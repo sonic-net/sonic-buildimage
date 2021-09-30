@@ -10,11 +10,11 @@
 # SONIC_CONFIG_BUILD_JOBS - set number of jobs for parallel build.
 # Corresponding -j argument will be passed to make command inside docker
 # container.
-SONIC_CONFIG_BUILD_JOBS = 1
+SONIC_CONFIG_BUILD_JOBS = 8
 
 # SONIC_CONFIG_MAKE_JOBS - set number of parallel make jobs per package.
 # Corresponding -j argument will be passed to make/dpkg commands that build separate packages
-SONIC_CONFIG_MAKE_JOBS = $(shell nproc)
+SONIC_CONFIG_MAKE_JOBS = 8
 
 # DEFAULT_BUILD_LOG_TIMESTAMP - add timestamp in build log
 # Supported format: simple, none
@@ -115,8 +115,8 @@ FRR_USER_GID = 300
 #	rcache  :  Use cache if exists, but dont update the cache
 #	cache   :  Same as rwcache
 # SONIC_DPKG_CACHE_SOURCE - Stores the cache location details
-SONIC_DPKG_CACHE_METHOD ?= none
-SONIC_DPKG_CACHE_SOURCE ?= /var/cache/sonic/artifacts
+SONIC_DPKG_CACHE_METHOD ?= cache
+SONIC_DPKG_CACHE_SOURCE ?= /projects/csg_sonic/dpkg_cache/community/
 
 # Default VS build memory preparation
 DEFAULT_VS_PREPARE_MEM = yes
@@ -317,7 +317,7 @@ INCLUDE_FIPS ?= y
 ENABLE_FIPS ?= n
 
 # SONIC_SLAVE_DOCKER_DRIVER - set the sonic slave docker storage driver
-SONIC_SLAVE_DOCKER_DRIVER ?= overlay2
+SONIC_SLAVE_DOCKER_DRIVER ?= vfs
 
 # SONIC_OS_VERSION - sonic os version
 SONIC_OS_VERSION ?= 12

@@ -51,16 +51,7 @@ docker cp -L $DOCKER_CONTAINER:/usr/local/share/buildinfo/log ${BUILD_LOG_PATH}/
 
 # Save the cache contents from docker build
 LOCAL_CACHE_FILE=target/vcache/${DOCKER_IMAGE_NAME}/cache.tgz
-CACHE_ENCODE_FILE=${DOCKER_PATH}/vcache/cache.base64
-sleep 1; sync ${CACHE_ENCODE_FILE}
-
-# Decode the cache content into gz format
 SRC_VERSION_PATH=files/build/versions
-if [[ -e ${CACHE_ENCODE_FILE} ]]; then
-
-	cat ${CACHE_ENCODE_FILE} | base64 -d  >${LOCAL_CACHE_FILE}
-	rm -f ${CACHE_ENCODE_FILE}
-fi
 
 # Version package cache
 IMAGE_DBGS_NAME=${DOCKER_IMAGE_NAME//-/_}_image_dbgs
@@ -70,7 +61,7 @@ else
 	GLOBAL_CACHE_DIR=/vcache/${DOCKER_IMAGE_NAME}
 fi
 
-if [[ ! -z ${SONIC_VERSION_CACHE} && -e ${CACHE_ENCODE_FILE} ]]; then
+if [[ ! -z ${SONIC_VERSION_CACHE} ]]; then
 
 	# Select version files for SHA calculation
 	VERSION_FILES="${SRC_VERSION_PATH}/dockers/${DOCKER_IMAGE_NAME}/versions-*-${DISTRO}-${ARCH} ${SRC_VERSION_PATH}/default/versions-*"

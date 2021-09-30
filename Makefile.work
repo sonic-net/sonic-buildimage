@@ -301,8 +301,8 @@ endif
 ifeq ($(DOCKER_BUILDER_WORKDIR),)
 override DOCKER_BUILDER_WORKDIR := "/sonic"
 endif
-
-DOCKER_RUN := docker run --rm=true --privileged --init \
+HOSTNET := --network=host
+DOCKER_RUN := docker run $(HOSTNET) --rm=true --privileged --init \
     -v $(DOCKER_BUILDER_MOUNT) \
     -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \
     -w $(DOCKER_BUILDER_WORKDIR) \
@@ -321,6 +321,7 @@ ifneq ($(DOCKER_BUILDER_USER_MOUNT),)
 	DOCKER_RUN += $(foreach mount,$(subst $(comma), ,$(DOCKER_BUILDER_USER_MOUNT)), $(addprefix -v , $(mount)))
 endif
 
+DOCKER_RUN += --mount type=tmpfs,destination=/bld-tmp,tmpfs-mode=1777
 ifdef SONIC_BUILD_QUIETER
 	DOCKER_RUN += -e "SONIC_BUILD_QUIETER=$(SONIC_BUILD_QUIETER)"
 endif
@@ -423,7 +424,8 @@ DOCKER_BASE_LOG = $(SLAVE_DIR)/$(SLAVE_BASE_IMAGE)_$(SLAVE_BASE_TAG).log
 DOCKER_LOG = $(SLAVE_DIR)/$(SLAVE_IMAGE)_$(SLAVE_TAG).log
 
 
-DOCKER_SLAVE_BASE_BUILD = docker build --no-cache \
+DOCKER_AUTH:=docker login -u sonicbrcm -p 4b5d1f28-6f43-41da-a794-88805ee8fc2d 
+DOCKER_SLAVE_BASE_BUILD = $(DOCKER_AUTH);docker build $(HOSTNET) --no-cache \
 		    -t $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
 		    --build-arg http_proxy=$(http_proxy) \
 		    --build-arg https_proxy=$(https_proxy) \
@@ -433,10 +435,10 @@ DOCKER_SLAVE_BASE_BUILD = docker build --no-cache \
 		    $(SLAVE_DIR) \
 		    $(SPLIT_LOG) $(DOCKER_BASE_LOG)
 
-DOCKER_BASE_PULL = docker pull \
-			$(REGISTRY_SERVER):$(REGISTRY_PORT)$(REGISTRY_SERVER_PATH)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
+DOCKER_BASE_PULL = $(DOCKER_AUTH);docker pull \
+			$(REGISTRY_SERVER):$(REGISTRY_PORT)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
 
-DOCKER_USER_BUILD = docker build --no-cache \
+DOCKER_USER_BUILD = $(DOCKER_AUTH);docker build $(HOSTNET) --no-cache \
 	       --build-arg user=$(USER) \
 	       --build-arg uid=$(shell id -u) \
 	       --build-arg guid=$(shell id -g) \

@@ -171,9 +171,12 @@ define SETUP_OVERLAYFS_FOR_DPKG_ADMINDIR
 upperdir=$(shell mktemp -d -p $(DPKG_ADMINDIR_PATH))
 workdir=$(shell mktemp -d -p $(DPKG_ADMINDIR_PATH))
 mergedir=$(shell mktemp -d -p $(DPKG_ADMINDIR_PATH))
+#echo sudo mount -t overlay overlay -olowerdir=/var/lib/dpkg,upperdir=$$upperdir,workdir=$$workdir $$mergedir
 sudo mount -t overlay overlay -olowerdir=/var/lib/dpkg,upperdir=$$upperdir,workdir=$$workdir $$mergedir
 export SONIC_DPKG_ADMINDIR=$$mergedir
 trap "sudo umount $$mergedir && rm -rf $$mergedir $$upperdir $$workdir" EXIT
+#mergedir=$(echo -n /var/lib/dpkg)
+#export SONIC_DPKG_ADMINDIR=/var/lib/dpkg
 endef
 
 
