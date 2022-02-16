@@ -668,7 +668,7 @@ write_platform_specific_cmdline() {
         aboot_machine=arista_7800r3ak_36dm2_lc
         sonic_mode="$linecard_mode"
     fi
-    if [ "$sid" = "OtterLake" ]; then
+    if [ "$sid" = "OtterLake" ] || [ "$sid" = "OtterLakeS" ]; then
         aboot_machine=arista_7800_sup
         flash_size=30000
         sonic_mode=$supervisor_mode
