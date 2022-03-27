@@ -1,0 +1,42 @@
+
+# parse_port_config_ini(config_file_path)
+{
+    'phy_port_info':{
+        physical port:{
+            'user_port':{ name:{
+                                'lanes':[logic_lane1, logic_lane2...],
+                                'alias':'',
+                                'max-speed':dd
+                          }
+            }
+            'lane_list': [logic_lane1, logic_lane2]
+        }
+    }
+    'logical_lane_2_phy_port':{
+        logic_lane: physical port
+    }
+    'user_port_2_phy_port': {  
+        user_port: phy port
+    }
+}
+
+# parse_clx_dsh(config_file_path)
+{
+  'clx_port_2_logic_lane': {
+    clx_port(unit,port): [logic_lane1, logic_lane2]
+  },
+  'logic_lane_2_clx_port': {
+    logic_lane: clx_port(unit,port)
+  },
+  'pre-emphasis': {
+    # key: value
+    (logic_lane, property): hex
+  },
+  'polarity-rev':
+    # key: value
+    (logic_lane, property): hex
+  'lane-swap':
+    # key: value
+    (logic_lane, property): hex
+}
+
