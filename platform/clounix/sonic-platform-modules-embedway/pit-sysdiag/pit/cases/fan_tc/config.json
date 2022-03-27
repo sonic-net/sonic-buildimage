@@ -1,0 +1,6 @@
+{
+    "name": "fan-test",
+    "description": "Check fan status",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "smoke"]
+}

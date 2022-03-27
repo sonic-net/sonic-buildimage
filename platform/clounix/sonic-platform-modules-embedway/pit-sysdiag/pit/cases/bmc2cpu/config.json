@@ -1,0 +1,6 @@
+{
+    "name": "bmc2cpu",
+    "description": "Check ping info",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "power", "emc"]
+}

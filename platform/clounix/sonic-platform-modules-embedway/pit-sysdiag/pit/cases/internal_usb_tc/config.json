@@ -1,0 +1,6 @@
+{
+    "name": "internal_usb-test",
+    "description": "Check usb bus between CPU and BMC",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "power", "emc", "smoke"]
+}

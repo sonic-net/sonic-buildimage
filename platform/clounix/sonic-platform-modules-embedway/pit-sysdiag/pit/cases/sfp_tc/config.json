@@ -1,0 +1,6 @@
+{
+    "name": "sfp-test",
+    "description": "Check SFP modules and access test",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "emc", "power", "pa", "smoke"]
+}

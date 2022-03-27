@@ -1,0 +1,475 @@
+{
+    "asic": "clounix",
+    "arch": "x86_64",
+    "cpu_info": {
+        "model_cmd": "cat /proc/cpuinfo",
+        "cores_cmd": "cat /proc/cpuinfo | grep \"cpu cores\" | wc -l",
+        "MHz_cmd": "cat /proc/cpuinfo | grep \"cpu MHz\" | awk '{print $4}'",
+        "pattern": "model name\\s*:(\\s*.*)",
+        "model_name": [
+            "Intel(R) Xeon(R) D-1712TR CPU @ 2.00GHz",
+            "Intel(R) Xeon(R) D-1715TER CPU @ 2.40GHz",
+            "Intel(R) Xeon(R) D-1732TE CPU @ 1.90GHz",
+            "Intel(R) Xeon(R) D-1735TR CPU @ 2.20GHz",
+            "Intel(R) Xeon(R) D-1736NT CPU @ 2.70GHz"
+        ],
+        "CPU(s)": ["8", "8", "16", "16", "16"],
+        "cpu_MHz": [
+            "2.00GHz",
+            "2.40GHz",
+            "1.90GHz",
+            "2.20GHz",
+            "2.70GHz"
+        ]
+    },
+    "rtc_info":{
+        "delay_time": 5,
+        "max_time_diff": 1
+    },
+    "server_ip": "10.19.1.1",
+    "mac_address": {
+        "offset":{
+            "cpu_offset": 0
+        },
+        "check_list":["cpu"]
+    },
+    "memstress_info":{
+        "mem_test_count": "1",
+        "mem_run_size_percentage": "90%",
+        "memstress_test_time": 1
+    },
+    "software_system":{
+        "sysdiag_version":"1.1",
+        "timezone":"Asia/Shanghai",
+        "sonic_version":"SONiC.cuos.master"
+    },
+    "pcie":{
+        "I210": {
+                "width":"x1",
+                "speed": "2.5GT/s",
+                "num":1
+        },
+        "1f83:8600": {
+            "width":"x4",
+            "speed": "16GT/s",
+            "num":1
+        },
+        "Xilinx": {
+            "width":"x1",
+            "speed": "5GT/s",
+            "num":1
+        }
+    },
+    "ssdstress_info":{
+        "dev_path": "/stress.txt",
+        "rw_mode": "randread",
+        "io_size": "4k",
+        "num_jobs": "1",
+        "iop_pattern" : "IOPS=([0-9]+\\.?[0-9]*[k]?)",
+        "dev_pattern" : "root-overlay",
+        "ssd_run_size_percentage": "10%",
+        "iops_value_standard": "3000",
+        "ssd_test_count": 1,
+        "total_ssd_value": "32G"
+    },
+    "fan_info":{
+        "test_cfg": [
+            {
+                "position" : "main board",
+                "fan_count": 4,
+                "fan_list" : [1, 2, 3, 4],
+                "direction":"out",
+                "ratio_target": [50,80,40],
+                "speed_per_ratio": 274,
+                "speed_max":28200,
+                "speed_min":10900
+            }
+        ]
+    },
+    "psu_info":{
+        "position" : "main board",
+        "count" :2,
+        "in_power_min":0, 
+        "in_power_max":1815000000,
+        "in_vol_min":198000,
+        "in_vol_max":242000,
+        "in_curr_min":0,
+        "in_curr_max":7500,
+
+        "out_power_min":0, 
+        "out_power_max":1260000000,
+        "out_vol_min":11400,
+        "out_vol_max":12600,
+        "out_curr_min":0,
+        "out_curr_max":100000
+    },
+    "usbstress_info":{
+        "stress_test_time": 1
+    },
+    "i2c":{
+        "FAN_CPLD" : {
+            "bus" : 25,
+            "address" : "0x60",
+            "register" : "0x0",
+            "flag" : "rw"
+        }
+    },
+    "i2c_stress":{
+        "loop_time":3600,
+        "run_threads":5,
+        "slave_dict":[
+            {"master":1,  "slave":"0x24", "addr":0},
+            {"master":2,  "slave":"0x50", "addr":0},
+            {"master":2,  "slave":"0x58", "addr":0},
+            {"master":3,  "slave":"0x52", "addr":0},
+            {"master":3,  "slave":"0x5A", "addr":0},
+            {"master":4,  "slave":"0x1D", "addr":0},
+            {"master":4,  "slave":"0x4E", "addr":0},
+            {"master":4,  "slave":"0x57", "addr":0},
+            {"master":23,  "slave":"0x1D", "addr":0},
+            {"master":23,  "slave":"0x1F", "addr":0},
+            {"master":23,  "slave":"0x49", "addr":0},
+            {"master":24,  "slave":"0x48", "addr":0},
+            {"master":24,  "slave":"0x4A", "addr":0},
+            {"master":25,  "slave":"0x60", "addr":0},
+            {"master":26,  "slave":"0x5E", "addr":0},
+            {"master":27,  "slave":"0x5E", "addr":0}
+        ]
+    },
+    "dac_info":{
+        "dac_type":"QSFP",
+        "QSFP":{
+            "dac_port":["400G"],
+            "total_portnum":64,
+            "400G":{
+                "port_num":[0,252,4],
+                "Identifier":["QSFP28 or later", "QSFP+ or later with CMIS"],
+                "Vendor_Name":["BizLink","LUXSHARE-TECH","LINKTEL"],
+                "Vendor_PN_len":[5,40],
+                "Vendor_SN_len":[0,40]
+            }
+        },
+        "SFP":{
+            "400G":{},
+            "800G":{}
+        }
+
+    },
+
+    "chip_type": ["board","fpga","cpld"],
+    "cpld_type":{
+        "CPLD1": "Lattice LCMXO2-1200UHC",
+        "CPLD2": "Lattice LCMXO2-640HC",
+        "CPLD3": "Lattice LCMXO2-1200UHC",
+        "CPLD4": "Lattice LCMXO2-1200UHC"
+    },
+    "fpga_type":"Xilinx artix-7:xc7a75tfgg484-2",
+    "board_type":"ESX25600-64D-1VB",
+
+    "firmware_version":["bios","fpga","cpld"],
+    "cpld_version":{
+        "CPLD1": "0xd",
+        "CPLD2": "0xd",
+        "CPLD3": "0x5",
+        "CPLD4": "0x4"
+    },
+    "bios_version":"1.0.1-HengWei1",
+    "sdk_version":"1.11.0",
+    "fpga_version":"0xa2",
+
+    "fpga_firmware_type":["FPGA"],
+    "fpga_firmware_baseline":{
+        "FPGA":  {
+            "absolute_path":false,
+            "file_path": "ESX25-64D-FPGA-2025-0305.bin",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        }
+    },
+    "fpga_firmware_test":{
+        "FPGA":  {
+            "absolute_path":false,
+            "file_path": "ESX25-64D-FPGA-2025-0305.bin",
+            "version": "0xe",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":"",
+            "slave_version":""
+        }
+    },
+
+    "cpld_firmware_type":["CPLD-1","CPLD-2","CPLD-3","CPLD-4"],
+    "cpld_firmware_baseline":{
+        "CPLD-1":  {
+            "absolute_path":false,
+            "file_path": "ESX25-64D-CPLD0-2025-0305.bin",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        },
+        "CPLD-2":  {
+            "absolute_path":false,
+            "file_path": "ESX25-64D-CPLD1-2025-0305.bin",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        },
+        "CPLD-3":  {
+            "absolute_path":false,
+            "file_path": "ESX25-64D-CPLD-CB-2025-0305.bin",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        },
+        "CPLD-4":  {
+            "absolute_path":false,
+            "file_path": "ESX25-64D-CPLD-FB-2025-0305.bin",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        }
+
+    },
+    "cpld_firmware_test":{
+        "CPLD-1":  {
+            "absolute_path":false,
+            "file_path": "ESX25-64D-CPLD0-2025-0305.bin",
+            "version": "0xc",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        },
+        "CPLD-2":  {
+            "absolute_path":false,
+            "file_path": "ESX25-64D-CPLD1-2025-0305.bin",
+            "version": "0xc",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        },
+        "CPLD-3":  {
+            "absolute_path":false,
+            "file_path": "ESX25-64D-CPLD-CB-2025-0305.bin",
+            "version": "0x3",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        },
+        "CPLD-4":  {
+            "absolute_path":false,
+            "file_path": "ESX25-64D-CPLD-FB-2025-0305.bin",
+            "version": "0x3",
+            "slave_upgrade":false,
+            "same_with_master":false,
+            "slave_file_path":""
+        }
+    },
+
+    "voltage_margin_device":["SWITCH_VDDK", "SWITCH_SFF_P3V3_A", "SWITCH_P0V75_AVDDL", "SWITCH_SFF_P3V3_B", "SWITCH_P1V2_AVDDH", "FPGA_3V3_SB", "FPGA_1V8_SB", "POWER_5V_SB", "FPGA_1V_VCCINT", "FPGA_1V_MGT", "FPGA_1V2_SB", "CLOCK_1V8_LDO", "SWITCH_1V2_DVDD"],
+    "svid_info":{
+         "SWITCH_VDDK":{
+                 "high_voltage": 741,
+                 "low_voltage": 713,
+                 "normal_voltage": 727,
+                 "high_margin_val": 2,
+                 "low_margin_val": -2
+         },
+         "SWITCH_SFF_P3V3_A":{
+                 "high_voltage": 3399,
+                 "low_voltage": 3201,
+                 "normal_voltage": 3300,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         },
+         "SWITCH_P0V75_AVDDL":{
+                 "high_voltage": 765,
+                 "low_voltage": 735,
+                 "normal_voltage": 750,
+                 "high_margin_val": 2,
+                 "low_margin_val": -2
+         },
+         "SWITCH_SFF_P3V3_B":{
+                 "high_voltage": 3399,
+                 "low_voltage": 3201,
+                 "normal_voltage": 3300,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         },
+         "SWITCH_P1V2_AVDDH":{
+                 "high_voltage": 1224,
+                 "low_voltage": 1176,
+                 "normal_voltage": 1200,
+                 "high_margin_val": 2,
+                 "low_margin_val": -2
+         },
+         "FPGA_3V3_SB":{
+                 "high_voltage": 3398,
+                 "low_voltage": 3210,
+                 "normal_voltage": 3298,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         },
+         "FPGA_1V8_SB":{
+                 "high_voltage": 1856,
+                 "low_voltage": 1756,
+                 "normal_voltage": 1813,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         },
+         "POWER_5V_SB":{
+                 "high_voltage": 5145,
+                 "low_voltage": 4847,
+                 "normal_voltage": 5048,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         },
+         "FPGA_1V_VCCINT":{
+                 "high_voltage": 1030,
+                 "low_voltage": 975,
+                 "normal_voltage": 1001,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         }
+         ,
+         "FPGA_1V_MGT":{
+                 "high_voltage": 1033,
+                 "low_voltage": 975,
+                 "normal_voltage": 1003,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         }
+         ,
+         "FPGA_1V2_SB":{
+                 "high_voltage": 1238,
+                 "low_voltage": 1171,
+                 "normal_voltage": 1206,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         }
+         ,
+         "CLOCK_1V8_LDO":{
+                 "high_voltage": 1856,
+                 "low_voltage": 1754,
+                 "normal_voltage": 1790,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         }
+         ,
+         "SWITCH_1V2_DVDD":{
+                 "high_voltage": 1241,
+                 "low_voltage": 1175,
+                 "normal_voltage": 1209,
+                 "high_margin_val": 3,
+                 "low_margin_val": -3
+         }
+     },
+    "memory_free_size": 100,
+    "snake_info":{
+        "script_filename" : "/usr/share/sonic/device/x86_64-embedway_esx25600_64d-r0/esx25600-64d/port.dsh",
+        "led_cfg_filename" : "/usr/share/sonic/device/x86_64-embedway_esx25600_64d-r0/esx25600-64d/port.led",
+        "port_list" : "0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,196,200,204,208,212,216,220,224,228,232,236,240,244,248,252",
+        "sdk_traffic_self_loop_test_dsh" :[
+            "selfloop_cpu_flow_1_sendPkt.dsh",
+            "selfloop_cpu_flow_2_ctrl2cpu.dsh",
+            "selfloop_cpu_flow_3_recover.dsh"
+        ],
+        "sdk_traffic_exp_loop_test_dsh" :[
+            "exploop_cpu_flow_1_snedpkt.dsh",
+            "exploop_cpu_flow_2_ctrl2cpu.dsh",
+            "exploop_cpu_flow_3_recover.dsh"
+        ],
+        "test_mode": "exp_loop",
+        "total_portnum" : 64,
+        "qsfp_portnum" : 48,
+        "port_step" : 4,
+        "test_loop_times" : 10
+    },
+    "sensor_info":{
+        "dcdc_sensor_type" : [
+            "SWITCH_VDDK",
+            "SWITCH_SFF_P3V3_A",
+            "SWITCH_P0V75_AVDDL",
+            "SWITCH_SFF_P3V3_B",
+            "SWITCH_P1V2_AVDDH",
+            "CAD2512_1_0x1D_3V3",
+            "CAD2512_1_0x1D_5V",
+            "CAD2512_1_0x1D_1V1",
+            "FPGA_3V3_SB",
+            "FPGA_1V8_SB",
+            "POWER_5V_SB",
+            "FPGA_1V_VCCINT",
+            "FPGA_1V_MGT",
+            "FPGA_1V2_SB",
+            "CAD2512_3_0x1F_0V75",
+            "CAD2512_3_0x1F_1V2_A",
+            "CAD2512_3_0x1F_3V3_A",
+            "CAD2512_3_0x1F_3V3_B",
+            "SWITCH_1V2_DVDD",
+            "CLOCK_1V8_LDO",
+            "CAD2512_3_0x1F_0V74"
+        ],
+        "dcdc_sensor_node_name" : {
+            "SWITCH_VDDK"           : ["NA","in3_input","NA"],
+            "SWITCH_SFF_P3V3_A"     : ["NA","in3_input","NA"],
+            "SWITCH_P0V75_AVDDL"    : ["NA","in4_input","NA"],
+            "SWITCH_SFF_P3V3_B"     : ["NA","in3_input","NA"],
+            "SWITCH_P1V2_AVDDH"     : ["NA","in4_input","NA"],
+            "CAD2512_1_0x1D_3V3"    : ["NA","in0_input","NA"],
+            "CAD2512_1_0x1D_5V"     : ["NA","in1_input","NA"],
+            "CAD2512_1_0x1D_1V1"    : ["NA","in2_input","NA"],
+            "FPGA_3V3_SB"           : ["NA","in0_input","NA"],
+            "FPGA_1V8_SB"           : ["NA","in1_input","NA"],
+            "POWER_5V_SB"           : ["NA","in2_input","NA"],
+            "FPGA_1V_VCCINT"        : ["NA","in3_input","NA"],
+            "FPGA_1V_MGT"           : ["NA","in4_input","NA"],
+            "FPGA_1V2_SB"           : ["NA","in5_input","NA"],
+            "CAD2512_3_0x1F_0V75"   : ["NA","in0_input","NA"],
+            "CAD2512_3_0x1F_1V2_A"  : ["NA","in1_input","NA"],
+            "CAD2512_3_0x1F_3V3_A"  : ["NA","in1_input","NA"],
+            "CAD2512_3_0x1F_3V3_B"  : ["NA","in3_input","NA"],
+            "SWITCH_1V2_DVDD"       : ["NA","in5_input","NA"],
+            "CLOCK_1V8_LDO"         : ["NA","in6_input","NA"],
+            "CAD2512_3_0x1F_0V74"   : ["NA","in7_input","NA"]
+        },
+        "dcdc_sensor_node" : {
+            "SWITCH_VDDK"               : "/sys/bus/i2c/devices/25-0060/hwmon/hwmon*/",
+            "SWITCH_SFF_P3V3_A"         : "/sys/bus/i2c/devices/26-005e/hwmon/hwmon*/",
+            "SWITCH_P0V75_AVDDL"        : "/sys/bus/i2c/devices/26-005e/hwmon/hwmon*/",
+            "SWITCH_SFF_P3V3_B"         : "/sys/bus/i2c/devices/27-005e/hwmon/hwmon*/",
+            "SWITCH_P1V2_AVDDH"         : "/sys/bus/i2c/devices/27-005e/hwmon/hwmon*/",
+            "CAD2512_1_0x1D_3V3"        : "/sys/bus/i2c/devices/4-001d/hwmon/hwmon*/",
+            "CAD2512_1_0x1D_5V"         : "/sys/bus/i2c/devices/4-001d/hwmon/hwmon*/",
+            "CAD2512_1_0x1D_1V1"        : "/sys/bus/i2c/devices/4-001d/hwmon/hwmon*/",
+            "FPGA_3V3_SB"               : "/sys/bus/i2c/devices/23-001d/hwmon/hwmon*/",
+            "FPGA_1V8_SB"               : "/sys/bus/i2c/devices/23-001d/hwmon/hwmon*/",
+            "POWER_5V_SB"               : "/sys/bus/i2c/devices/23-001d/hwmon/hwmon*/",
+            "FPGA_1V_VCCINT"            : "/sys/bus/i2c/devices/23-001d/hwmon/hwmon*/",
+            "FPGA_1V_MGT"               : "/sys/bus/i2c/devices/23-001d/hwmon/hwmon*/",
+            "FPGA_1V2_SB"               : "/sys/bus/i2c/devices/23-001d/hwmon/hwmon*/",
+            "CAD2512_3_0x1F_0V75"       : "/sys/bus/i2c/devices/23-001f/hwmon/hwmon*/",
+            "CAD2512_3_0x1F_1V2_A"      : "/sys/bus/i2c/devices/23-001f/hwmon/hwmon*/",
+            "CAD2512_3_0x1F_3V3_A"      : "/sys/bus/i2c/devices/23-001f/hwmon/hwmon*/",
+            "CAD2512_3_0x1F_3V3_B"      : "/sys/bus/i2c/devices/23-001f/hwmon/hwmon*/",
+            "SWITCH_1V2_DVDD"           : "/sys/bus/i2c/devices/23-001f/hwmon/hwmon*/",
+            "CLOCK_1V8_LDO"             : "/sys/bus/i2c/devices/23-001f/hwmon/hwmon*/",
+            "CAD2512_3_0x1F_0V74"       : "/sys/bus/i2c/devices/23-001f/hwmon/hwmon*/"
+        },
+        "dcdc_sensor_factor": {
+            "SWITCH_SFF_P3V3_A"    : [2],
+            "SWITCH_SFF_P3V3_B"    : [2]
+        }
+    },
+    "cpi_port_info":{
+        "script_filename" : "/usr/share/sonic/device/embedway/x86_64-embedway_esx25600_64d-r0/esx25600-64d/port.dsh",
+        "led_cfg_filename" : "/usr/share/sonic/device/embedway/x86_64-embedway_esx25600_64d-r0/esx25600-64d/port.led",
+        "port_list" : "0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,200,208,216,224,232,240,248",
+        "cpi_port" : {
+            "eth1":"257",
+            "eth2":"258"
+        },
+        "asic_send_pkt_num":1000,
+        "cpu_send_pkt_num":1,
+        "test_loop_times" : 1
+    }
+}

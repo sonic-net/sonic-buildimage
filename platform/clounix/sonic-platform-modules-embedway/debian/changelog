@@ -1,0 +1,5 @@
+sonic-embedway-platform-modules (1.0.0) unstable; urgency=low
+
+  * Add sonic-platform-embedway-esx25600-64d
+
+ -- Embedway <zhuang.yong@embedway.com>  Thu, 26 Dec 2024 10:35:18 +0800

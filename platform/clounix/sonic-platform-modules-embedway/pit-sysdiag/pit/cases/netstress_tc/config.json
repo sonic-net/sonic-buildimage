@@ -1,0 +1,6 @@
+{
+    "name": "netstress-test",
+    "description": "Check Net Stress Test",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "power", "stress", "smoke"]
+}

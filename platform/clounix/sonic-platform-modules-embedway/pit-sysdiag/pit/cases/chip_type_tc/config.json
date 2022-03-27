@@ -1,0 +1,6 @@
+{
+    "name": "chip-type-test",
+    "description": "chip type info",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "emc", "power", "pa", "smoke"]
+}

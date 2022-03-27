@@ -1,0 +1,6 @@
+{
+    "name": "mgmtport-test",
+    "description": "Check mgmt port function",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "smoke"]
+}

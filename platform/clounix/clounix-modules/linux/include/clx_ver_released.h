@@ -1,0 +1,6 @@
+#ifndef __CLX_DEV_VER_RELEASED_H__
+#define __CLX_DEV_VER_RELEASED_H__
+
+#define CLX_DEV_RELEASED_GIT_HASH      "e50092a"
+
+#endif // __CLX_DEV_VER_RELEASED_H__

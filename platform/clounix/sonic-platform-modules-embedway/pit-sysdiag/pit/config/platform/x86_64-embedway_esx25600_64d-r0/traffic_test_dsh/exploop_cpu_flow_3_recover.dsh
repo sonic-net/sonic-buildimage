@@ -1,0 +1,341 @@
+pkt set sequence verify
+
+netif destroy profile profile-id=0
+netif destroy profile profile-id=1
+
+pkt set monitor disable
+pkt set rx deinit
+
+tm set global-property igr-dynamic-threshold=false factor=4
+tm set global-property egr-dynamic-threshold=false factor=4
+
+l2 del mac-table mac=00:00:00:00:00:01 vid=1000
+l2 del mac-table mac=00:00:00:00:00:01 vid=1008
+l2 del mac-table mac=00:00:00:00:00:01 vid=1016
+l2 del mac-table mac=00:00:00:00:00:01 vid=1024
+l2 del mac-table mac=00:00:00:00:00:01 vid=1032
+l2 del mac-table mac=00:00:00:00:00:01 vid=1040
+l2 del mac-table mac=00:00:00:00:00:01 vid=1048
+l2 del mac-table mac=00:00:00:00:00:01 vid=1056
+l2 del mac-table mac=00:00:00:00:00:01 vid=1064
+l2 del mac-table mac=00:00:00:00:00:01 vid=1072
+l2 del mac-table mac=00:00:00:00:00:01 vid=1080
+l2 del mac-table mac=00:00:00:00:00:01 vid=1088
+l2 del mac-table mac=00:00:00:00:00:01 vid=1096
+l2 del mac-table mac=00:00:00:00:00:01 vid=1104
+l2 del mac-table mac=00:00:00:00:00:01 vid=1112
+l2 del mac-table mac=00:00:00:00:00:01 vid=1120
+l2 del mac-table mac=00:00:00:00:00:01 vid=1128
+l2 del mac-table mac=00:00:00:00:00:01 vid=1136
+l2 del mac-table mac=00:00:00:00:00:01 vid=1144
+l2 del mac-table mac=00:00:00:00:00:01 vid=1152
+l2 del mac-table mac=00:00:00:00:00:01 vid=1160
+l2 del mac-table mac=00:00:00:00:00:01 vid=1168
+l2 del mac-table mac=00:00:00:00:00:01 vid=1176
+l2 del mac-table mac=00:00:00:00:00:01 vid=1184
+l2 del mac-table mac=00:00:00:00:00:01 vid=1192
+l2 del mac-table mac=00:00:00:00:00:01 vid=1196
+l2 del mac-table mac=00:00:00:00:00:01 vid=1208
+l2 del mac-table mac=00:00:00:00:00:01 vid=1212
+l2 del mac-table mac=00:00:00:00:00:01 vid=1224
+l2 del mac-table mac=00:00:00:00:00:01 vid=1228
+l2 del mac-table mac=00:00:00:00:00:01 vid=1240
+l2 del mac-table mac=00:00:00:00:00:01 vid=1244
+
+l2 del mac-table mac=00:00:00:00:00:02 vid=1004
+l2 del mac-table mac=00:00:00:00:00:02 vid=1012
+l2 del mac-table mac=00:00:00:00:00:02 vid=1020
+l2 del mac-table mac=00:00:00:00:00:02 vid=1028
+l2 del mac-table mac=00:00:00:00:00:02 vid=1036
+l2 del mac-table mac=00:00:00:00:00:02 vid=1044
+l2 del mac-table mac=00:00:00:00:00:02 vid=1052
+l2 del mac-table mac=00:00:00:00:00:02 vid=1060
+l2 del mac-table mac=00:00:00:00:00:02 vid=1068
+l2 del mac-table mac=00:00:00:00:00:02 vid=1076
+l2 del mac-table mac=00:00:00:00:00:02 vid=1084
+l2 del mac-table mac=00:00:00:00:00:02 vid=1092
+l2 del mac-table mac=00:00:00:00:00:02 vid=1100
+l2 del mac-table mac=00:00:00:00:00:02 vid=1108
+l2 del mac-table mac=00:00:00:00:00:02 vid=1116
+l2 del mac-table mac=00:00:00:00:00:02 vid=1124
+l2 del mac-table mac=00:00:00:00:00:02 vid=1132
+l2 del mac-table mac=00:00:00:00:00:02 vid=1140
+l2 del mac-table mac=00:00:00:00:00:02 vid=1148
+l2 del mac-table mac=00:00:00:00:00:02 vid=1156
+l2 del mac-table mac=00:00:00:00:00:02 vid=1164
+l2 del mac-table mac=00:00:00:00:00:02 vid=1172
+l2 del mac-table mac=00:00:00:00:00:02 vid=1180
+l2 del mac-table mac=00:00:00:00:00:02 vid=1188
+l2 del mac-table mac=00:00:00:00:00:02 vid=1200
+l2 del mac-table mac=00:00:00:00:00:02 vid=1204
+l2 del mac-table mac=00:00:00:00:00:02 vid=1216
+l2 del mac-table mac=00:00:00:00:00:02 vid=1220
+l2 del mac-table mac=00:00:00:00:00:02 vid=1232
+l2 del mac-table mac=00:00:00:00:00:02 vid=1236
+l2 del mac-table mac=00:00:00:00:00:02 vid=1248
+l2 del mac-table mac=00:00:00:00:00:02 vid=1252
+
+vlan del member vid=1000 portlist=252,0
+vlan del member vid=1004 portlist=4,8
+vlan del member vid=1008 portlist=4,8
+vlan del member vid=1012 portlist=12,16
+vlan del member vid=1016 portlist=12,16
+vlan del member vid=1020 portlist=20,24
+vlan del member vid=1024 portlist=20,24
+vlan del member vid=1028 portlist=28,32
+vlan del member vid=1032 portlist=28,32
+vlan del member vid=1036 portlist=36,40
+vlan del member vid=1040 portlist=36,40
+vlan del member vid=1044 portlist=44,48
+vlan del member vid=1048 portlist=44,48
+vlan del member vid=1052 portlist=52,56
+vlan del member vid=1056 portlist=52,56
+vlan del member vid=1060 portlist=60,64
+vlan del member vid=1064 portlist=60,64
+vlan del member vid=1068 portlist=68,72
+vlan del member vid=1072 portlist=68,72
+vlan del member vid=1076 portlist=76,80
+vlan del member vid=1080 portlist=76,80
+vlan del member vid=1084 portlist=84,88
+vlan del member vid=1088 portlist=84,88
+vlan del member vid=1092 portlist=92,96
+vlan del member vid=1096 portlist=92,96
+vlan del member vid=1100 portlist=100,104
+vlan del member vid=1104 portlist=100,104
+vlan del member vid=1108 portlist=108,112
+vlan del member vid=1112 portlist=108,112
+vlan del member vid=1116 portlist=116,120
+vlan del member vid=1120 portlist=116,120
+vlan del member vid=1124 portlist=124,128
+vlan del member vid=1128 portlist=124,128
+vlan del member vid=1132 portlist=132,136
+vlan del member vid=1136 portlist=132,136
+vlan del member vid=1140 portlist=140,144
+vlan del member vid=1144 portlist=140,144
+vlan del member vid=1148 portlist=148,152
+vlan del member vid=1152 portlist=148,152
+vlan del member vid=1156 portlist=156,160
+vlan del member vid=1160 portlist=156,160
+vlan del member vid=1164 portlist=164,168
+vlan del member vid=1168 portlist=164,168
+vlan del member vid=1172 portlist=172,176
+vlan del member vid=1176 portlist=172,176
+vlan del member vid=1180 portlist=180,184
+vlan del member vid=1184 portlist=180,184
+vlan del member vid=1188 portlist=188,192
+vlan del member vid=1192 portlist=188,192
+vlan del member vid=1200 portlist=200,196
+vlan del member vid=1196 portlist=200,196
+vlan del member vid=1204 portlist=204,208
+vlan del member vid=1208 portlist=204,208
+vlan del member vid=1216 portlist=216,212
+vlan del member vid=1212 portlist=216,212
+vlan del member vid=1220 portlist=220,224
+vlan del member vid=1224 portlist=220,224
+vlan del member vid=1232 portlist=232,228
+vlan del member vid=1228 portlist=232,228
+vlan del member vid=1236 portlist=236,240
+vlan del member vid=1240 portlist=236,240
+vlan del member vid=1248 portlist=248,244
+vlan del member vid=1244 portlist=248,244
+vlan del member vid=1252 portlist=252,0
+
+vlan unbind bridge-domain vid=1000 bdid=1000
+vlan unbind bridge-domain vid=1004 bdid=1004
+vlan unbind bridge-domain vid=1008 bdid=1008
+vlan unbind bridge-domain vid=1012 bdid=1012
+vlan unbind bridge-domain vid=1016 bdid=1016
+vlan unbind bridge-domain vid=1020 bdid=1020
+vlan unbind bridge-domain vid=1024 bdid=1024
+vlan unbind bridge-domain vid=1028 bdid=1028
+vlan unbind bridge-domain vid=1032 bdid=1032
+vlan unbind bridge-domain vid=1036 bdid=1036
+vlan unbind bridge-domain vid=1040 bdid=1040
+vlan unbind bridge-domain vid=1044 bdid=1044
+vlan unbind bridge-domain vid=1048 bdid=1048
+vlan unbind bridge-domain vid=1052 bdid=1052
+vlan unbind bridge-domain vid=1056 bdid=1056
+vlan unbind bridge-domain vid=1060 bdid=1060
+vlan unbind bridge-domain vid=1064 bdid=1064
+vlan unbind bridge-domain vid=1068 bdid=1068
+vlan unbind bridge-domain vid=1072 bdid=1072
+vlan unbind bridge-domain vid=1076 bdid=1076
+vlan unbind bridge-domain vid=1080 bdid=1080
+vlan unbind bridge-domain vid=1084 bdid=1084
+vlan unbind bridge-domain vid=1088 bdid=1088
+vlan unbind bridge-domain vid=1092 bdid=1092
+vlan unbind bridge-domain vid=1096 bdid=1096
+vlan unbind bridge-domain vid=1100 bdid=1100
+vlan unbind bridge-domain vid=1104 bdid=1104
+vlan unbind bridge-domain vid=1108 bdid=1108
+vlan unbind bridge-domain vid=1112 bdid=1112
+vlan unbind bridge-domain vid=1116 bdid=1116
+vlan unbind bridge-domain vid=1120 bdid=1120
+vlan unbind bridge-domain vid=1124 bdid=1124
+vlan unbind bridge-domain vid=1128 bdid=1128
+vlan unbind bridge-domain vid=1132 bdid=1132
+vlan unbind bridge-domain vid=1136 bdid=1136
+vlan unbind bridge-domain vid=1140 bdid=1140
+vlan unbind bridge-domain vid=1144 bdid=1144
+vlan unbind bridge-domain vid=1148 bdid=1148
+vlan unbind bridge-domain vid=1152 bdid=1152
+vlan unbind bridge-domain vid=1156 bdid=1156
+vlan unbind bridge-domain vid=1160 bdid=1160
+vlan unbind bridge-domain vid=1164 bdid=1164
+vlan unbind bridge-domain vid=1168 bdid=1168
+vlan unbind bridge-domain vid=1172 bdid=1172
+vlan unbind bridge-domain vid=1176 bdid=1176
+vlan unbind bridge-domain vid=1180 bdid=1180
+vlan unbind bridge-domain vid=1184 bdid=1184
+vlan unbind bridge-domain vid=1188 bdid=1188
+vlan unbind bridge-domain vid=1192 bdid=1192
+vlan unbind bridge-domain vid=1200 bdid=1200
+vlan unbind bridge-domain vid=1196 bdid=1196
+vlan unbind bridge-domain vid=1204 bdid=1204
+vlan unbind bridge-domain vid=1208 bdid=1208
+vlan unbind bridge-domain vid=1216 bdid=1216
+vlan unbind bridge-domain vid=1212 bdid=1212
+vlan unbind bridge-domain vid=1220 bdid=1220
+vlan unbind bridge-domain vid=1224 bdid=1224
+vlan unbind bridge-domain vid=1232 bdid=1232
+vlan unbind bridge-domain vid=1228 bdid=1228
+vlan unbind bridge-domain vid=1236 bdid=1236
+vlan unbind bridge-domain vid=1240 bdid=1240
+vlan unbind bridge-domain vid=1248 bdid=1248
+vlan unbind bridge-domain vid=1244 bdid=1244
+vlan unbind bridge-domain vid=1252 bdid=1252
+
+bd destroy bdid=1000
+bd destroy bdid=1004
+bd destroy bdid=1008
+bd destroy bdid=1012
+bd destroy bdid=1016
+bd destroy bdid=1020
+bd destroy bdid=1024
+bd destroy bdid=1028
+bd destroy bdid=1032
+bd destroy bdid=1036
+bd destroy bdid=1040
+bd destroy bdid=1044
+bd destroy bdid=1048
+bd destroy bdid=1052
+bd destroy bdid=1056
+bd destroy bdid=1060
+bd destroy bdid=1064
+bd destroy bdid=1068
+bd destroy bdid=1072
+bd destroy bdid=1076
+bd destroy bdid=1080
+bd destroy bdid=1084
+bd destroy bdid=1088
+bd destroy bdid=1092
+bd destroy bdid=1096
+bd destroy bdid=1100
+bd destroy bdid=1104
+bd destroy bdid=1108
+bd destroy bdid=1112
+bd destroy bdid=1116
+bd destroy bdid=1120
+bd destroy bdid=1124
+bd destroy bdid=1128
+bd destroy bdid=1132
+bd destroy bdid=1136
+bd destroy bdid=1140
+bd destroy bdid=1144
+bd destroy bdid=1148
+bd destroy bdid=1152
+bd destroy bdid=1156
+bd destroy bdid=1160
+bd destroy bdid=1164
+bd destroy bdid=1168
+bd destroy bdid=1172
+bd destroy bdid=1176
+bd destroy bdid=1180
+bd destroy bdid=1184
+bd destroy bdid=1188
+bd destroy bdid=1192
+bd destroy bdid=1200
+bd destroy bdid=1196
+bd destroy bdid=1204
+bd destroy bdid=1208
+bd destroy bdid=1216
+bd destroy bdid=1212
+bd destroy bdid=1220
+bd destroy bdid=1224
+bd destroy bdid=1232
+bd destroy bdid=1228
+bd destroy bdid=1236
+bd destroy bdid=1240
+bd destroy bdid=1248
+bd destroy bdid=1244
+bd destroy bdid=1252
+
+vlan destroy vid=1000
+vlan destroy vid=1004
+vlan destroy vid=1008
+vlan destroy vid=1012
+vlan destroy vid=1016
+vlan destroy vid=1020
+vlan destroy vid=1024
+vlan destroy vid=1028
+vlan destroy vid=1032
+vlan destroy vid=1036
+vlan destroy vid=1040
+vlan destroy vid=1044
+vlan destroy vid=1048
+vlan destroy vid=1052
+vlan destroy vid=1056
+vlan destroy vid=1060
+vlan destroy vid=1064
+vlan destroy vid=1068
+vlan destroy vid=1072
+vlan destroy vid=1076
+vlan destroy vid=1080
+vlan destroy vid=1084
+vlan destroy vid=1088
+vlan destroy vid=1092
+vlan destroy vid=1096
+vlan destroy vid=1100
+vlan destroy vid=1104
+vlan destroy vid=1108
+vlan destroy vid=1112
+vlan destroy vid=1116
+vlan destroy vid=1120
+vlan destroy vid=1124
+vlan destroy vid=1128
+vlan destroy vid=1132
+vlan destroy vid=1136
+vlan destroy vid=1140
+vlan destroy vid=1144
+vlan destroy vid=1148
+vlan destroy vid=1152
+vlan destroy vid=1156
+vlan destroy vid=1160
+vlan destroy vid=1164
+vlan destroy vid=1168
+vlan destroy vid=1172
+vlan destroy vid=1176
+vlan destroy vid=1180
+vlan destroy vid=1184
+vlan destroy vid=1188
+vlan destroy vid=1192
+vlan destroy vid=1200
+vlan destroy vid=1196
+vlan destroy vid=1204
+vlan destroy vid=1208
+vlan destroy vid=1216
+vlan destroy vid=1212
+vlan destroy vid=1220
+vlan destroy vid=1224
+vlan destroy vid=1232
+vlan destroy vid=1228
+vlan destroy vid=1236
+vlan destroy vid=1240
+vlan destroy vid=1248
+vlan destroy vid=1244
+vlan destroy vid=1252
+
+port set intf cfg portlist=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,196,200,204,208,212,216,220,224,228,232,236,240,244,248,252 pvid=1
+
+vlan add member vid=1 portlist=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,196,200,204,208,212,216,220,224,228,232,236,240,244,248,252 untag-portlist=0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,64,68,72,76,80,84,88,92,96,100,104,108,112,116,120,124,128,132,136,140,144,148,152,156,160,164,168,172,176,180,184,188,192,196,200,204,208,212,216,220,224,228,232,236,240,244,248,252
+

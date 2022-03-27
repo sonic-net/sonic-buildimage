@@ -1,0 +1,16 @@
+{
+    "Part Number": "PIBC",
+    "Diag Version": "1.0.0",
+    "MAC Addresses": "5",
+    "Manufacture Country": "CHN",
+    "Manufacture Date": "08/28/2023 01:01:01",
+    "Label Revision": "R01",
+    "Vendor Name": "Embedway",
+    "Serial Number": "ESX888",
+    "Platform Name": "x86_64-embedway_esx25600_64d-r0",
+    "Product Name": "ESX25600",
+    "Device Version": "8",
+    "ONIE Version": "2023.08-dirty",
+    "Base MAC Address": "02:88:22:03:80:CC",
+    "Manufacturer": "Embedway"
+}

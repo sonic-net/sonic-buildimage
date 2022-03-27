@@ -1,0 +1,6 @@
+{
+    "name": "pcie-test",
+    "description": "Check PCIe devices",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "smoke"]
+}

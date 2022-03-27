@@ -1,0 +1,6 @@
+{
+    "name": "fpga-firmware-program-test",
+    "description": "fpga firmware program test",
+    "type": "manual",
+    "tags": ["manufacture", "development"]
+}

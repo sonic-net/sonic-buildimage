@@ -1,0 +1,20 @@
+{
+    "name": "tlv-eeprom-test",
+    "description": "Test system TLV EEPROM",
+    "type": "auto",
+    "tags": ["production", "delivery"],
+    "expectation": {
+        "override": "enable",
+        "Serial Number": {
+            "type": "string",
+            "prefix": "R1241FCL",
+            "subfix": "none",
+            "keywords": [],
+            "length": 19
+        },
+        "Part Number": {
+            "type": "regex",
+            "pattern": "R1241-F[A-Z]{4}-[0-9]{2}"
+        }
+    }
+}

@@ -1,0 +1,10 @@
+# enable platform-service
+depmod -a
+
+systemctl enable pddf-platform-init.service
+systemctl start pddf-platform-init.service
+systemctl enable pddf-s3ip-init.service
+systemctl start pddf-s3ip-init.service
+
+systemctl enable embedway-common-platform-init.service
+systemctl start embedway-common-platform-init.service

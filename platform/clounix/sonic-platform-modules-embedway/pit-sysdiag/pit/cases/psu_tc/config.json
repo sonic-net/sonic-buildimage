@@ -1,0 +1,6 @@
+{
+    "name": "psu-test",
+    "description": "check psu status",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "power", "emc", "smoke"]
+}

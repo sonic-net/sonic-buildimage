@@ -1,0 +1,6 @@
+{
+    "name": "svid-test",
+    "description": "Switch Chip Voltage Test",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "smoke"]
+}

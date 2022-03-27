@@ -1,0 +1,11 @@
+###############################################################################
+## Monit configuration for syncd container
+## process list:
+##  syncd
+##  dsserve
+###############################################################################
+check program syncd|syncd with path "/usr/bin/process_checker syncd /usr/bin/syncd"
+    if status != 0 for 5 times within 5 cycles then alert repeat every 1 cycles
+
+check program syncd|dsserve with path "/usr/bin/process_checker syncd /usr/bin/dsserve /usr/bin/syncd"
+    if status != 0 for 5 times within 5 cycles then alert repeat every 1 cycles

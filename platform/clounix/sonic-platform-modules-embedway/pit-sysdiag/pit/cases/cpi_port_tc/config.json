@@ -1,0 +1,6 @@
+{
+    "name": "cpi-port-test",
+    "description": "CPI Port Test",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "power", "smoke"]
+}

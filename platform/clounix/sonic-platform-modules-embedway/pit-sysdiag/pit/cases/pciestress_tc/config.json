@@ -1,0 +1,6 @@
+{
+    "name": "pciestress-test",
+    "description": "pcie stress test",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "power", "emc", "stress", "smoke"]
+}

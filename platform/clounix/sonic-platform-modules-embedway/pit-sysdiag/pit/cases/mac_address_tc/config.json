@@ -1,0 +1,6 @@
+{
+    "name": "mac-address-test",
+    "description": "Check mac address",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "emc", "power", "pa", "smoke"]
+}

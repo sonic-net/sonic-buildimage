@@ -1,0 +1,6 @@
+{
+    "name": "cpld-firmware-program-test",
+    "description": "cpld firmware program test",
+    "type": "manual",
+    "tags": ["manufacture", "development"]
+}

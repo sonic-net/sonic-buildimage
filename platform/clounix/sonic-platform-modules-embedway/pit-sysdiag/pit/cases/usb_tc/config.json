@@ -1,0 +1,6 @@
+{
+    "name": "usb-test",
+    "description": "Check USB r/w",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "emc", "pa", "smoke"]
+}

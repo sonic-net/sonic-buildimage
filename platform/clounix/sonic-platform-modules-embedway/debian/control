@@ -1,0 +1,14 @@
+Source: sonic-embedway-platform-modules
+Section: main
+Priority: extra
+Maintainer: Embedway <zhuang.yong@embedway.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: sonic-platform-embedway-esx25600-64d
+Architecture: any
+Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: sonic-platform-embedway-pit-sysdiag
+Architecture: any
+Description: Platform Integration Test System, dedicated to be used in switch system

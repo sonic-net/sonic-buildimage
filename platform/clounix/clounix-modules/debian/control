@@ -1,0 +1,11 @@
+Source: clounix-modules
+Section: main
+Priority: extra
+Maintainer: support <Fanqi Lu@clounix.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: clounix-modules
+Architecture: amd64
+Description: kernel modules for clounix asic
+

@@ -1,0 +1,6 @@
+{
+    "name": "i2c_stress-test",
+    "description": "Stress i2c devices under I2C bus",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "power", "smoke"]
+}

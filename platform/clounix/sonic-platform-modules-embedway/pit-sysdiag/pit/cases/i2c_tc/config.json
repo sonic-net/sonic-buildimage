@@ -1,0 +1,6 @@
+{
+    "name": "i2c-test",
+    "description": "Check i2c devices under I2C bus",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc", "power", "smoke"]
+}

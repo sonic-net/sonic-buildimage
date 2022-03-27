@@ -1,0 +1,6 @@
+{
+    "name": "sfp-stress-tc",
+    "description": "SFP init/deinit and read/write eeprom stress test",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "emc", "power", "pa", "smoke"]
+}
