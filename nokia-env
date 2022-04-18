@@ -1,0 +1,5 @@
+export USERNAME=admin
+export PASSWORD=password
+export DOCKER_EXTRA_OPTS='--registry-mirror=https://docker-registry-remote.artifactory-fpark1.int.net.nokia.com'
+export NOJESSIE=1
+export NOSTRETCH=1
