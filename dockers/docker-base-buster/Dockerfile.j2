@@ -111,6 +111,9 @@ RUN apt-get -y purge   \
 {{ install_debian_packages(docker_base_buster_debs.split(' ')) }}
 {%- endif %}
 
+# Nokia debug
+RUN apt-get -y install strace gdb
+
 # Clean up apt
 # Remove /var/lib/apt/lists/*, could be obsoleted for derived images
 RUN apt-get clean -y                     && \

@@ -345,6 +345,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     linux-sysctl-defaults   \
     logrotate               \
     curl                    \
+    gdb                     \
     kexec-tools             \
     less                    \
     unzip                   \
