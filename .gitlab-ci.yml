@@ -5,7 +5,6 @@ variables:
   GIT_CLEAN_FLAGS: "-ffxd -e fsroot"
   #CI_DEBUG_TRACE: "true"
   HOME: "${CI_PROJECT_DIR}"
-  ENABLE_PRINT_BUILD_TIME: verbose
   SONIC_CONFIG_MAKE_JOBS: 16
   NOJESSIE: 1
   NOSTRETCH: 1
@@ -15,13 +14,17 @@ variables:
   PLUTO_COMMIT_DIR: files/sonic/build/${CI_COMMIT_BRANCH}/${CI_PIPELINE_ID}
   PLUTO_POSTED_LATEST: files/sonic/build/${PLUTO_PARENT_BRANCH}/latest
 
-before_script:
-  - sudo rm -fr fsroot
-  - rm -f .gitconfig && touch $HOME/.gitconfig
-  - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net/".insteadOf "git@gitlabsr.nuq.ion.nokia.net:"
+before_script: |
+  sudo rm -fr fsroot
+  rm -f .gitconfig && touch $HOME/.gitconfig
+  git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net/".insteadOf "git@gitlabsr.nuq.ion.nokia.net:"
   # commit title with things in brackets e.g. "[skip build] some change" will create variables, e.g. skip_build=1
-  - touch .ci-env
-  - echo $CI_COMMIT_TITLE | sed 's,[ -/:],_,g' | awk -v FS='(\\[|\\])' '{if($2!="")print $2"=1"}' > .ci-env
+  touch .ci-env
+  echo $CI_COMMIT_TITLE | sed 's,[ -/:],_,g' | awk -v FS='(\\[|\\])' '{if($2!="")print $2"=1"}' > .ci-env
+  ./.gitlab-ci-submodule-init.sh
+  # always use latest of these submodules
+  pushd altos && git fetch && git reset --hard origin/master && popd
+  pushd src/sonic-mgmt && git fetch && git reset --hard origin/nokia-dev && popd
 
 stages:
   - build
@@ -51,213 +54,203 @@ build:broadcom:
       - version.txt
     expire_in: 1 week
 
+build:marvell-armhf:
+  stage: build
+  tags:
+    - armhf
+  script: |
+    ./.gitlab-ci-submodule-init.sh
+    . .ci-env
+    # schedules can set NO_SKIP_BUILD to force a build to happen
+    if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
+      # skip build and use the latest
+      mkdir -p target
+      curl -o target/sonic-marvell-armhf.bin http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/sonic-marvell-armhf.bin
+    else
+      make init && make configure PLATFORM=marvell-armhf PLATFORM_ARCH=armhf
+      make SONIC_BUILD_JOBS=2 target/sonic-marvell-armhf.bin || \
+      make SONIC_BUILD_JOBS=1 target/sonic-marvell-armhf.bin
+    fi
+  artifacts:
+    name: "$CI_COMMIT_REF_NAME"
+    paths:
+      - target/sonic-marvell-armhf.bin
+    expire_in: 1 week
+
 express:hw:ixre:
   stage: test
   tags:
-    - regress_chassis9
+    - regress_chassis7
   needs:
     - build:broadcom
   only:
     variables:
       - $EXPRESS_HW || $CI_PIPELINE_SOURCE == "push"
-  script:
-    - ./.gitlab-ci-submodule-init.sh
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
-    - ./run_test.sh -i target/sonic-broadcom-dnx.bin -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --no_cleanup
+  script: |
+    docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
+    ./run_test.sh -i target/sonic-broadcom-dnx.bin \
+      -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net \
+      -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --no_cleanup
   artifacts:
     name: "$CI_COMMIT_REF_NAME"
     when: always
     paths:
       - output_files/
+    expire_in: 1 month
+
+express:hw:armhf:
+  stage: test
+  # tags:
+  #   - express_<tbd>
+  needs:
+    - build:marvell-armhf
+  only:
+    variables:
+      - $EXPRESS_HW || $CI_PIPELINE_SOURCE == "push"
+  script: |
+    docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
+    ls -la target/sonic-marvell-armhf.bin
+    # ./run_test.sh -i target/sonic-marvell-armhf.bin \
+    #   -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net \
+    #   -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --no_cleanup
+  artifacts:
+    name: "$CI_COMMIT_REF_NAME"
+    when: always
+    paths:
+      - output_files/
+    expire_in: 1 month
+
+.regress:
+  stage: test
+  needs:
+    - build:broadcom
+  script: |
+    if [ -n "${DELAY_START}" ]; then sleep ${DELAY_START}; fi
+    docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
+    ./run_test.sh -i target/sonic-broadcom-dnx.bin \
+      -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net \
+      -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test \
+      --run_in_order false --topology t2 ${EXTRA_RUN_TEST_ARGS} \
+      --no_cleanup --post_results > ${CI_PROJECT_DIR}/run.log
+  artifacts:
+    name: "$CI_COMMIT_REF_NAME"
+    when: always
+    paths:
+      - output_files/
+      - ${CI_PROJECT_DIR}/run.log      
     expire_in: 1 month
 
 regress:t2:chassis8:
-  stage: test
+  extends: .regress
   tags:
     - sonic_eagle_express
+  variables:
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS: --suite masic
   only:
     variables:
       - $REGRESS_T2_CHASSIS8
-  needs:
-    - build:broadcom
-  script:
-    - ./.gitlab-ci-submodule-init.sh
-    - sleep 600
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
-    - ./run_test.sh -i target/sonic-broadcom-dnx.bin -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --run_in_order false --topology t2 --suite masic --no_cleanup --post_results > ${CI_PROJECT_DIR}/run.log
-  artifacts:
-    name: "$CI_COMMIT_REF_NAME"
-    when: always
-    paths:
-      - output_files/
-      - ${CI_PROJECT_DIR}/run.log      
-    expire_in: 1 month
-
     
 regress:t2:chassis9:
-  stage: test
+  extends: .regress
   tags:
     - regress_chassis9
+  variables:
+    DELAY_START: 300
+    EXTRA_RUN_TEST_ARGS: --suite masic
   only:
     variables:
       - $REGRESS_T2_CHASSIS9
-  needs:
-    - build:broadcom
-  script:
-    - ./.gitlab-ci-submodule-init.sh
-    - sleep 1200
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
-    - ./run_test.sh -i target/sonic-broadcom-dnx.bin -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --topology t2 --suite masic --no_cleanup --post_results > ${CI_PROJECT_DIR}/run.log
-  artifacts:
-    name: "$CI_COMMIT_REF_NAME"
-    when: always
-    paths:
-      - output_files/
-      - ${CI_PROJECT_DIR}/run.log
-    expire_in: 1 month
 
 regress:t2:chassis10:
-  stage: test
+  extends: .regress
   tags:
     - regress_chassis10
+  variables:
+    DELAY_START: 600
+    EXTRA_RUN_TEST_ARGS: --suite masic
   only:
     variables:
       - $REGRESS_T2_CHASSIS10
-  needs:
-    - build:broadcom
-  script:
-    - ./.gitlab-ci-submodule-init.sh
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
-    - ./run_test.sh -i target/sonic-broadcom-dnx.bin -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --topology t2 --suite masic --no_cleanup --post_results > ${CI_PROJECT_DIR}/run.log
-  artifacts:
-    name: "$CI_COMMIT_REF_NAME"
-    when: always
-    paths:
-      - output_files/
-      - ${CI_PROJECT_DIR}/run.log      
-    expire_in: 1 month
 
 regress:t2:chassis11:
-  stage: test
+  extends: .regress
   tags:
     - regress_chassis11
+  variables:
+    DELAY_START: 900
+    EXTRA_RUN_TEST_ARGS: --suite masic
   only:
     variables:
       - $REGRESS_T2_CHASSIS11
-  needs:
-    - build:broadcom
-  script:
-    - ./.gitlab-ci-submodule-init.sh
-    - sleep 1200
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
-    - ./run_test.sh -i target/sonic-broadcom-dnx.bin -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --topology t2 --suite masic --no_cleanup --post_results > ${CI_PROJECT_DIR}/run.log
-  artifacts:
-    name: "$CI_COMMIT_REF_NAME"
-    when: always
-    paths:
-      - output_files/
-      - ${CI_PROJECT_DIR}/run.log
-    expire_in: 1 month
 
 regress:t2nightly:chassis8:
-  stage: test
+  extends: .regress
   tags:
     - sonic_eagle_express
+  variables:
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS: --suite nightly
   only:
     variables:
       - $REGRESS_T2_NIGHTLY_CHASSIS8
-  needs:
-    - build:broadcom
-  script:
-    - ./.gitlab-ci-submodule-init.sh
-    - sleep 600
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
-    - ./run_test.sh -i target/sonic-broadcom-dnx.bin -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --topology t2 --suite nightly --no_cleanup --post_results > ${CI_PROJECT_DIR}/run.log
-  artifacts:
-    name: "$CI_COMMIT_REF_NAME"
-    when: always
-    paths:
-      - output_files/
-      - ${CI_PROJECT_DIR}/run.log      
-    expire_in: 1 month
 
-    
 regress:t2nightly:chassis9:
+  extends: .regress
   stage: test
   tags:
     - regress_chassis9
+  variables:
+    DELAY_START: 300
+    EXTRA_RUN_TEST_ARGS: --suite nightly
   only:
     variables:
       - $REGRESS_T2_NIGHTLY_CHASSIS9
-  needs:
-    - build:broadcom
-  script:
-    - ./.gitlab-ci-submodule-init.sh
-    - sleep 1200
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
-    - ./run_test.sh -i target/sonic-broadcom-dnx.bin -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --topology t2 --suite nightly --no_cleanup --post_results > ${CI_PROJECT_DIR}/run.log
-  artifacts:
-    name: "$CI_COMMIT_REF_NAME"
-    when: always
-    paths:
-      - output_files/
-      - ${CI_PROJECT_DIR}/run.log
-    expire_in: 1 month
 
 regress:t2nightly:chassis11:
-  stage: test
+  extends: .regress
   tags:
     - regress_chassis11
+  variables:
+    DELAY_START: 900
+    EXTRA_RUN_TEST_ARGS: --suite nightly
   only:
     variables:
       - $REGRESS_T2_NIGHTLY_CHASSIS11
-  needs:
-    - build:broadcom
-  script:
-    - ./.gitlab-ci-submodule-init.sh
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
-    - ./run_test.sh -i target/sonic-broadcom-dnx.bin -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --topology t2 --suite nightly --no_cleanup --post_results > ${CI_PROJECT_DIR}/run.log
-  artifacts:
-    name: "$CI_COMMIT_REF_NAME"
-    when: always
-    paths:
-      - output_files/
-      - ${CI_PROJECT_DIR}/run.log
-    expire_in: 1 month
 
-post:
+.post:
   stage: post
   tags:
     - post
-  # only:
-  #   refs:
-  #     - nokia-master
+  script: |
+    . .ci-env
+    if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
+      echo "skipping post"
+    else
+        # with all express passed, we post images and update the symlink latest
+      mkdir -p /var/www/html/${PLUTO_COMMIT_DIR}
+      cp -a target/sonic-*.bin /var/www/html/${PLUTO_COMMIT_DIR}/
+      if [ -e version.txt ] ; then cp -a version.txt /var/www/html/${PLUTO_COMMIT_DIR}/ ; fi
+      eval ${BUILD_REASON}
+      echo "sonic_commitid=${CI_COMMIT_SHORT_SHA}" > /var/www/html/${PLUTO_COMMIT_DIR}/build-info.txt
+      if [ "${SRL_NDK_JOBID}" != "" ] ; then
+         echo "srl_ndk_job_url=https://gitlabsr.nuq.ion.nokia.net/sr/srlinux/-/jobs/${SRL_NDK_JOBID}" >> /var/www/html/${PLUTO_COMMIT_DIR}/build-info.txt
+      fi
+      # make latest link and remove anything older than a week
+      cd /var/www/html/${PLUTO_BRANCH_DIR} && \
+        rm -f latest && ln -sf ${CI_PIPELINE_ID} latest && \
+        find . -maxdepth 1 -type d -ctime +7 -exec rm -fr {} \+
+    fi
+
+post:ixre:
+  extends: .post
   needs:
     - build:broadcom
-  script:
-    - . .ci-env
-    - if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
-    -   echo "skipping post"
-    - else
-        # with all express passed, we post images and update the symlink latest
-    -   mkdir -p /var/www/html/${PLUTO_COMMIT_DIR}
-    -   cp -a target/sonic-broadcom-dnx.bin /var/www/html/${PLUTO_COMMIT_DIR}/
-    -   if [ -e target/sonic-vs.img.gz ]; then
-    -     cp -a target/sonic-vs.img.gz /var/www/html/${PLUTO_COMMIT_DIR}/
-    -   fi
-    -   cp -a version.txt /var/www/html/${PLUTO_COMMIT_DIR}/
-    -   eval ${BUILD_REASON}
-    -   echo "sonic_commitid=${CI_COMMIT_SHORT_SHA}" > /var/www/html/${PLUTO_COMMIT_DIR}/build-info.txt
-    -   if [ "${SRL_NDK_JOBID}" != "" ] ; then
-    -      echo "srl_ndk_job_url=https://gitlabsr.nuq.ion.nokia.net/sr/srlinux/-/jobs/${SRL_NDK_JOBID}" >> /var/www/html/${PLUTO_COMMIT_DIR}/build-info.txt
-    -   fi
-    -   cd /var/www/html/${PLUTO_BRANCH_DIR} && rm -f latest && ln -sf ${CI_PIPELINE_ID} latest
-    - fi
+
+post:armhf:
+  extends: .post
+  needs:
+    - build:marvell-armhf

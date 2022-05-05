@@ -5,4 +5,4 @@ source nokia-env
 
 make init
 make PLATFORM=broadcom configure
-make target/sonic-broadcom.bin || ( rm -f target/*.bin && make target/sonic-broadcom.bin )
+make SONIC_BUILD_JOBS=4 target/sonic-broadcom.bin || ( rm -f target/*.bin && make target/sonic-broadcom.bin )

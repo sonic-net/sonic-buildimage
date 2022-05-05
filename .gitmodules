@@ -90,6 +90,12 @@
 [submodule "src/linkmgrd"]
 	path = src/linkmgrd
 	url = https://github.com/sonic-net/sonic-linkmgrd.git
+[submodule "altos"]
+	path = altos
+	url = git@gitlabsr.nuq.ion.nokia.net:sr/linux/sonic/altos.git
+[submodule "src/sonic-mgmt"]
+	path = src/sonic-mgmt
+	url = git@gitlabsr.nuq.ion.nokia.net:sr/linux/sonic/sonic-mgmt.git
 [submodule "src/sonic-p4rt/sonic-pins"]
 	path = src/sonic-p4rt/sonic-pins
 	url = https://github.com/sonic-net/sonic-pins.git
