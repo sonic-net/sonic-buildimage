@@ -54,8 +54,28 @@ build:broadcom:
       - version.txt
     expire_in: 1 week
 
+build:docker-syncd-brcm-rpc:
+  stage: build
+  script: |
+    ./.gitlab-ci-submodule-init.sh
+    . .ci-env
+    if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
+      # skip build and use the latest
+      mkdir -p target
+      curl -o target/docker-syncd-brcm-dnx-rpc.gz http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/docker-syncd-brcm-dnx-rpc.gz
+    else
+      ./build-syncd-rpc.sh
+    fi
+  artifacts:
+    name: "$CI_COMMIT_REF_NAME"
+    paths:
+      - target/docker-syncd-brcm*rpc.gz
+    expire_in: 1 week
+
 build:marvell-armhf:
   stage: build
+  rules:
+    - if: $BUILD_REASON !~ /SRL_NDK_JOBID/
   tags:
     - armhf
   script: |
@@ -103,11 +123,10 @@ express:hw:armhf:
   stage: test
   # tags:
   #   - express_<tbd>
+  rules:
+    - if: $BUILD_REASON !~ /SRL_NDK_JOBID/
   needs:
     - build:marvell-armhf
-  only:
-    variables:
-      - $EXPRESS_HW || $CI_PIPELINE_SOURCE == "push"
   script: |
     docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
@@ -232,7 +251,10 @@ regress:t2nightly:chassis11:
     else
         # with all express passed, we post images and update the symlink latest
       mkdir -p /var/www/html/${PLUTO_COMMIT_DIR}
-      cp -a target/sonic-*.bin /var/www/html/${PLUTO_COMMIT_DIR}/
+      for f in `ls target/sonic-*.bin` ; do \
+        cp -a $f /var/www/html/${PLUTO_COMMIT_DIR}/ ; done
+      if [ -e target/docker-syncd-brcm-dnx-rpc.gz ] ; then \
+        cp -a target/docker-syncd-brcm-dnx-rpc.gz /var/www/html/${PLUTO_COMMIT_DIR}/ ; fi
       if [ -e version.txt ] ; then cp -a version.txt /var/www/html/${PLUTO_COMMIT_DIR}/ ; fi
       eval ${BUILD_REASON}
       echo "sonic_commitid=${CI_COMMIT_SHORT_SHA}" > /var/www/html/${PLUTO_COMMIT_DIR}/build-info.txt
@@ -250,7 +272,14 @@ post:ixre:
   needs:
     - build:broadcom
 
+post:docker-syncd-brcm-rpc:
+  extends: .post
+  needs:
+    - build:docker-syncd-brcm-rpc
+
 post:armhf:
   extends: .post
+  rules:
+    - if: $BUILD_REASON !~ /SRL_NDK_JOBID/
   needs:
     - build:marvell-armhf
