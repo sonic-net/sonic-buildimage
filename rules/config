@@ -125,6 +125,9 @@ DEFAULT_VS_PREPARE_MEM = yes
 # INCLUDE_SYSTEM_TELEMETRY - build docker-sonic-telemetry for system telemetry support
 INCLUDE_SYSTEM_TELEMETRY = y
 
+# INCLUDE_SYSTEM_GNMI - build docker-sonic-gnmi for system gnmi support
+INCLUDE_SYSTEM_GNMI = y
+
 # INCLUDE_ICCPD - build docker-iccpd for mclag support
 INCLUDE_ICCPD = n
 
@@ -139,7 +142,7 @@ INCLUDE_MGMT_FRAMEWORK = y
 
 # ENABLE_HOST_SERVICE_ON_START - enable sonic-host-server for mgmt-framework and/or
 # telemetry containers to access host functionality by default
-ENABLE_HOST_SERVICE_ON_START = n
+ENABLE_HOST_SERVICE_ON_START = y
 
 # INCLUDE_RESTAPI - build docker-sonic-restapi for configuring the switch using REST APIs
 INCLUDE_RESTAPI = n

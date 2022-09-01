@@ -103,12 +103,14 @@
 [submodule "src/ptf-py3"]
 	path = src/ptf-py3
 	url = https://github.com/p4lang/ptf.git
+[submodule "src/sonic-gnmi"]
+	path = src/sonic-gnmi
+	url = https://github.com/ganglyu/sonic-gnmi.git
+	branch = gnmi_init_draft
 [submodule "src/dhcprelay"]
 	path = src/dhcprelay
 	url = https://github.com/sonic-net/sonic-dhcp-relay.git
 [submodule "src/sonic-host-services"]
 	path = src/sonic-host-services
-	url = https://github.com/sonic-net/sonic-host-services
-[submodule "src/sonic-gnmi"]
-	path = src/sonic-gnmi
-	url = https://github.com/sonic-net/sonic-gnmi.git
+	url = https://github.com/ganglyu/sonic-host-services.git
+	branch = update_dbus

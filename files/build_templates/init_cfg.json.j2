@@ -53,6 +53,7 @@
 {%- if include_sflow == "y" %}{% do features.append(("sflow", "disabled", false, "enabled")) %}{% endif %}
 {%- if include_macsec == "y" %}{% do features.append(("macsec", "disabled", false, "enabled")) %}{% endif %}
 {%- if include_system_telemetry == "y" %}{% do features.append(("telemetry", "enabled", true, "enabled")) %}{% endif %}
+{%- if include_system_gnmi == "y" %}{% do features.append(("gnmi", "enabled", true, "enabled")) %}{% endif %}
     "FEATURE": {
 {# has_timer field if set, will start the feature systemd .timer unit instead of .service unit #}
 {%- for feature, state, has_timer, autorestart in features %}
@@ -69,7 +70,7 @@
             "check_up_status" : "false",
 {%- endif %}
 {%- if include_kubernetes == "y" %}
-{%- if feature in ["lldp", "pmon", "radv", "snmp", "telemetry"] %}
+{%- if feature in ["lldp", "pmon", "radv", "snmp", "telemetry", "gnmi"] %}
             "set_owner": "kube", {% else %}
             "set_owner": "local", {% endif %} {% endif %}
             "high_mem_alert": "disabled"

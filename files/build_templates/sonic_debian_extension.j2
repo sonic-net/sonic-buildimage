@@ -871,6 +871,11 @@ sudo cp $BUILD_TEMPLATES/telemetry.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "telemetry.timer" | sudo tee -a $GENERATED_SERVICE_FILE
 {% endif %}
 
+{% if include_system_gnmi == 'y' %}
+sudo cp $BUILD_TEMPLATES/gnmi.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+echo "gnmi.timer" | sudo tee -a $GENERATED_SERVICE_FILE
+{% endif %}
+
 {% if include_mgmt_framework == 'y' %}
 sudo cp $BUILD_TEMPLATES/mgmt-framework.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "mgmt-framework.timer" | sudo tee -a $GENERATED_SERVICE_FILE

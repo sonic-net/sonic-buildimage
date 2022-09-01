@@ -1,0 +1,5 @@
+{
+    "certs": {% if "certs" in TELEMETRY.keys() %}{{ TELEMETRY["certs"] }}{% else %}""{% endif %},
+    "gnmi" : {% if "gnmi" in TELEMETRY.keys() %}{{ TELEMETRY["gnmi"] }}{% else %}""{% endif %},
+    "x509" : {% if "x509" in DEVICE_METADATA.keys() %}{{ DEVICE_METADATA["x509"] }}{% else %}""{% endif %}
+}

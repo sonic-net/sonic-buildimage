@@ -313,7 +313,7 @@ check_all_config_db_present()
 do_config_migration()
 {
     # Identify list of files to migrate
-    copy_list="minigraph.xml snmp.yml acl.json port_config.json frr telemetry"
+    copy_list="minigraph.xml snmp.yml acl.json port_config.json frr telemetry gnxi"
 
     # Migrate all configuration files from old to new
     copy_config_files_and_directories $copy_list

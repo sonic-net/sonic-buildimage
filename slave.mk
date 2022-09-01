@@ -144,6 +144,10 @@ ifeq ($(SONIC_INCLUDE_SYSTEM_TELEMETRY),y)
 INCLUDE_SYSTEM_TELEMETRY = y
 endif
 
+ifeq ($(SONIC_INCLUDE_SYSTEM_GNMI),y)
+INCLUDE_SYSTEM_GNMI = y
+endif
+
 ifeq ($(SONIC_INCLUDE_RESTAPI),y)
 INCLUDE_RESTAPI = y
 endif
@@ -377,6 +381,7 @@ $(info "VS_PREPARE_MEM"                  : "$(VS_PREPARE_MEM)")
 $(info "INCLUDE_MGMT_FRAMEWORK"          : "$(INCLUDE_MGMT_FRAMEWORK)")
 $(info "INCLUDE_ICCPD"                   : "$(INCLUDE_ICCPD)")
 $(info "INCLUDE_SYSTEM_TELEMETRY"        : "$(INCLUDE_SYSTEM_TELEMETRY)")
+$(info "INCLUDE_SYSTEM_GNMI"             : "$(INCLUDE_SYSTEM_GNMI)")
 $(info "ENABLE_HOST_SERVICE_ON_START"    : "$(ENABLE_HOST_SERVICE_ON_START)")
 $(info "INCLUDE_RESTAPI"                 : "$(INCLUDE_RESTAPI)")
 $(info "INCLUDE_SFLOW"                   : "$(INCLUDE_SFLOW)")
@@ -1175,6 +1180,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export enable_dhcp_graph_service="$(ENABLE_DHCP_GRAPH_SERVICE)"
 	export enable_ztp="$(ENABLE_ZTP)"
 	export include_system_telemetry="$(INCLUDE_SYSTEM_TELEMETRY)"
+	export include_system_gnmi="$(INCLUDE_SYSTEM_GNMI)"
 	export include_restapi="$(INCLUDE_RESTAPI)"
 	export include_nat="$(INCLUDE_NAT)"
 	export include_p4rt="$(INCLUDE_P4RT)"
