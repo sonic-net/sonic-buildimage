@@ -1,0 +1,12 @@
+!
+! template: bgpd/templates/msft.general/v6.vm/instance.conf.j2
+!
+  address-family ipv6 unicast
+    neighbor {{ neighbor_addr }} route-map FROM_TIER0_V6 in
+    neighbor {{ neighbor_addr }} route-map TO_TIER0_V6 out
+    neighbor {{ neighbor_addr }} soft-reconfiguration inbound
+    neighbor {{ neighbor_addr }} activate
+    exit-address-family
+!
+! end of template: bgpd/templates/msft.general/v6.vm/instance.conf.j2
+!
