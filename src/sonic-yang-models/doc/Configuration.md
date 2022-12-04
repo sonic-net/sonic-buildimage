@@ -3,70 +3,71 @@
 Table of Contents
 =================
 
-   * [Introduction](#introduction)
-   * [Configuration](#configuration)
-   * [<strong>Config Load and Save</strong>](#config-load-and-save)
-         * [Incremental Configuration](#incremental-configuration)
-   * [<strong>Redis and Json Schema</strong>](#redis-and-json-schema)
-         * [ACL and Mirroring](#acl-and-mirroring)
-         * [BGP Device Global](#bgp-device-global)
-         * [BGP Sessions](#bgp-sessions)
-         * [BUFFER_PG](#buffer_pg)
-         * [Buffer pool](#buffer-pool)
-         * [Buffer profile](#buffer-profile)
-         * [Buffer queue](#buffer-queue)
-         * [Buffer port ingress profile list](#buffer-port-ingress-profile-list)
-         * [Buffer port egress profile list](#buffer-port-egress-profile-list)
-         * [Cable length](#cable-length)
-         * [COPP_TABLE](#copp_table)
-         * [Console](#console)
-         * [CRM](#crm)
-         * [Data Plane L3 Interfaces](#data-plane-l3-interfaces)
-         * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
-         * [Device Metadata](#device-metadata)
-         * [Device neighbor metada](#device-neighbor-metada)
-         * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
-         * [FLEX_COUNTER_TABLE](#flex_counter_table)
-         * [KDUMP](#kdump)
-         * [Kubernetes Master](#kubernetes-master)
-         * [L2 Neighbors](#l2-neighbors)
-         * [Loopback Interface](#loopback-interface)
-         * [LOSSLESS_TRAFFIC_PATTERN](#LOSSLESS_TRAFFIC_PATTERN)
-         * [Management Interface](#management-interface)
-         * [Management port](#management-port)
-         * [Management VRF](#management-vrf)
-         * [MAP_PFC_PRIORITY_TO_QUEUE](#map_pfc_priority_to_queue)
-         * [MUX_CABLE](#muxcable)
-         * [NTP Global Configuration](#ntp-global-configuration)
-         * [NTP and SYSLOG servers](#ntp-and-syslog-servers)
-         * [Peer Switch](#peer-switch)
-         * [Policer](#policer)
-         * [Port](#port)
-         * [Port Channel](#port-channel)
-         * [Portchannel member](#portchannel-member)
-         * [Scheduler](#scheduler)
-         * [Port QoS Map](#port-qos-map)
-         * [Queue](#queue)
-         * [Restapi](#restapi)
-         * [SYSLOG Rate Limit](#syslog-rate-limit)
-         * [Tacplus Server](#tacplus-server)
-         * [TC to Priority group map](#tc-to-priority-group-map)
-         * [TC to Queue map](#tc-to-queue-map)
-         * [Telemetry](#telemetry)
-         * [Versions](#versions)
-         * [VLAN](#vlan)
-         * [VLAN_MEMBER](#vlan_member)
-         * [VOQ Inband Interface](#voq-inband-interface) 
-         * [VXLAN](#vxlan)   
+   * [Introduction](#introduction)  
+   * [Configuration](#configuration)  
+   * [<strong>Config Load and Save</strong>](#config-load-and-save)  
+         * [Incremental Configuration](#incremental-configuration)  
+   * [<strong>Redis and Json Schema</strong>](#redis-and-json-schema)  
+         * [ACL and Mirroring](#acl-and-mirroring)  
+         * [BGP Device Global](#bgp-device-global)  
+         * [BGP Sessions](#bgp-sessions)  
+         * [BUFFER_PG](#buffer_pg)  
+         * [Buffer pool](#buffer-pool)  
+         * [Buffer profile](#buffer-profile)  
+         * [Buffer queue](#buffer-queue)  
+         * [Buffer port ingress profile list](#buffer-port-ingress-profile-list)  
+         * [Buffer port egress profile list](#buffer-port-egress-profile-list)  
+         * [Cable length](#cable-length)  
+         * [COPP_TABLE](#copp_table)  
+         * [Console](#console)  
+         * [CRM](#crm)  
+         * [Data Plane L3 Interfaces](#data-plane-l3-interfaces)  
+         * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)  
+         * [Device Metadata](#device-metadata)  
+         * [Device neighbor metada](#device-neighbor-metada)  
+         * [DSCP_TO_TC_MAP](#dscp_to_tc_map)  
+         * [FLEX_COUNTER_TABLE](#flex_counter_table)  
+         * [KDUMP](#kdump)  
+         * [Kubernetes Master](#kubernetes-master)  
+         * [L2 Neighbors](#l2-neighbors)  
+         * [Loopback Interface](#loopback-interface)  
+         * [LOSSLESS_TRAFFIC_PATTERN](#LOSSLESS_TRAFFIC_PATTERN)  
+         * [Management Interface](#management-interface)  
+         * [Management port](#management-port)  
+         * [Management VRF](#management-vrf)  
+         * [MAP_PFC_PRIORITY_TO_QUEUE](#map_pfc_priority_to_queue)  
+         * [MUX_CABLE](#muxcable)  
+         * [NTP Global Configuration](#ntp-global-configuration)  
+         * [NTP and SYSLOG servers](#ntp-and-syslog-servers)  
+         * [Peer Switch](#peer-switch)  
+         * [Policer](#policer)   
+         * [Port](#port)   
+         * [Port Channel](#port-channel)  
+         * [Portchannel member](#portchannel-member)  
+         * [Scheduler](#scheduler)  
+         * [Port QoS Map](#port-qos-map)  
+         * [Queue](#queue)  
+         * [Syslog Rate Limit](#syslog-rate-limit)  
+         * [Sflow](#sflow)  
+         * [Restapi](#restapi)  
+         * [Tacplus Server](#tacplus-server)    
+         * [TC to Priority group map](#tc-to-priority-group-map)  
+         * [TC to Queue map](#tc-to-queue-map)    
+         * [Telemetry](#telemetry)  
+         * [Versions](#versions)  
+         * [VLAN](#vlan)   
+         * [VLAN_MEMBER](#vlan_member)  
+         * [VOQ Inband Interface](#voq-inband-interface)  
+         * [VXLAN](#vxlan)  
          * [Virtual router](#virtual-router)  
          * [LOGGER](#logger)           
          * [WRED_PROFILE](#wred_profile)  
          * [PASSWORD_HARDENING](#password_hardening)  
          * [SYSTEM_DEFAULTS table](#systemdefaults-table)
-   * [For Developers](#for-developers)
+   * [For Developers](#for-developers)  
       * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
       * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
-
+ 
 
 
 # Introduction
@@ -1455,6 +1456,36 @@ name as object key and member list as attribute.
     }
 }
 ```
+### Sflow
+
+The below are the tables and their schema for SFLOW feature
+
+SFLOW
+
+| Field            | Description                                                                             | Mandatory   | Default   | Reference                                 |
+|------------------|-----------------------------------------------------------------------------------------|-------------|-----------|-------------------------------------------|
+| admin_state      | Global sflow admin state                                                                |             | down      |                                           |
+| polling_interval | The interval within which sFlow data is collected and sent to the configured collectors |             | 20        |                                           |
+| agent_id         | Interface name                                                                          |             |           | PORT:name,PORTCHANNEL:name,MGMT_PORT:name, VLAN:name |
+
+SFLOW_SESSION
+
+key - port
+| Field       | Description                                                                                                             | Mandatory   | Default   | Reference   |
+|-------------|-------------------------------------------------------------------------------------------------------------------------|-------------|-----------|-------------|
+| port        | Sets sflow session table attributes for either all interfaces or a specific Ethernet interface.                         |             |           | PORT:name   |
+| admin_state | Per port sflow admin state                                                                                              |             | up        |             |
+| sample_rate | Sets the packet sampling rate.  The rate is expressed as an integer N, where the intended sampling rate is 1/N packets. |             |           |             |
+
+SFLOW_COLLECTOR
+
+key - name
+| Field          | Description                                                                             | Mandatory   | Default   | Reference   |
+|----------------|-----------------------------------------------------------------------------------------|-------------|-----------|-------------|
+| name           | Name of the Sflow collector                                                             |             |           |             |
+| collector_ip   | IPv4/IPv6 address of the Sflow collector                                                | true        |           |             |
+| collector_port | Destination L4 port of the Sflow collector                                              |             | 6343      |             |
+| collector_vrf  | Specify the Collector VRF. In this revision, it is either default VRF or Management VRF.|             |           |             |
 
 ### Syslog Rate Limit
 

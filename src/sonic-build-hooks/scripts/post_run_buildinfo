@@ -1,12 +1,14 @@
 #!/bin/bash
 
+IMAGENAME=$1
+
 . /usr/local/share/buildinfo/scripts/buildinfo_base.sh
 
 # Collect the version files
 collect_version_files $POST_VERSION_PATH
 
-[ -d $BUILD_VERSION_PATH ] && [ ! -z "$(ls -A $BUILD_VERSION_PATH)" ] && cp -rf $BUILD_VERSION_PATH/* $POST_VERSION_PATH
-rm -rf $BUILD_VERSION_PATH/*
+#Save the cache file for exporting it to host.
+tar -C ${PKG_CACHE_PATH} --exclude=cache.tgz -zcvf /cache.tgz .
 
 # Disable the build hooks
 symlink_build_hooks -d

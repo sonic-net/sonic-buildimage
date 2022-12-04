@@ -1,9 +1,9 @@
 '''
 listen for the SFP change event and return to chassis.
 '''
-import sys
 import time
 from sonic_py_common import logger
+from sonic_py_common.general import getstatusoutput_noshell
 
 smbus_present = 1
 
@@ -11,11 +11,6 @@ try:
     import smbus
 except ImportError as e:
     smbus_present = 0
-
-if sys.version_info[0] < 3:
-    import commands as cmd
-else:
-    import subprocess as cmd
 
 # system level event/error
 EVENT_ON_ALL_SFP = '-1'
@@ -51,7 +46,7 @@ class sfp_event:
     def _get_transceiver_status(self):
         if smbus_present == 0:
             sonic_logger.log_info("  PMON - smbus ERROR - DEBUG sfp_event   ")
-            cmdstatus, sfpstatus = cmd.getstatusoutput('sudo i2cget -y 0 0x41 0x3')
+            cmdstatus, sfpstatus = getstatusoutput_noshell(['sudo', 'i2cget', '-y', '0', '0x41', '0x3'])
             sfpstatus = int(sfpstatus, 16)
         else:
             bus = smbus.SMBus(0)

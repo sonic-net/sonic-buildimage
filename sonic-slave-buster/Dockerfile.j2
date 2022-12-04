@@ -599,7 +599,7 @@ RUN add-apt-repository \
            $(lsb_release -cs) \
            stable"
 RUN apt-get update
-RUN apt-get install -y docker-ce=5:18.09.5~3-0~debian-buster docker-ce-cli=5:18.09.5~3-0~debian-buster
+RUN apt-get install -y docker-ce=5:20.10.21~3-0~debian-buster docker-ce-cli=5:20.10.21~3-0~debian-buster
 RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 

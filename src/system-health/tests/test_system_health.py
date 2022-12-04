@@ -457,7 +457,7 @@ def test_config():
 
     assert config.get_led_color('fault') == 'red'
     assert config.get_led_color('normal') == 'green'
-    assert config.get_led_color('booting') == 'orange_blink'
+    assert config.get_led_color('booting') == 'red'
 
     config._last_mtime  = 1
     config._config_file = 'notExistFile'
@@ -530,10 +530,10 @@ def test_manager(mock_hw_info, mock_service_info, mock_udc_info):
     assert stat['Internal']['UserDefinedChecker - some check']['status'] == 'Not OK'
 
     chassis.set_status_led.side_effect = NotImplementedError()
-    manager._set_system_led(chassis, manager.config, 'normal')
+    manager._set_system_led(chassis)
 
     chassis.set_status_led.side_effect = RuntimeError()
-    manager._set_system_led(chassis, manager.config, 'normal')
+    manager._set_system_led(chassis)
 
 def test_utils():
     output = utils.run_command(['some', 'invalid', 'command'])
@@ -600,7 +600,7 @@ def test_get_app_ready_status(mock_config_db, mock_run, mock_docker_client):
             'has_global_scope': 'True',
             'has_per_asic_scope': 'False',
             'check_up_status': 'True'
-        },   
+        },
         'snmp': {
             'state': 'enabled',
             'has_global_scope': 'True',
@@ -691,10 +691,10 @@ def test_get_all_system_status_not_ok():
     result = sysmon.get_all_system_status()
     print("result:{}".format(result))
     assert result == 'DOWN'
-    
+
 def test_post_unit_status():
     sysmon = Sysmonitor()
-    sysmon.post_unit_status("mock_bgp", 'OK', 'Down', 'mock reason', '-') 
+    sysmon.post_unit_status("mock_bgp", 'OK', 'Down', 'mock reason', '-')
     result = swsscommon.SonicV2Connector.get_all(MockConnector, 0, 'ALL_SERVICE_STATUS|mock_bgp')
     print(result)
     assert result['service_status'] == 'OK'
@@ -703,7 +703,7 @@ def test_post_unit_status():
 
 def test_post_system_status():
     sysmon = Sysmonitor()
-    sysmon.post_system_status("UP") 
+    sysmon.post_system_status("UP")
     result = swsscommon.SonicV2Connector.get(MockConnector, 0, "SYSTEM_READY|SYSTEM_STATE", 'Status')
     print("post system status result:{}".format(result))
     assert result == "UP"
@@ -721,7 +721,7 @@ def test_publish_system_status():
 @patch('health_checker.sysmonitor.Sysmonitor.publish_system_status', test_publish_system_status())
 def test_update_system_status():
     sysmon = Sysmonitor()
-    sysmon.update_system_status() 
+    sysmon.update_system_status()
     result = swsscommon.SonicV2Connector.get(MockConnector, 0, "SYSTEM_READY|SYSTEM_STATE", 'Status')
     assert result == "UP"
 

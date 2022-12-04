@@ -9,10 +9,10 @@
 
 try:
     import os
-    import sys
     import subprocess
     import ntpath
     from sonic_platform_base.component_base import ComponentBase
+    from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_noshell_pipe
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -22,11 +22,6 @@ try:
 except ImportError as e:
     smbus_present = 0
 
-if sys.version_info[0] < 3:
-    import commands as cmd
-else:
-    import subprocess as cmd
-
 
 class Component(ComponentBase):
     """Nokia platform-specific Component class"""
@@ -35,29 +30,20 @@ class Component(ComponentBase):
         ["System-CPLD", "Used for managing SFPs, LEDs, PSUs and FANs "],
         ["U-Boot", "Performs initialization during booting"],
     ]
-    CPLD_UPDATE_COMMAND = 'cp /usr/sbin/vme /tmp; cp {} /tmp; cd /tmp; ./vme {};'
+    CPLD_UPDATE_COMMAND1 = ['cp', '/usr/sbin/vme', '/tmp']
+    CPLD_UPDATE_COMMAND2 = ['cp', '', '/tmp']
+    CPLD_UPDATE_COMMAND3 = ['cd', '/tmp']
+    CPLD_UPDATE_COMMAND4 = ['./vme', '']
 
     def __init__(self, component_index):
         self.index = component_index
         self.name = self.CHASSIS_COMPONENTS[self.index][0]
         self.description = self.CHASSIS_COMPONENTS[self.index][1]
 
-    def _get_command_result(self, cmdline):
-        try:
-            proc = subprocess.Popen(cmdline.split(), stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT)
-            stdout = proc.communicate()[0]
-            proc.wait()
-            result = stdout.rstrip('\n')
-        except OSError:
-            result = None
-
-        return result
-
     def _get_cpld_version(self, cpld_number):
 
         if smbus_present == 0:
-            cmdstatus, cpld_version = cmd.getstatusoutput('sudo i2cget -y 0 0x41 0x2')
+            cmdstatus, cpld_version = getstatusoutput_noshell(['sudo', 'i2cget', '-y', '0', '0x41', '0x2'])
         else:
             bus = smbus.SMBus(0)
             DEVICE_ADDRESS = 0x41
@@ -144,7 +130,10 @@ class Component(ComponentBase):
             return self._get_cpld_version(self.index)
 
         if self.index == 1:
-            cmdstatus, uboot_version = cmd.getstatusoutput('grep --null-data U-Boot /dev/mtd0ro|head -1 | cut -d" " -f2-4')
+            cmd1 = ['grep', '--null-data', 'U-Boot', '/dev/mtd0ro']
+            cmd2 = ['head', '-1']
+            cmd3 = ['cut', '-d', ' ', '-f2-4']
+            cmdstatus, uboot_version = getstatusoutput_noshell_pipe(cmd1, cmd2, cmd3)
             return uboot_version
 
     def install_firmware(self, image_path):
@@ -165,12 +154,16 @@ class Component(ComponentBase):
             print("ERROR: the cpld image {} doesn't exist ".format(image_path))
             return False
 
-        cmdline = self.CPLD_UPDATE_COMMAND.format(image_path, image_name)
+        self.CPLD_UPDATE_COMMAND2[1] = image_path
+        self.CPLD_UPDATE_COMMAND4[1] = image_name
 
         success_flag = False
-
-        try:
-            subprocess.check_call(cmdline, stderr=subprocess.STDOUT, shell=True)
+ 
+        try:   
+            subprocess.check_call(self.CPLD_UPDATE_COMMAND1, stderr=subprocess.STDOUT)
+            subprocess.check_call(self.CPLD_UPDATE_COMMAND2, stderr=subprocess.STDOUT)
+            subprocess.check_call(self.CPLD_UPDATE_COMMAND3, stderr=subprocess.STDOUT)
+            subprocess.check_call(self.CPLD_UPDATE_COMMAND4, stderr=subprocess.STDOUT)
             success_flag = True
         except subprocess.CalledProcessError as e:
             print("ERROR: Failed to upgrade CPLD: rc={}".format(e.returncode))

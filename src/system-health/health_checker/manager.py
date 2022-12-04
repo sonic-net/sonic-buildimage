@@ -3,14 +3,13 @@ from .health_checker import HealthChecker
 from .service_checker import ServiceChecker
 from .hardware_checker import HardwareChecker
 from .user_defined_checker import UserDefinedChecker
+from . import utils
 
 
 class HealthCheckerManager(object):
     """
     Manage all system health checkers and system health configuration.
     """
-    boot_timeout = None
-
     def __init__(self):
         self._checkers = []
         self.config = Config()
@@ -42,9 +41,7 @@ class HealthCheckerManager(object):
                 checker = UserDefinedChecker(udc)
                 self._do_check(checker, stats)
 
-        led_status = 'normal' if HealthChecker.summary == HealthChecker.STATUS_OK else 'fault'
-        self._set_system_led(chassis, self.config, led_status)
-
+        self._set_system_led(chassis)
         return stats
 
     def _do_check(self, checker, stats):
@@ -75,10 +72,22 @@ class HealthCheckerManager(object):
             else:
                 stats['Internal'].update(entry)
 
-    def _set_system_led(self, chassis, config, status):
+    def _set_system_led(self, chassis):
         try:
-            chassis.set_status_led(config.get_led_color(status))
+            chassis.set_status_led(self._get_led_target_color())
         except NotImplementedError:
             print('chassis.set_status_led is not implemented')
         except Exception as e:
             print('Failed to set system led due to - {}'.format(repr(e)))
+
+    def _get_led_target_color(self):
+        """Get target LED color according to health status and system uptime
+
+        Returns:
+            str: LED color
+        """
+        if HealthChecker.summary == HealthChecker.STATUS_OK:
+            return self.config.get_led_color('normal')
+        else:
+            uptime = utils.get_uptime()
+            return self.config.get_led_color('booting') if uptime < self.config.get_bootup_timeout() else self.config.get_led_color('fault')

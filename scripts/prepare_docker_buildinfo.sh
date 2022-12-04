@@ -11,6 +11,7 @@ DISTRO=$5
 DOCKERFILE_PATH=$(dirname "$DOCKERFILE_TARGE")
 BUILDINFO_PATH="${DOCKERFILE_PATH}/buildinfo"
 BUILDINFO_VERSION_PATH="${BUILDINFO_PATH}/versions"
+DOCKER_PATH=$(dirname $DOCKERFILE)
 
 [ -d $BUILDINFO_PATH ] && rm -rf $BUILDINFO_PATH
 mkdir -p $BUILDINFO_VERSION_PATH
@@ -31,8 +32,11 @@ scripts/docker_version_control.sh $@
 
 DOCKERFILE_PRE_SCRIPT='# Auto-Generated for buildinfo
 COPY ["buildinfo", "/usr/local/share/buildinfo"]
+COPY vcache/ /sonic/target/vcache/'${IMAGENAME}'
 RUN dpkg -i /usr/local/share/buildinfo/sonic-build-hooks_1.0_all.deb
-RUN pre_run_buildinfo'
+ENV IMAGENAME='${IMAGENAME}'
+RUN pre_run_buildinfo '${IMAGENAME}'
+'
 
 # Add the auto-generate code if it is not added in the target Dockerfile
 if [ ! -f $DOCKERFILE_TARGE ] || ! grep -q "Auto-Generated for buildinfo" $DOCKERFILE_TARGE; then
@@ -42,7 +46,7 @@ if [ ! -f $DOCKERFILE_TARGE ] || ! grep -q "Auto-Generated for buildinfo" $DOCKE
     awk -v text="${DOCKERFILE_PRE_SCRIPT}" -v linenumber=$LINE_NUMBER 'NR==linenumber{print text}1' $DOCKERFILE > $TEMP_FILE
 
     # Append the docker build script at the end of the docker file
-    echo -e "\nRUN post_run_buildinfo" >> $TEMP_FILE
+    echo -e "\nRUN post_run_buildinfo ${IMAGENAME} " >> $TEMP_FILE
 
     cat $TEMP_FILE > $DOCKERFILE_TARGE
     rm -f $TEMP_FILE
@@ -55,3 +59,8 @@ cp -rf src/sonic-build-hooks/buildinfo/* $BUILDINFO_PATH
 scripts/versions_manager.py generate -t "$BUILDINFO_VERSION_PATH" -n "$IMAGENAME" -d "$DISTRO" -a "$ARCH"
 
 touch $BUILDINFO_VERSION_PATH/versions-deb
+
+# Create the cache directories
+LOCAL_CACHE_DIR=target/vcache/${IMAGENAME}
+mkdir -p ${LOCAL_CACHE_DIR} ${DOCKER_PATH}/vcache/
+chmod -f 777 ${LOCAL_CACHE_DIR} ${DOCKER_PATH}/vcache/

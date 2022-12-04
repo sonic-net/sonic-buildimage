@@ -14,6 +14,21 @@
         "desc": "Configure collectors above the specified limit in SFLOW_COLLECTOR table.",
         "eStr":	["Too many \"SFLOW_COLLECTOR_LIST\" elements"]
     },
+    "SFLOW_TEST_WITH_COLLECTOR_DEFAULT_VRF": {
+        "desc": "Configure a collector in SFLOW_COLLECTOR table with default VRF."
+    },
+    "SFLOW_TEST_WITH_COLLECTOR_MGMT_VRF": {
+        "desc": "Configure a collector in SFLOW_COLLECTOR table with mgmt VRF."
+    },
+    "SFLOW_TEST_WITH_COLLECTOR_NON_EXISTING_MGMT_VRF": {
+        "desc": "Configure a collector in SFLOW_COLLECTOR table with mgmt VRF when MGMT VRF is not configured",
+        "eStrKey": "Must"
+    },
+    "SFLOW_TEST_WITH_COLLECTOR_INVALID_VRF": {
+        "desc": "Configure a collector in SFLOW_COLLECTOR table with invalid vrf",
+        "eStrKey": "Pattern",
+        "eStr": ["mgmt|default"]
+    },
     "SFLOW_SESSION_TEST": {
         "desc": "Configure a sflow session in SFLOW_SESSION table."
     },

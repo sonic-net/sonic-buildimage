@@ -18,6 +18,7 @@ try:
     from sonic_platform.thermal import Thermal
     from sonic_platform.component import Component
     from sonic_py_common import logger
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -26,11 +27,6 @@ try:
     import smbus
 except ImportError as e:
     smbus_present = 0
-
-if sys.version_info[0] < 3:
-    import commands as cmd
-else:
-    import subprocess as cmd
 
 MAX_SELECT_DELAY = 3600
 COPPER_PORT_START = 1
@@ -209,7 +205,7 @@ class Chassis(ChassisBase):
             string: Revision value of chassis
         """
         if smbus_present == 0:  # called from host
-            cmdstatus, value = cmd.getstatusoutput('sudo i2cget -y 0 0x41 0x0')
+            cmdstatus, value = getstatusoutput_noshell(['sudo', 'i2cget', '-y', '0', '0x41', '0x0'])
         else:
             bus = smbus.SMBus(0)
             DEVICE_ADDRESS = 0x41
@@ -331,7 +327,7 @@ class Chassis(ChassisBase):
 
         # Write sys led
         if smbus_present == 0:  # called from host (e.g. 'show system-health')
-            cmdstatus, value = cmd.getstatusoutput('sudo i2cset -y 0 0x41 0x7 %d' % value)
+            cmdstatus, value = getstatusoutput_noshell(['sudo', 'i2cset', '-y', '0', '0x41', '0x7', str(value)])
             if cmdstatus:
                 sonic_logger.log_warning("  System LED set %s failed" % value)
                 return False
@@ -353,7 +349,7 @@ class Chassis(ChassisBase):
         """
         # Read sys led
         if smbus_present == 0:  # called from host
-            cmdstatus, value = cmd.getstatusoutput('sudo i2cget -y 0 0x41 0x7')
+            cmdstatus, value = getstatusoutput_noshell(['sudo', 'i2cget', '-y', '0', '0x41', '0x7'])
             value = int(value, 16)
         else:
             bus = smbus.SMBus(0)

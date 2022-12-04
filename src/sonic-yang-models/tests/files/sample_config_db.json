@@ -1273,7 +1273,8 @@
                 "collector_port": "6343"
             },
             "collector2": {
-                "collector_ip": "10.144.1.2"
+                "collector_ip": "10.144.1.2",
+                "collector_vrf": "mgmt"
             }
         },
 
