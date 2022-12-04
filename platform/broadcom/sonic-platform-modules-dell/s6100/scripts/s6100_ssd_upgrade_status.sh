@@ -15,11 +15,14 @@ fi
 
 SSD_UPGRADE_LOG="$SSD_FW_UPGRADE/upgrade.log"
 
+iSMART="/usr/local/bin/iSMART_64"
+iSMART_OPTIONS="-d /dev/sda"
+iSMART_CMD=`$iSMART $iSMART_OPTIONS`
 SMART_CMD=`smartctl -a /dev/sda`
 
-SSD_FW_VERSION=$(echo "$SMART_CMD" | grep "Firmware Version" | awk '{print $NF}')
+SSD_FW_VERSION=$(echo "$iSMART_CMD" | grep "FW Version" | awk '{print $NF}')
 SSD_FW_VERSION=${SSD_FW_VERSION,,}
-SSD_MODEL=$(echo "$SMART_CMD" | grep "Device Model" | awk '{print $NF}')
+SSD_MODEL=$(echo "$iSMART_CMD" | grep "Model" | awk '{print $NF}')
 
 if [ -e $SSD_FW_UPGRADE/GPIO7_pending_upgrade ]; then
     if [ $SSD_MODEL == "3IE" ] && [ $SSD_FW_VERSION == "s141002c" ]; then
@@ -33,10 +36,6 @@ if [ -e $SSD_FW_UPGRADE/GPIO7_pending_upgrade ]; then
 fi
 
 echo "$0 `date` SSD FW upgrade logs post reboot." >> $SSD_UPGRADE_LOG
-
-iSMART="/usr/local/bin/iSMART_64"
-iSMART_OPTIONS="-d /dev/sda"
-iSMART_CMD=`$iSMART $iSMART_OPTIONS`
 
 SSD_UPGRADE_STATUS1=`io_rd_wr.py --set --val 06 --offset 210; io_rd_wr.py --set --val 09 --offset 211; io_rd_wr.py --get --offset 212`
 SSD_UPGRADE_STATUS1=$(echo "$SSD_UPGRADE_STATUS1" | awk '{print $NF}')
@@ -69,11 +68,10 @@ elif [ $SSD_FW_VERSION == "s210506g" ] || [ $SSD_FW_VERSION == "s16425cg" ]; the
         echo "$0 `date` soft-/fast-/warm-reboot is allowed." >> $SSD_UPGRADE_LOG
 
     else
+        rm -rf $SSD_FW_UPGRADE/GPIO7_*
+        touch $SSD_FW_UPGRADE/GPIO7_high
+        systemctl start --no-block s6100-ssd-monitor.timer
         if [ $SSD_UPGRADE_STATUS1 == "0" ]; then
-            rm -rf $SSD_FW_UPGRADE/GPIO7_*
-            touch $SSD_FW_UPGRADE/GPIO7_high
-            systemctl start --no-block s6100-ssd-monitor.timer
-
             if [ $SSD_MODEL  == "3IE" ];then
                 echo "$0 `date` SSD FW upgraded from S141002C to S210506G in first mp_64." >> $SSD_UPGRADE_LOG
             else

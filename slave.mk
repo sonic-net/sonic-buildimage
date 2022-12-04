@@ -111,6 +111,7 @@ configure :
 	$(Q)mkdir -p $(PYTHON_DEBS_PATH)
 	$(Q)mkdir -p $(PYTHON_WHEELS_PATH)
 	$(Q)mkdir -p $(DPKG_ADMINDIR_PATH)
+	$(Q)mkdir -p $(TARGET_PATH)/vcache
 	$(Q)echo $(PLATFORM) > .platform
 	$(Q)echo $(PLATFORM_ARCH) > .arch
 
@@ -929,8 +930,10 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_SIMPLE_DOCKER_IMAGES)) : $(TARGET_PATH)/%.g
 		--label Tag=$(SONIC_IMAGE_VERSION) \
 		-f $(TARGET_DOCKERFILE)/Dockerfile.buildinfo \
 		-t $(DOCKER_IMAGE_REF) $($*.gz_PATH) $(LOG)
+
 	if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then docker tag $(DOCKER_IMAGE_REF) $*; fi
-	scripts/collect_docker_version_files.sh $(DOCKER_IMAGE_REF) $(TARGET_PATH)
+	scripts/collect_docker_version_files.sh $* $(TARGET_PATH) $(DOCKER_IMAGE_REF) $($*.gz_PATH) $(LOG)
+
 	$(call docker-image-save,$*,$@)
 	# Clean up
 	if [ -f $($*.gz_PATH).patch/series ]; then pushd $($*.gz_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi
@@ -1008,6 +1011,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 		mkdir -p $($*.gz_PATH)/files $(LOG)
 		mkdir -p $($*.gz_PATH)/python-debs $(LOG)
 		mkdir -p $($*.gz_PATH)/python-wheels $(LOG)
+		mkdir -p $(TARGET_PATH)/vcache/$* $($*.gz_PATH)/vcache $(LOG)
 		sudo mount --bind $($*.gz_DEBS_PATH) $($*.gz_PATH)/debs $(LOG)
 		sudo mount --bind $($*.gz_FILES_PATH) $($*.gz_PATH)/files $(LOG)
 		sudo mount --bind $(PYTHON_DEBS_PATH) $($*.gz_PATH)/python-debs $(LOG)
@@ -1049,9 +1053,11 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_IMAGES)) : $(TARGET_PATH)/%.gz : .platform
 			--label Tag=$(SONIC_IMAGE_VERSION) \
 		        $($(subst -,_,$(notdir $($*.gz_PATH)))_labels) \
 			-t $(DOCKER_IMAGE_REF) $($*.gz_PATH) $(LOG)
+
 		if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then docker tag $(DOCKER_IMAGE_REF) $*; fi
-		scripts/collect_docker_version_files.sh $(DOCKER_IMAGE_REF) $(TARGET_PATH)
+		scripts/collect_docker_version_files.sh $* $(TARGET_PATH) $(DOCKER_IMAGE_REF) $($*.gz_PATH) $($*.gz_PATH)/Dockerfile $(LOG)
 		if [ ! -z $(filter $*.gz,$(SONIC_PACKAGES_LOCAL)) ]; then docker tag $(DOCKER_IMAGE_REF) $*:$(SONIC_IMAGE_VERSION); fi
+
 		$(call docker-image-save,$*,$@)
 		# Clean up
 		if [ -f $($*.gz_PATH).patch/series ]; then pushd $($*.gz_PATH) && quilt pop -a -f; [ -d .pc ] && rm -rf .pc; popd; fi
@@ -1080,6 +1086,7 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 
 		mkdir -p $($*.gz_PATH)/debs $(LOG)
 		sudo mount --bind $($*.gz_DEBS_PATH) $($*.gz_PATH)/debs $(LOG)
+		mkdir -p $(TARGET_PATH)/vcache/$*-dbg $($*.gz_PATH)/vcache $(LOG)
 		# Export variables for j2. Use path for unique variable names, e.g. docker_orchagent_debs
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_dbg_debs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_DBG_DEPENDS),RDEPENDS))\n" | awk '!a[$$0]++'))
 		$(eval export $(subst -,_,$(notdir $($*.gz_PATH)))_image_dbgs=$(shell printf "$(subst $(SPACE),\n,$(call expand,$($*.gz_DBG_IMAGE_PACKAGES)))\n" | awk '!a[$$0]++'))
@@ -1103,9 +1110,11 @@ $(addprefix $(TARGET_PATH)/, $(DOCKER_DBG_IMAGES)) : $(TARGET_PATH)/%-$(DBG_IMAG
 			--label Tag=$(SONIC_IMAGE_VERSION) \
 			--file $($*.gz_PATH)/Dockerfile-dbg \
 			-t $(DOCKER_DBG_IMAGE_REF) $($*.gz_PATH) $(LOG)
+
 		if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then docker tag $(DOCKER_IMAGE_REF) $*; fi
-		scripts/collect_docker_version_files.sh $(DOCKER_DBG_IMAGE_REF) $(TARGET_PATH)
+		scripts/collect_docker_version_files.sh $*-dbg $(TARGET_PATH) $(DOCKER_DBG_IMAGE_REF) $($*.gz_PATH)  $($*.gz_PATH)/Dockerfile-dbg $(LOG)
 		if [ ! -z $(filter $*.gz,$(SONIC_PACKAGES_LOCAL)) ]; then docker tag $(DOCKER_IMAGE_REF) $*:$(SONIC_IMAGE_VERSION); fi
+
 		$(call docker-image-save,$*-$(DBG_IMAGE_MARK),$@)
 		# Clean up
 		docker rmi -f $(DOCKER_IMAGE_REF) &> /dev/null || true

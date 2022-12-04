@@ -23,6 +23,6 @@ mkdir -p $VERSION_SLAVE_PATH
 
 scripts/versions_manager.py merge -t $VERSION_SLAVE_PATH -b $LOG_VERSION_PATH -e $POST_VERSION_PATH
 
-rm -rf $BUILD_VERSION_PATH/*
+[ -d $BUILD_VERSION_PATH ] && rm -rf $BUILD_VERSION_PATH/*
 
 exit $RET

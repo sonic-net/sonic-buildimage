@@ -228,8 +228,12 @@ SLAVE_TAG = $(shell \
 
 COLLECT_DOCKER=DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
 	scripts/collect_docker_version_files.sh \
-	$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
-		target 
+		$(SLAVE_BASE_IMAGE) \
+		target \
+		$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG) \
+		$(SLAVE_DIR) \
+		$(SLAVE_DIR)/Dockerfile
+
 OVERLAY_MODULE_CHECK := \
     lsmod | grep -q "^overlay " &>/dev/null || \
     zgrep -q 'CONFIG_OVERLAY_FS=y' /proc/config.gz &>/dev/null || \
@@ -376,7 +380,8 @@ DOCKER_SLAVE_BASE_BUILD = docker build --no-cache \
 		    --build-arg http_proxy=$(http_proxy) \
 		    --build-arg https_proxy=$(https_proxy) \
 		    --build-arg no_proxy=$(no_proxy) \
-		    $(SLAVE_DIR) $(SPLIT_LOG) $(DOCKER_BASE_LOG)
+		    $(SLAVE_DIR) \
+		    $(SPLIT_LOG) $(DOCKER_BASE_LOG)
 
 DOCKER_BASE_PULL = docker pull \
 			$(REGISTRY_SERVER):$(REGISTRY_PORT)/$(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
@@ -510,7 +515,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
 
 
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
-COLLECT_BUILD_VERSION = { DBGOPT='$(DBGOPT)' scripts/collect_build_version_files.sh \$$?; }
+COLLECT_BUILD_VERSION = { scripts/collect_build_version_files.sh \$$?; }
 endif
 
 ifdef SOURCE_FOLDER

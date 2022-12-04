@@ -1,5 +1,7 @@
 #!/bin/bash
 
+IMAGENAME=$1
+
 . /usr/local/share/buildinfo/scripts/buildinfo_base.sh
 
 [ -d $DIFF_VERSION_PATH ] && rm -rf $DIFF_VERSION_PATH
@@ -15,10 +17,14 @@ update_version_files
 symlink_build_hooks
 set_reproducible_mirrors
 
+mkdir -p /var/cache/apt/archives/
+
 chmod -R a+rw $BUILDINFO_PATH
 
 if [ "$ENABLE_VERSION_CONTROL_DEB" == "y" ] && [ -f $VERSION_DEB_PREFERENCE ]; then
     cp -f $VERSION_DEB_PREFERENCE /etc/apt/preferences.d/
 fi
+
+DISTRO=${DISTRO} apt-get update && apt-get install -y rsync
 
 exit 0

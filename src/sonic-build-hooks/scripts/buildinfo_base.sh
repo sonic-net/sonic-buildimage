@@ -15,6 +15,15 @@ REPR_MIRROR_URL_PATTERN='http:\/\/packages.trafficmanager.net\/debian'
 DPKG_INSTALLTION_LOCK_FILE=/tmp/.dpkg_installation.lock
 
 . $BUILDINFO_PATH/config/buildinfo.config
+if [ -e /vcache ]; then
+	PKG_CACHE_PATH=/vcache/${IMAGENAME}
+else
+	PKG_CACHE_PATH=/sonic/target/vcache/${IMAGENAME}
+fi
+PKG_CACHE_FILE_NAME=${PKG_CACHE_PATH}/cache.tgz
+mkdir -p ${PKG_CACHE_PATH}
+
+
 
 URL_PREFIX=$(echo "${PACKAGE_URL_PREFIX}" | sed -E "s#(//[^/]*/).*#\1#")
 
