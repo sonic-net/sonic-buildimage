@@ -20,7 +20,10 @@ mkdir -p $BUILDINFO_VERSION_PATH
 if [ -z "$DISTRO" ]; then
     DOCKER_BASE_IMAGE=$(grep "^FROM" $DOCKERFILE | head -n 1 | awk '{print $2}')
     DISTRO=$(docker run --rm --entrypoint "" $DOCKER_BASE_IMAGE cat /etc/os-release | grep VERSION_CODENAME | cut -d= -f2)
-    [ -z "$DISTRO" ] && DISTRO=jessie
+    if [ -z "$DISTRO" ]; then
+        DISTRO=$(docker run --rm --entrypoint "" $DOCKER_BASE_IMAGE cat /etc/apt/sources.list | grep deb.debian.org | awk '{print $3}')
+        [ -z "$DISTRO" ] && DISTRO=jessie
+    fi
 fi
 
 if [[ "$IMAGENAME" == docker-base-* ]]; then

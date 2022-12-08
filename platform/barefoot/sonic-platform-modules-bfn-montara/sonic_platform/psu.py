@@ -135,12 +135,16 @@ class Psu(PsuBase):
         :param self.index: An integer, 1-based self.index of the PSU of which to query status
         :return: Boolean, True if PSU is plugged, False if not
         """
+        @cancel_on_sigterm
         def psu_present_get(client):
             return client.pltfm_mgr.pltfm_mgr_pwr_supply_present_get(self.__index)
 
         status = False
         try:
-            status = thrift_try(psu_present_get)
+            status = thrift_try(psu_present_get, attempts=1)
+        except Exception as e:
+            if "Canceling" in str(e):
+                syslog.syslog(syslog.LOG_INFO, "{}".format(e))
         finally:
             return status
 

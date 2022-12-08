@@ -30,13 +30,23 @@ function startplatform() {
 
     if [[ x"$sonic_asic_platform" == x"broadcom" ]]; then
         if [[ x"$WARM_BOOT" != x"true" ]]; then
-            is_bcm0=$(ls /sys/class/net | grep bcm0)
-            if [[ "$is_bcm0" == "bcm0" ]]; then
-                debug "stop SDK opennsl-modules ..."
-                /etc/init.d/opennsl-modules stop
-                debug "start SDK opennsl-modules ..."
-                /etc/init.d/opennsl-modules start
-                debug "started SDK opennsl-modules"
+            . /host/machine.conf
+            if [ -n "$aboot_platform" ]; then
+                platform=$aboot_platform
+            elif [ -n "$onie_platform" ]; then
+                platform=$onie_platform
+            else 
+                platform="unknown"
+            fi
+            if [[ x"$platform" == x"x86_64-arista_720dt_48s" ]]; then
+                is_bcm0=$(ls /sys/class/net | grep bcm0)
+                if [[ "$is_bcm0" == "bcm0" ]]; then
+                    debug "stop SDK opennsl-modules ..."
+                    /etc/init.d/opennsl-modules stop
+                    debug "start SDK opennsl-modules ..."
+                    /etc/init.d/opennsl-modules start
+                    debug "started SDK opennsl-modules"
+                fi
             fi
         fi
     fi

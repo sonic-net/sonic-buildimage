@@ -32,6 +32,7 @@ RUN apt-get update && \
         python3-pip  \
         python3-dev \
         python-is-python3 \
+        python3-jsonschema \
 {%- if ENABLE_ASAN == "y" %}
         libasan6 \
 {%- endif %}
@@ -69,5 +70,11 @@ COPY ["critical_processes", "/etc/supervisor/"]
 RUN mkdir -p /etc/supervisor/conf.d/
 RUN sonic-cfggen -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\"}" -t /usr/share/sonic/templates/supervisord.conf.j2 > /etc/supervisor/conf.d/supervisord.conf
 RUN rm -f /usr/share/sonic/templates/supervisord.conf.j2
+
+RUN mkdir -p /usr/lib/ecmp_calc
+COPY ["ecmp_calculator/ecmp_calc.py", "/usr/bin"]
+COPY ["ecmp_calculator/ecmp_calc_sdk.py", "/usr/lib/ecmp_calc"]
+COPY ["ecmp_calculator/packet_scheme.py", "/usr/lib/ecmp_calc"]
+COPY ["lib/port_utils.py", "/usr/lib"]
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

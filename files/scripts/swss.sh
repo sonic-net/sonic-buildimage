@@ -304,7 +304,7 @@ function check_peer_gbsyncd()
 
 function check_macsec()
 {
-    MACSEC_STATE=`show feature status | grep macsec | awk '{print $2}'`
+    MACSEC_STATE=`$SONIC_DB_CLI CONFIG_DB hget 'FEATURE|macsec' state`
 
     if [[ ${MACSEC_STATE} == 'enabled' ]]; then
         if [ "$DEV" ]; then
