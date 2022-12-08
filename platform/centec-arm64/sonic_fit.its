@@ -50,13 +50,34 @@
 		};
 	};
 	configurations {
-		default = "e530-ctc5236";
+		default = "arm64-centec_e530_24x2c-r0";
 					
-		e530-ctc5236 {			
-			description = "config for tm_ctc5236";			
-			kernel = "kernel_ctc";			
-			ramdisk = "initramfs";			
-			fdt = "ctc_fdt";		
+		arm64-centec_e530_24x2c-r0 {
+			description = "config for arm64-centec_e530_24x2c-r0";
+			kernel = "kernel_ctc";
+			ramdisk = "initramfs";
+			fdt = "ctc_fdt";
+			};
+
+		arm64-centec_e530_24x2q-r0 {
+			description = "config for arm64-centec_e530_24x2q-r0";
+			kernel = "kernel_ctc";
+			ramdisk = "initramfs";
+			fdt = "ctc_fdt";
+			};
+
+		arm64-centec_e530_48s4x-r0 {
+			description = "config for arm64-centec_e530_48s4x-r0";
+			kernel = "kernel_ctc";
+			ramdisk = "initramfs";
+			fdt = "ctc_fdt";
+			};
+
+		arm64-centec_e530_48t4x_p-r0 {
+			description = "config for arm64-centec_e530_48t4x_p-r0";
+			kernel = "kernel_ctc";
+			ramdisk = "initramfs";
+			fdt = "ctc_fdt";
 			};
 	};
 };

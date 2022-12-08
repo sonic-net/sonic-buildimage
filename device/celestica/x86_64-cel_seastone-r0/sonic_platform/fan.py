@@ -97,7 +97,7 @@ class Fan(FanBase):
 
     def __get_gpio_base(self):
         for r in os.listdir(GPIO_DIR):
-            label_path = os.path.join(GPIO_DIR, r, "label")
+            label_path = os.path.join(GPIO_DIR, r, "device/name")
             if "gpiochip" in r and GPIO_LABEL in \
                     self._api_helper.read_txt_file(label_path):
                 return int(r[8:], 10)

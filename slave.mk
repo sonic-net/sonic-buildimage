@@ -199,6 +199,15 @@ endif
 override INCLUDE_P4RT = n
 endif
 
+# Pre-built Bazel is not available for arm64, so exclude P4RT
+# TODO(PINS): Remove when Bazel binaries are available for arm64
+ifeq ($(CONFIGURED_ARCH),arm64)
+ifeq ($(INCLUDE_P4RT),y)
+$(Q)echo "Disabling P4RT due to incompatible CPU architecture: $(CONFIGURED_ARCH)"
+endif
+override INCLUDE_P4RT = n
+endif
+
 ifeq ($(SONIC_INCLUDE_MACSEC),y)
 INCLUDE_MACSEC = y
 endif
@@ -504,11 +513,11 @@ define docker-image-load
     @echo "Obtained docker image lock for $(1) load" $(LOG)
     @echo "Loading docker image $(TARGET_PATH)/$(1).gz" $(LOG)
     docker load -i $(TARGET_PATH)/$(1).gz $(LOG)
-    @echo "Tagging docker image $(1):latest as $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG)" $(LOG)
-    docker tag $(1):latest $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) $(LOG)
+    @echo "Tagging docker image $(1):$(call docker-get-tag,$(1)) as $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG)" $(LOG)
+    docker tag $(1):$(call docker-get-tag,$(1)) $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) $(LOG)
     if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then
         @echo "Removing docker image $(1):latest" $(LOG)
-        docker rmi -f $(1):latest $(LOG)
+        docker rmi -f $(1):$(call docker-get-tag,$(1)) $(LOG)
     fi
     $(call MOD_UNLOCK,$(1))
     @echo "Released docker image lock for $(1) load" $(LOG)

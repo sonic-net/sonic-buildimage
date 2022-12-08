@@ -345,14 +345,14 @@ err:
 	return ret;
 }
 
-static int ctc_wdt_remove(struct amba_device *adev)
+static void ctc_wdt_remove(struct amba_device *adev)
 {
 	struct ctc_wdt *wdt = amba_get_drvdata(adev);
 
 	watchdog_unregister_device(&wdt->wdd);
 	watchdog_set_drvdata(&wdt->wdd, NULL);
 
-	return 0;
+	return;
 }
 
 static int __maybe_unused ctc_wdt_suspend(struct device *dev)
