@@ -3,6 +3,15 @@ logfile_maxbytes=1MB
 logfile_backups=2
 nodaemon=true
 
+[eventlistener:dependent-startup]
+command=python3 -m supervisord_dependent_startup
+autostart=true
+autorestart=unexpected
+startretries=0
+exitcodes=0,3
+events=PROCESS_STATE
+buffer_size=1024
+
 [eventlistener:supervisor-proc-exit-listener]
 command=/usr/bin/supervisor-proc-exit-listener --container-name database
 events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING
@@ -13,14 +22,15 @@ buffer_size=1024
 [program:rsyslogd]
 command=/usr/sbin/rsyslogd -n -iNONE
 priority=1
-autostart=true
+autostart=false
 autorestart=false
 stdout_logfile=syslog
 stderr_logfile=syslog
+dependent_startup=true
 
 {% if INSTANCES %}
 {%     for redis_inst, redis_items in INSTANCES.items() %}
-[program: {{ redis_inst }}]
+[program:{{ redis_inst }}]
 {% if redis_items['hostname'] != '127.0.0.1' and redis_inst != 'redis_chassis' %}
 {%- set LOOPBACK_IP = '127.0.0.1' -%}
 {%- else -%}
@@ -28,17 +38,21 @@ stderr_logfile=syslog
 {%- endif -%}
 command=/bin/bash -c "{ [[ -s /var/lib/{{ redis_inst }}/dump.rdb ]] || rm -f /var/lib/{{ redis_inst }}/dump.rdb; } && mkdir -p /var/lib/{{ redis_inst }} && exec /usr/bin/redis-server /etc/redis/redis.conf --bind {{ LOOPBACK_IP }} {{ redis_items['hostname'] }} --port {{ redis_items['port'] }} --unixsocket {{ redis_items['unix_socket_path'] }} --pidfile /var/run/redis/{{ redis_inst }}.pid --dir /var/lib/{{ redis_inst }}"
 priority=2
-autostart=true
+autostart=false
 autorestart=false
 stdout_logfile=syslog
 stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
 {%     endfor %}
 {% endif %}
 
 [program:flushdb]
 command=/bin/bash -c "sleep 300 && /usr/local/bin/flush_unused_database"
 priority=3
-autostart=true
+autostart=false
 autorestart=false
 stdout_logfile=syslog
 stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running

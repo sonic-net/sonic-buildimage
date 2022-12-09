@@ -49,7 +49,6 @@ RUN apt-get -y install \
     rsyslog            \
     less
 
-COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
 COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 COPY ["root/.vimrc", "/root/.vimrc"]
 
@@ -64,10 +63,11 @@ RUN pip install wheel
 # Install supervisor
 RUN pip install supervisor>=3.4.0
 
-RUN mkdir -p /etc/supervisor
+RUN mkdir -p /etc/supervisor/conf.d
 RUN mkdir -p /var/log/supervisor
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
+COPY ["etc/supervisor/containercfgd.conf", "/etc/supervisor/conf.d/"]
 
 RUN apt-get -y purge   \
     exim4              \

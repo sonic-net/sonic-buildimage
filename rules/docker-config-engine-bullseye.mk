@@ -11,8 +11,9 @@ $(DOCKER_CONFIG_ENGINE_BULLSEYE)_DEPENDS += $(LIBSWSSCOMMON) \
                                           $(SONIC_DB_CLI) \
                                           $(SONIC_EVENTD)
 $(DOCKER_CONFIG_ENGINE_BULLSEYE)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
-                                                $(SONIC_YANG_MGMT_PY3) \
-                                                $(SONIC_YANG_MODELS_PY3)
+                                                  $(SONIC_YANG_MGMT_PY3) \
+                                                  $(SONIC_YANG_MODELS_PY3) \
+                                                  $(SONIC_CONTAINERCFGD)
 $(DOCKER_CONFIG_ENGINE_BULLSEYE)_PYTHON_WHEELS += $(SONIC_CONFIG_ENGINE_PY3)
 $(DOCKER_CONFIG_ENGINE_BULLSEYE)_LOAD_DOCKERS += $(DOCKER_BASE_BULLSEYE)
 $(DOCKER_CONFIG_ENGINE_BULLSEYE)_FILES += $(SWSS_VARS_TEMPLATE)

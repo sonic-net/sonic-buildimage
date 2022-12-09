@@ -34,16 +34,23 @@ function updateSyslogConf()
     # Also update the container name
     if [[ ($NUM_ASIC -gt 1) ]]; then
         TARGET_IP=$(docker network inspect bridge --format={{ "'{{(index .IPAM.Config 0).Gateway}}'" }})
-        CONTAINER_NAME="$DOCKERNAME"
-        TMP_FILE="/tmp/rsyslog.$CONTAINER_NAME.conf"
-        {%- if docker_container_name == "database" %}
-        python -c "import jinja2, os; paths=['/usr/share/sonic/templates']; loader = jinja2.FileSystemLoader(paths); env = jinja2.Environment(loader=loader, trim_blocks=True); template_file='/usr/share/sonic/templates/rsyslog-container.conf.j2'; template = env.get_template(os.path.basename(template_file)); data=template.render({\"target_ip\":\"$TARGET_IP\",\"container_name\":\"$CONTAINER_NAME\"}); print(data)" > $TMP_FILE
-        {%- else %}
-        sonic-cfggen -t /usr/share/sonic/templates/rsyslog-container.conf.j2 -a "{\"target_ip\": \"$TARGET_IP\", \"container_name\": \"$CONTAINER_NAME\" }"  > $TMP_FILE
-        {%- endif %}
-        docker cp $TMP_FILE ${DOCKERNAME}:/etc/rsyslog.conf
-        rm -rf $TMP_FILE
+    else
+        if [ "$CONTAINER_EXISTS" = "yes" ]; then
+            # database configuration has been synced to /etc/rsyslog.conf
+            # no need generate it to save boot time
+            return
+        fi
+        TARGET_IP="127.0.0.1"
     fi
+    CONTAINER_NAME="$DOCKERNAME"
+    TMP_FILE="/tmp/rsyslog.$CONTAINER_NAME.conf"
+    {%- if docker_container_name == "database" %}
+    python -c "import jinja2, os; paths=['/usr/share/sonic/templates']; loader = jinja2.FileSystemLoader(paths); env = jinja2.Environment(loader=loader, trim_blocks=True); template_file='/usr/share/sonic/templates/rsyslog-container.conf.j2'; template = env.get_template(os.path.basename(template_file)); data=template.render({\"target_ip\":\"$TARGET_IP\",\"container_name\":\"$CONTAINER_NAME\"}); print(data)" > $TMP_FILE
+    {%- else %}
+    sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog-container.conf.j2 -a "{\"target_ip\": \"$TARGET_IP\", \"container_name\": \"$CONTAINER_NAME\" }"  > $TMP_FILE
+    {%- endif %}
+    docker cp $TMP_FILE ${DOCKERNAME}:/etc/rsyslog.conf
+    rm -rf $TMP_FILE
 }
 function ebtables_config()
 {
@@ -342,6 +349,7 @@ start() {
         DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
         {%- endif %}
         if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
+            CONTAINER_EXISTS="yes"
             preStartAction
             {%- if docker_container_name == "database" %}
             echo "Starting existing ${DOCKERNAME} container"
@@ -536,6 +544,7 @@ start() {
 {%- endif %}
         $REDIS_MNT \
         -v /usr/share/sonic/device/$PLATFORM:/usr/share/sonic/platform:ro \
+        -v /usr/share/sonic/templates/rsyslog-container.conf.j2:/usr/share/sonic/templates/rsyslog-container.conf.j2:ro \
 {%- if sonic_asic_platform != "mellanox" %}
 {%- if mount_default_tmpfs|default("n") == "y" %}
         --tmpfs /tmp \
@@ -547,6 +556,7 @@ start() {
         --env "NAMESPACE_ID"="$DEV" \
         --env "NAMESPACE_PREFIX"="$NAMESPACE_PREFIX" \
         --env "NAMESPACE_COUNT"=$NUM_ASIC \
+        --env "CONTAINER_NAME"=$DOCKERNAME \
         --name=$DOCKERNAME \
 {%- if docker_container_name == "gbsyncd" %}
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \
@@ -617,6 +627,7 @@ fi
 {%- endif %}
 NAMESPACE_PREFIX="asic"
 DOCKERNAME=$DOCKERNAME$DEV
+CONTAINER_EXISTS="no"
 if [ "$DEV" ]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
 

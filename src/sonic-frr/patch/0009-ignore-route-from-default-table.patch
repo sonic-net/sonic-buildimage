@@ -1,19 +1,46 @@
-From bb3b003840959adf5b5be52e91bc798007c9857a Mon Sep 17 00:00:00 2001
-From: Ying Xie <ying.xie@microsoft.com>
-Date: Thu, 8 Sep 2022 04:20:36 +0000
-Subject: [PATCH] From 776a29e8ab32c1364ee601a8730aabb773b0c86b Mon Sep 17
- 00:00:00 2001 Subject: [PATCH] ignore route from default table
+commit 8b78a43ba243df281f2096a84893ad87cb2a79ff
+Author: Stephen Xu <stexu@linkedin.com>
+Date:   Wed Nov 16 16:07:37 2022 -0500
 
-Signed-off-by: Ying Xie <ying.xie@microsoft.com>
----
- zebra/zebra_fpm_netlink.c | 5 +++++
- 1 file changed, 5 insertions(+)
+    [PATCH] ignore route from default table
 
+    Signed-off-by: Stephen Xu <stexu@linkedin.com>
+
+diff --git a/zebra/zebra_fpm.c b/zebra/zebra_fpm.c
+index 43958fdfd..de7e246d4 100644
+--- a/zebra/zebra_fpm.c
++++ b/zebra/zebra_fpm.c
+@@ -25,6 +25,7 @@
+ 
+ #include "log.h"
+ #include "libfrr.h"
++#include "rib.h"
+ #include "stream.h"
+ #include "thread.h"
+ #include "network.h"
+@@ -1016,8 +1017,15 @@ static int zfpm_build_route_updates(void)
+ 				else
+ 					zfpm_g->stats.route_dels++;
+ 			} else {
+-				zlog_err("%s: Encoding Prefix: %pRN No valid nexthops",
+-					 __func__, dest->rnode);
++				struct rib_table_info *table_info =
++				    rib_table_info(rib_dest_table(dest));
++				if (table_info && table_info->table_id == RT_TABLE_DEFAULT) {
++					zfpm_debug("%s: Skip encoding default table prefix: %pRN",
++						   __func__, dest->rnode);
++				} else {
++					zlog_err("%s: Encoding Prefix: %pRN No valid nexthops",
++						 __func__, dest->rnode);
++				}
+ 			}
+ 		}
+ 
 diff --git a/zebra/zebra_fpm_netlink.c b/zebra/zebra_fpm_netlink.c
-index 34be9fb39..d6c875a7e 100644
+index ec22c5dd4..53e5f59fb 100644
 --- a/zebra/zebra_fpm_netlink.c
 +++ b/zebra/zebra_fpm_netlink.c
-@@ -283,6 +283,11 @@ static int netlink_route_info_fill(struct netlink_route_info *ri, int cmd,
+@@ -278,6 +278,11 @@ static int netlink_route_info_fill(struct netlink_route_info *ri, int cmd,
  		rib_table_info(rib_dest_table(dest));
  	struct zebra_vrf *zvrf = table_info->zvrf;
  
@@ -25,6 +52,3 @@ index 34be9fb39..d6c875a7e 100644
  	memset(ri, 0, sizeof(*ri));
  
  	ri->prefix = rib_dest_prefix(dest);
--- 
-2.17.1
-

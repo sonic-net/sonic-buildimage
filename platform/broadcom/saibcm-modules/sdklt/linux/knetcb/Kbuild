@@ -17,8 +17,7 @@
 # A copy of the GNU General Public License version 2 (GPLv2) can
 # be found in the LICENSES folder.$
 #
-ifeq ($(BUILD_PSAMPLE),1)
-PSAMPLE_CFLAGS=-DPSAMPLE_SUPPORT
+ifneq ($(CONFIG_PSAMPLE),)
 PSAMPLE_CB_OBJS=psample-cb.o
 endif
 

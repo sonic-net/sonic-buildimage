@@ -90,7 +90,7 @@ RUN pip install supervisor>=3.4.0
 # Add support for supervisord to handle startup dependencies
 RUN pip install supervisord-dependent-startup==1.4.0
 
-RUN mkdir -p /etc/supervisor /var/log/supervisor
+RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
 
 RUN apt-get -y purge   \
     exim4              \
@@ -113,10 +113,10 @@ RUN apt-get clean -y                     && \
     apt-get autoremove -y                && \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
-COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
 COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 COPY ["root/.vimrc", "/root/.vimrc"]
 
 RUN ln /usr/bin/vim.tiny /usr/bin/vim
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
+COPY ["etc/supervisor/containercfgd.conf", "/etc/supervisor/conf.d/"]
