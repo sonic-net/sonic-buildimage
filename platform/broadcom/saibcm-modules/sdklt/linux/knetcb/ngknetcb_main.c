@@ -307,8 +307,8 @@ static struct sk_buff *
 ngknet_rx_cb(struct sk_buff *skb)
 {
     skb = strip_tag_rx_cb(skb);
-#ifdef PSAMPLE_SUPPORT
-    skb = psample_rx_cb(skb); 
+#if IS_ENABLED(CONFIG_PSAMPLE)
+    skb = psample_rx_cb(skb);
 #endif
     return skb;
 }
@@ -324,7 +324,7 @@ static int
 ngknet_netif_create_cb(struct net_device *dev)
 {
     int retv = 0;
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
     retv = psample_netif_create_cb(dev); 
 #endif
     return retv;
@@ -334,7 +334,7 @@ static int
 ngknet_netif_destroy_cb(struct net_device *dev)
 {
     int retv = 0;
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
     retv = psample_netif_destroy_cb(dev); 
 #endif
     return retv;
@@ -431,7 +431,7 @@ ngknetcb_init_module(void)
     ngknet_rx_cb_register(ngknet_rx_cb);
     ngknet_tx_cb_register(ngknet_tx_cb);
 
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
     psample_init();
 #endif
 
@@ -446,7 +446,7 @@ ngknetcb_exit_module(void)
     ngknet_netif_create_cb_unregister(ngknet_netif_create_cb);
     ngknet_netif_destroy_cb_unregister(ngknet_netif_destroy_cb);
 
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
     psample_cleanup();
 #endif
 

@@ -15,6 +15,7 @@ try:
     from sonic_platform.thermal import chassis_thermals_list_get
     from sonic_platform.platform_utils import file_create
     from sonic_platform.eeprom import Eeprom
+    from sonic_platform.watchdog import Watchdog
 
     from sonic_platform.platform_thrift_client import pltfm_mgr_ready
     from sonic_platform.platform_thrift_client import thrift_try
@@ -49,6 +50,7 @@ class Chassis(ChassisBase):
         self.__thermals = None
         self.__psu_list = None
         self.__sfp_list = None
+        self.__watchdog = None
 
         self.ready = False
         self.phy_port_cur_state = {}
@@ -81,6 +83,16 @@ class Chassis(ChassisBase):
         if self.__tlv_dict_eeprom is None:
             self.__tlv_dict_eeprom = self._eeprom.get_data()
         return self.__tlv_dict_eeprom
+
+    @property
+    def _watchdog(self):
+        if self.__watchdog is None:
+            self.__watchdog = Watchdog()
+        return self.__watchdog
+
+    @_watchdog.setter
+    def _watchdog(self, value):
+        pass
 
     @property
     def _fan_drawer_list(self):

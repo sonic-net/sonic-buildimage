@@ -46,7 +46,7 @@
 #include <linux/if_vlan.h>
 
 /* Enable sflow sampling using psample */
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
 #include "psample-cb.h"
 #endif
 
@@ -334,7 +334,7 @@ knet_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
                      int chan, kcom_filter_t *kf)
 {
     /* check for filter callback handler */
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
     if (strncmp(kf->desc, PSAMPLE_CB_NAME, strlen(PSAMPLE_CB_NAME)) == 0) {
         return psample_filter_cb (pkt, size, dev_no, meta, chan, kf);
     }
@@ -346,7 +346,7 @@ static int
 knet_netif_create_cb(int unit, kcom_netif_t *netif, uint16 spa, struct net_device *dev)
 {
     int retv = 0;
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
     retv = psample_netif_create_cb(unit, netif, spa, dev);
 #endif
     return retv;
@@ -356,7 +356,7 @@ static int
 knet_netif_destroy_cb(int unit, kcom_netif_t *netif, uint16 spa, struct net_device *dev)
 {
     int retv = 0;
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
     retv = psample_netif_destroy_cb(unit, netif, spa, dev);
 #endif
     return retv;
@@ -367,7 +367,7 @@ knet_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
                      int chan, kcom_filter_t *kf)
 {
     /* check for filter callback handler */
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
     if (strncmp(kf->desc, PSAMPLE_CB_NAME, KCOM_FILTER_DESC_MAX) == 0) {
         return psample_filter_cb (pkt, size, dev_no, meta, chan, kf);
     }
@@ -379,7 +379,7 @@ static int
 knet_netif_create_cb(int unit, kcom_netif_t *netif, struct net_device *dev)
 {
     int retv = 0;
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
     retv = psample_netif_create_cb(unit, netif, dev);
 #endif
     return retv;
@@ -389,7 +389,7 @@ static int
 knet_netif_destroy_cb(int unit, kcom_netif_t *netif, struct net_device *dev)
 {
     int retv = 0;
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
     retv = psample_netif_destroy_cb(unit, netif, dev);
 #endif
     return retv;
@@ -427,7 +427,7 @@ _cleanup(void)
     bkn_netif_create_cb_unregister(knet_netif_create_cb);
     bkn_netif_destroy_cb_unregister(knet_netif_destroy_cb);
 
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
     psample_cleanup();
 #endif
     return 0;
@@ -445,7 +445,7 @@ _init(void)
         bkn_tx_skb_cb_register(strip_tag_tx_cb);
     }
 
-#ifdef PSAMPLE_SUPPORT
+#if IS_ENABLED(CONFIG_PSAMPLE)
     psample_init();
 #endif
     bkn_filter_cb_register(knet_filter_cb);

@@ -24,7 +24,6 @@
 #include <lkm/lkm.h>
 #include <linux/netdevice.h>
 
-//#define PSAMPLE_SUPPORT 1  // TODO: MLI@BRCM - Add this as part of conditional in Makefile
 #define PSAMPLE_CB_NAME "psample"
 
 extern int

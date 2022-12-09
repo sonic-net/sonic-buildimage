@@ -4,6 +4,7 @@ mkdir -p /etc/swss/config.d/
 mkdir -p /etc/supervisor/
 mkdir -p /etc/supervisor/conf.d/
 
+
 CFGGEN_PARAMS=" \
     -d \
 {% if ENABLE_ASAN == "y" %}
@@ -49,21 +50,24 @@ if [ "$SUBTYPE" == "DualToR" ]; then
     cp /usr/share/sonic/templates/tunnel_packet_handler.conf /etc/supervisor/conf.d/
 fi
 
+IS_SUPERVISOR=/etc/sonic/chassisdb.conf
 USE_PCI_ID_IN_CHASSIS_STATE_DB=/usr/share/sonic/platform/use_pci_id_chassis
 ASIC_ID="asic$NAMESPACE_ID"
-if [ -f "$USE_PCI_ID_IN_CHASSIS_STATE_DB" ]; then
-    while true; do
-        PCI_ID=$(sonic-db-cli -s CHASSIS_STATE_DB HGET "CHASSIS_ASIC_TABLE|$ASIC_ID" asic_pci_address)
-        if [ -z "$PCI_ID" ]; then
-            sleep 3
-        else
-            # Update asic_id in CONFIG_DB, which is used by orchagent and fed to syncd
-            if [[ $PCI_ID == ????:??:??.? ]]; then
-                sonic-db-cli CONFIG_DB HSET 'DEVICE_METADATA|localhost' 'asic_id' ${PCI_ID#*:}
-                break
+if [ -f "$IS_SUPERVISOR" ]; then 
+    if [ -f "$USE_PCI_ID_IN_CHASSIS_STATE_DB" ]; then
+        while true; do
+            PCI_ID=$(sonic-db-cli -s CHASSIS_STATE_DB HGET "CHASSIS_FABRIC_ASIC_TABLE|$ASIC_ID" asic_pci_address)
+            if [ -z "$PCI_ID" ]; then
+                sleep 3
+            else
+                # Update asic_id in CONFIG_DB, which is used by orchagent and fed to syncd
+                if [[ $PCI_ID == ????:??:??.? ]]; then
+                    sonic-db-cli CONFIG_DB HSET 'DEVICE_METADATA|localhost' 'asic_id' ${PCI_ID#*:}
+                    break
+                fi
             fi
-        fi
-    done
+        done
+    fi
 fi
 
 exec /usr/local/bin/supervisord
