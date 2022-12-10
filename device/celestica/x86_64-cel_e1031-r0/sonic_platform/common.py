@@ -1,8 +1,8 @@
 import os
+import ast
 import imp
 import yaml
 import subprocess
-
 from sonic_py_common import device_info
 
 
@@ -24,7 +24,7 @@ class Common:
 
     SET_METHOD_IPMI = 'ipmitool'
     NULL_VAL = 'N/A'
-    HOST_CHK_CMD = "docker > /dev/null 2>&1"
+    HOST_CHK_CMD = ["docker"]
     REF_KEY = '$ref:'
 
     def __init__(self, conf=None):
@@ -46,8 +46,7 @@ class Common:
         status = False
         output = ""
         try:
-            p = subprocess.Popen(
-                command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p = subprocess.Popen(command, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             raw_data, err = p.communicate()
             if p.returncode == 0:
                 status, output = True, raw_data.strip()
@@ -67,7 +66,7 @@ class Common:
             cleaned_input = input_translator.get(input)
 
         elif type(input_translator) is str:
-            cleaned_input = eval(input_translator.format(input))
+            cleaned_input = ast.literal_eval(input_translator.format(input))
 
         return cleaned_input
 
@@ -77,18 +76,11 @@ class Common:
         if type(output_translator) is dict:
             output = output_translator.get(output)
         elif type(output_translator) is str:
-            output = eval(output_translator.format(output))
+            output = ast.literal_eval(output_translator.format(output))
         elif type(output_translator) is list:
-            output = eval(output_translator[index].format(output))
+            output = ast.literal_eval(output_translator[index].format(output))
 
         return output
-
-    def _ipmi_get(self, index, config):
-        argument = config.get('argument')
-        cmd = config['command'].format(
-            config['argument'][index]) if argument else config['command']
-        status, output = self.run_command(cmd)
-        return output if status else None
 
     def _sysfs_read(self, index, config):
         sysfs_path = config.get('sysfs_path')
@@ -132,10 +124,6 @@ class Common:
             return False, output
         return True, output
 
-    def _ipmi_set(self, index, config, input):
-        arg = config['argument'][index].format(input)
-        return self.run_command(config['command'].format(arg))
-
     def _hex_ver_decode(self, hver, num_of_bits, num_of_points):
         ver_list = []
         c_bit = 0
@@ -159,14 +147,16 @@ class Common:
         return class_
 
     def get_reg(self, path, reg_addr):
-        cmd = "echo {1} > {0}; cat {0}".format(path, reg_addr)
-        status, output = self.run_command(cmd)
-        return output if status else None
+        with open(path, 'w') as file:
+            file.write(reg_addr + '\n')
+        with open(path, 'r') as file:
+            output = file.readline().strip()
+        return output
 
     def set_reg(self, path, reg_addr, value):
-        cmd = "echo {0} {1} > {2}".format(reg_addr, value, path)
-        status, output = self.run_command(cmd)
-        return output if status else None
+        with open(path, 'w') as file:
+            file.write("{0} {1}\n".format(reg_addr, value))
+        return None
 
     def read_txt_file(self, path):
         try:
@@ -195,7 +185,11 @@ class Common:
         return True
 
     def is_host(self):
-        return os.system(self.HOST_CHK_CMD) == 0
+        try:
+            subprocess.call(self.HOST_CHK_CMD, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except FileNotFoundError:
+            return False
+        return True
 
     def load_json_file(self, path):
         """
@@ -220,87 +214,6 @@ class Common:
             A string containing the path to json file
         """
         return os.path.join(self.DEVICE_PATH, self.platform, self.CONFIG_DIR, config_name) if self.is_host() else os.path.join(self.PMON_PLATFORM_PATH, self.CONFIG_DIR, config_name)
-
-    def get_output(self, index, config, default):
-        """
-        Retrieves the output for each function base on config
-
-        Args:
-            index: An integer containing the index of device.
-            config: A dict object containing the configuration of specified function.
-            default: A string containing the default output of specified function.
-
-        Returns:
-            A string containing the output of specified function in config
-        """
-        output_source = config.get('output_source')
-
-        if output_source == self.OUTPUT_SOURCE_IPMI:
-            output = self._ipmi_get(index, config)
-
-        elif output_source == self.OUTPUT_SOURCE_GIVEN_VALUE:
-            output = config["value"]
-
-        elif output_source == self.OUTPUT_SOURCE_GIVEN_CLASS:
-            output = self._get_class(config)
-
-        elif output_source == self.OUTPUT_SOURCE_GIVEN_LIST:
-            output = config["value_list"][index]
-
-        elif output_source == self.OUTPUT_SOURCE_SYSFS:
-            output = self._sysfs_read(index, config)
-
-        elif output_source == self.OUTPUT_SOURCE_FUNC:
-            func_conf = self._main_conf[config['function'][index]]
-            output = self.get_output(index, func_conf, default)
-
-        elif output_source == self.OUTPUT_SOURCE_GIVEN_TXT_FILE:
-            path = config.get('path')
-            output = self.read_txt_file(path)
-
-        elif output_source == self.OUTPUT_SOURCE_GIVEN_VER_HEX_FILE:
-            path = config.get('path')
-            hex_ver = self.read_txt_file(path)
-            output = self._hex_ver_decode(
-                hex_ver, config['num_of_bits'], config['num_of_points'])
-
-        elif output_source == self.OUTPUT_SOURCE_GIVEN_VER_HEX_ADDR:
-            path = config.get('path')
-            addr = config.get('reg_addr')
-            hex_ver = self.get_reg(path, addr)
-            output = self._hex_ver_decode(
-                hex_ver, config['num_of_bits'], config['num_of_points'])
-
-        else:
-            output = default
-
-        return self._clean_output(index, output, config) or default
-
-    def set_output(self, index, input, config):
-        """
-        Sets the output of specified function on config
-
-        Args:
-            config: A dict object containing the configuration of specified function.
-            index: An integer containing the index of device.
-            input: A string containing the input of specified function.
-
-        Returns:
-            bool: True if set function is successfully, False if not
-        """
-        cleaned_input = self._clean_input(input, config)
-        if not cleaned_input:
-            return False
-
-        set_method = config.get('set_method')
-        if set_method == self.SET_METHOD_IPMI:
-            output = self._ipmi_set(index, config, cleaned_input)[0]
-        elif set_method == self.OUTPUT_SOURCE_SYSFS:
-            output = self._sysfs_write(index, config, cleaned_input)[0]
-        else:
-            output = False
-
-        return output
 
     def get_event(self, timeout, config, sfp_list):
         """

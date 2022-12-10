@@ -8,19 +8,18 @@
 #
 #############################################################################
 
-import os.path
 import subprocess
-import time
-import os
 
 try:
     from sonic_platform_base.component_base import ComponentBase
+    from sonic_py_common.general import getstatusoutput_noshell_pipe
     #from helper import APIHelper
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-SWCPLD_VERSION_PATH = "i2cget -y -f 2 0x32 0"
-BIOS_VERSION_PATH = "dmidecode -t bios | grep Version"
+SWCPLD_VERSION_PATH = ["i2cget", "-y", "-f", "2", "0x32", "0"]
+BIOS_VERSION_PATH_CMD1 = ["dmidecode", "-t", "bios"]
+BIOS_VERSION_PATH_CMD2 = ["grep", "Version"]
 COMPONENT_NAME_LIST = ["SWCPLD", "Main_BIOS", "Backup_BIOS"]
 COMPONENT_DES_LIST = ["Use for boot control and BIOS switch",
                       "Main basic Input/Output System",
@@ -39,15 +38,15 @@ class Component(ComponentBase):
         self.name = self.get_name()
 
     def run_command(self,cmd):
-        responses = os.popen(cmd).read()
+        responses = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True).stdout.read()
         return responses
 
     def __get_bios_version(self):
         # Retrieves the BIOS firmware version
-        result = self.run_command("i2cget -y -f 2 0x32 0x19")
+        result = self.run_command(["i2cget", "-y", "-f", "2", "0x32", "0x19"])
         if result.strip() == "0x01":
             if self.name == "Main_BIOS":
-                version = self.run_command(BIOS_VERSION_PATH)
+                _, version = getstatusoutput_noshell_pipe(BIOS_VERSION_PATH_CMD1, BIOS_VERSION_PATH_CMD2)
                 bios_version = version.strip().split(" ")[1]
                 return str(bios_version)
             elif self.name == "Backup_BIOS":
@@ -56,7 +55,7 @@ class Component(ComponentBase):
                 
         elif result.strip() == "0x03":
             if self.name == "Backup_BIOS":
-                version = self.run_command(BIOS_VERSION_PATH)
+                _, version = getstatusoutput_noshell_pipe(BIOS_VERSION_PATH_CMD1, BIOS_VERSION_PATH_CMD2)
                 bios_version = version.strip().split(" ")[1]
                 return str(bios_version)
             elif self.name == "Main_BIOS":

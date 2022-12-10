@@ -23,13 +23,13 @@
 try:
     import sys
     import getopt
-    import subprocess
     import logging
     import logging.config
     import time  # this is only being used as part of the example
     import signal
     import math
     from sonic_platform import platform
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
@@ -224,7 +224,7 @@ def handler(signum, frame):
         else:
             logging.debug('INFO: FAIL. set_fan_duty_cycle (%d)' % DUTY_MAX)
         # Enable the CPLD Heartbeat back
-        status, output = subprocess.getstatusoutput('i2cset -f -y 75 0x40 0x22 0x00')
+        status, output = getstatusoutput_noshell(["i2cset", "-f", "-y", "75", "0x40", "0x22", "0x00"])
         if status == 0:
             logging.debug('INFO: CPLD Heartbeat check is enabled back')
     sys.exit(0)
@@ -258,7 +258,7 @@ def main(argv):
     signal.signal(signal.SIGINT, handler)
     signal.signal(signal.SIGTERM, handler)
     # Disaable the CPLD Heartbeat check to control Fan speed from CPU via ADT7470
-    subprocess.getstatusoutput('i2cset -f -y 2 0x32 0x30 0x01')
+    getstatusoutput_noshell(['i2cset', '-f', '-y', '2', '0x32', '0x30', '0x01'])
 
     monitor = cel_belgite_monitor(log_file, log_level)
 

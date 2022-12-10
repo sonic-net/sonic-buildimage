@@ -1,4 +1,3 @@
-import os.path
 import subprocess
 import sys
 import re
@@ -13,13 +12,13 @@ class PsuUtil(PsuBase):
     """Platform-specific PSUutil class"""
 
     def __init__(self):
-        self.ipmi_raw = "docker exec -ti pmon ipmitool raw 0x4 0x2d"
+        self.ipmi_raw = ["docker", "exec", "-ti", "pmon", "ipmitool", "raw", "0x4", "0x2d", ""]
         self.psu1_id = "0x2f"
         self.psu2_id = "0x39"
         PsuBase.__init__(self)
 
     def run_command(self, command):
-        proc = subprocess.Popen(command, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+        proc = subprocess.Popen(command, universal_newlines=True, stdout=subprocess.PIPE)
         (out, err) = proc.communicate()
 
         if proc.returncode != 0:
@@ -52,7 +51,8 @@ class PsuUtil(PsuBase):
             return False
 
         psu_id = self.psu1_id if index == 1 else self.psu2_id
-        res_string = self.run_command(self.ipmi_raw + ' ' + psu_id)
+        self.ipmi_raw[8] = psu_id
+        res_string = self.run_command(self.ipmi_raw)
         status_byte = self.find_value(res_string)
 
         if status_byte is None:
@@ -76,7 +76,8 @@ class PsuUtil(PsuBase):
             return False
 
         psu_id = self.psu1_id if index == 1 else self.psu2_id
-        res_string = self.run_command(self.ipmi_raw + ' ' + psu_id)
+        self.ipmi_raw[8] = psu_id
+        res_string = self.run_command(self.ipmi_raw)
         status_byte = self.find_value(res_string)
 
         if status_byte is None:

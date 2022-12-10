@@ -6,8 +6,6 @@
 #
 #############################################################################
 
-import os.path
-import subprocess
 
 try:
     from sonic_psu.psu_base import PsuBase
