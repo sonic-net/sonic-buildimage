@@ -211,8 +211,7 @@ $(shell $(PREPARE_DOCKER) )
 SLAVE_BASE_TAG = $(shell \
 	cat $(SLAVE_DIR)/Dockerfile \
 		$(SLAVE_DIR)/sources.list.* \
-		$(SLAVE_DIR)/buildinfo/versions/versions-* \
-		src/sonic-build-hooks/hooks/* 2>/dev/null \
+		$(SLAVE_DIR)/buildinfo/versions/versions-* 2>/dev/null \
 	| sha1sum \
 	| awk '{print substr($$1,0,11);}')
 

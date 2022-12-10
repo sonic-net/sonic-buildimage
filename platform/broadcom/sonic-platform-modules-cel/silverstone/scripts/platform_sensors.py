@@ -12,7 +12,7 @@ import sys
 import logging
 import subprocess
 
-IPMI_SDR_CMD = "ipmitool sdr elist"
+IPMI_SDR_CMD = ["ipmitool", "sdr", "elist"]
 MAX_NUM_FANS = 7
 MAX_NUM_PSUS = 2
 
@@ -23,7 +23,7 @@ def ipmi_sensor_dump(cmd):
     '''
     sensor_dump = ''
     try:
-        sensor_dump = subprocess.check_output(cmd, shell=True)
+        sensor_dump = subprocess.check_output(cmd)
     except subprocess.CalledProcessError as e:
         logging.error('Error! Failed to execute: {}'.format(cmd))
         sys.exit(1)

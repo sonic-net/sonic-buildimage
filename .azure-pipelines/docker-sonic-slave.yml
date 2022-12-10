@@ -30,7 +30,6 @@ trigger:
   paths:
     include:
     - sonic-slave-*
-    - src/sonic-build-hooks
     - files/build/versions
     - Makefile
     - Makefile.work

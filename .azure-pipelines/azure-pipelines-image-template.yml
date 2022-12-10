@@ -36,6 +36,7 @@ jobs:
         displayName: "Set cache options"
       - checkout: self
         submodules: recursive
+        fetchDepth: 0
         condition: and(succeeded(), eq(variables.SKIP_CHECKOUT, ''))
         displayName: 'Checkout code'
       - script: |

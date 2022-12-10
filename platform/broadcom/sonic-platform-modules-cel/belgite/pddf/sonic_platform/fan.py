@@ -1,6 +1,6 @@
 try:
     from sonic_platform_pddf_base.pddf_fan import PddfFan
-    import os
+    import subprocess
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 # ------------------------------------------------------------------
@@ -47,8 +47,9 @@ class Fan(PddfFan):
         """
         if self.is_psu_fan:
             cmd_num = "58" if self.fans_psu_index == 1 else "59"
-            cmd = "i2cget -y -f 4 0x%s 0x80" % cmd_num
-            res = os.popen(cmd).read()
+            cmd = ["i2cget", "-y", "-f", "4", "", "0x80"]
+            cmd[4] = "0x" + cmd_num
+            res = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True).stdout.read()
             # F2B 
             if res.strip() == "0x01":
                 direction = "EXHAUST"

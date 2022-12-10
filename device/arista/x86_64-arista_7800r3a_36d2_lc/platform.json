@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "7800R3-48CQM2-LC",
+        "name": "7800R3A-36DM2-LC",
         "components": [
             {
                 "name": "Aboot()"
@@ -9,7 +9,7 @@
                 "name": "Scd(addr=0000:00:18.7)"
             },
             {
-                "name": "Scd(addr=0000:07:00.0)"
+                "name": "Scd(addr=0000:08:00.0)"
             }
         ],
         "fans": [],
@@ -43,148 +43,148 @@
         ],
         "sfps": [
             {
-                "name": "qsfp1"
+                "name": "osfp1"
             },
             {
-                "name": "qsfp2"
+                "name": "osfp2"
             },
             {
-                "name": "qsfp3"
+                "name": "osfp3"
             },
             {
-                "name": "qsfp4"
+                "name": "osfp4"
             },
             {
-                "name": "qsfp5"
+                "name": "osfp5"
             },
             {
-                "name": "qsfp6"
+                "name": "osfp6"
             },
             {
-                "name": "qsfp7"
+                "name": "osfp7"
             },
             {
-                "name": "qsfp8"
+                "name": "osfp8"
             },
             {
-                "name": "qsfp9"
+                "name": "osfp9"
             },
             {
-                "name": "qsfp10"
+                "name": "osfp10"
             },
             {
-                "name": "qsfp11"
+                "name": "osfp11"
             },
             {
-                "name": "qsfp12"
+                "name": "osfp12"
             },
             {
-                "name": "qsfp13"
+                "name": "osfp13"
             },
             {
-                "name": "qsfp14"
+                "name": "osfp14"
             },
             {
-                "name": "qsfp15"
+                "name": "osfp15"
             },
             {
-                "name": "qsfp16"
+                "name": "osfp16"
             },
             {
-                "name": "qsfp17"
+                "name": "osfp17"
             },
             {
-                "name": "qsfp18"
+                "name": "osfp18"
             },
             {
-                "name": "qsfp19"
+                "name": "osfp19"
             },
             {
-                "name": "qsfp20"
+                "name": "osfp20"
             },
             {
-                "name": "qsfp21"
+                "name": "osfp21"
             },
             {
-                "name": "qsfp22"
+                "name": "osfp22"
             },
             {
-                "name": "qsfp23"
+                "name": "osfp23"
             },
             {
-                "name": "qsfp24"
+                "name": "osfp24"
             },
             {
-                "name": "qsfp25"
+                "name": "osfp25"
             },
             {
-                "name": "qsfp26"
+                "name": "osfp26"
             },
             {
-                "name": "qsfp27"
+                "name": "osfp27"
             },
             {
-                "name": "qsfp28"
+                "name": "osfp28"
             },
             {
-                "name": "qsfp29"
+                "name": "osfp29"
             },
             {
-                "name": "qsfp30"
+                "name": "osfp30"
             },
             {
-                "name": "qsfp31"
+                "name": "osfp31"
             },
             {
-                "name": "qsfp32"
+                "name": "osfp32"
             },
             {
-                "name": "qsfp33"
+                "name": "osfp33"
             },
             {
-                "name": "qsfp34"
+                "name": "osfp34"
             },
             {
-                "name": "qsfp35"
+                "name": "osfp35"
             },
             {
-                "name": "qsfp36"
+                "name": "osfp36"
             },
             {
-                "name": "qsfp37"
+                "name": "osfp37"
             },
             {
-                "name": "qsfp38"
+                "name": "osfp38"
             },
             {
-                "name": "qsfp39"
+                "name": "osfp39"
             },
             {
-                "name": "qsfp40"
+                "name": "osfp40"
             },
             {
-                "name": "qsfp41"
+                "name": "osfp41"
             },
             {
-                "name": "qsfp42"
+                "name": "osfp42"
             },
             {
-                "name": "qsfp43"
+                "name": "osfp43"
             },
             {
-                "name": "qsfp44"
+                "name": "osfp44"
             },
             {
-                "name": "qsfp45"
+                "name": "osfp45"
             },
             {
-                "name": "qsfp46"
+                "name": "osfp46"
             },
             {
-                "name": "qsfp47"
+                "name": "osfp47"
             },
             {
-                "name": "qsfp48"
+                "name": "osfp48"
             }
         ]
     },

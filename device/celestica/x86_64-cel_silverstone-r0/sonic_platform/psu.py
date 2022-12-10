@@ -33,19 +33,14 @@ PSU_LED_OFF_CMD = "0x00"
 PSU_LED_GREEN_CMD = "0x01"
 PSU_LED_AMBER_CMD = "0x02"
 
-PSU1_VOUT_SS_ID = "0x36"
-PSU1_COUT_SS_ID = "0x37"
-PSU1_POUT_SS_ID = "0x38"
-PSU1_STATUS_REG = "0x39"
-
-PSU2_VOUT_SS_ID = "0x40"
-PSU2_COUT_SS_ID = "0x41"
-PSU2_POUT_SS_ID = "0x42"
-PSU2_STATUS_REG = "0x2f"
-
 PSU1_FRU_ID = 3
 
 SS_READ_OFFSET = 0
+
+PSU_VOUT_SS_ID = ["0x36", "0x40"]
+PSU_COUT_SS_ID = ["0x37", "0x41"]
+PSU_POUT_SS_ID = ["0x38", "0x42"]
+PSU_STATUS_REG = ["0x39", "0x2f"]
 
 
 class Psu(PsuBase):
@@ -71,7 +66,7 @@ class Psu(PsuBase):
             e.g. 12.1
         """
         psu_voltage = 0.0
-        psu_vout_key = globals()['PSU{}_VOUT_SS_ID'.format(self.index+1)]
+        psu_vout_key = PSU_VOUT_SS_ID[self.index]
         status, raw_ss_read = self._api_helper.ipmi_raw(
             IPMI_SENSOR_NETFN, IPMI_SS_READ_CMD.format(psu_vout_key))
         ss_read = raw_ss_read.split()[SS_READ_OFFSET]
@@ -87,7 +82,7 @@ class Psu(PsuBase):
             A float number, the electric current in amperes, e.g 15.4
         """
         psu_current = 0.0
-        psu_cout_key = globals()['PSU{}_COUT_SS_ID'.format(self.index+1)]
+        psu_cout_key = PSU_COUT_SS_ID[self.index]
         status, raw_ss_read = self._api_helper.ipmi_raw(
             IPMI_SENSOR_NETFN, IPMI_SS_READ_CMD.format(psu_cout_key))
         ss_read = raw_ss_read.split()[SS_READ_OFFSET]
@@ -103,7 +98,7 @@ class Psu(PsuBase):
             A float number, the power in watts, e.g. 302.6
         """
         psu_power = 0.0
-        psu_pout_key = globals()['PSU{}_POUT_SS_ID'.format(self.index+1)]
+        psu_pout_key = PSU_POUT_SS_ID[self.index]
         status, raw_ss_read = self._api_helper.ipmi_raw(
             IPMI_SENSOR_NETFN, IPMI_SS_READ_CMD.format(psu_pout_key))
         ss_read = raw_ss_read.split()[SS_READ_OFFSET]
@@ -176,7 +171,7 @@ class Psu(PsuBase):
             bool: True if PSU is present, False if not
         """
         psu_presence = False
-        psu_pstatus_key = globals()['PSU{}_STATUS_REG'.format(self.index+1)]
+        psu_pstatus_key = PSU_STATUS_REG[self.index]
         status, raw_status_read = self._api_helper.ipmi_raw(
             IPMI_SENSOR_NETFN, IPMI_SS_READ_CMD.format(psu_pstatus_key))
         status_byte = self.find_value(raw_status_read)
@@ -228,7 +223,7 @@ class Psu(PsuBase):
             A boolean value, True if device is operating properly, False if not
         """
         psu_status = False
-        psu_pstatus_key = globals()['PSU{}_STATUS_REG'.format(self.index+1)]
+        psu_pstatus_key = PSU_STATUS_REG[self.index]
         status, raw_status_read = self._api_helper.ipmi_raw(
             IPMI_SENSOR_NETFN, IPMI_SS_READ_CMD.format(psu_pstatus_key))
         status_byte = self.find_value(raw_status_read)

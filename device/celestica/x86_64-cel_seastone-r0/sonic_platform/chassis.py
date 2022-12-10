@@ -26,7 +26,6 @@ HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
 PREV_REBOOT_CAUSE_FILE = "previous-reboot-cause.txt"
 GETREG_PATH = "/sys/devices/platform/dx010_cpld/getreg"
-HOST_CHK_CMD = "docker > /dev/null 2>&1"
 STATUS_LED_PATH = "/sys/devices/platform/leds_dx010/leds/dx010:green:stat/brightness"
 
 

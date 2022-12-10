@@ -32,7 +32,7 @@ dhcpmon-{{ vlan_name }}
 {% endif %}
 {# Check DHCPv6 agents #}
 {% if DHCP_RELAY and vlan_name in DHCP_RELAY and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
-{% for dhcpv6_server in VLAN[vlan_name]['dhcpv6_servers'] %}
+{% for dhcpv6_server in DHCP_RELAY[vlan_name]['dhcpv6_servers'] %}
 {% if dhcpv6_server | ipv6 %}
 {% set _dummy = relay_for_ipv6.update({'flag': True}) %}
 {% endif %}

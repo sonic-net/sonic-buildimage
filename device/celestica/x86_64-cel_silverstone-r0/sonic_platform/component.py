@@ -6,7 +6,6 @@
 #
 #############################################################################
 
-import json
 import os.path
 
 try:
@@ -24,14 +23,18 @@ COMPONENT_LIST = [
 ]
 SW_CPLD_VER_PATH = "/sys/module/switch_cpld/version"
 BASE_CPLD_VER_PATH = "/sys/module/baseboard_lpc/version"
-CPLD_UPGRADE_OPT = 4
 BIOS_VER_PATH = "/sys/class/dmi/id/bios_version"
-BIOS__UPGRADE_OPT = 2
-BMC_VER_CMD = "ipmitool mc info | grep 'Firmware Revision'"
-BMC_UPGRADE_OPT = 1
-CFUFLASH_FW_UPGRADE_CMD = "CFUFLASH -cd -d {} -mse 3 {}"
+BMC_VER_CMD1 = ["ipmitool", "mc", "info"]
+BMC_VER_CMD2 = ["grep", "Firmware Revision"]
+CFUFLASH_FW_UPGRADE_CMD = ["CFUFLASH", "-cd", "-d", "", "-mse", "3", ""]
 MEM_PCI_RESOURCE = "/sys/bus/pci/devices/0000:09:00.0/resource0"
 FPGA_VER_MEM_OFFSET = 0
+UPGRADE_OPT = {
+    'BMC': '1',
+    'BIOS': '2',
+    'SWITCH_CPLD': '4',
+    'BASE_CPLD': '4'
+}
 
 
 class Component(ComponentBase):
@@ -47,7 +50,7 @@ class Component(ComponentBase):
 
     def __get_bmc_ver(self):
         bmc_ver = "Unknown"
-        status, raw_bmc_data = self._api_helper.run_command(BMC_VER_CMD)
+        status, raw_bmc_data = self._api_helper.run_command(BMC_VER_CMD1, BMC_VER_CMD2)
         if status:
             bmc_ver_data = raw_bmc_data.split(":")
             bmc_ver = bmc_ver_data[-1].strip() if len(
@@ -104,16 +107,12 @@ class Component(ComponentBase):
         Returns:
             A boolean, True if install successfully, False if not
         """
-        install_command = {
-            "BMC": CFUFLASH_FW_UPGRADE_CMD.format(BMC_UPGRADE_OPT, image_path),
-            "BIOS": CFUFLASH_FW_UPGRADE_CMD.format(BIOS__UPGRADE_OPT, image_path),
-            "SWITCH_CPLD": CFUFLASH_FW_UPGRADE_CMD.format(CPLD_UPGRADE_OPT, image_path),
-            "BASE_CPLD": CFUFLASH_FW_UPGRADE_CMD.format(CPLD_UPGRADE_OPT, image_path)
-        }.get(self.name, None)
+        CFUFLASH_FW_UPGRADE_CMD[3] = UPGRADE_OPT.get(self.name)
+        CFUFLASH_FW_UPGRADE_CMD[6] = image_path
 
-        if not os.path.isfile(image_path) or install_command is None:
+        if not os.path.isfile(image_path):
             return False
 
         # print(install_command)
-        status = self._api_helper.run_interactive_command(install_command)
+        status = self._api_helper.run_interactive_command(CFUFLASH_FW_UPGRADE_CMD)
         return status
