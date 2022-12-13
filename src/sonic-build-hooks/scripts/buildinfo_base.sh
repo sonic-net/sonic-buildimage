@@ -23,6 +23,7 @@ fi
 PKG_CACHE_FILE_NAME=${PKG_CACHE_PATH}/cache.tgz
 mkdir -p ${PKG_CACHE_PATH}
 
+. ${BUILDINFO_PATH}/scripts/utils.sh
 
 
 URL_PREFIX=$(echo "${PACKAGE_URL_PREFIX}" | sed -E "s#(//[^/]*/).*#\1#")
@@ -35,9 +36,15 @@ fi
 
 log_err()
 {
-    echo "$1" >> $LOG_PATH/error.log
+    echo "$(date "+%F-%H-%M-%S") ERR $1" >> $LOG_PATH/error.log
     echo "$1" 1>&2
 }
+log_info()
+{
+    echo "$(date "+%F-%H-%M-%S") INFO $1" >> $LOG_PATH/info.log
+    echo "$1" 1>&2
+}
+
 
 # Get the real command not hooked by sonic-build-hook package
 get_command()
@@ -75,6 +82,28 @@ check_if_url_exist()
         echo n
     fi
 }
+
+get_version_cache_option()
+{
+	#SONIC_VERSION_CACHE="cache"
+	if [ ! -z ${SONIC_VERSION_CACHE} ]; then
+		if [ ${SONIC_VERSION_CACHE} == "rcache" ]; then
+			echo -n "rcache"
+		elif [ ${SONIC_VERSION_CACHE} == "wcache" ]; then
+			echo -n "wcache"
+		elif [ ${SONIC_VERSION_CACHE} == "cache" ]; then
+			echo -n  "wcache"
+		else
+			echo -n ""
+			return 1
+		fi
+		echo -n ""
+		return 0
+	fi
+	echo -n ""
+	return 1
+}
+
 
 # Enable or disable the reproducible mirrors
 set_reproducible_mirrors()
@@ -115,7 +144,7 @@ download_packages()
                 local filename=$(echo $url | awk -F"/" '{print $NF}' | cut -d? -f1 | cut -d# -f1)
                 [ -f $WEB_VERSION_FILE ] && version=$(grep "^${url}=" $WEB_VERSION_FILE | awk -F"==" '{print $NF}')
                 if [ -z "$version" ]; then
-                    echo "Warning: Failed to verify the package: $url, the version is not specified" 1>&2
+                    log_err "Warning: Failed to verify the package: $url, the version is not specified" 1>&2
                     continue
                 fi
 
@@ -129,7 +158,7 @@ download_packages()
                 else
                     real_version=$(get_url_version $url)
                     if [ "$real_version" != "$version" ]; then
-                        echo "Failed to verify url: $url, real hash value: $real_version, expected value: $version_filename" 1>&2
+                        log_err "Failed to verify url: $url, real hash value: $real_version, expected value: $version_filename" 1>&2
                        exit 1
                     fi
                 fi
@@ -294,10 +323,10 @@ update_version_file()
     if [ ! -f "$pre_version_file" ]; then
         return 0
     fi
-    local pacakge_versions="$(cat $pre_version_file)"
-    [ -f "$version_file" ] && pacakge_versions="$pacakge_versions $(cat $version_file)"
+    local package_versions="$(cat $pre_version_file)"
+    [ -f "$version_file" ] && package_versions="$package_versions $(cat $version_file)"
     declare -A versions
-    for pacakge_version in $pacakge_versions; do
+    for pacakge_version in $package_versions; do
         package=$(echo $pacakge_version | awk -F"==" '{print $1}')
         version=$(echo $pacakge_version | awk -F"==" '{print $2}')
         if [ -z "$package" ] || [ -z "$version" ]; then
@@ -331,4 +360,8 @@ ENABLE_VERSION_CONTROL_PY2=$(check_version_control "py2")
 ENABLE_VERSION_CONTROL_PY3=$(check_version_control "py3")
 ENABLE_VERSION_CONTROL_WEB=$(check_version_control "web")
 ENABLE_VERSION_CONTROL_GIT=$(check_version_control "git")
+ENABLE_VERSION_CONTROL_PIP=$(check_version_control "pip")
+ENABLE_VERSION_CONTROL_PYTHON=$(check_version_control "python")
+ENABLE_VERSION_CONTROL_EASY_INSTALL=$(check_version_control "easy_install")
+ENABLE_VERSION_CONTROL_GO=$(check_version_control "go")
 ENABLE_VERSION_CONTROL_DOCKER=$(check_version_control "docker")

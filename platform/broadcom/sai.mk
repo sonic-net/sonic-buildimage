@@ -17,5 +17,10 @@ $(BRCM_DNX_SAI)_URL = "https://sonicstorage.blob.core.windows.net/packages/bcmsa
 SONIC_ONLINE_DEBS += $(BRCM_XGS_SAI)
 SONIC_ONLINE_DEBS += $(BRCM_DNX_SAI)
 $(BRCM_XGS_SAI_DEV)_DEPENDS += $(BRCM_XGS_SAI)
+
+$(BRCM_XGS_SAI)_SKIP_VERSION=y
+$(BRCM_XGS_SAI_DEV)_SKIP_VERSION=y
+$(BRCM_DNX_SAI)_SKIP_VERSION=y
+
 $(eval $(call add_conflict_package,$(BRCM_XGS_SAI_DEV),$(LIBSAIVS_DEV)))
 $(BRCM_SAI_DBG)_DEPENDS += $(BRCM_XGS_SAI)

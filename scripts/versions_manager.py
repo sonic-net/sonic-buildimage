@@ -4,6 +4,7 @@ import argparse
 import glob
 import os
 import sys
+import re
 
 ALL_DIST = 'all'
 ALL_ARCH = 'all'
@@ -24,7 +25,7 @@ class Component:
     arch  -- Architectrue, such as amd64, arm64, etc
 
     '''
-    def __init__(self, versions, ctype, dist=ALL_DIST, arch=ALL_ARCH):
+    def __init__(self, verbose=None, versions={}, ctype="deb", dist=ALL_DIST, arch=ALL_ARCH):
         self.versions = versions
         self.ctype = ctype
         if not dist:
@@ -33,6 +34,7 @@ class Component:
             arch = ALL_ARCH
         self.dist = dist
         self.arch = arch
+        self.verbose = verbose
 
     @classmethod
     def get_versions(cls, version_file):
@@ -51,7 +53,7 @@ class Component:
         return result
 
     def clone(self):
-        return Component(self.versions.copy(), self.ctype, self.dist, self.arch)
+        return Component(self.verbose, self.versions.copy(), self.ctype, self.dist, self.arch)
 
     def merge(self, versions, overwritten=True):
         for package in versions:
@@ -71,7 +73,7 @@ class Component:
                 result.append(lines)
             else:
                 result.append('{0}=={1}'.format(package, self.versions[package]))
-        return "\n".join(result)
+        return "\n".join(result)+'\n'
 
     def dump_to_file(self, version_file, config=False, priority=999):
         if len(self.versions) <= 0:
@@ -92,6 +94,35 @@ class Component:
         file_path = os.path.join(file_path, filename)
         self.dump_to_file(file_path, config, priority)
 
+    def print(self, file_path):
+        if len(self.versions) <= 0:
+            return
+            
+        if self.verbose is None:
+            return
+
+        filename = self.get_filename()
+        file_path = os.path.join(file_path, filename)
+        if self.verbose and re.search("cfile=", self.verbose) \
+           and not re.search(self.verbose, "cfile=all".format(filename)) \
+           and not re.search(self.verbose, "cfile={}".format(filename)):
+                    return
+        print("VERSION : {}".format(file_path))
+        for package in sorted(self.versions.keys(), key=str.casefold):
+            if self.verbose and re.search("ctype=", self.verbose) \
+               and not re.search("ctype=all".format(self.ctype), self.verbose) \
+               and not re.search("ctype={}".format(self.ctype), self.verbose):
+                    continue
+            if self.verbose and re.search("cname=", self.verbose) \
+               and not re.search(self.verbose, "cname=all".format(package)) \
+               and not re.search(self.verbose, "cname={}".format(package)):
+                    continue
+            if self.verbose and re.search("cver=", self.verbose) \
+               and not re.search(self.verbose, "cver=all".format(self.versions[package])) \
+               and not re.search(self.verbose, "cver={}".format(self.versions[package])):
+                    continue
+            print('{0}=={1}'.format(package, self.versions[package]))
+            
     # Check if the self component can be overwritten by the input component
     def check_overwritable(self, component, for_all_dist=False, for_all_arch=False):
         if self.ctype != component.ctype:
@@ -153,9 +184,11 @@ class VersionModule:
 
     name   -- The name of the image, such as sonic-slave-buster, docker-lldp, etc
     '''
-    def __init__(self, name=None, components=None):
+    def __init__(self, verbose=None, name=None, components=None):
         self.name = name
         self.components = components
+        self.module_path=""
+        self.verbose=verbose
 
     # Overwrite the docker/host image/base image versions
     def overwrite(self, module, for_all_dist=False, for_all_arch=False):
@@ -191,6 +224,7 @@ class VersionModule:
             module = default_module.clone(exclude_ctypes=DEFAULT_OVERWRITE_COMPONENTS)
         return self._get_config_module(module, dist, arch)
 
+    #Merge the default with specific version
     def _get_config_module(self, default_module, dist, arch):
         module = default_module.clone()
         default_ctype_components = module._get_components_per_ctypes()
@@ -205,11 +239,11 @@ class VersionModule:
                 continue
             config_component = self._get_config_for_ctype(components, dist, arch)
             config_components.append(config_component)
-        config_module = VersionModule(self.name, config_components)
+        config_module = VersionModule(self.verbose, self.name, config_components)
         return config_module
 
     def _get_config_for_ctype(self, components, dist, arch):
-        result = Component({}, components[0].ctype, dist, arch)
+        result = Component(self.verbose, {}, components[0].ctype, dist, arch)
         for component in sorted(components, key = lambda x : x.get_order_keys()):
             if result.check_inheritable(component):
                 result.merge(component.versions, True)
@@ -224,7 +258,7 @@ class VersionModule:
             components = sorted(components, key = lambda x : x.get_order_keys())
             for i in range(0, len(components)):
                 component = components[i]
-                base_module = VersionModule(self.name, components[0:i])
+                base_module = VersionModule(self.verbose, self.name, components[0:i])
                 config_module = base_module._get_config_module(default_module, component.dist, component.arch)
                 config_components = config_module._get_components_by_ctype(ctype)
                 if len(config_components) > 0:
@@ -253,7 +287,7 @@ class VersionModule:
         result = []
         for i in range(0, len(components)):
             component = components[i]
-            inheritable_component = Component({}, component.ctype)
+            inheritable_component = Component(self.verbose, {}, component.ctype)
             for j in range(0, i):
                 base_component = components[j]
                 if component.check_inheritable(base_component):
@@ -276,6 +310,7 @@ class VersionModule:
         file_paths = glob.glob(version_file_pattern)
         components = []
         self.name = os.path.basename(image_path)
+        self.module_path = image_path
         self.components = components
         for file_path in file_paths:
             filename = os.path.basename(file_path)
@@ -296,18 +331,25 @@ class VersionModule:
             if filter_arch and arch and filter_arch != arch and arch != ALL_ARCH:
                 continue
             versions = Component.get_versions(file_path)
-            component = Component(versions, ctype, dist, arch)
+            component = Component(self.verbose, versions, ctype, dist, arch)
             components.append(component)
+            if self.verbose and re.search("stage=load", self.verbose):
+                component.print(file_path)
 
     def load_from_target(self, image_path):
+        self.module_path=image_path
         post_versions = os.path.join(image_path, 'post-versions')
         if os.path.exists(post_versions):
             self.load(post_versions)
             self.name = os.path.basename(image_path)
+            if self.verbose and re.search("stage=post", self.verbose):
+                self.print(post_versions)
             pre_versions = os.path.join(image_path, 'pre-versions')
             if os.path.exists(pre_versions):
-                pre_module = VersionModule()
+                pre_module = VersionModule(self.verbose)
                 pre_module.load(pre_versions)
+                if self.verbose and re.search("stage=pre", self.verbose):
+                    pre_module.print(pre_versions)
                 self.subtract(pre_module)
         else:
             self.load(image_path)
@@ -319,6 +361,15 @@ class VersionModule:
         for component in self.components:
             component.dump_to_path(module_path, config, priority)
 
+    def print(self, module_path):
+        if self.verbose is None:
+            return
+        if re.search("cmod=", self.verbose) \
+           and not re.search(self.verbose, "cmod=all".format(self.name)) \
+           and not re.search(self.verbose, "cmod={}".format(self.name)):
+                    return
+        for component in self.components:
+            component.print(module_path)
     def filter(self, ctypes=[]):
         if 'all' in ctypes:
             return self
@@ -340,7 +391,7 @@ class VersionModule:
             if ctypes and component.ctype not in ctypes:
                 continue
             components.append(component.clone())
-        return VersionModule(self.name, components)
+        return VersionModule(self.verbose, self.name, components)
 
     def is_slave_module(self):
         return self.name.startswith('sonic-slave-')
@@ -370,14 +421,18 @@ class VersionModule:
             return os.path.join(source_path, 'files/build/versions/build', module_name)
         return os.path.join(source_path, 'files/build/versions/dockers', module_name)
 
+    def __repr__(self):
+        return repr(self.name)
+
 class VersionBuild:
     '''
     The VersionBuild consists of multiple version modules.
 
     '''
-    def __init__(self, target_path="./target", source_path='.'):
+    def __init__(self, verbose=None, target_path="./target", source_path='.'):
         self.target_path = target_path
         self.source_path = source_path
+        self.verbose = verbose
         self.modules = {}
 
     def load_from_target(self):
@@ -394,8 +449,11 @@ class VersionBuild:
         for file_path in file_paths:
             if not os.path.isdir(file_path):
                 continue
-            module = VersionModule()
+            module = VersionModule(self.verbose)
             module.load_from_target(file_path)
+            if self.verbose and re.search("stage=tmodname", self.verbose):
+                print("Target modname={}, path={}".format(module.name, file_path))
+                module.print(file_path)
             modules[module.name] = module
         self._merge_dgb_modules()
 
@@ -411,8 +469,11 @@ class VersionBuild:
         modules = {}
         self.modules = modules
         for image_path in paths:
-            module = VersionModule()
+            module = VersionModule(self.verbose)
             module.load(image_path)
+            if self.verbose and re.search("stage=smodname", self.verbose):
+                print("Source modname={}, path={}".format(module.name, image_path))
+                module.print(image_path)
             modules[module.name] = module
 
     def overwrite(self, build, for_all_dist=False, for_all_arch=False):
@@ -430,6 +491,13 @@ class VersionBuild:
             module_path = self.get_module_path(module)
             module.dump(module_path)
 
+    def print(self, message=None):
+        if self.verbose is None:
+            return
+        if message is not None:
+            print("[============={}===========]".format(message))
+        for module in [ self.modules[x] for x in (sorted(self.modules, key = lambda x : x)) ]:
+            module.print(module.module_path)
     def subtract(self, default_module):
         none_aggregatable_module = default_module.clone(exclude_ctypes=DEFAULT_OVERWRITE_COMPONENTS)
         for module in self.modules.values():
@@ -455,20 +523,39 @@ class VersionBuild:
             self.dump()
             return
         self.load_from_source()
+        if self.verbose and re.search("stage=init", self.verbose):
+            self.print("Initial Source")
+
         default_module = self.modules.get(DEFAULT_MODULE, None)
-        target_build = VersionBuild(self.target_path, self.source_path)
+        if self.verbose and re.search("stage=init", self.verbose):
+            default_module.print("Default Module")
+
+        target_build = VersionBuild(self.verbose, self.target_path, self.source_path)
         target_build.load_from_target()
         target_build.filter(ctypes=ctypes)
+        if self.verbose and re.search("stage=init", self.verbose):
+            target_build.print("Initial Target")
+
         if not default_module:
             raise Exception("The default versions does not exist")
-        for module in target_build.modules.values():
+        for module in [ target_build.modules[x] for x in (sorted(target_build.modules, key = lambda x : x)) ] :
             if module.is_individule_version():
                 continue
             tmp_module = module.clone(exclude_ctypes=DEFAULT_OVERWRITE_COMPONENTS)
             default_module.overwrite(tmp_module, for_all_dist=True, for_all_arch=True)
+            if self.verbose and re.search("stage=tmp", self.verbose):
+                default_module.print("TMP DEFAULT MODULE")
+
         target_build.subtract(default_module)
+        if self.verbose and re.search("stage=tmp", self.verbose):
+            target_build.print("After Subtract Target")
+            self.print("After Subtract Source")
         self.overwrite(target_build, for_all_dist=for_all_dist, for_all_arch=for_all_arch)
-        self.dump()
+
+        if self.verbose and re.search("stage=add", self.verbose):
+            self.print("After Merge")
+        if not self.verbose or not re.search("dryrun", self.verbose):
+            self.dump()
 
     def filter(self, ctypes=[]):
         for module in self.modules.values():
@@ -485,14 +572,14 @@ class VersionBuild:
                 for dist in dists:
                     versions = self._get_versions(ctype, dist)
                     common_versions = self._get_common_versions(versions)
-                    component = Component(common_versions, ctype, dist)
+                    component = Component(self.verbose, common_versions, ctype, dist)
                     components.append(component)
             else:
                 versions = self._get_versions(ctype)
                 common_versions = self._get_common_versions(versions)
-                component = Component(common_versions, ctype)
+                component = Component(self.verbose, common_versions, ctype)
                 components.append(component)
-        return VersionModule(DEFAULT_MODULE, components)
+        return VersionModule(self.verbose, DEFAULT_MODULE, components)
 
     def get_aggregatable_modules(self):
         modules = {}
@@ -619,11 +706,13 @@ class VersionManagerCommands:
         parser.add_argument('-d', '--for_all_dist', action='store_true', help='apply the versions for all distributions')
         parser.add_argument('-a', '--for_all_arch', action='store_true', help='apply the versions for all architectures')
         parser.add_argument('-c', '--ctypes', default='all', help='component types to freeze')
+        parser.add_argument('-v', '--verbose', default=None, help="verbose mode")
         args = parser.parse_args(sys.argv[2:])
         ctypes = args.ctypes.split(',')
         if len(ctypes) == 0:
             ctypes = ['all']
-        build = VersionBuild(target_path=args.target_path, source_path=args.source_path)
+
+        build = VersionBuild(verbose=args.verbose, target_path=args.target_path, source_path=args.source_path)
         build.freeze(rebuild=args.rebuild, for_all_dist=args.for_all_dist, for_all_arch=args.for_all_arch, ctypes=ctypes)
 
     def merge(self):
@@ -632,6 +721,8 @@ class VersionManagerCommands:
         parser.add_argument('-m', '--module_path', default=None, help='merge path, use the target path if not specified')
         parser.add_argument('-b', '--base_path', required=True, help='base path, merge to the module path')
         parser.add_argument('-e', '--exclude_module_path', default=None, help='exclude module path')
+        parser.add_argument('-i', '--include_module_path', default=None, help='include module path')
+        parser.add_argument('-v', '--verbose', default=None, help="verbose mode")
         args = parser.parse_args(sys.argv[2:])
         module_path = args.module_path
         if not module_path:
@@ -640,15 +731,22 @@ class VersionManagerCommands:
             print('The module path {0} does not exist'.format(module_path))
         if not os.path.exists(args.target_path):
             os.makedirs(args.target_path)
-        module = VersionModule()
+        module = VersionModule(args.verbose)
         module.load(module_path)
-        base_module = VersionModule()
+        base_module = VersionModule(args.verbose)
         base_module.load(args.base_path)
         module.overwrite(base_module)
         if args.exclude_module_path:
-            exclude_module = VersionModule()
+            exclude_module = VersionModule(args.verbose)
             exclude_module.load(args.exclude_module_path)
             module.subtract(exclude_module)
+        if args.include_module_path:
+            include_module = VersionModule(args.verbose)
+            include_module.load(args.include_module_path)
+            if args.verbose:
+                include_module.print(args.include_module_path)
+            include_module.overwrite(module)
+            module.overwrite(include_module)
         module.dump(args.target_path)
 
     def generate(self):
@@ -661,6 +759,7 @@ class VersionManagerCommands:
         parser.add_argument('-d', '--distribution', required=True, help="distribution")
         parser.add_argument('-a', '--architecture', required=True, help="architecture")
         parser.add_argument('-p', '--priority', default=999, help="priority of the debian apt preference")
+        parser.add_argument('-v', '--verbose', default=None, help="verbose mode")
 
         args = parser.parse_args(sys.argv[2:])
         module_path = args.module_path
@@ -668,11 +767,20 @@ class VersionManagerCommands:
             module_path = VersionModule.get_module_path_by_name(args.source_path, args.module_name)
         if not os.path.exists(args.target_path):
             os.makedirs(args.target_path)
-        module = VersionModule()
+        module = VersionModule(args.verbose)
         module.load(module_path, filter_dist=args.distribution, filter_arch=args.architecture)
         config = module.get_config_module(args.source_path, args.distribution, args.architecture)
+        if args.verbose:
+            config.print(args.source_path)
         config.clean_info(force=True)
         config.dump(args.target_path, config=True, priority=args.priority)
 
 if __name__ == "__main__":
     VersionManagerCommands()
+
+
+"""
+Dry run examples:
+   scripts/versions_manager.py freeze -v 'dryrun|cmod=docker-config-engine-stretch|cfile=versions-py2|cname=all|stage=sub|stage=add|stage=init|stage=tmodname|stage=tmp'
+   scripts/versions_manager.py freeze -v 'dryrun|cmod=default|cfile=versions-docker|cname=all|stage=sub|stage=add|stage=init|stage=tmodname|stage=tmp'
+"""
