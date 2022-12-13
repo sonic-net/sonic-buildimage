@@ -1,5 +1,7 @@
 #!/bin/bash
 
+[[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x 
+
 CONFIGURED_ARCH=$1
 IMAGE_DISTRO=$2
 FILESYSTEM_ROOT=$3

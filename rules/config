@@ -237,6 +237,15 @@ TRUSTED_GPG_URLS = https://packages.trafficmanager.net/debian/public_key.gpg,htt
 #   docker: docker base images
 SONIC_VERSION_CONTROL_COMPONENTS ?= none
 
+# SONIC_VERSION_CACHE allows the .deb,.py, wget, git, docker and go files to be stored in the cache path. This allows the submodules to
+# cache standard installation package and restored back to avoid the package download every time.
+# SONIC_VERSION_CACHE - Method of deb package caching
+#	none    :  no caching
+#	cache   :  Use cache if exists else build the source and update the cache
+# SONIC_VERSION_CACHE_SOURCE - Defines the version cache location details
+SONIC_VERSION_CACHE_METHOD ?= none
+SONIC_VERSION_CACHE_SOURCE ?= $(SONIC_DPKG_CACHE_SOURCE)/vcache
+
 # SONiC docker registry
 #
 

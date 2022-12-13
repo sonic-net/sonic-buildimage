@@ -18,6 +18,22 @@ symlink_build_hooks
 set_reproducible_mirrors
 
 mkdir -p /var/cache/apt/archives/
+mkdir -p ${PKG_CACHE_PATH}/deb/
+
+if [ ! -z "$(get_version_cache_option)" ]; then
+	# Skip the deletion of cache files
+	cat <<-EOF >/etc/apt/apt.conf.d/docker-clean
+	DPkg::Post-Invoke { "test -f /usr/bin/rsync && rsync -avzh --ignore-errors /var/cache/apt/archives/ ${PKG_CACHE_PATH}/deb/; rm -f /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true"; };
+	APT::Update::Post-Invoke { "test -f /usr/bin/rsync && rsync -avzh --ignore-errors /var/cache/apt/archives/ ${PKG_CACHE_PATH}/deb/; rm -f /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true"; };
+	APT::Keep-Downloaded-Packages "true";
+	EOF
+fi
+
+# Extract the cache inside the docker build.
+if [ -f ${PKG_CACHE_FILE_NAME} ]; then
+	tar -C ${PKG_CACHE_PATH} -xvf  ${PKG_CACHE_FILE_NAME}
+	test -e ${PKG_CACHE_PATH}/deb && cp ${PKG_CACHE_PATH}/deb/* /var/cache/apt/archives/
+fi
 
 chmod -R a+rw $BUILDINFO_PATH
 

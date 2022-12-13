@@ -175,11 +175,22 @@ ifeq ($(ENABLE_FIPS), y)
 endif
 endif
 
+SONIC_VERSION_CACHE := $(filter-out none,$(SONIC_VERSION_CACHE_METHOD))
+SONIC_OVERRIDE_BUILD_VARS += SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE)
+SONIC_OVERRIDE_BUILD_VARS += SONIC_VERSION_CACHE_SOURCE=$(SONIC_VERSION_CACHE_SOURCE)
+export SONIC_VERSION_CACHE SONIC_VERSION_CACHE_SOURCE
+$(shell test -d $(SONIC_VERSION_CACHE_SOURCE) || \
+    mkdir -p $(SONIC_VERSION_CACHE_SOURCE) && chmod -f 777 $(SONIC_VERSION_CACHE_SOURCE) 2>/dev/null )
+
 # Generate the version control build info
 $(shell \
 	SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
 	TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
 	PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
+	DISTRO=$(BLDENV) \
+	SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
+	SONIC_VERSION_CACHE_SOURCE=$(SONIC_VERSION_CACHE_SOURCE) \
+	DBGOPT='$(DBGOPT)' \
 	scripts/generate_buildinfo_config.sh)
 
 # Generate the slave Dockerfile, and prepare build info for it
@@ -198,6 +209,8 @@ $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 
 PREPARE_DOCKER=BUILD_SLAVE=y \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
+	SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
+	DBGOPT='$(DBGOPT)' \
 	scripts/prepare_docker_buildinfo.sh \
 		$(SLAVE_BASE_IMAGE) \
 		$(SLAVE_DIR)/Dockerfile \
@@ -220,12 +233,13 @@ SLAVE_TAG = $(shell \
 	(cat $(SLAVE_DIR)/Dockerfile.user \
 		 $(SLAVE_DIR)/Dockerfile \
 		 $(SLAVE_DIR)/buildinfo/versions/versions-* \
-		 .git/HEAD \
 	&& echo $(USER)/$(PWD)/$(CONFIGURED_PLATFORM)) \
 	| sha1sum \
 	| awk '{print substr($$1,0,11);}')
 
 COLLECT_DOCKER=DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
+	SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
+	DBGOPT='$(DBGOPT)' \
 	scripts/collect_docker_version_files.sh \
 		$(SLAVE_BASE_IMAGE) \
 		target \
@@ -284,6 +298,10 @@ endif
 
 ifneq ($(SONIC_DPKG_CACHE_SOURCE),)
 	DOCKER_RUN += -v "$(SONIC_DPKG_CACHE_SOURCE):/dpkg_cache:rw"
+endif
+
+ifneq ($(SONIC_VERSION_CACHE_SOURCE),)
+	DOCKER_RUN += -v "$(SONIC_VERSION_CACHE_SOURCE):/vcache:rw"
 endif
 
 ifeq ($(SONIC_ENABLE_SECUREBOOT_SIGNATURE), y)
@@ -379,6 +397,8 @@ DOCKER_SLAVE_BASE_BUILD = docker build --no-cache \
 		    --build-arg http_proxy=$(http_proxy) \
 		    --build-arg https_proxy=$(https_proxy) \
 		    --build-arg no_proxy=$(no_proxy) \
+		    --build-arg SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
+		    --build-arg SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
 		    $(SLAVE_DIR) \
 		    $(SPLIT_LOG) $(DOCKER_BASE_LOG)
 
