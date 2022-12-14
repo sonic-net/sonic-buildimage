@@ -170,6 +170,12 @@ ENABLE_AUTO_TECH_SUPPORT = y
 # INCLUDE_MACSEC - build docker-macsec for macsec support
 INCLUDE_MACSEC = y
 
+# INCLUDE_TEAMD - build docker-teamd for LAG protocol support
+INCLUDE_TEAMD ?= y
+
+# INCLUDE_ROUTER_ADVERTISER - build docker-router-advertiser for router advertisements support
+INCLUDE_ROUTER_ADVERTISER ?= y
+
 # INCLUDE_KUBERNETES - if set to y kubernetes packages are installed to be able to
 # run as worker node in kubernetes cluster.
 INCLUDE_KUBERNETES = n
