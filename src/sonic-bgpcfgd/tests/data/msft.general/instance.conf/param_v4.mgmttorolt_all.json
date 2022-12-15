@@ -1,0 +1,21 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "MgmtToRRouter"
+        }
+    },
+    "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {
+        "neig_device": {
+            "type": "OpticalLonghaulTerminal"
+        }
+    },
+    "CONFIG_DB__BGP_BBR": {
+        "status": "enabled"
+    },
+    "bgp_session": {
+        "asn": "11111",
+        "name": "neig_device",
+        "admin_status": "down"
+    },
+    "neighbor_addr": "11.11.11.11"
+}

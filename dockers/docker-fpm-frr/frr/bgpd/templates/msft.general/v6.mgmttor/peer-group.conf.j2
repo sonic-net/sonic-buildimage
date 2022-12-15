@@ -1,14 +1,22 @@
 !
 ! template: bgpd/templates/msft.general/v6.leaf.tor.all/peer-group.conf.j2
 !
-  neighbor TIER1_V6 peer-group
+  neighbor {{ peer_group_type }} peer-group
   address-family ipv6 unicast
-    neighbor TIER1_V6 activate
-    neighbor TIER1_V6 soft-reconfiguration inbound
-    neighbor TIER1_V6 route-map FROM_TIER1_V6 in
-    neighbor TIER1_V6 route-map TO_TIER1_V6 out
-    neighbor TIER1_V6 send-community
-    neighbor TIER1_V6 maximum-prefix 1000 90 warning-only
+    neighbor {{ peer_group_type }} activate
+    neighbor {{ peer_group_type }} soft-reconfiguration inbound
+{% if neighbor_type == 'OpticalLonghaulTerminal' %}
+    neighbor {{ peer_group_type }} route-map FROM_{{ peer_group_type }}_DEPLOYMENT_ID_{{ neighbor_deployment_id }} in
+{% else %}
+    neighbor {{ peer_group_type }} route-map FROM_{{ peer_group_type }} in
+{% endif %}
+    neighbor {{ peer_group_type }} route-map TO_{{ peer_group_type }} out
+    neighbor {{ peer_group_type }} send-community
+{% if neighbor_type == 'OpticalLonghaulTerminal' %}
+    neighbor {{ peer_group_type }} maximum-prefix 40 90
+{% else %}
+    neighbor {{ peer_group_type }} maximum-prefix 1000 90 warning-only
+{% endif %}
   exit-address-family
 !
 ! end of template: bgpd/templates/msft.general/v6.leaf.tor.all/peer-group.conf.j2

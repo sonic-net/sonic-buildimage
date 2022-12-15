@@ -1,9 +1,37 @@
 !
 ! template: bgpd/templates/msft.general/v4.mgmttor/policy.conf.j2
 !
-route-map FROM_TIER1_V4 permit 100
+{% if neighbor_type == 'OpticalLonghaulTerminal' %}
+ip prefix-list DEFAULT_IPV4 permit 0.0.0.0/0
 !
-route-map TO_TIER1_V4 permit 100
+route-map ALLOW_LIST_DEPLOYMENT_ID_{{ neighbor_deployment_id}}_NEIGHBOR_{{ neighbor_type }}_V4 deny 60000
 !
+{% if constants.bgp.allow_list is defined and constants.bgp.allow_list.enabled is defined and constants.bgp.allow_list.enabled and constants.bgp.allow_list.drop_community is defined %}
+{% if allow_list_default_action == 'deny' %}
+route-map ALLOW_LIST_DEPLOYMENT_ID_{{ neighbor_deployment_id}}_NEIGHBOR_{{ neighbor_type }}_V4 permit 65535
+  set community no-export additive
+!
+{% else %}
+route-map ALLOW_LIST_DEPLOYMENT_ID_{{ neighbor_deployment_id}}_NEIGHBOR_{{ neighbor_type }}_V4 permit 65535
+  set community {{ constants.bgp.allow_list.drop_community }} additive
+!
+{% endif %}
+route-map FROM_{{ peer_group_type }}_DEPLOYMENT_ID_{{ neighbor_deployment_id }} permit 100
+ call ALLOW_LIST_DEPLOYMENT_ID_{{ neighbor_deployment_id}}_NEIGHBOR_{{ neighbor_type }}_V4
+!
+{% endif %}
+route-map FROM_{{ peer_group_type }}_DEPLOYMENT_ID_{{ neighbor_deployment_id }} deny 1000
+!
+route-map TO_{{ peer_group_type }} permit 100
+ match ip address prefix-list DEFAULT_IPV4
+!
+route-map TO_{{ peer_group_type }} deny 1000
+!
+{% else %}
+route-map FROM_{{ peer_group_type }} permit 100
+!
+route-map TO_{{ peer_group_type }} permit 100
+!
+{% endif %}
 ! end of template: bgpd/templates/msft.general/v4.mgmttor/policy.conf.j2
 !

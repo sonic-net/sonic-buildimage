@@ -1,14 +1,22 @@
 !
 ! template: bgpd/templates/msft.general/v4.mgmttor/peer-group.conf.j2
 !
-  neighbor TIER1_V4 peer-group
+  neighbor {{ peer_group_type }} peer-group
   address-family ipv4 unicast
-    neighbor TIER1_V4 activate
-    neighbor TIER1_V4 soft-reconfiguration inbound
-    neighbor TIER1_V4 route-map FROM_TIER1_V4 in
-    neighbor TIER1_V4 route-map TO_TIER1_V4 out
-    neighbor TIER1_V4 send-community
-    neighbor TIER1_V4 maximum-prefix 4000 90 warning-only
+    neighbor {{ peer_group_type }} activate
+    neighbor {{ peer_group_type }} soft-reconfiguration inbound
+{% if neighbor_type == 'OpticalLonghaulTerminal' %}
+    neighbor {{ peer_group_type }} route-map FROM_{{ peer_group_type }}_DEPLOYMENT_ID_{{ neighbor_deployment_id }} in
+{% else %}
+    neighbor {{ peer_group_type }} route-map FROM_{{ peer_group_type }} in
+{% endif %}
+    neighbor {{ peer_group_type }} route-map TO_{{ peer_group_type }} out
+    neighbor {{ peer_group_type }} send-community
+{% if neighbor_type == 'OpticalLonghaulTerminal' %}
+    neighbor {{ peer_group_type }} maximum-prefix 40 90
+{% else %}
+    neighbor {{ peer_group_type }} maximum-prefix 4000 90 warning-only
+{% endif %}
   exit-address-family
 !
 ! end of template: bgpd/templates/msft.general/v4.mgmttor/peer-group.conf.j2

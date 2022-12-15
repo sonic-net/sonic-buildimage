@@ -20,6 +20,11 @@
 {%         elif device_type in ['BmcMgmtToRRouter'] %}
 {%             include path_template % "v4.mgmttor.mx" %}
 {%         else %}
+{%             if neighbor_type == 'OpticalLonghaulTerminal' %}
+{%                 set peer_group_type = 'OLT_V4' %}
+{%             else %}
+{%                 set peer_group_type = 'TIER1_V4' %}
+{%             endif %}
 {%             include path_template % "v4.mgmttor" %}
 {%         endif %}
 {%     elif device_type in ['ToRRouter', 'BackEndToRRouter'] %}
@@ -71,6 +76,11 @@
 {%         elif device_type in ['BmcMgmtToRRouter'] %}
 {%             include path_template % "v6.mgmttor.mx" %}
 {%         else %}
+{%             if neighbor_type == 'OpticalLonghaulTerminal' %}
+{%                 set peer_group_type = 'OLT_V6' %}
+{%             else %}
+{%                 set peer_group_type = 'TIER1_V6' %}
+{%             endif %}
 {%             include path_template % "v6.mgmttor" %}
 {%         endif %}
 {%     elif device_type in ['ToRRouter', 'BackEndToRRouter'] %}

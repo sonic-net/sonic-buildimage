@@ -1,0 +1,26 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "MgmtToRRouter"
+        }
+    },
+    "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {
+        "neig_device": {
+            "type": "OpticalLonghaulTerminal",
+            "deployment_id": "3"
+        }
+    },
+    "bgp_session": {
+        "asn": "11111",
+        "name": "neig_device"
+    },
+    "neighbor_addr": "fc00::15",
+    "constants": {
+        "bgp": {
+            "allow_list": {
+                "enabled": true,
+                "drop_community": "12345:12345"
+            }
+        }
+    }
+}

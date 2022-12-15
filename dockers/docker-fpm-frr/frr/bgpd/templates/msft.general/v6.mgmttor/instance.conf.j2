@@ -3,7 +3,7 @@
 !
   neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
   neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
-  neighbor {{ neighbor_addr }} peer-group TIER1_V6
+  neighbor {{ neighbor_addr }} peer-group {{ peer_group_type }}
 !
 {% if CONFIG_DB__BGP_BBR['status'] == 'enabled' %}
 address-family ipv6 unicast
