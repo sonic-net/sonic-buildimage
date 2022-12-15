@@ -1,0 +1,14 @@
+Source: s3ip-sysfs
+Maintainer: timsftian <timsftian@tencent.com>
+Section: libs
+Priority: optional
+Build-Depends: dh-exec (>=0.3),debhelper (>= 8.0.0), autotools-dev
+Standards-Version: 3.9.3
+Homepage: https://tencent.com
+
+Package: s3ip-sysfs
+Architecture: any
+Section: libdevel
+Depends: ${misc:Depends} 
+Description: This package contains development files for s3ip sysfs
+

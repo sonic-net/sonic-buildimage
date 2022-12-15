@@ -93,7 +93,7 @@ class Module(ModuleBase):
     def is_replaceable(self):
         return True
 
-    def get_oper_status(self): # TODO: read from DB?
+    def get_oper_status(self):
         if utils.read_int_from_file('/run/hw-management/system/lc{}_active'.format(self.slot_id)) == 1:
             return ModuleBase.MODULE_STATUS_ONLINE
         elif utils.read_int_from_file('/run/hw-management/system/lc{}_present'.format(self.slot_id)) == 1:
@@ -105,7 +105,7 @@ class Module(ModuleBase):
 
     def _check_state(self):
         """Check Module status change:
-            1. If status sysfs file value has been changed TODO: read from DB?
+            1. If status sysfs file value has been changed
             2. If sequence NO has been changed which means line card has been removed and inserted again.
         """
         seq_no = self._get_seq_no()
@@ -140,7 +140,7 @@ class Module(ModuleBase):
         self._check_state()
         if self.current_state == Module.STATE_ACTIVATED and not self._thermal_list:
             from .thermal import initialize_linecard_thermals
-            self._thermal_list = initialize_linecard_thermals(self.get_name(), self.slot_id) # TODO: add presence_cb?
+            self._thermal_list = initialize_linecard_thermals(self.get_name(), self.slot_id)
 
     def get_num_thermals(self):
         """
@@ -192,7 +192,7 @@ class Module(ModuleBase):
             if index < sfp_count:
                 if not self._sfp_list:
                     self._sfp_list = [None] * sfp_count
-                
+
                 if not self._sfp_list[index]:
                     self._sfp_list[index] = self._create_sfp_object(index)
                     self.sfp_initialized_count += 1
@@ -220,7 +220,7 @@ class Module(ModuleBase):
         """
         if self.sfp_count == 0:
             self.sfp_count = DeviceDataManager.get_linecard_sfp_count(self.slot_id)
-        return self.sfp_count 
+        return self.sfp_count
 
     def get_all_sfps(self):
         """

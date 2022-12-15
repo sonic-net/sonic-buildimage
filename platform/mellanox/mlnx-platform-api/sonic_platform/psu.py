@@ -84,8 +84,8 @@ class FixedPsu(PsuBase):
         Retrieves current PSU voltage output
 
         Returns:
-            A float number, the output voltage in volts, 
-            e.g. 12.1 
+            A float number, the output voltage in volts,
+            e.g. 12.1
         """
         return None
 
@@ -143,7 +143,7 @@ class FixedPsu(PsuBase):
         Gets the power available status
 
         Returns:
-            True if power is present and power on. 
+            True if power is present and power on.
             False and "absence of PSU" if power is not present.
             False and "absence of power" if power is present but not power on.
         """
@@ -176,7 +176,7 @@ class FixedPsu(PsuBase):
 
         Returns:
             A float number of current temperature in Celsius up to nearest thousandth
-            of one degree Celsius, e.g. 30.125 
+            of one degree Celsius, e.g. 30.125
         """
         return None
 
@@ -195,8 +195,8 @@ class FixedPsu(PsuBase):
         Retrieves current PSU voltage input
 
         Returns:
-            A float number, the input voltage in volts, 
-            e.g. 12.1 
+            A float number, the input voltage in volts,
+            e.g. 12.1
         """
         return None
 
@@ -264,7 +264,7 @@ class Psu(FixedPsu):
                 psu_voltage_out = os.path.join(PSU_PATH, "power/psu{}_volt".format(self.index))
                 if os.path.exists(psu_voltage_out):
                     self._psu_voltage = psu_voltage_out
-        
+
         return self._psu_voltage
 
     @property
@@ -336,12 +336,10 @@ class Psu(FixedPsu):
         Retrieves current PSU voltage output
 
         Returns:
-            A float number, the output voltage in volts, 
-            e.g. 12.1 
+            A float number, the output voltage in volts,
+            e.g. 12.1
         """
         if self.get_powergood_status() and self.psu_voltage:
-            # TODO: should we put log_func=None here? If not do this, when a PSU is back to power, some PSU related
-            # sysfs may not ready, read_int_from_file would encounter exception and log an error.
             voltage = utils.read_int_from_file(self.psu_voltage, log_func=logger.log_info)
             return float(voltage) / 1000
         return None
@@ -405,7 +403,7 @@ class Psu(FixedPsu):
 
         Returns:
             A float number of current temperature in Celsius up to nearest thousandth
-            of one degree Celsius, e.g. 30.125 
+            of one degree Celsius, e.g. 30.125
         """
         if self.get_powergood_status():
             temp = utils.read_int_from_file(self.psu_temp, log_func=logger.log_info)
@@ -492,8 +490,8 @@ class Psu(FixedPsu):
         Retrieves current PSU voltage input
 
         Returns:
-            A float number, the input voltage in volts, 
-            e.g. 12.1 
+            A float number, the input voltage in volts,
+            e.g. 12.1
         """
         if self.get_powergood_status():
             voltage = utils.read_int_from_file(self.psu_voltage_in, log_func=logger.log_info)
@@ -563,13 +561,13 @@ class Psu(FixedPsu):
 
 
 class InvalidPsuVolWA:
-    """This class is created as a workaround for a known hardware issue that the PSU voltage threshold could be a 
+    """This class is created as a workaround for a known hardware issue that the PSU voltage threshold could be a
        invalid value 127998. Once we read a voltage threshold value equal to 127998, we should do following:
            1. Check the PSU vendor, it should be Delta
            2. Generate a temp sensor configuration file which contains a few set commands. Those set commands are the WA provided by low level team.
            3. Call "sensors -s -c <tmp_conf_file>"
            4. Wait for it to take effect
-        
+
         This issue is found on 3700, 3700c, 3800, 4600c
     """
 
