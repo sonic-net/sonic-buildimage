@@ -1,0 +1,2 @@
+systemctl stop s3ip-sysfs
+systemctl disable s3ip-sysfs

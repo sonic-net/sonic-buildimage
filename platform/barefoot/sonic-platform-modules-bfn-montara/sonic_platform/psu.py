@@ -6,6 +6,8 @@ try:
     import time
     import signal
     import syslog
+    import logging
+    import threading
 
     sys.path.append(os.path.dirname(__file__))
 
@@ -14,11 +16,17 @@ try:
     from sonic_platform_base.psu_base import PsuBase
     from sonic_platform.thermal import psu_thermals_list_get
     from platform_utils import cancel_on_sigterm
+    from sonic_platform.bfn_extensions.psu_sensors import get_psu_metrics
+    from sonic_platform.bfn_extensions.psu_sensors import get_metric_value
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
 class Psu(PsuBase):
     """Platform-specific PSU class"""
+
+    __lock = threading.Lock()
+    __sensors_info = None
+    __timestamp = 0
 
     sigterm = False
     sigterm_default_handler = None
@@ -47,6 +55,20 @@ class Psu(PsuBase):
             cls.sigterm_default_handler(sig, frame)
         syslog.syslog(syslog.LOG_INFO, "Canceling PSU platform API calls...")
         cls.sigterm = True
+
+    @classmethod
+    def __sensors_get(cls, cached=True):
+        cls.__lock.acquire()
+        if time.time() > cls.__timestamp + 15:
+            # Update cache once per 15 seconds
+            try:
+                cls.__sensors_info = get_psu_metrics()
+                cls.__timestamp = time.time()
+            except Exception as e:
+                logging.warning("Failed to update sensors cache: " + str(e))
+        info = cls.__sensors_info
+        cls.__lock.release()
+        return info
 
     '''
     Units of returned info object values:
@@ -105,8 +127,7 @@ class Psu(PsuBase):
             A float number, the output voltage in volts,
             e.g. 12.1
         """
-        info = self.__info_get()
-        return float(info.vout) if info else 0
+        return get_metric_value(Psu.__sensors_get(), "PSU%d 12V Output Voltage_in1_input" % self.__index)
 
     def get_current(self):
         """
@@ -115,8 +136,24 @@ class Psu(PsuBase):
         Returns:
             A float number, the electric current in amperes, e.g 15.4
         """
-        info = self.__info_get()
-        return info.iout / 1000 if info else 0
+        return get_metric_value(Psu.__sensors_get(), "PSU%d 12V Output Current_curr2_input" % self.__index)
+
+    def get_input_voltage(self):
+        """
+        Retrieves current PSU voltage input
+        Returns:
+            A float number, the input voltage in volts,
+            e.g. 220
+        """
+        return get_metric_value(Psu.__sensors_get(), "PSU%d Input Voltage_in0_input" % self.__index)
+
+    def get_input_current(self):
+        """
+        Retrieves the input current draw of the power supply
+        Returns:
+            A float number, the electric current in amperes, e.g 0.8
+        """
+        return get_metric_value(Psu.__sensors_get(), "PSU%d Input Current_curr1_input" % self.__index)
 
     def get_power(self):
         """
