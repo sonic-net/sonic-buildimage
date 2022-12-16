@@ -14,20 +14,34 @@ Packet is defined by a JSON file given as an argument to the tool.
 3.  Changes done in the packet classification (e.g. ACL, PBR) are not taken into consideration during calculation.
 
 ## Command line interface
-1.  User shall provide the following input parameters:
+1.  User shall enter syncd container to run ECMP calculator.
+2.  User shall provide the following input parameters:
 - JSON file describing a packet
 - Ingress port (e.g. "Ethernet0", must pe a physical interface)
 - Debug option for debug purposes (optional)
 - VRF name (optional)
-2.  Usage example:
+3.  Usage example:
 ```
-$ show ip ecmp-egress-port --packet /tmp/packet.json --ingress-port Ethernet0 --vrf Vrf_red --debug
+$ docker exec -it syncd bash
+$ /usr/bin/ecmp_calc.py -i Ethernet0 -p ./packet.json -v Vrf_red
 Egress port: Ethernet4
 ```
-ECMP calculator is a vendor specific tool. If tool was not implemented and CLI command is being called, the following message will be returned to user:
 ```
-$ show ip ecmp-egress-port --packet /tmp/packet.json --ingress-port Ethernet0 --vrf Vrf_red --debug
-ECMP calculator is not available in this image
+$ docker exec -it syncd bash
+$ /usr/bin/ecmp_calc.py -h
+usage: ecmp_calc.py [-h] -i INTERFACE -p PACKET [-v VRF] [-d]
+
+ECMP calculator
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INTERFACE, --interface INTERFACE
+                        Ingress interface
+  -p PACKET, --packet PACKET
+                        Packet description
+  -v VRF, --vrf VRF     VRF name
+  -d, --debug           Flag for debug
+
 ```
 
 ## Packet JSON
