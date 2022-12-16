@@ -1,4 +1,5 @@
 import filecmp
+import json
 import os
 import subprocess
 
@@ -46,11 +47,13 @@ class TestCfgGen(TestCase):
         _, output = getstatusoutput_noshell(['diff', '-u', file1, file2])
         return output
 
-    def run_case(self, template, target):
+    def run_case(self, template, target, extra_data=None):
         template_dir = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-fpm-frr', "frr")
         conf_template = os.path.join(template_dir, template)
         constants = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'constants', 'constants.yml')
         cmd = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-y', constants, '-t', conf_template, '-T', template_dir]
+        if extra_data:
+            cmd = ['-a', json.dumps(extra_data)] + cmd
         self.run_script(cmd, output_file=self.output_file)
 
         original_filename = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, target)
@@ -68,3 +71,6 @@ class TestCfgGen(TestCase):
     def test_zebra_frr(self):
         self.assertTrue(*self.run_case('zebra/zebra.conf.j2', 'zebra_frr.conf'))
 
+    def test_bgpd_frr_dualtor(self):
+        extra_data = {"DEVICE_METADATA": {"localhost": {"subtype": "DualToR"}}}
+        self.assertTrue(*self.run_case('bgpd/bgpd.conf.j2', 'bgpd_frr_dualtor.conf', extra_data=extra_data))

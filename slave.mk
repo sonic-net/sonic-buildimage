@@ -486,7 +486,7 @@ export vs_build_prepare_mem=$(VS_PREPARE_MEM)
 # $(1) => Docker name
 
 define docker-get-tag
-$(shell [ ! -z $(filter $(1).gz,$(SONIC_PACKAGES_LOCAL)) ] && echo $(SONIC_IMAGE_VERSION) || echo latest)
+$(shell [ ! -z $(filter $(1).gz,$(SONIC_PACKAGES_LOCAL)) ] && [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ] && echo $(SONIC_IMAGE_VERSION) || echo latest)
 endef
 
 # $(call docker-image-save,from,to)
