@@ -8,9 +8,9 @@ NUM_LOGS_TO_ROTATE=10
 
 # Detect common log files (auth, cron, teamd, telemetry, etc.) size. 720M is
 # required to hold extra space to rotate all files (16M each) two times.
-if [[ "$VAR_LOG_SIZE" < "737280" ]]; then
+if [[ "$VAR_LOG_SIZE" < "204800" ]]; then
     LOG_FILE_ROTATE_SIZE_MB=1
-elif [[ "$VAR_LOG_SIZE" < "1474560" ]]; then
+elif [[ "$VAR_LOG_SIZE" < "409600" ]]; then
     LOG_FILE_ROTATE_SIZE_MB=2
 else
     LOG_FILE_ROTATE_SIZE_MB=16

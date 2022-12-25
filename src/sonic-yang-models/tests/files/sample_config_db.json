@@ -2622,6 +2622,8 @@
             },
             "dpu1": {
                 "midplane_interface": "dpu1"
+            }
+        },
         "LOGGING": {
             "debug": {
                 "disk_percentage": "46.0",
