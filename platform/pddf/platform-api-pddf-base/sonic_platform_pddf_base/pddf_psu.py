@@ -11,9 +11,17 @@
 # - psu_serial_num
 # - psu_fan_dir
 # - psu_v_out
+# - psu_v_out_min
+# - psu_v_out_max
 # - psu_i_out
 # - psu_p_out
+# - psu_p_out_max
 # - psu_fan1_speed_rpm
+# - psu_temp1_input
+# - psu_temp1_high_threshold
+# - psu_v_in
+# - psu_i_in
+# - psu_p_in
 #############################################################################
 
 
@@ -129,6 +137,10 @@ class PddfPsu(PsuBase):
 
         serial = output['status']
 
+        # strip_non_ascii
+        stripped = (c for c in serial if 0 < ord(c) < 127)
+        serial = ''.join(stripped)
+
         return serial.rstrip('\n')
 
     def get_status(self):
@@ -167,6 +179,10 @@ class PddfPsu(PsuBase):
             return None
 
         mfr = output['status']
+
+        # strip_non_ascii
+        stripped = (c for c in mfr if 0 < ord(c) < 127)
+        mfr = ''.join(stripped)
 
         return mfr.rstrip('\n')
 
@@ -318,6 +334,100 @@ class PddfPsu(PsuBase):
 
         # current in mA
         return float(i_in)/1000
+
+    def get_input_power(self):
+        """
+        Retrieves current energy supplied to the PSU
+        Returns:
+            A float number, the power in watts, e.g. 302.6
+        """
+        device = "PSU{}".format(self.psu_index)
+        output = self.pddf_obj.get_attr_name_output(device, "psu_p_in")
+        if not output:
+            return 0.0
+
+        p_in = output['status']
+
+        # power is returned in micro watts
+        return float(p_in)/1000000
+
+    def get_temperature_high_threshold(self):
+        """
+        Retrieves the high threshold temperature of PSU
+        Returns:
+            A float number, the high threshold temperature of PSU in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        device = "PSU{}".format(self.psu_index)
+        output = self.pddf_obj.get_attr_name_output(device, "psu_temp1_high_threshold")
+        if not output:
+            return 0.0
+
+        temp_high_thresh = output['status']
+        return float(temp_high_thresh)/1000
+
+    def get_voltage_high_threshold(self):
+        """
+        Retrieves the high threshold PSU voltage output
+        Returns:
+            A float number, the high threshold output voltage in volts,
+            e.g. 12.1
+        """
+        device = "PSU{}".format(self.psu_index)
+        output = self.pddf_obj.get_attr_name_output(device, "psu_v_out_max")
+        if not output:
+            return 0.0
+
+        v_out_max = output['status']
+        return float(v_out_max)/1000
+
+    def get_voltage_low_threshold(self):
+        """
+        Retrieves the low threshold PSU voltage output
+        Returns:
+            A float number, the low threshold output voltage in volts,
+            e.g. 12.1
+        """
+        device = "PSU{}".format(self.psu_index)
+        output = self.pddf_obj.get_attr_name_output(device, "psu_v_out_min")
+        if not output:
+            return 0.0
+
+        v_out_min = output['status']
+        return float(v_out_min)/1000
+
+    def get_maximum_supplied_power(self):
+        """
+        Retrieves the maximum supplied power by PSU
+        Returns:
+            A float number, the maximum power output in Watts.
+            e.g. 1200.1
+        """
+        device = "PSU{}".format(self.psu_index)
+        output = self.pddf_obj.get_attr_name_output(device, "psu_p_out_max")
+        if not output:
+            return 0.0
+
+        p_out_max = output['status']
+        # max power is in milliwatts
+        return float(p_out_max)/1000
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.psu_index
+
+    def is_replaceable(self):
+        """
+        Indicate whether PSU is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True
 
     def dump_sysfs(self):
         return self.pddf_obj.cli_dump_dsysfs('psu')

@@ -56,10 +56,10 @@ generate_kvm_image()
         exit 1
     }
 
-    gzip $KVM_IMAGE_DISK
+    $GZ_COMPRESS_PROGRAM $KVM_IMAGE_DISK
 
     [ -r $KVM_IMAGE_DISK.gz ] || {
-        echo "Error : gzip $KVM_IMAGE_DISK failed!"
+        echo "Error : $GZ_COMPRESS_PROGRAM $KVM_IMAGE_DISK failed!"
         exit 1
     }
 
@@ -147,10 +147,10 @@ elif [ "$IMAGE_TYPE" = "raw" ]; then
         exit 1
     }
 
-    gzip $OUTPUT_RAW_IMAGE
+    $GZ_COMPRESS_PROGRAM $OUTPUT_RAW_IMAGE
 
     [ -r $OUTPUT_RAW_IMAGE.gz ] || {
-        echo "Error : gzip $OUTPUT_RAW_IMAGE failed!"
+        echo "Error : $GZ_COMPRESS_PROGRAM $OUTPUT_RAW_IMAGE failed!"
         exit 1
     }
 

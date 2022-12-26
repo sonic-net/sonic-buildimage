@@ -127,7 +127,7 @@ class Component(ComponentBase):
         self.index = component_index
         self.name = self.CHASSIS_COMPONENTS[self.index][0]
         self.description = self.CHASSIS_COMPONENTS[self.index][1]
-        self.version = self.CHASSIS_COMPONENTS[self.index][2]()
+        self.version = None
 
     @staticmethod
     def _get_available_firmware_version(image_path):
@@ -208,6 +208,8 @@ class Component(ComponentBase):
         Returns:
             A string containing the firmware version of the component
         """
+        if self.version == None:
+            self.version = self.CHASSIS_COMPONENTS[self.index][2]()
         return self.version
 
     def get_presence(self):

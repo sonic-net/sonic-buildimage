@@ -1,0 +1,11 @@
+Source: sonic-platform-modules-fs
+Section: main
+Priority: extra
+Maintainer: Sec <sec@feisu.com> 
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: platform-modules-s5800-48t4s
+Architecture: arm64
+Depends: linux-image-5.10.0-18-2-arm64-unsigned
+Description: kernel modules for platform devices such as fan, led, sfp

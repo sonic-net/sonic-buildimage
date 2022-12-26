@@ -345,7 +345,7 @@ class SFP(NvidiaSFPCommon):
                     raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
         except (OSError, IOError) as e:
             if log_on_error:
-                logger.log_error(f'Failed to read sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, \
+                logger.log_warning(f'Failed to read sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, \
                     size={num_bytes}, offset={offset}, error = {e}')
             return None
 

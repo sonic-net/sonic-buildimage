@@ -1,8 +1,8 @@
 import os
 import struct
-import subprocess
 from mmap import *
 from sonic_py_common import device_info
+from sonic_py_common.general import getstatusoutput_noshell
 
 HOST_CHK_CMD = ["docker"]
 EMPTY_STRING = ""
@@ -14,7 +14,11 @@ class APIHelper():
         (self.platform, self.hwsku) = device_info.get_platform_and_hwsku()
 
     def is_host(self):
-        return subprocess.call(HOST_CHK_CMD) == 0
+        try:
+            status, output = getstatusoutput_noshell(HOST_CHK_CMD)
+            return status == 0
+        except Exception:
+            return False
 
     def pci_get_value(self, resource, offset):
         status = True

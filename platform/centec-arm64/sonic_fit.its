@@ -79,5 +79,12 @@
 			ramdisk = "initramfs";
 			fdt = "ctc_fdt";
 			};
+
+		arm64-fs_s5800_48t4s-r0 {
+			description = "config for arm64-fs_s5800_48t4s-r0";
+			kernel = "kernel_ctc";
+			ramdisk = "initramfs";
+			fdt = "ctc_fdt";
+			};
 	};
 };

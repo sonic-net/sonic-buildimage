@@ -302,3 +302,4 @@ stable_size=0x5500000
 tdma_timeout_usec.0=15000000
 tslam_timeout_usec.0=15000000
 sai_mdio_access_clause22=1
+sai_verify_incoming_chksum=0

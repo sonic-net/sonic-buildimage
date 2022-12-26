@@ -36,4 +36,3 @@ phy set 17 reg=0xd137 data=0      lane=2
 phy set 17 reg=0xd138 data=0      lane=2
 phy set 17 reg=0xd133 data=0x1804 lane=2
 
-mod ETPPC_MAP_FWD_QOS_DP_TO_TYPE_FWD 0 128 TYPE_FWD_KEEP_ECN_BITS=1

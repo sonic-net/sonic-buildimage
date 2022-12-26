@@ -186,17 +186,8 @@ def is_host():
     Test whether current process is running on the host or an docker
     return True for host and False for docker
     """
-    try:
-        proc = subprocess.Popen(["docker", "--version"],
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,
-                                universal_newlines=True)
-        stdout = proc.communicate()[0]
-        proc.wait()
-        result = stdout.rstrip('\n')
-        return result != ''
-    except OSError as e:
-        return False
+    docker_env_file = '/.dockerenv'
+    return os.path.exists(docker_env_file) is False
 
 
 def default_return(return_value, log_func=logger.log_debug):

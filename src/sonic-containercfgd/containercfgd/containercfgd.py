@@ -149,7 +149,7 @@ class SyslogHandler:
         if os.path.exists(self.TMP_SYSLOG_CONF_PATH):
             os.remove(self.TMP_SYSLOG_CONF_PATH)
         with open(self.TMP_SYSLOG_CONF_PATH, 'w+') as f:
-            json_args = f'{{"target_ip": "127.0.0.1", "{self.target_ip}": "{container_name}" }}'
+            json_args = f'{{"target_ip": "{self.target_ip}", "container_name": "{container_name}" }}'
             output = run_command(['sonic-cfggen', '-d', '-t', '/usr/share/sonic/templates/rsyslog-container.conf.j2', '-a', json_args])
             f.write(output)
         run_command(['cp', self.TMP_SYSLOG_CONF_PATH, self.SYSLOG_CONF_PATH])

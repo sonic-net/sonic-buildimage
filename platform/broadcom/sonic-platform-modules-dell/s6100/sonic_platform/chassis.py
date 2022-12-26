@@ -65,6 +65,8 @@ class Chassis(ChassisBase):
         'amber': 0x02, 'blinking amber': 0x08
     }
 
+    _global_port_pres_dict = {}
+
     def __init__(self):
 
         ChassisBase.__init__(self)
@@ -102,6 +104,13 @@ class Chassis(ChassisBase):
         for i in range(MAX_S6100_COMPONENT):
             component = Component(i)
             self._component_list.append(component)
+
+        for i in self._sfp_list:
+            presence = i.get_presence()
+            if presence:
+                self._global_port_pres_dict[i.index] = '1'
+            else:
+                self._global_port_pres_dict[i.index] = '0'
 
         bios_ver = self.get_component(0).get_firmware_version()
         bios_minor_ver = bios_ver.split("-")[-1]

@@ -119,7 +119,7 @@ int psu_update_attr(struct device *dev, struct psu_attr_info *data, PSU_DATA_ATT
 
     mutex_lock(&data->update_lock);
 
-    if (time_after(jiffies, data->last_updated + HZ + HZ / 2) || !data->valid) 
+    if (time_after(jiffies, data->last_updated + HZ + HZ / 2) || !data->valid)
     {
         dev_dbg(&client->dev, "Starting update for %s\n", data->name);
 
@@ -171,7 +171,7 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
     {
         ptr = (PSU_SYSFS_ATTR_DATA *)pdata->psu_attrs[i].access_data;
         get_psu_duplicate_sysfs(ptr->index , new_str);
-        if ( strcmp(attr->dev_attr.attr.name, pdata->psu_attrs[i].aname) == 0 || strcmp(attr->dev_attr.attr.name, new_str) == 0 ) 
+        if ( strcmp(attr->dev_attr.attr.name, pdata->psu_attrs[i].aname) == 0 || strcmp(attr->dev_attr.attr.name, new_str) == 0 )
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->psu_attrs[i];
@@ -201,9 +201,12 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
             return sprintf(buf, "%s\n", sysfs_attr_info->val.strval);
             break;
         case PSU_V_OUT:
+        case PSU_V_OUT_MIN:
+        case PSU_V_OUT_MAX:
         case PSU_I_OUT:
         case PSU_V_IN:
         case PSU_I_IN:
+        case PSU_P_OUT_MAX:
             multiplier = 1000;
             value = sysfs_attr_info->val.shortval;
             exponent = two_complement_to_int(value >> 11, 5, 0x1f);
@@ -214,6 +217,7 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
                 return sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
 
             break;
+        case PSU_P_IN:
         case PSU_P_OUT:
             multiplier = 1000000;
             value = sysfs_attr_info->val.shortval;
@@ -233,9 +237,10 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
                 return sprintf(buf, "%d\n", (mantissa << exponent));
             else
                 return sprintf(buf, "%d\n", (mantissa) / (1 << -exponent));
-    
+
             break;
         case PSU_TEMP1_INPUT:
+        case PSU_TEMP1_HIGH_THRESHOLD:
             multiplier = 1000;
             value = sysfs_attr_info->val.shortval;
             exponent = two_complement_to_int(value >> 11, 5, 0x1f);
@@ -244,7 +249,7 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
                 return sprintf(buf, "%d\n", (mantissa << exponent) * multiplier);
             else
                 return sprintf(buf, "%d\n", (mantissa * multiplier) / (1 << -exponent));
-    
+
             break;
         default:
             printk(KERN_ERR "%s: Unable to find attribute index for %s\n", __FUNCTION__, usr_data->aname);
@@ -293,54 +298,36 @@ exit:
     return count;
 }
 
-int sonic_i2c_get_psu_present_default(void *client, PSU_DATA_ATTR *adata, void *data)
+int sonic_i2c_get_psu_byte_default(void *client, PSU_DATA_ATTR *adata, void *data)
 {
     int status = 0;
     int val = 0;
     struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    
-    
+
+
     if (strncmp(adata->devtype, "cpld", strlen("cpld")) == 0)
     {
         val = board_i2c_cpld_read(adata->devaddr , adata->offset);
         if (val < 0)
             return val;
         padata->val.intval =  ((val & adata->mask) == adata->cmpval);
-        psu_dbg(KERN_ERR "%s: status_value = 0x%x\n", __FUNCTION__, padata->val.intval);
+        psu_dbg(KERN_ERR "%s: byte_value = 0x%x\n", __FUNCTION__, padata->val.intval);
     }
 
     return status;
 }
 
-int sonic_i2c_get_psu_power_good_default(void *client, PSU_DATA_ATTR *adata, void *data)
-{
-    int status = 0;
-    int val = 0;
-    struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    
-    if (strncmp(adata->devtype, "cpld", strlen("cpld")) == 0)
-        {
-        val = board_i2c_cpld_read(adata->devaddr , adata->offset);
-        if (val < 0)
-            return val;
-        padata->val.intval =  ((val & adata->mask) == adata->cmpval);
-        psu_dbg(KERN_ERR "%s: status_value = 0x%x\n", __FUNCTION__, padata->val.intval);
-    }
-
-    return status;
-}
-
-int sonic_i2c_get_psu_model_name_default(void *client, PSU_DATA_ATTR *adata, void *data)
+int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *data)
 {
     int status = 0, retry = 10;
     struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    char model[32]="";  //temporary placeholder for model name
+    char buf[32]="";  //temporary placeholder for block data
     uint8_t offset = (uint8_t)adata->offset;
     int data_len = adata->len;
 
     while (retry)
     {
-        status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, data_len-1, model);
+        status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, data_len-1, buf);
         if (unlikely(status<0))
         {
             msleep(60);
@@ -350,39 +337,35 @@ int sonic_i2c_get_psu_model_name_default(void *client, PSU_DATA_ATTR *adata, voi
         break;
     }
 
-    if (status < 0) 
+    if (status < 0)
     {
-        model[0] = '\0';
-        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read model name from (0x%x)\n", ((struct i2c_client *)client)->addr);
+        buf[0] = '\0';
+        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read block of data from (0x%x)\n", ((struct i2c_client *)client)->addr);
     }
-    else 
+    else
     {
-        model[data_len-1] = '\0';
+        buf[data_len-1] = '\0';
     }
 
     if (strncmp(adata->devtype, "pmbus", strlen("pmbus")) == 0)
-        strncpy(padata->val.strval, model+1, data_len-1);
+        strncpy(padata->val.strval, buf+1, data_len-1);
     else
-        strncpy(padata->val.strval, model, data_len);
+        strncpy(padata->val.strval, buf, data_len);
 
-    psu_dbg(KERN_ERR "%s: status = %d, model_name : %s\n", __FUNCTION__, status, padata->val.strval);
+    psu_dbg(KERN_ERR "%s: status = %d, buf block: %s\n", __FUNCTION__, status, padata->val.strval);
     return 0;
 }
 
-int sonic_i2c_get_psu_mfr_id_default(void *client, PSU_DATA_ATTR *adata, void *data)
+int sonic_i2c_get_psu_word_default(void *client, PSU_DATA_ATTR *adata, void *data)
 {
 
     int status = 0, retry = 10;
     struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    char mfr_id[16] = "";   // temporary place holder for mfr_id
     uint8_t offset = (uint8_t)adata->offset;
-    int data_len = adata->len;
 
-    while (retry)
-    {
-        status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, data_len-1, mfr_id);
-        if (unlikely(status<0))
-        {
+    while (retry) {
+        status = i2c_smbus_read_word_data((struct i2c_client *)client, offset);
+        if (unlikely(status < 0)) {
             msleep(60);
             retry--;
             continue;
@@ -390,318 +373,16 @@ int sonic_i2c_get_psu_mfr_id_default(void *client, PSU_DATA_ATTR *adata, void *d
         break;
     }
 
-    if (status < 0) 
+    if (status < 0)
     {
-        mfr_id[0] = '\0';
-        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read mfr_id from (0x%x)\n", ((struct i2c_client *)client)->addr);
+        padata->val.shortval = 0;
+        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read a word from (0x%x)\n", ((struct i2c_client *)client)->addr);
     }
-    else 
-    {
-        mfr_id[data_len-1] = '\0';
-    }
-
-    if (strncmp(adata->devtype, "pmbus", strlen("pmbus")) == 0)
-        strncpy(padata->val.strval, mfr_id+1, data_len-1);
     else
-        strncpy(padata->val.strval, mfr_id, data_len);
-
-    psu_dbg(KERN_ERR "%s: status = %d, mfr_id : %s\n", __FUNCTION__, status, padata->val.strval);
-    return 0;
-}
-
-int sonic_i2c_get_psu_serial_num_default(void *client, PSU_DATA_ATTR *adata, void *data)
-{
-
-    int status = 0, retry = 10;
-    struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    char serial[32] = "";   // temporary string to store the serial num
-    uint8_t offset = (uint8_t)adata->offset;
-    int data_len = adata->len;
-
-    while (retry)
-    {
-        status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, data_len-1, serial);
-        if (unlikely(status<0))
-        {
-            msleep(60);
-            retry--;
-            continue;
-        }
-        break;
-    }
-
-    if (status < 0) 
-    {
-        serial[0] = '\0';
-        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read serial num from (0x%x)\n", ((struct i2c_client *)client)->addr);
-    }
-    else 
-    {
-        serial[data_len-1] = '\0';
-    }
-
-    if (strncmp(adata->devtype, "pmbus", strlen("pmbus")) == 0)
-        strncpy(padata->val.strval, serial+1, data_len-1);
-    else
-        strncpy(padata->val.strval, serial, data_len);
-
-    psu_dbg(KERN_ERR "%s: status = %d, serial_num : %s\n", __FUNCTION__, status, padata->val.strval);
-    return 0;
-}
-
-int sonic_i2c_get_psu_fan_dir_default(void *client, PSU_DATA_ATTR *adata, void *data)
-{
-
-    int status = 0, retry = 10;
-    struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    char fan_dir[5] = "";
-    uint8_t offset = (uint8_t)adata->offset;
-    int data_len = adata->len;
-
-    while (retry)
-    {
-        status = i2c_smbus_read_i2c_block_data((struct i2c_client *)client, offset, data_len-1, fan_dir);
-        if (unlikely(status<0))
-        {
-            msleep(60);
-            retry--;
-            continue;
-        }
-        break;
-    }
-
-    if (status < 0) 
-    {
-        fan_dir[0] = '\0';
-        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read fan_dir from (0x%x)\n", ((struct i2c_client *)client)->addr);
-    }
-    else 
-    {
-        fan_dir[data_len-1] = '\0';
-    }
-
-    if (strncmp(adata->devtype, "pmbus", strlen("pmbus")) == 0)
-        strncpy(padata->val.strval, fan_dir+1, data_len-1);
-    else
-        strncpy(padata->val.strval, fan_dir, data_len);
-
-    psu_dbg(KERN_ERR "%s: status = %d, fan_dir : %s\n", __FUNCTION__, status, padata->val.strval);
-    return 0;
-}
-
-int sonic_i2c_get_psu_v_out_default(void *client, PSU_DATA_ATTR *adata, void *data)
-{
-
-    int status = 0, retry = 10;
-    struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    uint8_t offset = (uint8_t)adata->offset;
-
-    while (retry) {
-        status = i2c_smbus_read_word_data((struct i2c_client *)client, offset);
-        if (unlikely(status < 0)) {
-            msleep(60);
-            retry--;
-            continue;
-        }
-        break;
-    }
-
-    if (status < 0) 
-    {
-        padata->val.shortval = 0;
-        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read v_out from (0x%x)\n", ((struct i2c_client *)client)->addr);
-    }
-    else 
     {
         padata->val.shortval = status;
     }
 
-    psu_dbg(KERN_ERR "%s: v_out : %d\n", __FUNCTION__, padata->val.shortval);
-    return 0;
-}
-
-int sonic_i2c_get_psu_i_out_default(void *client, PSU_DATA_ATTR *adata, void *data)
-{
-
-    int status = 0, retry = 10;
-    struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    uint8_t offset = (uint8_t)adata->offset;
-
-    while (retry) {
-        status = i2c_smbus_read_word_data((struct i2c_client *)client, offset);
-        if (unlikely(status < 0)) {
-            msleep(60);
-            retry--;
-            continue;
-        }
-        break;
-    }
-
-    if (status < 0) 
-    {
-        padata->val.shortval = 0;
-        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read i_out from (0x%x)\n", ((struct i2c_client *)client)->addr);
-    }
-    else 
-    {
-        padata->val.shortval = status;
-    }
-
-    psu_dbg(KERN_ERR "%s: i_out : %d\n", __FUNCTION__, padata->val.shortval);
-    return 0;
-}
-
-int sonic_i2c_get_psu_p_out_default(void *client, PSU_DATA_ATTR *adata, void *data)
-{
-
-    int status = 0, retry = 10;
-    struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    uint8_t offset = (uint8_t)adata->offset;
-
-    while (retry) {
-        status = i2c_smbus_read_word_data((struct i2c_client *)client, offset);
-        if (unlikely(status < 0)) {
-            msleep(60);
-            retry--;
-            continue;
-        }
-        break;
-    }
-
-    if (status < 0) 
-    {
-        padata->val.shortval = 0;
-        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read p_out from (0x%x)\n", ((struct i2c_client *)client)->addr);
-    }
-    else 
-    {
-        padata->val.shortval = status;
-    }
-
-    psu_dbg(KERN_ERR "%s: p_out : %d\n", __FUNCTION__, padata->val.shortval);
-    return 0;
-}
-
-int sonic_i2c_get_psu_v_in_default(void *client, PSU_DATA_ATTR *adata, void *data)
-{
-
-    int status = 0, retry = 10;
-    struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    uint8_t offset = (uint8_t)adata->offset;
-
-    while (retry) {
-        status = i2c_smbus_read_word_data((struct i2c_client *)client, offset);
-        if (unlikely(status < 0)) {
-            msleep(60);
-            retry--;
-            continue;
-        }
-        break;
-    }
-
-    if (status < 0) 
-    {
-        padata->val.shortval = 0;
-        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read v_in from (0x%x)\n", ((struct i2c_client *)client)->addr);
-    }
-    else 
-    {
-        padata->val.shortval = status;
-    }
-
-    psu_dbg(KERN_ERR "%s: v_in : %d\n", __FUNCTION__, padata->val.shortval);
-    return 0;
-}
-
-int sonic_i2c_get_psu_i_in_default(void *client, PSU_DATA_ATTR *adata, void *data)
-{
-
-    int status = 0, retry = 10;
-    struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    uint8_t offset = (uint8_t)adata->offset;
-
-    while (retry) {
-        status = i2c_smbus_read_word_data((struct i2c_client *)client, offset);
-        if (unlikely(status < 0)) {
-            msleep(60);
-            retry--;
-            continue;
-        }
-        break;
-    }
-
-    if (status < 0) 
-    {
-        padata->val.shortval = 0;
-        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read i_in from (0x%x)\n", ((struct i2c_client *)client)->addr);
-    }
-    else 
-    {
-        padata->val.shortval = status;
-    }
-
-    psu_dbg(KERN_ERR "%s: i_in : %d\n", __FUNCTION__, padata->val.shortval);
-    return 0;
-}
-
-int sonic_i2c_get_psu_fan1_speed_rpm_default(void *client, PSU_DATA_ATTR *adata, void *data)
-{
-
-    int status = 0, retry = 10;
-    struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    uint8_t offset = (uint8_t)adata->offset;
-
-    while (retry) {
-        status = i2c_smbus_read_word_data((struct i2c_client *)client, offset);
-        if (unlikely(status < 0)) {
-            msleep(60);
-            retry--;
-            continue;
-        }
-        break;
-    }
-
-    if (status < 0) 
-    {
-        padata->val.shortval = 0;
-        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read fan1_speed_rpm from (0x%x)\n", ((struct i2c_client *)client)->addr);
-    }
-    else 
-    {
-        padata->val.shortval = status;
-    }
-
-    psu_dbg(KERN_ERR "%s: fan1_speed_rpm : %d\n", __FUNCTION__, padata->val.shortval);
-    return 0;
-}
-
-int sonic_i2c_get_psu_temp1_input_default(void *client, PSU_DATA_ATTR *adata, void *data)
-{
-
-    int status = 0, retry = 10;
-    struct psu_attr_info *padata = (struct psu_attr_info *)data;
-    uint8_t offset = (uint8_t)adata->offset;
-
-    while (retry) {
-        status = i2c_smbus_read_word_data((struct i2c_client *)client, offset);
-        if (unlikely(status < 0)) {
-            msleep(60);
-            retry--;
-            continue;
-        }
-        break;
-    }
-
-    if (status < 0) 
-    {
-        padata->val.shortval = 0;
-        dev_dbg(&((struct i2c_client *)client)->dev, "unable to read temp1_input from (0x%x)\n", ((struct i2c_client *)client)->addr);
-    }
-    else 
-    {
-        padata->val.shortval = status;
-    }
-
-    psu_dbg(KERN_ERR "%s: temp1_input : %d\n", __FUNCTION__, padata->val.shortval);
+    psu_dbg(KERN_ERR "%s: word value : %d\n", __FUNCTION__, padata->val.shortval);
     return 0;
 }

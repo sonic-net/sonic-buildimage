@@ -11,6 +11,7 @@
 
 try:
     from sonic_eeprom import eeprom_tlvinfo
+    import os
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -26,6 +27,10 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
             self.eeprom_path = "/sys/class/i2c-adapter/i2c-2/2-0050/eeprom"
         super(Eeprom, self).__init__(self.eeprom_path, 0, '', True)
         self.eeprom_tlv_dict = dict()
+
+        if os.geteuid() != 0:
+            self.eeprom_data = "N/A"
+            return
 
         try:
             if self.is_module:

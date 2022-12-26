@@ -467,4 +467,3 @@ serdes_core_tx_polarity_flip_physical{129}=0x0
 stable_size=0x5500000
 tdma_timeout_usec=15000000
 tslam_timeout_usec=15000000
-disable_pcie_firmware_check=1

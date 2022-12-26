@@ -63,10 +63,18 @@ cgroupfs_mount() {
 	# see also https://github.com/tianon/cgroupfs-mount/blob/master/cgroupfs-mount
 	if grep -v '^#' /etc/fstab | grep -q cgroup \
 		|| [ ! -e /proc/cgroups ] \
-		|| [ ! -d /sys/fs/cgroup ]; then
+		|| [ ! -d /sys/fs/cgroup ] \
+		|| [ "$(stat -fc '%T' /sys/fs/cgroup)" = "cgroup2fs" ]; then
 		return
 	fi
 	if ! mountpoint -q /sys/fs/cgroup; then
+		# cgroup2
+		# https://github.com/systemd/systemd/blob/5c6c587ce24096d36826418b5390599d1e5ad55c/src/shared/cgroup-setup.c#L35-L74
+		if awk '!/^#/ && $4 == 1 && $2 != 0 { count++ } END { exit count != 0 }' /proc/cgroups; then
+			mount -t cgroup2 cgroup2 /sys/fs/cgroup
+			return
+		fi
+		# cgroup1
 		mount -t tmpfs -o uid=0,gid=0,mode=0755 cgroup /sys/fs/cgroup
 	fi
 	(
