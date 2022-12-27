@@ -130,8 +130,7 @@ class Chassis(ChassisBase):
         self._thermal_list = [Thermal(i) for i in range(MAX_Z9432F_THERMAL)]
         self._component_list = [Component(i) for i in range(MAX_Z9432F_COMPONENT)]
         for port_num in range(PORT_START, PORTS_IN_BLOCK):
-            presence = self.get_sfp(port_num).get_presence()
-            self._global_port_pres_dict[port_num] = '1' if presence else '0'
+            self._global_port_pres_dict[port_num] = '0'
 
         self._watchdog = Watchdog()
         #self.LOCATOR_LED_ON = self.STATUS_LED_COLOR_BLUE_BLINK

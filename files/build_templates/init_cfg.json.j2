@@ -70,6 +70,7 @@
             "has_per_asic_scope": {% if feature + '@.service' in installer_services.split(' ') %}"True"{% else %}"False"{% endif %},
 {%- endif %}
             "auto_restart": "{{autorestart}}",
+            "support_syslog_rate_limit" : "true",
 {# Set check_up_status to true here when app readiness will be marked in state db  #}
 {# For now, to support the infrastrucure, setting the check_up_status to false for bgp,swss,pmon  #}
 {# Once apps like bgp,synd supports app readiness, then bgp,syncd can set check_up_status to true #}
@@ -105,6 +106,20 @@
             "state" : "disabled", {% endif %}
             "rate_limit_interval" : "600",
             "available_mem_threshold": "10.0"
+        }{%if not loop.last %},{% endif -%}
+{% endfor %}
+    },
+    "SYSLOG_CONFIG": {
+        "GLOBAL": {
+            "rate_limit_interval" : "0",
+            "rate_limit_burst" : "0"
+        }
+    },
+    "SYSLOG_CONFIG_FEATURE": {
+{%- for feature, _, _, _ in features %}
+        "{{feature}}": {
+            "rate_limit_interval" : "300",
+            "rate_limit_burst": "20000"
         }{%if not loop.last %},{% endif -%}
 {% endfor %}
     },

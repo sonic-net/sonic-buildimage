@@ -151,8 +151,7 @@ class Chassis(ChassisBase):
         self._component_list = [Component(i) for i in range(MAX_S5248F_COMPONENT)]
         for port_num in range(self.PORT_START, self.PORTS_IN_BLOCK):
             # sfp get uses zero-indexing, but port numbers start from 1
-            presence = self.get_sfp(port_num-1).get_presence()
-            self._global_port_pres_dict[port_num] = '1' if presence else '0'
+            self._global_port_pres_dict[port_num] = '0'
 
         #self.LOCATOR_LED_ON = self.STATUS_LED_COLOR_BLUE_BLINK
         #self.LOCATOR_LED_OFF = self.STATUS_LED_COLOR_OFF

@@ -1,0 +1,10 @@
+#!/bin/sh
+# postinst
+
+kernel_version=$(uname -r)
+
+if [ -e /boot/System.map-${kernel_version} ]; then
+    depmod -a -F /boot/System.map-${kernel_version} ${kernel_version} || true
+fi
+
+#DEBHELPER#

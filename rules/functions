@@ -198,6 +198,7 @@ define generate_manifest
     $(eval export config_cli_plugin=$($(1).gz_CLI_CONFIG_PLUGIN))
     $(eval export show_cli_plugin=$($(1).gz_CLI_SHOW_PLUGIN))
     $(eval export clear_cli_plugin=$($(1).gz_CLI_CLEAR_PLUGIN))
+    $(eval export support_rate_limit=$($(1).gz_SUPPORT_RATE_LIMIT))
     j2 --customize scripts/j2cli/json_filter.py files/build_templates/manifest.json.j2 > $($(1).gz_PATH)/manifest.common.json
     if [ -f $($*.gz_PATH)/manifest.part.json.j2 ]; then
         j2 --customize scripts/j2cli/json_filter.py $($(1).gz_PATH)/manifest.part.json.j2 > $($(1).gz_PATH)/manifest.part.json

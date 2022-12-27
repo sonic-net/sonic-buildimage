@@ -46,4 +46,4 @@ jobs:
           exit 1
         fi
         gh pr edit $origin_pr_url --add-label "Included in ${base_ref} Branch"
-        gh pr edit $origin_pr_url --remove-label "Created PR to ${base_ref} Branch,Request for ${base_ref} Branch,Approved for ${base_ref} Branch"
+        gh pr edit $origin_pr_url --remove-label "Created PR to ${base_ref} Branch,Approved for ${base_ref} Branch"

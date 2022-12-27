@@ -53,6 +53,9 @@
 #  * ENABLE_BOOTCHART: Enable SONiC bootchart
 #  *                 Default: n
 #  *                 Values: y,n
+#  * GZ_COMPRESS_PROGRAM: Select pigz to reduce build time
+#  *                 Default: gzip
+#  *                 Values: pigz,gzip
 #
 ###############################################################################
 
@@ -140,6 +143,10 @@ ifeq ($(ENABLE_DOCKER_BASE_PULL),)
 	override ENABLE_DOCKER_BASE_PULL = n
 endif
 
+ifneq ($(GZ_COMPRESS_PROGRAM), pigz)
+override GZ_COMPRESS_PROGRAM = gzip
+endif
+
 ifeq ($(CONFIGURED_ARCH),amd64)
 SLAVE_BASE_IMAGE = $(SLAVE_DIR)
 MULTIARCH_QEMU_ENVIRON = n
@@ -200,6 +207,7 @@ $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	ENABLE_FIPS_FEATURE=$(ENABLE_FIPS_FEATURE) \
 	DOCKER_EXTRA_OPTS=$(DOCKER_EXTRA_OPTS) \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
+	GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
 	j2 $(SLAVE_DIR)/Dockerfile.j2 > $(SLAVE_DIR)/Dockerfile)
 
 $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
@@ -528,14 +536,13 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_SLAVE_DOCKER_DRIVER=$(SONIC_SLAVE_DOCKER_DRIVER) \
                            MIRROR_URLS=$(MIRROR_URLS) \
                            MIRROR_SECURITY_URLS=$(MIRROR_SECURITY_URLS) \
+                           GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset
 
 
-ifeq ($(filter clean,$(MAKECMDGOALS)),)
 COLLECT_BUILD_VERSION = { scripts/collect_build_version_files.sh \$$?; }
-endif
 
 ifdef SOURCE_FOLDER
 	DOCKER_RUN += -v $(SOURCE_FOLDER):/var/$(USER)/src

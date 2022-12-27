@@ -5,7 +5,6 @@ ARG docker_container_name
 ARG frr_user_uid
 ARG frr_user_gid
 
-RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive

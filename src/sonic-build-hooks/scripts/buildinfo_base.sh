@@ -70,7 +70,8 @@ check_version_control()
 get_url_version()
 {
     local package_url=$1
-    /usr/bin/curl -Lks $package_url | md5sum | cut -d' ' -f1
+    set -o pipefail
+    /usr/bin/curl -Lfks --retry 5 $package_url | md5sum | cut -d' ' -f1
 }
 
 check_if_url_exist()
@@ -156,14 +157,14 @@ download_packages()
                     filenames[$version_filename]=$filename
                     real_version=$version
                 else
-                    real_version=$(get_url_version $url)
+                    real_version=$(get_url_version $url) || { echo "get_url_version $url failed"; exit 1; }
                     if [ "$real_version" != "$version" ]; then
                         log_err "Failed to verify url: $url, real hash value: $real_version, expected value: $version_filename" 1>&2
                        exit 1
                     fi
                 fi
             else
-                real_version=$(get_url_version $url)
+                real_version=$(get_url_version $url) || { echo "get_url_version $url failed"; exit 1; }
             fi
 
             echo "$url==$real_version" >> ${BUILD_WEB_VERSION_FILE}

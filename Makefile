@@ -33,20 +33,21 @@ PLATFORM_PATH := platform/$(if $(PLATFORM),$(PLATFORM),$(CONFIGURED_PLATFORM))
 PLATFORM_CHECKOUT := platform/checkout
 PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM).ini
 PLATFORM_CHECKOUT_CMD := $(shell if [ -f $(PLATFORM_CHECKOUT_FILE) ]; then PLATFORM_PATH=$(PLATFORM_PATH) j2 $(PLATFORM_CHECKOUT)/template.j2 $(PLATFORM_CHECKOUT_FILE); fi)
+MAKE_WITH_RETRY := ./scripts/run_with_retry $(MAKE)
 
 %::
 	@echo "+++ --- Making $@ --- +++"
 ifeq ($(NOJESSIE), 0)
-	EXTRA_DOCKER_TARGETS=$(notdir $@) $(MAKE) -f Makefile.work jessie
+	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) -f Makefile.work jessie
 endif
 ifeq ($(NOSTRETCH), 0)
-	EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=stretch $(MAKE) -f Makefile.work stretch
+	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=stretch -f Makefile.work stretch
 endif
 ifeq ($(NOBUSTER), 0)
-	EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=buster $(MAKE) -f Makefile.work buster
+	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=buster -f Makefile.work buster
 endif
 ifeq ($(NOBULLSEYE), 0)
-	BLDENV=bullseye $(MAKE) -f Makefile.work $@
+	$(MAKE_WITH_RETRY) BLDENV=bullseye -f Makefile.work $@
 endif
 	BLDENV=bullseye $(MAKE) -f Makefile.work docker-cleanup
 

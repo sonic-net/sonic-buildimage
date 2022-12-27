@@ -56,6 +56,8 @@ class Chassis(ChassisBase):
     _is_fan_control_enabled = False
     _fan_control_initialised = False
 
+    _global_port_pres_dict = {}
+
     def __init__(self):
         ChassisBase.__init__(self)
         self.status_led_reg = "system_led"
@@ -106,6 +108,9 @@ class Chassis(ChassisBase):
         for i in range(MAX_S6000_COMPONENT):
             component = Component(i)
             self._component_list.append(component)
+
+        for port_num in range(self.PORT_START, (self.PORT_END + 1)):
+            self._global_port_pres_dict[port_num] = '0'
 
     def _get_cpld_register(self, reg_name):
         rv = 'ERR'
