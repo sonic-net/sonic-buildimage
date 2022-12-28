@@ -139,6 +139,12 @@ stages:
                 [ -e $link_path/latest ] && LATEST_VERSION=$(cat $link_path/latest/target/sonic.version)
                 mkdir -p $link_path
 
+                # Skip the change if the latest version is existed
+                if [ "$LATEST_VERSION" = "$(SONIC_VERSION)" ]; then
+                  echo "Skipped to update the symbol links for version $(SONIC_VERSION) in $link_path"
+                  continue
+                fi
+
                 # Make soft links for latest and prev
                 prev_link_path=$(realpath $link_path/latest)
                 # If the latest version in the storage account is the same as the current build version, not update the prev link
@@ -163,9 +169,13 @@ stages:
                 done
 
                 # Remove the old soft links
-                echo "PREVIOUS_VERSION=$PREVIOUS_VERSION"
-                if [ -n "$PREVIOUS_VERSION" ]; then
-                  rm -f $link_path/*"$PREVIOUS_VERSION"*
+                if [ "$link_foldername" != "tagged" ]; then
+                  echo "Remove the old symbol links in $link_foldername"
+                  if [ -n "$PREVIOUS_VERSION" ]; then
+                    rm -f $link_path/*"$PREVIOUS_VERSION"*
+                  fi
+                else
+                  echo "Skipped to remove the old symbol links in $link_foldername"
                 fi
               done
         - script: |
