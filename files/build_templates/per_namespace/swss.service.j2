@@ -11,7 +11,6 @@ Requires=opennsl-modules.service
 {% endif %}
 Requires=updategraph.service
 After=updategraph.service
-After=interfaces-config.service
 BindsTo=sonic.target
 After=sonic.target
 Before=ntp-config.service
