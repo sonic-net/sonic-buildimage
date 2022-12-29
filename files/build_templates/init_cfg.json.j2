@@ -37,12 +37,12 @@
                    ("lldp", "enabled", true, "enabled"),
                    ("pmon", "enabled", true, "enabled"),
                    ("pmon", "enabled", false, "enabled"),
-                   ("radv", "enabled", false, "enabled"),
                    ("snmp", "enabled", true, "enabled"),
                    ("eventd", "enabled", false, "enabled"),
                    ("swss", "enabled", false, "enabled"),
-                   ("syncd", "enabled", false, "enabled"),
-                   ("teamd", "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}disabled{% else %}enabled{% endif %}", false, "enabled")] %}
+                   ("syncd", "enabled", false, "enabled")] %}
+{%- if include_router_advertiser == "y" %}{% do features.append(("radv", "enabled", false, "enabled")) %}{% endif %}
+{%- if include_teamd == "y" %}{% do features.append(("teamd", "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}disabled{% else %}enabled{% endif %}", false, "enabled")) %}{% endif %}
 {% do features.append(("dhcp_relay", "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}
 {%- if sonic_asic_platform == "vs" %}{% do features.append(("gbsyncd", "enabled", false, "enabled")) %}{% endif %}
 {%- if include_iccpd == "y" %}{% do features.append(("iccpd", "disabled", false, "enabled")) %}{% endif %}

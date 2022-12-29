@@ -1,7 +1,7 @@
 import sys
 import click
 import importlib
-importlib.import_module('show.plugins.dhcp-relay')
+dhcp6_relay = importlib.import_module('show.plugins.dhcp-relay')
 
 import utilities_common.cli as clicommon
 
@@ -16,7 +16,7 @@ def dhcp6relay_clear():
 def dhcp6relay_clear_counters(interface):
     """ Clear dhcp6relay message counts """
 
-    counter = DHCPv6_Counter()
+    counter = dhcp6_relay.DHCPv6_Counter()
     counter_intf = counter.get_interface()
 
     if interface:
