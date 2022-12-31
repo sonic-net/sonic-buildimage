@@ -1144,14 +1144,45 @@
         "TELEMETRY": {
             "certs": {
                 "ca_crt": "/etc/sonic/telemetry/dsmsroot.cer",
-		"server_crt": "/etc/sonic/telemetry/streamingtelemetryserver.cer",
-		"server_key": "/etc/sonic/telemetry/streamingtelemetryserver.key"
+                "server_crt": "/etc/sonic/telemetry/streamingtelemetryserver.cer",
+                "server_key": "/etc/sonic/telemetry/streamingtelemetryserver.key"
             },
-	    "gnmi": {
-		"client_auth": "true",
-		"log_level": "2",
-		"port": "50051"
-	    }
+            "gnmi": {
+                "client_auth": "true",
+                "log_level": "2",
+                "port": "50051"
+            }
+        },
+        "TUNNEL": {
+            "MuxTunnel0": {
+                "dscp_mode": "uniform",
+                "dst_ip": "10.1.0.32",
+                "ecn_mode": "copy_from_outer",
+                "encap_ecn_mode": "standard",
+                "ttl_mode": "pipe",
+                "tunnel_type": "IPINIP"
+            },
+            "MuxTunnel1": {
+                "dscp_mode": "pipe",
+                "dst_ip": "10.1.0.32",
+                "ecn_mode": "standard",
+                "encap_ecn_mode": "standard",
+                "ttl_mode": "uniform",
+                "tunnel_type": "IPINIP"
+            },
+            "MuxTunnel2": {
+                "tunnel_type": "IPINIP",
+                "src_ip": "10.1.0.33",
+                "dst_ip": "10.1.0.32",
+                "dscp_mode": "pipe",
+                "encap_ecn_mode": "standard",
+                "ecn_mode": "copy_from_outer",
+                "ttl_mode": "uniform",
+                "decap_dscp_to_tc_map": "Dscp_to_tc_map1",
+                "decap_tc_to_pg_map": "tc_to_pg_map1",
+                "encap_tc_to_dscp_map": "EncapTcToQueueMap",
+                "encap_tc_to_queue_map": "tc_to_q_map1"
+            }
         },
         "RESTAPI": {
             "certs": {

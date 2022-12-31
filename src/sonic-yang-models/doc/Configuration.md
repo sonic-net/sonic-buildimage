@@ -54,6 +54,7 @@ Table of Contents
          * [TC to Priority group map](#tc-to-priority-group-map)  
          * [TC to Queue map](#tc-to-queue-map)    
          * [Telemetry](#telemetry)  
+         * [Tunnel](#tunnel)
          * [Versions](#versions)  
          * [VLAN](#vlan)   
          * [VLAN_MEMBER](#vlan_member)  
@@ -1589,6 +1590,61 @@ Container side configuration:
             "client_auth": "true",
             "log_level": "2",
             "port": "50051"
+        }
+    }
+}
+```
+
+### Tunnel
+
+This table configures the MUX tunnel for Dual-ToR setup
+```
+{
+    "TUNNEL": {
+        "MuxTunnel0": {
+            "dscp_mode": "uniform",
+            "dst_ip": "10.1.0.32",
+            "ecn_mode": "copy_from_outer",
+            "encap_ecn_mode": "standard",
+            "ttl_mode": "pipe",
+            "tunnel_type": "IPINIP"
+        }
+    }
+}
+```
+
+different example for configuring MUX tunnel
+```
+{
+    "TUNNEL": {
+        "MuxTunnel0": {
+            "dscp_mode": "pipe",
+            "dst_ip": "10.1.0.32",
+            "ecn_mode": "standard",
+            "encap_ecn_mode": "standard",
+            "ttl_mode": "uniform",
+            "tunnel_type": "IPINIP"
+        }
+    }
+}
+```
+
+example mux tunnel configuration for when tunnel_qos_remap is enabled
+```
+{
+    "TUNNEL": {
+        "MuxTunnel0": {
+            "tunnel_type": "IPINIP",
+            "src_ip": "10.1.0.33",
+            "dst_ip": "10.1.0.32",
+            "dscp_mode": "pipe",
+            "encap_ecn_mode": "standard",
+            "ecn_mode": "copy_from_outer",
+            "ttl_mode": "uniform",
+            "decap_dscp_to_tc_map": "DecapDscpToTcMap",
+            "decap_tc_to_pg_map": "DecapTcToPgMap",
+            "encap_tc_to_dscp_map": "EncapTcToQueueMap",
+            "encap_tc_to_queue_map": "EncapTcToDscpMap"
         }
     }
 }

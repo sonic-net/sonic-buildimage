@@ -1,0 +1,143 @@
+{
+    "TUNNEL_LOAD_NORMAL": {
+        "sonic-peer-switch:sonic-peer-switch": {
+            "sonic-peer-switch:PEER_SWITCH": {
+                "PEER_SWITCH_LIST": [
+                    {
+                        "peer_switch": "vlab-05",
+                        "address_ipv4":  "10.1.0.33"
+                    }
+                ]
+            }
+        },
+        "sonic-dscp-tc-map:sonic-dscp-tc-map": {
+            "sonic-dscp-tc-map:DSCP_TO_TC_MAP": {
+                "DSCP_TO_TC_MAP_LIST": [
+                    {
+                        "name": "DecapDscpToTcMap",
+                        "DSCP_TO_TC_MAP": [
+                            {
+                                "dscp": "1",
+                                "tc": "1"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-tc-priority-group-map:sonic-tc-priority-group-map": {
+            "sonic-tc-priority-group-map:TC_TO_PRIORITY_GROUP_MAP": {
+                "TC_TO_PRIORITY_GROUP_MAP_LIST": [
+                    {
+                        "name": "DecapTcToPgMap",
+                        "TC_TO_PRIORITY_GROUP_MAP": [
+                            {
+                                "tc": "1",
+                                "pg": "1"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-tc-queue-map:sonic-tc-queue-map": {
+            "sonic-tc-queue-map:TC_TO_QUEUE_MAP": {
+                "TC_TO_QUEUE_MAP_LIST": [
+                    {
+                        "name": "EncapTcToQueueMap",
+                        "TC_TO_QUEUE_MAP": [
+                            {
+                                "tc": "1",
+                                "qindex": "1"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-tunnel:sonic-tunnel": {
+            "sonic-tunnel:TUNNEL": {
+                "TUNNEL_LIST": [
+                    {
+                        "mux_tunnel": "MuxTunnel0",
+                        "dscp_mode": "pipe",
+                        "src_ip":  "10.1.0.33",
+                        "dst_ip":  "10.1.0.32",
+                        "ecn_mode":  "standard",
+                        "encap_ecn_mode":  "standard",
+                        "ttl_mode":  "pipe",
+                        "tunnel_type":  "IPINIP",
+                        "decap_dscp_to_tc_map": "DecapDscpToTcMap",
+                        "decap_tc_to_pg_map": "DecapTcToPgMap",
+                        "encap_tc_to_dscp_map": "EncapTcToDscpMap",
+                        "encap_tc_to_queue_map": "EncapTcToQueueMap"
+                    }
+                ]
+            }
+        }
+    },
+
+    "TUNNEL_INVALID_ADDR": {
+        "sonic-tunnel:sonic-tunnel": {
+            "sonic-tunnel:TUNNEL": {
+                "TUNNEL_LIST": [
+                    {
+                        "mux_tunnel": "MuxTunnel0",
+                        "dscp_mode": "pipe",
+                        "dst_ip":  "10.1.0.33/32",
+                        "ecn_mode":  "standard",
+                        "encap_ecn_mode":  "standard",
+                        "ttl_mode":  "pipe",
+                        "tunnel_type":  "IPINIP"
+                    }
+                ]
+            }
+        }
+    },
+
+    "TUNNEL_SRC_IP_NOT_PEER_SWITCH": {
+        "sonic-peer-switch:sonic-peer-switch": {
+            "sonic-peer-switch:PEER_SWITCH": {
+                "PEER_SWITCH_LIST": [
+                    {
+                        "peer_switch": "vlab-05",
+                        "address_ipv4":  "10.1.0.33"
+                    }
+                ]
+            }
+        },
+        "sonic-tunnel:sonic-tunnel": {
+            "sonic-tunnel:TUNNEL": {
+                "TUNNEL_LIST": [
+                    {
+                        "mux_tunnel": "MuxTunnel0",
+                        "dscp_mode": "pipe",
+                        "dst_ip":  "10.1.0.32",
+                        "src_ip":  "10.1.0.32",
+                        "ecn_mode":  "standard",
+                        "encap_ecn_mode":  "standard",
+                        "ttl_mode":  "pipe",
+                        "tunnel_type":  "IPINIP"
+                    }
+                ]
+            }
+        }
+    },
+
+    "TUNNEL_MISSING_MUX_TUNNEL": {
+        "sonic-tunnel:sonic-tunnel": {
+            "sonic-tunnel:TUNNEL": {
+                "TUNNEL_LIST": [
+                    {
+                        "dscp_mode": "pipe",
+                        "dst_ip":  "10.1.0.32",
+                        "ecn_mode":  "standard",
+                        "encap_ecn_mode":  "standard",
+                        "ttl_mode":  "pipe",
+                        "tunnel_type":  "IPINIP"
+                    }
+                ]
+            }
+        }
+    }
+}
