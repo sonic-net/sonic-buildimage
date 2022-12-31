@@ -1,0 +1,122 @@
+module sonic-tunnel {
+	yang-version 1.1;
+	namespace "http://github.com/sonic-net/sonic-tunnel";
+	prefix tunnel;
+
+	import ietf-inet-types {
+		prefix inet;
+	}
+
+	import sonic-peer-switch {
+		prefix ps;
+	}
+
+	import sonic-dscp-tc-map {
+		prefix dtm;
+	}
+
+	import sonic-tc-priority-group-map {
+		prefix tpgm;
+	}
+
+	import sonic-tc-queue-map {
+		prefix tqm;
+	}
+
+	organization
+		"SONiC";
+
+	contact
+		"SONiC";
+
+	description
+		"SONiC DualToR tunnel data";
+
+	revision 2022-08-23 {
+		description
+			"Initial revision";
+	}
+
+	container sonic-tunnel {
+		container TUNNEL {
+			description "TUNNEL configuration for SONiC Dual-ToR";
+			list TUNNEL_LIST {
+				key "mux_tunnel";
+
+				leaf mux_tunnel {
+					description "Name of MuxTunnel";
+					type string {
+						pattern "MuxTunnel[0-9]+";
+					}
+				}
+
+				leaf dscp_mode {
+					description "DSCP mode";
+					type string {
+						pattern "uniform|pipe";
+					}
+				}
+
+				leaf src_ip {
+					description "source IPv4 address off the tunnel. Must be SONiC DualToR peer IPv4 address.";
+					type leafref {
+						path "/ps:sonic-peer-switch/ps:PEER_SWITCH/ps:PEER_SWITCH_LIST/ps:address_ipv4";
+					}
+				}
+
+				leaf dst_ip {
+					description "IPv4 address of this switch.";
+					type inet:ipv4-address;
+				}
+
+				leaf ecn_mode {
+					description "ECN mode";
+					type string {
+						pattern "copy_from_outer|standard";
+					}
+				}
+
+				leaf encap_ecn_mode {
+					description "Encap ECN mode";
+					type string {
+						pattern "standard";
+					}
+				}
+
+				leaf ttl_mode {
+					description "TTL mode";
+					type string {
+						pattern "uniform|pipe";
+					}
+				}
+
+				leaf tunnel_type {
+					description "Tunnel type";
+					type string {
+						pattern "IPINIP";
+					}
+				}
+
+				leaf decap_dscp_to_tc_map {
+					description "Decap DSCP to TC map";
+					type string;
+				}
+
+				leaf decap_tc_to_pg_map {
+					description "Decap TC to PG map";
+					type string;
+				}
+
+				leaf encap_tc_to_dscp_map {
+					description "Encap TC to DSCP map";
+					type string;
+				}
+
+				leaf encap_tc_to_queue_map {
+					description "Encap TC to Queue map";
+					type string;
+				}
+			}
+		}
+	}
+}
