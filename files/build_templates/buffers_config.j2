@@ -21,6 +21,11 @@ def
 {%-     set switch_role      = '' %}
 {%- endif -%}
 
+{% set voq_chassis = false %}
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['switch_type'] is defined and  DEVICE_METADATA['localhost']['switch_type']  == 'voq' %}
+{%-  set voq_chassis = true %}
+{%- endif -%}
+
 {# Import default values from device HWSKU folder #}
 {%- import 'buffers_defaults_%s.j2' % filename_postfix as defs with context %}
 
@@ -94,7 +99,20 @@ def
 {%- endmacro %}
 
 {%- set PORT_ALL  = [] %}
+{%- set SYSTEM_PORT_ALL = [] %}
 
+{%- if voq_chassis %}
+    {%- for system_port in SYSTEM_PORT %}
+    {% if '|' not in system_port %}
+        {%- set system_port_name = system_port|join("|")  %}
+    {% else %}
+        {%- set system_port_name = system_port  %}
+    {% endif %}
+    {%- if 'cpu' not  in system_port_name.lower() and 'IB' not in system_port_name and 'Rec' not in system_port_name %}
+        {%- if SYSTEM_PORT_ALL.append(system_port_name) %}{%- endif %}
+    {%- endif %}
+    {%- endfor %}
+{%- endif %}
 {%- if PORT is not defined %}
     {%- if defs.generate_port_lists is defined %}
         {%- if defs.generate_port_lists(PORT_ALL) %} {% endif %}
@@ -190,6 +208,26 @@ def
     },
 {% endif %}
 
+{% if voq_chassis %}
+     "BUFFER_QUEUE": {
+{% for system_port in SYSTEM_PORT_ALL %}
+        "{{ system_port }}|3-4": {
+            "profile" : "egress_lossless_profile"
+        },
+{% endfor %}
+{% for system_port in SYSTEM_PORT_ALL %}
+        "{{ system_port }}|0-2": {
+            "profile" : "egress_lossy_profile"
+        },
+{% endfor %}
+{% for system_port in SYSTEM_PORT_ALL %}
+        "{{ system_port }}|5-6": {
+            "profile" : "egress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    }
+{% else %}
 {% if (defs.generate_queue_buffers_with_extra_lossless_queues_with_inactive_ports is defined) and (port_names_extra_queues != '') %}
 {{ defs.generate_queue_buffers_with_extra_lossless_queues_with_inactive_ports(port_names_active, port_names_extra_queues, port_names_inactive) }}
 {% elif (defs.generate_queue_buffers_with_extra_lossless_queues is defined) and (port_names_extra_queues != '') %}
@@ -217,6 +255,7 @@ def
 
 {% endfor %}
     }
+{% endif %}
 {% endif %}
 {%- if dynamic_mode is defined -%}
    ,
