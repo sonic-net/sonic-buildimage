@@ -2,6 +2,10 @@ steps:
   - script: |
       set -ex
 
+      # disable auto upgrade, because it will conflict with apt-get install.
+      # It will breaks init step and breaks build.
+      sudo sed -i 's/1/0/' /etc/apt/apt.conf.d/20auto-upgrades
+
       # Install Azcopy
       if [ -z "$(which azcopy)" ]; then
         azcopy_url=https://aka.ms/downloadazcopy-v10-linux
