@@ -1,6 +1,6 @@
 # Centec SAI
 
-export CENTEC_SAI_VERSION = 1.10.1-0
+export CENTEC_SAI_VERSION = 1.11.0-1
 export CENTEC_SAI = libsai_$(CENTEC_SAI_VERSION)_$(PLATFORM_ARCH).deb
 export CENTEC_SAI_DEV = libsai-dev_$(CENTEC_SAI_VERSION)_$(PLATFORM_ARCH).deb
 
