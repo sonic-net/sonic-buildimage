@@ -2140,6 +2140,12 @@
                 "ip": "kubernetes.apiserver.com",
                 "port": "6443"
             }
+        },
+        "DASH_VNET": {
+            "Vnet1": {
+               "vni": "10",
+               "guid":"guid-vnet1"
+             }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
