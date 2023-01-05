@@ -19,6 +19,8 @@ using namespace std;
 using namespace swss;
 using json = nlohmann::json;
 
+const string g_stored_year = "2024";
+
 vector<EventParam> createEventParams(vector<string> params, vector<string> luaCodes) {
     vector<EventParam> eventParams;
     for(long unsigned int i = 0; i < params.size(); i++) {
@@ -85,13 +87,16 @@ TEST(syslog_parser, matching_regex_timestamp) {
     event_params_t expectedDict;
     expectedDict["message"] = "test_message";
     expectedDict["other_data"] = "test_data";
-    expectedDict["timestamp"] = "2022-07-21T02:10:00.000000Z";
+    // Adding stored year to messages as syslog don't contain year
+    expectedDict["timestamp"] = g_stored_year + "-07-21T02:10:00.000000Z";
 
     unique_ptr<SyslogParser> parser(new SyslogParser());
     parser->m_regexList = regexList;
     lua_State* luaState = luaL_newstate();
     luaL_openlibs(luaState);
 
+    parser->m_timestampFormatter->m_storedTimestamp = "010100:00:00.000000";
+    parser->m_timestampFormatter->m_storedYear = g_stored_year;
     bool success = parser->parseMessage("Jul 21 02:10:00.000000 message test_message other_data test_data", tag, paramDict, luaState);
     EXPECT_EQ(true, success);
     EXPECT_EQ("test_tag", tag);
@@ -186,13 +191,15 @@ TEST(syslog_parser, lua_code_valid_2) {
     expectedDict["ip"] = "10.10.24.216";
     expectedDict["major-code"] = "6";
     expectedDict["minor-code"] = "2";
-    expectedDict["timestamp"] = "2022-12-03T12:36:24.503424Z";
+    expectedDict["timestamp"] = g_stored_year + "-12-03T12:36:24.503424Z";
 
     unique_ptr<SyslogParser> parser(new SyslogParser());
     parser->m_regexList = regexList;
     lua_State* luaState = luaL_newstate();
     luaL_openlibs(luaState);
 
+    parser->m_timestampFormatter->m_storedTimestamp = "010100:00:00.000000";
+    parser->m_timestampFormatter->m_storedYear = g_stored_year;
     bool success = parser->parseMessage("Dec  3 12:36:24.503424 NOTIFICATION: received from neighbor 10.10.24.216 active 6/2 (Administrative Shutdown) 0 bytes", tag, paramDict, luaState);
     EXPECT_EQ(true, success);
     EXPECT_EQ("test_tag", tag);
@@ -253,13 +260,22 @@ TEST(timestampFormatter, changeTimestampFormat) {
     vector<string> timestampTwo = { "Jan", "1", "00:00:00.000000" };
     vector<string> timestampThree = { "Dec", "31", "23:59:59.000000" }; 
 
+    formatter->m_storedTimestamp = "010100:00:00.000000";
+    formatter->m_storedYear = g_stored_year;
+
     string formattedTimestampOne = formatter->changeTimestampFormat(timestampOne);
-    EXPECT_EQ("2022-07-20T10:09:40.230874Z", formattedTimestampOne);
+    string expectedTimestampOne = g_stored_year + "-07-20T10:09:40.230874Z";
+
+    EXPECT_EQ(expectedTimestampOne, formattedTimestampOne);
 
     EXPECT_EQ("072010:09:40.230874", formatter->m_storedTimestamp);
 
+    formatter->m_storedTimestamp = "010100:00:00.000000";
+    formatter->m_storedYear = g_stored_year;
+
     string formattedTimestampTwo = formatter->changeTimestampFormat(timestampTwo);
-    EXPECT_EQ("2022-01-01T00:00:00.000000Z", formattedTimestampTwo);
+    string expectedTimestampTwo = g_stored_year + "-01-01T00:00:00.000000Z";
+    EXPECT_EQ(expectedTimestampTwo, formattedTimestampTwo);
 
     formatter->m_storedTimestamp = "010100:00:00.000000";
     formatter->m_storedYear = "2025";
