@@ -3,7 +3,7 @@
 from swsscommon import swsscommon
 import netaddr
 from sonic_py_common import logger
-from swsssdk import ConfigDBConnector
+from swsscommon.swsscommon import ConfigDBConnector
 from pyroute2 import IPRoute
 from ipaddress import ip_interface
 
