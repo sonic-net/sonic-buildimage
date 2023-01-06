@@ -3,8 +3,16 @@
 . /usr/local/share/buildinfo/scripts/buildinfo_base.sh
 REAL_COMMAND=$(get_command dpkg)
 COMMAND_INFO="Locked by command: $REAL_COMMAND $@"
-lock_result=$(acquire_apt_installation_lock "$COMMAND_INFO" )
+NEED_RELEASE_LOCK=n
+if [[ "$DPKG_HOOK_LOCKED" != "y" ]];then
+    lock_result=$(acquire_apt_installation_lock "$COMMAND_INFO" )
+    export DPKG_HOOK_LOCKED=y
+    NEED_RELEASE_LOCK=y
+fi
 $REAL_COMMAND "$@"
 command_result=$?
+if [[ "$NEED_RELEASE_LOCK" == "y" ]];then
+    unset DPKG_HOOK_LOCKED
+fi
 [ "$lock_result" == y ] && release_apt_installation_lock
 exit $command_result
