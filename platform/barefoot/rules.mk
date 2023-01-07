@@ -16,6 +16,7 @@ include $(PLATFORM_PATH)/bfn-platform.mk
 #include $(PLATFORM_PATH)/bfn-platform-wnc.mk
 #include $(PLATFORM_PATH)/bfn-platform-ingrasys.mk
 include $(PLATFORM_PATH)/bfn-modules.mk
+include $(PLATFORM_PATH)/docker-saiserver-bfn.mk
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) $(SONIC_ONE_ABOOT) \
              $(DOCKER_FPM)

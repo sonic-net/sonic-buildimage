@@ -18,6 +18,7 @@ try:
     import tempfile
     from sonic_platform_base.component_base import ComponentBase
     import sonic_platform.hwaccess as hwaccess
+    from sonic_py_common.general import check_output_pipe
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -161,10 +162,10 @@ class Component(ComponentBase):
             return False, "ERROR: File not found"
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            cmd = "sed -e '1,/^exit_marker$/d' {} | tar -x -C {} installer/onie-update.tar.xz".format(image_path, tmpdir)
+            cmd1 = ["sed", "-e", '1,/^exit_marker$/d', image_path]
+            cmd2 = ["tar", "-x", "-C", tmpdir, "installer/onie-update.tar.xz"]
             try:
-                subprocess.check_call(cmd, stdout=subprocess.DEVNULL,
-                                      stderr=subprocess.DEVNULL, shell=True)
+                check_output_pipe(cmd1, cmd2)
             except subprocess.CalledProcessError:
                 return False, "ERROR: Unable to extract firmware updater"
 
@@ -200,18 +201,18 @@ class Component(ComponentBase):
     @staticmethod
     def _stage_firmware_package(image_path):
         stage_msg = None
-        cmd = "onie_stage_fwpkg -a {}".format(image_path)
+        cmd = ["onie_stage_fwpkg", "-a", image_path]
         try:
-            subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT, text=True)
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True)
         except subprocess.CalledProcessError as e:
             if e.returncode != 2:
                 return False, e.output.strip()
             else:
                 stage_msg = e.output.strip()
 
-        cmd = "onie_mode_set -o update"
+        cmd = ["onie_mode_set", "-o", "update"]
         try:
-            subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT, text=True)
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True)
         except subprocess.CalledProcessError as e:
             return False, e.output.strip()
 

@@ -13,11 +13,11 @@
 
 import sys
 import logging
-import subprocess
+from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_noshell_pipe
 
 S5248F_MAX_FAN_TRAYS = 4
 S5248F_MAX_PSUS = 2
-IPMI_SENSOR_DATA = "ipmitool sdr list"
+IPMI_SENSOR_DATA = ["ipmitool", "sdr", "list"]
 IPMI_SENSOR_DUMP = "/tmp/sdr"
 
 FAN_PRESENCE = "FAN{0}_prsnt"
@@ -25,8 +25,9 @@ PSU_PRESENCE = "PSU{0}_stat"
 # Use this for older firmware
 # PSU_PRESENCE="PSU{0}_prsnt"
 
-IPMI_PSU1_DATA_DOCKER = "ipmitool raw 0x04 0x2d 0x31 |  awk '{print substr($0,9,1)}'"
-IPMI_PSU2_DATA_DOCKER = "ipmitool raw 0x04 0x2d 0x32 |  awk '{print substr($0,9,1)}'"
+IPMI_PSU1_DATA_DOCKER = ["ipmitool", "raw", "0x04", "0x2d", "0x31"]
+IPMI_PSU2_DATA_DOCKER = ["ipmitool", "raw", "0x04", "0x2d", "0x32"]
+awk_cmd = ['awk', '{print substr($0,9,1)}']
 ipmi_sdr_list = ""
 
 # Dump sensor registers
@@ -37,7 +38,7 @@ def ipmi_sensor_dump():
     status = 1
     global ipmi_sdr_list
     ipmi_cmd = IPMI_SENSOR_DATA
-    status, ipmi_sdr_list = subprocess.getstatusoutput(ipmi_cmd)
+    status, ipmi_sdr_list = getstatusoutput_noshell(ipmi_cmd)
 
     if status:
         logging.error('Failed to execute:' + ipmi_sdr_list)
@@ -174,9 +175,9 @@ for tray in range(1, S5248F_MAX_FAN_TRAYS + 1):
         ret_status = 1
 
         if index == 1:
-            status, ipmi_cmd_ret = subprocess.getstatusoutput(IPMI_PSU1_DATA_DOCKER)
+            status, ipmi_cmd_ret = getstatusoutput_noshell_pipe(IPMI_PSU1_DATA_DOCKER, awk_cmd)
         elif index == 2:
-            ret_status, ipmi_cmd_ret = subprocess.getstatusoutput(IPMI_PSU2_DATA_DOCKER)
+            ret_status, ipmi_cmd_ret = getstatusoutput_noshell_pipe(IPMI_PSU2_DATA_DOCKER, awk_cmd)
 
         #if ret_status:
          #   print ipmi_cmd_ret
@@ -186,7 +187,7 @@ for tray in range(1, S5248F_MAX_FAN_TRAYS + 1):
         psu_status = ipmi_cmd_ret
 
         if psu_status == '1':
-           status = 1
+            status = 1
 
         return status
 

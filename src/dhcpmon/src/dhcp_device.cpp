@@ -41,6 +41,7 @@
 #define DHCP_OPTIONS_HEADER_SIZE 240
 /** Offset of DHCP GIADDR */
 #define DHCP_GIADDR_OFFSET 24
+#define CLIENT_IF_PREFIX "Ethernet"
 
 #define OP_LDHA     (BPF_LD  | BPF_H   | BPF_ABS)   /** bpf ldh Abs */
 #define OP_LDHI     (BPF_LD  | BPF_H   | BPF_IND)   /** bpf ldh Ind */
@@ -51,19 +52,54 @@
 #define OP_JSET     (BPF_JMP | BPF_JSET | BPF_K)    /** bpf jset */
 #define OP_LDXB     (BPF_LDX | BPF_B    | BPF_MSH)  /** bpf ldxb */
 
+std::shared_ptr<swss::DBConnector> mConfigDbPtr = std::make_shared<swss::DBConnector> ("CONFIG_DB", 0);
 std::shared_ptr<swss::DBConnector> mStateDbPtr = std::make_shared<swss::DBConnector> ("STATE_DB", 0);
 std::shared_ptr<swss::Table> mStateDbMuxTablePtr = std::make_shared<swss::Table> (
             mStateDbPtr.get(), "HW_MUX_CABLE_TABLE"
         );
-swss::DBConnector configDb("CONFIG_DB", 0);
+
+/* interface to vlan mapping */
+std::unordered_map<std::string, std::string> vlan_map;
+
+/** Berkeley Packet Filter program for "udp and (port 67 or port 68)".
+ * This program is obtained using the following command tcpdump:
+ * `tcpdump -dd "outbound and udp and (port 67 or port 68)"`
+ */
+static struct sock_filter dhcp_outbound_bpf_code[] = {
+    {.code = OP_LDHA, .jt = 0,  .jf = 0,  .k = 0xfffff004}, // (000) ldh      #fffff004
+    {.code = OP_JEQ,  .jt = 0,  .jf = 22, .k = 0x00000004}, // (001) jeq      #0x04            jt 0 jf 22
+    {.code = OP_LDHA, .jt = 0,  .jf = 0,  .k = 0x0000000c}, // (002) ldh      [12]
+    {.code = OP_JEQ,  .jt = 0,  .jf = 7,  .k = 0x000086dd}, // (003) jeq      #0x86dd          jt 2	jf 9
+    {.code = OP_LDB,  .jt = 0,  .jf = 0,  .k = 0x00000014}, // (004) ldb      [20]
+    {.code = OP_JEQ,  .jt = 0,  .jf = 18, .k = 0x00000011}, // (005) jeq      #0x11            jt 4	jf 22
+    {.code = OP_LDHA, .jt = 0,  .jf = 0,  .k = 0x00000036}, // (006) ldh      [54]
+    {.code = OP_JEQ,  .jt = 15, .jf = 0,  .k = 0x00000043}, // (007) jeq      #0x43            jt 21	jf 6
+    {.code = OP_JEQ,  .jt = 14, .jf = 0,  .k = 0x00000044}, // (008) jeq      #0x44            jt 21	jf 7
+    {.code = OP_LDHA, .jt = 0,  .jf = 0,  .k = 0x00000038}, // (009) ldh      [56]
+    {.code = OP_JEQ,  .jt = 12, .jf = 11, .k = 0x00000043}, // (010) jeq      #0x43            jt 21	jf 20
+    {.code = OP_JEQ,  .jt = 0,  .jf = 12, .k = 0x00000800}, // (011) jeq      #0x800           jt 10	jf 22
+    {.code = OP_LDB,  .jt = 0,  .jf = 0,  .k = 0x00000017}, // (012) ldb      [23]
+    {.code = OP_JEQ,  .jt = 0,  .jf = 10, .k = 0x00000011}, // (013) jeq      #0x11            jt 12	jf 22
+    {.code = OP_LDHA, .jt = 0,  .jf = 0,  .k = 0x00000014}, // (014) ldh      [20]
+    {.code = OP_JSET, .jt = 8,  .jf = 0,  .k = 0x00001fff}, // (015) jset     #0x1fff          jt 22	jf 14
+    {.code = OP_LDXB, .jt = 0,  .jf = 0,  .k = 0x0000000e}, // (016) ldxb     4*([14]&0xf)
+    {.code = OP_LDHI, .jt = 0,  .jf = 0,  .k = 0x0000000e}, // (017) ldh      [x + 14]
+    {.code = OP_JEQ,  .jt = 4,  .jf = 0,  .k = 0x00000043}, // (018) jeq      #0x43            jt 21	jf 17
+    {.code = OP_JEQ,  .jt = 3,  .jf = 0,  .k = 0x00000044}, // (019) jeq      #0x44            jt 21	jf 18
+    {.code = OP_LDHI, .jt = 0,  .jf = 0,  .k = 0x00000010}, // (020) ldh      [x + 16]
+    {.code = OP_JEQ,  .jt = 1,  .jf = 0,  .k = 0x00000043}, // (021) jeq      #0x43            jt 21	jf 20
+    {.code = OP_JEQ,  .jt = 0,  .jf = 1,  .k = 0x00000044}, // (022) jeq      #0x44            jt 21	jf 22
+    {.code = OP_RET,  .jt = 0,  .jf = 0,  .k = 0x00040000}, // (023) ret      #262144
+    {.code = OP_RET,  .jt = 0,  .jf = 0,  .k = 0x00000000}, // (024) ret      #0
+};
 
 /** Berkeley Packet Filter program for "udp and (port 67 or port 68)".
  * This program is obtained using the following command tcpdump:
  * `tcpdump -dd "inbound and udp and (port 67 or port 68)"`
  */
-static struct sock_filter dhcp_bpf_code[] = {
+static struct sock_filter dhcp_inbound_bpf_code[] = {
     {.code = OP_LDHA, .jt = 0,  .jf = 0,  .k = 0xfffff004}, // (000) ldh      #fffff004
-    {.code = OP_JEQ, .jt = 22,  .jf = 0,  .k = 0x00000004}, // (001) jeq      #0x04            jt 22 jf 0
+    {.code = OP_JEQ,  .jt = 22, .jf = 0, .k = 0x00000004},  // (001) jeq      #0x04            jt 22 jf 0
     {.code = OP_LDHA, .jt = 0,  .jf = 0,  .k = 0x0000000c}, // (002) ldh      [12]
     {.code = OP_JEQ,  .jt = 0,  .jf = 7,  .k = 0x000086dd}, // (003) jeq      #0x86dd          jt 2	jf 9
     {.code = OP_LDB,  .jt = 0,  .jf = 0,  .k = 0x00000014}, // (004) ldb      [20]
@@ -90,8 +126,11 @@ static struct sock_filter dhcp_bpf_code[] = {
 };
 
 /** Filter program socket struct */
-static struct sock_fprog dhcp_sock_bfp = {
-    .len = sizeof(dhcp_bpf_code) / sizeof(*dhcp_bpf_code), .filter = dhcp_bpf_code
+static struct sock_fprog dhcp_outbound_sock_bfp = {
+    .len = sizeof(dhcp_outbound_bpf_code) / sizeof(*dhcp_outbound_bpf_code), .filter = dhcp_outbound_bpf_code
+};
+static struct sock_fprog dhcp_inbound_sock_bfp = {
+    .len = sizeof(dhcp_inbound_bpf_code) / sizeof(*dhcp_inbound_bpf_code), .filter = dhcp_inbound_bpf_code
 };
 
 /** Aggregate device of DHCP interfaces. It contains aggregate counters from
@@ -106,6 +145,17 @@ static dhcp_message_type_t monitored_msgs[] = {
     DHCP_MESSAGE_TYPE_REQUEST,
     DHCP_MESSAGE_TYPE_ACK
 };
+
+void update_vlan_mapping(std::string vlan, std::shared_ptr<swss::DBConnector> mConfigDbPtr) {
+    auto match_pattern = std::string("VLAN_MEMBER|") + vlan + std::string("|*");
+    auto keys = mConfigDbPtr->keys(match_pattern);
+    for (auto &itr : keys) {
+        auto found = itr.find_last_of('|');
+        auto interface = itr.substr(found + 1);
+        vlan_map[interface] = vlan;
+        syslog(LOG_INFO, "add <%s, %s> into interface vlan map\n", interface.c_str(), vlan.c_str());
+    }
+}
 
 /** Number of monitored DHCP message type */
 static uint8_t monitored_msg_sz = sizeof(monitored_msgs) / sizeof(*monitored_msgs);
@@ -163,78 +213,62 @@ static void handle_dhcp_option_53(dhcp_device_context_t *context,
 }
 
 /**
- * @code read_callback(fd, event, arg);
+ * @code client_packet_handler(dhcp_device_context_t *context, ssize_t buffer_sz);
  *
- * @brief callback for libevent which is called every time out in order to read queued packet capture
+ * @brief packet handler to process received rx and tx packets
  *
- * @param fd            socket to read from
- * @param event         libevent triggered event
- * @param arg           user provided argument for callback (interface context)
+ * @param context       pointer to device (interface) context
+ * @param buffer_sz     buffer that stores received packet data
  *
  * @return none
  */
-static void read_callback(int fd, short event, void *arg)
+static void client_packet_handler(dhcp_device_context_t *context, ssize_t buffer_sz)
 {
-    dhcp_device_context_t *context = (dhcp_device_context_t*) arg;
-    ssize_t buffer_sz;
+    struct ether_header *ethhdr = (struct ether_header*) context->buffer;
+    struct ip *iphdr = (struct ip*) (context->buffer + IP_START_OFFSET);
+    struct udphdr *udp = (struct udphdr*) (context->buffer + UDP_START_OFFSET);
+    uint8_t *dhcphdr = context->buffer + DHCP_START_OFFSET;
+    int dhcp_option_offset = DHCP_START_OFFSET + DHCP_OPTIONS_HEADER_SIZE;
 
-    while ((event == EV_READ) &&
-           ((buffer_sz = recv(fd, context->buffer, context->snaplen, MSG_DONTWAIT)) > 0)) {
-        struct ether_header *ethhdr = (struct ether_header*) context->buffer;
-        struct ip *iphdr = (struct ip*) (context->buffer + IP_START_OFFSET);
-        struct udphdr *udp = (struct udphdr*) (context->buffer + UDP_START_OFFSET);
-        uint8_t *dhcphdr = context->buffer + DHCP_START_OFFSET;
-        int dhcp_option_offset = DHCP_START_OFFSET + DHCP_OPTIONS_HEADER_SIZE;
-
-        if (((unsigned)buffer_sz > UDP_START_OFFSET + sizeof(struct udphdr) + DHCP_OPTIONS_HEADER_SIZE) &&
-            (ntohs(udp->len) > DHCP_OPTIONS_HEADER_SIZE)) {
-            int dhcp_sz = ntohs(udp->len) < buffer_sz - UDP_START_OFFSET - sizeof(struct udphdr) ?
-                          ntohs(udp->len) : buffer_sz - UDP_START_OFFSET - sizeof(struct udphdr);
-            int dhcp_option_sz = dhcp_sz - DHCP_OPTIONS_HEADER_SIZE;
-            const u_char *dhcp_option = context->buffer + dhcp_option_offset;
-            dhcp_packet_direction_t dir = (ethhdr->ether_shost[0] == context->mac[0] &&
-                                           ethhdr->ether_shost[1] == context->mac[1] &&
-                                           ethhdr->ether_shost[2] == context->mac[2] &&
-                                           ethhdr->ether_shost[3] == context->mac[3] &&
-                                           ethhdr->ether_shost[4] == context->mac[4] &&
-                                           ethhdr->ether_shost[5] == context->mac[5]) ?
-                                           DHCP_TX : DHCP_RX;
-            int offset = 0;
-            int stop_dhcp_processing = 0;
-            while ((offset < (dhcp_option_sz + 1)) && dhcp_option[offset] != 255) {
-                switch (dhcp_option[offset])
-                {
-                case 53:
-                    if (offset < (dhcp_option_sz + 2)) {
-                        handle_dhcp_option_53(context, &dhcp_option[offset], dir, iphdr, dhcphdr);
-                    }
-                    stop_dhcp_processing = 1; // break while loop since we are only interested in Option 53
-                    break;
-                default:
-                    break;
+    if (((unsigned)buffer_sz > UDP_START_OFFSET + sizeof(struct udphdr) + DHCP_OPTIONS_HEADER_SIZE) &&
+        (ntohs(udp->len) > DHCP_OPTIONS_HEADER_SIZE))
+    {
+        int dhcp_sz = ntohs(udp->len) < buffer_sz - UDP_START_OFFSET - sizeof(struct udphdr) ?
+                    ntohs(udp->len) : buffer_sz - UDP_START_OFFSET - sizeof(struct udphdr);
+        int dhcp_option_sz = dhcp_sz - DHCP_OPTIONS_HEADER_SIZE;
+        const u_char *dhcp_option = context->buffer + dhcp_option_offset;
+        dhcp_packet_direction_t dir = (ethhdr->ether_shost[0] == context->mac[0] &&
+                                    ethhdr->ether_shost[1] == context->mac[1] &&
+                                    ethhdr->ether_shost[2] == context->mac[2] &&
+                                    ethhdr->ether_shost[3] == context->mac[3] &&
+                                    ethhdr->ether_shost[4] == context->mac[4] &&
+                                    ethhdr->ether_shost[5] == context->mac[5]) ?
+                                    DHCP_TX : DHCP_RX;
+        int offset = 0;
+        while ((offset < (dhcp_option_sz + 1)) && dhcp_option[offset] != 255) {
+            if (dhcp_option[offset] == OPTION_DHCP_MESSAGE_TYPE) {
+                if (offset < (dhcp_option_sz + 2)) {
+                    handle_dhcp_option_53(context, &dhcp_option[offset], dir, iphdr, dhcphdr);
                 }
-
-                if (stop_dhcp_processing == 1) {
-                    break;
-                }
-
-                if (dhcp_option[offset] == 0) { // DHCP Option Padding
-                    offset++;
-                } else {
-                    offset += dhcp_option[offset + 1] + 2;
-                }
+                break; // break while loop since we are only interested in Option 53
             }
-        } else {
-            syslog(LOG_WARNING, "read_callback(%s): read length (%ld) is too small to capture DHCP options",
-                   context->intf, buffer_sz);
+
+            if (dhcp_option[offset] == 0) { // DHCP Option Padding
+                offset++;
+            } else {
+                offset += dhcp_option[offset + 1] + 2;
+            }
         }
+    } else {
+        syslog(LOG_WARNING, "read_callback(%s): read length (%ld) is too small to capture DHCP options",
+            context->intf, buffer_sz);
     }
 }
 
 /**
- * @code read_callback_dual_tor(fd, event, arg);
+ * @code read_tx_callback(fd, event, arg);
  *
- * @brief callback for libevent which is called every time out in order to read queued packet capture when dual tor mode is enabled
+ * @brief callback for libevent which is called every time out in order to read queued outgoing packet capture
  *
  * @param fd            socket to read from
  * @param event         libevent triggered event
@@ -242,72 +276,58 @@ static void read_callback(int fd, short event, void *arg)
  *
  * @return none
  */
-static void read_callback_dual_tor(int fd, short event, void *arg)
+static void read_tx_callback(int fd, short event, void *arg)
+{
+    dhcp_device_context_t *context = (dhcp_device_context_t*) arg;
+    ssize_t buffer_sz;
+
+    while ((buffer_sz = recv(fd, context->buffer, context->snaplen, MSG_DONTWAIT)) > 0) {
+        client_packet_handler(context, buffer_sz);
+    }
+}
+
+/**
+ * @code read_rx_callback(fd, event, arg);
+ *
+ * @brief callback for libevent which is called every time out in order to read queued incoming packet capture
+ *
+ * @param fd            socket to read from
+ * @param event         libevent triggered event
+ * @param arg           user provided argument for callback (interface context)
+ *
+ * @return none
+ */
+static void read_rx_callback(int fd, short event, void *arg)
 {
     dhcp_device_context_t *context = (dhcp_device_context_t*) arg;
     ssize_t buffer_sz;
     struct sockaddr_ll sll;
     socklen_t slen = sizeof sll;
 
-    while ((event == EV_READ) &&
-           ((buffer_sz = recvfrom(fd, context->buffer, context->snaplen, MSG_DONTWAIT, (struct sockaddr *)&sll, &slen)) > 0)) 
+    while ((buffer_sz = recvfrom(fd, context->buffer, context->snaplen, MSG_DONTWAIT, (struct sockaddr *)&sll, &slen)) > 0) 
     {
-        std::string member_table = std::string("VLAN_MEMBER|") + context->intf + "|";
         char interfaceName[IF_NAMESIZE];
-        char *interface = if_indextoname(sll.sll_ifindex, interfaceName);
-        std::string state;
-        std::string intf(interface);
-        mStateDbMuxTablePtr->hget(intf, "state", state);
-        if (state != "standby" && configDb.exists(member_table.append(interface))) {
-            struct ether_header *ethhdr = (struct ether_header*) context->buffer;
-            struct ip *iphdr = (struct ip*) (context->buffer + IP_START_OFFSET);
-            struct udphdr *udp = (struct udphdr*) (context->buffer + UDP_START_OFFSET);
-            uint8_t *dhcphdr = context->buffer + DHCP_START_OFFSET;
-            int dhcp_option_offset = DHCP_START_OFFSET + DHCP_OPTIONS_HEADER_SIZE;
-
-            if (((unsigned)buffer_sz > UDP_START_OFFSET + sizeof(struct udphdr) + DHCP_OPTIONS_HEADER_SIZE) &&
-                (ntohs(udp->len) > DHCP_OPTIONS_HEADER_SIZE)) 
-            {
-                int dhcp_sz = ntohs(udp->len) < buffer_sz - UDP_START_OFFSET - sizeof(struct udphdr) ?
-                            ntohs(udp->len) : buffer_sz - UDP_START_OFFSET - sizeof(struct udphdr);
-                int dhcp_option_sz = dhcp_sz - DHCP_OPTIONS_HEADER_SIZE;
-                const u_char *dhcp_option = context->buffer + dhcp_option_offset;
-                dhcp_packet_direction_t dir = (ethhdr->ether_shost[0] == context->mac[0] &&
-                                            ethhdr->ether_shost[1] == context->mac[1] &&
-                                            ethhdr->ether_shost[2] == context->mac[2] &&
-                                            ethhdr->ether_shost[3] == context->mac[3] &&
-                                            ethhdr->ether_shost[4] == context->mac[4] &&
-                                            ethhdr->ether_shost[5] == context->mac[5]) ?
-                                            DHCP_TX : DHCP_RX;
-                int offset = 0;
-                int stop_dhcp_processing = 0;
-                while ((offset < (dhcp_option_sz + 1)) && dhcp_option[offset] != 255) {
-                    switch (dhcp_option[offset])
-                    {
-                    case 53:
-                        if (offset < (dhcp_option_sz + 2)) {
-                            handle_dhcp_option_53(context, &dhcp_option[offset], dir, iphdr, dhcphdr);
-                        }
-                        stop_dhcp_processing = 1; // break while loop since we are only interested in Option 53
-                        break;
-                    default:
-                        break;
-                    }
-
-                    if (stop_dhcp_processing == 1) {
-                        break;
-                    }
-
-                    if (dhcp_option[offset] == 0) { // DHCP Option Padding
-                        offset++;
-                    } else {
-                        offset += dhcp_option[offset + 1] + 2;
-                    }
-                }
-            } else {
-                syslog(LOG_WARNING, "read_callback(%s): read length (%ld) is too small to capture DHCP options",
-                    context->intf, buffer_sz);
+        if (if_indextoname(sll.sll_ifindex, interfaceName) == NULL) {
+            syslog(LOG_WARNING, "invalid input interface index %d\n", sll.sll_ifindex);
+            continue;
+        }
+        std::string intf(interfaceName);
+        auto vlan = vlan_map.find(intf);
+        if (vlan == vlan_map.end()) {
+            if (intf.find(CLIENT_IF_PREFIX) != std::string::npos) {
+                syslog(LOG_WARNING, "invalid input interface %s\n", interfaceName);
             }
+            continue;
+        }
+
+        if (dual_tor_sock) {
+            std::string state;
+            mStateDbMuxTablePtr->hget(intf, "state", state);
+            if (state != "standby") {
+                client_packet_handler(context, buffer_sz);
+            }
+        } else {
+            client_packet_handler(context, buffer_sz);
         }
     }
 }
@@ -495,20 +515,31 @@ static int init_socket(dhcp_device_context_t *context, const char *intf)
     int rv = -1;
 
     do {
-        context->sock = socket(AF_PACKET, SOCK_RAW | SOCK_NONBLOCK, htons(ETH_P_ALL));
-        if (context->sock < 0) {
+        context->rx_sock = socket(AF_PACKET, SOCK_RAW | SOCK_NONBLOCK, htons(ETH_P_ALL));
+        context->tx_sock = socket(AF_PACKET, SOCK_RAW | SOCK_NONBLOCK, htons(ETH_P_ALL));
+        if (context->rx_sock < 0 || context->tx_sock < 0) {
             syslog(LOG_ALERT, "socket: failed to open socket with '%s'\n", strerror(errno));
+            exit(1);
+        }
+
+        struct sockaddr_ll rx_addr;
+        memset(&rx_addr, 0, sizeof(rx_addr));
+        rx_addr.sll_ifindex = 0; // any interface
+        rx_addr.sll_family = AF_PACKET;
+        rx_addr.sll_protocol = htons(ETH_P_ALL);
+        if (bind(context->rx_sock, (struct sockaddr *) &rx_addr, sizeof(rx_addr))) {
+            syslog(LOG_ALERT, "bind: failed to bind to interface '%s' with '%s'\n", intf, strerror(errno));
             break;
         }
 
-        struct sockaddr_ll addr;
-        memset(&addr, 0, sizeof(addr));
-        addr.sll_ifindex = 0; // any interface
-        addr.sll_family = AF_PACKET;
-        addr.sll_protocol = htons(ETH_P_ALL);
-        if (bind(context->sock, (struct sockaddr *) &addr, sizeof(addr))) {
+        struct sockaddr_ll tx_addr;
+        memset(&tx_addr, 0, sizeof(tx_addr));
+        tx_addr.sll_ifindex = if_nametoindex(intf);
+        tx_addr.sll_family = AF_PACKET;
+        tx_addr.sll_protocol = htons(ETH_P_ALL);
+        if (bind(context->tx_sock, (struct sockaddr *) &tx_addr, sizeof(tx_addr))) {
             syslog(LOG_ALERT, "bind: failed to bind to interface '%s' with '%s'\n", intf, strerror(errno));
-            break;
+            exit(1);
         }
 
         strncpy(context->intf, intf, sizeof(context->intf) - 1);
@@ -644,17 +675,18 @@ int dhcp_device_start_capture(dhcp_device_context_t *context,
                               in_addr_t giaddr_ip)
 {
     int rv = -1;
-    struct event *ev;
+    struct event *rx_ev;
+    struct event *tx_ev;
 
     do {
         if (context == NULL) {
             syslog(LOG_ALERT, "NULL interface context pointer'\n");
-            break;
+            exit(1);
         }
 
         if (snaplen < UDP_START_OFFSET + sizeof(struct udphdr) + DHCP_OPTIONS_HEADER_SIZE) {
             syslog(LOG_ALERT, "dhcp_device_start_capture(%s): snap length is too low to capture DHCP options", context->intf);
-            break;
+            exit(1);
         }
 
         context->giaddr_ip = giaddr_ip;
@@ -662,25 +694,31 @@ int dhcp_device_start_capture(dhcp_device_context_t *context,
         context->buffer = (uint8_t *) malloc(snaplen);
         if (context->buffer == NULL) {
             syslog(LOG_ALERT, "malloc: failed to allocate memory for socket buffer '%s'\n", strerror(errno));
-            break;
+            exit(1);
         }
         context->snaplen = snaplen;
 
-        if (setsockopt(context->sock, SOL_SOCKET, SO_ATTACH_FILTER, &dhcp_sock_bfp, sizeof(dhcp_sock_bfp)) != 0) {
+        if (setsockopt(context->rx_sock, SOL_SOCKET, SO_ATTACH_FILTER, &dhcp_inbound_sock_bfp, sizeof(dhcp_inbound_sock_bfp)) != 0) {
             syslog(LOG_ALERT, "setsockopt: failed to attach filter with '%s'\n", strerror(errno));
-            break;
+            exit(1);
         }
 
-        if (dual_tor_sock)
-            ev = event_new(base, context->sock, EV_READ | EV_PERSIST, read_callback_dual_tor, context);
-        else
-            ev = event_new(base, context->sock, EV_READ | EV_PERSIST, read_callback, context);
+        if (setsockopt(context->tx_sock, SOL_SOCKET, SO_ATTACH_FILTER, &dhcp_outbound_sock_bfp, sizeof(dhcp_outbound_sock_bfp)) != 0) {
+            syslog(LOG_ALERT, "setsockopt: failed to attach filter with '%s'\n", strerror(errno));
+            exit(1);
+        }
 
-        if (ev == NULL) {
+        update_vlan_mapping(context->intf, mConfigDbPtr);
+
+        rx_ev = event_new(base, context->rx_sock, EV_READ | EV_PERSIST, read_rx_callback, context);
+        tx_ev = event_new(base, context->tx_sock, EV_READ | EV_PERSIST, read_tx_callback, context);
+
+        if (rx_ev == NULL || tx_ev == NULL) {
             syslog(LOG_ALERT, "event_new: failed to allocate memory for libevent event '%s'\n", strerror(errno));
-            break;
+            exit(1);
         }
-        event_add(ev, NULL);
+        event_add(rx_ev, NULL);
+        event_add(tx_ev, NULL);
 
         rv = 0;
     } while (0);

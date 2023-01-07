@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 HWSKU_DIR=/usr/share/sonic/hwsku
 
-start_bcm()
-{
-    [ -e /dev/linux-bcm-knet ] || mknod /dev/linux-bcm-knet c 122 0
-    [ -e /dev/linux-user-bde ] || mknod /dev/linux-user-bde c 126 0
-    [ -e /dev/linux-kernel-bde ] || mknod /dev/linux-kernel-bde c 127 0
-}
-
 generate_profile()
 {
     # There are two ways to specify the contents of the SAI_INIT_CONFIG_FILE and they are mutually exclusive
@@ -35,10 +28,6 @@ generate_profile()
 }
 
 rm -f /var/run/rsyslogd.pid
-
 supervisorctl start rsyslogd
-
 generate_profile
-start_bcm
-
 supervisorctl start saiserver
