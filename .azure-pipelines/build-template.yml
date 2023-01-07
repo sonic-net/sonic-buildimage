@@ -116,6 +116,12 @@ jobs:
             git stash
             popd 
           fi
+          if [ ${{ parameters.platform }} == barefoot ]; then
+            make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) SAITHRIFT_V2=y  ENABLE_SYNCD_RPC=y  target/docker-saiserverv2-bfn.gz
+            pushd ./src/sonic-sairedis/SAI
+            git stash
+            popd 
+          fi
         fi
 
         make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/sonic-${{ parameters.platform }}.bin

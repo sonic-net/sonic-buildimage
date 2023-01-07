@@ -61,20 +61,24 @@ class Psu(PsuBase):
 
     def _reload_dps_module(self):
         try:
-            del_cmd = "echo  0x56 > /sys/bus/i2c/devices/i2c-{}/delete_device".format(10 + self.index - 1)
-            os.system(del_cmd)
+            file = "/sys/bus/i2c/devices/i2c-{}/delete_device".format(10 + self.index - 1)
+            with open(file, 'w') as f:
+                f.write("0x56\n")
         except (IOError, OSError):
             pass
         try:
-            del_cmd = "echo  0x5e > /sys/bus/i2c/devices/i2c-{}/delete_device".format(10 + self.index - 1)
-            os.system(del_cmd)
+            file = "/sys/bus/i2c/devices/i2c-{}/delete_device".format(10 + self.index - 1)
+            with open(file, 'w') as f:
+                f.write("0x5e\n")
         except (IOError, OSError):
             pass
         try:
-            ins_cmd = "echo '24c02 0x56' > /sys/bus/i2c/devices/i2c-{}/new_device".format(10 + self.index - 1)
-            os.system(ins_cmd)
-            ins_cmd = "echo 'dps460 0x5e' > /sys/bus/i2c/devices/i2c-{}/new_device".format(10 + self.index - 1)
-            os.system(ins_cmd)
+            file = "/sys/bus/i2c/devices/i2c-{}/new_device".format(10 + self.index - 1)
+            with open(file, 'w') as f:
+                f.write('24c02 0x56\n')
+            file = "/sys/bus/i2c/devices/i2c-{}/new_device".format(10 + self.index - 1)
+            with open(file, 'w') as f:
+                f.write('dps460 0x5e\n')
         except (IOError, OSError):
             pass
 

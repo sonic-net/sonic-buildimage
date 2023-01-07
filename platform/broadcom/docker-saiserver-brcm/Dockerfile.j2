@@ -25,7 +25,10 @@ debs/
 RUN apt-get install -yf kmod
 
 COPY ["files/dsserve", "files/bcmcmd", "start.sh", "bcmsh", "/usr/bin/"]
+COPY ["saiserver_start.sh", "/usr/bin/"]
+COPY ["files/syncd_init_common.sh", "/usr/bin/"]
 RUN chmod +x /usr/bin/dsserve /usr/bin/bcmcmd
+RUN chmod +x /usr/bin/saiserver_start.sh /usr/bin/syncd_init_common.sh
 
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 

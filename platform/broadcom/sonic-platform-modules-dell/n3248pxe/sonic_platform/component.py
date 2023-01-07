@@ -19,8 +19,10 @@ def get_bios_version():
     return subprocess.check_output(['dmidecode', '-s', 'system-version']).strip().decode()
 
 def get_cpld_version(cpld):
-    mjr_ver=subprocess.check_output('cat /sys/devices/platform/dell-n3248pxe-cpld.0/' + cpld + '_mjr_ver', shell=True).strip()[2:].decode()
-    mnr_ver=subprocess.check_output('cat /sys/devices/platform/dell-n3248pxe-cpld.0/' + cpld + '_mnr_ver', shell=True).strip()[2:].decode()
+    mjr_ver_path = "/sys/devices/platform/dell-n3248pxe-cpld.0/" + cpld + '_mjr_ver'
+    mnr_ver_path = "/sys/devices/platform/dell-n3248pxe-cpld.0/" + cpld + '_mnr_ver'
+    mjr_ver = subprocess.check_output(['cat', mjr_ver_path]).strip()[2:].decode()
+    mnr_ver = subprocess.check_output(['cat', mnr_ver_path]).strip()[2:].decode()
     return (str(mjr_ver) + '.' + str(mnr_ver))
 
 class Component(ComponentBase):

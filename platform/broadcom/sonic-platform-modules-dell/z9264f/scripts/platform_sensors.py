@@ -13,11 +13,11 @@
 
 import sys
 import logging
-import subprocess
+from sonic_py_common.general import getstatusoutput_noshell
 
 Z9264F_MAX_FAN_TRAYS = 4
 Z9264F_MAX_PSUS = 2
-IPMI_SENSOR_DATA = "ipmitool sdr list"
+IPMI_SENSOR_DATA = ["ipmitool", "sdr", "list"]
 IPMI_SENSOR_DUMP = "/tmp/sdr"
 
 FAN_PRESENCE = "FAN{0}_prsnt"
@@ -34,7 +34,7 @@ def ipmi_sensor_dump():
     status = 1
     global ipmi_sdr_list
     ipmi_cmd = IPMI_SENSOR_DATA
-    status, ipmi_sdr_list = subprocess.getstatusoutput(ipmi_cmd)
+    status, ipmi_sdr_list = getstatusoutput_noshell(ipmi_cmd)
 
     if status:
         logging.error('Failed to execute:' + ipmi_sdr_list)
