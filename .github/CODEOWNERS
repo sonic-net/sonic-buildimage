@@ -19,9 +19,9 @@
 /Makefile.work  @qiluo-msft @xumia @lguohan
 /slave.mk       @qiluo-msft @xumia @lguohan
 /scripts        @qiluo-msft @xumia @lguohan
-/src/sonic-build-hooks/                 @Azure/sonic-build
-/src/debootstrap/                       @Azure/sonic-build
-/src/sonic-fips/                        @Azure/sonic-build
+/src/sonic-build-hooks/                 @sonic-net/sonic-build
+/src/debootstrap/                       @sonic-net/sonic-build
+/src/sonic-fips/                        @sonic-net/sonic-build
 
 # installer
 /installer/     @qiluo-msft
@@ -35,76 +35,77 @@
 /dockers/docker-snmp/                   @qiluo-msft
 
 # kernel
-/src/sonic-linux-kernel/                @Azure/sonic-kernel
+/src/sonic-linux-kernel/                @sonic-net/sonic-kernel
 
 # devices
-/device/                                @Azure/sonic-platform
-/src/sonic-platform-common/             @Azure/sonic-platform
-/src/sonic-platform-daemons/            @Azure/sonic-platform
-/src/sonic-platform-pde/                @Azure/sonic-platform
-/src/lm-sensors/                        @Azure/sonic-platform
-/src/flashrom/                          @Azure/sonic-platform
+/device/                                @sonic-net/sonic-platform
+/src/sonic-platform-common/             @sonic-net/sonic-platform
+/src/sonic-platform-daemons/            @sonic-net/sonic-platform
+/src/sonic-platform-pde/                @sonic-net/sonic-platform
+/src/lm-sensors/                        @sonic-net/sonic-platform
+/src/flashrom/                          @sonic-net/sonic-platform
 
 # common library
 /src/initramfs-tools/                   @qiluo-msft
-/src/redis-dump-load/                   @Azure/sonic-management
-/src/sonic-py-common/                   @Azure/sonic-management
-/src/sonic-py-swsssdk/                  @Azure/sonic-management
-/src/sonic-swss-common/                 @Azure/sonic-management
-/src/bash/                              @Azure/sonic-management
-/src/tacacs/                            @Azure/sonic-management
-/src/radius/                            @Azure/sonic-management
-/src/swig/                              @Azure/sonic-management
-/src/socat/                             @Azure/sonic-management
+/src/redis-dump-load/                   @sonic-net/sonic-management
+/src/sonic-py-common/                   @sonic-net/sonic-management
+/src/sonic-py-swsssdk/                  @sonic-net/sonic-management
+/src/sonic-swss-common/                 @sonic-net/sonic-management
+/src/bash/                              @sonic-net/sonic-management
+/src/tacacs/                            @sonic-net/sonic-management
+/src/radius/                            @sonic-net/sonic-management
+/src/swig/                              @sonic-net/sonic-management
+/src/socat/                             @sonic-net/sonic-management
 
 # redis
-/src/redis/                             @Azure/sonic-management
-/src/hiredis/                           @Azure/sonic-management
+/src/redis/                             @sonic-net/sonic-management
+/src/hiredis/                           @sonic-net/sonic-management
 
 # yang
 /src/sonic-yang-models/                 @praveen-li @dgsudharsan @rathnasabapathyv @venkatmahalingam @qiluo-msft
-/src/sonic-yang-mgmt/                   @Azure/sonic-management
-/src/libyang/                           @Azure/sonic-management
-/src/libyang1/                          @Azure/sonic-management
-/src/libyang2/                          @Azure/sonic-management
+/src/sonic-yang-mgmt/                   @sonet-net/sonic-management
+/src/libyang/                           @sonic-net/sonic-management
+/src/libyang1/                          @sonic-net/sonic-management
+/src/libyang2/                          @sonic-net/sonic-management
 
 # bgpcfgd
 /src/sonic-bgpcfgd/                     @StormLiangMS
 
 # sonic-config-engine
-/src/sonic-config-engine/               @Azure/sonic-management
+/src/sonic-config-engine/               @sonic-net/sonic-management
 
 # sonic-utilities
-/src/sonic-utilities/                   @Azure/sonic-management
+/src/sonic-utilities/                   @sonic-net/sonic-management
 
 # sonic-telemetry
-/src/sonic-telemetry/                   @Azure/sonic-management
+/dockers/docker-sonic-telemetry         @sonic-net/sonic-management
+/src/sonic-telemetry/                   @sonic-net/sonic-management
 
 # snmp
-/src/sonic-snmpagent/                   @Azure/sonic-management
-/src/snmpd/                             @Azure/sonic-management
+/src/sonic-snmpagent/                   @sonic-net/sonic-management
+/src/snmpd/                             @sonic-net/sonic-management
 
 # dhcp relay
-/src/dhcp6relay/                        @Azure/sonic-fundamentals
-/src/dhcpmon/                           @Azure/sonic-fundamentals
-/src/isc-dhcp/                          @Azure/sonic-fundamentals
+/src/dhcp6relay/                        @sonic-net/sonic-fundamentals
+/src/dhcpmon/                           @sonic-net/sonic-fundamentals
+/src/isc-dhcp/                          @sonic-net/sonic-fundamentals
 
 # sflow
-/src/sflow/                             @Azure/sonic-dataplane
+/src/sflow/                             @sonic-net/sonic-dataplane
 
 # sonic restapi
-/src/sonic-restapi/                     @Azure/sonic-dataplane
+/src/sonic-restapi/                     @sonic-net/sonic-dataplane
 
 # sonic swss
-/src/sonic-swss/                        @Azure/sonic-dataplane
+/src/sonic-swss/                        @sonic-net/sonic-dataplane
 
 # linux networking, e.g., libnl3, iproute2, ifupdown2, ethtool
-/src/libnl3/                            @Azure/sonic-dataplane
-/src/iproute2/                          @Azure/sonic-dataplane
-/src/ifupdown2/                         @Azure/sonic-dataplane
-/src/ethtool/                           @Azure/sonic-dataplane
+/src/libnl3/                            @sonic-net/sonic-dataplane
+/src/iproute2/                          @sonic-net/sonic-dataplane
+/src/ifupdown2/                         @sonic-net/sonic-dataplane
+/src/ethtool/                           @sonic-net/sonic-dataplane
 
 # ptf
-/src/ptf/                               @Azure/sonic-fundamentals
-/src/ptf-py3/                           @Azure/sonic-fundamentals
-/src/scapy/                             @Azure/sonic-fundamentals
+/src/ptf/                               @sonic-net/sonic-fundamentals
+/src/ptf-py3/                           @sonic-net/sonic-fundamentals
+/src/scapy/                             @sonic-net/sonic-fundamentals
