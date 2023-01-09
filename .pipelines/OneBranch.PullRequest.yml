@@ -39,3 +39,157 @@ stages:
       - name: mellanox
       preSteps:
         - template: .pipelines/prepare_agent.yml@acs-buildimage
+
+- stage: Test
+  dependsOn: Build
+  condition: and(succeeded(), in(dependencies.Build.result, 'Succeeded', 'SucceededWithIssues'))
+  variables:
+    - group: SONiC-Testbed-Tools
+    - name: inventory
+      value: veos_vtb
+    - name: testbed_file
+      value: vtestbed.csv
+
+  # For every test job:
+  # continueOnError: false means it's a required test job and will block merge if it fails
+  # continueOnError: true means it's an optional test job and will not block merge even though it fails(unless a required test job depends on its result)
+
+  jobs:
+    - job:
+      displayName: "vstest"
+      timeoutInMinutes: 60
+      steps:
+        - template: .azure-pipelines/cleanup.yml@acs-buildimage
+        - checkout: self
+          clean: true
+          submodules: recursive
+          displayName: 'Checkout code'
+
+        - script: |
+            sudo rm -rf ../target
+            sudo rm -rf ../*.deb
+          displayName: "Cleanup"
+
+        - task: DownloadPipelineArtifact@2
+          inputs:
+            source: specific
+            project: build
+            pipeline: 9
+            artifact: sonic-swss-common.amd64.ubuntu20_04
+            runVersion: 'latestFromBranch'
+            runBranch: 'refs/heads/master'
+          displayName: "Download sonic swss common deb packages"
+
+        - task: DownloadPipelineArtifact@2
+          inputs:
+            artifact: sonic-buildimage.vs
+          displayName: "Download sonic-buildimage.vs artifact"
+
+        - script: |
+            set -x
+            sudo apt-get update
+            sudo apt-get install libyang0.16 -y
+            sudo dpkg -i --force-confask,confnew ../libswsscommon_1.0.0_amd64.deb
+            sudo dpkg -i ../python3-swsscommon_1.0.0_amd64.deb
+            sudo docker load -i ../target/docker-sonic-vs.gz
+            docker tag docker-sonic-vs:latest docker-sonic-vs:64554688
+            username=$(id -un)
+            
+            trap "docker ps; docker images; ip netns list; \
+                  docker rmi docker-sonic-vs:64554688; \
+                  ip netns list | grep -E [-]srv[0-9]+ | awk '{print $1}' | xargs -I {} sudo ip netns delete {}; \
+                  sudo chown -R ${username}.${username} .; \
+                  sudo chown -R ${username}.${username} $(System.DefaultWorkingDirectory)" EXIT
+            pushd platform/vs/tests
+            sudo py.test -v --junitxml=tr.xml --imgname=docker-sonic-vs:64554688
+          displayName: "Run vs tests"
+
+        - task: PublishTestResults@2
+          inputs:
+            testResultsFiles: '**/tr.xml'
+            testRunTitle: vstest
+
+    - job: t0_testbedv2
+      pool:
+        vmImage: 'ubuntu-20.04'
+      displayName: "kvmtest-t0 by TestbedV2"
+      timeoutInMinutes: 1080
+      continueOnError: false
+      steps:
+        - template: ../.azure-pipelines/run-test-scheduler-template.yml
+          parameters:
+            TOPOLOGY: t0
+            MIN_WORKER: 2
+            MAX_WORKER: 3
+
+    - job: t0_2vlans_testbedv2
+      pool:
+        vmImage: 'ubuntu-20.04'
+      displayName: "kvmtest-t0-2vlans by TestbedV2"
+      timeoutInMinutes: 1080
+      continueOnError: false
+      steps:
+        - template: ../.azure-pipelines/run-test-scheduler-template.yml
+          parameters:
+            TOPOLOGY: t0
+            TEST_SET: t0-2vlans
+            MAX_WORKER: 1
+            DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
+
+    - job: t1_lag_testbedv2
+      pool:
+        vmImage: 'ubuntu-20.04'
+      displayName: "kvmtest-t1-lag by TestbedV2"
+      timeoutInMinutes: 600
+      continueOnError: false
+      steps:
+        - template: ../.azure-pipelines/run-test-scheduler-template.yml
+          parameters:
+            TOPOLOGY: t1-lag
+            MIN_WORKER: 2
+            MAX_WORKER: 3
+
+    - job: dualtor_testbedv2
+      pool:
+        vmImage: 'ubuntu-20.04'
+      displayName: "kvmtest-dualtor-t0 by TestbedV2"
+      timeoutInMinutes: 1080
+      continueOnError: false
+      steps:
+        - template: ../.azure-pipelines/run-test-scheduler-template.yml
+          parameters:
+            TOPOLOGY: dualtor
+            MIN_WORKER: 1
+            MAX_WORKER: 1
+            COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
+
+    - job: sonic_t0_testbedv2
+      displayName: "kvmtest-t0-sonic by TestbedV2"
+      pool:
+        vmImage: 'ubuntu-20.04'
+      timeoutInMinutes: 1080
+      continueOnError: true
+      steps:
+        - template: ../.azure-pipelines/run-test-scheduler-template.yml
+          parameters:
+            TOPOLOGY: t0-64-32
+            MIN_WORKER: 1
+            MAX_WORKER: 2
+            TEST_SET: t0-sonic
+            COMMON_EXTRA_PARAMS: "--neighbor_type=sonic --enable_macsec --macsec_profile=128_SCI,256_XPN_SCI"
+            VM_TYPE: vsonic
+            SPECIFIED_PARAMS: '{\"test_pretest.py\":[\"--completeness_level=confident\",\"--allow_recover\"],\"test_posttest.py\":[\"--completeness_level=confident\",\"--allow_recover\"]}'
+
+    - job: wan_testbedv2
+      displayName: "kvmtest-wan by TestbedV2"
+      pool:
+        vmImage: 'ubuntu-20.04'
+      timeoutInMinutes: 1080
+      continueOnError: true
+      steps:
+        - template: ../.azure-pipelines/run-test-scheduler-template.yml
+          parameters:
+            TOPOLOGY: wan-pub
+            MIN_WORKER: 1
+            MAX_WORKER: 1
+            COMMON_EXTRA_PARAMS: "--skip_sanity "

@@ -40,7 +40,7 @@ parameters:
 
 - name: MGMT_BRANCH
   type: string
-  default: master
+  default: internal
 
 - name: NUM_ASIC
   type: number
@@ -48,9 +48,8 @@ parameters:
 
 steps:
   - script: |
-      set -ex
-      wget -O ./.azure-pipelines/test_plan.py  https://raw.githubusercontent.com/sonic-net/sonic-mgmt/master/.azure-pipelines/test_plan.py
-      wget -O ./.azure-pipelines/pr_test_scripts.yaml  https://raw.githubusercontent.com/sonic-net/sonic-mgmt/master/.azure-pipelines/pr_test_scripts.yaml
+      curl -u $(AZP_REPO_ACCESS_TOKEN) "https://dev.azure.com/mssonic/internal/_apis/sourceProviders/TfsGit/filecontents?repository=sonic-mgmt-int&commitOrBranch=internal&api-version=5.0-preview.1&path=.azure-pipelines%2Ftest_plan.py" -o ./.azure-pipelines/test_plan.py
+      curl -u $(AZP_REPO_ACCESS_TOKEN) "https://dev.azure.com/mssonic/internal/_apis/sourceProviders/TfsGit/filecontents?repository=sonic-mgmt-int&commitOrBranch=internal&api-version=5.0-preview.1&path=.azure-pipelines%2Fpr_test_scripts.yaml" -o ./.azure-pipelines/pr_test_scripts.yaml
     displayName: Download TestbedV2 scripts
 
   - script: |
@@ -62,7 +61,7 @@ steps:
       --test-set ${{ parameters.TEST_SET }} --kvm-build-id $(KVM_BUILD_ID) \
       --deploy-mg-extra-params "${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}" --common-extra-params "${{ parameters.COMMON_EXTRA_PARAMS }}" \
       --mgmt-branch ${{ parameters.MGMT_BRANCH }} --vm-type ${{ parameters.VM_TYPE }} --specified-params "${{ parameters.SPECIFIED_PARAMS }}" \
-      --num-asic ${{ parameters.NUM_ASIC }}
+      --num-asic ${{ parameters.NUM_ASIC }} --azp-access-token ":$(System.AccessToken)" --azp-repo-access-token $(AZP_REPO_ACCESS_TOKEN)
       TEST_PLAN_ID=`cat new_test_plan_id.txt`
 
       echo "Created test plan $TEST_PLAN_ID"
