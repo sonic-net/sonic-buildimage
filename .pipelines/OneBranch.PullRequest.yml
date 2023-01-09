@@ -77,7 +77,7 @@ stages:
           pipeline: 9
           artifact: sonic-swss-common.amd64.ubuntu20_04
           runVersion: 'latestFromBranch'
-          runBranch: 'refs/heads/master'
+          runBranch: 'refs/heads/internal'
         displayName: "Download sonic swss common deb packages"
 
       - task: DownloadPipelineArtifact@2
