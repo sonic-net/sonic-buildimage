@@ -53,7 +53,8 @@ jobs:
       containerRegistry: ${{ parameters.registry_conn }}
   - bash: |
       set -ex
-      image_tag=$(BLDENV=${{ parameters.dist }} make -f Makefile.work showtag PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} | grep sonic-slave | tail -n 1)
+      build_options="$(VERSION_CONTROL_OPTIONS)"
+      image_tag=$(BLDENV=${{ parameters.dist }} make -f Makefile.work showtag $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} | grep sonic-slave | tail -n 1)
       image_latest=$(echo $(echo $image_tag | awk -F: '{print$1}'):latest)
       if echo ${{ parameters.pool }} | grep ${{ parameters.arch }};then
         image_latest=$(echo ${image_latest} | sed 's/:/-${{ parameters.arch }}:/')
@@ -65,7 +66,7 @@ jobs:
         exit 0
       fi
 
-      DOCKER_DATA_ROOT_FOR_MULTIARCH=/data/march/docker BLDENV=${{ parameters.dist }} make -f Makefile.work configure PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} $args || docker image ls $image_tag
+      DOCKER_DATA_ROOT_FOR_MULTIARCH=/data/march/docker BLDENV=${{ parameters.dist }} make -f Makefile.work configure $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} $args || docker image ls $image_tag
       if [[ "$(Build.Reason)" == "PullRequest" ]];then
         exit 0
       fi

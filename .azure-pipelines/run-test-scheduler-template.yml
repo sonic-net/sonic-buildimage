@@ -81,7 +81,7 @@ steps:
       echo "TestbedV2 is just online and might not be stable enough, for any issue, please send email to sonictestbedtools@microsoft.com"
       echo "Runtime detailed progress at https://www.testbed-tools.org/scheduler/testplan/$TEST_PLAN_ID"
       # When "LOCK_TESTBED" finish, it changes into "PREPARE_TESTBED"
-      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-states PREPARE_TESTBED EXECUTING KVMDUMP FINISHED CANCELLED FAILED
+      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-state LOCK_TESTBED
     env:
       TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
     displayName: Lock testbed
@@ -94,7 +94,7 @@ steps:
       echo "TestbedV2 is just online and might not be stable enough, for any issue, please send email to sonictestbedtools@microsoft.com"
       echo "Runtime detailed progress at https://www.testbed-tools.org/scheduler/testplan/$TEST_PLAN_ID"
       # When "PREPARE_TESTBED" finish, it changes into "EXECUTING"
-      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-states EXECUTING KVMDUMP FINISHED CANCELLED FAILED
+      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-state PREPARE_TESTBED
     env:
       TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
     displayName: Prepare testbed
@@ -105,7 +105,7 @@ steps:
       echo "TestbedV2 is just online and might not be stable enough, for any issue, please send email to sonictestbedtools@microsoft.com"
       echo "Runtime detailed progress at https://www.testbed-tools.org/scheduler/testplan/$TEST_PLAN_ID"
       # When "EXECUTING" finish, it changes into "KVMDUMP", "FAILED", "CANCELLED" or "FINISHED"
-      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-states KVMDUMP FINISHED CANCELLED FAILED
+      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-state EXECUTING
     env:
       TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
     displayName: Run test
@@ -116,7 +116,7 @@ steps:
       echo "TestbedV2 is just online and might not be stable enough, for any issue, please send email to sonictestbedtools@microsoft.com"
       echo "Runtime detailed progress at https://www.testbed-tools.org/scheduler/testplan/$TEST_PLAN_ID"
       # When "KVMDUMP" finish, it changes into "FAILED", "CANCELLED" or "FINISHED"
-      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-states FINISHED CANCELLED FAILED
+      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-state KVMDUMP
     condition: succeededOrFailed()
     env:
       TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
