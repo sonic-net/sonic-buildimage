@@ -289,7 +289,7 @@ if [ -f $FIRST_BOOT_FILE ]; then
             mv /etc/apt/sources.list /etc/apt/sources.list.rc-local
             echo "deb [trusted=yes] file:///host/image-$SONIC_VERSION/platform/common /" > /etc/apt/sources.list.d/sonic_debian_extension.list
             LANG=C DEBIAN_FRONTEND=noninteractive apt-get update
-            LANG=C DEBIAN_FRONTEND=noninteractive apt-get -y install /host/image-$SONIC_VERSION/platform/$platform/*.deb
+            LANG=C DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Path=$PATH:/usr/local/bin -y install /host/image-$SONIC_VERSION/platform/$platform/*.deb
             # Cleanup
             rm -f /etc/apt/sources.list.d/sonic_debian_extension.list
             rm -f /var/lib/apt/lists/_host_image-${SONIC_VERSION}_platform_common_Packages.lz4
