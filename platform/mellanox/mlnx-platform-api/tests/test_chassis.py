@@ -224,6 +224,35 @@ class TestChassis:
             assert minor == value
             mock_file_content[file_path] = 0
 
+        utils.is_host = mock.MagicMock(return_value=True)
+        chassis._parse_warmfast_reboot_from_proc_cmdline = mock.MagicMock(return_value='warm-reboot')
+        for key, value in chassis.reboot_major_cause_dict.items():
+            file_path = os.path.join(REBOOT_CAUSE_ROOT, key)
+            mock_file_content[file_path] = 1
+            major, minor = chassis.get_reboot_cause()
+            assert major == chassis.REBOOT_CAUSE_NON_HARDWARE
+            assert minor == ''
+            mock_file_content[file_path] = 0
+
+        for key, value in chassis.reboot_minor_cause_dict.items():
+            file_path = os.path.join(REBOOT_CAUSE_ROOT, key)
+            mock_file_content[file_path] = 1
+            major, minor = chassis.get_reboot_cause()
+            assert major == chassis.REBOOT_CAUSE_NON_HARDWARE
+            assert minor == value
+            mock_file_content[file_path] = 0
+
+    def test_parse_warmfast_reboot_from_proc_cmdline(self):
+        chassis = Chassis()
+        with mock.patch("builtins.open", mock.mock_open(read_data="SONIC_BOOT_TYPE=warm")):
+            assert chassis._parse_warmfast_reboot_from_proc_cmdline() == "warm-reboot"
+
+        with mock.patch("builtins.open", mock.mock_open(read_data="SONIC_BOOT_TYPE=fast")):
+            assert chassis._parse_warmfast_reboot_from_proc_cmdline() == "fast-reboot"
+
+        with mock.patch("builtins.open", mock.mock_open(read_data="SONIC_BOOT_TYPE=None")):
+            assert chassis._parse_warmfast_reboot_from_proc_cmdline() == None
+
     def test_module(self):
         from sonic_platform.chassis import ModularChassis
         # Test get_num_modules, it should not create any SFP objects
