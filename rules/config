@@ -178,7 +178,7 @@ INCLUDE_ROUTER_ADVERTISER ?= y
 
 # INCLUDE_KUBERNETES - if set to y kubernetes packages are installed to be able to
 # run as worker node in kubernetes cluster.
-INCLUDE_KUBERNETES = n
+INCLUDE_KUBERNETES ?= n
 
 KUBE_DOCKER_PROXY = http://172.16.1.1:3128/
 
@@ -188,7 +188,6 @@ KUBE_DOCKER_PROXY = http://172.16.1.1:3128/
 # NOTE: As a worker node it has to run version compatible to kubernetes master.
 #
 KUBERNETES_VERSION = 1.22.2-00
-KUBERNETES_CNI_VERSION = 0.8.7-00
 K8s_GCR_IO_PAUSE_VERSION = 3.5
 
 # INCLUDE_KUBERNETES_MASTER - if set to y kubernetes packages are installed o be able 
