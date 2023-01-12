@@ -62,6 +62,7 @@ class DnsmasqStaticHostMonitor(object):
         with open("/etc/dnsmasq.hosts", "w") as f:
             # Get all known MAC addresses
             vlan_mac_addresses = fdb_table.getKeys()
+            ip_mac_dict = {}
             for vlan_mac_address in vlan_mac_addresses:
                 (vlan, mac_address) = vlan_mac_address.split(":", maxsplit=1)
                 (status, port) = fdb_table.hget(vlan_mac_address, 'port')
@@ -93,7 +94,17 @@ class DnsmasqStaticHostMonitor(object):
                 if ipv4_device_address not in ipv4_network.network.hosts():
                     syslog.syslog(syslog.LOG_ERR, f"Calculated address {ipv4_device_address} not part of {ipv4_network} for {mac_address}")
                     continue
-                f.write(f"{mac_address},{ipv4_device_address},15m\n")
+
+                # If different mac get same ip, always respect mac first met
+                if ipv4_device_address in ip_mac_dict:
+                    syslog.syslog(syslog.LOG_INFO, f"Duplicate ip address {ipv4_device_address} which has been assigned"
+                                  f" to {ip_mac_dict[ipv4_device_address]}, skip {mac_address}")
+                    continue
+
+                ip_mac_dict[ipv4_device_address] = mac_address
+
+            for ip, mac in ip_mac_dict.items():
+                f.write(f"{mac},{ip},15m\n")
 
 
         # Update the next time we'll update /etc/dnsmasq.hosts
