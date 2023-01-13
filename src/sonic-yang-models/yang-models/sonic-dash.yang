@@ -385,7 +385,7 @@ module sonic-dash {
                 }
 
                 leaf vnet {
-                    when "((current()/../action_type = 'vnet') or (current()/../action_type = 'vnet-direct'))";
+                    when "((current()/../action_type = 'vnet') or (current()/../action_type = 'vnet_direct'))";
                     type leafref {
                         path /dash:sonic-dash/dash:DASH_VNET/dash:DASH_VNET_LIST/dash:name;
                     }
@@ -399,8 +399,8 @@ module sonic-dash {
                 }
 
                 leaf overlay_ip {
-                    when "((current()/../action_type = 'vnet') or (current()/../action_type = 'vnet-direct'))";
-                    description "Overlay IP to use for mapping lookup, if routing_type is vnet-direct";
+                    when "((current()/../action_type = 'vnet') or (current()/../action_type = 'vnet_direct'))";
+                    description "Overlay IP to use for mapping lookup, if routing_type is vnet_direct";
                     type inet:ip-address;
                 }
 

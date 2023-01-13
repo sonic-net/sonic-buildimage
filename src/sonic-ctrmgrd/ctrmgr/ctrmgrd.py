@@ -99,6 +99,8 @@ remote_ctr_config = {
     USE_K8S_PROXY: ""
     }
 
+ENABLED_FEATURE_SET = {"telemetry", "snmp"}
+
 def log_debug(m):
     msg = "{}: {}".format(inspect.stack()[1][3], m)
     syslog.syslog(syslog.LOG_DEBUG, msg)
@@ -260,6 +262,8 @@ class MainServer:
                 key, op, fvs = subscriber.pop()
                 if not key:
                     continue
+                if subscriber.getTableName() == FEATURE_TABLE and key not in ENABLED_FEATURE_SET:
+                    continue
                 log_debug("Received message : '%s'" % str((key, op, fvs)))
                 for callback in (self.callbacks
                         [subscriber.getDbConnector().getDbName()]
@@ -280,6 +284,8 @@ def set_node_labels(server):
     labels["sonic_version"] = version_info['build_version']
     labels["hwsku"] = device_info.get_hwsku() if not UNIT_TESTING else "mock"
     labels["deployment_type"] = dep_type
+    platform = device_info.get_platform()
+    labels["worker.sonic/platform"] = platform if platform is not None else ""
     server.mod_db_entry(STATE_DB_NAME,
             KUBE_LABEL_TABLE, KUBE_LABEL_SET_KEY, labels)
 
