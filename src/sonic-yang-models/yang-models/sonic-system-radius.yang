@@ -1,0 +1,215 @@
+module sonic-system-radius {
+    namespace "http://github.com/sonic-net/sonic-system-radius";
+    prefix ssys;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+// Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
+//    import sonic-vlan {
+//        prefix vlan;
+//    }
+
+    import sonic-loopback-interface {
+        prefix loopback;
+    }
+
+    import sonic-mgmt_port {
+        prefix mgmt-port;
+    }
+
+    import sonic-interface {
+        prefix interface;
+    }
+
+    description
+        "SONiC RADIUS";
+
+    revision 2022-11-11 {
+        description "Initial revision.";
+    }
+
+    typedef auth_type_enumeration {
+        type enumeration {
+            enum pap;
+            enum chap;
+            enum mschapv2;
+        }
+    }
+
+
+    container sonic-system-radius {
+
+        container RADIUS {
+
+            container global {
+
+
+                leaf passkey {
+                    type string {
+                        length "1..65";
+                        pattern "[^ #,]*" {
+                            error-message 'RADIUS shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
+                        }
+                    }
+                    description
+                            'RADIUS global shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
+                }
+
+                leaf auth_type {
+                    default "pap";
+                    type auth_type_enumeration;
+                    description
+                            "RADIUS global method used for authenticating the comm. mesg.";
+                }
+
+                leaf src_ip {
+                    type inet:ip-address;
+                    description
+                            "source IP address (IPv4 or IPv6) for the outgoing RADIUS pkts.";
+                }
+
+                leaf nas_ip {
+                    type inet:ip-address;
+                    description
+                            "NAS-IP|IPV6-Address attribute for the outgoing RADIUS pkts.";
+                }
+
+                leaf statistics {
+                    type boolean;
+                    description
+                            "Should statistics collection be enabled/disabled";
+                }
+
+                leaf timeout {
+                    default 5;
+                    type uint16 {
+                        range "1..60" {
+                            error-message "RADIUS timeout must be 1..60";
+                        }
+                    }
+                }
+
+                leaf retransmit {
+                    default 3;
+                    type uint8 {
+                        range "0..10" {
+                            error-message "RADIUS retransmit must be 0..10";
+                        }
+                    }
+                }
+            }
+        }
+
+        container RADIUS_SERVER {
+
+            list RADIUS_SERVER_LIST {
+                key "ipaddress";
+
+                max-elements 8;
+
+                leaf ipaddress {
+                    type inet:host;
+                    description
+                        "RADIUS server's Domain name or IP address (IPv4 or IPv6)";
+                }
+
+                leaf auth_port {
+                    default 1812;
+                    type inet:port-number;
+                    description
+                        "RADIUS authentication port number.";
+                }
+
+                leaf passkey {
+                    type string {
+                        length "1..65";
+                        pattern "[^ #,]*" {
+                            error-message 'RADIUS shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
+                        }
+                    }
+                    description
+                            'RADIUS servers shared secret (Valid chars are ASCII printable except SPACE, "#", and ",")';
+                }
+
+                leaf auth_type {
+                    default "pap";
+                    type auth_type_enumeration;
+                    description
+                            "RADIUS server's method used for authenticating the comm. mesg.";
+                }
+
+                leaf priority {
+                    type uint8 {
+                        range "1..64" {
+                            error-message "RADIUS priority must be 1..64";
+                        }
+                    }
+                    description
+                            "RADIUS server's priority";
+                }
+
+                leaf timeout {
+                    default 5;
+                    type uint16 {
+                        range "1..60" {
+                            error-message "RADIUS timeout must be 1..60";
+                        }
+                    }
+                }
+
+                leaf retransmit {
+                    default 3;
+                    type uint8 {
+                        range "0..10" {
+                            error-message "RADIUS retransmit must be 0..10";
+                        }
+                    }
+                }
+
+                leaf vrf {
+                    type string {
+                        pattern "mgmt|default" {
+                            error-message "Error: Invalid VRF name";
+                        }
+                    }
+                    description
+                        "VRF name";
+
+                }
+
+                leaf src_intf {
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        type string {
+                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        }
+
+                        type leafref {
+                            path "/loopback:sonic-loopback-interface/loopback:LOOPBACK_INTERFACE/loopback:LOOPBACK_INTERFACE_LIST/loopback:name";
+                        }
+                        type leafref {
+                            path "/mgmt-port:sonic-mgmt_port/mgmt-port:MGMT_PORT/mgmt-port:MGMT_PORT_LIST/mgmt-port:name";
+                        }
+                    }
+                    description "Source interface to use for RADIUS server communication.";
+                }
+            }
+        }
+    }
+}

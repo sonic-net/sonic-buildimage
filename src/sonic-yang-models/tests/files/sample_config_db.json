@@ -1349,6 +1349,19 @@
                 "timeout": "10"
             }
         },
+        "RADIUS": {
+            "global": {
+                "auth_type": "pap",
+                "timeout": "5"
+            }
+        },
+        "RADIUS_SERVER": {
+            "192.168.1.2": {
+                "priority": "4",
+                "retransmit": "2",
+                "timeout": "5"
+            }
+        },
         "NAT_BINDINGS": {
             "bind1": {
                 "nat_pool": "pool1",
