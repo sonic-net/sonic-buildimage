@@ -69,22 +69,6 @@ stages:
           MIN_WORKER: $(T0_INSTANCE_NUM)
           MAX_WORKER: $(T0_INSTANCE_NUM)
 
-  - job: t0_2vlans_testbedv2
-    pool:
-      vmImage: 'ubuntu-20.04'
-    displayName: "kvmtest-t0-2vlans by TestbedV2"
-    timeoutInMinutes: 240
-    condition: succeeded()
-    continueOnError: false
-    steps:
-      - template: ../.azure-pipelines/run-test-scheduler-template.yml
-        parameters:
-          TOPOLOGY: t0
-          TEST_SET: t0-2vlans
-          MIN_WORKER: $(T0_2VLANS_INSTANCE_NUM)
-          MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
-          DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
-
   - job: t1_lag_testbedv2
     pool:
       vmImage: 'ubuntu-20.04'
@@ -98,33 +82,3 @@ stages:
           TOPOLOGY: t1-lag
           MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
           MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
-
-  - job: dualtor_testbedv2
-    pool:
-      vmImage: 'ubuntu-20.04'
-    displayName: "kvmtest-dualtor-t0 by TestbedV2"
-    timeoutInMinutes: 240
-    condition: succeeded()
-    continueOnError: false
-    steps:
-      - template: ../.azure-pipelines/run-test-scheduler-template.yml
-        parameters:
-          TOPOLOGY: dualtor
-          MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
-
-  - job: wan_testbedv2
-    displayName: "kvmtest-wan by TestbedV2"
-    pool:
-      vmImage: 'ubuntu-20.04'
-    timeoutInMinutes: 240
-    condition: succeeded()
-    continueOnError: true
-    steps:
-      - template: ../.azure-pipelines/run-test-scheduler-template.yml
-        parameters:
-          TOPOLOGY: wan-pub
-          MIN_WORKER: $(WAN_INSTANCE_NUM)
-          MAX_WORKER: $(WAN_INSTANCE_NUM)
-          COMMON_EXTRA_PARAMS: "--skip_sanity "
