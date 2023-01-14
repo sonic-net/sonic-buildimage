@@ -87,6 +87,7 @@ export CROSS_BUILD_ENVIRON
 export BLDENV
 export BUILD_WORKDIR
 export GZ_COMPRESS_PROGRAM
+export MIRROR_SNAPSHOT
 
 ###############################################################################
 ## Utility rules

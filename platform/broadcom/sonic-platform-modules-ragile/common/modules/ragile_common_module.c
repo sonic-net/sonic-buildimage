@@ -37,9 +37,6 @@ module_param(g_common_debug_verbose, int, S_IRUGO | S_IWUSR);
 
 int dfd_get_my_card_type(void)
 {
-    int type;
-    int cnt;
-
     if (dfd_my_type != 0) {
         RAGILE_COMMON_DEBUG_VERBOSE("my_type = 0x%x\r\n", dfd_my_type);
         return dfd_my_type;

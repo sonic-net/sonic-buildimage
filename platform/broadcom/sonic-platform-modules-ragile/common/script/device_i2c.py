@@ -5,7 +5,7 @@ import click
 import os
 import time
 import subprocess
-from ragileconfig import GLOBALCONFIG, GLOBALINITPARAM, MAC_LED_RESET, STARTMODULE, i2ccheck_params
+from ragileconfig import *
 from ragileutil import rgpciwr, rgi2cset, io_wr
 from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_noshell_pipe
 
@@ -96,13 +96,6 @@ def starthal_ledctrl():
         if len(rets) == 0:
             subprocess.Popen(cmd)
 
-def start_dev_monitor():
-    if STARTMODULE.get('dev_monitor',0) == 1:
-        cmd = ["dev_monitor.py", "start"]
-        rets = get_pid("dev_monitor.py")
-        if len(rets) == 0:
-            subprocess.Popen(cmd)
-
 def start_slot_monitor():
     if STARTMODULE.get('slot_monitor',0) == 1:
         cmd = ["slot_monitor.py", "start"]
@@ -122,16 +115,6 @@ def stop_fan_ctrl():
 def stophal_ledctrl():
     if STARTMODULE.get('hal_ledctrl',0) == 1:
         rets = get_pid("hal_ledctrl.py")
-        for ret in rets:
-            cmd = ["kill", ret]
-            subprocess.call(cmd)
-        return True
-
-
-def stop_dev_monitor():
-    u'''disable the fan timer service'''
-    if STARTMODULE.get('dev_monitor',0) == 1:
-        rets = get_pid("dev_monitor.py")  #
         for ret in rets:
             cmd = ["kill", ret]
             subprocess.call(cmd)
@@ -259,7 +242,6 @@ def otherinit():
 
 def unload_driver():
     u'''remove devices and drivers'''
-    stop_dev_monitor() # disable removable device driver monitors
     stop_fan_ctrl()  # disable fan-control service
     removedevs()    # remove other devices
     removedrivers() # remove drivers
@@ -311,7 +293,6 @@ def load_driver():
     starthal_ledctrl() # enable LED control
     if STARTMODULE['avscontrol'] == 1:
         start_avs_ctrl() # avs voltage-adjustment
-    start_dev_monitor() # enable removable device driver monitors
     start_slot_monitor() # slot insertion and removal initialization monitor
     otherinit();    # other initialization, QSFP initialization
     if STARTMODULE.get("macledreset", 0) == 1:

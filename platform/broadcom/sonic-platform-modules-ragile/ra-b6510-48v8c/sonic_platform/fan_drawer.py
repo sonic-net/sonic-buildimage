@@ -1,71 +1,17 @@
-#
-# fan_drawer_base.py
-#
-# Abstract base class for implementing a platform-specific class with which
-# to interact with a fan drawer module in SONiC
-#
+#!/usr/bin/env python
+
 
 try:
-    from sonic_platform_base.fan_drawer_base import FanDrawerBase
+    from sonic_platform_pddf_base.pddf_fan_drawer import PddfFanDrawer
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 
-class FanDrawer(FanDrawerBase):
-    """
-    Abstract base class for interfacing with a fan drawer
-    """
-    # Device type definition. Note, this is a constant.
-    DEVICE_TYPE = "fan_drawer"
+class FanDrawer(PddfFanDrawer):
+    """PDDF Platform-Specific Fan-Drawer class"""
 
-    def __init__(self, index, fan_list):
-        FanDrawerBase.__init__(self)
+    def __init__(self, tray_idx, pddf_data=None, pddf_plugin_data=None):
+        # idx is 0-based 
+        PddfFanDrawer.__init__(self, tray_idx, pddf_data, pddf_plugin_data)
 
-        self._fan_list = fan_list
-        self._index = index
-
-    def get_name(self):
-        """
-        Retrieves the name of the device
-        Returns:
-            string: The name of the device
-        """
-
-        return "fan {}".format(self._index)
-
-    def get_num_fans(self):
-        """
-        Retrieves the number of fans available on this fan drawer
-        Returns:
-            An integer, the number of fan modules available on this fan drawer
-        """
-        return len(self._fan_list)
-
-    def get_all_fans(self):
-        """
-        Retrieves all fan modules available on this fan drawer
-        Returns:
-            A list of objects derived from FanBase representing all fan
-            modules available on this fan drawer
-        """
-        return self._fan_list
-
-    def set_status_led(self, color):
-        """
-        Sets the state of the fan drawer status LED
-        Args:
-            color: A string representing the color with which to set the
-                   fan drawer status LED
-        Returns:
-            bool: True if status LED state is set successfully, False if not
-        """
-        return self._fan_list[self._index].set_status_led(color)
-
-    def get_status_led(self, color):
-        """
-        Gets the state of the fan drawer LED
-        Returns:
-            A string, one of the predefined STATUS_LED_COLOR_* strings above
-        """
-        return self._fan_list[self._index].get_status_led(color)
-
+    # Provide the functions/variables below for which implementation is to be overwritten

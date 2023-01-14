@@ -25,6 +25,13 @@ dpkg-query -W -f '${Package}==${Version}\n' | grep -Ev "${SKIP_VERSION_PACKAGE}"
 ## Add the the packages purged
 [ -f $POST_VERSION_PATH/purge-versions-deb ] && cat $POST_VERSION_PATH/purge-versions-deb >> "${TARGET_PATH}/versions-deb-${DIST}-${ARCH}"
 
+## Add mirror versions
+while read -r line; do
+    mirror=$(echo "$line" | sed "s/.*\///" | sed "s/_InRelease.*//")
+    date=$(date --date="$(echo "$line" | cut -d: -f3-)" +%Y-%m-%dT%H:%M:%SZ)
+    echo "$mirror==$date" >> ${TARGET_PATH}/versions-mirror
+done < <(grep Date: /var/lib/apt/lists/*_InRelease 2>/dev/null)
+
 ## Print the unique and sorted result
 sort -u "${TARGET_PATH}/versions-deb-${DIST}-${ARCH}" -o "${TARGET_PATH}/versions-deb-${DIST}-${ARCH}"
 if [ -e "${TARGET_PATH}/versions-py2-${DIST}-${ARCH}" ]; then
@@ -32,6 +39,9 @@ if [ -e "${TARGET_PATH}/versions-py2-${DIST}-${ARCH}" ]; then
 fi
 if [ -e "${TARGET_PATH}/versions-py3-${DIST}-${ARCH}" ]; then
     sort -u "${TARGET_PATH}/versions-py3-${DIST}-${ARCH}" -o "${TARGET_PATH}/versions-py3-${DIST}-${ARCH}"
+fi
+if [ -e "${TARGET_PATH}/versions-mirror" ]; then
+    sort -u "${TARGET_PATH}/versions-mirror" -o "${TARGET_PATH}/versions-mirror"
 fi
 
 exit 0

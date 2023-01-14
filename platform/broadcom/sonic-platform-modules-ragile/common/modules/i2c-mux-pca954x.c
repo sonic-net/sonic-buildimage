@@ -40,7 +40,13 @@
 #include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/i2c-mux.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+#include <dt-bindings/mux/mux.h>
+#include <linux/property.h>
+#else
 #include <linux/platform_data/pca954x.h>
+#endif
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/module.h>
@@ -63,7 +69,12 @@
 extern int pca9641_setmuxflag(int nr, int flag);
 
 int force_create_bus = 0;
+static int close_chan_force_reset = 0;
+static int select_chan_check = 0;
+
 module_param(force_create_bus, int, S_IRUGO | S_IWUSR);
+module_param(close_chan_force_reset, int, S_IRUGO | S_IWUSR);
+module_param(select_chan_check, int, S_IRUGO | S_IWUSR);
 
 enum pca_type {
     pca_9540,
@@ -86,14 +97,15 @@ struct chip_desc {
     } muxtype;
 };
 
-
-
-
 struct pca954x {
     const struct chip_desc *chip;
 
     u8 last_chan;        /* last register value */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+    s32 idle_state;
+#else
     u8 deselect;
+#endif
     struct i2c_client *client;
 
     struct irq_domain *irq;
@@ -157,7 +169,20 @@ static const struct i2c_device_id pca954x_id[] = {
     { }
 };
 MODULE_DEVICE_TABLE(i2c, pca954x_id);
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+static const struct of_device_id pca954x_of_match[] = {
+    { .compatible = "nxp,pca9540", .data = &chips[pca_9540] },
+    { .compatible = "nxp,pca9542", .data = &chips[pca_9542] },
+    { .compatible = "nxp,pca9543", .data = &chips[pca_9543] },
+    { .compatible = "nxp,pca9544", .data = &chips[pca_9544] },
+    { .compatible = "nxp,pca9545", .data = &chips[pca_9545] },
+    { .compatible = "nxp,pca9546", .data = &chips[pca_9546] },
+    { .compatible = "nxp,pca9547", .data = &chips[pca_9547] },
+    { .compatible = "nxp,pca9548", .data = &chips[pca_9548] },
+    {}
+};
+MODULE_DEVICE_TABLE(of, pca954x_of_match);
+#else
 #ifdef CONFIG_OF
 static const struct of_device_id pca954x_of_match[] = {
     { .compatible = "nxp,pca9540", .data = &chips[pca_9540] },
@@ -171,6 +196,7 @@ static const struct of_device_id pca954x_of_match[] = {
     {}
 };
 MODULE_DEVICE_TABLE(of, pca954x_of_match);
+#endif
 #endif
 
 /* Write to mux register. Don't use i2c_transfer()/i2c_smbus_xfer()
@@ -204,37 +230,59 @@ static int pca954x_reg_write(struct i2c_adapter *adap,
     return ret;
 }
 
+static int pca954x_reg_read(struct i2c_adapter *adap,
+                 struct i2c_client *client, u8 *val)
+{
+    int ret = -ENODEV;
+    u8 tmp_val;
+
+    if (adap->algo->master_xfer) {
+        struct i2c_msg msg;
+
+        msg.addr = client->addr;
+        msg.flags = I2C_M_RD;
+        msg.len = 1;
+        msg.buf = &tmp_val;
+        ret = __i2c_transfer(adap, &msg, 1);
+
+        if (ret >= 0 && ret != 1) {
+            ret = -EREMOTEIO;
+        } else {
+            *val = tmp_val;
+        }
+    } else {
+        union i2c_smbus_data data;
+        ret = adap->algo->smbus_xfer(adap, client->addr,
+                         client->flags,
+                         I2C_SMBUS_READ,
+                         0, I2C_SMBUS_BYTE, &data);
+
+        if (!ret) {
+            tmp_val = data.byte;
+            *val = tmp_val;
+        }
+    }
+
+    return ret;
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+static u8 pca954x_regval(struct pca954x *data, u8 chan)
+{
+	/* We make switches look like muxes, not sure how to be smarter. */
+	if (data->chip->muxtype == pca954x_ismux)
+		return chan | data->chip->enable;
+	else
+		return 1 << chan;
+}
+#endif
+
 static int pca954x_setmuxflag(struct i2c_client *client, int flag)
 {
     struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
     pca9641_setmuxflag(adap->nr, flag);
     return 0;
 }
-
-static int pca954x_select_chan(struct i2c_mux_core *muxc, u32 chan)
-{
-    struct pca954x *data = i2c_mux_priv(muxc);
-    struct i2c_client *client = data->client;
-    const struct chip_desc *chip = data->chip;
-    u8 regval;
-    int ret = 0;
-
-    /* we make switches look like muxes, not sure how to be smarter */
-    if (chip->muxtype == pca954x_ismux)
-        regval = chan | chip->enable;
-    else
-        regval = 1 << chan;
-
-    /* Only select the channel if its different from the last channel */
-    if (data->last_chan != regval) {
-        pca954x_setmuxflag(client, 0);
-        ret = pca954x_reg_write(muxc->parent, client, regval);
-        data->last_chan = ret < 0 ? 0 : regval;
-    }
-
-    return ret;
-}
-
 
 typedef void  (*pca954x_hw_do_reset_func_t)(int busid, int addr);
 pca954x_hw_do_reset_func_t g_notify_to_do_reset = NULL;
@@ -1132,6 +1180,179 @@ static int pca954x_do_reset(struct i2c_adapter *adap,
     ret = 0;
     return ret;
 }
+
+static int pca954x_select_chan(struct i2c_mux_core *muxc, u32 chan)
+{
+    struct pca954x *data = i2c_mux_priv(muxc);
+    struct i2c_client *client = data->client;
+    const struct chip_desc *chip = data->chip;
+    u8 regval;
+    int ret = 0;
+    u8 read_val;
+    int rv;
+
+    read_val = 0;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+    regval = pca954x_regval(data, chan);
+#else
+    /* we make switches look like muxes, not sure how to be smarter */
+    if (chip->muxtype == pca954x_ismux)
+        regval = chan | chip->enable;
+    else
+        regval = 1 << chan;
+#endif
+
+    /* Only select the channel if its different from the last channel */
+    if (data->last_chan != regval) {
+        pca954x_setmuxflag(client, 0);
+        ret = pca954x_reg_write(muxc->parent, client, regval);
+        data->last_chan = ret < 0 ? 0 : regval;
+    }
+
+    if (select_chan_check) { /* check chan */
+        ret = pca954x_reg_read(muxc->parent, client, &read_val);
+        /* read failed or chan not open, reset pca9548 */
+        if ((ret < 0) || (read_val != data->last_chan)) {
+            dev_warn(&client->dev, "pca954x open channle %u failed, do reset.\n", chan);
+            PCA954X_DEBUG("ret = %d, read_val = %d, last_chan = %d.\n", ret, read_val, data->last_chan);
+            rv = pca954x_do_reset(client->adapter, client, chan);
+            if (rv >= 0) {
+                PCA954X_DEBUG("pca954x_do_reset success, rv = %d.\n", rv);
+            } else {
+                PCA954X_DEBUG("pca954x_do_reset failed, rv = %d.\n", rv);
+            }
+            if (ret >= 0) {
+                ret = -EIO; /* chan not match, return IO error */
+            }
+        }
+    }
+
+    return ret;
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+static int pca954x_deselect_mux(struct i2c_mux_core *muxc, u32 chan)
+{
+	struct pca954x *data = i2c_mux_priv(muxc);
+	struct i2c_client *client = data->client;
+	s32 idle_state;
+    int ret, rv;
+    struct i2c_client * new_client;
+
+    if (close_chan_force_reset) {
+        data->last_chan = 0;
+        ret = pca954x_do_reset(client->adapter, client, chan);
+        if (ret < 0) {
+            dev_warn(&client->dev, "pca954x do reset failed %d.\n", ret);
+        }
+        return ret;
+    } else {
+        idle_state = READ_ONCE(data->idle_state);
+        if (idle_state >= 0)
+            /* Set the mux back to a predetermined channel */
+            return pca954x_select_chan(muxc, idle_state);
+        if (idle_state == MUX_IDLE_DISCONNECT) {
+            /* Deselect active channel */
+            data->last_chan = 0;
+            ret = pca954x_reg_write(muxc->parent, client,
+                        data->last_chan);
+            if (ret < 0) {
+                new_client =(struct i2c_client *) client;
+                dev_warn(&new_client->dev, "pca954x close chn failed, do reset.\n");
+                rv = pca954x_do_reset(client->adapter, client, chan);
+                if (rv == 0) {
+                    ret = 0;
+                }
+            }
+            return ret;
+        }
+    }
+
+	/* otherwise leave as-is */
+
+	return 0;
+}
+
+static ssize_t idle_state_show(struct device *dev,
+				    struct device_attribute *attr,
+				    char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct i2c_mux_core *muxc = i2c_get_clientdata(client);
+	struct pca954x *data = i2c_mux_priv(muxc);
+
+	return sprintf(buf, "%d\n", READ_ONCE(data->idle_state));
+}
+
+static ssize_t idle_state_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct i2c_mux_core *muxc = i2c_get_clientdata(client);
+	struct pca954x *data = i2c_mux_priv(muxc);
+	int val;
+	int ret;
+
+	ret = kstrtoint(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+
+	if (val != MUX_IDLE_AS_IS && val != MUX_IDLE_DISCONNECT &&
+	    (val < 0 || val >= data->chip->nchans))
+		return -EINVAL;
+
+	i2c_lock_bus(muxc->parent, I2C_LOCK_SEGMENT);
+
+	WRITE_ONCE(data->idle_state, val);
+	/*
+	 * Set the mux into a state consistent with the new
+	 * idle_state.
+	 */
+	if (data->last_chan || val != MUX_IDLE_DISCONNECT)
+		ret = pca954x_deselect_mux(muxc, 0);
+
+	i2c_unlock_bus(muxc->parent, I2C_LOCK_SEGMENT);
+
+	return ret < 0 ? ret : count;
+}
+
+static DEVICE_ATTR_RW(idle_state);
+
+static irqreturn_t pca954x_irq_handler(int irq, void *dev_id)
+{
+	struct pca954x *data = dev_id;
+	unsigned long pending;
+	int ret, i;
+
+	ret = i2c_smbus_read_byte(data->client);
+	if (ret < 0)
+		return IRQ_NONE;
+
+	pending = (ret >> PCA954X_IRQ_OFFSET) & (BIT(data->chip->nchans) - 1);
+	for_each_set_bit(i, &pending, data->chip->nchans)
+		handle_nested_irq(irq_linear_revmap(data->irq, i));
+
+	return IRQ_RETVAL(pending);
+}
+
+static int pca954x_init(struct i2c_client *client, struct pca954x *data)
+{
+	int ret;
+
+	if (data->idle_state >= 0)
+		data->last_chan = pca954x_regval(data, data->idle_state);
+	else
+		data->last_chan = 0; /* Disconnect multiplexer */
+
+	ret = i2c_smbus_write_byte(client, data->last_chan);
+	if (ret < 0)
+		data->last_chan = 0;
+
+	return ret;
+}
+
+#else
 static int pca954x_deselect_mux(struct i2c_mux_core *muxc, u32 chan)
 {
     struct pca954x *data = i2c_mux_priv(muxc);
@@ -1178,6 +1399,7 @@ static irqreturn_t pca954x_irq_handler(int irq, void *dev_id)
     }
     return handled ? IRQ_HANDLED : IRQ_NONE;
 }
+#endif
 
 static void pca954x_irq_mask(struct irq_data *idata)
 {
@@ -1274,7 +1496,9 @@ static int pca954x_probe(struct i2c_client *client,
         const struct i2c_device_id *id)
 {
     struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
     struct pca954x_platform_data *pdata = dev_get_platdata(&client->dev);
+#endif
     struct device_node *of_node = client->dev.of_node;
     bool idle_disconnect_dt;
     struct gpio_desc *gpio;
@@ -1302,7 +1526,25 @@ static int pca954x_probe(struct i2c_client *client,
     gpio = devm_gpiod_get_optional(&client->dev, "reset", GPIOD_OUT_LOW);
     if (IS_ERR(gpio))
         return PTR_ERR(gpio);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+    data->idle_state = MUX_IDLE_AS_IS;
+	if (device_property_read_u32(&client->dev, "idle-state", &data->idle_state)) {
+		if (device_property_read_bool(&client->dev, "i2c-mux-idle-disconnect"))
+			data->idle_state = MUX_IDLE_DISCONNECT;
+	}
 
+	/*
+	 * Write the mux register at addr to verify
+	 * that the mux is in fact present. This also
+	 * initializes the mux to a channel
+	 * or disconnected state.
+	 */
+	ret = pca954x_init(client, data);
+	if (ret < 0) {
+		dev_warn(&client->dev, "probe failed\n");
+		return -ENODEV;
+	}
+#else
     /* Write the mux register at addr to verify
      * that the mux is in fact present. This also
      * initializes the mux to disconnected state.
@@ -1311,7 +1553,7 @@ static int pca954x_probe(struct i2c_client *client,
         dev_warn(&client->dev, "probe failed\n");
         return -ENODEV;
     }
-
+#endif
     match = of_match_device(of_match_ptr(pca954x_of_match), &client->dev);
     if (match)
         data->chip = of_device_get_match_data(&client->dev);
@@ -1329,6 +1571,9 @@ static int pca954x_probe(struct i2c_client *client,
 
     /* Now create an adapter for each channel */
     for (num = 0; num < data->chip->nchans; num++) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+        ret = i2c_mux_add_adapter(muxc, 0, num, 0);
+#else
         bool idle_disconnect_pd = false;
 
         force = 0;              /* dynamic adap number */
@@ -1347,10 +1592,17 @@ static int pca954x_probe(struct i2c_client *client,
                 idle_disconnect_dt) << num;
 
         ret = i2c_mux_add_adapter(muxc, force, num, class);
+#endif
         if (ret)
             goto fail_del_adapters;
     }
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+    /*
+	 * The attr probably isn't going to be needed in most cases,
+	 * so don't fail completely on error.
+	 */
+	device_create_file(&client->dev, &dev_attr_idle_state);
+#endif
     dev_info(&client->dev,
             "registered %d multiplexed busses for I2C %s %s\n",
             num, data->chip->muxtype == pca954x_ismux
@@ -1376,7 +1628,9 @@ static int pca954x_remove(struct i2c_client *client)
         }
         irq_domain_remove(data->irq);
     }
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+    device_remove_file(&client->dev, &dev_attr_idle_state);
+#endif
     i2c_mux_del_adapters(muxc);
     return 0;
 }
@@ -1387,9 +1641,18 @@ static int pca954x_resume(struct device *dev)
     struct i2c_client *client = to_i2c_client(dev);
     struct i2c_mux_core *muxc = i2c_get_clientdata(client);
     struct pca954x *data = i2c_mux_priv(muxc);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+	int ret;
 
+	ret = pca954x_init(client, data);
+	if (ret < 0)
+		dev_err(&client->dev, "failed to verify mux presence\n");
+
+	return ret;
+#else
     data->last_chan = 0;
     return i2c_smbus_write_byte(client, 0);
+#endif
 }
 #endif
 

@@ -317,6 +317,16 @@ sap_rx_polarity_flip
 sap_tx_polarity_flip
 sap_mdio_num
 dport_map_port_9
+cancun_dir 
+pcie_file
+capi_level
+phy_pin_compatibility_enable
+cfg_int_phy_ctrl
+stand_alone_phy_init
+sap_rx_polarity_flip
+sap_tx_polarity_flip
+sap_mdio_num
+dport_map_port_9
 ifa_enable
 port_gmii_mode
 phy_force_firmware_load

@@ -675,10 +675,14 @@ def parse_dpg(dpg, hname):
                         acl_intfs.extend(vlan_member_list[member])
                     else:
                         acl_intfs.append(member)
-                elif member in port_alias_map:
-                    acl_intfs.append(port_alias_map[member])
+                elif (member in port_alias_map) or (member in port_names_map):
+                    if member in port_alias_map:
+                        acl_intf = port_alias_map[member]
+                    else:
+                        acl_intf = member
+                    acl_intfs.append(acl_intf)
                     # Give a warning if trying to attach ACL to a LAG member interface, correct way is to attach ACL to the LAG interface
-                    if port_alias_map[member] in intfs_inpc:
+                    if acl_intf in intfs_inpc:
                         print("Warning: ACL " + aclname + " is attached to a LAG member interface " + port_alias_map[member] + ", instead of LAG interface", file=sys.stderr)
                 elif member.lower().startswith('erspan') or member.lower().startswith('egress_erspan') or member.lower().startswith('erspan_dscp'):
                     if 'dscp' in member.lower():
@@ -1398,6 +1402,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             docker_routing_config_mode = child.text
 
     (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
+    
+    port_names_map.update(ports)
     port_alias_map.update(alias_map)
     port_alias_asic_map.update(alias_asic_map)
 
@@ -2083,6 +2089,7 @@ def parse_asic_meta_get_devices(root):
 
     return local_devices
 
+port_names_map = {}
 port_alias_map = {}
 port_alias_asic_map = {}
 

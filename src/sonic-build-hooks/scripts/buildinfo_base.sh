@@ -11,7 +11,7 @@ POST_VERSION_PATH=$BUILDINFO_PATH/post-versions
 VERSION_DEB_PREFERENCE=$BUILDINFO_PATH/versions/01-versions-deb
 WEB_VERSION_FILE=$VERSION_PATH/versions-web
 BUILD_WEB_VERSION_FILE=$BUILD_VERSION_PATH/versions-web
-REPR_MIRROR_URL_PATTERN='http:\/\/packages.trafficmanager.net\/debian'
+REPR_MIRROR_URL_PATTERN='http:\/\/packages.trafficmanager.net\/'
 DPKG_INSTALLTION_LOCK_FILE=/tmp/.dpkg_installation.lock
 
 . $BUILDINFO_PATH/config/buildinfo.config
@@ -112,14 +112,39 @@ set_reproducible_mirrors()
 {
     # Remove the charater # in front of the line if matched
     local expression="s/^#\(.*$REPR_MIRROR_URL_PATTERN\)/\1/"
+    # Add the character # in front of the line, if not match the URL pattern condition
+    local expression2="/^#*deb.*$REPR_MIRROR_URL_PATTERN/! s/^#*deb/#&/"
+    local expression3="\$a#SET_REPR_MIRRORS"
     if [ "$1" = "-d" ]; then
         # Add the charater # in front of the line if match
         expression="s/^deb.*$REPR_MIRROR_URL_PATTERN/#\0/"
+        # Remove the character # in front of the line, if not match the URL pattern condition
+        expression2="/^#*deb.*$REPR_MIRROR_URL_PATTERN/! s/^#(#*deb)/\1/"
+        expression3="/#SET_REPR_MIRRORS/d"
     fi
 
     local mirrors="/etc/apt/sources.list $(find /etc/apt/sources.list.d/ -type f)"
     for mirror in $mirrors; do
+        if ! grep -iq "$REPR_MIRROR_URL_PATTERN" "$mirror"; then
+            continue
+        fi
+
+        # Make sure no duplicate operations on the mirror config file
+        if ([ "$1" == "-d" ] && ! grep -iq "#SET_REPR_MIRRORS" "$mirror") ||
+           ([ "$1" != "-d" ] && grep -iq "#SET_REPR_MIRRORS" "$mirror"); then
+            continue
+        fi
+
+        # Enable or disable the reproducible mirrors
         $SUDO sed -i "$expression" "$mirror"
+
+        # Enable or disable the none reproducible mirrors
+        if [ "$MIRROR_SNAPSHOT" == y ]; then
+            $SUDO sed -ri "$expression2" "$mirror"
+        fi
+
+        # Add or remove the SET_REPR_MIRRORS flag
+        $SUDO sed -i "$expression3" "$mirror"
     done
 }
 

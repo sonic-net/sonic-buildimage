@@ -25,10 +25,11 @@
 #include <linux/log2.h>
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
-#include <lpc_cpld_i2c_ocores.h>
+#include "lpc_cpld_i2c_ocores.h"
 #include <linux/spinlock.h>
 #include <linux/delay.h>
 #include <linux/jiffies.h>
+#include <linux/version.h>
 
 #define OCORES_FLAG_POLL BIT(0)
 
@@ -768,8 +769,13 @@ static int rg_ocores_i2c_probe(struct platform_device *pdev)
     /* add in known devices to the bus */
     if (pdata) {
         LPC_CPLD_I2C_DEBUG_VERBOSE("i2c device %d.\n", pdata->num_devices);
-        for (i = 0; i < pdata->num_devices; i++)
+        for (i = 0; i < pdata->num_devices; i++) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+            i2c_new_client_device(&i2c->adap, pdata->devices + i);
+#else
             i2c_new_device(&i2c->adap, pdata->devices + i);
+#endif
+        }
     }
 
     oc_debug_sysfs_init(pdev);

@@ -483,7 +483,6 @@ write_platform_specific_cmdline() {
     if [ "$platform" = "raven" ]; then
         # Assuming sid=Cloverdale
         aboot_machine=arista_7050_qx32
-        flash_size=2000
         cmdline_add modprobe.blacklist=radeon,sp5100_tco
         cmdline_add acpi=off
     fi
