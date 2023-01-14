@@ -11,9 +11,9 @@
 #include <linux/delay.h>
 #include <linux/platform_device.h>
 
-#include <fpga_i2c_ocores.h>
-#include <fpga_pcie_i2c.h>
-#include <fpga_reg_defs.h>
+#include "fpga_i2c_ocores.h"
+#include "fpga_pcie_i2c.h"
+#include "fpga_reg_defs.h"
 
 #include <linux/i2c-mux.h>
 #include <linux/i2c-mux.h>

@@ -23,7 +23,12 @@
 #include <linux/device.h>
 #include <linux/i2c.h>
 #include <linux/i2c-mux.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+#include <linux/bitops.h>
+#else
 #include <linux/platform_data/pca954x.h>
+#endif
 
 /*
  * The PCA9541 is a bus master selector. It supports two I2C masters connected
@@ -546,7 +551,9 @@ static int pca9541_probe(struct i2c_client *client,
         const struct i2c_device_id *id)
 {
     struct i2c_adapter *adap = client->adapter;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
     struct pca954x_platform_data *pdata = dev_get_platdata(&client->dev);
+#endif
     struct i2c_mux_core *muxc;
     struct pca9541 *data;
     int force;
@@ -573,11 +580,11 @@ static int pca9541_probe(struct i2c_client *client,
     }
 
     /* Create mux adapter */
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
     force = 0;
     if (pdata)
         force = pdata->modes[0].adap_id;
-
+#endif
     if (detect_id == 0) {
         muxc = i2c_mux_alloc(adap, &client->dev, 1, sizeof(*data),
                 I2C_MUX_ARBITRATOR,
@@ -589,8 +596,11 @@ static int pca9541_probe(struct i2c_client *client,
         data->client = client;
 
         i2c_set_clientdata(client, muxc);
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+        ret = i2c_mux_add_adapter(muxc, 0, 0, 0);
+#else
         ret = i2c_mux_add_adapter(muxc, force, 0, 0);
+#endif
         if (ret)
             return ret;
     } else {

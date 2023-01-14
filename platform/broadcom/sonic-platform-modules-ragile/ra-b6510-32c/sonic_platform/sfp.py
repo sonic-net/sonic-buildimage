@@ -1,287 +1,525 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+
+#############################################################################
+#
+# Module contains an implementation of SONiC Platform Base API and
+# provides the platform information
+#
+#
+# *_device.py config version instruction:
+#      ver 1.0 - platform api:
+#           "presence_cpld": {
+#               "dev_id": {
+#                   [dev_id]: {
+#                       "offset": {
+#                           [offset]: [port_id]
+#                       }
+#                    }
+#                 }
+#              }
+#           "reset_cpld": {
+#               "dev_id": {
+#                   [dev_id]: {
+#                       "offset": {
+#                           [offset]: [port_id]
+#                       }
+#                    }
+#                 }
+#           }
+#      ver 2.0 - rg_plat:
+#               "presence_path": "/xx/rg_plat/xx[port_id]/present"
+#               "eeprom_path": "/sys/bus/i2c/devices/i2c-[bus]/[bus]-0050/eeprom"
+#               "reset_path": "/xx/rg_plat/xx[port_id]/reset"
+#############################################################################
+import sys
+import time
+import syslog
+import traceback
+from abc import abstractmethod
 
 try:
-    #from sonic_platform_pddf_base.pddf_sfp import *
-    from sonic_platform_base.sonic_sfp.sff8436 import sff8436InterfaceId
-    from sonic_platform_base.sonic_sfp.sff8436 import sff8436Dom
-    from sonic_platform_base.sonic_sfp.sff8472 import sff8472InterfaceId
-    from sonic_platform_base.sonic_sfp.sff8472 import sff8472Dom
-    from sonic_platform_pddf_base.pddf_sfp import PddfSfp
-    from sonic_platform_pddf_base.pddf_sfp import SFP_VOLT_OFFSET
-    from sonic_platform_pddf_base.pddf_sfp import SFP_VOLT_WIDTH
-    from sonic_platform_pddf_base.pddf_sfp import SFP_CHANNL_MON_OFFSET
-    from sonic_platform_pddf_base.pddf_sfp import SFP_CHANNL_MON_WIDTH
-    from sonic_platform_pddf_base.pddf_sfp import SFP_TEMPE_OFFSET
-    from sonic_platform_pddf_base.pddf_sfp import SFP_TEMPE_WIDTH
-    from sonic_platform_pddf_base.pddf_sfp import QSFP_DOM_REV_OFFSET
-    from sonic_platform_pddf_base.pddf_sfp import QSFP_DOM_REV_WIDTH
-    from sonic_platform_pddf_base.pddf_sfp import QSFP_CHANNL_MON_OFFSET
-    from sonic_platform_pddf_base.pddf_sfp import QSFP_CHANNL_MON_WITH_TX_POWER_WIDTH
+    import os
+    from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
+    from .sfp_config import *
+
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
-XCVR_DOM_CAPABILITY_OFFSET = 92
-XCVR_DOM_CAPABILITY_WIDTH = 2
-QSFP_VERSION_COMPLIANCE_OFFSET = 1
-QSFP_VERSION_COMPLIANCE_WIDTH = 2
-QSFP_OPTION_VALUE_OFFSET = 192
-QSFP_OPTION_VALUE_WIDTH = 4
+LOG_DEBUG_LEVEL  = 1
+LOG_WARNING_LEVEL  = 2
+LOG_ERROR_LEVEL  = 3
 
-class Sfp(PddfSfp):
-    """
-    PDDF Platform-Specific Sfp class
-    """
+CONFIG_DB_PATH = "/etc/sonic/config_db.json"
 
-    def __init__(self, index, pddf_data=None, pddf_plugin_data=None):
-        PddfSfp.__init__(self, index, pddf_data, pddf_plugin_data)
-        self.dom_supported = False
-        self.__dom_capability_detect()
+def getonieplatform(path):
+    if not os.path.isfile(path):
+        return ""
+    machine_vars = {}
+    with open(path) as machine_file:
+        for line in machine_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+                continue
+            machine_vars[tokens[0]] = tokens[1].strip()
+    return machine_vars.get("onie_platform")
 
-    def __dom_capability_detect(self):
-        self.dom_supported = False
-        self.dom_temp_supported = False
-        self.dom_volt_supported = False
-        self.dom_rx_power_supported = False
-        self.dom_tx_power_supported = False
-        self.qsfp_page3_available = False
-        self.calibration = 0
-        if not self.get_presence():
-            return
+def getplatform_config_db():
+    if not os.path.isfile(CONFIG_DB_PATH):
+        return ""
+    val = os.popen("sonic-cfggen -j %s -v DEVICE_METADATA.localhost.platform" % CONFIG_DB_PATH).read().strip()
+    if len(val) <= 0:
+        return ""
+    else:
+        return val
 
-        if self.is_osfp_port:
-            # Not implement
-            return
-        elif self.is_qsfp_port:
-            self.calibration = 1
-            sfpi_obj = sff8436InterfaceId()
-            if sfpi_obj is None:
-                self.dom_supported = False
-            offset = 128
+def getplatform_name():
+    if os.path.isfile('/host/machine.conf'):
+        return getonieplatform('/host/machine.conf')
+    elif os.path.isfile('/usr/share/sonic/hwsku/machine.conf'):
+        return getonieplatform('/usr/share/sonic/hwsku/machine.conf')
+    else:
+        return getplatform_config_db()
 
-            # QSFP capability byte parse, through this byte can know whether it support tx_power or not.
-            # TODO: in the future when decided to migrate to support SFF-8636 instead of SFF-8436,
-            # need to add more code for determining the capability and version compliance
-            # in SFF-8636 dom capability definitions evolving with the versions.
-            qsfp_dom_capability_raw = self.__read_eeprom_specific_bytes(
-                (offset + XCVR_DOM_CAPABILITY_OFFSET), XCVR_DOM_CAPABILITY_WIDTH)
-            if qsfp_dom_capability_raw is not None:
-                qsfp_version_compliance_raw = self.__read_eeprom_specific_bytes(
-                    QSFP_VERSION_COMPLIANCE_OFFSET, QSFP_VERSION_COMPLIANCE_WIDTH)
-                qsfp_version_compliance = int(
-                    qsfp_version_compliance_raw[0], 16)
-                dom_capability = sfpi_obj.parse_dom_capability(
-                    qsfp_dom_capability_raw, 0)
-                if qsfp_version_compliance >= 0x08:
-                    self.dom_temp_supported = dom_capability['data']['Temp_support']['value'] == 'On'
-                    self.dom_volt_supported = dom_capability['data']['Voltage_support']['value'] == 'On'
-                    self.dom_rx_power_supported = dom_capability['data']['Rx_power_support']['value'] == 'On'
-                    self.dom_tx_power_supported = dom_capability['data']['Tx_power_support']['value'] == 'On'
-                else:
-                    self.dom_temp_supported = True
-                    self.dom_volt_supported = True
-                    self.dom_rx_power_supported = dom_capability['data']['Rx_power_support']['value'] == 'On'
-                    self.dom_tx_power_supported = True
+def get_sfp_config():
+    dev = getplatform_name()
+    return cust_sfp_cfg.get(dev, None)
 
-                self.dom_supported = True
-                self.calibration = 1
-                sfpd_obj = sff8436Dom()
-                if sfpd_obj is None:
-                    return None
-                qsfp_option_value_raw = self.__read_eeprom_specific_bytes(
-                    QSFP_OPTION_VALUE_OFFSET, QSFP_OPTION_VALUE_WIDTH)
-                if qsfp_option_value_raw is not None:
-                    optional_capability = sfpd_obj.parse_option_params(
-                        qsfp_option_value_raw, 0)
-                    self.dom_tx_disable_supported = optional_capability[
-                        'data']['TxDisable']['value'] == 'On'
-                dom_status_indicator = sfpd_obj.parse_dom_status_indicator(
-                    qsfp_version_compliance_raw, 1)
-                self.qsfp_page3_available = dom_status_indicator['data']['FlatMem']['value'] == 'Off'
-            else:
-                self.dom_supported = False
-                self.dom_temp_supported = False
-                self.dom_volt_supported = False
-                self.dom_rx_power_supported = False
-                self.dom_tx_power_supported = False
-                self.calibration = 0
-                self.qsfp_page3_available = False
+class Sfp(SfpOptoeBase):
+
+    OPTOE_DRV_TYPE1 = 1
+    OPTOE_DRV_TYPE2 = 2
+    OPTOE_DRV_TYPE3 = 3
+
+    # index must start at 1
+    def __init__(self, index, a=None, b=None):
+        SfpOptoeBase.__init__(self)
+        self.sfp_type = None
+        sfp_config = get_sfp_config()
+        self.log_level_config = sfp_config.get("log_level", LOG_WARNING_LEVEL)
+        # Init instance of SfpCust
+        ver = sfp_config.get("ver", None)
+        if ver is None:
+            self._sfplog(LOG_ERROR_LEVEL, "Get Ver Config Error!")
+        vers = int(float(ver))
+        if vers == 1:
+            self._sfp_api = SfpV1(index)
+        elif vers == 2:
+            self._sfp_api = SfpV2(index)
         else:
-            sfpi_obj = sff8472InterfaceId()
-            if sfpi_obj is None:
-                return None
-            sfp_dom_capability_raw = self.__read_eeprom_specific_bytes(
-                XCVR_DOM_CAPABILITY_OFFSET, XCVR_DOM_CAPABILITY_WIDTH)
-            if sfp_dom_capability_raw is not None:
-                sfp_dom_capability = int(sfp_dom_capability_raw[0], 16)
-                self.dom_supported = (sfp_dom_capability & 0x40 != 0)
-                if self.dom_supported:
-                    self.dom_temp_supported = True
-                    self.dom_volt_supported = True
-                    self.dom_rx_power_supported = True
-                    self.dom_tx_power_supported = True
-                    if sfp_dom_capability & 0x20 != 0:
-                        self.calibration = 1
-                    elif sfp_dom_capability & 0x10 != 0:
-                        self.calibration = 2
+            self._sfplog(LOG_ERROR_LEVEL, "Get SfpVer Error!")
+
+    def get_eeprom_path(self):
+        return self._sfp_api._get_eeprom_path()
+
+    def read_eeprom(self, offset, num_bytes):
+        return self._sfp_api.read_eeprom(offset, num_bytes)
+
+    def write_eeprom(self, offset, num_bytes, write_buffer):
+        return self._sfp_api.write_eeprom(offset, num_bytes, write_buffer)
+
+    def get_presence(self):
+        return self._sfp_api.get_presence()
+
+    def get_transceiver_info(self):
+        # temporary solution for a sonic202111 bug
+        transceiver_info = super().get_transceiver_info()
+        try:
+            if transceiver_info["vendor_rev"] is not None:
+                transceiver_info["hardware_rev"] = transceiver_info["vendor_rev"]
+            return transceiver_info
+        except Exception as e:
+            print(traceback.format_exc())
+
+    def reset(self):
+        if self.get_presence() is False:
+            return False
+
+        if self.sfp_type is None:
+            self.refresh_xcvr_api()
+
+        if self.sfp_type == 'SFP':
+            self._sfplog(LOG_ERROR_LEVEL, 'SFP does not support reset')
+            return False
+
+        self._sfplog(LOG_DEBUG_LEVEL, 'resetting...')
+        ret = self._sfp_api.set_reset(True)
+        if ret:
+            time.sleep(0.5)
+            ret = self._sfp_api.set_reset(False)
+
+        return ret
+
+    def get_lpmode(self):
+        if self.get_presence() is False:
+            return False
+
+        if self.sfp_type is None:
+            self.refresh_xcvr_api()
+
+        if self.sfp_type == 'SFP':
+            self._sfplog(LOG_WARNING_LEVEL, 'SFP does not support lpmode')
+            return False
+
+        #implement in future
+
+        return False
+
+    def set_lpmode(self, lpmode):
+        if self.get_presence() is False:
+            return False
+
+        if self.sfp_type is None or self._xcvr_api is None:
+            self.refresh_xcvr_api()
+
+        if self.sfp_type == 'QSFP-DD':
+            return SfpOptoeBase.set_lpmode(self, lpmode)
+        elif self.sfp_type == 'QSFP':
+            if lpmode:
+                return self._xcvr_api.set_power_override(True, lpmode)
+            else:
+                return self._xcvr_api.set_power_override(False, lpmode)
+        else:
+            self._sfplog(LOG_WARNING_LEVEL, 'SFP does not support lpmode')
+            return False
+
+    def set_optoe_write_max(self, write_max):
+        """
+        This func is declared and implemented by SONiC but we're not supported
+        so override it as NotImplemented
+        """
+        self._sfplog(LOG_DEBUG_LEVEL, "set_optoe_write_max NotImplemented")
+        pass
+
+    def refresh_xcvr_api(self):
+        """
+        Updates the XcvrApi associated with this SFP
+        """
+        self._xcvr_api = self._xcvr_api_factory.create_xcvr_api()
+        class_name = self._xcvr_api.__class__.__name__
+        optoe_type = None
+        # set sfp_type
+        if (class_name == 'CmisApi'):
+            self.sfp_type = 'QSFP-DD'
+            optoe_type = self.OPTOE_DRV_TYPE3
+        elif (class_name == 'Sff8472Api'):
+            self.sfp_type = 'SFP'
+            optoe_type = self.OPTOE_DRV_TYPE2
+        elif (class_name == 'Sff8636Api' or class_name == 'Sff8436Api'):
+            self.sfp_type = 'QSFP'
+            optoe_type = self.OPTOE_DRV_TYPE1
+
+        if optoe_type is not None:
+            # set optoe driver
+            self._sfp_api.set_optoe_type(optoe_type)
+
+    def _sfplog(self, log_level, msg):
+        if log_level >= self.log_level_config:
+            try:
+                syslog.openlog("Sfp")
+                if log_level == LOG_DEBUG_LEVEL:
+                    syslog.syslog(syslog.LOG_DEBUG, msg)
+                elif log_level == LOG_WARNING_LEVEL:
+                    syslog.syslog(syslog.LOG_DEBUG, msg)
+                elif log_level == LOG_ERROR_LEVEL:
+                    syslog.syslog(syslog.LOG_ERR, msg)
+                syslog.closelog()
+
+            except Exception as e:
+                print(traceback.format_exc())
+
+class SfpCust():
+    def __init__(self, index):
+        self.eeprom_path = None
+        self._init_config(index)
+
+    def _init_config(self, index):
+        sfp_config = get_sfp_config()
+        self.log_level_config = sfp_config.get("log_level", LOG_WARNING_LEVEL)
+        self._port_id = index
+        self.eeprom_retry_times = sfp_config.get("eeprom_retry_times", 0)
+        self.eeprom_retry_break_sec = sfp_config.get("eeprom_retry_break_sec", 0)
+
+    def combine_format_str(self, str, key):
+        count_format = str.count('%')
+        if count_format > 0:
+            args_k = []
+            for i in range(count_format):
+                args_k.append(key)
+            return str % (tuple(args_k))
+        else:
+            return str
+
+    def _get_eeprom_path(self):
+        return self.eeprom_path or None
+
+    @abstractmethod
+    def get_presence(self):
+        pass
+
+    def read_eeprom(self, offset, num_bytes):
+        try:
+            for i in range(self.eeprom_retry_times):
+                with open(self._get_eeprom_path(), mode='rb', buffering=0) as f:
+                    f.seek(offset)
+                    result = f.read(num_bytes)
+                    # temporary solution for a sonic202111 bug
+                    if len(result) < num_bytes:
+                        result = result[::-1].zfill(num_bytes)[::-1]
+                    if result != None:
+                        return bytearray(result)
                     else:
-                        self.calibration = 0
-                else:
-                    self.dom_temp_supported = False
-                    self.dom_volt_supported = False
-                    self.dom_rx_power_supported = False
-                    self.dom_tx_power_supported = False
-                    self.calibration = 0
-                self.dom_tx_disable_supported = (
-                    int(sfp_dom_capability_raw[1], 16) & 0x40 != 0)
+                        time.sleep(self.eeprom_retry_break_sec)
+                        continue
 
-    # Provide the functions/variables below for which implementation is to be overwritten
-
-    def __read_eeprom_specific_bytes(self, offset, num_bytes):
-        eeprom_raw = []
-        if not self.get_presence():
-            return None
-        for i in range(0, num_bytes):
-            eeprom_raw.append("0x00")
-
-        try:
-            with open(self.eeprom_path, mode="rb", buffering=0) as eeprom:
-                eeprom.seek(offset)
-                raw = eeprom.read(num_bytes)
         except Exception as e:
-            print("Error: Unable to open eeprom_path: %s" % (str(e)))
-            return None
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())
 
+        return None
+
+
+    def write_eeprom(self, offset, num_bytes, write_buffer):
         try:
-            if len(raw) == 0:
-                return None
-            for n in range(0, num_bytes):
-                eeprom_raw[n] = hex(raw[n])[2:].zfill(2)
+            for i in range(self.eeprom_retry_times):
+                ret = SfpOptoeBase.write_eeprom(self, offset, num_bytes, write_buffer)
+                if ret is False:
+                    time.sleep(self.eeprom_retry_break_sec)
+                    continue
+                break
+
+            return ret
+
         except Exception as e:
-            print("Error: Exception info: %s" % (str(e)))
-            return None
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())
 
-        return eeprom_raw
 
-    def get_transceiver_bulk_status(self):
-        # check present status
-        if not self.get_presence():
-            return None
-        self.__dom_capability_detect()
+    @abstractmethod
+    def set_optoe_type(self, class_name):
+        pass
 
-        xcvr_dom_info_dict = dict.fromkeys(self.dom_dict_keys, 'N/A')
+    @abstractmethod
+    def set_reset(self, reset):
+        pass
 
-        if self.is_osfp_port:
-            # Below part is added to avoid fail xcvrd, shall be implemented later
-            pass
-        elif self.is_qsfp_port:
-            # QSFPs
-            xcvr_dom_info_dict = super(Sfp, self).get_transceiver_bulk_status()
+    def _convert_str_range_to_int_arr(self, range_str):
+        if not range_str:
+            return []
 
-            # pddf_sfp "qsfp_tx_power_support != 'on'" is wrong
-
-            offset = 0
-            sfpd_obj = sff8436Dom()
-            if sfpd_obj is None:
-                return None
-
-            qsfp_dom_rev_raw = self.__read_eeprom_specific_bytes((offset + QSFP_DOM_REV_OFFSET), QSFP_DOM_REV_WIDTH)
-            if qsfp_dom_rev_raw is not None:
-                qsfp_dom_rev_data = sfpd_obj.parse_sfp_dom_rev(qsfp_dom_rev_raw, 0)
+        int_range_strs = range_str.split(',')
+        range_res = []
+        for int_range_str in int_range_strs:
+            if '-' in int_range_str:
+                range_s = int(int_range_str.split('-')[0])
+                range_e = int(int_range_str.split('-')[1]) + 1
             else:
-                return None
+                range_s = int(int_range_str)
+                range_e = int(int_range_str) + 1
 
-            dom_channel_monitor_data = {}
-            qsfp_dom_rev = qsfp_dom_rev_data['data']['dom_rev']['value']
+            range_res = range_res + list(range(range_s, range_e))
 
-            if (qsfp_dom_rev[0:8] == 'SFF-8636' and self.dom_tx_power_supported is True):
-                dom_channel_monitor_raw = self.__read_eeprom_specific_bytes(
-                    (offset + QSFP_CHANNL_MON_OFFSET), QSFP_CHANNL_MON_WITH_TX_POWER_WIDTH)
-                if dom_channel_monitor_raw is not None:
-                    dom_channel_monitor_data = sfpd_obj.parse_channel_monitor_params_with_tx_power(
-                        dom_channel_monitor_raw, 0)
+        return range_res
+
+    def _sfplog(self, log_level, msg):
+        if log_level >= self.log_level_config:
+            try:
+                syslog.openlog("SfpCust")
+                if log_level == LOG_DEBUG_LEVEL:
+                    syslog.syslog(syslog.LOG_DEBUG, msg)
+                elif log_level == LOG_WARNING_LEVEL:
+                    syslog.syslog(syslog.LOG_DEBUG, msg)
+                elif log_level == LOG_ERROR_LEVEL:
+                    syslog.syslog(syslog.LOG_ERR, msg)
+                syslog.closelog()
+
+            except Exception as e:
+                print(traceback.format_exc())
+
+class SfpV1(SfpCust):
+    def _init_config(self, index):
+        super()._init_config(index)
+        sfp_config = get_sfp_config()
+
+        # init presence path
+        self.presence_cpld = sfp_config.get("presence_cpld", None)
+        self.presence_val_is_present = sfp_config.get("presence_val_is_present", 0)
+        self._sfplog(LOG_DEBUG_LEVEL, "Done init presence path")
+
+        # init reset path
+        self.reset_cpld = sfp_config.get("reset_cpld", None)
+        self.reset_val_is_reset = sfp_config.get("reset_val_is_reset", 0)
+        self._sfplog(LOG_DEBUG_LEVEL, "Done init cpld path")
+
+    def get_presence(self):
+        if self.presence_cpld is None:
+            self._sfplog(LOG_ERROR_LEVEL, "presence_cpld is None!")
+            return False
+        try:
+            dev_id, offset, offset_bit = self._get_sfp_cpld_info(self.presence_cpld)
+            ret, info = platform_reg_read(0, dev_id, offset, 1)
+            return (info[0] & (1 << offset_bit) == self.presence_val_is_present)
+        except Exception as err:
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())
+
+    def read_eeprom(self, offset, num_bytes):
+        try:
+            for i in range(self.eeprom_retry_times):
+                ret, info = platform_sfp_read(self._port_id, offset, num_bytes)
+                if (ret is False
+                    or info is None):
+                    time.sleep(self.eeprom_retry_break_sec)
+                    continue
+                eeprom_raw = []
+                for i in range(0, num_bytes):
+                    eeprom_raw.append("0x00")
+                for n in range(0, len(info)):
+                    eeprom_raw[n] = info[n]
+                # temporary solution for a sonic202111 bug
+                if len(eeprom_raw) < num_bytes:
+                    eeprom_raw = eeprom_raw[::-1].zfill(num_bytes)[::-1]
+                return bytearray(eeprom_raw)
+        except Exception as e:
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())
+        return None
+
+    def write_eeprom(self, offset, num_bytes, write_buffer):
+        try:
+            for i in range(self.eeprom_retry_times):
+                # TODO: write_buffer is bytearray, need to convert to int array
+                val_list = []
+                if isinstance(write_buffer, list):
+                    val_list = write_buffer
                 else:
-                    return None
+                    val_list.append(write_buffer)
+                ret, info = platform_sfp_write(self._port_id, offset, val_list)
+                if ret is False:
+                    time.sleep(self.eeprom_retry_break_sec)
+                    continue
+                return True
+        except Exception as e:
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())
 
-                xcvr_dom_info_dict['tx1power'] = dom_channel_monitor_data['data']['TX1Power']['value']
-                xcvr_dom_info_dict['tx2power'] = dom_channel_monitor_data['data']['TX2Power']['value']
-                xcvr_dom_info_dict['tx3power'] = dom_channel_monitor_data['data']['TX3Power']['value']
-                xcvr_dom_info_dict['tx4power'] = dom_channel_monitor_data['data']['TX4Power']['value']
-        else:
-            # SFPs
-            offset = 256
-            if not self.dom_supported:
-                return xcvr_dom_info_dict
+        return False
 
-            sfpd_obj = sff8472Dom()
-            if sfpd_obj is None:
-                return None
+    def set_optoe_type(self, optoe_type):
+        ret, info = platform_get_optoe_type(self._port_id)
+        if info != optoe_type:
+            try:
+                ret, _ = platform_set_optoe_type(self._port_id, optoe_type)
+            except Exception as err:
+                self._sfplog(LOG_ERROR_LEVEL, "Set optoe err %s" % err)
 
-            sfpd_obj._calibration_type = self.calibration
-
-            dom_temperature_raw = self.__read_eeprom_specific_bytes((offset + SFP_TEMPE_OFFSET), SFP_TEMPE_WIDTH)
-            if dom_temperature_raw is not None:
-                dom_temperature_data = sfpd_obj.parse_temperature(dom_temperature_raw, 0)
+    def set_reset(self, reset):
+        if self.reset_cpld is None:
+            self._sfplog(LOG_ERROR_LEVEL, "reset_cpld is None!")
+            return False
+        try:
+            val = []
+            dev_id, offset, offset_bit = self._get_sfp_cpld_info(self.reset_cpld)
+            ret, info = platform_reg_read(0, dev_id, offset, 1)
+            if self.reset_val_is_reset == 0:
+                if reset:
+                    val.append(info[0] & (~(1 << offset_bit)))
+                else:
+                    val.append(info[0] | (1 << offset_bit))
             else:
-                return None
+                if reset:
+                    val.append(info[0] | (1 << offset_bit))
+                else:
+                    val.append(info[0] & (~(1 << offset_bit)))
 
-            dom_voltage_raw = self.__read_eeprom_specific_bytes((offset + SFP_VOLT_OFFSET), SFP_VOLT_WIDTH)
-            if dom_voltage_raw is not None:
-                dom_voltage_data = sfpd_obj.parse_voltage(dom_voltage_raw, 0)
-            else:
-                return None
+            ret, info = platform_reg_write(0, dev_id, offset, val)
+            if ret is False:
+                self._sfplog(LOG_ERROR_LEVEL, "platform_reg_write error!")
+                return False
 
-            dom_channel_monitor_raw = self.__read_eeprom_specific_bytes(
-                (offset + SFP_CHANNL_MON_OFFSET), SFP_CHANNL_MON_WIDTH)
-            if dom_channel_monitor_raw is not None:
-                dom_channel_monitor_data = sfpd_obj.parse_channel_monitor_params(dom_channel_monitor_raw, 0)
-            else:
-                return None
+        except Exception as err:
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())
+            return False
 
-            xcvr_dom_info_dict['temperature'] = dom_temperature_data['data']['Temperature']['value']
-            xcvr_dom_info_dict['voltage'] = dom_voltage_data['data']['Vcc']['value']
-            xcvr_dom_info_dict['rx1power'] = dom_channel_monitor_data['data']['RXPower']['value']
-            xcvr_dom_info_dict['rx2power'] = 'N/A'
-            xcvr_dom_info_dict['rx3power'] = 'N/A'
-            xcvr_dom_info_dict['rx4power'] = 'N/A'
-            xcvr_dom_info_dict['tx1bias'] = dom_channel_monitor_data['data']['TXBias']['value']
-            xcvr_dom_info_dict['tx2bias'] = 'N/A'
-            xcvr_dom_info_dict['tx3bias'] = 'N/A'
-            xcvr_dom_info_dict['tx4bias'] = 'N/A'
-            xcvr_dom_info_dict['tx1power'] = dom_channel_monitor_data['data']['TXPower']['value']
-            xcvr_dom_info_dict['tx2power'] = 'N/A'
-            xcvr_dom_info_dict['tx3power'] = 'N/A'
-            xcvr_dom_info_dict['tx4power'] = 'N/A'
+        return True
 
-            xcvr_dom_info_dict['rx_los'] = self.get_rx_los()
-            xcvr_dom_info_dict['tx_fault'] = self.get_tx_fault()
-            xcvr_dom_info_dict['reset_status'] = self.get_reset_status()
-            xcvr_dom_info_dict['lp_mode'] = self.get_lpmode()
+    def _get_sfp_cpld_info(self, cpld_config):
+        dev_id = 0
+        offset = 0
 
-        return xcvr_dom_info_dict
+        for dev_id_temp in cpld_config["dev_id"]:
+            for offset_temp in cpld_config["dev_id"][dev_id_temp]["offset"]:
+                port_range_str = cpld_config["dev_id"][dev_id_temp]["offset"][offset_temp]
+                port_range_int = self._convert_str_range_to_int_arr(port_range_str)
+                if self._port_id in port_range_int:
+                    dev_id = dev_id_temp
+                    offset = offset_temp
+                    offset_bit = port_range_int.index(self._port_id)
+                    break
 
-    def get_transceiver_threshold_info(self):
-        # check present status
-        if not self.get_presence():
-            return None
-        self.__dom_capability_detect()
+        return dev_id, offset, offset_bit
 
-        xcvr_dom_threshold_info_dict = dict.fromkeys(self.threshold_dict_keys, 'N/A')
+class SfpV2(SfpCust):
+    def _init_config(self, index):
+        super()._init_config(index)
+        sfp_config = get_sfp_config()
 
-        if self.is_osfp_port:
-            # Below part is added to avoid fail xcvrd, shall be implemented later
-            pass
-        elif self.is_qsfp_port:
-            # QSFPs
-            if not self.dom_supported or not self.qsfp_page3_available:
-                return xcvr_dom_threshold_info_dict
+        # init eeprom path
+        eeprom_path_config = sfp_config.get("eeprom_path", None)
+        eeprom_path_key = sfp_config.get("eeprom_path_key")[self._port_id - 1]
+        self.eeprom_path = self.combine_format_str(eeprom_path_config, eeprom_path_key)
+        self._sfplog(LOG_DEBUG_LEVEL, "Done init eeprom path: %s" % self.eeprom_path)
 
-            return super(Sfp, self).get_transceiver_threshold_info()
+        # init presence path
+        presence_path_config = sfp_config.get("presence_path", None)
+        presence_path_key = sfp_config.get("presence_path_key")[self._port_id - 1]
+        self.presence_path = self.combine_format_str(presence_path_config, presence_path_key)
+        self.presence_val_is_present = sfp_config.get("presence_val_is_present", 0)
+        self._sfplog(LOG_DEBUG_LEVEL, "Done init presence path: %s" % self.presence_path)
 
-        else:
-            # SFPs
-            if not self.dom_supported:
-                return xcvr_dom_threshold_info_dict
+        # init optoe driver path
+        optoe_driver_path_config = sfp_config.get("optoe_driver_path", None)
+        optoe_driver_key = sfp_config.get("optoe_driver_key")[self._port_id - 1]
+        self.dev_class_path = self.combine_format_str(optoe_driver_path_config, optoe_driver_key)
+        self._sfplog(LOG_DEBUG_LEVEL, "Done init optoe driver path: %s" % self.dev_class_path)
 
-            return super(Sfp, self).get_transceiver_threshold_info()
+        # init txdisable path
+        txdisable_path_config = sfp_config.get("txdisable_path", None)
+        if txdisable_path_config is not None:
+            txdisable_path_key = sfp_config.get("txdisable_path_key")[self._port_id - 1]
+            self.txdisable_path = self.combine_format_str(txdisable_path_config, txdisable_path_key)
+            self.txdisable_val_is_on = sfp_config.get("txdisable_val_is_on", 0)
+            self._sfplog(LOG_DEBUG_LEVEL, "Done init optoe driver path: %s" % self.dev_class_path)
 
-        return xcvr_dom_threshold_info_dict
+        # init reset path
+        reset_path_config = sfp_config.get("reset_path", None)
+        if reset_path_config is not None:
+            reset_path_key = sfp_config.get("reset_path_key")[self._port_id - 1]
+            self.reset_path = self.combine_format_str(reset_path_config, reset_path_key)
+            self.reset_val_is_on = sfp_config.get("reset_val_is_on", 0)
+            self._sfplog(LOG_DEBUG_LEVEL, "Done init reset path: %s" % self.reset_path)
+
+    def get_presence(self):
+        if self.presence_path is None:
+            self._sfplog(LOG_ERROR_LEVEL, "presence_path is None!")
+            return False
+        try:
+            with open(self.presence_path, "rb") as data:
+                sysfs_data = data.read(1)
+                if sysfs_data != "":
+                    result = int(sysfs_data, 16)
+            return result == self.presence_val_is_present
+        except Exception as err:
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())
+
+    def set_reset(self, reset):
+        return True
+
+    def set_optoe_type(self, optoe_type):
+        if self.dev_class_path is None:
+            self._sfplog(LOG_ERROR_LEVEL, "dev_class_path is None!")
+            return False
+        try:
+            dc_file = open(self.dev_class_path, "r+")
+            dc_file_val = dc_file.read(1)
+            if int(dc_file_val) != optoe_type:
+                dc_str = "%s" % str(optoe_type)
+                dc_file.write(dc_str)
+                dc_file.close()
+        except Exception as err:
+            self._sfplog(LOG_ERROR_LEVEL, traceback.format_exc())

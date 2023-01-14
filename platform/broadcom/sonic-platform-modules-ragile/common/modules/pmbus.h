@@ -24,6 +24,7 @@
 
 #include <linux/bitops.h>
 #include <linux/regulator/driver.h>
+#include <linux/version.h>
 
 /*
  * Registers
@@ -34,6 +35,8 @@ enum pmbus_regs {
 	PMBUS_ON_OFF_CONFIG		= 0x02,
 	PMBUS_CLEAR_FAULTS		= 0x03,
 	PMBUS_PHASE			= 0x04,
+
+	PMBUS_WRITE_PROTECT		= 0x10,
 
 	PMBUS_CAPABILITY		= 0x19,
 	PMBUS_QUERY			= 0x1A,
@@ -130,6 +133,23 @@ enum pmbus_regs {
 	PMBUS_MFR_DATE			= 0x9D,
 	PMBUS_MFR_SERIAL		= 0x9E,
 
+	PMBUS_MFR_VIN_MIN		= 0xA0,
+	PMBUS_MFR_VIN_MAX		= 0xA1,
+	PMBUS_MFR_IIN_MAX		= 0xA2,
+	PMBUS_MFR_PIN_MAX		= 0xA3,
+	PMBUS_MFR_VOUT_MIN		= 0xA4,
+	PMBUS_MFR_VOUT_MAX		= 0xA5,
+	PMBUS_MFR_IOUT_MAX		= 0xA6,
+	PMBUS_MFR_POUT_MAX		= 0xA7,
+
+	PMBUS_IC_DEVICE_ID		= 0xAD,
+	PMBUS_IC_DEVICE_REV		= 0xAE,
+
+	PMBUS_MFR_MAX_TEMP_1		= 0xC0,
+	PMBUS_MFR_MAX_TEMP_2		= 0xC1,
+	PMBUS_MFR_MAX_TEMP_3		= 0xC2,
+
+
 	/*
 	 * Virtual registers.
 	 * Useful to support attributes which are not supported by standard PMBus
@@ -217,12 +237,34 @@ enum pmbus_regs {
 	PMBUS_VIRT_PWM_ENABLE_2,
 	PMBUS_VIRT_PWM_ENABLE_3,
 	PMBUS_VIRT_PWM_ENABLE_4,
+	/* Samples for average
+	 *
+	 * Drivers wanting to expose functionality for changing the number of
+	 * samples used for average values should implement support in
+	 * {read,write}_word_data callback for either PMBUS_VIRT_SAMPLES if it
+	 * applies to all types of measurements, or any number of specific
+	 * PMBUS_VIRT_*_SAMPLES registers to allow for individual control.
+	 */
+	PMBUS_VIRT_SAMPLES,
+	PMBUS_VIRT_IN_SAMPLES,
+	PMBUS_VIRT_CURR_SAMPLES,
+	PMBUS_VIRT_POWER_SAMPLES,
+	PMBUS_VIRT_TEMP_SAMPLES,
 };
 
 /*
  * OPERATION
  */
 #define PB_OPERATION_CONTROL_ON		BIT(7)
+
+/*
+ * WRITE_PROTECT
+ */
+#define PB_WP_ALL	BIT(7)	/* all but WRITE_PROTECT */
+#define PB_WP_OP	BIT(6)	/* all but WP, OPERATION, PAGE */
+#define PB_WP_VOUT	BIT(5)	/* all but WP, OPERATION, PAGE, VOUT, ON_OFF */
+
+#define PB_WP_ANY	(PB_WP_ALL | PB_WP_OP | PB_WP_VOUT)
 
 /*
  * CAPABILITY
@@ -347,7 +389,7 @@ enum pmbus_sensor_classes {
 };
 
 #define PMBUS_PAGES	32	/* Per PMBus specification */
-
+#define PMBUS_PHASES	8	/* Maximum number of phases per page */
 /* Functionality bit mask */
 #define PMBUS_HAVE_VIN		BIT(0)
 #define PMBUS_HAVE_VCAP		BIT(1)
@@ -371,16 +413,23 @@ enum pmbus_sensor_classes {
 #define PMBUS_HAVE_STATUS_VMON	BIT(19)
 #define PMBUS_HAVE_PWM12	BIT(20)
 #define PMBUS_HAVE_PWM34	BIT(21)
-
+#define PMBUS_HAVE_SAMPLES	BIT(22)
+#define PMBUS_PHASE_VIRTUAL	BIT(30)
 #define PMBUS_PAGE_VIRTUAL	BIT(31)
 
 enum pmbus_data_format { linear = 0, direct, vid };
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+enum vrm_version { vr11 = 0, vr12, vr13, imvp9, amd625mv };
+#else
 enum vrm_version { vr11 = 0, vr12, vr13 };
+#endif
 
 struct pmbus_driver_info {
 	int pages;		/* Total number of pages */
 	enum pmbus_data_format format[PSC_NUM_CLASSES];
 	enum vrm_version vrm_version[PMBUS_PAGES];
+    u8 phases[PMBUS_PAGES];/* Number of phases per page */
+    u32 pfunc[PMBUS_PHASES];/* Functionality, per phase */
 	/*
 	 * Support one set of coefficients for each sensor type
 	 * Used for chips providing data in direct mode.
@@ -417,6 +466,7 @@ struct pmbus_driver_info {
 	/* Regulator functionality, if supported by this chip driver. */
 	int num_regulators;
 	const struct regulator_desc *reg_desc;
+    const struct attribute_group **groups;
 };
 
 /* Regulator ops */
@@ -450,8 +500,12 @@ int pmbus_update_byte_data(struct i2c_client *client, int page, u8 reg,
 void pmbus_clear_faults(struct i2c_client *client);
 bool pmbus_check_byte_register(struct i2c_client *client, int page, int reg);
 bool pmbus_check_word_register(struct i2c_client *client, int page, int reg);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+int pmbus_do_probe(struct i2c_client *client, struct pmbus_driver_info *info);
+#else
 int pmbus_do_probe(struct i2c_client *client, const struct i2c_device_id *id,
 		struct pmbus_driver_info *info);
+#endif
 int pmbus_do_remove(struct i2c_client *client);
 const struct pmbus_driver_info *pmbus_get_driver_info(struct i2c_client
 		*client);

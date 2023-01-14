@@ -463,6 +463,14 @@ class TestCfgGenCaseInsensitive(TestCase):
             expected_ports.sort()
         )
 
+    def test_minigraph_acl_attach_to_ports(self):
+        """
+        The test case is to verify ACL table can be bound to both port names and alias
+        """
+        result = minigraph.parse_xml(self.sample_graph, port_config_file=self.port_config)
+        expected_dataacl_ports = ['PortChannel01','fortyGigE0/8','Ethernet12']
+        self.assertEqual(result['ACL_TABLE']['DATAACL']['ports'].sort(), expected_dataacl_ports.sort())
+
     def test_parse_device_desc_xml_mgmt_interface(self):
         # Regular device_desc.xml with both IPv4 and IPv6 mgmt address
         result = minigraph.parse_device_desc_xml(self.sample_simple_device_desc)

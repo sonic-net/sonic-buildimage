@@ -25,10 +25,10 @@
 #include <linux/log2.h>
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
-#include <fpga_i2c_ocores.h>
+#include "fpga_i2c_ocores.h"
 #include <linux/spinlock.h>
 #include <linux/delay.h>
-
+#include <linux/version.h>
 
 struct ocores_i2c {
     void __iomem *base;
@@ -835,8 +835,13 @@ static int rg_ocores_i2c_probe(struct platform_device *pdev)
 
     /* add in known devices to the bus */
     if (pdata) {
-        for (i = 0; i < pdata->num_devices; i++)
+        for (i = 0; i < pdata->num_devices; i++) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+            i2c_new_client_device(&i2c->adap, pdata->devices + i);
+#else
             i2c_new_device(&i2c->adap, pdata->devices + i);
+#endif
+        }
     }
 
     oc_debug_sysfs_init(pdev);

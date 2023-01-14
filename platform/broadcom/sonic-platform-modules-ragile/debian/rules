@@ -18,7 +18,7 @@ export  INSTALL_MOD_DIR top_srcdir KVERSION  KERNEL_SRC CC  KBUILD_OUTPUT
 
 include $(CUSTOM_RULES_DIR)/rule-ragile.mk
 
-#all product need common
+#all products need common
 COMPILE_DIRS = $(MODULE_DIRS)
 
 clean_dirs = $(MODULE_DIRS)
@@ -64,7 +64,7 @@ $(COMPILE_DIRS): common_build
 	cp -r $(MOD_SRC_DIR)/$@/build/*  debian/platform-modules-ragile-$@/
 
 binary: binary-indep
-	@echo "======================================================="
+	@echo "======================================================"
 
 binary-indep:
 	# Resuming debhelper scripts
