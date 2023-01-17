@@ -48,6 +48,7 @@ parameters:
 
 steps:
   - script: |
+      set -ex
       curl -u $(AZP_REPO_ACCESS_TOKEN) "https://dev.azure.com/mssonic/internal/_apis/sourceProviders/TfsGit/filecontents?repository=sonic-mgmt-int&commitOrBranch=internal&api-version=5.0-preview.1&path=.azure-pipelines%2Ftest_plan.py" -o ./.azure-pipelines/test_plan.py
       curl -u $(AZP_REPO_ACCESS_TOKEN) "https://dev.azure.com/mssonic/internal/_apis/sourceProviders/TfsGit/filecontents?repository=sonic-mgmt-int&commitOrBranch=internal&api-version=5.0-preview.1&path=.azure-pipelines%2Fpr_test_scripts.yaml" -o ./.azure-pipelines/pr_test_scripts.yaml
     displayName: Download TestbedV2 scripts
