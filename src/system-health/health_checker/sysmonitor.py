@@ -19,7 +19,6 @@ spl_srv_list = ['database-chassis', 'gbsyncd']
 SELECT_TIMEOUT_MSECS = 1000
 QUEUE_TIMEOUT = 15
 TASK_STOP_TIMEOUT = 10
-mpmgr = multiprocessing.Manager()
 logger = Logger(log_identifier=SYSLOG_IDENTIFIER)
 
 
@@ -420,6 +419,7 @@ class Sysmonitor(ProcessTaskBase):
             self.state_db = swsscommon.SonicV2Connector(host='127.0.0.1')
             self.state_db.connect(self.state_db.STATE_DB)
         
+        mpmgr = multiprocessing.Manager()
         myQ = mpmgr.Queue()
         try:
             monitor_system_bus = MonitorSystemBusTask(myQ)
