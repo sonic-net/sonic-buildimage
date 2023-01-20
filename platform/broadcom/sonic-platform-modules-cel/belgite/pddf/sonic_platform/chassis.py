@@ -4,6 +4,7 @@
 #
 #############################################################################
 import os
+import time
 
 try:
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
@@ -14,26 +15,29 @@ try:
     import sys
     import subprocess
     from sonic_py_common import device_info
+    from sonic_platform_base.sfp_base import SfpBase
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-NUM_COMPONENT = 3
-FAN_DIRECTION_FILE_PATH = "/var/fan_direction"
+NUM_COMPONENT = 2
 
 class Chassis(PddfChassis):
     """
     PDDF Platform-specific Chassis class
     """
+    sfp_status_dict = {}
 
     def __init__(self, pddf_data=None, pddf_plugin_data=None):
 
         PddfChassis.__init__(self, pddf_data, pddf_plugin_data)
-        vendor_ext = self._eeprom.vendor_ext_str()
-        with open(FAN_DIRECTION_FILE_PATH, "w+") as f:
-            f.write(vendor_ext)
         (self.platform, self.hwsku) = device_info.get_platform_and_hwsku()
 
         self.__initialize_components()
+        self.sfp_port_list = list(range(49, 56+1))
+
+        for port_idx in self.sfp_port_list:
+            present = self.get_sfp(port_idx).get_presence()
+            self.sfp_status_dict[port_idx] = '1' if present else '0'
 
     def __initialize_components(self):
         from sonic_platform.component import Component
@@ -121,12 +125,14 @@ class Chassis(PddfChassis):
             description = 'Unkown Reason'
 
         return (reboot_cause, description)	
-		
-    def get_serial(self):
-        return self._eeprom.serial_number_str()
-		
+
     def get_revision(self):
-        return self._eeprom.revision_str()
+        version_str = self._eeprom.revision_str()
+
+        if version_str != "NA":
+            return str(bytearray(version_str, 'ascii')[0])
+
+        return version_str
 		
     @staticmethod
     def get_position_in_parent():
@@ -134,19 +140,7 @@ class Chassis(PddfChassis):
 		
     @staticmethod
     def is_replaceable():
-        return True
-		
-    def get_base_mac(self):
-        return self._eeprom.base_mac_addr()
-		
-    def get_system_eeprom_info(self):
-        return self._eeprom.system_eeprom_info()
-
-    def get_name(self):
-        return self.modelstr()
-
-    def get_model(self):
-        return self._eeprom.part_number_str()
+        return False
 
     def set_status_led(self, color):
         color_dict = {
@@ -155,8 +149,94 @@ class Chassis(PddfChassis):
             'amber': "STATUS_LED_COLOR_AMBER",
             'off': "STATUS_LED_COLOR_OFF"
         }
-        return self.set_system_led("SYS_LED", color_dict.get(color, "off"))
+        return self.set_system_led("SYS_LED", color_dict.get(color, "STATUS_LED_COLOR_OFF"))
 
     def get_status_led(self):
         return self.get_system_led("SYS_LED")
-        
+
+    def get_port_or_cage_type(self, index):
+        """
+        Retrieves sfp port or cage type corresponding to physical port <index>
+
+        Args:
+            index: An integer (>=0), the index of the sfp to retrieve.
+                   The index should correspond to the physical port in a chassis.
+                   For example:-
+                   1 for Ethernet0, 2 for Ethernet4 and so on for one platform.
+                   0 for Ethernet0, 1 for Ethernet4 and so on for another platform.
+
+        Returns:
+            The masks of all types of port or cage that can be supported on the port
+            Types are defined in sfp_base.py
+            Eg.
+                Both SFP and SFP+ are supported on the port, the return value should be 0x0a
+                which is 0x02 | 0x08
+        """
+        if index in range(1, 48+1):
+            return SfpBase.SFP_PORT_TYPE_BIT_RJ45
+        elif index in range(49, 56+1):
+            return (SfpBase.SFP_PORT_TYPE_BIT_SFP | SfpBase.SFP_PORT_TYPE_BIT_SFP_PLUS)
+        else:
+            raise NotImplementedError
+
+    def get_change_event(self, timeout=0):
+        """
+        Returns a nested dictionary containing all devices which have
+        experienced a change at chassis level
+
+        Args:
+            timeout: Timeout in milliseconds (optional). If timeout == 0,
+                this method will block until a change is detected.
+
+        Returns:
+            (bool, dict):
+                - True if call successful, False if not;
+                - A nested dictionary where key is a device type,
+                  value is a dictionary with key:value pairs in the format of
+                  {'device_id':'device_event'},
+                  where device_id is the device ID for this device and
+                        device_event,
+                             status='1' represents device inserted,
+                             status='0' represents device removed.
+                  Ex. {'fan':{'0':'0', '2':'1'}, 'sfp':{'11':'0'}}
+                      indicates that fan 0 has been removed, fan 2
+                      has been inserted and sfp 11 has been removed.
+                  Specifically for SFP event, besides SFP plug in and plug out,
+                  there are some other error event could be raised from SFP, when
+                  these error happened, SFP eeprom will not be avalaible, XCVRD shall
+                  stop to read eeprom before SFP recovered from error status.
+                      status='2' I2C bus stuck,
+                      status='3' Bad eeprom,
+                      status='4' Unsupported cable,
+                      status='5' High Temperature,
+                      status='6' Bad cable.
+        """
+
+        sfp_dict = {}
+
+        SFP_REMOVED = '0'
+        SFP_INSERTED = '1'
+
+        SFP_PRESENT = True
+        SFP_ABSENT = False
+
+        start_time = time.time()
+        time_period = timeout/float(1000) #Convert msecs to secs
+
+        while time.time() < (start_time + time_period) or timeout == 0:
+            for port_idx in self.sfp_port_list:
+                if self.sfp_status_dict[port_idx] == SFP_REMOVED and \
+                    self.get_sfp(port_idx).get_presence() == SFP_PRESENT:
+                    sfp_dict[port_idx] = SFP_INSERTED
+                    self.sfp_status_dict[port_idx] = SFP_INSERTED
+                elif self.sfp_status_dict[port_idx] == SFP_INSERTED and \
+                    self.get_sfp(port_idx).get_presence() == SFP_ABSENT:
+                    sfp_dict[port_idx] = SFP_REMOVED
+                    self.sfp_status_dict[port_idx] = SFP_REMOVED
+
+            if sfp_dict:
+                return True, {'sfp':sfp_dict}
+
+            time.sleep(0.5)
+
+        return True, {'sfp':{}} # Timeout

@@ -179,7 +179,7 @@
                 { "attr_name":"psu_v_out", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8b", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_i_out", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8c", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_p_out", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x96", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-                { "attr_name":"psu_fan_dir", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0xc5", "attr_mask":"0x18", "attr_cmpval":"0x08", "attr_len":"1"},
+                { "attr_name":"psu_fan_dir", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x80", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"1"},
                 { "attr_name":"psu_fan1_speed_rpm", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x90", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_temp1_input", "attr_devaddr":"0x58", "attr_devtype":"pmbus", "attr_offset":"0x8d", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"}
              ]
@@ -215,7 +215,7 @@
                 { "attr_name":"psu_v_out", "attr_devaddr":"0x59", "attr_devtype":"pmbus", "attr_offset":"0x8b", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_i_out", "attr_devaddr":"0x59", "attr_devtype":"pmbus", "attr_offset":"0x8c", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_p_out", "attr_devaddr":"0x59", "attr_devtype":"pmbus", "attr_offset":"0x96", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
-                { "attr_name":"psu_fan_dir", "attr_devaddr":"0x59", "attr_devtype":"pmbus", "attr_offset":"0xc5", "attr_mask":"0x18", "attr_cmpval":"0x08", "attr_len":"1"},
+                { "attr_name":"psu_fan_dir", "attr_devaddr":"0x59", "attr_devtype":"pmbus", "attr_offset":"0x80", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"1"},
                 { "attr_name":"psu_fan1_speed_rpm", "attr_devaddr":"0x59", "attr_devtype":"pmbus", "attr_offset":"0x90", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"},
                 { "attr_name":"psu_temp1_input", "attr_devaddr":"0x59", "attr_devtype":"pmbus", "attr_offset":"0x8d", "attr_mask":"0x0", "attr_cmpval":"0xff", "attr_len":"2"}
             ]
@@ -283,7 +283,7 @@
     },  
     "PORT49":
     {
-        "dev_info": { "device_type":"SFP28", "device_name":"PORT49", "device_parent":"MUX2"},
+        "dev_info": { "device_type":"SFP+", "device_name":"PORT49", "device_parent":"MUX2"},
         "dev_attr": { "dev_idx":"49"},
         "i2c":
         {
@@ -324,7 +324,7 @@
     },
     "PORT50":
     {
-        "dev_info": { "device_type":"SFP28", "device_name":"PORT50", "device_parent":"MUX2"},
+        "dev_info": { "device_type":"SFP+", "device_name":"PORT50", "device_parent":"MUX2"},
         "dev_attr": { "dev_idx":"50"},
         "i2c":
         {
@@ -366,7 +366,7 @@
     },
     "PORT51":
     {
-        "dev_info": { "device_type":"SFP28", "device_name":"PORT51", "device_parent":"MUX2"},
+        "dev_info": { "device_type":"SFP+", "device_name":"PORT51", "device_parent":"MUX2"},
         "dev_attr": { "dev_idx":"51"},
         "i2c":
         {
@@ -407,7 +407,7 @@
     },
     "PORT52":
     {
-        "dev_info": { "device_type":"SFP28", "device_name":"PORT52", "device_parent":"MUX2"},
+        "dev_info": { "device_type":"SFP+", "device_name":"PORT52", "device_parent":"MUX2"},
         "dev_attr": { "dev_idx":"52"},
         "i2c":
         {
@@ -449,7 +449,7 @@
     },
     "PORT53":
     {
-        "dev_info": { "device_type":"SFP28", "device_name":"PORT53", "device_parent":"MUX2"},
+        "dev_info": { "device_type":"SFP+", "device_name":"PORT53", "device_parent":"MUX2"},
         "dev_attr": { "dev_idx":"53"},
         "i2c":
         {
@@ -491,7 +491,7 @@
     },
     "PORT54":
     {
-        "dev_info": { "device_type":"SFP28", "device_name":"PORT54", "device_parent":"MUX2"},
+        "dev_info": { "device_type":"SFP+", "device_name":"PORT54", "device_parent":"MUX2"},
         "dev_attr": { "dev_idx":"54"},
         "i2c":
         {
@@ -532,7 +532,7 @@
     },
     "PORT55":
     {
-        "dev_info": { "device_type":"SFP28", "device_name":"PORT55", "device_parent":"MUX2"},
+        "dev_info": { "device_type":"SFP+", "device_name":"PORT55", "device_parent":"MUX2"},
         "dev_attr": { "dev_idx":"55"},
         "i2c":
         {
@@ -573,7 +573,7 @@
     },
     "PORT56":
     {
-        "dev_info": { "device_type":"SFP28", "device_name":"PORT56", "device_parent":"MUX2"},
+        "dev_info": { "device_type":"SFP+", "device_name":"PORT56", "device_parent":"MUX2"},
         "dev_attr": { "dev_idx":"56"},
         "i2c":
         {
@@ -642,7 +642,7 @@
             [
                 {"attr_name":"STATUS_LED_COLOR_AMBER","swpld_addr":"0x32","attr_devtype":"cpld","attr_devname":"CPLD1", "bits":"5:4","descr":"","value":"0x1","swpld_addr_offset":"0x43"},
                 {"attr_name":"STATUS_LED_COLOR_GREEN","swpld_addr":"0x32","attr_devtype":"cpld","attr_devname":"CPLD1", "bits":"5:4","descr":"","value":"0x2","swpld_addr_offset":"0x43"},
-                {"attr_name":"STATUS_LED_COLOR_OFF","swpld_addr":"0x32","attr_devtype":"cpld","attr_devname":"CPLD1", "bits":"5:4","descr":"","value":"0x0","swpld_addr_offset":"0x43"}
+                {"attr_name":"STATUS_LED_COLOR_OFF","swpld_addr":"0x32","attr_devtype":"cpld","attr_devname":"CPLD1", "bits":"5:4","descr":"","value":"0x3","swpld_addr_offset":"0x43"}
             ]
         }
     },
@@ -666,7 +666,7 @@
             "attr_list":
             [
                 {"attr_name":"STATUS_LED_COLOR_GREEN","attr_devtype":"cpld","attr_devname":"CPLD1","bits":"1:0","descr":"","value":"0x1","swpld_addr":"0x32","swpld_addr_offset":"0x37"},
-                {"attr_name":"STATUS_LED_COLOR_AMBER","attr_devtype":"cpld","attr_devname":"CPLD1B","bits":"1:0","descr":"","value":"0x2","swpld_addr":"0x32","swpld_addr_offset":"0x37"}
+                {"attr_name":"STATUS_LED_COLOR_AMBER","attr_devtype":"cpld","attr_devname":"CPLD1","bits":"1:0","descr":"","value":"0x2","swpld_addr":"0x32","swpld_addr_offset":"0x37"}
             ]
         }
     },

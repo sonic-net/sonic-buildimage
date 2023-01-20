@@ -24,9 +24,11 @@ CPLD_ADDR_MAPPING = {
 }
 GETREG_PATH = "/sys/devices/platform/dx010_cpld/getreg"
 BIOS_VERSION_PATH = "/sys/class/dmi/id/bios_version"
-COMPONENT_NAME_LIST = ["CPLD1", "CPLD2", "CPLD3", "CPLD4", "BIOS"]
+COMPONENT_NAME_LIST = ["CPLD1", "CPLD2", "CPLD3", "CPLD4", "CPLD5", "BIOS"]
 COMPONENT_DES_LIST = ["Used for managing the CPU",
-                      "Used for managing QSFP+ ports (1-10)", "Used for managing QSFP+ ports (11-20)", "Used for managing QSFP+ ports (22-32)", "Basic Input/Output System"]
+                      "Used for managing QSFP+ ports (1-10)", "Used for managing QSFP+ ports (11-21)",
+                      "Used for misc status and control", "Used for managing QSFP+ ports (22-32)",
+                      "Basic Input/Output System"]
 
 
 class Component(ComponentBase):

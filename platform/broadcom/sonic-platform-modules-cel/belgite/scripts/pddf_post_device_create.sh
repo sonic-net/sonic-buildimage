@@ -7,4 +7,7 @@ sleep 0.1
 #Set LM75 shutdown enable
 sudo i2cset -y -f 2 0x32 0x45 0x1
 
+# set sys led green status
+sudo i2cset -y -f 2 0x32 0x43 0xec
+
 echo -2 | tee /sys/bus/i2c/drivers/pca954x/*-00*/idle_state
