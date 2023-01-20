@@ -197,7 +197,7 @@ class Psu(PsuBase):
         """
 
         set_status_str = {
-            self.STATUS_LED_COLOR_GREEN: '1',
+            self.STATUS_LED_COLOR_GREEN: '255',
             self.STATUS_LED_COLOR_OFF: '0'
         }.get(color, None)
 

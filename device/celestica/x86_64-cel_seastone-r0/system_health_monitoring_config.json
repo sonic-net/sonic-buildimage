@@ -1,10 +1,8 @@
 {
     "services_to_ignore": [],
     "devices_to_ignore": [
-        "asic",
-        "psu.temperature",
-        "PSU2 Fan",
-        "PSU1 Fan"
+        "PSU-1 FAN-1",
+        "PSU-2 FAN-1"
     ],
     "user_defined_checkers": [],
     "polling_interval": 60,

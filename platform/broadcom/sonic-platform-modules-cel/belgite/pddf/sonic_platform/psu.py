@@ -53,3 +53,21 @@ class Psu(PddfPsu):
 
     def temperature(self):
         return self.get_temperature()
+
+    def get_voltage_high_threshold(self):
+        """
+        Retrieves the high threshold PSU voltage output
+        Returns:
+            A float number, the high threshold output voltage in volts,
+            e.g. 12.1
+        """
+        return 12.6
+
+    def get_voltage_low_threshold(self):
+        """
+        Retrieves the low threshold PSU voltage output
+        Returns:
+            A float number, the low threshold output voltage in volts,
+            e.g. 12.1
+        """
+        return 11.4

@@ -1,0 +1,10 @@
+{
+    "chassis": {
+        "E1070": {
+            "component": {
+                "SWCPLD": {},
+                "BIOS": {}
+            }
+        }
+    }
+}

@@ -360,19 +360,19 @@ ifeq ($(DOCKER_DATA_ROOT_FOR_MULTIARCH),)
 endif
     # Multiarch docker cannot start dockerd service due to iptables cannot run over different arch kernel
     SONIC_SERVICE_DOCKERD_FOR_MULTIARCH=y
-    SONIC_NATIVE_DOCKERD_FOR_MUTLIARCH := dockerd  --experimental=true --storage-driver=vfs \
+    SONIC_NATIVE_DOCKERD_FOR_MULTIARCH := dockerd  --experimental=true --storage-driver=vfs \
         --data-root=$(DOCKER_DATA_ROOT_FOR_MULTIARCH) --exec-root=/var/run/march/docker/ \
         -H unix:///var/run/march/docker.sock -p /var/run/march/docker.pid
 
 ifneq ($(DOCKER_CONFIG_FILE_FOR_MULTIARCH),)
-    SONIC_NATIVE_DOCKERD_FOR_MUTLIARCH += --config-file=$(DOCKER_CONFIG_FILE_FOR_MULTIARCH)
+    SONIC_NATIVE_DOCKERD_FOR_MULTIARCH += --config-file=$(DOCKER_CONFIG_FILE_FOR_MULTIARCH)
 endif
 
     DOCKER_RUN += -v /var/run/march/docker.sock:/var/run/docker.sock
     DOCKER_RUN += -v /var/run/march/docker.pid:/var/run/docker.pid
     DOCKER_RUN += -v /var/run/march/docker:/var/run/docker
     DOCKER_RUN += -v $(DOCKER_DATA_ROOT_FOR_MULTIARCH):/var/lib/docker
-    SONIC_USERFACL_DOCKERD_FOR_MUTLIARCH := setfacl -m user:$(USER):rw /var/run/march/docker.sock
+    SONIC_USERFACL_DOCKERD_FOR_MULTIARCH := setfacl -m user:$(USER):rw /var/run/march/docker.sock
 
     #Override Native config to prevent docker service
     SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=y
@@ -380,7 +380,7 @@ endif
     DOCKER_MULTIARCH_CHECK := docker run --rm --privileged multiarch/qemu-user-static --reset -p yes --credential yes
 
     DOCKER_SERVICE_SAFE_KILLER :=  (MARCH_PID=`ps -eo pid,cmd | grep "[0-9] dockerd.*march" | awk '{print $$1}'`; echo "Killing march docker $$MARCH_PID"; [ -z "$$MARCH_PID" ] || sudo kill -9 "$$MARCH_PID";)
-    DOCKER_SERVICE_MULTIARCH_CHECK := ($(DOCKER_SERVICE_SAFE_KILLER); sudo rm -fr /var/run/march/; (echo "Starting docker march service..."; sudo $(SONIC_NATIVE_DOCKERD_FOR_MUTLIARCH) &) &>/dev/null ; sleep 2; sudo $(SONIC_USERFACL_DOCKERD_FOR_MUTLIARCH);)
+    DOCKER_SERVICE_MULTIARCH_CHECK := ($(DOCKER_SERVICE_SAFE_KILLER); sudo rm -fr /var/run/march/; (echo "Starting docker march service..."; sudo $(SONIC_NATIVE_DOCKERD_FOR_MULTIARCH) &) &>/dev/null ; sleep 2; sudo $(SONIC_USERFACL_DOCKERD_FOR_MULTIARCH);)
 
     # Docker service to load the compiled dockers-*.gz
     # docker 19.0 version above has path/length restriction, so replaced it with soft link in /tmp/
