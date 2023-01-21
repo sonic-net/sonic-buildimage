@@ -180,8 +180,28 @@
       <DataAcls/>
       <AclInterfaces>
         <AclInterface>
-          <AttachTo>PortChannel01;Ethernet0;Ethernet12</AttachTo>
-          <InAcl>DataAcl</InAcl>
+          <AttachTo>PortChannel01;Ethernet20;Ethernet24</AttachTo>
+          <InAcl>DataAcl_port_name</InAcl>
+          <Type>DataPlane</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>PortChannel01;Ethernet6/1;Ethernet7/1</AttachTo>
+          <InAcl>DataAcl_port_alias</InAcl>
+          <Type>DataPlane</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>PortChannel01;Ethernet0;Ethernet1;Ethernet2;Ethernet3</AttachTo>
+          <InAcl>DataAcl_mixed_name_alias_1</InAcl>
+          <Type>DataPlane</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>PortChannel01;Ethernet1;Ethernet2;Ethernet6/1;Ethernet7/1</AttachTo>
+          <InAcl>DataAcl_mixed_name_alias_2</InAcl>
+          <Type>DataPlane</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>Ethernet1</AttachTo>
+          <InAcl>DataAcl_mixed_name_alias_3</InAcl>
           <Type>DataPlane</Type>
         </AclInterface>
         <AclInterface>
