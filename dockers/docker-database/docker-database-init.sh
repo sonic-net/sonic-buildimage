@@ -52,6 +52,7 @@ if [[ $DATABASE_TYPE == "chassisdb" ]]; then
     update_chassisdb_config -j $db_cfg_file_tmp -k -p $chassis_db_port
     # generate all redis server supervisord configuration file
     sonic-cfggen -j $db_cfg_file_tmp -t /usr/share/sonic/templates/supervisord.conf.j2 > /etc/supervisor/conf.d/supervisord.conf
+    sonic-cfggen -j $db_cfg_file_tmp -t /usr/share/sonic/templates/critical_processes.j2 > /etc/supervisor/critical_processes
     rm $db_cfg_file_tmp
     exec /usr/local/bin/supervisord
     exit 0
@@ -69,6 +70,7 @@ fi
 # delete chassisdb config to generate supervisord config
 update_chassisdb_config -j $db_cfg_file_tmp -d
 sonic-cfggen -j $db_cfg_file_tmp -t /usr/share/sonic/templates/supervisord.conf.j2 > /etc/supervisor/conf.d/supervisord.conf
+sonic-cfggen -j $db_cfg_file_tmp -t /usr/share/sonic/templates/critical_processes.j2 > /etc/supervisor/critical_processes
 
 if [[ "$start_chassis_db" != "1" ]] && [[ -z "$chassis_db_address" ]]; then
      cp $db_cfg_file_tmp $db_cfg_file
