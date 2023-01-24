@@ -21,6 +21,8 @@ MLNX_FW_BASE_PATH = $(MLNX_SDK_BASE_PATH)
 # Place an URL here to FW if you want to download FW instead
 MLNX_FW_BASE_URL =
 
+SIMX_VERSION = 5.1-1065
+
 ifneq ($(MLNX_FW_BASE_URL), )
 FW_FROM_URL = y
 else
