@@ -196,7 +196,9 @@ module sonic-events-host {
             }
 
             leaf mem_usage {
-                type uint64;
+                type decimal64 {
+                    fraction-digits 2;
+                }
                 description "Memory usage of process";
             }
 

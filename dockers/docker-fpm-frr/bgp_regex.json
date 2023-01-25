@@ -12,7 +12,7 @@
     {
         "tag": "notification",
         "regex": "NOTIFICATION: (received|sent) (?:to|from) neighbor ([0-9a-f:.]*[0-9a-f+]*)\\s*.* (\\d*)\/(\\d*)",
-        "params": [ "is-sent", "ip", "major-code", "minor-code" ]
+        "params": [ "is_sent", "ip", "major_code", "minor_code" ]
     }
 ]
 
