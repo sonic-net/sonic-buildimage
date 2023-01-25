@@ -1,4 +1,4 @@
-from swsscommon.swsscommon import events_init_publisher, event_publish, FieldValueMap
+from swsscommon.swsscommon import events_init_publisher, events_deinit_publisher, event_publish, FieldValueMap
 import time
 import sys
 import ipaddress
@@ -92,6 +92,7 @@ def main():
         publishBGPEvents(publisher_handle, args.count, args.pause)
     else:
         publishEventsFromFile(publisher_handle, args.file, args.count, args.pause)
+    events_deinit_publisher(publisher_handle)
 
 if __name__ == "__main__":
     main()

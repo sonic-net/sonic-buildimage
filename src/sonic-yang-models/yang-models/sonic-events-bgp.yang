@@ -57,12 +57,12 @@ module sonic-events-bgp {
                 The error codes as per IANA.
                 The other params are as in the message";
 
-            leaf major-code {
+            leaf major_code {
                 type uint8;
                 description "Major IANA error code; [RFC4271][RFC7313]";
             }
 
-            leaf minor-code {
+            leaf minor_code {
                 type uint8;
                 description "Minor IANA error code; [RFC4271][RFC7313]";
             }
@@ -72,7 +72,7 @@ module sonic-events-bgp {
                 description "IP of neighbor associated with this notification";
             }
 
-            leaf is-sent {
+            leaf is_sent {
                 type boolean;
                 description "true - if this notification was for sent messages; false if it was for received.";
             }

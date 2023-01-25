@@ -24,6 +24,7 @@ import subprocess
 import sys
 import syslog
 import re
+import time
 
 import docker
 
@@ -58,14 +59,18 @@ def get_command_result(command):
 
     return command_stdout.strip()
 
-def publish_events(events_handle, container_name, mem_usage_bytes, threshold_value):
+
+def publish_events(container_name, mem_usage_bytes, threshold_value):
+    events_handle = swsscommon.events_init_publisher(EVENTS_PUBLISHER_SOURCE)
     params = swsscommon.FieldValueMap()
     params["ctr_name"] = container_name
     params["mem_usage"] = mem_usage_bytes
     params["threshold"] = threshold_value
     swsscommon.event_publish(events_handle, EVENTS_PUBLISHER_TAG, params)
+    swsscommon.events_deinit_publisher(events_handle)
 
-def check_memory_usage(events_handle, container_name, threshold_value):
+
+def check_memory_usage(container_name, threshold_value):
     """Checks the memory usage of a container and writes an alerting messages into
     the syslog if the memory usage is larger than the threshold value.
 
@@ -100,7 +105,7 @@ def check_memory_usage(events_handle, container_name, threshold_value):
             syslog.syslog(syslog.LOG_INFO, "[{}]: Memory usage ({} Bytes) is larger than the threshold ({} Bytes)!"
                           .format(container_name, mem_usage_bytes, threshold_value))
             # publish event
-            publish_events(events_handle, container_name, str(mem_usage_bytes), str(threshold_value))
+            publish_events(container_name, "{:.2f}".format(mem_usage_bytes), str(threshold_value))
             sys.exit(3)
     else:
         syslog.syslog(syslog.LOG_ERR, "[memory_checker] Failed to retrieve memory value from '{}'"
@@ -160,14 +165,13 @@ def main():
         sys.exit(0)
 
     running_container_names = get_running_container_names()
-    events_handle = swsscommon.events_init_publisher(EVENTS_PUBLISHER_SOURCE)
     if args.container_name in running_container_names:
-        check_memory_usage(events_handle, args.container_name, args.threshold_value)
+        check_memory_usage(args.container_name, args.threshold_value)
     else:
         syslog.syslog(syslog.LOG_INFO,
                       "[memory_checker] Exits without checking memory usage since container '{}' is not running!"
                       .format(args.container_name))
-    swsscommon.events_deinit_publisher(events_handle)
+
 
 if __name__ == "__main__":
     main()

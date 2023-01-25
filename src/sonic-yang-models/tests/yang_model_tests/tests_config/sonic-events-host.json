@@ -263,7 +263,7 @@
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:mem-threshold-exceeded": {
                 "ctr_name": "Invalid$",
-                "mem_usage": 123456,
+                "mem_usage": "123456.78",
                 "threshold": 123456,
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
@@ -273,7 +273,7 @@
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:mem-threshold-exceeded": {
                 "ctr_name": "invalid-length-for-ctr-name-too-long",
-                "mem_usage": 123456,
+                "mem_usage": "123456.78",
                 "threshold": 123456,
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
@@ -293,7 +293,7 @@
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:mem-threshold-exceeded": {
                 "ctr_name": "container_name",
-                "mem_usage": 123456,
+                "mem_usage": "123456.78",
                 "threshold": "INCORRECT_THRESHOLD",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
@@ -303,7 +303,7 @@
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:mem-threshold-exceeded": {
                 "ctr_name": "container_name",
-                "mem_usage": 123456,
+                "mem_usage": "123456.78",
                 "threshold": 123456,
                 "timestamp": "INCORRECT_TIMESTAMP"
             }
@@ -313,7 +313,7 @@
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:mem-threshold-exceeded": {
                 "ctr_name": "container_name",
-                "mem_usage": 123456,
+                "mem_usage": "123456.78",
                 "threshold": 123456,
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }

@@ -38,10 +38,10 @@
     "SONIC_EVENTS_BGP_NOTIFICATION_INCORRECT_MAJOR_CODE": {
         "sonic-events-bgp:sonic-events-bgp": {
             "sonic-events-bgp:notification": {
-                "major-code": "INCORRECT_MAJOR_CODE",
-                "minor-code": 2,
+                "major_code": "INCORRECT_MAJOR_CODE",
+                "minor_code": 2,
                 "ip": "10.0.0.0",
-                "is-sent": true,
+                "is_sent": true,
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }
@@ -49,10 +49,10 @@
     "SONIC_EVENTS_BGP_NOTIFICATION_INCORRECT_MINOR_CODE": {
         "sonic-events-bgp:sonic-events-bgp": {
             "sonic-events-bgp:notification": {
-                "major-code": 2,
-                "minor-code": "INCORRECT_MINOR_CODE",
+                "major_code": 2,
+                "minor_code": "INCORRECT_MINOR_CODE",
                 "ip": "10.0.0.0",
-                "is-sent": true,
+                "is_sent": true,
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }
@@ -60,10 +60,10 @@
     "SONIC_EVENTS_BGP_NOTIFICATION_INCORRECT_IP": {
         "sonic-events-bgp:sonic-events-bgp": {
             "sonic-events-bgp:notification": {
-                "major-code": 2,
-                "minor-code": 2,
+                "major_code": 2,
+                "minor_code": 2,
                 "ip": "INCORRECT_IP",
-                "is-sent": true,
+                "is_sent": true,
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }
@@ -71,10 +71,10 @@
     "SONIC_EVENTS_BGP_NOTIFICATION_INCORRECT_IS-SENT": {
         "sonic-events-bgp:sonic-events-bgp": {
             "sonic-events-bgp:notification": {
-                "major-code": 2,
-                "minor-code": 2,
+                "major_code": 2,
+                "minor_code": 2,
                 "ip": "10.0.0.0",
-                "is-sent": "INCORRECT_VALUE",
+                "is_sent": "INCORRECT_VALUE",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }
@@ -82,10 +82,10 @@
     "SONIC_EVENTS_BGP_NOTIFICATION_INCORRECT_TIMESTAMP": {
         "sonic-events-bgp:sonic-events-bgp": {
             "sonic-events-bgp:notification": {
-                "major-code": 2,
-                "minor-code": 2,
+                "major_code": 2,
+                "minor_code": 2,
                 "ip": "10.0.0.0",
-                "is-sent": true,
+                "is_sent": true,
                 "timestamp": "INCORRECT_TIMESTAMP"
             }
         }
@@ -93,10 +93,10 @@
     "SONIC_EVENTS_BGP_NOTIFICATION_VALID": {
         "sonic-events-bgp:sonic-events-bgp": {
             "sonic-events-bgp:notification": {
-                "major-code": 2,
-                "minor-code": 2,
+                "major_code": 2,
+                "minor_code": 2,
                 "ip": "10.0.0.0",
-                "is-sent": true,
+                "is_sent": true,
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }
