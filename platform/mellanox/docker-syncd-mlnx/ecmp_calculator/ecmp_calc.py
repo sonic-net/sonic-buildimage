@@ -482,11 +482,12 @@ class EcmpCalc:
 def main():
     rc = 0
     try:
-        parser = argparse.ArgumentParser(description="ECMP calculator")
-        parser.add_argument("-i", "--interface", required=True, help="Ingress interface")
-        parser.add_argument("-p", "--packet", required=True, help="Packet description")
+        parser = argparse.ArgumentParser(description="Calculate egress interface for the given packet being routed over ECMP",
+                                         usage="/usr/bin/ecmp_calc.py -i <ingress interface> -p <path to json>")
+        parser.add_argument("-i", "--interface", required=True, help="ingress interface")
+        parser.add_argument("-p", "--packet", required=True, help="json file describing a packet")
         parser.add_argument("-v", "--vrf", help="VRF name")
-        parser.add_argument("-d", "--debug", default=False, action="store_true", help="Flag for debug")
+        parser.add_argument("-d", "--debug", default=False, action="store_true", help="when used, debug messages will be printed to stdout")
         args = parser.parse_args()
         
         ecmp_calc = EcmpCalc()

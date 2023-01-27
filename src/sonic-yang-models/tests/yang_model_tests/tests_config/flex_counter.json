@@ -43,6 +43,10 @@
                     "FLEX_COUNTER_STATUS": "enable",
                     "POLL_INTERVAL": 10000
                 },
+                "TUNNEL": {
+                    "FLEX_COUNTER_STATUS": "enable",
+                    "POLL_INTERVAL": 10000
+                },
                 "FLOW_CNT_TRAP": {
                     "FLEX_COUNTER_STATUS": "enable",
                     "POLL_INTERVAL": 10000
@@ -95,6 +99,10 @@
                     "POLL_INTERVAL": 99
                 },
                 "ACL": {
+                    "FLEX_COUNTER_STATUS": "enable",
+                    "POLL_INTERVAL": 99
+                },
+                "TUNNEL": {
                     "FLEX_COUNTER_STATUS": "enable",
                     "POLL_INTERVAL": 99
                 },

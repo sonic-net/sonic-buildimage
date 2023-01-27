@@ -1234,6 +1234,10 @@
             "FLOW_CNT_ROUTE": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
+            },
+            "TUNNEL": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
             }
         },
         "FLOW_COUNTER_ROUTE_PATTERN": {
