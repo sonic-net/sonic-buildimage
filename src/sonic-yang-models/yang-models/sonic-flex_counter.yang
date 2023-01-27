@@ -228,6 +228,19 @@ module sonic-flex_counter {
                 }
             }
 
+            container TUNNEL {
+                /* TUNNEL_STAT_COUNTER_FLEX_COUNTER_GROUP */
+                leaf FLEX_COUNTER_STATUS {
+                    type flex_status;
+                }
+                leaf FLEX_COUNTER_DELAY_STATUS {
+                    type flex_delay_status;
+                }
+                leaf POLL_INTERVAL {
+                    type poll_interval;
+                }
+            }
+
         }
         /* end of container FLEX_COUNTER_TABLE */
 

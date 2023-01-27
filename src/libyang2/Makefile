@@ -2,6 +2,16 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -e
 
+LIBYANG_URL = https://sonicstorage.blob.core.windows.net/debian/pool/main/liby/libyang
+
+DSC_FILE = libyang2_$(LIBYANG2_FULLVERSION).dsc
+ORIG_FILE = libyang2_$(LIBYANG2_VERSION).orig.tar.gz
+DEBIAN_FILE = libyang2_$(LIBYANG2_FULLVERSION).debian.tar.xz
+
+DSC_FILE_URL = $(LIBYANG_URL)/$(DSC_FILE)
+ORIG_FILE_URL = $(LIBYANG_URL)/$(ORIG_FILE)
+DEBIAN_FILE_URL = $(LIBYANG_URL)/$(DEBIAN_FILE)
+
 MAIN_TARGET = $(LIBYANG2)
 DERIVED_TARGETS = $(LIBYANG2_DEV) $(LIBYANG2_DBG) $(LIBYANG2_TOOLS) $(LIBYANG2_TOOLS_DBG)
 
@@ -10,7 +20,10 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -fr ./libyang2-$(LIBYANG2_VERSION)
 
 	# download debian libyang
-	dget https://deb.debian.org/debian/pool/main/liby/libyang2/libyang2_$(LIBYANG2_FULLVERSION).dsc
+	wget -NO "$(DSC_FILE)" $(DSC_FILE_URL)
+	wget -NO "$(ORIG_FILE)" $(ORIG_FILE_URL)
+	wget -NO "$(DEBIAN_FILE)" $(DEBIAN_FILE_URL)
+	dpkg-source -x libyang2_$(LIBYANG2_FULLVERSION).dsc
 
 	pushd libyang2-$(LIBYANG2_VERSION)
 	#sed -i 's/set(LIBYANG_MAJOR_SOVERSION 1)/set(LIBYANG_MAJOR_SOVERSION 2)/' CMakeLists.txt
