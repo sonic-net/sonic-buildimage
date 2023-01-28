@@ -4,6 +4,7 @@ Requires=updategraph.service
 After=updategraph.service
 BindsTo=sonic.target
 After=sonic.target
+After=interfaces-config.service
 
 [Service]
 Type=oneshot
