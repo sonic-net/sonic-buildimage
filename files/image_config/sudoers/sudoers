@@ -42,7 +42,8 @@ Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog*, \
                                  /usr/local/bin/pcieutil *, \
                                  /usr/local/bin/psuutil *, \
                                  /usr/local/bin/sonic-installer list, \
-                                 /usr/local/bin/sfputil show *
+                                 /usr/local/bin/sfputil show *, \
+                                 /usr/local/bin/storyteller *
 
 
 Cmnd_Alias      PASSWD_CMDS = /usr/local/bin/config tacacs passkey *, \
