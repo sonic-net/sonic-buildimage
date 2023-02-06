@@ -144,6 +144,9 @@ int send_authorization_message(
 
         tac_add_attrib(&attr, "cmd-arg", (char *)arg);
     }
+    
+    // Networking-AAA service need this information for match authoriztaion rules
+    tac_add_attrib_pair(&attr, "DeviceType", '*', "All Device Types:NDG-SONIC");
 
     re.msg = NULL;
     output_debug("send authorizatiom message with user: %s, tty: %s, host: %s\n", user, tty, host);
