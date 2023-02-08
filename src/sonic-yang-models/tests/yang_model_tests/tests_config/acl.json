@@ -1039,5 +1039,59 @@
                 ]
             }
         }
+    },
+    "ACL_RULE_WRONG_BTH_OPCODE": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "BTH_OPCODE_TEST",
+                        "ETHER_TYPE": "2048",
+                        "PACKET_ACTION": "DROP",
+                        "PRIORITY": 9981,
+                        "BTH_OPCODE": "0x24",
+                        "RULE_NAME": "Rule_19"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "BTH_OPCODE_TEST",
+                        "policy_desc": "BTH_OPCODE_TEST",
+                        "ports": [ "" ],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_WRONG_AETH_SYNDROME": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "AETH_SYNDROME_TEST",
+                        "ETHER_TYPE": "2048",
+                        "PACKET_ACTION": "DROP",
+                        "PRIORITY": 9981,
+                        "AETH_SYNDROME": "0x24",
+                        "RULE_NAME": "Rule_19"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "AETH_SYNDROME_TEST",
+                        "policy_desc": "AETH_SYNDROME_TEST",
+                        "ports": [ "" ],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
     }
 }

@@ -60,6 +60,9 @@ for intf_pid in $(ls -1 /var/run/dhclient*.Ethernet*.pid 2> /dev/null); do
     [[ -f ${intf_pid} ]] && kill `cat ${intf_pid}` && rm -f ${intf_pid}
 done
 
+[[ -f /var/run/resolvconf/interface/eth0.dhclient ]] && rm -f /var/run/resolvconf/interface/eth0.dhclient
+[[ -f /var/run/resolvconf/interface/eth0.ip6.dhclient ]] && rm -f /var/run/resolvconf/interface/eth0.ip6.dhclient
+
 # Read sysctl conf files again
 sysctl -p /etc/sysctl.d/90-dhcp6-systcl.conf
 

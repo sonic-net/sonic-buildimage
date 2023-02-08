@@ -27,6 +27,7 @@ Table of Contents
          * [Device neighbor metada](#device-neighbor-metada)  
          * [DSCP_TO_TC_MAP](#dscp_to_tc_map)  
          * [FLEX_COUNTER_TABLE](#flex_counter_table)  
+         * [Hash](#hash)  
          * [KDUMP](#kdump)  
          * [Kubernetes Master](#kubernetes-master)  
          * [L2 Neighbors](#l2-neighbors)  
@@ -50,6 +51,7 @@ Table of Contents
          * [Syslog Rate Limit](#syslog-rate-limit)  
          * [Sflow](#sflow)  
          * [Restapi](#restapi)  
+         * [System Port](#system-port)  
          * [Tacplus Server](#tacplus-server)    
          * [TC to Priority group map](#tc-to-priority-group-map)  
          * [TC to Queue map](#tc-to-queue-map)    
@@ -935,6 +937,58 @@ instance is supported in SONiC.
 
 ```
 
+### Hash
+
+Generic hash allows user to configure which hash fields are suppose to be used by a hashing algorithm.  
+The configuration is applied globally for each ECMP and LAG on a switch.
+
+***ECMP/LAG HASH***
+
+```
+{
+    "SWITCH_HASH": {
+        "GLOBAL": {
+            "ecmp_hash": [
+                "DST_MAC",
+                "SRC_MAC",
+                "ETHERTYPE",
+                "IP_PROTOCOL",
+                "DST_IP",
+                "SRC_IP",
+                "L4_DST_PORT",
+                "L4_SRC_PORT",
+                "INNER_DST_MAC",
+                "INNER_SRC_MAC",
+                "INNER_ETHERTYPE",
+                "INNER_IP_PROTOCOL",
+                "INNER_DST_IP",
+                "INNER_SRC_IP",
+                "INNER_L4_DST_PORT",
+                "INNER_L4_SRC_PORT"
+            ],
+            "lag_hash": [
+                "DST_MAC",
+                "SRC_MAC",
+                "ETHERTYPE",
+                "IP_PROTOCOL",
+                "DST_IP",
+                "SRC_IP",
+                "L4_DST_PORT",
+                "L4_SRC_PORT",
+                "INNER_DST_MAC",
+                "INNER_SRC_MAC",
+                "INNER_ETHERTYPE",
+                "INNER_IP_PROTOCOL",
+                "INNER_DST_IP",
+                "INNER_SRC_IP",
+                "INNER_L4_DST_PORT",
+                "INNER_L4_SRC_PORT"
+            ]
+        }
+    }
+}
+```
+
 ### KDUMP
 
 ```
@@ -1523,6 +1577,49 @@ Container side configuration:
     "pmon": {
         "rate_limit_interval": "300",
         "rate_limit_burst": "20000"
+    }
+  }
+}
+```
+
+### System Port
+Every port on the system requires a global representation, known as a System Port,
+and is listed in this table.
+
+```
+{
+"SYSTEM_PORT": {
+    "host227-4|asic0|Ethernet0": {
+        "core_index": "1",
+        "core_port_index": "1",
+        "num_voq": "8",
+        "speed": "100000",
+        "switch_id": "0",
+        "system_port_id": "1"
+    },
+    "host227-4|asic0|Ethernet4": {
+        "core_index": "1",
+        "core_port_index": "2",
+        "num_voq": "8",
+        "speed": "100000",
+        "switch_id": "0",
+        "system_port_id": "2"
+    },
+    "host227-5|asic0|Ethernet0": {
+        "core_index": "1",
+        "core_port_index": "1",
+        "num_voq": "8",
+        "speed": "100000",
+        "switch_id": "4",
+        "system_port_id": "80"
+    },
+    "host227-5|asic0|Ethernet4": {
+        "core_index": "1",
+        "core_port_index": "2",
+        "num_voq": "8",
+        "speed": "100000",
+        "switch_id": "4",
+        "system_port_id": "81"
     }
   }
 }

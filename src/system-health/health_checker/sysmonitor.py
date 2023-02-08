@@ -273,7 +273,7 @@ class Sysmonitor(ProcessTaskBase):
             
             sysctl_show = self.run_systemctl_show(event)
 
-            load_state = sysctl_show['LoadState']
+            load_state = sysctl_show.get('LoadState')
             if load_state == "loaded":
                 status = sysctl_show['UnitFileState']
                 fail_reason = sysctl_show['Result']

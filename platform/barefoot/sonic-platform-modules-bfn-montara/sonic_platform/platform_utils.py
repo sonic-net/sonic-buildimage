@@ -9,6 +9,8 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+SIGTERM_CAUGHT = False
+
 def file_create(path, mode=None):
     """
     Ensure that file is created with the appropriate permissions
@@ -38,13 +40,16 @@ def cancel_on_sigterm(func):
         def handler(sig, frame):
             if sigterm_handler:
                 sigterm_handler(sig, frame)
+                global SIGTERM_CAUGHT
+                SIGTERM_CAUGHT = True
             raise Exception("Canceling {}() execution...".format(func.__name__))
 
         sigterm_handler = signal.getsignal(signal.SIGTERM)
         signal.signal(signal.SIGTERM, handler)
         result = None
         try:
-            result = func(*args, **kwargs)
+            if not SIGTERM_CAUGHT:
+                result = func(*args, **kwargs)
         finally:
             signal.signal(signal.SIGTERM, sigterm_handler)
         return result

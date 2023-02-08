@@ -297,38 +297,31 @@ class PddfFan(FanBase):
                 return status
 
     def set_status_led(self, color):
-        index = str(self.fantray_index-1)
-        led_device_name = "FANTRAY{}".format(self.fantray_index) + "_LED"
-
-        result, msg = self.pddf_obj.is_supported_sysled_state(led_device_name, color)
-        if result == False:
-            print(msg)
-            return (False)
-
-        device_name = self.pddf_obj.data[led_device_name]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', index, self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('color', color, self.pddf_obj.get_led_cur_state_path())
-        self.pddf_obj.create_attr('dev_ops', 'set_status',  self.pddf_obj.get_led_path())
-        return (True)
+        result = False
+        if self.is_psu_fan:
+            # Usually no led for psu_fan hence raise a NotImplementedError
+            raise NotImplementedError
+        else:
+            # Usually there is no led for psu_fan
+            led_device_name = "FANTRAY{}".format(self.fantray_index) + "_LED"
+            result, msg = self.pddf_obj.set_system_led_color(led_device_name, color)
+        return (result)
 
     def get_status_led(self):
-        index = str(self.fantray_index-1)
-        fan_led_device = "FANTRAY{}".format(self.fantray_index) + "_LED"
+        if self.is_psu_fan:
+            # Usually no led for psu_fan hence raise a NotImplementedError
+            raise NotImplementedError
+        else:
+            fan_led_device = "FANTRAY{}".format(self.fantray_index) + "_LED"
+            if (not fan_led_device in self.pddf_obj.data.keys()):
+                # Implement a generic status_led color scheme
+                if self.get_status():
+                    return self.STATUS_LED_COLOR_GREEN
+                else:
+                    return self.STATUS_LED_COLOR_OFF
 
-        if fan_led_device not in self.pddf_obj.data.keys():
-            # Implement a generic status_led color scheme
-            if self.get_status():
-                return self.STATUS_LED_COLOR_GREEN
-            else:
-                return self.STATUS_LED_COLOR_OFF
-
-        device_name = self.pddf_obj.data[fan_led_device]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', index, self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('dev_ops', 'get_status',  self.pddf_obj.get_led_path())
-        color = self.pddf_obj.get_led_color()
-        return (color)
+            result, color = self.pddf_obj.get_system_led_color(fan_led_device)
+            return (color)
 
     def get_position_in_parent(self):
         """

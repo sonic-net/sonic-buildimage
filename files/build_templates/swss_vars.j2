@@ -6,5 +6,7 @@
     "asic_id": "{{ DEVICE_METADATA.localhost.asic_id }}",
     "mac": "{{ DEVICE_METADATA.localhost.mac }}",
     "resource_type": "{{ DEVICE_METADATA.localhost.resource_type }}",
-    "synchronous_mode": {% if DEVICE_METADATA.localhost.synchronous_mode == "disable" %}"disable"{% else %}"enable"{% endif %}
+    "synchronous_mode": {% if DEVICE_METADATA.localhost.synchronous_mode == "disable" %}"disable"{% else %}"enable"{% endif %},
+    "dual_tor": {% if DEVICE_METADATA.localhost.type == "ToRRouter" and DEVICE_METADATA.localhost.subtype == "DualToR" %}"enable"{% else %}"disable"{% endif %},
+    "dscp_remapping": {% if SYSTEM_DEFAULTS is defined and SYSTEM_DEFAULTS.tunnel_qos_remap is defined and SYSTEM_DEFAULTS.tunnel_qos_remap.status == "enabled" %}"enable"{% else %}"disable"{% endif %}
 }

@@ -9,6 +9,10 @@ module sonic-pbh {
 		prefix inet;
 	}
 
+	import sonic-types {
+		prefix stypes;
+	}
+
 	import sonic-port {
 		prefix port;
 	}
@@ -25,7 +29,7 @@ module sonic-pbh {
 
 	typedef hash-field {
 		description "Represents native hash field";
-		type enumeration {
+		type stypes:hash-field {
 			enum INNER_IP_PROTOCOL;
 			enum INNER_L4_DST_PORT;
 			enum INNER_L4_SRC_PORT;

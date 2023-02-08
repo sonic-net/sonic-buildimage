@@ -1,25 +1,48 @@
-From 39bb40dc4bad4462e4ae9c98580d75fa2c92e032 Mon Sep 17 00:00:00 2001
-From: Pavel Shirshov <pavelsh@microsoft.com>
-Date: Mon, 16 Nov 2020 18:29:46 -0800
-Subject: [PATCH 3/8] Use vrf_id for vrf, not tabled_id
+From 5dba497fb3810f9e5cb4b23bec151ec44d8dcec4 Mon Sep 17 00:00:00 2001
+From: Stepan Blyschak <stepanb@nvidia.com>
+Date: Mon, 16 Jan 2023 11:24:16 +0000
+Subject: [PATCH] Use vrf_id for vrf, not tabled_id
 
+Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
 ---
- zebra/zebra_fpm_netlink.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ zebra/rt_netlink.c | 24 ++++++++++++++++++------
+ 1 file changed, 18 insertions(+), 6 deletions(-)
 
-diff --git a/zebra/zebra_fpm_netlink.c b/zebra/zebra_fpm_netlink.c
-index ec22c5dd4..aad0156b3 100644
---- a/zebra/zebra_fpm_netlink.c
-+++ b/zebra/zebra_fpm_netlink.c
-@@ -287,7 +287,7 @@ static int netlink_route_info_fill(struct netlink_route_info *ri, int cmd,
- 		ri->nlmsg_pid = zvrf->zns->netlink_dplane_out.snl.nl_pid;
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 24c01b7f5..d4567990e 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -1969,12 +1969,24 @@ ssize_t netlink_route_multipath_msg_encode(int cmd,
+ #endif
+ 	/* Table corresponding to this route. */
+ 	table_id = dplane_ctx_get_table(ctx);
+-	if (table_id < 256)
+-		req->r.rtm_table = table_id;
+-	else {
+-		req->r.rtm_table = RT_TABLE_UNSPEC;
+-		if (!nl_attr_put32(&req->n, datalen, RTA_TABLE, table_id))
+-			return 0;
++	if (!fpm) {
++		if (table_id < 256)
++			req->r.rtm_table = table_id;
++		else {
++			req->r.rtm_table = RT_TABLE_UNSPEC;
++			if (!nl_attr_put32(&req->n, datalen, RTA_TABLE, table_id))
++				return 0;
++		}
++	} else {
++		/* Put vrf if_index instead of table id */
++		vrf_id_t vrf = dplane_ctx_get_vrf(ctx);
++		if (vrf < 256)
++			req->r.rtm_table = vrf;
++		else {
++			req->r.rtm_table = RT_TABLE_UNSPEC;
++			if (!nl_attr_put32(&req->n, datalen, RTA_TABLE, vrf))
++				return 0;
++			}
+ 	}
  
- 	ri->nlmsg_type = cmd;
--	ri->rtm_table = table_info->table_id;
-+	ri->rtm_table = zvrf_id(rib_dest_vrf(dest));
- 	ri->rtm_protocol = RTPROT_UNSPEC;
- 
- 	/*
+ 	if (IS_ZEBRA_DEBUG_KERNEL)
 -- 
-2.12.2
+2.30.2
 

@@ -10,6 +10,11 @@ def mock_cfgdb():
             'Vlan1000': {
                 'dhcp_servers': ['192.0.0.1']
             }
+        },
+        'DHCP_RELAY': {
+            'Vlan1000': {
+                'dhcpv6_servers': ['fc02:2000::1']
+            }
         }
     }
 

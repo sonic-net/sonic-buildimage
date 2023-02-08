@@ -1,4 +1,4 @@
-FROM docker-config-engine-buster-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -7,7 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update              \
  && apt-get -y install          \
-      libboost-atomic1.71-dev   \
+      libboost-atomic1.74.0     \
       libqt5core5a              \
       libqt5network5
 

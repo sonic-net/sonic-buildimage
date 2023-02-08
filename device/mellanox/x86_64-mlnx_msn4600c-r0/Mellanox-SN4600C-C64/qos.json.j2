@@ -1,5 +1,5 @@
 {#
-    Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES.
+    Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
     Apache-2.0
 
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,77 +14,13 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 #}
-{% if ('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'LeafRouter') %}
+
+{% if (('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'LeafRouter') or
+       ('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'ToRRouter') and
+       ('subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR')) %}
 {% set different_dscp_to_tc_map = true %}
-{%- macro generate_dscp_to_tc_map() %}
-    "DSCP_TO_TC_MAP": {
-        "AZURE": {
-            "0" : "1",
-            "1" : "1",
-            "2" : "2",
-            "3" : "3",
-            "4" : "4",
-            "5" : "1",
-            "6" : "6",
-            "7" : "1",
-            "8" : "0",
-            "9" : "1",
-            "10": "1",
-            "11": "1",
-            "12": "1",
-            "13": "1",
-            "14": "1",
-            "15": "1",
-            "16": "1",
-            "17": "1",
-            "18": "1",
-            "19": "1",
-            "20": "1",
-            "21": "1",
-            "22": "1",
-            "23": "1",
-            "24": "1",
-            "25": "1",
-            "26": "1",
-            "27": "1",
-            "28": "1",
-            "29": "1",
-            "30": "1",
-            "31": "1",
-            "32": "1",
-            "33": "1",
-            "34": "1",
-            "35": "1",
-            "36": "1",
-            "37": "1",
-            "38": "1",
-            "39": "1",
-            "40": "1",
-            "41": "1",
-            "42": "1",
-            "43": "1",
-            "44": "1",
-            "45": "1",
-            "46": "5",
-            "47": "1",
-            "48": "7",
-            "49": "1",
-            "50": "1",
-            "51": "1",
-            "52": "1",
-            "53": "1",
-            "54": "1",
-            "55": "1",
-            "56": "1",
-            "57": "1",
-            "58": "1",
-            "59": "1",
-            "60": "1",
-            "61": "1",
-            "62": "1",
-            "63": "1"
-        },
-        "AZURE_UPLINK": {
+{%- macro  generate_normal_dscp_to_tc_map(tc_mapped_from_dscp_33) -%}
+        {
             "0" : "1",
             "1" : "1",
             "2" : "1",
@@ -118,7 +54,7 @@
             "30": "1",
             "31": "1",
             "32": "1",
-            "33": "1",
+            "33": "{{tc_mapped_from_dscp_33}}",
             "34": "1",
             "35": "1",
             "36": "1",
@@ -150,10 +86,120 @@
             "62": "1",
             "63": "1"
         }
+{%- endmacro -%}
+{%- macro generate_dscp_to_tc_map_with_addition_lossless_pgs_n_queues(tc_mapped_from_dscp_33) -%}
+        {
+            "0" : "1",
+            "1" : "1",
+            "2" : "2",
+            "3" : "3",
+            "4" : "4",
+            "5" : "1",
+            "6" : "6",
+            "7" : "1",
+            "8" : "0",
+            "9" : "1",
+            "10": "1",
+            "11": "1",
+            "12": "1",
+            "13": "1",
+            "14": "1",
+            "15": "1",
+            "16": "1",
+            "17": "1",
+            "18": "1",
+            "19": "1",
+            "20": "1",
+            "21": "1",
+            "22": "1",
+            "23": "1",
+            "24": "1",
+            "25": "1",
+            "26": "1",
+            "27": "1",
+            "28": "1",
+            "29": "1",
+            "30": "1",
+            "31": "1",
+            "32": "1",
+            "33": "{{tc_mapped_from_dscp_33}}",
+            "34": "1",
+            "35": "1",
+            "36": "1",
+            "37": "1",
+            "38": "1",
+            "39": "1",
+            "40": "1",
+            "41": "1",
+            "42": "1",
+            "43": "1",
+            "44": "1",
+            "45": "1",
+            "46": "5",
+            "47": "1",
+            "48": "7",
+            "49": "1",
+            "50": "1",
+            "51": "1",
+            "52": "1",
+            "53": "1",
+            "54": "1",
+            "55": "1",
+            "56": "1",
+            "57": "1",
+            "58": "1",
+            "59": "1",
+            "60": "1",
+            "61": "1",
+            "62": "1",
+            "63": "1"
+        }
+{%- endmacro -%}
+{%- macro generate_dscp_to_tc_map() %}
+    "DSCP_TO_TC_MAP": {
+{% if ('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'LeafRouter') %}
+        "AZURE_UPLINK":
+        {{ generate_normal_dscp_to_tc_map("1") }},
+        "AZURE":
+        {{ generate_dscp_to_tc_map_with_addition_lossless_pgs_n_queues("1") }}
+{% endif %}
+{% if ('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'ToRRouter') %}
+        "AZURE_UPLINK":
+        {{ generate_dscp_to_tc_map_with_addition_lossless_pgs_n_queues("8") }},
+        "AZURE_TUNNEL":
+        {{ generate_normal_dscp_to_tc_map("8") }},
+        "AZURE":
+        {{ generate_normal_dscp_to_tc_map("8") }}
+{% endif %}
     },
 {%- endmacro %}
 {%- macro generate_tc_to_pg_map() %}
     "TC_TO_PRIORITY_GROUP_MAP": {
+{% if (('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'ToRRouter') and
+       ('subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR')) %}
+        "AZURE_TUNNEL": {
+            "0": "0",
+            "1": "0",
+            "2": "0",
+            "3": "2",
+            "4": "6",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "0"
+        },
+        "AZURE": {
+            "0": "0",
+            "1": "0",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "0",
+            "6": "6",
+            "7": "0",
+            "8": "0"
+        }
+{% else %}
         "AZURE": {
             "0": "0",
             "1": "0",
@@ -164,8 +210,67 @@
             "6": "6",
             "7": "0"
         }
+{% endif %}
     },
 {%- endmacro %}
+{%- macro generate_tc_to_queue_map() %}
+    "TC_TO_QUEUE_MAP": {
+{% if (('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'ToRRouter') and
+       ('subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR')) %}
+        "AZURE_TUNNEL": {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+            "3": "2",
+            "4": "6",
+            "5": "5",
+            "6": "6",
+            "7": "7",
+            "8": "1"
+        },
+        "AZURE": {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7",
+            "8": "1"
+        }
+{% else %}
+        "AZURE": {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7"
+        }
+{% endif %}
+    },
+{%- endmacro %}
+{% if (('type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'ToRRouter') and
+       ('subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR')) %}
+{%- macro generate_tc_to_dscp_map() %}
+    "TC_TO_DSCP_MAP": {
+        "AZURE_TUNNEL": {
+            "0": "8",
+            "1": "0",
+            "2": "2",
+            "3": "2",
+            "4": "6",
+            "5": "46",
+            "6": "6",
+            "7": "48",
+            "8": "33"
+        }
+    },
+{%- endmacro %}
+{%- endif %}
 {%- macro generate_global_dscp_to_tc_map() %}
 {# This is an empty macro since the global DSCP_TO_TC map is not required #}
 {%- endmacro %}

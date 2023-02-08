@@ -1,9 +1,9 @@
 DOCKER_GBSYNCD_PLATFORM_CODE = credo
 
-LIBSAI_CREDO = libsaicredo_0.7.5_amd64.deb
-$(LIBSAI_CREDO)_URL = "https://sonicstorage.blob.core.windows.net/packages/credosai/libsaicredo_0.7.5_amd64.deb?sv=2020-10-02&st=2022-04-14T02%3A21%3A31Z&se=2100-04-15T02%3A21%3A00Z&sr=b&sp=r&sig=iDv9Fprntpw9iVBFYVjW8iygy4qcSWT8O90nAXdXR0A%3D"
-LIBSAI_CREDO_OWL = libsaicredo-owl_0.7.5_amd64.deb
-$(LIBSAI_CREDO_OWL)_URL = "https://sonicstorage.blob.core.windows.net/packages/credosai/libsaicredo-owl_0.7.5_amd64.deb?sv=2020-10-02&st=2022-04-14T02%3A23%3A22Z&se=2100-04-15T02%3A23%3A00Z&sr=b&sp=r&sig=58z6E2nPcLIGjqAoxRAo7du%2FzjIBZkFdoXfSzw96Kxc%3D"
+LIBSAI_CREDO = libsaicredo_0.8.2_amd64.deb
+$(LIBSAI_CREDO)_URL = "https://sonicstorage.blob.core.windows.net/packages/credosai/libsaicredo_0.8.2_amd64.deb?sv=2021-04-10&st=2023-01-31T04%3A24%3A23Z&se=2100-01-31T04%3A24%3A00Z&sr=b&sp=r&sig=RZPbmaIetvDRtwifrVT4s%2FaQxB%2FBTOyCqXtMtoNRjmY%3D"
+LIBSAI_CREDO_OWL = libsaicredo-owl_0.8.2_amd64.deb
+$(LIBSAI_CREDO_OWL)_URL = "https://sonicstorage.blob.core.windows.net/packages/credosai/libsaicredo-owl_0.8.2_amd64.deb?sv=2021-04-10&st=2023-01-31T04%3A25%3A43Z&se=2100-01-31T04%3A25%3A00Z&sr=b&sp=r&sig=%2BdSFujwy0gY%2FiH50Ffi%2FsqZOAHBOFPUcBdR06fHEZkI%3D"
 
 ifneq ($($(LIBSAI_CREDO)_URL),)
 include $(PLATFORM_PATH)/../template/docker-gbsyncd-base.mk

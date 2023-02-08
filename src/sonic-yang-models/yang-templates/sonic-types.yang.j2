@@ -305,7 +305,33 @@ module sonic-types {
         }
     }
 
-
+    typedef hash-field {
+        description "Represents native hash field";
+        type enumeration {
+            enum IN_PORT;
+            enum DST_MAC;
+            enum SRC_MAC;
+            enum ETHERTYPE;
+            enum VLAN_ID;
+            enum IP_PROTOCOL;
+            enum DST_IP;
+            enum SRC_IP;
+            enum L4_DST_PORT;
+            enum L4_SRC_PORT;
+            enum INNER_DST_MAC;
+            enum INNER_SRC_MAC;
+            enum INNER_ETHERTYPE;
+            enum INNER_IP_PROTOCOL;
+            enum INNER_DST_IP;
+            enum INNER_DST_IPV4;
+            enum INNER_DST_IPV6;
+            enum INNER_SRC_IP;
+            enum INNER_SRC_IPV4;
+            enum INNER_SRC_IPV6;
+            enum INNER_L4_DST_PORT;
+            enum INNER_L4_SRC_PORT;
+        }
+    }
 
     {% if yang_model_type == "cvl" %}
     /* Required for CVL */

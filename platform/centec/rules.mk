@@ -1,7 +1,7 @@
 include $(PLATFORM_PATH)/platform-modules-centec-e582.mk
 include $(PLATFORM_PATH)/platform-modules-embedway.mk
 include $(PLATFORM_PATH)/platform-modules-centec-v682.mk
-include $(PLATFORM_PATH)/sdk.mk
+include $(PLATFORM_PATH)/sai.mk
 include $(PLATFORM_PATH)/docker-syncd-centec.mk
 include $(PLATFORM_PATH)/docker-syncd-centec-rpc.mk
 include $(PLATFORM_PATH)/docker-saiserver-centec.mk

@@ -124,16 +124,6 @@
   id: 6f53
   name: 'System peripheral: Intel Corporation Xeon Processor D Family QuickData Technology
     Register DMA Channel 3'
-- bus: '04'
-  dev: '00'
-  fn: '0'
-  id: 10a6
-  name: 'Unassigned class [ff00]: Intel Corporation 82599EB 10-Gigabit Dummy Function'
-- bus: '05'
-  dev: '00'
-  fn: '0'
-  id: '0010'
-  name: 'Unassigned class [ff00]: Device 1d1c:0010 (rev 10)'
 - bus: ff
   dev: 0b
   fn: '0'

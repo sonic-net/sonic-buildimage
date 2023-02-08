@@ -365,6 +365,8 @@ class TestJ2Files(TestCase):
             '../../../device/arista/x86_64-arista_7260cx3_64/Arista-7260CX3-C64',
             '../../../device/mellanox/x86_64-mlnx_msn4600c-r0/Mellanox-SN4600C-C64',
             '../../../device/mellanox/x86_64-mlnx_msn4600c-r0/Mellanox-SN4600C-C64',
+            '../../../device/mellanox/x86_64-mlnx_msn4600c-r0/Mellanox-SN4600C-D48C40',
+            '../../../device/mellanox/x86_64-mlnx_msn4600c-r0/Mellanox-SN4600C-D48C40',
             '../../../device/arista/x86_64-arista_7050_qx32s/Arista-7050-QX-32S'
         ]
         sample_outputs = [
@@ -376,6 +378,8 @@ class TestJ2Files(TestCase):
             'qos-arista7260-t1-remap-disabled.json',
             'qos-mellanox4600c-c64.json',
             'qos-mellanox4600c-c64-remap-disabled.json',
+            'qos-mellanox4600c-d48c40-t0.json',
+            'qos-mellanox4600c-d48c40-t0-remap-disabled.json',
             'qos-arista7050-t0-storage-backend.json'
         ]
         sample_minigraph_files = [
@@ -387,6 +391,8 @@ class TestJ2Files(TestCase):
             'sample-arista-7260-t1-minigraph-remap-disabled.xml',
             'sample-mellanox-4600c-t1-minigraph.xml',
             'sample-mellanox-4600c-t1-minigraph-remap-disabled.xml',
+            'sample-mellanox-4600c-t0-minigraph.xml',
+            'sample-mellanox-4600c-t0-minigraph-remap-disabled.xml',
             'sample-arista-7050-t0-storage-backend-minigraph.xml'
         ]
 
@@ -482,9 +488,6 @@ class TestJ2Files(TestCase):
     def test_buffers_dell6100_render_template(self):
         self._test_buffers_render_template('dell', 'x86_64-dell_s6100_c2538-r0', 'Force10-S6100', 'sample-dell-6100-t0-minigraph.xml', 'buffers.json.j2', 'buffers-dell6100.json')
 
-    def test_buffers_mellanox2700_render_template(self):
-        self._test_buffers_render_template('mellanox', 'x86_64-mlnx_msn2700-r0', 'Mellanox-SN2700-D48C8', 'sample-mellanox-2700-t0-minigraph.xml', 'buffers.json.j2', 'buffers-mellanox2700.json')
-
     def test_buffers_mellanox2410_render_template(self):
         self._test_buffers_render_template('mellanox', 'x86_64-mlnx_msn2410-r0', 'ACS-MSN2410', 'sample-mellanox-2410-t1-minigraph.xml', 'buffers.json.j2', 'buffers-mellanox2410.json')
 
@@ -507,8 +510,12 @@ class TestJ2Files(TestCase):
             ('mellanox', 'x86_64-mlnx_msn4600c-r0', 'Mellanox-SN4600C-C64', 'sample-mellanox-4600c-t1-minigraph.xml', 'buffers_dynamic.json.j2', 'buffers-mellanox4600c-t1-dynamic.json'),
             ('mellanox', 'x86_64-mlnx_msn4600c-r0', 'Mellanox-SN4600C-C64', 'sample-mellanox-4600c-t1-minigraph.xml', 'buffers.json.j2', 'buffers-mellanox4600c-t1.json'),
             ('mellanox', 'x86_64-mlnx_msn4600c-r0', 'Mellanox-SN4600C-C64', 'sample-mellanox-4600c-t1-minigraph-remap-disabled.xml', 'buffers_dynamic.json.j2', 'buffers-mellanox4600c-t1-dynamic-remap-disabled.json'),
-            ('mellanox', 'x86_64-mlnx_msn4600c-r0', 'Mellanox-SN4600C-C64', 'sample-mellanox-4600c-t1-minigraph-remap-disabled.xml', 'buffers.json.j2', 'buffers-mellanox4600c-t1-remap-disabled.json')
-        ]
+            ('mellanox', 'x86_64-mlnx_msn4600c-r0', 'Mellanox-SN4600C-C64', 'sample-mellanox-4600c-t1-minigraph-remap-disabled.xml', 'buffers.json.j2', 'buffers-mellanox4600c-t1-remap-disabled.json'),
+            ('mellanox', 'x86_64-mlnx_msn4600c-r0', 'Mellanox-SN4600C-D48C40', 'sample-mellanox-4600c-t0-minigraph.xml', 'buffers_dynamic.json.j2', 'buffers-mellanox4600c-t0-dynamic.json'),
+            ('mellanox', 'x86_64-mlnx_msn4600c-r0', 'Mellanox-SN4600C-D48C40', 'sample-mellanox-4600c-t0-minigraph.xml', 'buffers.json.j2', 'buffers-mellanox4600c-t0.json'),
+            ('mellanox', 'x86_64-mlnx_msn4600c-r0', 'Mellanox-SN4600C-D48C40', 'sample-mellanox-4600c-t0-minigraph-remap-disabled.xml', 'buffers_dynamic.json.j2', 'buffers-mellanox4600c-t0-dynamic-remap-disabled.json'),
+            ('mellanox', 'x86_64-mlnx_msn4600c-r0', 'Mellanox-SN4600C-D48C40', 'sample-mellanox-4600c-t0-minigraph-remap-disabled.xml', 'buffers.json.j2', 'buffers-mellanox4600c-t0-remap-disabled.json')
+         ]
 
         for test_data in TEST_DATA:
             self._test_buffers_render_template(vendor=test_data[0],

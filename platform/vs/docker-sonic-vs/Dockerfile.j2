@@ -206,6 +206,8 @@ RUN touch /etc/quagga/zebra.conf
 # disable integrated vtysh config
 RUN rm /etc/frr/frr.conf
 
+COPY ["frr/zebra.conf", "/etc/frr/"]
+
 # Create /var/warmboot/teamd folder for teammgrd
 RUN mkdir -p /var/warmboot/teamd
 

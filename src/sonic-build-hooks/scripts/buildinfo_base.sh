@@ -15,25 +15,26 @@ REPR_MIRROR_URL_PATTERN='http:\/\/packages.trafficmanager.net\/'
 DPKG_INSTALLTION_LOCK_FILE=/tmp/.dpkg_installation.lock
 
 . $BUILDINFO_PATH/config/buildinfo.config
-if [ -e /vcache ]; then
-	PKG_CACHE_PATH=/vcache/${IMAGENAME}
-else
-	PKG_CACHE_PATH=/sonic/target/vcache/${IMAGENAME}
-fi
-PKG_CACHE_FILE_NAME=${PKG_CACHE_PATH}/cache.tgz
-sudo chown $USER $(dirname $PKG_CACHE_PATH)
-mkdir -p ${PKG_CACHE_PATH}
-
-. ${BUILDINFO_PATH}/scripts/utils.sh
-
-
-URL_PREFIX=$(echo "${PACKAGE_URL_PREFIX}" | sed -E "s#(//[^/]*/).*#\1#")
 
 if [ "$(whoami)" != "root" ] && [ -n "$(which sudo)" ];then
     SUDO=sudo
 else
     SUDO=''
 fi
+
+if [ -e /vcache ]; then
+	PKG_CACHE_PATH=/vcache/${IMAGENAME}
+else
+	PKG_CACHE_PATH=/sonic/target/vcache/${IMAGENAME}
+fi
+PKG_CACHE_FILE_NAME=${PKG_CACHE_PATH}/cache.tgz
+$SUDO mkdir -p ${PKG_CACHE_PATH}
+$SUDO chown $USER $PKG_CACHE_PATH
+
+. ${BUILDINFO_PATH}/scripts/utils.sh
+
+
+URL_PREFIX=$(echo "${PACKAGE_URL_PREFIX}" | sed -E "s#(//[^/]*/).*#\1#")
 
 log_err()
 {

@@ -28,10 +28,13 @@
 #define CLIENT "PDDF_CLIENT"
 #define CPLD "PDDF_CPLD"
 #define CPLDMUX "PDDF_CPLDMUX"
+#define FPGAI2C "PDDF_FPGAI2C"
 #define MUX "PDDF_MUX"
 #define GPIO "PDDF_GPIO"
 #define SYSSTATUS "PDDF_SYSSTATUS"
 #define XCVR "PDDF_XCVR"
+#define FPGA "PDDF_FPGAPCI"
+
 
 #define PDDF_DEBUG
 #ifdef PDDF_DEBUG
