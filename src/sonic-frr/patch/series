@@ -12,3 +12,4 @@ cross-compile-changes.patch
 0010-zebra-Note-when-the-netlink-DUMP-command-is-interrup.patch
 0011-bgpd-enhanced-capability-is-always-turned-on-for-int.patch
 0012-Ensure-ospf_apiclient_lsa_originate-cannot-accidently-write-into-stack.patch
+0013-zebra-fix-dplane-fpm-nl-to-allow-for-fast-configuration.patch

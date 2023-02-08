@@ -10,6 +10,7 @@ on:
 
 jobs:
   semgrep:
+    if: github.repository_owner == 'sonic-net'
     name: Semgrep
     runs-on: ubuntu-latest
     container:

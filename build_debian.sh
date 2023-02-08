@@ -397,7 +397,8 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     gpg                     \
     jq                      \
     auditd                  \
-    linux-perf
+    linux-perf              \
+    resolvconf
 
 # default rsyslog version is 8.2110.0 which has a bug on log rate limit,
 # use backport version
@@ -707,7 +708,11 @@ sudo rm -f $ONIE_INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS
 ## Note: -x to skip directories on different file systems, such as /proc
 sudo du -hsx $FILESYSTEM_ROOT
 sudo mkdir -p $FILESYSTEM_ROOT/var/lib/docker
-sudo cp files/image_config/resolv-config/resolv.conf $FILESYSTEM_ROOT/etc/resolv.conf
+
+## Clear DNS configuration inherited from the build server
+sudo rm -f $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/original
+sudo cp files/image_config/resolv-config/resolv.conf.head $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/head
+
 sudo mksquashfs $FILESYSTEM_ROOT $FILESYSTEM_SQUASHFS -comp zstd -b 1M -e boot -e var/lib/docker -e $PLATFORM_DIR
 
 # Ensure admin gid is 1000

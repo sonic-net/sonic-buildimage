@@ -502,6 +502,7 @@ write_platform_specific_cmdline() {
     if [ "$sid" = "Gardena" ] || [ "$sid" = "GardenaE" ]; then
         aboot_machine=arista_7260cx3_64
         flash_size=28000
+        cmdline_add logs_inram=on
     fi
     if [ "$sid" = "Alhambra" ]; then
         aboot_machine=arista_7170_64c

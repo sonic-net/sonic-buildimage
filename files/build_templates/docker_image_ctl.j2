@@ -48,6 +48,10 @@ function updateSyslogConf()
     python -c "import jinja2, os; paths=['/usr/share/sonic/templates']; loader = jinja2.FileSystemLoader(paths); env = jinja2.Environment(loader=loader, trim_blocks=True); template_file='/usr/share/sonic/templates/rsyslog-container.conf.j2'; template = env.get_template(os.path.basename(template_file)); data=template.render({\"target_ip\":\"$TARGET_IP\",\"container_name\":\"$CONTAINER_NAME\"}); print(data)" > $TMP_FILE
     {%- else %}
     sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog-container.conf.j2 -a "{\"target_ip\": \"$TARGET_IP\", \"container_name\": \"$CONTAINER_NAME\" }"  > $TMP_FILE
+    if [ $? -ne 0 ]; then
+      echo "Error: Execute sonic-cfggen -d failed. Execute without '-d'."
+      sonic-cfggen -t /usr/share/sonic/templates/rsyslog-container.conf.j2 -a "{\"target_ip\": \"$TARGET_IP\", \"container_name\": \"$CONTAINER_NAME\" }"  > $TMP_FILE
+    fi
     {%- endif %}
     docker cp $TMP_FILE ${DOCKERNAME}:/etc/rsyslog.conf
     rm -rf $TMP_FILE
@@ -315,6 +319,29 @@ start() {
         source $PLATFORM_ENV_CONF
     fi
 
+    {%- if sonic_asic_platform == "broadcom" %}
+    {%- if docker_container_name == "syncd" %}
+    # Set the SYNCD_SHM_SIZE if this variable not defined    
+    BRCM_PLATFORM_COMMON_DIR=/usr/share/sonic/device/x86_64-broadcom_common
+    SYNCD_SHM_INI=$BRCM_PLATFORM_COMMON_DIR/syncd_shm.ini
+
+    readline=$(grep '0x14e4' /proc/linux-kernel-bde)
+    bcm_chip_id=${readline#*0x14e4:0x}
+    bcm_chip_id=${bcm_chip_id::3}
+
+    if [ -z "$SYNCD_SHM_SIZE" ]; then
+        if [ -z "$bcm_chip_id" ]; then
+            echo "Cannot get Broadcom Chip Id. Skip set SYNCD_SHM_SIZE."
+        elif [ -f "$SYNCD_SHM_INI" ] && [ "$(grep -m1 "^${bcm_chip_id}=" $SYNCD_SHM_INI)" ]; then
+                SYNCD_SHM_SIZE=`grep -m1 "^${bcm_chip_id}=" $SYNCD_SHM_INI | awk -F= '{print $2}'`
+        else
+            echo "Cannot get SYNCD_SHM_SIZE for chip: [${bcm_chip_id}] in $SYNCD_SHM_INI. Skip set SYNCD_SHM_SIZE."
+        fi
+
+    fi
+    {%- endif %}
+    {%- endif %}
+
     {%- if docker_container_name == "gbsyncd" %}
     GBSYNCD_CONF=/usr/share/sonic/device/$PLATFORM/gbsyncd.ini
     GBSYNCD_PLATFORM=gbsyncd-vs
@@ -503,6 +530,7 @@ start() {
         -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v mlnx_sdk_ready:/tmp \
         -v /dev/shm:/dev/shm:rw \
+        -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
 {%- elif docker_container_name == "pmon" %}
         -v /var/run/hw-management:/var/run/hw-management:rw \

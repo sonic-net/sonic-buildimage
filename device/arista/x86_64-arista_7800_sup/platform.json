@@ -7,6 +7,9 @@
         "psus": [
             {
                 "name": "psu1",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
                         "name": "psu1/1",
@@ -21,6 +24,9 @@
             },
             {
                 "name": "psu2",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
                         "name": "psu2/1",
@@ -35,6 +41,9 @@
             },
             {
                 "name": "psu3",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
                         "name": "psu3/1",
@@ -49,6 +58,9 @@
             },
             {
                 "name": "psu4",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
                         "name": "psu4/1",
@@ -63,6 +75,9 @@
             },
             {
                 "name": "psu5",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
                         "name": "psu5/1",
@@ -77,6 +92,9 @@
             },
             {
                 "name": "psu6",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
                         "name": "psu6/1",
@@ -91,6 +109,9 @@
             },
             {
                 "name": "psu7",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
                         "name": "psu7/1",
@@ -105,6 +126,9 @@
             },
             {
                 "name": "psu8",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
                         "name": "psu8/1",
@@ -119,6 +143,9 @@
             },
             {
                 "name": "psu9",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
                         "name": "psu9/1",
@@ -133,6 +160,9 @@
             },
             {
                 "name": "psu10",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
                         "name": "psu10/1",
@@ -147,6 +177,9 @@
             },
             {
                 "name": "psu11",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
                         "name": "psu11/1",
@@ -161,6 +194,9 @@
             },
             {
                 "name": "psu12",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
                         "name": "psu12/1",

@@ -6,6 +6,13 @@
 !
 {% endblock banner %}
 !
+{% block fpm %}
+! Uses the old known FPM behavior of including next hop information in the route (e.g. RTM_NEWROUTE) messages
+no fpm use-next-hop-groups
+!
+fpm address 127.0.0.1
+{% endblock fpm %}
+!
 {% include "common/daemons.common.conf.j2" %}
 !
 {% include "zebra.interfaces.conf.j2" %}

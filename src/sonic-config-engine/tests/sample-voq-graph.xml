@@ -619,7 +619,7 @@
           <NumVoq>8</NumVoq>
         </SystemPort>
         <SystemPort>
-          <Name>Ethernet1/1</Name>
+          <Name>Ethernet0</Name>
           <Hostname>linecard-1</Hostname>
           <AsicName>Asic0</AsicName>
           <Speed>40000</Speed>
@@ -630,7 +630,7 @@
           <NumVoq>8</NumVoq>
         </SystemPort>
         <SystemPort>
-          <Name>Ethernet1/2</Name>
+          <Name>Ethernet4</Name>
           <Hostname>linecard-1</Hostname>
           <AsicName>Asic0</AsicName>
           <Speed>40000</Speed>
@@ -641,7 +641,7 @@
           <NumVoq>8</NumVoq>
         </SystemPort>
         <SystemPort>
-          <Name>Ethernet1/3</Name>
+          <Name>Ethernet8</Name>
           <Hostname>linecard-1</Hostname>
           <AsicName>Asic0</AsicName>
           <Speed>40000</Speed>
@@ -652,7 +652,7 @@
           <NumVoq>8</NumVoq>
         </SystemPort>
         <SystemPort>
-          <Name>Ethernet1/4</Name>
+          <Name>Ethernet12</Name>
           <Hostname>linecard-1</Hostname>
           <AsicName>Asic0</AsicName>
           <Speed>40000</Speed>
@@ -675,7 +675,7 @@
           <NumVoq>8</NumVoq>
         </SystemPort>
         <SystemPort>
-          <Name>Ethernet1/5</Name>
+          <Name>Ethernet0</Name>
           <Hostname>linecard-2</Hostname>
           <AsicName>Asic0</AsicName>
           <Speed>40000</Speed>
@@ -686,7 +686,7 @@
           <NumVoq>8</NumVoq>
         </SystemPort>
         <SystemPort>
-          <Name>Ethernet1/6</Name>
+          <Name>Ethernet4</Name>
           <Hostname>linecard-2</Hostname>
           <AsicName>Asic0</AsicName>
           <Speed>40000</Speed>
@@ -709,7 +709,7 @@
           <NumVoq>8</NumVoq>
         </SystemPort>
         <SystemPort>
-          <Name>Ethernet1/7</Name>
+          <Name>Ethernet8</Name>
           <Hostname>linecard-2</Hostname>
           <AsicName>Asic1</AsicName>
           <Speed>40000</Speed>
@@ -720,7 +720,7 @@
           <NumVoq>8</NumVoq>
         </SystemPort>
         <SystemPort>
-          <Name>Ethernet1/8</Name>
+          <Name>Ethernet12</Name>
           <Hostname>linecard-2</Hostname>
           <AsicName>Asic1</AsicName>
           <Speed>40000</Speed>

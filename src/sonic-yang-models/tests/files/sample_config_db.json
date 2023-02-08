@@ -314,6 +314,36 @@
                 "PACKET_ACTION": "DROP",
                 "IP_TYPE": "IPv4ANY",
                 "SRC_IP": "1.1.1.1/32"
+            },
+            "DATAACL|RULE1": {
+                "PRIORITY": "999",
+                "PACKET_ACTION": "FORWARD",
+                "IP_TYPE": "IPv4ANY",
+                "SRC_IP": "1.1.1.1/32",
+                "BTH_OPCODE": "0x11/0xbf",
+                "AETH_SYNDROME": "0x60/0x60"
+            }
+        },
+        "SWITCH_HASH": {
+            "GLOBAL": {
+                "ecmp_hash": [
+                    "DST_IP",
+                    "SRC_IP",
+                    "IP_PROTOCOL",
+                    "L4_DST_PORT",
+                    "L4_SRC_PORT",
+                    "INNER_DST_IP",
+                    "INNER_SRC_IP"
+                ],
+                "lag_hash": [
+                    "DST_IP",
+                    "SRC_IP",
+                    "IP_PROTOCOL",
+                    "L4_DST_PORT",
+                    "L4_SRC_PORT",
+                    "INNER_DST_IP",
+                    "INNER_SRC_IP"
+                ]
             }
         },
         "DEVICE_METADATA": {
@@ -1342,6 +1372,80 @@
                 "login": "local"
             }
         },
+        "SYSTEM_PORT": {
+            "host227-4|asic0|Cpu0": {
+                "core_index": "0",
+                "core_port_index": "0",
+                "num_voq": "8",
+                "speed": "10000",
+                "switch_id": "0",
+                "system_port_id": "1"
+            },
+            "host227-4|asic0|Ethernet0": {
+                "core_index": "1",
+                "core_port_index": "1",
+                "num_voq": "8",
+                "speed": "100000",
+                "switch_id": "0",
+                "system_port_id": "2"
+            },
+            "host227-4|asic0|Ethernet4": {
+                "core_index": "1",
+                "core_port_index": "2",
+                "num_voq": "8",
+                "speed": "100000",
+                "switch_id": "0",
+                "system_port_id": "3"
+            },
+            "host227-4|asic1|Cpu0": {
+                "core_index": "0",
+                "core_port_index": "0",
+                "num_voq": "8",
+                "speed": "10000",
+                "switch_id": "0",
+                "system_port_id": "41"
+            },
+            "host227-4|asic1|Ethernet8": {
+                "core_index": "0",
+                "core_port_index": "1",
+                "num_voq": "8",
+                "speed": "100000",
+                "switch_id": "2",
+                "system_port_id": "42"
+            },
+            "host227-4|asic1|Ethernet12": {
+                "core_index": "0",
+                "core_port_index": "2",
+                "num_voq": "8",
+                "speed": "100000",
+                "switch_id": "2",
+                "system_port_id": "43"
+            },
+            "host227-5|asic0|Cpu0": {
+                "core_index": "0",
+                "core_port_index": "0",
+                "num_voq": "8",
+                "speed": "10000",
+                "switch_id": "0",
+                "system_port_id": "81"
+            },
+            "host227-5|asic0|Ethernet0": {
+                "core_index": "1",
+                "core_port_index": "1",
+                "num_voq": "8",
+                "speed": "100000",
+                "switch_id": "4",
+                "system_port_id": "82"
+            },
+            "host227-5|asic0|Ethernet4": {
+                "core_index": "1",
+                "core_port_index": "2",
+                "num_voq": "8",
+                "speed": "100000",
+                "switch_id": "4",
+                "system_port_id": "83"
+            }
+        },
         "TACPLUS": {
             "global": {
                 "auth_type": "pap",
@@ -2076,7 +2180,9 @@
                  "matches": [
                      "IN_PORTS",
                      "OUT_PORTS",
-                     "SRC_IP"
+                     "SRC_IP",
+                     "BTH_OPCODE",
+                     "AETH_SYNDROME"
                  ],
                  "actions": [
                      "PACKET_ACTION",

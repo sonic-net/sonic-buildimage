@@ -132,5 +132,13 @@
     },
     "ACL_RULE_VALID_TCP_FLAGS": {
         "desc": "Configure ACL_RULE with valid TCP_FLAGS."
+    },
+    "ACL_RULE_WRONG_BTH_OPCODE": {
+        "desc": "Configure invalid BTH_OPCODE in decimal format.",
+        "eStrKey" : "Pattern"
+    },
+    "ACL_RULE_WRONG_AETH_SYNDROME": {
+        "desc": "Configure invalid AETH_SYNDROME in decimal format.",
+        "eStrKey" : "Pattern"
     }
 }

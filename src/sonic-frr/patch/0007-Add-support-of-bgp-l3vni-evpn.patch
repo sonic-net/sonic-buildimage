@@ -1,39 +1,40 @@
-From 74ee34e4990dbd168b7b8072894eb0cf8927f9d1 Mon Sep 17 00:00:00 2001
-From: Kishore Kunal <kishore.kunal@broadcom.com>
-Date: Fri, 15 Jan 2021 15:52:13 -0800
-Subject: [PATCH 7/8] This is temp patch till Prefix to ARP indirection is
- add in neighorch
+From 369bbb4d62aa47d5a6d5157ca6ea819c4cb80f15 Mon Sep 17 00:00:00 2001
+From: Stepan Blyschak <stepanb@nvidia.com>
+Date: Thu, 20 Oct 2022 13:19:31 +0000
+Subject: [PATCH 07/13] Added support of L3VNI EVPN
 
+This is temp patch till Prefix to ARP indirection is add in neighorch
+
+Signed-off-by: Kishore Kunal <kishore.kunal@broadcom.com>
+Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
 ---
- lib/nexthop.c             |  2 ++
- lib/nexthop.h             |  6 ++++++
- zebra/rt_netlink.c        |  2 +-
- zebra/zapi_msg.c          |  4 ++++
- zebra/zebra_dplane.c      |  1 +
- zebra/zebra_fpm_netlink.c | 20 ++++++++++++++++++++
- 6 files changed, 34 insertions(+), 1 deletion(-)
+ lib/nexthop.c        |  1 +
+ lib/nexthop.h        |  7 ++++++-
+ zebra/rt_netlink.c   | 15 ++++++++++++++-
+ zebra/zapi_msg.c     |  4 ++++
+ zebra/zebra_dplane.c |  2 +-
+ 5 files changed, 26 insertions(+), 3 deletions(-)
 
 diff --git a/lib/nexthop.c b/lib/nexthop.c
-index a1ce22e3b..6f3fe2a5f 100644
+index a1ce22e3b..10a87f072 100644
 --- a/lib/nexthop.c
 +++ b/lib/nexthop.c
-@@ -813,6 +813,8 @@ void nexthop_copy_no_recurse(struct nexthop *copy,
+@@ -813,6 +813,7 @@ void nexthop_copy_no_recurse(struct nexthop *copy,
  	memcpy(&copy->src, &nexthop->src, sizeof(nexthop->src));
  	memcpy(&copy->rmap_src, &nexthop->rmap_src, sizeof(nexthop->rmap_src));
  	copy->rparent = rparent;
 +	memcpy(&copy->nh_encap.encap_data.rmac, &nexthop->nh_encap.encap_data.rmac, ETH_ALEN);
-+
  	if (nexthop->nh_label)
  		nexthop_add_labels(copy, nexthop->nh_label_type,
  				   nexthop->nh_label->num_labels,
 diff --git a/lib/nexthop.h b/lib/nexthop.h
-index 320b46315..0f98dc3c2 100644
+index 320b46315..77eea3674 100644
 --- a/lib/nexthop.h
 +++ b/lib/nexthop.h
 @@ -66,6 +66,11 @@ enum nh_encap_type {
  /* Backup index value is limited */
  #define NEXTHOP_BACKUP_IDX_MAX 255
- 
+
 +struct vxlan_nh_encap {
 +	vni_t vni;
 +	struct ethaddr rmac;
@@ -42,27 +43,50 @@ index 320b46315..0f98dc3c2 100644
  /* Nexthop structure. */
  struct nexthop {
  	struct nexthop *next;
-@@ -136,6 +141,7 @@ struct nexthop {
+@@ -135,7 +140,7 @@ struct nexthop {
+ 	/* Encapsulation information. */
  	enum nh_encap_type nh_encap_type;
  	union {
- 		vni_t vni;
+-		vni_t vni;
 +		struct vxlan_nh_encap encap_data;
  	} nh_encap;
- 
+
  	/* SR-TE color used for matching SR-TE policies */
 diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
-index 24c01b7f5..5e0f4cd8f 100644
+index 03c84d6dc..a56a95276 100644
 --- a/zebra/rt_netlink.c
 +++ b/zebra/rt_netlink.c
-@@ -1856,7 +1856,7 @@ static int netlink_route_nexthop_encap(struct nlmsghdr *n, size_t nlen,
+@@ -1869,6 +1869,7 @@ static int netlink_route_nexthop_encap(struct nlmsghdr *n, size_t nlen,
+ 				       struct nexthop *nh)
+ {
+ 	struct rtattr *nest;
++	struct vxlan_nh_encap* encap_data;
+
+ 	switch (nh->nh_encap_type) {
+ 	case NET_VXLAN:
+@@ -1879,9 +1880,21 @@ static int netlink_route_nexthop_encap(struct nlmsghdr *n, size_t nlen,
+ 		if (!nest)
  			return false;
- 
+
++		encap_data = &nh->nh_encap.encap_data;
++
  		if (!nl_attr_put32(n, nlen, 0 /* VXLAN_VNI */,
 -				   nh->nh_encap.vni))
-+				   nh->nh_encap.encap_data.vni))
++				   encap_data->vni))
++			return false;
++
++		if (ZEBRA_DEBUG_KERNEL)
++			zlog_debug(
++				"%s: VNI:%d RMAC:%pEA", __func__, encap_data->vni,
++				&encap_data->rmac);
++
++		if (!nl_attr_put(n, nlen, 1 /* VXLAN_RMAC */,
++					&encap_data->rmac, sizeof(encap_data->rmac)))
  			return false;
++
  		nl_attr_nest_end(n, nest);
  		break;
+ 	}
 diff --git a/zebra/zapi_msg.c b/zebra/zapi_msg.c
 index 5cf7d815d..529cbb44b 100644
 --- a/zebra/zapi_msg.c
@@ -86,80 +110,18 @@ index 5cf7d815d..529cbb44b 100644
  				api_nh->vrf_id, &api_nh->rmac, &vtep_ip, p);
  		}
 diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
-index 656ebcf3b..8d125d77e 100644
+index 656ebcf3b..bd59df189 100644
 --- a/zebra/zebra_dplane.c
 +++ b/zebra/zebra_dplane.c
-@@ -2421,6 +2421,7 @@ int dplane_ctx_route_init(struct zebra_dplane_ctx *ctx, enum dplane_op_e op,
+@@ -2420,7 +2420,7 @@ int dplane_ctx_route_init(struct zebra_dplane_ctx *ctx, enum dplane_op_e op,
+ 		zl3vni = zl3vni_from_vrf(nexthop->vrf_id);
  		if (zl3vni && is_l3vni_oper_up(zl3vni)) {
  			nexthop->nh_encap_type = NET_VXLAN;
- 			nexthop->nh_encap.vni = zl3vni->vni;
+-			nexthop->nh_encap.vni = zl3vni->vni;
 +			nexthop->nh_encap.encap_data.vni = zl3vni->vni;
  		}
  	}
- 
-diff --git a/zebra/zebra_fpm_netlink.c b/zebra/zebra_fpm_netlink.c
-index aad0156b3..34be9fb39 100644
---- a/zebra/zebra_fpm_netlink.c
-+++ b/zebra/zebra_fpm_netlink.c
-@@ -95,10 +95,12 @@ static const char *fpm_nh_encap_type_to_str(enum fpm_nh_encap_type_t encap_type)
- 
- struct vxlan_encap_info_t {
- 	vni_t vni;
-+	struct ethaddr rmac;
- };
- 
- enum vxlan_encap_info_type_t {
- 	VXLAN_VNI = 0,
-+	VXLAN_RMAC = 1,
- };
- 
- struct fpm_nh_encap_info_t {
-@@ -234,6 +236,9 @@ static int netlink_route_info_add_nh(struct netlink_route_info *ri,
- 		}
- 
- 		nhi.encap_info.vxlan_encap.vni = vni;
-+		memcpy(&nhi.encap_info.vxlan_encap.rmac,
-+				&(nexthop->nh_encap.encap_data.rmac),
-+				ETH_ALEN);
- 	}
- 
- 	/*
-@@ -456,9 +461,16 @@ static int netlink_route_info_encode(struct netlink_route_info *ri,
- 			nl_attr_put16(&req->n, in_buf_len, RTA_ENCAP_TYPE,
- 				      encap);
- 			vxlan = &nhi->encap_info.vxlan_encap;
-+			char buf[ETHER_ADDR_STRLEN];
-+
-+			zfpm_debug(
-+				"%s: VNI:%d RMAC:%s", __func__, vxlan->vni,
-+				prefix_mac2str(&vxlan->rmac, buf, sizeof(buf)));
- 			nest = nl_attr_nest(&req->n, in_buf_len, RTA_ENCAP);
- 			nl_attr_put32(&req->n, in_buf_len, VXLAN_VNI,
- 				      vxlan->vni);
-+			nl_attr_put(&req->n, in_buf_len, VXLAN_RMAC,
-+				    &vxlan->rmac, sizeof(vxlan->rmac));
- 			nl_attr_nest_end(&req->n, nest);
- 			break;
- 		}
-@@ -494,10 +506,18 @@ static int netlink_route_info_encode(struct netlink_route_info *ri,
- 			nl_attr_put16(&req->n, in_buf_len, RTA_ENCAP_TYPE,
- 				      encap);
- 			vxlan = &nhi->encap_info.vxlan_encap;
-+			char rmac_buf[ETHER_ADDR_STRLEN];
-+
-+			zfpm_debug("%s: Multi VNI:%d RMAC:%s", __func__,
-+				   vxlan->vni,
-+				   prefix_mac2str(&vxlan->rmac, rmac_buf,
-+						  sizeof(rmac_buf)));
- 			inner_nest =
- 				nl_attr_nest(&req->n, in_buf_len, RTA_ENCAP);
- 			nl_attr_put32(&req->n, in_buf_len, VXLAN_VNI,
- 				      vxlan->vni);
-+			nl_attr_put(&req->n, in_buf_len, VXLAN_RMAC,
-+				    &vxlan->rmac, sizeof(vxlan->rmac));
- 			nl_attr_nest_end(&req->n, inner_nest);
- 			break;
- 		}
--- 
-2.12.2
+
+--
+2.30.2
 

@@ -1,0 +1,91 @@
+{
+    "SYSTEM_PORT_POSITIVE_CONFIG": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 100000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth4",
+                        "description": "Ethernet4",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet4",
+                        "speed": 100000
+                    }
+                ]
+            }
+        },
+        "sonic-system-port:sonic-system-port": {
+            "sonic-system-port:SYSTEM_PORT": {
+                "SYSTEM_PORT_LIST": [
+                    {
+                        "hostname": "host123",
+                        "asic_name": "asic0",
+                        "ifname": "Ethernet0",
+                        "core_index": "0",
+                        "core_port_index": "10",
+                        "num_voq": "8",
+                        "speed": "100000",
+                        "switch_id": "0",
+                        "system_port_id": "100"
+                    },
+                    {
+                        "hostname": "host123",
+                        "asic_name": "asic1",
+                        "ifname": "Ethernet4",
+                        "core_index": "1",
+                        "core_port_index": "20",
+                        "num_voq": "8",
+                        "speed": "100000",
+                        "switch_id": "1",
+                        "system_port_id": "200"
+                    }
+                ]
+            }
+        }
+    },
+    "SYSTEM_PORT_WRONG_SPEED_PATTERN": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 100000
+                    }
+                ]
+            }
+        },
+        "sonic-system-port:sonic-system-port": {
+            "sonic-system-port:SYSTEM_PORT": {
+                "SYSTEM_PORT_LIST": [
+                    {
+                        "hostname": "host456",
+                        "asic_name": "asic0",
+                        "ifname": "Ethernet0",
+                        "core_index": "1",
+                        "core_port_index": "20",
+                        "num_voq": "8",
+                        "speed": "900000",
+                        "switch_id": "1",
+                        "system_port_id": "200"
+                    }
+                ]
+            }
+        }
+    }
+
+}

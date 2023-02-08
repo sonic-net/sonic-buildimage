@@ -1,0 +1,95 @@
+module sonic-system-port {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-system-port";
+    prefix system-port;
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "SYSTEM_PORT YANG Module for SONiC OS";
+
+    revision 2022-11-10 {
+        description "First Revision";
+    }
+
+    container sonic-system-port {
+
+        container SYSTEM_PORT {
+
+            description "SYSTEM_PORT table of config_db.json";
+
+            list SYSTEM_PORT_LIST {
+
+                key "hostname asic_name ifname";
+
+                leaf hostname {
+                    type stypes:hostname;
+                }
+
+                leaf asic_name {
+                    type string {
+                        pattern "[Aa]sic[0-4]";
+                    }
+                }
+
+                leaf ifname {
+                    type union {
+                        type leafref {
+                            path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
+                        }
+                        type string {
+                            pattern "Cpu0";
+                        }
+                    }
+                }
+
+                leaf core_index {
+                    type uint8 {
+                        range 0..7;
+                    }
+                    description "Hardware core index a port is affiliated with.";
+                }
+
+                leaf core_port_index {
+                    type uint16;
+                    description "Local port index index to an ASIC core.";
+                }
+
+                leaf num_voq {
+                    type uint8 {
+                        range 1..8;
+                    }
+                    description "Number of VoQs associated with a port.";
+                }
+
+                leaf speed {
+                    type uint32 {
+                        range 1..800000;
+                    }
+                    description "Port speed in Mbps.";
+                }
+
+                leaf switch_id {
+                    type uint16;
+                    description "On a VoQ switch, the global ASIC identifier.";
+                }
+
+                leaf system_port_id {
+                    type uint32;
+                    description "On a VoQ switch, the global port identifier.";
+                }
+            }
+            /* end of list SYSTEM_PORT_LIST */
+        }
+        /* end of container SYSTEM_PORT */
+    }
+    /* end of container sonic-system-port */
+}
+/* end of module sonic-system-port */

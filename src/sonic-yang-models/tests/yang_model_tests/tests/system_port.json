@@ -1,0 +1,9 @@
+{
+    "SYSTEM_PORT_POSITIVE_CONFIG": {
+        "desc": "Configure SYSTEM_PORT positive config."
+    },
+    "SYSTEM_PORT_WRONG_SPEED_PATTERN": {
+        "desc": "Configure SYSTEM_PORT wrong speed.",
+        "eStr": ["pattern", "does not satisfy"]
+    }
+}

@@ -250,23 +250,17 @@ class PddfPsu(PsuBase):
         return self.get_status()
 
     def set_status_led(self, color):
-        index = str(self.psu_index-1)
+        if 'psu_led_color' in self.plugin_data['PSU']:
+            led_color_map = self.plugin_data['PSU']['psu_led_color']['colmap']
+            if color in led_color_map:
+                # change the color properly
+                new_color = led_color_map[color]
+                color = new_color
         led_device_name = "PSU{}".format(self.psu_index) + "_LED"
-
-        result, msg = self.pddf_obj.is_supported_sysled_state(led_device_name, color)
-        if result == False:
-            print(msg)
-            return (False)
-
-        device_name = self.pddf_obj.data[led_device_name]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', index, self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('color', color, self.pddf_obj.get_led_cur_state_path())
-        self.pddf_obj.create_attr('dev_ops', 'set_status',  self.pddf_obj.get_led_path())
-        return (True)
+        result, msg = self.pddf_obj.set_system_led_color(led_device_name, color)
+        return (result)
 
     def get_status_led(self):
-        index = str(self.psu_index-1)
         psu_led_device = "PSU{}_LED".format(self.psu_index)
         if psu_led_device not in self.pddf_obj.data.keys():
             # Implement a generic status_led color scheme
@@ -275,11 +269,7 @@ class PddfPsu(PsuBase):
             else:
                 return self.STATUS_LED_COLOR_OFF
 
-        device_name = self.pddf_obj.data[psu_led_device]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', index, self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('dev_ops', 'get_status',  self.pddf_obj.get_led_path())
-        color = self.pddf_obj.get_led_color()
+        result, color = self.pddf_obj.get_system_led_color(psu_led_device)
         return (color)
 
     def get_temperature(self):

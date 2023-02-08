@@ -104,7 +104,23 @@ static int get_target_lines(char* unit_file, char* target_lines[]) {
 static bool is_multi_instance_service(char *service_name){
     int i;
     for(i=0; i < num_multi_inst; i++){
-        if (strstr(service_name, multi_instance_services[i]) != NULL) {
+        /*
+         * The service name may contain @.service or .service. Remove these
+         * postfixes and extract service name. Compare service name for absolute
+         * match in multi_instance_services[].
+         * This is to prevent services like database-chassis and systemd-timesyncd marked
+         * as multi instance services as they contain strings 'database' and 'syncd' respectively
+         * which are multi instance services in multi_instance_services[].
+         */
+        char *saveptr;
+        char *token = strtok_r(service_name, "@", &saveptr);
+        if (token) {
+            if (strstr(token, ".service") != NULL) {
+                /* If we are here, service_name did not have '@' delimiter but contains '.service' */
+                token = strtok_r(service_name, ".", &saveptr);
+            }
+        }
+        if (strncmp(service_name, multi_instance_services[i], strlen(service_name)) == 0) {
             return true;
         }
     }

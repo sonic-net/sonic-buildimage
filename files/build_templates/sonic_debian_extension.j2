@@ -566,6 +566,11 @@ echo "topology.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $IMAGE_CONFIGS/topology/topology.sh $FILESYSTEM_ROOT/usr/bin
 {%- endif %}
 
+# Copy platform topology configuration scripts
+sudo cp $IMAGE_CONFIGS/config-topology/config-topology.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+echo "config-topology.service" | sudo tee -a $GENERATED_SERVICE_FILE
+sudo cp $IMAGE_CONFIGS/config-topology/config-topology.sh $FILESYSTEM_ROOT/usr/bin
+
 # Copy updategraph script and service file
 j2 files/build_templates/updategraph.service.j2 | sudo tee $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/updategraph.service
 sudo cp $IMAGE_CONFIGS/updategraph/updategraph $FILESYSTEM_ROOT/usr/bin/
