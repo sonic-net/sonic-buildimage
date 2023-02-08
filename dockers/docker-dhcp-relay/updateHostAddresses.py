@@ -29,11 +29,26 @@ class DnsmasqStaticHostMonitor(object):
 
         # Build a lookup table from port to port index. Also determine the
         # "base" port index.
-        port_table = Table(self.appl_db, APP_PORT_TABLE_NAME)
-        port_keys = port_table.getKeys()
         self.port_index_lookup = {}
         self.min_port_index = None
+        while True:
+            if self.build_lookup_table():
+                break
+            else:
+                syslog.syslog(syslog.LOG_ERR, "System init is not done, wait 10 secs.")
+                time.sleep(10)
+
+        syslog.syslog(syslog.LOG_INFO, "DnsmasqStaticHostMonitor init success.")
+
+    def build_lookup_table(self):
+        port_table = Table(self.appl_db, APP_PORT_TABLE_NAME)
+        port_keys = port_table.getKeys()
+        if "PortInitDone" not in port_keys or "PortConfigDone" not in port_keys:
+            return False
+
         for port in port_keys:
+            if port in ["PortInitDone", "PortConfigDone"]:
+                continue
             # Get the index that corresponds to this ethernet port
             (status, port_index) = port_table.hget(port, 'index')
             if not status:
@@ -43,6 +58,8 @@ class DnsmasqStaticHostMonitor(object):
             self.port_index_lookup[port] = port_index
             if self.min_port_index is None or port_index < self.min_port_index:
                 self.min_port_index = port_index
+
+        return True
 
     def new_host_update(self, key, op, data):
         self.changes_since_last_update = True
