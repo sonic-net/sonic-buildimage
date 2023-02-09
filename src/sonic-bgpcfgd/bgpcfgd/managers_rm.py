@@ -1,8 +1,9 @@
 from .manager import Manager
+from swsscommon import swsscommon
 from .log import log_err, log_debug
 
 ROUTE_MAPS = ["FROM_SDN_SLB_ROUTES"]
-
+FROM_SDN_SLB_DEPLOYMENT_ID = '2'
 
 class RouteMapMgr(Manager):
     """This class add route-map when BGP_PROFILE_TABLE in APPL_DB is updated"""
@@ -71,8 +72,28 @@ class RouteMapMgr(Manager):
             return False
         return True
 
+    def __read_asn(self):
+        if not 'deployment_id_asn_map' in self.constants:
+            log_err("BGPRouteMapMgr:: 'deployment_id_asn_map' key is not found in constants")
+            return None
+        if FROM_SDN_SLB_DEPLOYMENT_ID in self.constants['deployment_id_asn_map']:
+            return self.constants['deployment_id_asn_map'][FROM_SDN_SLB_DEPLOYMENT_ID]
+        log_err("BGPRouteMapMgr:: deployment id %s is not found in constants" % (FROM_SDN_SLB_DEPLOYMENT_ID))
+        return None
+
     def __update_rm(self, rm, data):
-        cmds = ["route-map %s permit 100" % ("%s_RM" % rm), " set community %s" % data["community_id"]]
-        log_debug("BGPRouteMapMgr:: update route-map %s community %s" % ("%s_RM" % rm, data["community_id"]))
-        self.cfg_mgr.push_list(cmds)
+        cmds = []
+        if rm == "FROM_SDN_SLB_ROUTES":
+            cmds.append("route-map %s permit 100" % ("%s_RM" % rm))
+            bgp_asn = self.__read_asn()
+            if bgp_asn is None or bgp_asn is '':
+                log_debug("BGPRouteMapMgr:: update route-map %s, but asn is not found in constants" % ("%s_RM" % rm))
+                return
+            cmds.append(" set as-path prepend %s %s" % (bgp_asn, bgp_asn))
+            cmds.append(" set community %s" % data["community_id"])
+            cmds.append(" set origin incomplete")
+            log_debug("BGPRouteMapMgr:: update route-map %s community %s origin incomplete as-path prepend %s %s" % \
+                      ("%s_RM" % rm, data["community_id"], bgp_asn, bgp_asn))
+        if cmds:
+            self.cfg_mgr.push_list(cmds)
         log_debug("BGPRouteMapMgr::Done")

@@ -21,22 +21,6 @@
                 "controllable": false
             },
             {
-                "name": "Center back",
-                "controllable": false
-            },
-            {
-                "name": "Fap0 core0",
-                "controllable": false
-            },
-            {
-                "name": "Fap0 core1",
-                "controllable": false
-            },
-            {
-                "name": "PCIE",
-                "controllable": false
-            },
-            {
                 "name": "Cpu SBTSI",
                 "controllable": false
             }
@@ -149,42 +133,6 @@
             },
             {
                 "name": "osfp36"
-            },
-            {
-                "name": "osfp37"
-            },
-            {
-                "name": "osfp38"
-            },
-            {
-                "name": "osfp39"
-            },
-            {
-                "name": "osfp40"
-            },
-            {
-                "name": "osfp41"
-            },
-            {
-                "name": "osfp42"
-            },
-            {
-                "name": "osfp43"
-            },
-            {
-                "name": "osfp44"
-            },
-            {
-                "name": "osfp45"
-            },
-            {
-                "name": "osfp46"
-            },
-            {
-                "name": "osfp47"
-            },
-            {
-                "name": "osfp48"
             }
         ]
     },
