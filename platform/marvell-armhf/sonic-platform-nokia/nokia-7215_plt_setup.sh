@@ -25,7 +25,6 @@ main()
     fw_uboot_env_cfg
     echo "Nokia-IXS7215: /dev/mtd0 FW_ENV_DEFAULT"
 
-    python /etc/entropy.py &
     /bin/sh /etc/inband_mgmt.sh
 }
 
