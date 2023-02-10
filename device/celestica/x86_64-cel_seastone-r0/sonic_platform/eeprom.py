@@ -131,6 +131,9 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
     def get_eeprom(self):
         return self._valid_tlv(self._eeprom)
 
+    def get_product_name(self):
+        return self._eeprom.get('0x21', NULL)
+
     def get_pn(self):
         return self._eeprom.get('0x22', NULL)
 
