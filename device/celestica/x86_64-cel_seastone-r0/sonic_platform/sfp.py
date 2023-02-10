@@ -2202,3 +2202,16 @@ class Sfp(SfpBase):
             A boolean value, True if replaceable
         """
         return True
+
+    def get_error_description(self):
+        """
+        Retrives the error descriptions of the SFP module
+        Returns:
+            String that represents the current error descriptions of vendor specific errors
+            In case there are multiple errors, they should be joined by '|',
+            like: "Bad EEPROM|Unsupported cable"
+        """
+        if not self.get_presence():
+            return self.SFP_STATUS_UNPLUGGED
+
+        return self.SFP_STATUS_OK

@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "Seastone-DX010": {
+        "DX010": {
             "component": {
                 "CPLD1": {},
                 "CPLD2": {},
