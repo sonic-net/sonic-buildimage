@@ -35,7 +35,7 @@ class DnsmasqStaticHostMonitor(object):
             if self.build_lookup_table():
                 break
             else:
-                syslog.syslog(syslog.LOG_ERR, "System init is not done, wait 10 secs.")
+                syslog.syslog(syslog.LOG_WARNING, "System init is not done, wait 10 secs.")
                 time.sleep(10)
 
         syslog.syslog(syslog.LOG_INFO, "DnsmasqStaticHostMonitor init success.")
