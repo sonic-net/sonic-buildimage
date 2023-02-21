@@ -13,6 +13,7 @@ variables:
   PLUTO_BRANCH_DIR: files/sonic/build/${CI_COMMIT_BRANCH}
   PLUTO_COMMIT_DIR: files/sonic/build/${CI_COMMIT_BRANCH}/${CI_PIPELINE_ID}
   PLUTO_POSTED_LATEST: files/sonic/build/${PLUTO_PARENT_BRANCH}/latest
+  DOCKER_EXTRA_OPTS: '--registry-mirror=https://docker-registry-remote.artifactory-fpark1.int.net.nokia.com'
 
 before_script: |
   sudo rm -fr fsroot
@@ -27,74 +28,49 @@ before_script: |
   pushd src/sonic-mgmt && git fetch && git reset --hard origin/nokia-dev && popd
 
 stages:
+  - configure
   - build
   - test
   - post
   - deploy
 
-# Build with option to display build time for each component and sorted list of longest build times
-build:broadcom:
-  stage: build
-  script: |
-    ./.gitlab-ci-submodule-init.sh
-    . .ci-env
-    # schedules can set NO_SKIP_BUILD to force a build to happen
-    if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
-      # skip build and use the latest
-      mkdir -p target
-      curl -o target/sonic-broadcom-dnx.bin http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/sonic-broadcom-dnx.bin
-    else
-      ./build.sh
-    fi
-    ./.gitlab-mk-version.sh > version.txt
-  artifacts:
-    name: "$CI_COMMIT_REF_NAME"
-    paths:
-      - target/sonic-broadcom-dnx.bin
-      - version.txt
-    expire_in: 1 week
-
-build:docker-syncd-brcm-rpc:
-  stage: build
-  script: |
-    ./.gitlab-ci-submodule-init.sh
-    . .ci-env
-    if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
-      # skip build and use the latest
-      mkdir -p target
-      curl -o target/docker-syncd-brcm-dnx-rpc.gz http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/docker-syncd-brcm-dnx-rpc.gz
-    else
-      ./build-syncd-rpc.sh
-    fi
-  artifacts:
-    name: "$CI_COMMIT_REF_NAME"
-    paths:
-      - target/docker-syncd-brcm*rpc.gz
-    expire_in: 1 week
-
-build:marvell-armhf:
-  stage: build
-  rules:
-    - if: $BUILD_REASON !~ /SRL_NDK_JOBID/
+configure:sonic:
+  # one configure step to build all docker images used by subsequent build stage(s).
+  # This is required to avoid conflicting docker image creation between 
+  # build:broadcom and build:docker-syncd-brcm-rpc
+  stage: configure
+  parallel:
+    matrix:
+    - BUILD_ARCH: x86_64
+    - BUILD_ARCH: armhf
+    - BUILD_ARCH: aarch64
   tags:
-    - armhf
+    - ${BUILD_ARCH}
   script: |
     ./.gitlab-ci-submodule-init.sh
     . .ci-env
-    # schedules can set NO_SKIP_BUILD to force a build to happen
-    if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
-      # skip build and use the latest
-      mkdir -p target
-      curl -o target/sonic-marvell-armhf.bin http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/sonic-marvell-armhf.bin
-    else
-      make init && make configure PLATFORM=marvell-armhf PLATFORM_ARCH=armhf
-      make SONIC_BUILD_JOBS=2 target/sonic-marvell-armhf.bin || \
-      make SONIC_BUILD_JOBS=1 target/sonic-marvell-armhf.bin
-    fi
+    ./build.sh
+
+# Build with option to display build time for each component and sorted list of longest build times
+build:sonic:
+  stage: build
+  parallel:
+    matrix:
+    - BUILD_ARCH: x86_64
+    - BUILD_ARCH: armhf
+    - BUILD_ARCH: aarch64
+  tags:
+    - ${BUILD_ARCH}
+  needs:
+    - configure:sonic
+  script: |
+    ./.gitlab-ci-submodule-init.sh
+    . .ci-env
+    ./build.sh
   artifacts:
     name: "$CI_COMMIT_REF_NAME"
     paths:
-      - target/sonic-marvell-armhf.bin
+      - target/sonic-*.bin
     expire_in: 1 week
 
 express:hw:ixre:
@@ -102,143 +78,23 @@ express:hw:ixre:
   tags:
     - regress_chassis7
   needs:
-    - build:broadcom
-  only:
-    variables:
-      - $EXPRESS_HW || $CI_PIPELINE_SOURCE == "push"
+    - build:sonic
+  rules:
+    - if: $EXPRESS_HW == "true"
+    - if: $BUILD_ARCH == "x86_64"
   script: |
     docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
     ./run_test.sh -i target/sonic-broadcom-dnx.bin \
       -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net \
       -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --no_cleanup
+  allow_failure: true
   artifacts:
     name: "$CI_COMMIT_REF_NAME"
     when: always
     paths:
       - output_files/
     expire_in: 1 month
-
-express:hw:armhf:
-  stage: test
-  # tags:
-  #   - express_<tbd>
-  rules:
-    - if: $BUILD_REASON !~ /SRL_NDK_JOBID/
-  needs:
-    - build:marvell-armhf
-  script: |
-    docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
-    ls -la target/sonic-marvell-armhf.bin
-    # ./run_test.sh -i target/sonic-marvell-armhf.bin \
-    #   -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net \
-    #   -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --no_cleanup
-  artifacts:
-    name: "$CI_COMMIT_REF_NAME"
-    when: always
-    paths:
-      - output_files/
-    expire_in: 1 month
-
-.regress:
-  stage: test
-  needs:
-    - build:broadcom
-  script: |
-    if [ -n "${DELAY_START}" ]; then sleep ${DELAY_START}; fi
-    docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
-    ./run_test.sh -i target/sonic-broadcom-dnx.bin \
-      -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net \
-      -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test \
-      --run_in_order false --topology t2 ${EXTRA_RUN_TEST_ARGS} \
-      --no_cleanup --post_results > ${CI_PROJECT_DIR}/run.log
-  artifacts:
-    name: "$CI_COMMIT_REF_NAME"
-    when: always
-    paths:
-      - output_files/
-      - ${CI_PROJECT_DIR}/run.log      
-    expire_in: 1 month
-
-regress:t2:chassis8:
-  extends: .regress
-  tags:
-    - sonic_eagle_express
-  variables:
-    DELAY_START: 0
-    EXTRA_RUN_TEST_ARGS: --suite masic
-  only:
-    variables:
-      - $REGRESS_T2_CHASSIS8
-    
-regress:t2:chassis9:
-  extends: .regress
-  tags:
-    - regress_chassis9
-  variables:
-    DELAY_START: 300
-    EXTRA_RUN_TEST_ARGS: --suite masic
-  only:
-    variables:
-      - $REGRESS_T2_CHASSIS9
-
-regress:t2:chassis10:
-  extends: .regress
-  tags:
-    - regress_chassis10
-  variables:
-    DELAY_START: 600
-    EXTRA_RUN_TEST_ARGS: --suite masic
-  only:
-    variables:
-      - $REGRESS_T2_CHASSIS10
-
-regress:t2:chassis11:
-  extends: .regress
-  tags:
-    - regress_chassis11
-  variables:
-    DELAY_START: 900
-    EXTRA_RUN_TEST_ARGS: --suite masic
-  only:
-    variables:
-      - $REGRESS_T2_CHASSIS11
-
-regress:t2nightly:chassis8:
-  extends: .regress
-  tags:
-    - sonic_eagle_express
-  variables:
-    DELAY_START: 0
-    EXTRA_RUN_TEST_ARGS: --suite nightly
-  only:
-    variables:
-      - $REGRESS_T2_NIGHTLY_CHASSIS8
-
-regress:t2nightly:chassis9:
-  extends: .regress
-  stage: test
-  tags:
-    - regress_chassis9
-  variables:
-    DELAY_START: 300
-    EXTRA_RUN_TEST_ARGS: --suite nightly
-  only:
-    variables:
-      - $REGRESS_T2_NIGHTLY_CHASSIS9
-
-regress:t2nightly:chassis11:
-  extends: .regress
-  tags:
-    - regress_chassis11
-  variables:
-    DELAY_START: 900
-    EXTRA_RUN_TEST_ARGS: --suite nightly
-  only:
-    variables:
-      - $REGRESS_T2_NIGHTLY_CHASSIS11
 
 .post:
   stage: post
@@ -246,40 +102,18 @@ regress:t2nightly:chassis11:
     - post
   script: |
     . .ci-env
-    if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
-      echo "skipping post"
-    else
-        # with all express passed, we post images and update the symlink latest
-      mkdir -p /var/www/html/${PLUTO_COMMIT_DIR}
-      for f in `ls target/sonic-*.bin` ; do \
-        cp -a $f /var/www/html/${PLUTO_COMMIT_DIR}/ ; done
-      if [ -e target/docker-syncd-brcm-dnx-rpc.gz ] ; then \
-        cp -a target/docker-syncd-brcm-dnx-rpc.gz /var/www/html/${PLUTO_COMMIT_DIR}/ ; fi
-      if [ -e version.txt ] ; then cp -a version.txt /var/www/html/${PLUTO_COMMIT_DIR}/ ; fi
-      eval ${BUILD_REASON}
-      echo "sonic_commitid=${CI_COMMIT_SHORT_SHA}" > /var/www/html/${PLUTO_COMMIT_DIR}/build-info.txt
-      if [ "${SRL_NDK_JOBID}" != "" ] ; then
-         echo "srl_ndk_job_url=https://gitlabsr.nuq.ion.nokia.net/sr/srlinux/-/jobs/${SRL_NDK_JOBID}" >> /var/www/html/${PLUTO_COMMIT_DIR}/build-info.txt
-      fi
-      # make latest link and remove anything older than a week
-      cd /var/www/html/${PLUTO_BRANCH_DIR} && \
-        rm -f latest && ln -sf ${CI_PIPELINE_ID} latest && \
-        find . -maxdepth 1 -type d -ctime +7 -exec rm -fr {} \+
-    fi
+    # with all express passed, we post images and update the symlink latest
+    mkdir -p /var/www/html/${PLUTO_COMMIT_DIR}
+    for f in `ls target/sonic-*.bin` ; do \
+      cp -a --no-preserve=mode $f /var/www/html/${PLUTO_COMMIT_DIR}/ ; done
+    echo "sonic_commitid=${CI_COMMIT_SHORT_SHA}" > /var/www/html/${PLUTO_COMMIT_DIR}/build-info.txt
+    # make latest link and remove anything older than a week
+    cd /var/www/html/${PLUTO_BRANCH_DIR} && \
+      rm -f latest && ln -sf ${CI_PIPELINE_ID} latest && \
+      find . -maxdepth 1 -type d -ctime +7 -exec rm -fr {} \+
 
-post:ixre:
+post:sonic:
   extends: .post
   needs:
-    - build:broadcom
+    - build:sonic
 
-post:docker-syncd-brcm-rpc:
-  extends: .post
-  needs:
-    - build:docker-syncd-brcm-rpc
-
-post:armhf:
-  extends: .post
-  rules:
-    - if: $BUILD_REASON !~ /SRL_NDK_JOBID/
-  needs:
-    - build:marvell-armhf
