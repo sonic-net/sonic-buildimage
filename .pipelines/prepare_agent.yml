@@ -10,6 +10,8 @@ steps:
       sudo apt update
 
       sudo setfacl -R -b /mnt
+      # clean the 1es acl config if /data/work used as the default workspace
+      [ -d /data/work ] && sudo setfacl -R -b /data/work
       if [[ $PLATFORM_ARCH == arm* ]];then
         echo arm agent, skip.
         exit 0
