@@ -2,7 +2,7 @@
 ! template: bgpd/templates/msft.general/v6.spine.rh/policy.conf.j2
 !
 bgp community-list standard LEAK_COMMUNITY permit 8075:10400
-bgp community-list standard INREGION_LEAK_COMMUNITY permit 8075:54002
+bgp community-list standard INREGION_LEAK_COMMUNITY permit 8075:8848
 bgp community-list standard FABRIC_INFRA_COMMUNITY permit 8075:316
 !
 bgp as-path access-list WAN_ASNS permit _8075_
