@@ -62,8 +62,8 @@ diff --git a/drivers/hwmon/pmbus/Makefile b/drivers/hwmon/pmbus/Makefile
 index edc7c315c..df9119c0d 100644
 --- a/drivers/hwmon/pmbus/Makefile
 +++ b/drivers/hwmon/pmbus/Makefile
-@@ -24,3 +24,4 @@ obj-$(CONFIG_SENSORS_UCD9200)	+= ucd9200.o
- obj-$(CONFIG_SENSORS_XDPE122)	+= xdpe12284.o
+@@ -36,3 +36,4 @@ obj-$(CONFIG_SENSORS_UCD9200)	+= ucd9200.o
+ obj-$(CONFIG_SENSORS_XDPE152)	+= xdpe152c4.o
  obj-$(CONFIG_SENSORS_ZL6100)	+= zl6100.o
  obj-$(CONFIG_SENSORS_DPS1900)	+= dps1900.o
 +obj-$(CONFIG_SENSORS_CISCO_N2200) += cisco_n2200.o
