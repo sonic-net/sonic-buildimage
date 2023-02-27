@@ -13,6 +13,11 @@ resources:
     type: git
     name: One/Networking-acs-buildimage
     ref: internal
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    ref: master
+    endpoint: sonic-net
 
 name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
 
