@@ -63,6 +63,9 @@ done
 [[ -f /var/run/resolvconf/interface/eth0.dhclient ]] && rm -f /var/run/resolvconf/interface/eth0.dhclient
 [[ -f /var/run/resolvconf/interface/eth0.ip6.dhclient ]] && rm -f /var/run/resolvconf/interface/eth0.ip6.dhclient
 
+# Do a manual resolvconf update to get our static DNS server configuration applied
+resolvconf -u
+
 # Read sysctl conf files again
 sysctl -p /etc/sysctl.d/90-dhcp6-systcl.conf
 
