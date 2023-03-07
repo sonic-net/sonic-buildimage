@@ -38,7 +38,7 @@ stages:
           docker_syncd_rpc_image: yes
           swi_image: yes
       - name: mellanox
-         variables:
+        variables:
           docker_syncd_rpc_image: yes
           dbg_image: yes
           syncd_rpc_image: yes
