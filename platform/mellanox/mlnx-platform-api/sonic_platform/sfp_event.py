@@ -332,11 +332,9 @@ class sfp_event:
         pkt = new_uint8_t_arr(pkt_size)
         recv_info_p = new_sx_receive_info_t_p()
         pmpe_t = sx_event_pmpe_t()
-        port_attributes_list = new_sx_port_attributes_t_arr(64)
         port_cnt_p = new_uint32_t_p()
-        uint32_t_p_assign(port_cnt_p,64)
+        uint32_t_p_assign(port_cnt_p, 0)
         label_port_list = []
-        label_port = None
         module_state = 0
 
         rc = sx_lib_host_ifc_recv(fd_p, pkt, pkt_size_p, recv_info_p)
@@ -352,31 +350,44 @@ class sfp_event:
             module_state = pmpe_t.module_state
             error_type = pmpe_t.error_type
             module_id = pmpe_t.module_id
-            slot_id = pmpe_t.slot_id # For non-modular chassis, it should return 0
+            slot_id = pmpe_t.slot_id  # For non-modular chassis, it should return 0
 
             if module_state == SDK_SFP_STATE_ERR:
                 logger.log_error("Receive PMPE error event on module {}: status {} error type {}".format(module_id, module_state, error_type))
             elif module_state == SDK_SFP_STATE_DIS:
-                logger.log_info("Receive PMPE disable event on module {}: status {}".format(module_id, module_state))
+                logger.log_notice("Receive PMPE disable event on module {}: status {}".format(module_id, module_state))
             elif module_state == SDK_SFP_STATE_IN or module_state == SDK_SFP_STATE_OUT:
-                logger.log_info("Receive PMPE plug in/out event on module {}: status {}".format(module_id, module_state))
+                logger.log_notice("Receive PMPE plug in/out event on module {}: status {}".format(module_id, module_state))
             elif module_state == SDK_SFP_STATE_UNKNOWN:
                 unknown = True
             else:
                 logger.log_error("Receive PMPE unknown event on module {}: status {}".format(module_id, module_state))
 
-            for i in range(port_list_size):
-                logical_port = sx_port_log_id_t_arr_getitem(logical_port_list, i)
-                rc = sx_api_port_device_get(self.handle, 1 , 0, port_attributes_list,  port_cnt_p)
+            # Call sx_api_port_device_get with port_cnt_p=0, SDK will return the logical port number
+            rc = sx_api_port_device_get(self.handle, 1, 0, None,  port_cnt_p)
+            if rc != SX_STATUS_SUCCESS:
+                logger.log_error("Failed to get logical port number")
+                status = False
+            else:
                 port_cnt = uint32_t_p_value(port_cnt_p)
-                for i in range(port_cnt):
-                    port_attributes = sx_port_attributes_t_arr_getitem(port_attributes_list,i)
-                    if port_attributes.log_port == logical_port:
-                        label_port = slot_id * DeviceDataManager.get_linecard_max_port_count() + port_attributes.port_mapping.module_port
-                        break
+                port_attributes_list = new_sx_port_attributes_t_arr(port_cnt)
+                rc = sx_api_port_device_get(self.handle, 1, 0, port_attributes_list,  port_cnt_p)
+                if rc != SX_STATUS_SUCCESS:
+                    logger.log_error("Failed to get logical port attributes")
+                    status = False
+                else:
+                    for i in range(port_list_size):
+                        label_port = None
+                        logical_port = sx_port_log_id_t_arr_getitem(logical_port_list, i)
+                        for j in range(port_cnt):
+                            port_attributes = sx_port_attributes_t_arr_getitem(port_attributes_list,j)
+                            if port_attributes.log_port == logical_port:
+                                label_port = slot_id * DeviceDataManager.get_linecard_max_port_count() + port_attributes.port_mapping.module_port
+                                break
 
-                if label_port is not None:
-                    label_port_list.append(label_port)
+                        if label_port is not None:
+                            label_port_list.append(label_port)
+                delete_sx_port_attributes_t_arr(port_attributes_list)
 
             if unknown:
                 SFP_ports_with_unknown_event = set(label_port_list) - self.RJ45_port_set
@@ -389,7 +400,9 @@ class sfp_event:
         delete_uint32_t_p(pkt_size_p)
         delete_uint8_t_arr(pkt)
         delete_sx_receive_info_t_p(recv_info_p)
-        delete_sx_port_attributes_t_arr(port_attributes_list)
         delete_uint32_t_p(port_cnt_p)
+
+        if not label_port_list:
+            logger.log_error('Dropping PMPE event due to label port not found')
 
         return status, label_port_list, module_state, error_type

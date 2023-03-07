@@ -341,3 +341,4 @@ sai_mdio_access_clause22
 cmic_dma_abort_in_cold_boot
 hybrid_pfc_deadlock_enable
 sai_pfc_dlr_init_capability
+appl_param_nof_ports_per_modid

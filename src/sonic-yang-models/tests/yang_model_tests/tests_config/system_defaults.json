@@ -6,6 +6,10 @@
                     {
                         "name": "tunnel_qos_remap",
                         "status": "enabled"
+                    },
+                    {
+                        "name": "mux_tunnel_egress_acl",
+                        "status": "enabled"
                     }
                 ]
             }
@@ -17,6 +21,10 @@
                 "SYSTEM_DEFAULTS_LIST": [
                     {
                         "name": "tunnel_qos_remap",
+                        "status": "invalid_status"
+                    },
+                    {
+                        "name": "mux_tunnel_egress_acl",
                         "status": "invalid_status"
                     }
                 ]

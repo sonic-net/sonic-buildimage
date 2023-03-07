@@ -72,10 +72,6 @@
     "MIRROR_ERSPAN_ENTRY_VALID_SRC_PORTCHANNEL": {
         "desc": "Configuring ERSPAN entry with valid source portchannel"
     },
-    "MIRROR_ERSPAN_ENTRY_INVALID_SRC_PORT": {
-        "desc": "Configuring ERSPAN entry with invalid source port",
-        "eStrKey" : "InvalidValue"
-    },
     "MIRROR_SPAN_ENTRY_WITH_VALID_VALUES": {
         "desc": "Configuring SPAN entry with valid source and destination ports"
     },
@@ -89,10 +85,6 @@
     },
     "MIRROR_SPAN_ENTRY_VALID_DST_PORT_CPU": {
         "desc": "Configuring SPAN entry with valid destination port CPU"
-    },
-    "MIRROR_SPAN_ENTRY_INVALID_SRC_PORT": {
-        "desc": "Configuring SPAN entry with invalid destination ports",
-        "eStrKey" : "InvalidValue"
     },
     "MIRROR_SPAN_ENTRY_INVALID_DIRECTION": {
         "desc": "Configuring SPAN entry with invalid direction",

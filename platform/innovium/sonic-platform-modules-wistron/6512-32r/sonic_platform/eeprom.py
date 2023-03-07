@@ -41,12 +41,19 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
         for line in lines:
             try:
                 match = re.search(
-                    '(0x[0-9a-fA-F]{2})([\s]+[\S]+[\s]+)([\S]+)', line)
-                if match is not None:
+                    '(0x[0-9a-fA-F]{2})([\s]+[\S]+[\s]+)([\S]+[\s]+[\S]+)', line)
+                if match is not None and match.group(1) == '0x25':
                     idx = match.group(1)
                     value = match.group(3).rstrip('\0')
+                    _eeprom_info_dict[idx] = value
+                else:
+                    match = re.search(
+                        '(0x[0-9a-fA-F]{2})([\s]+[\S]+[\s]+)([\S]+)', line)
+                    if match is not None:
+                        idx = match.group(1)
+                        value = match.group(3).rstrip('\0')
+                        _eeprom_info_dict[idx] = value
 
-                _eeprom_info_dict[idx] = value
             except BaseException:
                 pass
         return _eeprom_info_dict
@@ -70,7 +77,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
         if not os.path.exists(CACHE_ROOT):
             try:
                 os.makedirs(CACHE_ROOT)
-            except OSError:
+            except Exception:
                 pass
 
         #
@@ -79,7 +86,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
         #
         try:
             self.set_cache_name(os.path.join(CACHE_ROOT, CACHE_FILE))
-        except OSError:
+        except Exception:
             pass
 
         e = self.read_eeprom()
@@ -90,6 +97,7 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
             self.update_cache(e)
         except Exception:
             pass
+
         self.decode_eeprom(e)
         decode_output = sys.stdout.getvalue()
         sys.stdout = original_stdout
@@ -108,3 +116,6 @@ class Tlv(eeprom_tlvinfo.TlvInfoDecoder):
 
     def get_mac(self):
         return self._eeprom.get('0x24', "Undefined.")
+
+    def get_model(self):
+        return self._eeprom.get('0x21', "Undefined.")

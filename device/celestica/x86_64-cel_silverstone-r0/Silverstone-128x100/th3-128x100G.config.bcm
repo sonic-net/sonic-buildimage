@@ -11,6 +11,8 @@ pll_bypass=1
 
 init_all_modules=0
 
+sai_tunnel_global_sip_mask_enable=1
+
 portmap_20=33:100:2
 portmap_21=35:100:2
 portmap_22=37:100:2

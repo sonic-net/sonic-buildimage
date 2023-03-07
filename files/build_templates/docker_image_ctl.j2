@@ -155,11 +155,13 @@ function waitForAllInstanceDatabaseConfigJsonFilesReady()
                     fi
 		done
             done
-	fi
+        fi
+        # Delay a second to allow all instance database_config.json files to be completely generated and fully accessible.
+        # This delay is needed to make sure that the database_config.json files are correctly rendered from j2 template 
+        # files ( renderning takes some time )
+        sleep 1 
     fi
 }
-# delay a second to allow the file to be fully accessible
-sleep 1
 {%- endif %}
 
 function postStartAction()
@@ -225,6 +227,10 @@ function postStartAction()
         # then we catch python exception of file not valid
         # that comes to syslog which is unwanted so wait till database
         # config is ready and then ping
+	# sonic-db-cli try to initialize the global database. If in multiasic platform, inital global
+        # database will try to access to all other instance database-config.json. If other instance
+        # database-config.json files are not ready yet, it will generate the sonic-db-cli core files.
+	waitForAllInstanceDatabaseConfigJsonFilesReady
         until [[ ($(docker exec -i database$DEV pgrep -x -c supervisord) -gt 0) && ($($SONIC_DB_CLI PING | grep -c PONG) -gt 0) &&
                  ($(docker exec -i database$DEV sonic-db-cli PING | grep -c PONG) -gt 0) ]]; do
           sleep 1;
@@ -234,11 +240,7 @@ function postStartAction()
             mv $WARM_DIR/dump.rdb $WARM_DIR/dump.rdb.old
         else
             # If there is a config_db.json dump file, load it.
-            if [ -r /etc/sonic/config_db$DEV.json ]; then
-
-		# For multi-asic, all /var/run/redis$DEV/sonic-db/database_config.json need to ready
-                # for loading config with --write-to-db
-		waitForAllInstanceDatabaseConfigJsonFilesReady
+            if [ -r /etc/sonic/config_db$DEV.json ]; then		
 
                 if [ -r /etc/sonic/init_cfg.json ]; then
                     $SONIC_CFGGEN -j /etc/sonic/init_cfg.json -j /etc/sonic/config_db$DEV.json --write-to-db

@@ -111,9 +111,25 @@ class TestConfigDhcpRelay(object):
         cli = mock.MagicMock()
         dhcp_relay.register(cli)
 
-    def test_config_dhcp_relay_add_del_with_nonexist_vlanid(self, ip_version, op):
+    def test_config_dhcp_relay_add_del_with_nonexist_vlanid_ipv4(self, op):
         runner = CliRunner()
 
+        ip_version = "ipv4"
+        with mock.patch("utilities_common.cli.run_command") as mock_run_command:
+            result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
+                                   .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
+                                   .commands[op], ["1001", IP_VER_TEST_PARAM_MAP[ip_version]["ips"][0]])
+            print(result.exit_code)
+            print(result.stdout)
+            assert result.exit_code != 0
+            assert "Error: Vlan1001 doesn't exist" in result.output
+            assert mock_run_command.call_count == 0
+
+    def test_config_dhcp_relay_del_with_nonexist_vlanid_ipv6(self):
+        runner = CliRunner()
+
+        op = "del"
+        ip_version = "ipv6"
         with mock.patch("utilities_common.cli.run_command") as mock_run_command:
             result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
                                    .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
@@ -262,3 +278,25 @@ class TestConfigDhcpRelay(object):
             assert result.exit_code != 0
             assert "Error: Find duplicate DHCP relay ip {} in {} list".format(test_ip, op) in result.output
             assert mock_run_command.call_count == 0
+
+    def test_config_add_dhcp_relay_ipv6_with_non_entry(self, mock_cfgdb):
+        op = "add"
+        ip_version = "ipv6"
+        test_ip = IP_VER_TEST_PARAM_MAP[ip_version]["ips"][0]
+        runner = CliRunner()
+        db = Db()
+        db.cfgdb = mock_cfgdb
+        table = IP_VER_TEST_PARAM_MAP[ip_version]["table"]
+        db.cfgdb.set_entry(table, "Vlan1000", None)
+        assert db.cfgdb.get_entry(table, "Vlan1000") == {}
+        assert len(db.cfgdb.get_keys(table)) == 0
+
+        with mock.patch("utilities_common.cli.run_command") as mock_run_command:
+            result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
+                                   .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
+                                   .commands[op], ["1000", test_ip], obj=db)
+            print(result.exit_code)
+            print(result.output)
+            assert result.exit_code == 0
+            assert db.cfgdb.get_entry(table, "Vlan1000") == {"dhcpv6_servers": [test_ip]}
+            assert mock_run_command.call_count == 3

@@ -23,8 +23,8 @@
         "0": "0",
         "1": "0",
         "2": "0",
-        "3": "3",
-        "4": "4",
+        "3": "1",
+        "4": "2",
         "5": "0",
         "6": "0",
         "7": "0"
@@ -99,11 +99,14 @@
         }
     },
     "PORT_QOS_MAP": {
-       "{{ port_names }}": {
-            "tc_to_pg_map": "[TC_TO_PRIORITY_GROUP_MAP|AZURE]",
-            "tc_to_queue_map": "[TC_TO_QUEUE_MAP|AZURE]",
-            "dscp_to_tc_map": "[DSCP_TO_TC_MAP|AZURE]"
-        }
+{% for port in port_names_list %}
+       "{{ port }}": {
+            "tc_to_pg_map": "AZURE",
+            "tc_to_queue_map": "AZURE",
+            "dscp_to_tc_map": "AZURE"
+        }{% if not loop.last %},{% endif %}
+
+{% endfor %}
     },
     "SCHEDULER": {
         "scheduler.7": {

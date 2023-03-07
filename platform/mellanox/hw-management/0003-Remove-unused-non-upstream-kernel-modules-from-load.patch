@@ -1,14 +1,14 @@
-From 14b06a12802fc0e15116a64f419d002d0d21d695 Mon Sep 17 00:00:00 2001
+From 439639e939f896f9aee42a4dbd5216feb728220c Mon Sep 17 00:00:00 2001
 From: Alexander Allen <arallen@nvidia.com>
 Date: Thu, 17 Feb 2022 04:19:50 +0000
-Subject: [PATCH] Remove unused non-upstream kernel modules from load
+Subject: [PATCH 3/4] Remove unused non-upstream kernel modules from load
 
 ---
  usr/etc/modules-load.d/05-hw-management-modules.conf | 2 --
  1 file changed, 2 deletions(-)
 
 diff --git a/usr/etc/modules-load.d/05-hw-management-modules.conf b/usr/etc/modules-load.d/05-hw-management-modules.conf
-index 39f621e..c0980bc 100644
+index cfcfaa4..dd3b5ca 100644
 --- a/usr/etc/modules-load.d/05-hw-management-modules.conf
 +++ b/usr/etc/modules-load.d/05-hw-management-modules.conf
 @@ -15,8 +15,6 @@ xdpe12284
@@ -21,5 +21,5 @@ index 39f621e..c0980bc 100644
  gpio-pca953x
  pmbus
 -- 
-2.17.1
+2.20.1
 

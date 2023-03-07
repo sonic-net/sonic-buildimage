@@ -18,6 +18,8 @@
 import os
 import pytest
 import sys
+import threading
+import time
 if sys.version_info.major == 3:
     from unittest import mock
 else:
@@ -125,3 +127,17 @@ class TestUtils:
     def test_extract_RJ45_ports_index(self):
         rj45_list = utils.extract_RJ45_ports_index()
         assert rj45_list is None
+
+    def test_wait_until(self):
+        values = []
+        assert utils.wait_until(lambda: len(values) == 0, timeout=1)
+        assert not utils.wait_until(lambda: len(values) > 0, timeout=1)
+
+        def thread_func(items):
+            time.sleep(3)
+            items.append(0)
+
+        t = threading.Thread(target=thread_func, args=(values, ))
+        t.start()
+        assert utils.wait_until(lambda: len(values) > 0, timeout=5)
+        t.join()

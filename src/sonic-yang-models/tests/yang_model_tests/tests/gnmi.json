@@ -1,0 +1,17 @@
+{
+    "GNMI_TABLE_WITH_INCORRECT_CERT": {
+        "desc": "TABLE_WITH_INCORRECT_CERT failure.",
+        "eStrKey": "Pattern"
+    },
+    "GNMI_TABLE_WITH_INCORRECT_CLIENT_AUTH": {
+        "desc": "TABLE_WITH_INCORRECT_CLIENT_AUTH failure",
+        "eStrKey": "InvalidValue"
+    },
+    "GNMI_TABLE_WITH_INCORRECT_PORT": {
+        "desc": "TABLE_WITH_INCORRECT_PORT failure.",
+        "eStrKey": "InvalidValue"
+    },
+    "GNMI_TABLE_WITH_VALID_CONFIG": {
+        "desc": "TABLE WITH VALID CONFIG."
+    }
+}

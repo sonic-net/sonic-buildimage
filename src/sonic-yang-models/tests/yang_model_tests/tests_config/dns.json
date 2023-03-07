@@ -1,0 +1,47 @@
+{
+    "DNS_NAMESERVER_TEST": {
+        "sonic-dns:sonic-dns": {
+            "sonic-dns:DNS_NAMESERVER": {
+                "DNS_NAMESERVER_LIST": [
+                    {
+                        "ip": "192.168.1.1"
+                    },
+                    {
+                        "ip": "fe80:1000:2000:3000::1"
+                    }
+                ]
+            }
+        }
+    },
+    "DNS_NAMESERVER_TEST_INVALID_IP": {
+        "sonic-dns:sonic-dns": {
+            "sonic-dns:DNS_NAMESERVER": {
+                "DNS_NAMESERVER_LIST": [
+                    {
+                        "ip": "1.x.2.x"
+                    }
+                ]
+            }
+        }
+    },
+    "DNS_NAMESERVER_TEST_MAX_IP_NUMBER": {
+        "sonic-dns:sonic-dns": {
+            "sonic-dns:DNS_NAMESERVER": {
+                "DNS_NAMESERVER_LIST": [
+                    {
+                        "ip": "192.168.1.1"
+                    },
+                    {
+                        "ip": "fe80:1000:2000:3000::2"
+                    },
+                    {
+                        "ip": "192.168.1.3"
+                    },
+                    {
+                        "ip": "fe80:1000:2000:3000::4"
+                    }
+                ]
+            }
+        }
+    }
+}

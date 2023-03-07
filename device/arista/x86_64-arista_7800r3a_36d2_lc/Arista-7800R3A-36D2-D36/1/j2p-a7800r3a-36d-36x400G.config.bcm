@@ -263,15 +263,15 @@ tm_port_header_type_in_219=INJECTED_2
 port_init_speed_sat=400000
 
 ### RCY
-sai_recycle_port_lane_base=0
-ucode_port_221=RCY.21:core_0.221
-ucode_port_222=RCY.22:core_1.222
-tm_port_header_type_out_221=ETH
-tm_port_header_type_in_221=ETH
-tm_port_header_type_out_222=ETH
-tm_port_header_type_in_222=ETH
-port_init_speed_221=400000
-port_init_speed_222=400000
+sai_recycle_port_lane_base=200
+ucode_port_49=RCY0:core_0.49
+ucode_port_50=RCY1:core_1.50
+tm_port_header_type_out_49=ETH
+tm_port_header_type_in_49=ETH
+tm_port_header_type_out_50=ETH
+tm_port_header_type_in_50=ETH
+port_init_speed_49=400000
+port_init_speed_50=400000
 
 #OLP port
 tm_port_header_type_in_240=INJECTED_2
@@ -1018,5 +1018,6 @@ serdes_tx_taps_34=pam4:-14:136:-14:2:0:-4
 serdes_tx_taps_35=pam4:-16:141:-5:3:-2:-3
 serdes_tx_taps_36=pam4:-16:137:-12:2:0:-3
 
+appl_param_nof_ports_per_modid=64
 xflow_macsec_secure_chan_to_num_secure_assoc_encrypt=2
 xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=4

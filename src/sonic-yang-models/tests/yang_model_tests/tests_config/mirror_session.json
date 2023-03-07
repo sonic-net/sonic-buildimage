@@ -316,9 +316,7 @@
                         "gre_type": "0x1234",
                         "dscp": "10",
                         "ttl": "63",
-                        "src_port": [
-                            "Ethernet0"
-                        ]
+                        "src_port": "Ethernet0"
                     }
                 ]
             }
@@ -346,29 +344,7 @@
                         "gre_type": "0x1234",
                         "dscp": "10",
                         "ttl": "63",
-                        "src_port": [
-                            "PortChannel5"
-                        ]
-                    }
-                ]
-            }
-        }
-    },
-    "MIRROR_ERSPAN_ENTRY_INVALID_SRC_PORT": {
-        "sonic-mirror-session:sonic-mirror-session": {
-            "MIRROR_SESSION": {
-                "MIRROR_SESSION_LIST": [
-                    {
-                        "name": "erspan",
-                        "type": "ERSPAN",
-                        "dst_ip": "11.1.1.1",
-                        "src_ip": "10.1.1.1",
-                        "gre_type": "0x1234",
-                        "dscp": "10",
-                        "ttl": "63",
-                        "src_port": [
-                            "Ethernet0"
-                        ]
+                        "src_port": "PortChannel5"
                     }
                 ]
             }
@@ -415,10 +391,7 @@
                         "name": "span",
                         "type": "SPAN",
                         "dst_port": "Ethernet0",
-                        "src_port": [
-                            "Ethernet4",
-                            "Ethernet8"
-                        ],
+                        "src_port": "Ethernet4,Ethernet8",
                         "direction": "RX"
                     }
                 ]
@@ -474,37 +447,6 @@
                         "name": "span",
                         "type": "SPAN",
                         "dst_port": "CPU"
-                    }
-                ]
-            }
-        }
-    },
-    "MIRROR_SPAN_ENTRY_INVALID_SRC_PORT": {
-        "sonic-port:sonic-port": {
-            "sonic-port:PORT": {
-                "PORT_LIST": [
-                    {
-                        "admin_status": "up",
-                        "alias": "eth0",
-                        "description": "Ethernet0",
-                        "lanes": "1",
-                        "mtu": 9000,
-                        "name": "Ethernet0",
-                        "speed": 25000
-                    }
-                ]
-            }
-        },
-        "sonic-mirror-session:sonic-mirror-session": {
-            "MIRROR_SESSION": {
-                "MIRROR_SESSION_LIST": [
-                    {
-                        "name": "span",
-                        "type": "SPAN",
-                        "dst_port": "Ethernet0",
-                        "src_port": [
-                            "Ethernet4"
-                        ]
                     }
                 ]
             }

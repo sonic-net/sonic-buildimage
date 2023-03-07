@@ -1,0 +1,78 @@
+module sonic-gnmi {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-gnmi";
+    prefix gnmi;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description "GNMI YANG Module for SONiC OS";
+
+    revision 2023-02-10 {
+        description "First Revision";
+    }
+
+    container sonic-gnmi {
+
+        container GNMI {
+
+            description "GNMI TABLE part of config_db.json";
+
+            container certs {
+
+                leaf ca_crt {
+                    type string {
+                        pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).cer';
+                    }
+                    description "Local path for ca_crt.";
+                }
+
+                leaf server_crt {
+                    type string {
+                        pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).cer';
+                    }
+                    description "Local path for server_crt.";
+                }
+
+                leaf server_key {
+                    type string {
+                        pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).key';
+                    }
+                    description "Local path for server_key.";
+                }
+
+            }
+
+            container gnmi {
+
+                leaf client_auth {
+                    type boolean;
+                    description "Flag for requiring client auth.";
+                }
+
+                leaf log_level {
+                    type uint8 {
+                        range 0..100;
+                    }
+                    description "Log level for gnmi.";
+                }
+
+                leaf port {
+                    type inet:port-number;
+                    description "Port gnmi runs on.";
+                }
+
+            }
+
+        }
+    }
+}

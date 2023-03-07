@@ -1,8 +1,8 @@
-From 1a1011b6da491d35001df5a7204d4eecb2769767 Mon Sep 17 00:00:00 2001
+From 489764eb124e03087eb408dec27d769fa4f98459 Mon Sep 17 00:00:00 2001
 From: keboliu <kebol@mellanox.com>
 Date: Fri, 15 Jan 2021 14:41:16 +0800
-Subject: [PATCH] Make SONiC determine-reboot-cause service start after hw-mgmt
- service
+Subject: [PATCH 1/4] Make SONiC determine-reboot-cause service start after
+ hw-mgmt service
 
 Signed-off-by: Kebo Liu <kebol@nvidia.com>
 ---
@@ -10,7 +10,7 @@ Signed-off-by: Kebo Liu <kebol@nvidia.com>
  1 file changed, 1 insertion(+)
 
 diff --git a/debian/hw-management.hw-management.service b/debian/hw-management.hw-management.service
-index 39a2a54..2104b87 100755
+index 8bdcaef..1c25ffb 100755
 --- a/debian/hw-management.hw-management.service
 +++ b/debian/hw-management.hw-management.service
 @@ -1,6 +1,7 @@
@@ -22,5 +22,5 @@ index 39a2a54..2104b87 100755
  [Service]
  Type=oneshot
 -- 
-1.9.1
+2.20.1
 

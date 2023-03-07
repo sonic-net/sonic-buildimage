@@ -23,14 +23,18 @@ from ecmp_calc_sdk import sx_open_sdk_connection, sx_get_active_vrids, sx_router
                                               PORT, VPORT, VLAN, SX_ENTRY_NOT_FOUND
 from packet_scheme import PACKET_SCHEME
 from port_utils import sx_get_ports_map, is_lag
+from swsscommon.swsscommon import ConfigDBConnector, DBConnector, Table
 
 IP_VERSION_IPV4 = 1
 IP_VERSION_IPV6 = 2
-PORT_CHANNEL_IDX = 1
+PORT_CHANNEL_IDX = 0
 VRF_NAME_IDX = 1
 IP_VERSION_MAX_MASK_LEN = {IP_VERSION_IPV4: 32, IP_VERSION_IPV6: 128}
 
+APPL_DB_NAME = 'APPL_DB'
 INTF_TABLE = 'INTF_TABLE'
+VRF_TABLE = 'VRF_TABLE'
+LAG_MEMBER_TABLE = 'LAG_MEMBER_TABLE'
 HASH_CALC_PATH = '/usr/bin/sx_hash_calculator'
 HASH_CALC_INPUT_FILE = "/tmp/hash_calculator_input.json"
 HASH_CALC_OUTPUT_FILE = "/tmp/hash_calculator_output.json"
@@ -113,6 +117,8 @@ class EcmpCalc:
         self.egress_ports = []
         self.debug = False
         
+        self.config_db = ConfigDBConnector()
+        self.appl_db = DBConnector(APPL_DB_NAME, 0)
         self.open_sdk_connection()
         self.init_ports_map()
         self.get_active_vrids()
@@ -137,7 +143,7 @@ class EcmpCalc:
             print(*args, **kwargs)
 
     def init_ports_map(self):
-        self.ports_map = sx_get_ports_map(self.handle)
+        self.ports_map = sx_get_ports_map(self.handle, self.config_db)
         
     def validate_ingress_port(self, interface):
         if interface not in self.ports_map.values():
@@ -156,16 +162,12 @@ class EcmpCalc:
             if not self.validate_vrf():
                 raise ValueError("VRF validation failed: VRF {} does not exist".format(self.user_vrf))
                         
-    def validate_vrf(self):        
-        query_output = exec_cmd(['/usr/bin/redis-cli', '-n', '0', 'keys','*VRF*']).strip()
-        if not query_output:
-            return False
+    def validate_vrf(self):
+        vrf_table = Table(self.appl_db, VRF_TABLE)
+        vrf_table_keys = vrf_table.getKeys()
 
-        vrf_entries= query_output.split('\n')
-        for entry in vrf_entries:
-            vrf = entry.split(':')[VRF_NAME_IDX]
-            if vrf == self.user_vrf:
-                return True
+        if self.user_vrf in vrf_table_keys:
+            return True
 
         return False
 
@@ -289,26 +291,30 @@ class EcmpCalc:
     def is_port_bind_to_user_vrf(self, port_type, port, vlan_id = 0):
         if port_type == PORT:
             # INTF_TABLE:Ethernet0
-            entry = '{}:{}'.format(INTF_TABLE, port) 
+            entry = '{}'.format(port)
         elif port_type == VPORT:
             # INTF_TABLE:Ethernet0.300
-            entry = '{}:{}.{}'.format(INTF_TABLE, port, vlan_id)     
+            entry = '{}.{}'.format(port, vlan_id)
         elif port_type == VLAN:
             # INTF_TABLE:Vlan300
-            entry = '{}:Vlan{}'.format(INTF_TABLE, vlan_id)
+            entry = 'Vlan{}'.format(vlan_id)
 
-        port_vrf = exec_cmd(['/usr/bin/redis-cli', '-n', '0', 'hget', entry, 'vrf_name'])
+        vrf_table = Table(self.appl_db, INTF_TABLE)
+        (_, port_vrf) = vrf_table.hget(entry, 'vrf_name')
+
         if self.user_vrf == port_vrf.strip():
             return True
         
         return False
     
     # Get port-channel name for given port-channel member port
-    def get_port_channel_name(self, port):        
-        query_output = exec_cmd(['/usr/bin/redis-cli', '-n', '0', 'keys','*LAG_MEMBER_TABLE*'])
-        for line in query_output.split('\n'):
-            if str(port) in line:
-                port_channel = line.split(':')[PORT_CHANNEL_IDX]
+    def get_port_channel_name(self, port):
+        lag_member_table = Table(self.appl_db, LAG_MEMBER_TABLE)
+        lag_member_table_keys = lag_member_table.getKeys()
+
+        for key in lag_member_table_keys:
+            if port in key:
+                port_channel = key.split(':')[PORT_CHANNEL_IDX]
                 return port_channel
         
         raise KeyError("Failed to get port-channel name for interface {}".format(port))
@@ -368,7 +374,7 @@ class EcmpCalc:
         member_index = self.get_lag_member_index(len(lag_members), flood_case)
         lag_member = lag_members[member_index]
         
-        self.debug_print("Lag member from which trafic will egress: {}".format(lag_member))
+        self.debug_print("Lag members: {}\nLag member from which trafic will egress: {}".format(lag_members, lag_member))
         return lag_member
         
     def call_hash_calculator(self, input_dict):

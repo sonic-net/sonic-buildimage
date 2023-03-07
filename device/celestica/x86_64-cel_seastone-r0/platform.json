@@ -266,6 +266,9 @@
                         "name": "PSU-1 FAN-1",
                         "speed": {
                             "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
                         }
                     }
                 ]
@@ -281,6 +284,9 @@
                         "name": "PSU-2 FAN-1",
                         "speed": {
                             "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
                         }
                     }
                 ]

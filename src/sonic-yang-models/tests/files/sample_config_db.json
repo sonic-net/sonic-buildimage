@@ -2,11 +2,16 @@
     "SAMPLE_CONFIG_DB_JSON": {
         "VRF": {
                 "Vrf_blue": {
+                    "vni" : "100"
                 }
         },
         "DHCP_SERVER": {
             "192.0.0.8": {},
             "192.0.0.8": {}
+        },
+        "DNS_NAMESERVER": {
+            "1.1.1.1": {},
+            "fe80:1000:2000:3000::1": {}
         },
         "BUFFER_POOL": {
             "ingress_lossy_pool": {
@@ -81,9 +86,6 @@
             "PortChannel0003": {
                 "admin_status": "up",
                 "min_links": "1",
-                "members": [
-                    "Ethernet1"
-                ],
                 "tpid": "0x8100",
                 "mtu": "9100",
                 "lacp_key": "auto"
@@ -91,9 +93,6 @@
             "PortChannel0004": {
                 "admin_status": "up",
                 "min_links": "1",
-                "members": [
-                    "Ethernet2"
-                ],
                 "tpid": "0x9200",
                 "mtu": "9100",
                 "lacp_key": "auto"
@@ -101,19 +100,12 @@
             "PortChannel2": {
                 "admin_status": "up",
                 "min_links": "1",
-                "members": [
-                    "Ethernet12"
-                ],
                 "tpid": "0x9200",
                 "mtu": "9100",
                 "lacp_key": "auto"
             },
             "PortChannel42": {
                 "admin_status": "up",
-                "members": [
-                    "Ethernet-BP0",
-                    "Ethernet-BP4"
-                ],
                 "min_links": "2",
                 "mtu": "9100",
                 "tpid": "0x8100"
@@ -1183,6 +1175,18 @@
                 "port": "50051"
             }
         },
+        "GNMI": {
+            "certs": {
+                "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
+                "server_crt": "/etc/sonic/credentials/server.cer",
+                "server_key": "/etc/sonic/credentials/server.key"
+            },
+            "gnmi": {
+                "client_auth": "true",
+                "log_level": "2",
+                "port": "50052"
+            }
+        },
         "TUNNEL": {
             "MuxTunnel0": {
                 "dscp_mode": "uniform",
@@ -2029,11 +2033,7 @@
                 "direction": "RX",
                 "type": "SPAN",
                 "dst_port": "Ethernet2",
-                "src_port": [
-                    "Ethernet3",
-                    "Ethernet4"
-                ]
-
+                "src_port": "Ethernet3,Ethernet4"
             }
         },
 
@@ -2214,6 +2214,10 @@
 
         "SYSTEM_DEFAULTS": {
             "tunnel_qos_remap": {
+                "status": "enabled"
+            },
+            "mux_tunnel_egress_acl":
+            {
                 "status": "enabled"
             }
          },

@@ -29,9 +29,6 @@
                 "PORTCHANNEL_LIST": [
                     {
                         "admin_status": "up",
-                        "members": [
-                            "Ethernet0"
-                        ],
                         "min_links": "1",
                         "mtu": "9100",
                         "lacp_key": "auto",
@@ -39,9 +36,6 @@
                     },
                     {
                         "admin_status": "up",
-                        "members": [
-                            "Ethernet10"
-                        ],
                         "min_links": "1",
                         "mtu": "9100",
                         "lacp_key": "auto",
@@ -151,9 +145,6 @@
                 "PORTCHANNEL_LIST": [
                     {
                         "admin_status": "up",
-                        "members": [
-                            "Ethernet0"
-                        ],
                         "min_links": "1",
                         "mtu": "9100",
                         "lacp_key": "auto",

@@ -608,11 +608,14 @@ int ssg_main(int argc, char **argv) {
     for (int i = 0; i < num_unit_files; i++) {
         unit_instance = strdup(unit_files[i]);
         if ((num_asics == 1) && strstr(unit_instance, "@") != NULL) {
-            prefix = strtok_r(unit_instance, "@", &saveptr);
-            suffix = strtok_r(NULL, "@", &saveptr);
+            prefix = strdup(strtok_r(unit_instance, "@", &saveptr));
+            suffix = strdup(strtok_r(NULL, "@", &saveptr));
 
             strcpy(unit_instance, prefix);
             strcat(unit_instance, suffix);
+
+            free(prefix);
+            free(suffix);
         }
 
         num_targets = get_install_targets(unit_instance, targets);
