@@ -6,7 +6,8 @@ export ARCHITECTURE=$2
 export DISTRIBUTION=$3
 
 DEFAULT_MIRROR_URL_PREFIX=http://packages.trafficmanager.net
-MIRROR_VERSION_FILE=files/build/versions/default/versions-mirror
+MIRROR_VERSION_FILE=
+[[ "$SONIC_VERSION_CONTROL_COMPONENTS" == *deb* || $SONIC_VERSION_CONTROL_COMPONENTS == *all* ]] && MIRROR_VERSION_FILE=files/build/versions/default/versions-mirror
 [ -f target/versions/default/versions-mirror ] && MIRROR_VERSION_FILE=target/versions/default/versions-mirror
 
 # The default mirror urls
@@ -21,7 +22,7 @@ if [ "$ARCHITECTURE" == "armhf" ]; then
 fi
 
 if [ "$MIRROR_SNAPSHOT" == y ]; then
-    if [ -f $MIRROR_VERSION_FILE ]; then
+    if [ -f "$MIRROR_VERSION_FILE" ]; then
         DEBIAN_TIMESTAMP=$(grep "^debian==" $MIRROR_VERSION_FILE | tail -n 1 | sed 's/.*==//')
         DEBIAN_SECURITY_TIMESTAMP=$(grep "^debian-security==" $MIRROR_VERSION_FILE | tail -n 1 | sed 's/.*==//')
     elif [ -z "$DEBIAN_TIMESTAMP" ] || [ -z "$DEBIAN_SECURITY_TIMESTAMP" ]; then

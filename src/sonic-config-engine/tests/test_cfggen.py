@@ -40,6 +40,8 @@ class TestCfgGen(TestCase):
         self.maxDiff = None
         self.macsec_profile = os.path.join(self.test_dir, 'macsec_profile.json')
         self.sample_backend_graph = os.path.join(self.test_dir, 'sample-graph-storage-backend.xml')
+        self.voq_port_config_400g = os.path.join(self.test_dir, 'voq-sample-400g-port-config.ini')
+        self.voq_sample_masic_graph = os.path.join(self.test_dir, 'voq-sample-masic-graph.xml')
         # To ensure that mock config_db data is used for unit-test cases
         os.environ["CFGGEN_UNIT_TESTING"] = "2"
 
@@ -329,7 +331,7 @@ class TestCfgGen(TestCase):
         output = self.run_script(argument)
         self.assertEqual(
             utils.to_dict(output.strip()),
-            utils.to_dict("{'PortChannel1': {'admin_status': 'up', 'min_links': '1', 'members': ['Ethernet4'], 'mtu': '9100', 'tpid': '0x8100', 'lacp_key': 'auto'}}")
+            utils.to_dict("{'PortChannel1': {'admin_status': 'up', 'min_links': '1', 'mtu': '9100', 'tpid': '0x8100', 'lacp_key': 'auto'}}")
         )
 
     def test_minigraph_portchannel_with_more_member(self):
@@ -337,7 +339,7 @@ class TestCfgGen(TestCase):
         output = self.run_script(argument)
         self.assertEqual(
             utils.to_dict(output.strip()),
-            utils.to_dict("{'PortChannel01': {'admin_status': 'up', 'min_links': '3', 'members': ['Ethernet112', 'Ethernet116', 'Ethernet120', 'Ethernet124'], 'mtu': '9100', 'tpid': '0x8100', 'lacp_key': 'auto'}}"))
+            utils.to_dict("{'PortChannel01': {'admin_status': 'up', 'min_links': '3', 'mtu': '9100', 'tpid': '0x8100', 'lacp_key': 'auto'}}"))
 
     def test_minigraph_portchannel_members(self):
         argument = ['-m', self.sample_graph_pc_test, '-p', self.port_config, '-v', "PORTCHANNEL_MEMBER.keys()|list"]
@@ -960,6 +962,14 @@ class TestCfgGen(TestCase):
                 "admin_status": "up"
             })
 
+        argument = ["-j", self.macsec_profile, "-m", self.sample_graph_voq, "-p", self.voq_port_config, "--var-json", "INTERFACE"]
+        output = self.run_script(argument)
+        output_dict = utils.to_dict(output.strip())
+        self.assertDictEqual(
+            output_dict['Ethernet-Rec0'],
+            {}
+        )
+
     def test_minigraph_dhcp(self):
         argument = ['-m', self.sample_graph_simple_case, '-p', self.port_config, '-v', 'DHCP_RELAY']
         output = self.run_script(argument)
@@ -1015,3 +1025,33 @@ class TestCfgGen(TestCase):
         output_dict = utils.to_dict(output.strip())
         self.assertEqual(output_dict['tx_power'], '7.5')
         self.assertEqual(output_dict['laser_freq'], 131000)
+
+    def test_minigraph_400g_to_100G_speed(self):
+        argument = ["-j", self.macsec_profile, "-m", self.voq_sample_masic_graph, "-p", self.voq_port_config_400g, "-n",  "asic0", "-v", "PORT"]
+        output = self.run_script(argument)
+        self.assertEqual(
+            utils.to_dict(output.strip()),
+            utils.to_dict(
+                "{'Ethernet0': {'lanes': '72,73,74,75', 'alias': 'Ethernet1/1', 'index': '1', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth0-ASIC0', 'fec': 'rs', 'description': 'ARISTA01T3:Ethernet1', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet8': {'lanes': '80,81,82,83', 'alias': 'Ethernet2/1', 'index': '2', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth8-ASIC0', 'fec': 'rs', 'description': 'ARISTA01T3:Ethernet2', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet16': {'lanes': '88,89,90,91', 'alias': 'Ethernet3/1', 'index': '3', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth16-ASIC0', 'fec': 'rs', 'description': 'ARISTA03T3:Ethernet1', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet24': {'lanes': '96,97,98,99,100,101,102,103', 'alias': 'Ethernet4/1', 'index': '4', 'role': 'Ext', 'speed': '400000', 'asic_port_name': 'Eth24-ASIC0', 'description': 'ARISTA03T3:Ethernet2', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet32': {'lanes': '104,105,106,107,108,109,110,111', 'alias': 'Ethernet5/1', 'index': '5', 'role': 'Ext', 'speed': '400000', 'asic_port_name': 'Eth32-ASIC0', 'description': 'ARISTA05T3:Ethernet1', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet40': {'lanes': '112,113,114,115,116,117,118,119', 'alias': 'Ethernet6/1', 'index': '6', 'role': 'Ext', 'speed': '400000', 'asic_port_name': 'Eth40-ASIC0', 'description': 'ARISTA05T3:Ethernet2', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet48': {'lanes': '120,121,122,123,124,125,126,127', 'alias': 'Ethernet7/1', 'index': '7', 'role': 'Ext', 'speed': '400000', 'asic_port_name': 'Eth48-ASIC0', 'description': 'ARISTA07T3:Ethernet1', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet56': {'lanes': '128,129,130,131', 'alias': 'Ethernet8/1', 'index': '8', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth56-ASIC0', 'fec': 'rs', 'description': 'ARISTA07T3:Ethernet2', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet64': {'lanes': '136,137,138,139', 'alias': 'Ethernet9/1', 'index': '9', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth64-ASIC0', 'fec': 'rs', 'description': 'ARISTA09T3:Ethernet1', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet72': {'lanes': '64,65,66,67', 'alias': 'Ethernet10/1', 'index': '10', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth72-ASIC0', 'fec': 'rs', 'description': 'ARISTA09T3:Ethernet2', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet80': {'lanes': '56,57,58,59', 'alias': 'Ethernet11/1', 'index': '11', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth80-ASIC0', 'fec': 'rs', 'description': 'ARISTA11T3:Ethernet1', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet88': {'lanes': '48,49,50,51', 'alias': 'Ethernet12/1', 'index': '12', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth88-ASIC0', 'fec': 'rs', 'description': 'ARISTA11T3:Ethernet2', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet96': {'lanes': '40,41,42,43', 'alias': 'Ethernet13/1', 'index': '13', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth96-ASIC0', 'fec': 'rs', 'description': 'ARISTA13T3:Ethernet1', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet104': {'lanes': '32,33,34,35', 'alias': 'Ethernet14/1', 'index': '14', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth104-ASIC0', 'fec': 'rs', 'description': 'ARISTA15T3:Ethernet1', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet112': {'lanes': '24,25,26,27', 'alias': 'Ethernet15/1', 'index': '15', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth112-ASIC0', 'fec': 'rs', 'description': 'ARISTA15T3:Ethernet2', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet120': {'lanes': '16,17,18,19', 'alias': 'Ethernet16/1', 'index': '16', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth120-ASIC0', 'fec': 'rs', 'description': 'ARISTA17T3:Ethernet1', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet128': {'lanes': '8,9,10,11', 'alias': 'Ethernet17/1', 'index': '17', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth128-ASIC0', 'fec': 'rs', 'description': 'ARISTA18T3:Ethernet1', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet136': {'lanes': '0,1,2,3', 'alias': 'Ethernet18/1', 'index': '18', 'role': 'Ext', 'speed': '100000', 'asic_port_name': 'Eth136-ASIC0', 'fec': 'rs', 'description': 'ARISTA18T3:Ethernet2', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}, "
+                "'Ethernet-Rec0': {'lanes': '221', 'alias': 'Recirc0/0', 'index': '37', 'role': 'Rec', 'speed': '400000', 'asic_port_name': 'Rcy0-ASIC0', 'description': 'Recirc0/0', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}," 
+                "'Ethernet-IB0': {'lanes': '222', 'alias': 'Recirc0/1', 'index': '38', 'role': 'Inb', 'speed': '400000', 'asic_port_name': 'Rcy1-ASIC0', 'description': 'Recirc0/1', 'mtu': '9100', 'tpid': '0x8100', 'pfc_asym': 'off', 'admin_status': 'up'}}"
+            )
+        )
+

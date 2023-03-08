@@ -101,6 +101,9 @@
             },
             {
                 "name": "ASIC"
+            },
+            {
+                "name": "SODIMM 1 Temp"
             }
         ],
         "sfps": [{

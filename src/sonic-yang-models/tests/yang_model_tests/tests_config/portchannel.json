@@ -21,9 +21,6 @@
                 "PORTCHANNEL_LIST": [
                     {
                         "admin_status": "up",
-                        "members": [
-                            "Ethernet0"
-                        ],
                         "min_links": "1",
                         "mtu": "9100",
                         "tpid": "0x8100",
@@ -55,9 +52,6 @@
                 "PORTCHANNEL_LIST": [
                     {
                         "admin_status": "up",
-                        "members": [
-                            "Ethernet0"
-                        ],
                         "min_links": "1024",
                         "mtu": "9100",
                         "name": "PortChannel0001"
@@ -87,9 +81,6 @@
                 "PORTCHANNEL_LIST": [
                     {
                         "admin_status": "up",
-                        "members": [
-                            "Ethernet0"
-                        ],
                         "min_links": "1025",
                         "mtu": "9100",
                         "name": "PortChannel0001"
@@ -303,9 +294,6 @@
                 "PORTCHANNEL_LIST": [
                     {
                         "admin_status": "up",
-                        "members": [
-                            "Ethernet0"
-                        ],
                         "min_links": "1",
                         "mtu": "9100",
                         "name": "PortChannel0001"
@@ -350,9 +338,6 @@
                 "PORTCHANNEL_LIST": [
                     {
                         "admin_status": "up",
-                        "members": [
-                            "Ethernet0"
-                        ],
                         "min_links": "1",
                         "mtu": "9100",
                         "name": "PortChannel0001"
@@ -396,9 +381,6 @@
                 "PORTCHANNEL_LIST": [
                     {
                         "admin_status": "up",
-                        "members": [
-                            "Ethernet0"
-                        ],
                         "min_links": "1",
                         "mtu": "9100",
                         "name": "PortChannel0001"

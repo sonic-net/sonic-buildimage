@@ -38,3 +38,4 @@ set_reproducible_mirrors -d
 
 # Remove the version deb preference
 rm -f $VERSION_DEB_PREFERENCE
+rm -f /etc/apt/preferences.d/01-versions-deb

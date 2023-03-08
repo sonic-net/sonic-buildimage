@@ -704,6 +704,16 @@ sudo LANG=C chroot $FILESYSTEM_ROOT umount /proc || true
 ## Prepare empty directory to trigger mount move in initramfs-tools/mount_loop_root, implemented by patching
 sudo mkdir $FILESYSTEM_ROOT/host
 
+
+if [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]]; then
+    ## Expire default password for exitsing users that can do login
+    default_users=$(cat $FILESYSTEM_ROOT/etc/passwd | grep "/home"|  grep ":/bin/bash\|:/bin/sh" | awk -F ":" '{print $1}' 2> /dev/null)
+    for user in $default_users
+    do
+        sudo LANG=C chroot $FILESYSTEM_ROOT passwd -e ${user}
+    done
+fi
+
 ## Compress most file system into squashfs file
 sudo rm -f $ONIE_INSTALLER_PAYLOAD $FILESYSTEM_SQUASHFS
 ## Output the file system total size for diag purpose

@@ -220,7 +220,7 @@ class Psu(FixedPsu):
     FAN_AMBIENT_TEMP = os.path.join(PSU_PATH, "thermal/fan_amb")
     AMBIENT_TEMP_CRITICAL_THRESHOLD = os.path.join(PSU_PATH, "config/amb_tmp_crit_limit")
     AMBIENT_TEMP_WARNING_THRESHOLD = os.path.join(PSU_PATH, "config/amb_tmp_warn_limit")
-    PSU_POWER_SLOPE = os.path.join(PSU_PATH, "config/psu_power_slope")
+    PSU_POWER_SLOPE = os.path.join(PSU_PATH, "config/psu{}_power_slope")
 
     shared_led = None
 
@@ -244,6 +244,8 @@ class Psu(FixedPsu):
 
         self.psu_temp = os.path.join(PSU_PATH, 'thermal/psu{}_temp'.format(self.index))
         self.psu_temp_threshold = os.path.join(PSU_PATH, 'thermal/psu{}_temp_max'.format(self.index))
+
+        self.psu_power_slope = os.path.join(PSU_PATH, self.PSU_POWER_SLOPE.format(self.index))
 
         from .fan import PsuFan
         self._fan_list.append(PsuFan(psu_index, 1, self))
@@ -529,7 +531,7 @@ class Psu(FixedPsu):
                 if ambient_temp < temp_threshold:
                     power_threshold = power_max_capacity
                 else:
-                    slope = utils.read_int_from_file(Psu.PSU_POWER_SLOPE)
+                    slope = utils.read_int_from_file(self.psu_power_slope)
                     power_threshold = power_max_capacity - (ambient_temp - temp_threshold) * slope
                 if power_threshold <= 0:
                     logger.log_warning('Got negative PSU power threshold {} for {}'.format(power_threshold, self.get_name()))

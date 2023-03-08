@@ -22,11 +22,13 @@ def validate_ips(ctx, ips, ip_version):
             ctx.fail("{} is not IPv{} address".format(ip, ip_version))
 
 
-def get_dhcp_servers(db, vlan_name, ctx, table_name, dhcp_servers_str):
-    table = db.cfgdb.get_entry(table_name, vlan_name)
-    if len(table.keys()) == 0:
-        ctx.fail("{} doesn't exist".format(vlan_name))
+def get_dhcp_servers(db, vlan_name, ctx, table_name, dhcp_servers_str, check_is_exist=True):
+    if check_is_exist:
+        keys = db.cfgdb.get_keys(table_name)
+        if vlan_name not in keys:
+            ctx.fail("{} doesn't exist".format(vlan_name))
 
+    table = db.cfgdb.get_entry(table_name, vlan_name)
     dhcp_servers = table.get(dhcp_servers_str, [])
 
     return dhcp_servers, table
@@ -49,7 +51,10 @@ def add_dhcp_relay(vid, dhcp_relay_ips, db, ip_version):
     ctx = click.get_current_context()
     # Verify ip addresses are valid
     validate_ips(ctx, dhcp_relay_ips, ip_version)
-    dhcp_servers, table = get_dhcp_servers(db, vlan_name, ctx, table_name, dhcp_servers_str)
+
+    # It's unnecessary for DHCPv6 Relay to verify entry exist
+    check_config_exist = True if ip_version == 4 else False
+    dhcp_servers, table = get_dhcp_servers(db, vlan_name, ctx, table_name, dhcp_servers_str, check_config_exist)
     added_ips = []
 
     for dhcp_relay_ip in dhcp_relay_ips:
@@ -99,6 +104,9 @@ def del_dhcp_relay(vid, dhcp_relay_ips, db, ip_version):
         del table[dhcp_servers_str]
     else:
         table[dhcp_servers_str] = dhcp_servers
+
+    if ip_version == 6 and len(table.keys()) == 0:
+        table = None
 
     db.cfgdb.set_entry(table_name, vlan_name, table)
     click.echo("Removed DHCP relay address [{}] from {}".format(",".join(dhcp_relay_ips), vlan_name))

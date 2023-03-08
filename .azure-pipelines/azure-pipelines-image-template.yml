@@ -25,7 +25,7 @@ jobs:
     jobFilters: ${{ parameters.jobFilters }}
     jobVariables: ${{ parameters.jobVariables }}
     preSteps:
-      - template: cleanup.yml
+      - template: .azure-pipelines/cleanup.yml@buildimage
       - ${{ parameters.preSteps }}
       - script: |
           if [ -n "$(CACHE_MODE)" ] && echo $(PLATFORM_AZP) | grep -E -q "^(vs|broadcom|mellanox|marvell-armhf)$"; then
@@ -67,6 +67,6 @@ jobs:
             artifactName: 'sonic-buildimage.$(GROUP_NAME)$(GROUP_EXTNAME)'
             publishPrefix: '$(Build.DefinitionName)/$(Build.SourceBranchName)/$(GROUP_NAME)'
       - ${{ parameters.postSteps }}
-      - template: cleanup.yml
+      - template: .azure-pipelines/cleanup.yml@buildimage
     jobGroups: ${{ parameters.jobGroups }}
     buildSteps: ${{ parameters.buildSteps }}

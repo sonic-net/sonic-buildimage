@@ -1,0 +1,375 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: 6f00
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D DMI2 (rev 03)'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: 6f02
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D PCI Express Root Port 1 (rev 03)'
+- bus: '00'
+  dev: '01'
+  fn: '1'
+  id: 6f03
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D PCI Express Root Port 1 (rev 03)'
+- bus: '00'
+  dev: '02'
+  fn: '0'
+  id: 6f04
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D PCI Express Root Port 2 (rev 03)'
+- bus: '00'
+  dev: '02'
+  fn: '2'
+  id: 6f06
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D PCI Express Root Port 2 (rev 03)'
+- bus: '00'
+  dev: '03'
+  fn: '0'
+  id: 6f08
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D PCI Express Root Port 3 (rev 03)'
+- bus: '00'
+  dev: '03'
+  fn: '1'
+  id: 6f09
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D PCI Express Root Port 3 (rev 03)'
+- bus: '00'
+  dev: '03'
+  fn: '2'
+  id: 6f0a
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D PCI Express Root Port 3 (rev 03)'
+- bus: '00'
+  dev: '03'
+  fn: '3'
+  id: 6f0b
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D PCI Express Root Port 3 (rev 03)'
+- bus: '00'
+  dev: '05'
+  fn: '0'
+  id: 6f28
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Map/VTd_Misc/System Management (rev 03)'
+- bus: '00'
+  dev: '05'
+  fn: '1'
+  id: 6f29
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D IIO Hot Plug (rev 03)'
+- bus: '00'
+  dev: '05'
+  fn: '2'
+  id: 6f2a
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D IIO RAS/Control Status/Global Errors (rev 03)'
+- bus: '00'
+  dev: '05'
+  fn: '4'
+  id: 6f2c
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D I/O APIC (rev 03)'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: 8c31
+  name: 'Intel Corporation 8 Series/C220 Series Chipset Family USB xHCI (rev 05)'
+- bus: '00'
+  dev: '1c'
+  fn: '0'
+  id: 8c10
+  name: 'Intel Corporation 8 Series/C220 Series Chipset Family PCI Express Root Port #1 (rev d5)'
+- bus: '00'
+  dev: '1c'
+  fn: '6'
+  id: 8c1c
+  name: 'Intel Corporation 8 Series/C220 Series Chipset Family PCI Express Root Port #7 (rev d5)'
+- bus: '00'
+  dev: '1c'
+  fn: '7'
+  id: 8c1e
+  name: 'Intel Corporation 8 Series/C220 Series Chipset Family PCI Express Root Port #8 (rev d5)'
+- bus: '00'
+  dev: '1f'
+  fn: '0'
+  id: 8c54
+  name: 'Intel Corporation C224 Series Chipset Family Server Standard SKU LPC Controller (rev 05)'
+- bus: '00'
+  dev: '1f'
+  fn: '3'
+  id: 8c22
+  name: 'Intel Corporation 8 Series/C220 Series Chipset Family SMBus Controller (rev 05)'
+- bus: '03'
+  dev: '00'
+  fn: '0'
+  id: 6f50
+  name: 'Intel Corporation Xeon Processor D Family QuickData Technology Register DMA Channel 0'
+- bus: '03'
+  dev: '00'
+  fn: '1'
+  id: 6f51
+  name: 'Intel Corporation Xeon Processor D Family QuickData Technology Register DMA Channel 1'
+- bus: '03'
+  dev: '00'
+  fn: '2'
+  id: 6f52
+  name: 'Intel Corporation Xeon Processor D Family QuickData Technology Register DMA Channel 2'
+- bus: '03'
+  dev: '00'
+  fn: '3'
+  id: 6f53
+  name: 'Intel Corporation Xeon Processor D Family QuickData Technology Register DMA Channel 3'
+- bus: '04'
+  dev: '00'
+  fn: '0'
+  id: 15ac
+  name: 'Intel Corporation Ethernet Connection X552 10 GbE SFP+'
+- bus: '04'
+  dev: '00'
+  fn: '1'
+  id: 15ac
+  name: 'Intel Corporation Ethernet Connection X552 10 GbE SFP+'
+- bus: '06'
+  dev: '00'
+  fn: '0'
+  id: 1b58
+  name: 'Device 1d98:1b58 (rev 10)'
+- bus: '07'
+  dev: '00'
+  fn: '0'
+  id: 9100
+  name: 'Solid State Storage Technology Corporation Device 9100 (rev 03)'
+- bus: '0b'
+  dev: '00'
+  fn: '0'
+  id: e001
+  name: 'Altera Corporation Device e001 (rev 09)'
+- bus: '0c'
+  dev: '00'
+  fn: '0'
+  id: 1533
+  name: 'Intel Corporation I210 Gigabit Network Connection (rev 03)'
+- bus: 'ff'
+  dev: '0b'
+  fn: '0'
+  id: 6f81
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D R3 QPI Link 0/1 (rev 03)'
+- bus: 'ff'
+  dev: '0b'
+  fn: '1'
+  id: 6f36
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D R3 QPI Link 0/1 (rev 03)'
+- bus: 'ff'
+  dev: '0b'
+  fn: '2'
+  id: 6f37
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D R3 QPI Link 0/1 (rev 03)'
+- bus: 'ff'
+  dev: '0b'
+  fn: '3'
+  id: 6f76
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D R3 QPI Link Debug (rev 03)'
+- bus: 'ff'
+  dev: '0c'
+  fn: '0'
+  id: 6fe0
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Caching Agent (rev 03)'
+- bus: 'ff'
+  dev: '0c'
+  fn: '1'
+  id: 6fe1
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Caching Agent (rev 03)'
+- bus: 'ff'
+  dev: '0c'
+  fn: '2'
+  id: 6fe2
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Caching Agent (rev 03)'
+- bus: 'ff'
+  dev: '0c'
+  fn: '3'
+  id: 6fe3
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Caching Agent (rev 03)'
+- bus: 'ff'
+  dev: '0f'
+  fn: '0'
+  id: 6ff8
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Caching Agent (rev 03)'
+- bus: 'ff'
+  dev: '0f'
+  fn: '4'
+  id: 6ffc
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Caching Agent (rev 03)'
+- bus: 'ff'
+  dev: '0f'
+  fn: '5'
+  id: 6ffd
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Caching Agent (rev 03)'
+- bus: 'ff'
+  dev: '0f'
+  fn: '6'
+  id: 6ffe
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Caching Agent (rev 03)'
+- bus: 'ff'
+  dev: '10'
+  fn: '0'
+  id: 6f1d
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D R2PCIe Agent (rev 03)'
+- bus: 'ff'
+  dev: '10'
+  fn: '1'
+  id: 6f34
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D R2PCIe Agent (rev 03)'
+- bus: 'ff'
+  dev: '10'
+  fn: '5'
+  id: 6f1e
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Ubox (rev 03)'
+- bus: 'ff'
+  dev: '10'
+  fn: '6'
+  id: 6f7d
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Ubox (rev 03)'
+- bus: 'ff'
+  dev: '10'
+  fn: '7'
+  id: 6f1f
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Ubox (rev 03)'
+- bus: 'ff'
+  dev: '12'
+  fn: '0'
+  id: 6fa0
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Home Agent 0 (rev 03)'
+- bus: 'ff'
+  dev: '12'
+  fn: '1'
+  id: 6f30
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Home Agent 0 (rev 03)'
+- bus: 'ff'
+  dev: '13'
+  fn: '0'
+  id: 6fa8
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Target Address/Thermal/RAS (rev 03)'
+- bus: 'ff'
+  dev: '13'
+  fn: '1'
+  id: 6f71
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Target Address/Thermal/RAS (rev 03)'
+- bus: 'ff'
+  dev: '13'
+  fn: '2'
+  id: 6faa
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Channel Target Address Decoder (rev 03)'
+- bus: 'ff'
+  dev: '13'
+  fn: '3'
+  id: 6fab
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Channel Target Address Decoder (rev 03)'
+- bus: 'ff'
+  dev: '13'
+  fn: '4'
+  id: 6fac
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Channel Target Address Decoder (rev 03)'
+- bus: 'ff'
+  dev: '13'
+  fn: '5'
+  id: 6fad
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Channel Target Address Decoder (rev 03)'
+- bus: 'ff'
+  dev: '13'
+  fn: '6'
+  id: 6fae
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D DDRIO Channel 0/1 Broadcast (rev 03)'
+- bus: 'ff'
+  dev: '13'
+  fn: '7'
+  id: 6faf
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D DDRIO Global Broadcast (rev 03)'
+- bus: 'ff'
+  dev: '14'
+  fn: '0'
+  id: 6fb0
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Channel 0 Thermal Control (rev 03)'
+- bus: 'ff'
+  dev: '14'
+  fn: '1'
+  id: 6fb1
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Channel 1 Thermal Control (rev 03)'
+- bus: 'ff'
+  dev: '14'
+  fn: '2'
+  id: 6fb2
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Channel 0 Error (rev 03)'
+- bus: 'ff'
+  dev: '14'
+  fn: '3'
+  id: 6fb3
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Channel 1 Error (rev 03)'
+- bus: 'ff'
+  dev: '14'
+  fn: '4'
+  id: 6fbc
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D DDRIO Channel 0/1 Interface (rev 03)'
+- bus: 'ff'
+  dev: '14'
+  fn: '5'
+  id: 6fbd
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D DDRIO Channel 0/1 Interface (rev 03)'
+- bus: 'ff'
+  dev: '14'
+  fn: '6'
+  id: 6fbe
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D DDRIO Channel 0/1 Interface (rev 03)'
+- bus: 'ff'
+  dev: '14'
+  fn: '7'
+  id: 6fbf
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D DDRIO Channel 0/1 Interface (rev 03)'
+- bus: 'ff'
+  dev: '15'
+  fn: '0'
+  id: 6fb4
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Channel 2 Thermal Control (rev 03)'
+- bus: 'ff'
+  dev: '15'
+  fn: '1'
+  id: 6fb5
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Channel 3 Thermal Control (rev 03)'
+- bus: 'ff'
+  dev: '15'
+  fn: '2'
+  id: 6fb6
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Channel 2 Error (rev 03)'
+- bus: 'ff'
+  dev: '15'
+  fn: '3'
+  id: 6fb7
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Memory Controller 0 - Channel 3 Error (rev 03)'
+- bus: 'ff'
+  dev: '1e'
+  fn: '0'
+  id: 6f98
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Power Control Unit (rev 03)'
+- bus: 'ff'
+  dev: '1e'
+  fn: '1'
+  id: 6f99
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Power Control Unit (rev 03)'
+- bus: 'ff'
+  dev: '1e'
+  fn: '2'
+  id: 6f9a
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Power Control Unit (rev 03)'
+- bus: 'ff'
+  dev: '1e'
+  fn: '3'
+  id: 6fc0
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Power Control Unit (rev 03)'
+- bus: 'ff'
+  dev: '1e'
+  fn: '4'
+  id: 6f9c
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Power Control Unit (rev 03)'
+- bus: 'ff'
+  dev: '1f'
+  fn: '0'
+  id: 6f88
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Power Control Unit (rev 03)'
+- bus: 'ff'
+  dev: '1f'
+  fn: '2'
+  id: 6f8a
+  name: 'Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon D Power Control Unit (rev 03)'

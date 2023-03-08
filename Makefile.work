@@ -56,6 +56,10 @@
 #  * GZ_COMPRESS_PROGRAM: Select pigz to reduce build time
 #  *                 Default: gzip
 #  *                 Values: pigz,gzip
+#  * UNATTENDED: Don't wait for interactive input from terminal, setting this
+#  *             value to anything will enable it
+#  *             Default: unset
+#  *             Value: y
 #
 ###############################################################################
 
@@ -495,6 +499,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            MDEBUG=$(MDEBUG) \
                            PASSWORD=$(PASSWORD) \
                            USERNAME=$(USERNAME) \
+			   CHANGE_DEFAULT_PASSWORD=$(CHANGE_DEFAULT_PASSWORD) \
                            SONIC_BUILD_JOBS=$(SONIC_BUILD_JOBS) \
                            SONIC_USE_DOCKER_BUILDKIT=$(SONIC_USE_DOCKER_BUILDKIT) \
                            VS_PREPARE_MEM=$(VS_PREPARE_MEM) \
@@ -558,6 +563,7 @@ endif
 
 export MIRROR_URLS
 export MIRROR_SECURITY_URLS
+export SONIC_VERSION_CONTROL_COMPONENTS
 
 %:: | sonic-build-hooks
 ifneq ($(filter y, $(MULTIARCH_QEMU_ENVIRON) $(CROSS_BUILD_ENVIRON)),)
@@ -613,23 +619,28 @@ init :
 
 .ONESHELL : reset
 reset :
-	$(Q)echo && echo -n "Warning! All local changes will be lost. Proceed? [y/N]: "
-	$(Q)read ans && (
-	    if [ $$ans == y ]; then
-	        echo "Resetting local repository. Please wait...";
-	        sudo rm -rf fsroot*;
-	        if [ "$(MULTIARCH_QEMU_ENVIRON)" == y ] && [[ "$(CONFIGURED_ARCH)" == "armhf" || "$(CONFIGURED_ARCH)" ==  "arm64" ]]; then
-	            echo "Stopping march $(CONFIGURED_ARCH) docker"
-	            sudo kill -9 `sudo cat /var/run/march/docker.pid` || true
-	            sudo rm -f /var/run/march/docker.pid || true
-	        fi
-	        git clean -xfdf;
-	        git reset --hard;
-	        git submodule foreach --recursive 'git clean -xfdf || true';
-	        git submodule foreach --recursive 'git reset --hard || true';
-	        git submodule foreach --recursive 'git remote update || true';
-	        git submodule update --init --recursive;
-	        echo "Reset complete!";
-	    else
-	        echo "Reset aborted";
-	    fi )
+	$(Q)echo && (
+	if [ -z "$(UNATTENDED)" ]; then
+	   echo -n "Warning! All local changes will be lost. Proceed? [y/N]: "
+	   @read ans
+	else
+	   ans=y
+	fi
+	if [ $$ans == y ]; then
+	    echo "Resetting local repository. Please wait...";
+	    sudo rm -rf fsroot*;
+	    if [ "$(MULTIARCH_QEMU_ENVIRON)" == y ] && [[ "$(CONFIGURED_ARCH)" == "armhf" || "$(CONFIGURED_ARCH)" ==  "arm64" ]]; then
+	        echo "Stopping march $(CONFIGURED_ARCH) docker"
+	        sudo kill -9 `sudo cat /var/run/march/docker.pid` || true
+	        sudo rm -f /var/run/march/docker.pid || true
+	    fi
+	    git clean -xfdf;
+	    git reset --hard;
+	    git submodule foreach --recursive 'git clean -xfdf || true';
+	    git submodule foreach --recursive 'git reset --hard || true';
+	    git submodule foreach --recursive 'git remote update || true';
+	    git submodule update --init --recursive;
+	    echo "Reset complete!";
+	else
+	    echo "Reset aborted";
+	fi )

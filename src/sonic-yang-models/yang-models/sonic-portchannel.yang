@@ -58,23 +58,6 @@ module sonic-portchannel {
                     }
                 }
 
-                leaf-list members {
-                    /* leaf-list members are unique by default */
-                    type union {
-                        type leafref {
-                            path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
-                        }
-                        type string {
-                            pattern "";
-                        }
-                    }
-                    /* Today in SONiC, we do not delete the list once
-                     * created, instead we set to empty list. Due to that
-                     * below default values are needed.
-                     */
-                    default "";
-                }
-
                 leaf min_links {
                     type uint16 {
                         range 1..1024;

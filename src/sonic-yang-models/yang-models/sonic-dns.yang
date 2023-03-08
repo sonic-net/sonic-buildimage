@@ -1,0 +1,45 @@
+module sonic-dns {
+
+    namespace  "http://github.com/sonic-net/sonic-dns";
+    yang-version 1.1;
+    prefix dns;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description "DNS YANG module for SONiC OS";
+
+    revision 2023-02-14 {
+        description "Initial version";
+    }
+
+    container sonic-dns {
+
+        container DNS_NAMESERVER {
+
+            description "DNS_NAMESERVER part of config_db.json";
+
+            list DNS_NAMESERVER_LIST {
+                max-elements 3;
+                description "List of nameservers IPs";
+
+                key "ip";
+
+                leaf ip {
+                    description "IP as DHCP_SERVER";
+                    type inet:ip-address;
+                }
+            } /* end of list DNS_NAMESERVER_LIST */
+
+        } /* end of container DNS_NAMESERVER */
+
+    } /* end of container sonic-dns */
+
+} /* end of module sonic-dns */

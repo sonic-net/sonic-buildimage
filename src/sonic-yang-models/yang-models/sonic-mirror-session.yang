@@ -154,14 +154,9 @@ module sonic-mirror-session {
                         "Destination port configuration for port mirroring(SPAN).";
                 }
 
-                leaf-list src_port {
-                    type union {
-                        type leafref {
-                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
-                        }
-                        type leafref {
-                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
-                        }
+                leaf src_port {
+                    type string {
+                        length 1..2048;
                     }
                     description
                         "Source port configuration for mirroring. Can be configured for both SPAN/ERSPAN.

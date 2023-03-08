@@ -229,6 +229,18 @@ def device_install():
             print(output)
             if FORCE == 0:
                 return status
+
+    status, output = log_os_system("cp /usr/share/sonic/device/x86_64-wistron_sw_to3200k-r0/smartd.conf /etc/;systemctl restart smartd.service", 1)
+    if status:
+        print(output)
+        if FORCE == 0:
+            return status
+
+    status, output = log_os_system("cp /usr/share/sonic/device/x86_64-wistron_sw_to3200k-r0/watchdog-control.service /usr/lib/systemd/system/", 1)
+    if status:
+        print(output)
+        if FORCE == 0:
+            return status
     return
 
 def device_uninstall():
@@ -284,12 +296,6 @@ def do_install():
     else:
         print(PROJECT_NAME.upper()+" devices detected....")
 
-    status, output = log_os_system(
-        "/bin/sh /usr/local/bin/platform_api_mgnt.sh init", 1)
-    if status:
-            print(output)
-            if FORCE == 0:
-                return status
     return
 
 def do_uninstall():

@@ -28,5 +28,27 @@
                 }]
             }
         }
+    },
+
+    "VRF_TEST_WITH_VNI": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                        "name": "Vrf_blue",
+                        "vni": "100"
+                }]
+            }
+        }
+    },
+
+    "VRF_TEST_WITH_VNI_OOR": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                        "name": "Vrf_blue",
+                        "vni": "16777216"
+                }]
+            }
+        }
     }
 }

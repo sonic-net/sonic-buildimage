@@ -15,7 +15,6 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-
 class Thermal(ThermalBase):
     """Platform-specific Thermal class"""
 
@@ -42,6 +41,8 @@ class Thermal(ThermalBase):
         self.THERMAL_NAME_LIST.append("UCPUB")
         self.THERMAL_NAME_LIST.append("UFANB")
         ThermalBase.__init__(self)
+        self.minimum_thermal = self.get_temperature()
+        self.maximum_thermal = self.get_temperature()
 
     def __read_txt_file(self, file_path):
         try:
@@ -50,13 +51,24 @@ class Thermal(ThermalBase):
                 return data.strip()
         except IOError:
             pass
-        return ""
+        return None
 
     def __get_temp(self, temp_file):
         temp_file_path = os.path.join(self.SYSFS_THERMAL_DIR[self.index], temp_file)
         raw_temp = self.__read_txt_file(temp_file_path)
-        temp = float(raw_temp)/1000
-        return "{:.3f}".format(temp)
+        if raw_temp is not None:
+            return float(raw_temp)/1000
+        else:
+            return 0.0
+
+    def __set_threshold(self, file_name, temperature):
+        temp_file_path = os.path.join(self.SYSFS_THERMAL_DIR[self.index], file_name)
+        try:
+            with open(temp_file_path, 'w') as fd:
+                fd.write(str(temperature))
+            return True
+        except IOError:
+            return False
 
     def get_temperature(self):
         """
@@ -74,7 +86,8 @@ class Thermal(ThermalBase):
         :return: A float number, the low threshold temperature of thermal in Celsius
                  up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        return int(3)
+        # work temperatur is 0~40, hyst is 2
+        return 2.0
 
     def get_low_critical_threshold(self):
         """
@@ -82,7 +95,8 @@ class Thermal(ThermalBase):
         :return: A float number, the low critical threshold temperature of thermal in Celsius
                  up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        return int(0)
+        # work temperatur is 0~40
+        return 0.0
 
     def get_high_threshold(self):
         """
@@ -120,7 +134,7 @@ class Thermal(ThermalBase):
             bool: True if PSU is present, False if not
         """
         temp_file = "temp1_input"
-        temp_file_path = os.path.join(self.hwmon_path, temp_file)
+        temp_file_path = os.path.join(self.SYSFS_THERMAL_DIR[self.index], temp_file)
         return os.path.isfile(temp_file_path)
 
     def get_status(self):
@@ -133,4 +147,64 @@ class Thermal(ThermalBase):
             return False
 
         return True
+
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the device
+        Returns:
+            string: Model/part number of device
+        """
+        return "None"
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the device
+        Returns:
+            string: Serial number of device
+        """
+        return "None"
+
+    def is_replaceable(self):
+        """
+        Retrieves whether thermal module is replaceable
+        Returns:
+            A boolean value, True if replaceable, False if not
+        """
+        return False
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of
+        entPhysicalContainedIn is'0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device
+            or -1 if cannot determine the position
+        """
+        return self.index + 1
+
+    def get_minimum_recorded(self):
+        """
+        Retrieves the minimum recorded temperature of thermal
+        Returns:
+            A float number, the minimum recorded temperature of thermal in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        tmp = self.get_temperature()
+        if tmp < self.minimum_thermal:
+            self.minimum_thermal = tmp
+        return self.minimum_thermal
+
+    def get_maximum_recorded(self):
+        """
+        Retrieves the maximum recorded temperature of thermal
+        Returns:
+            A float number, the maximum recorded temperature of thermal in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        tmp = self.get_temperature()
+        if tmp > self.maximum_thermal:
+            self.maximum_thermal = tmp
+        return self.maximum_thermal
 

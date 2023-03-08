@@ -66,8 +66,9 @@ Table of Contents
          * [LOGGER](#logger)           
          * [WRED_PROFILE](#wred_profile)  
          * [PASSWORD_HARDENING](#password_hardening)  
-         * [SYSTEM_DEFAULTS table](#systemdefaults-table)
-         * [RADIUS](#radius)
+         * [SYSTEM_DEFAULTS table](#systemdefaults-table)  
+         * [RADIUS](#radius)  
+         * [Static DNS](#static-dns)  
    * [For Developers](#for-developers)  
       * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
       * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -1882,6 +1883,7 @@ table allow to change properties of a virtual router. Attributes:
     packets with IP options
 -   'l3_mc_action' contains packet action. Defines the action for
     unknown L3 multicast packets
+-   'vni' contains L3 VNI value. VNI associated Virtual router instance.
 
 The packet action could be:
 
@@ -1903,7 +1905,8 @@ The packet action could be:
 	'src_mac': '02:04:05:06:07:08',
 	'ttl_action': 'copy',
 	'ip_opt_action': 'deny',
-	'l3_mc_action': 'drop'
+	'l3_mc_action': 'drop',
+	'vni': '100'
 }
 ```
 
@@ -2094,6 +2097,19 @@ The RADIUS and RADIUS_SERVER tables define RADIUS configuration parameters. RADI
                "timeout": "5"
         }
     }
+```
+
+### Static DNS
+
+The DNS_NAMESERVER table introduces static DNS nameservers configuration.
+
+```json
+{
+	"DNS_NAMESERVER": {
+		"1.1.1.1": {},
+		"fe80:1000:2000:3000::1": {}
+	},
+}
 ```
 
 #### 5.2.3 Update value directly in db memory

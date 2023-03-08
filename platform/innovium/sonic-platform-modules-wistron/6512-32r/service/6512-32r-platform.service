@@ -1,7 +1,6 @@
 [Unit]
 Description=Wistron 6512-32R Platform Monitoring service
-Before=pmon.service
-After=sysinit.target
+After=platform-modules-6512-32r.service
 DefaultDependencies=no
 
 [Service]

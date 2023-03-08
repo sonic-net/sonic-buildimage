@@ -43,6 +43,14 @@ module sonic-vrf {
                         "Enable/disable fallback feature which is useful for specified VRF user to access internet through global/main route.";
                 }
 
+                leaf vni {
+                    type uint32 {
+                        range "0..16777215";
+                    }
+                    default 0;
+                    description
+                        "VNI mapped to VRF";
+                }
             } /* end of list VRF_LISt */
         } /* end of container VRf */
     } /* end of container sonic-vrf */

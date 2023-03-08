@@ -524,6 +524,8 @@ write_platform_specific_cmdline() {
     fi
     if [ "$sid" = "Lodoga" ]; then
         aboot_machine=arista_7050cx3_32s
+        cmdline_add logs_inram=on
+        cmdline_add libata.force=2.00:noncq
     fi
     if [ "$sid" = "Marysville" ]; then
         aboot_machine=arista_7050sx3_48yc8
@@ -620,6 +622,10 @@ write_platform_specific_cmdline() {
         cmdline_add intel_iommu=on
         cmdline_add intel_idle.max_cstate=0
         read_system_eeprom
+    fi
+    if in_array "$platform" "rook"; then
+        # Currently applies to Alhambra, Blackhawk, Gardena and Mineral
+        cmdline_add libata.force=1.00:noncq
     fi
     if in_array "$platform" "crow" "magpie"; then
         cmdline_add amd_iommu=off

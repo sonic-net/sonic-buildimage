@@ -38,6 +38,7 @@ def
     {%- set ports2cable = defs.ports2cable %}
 {%- else %}
     {%- set ports2cable = {
+            'internal'               : '5m',
             'torrouter_server'       : '5m',
             'leafrouter_torrouter'   : '40m',
             'spinerouter_leafrouter' : '300m'
@@ -93,7 +94,14 @@ def
                 {{ default_cable }}
             {%- endif %}
         {%- else -%}
-            {{ default_cable }}
+            {%- if port_name.startswith('Ethernet-BP') %}
+                {%- if 'internal' not in ports2cable %}
+                    {%- set _ = ports2cable.update({'internal': '5m'}) %}
+                {%- endif -%}
+                {{ ports2cable['internal'] }}
+            {%- else -%}
+                {{ default_cable }}
+            {%- endif %}
         {%- endif %}
     {%- endif %}
 {%- endmacro %}

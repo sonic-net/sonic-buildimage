@@ -242,27 +242,27 @@ static ssize_t set_oom_info(struct device *dev, struct device_attribute *da, con
         {
             case OOM_EEPROM_LOW:
             {
-                memset(&data->eeproml, 0x0, sizeof(data->eeproml));
+                memzero_explicit(&data->eeproml, sizeof(data->eeproml));
                 break;
             }
             case OOM_EEPROM_PG0:
             {
-                memset(&data->eeprom0, 0x0, sizeof(data->eeprom0));
+                memzero_explicit(&data->eeprom0, sizeof(data->eeprom0));
                 break;
             }
             case OOM_EEPROM_PG2:
             {
-                memset(&data->eeprom2, 0x0, sizeof(data->eeprom2));
+                memzero_explicit(&data->eeprom2, sizeof(data->eeprom2));
                 break;
             }
             case OOM_EEPROM_PG3:
             {
-                memset(&data->eeprom3, 0x0, sizeof(data->eeprom3));
+                memzero_explicit(&data->eeprom3, sizeof(data->eeprom3));
                 break;
             }
             case OOM_EEPROM_PG11:
             {
-                memset(&data->eeprom11, 0x0, sizeof(data->eeprom11));
+                memzero_explicit(&data->eeprom11, sizeof(data->eeprom11));
                 break;
             }
             default:
@@ -332,7 +332,7 @@ static int sw_to3200k_oom_probe(struct i2c_client *client, const struct i2c_devi
         goto exit_free;
     }
 
-    data->hwmon_dev = hwmon_device_register(&client->dev);
+	data->hwmon_dev = hwmon_device_register_with_info(&client->dev, "wistron_oom", NULL, NULL, NULL);
     if (IS_ERR(data->hwmon_dev))
     {
         status = PTR_ERR(data->hwmon_dev);

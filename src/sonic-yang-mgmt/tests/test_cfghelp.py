@@ -71,17 +71,17 @@ Description: AUTO_TECHSUPPORT part of config_db.json
 
 """
 
-portchannel_table_field_output="""\
+vlan_table_field_output="""\
 
-PORTCHANNEL
-Description: PORTCHANNEL part of config_db.json
+VLAN
+Description: VLAN part of config_db.json
 
 key - name
-+---------+-------------------------------------------+-------------+-----------+-------------+
-| Field   | Description                               | Mandatory   | Default   | Reference   |
-+=========+===========================================+=============+===========+=============+
-| members | The field contains list of unique members |             |           | PORT:name   |
-+---------+-------------------------------------------+-------------+-----------+-------------+
++--------------+------------------------------------------------------------------------+-------------+-----------+-------------+
+| Field        | Description                                                            | Mandatory   | Default   | Reference   |
++==============+========================================================================+=============+===========+=============+
+| dhcp_servers | The field contains list of unique membersConfigure the dhcp v4 servers |             |           |             |
++--------------+------------------------------------------------------------------------+-------------+-----------+-------------+
 
 """
 
@@ -153,9 +153,9 @@ class TestCfgHelp(TestCase):
         self.assertEqual(output, techsupport_table_field_output)
 
     def test_leaf_list(self):
-        argument = ['-t', 'PORTCHANNEL', '-f', 'members']
+        argument = ['-t', 'VLAN', '-f', 'dhcp_servers']
         output = self.run_script(argument)
-        self.assertEqual(output, portchannel_table_field_output)
+        self.assertEqual(output, vlan_table_field_output)
 
     def test_leaf_list_map(self):
         argument = ['-t', 'DSCP_TO_TC_MAP']

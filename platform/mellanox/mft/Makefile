@@ -27,6 +27,12 @@ endif
 MFT_NAME = mft-$(MFT_VERSION)-$(MFT_REVISION)-$(MFT_ARCH)-deb
 MFT_TGZ = $(MFT_NAME).tgz
 
+ifeq ($(MFT_FROM_INTERNAL),y)
+MFT_TGZ_URL = $(MLNX_MFT_INTERNAL_SOURCE_BASE_URL)$(MFT_TGZ)
+else
+MFT_TGZ_URL = http://www.mellanox.com/downloads/MFT/$(MFT_TGZ)
+endif
+
 SRC_DEB = kernel-mft-dkms_$(MFT_VERSION)-$(MFT_REVISION)_all.deb
 MOD_DEB = kernel-mft-dkms-modules-$(KVERSION)_$(MFT_VERSION)_$(CONFIGURED_ARCH).deb
 
@@ -38,7 +44,7 @@ DKMS_TMP := $(shell mktemp -u -d -t dkms.XXXXXXXXXX)
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf $(MFT_NAME)
-	wget -O $(MFT_TGZ) http://www.mellanox.com/downloads/MFT/$(MFT_TGZ)
+	wget -O $(MFT_TGZ) $(MFT_TGZ_URL)
 	tar xzf $(MFT_TGZ)
 
 	pushd $(MFT_NAME)/SDEBS
