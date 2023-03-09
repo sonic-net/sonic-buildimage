@@ -131,3 +131,18 @@ stages:
           MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
           MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
           COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
+
+  - job: wan_testbedv2
+    displayName: "kvmtest-wan by TestbedV2"
+    pool:
+      vmImage: 'ubuntu-20.04'
+    timeoutInMinutes: 240
+    condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
+    continueOnError: false
+    steps:
+      - template: ../.azure-pipelines/run-test-scheduler-template.yml
+        parameters:
+          TOPOLOGY: wan-pub
+          MIN_WORKER: $(WAN_INSTANCE_NUM)
+          MAX_WORKER: $(WAN_INSTANCE_NUM)
+          COMMON_EXTRA_PARAMS: "--skip_sanity "
