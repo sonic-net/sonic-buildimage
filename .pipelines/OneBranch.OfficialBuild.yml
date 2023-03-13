@@ -194,7 +194,7 @@ stages:
         - name: vs
           script: |
             set -ex
-            OPTIONS="$(BUILD_OPTIONS) SONIC_DPKG_CACHE_METHOD=wcache PASSWORD=$PASSWORD"
+            OPTIONS="$(BUILD_OPTIONS) SONIC_DPKG_CACHE_METHOD=wcache PASSWORD=$PASSWORD BUILD_MULTIASIC_KVM=y"
             make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
         - name: generic
           script: |
