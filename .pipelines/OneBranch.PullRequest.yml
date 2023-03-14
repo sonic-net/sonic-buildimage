@@ -41,7 +41,12 @@ stages:
       - name: broadcom
         variables:
           swi_image: yes
+          dbg_image: yes
       - name: mellanox
+        variables:
+          dbg_image: yes
+          docker_syncd_rpc_image: yes
+          platform_rpc: mlnx
       preSteps:
         - template: .pipelines/prepare_agent.yml@acs-buildimage
 
