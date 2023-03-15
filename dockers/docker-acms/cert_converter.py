@@ -88,7 +88,7 @@ def convert_certs(acms_certs_path, certs_path, password_length):
                 ver = cert_name.split(".")[1]
                 # Extract the certificate from the pfx file
                 cmd = ["openssl", "pkcs12", "-clcerts", "-nokeys", "-in", acms_certs_path+name+".pfx."+ver, "-out", certs_path+name+".crt."+ver, "-password", "pass:", "-passin", "pass:"]
-                sonic_logger.log_info("cert_converter : convert_certs : "+cmd)
+                sonic_logger.log_info("cert_converter : convert_certs : "+" ".join(cmd))
                 if not execute_cmd(cmd):
                     sonic_logger.log_error("cert_converter : convert_certs : Extracting crt from pfx failed!", True)
                     return False                
