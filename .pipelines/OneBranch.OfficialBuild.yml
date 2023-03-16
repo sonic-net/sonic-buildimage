@@ -62,6 +62,7 @@ stages:
       preSteps:
         - template: .pipelines/prepare_agent.yml@acs-buildimage
         - template: .azure-pipelines/cleanup.yml@acs-buildimage
+        - template: .azure-pipelines/template-daemon.yml@buildimage
         - checkout: self
           clean: true
           submodules: recursive
@@ -186,10 +187,7 @@ stages:
         - template: .pipelines/post-build-steps.yml@acs-buildimage
         - task: ComponentGovernanceComponentDetection@0
           condition: eq(variables['PLATFORM_ARCH'], 'amd64')
-        - script: |
-            sudo rm -rf fsroot
-            docker rmi -f $(docker images docker-* -a -q | grep docker-) || true
-          displayName: "CleanUp"
+        - template: .azure-pipelines/cleanup.yml@acs-buildimage
       jobGroups:
         - name: vs
           script: |
