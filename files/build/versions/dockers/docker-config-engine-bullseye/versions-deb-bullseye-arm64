@@ -1,0 +1,14 @@
+icu-devtools==67.1-7
+libc-dev-bin==2.31-13+deb11u5
+libc6-dev==2.31-13+deb11u5
+libcrypt-dev==1:4.4.18-4
+libicu-dev==67.1-7
+libicu67==67.1-7
+libnsl-dev==1.3.0-2
+libtirpc-dev==1.3.1-1+deb11u1
+libxml2==2.9.10+dfsg-6.7+deb11u3
+libxml2-dev==2.9.10+dfsg-6.7+deb11u3
+libxslt1-dev==1.1.34-4+deb11u1
+libxslt1.1==1.1.34-4+deb11u1
+linux-libc-dev==5.10.162-1
+zlib1g-dev==1:1.2.11.dfsg-2+deb11u2

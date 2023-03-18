@@ -1,0 +1,54 @@
+{
+    "CHASSIS_MODULE_WITH_DEFAULT_VALUES": {
+        "sonic-chassis-module:sonic-chassis-module": {
+            "sonic-chassis-module:CHASSIS_MODULE": {
+                "CHASSIS_MODULE_LIST": [
+                    {
+                        "name": "LINE-CARD0",
+                        "admin_status": "up"
+                    },
+                    {
+                        "name": "LINE-CARD1",
+                        "admin_status": "up"
+                    },
+                    { 
+                        "name": "FABRIC-CARD0",
+                        "admin_status": "up"
+                    },
+                    {
+                        "name": "FABRIC-CARD1",
+                        "admin_status": "up"
+                    }
+                ]
+            }            
+        }
+    },
+    "CHASSIS_MODULE_WITH_LINECARD_ADMIN_DOWN": {
+        "sonic-chassis-module:sonic-chassis-module": {
+            "sonic-chassis-module:CHASSIS_MODULE": {
+                "CHASSIS_MODULE_LIST": [
+                    {
+                        "name": "LINE-CARD0",
+                        "admin_status": "down"
+                    },
+                    {
+                        "name": "FABRIC-CARD1",
+                        "admin_status": "down"
+                    }
+                ]
+            }            
+        }
+    },
+    "CHASSIS_MODULE_WITH_LINECARD_ADMIN_INVALID_VALUE": {
+        "sonic-chassis-module:sonic-chassis-module": {
+            "sonic-chassis-module:CHASSIS_MODULE": {
+                "CHASSIS_MODULE_LIST": [
+                    {
+                        "name": "LINE-CARD0",
+                        "admin_status": "false"
+                    }
+                ]
+            }            
+        }
+    }
+}

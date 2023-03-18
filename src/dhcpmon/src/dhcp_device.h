@@ -17,6 +17,7 @@
 #include <event2/buffer.h>
 
 extern bool dual_tor_sock;
+extern std::unordered_map<std::string, struct intf*> intfs;
 
 /**
  * DHCP message types
@@ -83,7 +84,6 @@ typedef struct
     in_addr_t giaddr_ip;            /** Gateway IP address */
     uint8_t is_uplink;              /** north interface? */
     char intf[IF_NAMESIZE];         /** device (interface) name */
-    uint8_t *buffer;                /** buffer used to read socket data */
     size_t snaplen;                 /** snap length or buffer size */
     uint64_t counters[DHCP_COUNTERS_COUNT][DHCP_DIR_COUNT][DHCP_MESSAGE_TYPE_COUNT];
                                     /** current/snapshot counters of DHCP packets */
@@ -137,21 +137,17 @@ int dhcp_device_init(dhcp_device_context_t **context,
                      uint8_t is_uplink);
 
 /**
- * @code dhcp_device_start_capture(context, snaplen, base, giaddr_ip);
+ * @code dhcp_device_start_capture(snaplen, base, giaddr_ip);
  *
  * @brief starts packet capture on this interface
  *
- * @param context           pointer to device (interface) context
  * @param snaplen           length of packet capture
  * @param base              pointer to libevent base
  * @param giaddr_ip         gateway IP address
  *
  * @return 0 on success, otherwise for failure
  */
-int dhcp_device_start_capture(dhcp_device_context_t *context,
-                              size_t snaplen,
-                              struct event_base *base,
-                              in_addr_t giaddr_ip);
+int dhcp_device_start_capture(size_t snaplen, struct event_base *base, in_addr_t giaddr_ip);
 
 /**
  * @code dhcp_device_shutdown(context);

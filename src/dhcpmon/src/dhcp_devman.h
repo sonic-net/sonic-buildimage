@@ -8,8 +8,18 @@
 #define DHCP_DEVMAN_H_
 
 #include <stdint.h>
+#include <string>
+#include <unordered_map>
 
 #include "dhcp_device.h"
+
+/** struct for interface information */
+struct intf
+{
+    const char *name;                   /** interface name */
+    uint8_t is_uplink;                  /** is uplink (north) interface */
+    dhcp_device_context_t *dev_context; /** device (interface_ context */
+};
 
 /**
  * @code dhcp_devman_init();

@@ -1,0 +1,2 @@
+netifaces==0.10.9
+pyroute2==0.5.14

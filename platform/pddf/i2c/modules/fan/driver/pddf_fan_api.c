@@ -330,6 +330,106 @@ int fan_cpld_client_read(FAN_DATA_ATTR *udata)
     return status;
 }
 
+int fan_cpld_client_write(FAN_DATA_ATTR *udata, uint32_t val)
+{
+    int status = 0;
+
+    if (udata->len==1)
+    {
+        status = board_i2c_cpld_write(udata->devaddr, udata->offset, val);
+    }
+    else
+    {
+        /* Get the I2C client for the CPLD */
+        struct i2c_client *client_ptr=NULL;
+        client_ptr = (struct i2c_client *)get_device_table(udata->devname);
+        if (client_ptr)
+        {
+            if (udata->len==2)
+            {
+                uint8_t val_lsb = val & 0xFF;
+                uint8_t val_hsb = (val >> 8) & 0xFF;
+                /* TODO: Check this logic for LE and BE */
+                status = i2c_smbus_write_byte_data(client_ptr, udata->offset, val_lsb);
+                if (status==0) status = i2c_smbus_write_byte_data(client_ptr, udata->offset+1, val_hsb);
+            }
+            else
+                printk(KERN_ERR "PDDF_FAN: Doesn't support block CPLD write yet");
+        }
+        else
+            printk(KERN_ERR "Unable to get the client handle for %s\n", udata->devname);
+    }
+
+    return status;
+}
+
+int fan_fpgai2c_client_read(FAN_DATA_ATTR *udata)
+{
+    int status = -1;
+
+    if (udata!=NULL)
+    {
+        if (udata->len==1)
+        {
+            status = board_i2c_fpga_read(udata->devaddr , udata->offset);
+            /*printk(KERN_ERR "### Reading offset 0x%x from 0x%x device ...  val 0x%x\n", udata->offset, udata->devaddr, status);*/
+        }
+        else
+        {
+            /* Get the I2C client for the FPGAI2C */
+            struct i2c_client *client_ptr=NULL;
+            client_ptr = (struct i2c_client *)get_device_table(udata->devname);
+            if (client_ptr)
+            {
+                if (udata->len==2)
+                {
+                    status = i2c_smbus_read_word_swapped(client_ptr, udata->offset);
+                }
+                else
+                    printk(KERN_ERR "PDDF_FAN: Doesn't support block FPGAI2C read yet");
+            }
+            else
+                printk(KERN_ERR "Unable to get the client handle for %s\n", udata->devname);
+        }
+
+    }
+
+    return status;
+}
+
+int fan_fpgai2c_client_write(FAN_DATA_ATTR *udata, uint32_t val)
+{
+    int status = 0;
+
+    if (udata->len==1)
+    {
+        status = board_i2c_fpga_write(udata->devaddr, udata->offset, val);
+    }
+    else
+    {
+        /* Get the I2C client for the FPGAI2C */
+        struct i2c_client *client_ptr=NULL;
+        client_ptr = (struct i2c_client *)get_device_table(udata->devname);
+        if (client_ptr)
+        {
+            if (udata->len==2)
+            {
+                uint8_t val_lsb = val & 0xFF;
+                uint8_t val_hsb = (val >> 8) & 0xFF;
+                /* TODO: Check this logic for LE and BE */
+                status = i2c_smbus_write_byte_data(client_ptr, udata->offset, val_lsb);
+                if (status==0) status = i2c_smbus_write_byte_data(client_ptr, udata->offset+1, val_hsb);
+            }
+            else
+                printk(KERN_ERR "PDDF_FAN: Doesn't support block FPGAI2C write yet");
+        }
+        else
+            printk(KERN_ERR "Unable to get the client handle for %s\n", udata->devname);
+    }
+
+    return status;
+}
+
 
 int sonic_i2c_get_fan_present_default(void *client, FAN_DATA_ATTR *udata, void *info)
 {
@@ -340,6 +440,10 @@ int sonic_i2c_get_fan_present_default(void *client, FAN_DATA_ATTR *udata, void *
     if (strcmp(udata->devtype, "cpld") == 0)
     {
         val = fan_cpld_client_read(udata);
+    }
+    else if (strcmp(udata->devtype, "fpgai2c") == 0)
+    {
+        val = fan_fpgai2c_client_read(udata);
     }
     else
     {
@@ -364,6 +468,10 @@ int sonic_i2c_get_fan_rpm_default(void *client, FAN_DATA_ATTR *udata, void *info
     if (strcmp(udata->devtype, "cpld") == 0)
     {
         val = fan_cpld_client_read(udata);
+    }
+    else if (strcmp(udata->devtype, "fpgai2c") == 0)
+    {
+        val = fan_fpgai2c_client_read(udata);
     }
     else
     {
@@ -395,18 +503,26 @@ int sonic_i2c_get_fan_rpm_default(void *client, FAN_DATA_ATTR *udata, void *info
 int sonic_i2c_get_fan_direction_default(void *client, FAN_DATA_ATTR *udata, void *info)
 {
     int status = 0;
-	uint32_t val = 0;
+	int val = 0;
     struct fan_attr_info *painfo = (struct fan_attr_info *)info;
 
     if (strcmp(udata->devtype, "cpld") == 0)
     {
         val = fan_cpld_client_read(udata);
     }
+    else if (strcmp(udata->devtype, "fpgai2c") == 0)
+    {
+        val = fan_fpgai2c_client_read(udata);
+    }
     else
     {
 	    val = i2c_smbus_read_byte_data((struct i2c_client *)client, udata->offset);
     }
-	painfo->val.intval = ((val & udata->mask) == udata->cmpval);
+
+    if (val < 0)
+        status = val;
+    else
+        painfo->val.intval = ((val & udata->mask) == udata->cmpval);
 
     return status;
 }
@@ -415,7 +531,7 @@ int sonic_i2c_get_fan_direction_default(void *client, FAN_DATA_ATTR *udata, void
 int sonic_i2c_set_fan_pwm_default(struct i2c_client *client, FAN_DATA_ATTR *udata, void *info)
 {
     int status = 0;
-	uint32_t val = 0;
+	int val = 0;
     struct fan_attr_info *painfo = (struct fan_attr_info *)info;
 
 	val = painfo->val.intval & udata->mask;
@@ -427,52 +543,31 @@ int sonic_i2c_set_fan_pwm_default(struct i2c_client *client, FAN_DATA_ATTR *udat
 
     if (strcmp(udata->devtype, "cpld") == 0)
     {
-        if (udata->len==1)
-        {
-            status = board_i2c_cpld_write(udata->devaddr , udata->offset, val);
-        }
-        else
-        {
-            /* Get the I2C client for the CPLD */
-            struct i2c_client *client_ptr=NULL;
-            client_ptr = (struct i2c_client *)get_device_table(udata->devname);
-            if (client_ptr)
-            {
-                if (udata->len==2)
-                {
-                    uint8_t val_lsb = val & 0xFF;
-                    uint8_t val_hsb = (val >> 8) & 0xFF;
-                    /* TODO: Check this logic for LE and BE */
-                    i2c_smbus_write_byte_data(client, udata->offset, val_lsb);
-                    i2c_smbus_write_byte_data(client, udata->offset+1, val_hsb);
-                }
-                else
-                    printk(KERN_ERR "PDDF_FAN: Doesn't support block CPLD write yet");
-            }
-            else
-                printk(KERN_ERR "Unable to get the client handle for %s\n", udata->devname);
-        }
-        
+        status = fan_cpld_client_write(udata, val);
+    }
+    else if (strcmp(udata->devtype, "fpgai2c") == 0)
+    {
+        status = fan_fpgai2c_client_write(udata, val);
     }
     else
     {
         if (udata->len == 1)
-            i2c_smbus_write_byte_data(client, udata->offset, val);
+            status = i2c_smbus_write_byte_data(client, udata->offset, val);
         else if (udata->len == 2)
         {
             uint8_t val_lsb = val & 0xFF;
             uint8_t val_hsb = (val >> 8) & 0xFF;
             /* TODO: Check this logic for LE and BE */
-            i2c_smbus_write_byte_data(client, udata->offset, val_lsb);
-            i2c_smbus_write_byte_data(client, udata->offset+1, val_hsb);
+            status = i2c_smbus_write_byte_data(client, udata->offset, val_lsb);
+            if (status == 0) status = i2c_smbus_write_byte_data(client, udata->offset+1, val_hsb);
         }
         else
         {
             printk(KERN_DEBUG "%s: pwm should be of len 1/2 bytes. Not setting the pwm as the length is %d\n", __FUNCTION__, udata->len);
         }
     }
-	
-	return status;
+
+    return status;
 }
 
 
@@ -485,6 +580,10 @@ int sonic_i2c_get_fan_pwm_default(void *client, FAN_DATA_ATTR *udata, void *info
     if (strcmp(udata->devtype, "cpld") == 0)
     {
         val = fan_cpld_client_read(udata);
+    }
+    else if (strcmp(udata->devtype, "fpgai2c") == 0)
+    {
+        val = fan_fpgai2c_client_read(udata);
     }
     else
     {
@@ -519,6 +618,10 @@ int sonic_i2c_get_fan_fault_default(void *client, FAN_DATA_ATTR *udata, void *in
     if (strcmp(udata->devtype, "cpld") == 0)
     {
         val = fan_cpld_client_read(udata);
+    }
+    else if (strcmp(udata->devtype, "fpgai2c") == 0)
+    {
+        val = fan_fpgai2c_client_read(udata);
     }
     else
     {

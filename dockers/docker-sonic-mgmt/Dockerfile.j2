@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y build-essential \
                                          python3-pip \
                                          python3-venv \
                                          rsyslog \
+                                         shellcheck \
                                          snmp \
                                          software-properties-common \
                                          sshpass \
@@ -59,6 +60,7 @@ RUN pip install allure-pytest==2.8.22 \
                 jsonpatch \
                 lazy-object-proxy==1.6.0 \
                 lxml \
+                mock \
                 msrest==0.6.21 \
                 natsort \
                 netaddr \
@@ -85,6 +87,7 @@ RUN pip install allure-pytest==2.8.22 \
                 requests \
                 retry \
                 rpyc \
+                scandir \
                 six \
                 snappi[ixnetwork,convergence]==0.7.44 \
                 statistics \
@@ -205,6 +208,7 @@ RUN python3 -m pip install aiohttp \
                            jsonpatch \
                            lxml \
                            markupsafe==2.0.1 \
+                           mock \
                            msrest==0.6.21 \
                            natsort \
                            ncclient \
@@ -234,6 +238,7 @@ RUN python3 -m pip install aiohttp \
                            requests \
                            retry \
                            rpyc \
+                           scandir \
                            scapy==2.4.5 \
                            setuptools-rust \
                            six \

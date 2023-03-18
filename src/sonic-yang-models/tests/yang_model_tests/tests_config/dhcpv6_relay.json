@@ -76,8 +76,22 @@
                             "2001:1::2"
                         ],
                         "rfc6939_support": "true",
-
+                        "name": "Vlan400",
+                        "interface_id": "true",
                         "name": "Vlan400"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCPv6_OPTION_WITH_INVALID_BOOLEAN_TYPE": {
+        "sonic-dhcpv6-relay:sonic-dhcpv6-relay": {
+            "sonic-dhcpv6-relay:DHCP_RELAY": {
+                "DHCP_RELAY_LIST": [
+                    {
+                        "name": "Vlan500",
+                        "rfc6939_support": "False",
+                        "interface_id": "False"
                     }
                 ]
             }

@@ -15,6 +15,7 @@ WORKDIR /root
 MAINTAINER Pavel Shirshov
 
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
+COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -73,7 +74,8 @@ RUN apt-get update          \
         libteam-utils       \
         gdb                 \
         automake            \
-        iproute2
+        iproute2            \
+        wireshark-common
 
 # Install all python modules from pypi. python-scapy is exception, ptf debian package requires python-scapy
 # TODO: Clean up this step

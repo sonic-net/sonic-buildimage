@@ -260,7 +260,7 @@ class LldpManager(daemon_base.DaemonBase):
                         self.pending_cmds.pop(key, None)
             elif op == "DEL":
                 self.pending_cmds.pop(key, None)
-            else:
+            elif op:
                 self.log_error("unknown operation '{}'".format(op))
         elif key == "PortInitDone":
             self.port_init_done = True

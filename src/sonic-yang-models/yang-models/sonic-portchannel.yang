@@ -102,6 +102,15 @@ module sonic-portchannel {
                     type stypes:tpid_type;
                 }
 
+                leaf fallback {
+                    description "Enable LACP fallback feature";
+                    type stypes:boolean_type;
+                }
+                leaf fast_rate {
+                    description "Enable LACP fast rate";
+                    type stypes:boolean_type;
+                }
+
             } /* end of list PORTCHANNEL_LIST */
 
         } /* end of container PORTCHANNEL */

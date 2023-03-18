@@ -14,11 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-MLNX_SDK_BASE_PATH = $(PLATFORM_PATH)/sdk-src/sx-kernel/Switch-SDK-drivers/bin/
-MLNX_SDK_PKG_BASE_PATH = $(MLNX_SDK_BASE_PATH)/$(BLDENV)/$(CONFIGURED_ARCH)/
-MLNX_SDK_VERSION = 4.5.4150
+MLNX_SDK_VERSION = 4.5.4206
 MLNX_SDK_ISSU_VERSION = 101
 
+MLNX_ASSETS_GITHUB_URL = https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins
+MLNX_SDK_ASSETS_RELEASE_TAG = sdk-$(MLNX_SDK_VERSION)-$(BLDENV)-$(CONFIGURED_ARCH)
+MLNX_SDK_ASSETS_URL = $(MLNX_ASSETS_GITHUB_URL)/releases/download/$(MLNX_SDK_ASSETS_RELEASE_TAG)
 MLNX_SDK_DEB_VERSION = $(subst -,.,$(subst _,.,$(MLNX_SDK_VERSION)))
 
 # Place here URL where SDK sources exist
@@ -30,7 +31,7 @@ else
 SDK_FROM_SRC = n
 endif
 
-export MLNX_SDK_SOURCE_BASE_URL MLNX_SDK_VERSION MLNX_SDK_ISSU_VERSION MLNX_SDK_DEB_VERSION
+export MLNX_SDK_SOURCE_BASE_URL MLNX_SDK_VERSION MLNX_SDK_ISSU_VERSION MLNX_SDK_DEB_VERSION MLNX_ASSETS_GITHUB_URL
 
 MLNX_SDK_RDEBS += $(APPLIBS) $(IPROUTE2_MLNX) $(SX_COMPLIB) $(SX_EXAMPLES) \
                   $(SX_GEN_UTILS) $(SX_SCEW) $(SXD_LIBS) $(WJH_LIBS) $(SX_ACL_HELPER) \
@@ -163,21 +164,19 @@ $(SX_KERNEL)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/sx-kernel
 SX_KERNEL_DEV = sx-kernel-dev_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(SX_KERNEL),$(SX_KERNEL_DEV)))
 
-define make_path
-	$(1)_PATH = $(MLNX_SDK_PKG_BASE_PATH)
+define make_url
+	$(1)_URL = $(MLNX_SDK_ASSETS_URL)/$(1)
 
 endef
 
-$(eval $(foreach deb,$(MLNX_SDK_DEBS),$(call make_path,$(deb))))
-$(eval $(foreach deb,$(MLNX_SDK_RDEBS),$(call make_path,$(deb))))
-$(eval $(foreach deb,$(PYTHON_SDK_API) $(SX_KERNEL) $(SX_KERNEL_DEV),$(call make_path,$(deb))))
+$(eval $(foreach deb,$(MLNX_SDK_DEBS) $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API),$(call make_url,$(deb))))
 
 SONIC_MAKE_DEBS += $(SX_KERNEL)
 
 ifeq ($(SDK_FROM_SRC), y)
 SONIC_MAKE_DEBS += $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API)
 else
-SONIC_COPY_DEBS += $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API)
+SONIC_ONLINE_DEBS += $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API)
 endif
 
 mlnx-sdk-packages: $(addprefix $(DEBS_PATH)/, $(MLNX_SDK_RDEBS) $(PYTHON_SDK_API) $(SX_KERNEL))

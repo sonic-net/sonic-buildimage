@@ -227,6 +227,9 @@ RUN apt-get update && apt-get install -y \
         libpcap-dev \
         dnsutils \
         libusb-dev \
+# For cisco sdk build
+        libgrpc++1 \
+        libabsl-dev \
 # For debian image reconfiguration
         augeas-tools \
 # For p4 build

@@ -55,6 +55,8 @@ stages:
 
 - stage: Build
   pool: sonicbld
+  variables:
+    INSTALL_DEBUG_TOOLS: y
   dependsOn: []
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
@@ -174,8 +176,7 @@ stages:
         section: part-2
 
   - job: t0_testbedv2
-    pool:
-      vmImage: 'ubuntu-20.04'
+    pool: ubuntu-20.04
     displayName: "kvmtest-t0 by TestbedV2"
     timeoutInMinutes: 240
     condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
@@ -188,8 +189,7 @@ stages:
         MAX_WORKER: $(T0_INSTANCE_NUM)
 
   - job: t0_2vlans_testbedv2
-    pool:
-      vmImage: 'ubuntu-20.04'
+    pool: ubuntu-20.04
     displayName: "kvmtest-t0-2vlans by TestbedV2"
     timeoutInMinutes: 240
     condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
@@ -252,8 +252,7 @@ stages:
         vmtype: ceos
 
   - job: t1_lag_testbedv2
-    pool:
-      vmImage: 'ubuntu-20.04'
+    pool: ubuntu-20.04
     displayName: "kvmtest-t1-lag by TestbedV2"
     timeoutInMinutes: 240
     condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
@@ -319,8 +318,7 @@ stages:
 
   - job: multi_asic_testbedv2
     displayName: "kvmtest-multi-asic-t1-lag by TestbedV2"
-    pool:
-      vmImage: 'ubuntu-20.04'
+    pool: ubuntu-20.04
     timeoutInMinutes: 240
     condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
     continueOnError: false
@@ -334,8 +332,7 @@ stages:
           NUM_ASIC: 4
 
   - job: dualtor_testbedv2
-    pool:
-      vmImage: 'ubuntu-20.04'
+    pool: ubuntu-20.04
     displayName: "kvmtest-dualtor-t0 by TestbedV2"
     timeoutInMinutes: 240
     condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
@@ -350,8 +347,7 @@ stages:
 
   - job: sonic_t0_testbedv2
     displayName: "kvmtest-t0-sonic by TestbedV2"
-    pool:
-      vmImage: 'ubuntu-20.04'
+    pool: ubuntu-20.04
     timeoutInMinutes: 240
     condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
     continueOnError: false
@@ -368,8 +364,7 @@ stages:
 
   - job: wan_testbedv2
     displayName: "kvmtest-wan by TestbedV2"
-    pool:
-      vmImage: 'ubuntu-20.04'
+    pool: ubuntu-20.04
     timeoutInMinutes: 240
     condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
     continueOnError: false

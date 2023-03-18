@@ -121,6 +121,13 @@ module sonic-port{
 					}
 				}
 
+				leaf channel {
+					description "Logical channel(s) for physical port breakout";
+					type uint8 {
+						range 0..8;
+					}
+				}
+
 				leaf index {
 					type uint16;
 				}

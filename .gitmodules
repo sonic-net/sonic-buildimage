@@ -71,9 +71,6 @@
 [submodule "src/sonic-mgmt-framework"]
 	path = src/sonic-mgmt-framework
 	url = https://github.com/sonic-net/sonic-mgmt-framework
-[submodule "Switch-SDK-drivers"]
-	path = platform/mellanox/sdk-src/sx-kernel/Switch-SDK-drivers
-	url = https://github.com/Mellanox/Switch-SDK-drivers
 [submodule "src/sonic-ztp"]
 	path = src/sonic-ztp
 	url = https://github.com/sonic-net/sonic-ztp

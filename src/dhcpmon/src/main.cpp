@@ -46,7 +46,7 @@ bool dual_tor_sock = false;
 static void usage(const char *prog)
 {
     printf("Usage: %s -id <south interface> {-iu <north interface>}+ -im <mgmt interface> [-u <loopback interface>]"
-            "[-w <snapshot window in sec>] [-c <unhealthy status count>] [-s <snap length>] [-d]\n", prog);
+            "[-w <snapshot window in sec>] [-c <unhealthy status count>] [-s <snap length>] [-D] [-d]\n", prog);
     printf("where\n");
     printf("\tsouth interface: is a vlan interface,\n");
     printf("\tnorth interface: is a TOR-T1 interface,\n");
@@ -57,6 +57,7 @@ static void usage(const char *prog)
            "(default %d),\n",
            dhcpmon_default_unhealthy_max_count);
     printf("\tsnap length: snap length of packet capture (default %ld),\n", dhcpmon_default_snaplen);
+    printf("\t-D: debug mode: print counter to syslog\n");
     printf("\t-d: daemonize %s.\n", prog);
 
     exit(EXIT_SUCCESS);
@@ -117,11 +118,10 @@ int main(int argc, char **argv)
     int max_unhealthy_count = dhcpmon_default_unhealthy_max_count;
     size_t snaplen = dhcpmon_default_snaplen;
     int make_daemon = 0;
+    bool debug_mode = false;
 
     setlogmask(LOG_UPTO(LOG_INFO));
     openlog(basename(argv[0]), LOG_CONS | LOG_PID | LOG_NDELAY, LOG_DAEMON);
-
-    dhcp_devman_init();
 
     for (i = 1; i < argc;) {
         if ((argv[i] == NULL) || (argv[i][0] != '-')) {
@@ -161,6 +161,10 @@ int main(int argc, char **argv)
             max_unhealthy_count = atoi(argv[i + 1]);
             i += 2;
             break;
+        case 'D':
+            debug_mode = true;
+            i += 1;
+            break;
         default:
             fprintf(stderr, "%s: %c: Unknown option\n", basename(argv[0]), argv[i][1]);
             usage(basename(argv[0]));
@@ -172,7 +176,7 @@ int main(int argc, char **argv)
     }
 
     if ((dhcp_mon_init(window_interval, max_unhealthy_count) == 0) &&
-        (dhcp_mon_start(snaplen) == 0)) {
+        (dhcp_mon_start(snaplen, debug_mode) == 0)) {
 
         rv = EXIT_SUCCESS;
 

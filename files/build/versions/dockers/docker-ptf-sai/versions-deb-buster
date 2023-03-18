@@ -1,0 +1,3 @@
+libboost-atomic1.67.0==1.67.0-13+deb10u1
+libthrift0==0.14.1
+python3-thrift==0.14.1

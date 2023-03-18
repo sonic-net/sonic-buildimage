@@ -33,6 +33,7 @@ struct kobject *cur_state_kobj=NULL;
  * space JSON data file
  *****************************************/
 #define NAME_SIZE 32
+#define VALUE_SIZE 5
 typedef enum {
     STATUS_LED_COLOR_GREEN,
     STATUS_LED_COLOR_GREEN_BLINK,
@@ -42,20 +43,24 @@ typedef enum {
     STATUS_LED_COLOR_AMBER_BLINK,
     STATUS_LED_COLOR_BLUE,
     STATUS_LED_COLOR_BLUE_BLINK,
+    STATUS_LED_COLOR_YELLOW,
+    STATUS_LED_COLOR_YELLOW_BLINK,
     STATUS_LED_COLOR_OFF,
     MAX_LED_STATUS
 }LED_STATUS;
 
 char*  LED_STATUS_STR[] = {
-    "STATUS_LED_COLOR_GREEN",
-    "STATUS_LED_COLOR_GREEN_BLINK",
-    "STATUS_LED_COLOR_RED",
-    "STATUS_LED_COLOR_RED_BLINK",
-    "STATUS_LED_COLOR_AMBER",
-    "STATUS_LED_COLOR_AMBER_BLINK",
-    "STATUS_LED_COLOR_BLUE",
-    "STATUS_LED_COLOR_BLUE_BLINK",
-    "STATUS_LED_COLOR_OFF"
+    "green",
+    "green_blink",
+    "red",
+    "red_blink",
+    "amber",
+    "amber_blink",
+    "blue",
+    "blue_blink",
+    "yellow",
+    "yellow_blink",
+    "off"
 };
 
 
@@ -71,7 +76,10 @@ typedef struct
     int	swpld_addr;
     int swpld_addr_offset;
     MASK_BITS bits;
-    unsigned short	value;
+    u8	 reg_values[VALUE_SIZE];
+    char value[NAME_SIZE];
+    char attr_devtype[NAME_SIZE];
+    char attr_devname[NAME_SIZE];
 } LED_DATA;
 
 typedef struct
@@ -88,6 +96,8 @@ typedef struct
     LED_DATA data[MAX_LED_STATUS];
     int	swpld_addr;
     int swpld_addr_offset;
+    char attr_devtype[NAME_SIZE];
+    char attr_devname[NAME_SIZE];
 } LED_OPS_DATA; 
 
 typedef enum{

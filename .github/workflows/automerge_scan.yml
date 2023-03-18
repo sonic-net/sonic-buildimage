@@ -30,6 +30,9 @@ jobs:
           echo PR: $(($i+1))/$count, URL: $url, createdAt: $created_at, now: $(date -u +"%FT%TZ")
           [[ "$url" == "" ]] && continue
           [[ $created_at > $(date --date "1 hour ago" -u +"%FT%TZ") ]] && continue
+          # only check automerge PR.
+          cat prs.log | jq -r ".[$i].labels[].name" | grep automerge || continue
+
           checks=$(cat prs.log | jq ".[$i].statusCheckRollup")
           checks_count=$(echo $checks | jq 'length')
           echo Checks count: $checks_count
@@ -38,9 +41,14 @@ jobs:
             check=$(echo $checks | jq ".[$j]")
             state=$(echo $check | jq -r '.state')
             conclusion=$(echo $check | jq -r '.conclusion')
+            name=$(echo $check | jq -r '.name')
 
             # EasyCLA success flag:  state=SUCCESS
             # Others success flag:   conclusion in SUCCESS,NEUTRAL
+            # Ignore Azure.sonic-buildimage stage check result. It may be set continueOnError
+            echo "$name" | grep "Azure.sonic-buildimage (" && continue
+            # Ignore Semgrep, it has issues.
+            [[ "$name" == "Semgrep" ]] && continue
             if [[ "$state" == "SUCCESS" ]];then
               # check pass
               continue

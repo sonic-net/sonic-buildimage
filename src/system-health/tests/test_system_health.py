@@ -12,6 +12,7 @@
 import copy
 import os
 import sys
+from imp import load_source
 from swsscommon import swsscommon
 
 from mock import Mock, MagicMock, patch
@@ -23,7 +24,9 @@ swsscommon.SonicV2Connector = MockConnector
 
 test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
+scripts_path = os.path.join(modules_path, 'scripts')
 sys.path.insert(0, modules_path)
+sys.path.insert(0, scripts_path)
 from health_checker import utils
 from health_checker.config import Config
 from health_checker.hardware_checker import HardwareChecker
@@ -34,6 +37,9 @@ from health_checker.user_defined_checker import UserDefinedChecker
 from health_checker.sysmonitor import Sysmonitor
 from health_checker.sysmonitor import MonitorStateDbTask
 from health_checker.sysmonitor import MonitorSystemBusTask
+
+load_source('healthd', os.path.join(scripts_path, 'healthd'))
+from healthd import HealthDaemon
 
 mock_supervisorctl_output = """
 snmpd                       RUNNING   pid 67, uptime 1:03:56
@@ -772,3 +778,26 @@ def test_get_service_from_feature_table():
     sysmon.get_service_from_feature_table(dir_list)
     assert 'bgp.service' in dir_list
     assert 'swss.service' not in dir_list
+
+
+@patch('healthd.time.time')
+def test_healthd_check_interval(mock_time):
+    daemon = HealthDaemon()
+    manager = MagicMock()
+    manager.check = MagicMock()
+    manager.config = MagicMock()
+    chassis = MagicMock()
+    daemon._process_stat = MagicMock()
+    daemon.stop_event = MagicMock()
+    daemon.stop_event.wait = MagicMock()
+
+    daemon.stop_event.wait.return_value = False
+    manager.config.interval = 60
+    mock_time.side_effect = [0, 3, 0, 61, 0, 1]
+    assert daemon._run_checker(manager, chassis)
+    daemon.stop_event.wait.assert_called_with(57)
+    assert daemon._run_checker(manager, chassis)
+    daemon.stop_event.wait.assert_called_with(1)
+
+    daemon.stop_event.wait.return_value = True
+    assert not daemon._run_checker(manager, chassis)

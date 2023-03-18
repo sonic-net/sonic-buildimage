@@ -139,7 +139,7 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'mvrf_interfaces_nomgmt'), self.output_file))
 
-        
+
     def test_ports_json(self):
         ports_template = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ports.json.j2')
         argument = ['-m', self.simple_minigraph, '-p', self.t0_port_config, '-t', ports_template]
@@ -223,7 +223,7 @@ class TestJ2Files(TestCase):
         output_json = json.loads(output)
 
         self.assertTrue(json.dumps(sample_output_json, sort_keys=True) == json.dumps(output_json, sort_keys=True))
-    
+
     def test_l1_ports_template(self):
         argument = ['-k', '32x1000Gb', '--preset', 'l1', '-p', self.l1_l3_port_config]
         output = self.run_script(argument)
@@ -345,7 +345,7 @@ class TestJ2Files(TestCase):
         # cleanup
         qos_config_file_new = os.path.join(dir_path, 'qos_config.j2')
         os.remove(qos_config_file_new)
- 
+
         self.remove_machine_conf(file_exist, dir_exist)
 
         sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, expected)
@@ -529,7 +529,7 @@ class TestJ2Files(TestCase):
         ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
         argument = ['-m', self.multi_asic_minigraph, '-p', self.multi_asic_port_config, '-t', ipinip_file, '-n', 'asic0']
         print(argument)
-        self.run_script(argument, output_file=self.output_file) 
+        self.run_script(argument, output_file=self.output_file)
         sample_output_file = os.path.join(self.test_dir, 'multi_npu_data', utils.PYvX_DIR, 'ipinip.json')
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
@@ -635,6 +635,11 @@ class TestJ2Files(TestCase):
             )
             self.run_script(argument, output_file=self.output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
+
+
+    def test_buffers_edgezone_aggregator_render_template(self):
+        self._test_buffers_render_template('arista', 'x86_64-arista_7060_cx32s', 'Arista-7060CX-32S-D48C8', 'sample-arista-7060-t0-minigraph.xml', 'buffers.json.j2', 'buffer-arista7060-t0.json')
+
 
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""

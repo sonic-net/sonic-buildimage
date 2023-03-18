@@ -1,0 +1,36 @@
+module sonic-chassis-module {
+
+    yang-version 1.1;
+
+    namespace  "http://github.com/sonic-net/sonic-chassis-module";
+    prefix chassis_mod;
+    import sonic-types {
+        prefix stypes;
+    }
+    description "CHASSIS_MODULE YANG to administratively set SONIC modules state";
+
+    revision 2023-02-24 {
+        description "Initial version";
+    }
+
+    container sonic-chassis-module {
+        container CHASSIS_MODULE {
+            description "List of modules in the chassis";
+            list CHASSIS_MODULE_LIST {
+                key "name";
+                leaf name {
+                    type string {
+                        pattern "LINE-CARD[0-9]+|FABRIC-CARD[0-9]+";
+                    }
+                    description "Line-card or fabric-card module name";
+                }
+
+                leaf admin_status {
+                    type stypes:admin_status;
+                    default up;
+                    description "Administrative state of chassis module";
+                }
+            }
+        }
+    }
+}
