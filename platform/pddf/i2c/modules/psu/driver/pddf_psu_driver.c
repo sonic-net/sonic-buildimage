@@ -383,7 +383,7 @@ int psu_init(void)
 }
 EXPORT_SYMBOL(psu_init);
 
-void __exit psu_exit(void)
+void psu_exit(void)
 {
 	pddf_dbg(PSU, "GENERIC_PSU_DRIVER.. exit\n");
 	if (pddf_psu_ops.pre_exit) (pddf_psu_ops.pre_exit)();

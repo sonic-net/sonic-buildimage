@@ -203,7 +203,9 @@ def config_pddf_utils():
             if not os.path.exists(SONIC_PLATFORM_BSP_WHL_PKG_BK):
                 # bsp 2.0 classes are installed. Take a backup and copy pddf 2.0 whl pkg
                 log_os_system('mv '+SONIC_PLATFORM_BSP_WHL_PKG+' '+SONIC_PLATFORM_BSP_WHL_PKG_BK, 1)
+                log_os_system('sync', 1)
                 shutil.copy(SONIC_PLATFORM_PDDF_WHL_PKG, SONIC_PLATFORM_BSP_WHL_PKG)
+                log_os_system('sync', 1)
                 # uninstall the existing bsp whl pkg
                 status, output = log_os_system("pip3 uninstall sonic-platform -y &> /dev/null", 1)
                 if status:
@@ -328,6 +330,7 @@ def create_pddf_log_files():
     log_os_system("sudo touch /var/log/pddf/cpldmux.txt", 1)
     log_os_system("sudo touch /var/log/pddf/client.txt", 1)
     log_os_system("sudo touch /var/log/pddf/mux.txt", 1)
+    log_os_system("sudo touch /var/log/pddf/fpgapci.txt", 1)
 
 def driver_install():
     global FORCE

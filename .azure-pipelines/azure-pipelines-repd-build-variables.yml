@@ -1,7 +1,5 @@
 variables:
   ${{ if eq(variables['Build.Reason'],'PullRequest') }}:
     VERSION_CONTROL_OPTIONS: 'SONIC_VERSION_CONTROL_COMPONENTS=$([[ "$(System.PullRequest.TargetBranch)" =~ ^20[2-9][0-9]{3}$ ]] && echo deb,py2,py3,web,git,docker)'
-  ${{ elseif ne(variables['Build.SourceBranchName'],'master') }}:
-    VERSION_CONTROL_OPTIONS: 'SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker'
   ${{ else }}:
-    VERSION_CONTROL_OPTIONS: ''
+    VERSION_CONTROL_OPTIONS: 'SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker'

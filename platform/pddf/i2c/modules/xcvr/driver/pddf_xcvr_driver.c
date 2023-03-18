@@ -278,7 +278,7 @@ int xcvr_init(void)
 }
 EXPORT_SYMBOL(xcvr_init);
 
-void __exit xcvr_exit(void)
+void xcvr_exit(void)
 {
     pddf_dbg(XCVR, "PDDF XCVR DRIVER.. exit\n");
     if (pddf_xcvr_ops.pre_exit) (pddf_xcvr_ops.pre_exit)();
@@ -288,9 +288,9 @@ void __exit xcvr_exit(void)
 }
 EXPORT_SYMBOL(xcvr_exit);
 
+module_init(xcvr_init);
+module_exit(xcvr_exit);
+
 MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION("Driver for transceiver operations");
 MODULE_LICENSE("GPL");
-
-module_init(xcvr_init);
-module_exit(xcvr_exit);

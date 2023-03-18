@@ -1,0 +1,11 @@
+bitarray==1.5.3
+contextlib2==0.6.0.post1
+future==0.18.3
+importlib-resources==3.3.1
+natsort==6.2.1
+netaddr==0.8.0
+pyang==2.5.3
+pyangbind==0.6.0
+redis==3.5.3
+thrift==0.11.0
+zipp==1.2.0

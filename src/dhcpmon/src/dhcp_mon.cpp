@@ -30,6 +30,8 @@ typedef struct
 static int window_interval_sec = 18;
 /** dhcp_unhealthy_max_count max count of consecutive unhealthy statuses before reporting to syslog */
 static int dhcp_unhealthy_max_count = 10;
+/** dhcpmon debug mode control flag */
+static bool debug_on = false;
 /** libevent base struct */
 static struct event_base *base;
 /** libevent timeout event struct */
@@ -143,6 +145,11 @@ static void timeout_callback(evutil_socket_t fd, short event, void *arg)
     }
 
     dhcp_devman_update_snapshot(NULL);
+
+    if (debug_on) {
+        dhcp_devman_print_status(NULL, DHCP_COUNTERS_SNAPSHOT);
+        dhcp_devman_print_status(NULL, DHCP_COUNTERS_CURRENT);
+    }
 }
 
 /**
@@ -221,13 +228,14 @@ void dhcp_mon_shutdown()
 }
 
 /**
- * @code dhcp_mon_start(snaplen);
+ * @code dhcp_mon_start(snaplen, debug_mode);
  *
  * @brief start monitoring DHCP Relay
  */
-int dhcp_mon_start(size_t snaplen)
+int dhcp_mon_start(size_t snaplen, bool debug_mode)
 {
     int rv = -1;
+    debug_on = debug_mode;
 
     do
     {
@@ -260,7 +268,6 @@ int dhcp_mon_start(size_t snaplen)
             syslog(LOG_ERR, "Could not start libevent dispatching loop!\n");
             break;
         }
-
         rv = 0;
     } while (0);
 

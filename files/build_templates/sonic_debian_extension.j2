@@ -78,6 +78,10 @@ fi
 # Update apt's snapshot of its repos
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get update
 
+# Install efitools to support secure upgrade
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install efitools
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install mokutil
+
 # Apply environtment configuration files
 sudo cp $IMAGE_CONFIGS/environment/environment $FILESYSTEM_ROOT/etc/
 sudo cp $IMAGE_CONFIGS/environment/motd $FILESYSTEM_ROOT/etc/
@@ -605,6 +609,11 @@ sudo cp $IMAGE_CONFIGS/config-chassisdb/config-chassisdb $FILESYSTEM_ROOT/usr/bi
 echo "config-chassisdb.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable config-chassisdb.service
 
+# Copy backend-acl script and service file
+sudo cp $IMAGE_CONFIGS/backend_acl/backend-acl.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/backend-acl.service
+sudo cp $IMAGE_CONFIGS/backend_acl/backend_acl.py $FILESYSTEM_ROOT/usr/bin/backend_acl.py
+echo "backend-acl.service" | sudo tee -a $GENERATED_SERVICE_FILE
+
 # Copy SNMP configuration files
 sudo cp $IMAGE_CONFIGS/snmp/snmp.yml $FILESYSTEM_ROOT/etc/sonic/
 
@@ -934,10 +943,18 @@ sudo cp {{src}} $FILESYSTEM_ROOT/{{dst}}
 {% endfor -%}
 
 {% if sonic_asic_platform == "mellanox" %}
-sudo mkdir -p $FILESYSTEM_ROOT/etc/mlnx/
-sudo cp $files_path/$MLNX_SPC_FW_FILE $FILESYSTEM_ROOT/etc/mlnx/fw-SPC.mfa
-sudo cp $files_path/$MLNX_SPC2_FW_FILE $FILESYSTEM_ROOT/etc/mlnx/fw-SPC2.mfa
-sudo cp $files_path/$MLNX_SPC3_FW_FILE $FILESYSTEM_ROOT/etc/mlnx/fw-SPC3.mfa
+declare -rA FW_FILE_MAP=( \
+    [$MLNX_SPC_FW_FILE]="fw-SPC.mfa" \
+    [$MLNX_SPC2_FW_FILE]="fw-SPC2.mfa" \
+    [$MLNX_SPC3_FW_FILE]="fw-SPC3.mfa" \
+)
+sudo mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/
+sudo mkdir -p $FILESYSTEM_ROOT_ETC/mlnx/
+for fw_file_name in ${!FW_FILE_MAP[@]}; do
+    sudo cp $files_path/$fw_file_name $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/${FW_FILE_MAP[$fw_file_name]}
+    # Link old FW location to not break existing automation/scripts
+    sudo ln -s /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/asic/${FW_FILE_MAP[$fw_file_name]} $FILESYSTEM_ROOT/etc/mlnx/${FW_FILE_MAP[$fw_file_name]}
+done
 sudo cp $files_path/$ISSU_VERSION_FILE $FILESYSTEM_ROOT/etc/mlnx/issu-version
 sudo cp $files_path/$MLNX_FFB_SCRIPT $FILESYSTEM_ROOT/usr/bin/mlnx-ffb.sh
 sudo cp $files_path/$MLNX_ONIE_FW_UPDATE $FILESYSTEM_ROOT/usr/bin/$MLNX_ONIE_FW_UPDATE

@@ -108,7 +108,9 @@
                 "admin_status": "up",
                 "min_links": "2",
                 "mtu": "9100",
-                "tpid": "0x8100"
+                "tpid": "0x8100",
+                "fast_rate": "false",
+                "fallback" : "true"
             }
         },
         "PORTCHANNEL_INTERFACE": {
@@ -556,7 +558,8 @@
                 "admin_status": "up",
                 "autoneg": "on",
                 "adv_speeds": "all",
-                "adv_interface_types": "all"
+                "adv_interface_types": "all",
+                "channel" : "0"
             },
             "Ethernet3": {
                 "alias": "Eth1/4",
@@ -564,7 +567,8 @@
                 "description": "",
                 "speed": "11100",
                 "tpid": "0x88A8",
-                "admin_status": "up"
+                "admin_status": "up",
+                "channel": "1"
             },
             "Ethernet4": {
                 "alias": "Eth2/1",
@@ -572,7 +576,8 @@
                 "description": "",
                 "speed": "11100",
                 "tpid": "0x9100",
-                "admin_status": "up"
+                "admin_status": "up",
+                "channel": "2"
             },
             "Ethernet5": {
                 "alias": "Eth2/2",
@@ -580,7 +585,8 @@
                 "description": "",
                 "speed": "11100",
                 "tpid": "0x9200",
-                "admin_status": "up"
+                "admin_status": "up",
+                "channel": "3"
             },
             "Ethernet6": {
                 "alias": "Eth2/3",
@@ -588,7 +594,8 @@
                 "description": "",
                 "speed": "11100",
                 "tpid": "0x8100",
-                "admin_status": "up"
+                "admin_status": "up",
+                "channel": "4"
             },
             "Ethernet7": {
                 "alias": "Eth2/4",
@@ -596,7 +603,8 @@
                 "description": "",
                 "speed": "11100",
                 "tpid": "0x8100",
-                "admin_status": "up"
+                "admin_status": "up",
+                "channel": "5"
             },
             "Ethernet8": {
                 "alias": "Eth3/1",
@@ -604,7 +612,8 @@
                 "description": "",
                 "speed": "11100",
                 "tpid": "0x8100",
-                "admin_status": "up"
+                "admin_status": "up",
+                "channel": "6"
             },
             "Ethernet9": {
                 "alias": "Eth3/2",
@@ -612,7 +621,8 @@
                 "description": "",
                 "speed": "11100",
                 "tpid": "0x8100",
-                "admin_status": "up"
+                "admin_status": "up",
+                "channel": "7"
             },
             "Ethernet10": {
                 "alias": "Eth3/3",
@@ -620,7 +630,8 @@
                 "description": "",
                 "speed": "11100",
                 "tpid": "0x8100",
-                "admin_status": "up"
+                "admin_status": "up",
+                "channel": "8"
             },
             "Ethernet11": {
                 "alias": "Eth3/4",
@@ -1175,6 +1186,24 @@
                 "port": "50051"
             }
         },
+        "TELEMETRY_CLIENT": {
+            "Global": {
+                "encoding": "JSON_IETF",
+                "retry_interval": "30",
+                "src_ip": "30.57.185.38",
+                "unidirectional": "true"
+            },
+            "DestinationGroup_HS": {
+                "dst_addr": "30.57.186.214:8081,30.57.185.39:8081"
+            },
+            "Subscription_HS_RDMA": {
+                "dst_group": "HS",
+                "path_target": "COUNTERS_DB",
+                "paths": "COUNTERS/Ethernet*,COUNTERS_PORT_NAME_MAP",
+                "report_interval": "5000",
+                "report_type": "periodic"
+            }
+        },
         "GNMI": {
             "certs": {
                 "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",
@@ -1629,6 +1658,14 @@
             "prefix1|1|10.0.0.0/8|8..16": {
             }
         },
+        "CHASSIS_MODULE": {
+            "LINE-CARD0": {
+                "admin_status": "down"
+            },
+            "FABRIC-CARD1": {
+                "admin_status": "down"
+            }
+        },
         "COPP_GROUP": {
             "queue1_group1": {
                 "queue": "1",
@@ -1777,13 +1814,15 @@
                 "dhcpv6_servers": [
                     "2a04:5555:41::11"
                 ],
-                "rfc6939_support": "true"
+                "rfc6939_support": "true",
+                "interface_id": "true"
             },
             "Vlan777": {
                 "dhcpv6_servers": [
                     "2a04:5555:41::11"
                 ],
-                "rfc6939_support": "true"
+                "rfc6939_support": "true",
+                "interface_id": "true"
             }
         },
         "SCHEDULER": {
@@ -2273,6 +2312,46 @@
                "vni": "10",
                "guid":"guid-vnet1"
              }
+        },
+        "FG_NHG": {
+            "nhg1": {
+                "bucket_size": "16",
+                "match_mode": "nexthop-based"
+            },
+            "nhg2": {
+                "bucket_size": "32",
+                "match_mode": "route-based"
+            }
+        },
+        "FG_NHG_PREFIX": {
+            "10.0.0.0/24": {
+                "FG_NHG": "nhg1"
+            },
+            "192.168.0.0/16": {
+                "FG_NHG": "nhg2"
+            }
+        },
+        "FG_NHG_MEMBER": {
+            "192.168.1.1": {
+                "FG_NHG": "nhg1",
+                "bank": "0",
+                "link": "Ethernet1"
+            },
+            "192.168.1.2": {
+                "FG_NHG": "nhg1",
+                "bank": "0",
+                "link": "Ethernet2"
+            },
+            "10.0.0.1": {
+                "FG_NHG": "nhg2",
+                "bank": "1",
+                "link": "PortChannel42"
+            },
+            "10.0.0.2": {
+                "FG_NHG": "nhg2",
+                "bank": "1",
+                "link": "PortChannel2"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {

@@ -1,0 +1,14 @@
+bitarray==1.5.3
+ijson==2.6.1
+ipaddress==1.0.23
+jsondiff==2.0.0
+lxml==4.9.1
+natsort==6.2.1
+netaddr==0.8.0
+pyang==2.5.3
+pyangbind==0.8.1
+pyyaml==5.4.1
+regex==2022.10.31
+six==1.16.0
+tabulate==0.8.2
+xmltodict==0.12.0

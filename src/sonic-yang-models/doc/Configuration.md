@@ -1,3 +1,4 @@
+=======
 # SONiC Configuration Database Manual
 
 Table of Contents
@@ -18,14 +19,19 @@ Table of Contents
          * [Buffer port ingress profile list](#buffer-port-ingress-profile-list)  
          * [Buffer port egress profile list](#buffer-port-egress-profile-list)  
          * [Cable length](#cable-length)  
+         * [Chassis module](#chassis-module)         
          * [COPP_TABLE](#copp_table)  
          * [Console](#console)  
          * [CRM](#crm)  
          * [Data Plane L3 Interfaces](#data-plane-l3-interfaces)  
          * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)  
          * [Device Metadata](#device-metadata)  
-         * [Device neighbor metada](#device-neighbor-metada)  
+         * [Device neighbor metada](#device-neighbor-metada)
+         * [DHCP_RELAY](#dhcp_relay)
          * [DSCP_TO_TC_MAP](#dscp_to_tc_map)  
+         * [FG_NHG](#fg_nhg)  
+         * [FG_NHG_MEMBER](#fg_nhg_member)  
+         * [FG_NHG_PREFIX](#fg_nhg_prefix)  
          * [FLEX_COUNTER_TABLE](#flex_counter_table)  
          * [Hash](#hash)  
          * [KDUMP](#kdump)  
@@ -645,6 +651,25 @@ This kind of profiles will be handled by buffer manager and won't be applied to 
 
 ```
 
+### Chassis Module
+
+CHASSIS_MODULE table holds the list and configuration of linecard and fabric modules in a SONiC chassis.
+It currently allows user to administratively bring down a line-card or fabric-card
+
+```
+{
+    "CHASSIS_MODULE": {
+        "LINE-CARD0": {
+            "admin_status": "down"
+        },
+        "FABRIC-CARD1": {
+            "admin_status": "down"
+        }
+    }
+}
+
+```
+
 ### COPP_TABLE
 
 ```
@@ -870,6 +895,22 @@ instance is supported in SONiC.
 
 ```
 
+### DHCP_RELAY
+
+```
+{
+"DHCP_RELAY": {
+    "dhcpv6_servers": [
+        "fc02:2000::1",
+        "fc02:2000::2",
+        "fc02:2000::3",
+        "fc02:2000::4"
+    ],
+    "rfc6939_support": "true",
+    "interface_id": "true"
+}
+
+```
 
 ### DSCP_TO_TC_MAP
 ```
@@ -890,6 +931,57 @@ instance is supported in SONiC.
   }
 }
 
+```
+
+### FG_NHG
+
+The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size) and match mode for each group.
+
+```
+"FG_NHG": {
+    "fgnhg_v4": {
+        "bucket_size": "120",
+        "match_mode": "nexthop-based"
+    },
+    "fgnhg_v6": {
+        "bucket_size": "120",
+        "match_mode": "nexthop-based"
+    }
+}
+```
+
+### FG_NHG_MEMBER
+
+The FG_NHG_MEMBER table provides information about the members of a next hop group, including the group name (FG_NHG), the index at which redistribution is performed (bank), and the link associated with the next-hop-ip (link).
+
+```
+"FG_NHG_MEMBER": {
+    "200.200.200.4": {
+        "FG_NHG": "fgnhg_v4",
+        "bank": "0",
+        "link": "Ethernet8"
+    },
+    "200.200.200.5": {
+        "FG_NHG": "fgnhg_v4",
+        "bank": "1",
+        "link": "Ethernet12"
+    }
+}
+```
+
+### FG_NHG_PREFIX
+
+The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desired, and Fine Grained next-hop group name.
+
+```
+"FG_NHG_PREFIX": {
+    "100.50.25.12/32": {
+	    "FG_NHG": "fgnhg_v4"
+	},
+    "fc:05::/128": {
+	    "FG_NHG": "fgnhg_v6"
+	}
+}
 ```
 
 
@@ -1398,6 +1490,33 @@ optional attributes.
     }
 }
 
+2x100G port breakout
+{
+"PORT": {
+        "Ethernet0": {
+            "admin_status": "up",
+            "index": "1",
+            "lanes": "101,102,103,104",
+            "description": "etp1a",
+            "mtu": "9100",
+            "alias": "etp1a",
+            "speed": "100000",
+            "channel": 1
+        },
+        "Ethernet4": {
+            "admin_status": "up",
+            "index": "1",
+            "lanes": "105,106,107,108",
+            "description": "etp1b",
+            "mtu": "9100",
+            "alias": "etp1b",
+            "speed": "100000",
+            "channel": 2
+        },
+    }
+}
+
+
 ```
 
 ### Port Channel
@@ -1422,7 +1541,9 @@ name as object key and member list as attribute.
         "members": [
             "Ethernet56"
         ],
-        "mtu": "9100"
+        "mtu": "9100",
+        "fallback": "false",
+        "fast_rate": "true"
     }
   }
 }

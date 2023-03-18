@@ -20,7 +20,7 @@ index 1c25ffb..0fbd877 100755
  Description=Chassis HW management service of Mellanox systems
  Documentation=man:hw-management.service(8)
 -Before=determine-reboot-cause.service
-+Before=determine-reboot-cause.service system-health.service
++Before=determine-reboot-cause.service system-health.service watchdog-control.service
  
  [Service]
  Type=oneshot

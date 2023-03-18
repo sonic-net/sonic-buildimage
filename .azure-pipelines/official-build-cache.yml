@@ -11,6 +11,14 @@ schedules:
     - master
     - 202012
 
+resources:
+  repositories:
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    ref: master
+    endpoint: sonic-net
+
 trigger: none
 pr: none
 
@@ -20,7 +28,8 @@ stages:
   variables:
   - name: CACHE_MODE
     value: cache
-  - template: azure-pipelines-repd-build-variables.yml
+  - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
+  - template: .azure-pipelines/template-variables.yml@buildimage
   jobs:
   - template: azure-pipelines-build.yml
     parameters:

@@ -24,6 +24,7 @@
 #include "subscriberstatetable.h"
 #include "select.h"
 
+#include "dhcp_devman.h"
 #include "dhcp_device.h"
 
 /** Counter print width */
@@ -60,6 +61,12 @@ std::shared_ptr<swss::Table> mStateDbMuxTablePtr = std::make_shared<swss::Table>
 
 /* interface to vlan mapping */
 std::unordered_map<std::string, std::string> vlan_map;
+
+/* interface to port-channel mapping */
+std::unordered_map<std::string, std::string> portchan_map;
+
+/* interface to mgmt port mapping */
+std::unordered_map<std::string, std::string> mgmt_map;
 
 /** Berkeley Packet Filter program for "udp and (port 67 or port 68)".
  * This program is obtained using the following command tcpdump:
@@ -133,6 +140,10 @@ static struct sock_fprog dhcp_inbound_sock_bfp = {
     .len = sizeof(dhcp_inbound_bpf_code) / sizeof(*dhcp_inbound_bpf_code), .filter = dhcp_inbound_bpf_code
 };
 
+static uint8_t *rx_recv_buffer = NULL;
+static uint8_t *tx_recv_buffer = NULL;
+static uint32_t snap_length;
+
 /** Aggregate device of DHCP interfaces. It contains aggregate counters from
     all interfaces
  */
@@ -146,15 +157,54 @@ static dhcp_message_type_t monitored_msgs[] = {
     DHCP_MESSAGE_TYPE_ACK
 };
 
-void update_vlan_mapping(std::string vlan, std::shared_ptr<swss::DBConnector> mConfigDbPtr) {
-    auto match_pattern = std::string("VLAN_MEMBER|") + vlan + std::string("|*");
-    auto keys = mConfigDbPtr->keys(match_pattern);
+/** update ethernet interface to vlan map
+ *  VLAN_MEMBER|Vlan1000|Ethernet48
+ */
+void update_vlan_mapping(std::shared_ptr<swss::DBConnector> db_conn) {
+    auto match_pattern = std::string("VLAN_MEMBER|*");
+    auto keys = db_conn->keys(match_pattern);
     for (auto &itr : keys) {
-        auto found = itr.find_last_of('|');
-        auto interface = itr.substr(found + 1);
+        auto first = itr.find_first_of('|');
+        auto second = itr.find_last_of('|');
+        auto vlan = itr.substr(first + 1, second - first - 1);
+        auto interface = itr.substr(second + 1);
         vlan_map[interface] = vlan;
         syslog(LOG_INFO, "add <%s, %s> into interface vlan map\n", interface.c_str(), vlan.c_str());
     }
+}
+
+/** update ethernet interface to port-channel map
+ *  PORTCHANNEL_MEMBER|PortChannel101|Ethernet112
+ */
+void update_portchannel_mapping(std::shared_ptr<swss::DBConnector> db_conn) {
+    auto match_pattern = std::string("PORTCHANNEL_MEMBER|*");
+    auto keys = db_conn->keys(match_pattern);
+    for (auto &itr : keys) {
+        auto first = itr.find_first_of('|');
+        auto second = itr.find_last_of('|');
+        auto portchannel = itr.substr(first + 1, second - first - 1);
+        auto interface = itr.substr(second + 1);
+        portchan_map[interface] = portchannel;
+        syslog(LOG_INFO, "add <%s, %s> into interface port-channel map\n", interface.c_str(), portchannel.c_str());
+    }
+}
+
+/** update interface to mgmt map
+ */
+void update_mgmt_mapping() {
+    auto mgmt = dhcp_devman_get_mgmt_dev();
+    if (mgmt) {
+        auto name = std::string(mgmt->intf);
+        mgmt_map[name] = name;
+    }
+}
+
+dhcp_device_context_t *find_device_context(std::unordered_map<std::string, struct intf*> *intfs, std::string if_name) {
+    auto intf = intfs->find(if_name);
+    if (intf == intfs->end()) {
+        return NULL;
+    }
+    return intf->second->dev_context;
 }
 
 /** Number of monitored DHCP message type */
@@ -222,12 +272,12 @@ static void handle_dhcp_option_53(dhcp_device_context_t *context,
  *
  * @return none
  */
-static void client_packet_handler(dhcp_device_context_t *context, ssize_t buffer_sz)
+static void client_packet_handler(dhcp_device_context_t *context, uint8_t *buffer,
+                                  ssize_t buffer_sz, dhcp_packet_direction_t dir)
 {
-    struct ether_header *ethhdr = (struct ether_header*) context->buffer;
-    struct ip *iphdr = (struct ip*) (context->buffer + IP_START_OFFSET);
-    struct udphdr *udp = (struct udphdr*) (context->buffer + UDP_START_OFFSET);
-    uint8_t *dhcphdr = context->buffer + DHCP_START_OFFSET;
+    struct ip *iphdr = (struct ip*) (buffer + IP_START_OFFSET);
+    struct udphdr *udp = (struct udphdr*) (buffer + UDP_START_OFFSET);
+    uint8_t *dhcphdr = buffer + DHCP_START_OFFSET;
     int dhcp_option_offset = DHCP_START_OFFSET + DHCP_OPTIONS_HEADER_SIZE;
 
     if (((unsigned)buffer_sz > UDP_START_OFFSET + sizeof(struct udphdr) + DHCP_OPTIONS_HEADER_SIZE) &&
@@ -236,14 +286,8 @@ static void client_packet_handler(dhcp_device_context_t *context, ssize_t buffer
         int dhcp_sz = ntohs(udp->len) < buffer_sz - UDP_START_OFFSET - sizeof(struct udphdr) ?
                     ntohs(udp->len) : buffer_sz - UDP_START_OFFSET - sizeof(struct udphdr);
         int dhcp_option_sz = dhcp_sz - DHCP_OPTIONS_HEADER_SIZE;
-        const u_char *dhcp_option = context->buffer + dhcp_option_offset;
-        dhcp_packet_direction_t dir = (ethhdr->ether_shost[0] == context->mac[0] &&
-                                    ethhdr->ether_shost[1] == context->mac[1] &&
-                                    ethhdr->ether_shost[2] == context->mac[2] &&
-                                    ethhdr->ether_shost[3] == context->mac[3] &&
-                                    ethhdr->ether_shost[4] == context->mac[4] &&
-                                    ethhdr->ether_shost[5] == context->mac[5]) ?
-                                    DHCP_TX : DHCP_RX;
+        const u_char *dhcp_option = buffer + dhcp_option_offset;
+        
         int offset = 0;
         while ((offset < (dhcp_option_sz + 1)) && dhcp_option[offset] != 255) {
             if (dhcp_option[offset] == OPTION_DHCP_MESSAGE_TYPE) {
@@ -260,10 +304,40 @@ static void client_packet_handler(dhcp_device_context_t *context, ssize_t buffer
             }
         }
     } else {
-        syslog(LOG_WARNING, "read_callback(%s): read length (%ld) is too small to capture DHCP options",
-            context->intf, buffer_sz);
+        syslog(LOG_WARNING, "read_callback(%s %s): read length (%ld) is too small to capture DHCP options",
+               context->intf, dir == DHCP_TX ? "TX" : "RX", buffer_sz);
     }
 }
+
+static dhcp_device_context_t *interface_to_dev_context(std::unordered_map<std::string, struct intf*> *devices,
+                                                       std::string ifname)
+{
+    auto vlan = vlan_map.find(ifname);
+    if (vlan != vlan_map.end()) {
+        if (dual_tor_sock) {
+            std::string state;
+            mStateDbMuxTablePtr->hget(ifname, "state", state);
+            if (state == "standby") {
+                return NULL;
+            }
+        }
+        return find_device_context(devices, vlan->second);
+    } else {
+        auto port_channel = portchan_map.find(ifname);
+        if (port_channel != portchan_map.end()) {
+            return find_device_context(devices, port_channel->second);
+        }
+        else {
+            // mgmt interface check
+            auto mgmt = mgmt_map.find(ifname);
+            if (mgmt != mgmt_map.end()) {
+                return find_device_context(devices, mgmt->second);
+            }
+        }
+    }
+    return NULL;
+}
+
 
 /**
  * @code read_tx_callback(fd, event, arg);
@@ -278,11 +352,24 @@ static void client_packet_handler(dhcp_device_context_t *context, ssize_t buffer
  */
 static void read_tx_callback(int fd, short event, void *arg)
 {
-    dhcp_device_context_t *context = (dhcp_device_context_t*) arg;
+    auto devices = (std::unordered_map<std::string, struct intf*> *)arg;
     ssize_t buffer_sz;
+    struct sockaddr_ll sll;
+    socklen_t slen = sizeof sll;
+    dhcp_device_context_t *context = NULL;
 
-    while ((buffer_sz = recv(fd, context->buffer, context->snaplen, MSG_DONTWAIT)) > 0) {
-        client_packet_handler(context, buffer_sz);
+    while ((buffer_sz = recvfrom(fd, tx_recv_buffer, snap_length, MSG_DONTWAIT, (struct sockaddr *)&sll, &slen)) > 0) 
+    {
+        char interfaceName[IF_NAMESIZE];
+        if (if_indextoname(sll.sll_ifindex, interfaceName) == NULL) {
+            syslog(LOG_WARNING, "invalid output interface index %d\n", sll.sll_ifindex);
+            continue;
+        }
+        std::string intf(interfaceName);
+        context = find_device_context(devices, intf);
+        if (context) {
+            client_packet_handler(context, tx_recv_buffer, buffer_sz, DHCP_TX);
+        }
     }
 }
 
@@ -299,12 +386,13 @@ static void read_tx_callback(int fd, short event, void *arg)
  */
 static void read_rx_callback(int fd, short event, void *arg)
 {
-    dhcp_device_context_t *context = (dhcp_device_context_t*) arg;
+    auto devices = (std::unordered_map<std::string, struct intf*> *)arg;
     ssize_t buffer_sz;
     struct sockaddr_ll sll;
-    socklen_t slen = sizeof sll;
+    socklen_t slen = sizeof(sll);
+    dhcp_device_context_t *context = NULL;
 
-    while ((buffer_sz = recvfrom(fd, context->buffer, context->snaplen, MSG_DONTWAIT, (struct sockaddr *)&sll, &slen)) > 0) 
+    while ((buffer_sz = recvfrom(fd, rx_recv_buffer, snap_length, MSG_DONTWAIT, (struct sockaddr *)&sll, &slen)) > 0) 
     {
         char interfaceName[IF_NAMESIZE];
         if (if_indextoname(sll.sll_ifindex, interfaceName) == NULL) {
@@ -312,22 +400,9 @@ static void read_rx_callback(int fd, short event, void *arg)
             continue;
         }
         std::string intf(interfaceName);
-        auto vlan = vlan_map.find(intf);
-        if (vlan == vlan_map.end()) {
-            if (intf.find(CLIENT_IF_PREFIX) != std::string::npos) {
-                syslog(LOG_WARNING, "invalid input interface %s\n", interfaceName);
-            }
-            continue;
-        }
-
-        if (dual_tor_sock) {
-            std::string state;
-            mStateDbMuxTablePtr->hget(intf, "state", state);
-            if (state != "standby") {
-                client_packet_handler(context, buffer_sz);
-            }
-        } else {
-            client_packet_handler(context, buffer_sz);
+        context = interface_to_dev_context(devices, intf);
+        if (context) {
+            client_packet_handler(context, rx_recv_buffer, buffer_sz, DHCP_RX);
         }
     }
 }
@@ -500,24 +575,20 @@ static void dhcp_print_counters(const char *vlan_intf,
 }
 
 /**
- * @code init_socket(context, intf);
+ * @code init_socket();
  *
- * @brief initializes socket, bind it to interface and bpf program, and
- *        associate with libevent base
- *
- * @param context           pointer to device (interface) context
- * @param intf              interface name
+ * @brief initializes rx/tx sockets, bind it to interface and bpf program
  *
  * @return 0 on success, otherwise for failure
  */
-static int init_socket(dhcp_device_context_t *context, const char *intf)
+static int init_socket()
 {
     int rv = -1;
 
     do {
-        context->rx_sock = socket(AF_PACKET, SOCK_RAW | SOCK_NONBLOCK, htons(ETH_P_ALL));
-        context->tx_sock = socket(AF_PACKET, SOCK_RAW | SOCK_NONBLOCK, htons(ETH_P_ALL));
-        if (context->rx_sock < 0 || context->tx_sock < 0) {
+        auto rx_sock = socket(AF_PACKET, SOCK_RAW | SOCK_NONBLOCK, htons(ETH_P_ALL));
+        auto tx_sock = socket(AF_PACKET, SOCK_RAW | SOCK_NONBLOCK, htons(ETH_P_ALL));
+        if (rx_sock < 0 || tx_sock < 0) {
             syslog(LOG_ALERT, "socket: failed to open socket with '%s'\n", strerror(errno));
             exit(1);
         }
@@ -527,28 +598,45 @@ static int init_socket(dhcp_device_context_t *context, const char *intf)
         rx_addr.sll_ifindex = 0; // any interface
         rx_addr.sll_family = AF_PACKET;
         rx_addr.sll_protocol = htons(ETH_P_ALL);
-        if (bind(context->rx_sock, (struct sockaddr *) &rx_addr, sizeof(rx_addr))) {
-            syslog(LOG_ALERT, "bind: failed to bind to interface '%s' with '%s'\n", intf, strerror(errno));
+        if (bind(rx_sock, (struct sockaddr *) &rx_addr, sizeof(rx_addr))) {
+            syslog(LOG_ALERT, "bind: failed to bind to all interface with '%s'\n", strerror(errno));
             break;
         }
 
         struct sockaddr_ll tx_addr;
         memset(&tx_addr, 0, sizeof(tx_addr));
-        tx_addr.sll_ifindex = if_nametoindex(intf);
+        tx_addr.sll_ifindex = 0; // any interface
         tx_addr.sll_family = AF_PACKET;
         tx_addr.sll_protocol = htons(ETH_P_ALL);
-        if (bind(context->tx_sock, (struct sockaddr *) &tx_addr, sizeof(tx_addr))) {
-            syslog(LOG_ALERT, "bind: failed to bind to interface '%s' with '%s'\n", intf, strerror(errno));
+        if (bind(tx_sock, (struct sockaddr *) &tx_addr, sizeof(tx_addr))) {
+            syslog(LOG_ALERT, "bind: failed to bind to interface with '%s'\n", strerror(errno));
             exit(1);
         }
 
-        strncpy(context->intf, intf, sizeof(context->intf) - 1);
-        context->intf[sizeof(context->intf) - 1] = '\0';
-
+        for (auto &itr : intfs) {
+            itr.second->dev_context->rx_sock = rx_sock;
+            itr.second->dev_context->tx_sock = tx_sock;
+        }
         rv = 0;
     } while (0);
 
     return rv;
+}
+
+static void init_recv_buffers(int snaplen)
+{
+    snap_length = snaplen;
+    rx_recv_buffer = (uint8_t *) malloc(snaplen);
+    if (rx_recv_buffer == NULL) {
+        syslog(LOG_ALERT, "malloc: failed to allocate memory for socket rx buffer '%s'\n", strerror(errno));
+        exit(1);
+    }
+
+    tx_recv_buffer = (uint8_t *) malloc(snaplen);
+    if (tx_recv_buffer == NULL) {
+        syslog(LOG_ALERT, "malloc: failed to allocate memory for socket tx buffer '%s'\n", strerror(errno));
+        exit(1);
+    }
 }
 
 /**
@@ -642,16 +730,15 @@ int dhcp_device_init(dhcp_device_context_t **context, const char *intf, uint8_t 
     dhcp_device_context_t *dev_context = NULL;
 
     if ((context != NULL) && (strlen(intf) < sizeof(dev_context->intf))) {
-
         dev_context = (dhcp_device_context_t *) malloc(sizeof(dhcp_device_context_t));
         if (dev_context != NULL) {
-            if ((init_socket(dev_context, intf) == 0) &&
-                (initialize_intf_mac_and_ip_addr(dev_context) == 0)) {
-
+            // set device name
+            strncpy(dev_context->intf, intf, sizeof(dev_context->intf) - 1);
+            dev_context->intf[sizeof(dev_context->intf) - 1] = '\0';
+            // set device meta data
+            if (initialize_intf_mac_and_ip_addr(dev_context) == 0) {
                 dev_context->is_uplink = is_uplink;
-
                 memset(dev_context->counters, 0, sizeof(dev_context->counters));
-
                 *context = dev_context;
                 rv = 0;
             }
@@ -665,53 +752,55 @@ int dhcp_device_init(dhcp_device_context_t **context, const char *intf, uint8_t 
 }
 
 /**
- * @code dhcp_device_start_capture(context, snaplen, base, giaddr_ip);
+ * @code dhcp_device_start_capture(snaplen, base, giaddr_ip);
  *
  * @brief starts packet capture on this interface
  */
-int dhcp_device_start_capture(dhcp_device_context_t *context,
-                              size_t snaplen,
-                              struct event_base *base,
-                              in_addr_t giaddr_ip)
+int dhcp_device_start_capture(size_t snaplen, struct event_base *base, in_addr_t giaddr_ip)
 {
     int rv = -1;
     struct event *rx_ev;
     struct event *tx_ev;
+    int rx_sock = -1, tx_sock = -1;
 
     do {
-        if (context == NULL) {
-            syslog(LOG_ALERT, "NULL interface context pointer'\n");
-            exit(1);
-        }
-
         if (snaplen < UDP_START_OFFSET + sizeof(struct udphdr) + DHCP_OPTIONS_HEADER_SIZE) {
-            syslog(LOG_ALERT, "dhcp_device_start_capture(%s): snap length is too low to capture DHCP options", context->intf);
+            syslog(LOG_ALERT, "dhcp_device_start_capture: snap length is too low to capture DHCP options");
             exit(1);
         }
 
-        context->giaddr_ip = giaddr_ip;
+        init_socket();
 
-        context->buffer = (uint8_t *) malloc(snaplen);
-        if (context->buffer == NULL) {
-            syslog(LOG_ALERT, "malloc: failed to allocate memory for socket buffer '%s'\n", strerror(errno));
+        init_recv_buffers(snaplen);
+
+        update_vlan_mapping(mConfigDbPtr);
+        update_portchannel_mapping(mConfigDbPtr);
+        update_mgmt_mapping();
+
+        for (auto &itr : intfs) {
+            itr.second->dev_context->snaplen = snaplen;
+            itr.second->dev_context->giaddr_ip = giaddr_ip;
+            // all interface dev context has same rx/tx socket
+            rx_sock = itr.second->dev_context->rx_sock;
+            tx_sock = itr.second->dev_context->tx_sock;
+        }
+
+        if (rx_sock == -1 || tx_sock == -1) {
+            syslog(LOG_ALERT, "dhcp_device_start_capture: invalid rx_sock or tx_sock");
             exit(1);
         }
-        context->snaplen = snaplen;
-
-        if (setsockopt(context->rx_sock, SOL_SOCKET, SO_ATTACH_FILTER, &dhcp_inbound_sock_bfp, sizeof(dhcp_inbound_sock_bfp)) != 0) {
+        if (setsockopt(rx_sock, SOL_SOCKET, SO_ATTACH_FILTER, &dhcp_inbound_sock_bfp, sizeof(dhcp_inbound_sock_bfp)) != 0) {
             syslog(LOG_ALERT, "setsockopt: failed to attach filter with '%s'\n", strerror(errno));
             exit(1);
         }
 
-        if (setsockopt(context->tx_sock, SOL_SOCKET, SO_ATTACH_FILTER, &dhcp_outbound_sock_bfp, sizeof(dhcp_outbound_sock_bfp)) != 0) {
+        if (setsockopt(tx_sock, SOL_SOCKET, SO_ATTACH_FILTER, &dhcp_outbound_sock_bfp, sizeof(dhcp_outbound_sock_bfp)) != 0) {
             syslog(LOG_ALERT, "setsockopt: failed to attach filter with '%s'\n", strerror(errno));
             exit(1);
         }
 
-        update_vlan_mapping(context->intf, mConfigDbPtr);
-
-        rx_ev = event_new(base, context->rx_sock, EV_READ | EV_PERSIST, read_rx_callback, context);
-        tx_ev = event_new(base, context->tx_sock, EV_READ | EV_PERSIST, read_tx_callback, context);
+        rx_ev = event_new(base, rx_sock, EV_READ | EV_PERSIST, read_rx_callback, &intfs);
+        tx_ev = event_new(base, tx_sock, EV_READ | EV_PERSIST, read_tx_callback, &intfs);
 
         if (rx_ev == NULL || tx_ev == NULL) {
             syslog(LOG_ALERT, "event_new: failed to allocate memory for libevent event '%s'\n", strerror(errno));

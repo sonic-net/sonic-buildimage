@@ -32,15 +32,16 @@ int dhcp_mon_init(int window_sec, int max_count);
 void dhcp_mon_shutdown();
 
 /**
- * @code dhcp_mon_start(snaplen);
+ * @code dhcp_mon_start(snaplen, debug);
  *
  * @brief start monitoring DHCP Relay
  *
  * @param snaplen       packet capture length
+ * @param debug         turn on debug or not
  *
  * @return 0 upon success, otherwise upon failure
  */
-int dhcp_mon_start(size_t snaplen);
+int dhcp_mon_start(size_t snaplen, bool debug);
 
 /**
  * @code dhcp_mon_stop();

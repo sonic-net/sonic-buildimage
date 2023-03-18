@@ -14,10 +14,10 @@ def test_contructor():
     for table, hdlr in daemon.table_handler_list:
         daemon.config_db.subscribe.assert_any_call(table, hdlr)
     daemon.config_db.pubsub.psubscribe.assert_called_once()
+    assert(daemon.config_db.sub_thread.is_alive() == True)
     daemon.stop()
-    daemon.config_db.sub_thread.stop.assert_called()
-    daemon.config_db.sub_thread.is_alive.assert_called_once()
-    daemon.config_db.sub_thread.join.assert_called_once()
+    daemon.config_db.pubsub.punsubscribe.assert_called_once()
+    assert(daemon.config_db.sub_thread.is_alive() == False)
 
 class CmdMapTestInfo:
     data_buf = {}

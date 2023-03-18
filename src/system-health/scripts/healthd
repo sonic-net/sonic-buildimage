@@ -7,6 +7,7 @@
 
 import signal
 import threading
+import time
 
 from sonic_py_common.daemon_base import DaemonBase
 from swsscommon.swsscommon import SonicV2Connector
@@ -79,17 +80,26 @@ class HealthDaemon(DaemonBase):
                 return
             sysmon = Sysmonitor()
             sysmon.task_run()
-            while 1:
-                stat = manager.check(chassis)
-                self._process_stat(chassis, manager.config, stat)
-
-                if self.stop_event.wait(manager.config.interval):
-                    break
+            while self._run_checker(manager, chassis):
+                pass
         except ImportError:
             self.log_warning("sonic_platform package not installed. Cannot start system-health daemon")
 
         self.deinit()
         sysmon.task_stop()
+
+    def _run_checker(self, manager, chassis):
+        begin = time.time()
+        stat = manager.check(chassis)
+        self._process_stat(chassis, manager.config, stat)
+        elapse = time.time() - begin
+        sleep_time_in_sec = manager.config.interval - elapse
+        if sleep_time_in_sec < 0:
+            self.log_notice(f'System health takes {elapse} seconds for one iteration')
+            sleep_time_in_sec = 1
+        if self.stop_event.wait(sleep_time_in_sec):
+            return False
+        return True
 
     def _process_stat(self, chassis, config, stat):
         from health_checker.health_checker import HealthChecker

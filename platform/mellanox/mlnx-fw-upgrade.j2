@@ -32,9 +32,9 @@ declare -r UNKN_ASIC="unknown"
 declare -r UNKN_MST="unknown"
 
 declare -rA FW_FILE_MAP=( \
-    [$SPC1_ASIC]="/etc/mlnx/fw-SPC.mfa" \
-    [$SPC2_ASIC]="/etc/mlnx/fw-SPC2.mfa" \
-    [$SPC3_ASIC]="/etc/mlnx/fw-SPC3.mfa" \
+    [$SPC1_ASIC]="fw-SPC.mfa" \
+    [$SPC2_ASIC]="fw-SPC2.mfa" \
+    [$SPC3_ASIC]="fw-SPC3.mfa" \
 )
 
 IMAGE_UPGRADE="${NO_PARAM}"
@@ -221,17 +221,17 @@ function RunFwUpdateCmd() {
 }
 
 function UpgradeFW() {
-    local -r _FS_MOUNTPOINT="$1"
+    local -r _FW_BIN_PATH="$1"
 
     local -r _ASIC_TYPE="$(GetAsicType)"
     if [[ "${_ASIC_TYPE}" = "${UNKN_ASIC}" ]]; then
         ExitFailure "failed to detect ASIC type"
     fi
 
-    if [ ! -z "${_FS_MOUNTPOINT}" ]; then
-        local -r _FW_FILE="${_FS_MOUNTPOINT}/${FW_FILE_MAP[$_ASIC_TYPE]}"
+    if [ ! -z "${_FW_BIN_PATH}" ]; then
+        local -r _FW_FILE="${_FW_BIN_PATH}/${FW_FILE_MAP[$_ASIC_TYPE]}"
     else
-        local -r _FW_FILE="${FW_FILE_MAP[$_ASIC_TYPE]}"
+        local -r _FW_FILE="/etc/mlnx/${FW_FILE_MAP[$_ASIC_TYPE]}"
     fi
 
     if [ ! -f "${_FW_FILE}" ]; then
@@ -274,16 +274,29 @@ function UpgradeFWFromImage() {
     local -r _NEXT_SONIC_IMAGE="$(sonic-installer list | grep "Next: " | cut -f2 -d' ')"
     local -r _CURRENT_SONIC_IMAGE="$(sonic-installer list | grep "Current: " | cut -f2 -d' ')"
 
-    local -r _FS_PATH="/host/image-${_NEXT_SONIC_IMAGE#SONiC-OS-}/fs.squashfs"
-    local -r _FS_MOUNTPOINT="/tmp/image-${_NEXT_SONIC_IMAGE#SONiC-OS-}-fs"
-
     if [[ "${_CURRENT_SONIC_IMAGE}" == "${_NEXT_SONIC_IMAGE}" ]]; then
         ExitSuccess "firmware is up to date"
+    fi
+
+    # /host/image-<version>/platform/fw/asic is now the new location for FW binaries.
+    # Prefere this path and if it does not exist use squashfs as a fallback.
+    local -r _PLATFORM_FW_BIN_PATH="/host/image-${_NEXT_SONIC_IMAGE#SONiC-OS-}/platform/fw/asic/"
+
+    if [[ -d "${_PLATFORM_FW_BIN_PATH}" ]]; then
+        LogInfo "Using FW binaries from ${_PLATFORM_FW_BIN_PATH}"
+
+        UpgradeFW "${_PLATFORM_FW_BIN_PATH}"
     else
+        local -r _FS_PATH="/host/image-${_NEXT_SONIC_IMAGE#SONiC-OS-}/fs.squashfs"
+        local -r _FS_MOUNTPOINT="/tmp/image-${_NEXT_SONIC_IMAGE#SONiC-OS-}-fs"
+        local -r _FW_BIN_PATH="${_FS_MOUNTPOINT}/etc/mlnx/"
+
+        LogInfo "Using FW binaries from ${_FW_BIN_PATH}"
+
         mkdir -p "${_FS_MOUNTPOINT}"
         mount -t squashfs "${_FS_PATH}" "${_FS_MOUNTPOINT}"
 
-        UpgradeFW "${_FS_MOUNTPOINT}"
+        UpgradeFW "${_FW_BIN_PATH}"
 
         umount -rf "${_FS_MOUNTPOINT}"
         rm -rf "${_FS_MOUNTPOINT}"

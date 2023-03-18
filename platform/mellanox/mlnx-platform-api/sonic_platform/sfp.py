@@ -89,7 +89,6 @@ RJ45_TYPE = "RJ45"
 REGISTER_NUM = 1
 DEVICE_ID = 1
 SWITCH_ID = 0
-SX_PORT_ATTR_ARR_SIZE = 64
 
 PMAOS_ASE = 1
 PMAOS_EE = 1
@@ -529,9 +528,13 @@ class SFP(NvidiaSFPCommon):
     @classmethod
     def get_logical_ports(cls, sdk_handle, sdk_index, slot_id):
         # Get all the ports related to the sfp, if port admin status is up, put it to list
-        port_attributes_list = new_sx_port_attributes_t_arr(SX_PORT_ATTR_ARR_SIZE)
         port_cnt_p = new_uint32_t_p()
-        uint32_t_p_assign(port_cnt_p, SX_PORT_ATTR_ARR_SIZE)
+        uint32_t_p_assign(port_cnt_p, 0)
+        rc = sx_api_port_device_get(sdk_handle, DEVICE_ID, SWITCH_ID, None,  port_cnt_p)
+
+        assert rc == SX_STATUS_SUCCESS, "sx_api_port_device_get failed, rc = %d" % rc
+        port_cnt = uint32_t_p_value(port_cnt_p)
+        port_attributes_list = new_sx_port_attributes_t_arr(port_cnt)
 
         rc = sx_api_port_device_get(sdk_handle, DEVICE_ID , SWITCH_ID, port_attributes_list,  port_cnt_p)
         assert rc == SX_STATUS_SUCCESS, "sx_api_port_device_get failed, rc = %d" % rc

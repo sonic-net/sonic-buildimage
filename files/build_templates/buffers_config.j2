@@ -53,6 +53,9 @@ def
             {%- if DEVICE_NEIGHBOR_METADATA is defined and DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[local_port].name] %}
                 {%- set neighbor = DEVICE_NEIGHBOR_METADATA[DEVICE_NEIGHBOR[local_port].name] %}
                 {%- set neighbor_role = neighbor.type %}
+                {%- if 'edgezoneaggregator' == neighbor_role | lower %}
+                         {%- set neighbor_role = 'LeafRouter' %}
+                {%- endif %}
                 {%- if 'asic' == neighbor_role | lower %}
                          {%- set roles1 = 'internal' %}
                          {%- if 'internal' not in ports2cable %}

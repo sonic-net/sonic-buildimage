@@ -1520,7 +1520,7 @@ class Sfp(SfpBase):
             if dom_control_raw is not None:
                 dom_control_data = sfpd_obj.parse_control_bytes(
                     dom_control_raw, 0)
-                return ('On' == dom_control_data['data']['PowerOverride'])
+                return ('On' == dom_control_data['data']['PowerOverride']['value'])
             else:
                 return False
         else:

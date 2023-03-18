@@ -1,0 +1,12 @@
+crc16==0.1.1
+getmac==0.9.2
+netifaces==0.11.0
+packet-helper==0.0.1
+psutil==5.9.4
+ptf==0.9.3
+pyperclip==1.8.2
+pysubnettree==0.35
+scapy-helper==0.14.8
+tabulate==0.8.10
+thrift==0.14.1
+xmlrunner==1.7.7

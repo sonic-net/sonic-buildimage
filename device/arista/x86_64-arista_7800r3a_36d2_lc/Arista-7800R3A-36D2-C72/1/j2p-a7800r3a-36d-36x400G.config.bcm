@@ -269,17 +269,6 @@ tm_port_header_type_out_202=ETH
 tm_port_header_type_in_203=INJECTED_2_PP
 tm_port_header_type_out_203=ETH
 
-### SAT
-## Enable SAT Interface. 0 - Disable, 1 - Enable (Default) 
-sat_enable=1
-ucode_port_218=SAT:core_0.218
-tm_port_header_type_out_218=CPU
-tm_port_header_type_in_218=INJECTED_2
-ucode_port_219=SAT:core_1.219
-tm_port_header_type_out_219=CPU
-tm_port_header_type_in_219=INJECTED_2
-port_init_speed_sat=400000
-
 ### RCY
 sai_recycle_port_lane_base=0
 ucode_port_221=RCY.21:core_0.221
