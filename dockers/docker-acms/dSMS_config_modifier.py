@@ -21,7 +21,7 @@ def get_device_cloudtype():
     device_metadata = swsscommon.Table(config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
     (status, tuples) = device_metadata.get("localhost")
     localhost = dict(tuples)
-    return localhost['cloudtype']
+    return localhost.get('cloudtype', '')
 
 def get_device_region_from_bootstrap_cert(path_to_bootstrap_cert):
     # /etc/sonic/credentials/sonic_acms_bootstrap-uswestcentral.pfx

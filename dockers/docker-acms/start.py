@@ -57,13 +57,16 @@ def get_bootstrap_status():
 
 def update_acms_config(bootstrap_cert):
     cloud = dSMS_config_modifier.get_device_cloudtype()
+    if cloud == '':
+        sonic_logger.log_error("start: update_acms_config: Fail to get cloud type, need retry")
+        return False
     if cloud.lower() != "Public".lower():
         if not dSMS_config_modifier.fix_endpoint_for_cloud(cloud):
             sonic_logger.log_error("start: update_acms_config: Fixing endpoint for cloudtype "+cloud+" failed!")
             sys.exit(1)
     dSMS_config_modifier.update_config(bootstrap_cert)
-    sonic_logger.log_info("start: update_acms_config: ACMS Config update complete")  
-    return
+    sonic_logger.log_info("start: update_acms_config: ACMS Config update complete")
+    return True
 
 
 def main():
@@ -117,11 +120,11 @@ def main():
                 curr_bootstrap_cert = boostrap_certs[0][0]
                 ctr = 0
             sonic_logger.log_info("start: main: Trying to bootstrap with "+curr_bootstrap_cert)
-            update_acms_config(curr_bootstrap_cert)
-            exec_cmd("/usr/bin/acms -Bootstrap -Dependant client -BaseDirPath /var/opt/msft/")
-            # Choose a different bootstrap cert for next bootstrap attempt
-            ctr += 1
-            ctr = ctr % len(boostrap_certs)
+            if (update_acms_config(curr_bootstrap_cert) == True):
+                exec_cmd("/usr/bin/acms -Bootstrap -Dependant client -BaseDirPath /var/opt/msft/")
+                # Choose a different bootstrap cert for next bootstrap attempt
+                ctr += 1
+                ctr = ctr % len(boostrap_certs)
         else:
             sonic_logger.log_info("start: main: Waiting for bootstrap cert")
         time.sleep(WAIT_TIME_FOR_BOOTSTRAP_CERT)
