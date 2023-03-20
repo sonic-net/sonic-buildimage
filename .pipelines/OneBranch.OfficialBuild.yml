@@ -62,7 +62,7 @@ stages:
       preSteps:
         - template: .pipelines/prepare_agent.yml@acs-buildimage
         - template: .azure-pipelines/cleanup.yml@acs-buildimage
-        - template: .azure-pipelines/template-daemon.yml@buildimage
+        - template: .azure-pipelines/template-daemon.yml@acs-buildimage
         - checkout: self
           clean: true
           submodules: recursive
