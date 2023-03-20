@@ -1,0 +1,3 @@
+bitarray==1.5.3
+lxml==4.9.1
+redis==3.5.3

@@ -70,8 +70,8 @@ libnftnl11==1.1.2-2
 libnorm-dev==1.5.8+dfsg2-1
 libnpth0==1.6-1
 libpcap0.8==1.8.1-6+deb10u1
-libpcre2-16-0==10.32-5
-libpcre2-8-0==10.32-5
+libpcre2-16-0==10.32-5+deb10u1
+libpcre2-8-0==10.32-5+deb10u1
 libpgm-dev==5.2.122~dfsg-3
 libpng16-16==1.6.36-6
 libpython-stdlib==2.7.16-1

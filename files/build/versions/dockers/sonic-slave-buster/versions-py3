@@ -20,11 +20,11 @@ gcovr==4.1
 gpg==1.12.0
 idna==2.6
 imagesize==1.0.0
-importlib-metadata==6.0.0
+importlib-metadata==6.1.0
 jinja2==3.0.3
 keyring==17.1.1
 keyrings.alt==3.1.1
-lxml==4.6.5
+lxml==4.9.1
 m2crypto==0.38.0
 mako==1.0.7
 markdown==3.0.1
@@ -77,5 +77,5 @@ typing_extensions==4.5.0
 unattended-upgrades==0.1
 unidiff==0.5.4
 urllib3==1.24.1
-wheel==0.35.1
+wheel==0.38.1
 zipp==3.15.0

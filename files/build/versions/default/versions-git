@@ -1,11 +1,11 @@
-https://chromium.googlesource.com/chromium/tools/depot_tools.git==c5b38329e6b5fd3ebf87afb2267620ad2d9269ea
+https://chromium.googlesource.com/chromium/tools/depot_tools.git==249e9a26c13596183c16784d1e2bcae475caa380
 https://github.com/aristanetworks/swi-tools.git==b5f087e4774168bf536360d43c9c509c8f14ad9f
-https://github.com/CESNET/libyang.git==d57c8888922d1663508ad0f0a5b66f8ad600276d
+https://github.com/CESNET/libyang.git==9a4e5b2ce30b9696116d6e654ee55caab5aafed8
 https://github.com/daveolson53/audisp-tacplus.git==559c9f22edd4f2dea0ecedffb3ad9502b12a75b6
 https://github.com/daveolson53/libnss-tacplus.git==19008ab68d9d504aa58eb34d5f564755a1613b8b
 https://github.com/dyninc/OpenBFDD.git==e35f43ad8d2b3f084e96a84c392528a90d05a287
-https://github.com/flashrom/flashrom.git==9fea866ad15748809ff0c75bc591349a31a8b6f4
-https://github.com/FreeRADIUS/freeradius-server.git==0f1969b24067b8507a26548d9ae019924b5fced4
+https://github.com/flashrom/flashrom.git==028099dbfd92e62eb0c6227d1194ff714f55e67c
+https://github.com/FreeRADIUS/freeradius-server.git==b4a5aada3801b57f94ee2ade65f35f8f25ea5e10
 https://github.com/FreeRADIUS/pam_radius.git==8d373539bb9f13b0abfe8bcae0095a930a00fad0
 https://github.com/jeroennijhof/pam_tacplus.git==4284d9016e64def2bb81d5f50f96dc3b59bfdc39
 https://github.com/jpirko/libteam.git==61e27812c1074a865d7e1a778c0ce442837c28d7
@@ -14,7 +14,7 @@ https://github.com/Marvell-switching/mrvl-prestera.git==9dbae444204a2c27b33be698
 https://github.com/Mellanox/libpsample.git==62bb27d9a49424e45191eee81df7ce0d8c74e774
 https://github.com/p4lang/ptf.git==7494366607e2e4c171439df3585eba3c9769fad8
 https://github.com/p4lang/scapy-vxlan.git==85ffe83da156568ee47a0750f638227e6e1d7479
-https://github.com/sflow/host-sflow==73af41b30fc03eec7a8291ff99e073cf3bd3b0ac
+https://github.com/sflow/host-sflow==3cd477f55b7049082a3e6f38fe9fa4519f8f0469
 https://github.com/sflow/sflowtool==8c914e79ecb7930adcba2e5296041c3f9eb8e450
 https://github.com/thom311/libnl==cbafad9ddf24caef5230fef715d34f0539603be0
 https://salsa.debian.org/debian/libteam.git==48142125234a665ad5367b724af36a58fb484d3d

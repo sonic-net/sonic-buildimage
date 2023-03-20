@@ -291,8 +291,8 @@ libpcap-dev==1.8.1-6+deb10u1
 libpcap0.8==1.8.1-6+deb10u1
 libpcap0.8-dev==1.8.1-6+deb10u1
 libpciaccess0==0.14-1
-libpcre2-16-0==10.32-5
-libpcre2-8-0==10.32-5
+libpcre2-16-0==10.32-5+deb10u1
+libpcre2-8-0==10.32-5+deb10u1
 libperl5.28==5.28.1-6+deb10u1
 libpixman-1-0==0.36.0-1+deb10u1
 libpng16-16==1.6.36-6
