@@ -63,7 +63,7 @@ if [ -z $CLIENT_AUTH ] || [ $CLIENT_AUTH == "false" ]; then
 fi
 
 LOG_LEVEL=$(echo $GNMI | jq -r '.log_level')
-if [ ! -z $LOG_LEVEL ]; then
+if [[ $LOG_LEVEL =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" -v=$LOG_LEVEL"
 else
     TELEMETRY_ARGS+=" -v=2"

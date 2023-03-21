@@ -3,8 +3,11 @@ dctrl-tools==2.24-3
 dvipng==1.15-1.1
 golang-1.15-go==1.15.15-1~deb11u4
 golang-1.15-src==1.15.15-1~deb11u4
+libjpeg-dev==1:2.0.6-4
+libjpeg62-turbo-dev==1:2.0.6-4
 libxslt1-dev==1.1.34-4+deb11u1
 linux-compiler-gcc-10-arm==5.10.162-1
 linux-headers-5.10.0-21-armmp==5.10.162-1
 linux-headers-armmp==5.10.162-1
+nasm==2.15.05-1
 nodejs==14.21.3-deb-1nodesource1
