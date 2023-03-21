@@ -14,7 +14,7 @@ netifaces==0.11.0
 protobuf==3.20.3
 pyrsistent==0.15.5
 python_sdk_api==4.5.4206
-redis==4.5.1
+redis==4.5.2
 requests==2.28.2
 thrift==0.13.0
 urllib3==1.26.15

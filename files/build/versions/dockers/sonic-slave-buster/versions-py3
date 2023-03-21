@@ -40,7 +40,7 @@ packaging==19.0
 parameterized==0.8.1
 pbr==4.2.0
 pexpect==4.8.0
-pillow==5.4.1
+pillow==9.4.0
 pip==23.0.1
 pluggy==0.8.0
 ptyprocess==0.7.0

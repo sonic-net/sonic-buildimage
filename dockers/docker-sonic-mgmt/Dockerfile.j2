@@ -3,18 +3,23 @@ FROM {{ prefix }}ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y build-essential \
+RUN apt-get update && apt-get install -y apt-transport-https \
+                                         apt-utils \
+                                         build-essential \
+                                         ca-certificates \
                                          cmake \
                                          curl \
                                          default-jre \
                                          git \
-                                         inetutils-ping \
                                          iproute2 \
+                                         iputils-ping \
                                          isc-dhcp-client \
                                          libffi-dev \
                                          libssl-dev \
                                          libxml2 \
                                          libxslt1-dev \
+                                         lsb-release \
+                                         jq \
                                          openssh-server \
                                          psmisc \
                                          python \
@@ -56,7 +61,7 @@ RUN pip install allure-pytest==2.8.22 \
                 ipython==5.4.1 \
                 ixnetwork-restpy==1.0.64 \
                 ixnetwork-open-traffic-generator==0.0.79 \
-                jinja2==2.7.2 \
+                jinja2==2.10.1 \
                 jsonpatch \
                 lazy-object-proxy==1.6.0 \
                 lxml \
@@ -172,10 +177,6 @@ WORKDIR /var/$user
 # Add az symlink for backwards compatibility
 RUN mkdir bin && ln -s /usr/bin/az bin/az
 
-# Install Virtual Environments
-RUN python -m virtualenv --system-site-packages env-201811
-RUN env-201811/bin/pip install cryptography==3.3.2 ansible==2.0.0.2
-
 RUN python3 -m venv env-python3
 
 # Activating a virtualenv. The virtualenv automatically works for RUN, ENV and CMD.
@@ -204,7 +205,7 @@ RUN python3 -m pip install aiohttp \
                            ipython==5.4.1 \
                            ixnetwork-restpy==1.0.64 \
                            ixnetwork-open-traffic-generator==0.0.79 \
-                           jinja2==2.7.2 \
+                           jinja2==2.10.1 \
                            jsonpatch \
                            lxml \
                            markupsafe==2.0.1 \
@@ -250,3 +251,11 @@ RUN python3 -m pip install aiohttp \
 
 # Deactivating a virtualenv
 ENV PATH="$BACKUP_OF_PATH"
+
+USER root
+WORKDIR /azp
+COPY ./start.sh .
+RUN chmod +x start.sh
+
+USER $user
+WORKDIR /var/$user

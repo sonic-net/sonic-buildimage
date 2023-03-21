@@ -346,6 +346,7 @@ libboost-thread-dev==1.74.0.3
 libboost-thread1.74-dev==1.74.0-9
 libboost-thread1.74.0==1.74.0-9
 libboost1.74-dev==1.74.0-9
+libbpf-dev==1:0.3-2
 libbpf0==1:0.3-2
 libbrlapi0.8==6.3+dfsg-1+deb11u1
 libbrotli-dev==1.0.9-2+b2
