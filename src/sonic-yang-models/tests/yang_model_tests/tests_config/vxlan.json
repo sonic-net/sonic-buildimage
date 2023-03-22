@@ -38,6 +38,45 @@
              }
          }
     },
+    "VXLAN_VALID_V6_TUNNEL_TEST": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+         },
+        "sonic-vxlan:sonic-vxlan": {
+            "sonic-vxlan:VXLAN_TUNNEL": {
+                "VXLAN_TUNNEL_LIST": [
+                    {
+                        "name": "vtep1",
+                        "src_ip": "2001::1:2:3:4"
+                    }
+                ]
+             },
+            "sonic-vxlan:VXLAN_EVPN_NVO": {
+                "VXLAN_EVPN_NVO_LIST": [
+                    {
+                        "name": "nvo1",
+                        "source_vtep": "vtep1"
+                    }
+                ]
+             },
+            "sonic-vxlan:VXLAN_TUNNEL_MAP": {
+                "VXLAN_TUNNEL_MAP_LIST": [
+                    {
+                        "name": "vtep1",
+                        "mapname": "map_100_Vlan100",
+                        "vlan": "Vlan100",
+                        "vni": "100"
+                    }
+                ]
+             }
+         }
+    },
     "VXLAN_EVPN_NVO_WITHOUT_VTEP": {
         "sonic-vxlan:sonic-vxlan": {
             "sonic-vxlan:VXLAN_EVPN_NVO": {

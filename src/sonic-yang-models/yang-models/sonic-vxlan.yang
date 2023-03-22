@@ -60,7 +60,7 @@ module sonic-vxlan {
                 }
 
                 leaf src_ip {
-                    type inet:ipv4-address;
+                    type inet:ip-address;
                 }
             }
         }
