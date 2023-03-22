@@ -2,6 +2,9 @@
     "VXLAN_VALID_TEST": {
         "desc": "Valid VXLAN Configuration."
     },
+    "VXLAN_VALID_V6_TUNNEL_TEST": {
+        "desc": "Valid VXLAN V6 Configuration."
+    },
     "VXLAN_EVPN_NVO_WITHOUT_VTEP": {
         "desc": "Configure EVPN_NVO without VXLAN_TUNNEL entry",
 	    "eStrKey" : "LeafRef"
