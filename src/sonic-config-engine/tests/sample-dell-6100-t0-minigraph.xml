@@ -716,6 +716,11 @@
             <a:Reference i:nil="true"/>
             <a:Value>10.0.0.16</a:Value>
           </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>SonicQosProfile</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>RDMA-CENTRIC</a:Value>
+          </a:DeviceProperty>
         </a:Properties>
       </a:DeviceMetadata>
     </Devices>
@@ -730,11 +735,6 @@
             <a:Name>AutoNegotiation</a:Name>
             <a:Reference i:nil="true"/>
             <a:Value>True</a:Value>
-          </a:DeviceProperty>
-          <a:DeviceProperty>
-            <a:Name>SonicQosProfile</a:Name>
-            <a:Reference i:nil="true"/>
-            <a:Value>RDMA-CENTRIC</a:Value>
           </a:DeviceProperty>
         </a:Properties>
         <a:Key>ARISTA01T1:Ethernet1;s6100-dev-1:fortyGigE1/1/1</a:Key>
