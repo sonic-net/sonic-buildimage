@@ -1,5 +1,7 @@
+async-timeout==4.0.2
 bitarray==1.5.3
 ijson==2.6.1
+importlib-metadata==6.1.0
 ipaddress==1.0.23
 jsondiff==2.0.0
 lxml==4.9.1
@@ -8,7 +10,11 @@ netaddr==0.8.0
 pyang==2.5.3
 pyangbind==0.8.1
 pyyaml==5.4.1
+redis==4.5.3
+redis-dump-load==1.1
 regex==2022.10.31
 six==1.16.0
 tabulate==0.8.2
+typing_extensions==4.5.0
 xmltodict==0.12.0
+zipp==3.15.0

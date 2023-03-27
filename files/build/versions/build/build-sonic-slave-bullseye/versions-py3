@@ -5,7 +5,7 @@ colorful==0.5.5
 docker==6.0.1
 docker-image-py==0.1.12
 enlighten==1.11.2
-filelock==3.10.0
+filelock==3.10.4
 ijson==2.6.1
 ipaddress==1.0.23
 jsondiff==2.0.0

@@ -48,7 +48,7 @@ cmake==3.13.4-1
 cmake-data==3.13.4-1
 cmocka-doc==1.1.3-1
 comerr-dev==2.1-1.44.5-1+deb10u3
-containerd.io==1.6.18-1
+containerd.io==1.6.19-1
 cowbuilder==0.88
 cowdancer==0.88
 cpio==2.12+dfsg-9
