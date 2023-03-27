@@ -1,0 +1,12 @@
+
+DPATH       := $($(DOCKER_VNET_MONITOR)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-vnet-monitor.mk rules/docker-vnet-monitor.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_VNET_MONITOR)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(DOCKER_VNET_MONITOR)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_VNET_MONITOR)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_VNET_MONITOR),$(DOCKER_VNET_MONITOR_DBG)))
+

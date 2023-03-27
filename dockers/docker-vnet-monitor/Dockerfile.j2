@@ -9,15 +9,19 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update &&     \
     apt-get install -f -y \
+        libpcap0.8        \
         rsyslog           \
-        python-scapy
+        python-scapy      \
+        build-essential   \
+        python3-dev
 
 # Upgrade pip via PyPI and uninstall the Debian version
 RUN pip3 install --upgrade pip
 RUN apt-get purge -y python3-pip
 RUN pip3 install \
          scapy==2.4.4 \
-         pyroute2==0.5.14
+         pyroute2==0.5.14 \
+         netifaces==0.10.9
 
 {% if docker_vnet_monitor_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -36,13 +40,16 @@ RUN pip3 install \
 {% endif %}
 
 ## Clean up
-RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN apt-get purge -y          \
+        python3-dev           \
+        build-essential    && \
+    apt-get clean -y       && \
+    apt-get autoclean -y   && \
+    apt-get autoremove -y  && \
+    rm -rf /debs ~/.cache
 
-COPY ["vnetping.py", "vnetpingsrv.py", "configutil.py", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
-COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
-COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
