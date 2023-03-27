@@ -575,6 +575,7 @@ tk8.6-blt2.5==2.5.3+dfsg-4
 tmux==2.8-3+deb10u1
 traceroute==1:2.1.0-2
 ttf-bitstream-vera==1.10-8
+tzdata==2021a-0+deb10u10
 ucf==3.0038+nmu1
 unzip==6.0-23+deb10u3
 vim==2:8.1.0875-5+deb10u4
