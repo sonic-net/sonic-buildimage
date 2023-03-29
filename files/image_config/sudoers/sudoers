@@ -30,7 +30,7 @@ Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog*, \
                                  /usr/bin/lldpctl, \
                                  /usr/bin/sensors, \
                                  /usr/bin/tail -F /var/log/syslog, \
-                                 /usr/bin/rvtysh *, \
+                                 /usr/bin/rvtysh -c show *, /usr/bin/rvtysh -n [0-9] -c show *, \
                                  /usr/bin/vtysh -c show version, \
                                  /usr/bin/vtysh -c show bgp ipv[46] summary json, \
                                  /usr/bin/vtysh -n [0-9] -c show version, \
