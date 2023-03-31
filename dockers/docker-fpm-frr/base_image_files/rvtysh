@@ -1,22 +1,22 @@
 #!/bin/bash
-
-# The command rvtysh can be run as root priviledge by any user without password, only allow to execute readonly commands.
-
-# The options in the show command cannot contains any charactors to run multiple sub-commands potentially, such as "\n", "\r", "|", "&", "$" and ";".
-if printf -- "$*" | grep -qPz '[\n\r|&$;]'; then
-    echo "Not allow to run the command, please use the comand 'sudo vtysh' instead." 1>&2
+QUOTED_OUTPUT=''
+for var in "$@"; do
+    if [ "$var" == "-c" ]; then
+        QUOTED_OUTPUT="${QUOTED_OUTPUT} ${var}"
+    elif [ "$var" == "-n" ]; then
+        QUOTED_OUTPUT="${QUOTED_OUTPUT} \\${var}"
+    else
+        QUOTED_OUTPUT="${QUOTED_OUTPUT} #${var:Q}#"
+    fi
+done
+# The command includes '-c' option (required) and '-n' option (optional)
+# '-c' option must start with show and the subcommand only allows a specific number of special characters.
+SHOW_MATCHED_PATTERN=`echo ${QUOTED_OUTPUT}|grep -Eo "\-[c][ ]+#show[ a-zA-Z0-9!%()*+,-./:<=>@^_~ ]+#"|sed -e 's/#//g'`
+if [ "${SHOW_MATCHED_PATTERN}" == "" ]; then
+    echo "Not allowed to run command. Please run sudo vtysh instead."
     exit 1
 fi
+N_MATCHED_PATTERN=`echo ${QUOTED_OUTPUT}|grep -Eo "\-[n][ ]+#[0-9]#"|sed -e 's/#//g'`
+ARGUMENTS=("$SHOW_MATCHED_PATTERN")
+vtysh ${N_MATCHED_PATTERN} "${ARGUMENTS[@]}"
 
-# The sub commands must start with "show"
-LAST_PARAM=
-for param in "$@"
-do
-    if [ "$LAST_PARAM" == "-c" ] && [[ "$param" != show*  ]]; then
-        echo "Not allow to run the command '$param', please use the comand 'sudo vtysh' instead." 1>&2
-        exit 1
-    fi
-    LAST_PARAM=$param
-done
-
-vtysh "$@"
