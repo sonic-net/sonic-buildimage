@@ -50,9 +50,9 @@ class Chassis(ChassisBase):
         port_config_file_path = device_info.get_path_to_port_config_file()
         sfputil_helper.read_porttab_mappings(port_config_file_path, 0)
 
-        from sonic_platform.sfp import Sfp
+        from sonic_platform.sfp_optoe import SfpOptoe
         for index in range(0, NUM_SFP):
-            sfp = Sfp(index, sfputil_helper.logical[index])
+            sfp = SfpOptoe(index, sfputil_helper.physical_to_logical[index + 1])
             self._sfp_list.append(sfp)
         self.sfp_module_initialized = True
 

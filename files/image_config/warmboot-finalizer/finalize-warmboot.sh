@@ -112,6 +112,7 @@ function restore_counters_folder()
     cache_counters_folder="/host/counters"
     if [[ -d $cache_counters_folder ]]; then
         mv $cache_counters_folder /tmp/cache
+        chown -R admin:admin /tmp/cache
     fi
 }
 

@@ -9,19 +9,20 @@ debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
 
-RUN dpkg -P syncd
+RUN apt-get purge -y syncd
 
 ## Pre-install the fundamental packages
 RUN apt-get update \
  && apt-get -y install  \
     net-tools           \
     python-pip          \
+    python-setuptools   \
     build-essential     \
     libssl-dev          \
     libffi-dev          \
     python-dev          \
-    libpython2.7        \
     libjansson4         \
+    libyaml-dev         \
     wget                \
     cmake               \
     libqt5core5a        \
@@ -43,9 +44,6 @@ RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
  && cd ..               \
  && rm -fr nanomsg-1.0.0 \
  && rm -f 1.0.0.tar.gz  \
- && pip install cffi==1.7.0    \
- && pip install --upgrade cffi==1.7.0 \
- && pip install nnpy    \
  && pip install numpy   \
  && pip install scipy   \
  && pip install setuptools   \

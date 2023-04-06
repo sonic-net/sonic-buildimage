@@ -45,7 +45,15 @@ class PortIndexMapper(object):
         index = port_util.get_index_from_str(ifname)
         if op == 'SET' and index is None:
             return
-        ifindex = if_nametoindex(ifname)
+
+        # catch system error and log as warning level instead of
+        # error level in case interface was already deleted
+        ifindex = None
+        try:
+            ifindex = if_nametoindex(ifname)
+        except OSError as e:
+            logger.log_warning("%s" % str(e))
+
         if op == 'SET' and ifindex is None:
             return
 

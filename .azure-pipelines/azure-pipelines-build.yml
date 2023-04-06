@@ -125,7 +125,7 @@ jobs:
             make $BUILD_OPTIONS target/docker-ptf-sai.gz
             if [ $(Build.Reason) != 'PullRequest' ];then
               gzip -kd target/sonic-vs.img.gz
-              SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make sonic-slave-run
+              SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
               rm target/sonic-vs.img
             fi
           else

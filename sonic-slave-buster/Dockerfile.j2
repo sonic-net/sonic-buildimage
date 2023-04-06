@@ -204,7 +204,7 @@ RUN apt-get update && apt-get install -y \
         libxml2-dev \
 # For BFN sdk build
         libusb-1.0-0-dev \
-        libcurl3-nss-dev \
+        libcurl4-openssl-dev \
         libunwind8-dev \
         telnet \
         libc-ares2 \
@@ -359,7 +359,7 @@ RUN apt-get update && apt-get install -y \
         xsltproc \
         python-lxml \
         libexpat1-dev \
-        libcurl3-gnutls \
+        libcurl4 \
         libcjson-dev \
 # For WPA supplication
         qtbase5-dev          \
@@ -550,6 +550,7 @@ RUN pip3 install "lxml==4.9.1"
 {%- endif %}
 
 # For sonic-platform-common testing
+RUN pip2 install redis
 RUN pip3 install redis
 
 # For vs image build
@@ -634,7 +635,7 @@ RUN apt-get install -y nodejs
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN apt-get install -y rsync dh-python
 
-RUN apt-get install -y libelf-dev:$arch libdw-dev:$arch  libbz2-dev:$arch liblzo2-dev:$arch libedit-dev:$arch libevent-dev:$arch libopts25-dev:$arch libssl-dev:$arch pps-tools:$arch libpam-cap:$arch libcap-dev:$arch libpam0g-dev:$arch libaudit-dev:$arch libgtk-3-dev:$arch libkrb5-dev:$arch libsystemd-dev:$arch libwrap0-dev:$arch libkrb5-dev:$arch libboost1.67-dev:$arch libboost-dev:$arch libzmq5:$arch libzmq3-dev:$arch libdaemon-dev:$arch libjansson-dev:$arch libmnl-dev:$arch libsensors5:$arch libsensors4-dev:$arch libperl-dev:$arch libmariadb-dev:$arch libmariadb-dev-compat:$arch libpci-dev:$arch libjson-c3:$arch libjson-c-dev:$arch libreadline-dev:$arch librtr-dev:$arch librrd-dev:$arch libnetfilter-conntrack-dev:$arch libnetfilter-conntrack3:$arch libnfnetlink-dev:$arch libnftnl-dev:$arch libldap2-dev:$arch libbind-export-dev:$arch check:$arch libboost-atomic-dev:$arch libboost-test-dev:$arch libglib2.0-dev:$arch qt5-default:$arch libexplain-dev:$arch libc-ares-dev:$arch libip4tc0:$arch libip6tc0:$arch libiptc0:$arch libxtables12:$arch iptables-dev:$arch libatm1-dev:$arch libdb-dev:$arch pkg-config:$arch libnghttp2-14:$arch librtmp1:$arch libssh2-1:$arch libcjson1:$arch libcjson-dev:$arch libcurl3-gnutls:$arch libcurl3-nss-dev:$arch libboost-thread1.67-dev:$arch libboost-thread-dev:$arch libboost-system1.67-dev:$arch libboost-system-dev:$arch libgtest-dev:$arch libgmock-dev:$arch
+RUN apt-get install -y libelf-dev:$arch libdw-dev:$arch  libbz2-dev:$arch liblzo2-dev:$arch libedit-dev:$arch libevent-dev:$arch libopts25-dev:$arch libssl-dev:$arch pps-tools:$arch libpam-cap:$arch libcap-dev:$arch libpam0g-dev:$arch libaudit-dev:$arch libgtk-3-dev:$arch libkrb5-dev:$arch libsystemd-dev:$arch libwrap0-dev:$arch libkrb5-dev:$arch libboost1.67-dev:$arch libboost-dev:$arch libzmq5:$arch libzmq3-dev:$arch libdaemon-dev:$arch libjansson-dev:$arch libmnl-dev:$arch libsensors5:$arch libsensors4-dev:$arch libperl-dev:$arch libmariadb-dev:$arch libmariadb-dev-compat:$arch libpci-dev:$arch libjson-c3:$arch libjson-c-dev:$arch libreadline-dev:$arch librtr-dev:$arch librrd-dev:$arch libnetfilter-conntrack-dev:$arch libnetfilter-conntrack3:$arch libnfnetlink-dev:$arch libnftnl-dev:$arch libldap2-dev:$arch libbind-export-dev:$arch check:$arch libboost-atomic-dev:$arch libboost-test-dev:$arch libglib2.0-dev:$arch qt5-default:$arch libexplain-dev:$arch libc-ares-dev:$arch libip4tc0:$arch libip6tc0:$arch libiptc0:$arch libxtables12:$arch iptables-dev:$arch libatm1-dev:$arch libdb-dev:$arch pkg-config:$arch libnghttp2-14:$arch librtmp1:$arch libssh2-1:$arch libcjson1:$arch libcjson-dev:$arch libcurl4-openssl-dev:$arch libboost-thread1.67-dev:$arch libboost-thread-dev:$arch libboost-system1.67-dev:$arch libboost-system-dev:$arch libgtest-dev:$arch libgmock-dev:$arch
 
 RUN apt-get install -y -t buster-backports \
         libbpf-dev:$arch

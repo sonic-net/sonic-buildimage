@@ -41,6 +41,8 @@ if [ "$ENABLE_VERSION_CONTROL_DEB" == "y" ] && [ -f $VERSION_DEB_PREFERENCE ]; t
     cp -f $VERSION_DEB_PREFERENCE /etc/apt/preferences.d/
 fi
 
-DISTRO=${DISTRO} apt-get update && apt-get install -y rsync
+if [ ! -z "$(get_version_cache_option)" ]; then
+    DISTRO=${DISTRO} apt-get update && apt-get install -y rsync
+fi
 
 exit 0
