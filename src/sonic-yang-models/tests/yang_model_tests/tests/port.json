@@ -121,11 +121,11 @@
          "desc": "PORT_INVALID_MULTIASIC_TEST invalid role pattern, expect fail",
          "eStrKey": "Pattern"
      },
-     "PORT_VALID_CHANNEL_NUMBER": {
-         "desc": "PORT_VALID_CHANNEL_NUMBER no failure."
+     "PORT_VALID_SUBPORT_NUMBER": {
+         "desc": "PORT_VALID_SUBPORT_NUMBER no failure."
      },
-     "PORT_INVALID_CHANNEL_NUMBER": {
-         "desc": "Out of range channel number",
+     "PORT_INVALID_SUBPORT_NUMBER": {
+         "desc": "Out of range subport number",
          "eStrKey": "Range",
          "eStr": "0..8"
      }

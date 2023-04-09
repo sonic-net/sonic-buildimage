@@ -35,6 +35,7 @@ s6100/systemd/s6100-ssd-upgrade-status.service etc/systemd/system
 s6100/systemd/s6100-reboot-cause.service etc/systemd/system
 s6100/systemd/s6100-platform-startup.service etc/systemd/system
 s6100/scripts/s6100_serial_getty_monitor etc/monit/conf.d
+s6100/scripts/check-getty.sh usr/local/bin
 common/fw-updater usr/local/bin
 common/onie_mode_set usr/local/bin
 common/onie_version usr/local/bin

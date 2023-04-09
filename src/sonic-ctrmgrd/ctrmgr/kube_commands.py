@@ -412,7 +412,76 @@ def kube_reset_master(force):
 
     return (ret, err)
 
+def _do_tag(docker_id, image_ver):
+    err = ""
+    out = ""
+    ret = 1
+    status, _, err = _run_command("docker ps |grep {}".format(docker_id))
+    if status == 0:
+        _, image_item, err = _run_command("docker inspect {} |jq -r .[].Image".format(docker_id))
+        if image_item:
+            image_id = image_item.split(":")[1][:12]
+            _, image_info, err = _run_command("docker images |grep {}".format(image_id))
+            if image_info:
+                # Only need the docker repo name without acr domain
+                image_rep = image_info.split()[0].split("/")[-1]
+                tag_res, _, err = _run_command("docker tag {} {}:latest".format(image_id, image_rep))
+                if tag_res == 0:
+                    out = "docker tag {} {}:latest successfully".format(image_id, image_rep)
+                    ret = 0
+                else:
+                    err = "Failed to tag {}:{} to latest. Err: {}".format(image_rep, image_ver, err)
+            else:
+                err = "Failed to docker images |grep {} to get image repo. Err: {}".format(image_id, err)
+        else:
+            err = "Failed to inspect container:{} to get image id. Err: {}".format(docker_id, err)
+    elif err:
+        err = "Error happens when execute docker ps |grep {}. Err: {}".format(docker_id, err)
+    else:
+        out = "New version {} is not running.".format(image_ver)
+        ret = -1
+    
+    return (ret, out, err)
 
+def _remove_container(feat):
+    err = ""
+    out = ""
+    ret = 0
+    _, feat_status, err = _run_command("docker inspect {} |jq -r .[].State.Running".format(feat))
+    if feat_status:
+        if feat_status == 'true':
+            err = "Feature {} container is running, it's unexpected".format(feat)
+            ret = 1
+        else:
+            rm_res, _, err = _run_command("docker rm {}".format(feat))
+            if rm_res == 0:
+                out = "Remove origin local {} container successfully".format(feat)
+            else:
+                err = "Failed to docker rm {}. Err: {}".format(feat, err)
+                ret = 1
+    elif err.startswith("Error: No such object"):
+        out = "Origin local {} container has been removed before".format(feat)
+        err = ""
+    else:
+        err = "Failed to docker inspect {} |jq -r .[].State.Running. Err: {}".format(feat, err)
+        ret = 1
+    
+    return (ret, out, err)
+
+def tag_latest(feat, docker_id, image_ver):
+    ret, out, err = _do_tag(docker_id, image_ver)
+    if ret == 0:
+        log_debug(out)
+        ret, out, err = _remove_container(feat)
+        if ret == 0:
+            log_debug(out)
+        else:
+            log_error(err)
+    elif ret == -1:
+        ret = 0
+    else:
+        log_error(err)
+    return ret
 
 def main():
     syslog.openlog("kube_commands")

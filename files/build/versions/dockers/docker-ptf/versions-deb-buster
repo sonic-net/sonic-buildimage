@@ -180,8 +180,8 @@ libgnutls30==3.6.7-4+deb10u10
 libgomp1==8.3.0-6
 libgpm2==1.20.7-5
 libgraphite2-3==1.3.13-7
-libgs9==9.27~dfsg-2+deb10u6
-libgs9-common==9.27~dfsg-2+deb10u6
+libgs9==9.27~dfsg-2+deb10u7
+libgs9-common==9.27~dfsg-2+deb10u7
 libgssapi-krb5-2==1.17-3+deb10u5
 libgstreamer-plugins-base1.0-0==1.14.4-2+deb10u1
 libgstreamer1.0-0==1.14.4-1
@@ -274,13 +274,13 @@ libnl-genl-3-200==3.4.0-1
 libnl-nf-3-200==3.4.0-1
 libnl-route-3-200==3.4.0-1
 libnpth0==1.6-1
-libnss-systemd==241-7~deb10u8
+libnss-systemd==241-7~deb10u9
 libogg0==1.3.2-1+b1
 libopenjp2-7==2.3.0-2+deb10u2
 libopts25==1:5.18.12-4
 libopus0==1.3-1
 liborc-0.4-0==1:0.4.28-3.1
-libpam-systemd==241-7~deb10u8
+libpam-systemd==241-7~deb10u9
 libpango-1.0-0==1.42.4-8~deb10u1
 libpangocairo-1.0-0==1.42.4-8~deb10u1
 libpangoft2-1.0-0==1.42.4-8~deb10u1
@@ -357,6 +357,7 @@ libssl-dev==1.1.1n-0+deb10u4
 libssl1.1==1.1.1n-0+deb10u4
 libstdc++-8-dev==8.3.0-6
 libsynctex2==2018.20181218.49446-1
+libsystemd0==241-7~deb10u9
 libtacacs+1==4.0.4.27a-3
 libtcl8.6==8.6.9+dfsg-2
 libteam-utils==1.28-1
@@ -378,7 +379,8 @@ libtk8.6==8.6.9-2
 libtry-tiny-perl==0.30-1
 libtsan0==8.3.0-6
 libubsan1==8.3.0-6
-libunbound8==1.9.0-2+deb10u2
+libudev1==241-7~deb10u9
+libunbound8==1.9.0-2+deb10u3
 liburi-perl==1.76-1
 libutempter0==1.1.6-3
 libuv1==1.24.1-1+deb10u1
@@ -561,8 +563,8 @@ rsyslog==8.1901.0-1+deb10u2
 sensible-utils==0.0.12
 shared-mime-info==1.10-1
 sntp==1:4.2.8p12+dfsg-4
-systemd==241-7~deb10u8
-systemd-sysv==241-7~deb10u8
+systemd==241-7~deb10u9
+systemd-sysv==241-7~deb10u9
 t1utils==1.41-3
 tacacs+==4.0.4.27a-3
 tcpdump==4.9.3-1~deb10u2

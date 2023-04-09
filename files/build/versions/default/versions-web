@@ -1,9 +1,9 @@
 http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_5.10.0-4.debian.tar.xz==9a85eed17658cdbf9287606da64143e5
 http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_5.10.0-4.dsc==0038ddbc885bea2b1bcf367b1806bfbf
 http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_5.10.0.orig.tar.xz==f36f0a0612f7fd565680e918d692900d
-http://deb.debian.org/debian/pool/main/i/iptables/iptables_1.8.2-4.debian.tar.xz==c27e499611c48ba307792518d29cdcc7
-http://deb.debian.org/debian/pool/main/i/iptables/iptables_1.8.2-4.dsc==d9572a9f48c88293341681601a7b18c5
-http://deb.debian.org/debian/pool/main/i/iptables/iptables_1.8.2.orig.tar.bz2==944558e88ddcc3b9b0d9550070fa3599
+http://deb.debian.org/debian/pool/main/i/iptables/iptables_1.8.7-1.debian.tar.xz==bacfd4f463240af61c4a50298e5f7560
+http://deb.debian.org/debian/pool/main/i/iptables/iptables_1.8.7-1.dsc==c7b1880f0d2e7a9306007969f3b541ee
+http://deb.debian.org/debian/pool/main/i/iptables/iptables_1.8.7.orig.tar.bz2==602ba7e937c72fbb7b1c2b71c3b0004b
 http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.1-2.3+deb11u1.debian.tar.xz==8c3640097a1b4cc59e927badbd45b3f0
 http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.1-2.3+deb11u1.dsc==1af0a028a9655235ec3372332f94a19c
 http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.1.orig.tar.gz==dbcba5108f659278200218ac0847ce3f

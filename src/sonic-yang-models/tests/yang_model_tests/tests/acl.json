@@ -31,6 +31,9 @@
         "eStrKey" : "When",
         "eStr": ["IP_TYPE"]
     },
+    "ACL_RULE_WITHOUT_IP_TYPE": {
+        "desc": "Configure ACL_RULE without IP_TYPE."
+    },
     "ACL_RULE_ARP_TYPE_DST_IPV6_MISMATCH": {
         "desc": "Configure IP_TYPE as ARP and DST_IPV6 in ACL_RULE.",
         "eStrKey" : "When",

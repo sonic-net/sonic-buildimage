@@ -4,6 +4,7 @@
     "retry_labels_update_seconds": 5,
     "revert_to_local_on_wait_seconds": 60,
     "tag_latest_image_on_wait_seconds": 600,
+    "retry_tag_latest_seconds": 30,
     "use_k8s_as_http_proxy": "n"
 }
 

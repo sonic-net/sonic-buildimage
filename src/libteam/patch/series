@@ -10,3 +10,5 @@
 0010-When-read-of-timerfd-returned-0-don-t-consider-this-.patch
 0011-Remove-extensive-debug-output.patch
 0012-Increase-min_ports-upper-limit-to-1024.patch
+0013-set-port-to-disabled-state-during-removal.patch
+0014-dont-move-the-port-state-from-disabled-when-admin-state-is-down.patch

@@ -80,6 +80,7 @@ libpcap0.8==1.10.0-2
 libpcre2-16-0==10.36-2+deb11u1
 libpgm-dev==5.3.128~dfsg-2
 libpng16-16==1.6.37-3
+libpopt0==1.18-2
 libpython2-stdlib==2.7.18-3
 libpython2.7-minimal==2.7.18-8
 libpython2.7-stdlib==2.7.18-8

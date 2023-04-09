@@ -5,12 +5,13 @@ Subject: [PATCH] [libteam]: Reimplement Warm-Reboot procedure'
 
 ---
  libteam/ifinfo.c          |   6 +-
+ libteam/ports.c           |  19 +-
  teamd/teamd.c             |  51 +++-
  teamd/teamd.h             |   6 +
  teamd/teamd_events.c      |  13 ++
  teamd/teamd_per_port.c    |   6 +
  teamd/teamd_runner_lacp.c | 475 +++++++++++++++++++++++++++++++++++---
- 6 files changed, 513 insertions(+), 44 deletions(-)
+ 7 files changed, 530 insertions(+), 46 deletions(-)
 
 diff --git a/libteam/ifinfo.c b/libteam/ifinfo.c
 index 46d56a2..b86d34c 100644
@@ -34,6 +35,58 @@ index 46d56a2..b86d34c 100644
  		set_changed(ifinfo, CHANGED_HWADDR);
  	}
  }
+diff --git a/libteam/ports.c b/libteam/ports.c
+index 9ebf30f..0bd7cc0 100644
+--- a/libteam/ports.c
++++ b/libteam/ports.c
+@@ -128,6 +128,12 @@ int get_port_list_handler(struct nl_msg *msg, void *arg)
+ 	struct nlattr *port_attrs[TEAM_ATTR_PORT_MAX + 1];
+ 	int i;
+ 	uint32_t team_ifindex = 0;
++	/*
++	 * In case get_port_list is being called from check_call_change_handlers recursively,
++	 * there can be some attributes which have not been consumed by callbacks.
++	 * In this case, we should only merge the new attributes into the existing ones without clearing them
++	 */
++	bool recursive = (th->change_handler.pending_type_mask & TEAM_PORT_CHANGE) ? true : false;
+ 
+ 	genlmsg_parse(nlh, 0, attrs, TEAM_ATTR_MAX, NULL);
+ 	if (attrs[TEAM_ATTR_TEAM_IFINDEX])
+@@ -140,7 +146,8 @@ int get_port_list_handler(struct nl_msg *msg, void *arg)
+ 		return NL_SKIP;
+ 
+ 	if (!th->msg_recv_started) {
+-		port_list_cleanup_last_state(th);
++		if (!recursive)
++			port_list_cleanup_last_state(th);
+ 		th->msg_recv_started = true;
+ 	}
+ 	nla_for_each_nested(nl_port, attrs[TEAM_ATTR_LIST_PORT], i) {
+@@ -165,7 +172,9 @@ int get_port_list_handler(struct nl_msg *msg, void *arg)
+ 			if (!port)
+ 				return NL_SKIP;
+ 		}
+-		port->changed = port_attrs[TEAM_ATTR_PORT_CHANGED] ? true : false;
++
++		if (!port->changed || !recursive)
++			port->changed = port_attrs[TEAM_ATTR_PORT_CHANGED] ? true : false;
+ 		port->linkup = port_attrs[TEAM_ATTR_PORT_LINKUP] ? true : false;
+ 		port->removed = port_attrs[TEAM_ATTR_PORT_REMOVED] ? true : false;
+ 		if (port_attrs[TEAM_ATTR_PORT_SPEED])
+@@ -196,6 +204,13 @@ static int get_port_list(struct team_handle *th)
+ 	if (err)
+ 		return err;
+ 
++	/*
++	 * Do not call check_call_change_handlers if this is called recursively to avoid racing conditions
++	 * It will be called by the outer call
++	 */
++	if (th->change_handler.pending_type_mask & TEAM_PORT_CHANGE)
++		return 0;
++
+ 	return check_call_change_handlers(th, TEAM_PORT_CHANGE);
+ 
+ nla_put_failure:
 diff --git a/teamd/teamd.c b/teamd/teamd.c
 index 421e34d..33512a6 100644
 --- a/teamd/teamd.c
@@ -881,5 +934,5 @@ index 955ef0c..782fc05 100644
  
  const struct teamd_runner teamd_runner_lacp = {
 -- 
-2.17.1
+2.30.2
 

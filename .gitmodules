@@ -118,3 +118,6 @@
 [submodule "src/sonic-genl-packet"]
 	path = src/sonic-genl-packet
 	url = https://github.com/sonic-net/sonic-genl-packet
+[submodule "src/dhcpmon"]
+	path = src/dhcpmon
+	url = https://github.com/sonic-net/sonic-dhcpmon.git

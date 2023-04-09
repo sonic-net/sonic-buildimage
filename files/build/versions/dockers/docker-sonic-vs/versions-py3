@@ -9,7 +9,7 @@ dbus-python==1.3.2
 docker==6.0.1
 docker-image-py==0.1.12
 enlighten==1.11.2
-filelock==3.10.4
+filelock==3.11.0
 idna==3.4
 importlib-metadata==6.1.0
 jsonpatch==1.32

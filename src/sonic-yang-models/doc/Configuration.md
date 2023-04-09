@@ -1501,7 +1501,7 @@ optional attributes.
             "mtu": "9100",
             "alias": "etp1a",
             "speed": "100000",
-            "channel": 1
+            "subport": 1
         },
         "Ethernet4": {
             "admin_status": "up",
@@ -1511,7 +1511,7 @@ optional attributes.
             "mtu": "9100",
             "alias": "etp1b",
             "speed": "100000",
-            "channel": 2
+            "subport": 2
         },
     }
 }

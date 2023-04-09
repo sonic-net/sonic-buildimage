@@ -37,7 +37,7 @@ class MuxStateWriter(object):
         Initializes the connector during the first call
         """
         if self.config_db_connector is None:
-            self.config_db_connector = ConfigDBConnector()
+            self.config_db_connector = ConfigDBConnector(use_unix_socket_path=True)
             self.config_db_connector.connect()
 
         return self.config_db_connector
@@ -69,7 +69,7 @@ class MuxStateWriter(object):
         Initializes the connector during the first call
         """
         if self.asic_db_connector is None:
-            self.asic_db_connector = SonicV2Connector()
+            self.asic_db_connector = SonicV2Connector(use_unix_socket_path=True)
             self.asic_db_connector.connect('ASIC_DB')
 
         return self.asic_db_connector
@@ -136,7 +136,7 @@ class MuxStateWriter(object):
         tunnel_key_pattern = 'ASIC_STATE:SAI_OBJECT_TYPE_TUNNEL:*'
         return len(self.asic_db.keys('ASIC_DB', tunnel_key_pattern)) > 0
 
-    def wait_for_tunnel(self, interval=1, timeout=60):
+    def wait_for_tunnel(self, interval=1, timeout=90):
         """
         Waits until the IP-in-IP tunnel has been created
 

@@ -35,6 +35,8 @@ def check_file(file_name):
 
                 # Remove trailing chip name "bcm8869x"
                 p = re.sub(r"\.bcm8869x(_adapter|_[a-z]\d)?$", "", p)
+                # Remove trailing chip name "bcm8885x"
+                p = re.sub(r"\.bcm8885x(_adapter|_[a-z]\d)?$", "", p)
                 # Remove trailing unit ".<number>$"
                 p = re.sub(r"\.[0-9]+$", '', p)
                 # Remove trailing port name

@@ -1,7 +1,7 @@
 [Unit]
 Description=Delays snmp container until SONiC has started
 PartOf=snmp.service
-After=swss.service
+After=swss.service interfaces-config.service
 
 [Timer]
 OnUnitActiveSec=0 sec
