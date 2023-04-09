@@ -1,9 +1,0 @@
-#!/usr/bin/make -f
-
-export DEB_BUILD_MAINT_OPTIONS=hardening=+all
-
-DEB_CFLAGS_APPEND=-std=gnu11
-export DEB_CFLAGS_APPEND
-
-%:
-	dh $@ --parallel

@@ -14,7 +14,7 @@ dbus-python==1.2.16
 docker==5.0.3
 docker-image-py==0.1.12
 enlighten==1.11.2
-filelock==3.10.4
+filelock==3.11.0
 grpcio==1.39.0
 grpcio-tools==1.39.0
 idna==3.4

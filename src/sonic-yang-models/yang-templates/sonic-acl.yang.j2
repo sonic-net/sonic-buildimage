@@ -106,7 +106,7 @@ module sonic-acl {
 						}
 					}
 					case ip4_prefix {
-						when "boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='ARP'])";
+						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='ARP'])";
 						leaf SRC_IP {
 							type inet:ipv4-prefix;
 						}
@@ -117,7 +117,7 @@ module sonic-acl {
 					}
 
 					case ip6_prefix {
-						when "boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY'])";
+						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY'])";
 						leaf SRC_IPV6 {
 							type inet:ipv6-prefix;
 						}
@@ -199,7 +199,7 @@ module sonic-acl {
 				choice icmp {
 
 					case icmp4 {
-						when "boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='ARP'])";
+						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='ARP'])";
 						leaf ICMP_TYPE {
 							type uint8 {
 								range 1..44;
@@ -214,7 +214,7 @@ module sonic-acl {
 					}
 
 					case icmp6 {
-						when "boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY'])";
+						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY'])";
 						leaf ICMPV6_TYPE {
 							type uint8 {
 								range 1..44;

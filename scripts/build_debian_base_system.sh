@@ -23,6 +23,12 @@ generate_version_file()
     sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "dpkg-query -W -f '\${Package}==\${Version}\n'" > $TARGET_BASEIMAGE_PATH/versions-deb-${IMAGE_DISTRO}-${CONFIGURED_ARCH}
 }
 
+MIRROR_URL=http://deb.debian.org/debian
+if [ "$MIRROR_SNAPSHOT" == y ]; then
+    SNAPSHOT_TIMESTAMP=$(grep "^debian==" $TARGET/versions/default/versions-mirror | tail -n 1 | sed 's/.*==//')
+    MIRROR_URL=http://packages.trafficmanager.net/snapshot/debian/$SNAPSHOT_TIMESTAMP
+fi
+
 if [ "$ENABLE_VERSION_CONTROL_DEB" != "y" ] || [ ! -d files/build/versions/host-base-image ]; then
     if [[ $CONFIGURED_ARCH == armhf || $CONFIGURED_ARCH == arm64 ]]; then
         if [[ $MULTIARCH_QEMU_ENVIRON == y || $CROSS_BUILD_ENVIRON == y ]]; then
@@ -30,13 +36,13 @@ if [ "$ENABLE_VERSION_CONTROL_DEB" != "y" ] || [ ! -d files/build/versions/host-
             sudo mkdir -p $FILESYSTEM_ROOT/usr/bin
             sudo cp /usr/bin/qemu*static $FILESYSTEM_ROOT/usr/bin || true
         fi
-        sudo http_proxy=$HTTP_PROXY SKIP_BUILD_HOOK=y debootstrap --foreign --variant=minbase --arch $CONFIGURED_ARCH $IMAGE_DISTRO $FILESYSTEM_ROOT http://deb.debian.org/debian
+        sudo http_proxy=$HTTP_PROXY SKIP_BUILD_HOOK=y debootstrap --foreign --variant=minbase --arch $CONFIGURED_ARCH $IMAGE_DISTRO $FILESYSTEM_ROOT "$MIRROR_URL"
         sudo rm $FILESYSTEM_ROOT/proc -rf
         sudo mkdir $FILESYSTEM_ROOT/proc
         sudo mount -t proc proc $FILESYSTEM_ROOT/proc
         sudo LANG=C chroot $FILESYSTEM_ROOT /debootstrap/debootstrap --second-stage
     else
-        sudo http_proxy=$HTTP_PROXY SKIP_BUILD_HOOK=y debootstrap --variant=minbase --arch $CONFIGURED_ARCH $IMAGE_DISTRO $FILESYSTEM_ROOT http://debian-archive.trafficmanager.net/debian
+        sudo http_proxy=$HTTP_PROXY SKIP_BUILD_HOOK=y debootstrap --variant=minbase --arch $CONFIGURED_ARCH $IMAGE_DISTRO $FILESYSTEM_ROOT "$MIRROR_URL"
     fi
     RET=$?
     if [ $RET -ne 0 ]; then

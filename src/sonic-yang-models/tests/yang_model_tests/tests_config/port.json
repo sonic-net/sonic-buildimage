@@ -516,7 +516,7 @@
         }
     },
 
-    "PORT_INVALID_CHANNEL_NUMBER": {
+    "PORT_INVALID_SUBPORT_NUMBER": {
          "sonic-port:sonic-port": {
              "sonic-port:PORT": {
                  "PORT_LIST": [
@@ -525,14 +525,14 @@
                          "alias": "etp1a",
                          "lanes": "60, 61",
                          "speed": 100000,
-                         "channel": 9
+                         "subport": 9
                      }
                  ]
              }
          }
      },
 
-     "PORT_VALID_CHANNEL_NUMBER": {
+     "PORT_VALID_SUBPORT_NUMBER": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
                 "PORT_LIST": [
@@ -541,28 +541,28 @@
                         "alias": "etp1a",
                         "lanes": "60, 61",
                         "speed": 100000,
-                        "channel": 1
+                        "subport": 1
                     },
                     {
                        "name": "Ethernet2",
                         "alias": "etp1b",
                         "lanes": "62, 63",
                         "speed": 100000,
-                        "channel": 2
+                        "subport": 2
                     },
                     {
                         "name": "Ethernet4",
                         "alias": "etp1c",
                         "lanes": "64, 65",
                         "speed": 100000,
-                        "channel": 3
+                        "subport": 3
                     },
                     {
                         "name": "Ethernet6",
                         "alias": "etp1d",
                         "lanes": "66, 67",
                         "speed": 100000,
-                        "channel": 4
+                        "subport": 4
                     }
                 ]
             }
