@@ -52,6 +52,17 @@ function check_warm_boot()
     WARM_BOOT=`sonic-db-cli STATE_DB hget "WARM_RESTART_ENABLE_TABLE|system" enable`
 }
 
+function check_fast_reboot()
+{
+    debug "Checking if fast-reboot is enabled..."
+    FAST_REBOOT=`sonic-db-cli STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
+    if [[ x"${FAST_REBOOT}" == x"true" ]]; then
+       debug "Fast-reboot is enabled..."
+    else
+       debug "Fast-reboot is disabled..."
+    fi
+}
+
 
 function wait_for_database_service()
 {
@@ -97,6 +108,12 @@ function finalize_warm_boot()
     sudo config warm_restart disable
 }
 
+function finalize_fast_reboot()
+{
+    debug "Finalizing fast-reboot..."
+    sonic-db-cli STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false" &>/dev/null
+}
+
 function stop_control_plane_assistant()
 {
     if [[ -x ${ASSISTANT_SCRIPT} ]]; then
@@ -119,14 +136,20 @@ function restore_counters_folder()
 
 wait_for_database_service
 
+check_fast_reboot
 check_warm_boot
 
 if [[ x"${WARM_BOOT}" != x"true" ]]; then
     debug "warmboot is not enabled ..."
-    exit 0
+    if [[ x"${FAST_REBOOT}" != x"true" ]]; then
+	    debug "fastboot is not enabled ..."
+	    exit 0
+    fi
 fi
 
-restore_counters_folder
+if [[ (x"${WARM_BOOT}" == x"true") && (x"${FAST_REBOOT}" != x"true") ]]; then
+    restore_counters_folder
+fi
 
 get_component_list
 
@@ -143,14 +166,22 @@ for i in `seq 60`; do
     sleep 5
 done
 
-stop_control_plane_assistant
+if [[ (x"${WARM_BOOT}" == x"true") && (x"${FAST_REBOOT}" != x"true") ]]; then
+   stop_control_plane_assistant
+fi
 
 # Save DB after stopped control plane assistant to avoid extra entries
-debug "Save in-memory database after warm reboot ..."
+debug "Save in-memory database after warm/fast reboot ..."
 config save -y
 
 if [[ -n "${list}" ]]; then
     debug "Some components didn't finish reconcile: ${list} ..."
 fi
 
-finalize_warm_boot
+if [ x"${FAST_REBOOT}" == x"true" ]; then
+    finalize_fast_reboot
+fi
+
+if [ x"${WARM_BOOT}" == x"true" ]; then
+    finalize_warm_boot
+fi
