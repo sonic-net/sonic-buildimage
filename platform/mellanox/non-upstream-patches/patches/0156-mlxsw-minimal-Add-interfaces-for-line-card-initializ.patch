@@ -1,0 +1,119 @@
+From 20b2dd627f42e79a8fce30d29d4cea64f6636521 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 19 Dec 2021 09:40:34 +0000
+Subject: [PATCH] mlxsw: minimal: Add interfaces for line card initialization
+ and de-initialization
+
+Add callback functions for line card 'netdevice' objects initialization
+and de-initialization. Each line card is associated with the set of
+'netdevices', which are created/destroyed dynamically, when line card
+is getting to active / inactive states.
+
+Add APIs for line card registration and de-registration during init and
+de-init.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c | 70 +++++++++++++++++++
+ 1 file changed, 70 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+index 27afb28e4..0b605c6aa 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+@@ -549,6 +549,69 @@ static void mlxsw_m_sys_event_handler(struct mlxsw_core *mlxsw_core)
+ 	}
+ }
+ 
++static void
++mlxsw_m_got_active(struct mlxsw_core *mlxsw_core, u8 slot_index,
++		   const struct mlxsw_linecard *linecard, void *priv)
++{
++	struct mlxsw_m *mlxsw_m = priv;
++	int err;
++
++	err = mlxsw_m_ports_create(mlxsw_m, slot_index);
++	if (err) {
++		dev_err(mlxsw_m->bus_info->dev, "Failed to set line card at slot %d\n",
++			slot_index);
++		goto mlxsw_m_ports_create_fail;
++	}
++	mlxsw_m->line_cards[slot_index]->active = true;
++
++mlxsw_m_ports_create_fail:
++	return;
++}
++
++static void
++mlxsw_m_got_inactive(struct mlxsw_core *mlxsw_core, u8 slot_index,
++		     const struct mlxsw_linecard *linecard, void *priv)
++{
++	struct mlxsw_m *mlxsw_m = priv;
++
++	mlxsw_m_ports_remove(mlxsw_m, slot_index);
++	mlxsw_m->line_cards[slot_index]->active = false;
++}
++
++static struct mlxsw_linecards_event_ops mlxsw_m_event_ops = {
++	.got_active = mlxsw_m_got_active,
++	.got_inactive = mlxsw_m_got_inactive,
++};
++
++static int mlxsw_m_linecards_register(struct mlxsw_m *mlxsw_m)
++{
++	struct mlxsw_linecards *linecards = mlxsw_core_linecards(mlxsw_m->core);
++
++	if (!linecards || !linecards->count)
++		return 0;
++
++	return mlxsw_linecards_event_ops_register(mlxsw_m->core,
++						  &mlxsw_m_event_ops,
++						  mlxsw_m);
++}
++
++static void mlxsw_m_linecards_unregister(struct mlxsw_m *mlxsw_m)
++{
++	struct mlxsw_linecards *linecards = mlxsw_core_linecards(mlxsw_m->core);
++	int i;
++
++	if (!linecards || !linecards->count)
++		return;
++
++	for (i = 1; i <= linecards->count; i++) {
++		if (mlxsw_m->line_cards[i]->active)
++			mlxsw_m_got_inactive(mlxsw_m->core, i, NULL, mlxsw_m);
++	}
++
++	mlxsw_linecards_event_ops_unregister(mlxsw_m->core,
++					     &mlxsw_m_event_ops, mlxsw_m);
++}
++
+ static int mlxsw_m_init(struct mlxsw_core *mlxsw_core,
+ 			const struct mlxsw_bus_info *mlxsw_bus_info,
+ 			struct netlink_ext_ack *extack)
+@@ -587,8 +650,14 @@ static int mlxsw_m_init(struct mlxsw_core *mlxsw_core,
+ 		goto err_mlxsw_m_ports_create;
+ 	}
+ 
++	err = mlxsw_m_linecards_register(mlxsw_m);
++	if (err)
++		goto err_linecards_register;
++
+ 	return 0;
+ 
++err_linecards_register:
++	mlxsw_m_ports_remove(mlxsw_m, 0);
+ err_mlxsw_m_ports_create:
+ 	mlxsw_m_line_cards_free(mlxsw_m);
+ 	return err;
+@@ -598,6 +667,7 @@ static void mlxsw_m_fini(struct mlxsw_core *mlxsw_core)
+ {
+ 	struct mlxsw_m *mlxsw_m = mlxsw_core_driver_priv(mlxsw_core);
+ 
++	mlxsw_m_linecards_unregister(mlxsw_m);
+ 	mlxsw_m_ports_remove(mlxsw_m, 0);
+ 	mlxsw_m_line_cards_free(mlxsw_m);
+ }
+-- 
+2.30.2
+

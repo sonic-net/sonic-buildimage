@@ -1,0 +1,87 @@
+From c9c0ae28ab85836ee15920ddafaa3ba45e0dcaeb Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 3 Dec 2021 11:48:46 +0200
+Subject: [PATCH] mlxsw: reg: Extend MTBR register with new slot number field
+
+Extend MTBR (Management Temperature Bulk Register) with new field
+specifying the slot number. The purpose of this field is to support
+access to MTBR register for reading temperature sensors on modular
+system. For non-modular systems the 'sensor_index' uniquely identifies
+the cage sensors. For modular systems the sensors are identified by two
+indexes:
+- 'slot_index', specifying the slot number, where line card is located;
+- 'sensor_index', specifying cage sensor within the line card.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_env.c   |  4 ++--
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c |  4 ++--
+ drivers/net/ethernet/mellanox/mlxsw/reg.h        | 11 +++++++++--
+ 3 files changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+index 0b43029b2..7feefb38b 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+@@ -593,8 +593,8 @@ static int mlxsw_env_module_has_temp_sensor(struct mlxsw_core *mlxsw_core,
+ 	u16 temp;
+ 	int err;
+ 
+-	mlxsw_reg_mtbr_pack(mtbr_pl, MLXSW_REG_MTBR_BASE_MODULE_INDEX + module,
+-			    1);
++	mlxsw_reg_mtbr_pack(mtbr_pl, 0,
++			    MLXSW_REG_MTBR_BASE_MODULE_INDEX + module, 1);
+ 	err = mlxsw_reg_query(mlxsw_core, MLXSW_REG(mtbr), mtbr_pl);
+ 	if (err)
+ 		return err;
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index 71ca3b561..f4bc711a1 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -271,8 +271,8 @@ static ssize_t mlxsw_hwmon_module_temp_fault_show(struct device *dev,
+ 	int err;
+ 
+ 	module = mlxsw_hwmon_attr->type_index - mlxsw_hwmon->sensor_count;
+-	mlxsw_reg_mtbr_pack(mtbr_pl, MLXSW_REG_MTBR_BASE_MODULE_INDEX + module,
+-			    1);
++	mlxsw_reg_mtbr_pack(mtbr_pl, 0,
++			    MLXSW_REG_MTBR_BASE_MODULE_INDEX + module, 1);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtbr), mtbr_pl);
+ 	if (err) {
+ 		dev_err(dev, "Failed to query module temperature sensor\n");
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index 52cb58c6d..56927c772 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -8707,6 +8707,12 @@ MLXSW_ITEM_BIT_ARRAY(reg, mtwe, sensor_warning, 0x0, 0x10, 1);
+ 
+ MLXSW_REG_DEFINE(mtbr, MLXSW_REG_MTBR_ID, MLXSW_REG_MTBR_LEN);
+ 
++/* reg_mtbr_slot_index
++ * Slot index (0: Main board).
++ * Access: Index
++ */
++MLXSW_ITEM32(reg, mtbr, slot_index, 0x00, 16, 4);
++
+ /* reg_mtbr_base_sensor_index
+  * Base sensors index to access (0 - ASIC sensor, 1-63 - ambient sensors,
+  * 64-127 are mapped to the SFP+/QSFP modules sequentially).
+@@ -8739,10 +8745,11 @@ MLXSW_ITEM32_INDEXED(reg, mtbr, rec_max_temp, MLXSW_REG_MTBR_BASE_LEN, 16,
+ MLXSW_ITEM32_INDEXED(reg, mtbr, rec_temp, MLXSW_REG_MTBR_BASE_LEN, 0, 16,
+ 		     MLXSW_REG_MTBR_REC_LEN, 0x00, false);
+ 
+-static inline void mlxsw_reg_mtbr_pack(char *payload, u16 base_sensor_index,
+-				       u8 num_rec)
++static inline void mlxsw_reg_mtbr_pack(char *payload, u8 slot_index,
++				       u16 base_sensor_index, u8 num_rec)
+ {
+ 	MLXSW_REG_ZERO(mtbr, payload);
++	mlxsw_reg_mtbr_slot_index_set(payload, slot_index);
+ 	mlxsw_reg_mtbr_base_sensor_index_set(payload, base_sensor_index);
+ 	mlxsw_reg_mtbr_num_rec_set(payload, num_rec);
+ }
+-- 
+2.30.2
+

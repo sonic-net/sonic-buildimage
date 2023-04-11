@@ -1,0 +1,243 @@
+From a1421cadee435540d09a5526525f692821a271cd Mon Sep 17 00:00:00 2001
+From: Jiri Pirko <jiri@nvidia.com>
+Date: Fri, 26 Feb 2021 18:40:28 +0100
+Subject: [PATCH] mlxsw: core: Introduce flash update components
+
+Introduce an infrastructure allowing to have multiple components for
+flashing purposes that can be registered from inside the driver. Convert
+the existing "no component" flash update to use the new infra.
+
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core.c | 117 +++++++++++++++++++--
+ drivers/net/ethernet/mellanox/mlxsw/core.h |  12 +++
+ include/net/devlink.h                      |   3 +
+ 3 files changed, 125 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
+index 68ef007ac..f55071982 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
+@@ -91,6 +91,10 @@ struct mlxsw_core {
+ 		struct devlink_health_reporter *fw_fatal;
+ 	} health;
+ 	struct mlxsw_env *env;
++	struct list_head flash_component_list;
++	struct mutex flash_update_lock; /* Protects component list and component
++					 * callbacks.
++					 */
+ 	unsigned long driver_priv[];
+ 	/* driver_priv has to be always the last item */
+ };
+@@ -1113,21 +1117,101 @@ static int mlxsw_core_fw_rev_validate(struct mlxsw_core *mlxsw_core,
+ 		return 0;
+ }
+ 
++static int mlxsw_core_fw_flash_cb(struct mlxsw_core *mlxsw_core,
++				  const struct firmware *firmware,
++				  struct netlink_ext_ack *extack, void *priv)
++{
++	return mlxsw_core_fw_flash(mlxsw_core, firmware, extack);
++}
++
++struct mlxsw_core_flash_component {
++	struct list_head list;
++	const char *name;
++	mlxsw_core_flash_update_cb cb;
++	void *priv;
++};
++
++static struct mlxsw_core_flash_component *
++mlxsw_core_flash_component_lookup(struct mlxsw_core *mlxsw_core,
++				  const char *name)
++{
++	struct mlxsw_core_flash_component *component;
++
++	list_for_each_entry(component, &mlxsw_core->flash_component_list,
++			    list) {
++		if ((name && component->name &&
++		     !strcmp(name, component->name)) ||
++		    (!name && !component->name))
++			return component;
++	}
++	return NULL;
++}
++
+ static int mlxsw_core_fw_flash_update(struct mlxsw_core *mlxsw_core,
+ 				      struct devlink_flash_update_params *params,
+ 				      struct netlink_ext_ack *extack)
+ {
+-	const struct firmware *firmware;
++	struct mlxsw_core_flash_component *component;
+ 	int err;
+ 
+-	err = request_firmware_direct(&firmware, params->file_name, mlxsw_core->bus_info->dev);
+-	if (err)
+-		return err;
+-	err = mlxsw_core_fw_flash(mlxsw_core, firmware, extack);
+-	release_firmware(firmware);
++	mutex_lock(&mlxsw_core->flash_update_lock);
++	component = mlxsw_core_flash_component_lookup(mlxsw_core,
++						      params->component);
++	if (!component) {
++		NL_SET_ERR_MSG_MOD(extack, "Component does not exist");
++		err = -ENOENT;
++		goto unlock;
++	}
++	err = component->cb(mlxsw_core, params->fw, extack, component->priv);
++unlock:
++	mutex_unlock(&mlxsw_core->flash_update_lock);
++	return err;
++}
+ 
++int mlxsw_core_flash_component_register(struct mlxsw_core *mlxsw_core,
++					const char *name,
++					mlxsw_core_flash_update_cb cb,
++					void *priv)
++{
++	struct mlxsw_core_flash_component *component;
++	int err = 0;
++
++	mutex_lock(&mlxsw_core->flash_update_lock);
++	component = mlxsw_core_flash_component_lookup(mlxsw_core, name);
++	if (WARN_ON(component)) {
++		err = -EEXIST;
++		goto unlock;
++	}
++	component = kzalloc(sizeof(*component), GFP_KERNEL);
++	if (!component) {
++		err = -ENOMEM;
++		goto unlock;
++	}
++	component->name = name;
++	component->cb = cb;
++	component->priv = priv;
++	list_add_tail(&component->list, &mlxsw_core->flash_component_list);
++unlock:
++	mutex_unlock(&mlxsw_core->flash_update_lock);
+ 	return err;
+ }
++EXPORT_SYMBOL(mlxsw_core_flash_component_register);
++
++void mlxsw_core_flash_component_unregister(struct mlxsw_core *mlxsw_core,
++					   const char *name)
++{
++	struct mlxsw_core_flash_component *component;
++
++	mutex_lock(&mlxsw_core->flash_update_lock);
++	component = mlxsw_core_flash_component_lookup(mlxsw_core, name);
++	if (WARN_ON(!component))
++		goto unlock;
++	list_del(&component->list);
++unlock:
++	mutex_unlock(&mlxsw_core->flash_update_lock);
++	kfree(component);
++}
++EXPORT_SYMBOL(mlxsw_core_flash_component_unregister);
+ 
+ static int mlxsw_core_devlink_param_fw_load_policy_validate(struct devlink *devlink, u32 id,
+ 							    union devlink_param_value val,
+@@ -1572,6 +1656,7 @@ mlxsw_devlink_trap_policer_counter_get(struct devlink *devlink,
+ }
+ 
+ static const struct devlink_ops mlxsw_devlink_ops = {
++	.supported_flash_update_params	= DEVLINK_SUPPORT_FLASH_UPDATE_COMPONENT,
+ 	.reload_actions		= BIT(DEVLINK_RELOAD_ACTION_DRIVER_REINIT) |
+ 				  BIT(DEVLINK_RELOAD_ACTION_FW_ACTIVATE),
+ 	.reload_down		= mlxsw_devlink_core_bus_device_reload_down,
+@@ -1894,6 +1979,16 @@ __mlxsw_core_bus_device_register(const struct mlxsw_bus_info *mlxsw_bus_info,
+ 	mlxsw_core->bus_priv = bus_priv;
+ 	mlxsw_core->bus_info = mlxsw_bus_info;
+ 
++	if (!reload) {
++		INIT_LIST_HEAD(&mlxsw_core->flash_component_list);
++		mutex_init(&mlxsw_core->flash_update_lock);
++		err = mlxsw_core_flash_component_register(mlxsw_core, NULL,
++							  mlxsw_core_fw_flash_cb,
++							  NULL);
++		if (err)
++			goto err_flash_component_register;
++	}
++
+ 	res = mlxsw_driver->res_query_enabled ? &mlxsw_core->res : NULL;
+ 	err = mlxsw_bus->init(bus_priv, mlxsw_core, mlxsw_driver->profile, res);
+ 	if (err)
+@@ -2013,6 +2108,11 @@ __mlxsw_core_bus_device_register(const struct mlxsw_bus_info *mlxsw_bus_info,
+ err_register_resources:
+ 	mlxsw_bus->fini(bus_priv);
+ err_bus_init:
++	if (!reload) {
++		mlxsw_core_flash_component_unregister(mlxsw_core, NULL);
++		mutex_destroy(&mlxsw_core->flash_update_lock);
++	}
++err_flash_component_register:
+ 	if (!reload)
+ 		devlink_free(devlink);
+ err_devlink_alloc:
+@@ -2081,8 +2181,11 @@ void mlxsw_core_bus_device_unregister(struct mlxsw_core *mlxsw_core,
+ 	if (!reload)
+ 		devlink_resources_unregister(devlink, NULL);
+ 	mlxsw_core->bus->fini(mlxsw_core->bus_priv);
+-	if (!reload)
++	if (!reload) {
++		mlxsw_core_flash_component_unregister(mlxsw_core, NULL);
++		mutex_destroy(&mlxsw_core->flash_update_lock);
+ 		devlink_free(devlink);
++	}
+ 
+ 	return;
+ 
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
+index 593470d14..30f00da0a 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
+@@ -41,6 +41,18 @@ mlxsw_core_fw_rev_minor_subminor_validate(const struct mlxsw_fw_rev *rev,
+ int mlxsw_core_driver_register(struct mlxsw_driver *mlxsw_driver);
+ void mlxsw_core_driver_unregister(struct mlxsw_driver *mlxsw_driver);
+ 
++typedef int (*mlxsw_core_flash_update_cb)(struct mlxsw_core *mlxsw_core,
++					  const struct firmware *firmware,
++					  struct netlink_ext_ack *extack,
++					  void *priv);
++
++int mlxsw_core_flash_component_register(struct mlxsw_core *mlxsw_core,
++					const char *name,
++					mlxsw_core_flash_update_cb cb,
++					void *priv);
++void mlxsw_core_flash_component_unregister(struct mlxsw_core *mlxsw_core,
++					   const char *name);
++
+ int mlxsw_core_bus_device_register(const struct mlxsw_bus_info *mlxsw_bus_info,
+ 				   const struct mlxsw_bus *mlxsw_bus,
+ 				   void *bus_priv, bool reload,
+diff --git a/include/net/devlink.h b/include/net/devlink.h
+index 06b61c1d7..fafbec26d 100644
+--- a/include/net/devlink.h
++++ b/include/net/devlink.h
+@@ -19,6 +19,7 @@
+ #include <net/flow_offload.h>
+ #include <uapi/linux/devlink.h>
+ #include <linux/xarray.h>
++#include <linux/firmware.h>
+ 
+ #define DEVLINK_RELOAD_STATS_ARRAY_SIZE \
+ 	(__DEVLINK_RELOAD_LIMIT_MAX * __DEVLINK_RELOAD_ACTION_MAX)
+@@ -624,6 +625,7 @@ enum devlink_param_generic_id {
+ 
+ /**
+  * struct devlink_flash_update_params - Flash Update parameters
++ * @fw: pointer to the firmware data to update from
+  * @file_name: the name of the flash firmware file to update from
+  * @component: the flash component to update
+  *
+@@ -632,6 +634,7 @@ enum devlink_param_generic_id {
+  * their devlink_ops structure.
+  */
+ struct devlink_flash_update_params {
++	const struct firmware *fw;
+ 	const char *file_name;
+ 	const char *component;
+ 	u32 overwrite_mask;
+-- 
+2.30.2
+

@@ -1,0 +1,200 @@
+From ecf655b1e2329f2376f014c2cad0f81ec2ac5deb Mon Sep 17 00:00:00 2001
+From: Jiri Pirko <jiri@nvidia.com>
+Date: Fri, 4 Jun 2021 10:25:35 +0200
+Subject: [PATCH] mlxfw: Get the PSID value using op instead of passing it in
+ struct
+
+In preparation for line card device flashing, where the PSID is going to
+be obtained dynamically using MGIR register for each individual line
+card device. So convert the PSID value get to an extra op.
+
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlx5/core/fw.c  | 18 +++++++++++++--
+ drivers/net/ethernet/mellanox/mlxfw/mlxfw.h   |  4 ++--
+ .../net/ethernet/mellanox/mlxfw/mlxfw_fsm.c   | 23 ++++++++++++++-----
+ drivers/net/ethernet/mellanox/mlxsw/core.c    | 19 +++++++++++++--
+ 4 files changed, 52 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlx5/core/fw.c b/drivers/net/ethernet/mellanox/mlx5/core/fw.c
+index 02558ac2a..06edfd5b1 100644
+--- a/drivers/net/ethernet/mellanox/mlx5/core/fw.c
++++ b/drivers/net/ethernet/mellanox/mlx5/core/fw.c
+@@ -494,6 +494,20 @@ struct mlx5_mlxfw_dev {
+ 	struct mlx5_core_dev *mlx5_core_dev;
+ };
+ 
++static const char *mlx5_psid_get(struct mlxfw_dev *mlxfw_dev, u16 *psid_size)
++{
++	struct mlx5_mlxfw_dev *mlx5_mlxfw_dev =
++		container_of(mlxfw_dev, struct mlx5_mlxfw_dev, mlxfw_dev);
++	struct mlx5_core_dev *dev = mlx5_mlxfw_dev->mlx5_core_dev;
++
++	*psid_size = MLX5_BOARD_ID_LEN;
++	return dev->board_id;
++}
++
++static void mlx5_psid_put(const char *psid)
++{
++}
++
+ static int mlx5_component_query(struct mlxfw_dev *mlxfw_dev,
+ 				u16 component_index, u32 *p_max_size,
+ 				u8 *p_align_bits, u16 *p_max_write_size)
+@@ -651,6 +665,8 @@ static int mlx5_fsm_reactivate(struct mlxfw_dev *mlxfw_dev, u8 *status)
+ }
+ 
+ static const struct mlxfw_dev_ops mlx5_mlxfw_dev_ops = {
++	.psid_get		= mlx5_psid_get,
++	.psid_put		= mlx5_psid_put,
+ 	.component_query	= mlx5_component_query,
+ 	.fsm_lock		= mlx5_fsm_lock,
+ 	.fsm_component_update	= mlx5_fsm_component_update,
+@@ -670,8 +686,6 @@ int mlx5_firmware_flash(struct mlx5_core_dev *dev,
+ 	struct mlx5_mlxfw_dev mlx5_mlxfw_dev = {
+ 		.mlxfw_dev = {
+ 			.ops = &mlx5_mlxfw_dev_ops,
+-			.psid = dev->board_id,
+-			.psid_size = strlen(dev->board_id),
+ 			.devlink = priv_to_devlink(dev),
+ 		},
+ 		.mlx5_core_dev = dev
+diff --git a/drivers/net/ethernet/mellanox/mlxfw/mlxfw.h b/drivers/net/ethernet/mellanox/mlxfw/mlxfw.h
+index 7654841a0..b83651246 100644
+--- a/drivers/net/ethernet/mellanox/mlxfw/mlxfw.h
++++ b/drivers/net/ethernet/mellanox/mlxfw/mlxfw.h
+@@ -11,8 +11,6 @@
+ 
+ struct mlxfw_dev {
+ 	const struct mlxfw_dev_ops *ops;
+-	const char *psid;
+-	u16 psid_size;
+ 	struct devlink *devlink;
+ };
+ 
+@@ -70,6 +68,8 @@ enum mlxfw_fsm_reactivate_status {
+ };
+ 
+ struct mlxfw_dev_ops {
++	const char * (*psid_get)(struct mlxfw_dev *mlxfw_dev, u16 *psid_size);
++	void (*psid_put)(const char *psid);
+ 	int (*component_query)(struct mlxfw_dev *mlxfw_dev, u16 component_index,
+ 			       u32 *p_max_size, u8 *p_align_bits,
+ 			       u16 *p_max_write_size);
+diff --git a/drivers/net/ethernet/mellanox/mlxfw/mlxfw_fsm.c b/drivers/net/ethernet/mellanox/mlxfw/mlxfw_fsm.c
+index bcd166911..329ddf1b3 100644
+--- a/drivers/net/ethernet/mellanox/mlxfw/mlxfw_fsm.c
++++ b/drivers/net/ethernet/mellanox/mlxfw/mlxfw_fsm.c
+@@ -303,7 +303,8 @@ static int mlxfw_flash_component(struct mlxfw_dev *mlxfw_dev,
+ 	return err;
+ }
+ 
+-static int mlxfw_flash_components(struct mlxfw_dev *mlxfw_dev, u32 fwhandle,
++static int mlxfw_flash_components(struct mlxfw_dev *mlxfw_dev, const char *psid,
++				  u16 psid_size, u32 fwhandle,
+ 				  struct mlxfw_mfa2_file *mfa2_file,
+ 				  bool reactivate_supp,
+ 				  struct netlink_ext_ack *extack)
+@@ -312,8 +313,7 @@ static int mlxfw_flash_components(struct mlxfw_dev *mlxfw_dev, u32 fwhandle,
+ 	int err;
+ 	int i;
+ 
+-	err = mlxfw_mfa2_file_component_count(mfa2_file, mlxfw_dev->psid,
+-					      mlxfw_dev->psid_size,
++	err = mlxfw_mfa2_file_component_count(mfa2_file, psid, psid_size,
+ 					      &component_count);
+ 	if (err) {
+ 		MLXFW_ERR_MSG(mlxfw_dev, extack,
+@@ -324,8 +324,8 @@ static int mlxfw_flash_components(struct mlxfw_dev *mlxfw_dev, u32 fwhandle,
+ 	for (i = 0; i < component_count; i++) {
+ 		struct mlxfw_mfa2_component *comp;
+ 
+-		comp = mlxfw_mfa2_file_component_get(mfa2_file, mlxfw_dev->psid,
+-						     mlxfw_dev->psid_size, i);
++		comp = mlxfw_mfa2_file_component_get(mfa2_file, psid,
++						     psid_size, i);
+ 		if (IS_ERR(comp)) {
+ 			err = PTR_ERR(comp);
+ 			MLXFW_ERR_MSG(mlxfw_dev, extack,
+@@ -350,6 +350,8 @@ int mlxfw_firmware_flash(struct mlxfw_dev *mlxfw_dev,
+ {
+ 	struct mlxfw_mfa2_file *mfa2_file;
+ 	bool reactivate_supp = true;
++	const char *psid;
++	u16 psid_size;
+ 	u32 fwhandle;
+ 	int err;
+ 
+@@ -392,8 +394,16 @@ int mlxfw_firmware_flash(struct mlxfw_dev *mlxfw_dev,
+ 	if (err)
+ 		goto err_state_wait_reactivate_to_locked;
+ 
+-	err = mlxfw_flash_components(mlxfw_dev, fwhandle, mfa2_file,
++	psid = mlxfw_dev->ops->psid_get(mlxfw_dev, &psid_size);
++	if (IS_ERR(psid)) {
++		err = PTR_ERR(psid);
++		goto err_psid_get;
++	}
++
++	err = mlxfw_flash_components(mlxfw_dev, psid, psid_size,
++				     fwhandle, mfa2_file,
+ 				     reactivate_supp, extack);
++	mlxfw_dev->ops->psid_put(psid);
+ 	if (err)
+ 		goto err_flash_components;
+ 
+@@ -423,6 +433,7 @@ int mlxfw_firmware_flash(struct mlxfw_dev *mlxfw_dev,
+ err_state_wait_activate_to_locked:
+ err_fsm_activate:
+ err_flash_components:
++err_psid_get:
+ err_state_wait_reactivate_to_locked:
+ err_fsm_reactivate:
+ err_state_wait_idle_to_locked:
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
+index f55071982..8c1280781 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
+@@ -890,6 +890,21 @@ struct mlxsw_core_fw_info {
+ 	struct mlxsw_core *mlxsw_core;
+ };
+ 
++static const char *mlxsw_core_fw_psid_get(struct mlxfw_dev *mlxfw_dev,
++					  u16 *psid_size)
++{
++	struct mlxsw_core_fw_info *mlxsw_core_fw_info =
++		container_of(mlxfw_dev, struct mlxsw_core_fw_info, mlxfw_dev);
++	struct mlxsw_core *mlxsw_core = mlxsw_core_fw_info->mlxsw_core;
++
++	*psid_size = strlen(mlxsw_core->bus_info->psid);
++	return mlxsw_core->bus_info->psid;
++}
++
++static void mlxsw_core_fw_psid_put(const char *psid)
++{
++}
++
+ static int mlxsw_core_fw_component_query(struct mlxfw_dev *mlxfw_dev,
+ 					 u16 component_index, u32 *p_max_size,
+ 					 u8 *p_align_bits, u16 *p_max_write_size)
+@@ -1028,6 +1043,8 @@ static void mlxsw_core_fw_fsm_release(struct mlxfw_dev *mlxfw_dev, u32 fwhandle)
+ }
+ 
+ static const struct mlxfw_dev_ops mlxsw_core_fw_mlxsw_dev_ops = {
++	.psid_get		= mlxsw_core_fw_psid_get,
++	.psid_put		= mlxsw_core_fw_psid_put,
+ 	.component_query	= mlxsw_core_fw_component_query,
+ 	.fsm_lock		= mlxsw_core_fw_fsm_lock,
+ 	.fsm_component_update	= mlxsw_core_fw_fsm_component_update,
+@@ -1045,8 +1062,6 @@ static int mlxsw_core_fw_flash(struct mlxsw_core *mlxsw_core, const struct firmw
+ 	struct mlxsw_core_fw_info mlxsw_core_fw_info = {
+ 		.mlxfw_dev = {
+ 			.ops = &mlxsw_core_fw_mlxsw_dev_ops,
+-			.psid = mlxsw_core->bus_info->psid,
+-			.psid_size = strlen(mlxsw_core->bus_info->psid),
+ 			.devlink = priv_to_devlink(mlxsw_core),
+ 		},
+ 		.mlxsw_core = mlxsw_core
+-- 
+2.30.2
+

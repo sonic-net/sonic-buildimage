@@ -1,0 +1,35 @@
+From 34251eb77f3f50ac2d574876f33c65d8d2c70e9c Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 14 Dec 2021 10:57:37 +0200
+Subject: [PATCH] mlxsw: core_thermal: Use exact name of cooling devices for
+ binding
+
+Modular system supports additional cooling devices "mlxreg_fan1",
+"mlxreg_fan2", etcetera. Thermal zones in "mlxsw" driver should be
+bound to the same device as before called "mlxreg_fan". Used exact
+match for cooling device name to avoid binding to new additional
+cooling devices.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index 421555d3f..a20a91285 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -141,8 +141,7 @@ static int mlxsw_get_cooling_device_idx(struct mlxsw_thermal *thermal,
+ 
+ 	/* Allow mlxsw thermal zone binding to an external cooling device */
+ 	for (i = 0; i < ARRAY_SIZE(mlxsw_thermal_external_allowed_cdev); i++) {
+-		if (strnstr(cdev->type, mlxsw_thermal_external_allowed_cdev[i],
+-			    strlen(cdev->type)))
++		if (!strcmp(cdev->type, mlxsw_thermal_external_allowed_cdev[i]))
+ 			return 0;
+ 	}
+ 
+-- 
+2.30.2
+

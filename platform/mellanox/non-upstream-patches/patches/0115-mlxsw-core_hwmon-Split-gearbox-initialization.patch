@@ -1,0 +1,121 @@
+From 4d15dd7f69b89a370731b08cb3f13e5dd591c189 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 14 Dec 2021 10:57:29 +0200
+Subject: [PATCH] mlxsw: core_hwmon: Split gearbox initialization
+
+Split gearbox initialization in two functions - the first one is to be
+used for gearbox configuration validation, the second for creation of
+gearbox related hwmon attributes, if any.
+
+Currently, mlxsw supports gearbox hwmon attributes corresponding to the
+objects discovered on the main board. Same hwmon attributes could be
+also discovered on line cards. While the initialization flow for main
+board and for line cards is the same, the configuration flow is
+different.
+
+The purpose of this patch is to allow reusing of initialization flow by
+main board and line cards.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ .../net/ethernet/mellanox/mlxsw/core_hwmon.c  | 43 ++++++++++++++-----
+ 1 file changed, 33 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index 5df54a5bf..7061c18b7 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -700,13 +700,11 @@ static int mlxsw_hwmon_module_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ 	return 0;
+ }
+ 
+-static int mlxsw_hwmon_gearbox_init(struct mlxsw_hwmon *mlxsw_hwmon)
++static int
++mlxsw_hwmon_gearbox_main_init(struct mlxsw_hwmon *mlxsw_hwmon, u8 *gbox_num)
+ {
+ 	enum mlxsw_reg_mgpir_device_type device_type;
+-	int index, max_index, sensor_index;
+ 	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
+-	char mtmp_pl[MLXSW_REG_MTMP_LEN];
+-	u8 gbox_num;
+ 	int err;
+ 
+ 	mlxsw_reg_mgpir_pack(mgpir_pl, 0);
+@@ -714,10 +712,27 @@ static int mlxsw_hwmon_gearbox_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ 	if (err)
+ 		return err;
+ 
+-	mlxsw_reg_mgpir_unpack(mgpir_pl, &gbox_num, &device_type, NULL, NULL,
++	mlxsw_reg_mgpir_unpack(mgpir_pl, gbox_num, &device_type, NULL, NULL,
+ 			       NULL);
+-	if (device_type != MLXSW_REG_MGPIR_DEVICE_TYPE_GEARBOX_DIE ||
+-	    !gbox_num)
++	if (device_type != MLXSW_REG_MGPIR_DEVICE_TYPE_GEARBOX_DIE)
++		*gbox_num = 0;
++
++	return 0;
++}
++
++static void
++mlxsw_hwmon_gearbox_main_fini(struct mlxsw_hwmon *mlxsw_hwmon)
++{
++}
++
++static int
++mlxsw_hwmon_gearbox_init(struct mlxsw_hwmon *mlxsw_hwmon, u8 gbox_num)
++{
++	int index, max_index, sensor_index;
++	char mtmp_pl[MLXSW_REG_MTMP_LEN];
++	int err;
++
++	if (!gbox_num)
+ 		return 0;
+ 
+ 	index = mlxsw_hwmon->module_sensor_max;
+@@ -756,6 +771,7 @@ int mlxsw_hwmon_init(struct mlxsw_core *mlxsw_core,
+ {
+ 	struct mlxsw_hwmon *mlxsw_hwmon;
+ 	struct device *hwmon_dev;
++	u8 gbox_num;
+ 	int err;
+ 
+ 	mlxsw_hwmon = kzalloc(sizeof(*mlxsw_hwmon), GFP_KERNEL);
+@@ -776,9 +792,13 @@ int mlxsw_hwmon_init(struct mlxsw_core *mlxsw_core,
+ 	if (err)
+ 		goto err_temp_module_init;
+ 
+-	err = mlxsw_hwmon_gearbox_init(mlxsw_hwmon);
++	err = mlxsw_hwmon_gearbox_main_init(mlxsw_hwmon, &gbox_num);
++	if (err)
++		goto err_gearbox_main_init;
++
++	err = mlxsw_hwmon_gearbox_init(mlxsw_hwmon, gbox_num);
+ 	if (err)
+-		goto err_temp_gearbox_init;
++		goto err_gearbox_init;
+ 
+ 	mlxsw_hwmon->groups[0] = &mlxsw_hwmon->group;
+ 	mlxsw_hwmon->group.attrs = mlxsw_hwmon->attrs;
+@@ -796,7 +816,9 @@ int mlxsw_hwmon_init(struct mlxsw_core *mlxsw_core,
+ 	return 0;
+ 
+ err_hwmon_register:
+-err_temp_gearbox_init:
++err_gearbox_init:
++	mlxsw_hwmon_gearbox_main_fini(mlxsw_hwmon);
++err_gearbox_main_init:
+ err_temp_module_init:
+ err_fans_init:
+ err_temp_init:
+@@ -807,5 +829,6 @@ int mlxsw_hwmon_init(struct mlxsw_core *mlxsw_core,
+ void mlxsw_hwmon_fini(struct mlxsw_hwmon *mlxsw_hwmon)
+ {
+ 	hwmon_device_unregister(mlxsw_hwmon->hwmon_dev);
++	mlxsw_hwmon_gearbox_main_fini(mlxsw_hwmon);
+ 	kfree(mlxsw_hwmon);
+ }
+-- 
+2.30.2
+

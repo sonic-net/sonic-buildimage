@@ -1,0 +1,98 @@
+From 063ca0577ceb2355884555d96a24a740a2c03bdb Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 22 Dec 2021 16:26:43 +0000
+Subject: [PATCH] mlxsw: core: Extend driver ops by remove selected ports op
+
+In case of line card implementation, the core has to have a way to
+remove relevant ports manually. Extend the Spectrum driver ops by an op
+that implements port removal of selected ports upon request.
+
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core.c     |  9 +++++++++
+ drivers/net/ethernet/mellanox/mlxsw/core.h     |  8 ++++++++
+ drivers/net/ethernet/mellanox/mlxsw/spectrum.c | 15 +++++++++++++++
+ 3 files changed, 32 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
+index 246db548f..2b4f9844b 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
+@@ -2870,6 +2870,15 @@ mlxsw_core_port_devlink_port_get(struct mlxsw_core *mlxsw_core,
+ }
+ EXPORT_SYMBOL(mlxsw_core_port_devlink_port_get);
+ 
++void mlxsw_core_ports_remove_selected(struct mlxsw_core *mlxsw_core,
++				      bool (*selector)(void *priv, u16 local_port),
++				      void *priv)
++{
++	if (WARN_ON(!mlxsw_core->driver->ports_remove_selected))
++		return;
++	mlxsw_core->driver->ports_remove_selected(mlxsw_core, selector, priv);
++}
++
+ struct mlxsw_env *mlxsw_core_env(const struct mlxsw_core *mlxsw_core)
+ {
+ 	return mlxsw_core->env;
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
+index ecd91bb8c..70f97ef74 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
+@@ -223,6 +223,10 @@ enum devlink_port_type mlxsw_core_port_type_get(struct mlxsw_core *mlxsw_core,
+ struct devlink_port *
+ mlxsw_core_port_devlink_port_get(struct mlxsw_core *mlxsw_core,
+ 				 u8 local_port);
++void mlxsw_core_ports_remove_selected(struct mlxsw_core *mlxsw_core,
++				      bool (*selector)(void *priv,
++						       u16 local_port),
++				      void *priv);
+ struct mlxsw_env *mlxsw_core_env(const struct mlxsw_core *mlxsw_core);
+ int mlxsw_core_module_max_width(struct mlxsw_core *mlxsw_core, u8 module);
+ 
+@@ -296,6 +300,10 @@ struct mlxsw_driver {
+ 			  unsigned int count, struct netlink_ext_ack *extack);
+ 	int (*port_unsplit)(struct mlxsw_core *mlxsw_core, u8 local_port,
+ 			    struct netlink_ext_ack *extack);
++	void (*ports_remove_selected)(struct mlxsw_core *mlxsw_core,
++				      bool (*selector)(void *priv,
++						       u16 local_port),
++				      void *priv);
+ 	int (*sb_pool_get)(struct mlxsw_core *mlxsw_core,
+ 			   unsigned int sb_index, u16 pool_index,
+ 			   struct devlink_sb_pool_info *pool_info);
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
+index d7a230828..75b418fbe 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
+@@ -1736,6 +1736,20 @@ static void mlxsw_sp_ports_remove(struct mlxsw_sp *mlxsw_sp)
+ 	mlxsw_sp->ports = NULL;
+ }
+ 
++static void
++mlxsw_sp_ports_remove_selected(struct mlxsw_core *mlxsw_core,
++			       bool (*selector)(void *priv, u16 local_port),
++			       void *priv)
++{
++	struct mlxsw_sp *mlxsw_sp = mlxsw_core_driver_priv(mlxsw_core);
++	unsigned int max_ports = mlxsw_core_max_ports(mlxsw_core);
++	int i;
++
++	for (i = 1; i < max_ports; i++)
++		if (mlxsw_sp_port_created(mlxsw_sp, i) && selector(priv, i))
++			mlxsw_sp_port_remove(mlxsw_sp, i);
++}
++
+ static int mlxsw_sp_ports_create(struct mlxsw_sp *mlxsw_sp)
+ {
+ 	unsigned int max_ports = mlxsw_core_max_ports(mlxsw_sp->core);
+@@ -3370,6 +3384,7 @@ static struct mlxsw_driver mlxsw_sp3_driver = {
+ 	.basic_trap_groups_set		= mlxsw_sp_basic_trap_groups_set,
+ 	.port_split			= mlxsw_sp_port_split,
+ 	.port_unsplit			= mlxsw_sp_port_unsplit,
++	.ports_remove_selected		= mlxsw_sp_ports_remove_selected,
+ 	.sb_pool_get			= mlxsw_sp_sb_pool_get,
+ 	.sb_pool_set			= mlxsw_sp_sb_pool_set,
+ 	.sb_port_pool_get		= mlxsw_sp_sb_port_pool_get,
+-- 
+2.30.2
+

@@ -1,0 +1,66 @@
+From 562fe3c68c9dbcff172eeae8b4f0a84484b5e3e9 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 3 Dec 2021 11:48:52 +0200
+Subject: [PATCH] mlxsw: core_env: Pass slot index during PMAOS register write
+ call
+
+Pass the slot index down to PMAOS pack helper alongside with the module.
+
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_env.c | 6 +++---
+ drivers/net/ethernet/mellanox/mlxsw/reg.h      | 3 ++-
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+index b1a1204e7..45058d4cf 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+@@ -400,7 +400,7 @@ static int mlxsw_env_module_reset(struct mlxsw_core *mlxsw_core, u8 module)
+ {
+ 	char pmaos_pl[MLXSW_REG_PMAOS_LEN];
+ 
+-	mlxsw_reg_pmaos_pack(pmaos_pl, module);
++	mlxsw_reg_pmaos_pack(pmaos_pl, 0, module);
+ 	mlxsw_reg_pmaos_rst_set(pmaos_pl, true);
+ 
+ 	return mlxsw_reg_write(mlxsw_core, MLXSW_REG(pmaos), pmaos_pl);
+@@ -488,7 +488,7 @@ static int mlxsw_env_module_enable_set(struct mlxsw_core *mlxsw_core,
+ 	enum mlxsw_reg_pmaos_admin_status admin_status;
+ 	char pmaos_pl[MLXSW_REG_PMAOS_LEN];
+ 
+-	mlxsw_reg_pmaos_pack(pmaos_pl, module);
++	mlxsw_reg_pmaos_pack(pmaos_pl, 0, module);
+ 	admin_status = enable ? MLXSW_REG_PMAOS_ADMIN_STATUS_ENABLED :
+ 				MLXSW_REG_PMAOS_ADMIN_STATUS_DISABLED;
+ 	mlxsw_reg_pmaos_admin_status_set(pmaos_pl, admin_status);
+@@ -878,7 +878,7 @@ mlxsw_env_module_oper_state_event_enable(struct mlxsw_core *mlxsw_core,
+ 	for (i = 0; i < module_count; i++) {
+ 		char pmaos_pl[MLXSW_REG_PMAOS_LEN];
+ 
+-		mlxsw_reg_pmaos_pack(pmaos_pl, i);
++		mlxsw_reg_pmaos_pack(pmaos_pl, 0, i);
+ 		mlxsw_reg_pmaos_e_set(pmaos_pl,
+ 				      MLXSW_REG_PMAOS_E_GENERATE_EVENT);
+ 		mlxsw_reg_pmaos_ee_set(pmaos_pl, true);
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index e981630fd..748a22ec4 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -5481,9 +5481,10 @@ enum mlxsw_reg_pmaos_e {
+  */
+ MLXSW_ITEM32(reg, pmaos, e, 0x04, 0, 2);
+ 
+-static inline void mlxsw_reg_pmaos_pack(char *payload, u8 module)
++static inline void mlxsw_reg_pmaos_pack(char *payload, u8 slot_index, u8 module)
+ {
+ 	MLXSW_REG_ZERO(pmaos, payload);
++	mlxsw_reg_pmaos_slot_index_set(payload, slot_index);
+ 	mlxsw_reg_pmaos_module_set(payload, module);
+ }
+ 
+-- 
+2.30.2
+

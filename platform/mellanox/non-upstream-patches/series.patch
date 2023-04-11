@@ -1,0 +1,86 @@
+diff --git a/patch/series b/patch/series
+index e86f858..61144ff 100755
+--- a/patch/series
++++ b/patch/series
+@@ -155,12 +155,71 @@ kernel-compat-always-include-linux-compat.h-from-net-compat.patch
+ 0097-hwmon-mlxreg-fan-Support-distinctive-names-per-.patch
+ 0999-Revert-mlxsw-thermal-Fix-out-of-bounds-memory-a.patch
+ 0098-mlxsw-i2c-Prevent-transaction-execution-for.patch
++0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch
++0100-mlxsw-core_thermal-Rename-labels-according-to-naming.patch
++0101-mlxsw-core_thermal-Remove-obsolete-API-for-query-res.patch
++0102-mlxsw-reg-Add-mgpir_-prefix-to-MGPIR-fields-comments.patch
++0103-mlxsw-core-Remove-unnecessary-asserts.patch
++0104-mlxsw-reg-Extend-MTMP-register-with-new-slot-number-.patch
++0105-mlxsw-reg-Extend-MTBR-register-with-new-slot-number-.patch
++0106-mlxsw-reg-Extend-MCIA-register-with-new-slot-number-.patch
++0107-mlxsw-reg-Extend-MCION-register-with-new-slot-number.patch
++0108-mlxsw-reg-Extend-PMMP-register-with-new-slot-number-.patch
++0109-mlxsw-reg-Extend-MGPIR-register-with-new-slot-fields.patch
++0110-mlxsw-core_env-Pass-slot-index-during-PMAOS-register.patch
++0111-mlxsw-reg-Add-new-field-to-Management-General-Periph.patch
++0112-mlxsw-core-Extend-interfaces-for-cable-info-access-w.patch
++0113-mlxsw-core-Extend-port-module-data-structures-for-li.patch
++0114-mlxsw-core-Move-port-module-events-enablement-to-a-s.patch
++0115-mlxsw-core_hwmon-Split-gearbox-initialization.patch
++0116-mlxsw-core_hwmon-Extend-internal-structures-to-suppo.patch
++0117-mlxsw-core_hwmon-Introduce-slot-parameter-in-hwmon-i.patch
++0118-mlxsw-core_hwmon-Extend-hwmon-device-with-gearbox-ma.patch
++0119-mlxsw-core_thermal-Extend-internal-structures-to-sup.patch
++0120-mlxsw-core_thermal-Split-gearbox-initialization.patch
++0121-mlxsw-core_thermal-Extend-thermal-area-with-gearbox-.patch
++0122-mlxsw-core_thermal-Add-line-card-id-prefix-to-line-c.patch
++0123-mlxsw-core_thermal-Use-exact-name-of-cooling-devices.patch
++0124-mlxsw-core_thermal-Use-common-define-for-thermal-zon.patch
++0125-devlink-add-support-to-create-line-card-and-expose-t.patch
++0126-devlink-implement-line-card-provisioning.patch
++0127-devlink-implement-line-card-active-state.patch
++0128-devlink-add-port-to-line-card-relationship-set.patch
++0129-devlink-introduce-linecard-info-get-message.patch
++0130-devlink-introduce-linecard-info-get-message.patch
++0131-mlxsw-reg-Add-Ports-Mapping-event-Configuration-Regi.patch
++0132-mlxsw-reg-Add-Management-DownStream-Device-Query-Reg.patch
++0133-mlxsw-reg-Add-Management-DownStream-Device-Control-R.patch
++0134-mlxsw-reg-Add-Management-Binary-Code-Transfer-Regist.patch
++0135-mlxsw-core_linecards-Add-line-card-objects-and-imple.patch
++0136-mlxsw-core_linecards-Implement-line-card-activation-.patch
++0137-mlxsw-core-Extend-driver-ops-by-remove-selected-port.patch
++0138-mlxsw-spectrum-Add-port-to-linecard-mapping.patch
++0139-mlxsw-reg-Introduce-Management-Temperature-Extended-.patch
++0140-mlxsw-core-Add-APIs-for-thermal-sensor-mapping.patch
++0141-mlxsw-reg-Add-Management-DownStream-Device-Tunneling.patch
++0142-mlxsw-core_linecards-Probe-devices-for-provisioned-l.patch
++0143-mlxsw-core_linecards-Expose-device-FW-version-over-d.patch
++0144-mlxsw-core-Introduce-flash-update-components.patch
++0145-mlxfw-Get-the-PSID-value-using-op-instead-of-passing.patch
++0146-mlxsw-core_linecards-Implement-line-card-device-flas.patch
++0147-mlxsw-core_linecards-Introduce-ops-for-linecards-sta.patch
++0148-mlxsw-core-Add-interfaces-for-line-card-initializati.patch
++0149-mlxsw-core_thermal-Add-interfaces-for-line-card-init.patch
++0150-mlxsw-core_hwmon-Add-interfaces-for-line-card-initia.patch
++0151-mlxsw-minimal-Prepare-driver-for-modular-system-supp.patch
++0152-mlxsw-core-Extend-bus-init-function-with-event-handl.patch
++0153-mlxsw-i2c-Add-support-for-system-events-handling.patch
++0154-mlxsw-core-Export-line-card-API.patch
++0155-mlxsw-minimal-Add-system-event-handler.patch
++0156-mlxsw-minimal-Add-interfaces-for-line-card-initializ.patch
+ 0157-platform-x86-mlx-platform-Make-activation-of-some-dr.patch
+ 0158-platform-x86-mlx-platform-Add-cosmetic-changes-for-a.patch
+ 0159-mlx-platform-Add-support-for-systems-equipped-with-t.patch
+ 0160-platform-mellanox-Introduce-support-for-COMe-NVSwitc.patch
+ 0161-platform-x86-mlx-platform-Add-support-for-new-system.patch
+ 0162-platform-mellanox-Add-COME-board-revision-register.patch
++0163-platform-mellanox-Introduce-support-for-rack-manager.patch
+ 0164-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch
+ 0165-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch
+ 0167-leds-mlxreg-Send-udev-change-event.patch
+@@ -168,6 +227,9 @@ kernel-compat-always-include-linux-compat.h-from-net-compat.patch
+ 0171-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch
+ 0173-core-Add-support-for-OSFP-transceiver-modules.patch
+ 0175-hwmon-pmbus-Add-support-for-Infineon-Digital-Multi-p.patch
++0176-platform-mellanox-fix-reset_pwr_converter_fail-attri.patch
++0177-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch
++0178-platform-mellanox-Introduce-support-for-next-generat.patch
+ 0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch
+ ###-> mellanox_hw_mgmt-end
+ 

@@ -1,0 +1,315 @@
+From 7a39de95203f7dc033bdc81703989d627f2ca0de Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 22 Dec 2021 15:11:36 +0000
+Subject: [PATCH] devlink: introduce linecard info get message
+
+Allow the driver to provide per line card info get op to fill-up info,
+similar to the "devlink dev info".
+
+devlink: introduce line card devices support
+
+Line card can contain a device. For example, this can be a gearbox with
+flash. This flash could be updated. Provide the driver possibility to
+attach such devices to a line card and expose those to user. Leverage
+the existing devlink flash update mechanism and allow driver to pass a
+custom "component name" string identifying the line card device to
+flash.
+
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+---
+ include/net/devlink.h        |  12 +++
+ include/uapi/linux/devlink.h |   4 +
+ net/core/devlink.c           | 166 +++++++++++++++++++++++++++++++++++
+ 3 files changed, 182 insertions(+)
+
+diff --git a/include/net/devlink.h b/include/net/devlink.h
+index 059bed6ae..06b61c1d7 100644
+--- a/include/net/devlink.h
++++ b/include/net/devlink.h
+@@ -160,9 +160,11 @@ struct devlink_linecard {
+ 	struct devlink_linecard_type *types;
+ 	unsigned int types_count;
+ 	bool active;
++	struct list_head device_list;
+ };
+ 
+ struct devlink_info_req;
++struct devlink_linecard_device;
+ 
+ /**
+  * struct devlink_linecard_ops - Linecard operations
+@@ -188,6 +190,9 @@ struct devlink_linecard_ops {
+ 	int (*info_get)(struct devlink_linecard *linecard, void *priv,
+ 			struct devlink_info_req *req,
+ 			struct netlink_ext_ack *extack);
++	int (*device_info_get)(struct devlink_linecard_device *device,
++			       void *priv, struct devlink_info_req *req,
++			       struct netlink_ext_ack *extack);
+ };
+ 
+ struct devlink_sb_pool_info {
+@@ -1459,6 +1464,13 @@ struct devlink_linecard *
+ devlink_linecard_create(struct devlink *devlink, unsigned int linecard_index,
+ 			const struct devlink_linecard_ops *ops, void *priv);
+ void devlink_linecard_destroy(struct devlink_linecard *linecard);
++struct devlink_linecard_device *
++devlink_linecard_device_create(struct devlink_linecard *linecard,
++			       unsigned int device_index,
++			       const char *flash_component, void *priv);
++void
++devlink_linecard_device_destroy(struct devlink_linecard *linecard,
++				struct devlink_linecard_device *linecard_device);
+ void devlink_linecard_provision_set(struct devlink_linecard *linecard,
+ 				    const char *type);
+ void devlink_linecard_provision_clear(struct devlink_linecard *linecard);
+diff --git a/include/uapi/linux/devlink.h b/include/uapi/linux/devlink.h
+index 2c9f7d584..bac94c3c1 100644
+--- a/include/uapi/linux/devlink.h
++++ b/include/uapi/linux/devlink.h
+@@ -569,6 +569,10 @@ enum devlink_attr {
+ 	DEVLINK_ATTR_LINECARD_TYPE,		/* string */
+ 	DEVLINK_ATTR_LINECARD_SUPPORTED_TYPES,	/* nested */
+ 	DEVLINK_ATTR_LINECARD_INFO,		/* nested */
++	DEVLINK_ATTR_LINECARD_DEVICE_LIST,	/* nested */
++	DEVLINK_ATTR_LINECARD_DEVICE,		/* nested */
++	DEVLINK_ATTR_LINECARD_DEVICE_INDEX,	/* u32 */
++	DEVLINK_ATTR_LINECARD_DEVICE_INFO,	/* nested */
+ 
+ 	/* add new attributes above here, update the policy in devlink.c */
+ 
+diff --git a/net/core/devlink.c b/net/core/devlink.c
+index 04f8038f8..ca014f40a 100644
+--- a/net/core/devlink.c
++++ b/net/core/devlink.c
+@@ -1249,6 +1249,59 @@ struct devlink_info_req {
+ 	struct sk_buff *msg;
+ };
+ 
++struct devlink_linecard_device {
++	struct list_head list;
++	unsigned int index;
++	const char *flash_component;
++	void *priv;
++};
++
++static int
++devlink_nl_linecard_device_fill(struct sk_buff *msg,
++				struct devlink_linecard *linecard,
++				struct devlink_linecard_device *linecard_device)
++{
++	struct nlattr *attr;
++
++	attr = nla_nest_start(msg, DEVLINK_ATTR_LINECARD_DEVICE);
++	if (!attr)
++		return -EMSGSIZE;
++	if (nla_put_u32(msg, DEVLINK_ATTR_LINECARD_DEVICE_INDEX,
++			linecard_device->index))
++		return -EMSGSIZE;
++	if (linecard_device->flash_component &&
++	    nla_put_string(msg, DEVLINK_ATTR_FLASH_UPDATE_COMPONENT,
++			   linecard_device->flash_component))
++		return -EMSGSIZE;
++	nla_nest_end(msg, attr);
++
++	return 0;
++}
++
++static int devlink_nl_linecard_devices_fill(struct sk_buff *msg,
++					    struct devlink_linecard *linecard)
++{
++	struct devlink_linecard_device *linecard_device;
++	struct nlattr *attr;
++	int err;
++
++	if (list_empty(&linecard->device_list))
++		return 0;
++
++	attr = nla_nest_start(msg, DEVLINK_ATTR_LINECARD_DEVICE_LIST);
++	if (!attr)
++		return -EMSGSIZE;
++	list_for_each_entry(linecard_device, &linecard->device_list, list) {
++		err = devlink_nl_linecard_device_fill(msg, linecard,
++						      linecard_device);
++		if (err)
++			return err;
++	}
++	nla_nest_end(msg, attr);
++
++	return 0;
++}
++
+ static int devlink_nl_linecard_fill(struct sk_buff *msg,
+ 				    struct devlink *devlink,
+ 				    struct devlink_linecard *linecard,
+@@ -1259,6 +1312,7 @@ static int devlink_nl_linecard_fill(struct sk_buff *msg,
+ 	struct devlink_linecard_type *linecard_type;
+ 	struct nlattr *attr;
+ 	void *hdr;
++	int err;
+ 	int i;
+ 
+ 	hdr = genlmsg_put(msg, portid, seq, &devlink_nl_family, flags, cmd);
+@@ -1289,6 +1343,10 @@ static int devlink_nl_linecard_fill(struct sk_buff *msg,
+ 		nla_nest_end(msg, attr);
+ 	}
+ 
++	err = devlink_nl_linecard_devices_fill(msg, linecard);
++	if (err)
++		goto nla_put_failure;
++
+ 	genlmsg_end(msg, hdr);
+ 	return 0;
+ 
+@@ -1546,6 +1604,66 @@ static int devlink_nl_cmd_linecard_set_doit(struct sk_buff *skb,
+ 	return 0;
+ }
+ 
++static int
++devlink_nl_linecard_device_info_fill(struct sk_buff *msg,
++				     struct devlink_linecard *linecard,
++				     struct devlink_linecard_device *linecard_device,
++				     struct netlink_ext_ack *extack)
++{
++	struct nlattr *attr, *attr2;
++
++	attr = nla_nest_start(msg, DEVLINK_ATTR_LINECARD_DEVICE);
++	if (!attr)
++		return -EMSGSIZE;
++	if (nla_put_u32(msg, DEVLINK_ATTR_LINECARD_DEVICE_INDEX,
++			linecard_device->index))
++		return -EMSGSIZE;
++	if (linecard->ops->device_info_get) {
++		struct devlink_info_req req;
++		int err;
++
++		attr2 = nla_nest_start(msg, DEVLINK_ATTR_LINECARD_DEVICE_INFO);
++		if (!attr2)
++			return -EMSGSIZE;
++		req.msg = msg;
++		err = linecard->ops->device_info_get(linecard_device,
++						     linecard_device->priv,
++						     &req, extack);
++		if (err)
++			return -EMSGSIZE;
++		nla_nest_end(msg, attr2);
++	}
++	nla_nest_end(msg, attr);
++
++	return 0;
++}
++
++static int devlink_nl_linecard_devices_info_fill(struct sk_buff *msg,
++						 struct devlink_linecard *linecard,
++						 struct netlink_ext_ack *extack)
++{
++	struct devlink_linecard_device *linecard_device;
++	struct nlattr *attr;
++	int err;
++
++	if (list_empty(&linecard->device_list))
++		return 0;
++
++	attr = nla_nest_start(msg, DEVLINK_ATTR_LINECARD_DEVICE_LIST);
++	if (!attr)
++		return -EMSGSIZE;
++	list_for_each_entry(linecard_device, &linecard->device_list, list) {
++		err = devlink_nl_linecard_device_info_fill(msg, linecard,
++							   linecard_device,
++							   extack);
++		if (err)
++			return err;
++	}
++	nla_nest_end(msg, attr);
++
++	return 0;
++}
++
+ static int
+ devlink_nl_linecard_info_fill(struct sk_buff *msg, struct devlink *devlink,
+ 			      struct devlink_linecard *linecard,
+@@ -1576,6 +1694,10 @@ devlink_nl_linecard_info_fill(struct sk_buff *msg, struct devlink *devlink,
+ 		goto nla_put_failure;
+ 	nla_nest_end(msg, attr);
+ 
++	err = devlink_nl_linecard_devices_info_fill(msg, linecard, extack);
++	if (err)
++		goto nla_put_failure;
++
+ 	genlmsg_end(msg, hdr);
+ 	return 0;
+ 
+@@ -9068,6 +9190,7 @@ devlink_linecard_create(struct devlink *devlink, unsigned int linecard_index,
+ 	linecard->priv = priv;
+ 	linecard->state = DEVLINK_LINECARD_STATE_UNPROVISIONED;
+ 	mutex_init(&linecard->state_lock);
++	INIT_LIST_HEAD(&linecard->device_list);
+ 
+ 	err = devlink_linecard_types_init(linecard);
+ 	if (err) {
+@@ -9096,6 +9219,7 @@ void devlink_linecard_destroy(struct devlink_linecard *linecard)
+ 
+ 	devlink_linecard_notify(linecard, DEVLINK_CMD_LINECARD_DEL);
+ 	devlink_linecard_types_fini(linecard);
++	WARN_ON(!list_empty(&linecard->device_list));
+ 	mutex_lock(&devlink->linecards_lock);
+ 	list_del(&linecard->list);
+ 	mutex_unlock(&devlink->linecards_lock);
+@@ -9103,6 +9227,47 @@ void devlink_linecard_destroy(struct devlink_linecard *linecard)
+ }
+ EXPORT_SYMBOL_GPL(devlink_linecard_destroy);
+ 
++/**
++ *	devlink_linecard_device_create - Create a device on linecard
++ *
++ *	@devlink_linecard: devlink linecard
++ *	@device_index: index of the linecard device
++ *	@flash_component: name of flash update component,
++ *			  NULL if unable to flash
++ */
++struct devlink_linecard_device *
++devlink_linecard_device_create(struct devlink_linecard *linecard,
++			       unsigned int device_index,
++			       const char *flash_component, void *priv)
++{
++	struct devlink_linecard_device *linecard_device;
++
++	linecard_device = kzalloc(sizeof(*linecard_device), GFP_KERNEL);
++	if (!linecard_device)
++		return ERR_PTR(-ENOMEM);
++	linecard_device->index = device_index;
++	linecard_device->flash_component = flash_component;
++	linecard_device->priv = priv;
++	mutex_lock(&linecard->devlink->lock);
++	list_add_tail(&linecard_device->list, &linecard->device_list);
++	devlink_linecard_notify(linecard, DEVLINK_CMD_LINECARD_NEW);
++	mutex_unlock(&linecard->devlink->lock);
++	return linecard_device;
++}
++EXPORT_SYMBOL_GPL(devlink_linecard_device_create);
++
++void
++devlink_linecard_device_destroy(struct devlink_linecard *linecard,
++				struct devlink_linecard_device *linecard_device)
++{
++	mutex_lock(&linecard->devlink->lock);
++	devlink_linecard_notify(linecard, DEVLINK_CMD_LINECARD_NEW);
++	list_del(&linecard_device->list);
++	mutex_unlock(&linecard->devlink->lock);
++	kfree(linecard_device);
++}
++EXPORT_SYMBOL_GPL(devlink_linecard_device_destroy);
++
+ /**
+  *	devlink_linecard_provision_set - Set provisioning on linecard
+  *
+@@ -9129,6 +9294,7 @@ EXPORT_SYMBOL_GPL(devlink_linecard_provision_set);
+ void devlink_linecard_provision_clear(struct devlink_linecard *linecard)
+ {
+ 	mutex_lock(&linecard->state_lock);
++	WARN_ON(!list_empty(&linecard->device_list));
+ 	linecard->state = DEVLINK_LINECARD_STATE_UNPROVISIONED;
+ 	linecard->type = NULL;
+ 	devlink_linecard_notify(linecard, DEVLINK_CMD_LINECARD_NEW);
+-- 
+2.30.2
+

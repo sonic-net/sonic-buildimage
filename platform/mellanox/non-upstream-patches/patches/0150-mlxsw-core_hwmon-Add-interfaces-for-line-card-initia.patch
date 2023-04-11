@@ -1,0 +1,235 @@
+From 97f2a14ec9543588b37be8fc54aad9ed13cceec9 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 12 May 2021 22:57:42 +0300
+Subject: [PATCH] mlxsw: core_hwmon: Add interfaces for line card
+ initialization and de-initialization
+
+Add callback functions for line card 'hwmon' initialization and
+de-initialization. Each line card is associated with the relevant
+'hwmon' device, which may contain thermal attributes for the cages
+and gearboxes found on this line card.
+
+The line card 'hwmon' initialization / de-initialization APIs are to be
+called when line card is set to active / inactive state by
+got_active() / got_inactive() callbacks from line card state machine.
+
+For example cage temperature for module #9 located at line card #7 will
+be exposed by utility 'sensors' like:
+linecard#07
+front panel 009:	+32.0C  (crit = +70.0C, emerg = +80.0C)
+And temperature for gearbox #3 located at line card #5 will be exposed
+like:
+linecard#05
+gearbox 003:		+41.0C  (highest = +41.0C)
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+---
+ .../net/ethernet/mellanox/mlxsw/core_hwmon.c  | 137 +++++++++++++++++-
+ 1 file changed, 134 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index 6af23f472..a27146cca 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -19,6 +19,7 @@
+ #define MLXSW_HWMON_ATTR_PER_SENSOR 3
+ #define MLXSW_HWMON_ATTR_PER_MODULE 7
+ #define MLXSW_HWMON_ATTR_PER_GEARBOX 4
++#define MLXSW_HWMON_DEV_NAME_LEN_MAX 16
+ 
+ #define MLXSW_HWMON_ATTR_COUNT (MLXSW_HWMON_SENSORS_MAX_COUNT * MLXSW_HWMON_ATTR_PER_SENSOR + \
+ 				MLXSW_HWMON_MODULES_MAX_COUNT * MLXSW_HWMON_ATTR_PER_MODULE + \
+@@ -42,6 +43,7 @@ mlxsw_hwmon_get_attr_index(int index, int count, u16 *gearbox_sensor_map)
+ }
+ 
+ struct mlxsw_hwmon_dev {
++	char name[MLXSW_HWMON_DEV_NAME_LEN_MAX];
+ 	struct mlxsw_hwmon *hwmon;
+ 	struct device *hwmon_dev;
+ 	struct attribute_group group;
+@@ -59,6 +61,7 @@ struct mlxsw_hwmon {
+ 	struct mlxsw_core *core;
+ 	const struct mlxsw_bus_info *bus_info;
+ 	struct mlxsw_hwmon_dev *main;
++	struct mlxsw_hwmon_dev **linecards;
+ };
+ 
+ static ssize_t mlxsw_hwmon_temp_show(struct device *dev,
+@@ -405,9 +408,14 @@ mlxsw_hwmon_module_temp_label_show(struct device *dev,
+ {
+ 	struct mlxsw_hwmon_attr *mlxsw_hwmon_attr =
+ 			container_of(attr, struct mlxsw_hwmon_attr, dev_attr);
++	struct mlxsw_hwmon_dev *mlxsw_hwmon_dev;
++	int index = mlxsw_hwmon_attr->type_index;
++
++	mlxsw_hwmon_dev = mlxsw_hwmon_attr->mlxsw_hwmon_dev;
++	if (strlen(mlxsw_hwmon_dev->name))
++		index += 1;
+ 
+-	return sprintf(buf, "front panel %03u\n",
+-		       mlxsw_hwmon_attr->type_index);
++	return sprintf(buf, "front panel %03u\n", index);
+ }
+ 
+ static ssize_t
+@@ -691,7 +699,7 @@ static int mlxsw_hwmon_module_init(struct mlxsw_hwmon_dev *mlxsw_hwmon_dev)
+ 	u8 module_sensor_max;
+ 	int i, err;
+ 
+-	mlxsw_reg_mgpir_pack(mgpir_pl, 0);
++	mlxsw_reg_mgpir_pack(mgpir_pl, mlxsw_hwmon_dev->slot_index);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mgpir), mgpir_pl);
+ 	if (err)
+ 		return err;
+@@ -819,6 +827,122 @@ mlxsw_hwmon_gearbox_init(struct mlxsw_hwmon_dev *mlxsw_hwmon_dev, u8 gbox_num)
+ 	return 0;
+ }
+ 
++static void
++mlxsw_hwmon_got_active(struct mlxsw_core *mlxsw_core, u8 slot_index,
++		       const struct mlxsw_linecard *linecard, void *priv)
++{
++	struct mlxsw_hwmon *hwmon = priv;
++	struct device *dev = hwmon->bus_info->dev;
++	struct mlxsw_env_gearbox_sensors_map map;
++	struct mlxsw_hwmon_dev *lc;
++	int err;
++
++	lc = kzalloc(sizeof(*lc), GFP_KERNEL);
++	if (!lc)
++		return;
++	lc->slot_index = slot_index;
++	lc->hwmon = hwmon;
++	err = mlxsw_hwmon_module_init(lc);
++	if (err)
++		goto err_hwmon_linecard_module_init;
++
++	err = mlxsw_env_sensor_map_create(hwmon->core,
++					  hwmon->bus_info, slot_index,
++					  &map);
++	if (err)
++		goto err_hwmon_linecard_env_sensor_map_create;
++
++	lc->gearbox_sensor_map = map.sensor_bit_map;
++	err = mlxsw_hwmon_gearbox_init(lc, map.sensor_count);
++	if (err)
++		goto err_hwmon_linecard_gearbox_init;
++
++	lc->groups[0] = &lc->group;
++	lc->group.attrs = lc->attrs;
++	sprintf(lc->name, "%s#%02u", "linecard", slot_index);
++	lc->hwmon_dev = hwmon_device_register_with_groups(dev, (const char *) lc->name,
++							  lc, lc->groups);
++	if (IS_ERR(lc->hwmon_dev)) {
++		err = PTR_ERR(lc->hwmon_dev);
++		goto err_hwmon_linecard_register;
++	}
++	hwmon->linecards[slot_index - 1] = lc;
++
++	return;
++
++err_hwmon_linecard_register:
++err_hwmon_linecard_gearbox_init:
++	mlxsw_env_sensor_map_destroy(hwmon->bus_info,
++				     lc->gearbox_sensor_map);
++err_hwmon_linecard_env_sensor_map_create:
++err_hwmon_linecard_module_init:
++	kfree(lc);
++}
++
++static void
++mlxsw_hwmon_got_inactive(struct mlxsw_core *mlxsw_core, u8 slot_index,
++			 const struct mlxsw_linecard *linecard, void *priv)
++{
++	struct mlxsw_hwmon *hwmon = priv;
++	struct mlxsw_hwmon_dev *lc = hwmon->linecards[slot_index - 1];
++
++	if (lc->hwmon_dev)
++		hwmon_device_unregister(lc->hwmon_dev);
++	mlxsw_env_sensor_map_destroy(hwmon->bus_info,
++				     lc->gearbox_sensor_map);
++	kfree(lc);
++	hwmon->linecards[slot_index - 1] = NULL;
++}
++
++static struct mlxsw_linecards_event_ops mlxsw_hwmon_event_ops = {
++	.got_active = mlxsw_hwmon_got_active,
++	.got_inactive = mlxsw_hwmon_got_inactive,
++};
++
++static int mlxsw_hwmon_linecards_register(struct mlxsw_hwmon *hwmon)
++{
++	struct mlxsw_linecards *linecards = mlxsw_core_linecards(hwmon->core);
++	int err;
++
++	if (!linecards || !linecards->count)
++		return 0;
++
++	hwmon->linecards = kcalloc(linecards->count, sizeof(*hwmon->linecards),
++				   GFP_KERNEL);
++	if (!hwmon->linecards)
++		return -ENOMEM;
++
++	err = mlxsw_linecards_event_ops_register(hwmon->core,
++						 &mlxsw_hwmon_event_ops,
++						 hwmon);
++	if (err)
++		goto err_linecards_event_ops_register;
++
++	return 0;
++
++err_linecards_event_ops_register:
++	kfree(hwmon->linecards);
++	return err;
++}
++
++static void mlxsw_hwmon_linecards_unregister(struct mlxsw_hwmon *hwmon)
++{
++	struct mlxsw_linecards *linecards = mlxsw_core_linecards(hwmon->core);
++	int i;
++
++	if (!linecards || !linecards->count)
++		return;
++
++	for (i = 1; i <= linecards->count; i++) {
++		if (hwmon->linecards[i - 1])
++			mlxsw_hwmon_got_inactive(hwmon->core, i, NULL, hwmon);
++	}
++
++	mlxsw_linecards_event_ops_unregister(hwmon->core,
++					     &mlxsw_hwmon_event_ops, hwmon);
++	kfree(hwmon->linecards);
++}
++
+ int mlxsw_hwmon_init(struct mlxsw_core *mlxsw_core,
+ 		     const struct mlxsw_bus_info *mlxsw_bus_info,
+ 		     struct mlxsw_hwmon **p_hwmon)
+@@ -872,10 +996,16 @@ int mlxsw_hwmon_init(struct mlxsw_core *mlxsw_core,
+ 		goto err_hwmon_register;
+ 	}
+ 
++	err = mlxsw_hwmon_linecards_register(mlxsw_hwmon);
++	if (err)
++		goto err_linecards_register;
++
+ 	mlxsw_hwmon->main->hwmon_dev = hwmon_dev;
+ 	*p_hwmon = mlxsw_hwmon;
+ 	return 0;
+ 
++err_linecards_register:
++	hwmon_device_unregister(mlxsw_hwmon->main->hwmon_dev);
+ err_hwmon_register:
+ err_gearbox_init:
+ 	mlxsw_hwmon_gearbox_main_fini(mlxsw_hwmon->main);
+@@ -891,6 +1021,7 @@ int mlxsw_hwmon_init(struct mlxsw_core *mlxsw_core,
+ 
+ void mlxsw_hwmon_fini(struct mlxsw_hwmon *mlxsw_hwmon)
+ {
++	mlxsw_hwmon_linecards_unregister(mlxsw_hwmon);
+ 	hwmon_device_unregister(mlxsw_hwmon->main->hwmon_dev);
+ 	mlxsw_hwmon_gearbox_main_fini(mlxsw_hwmon->main);
+ 	kfree(mlxsw_hwmon->main);
+-- 
+2.30.2
+
