@@ -564,6 +564,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            MIRROR_SECURITY_URLS=$(MIRROR_SECURITY_URLS) \
                            GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
                            MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
+                           SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset
@@ -584,6 +585,7 @@ endif
 
 export MIRROR_URLS
 export MIRROR_SECURITY_URLS
+export MIRROR_SNAPSHOT
 export SONIC_VERSION_CONTROL_COMPONENTS
 
 %:: | sonic-build-hooks

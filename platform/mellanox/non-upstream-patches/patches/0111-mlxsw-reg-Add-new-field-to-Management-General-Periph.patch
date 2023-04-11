@@ -1,0 +1,38 @@
+From fe27f006de6b428fe59acb1960373b32e59adf0b Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 3 Dec 2021 11:48:49 +0200
+Subject: [PATCH] mlxsw: reg: Add new field to Management General Peripheral
+ Information Register
+
+Add new field 'max_modules_per_slot' to provide maximum number of
+modules that can be connected per slot. This field will always be zero,
+if 'slot_index' in query request is set to non-zero value, otherwise
+value in this field will provide maximum modules number, which can be
+equipped on device inserted at any slot.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/reg.h | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index 748a22ec4..9de037b9a 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -10191,6 +10191,12 @@ MLXSW_ITEM32(reg, mgpir, devices_per_flash, 0x00, 16, 8);
+  */
+ MLXSW_ITEM32(reg, mgpir, num_of_devices, 0x00, 0, 8);
+ 
++/* max_modules_per_slot
++ * Maximum number of modules that can be connected per slot.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mgpir, max_modules_per_slot, 0x04, 16, 8);
++
+ /* mgpir_num_of_slots
+  * Number of slots in the system.
+  * Access: RO
+-- 
+2.30.2
+

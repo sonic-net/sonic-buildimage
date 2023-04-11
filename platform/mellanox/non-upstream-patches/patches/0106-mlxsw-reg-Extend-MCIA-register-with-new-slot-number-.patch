@@ -1,0 +1,108 @@
+From d494bb0c59dd1f6150f189e2878babf53b67e111 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 3 Dec 2021 11:48:47 +0200
+Subject: [PATCH] mlxsw: reg: Extend MCIA register with new slot number field
+
+Extend MCIA (Management Cable Info Access Register) with new field
+specifying the slot number. The purpose of this field is to support
+access to MCIA register for reading cage cable information on modular
+system. For non-modular systems the 'module' number uniquely identifies
+the transceiver location. For modular systems the transceivers are
+identified by two indexes:
+- 'slot_index', specifying the slot number, where line card is located;
+- 'module', specifying cage transceiver within the line card.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_env.c | 13 +++++++------
+ drivers/net/ethernet/mellanox/mlxsw/reg.h      | 14 +++++++++++---
+ 2 files changed, 18 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+index 7feefb38b..21eacbe0a 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+@@ -35,8 +35,8 @@ static int mlxsw_env_validate_cable_ident(struct mlxsw_core *core, int id,
+ 	u8 ident;
+ 	int err;
+ 
+-	mlxsw_reg_mcia_pack(mcia_pl, id, 0, MLXSW_REG_MCIA_PAGE0_LO_OFF, 0, 1,
+-			    MLXSW_REG_MCIA_I2C_ADDR_LOW);
++	mlxsw_reg_mcia_pack(mcia_pl, 0, id, 0, MLXSW_REG_MCIA_PAGE0_LO_OFF, 0,
++			    1, MLXSW_REG_MCIA_I2C_ADDR_LOW);
+ 	err = mlxsw_reg_query(core, MLXSW_REG(mcia), mcia_pl);
+ 	if (err)
+ 		return err;
+@@ -111,7 +111,8 @@ mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
+ 		}
+ 	}
+ 
+-	mlxsw_reg_mcia_pack(mcia_pl, module, 0, page, offset, size, i2c_addr);
++	mlxsw_reg_mcia_pack(mcia_pl, 0, module, 0, page, offset, size,
++			    i2c_addr);
+ 
+ 	err = mlxsw_reg_query(mlxsw_core, MLXSW_REG(mcia), mcia_pl);
+ 	if (err)
+@@ -185,12 +186,12 @@ int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, int module,
+ 			page = MLXSW_REG_MCIA_TH_PAGE_CMIS_NUM;
+ 		else
+ 			page = MLXSW_REG_MCIA_TH_PAGE_NUM;
+-		mlxsw_reg_mcia_pack(mcia_pl, module, 0, page,
++		mlxsw_reg_mcia_pack(mcia_pl, 0, module, 0, page,
+ 				    MLXSW_REG_MCIA_TH_PAGE_OFF + off,
+ 				    MLXSW_REG_MCIA_TH_ITEM_SIZE,
+ 				    MLXSW_REG_MCIA_I2C_ADDR_LOW);
+ 	} else {
+-		mlxsw_reg_mcia_pack(mcia_pl, module, 0,
++		mlxsw_reg_mcia_pack(mcia_pl, 0, module, 0,
+ 				    MLXSW_REG_MCIA_PAGE0_LO,
+ 				    off, MLXSW_REG_MCIA_TH_ITEM_SIZE,
+ 				    MLXSW_REG_MCIA_I2C_ADDR_HIGH);
+@@ -371,7 +372,7 @@ mlxsw_env_get_module_eeprom_by_page(struct mlxsw_core *mlxsw_core, u8 module,
+ 		size = min_t(u8, page->length - bytes_read,
+ 			     MLXSW_REG_MCIA_EEPROM_SIZE);
+ 
+-		mlxsw_reg_mcia_pack(mcia_pl, module, 0, page->page,
++		mlxsw_reg_mcia_pack(mcia_pl, 0, module, 0, page->page,
+ 				    device_addr + bytes_read, size,
+ 				    page->i2c_address);
+ 		mlxsw_reg_mcia_bank_number_set(mcia_pl, page->bank);
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index 56927c772..2714e316c 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -8798,6 +8798,12 @@ MLXSW_ITEM32(reg, mcia, l, 0x00, 31, 1);
+  */
+ MLXSW_ITEM32(reg, mcia, module, 0x00, 16, 8);
+ 
++/* reg_mcia_slot_index
++ * Slot index (0: Main board)
++ * Access: Index
++ */
++MLXSW_ITEM32(reg, mcia, slot, 0x00, 12, 4);
++
+ enum {
+ 	MLXSW_REG_MCIA_STATUS_GOOD = 0,
+ 	/* No response from module's EEPROM. */
+@@ -8897,11 +8903,13 @@ MLXSW_ITEM_BUF(reg, mcia, eeprom, 0x10, MLXSW_REG_MCIA_EEPROM_SIZE);
+ 				MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH) / \
+ 				MLXSW_REG_MCIA_EEPROM_UP_PAGE_LENGTH + 1)
+ 
+-static inline void mlxsw_reg_mcia_pack(char *payload, u8 module, u8 lock,
+-				       u8 page_number, u16 device_addr,
+-				       u8 size, u8 i2c_device_addr)
++static inline void mlxsw_reg_mcia_pack(char *payload, u8 slot_index, u8 module,
++				       u8 lock, u8 page_number,
++				       u16 device_addr, u8 size,
++				       u8 i2c_device_addr)
+ {
+ 	MLXSW_REG_ZERO(mcia, payload);
++	mlxsw_reg_mcia_slot_set(payload, slot_index);
+ 	mlxsw_reg_mcia_module_set(payload, module);
+ 	mlxsw_reg_mcia_l_set(payload, lock);
+ 	mlxsw_reg_mcia_page_number_set(payload, page_number);
+-- 
+2.30.2
+

@@ -1,0 +1,277 @@
+From 19bae5f5978a43a22258843cc999b592d0e4b414 Mon Sep 17 00:00:00 2001
+From: Jiri Pirko <jiri@nvidia.com>
+Date: Fri, 22 Jan 2021 15:01:06 +0100
+Subject: [PATCH] mlxsw: core_linecards: Introduce ops for linecards status
+ change tracking
+
+Introduce an infrastructure allowing the core to register set of ops
+which are called whenever line card gets provisione/unprovisioned
+and active/inactive.
+
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core.h    |  22 +++
+ .../ethernet/mellanox/mlxsw/core_linecards.c  | 134 +++++++++++++++++-
+ 2 files changed, 150 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
+index 30f00da0a..10ea541bb 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
+@@ -582,4 +582,26 @@ int mlxsw_linecard_status_process(struct mlxsw_core *mlxsw_core,
+ int mlxsw_linecard_bct_process(struct mlxsw_core *mlxsw_core,
+ 			       const char *mbct_pl);
+ 
++struct mlxsw_linecards_event_ops {
++	int (*got_provisioned)(struct mlxsw_core *mlxsw_core, u8 slot_index,
++			       const struct mlxsw_linecard *linecard,
++			       void *priv);
++	void (*got_unprovisioned)(struct mlxsw_core *mlxsw_core, u8 slot_index,
++				  const struct mlxsw_linecard *linecard,
++				  void *priv);
++	void (*got_active)(struct mlxsw_core *mlxsw_core, u8 slot_index,
++			   const struct mlxsw_linecard *linecard,
++			   void *priv);
++	void (*got_inactive)(struct mlxsw_core *mlxsw_core, u8 slot_index,
++			     const struct mlxsw_linecard *linecard,
++			     void *priv);
++};
++
++int mlxsw_linecards_event_ops_register(struct mlxsw_core *mlxsw_core,
++				       struct mlxsw_linecards_event_ops *ops,
++				       void *priv);
++void mlxsw_linecards_event_ops_unregister(struct mlxsw_core *mlxsw_core,
++					  struct mlxsw_linecards_event_ops *ops,
++					  void *priv);
++
+ #endif
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
+index 9f9ee582f..3a2fdd22d 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
+@@ -576,6 +576,59 @@ static void mlxsw_linecard_provision_fail(struct mlxsw_core *mlxsw_core,
+ 	devlink_linecard_provision_fail(linecard->devlink_linecard);
+ }
+ 
++struct mlxsw_linecards_event_ops_item {
++	struct list_head list;
++	struct mlxsw_linecards_event_ops *event_ops;
++	void *priv;
++};
++
++static int
++mlxsw_linecard_provision_cbs_call(struct mlxsw_core *mlxsw_core,
++				  struct mlxsw_linecards *linecards,
++				  struct mlxsw_linecard *linecard)
++{
++	struct mlxsw_linecards_event_ops_item *item;
++	int err;
++
++	list_for_each_entry(item, &linecards->event_ops_list, list) {
++		if (!item->event_ops->got_provisioned)
++			continue;
++		err = item->event_ops->got_provisioned(mlxsw_core,
++						       linecard->slot_index,
++						       linecard, item->priv);
++		if (err)
++			goto rollback;
++	}
++	return 0;
++
++rollback:
++	list_for_each_entry_continue_reverse(item, &linecards->event_ops_list,
++					     list) {
++		if (!item->event_ops->got_unprovisioned)
++			continue;
++		item->event_ops->got_unprovisioned(mlxsw_core,
++						   linecard->slot_index,
++						   linecard, item->priv);
++	}
++	return err;
++}
++
++static void
++mlxsw_linecard_unprovision_cbs_call(struct mlxsw_core *mlxsw_core,
++				    struct mlxsw_linecards *linecards,
++				    struct mlxsw_linecard *linecard)
++{
++	struct mlxsw_linecards_event_ops_item *item;
++
++	list_for_each_entry(item, &linecards->event_ops_list, list) {
++		if (!item->event_ops->got_unprovisioned)
++			continue;
++		item->event_ops->got_unprovisioned(mlxsw_core,
++						   linecard->slot_index,
++						   linecard, item->priv);
++	}
++}
++
+ static int
+ mlxsw_linecard_provision_set(struct mlxsw_core *mlxsw_core,
+ 			     struct mlxsw_linecards *linecards,
+@@ -594,14 +647,27 @@ mlxsw_linecard_provision_set(struct mlxsw_core *mlxsw_core,
+ 	err = mlxsw_linecard_devices_attach(mlxsw_core, linecard);
+ 	if (err)
+ 		return err;
++	err = mlxsw_linecard_provision_cbs_call(mlxsw_core, linecards,
++						linecard);
++	if (err)
++		goto err_cbs_call;
+ 	linecard->provisioned = true;
+ 	devlink_linecard_provision_set(linecard->devlink_linecard, type);
+ 	return 0;
++
++err_cbs_call:
++	mlxsw_linecard_devices_detach(linecard->linecards->mlxsw_core,
++				      linecard);
++	return err;
+ }
+ 
+-static void mlxsw_linecard_provision_clear(struct mlxsw_linecard *linecard)
++static void mlxsw_linecard_provision_clear(struct mlxsw_core *mlxsw_core,
++					   struct mlxsw_linecards *linecards,
++					   struct mlxsw_linecard *linecard)
+ {
+ 	linecard->provisioned = false;
++	mlxsw_linecard_unprovision_cbs_call(mlxsw_core, linecards,
++					    linecard);
+ 	mlxsw_linecard_devices_detach(linecard->linecards->mlxsw_core,
+ 				      linecard);
+ 	devlink_linecard_provision_clear(linecard->devlink_linecard);
+@@ -636,22 +702,43 @@ static int mlxsw_linecard_ready_clear(struct mlxsw_core *mlxsw_core,
+ }
+ 
+ static int mlxsw_linecard_active_set(struct mlxsw_core *mlxsw_core,
++				     struct mlxsw_linecards *linecards,
+ 				     struct mlxsw_linecard *linecard,
+ 				     u16 hw_revision, u16 ini_version)
+ {
++	struct mlxsw_linecards_event_ops_item *item;
+ 	int err;
+ 
+ 	err = mlxsw_linecard_devices_update(mlxsw_core, linecard);
+ 	if (err)
+ 		return err;
++
+ 	linecard->active = true;
++	linecard->hw_revision = hw_revision;
++	linecard->ini_version = ini_version;
++	list_for_each_entry(item, &linecards->event_ops_list, list) {
++		if (!item->event_ops->got_active)
++			continue;
++		item->event_ops->got_active(mlxsw_core, linecard->slot_index,
++					    linecard, item->priv);
++	}
+ 	devlink_linecard_activate(linecard->devlink_linecard);
+ 	return 0;
+ }
+ 
+-static void mlxsw_linecard_active_clear(struct mlxsw_linecard *linecard)
++static void mlxsw_linecard_active_clear(struct mlxsw_core *mlxsw_core,
++					struct mlxsw_linecards *linecards,
++					struct mlxsw_linecard *linecard)
+ {
++	struct mlxsw_linecards_event_ops_item *item;
++
+ 	linecard->active = false;
++	list_for_each_entry(item, &linecards->event_ops_list, list) {
++		if (!item->event_ops->got_inactive)
++			continue;
++		item->event_ops->got_inactive(mlxsw_core, linecard->slot_index,
++					      linecard, item->priv);
++	}
+ 	devlink_linecard_deactivate(linecard->devlink_linecard);
+ }
+ 
+@@ -703,14 +790,14 @@ static int __mlxsw_linecard_status_process(struct mlxsw_core *mlxsw_core,
+ 
+ 	if (!process_provision_only && !linecard->unprovision_done && active &&
+ 	    linecard->active != active && linecard->ready) {
+-		err = mlxsw_linecard_active_set(mlxsw_core, linecard,
++		err = mlxsw_linecard_active_set(mlxsw_core, linecards, linecard,
+ 						hw_revision, ini_version);
+ 		if (err)
+ 			goto out;
+ 	}
+ 
+ 	if (!process_provision_only && !active && linecard->active != active)
+-		mlxsw_linecard_active_clear(linecard);
++		mlxsw_linecard_active_clear(mlxsw_core, linecards, linecard);
+ 
+ 	if (!process_provision_only && ready != MLXSW_REG_MDDQ_READY_READY &&
+ 	    linecard->ready) {
+@@ -720,7 +807,7 @@ static int __mlxsw_linecard_status_process(struct mlxsw_core *mlxsw_core,
+ 	}
+ 
+ 	if (!provisioned && linecard->provisioned != provisioned)
+-		mlxsw_linecard_provision_clear(linecard);
++		mlxsw_linecard_provision_clear(mlxsw_core, linecards, linecard);
+ 
+ out:
+ 	mutex_unlock(&linecard->lock);
+@@ -1128,7 +1215,7 @@ static void mlxsw_linecard_pre_fini(struct mlxsw_core *mlxsw_core,
+ 	/* Make sure all scheduled events are processed */
+ 	mlxsw_core_flush_owq();
+ 	if (linecard->active)
+-		mlxsw_linecard_active_clear(linecard);
++		mlxsw_linecard_active_clear(mlxsw_core, linecards, linecard);
+ }
+ 
+ static void mlxsw_linecard_fini(struct mlxsw_core *mlxsw_core,
+@@ -1287,6 +1374,7 @@ int mlxsw_linecards_init(struct mlxsw_core *mlxsw_core,
+ 	linecards->count = slot_count;
+ 	linecards->mlxsw_core = mlxsw_core;
+ 	linecards->bus_info = bus_info;
++	INIT_LIST_HEAD(&linecards->event_ops_list);
+ 
+ 	linecards->wq = alloc_workqueue("mlxsw_linecards", 0, 0);
+ 	if (!linecards->wq) {
+@@ -1360,6 +1448,7 @@ void mlxsw_linecards_fini(struct mlxsw_core *mlxsw_core,
+ 
+ 	if (!linecards)
+ 		return;
++	WARN_ON(!list_empty(&linecards->event_ops_list));
+ 	for (i = 0; i < linecards->count; i++)
+ 		mlxsw_linecard_fini(mlxsw_core, linecards, i + 1);
+ 	mlxsw_linecard_types_fini(linecards);
+@@ -1367,4 +1456,37 @@ void mlxsw_linecards_fini(struct mlxsw_core *mlxsw_core,
+ 	kfree(linecards);
+ }
+ 
++int mlxsw_linecards_event_ops_register(struct mlxsw_core *mlxsw_core,
++				       struct mlxsw_linecards_event_ops *ops,
++				       void *priv)
++{
++	struct mlxsw_linecards *linecards = mlxsw_core_linecards(mlxsw_core);
++	struct mlxsw_linecards_event_ops_item *item;
++
++	item = kzalloc(sizeof(*item), GFP_KERNEL);
++	if (!item)
++		return -ENOMEM;
++	item->event_ops = ops;
++	item->priv = priv;
++	list_add_tail(&item->list, &linecards->event_ops_list);
++	return 0;
++}
++EXPORT_SYMBOL(mlxsw_linecards_event_ops_register);
++
++void mlxsw_linecards_event_ops_unregister(struct mlxsw_core *mlxsw_core,
++					  struct mlxsw_linecards_event_ops *ops,
++					  void *priv)
++{
++	struct mlxsw_linecards *linecards = mlxsw_core_linecards(mlxsw_core);
++	struct mlxsw_linecards_event_ops_item *item, *tmp;
++
++	list_for_each_entry_safe(item, tmp, &linecards->event_ops_list, list) {
++		if (item->event_ops == ops && item->priv == priv) {
++			list_del(&item->list);
++			kfree(item);
++		}
++	}
++}
++EXPORT_SYMBOL(mlxsw_linecards_event_ops_unregister);
++
+ MODULE_FIRMWARE(MLXSW_LINECARDS_INI_BUNDLE_FILE);
+-- 
+2.30.2
+

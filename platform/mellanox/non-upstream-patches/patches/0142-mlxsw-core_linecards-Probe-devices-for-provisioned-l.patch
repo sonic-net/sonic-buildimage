@@ -1,0 +1,224 @@
+From 70bc337251ccbfe095a89457ded233c3ad5b9bbc Mon Sep 17 00:00:00 2001
+From: Jiri Pirko <jiri@nvidia.com>
+Date: Fri, 26 Feb 2021 13:15:09 +0100
+Subject: [PATCH] mlxsw: core_linecards: Probe devices for provisioned line
+ card and attach them
+
+In case the line card is provisioned, go over all possible existing
+devices (gearboxes) on it and attach them, so devlink core is aware of
+them. In case the device can be flashed, register mlxsw flash component.
+
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core.h    |   3 +
+ .../ethernet/mellanox/mlxsw/core_linecards.c  | 113 ++++++++++++++++--
+ 2 files changed, 108 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
+index 8e738ddb3..593470d14 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
+@@ -533,6 +533,9 @@ struct mlxsw_linecard {
+ 	bool ready;
+ 	bool active;
+ 	bool unprovision_done;
++	u16 hw_revision;
++	u16 ini_version;
++	struct list_head device_list;
+ };
+ 
+ struct mlxsw_linecard_types_info;
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
+index 134437f49..720ad6d82 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
+@@ -64,27 +64,120 @@ static const char *mlxsw_linecard_type_name(struct mlxsw_linecard *linecard)
+ 	return linecard->read_name;
+ }
+ 
+-static void mlxsw_linecard_provision_fail(struct mlxsw_linecard *linecard)
++struct mlxsw_linecard_device {
++	struct list_head list;
++	u8 index;
++	struct mlxsw_linecard *linecard;
++	struct devlink_linecard_device *devlink_device;
++};
++
++static int mlxsw_linecard_device_attach(struct mlxsw_core *mlxsw_core,
++					struct mlxsw_linecard *linecard,
++					u8 device_index, bool flash_owner)
++{
++	struct mlxsw_linecard_device *device;
++	int err;
++
++	device = kzalloc(sizeof(*device), GFP_KERNEL);
++	if (!device)
++		return -ENOMEM;
++	device->index = device_index;
++	device->linecard = linecard;
++
++	device->devlink_device = devlink_linecard_device_create(linecard->devlink_linecard,
++								device_index,
++								NULL, NULL);
++	if (IS_ERR(device->devlink_device)) {
++		err = PTR_ERR(device->devlink_device);
++		goto err_devlink_linecard_device_attach;
++	}
++
++	list_add_tail(&device->list, &linecard->device_list);
++	return 0;
++
++err_devlink_linecard_device_attach:
++	kfree(device);
++	return err;
++}
++
++static void mlxsw_linecard_device_detach(struct mlxsw_core *mlxsw_core,
++					 struct mlxsw_linecard *linecard,
++					 struct mlxsw_linecard_device *device)
++{
++	list_del(&device->list);
++	devlink_linecard_device_destroy(linecard->devlink_linecard,
++					device->devlink_device);
++	kfree(device);
++}
++
++static int mlxsw_linecard_devices_attach(struct mlxsw_core *mlxsw_core,
++					 struct mlxsw_linecard *linecard)
++{
++	char mddq_pl[MLXSW_REG_MDDQ_LEN];
++	bool flash_owner;
++	bool data_valid;
++	u8 device_index;
++	u8 msg_seq = 0;
++	int err;
++
++	do {
++		mlxsw_reg_mddq_device_info_pack(mddq_pl, linecard->slot_index,
++						msg_seq);
++		err =  mlxsw_reg_query(mlxsw_core, MLXSW_REG(mddq), mddq_pl);
++		if (err)
++			return err;
++		mlxsw_reg_mddq_device_info_unpack(mddq_pl, &msg_seq,
++						  &data_valid, &flash_owner,
++						  &device_index, NULL,
++						  NULL, NULL);
++		if (!data_valid)
++			break;
++		err = mlxsw_linecard_device_attach(mlxsw_core, linecard,
++						   device_index, flash_owner);
++		if (err)
++			return err;
++	} while (msg_seq);
++
++	return 0;
++}
++
++static void mlxsw_linecard_devices_detach(struct mlxsw_core *mlxsw_core,
++					  struct mlxsw_linecard *linecard)
++{
++	struct mlxsw_linecard_device *device, *tmp;
++
++	list_for_each_entry_safe(device, tmp, &linecard->device_list, list)
++		mlxsw_linecard_device_detach(mlxsw_core, linecard, device);
++}
++
++static void mlxsw_linecard_provision_fail(struct mlxsw_core *mlxsw_core,
++					  struct mlxsw_linecard *linecard)
+ {
+ 	linecard->provisioned = false;
+ 	linecard->ready = false;
+ 	linecard->active = false;
++	mlxsw_linecard_devices_detach(mlxsw_core, linecard);
+ 	devlink_linecard_provision_fail(linecard->devlink_linecard);
+ }
+ 
+ static int
+-mlxsw_linecard_provision_set(struct mlxsw_linecards *linecards,
++mlxsw_linecard_provision_set(struct mlxsw_core *mlxsw_core,
++			     struct mlxsw_linecards *linecards,
+ 			     struct mlxsw_linecard *linecard,
+ 			     enum mlxsw_reg_mddq_card_type card_type)
+ {
+ 	const char *type = mlxsw_linecard_types_lookup(linecards, card_type);
++	int err;
+ 
+ 	if (!type)
+ 		type = mlxsw_linecard_type_name(linecard);
+ 	if (!type) {
+-		mlxsw_linecard_provision_fail(linecard);
++		mlxsw_linecard_provision_fail(mlxsw_core, linecard);
+ 		return -EINVAL;
+ 	}
++	err = mlxsw_linecard_devices_attach(mlxsw_core, linecard);
++	if (err)
++		return err;
+ 	linecard->provisioned = true;
+ 	devlink_linecard_provision_set(linecard->devlink_linecard, type);
+ 	return 0;
+@@ -93,6 +186,8 @@ mlxsw_linecard_provision_set(struct mlxsw_linecards *linecards,
+ static void mlxsw_linecard_provision_clear(struct mlxsw_linecard *linecard)
+ {
+ 	linecard->provisioned = false;
++	mlxsw_linecard_devices_detach(linecard->linecards->mlxsw_core,
++				      linecard);
+ 	devlink_linecard_provision_clear(linecard->devlink_linecard);
+ }
+ 
+@@ -169,8 +264,8 @@ static int __mlxsw_linecard_status_process(struct mlxsw_core *mlxsw_core,
+ 	mutex_lock(&linecard->lock);
+ 
+ 	if (provisioned && linecard->provisioned != provisioned) {
+-		err = mlxsw_linecard_provision_set(linecards, linecard,
+-						   card_type);
++		err = mlxsw_linecard_provision_set(mlxsw_core, linecards,
++						   linecard, card_type);
+ 		if (err)
+ 			goto out;
+ 	}
+@@ -353,7 +448,7 @@ int mlxsw_linecard_bct_process(struct mlxsw_core *mlxsw_core,
+ 
+ fix_fsm_err_out:
+ 	mlxsw_linecard_fix_fsm_state(linecard, fsm_state);
+-	mlxsw_linecard_provision_fail(linecard);
++	mlxsw_linecard_provision_fail(mlxsw_core, linecard);
+ 	return err;
+ }
+ EXPORT_SYMBOL(mlxsw_linecard_bct_process);
+@@ -415,7 +510,7 @@ static int mlxsw_linecard_provision(struct devlink_linecard *devlink_linecard,
+ fix_fsm_err_out:
+ 	mlxsw_linecard_fix_fsm_state(linecard, fsm_state);
+ err_out:
+-	mlxsw_linecard_provision_fail(linecard);
++	mlxsw_linecard_provision_fail(mlxsw_core, linecard);
+ out:
+ 	mutex_unlock(&linecard->lock);
+ 	return err;
+@@ -488,7 +583,7 @@ static int mlxsw_linecard_unprovision(struct devlink_linecard *devlink_linecard,
+ fix_fsm_err_out:
+ 	mlxsw_linecard_fix_fsm_state(linecard, fsm_state);
+ err_out:
+-	mlxsw_linecard_provision_fail(linecard);
++	mlxsw_linecard_provision_fail(mlxsw_core, linecard);
+ out:
+ 	mutex_unlock(&linecard->lock);
+ 	return err;
+@@ -536,6 +631,7 @@ static int mlxsw_linecard_init(struct mlxsw_core *mlxsw_core,
+ 	linecard->slot_index = slot_index;
+ 	linecard->linecards = linecards;
+ 	mutex_init(&linecard->lock);
++	INIT_LIST_HEAD(&linecard->device_list);
+ 
+ 	devlink_linecard = devlink_linecard_create(priv_to_devlink(mlxsw_core),
+ 						   slot_index, &mlxsw_linecard_ops,
+@@ -613,6 +709,7 @@ static void mlxsw_linecard_fini(struct mlxsw_core *mlxsw_core,
+ 	struct mlxsw_linecard *linecard;
+ 
+ 	linecard = mlxsw_linecard_get(linecards, slot_index);
++	mlxsw_linecard_devices_detach(mlxsw_core, linecard);
+ 	devlink_linecard_destroy(linecard->devlink_linecard);
+ 	mutex_destroy(&linecard->lock);
+ }
+-- 
+2.30.2
+

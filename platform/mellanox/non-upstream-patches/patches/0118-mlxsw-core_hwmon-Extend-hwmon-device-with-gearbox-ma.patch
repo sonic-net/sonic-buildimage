@@ -1,0 +1,136 @@
+From 94d3b63c64fc202bfe525cc3b500c23e92d38fbf Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 14 Dec 2021 10:57:32 +0200
+Subject: [PATCH] mlxsw: core_hwmon: Extend hwmon device with gearbox mapping
+ field
+
+Add gearbox mapping field to 'mlxsw_hwmon_dev' structure. It should
+provide the mapping for gearbox sensor indexes, given gearbox number.
+For main board mapping is supposed to be always sequential, while for
+line cards on modular system it could be non-sequential.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ .../net/ethernet/mellanox/mlxsw/core_hwmon.c  | 40 ++++++++++++++-----
+ 1 file changed, 31 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index 0d7edabf1..6af23f472 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -32,10 +32,11 @@ struct mlxsw_hwmon_attr {
+ 	char name[32];
+ };
+ 
+-static int mlxsw_hwmon_get_attr_index(int index, int count)
++static int
++mlxsw_hwmon_get_attr_index(int index, int count, u16 *gearbox_sensor_map)
+ {
+ 	if (index >= count)
+-		return index % count + MLXSW_REG_MTMP_GBOX_INDEX_MIN;
++		return gearbox_sensor_map[index % count];
+ 
+ 	return index;
+ }
+@@ -50,6 +51,7 @@ struct mlxsw_hwmon_dev {
+ 	unsigned int attrs_count;
+ 	u8 sensor_count;
+ 	u8 module_sensor_max;
++	u16 *gearbox_sensor_map;
+ 	u8 slot_index;
+ };
+ 
+@@ -72,7 +74,8 @@ static ssize_t mlxsw_hwmon_temp_show(struct device *dev,
+ 	int err;
+ 
+ 	index = mlxsw_hwmon_get_attr_index(mlxsw_hwmon_attr->type_index,
+-					   mlxsw_hwmon_dev->module_sensor_max);
++					   mlxsw_hwmon_dev->module_sensor_max,
++					   mlxsw_hwmon_dev->gearbox_sensor_map);
+ 	mlxsw_reg_mtmp_pack(mtmp_pl, mlxsw_hwmon_dev->slot_index, index, false,
+ 			    false);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
+@@ -97,7 +100,8 @@ static ssize_t mlxsw_hwmon_temp_max_show(struct device *dev,
+ 	int err;
+ 
+ 	index = mlxsw_hwmon_get_attr_index(mlxsw_hwmon_attr->type_index,
+-					   mlxsw_hwmon_dev->module_sensor_max);
++					   mlxsw_hwmon_dev->module_sensor_max,
++					   mlxsw_hwmon_dev->gearbox_sensor_map);
+ 	mlxsw_reg_mtmp_pack(mtmp_pl, mlxsw_hwmon_dev->slot_index, index, false,
+ 			    false);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
+@@ -129,7 +133,8 @@ static ssize_t mlxsw_hwmon_temp_rst_store(struct device *dev,
+ 		return -EINVAL;
+ 
+ 	index = mlxsw_hwmon_get_attr_index(mlxsw_hwmon_attr->type_index,
+-					   mlxsw_hwmon_dev->module_sensor_max);
++					   mlxsw_hwmon_dev->module_sensor_max,
++					   mlxsw_hwmon_dev->gearbox_sensor_map);
+ 
+ 	mlxsw_reg_mtmp_slot_index_set(mtmp_pl, mlxsw_hwmon_dev->slot_index);
+ 	mlxsw_reg_mtmp_sensor_index_set(mtmp_pl, index);
+@@ -735,7 +740,7 @@ mlxsw_hwmon_gearbox_main_init(struct mlxsw_hwmon_dev *mlxsw_hwmon_dev,
+ 	struct mlxsw_hwmon *mlxsw_hwmon = mlxsw_hwmon_dev->hwmon;
+ 	enum mlxsw_reg_mgpir_device_type device_type;
+ 	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
+-	int err;
++	int i, err;
+ 
+ 	mlxsw_reg_mgpir_pack(mgpir_pl, 0);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mgpir), mgpir_pl);
+@@ -747,12 +752,30 @@ mlxsw_hwmon_gearbox_main_init(struct mlxsw_hwmon_dev *mlxsw_hwmon_dev,
+ 	if (device_type != MLXSW_REG_MGPIR_DEVICE_TYPE_GEARBOX_DIE)
+ 		*gbox_num = 0;
+ 
++	/* Skip gearbox sensor mapping array allocation, if no gearboxes are
++	 * available.
++	 */
++	if (!*gbox_num)
++		return 0;
++
++	mlxsw_hwmon_dev->gearbox_sensor_map = kmalloc_array(*gbox_num,
++							    sizeof(u16),
++							    GFP_KERNEL);
++	if (!mlxsw_hwmon_dev->gearbox_sensor_map)
++		return -ENOMEM;
++
++	/* Fill out gearbox sensor mapping array. */
++	for (i = 0; i < *gbox_num; i++)
++		mlxsw_hwmon_dev->gearbox_sensor_map[i] =
++					MLXSW_REG_MTMP_GBOX_INDEX_MIN + i;
++
+ 	return 0;
+ }
+ 
+ static void
+ mlxsw_hwmon_gearbox_main_fini(struct mlxsw_hwmon_dev *mlxsw_hwmon_dev)
+ {
++	kfree(mlxsw_hwmon_dev->gearbox_sensor_map);
+ }
+ 
+ static int
+@@ -761,7 +784,7 @@ mlxsw_hwmon_gearbox_init(struct mlxsw_hwmon_dev *mlxsw_hwmon_dev, u8 gbox_num)
+ 	struct mlxsw_hwmon *mlxsw_hwmon = mlxsw_hwmon_dev->hwmon;
+ 	int index, max_index, sensor_index;
+ 	char mtmp_pl[MLXSW_REG_MTMP_LEN];
+-	int err;
++	int i = 0, err;
+ 
+ 	if (!gbox_num)
+ 		return 0;
+@@ -769,8 +792,7 @@ mlxsw_hwmon_gearbox_init(struct mlxsw_hwmon_dev *mlxsw_hwmon_dev, u8 gbox_num)
+ 	index = mlxsw_hwmon_dev->module_sensor_max;
+ 	max_index = mlxsw_hwmon_dev->module_sensor_max + gbox_num;
+ 	while (index < max_index) {
+-		sensor_index = index % mlxsw_hwmon_dev->module_sensor_max +
+-			       MLXSW_REG_MTMP_GBOX_INDEX_MIN;
++		sensor_index = mlxsw_hwmon_dev->gearbox_sensor_map[i++];
+ 		mlxsw_reg_mtmp_pack(mtmp_pl, mlxsw_hwmon_dev->slot_index,
+ 				    sensor_index, true, true);
+ 		err = mlxsw_reg_write(mlxsw_hwmon->core,
+-- 
+2.30.2
+

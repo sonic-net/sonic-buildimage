@@ -1,0 +1,101 @@
+From ce052dd9aec77733b55fe1285a9be5c4cbcc87b3 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 22 Dec 2021 14:10:14 +0000
+Subject: [PATCH] devlink: add port to line card relationship set
+
+In order to properly inform user about relationship between port and
+line card, introduce a driver API to set line card for a port. Use this
+information to extend port devlink netlink message by line card index
+and also include the line card index into phys_port_name and by that
+into a netdevice name.
+
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+---
+ include/net/devlink.h |  4 ++++
+ net/core/devlink.c    | 34 ++++++++++++++++++++++++++++------
+ 2 files changed, 32 insertions(+), 6 deletions(-)
+
+diff --git a/include/net/devlink.h b/include/net/devlink.h
+index d9b2b559c..3d4ceb290 100644
+--- a/include/net/devlink.h
++++ b/include/net/devlink.h
+@@ -140,6 +140,8 @@ struct devlink_port {
+ 	struct delayed_work type_warn_dw;
+ 	struct list_head reporter_list;
+ 	struct mutex reporters_lock; /* Protects reporter_list */
++
++	struct devlink_linecard *linecard;
+ };
+ 
+ struct devlink_linecard_ops;
+@@ -1446,6 +1448,8 @@ void devlink_port_attrs_pci_pf_set(struct devlink_port *devlink_port, u32 contro
+ 				   u16 pf, bool external);
+ void devlink_port_attrs_pci_vf_set(struct devlink_port *devlink_port, u32 controller,
+ 				   u16 pf, u16 vf, bool external);
++void devlink_port_linecard_set(struct devlink_port *devlink_port,
++			       struct devlink_linecard *linecard);
+ struct devlink_linecard *
+ devlink_linecard_create(struct devlink *devlink, unsigned int linecard_index,
+ 			const struct devlink_linecard_ops *ops, void *priv);
+diff --git a/net/core/devlink.c b/net/core/devlink.c
+index 724633810..b43e93ccc 100644
+--- a/net/core/devlink.c
++++ b/net/core/devlink.c
+@@ -905,6 +905,10 @@ static int devlink_nl_port_fill(struct sk_buff *msg, struct devlink *devlink,
+ 		goto nla_put_failure;
+ 	if (devlink_nl_port_function_attrs_put(msg, devlink_port, extack))
+ 		goto nla_put_failure;
++	if (devlink_port->linecard &&
++	    nla_put_u32(msg, DEVLINK_ATTR_LINECARD_INDEX,
++			devlink_port->linecard->index))
++		goto nla_put_failure;
+ 
+ 	genlmsg_end(msg, hdr);
+ 	return 0;
+@@ -8795,6 +8799,21 @@ void devlink_port_attrs_pci_vf_set(struct devlink_port *devlink_port, u32 contro
+ }
+ EXPORT_SYMBOL_GPL(devlink_port_attrs_pci_vf_set);
+ 
++/**
++ *	devlink_port_linecard_set - Link port with a linecard
++ *
++ *	@devlink_port: devlink port
++ *	@devlink_linecard: devlink linecard
++ */
++void devlink_port_linecard_set(struct devlink_port *devlink_port,
++			       struct devlink_linecard *linecard)
++{
++	if (WARN_ON(devlink_port->devlink))
++		return;
++	devlink_port->linecard = linecard;
++}
++EXPORT_SYMBOL_GPL(devlink_port_linecard_set);
++
+ static int __devlink_port_phys_port_name_get(struct devlink_port *devlink_port,
+ 					     char *name, size_t len)
+ {
+@@ -8806,12 +8825,15 @@ static int __devlink_port_phys_port_name_get(struct devlink_port *devlink_port,
+ 
+ 	switch (attrs->flavour) {
+ 	case DEVLINK_PORT_FLAVOUR_PHYSICAL:
+-		if (!attrs->split)
+-			n = snprintf(name, len, "p%u", attrs->phys.port_number);
+-		else
+-			n = snprintf(name, len, "p%us%u",
+-				     attrs->phys.port_number,
+-				     attrs->phys.split_subport_number);
++		if (devlink_port->linecard)
++			n = snprintf(name, len, "l%u",
++				     devlink_port->linecard->index);
++		if (n < len)
++			n += snprintf(name + n, len - n, "p%u",
++				      attrs->phys.port_number);
++		if (n < len && attrs->split)
++			n += snprintf(name + n, len - n, "s%u",
++				      attrs->phys.split_subport_number);
+ 		break;
+ 	case DEVLINK_PORT_FLAVOUR_CPU:
+ 	case DEVLINK_PORT_FLAVOUR_DSA:
+-- 
+2.30.2
+

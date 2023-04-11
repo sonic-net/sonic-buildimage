@@ -1,0 +1,146 @@
+From 5c2fb60aa437b4858f15bb8bfb02d9df43b4dd95 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 3 Dec 2021 11:48:45 +0200
+Subject: [PATCH] mlxsw: reg: Extend MTMP register with new slot number field
+
+Extend MTMP (Management Temperature Register) with new field specifying
+the slot index. The purpose of this field is to support access to MTMP
+register for reading temperature sensors on modular systems.
+For non-modular systems the 'sensor_index' uniquely identifies the cage
+sensors, while 'slot_index' is always 0. For modular systems the
+sensors are identified by:
+- 'slot_index', specifying the slot index, where line card is located;
+- 'sensor_index', specifying cage sensor within the line card.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_env.c     |  2 +-
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c   | 11 ++++++-----
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c |  6 +++---
+ drivers/net/ethernet/mellanox/mlxsw/reg.h          | 11 +++++++++--
+ 4 files changed, 19 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+index 4cbed2e3b..0b43029b2 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+@@ -143,7 +143,7 @@ int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, int module,
+ 	int page;
+ 	int err;
+ 
+-	mlxsw_reg_mtmp_pack(mtmp_pl, MLXSW_REG_MTMP_MODULE_INDEX_MIN + module,
++	mlxsw_reg_mtmp_pack(mtmp_pl, 0, MLXSW_REG_MTMP_MODULE_INDEX_MIN + module,
+ 			    false, false);
+ 	err = mlxsw_reg_query(core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err)
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index 8b170ad92..71ca3b561 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -66,7 +66,7 @@ static ssize_t mlxsw_hwmon_temp_show(struct device *dev,
+ 
+ 	index = mlxsw_hwmon_get_attr_index(mlxsw_hwmon_attr->type_index,
+ 					   mlxsw_hwmon->module_sensor_max);
+-	mlxsw_reg_mtmp_pack(mtmp_pl, index, false, false);
++	mlxsw_reg_mtmp_pack(mtmp_pl, 0, index, false, false);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err) {
+ 		dev_err(mlxsw_hwmon->bus_info->dev, "Failed to query temp sensor\n");
+@@ -89,7 +89,7 @@ static ssize_t mlxsw_hwmon_temp_max_show(struct device *dev,
+ 
+ 	index = mlxsw_hwmon_get_attr_index(mlxsw_hwmon_attr->type_index,
+ 					   mlxsw_hwmon->module_sensor_max);
+-	mlxsw_reg_mtmp_pack(mtmp_pl, index, false, false);
++	mlxsw_reg_mtmp_pack(mtmp_pl, 0, index, false, false);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err) {
+ 		dev_err(mlxsw_hwmon->bus_info->dev, "Failed to query temp sensor\n");
+@@ -232,8 +232,9 @@ static int mlxsw_hwmon_module_temp_get(struct device *dev,
+ 	int err;
+ 
+ 	module = mlxsw_hwmon_attr->type_index - mlxsw_hwmon->sensor_count;
+-	mlxsw_reg_mtmp_pack(mtmp_pl, MLXSW_REG_MTMP_MODULE_INDEX_MIN + module,
+-			    false, false);
++	mlxsw_reg_mtmp_pack(mtmp_pl, 0,
++			    MLXSW_REG_MTMP_MODULE_INDEX_MIN + module, false,
++			    false);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err) {
+ 		dev_err(dev, "Failed to query module temperature\n");
+@@ -721,7 +722,7 @@ static int mlxsw_hwmon_gearbox_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ 	while (index < max_index) {
+ 		sensor_index = index % mlxsw_hwmon->module_sensor_max +
+ 			       MLXSW_REG_MTMP_GBOX_INDEX_MIN;
+-		mlxsw_reg_mtmp_pack(mtmp_pl, sensor_index, true, true);
++		mlxsw_reg_mtmp_pack(mtmp_pl, 0, sensor_index, true, true);
+ 		err = mlxsw_reg_write(mlxsw_hwmon->core,
+ 				      MLXSW_REG(mtmp), mtmp_pl);
+ 		if (err) {
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index 9b0cd6f79..8d88633c9 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -280,7 +280,7 @@ static int mlxsw_thermal_get_temp(struct thermal_zone_device *tzdev,
+ 	int temp;
+ 	int err;
+ 
+-	mlxsw_reg_mtmp_pack(mtmp_pl, 0, false, false);
++	mlxsw_reg_mtmp_pack(mtmp_pl, 0, 0, false, false);
+ 
+ 	err = mlxsw_reg_query(thermal->core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err) {
+@@ -440,7 +440,7 @@ mlxsw_thermal_module_temp_and_thresholds_get(struct mlxsw_core *core,
+ 	int err;
+ 
+ 	/* Read module temperature and thresholds. */
+-	mlxsw_reg_mtmp_pack(mtmp_pl, sensor_index, false, false);
++	mlxsw_reg_mtmp_pack(mtmp_pl, 0, sensor_index, false, false);
+ 	err = mlxsw_reg_query(core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err) {
+ 		/* Set temperature and thresholds to zero to avoid passing
+@@ -585,7 +585,7 @@ static int mlxsw_thermal_gearbox_temp_get(struct thermal_zone_device *tzdev,
+ 	int err;
+ 
+ 	index = MLXSW_REG_MTMP_GBOX_INDEX_MIN + tz->module;
+-	mlxsw_reg_mtmp_pack(mtmp_pl, index, false, false);
++	mlxsw_reg_mtmp_pack(mtmp_pl, 0, index, false, false);
+ 
+ 	err = mlxsw_reg_query(thermal->core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err)
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index 7f7cdb3fc..52cb58c6d 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -8541,6 +8541,12 @@ MLXSW_ITEM32(reg, mtcap, sensor_count, 0x00, 0, 7);
+ 
+ MLXSW_REG_DEFINE(mtmp, MLXSW_REG_MTMP_ID, MLXSW_REG_MTMP_LEN);
+ 
++/* reg_mtmp_slot_index
++ * Slot index (0: Main board).
++ * Access: Index
++ */
++MLXSW_ITEM32(reg, mtmp, slot_index, 0x00, 16, 4);
++
+ #define MLXSW_REG_MTMP_MODULE_INDEX_MIN 64
+ #define MLXSW_REG_MTMP_GBOX_INDEX_MIN 256
+ /* reg_mtmp_sensor_index
+@@ -8630,11 +8636,12 @@ MLXSW_ITEM32(reg, mtmp, temperature_threshold_lo, 0x10, 0, 16);
+  */
+ MLXSW_ITEM_BUF(reg, mtmp, sensor_name, 0x18, MLXSW_REG_MTMP_SENSOR_NAME_SIZE);
+ 
+-static inline void mlxsw_reg_mtmp_pack(char *payload, u16 sensor_index,
+-				       bool max_temp_enable,
++static inline void mlxsw_reg_mtmp_pack(char *payload, u8 slot_index,
++				       u16 sensor_index, bool max_temp_enable,
+ 				       bool max_temp_reset)
+ {
+ 	MLXSW_REG_ZERO(mtmp, payload);
++	mlxsw_reg_mtmp_slot_index_set(payload, slot_index);
+ 	mlxsw_reg_mtmp_sensor_index_set(payload, sensor_index);
+ 	mlxsw_reg_mtmp_mte_set(payload, max_temp_enable);
+ 	mlxsw_reg_mtmp_mtr_set(payload, max_temp_reset);
+-- 
+2.30.2
+

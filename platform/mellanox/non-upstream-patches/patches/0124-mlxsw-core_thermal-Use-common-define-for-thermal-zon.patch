@@ -1,0 +1,48 @@
+From 56370efd25ad5b77b87645d779dd577674c12864 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 14 Dec 2021 10:57:38 +0200
+Subject: [PATCH] mlxsw: core_thermal: Use common define for thermal zone name
+ length
+
+Replace internal define 'MLXSW_THERMAL_ZONE_MAX_NAME' by common
+'THERMAL_NAME_LENGTH'.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index a20a91285..e860cade5 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -21,7 +21,6 @@
+ #define MLXSW_THERMAL_ASIC_TEMP_HOT	105000	/* 105C */
+ #define MLXSW_THERMAL_HYSTERESIS_TEMP	5000	/* 5C */
+ #define MLXSW_THERMAL_MODULE_TEMP_SHIFT	(MLXSW_THERMAL_HYSTERESIS_TEMP * 2)
+-#define MLXSW_THERMAL_ZONE_MAX_NAME	16
+ #define MLXSW_THERMAL_TEMP_SCORE_MAX	GENMASK(31, 0)
+ #define MLXSW_THERMAL_MAX_STATE	10
+ #define MLXSW_THERMAL_MAX_DUTY	255
+@@ -726,7 +725,7 @@ static const struct thermal_cooling_device_ops mlxsw_cooling_ops = {
+ static int
+ mlxsw_thermal_module_tz_init(struct mlxsw_thermal_module *module_tz)
+ {
+-	char tz_name[MLXSW_THERMAL_ZONE_MAX_NAME];
++	char tz_name[THERMAL_NAME_LENGTH];
+ 	int err;
+ 
+ 	if (module_tz->slot_index)
+@@ -865,7 +864,7 @@ mlxsw_thermal_modules_fini(struct mlxsw_thermal *thermal,
+ static int
+ mlxsw_thermal_gearbox_tz_init(struct mlxsw_thermal_module *gearbox_tz)
+ {
+-	char tz_name[MLXSW_THERMAL_ZONE_MAX_NAME];
++	char tz_name[THERMAL_NAME_LENGTH];
+ 	int ret;
+ 
+ 	if (gearbox_tz->slot_index)
+-- 
+2.30.2
+

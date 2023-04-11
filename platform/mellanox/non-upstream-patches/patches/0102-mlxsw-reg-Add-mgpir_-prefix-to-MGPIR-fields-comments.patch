@@ -1,0 +1,51 @@
+From ad972c6b6591023ddc7547bbcbc5c5e1941b29c5 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 3 Dec 2021 11:48:44 +0200
+Subject: [PATCH] mlxsw: reg: Add "mgpir_" prefix to MGPIR fields comments
+
+Do the same as for other registers and have "mgpir_" prefix for the
+MGPIR fields.
+
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/reg.h | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index a9119451d..7f7cdb3fc 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -10131,24 +10131,24 @@ enum mlxsw_reg_mgpir_device_type {
+ 	MLXSW_REG_MGPIR_DEVICE_TYPE_GEARBOX_DIE,
+ };
+ 
+-/* device_type
++/* mgpir_device_type
+  * Access: RO
+  */
+ MLXSW_ITEM32(reg, mgpir, device_type, 0x00, 24, 4);
+ 
+-/* devices_per_flash
++/* mgpir_devices_per_flash
+  * Number of devices of device_type per flash (can be shared by few devices).
+  * Access: RO
+  */
+ MLXSW_ITEM32(reg, mgpir, devices_per_flash, 0x00, 16, 8);
+ 
+-/* num_of_devices
++/* mgpir_num_of_devices
+  * Number of devices of device_type.
+  * Access: RO
+  */
+ MLXSW_ITEM32(reg, mgpir, num_of_devices, 0x00, 0, 8);
+ 
+-/* num_of_modules
++/* mgpir_num_of_modules
+  * Number of modules.
+  * Access: RO
+  */
+-- 
+2.30.2
+

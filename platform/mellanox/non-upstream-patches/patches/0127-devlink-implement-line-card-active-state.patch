@@ -1,0 +1,98 @@
+From 999c148a0a19a6a6c96dbc5b6615285d80c28de9 Mon Sep 17 00:00:00 2001
+From: Jiri Pirko <jiri@nvidia.com>
+Date: Wed, 6 Jan 2021 16:03:43 +0100
+Subject: [PATCH] devlink: implement line card active state
+
+Allow driver to mark a linecard as active. Expose this state to the
+userspace over devlink netlink interface with proper notifications.
+
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+---
+ include/net/devlink.h        |  3 +++
+ include/uapi/linux/devlink.h |  1 +
+ net/core/devlink.c           | 36 ++++++++++++++++++++++++++++++++++++
+ 3 files changed, 40 insertions(+)
+
+diff --git a/include/net/devlink.h b/include/net/devlink.h
+index 44b60085e..d9b2b559c 100644
+--- a/include/net/devlink.h
++++ b/include/net/devlink.h
+@@ -157,6 +157,7 @@ struct devlink_linecard {
+ 	const char *type;
+ 	struct devlink_linecard_type *types;
+ 	unsigned int types_count;
++	bool active;
+ };
+ 
+ /**
+@@ -1453,6 +1454,8 @@ void devlink_linecard_provision_set(struct devlink_linecard *linecard,
+ 				    const char *type);
+ void devlink_linecard_provision_clear(struct devlink_linecard *linecard);
+ void devlink_linecard_provision_fail(struct devlink_linecard *linecard);
++void devlink_linecard_activate(struct devlink_linecard *linecard);
++void devlink_linecard_deactivate(struct devlink_linecard *linecard);
+ int devlink_sb_register(struct devlink *devlink, unsigned int sb_index,
+ 			u32 size, u16 ingress_pools_count,
+ 			u16 egress_pools_count, u16 ingress_tc_count,
+diff --git a/include/uapi/linux/devlink.h b/include/uapi/linux/devlink.h
+index d88336645..5ace55666 100644
+--- a/include/uapi/linux/devlink.h
++++ b/include/uapi/linux/devlink.h
+@@ -341,6 +341,7 @@ enum devlink_linecard_state {
+ 	DEVLINK_LINECARD_STATE_PROVISIONING,
+ 	DEVLINK_LINECARD_STATE_PROVISIONING_FAILED,
+ 	DEVLINK_LINECARD_STATE_PROVISIONED,
++	DEVLINK_LINECARD_STATE_ACTIVE,
+ 
+ 	__DEVLINK_LINECARD_STATE_MAX,
+ 	DEVLINK_LINECARD_STATE_MAX = __DEVLINK_LINECARD_STATE_MAX - 1
+diff --git a/net/core/devlink.c b/net/core/devlink.c
+index 943973ffc..724633810 100644
+--- a/net/core/devlink.c
++++ b/net/core/devlink.c
+@@ -9001,6 +9001,42 @@ void devlink_linecard_provision_fail(struct devlink_linecard *linecard)
+ }
+ EXPORT_SYMBOL_GPL(devlink_linecard_provision_fail);
+ 
++/**
++ *	devlink_linecard_activate - Set linecard active
++ *
++ *	@devlink_linecard: devlink linecard
++ */
++void devlink_linecard_activate(struct devlink_linecard *linecard)
++{
++	mutex_lock(&linecard->state_lock);
++	WARN_ON(linecard->state != DEVLINK_LINECARD_STATE_PROVISIONED);
++	linecard->state = DEVLINK_LINECARD_STATE_ACTIVE;
++	devlink_linecard_notify(linecard, DEVLINK_CMD_LINECARD_NEW);
++	mutex_unlock(&linecard->state_lock);
++}
++EXPORT_SYMBOL_GPL(devlink_linecard_activate);
++
++/**
++ *	devlink_linecard_deactivate - Set linecard inactive
++ *
++ *	@devlink_linecard: devlink linecard
++ */
++void devlink_linecard_deactivate(struct devlink_linecard *linecard)
++{
++	bool should_notify = false;
++
++	mutex_lock(&linecard->state_lock);
++	if (linecard->state != DEVLINK_LINECARD_STATE_UNPROVISIONING) {
++		WARN_ON(linecard->state != DEVLINK_LINECARD_STATE_ACTIVE);
++		linecard->state = DEVLINK_LINECARD_STATE_PROVISIONED;
++		should_notify = true;
++	}
++	if (should_notify)
++		devlink_linecard_notify(linecard, DEVLINK_CMD_LINECARD_NEW);
++	mutex_unlock(&linecard->state_lock);
++}
++EXPORT_SYMBOL_GPL(devlink_linecard_deactivate);
++
+ int devlink_sb_register(struct devlink *devlink, unsigned int sb_index,
+ 			u32 size, u16 ingress_pools_count,
+ 			u16 egress_pools_count, u16 ingress_tc_count,
+-- 
+2.30.2
+

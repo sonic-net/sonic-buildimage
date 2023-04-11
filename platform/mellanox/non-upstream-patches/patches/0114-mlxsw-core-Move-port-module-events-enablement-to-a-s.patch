@@ -1,0 +1,92 @@
+From 9eb9b3172a238d5818d2925e2db6b0f686b31411 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 14 Dec 2021 10:57:28 +0200
+Subject: [PATCH] mlxsw: core: Move port module events enablement to a separate
+ function
+
+Use a separate function for enablement of port module events such
+plug/unplug and temperature threshold crossing. The motivation is to
+reuse the function for line cards.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ .../net/ethernet/mellanox/mlxsw/core_env.c    | 44 ++++++++++++++-----
+ 1 file changed, 34 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+index 2a6630547..94d44db1a 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+@@ -1089,6 +1089,32 @@ static void mlxsw_env_line_cards_free(struct mlxsw_env *env)
+ 		kfree(env->line_cards[i]);
+ }
+ 
++static int
++mlxsw_env_module_event_enable(struct mlxsw_env *mlxsw_env, u8 slot_index)
++{
++	u8 module_count;
++	int err;
++
++	module_count = mlxsw_env->line_cards[slot_index]->module_count;
++	err = mlxsw_env_module_oper_state_event_enable(mlxsw_env->core,
++						       slot_index,
++						       module_count);
++	if (err)
++		return err;
++
++	err = mlxsw_env_module_temp_event_enable(mlxsw_env->core, slot_index,
++						 module_count);
++	if (err)
++		return err;
++
++	return 0;
++}
++
++static void
++mlxsw_env_module_event_disable(struct mlxsw_env *mlxsw_env, u8 slot_index)
++{
++}
++
+ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
+ {
+ 	u8 module_count, num_of_slots, max_module_count;
+@@ -1137,20 +1163,17 @@ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
+ 	 * is to be set after line card is activated.
+ 	 */
+ 	env->line_cards[0]->module_count = num_of_slots ? 0 : module_count;
+-	err = mlxsw_env_module_oper_state_event_enable(mlxsw_core, 0,
+-						       module_count);
+-	if (err)
+-		goto err_oper_state_event_enable;
+-
+-	err = mlxsw_env_module_temp_event_enable(mlxsw_core, 0,
+-						 module_count);
++	/* Enable events only for main board. Line card events are to be
++	 * configured only after line card is activated. Before that, access to
++	 * modules on line cards is not allowed.
++	 */
++	err = mlxsw_env_module_event_enable(env, 0);
+ 	if (err)
+-		goto err_temp_event_enable;
++		goto err_mlxsw_env_module_event_enable;
+ 
+ 	return 0;
+ 
+-err_temp_event_enable:
+-err_oper_state_event_enable:
++err_mlxsw_env_module_event_enable:
+ 	mlxsw_env_module_plug_event_unregister(env);
+ err_module_plug_event_register:
+ 	mlxsw_env_temp_warn_event_unregister(env);
+@@ -1164,6 +1187,7 @@ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
+ 
+ void mlxsw_env_fini(struct mlxsw_env *env)
+ {
++	mlxsw_env_module_event_disable(env, 0);
+ 	mlxsw_env_module_plug_event_unregister(env);
+ 	/* Make sure there is no more event work scheduled. */
+ 	mlxsw_core_flush_owq();
+-- 
+2.30.2
+

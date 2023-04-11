@@ -1,0 +1,61 @@
+From b526413a86afcd1d6bd3f4e05f25631c8103f617 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 19 Dec 2021 09:25:35 +0000
+Subject: [PATCH] mlxsw: minimal: Add system event handler
+
+Add system event handler for treating line card specific signals on
+modular system. These signals indicate line card state changes, like
+line card activation or de-activation.
+When such signals are received, driver should create or destroy "hwmon"
+"thermal" and module info objects, associated with line card in a slot,
+for which signal has been received.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c | 23 +++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+index 59c5053dc..27afb28e4 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+@@ -527,6 +527,28 @@ static void mlxsw_m_line_cards_free(struct mlxsw_m *mlxsw_m)
+ 	kfree(mlxsw_m->line_cards);
+ }
+ 
++static void mlxsw_m_sys_event_handler(struct mlxsw_core *mlxsw_core)
++{
++	struct mlxsw_linecards *linecards = mlxsw_core_linecards(mlxsw_core);
++	struct mlxsw_m *mlxsw_m = mlxsw_core_driver_priv(mlxsw_core);
++	char mddq_pl[MLXSW_REG_MDDQ_LEN];
++	int i, err;
++
++	if (!linecards)
++		return;
++
++	/* Handle line cards, for which active status has been changed. */
++	for (i = 1; i <= linecards->count; i++) {
++		mlxsw_reg_mddq_slot_info_pack(mddq_pl, i, false);
++		err = mlxsw_reg_query(mlxsw_m->core, MLXSW_REG(mddq), mddq_pl);
++		if (err)
++			dev_err(mlxsw_m->bus_info->dev, "Fail to query MDDQ register for slot %d\n",
++				i);
++
++		mlxsw_linecard_status_process(mlxsw_m->core, mddq_pl);
++	}
++}
++
+ static int mlxsw_m_init(struct mlxsw_core *mlxsw_core,
+ 			const struct mlxsw_bus_info *mlxsw_bus_info,
+ 			struct netlink_ext_ack *extack)
+@@ -587,6 +609,7 @@ static struct mlxsw_driver mlxsw_m_driver = {
+ 	.priv_size		= sizeof(struct mlxsw_m),
+ 	.init			= mlxsw_m_init,
+ 	.fini			= mlxsw_m_fini,
++	.sys_event_handler	= mlxsw_m_sys_event_handler,
+ 	.profile		= &mlxsw_m_config_profile,
+ 	.res_query_enabled	= true,
+ };
+-- 
+2.30.2
+

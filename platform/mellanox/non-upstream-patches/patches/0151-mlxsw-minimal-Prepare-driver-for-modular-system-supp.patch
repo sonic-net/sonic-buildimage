@@ -1,0 +1,495 @@
+From 37eabf5ec0121c1a5092f48360b3d1208a22e655 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 30 Dec 2021 16:02:59 +0000
+Subject: [PATCH] mlxsw: minimal: Prepare driver for modular system support
+
+As a preparation for line cards support:
+- Allocate per line card array according to the queried number of slots
+  in the system. For each line card, allocate a port mapping array
+  according to the queried maximum number of ports available in system.
+  Port mapping array includes port object handle, local port number and
+  module number.
+- Extend port creation APIs with 'slot_index' argument.
+- Extend port structure with slot index and module offset for this slot
+  index.
+
+For main board, slot will always be set to zero and these APIs will work
+as before. For the ports located on line cards, slot should be set to the
+physical slot number, where line card is located in modular systems.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c | 293 +++++++++++++++---
+ 1 file changed, 242 insertions(+), 51 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+index 30925f573..59c5053dc 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+@@ -24,22 +24,40 @@ static const struct mlxsw_fw_rev mlxsw_m_fw_rev = {
+ 	.subminor = MLXSW_M_FWREV_SUBMINOR,
+ };
+ 
++struct mlxsw_m_line_card;
+ struct mlxsw_m_port;
+ 
+ struct mlxsw_m {
+-	struct mlxsw_m_port **ports;
+-	int *module_to_port;
+ 	struct mlxsw_core *core;
+ 	const struct mlxsw_bus_info *bus_info;
+ 	u8 base_mac[ETH_ALEN];
+ 	u8 max_ports;
++	u8 max_module_count; /* Maximum number of modules per-slot. */
++	u8 num_of_slots; /* Including the main board. */
++	struct mlxsw_m_line_card **line_cards;
++};
++
++struct mlxsw_m_port_mapping {
++	struct mlxsw_m_port *port;
++	int module_to_port;
++	u8 module;
++};
++
++struct mlxsw_m_line_card {
++	struct mlxsw_m *mlxsw_m;
++	u8 max_ports;
++	u8 module_offset;
++	bool active;
++	struct mlxsw_m_port_mapping port_mapping[];
+ };
+ 
+ struct mlxsw_m_port {
+ 	struct net_device *dev;
+ 	struct mlxsw_m *mlxsw_m;
+-	u8 local_port;
++	u16 local_port;
+ 	u8 module;
++	u8 slot_index;
++	u8 module_offset;
+ };
+ 
+ static int mlxsw_m_base_mac_get(struct mlxsw_m *mlxsw_m)
+@@ -111,8 +129,8 @@ static int mlxsw_m_get_module_info(struct net_device *netdev,
+ 	struct mlxsw_m_port *mlxsw_m_port = netdev_priv(netdev);
+ 	struct mlxsw_core *core = mlxsw_m_port->mlxsw_m->core;
+ 
+-	return mlxsw_env_get_module_info(core, 0, mlxsw_m_port->module,
+-					 modinfo);
++	return mlxsw_env_get_module_info(core, mlxsw_m_port->slot_index,
++					 mlxsw_m_port->module, modinfo);
+ }
+ 
+ static int
+@@ -122,7 +140,8 @@ mlxsw_m_get_module_eeprom(struct net_device *netdev, struct ethtool_eeprom *ee,
+ 	struct mlxsw_m_port *mlxsw_m_port = netdev_priv(netdev);
+ 	struct mlxsw_core *core = mlxsw_m_port->mlxsw_m->core;
+ 
+-	return mlxsw_env_get_module_eeprom(netdev, core, 0,
++	return mlxsw_env_get_module_eeprom(netdev, core,
++					   mlxsw_m_port->slot_index,
+ 					   mlxsw_m_port->module, ee, data);
+ }
+ 
+@@ -134,7 +153,8 @@ mlxsw_m_get_module_eeprom_by_page(struct net_device *netdev,
+ 	struct mlxsw_m_port *mlxsw_m_port = netdev_priv(netdev);
+ 	struct mlxsw_core *core = mlxsw_m_port->mlxsw_m->core;
+ 
+-	return mlxsw_env_get_module_eeprom_by_page(core, 0,
++	return mlxsw_env_get_module_eeprom_by_page(core,
++						   mlxsw_m_port->slot_index,
+ 						   mlxsw_m_port->module,
+ 						   page, extack);
+ }
+@@ -144,7 +164,8 @@ static int mlxsw_m_reset(struct net_device *netdev, u32 *flags)
+ 	struct mlxsw_m_port *mlxsw_m_port = netdev_priv(netdev);
+ 	struct mlxsw_core *core = mlxsw_m_port->mlxsw_m->core;
+ 
+-	return mlxsw_env_reset_module(netdev, core, 0, mlxsw_m_port->module,
++	return mlxsw_env_reset_module(netdev, core, mlxsw_m_port->slot_index,
++				      mlxsw_m_port->module,
+ 				      flags);
+ }
+ 
+@@ -156,7 +177,8 @@ mlxsw_m_get_module_power_mode(struct net_device *netdev,
+ 	struct mlxsw_m_port *mlxsw_m_port = netdev_priv(netdev);
+ 	struct mlxsw_core *core = mlxsw_m_port->mlxsw_m->core;
+ 
+-	return mlxsw_env_get_module_power_mode(core, 0, mlxsw_m_port->module,
++	return mlxsw_env_get_module_power_mode(core, mlxsw_m_port->slot_index,
++					       mlxsw_m_port->module,
+ 					       params, extack);
+ }
+ 
+@@ -168,7 +190,8 @@ mlxsw_m_set_module_power_mode(struct net_device *netdev,
+ 	struct mlxsw_m_port *mlxsw_m_port = netdev_priv(netdev);
+ 	struct mlxsw_core *core = mlxsw_m_port->mlxsw_m->core;
+ 
+-	return mlxsw_env_set_module_power_mode(core, 0, mlxsw_m_port->module,
++	return mlxsw_env_set_module_power_mode(core, mlxsw_m_port->slot_index,
++					       mlxsw_m_port->module,
+ 					       params->policy, extack);
+ }
+ 
+@@ -199,19 +222,31 @@ mlxsw_m_port_dev_addr_get(struct mlxsw_m_port *mlxsw_m_port)
+ 	 * to be such it does not overflow when adding local_port
+ 	 * value.
+ 	 */
+-	dev->dev_addr[ETH_ALEN - 1] = mlxsw_m_port->module + 1;
++	dev->dev_addr[ETH_ALEN - 1] = mlxsw_m_port->module + 1 +
++				      mlxsw_m_port->module_offset;
+ 	return 0;
+ }
+ 
++static struct
++mlxsw_m_port_mapping *mlxsw_m_port_mapping_get(struct mlxsw_m *mlxsw_m,
++					       u8 slot_index, u8 local_port)
++{
++	return &mlxsw_m->line_cards[slot_index]->port_mapping[local_port];
++}
++
+ static int
+-mlxsw_m_port_create(struct mlxsw_m *mlxsw_m, u8 local_port, u8 module)
++mlxsw_m_port_create(struct mlxsw_m *mlxsw_m, u8 slot_index, u16 local_port,
++		    u8 module)
+ {
++	struct mlxsw_m_port_mapping *port_mapping;
+ 	struct mlxsw_m_port *mlxsw_m_port;
+ 	struct net_device *dev;
++	u8 module_offset;
+ 	int err;
+ 
+-	err = mlxsw_core_port_init(mlxsw_m->core, local_port, 0,
+-				   module + 1, false, 0, false,
++	module_offset = mlxsw_m->line_cards[slot_index]->module_offset;
++	err = mlxsw_core_port_init(mlxsw_m->core, local_port, slot_index,
++				   module + 1 + module_offset, false, 0, false,
+ 				   0, mlxsw_m->base_mac,
+ 				   sizeof(mlxsw_m->base_mac));
+ 	if (err) {
+@@ -233,6 +268,13 @@ mlxsw_m_port_create(struct mlxsw_m *mlxsw_m, u8 local_port, u8 module)
+ 	mlxsw_m_port->mlxsw_m = mlxsw_m;
+ 	mlxsw_m_port->local_port = local_port;
+ 	mlxsw_m_port->module = module;
++	mlxsw_m_port->slot_index = slot_index;
++	/* Add module offset for line card. Offset for main board iz zero.
++	 * For line card in slot #n offset is calculated as (#n - 1)
++	 * multiplied by maximum modules number, which could be found on a line
++	 * card.
++	 */
++	mlxsw_m_port->module_offset = module_offset;
+ 
+ 	dev->netdev_ops = &mlxsw_m_port_netdev_ops;
+ 	dev->ethtool_ops = &mlxsw_m_port_ethtool_ops;
+@@ -245,7 +287,9 @@ mlxsw_m_port_create(struct mlxsw_m *mlxsw_m, u8 local_port, u8 module)
+ 	}
+ 
+ 	netif_carrier_off(dev);
+-	mlxsw_m->ports[local_port] = mlxsw_m_port;
++	port_mapping = mlxsw_m_port_mapping_get(mlxsw_m, slot_index,
++						local_port);
++	port_mapping->port = mlxsw_m_port;
+ 	err = register_netdev(dev);
+ 	if (err) {
+ 		dev_err(mlxsw_m->bus_info->dev, "Port %d: Failed to register netdev\n",
+@@ -259,7 +303,7 @@ mlxsw_m_port_create(struct mlxsw_m *mlxsw_m, u8 local_port, u8 module)
+ 	return 0;
+ 
+ err_register_netdev:
+-	mlxsw_m->ports[local_port] = NULL;
++	port_mapping->port = NULL;
+ err_dev_addr_get:
+ 	free_netdev(dev);
+ err_alloc_etherdev:
+@@ -267,72 +311,130 @@ mlxsw_m_port_create(struct mlxsw_m *mlxsw_m, u8 local_port, u8 module)
+ 	return err;
+ }
+ 
+-static void mlxsw_m_port_remove(struct mlxsw_m *mlxsw_m, u8 local_port)
++static void mlxsw_m_port_remove(struct mlxsw_m *mlxsw_m, u8 slot_index,
++				u16 local_port)
+ {
+-	struct mlxsw_m_port *mlxsw_m_port = mlxsw_m->ports[local_port];
++	struct mlxsw_m_port_mapping *port_mapping;
++	struct mlxsw_m_port *mlxsw_m_port;
+ 
++	port_mapping = mlxsw_m_port_mapping_get(mlxsw_m, slot_index,
++						local_port);
++	mlxsw_m_port = port_mapping->port;
+ 	mlxsw_core_port_clear(mlxsw_m->core, local_port, mlxsw_m);
+ 	unregister_netdev(mlxsw_m_port->dev); /* This calls ndo_stop */
+-	mlxsw_m->ports[local_port] = NULL;
++	port_mapping->port = NULL;
+ 	free_netdev(mlxsw_m_port->dev);
+ 	mlxsw_core_port_fini(mlxsw_m->core, local_port);
+ }
+ 
+-static int mlxsw_m_ports_create(struct mlxsw_m *mlxsw_m)
++static int mlxsw_m_port_module_map(struct mlxsw_m *mlxsw_m, u8 slot_index,
++				   u16 local_port, u8 module)
++{
++	struct mlxsw_m_port_mapping *port_mapping;
++
++	port_mapping = mlxsw_m_port_mapping_get(mlxsw_m, slot_index,
++						local_port);
++
++	if (WARN_ON_ONCE(port_mapping->module_to_port >= mlxsw_m->max_ports))
++		return -EINVAL;
++	mlxsw_env_module_port_map(mlxsw_m->core, slot_index, module);
++	port_mapping->module_to_port = local_port;
++	port_mapping->module = module;
++
++	return 0;
++}
++
++static void
++mlxsw_m_port_module_unmap(struct mlxsw_m *mlxsw_m, u8 slot_index,
++			  struct mlxsw_m_port_mapping *port_mapping)
+ {
++	port_mapping->module_to_port = -1;
++	mlxsw_env_module_port_unmap(mlxsw_m->core, slot_index,
++				    port_mapping->module);
++}
++
++static int mlxsw_m_ports_create(struct mlxsw_m *mlxsw_m, u8 slot_index)
++{
++	struct mlxsw_m_port_mapping *port_mapping;
++	struct mlxsw_m_line_card *line_card;
+ 	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
+ 	int i, err;
+ 
+-	mlxsw_reg_mgpir_pack(mgpir_pl, 0);
++	mlxsw_reg_mgpir_pack(mgpir_pl, slot_index);
+ 	err = mlxsw_reg_query(mlxsw_m->core, MLXSW_REG(mgpir), mgpir_pl);
+ 	if (err)
+ 		return err;
+ 
++	line_card = mlxsw_m->line_cards[slot_index];
+ 	mlxsw_reg_mgpir_unpack(mgpir_pl, NULL, NULL, NULL,
+-			       &mlxsw_m->max_ports, NULL);
+-	if (!mlxsw_m->max_ports)
++			       &line_card->max_ports, NULL);
++	if (!line_card->max_ports)
+ 		return 0;
+ 
+-	mlxsw_m->ports = kcalloc(mlxsw_m->max_ports, sizeof(*mlxsw_m->ports),
+-				 GFP_KERNEL);
+-	if (!mlxsw_m->ports)
+-		return -ENOMEM;
++	line_card->max_ports += 1;
++	line_card->module_offset = slot_index ? (slot_index - 1) *
++				   mlxsw_m->max_module_count : 0;
+ 
+-	mlxsw_m->module_to_port = kmalloc_array(mlxsw_m->max_ports, sizeof(int),
+-						GFP_KERNEL);
+-	if (!mlxsw_m->module_to_port) {
+-		err = -ENOMEM;
+-		goto err_module_to_port_alloc;
++	/* Fill out module to local port mapping array */
++	for (i = 1; i < mlxsw_m->line_cards[slot_index]->max_ports; i++) {
++		err = mlxsw_m_port_module_map(mlxsw_m, slot_index, i +
++					      line_card->module_offset, i - 1);
++		if (err)
++			goto err_module_to_port_map;
+ 	}
+ 
+-	/* Create port objects for each entry. */
++	/* Create port objects for each valid entry */
+ 	for (i = 0; i < mlxsw_m->max_ports; i++) {
+-		mlxsw_m->module_to_port[i] = i;
+-		err = mlxsw_m_port_create(mlxsw_m, mlxsw_m->module_to_port[i], i);
+-		if (err)
+-			goto err_module_to_port_create;
++		port_mapping = mlxsw_m_port_mapping_get(mlxsw_m, slot_index,
++							i);
++		if (port_mapping->module_to_port > 0) {
++			err = mlxsw_m_port_create(mlxsw_m, slot_index,
++						  port_mapping->module_to_port,
++						  port_mapping->module);
++			if (err)
++				goto err_module_to_port_create;
++		}
+ 	}
+ 
+ 	return 0;
+ 
+ err_module_to_port_create:
+-	for (i--; i >= 0; i--)
+-		mlxsw_m_port_remove(mlxsw_m, mlxsw_m->module_to_port[i]);
+-	kfree(mlxsw_m->module_to_port);
+-err_module_to_port_alloc:
+-	kfree(mlxsw_m->ports);
++	for (i--; i >= 0; i--) {
++		port_mapping = mlxsw_m_port_mapping_get(mlxsw_m, slot_index,
++							i);
++		if (port_mapping->module_to_port > 0)
++			mlxsw_m_port_remove(mlxsw_m, slot_index,
++					    port_mapping->module_to_port);
++	}
++	i = mlxsw_m->max_ports;
++err_module_to_port_map:
++	for (i--; i > 0; i--) {
++		port_mapping = mlxsw_m_port_mapping_get(mlxsw_m, slot_index,
++							i);
++		if (port_mapping->module_to_port > 0)
++			mlxsw_m_port_module_unmap(mlxsw_m, slot_index,
++						  port_mapping);
++	}
+ 	return err;
+ }
+ 
+-static void mlxsw_m_ports_remove(struct mlxsw_m *mlxsw_m)
++static void mlxsw_m_ports_remove(struct mlxsw_m *mlxsw_m, u8 slot_index)
+ {
++	struct mlxsw_m_port_mapping *port_mapping;
++	u8 module;
+ 	int i;
+ 
+-	for (i = 0; i < mlxsw_m->max_ports; i++)
+-		mlxsw_m_port_remove(mlxsw_m, mlxsw_m->module_to_port[i]);
+-
+-	kfree(mlxsw_m->module_to_port);
+-	kfree(mlxsw_m->ports);
++	for (i = 0; i < mlxsw_m->max_ports; i++) {
++		port_mapping = mlxsw_m_port_mapping_get(mlxsw_m, slot_index,
++							i);
++		if (port_mapping->module_to_port > 0) {
++			module = port_mapping->port->module;
++			mlxsw_m_port_remove(mlxsw_m, slot_index,
++					    port_mapping->module_to_port);
++			mlxsw_m_port_module_unmap(mlxsw_m, slot_index,
++						  port_mapping);
++		}
++	}
+ }
+ 
+ static int mlxsw_m_fw_rev_validate(struct mlxsw_m *mlxsw_m)
+@@ -353,6 +455,78 @@ static int mlxsw_m_fw_rev_validate(struct mlxsw_m *mlxsw_m)
+ 	return -EINVAL;
+ }
+ 
++static int mlxsw_m_get_peripheral_info(struct mlxsw_m *mlxsw_m)
++{
++	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
++	u8 module_count;
++	int err;
++
++	mlxsw_reg_mgpir_pack(mgpir_pl, 0);
++	err = mlxsw_reg_query(mlxsw_m->core, MLXSW_REG(mgpir), mgpir_pl);
++	if (err)
++		return err;
++
++	mlxsw_reg_mgpir_unpack(mgpir_pl, NULL, NULL, NULL, &module_count,
++			       &mlxsw_m->num_of_slots);
++	/* If the system is modular, get the maximum number of modules per-slot.
++	 * Otherwise, get the maximum number of modules on the main board.
++	 */
++	mlxsw_m->max_module_count = mlxsw_m->num_of_slots ?
++			   mlxsw_reg_mgpir_max_modules_per_slot_get(mgpir_pl) :
++			   module_count;
++	/* Add slot for main board. */
++	mlxsw_m->num_of_slots += 1;
++
++	return 0;
++}
++
++static int mlxsw_env_line_cards_alloc(struct mlxsw_m *mlxsw_m)
++{
++	unsigned int max_ports = mlxsw_core_max_ports(mlxsw_m->core);
++	struct mlxsw_m_port_mapping *port_mapping;
++	int i, j;
++
++	mlxsw_m->line_cards = kcalloc(mlxsw_m->num_of_slots,
++				      sizeof(*mlxsw_m->line_cards),
++				      GFP_KERNEL);
++	if (!mlxsw_m->line_cards)
++		goto err_kcalloc;
++
++	for (i = 0; i < mlxsw_m->num_of_slots; i++) {
++		mlxsw_m->line_cards[i] = kzalloc(struct_size(mlxsw_m->line_cards[i],
++							     port_mapping, max_ports),
++						 GFP_KERNEL);
++		if (!mlxsw_m->line_cards[i])
++			goto kzalloc_err;
++
++		/* Invalidate the entries of module to local port mapping array */
++		for (j = 0; j < mlxsw_m->max_ports; j++) {
++			port_mapping = mlxsw_m_port_mapping_get(mlxsw_m, i, j);
++			port_mapping->module_to_port = -1;
++		}
++	}
++
++	mlxsw_m->max_ports = max_ports;
++
++	return 0;
++
++kzalloc_err:
++	for (i--; i >= 0; i--)
++		kfree(mlxsw_m->line_cards[i]);
++err_kcalloc:
++	kfree(mlxsw_m->line_cards);
++	return -ENOMEM;
++}
++
++static void mlxsw_m_line_cards_free(struct mlxsw_m *mlxsw_m)
++{
++	int i = mlxsw_m->num_of_slots;
++
++	for (i--; i >= 0; i--)
++		kfree(mlxsw_m->line_cards[i]);
++	kfree(mlxsw_m->line_cards);
++}
++
+ static int mlxsw_m_init(struct mlxsw_core *mlxsw_core,
+ 			const struct mlxsw_bus_info *mlxsw_bus_info,
+ 			struct netlink_ext_ack *extack)
+@@ -367,26 +541,43 @@ static int mlxsw_m_init(struct mlxsw_core *mlxsw_core,
+ 	if (err)
+ 		return err;
+ 
++	err = mlxsw_m_get_peripheral_info(mlxsw_m);
++	if (err) {
++		dev_err(mlxsw_m->bus_info->dev, "Failed to get peripheral info\n");
++		return err;
++	}
++
+ 	err = mlxsw_m_base_mac_get(mlxsw_m);
+ 	if (err) {
+ 		dev_err(mlxsw_m->bus_info->dev, "Failed to get base mac\n");
+ 		return err;
+ 	}
+ 
+-	err = mlxsw_m_ports_create(mlxsw_m);
++	err = mlxsw_env_line_cards_alloc(mlxsw_m);
+ 	if (err) {
+-		dev_err(mlxsw_m->bus_info->dev, "Failed to create ports\n");
++		dev_err(mlxsw_m->bus_info->dev, "Failed to allocate memory\n");
+ 		return err;
+ 	}
+ 
++	err = mlxsw_m_ports_create(mlxsw_m, 0);
++	if (err) {
++		dev_err(mlxsw_m->bus_info->dev, "Failed to create ports\n");
++		goto err_mlxsw_m_ports_create;
++	}
++
+ 	return 0;
++
++err_mlxsw_m_ports_create:
++	mlxsw_m_line_cards_free(mlxsw_m);
++	return err;
+ }
+ 
+ static void mlxsw_m_fini(struct mlxsw_core *mlxsw_core)
+ {
+ 	struct mlxsw_m *mlxsw_m = mlxsw_core_driver_priv(mlxsw_core);
+ 
+-	mlxsw_m_ports_remove(mlxsw_m);
++	mlxsw_m_ports_remove(mlxsw_m, 0);
++	mlxsw_m_line_cards_free(mlxsw_m);
+ }
+ 
+ static const struct mlxsw_config_profile mlxsw_m_config_profile;
+-- 
+2.30.2
+
