@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-buster
+FROM docker-config-engine-bullseye
 
 ARG docker_container_name
 RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
@@ -11,7 +11,7 @@ RUN apt-get update &&     \
     apt-get install -f -y \
         libpcap0.8        \
         rsyslog           \
-        python-scapy      \
+        python3-scapy     \
         build-essential   \
         python3-dev
 

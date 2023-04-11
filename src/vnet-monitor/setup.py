@@ -26,7 +26,7 @@ setup(
         'vnet_monitor.py'
     ],
     install_requires = [
-        'scapy==2.4.4',
+        'scapy==2.4.5',
         'pyroute2==0.5.14',
         'netifaces==0.10.9',
         'sonic-py-common'

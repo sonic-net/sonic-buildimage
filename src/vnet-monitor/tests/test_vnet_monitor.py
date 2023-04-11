@@ -355,13 +355,13 @@ class TestReplyMonitor(object):
             # Start sniffing
             reply_monitor.start()
             assert(reply_monitor.sniffing_iface == ["Ethernet0", "Ethernet4"])
-            assert(reply_monitor.sniffer.start.called_with())
+            reply_monitor.sniffer.start.assert_called_with()
             # One more port is up
             reply_monitor._get_oper_up_iface_list.return_value = ["Ethernet0", "Ethernet4", "Ethernet8"]
             time.sleep(3)
             # Verify sniffer is restarted
             assert(reply_monitor.sniffing_iface == ["Ethernet0", "Ethernet4", "Ethernet8"])
-            assert(reply_monitor.sniffer.start.called_with())
+            reply_monitor.sniffer.start.assert_called_with()
         finally:
             reply_monitor.stop()
 
