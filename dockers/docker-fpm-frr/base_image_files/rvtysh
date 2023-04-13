@@ -1,22 +1,36 @@
 #!/bin/bash
+
 QUOTED_OUTPUT=''
 for var in "$@"; do
-    if [ "$var" == "-c" ]; then
+    if [ "$var" == "-c" ]
+    then
         QUOTED_OUTPUT="${QUOTED_OUTPUT} ${var}"
-    elif [ "$var" == "-n" ]; then
-        QUOTED_OUTPUT="${QUOTED_OUTPUT} \\${var}"
+    elif [ "$var" == "-n" ]
+    then
+        QUOTED_OUTPUT="${QUOTED_OUTPUT} #${var}#"
     else
         QUOTED_OUTPUT="${QUOTED_OUTPUT} #${var:Q}#"
     fi
 done
-# The command includes '-c' option (required) and '-n' option (optional)
-# '-c' option must start with show and the subcommand only allows a specific number of special characters.
-SHOW_MATCHED_PATTERN=`echo ${QUOTED_OUTPUT}|grep -Eo "\-[c][ ]+#show[ a-zA-Z0-9!%()*+,-./:<=>@^_~ ]+#"|sed -e 's/#//g'`
-if [ "${SHOW_MATCHED_PATTERN}" == "" ]; then
+
+SHOW_MATCHED_PATTERN=`echo ${QUOTED_OUTPUT}|grep -Eo "\-[c][ ]+#show[ a-zA-Z0-9!%()*+,./:<=>@^_~ -]+#"|grep -Eo "#show[ a-zA-Z0-9!%()*+,./:<=>@^_~ -]+#" |sed -e 's/#//g'`
+if [ "${SHOW_MATCHED_PATTERN}" == "" ]
+then
     echo "Not allowed to run command. Please run sudo vtysh instead."
     exit 1
 fi
-N_MATCHED_PATTERN=`echo ${QUOTED_OUTPUT}|grep -Eo "\-[n][ ]+#[0-9]#"|sed -e 's/#//g'`
-ARGUMENTS=("$SHOW_MATCHED_PATTERN")
-vtysh ${N_MATCHED_PATTERN} "${ARGUMENTS[@]}"
+
+# The command includes '-c' option (required) and '-n' option (optional)
+# '-c' option must start with show and the subcommand only allows a specific number of special characters.
+ARGUMENTS=()
+N_MATCHED_PATTERN=`echo ${QUOTED_OUTPUT}|grep -Eo "#-[n]#[ ]+#[0-9]#" |grep -Eo "#[0-9]#" |sed -e 's/#//g'`
+if [ "${N_MATCHED_PATTERN}" != "" ]
+then
+    ARGUMENTS+=('-n')
+    ARGUMENTS+=(${N_MATCHED_PATTERN})
+fi
+ARGUMENTS+=('-c')
+ARGUMENTS+=("${SHOW_MATCHED_PATTERN}")
+
+vtysh "${ARGUMENTS[@]}"
 
