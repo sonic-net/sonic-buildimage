@@ -306,3 +306,6 @@ SONIC_SLAVE_DOCKER_DRIVER ?= vfs
 # GZ_COMPRESS_PROGRAM - select pigz (a parallel implementation of gzip) to reduce a build time
 # and speed up a decompression of docker images on target system
 GZ_COMPRESS_PROGRAM ?= gzip
+
+# SONIC_OS_VERSION - sonic os version
+SONIC_OS_VERSION ?= 11

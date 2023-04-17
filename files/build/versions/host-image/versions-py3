@@ -48,7 +48,7 @@ pyangbind==0.8.1
 pycairo==1.23.0
 pycparser==2.21
 pycurl==7.43.0.6
-pygments==2.14.0
+pygments==2.15.0
 pygobject==3.44.1
 pyroute2==0.5.19
 python-apt==2.2.1

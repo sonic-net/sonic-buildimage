@@ -58,11 +58,11 @@
 {%- if include_acms == "y" %}{% do features.append(("acms", "enabled", false, "enabled")) %}{% endif %}
 {%- if include_vnet_monitor == "y" %}{% do features.append(("vnet-monitor", "{% if DEVICE_METADATA is defined and 'localhost' in DEVICE_METADATA and 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}enabled{% else %}always_disabled{% endif %}", false, "enabled")) %}{% endif %}
     "FEATURE": {
-{# has_timer field if set, will start the feature systemd .timer unit instead of .service unit #}
-{%- for feature, state, has_timer, autorestart in features %}
+{# delayed field if set, will start the feature systemd .timer unit instead of .service unit #}
+{%- for feature, state, delayed, autorestart in features %}
         "{{feature}}": {
             "state": "{{state}}",
-            "has_timer" : {{has_timer | lower()}},
+            "delayed" : {{delayed | lower()}},
             "has_global_scope": {% if feature + '.service' in installer_services.split(' ') %}true{% else %}false{% endif %},
 {%- if feature in ["lldp"] %}
             "has_per_asic_scope": {% raw %}"{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}"{% endraw %},

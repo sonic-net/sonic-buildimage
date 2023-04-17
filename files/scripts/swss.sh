@@ -275,6 +275,8 @@ stop() {
     if [[ x"$WARM_BOOT" != x"true" ]] && [[ x"$FAST_BOOT" != x"true" ]]; then
         /usr/bin/${SERVICE}.sh stop $DEV
         debug "Stopped ${SERVICE}$DEV service..."
+        $SONIC_DB_CLI APPL_DB DEL PORT_TABLE:PortInitDone
+        debug "Cleared PortInitDone from APPL_DB..."
     else
         debug "Killing Docker swss..."
         /usr/bin/docker kill swss &> /dev/null || debug "Docker swss is not running ($?) ..."

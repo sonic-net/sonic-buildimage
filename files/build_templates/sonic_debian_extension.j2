@@ -852,19 +852,6 @@ if [ -f {{service}} ]; then
     echo "{{service}}" | sudo tee -a $GENERATED_SERVICE_FILE
 fi
 {% endfor %}
-{% for timer in installer_timers.split(' ') -%}
-if [ -f {{timer}} ]; then
-    sudo cp {{timer}} $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
-
-    {% if "@" in timer %}
-    MULTI_INSTANCE="{{timer}}"
-    SINGLE_INSTANCE=${MULTI_INSTANCE/"@"}
-    sudo cp $SINGLE_INSTANCE $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
-    {% endif %}
-
-    echo "{{timer}}" | sudo tee -a $GENERATED_SERVICE_FILE
-fi
-{% endfor %}
 if [ -f iccpd.service ]; then
     sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable iccpd.service
 fi
@@ -899,34 +886,8 @@ sudo LANG=C cp $SCRIPTS_DIR/write_standby.py $FILESYSTEM_ROOT/usr/local/bin/writ
 # Copy mark_dhcp_packet script
 sudo LANG=C cp $SCRIPTS_DIR/mark_dhcp_packet.py $FILESYSTEM_ROOT/usr/local/bin/mark_dhcp_packet.py
 
-# Copy systemd timer configuration
-# It implements delayed start of services
-sudo cp $BUILD_TEMPLATES/snmp.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
-echo "snmp.timer" | sudo tee -a $GENERATED_SERVICE_FILE
-
-{% if include_system_telemetry == 'y' %}
-sudo cp $BUILD_TEMPLATES/telemetry.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
-echo "telemetry.timer" | sudo tee -a $GENERATED_SERVICE_FILE
-{% endif %}
-
-{% if include_system_gnmi == 'y' %}
-sudo cp $BUILD_TEMPLATES/gnmi.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
-echo "gnmi.timer" | sudo tee -a $GENERATED_SERVICE_FILE
-{% endif %}
-
-{% if include_mgmt_framework == 'y' %}
-sudo cp $BUILD_TEMPLATES/mgmt-framework.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
-echo "mgmt-framework.timer" | sudo tee -a $GENERATED_SERVICE_FILE
-{% endif %}
-
-sudo cp $BUILD_TEMPLATES/pmon.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
-echo "pmon.timer" | sudo tee -a $GENERATED_SERVICE_FILE
-
 sudo cp $BUILD_TEMPLATES/sonic.target $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sonic.target
-
-sudo cp $BUILD_TEMPLATES/sonic-delayed.target $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
-sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sonic-delayed.target
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y python3-dev
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y build-essential libssl-dev swig

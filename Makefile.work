@@ -224,6 +224,7 @@ PREPARE_DOCKER=BUILD_SLAVE=y \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
 	SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
 	DBGOPT='$(DBGOPT)' \
+	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
 	scripts/prepare_docker_buildinfo.sh \
 		$(SLAVE_BASE_IMAGE) \
 		$(SLAVE_DIR)/Dockerfile \
@@ -565,6 +566,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
                            MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
                            SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
+                           SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset
