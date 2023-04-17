@@ -63,6 +63,12 @@ platform/**/*.egg-info
 platform/**/*-none-any.whl
 platform/**/.pybuild
 platform/**/debian/*
+!platform/**/debian/control
+!platform/**/debian/rules
+!platform/**/debian/changelog
+!platform/**/debian/compat
+!platform/**/debian/*.postinst
+!platform/**/debian/*.install
 platform/**/build
 platform/**/*.ko
 platform/**/*.mod.c

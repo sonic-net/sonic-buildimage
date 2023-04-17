@@ -14,13 +14,16 @@ while /bin/true; do
   ARP_UPDATE_VARS=$(sonic-cfggen -d -t ${ARP_UPDATE_VARS_FILE})
   SWITCH_TYPE=$(echo $ARP_UPDATE_VARS | jq -r '.switch_type')
   if [[ "$SWITCH_TYPE" == "chassis-packet" ]]; then
-      STATIC_ROUTE_NEXTHOPS=$(echo $ARP_UPDATE_VARS | jq -r '.static_route_nexthops')
+      # Get array of Nexthops and ifnames. Nexthops and ifnames are mapped one to one
+      STATIC_ROUTE_NEXTHOPS=($(echo $ARP_UPDATE_VARS | jq -r '.static_route_nexthops'))
+      STATIC_ROUTE_IFNAMES=($(echo $ARP_UPDATE_VARS | jq -r '.static_route_ifnames'))
       # on supervisor/rp exit the script gracefully
-      if [[ -z "$STATIC_ROUTE_NEXTHOPS" ]]; then
+      if [[ -z "$STATIC_ROUTE_NEXTHOPS" ]] || [[ -z "$STATIC_ROUTE_IFNAMES" ]]; then
           logger "arp_update: exiting as no static route in packet based chassis"
           exit 0
       fi
-      for nexthop in $STATIC_ROUTE_NEXTHOPS; do
+      for i in ${!STATIC_ROUTE_NEXTHOPS[@]}; do
+          nexthop="${STATIC_ROUTE_NEXTHOPS[i]}"
           if [[ $nexthop == *"."* ]]; then
               neigh_state=( $(ip -4 neigh show | grep -w $nexthop | tr -s ' ' | cut -d ' ' -f 3,4) )
               ping_prefix=ping
@@ -28,11 +31,19 @@ while /bin/true; do
               neigh_state=( $(ip -6 neigh show | grep -w $nexthop | tr -s ' ' | cut -d ' ' -f 3,4) )
               ping_prefix=ping6
           fi
-       
-          if [[ "${neigh_state[1]}" == "INCOMPLETE" ]] || [[ "${neigh_state[1]}" == "FAILED" ]]; then
-              pingcmd="timeout 0.2 $ping_prefix -I ${neigh_state[0]} -n -q -i 0 -c 1 -W 1 $nexthop >/dev/null"
-              eval $pingcmd
-              logger "arp_update: sttaic route nexthop not resolved, pinging $nexthop on ${neigh_state[0]}"
+          if [[ -z "${neigh_state}" ]] || [[ "${neigh_state[1]}" == "INCOMPLETE" ]] || [[ "${neigh_state[1]}" == "FAILED" ]]; then
+              interface="${STATIC_ROUTE_IFNAMES[i]}"
+              if [[ -z "$interface" ]]; then
+                  # should never be here, handling just in case
+                  logger "ERR: arp_update: missing interface entry for static route $nexthop"
+                  interface=${neigh_state[0]}
+              fi
+              intf_up=$(ip link show $interface | grep "state UP")
+              if [[ -n "$intf_up" ]]; then
+                  pingcmd="timeout 0.2 $ping_prefix -I ${interface} -n -q -i 0 -c 1 -W 1 $nexthop >/dev/null"
+                  eval $pingcmd
+                  logger "arp_update: static route nexthop not resolved, pinging $nexthop on ${neigh_state[0]}"
+              fi
           fi
       done
 

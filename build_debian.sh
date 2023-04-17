@@ -602,6 +602,7 @@ export release="$(if [ -f $FILESYSTEM_ROOT/etc/sonic/sonic_release ]; then cat $
 export build_date="$(date -u)"
 export build_number="${BUILD_NUMBER:-0}"
 export built_by="$USER@$BUILD_HOSTNAME"
+export sonic_os_version="${SONIC_OS_VERSION}"
 j2 files/build_templates/sonic_version.yml.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/sonic_version.yml
 
 ## Copy over clean-up script

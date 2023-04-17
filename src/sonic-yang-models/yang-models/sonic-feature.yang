@@ -57,9 +57,9 @@ module sonic-feature{
                     default "enabled";
                 }
 
-                leaf has_timer {
-                    description "This configuration identicates if there is
-                                timer associated to this feature";
+                leaf delayed {
+                    description "This configuration identicates if the feature needs to be delayed until
+                                 system initialization";
                     type stypes:boolean_type;
                     default "false";
                 }
