@@ -15,7 +15,7 @@ SONIC_ALL += $(SONIC_INVM_ONE_IMAGE) \
              $(DOCKER_SYNCD_INVM_RPC)
 
 # Inject invm sai into syncd
-$(SYNCD)_DEPENDS += $(INVM_HSAI) $(INVM_LIBSAI) $(LIBSAITHRIFT_DEV_INVM)
+$(SYNCD)_DEPENDS += $(INVM_HSAI) $(INVM_LIBSAI) $(LIBSAITHRIFT_DEV_INVM) $(INVM_SHELL)
 $(SYNCD)_UNINSTALLS += $(INVM_HSAI)
 
 # Runtime dependency on invm sai is set only for syncd

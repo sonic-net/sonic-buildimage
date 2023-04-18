@@ -20,7 +20,7 @@ gcovr==4.1
 gpg==1.12.0
 idna==2.6
 imagesize==1.0.0
-importlib-metadata==6.3.0
+importlib-metadata==6.4.1
 jinja2==3.0.3
 keyring==17.1.1
 keyrings.alt==3.1.1
@@ -41,7 +41,7 @@ parameterized==0.8.1
 pbr==4.2.0
 pexpect==4.8.0
 pillow==9.4.0
-pip==23.0.1
+pip==23.1
 pluggy==0.8.0
 ptyprocess==0.7.0
 py==1.7.0
@@ -49,7 +49,7 @@ pyang==2.4.0
 pyangbind==0.8.1
 pycrypto==2.6.1
 pycurl==7.43.0.2
-pyfakefs==5.2.1
+pyfakefs==5.2.2
 pygments==2.3.1
 pygobject==3.30.4
 pympler==0.8

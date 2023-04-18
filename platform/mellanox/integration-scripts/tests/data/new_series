@@ -1,0 +1,27 @@
+
+# Patches updated from hw-mgmt 7.0020.5048
+
+0001-i2c-mlxcpld-Update-module-license.patch
+0002-i2c-mlxcpld-Decrease-polling-time-for-performance-im.patch
+0003-i2c-mlxcpld-Add-support-for-I2C-bus-frequency-settin.patch
+0004-i2c-mux-mlxcpld-Update-module-license.patch
+0005-i2c-mux-mlxcpld-Move-header-file-out-of-x86-realm.patch
+0006-i2c-mux-mlxcpld-Convert-driver-to-platform-driver.patch
+0007-i2c-mux-mlxcpld-Prepare-mux-selection-infrastructure.patch
+0008-i2c-mux-mlxcpld-Get-rid-of-adapter-numbers-enforceme.patch
+0009-i2c-mux-mlxcpld-Extend-driver-to-support-word-addres.patch
+0010-i2c-mux-mlxcpld-Extend-supported-mux-number.patch
+0011-i2c-mux-mlxcpld-Add-callback-to-notify-mux-creation-.patch
+0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch
+0100-mlxsw-core_thermal-Rename-labels-according-to-naming.patch
+0101-mlxsw-core_thermal-Remove-obsolete-API-for-query-res.patch
+0102-mlxsw-reg-Add-mgpir_-prefix-to-MGPIR-fields-comments.patch
+0103-mlxsw-core-Remove-unnecessary-asserts.patch
+0104-mlxsw-reg-Extend-MTMP-register-with-new-slot-number-.patch
+0105-mlxsw-reg-Extend-MTBR-register-with-new-slot-number-.patch
+0106-mlxsw-reg-Extend-MCIA-register-with-new-slot-number-.patch
+0107-mlxsw-reg-Extend-MCION-register-with-new-slot-number.patch
+0168-TMP-mlxsw-minimal-Ignore-error-reading-SPAD-register.patch
+0169-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch
+0172-DS-platform-mlx-platform-Add-SPI-path-for-rack-switc.patch
+0174-DS-mlxsw-core_linecards-Skip-devlink-and-provisionin.patch

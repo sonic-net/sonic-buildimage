@@ -1,0 +1,40 @@
+# Description: Add kconfig options that has to be included in the kernel
+# Note: Markers should start with "###->"
+#       Header should end with .*-start eg: any_description-start
+#       Footer must end with .*-end eg: any_description-end
+#       Markers should not be nested
+
+[common]
+CONFIG_LOG_BUF_SHIFT=20
+
+[amd64]
+# For Inventec d7032
+CONFIG_GPIO_ICH=m
+# For mitac ly1200
+CONFIG_SENSORS_MAX31790=m
+# For optoe
+CONFIG_EEPROM_OPTOE=m
+
+###-> mellanox-start
+CONFIG_SPI_PXA2XX=m
+CONFIG_THERMAL_NETLINK=y
+CONFIG_SENSORS_XDPE152=m
+CONFIG_SENSORS_DRIVETEMP=m
+CONFIG_SENSORS_IIO_HWMON=m
+CONFIG_SENSORS_LM25066=m
+CONFIG_SENSORS_UCD9000=m
+CONFIG_SENSORS_UCD9200=m
+CONFIG_THERMAL_OF=y
+###-> mellanox-end
+
+# For Cisco 8000
+CONFIG_PHYLIB=m
+CONFIG_GPIOLIB=y
+CONFIG_OF_GPIO=y
+CONFIG_OF=y
+CONFIG_OF_MDIO=m
+
+[armhf]
+CONFIG_EEPROM_SFF_8436=m
+CONFIG_EEPROM_OPTOE=m
+CONFIG_I2C_MUX_GPIO=m
