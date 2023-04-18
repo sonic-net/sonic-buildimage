@@ -9,7 +9,7 @@ charset-normalizer==3.1.0
 click==7.0
 click-log==0.4.0
 colorful==0.5.5
-cryptography==40.0.1
+cryptography==40.0.2
 dbus-python==1.2.16
 docker==5.0.3
 docker-image-py==0.1.12
@@ -37,7 +37,7 @@ netifaces==0.11.0
 pathtools==0.1.2
 pddf-platform==1.0
 pexpect==4.8.0
-pip==23.0.1
+pip==23.1
 prefixed==0.7.0
 prettyprinter==0.18.0
 protobuf==3.20.3

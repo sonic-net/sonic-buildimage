@@ -17,7 +17,7 @@ jsonpointer==2.3
 lazy-object-proxy==1.9.0
 m2crypto==0.38.0
 netifaces==0.10.9
-packaging==23.0
+packaging==23.1
 pexpect==4.8.0
 prefixed==0.7.0
 prettyprinter==0.18.0
