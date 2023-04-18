@@ -11,4 +11,3 @@ linux-headers-5.10.0-21-armmp==5.10.162-1
 linux-headers-armmp==5.10.162-1
 nasm==2.15.05-1
 nodejs==14.21.3-deb-1nodesource1
-tzdata==2021a-1+deb11u9

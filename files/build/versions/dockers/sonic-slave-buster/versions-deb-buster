@@ -1115,7 +1115,6 @@ libswscale5==7:4.1.10-0+deb10u1
 libsynctex2==2018.20181218.49446-1
 libsys-hostname-long-perl==1.5-1
 libsystemd-dev==241-7~deb10u9
-libsystemd0==241-7~deb10u9
 libtag1v5==1.11.1+dfsg.1-0.3+deb10u1
 libtag1v5-vanilla==1.11.1+dfsg.1-0.3+deb10u1
 libtask-weaken-perl==1.06-1
@@ -1157,7 +1156,6 @@ libtypes-serialiser-perl==1.0-1
 libubsan1==8.3.0-6
 libuchardet0==0.0.6-3
 libudev-dev==241-7~deb10u9
-libudev1==241-7~deb10u9
 libunbound8==1.9.0-2+deb10u3
 libunicode-utf8-perl==0.62-1
 libunwind-dev==1.2.1-10~deb10u1

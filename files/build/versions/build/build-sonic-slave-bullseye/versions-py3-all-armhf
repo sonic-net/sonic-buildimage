@@ -1,5 +1,4 @@
 bitarray==1.5.3
 click==7.0
-redis==3.5.3
 requests==2.28.2
 zipp==1.2.0

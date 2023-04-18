@@ -261,7 +261,7 @@ RUN apt-get -y build-dep linux
 {%- endif %}
 
 # For gobgp and telemetry build
-RUN export VERSION=1.14.2 \
+RUN export VERSION=1.15.15 \
 {%- if CONFIGURED_ARCH == "armhf" %}
  && wget https://storage.googleapis.com/golang/go$VERSION.linux-armv6l.tar.gz \
  && tar -C /usr/local -xzf go$VERSION.linux-armv6l.tar.gz \

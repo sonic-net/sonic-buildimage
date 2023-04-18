@@ -23,4 +23,3 @@ EXTERNAL_KERNEL_PATCH_LOC/
 
 Set `INCLUDE_EXTERNAL_PATCHES=y` using `SONIC_OVERRIDE_BUILD_VARS` to include these changes before building the kernel.
 - Eg: `NOJESSIE=1 NOSTRETCH=1 NOBUSTER=1 make SONIC_OVERRIDE_BUILD_VARS=' INCLUDE_EXTERNAL_PATCHES=y ' target/debs/bullseye/linux-headers-5.10.0-12-2-common_5.10.103-1_all.deb`
-
