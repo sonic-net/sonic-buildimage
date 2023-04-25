@@ -69,4 +69,11 @@ else
     TELEMETRY_ARGS+=" -v=2"
 fi
 
+THRESHOLD_CONNECTIONS=$(echo $GNMI | jq -r '.threshold')
+if [[ $THRESHOLD_CONNECTIONS =~ ^[0-9]+$ ]]; then
+    TELEMETRY_ARGS+=" --threshold $THRESHOLD_CONNECTIONS"
+else
+    TELEMETRY_ARGS+=" --threshold 100"
+fi
+
 exec /usr/sbin/telemetry ${TELEMETRY_ARGS}

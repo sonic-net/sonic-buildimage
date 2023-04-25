@@ -95,7 +95,7 @@ docbook-utils==0.6.14-3.4
 docbook-xml==4.5-9
 docker-ce==5:20.10.14~3-0~debian-bullseye
 docker-ce-cli==5:20.10.14~3-0~debian-bullseye
-docker-ce-rootless-extras==5:23.0.3-1~debian.11~bullseye
+docker-ce-rootless-extras==5:23.0.4-1~debian.11~bullseye
 docker-scan-plugin==0.23.0~debian-bullseye
 docutils-common==0.16+dfsg-4
 dosfstools==4.2-1
@@ -1325,9 +1325,9 @@ libxml-sax-perl==1.02+dfsg-1
 libxml-simple-perl==2.25-1
 libxml-twig-perl==1:3.52-1
 libxml-xpathengine-perl==0.14-1
-libxml2==2.9.10+dfsg-6.7+deb11u3
-libxml2-dev==2.9.10+dfsg-6.7+deb11u3
-libxml2-utils==2.9.10+dfsg-6.7+deb11u3
+libxml2==2.9.10+dfsg-6.7+deb11u4
+libxml2-dev==2.9.10+dfsg-6.7+deb11u4
+libxml2-utils==2.9.10+dfsg-6.7+deb11u4
 libxmlgraphics-commons-java==2.4-2~deb11u1
 libxmlrpc-lite-perl==0.717-4
 libxmu6==2:1.1.2-2+b3

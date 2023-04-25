@@ -43,7 +43,8 @@ Table of Contents
          * [Management port](#management-port)  
          * [Management VRF](#management-vrf)  
          * [MAP_PFC_PRIORITY_TO_QUEUE](#map_pfc_priority_to_queue)  
-         * [MUX_CABLE](#muxcable)  
+         * [MUX_CABLE](#mux_cable)  
+         * [NEIGH](#neigh)
          * [NTP Global Configuration](#ntp-global-configuration)  
          * [NTP and SYSLOG servers](#ntp-and-syslog-servers)  
          * [Peer Switch](#peer-switch)  
@@ -1288,6 +1289,32 @@ The **MUX_CABLE** table is used for dualtor interface configuration. The `cable_
             "server_ipv6": "fc02:1000::30/128",
             "soc_ipv4": "192.168.0.3/32",
             "state": "auto"
+        }
+    }
+}
+```
+
+### NEIGH
+
+The **NEIGH** table is used to keep track of resolved and static neighbors.
+
+Resolve case:
+```
+{
+    "NEIGH": {
+        "Vlan100|100.1.1.3": { 
+            "family": "IPv4" 
+        }
+    }
+}
+```
+Static Nbr:
+```
+{
+    "NEIGH": {
+        "Vlan100|100.1.1.5": { 
+            "neigh": "00:02:02:03:04:05",
+            "family": "IPv4" 
         }
     }
 }

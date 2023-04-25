@@ -18,7 +18,7 @@ cmake-data==3.13.4-1
 cpp==4:8.3.0-1
 cpp-8==8.3.0-6
 cron==3.0pl1-134+deb10u1
-curl==7.64.0-4+deb10u5
+curl==7.64.0-4+deb10u6
 dbus==1.12.24-0+deb10u1
 dbus-user-session==1.12.24-0+deb10u1
 dconf-gsettings-backend==0.30.1-2
@@ -113,8 +113,8 @@ libcryptsetup12==2:2.1.0-5+deb10u2
 libcups2==2.2.10-6+deb10u6
 libcupsfilters1==1.21.6-5
 libcupsimage2==2.2.10-6+deb10u6
-libcurl3-gnutls==7.64.0-4+deb10u5
-libcurl4==7.64.0-4+deb10u5
+libcurl3-gnutls==7.64.0-4+deb10u6
+libcurl4==7.64.0-4+deb10u6
 libdaemon0==0.14-7
 libdata-dump-perl==1.23-1
 libdatrie1==0.2.12-2

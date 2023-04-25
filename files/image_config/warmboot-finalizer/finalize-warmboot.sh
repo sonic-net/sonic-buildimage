@@ -112,6 +112,7 @@ function finalize_fast_reboot()
 {
     debug "Finalizing fast-reboot..."
     sonic-db-cli STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false" &>/dev/null
+    sonic-db-cli CONFIG_DB DEL "WARM_RESTART|teamd" &>/dev/null
 }
 
 function stop_control_plane_assistant()
@@ -170,10 +171,6 @@ if [[ (x"${WARM_BOOT}" == x"true") && (x"${FAST_REBOOT}" != x"true") ]]; then
    stop_control_plane_assistant
 fi
 
-# Save DB after stopped control plane assistant to avoid extra entries
-debug "Save in-memory database after warm/fast reboot ..."
-config save -y
-
 if [[ -n "${list}" ]]; then
     debug "Some components didn't finish reconcile: ${list} ..."
 fi
@@ -185,3 +182,7 @@ fi
 if [ x"${WARM_BOOT}" == x"true" ]; then
     finalize_warm_boot
 fi
+
+# Save DB after stopped control plane assistant to avoid extra entries
+debug "Save in-memory database after warm/fast reboot ..."
+config save -y

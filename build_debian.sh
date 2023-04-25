@@ -665,8 +665,8 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" && $SONIC_
         shim-unsigned \
         grub-efi
     
-    if [ ! -f $SECURE_UPGRADE_DEV_SIGNING_CERT ]; then
-        echo "Error: SONiC SECURE_UPGRADE_DEV_SIGNING_CERT=$SECURE_UPGRADE_DEV_SIGNING_CERT key missing"
+    if [ ! -f $SECURE_UPGRADE_SIGNING_CERT ]; then
+        echo "Error: SONiC SECURE_UPGRADE_SIGNING_CERT=$SECURE_UPGRADE_SIGNING_CERT key missing"
         exit 1
     fi
 
@@ -681,7 +681,7 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" && $SONIC_
         sudo ./scripts/signing_secure_boot_dev.sh -a $CONFIGURED_ARCH \
                                                   -r $FILESYSTEM_ROOT \
                                                   -l $LINUX_KERNEL_VERSION \
-                                                  -c $SECURE_UPGRADE_DEV_SIGNING_CERT \
+                                                  -c $SECURE_UPGRADE_SIGNING_CERT \
                                                   -p $SECURE_UPGRADE_DEV_SIGNING_KEY
     elif [[ $SECURE_UPGRADE_MODE == "prod" ]]; then
         #  Here Vendor signing should be implemented
@@ -696,12 +696,12 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" && $SONIC_
         
         # verifying all EFI files and kernel modules in $OUTPUT_SEC_BOOT_DIR
         sudo ./scripts/secure_boot_signature_verification.sh -e $OUTPUT_SEC_BOOT_DIR \
-                                                             -c $SECURE_UPGRADE_DEV_SIGNING_CERT \
+                                                             -c $SECURE_UPGRADE_SIGNING_CERT \
                                                              -k $FILESYSTEM_ROOT
 
         # verifying vmlinuz file.
         sudo ./scripts/secure_boot_signature_verification.sh -e $FILESYSTEM_ROOT/boot/vmlinuz-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH} \
-                                                             -c $SECURE_UPGRADE_DEV_SIGNING_CERT \
+                                                             -c $SECURE_UPGRADE_SIGNING_CERT \
                                                              -k $FILESYSTEM_ROOT
     fi
     echo "Secure Boot support build stage: END."
