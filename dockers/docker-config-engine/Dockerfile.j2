@@ -8,6 +8,9 @@ RUN apt-get update
 # Dependencies for sonic-cfggen
 RUN apt-get install -y build-essential python-dev
 
+# Install python-redis
+RUN pip install redis>=3.5.3
+
 {% if docker_config_engine_debs.strip() %}
 COPY \
 {% for deb in docker_config_engine_debs.split(' ') -%}

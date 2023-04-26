@@ -9,7 +9,7 @@ dbus-python==1.3.2
 docker==6.0.1
 docker-image-py==0.1.12
 enlighten==1.11.2
-filelock==3.11.0
+filelock==3.12.0
 idna==3.4
 importlib-metadata==6.1.0
 jsonpatch==1.32
@@ -23,7 +23,7 @@ prefixed==0.7.0
 prettyprinter==0.18.0
 ptyprocess==0.7.0
 pycairo==1.23.0
-pygments==2.15.0
+pygments==2.15.1
 pygobject==3.44.1
 pyroute2==0.5.14
 redis==4.5.2

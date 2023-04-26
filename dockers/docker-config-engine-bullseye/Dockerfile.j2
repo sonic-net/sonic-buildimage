@@ -23,6 +23,9 @@ RUN apt-get install -y        \
 RUN pip3 install pyangbind==0.8.1
 RUN pip3 uninstall -y enum34
 
+# Install python-redis
+RUN pip3 install redis==4.5.4
+
 {% if docker_config_engine_bullseye_debs.strip() %}
 # Copy locally-built Debian package dependencies
 {{ copy_files("debs/", docker_config_engine_bullseye_debs.split(' '), "/debs/") }}

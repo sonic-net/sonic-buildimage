@@ -1,4 +1,4 @@
-From 79b3c4f7e8589afae4b048d662a56b055436e9ab Mon Sep 17 00:00:00 2001
+From c5687a2a9a9fd5ca4d5184002070b6961037395e Mon Sep 17 00:00:00 2001
 From: liuh-80 <58683130+liuh-80@users.noreply.github.com>
 Date: Fri, 8 Oct 2021 16:36:34 +0800
 Subject: [PATCH] Add plugin support to bash.
@@ -8,11 +8,11 @@ Subject: [PATCH] Add plugin support to bash.
  bash-5.1/config.h.in   |   3 +
  bash-5.1/configure     |  18 +-
  bash-5.1/configure.ac  |  10 +
- bash-5.1/execute_cmd.c |  16 ++
+ bash-5.1/execute_cmd.c |  35 +++-
  bash-5.1/plugin.c      | 428 +++++++++++++++++++++++++++++++++++++++++
  bash-5.1/plugin.h      |  79 ++++++++
  bash-5.1/shell.c       |  12 ++
- 8 files changed, 571 insertions(+), 9 deletions(-)
+ 8 files changed, 583 insertions(+), 16 deletions(-)
  create mode 100644 bash-5.1/plugin.c
  create mode 100644 bash-5.1/plugin.h
 
@@ -211,7 +211,7 @@ index 2fe3e7d..0064683 100644
  AC_DEFINE(ALIAS)
  fi
 diff --git a/bash-5.1/execute_cmd.c b/bash-5.1/execute_cmd.c
-index d2a0dd7..fb05489 100644
+index d2a0dd7..e74d0f3 100644
 --- a/bash-5.1/execute_cmd.c
 +++ b/bash-5.1/execute_cmd.c
 @@ -82,6 +82,10 @@ extern int errno;
@@ -225,13 +225,88 @@ index d2a0dd7..fb05489 100644
  #include "builtins/common.h"
  #include "builtins/builtext.h"	/* list of builtins */
  
-@@ -5592,6 +5596,18 @@ execute_disk_command (words, redirects, command_line, pipe_in, pipe_out,
+@@ -171,13 +175,13 @@ static int execute_function PARAMS((SHELL_VAR *, WORD_LIST *, int, struct fd_bit
+ static int execute_builtin_or_function PARAMS((WORD_LIST *, sh_builtin_func_t *,
+ 					    SHELL_VAR *,
+ 					    REDIRECT *, struct fd_bitmap *, int));
+-static void execute_subshell_builtin_or_function PARAMS((WORD_LIST *, REDIRECT *,
++static void execute_subshell_builtin_or_function PARAMS((WORD_LIST *, WORD_LIST *, REDIRECT *,
+ 						      sh_builtin_func_t *,
+ 						      SHELL_VAR *,
+ 						      int, int, int,
+ 						      struct fd_bitmap *,
+ 						      int));
+-static int execute_disk_command PARAMS((WORD_LIST *, REDIRECT *, char *,
++static int execute_disk_command PARAMS((WORD_LIST *, WORD_LIST *, REDIRECT *, char *,
+ 				      int, int, int, struct fd_bitmap *, int));
+ 
+ static char *getinterp PARAMS((char *, int, int *));
+@@ -4587,7 +4591,7 @@ run_builtin:
+ 	  if (async == 0)
+ 	    subshell_level++;
+ 	  execute_subshell_builtin_or_function
+-	    (words, simple_command->redirects, builtin, func,
++	    (words, simple_command->words, simple_command->redirects, builtin, func,
+ 	     pipe_in, pipe_out, async, fds_to_close,
+ 	     cmdflags);
+ 	  subshell_level--;
+@@ -4665,7 +4669,7 @@ execute_from_filesystem:
+   if (already_forked == 0 && (cmdflags & CMD_NO_FORK) && fifos_pending() > 0)
+     cmdflags &= ~CMD_NO_FORK;
+ #endif
+-  result = execute_disk_command (words, simple_command->redirects, command_line,
++  result = execute_disk_command (words, simple_command->words, simple_command->redirects, command_line,
+ 			pipe_in, pipe_out, async, fds_to_close,
+ 			cmdflags);
+ 
+@@ -5169,10 +5173,11 @@ execute_shell_function (var, words)
+    to the command, REDIRECTS specifies redirections to perform before the
+    command is executed. */
+ static void
+-execute_subshell_builtin_or_function (words, redirects, builtin, var,
++execute_subshell_builtin_or_function (words, original_words, redirects, builtin, var,
+ 				      pipe_in, pipe_out, async, fds_to_close,
+ 				      flags)
+      WORD_LIST *words;
++     WORD_LIST *original_words;
+      REDIRECT *redirects;
+      sh_builtin_func_t *builtin;
+      SHELL_VAR *var;
+@@ -5258,7 +5263,7 @@ execute_subshell_builtin_or_function (words, redirects, builtin, var,
+ 	      char *command_line;
+ 
+ 	      command_line = savestring (the_printed_command_except_trap ? the_printed_command_except_trap : "");
+-	      r = execute_disk_command (words, (REDIRECT *)0, command_line,
++	      r = execute_disk_command (words, original_words, (REDIRECT *)0, command_line,
+ 		  -1, -1, async, (struct fd_bitmap *)0, flags|CMD_NO_FORK);
+ 	    }
+ 	  subshell_exit (r);
+@@ -5439,9 +5444,10 @@ setup_async_signals ()
+ #endif
+ 
+ static int
+-execute_disk_command (words, redirects, command_line, pipe_in, pipe_out,
++execute_disk_command (words, original_words, redirects, command_line, pipe_in, pipe_out,
+ 		      async, fds_to_close, cmdflags)
+      WORD_LIST *words;
++     WORD_LIST *original_words;
+      REDIRECT *redirects;
+      char *command_line;
+      int pipe_in, pipe_out, async;
+@@ -5588,10 +5594,25 @@ execute_disk_command (words, redirects, command_line, pipe_in, pipe_out,
+ 	  exit (execute_shell_function (hookf, wl));
+ 	}
+ 
++#if defined (BASH_SHELL_EXECVE_PLUGIN)
++      /*get original user input args for plugin*/
++      char **original_args = strvec_from_word_list (original_words, 0, 0, (int *)NULL);
++      result = invoke_plugin_on_shell_execve (current_user.user_name, command, original_args);
++      xfree(original_args);
++
+       /* Execve expects the command name to be in args[0].  So we
  	 leave it there, in the same format that the user used to
  	 type it in. */
        args = strvec_from_word_list (words, 0, 0, (int *)NULL);
-+
-+#if defined (BASH_SHELL_EXECVE_PLUGIN)
-+      result = invoke_plugin_on_shell_execve (current_user.user_name, command, args);
 +
 +#if defined (DEBUG)
 +      itrace("invoke_plugin_on_shell_execve: failed invoke plugin with user:%s, command:%s, result: %d", current_user.user_name, command, result);
@@ -801,5 +876,5 @@ index ce8087f..6928208 100644
  
  static int
 -- 
-2.17.1.windows.2
+2.40.0.windows.1
 

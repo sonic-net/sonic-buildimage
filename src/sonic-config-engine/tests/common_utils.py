@@ -83,6 +83,8 @@ class YangWrapper(object):
             except sonic_yang.SonicYangException as e:
                 print("yang data generated from %s is not valid: %s"%(args.minigraph, str(e)))
                 return False
+            if len(self.yang_parser.tablesWithOutYang):
+                return False
         return True
 
 def cmp(file1, file2):

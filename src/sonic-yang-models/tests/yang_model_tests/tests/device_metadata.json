@@ -125,6 +125,15 @@
     },
     "DEVICE_METADATA_ADVERTISE_LO_PREFIX_AS_128": {
         "desc": "Verifying advertising lo prefix as /128."
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_ENABLED": {
+        "desc": "Enable bgp-suppress-fib-pending"
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_DISABLED": {
+        "desc": "Disable bgp-suppress-fib-pending"
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_ENABLED_SYNCHRONOUS_MODE_DISABLED": {
+        "desc": "Enable bgp-suppress-fib-pending when synchronous mode is disabled",
+        "eStr": ["ASIC synchronous mode must be enabled in order to enable suppress FIB pending feature"]
     }
-
 }

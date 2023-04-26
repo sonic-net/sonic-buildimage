@@ -1,0 +1,15 @@
+{
+    "VALID_NEIGH": {
+        "desc": "Load valid neighbors"
+    },
+
+    "NEIGH_MISSING_IP": {
+        "desc": "Load NEIGH missing IP address",
+        "eStr": ["Invalid JSON data"]
+    },
+
+    "NEIGH_INVALID_VLAN": {
+        "desc": "Load NEIGH missing VLAN",
+        "eStr": ["does not satisfy the constraint"]
+    }
+}
