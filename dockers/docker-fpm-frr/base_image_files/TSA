@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ -f /etc/sonic/chassisdb.conf ]; then
+  rexec all -c "TSA chassis"
+  echo "Please execute \"rexec all -c 'sudo config save -y'\" to preserve System mode in Maintenance after reboot\
+  or config reload on all linecards"
+  exit 0
+fi
 # toggle the mux to standby if dualtor and any mux active
 if
 [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr [:upper:] [:lower:])" == *"dualtor"* ]] &&
@@ -10,4 +16,11 @@ then
 fi
 
 /usr/bin/TS TSA
-echo "Please execute 'config save' to preserve System mode in Maintenance after reboot or config reload"
+if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)" == *"SpineRouter"* ]] ; then
+  if [[ "$1" != "chassis" ]] ; then
+    echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot or config reload"
+    echo -e "\nWARNING: Please execute 'TSA' on all other linecards of the chassis to fully isolate this device"    
+  fi
+else
+  echo "Please execute 'sudo config save' to preserve System mode in Maintenance after reboot or config reload"
+fi

@@ -1146,5 +1146,69 @@
                 ]
             }
         }
+    },
+    "ACL_TABLE_L3V4V6_TABLE_TYPE": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "DATA-ACL-V4V6",
+                        "IP_TYPE": "IPV4",
+                        "DST_IP": "10.186.72.64/26",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 999960,
+                        "RULE_NAME": "Rule_40",
+                        "SRC_IP": "10.176.0.0/15"
+                    },
+                    {
+                        "ACL_TABLE_NAME": "DATA-ACL-V4V6",
+                        "DST_IPV6": "2a04:f547:43:320::/64",
+                        "IP_TYPE": "IPV6",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 999980,
+                        "RULE_NAME": "Rule_20",
+                        "SRC_IPV6": "2a04:f547:41::/48"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "DATA-ACL-V4V6",
+                        "policy_desc": "Filter IPv4 and IPv6",
+                        "ports": [
+                            "Ethernet0",
+                            "Ethernet1"
+                        ],
+                        "stage": "EGRESS",
+                        "type": "L3V4V6"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "0,1,2,3",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth1",
+                        "description": "Ethernet1",
+                        "mtu": 9000,
+                        "lanes": "10,11,12,13",
+                        "name": "Ethernet1",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
     }
 }

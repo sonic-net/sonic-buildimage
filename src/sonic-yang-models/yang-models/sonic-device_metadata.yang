@@ -182,7 +182,7 @@ module sonic-device_metadata {
 
                 leaf switch_type {
                     type string {
-                        pattern "chassis-packet|fabric|npu|voq";
+                        pattern "chassis-packet|fabric|npu|voq|dpu";
                     }
                     description "Type of switch. Default is NPU, on a VOQ switch voq is used for a regular
                                  switching device while fabric is used for a fabric device.

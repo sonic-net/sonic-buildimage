@@ -1,0 +1,287 @@
+{
+    "CRM_DASH_VNET_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_VNET_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_VNET_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_VNET_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_VNET_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_VNET_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_VNET_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_VNET_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_VNET_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_VNET_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_ENI_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_ENI_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_ENI_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_ENI_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_ENI_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_ENI_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_ENI_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_ENI_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_ENI_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_ENI_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_IPV4_PA_VALIDATION_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_IPV4_PA_VALIDATION_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_IPV4_PA_VALIDATION_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_IPV4_PA_VALIDATION_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_IPV4_PA_VALIDATION_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_IPV4_PA_VALIDATION_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_IPV4_PA_VALIDATION_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_IPV4_PA_VALIDATION_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_IPV4_PA_VALIDATION_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_IPV4_PA_VALIDATION_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_IPV6_PA_VALIDATION_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_IPV6_PA_VALIDATION_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_IPV6_PA_VALIDATION_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_IPV6_PA_VALIDATION_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_IPV6_PA_VALIDATION_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_IPV6_PA_VALIDATION_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_IPV6_PA_VALIDATION_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_IPV6_PA_VALIDATION_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_IPV6_PA_VALIDATION_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_IPV6_PA_VALIDATION_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_IPV4_ACL_GROUP_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_IPV4_ACL_GROUP_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_IPV4_ACL_GROUP_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_IPV4_ACL_GROUP_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_IPV4_ACL_GROUP_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_IPV4_ACL_GROUP_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_IPV4_ACL_GROUP_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_IPV4_ACL_GROUP_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_IPV4_ACL_GROUP_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_IPV4_ACL_GROUP_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_IPV6_ACL_GROUP_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_IPV6_ACL_GROUP_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_IPV6_ACL_GROUP_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_IPV6_ACL_GROUP_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_IPV6_ACL_GROUP_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_IPV6_ACL_GROUP_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_IPV6_ACL_GROUP_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_IPV6_ACL_GROUP_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_IPV6_ACL_GROUP_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_IPV6_ACL_GROUP_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_IPV4_ACL_RULE_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_IPV4_ACL_RULE_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_IPV4_ACL_RULE_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_IPV4_ACL_RULE_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_IPV4_ACL_RULE_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_IPV4_ACL_RULE_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_IPV4_ACL_RULE_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_IPV4_ACL_RULE_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_IPV4_ACL_RULE_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_IPV4_ACL_RULE_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    },
+    "CRM_DASH_IPV6_ACL_RULE_WITH_CORRECT_FREE_VALUE": {
+        "desc": "CRM_DASH_IPV6_ACL_RULE_WITH_CORRECT_FREE_VALUE no failure."
+    },
+    "CRM_DASH_IPV6_ACL_RULE_WITH_CORRECT_USED_VALUE": {
+        "desc": "CRM_DASH_IPV6_ACL_RULE_WITH_CORRECT_USED_VALUE no failure."
+    },
+    "CRM_DASH_IPV6_ACL_RULE_WITH_WRONG_THRESHOLD_TYPE": {
+        "desc": "CRM_DASH_IPV6_ACL_RULE_WITH_WRONG_THRESHOLD_TYPE pattern failure.",
+        "eStrKey": "Pattern",
+        "eStr": ["wrong" ]
+    },
+    "CRM_DASH_IPV6_ACL_RULE_WITH_WRONG_PERCENTAGE": {
+        "desc": "CRM_DASH_IPV6_ACL_RULE_WITH_WRONG_PERCENTAGE must condition failure.",
+        "eStrKey": "Must"
+    },
+    "CRM_DASH_IPV6_ACL_RULE_WITH_HIGH_THRESHOLD_ERR": {
+        "desc": "CRM_DASH_IPV6_ACL_RULE_WITH_HIGH_THRESHOLD_ERR must condition failure  about high threshold being lower than low threshold.",
+        "eStr": ["high_threshold should be more than low_threshold"]
+    }
+}

@@ -1,0 +1,303 @@
+Subject: Added sx_netdev and sx_bridge support to iproute2
+
+---
+ Makefile              |   3 +-
+ include/version.h     |   2 +-
+ ip/Makefile           |   2 +
+ ip/iplink.c           |   1 +
+ ip/iplink_sx_bridge.c |  99 +++++++++++++++++++++++++++++++++
+ ip/iplink_sxnet.c     | 123 +++++++++++++++++++++++++++++++++++++++++
+ 6 files changed, 228 insertions(+), 2 deletions(-)
+ create mode 100644 ip/iplink_sx_bridge.c
+ create mode 100644 ip/iplink_sxnet.c
+
+diff --git a/Makefile b/Makefile
+index 5b040415..e3c38a90 100644
+--- a/Makefile
++++ b/Makefile
+@@ -51,6 +51,7 @@ DEFINES += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
+ CCOPTS = -O2 -pipe
+ WFLAGS := -Wall -Wstrict-prototypes  -Wmissing-prototypes
+ WFLAGS += -Wmissing-declarations -Wold-style-definition -Wformat=2
++WFLAGS += -Werror
+ 
+ CFLAGS := $(WFLAGS) $(CCOPTS) -I../include -I../include/uapi $(DEFINES) $(CFLAGS)
+ YACCFLAGS = -d -t -v
+@@ -89,7 +90,7 @@ install: all
+ 	install -m 0755 -d $(DESTDIR)$(ARPDDIR)
+ 	install -m 0755 -d $(DESTDIR)$(HDRDIR)
+ 	@for i in $(SUBDIRS);  do $(MAKE) -C $$i install; done
+-	install -m 0644 $(shell find etc/iproute2 -maxdepth 1 -type f) $(DESTDIR)$(CONFDIR)
++	install -m 0644 $(shell find -L etc/iproute2 -maxdepth 1 -type f) $(DESTDIR)$(CONFDIR)
+ 	install -m 0755 -d $(DESTDIR)$(BASH_COMPDIR)
+ 	install -m 0644 bash-completion/tc $(DESTDIR)$(BASH_COMPDIR)
+ 	install -m 0644 bash-completion/devlink $(DESTDIR)$(BASH_COMPDIR)
+diff --git a/include/version.h b/include/version.h
+index cf7afbbf..964c230e 100644
+--- a/include/version.h
++++ b/include/version.h
+@@ -1 +1 @@
+-static const char version[] = "5.10.0";
++static const char version[] = "5.10.0-sx-netdev";
+diff --git a/ip/Makefile b/ip/Makefile
+index 4cad619c..46173c3a 100644
+--- a/ip/Makefile
++++ b/ip/Makefile
+@@ -13,6 +13,8 @@ IPOBJ=ip.o ipaddress.o ipaddrlabel.o iproute.o iprule.o ipnetns.o \
+     ipvrf.o iplink_xstats.o ipseg6.o iplink_netdevsim.o iplink_rmnet.o \
+     ipnexthop.o ipmptcp.o iplink_bareudp.o
+ 
++IPOBJ+=iplink_sxnet.o iplink_sx_bridge.o
++
+ RTMONOBJ=rtmon.o
+ 
+ include ../config.mk
+diff --git a/ip/iplink.c b/ip/iplink.c
+index d6b766de..5d8199ec 100644
+--- a/ip/iplink.c
++++ b/ip/iplink.c
+@@ -126,6 +126,7 @@ void iplink_usage(void)
+ 			"	   gre | gretap | erspan | ip6gre | ip6gretap | ip6erspan |\n"
+ 			"	   vti | nlmon | team_slave | bond_slave | bridge_slave |\n"
+ 			"	   ipvlan | ipvtap | geneve | bareudp | vrf | macsec | netdevsim | rmnet |\n"
++      "    sx_netdev | sx_bridge | \n"
+ 			"	   xfrm }\n");
+ 	}
+ 	exit(-1);
+diff --git a/ip/iplink_sx_bridge.c b/ip/iplink_sx_bridge.c
+new file mode 100644
+index 00000000..1750f78a
+--- /dev/null
++++ b/ip/iplink_sx_bridge.c
+@@ -0,0 +1,99 @@
++/*
++ * iplink_sx_bridge.c	Mellanox switch netdev device support
++ *
++ *              This program is free software; you can redistribute it and/or
++ *              modify it under the terms of the GNU General Public License
++ *              as published by the Free Software Foundation; either version
++ *              2 of the License, or (at your option) any later version.
++ *
++ * Authors:     Tamar Warshai <tamard@mellanox.com>
++ */
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/socket.h>
++#include <linux/if_link.h>
++
++#include "rt_names.h"
++#include "utils.h"
++#include "ip_common.h"
++
++/* ip link add [dev_name] type sx_bridge id [bridge_id]*/
++enum {
++	IFLA_SX_BRIDGE_UNSPEC,
++	IFLA_SX_BRIDGE_ID,
++	__IFLA_SX_BRIDGE_MAX
++};
++#define IFLA_SX_BRIDGE_MAX  (__IFLA_SX_BRIDGE_MAX - 1)
++
++
++static void print_explain(FILE *f)
++{
++	fprintf(f, "Usage: ... sx_bridge id BRIDGE\n");
++	fprintf(f, "\n");
++	fprintf(f, "Where: BRIDGE := Bridge ID\n");
++}
++
++static void explain(void)
++{
++	print_explain(stderr);
++}
++
++static int sx_bridge_parse_opt(struct link_util *lu, int argc, char **argv,
++			   struct nlmsghdr *n)
++{
++    int bridge_set = 0;
++    __u16 bridge = 0;
++
++	while (argc > 0) {
++		if (!matches(*argv, "id")) {
++			NEXT_ARG();
++			if (get_u16(&bridge, *argv, 0))
++				invarg("invalid id", *argv);
++			bridge_set = 1;
++		} else {
++			fprintf(stderr, "sx_bridge: unknown command \"%s\"?\n", *argv);
++			explain();
++			return -1;
++		}
++		argc--, argv++;
++	}
++
++	if (!bridge_set)  {
++		fprintf(stderr, "sx_bridge: missing virtual network identifier\n");
++		return -1;
++	}
++
++	addattr16(n, 1024, IFLA_SX_BRIDGE_ID, bridge);
++
++	return 0;
++}
++
++static void sx_bridge_print_opt(struct link_util *lu, FILE *f, struct rtattr *tb[])
++{
++	__u16 i;
++
++	if (!tb)
++		return;
++
++	if (tb[IFLA_SX_BRIDGE_ID] && (RTA_PAYLOAD(tb[IFLA_SX_BRIDGE_ID]) < sizeof(__u16))) {
++		i = rta_getattr_u16(tb[IFLA_SX_BRIDGE_ID]);
++		fprintf(f, "id %u ", i);
++	}
++
++}
++
++static void sx_bridge_print_help(struct link_util *lu, int argc, char **argv,
++	FILE *f)
++{
++	print_explain(f);
++}
++
++struct link_util sx_bridge_link_util = {
++	.id		    = "sx_bridge",
++	.maxattr	= IFLA_SX_BRIDGE_MAX,
++	.parse_opt	= sx_bridge_parse_opt,
++	.print_opt	= sx_bridge_print_opt,
++	.print_help	= sx_bridge_print_help,
++};
+diff --git a/ip/iplink_sxnet.c b/ip/iplink_sxnet.c
+new file mode 100644
+index 00000000..59ed0a17
+--- /dev/null
++++ b/ip/iplink_sxnet.c
+@@ -0,0 +1,123 @@
++/*
++ * iplink_sxnet.c	Mellanox switch netdev device support
++ *
++ *              This program is free software; you can redistribute it and/or
++ *              modify it under the terms of the GNU General Public License
++ *              as published by the Free Software Foundation; either version
++ *              2 of the License, or (at your option) any later version.
++ *
++ * Authors:     Elad Raz <eladr@mellanox.com>
++ */
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/socket.h>
++#include <linux/if_link.h>
++
++#include "rt_names.h"
++#include "utils.h"
++#include "ip_common.h"
++
++/* ip link add eth_p1 type sx_netdev swid 0 port 0x10001*/
++enum {
++    IFLA_SX_NETDEV_UNSPEC,
++    IFLA_SX_NETDEV_SWID,
++    IFLA_SX_NETDEV_PORT,
++    __IFLA_SX_NETDEV_MAX
++};
++#define IFLA_SX_NETDEV_MAX (__IFLA_SX_NETDEV_MAX - 1)
++
++
++static void print_explain(FILE *f)
++{
++    fprintf(f, "Usage: ... sx_netdev [ swid SWID ] port PORT\n");
++    fprintf(f, "\n");
++    fprintf(f, "Where: SWID := 0-8\n");
++    fprintf(f, "       PORT := Logical port number\n");
++}
++
++static void explain(void)
++{
++    print_explain(stderr);
++}
++
++static int sx_netdev_parse_opt(struct link_util *lu, int argc, char **argv, struct nlmsghdr *n)
++{
++    __u32 swid = 0;
++    __u32 port = 0;
++    int   port_set = 0;
++
++    while (argc > 0) {
++        if (!matches(*argv, "swid")) {
++            NEXT_ARG();
++            if (get_u32(&swid, *argv, 0) ||
++                (swid >= 8)) {
++                invarg("invalid swid", *argv);
++            }
++        } else if (!matches(*argv, "port")) {
++            NEXT_ARG();
++            if (get_u32(&port, *argv, 0)) {
++                invarg("invalid port", *argv);
++            }
++            port_set = 1;
++        } else if (!matches(*argv, "type")) {
++            NEXT_ARG();
++            if (strcasecmp(*argv, "l2") == 0 || strcasecmp(*argv, "l3") == 0) {
++                printf("sx_netdev: port type \"%s\" is obsolete\n", *argv);
++            } else {
++                invarg("invalid type", *argv);
++            }
++        } else {
++            fprintf(stderr, "sx_netdev: unknown command \"%s\"?\n", *argv);
++            explain();
++            return -1;
++        }
++        argc--, argv++;
++    }
++
++    if (!port_set) {
++        fprintf(stderr, "sx_netdev: missing virtual network identifier\n");
++        return -1;
++    }
++
++    addattr32(n, 1024, IFLA_SX_NETDEV_SWID, swid);
++
++    if (port_set) {
++        addattr32(n, 1024, IFLA_SX_NETDEV_PORT, port);
++    }
++
++    return 0;
++}
++
++static void sx_netdev_print_opt(struct link_util *lu, FILE *f, struct rtattr *tb[])
++{
++    __u32 i;
++
++    if (!tb) {
++        return;
++    }
++
++    if (tb[IFLA_SX_NETDEV_SWID] && (RTA_PAYLOAD(tb[IFLA_SX_NETDEV_SWID]) < sizeof(__u32))) {
++        i = rta_getattr_u32(tb[IFLA_SX_NETDEV_SWID]);
++        fprintf(f, "swid %u ", i);
++    }
++
++    if (tb[IFLA_SX_NETDEV_PORT] && (RTA_PAYLOAD(tb[IFLA_SX_NETDEV_PORT]) < sizeof(__u32))) {
++        i = rta_getattr_u32(tb[IFLA_SX_NETDEV_PORT]);
++        fprintf(f, "port %X ", i);
++    }
++}
++
++static void sx_netdev_print_help(struct link_util *lu, int argc, char **argv, FILE *f)
++{
++    print_explain(f);
++}
++
++struct link_util sx_netdev_link_util = {
++    .id = "sx_netdev",
++    .maxattr = IFLA_SX_NETDEV_MAX,
++    .parse_opt = sx_netdev_parse_opt,
++    .print_opt = sx_netdev_print_opt,
++    .print_help = sx_netdev_print_help,
++};
+-- 
+2.8.4
+

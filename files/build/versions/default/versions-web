@@ -1,5 +1,7 @@
 http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_5.10.0-4.debian.tar.xz==9a85eed17658cdbf9287606da64143e5
 http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_5.10.0-4.dsc==0038ddbc885bea2b1bcf367b1806bfbf
+http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_5.10.0-4~bpo10+1.debian.tar.xz==4fcbfdd68253864ebbfc11c3fb1480c6
+http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_5.10.0-4~bpo10+1.dsc==81cf5b863f12de38a48b5a3b602cfff4
 http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_5.10.0.orig.tar.xz==f36f0a0612f7fd565680e918d692900d
 http://deb.debian.org/debian/pool/main/i/iptables/iptables_1.8.7-1.debian.tar.xz==bacfd4f463240af61c4a50298e5f7560
 http://deb.debian.org/debian/pool/main/i/iptables/iptables_1.8.7-1.dsc==c7b1880f0d2e7a9306007969f3b541ee
@@ -46,8 +48,6 @@ https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2010.4204/fw-SPC3-rel-30_2010_4204-EVB.mfa==9099a37a1efb22b6dce535ad2e1528d4
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.5.4206-bullseye-amd64/applibs-dev_1.mlnx.4.5.4206_amd64.deb==5523e1f8692b779b54f1d870f90ec147
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.5.4206-bullseye-amd64/applibs_1.mlnx.4.5.4206_amd64.deb==bdfaee12138459af05f43c03f801b4c4
-https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.5.4206-bullseye-amd64/iproute2-dev_1.mlnx.4.5.4206_amd64.deb==d724c97a61614e3066498c6c251d46dc
-https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.5.4206-bullseye-amd64/iproute2_1.mlnx.4.5.4206_amd64.deb==0938e89eca5d53e19f015eb8a715414b
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.5.4206-bullseye-amd64/python-sdk-api_1.mlnx.4.5.4206_amd64.deb==883efaa52f9388a3e56179a90a02d588
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.5.4206-bullseye-amd64/sx-acl-helper-dev_1.mlnx.4.5.4206_amd64.deb==64e1c57da2f82ba276f43ab5eee2f846
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.5.4206-bullseye-amd64/sx-acl-helper_1.mlnx.4.5.4206_amd64.deb==ffa83528b29dc9ac4b7e84be169ce29f

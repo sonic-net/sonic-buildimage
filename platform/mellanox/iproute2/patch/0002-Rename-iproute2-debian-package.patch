@@ -1,0 +1,50 @@
+From 6676c4a200df54a06c96faa9a30baaefc61a91b5 Mon Sep 17 00:00:00 2001
+From: liora <liora@nvidia.com>
+Date: Thu, 27 Apr 2023 03:34:10 +0000
+Subject: [PATCH 1/1] Rename iproute2 debian package
+
+---
+ debian/control                                     | 4 ++--
+ debian/{iproute2.install => iproute2-mlnx.install} | 0
+ debian/rules                                       | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+ rename debian/{iproute2.install => iproute2-mlnx.install} (100%)
+
+diff --git a/debian/control b/debian/control
+index e735c26..4b03a6f 100644
+--- a/debian/control
++++ b/debian/control
+@@ -25,11 +25,11 @@ Build-Depends: bison,
+                po-debconf,
+                zlib1g-dev,
+ 
+-Package: iproute2
++Package: iproute2-mlnx
+ Priority: important
+ Architecture: linux-any
+ Conflicts: iproute (<< 20130000-1)
+-Replaces: iproute
++Replaces: iproute, iproute2
+ Depends: ${misc:Depends}, ${shlibs:Depends}, libcap2-bin,
+ Recommends: ${ipmods:Recommends}
+ Suggests: iproute2-doc
+diff --git a/debian/iproute2.install b/debian/iproute2-mlnx.install
+similarity index 100%
+rename from debian/iproute2.install
+rename to debian/iproute2-mlnx.install
+diff --git a/debian/rules b/debian/rules
+index d940d3c..8bd4f84 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -34,7 +34,7 @@ override_dh_clean:
+ 
+ override_dh_shlibdeps:
+ 	dh_shlibdeps -a -Xq_atm.so -Xm_xt.so -Xm_ipt.so
+-	dh_shlibdeps -a -- -pipmods -dRecommends -e debian/iproute2/usr/lib/tc/m_xt.so -e debian/iproute2/usr/lib/tc/q_atm.so -xlibc6
++	dh_shlibdeps -a -- -pipmods -dRecommends -e debian/iproute2-mlnx/usr/lib/tc/m_xt.so -e debian/iproute2-mlnx/usr/lib/tc/q_atm.so -xlibc6
+ 
+ override_dh_auto_test:
+ 	# upstream test suite needs root and leaves machine unclean, skip it
+-- 
+2.30.2
+

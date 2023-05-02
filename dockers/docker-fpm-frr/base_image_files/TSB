@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# If run on supervisor of chassis, trigger remote execution of TSB on all linecards
+if [ -f /etc/sonic/chassisdb.conf ]; then
+  rexec all -c "TSB chassis"
+  echo "Please execute \"rexec all -c 'sudo config save -y'\" to preserve System mode in Normal state after reboot\
+ or config reload on all linecards"
+  exit 0
+fi
+
 # toggle the mux to auto if dualtor
 if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr [:upper:] [:lower:])" == *"dualtor"* ]];
 then
@@ -8,4 +16,10 @@ then
 fi
 
 /usr/bin/TS TSB
-echo "Please execute 'config save' to preserve System mode in Normal state after reboot or config reload"
+if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)" == *"SpineRouter"* ]] ; then
+  if [[ "$1" != "chassis" ]] ; then
+    echo "Please execute 'sudo config save' to preserve System mode in Normal state after reboot or config reload"    
+  fi
+else
+  echo "Please execute 'sudo config save' to preserve System mode in Normal state after reboot or config reload"
+fi

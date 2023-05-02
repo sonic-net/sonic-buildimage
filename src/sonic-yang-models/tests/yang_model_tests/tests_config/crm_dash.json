@@ -1,0 +1,1352 @@
+{
+    "CRM_DASH_VNET_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_vnet_high_threshold": 90,
+                    "dash_vnet_low_threshold": 70,
+                    "dash_vnet_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_VNET_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_vnet_high_threshold": 85,
+                    "dash_vnet_low_threshold": 25,
+                    "dash_vnet_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_VNET_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_vnet_high_threshold": 80,
+                    "dash_vnet_low_threshold": 81,
+                    "dash_vnet_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_VNET_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_vnet_high_threshold": 110,
+                    "dash_vnet_low_threshold": 85,
+                    "dash_vnet_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_VNET_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_vnet_high_threshold": 90,
+                    "dash_vnet_low_threshold": 70,
+                    "dash_vnet_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_ENI_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_eni_high_threshold": 90,
+                    "dash_eni_low_threshold": 70,
+                    "dash_eni_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_ENI_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_eni_high_threshold": 85,
+                    "dash_eni_low_threshold": 25,
+                    "dash_eni_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_ENI_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_eni_high_threshold": 80,
+                    "dash_eni_low_threshold": 81,
+                    "dash_eni_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_ENI_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_eni_high_threshold": 110,
+                    "dash_eni_low_threshold": 85,
+                    "dash_eni_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_ENI_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_eni_high_threshold": 90,
+                    "dash_eni_low_threshold": 70,
+                    "dash_eni_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_eni_ether_address_map_high_threshold": 90,
+                    "dash_eni_ether_address_map_low_threshold": 70,
+                    "dash_eni_ether_address_map_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_eni_ether_address_map_high_threshold": 85,
+                    "dash_eni_ether_address_map_low_threshold": 25,
+                    "dash_eni_ether_address_map_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_eni_ether_address_map_high_threshold": 80,
+                    "dash_eni_ether_address_map_low_threshold": 81,
+                    "dash_eni_ether_address_map_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_eni_ether_address_map_high_threshold": 110,
+                    "dash_eni_ether_address_map_low_threshold": 85,
+                    "dash_eni_ether_address_map_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_ENI_ETHER_ADDRESS_MAP_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_eni_ether_address_map_high_threshold": 90,
+                    "dash_eni_ether_address_map_low_threshold": 70,
+                    "dash_eni_ether_address_map_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_inbound_routing_high_threshold": 90,
+                    "dash_ipv4_inbound_routing_low_threshold": 70,
+                    "dash_ipv4_inbound_routing_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_inbound_routing_high_threshold": 85,
+                    "dash_ipv4_inbound_routing_low_threshold": 25,
+                    "dash_ipv4_inbound_routing_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_inbound_routing_high_threshold": 80,
+                    "dash_ipv4_inbound_routing_low_threshold": 81,
+                    "dash_ipv4_inbound_routing_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_inbound_routing_high_threshold": 110,
+                    "dash_ipv4_inbound_routing_low_threshold": 85,
+                    "dash_ipv4_inbound_routing_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_INBOUND_ROUTING_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_inbound_routing_high_threshold": 90,
+                    "dash_ipv4_inbound_routing_low_threshold": 70,
+                    "dash_ipv4_inbound_routing_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_inbound_routing_high_threshold": 90,
+                    "dash_ipv6_inbound_routing_low_threshold": 70,
+                    "dash_ipv6_inbound_routing_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_inbound_routing_high_threshold": 85,
+                    "dash_ipv6_inbound_routing_low_threshold": 25,
+                    "dash_ipv6_inbound_routing_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_inbound_routing_high_threshold": 80,
+                    "dash_ipv6_inbound_routing_low_threshold": 81,
+                    "dash_ipv6_inbound_routing_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_inbound_routing_high_threshold": 110,
+                    "dash_ipv6_inbound_routing_low_threshold": 85,
+                    "dash_ipv6_inbound_routing_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_INBOUND_ROUTING_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_inbound_routing_high_threshold": 90,
+                    "dash_ipv6_inbound_routing_low_threshold": 70,
+                    "dash_ipv6_inbound_routing_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_outbound_routing_high_threshold": 90,
+                    "dash_ipv4_outbound_routing_low_threshold": 70,
+                    "dash_ipv4_outbound_routing_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_outbound_routing_high_threshold": 85,
+                    "dash_ipv4_outbound_routing_low_threshold": 25,
+                    "dash_ipv4_outbound_routing_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_outbound_routing_high_threshold": 80,
+                    "dash_ipv4_outbound_routing_low_threshold": 81,
+                    "dash_ipv4_outbound_routing_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_outbound_routing_high_threshold": 110,
+                    "dash_ipv4_outbound_routing_low_threshold": 85,
+                    "dash_ipv4_outbound_routing_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_OUTBOUND_ROUTING_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_outbound_routing_high_threshold": 90,
+                    "dash_ipv4_outbound_routing_low_threshold": 70,
+                    "dash_ipv4_outbound_routing_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_outbound_routing_high_threshold": 90,
+                    "dash_ipv6_outbound_routing_low_threshold": 70,
+                    "dash_ipv6_outbound_routing_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_outbound_routing_high_threshold": 85,
+                    "dash_ipv6_outbound_routing_low_threshold": 25,
+                    "dash_ipv6_outbound_routing_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_outbound_routing_high_threshold": 80,
+                    "dash_ipv6_outbound_routing_low_threshold": 81,
+                    "dash_ipv6_outbound_routing_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_outbound_routing_high_threshold": 110,
+                    "dash_ipv6_outbound_routing_low_threshold": 85,
+                    "dash_ipv6_outbound_routing_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_OUTBOUND_ROUTING_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_outbound_routing_high_threshold": 90,
+                    "dash_ipv6_outbound_routing_low_threshold": 70,
+                    "dash_ipv6_outbound_routing_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_PA_VALIDATION_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_pa_validation_high_threshold": 90,
+                    "dash_ipv4_pa_validation_low_threshold": 70,
+                    "dash_ipv4_pa_validation_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_PA_VALIDATION_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_pa_validation_high_threshold": 85,
+                    "dash_ipv4_pa_validation_low_threshold": 25,
+                    "dash_ipv4_pa_validation_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_PA_VALIDATION_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_pa_validation_high_threshold": 80,
+                    "dash_ipv4_pa_validation_low_threshold": 81,
+                    "dash_ipv4_pa_validation_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_PA_VALIDATION_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_pa_validation_high_threshold": 110,
+                    "dash_ipv4_pa_validation_low_threshold": 85,
+                    "dash_ipv4_pa_validation_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_PA_VALIDATION_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_pa_validation_high_threshold": 90,
+                    "dash_ipv4_pa_validation_low_threshold": 70,
+                    "dash_ipv4_pa_validation_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_PA_VALIDATION_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_pa_validation_high_threshold": 90,
+                    "dash_ipv6_pa_validation_low_threshold": 70,
+                    "dash_ipv6_pa_validation_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_PA_VALIDATION_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_pa_validation_high_threshold": 85,
+                    "dash_ipv6_pa_validation_low_threshold": 25,
+                    "dash_ipv6_pa_validation_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_PA_VALIDATION_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_pa_validation_high_threshold": 80,
+                    "dash_ipv6_pa_validation_low_threshold": 81,
+                    "dash_ipv6_pa_validation_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_PA_VALIDATION_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_pa_validation_high_threshold": 110,
+                    "dash_ipv6_pa_validation_low_threshold": 85,
+                    "dash_ipv6_pa_validation_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_PA_VALIDATION_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_pa_validation_high_threshold": 90,
+                    "dash_ipv6_pa_validation_low_threshold": 70,
+                    "dash_ipv6_pa_validation_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_outbound_ca_to_pa_high_threshold": 90,
+                    "dash_ipv4_outbound_ca_to_pa_low_threshold": 70,
+                    "dash_ipv4_outbound_ca_to_pa_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_outbound_ca_to_pa_high_threshold": 85,
+                    "dash_ipv4_outbound_ca_to_pa_low_threshold": 25,
+                    "dash_ipv4_outbound_ca_to_pa_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_outbound_ca_to_pa_high_threshold": 80,
+                    "dash_ipv4_outbound_ca_to_pa_low_threshold": 81,
+                    "dash_ipv4_outbound_ca_to_pa_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_outbound_ca_to_pa_high_threshold": 110,
+                    "dash_ipv4_outbound_ca_to_pa_low_threshold": 85,
+                    "dash_ipv4_outbound_ca_to_pa_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_OUTBOUND_CA_TO_PA_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_outbound_ca_to_pa_high_threshold": 90,
+                    "dash_ipv4_outbound_ca_to_pa_low_threshold": 70,
+                    "dash_ipv4_outbound_ca_to_pa_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_outbound_ca_to_pa_high_threshold": 90,
+                    "dash_ipv6_outbound_ca_to_pa_low_threshold": 70,
+                    "dash_ipv6_outbound_ca_to_pa_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_outbound_ca_to_pa_high_threshold": 85,
+                    "dash_ipv6_outbound_ca_to_pa_low_threshold": 25,
+                    "dash_ipv6_outbound_ca_to_pa_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_outbound_ca_to_pa_high_threshold": 80,
+                    "dash_ipv6_outbound_ca_to_pa_low_threshold": 81,
+                    "dash_ipv6_outbound_ca_to_pa_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_outbound_ca_to_pa_high_threshold": 110,
+                    "dash_ipv6_outbound_ca_to_pa_low_threshold": 85,
+                    "dash_ipv6_outbound_ca_to_pa_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_OUTBOUND_CA_TO_PA_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_outbound_ca_to_pa_high_threshold": 90,
+                    "dash_ipv6_outbound_ca_to_pa_low_threshold": 70,
+                    "dash_ipv6_outbound_ca_to_pa_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_ACL_GROUP_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_acl_group_high_threshold": 90,
+                    "dash_ipv4_acl_group_low_threshold": 70,
+                    "dash_ipv4_acl_group_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_ACL_GROUP_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_acl_group_high_threshold": 85,
+                    "dash_ipv4_acl_group_low_threshold": 25,
+                    "dash_ipv4_acl_group_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_ACL_GROUP_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_acl_group_high_threshold": 80,
+                    "dash_ipv4_acl_group_low_threshold": 81,
+                    "dash_ipv4_acl_group_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_ACL_GROUP_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_acl_group_high_threshold": 110,
+                    "dash_ipv4_acl_group_low_threshold": 85,
+                    "dash_ipv4_acl_group_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_ACL_GROUP_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_acl_group_high_threshold": 90,
+                    "dash_ipv4_acl_group_low_threshold": 70,
+                    "dash_ipv4_acl_group_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_ACL_GROUP_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_acl_group_high_threshold": 90,
+                    "dash_ipv6_acl_group_low_threshold": 70,
+                    "dash_ipv6_acl_group_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_ACL_GROUP_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_acl_group_high_threshold": 85,
+                    "dash_ipv6_acl_group_low_threshold": 25,
+                    "dash_ipv6_acl_group_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_ACL_GROUP_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_acl_group_high_threshold": 80,
+                    "dash_ipv6_acl_group_low_threshold": 81,
+                    "dash_ipv6_acl_group_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_ACL_GROUP_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_acl_group_high_threshold": 110,
+                    "dash_ipv6_acl_group_low_threshold": 85,
+                    "dash_ipv6_acl_group_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_ACL_GROUP_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_acl_group_high_threshold": 90,
+                    "dash_ipv6_acl_group_low_threshold": 70,
+                    "dash_ipv6_acl_group_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_ACL_RULE_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_acl_rule_high_threshold": 90,
+                    "dash_ipv4_acl_rule_low_threshold": 70,
+                    "dash_ipv4_acl_rule_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_ACL_RULE_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_acl_rule_high_threshold": 85,
+                    "dash_ipv4_acl_rule_low_threshold": 25,
+                    "dash_ipv4_acl_rule_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_ACL_RULE_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_acl_rule_high_threshold": 80,
+                    "dash_ipv4_acl_rule_low_threshold": 81,
+                    "dash_ipv4_acl_rule_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_ACL_RULE_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_acl_rule_high_threshold": 110,
+                    "dash_ipv4_acl_rule_low_threshold": 85,
+                    "dash_ipv4_acl_rule_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV4_ACL_RULE_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv4_acl_rule_high_threshold": 90,
+                    "dash_ipv4_acl_rule_low_threshold": 70,
+                    "dash_ipv4_acl_rule_threshold_type": "wrong"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_ACL_RULE_WITH_CORRECT_FREE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_acl_rule_high_threshold": 90,
+                    "dash_ipv6_acl_rule_low_threshold": 70,
+                    "dash_ipv6_acl_rule_threshold_type": "free"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_ACL_RULE_WITH_CORRECT_USED_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_acl_rule_high_threshold": 85,
+                    "dash_ipv6_acl_rule_low_threshold": 25,
+                    "dash_ipv6_acl_rule_threshold_type": "used"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_ACL_RULE_WITH_HIGH_THRESHOLD_ERR": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_acl_rule_high_threshold": 80,
+                    "dash_ipv6_acl_rule_low_threshold": 81,
+                    "dash_ipv6_acl_rule_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_ACL_RULE_WITH_WRONG_PERCENTAGE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_acl_rule_high_threshold": 110,
+                    "dash_ipv6_acl_rule_low_threshold": 85,
+                    "dash_ipv6_acl_rule_threshold_type": "PERCENTAGE"
+                }
+            }
+        }
+    },
+    "CRM_DASH_IPV6_ACL_RULE_WITH_WRONG_THRESHOLD_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "switch_type": "dpu"
+                }
+            }
+        },
+        "sonic-crm:sonic-crm": {
+            "sonic-crm:CRM": {
+                "Config": {
+                    "dash_ipv6_acl_rule_high_threshold": 90,
+                    "dash_ipv6_acl_rule_low_threshold": 70,
+                    "dash_ipv6_acl_rule_threshold_type": "wrong"
+                }
+            }
+        }
+    }
+}

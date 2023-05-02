@@ -109,15 +109,7 @@ run_hookdir() {
 reload_minigraph()
 {
     echo "Reloading minigraph..."
-    if
-    [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr [:upper:] [:lower:])" == *"dualtor"* ]] ||
-    [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type | tr [:upper:] [:lower:])" == *"leafrouter"* ]];
-    then
-        #Keep device isolated with traffic-shift-away option on LeafRouter and Dualtor
-        config load_minigraph -y -n -t
-    else
-        config load_minigraph -y -n
-    fi
+    config load_minigraph -y -n
     config save -y
 }
 

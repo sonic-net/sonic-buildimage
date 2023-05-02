@@ -36,9 +36,9 @@ libapparmor1==2.13.6-10
 libassuan0==2.5.3-7.1
 libblkid-dev==2.36.1-8+deb11u1
 libbsd-dev==0.11.3-1
-libc-ares2==1.17.1-1+deb11u1
-libc-dev-bin==2.31-13+deb11u5
-libc6-dev==2.31-13+deb11u5
+libc-ares2==1.17.1-1+deb11u2
+libc-dev-bin==2.31-13+deb11u6
+libc6-dev==2.31-13+deb11u6
 libcbor0==0.5.0+dfsg-2
 libcrypt-dev==1:4.4.18-4
 libdevmapper1.02.1==2:1.02.175-2.1
@@ -89,6 +89,7 @@ libqt5dbus5==5.15.2+dfsg-9
 libqt5network5==5.15.2+dfsg-9
 libsaivs==1.0.0
 libsodium-dev==1.0.18-1
+libsystemd0==247.3-7+deb11u2
 libteam-utils==1.30-1
 libtirpc-dev==1.3.1-1+deb11u1
 libunwind8==1.3.2-2
@@ -96,7 +97,7 @@ libxml2==2.9.10+dfsg-6.7+deb11u4
 libxml2-dev==2.9.10+dfsg-6.7+deb11u4
 libyang2==2.0.112-6
 libzmq3-dev==4.3.4-1
-linux-libc-dev==5.10.162-1
+linux-libc-dev==5.10.178-3
 logrotate==3.18.0-2+deb11u1
 lsof==4.93.2+dfsg-1.1
 mailcap==3.69

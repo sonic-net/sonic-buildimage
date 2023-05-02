@@ -93,7 +93,7 @@ docbook-utils==0.6.14-3.3
 docbook-xml==4.5-8
 docker-ce==5:20.10.21~3-0~debian-buster
 docker-ce-cli==5:20.10.21~3-0~debian-buster
-docker-ce-rootless-extras==5:23.0.4-1~debian.10~buster
+docker-ce-rootless-extras==5:23.0.5-1~debian.10~buster
 docker-scan-plugin==0.23.0~debian-buster
 docutils-common==0.14+dfsg-4
 docutils-doc==0.14+dfsg-4

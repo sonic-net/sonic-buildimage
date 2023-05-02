@@ -23,3 +23,7 @@ class TestShowMACsec(object):
         result = runner.invoke(show_macsec.macsec,["Ethernet1"])
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
 
+    def test_show_profile(self):
+        runner = CliRunner()
+        result = runner.invoke(show_macsec.macsec,["--profile"])
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)

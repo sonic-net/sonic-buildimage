@@ -52,6 +52,20 @@ dualtor_cable_types = ["active-active", "active-standby"]
 # Default Virtual Network Index (VNI) 
 vni_default = 8000
 
+# Defination of custom acl table types
+acl_table_type_defination = {
+    'BMCDATA': {
+        "ACTIONS": "PACKET_ACTION,COUNTER",
+        "BIND_POINTS": "PORT",
+        "MATCHES": "SRC_IP,DST_IP,ETHER_TYPE,IP_TYPE,IP_PROTOCOL,IN_PORTS,TCP_FLAGS",
+    },
+    'BMCDATAV6': {
+        "ACTIONS": "PACKET_ACTION,COUNTER",
+        "BIND_POINTS": "PORT",
+        "MATCHES": "SRC_IPV6,DST_IPV6,ETHER_TYPE,IP_TYPE,IP_PROTOCOL,IN_PORTS,TCP_FLAGS",
+    }
+}
+
 ###############################################################################
 #
 # Minigraph parsing functions
@@ -647,6 +661,7 @@ def parse_dpg(dpg, hname):
             vlan_member_list[sonic_vlan_name] = vmbr_list
 
         acls = {}
+        acl_table_types = {}
         for aclintf in aclintfs.findall(str(QName(ns, "AclInterface"))):
             if aclintf.find(str(QName(ns, "InAcl"))) is not None:
                 aclname = aclintf.find(str(QName(ns, "InAcl"))).text.upper().replace(" ", "_").replace("-", "_")
@@ -658,6 +673,8 @@ def parse_dpg(dpg, hname):
                 sys.exit("Error: 'AclInterface' must contain either an 'InAcl' or 'OutAcl' subelement.")
             aclattach = aclintf.find(str(QName(ns, "AttachTo"))).text.split(';')
             acl_intfs = []
+            is_bmc_data = False
+            is_bmc_data_v6 = False
             is_mirror = False
             is_mirror_v6 = False
             is_mirror_dscp = False
@@ -740,6 +757,13 @@ def parse_dpg(dpg, hname):
                         if panel_port not in intfs_inpc and panel_port not in acl_intfs:
                             acl_intfs.append(panel_port)
                     break
+            if aclintf.find(str(QName(ns, "Type"))) is not None and aclintf.find(str(QName(ns, "Type"))).text.upper() == "BMCDATA":
+                if 'v6' in aclname.lower():
+                    is_bmc_data_v6 = True
+                    acl_table_types['BMCDATAV6'] = acl_table_type_defination['BMCDATAV6']
+                else:
+                    is_bmc_data = True
+                    acl_table_types['BMCDATA'] = acl_table_type_defination['BMCDATA']
             # if acl is classified as mirror (erpsan) or acl interface 
             # are binded then do not classify as Control plane.
             # For multi-asic platforms it's possible there is no
@@ -760,6 +784,10 @@ def parse_dpg(dpg, hname):
                     acls[aclname]['type'] = 'MIRRORV6'
                 elif is_mirror_dscp:
                     acls[aclname]['type'] = 'MIRROR_DSCP'
+                elif is_bmc_data:
+                    acls[aclname]['type'] = 'BMCDATA'
+                elif is_bmc_data_v6:
+                    acls[aclname]['type'] = 'BMCDATAV6'
                 else:
                     acls[aclname]['type'] = 'L3V6' if  'v6' in aclname.lower() else 'L3'
             else:
@@ -818,8 +846,8 @@ def parse_dpg(dpg, hname):
                     if mg_key in mg_tunnel.attrib:
                         tunnelintfs_qos_remap_config[tunnel_type][tunnel_name][table_key] = mg_tunnel.attrib[mg_key]
 
-        return intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, vni, tunnelintfs, dpg_ecmp_content, static_routes, tunnelintfs_qos_remap_config
-    return None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+        return intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnelintfs, dpg_ecmp_content, static_routes, tunnelintfs_qos_remap_config
+    return None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
 
 
 def parse_host_loopback(dpg, hname):
@@ -1377,6 +1405,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
     u_neighbors = None
     u_devices = None
+    acls = {}
+    acl_table_types = {}
     hwsku = None
     bgp_sessions = None
     bgp_monitors = []
@@ -1457,7 +1487,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     for child in root:
         if asic_name is None:
             if child.tag == str(QName(ns, "DpgDec")):
-                (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, hostname)
+                (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, hostname)
             elif child.tag == str(QName(ns, "CpgDec")):
                 (bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, bgp_asn, bgp_peers_with_range, bgp_monitors) = parse_cpg(child, hostname)
             elif child.tag == str(QName(ns, "PngDec")):
@@ -1472,7 +1502,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
                 (port_speeds_default, port_descriptions, sys_ports) = parse_deviceinfo(child, hwsku)
         else:
             if child.tag == str(QName(ns, "DpgDec")):
-                (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, asic_name)
+                (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, asic_name)
                 host_lo_intfs = parse_host_loopback(child, hostname)
             elif child.tag == str(QName(ns, "CpgDec")):
                 (bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, bgp_asn, bgp_peers_with_range, bgp_monitors) = parse_cpg(child, asic_name, local_devices)
@@ -1903,6 +1933,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     results['DHCP_RELAY'] = dhcp_relay_table
     results['NTP_SERVER'] = dict((item, {}) for item in ntp_servers)
     results['TACPLUS_SERVER'] = dict((item, {'priority': '1', 'tcp_port': '49'}) for item in tacacs_servers)
+    if len(acl_table_types) > 0:
+        results['ACL_TABLE_TYPE'] = acl_table_types
     results['ACL_TABLE'] = filter_acl_table_bindings(acls, neighbors, pcs, pc_members, sub_role, current_device['type'], is_storage_device, vlan_members)
     results['FEATURE'] = {
         'telemetry': {

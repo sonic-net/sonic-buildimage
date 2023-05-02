@@ -18,6 +18,17 @@ CACHE_FILE = os.path.join(CACHE_MANAGER.get_directory(), "macsecstats{}")
 DB_CONNECTOR = None
 COUNTER_TABLE = None
 
+class MACsecCfgMeta(object):
+    def __init__(self, *args) -> None:
+        SEPARATOR = DB_CONNECTOR.get_db_separator(DB_CONNECTOR.CONFIG_DB)
+        self.key = self.__class__.get_cfg_table_name() + SEPARATOR + \
+            SEPARATOR.join(args)
+        self.cfgMeta = DB_CONNECTOR.get_all(
+            DB_CONNECTOR.CONFIG_DB, self.key)
+        if len(self.cfgMeta) == 0:
+            raise ValueError("No such MACsecCfgMeta: {}".format(self.key))
+        for k, v in self.cfgMeta.items():
+            setattr(self, k, v)
 
 class MACsecAppMeta(object):
     def __init__(self, *args) -> None:
@@ -126,23 +137,55 @@ class MACsecEgressSC(MACsecSC):
         return "MACsec Egress SC ({})\n".format(self.sci)
 
 
-class MACsecPort(MACsecAppMeta):
+class MACsecPort(MACsecAppMeta, MACsecCfgMeta):
     def __init__(self,  port_name: str) -> None:
         self.port_name = port_name
-        super(MACsecPort, self).__init__(port_name)
+        MACsecAppMeta.__init__(self, port_name)
+        MACsecCfgMeta.__init__(self, port_name)
 
     @classmethod
     def get_appl_table_name(cls) -> str:
         return "MACSEC_PORT_TABLE"
 
+    @classmethod
+    def get_cfg_table_name(cls) -> str:
+        return "PORT"
+
     def dump_str(self, cache = None) -> str:
         buffer = self.get_header()
+
+        # Add the profile information to the meta dict from config meta dict
+        self.meta["profile"] = self.cfgMeta["macsec"]
+
         buffer += tabulate(sorted(self.meta.items(), key=lambda x: x[0]))
         return buffer
 
     def get_header(self) -> str:
         return "MACsec port({})\n".format(self.port_name)
 
+class MACsecProfile(MACsecCfgMeta):
+    def __init__(self, profile_name: str) -> None:
+        self.profile_name = profile_name
+        super(MACsecProfile, self).__init__(profile_name)
+
+    @classmethod
+    def get_cfg_table_name(cls) -> str:
+        return "MACSEC_PROFILE"
+
+    def dump_str(self, cache = None) -> str:
+        buffer = self.get_header()
+
+        # Don't display the primary and fallback CAK
+        if 'primary_cak' in self.cfgMeta: del self.cfgMeta['primary_cak']
+        if 'fallback_cak' in self.cfgMeta: del self.cfgMeta['fallback_cak']
+
+        t_buffer = tabulate(sorted(self.cfgMeta.items(), key=lambda x: x[0]))
+        t_buffer = "\n".join(["\t" + line for line in t_buffer.splitlines()])
+        buffer += t_buffer
+        return buffer
+
+    def get_header(self) -> str:
+        return "MACsec profile : {}\n".format(self.profile_name)
 
 def create_macsec_obj(key: str) -> MACsecAppMeta:
     attr = key.split(":")
@@ -161,6 +204,14 @@ def create_macsec_obj(key: str) -> MACsecAppMeta:
     except ValueError as e:
         return None
 
+def create_macsec_profile_obj(key: str) -> MACsecCfgMeta:
+    attr = key.split("|")
+    try:
+        if attr[0] == MACsecProfile.get_cfg_table_name():
+            return MACsecProfile(attr[1])
+        raise TypeError("Unknown MACsec object type")
+    except ValueError as e:
+        return None
 
 def create_macsec_objs(interface_name: str) -> typing.List[MACsecAppMeta]:
     objs = []
@@ -192,6 +243,12 @@ def create_macsec_objs(interface_name: str) -> typing.List[MACsecAppMeta]:
     return objs
 
 
+def create_macsec_profiles_objs(profile_name: str) -> typing.List[MACsecCfgMeta]:
+    objs = []
+    objs.append(create_macsec_profile_obj(MACsecProfile.get_cfg_table_name() + "|" + profile_name))
+    return objs
+
+
 def cache_find(cache: dict, target: MACsecAppMeta) -> MACsecAppMeta:
     if not cache or not cache["objs"]:
         return None
@@ -207,10 +264,14 @@ def cache_find(cache: dict, target: MACsecAppMeta) -> MACsecAppMeta:
 
 @click.command()
 @click.argument('interface_name', required=False)
-@click.option('--dump-file', is_flag=True, required=False, default=False)
+@click.option('--profile', is_flag=True, required=False, default=False, help="show all macsec profiles")
+@click.option('--dump-file', is_flag=True, required=False, default=False, help="store show output to a file")
 @multi_asic_util.multi_asic_click_options
-def macsec(interface_name, dump_file, namespace, display):
-    MacsecContext(namespace, display).show(interface_name, dump_file)
+def macsec(interface_name, dump_file, namespace, display, profile):
+    if interface_name is not None and profile:
+        click.echo('Interface name is not valid with profile option')
+        return
+    MacsecContext(namespace, display).show(interface_name, dump_file, profile)
 
 class MacsecContext(object):
 
@@ -218,23 +279,36 @@ class MacsecContext(object):
         self.db = None
         self.multi_asic = multi_asic_util.MultiAsic(
             display_option, namespace_option)
+        self.macsec_profiles = []
 
     @multi_asic_util.run_on_multi_asic
-    def show(self, interface_name, dump_file):
+    def show(self, interface_name, dump_file, profile):
         global DB_CONNECTOR
         global COUNTER_TABLE
         DB_CONNECTOR = self.db
-        COUNTER_TABLE = CounterTable(self.db.get_redis_client(self.db.COUNTERS_DB))
 
-        interface_names = [name.split(":")[1] for name in self.db.keys(self.db.APPL_DB, "MACSEC_PORT*")]
-        if interface_name is not None:
-            if interface_name not in interface_names:
-                return
-            interface_names = [interface_name]
-        objs = []
+        if not profile:
+            COUNTER_TABLE = CounterTable(self.db.get_redis_client(self.db.COUNTERS_DB))
 
-        for interface_name in natsorted(interface_names):
-            objs += create_macsec_objs(interface_name)
+            interface_names = [name.split(":")[1] for name in self.db.keys(self.db.APPL_DB, "MACSEC_PORT*")]
+            if interface_name is not None:
+                if interface_name not in interface_names:
+                    return
+                interface_names = [interface_name]
+            objs = []
+
+            for interface_name in natsorted(interface_names):
+                objs += create_macsec_objs(interface_name)
+        else:
+            profile_names = [name.split("|")[1] for name in self.db.keys(self.db.CONFIG_DB, "MACSEC_PROFILE*")]
+            objs = []
+
+            for profile_name in natsorted(profile_names):
+                # Check if this macsec profile is already added to profile list. This is in case of
+                # multi-asic devices where all namespaces will have the same macsec profile defined.
+                if profile_name not in self.macsec_profiles and not dump_file:
+                    self.macsec_profiles.append(profile_name)
+                    objs += create_macsec_profiles_objs(profile_name)
 
         cache = {}
         if os.path.isfile(CACHE_FILE.format(self.multi_asic.current_namespace)):

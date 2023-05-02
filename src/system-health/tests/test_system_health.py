@@ -654,6 +654,15 @@ def test_check_unit_status():
     assert 'mock_bgp.service' in sysmon.dnsrvs_name
 
 
+@patch('health_checker.sysmonitor.Sysmonitor.get_all_service_list', MagicMock(return_value=['mock_snmp.service']))
+def test_check_unit_status_timer():
+    sysmon = Sysmonitor()
+    sysmon.state_db = MagicMock()
+    sysmon.state_db.exists = MagicMock(return_value=1)
+    sysmon.state_db.delete = MagicMock()
+    sysmon.check_unit_status('mock_snmp.timer')
+    assert not sysmon.state_db.delete.called
+
 
 @patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_srv_props['mock_radv.service']))
 @patch('health_checker.sysmonitor.Sysmonitor.get_app_ready_status', MagicMock(return_value=('Up','-','-')))

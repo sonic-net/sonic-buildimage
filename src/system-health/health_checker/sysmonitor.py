@@ -407,10 +407,13 @@ class Sysmonitor(ProcessTaskBase):
                 self.dnsrvs_name.remove(event)
             
             srv_name,last = event.split('.')
-            key = 'ALL_SERVICE_STATUS|{}'.format(srv_name)
-            key_exists = self.state_db.exists(self.state_db.STATE_DB, key)
-            if key_exists == 1:
-                self.state_db.delete(self.state_db.STATE_DB, key)
+            # stop on service maybe propagated to timers and in that case,
+            # the state_db entry for the service should not be deleted
+            if last == "service":
+                key = 'ALL_SERVICE_STATUS|{}'.format(srv_name)
+                key_exists = self.state_db.exists(self.state_db.STATE_DB, key)
+                if key_exists == 1:
+                    self.state_db.delete(self.state_db.STATE_DB, key)
         
         return 0
 

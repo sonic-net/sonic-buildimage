@@ -37,7 +37,7 @@ netifaces==0.11.0
 pathtools==0.1.2
 pddf-platform==1.0
 pexpect==4.8.0
-pip==23.1.1
+pip==23.1.2
 prefixed==0.7.0
 prettyprinter==0.18.0
 protobuf==3.20.3
@@ -56,7 +56,7 @@ python-dateutil==2.8.2
 pyyaml==5.4.1
 redis==3.5.3
 regex==2023.3.23
-requests==2.28.2
+requests==2.29.0
 scapy==2.4.4
 semantic-version==2.10.0
 setuptools==49.6.0

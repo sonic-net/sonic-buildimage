@@ -70,5 +70,91 @@ module sonic-snmp {
         }
       }
     }
+    container SNMP_USER {
+      list SNMP_USER_LIST {
+        key name;
+        description
+          "List of users.";
+
+        leaf name {
+          type string {
+              length "4..32";
+              pattern '[^ :@,\\' +"']*" {
+                  error-message 'Invalid snmp user string (Valid chars are ASCII printable except \
+                                 SPACE, single quote,"@", ",", "\" and ":")';
+              }
+          }
+          description
+            "Name defining the SNMP User.";
+        }
+
+        leaf SNMP_USER_TYPE {
+          mandatory true;
+          type enumeration {
+            enum noAuthNoPriv;
+            enum AuthNoPriv;
+            enum Priv;
+          }
+          description
+            "Authentication and encryption method used for the user, can be noAuthNoPriv,AuthNoPriv or Priv";
+        }
+        leaf SNMP_USER_PERMISSION {
+          mandatory true;
+          type enumeration {
+            enum RO;
+            enum RW;
+          }
+          description
+            "Specify if the user permission can be Read only or Read write user, can be RO or RW";
+        }
+        leaf SNMP_USER_AUTH_TYPE {
+          type string;
+          must "(current()/../SNMP_USER_TYPE = 'noAuthNoPriv' and current() = '') or 
+                ((current()/../SNMP_USER_TYPE = 'AuthNoPriv' or current()/../SNMP_USER_TYPE = 'Priv') 
+                and (current() = 'SHA' or current() = 'MD5' or current() = 'HMAC-SHA-2'))";
+          default "";
+          description
+            "Specify authentication type used for user, can be MD5, SHA or HMAC-SHA-2";
+        }
+        leaf SNMP_USER_AUTH_PASSWORD {
+          type string {
+              length "0..64";
+              pattern '[^ @:]*' {
+                  error-message 'Invalid snmp user authentication password (Valid chars are ASCII 
+                                 printable except ":" and"@")';
+              }
+          }
+          must "(current()/../SNMP_USER_TYPE = 'AuthNoPriv' and string-length(current()) >= 8) or 
+                (current()/../SNMP_USER_TYPE = 'Priv' and string-length(current()) >= 8) or 
+                (current()/../SNMP_USER_TYPE = 'noAuthNoPriv' and current() = '')";
+          description
+            "Authentication password for the user.";
+        }
+        leaf SNMP_USER_ENCRYPTION_TYPE {
+          type string;
+          must "(current()/../SNMP_USER_TYPE = 'noAuthNoPriv' and current() = '') or 
+                (current()/../SNMP_USER_TYPE = 'AuthNoPriv' and current() = '') or 
+                (current()/../SNMP_USER_TYPE = 'Priv' and (current() = 'DES' or current() = 'AES'))";
+          default "";
+          description
+            "Specify encrytion type used for user, can be AES or DES";
+        }
+        leaf SNMP_USER_ENCRYPTION_PASSWORD {
+          mandatory true;
+          type string {
+              length "0..64";
+              pattern '[^ @:]*' {
+                  error-message 'Invalid snmp user encryption password (Valid chars are ASCII \
+                                 printable except ":" and"@")';
+              }
+          }
+          must "(current()/../SNMP_USER_TYPE = 'noAuthNoPriv' and current() = '') or 
+                (current()/../SNMP_USER_TYPE = 'AuthNoPriv' and current() = '') or 
+                (current()/../SNMP_USER_TYPE = 'Priv' and string-length(current()) >= 8)";
+          description
+            "Encryption password for the user.";
+        }
+      }
+    }
   }
 }

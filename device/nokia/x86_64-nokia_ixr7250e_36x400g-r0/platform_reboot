@@ -28,4 +28,4 @@ rm -f /sys/firmware/efi/efivars/dump-*
 touch /etc/opt/srlinux/devmgr_reboot_cause.done
 rm -f /etc/opt/srlinux/reboot-cause.txt
 sync
-/sbin/reboot
+exec /sbin/reboot $@

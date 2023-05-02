@@ -1,8 +1,16 @@
 #!/bin/bash
 
-/usr/bin/TS TSC
+if [ -f /etc/sonic/chassisdb.conf ]; then
+  if [[ $1 == "no-stats" ]]; then
+    rexec all -c "TSC no-stats"
+  else
+    rexec all -c "TSC"
+  fi
+  exit 0
+fi
 
-portstat -p 5
+/usr/bin/TS TSC
+[[ $1 != "no-stats" ]] && portstat -p 5
 
 if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr [:upper:] [:lower:])" == *"dualtor"* ]]
 then

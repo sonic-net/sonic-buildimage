@@ -156,7 +156,7 @@ class KCFG:
     def get_writable_opts(opts):
         lines = []
         for opt in opts:
-            lines.append("{}={}".format(opt[0].upper(), opt[1]))
+            lines.append("{}={}".format(opt[0], opt[1]))
         return lines
 
 

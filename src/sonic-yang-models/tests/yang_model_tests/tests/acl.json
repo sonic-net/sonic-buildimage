@@ -143,5 +143,8 @@
     "ACL_RULE_WRONG_AETH_SYNDROME": {
         "desc": "Configure invalid AETH_SYNDROME in decimal format.",
         "eStrKey" : "Pattern"
+    },
+    "ACL_TABLE_L3V4V6_TABLE_TYPE": {
+        "desc": "ACL_TABLE Validate type L3V4V6."
     }
 }

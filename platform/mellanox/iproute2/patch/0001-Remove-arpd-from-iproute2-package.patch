@@ -1,0 +1,54 @@
+From 28e58b34f1168de182c37eff640180b6064a800d Mon Sep 17 00:00:00 2001
+From: liora <liora@nvidia.com>
+Date: Tue, 18 Apr 2023 13:01:16 +0000
+Subject: [PATCH 1/1] Remove arpd from iproute2 package
+
+---
+ debian/control          | 3 +--
+ debian/iproute2.install | 1 -
+ misc/Makefile           | 4 ----
+ 3 files changed, 1 insertion(+), 7 deletions(-)
+
+diff --git a/debian/control b/debian/control
+index b5e8b0a..e735c26 100644
+--- a/debian/control
++++ b/debian/control
+@@ -28,8 +28,7 @@ Build-Depends: bison,
+ Package: iproute2
+ Priority: important
+ Architecture: linux-any
+-Provides: arpd
+-Conflicts: arpd, iproute (<< 20130000-1)
++Conflicts: iproute (<< 20130000-1)
+ Replaces: iproute
+ Depends: ${misc:Depends}, ${shlibs:Depends}, libcap2-bin,
+ Recommends: ${ipmods:Recommends}
+diff --git a/debian/iproute2.install b/debian/iproute2.install
+index f9e8c26..fba201d 100644
+--- a/debian/iproute2.install
++++ b/debian/iproute2.install
+@@ -1,6 +1,5 @@
+ etc/
+ usr/include/iproute2/
+-sbin/arpd /usr/sbin
+ sbin/bridge
+ sbin/devlink
+ sbin/genl /usr/sbin
+diff --git a/misc/Makefile b/misc/Makefile
+index 50dae79..1f3898f 100644
+--- a/misc/Makefile
++++ b/misc/Makefile
+@@ -6,10 +6,6 @@ TARGETS=ss nstat ifstat rtacct lnstat
+ 
+ include ../config.mk
+ 
+-ifeq ($(HAVE_BERKELEY_DB),y)
+-	TARGETS += arpd
+-endif
+-
+ all: $(TARGETS)
+ 
+ ss: $(SSOBJ)
+-- 
+2.30.2
+

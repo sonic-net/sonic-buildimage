@@ -1,5 +1,7 @@
 #!/bin/bash
-
+echo "Rebooting all Linecards"
+python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); platform_chassis.reboot_imms()'
+sleep 3
 systemctl stop nokia-watchdog.service
 sleep 2
 echo "w" > /dev/watchdog
@@ -8,7 +10,7 @@ echo "last watchdog kick $kick_date" > /var/log/nokia-watchdog-last.log
 rm -f /sys/firmware/efi/efivars/dump-*
 touch /etc/opt/srlinux/devmgr_reboot_cause.done
 rm -f /etc/opt/srlinux/reboot-cause.txt
+echo "Shutdown midplane"
+ifconfig xe0 down
 sync
-echo "Rebooting all Linecards"
-python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); platform_chassis.reboot_imms()'
-/sbin/reboot
+exec /sbin/reboot $@

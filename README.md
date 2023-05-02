@@ -227,7 +227,7 @@ make configure PLATFORM=marvell-arm64 PLATFORM_ARCH=arm64
     `/usr/bin/tar: /path/to/sonic-buildimage/<some_file>:
      Cannot write: No space left on device`
 
-    The solution is to [move the directory](https://linuxconfig.org/how-to-move-docker-s-default-var-lib-docker-to-another-directory-on-ubuntu-debian-linux)
+    The solution is to [move the directory](https://www.ibm.com/docs/en/z-logdata-analytics/5.1.0?topic=compose-relocating-docker-root-directory)
     to a partition with more free space.
 * Use
   `http_proxy=[your_proxy] https_proxy=[your_proxy] no_proxy=[your_no_proxy] make`
