@@ -33,7 +33,7 @@ stages:
     ${{ if eq(variables['Build.SourceBranchName'], '202012') }}:
       VERSION_CONTROL_OPTIONS: 'SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker'
   jobs:
-  - template: .azure-pipelines/azure-pipelines-build.yml@acs-buildimage
+  - template: /.azure-pipelines/azure-pipelines-build.yml
     parameters:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobGroups:
@@ -49,10 +49,15 @@ stages:
           platform_rpc: mlnx
       preSteps:
         - template: .pipelines/prepare_agent.yml@acs-buildimage
+      postSteps:
+        - bash: |
+            echo $(System.PullRequest.targetBranchName)
+            git log origin/$(System.PullRequest.targetBranchName)..HEAD --oneline --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) [%an]' | head -n2 | grep -E "Merge branch .* of .* into internal.* \[Sonic Automation\]" && echo skiptest && echo "##vso[task.setvariable variable=SKIP_VSTEST;isOutput=true]YES"
+          name: SetVarInt
 
 - stage: Test
   dependsOn: Build
-  condition: and(succeeded(), in(dependencies.Build.result, 'Succeeded', 'SucceededWithIssues'))
+  condition: and(in(dependencies.Build.result, 'Succeeded', 'SucceededWithIssues'), ne(stageDependencies.Build.outputs['vs.SetVarInt.SKIP_VSTEST'], 'YES'))
   variables:
     - group: SONiC-Testbed-Tools
     - name: inventory
