@@ -75,6 +75,12 @@ module sonic-interface {
 					}
 				}
 
+				leaf ipv6_use_link_local_only {
+					description "Enable/Disable IPv6 link local address on interface";
+					type stypes:mode-status;
+					default disable;
+				}
+
                 leaf loopback_action {
                     description "Packet action when a packet ingress and gets routed on the same IP interface";
                     type stypes:loopback_action;
