@@ -53,6 +53,9 @@ LOG = < /dev/null |& $(PROJECT_ROOT)/scripts/process_log.sh $(PROCESS_LOG_OPTION
 ###############################################################################
 ## Header and footer for each target
 ###############################################################################
+START_TIME = echo Build start time: $$(date -ud "@$($@_TSTMP_ST)") $(LOG)
+END_TIME = echo Build end time: $$(date -ud "@$($@_TSTMP_END)") $(LOG)
+ELAPSED_TIME = echo Elapsed time: $$(date -ud "@$$(( $($@_TSTMP_END) - $($@_TSTMP_ST) ))" +'%-Hh %-Mm %-Ss') $(LOG)
 
 # Dump targets taht current depends on
 ifeq ($(SONIC_CONFIG_PRINT_DEPENDENCIES),y)
@@ -64,11 +67,16 @@ define HEADER
 @
 $(PRINT_DEPENDENCIES)
 $(FLUSH_LOG)
+$(eval $@_TSTMP_ST := $(shell date +%s))
+$(START_TIME)
 ./update_screen.sh -a $@ $*
 endef
 
 # footer for each rule
 define FOOTER
+$(eval $@_TSTMP_END := `date +%s`)
+$(END_TIME)
+$(ELAPSED_TIME)
 ./update_screen.sh -d $@ $($*_CACHE_LOADED)
 endef
 

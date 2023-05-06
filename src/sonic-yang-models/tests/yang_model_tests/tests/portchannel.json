@@ -73,5 +73,12 @@
         "desc": "INCORRECT LOOPBACK ACTION IN PORTCHANNEL_INTERFACE TABLE.",
         "eStrKey" : "Pattern",
         "eStr": ["drop|forward"]
+    },
+    "PORTCHANNEL_INTERFACE_ENABLE_IPV6_LINK_LOCAL": {
+        "desc": "Enable the ipv6 link-local."
+    },
+    "PORTCHANNEL_INTERFACE_INVALID_ENABLE_IPV6_LINK_LOCAL": {
+        "desc": "Enable the ipv6 link-local as true.",
+        "eStr": "Invalid value \"true\" in \"ipv6_use_link_local_only\" element."
     }
 }

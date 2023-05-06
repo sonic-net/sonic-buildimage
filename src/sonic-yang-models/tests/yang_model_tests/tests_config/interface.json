@@ -209,5 +209,61 @@
                 ]
             }
         }
+    },
+    "INTERFACE_ENABLE_IPV6_LINK_LOCAL": {
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "ipv6_use_link_local_only": "enable"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "INTERFACE_INVALID_ENABLE_IPV6_LINK_LOCAL": {
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "ipv6_use_link_local_only": "true"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
     }
 }

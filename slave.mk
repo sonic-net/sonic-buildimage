@@ -559,10 +559,25 @@ endef
 #     SOME_NEW_DEB = some_new_deb.deb
 #     $(SOME_NEW_DEB)_PATH = path/to/some_new_deb.deb
 #     SONIC_COPY_DEBS += $(SOME_NEW_DEB)
-$(addprefix $(DEBS_PATH)/, $(SONIC_COPY_DEBS)) : $(DEBS_PATH)/% : .platform
+$(addprefix $(DEBS_PATH)/, $(SONIC_COPY_DEBS)) : $(DEBS_PATH)/% : .platform \
+	$(call dpkg_depend,$(DEBS_PATH)/%.dep)
+
 	$(HEADER)
-	$(foreach deb,$* $($*_DERIVED_DEBS), \
-	    { cp $($(deb)_PATH)/$(deb) $(DEBS_PATH)/ $(LOG) || exit 1 ; } ; )
+
+	# Load the target deb from DPKG cache
+	$(call LOAD_CACHE,$*,$@)
+
+	# Skip building the target if it is already loaded from cache
+	if [ -z '$($*_CACHE_LOADED)' ] ; then
+
+		$(foreach deb,$* $($*_DERIVED_DEBS), \
+			{ cp $($(deb)_PATH)/$(deb) $(DEBS_PATH)/ $(LOG) || exit 1 ; } ; )
+
+		# Save the target deb into DPKG cache
+		$(call SAVE_CACHE,$*,$@)
+
+	fi
+
 	$(FOOTER)
 
 
@@ -1284,7 +1299,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export sonic_su_dev_signing_key="$(SECURE_UPGRADE_DEV_SIGNING_KEY)"
 	export sonic_su_signing_cert="$(SECURE_UPGRADE_SIGNING_CERT)"
 	export sonic_su_mode="$(SECURE_UPGRADE_MODE)"
-	export sonic_su_prod_signing_tool="$(SECURE_UPGRADE_PROD_SIGNING_TOOL)"
+	export sonic_su_prod_signing_tool="/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL))"
 	export include_system_telemetry="$(INCLUDE_SYSTEM_TELEMETRY)"
 	export include_system_gnmi="$(INCLUDE_SYSTEM_GNMI)"
 	export include_restapi="$(INCLUDE_RESTAPI)"

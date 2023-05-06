@@ -3,11 +3,11 @@
 !
   neighbor INTERNAL_PEER_V4 peer-group
   neighbor INTERNAL_PEER_V6 peer-group
-  address-family ipv4
-
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
-    neighbor INTERNAL_PEER_V4 update-source Loopback4096
-{% elif CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' %}
+  neighbor INTERNAL_PEER_V4 update-source Loopback4096
+{% endif %}
+  address-family ipv4
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' %}
     neighbor INTERNAL_PEER_V4 route-reflector-client
 {% endif %}
     neighbor INTERNAL_PEER_V4 soft-reconfiguration inbound
@@ -15,10 +15,11 @@
     neighbor INTERNAL_PEER_V4 route-map FROM_BGP_INTERNAL_PEER_V4 in
     neighbor INTERNAL_PEER_V4 route-map TO_BGP_INTERNAL_PEER_V4 out
   exit-address-family
-  address-family ipv6
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
-    neighbor INTERNAL_PEER_V6 update-source Loopback4096
-{% elif CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' %}
+  neighbor INTERNAL_PEER_V6 update-source Loopback4096
+{% endif %}
+  address-family ipv6
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' %}
     neighbor INTERNAL_PEER_V6 route-reflector-client
 {% endif %}
     neighbor INTERNAL_PEER_V6 soft-reconfiguration inbound

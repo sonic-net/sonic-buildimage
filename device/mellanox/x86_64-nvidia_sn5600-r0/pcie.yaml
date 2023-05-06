@@ -82,12 +82,6 @@
     f0)'
 - bus: '00'
   dev: 1b
-  fn: '2'
-  id: a342
-  name: 'PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #19 (rev
-    f0)'
-- bus: '00'
-  dev: 1b
   fn: '4'
   id: a32c
   name: 'PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #21 (rev
@@ -144,3 +138,8 @@
   id: 15bb
   name: 'Ethernet controller: Intel Corporation Ethernet Connection (7) I219-LM (rev
     10)'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: cf80
+  name: 'Ethernet controller: Mellanox Technologies Spectrum-4'
