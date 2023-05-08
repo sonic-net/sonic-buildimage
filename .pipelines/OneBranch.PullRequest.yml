@@ -52,7 +52,7 @@ stages:
       postSteps:
         - bash: |
             echo $(System.PullRequest.targetBranchName)
-            git log origin/$(System.PullRequest.targetBranchName)..HEAD --oneline --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) [%an]' | head -n2 | grep -E "Merge branch .* of .* into internal.* \[Sonic Automation\]" && echo skiptest && echo "##vso[task.setvariable variable=SKIP_VSTEST;isOutput=true]YES"
+            git log origin/$(System.PullRequest.targetBranchName)..HEAD --oneline --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) [%an]' | head -n2 | grep -E "Merge branch .* of .* into internal.* \[Sonic Automation\]" && echo skiptest && echo "##vso[task.setvariable variable=SKIP_VSTEST;isOutput=true]YES" || true
           name: SetVarInt
 
 - stage: Test
