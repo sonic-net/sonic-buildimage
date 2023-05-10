@@ -226,7 +226,7 @@ class BGPPeerMgrBase(Manager):
             kwargs['loopback0_ipv4'] = lo0_ipv4
 
         if self.load_mgmt_intf:
-            kwargs['CONFIG_DB__MGMT_INTERFACE'] = { tuple(key.split('|')) : {} for key in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_MGMT_INTERFACE_TABLE_NAME)}
+            kwargs['CONFIG_DB__MGMT_INTERFACE'] = { tuple(key.split('|')) : {} for key in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_MGMT_INTERFACE_TABLE_NAME) if '|' in key }
 
         tag = data['name'] if 'name' in data else nbr
         self.peer_group_mgr.update(tag, **kwargs)

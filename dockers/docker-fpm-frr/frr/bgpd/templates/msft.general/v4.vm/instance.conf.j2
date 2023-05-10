@@ -3,10 +3,11 @@
 !
 ! template: bgpd/templates/msft.general/v4.vm/instance.conf.j2
 !
+{% set baremetal_v4 = CONFIG_DB__DEVICE_METADATA['localhost']['baremetal_v4'] %}
 
 ! It is calling get_ipv4_loopback_address, but the method is generic enough
 ! to get IP from an interface in any table
-  bgp router-id {{ get_ipv4_loopback_address(CONFIG_DB__MGMT_INTERFACE, "eth1") | ip }}
+  bgp router-id {{baremetal_v4}}
   neighbor {{ neighbor_addr }} remote-as {{ bgp_session['asn'] }}
   neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
   neighbor {{ neighbor_addr }} ebgp-multihop 255
