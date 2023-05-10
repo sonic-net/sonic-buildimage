@@ -12,6 +12,7 @@ vni {{ vnet_metadata['vni'] }}
 {% block interfaces %}
 ! Enable nht through default route
 ip nht resolve-via-default
+ipv6 nht resolve-via-default
 ! Enable link-detect (default disabled)
 {% for (name, prefix) in INTERFACE|pfx_filter %}
 interface {{ name }}

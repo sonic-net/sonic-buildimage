@@ -1,8 +1,7 @@
 {
     "CONFIG_DB__DEVICE_METADATA": {
         "localhost": {         
-            "type": "LeafRouter"
+            "type": "SpineRouter"
         }
-    },
-    "loopback0_ipv4": "1.1.1.1/32"
+    }
 }
