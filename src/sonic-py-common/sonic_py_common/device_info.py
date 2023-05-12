@@ -345,7 +345,7 @@ def get_sonic_version_info():
         if yaml.__version__ >= "5.1":
             sonic_ver_info = yaml.full_load(stream)
         else:
-            sonic_ver_info = yaml.load(stream)
+            sonic_ver_info = yaml.safe_load(stream)
 
     return sonic_ver_info
 
