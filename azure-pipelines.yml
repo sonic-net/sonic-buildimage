@@ -203,39 +203,6 @@ stages:
         MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
         DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
 
-  - job:
-    pool:
-      vmImage: 'ubuntu-20.04'
-    displayName: "kvmtest-t0"
-    dependsOn:
-    - t0_part1
-    - t0_part2
-    - t0_testbedv2
-    - t0_2vlans_testbedv2
-    condition: always()
-    continueOnError: false
-    variables:
-      resultOfPart1: $[ dependencies.t0_part1.result ]
-      resultOfPart2: $[ dependencies.t0_part2.result ]
-      resultOfT0TestbedV2: $[ dependencies.t0_testbedv2.result ]
-      resultOfT02VlansTestbedV2: $[ dependencies.t0_2vlans_testbedv2.result ]
-
-    steps:
-    - script: |
-        if [ $(resultOfT0TestbedV2) == "Succeeded" ] && [ $(resultOfT02VlansTestbedV2) == "Succeeded" ]; then
-          echo "TestbedV2 t0 passed."
-          exit 0
-        fi
-
-        if [ $(resultOfPart1) == "Succeeded" ] && [ $(resultOfPart2) == "Succeeded" ]; then
-          echo "Classic t0 jobs(both part1 and part2) passed."
-          exit 0
-        fi
-
-        echo "Both classic and TestbedV2 t0 jobs failed! Please check the detailed information. (Any of them passed, t0 will be considered as passed)"
-        exit 1
-
-
   - job: t1_lag_classic
     pool: sonictest-t1-lag
     displayName: "kvmtest-t1-lag classic"
@@ -265,33 +232,11 @@ stages:
         MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
 
   - job:
-    pool:
-      vmImage: 'ubuntu-20.04'
-    displayName: "kvmtest-t1-lag"
-    dependsOn:
-    - t1_lag_classic
-    - t1_lag_testbedv2
-    condition: always()
-    continueOnError: false
-    variables:
-      resultOfClassic: $[ dependencies.t1_lag_classic.result ]
-      resultOfTestbedV2: $[ dependencies.t1_lag_testbedv2.result ]
-    steps:
-    - script: |
-        if [ $(resultOfClassic) == "Succeeded" ] || [ $(resultOfTestbedV2) == "Succeeded" ]; then
-          echo "One or both of t1_lag_classic and t1_lag_testbedv2 passed."
-          exit 0
-        else
-          echo "Both t1_lag_classic and t1_lag_testbedv2 failed! Please check the detailed information."
-          exit 1
-        fi
-
-  - job:
     pool: sonictest-sonic-t0
     displayName: "kvmtest-t0-sonic"
     timeoutInMinutes: 360
     condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_CLASSICAL_TEST, 'YES'))
-    continueOnError: true
+    continueOnError: false
     steps:
     - template: .azure-pipelines/run-test-template.yml
       parameters:
@@ -306,7 +251,7 @@ stages:
     displayName: "kvmtest-multi-asic-t1-lag"
     timeoutInMinutes: 240
     condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_CLASSICAL_TEST, 'YES'))
-    continueOnError: true
+    continueOnError: false
     steps:
     - template: .azure-pipelines/run-test-template.yml
       parameters:
