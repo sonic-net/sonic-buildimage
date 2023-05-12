@@ -186,6 +186,12 @@ class DeviceDataManager:
 
     @classmethod
     @utils.read_only_cache()
+    def is_simx_platform(cls):
+        platform_name = cls.get_platform_name()
+        return platform_name and 'simx' in platform_name
+
+    @classmethod
+    @utils.read_only_cache()
     def get_fan_drawer_count(cls):
         # Here we don't read from /run/hw-management/config/hotplug_fans because the value in it is not
         # always correct.

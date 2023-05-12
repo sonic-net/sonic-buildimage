@@ -57,45 +57,45 @@ class TestLed:
         utils.write_file = mock_write_file
 
         assert obj.get_status_led() == Led.STATUS_LED_COLOR_GREEN
-        mock_file_content[physical_led.get_green_led_path()] = Led.LED_OFF
+        mock_file_content[physical_led.get_led_path('green')] = Led.LED_OFF
         assert obj.set_status_led(Led.STATUS_LED_COLOR_RED) is True
         assert obj.get_status_led() == Led.STATUS_LED_COLOR_RED
-        mock_file_content[physical_led.get_red_led_path()] = Led.LED_OFF
+        mock_file_content[physical_led.get_led_path('red')] = Led.LED_OFF
         assert obj.set_status_led(Led.STATUS_LED_COLOR_GREEN) is True
         assert obj.get_status_led() == Led.STATUS_LED_COLOR_GREEN
-        mock_file_content[physical_led.get_green_led_path()] = Led.LED_OFF
+        mock_file_content[physical_led.get_led_path('green')] = Led.LED_OFF
         assert obj.set_status_led(Led.STATUS_LED_COLOR_ORANGE) is True
         assert obj.get_status_led() == Led.STATUS_LED_COLOR_RED
-        mock_file_content[physical_led.get_orange_led_path()] = Led.LED_OFF
+        mock_file_content[physical_led.get_led_path('orange')] = Led.LED_OFF
 
         assert obj.set_status_led(Led.STATUS_LED_COLOR_RED_BLINK)
         assert obj.get_status_led() == Led.STATUS_LED_COLOR_RED_BLINK
 
-        mock_file_content[physical_led.get_red_led_delay_off_path()] = Led.LED_OFF
-        mock_file_content[physical_led.get_red_led_delay_on_path()] = Led.LED_OFF
+        mock_file_content[physical_led.get_led_delay_off_path('red')] = Led.LED_OFF
+        mock_file_content[physical_led.get_led_delay_on_path('red')] = Led.LED_OFF
 
         assert obj.set_status_led(Led.STATUS_LED_COLOR_GREEN_BLINK)
         assert obj.get_status_led() == Led.STATUS_LED_COLOR_GREEN_BLINK
-        mock_file_content[physical_led.get_green_led_delay_off_path()] = Led.LED_OFF
-        mock_file_content[physical_led.get_green_led_delay_on_path()] = Led.LED_OFF
+        mock_file_content[physical_led.get_led_delay_off_path('green')] = Led.LED_OFF
+        mock_file_content[physical_led.get_led_delay_on_path('green')] = Led.LED_OFF
 
         assert obj.set_status_led(Led.STATUS_LED_COLOR_ORANGE_BLINK)
         assert obj.get_status_led() == Led.STATUS_LED_COLOR_RED_BLINK
-        mock_file_content[physical_led.get_green_led_delay_off_path()] = Led.LED_OFF
-        mock_file_content[physical_led.get_green_led_delay_on_path()] = Led.LED_OFF
+        mock_file_content[physical_led.get_led_delay_off_path('green')] = Led.LED_OFF
+        mock_file_content[physical_led.get_led_delay_on_path('green')] = Led.LED_OFF
 
     def _mock_led_file_content(self, led):
         return {
-            led.get_green_led_path(): Led.LED_ON,
-            led.get_red_led_path(): Led.LED_OFF,
-            led.get_orange_led_path(): Led.LED_OFF,
+            led.get_led_path('green'): Led.LED_ON,
+            led.get_led_path('red'): Led.LED_OFF,
+            led.get_led_path('orange'): Led.LED_OFF,
             led.get_led_cap_path(): 'none green green_blink red red_blink orange',
-            led.get_green_led_delay_off_path(): Led.LED_OFF,
-            led.get_green_led_delay_on_path(): Led.LED_OFF,
-            led.get_red_led_delay_off_path(): Led.LED_OFF,
-            led.get_red_led_delay_on_path(): Led.LED_OFF,
-            led.get_orange_led_delay_off_path(): Led.LED_OFF,
-            led.get_orange_led_delay_on_path(): Led.LED_OFF,
+            led.get_led_delay_off_path('green'): Led.LED_OFF,
+            led.get_led_delay_on_path('green'): Led.LED_OFF,
+            led.get_led_delay_off_path('red'): Led.LED_OFF,
+            led.get_led_delay_on_path('red'): Led.LED_OFF,
+            led.get_led_delay_off_path('orange'): Led.LED_OFF,
+            led.get_led_delay_on_path('orange'): Led.LED_OFF,
         }
 
     @mock.patch('sonic_platform.led.Led._wait_files_ready', mock.MagicMock(return_value=True))
@@ -124,19 +124,20 @@ class TestLed:
         utils.write_file = mock_write_file
         assert obj1.set_status_led(Led.STATUS_LED_COLOR_GREEN)
         assert obj2.get_status_led() == Led.STATUS_LED_COLOR_GREEN
-        mock_file_content[physical_led.get_green_led_path()] = Led.LED_OFF
+        mock_file_content[physical_led.get_led_path('green')] = Led.LED_OFF
         assert obj2.set_status_led(Led.STATUS_LED_COLOR_RED)
         assert obj2.get_status_led() == Led.STATUS_LED_COLOR_RED
         assert obj1.set_status_led(Led.STATUS_LED_COLOR_RED)
         assert obj2.get_status_led() == Led.STATUS_LED_COLOR_RED
 
-        mock_file_content[physical_led.get_red_led_path()] = Led.LED_OFF
+        mock_file_content[physical_led.get_led_path('red')] = Led.LED_OFF
         assert obj1.set_status_led(Led.STATUS_LED_COLOR_GREEN)
         assert obj1.get_status_led() == Led.STATUS_LED_COLOR_RED
         assert obj2.get_status_led() == Led.STATUS_LED_COLOR_RED
+        mock_file_content[physical_led.get_led_path('red')] = Led.LED_OFF
         assert obj2.set_status_led(Led.STATUS_LED_COLOR_GREEN)
         assert obj1.get_status_led() == Led.STATUS_LED_COLOR_GREEN
-        assert obj1.get_status_led() == Led.STATUS_LED_COLOR_GREEN
+        assert obj2.get_status_led() == Led.STATUS_LED_COLOR_GREEN
 
     @mock.patch('sonic_platform.led.Led._wait_files_ready', mock.MagicMock(return_value=True))
     def test_psu_led(self):

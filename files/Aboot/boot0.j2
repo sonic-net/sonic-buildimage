@@ -118,7 +118,8 @@ clean_flash() {
            [ $f != "minigraph.xml" ] &&
            [ $f != "snmp.yml" ] &&
            [ $f != "acl.json" ] &&
-           [ $f != "port_config.json" ]
+           [ $f != "port_config.json" ] &&
+           [ $f != "golden_config_db.json" ]
         then
             rm -rf "$target_path/$f"
         fi

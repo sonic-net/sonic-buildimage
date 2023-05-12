@@ -109,7 +109,11 @@ run_hookdir() {
 reload_minigraph()
 {
     echo "Reloading minigraph..."
-    config load_minigraph -y -n
+    if [ -f /etc/sonic/golden_config_db.json ]; then
+        config load_minigraph -y -n --override_config --golden_config_path '/etc/sonic/golden_config_db.json'
+    else
+        config load_minigraph -y -n
+    fi
     config save -y
 }
 
@@ -305,7 +309,7 @@ check_all_config_db_present()
 do_config_migration()
 {
     # Identify list of files to migrate
-    copy_list="minigraph.xml snmp.yml acl.json port_config.json frr telemetry credentials"
+    copy_list="minigraph.xml snmp.yml acl.json port_config.json frr telemetry credentials golden_config_db.json"
 
     # Migrate all configuration files from old to new
     copy_config_files_and_directories $copy_list

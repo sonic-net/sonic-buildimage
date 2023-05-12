@@ -1,4 +1,4 @@
-{% set asan_extra_options = ':print_suppressions=0' %}
+{% set asan_extra_options = ':print_suppressions=0:fast_unwind_on_malloc=0' %}
 [supervisord]
 logfile_maxbytes=1MB
 logfile_backups=2

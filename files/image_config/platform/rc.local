@@ -126,6 +126,8 @@ migrate_nos_configuration()
         PORT_CONFIG_GZFILE=$NOS_DIR/port_config.json.gz.base64.txt
         PORT_CONFIG_FILE=$NOS_DIR/port_config.json
         SNMP_FILE=$NOS_DIR/snmp.yml
+        GOLDEN_CONFIG_DB_GZFILE=$NOS_DIR/golden_config_db.json.gz.base64.txt
+        GOLDEN_CONFIG_DB_FILE=$NOS_DIR/golden_config_db.json
         mkdir -p $NOS_DIR
 
         mount $nos_dev $NOS_DIR
@@ -137,6 +139,7 @@ migrate_nos_configuration()
             [ -f $MG_GZFILE ] && /usr/bin/base64 -d $MG_GZFILE | /bin/gunzip > $MG_FILE
             [ -f $ACL_GZFILE ] && /usr/bin/base64 -d $ACL_GZFILE | /bin/gunzip > $ACL_FILE
             [ -f $PORT_CONFIG_GZFILE ] && /usr/bin/base64 -d $PORT_CONFIG_GZFILE | /bin/gunzip > $PORT_CONFIG_FILE
+            [ -f $GOLDEN_CONFIG_DB_GZFILE] && /usr/bin/base64 -d $GOLDEN_CONFIG_DB_GZFILE| /bin/gunzip > $GOLDEN_CONFIG_DB_FILE
 
             # Copy relevant files
             nos_migration_import $NOS_DIR/mgmt_interface.cfg /host/migration
@@ -144,6 +147,7 @@ migrate_nos_configuration()
             nos_migration_import $ACL_FILE /host/migration
             nos_migration_import $PORT_CONFIG_FILE /host/migration
             nos_migration_import $SNMP_FILE /host/migration
+            nos_migration_import $GOLDEN_CONFIG_DB_FILE /host/migration
 
             if [ "$sonic_fast_reboot" == true ]; then
                 mkdir -p /host/fast-reboot
@@ -261,6 +265,7 @@ if [ -f $FIRST_BOOT_FILE ]; then
         [ -f /host/acl.json ] && mv /host/acl.json /etc/sonic/old_config/
         [ -f /host/port_config.json ] && mv /host/port_config.json /etc/sonic/old_config/
         [ -f /host/snmp.yml ] && mv /host/snmp.yml /etc/sonic/old_config/
+        [ -f /host/golden_config_db.json ] && mv /host/golden_config_db.json /etc/sonic/old_config/
         touch /tmp/pending_config_migration
     elif [ -n "$migration" ] && [ -f /host/migration/minigraph.xml ];  then
         mkdir -p /etc/sonic/old_config
@@ -268,6 +273,7 @@ if [ -f $FIRST_BOOT_FILE ]; then
         [ -f /host/migration/acl.json ] && mv /host/migration/acl.json /etc/sonic/old_config/
         [ -f /host/migration/port_config.json ] && mv /host/migration/port_config.json /etc/sonic/old_config/
         [ -f /host/migration/snmp.yml ] && mv /host/migration/snmp.yml /etc/sonic/old_config/
+        [ -f /host/migration/golden_config_db.json ] && mv /host/migration/golden_config_db.json /etc/sonic/old_config/
         touch /tmp/pending_config_migration
         [ -f /etc/sonic/updategraph.conf ] && sed -i -e "s/enabled=false/enabled=true/g" /etc/sonic/updategraph.conf
     else
