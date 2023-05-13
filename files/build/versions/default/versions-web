@@ -6,8 +6,8 @@ http://deb.debian.org/debian/pool/main/i/iproute2/iproute2_5.10.0.orig.tar.xz==f
 http://deb.debian.org/debian/pool/main/i/iptables/iptables_1.8.7-1.debian.tar.xz==bacfd4f463240af61c4a50298e5f7560
 http://deb.debian.org/debian/pool/main/i/iptables/iptables_1.8.7-1.dsc==c7b1880f0d2e7a9306007969f3b541ee
 http://deb.debian.org/debian/pool/main/i/iptables/iptables_1.8.7.orig.tar.bz2==602ba7e937c72fbb7b1c2b71c3b0004b
-http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.1-2.3+deb11u1.debian.tar.xz==8c3640097a1b4cc59e927badbd45b3f0
-http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.1-2.3+deb11u1.dsc==1af0a028a9655235ec3372332f94a19c
+http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.1-2.3+deb11u2.debian.tar.xz==126081bf0da3c1e5ca722edeb5a3aed1
+http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.1-2.3+deb11u2.dsc==c35e75da314bce54f53b2e0847c6bc9b
 http://deb.debian.org/debian/pool/main/i/isc-dhcp/isc-dhcp_4.4.1.orig.tar.gz==dbcba5108f659278200218ac0847ce3f
 http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0-7.debian.tar.xz==8eab143a53c71c03695ebc78e4b5ed36
 http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0-7.dsc==983d68fb43001bb2fc94862bc4bc2e2b

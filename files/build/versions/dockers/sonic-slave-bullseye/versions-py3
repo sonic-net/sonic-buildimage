@@ -84,8 +84,8 @@ python-magic==0.4.20
 pytz==2021.1
 pyxdg==0.27
 pyyaml==5.4.1
-redis==4.5.4
-regex==2023.3.23
+redis==4.5.5
+regex==2023.5.5
 requests==2.25.1
 roman==2.0.0
 service-identity==18.1.0
