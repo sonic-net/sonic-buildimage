@@ -1,7 +1,7 @@
 gdb==10.1-1.7
 gdbserver==10.1-1.7
-isc-dhcp-relay==4.4.1-2.3+deb11u1
-isc-dhcp-relay-dbgsym==4.4.1-2.3+deb11u1
+isc-dhcp-relay==4.4.1-2.3+deb11u2
+isc-dhcp-relay-dbgsym==4.4.1-2.3+deb11u2
 libbabeltrace1==1.5.8-1+b3
 libboost-regex1.74.0==1.74.0-9
 libboost-thread1.74.0==1.74.0-9

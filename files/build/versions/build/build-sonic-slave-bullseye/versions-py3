@@ -2,7 +2,7 @@ blessed==1.20.0
 charset-normalizer==3.1.0
 click-log==0.4.0
 colorful==0.5.5
-docker==6.0.1
+docker==6.1.2
 docker-image-py==0.1.12
 enlighten==1.11.2
 filelock==3.12.0

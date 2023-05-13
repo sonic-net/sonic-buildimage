@@ -64,6 +64,7 @@ traitlets==4.3.3
 twisted==16.0.0
 typing==3.10.0.0
 unittest-xml-reporting==2.5.2
+unknown==0.0.0
 wcwidth==0.2.6
 werkzeug==1.0.1
 wheel==0.37.1

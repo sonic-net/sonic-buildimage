@@ -1,11 +1,8 @@
-base-files==11.1+deb11u7
 binutils-arm-linux-gnueabihf==2.35.2-2
 dctrl-tools==2.24-3
-debian-archive-keyring==2021.1.1+deb11u1
 dvipng==1.15-1.1
 golang-1.15-go==1.15.15-1~deb11u4
 golang-1.15-src==1.15.15-1~deb11u4
-grep==3.6-1+deb11u1
 libjpeg-dev==1:2.0.6-4
 libjpeg62-turbo-dev==1:2.0.6-4
 libxslt1-dev==1.1.34-4+deb11u1
@@ -13,7 +10,4 @@ linux-compiler-gcc-10-arm==5.10.178-3
 linux-headers-5.10.0-22-armmp==5.10.178-3
 linux-headers-armmp==5.10.178-3
 nasm==2.15.05-1
-ncurses-base==6.2+20201114-2+deb11u1
-ncurses-bin==6.2+20201114-2+deb11u1
 nodejs==14.21.3-deb-1nodesource1
-tzdata==2021a-1+deb11u10
