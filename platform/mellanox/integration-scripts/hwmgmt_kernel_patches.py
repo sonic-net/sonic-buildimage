@@ -9,11 +9,107 @@ import difflib
 
 from helper import *
 
+COMMIT_TITLE = "Intgerate HW-MGMT {} Changes"
+
+PATCH_TABLE_LOC = "platform/mellanox/hw-management/hw-mgmt/recipes-kernel/linux/"
+PATCH_TABLE_NAME = "Patch_Status_Table.txt"
+PATCH_TABLE_DELIMITER = "----------------------"
+PATCH_NAME = "patch name"
+COMMIT_ID = "Upstream commit id"
+
+def trim_array_str(str_list):
+    ret = [elem.strip() for elem in str_list]
+    return ret
+
+def get_line_elements(line):
+    columns_raw = line.split("|")
+    if len(columns_raw) < 3:
+        return False
+    # remove empty firsta and last elem
+    columns_raw = columns_raw[1:-1]
+    columns = trim_array_str(columns_raw)
+    return columns
+
+def load_patch_table(path, k_version):
+    patch_table_filename = os.path.join(path, PATCH_TABLE_NAME)
+
+    major, minor, subversion = k_version.split(".")
+    k_ver = "{}.{}".format(major, minor)
+
+    print("Loading patch table {} kver:{}".format(patch_table_filename, k_ver))
+
+    if not os.path.isfile(patch_table_filename):
+        print("-> ERR: file {} not found".format(patch_table_filename))
+        return None
+
+    # opening the file
+    patch_table_file = open(patch_table_filename, "r")
+    # reading the data from the file
+    patch_table_data = patch_table_file.read()
+    # splitting the file data into lines
+    patch_table_lines = patch_table_data.splitlines()
+    patch_table_file.close()
+
+    # Extract patch table for specified kernel version
+    kversion_line = "Kernel-{}".format(k_ver)
+    table_ofset = 0
+    for table_ofset, line in enumerate(patch_table_lines):
+        if line == kversion_line:
+            break
+
+    # if kernel version not found
+    if table_ofset >= len(patch_table_lines)-5:
+        print ("Err: kernel version {} not found in {}".format(k_ver, patch_table_filename))
+        return None
+
+    table = []
+    delimiter_count = 0
+    column_names = None
+    for idx, line in enumerate(patch_table_lines[table_ofset:]):
+        if PATCH_TABLE_DELIMITER in line:
+            delimiter_count += 1
+            if delimiter_count >= 3:
+                print ("Err: too much leading delimers line #{}: {}".format(table_ofset + idx, line))
+                return None
+            elif table:
+                break
+            continue
+
+        # line without delimiter but header still not found
+        if delimiter_count > 0:
+            if not column_names:
+                column_names = get_line_elements(line)
+                if not column_names:
+                    print ("Err: parsing table header line #{}: {}".format(table_ofset + idx, line))
+                    return None
+                delimiter_count = 0
+                continue
+            elif column_names:
+                line_arr = get_line_elements(line)
+                if len(line_arr) != len(column_names):
+                    print ("Err: patch table wrong format linex #{}: {}".format(table_ofset + idx, line))
+                    return None
+                else:
+                    table_line = dict(zip(column_names, line_arr))
+                    table.append(table_line)
+    return table
+
+def build_commit_description(changes):
+    if not changes:
+        return ""
+    content = "\n"
+    content = content + " ## Patch List\n"
+    for key, value in changes.items():
+        content = content + f"* {key} : {value}\n"
+    return content
+
 class Data:
     # list of new upstream patches
     new_up = list()
     # list of new non-upstream patches
     new_non_up = list()
+    # old upstream patches
+    old_up_patches = list()
     # current series file raw data
     old_series = list()
     # current non-upstream patch list
@@ -275,6 +371,39 @@ class PostProcess(HwMgmtAction):
         FileHandler.write_lines(os.path.join(self.args.build_root, SLK_KCONFIG_EXCLUDE), new_lines, True)
         print("-> INFO: updated kconfig-exclusion: \n{}".format("".join(FileHandler.read_raw(os.path.join(self.args.build_root, SLK_KCONFIG_EXCLUDE)))))
 
+    def list_patches(self):
+        old_up_patches = []
+        for i in range(Data.i_mlnx_start, Data.i_mlnx_end):
+            old_up_patches.append(Data.old_series[i].strip())
+        old_non_up_patches = [ptch.strip() for ptch in Data.old_non_up]
+        return old_up_patches, old_non_up_patches
+
+    def parse_id(self, id_):
+        if id_:
+            id_ = "https://github.com/gregkh/linux/commit/" + id_
+        return id_
+
+    def create_commit_msg(self, table):
+        title = COMMIT_TITLE.format(self.args.hw_mgmt_ver) 
+        changes_slk, changes_sb = {}, {}
+        old_up_patches, old_non_up_patches = self.list_patches()
+        for patch in table:
+            id_ = self.parse_id(patch.get(COMMIT_ID, ""))
+            patch_ = patch.get(PATCH_NAME)
+            if patch_ in Data.new_up and patch_ not in old_up_patches:
+                changes_slk[patch_] = id_
+                print(f"-> INFO: Patch: {patch_}, Commit: {id_}, added to linux-kernel description")
+            elif patch_ in Data.new_non_up and patch_ not in old_non_up_patches:
+                changes_sb[patch_] = id_
+                print(f"-> INFO: Patch: {patch_}, Commit: {id_}, added to buildimage description")
+            else:
+                print(f"-> INFO: Patch: {patch_}, Commit: {id_}, is not added")
+        slk_commit_msg = title + "\n" + build_commit_description(changes_slk)
+        sb_commit_msg = title + "\n" + build_commit_description(changes_sb)
+        print(f"-> INFO: SLK Commit Message: \n {slk_commit_msg}")
+        print(f"-> INFO: SB Commit Message: \n {sb_commit_msg}")
+        return sb_commit_msg, slk_commit_msg
+
     def perform(self):
         """ Read the data output from the deploy_kernel_patches.py script 
             and move to appropriate locations """
@@ -299,6 +428,18 @@ class PostProcess(HwMgmtAction):
         self.construct_series_with_non_up()
         self.write_series_diff()
 
+        path = os.path.join(self.args.build_root, PATCH_TABLE_LOC)
+        patch_table = load_patch_table(path, self.args.kernel_version)
+        
+        sb_msg, slk_msg = self.create_commit_msg(patch_table)
+
+        if self.args.sb_msg and sb_msg:
+            with open(self.args.sb_msg, 'w') as f:
+                f.write(sb_msg)
+
+        if self.args.slk_msg:
+            with open(self.args.slk_msg, 'w') as f:
+                f.write(slk_msg) 
 
 def create_parser():
     # Create argument parser
@@ -314,6 +455,10 @@ def create_parser():
     parser.add_argument("--series", type=str)
     parser.add_argument("--current_non_up_patches", type=str)
     parser.add_argument("--build_root", type=str)
+    parser.add_argument("--hw_mgmt_ver", type=str, required=True)
+    parser.add_argument("--kernel_version", type=str, required=True)
+    parser.add_argument("--sb_msg", type=str, required=False, default="")
+    parser.add_argument("--slk_msg", type=str, required=False, default="")
     parser.add_argument("--is_test", action="store_true")
     return parser
 
@@ -322,3 +467,4 @@ if __name__ == '__main__':
     parser = create_parser()
     action = HwMgmtAction.get(parser.parse_args())
     action.perform()
+
