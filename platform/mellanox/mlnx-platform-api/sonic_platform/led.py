@@ -28,10 +28,12 @@ class Led(object):
     STATUS_LED_COLOR_GREEN = 'green'
     STATUS_LED_COLOR_RED = 'red'
     STATUS_LED_COLOR_ORANGE = 'orange'
+    STATUS_LED_COLOR_BLUE = 'blue'
     STATUS_LED_COLOR_OFF = 'off'
     STATUS_LED_COLOR_GREEN_BLINK = 'green_blink'
     STATUS_LED_COLOR_RED_BLINK = 'red_blink'
     STATUS_LED_COLOR_ORANGE_BLINK = 'orange_blink'
+    STATUS_LED_COLOR_BLUE_BLINK = 'blue_blink'
 
     LED_ON = '255'
     LED_OFF = '0'
@@ -47,7 +49,8 @@ class Led(object):
         'red': 'red',
         'amber': 'red',
         'orange': 'red',
-        'green': 'green'
+        'green': 'green',
+        'blue': 'blue'
     }
 
     LED_PATH = "/var/run/hw-management/led/"
@@ -271,6 +274,12 @@ class SystemLed(Led):
     def __init__(self):
         super().__init__()
         self._led_id = 'status'
+
+
+class SystemUidLed(Led):
+    def __init__(self):
+        super().__init__()
+        self._led_id = 'uid'
 
 
 class SharedLed(object):
