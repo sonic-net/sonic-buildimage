@@ -37,7 +37,6 @@ stages:
     parameters:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobGroups:
-      - name: vs
       - name: broadcom
         variables:
           swi_image: yes
@@ -55,9 +54,30 @@ stages:
             git log origin/$(System.PullRequest.targetBranchName)..HEAD --oneline --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) [%an]' | head -n2 | grep -E "Merge branch .* of .* into internal.* \[Sonic Automation\]" && echo skiptest && echo "##vso[task.setvariable variable=SKIP_VSTEST;isOutput=true]YES" || true
           name: SetVarInt
 
+- stage: BuildVS
+  pool: sonic-image-builder-1ES
+  dependsOn: []
+  variables:
+    CACHE_MODE: rcache
+    ${{ if eq(variables['Build.SourceBranchName'], '202012') }}:
+      VERSION_CONTROL_OPTIONS: 'SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker'
+  jobs:
+  - template: .azure-pipelines/azure-pipelines-build.yml@acs-buildimage
+    parameters:
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }} BUILD_MULTIASIC_KVM=y'
+      jobGroups:
+      - name: vs
+      preSteps:
+        - template: .pipelines/prepare_agent.yml@acs-buildimage
+      postSteps:
+        - bash: |
+            echo $(System.PullRequest.targetBranchName)
+            git log origin/$(System.PullRequest.targetBranchName)..HEAD --oneline --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) [%an]' | head -n2 | grep -E "Merge branch .* of .* into internal.* \[Sonic Automation\]" && echo skiptest && echo "##vso[task.setvariable variable=SKIP_VSTEST;isOutput=true]YES" || true
+          name: SetVarInt
+
 - stage: Test
-  dependsOn: Build
-  condition: and(in(dependencies.Build.result, 'Succeeded', 'SucceededWithIssues'), ne(stageDependencies.Build.outputs['vs.SetVarInt.SKIP_VSTEST'], 'YES'))
+  dependsOn: BuildVS
+  condition: and(in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues'), ne(stageDependencies.BuildVS.outputs['vs.SetVarInt.SKIP_VSTEST'], 'YES'))
   variables:
     - group: SONiC-Testbed-Tools
     - name: inventory
