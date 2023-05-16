@@ -44,6 +44,13 @@ class TestLed:
         assert physical_led is not None
         self._verify_non_shared_led(physical_led, chassis)
 
+    def test_uid_led(self):
+        chassis = Chassis()
+        assert chassis.set_uid_led('blue') is False
+        physical_led = chassis._led_uid
+        assert physical_led is not None
+        self._verify_uid_led(physical_led, chassis)
+
     def _verify_non_shared_led(self, physical_led, obj):
         mock_file_content = self._mock_led_file_content(physical_led)
 
@@ -84,18 +91,39 @@ class TestLed:
         mock_file_content[physical_led.get_led_delay_off_path('green')] = Led.LED_OFF
         mock_file_content[physical_led.get_led_delay_on_path('green')] = Led.LED_OFF
 
+    def _verify_uid_led(self, physical_led, obj):
+        mock_file_content = self._mock_led_file_content(physical_led)
+
+        def mock_read_str_from_file(file_path, **kwargs):
+            return mock_file_content[file_path]
+
+        def mock_write_file(file_path, content, **kwargs):
+            mock_file_content[file_path] = content
+
+        utils.read_str_from_file = mock_read_str_from_file
+        utils.write_file = mock_write_file
+
+        assert obj.get_uid_led() == Led.STATUS_LED_COLOR_GREEN
+        mock_file_content[physical_led.get_led_path('green')] = Led.LED_OFF
+        assert obj.set_uid_led(Led.STATUS_LED_COLOR_BLUE) is True
+        assert obj.get_uid_led() == Led.STATUS_LED_COLOR_BLUE
+        mock_file_content[physical_led.get_led_path('blue')] = Led.LED_OFF
+
     def _mock_led_file_content(self, led):
         return {
             led.get_led_path('green'): Led.LED_ON,
             led.get_led_path('red'): Led.LED_OFF,
             led.get_led_path('orange'): Led.LED_OFF,
-            led.get_led_cap_path(): 'none green green_blink red red_blink orange',
+            led.get_led_path('blue'): Led.LED_OFF,
+            led.get_led_cap_path(): 'none green green_blink red red_blink orange blue',
             led.get_led_delay_off_path('green'): Led.LED_OFF,
             led.get_led_delay_on_path('green'): Led.LED_OFF,
             led.get_led_delay_off_path('red'): Led.LED_OFF,
             led.get_led_delay_on_path('red'): Led.LED_OFF,
             led.get_led_delay_off_path('orange'): Led.LED_OFF,
             led.get_led_delay_on_path('orange'): Led.LED_OFF,
+            led.get_led_delay_off_path('blue'): Led.LED_OFF,
+            led.get_led_delay_on_path('blue'): Led.LED_OFF,
         }
 
     @mock.patch('sonic_platform.led.Led._wait_files_ready', mock.MagicMock(return_value=True))
