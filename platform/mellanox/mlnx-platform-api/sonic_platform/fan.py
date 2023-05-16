@@ -31,6 +31,7 @@ try:
     from .led import ComponentFaultyIndicator
     from . import utils
     from .thermal import Thermal
+    from .fan_drawer import VirtualDrawer
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
@@ -45,7 +46,10 @@ CONFIG_PATH = "/var/run/hw-management/config"
 FAN_DIR = "/var/run/hw-management/thermal/fan{}_dir"
 FAN_DIR_VALUE_EXHAUST = 0
 FAN_DIR_VALUE_INTAKE = 1
-
+FAN_DIR_MAPPING = {
+    FAN_DIR_VALUE_EXHAUST: FanBase.FAN_DIRECTION_EXHAUST,
+    FAN_DIR_VALUE_INTAKE: FanBase.FAN_DIRECTION_INTAKE,
+}
 
 class MlnxFan(FanBase):
     def __init__(self, fan_index, position):
@@ -125,6 +129,20 @@ class MlnxFan(FanBase):
         """
         return False
 
+    @classmethod
+    def get_fan_direction(cls, dir_path):
+        try:
+            fan_dir = utils.read_int_from_file(dir_path, raise_exception=True)
+            ret = FAN_DIR_MAPPING.get(fan_dir)
+            if ret is None:
+                logger.log_error(f"Got wrong value {fan_dir} for fan direction {dir_path}")
+                return FanBase.FAN_DIRECTION_NOT_APPLICABLE
+            else:
+                return ret
+        except (ValueError, IOError) as e:
+            logger.log_error(f"Failed to read fan direction from {dir_path} - {e}")
+            return FanBase.FAN_DIRECTION_NOT_APPLICABLE
+
 
 class PsuFan(MlnxFan):
     # PSU fan speed vector
@@ -145,6 +163,7 @@ class PsuFan(MlnxFan):
         self.psu_i2c_bus_path = os.path.join(CONFIG_PATH, 'psu{0}_i2c_bus'.format(self.index))
         self.psu_i2c_addr_path = os.path.join(CONFIG_PATH, 'psu{0}_i2c_addr'.format(self.index))
         self.psu_i2c_command_path = os.path.join(CONFIG_PATH, 'fan_command')
+        self.psu_fan_dir_path = os.path.join(FAN_PATH, "psu{}_fan_dir".format(self.index))
 
     def get_direction(self):
         """
@@ -165,7 +184,10 @@ class PsuFan(MlnxFan):
                 1 stands for forward, in other words intake
                 0 stands for reverse, in other words exhaust
         """
-        return self.FAN_DIRECTION_NOT_APPLICABLE
+        if not os.path.exists(self.psu_fan_dir_path) or not self.get_presence():
+            return self.FAN_DIRECTION_NOT_APPLICABLE
+
+        return MlnxFan.get_fan_direction(self.psu_fan_dir_path)
 
     def get_status(self):
         """
@@ -263,7 +285,10 @@ class Fan(MlnxFan):
                 1 stands for forward, in other words intake
                 0 stands for reverse, in other words exhaust
         """
-        return self.fan_drawer.get_direction()
+        if not isinstance(self.fan_drawer, VirtualDrawer):
+            return self.fan_drawer.get_direction()
+        else:
+            return MlnxFan.get_fan_direction(FAN_DIR.format(self.index))
 
     def get_status(self):
         """

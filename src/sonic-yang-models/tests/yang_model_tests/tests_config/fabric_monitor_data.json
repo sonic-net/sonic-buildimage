@@ -1,0 +1,14 @@
+{
+    "FABRIC_MONITOR_POSITIVE_CONFIG": {
+        "sonic-fabric-monitor:sonic-fabric-monitor": {
+            "sonic-fabric-monitor:FABRIC_MONITOR": {
+                "FABRIC_MONITOR_DATA": {
+                    "monErrThreshCrcCells": "1",
+                    "monErrThreshRxCells": "61035156",
+                    "monPollThreshIsolation": "1",
+                    "monPollThreshRecovery": "8"
+                }
+            }
+        }
+    }
+}

@@ -264,3 +264,15 @@ class TestCfgGen(object):
                 "ipv6_neighbor_threshold_type": "used"
             }
         })
+
+    def test_fabric_monitor_data_table(self):
+        arg = ["--var-json", "FABRIC_MONITOR"]
+        output = json.loads(self.run_script_with_yang_arg(arg))
+        assert(output == {\
+            "FABRIC_MONITOR_DATA": {
+                "monErrThreshCrcCells": "1",
+                "monErrThreshRxCells": "61035156",
+                "monPollThreshIsolation": "1",
+                "monPollThreshRecovery": "8"
+            }
+        })
