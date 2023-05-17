@@ -9,7 +9,7 @@ on:
 
 jobs:
   pre_cherry_pick:
-    if: github.event.pull_request.merged == true && ( (github.event.action == 'closed' && contains(join(github.event.pull_request.labels.*.name, ','), 'Approved for 20')) || (github.event.action == 'labeled' && startsWith(github.event.label.name, 'Approved for 20')) )
+    if: github.repository_owner == 'sonic-net' && github.event.pull_request.merged == true && ( (github.event.action == 'closed' && contains(join(github.event.pull_request.labels.*.name, ','), 'Approved for 20')) || (github.event.action == 'labeled' && startsWith(github.event.label.name, 'Approved for 20')) )
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -39,6 +39,7 @@ jobs:
           labels=$(echo $GITHUB_CONTEXT | jq -r ".event.label.name")
         fi
         title=$(echo $GITHUB_CONTEXT | jq -r ".event.pull_request.title")
+        body=$(echo $GITHUB_CONTEXT | jq -r ".event.pull_request.body")
         echo =============================
         echo SHA:           $sha
         echo PRID:          $pr_id
@@ -50,6 +51,7 @@ jobs:
         echo ${TOKEN} | gh auth login --with-token
         echo author:        $author
         echo title:         $title
+        echo body:          "$body"
         echo =============================
 
         git config user.name mssonicbld
@@ -105,7 +107,7 @@ jobs:
           else
             # Create PR to release branch
             git push mssonicbld HEAD:cherry/$branch/${pr_id} -f
-            result=$(gh pr create -R ${repository} -H mssonicbld:cherry/$branch/${pr_id} -B $branch -t "[action] [PR:$pr_id] $title" -b '' 2>&1)
+            result=$(gh pr create -R ${repository} -H mssonicbld:cherry/$branch/${pr_id} -B $branch -t "[action] [PR:$pr_id] $title" -b "$body" 2>&1)
             echo $result | grep "already exists" && { echo $result; return 0; }
             echo $result | grep github.com || { echo $result; return 1; }
             new_pr_rul=$(echo $result | grep github.com)

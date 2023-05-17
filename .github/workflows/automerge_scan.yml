@@ -47,6 +47,11 @@ jobs:
             # Others success flag:   conclusion in SUCCESS,NEUTRAL
             # Ignore Azure.sonic-buildimage stage check result. It may be set continueOnError
             echo "$name" | grep "Azure.sonic-buildimage (" && continue
+            # rerun Azure.sonic-buildimage per day
+            if [[ "$name" == "Azure.sonic-buildimage" ]] && [[ "$conclusion" == "FAILURE" ]];then
+              completedAt=$(echo $check | jq -r '.completedAt')
+              [[ "$completedAt" < $(date --date "2 hour ago" -u +"%FT%TZ") ]] && [[ $(date -u +"%T") < "02:00:00" ]] && gh pr comment $url --body "/azp run Azure.sonic-buildimage"
+            fi
             # Ignore Semgrep, it has issues.
             [[ "$name" == "Semgrep" ]] && continue
             if [[ "$state" == "SUCCESS" ]];then
