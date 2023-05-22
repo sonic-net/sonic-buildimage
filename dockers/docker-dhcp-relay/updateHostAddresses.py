@@ -115,13 +115,15 @@ class DnsmasqStaticHostMonitor(object):
                 # If different mac get same ip, always respect mac first met
                 if ipv4_device_address in ip_mac_dict:
                     syslog.syslog(syslog.LOG_INFO, f"Duplicate ip address {ipv4_device_address} which has been assigned"
-                                  f" to {ip_mac_dict[ipv4_device_address]}, skip {mac_address}")
+                                  f" to {ip_mac_dict[ipv4_device_address][0]}, skip {mac_address}")
                     continue
 
-                ip_mac_dict[ipv4_device_address] = mac_address
+                ip_mac_dict[ipv4_device_address] = [mac_address, vlan]
 
-            for ip, mac in ip_mac_dict.items():
-                f.write(f"{mac},{ip},15m\n")
+            for ip, value in ip_mac_dict.items():
+                mac = value[0]
+                vlan = value[1]
+                f.write(f"{mac},set:{vlan},{ip},15m\n")
 
 
         # Update the next time we'll update /etc/dnsmasq.hosts

@@ -11,5 +11,8 @@ interface=
 {% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %}
 dhcp-range={{ prefix | ip }},static
+{%     if 'localhost' in DEVICE_METADATA and 'dhcp_server' in DEVICE_METADATA['localhost'] and 'enable' in DEVICE_METADATA['localhost']['dhcp_server'] and 'rack_mgmt_map' in DEVICE_METADATA['localhost'] %}
+dhcp-option=tag:{{ name }},223,"{{ DEVICE_METADATA['localhost']['rack_mgmt_map'] }}"
+{%     endif %}
 {% endif %}
 {% endfor %}
