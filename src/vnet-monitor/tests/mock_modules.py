@@ -13,3 +13,8 @@ class MockStateDbTable(object):
             return True, self.data[table_key][key]
         else:
             return False, None
+    
+    def delete(self, *args):
+        table_key = args[0]
+        if table_key in self.data:
+            self.data.pop(table_key)

@@ -59,12 +59,15 @@ class PingStatusCache:
     def set_state_db_table(self, vnet_monitor_table):
         self.vnet_monitor_table = vnet_monitor_table
 
-    def add_entry(self, t0_loopback, card_vip):
+    def add_entry(self, t0_loopback, card_vip, interval, multiplier, overlay_mac):
         """
         Add an entry in the cache
         Args:
             t0_loopback: The loopback address (IPv4) of target T0
             card_vip: The virtual IP address (IPv4) of the card
+            interval: The ping interval
+            multiplier: The ping timeout multiplier
+            overlay_mac: The overlay MAC address
         Returns:
             None
         Raises:
@@ -73,24 +76,31 @@ class PingStatusCache:
         # The key in cache is without prefix length
         key = self.make_key(t0_loopback, card_vip)
         if key in self.stats:
-            return
-        self.stats[key] = {
-            "t0_lo": t0_loopback,
-            "card_vip": card_vip,
-            "seq_num": 0,
-            "timeout_count": 0,
-            "state": "down",
-            "ping_state": PING_INITIAL
-        }
-        if self.vnet_monitor_table is not None:
-            # Also create entry in STATE_DB if not found
-            table_key = t0_loopback + "|" + card_vip
-            ret, state = self.vnet_monitor_table.hget(table_key, "state")
-            if not ret:
-                kvs = [("state", "down")]
-                self.vnet_monitor_table.set(table_key, kvs)
-            else:
-                self.stats[key]['state'] = state
+            # Update the existing cache
+            self.stats[key]["interval"] = interval
+            self.stats[key]["multiplier"] = multiplier
+            self.stats[key]["overlay_mac"] = overlay_mac
+        else:
+            self.stats[key] = {
+                "t0_lo": t0_loopback,
+                "card_vip": card_vip,
+                "seq_num": 0,
+                "timeout_count": 0,
+                "state": "down",
+                "ping_state": PING_INITIAL,
+                "interval": interval,
+                "multiplier": multiplier,
+                "overlay_mac": overlay_mac
+            }
+            if self.vnet_monitor_table is not None:
+                # Also create entry in STATE_DB if not found
+                table_key = t0_loopback + "|" + card_vip
+                ret, state = self.vnet_monitor_table.hget(table_key, "state")
+                if not ret:
+                    kvs = [("state", "down")]
+                    self.vnet_monitor_table.set(table_key, kvs)
+                else:
+                    self.stats[key]['state'] = state
     
     def remove_entry(self, t0_loopback, card_vip):
         """
@@ -105,6 +115,12 @@ class PingStatusCache:
         """
         key = self.make_key(t0_loopback, card_vip)
         if key in self.stats:
+            # Remove entry from STATE_DB as well
+            table_key = self.stats[key]['t0_lo'] + "|" + self.stats[key]['card_vip']
+            if self.vnet_monitor_table is not None:
+                self.vnet_monitor_table.delete(table_key)
+                logger_helper.log_notice("Removed state_db entry for loopback {} VIP {}".format(t0_loopback, card_vip))
+            # Remove entry from cache
             self.stats.pop(key)
 
     def has_entry(self, t0_loopback, card_vip):
@@ -120,6 +136,27 @@ class PingStatusCache:
         """
         key = self.make_key(t0_loopback, card_vip)
         return key in self.stats
+    
+    def compare_entry(self, t0_loopback, card_vip, interval, multiplier, overlay_mac):
+        """
+        Compare the given entry with the cached entry
+        Args:
+            t0_loopback: The loopback address (IPv4) of target T0
+            card_vip: The virtual IP address (IPv4) of the card
+            interval: The ping interval
+            multiplier: The ping timeout multiplier
+            overlay_mac: The overlay MAC address
+        Returns:
+            True if the entry is found and the values are the same, otherwise return False
+        Raises:
+            None
+        """
+        key = self.make_key(t0_loopback, card_vip)
+        if not self.has_entry(t0_loopback, card_vip):
+            return False
+        return self.stats[key]['interval'] == interval and \
+            self.stats[key]['multiplier'] == multiplier and \
+            self.stats[key]['overlay_mac'] == overlay_mac
     
     def update_sequence_number(self, t0_loopback, card_vip, seq_num=None):
         """
@@ -262,7 +299,7 @@ class TaskPing(TaskBase):
     # are running sequentially
     socket_ping = None
 
-    def __init__(self, expected_running_timestamp_ms, t1_mac, t1_loopback, t0_loopback, special_mac, card_vip, vni, interval_ms, multiplier, seq_num):
+    def __init__(self, expected_running_timestamp_ms, t1_mac, t1_loopback, t0_loopback, overlay_mac, card_vip, vni, interval_ms, multiplier, seq_num):
         """
         Constructor of TaskPing
         Args:
@@ -270,7 +307,7 @@ class TaskPing(TaskBase):
             t1_mac: MAC address of this T1
             t1_loopback: The loopback address (IPv4 or IPv6) of this T1. 
             t0_loopback: The loopback address (IPV4) of the target T0
-            special_mac: The special MAC for matching the Vnet ping
+            overlay_mac: The special MAC for matching the Vnet ping
             card_vip: The virtual IP address of card. The VIP of card can be IPv4 or IPv6
             vni: The vni in vxlan header
             interval_ms: The interval for ping request (in ms)
@@ -285,7 +322,7 @@ class TaskPing(TaskBase):
         self.t1_mac = t1_mac
         self.t1_loopback = t1_loopback
         self.t0_loopback = t0_loopback
-        self.special_mac = special_mac
+        self.overlay_mac = overlay_mac
         self.card_vip = card_vip
         self.vni = vni
         self.interval_ms = interval_ms
@@ -295,7 +332,7 @@ class TaskPing(TaskBase):
         # need to calculate it upon each send
         self.t0_lo_addr = ip_addr(self.t0_loopback)
         self.load_t0_loopback = socket.inet_aton(self.t0_lo_addr)
-        self.packet_tmpl = self.build_vent_ping_template_packet(t1_mac, ip_addr(t1_loopback), special_mac, ip_addr(card_vip), vni)
+        self.packet_tmpl = self.build_vent_ping_template_packet(t1_mac, ip_addr(t1_loopback), overlay_mac, ip_addr(card_vip), vni)
     
     @staticmethod
     def init(t1_loopback_v4):
@@ -338,31 +375,37 @@ class TaskPing(TaskBase):
             TaskPing.socket_ping = None
 
     
-    def build_vent_ping_template_packet(self, t1_mac, t1_loopback, special_mac, card_vip, vni):
+    def build_vent_ping_template_packet(self, t1_mac, t1_loopback, overlay_mac, card_vip, vni):
         """
         Build a vxlan encapsulated template packet for later use.
         A payload will be added to the template to generate a final packet.
-        +------+------+------+-----------+------+-------+------+-------+------------+--------+-----+-------+
-        |T1 lo |T0 lo |Vxlan1|Special MAC|T1 MAC| T1 lo | VIP  |Vxlan2 |Special MAC | T1 MAC | VIP | T1 Lo |
-        +------+------+------+-----------+--------------+------+------_+------------+--------+-----+-------+
+        The template is as below:
+        +------+------+------+-------------------+------+-------+------+-------+------------+--------+-----+-------+
+        |T1 lo |T0 lo |Vxlan1|'00:12:34:56:78:9a'|T1 MAC| T1 lo | VIP  |Vxlan2 |Special MAC | T1 MAC | VIP | T1 Lo |
+        +------+------+------+-------------------+--------------+------+------_+------------+--------+-----+-------+
+        Notes:
+            1. The dst_mac after the 1st vxlan header is a fixed value '00:12:34:56:78:9a', otherwise the packet is dropped by T0
+            2. The src_mac after the 2nd vxlan must be the special_mac. The card is reading the src_mac and do the matching
+            3. The dst_mac after the 2nd vxlan header can be any value. The card will rewrite it. We use the MAC of T1 here
         Args:
             t1_mac: MAC address of this T1
             t1_loopback: The loopback address (IPV4) of this T1
-            special_mac: The special MAC for matching the Vnet ping
+            overlay_mac: The special MAC for matching the Vnet ping
             card_vip: The virtual IP address of card. The VIP of card can be IPv4 or IPv6
             vni: The vni in vxlan header
         Returns:
             packet tempalte
         Raises:
         """
+        T0_MAC = "00:12:34:56:78:9a"
         if ip_interface(card_vip).version == 4:
             # The VIP of card is IPv4
-            inner_pkt = Ether(dst=special_mac, src=t1_mac)/IP(src=card_vip, dst=t1_loopback, tos=(DEFAULT_DSCP << 2))/UDP(sport=DEFAULT_UDP_PORT, dport=DEFAULT_UDP_PORT)
-            vxlan2_pkt = Ether(dst=special_mac, src=t1_mac)/IP(src=t1_loopback, dst=card_vip, ttl=2, tos=(DEFAULT_DSCP << 2))/UDP()/VXLAN(vni=vni)/inner_pkt
+            inner_pkt = Ether(dst=t1_mac, src=overlay_mac)/IP(src=card_vip, dst=t1_loopback, tos=(DEFAULT_DSCP << 2))/UDP(sport=DEFAULT_UDP_PORT, dport=DEFAULT_UDP_PORT)
+            vxlan2_pkt = Ether(dst=T0_MAC, src=t1_mac)/IP(src=t1_loopback, dst=card_vip, ttl=2, tos=(DEFAULT_DSCP << 2))/UDP()/VXLAN(vni=vni)/inner_pkt
         else:
             # The VIP of card is IPv6
-            inner_pkt = Ether(dst=special_mac, src=t1_mac)/IPv6(src=card_vip, dst=t1_loopback, tc=(DEFAULT_DSCP << 2))/UDP(sport=DEFAULT_UDP_PORT, dport=DEFAULT_UDP_PORT)
-            vxlan2_pkt = Ether(dst=special_mac, src=t1_mac)/IPv6(src=t1_loopback, dst=card_vip, hlim=2, tc=(DEFAULT_DSCP << 2))/UDP()/VXLAN(vni=vni)/inner_pkt
+            inner_pkt = Ether(dst=t1_mac, src=overlay_mac)/IPv6(src=card_vip, dst=t1_loopback, tc=(DEFAULT_DSCP << 2))/UDP(sport=DEFAULT_UDP_PORT, dport=DEFAULT_UDP_PORT)
+            vxlan2_pkt = Ether(dst=T0_MAC, src=t1_mac)/IPv6(src=t1_loopback, dst=card_vip, hlim=2, tc=(DEFAULT_DSCP << 2))/UDP()/VXLAN(vni=vni)/inner_pkt
 
         vxlan1_pkt = VXLAN(vni=vni)/vxlan2_pkt
 
@@ -371,9 +414,9 @@ class TaskPing(TaskBase):
     def build_vnet_ping_packet(self):
         """
         Build a double vxlan encapsulated packet
-            +------+------+------+-----------+------+------+------+-------+------------+--------+-----+-------+-------+---------+
-            |T1 lo |T0 lo |Vxlan1|Special MAC|T1 MAC|T1 lo | VIP  |Vxlan2 |Special MAC | T1 MAC | VIP | T1 Lo | T0 Lo | Seq No. |
-            +------+------+------+-----------+------+------+------+------_+------------+--------+-----+-------+-------+---------+
+           +------+------+------+-------------------+------+-------+------+-------+------------+--------+-----+-------+-------+---------+
+            |T1 lo |T0 lo |Vxlan1|'00:12:34:56:78:9a'|T1 MAC| T1 lo | VIP  |Vxlan2 |Special MAC | T1 MAC | VIP | T1 Lo | T0 Lo | Seq No. |
+            +------+------+------+-------------------+--------------+------+------_+------------+--------+-----+-------+-------+---------+
         Returns:
             The vnet ping packet
         Raises:
@@ -491,7 +534,7 @@ class TaskRunner():
                     next_timeout_task = TaskTimeout(monotonic_ms() + task.multiplier*task.interval_ms, task.t0_loopback, task.card_vip, task.seq_num, task.multiplier)
                     self.add_task(next_timeout_task)
                     # Schedule the next ping task if cached entry is not removed
-                    if self.cached_stats.has_entry(task.t0_loopback, task.card_vip):
+                    if self.cached_stats.compare_entry(task.t0_loopback, task.card_vip, task.interval_ms, task.multiplier, task.overlay_mac):
                         next_ping_task = task.next_ping_task()
                         self.add_task(next_ping_task)
                 elif isinstance(task, TaskTimeout):
@@ -543,19 +586,32 @@ class DBMonitor():
         #Key format VNET_MONITOR_TABLE:T0_lo:VIP. The VIP can be both IPv4 and IPv6
         t0_loopback = keys[0]
         card_vip = keys[1]
-        af = ip_interface(card_vip).version
+        try:
+            if ip_interface(t0_loopback).version != 4:
+                logger_helper.log_warning("T0 Loopback should be IPv4 address: {}".format(t0_loopback))
+                return
+            af = ip_interface(card_vip).version
+        except ValueError:
+            logger_helper.log_warning("Got invalid vnet ping task. Key: {}".format(key))
+            return
         if op == 'SET':
             interval = int(fvp.get("interval", DEFAULT_INTERVAL))
             multiplier = int(fvp.get("multiplier", DEFAULT_MULTIPLIER))
-            filter_mac = fvp.get("overlay_dmac")
+            overlay_mac = fvp.get("overlay_dmac")
+            if self.cached_stats.has_entry(t0_loopback, card_vip):
+                if self.cached_stats.compare_entry(t0_loopback, card_vip, interval, multiplier, overlay_mac):
+                    # The entry is already in the cache, and the new entry is the same as the cached one
+                    return
+                logger_helper.log_notice("Update existing vnet ping task T0 Loopback: {} VIP: {}".format(t0_loopback, card_vip))
+
             logger_helper.log_notice("Got new vnet ping task T0 Loopback: {} VIP: {}".format(t0_loopback, card_vip))
-            self.cached_stats.add_entry(t0_loopback, card_vip)
+            self.cached_stats.add_entry(t0_loopback, card_vip, interval, multiplier, overlay_mac)
             ping_task = TaskPing(
                                 expected_running_timestamp_ms=monotonic_ms() + random.randint(0, interval), # A random delay is added to avoid burst request
                                 t1_mac=self.t1_mac,
                                 t1_loopback=self.t1_loopback[af],
                                 t0_loopback=t0_loopback,
-                                special_mac=filter_mac,
+                                overlay_mac=overlay_mac,
                                 card_vip=card_vip,
                                 vni=self.vni,
                                 interval_ms=interval,
@@ -563,7 +619,7 @@ class DBMonitor():
                                 seq_num=0)
             self.task_runner.add_task(ping_task)
         else:
-            logger_helper.log_notice("Removed new vnet ping task T0 Loopback: {} VIP: {}".format(t0_loopback, card_vip))
+            logger_helper.log_notice("Removed vnet ping task T0 Loopback: {} VIP: {}".format(t0_loopback, card_vip))
             self.cached_stats.remove_entry(t0_loopback, card_vip)
 
     def start(self):
@@ -728,6 +784,10 @@ class ReplyMonitor():
         if self.sniffer is not None:
             return
         self.sniffing_iface = self._get_oper_up_iface_list()
+        while self.sniffing_iface == []:
+            # Wait for at least one interface is up, oterwise the sniffer will not work
+            time.sleep(1)
+            self.sniffing_iface = self._get_oper_up_iface_list()
         self.sniffer = AsyncSniffer(iface=self.sniffing_iface, filter=self.sniffstring, prn=process_packet, store=False)
         self.sniffer.start()
         logger_helper.log_notice("Started vnet ping monitor at interfaces {}".format(self.sniffing_iface))

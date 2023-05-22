@@ -19,6 +19,7 @@ INTERVAL = 1000
 MULTIPLIER = 3
 VXLAN_PORT = 4789
 UDP_PORT = 10000
+OVERLAY_MAC = "00:AA:BB:CC:DD:EG"
 
 def test_ip_addr():
     assert(ip_addr('192.168.0.2/32') == '192.168.0.2')
@@ -52,11 +53,17 @@ class TestPingStatusCache(object):
         try:
             t0_loopback = '10.1.0.32'
             vip = '1.1.1.1/32'
-            self.cache.add_entry(t0_loopback, vip)
+            self.cache.add_entry(t0_loopback, vip, INTERVAL, MULTIPLIER, OVERLAY_MAC)
             # Verify the entry is in local cache
             assert(self.cache.has_entry(t0_loopback, vip))
+            assert(self.cache.compare_entry(t0_loopback, vip, INTERVAL, MULTIPLIER, OVERLAY_MAC))
             # Verify the entry is writen into state_db
             assert(self.state_db_status(t0_loopback, vip) == 'down')
+            # Remove entry
+            self.cache.remove_entry(t0_loopback, vip)
+            # Verify the entry is removed from state_db
+            table_key = t0_loopback + "|" + vip
+            return self.state_db_table.hget(table_key, "state") == (False, None)
         finally:
             self.clear_cached_stats()
             self.clear_state_db()
@@ -72,7 +79,7 @@ class TestPingStatusCache(object):
             # Write up status into state_db
             fvs = [('state', 'up')]
             self.state_db_table.set(table_key, fvs)
-            self.cache.add_entry(t0_loopback, vip)
+            self.cache.add_entry(t0_loopback, vip, INTERVAL, MULTIPLIER, OVERLAY_MAC)
             # Verify the entry is in local cache
             assert(self.cache.has_entry(t0_loopback, vip))
             # Verify the entry in state_db remains up
@@ -85,7 +92,7 @@ class TestPingStatusCache(object):
         try:
             t0_loopback = '10.1.0.32'
             vip = '1.1.1.1/32'
-            self.cache.add_entry(t0_loopback, vip)
+            self.cache.add_entry(t0_loopback, vip, INTERVAL, MULTIPLIER, OVERLAY_MAC)
             seq_num = 0
             self.cache.set_up_state(t0_loopback, vip, seq_num)
             table_key = t0_loopback + "|" + vip
@@ -98,7 +105,10 @@ class TestPingStatusCache(object):
                 "seq_num": 1,
                 "timeout_count": 0,
                 "state": "up",
-                "ping_state": PING_INITIAL # The ping_state is reset to initial after updating sn
+                "ping_state": PING_INITIAL, # The ping_state is reset to initial after updating sn
+                "interval": INTERVAL,
+                "multiplier": MULTIPLIER,
+                "overlay_mac": OVERLAY_MAC
             }
             # Verify the cached status is as expected
             assert(self.cache.stats[cache_key] == expected_values)
@@ -110,7 +120,7 @@ class TestPingStatusCache(object):
         try:
             t0_loopback = '10.1.0.32'
             vip = '1.1.1.1/32'
-            self.cache.add_entry(t0_loopback, vip)
+            self.cache.add_entry(t0_loopback, vip, INTERVAL, MULTIPLIER, OVERLAY_MAC)
             seq_num = 0
             # Set the state to up
             self.cache.set_up_state(t0_loopback, vip, seq_num)
@@ -124,7 +134,10 @@ class TestPingStatusCache(object):
                 "seq_num": seq_num+1,
                 "timeout_count": 0,
                 "state": "up",
-                "ping_state": PING_INITIAL
+                "ping_state": PING_INITIAL,
+                "interval": INTERVAL,
+                "multiplier": MULTIPLIER,
+                "overlay_mac": OVERLAY_MAC
             }
             assert(self.cache.stats[cache_key] == expected_values)
             # The 1st timeout
@@ -177,7 +190,7 @@ def create_task_ping(interval=INTERVAL):
                         t1_mac=T1_MAC,
                         t1_loopback=T1_LOOPBACK_V4,
                         t0_loopback=T0_LOOPBACK,
-                        special_mac=FILTER_MAC,
+                        overlay_mac=FILTER_MAC,
                         card_vip=VIP_V4,
                         vni=VNI,
                         interval_ms=interval,
@@ -278,6 +291,8 @@ class TestDBMonitor(object):
     def create_db_monitor(self):
         task_runner = mock.MagicMock()
         state_cache = mock.MagicMock()
+        # Return False to simulate the entry is not in the cache
+        state_cache.has_entry.return_value = False
         vnet_monitor_base.swsscommon = mock.MagicMock()
         vnet_monitor_base.daemon_base = mock.MagicMock()
         db_monitor = DBMonitor(
@@ -299,12 +314,26 @@ class TestDBMonitor(object):
             "overlay_dmac": FILTER_MAC
             }
         db_monitor.process_new_entry(key, "SET", fvp)
-        db_monitor.cached_stats.add_entry.assert_called_with(T0_LOOPBACK, VIP_V4)
+        db_monitor.cached_stats.add_entry.assert_called_with(T0_LOOPBACK, VIP_V4, INTERVAL, MULTIPLIER, FILTER_MAC)
         called_args = db_monitor.task_runner.add_task.call_args[0][0]
         assert(called_args.t1_mac == T1_MAC)
         assert(called_args.t1_loopback == T1_LOOPBACK_V4)
         assert(called_args.t0_loopback == T0_LOOPBACK)
-        assert(called_args.special_mac == FILTER_MAC)
+        assert(called_args.overlay_mac == FILTER_MAC)
+        assert(called_args.card_vip == VIP_V4)
+        assert(called_args.vni == VNI)
+        assert(called_args.interval_ms == INTERVAL)
+        assert(called_args.seq_num == 0)
+        # Update existing entry
+        TMP_MAC = "AA:BB:CC:DD:EE:FF"
+        fvp["overlay_dmac"] = TMP_MAC
+        db_monitor.process_new_entry(key, "SET", fvp)
+        db_monitor.cached_stats.add_entry.assert_called_with(T0_LOOPBACK, VIP_V4, INTERVAL, MULTIPLIER, TMP_MAC)
+        called_args = db_monitor.task_runner.add_task.call_args[0][0]
+        assert(called_args.t1_mac == T1_MAC)
+        assert(called_args.t1_loopback == T1_LOOPBACK_V4)
+        assert(called_args.t0_loopback == T0_LOOPBACK)
+        assert(called_args.overlay_mac == TMP_MAC)
         assert(called_args.card_vip == VIP_V4)
         assert(called_args.vni == VNI)
         assert(called_args.interval_ms == INTERVAL)
@@ -314,13 +343,14 @@ class TestDBMonitor(object):
         db_monitor.cached_stats.remove_entry.assert_called_with(T0_LOOPBACK, VIP_V4)
         # IPV6
         key = T0_LOOPBACK + ":" + VIP_V6
+        fvp["overlay_dmac"] = FILTER_MAC
         db_monitor.process_new_entry(key, "SET", fvp)
-        db_monitor.cached_stats.add_entry.assert_called_with(T0_LOOPBACK, VIP_V6)
+        db_monitor.cached_stats.add_entry.assert_called_with(T0_LOOPBACK, VIP_V6, INTERVAL, MULTIPLIER, FILTER_MAC)
         called_args = db_monitor.task_runner.add_task.call_args[0][0]
         assert(called_args.t1_mac == T1_MAC)
         assert(called_args.t1_loopback == T1_LOOPBACK_V6)
         assert(called_args.t0_loopback == T0_LOOPBACK)
-        assert(called_args.special_mac == FILTER_MAC)
+        assert(called_args.overlay_mac == FILTER_MAC)
         assert(called_args.card_vip == VIP_V6)
         assert(called_args.vni == VNI)
         assert(called_args.interval_ms == INTERVAL)
