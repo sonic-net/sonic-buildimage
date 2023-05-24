@@ -1,0 +1,11 @@
+#!/bin/bash
+
+function SafePwrCycle() {
+    sync ; sync
+    sudo umount -fa > /dev/null 2&>1
+
+    # Write CPLD register to initiate cold reboot
+    sudo echo 0 > /sys/bus/i2c/devices/i2c-0/0-0041/cold_reset
+}
+
+SafePwrCycle

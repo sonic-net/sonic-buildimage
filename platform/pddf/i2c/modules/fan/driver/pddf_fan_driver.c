@@ -182,6 +182,47 @@ EXPORT_SYMBOL(data_fan11_fault);
 FAN_SYSFS_ATTR_DATA data_fan12_fault = {FAN12_FAULT, S_IRUGO, fan_show_default, NULL, sonic_i2c_get_fan_fault_default, NULL, NULL, NULL, NULL, NULL, NULL};
 EXPORT_SYMBOL(data_fan12_fault);
 
+/* Derived attributes like status (should be derived from 'presence' and 'speed'/'fault' attributes) etc */
+FAN_SYSFS_ATTR_DATA data_fan1_status = {FAN1_STATUS, S_IRUGO, fan_show_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan1_status);
+FAN_SYSFS_ATTR_DATA data_fan2_status = {FAN2_STATUS, S_IRUGO, fan_show_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan2_status);
+FAN_SYSFS_ATTR_DATA data_fan3_status = {FAN3_STATUS, S_IRUGO, fan_show_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan3_status);
+FAN_SYSFS_ATTR_DATA data_fan4_status = {FAN4_STATUS, S_IRUGO, fan_show_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan4_status);
+FAN_SYSFS_ATTR_DATA data_fan5_status = {FAN5_STATUS, S_IRUGO, fan_show_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan5_status);
+FAN_SYSFS_ATTR_DATA data_fan6_status = {FAN6_STATUS, S_IRUGO, fan_show_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan6_status);
+FAN_SYSFS_ATTR_DATA data_fan7_status = {FAN7_STATUS, S_IRUGO, fan_show_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan7_status);
+FAN_SYSFS_ATTR_DATA data_fan8_status = {FAN8_STATUS, S_IRUGO, fan_show_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan8_status);
+FAN_SYSFS_ATTR_DATA data_fan9_status = {FAN9_STATUS, S_IRUGO, fan_show_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan9_status);
+FAN_SYSFS_ATTR_DATA data_fan10_status = {FAN10_STATUS, S_IRUGO, fan_show_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan10_status);
+FAN_SYSFS_ATTR_DATA data_fan11_status = {FAN11_STATUS, S_IRUGO, fan_show_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan11_status);
+FAN_SYSFS_ATTR_DATA data_fan12_status = {FAN12_STATUS, S_IRUGO, fan_show_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan12_status);
+
+/* Some generic fan attributes */
+FAN_SYSFS_ATTR_DATA data_fan_duty_cycle = {FAN_DUTY_CYCLE, S_IRUGO | S_IWUSR, fan_show_default, NULL, sonic_i2c_get_fan_dc_default, NULL, fan_store_default, NULL, sonic_i2c_set_fan_dc_default, NULL, NULL};
+EXPORT_SYMBOL(data_fan_duty_cycle);
+
+FAN_SYSFS_ATTR_DATA data_fan_model_name = {FAN_MODEL_NAME, S_IRUGO, fan_show_string, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan_model_name);
+
+FAN_SYSFS_ATTR_DATA data_fan_serial_num = {FAN_SERIAL_NUM, S_IRUGO, fan_show_string, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan_serial_num);
+
+FAN_SYSFS_ATTR_DATA data_fan_part_num = {FAN_PART_NUM, S_IRUGO, fan_show_string, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan_part_num);
+
+FAN_SYSFS_ATTR_DATA data_fan_hw_version = {FAN_HW_VERSION, S_IRUGO, fan_show_string, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+EXPORT_SYMBOL(data_fan_hw_version);
 
 FAN_SYSFS_ATTR_DATA_ENTRY fan_sysfs_attr_data_tbl[]=
 {
@@ -245,6 +286,23 @@ FAN_SYSFS_ATTR_DATA_ENTRY fan_sysfs_attr_data_tbl[]=
     { "fan10_fault", &data_fan10_fault},
     { "fan11_fault", &data_fan11_fault},
     { "fan12_fault", &data_fan12_fault},
+	{ "fan1_status", &data_fan1_status},
+    { "fan2_status", &data_fan2_status},
+    { "fan3_status", &data_fan3_status},
+    { "fan4_status", &data_fan4_status},
+    { "fan5_status", &data_fan5_status},
+    { "fan6_status", &data_fan6_status},
+	{ "fan7_status", &data_fan7_status},
+    { "fan8_status", &data_fan8_status},
+    { "fan9_status", &data_fan9_status},
+    { "fan10_status", &data_fan10_status},
+    { "fan11_status", &data_fan11_status},
+    { "fan12_status", &data_fan12_status},
+    { "fan_duty_cycle", &data_fan_duty_cycle},
+    { "fan_model_name", &data_fan_model_name},
+    { "fan_serial_num", &data_fan_serial_num},
+    { "fan_part_num", &data_fan_part_num},
+    { "fan_hw_version", &data_fan_hw_version},
 };
 
 void *get_fan_access_data(char *name)
@@ -271,7 +329,10 @@ static int pddf_fan_probe(struct i2c_client *client,
 	FAN_PDATA *fan_platform_data;
     FAN_DATA_ATTR *data_attr;
     FAN_SYSFS_ATTR_DATA_ENTRY *sysfs_data_entry;
-	char new_str[ATTR_NAME_LEN] = "";
+    FAN_SYSFS_ATTR_DATA_ENTRY *extra_sysfs_data_entry;
+	char new_duplicate_str[ATTR_NAME_LEN] = "";
+	char new_default_str[ATTR_NAME_LEN] = "";
+    int idx = 0;
 
 	if (client == NULL) {
         printk("NULL Client.. \n");
@@ -331,13 +392,14 @@ static int pddf_fan_probe(struct i2c_client *client,
         data->attr_info[i].valid = 0;
 		mutex_init(&data->attr_info[i].update_lock);
 
-		/*Create a duplicate entry*/
-		get_fan_duplicate_sysfs(dy_ptr->index, new_str);
-		if (strcmp(new_str,""))
+		/*Create a duplicate entry i.e. show, store funcs etc and other access data is same as data_attr->aname*/
+        idx = dy_ptr->index;
+		get_fan_duplicate_sysfs(idx, new_duplicate_str);
+		if (strcmp(new_duplicate_str,""))
 		{
 			dy_ptr = (struct sensor_device_attribute *)kzalloc(sizeof(struct sensor_device_attribute)+ATTR_NAME_LEN, GFP_KERNEL);
 			dy_ptr->dev_attr.attr.name = (char *)&dy_ptr[1];
-			strcpy((char *)dy_ptr->dev_attr.attr.name, new_str);
+			strcpy((char *)dy_ptr->dev_attr.attr.name, new_duplicate_str);
 			dy_ptr->dev_attr.attr.mode = sysfs_data_entry->a_ptr->mode;
 			dy_ptr->dev_attr.show = sysfs_data_entry->a_ptr->show;
 			dy_ptr->dev_attr.store = sysfs_data_entry->a_ptr->store;
@@ -345,7 +407,32 @@ static int pddf_fan_probe(struct i2c_client *client,
 
 			data->fan_attribute_list[num+j] = &dy_ptr->dev_attr.attr;
 			j++;
-			strcpy(new_str, "");
+			strcpy(new_duplicate_str, "");
+		}
+		/*Create a default sysfs entry which might not be present in the JSON file*/
+		get_fan_extra_default_sysfs(idx, new_default_str);
+		if (strcmp(new_default_str,""))
+		{
+		    extra_sysfs_data_entry = get_fan_access_data(new_default_str);
+            if (extra_sysfs_data_entry == NULL)
+            {
+                printk(KERN_ERR "%s: Invalid name for extra default attribute '%s'. No access data exists\n", __FUNCTION__, new_default_str);
+                continue;
+            }
+			dy_ptr = (struct sensor_device_attribute *)kzalloc(sizeof(struct sensor_device_attribute)+ATTR_NAME_LEN, GFP_KERNEL);
+			dy_ptr->dev_attr.attr.name = (char *)&dy_ptr[1];
+			strcpy((char *)dy_ptr->dev_attr.attr.name, new_default_str);
+			dy_ptr->dev_attr.attr.mode = extra_sysfs_data_entry->a_ptr->mode;
+			dy_ptr->dev_attr.show = extra_sysfs_data_entry->a_ptr->show;
+			dy_ptr->dev_attr.store = extra_sysfs_data_entry->a_ptr->store;
+			dy_ptr->index = extra_sysfs_data_entry->a_ptr->index;
+
+			data->fan_attribute_list[num+j] = &dy_ptr->dev_attr.attr;
+            strcpy(data->attr_info[num+j].name, new_default_str);
+            data->attr_info[num+j].valid = 0;
+		    mutex_init(&data->attr_info[num+j].update_lock);
+			j++;
+			strcpy(new_default_str, "");
 		}
 	}
 	data->fan_attribute_list[i+j] = NULL;

@@ -33,6 +33,7 @@ class TestJ2Files(TestCase):
         self.dell6100_t0_minigraph = os.path.join(self.test_dir, 'sample-dell-6100-t0-minigraph.xml')
         self.arista7050_t0_minigraph = os.path.join(self.test_dir, 'sample-arista-7050-t0-minigraph.xml')
         self.arista7800r3_48cq2_lc_t2_minigraph = os.path.join(self.test_dir, 'sample-arista-7800r3-48cq2-lc-t2-minigraph.xml')
+        self.arista7800r3_48cqm2_lc_t2_minigraph = os.path.join(self.test_dir, 'sample-arista-7800r3-48cqm2-lc-t2-minigraph.xml')
         self.arista7800r3a_36dm2_c36_lc_t2_minigraph = os.path.join(self.test_dir, 'sample-arista-7800r3a-36dm2-c36-lc-t2-minigraph.xml')
         self.arista7800r3a_36dm2_d36_lc_t2_minigraph = os.path.join(self.test_dir, 'sample-arista-7800r3a-36dm2-d36-lc-t2-minigraph.xml')
         self.multi_asic_minigraph = os.path.join(self.test_dir, 'multi_npu_data', 'sample-minigraph.xml')
@@ -293,40 +294,13 @@ class TestJ2Files(TestCase):
     def test_qos_arista7050_render_template(self):
         self._test_qos_render_template('arista', 'x86_64-arista_7050_qx32s', 'Arista-7050-QX-32S', 'sample-arista-7050-t0-minigraph.xml', 'qos-arista7050.json')
 
-    def do_test_qos_and_buffer_arista7800r3_48cq2_lc_render_template(self, platform, hwsku):
-        arista_dir_path = os.path.join(self.test_dir, '..', '..', '..', 'device', 'arista', platform, hwsku)
-        qos_file = os.path.join(arista_dir_path, 'qos.json.j2')
-        buffer_file = os.path.join(arista_dir_path, 'buffers.json.j2')
-        port_config_ini_file = os.path.join(arista_dir_path, 'port_config.ini')
-
-        # copy qos_config.j2 and buffer_config.j2 to the Arista 7800r3_48cq2_lc directory to have all templates in one directory
-        qos_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'qos_config.j2')
-        shutil.copy2(qos_config_file, arista_dir_path)
-        buffer_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'buffers_config.j2')
-        shutil.copy2(buffer_config_file, arista_dir_path)
-
-        for template_file, cfg_file, sample_output_file in [(qos_file, 'qos_config.j2', 'qos-arista7800r3-48cq2-lc.json'),
-                                                            (buffer_file, 'buffers_config.j2', 'buffer-arista7800r3-48cq2-lc.json') ]:
-            argument = ['-m', self.arista7800r3_48cq2_lc_t2_minigraph, '-p', port_config_ini_file, '-t', template_file]
-            self.run_script(argument, output_file=self.output_file)
-
-            # cleanup
-            cfg_file_new = os.path.join(arista_dir_path, cfg_file)
-            os.remove(cfg_file_new)
-
-            sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, sample_output_file)
-            assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
-
-    def test_qos_and_buffer_arista7800r3_48cq2_lc_render_template(self):
-        self.do_test_qos_and_buffer_arista7800r3_48cq2_lc_render_template('x86_64-arista_7800r3_48cq2_lc', 'Arista-7800R3-48CQ2-C48')
-
-    def test_qos_and_buffer_arista7800r3_48cqm2_lc_render_template(self):
-        self.do_test_qos_and_buffer_arista7800r3_48cq2_lc_render_template('x86_64-arista_7800r3_48cqm2_lc', 'Arista-7800R3-48CQM2-C48')
-
-    def do_test_qos_and_buffer_lc_render_template(self, platform, vendor, hwsku, minigraph, qos_sample_output, buffer_sample_output):
+    def do_test_qos_and_buffer_lc_render_template(self, platform, vendor, hwsku, minigraph, qos_sample_output, buffer_sample_output, multi_asic):
         dir_path = os.path.join(self.test_dir, '..', '..', '..', 'device', vendor, platform, hwsku)
-        # for asic0
-        dir_path = os.path.join(dir_path, '0')
+
+        if multi_asic == 1:
+            # for asic0
+            dir_path = os.path.join(dir_path, '0')
+
         qos_file = os.path.join(dir_path, 'qos.json.j2')
         buffer_file = os.path.join(dir_path, 'buffers.json.j2')
         port_config_ini_file = os.path.join(dir_path, 'port_config.ini')
@@ -349,25 +323,35 @@ class TestJ2Files(TestCase):
             sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, sample_output_file)
             assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
+    def test_qos_and_buffer_arista7800r3_48cq2_lc_render_template(self):
+        self.do_test_qos_and_buffer_lc_render_template('x86_64-arista_7800r3_48cq2_lc', 'arista', 'Arista-7800R3-48CQ2-C48',\
+                                                        self.arista7800r3_48cq2_lc_t2_minigraph, 'qos-arista7800r3-48cq2-lc.json',\
+                                                        'buffer-arista7800r3-48cq2-lc.json', 0)
+
+    def test_qos_and_buffer_arista7800r3_48cqm2_lc_render_template(self):
+        self.do_test_qos_and_buffer_lc_render_template('x86_64-arista_7800r3_48cqm2_lc', 'arista', 'Arista-7800R3-48CQM2-C48',\
+                                                        self.arista7800r3_48cqm2_lc_t2_minigraph, 'qos-arista7800r3-48cqm2-lc.json',\
+                                                        'buffer-arista7800r3-48cqm2-lc.json', 0)
+
     def test_qos_and_buffer_arista7800r3a_36dm2_c36_render_template(self):
         self.do_test_qos_and_buffer_lc_render_template('x86_64-arista_7800r3a_36dm2_lc', 'arista', 'Arista-7800R3A-36DM2-C36',\
                                                        self.arista7800r3a_36dm2_c36_lc_t2_minigraph, 'qos-arista7800r3a-36dm2-c36-lc.json',\
-                                                       'buffer-arista7800r3a-36dm2-c36-lc.json')
+                                                       'buffer-arista7800r3a-36dm2-c36-lc.json', 1)
 
     def test_qos_and_buffer_arista7800r3a_36dm2_d36_render_template(self):
         self.do_test_qos_and_buffer_lc_render_template('x86_64-arista_7800r3a_36dm2_lc', 'arista', 'Arista-7800R3A-36DM2-D36',\
                                                        self.arista7800r3a_36dm2_d36_lc_t2_minigraph, 'qos-arista7800r3a-36dm2-d36-lc.json',\
-                                                       'buffer-arista7800r3a-36dm2-d36-lc.json')
+                                                       'buffer-arista7800r3a-36dm2-d36-lc.json', 1)
 
     def test_qos_and_buffer_nokia_ixr7250e_36x100g_render_template(self):
         self.do_test_qos_and_buffer_lc_render_template('x86_64-nokia_ixr7250e_36x400g-r0', 'nokia', 'Nokia-IXR7250E-36x100G',\
                                                        self.nokia_ixr7250e_36x100g_t2_minigraph, 'qos-nokia-ixr7250e-36x100g.json',\
-                                                       'buffer-nokia-ixr7250e-36x100g.json')
+                                                       'buffer-nokia-ixr7250e-36x100g.json', 1)
 
     def test_qos_and_buffer_nokia_ixr7250e_36x400g_render_template(self):
         self.do_test_qos_and_buffer_lc_render_template('x86_64-nokia_ixr7250e_36x400g-r0', 'nokia', 'Nokia-IXR7250E-36x400G',\
                                                        self.nokia_ixr7250e_36x400g_t2_minigraph, 'qos-nokia-ixr7250e-36x400g.json',\
-                                                       'buffer-nokia-ixr7250e-36x400g.json')
+                                                       'buffer-nokia-ixr7250e-36x400g.json', 1)
 
     def test_qos_dell9332_render_template(self):
         self._test_qos_render_template('dell', 'x86_64-dellemc_z9332f_d1508-r0', 'DellEMC-Z9332f-O32', 'sample-dell-9332-t1-minigraph.xml', 'qos-dell9332.json')

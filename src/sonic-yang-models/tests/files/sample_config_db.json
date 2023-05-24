@@ -359,7 +359,8 @@
                 "sub_role": "FrontEnd",
                 "dhcp_server": "disabled",
                 "bgp_adv_lo_prefix_as_128": "true",
-                "yang_config_validation": "disable"
+                "yang_config_validation": "disable",
+                "rack_mgmt_map": "dummy_value"
             }
         },
         "VLAN": {
@@ -2021,6 +2022,16 @@
             "vtep1|map_100_Vlan100": {
                 "vni" : "100",
                 "vlan": "Vlan100"
+            }
+        },
+        "VNET": {
+            "vnet1": {
+                "vxlan_tunnel": "vtep1",
+                "scope": "default",
+                "vni": "100",
+                "peer_list": "",
+                "advertise_prefix": "true",
+                "overlay_dmac": "22:33:44:55:66:77"
             }
         },
         "PORT_QOS_MAP": {

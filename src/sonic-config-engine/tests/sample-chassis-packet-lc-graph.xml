@@ -121,11 +121,9 @@
 	   <IPNextHop>
 	    <ElementType>IPNextHop</ElementType>
 	    <Name i:nil="true"/>
-	    <AssociatedTo>8.0.0.1/32</AssociatedTo>
-	    <Address>192.168.1.2,192.168.2.2</Address>
-	    <AttachTo>PortChannel40,PortChannel50</AttachTo>
+            <Address>8.0.0.1</Address>
+            <AttachTo>PortChannel40,192.168.1.2;PortChannel50,192.168.2.2</AttachTo>
 	    <Type>StaticRoute</Type>
-        <Advertise>false</Advertise>
         </IPNextHop>
       </IPNextHops>
       <DataAcls/>
@@ -213,11 +211,9 @@
 	<IPNextHop>
 	  <ElementType>IPNextHop</ElementType>
 	  <Name i:nil="true"/>
-	    <AssociatedTo>8.0.0.1/32</AssociatedTo>
-	    <Address>192.168.1.2,192.168.2.2</Address>
-	    <AttachTo>PortChannel40,PortChannel50</AttachTo>
+          <Address>8.0.0.1</Address>
+          <AttachTo>PortChannel40,192.168.1.2;PortChannel50,192.168.2.2</AttachTo>
       <Type>StaticRoute</Type>
-      <Advertise>false</Advertise>
         </IPNextHop>
       </IPNextHops>
     </DeviceDataPlaneInfo>

@@ -537,6 +537,11 @@
       <a:Reference i:nil="true"/>
       <a:Value>Mixed</a:Value>
      </a:DeviceProperty>
+    <a:DeviceProperty>
+      <a:Name>RackMgmtMap</a:Name>
+      <a:Reference i:nil="true"/>
+      <a:Value>dummy_value</a:Value>
+    </a:DeviceProperty>
   </a:Properties>
   </a:DeviceMetadata>
  </Devices>

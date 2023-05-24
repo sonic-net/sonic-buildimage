@@ -1,0 +1,11 @@
+[Unit]
+Description=Nokia-7215 Platform Service
+After=sysinit.target
+Before=pmon.service
+
+[Service]
+ExecStart=/usr/local/bin/nokia-7215-init.sh
+StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

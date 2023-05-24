@@ -30,20 +30,25 @@
 #include <linux/slab.h>
 
 #define DEBUG 0
+#define MAX_PSU_NUM 2
+#define MAX_FANTRAY_NUM 6
 LED_OPS_DATA sys_led_ops_data[1]={0};
-LED_OPS_DATA* psu_led_ops_data=NULL;
+LED_OPS_DATA psu_led_ops_data[MAX_PSU_NUM]={0};
 LED_OPS_DATA diag_led_ops_data[1]= {0};
 LED_OPS_DATA fan_led_ops_data[1]= {0};
 LED_OPS_DATA loc_led_ops_data[1]= {0};
-LED_OPS_DATA* fantray_led_ops_data=NULL;
+LED_OPS_DATA bmc_led_ops_data[1]= {0};
+LED_OPS_DATA fantray_led_ops_data[MAX_FANTRAY_NUM]={0};
 LED_OPS_DATA temp_data={0};
 LED_OPS_DATA* dev_list[LED_TYPE_MAX] = {
     sys_led_ops_data,
-    NULL,
+    psu_led_ops_data,
     fan_led_ops_data,
-    NULL,
+    fantray_led_ops_data,
     diag_led_ops_data,
     loc_led_ops_data,
+    bmc_led_ops_data,
+    NULL
 };
 int num_psus = 0;
 int num_fantrays = 0;
@@ -55,6 +60,8 @@ extern int board_i2c_fpga_write(unsigned short cpld_addr, u8 reg, u8 value);
 
 extern ssize_t show_pddf_data(struct device *dev, struct device_attribute *da, char *buf);
 extern ssize_t store_pddf_data(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
+extern ssize_t show_pddf_s3ip_data(struct device *dev, struct device_attribute *da, char *buf);
+extern ssize_t store_pddf_s3ip_data(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
 
 static LED_STATUS find_state_index(const char* state_str) {
     int index;
@@ -93,16 +100,16 @@ static LED_TYPE get_dev_type(char* name)
 static int dev_index_check(LED_TYPE type, int index)
 {
 #if DEBUG
-    pddf_dbg(LED, "dev_index_check: type:%s index:%d num_psus:%d num_fantrays:%d\n",
-        LED_TYPE_STR[type], index, num_psus, num_fantrays);
+    pddf_dbg(LED, "dev_index_check: type:%s[%d] index:%d num_psus:%d num_fantrays:%d\n",
+        LED_TYPE_STR[type], type, index, num_psus, num_fantrays);
 #endif
     switch(type)
     {
         case LED_PSU:
-            if(index >= num_psus) return (-1);
+            if(index >= MAX_PSU_NUM) return (-1);
             break;
         case LED_FANTRAY:
-            if(index >= num_fantrays) return (-1);
+            if(index >= MAX_FANTRAY_NUM) return (-1);
             break;
         default:
             if(index >= 1) return (-1);
@@ -123,7 +130,7 @@ static LED_OPS_DATA* find_led_ops_data(struct device_attribute *da)
         return (NULL);
     }
     if(dev_index_check(led_type, ptr->index) == -1) {
-        printk(KERN_ERR "PDDF_LED ERROR %s invalid index: %d for type:%s\n", __func__, ptr->index, ptr->device_name);
+        printk(KERN_ERR "PDDF_LED ERROR %s invalid index: %d for type:%s;%d\n", __func__, ptr->index, ptr->device_name, led_type);
         return (NULL);
     }
 #if DEBUG > 1
@@ -376,6 +383,113 @@ ssize_t store_pddf_data(struct device *dev, struct device_attribute *da, const c
     return count;
 }
 
+ssize_t show_pddf_s3ip_data(struct device *dev, struct device_attribute *da,
+             char *buf)
+{
+    int ret = 0;
+    pddf_dbg(LED, KERN_ERR " %s", __FUNCTION__);
+    struct pddf_data_attribute *_ptr = (struct pddf_data_attribute *)da;
+    if (_ptr == NULL) {
+       pddf_dbg(LED, KERN_ERR "%s return", __FUNCTION__);
+       return -1;
+    }
+    LED_OPS_DATA* ops_ptr=(LED_OPS_DATA*)_ptr->addr;
+    uint32_t color_val=0, sys_val=0;
+    int state=0, j;
+    int cpld_type=0;
+    if (!ops_ptr) {
+        pddf_dbg(LED, KERN_ERR "ERROR %s: Cannot find LED Ptr", __func__);
+        return (-1);
+    }
+    if (ops_ptr->swpld_addr == 0x0) {
+        pddf_dbg(LED, KERN_ERR "ERROR %s: device: %s %d not configured\n", __func__,
+            ops_ptr->device_name, ops_ptr->index);
+        return (-1);
+    }
+    if ( strcmp(ops_ptr->attr_devtype, "cpld") == 0) {
+        cpld_type=1;
+        sys_val = board_i2c_cpld_read(ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset);
+    } else if ( strcmp(ops_ptr->attr_devtype, "fpgai2c") == 0) {
+        sys_val = board_i2c_fpga_read(ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset);
+    } else {
+        pddf_dbg(LED, KERN_ERR "ERROR %s: %s %d devtype:%s 0x%x:0x%x not configured\n",__func__,
+            ops_ptr->device_name, ops_ptr->index, ops_ptr->attr_devtype, ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset);
+        return (-1);
+    }
+
+    if (sys_val < 0) {
+        pddf_dbg(LED, KERN_ERR "ERROR %s: %s %d devtype:%s 0x%x:0x%x read failed\n",__func__,
+            ops_ptr->device_name, ops_ptr->index, ops_ptr->attr_devtype, ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset);
+        return sys_val;
+    }
+    for (state=0; state<MAX_LED_STATUS; state++) {
+        color_val = (sys_val & ~ops_ptr->data[state].bits.mask_bits);
+        for (j = 0; j < VALUE_SIZE && ops_ptr->data[state].reg_values[j] != 0xff; j++) {
+           if ((color_val ^ (ops_ptr->data[state].reg_values[j] << ops_ptr->data[state].bits.pos))==0) {
+                ret = sprintf(buf, "%d\n", state);
+                break;
+           }
+        }
+    }
+#if DEBUG
+    pddf_dbg(LED, KERN_ERR "Get : %s:%d addr/offset:0x%x; 0x%x devtype:%s;%s value=0x%x [%d]\n",
+        ops_ptr->device_name, ops_ptr->index, ops_ptr->swpld_addr,
+        ops_ptr->swpld_addr_offset, ops_ptr->attr_devtype, cpld_type? "cpld": "fpgai2c", sys_val, state);
+#endif
+    return ret;
+}
+
+ssize_t store_pddf_s3ip_data(struct device *dev, struct device_attribute *da, const char *buf, size_t count)
+{
+    int ret = 0;
+    int cur_state = 0;
+    uint32_t sys_val=0, new_val=0, read_val=0;
+    int cpld_type=0;
+
+    pddf_dbg(LED, KERN_ERR "%s: %s;%d", __FUNCTION__, buf, cur_state);
+    struct pddf_data_attribute *_ptr = (struct pddf_data_attribute *)da;
+    ret = kstrtoint(buf,10,&cur_state);
+    if (_ptr == NULL || cur_state >= MAX_LED_STATUS || ret !=0) {
+       pddf_dbg(LED, KERN_ERR "%s return", __FUNCTION__);
+       return -1;
+    }
+    LED_OPS_DATA* ops_ptr=(LED_OPS_DATA*)_ptr->addr;
+
+    if ( strcmp(ops_ptr->attr_devtype, "cpld") == 0) {
+        cpld_type=1;
+        sys_val = board_i2c_cpld_read(ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset);
+    } else if ( strcmp(ops_ptr->attr_devtype, "fpgai2c") == 0) {
+        sys_val = board_i2c_fpga_read(ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset);
+    } else {
+        pddf_dbg(LED, KERN_ERR "ERROR %s: %s %d devtype:%s 0x%x:0x%x not configured\n",__func__,
+            ops_ptr->device_name, ops_ptr->index, ops_ptr->attr_devtype, ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset);
+        return (-1);
+    }
+
+    new_val = (sys_val & ops_ptr->data[cur_state].bits.mask_bits) |
+            (ops_ptr->data[cur_state].reg_values[0] << ops_ptr->data[cur_state].bits.pos);
+
+    if ( strcmp(ops_ptr->data[cur_state].attr_devtype, "cpld") == 0) {
+        ret = board_i2c_cpld_write(ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset, new_val);
+        read_val = board_i2c_cpld_read(ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset);
+    } else if ( strcmp(ops_ptr->data[cur_state].attr_devtype, "fpgai2c") == 0) {
+        ret = board_i2c_fpga_write(ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset, (uint8_t)new_val);
+        read_val = board_i2c_fpga_read(ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset);
+    } else {
+        pddf_dbg(LED, KERN_ERR "ERROR %s: %s %d devtype:%s not configured\n",__func__,
+            ops_ptr->device_name, ops_ptr->index, ops_ptr->attr_devtype);
+        return (-1);
+    }
+
+#if DEBUG
+    pddf_dbg(LED, KERN_INFO "Set color:%s; 0x%x:0x%x sys_val:0x%x new_val:0x%x devtype:%s w_ret:0x%x read:0x%x devtype:%s\n",
+        LED_STATUS_STR[cur_state], ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset,
+        sys_val, new_val, cpld_type? "cpld":"fpgai2c", ret, read_val, ops_ptr->data[cur_state].attr_devtype);
+#endif
+    return count;
+}
+
+
 static int load_led_ops_data(struct device_attribute *da, LED_STATUS state)
 {
     struct pddf_data_attribute *_ptr = (struct pddf_data_attribute *)da;
@@ -498,14 +612,6 @@ ssize_t store_config_data(struct device *dev, struct device_attribute *da, const
         ret = kstrtoint(buf,10,&num);
         if (ret==0)
             *(int *)(ptr->addr) = num;
-        if (psu_led_ops_data == NULL) {
-            if ((psu_led_ops_data = kzalloc(num * sizeof(LED_OPS_DATA), GFP_KERNEL)) == NULL) {
-                printk(KERN_ERR "PDDF_LED ERROR failed to allocate memory for PSU LED\n");
-                return (count);
-            }
-            pddf_dbg(LED, "Allocate PSU LED Memory ADDR=%p\n", psu_led_ops_data);
-            dev_list[LED_PSU]=psu_led_ops_data;
-        }
 #if DEBUG
         pddf_dbg(LED, "[ WRITE ] ATTR CONFIG [%s] VALUE:%d; %d\n",
                 ptr->dev_attr.attr.name, num, num_psus);
@@ -516,14 +622,6 @@ ssize_t store_config_data(struct device *dev, struct device_attribute *da, const
        ret = kstrtoint(buf, 10, &num);
        if (ret == 0)
           *(int *)(ptr->addr) = num;
-        if (fantray_led_ops_data == NULL) {
-            if ((fantray_led_ops_data = kzalloc(num * sizeof(LED_OPS_DATA), GFP_KERNEL)) == NULL) {
-                printk(KERN_ERR "PDDF_LED ERROR failed to allocate memory for FANTRAY LED\n");
-                return (count);
-            }
-            pddf_dbg(LED, "Allocate FanTray LED Memory ADDR=%p\n", fantray_led_ops_data);
-            dev_list[LED_FANTRAY]=fantray_led_ops_data;
-        }
 #if DEBUG
         pddf_dbg(LED, "[ WRITE ] ATTR CONFIG [%s] VALUE:%d; %d\n",
             ptr->dev_attr.attr.name, num, num_fantrays);
@@ -651,9 +749,49 @@ LED_DEV_STATE_ATTR_GROUP(state_attr, (void*)&temp_data.data[0])
  **************************************************************************/
 PDDF_LED_DATA_ATTR(cur_state, color, S_IWUSR|S_IRUGO, show_pddf_data,
         store_pddf_data, PDDF_CHAR, NAME_SIZE, (void*)&temp_data.cur_state.color);
+PDDF_LED_DATA_ATTR(cur_state, sys_led, S_IWUSR|S_IRUGO, show_pddf_s3ip_data,
+            store_pddf_s3ip_data, PDDF_INT_DEC, sizeof(int), (void*)&sys_led_ops_data);
+PDDF_LED_DATA_ATTR(cur_state, loc_led, S_IWUSR|S_IRUGO, show_pddf_s3ip_data,
+            store_pddf_s3ip_data, PDDF_INT_DEC, NAME_SIZE, (void*)&loc_led_ops_data);
+PDDF_LED_DATA_ATTR(cur_state, bmc_led, S_IWUSR|S_IRUGO, show_pddf_s3ip_data,
+            store_pddf_s3ip_data, PDDF_INT_DEC, sizeof(int), (void*)&bmc_led_ops_data);
+PDDF_LED_DATA_ATTR(cur_state, fan_led, S_IWUSR|S_IRUGO, show_pddf_s3ip_data,
+            store_pddf_s3ip_data, PDDF_INT_DEC, sizeof(int), (void*)&fan_led_ops_data);
+PDDF_LED_DATA_ATTR(cur_state, psu_led, S_IWUSR|S_IRUGO, show_pddf_s3ip_data,
+            store_pddf_s3ip_data, PDDF_INT_DEC, sizeof(int), NULL);
+PDDF_LED_DATA_ATTR(cur_state, psu1_led, S_IRUGO, show_pddf_s3ip_data,
+            NULL, PDDF_INT_DEC, sizeof(int), (void *)&psu_led_ops_data[0]);
+PDDF_LED_DATA_ATTR(cur_state, psu2_led, S_IRUGO, show_pddf_s3ip_data,
+            NULL, PDDF_INT_DEC, sizeof(int), (void *)&psu_led_ops_data[1]);
+PDDF_LED_DATA_ATTR(cur_state, fantray1_led, S_IWUSR|S_IRUGO, show_pddf_s3ip_data,
+            store_pddf_s3ip_data, PDDF_INT_DEC, sizeof(int), (void *)&fantray_led_ops_data[0]);
+PDDF_LED_DATA_ATTR(cur_state, fantray2_led, S_IWUSR|S_IRUGO, show_pddf_s3ip_data,
+            store_pddf_s3ip_data, PDDF_INT_DEC, sizeof(int), (void *)&fantray_led_ops_data[1]);
+PDDF_LED_DATA_ATTR(cur_state, fantray3_led, S_IWUSR|S_IRUGO, show_pddf_s3ip_data,
+            store_pddf_s3ip_data, PDDF_INT_DEC, sizeof(int), (void *)&fantray_led_ops_data[2]);
+PDDF_LED_DATA_ATTR(cur_state, fantray4_led, S_IWUSR|S_IRUGO, show_pddf_s3ip_data,
+            store_pddf_s3ip_data, PDDF_INT_DEC, sizeof(int), (void *)&fantray_led_ops_data[3]);
+PDDF_LED_DATA_ATTR(cur_state, fantray5_led, S_IWUSR|S_IRUGO, show_pddf_s3ip_data,
+            store_pddf_s3ip_data, PDDF_INT_DEC, sizeof(int), (void *)&fantray_led_ops_data[4]);
+PDDF_LED_DATA_ATTR(cur_state, fantray6_led, S_IWUSR|S_IRUGO, show_pddf_s3ip_data,
+            store_pddf_s3ip_data, PDDF_INT_DEC, sizeof(int), (void *)&fantray_led_ops_data[5]);
+
 
 struct attribute* attrs_cur_state[] = {
     &pddf_dev_cur_state_attr_color.dev_attr.attr,
+    &pddf_dev_cur_state_attr_sys_led.dev_attr.attr,
+    &pddf_dev_cur_state_attr_loc_led.dev_attr.attr,
+    &pddf_dev_cur_state_attr_bmc_led.dev_attr.attr,
+    &pddf_dev_cur_state_attr_fan_led.dev_attr.attr,
+    &pddf_dev_cur_state_attr_psu_led.dev_attr.attr,
+    &pddf_dev_cur_state_attr_psu1_led.dev_attr.attr,
+    &pddf_dev_cur_state_attr_psu2_led.dev_attr.attr,
+    &pddf_dev_cur_state_attr_fantray1_led.dev_attr.attr,
+    &pddf_dev_cur_state_attr_fantray2_led.dev_attr.attr,
+    &pddf_dev_cur_state_attr_fantray3_led.dev_attr.attr,
+    &pddf_dev_cur_state_attr_fantray4_led.dev_attr.attr,
+    &pddf_dev_cur_state_attr_fantray5_led.dev_attr.attr,
+    &pddf_dev_cur_state_attr_fantray6_led.dev_attr.attr,
     NULL,
 };
 
@@ -719,8 +857,6 @@ static int __init led_init(void) {
 static void __exit led_exit(void) {
     pddf_dbg(LED, "PDDF GENERIC LED MODULE exit..\n");
     free_kobjs();
-    if(psu_led_ops_data) kfree(psu_led_ops_data);
-    if(fantray_led_ops_data) kfree(fantray_led_ops_data);
 }
 
 module_init(led_init);

@@ -291,7 +291,7 @@ feature_test_data = {
             common_test.STATE_DB_NO: {
                 common_test.FEATURE_TABLE: {
                     "snmp": {
-                        "remote_state": "pending"
+                        "remote_state": "ready"
                     }
                 }
             }
@@ -307,7 +307,19 @@ feature_test_data = {
             common_test.STATE_DB_NO: {
                 common_test.FEATURE_TABLE: {
                     "snmp": {
-                        "remote_state": "running"
+                        "remote_state": "running",
+                        "container_version": "20201231.74",
+                        "container_stable_version": "20201231.64"
+                    }
+                }
+            }
+        },
+        common_test.POST: {
+            common_test.STATE_DB_NO: {
+                common_test.FEATURE_TABLE: {
+                    "snmp": {
+                        "container_last_version": "20201231.64",
+                        "container_stable_version": "20201231.74"
                     }
                 }
             }
@@ -473,13 +485,16 @@ class TestContainerStartup(object):
     @patch("ctrmgrd.kube_commands.kube_reset_master")
     @patch("ctrmgrd.kube_commands.kube_join_master")
     @patch("ctrmgrd.kube_commands.kube_write_labels")
-    def test_feature(self, mock_kube_wr, mock_kube_join, mock_kube_rst, mock_subs,
+    @patch("ctrmgrd.kube_commands.tag_latest")
+    @patch("ctrmgrd.kube_commands.clean_image")
+    def test_feature(self, mock_clean_image, mock_tag_latest, mock_kube_wr, mock_kube_join, mock_kube_rst, mock_subs,
             mock_select, mock_table, mock_conn):
         self.init()
         ret = 0
         common_test.set_mock(mock_table, mock_conn)
         common_test.set_mock_sel(mock_select, mock_subs)
         common_test.set_mock_kube(mock_kube_wr, mock_kube_join, mock_kube_rst)
+        common_test.set_mock_image_op(mock_clean_image, mock_tag_latest)
 
         for (i, ct_data) in feature_test_data.items():
             common_test.do_start_test("ctrmgrd:feature", i, ct_data)

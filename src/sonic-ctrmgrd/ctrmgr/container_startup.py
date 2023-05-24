@@ -36,6 +36,11 @@ def _get_version_key(feature, version):
     return "{}_{}_enabled".format(feature, version)
 
 
+def _get_local_version_key(feature):
+    # Coin label for track laster local version
+    return "{}_local".format(feature)
+
+
 def read_data(feature):
     state_data = {
             CURRENT_OWNER: "none",
@@ -87,8 +92,8 @@ def check_version_blocked(state_db, feature, version):
     #
     tbl = swsscommon.Table(state_db, KUBE_LABEL_TABLE)
     labels = dict(tbl.get(KUBE_LABEL_SET_KEY)[1])
-    key = _get_version_key(feature, version)
-    return (key in labels) and (labels[key].lower() == "false")
+    key = _get_local_version_key(feature)
+    return (key in labels) and (labels[key].lower() == version.lower())
 
 
 def drop_label(state_db, feature, version):
@@ -97,8 +102,8 @@ def drop_label(state_db, feature, version):
     # ctrmgrd sets it with kube API server per reaschability
     
     tbl = swsscommon.Table(state_db, KUBE_LABEL_TABLE)
-    name = _get_version_key(feature, version)
-    tbl.set(KUBE_LABEL_SET_KEY, [ (name, "false")])
+    name = _get_local_version_key(feature)
+    tbl.set(KUBE_LABEL_SET_KEY, [(name, version)])
         
 
 def update_data(state_db, feature, data):

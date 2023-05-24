@@ -15,6 +15,6 @@ def load_constants_dir_mappings():
 
 def load_constants(constants = CONSTANTS_PATH):
     with open(constants) as f:
-        data = yaml.load(f) # FIXME" , Loader=yaml.FullLoader)
+        data = yaml.safe_load(f)
     assert "constants" in data, "'constants' key not found in constants.yml"
     return data

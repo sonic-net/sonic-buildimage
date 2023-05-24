@@ -25,6 +25,7 @@ Description: bgpmon.py -- populating bgp related information in stateDB.
 """
 import json
 import os
+import sys
 import syslog
 from swsscommon import swsscommon
 import time
@@ -160,7 +161,7 @@ def main():
         bgp_state_get = BgpStateGet()
     except Exception as e:
         syslog.syslog(syslog.LOG_ERR, "{}: error exit 1, reason {}".format("THIS_MODULE", str(e)))
-        exit(1)
+        sys.exit(1)
 
     # periodically obtain the new neighbor information and update if necessary
     while True:

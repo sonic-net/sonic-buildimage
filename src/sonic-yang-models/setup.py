@@ -159,6 +159,7 @@ setup(
                          './yang-models/sonic-types.yang',
                          './yang-models/sonic-versions.yang',
                          './yang-models/sonic-vlan.yang',
+                         './yang-models/sonic-vnet.yang',
                          './yang-models/sonic-voq-inband-interface.yang',
                          './yang-models/sonic-vxlan.yang',
                          './yang-models/sonic-vrf.yang',

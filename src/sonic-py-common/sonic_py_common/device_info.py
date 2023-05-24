@@ -600,18 +600,19 @@ def get_system_mac(namespace=None):
         machine_vars = get_machine_info()
         (mac, err) = run_command(syseeprom_cmd)
         hw_mac_entry_outputs.append((mac, err))
-        if machine_vars is not None and machine_key in machine_vars:
-            hwsku = machine_vars[machine_key]
-            profile_cmd0 = ['cat', HOST_DEVICE_PATH + '/' + platform + '/' + hwsku + '/profile.ini']
-            profile_cmd1 = ['grep', 'switchMacAddress']
-            profile_cmd2 = ['cut', '-f2', '-d', '=']
-            (mac, err) = run_command_pipe(profile_cmd0, profile_cmd1, profile_cmd2)
-        else:
-            profile_cmd = ["false"]
-            (mac, err) = run_command(profile_cmd)
-        hw_mac_entry_outputs.append((mac, err))
-        (mac, err) = run_command_pipe(iplink_cmd0, iplink_cmd1, iplink_cmd2)
-        hw_mac_entry_outputs.append((mac, err))
+        if not mac:
+            if machine_vars is not None and machine_key in machine_vars:
+                hwsku = machine_vars[machine_key]
+                profile_cmd0 = ['cat', HOST_DEVICE_PATH + '/' + platform + '/' + hwsku + '/profile.ini']
+                profile_cmd1 = ['grep', 'switchMacAddress']
+                profile_cmd2 = ['cut', '-f2', '-d', '=']
+                (mac, err) = run_command_pipe(profile_cmd0, profile_cmd1, profile_cmd2)
+            else:
+                profile_cmd = ["false"]
+                (mac, err) = run_command(profile_cmd)
+            hw_mac_entry_outputs.append((mac, err))
+            (mac, err) = run_command_pipe(iplink_cmd0, iplink_cmd1, iplink_cmd2)
+            hw_mac_entry_outputs.append((mac, err))
     elif (version_info['asic_type'] == 'cisco-8000'):
         # Try to get valid MAC from profile.ini first, else fetch it from syseeprom or eth0
         platform = get_platform()

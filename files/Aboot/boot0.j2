@@ -67,7 +67,7 @@ fi
 
 mountpoint_for_file() {
    local file="$1"
-   df "$file" | tail -1 | tr -s " " | cut -d ' ' -f6
+   df "$file" 2>/dev/null | tail -1 | tr -s " " | cut -d ' ' -f6
 }
 
 # extract mount point from the swi path, e.g., /mnt/flash/sonic.swi --> /mnt/flash
@@ -402,7 +402,7 @@ extract_image() {
 extract_image_secureboot() {
     info "Extracting necessary swi content"
     # NOTE: boot/ is not used by the boot process but only extracted for kdump
-    unzip -oq "$swipath" 'boot/*' .imagehash -d "$image_path"
+    unzip -oq "$swipath" 'boot/*' .imagehash kernel-cmdline-append -d "$image_path"
 
     ## Extract platform.tar.gz
     info "Extracting platform.tar.gz"
@@ -442,7 +442,7 @@ write_machine_config() {
     ## Detect SKU and create a hardware description file
     aboot_version=$(cmdline_get Aboot | sed 's/^.*norcal.-//')
     if [ -x /bin/sysinit ]; then
-       aboot_build_date=$(stat -c %y /bin/sysinit | sed 's/ /T/')
+       aboot_build_date=$(stat -c %y /bin/sysinit | sed 's/ /T/g')
     else
        aboot_build_date="unknown"
     fi
@@ -655,10 +655,11 @@ write_platform_specific_cmdline() {
        else
            varlog_size=256
            cmdline_add logs_inram=on
+           cmdline_add docker_inram=on
+           cmdline_add docker_inram_algo=zstd
            if [ $flash_size -le 2000 ]; then
                # enable docker_inram for switches with less than 2G of flash
                varlog_size=128
-               cmdline_add docker_inram=on
            fi
        fi
     fi
@@ -741,13 +742,19 @@ write_cmdline() {
         cat "$target_path/$kernel_params" | cmdline_append
     fi
 
-    # FIXME: sonic sometimes adds extra kernel parameters from user space
-    #        this is unsafe but some will be kept as part of the regular boot
-    if [ -f "$image_path/kernel-cmdline" ]; then
-        for field in $cmdline_allowlist; do
-           cat "$image_path/kernel-cmdline" | tr ' ' '\n' | grep -E "$field" | tail -n 1 | cmdline_append
-        done
-    fi
+    # NOTE: SONiC might need to provide some extra kernel parameter to change the
+    #       next boot behavior. The following lines lookup allowed parameters and
+    #       append them to the cmdline.
+    #       - kernel-cmdline is still modified but its usage should ideally be deprecated over time
+    #       - kernel-cmdline-append is for the user (SONiC) to use.
+    #         this file can be either packaged in the swi or generated from userland
+    for cpath in "$image_path/kernel-cmdline" "$image_path/kernel-cmdline-append"; do
+        if [ -f "$cpath" ]; then
+            for field in $cmdline_allowlist; do
+               cat "$cpath" | tr ' ' '\n' | grep -E "$field" | tail -n 1 | cmdline_append
+            done
+        fi
+    done
 
     # FIXME: legacy configuration files used by fast-reboot and eos2sonic
     #        these should be deprecated over time.
@@ -829,6 +836,10 @@ regular_install() {
 
     info "Installing image under $image_path"
     extract_image
+
+    # NOTE: this call is necessary to process the kernel-cmdline-append file coming
+    #       from the just extracted swi
+    write_cmdline
 
     run_hooks post-install
 }

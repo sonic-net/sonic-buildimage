@@ -135,5 +135,12 @@
     "DEVICE_METADATA_SUPPRESS_PENDING_FIB_ENABLED_SYNCHRONOUS_MODE_DISABLED": {
         "desc": "Enable bgp-suppress-fib-pending when synchronous mode is disabled",
         "eStr": ["ASIC synchronous mode must be enabled in order to enable suppress FIB pending feature"]
+    },
+    "DEVICE_METADATA_VALID_RACK_MGMT_MAP": {
+        "desc": "Verifying rack_mgmt_map configuration."
+    },
+    "DEVICE_METADATA_INVALID_RACK_MGMT_MAP": {
+        "desc": "Verifying invalid rack_mgmt_map configuration.",
+        "eStr": "Invalid length for the rack mgmt map."
     }
 }

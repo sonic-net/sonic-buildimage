@@ -192,6 +192,11 @@ class TestCfgGenCaseInsensitive(TestCase):
         output = self.run_script(argument)
         self.assertEqual(output.strip(), "1")
 
+    def test_minigraph_rack_mgmt_map(self):
+        argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "DEVICE_METADATA[\'localhost\'][\'rack_mgmt_map\']"]
+        output = self.run_script(argument)
+        self.assertEqual(output.strip(), "dummy_value")
+
     def test_minigraph_cluster(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "DEVICE_METADATA[\'localhost\'][\'cluster\']"]
         output = self.run_script(argument)

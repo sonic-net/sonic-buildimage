@@ -309,6 +309,93 @@ tag_latest_test_data = {
     }
 }
 
+clean_image_test_data = {
+    0: {
+        common_test.DESCR: "Clean image successfuly(kube to kube)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
+            "docker rmi 744d3a09062f --force"
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.96 744d3a09062f\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6e",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            0
+        ]
+    },
+    1: {
+        common_test.DESCR: "Clean image failed(delete image failed)",
+        common_test.RETVAL: 1,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
+            "docker rmi 744d3a09062f --force"
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.96 744d3a09062f\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6e",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            1
+        ]
+    },
+    2: {
+        common_test.DESCR: "Clean image failed(no image found)",
+        common_test.RETVAL: 1,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'"
+        ],
+        common_test.PROC_OUT: [
+            ""
+        ]
+    },
+    3: {
+        common_test.DESCR: "Clean image failed(current image doesn't exist)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
+            ""
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.96 744d3a09062f",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0
+        ]
+    },
+    4: {
+        common_test.DESCR: "Clean image successfuly(local to kube)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "20201231.84", ""],
+        common_test.PROC_CMD: [
+            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
+            "docker tag 507f8d28bf6e sonick8scue.azurecr.io/docker-sonic-telemetry:20201231.74 && docker rmi docker-sonic-telemetry:20201231.74"
+        ],
+        common_test.PROC_OUT: [
+            "docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6e",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            0
+        ]
+    },
+}
+
 class TestKubeCommands(object):
 
     def init(self):
@@ -465,5 +552,16 @@ clusters:\n\
             common_test.do_start_test("tag:latest", i, ct_data)
 
             ret = kube_commands.tag_latest(*ct_data[common_test.ARGS])
+            if common_test.RETVAL in ct_data:
+                assert ret == ct_data[common_test.RETVAL]
+
+    @patch("kube_commands.subprocess.Popen")
+    def test_clean_image(self, mock_subproc):
+        common_test.set_kube_mock(mock_subproc)
+
+        for (i, ct_data) in clean_image_test_data.items():
+            common_test.do_start_test("clean:image", i, ct_data)
+
+            ret = kube_commands.clean_image(*ct_data[common_test.ARGS])
             if common_test.RETVAL in ct_data:
                 assert ret == ct_data[common_test.RETVAL]

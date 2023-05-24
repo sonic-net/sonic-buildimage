@@ -1,0 +1,3 @@
+mrvl-prestera/drivers/generic/cpssEnabler/linuxNoKernelModule/drivers/mvMbusDrv.ko /lib/modules/KVERSION/kernel/extra
+mrvl-prestera/drivers/generic/cpssEnabler/linuxNoKernelModule/drivers/mvIntDrv.ko /lib/modules/KVERSION/kernel/extra
+mrvl-prestera/platform/arm64/*	/

@@ -217,6 +217,14 @@ module sonic-device_metadata {
                         error-message "ASIC synchronous mode must be enabled in order to enable suppress FIB pending feature";
                     }
                 }
+                leaf rack_mgmt_map {
+                    type string {
+                        length 0..128 {
+                            error-message "Invalid length for the rack mgmt map.";
+                        }
+                    }
+                    description "Information of rack mgmt map.";
+                }
             }
             /* end of container localhost */
         }

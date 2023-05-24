@@ -27,6 +27,7 @@ REMOTE_STATE = "remote_state"
 VERSION = "container_version"
 SYSTEM_STATE = "system_state"
 STATE = "state"
+ST_FEAT_CTR_STABLE_VER = "container_stable_version"
 
 KUBE_LABEL_TABLE = "KUBE_LABELS"
 KUBE_LABEL_SET_KEY = "SET"
@@ -130,6 +131,26 @@ def docker_action(action, feature, **kwargs):
         syslog.syslog(syslog.LOG_ERR, "docker cmd: {} for {} failed with {}".
                 format(action, feature, str(err)))
         return FAILURE
+
+
+def container_version(feature):
+    """ Get container image version """
+    version = None
+    try:
+        client = docker.from_env()
+        container = client.containers.get(feature)
+        envs = container.attrs['Config']['Env']
+        for env in envs:
+            if env.startswith("IMAGE_VERSION="):
+                version = env.split('=')[1]
+        
+        syslog.syslog(syslog.LOG_INFO, "docker get image version for {}".format(feature))
+        
+    except (docker.errors.NotFound, docker.errors.APIError) as err:
+        syslog.syslog(syslog.LOG_ERR, "docker get image version for {} failed with {}".
+                format(feature, str(err)))
+    
+    return version
 
 
 def set_label(feature, create):
@@ -373,6 +394,11 @@ def container_wait(feature, **kwargs):
     docker_id = container_id(feature)
     pend_wait_secs = 0
     ret = SUCCESS
+
+    if docker_id == feature:
+        version = container_version(feature)
+        if version:
+            update_data(feature, {ST_FEAT_CTR_STABLE_VER: version})
 
     if not docker_id and fallback:
         pend_wait_secs = get_config_data(

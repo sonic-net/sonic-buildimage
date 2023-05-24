@@ -5,7 +5,8 @@ include $(PLATFORM_PATH)/docker-syncd-mrvl-rpc.mk
 include $(PLATFORM_PATH)/docker-saiserver-mrvl.mk
 include $(PLATFORM_PATH)/libsaithrift-dev.mk
 include $(PLATFORM_PATH)/one-image.mk
-include $(PLATFORM_PATH)/linux-kernel-arm64.mk
+include $(PLATFORM_PATH)/prestera.mk
+include $(PLATFORM_PATH)/platform-nokia.mk
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) \
              $(DOCKER_FPM) 	\

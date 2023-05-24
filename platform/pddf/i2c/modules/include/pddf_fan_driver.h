@@ -80,6 +80,23 @@ enum fan_sysfs_attributes {
     FAN10_FAULT,
     FAN11_FAULT,
     FAN12_FAULT,
+    FAN1_STATUS,
+    FAN2_STATUS,
+    FAN3_STATUS,
+    FAN4_STATUS,
+    FAN5_STATUS,
+    FAN6_STATUS,
+    FAN7_STATUS,
+    FAN8_STATUS,
+    FAN9_STATUS,
+    FAN10_STATUS,
+    FAN11_STATUS,
+    FAN12_STATUS,
+    FAN_DUTY_CYCLE,
+    FAN_MODEL_NAME,
+    FAN_SERIAL_NUM,
+    FAN_PART_NUM,
+    FAN_HW_VERSION,
 	FAN_MAX_ATTR 
 };
 /* Each client has this additional data */

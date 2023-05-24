@@ -416,7 +416,8 @@ wait_test_data = {
                         "remote_state": "none",
                         "system_state": "up",
                         "current_owner": "local",
-                        "container_id": "snmp"
+                        "container_id": "snmp",
+                        "container_stable_version": "20201231.11"
                     }
                 }
             }

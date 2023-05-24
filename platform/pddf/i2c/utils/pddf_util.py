@@ -455,6 +455,11 @@ def do_install():
     if status:
         return status
 
+    # Check if S3IP support is enabled, if yes, start the service in no block mode
+    if 'enable_s3ip' in pddf_obj.data['PLATFORM'].keys() and pddf_obj.data['PLATFORM']['enable_s3ip'] == 'yes':
+        log_os_system('systemctl enable pddf-s3ip-init.service', 1)
+        log_os_system('systemctl start --no-block pddf-s3ip-init.service', 1)
+
     return
     
 def do_uninstall():
