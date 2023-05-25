@@ -12,7 +12,7 @@ UNIT_TESTING = 0
 # NOTE:
 # Unable to use python-iptables as that does not create rules per ip-tables default
 # which is nf_tables. So rules added via iptc package will not be listed under
-# "sudo iptables -t nat -L -n". But available in kernel. To list, we need to 
+# "sudo iptables -t nat -L -n". But available in kernel. To list, we need to
 # use legacy mode as "sudo iptables-legacy -t nat -L -n".
 # As we can't use two modes and using non-default could make any debugging effort
 # very tough.

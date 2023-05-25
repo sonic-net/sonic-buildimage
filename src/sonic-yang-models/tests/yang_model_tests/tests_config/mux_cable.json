@@ -77,7 +77,7 @@
             }
         }
     },
-    
+
     "MUX_CABLE_INVALID_IP": {
         "sonic-mux-cable:sonic-mux-cable": {
             "sonic-mux-cable:MUX_CABLE": {

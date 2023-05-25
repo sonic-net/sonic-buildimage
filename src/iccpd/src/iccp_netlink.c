@@ -573,7 +573,7 @@ static int iccp_netlink_set_portchannel_iff_flag(
     char* saveptr;
     struct LocalInterface* member_if;
     char *tmp_member_buf = NULL;
-    
+
     if (!lif_po)
         return MCLAG_ERROR;
 
@@ -649,7 +649,7 @@ void update_if_ipmac_on_standby(struct LocalInterface* lif_po, int dir)
         return;
 
     pif = peer_if_find_by_name(csm, lif_po->name);
-    
+
     /*Set new mac only if remote MLAG interface also exists */
     if (pif && (memcmp( lif_po->mac_addr, MLACP(csm).remote_system.system_id, ETHER_ADDR_LEN) != 0))
     {
@@ -659,7 +659,7 @@ void update_if_ipmac_on_standby(struct LocalInterface* lif_po, int dir)
         ICCPD_LOG_NOTICE(__FUNCTION__,
                         "%s Change the system-id of %s from [%02X:%02X:%02X:%02X:%02X:%02X] to [%02X:%02X:%02X:%02X:%02X:%02X], dir %d",
                         (csm->role_type == STP_ROLE_STANDBY) ? "Standby" : "Active",
-                        lif_po->name,  lif_po->mac_addr[0], lif_po->mac_addr[1], lif_po->mac_addr[2], 
+                        lif_po->name,  lif_po->mac_addr[0], lif_po->mac_addr[1], lif_po->mac_addr[2],
                         lif_po->mac_addr[3], lif_po->mac_addr[4], lif_po->mac_addr[5],
                         MLACP(csm).remote_system.system_id[0], MLACP(csm).remote_system.system_id[1],
                         MLACP(csm).remote_system.system_id[2], MLACP(csm).remote_system.system_id[3],
@@ -776,9 +776,9 @@ void recover_if_ipmac_on_standby(struct LocalInterface *lif_po, int dir)
         iccp_netlink_if_shutdown_set(lif_po->ifindex);
         iccp_netlink_if_startup_set(lif_po->ifindex);
         /* Set the interface MAC address back to its local address so that subsequent vlan member
-         * add processing (local_if_add_vlan) will not use the old MAC address for 
+         * add processing (local_if_add_vlan) will not use the old MAC address for
          * update_if_ipmac_on_standby()
-         */ 
+         */
         memcpy(lif_po->mac_addr, MLACP(csm).system_id, ETHER_ADDR_LEN);
     }
 
@@ -986,14 +986,14 @@ void iccp_event_handler_obj_input_newlink(struct nl_object *obj, void *arg)
             if ((strncmp(ifname,
                          if_whitelist[i].ifname, strlen(if_whitelist[i].ifname)) == 0))
             {
-                
+
                 /*if the iface exists, but the ifindex changed, then delete old
                  * interface and add the new interface
                  * possible scenario is due to many kernel events, there is
                  * possiblility of losing if deletion event and just
                  * getting a add of same iface with new ifindex.
                  * to address this possibility if add event of interface is
-                 * received with new ifindex different from old interace, 
+                 * received with new ifindex different from old interace,
                  * then delete the old ifindex interface and add new if with new
                  * ifindex
                  */
@@ -2174,7 +2174,7 @@ int iccp_handle_events(struct System * sys)
     int i;
     int err;
     int max_nfds;
-    struct mLACPHeartbeatTLV dummy_tlv; 
+    struct mLACPHeartbeatTLV dummy_tlv;
 
     max_nfds = ICCP_EVENT_FDS_COUNT + sys->readfd_count;
 
@@ -2230,7 +2230,7 @@ int iccp_handle_events(struct System * sys)
                 {
                     if (scheduler_csm_read_callback(csm) != MCLAG_ERROR)
                     {
-                        //consider any msg from peer as heartbeat update, this will be in scenarios of scaled msg sync b/w peers 
+                        //consider any msg from peer as heartbeat update, this will be in scenarios of scaled msg sync b/w peers
                         mlacp_fsm_update_heartbeat(csm, &dummy_tlv);
                     }
                     break;
@@ -2334,7 +2334,7 @@ void update_vlan_if_mac_on_standby(struct LocalInterface* lif_vlan, int dir)
     ICCPD_LOG_DEBUG(__FUNCTION__,
             "%s Change the system-id of %s from [%02X:%02X:%02X:%02X:%02X:%02X] to [%02X:%02X:%02X:%02X:%02X:%02X], dir %d",
             (csm->role_type == STP_ROLE_STANDBY) ? "Standby" : "Active",
-            lif_vlan->name, lif_vlan->mac_addr[0], lif_vlan->mac_addr[1], lif_vlan->mac_addr[2], 
+            lif_vlan->name, lif_vlan->mac_addr[0], lif_vlan->mac_addr[1], lif_vlan->mac_addr[2],
             lif_vlan->mac_addr[3], lif_vlan->mac_addr[4], lif_vlan->mac_addr[5],
             system_mac[0], system_mac[1], system_mac[2], system_mac[3], system_mac[4], system_mac[5], dir);
 

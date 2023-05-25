@@ -83,7 +83,7 @@ module sonic-port{
 
 				leaf-list adv_speeds {
 					description "Port advertised speeds, valid value could be a list of interger or all";
-					
+
 					type union {
 						type uint32 {
 							range 1..800000;
@@ -114,7 +114,7 @@ module sonic-port{
 				}
 
 				must "(count(adv_interface_types[text()='all']) = 0) or (count(adv_interface_types) = 1)";
-					
+
 				leaf mtu {
 					type uint16 {
 						range 68..9216;

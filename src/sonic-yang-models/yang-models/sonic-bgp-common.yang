@@ -6,7 +6,7 @@ module sonic-bgp-common {
     import sonic-types {
         prefix stypes;
     }
-    
+
     import ietf-inet-types {
         prefix inet;
     }
@@ -69,12 +69,12 @@ module sonic-bgp-common {
         type enumeration {
             enum tx_all_paths {
                 description
-                    "Send multiple path advertisements for an NLRI from 
+                    "Send multiple path advertisements for an NLRI from
                     the neighbor or group";
             }
             enum tx_best_path_per_as {
                 description
-                    "Send only best path per AS advertisements for an NLRI from 
+                    "Send only best path per AS advertisements for an NLRI from
                     the neighbor or group";
             }
         }

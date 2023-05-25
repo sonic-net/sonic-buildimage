@@ -29,13 +29,13 @@ router ospf vrf {{ vrf }}
 {% endif %}
 {% endif %}
 {% if 'passive-interface-default' in ospf_instance %}
-  passive-interface default 
+  passive-interface default
 {% endif %}
 {% if 'write-multiplier' in ospf_instance %}
-  write-multiplier {{ ospf_instance['write-multiplier'] }} 
+  write-multiplier {{ ospf_instance['write-multiplier'] }}
 {% endif %}
 {% if 'spf-throttle-delay' in ospf_instance and 'spf-initial-delay' in ospf_instance and 'spf-maximum-delay' in ospf_instance %}
-  timers throttle spf {{ ospf_instance['spf-throttle-delay'] }} {{ ospf_instance['spf-initial-delay'] }} {{ ospf_instance['spf-maximum-delay'] }} 
+  timers throttle spf {{ ospf_instance['spf-throttle-delay'] }} {{ ospf_instance['spf-initial-delay'] }} {{ ospf_instance['spf-maximum-delay'] }}
 {% endif %}
 {% if 'lsa-min-interval-timer' in ospf_instance %}
   timers throttle lsa all {{ ospf_instance['lsa-min-interval-timer'] }}
@@ -87,7 +87,7 @@ router ospf vrf {{ vrf }}
 {% for networkkey, ospf_network_instance in OSPFV2_ROUTER_AREA_NETWORK.items() %}
 {% set networkareaid = networkkey[1] %}
 {% set networkid = networkkey[2] %}
-  network {{ networkid }} area {{ networkareaid }} 
+  network {{ networkid }} area {{ networkareaid }}
 {% endfor %}
 {% endif %}
 {# -------OSPFV2_ROUTER_AREA_NETWORK end --------------------------- #}

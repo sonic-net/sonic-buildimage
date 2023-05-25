@@ -19,7 +19,7 @@ else ifeq ($(CROSS_BUILD_ENVIRON), y)
 else
 	dpkg-buildpackage -rfakeroot -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 endif
-	
+
 	popd
 	mv $(DERIVED_TARGET) $* $(DEST)/
 

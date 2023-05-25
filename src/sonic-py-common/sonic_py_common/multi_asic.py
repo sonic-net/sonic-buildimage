@@ -52,9 +52,9 @@ def connect_config_db_for_ns(namespace=DEFAULT_NAMESPACE):
 def connect_to_all_dbs_for_ns(namespace=DEFAULT_NAMESPACE):
     """
     The function connects to the DBs for a given namespace and
-    returns the handle 
-    
-    For voq chassis systems, the db list includes databases from 
+    returns the handle
+
+    For voq chassis systems, the db list includes databases from
     supervisor card. Avoid connecting to these databases from linecards
 
     If no namespace is provided, it will connect to the db in the
@@ -463,7 +463,7 @@ def get_asic_presence_list():
               for inserted and detected fabric cards. For non-supervisor cards, e.g. line card, the list should
               contain all supported asics by the card. The function gets the asic list from CHASSIS_ASIC_TABLE from
               CHASSIS_STATE_DB. The function assumes that the first N asic ids (asic0 to asic(N-1)) in
-              CHASSIS_ASIC_TABLE belongs to the supervisor, where N is the max number of asics supported by the Chassis 
+              CHASSIS_ASIC_TABLE belongs to the supervisor, where N is the max number of asics supported by the Chassis
     @return:  List of asics present
     """
     asics_list = []

@@ -39,7 +39,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	sed -i 's/\/usr\/sbin\/ntpd {/\/usr\/sbin\/ntpd flags=(attach_disconnected complain) {/' debian/apparmor-profile
 
 ifeq ($(CROSS_BUILD_ENVIRON), y)
-	sed -i 's/dh_auto_configure \--/dh_auto_configure -- --with-yielding-select=yes /g' debian/rules 
+	sed -i 's/dh_auto_configure \--/dh_auto_configure -- --with-yielding-select=yes /g' debian/rules
 	echo ". $(CONFIG_SITE)" > fix.ntp.cross-config.$(CONFIGURED_ARCH)
 	echo "unset with_openssl_libdir" >> fix.ntp.cross-config.$(CONFIGURED_ARCH)
 	echo "unset with_openssl_incdir" >> fix.ntp.cross-config.$(CONFIGURED_ARCH)

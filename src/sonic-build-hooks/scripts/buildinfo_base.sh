@@ -373,7 +373,7 @@ update_version_file()
     done
     sort -u $tmp_file > $version_file
     rm -f $tmp_file
-    
+
     if [[ "${version_name}" == *-deb ]]; then
         update_preference_deb
     fi

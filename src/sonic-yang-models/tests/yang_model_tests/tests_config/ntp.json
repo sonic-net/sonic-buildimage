@@ -52,32 +52,32 @@
     "NTP_DEFAULT_VRF_1_TEST": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "vrf": "default"
-                } 
+                }
             }
         }
     },
     "NTP_DEFAULT_VRF_TEST": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "vrf": "default"
-                } 
+                }
             }
         }
     },
     "NTP_MGMT_VRF_TEST": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "vrf": "mgmt"
                 }
             }
         },
         "sonic-mgmt_vrf:sonic-mgmt_vrf": {
             "sonic-mgmt_vrf:MGMT_VRF_CONFIG": {
-                "sonic-mgmt_vrf:vrf_global": { 
+                "sonic-mgmt_vrf:vrf_global": {
                     "mgmtVrfEnabled": "true"
                 }
             }
@@ -86,14 +86,14 @@
     "NTP_MGMT_VRF_INVALID_MGMT_VRF_STATE_TEST": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "vrf": "mgmt"
                 }
             }
         },
         "sonic-mgmt_vrf:sonic-mgmt_vrf": {
             "sonic-mgmt_vrf:MGMT_VRF_CONFIG": {
-                "sonic-mgmt_vrf:vrf_global": { 
+                "sonic-mgmt_vrf:vrf_global": {
                     "mgmtVrfEnabled": "false"
                 }
             }
@@ -102,7 +102,7 @@
     "NTP_MGMT_VRF_WITH_NOEXIST_MGMT_VRF_TEST": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "vrf": "mgmt"
                 }
             }
@@ -111,7 +111,7 @@
     "NTP_VRF_INVALID_NAME": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "vrf": "Vrf_1"
                 }
             }
@@ -121,7 +121,7 @@
     "NTP_SRC_INTF": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "src_intf": [
                         "Ethernet0",
                         "Loopback100",
@@ -178,7 +178,7 @@
     "NTP_SRC_INTF_WITH_NONEXIST_ETH_PORT": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "src_intf": [
 		        "Ethernet0"
 		    ]
@@ -189,7 +189,7 @@
     "NTP_SRC_INTF_WITH_NONEXIST_LOOPBACK_INTF": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "src_intf": [
 			"Loopback100"
 		    ]
@@ -200,7 +200,7 @@
     "NTP_SRC_INTF_WITH_NONEXIST_PORTCHANNEL_INTF": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "src_intf": [
 			"PortChannel10"
 		    ]
@@ -221,7 +221,7 @@
     "NTP_SRC_INTF_WITH_NONEXIST_MGMT_INTF": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "src_intf": [
 			"eth1"
 		    ]

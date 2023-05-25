@@ -529,7 +529,7 @@
                 ]
             }
         },
-     
+
         "sonic-dot1p-tc-map:sonic-dot1p-tc-map": {
             "sonic-dot1p-tc-map:DOT1P_TO_TC_MAP": {
                 "DOT1P_TO_TC_MAP_LIST": [
@@ -701,7 +701,7 @@
                 ]
             }
         },
-     
+
         "sonic-port-qos-map:sonic-port-qos-map": {
             "sonic-port-qos-map:PORT_QOS_MAP": {
                 "PORT_QOS_MAP_LIST": [
@@ -750,7 +750,7 @@
             }
         }
     },
-   
+
      "PORT_QOS_MAP_APPLY_NON_EXISTS_PORT": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {

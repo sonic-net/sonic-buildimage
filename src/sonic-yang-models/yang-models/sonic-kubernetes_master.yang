@@ -15,7 +15,7 @@ module sonic-kubernetes_master {
     }
 
     description "KUBERNETES_MASTER YANG Module for SONiC OS";
-    
+
     revision 2022-10-09 {
         description "First Revision";
     }

@@ -267,8 +267,8 @@ class BGPAllowListMgr(Manager):
         log_debug("BGPAllowListMgr::__update_prefix_list. af='%s' prefix-list name=%s" % (af, pl_name))
         '''
             Need to check exist and equality of the allowed prefix list.
-            A. If exist and equal, no operation needed. 
-            B. If exist but not equal, first delete then add prefix based on the data from condig db and constants. 
+            A. If exist and equal, no operation needed.
+            B. If exist but not equal, first delete then add prefix based on the data from condig db and constants.
             C. If non-exist, directly add prefix based on the data from condig db and constants.
         '''
         exist, correct = self.__is_prefix_list_valid(af, pl_name, allow_list, constant_list)
@@ -308,7 +308,7 @@ class BGPAllowListMgr(Manager):
                     2001:cdba:0000:0000:0000:0000:3257:9652
                     2001:cdba:0:0:0:0:3257:9652
                     2001:cdba::3257:9652
-                after normalize, all would be normalized to 
+                after normalize, all would be normalized to
                     2001:cdba::3257:9652
         '''
         normalize_list = []
@@ -347,7 +347,7 @@ class BGPAllowListMgr(Manager):
                 config_list.append(rule)
 
         # Return double Ture, when running configuraiton is identical with config db + constants.
-        return True, expect_set == set(self.__normalize_ipnetwork(af, config_list))  
+        return True, expect_set == set(self.__normalize_ipnetwork(af, config_list))
 
     def __update_community(self, community_name, community_value):
         """

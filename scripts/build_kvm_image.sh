@@ -74,7 +74,7 @@ if [[ "$vs_build_prepare_mem" == "yes" ]]; then
     bash -c 'echo 1 > /proc/sys/vm/drop_caches'
     # Not all kernels support compact_memory
     if [[ -w '/proc/sys/vm/compact_memory' ]]
-    then	    
+    then
         bash -c 'echo 1 > /proc/sys/vm/compact_memory'
     fi
     free -m

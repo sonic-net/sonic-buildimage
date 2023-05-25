@@ -48,7 +48,7 @@
             "sonic-voq-inband-interface:VOQ_INBAND_INTERFACE": {
                 "VOQ_INBAND_INTERFACE_LIST": [
                     {
-                        "name": "Ethernet-IB0"                        
+                        "name": "Ethernet-IB0"
                     }
                 ],
                 "VOQ_INBAND_INTERFACE_IPPREFIX_LIST": [

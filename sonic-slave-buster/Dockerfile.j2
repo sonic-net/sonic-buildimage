@@ -57,7 +57,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN apt-get install -y python3 python3-pip
-RUN apt-get install -y python:$arch python3-minimal:$arch python3.7:$arch python3:$arch python-setuptools:$arch 
+RUN apt-get install -y python:$arch python3-minimal:$arch python3.7:$arch python3:$arch python-setuptools:$arch
 RUN apt-get download python3-distutils && dpkg --force-all -i python3-distutils*
 RUN apt-get download python3-pip && dpkg --force-all -i python3-pip*
 RUN which pip3 && pip3 install enum34
@@ -592,7 +592,7 @@ EXPOSE 22
 RUN git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /usr/share/depot_tools
 ENV PATH /usr/share/depot_tools:$PATH
 
-# Install dependencies for dhcp relay test 
+# Install dependencies for dhcp relay test
 RUN pip3 install parameterized==0.8.1
 RUN pip3 install pyfakefs
 

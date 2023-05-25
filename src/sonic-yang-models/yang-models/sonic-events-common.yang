@@ -19,7 +19,7 @@ module sonic-events-common {
     revision 2022-12-01 {
         description
             "Common reusable definitions";
-    } 
+    }
 
     grouping sonic-events-cmn {
         leaf timestamp {
@@ -37,7 +37,7 @@ module sonic-events-common {
             }
             description "Percentage in use";
         }
-        
+
         leaf limit {
             type uint8 {
                 range "0..100" {
@@ -65,16 +65,16 @@ module sonic-events-common {
 
     extension ALARM_SEVERITY_MINOR {
         description
-            "Indicates the existence of a non-service affecting fault condition 
+            "Indicates the existence of a non-service affecting fault condition
              and that corrective action should be taken in order to prevent a more serious
-             (for example, service affecting) fault. Such a severity can be reported, 
+             (for example, service affecting) fault. Such a severity can be reported,
              for example, when the detected alarm condition is not currently degrading the capacity of the resource";
     }
 
     extension ALARM_SEVERITY_MAJOR {
         description
-            "Indicates that a service affecting condition has developed and an urgent corrective 
-             action is required. Such a severity can be reported, for example, when there is a severe 
+            "Indicates that a service affecting condition has developed and an urgent corrective
+             action is required. Such a severity can be reported, for example, when there is a severe
              degradation in the capability of the resource and its full capability must be restored.";
     }
 }

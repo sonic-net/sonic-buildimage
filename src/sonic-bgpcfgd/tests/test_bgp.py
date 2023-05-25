@@ -17,7 +17,7 @@ def load_constant_files():
     for path in paths:
         constant_files += [os.path.abspath(os.path.join(path, name)) for name in os.listdir(path)
                    if os.path.isfile(os.path.join(path, name)) and name.startswith("constants")]
-    
+
     return constant_files
 
 
@@ -55,7 +55,7 @@ def constructor(constants_path):
     return m
 
 @patch('bgpcfgd.managers_bgp.log_info')
-def test_update_peer_up(mocked_log_info): 
+def test_update_peer_up(mocked_log_info):
     for constant in load_constant_files():
         m = constructor(constant)
         res = m.set_handler("10.10.10.1", {"admin_status": "up"})
@@ -63,7 +63,7 @@ def test_update_peer_up(mocked_log_info):
         mocked_log_info.assert_called_with("Peer 'default|10.10.10.1' admin state is set to 'up'")
 
 @patch('bgpcfgd.managers_bgp.log_info')
-def test_update_peer_up_ipv6(mocked_log_info): 
+def test_update_peer_up_ipv6(mocked_log_info):
     for constant in load_constant_files():
         m = constructor(constant)
         res = m.set_handler("fc00:10::1", {"admin_status": "up"})
@@ -71,7 +71,7 @@ def test_update_peer_up_ipv6(mocked_log_info):
         mocked_log_info.assert_called_with("Peer 'default|fc00:10::1' admin state is set to 'up'")
 
 @patch('bgpcfgd.managers_bgp.log_info')
-def test_update_peer_down(mocked_log_info): 
+def test_update_peer_down(mocked_log_info):
     for constant in load_constant_files():
         m = constructor(constant)
         res = m.set_handler("10.10.10.1", {"admin_status": "down"})

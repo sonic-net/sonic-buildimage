@@ -867,7 +867,7 @@ void mlacp_fsm_transit(struct CSM* csm)
 
     if (csm->warm_reboot_disconn_time != 0)
     {
-        /*After peer warm reboot and disconnect, if peer connection is not establised more than 90s, 
+        /*After peer warm reboot and disconnect, if peer connection is not establised more than 90s,
            recover peer disconnection to normal process, such as add peer age flag for MACs etc*/
         if ((time(NULL) - csm->warm_reboot_disconn_time) >= WARM_REBOOT_TIMEOUT)
         {
@@ -1017,7 +1017,7 @@ void mlacp_sync_mac(struct CSM* csm)
     RB_FOREACH (mac_msg, mac_rb_tree, &MLACP(csm).mac_rb)
     {
         /*If MAC with local age flag, dont sync to peer. Such MAC only exist when peer is warm-reboot.
-          If peer is warm-reboot, peer age flag is not set when connection is lost. 
+          If peer is warm-reboot, peer age flag is not set when connection is lost.
           When MAC is aged in local switch, this MAC is not deleted for no peer age flag.
           After warm-reboot, this MAC must be learnt by peer and sync to local switch*/
         if (!(mac_msg->age_flag & MAC_AGE_LOCAL))

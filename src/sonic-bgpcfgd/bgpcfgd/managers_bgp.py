@@ -128,7 +128,7 @@ class BGPPeerMgrBase(Manager):
         if self.check_deployment_id:
             deps.append(("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/deployment_id"))
 
-        if self.peer_type == 'internal':    
+        if self.peer_type == 'internal':
             deps.append(("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback4096"))
 
         super(BGPPeerMgrBase, self).__init__(

@@ -49,9 +49,9 @@ module sonic-vxlan {
                 max-elements 1;
 
                 leaf name {
-                /* vni devices are created of the form 'name'-vlanid 
+                /* vni devices are created of the form 'name'-vlanid
                    The kernel has a max limit of 15 chars for netdevices.
-                   keeping aside 5 chars for hyphen and vlanid the 
+                   keeping aside 5 chars for hyphen and vlanid the
                    name should have a max of 10 chars */
 
                     type string {
@@ -105,7 +105,7 @@ module sonic-vxlan {
 
             description "config db VXLAN_EVPN_NVO table";
 
-            list VXLAN_EVPN_NVO_LIST { 
+            list VXLAN_EVPN_NVO_LIST {
 
                 key "name";
                 max-elements 1;

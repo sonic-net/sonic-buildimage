@@ -5,7 +5,7 @@ module sonic-events-bgp {
 
     import sonic-events-common {
         prefix evtcmn;
-        revision-date 2022-12-01; 
+        revision-date 2022-12-01;
     }
 
     import sonic-types {
@@ -14,7 +14,7 @@ module sonic-events-bgp {
 
     import ietf-inet-types {
         prefix inet;
-    } 
+    }
 
     organization
         "SONiC";

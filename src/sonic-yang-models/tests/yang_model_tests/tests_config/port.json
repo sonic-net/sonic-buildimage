@@ -476,7 +476,7 @@
             }
         }
     },
-    
+
     "PORT_VALID_MUX_CABLE_TEST": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {

@@ -98,7 +98,7 @@ def read_data(is_config, feature, fields):
 
 def read_config(feature):
     """ Read requried feature config """
-    set_owner, no_fallback, state  = read_data(True, feature, 
+    set_owner, no_fallback, state  = read_data(True, feature,
             [(SET_OWNER, "local"), (NO_FALLBACK, False), (STATE, "disabled")])
 
     return (set_owner, not no_fallback, state)
@@ -143,13 +143,13 @@ def container_version(feature):
         for env in envs:
             if env.startswith("IMAGE_VERSION="):
                 version = env.split('=')[1]
-        
+
         syslog.syslog(syslog.LOG_INFO, "docker get image version for {}".format(feature))
-        
+
     except (docker.errors.NotFound, docker.errors.APIError) as err:
         syslog.syslog(syslog.LOG_ERR, "docker get image version for {} failed with {}".
                 format(feature, str(err)))
-    
+
     return version
 
 
@@ -164,11 +164,11 @@ def set_label(feature, create):
 
         # redundant set (data already exist) can still raise subscriber
         # notification. So check & set.
-        # Redundant delete (data doesn't exist) does not raise any 
+        # Redundant delete (data doesn't exist) does not raise any
         # subscriber notification. So no need to pre-check for delete.
         #
         tbl.set(KUBE_LABEL_SET_KEY, [(fld, "true" if create else "false")])
-        
+
 
 def update_data(feature, data):
     if remote_ctr_enabled:
@@ -180,13 +180,13 @@ def update_data(feature, data):
 def container_id(feature):
     """
     Return the container ID for the feature.
-    
+
     if current_owner is local, use feature name as the start/stop
-    of local image is synchronous. 
+    of local image is synchronous.
     Else get it from FEATURE table in STATE-DB
 
     :param feature: Name of the feature to start.
-    
+
     """
     init()
 
@@ -202,19 +202,19 @@ def container_id(feature):
 def container_start(feature, **kwargs):
     """
     Starts a container for given feature.
-    
+
     Starts from local image and/or trigger kubernetes to deploy the image
     for this feature. Marks the feature state up in STATE-DB FEATURE table.
 
     If feature's set_owner is local, invoke docker start.
     If feature's set_owner is kube, it creates a node label that
-    would trigger kubernetes to start the container. With kube as 
+    would trigger kubernetes to start the container. With kube as
     owner, if fallback is enabled and remote_state==none, it starts
     the local image using docker, which will run until kube
     deployment occurs.
 
     :param feature: Name of the feature to start.
-    
+
     """
     START_LOCAL = 1
     START_KUBE = 2
@@ -279,7 +279,7 @@ def container_stop(feature, **kwargs):
     Marks the feature state down in STATE-DB FEATURE table.
 
     :param feature: Name of the feature to stop.
-    
+
     """
     debug_msg("BEGIN")
 
@@ -336,7 +336,7 @@ def container_kill(feature, **kwargs):
     Instruct/ensure kube terminates, by removing label.
 
     :param feature: Name of the feature to kill.
-    
+
     """
     debug_msg("BEGIN")
 
@@ -383,7 +383,7 @@ def container_wait(feature, **kwargs):
     table and exit.
 
     :param feature: Name of the feature to wait.
-    
+
     """
     debug_msg("BEGIN")
 

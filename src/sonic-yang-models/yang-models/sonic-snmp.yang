@@ -109,8 +109,8 @@ module sonic-snmp {
         }
         leaf SNMP_USER_AUTH_TYPE {
           type string;
-          must "(current()/../SNMP_USER_TYPE = 'noAuthNoPriv' and current() = '') or 
-                ((current()/../SNMP_USER_TYPE = 'AuthNoPriv' or current()/../SNMP_USER_TYPE = 'Priv') 
+          must "(current()/../SNMP_USER_TYPE = 'noAuthNoPriv' and current() = '') or
+                ((current()/../SNMP_USER_TYPE = 'AuthNoPriv' or current()/../SNMP_USER_TYPE = 'Priv')
                 and (current() = 'SHA' or current() = 'MD5' or current() = 'HMAC-SHA-2'))";
           default "";
           description
@@ -120,20 +120,20 @@ module sonic-snmp {
           type string {
               length "0..64";
               pattern '[^ @:]*' {
-                  error-message 'Invalid snmp user authentication password (Valid chars are ASCII 
+                  error-message 'Invalid snmp user authentication password (Valid chars are ASCII
                                  printable except ":" and"@")';
               }
           }
-          must "(current()/../SNMP_USER_TYPE = 'AuthNoPriv' and string-length(current()) >= 8) or 
-                (current()/../SNMP_USER_TYPE = 'Priv' and string-length(current()) >= 8) or 
+          must "(current()/../SNMP_USER_TYPE = 'AuthNoPriv' and string-length(current()) >= 8) or
+                (current()/../SNMP_USER_TYPE = 'Priv' and string-length(current()) >= 8) or
                 (current()/../SNMP_USER_TYPE = 'noAuthNoPriv' and current() = '')";
           description
             "Authentication password for the user.";
         }
         leaf SNMP_USER_ENCRYPTION_TYPE {
           type string;
-          must "(current()/../SNMP_USER_TYPE = 'noAuthNoPriv' and current() = '') or 
-                (current()/../SNMP_USER_TYPE = 'AuthNoPriv' and current() = '') or 
+          must "(current()/../SNMP_USER_TYPE = 'noAuthNoPriv' and current() = '') or
+                (current()/../SNMP_USER_TYPE = 'AuthNoPriv' and current() = '') or
                 (current()/../SNMP_USER_TYPE = 'Priv' and (current() = 'DES' or current() = 'AES'))";
           default "";
           description
@@ -148,8 +148,8 @@ module sonic-snmp {
                                  printable except ":" and"@")';
               }
           }
-          must "(current()/../SNMP_USER_TYPE = 'noAuthNoPriv' and current() = '') or 
-                (current()/../SNMP_USER_TYPE = 'AuthNoPriv' and current() = '') or 
+          must "(current()/../SNMP_USER_TYPE = 'noAuthNoPriv' and current() = '') or
+                (current()/../SNMP_USER_TYPE = 'AuthNoPriv' and current() = '') or
                 (current()/../SNMP_USER_TYPE = 'Priv' and string-length(current()) >= 8)";
           description
             "Encryption password for the user.";

@@ -24,7 +24,7 @@ module sonic-dscp-tc-map {
             "Initial revision.";
     }
 
-    container sonic-dscp-tc-map {   
+    container sonic-dscp-tc-map {
 
         container DSCP_TO_TC_MAP {
 

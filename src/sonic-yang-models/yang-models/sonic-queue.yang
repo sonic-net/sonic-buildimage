@@ -41,7 +41,7 @@ module sonic-queue {
         container QUEUE {
 
             description "QUEUE part of config_db.json";
-            
+
             list QUEUE_LIST {
 
                 key "ifname qindex";
@@ -60,7 +60,7 @@ module sonic-queue {
                     }
                     description "Interface name.";
                 }
-                // qindex format is (X) | (X-Y). X is start and Y is end index. 
+                // qindex format is (X) | (X-Y). X is start and Y is end index.
                 // X and Y value depends on platform, example for physical ports 0-7 and
                 // for CPU port 0-48. Example qindex is 3-4
                 leaf qindex {

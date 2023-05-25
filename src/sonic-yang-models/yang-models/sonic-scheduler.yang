@@ -31,7 +31,7 @@ module sonic-scheduler {
                 key "name";
 
                 leaf name {
-                    type string; 
+                    type string;
                     description "Scheduler name";
                 }
 
@@ -85,7 +85,7 @@ module sonic-scheduler {
                         "Committed information rate for the dual-rate token
                         bucket policer.This value represents the rate at which
                         tokens are added to the primary bucket.nt Units is
-                        Bps(Bytes per second) for meter type is bytes else 
+                        Bps(Bytes per second) for meter type is bytes else
                         Pps(packets per second) for meter type is packets";
                 }
 

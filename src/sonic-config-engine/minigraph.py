@@ -49,7 +49,7 @@ BACKEND_ASIC_SUB_ROLE = 'BackEnd'
 
 dualtor_cable_types = ["active-active", "active-standby"]
 
-# Default Virtual Network Index (VNI) 
+# Default Virtual Network Index (VNI)
 vni_default = 8000
 
 # Defination of custom acl table types
@@ -788,7 +788,7 @@ def parse_dpg(dpg, hname):
                 else:
                     is_bmc_data = True
                     acl_table_types['BMCDATA'] = acl_table_type_defination['BMCDATA']
-            # if acl is classified as mirror (erpsan) or acl interface 
+            # if acl is classified as mirror (erpsan) or acl interface
             # are binded then do not classify as Control plane.
             # For multi-asic platforms it's possible there is no
             # interface are binded to everflow in host namespace.
@@ -861,7 +861,7 @@ def parse_dpg(dpg, hname):
                     # If the minigraph has the key, add the corresponding config DB key to the table
                     if mg_key in mg_tunnel.attrib:
                         tunnelintfs[tunnel_type][tunnel_name][table_key] = mg_tunnel.attrib[mg_key]
-                
+
                 tunnelintfs_qos_remap_config[tunnel_type][tunnel_name] = {
                     "tunnel_type": mg_tunnel.attrib["Type"].upper(),
                 }
@@ -1503,7 +1503,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             docker_routing_config_mode = child.text
 
     (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
-    
+
     port_names_map.update(ports)
     port_alias_map.update(alias_map)
     port_alias_asic_map.update(alias_asic_map)
@@ -1594,7 +1594,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             print("Warning: more than one peer switch was found. Only the first will be parsed: {}".format(results['PEER_SWITCH'].keys()[0]))
 
         results['DEVICE_METADATA']['localhost']['peer_switch'] = list(results['PEER_SWITCH'].keys())[0]
-    
+
     # Enable tunnel_qos_remap if downstream_redundancy_types(T1) or redundancy_type(T0) = Gemini/Libra
     enable_tunnel_qos_map = False
     if platform and 'kvm' in platform:
@@ -1609,8 +1609,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
     if len(system_defaults) > 0:
         results['SYSTEM_DEFAULTS'] = system_defaults
-    
-    # for this hostname, if sub_role is defined, add sub_role in 
+
+    # for this hostname, if sub_role is defined, add sub_role in
     # device_metadata
     if sub_role is not None:
         current_device['sub_role'] = sub_role
@@ -1745,7 +1745,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         port_default_speed =  port_speeds_default.get(port_name, None)
         port_png_speed = port_speed_png[port_name]
 
-        # when the port speed is changes from 400g to 100g/40g 
+        # when the port speed is changes from 400g to 100g/40g
         # update the port lanes, use the first 4 lanes of the 400G port to support 100G/40G port
         if port_default_speed == '400000' and (port_png_speed == '100000' or port_png_speed == '40000'):
             port_lanes =  ports[port_name].get('lanes', '').split(',')

@@ -493,7 +493,7 @@ def is_macsec_supported():
 def get_device_runtime_metadata():
     chassis_metadata = {}
     if is_chassis():
-        chassis_metadata = {'CHASSIS_METADATA': {'module_type' : 'supervisor' if is_supervisor() else 'linecard', 
+        chassis_metadata = {'CHASSIS_METADATA': {'module_type' : 'supervisor' if is_supervisor() else 'linecard',
                                                 'chassis_type': 'voq' if is_voq_chassis() else 'packet'}}
 
     port_metadata = {'ETHERNET_PORTS_PRESENT': True if get_path_to_port_config_file(hwsku=None, asic="0" if is_multi_npu() else None) else False}
@@ -702,10 +702,10 @@ def is_warm_restart_enabled(container_name):
 def is_fast_reboot_enabled():
     state_db = SonicV2Connector(host='127.0.0.1')
     state_db.connect(state_db.STATE_DB, False)
-    
+
     TABLE_NAME_SEPARATOR = '|'
     prefix = 'FAST_RESTART_ENABLE_TABLE' + TABLE_NAME_SEPARATOR
-    
+
     # Get the system warm reboot enable state
     _hash = '{}{}'.format(prefix, 'system')
     fb_system_state = state_db.get(state_db.STATE_DB, _hash, "enable")

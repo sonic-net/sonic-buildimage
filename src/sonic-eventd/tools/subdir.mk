@@ -1,6 +1,6 @@
 CC := g++
 
-TOOL_OBJS = ./tools/events_tool.o 
+TOOL_OBJS = ./tools/events_tool.o
 
 C_DEPS += ./tools/events_tool.d
 

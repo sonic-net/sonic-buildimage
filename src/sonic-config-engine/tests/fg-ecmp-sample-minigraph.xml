@@ -411,7 +411,7 @@
                <AttachTo>etp19</AttachTo>
                <Address>200.200.200.10</Address>
                <Type>FineGrainedECMPGroupMember</Type>
-            </IPNextHop> 
+            </IPNextHop>
             <IPNextHop>
                <ElementType>IPNextHop</ElementType>
                <Name i:nil="true" />
@@ -481,7 +481,7 @@
                <AttachTo>etp19</AttachTo>
                <Address>200:200:200:200::10</Address>
                <Type>FineGrainedECMPGroupMember</Type>
-            </IPNextHop> 
+            </IPNextHop>
          </IPNextHops>
       </DeviceDataPlaneInfo>
    </DpgDec>

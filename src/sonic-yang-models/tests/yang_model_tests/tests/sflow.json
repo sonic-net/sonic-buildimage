@@ -42,7 +42,7 @@
     },
     "SFLOW_SESSION_TEST_WITH_INCORRECT_SAMPLE_RATE": {
         "desc": "Configure sflow session in SFLOW_SESSION table with an out of range sample rate.",
-        "eStr": ["sFlow sample rate must be [256-8388608]"] 
+        "eStr": ["sFlow sample rate must be [256-8388608]"]
     },
     "SFLOW_SESSION_TEST_WITH_INCORRECT_PORT_TYPE_IN_SAMPLE_RATE": {
         "desc": "Configure sflow session in SFLOW_SESSION table with an incorrect port type in sample rate.",

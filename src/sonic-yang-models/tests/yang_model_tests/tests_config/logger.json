@@ -26,7 +26,7 @@
 		"LOGGER_LIST": [{
 		    "name": "orchagent",
 		    "LOGLEVEL": "wrong",
-		    "LOGOUTPUT": "SYSLOG"	            
+		    "LOGOUTPUT": "SYSLOG"
 		}]
 	    }
 	}
@@ -37,7 +37,7 @@
 		"LOGGER_LIST": [{
 		    "name": "orchagent",
 		    "LOGLEVEL": "NOTICE",
-		    "LOGOUTPUT": "wrong"	            
+		    "LOGOUTPUT": "wrong"
 		}]
 	    }
 	}

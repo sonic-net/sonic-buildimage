@@ -41,7 +41,7 @@ module sonic-vnet {
             list VNET_LIST {
 
                 key "name";
-                
+
                 leaf name {
                     description "An alphanumaric string to represent the name of the unique vnet";
                     type string;
@@ -54,7 +54,7 @@ module sonic-vnet {
                         path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
                     }
                 }
-                
+
                 leaf vni {
                     mandatory true;
                     description "A valid and unique vni which will become part of the encapsulated traffic header.";
@@ -80,7 +80,7 @@ module sonic-vnet {
                         pattern "default" {
                             error-message "Invalid VRF name";
                         }
-                    } 
+                    }
                 }
 
                 leaf advertise_prefix {

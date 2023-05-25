@@ -15,7 +15,7 @@ Section: libs
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Multi-Arch: same
-Description: library for dealing with netlink sockets 
+Description: library for dealing with netlink sockets
  This is a library for applications dealing with netlink sockets.
  The library provides an interface for raw netlink messaging and various
  netlink family specific interfaces.
@@ -133,8 +133,8 @@ Section: libdevel
 Depends: libnl-3-dev (= ${binary:Version}), libnl-genl-3-dev (= ${binary:Version}), libnl-nf-3-dev (= ${binary:Version}), libnl-route-3-dev (= ${binary:Version}), libnl-cli-3-200 (= ${binary:Version}), ${misc:Depends}
 Multi-Arch: same
 Description: development library and headers for libnl-cli-3
- This is a library for applications dealing with netlink sockets. 
- The library provides an interface for raw netlink messaging and various 
+ This is a library for applications dealing with netlink sockets.
+ The library provides an interface for raw netlink messaging and various
  netlink family specific interfaces.
  .
  This package contains the files that are needed to build applications using
@@ -225,7 +225,7 @@ Architecture: linux-any
 XC-Package-Type: udeb
 Section: debian-installer
 Depends: ${misc:Depends}, ${shlibs:Depends}
-Description: library for dealing with netlink sockets 
+Description: library for dealing with netlink sockets
  This is a library for applications dealing with netlink sockets.
  The library provides an interface for raw netlink messaging and various
  netlink family specific interfaces.

@@ -2,7 +2,7 @@
     "ROUTE_REDISTRIBUTE_VALID": {
         "desc": "Configure route redistribution table."
     },
-    
+
     "ROUTE_REDISTRIBUTE_INVALID_RT_MAP_CNT": {
         "desc": "Referring 2 route map, when 1 allowed",
         "eStrKey" : "LeafRef"

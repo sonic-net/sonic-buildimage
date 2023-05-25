@@ -80,7 +80,7 @@ t_map_to_str(const Map &m)
         _ss << sep << "{" << elem.first << "," << elem.second << "}";
         if (sep.empty()) {
             sep = ", ";
-        }   
+        }
     }
     _ss << "}";
     return _ss.str();
@@ -99,7 +99,7 @@ do_receive(const event_subscribe_sources_t filter, const string outfile, int cnt
             fp = &fout;
             printf("outfile=%s set\n", outfile.c_str());
         }
-    }   
+    }
     event_handle_t h = events_init_subscriber(use_cache, 2000, filter.empty() ? NULL : &filter);
     printf("Subscribed with use_cache=%d timeout=2000 filter %s\n",
             use_cache, filter.empty() ? "empty" : "non-empty");
@@ -124,7 +124,7 @@ do_receive(const event_subscribe_sources_t filter, const string outfile, int cnt
         evtOp[evt.key] = t_map_to_str(evt.params);
         (*fp) << t_map_to_str(evtOp) << "\n";
         fp->flush();
-        
+
         if ((++index % PRINT_CHUNK_SZ) == 0) {
             printf("Received index %d\n", index);
         }
@@ -178,7 +178,7 @@ do_send(const string infile, int cnt, int pause)
                         source.c_str(), key.substr(0, key.find(":")).c_str());
             }
             evt.tag = key.substr(key.find(":")+1);
-            
+
             const auto &val = data.begin().value();
             ASSERT(val.is_object(), "Parsed params is not object");
             ASSERT((int)val.size() >= 1, "Expect non empty params");
@@ -200,7 +200,7 @@ do_send(const string infile, int cnt, int pause)
         };
         lst.push_back(evt);
     }
-    
+
     h = events_init_publisher(source);
     ASSERT(h != NULL, "failed to init publisher");
 
@@ -214,7 +214,7 @@ do_send(const string infile, int cnt, int pause)
             if ((++index % PRINT_CHUNK_SZ) == 0) {
                 printf("Sending index %d\n", index);
             }
-            
+
             int rc = event_publish(h, evt.tag, evt.params.empty() ? NULL : &evt.params);
             ASSERT(rc == 0, "Failed to publish index=%d rc=%d", index, rc);
 

@@ -7,7 +7,7 @@
                     "vrf_name": "default",
                     "src_protocol": "connected",
                     "dst_protocol": "bgp",
-                    "addr_family": "ipv4" 
+                    "addr_family": "ipv4"
                 }
                 ]
             }
@@ -393,7 +393,7 @@
             }
         }
     },
-    
+
      "ROUTE_PREFIX_INVALID_MODE_ENUM": {
         "sonic-routing-policy-sets:sonic-routing-policy-sets":{
             "sonic-routing-policy-sets:PREFIX_SET": {
@@ -463,14 +463,14 @@
                     "set_type": "STANDARD",
                     "match_action": "ANY",
                     "action": "permit",
-                    "community_member": ["1:1"] 
+                    "community_member": ["1:1"]
                 },
                 {
                     "name": "com2",
                     "set_type": "STANDARD",
                     "match_action": "ALL",
                     "action": "permit",
-                    "community_member": ["1:2"] 
+                    "community_member": ["1:2"]
                 }
                 ]
             }
@@ -486,7 +486,7 @@
                     "set_type": "STANDARD",
                     "match_action": "ANY",
                     "action": "allow",
-                    "community_member": ["1:1"] 
+                    "community_member": ["1:1"]
                 }
                 ]
             }
@@ -502,14 +502,14 @@
                     "set_type": "STANDARD",
                     "match_action": "ANY",
                     "action": "permit",
-                    "community_member": ["rt:1:1"] 
+                    "community_member": ["rt:1:1"]
                 },
                 {
                     "name": "extcom2",
                     "set_type": "STANDARD",
                     "match_action": "ALL",
                     "action": "permit",
-                    "community_member": ["rt:1:2"] 
+                    "community_member": ["rt:1:2"]
                 }
                 ]
             }
@@ -522,12 +522,12 @@
                 {
                     "name": "aspath1",
                     "action": "permit",
-                    "as_path_set_member": ["65001","65003"] 
+                    "as_path_set_member": ["65001","65003"]
                 },
                 {
                     "name": "aspath2",
                     "action": "deny",
-                    "as_path_set_member": ["65002"] 
+                    "as_path_set_member": ["65002"]
                 }
                 ]
             }

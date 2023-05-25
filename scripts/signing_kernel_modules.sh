@@ -1,5 +1,5 @@
 #!/bin/bash
-# This script is signing kernel modules by using sign-file tool 
+# This script is signing kernel modules by using sign-file tool
 
 usage() {
     cat <<EOF

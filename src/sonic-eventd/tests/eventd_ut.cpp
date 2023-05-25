@@ -699,7 +699,7 @@ TEST(eventd, service)
 
 void
 wait_for_heartbeat(stats_collector &stats_instance, long unsigned int cnt,
-        int wait_ms = 3000) 
+        int wait_ms = 3000)
 {
     int diff = 0;
 
@@ -749,7 +749,7 @@ TEST(eventd, heartbeat)
 
     /* Pause heartbeat */
     stats_instance.heartbeat_ctrl(true);
-    
+
     /* Sleep to ensure the other thread noticed the pause request. */
     this_thread::sleep_for(chrono::milliseconds(200));
 
@@ -870,7 +870,7 @@ TEST(eventd, testDB)
         if (db.exists(key)) {
             try {
                 m = db.hgetall(key);
-                unordered_map<string, string>::const_iterator itc = 
+                unordered_map<string, string>::const_iterator itc =
                     m.find(string(EVENTS_STATS_FIELD_NAME));
                 if (itc != m.end()) {
                     int expect =  (counter_keys[i] == string(COUNTERS_EVENTS_PUBLISHED) ?

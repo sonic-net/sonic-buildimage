@@ -272,7 +272,7 @@ RUN apt-get update && apt-get install -y \
 # For gmock
 RUN apt-get install -y libgmock-dev -t stretch-backports
 
-# Install dependencies for dhcp relay test 
+# Install dependencies for dhcp relay test
 RUN pip3 install parameterized==0.8.1
 RUN pip3 install pyfakefs
 

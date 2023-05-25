@@ -32,14 +32,14 @@ vector<EventParam> createEventParams(vector<string> params, vector<string> luaCo
     return eventParams;
 }
 
-TEST(syslog_parser, matching_regex) {    
+TEST(syslog_parser, matching_regex) {
     json jList = json::array();
     vector<RegexStruct> regexList;
     string regexString = "^([a-zA-Z]{3})?\\s*([0-9]{1,2})?\\s*([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,6})?\\s*message (.*) other_data (.*) even_more_data (.*)";
     vector<string> params = { "month", "day", "time", "message", "other_data", "even_more_data" };
     vector<string> luaCodes = { "", "", "", "", "", "" };
     regex expression(regexString);
-    
+
     RegexStruct rs = RegexStruct();
     rs.tag = "test_tag";
     rs.regexExpression = expression;
@@ -63,11 +63,11 @@ TEST(syslog_parser, matching_regex) {
     EXPECT_EQ(true, success);
     EXPECT_EQ("test_tag", tag);
     EXPECT_EQ(expectedDict, paramDict);
-    
+
     lua_close(luaState);
 }
 
-TEST(syslog_parser, matching_regex_timestamp) {    
+TEST(syslog_parser, matching_regex_timestamp) {
     json jList = json::array();
     vector<RegexStruct> regexList;
     string regexString = "^([a-zA-Z]{3})?\\s*([0-9]{1,2})?\\s*([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,6})?\\s*message (.*) other_data (.*)";
@@ -101,7 +101,7 @@ TEST(syslog_parser, matching_regex_timestamp) {
     EXPECT_EQ(true, success);
     EXPECT_EQ("test_tag", tag);
     EXPECT_EQ(expectedDict, paramDict);
-    
+
     lua_close(luaState);
 }
 
@@ -165,7 +165,7 @@ TEST(syslog_parser, lua_code_valid_1) {
     EXPECT_EQ(true, success);
     EXPECT_EQ("test_tag", tag);
     EXPECT_EQ(expectedDict, paramDict);
-    
+
     lua_close(luaState);
 }
 
@@ -204,7 +204,7 @@ TEST(syslog_parser, lua_code_valid_2) {
     EXPECT_EQ(true, success);
     EXPECT_EQ("test_tag", tag);
     EXPECT_EQ(expectedDict, paramDict);
-    
+
     lua_close(luaState);
 }
 
@@ -255,10 +255,10 @@ TEST(rsyslog_plugin, onMessage_noParams) {
 
 TEST(timestampFormatter, changeTimestampFormat) {
     unique_ptr<TimestampFormatter> formatter(new TimestampFormatter());
-    
+
     vector<string> timestampOne = { "Jul", "20", "10:09:40.230874" };
     vector<string> timestampTwo = { "Jan", "1", "00:00:00.000000" };
-    vector<string> timestampThree = { "Dec", "31", "23:59:59.000000" }; 
+    vector<string> timestampThree = { "Dec", "31", "23:59:59.000000" };
 
     formatter->m_storedTimestamp = "010100:00:00.000000";
     formatter->m_storedYear = g_stored_year;

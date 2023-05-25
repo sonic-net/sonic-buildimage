@@ -238,7 +238,7 @@
             }
         }
     },
-     
+
     "BGP_PEERGROUP_ALL_VALID": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
@@ -381,7 +381,7 @@
                 ]
             }
         }
-    }, 
+    },
     "BGP_GLOBAL_NEG_VRF_NOT_EXIST": {
         "sonic-bgp-global:sonic-bgp-global": {
             "sonic-bgp-global:BGP_GLOBALS": {

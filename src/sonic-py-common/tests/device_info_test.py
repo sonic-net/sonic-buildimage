@@ -66,15 +66,15 @@ libswsscommon: 1.0.0
 sonic_utilities: 1.2"""
 
 SONIC_VERISON_YML_RESULT = {
-    'build_version': 'test_branch.1-a8fbac59d', 
-    'debian_version': '11.4', 
-    'kernel_version': '5.10.0-18-2-amd64', 
-    'asic_type': 'mellanox', 
-    'asic_subtype': 'mellanox', 
-    'commit_id': 'a8fbac59d', 
-    'branch': 'test_branch', 
-    'release': 'master', 
-    'libswsscommon': '1.0.0', 
+    'build_version': 'test_branch.1-a8fbac59d',
+    'debian_version': '11.4',
+    'kernel_version': '5.10.0-18-2-amd64',
+    'asic_type': 'mellanox',
+    'asic_subtype': 'mellanox',
+    'commit_id': 'a8fbac59d',
+    'branch': 'test_branch',
+    'release': 'master',
+    'libswsscommon': '1.0.0',
     'sonic_utilities': 1.2
 }
 
@@ -104,8 +104,8 @@ class TestDeviceInfo(object):
     def test_get_chassis_info(self):
         with mock.patch("sonic_py_common.device_info.SonicV2Connector", new=SonicV2Connector):
             result = device_info.get_chassis_info()
-            truth = {"serial": SonicV2Connector.TEST_SERIAL, 
-                     "model": SonicV2Connector.TEST_MODEL, 
+            truth = {"serial": SonicV2Connector.TEST_SERIAL,
+                     "model": SonicV2Connector.TEST_MODEL,
                      "revision": SonicV2Connector.TEST_REV}
             assert result == truth
 
@@ -118,7 +118,7 @@ class TestDeviceInfo(object):
                 assert device_info.get_sonic_version_info() == SONIC_VERISON_YML_RESULT
             # Assert the file was read only once
             open_mocked.assert_called_once_with(device_info.SONIC_VERSION_YAML_PATH)
-        
+
     @mock.patch("sonic_py_common.device_info.get_platform_info")
     def test_is_chassis(self, mock_platform_info):
         mock_platform_info.return_value = {"switch_type": "npu"}

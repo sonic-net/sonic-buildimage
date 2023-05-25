@@ -11,7 +11,7 @@
                         "name": "LINE-CARD1",
                         "admin_status": "up"
                     },
-                    { 
+                    {
                         "name": "FABRIC-CARD0",
                         "admin_status": "up"
                     },
@@ -20,7 +20,7 @@
                         "admin_status": "up"
                     }
                 ]
-            }            
+            }
         }
     },
     "CHASSIS_MODULE_WITH_LINECARD_ADMIN_DOWN": {
@@ -36,7 +36,7 @@
                         "admin_status": "down"
                     }
                 ]
-            }            
+            }
         }
     },
     "CHASSIS_MODULE_WITH_LINECARD_ADMIN_INVALID_VALUE": {
@@ -48,7 +48,7 @@
                         "admin_status": "false"
                     }
                 ]
-            }            
+            }
         }
     }
 }

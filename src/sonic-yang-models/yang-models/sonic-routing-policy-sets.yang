@@ -62,7 +62,7 @@ module sonic-routing-policy-sets {
 
         container PREFIX {
 
-            list PREFIX_LIST { 
+            list PREFIX_LIST {
                 key "name sequence_number ip_prefix masklength_range";
                 //ext:custom-validation ValidateIpPrefixListCfg;
 
@@ -71,7 +71,7 @@ module sonic-routing-policy-sets {
                         path "../../../PREFIX_SET/PREFIX_SET_LIST/name";
                     }
                     description "Prefix name";
-                }   
+                }
 
                 leaf sequence_number {
                     type uint32 {

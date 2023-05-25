@@ -29,7 +29,7 @@ module sonic-dhcpv6-relay {
 			list DHCP_RELAY_LIST {
 
 				key "name";
-        
+
 				leaf name {
 					type string;
 				}

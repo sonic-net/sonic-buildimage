@@ -106,7 +106,7 @@ void *dlopen(const char *filename, int flags)
 	  mock_dlerror = mock_dlerror_failed;
 	  return NULL;
   }
-  
+
   // all other case return mock handle
   mock_dlerror = NULL;
   return mock_plugin_handle;
@@ -133,21 +133,21 @@ void *dlsym(void *restrict handle, const char *restrict symbol)
 				mock_dlerror = mock_dlerror_failed;
 				return NULL;
 			}
-			
+
 		case TEST_SCEANRIO_PLUGIN_UNINIT_NOT_EXIT:
 			if (strcmp(symbol, "plugin_uninit") == 0)
 			{
 				mock_dlerror = mock_dlerror_failed;
 				return NULL;
 			}
-			
+
 		case TEST_SCEANRIO_PLUGIN_INIT_NOT_EXIT:
 			if (strcmp(symbol, "plugin_init") == 0)
 			{
 				mock_dlerror = mock_dlerror_failed;
 				return NULL;
 			}
-			
+
 		case TEST_SCEANRIO_PLUGIN_INIT_SUCCESS:
 			if (strcmp(symbol, "plugin_init") == 0)
 			{
@@ -165,7 +165,7 @@ void *dlsym(void *restrict handle, const char *restrict symbol)
 				return mock_on_shell_execve;
 			}
 	}
-	
+
 	return mock_plugin_default_function_handle;
 }
 

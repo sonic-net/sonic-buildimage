@@ -56,7 +56,7 @@ module sonic-fine-grained-ecmp {
 
     container sonic-fine-grained-ecmp {
 
-        container FG_NHG { 
+        container FG_NHG {
 
             description "FG_NHG part of config_db.json";
 
@@ -72,8 +72,8 @@ module sonic-fine-grained-ecmp {
                 leaf bucket_size{
                     type uint16;
                     mandatory true;
-                    description "total hash bucket size desired, 
-                    recommended value of Lowest Common Multiple 
+                    description "total hash bucket size desired,
+                    recommended value of Lowest Common Multiple
                     of 1..{max # of next-hops}";
                 }
 

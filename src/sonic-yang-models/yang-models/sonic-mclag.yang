@@ -47,7 +47,7 @@ module sonic-mclag {
 
         container MCLAG_DOMAIN {
 
-            list MCLAG_DOMAIN_LIST { 
+            list MCLAG_DOMAIN_LIST {
                 key "domain_id";
                 max-elements 1;
 
@@ -106,9 +106,9 @@ module sonic-mclag {
             }
         }
 
-        container MCLAG_INTERFACE { 
+        container MCLAG_INTERFACE {
 
-            list MCLAG_INTERFACE_LIST { 
+            list MCLAG_INTERFACE_LIST {
                 description  "List of MCLAG interfaces";
                 key "domain_id if_name";
 

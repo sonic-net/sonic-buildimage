@@ -28,7 +28,7 @@ bool RsyslogPlugin::onMessage(string msg, lua_State* luaState) {
 void parseParams(vector<string> params, vector<EventParam>& eventParams) {
     for(long unsigned int i = 0; i < params.size(); i++) {
         if(params[i].empty()) {
-            SWSS_LOG_ERROR("Empty param provided in regex file\n");	
+            SWSS_LOG_ERROR("Empty param provided in regex file\n");
             continue;
        	}
         EventParam ep = EventParam();
@@ -62,7 +62,7 @@ bool RsyslogPlugin::createRegexList() {
     }
 
     string regexString;
-    string timestampRegex = "^([a-zA-Z]{3})?\\s*([0-9]{1,2})?\\s*([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,6})?\\s*"; 
+    string timestampRegex = "^([a-zA-Z]{3})?\\s*([0-9]{1,2})?\\s*([0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{0,6})?\\s*";
     regex expression;
     vector<RegexStruct> regexList;
 
@@ -71,7 +71,7 @@ bool RsyslogPlugin::createRegexList() {
         vector<EventParam> eventParams;
         try {
             string eventRegex = jsonList[i]["regex"];
-	    regexString = timestampRegex + eventRegex; 
+	    regexString = timestampRegex + eventRegex;
             string tag = jsonList[i]["tag"];
             vector<string> params = jsonList[i]["params"];
 	    vector<string> timestampParams = { "month", "day", "time" };

@@ -11,4 +11,4 @@ DBGFLAGS = -DDEBUG -DBASH_PLUGIN_UT
 plugin_test_SOURCES = plugin_test.c mock_helper.c ../bash_tacplus.c
 
 plugin_test_CFLAGS = $(DBGFLAGS) $(AM_CFLAGS) $(CFLAGS_COMMON) $(CFLAGS_TEST) $(IFLAGS_TEST)
-plugin_test_LDADD = -lc -lcunit 
+plugin_test_LDADD = -lc -lcunit

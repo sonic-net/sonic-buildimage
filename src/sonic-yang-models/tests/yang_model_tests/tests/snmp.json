@@ -94,7 +94,7 @@
         "desc": "Load SNMP user with user type Priv without encyrption type",
         "eStrKey": "Must"
     },
-    "SNMP_USER_PRIV_INVALID_ENCRYPT_TYPE_NEG_TEST": {	
+    "SNMP_USER_PRIV_INVALID_ENCRYPT_TYPE_NEG_TEST": {
         "desc": "Load SNMP user with user type Priv with invalid encryption type",
         "eStrKey": "Must"
     },
