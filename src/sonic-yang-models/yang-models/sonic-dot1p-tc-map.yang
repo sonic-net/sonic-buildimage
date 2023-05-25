@@ -24,14 +24,14 @@ module sonic-dot1p-tc-map {
             "Initial revision.";
     }
 
-    container sonic-dot1p-tc-map {  
+    container sonic-dot1p-tc-map {
 
         container DOT1P_TO_TC_MAP {
 
             description "DOT1P_TO_TC_MAP part of config_db.json";
 
             list DOT1P_TO_TC_MAP_LIST {
-                
+
                 key "name";
 
                 leaf name {

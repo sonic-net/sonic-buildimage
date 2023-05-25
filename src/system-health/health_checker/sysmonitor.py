@@ -35,7 +35,7 @@ class MonitorStateDbTask(ProcessTaskBase):
         sel = swsscommon.Select()
         cst = swsscommon.SubscriberStateTable(state_db, "FEATURE")
         sel.addSelectable(cst)
-            
+
         while not self.task_stopping_event.is_set():
             (state, c) = sel.select(SELECT_TIMEOUT_MSECS)
             if state == swsscommon.Select.TIMEOUT:
@@ -48,8 +48,8 @@ class MonitorStateDbTask(ProcessTaskBase):
             timestamp = "{}".format(datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
             msg={"unit": key_ext, "evt_src":"feature", "time":timestamp}
             self.task_notify(msg)
-        
-        
+
+
     def task_worker(self):
         if self.task_stopping_event.is_set():
             return
@@ -57,7 +57,7 @@ class MonitorStateDbTask(ProcessTaskBase):
             self.subscribe_statedb()
         except Exception as e:
             logger.log_error("subscribe_statedb exited- {}".format(str(e)))
-    
+
     def task_notify(self, msg):
         if self.task_stopping_event.is_set():
             return
@@ -124,16 +124,16 @@ class Sysmonitor(ProcessTaskBase):
             if not self.state_db:
                 self.state_db = swsscommon.SonicV2Connector(host='127.0.0.1')
                 self.state_db.connect(self.state_db.STATE_DB)
-            
+
             self.state_db.set(self.state_db.STATE_DB, "SYSTEM_READY|SYSTEM_STATE", "Status", state)
             logger.log_info("Posting system ready status {} to statedb".format(state))
-            
+
         except Exception as e:
             logger.log_error("Unable to post system ready status: {}".format(str(e)))
 
     #Forms the service list to be monitored
     def get_all_service_list(self):
-        
+
         if not self.config_db:
             self.config_db = swsscommon.ConfigDBConnector()
             self.config_db.connect()
@@ -142,11 +142,11 @@ class Sysmonitor(ProcessTaskBase):
         #add the services from the below targets
         targets= ["/etc/systemd/system/multi-user.target.wants", "/etc/systemd/system/sonic.target.wants"]
         for path in targets:
-            dir_list += [os.path.basename(i) for i in glob.glob('{}/*.service'.format(path))] 
+            dir_list += [os.path.basename(i) for i in glob.glob('{}/*.service'.format(path))]
 
         #add the enabled docker services from config db feature table
         self.get_service_from_feature_table(dir_list)
-        
+
         self.config.load_config()
         if self.config and self.config.ignore_services:
             for srv in self.config.ignore_services:
@@ -161,7 +161,7 @@ class Sysmonitor(ProcessTaskBase):
            is not an atomic operation, sonic-cfggen do it with two steps:
                1. Add an empty table entry to CONFIG DB
                2. Add all fields to the table
-            
+
             So, if system health read db on middle of step 1 and step 2, it might read invalid data. A retry
             mechanism is here to avoid such issue.
 
@@ -222,7 +222,7 @@ class Sysmonitor(ProcessTaskBase):
                     if fail_reason is None:
                         fail_reason = "NA"
                     pstate = "Down"
-                
+
                 update_time = self.state_db.get(self.state_db.STATE_DB, 'FEATURE|{}'.format(service), 'update_time')
                 if update_time is None:
                     update_time = "-"
@@ -270,7 +270,7 @@ class Sysmonitor(ProcessTaskBase):
             service_status = "Down"
             service_up_status = "Down"
             service_name,last_name = event.split('.')
-            
+
             sysctl_show = self.run_systemctl_show(event)
 
             load_state = sysctl_show.get('LoadState')
@@ -280,7 +280,7 @@ class Sysmonitor(ProcessTaskBase):
                 active_state = sysctl_show['ActiveState']
                 sub_state = sysctl_show['SubState']
                 srv_type = sysctl_show['Type']
-                
+
                 #Raise syslog for service state change
                 logger.log_info("{} service state changed to [{}/{}]".format(event, active_state, sub_state))
 
@@ -320,14 +320,14 @@ class Sysmonitor(ProcessTaskBase):
                                 fail_reason = "Inactive"
                     else:
                         unit_status = "NOT OK"
-            
+
                     self.post_unit_status(service_name, service_status, service_up_status, fail_reason, update_time)
 
                     return unit_status
 
         except Exception as e:
             logger.log_error("Get unit status {}-{}".format(service_name, str(e)))
-        
+
 
     #Gets status of all the services from service list
     def get_all_system_status(self):
@@ -398,14 +398,14 @@ class Sysmonitor(ProcessTaskBase):
                 if event not in self.dnsrvs_name:
                     self.dnsrvs_name.add(event)
                 astate = "DOWN"
-        
+
             self.publish_system_status(astate)
         else:
             #if received event is not in current full service list but exists in STATE_DB & set,
             #then it should be removed from STATE_DB & set
             if event in self.dnsrvs_name:
                 self.dnsrvs_name.remove(event)
-            
+
             srv_name,last = event.split('.')
             # stop on service maybe propagated to timers and in that case,
             # the state_db entry for the service should not be deleted
@@ -414,30 +414,30 @@ class Sysmonitor(ProcessTaskBase):
                 key_exists = self.state_db.exists(self.state_db.STATE_DB, key)
                 if key_exists == 1:
                     self.state_db.delete(self.state_db.STATE_DB, key)
-        
+
         return 0
 
     def system_service(self):
         if not self.state_db:
             self.state_db = swsscommon.SonicV2Connector(host='127.0.0.1')
             self.state_db.connect(self.state_db.STATE_DB)
-        
+
         mpmgr = multiprocessing.Manager()
         myQ = mpmgr.Queue()
         try:
             monitor_system_bus = MonitorSystemBusTask(myQ)
             monitor_system_bus.task_run()
-            
+
             monitor_statedb_table = MonitorStateDbTask(myQ)
             monitor_statedb_table.task_run()
-            
+
         except Exception as e:
             logger.log_error("SubProcess-{}".format(str(e)))
             sys.exit(1)
 
 
         self.update_system_status()
-        
+
         from queue import Empty
         # Queue to receive the STATEDB and Systemd state change event
         while not self.task_stopping_event.is_set():
@@ -460,7 +460,7 @@ class Sysmonitor(ProcessTaskBase):
 
         monitor_system_bus.task_stop()
         monitor_statedb_table.task_stop()
-    
+
     def task_worker(self):
         if self.task_stopping_event.is_set():
             return

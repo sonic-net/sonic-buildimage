@@ -118,7 +118,7 @@ def generate_l2_config(data):
     if 'uplinks' in data:
         uplinks = data['uplinks']
         data.pop('uplinks')
-    
+
     if 'downlinks' in data:
         downlinks = data['downlinks']
         data.pop('downlinks')

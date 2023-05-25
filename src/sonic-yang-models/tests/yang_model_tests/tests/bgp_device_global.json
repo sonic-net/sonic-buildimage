@@ -6,7 +6,7 @@
         "desc": "Load bgp device global table with tsa_enabled set to true"
     },
     "BGP_DEVICE_GLOBAL_WITH_TSB_TEST": {
-        "desc": "Load bgp device global table with tsa_enabled set to false"        
+        "desc": "Load bgp device global table with tsa_enabled set to false"
     },
     "BGP_DEVICE_GLOBAL_WITH_INVALID_VALUE": {
         "desc": "Load bgp device global table with invalid value",

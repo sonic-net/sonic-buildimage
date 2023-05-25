@@ -108,7 +108,7 @@ def mock_subproc_run(cmd, shell, capture_output):
     ins_cmd = ["sudo", "iptables", "-t", "nat", "-A", "OUTPUT", "-p", "tcp", "-d"]
 
     assert shell == False
-    
+
     print("cmd={}".format(cmd))
     if list_cmd == cmd[:len(list_cmd)]:
         if len(cmd) == len(list_cmd) + 1:

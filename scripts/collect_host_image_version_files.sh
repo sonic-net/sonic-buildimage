@@ -1,10 +1,10 @@
 #!/bin/bash
 
-[[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x 
+[[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x
 
 SCRIPT_SRC_PATH=src/sonic-build-hooks
 if [ -e ${SCRIPT_SRC_PATH} ]; then
-	. ${SCRIPT_SRC_PATH}/scripts/utils.sh 
+	. ${SCRIPT_SRC_PATH}/scripts/utils.sh
 fi
 
 ARCH=$1

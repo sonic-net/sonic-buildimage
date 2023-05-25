@@ -42,7 +42,7 @@
 /* Tacacs+ config file timestamp string length */
 #define  CONFIG_FILE_TIME_STAMP_LEN  100
 
-/* 
+/*
     Convert log to a string because va args resoursive issue:
     http://www.c-faq.com/varargs/handoff.html
 */
@@ -202,7 +202,7 @@ int tacacs_authorization(
             continue;
         }
 
-        // increase connected servers 
+        // increase connected servers
         connected_servers++;
         result = send_authorization_message(server_fd, user, tty, host, task_id, cmd, args, argc);
         close(server_fd);
@@ -282,7 +282,7 @@ void load_tacacs_config()
     }
 
     output_debug("TACACS+ control flag: 0x%x\n", tacacs_ctrl);
-    
+
     if (tacacs_ctrl & AUTHORIZATION_FLAG_TACACS) {
         output_debug("TACACS+ per-command authorization enabled.\n");
     }
@@ -290,7 +290,7 @@ void load_tacacs_config()
     if (tacacs_ctrl & AUTHORIZATION_FLAG_LOCAL) {
         output_debug("Local per-command authorization enabled.\n");
     }
-    
+
     if (tacacs_ctrl & PAM_TAC_DEBUG) {
         output_debug("TACACS+ debug enabled.\n");
     }
@@ -374,7 +374,7 @@ int is_local_user(char *user)
         else {
             output_error("get user information failed, user: %s, errorno: %d\n", user, s);
         }
-        
+
         result = ERROR_CHECK_LOCAL_USER;
     }
     else if (strncmp(pwd.pw_gecos, REMOTE_USER_GECOS_PREFIX, strlen(REMOTE_USER_GECOS_PREFIX)) == 0) {
@@ -485,7 +485,7 @@ int on_shell_execve (char *user, int shell_level, char *cmd, char **argv)
         }
     }
 
-    // return 0, so bash will continue run user command and will check user permission with linux permission check. 
+    // return 0, so bash will continue run user command and will check user permission with linux permission check.
     output_debug("start local authorization for command %s with given arguments\n", cmd);
     return 0;
 }

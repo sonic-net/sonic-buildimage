@@ -20,10 +20,10 @@
   distance bgp {{af_val['ebgp_route_distance']}} {{af_val['ibgp_route_distance']}} {{af_val['local_route_distance']}}
 {% endif %}
 {% if 'import_vrf' in af_val %}
-  import vrf {{af_val['import_vrf']}}  
+  import vrf {{af_val['import_vrf']}}
 {% endif %}
 {% if 'import_vrf_route_map' in af_val %}
-  import vrf route-map {{af_val['import_vrf_route_map']}}  
+  import vrf route-map {{af_val['import_vrf_route_map']}}
 {% endif %}
 {% endif %}
 {% endfor %}

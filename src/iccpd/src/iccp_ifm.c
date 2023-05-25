@@ -515,7 +515,7 @@ static void do_ndisc_learn_from_kernel(struct ndmsg *ndm, struct rtattr *tb[], i
                    }
                }
            }
-        } 
+        }
     }
 
     if (!(csm && lif_po)) {
@@ -1204,7 +1204,7 @@ void do_ndisc_update_from_reply_packet(unsigned int ifindex, char *ipv6_addr, ui
             ndisc_info->op_type = ndisc_msg->op_type;
             sprintf(ndisc_info->ifname, "%s", ndisc_msg->ifname);
             memcpy(ndisc_info->mac_addr, ndisc_msg->mac_addr, ETHER_ADDR_LEN);
-             ICCPD_LOG_DEBUG(__FUNCTION__, "Update ND for %s", show_ipv6_str((char *)ndisc_msg->ipv6_addr)); 
+             ICCPD_LOG_DEBUG(__FUNCTION__, "Update ND for %s", show_ipv6_str((char *)ndisc_msg->ipv6_addr));
         }
         break;
     }
@@ -1330,7 +1330,7 @@ int add_pending_vlan_mbr(struct PendingVlanMbrIf* mbr_if, uint16_t vid)
     struct VLAN_ID *vlan = NULL;
     struct VLAN_ID vlan_key = { 0 };
     char vlan_name[16] = "";
-    if (!mbr_if) 
+    if (!mbr_if)
     {
         return MCLAG_ERROR;
     }
@@ -1340,7 +1340,7 @@ int add_pending_vlan_mbr(struct PendingVlanMbrIf* mbr_if, uint16_t vid)
     vlan_key.vid = vid;
 
     vlan = RB_FIND(vlan_rb_tree, &(mbr_if->vlan_tree), &vlan_key);
-    
+
     if (!vlan)
     {
         vlan = (struct VLAN_ID*)malloc(sizeof(struct VLAN_ID));
@@ -1364,7 +1364,7 @@ void del_pending_vlan_mbr(struct PendingVlanMbrIf* mbr_if, uint16_t vid)
 {
     struct VLAN_ID *vlan = NULL;
     struct VLAN_ID vlan_key = { 0 };
-    if (!mbr_if) 
+    if (!mbr_if)
     {
         return;
     }
@@ -1372,7 +1372,7 @@ void del_pending_vlan_mbr(struct PendingVlanMbrIf* mbr_if, uint16_t vid)
     vlan_key.vid = vid;
 
     vlan = RB_FIND(vlan_rb_tree, &(mbr_if->vlan_tree), &vlan_key);
- 
+
     if (vlan != NULL)
     {
         VLAN_RB_REMOVE(vlan_rb_tree, &(mbr_if->vlan_tree), vlan);
@@ -1398,7 +1398,7 @@ void del_all_pending_vlan_mbrs(struct PendingVlanMbrIf* lif)
     return;
 }
 
-//update vlan membership for a given interface; this function can be called 
+//update vlan membership for a given interface; this function can be called
 //whenever vlan membership is received from mclagsyncd and local interface is not found
 void update_pending_vlan_mbr(char *mbr_if_name, unsigned int vlan_id,  int add_flag)
 {
@@ -1414,10 +1414,10 @@ void update_pending_vlan_mbr(char *mbr_if_name, unsigned int vlan_id,  int add_f
 
     ICCPD_LOG_DEBUG(__FUNCTION__, "update pending vlan:%d member for if:%s event:%s \n", vlan_id, mbr_if_name, add_flag ? "add":"delete");
     mbr_if = find_pending_vlan_mbr_if(sys, mbr_if_name);
-    //if mbr_if not found create 
+    //if mbr_if not found create
     if (!mbr_if)
     {
-        if (!add_flag) 
+        if (!add_flag)
         {
             return;
         }
@@ -1432,12 +1432,12 @@ void update_pending_vlan_mbr(char *mbr_if_name, unsigned int vlan_id,  int add_f
         RB_INIT(vlan_rb_tree, &mbr_if->vlan_tree);
         LIST_INSERT_HEAD(&(sys->pending_vlan_mbr_if_list), mbr_if, if_next);
     }
-    if (add_flag) 
+    if (add_flag)
     {
         //add to pending vlan member if
         add_pending_vlan_mbr(mbr_if, vlan_id);
-    } 
-    else 
+    }
+    else
     {
         //delete from pending vlan member if
         del_pending_vlan_mbr(mbr_if, vlan_id);
@@ -1445,13 +1445,13 @@ void update_pending_vlan_mbr(char *mbr_if_name, unsigned int vlan_id,  int add_f
 }
 
 
-//move pending vlan membership from pending member interface to system lif 
+//move pending vlan membership from pending member interface to system lif
 void move_pending_vlan_mbr_to_lif(struct System *sys, struct LocalInterface* lif)
 {
     struct PendingVlanMbrIf *mbr_if;
     struct VLAN_ID* vlan = NULL;
     struct VLAN_ID* vlan_temp = NULL;
-    if (!sys || !lif) 
+    if (!sys || !lif)
     {
         return;
     }
@@ -1504,7 +1504,7 @@ void vlan_mbrship_change_handler(unsigned int vlan_id, char *mbr_if_name, int ad
     if (!lif)
     {
         ICCPD_LOG_NOTICE(__FUNCTION__, "Rx vlan:%d mbr if:%s event %s; No MCLAG If", vlan_id, mbr_if_name, add_flag ? "add":"delete");
-        update_pending_vlan_mbr(mbr_if_name, vlan_id, add_flag);  
+        update_pending_vlan_mbr(mbr_if_name, vlan_id, add_flag);
         return;
     }
     ICCPD_LOG_DEBUG(__FUNCTION__, "Rx vlan:%d mbr if:%s event %s", vlan_id, mbr_if_name, add_flag ? "add":"delete");

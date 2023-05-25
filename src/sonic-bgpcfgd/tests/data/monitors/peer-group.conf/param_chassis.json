@@ -1,6 +1,6 @@
 {
     "CONFIG_DB__DEVICE_METADATA": {
-        "localhost": {         
+        "localhost": {
             "type": "SpineRouter"
         }
     }

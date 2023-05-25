@@ -226,13 +226,13 @@ class TestCfgGenCaseInsensitive(TestCase):
                 'hwsku': 'server-sku',
                 'type': 'Server'
             },
-            'switch-01t1': { 
+            'switch-01t1': {
                 'lo_addr': '10.1.0.186/32',
                 'deployment_id': '2',
                 'hwsku': 'Force10-S6000',
                 'type': 'LeafRouter',
-                'mgmt_addr': '10.7.0.196/26' 
-            },  
+                'mgmt_addr': '10.7.0.196/26'
+            },
             'server1-SC': {
                 'lo_addr_v6': '::/0',
                 'mgmt_addr': '0.0.0.0/0',
@@ -298,7 +298,7 @@ class TestCfgGenCaseInsensitive(TestCase):
                 'address_ipv4': "25.1.1.10"
             }
         }
-        
+
         output = self.run_script(argument)
         self.assertEqual(
             utils.to_dict(output.strip()),
@@ -307,7 +307,7 @@ class TestCfgGenCaseInsensitive(TestCase):
 
     def test_mux_cable_parsing(self):
         result = minigraph.parse_xml(self.sample_graph, port_config_file=self.port_config)
-        
+
         expected_mux_cable_ports = ["Ethernet4", "Ethernet8"]
         port_table = result['PORT']
         for port_name, port in port_table.items():
@@ -345,7 +345,7 @@ class TestCfgGenCaseInsensitive(TestCase):
                 output = subprocess.check_output(["sed", "-i", 's/%s/%s/g' % (BACKEND_TOR_ROUTER, TOR_ROUTER), graph_file], stderr=subprocess.STDOUT)
             else:
                 output = subprocess.check_output(["sed", "-i", 's/%s/%s/g' % (BACKEND_TOR_ROUTER, TOR_ROUTER), graph_file])
-  
+
     def test_minigraph_tunnel_table(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "TUNNEL"]
         expected_tunnel = {
@@ -432,7 +432,7 @@ class TestCfgGenCaseInsensitive(TestCase):
             utils.to_dict(output.strip()),
             expected_table
         )
-    
+
     def test_dhcp_table(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "DHCP_RELAY"]
         expected = {
@@ -454,12 +454,12 @@ class TestCfgGenCaseInsensitive(TestCase):
             utils.to_dict(output.strip()),
             expected
         )
-    
+
     def test_minigraph_mirror_dscp(self):
         result = minigraph.parse_xml(self.sample_graph, port_config_file=self.port_config)
         self.assertTrue('EVERFLOW_DSCP' in result['ACL_TABLE'])
         everflow_dscp_entry = result['ACL_TABLE']['EVERFLOW_DSCP']
-        
+
         self.assertEqual(everflow_dscp_entry['type'], 'MIRROR_DSCP')
         self.assertEqual(everflow_dscp_entry['stage'], 'ingress')
         expected_ports = ['PortChannel01', 'Ethernet12', 'Ethernet8', 'Ethernet0']

@@ -19,7 +19,7 @@ bool SyslogParser::parseMessage(string message, string& eventTag, event_params_t
         }
         string formattedTimestamp;
         if(!matchResults[1].str().empty() && !matchResults[2].str().empty() && !matchResults[3].str().empty()) { // found timestamp components
-            formattedTimestamp = m_timestampFormatter->changeTimestampFormat({ matchResults[1].str(), matchResults[2].str(), matchResults[3].str() }); 
+            formattedTimestamp = m_timestampFormatter->changeTimestampFormat({ matchResults[1].str(), matchResults[2].str(), matchResults[3].str() });
 	}
         if(!formattedTimestamp.empty()) {
             paramMap["timestamp"] = formattedTimestamp;
@@ -29,7 +29,7 @@ bool SyslogParser::parseMessage(string message, string& eventTag, event_params_t
 
         // found matching regex
         eventTag = m_regexList[i].tag;
-	// check params for lua code	
+	// check params for lua code
         for(long unsigned int j = 3; j < m_regexList[i].params.size(); j++) {
 	    string resultValue = matchResults[j + 1].str();
 	    string paramName = m_regexList[i].params[j].paramName;

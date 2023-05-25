@@ -136,7 +136,7 @@ class stats_collector
         void run_collector();
 
         void run_writer();
-       
+
         atomic<bool> m_updated;
 
         counters_t m_lst_counters[COUNTERS_EVENTS_TOTAL];
@@ -192,13 +192,13 @@ class stats_collector
  *
  *  We add to the vector as much as allowed by vector and max limit,
  *  whichever comes first.
- *  
+ *
  *  The sequence number in internal event will help assess the missed count
  *  by the consumer of the cache data.
  *
  */
 typedef enum {
-    NEED_INIT = 0, 
+    NEED_INIT = 0,
     INIT_CAPTURE,
     START_CAPTURE,
     STOP_CAPTURE

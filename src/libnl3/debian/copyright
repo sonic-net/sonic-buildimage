@@ -9,9 +9,9 @@ Upstream Author:
    Thomas Graf <tgraf@suug.ch>
 
 
-Copyright: 
+Copyright:
 
-lib/route/addr.c 
+lib/route/addr.c
 include/netlink/route/addr.h
 
    Copyright (c) Thomas Graf <tgraf@suug.ch>
@@ -90,7 +90,7 @@ src/cls/basic.c
 src/nl-addr-delete.c:
 
    This library is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published 
+   it under the terms of the GNU General Public License as published
    by the Free Software Foundation version 2 of the License.
 
    This program is distributed in the hope that it will be useful, but
@@ -147,7 +147,7 @@ lib/xfrm/lifetime.c
 All other *.c and *.h files not mentioned above:
 
    This library is free software; you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License as published 
+   it under the terms of the GNU Lesser General Public License as published
    by the Free Software Foundation version 2.1 of the License.
 
    This program is distributed in the hope that it will be useful, but
@@ -156,5 +156,5 @@ All other *.c and *.h files not mentioned above:
    General Public License for more details.
 
 On Debian GNU/Linux systems, the complete text of the GNU Lesser General
-Public License can be found in /usr/share/common-licenses/LGPL-2.1 
+Public License can be found in /usr/share/common-licenses/LGPL-2.1
 

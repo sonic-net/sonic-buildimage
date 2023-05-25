@@ -524,7 +524,7 @@ clusters:\n\
         # test to_str()
         f = "abcd"
         f == kube_commands.to_str(str.encode(f))
-        
+
 
     @patch("kube_commands.subprocess.Popen")
     def test_reset(self, mock_subproc):

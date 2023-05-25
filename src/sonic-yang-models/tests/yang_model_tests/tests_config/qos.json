@@ -20,7 +20,7 @@
                     "meter_type": "bytes",
                     "pbs": 2048,
                     "pir": 2560000,
-                    "type": "STRICT", 
+                    "type": "STRICT",
                     "priority": 0
                 },
                 {
@@ -116,7 +116,7 @@
             }
         }
     },
-   
+
     "SCHEDULER_VALID_NAME": {
         "sonic-scheduler:sonic-scheduler":{
             "sonic-scheduler:SCHEDULER": {
@@ -138,7 +138,7 @@
                     "meter_type": "bytes",
                     "pbs": 2048,
                     "pir": 2560000,
-                    "type": "STRICT", 
+                    "type": "STRICT",
                     "priority": 0
                 },
                 {

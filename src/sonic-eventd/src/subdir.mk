@@ -1,6 +1,6 @@
 CC := g++
 
-TEST_OBJS += ./src/eventd.o 
+TEST_OBJS += ./src/eventd.o
 OBJS += ./src/eventd.o ./src/main.o
 
 C_DEPS += ./src/eventd.d ./src/main.d

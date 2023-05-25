@@ -73,7 +73,7 @@ public:
         }
 
         // Get this info handy
-        try 
+        try
         {
             DBConnector db("TEST_DB", 0, true);
             g_is_redis_available = true;

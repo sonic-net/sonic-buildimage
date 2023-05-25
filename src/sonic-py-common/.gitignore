@@ -1,12 +1,12 @@
 **/*.pyc
 
-# Distribution / packaging 
+# Distribution / packaging
 *.egg-info/
 .eggs/
 build/
 dist/
 
-# Unit test / coverage reports 
+# Unit test / coverage reports
 .cache
 .coverage
 coverage.xml

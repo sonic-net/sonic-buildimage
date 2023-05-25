@@ -48,7 +48,7 @@
 *
 ******************************************************/
 
-//this needs to be fine tuned 
+//this needs to be fine tuned
 #define PEER_SOCK_SND_BUF_LEN  (6 * 1024 * 1024)
 #define PEER_SOCK_RCV_BUF_LEN  (6 * 1024 * 1024)
 #define RECV_RETRY_INTERVAL_USEC    100000
@@ -388,7 +388,7 @@ void scheduler_init()
     //no need to create iccpd config from startup file, it will be done through
     //cli
     iccp_config_from_file(sys->config_file_path);
-    
+
     /*Get kernel ARP info */
     iccp_neigh_get_init();
 

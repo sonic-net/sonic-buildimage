@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-MLNX_SDK_VERSION = 4.5.4206
+MLNX_SDK_VERSION = 4.5.5142
 MLNX_SDK_ISSU_VERSION = 101
 
 MLNX_ASSETS_GITHUB_URL = https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins

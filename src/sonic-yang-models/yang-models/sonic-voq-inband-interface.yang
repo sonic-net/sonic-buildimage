@@ -1,7 +1,7 @@
 module sonic-voq-inband-interface {
     namespace "http://github.com/sonic-net/sonic-voq-inband-interface";
     prefix voq-inband-intf;
-    yang-version 1.1;    
+    yang-version 1.1;
 
     import sonic-types {
         prefix stypes;
@@ -34,9 +34,9 @@ module sonic-voq-inband-interface {
                 leaf inband_type {
                     description "Type of inband interface";
                     type string {
-                        pattern "port|Port";                        
+                        pattern "port|Port";
                     }
-                    default "port";                    
+                    default "port";
                 }
             }
             list VOQ_INBAND_INTERFACE_IPPREFIX_LIST {
@@ -52,5 +52,5 @@ module sonic-voq-inband-interface {
                 }
             }
         }
-    }  
+    }
 }

@@ -1,7 +1,7 @@
 module sonic-vrf {
     namespace "http://github.com/sonic-net/sonic-vrf";
     prefix vrf;
-    
+
     import sonic-extension {
         prefix sonic-ext;
     }
@@ -22,7 +22,7 @@ module sonic-vrf {
 
     container sonic-vrf {
         container VRF {
-            description "Vrf configuration.";            
+            description "Vrf configuration.";
 
             list VRF_LIST {
                 key "name";
@@ -34,7 +34,7 @@ module sonic-vrf {
                             error-app-tag vrf-name-invalid;
                         }
                     }
-                }   
+                }
 
                 leaf fallback {
                     type  boolean;

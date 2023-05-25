@@ -103,7 +103,7 @@ int iccp_mclag_config_dump(char * *buf,  int *num, int mclag_id)
 
         state_info.keepalive_time  = csm->keepalive_time;
         state_info.session_timeout = csm->session_timeout;
-        
+
         logconfig = logger_get_configuration();
         memcpy(state_info.loglevel, log_level_to_string(logconfig->log_level), strlen( log_level_to_string(logconfig->log_level)));
 

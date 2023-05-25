@@ -90,7 +90,7 @@
     "PORT_QOS_MAP_APPLY_MAP_TO_GLOBAL": {
         "desc": "Configure qos maps on switch level."
     },
-    
+
     "PORT_QOS_MAP_APPLY_NON_EXISTS_MAPS": {
         "desc": "Configure non exists qos maps on port.",
         "eStrKey": "LeafRef"

@@ -50,7 +50,7 @@ module sonic-system-aaa {
                     description "Allow AAA fallback";
                     default False;
                 }
-                
+
                 leaf debug {
                     type stypes:boolean_type;
                     description "Enable/disable AAA debugging";

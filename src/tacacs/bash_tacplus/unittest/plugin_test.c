@@ -23,14 +23,14 @@ void testcase_tacacs_authorization_all_failed() {
 	char *testargv[2];
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
-	
-	
+
+
 	// test connection failed case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_ALL_FAILED);
 	int result = tacacs_authorization("test_user","tty0","test_host","test_command",testargv,2);
 
 	CU_ASSERT_STRING_EQUAL(mock_syslog_message_buffer, "Failed to connect to TACACS server(s)\n");
-	
+
 	// check return value, -2 for all server not reachable
 	CU_ASSERT_EQUAL(result, -2);
 }
@@ -40,7 +40,7 @@ void testcase_tacacs_authorization_faled() {
 	char *testargv[2];
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
-	
+
 	// test connection failed case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_FAILED_RESULT);
 	int result = tacacs_authorization("test_user","tty0","test_host","test_command",testargv,2);
@@ -54,7 +54,7 @@ void testcase_tacacs_authorization_read_failed() {
 	char *testargv[2];
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
-	
+
 	// test connection failed case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_READ_FAILED);
 	int result = tacacs_authorization("test_user","tty0","test_host","test_command",testargv,2);
@@ -70,7 +70,7 @@ void testcase_tacacs_authorization_denined() {
 	char *testargv[2];
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
-	
+
 	// test connection denined case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_DENINED_RESULT);
 	int result = tacacs_authorization("test_user","tty0","test_host","test_command",testargv,2);
@@ -86,7 +86,7 @@ void testcase_tacacs_authorization_success() {
 	char *testargv[2];
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
-	
+
 	// test connection success case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
 	int result = tacacs_authorization("test_user","tty0","test_host","test_command",testargv,2);
@@ -100,7 +100,7 @@ void testcase_authorization_with_host_and_tty_success() {
 	char *testargv[2];
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
-	
+
 	// test connection success case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
 	int result = authorization_with_host_and_tty("test_user","test_command",testargv,2);
@@ -111,13 +111,13 @@ void testcase_authorization_with_host_and_tty_success() {
 
 /* Test check_and_load_changed_tacacs_config */
 void testcase_check_and_load_changed_tacacs_config() {
-	
+
 	// test connection failed case
 	check_and_load_changed_tacacs_config();
 
     // check server config updated.
 	CU_ASSERT_STRING_EQUAL(mock_syslog_message_buffer, "Server 2, address:TestAddress2, key:key2\n");
-	
+
 	// check and load file again.
 	check_and_load_changed_tacacs_config();
 
@@ -132,7 +132,7 @@ void testcase_on_shell_execve_success() {
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
 	testargv[2] = 0;
-	
+
 	// test connection failed case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT);
 	on_shell_execve("test_user", 1, "test_command", testargv);
@@ -147,7 +147,7 @@ void testcase_on_shell_execve_denined() {
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
 	testargv[2] = 0;
-	
+
 	// test connection failed case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_SEND_DENINED_RESULT);
 	on_shell_execve("test_user", 1, "test_command", testargv);
@@ -162,7 +162,7 @@ void testcase_on_shell_execve_failed() {
 	testargv[0] = "arg1";
 	testargv[1] = "arg2";
 	testargv[2] = 0;
-	
+
 	// test connection failed case
 	set_test_scenario(TEST_SCEANRIO_CONNECTION_ALL_FAILED);
 	on_shell_execve("test_user", 1, "test_command", testargv);

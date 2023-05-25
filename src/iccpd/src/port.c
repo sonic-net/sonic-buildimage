@@ -579,7 +579,7 @@ int local_if_add_vlan(struct LocalInterface* local_if,  uint16_t vid)
     vlan_key.vid = vid;
 
     vlan = RB_FIND(vlan_rb_tree, &(local_if->vlan_tree), &vlan_key);
-    
+
     if (!vlan)
     {
         vlan = (struct VLAN_ID*)malloc(sizeof(struct VLAN_ID));
@@ -609,7 +609,7 @@ int local_if_add_vlan(struct LocalInterface* local_if,  uint16_t vid)
             update_vlan_if_mac_on_standby(vlan->vlan_itf, 1);
         }
     }
-    else 
+    else
     {
         ICCPD_LOG_WARN(__FUNCTION__, "skip VLAN MAC update for vlan %d interface %s ", vid, local_if->name);
     }
@@ -625,7 +625,7 @@ void local_if_del_vlan(struct LocalInterface* local_if, uint16_t vid)
     vlan_key.vid = vid;
 
     vlan = RB_FIND(vlan_rb_tree, &(local_if->vlan_tree), &vlan_key);
- 
+
     if (vlan != NULL)
     {
         VLAN_RB_REMOVE(vlan_rb_tree, &(local_if->vlan_tree), vlan);
@@ -666,7 +666,7 @@ int peer_if_add_vlan(struct PeerInterface* peer_if, uint16_t vlan_id)
     vlan_key.vid = vlan_id;
 
     peer_vlan = RB_FIND(vlan_rb_tree, &(peer_if->vlan_tree), &vlan_key);
- 
+
     if (!peer_vlan)
     {
         peer_vlan = (struct VLAN_ID*)malloc(sizeof(struct VLAN_ID));

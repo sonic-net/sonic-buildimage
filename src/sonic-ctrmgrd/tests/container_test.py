@@ -260,11 +260,11 @@ stop_test_data = {
 
 
 # container_kill test cases
-# test case 0 -- container kill local 
-#   -- no change in state-db 
+# test case 0 -- container kill local
+#   -- no change in state-db
 #   -- no label update
 # test case 1 -- container kill kube -- set label
-#   -- no change in state-db 
+#   -- no change in state-db
 #   -- label update
 #
 kill_test_data = {
@@ -356,7 +356,7 @@ kill_test_data = {
 
 # container_kill test cases
 # test case 0 -- container kill local disabled container
-#   -- no change in state-db 
+#   -- no change in state-db
 #   -- no label update
 #
 invalid_kill_test_data = {
@@ -380,11 +380,11 @@ invalid_kill_test_data = {
 
 
 # container_wait test cases
-# test case 0 -- container wait local 
-#   -- no change in state-db 
+# test case 0 -- container wait local
+#   -- no change in state-db
 #   -- no label update
 # test case 1 -- container wait kube with fallback
-#   -- change in state-db 
+#   -- change in state-db
 #   -- no label update
 #
 wait_test_data = {

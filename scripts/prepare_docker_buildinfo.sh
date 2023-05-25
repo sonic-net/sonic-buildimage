@@ -1,14 +1,14 @@
 #!/bin/bash
 
-[[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x 
+[[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x
 
 BUILDINFO_BASE=/usr/local/share/buildinfo
 
 SCRIPT_SRC_PATH=src/sonic-build-hooks
 if [ -e ${SCRIPT_SRC_PATH} ]; then
-	. ${SCRIPT_SRC_PATH}/scripts/utils.sh 
+	. ${SCRIPT_SRC_PATH}/scripts/utils.sh
 else
-	. ${BUILDINFO_BASE}/scripts/utils.sh 
+	. ${BUILDINFO_BASE}/scripts/utils.sh
 fi
 
 IMAGENAME=$1
@@ -89,7 +89,7 @@ if [[ "$SKIP_BUILD_HOOK" == y || ${ENABLE_VERSION_CONTROL_DOCKER} != y ]]; then
 	exit 0
 fi
 
-# Version cache 
+# Version cache
 DOCKER_IMAGE_NAME=${IMAGENAME}
 IMAGE_DBGS_NAME=${DOCKER_IMAGE_NAME//-/_}_image_dbgs
 

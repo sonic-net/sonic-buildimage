@@ -289,7 +289,7 @@
     "PORT_QOS_MAP": {
 
         "Ethernet2": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -298,7 +298,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet4": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -307,7 +307,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet6": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -316,7 +316,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet8": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -325,7 +325,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet10": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -334,7 +334,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet12": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -343,7 +343,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet14": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -352,7 +352,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet16": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -361,7 +361,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet18": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -370,7 +370,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet20": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -379,7 +379,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet22": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -388,7 +388,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet24": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -397,7 +397,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet26": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -406,7 +406,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet28": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -415,7 +415,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet30": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -424,7 +424,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet32": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -433,7 +433,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet34": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -442,7 +442,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet36": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -451,7 +451,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet38": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
@@ -460,7 +460,7 @@
             "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet48": {
-    
+
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",

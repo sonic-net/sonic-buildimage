@@ -2,8 +2,8 @@
     "MGMT_VRF_TEST": {
         "sonic-mgmt_vrf:sonic-mgmt_vrf": {
             "sonic-mgmt_vrf:MGMT_VRF_CONFIG": {
-                "sonic-mgmt_vrf:vrf_global": { 
-                    "mgmtVrfEnabled": true 
+                "sonic-mgmt_vrf:vrf_global": {
+                    "mgmtVrfEnabled": true
                 }
             }
         }

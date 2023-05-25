@@ -92,9 +92,9 @@ def delete_file_if_exist(file):
             os.remove(file)
         except:
             print_msg(PRINT_LEVEL_WARN, "Cannot delete " + file)
-        
+
 # Logic functions
-        
+
 def generate_output_file(resources, dest_url_valid, dest_url, output_file_name):
     try:
         with open(output_file_name, 'w') as f:
@@ -111,7 +111,7 @@ def generate_output_file(resources, dest_url_valid, dest_url, output_file_name):
     except:
         print_msg(PRINT_LEVEL_WARN, output_file_name + " cannot be created")
         return RET_CODE_CANNOT_CREATE_FILE
-        
+
     return RET_CODE_SUCCESS
 
 def upload_resource_to_server(resource_path, resource_name, user, key, server_url):
@@ -142,7 +142,7 @@ def upload_resource_to_server(resource_path, resource_name, user, key, server_ur
     if reported_md5 != None and reported_md5 != file_md5:
         print_msg(PRINT_LEVEL_WARN, f"Server reported file's chsum {reported_md5}, expected {file_md5}")
 
-    
+
     return RET_CODE_SUCCESS
 
 def download_external_resouce(resource, cache_path):
@@ -204,13 +204,13 @@ def parse_args():
     parser.add_argument('-c', '--cache', default="." + os.sep + "tmp",
                         help='Path to cache for storing content before uploading to server')
 
-    parser.add_argument('-p', '--print', default=PRINT_LEVEL_INFO, 
+    parser.add_argument('-p', '--print', default=PRINT_LEVEL_INFO,
                         choices=[PRINT_LEVEL_ERROR, PRINT_LEVEL_WARN, PRINT_LEVEL_INFO, PRINT_LEVEL_VERBOSE],
                         help='Print level verbosity')
-                        
+
     parser.add_argument('-o', '--output', default=DEFAULT_INVALID_INPUT,
-                        help='Output file name to hold the list of packages')                    
-                        
+                        help='Output file name to hold the list of packages')
+
     parser.add_argument('-u', '--user', default=DEFAULT_INVALID_INPUT,
                         help='User for server authentication')
 
@@ -223,33 +223,33 @@ def parse_args():
     return parser.parse_args()
 
 def main():
-    global g_current_print_level 
+    global g_current_print_level
     ret_val = RET_CODE_SUCCESS
     resource_counter = 0.0
     resource_dict = dict()
 
     args = parse_args()
-       
+
     g_current_print_level = args.print
-    
+
     resource_files_list = get_resource_files_list(args.source)
 
     resource_list = get_resources_list(resource_files_list)
 
-    #remove duplications 
+    #remove duplications
     for resource in resource_list:
         unique_name = resource.get_unique_name()
         if not unique_name in resource_dict.keys():
             resource_dict[unique_name] = resource
 
     print_msg(PRINT_LEVEL_INFO, "Found " + str(len(resource_files_list)) + " version files and " + str(len(resource_dict.keys())) + " unique resources")
-    
+
     if args.dest != DEFAULT_INVALID_INPUT:
         upload_files_to_server = True
         print_msg(PRINT_LEVEL_INFO, "Upload files to URL - " + args.dest)
     else:
         upload_files_to_server = False
-        print_msg(PRINT_LEVEL_INFO, "Skipping files upload to server")       
+        print_msg(PRINT_LEVEL_INFO, "Skipping files upload to server")
 
     #create cache directory if not exist
     create_dir_if_not_exist(args.cache)
@@ -265,29 +265,29 @@ def main():
 
         #download content to cache
         file_in_cache = download_external_resouce(resource, args.cache)
-        
+
         if "" == file_in_cache:
             return RET_CODE_CANNOT_WRITE_FILE
-        
+
         if True == upload_files_to_server:
             #upload content to web server
             ret_val = upload_resource_to_server(file_in_cache, unique_name, args.user, args.key, args.dest)
             if ret_val != RET_CODE_SUCCESS:
                 return ret_val
-        
+
         if True == g_delete_resources_in_cache:
             delete_file_if_exist(file_in_cache)
 
         print_msg(PRINT_LEVEL_INFO, "Downloading Data. Progress " + str(int(100.0*resource_counter/len(resource_dict.keys()))) + "%", True) #print progress bar
-    
+
     # generate version output file as needed
     if args.output != DEFAULT_INVALID_INPUT:
         ret_val = generate_output_file(resource_dict, upload_files_to_server, args.dest, args.output)
         print_msg(PRINT_LEVEL_INFO, "Generate output file " + args.output)
-        
+
     return ret_val
 
-#    Entry function                                                
+#    Entry function
 if __name__ == '__main__':
 
     ret_val = main()

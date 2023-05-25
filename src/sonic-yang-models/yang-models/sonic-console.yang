@@ -33,7 +33,7 @@ module sonic-console {
 
             list CONSOLE_PORT_LIST {
                 key "name";
-                
+
                 leaf name {
                     description "Configure console port name";
                     type uint16;

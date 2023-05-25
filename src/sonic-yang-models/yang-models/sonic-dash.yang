@@ -35,7 +35,7 @@ module sonic-dash {
 
         container DASH_VNET {
 
-            description "DASH VNET configuration, part of APP_DB. Used for gNMI clients to configure SONiC";            
+            description "DASH VNET configuration, part of APP_DB. Used for gNMI clients to configure SONiC";
 
             list DASH_VNET_LIST {
                 key "name";
@@ -47,7 +47,7 @@ module sonic-dash {
                             error-app-tag vnet-name-invalid;
                         }
                     }
-                }   
+                }
 
                 leaf vni {
                     type  uint32 {
@@ -70,7 +70,7 @@ module sonic-dash {
         } /* end of container DASH_VNET */
 
         container DASH_QOS {
-            description "DASH QOS configs to specify bandwidth, cps, part of APP_DB";            
+            description "DASH QOS configs to specify bandwidth, cps, part of APP_DB";
 
             list DASH_QOS_LIST {
                 key "name";
@@ -110,9 +110,9 @@ module sonic-dash {
 
             } /* end of list DASH_QOS_LIST */
         } /* end of container DASH_QOS */
-        
+
         container DASH_ENI {
-            description "DASH ENI object to specify eni params; part of APP_DB";            
+            description "DASH ENI object to specify eni params; part of APP_DB";
 
             list DASH_ENI_LIST {
                 key "name";
@@ -148,9 +148,9 @@ module sonic-dash {
 
             } /* end of list DASH_ENI_LIST */
         } /* end of container DASH_ENI */
-     
+
         container DASH_ACL_IN {
-            description "DASH Ingress ACL to specify stage and group; part of APP_DB";            
+            description "DASH Ingress ACL to specify stage and group; part of APP_DB";
 
             list DASH_ACL_IN_LIST {
                 key "eni stage";
@@ -177,7 +177,7 @@ module sonic-dash {
         } /* end of container DASH_ACL_IN */
 
         container DASH_ACL_OUT {
-            description "DASH Egress ACL to specify stage and group; part of APP_DB";            
+            description "DASH Egress ACL to specify stage and group; part of APP_DB";
 
             list DASH_ACL_OUT_LIST {
                 key "eni stage";
@@ -204,7 +204,7 @@ module sonic-dash {
         } /* end of container DASH_ACL_OUT */
 
         container DASH_ACL_GROUP {
-            description "DASH ACL group to specify IP version; part of APP_DB";            
+            description "DASH ACL group to specify IP version; part of APP_DB";
 
             list DASH_ACL_GROUP_LIST {
                 key "name";
@@ -232,7 +232,7 @@ module sonic-dash {
         } /* end of container DASH_ACL_GROUP */
 
         container DASH_ACL_RULE {
-            description "DASH ACL rule; part of APP_DB";            
+            description "DASH ACL rule; part of APP_DB";
 
             list DASH_ACL_RULE_LIST {
                 key "acl_group_id name";
@@ -270,7 +270,7 @@ module sonic-dash {
                 leaf-list ip_protocol {
                     description "IP Protocol (tcp or udp or icmp etc)";
                     type stypes:ip-protocol-type;
-                }   
+                }
 
                 leaf-list src_addr {
                     type stypes:sonic-ip-prefix;
@@ -298,7 +298,7 @@ module sonic-dash {
         } /* end of container DASH_ACL_RULE */
 
         container DASH_APPLIANCE {
-            description "DASH general appliance configs; part of APP_DB";            
+            description "DASH general appliance configs; part of APP_DB";
 
             list DASH_APPLIANCE_LIST {
                 key "name";
@@ -324,7 +324,7 @@ module sonic-dash {
         } /* end of container DASH_APPLIANCE */
 
         container DASH_ROUTING_TYPE {
-            description "DASH Routing types and actions; part of APP_DB";            
+            description "DASH Routing types and actions; part of APP_DB";
 
             list DASH_ROUTING_TYPE_LIST {
                 key "name";
@@ -363,7 +363,7 @@ module sonic-dash {
         } /* end of container DASH_ROUTING_TYPE */
 
         container DASH_ROUTE_TABLE {
-            description "DASH Route table (LPM) associated to an ENI for outbound routing; part of APP_DB";            
+            description "DASH Route table (LPM) associated to an ENI for outbound routing; part of APP_DB";
 
             list DASH_ROUTE_TABLE_LIST {
                 key "eni prefix";
@@ -377,7 +377,7 @@ module sonic-dash {
                 leaf prefix {
                      type stypes:sonic-ip-prefix;
                 }
- 
+
                 leaf action_type {
                     type leafref {
                         path /dash:sonic-dash/dash:DASH_ROUTING_TYPE/dash:DASH_ROUTING_TYPE_LIST/dash:name;
@@ -432,7 +432,7 @@ module sonic-dash {
         } /* end of container DASH_ROUTE_TABLE */
 
         container DASH_VNET_MAPPING_TABLE {
-            description "DASH Mapping table associated to a Vnet; part of APP_DB";            
+            description "DASH Mapping table associated to a Vnet; part of APP_DB";
 
             list DASH_VNET_MAPPING_TABLE_LIST {
                 key "vnet ip_addr";

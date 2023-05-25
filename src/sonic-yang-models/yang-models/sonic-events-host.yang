@@ -32,7 +32,7 @@ module sonic-events-host {
             description "
                 Declares an event for disk usage crossing set limit
                 The parameters describe the usage & limit set.";
-            
+
             leaf fs {
                 type string;
                 description "Name of the file system";
@@ -49,7 +49,7 @@ module sonic-events-host {
             description "
                 Declares an event for memory usage crossing set limit
                 The parameters describe the usage & limit set.";
-            
+
             uses evtcmn:sonic-events-usage;
 
             uses evtcmn:sonic-events-cmn;
@@ -60,7 +60,7 @@ module sonic-events-host {
             description "
                 Declares an event for cpu usage crossing set limit
                 The parameters describe the usage & limit set.";
-            
+
             uses evtcmn:sonic-events-usage;
 
             uses evtcmn:sonic-events-cmn;
@@ -126,7 +126,7 @@ module sonic-events-host {
             description "
                 Declares an container that is expected to be up is down.
                 Reported by monit periodically.";
-               
+
             leaf ctr_name {
                 type string;
                 description "Name of the container not running";
@@ -141,7 +141,7 @@ module sonic-events-host {
             description "
                 Declare an event at the time point of container stopping.
                 event-down-ctr fires periodically until it starts up.";
-               
+
             leaf ctr_name {
                 type string;
                 description "Name of the container";
@@ -236,7 +236,7 @@ module sonic-events-host {
                 Declares an event in which a critical process exits unexpectedly.";
 
             leaf process_name {
-                type stypes:process_name; 
+                type stypes:process_name;
                 description "Name of process that is not running";
             }
 

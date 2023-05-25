@@ -51,7 +51,7 @@ class AdvertiseRouteMgr(Manager):
                     APP which config the data should be responsible to pass a valid IP prefix
                 """
                 return True
-            
+
         log_err("BGPAdvertiseRouteMgr:: Invalid data %s for advertised route %s" % (data, key))
         return False
 

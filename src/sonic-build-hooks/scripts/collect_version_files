@@ -12,7 +12,7 @@ DIST=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2)
 mkdir -p $TARGET_PATH
 chmod a+rw $TARGET_PATH
 
-# Skip the package that does have a static build version. 
+# Skip the package that does have a static build version.
 # SAI package versions are changed too frequently.
 SKIP_VERSION_PACKAGE="libsaibcm|libpaibcm|linuxptp|@ file://"
 dpkg-query -W -f '${Package}==${Version}\n' | grep -Ev "${SKIP_VERSION_PACKAGE}" > "${TARGET_PATH}/versions-deb-${DIST}-${ARCH}"

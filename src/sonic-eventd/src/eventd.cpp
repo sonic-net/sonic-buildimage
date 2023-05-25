@@ -8,7 +8,7 @@
  * (0) main thread -- Runs eventd service that accepts commands event_req_type_t
  *  This can be used to control caching events and a no-op echo service.
  *
- * (1) capture/cache service 
+ * (1) capture/cache service
  *      Saves all the events between cache start & stop.
  *      Update missed cached counter in memory.
  *
@@ -111,7 +111,7 @@ stats_collector::set_heartbeat_interval(int val)
 {
     if (val > 0) {
         /* Round to highest possible multiples of MIN */
-        m_heartbeats_interval_cnt = 
+        m_heartbeats_interval_cnt =
             (((val * 1000) + STATS_HEARTBEAT_MIN - 1) / STATS_HEARTBEAT_MIN);
     }
     else if (val == 0) {
@@ -269,7 +269,7 @@ stats_collector::run_collector()
 
 out:
     /*
-     * NOTE: A shutdown could lose messages in cache. 
+     * NOTE: A shutdown could lose messages in cache.
      * But consider, that eventd shutdown is a critical shutdown as it would
      * bring down all other features. Hence done only at system level shutdown,
      * hence losing few messages in flight is acceptable. Any more complex code
@@ -317,7 +317,7 @@ validate_event(const internal_event_t &event, runtime_id_t &rid, sequence_t &seq
 
     return ret;
 }
-        
+
 
 /*
  * Initialize cache with set of events provided.
@@ -358,10 +358,10 @@ capture_service::do_capture()
 
     typedef enum {
         /*
-         * In this state every event read is compared with init cache given 
+         * In this state every event read is compared with init cache given
          * Only new events are saved.
          */
-        CAP_STATE_INIT = 0, 
+        CAP_STATE_INIT = 0,
 
         /* In this state, all events read are cached until max limit */
         CAP_STATE_ACTIVE,
@@ -399,7 +399,7 @@ capture_service::do_capture()
     /*
      * The cache service connects but defers any reading until caller provides
      * the startup cache. But all events that arrived since connect, though not read
-     * will be held by ZMQ in its local cache. 
+     * will be held by ZMQ in its local cache.
      *
      * When cache service starts reading, check against the initial stock for duplicates.
      * m_pre_exist_id caches the last seq number in initial stock for each runtime id.
@@ -482,7 +482,7 @@ capture_service::do_capture()
                 }
                 break;
             }
-            catch (bad_alloc& e) 
+            catch (bad_alloc& e)
             {
                 stringstream ss;
                 ss << e.what();
@@ -535,7 +535,7 @@ capture_service::set_control(capture_control_t ctrl, event_serialized_lst_t *lst
             break;
 
         case START_CAPTURE:
-            
+
             /*
              * Reserve a MAX_PUBLISHERS_COUNT entries for last events, as we use it only
              * upon m_events/vector overflow, which might block adding new entries in map
@@ -545,7 +545,7 @@ capture_service::set_control(capture_control_t ctrl, event_serialized_lst_t *lst
             for (int i=0; i<MAX_PUBLISHERS_COUNT; ++i) {
                 m_last_events[to_string(i)] = "";
             }
-            
+
             if ((lst != NULL) && (!lst->empty())) {
                 init_capture_cache(*lst);
             }
@@ -663,7 +663,7 @@ run_eventd_service()
     RET_ON_ERR(stats_instance.is_running(), "Failed to start stats instance");
 
     while(code != EVENT_EXIT) {
-        int resp = -1; 
+        int resp = -1;
         event_serialized_lst_t req_data, resp_data;
 
         RET_ON_ERR(service.channel_read(code, req_data) == 0,
@@ -684,7 +684,7 @@ run_eventd_service()
                 }
                 break;
 
-                
+
             case EVENT_CACHE_START:
                 if (capture == NULL) {
                     SWSS_LOG_ERROR("Cache is not initialized to start");
@@ -697,7 +697,7 @@ run_eventd_service()
                 resp = capture->set_control(START_CAPTURE, &req_data);
                 break;
 
-                
+
             case EVENT_CACHE_STOP:
                 if (capture == NULL) {
                     SWSS_LOG_ERROR("Cache is not initialized to stop");

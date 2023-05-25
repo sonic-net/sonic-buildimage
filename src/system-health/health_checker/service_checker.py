@@ -58,7 +58,7 @@ class ServiceChecker(HealthChecker):
         self.load_critical_process_cache()
 
         self.events_handle = swsscommon.events_init_publisher(EVENTS_PUBLISHER_SOURCE)
- 
+
     def get_expected_running_containers(self, feature_table):
         """Get a set of containers that are expected to running on SONiC
 

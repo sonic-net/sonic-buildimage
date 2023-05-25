@@ -6,7 +6,7 @@ module sonic-peer-switch {
     import ietf-inet-types {
         prefix inet;
     }
-    
+
     import sonic-types {
         prefix stypes;
     }
@@ -31,7 +31,7 @@ module sonic-peer-switch {
                 max-elements 1;
 
                 key "peer_switch";
-                
+
                 leaf peer_switch {
                     type stypes:hostname;
 

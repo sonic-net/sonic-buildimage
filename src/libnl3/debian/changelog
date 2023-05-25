@@ -822,7 +822,7 @@ libnl3 (3.0-2) unstable; urgency=low
 libnl3 (3.0-1.1) unstable; urgency=low
 
   * Non-maintainer upload with agreement from Heiko Stuebner
-  * Add libnl3-udeb package with seperate build for 
+  * Add libnl3-udeb package with seperate build for
     debian-installer (Closes: #635962).
 
  -- Gaudenz Steinlin <gaudenz@debian.org>  Fri, 29 Jul 2011 23:25:48 +0200
@@ -876,7 +876,7 @@ libnl (1.1-5) unstable; urgency=low
 
 libnl (1.1-4) unstable; urgency=low
 
-  * debian/control 
+  * debian/control
     - Add ${misc:Depends} to all binary packages.
     - Bump Build-Depends on debhelper to (>= 7).
   * debian/compat
@@ -958,7 +958,7 @@ libnl (1.0~pre6-5) unstable; urgency=low
     - Add XS-Vcs-* fields.
     - Replace Build-Depends: tetex-bin with texlive-latex-base. teTeX is now
       gone, superseded by texlive.
-    - Add Build-Depends: graphviz, gs-gpl | gs-esp. 
+    - Add Build-Depends: graphviz, gs-gpl | gs-esp.
       The "dot" program is needed for generating the diagram image and "gs"
       for the ps to png conversion.
 
@@ -967,7 +967,7 @@ libnl (1.0~pre6-5) unstable; urgency=low
 libnl (1.0~pre6-4) unstable; urgency=medium
 
   * Autobuilders do not distinguish between build-arch and build-indep, they
-    simply run build. So we have to move doxygen and tetex-bin from 
+    simply run build. So we have to move doxygen and tetex-bin from
     Build-Depends-Indep to Build-Depends. Closes: #408719
   * Urgency medium, as it fixes a FTBFS bug.
 
@@ -989,7 +989,7 @@ libnl (1.0~pre6-3) unstable; urgency=low
 
 libnl (1.0~pre6-2) unstable; urgency=low
 
-  * Update maintainer email address to biebl@debian.org. 
+  * Update maintainer email address to biebl@debian.org.
 
  -- Michael Biebl <biebl@debian.org>  Thu, 19 Oct 2006 20:16:09 +0200
 
@@ -997,7 +997,7 @@ libnl (1.0~pre6-1) unstable; urgency=low
 
   * New upstream release.
   * Removed 20-autoconf-dirs.patch, merged upstream.
-  * Updated debian/copyright, libnl is now licensed under the LGPL 2.1. 
+  * Updated debian/copyright, libnl is now licensed under the LGPL 2.1.
   * Updated debian/watch.
 
  -- Michael Biebl <biebl@teco.edu>  Fri, 18 Aug 2006 00:40:34 +0200
@@ -1015,7 +1015,7 @@ libnl (1.0~pre6~svn30-1) unstable; urgency=low
 
 libnl (0.99+1.0.svn21-4) unstable; urgency=low
 
-  * Do not create bogus /usr/lib/pkg-config directory. Closes: #364601 
+  * Do not create bogus /usr/lib/pkg-config directory. Closes: #364601
 
  -- Michael Biebl <biebl@teco.edu>  Mon, 24 Apr 2006 15:40:23 +0200
 

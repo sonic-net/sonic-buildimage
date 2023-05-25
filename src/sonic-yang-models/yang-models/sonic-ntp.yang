@@ -32,7 +32,7 @@ module sonic-ntp {
     import sonic-mgmt_port {
         prefix mprt;
     }
-    
+
     description
         "NTP yang Module for SONiC OS";
 
@@ -48,7 +48,7 @@ module sonic-ntp {
             container global {
 
                 description "Global NTP part of config_db.json";
-                
+
                 leaf-list src_intf {
                     type union {
                         type leafref {
@@ -72,9 +72,9 @@ module sonic-ntp {
 
                     description
                         "This is the interface whose IP address is used as the source IP address for
-                         generating NTP traffic. User is required to make sure that the NTP server 
-                         is reachable via this IP address and the same IP address is reachable 
-                         from the NTP server. The source interface should be in the same VRF as the 
+                         generating NTP traffic. User is required to make sure that the NTP server
+                         is reachable via this IP address and the same IP address is reachable
+                         from the NTP server. The source interface should be in the same VRF as the
                          VRF NTP is enabled in.";
                 }
 
@@ -89,7 +89,7 @@ module sonic-ntp {
 
                     description
                         "NTP can be enabled only in one VRF at a time. In this revision, it is either
-                         default VRF or Management VRF."; 
+                         default VRF or Management VRF.";
                 }
 
             } /* end of container global */
@@ -97,9 +97,9 @@ module sonic-ntp {
         } /* end of container NTP */
 
         container NTP_SERVER {
-        
+
             description "NTP SERVER part of config_db.json";
-    
+
             list NTP_SERVER_LIST {
                 max-elements 10;
                 description
@@ -112,7 +112,7 @@ module sonic-ntp {
                 leaf server_address {
                     type inet:host;
                 }
-            } /* end of list NTP_SERVER_LIST */ 
+            } /* end of list NTP_SERVER_LIST */
 
         } /* end of container NTP_SERVER */
 

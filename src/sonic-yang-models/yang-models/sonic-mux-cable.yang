@@ -26,11 +26,11 @@ module sonic-mux-cable {
     }
 
     container sonic-mux-cable {
-        
+
         container MUX_CABLE {
-            
+
             list MUX_CABLE_LIST {
-                
+
                 key "ifname";
 
                 leaf ifname {

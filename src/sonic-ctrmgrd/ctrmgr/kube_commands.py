@@ -103,7 +103,7 @@ def kube_read_labels():
 
     return (ret, labels)
 
- 
+
 def kube_write_labels(set_labels):
     """ Set given set_labels.
     """
@@ -147,7 +147,7 @@ def kube_write_labels(set_labels):
 
     return ret
 
- 
+
 def func_get_labels(args):
     """ args parser default function for get labels"""
     ret, node_labels = kube_read_labels()
@@ -157,7 +157,7 @@ def func_get_labels(args):
 
     log_debug(json.dumps(node_labels, indent=4))
     return 0
-    
+
 
 def is_connected(server=""):
     """ Check if we are currently connected """
@@ -218,7 +218,7 @@ def _download_file(server, port, insecure):
 
 
 def _gen_cli_kubeconf(server, port, insecure):
-    """generate identity which can help authenticate and 
+    """generate identity which can help authenticate and
        authorization to k8s cluster
     """
     client_kubeconfig_template = """
@@ -387,7 +387,7 @@ def kube_join_master(server, port, insecure, force=False):
 
     log_debug("join: ret={} out:{} err:{}".format(ret, out, err))
     return (ret, out, err)
-    
+
 
 def kube_reset_master(force):
     err = ""
@@ -440,7 +440,7 @@ def _do_tag(docker_id, image_ver):
     else:
         out = "New version {} is not running.".format(image_ver)
         ret = -1
-    
+
     return (ret, out, err)
 
 def _remove_container(feat):
@@ -465,7 +465,7 @@ def _remove_container(feat):
     else:
         err = "Failed to docker inspect {} |jq -r .[].State.Running. Err: {}".format(feat, err)
         ret = 1
-    
+
     return (ret, out, err)
 
 def tag_latest(feat, docker_id, image_ver):
@@ -519,10 +519,10 @@ def _do_clean(feat, current_version, last_version):
                 ret = 1
                 err = "Failed to tag {} local version images. Err: {}".format(feat, err)
             return ret, out, err
-        
+
         if last_version in version_dict:
             del version_dict[last_version]
-        
+
         versions = [item[DOCKER_ID] for item in version_dict.values()]
         if versions:
             clean_res, _, err = _run_command("docker rmi {} --force".format(" ".join(versions)))

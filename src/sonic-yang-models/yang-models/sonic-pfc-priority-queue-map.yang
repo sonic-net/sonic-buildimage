@@ -20,7 +20,7 @@ module sonic-pfc-priority-queue-map {
             "Initial revision.";
     }
 
-    container sonic-pfc-priority-queue-map {    
+    container sonic-pfc-priority-queue-map {
 
         container MAP_PFC_PRIORITY_TO_QUEUE {
 

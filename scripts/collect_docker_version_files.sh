@@ -1,14 +1,14 @@
 #!/bin/bash
-  
-[[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x 
+
+[[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x
 
 BUILDINFO_BASE=/usr/local/share/buildinfo
 
 SCRIPT_SRC_PATH=src/sonic-build-hooks
 if [ -e ${SCRIPT_SRC_PATH} ]; then
-	. ${SCRIPT_SRC_PATH}/scripts/utils.sh 
+	. ${SCRIPT_SRC_PATH}/scripts/utils.sh
 else
-	. ${BUILDINFO_BASE}/scripts/utils.sh 
+	. ${BUILDINFO_BASE}/scripts/utils.sh
 fi
 
 DOCKER_IMAGE=$1
@@ -85,15 +85,15 @@ if [[ ! -z ${SONIC_VERSION_CACHE} && -e ${CACHE_ENCODE_FILE} ]]; then
 
 	GIT_FILE_STATUS=$(git status -s ${DEP_FILES})
 
-	# If the cache file is not exists in the global cache for the given SHA, 
+	# If the cache file is not exists in the global cache for the given SHA,
 	# store the new cache file into version cache path.
 	if [ -f ${LOCAL_CACHE_FILE} ]; then
 		if [[ -z ${GIT_FILE_STATUS} && ! -e ${GLOBAL_CACHE_FILE} ]]; then
 			mkdir -p ${GLOBAL_CACHE_DIR}
 			chmod -f 777 ${GLOBAL_CACHE_DIR}
 			FLOCK ${GLOBAL_CACHE_FILE}
-			cp ${LOCAL_CACHE_FILE} ${GLOBAL_CACHE_FILE} 
-			chmod -f 777 ${LOCAL_CACHE_FILE} ${GLOBAL_CACHE_FILE} 
+			cp ${LOCAL_CACHE_FILE} ${GLOBAL_CACHE_FILE}
+			chmod -f 777 ${LOCAL_CACHE_FILE} ${GLOBAL_CACHE_FILE}
 			FUNLOCK ${GLOBAL_CACHE_FILE}
 		fi
 	fi

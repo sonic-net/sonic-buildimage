@@ -167,7 +167,7 @@ xgxs_tx_lane_map
 ifp_inports_support_enable
 port_flex_enable
 pdma_descriptor_prefetch_enable
-pktdma_poll_mode_channel_bitmap 
+pktdma_poll_mode_channel_bitmap
 num_queues_pci
 num_queues_uc0
 num_queues_uc1
@@ -179,7 +179,7 @@ flowtracker_drop_monitor_enable
 flowtracker_export_interval_usecs
 flowtracker_max_export_pkt_length
 flowtracker_fsp_reinject_max_length
-host_as_route_disable 
+host_as_route_disable
 sai_fast_convergence_support
 ccm_dma_enable
 ccmdma_intr_enable
@@ -307,7 +307,7 @@ lb_port_pipe1_int
 ing_origin_id_device_id_mask
 egr_origin_id_device_id_mask
 port_count_in_pb_stream
-cancun_dir 
+cancun_dir
 pcie_file
 capi_level
 phy_pin_compatibility_enable
@@ -317,7 +317,7 @@ sap_rx_polarity_flip
 sap_tx_polarity_flip
 sap_mdio_num
 dport_map_port_9
-cancun_dir 
+cancun_dir
 pcie_file
 capi_level
 phy_pin_compatibility_enable

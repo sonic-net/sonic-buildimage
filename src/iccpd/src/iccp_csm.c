@@ -122,7 +122,7 @@ void iccp_csm_init(struct CSM* csm)
     memset(csm->peer_ip, 0, INET_ADDRSTRLEN);
     memset(csm->iccp_info.sender_name, 0, MAX_L_ICC_SENDER_NAME);
     csm->iccp_info.icc_rg_id = 0x0;
-    csm->keepalive_time      = CONNECT_INTERVAL_SEC; 
+    csm->keepalive_time      = CONNECT_INTERVAL_SEC;
     csm->session_timeout     = HEARTBEAT_TIMEOUT_SEC;
 }
 
@@ -217,7 +217,7 @@ void iccp_csm_finalize(struct CSM* csm)
         LIST_REMOVE(cif,csm_next);
         free(cif);
     }
-            
+
     /* Release iccp_csm */
     pthread_mutex_destroy(&(csm->conn_mutex));
     iccp_csm_msg_list_finalize(csm);

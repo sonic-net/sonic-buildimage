@@ -20,7 +20,7 @@ module sonic-pfc-priority-priority-group-map {
             "Initial revision.";
     }
 
-    container sonic-pfc-priority-priority-group-map {    
+    container sonic-pfc-priority-priority-group-map {
 
         container PFC_PRIORITY_TO_PRIORITY_GROUP_MAP {
 

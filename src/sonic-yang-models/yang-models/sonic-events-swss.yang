@@ -34,7 +34,7 @@ module sonic-events-swss {
             evtcmn:ALARM_SEVERITY_MINOR;
 
             description "
-                Declares an event for i/f flap. 
+                Declares an event for i/f flap.
                 The name of the flapping i/f and status are the only params.";
 
             leaf ifname {

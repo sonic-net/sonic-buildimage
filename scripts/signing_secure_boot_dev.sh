@@ -1,7 +1,7 @@
 #!/bin/bash
 # This script is signing boot components: shim, mmx, grub, kernel and kernel modules in development env.
 
-## Enable debug output for script & exit code when failing occurs 
+## Enable debug output for script & exit code when failing occurs
 set -x -e
 
 print_usage() {
@@ -79,9 +79,9 @@ for efi in $efi_file_list
 do
     # grep filename from full path
     efi_filename=$(echo $efi | grep -o '[^/]*$')
-    
+
     if echo $efi_filename | grep -e "shim" -e "grub" -e "mm"; then
-    
+
         clean_file ${efi}-signed
 
         echo "signing efi file - full path: ${efi} filename: ${efi_filename}"
@@ -92,7 +92,7 @@ do
         cp ${efi}-signed $FS_ROOT/boot/${efi_filename}
 
         # verifying signature of mm & shim efi files.
-        ./scripts/secure_boot_signature_verification.sh -c $PEM_CERT -e $FS_ROOT/boot/${efi_filename} 
+        ./scripts/secure_boot_signature_verification.sh -c $PEM_CERT -e $FS_ROOT/boot/${efi_filename}
     fi
 done
 

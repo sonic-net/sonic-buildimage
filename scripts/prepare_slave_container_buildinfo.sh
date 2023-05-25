@@ -1,6 +1,6 @@
 #!/bin/bash
 
-[[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x 
+[[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x
 
 SLAVE_DIR=$1
 ARCH=$2

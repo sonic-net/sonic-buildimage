@@ -220,6 +220,11 @@ $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	CROSS_BUILD_ENVIRON=$(CROSS_BUILD_ENVIRON) \
 	j2 $(SLAVE_DIR)/Dockerfile.user.j2 > $(SLAVE_DIR)/Dockerfile.user)
 
+ifeq ($(CROSS_BUILD_ENVIRON), y)
+$(shell MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) scripts/build_mirror_config.sh $(SLAVE_DIR) amd64 $(BLDENV))
+endif
+$(shell MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) scripts/build_mirror_config.sh $(SLAVE_DIR) $(CONFIGURED_ARCH) $(BLDENV))
+
 PREPARE_DOCKER=BUILD_SLAVE=y \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
 	SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
@@ -614,8 +619,6 @@ sonic-build-hooks:
 	$(Q)pushd src/sonic-build-hooks; TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) $(MAKE) all; popd
 	$(Q)mkdir -p $(SLAVE_DIR)/buildinfo
 	$(Q)cp src/sonic-build-hooks/buildinfo/sonic-build-hooks* $(SLAVE_DIR)/buildinfo
-	$(Q)if [ "$(MULTIARCH_QEMU_ENVIRON)" == y ]; then scripts/build_mirror_config.sh $(SLAVE_DIR) amd64 $(BLDENV); fi
-	$(Q)scripts/build_mirror_config.sh $(SLAVE_DIR) $(CONFIGURED_ARCH) $(BLDENV)
 
 sonic-slave-base-build : | sonic-build-hooks
 ifeq ($(MULTIARCH_QEMU_ENVIRON), y)

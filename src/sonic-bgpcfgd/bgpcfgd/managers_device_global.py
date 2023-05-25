@@ -47,7 +47,7 @@ class DeviceGlobalCfgMgr(Manager):
             self.cfg_mgr.update()
             self.isolate_unisolate_device(data["tsa_enabled"])
             self.directory.put(self.db_name, self.table_name, "tsa_enabled", data["tsa_enabled"])
-            return True        
+            return True
         return False
 
     def del_handler(self, key):
@@ -62,7 +62,7 @@ class DeviceGlobalCfgMgr(Manager):
             if tsa_status == "true":
                 cmds = cfg.replace("#012", "\n").split("\n")
                 log_notice("DeviceGlobalCfgMgr:: Device is isolated. Applying TSA route-maps")
-                cmd = self.get_ts_routemaps(cmds, self.tsa_template)            
+                cmd = self.get_ts_routemaps(cmds, self.tsa_template)
         return cmd
 
     def isolate_unisolate_device(self, tsa_status):
@@ -88,22 +88,22 @@ class DeviceGlobalCfgMgr(Manager):
     def __generate_routemaps_from_template(self, route_map_names, template):
         cmd = "\n"
         for rm in sorted(route_map_names):
-            # For packet-based chassis, the bgp session between the linecards are also considered internal sessions 
+            # For packet-based chassis, the bgp session between the linecards are also considered internal sessions
             # While isolating a single linecard, these sessions should not be skipped
             if "_INTERNAL_" in rm or "VOQ_" in rm:
-                continue            
+                continue
             if "V4" in rm:
                 ipv="V4" ; ipp="ip"
             elif "V6" in rm:
-                ipv="V6" ; ipp="ipv6"                
+                ipv="V6" ; ipp="ipv6"
             else:
-                continue                        
+                continue
             cmd += template.render(route_map_name=rm,ip_version=ipv,ip_protocol=ipp, constants=self.constants)
             cmd += "\n"
         return cmd
 
     def __extract_out_route_map_names(self, cmds):
-        route_map_names = set() 
+        route_map_names = set()
         out_route_map = re.compile(r'^\s*neighbor \S+ route-map (\S+) out$')
         for line in cmds:
             result = out_route_map.match(line)

@@ -46,7 +46,7 @@
     "WRED_PROFILE_VALID": {
         "desc": "Configure WRED profile."
     },
-    
+
     "WRED_PROFILE_INVALID_DROP_PROBABILITY": {
         "desc": "Configure invalid drop probability in WRED profile.",
         "eStrKey" : "Pattern"

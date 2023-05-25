@@ -204,9 +204,9 @@ def test_set_handler_with_community_and_deny_action():
             'route-map ALLOW_LIST_DEPLOYMENT_ID_5_V6 permit 10',
             ' match ipv6 address prefix-list PL_ALLOW_LIST_DEPLOYMENT_ID_5_COMMUNITY_1010:2020_V6',
             ' match community COMMUNITY_ALLOW_LIST_DEPLOYMENT_ID_5_COMMUNITY_1010:2020',
-            'route-map ALLOW_LIST_DEPLOYMENT_ID_5_V4 permit 65535', 
-            ' set community no-export additive', 
-            'route-map ALLOW_LIST_DEPLOYMENT_ID_5_V6 permit 65535', 
+            'route-map ALLOW_LIST_DEPLOYMENT_ID_5_V4 permit 65535',
+            ' set community no-export additive',
+            'route-map ALLOW_LIST_DEPLOYMENT_ID_5_V6 permit 65535',
             ' set community no-export additive'
         ]
     )
@@ -325,9 +325,9 @@ def test_set_handler_no_community_with_deny_action():
             ' match ip address prefix-list PL_ALLOW_LIST_DEPLOYMENT_ID_5_COMMUNITY_empty_V4',
             'route-map ALLOW_LIST_DEPLOYMENT_ID_5_V6 permit 30000',
             ' match ipv6 address prefix-list PL_ALLOW_LIST_DEPLOYMENT_ID_5_COMMUNITY_empty_V6',
-            'route-map ALLOW_LIST_DEPLOYMENT_ID_5_V4 permit 65535', 
-            ' set community no-export additive', 
-            'route-map ALLOW_LIST_DEPLOYMENT_ID_5_V6 permit 65535', 
+            'route-map ALLOW_LIST_DEPLOYMENT_ID_5_V4 permit 65535',
+            ' set community no-export additive',
+            'route-map ALLOW_LIST_DEPLOYMENT_ID_5_V6 permit 65535',
             ' set community no-export additive'
         ]
     )

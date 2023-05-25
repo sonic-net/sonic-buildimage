@@ -318,13 +318,13 @@ class Table:
         d = self.data[key]
         for (k, v) in items:
             d[k] = v
-        
+
 
     def check(self):
         expected = self.get_val(current_test_data, [POST, self.db, self.tbl])
 
         ret = check_subset(expected, self.data)
-        
+
         if ret != 0:
             print("Failed test={} no={} ret={}".format(
                 current_test_name, current_test_no, ret))
@@ -430,7 +430,7 @@ class mock_subscriber:
             return (key, "", mock_tbl.get(key)[1])
         else:
             return ("", "", {})
-   
+
 
     def getDbConnector(self):
         return self.dbconn
@@ -507,7 +507,7 @@ def kube_join_side_effect(ip, port, insecure):
     else:
         kube_return = 0
         return (1, "not joined", "error")
-    
+
 
 def kube_reset_side_effect(flag):
     global kube_actions
@@ -529,10 +529,10 @@ def check_kube_actions():
     ret = 0
     expected = {}
     expected[KUBE_CMD] = current_test_data.get(KUBE_CMD, {})
-     
+
     if expected[KUBE_CMD]:
         ret = check_subset(expected, kube_actions)
-    
+
     if ret != 0:
         print("Failed test={} no={} ret={}".format(
             current_test_name, current_test_no, ret))
@@ -540,7 +540,7 @@ def check_kube_actions():
         print("expect: {}".format(json.dumps(expected, indent=4)))
         return -1
     return 0
-    
+
 
 def set_mock_kube(kube_labels, kube_join, kube_reset):
     kube_labels.side_effect = kube_labels_side_effect

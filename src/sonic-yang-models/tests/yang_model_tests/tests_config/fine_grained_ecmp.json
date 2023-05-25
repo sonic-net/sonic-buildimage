@@ -188,7 +188,7 @@
                 ]
             }
         }
-    },    
+    },
     "FG_NHG_TEST_DUPLICATE_NAME": {
         "sonic-fine-grained-ecmp:sonic-fine-grained-ecmp": {
             "sonic-fine-grained-ecmp:FG_NHG": {
