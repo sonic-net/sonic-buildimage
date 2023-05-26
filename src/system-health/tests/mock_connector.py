@@ -2,7 +2,7 @@ class MockConnector(object):
     STATE_DB = None
     data = {}
 
-    def __init__(self, host):
+    def __init__(self, use_unix_socket_path):
         pass
 
     def connect(self, db_id):

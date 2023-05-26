@@ -15,7 +15,7 @@ class HardwareChecker(HealthChecker):
 
     def __init__(self):
         HealthChecker.__init__(self)
-        self._db = SonicV2Connector(host="127.0.0.1")
+        self._db = SonicV2Connector(use_unix_socket_path=True)
         self._db.connect(self._db.STATE_DB)
 
     def get_category(self):
