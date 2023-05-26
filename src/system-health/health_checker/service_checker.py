@@ -269,7 +269,7 @@ class ServiceChecker(HealthChecker):
             config (config.Config): Health checker configuration.
         """
         if not self.config_db:
-            self.config_db = swsscommon.ConfigDBConnector()
+            self.config_db = swsscommon.ConfigDBConnector(use_unix_socket_path=True)
             self.config_db.connect()
         feature_table = self.config_db.get_table("FEATURE")
         expected_running_containers, self.container_feature_dict = self.get_expected_running_containers(feature_table)
