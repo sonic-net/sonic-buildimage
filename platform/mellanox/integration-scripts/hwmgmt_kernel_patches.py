@@ -110,14 +110,6 @@ def load_patch_table(path, k_version):
                     table.append(table_line)
     return table
 
-def build_commit_description(changes):
-    if not changes:
-        return ""
-    content = "\n"
-    content = content + " ## Patch List\n"
-    for key, value in changes.items():
-        content = content + f"* {key} : {value}\n"
-    return content
 
 class Data:
     # list of new upstream patches
@@ -394,17 +386,12 @@ class PostProcess(HwMgmtAction):
         old_non_up_patches = [ptch.strip() for ptch in Data.old_non_up]
         return old_up_patches, old_non_up_patches
 
-    def parse_id(self, id_):
-        if id_:
-            id_ = "https://github.com/gregkh/linux/commit/" + id_
-        return id_
-
     def create_commit_msg(self, table):
         title = COMMIT_TITLE.format(self.args.hw_mgmt_ver) 
         changes_slk, changes_sb = {}, {}
         old_up_patches, old_non_up_patches = self.list_patches()
         for patch in table:
-            id_ = self.parse_id(patch.get(COMMIT_ID, ""))
+            id_ = parse_id(patch.get(COMMIT_ID, ""))
             patch_ = patch.get(PATCH_NAME)
             if patch_ in Data.new_up and patch_ not in old_up_patches:
                 changes_slk[patch_] = id_

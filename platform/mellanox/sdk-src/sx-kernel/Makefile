@@ -5,7 +5,7 @@ MAIN_TARGET = sx-kernel_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
 DERIVED_TARGETS = sx-kernel-dev_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
 PACKAGE_NAME = sx_kernel
 
-MLNX_SX_KERNEL_GITHUB_URL_BASE = https://github.com/Mellanox/Spectrum-SDK-Drivers/archive/refs/heads
+MLNX_SX_KERNEL_GITHUB_URL_BASE = $(MLNX_SDK_DRIVERS_GITHUB_URL)/archive/refs/heads
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# get sources

@@ -54,15 +54,15 @@ NEW_UP_LIST = """\
 TEST_SLK_COMMIT = """\
 Intgerate HW-MGMT 7.0030.0937 Changes
  ## Patch List
-* 0002-i2c-mlxcpld-Decrease-polling-time-for-performance-im.patch : https://github.com/gregkh/linux/commit/cb9744178f33
-* 0003-i2c-mlxcpld-Add-support-for-I2C-bus-frequency-settin.patch : https://github.com/gregkh/linux/commit/66b0c2846ba8
-* 0005-i2c-mux-mlxcpld-Move-header-file-out-of-x86-realm.patch : https://github.com/gregkh/linux/commit/98d29c410475
-* 0006-i2c-mux-mlxcpld-Convert-driver-to-platform-driver.patch : https://github.com/gregkh/linux/commit/84af1b168c50
-* 0007-i2c-mux-mlxcpld-Prepare-mux-selection-infrastructure.patch : https://github.com/gregkh/linux/commit/81566938083a
-* 0008-i2c-mux-mlxcpld-Get-rid-of-adapter-numbers-enforceme.patch : https://github.com/gregkh/linux/commit/cae5216387d1
-* 0009-i2c-mux-mlxcpld-Extend-driver-to-support-word-addres.patch : https://github.com/gregkh/linux/commit/c52a1c5f5db5
-* 0010-i2c-mux-mlxcpld-Extend-supported-mux-number.patch : https://github.com/gregkh/linux/commit/699c0506543e
-* 0011-i2c-mux-mlxcpld-Add-callback-to-notify-mux-creation-.patch : https://github.com/gregkh/linux/commit/a39bd92e92b9
+* 0002-i2c-mlxcpld-Decrease-polling-time-for-performance-im.patch : https://github.com/torvalds/linux/commit/cb9744178f33
+* 0003-i2c-mlxcpld-Add-support-for-I2C-bus-frequency-settin.patch : https://github.com/torvalds/linux/commit/66b0c2846ba8
+* 0005-i2c-mux-mlxcpld-Move-header-file-out-of-x86-realm.patch : https://github.com/torvalds/linux/commit/98d29c410475
+* 0006-i2c-mux-mlxcpld-Convert-driver-to-platform-driver.patch : https://github.com/torvalds/linux/commit/84af1b168c50
+* 0007-i2c-mux-mlxcpld-Prepare-mux-selection-infrastructure.patch : https://github.com/torvalds/linux/commit/81566938083a
+* 0008-i2c-mux-mlxcpld-Get-rid-of-adapter-numbers-enforceme.patch : https://github.com/torvalds/linux/commit/cae5216387d1
+* 0009-i2c-mux-mlxcpld-Extend-driver-to-support-word-addres.patch : https://github.com/torvalds/linux/commit/c52a1c5f5db5
+* 0010-i2c-mux-mlxcpld-Extend-supported-mux-number.patch : https://github.com/torvalds/linux/commit/699c0506543e
+* 0011-i2c-mux-mlxcpld-Add-callback-to-notify-mux-creation-.patch : https://github.com/torvalds/linux/commit/a39bd92e92b9
 
 """
 
