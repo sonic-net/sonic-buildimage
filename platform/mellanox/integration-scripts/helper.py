@@ -21,6 +21,7 @@ import re
 
 MARK_ID = "###->"
 MLNX_KFG_MARKER = "mellanox"
+SDK_MARKER = "mellanox_sdk"
 HW_MGMT_MARKER = "mellanox_hw_mgmt"
 SLK_PATCH_LOC = "src/sonic-linux-kernel/patch/"
 SLK_KCONFIG = SLK_PATCH_LOC + "kconfig-inclusions"
@@ -30,6 +31,7 @@ NON_UP_PATCH_DIR = "platform/mellanox/non-upstream-patches/"
 NON_UP_PATCH_LOC = NON_UP_PATCH_DIR + "patches"
 NON_UP_PATCH_DIFF = NON_UP_PATCH_DIR + "series.patch"
 KCFG_HDR_RE = "\[(.*)\]"
+KERNEL_BACKPORTS = "kernel_backports"
  # kconfig_inclusion headers to consider
 HDRS = ["common", "amd64"]
 
@@ -186,3 +188,22 @@ class Action():
 
     def write_user_out(self):
         pass
+
+
+def build_commit_description(changes):
+    if not changes:
+        return ""
+    content = "\n"
+    content = content + " ## Patch List\n"
+    for key, value in changes.items():
+        content = content + f"* {key} : {value}\n"
+    return content
+
+def parse_id(id_):
+    if id_ and id_ != "N/A":
+        id_ = "https://github.com/torvalds/linux/commit/" + id_
+    
+    if id_ == "N/A":
+        id_ = ""
+
+    return id_
