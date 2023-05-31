@@ -10,6 +10,7 @@ Subject: [PATCH] Modify user map profile
 * Added "many_to_one" mode, create one local user for many TACACS+ users which
   has the same privilege.
 * Modified configuration parse and file to adapt to the new user map profile.
+* Stop authorization after user being rejected by server.
 ---
  Makefile.am                   |    4 +-
  Makefile.in                   |    2 +-
@@ -17,9 +18,9 @@ Subject: [PATCH] Modify user map profile
  debian/changelog              |   11 +
  debian/control                |   11 +-
  debian/libnss-tacplus.symbols |    1 -
- nss_tacplus.c                 | 1004 +++++++++++++++++++----------------------
- tacplus_nss.conf              |   91 ++--
- 8 files changed, 518 insertions(+), 608 deletions(-)
+ nss_tacplus.c                 | 1018 +++++++++++++++------------------
+ tacplus_nss.conf              |   91 ++-
+ 8 files changed, 527 insertions(+), 613 deletions(-)
 
 diff --git a/Makefile.am b/Makefile.am
 index 293951e..b33c455 100644
@@ -1153,7 +1154,18 @@ index 79e62b9..ecfa0b0 100644
              done = 1; /* break out of loop after arep cleanup */
          }
          else {
-@@ -692,30 +724,12 @@ lookup_tacacs_user(struct pwbuf *pb)
+@@ -685,6 +717,10 @@ lookup_tacacs_user(struct pwbuf *pb)
+                     " invalid (%d)", nssname,
+                     tac_ntop(tac_srv[srvr].addr->ai_addr), pb->name,
+                     arep.status);
++
++                    if (arep.status == TAC_PLUS_AUTHOR_STATUS_FAIL) {
++                        done = 1; /* break out of loop after server reject user */
++                    }
+         }
+         if(arep.msg)
+             free(arep.msg);
+@@ -692,30 +728,12 @@ lookup_tacacs_user(struct pwbuf *pb)
              tac_free_attrib(&arep.attr);
      }
  
@@ -1186,7 +1198,7 @@ index 79e62b9..ecfa0b0 100644
   *
   * We try the lookup to the tacacs server first.  If we can't make a
   * connection to the server for some reason, we also try looking up
-@@ -730,20 +744,25 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+@@ -730,20 +748,25 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
      int result;
      struct pwbuf pbuf;
  
@@ -1221,7 +1233,7 @@ index 79e62b9..ecfa0b0 100644
          /* marshal the args for the lower level functions */
          pbuf.name = (char *)name;
          pbuf.pw = pw;
-@@ -751,126 +770,13 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
+@@ -751,126 +774,13 @@ enum nss_status _nss_tacplus_getpwnam_r(const char *name, struct passwd *pw,
          pbuf.buflen = buflen;
          pbuf.errnop = errnop;
  
