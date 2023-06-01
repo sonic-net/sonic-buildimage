@@ -402,11 +402,11 @@ class TaskPing(TaskBase):
         if ip_interface(card_vip).version == 4:
             # The VIP of card is IPv4
             inner_pkt = Ether(dst=t1_mac, src=overlay_mac)/IP(src=card_vip, dst=t1_loopback, tos=(DEFAULT_DSCP << 2))/UDP(sport=DEFAULT_UDP_PORT, dport=DEFAULT_UDP_PORT)
-            vxlan2_pkt = Ether(dst=T0_MAC, src=t1_mac)/IP(src=t1_loopback, dst=card_vip, ttl=2, tos=(DEFAULT_DSCP << 2))/UDP()/VXLAN(flags=0x08, vni=vni)/inner_pkt
+            vxlan2_pkt = Ether(dst=T0_MAC, src=t1_mac)/IP(src=t1_loopback, dst=card_vip, ttl=2, tos=(DEFAULT_DSCP << 2))/UDP(dport=DEFAULT_VXLAN_UDP_PORT)/VXLAN(flags=0x08, vni=vni)/inner_pkt
         else:
             # The VIP of card is IPv6
             inner_pkt = Ether(dst=t1_mac, src=overlay_mac)/IPv6(src=card_vip, dst=t1_loopback, tc=(DEFAULT_DSCP << 2))/UDP(sport=DEFAULT_UDP_PORT, dport=DEFAULT_UDP_PORT)
-            vxlan2_pkt = Ether(dst=T0_MAC, src=t1_mac)/IPv6(src=t1_loopback, dst=card_vip, hlim=2, tc=(DEFAULT_DSCP << 2))/UDP()/VXLAN(flags=0x08, vni=vni)/inner_pkt
+            vxlan2_pkt = Ether(dst=T0_MAC, src=t1_mac)/IPv6(src=t1_loopback, dst=card_vip, hlim=2, tc=(DEFAULT_DSCP << 2))/UDP(dport=DEFAULT_VXLAN_UDP_PORT)/VXLAN(flags=0x08, vni=vni)/inner_pkt
 
         vxlan1_pkt = VXLAN(flags=0x08, vni=vni)/vxlan2_pkt
 
