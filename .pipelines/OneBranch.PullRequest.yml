@@ -79,7 +79,7 @@ stages:
   dependsOn: BuildVS
   condition: and(in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues'), ne(stageDependencies.BuildVS.outputs['vs.SetVarInt.SKIP_VSTEST'], 'YES'))
   variables:
-    - group: SONiC-Testbed-Tools
+    - group: SONiC-Elastictest
     - name: inventory
       value: veos_vtb
     - name: testbed_file
@@ -90,12 +90,11 @@ stages:
   # continueOnError: true means it's an optional test job and will not block merge even though it fails(unless a required test job depends on its result)
 
   jobs:
-  - job: t0_testbedv2
+  - job: t0_elastictest
     pool:
       vmImage: 'ubuntu-20.04'
-    displayName: "kvmtest-t0 by TestbedV2"
+    displayName: "kvmtest-t0 by Elastictest"
     timeoutInMinutes: 240
-    condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
     continueOnError: false
     steps:
       - template: ../.azure-pipelines/run-test-scheduler-template.yml
@@ -104,12 +103,11 @@ stages:
           MIN_WORKER: $(T0_INSTANCE_NUM)
           MAX_WORKER: $(T0_INSTANCE_NUM)
 
-  - job: t1_lag_testbedv2
+  - job: t1_lag_elastictest
     pool:
       vmImage: 'ubuntu-20.04'
-    displayName: "kvmtest-t1-lag by TestbedV2"
+    displayName: "kvmtest-t1-lag by Elastictest"
     timeoutInMinutes: 240
-    condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
     continueOnError: false
     steps:
       - template: ../.azure-pipelines/run-test-scheduler-template.yml
@@ -118,12 +116,11 @@ stages:
           MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
           MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
 
-  - job: sonic_t0_testbedv2
-    displayName: "kvmtest-t0-sonic by TestbedV2"
+  - job: sonic_t0_elastictest
+    displayName: "kvmtest-t0-sonic by Elastictest"
     pool:
       vmImage: 'ubuntu-20.04'
     timeoutInMinutes: 240
-    condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
     continueOnError: false
     steps:
       - template: ../.azure-pipelines/run-test-scheduler-template.yml
@@ -136,12 +133,11 @@ stages:
           VM_TYPE: vsonic
           SPECIFIED_PARAMS: '{\"test_pretest.py\":[\"--completeness_level=confident\",\"--allow_recover\"],\"test_posttest.py\":[\"--completeness_level=confident\",\"--allow_recover\"]}'
 
-  - job: t0_2vlans_testbedv2
+  - job: t0_2vlans_elastictest
     pool:
       vmImage: 'ubuntu-20.04'
-    displayName: "kvmtest-t0-2vlans by TestbedV2"
+    displayName: "kvmtest-t0-2vlans by Elastictest"
     timeoutInMinutes: 240
-    condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
     continueOnError: false
     steps:
     - template: ../.azure-pipelines/run-test-scheduler-template.yml
@@ -152,12 +148,11 @@ stages:
         MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
         DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
 
-  - job: dualtor_testbedv2
+  - job: dualtor_elastictest
     pool:
       vmImage: 'ubuntu-20.04'
-    displayName: "kvmtest-dualtor-t0 by TestbedV2"
+    displayName: "kvmtest-dualtor-t0 by Elastictest"
     timeoutInMinutes: 240
-    condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
     continueOnError: false
     steps:
       - template: ../.azure-pipelines/run-test-scheduler-template.yml
@@ -167,12 +162,11 @@ stages:
           MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
           COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
 
-  - job: wan_testbedv2
-    displayName: "kvmtest-wan by TestbedV2"
+  - job: wan_elastictest
+    displayName: "kvmtest-wan by Elastictest"
     pool:
       vmImage: 'ubuntu-20.04'
     timeoutInMinutes: 240
-    condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
     continueOnError: false
     steps:
       - template: ../.azure-pipelines/run-test-scheduler-template.yml
@@ -182,12 +176,11 @@ stages:
           MAX_WORKER: $(WAN_INSTANCE_NUM)
           COMMON_EXTRA_PARAMS: "--skip_sanity "
 
-  - job: multi_asic_testbedv2
-    displayName: "kvmtest-multi-asic-t1-lag by TestbedV2"
+  - job: multi_asic_elastictest
+    displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
     pool:
       vmImage: 'ubuntu-20.04'
     timeoutInMinutes: 240
-    condition: and(succeeded(), eq(variables.BUILD_IMG_RUN_TESTBEDV2_TEST, 'YES'))
     continueOnError: false
     steps:
       - template: ../.azure-pipelines/run-test-scheduler-template.yml
