@@ -57,7 +57,7 @@ def get_bootstrap_status():
 
 def update_acms_config(bootstrap_cert):
     cloud = dSMS_config_modifier.get_device_cloudtype()
-    if cloud == '':
+    if cloud in ('None', ''):
         sonic_logger.log_error("start: update_acms_config: Fail to get cloud type, need retry")
         return False
     if cloud.lower() != "Public".lower():
