@@ -6,7 +6,8 @@ Description: bgpmon.py -- populating bgp related information in stateDB.
 
     Initial creation of this daemon is to assist SNMP agent in obtaining the
     BGP related information for its MIB support. The MIB that this daemon is
-    assisting is for the CiscoBgp4MIB (Neighbor state only). If there are other
+    assisting is for the CiscoBgp4MIB (Neighbor state only). Also for chassis use-case
+    it identify if the given BGP neighbors as i-BGP vs e-BGP. If there are other
     BGP related items that needs to be updated in a periodic manner in the
     future, then more can be added into this process.
 
@@ -69,7 +70,9 @@ class BgpStateGet:
         peer_l = peer_dict["peers"].keys()
         self.new_peer_l.update(peer_l)
         for peer in peer_l:
-            self.new_peer_state[peer] = peer_dict["peers"][peer]["state"]
+            self.new_peer_state[peer] = (peer_dict["peers"][peer]["state"], 
+                                         peer_dict["peers"][peer]["remoteAs"],
+                                         peer_dict["peers"][peer]["localAs"])
 
     # Get a new snapshot of BGP neighbors and store them in the "new" location
     def get_all_neigh_states(self):
@@ -124,17 +127,19 @@ class BgpStateGet:
             key = "NEIGH_STATE_TABLE|%s" % peer
             if peer in self.peer_l:
                 # only update the entry if state changed
-                if self.peer_state[peer] != self.new_peer_state[peer]:
+                if self.peer_state[peer] != self.new_peer_state[peer][0]:
                     # state changed. Update state DB for this entry
-                    state = self.new_peer_state[peer]
-                    data[key] = {'state':state}
+                    state = self.new_peer_state[peer][0]
+                    peerType = "i-BGP" if self.new_peer_state[peer][1] == self.new_peer_state[peer][2] else "e-BGP"
+                    data[key] = {'state':state, 'peerType':peerType}
                     self.peer_state[peer] = state
                 # remove this neighbor from old set since it is accounted for
                 self.peer_l.remove(peer)
             else:
                 # New neighbor found case. Add to dictionary and state DB
-                state = self.new_peer_state[peer]
-                data[key] = {'state':state}
+                state = self.new_peer_state[peer][0]
+                peerType = "i-BGP" if self.new_peer_state[peer][1] == self.new_peer_state[peer][2] else "e-BGP"
+                data[key] = {'state':state, 'peerType':peerType}
                 self.peer_state[peer] = state
             if len(data) > PIPE_BATCH_MAX_COUNT:
                 self.flush_pipe(data)
