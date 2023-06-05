@@ -1,7 +1,6 @@
 applibs==1.mlnx.4.5.5142
 applibs-dev==1.mlnx.4.5.5142
 bfnplatform==1.0.0
-bfnsdk==1.0.0
 isc-dhcp-relay==4.4.1-2.3+deb11u2
 kernel-mft-dkms==4.22.1-15
 libhiredis-dev==0.14.0-3~bpo9+1

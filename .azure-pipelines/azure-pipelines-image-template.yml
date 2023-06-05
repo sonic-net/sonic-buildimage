@@ -28,11 +28,13 @@ jobs:
       - template: .azure-pipelines/cleanup.yml@buildimage
       - ${{ parameters.preSteps }}
       - script: |
-          BUILD_OPTIONS="$(BUILD_OPTIONS)"
+          [ -n "$OVERRIDE_BUILD_OPTIONS" ] && OVERRIDE_BUILD_OPTIONS=$(OVERRIDE_BUILD_OPTIONS)
+          BUILD_OPTIONS="$(BUILD_OPTIONS) $OVERRIDE_BUILD_OPTIONS"
           if [ -n "$(CACHE_MODE)" ] && echo $(PLATFORM_AZP) | grep -E -q "^(vs|broadcom|mellanox|marvell-armhf)$"; then
             CACHE_OPTIONS="SONIC_DPKG_CACHE_METHOD=$(CACHE_MODE) SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(PLATFORM_AZP)"
-            BUILD_OPTIONS="$(BUILD_OPTIONS) $CACHE_OPTIONS"
+            BUILD_OPTIONS="$BUILD_OPTIONS $CACHE_OPTIONS"
           fi
+          echo $BUILD_OPTIONS
           echo "##vso[task.setvariable variable=BUILD_OPTIONS]$BUILD_OPTIONS"
         displayName: "Set cache options"
       - checkout: self

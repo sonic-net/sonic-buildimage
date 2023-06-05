@@ -73,7 +73,7 @@ stages:
   - template: azure-pipelines-build.yml
     parameters:
       jobFilters: ${{ parameters.jobFilters }}
-      buildOptions: '${{ variables.VERSION_CONTROL_OPTIONS }} ENABLE_DOCKER_BASE_PULL=n SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y $(OVERRIDE_BUILD_OPTIONS)'
+      buildOptions: '${{ variables.VERSION_CONTROL_OPTIONS }} ENABLE_DOCKER_BASE_PULL=n SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y'
       preSteps:
       - template: .azure-pipelines/template-clean-sonic-slave.yml@buildimage
       - checkout: self
