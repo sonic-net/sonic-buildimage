@@ -1,7 +1,13 @@
 #!/bin/bash
 
+# Restrict command to sudo users
+if [ "$EUID" -ne 0 ] ; then
+  echo "Root priveleges are needed for this operation"
+  exit 1
+fi
+
 if [ -f /etc/sonic/chassisdb.conf ]; then
-  rexec all -c "TSA chassis"
+  rexec all -c "sudo TSA chassis"
   echo "Please execute \"rexec all -c 'sudo config save -y'\" to preserve System mode in Maintenance after reboot\
   or config reload on all linecards"
   exit 0

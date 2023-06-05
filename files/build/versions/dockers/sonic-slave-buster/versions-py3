@@ -4,7 +4,7 @@ async-timeout==4.0.2
 atomicwrites==1.1.5
 attrs==18.2.0
 babel==2.6.0
-bitarray==2.7.3
+bitarray==2.7.4
 certifi==2018.8.24
 chardet==3.0.4
 cov-core==1.15.0
@@ -73,7 +73,7 @@ setuptools==49.6.0
 six==1.12.0
 sphinx==1.8.4
 sphinx-rtd-theme==0.4.3
-typing_extensions==4.5.0
+typing_extensions==4.6.3
 unattended-upgrades==0.1
 unidiff==0.5.4
 urllib3==1.24.1

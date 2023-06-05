@@ -1,16 +1,24 @@
 {# Construct config.bcm to include additional soc properties per specific device metadata requirement #}
 {%- set map_prio = '' -%}
+{%- set pfcwd_sock = '' -%}
 {%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['subtype'] is defined -%}
 {%-     set switch_subtype = DEVICE_METADATA['localhost']['subtype'] -%}
 {%-     if 'dualtor' in switch_subtype.lower() %}
 {%-         set map_prio = 'sai_remap_prio_on_tnl_egress=1' -%}
 {%-     endif %}
 {%- endif %}
+{%- if SYSTEM_DEFAULTS is defined and 'tunnel_qos_remap' in SYSTEM_DEFAULTS and SYSTEM_DEFAULTS['tunnel_qos_remap']['status'] == 'enabled' -%}
+{%-     set pfcwd_sock =
+'hybrid_pfc_deadlock_enable=1
+pfc_deadlock_seq_control=1
+sai_pfc_dlr_init_capability=1' -%}
+{%- endif %}
 sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_premium_issu/b870.6.4.1/
 l3_alpm_hit_skip=1
 sai_adjust_acl_drop_in_rx_drop=1
 sai_verify_incoming_chksum=0
 {{ map_prio }}
+{{ pfcwd_sock }}
 host_as_route_disable=1
 sai_trap_group_priority=1000
 use_all_splithorizon_groups=1

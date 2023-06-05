@@ -454,8 +454,8 @@ def parse_loopback_intf(child):
 
 
 def parse_dpg(dpg, hname):
-    aclintfs = None
-    mgmtintfs = None
+    aclintfs = {}
+    mgmtintfs = {}
     subintfs = None
     intfs= {}
     lo_intfs= {}
@@ -481,15 +481,15 @@ def parse_dpg(dpg, hname):
             There is just one aclintf node in the minigraph
             Get the aclintfs node first.
         """
-        if aclintfs is None and child.find(str(QName(ns, "AclInterfaces"))) is not None:
-            aclintfs = child.find(str(QName(ns, "AclInterfaces")))
+        if not aclintfs and child.find(str(QName(ns, "AclInterfaces"))) is not None and child.find(str(QName(ns, "AclInterfaces"))).findall(str(QName(ns, "AclInterface"))):
+            aclintfs = child.find(str(QName(ns, "AclInterfaces"))).findall(str(QName(ns, "AclInterface")))
         """
             In Multi-NPU platforms the mgmt intfs are defined only for the host not for individual asic
             There is just one mgmtintf node in the minigraph
             Get the mgmtintfs node first. We need mgmt intf to get mgmt ip in per asic dockers.
         """
-        if mgmtintfs is None and child.find(str(QName(ns, "ManagementIPInterfaces"))) is not None:
-            mgmtintfs = child.find(str(QName(ns, "ManagementIPInterfaces")))
+        if not mgmtintfs and child.find(str(QName(ns, "ManagementIPInterfaces"))) is not None and  child.find(str(QName(ns, "ManagementIPInterfaces"))).findall(str(QName(ns1, "ManagementIPInterface"))):
+            mgmtintfs = child.find(str(QName(ns, "ManagementIPInterfaces"))).findall(str(QName(ns1, "ManagementIPInterface")))
         hostname = child.find(str(QName(ns, "Hostname")))
         if hostname.text.lower() != hname.lower():
             continue
@@ -532,7 +532,7 @@ def parse_dpg(dpg, hname):
                 mvrf["vrf_global"] = {"mgmtVrfEnabled": mvrf_en_flag}
 
         mgmt_intf = {}
-        for mgmtintf in mgmtintfs.findall(str(QName(ns1, "ManagementIPInterface"))):
+        for mgmtintf in mgmtintfs:
             intfname = mgmtintf.find(str(QName(ns, "AttachTo"))).text
             ipprefix = mgmtintf.find(str(QName(ns1, "PrefixStr"))).text
             mgmtipn = ipaddress.ip_network(UNICODE_TYPE(ipprefix), False)
@@ -686,7 +686,7 @@ def parse_dpg(dpg, hname):
             vlans[sonic_vlan_name] = vlan_attributes
             vlan_member_list[sonic_vlan_name] = vmbr_list
 
-        for aclintf in aclintfs.findall(str(QName(ns, "AclInterface"))):
+        for aclintf in aclintfs:
             if aclintf.find(str(QName(ns, "InAcl"))) is not None:
                 aclname = aclintf.find(str(QName(ns, "InAcl"))).text.upper().replace(" ", "_").replace("-", "_")
                 stage = "ingress"

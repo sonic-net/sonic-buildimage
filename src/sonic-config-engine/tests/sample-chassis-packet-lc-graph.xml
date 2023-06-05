@@ -79,60 +79,7 @@
     </Routers>
   </CpgDec>
   <DpgDec>
-    <DeviceDataPlaneInfo>
-      <IPSecTunnels/>
-      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
-        <a:LoopbackIPInterface>
-          <Name>HostIP</Name>
-          <AttachTo>Loopback0</AttachTo>
-          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
-            <b:IPPrefix>10.0.1.6/32</b:IPPrefix>
-          </a:Prefix>
-          <a:PrefixStr>10.0.1.6/32</a:PrefixStr>
-        </a:LoopbackIPInterface>
-      </LoopbackIPInterfaces>
-      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
-        <a:ManagementIPInterface>
-          <Name>HostIP</Name>
-          <AttachTo>eth0</AttachTo>
-          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
-            <b:IPPrefix>10.3.147.97/23</b:IPPrefix>
-          </a:Prefix>
-          <a:PrefixStr>10.3.147.97/23</a:PrefixStr>
-        </a:ManagementIPInterface>
-      </ManagementIPInterfaces>
-      <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
-      <MplsInterfaces/>
-      <MplsTeInterfaces/>
-      <RsvpInterfaces/>
-      <Hostname>str2-8808-lc2-1</Hostname>
-      <PortChannelInterfaces>
-      </PortChannelInterfaces>
-      <IPInterfaces>
-        <IPInterface>
-          <Name i:nil="true"/>
-          <AttachTo>Eth1/1/47</AttachTo>
-          <Prefix>27.1.1.1/24</Prefix>
-        </IPInterface>
-        </IPInterfaces>
-       <VlanInterfaces>
-       </VlanInterfaces>
-      <IPNextHops>
-	   <IPNextHop>
-	    <ElementType>IPNextHop</ElementType>
-	    <Name i:nil="true"/>
-            <Address>8.0.0.1</Address>
-            <AttachTo>PortChannel40,192.168.1.2;PortChannel50,192.168.2.2</AttachTo>
-	    <Type>StaticRoute</Type>
-        </IPNextHop>
-      </IPNextHops>
-      <DataAcls/>
-      <AclInterfaces>
-      </AclInterfaces>
-      <DownstreamSummaries/>
-      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
-    </DeviceDataPlaneInfo>
-    <DeviceDataPlaneInfo>
+   <DeviceDataPlaneInfo>
       <IPSecTunnels/>
       <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
         <a:LoopbackIPInterface>
@@ -211,11 +158,86 @@
 	<IPNextHop>
 	  <ElementType>IPNextHop</ElementType>
 	  <Name i:nil="true"/>
-          <Address>8.0.0.1</Address>
+	  <Address>8.0.0.1</Address>
           <AttachTo>PortChannel40,192.168.1.2;PortChannel50,192.168.2.2</AttachTo>
-      <Type>StaticRoute</Type>
+          <Type>StaticRoute</Type>
         </IPNextHop>
       </IPNextHops>
+      <AclInterfaces>
+        <AclInterface>
+          <InAcl>SNMP_ACL</InAcl>
+          <AttachTo>SNMP</AttachTo>
+          <Type>SNMP</Type>
+        </AclInterface>
+       <AclInterface>
+          <AttachTo>VTY_LINE</AttachTo>
+          <InAcl>ssh-only</InAcl>
+          <Type>SSH</Type>
+        </AclInterface>
+      </AclInterfaces>
+    </DeviceDataPlaneInfo>
+    <DeviceDataPlaneInfo>
+      <IPSecTunnels/>
+      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:LoopbackIPInterface>
+          <Name>HostIP</Name>
+          <AttachTo>Loopback0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>10.0.1.6/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>10.0.1.6/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+      </LoopbackIPInterfaces>
+      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:ManagementIPInterface>
+          <Name>HostIP</Name>
+          <AttachTo>eth0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>10.3.147.97/23</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>10.3.147.97/23</a:PrefixStr>
+        </a:ManagementIPInterface>
+      </ManagementIPInterfaces>
+      <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <MplsInterfaces/>
+      <MplsTeInterfaces/>
+      <RsvpInterfaces/>
+      <Hostname>str2-8808-lc2-1</Hostname>
+      <PortChannelInterfaces>
+      </PortChannelInterfaces>
+      <IPInterfaces>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>Eth1/1/47</AttachTo>
+          <Prefix>27.1.1.1/24</Prefix>
+        </IPInterface>
+        </IPInterfaces>
+       <VlanInterfaces>
+       </VlanInterfaces>
+      <IPNextHops>
+	   <IPNextHop>
+	    <ElementType>IPNextHop</ElementType>
+	    <Name i:nil="true"/>
+	    <Address>8.0.0.1</Address>
+            <AttachTo>PortChannel40,192.168.1.2;PortChannel50,192.168.2.2</AttachTo>
+	    <Type>StaticRoute</Type>
+        </IPNextHop>
+      </IPNextHops>
+      <DataAcls/>
+      <AclInterfaces>
+        <AclInterface>
+          <InAcl>SNMP_ACL</InAcl>
+          <AttachTo>SNMP</AttachTo>
+          <Type>SNMP</Type>
+        </AclInterface>
+       <AclInterface>
+          <AttachTo>VTY_LINE</AttachTo>
+          <InAcl>ssh-only</InAcl>
+          <Type>SSH</Type>
+        </AclInterface>
+      </AclInterfaces>
+      <DownstreamSummaries/>
+      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
     </DeviceDataPlaneInfo>
   </DpgDec>
   <LinkMetadataDeclaration>

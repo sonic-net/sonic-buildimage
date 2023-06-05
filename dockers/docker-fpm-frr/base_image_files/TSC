@@ -1,10 +1,16 @@
 #!/bin/bash
 
+# Restrict command to sudo users
+if [ "$EUID" -ne 0 ] ; then
+  echo "Root priveleges are needed for this operation"
+  exit 1
+fi
+
 if [ -f /etc/sonic/chassisdb.conf ]; then
   if [[ $1 == "no-stats" ]]; then
-    rexec all -c "TSC no-stats"
+    rexec all -c "sudo TSC no-stats"
   else
-    rexec all -c "TSC"
+    rexec all -c "sudo TSC"
   fi
   exit 0
 fi
