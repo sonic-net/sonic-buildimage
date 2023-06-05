@@ -67,7 +67,7 @@ grub2-common==2.06-3~deb11u5
 haveged==1.9.14-1
 hdparm==9.60+ds-1
 hping3==3.a2.ds2-10
-hw-management==1.mlnx.7.0020.4104
+hw-management==1.mlnx.7.0020.4301
 i2c-tools==4.2-1+b1
 ifmetric==0.3-5
 ifupdown2==3.0.0-1
@@ -262,13 +262,13 @@ ndisc6==1.0.4-2
 net-tools==1.60+git20181103.0eebece-1
 netbase==6.3
 netfilter-persistent==1.0.15
-ntp==1:4.2.8p15+dfsg-1
+ntp==1:4.2.8p15+dfsg-1+deb10u2
 ntpstat==0.0.0.1-2+b1
 opennsl-modules==7.1.0.0
-openssh-client==1:8.4p1-5+deb11u1
-openssh-server==1:8.4p1-5+deb11u1
-openssh-sftp-server==1:8.4p1-5+deb11u1
-openssl==1.1.1n-0+deb11u4
+openssh-client==1:8.4p1-5+deb11u1+fips
+openssh-server==1:8.4p1-5+deb11u1+fips
+openssh-sftp-server==1:8.4p1-5+deb11u1+fips
+openssl==1.1.1n-0+deb11u4+fips
 pci.ids==0.0~2021.02.08-1
 pciutils==1:3.7.0-5
 perl==5.32.1-4+deb11u2
@@ -313,7 +313,7 @@ sonic-utilities-data==1.0-1
 sqlite3==3.34.1-3
 squashfs-tools==1:4.4-2+deb11u2
 sudo==1.9.5p2-3+deb11u1
-sx-kernel==1.mlnx.4.5.4206
+sx-kernel==1.mlnx.4.5.5142
 symcrypt-openssl==0.1
 sysfsutils==2.1.0+repack-7
 sysstat==12.5.2-2

@@ -983,6 +983,21 @@ class TestCfgGen(TestCase):
                 "'Vlan2000': {'dhcpv6_servers': ['fc02:2000::3', 'fc02:2000::4']}}"
             )
         )
+        
+    def test_minigraph_packet_chassis_acl(self):
+        argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-v', "ACL_TABLE"]
+        output = self.run_script(argument)
+        self.assertEqual(
+            utils.to_dict(output.strip()),
+            utils.to_dict("{'SNMP_ACL': {'policy_desc': 'SNMP_ACL', 'type': 'CTRLPLANE', 'stage': 'ingress', 'services': ['SNMP']}, 'SSH_ONLY': {'policy_desc': 'SSH_ONLY', 'type': 'CTRLPLANE', 'stage': 'ingress', 'services': ['SSH']}}")
+        )
+
+        argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-n', "asic1", '-v', "ACL_TABLE"]
+        output = self.run_script(argument)
+        self.assertEqual(
+            utils.to_dict(output.strip()),
+            utils.to_dict("{'SNMP_ACL': {'policy_desc': 'SNMP_ACL', 'type': 'CTRLPLANE', 'stage': 'ingress', 'services': ['SNMP']}, 'SSH_ONLY': {'policy_desc': 'SSH_ONLY', 'type': 'CTRLPLANE', 'stage': 'ingress', 'services': ['SSH']}}")
+        )
 
     def test_minigraph_bgp_packet_chassis_peer(self):
         argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-n', "asic1", '-v', "BGP_INTERNAL_NEIGHBOR[\'8.0.0.1\']"]

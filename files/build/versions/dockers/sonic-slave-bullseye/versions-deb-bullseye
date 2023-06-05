@@ -95,7 +95,7 @@ docbook-utils==0.6.14-3.4
 docbook-xml==4.5-9
 docker-ce==5:20.10.14~3-0~debian-bullseye
 docker-ce-cli==5:20.10.14~3-0~debian-bullseye
-docker-ce-rootless-extras==5:23.0.6-1~debian.11~bullseye
+docker-ce-rootless-extras==5:24.0.2-1~debian.11~bullseye
 docker-scan-plugin==0.23.0~debian-bullseye
 docutils-common==0.16+dfsg-4
 dosfstools==4.2-1
@@ -745,7 +745,7 @@ libkadm5clnt-mit12==1.18.3-6+deb11u3
 libkadm5srv-mit12==1.18.3-6+deb11u3
 libkdb5-10==1.18.3-6+deb11u3
 libkmod2==28-1
-libkpathsea6==2020.20200327.54578-7
+libkpathsea6==2020.20200327.54578-7+deb11u1
 libkrb5-dev==1.18.3-6+deb11u3
 libksba8==1.5.0-3+deb11u2
 liblab-gamut1==2.42.2-5
@@ -992,7 +992,7 @@ libproxy1v5==0.4.17-1
 libpsl5==0.21.0-1.2
 libpsm-infinipath1==3.3+20.604758e7-6.1
 libpsm2-2==11.2.185-1
-libptexenc1==2020.20200327.54578-7
+libptexenc1==2020.20200327.54578-7+deb11u1
 libpthread-stubs0-dev==0.4-1
 libpulse0==14.2-2
 libpython2-dev==2.7.18-3
@@ -1103,9 +1103,10 @@ libspice-server1==0.14.3-2.1
 libsqlite3-0==3.34.1-3
 libsratom-0-0==0.6.8-1
 libsrt1.4-gnutls==1.4.2-1.3
-libssh-gcrypt-4==0.9.5-1+deb11u1
+libssh-gcrypt-4==0.9.7-0+deb11u1
 libssh2-1==1.9.0-2
-libssl-dev==1.1.1n-0+deb11u4
+libssl-dev==1.1.1n-0+deb11u5
+libssl1.1==1.1.1n-0+deb11u5
 libstdc++-10-dev==10.2.1-6
 libstemmer0d==2.1.0-1
 libstrictures-perl==2.000006-1
@@ -1125,7 +1126,7 @@ libsurefire-java==2.22.3-1
 libswitch-perl==2.17-2.1
 libswresample3==7:4.3.6-0+deb11u1
 libswscale5==7:4.3.6-0+deb11u1
-libsynctex2==2020.20200327.54578-7
+libsynctex2==2020.20200327.54578-7+deb11u1
 libsys-cpuaffinity-perl==1.13~03-1
 libsys-hostname-long-perl==1.5-2
 libsystemd-dev==247.3-7+deb11u2
@@ -1137,8 +1138,8 @@ libtcmalloc-minimal4==2.8.1-1
 libteckit0==2.5.10+ds1-3
 libtemplate-perl==2.27-1+b3
 libterm-readkey-perl==2.38-1+b2
-libtexlua53==2020.20200327.54578-7
-libtexluajit2==2020.20200327.54578-7
+libtexlua53==2020.20200327.54578-7+deb11u1
+libtexluajit2==2020.20200327.54578-7+deb11u1
 libtext-charwidth-perl==0.04-10+b1
 libtext-glob-perl==0.11-1
 libtext-hogan-perl==2.03-1
@@ -1226,9 +1227,9 @@ libwayland-cursor0==1.18.0-2~exp1.1
 libwayland-dev==1.18.0-2~exp1.1
 libwayland-egl1==1.18.0-2~exp1.1
 libwayland-server0==1.18.0-2~exp1.1
-libwebp6==0.6.1-2.1
-libwebpdemux2==0.6.1-2.1
-libwebpmux3==0.6.1-2.1
+libwebp6==0.6.1-2.1+deb11u1
+libwebpdemux2==0.6.1-2.1+deb11u1
+libwebpmux3==0.6.1-2.1+deb11u1
 libwebsocket-api-java==1.1-2
 libwmf0.2-7==0.2.8.4-17
 libwoff1==1.0.2-1+b1
@@ -1424,7 +1425,7 @@ opensp==1.5.2-13+b2
 openssh-client==1:8.4p1-5+deb11u1
 openssh-server==1:8.4p1-5+deb11u1
 openssh-sftp-server==1:8.4p1-5+deb11u1
-openssl==1.1.1n-0+deb11u4
+openssl==1.1.1n-0+deb11u5
 ovmf==2020.11-2+deb11u1
 packagekit==1.2.2-2
 packagekit-tools==1.2.2-2
@@ -1680,7 +1681,7 @@ tex-gyre==20180621-3.1
 texi2html==1.82+dfsg1-6
 texinfo==6.7.0.dfsg.2-6
 texlive-base==2020.20210202-3
-texlive-binaries==2020.20200327.54578-7
+texlive-binaries==2020.20200327.54578-7+deb11u1
 texlive-fonts-recommended==2020.20210202-3
 texlive-formats-extra==2020.20210202-3
 texlive-latex-base==2020.20210202-3

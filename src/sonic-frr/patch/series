@@ -25,4 +25,6 @@ cross-compile-changes.patch
 0024-zebra-continue-fpm-read-when-we-decide-a-netlink-message-is-not-needed.patch
 0025-zebra-Send-nht-resolved-entry-up-to-concerned-protoc.patch
 0026-bgpd-Ensure-suppress-fib-pending-works-with-network-.patch
+0027-bgpd-Ensure-FRR-has-enough-data-to-read-in-peek_for_as4_capability-and-bgp_open_option_parse.patch
+0028-bgpd-Ensure-that-bgp-open-message-stream-has-enough-data-to-read.patch
 

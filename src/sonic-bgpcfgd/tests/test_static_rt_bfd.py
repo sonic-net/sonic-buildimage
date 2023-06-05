@@ -169,6 +169,94 @@ def test_set_del():
         {'del_default:2.2.2.0/24': {}}
     )
 
+    # test add a non-bfd static route
+    set_del_test(dut, "srt",
+        "SET",
+        ("3.3.3.0/24", {
+            "nexthop": "192.168.1.2 , 192.168.2.2",
+            "ifname": "if1, if2",
+        }),
+        {},
+        {}
+    )
+
+    # test delete a non-bfd static route
+    set_del_test(dut, "srt",
+        "DEL",
+        ("3.3.3.0/24", {}),
+        {},
+        {}
+    )
+
+def test_set_del_vrf():
+    dut = constructor()
+    intf_setup(dut)
+
+    set_del_test(dut, "srt",
+        "SET",
+        ("vrfred|2.2.2.0/24", {
+            "bfd": "true",
+            "nexthop": "192.168.1.2 , 192.168.2.2, 192.168.3.2",
+            "ifname": "if1, if2, if3",
+            "nexthop-vrf": "testvrf1, , default",
+        }),
+        { 
+            "set_testvrf1:default:192.168.1.2" : {'multihop': 'true', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.1.1'},
+            "set_vrfred:default:192.168.2.2" : {'multihop': 'true', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.2.1'},
+            "set_default:default:192.168.3.2" : {'multihop': 'true', 'rx_interval': '50', 'tx_interval': '50', 'multiplier': '3', 'local_addr': '192.168.3.1'}
+        },
+        {}
+    )
+
+    set_del_test(dut, "bfd",
+        "SET",
+        ("testvrf1|default|192.168.1.2", {
+            "state": "Up"
+        }),
+        {},
+        {'set_vrfred:2.2.2.0/24': {'nexthop': '192.168.1.2', 'ifname': 'if1', 'nexthop-vrf': 'testvrf1', 'expiry': 'false'}}
+    )
+    set_del_test(dut, "bfd",
+        "SET",
+        ("vrfred|default|192.168.2.2", {
+            "state": "Up"
+        }),
+        {},
+        {'set_vrfred:2.2.2.0/24': {'nexthop': '192.168.2.2,192.168.1.2 ', 'ifname': 'if2,if1', 'nexthop-vrf': 'testvrf1,vrfred', 'expiry': 'false'}}
+    )
+    set_del_test(dut, "bfd",
+        "SET",
+        ("default|default|192.168.3.2", {
+            "state": "Up"
+        }),
+        {},
+        {'set_vrfred:2.2.2.0/24': {'nexthop': '192.168.2.2,192.168.1.2,192.168.3.2 ', 'ifname': 'if2,if1,if3', 'nexthop-vrf': 'testvrf1,vrfred,default', 'expiry': 'false'}}
+    )
+
+    set_del_test(dut, "srt",
+        "SET",
+        ("vrfred|2.2.2.0/24", {
+            "bfd": "true",
+            "nexthop": "192.168.1.2 , 192.168.2.2",
+            "ifname": "if1, if2",
+            "nexthop-vrf": "testvrf1,",
+        }),
+        { 
+            "del_default:default:192.168.3.2" : {}
+        },
+        {'set_vrfred:2.2.2.0/24': {'nexthop': '192.168.2.2,192.168.1.2 ', 'ifname': 'if2,if1', 'nexthop-vrf': 'vrfred, testvrf1', 'expiry': 'false'}}
+    )
+
+    set_del_test(dut, "srt",
+        "DEL",
+        ("vrfred|2.2.2.0/24", { }),
+        { 
+            "del_testvrf1:default:192.168.1.2" : {},
+            "del_vrfred:default:192.168.2.2" : {}
+        },
+        {'del_vrfred:2.2.2.0/24': {}}
+    )
+
 def test_bfd_del():
     dut = constructor()
     intf_setup(dut)
@@ -512,5 +600,6 @@ def test_set_bfd_change_no_hold():
         {},
         {'set_default:2.2.2.0/24': {'nexthop': '192.168.2.2,192.168.1.2,192.168.3.2 ', 'ifname': 'if2,if1,if3', 'nexthop-vrf': 'default,default,default', 'expiry': 'false'}}
     )
+
 
 

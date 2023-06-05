@@ -25,7 +25,7 @@ def macsec_clear_counters(clean_cache):
             print("Cleaned cache")
         return
 
-    clicommon.run_command("show macsec --dump-file")
+    clicommon.run_command(['show', 'macsec', '--dump-file'])
     print("Clear MACsec counters")
 
 def register(cli):
