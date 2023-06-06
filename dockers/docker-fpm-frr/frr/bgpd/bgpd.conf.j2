@@ -12,7 +12,6 @@
 !
 {% include "common/daemons.common.conf.j2" %}
 !
-agentx
 !
 {% if DEVICE_METADATA['localhost']['type'] == "SpineChassisFrontendRouter" %}
 {%  include "bgpd.spine_chassis_frontend_router.conf.j2" %}

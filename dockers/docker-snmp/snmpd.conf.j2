@@ -185,14 +185,6 @@ trapsink {{ v3SnmpTrapIp }}:{{ v3SnmpTrapPort }}{% if v3SnmpTrapVrf != 'None' %}
 #
                                            #  Run as an AgentX master agent
 master          agentx
-# internal socket to allow extension to other docker containers
-# Currently the other container using this is docker-fpm-frr
-# make sure this line matches bgp:/etc/snmp/frr.conf 
-# please see testing procedure in the same file to verify this works
-# to verify the SNMP docker side look for the following string in the log file:
-# INFO snmp-subagent [ax_interface] INFO: Using agentx socket type tcp with path tcp:localhost:3161
-# INFO supervisord snmp-subagent INFO:ax_interface:Using agentx socket type tcp with path tcp:localhost:3161
-agentxsocket    tcp:localhost:3161
 
 #
 #  SysDescription pass-through
