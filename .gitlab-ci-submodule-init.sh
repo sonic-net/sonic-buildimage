@@ -5,7 +5,14 @@
 # to gitlabsr.nuq.ion.nokia.net requiring sync/update for each nest level.
 
 set -e
+prog=$(basename $0)
+die () {
+  echo "Error near line $prog:${1}"
+  exit 1
+}
+trap 'die ${LINENO}' ERR
 
+git submodule deinit -f --all
 # sync/update 1st level subs
 git submodule sync
 git submodule update --init
