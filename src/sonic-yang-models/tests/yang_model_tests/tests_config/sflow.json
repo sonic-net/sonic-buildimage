@@ -144,6 +144,7 @@
                     {
                         "port": "Ethernet0",
                         "admin_state": "up",
+                        "sample_direction": "both",
                         "sample_rate": "40000"
                     }
                 ]
@@ -158,6 +159,7 @@
                     {
                         "port": "Ethernet4",
                         "admin_state": "down",
+                        "sample_direction": "tx",
                         "sample_rate": "32768"
                     }
                 ]
@@ -242,6 +244,7 @@
                 "global": {
                     "agent_id": "Ethernet0",
                     "admin_state": "up",
+                    "sample_direction": "both",
                     "polling_interval": "20"
                 }
             }

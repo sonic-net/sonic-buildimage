@@ -32,8 +32,26 @@ module sonic-sflow{
 
     description "SFLOW yang Module for SONiC OS";
 
+    revision 2023-04-11 {
+        description "Add direction command to support egress sflow";
+    }
+
     revision 2021-04-26 {
         description "First Revision";
+    }
+
+    typedef sample_direction {
+        type enumeration {
+            enum rx {
+                description "rx direction";
+            }
+            enum tx {
+                description "tx direction";
+            }
+            enum both {
+                description "Both tx and rx direction";
+            }
+        }
     }
 
     container sonic-sflow {
@@ -111,6 +129,13 @@ module sonic-sflow{
                     }
                     description "Sets the packet sampling rate.  The rate is expressed as an integer N, where the intended sampling rate is 1/N packets.";
                 }
+
+                leaf sample_direction {
+                    type sample_direction;
+                    default "rx";
+                    description "sflow sample direction";
+                }
+
             } /* end of list SFLOW_SESSION_LIST */
         } /* end of container SFLOW_SESSION */
 
@@ -156,6 +181,13 @@ module sonic-sflow{
                     }
                     description "Interface name";
                 }
+
+                leaf sample_direction {
+                    type sample_direction;
+                    default "rx";
+                    description "sflow sample direction";
+                }
+
             } /* end of container global */
        } /* end of container SFLOW */
 
