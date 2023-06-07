@@ -1776,7 +1776,8 @@ SFLOW
 
 | Field            | Description                                                                             | Mandatory   | Default   | Reference                                 |
 |------------------|-----------------------------------------------------------------------------------------|-------------|-----------|-------------------------------------------|
-| admin_state      | Global sflow admin state                                                                |             | down      |                                           |
+| admin_state      | Global sflow admin state                                                                |             | down      |    
+| sample_direction | Global sflow sample direction                                                           |             | rx        |                                        |
 | polling_interval | The interval within which sFlow data is collected and sent to the configured collectors |             | 20        |                                           |
 | agent_id         | Interface name                                                                          |             |           | PORT:name,PORTCHANNEL:name,MGMT_PORT:name, VLAN:name |
 
@@ -1788,7 +1789,7 @@ key - port
 | port        | Sets sflow session table attributes for either all interfaces or a specific Ethernet interface.                         |             |           | PORT:name   |
 | admin_state | Per port sflow admin state                                                                                              |             | up        |             |
 | sample_rate | Sets the packet sampling rate.  The rate is expressed as an integer N, where the intended sampling rate is 1/N packets. |             |           |             |
-
+| sample_direction| Per port sflow sample direction                                                                                               |             |   rx
 SFLOW_COLLECTOR
 
 key - name
