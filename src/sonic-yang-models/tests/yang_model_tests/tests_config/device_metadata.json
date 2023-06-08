@@ -372,11 +372,29 @@
             }
         }
     },
+    "DEVICE_METADATA_VALID_TIMEZONE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "timezone": "UTC"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_INVALID_RACK_MGMT_MAP": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "rack_mgmt_map": "dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value-dummy_value"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_TIMEZONE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "timezone": ""
                 }
             }
         }

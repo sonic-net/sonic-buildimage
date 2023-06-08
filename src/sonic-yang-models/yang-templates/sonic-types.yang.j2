@@ -334,6 +334,19 @@ module sonic-types {
         }
     }
 
+    typedef timezone-name-type {
+        type string;
+        description
+            "A time zone name as used by the Time Zone Database,
+            sometimes referred to as the 'Olson Database'.
+
+            The exact set of valid values is an implementation-specific
+            matter.  Client discovery of the exact set of time zone names
+            for a particular server is out of scope.";
+        reference
+            "BCP 175: Procedures for Maintaining the Time Zone Database";
+    }
+
     {% if yang_model_type == "cvl" %}
     /* Required for CVL */
     container operation {
