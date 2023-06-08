@@ -67,6 +67,10 @@ stages:
         variables:
           swi_image: yes
       - name: mellanox
+      - name: marvell-arm64
+        pool: sonicbld-arm64
+        variables:
+           PLATFORM_ARCH: arm64
       - name: marvell-armhf
         pool: sonicbld-armhf
         timeoutInMinutes: 1200

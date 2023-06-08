@@ -225,6 +225,15 @@ module sonic-device_metadata {
                     }
                     description "Information of rack mgmt map.";
                 }
+
+                leaf timezone {
+                    type stypes:timezone-name-type {
+                        length 1..255;
+                    }
+                    default "UTC";
+                    description "The TZ database name to use for the system, such as 'Europe/Stockholm'.";
+                    reference "IANA Time Zone Database http://www.iana.org/time-zones";
+                }
             }
             /* end of container localhost */
         }

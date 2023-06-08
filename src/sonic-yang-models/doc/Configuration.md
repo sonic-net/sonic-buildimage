@@ -927,7 +927,8 @@ instance is supported in SONiC.
         "bgp_adv_lo_prefix_as_128" : "true",
         "buffer_model": "traditional",
         "yang_config_validation": "disable",
-        "rack_mgmt_map": "dummy_value"
+        "rack_mgmt_map": "dummy_value",
+        "timezome": "Europe/Kiev"
     }
   }
 }

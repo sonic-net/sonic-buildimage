@@ -142,5 +142,12 @@
     "DEVICE_METADATA_INVALID_RACK_MGMT_MAP": {
         "desc": "Verifying invalid rack_mgmt_map configuration.",
         "eStr": "Invalid length for the rack mgmt map."
+    },
+    "DEVICE_METADATA_VALID_TIMEZONE": {
+        "desc": "Verifying valid timezone value"
+    },
+    "DEVICE_METADATA_INVALID_TIMEZONE": {
+        "desc": "Verifying invalid timezone value",
+        "eStrKey": "Range"
     }
 }

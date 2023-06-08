@@ -1,3 +1,4 @@
+import fcntl
 import os
 import struct
 import subprocess
@@ -74,9 +75,23 @@ class APIHelper():
         return True
 
     def get_cpld_reg_value(self, getreg_path, register):
-        with open(getreg_path, 'w') as file:
+        file = open(getreg_path, 'w+')
+        # Acquire an exclusive lock on the file
+        fcntl.flock(file, fcntl.LOCK_EX)
+
+        try:
             file.write(register + '\n')
-        with open(getreg_path, 'r') as file:
-            result = file.readline()
+            file.flush()
+
+            # Seek to the beginning of the file
+            file.seek(0)
+
+            # Read the content of the file
+            result = file.readline().strip()
+        finally:
+            # Release the lock and close the file
+            fcntl.flock(file, fcntl.LOCK_UN)
+            file.close()
+
         return result
 

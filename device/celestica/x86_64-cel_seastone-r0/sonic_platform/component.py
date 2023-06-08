@@ -51,21 +51,13 @@ class Component(ComponentBase):
         except Exception as e:
             return None
 
-    def get_register_value(self, register):
-        # Retrieves the cpld register value
-        with open(GETREG_PATH, 'w') as file:
-            file.write(register + '\n')
-        with open(GETREG_PATH, 'r') as file:
-            raw_data = file.readline()
-        return raw_data.strip()
-
     def __get_cpld_version(self):
         # Retrieves the CPLD firmware version
         cpld_version = dict()
         for cpld_name in CPLD_ADDR_MAPPING:
             try:
                 cpld_addr = CPLD_ADDR_MAPPING[cpld_name]
-                cpld_version_raw = self.get_register_value(cpld_addr)
+                cpld_version_raw = self._api_helper.get_cpld_reg_value(GETREG_PATH, cpld_addr)
                 cpld_version_str = "{}.{}".format(int(cpld_version_raw[2], 16), int(
                     cpld_version_raw[3], 16)) if cpld_version_raw is not None else 'None'
                 cpld_version[cpld_name] = cpld_version_str
