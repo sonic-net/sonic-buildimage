@@ -425,7 +425,9 @@ class TaskPing(TaskBase):
             None
         """
         pkt = None
-        load_seq_num = self.seq_num.to_bytes(4, 'big')
+        # The sequence number is 8 bytes in big endian.
+        # If a ping packet is sent out every 1 millisecond, it will take 584942417355 years to wrap around
+        load_seq_num = self.seq_num.to_bytes(8, 'big')
         load = b''.join([self.load_t0_loopback, load_seq_num])
         pkt = self.packet_tmpl/Raw(load)
         return pkt
@@ -651,7 +653,7 @@ def process_packet(packet):
     try:
         load = packet[Raw].load
         t0_loopback = socket.inet_ntoa(load[0:4])
-        seq_number = int.from_bytes(load[4:8], 'big')
+        seq_number = int.from_bytes(load[4:12], 'big')
         if IP in packet:
             vip = packet[IP].src
         elif IPv6 in packet:
