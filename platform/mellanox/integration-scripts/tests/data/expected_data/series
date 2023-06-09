@@ -51,6 +51,7 @@
 0105-mlxsw-reg-Extend-MTBR-register-with-new-slot-number-.patch
 0106-mlxsw-reg-Extend-MCIA-register-with-new-slot-number-.patch
 0107-mlxsw-reg-Extend-MCION-register-with-new-slot-number.patch
+0188-i2c-mux-Add-register-map-based-mux-driver.patch
 ###-> mellanox_hw_mgmt-end
 
 # Cisco patches for 5.10 kernel

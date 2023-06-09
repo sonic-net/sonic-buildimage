@@ -48,10 +48,10 @@ Kernel-5.10
 |0044-platform-mellanox-mlxreg-io-Fix-read-access-of-n-byt.patch  | 5fd56f11838d       | Bugfix upstream                          |  5.10.75   |                                                |
 |0045-i2c-mlxcpld-Fix-criteria-for-frequency-setting.patch        | 52f57396c75a       | Feature upstream                         |            |                                                |
 |0046-i2c-mlxcpld-Reduce-polling-time-for-performance-impr.patch  | 669b2e4aa1a8       | Feature upstream                         |            | (5.16)                                         |
-|0047-i2c-mlxcpld-Allow-flexible-polling-time-setting-for-.patch  | 712d6617d0a2       | Feature upstream                         |            | (5.16)                                         |
 |0048-hwmon-pmbus-mp2975-Add-missed-POUT-attribute-for-pag.patch  | 2292e2f685cd       | Bugfix upstream                          |  5.10.71   |                                                |
 |0049-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Rejected; take[ALL]                      |            |Need to check patch apply. Can break patch apply|
 |0050-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream                               |            |                                                |
 |0051-leds-mlxreg-Allow-multi-instantiation-of-same-name-L.patch  |                    | Downstream                               |            | Modular SN4800                                 |
+|0188-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Feature pending                          |            | BF3-COME                                       |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
