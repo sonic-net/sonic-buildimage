@@ -199,6 +199,7 @@ def build_commit_description(changes):
         content = content + f"* {key} : {value}\n"
     return content
 
+
 def parse_id(id_):
     if id_ and id_ != "N/A":
         id_ = "https://github.com/torvalds/linux/commit/" + id_

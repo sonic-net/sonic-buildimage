@@ -8,6 +8,7 @@
 +0169-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch
 +0172-DS-platform-mlx-platform-Add-SPI-path-for-rack-switc.patch
 +0174-DS-mlxsw-core_linecards-Skip-devlink-and-provisionin.patch
+ 0188-i2c-mux-Add-register-map-based-mux-driver.patch
  ###-> mellanox_hw_mgmt-end
  
  # Cisco patches for 5.10 kernel

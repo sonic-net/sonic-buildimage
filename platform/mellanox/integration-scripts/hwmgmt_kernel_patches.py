@@ -28,10 +28,17 @@ from helper import *
 COMMIT_TITLE = "Intgerate HW-MGMT {} Changes"
 
 PATCH_TABLE_LOC = "platform/mellanox/hw-management/hw-mgmt/recipes-kernel/linux/"
+PATCHWORK_LOC = "linux-{}/patchwork"
 PATCH_TABLE_NAME = "Patch_Status_Table.txt"
 PATCH_TABLE_DELIMITER = "----------------------"
 PATCH_NAME = "patch name"
 COMMIT_ID = "Upstream commit id"
+
+# Strips the subversion
+def get_kver(k_version):
+    major, minor, subversion = k_version.split(".")
+    k_ver = "{}.{}".format(major, minor)
+    return k_ver
 
 def trim_array_str(str_list):
     ret = [elem.strip() for elem in str_list]
@@ -46,12 +53,8 @@ def get_line_elements(line):
     columns = trim_array_str(columns_raw)
     return columns
 
-def load_patch_table(path, k_version):
+def load_patch_table(path, k_ver):
     patch_table_filename = os.path.join(path, PATCH_TABLE_NAME)
-
-    major, minor, subversion = k_version.split(".")
-    k_ver = "{}.{}".format(major, minor)
-
     print("Loading patch table {} kver:{}".format(patch_table_filename, k_ver))
 
     if not os.path.isfile(patch_table_filename):
@@ -140,6 +143,8 @@ class Data:
     current_kcfg = list(tuple())
     # current raw kconfig exclude data
     kcfg_exclude = list()
+    # kernel version
+    k_ver = ""
 
 class HwMgmtAction(Action):
 
@@ -247,6 +252,7 @@ class PostProcess(HwMgmtAction):
                 print("-> FATAL: Patch {} not found either in upstream or non-upstream list".format(patch))
                 if not self.args.is_test:
                     sys.exit(1)
+        Data.k_ver = get_kver(self.args.kernel_version)
 
     def find_mlnx_hw_mgmt_markers(self):
         """ Find the indexes where the current mlnx patches sits in SLK_SERIES file """
@@ -386,13 +392,45 @@ class PostProcess(HwMgmtAction):
         old_non_up_patches = [ptch.strip() for ptch in Data.old_non_up]
         return old_up_patches, old_non_up_patches
 
+    def _get_patchwork(self, patch_name):
+        root_p = os.path.join(self.args.build_root, PATCH_TABLE_LOC)
+        patchwork_loc =  PATCHWORK_LOC.format(Data.k_ver)
+        file_dir = os.path.join(root_p, patchwork_loc)
+        file_loc = os.path.join(file_dir, f"{patch_name}.txt")
+        if not os.path.exists(file_loc):
+            return ""
+        print(f"-> INFO: Patchwork file {file_loc} is present")
+        lines = FileHandler.read_strip(file_loc)
+        for line in lines:
+            if "patchwork_link" not in line:
+                continue
+            tokens = line.split(":")
+            if len(tokens) < 2:
+                print(f"-> WARN: Invalid entry {line}, did not follow <key>:<value>")
+                continue
+            key = tokens[0]
+            values = tokens[1:]
+            if key == "patchwork_link":
+                desc = ":".join(values)
+                desc = desc.strip()
+                print(f"-> INFO: Patch work link for patch {patch_name} : {desc}")
+                return desc
+        return ""
+
+    def _fetch_description(self, patch, id_):
+        desc = parse_id(id_)
+        if not desc:
+            # not an upstream patch, check if the patchwork link is present and fetch it
+            desc = self._get_patchwork(patch)
+        return desc
+
     def create_commit_msg(self, table):
         title = COMMIT_TITLE.format(self.args.hw_mgmt_ver) 
         changes_slk, changes_sb = {}, {}
         old_up_patches, old_non_up_patches = self.list_patches()
         for patch in table:
-            id_ = parse_id(patch.get(COMMIT_ID, ""))
             patch_ = patch.get(PATCH_NAME)
+            id_ = self._fetch_description(patch_, patch.get(COMMIT_ID, ""))
             if patch_ in Data.new_up and patch_ not in old_up_patches:
                 changes_slk[patch_] = id_
                 print(f"-> INFO: Patch: {patch_}, Commit: {id_}, added to linux-kernel description")
@@ -432,7 +470,7 @@ class PostProcess(HwMgmtAction):
         self.write_series_diff()
 
         path = os.path.join(self.args.build_root, PATCH_TABLE_LOC)
-        patch_table = load_patch_table(path, self.args.kernel_version)
+        patch_table = load_patch_table(path, Data.k_ver)
         
         sb_msg, slk_msg = self.create_commit_msg(patch_table)
 
@@ -470,4 +508,3 @@ if __name__ == '__main__':
     parser = create_parser()
     action = HwMgmtAction.get(parser.parse_args())
     action.perform()
-
