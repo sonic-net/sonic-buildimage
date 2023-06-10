@@ -356,8 +356,8 @@ libbsd-dev==0.11.3-1
 libbsd0==0.11.3-1
 libbsh-java==2.0b4-20
 libbz2-dev==1.0.8-4
-libc-ares-dev==1.17.1-1+deb11u2
-libc-ares2==1.17.1-1+deb11u2
+libc-ares-dev==1.17.1-1+deb11u3
+libc-ares2==1.17.1-1+deb11u3
 libc-dev-bin==2.31-13+deb11u6
 libc-devtools==2.31-13+deb11u6
 libc-l10n==2.31-13+deb11u6

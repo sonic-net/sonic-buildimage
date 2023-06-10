@@ -1,7 +1,7 @@
 dmidecode==3.3-2
 gdb==10.1-1.7
 gdbserver==10.1-1.7
-hsflowd==2.0.35-1
+hsflowd==2.0.45-1
 libbabeltrace1==1.5.8-1+b3
 libboost-regex1.74.0==1.74.0-9
 libcbor0==0.5.0+dfsg-2

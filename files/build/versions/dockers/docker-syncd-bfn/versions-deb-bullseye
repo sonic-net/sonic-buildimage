@@ -1,6 +1,6 @@
 bfnplatform==1.0.0
 bfnsdk==1.0.0
-libc-ares2==1.17.1-1+deb11u2
+libc-ares2==1.17.1-1+deb11u3
 libc-dev-bin==2.31-13+deb11u6
 libc6-dev==2.31-13+deb11u6
 libcrypt-dev==1:4.4.18-4

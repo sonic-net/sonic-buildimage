@@ -36,7 +36,7 @@ libapparmor1==2.13.6-10
 libassuan0==2.5.3-7.1
 libblkid-dev==2.36.1-8+deb11u1
 libbsd-dev==0.11.3-1
-libc-ares2==1.17.1-1+deb11u2
+libc-ares2==1.17.1-1+deb11u3
 libc-dev-bin==2.31-13+deb11u6
 libc6-dev==2.31-13+deb11u6
 libcbor0==0.5.0+dfsg-2
