@@ -12,3 +12,5 @@
 0012-Increase-min_ports-upper-limit-to-1024.patch
 0013-set-port-to-disabled-state-during-removal.patch
 0014-dont-move-the-port-state-from-disabled-when-admin-state-is-down.patch
+0015-add-support-for-custom-retry.patch
+0016-block-retry-count-changes.patch
