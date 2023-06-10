@@ -86,7 +86,7 @@ installer_image_path="$image_path/$installer_image"
 
 boot_config="$target_path/boot-config"
 
-cmdline_allowlist="crashkernel hwaddr_ma1 sonic_fips"
+cmdline_allowlist="crashkernel hwaddr_ma1 sonic_fips docker_inram"
 
 # for backward compatibility with the sonic_upgrade= behavior
 install="${install:-${sonic_upgrade:-}}"

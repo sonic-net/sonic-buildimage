@@ -15,5 +15,5 @@ pyrsistent==0.15.5
 python_sdk_api==4.5.5142
 requests==2.31.0
 thrift==0.13.0
-urllib3==2.0.2
+urllib3==2.0.3
 zipp==1.0.0
