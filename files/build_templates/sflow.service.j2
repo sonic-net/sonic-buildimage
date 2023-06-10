@@ -14,6 +14,3 @@ ExecStartPre=/usr/bin/{{docker_container_name}}.sh start
 ExecStart=/usr/bin/{{docker_container_name}}.sh wait
 ExecStop=/usr/bin/{{docker_container_name}}.sh stop
 RestartSec=30
-
-[Install]
-WantedBy=sonic.target
