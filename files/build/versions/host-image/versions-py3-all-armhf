@@ -1,2 +1,1 @@
 cryptography==3.3.1
-filelock==3.12.0

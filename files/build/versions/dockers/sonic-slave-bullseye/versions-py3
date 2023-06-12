@@ -6,7 +6,7 @@ automat==20.2.0
 babel==2.8.0
 bcrypt==3.1.7
 beautifulsoup4==4.9.3
-bitarray==2.7.4
+bitarray==2.7.5
 certifi==2020.6.20
 chardet==4.0.0
 click==7.1.2

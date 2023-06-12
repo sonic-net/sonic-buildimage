@@ -1,6 +1,7 @@
 azure-common==1.1.28
 azure-nspkg==3.0.2
 azure-storage==0.36.0
+bcrypt==3.2.2
 bitarray==1.5.3
 blessed==1.20.0
 certifi==2023.5.7
@@ -9,7 +10,7 @@ charset-normalizer==3.1.0
 click==7.0
 click-log==0.4.0
 colorful==0.5.5
-cryptography==41.0.1
+cryptography==3.3.2
 dbus-python==1.2.16
 docker==6.1.1
 docker-image-py==0.1.12
@@ -35,6 +36,7 @@ natsort==6.2.1
 netaddr==0.8.0
 netifaces==0.11.0
 packaging==23.1
+paramiko==2.11.0
 pathtools==0.1.2
 pddf-platform==1.0
 pexpect==4.8.0
@@ -51,6 +53,7 @@ pycparser==2.21
 pycurl==7.43.0.6
 pygments==2.15.1
 pygobject==3.44.1
+pynacl==1.5.0
 pyroute2==0.5.19
 python-apt==2.2.1
 python-dateutil==2.8.2

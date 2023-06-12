@@ -1038,7 +1038,7 @@ librsvg2-2==2.44.10-2.1+deb10u3
 librsvg2-common==2.44.10-2.1+deb10u3
 librtmp1==2.4+20151223.gitfa8646d.1-2
 librubberband2==1.8.1-7
-libruby2.5==2.5.5-3+deb10u5
+libruby2.5==2.5.5-3+deb10u6
 libsamplerate0==0.1.9-2
 libsasl2-2==2.1.27+dfsg-1+deb10u2
 libsasl2-modules==2.1.27+dfsg-1+deb10u2
@@ -1682,9 +1682,9 @@ ruby-power-assert==1.1.1-1
 ruby-setup==3.4.1-9
 ruby-test-unit==3.2.8-1
 ruby-xmlrpc==0.3.0-2
-ruby2.5==2.5.5-3+deb10u5
-ruby2.5-dev==2.5.5-3+deb10u5
-ruby2.5-doc==2.5.5-3+deb10u5
+ruby2.5==2.5.5-3+deb10u6
+ruby2.5-dev==2.5.5-3+deb10u6
+ruby2.5-doc==2.5.5-3+deb10u6
 rubygems-integration==1.11+deb10u1
 sbsigntool==0.9.2-2
 seabios==1.12.0-1
