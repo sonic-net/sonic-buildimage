@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -172,24 +172,24 @@ class TestPsu:
             psu.psu_power_max_capacity: 100000000,
             psu.AMBIENT_TEMP_CRITICAL_THRESHOLD: 65000,
             psu.AMBIENT_TEMP_WARNING_THRESHOLD: 55000,
-            psu.psu_power_slope: 2000
+            psu.psu_power_slope: 2
             }
         normal_data = {
             psu.PORT_AMBIENT_TEMP: 55000,
             psu.FAN_AMBIENT_TEMP: 50000,
-            'warning_threshold': 100.0,
+            'warning_threshold': 98.0,
             'critical_threshold': 100.0
             }
         warning_data = {
             psu.PORT_AMBIENT_TEMP: 65000,
             psu.FAN_AMBIENT_TEMP: 60000,
-            'warning_threshold': 90.0,
+            'warning_threshold': 88.0,
             'critical_threshold': 100.0
             }
         critical_data = {
             psu.PORT_AMBIENT_TEMP: 70000,
             psu.FAN_AMBIENT_TEMP: 75000,
-            'warning_threshold': 70.0,
+            'warning_threshold': 68.0,
             'critical_threshold': 90.0
             }
         test_data = {}
