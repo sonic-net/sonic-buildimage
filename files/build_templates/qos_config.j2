@@ -1,9 +1,14 @@
 {%- set PORT_ALL = [] %}
+{%- set PORT_BP = [] %}
 {%- for port in PORT %}
     {%- if not port.startswith('Ethernet-Rec') and not port.startswith('Ethernet-IB') %}
         {%- if PORT_ALL.append(port) %}{% endif %}
     {%- endif %}
 {%- endfor %}
+{%- if generate_bp_port_list is defined %}
+    {%- if generate_bp_port_list(PORT,PORT_BP) %} {% endif %}
+{%- endif %}
+
 {%- if PORT_ALL | sort_by_port_index %}{% endif %}
 
 {%- set port_names_list_all = [] %}
@@ -18,6 +23,9 @@
     {%- set PORT_ACTIVE = PORT_ALL %}
 {%- else %}
     {%- for port in DEVICE_NEIGHBOR.keys() %}
+        {%- if PORT_ACTIVE.append(port) %}{%- endif %}
+    {%- endfor %}
+    {%- for port in PORT_BP %}
         {%- if PORT_ACTIVE.append(port) %}{%- endif %}
     {%- endfor %}
 {%- endif %}

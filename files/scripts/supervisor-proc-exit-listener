@@ -14,6 +14,12 @@ from swsscommon import swsscommon
 
 from supervisor import childutils
 
+# Each line of this file should specify one process, (as defined in supervisord.conf file), in the
+# following format:
+#
+# program:<process_name>
+WATCH_PROCESSES_FILE = '/etc/supervisor/watchdog_processes'
+
 # Each line of this file should specify either one critical process or one
 # critical process group, (as defined in supervisord.conf file), in the
 # following format:
@@ -34,15 +40,15 @@ ALERTING_INTERVAL_SECS = 60
 EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
 EVENTS_PUBLISHER_TAG = "process-exited-unexpectedly"
 
-def get_critical_group_and_process_list():
+def get_group_and_process_list(process_file):
     """
-    @summary: Read the critical processes/group names from CRITICAL_PROCESSES_FILE.
+    @summary: Read the critical processes/group names.
     @return: Two lists which contain critical processes and group names respectively.
     """
-    critical_group_list = []
-    critical_process_list = []
+    group_list = []
+    process_list = []
 
-    with open(CRITICAL_PROCESSES_FILE, 'r') as file:
+    with open(process_file, 'r') as file:
         for line in file:
             # ignore blank lines
             if re.match(r"^\s*$", line):
@@ -50,24 +56,24 @@ def get_critical_group_and_process_list():
             line_info = line.strip(' \n').split(':')
             if len(line_info) != 2:
                 syslog.syslog(syslog.LOG_ERR,
-                              "Syntax of the line {} in critical_processes file is incorrect. Exiting...".format(line))
+                              "Syntax of the line {} in processes file is incorrect. Exiting...".format(line))
                 sys.exit(5)
 
             identifier_key = line_info[0].strip()
             identifier_value = line_info[1].strip()
             if identifier_key == "group" and identifier_value:
-                critical_group_list.append(identifier_value)
+                group_list.append(identifier_value)
             elif identifier_key == "program" and identifier_value:
-                critical_process_list.append(identifier_value)
+                process_list.append(identifier_value)
             else:
                 syslog.syslog(syslog.LOG_ERR,
-                              "Syntax of the line {} in critical_processes file is incorrect. Exiting...".format(line))
+                              "Syntax of the line {} in processes file is incorrect. Exiting...".format(line))
                 sys.exit(6)
 
-    return critical_group_list, critical_process_list
+    return group_list, process_list
 
 
-def generate_alerting_message(process_name, dead_minutes):
+def generate_alerting_message(process_name, status, dead_minutes):
     """
     @summary: If a critical process was not running, this function will determine it resides in host
               or in a specific namespace. Then an alerting message will be written into syslog.
@@ -80,8 +86,8 @@ def generate_alerting_message(process_name, dead_minutes):
     else:
         namespace = namespace_prefix + namespace_id
 
-    syslog.syslog(syslog.LOG_ERR, "Process '{}' is not running in namespace '{}' ({} minutes)."
-                  .format(process_name, namespace, dead_minutes))
+    syslog.syslog(syslog.LOG_ERR, "Process '{}' is {} in namespace '{}' ({} minutes)."
+                  .format(process_name, status, namespace, dead_minutes))
 
 
 def get_autorestart_state(container_name):
@@ -125,9 +131,15 @@ def main(argv):
         syslog.syslog(syslog.LOG_ERR, "Container name not specified. Exiting...")
         sys.exit(1)
 
-    critical_group_list, critical_process_list = get_critical_group_and_process_list()
+    critical_group_list, critical_process_list = get_group_and_process_list(CRITICAL_PROCESSES_FILE)
+
+    # WATCH_PROCESSES_FILE is optional
+    watch_process_list = []
+    if os.path.exists(WATCH_PROCESSES_FILE):
+        _, watch_process_list = get_group_and_process_list(WATCH_PROCESSES_FILE)
 
     process_under_alerting = defaultdict(dict)
+    process_heart_beat_info = defaultdict(dict)
     # Transition from ACKNOWLEDGED to READY
     childutils.listener.ready()
     events_handle = swsscommon.events_init_publisher(EVENTS_PUBLISHER_SOURCE)
@@ -167,6 +179,15 @@ def main(argv):
                 if process_name in process_under_alerting:
                     process_under_alerting.pop(process_name)
 
+            # Handle the PROCESS_COMMUNICATION_STDOUT event
+            elif headers['eventname'] == 'PROCESS_COMMUNICATION_STDOUT':
+                payload_headers, payload_data = childutils.eventdata(payload + '\n')
+                process_name = payload_headers['processname']
+
+                # update process heart beat time
+                if (process_name in watch_process_list):
+                    process_heart_beat_info[process_name]["last_heart_beat"] = time.time()
+            
             # Transition from BUSY to ACKNOWLEDGED
             childutils.listener.ok()
 
@@ -181,7 +202,15 @@ def main(argv):
                 elapsed_mins = elapsed_secs // 60
                 process_under_alerting[process_name]["last_alerted"] = epoch_time
                 process_under_alerting[process_name]["dead_minutes"] += elapsed_mins
-                generate_alerting_message(process_name, process_under_alerting[process_name]["dead_minutes"])
+                generate_alerting_message(process_name, "not running", process_under_alerting[process_name]["dead_minutes"])
+
+        # Check whether we need write alerting messages into syslog
+        for process in process_heart_beat_info.keys():
+            epoch_time = time.time()
+            elapsed_secs = epoch_time - process_heart_beat_info[process]["last_heart_beat"]
+            if elapsed_secs >= ALERTING_INTERVAL_SECS:
+                elapsed_mins = elapsed_secs // 60
+                generate_alerting_message(process, "stuck", elapsed_mins)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

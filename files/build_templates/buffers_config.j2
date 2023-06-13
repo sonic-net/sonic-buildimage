@@ -112,6 +112,7 @@ def
 {%- endmacro %}
 
 {%- set PORT_ALL  = [] %}
+{%- set PORT_BP  = [] %}
 {%- set SYSTEM_PORT_ALL = [] %}
 
 {%- if voq_chassis %}
@@ -136,6 +137,9 @@ def
             {%- if PORT_ALL.append(port) %}{%- endif %}
         {%- endif %}
     {%- endfor %}
+    {%- if defs.generate_bp_port_list is defined %}
+        {%- if defs.generate_bp_port_list(PORT,PORT_BP) %} {% endif %}
+    {%- endif %}
 {%- endif %}
 
 {%- set PORT_ACTIVE  = [] %}
@@ -144,6 +148,9 @@ def
     {%- set PORT_ACTIVE = PORT_ALL %}
 {%- else %}
     {%- for port in DEVICE_NEIGHBOR.keys() %}
+        {%- if PORT_ACTIVE.append(port) %}{%- endif %}
+    {%- endfor %}
+    {%- for port in PORT_BP %}
         {%- if PORT_ACTIVE.append(port) %}{%- endif %}
     {%- endfor %}
     {%- for port in PORT_ALL %}
