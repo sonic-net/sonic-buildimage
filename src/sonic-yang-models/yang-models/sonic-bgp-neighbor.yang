@@ -61,7 +61,13 @@ module sonic-bgp-neighbor {
                     description "BGP Neighbor address";
                 }
 
-                uses bgpcmn:sonic-bgp-cmn-neigh;
+                uses bgpcmn:sonic-bgp-cmn-neigh {
+                    refine asn {
+                        must ". >= 1" {
+                            error-message "ASN must be greater than 0";
+                        }
+                    }
+                }
             }
 
             list BGP_NEIGHBOR_LIST {

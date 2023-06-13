@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2022 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -512,54 +512,74 @@ class Psu(FixedPsu):
             return float(amperes) / 1000
         return None
 
-    def _get_psu_power_threshold(self, temp_threshold_path):
-        """
-        Calculate power threshold for a PSU according to the maximum power capacity and ambient temperature
-            amb_temp = min(port_amb, fan_amb)
-            If amb_temp < ambient_temp_threshold
-                threshold = max capacity
-            else
-                threshold = max capacity - slope*(amb_temp - ambient_temp_threshold)
-        """
-        if self.get_powergood_status():
-            if os.path.exists(self.psu_power_max_capacity):
-                power_max_capacity = utils.read_int_from_file(self.psu_power_max_capacity)
-                temp_threshold = utils.read_int_from_file(temp_threshold_path)
-                fan_ambient_temp = utils.read_int_from_file(Psu.FAN_AMBIENT_TEMP)
-                port_ambient_temp = utils.read_int_from_file(Psu.PORT_AMBIENT_TEMP)
-                ambient_temp = min(fan_ambient_temp, port_ambient_temp)
-                if ambient_temp < temp_threshold:
-                    power_threshold = power_max_capacity
-                else:
-                    slope = utils.read_int_from_file(self.psu_power_slope)
-                    power_threshold = power_max_capacity - (ambient_temp - temp_threshold) * slope
-                if power_threshold <= 0:
-                    logger.log_warning('Got negative PSU power threshold {} for {}'.format(power_threshold, self.get_name()))
-                    power_threshold = 0
-                return float(power_threshold) / 1000000
-
-        return None
-
     def get_psu_power_warning_suppress_threshold(self):
         """
         Retrieve the warning suppress threshold of the power on this PSU
         The value can be volatile, so the caller should call the API each time it is used.
         On Mellanox platform, it is translated from the `warning threshold`
 
+        The formula to calculate power warning threshold for a PSU
+            amb_temp = min(port_amb, fan_amb)
+            If amb_temp < ambient_temp_warning_threshold
+                threshold = max capacity - slope
+            else
+                threshold = max capacity - slope * (1 + amb_temp - ambient_temp_threshold)
+
         Returns:
             A float number, the warning suppress threshold of the PSU in watts.
         """
-        return self._get_psu_power_threshold(Psu.AMBIENT_TEMP_WARNING_THRESHOLD)
+        if self.get_powergood_status():
+            if os.path.exists(self.psu_power_max_capacity):
+                power_max_capacity = utils.read_int_from_file(self.psu_power_max_capacity)
+                temp_warning_threshold = utils.read_int_from_file(Psu.AMBIENT_TEMP_WARNING_THRESHOLD)
+                fan_ambient_temp = utils.read_int_from_file(Psu.FAN_AMBIENT_TEMP)
+                port_ambient_temp = utils.read_int_from_file(Psu.PORT_AMBIENT_TEMP)
+                ambient_temp = min(fan_ambient_temp, port_ambient_temp)
+                slope = utils.read_int_from_file(self.psu_power_slope) * 1000
+                if ambient_temp < temp_warning_threshold:
+                    power_warning_threshold = power_max_capacity - slope * 1000
+                else:
+                    power_warning_threshold = power_max_capacity - (1000 + ambient_temp - temp_warning_threshold) * slope
+                if power_warning_threshold <= 0:
+                    logger.log_warning('Got negative PSU power threshold {} for {}'.format(power_warning_threshold, self.get_name()))
+                    power_warning_threshold = 0
+                return float(power_warning_threshold) / 1000000
+
+        return None
 
     def get_psu_power_critical_threshold(self):
         """
         Retrieve the critical threshold of the power on this PSU
         The value can be volatile, so the caller should call the API each time it is used.
 
+        The formula to calculate power critical threshold for a PSU
+            amb_temp = min(port_amb, fan_amb)
+            If amb_temp < ambient_temp_critical_threshold
+                threshold = max capacity
+            else
+                threshold = max capacity - slope*(amb_temp - ambient_temp_critical_threshold)
+
         Returns:
             A float number, the critical threshold of the PSU in watts.
         """
-        return self._get_psu_power_threshold(Psu.AMBIENT_TEMP_CRITICAL_THRESHOLD)
+        if self.get_powergood_status():
+            if os.path.exists(self.psu_power_max_capacity):
+                power_max_capacity = utils.read_int_from_file(self.psu_power_max_capacity)
+                temp_critical_threshold = utils.read_int_from_file(Psu.AMBIENT_TEMP_CRITICAL_THRESHOLD)
+                fan_ambient_temp = utils.read_int_from_file(Psu.FAN_AMBIENT_TEMP)
+                port_ambient_temp = utils.read_int_from_file(Psu.PORT_AMBIENT_TEMP)
+                ambient_temp = min(fan_ambient_temp, port_ambient_temp)
+                if ambient_temp < temp_critical_threshold:
+                    power_critical_threshold = power_max_capacity
+                else:
+                    slope = utils.read_int_from_file(self.psu_power_slope) * 1000
+                    power_critical_threshold = power_max_capacity - (ambient_temp - temp_critical_threshold) * slope
+                if power_critical_threshold <= 0:
+                    logger.log_warning('Got negative PSU power threshold {} for {}'.format(power_critical_threshold, self.get_name()))
+                    power_critical_threshold = 0
+                return float(power_critical_threshold) / 1000000
+
+        return None
 
 
 class InvalidPsuVolWA:

@@ -43,6 +43,9 @@ module sonic-bgp-internal-neighbor {
                         must "(current() = /dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:bgp_asn)" {
                             error-message "Internal iBGP neighbors should have same ASN as defined in device metadata";
                         }
+                        must ". >= 1" {
+                            error-message "ASN must be greater than 0";
+                        }
                     }
                     refine local_addr {
                         mandatory true;
