@@ -10,6 +10,7 @@ iface lo inet loopback
    netmask 255.255.0.0
    scope host
    post-up ip addr del 127.0.0.1/8 dev lo
+   down ip addr add 127.0.0.1/8 dev lo
 
 # The management network interface
 auto eth0
