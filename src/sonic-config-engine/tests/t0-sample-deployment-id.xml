@@ -731,6 +731,11 @@
             <a:Reference i:nil="true"/>
             <a:Value>2.2.2.2</a:Value>
           </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>ResourceType</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>HaAppliance</a:Value>
+          </a:DeviceProperty>
         </a:Properties>
       </a:DeviceMetadata>
     </Devices>

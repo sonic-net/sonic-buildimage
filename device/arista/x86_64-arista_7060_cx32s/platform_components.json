@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "DCS-7050CX3-32S": {
+        "DCS-7060CX-32S": {
             "component": {
                 "Aboot()": {},
                 "Scd(addr=0000:02:00.0)": {},
