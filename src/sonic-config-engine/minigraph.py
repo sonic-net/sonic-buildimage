@@ -1281,6 +1281,28 @@ def parse_spine_chassis_fe(results, vni, lo_intfs, phyport_intfs, pc_intfs, pc_m
             # Enslave the port channel interface to a Vnet
             pc_intfs[pc_intf] = {'vnet_name': chassis_vnet}
 
+def parse_default_vxlan_decap(results, vni, lo_intfs):
+    vnet ='Vnet-default'
+    vxlan_tunnel = 'tunnel_v4'
+
+    # Vxlan tunnel information
+    lo_addr = '0.0.0.0'
+    for lo in lo_intfs:
+        lo_network = ipaddress.ip_network(UNICODE_TYPE(lo[1]), False)
+        if lo_network.version == 4:
+            lo_addr = str(lo_network.network_address)
+            break
+    results['VXLAN_TUNNEL'] = {vxlan_tunnel: {
+        'src_ip': lo_addr
+    }}
+
+    # Vnet information
+    results['VNET'] = {vnet: {
+        'vxlan_tunnel': vxlan_tunnel,
+        'scope': "default",
+        'vni': vni
+    }}
+
 ###############################################################################
 #
 # Post-processing functions
@@ -1636,9 +1658,10 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         for key in voq_inband_intfs:
            results['VOQ_INBAND_INTERFACE'][key] = voq_inband_intfs[key]
 
-
     if resource_type is not None:
         results['DEVICE_METADATA']['localhost']['resource_type'] = resource_type
+        if 'Appliance' in resource_type:
+            parse_default_vxlan_decap(results, vni_default, lo_intfs)
 
     if downstream_subrole is not None:
         results['DEVICE_METADATA']['localhost']['downstream_subrole'] = downstream_subrole

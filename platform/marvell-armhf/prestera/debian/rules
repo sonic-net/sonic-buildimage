@@ -8,7 +8,7 @@ KVERSION   ?= $(shell uname -r)
 endif
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIR := mrvl-prestera/cpssEnabler/linuxNoKernelModule/drivers
+MODULE_DIR := mrvl-prestera/drivers/armhf/cpssEnabler/linuxNoKernelModule/drivers
 
 %:
 	dh $@ --with systemd,python2,python3 --buildsystem=pybuild
@@ -21,9 +21,9 @@ clean:
 build:
 	# get sources
 	rm -rf mrvl-prestera || true
-	git clone -b ${MRVL_PRESTERA_SRC_TAG} ${MRVL_PRESTERA_SRC_URL}
+	git clone ${MRVL_PRESTERA_SRC_URL}
+	cd mrvl-prestera && git checkout ${MRVL_PRESTERA_SRC_TAG} && cd ..
 	sed "s/KVERSION/${KVERSION}/g" /sonic/platform/marvell-armhf/prestera/debian/mrvlprestera.install.template > /sonic/platform/marvell-armhf/prestera/debian/mrvlprestera.install
-	sed -i "s/4,11,0)/4,11,0) \&\& LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0)/g" /sonic/platform/marvell-armhf/prestera/mrvl-prestera/cpssEnabler/linuxNoKernelModule/drivers/dmaDriver.c
 
 	make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$(MODULE_DIR)/
 

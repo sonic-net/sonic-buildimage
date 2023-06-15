@@ -53,37 +53,43 @@
         "psus": [
             {
                 "name": "psu1",
-                "fans": []
+                "fans": [
+                    {
+                        "name": "psu1/1",
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
             },
             {
                 "name": "psu2",
-                "fans": []
+                "fans": [
+                    {
+                        "name": "psu2/1",
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
             }
         ],
         "thermals": [
             {
-                "name": "Cpu temp sensor"
+                "name": "Cpu temp sensor",
+                "controllable": false
             },
             {
-                "name": "Board sensor"
+                "name": "Board sensor",
+                "controllable": false
             },
             {
-                "name": "Front-panel temp sensor"
+                "name": "Front-panel temp sensor",
+                "controllable": false
             },
             {
-                "name": "Rear temp sensor"
-            },
-            {
-                "name": "Power supply 1 inlet temp sensor"
-            },
-            {
-                "name": "Power supply 1 internal sensor"
-            },
-            {
-                "name": "Power supply 2 inlet temp sensor"
-            },
-            {
-                "name": "Power supply 2 internal sensor"
+                "name": "Rear temp sensor",
+                "controllable": false
             }
         ],
         "sfps": [

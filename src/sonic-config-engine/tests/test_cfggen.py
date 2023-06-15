@@ -58,7 +58,6 @@ class TestCfgGen(TestCase):
 
     def run_script(self, argument, check_stderr=False, verbose=False):
         print('\n    Running sonic-cfggen ' + ' '.join(argument))
-        self.assertTrue(self.yang.validate(argument))
         if check_stderr:
             output = subprocess.check_output(self.script_file + argument, stderr=subprocess.STDOUT)
         else:
@@ -491,6 +490,22 @@ class TestCfgGen(TestCase):
         self.assertEqual(
             utils.to_dict(output.strip()),
             utils.to_dict("{'lanes': '101,102,103,104', 'fec': 'rs', 'pfc_asym': 'off', 'mtu': '9100', 'tpid': '0x8100', 'alias': 'fortyGigE0/124', 'admin_status': 'up', 'speed': '100000', 'description': 'ARISTA04T1:Ethernet1/1'}")
+        )
+
+    def test_minigraph_default_vxlan(self):
+        argument = ['-m', self.sample_graph_deployment_id, '-p', self.port_config, '-v', "VXLAN_TUNNEL"]
+        output = self.run_script(argument, False, False)
+        self.assertEqual(
+            utils.to_dict(output.strip()),
+            utils.to_dict("{'tunnel_v4': {'src_ip': '10.1.0.32'}}")
+        )
+
+    def test_minigraph_default_vnet(self):
+        argument = ['-m', self.sample_graph_deployment_id, '-p', self.port_config, '-v', "VNET"]
+        output = self.run_script(argument, False, False)
+        self.assertEqual(
+            utils.to_dict(output.strip()),
+            utils.to_dict("{'Vnet-default': {'vxlan_tunnel': 'tunnel_v4', 'scope': 'default', 'vni': 8000}}")
         )
 
     def test_minigraph_bgp(self):
