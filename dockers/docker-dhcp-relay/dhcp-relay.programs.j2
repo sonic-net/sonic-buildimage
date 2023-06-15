@@ -10,9 +10,9 @@ programs=
 {% set _dummy = add_preceding_comma.update({'flag': True}) %}
 isc-dhcpv4-relay-{{ vlan_name }}
 {%- endif %}
+{%- endif %}
 {% if DHCP_RELAY and vlan_name in DHCP_RELAY and DHCP_RELAY[vlan_name]['dhcpv6_servers']|length > 0 %}
 {% set _dummy = relay_for_ipv6.update({'flag': True})  %}
-{%- endif %}
 {%- endif %}
 {% endfor %}
 {# Append DHCPv6 agents #}
