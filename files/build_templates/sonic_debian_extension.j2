@@ -924,7 +924,8 @@ for fw_file_name in ${!FW_FILE_MAP[@]}; do
     # Link old FW location to not break existing automation/scripts
     sudo ln -s /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/asic/${FW_FILE_MAP[$fw_file_name]} $FILESYSTEM_ROOT/etc/mlnx/${FW_FILE_MAP[$fw_file_name]}
 done
-sudo cp $files_path/$ISSU_VERSION_FILE $FILESYSTEM_ROOT/etc/mlnx/issu-version
+sudo cp $files_path/$ISSU_VERSION_FILE $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/issu-version
+sudo ln -s /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/asic/issu-version $FILESYSTEM_ROOT/etc/mlnx/issu-version
 sudo cp $files_path/$MLNX_FFB_SCRIPT $FILESYSTEM_ROOT/usr/bin/mlnx-ffb.sh
 sudo cp $files_path/$MLNX_ONIE_FW_UPDATE $FILESYSTEM_ROOT/usr/bin/$MLNX_ONIE_FW_UPDATE
 sudo cp $files_path/$MLNX_SSD_FW_UPDATE $FILESYSTEM_ROOT/usr/bin/$MLNX_SSD_FW_UPDATE
