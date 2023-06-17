@@ -20,6 +20,12 @@ SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
 
+# Fabric port configuration file names
+FABRIC_MONITOR_CONFIG_FILE = "fabric_monitor_config.json"
+
+# Fabric port configuration file names
+FABRIC_PORT_CONFIG_FILE = "fabric_port_config.ini"
+
 # HwSKU configuration file name
 HWSKU_JSON_FILE = 'hwsku.json'
 
@@ -243,6 +249,113 @@ def get_path_to_hwsku_dir():
     hwsku_path = os.path.join(platform_path, hwsku)
 
     return hwsku_path
+
+
+def get_path_to_fabric_monitor_config_file(hwsku=None, asic=None):
+    """
+    Retrieves the path to the device's fabric monitor configuration file
+
+    Args:
+        hwsku: a string, it is allowed to be passed in args because when loading the
+              initial configuration on the device, the HwSKU is not yet present in ConfigDB.
+        asic: a string , asic argument should be passed on multi-ASIC devices only,
+              it should be omitted on single-ASIC platforms.
+
+    Returns:
+        A string containing the path the the device's fabric monitor configuration file
+    """
+
+    """
+    This platform check is performed to make sure we return a None
+    in case of unit-tests within sonic-cfggen where platform is not expected to be
+    present because tests are not run on actual Hardware/Container.
+    TODO: refactor sonic-cfggen such that we can remove this check
+    """
+
+    platform = get_platform()
+    if not platform:
+        return None
+
+    if hwsku:
+        try:
+           platform_path = get_path_to_platform_dir()
+        except OSError:
+           return None
+        hwsku_path = os.path.join(platform_path, hwsku)
+    else:
+        (platform_path, hwsku_path) = get_paths_to_platform_and_hwsku_dirs()
+
+    fabric_monitor_config_candidates = []
+
+    # Check for 'hwsku.json' file presence first
+    hwsku_json_file = os.path.join(hwsku_path, HWSKU_JSON_FILE)
+
+    # Check for 'fabric_monitor_config.json' file presence
+    fabric_monitor_config_candidates.append(os.path.join(hwsku_path, FABRIC_MONITOR_CONFIG_FILE))
+
+    for candidate in fabric_monitor_config_candidates:
+        if os.path.isfile(candidate):
+            return candidate
+
+    return None
+
+
+def get_path_to_fabric_port_config_file(hwsku=None, asic=None):
+    """
+    Retrieves the path to the device's fabric port configuration file
+
+    Args:
+        hwsku: a string, it is allowed to be passed in args because when loading the
+              initial configuration on the device, the HwSKU is not yet present in ConfigDB.
+        asic: a string , asic argument should be passed on multi-ASIC devices only,
+              it should be omitted on single-ASIC platforms.
+
+    Returns:
+        A string containing the path the the device's fabric port configuration file
+    """
+
+    """
+    This platform check is performed to make sure we return a None
+    in case of unit-tests within sonic-cfggen where platform is not expected to be
+    present because tests are not run on actual Hardware/Container.
+    TODO: refactor sonic-cfggen such that we can remove this check
+    """
+
+    platform = get_platform()
+    if not platform:
+        return None
+
+    if hwsku:
+        try:
+           platform_path = get_path_to_platform_dir()
+        except OSError:
+           return None
+        hwsku_path = os.path.join(platform_path, hwsku)
+    else:
+        (platform_path, hwsku_path) = get_paths_to_platform_and_hwsku_dirs()
+
+    fabric_port_config_candidates = []
+
+    # Check for 'hwsku.json' file presence first
+    hwsku_json_file = os.path.join(hwsku_path, HWSKU_JSON_FILE)
+
+    # if 'hwsku.json' file is available, Check for 'platform.json' file presence,
+    # if 'platform.json' is available, APPEND it. Otherwise, SKIP it.
+
+    # Check for 'fabric_port_config.ini' file presence in a few locations
+    if asic:
+        # Check if there is a file that is specific for the asic.
+        fabric_port_config_candidates.append(os.path.join(hwsku_path, asic, FABRIC_PORT_CONFIG_FILE))
+        # Check if there is a file for the hardware type.
+        fabric_port_config_candidates.append(os.path.join(hwsku_path, FABRIC_PORT_CONFIG_FILE))
+    else:
+        fabric_port_config_candidates.append(os.path.join(hwsku_path, FABRIC_PORT_CONFIG_FILE))
+
+    for candidate in fabric_port_config_candidates:
+        if os.path.isfile(candidate):
+            return candidate
+
+    return None
 
 
 def get_paths_to_platform_and_hwsku_dirs():
