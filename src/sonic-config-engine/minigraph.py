@@ -13,7 +13,7 @@ from lxml.etree import QName
 
 from natsort import natsorted, ns as natsortns
 
-from portconfig import get_port_config
+from portconfig import get_port_config, get_fabric_port_config, get_fabric_monitor_config
 from sonic_py_common.interface import backplane_prefix
 
 # TODO: Remove this once we no longer support Python 2
@@ -1438,7 +1438,7 @@ def select_mmu_profiles(profile, platform, hwsku):
 # Main functions
 #
 ###############################################################################
-def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hwsku_config_file=None):
+def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hwsku_config_file=None, fabric_port_config_file=None ):
     """ Parse minigraph xml file.
 
     Keyword arguments:
@@ -1447,6 +1447,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     port_config_file -- port config file name
     asic_name -- asic name; to parse multi-asic device minigraph to
     generate asic specific configuration.
+    fabric_port_config_file -- fabric port config file name
      """
 
     root = ET.parse(filename).getroot()
@@ -1872,6 +1873,16 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
     results['PORT'] = ports
     results['CONSOLE_PORT'] = console_ports
+
+    # Get the global fabric monitoring data
+    fabric_monitor = get_fabric_monitor_config(hwsku=hwsku, asic_name=asic_name)
+    if bool( fabric_monitor ):
+        results[ 'FABRIC_MONITOR' ] = fabric_monitor
+
+    # parse fabric
+    fabric_ports = get_fabric_port_config(hwsku=hwsku, platform=platform, fabric_port_config_file=fabric_port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
+    if bool( fabric_ports ):
+        results['FABRIC_PORT'] = fabric_ports
 
     if port_config_file:
         port_set = set(ports.keys())

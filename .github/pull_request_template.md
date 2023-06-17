@@ -40,6 +40,7 @@ If PR needs to be backported, then the PR must be tested against the base branch
 - [ ] 202111
 - [ ] 202205
 - [ ] 202211
+- [ ] 202305
 
 #### Tested branch (Please provide the tested image version)
 

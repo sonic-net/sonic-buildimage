@@ -304,16 +304,6 @@ check_all_config_db_present()
     return 0   
 }
 
-# DB schema is subject to change between two images
-# Perform DB schema migration after loading backup config from previous image
-do_db_migration()
-{
-    if [[ -x /usr/local/bin/db_migrator.py ]]; then
-        # Migrate the DB to the latest schema version if needed
-        /usr/local/bin/db_migrator.py -o migrate
-    fi
-}
-
 # Perform configuration migration from backup copy.
 #  - This step is performed when a new image is installed and SONiC switch boots into it
 do_config_migration()
@@ -336,19 +326,16 @@ do_config_migration()
     if [ x"${WARM_BOOT}" == x"true" ]; then
         echo "Warm reboot detected..."
         disable_updategraph
-        do_db_migration
         rm -f /tmp/pending_config_migration
         exit 0
     elif check_all_config_db_present; then
         echo "Use config_db.json from old system..."
         reload_configdb
-        do_db_migration
         # Disable updategraph
         disable_updategraph
     elif [ -r ${MINGRAPH_FILE} ]; then
         echo "Use minigraph.xml from old system..."
         reload_minigraph
-        do_db_migration
         # Disable updategraph
         disable_updategraph
     else

@@ -100,6 +100,74 @@ def get_hwsku_file_name(hwsku=None, platform=None):
             return candidate
     return None
 
+def get_fabric_monitor_config(hwsku=None, asic_name=None):
+    config_db = db_connect_configdb(asic_name)
+    if config_db is not None:
+       fabric_monitor_global = config_db.get_table("FABRIC_MONITOR")
+       if bool( fabric_monitor_global ):
+          return fabric_monitor_global
+
+    fabric_monitor_global = {}
+    if asic_name is not None:
+        asic_id = str(get_asic_id_from_name(asic_name))
+    else:
+        asic_id = None
+    fabric_monitor_config_file = device_info.get_path_to_fabric_monitor_config_file(hwsku, asic_id)
+    if not fabric_monitor_config_file:
+       return fabric_monitor_global
+    with open( fabric_monitor_config_file, "r" ) as openfile:
+       fabric_monitor_global = json.load( openfile )
+       openfile.close()
+
+    return fabric_monitor_global
+
+
+def get_fabric_port_config(hwsku=None, platform=None, fabric_port_config_file=None, hwsku_config_file=None, asic_name=None):
+    config_db = db_connect_configdb(asic_name)
+    if config_db is not None and fabric_port_config_file is None:
+       port_data = config_db.get_table("FABRIC_PORT")
+       if bool(port_data):
+          ports = ast.literal_eval(json.dumps(port_data))
+          return ports
+
+    if asic_name is not None:
+        asic_id = str(get_asic_id_from_name(asic_name))
+    else:
+        asic_id = None
+
+    if not fabric_port_config_file:
+        fabric_port_config_file = device_info.get_path_to_fabric_port_config_file(hwsku, asic_id)
+        if not fabric_port_config_file:
+            return {}
+    # else  parse fabric_port_config.ini
+    ports = {}
+
+    # Default column definition
+    # ../../device/arista/x86_64-arista_7800r3_48cq2_lc/Arista-7800R3-48CQ2-C48/fabric_port_config.ini
+    # # name              lanes     isolateStatus
+    # Fabric0             0         False
+
+    titles = ['name', 'lanes', 'isolateStatus']
+    with open(fabric_port_config_file) as data:
+        for line in data:
+            if line.startswith('#'):
+                if "name" in line:
+                    titles = line.strip('#').split()
+                continue;
+            tokens = line.split()
+            if len(tokens) < 2:
+                continue
+            name_index = titles.index('name')
+            name = tokens[name_index]
+            data = {}
+            for i, item in enumerate(tokens):
+                if i == name_index:
+                    continue
+                data[titles[i]] = item
+            data.setdefault('alias', name)
+            ports[name] = data
+    return ports
+
 def get_port_config(hwsku=None, platform=None, port_config_file=None, hwsku_config_file=None, asic_name=None):
     config_db = db_connect_configdb(asic_name)
     # If available, Read from CONFIG DB first
