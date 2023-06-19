@@ -1,0 +1,69 @@
+diff --git a/Makefile b/Makefile
+index ab9578b..5064f07 100644
+--- a/Makefile
++++ b/Makefile
+@@ -30,6 +30,9 @@ ifneq ($(BLD_TAGS),)
+ BLD_FLAGS := -tags "$(strip $(BLD_TAGS))"
+ endif
+ 
++# Define a variable that holds the value of the `--with-dialout` option (if present)
++WITH_DIALOUT := $(findstring --with-dialout,$(MAKEFLAGS))
++
+ GO_DEPS := vendor/.done
+ PATCHES := $(wildcard patches/*.patch)
+ PATCHES += $(shell find $(MGMT_COMMON_DIR)/patches -type f)
+@@ -63,7 +66,9 @@ go-deps-clean:
+ sonic-gnmi: $(GO_DEPS)
+ ifeq ($(CROSS_BUILD_ENVIRON),y)
+ 	$(GO) build -o ${GOBIN}/telemetry -mod=vendor $(BLD_FLAGS) github.com/sonic-net/sonic-gnmi/telemetry
+-	$(GO) build -o ${GOBIN}/dialout_client_cli -mod=vendor $(BLD_FLAGS) github.com/sonic-net/sonic-gnmi/dialout/dialout_client_cli
++	ifneq ($(WITH_DIALOUT),)
++		$(GO) build -o ${GOBIN}/dialout_client_cli -mod=vendor $(BLD_FLAGS) github.com/sonic-net/sonic-gnmi/dialout/dialout_client_cli
++	endif
+ 	$(GO) build -o ${GOBIN}/gnmi_get -mod=vendor github.com/jipanyang/gnxi/gnmi_get
+ 	$(GO) build -o ${GOBIN}/gnmi_set -mod=vendor github.com/jipanyang/gnxi/gnmi_set
+ 	$(GO) build -o ${GOBIN}/gnmi_cli -mod=vendor github.com/openconfig/gnmi/cmd/gnmi_cli
+@@ -71,7 +76,9 @@ ifeq ($(CROSS_BUILD_ENVIRON),y)
+ 	$(GO) build -o ${GOBIN}/gnmi_dump -mod=vendor github.com/sonic-net/sonic-gnmi/gnmi_dump
+ else
+ 	$(GO) install -mod=vendor $(BLD_FLAGS) github.com/sonic-net/sonic-gnmi/telemetry
+-	$(GO) install -mod=vendor $(BLD_FLAGS) github.com/sonic-net/sonic-gnmi/dialout/dialout_client_cli
++	ifneq ($(WITH_DIALOUT),)
++		$(GO) install -mod=vendor $(BLD_FLAGS) github.com/sonic-net/sonic-gnmi/dialout/dialout_client_cli
++    endif
+ 	$(GO) install -mod=vendor github.com/jipanyang/gnxi/gnmi_get
+ 	$(GO) install -mod=vendor github.com/jipanyang/gnxi/gnmi_set
+ 	$(GO) install -mod=vendor github.com/openconfig/gnmi/cmd/gnmi_cli
+@@ -97,7 +104,9 @@ $(ENVFILE):
+ check_gotest: $(DBCONFG) $(ENVFILE)
+ 	sudo CGO_LDFLAGS="$(CGO_LDFLAGS)" CGO_CXXFLAGS="$(CGO_CXXFLAGS)" $(GO) test -race -coverprofile=coverage-config.txt -covermode=atomic -v github.com/sonic-net/sonic-gnmi/sonic_db_config
+ 	sudo CGO_LDFLAGS="$(CGO_LDFLAGS)" CGO_CXXFLAGS="$(CGO_CXXFLAGS)" $(TESTENV) $(GO) test -race -timeout 20m -coverprofile=coverage-gnmi.txt -covermode=atomic -mod=vendor $(BLD_FLAGS) -v github.com/sonic-net/sonic-gnmi/gnmi_server -coverpkg ../...
+-	sudo CGO_LDFLAGS="$(CGO_LDFLAGS)" CGO_CXXFLAGS="$(CGO_CXXFLAGS)" $(TESTENV) $(GO) test -coverprofile=coverage-dialcout.txt -covermode=atomic -mod=vendor $(BLD_FLAGS) -v github.com/sonic-net/sonic-gnmi/dialout/dialout_client
++	ifneq ($(WITH_DIALOUT),)
++		sudo CGO_LDFLAGS="$(CGO_LDFLAGS)" CGO_CXXFLAGS="$(CGO_CXXFLAGS)" $(TESTENV) $(GO) test -coverprofile=coverage-dialcout.txt -covermode=atomic -mod=vendor $(BLD_FLAGS) -v github.com/sonic-net/sonic-gnmi/dialout/dialout_client
++	endif
+ 	sudo CGO_LDFLAGS="$(CGO_LDFLAGS)" CGO_CXXFLAGS="$(CGO_CXXFLAGS)" $(GO) test -race -coverprofile=coverage-data.txt -covermode=atomic -mod=vendor -v github.com/sonic-net/sonic-gnmi/sonic_data_client
+ 	sudo CGO_LDFLAGS="$(CGO_LDFLAGS)" CGO_CXXFLAGS="$(CGO_CXXFLAGS)" $(GO) test -race -coverprofile=coverage-dbus.txt -covermode=atomic -mod=vendor -v github.com/sonic-net/sonic-gnmi/sonic_service_client
+ 	sudo CGO_LDFLAGS="$(CGO_LDFLAGS)" CGO_CXXFLAGS="$(CGO_CXXFLAGS)" $(TESTENV) $(GO) test -race -coverprofile=coverage-translutils.txt -covermode=atomic -mod=vendor -v github.com/sonic-net/sonic-gnmi/transl_utils
+@@ -122,7 +131,9 @@ endif
+ 
+ install:
+ 	$(INSTALL) -D $(BUILD_DIR)/telemetry $(DESTDIR)/usr/sbin/telemetry
+-	$(INSTALL) -D $(BUILD_DIR)/dialout_client_cli $(DESTDIR)/usr/sbin/dialout_client_cli
++	ifneq ($(WITH_DIALOUT),)
++		$(INSTALL) -D $(BUILD_DIR)/dialout_client_cli $(DESTDIR)/usr/sbin/dialout_client_cli
++	endif
+ 	$(INSTALL) -D $(BUILD_DIR)/gnmi_get $(DESTDIR)/usr/sbin/gnmi_get
+ 	$(INSTALL) -D $(BUILD_DIR)/gnmi_set $(DESTDIR)/usr/sbin/gnmi_set
+ 	$(INSTALL) -D $(BUILD_DIR)/gnmi_cli $(DESTDIR)/usr/sbin/gnmi_cli
+@@ -132,7 +143,9 @@ install:
+ 
+ deinstall:
+ 	rm $(DESTDIR)/usr/sbin/telemetry
+-	rm $(DESTDIR)/usr/sbin/dialout_client_cli
++	ifneq ($(WITH_DIALOUT),)
++		rm $(DESTDIR)/usr/sbin/dialout_client_cli
++	endif
+ 	rm $(DESTDIR)/usr/sbin/gnmi_get
+ 	rm $(DESTDIR)/usr/sbin/gnmi_set
+ 	rm $(DESTDIR)/usr/sbin/gnoi_client
