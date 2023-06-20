@@ -11,6 +11,7 @@ from sonic_py_common.logger import Logger
 from . import utils
 from sonic_py_common.task_base import ProcessTaskBase
 from .config import Config
+import signal
 
 SYSLOG_IDENTIFIER = "system#monitor"
 REDIS_TIMEOUT_MS = 0
@@ -117,6 +118,8 @@ class Sysmonitor(ProcessTaskBase):
         self.state_db = None
         self.config_db = None
         self.config = Config()
+        self.mpmgr = multiprocessing.Manager()
+        self.myQ = self.mpmgr.Queue()
 
     #Sets system ready status to state db
     def post_system_status(self, state):
@@ -428,13 +431,11 @@ class Sysmonitor(ProcessTaskBase):
             self.state_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
             self.state_db.connect(self.state_db.STATE_DB)
 
-        mpmgr = multiprocessing.Manager()
-        myQ = mpmgr.Queue()
         try:
-            monitor_system_bus = MonitorSystemBusTask(myQ)
+            monitor_system_bus = MonitorSystemBusTask(self.myQ)
             monitor_system_bus.task_run()
 
-            monitor_statedb_table = MonitorStateDbTask(myQ)
+            monitor_statedb_table = MonitorStateDbTask(self.myQ)
             monitor_statedb_table.task_run()
 
         except Exception as e:
@@ -448,7 +449,7 @@ class Sysmonitor(ProcessTaskBase):
         # Queue to receive the STATEDB and Systemd state change event
         while not self.task_stopping_event.is_set():
             try:
-                msg = myQ.get(timeout=QUEUE_TIMEOUT)
+                msg = self.myQ.get(timeout=QUEUE_TIMEOUT)
                 event = msg["unit"]
                 event_src = msg["evt_src"]
                 event_time = msg["time"]
@@ -472,5 +473,24 @@ class Sysmonitor(ProcessTaskBase):
             return
         self.system_service()
 
+    def task_stop(self):
+        # Signal the process to stop
+        self.task_stopping_event.set()
+        #Clear the resources of mpmgr- Queue
+        self.mpmgr.shutdown()
+
+        # Wait for the process to exit
+        self._task_process.join(self._stop_timeout_secs)
+
+        # If the process didn't exit, attempt to kill it
+        if self._task_process.is_alive():
+            logger.log_notice("Attempting to kill sysmon main process with pid {}".format(self._task_process.pid))
+            os.kill(self._task_process.pid, signal.SIGKILL)
+
+        if self._task_process.is_alive():
+            logger.log_error("Sysmon main process with pid {} could not be killed".format(self._task_process.pid))
+            return False
+
+        return True
 
 
