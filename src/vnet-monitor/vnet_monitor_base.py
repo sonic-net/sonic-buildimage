@@ -20,10 +20,11 @@ logger_helper = logger.Logger(SYSLOG_IDENTIFIER)
 DEFAULT_INTERVAL = 1000 # The default ping interval is set to 1000 ms
 DEFAULT_MULTIPLIER = 3  # The default multipler is set to 3
 DEFAULT_VNI = 8000        # The default vni
-DEFAULT_VXLAN_UDP_PORT = 4789   # The default Vxlan port
+DEFAULT_VXLAN_UDP_PORT = 65330   # The default Vxlan port
 DEFAULT_UDP_PORT = 10000 # The default inner packet UDP port
 DEFAULT_DSCP = 48 # The default DSCP value in IP header of vnet ping
-
+TRUSTED_VNI = 256 # The trusted VNI by Pensando card
+TRUSTED_SPORT = 64128 # The trusted source port by Pensando card
 
 # The state for current ping
 PING_INITIAL = 0 # Initial state, ping request sent, no reply yet and not timeout
@@ -387,6 +388,7 @@ class TaskPing(TaskBase):
             1. The dst_mac after the 1st vxlan header is a fixed value '00:12:34:56:78:9a', otherwise the packet is dropped by T0
             2. The src_mac after the 2nd vxlan must be the special_mac. The card is reading the src_mac and do the matching
             3. The dst_mac after the 2nd vxlan header can be any value. The card will rewrite it. We use the MAC of T1 here
+            4. The VXLAN flags is set to 0x08 explicitly. Otherwise the packet is dropped by T0
         Args:
             t1_mac: MAC address of this T1
             t1_loopback: The loopback address (IPV4) of this T1
@@ -401,13 +403,13 @@ class TaskPing(TaskBase):
         if ip_interface(card_vip).version == 4:
             # The VIP of card is IPv4
             inner_pkt = Ether(dst=t1_mac, src=overlay_mac)/IP(src=card_vip, dst=t1_loopback, tos=(DEFAULT_DSCP << 2))/UDP(sport=DEFAULT_UDP_PORT, dport=DEFAULT_UDP_PORT)
-            vxlan2_pkt = Ether(dst=T0_MAC, src=t1_mac)/IP(src=t1_loopback, dst=card_vip, ttl=2, tos=(DEFAULT_DSCP << 2))/UDP()/VXLAN(vni=vni)/inner_pkt
+            vxlan2_pkt = Ether(dst=T0_MAC, src=t1_mac)/IP(src=t1_loopback, dst=card_vip, ttl=2, tos=(DEFAULT_DSCP << 2))/UDP(sport=TRUSTED_SPORT, dport=DEFAULT_VXLAN_UDP_PORT)/VXLAN(flags=0x08, vni=TRUSTED_VNI)/inner_pkt
         else:
             # The VIP of card is IPv6
             inner_pkt = Ether(dst=t1_mac, src=overlay_mac)/IPv6(src=card_vip, dst=t1_loopback, tc=(DEFAULT_DSCP << 2))/UDP(sport=DEFAULT_UDP_PORT, dport=DEFAULT_UDP_PORT)
-            vxlan2_pkt = Ether(dst=T0_MAC, src=t1_mac)/IPv6(src=t1_loopback, dst=card_vip, hlim=2, tc=(DEFAULT_DSCP << 2))/UDP()/VXLAN(vni=vni)/inner_pkt
+            vxlan2_pkt = Ether(dst=T0_MAC, src=t1_mac)/IPv6(src=t1_loopback, dst=card_vip, hlim=2, tc=(DEFAULT_DSCP << 2))/UDP(sport=TRUSTED_SPORT, dport=DEFAULT_VXLAN_UDP_PORT)/VXLAN(flags=0x08, vni=TRUSTED_VNI)/inner_pkt
 
-        vxlan1_pkt = VXLAN(vni=vni)/vxlan2_pkt
+        vxlan1_pkt = VXLAN(flags=0x08, vni=vni)/vxlan2_pkt
 
         return vxlan1_pkt
 
@@ -423,7 +425,9 @@ class TaskPing(TaskBase):
             None
         """
         pkt = None
-        load_seq_num = self.seq_num.to_bytes(4, 'big')
+        # The sequence number is 8 bytes in big endian.
+        # If a ping packet is sent out every 1 millisecond, it will take 584942417355 years to wrap around
+        load_seq_num = self.seq_num.to_bytes(8, 'big')
         load = b''.join([self.load_t0_loopback, load_seq_num])
         pkt = self.packet_tmpl/Raw(load)
         return pkt
@@ -649,7 +653,7 @@ def process_packet(packet):
     try:
         load = packet[Raw].load
         t0_loopback = socket.inet_ntoa(load[0:4])
-        seq_number = int.from_bytes(load[4:8], 'big')
+        seq_number = int.from_bytes(load[4:12], 'big')
         if IP in packet:
             vip = packet[IP].src
         elif IPv6 in packet:
