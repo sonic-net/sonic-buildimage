@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y apt-transport-https \
                                          apt-utils \
+                                         azure-cli \
                                          build-essential \
                                          ca-certificates \
                                          cmake \
@@ -75,6 +76,7 @@ RUN pip install allure-pytest==2.8.22 \
                 pexpect \
                 prettytable \
                 psutil \
+                pyaml==21.10.1 \
                 pyasn1==0.1.9 \
                 pycryptodome==3.9.8 \
                 pyfiglet \
@@ -129,9 +131,6 @@ RUN apt-get update                  \
     && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"    \
     && apt-get update                                                                                              \
     && apt-get install -y docker-ce-cli
-
-# Install Azure CLI
-RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 ## Copy and install sonic-mgmt docker dependencies
 COPY \
