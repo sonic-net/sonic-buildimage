@@ -16,7 +16,7 @@ parameters:
 
 - name: MAX_WORKER
   type: string
-  default: 2
+  default: 1
 
 - name: NUM_ASIC
   type: number
