@@ -16,6 +16,10 @@ parameters:
 
 - name: MAX_WORKER
   type: string
+  default: 2
+
+- name: NUM_ASIC
+  type: number
   default: 1
 
 - name: TEST_SET
@@ -34,17 +38,73 @@ parameters:
   type: string
   default: "ceos"
 
-- name: SPECIFIED_PARAMS
+- name: TESTBED_NAME
   type: string
-  default: "{}"
+  default: ""
+
+- name: IMAGE_URL
+  type: string
+  default: ""
+
+- name: HWSKU
+  type: string
+  default: ""
+
+- name: TEST_PLAN_TYPE
+  type: string
+  default: ""
+
+- name: PLATFORM
+  type: string
+  default: ""
+
+- name: SCRIPTS
+  type: string
+  default: ""
+
+- name: FEATURES
+  type: string
+  default: ""
+
+- name: SCRIPTS_EXCLUDE
+  type: string
+  default: ""
+
+- name: FEATURES_EXCLUDE
+  type: string
+  default: ""
+
+- name: REPO_NAME
+  type: string
+  default: ""
 
 - name: MGMT_BRANCH
   type: string
-  default: internal
+  default: ""
 
-- name: NUM_ASIC
+- name: STOP_ON_FAILURE
+  type: string
+  default: ""
+
+- name: RETRY_TIMES
+  type: string
+  default: ""
+
+- name: DUMP_KVM_IF_FAIL
+  type: string
+  default: "True"
+  values:
+  - "True"
+  - "False"
+
+- name: REQUESTER
+  type: string
+  default: ""
+
+- name: MAX_RUN_TEST_MINUTES
   type: number
-  default: 1
+  default: 480
+
 
 steps:
   - script: |
@@ -57,13 +117,23 @@ steps:
       set -e
       pip install PyYAML
       rm -f new_test_plan_id.txt
-      python ./.azure-pipelines/test_plan.py create -t ${{ parameters.TOPOLOGY }} -o new_test_plan_id.txt \
-      --min-worker ${{ parameters.MIN_WORKER }} --max-worker ${{ parameters.MAX_WORKER }} \
-      --test-set ${{ parameters.TEST_SET }} --kvm-build-id $(KVM_BUILD_ID) \
-      --deploy-mg-extra-params "${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}" --common-extra-params "${{ parameters.COMMON_EXTRA_PARAMS }}" \
-      --mgmt-branch ${{ parameters.MGMT_BRANCH }} --vm-type ${{ parameters.VM_TYPE }} --specified-params "${{ parameters.SPECIFIED_PARAMS }}" \
-      --num-asic ${{ parameters.NUM_ASIC }} --azp-access-token ":$(System.AccessToken)" --azp-repo-access-token $(AZP_REPO_ACCESS_TOKEN) \
+      
+      python ./.azure-pipelines/test_plan.py create \
+      -t ${{ parameters.TOPOLOGY }} \
+      -o new_test_plan_id.txt \
+      --min-worker ${{ parameters.MIN_WORKER }} \
+      --max-worker ${{ parameters.MAX_WORKER }} \
+      --test-set ${{ parameters.TEST_SET }} \
+      --kvm-build-id $(KVM_BUILD_ID) \
+      --deploy-mg-extra-params "${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}" \
+      --common-extra-params "${{ parameters.COMMON_EXTRA_PARAMS }}" \
+      --mgmt-branch ${{ parameters.MGMT_BRANCH }} \
+      --vm-type ${{ parameters.VM_TYPE }} \
+      --num-asic ${{ parameters.NUM_ASIC }} \
+      --azp-access-token ":$(System.AccessToken)" \
+      --azp-repo-access-token $(AZP_REPO_ACCESS_TOKEN) \
       --azp-pr-id $(System.PullRequest.PullRequestId)
+      
       TEST_PLAN_ID=`cat new_test_plan_id.txt`
 
       echo "Created test plan $TEST_PLAN_ID"
@@ -109,18 +179,20 @@ steps:
     env:
       TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
     displayName: Run test
+    timeoutInMinutes: ${{ parameters.MAX_RUN_TEST_MINUTES }}
 
-  - script: |
-      set -e
-      echo "KVM dump"
-      echo "SONiC PR system-level test is powered by SONiC Elastictest, for any issue, please send email to sonicelastictest@microsoft.com"
-      echo "Runtime detailed progress at $(FRONTEND_URL)/scheduler/testplan/$TEST_PLAN_ID "
-      # When "KVMDUMP" finish, it changes into "FAILED", "CANCELLED" or "FINISHED"
-      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-state KVMDUMP
-    condition: succeededOrFailed()
-    env:
-      TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
-    displayName: KVM dump
+  - ${{ if eq(parameters.DUMP_KVM_IF_FAIL, 'True') }}:
+    - script: |
+        set -e
+        echo "KVM dump"
+        echo "SONiC PR system-level test is powered by SONiC Elastictest, for any issue, please send email to sonicelastictest@microsoft.com"
+        echo "Runtime detailed progress at $(FRONTEND_URL)/scheduler/testplan/$TEST_PLAN_ID "
+        # When "KVMDUMP" finish, it changes into "FAILED", "CANCELLED" or "FINISHED"
+        python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-state KVMDUMP
+      condition: succeededOrFailed()
+      env:
+        TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
+      displayName: KVM dump
 
   - script: |
       set -e
