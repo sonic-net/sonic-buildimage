@@ -569,7 +569,7 @@ int get_num_of_asic() {
                     str_num_asic = strtok_r(NULL, "=", &saveptr);
                     strip_trailing_newline(str_num_asic);
                     if (str_num_asic != NULL){
-                        sscanf(str_num_asic, "%d",&num_asic);
+                        num_asic = strtol(str_num_asic, NULL, 10);
                     }
                     break;
                 }

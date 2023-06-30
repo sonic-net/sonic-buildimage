@@ -1,0 +1,10 @@
+{
+    "test_cases": [
+        "fan_tc",
+        "psu_tc",
+        "cpu_tc",
+        "memory_tc",
+        "rtc_tc",
+        "sensor_tc"
+    ]
+}

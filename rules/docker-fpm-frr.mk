@@ -30,6 +30,7 @@ SONIC_DOCKER_DBG_IMAGES += $(DOCKER_FPM_FRR_DBG)
 $(DOCKER_FPM_FRR)_CONTAINER_NAME = bgp
 $(DOCKER_FPM_FRR)_RUN_OPT += --privileged -t
 $(DOCKER_FPM_FRR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
+$(DOCKER_FPM_FRR)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro
 
 $(DOCKER_FPM_FRR)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 

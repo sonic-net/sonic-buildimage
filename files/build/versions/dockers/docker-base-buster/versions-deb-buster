@@ -8,7 +8,7 @@ libdaemon0==0.14-7
 libdbus-1-3==1.12.24-0+deb10u1
 libestr0==0.1.10-2.1
 libexpat1==2.2.6-2+deb10u6
-libfastjson4==0.99.8-2
+libfastjson4==0.99.8-2+deb10u1
 libgdbm-compat4==1.18.1-4
 libgdbm6==1.18.1-4
 libgssapi-krb5-2==1.17-3+deb10u5
@@ -64,6 +64,6 @@ readline-common==7.0-5
 redis-tools==5:6.0.6-1~bpo10+1
 rsyslog==8.1901.0-1+deb10u2
 socat==1.7.4.1-3
-vim-common==2:8.1.0875-5+deb10u4
-vim-tiny==2:8.1.0875-5+deb10u4
-xxd==2:8.1.0875-5+deb10u4
+vim-common==2:8.1.0875-5+deb10u5
+vim-tiny==2:8.1.0875-5+deb10u5
+xxd==2:8.1.0875-5+deb10u5

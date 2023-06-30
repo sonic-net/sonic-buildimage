@@ -8,6 +8,11 @@
 ln -sf /usr/share/sonic/device/$PLATFORM /usr/share/sonic/platform
 ln -sf /usr/share/sonic/device/$PLATFORM/$HWSKU /usr/share/sonic/hwsku
 
+PLATFORM_CONF=platform.json
+if [[ $HWSKU == "NPU-2P" ]]; then
+    PLATFORM_CONF=platform-npu-2p.json
+fi
+
 pushd /usr/share/sonic/hwsku
 
 # filter available front panel ports in lanemap.ini
@@ -45,9 +50,14 @@ if [ -f /etc/sonic/config_db.json ]; then
     mv /tmp/config_db.json /etc/sonic/config_db.json
 else
     # generate and merge buffers configuration into config file
-    sonic-cfggen -k $HWSKU -p /usr/share/sonic/device/$PLATFORM/platform.json -t /usr/share/sonic/hwsku/buffers.json.j2 > /tmp/buffers.json
-    sonic-cfggen -j /etc/sonic/init_cfg.json -t /usr/share/sonic/hwsku/qos.json.j2 > /tmp/qos.json
-    sonic-cfggen -p /usr/share/sonic/device/$PLATFORM/platform.json -k $HWSKU --print-data > /tmp/ports.json
+    if [ -f /usr/share/sonic/hwsku/buffers.json.j2 ]; then
+        sonic-cfggen -k $HWSKU -p /usr/share/sonic/device/$PLATFORM/$PLATFORM_CONF -t /usr/share/sonic/hwsku/buffers.json.j2 > /tmp/buffers.json
+    fi
+    if [ -f /usr/share/sonic/hwsku/qos.json.j2 ]; then
+        sonic-cfggen -j /etc/sonic/init_cfg.json -t /usr/share/sonic/hwsku/qos.json.j2 > /tmp/qos.json
+    fi
+
+    sonic-cfggen -p /usr/share/sonic/device/$PLATFORM/$PLATFORM_CONF -k $HWSKU --print-data > /tmp/ports.json
     # change admin_status from up to down; Test cases dependent
     sed -i "s/up/down/g" /tmp/ports.json
     sonic-cfggen -j /etc/sonic/init_cfg.json -j /tmp/buffers.json -j /tmp/qos.json -j /tmp/ports.json --print-data > /etc/sonic/config_db.json
@@ -56,6 +66,8 @@ sonic-cfggen -t /usr/share/sonic/templates/copp_cfg.j2 > /etc/sonic/copp_cfg.jso
 
 if [ "$HWSKU" == "Mellanox-SN2700" ]; then
     cp /usr/share/sonic/hwsku/sai_mlnx.profile /usr/share/sonic/hwsku/sai.profile
+elif [ "$HWSKU" == "NPU" ]; then
+    cp /usr/share/sonic/hwsku/sai_npu.profile /usr/share/sonic/hwsku/sai.profile
 fi
 
 mkdir -p /etc/swss/config.d/

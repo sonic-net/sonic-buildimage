@@ -88,9 +88,9 @@ libatk1.0-data==2.30.0-2
 libatomic1==8.3.0-6
 libatspi2.0-0==2.30.0-7
 libauthen-sasl-perl==2.1600-1
-libavahi-client3==0.7-4+deb10u2
-libavahi-common-data==0.7-4+deb10u2
-libavahi-common3==0.7-4+deb10u2
+libavahi-client3==0.7-4+deb10u3
+libavahi-common-data==0.7-4+deb10u3
+libavahi-common3==0.7-4+deb10u3
 libbabeltrace1==1.5.6-2+deb10u1
 libbinutils==2.31.1-16
 libblas3==3.8.0-2
@@ -144,7 +144,7 @@ libevent-pthreads-2.1-6==2.1.8-stable-4
 libexpat1==2.2.6-2+deb10u6
 libexpat1-dev==2.2.6-2+deb10u6
 libfakeroot==1.23-1
-libfastjson4==0.99.8-2
+libfastjson4==0.99.8-2+deb10u1
 libffi-dev==3.2.1-9
 libfile-basedir-perl==0.08-1
 libfile-desktopentry-perl==0.22-1
@@ -448,7 +448,7 @@ libxml-xpathengine-perl==0.14-1
 libxml2==2.9.4+dfsg1-7+deb10u6
 libxmu6==2:1.1.2-2+b3
 libxmuu1==2:1.1.2-2+b3
-libxpm4==1:3.5.12-1
+libxpm4==1:3.5.12-1+deb10u1
 libxrandr2==2:1.5.1-1
 libxrender1==1:0.9.10-1
 libxshmfence1==1.3-1
@@ -580,9 +580,9 @@ ttf-bitstream-vera==1.10-8
 tzdata==2021a-0+deb10u11
 ucf==3.0038+nmu1
 unzip==6.0-23+deb10u3
-vim==2:8.1.0875-5+deb10u4
-vim-common==2:8.1.0875-5+deb10u4
-vim-runtime==2:8.1.0875-5+deb10u4
+vim==2:8.1.0875-5+deb10u5
+vim-common==2:8.1.0875-5+deb10u5
+vim-runtime==2:8.1.0875-5+deb10u5
 wget==1.20.1-1.1
 wireshark==2.6.20-0+deb10u7
 wireshark-common==2.6.20-0+deb10u7
@@ -596,5 +596,5 @@ xdg-utils==1.1.3-1+deb10u1
 xfonts-encodings==1:1.0.4-2
 xfonts-utils==1:7.7+6
 xkb-data==2.26-2
-xxd==2:8.1.0875-5+deb10u4
+xxd==2:8.1.0875-5+deb10u5
 xz-utils==5.2.4-1+deb10u1

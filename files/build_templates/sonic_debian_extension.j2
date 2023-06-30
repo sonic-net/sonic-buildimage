@@ -430,6 +430,15 @@ j2 files/dhcp/dhclient.conf.j2 | sudo tee $FILESYSTEM_ROOT/etc/dhcp/dhclient.con
 sudo cp files/dhcp/ifupdown2_policy.json $FILESYSTEM_ROOT/etc/network/ifupdown2/policy.d
 sudo cp files/dhcp/90-dhcp6-systcl.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 
+# Copy DNS configuration files and templates
+sudo cp $IMAGE_CONFIGS/resolv-config/resolv-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo cp $IMAGE_CONFIGS/resolv-config/resolv-config.sh $FILESYSTEM_ROOT/usr/bin/
+sudo cp $IMAGE_CONFIGS/resolv-config/resolv.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
+echo "resolv-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable resolvconf.service
+sudo mkdir -p $FILESYSTEM_ROOT/etc/resolvconf/update-libc.d/
+sudo cp $IMAGE_CONFIGS/resolv-config/update-containers $FILESYSTEM_ROOT/etc/resolvconf/update-libc.d/
+
 # Copy initial interfaces configuration file, will be overwritten on first boot
 sudo cp $IMAGE_CONFIGS/interfaces/init_interfaces $FILESYSTEM_ROOT/etc/network/interfaces
 sudo mkdir -p $FILESYSTEM_ROOT/etc/network/interfaces.d

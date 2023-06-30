@@ -14,6 +14,9 @@ output_file=$6
 demo_type=$7
 image_version=$8
 onie_image_part_size=$9
+onie_installer_payload=${10}
+cert_file=${11}
+key_file=${12}
 
 shift 9
 
@@ -100,7 +103,7 @@ sed -i -e "s/%%DEMO_TYPE%%/$demo_type/g" \
        -e "s@%%OUTPUT_RAW_IMAGE%%@$output_raw_image@" \
     $tmp_installdir/install.sh || clean_up 1
 echo -n "."
-cp -r $* $tmp_installdir || clean_up 1
+cp -r $onie_installer_payload $tmp_installdir || clean_up 1
 echo -n "."
 [ -r "$platform_conf" ] && {
     cp $platform_conf $tmp_installdir || clean_up 1
@@ -130,7 +133,50 @@ cp $installer_dir/sharch_body.sh $output_file || {
 # Replace variables in the sharch template
 sed -i -e "s/%%IMAGE_SHA1%%/$sha1/" $output_file
 echo -n "."
+tar_size="$(wc -c < "${sharch}")"
+sed -i -e "s|%%PAYLOAD_IMAGE_SIZE%%|${tar_size}|" ${output_file}
 cat $sharch >> $output_file
+echo "secure upgrade flags: SECURE_UPGRADE_MODE = $SECURE_UPGRADE_MODE, \
+SECURE_UPGRADE_DEV_SIGNING_KEY = $SECURE_UPGRADE_DEV_SIGNING_KEY, SECURE_UPGRADE_SIGNING_CERT = $SECURE_UPGRADE_SIGNING_CERT"
+
+if [ "$SECURE_UPGRADE_MODE" = "dev" -o "$SECURE_UPGRADE_MODE" = "prod" ]; then
+    CMS_SIG="${tmp_dir}/signature.sig"
+    DIR="$(dirname "$0")"
+    scripts_dir="${DIR}/scripts"
+    echo "$0 $SECURE_UPGRADE_MODE signing - creating CMS signature for ${output_file}. Output file ${CMS_SIG}"
+
+    if [ "$SECURE_UPGRADE_MODE" = "dev" ]; then
+        echo "$0 dev keyfile location: ${key_file}."
+        [ -f ${scripts_dir}/sign_image_dev.sh ] || {
+            echo "dev sign script ${scripts_dir}/sign_image_dev.sh not found"
+            rm -rf ${output_file}
+        }
+        (${scripts_dir}/sign_image_dev.sh ${cert_file} ${key_file} ${output_file} ${CMS_SIG}) || {
+            echo "CMS sign error $?"
+            rm -rf ${CMS_SIG} ${output_file}
+        }
+    else # "$SECURE_UPGRADE_MODE" has to be equal to "prod"
+        [ -f ${scripts_dir}/sign_image_${machine}.sh ] || {
+            echo "prod sign script ${scripts_dir}/sign_image_${machine}.sh not found"
+            rm -rf ${output_file}
+        }
+        (${scripts_dir}/sign_image_${machine}.sh ${output_file} ${CMS_SIG} ${SECURE_UPGRADE_MODE}) || {
+            echo "CMS sign error $?"
+            rm -rf ${CMS_SIG} ${output_file}
+        }
+    fi
+    
+    [ -f "$CMS_SIG" ] || {
+         echo "Error: CMS signature not created - exiting without signing"
+         clean_up 1
+    }
+    # append signature to binary
+    cat ${CMS_SIG} >> ${output_file}
+    sudo rm -rf ${CMS_SIG}
+elif [ "$SECURE_UPGRADE_MODE" -ne "no_sign" ]; then
+    echo "SECURE_UPGRADE_MODE not defined or defined as $SECURE_UPGRADE_MODE - build without signing"
+fi
+
 rm -rf $tmp_dir
 echo " Done."
 

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+for container in $(docker ps -a --format=" {{ .ID }}"); do
+    docker cp -L /etc/resolv.conf ${container}:/_resolv.conf
+    docker exec -t ${container} bash -c "cat /_resolv.conf > /etc/resolv.conf"
+    docker exec -t ${container} bash -c "rm /_resolv.conf"
+done
