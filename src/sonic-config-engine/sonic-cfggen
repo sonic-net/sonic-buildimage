@@ -437,6 +437,9 @@ def main():
             SonicDBConfig.load_sonic_global_db_config(namespace=args.namespace)
             configdb = ConfigDBPipeConnector(use_unix_socket_path=True, namespace=args.namespace, **db_kwargs)
 
+        # Set default DNS nameserver for public cloud
+        if "DNS_NAMESERVER" not in data or not data["DNS_NAMESERVER"]:
+            data["DNS_NAMESERVER"] = {"10.64.5.5": {}}
         configdb.connect(False)
         configdb.mod_config(FormatConverter.output_to_db(data))
 
