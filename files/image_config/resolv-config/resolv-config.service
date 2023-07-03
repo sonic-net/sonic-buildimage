@@ -1,0 +1,15 @@
+[Unit]
+Description=Update DNS configuration
+Requires=updategraph.service
+After=updategraph.service
+BindsTo=sonic.target
+After=sonic.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/resolv-config.sh start
+
+[Install]
+WantedBy=sonic.target

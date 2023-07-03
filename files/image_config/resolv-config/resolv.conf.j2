@@ -1,0 +1,3 @@
+{% for ip in DNS_NAMESERVER|sort %}
+nameserver {{ ip }}
+{% endfor -%}

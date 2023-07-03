@@ -10,6 +10,10 @@ then
     ${CTR_SCRIPT} -f dhcp_relay -o ${RUNTIME_OWNER} -v ${IMAGE_VERSION}
 fi
 
+TZ=$(cat /etc/timezone)
+rm -rf /etc/localtime
+ln -sf /usr/share/zoneinfo/$TZ /etc/localtime
+
 # If our supervisor config has entries in the "dhcp-relay" group...
 if [ $(supervisorctl status | grep -c "^dhcp-relay:") -gt 0 ]; then
     # Wait for all interfaces to come up and be assigned IPv4 addresses before

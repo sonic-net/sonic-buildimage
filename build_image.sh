@@ -86,7 +86,7 @@ generate_onie_installer_image()
     ## Note: Don't leave blank between lines. It is single line command.
     ./onie-mk-demo.sh $CONFIGURED_ARCH $TARGET_MACHINE $TARGET_PLATFORM-$TARGET_MACHINE-$ONIEIMAGE_VERSION \
           installer platform/$TARGET_MACHINE/platform.conf $output_file OS $IMAGE_VERSION $ONIE_IMAGE_PART_SIZE \
-          $ONIE_INSTALLER_PAYLOAD
+          $ONIE_INSTALLER_PAYLOAD $SECURE_UPGRADE_SIGNING_CERT $SECURE_UPGRADE_DEV_SIGNING_KEY
 }
 
 # Generate asic-specific device list

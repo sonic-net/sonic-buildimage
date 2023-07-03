@@ -170,6 +170,9 @@ ENABLE_AUTO_TECH_SUPPORT = y
 # Uncomment to enable:
 ENABLE_NATIVE_WRITE = y
 
+# ENABLE_DIALOUT - Disable dialout related code from internal branch.
+ENABLE_DIALOUT = n
+
 # INCLUDE_MACSEC - build docker-macsec for macsec support
 INCLUDE_MACSEC = y
 

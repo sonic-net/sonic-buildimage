@@ -1,5 +1,5 @@
-libhiredis-dev==0.14.0-3~bpo9+1
-libhiredis0.14==0.14.0-3~bpo9+1
+libhiredis-dev==0.14.1-1
+libhiredis0.14==0.14.1-1
 libnl-3-200==3.5.0-1
 libnl-3-dev==3.5.0-1
 libnl-route-3-200==3.5.0-1

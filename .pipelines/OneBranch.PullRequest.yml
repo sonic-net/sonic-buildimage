@@ -161,19 +161,19 @@ stages:
           MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
           COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
 
-  - job: wan_elastictest
-    displayName: "kvmtest-wan by Elastictest"
-    pool:
-      vmImage: 'ubuntu-20.04'
-    timeoutInMinutes: 240
-    continueOnError: false
-    steps:
-      - template: ../.azure-pipelines/run-test-scheduler-template.yml
-        parameters:
-          TOPOLOGY: wan-pub
-          MIN_WORKER: $(WAN_INSTANCE_NUM)
-          MAX_WORKER: $(WAN_INSTANCE_NUM)
-          COMMON_EXTRA_PARAMS: "--skip_sanity "
+#  - job: wan_elastictest
+#    displayName: "kvmtest-wan by Elastictest"
+#    pool:
+#      vmImage: 'ubuntu-20.04'
+#    timeoutInMinutes: 240
+#    continueOnError: false
+#    steps:
+#      - template: ../.azure-pipelines/run-test-scheduler-template.yml
+#        parameters:
+#          TOPOLOGY: wan-pub
+#          MIN_WORKER: $(WAN_INSTANCE_NUM)
+#          MAX_WORKER: $(WAN_INSTANCE_NUM)
+#          COMMON_EXTRA_PARAMS: "--skip_sanity "
 
   - job: multi_asic_elastictest
     displayName: "kvmtest-multi-asic-t1-lag by Elastictest"

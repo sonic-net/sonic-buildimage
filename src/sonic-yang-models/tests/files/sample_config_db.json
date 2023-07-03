@@ -2120,6 +2120,19 @@
             }
         },
 
+        "MUX_LINKMGR": {
+            "LINK_PROBER": {
+                "interval_v4": "100",
+                "interval_v6": "1000",
+                "positive_signal_count": "1",
+                "negative_signal_count": "3",
+                "suspend_timer": "500",
+                "use_well_known_mac": "enabled",
+                "src_mac": "ToRMac",
+                "interval_pck_loss_count_update": "3"
+            }
+        },
+
         "NEIGH": {
             "Vlan100|100.1.1.3": {
                 "family": "IPv4"

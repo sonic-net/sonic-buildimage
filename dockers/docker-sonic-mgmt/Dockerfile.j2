@@ -5,13 +5,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y apt-transport-https \
                                          apt-utils \
-                                         azure-cli \
                                          build-essential \
                                          ca-certificates \
                                          cmake \
                                          curl \
                                          default-jre \
                                          git \
+                                         gnupg \
+                                         gnupg-agent \
                                          iproute2 \
                                          iputils-ping \
                                          isc-dhcp-client \
@@ -122,15 +123,17 @@ RUN pip install allure-pytest==2.8.22 \
     && pip install scapy==2.4.5 --upgrade --ignore-installed
 
 # Install docker-ce-cli
-RUN apt-get update                  \
-    && apt-get install -y           \
-      apt-transport-https           \
-      ca-certificates               \
-      gnupg-agent                   \
-    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -                                     \
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -                                        \
     && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"    \
     && apt-get update                                                                                              \
     && apt-get install -y docker-ce-cli
+
+# Install Azure CLI, following https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt#option-2-step-by-step-installation-instructions
+RUN mkdir -p /etc/apt/keyrings \
+    && curl -sLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | tee /etc/apt/keyrings/microsoft.gpg > /dev/null \
+    && chmod go+r /etc/apt/keyrings/microsoft.gpg \
+    && echo "deb [arch=`dpkg --print-architecture` signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ `lsb_release -cs` main" | tee /etc/apt/sources.list.d/azure-cli.list \
+    && apt-get update && apt-get install -y azure-cli
 
 ## Copy and install sonic-mgmt docker dependencies
 COPY \

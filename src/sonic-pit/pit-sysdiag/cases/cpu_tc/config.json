@@ -1,0 +1,6 @@
+{
+    "name": "cpu-test",
+    "description": "Check CPU information",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "power", "emc"]
+}
