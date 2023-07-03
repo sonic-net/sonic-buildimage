@@ -1,6 +1,0 @@
-{
-    "name": "sensor-test",
-    "description": "Check sensors health",
-    "type": "auto",
-    "tags": ["manufacture", "delivery", "pa", "power", "emc"]
-}

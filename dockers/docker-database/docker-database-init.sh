@@ -95,8 +95,4 @@ do
     fi
 done
 
-TZ=$(cat /etc/timezone)
-rm -rf /etc/localtime
-ln -sf /usr/share/zoneinfo/$TZ /etc/localtime
-
 exec /usr/local/bin/supervisord

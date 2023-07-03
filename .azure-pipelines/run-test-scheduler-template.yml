@@ -34,6 +34,10 @@ parameters:
   type: string
   default: "ceos"
 
+- name: SPECIFIED_PARAMS
+  type: string
+  default: "{}"
+
 - name: MGMT_BRANCH
   type: string
   default: internal
@@ -57,7 +61,7 @@ steps:
       --min-worker ${{ parameters.MIN_WORKER }} --max-worker ${{ parameters.MAX_WORKER }} \
       --test-set ${{ parameters.TEST_SET }} --kvm-build-id $(KVM_BUILD_ID) \
       --deploy-mg-extra-params "${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}" --common-extra-params "${{ parameters.COMMON_EXTRA_PARAMS }}" \
-      --mgmt-branch ${{ parameters.MGMT_BRANCH }} --vm-type ${{ parameters.VM_TYPE }} \
+      --mgmt-branch ${{ parameters.MGMT_BRANCH }} --vm-type ${{ parameters.VM_TYPE }} --specified-params "${{ parameters.SPECIFIED_PARAMS }}" \
       --num-asic ${{ parameters.NUM_ASIC }} --azp-access-token ":$(System.AccessToken)" --azp-repo-access-token $(AZP_REPO_ACCESS_TOKEN) \
       --azp-pr-id $(System.PullRequest.PullRequestId)
       TEST_PLAN_ID=`cat new_test_plan_id.txt`

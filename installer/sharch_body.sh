@@ -11,9 +11,7 @@
 ##
 
 echo -n "Verifying image checksum ..."
-payload_image_size=%%PAYLOAD_IMAGE_SIZE%%
-
-sha1=$(sed -e '1,/^exit_marker$/d' "$0" | head -c $payload_image_size | sha1sum | awk '{ print $1 }')
+sha1=$(sed -e '1,/^exit_marker$/d' "$0" | sha1sum | awk '{ print $1 }')
 
 payload_sha1=%%IMAGE_SHA1%%
 
@@ -47,9 +45,7 @@ if [ "$(id -u)" = "0" ] ; then
 fi
 cd $tmp_dir
 echo -n "Preparing image archive ..."
-
-sed -e '1,/^exit_marker$/d' $archive_path | head -c $payload_image_size | tar xf - || exit 1
-
+sed -e '1,/^exit_marker$/d' $archive_path | tar xf - || exit 1
 echo " OK."
 cd $cur_wd
 if [ -n "$extract" ] ; then

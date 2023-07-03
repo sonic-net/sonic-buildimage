@@ -1426,11 +1426,6 @@
             <a:Value>17.39.1.129;17.39.1.130</a:Value>
           </a:DeviceProperty>
           <a:DeviceProperty>
-            <a:Name>DnsNameserverResources</a:Name>
-            <a:Reference i:nil="true"/>
-            <a:Value>1.1.1.1;8.8.8.8</a:Value>
-          </a:DeviceProperty>
-          <a:DeviceProperty>
             <a:Name>SnmpResources</a:Name>
             <a:Reference i:nil="true"/>
             <a:Value>71.49.219.98</a:Value>
