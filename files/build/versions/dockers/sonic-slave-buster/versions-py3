@@ -73,7 +73,7 @@ setuptools==49.6.0
 six==1.12.0
 sphinx==1.8.4
 sphinx-rtd-theme==0.4.3
-typing_extensions==4.6.3
+typing_extensions==4.7.0
 unattended-upgrades==0.1
 unidiff==0.5.4
 urllib3==1.24.1

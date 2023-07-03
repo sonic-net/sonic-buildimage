@@ -97,7 +97,7 @@ libblas3==3.8.0-2
 libboost-atomic1.71.0==1.71.0-6~bpo10+1
 libbrotli1==1.0.7-2+deb10u1
 libbsd0==0.9.1-2+deb10u1
-libc-ares2==1.14.0-1+deb10u2
+libc-ares2==1.14.0-1+deb10u3
 libc-dev-bin==2.28-10+deb10u2
 libc6-dbg==2.28-10+deb10u2
 libc6-dev==2.28-10+deb10u2
@@ -274,13 +274,13 @@ libnl-genl-3-200==3.4.0-1
 libnl-nf-3-200==3.4.0-1
 libnl-route-3-200==3.4.0-1
 libnpth0==1.6-1
-libnss-systemd==241-7~deb10u9
+libnss-systemd==241-7~deb10u10
 libogg0==1.3.2-1+b1
 libopenjp2-7==2.3.0-2+deb10u2
 libopts25==1:5.18.12-4
 libopus0==1.3-1
 liborc-0.4-0==1:0.4.28-3.1
-libpam-systemd==241-7~deb10u9
+libpam-systemd==241-7~deb10u10
 libpango-1.0-0==1.42.4-8~deb10u1
 libpangocairo-1.0-0==1.42.4-8~deb10u1
 libpangoft2-1.0-0==1.42.4-8~deb10u1
@@ -357,7 +357,7 @@ libssl-dev==1.1.1n-0+deb10u5
 libssl1.1==1.1.1n-0+deb10u5
 libstdc++-8-dev==8.3.0-6
 libsynctex2==2018.20181218.49446-1+deb10u2
-libsystemd0==241-7~deb10u9
+libsystemd0==241-7~deb10u10
 libtacacs+1==4.0.4.27a-3
 libtcl8.6==8.6.9+dfsg-2
 libteam-utils==1.28-1
@@ -379,7 +379,7 @@ libtk8.6==8.6.9-2
 libtry-tiny-perl==0.30-1
 libtsan0==8.3.0-6
 libubsan1==8.3.0-6
-libudev1==241-7~deb10u9
+libudev1==241-7~deb10u10
 libunbound8==1.9.0-2+deb10u3
 liburi-perl==1.76-1
 libutempter0==1.1.6-3
@@ -406,10 +406,10 @@ libwscodecs2==2.6.20-0+deb10u7
 libwsutil9==2.6.20-0+deb10u7
 libwww-perl==6.36-2
 libwww-robotrules-perl==6.02-1
-libx11-6==2:1.6.7-1+deb10u2
-libx11-data==2:1.6.7-1+deb10u2
+libx11-6==2:1.6.7-1+deb10u3
+libx11-data==2:1.6.7-1+deb10u3
 libx11-protocol-perl==0.56-7
-libx11-xcb1==2:1.6.7-1+deb10u2
+libx11-xcb1==2:1.6.7-1+deb10u3
 libxau6==1:1.0.8-1+b2
 libxaw7==2:1.0.13-1+b2
 libxcb-dri2-0==1.13.1-2
@@ -563,8 +563,8 @@ rsyslog==8.1901.0-1+deb10u2
 sensible-utils==0.0.12
 shared-mime-info==1.10-1
 sntp==1:4.2.8p12+dfsg-4
-systemd==241-7~deb10u9
-systemd-sysv==241-7~deb10u9
+systemd==241-7~deb10u10
+systemd-sysv==241-7~deb10u10
 t1utils==1.41-3
 tacacs+==4.0.4.27a-3
 tcpdump==4.9.3-1~deb10u2

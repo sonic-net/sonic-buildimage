@@ -338,8 +338,8 @@ libbsd-dev==0.9.1-2+deb10u1
 libbsd0==0.9.1-2+deb10u1
 libbsh-java==2.0b4-19
 libbz2-dev==1.0.6-9.2~deb10u2
-libc-ares-dev==1.14.0-1+deb10u2
-libc-ares2==1.14.0-1+deb10u2
+libc-ares-dev==1.14.0-1+deb10u3
+libc-ares2==1.14.0-1+deb10u3
 libc-dev-bin==2.28-10+deb10u2
 libc-l10n==2.28-10+deb10u2
 libc6-dbg==2.28-10+deb10u2
@@ -841,7 +841,7 @@ libnorm-dev==1.5.8+dfsg2-1
 libnorm1==1.5.8+dfsg2-1
 libnpth0==1.6-1
 libnspr4==2:4.20-1
-libnss-systemd==241-7~deb10u9
+libnss-systemd==241-7~deb10u10
 libnss3==2:3.42.1-1+deb10u6
 libnuma-dev==2.0.12-1
 libnuma1==2.0.12-1
@@ -878,7 +878,7 @@ libpackage-stash-perl==0.38-1
 libpackage-stash-xs-perl==0.29-1
 libpackagekit-glib2-18==1.1.12-5
 libpadwalker-perl==2.3-1+b1
-libpam-systemd==241-7~deb10u9
+libpam-systemd==241-7~deb10u10
 libpam0g-dev==1.3.1-5
 libpango-1.0-0==1.42.4-8~deb10u1
 libpango1.0-dev==1.42.4-8~deb10u1
@@ -1114,7 +1114,8 @@ libswresample3==7:4.1.11-0+deb10u1
 libswscale5==7:4.1.11-0+deb10u1
 libsynctex2==2018.20181218.49446-1+deb10u2
 libsys-hostname-long-perl==1.5-1
-libsystemd-dev==241-7~deb10u9
+libsystemd-dev==241-7~deb10u10
+libsystemd0==241-7~deb10u10
 libtag1v5==1.11.1+dfsg.1-0.3+deb10u1
 libtag1v5-vanilla==1.11.1+dfsg.1-0.3+deb10u1
 libtask-weaken-perl==1.06-1
@@ -1155,7 +1156,8 @@ libtype-tiny-xs-perl==0.014-1+b1
 libtypes-serialiser-perl==1.0-1
 libubsan1==8.3.0-6
 libuchardet0==0.0.6-3
-libudev-dev==241-7~deb10u9
+libudev-dev==241-7~deb10u10
+libudev1==241-7~deb10u10
 libunbound8==1.9.0-2+deb10u3
 libunicode-utf8-perl==0.62-1
 libunwind-dev==1.2.1-10~deb10u1
@@ -1216,12 +1218,12 @@ libwrap0==7.6.q-28
 libwrap0-dev==7.6.q-28
 libwww-perl==6.36-2
 libwww-robotrules-perl==6.02-1
-libx11-6==2:1.6.7-1+deb10u2
-libx11-data==2:1.6.7-1+deb10u2
-libx11-dev==2:1.6.7-1+deb10u2
+libx11-6==2:1.6.7-1+deb10u3
+libx11-data==2:1.6.7-1+deb10u3
+libx11-dev==2:1.6.7-1+deb10u3
 libx11-protocol-perl==0.56-7
-libx11-xcb-dev==2:1.6.7-1+deb10u2
-libx11-xcb1==2:1.6.7-1+deb10u2
+libx11-xcb-dev==2:1.6.7-1+deb10u3
+libx11-xcb1==2:1.6.7-1+deb10u3
 libx264-155==2:0.155.2917+git0a84d98-2
 libx265-165==2.9-4
 libx32asan5==8.3.0-6
@@ -1704,8 +1706,8 @@ strace==4.26-0.2
 sudo==1.8.27-1+deb10u5
 swig==3.0.12-2
 swig3.0==3.0.12-2
-systemd==241-7~deb10u9
-systemd-sysv==241-7~deb10u9
+systemd==241-7~deb10u10
+systemd-sysv==241-7~deb10u10
 t1utils==1.41-3
 tcl==8.6.9+1
 tcl8.6==8.6.9+dfsg-2
