@@ -133,6 +133,7 @@ setup(
                          './yang-models/sonic-mirror-session.yang',
                          './yang-models/sonic-mpls-tc-map.yang',
                          './yang-models/sonic-mux-cable.yang',
+                         './yang-models/sonic-mux-linkmgr.yang',
                          './yang-models/sonic-neigh.yang',
                          './yang-models/sonic-ntp.yang',
                          './yang-models/sonic-nat.yang',

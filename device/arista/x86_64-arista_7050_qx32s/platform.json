@@ -1,7 +1,23 @@
 {
     "chassis": {
         "name": "DCS-7050QX-32S",
-        "components": [],
+        "components": [
+	    {
+                "name": "Aboot()"
+            },
+            {
+                "name": "Scd(addr=0000:02:00.0)"
+            },
+            {
+                "name": "Ucd90120A(addr=4-004e)"
+            },
+            {
+                "name": "Ucd90120A(addr=8-004e)"
+            },
+            {
+                "name": "CrowSysCpld(addr=2-0023)"
+            }
+	],
         "fans": [],
         "fan_drawers": [
             {

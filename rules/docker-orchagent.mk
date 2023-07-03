@@ -37,6 +37,7 @@ SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_ORCHAGENT_DBG)
 $(DOCKER_ORCHAGENT)_CONTAINER_NAME = swss
 $(DOCKER_ORCHAGENT)_RUN_OPT += --privileged -t
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/network/interfaces:/etc/network/interfaces:ro
+$(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro 
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/network/interfaces.d/:/etc/network/interfaces.d/:ro
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /host/machine.conf:/host/machine.conf:ro
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro

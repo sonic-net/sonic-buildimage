@@ -19,6 +19,10 @@ After=updategraph.service
 BindsTo=sonic.target
 After=sonic.target
 Before=ntp-config.service
+{% if sonic_asic_platform == 'mellanox' %}
+Requires=nv-syncd-shared.service
+After=nv-syncd-shared.service
+{% endif %}
 
 [Service]
 User=root

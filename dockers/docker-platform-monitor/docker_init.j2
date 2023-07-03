@@ -110,4 +110,8 @@ else
     sonic-cfggen -d -a "$confvar" -t $SUPERVISOR_CONF_TEMPLATE > $SUPERVISOR_CONF_FILE
 fi
 
+TZ=$(cat /etc/timezone)
+rm -rf /etc/localtime
+ln -sf /usr/share/zoneinfo/$TZ /etc/localtime
+
 exec /usr/local/bin/supervisord

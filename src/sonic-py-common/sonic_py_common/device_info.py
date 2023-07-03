@@ -826,3 +826,13 @@ def is_fast_reboot_enabled():
 
     state_db.close(state_db.STATE_DB)
     return fb_enable_state
+
+
+def is_frontend_port_present_in_host():
+    if is_supervisor():
+        return False
+    if is_multi_npu():
+        namespace_id = os.getenv("NAMESPACE_ID")
+        if not namespace_id:
+            return False
+    return True

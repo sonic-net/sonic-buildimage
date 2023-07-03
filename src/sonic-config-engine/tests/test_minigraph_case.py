@@ -276,6 +276,11 @@ class TestCfgGenCaseInsensitive(TestCase):
         output = self.run_script(argument)
         self.assertEqual(output.strip(), "{'10.0.10.1': {}, '10.0.10.2': {}}")
 
+    def test_metadata_dns_nameserver(self):
+        argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "DNS_NAMESERVER"]
+        output = self.run_script(argument)
+        self.assertEqual(output.strip(), "{'1.1.1.1': {}, '8.8.8.8': {}}")
+
     def test_minigraph_vnet(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "VNET"]
         output = self.run_script(argument)

@@ -23,6 +23,7 @@ endif
 $(DOCKER_ICCPD)_CONTAINER_NAME = iccpd
 $(DOCKER_ICCPD)_RUN_OPT += --privileged -t
 $(DOCKER_ICCPD)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
+$(DOCKER_ICCPD)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro 
 
 $(DOCKER_ICCPD)_BASE_IMAGE_FILES += mclagdctl:/usr/bin/mclagdctl
 
