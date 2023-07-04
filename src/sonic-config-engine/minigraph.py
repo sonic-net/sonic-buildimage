@@ -2001,6 +2001,18 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     results['DHCP_SERVER'] = dict((item, {}) for item in dhcp_servers)
     results['DHCP_RELAY'] = dhcp_relay_table
     results['NTP_SERVER'] = dict((item, {}) for item in ntp_servers)
+    # Set default DNS nameserver for different cloud
+    if len(dns_nameservers) == 0:
+        if cloudtype.lower() == "fairfax":
+            dns_nameservers.append('10.111.39.6')
+        else if cloudtype.lower() == "mooncake":
+            dns_nameservers.append('10.41.21.20')
+        else if cloudtype.lower() == "usnat":
+            dns_nameservers.append('10.1.12.0')
+        else if cloudtype.lower() == "ussec":
+            dns_nameservers.append('10.1.48.0')
+        else:
+            dns_nameservers.append('10.64.5.5')
     results['DNS_NAMESERVER'] = dict((item, {}) for item in dns_nameservers)
     results['TACPLUS_SERVER'] = dict((item, {'priority': '1', 'tcp_port': '49'}) for item in tacacs_servers)
     if len(acl_table_types) > 0:

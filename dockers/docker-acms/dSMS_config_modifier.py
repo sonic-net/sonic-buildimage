@@ -40,15 +40,6 @@ def update_dsms_url(conf_file, new_url):
             conf_file_t.seek(0)
             conf_file_t.write(new_contents)
 
-def update_acms_dns(ip):
-    '''
-    Update the ACMS DNS in /etc/resolv.conf
-    '''
-    with open('/etc/resolv.conf', "w") as dns_file:
-        new_contents = "nameserver " + ip + "\n"
-        dns_file.write(new_contents)
-    return
-
 def fix_endpoint_for_cloud(cloud):
     '''
     Identify the correct URL pattern for dSMS endpoints in national clouds 
@@ -56,18 +47,14 @@ def fix_endpoint_for_cloud(cloud):
     # Convert cloudtype to lowercase for case-insensitive string comparison
     if cloud.lower() == "FairFax".lower():
         url_pattern = "https://region-dsms.dsms.core.usgovcloudapi.net"
-        update_acms_dns("10.111.39.6")
     elif cloud.lower() == "BlackForest".lower():
         url_pattern = "https://region-dsms.dsms.core.cloudapi.de"
     elif cloud.lower() == "Mooncake".lower():
         url_pattern = "https://region-dsms.dsms.core.chinacloudapi.cn"
-        update_acms_dns("10.41.21.20")
     elif cloud.lower() == "USnat".lower():
         url_pattern = "https://region-dsms.dsms.core.eaglex.ic.gov"
-        update_acms_dns("10.1.12.0")
     elif cloud.lower() == "USSec".lower():
         url_pattern = "https://region-dsms.dsms.core.microsoft.scloud"
-        update_acms_dns("10.1.48.0")
     else:
         sonic_logger.log_error("CloudType "+cloud+" not listed!")
         return False
