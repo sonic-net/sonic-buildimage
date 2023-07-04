@@ -276,3 +276,14 @@ class TestCfgGen(object):
                 "monPollThreshRecovery": "8"
             }
         })
+
+    def test_fabric_port_table(self):
+        arg = ["--var-json", "FABRIC_PORT"]
+        output = json.loads(self.run_script_with_yang_arg(arg))
+        assert(output == {\
+            "Fabric0": {
+                "alias": "Fabric0",
+                "isolateStatus": "False",
+                "lanes": "0"
+            }
+        })
