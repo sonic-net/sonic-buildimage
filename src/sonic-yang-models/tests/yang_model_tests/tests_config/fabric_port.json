@@ -1,0 +1,16 @@
+{
+    "FABRIC_PORT_POSITIVE_CONFIG": {
+        "sonic-fabric-port:sonic-fabric-port": {
+            "sonic-fabric-port:FABRIC_PORT": {
+                "FABRIC_PORT_LIST": [
+                    {
+                        "name": "Fabric0",
+                        "alias": "Fabric0",
+                        "isolateStatus": "False",
+                        "lanes": "0"
+                    }
+                ]
+            }
+        }
+    }
+}

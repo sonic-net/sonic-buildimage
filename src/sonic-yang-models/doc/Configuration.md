@@ -34,6 +34,7 @@ Table of Contents
          * [FG_NHG_MEMBER](#fg_nhg_member)
          * [FG_NHG_PREFIX](#fg_nhg_prefix)
          * [FABRIC_MONITOR](#fabric-monitor)
+         * [FABRIC_PORT](#fabric-port)
          * [FLEX_COUNTER_TABLE](#flex_counter_table)
          * [Hash](#hash)
          * [IPv6 Link-local] (#ipv6-link-local)
@@ -1063,6 +1064,24 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 
 ```
 
+### FABRIC_PORT
+```
+{
+"FABRIC_PORT": {
+    "Fabric0": {
+        "alias": "Fabric0",
+        "isolateStatus": "False",
+        "lanes": "0"
+    },
+    "Fabric1": {
+        "alias": "Fabric1",
+        "isolateStatus": "False",
+        "lanes": "1"
+    }
+  }
+}
+
+```
 
 ### MPLS_TC_TO_TC_MAP
 ```
