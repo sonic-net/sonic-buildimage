@@ -2005,11 +2005,11 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     if len(dns_nameservers) == 0:
         if cloudtype.lower() == "fairfax":
             dns_nameservers.append('10.111.39.6')
-        else if cloudtype.lower() == "mooncake":
+        elif cloudtype.lower() == "mooncake":
             dns_nameservers.append('10.41.21.20')
-        else if cloudtype.lower() == "usnat":
+        elif cloudtype.lower() == "usnat":
             dns_nameservers.append('10.1.12.0')
-        else if cloudtype.lower() == "ussec":
+        elif cloudtype.lower() == "ussec":
             dns_nameservers.append('10.1.48.0')
         else:
             dns_nameservers.append('10.64.5.5')
