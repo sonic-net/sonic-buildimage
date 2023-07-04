@@ -33,8 +33,8 @@ libpgm-5.2-0==5.2.122~dfsg-3
 libprocps7==2:3.3.15-2
 libpsl5==0.20.2-2
 libpython3-stdlib==3.7.3-1
-libpython3.7-minimal==3.7.3-2+deb10u4
-libpython3.7-stdlib==3.7.3-2+deb10u4
+libpython3.7-minimal==3.7.3-2+deb10u5
+libpython3.7-stdlib==3.7.3-2+deb10u5
 libreadline7==7.0-5
 librtmp1==2.4+20151223.gitfa8646d.1-2
 libsasl2-2==2.1.27+dfsg-1+deb10u2
@@ -58,8 +58,8 @@ python3==3.7.3-1
 python3-distutils==3.7.3-1
 python3-lib2to3==3.7.3-1
 python3-minimal==3.7.3-1
-python3.7==3.7.3-2+deb10u4
-python3.7-minimal==3.7.3-2+deb10u4
+python3.7==3.7.3-2+deb10u5
+python3.7-minimal==3.7.3-2+deb10u5
 readline-common==7.0-5
 redis-tools==5:6.0.6-1~bpo10+1
 rsyslog==8.1901.0-1+deb10u2
