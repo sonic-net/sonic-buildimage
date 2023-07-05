@@ -30,7 +30,7 @@ jsonpointer==2.4
 jsonschema==2.6.0
 lazy-object-proxy==1.9.0
 lxml==4.9.1
-m2crypto==0.38.0
+m2crypto==0.39.0
 markupsafe==2.1.3
 natsort==6.2.1
 netaddr==0.8.0

@@ -18,7 +18,7 @@ importlib-metadata==6.1.0
 jsonpatch==1.33
 jsonpointer==2.4
 lazy-object-proxy==1.9.0
-m2crypto==0.38.0
+m2crypto==0.39.0
 netifaces==0.10.9
 packaging==23.1
 paramiko==2.11.0
