@@ -157,9 +157,9 @@ function waitForAllInstanceDatabaseConfigJsonFilesReady()
             done
         fi
         # Delay a second to allow all instance database_config.json files to be completely generated and fully accessible.
-        # This delay is needed to make sure that the database_config.json files are correctly rendered from j2 template 
+        # This delay is needed to make sure that the database_config.json files are correctly rendered from j2 template
         # files ( renderning takes some time )
-        sleep 1 
+        sleep 1
     fi
 }
 {%- endif %}
@@ -240,7 +240,7 @@ function postStartAction()
             mv $WARM_DIR/dump.rdb $WARM_DIR/dump.rdb.old
         else
             # If there is a config_db.json dump file, load it.
-            if [ -r /etc/sonic/config_db$DEV.json ]; then		
+            if [ -r /etc/sonic/config_db$DEV.json ]; then
 
                 if [ -r /etc/sonic/init_cfg.json ]; then
                     $SONIC_CFGGEN -j /etc/sonic/init_cfg.json -j /etc/sonic/config_db$DEV.json --write-to-db
@@ -323,7 +323,7 @@ start() {
 
     {%- if sonic_asic_platform == "broadcom" %}
     {%- if docker_container_name == "syncd" %}
-    # Set the SYNCD_SHM_SIZE if this variable not defined    
+    # Set the SYNCD_SHM_SIZE if this variable not defined
     BRCM_PLATFORM_COMMON_DIR=/usr/share/sonic/device/x86_64-broadcom_common
     SYNCD_SHM_INI=$BRCM_PLATFORM_COMMON_DIR/syncd_shm.ini
 
@@ -545,14 +545,15 @@ start() {
 {%- if docker_container_name == "syncd" %}
         -v /var/log/mellanox:/var/log/mellanox:rw \
         -v mlnx_sdk_socket:/var/run/sx_sdk \
-        -v mlnx_sdk_ready:/tmp \
+        -v /tmp/nv-syncd-shared/:/tmp \
         -v /dev/shm:/dev/shm:rw \
         -v /var/log/sai_failure_dump:/var/log/sai_failure_dump:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
 {%- elif docker_container_name == "pmon" %}
         -v /var/run/hw-management:/var/run/hw-management:rw \
         -v mlnx_sdk_socket:/var/run/sx_sdk \
-        -v mlnx_sdk_ready:/tmp \
+        -v /tmp/nv-syncd-shared/:/tmp \
+        -v /dev/shm:/dev/shm:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
         -v /dev/shm:/dev/shm:rw \
 {%- else %}

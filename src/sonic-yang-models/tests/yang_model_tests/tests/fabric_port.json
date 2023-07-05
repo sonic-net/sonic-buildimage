@@ -1,0 +1,5 @@
+{
+    "FABRIC_PORT_POSITIVE_CONFIG": {
+        "desc": "Configure FABRIC_PORT no failure."
+    }
+}

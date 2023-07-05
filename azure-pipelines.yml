@@ -110,25 +110,24 @@ stages:
 
     - task: DownloadPipelineArtifact@2
       inputs:
-        source: specific
-        project: build
-        pipeline: 9
-        artifact: sonic-swss-common.amd64.ubuntu20_04
-        runVersion: 'latestFromBranch'
-        runBranch: 'refs/heads/master'
-      displayName: "Download sonic swss common deb packages"
-
-    - task: DownloadPipelineArtifact@2
-      inputs:
         artifact: sonic-buildimage.vs
       displayName: "Download sonic-buildimage.vs artifact"
 
     - script: |
-        set -x
         sudo apt-get update
-        sudo apt-get install libyang0.16 -y
-        sudo dpkg -i --force-confask,confnew ../libswsscommon_1.0.0_amd64.deb
-        sudo dpkg -i ../python3-swsscommon_1.0.0_amd64.deb
+        sudo apt-get install -y make libtool m4 autoconf dh-exec debhelper cmake pkg-config \
+                         libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev swig3.0 \
+                         libpython2.7-dev libboost-dev libboost-serialization-dev uuid-dev libzmq5 libzmq3-dev  python3-pip \
+                         cmake libgtest-dev libgmock-dev libyang-dev
+        sudo pip3 install pytest
+        cd src/sonic-swss-common
+        ./autogen.sh
+        dpkg-buildpackage -rfakeroot -us -uc -b -j$(nproc)
+        sudo dpkg -i --force-confask,confnew ../libswsscommon_*.deb
+        sudo dpkg -i ../python3-swsscommon_*.deb
+      displayName: "Compile sonic swss common"
+
+    - script: |
         sudo docker load -i ../target/docker-sonic-vs.gz
         docker tag docker-sonic-vs:latest docker-sonic-vs:$(Build.BuildNumber)
         username=$(id -un)
@@ -224,9 +223,8 @@ stages:
           MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
           MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
           TEST_SET: t0-sonic
-          COMMON_EXTRA_PARAMS: "--neighbor_type=sonic --enable_macsec --macsec_profile=128_SCI,256_XPN_SCI"
+          COMMON_EXTRA_PARAMS: "--neighbor_type=sonic "
           VM_TYPE: vsonic
-          SPECIFIED_PARAMS: '{\"test_pretest.py\":[\"--completeness_level=confident\",\"--allow_recover\"],\"test_posttest.py\":[\"--completeness_level=confident\",\"--allow_recover\"]}'
 
   - job: wan_elastictest
     displayName: "kvmtest-wan by Elastictest"

@@ -23,6 +23,8 @@ try:
     from sonic_py_common import daemon_base
     from swsscommon import swsscommon
     from sonic_py_common.interface import inband_prefix, recirc_prefix
+    from sonic_py_common import device_info
+
 except ImportError as err:
     raise ImportError("%s - required module not found" % str(err))
 
@@ -357,7 +359,8 @@ def run_cmd(self, cmd):
 
 def check_timeout(self, start_time):
     if time.time() - start_time > PORT_INIT_TIMEOUT:
-        self.log_error("Port init timeout reached ({} seconds), resuming lldpd...".format(PORT_INIT_TIMEOUT))
+        if device_info.is_frontend_port_present_in_host():
+            self.log_error("Port init timeout reached ({} seconds), resuming lldpd...".format(PORT_INIT_TIMEOUT))
         return True
     return False
 

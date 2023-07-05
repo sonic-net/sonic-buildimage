@@ -1,7 +1,17 @@
 {
     "chassis": {
         "name": "DCS-7050QX-32",
-        "components": [],
+        "components": [
+            {
+                "name": "Scd(addr=0000:04:00.0)"
+            },
+            {
+                "name": "Ucd90120A(addr=6-004e)"
+            },
+            {
+                "name": "Ucd90160(addr=10-004e)"
+            }
+	],
         "fans": [
             {
                 "name": "fan1"

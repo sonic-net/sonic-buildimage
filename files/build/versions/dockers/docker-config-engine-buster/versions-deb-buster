@@ -3,13 +3,13 @@ bzip2==1.0.6-9.2~deb10u2
 dpkg-dev==1.19.8
 libapt-inst2.0==1.8.2.3
 libboost-serialization1.71.0==1.71.0-6~bpo10+1
-libhiredis0.14==0.14.0-3~bpo9+1
+libhiredis0.14==0.14.1-1
 libnl-3-200==3.5.0-1
 libnl-cli-3-200==3.5.0-1
 libnl-genl-3-200==3.5.0-1
 libnl-nf-3-200==3.5.0-1
 libnl-route-3-200==3.5.0-1
-libpython3.7==3.7.3-2+deb10u4
+libpython3.7==3.7.3-2+deb10u5
 libswsscommon==1.0.0
 libyang==1.0.73
 libyang-cpp==1.0.73

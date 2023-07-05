@@ -1,7 +1,7 @@
 async-timeout==4.0.2
 bitarray==1.5.3
 ijson==2.6.1
-importlib-metadata==6.6.0
+importlib-metadata==6.7.0
 ipaddress==1.0.23
 jsondiff==2.0.0
 lxml==4.9.1
@@ -15,6 +15,6 @@ redis-dump-load==1.1
 regex==2023.6.3
 six==1.16.0
 tabulate==0.8.2
-typing_extensions==4.6.3
+typing_extensions==4.7.1
 xmltodict==0.12.0
 zipp==3.15.0

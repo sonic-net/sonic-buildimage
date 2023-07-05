@@ -1,0 +1,88 @@
+module sonic-mux-linkmgr {
+    namespace "http://github.com/sonic-net/sonic-mux-linkmgr";
+    prefix mux_linkmgr;
+    yang-version 1.1;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONiC DualToR Linkmgrd configuration data";
+
+    revision 2023-06-07 {
+        description
+            "Initial revision";
+    }
+
+    container sonic-mux-linkmgr {
+
+        container MUX_LINKMGR {
+
+            container LINK_PROBER {
+
+                leaf interval_v4 {
+                    type uint32;
+                    default 100;
+                    units milliseconds;
+
+                    description "IPv4 ICMP heartbeat interval. ";
+                }
+
+                leaf interval_v6 {
+                    type uint32;
+                    default 1000;
+                    units milliseconds;
+
+                    description "IPv6 ICMP heartbeat interval. ";
+                }
+
+                leaf positive_signal_count {
+                    type uint32;
+                    default 1;
+
+                    description "Linkmgrd positive signal count. ";
+                }
+
+                leaf negative_signal_count {
+                    type uint32;
+                    default 3;
+
+                    description "Linkmgrd negative signal count. ";
+                }
+
+                leaf suspend_timer {
+                    type uint32;
+
+                    description "ICMP heartbeat suspending timer, currently not in use. ";
+                }
+
+                leaf use_well_known_mac {
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+
+                    description "ICMP heartbeat use well known mac as dst mac or not. ";
+                }
+
+                leaf src_mac {
+                    type enumeration {
+                        enum ToRMac;
+                        enum VlanMac;
+                    }
+
+                    description "ICMP heartbeat use what mac as src mac. ";
+                }
+
+                leaf interval_pck_loss_count_update {
+                    type uint32;
+                    
+                    description "The frequency of streaming ICMP heartbeat loss data to telemetry. ";
+                }
+            }
+        }
+    }
+}
