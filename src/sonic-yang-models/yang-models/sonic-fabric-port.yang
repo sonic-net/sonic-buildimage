@@ -1,0 +1,61 @@
+module sonic-fabric-port{
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-fabric-port";
+    prefix fabric-port;
+
+    import sonic-types {
+       prefix stypes;
+    }
+
+    description "FABRIC_PORT yang Module for SONiC OS";
+
+    revision 2023-03-14 {
+        description "First Revision";
+    }
+
+    container sonic-fabric-port {
+
+        container FABRIC_PORT {
+
+            description "FABRIC_PORT part of config_db.json";
+
+            list FABRIC_PORT_LIST {
+
+                key "name";
+
+                leaf name {
+                    type string {
+                        length 1..128;
+                    }
+                }
+
+                leaf isolateStatus {
+                    description "Isolation status of a fabric port";
+                    type stypes:boolean_type;
+                    default "False";
+                }
+
+                leaf alias {
+                    description "Alias of a fabric port";
+                    type string {
+                        length 1..128;
+                    }
+                }
+
+                leaf lanes {
+                    description "Lanes of a fabric port";
+                    mandatory true;
+                    type string {
+                        length 1..128;
+                    }
+                }
+
+            } /* end of list FABRIC_PORT_LIST */
+
+        } /* end of container FABRIC_PORT */
+
+    } /* end of container sonic-fabric-port */
+
+} /* end of module sonic-fabric-port */

@@ -1273,6 +1273,18 @@
                 "monPollThreshRecovery": "8"
             }
         },
+        "FABRIC_PORT": {
+            "Fabric0": {
+                "alias": "Fabric0",
+                "isolateStatus": "False",
+                "lanes": "0"
+            },
+            "Fabric1": {
+                "alias": "Fabric1",
+                "isolateStatus": "False",
+                "lanes": "1"
+            }
+        },
         "FLEX_COUNTER_TABLE": {
             "PFCWD": {
                 "FLEX_COUNTER_STATUS": "enable"
