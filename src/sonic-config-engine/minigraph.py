@@ -66,6 +66,14 @@ acl_table_type_defination = {
     }
 }
 
+dns_dict = {
+    "public": "10.64.5.5",
+    "fairfax": "10.111.39.6",
+    "mooncake": "10.41.21.20",
+    "usnat": "10.1.12.0",
+    "ussec": "10.1.48.0"
+}
+
 ###############################################################################
 #
 # Minigraph parsing functions
@@ -2001,6 +2009,13 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     results['DHCP_SERVER'] = dict((item, {}) for item in dhcp_servers)
     results['DHCP_RELAY'] = dhcp_relay_table
     results['NTP_SERVER'] = dict((item, {}) for item in ntp_servers)
+    # Set default DNS nameserver for different cloud
+    if len(dns_nameservers) == 0:
+        if cloudtype is None:
+            dns_nameservers.append(dns_dict["public"])
+        else:
+            addr = dns_dict.get(cloudtype.lower(), dns_dict["public"])
+            dns_nameservers.append(addr)
     results['DNS_NAMESERVER'] = dict((item, {}) for item in dns_nameservers)
     results['TACPLUS_SERVER'] = dict((item, {'priority': '1', 'tcp_port': '49'}) for item in tacacs_servers)
     if len(acl_table_types) > 0:

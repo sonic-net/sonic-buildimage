@@ -159,7 +159,7 @@ class TestMultiNpuCfgGen(TestCase):
         for asic in range(NUM_ASIC):
             output = json.loads(self.run_script_for_asic(argument, asic, self.port_config[asic]))
             print("Log:asic{} sku {}".format(asic,output))
-            self.assertDictEqual(output, {})
+            self.assertDictEqual(output, {'10.64.5.5': {}})
 
     def test_mgmt_port(self):
         argument = ['-m', self.sample_graph, '-p', self.sample_port_config, '--var-json', "MGMT_PORT"]
