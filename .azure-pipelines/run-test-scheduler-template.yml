@@ -105,6 +105,9 @@ parameters:
   type: number
   default: 480
 
+- name: EXPECTED_RESULT
+  type: string
+  default: ""
 
 steps:
   - script: |
@@ -132,7 +135,8 @@ steps:
       --num-asic ${{ parameters.NUM_ASIC }} \
       --azp-access-token ":$(System.AccessToken)" \
       --azp-repo-access-token $(AZP_REPO_ACCESS_TOKEN) \
-      --azp-pr-id $(System.PullRequest.PullRequestId)
+      --azp-pr-id $(System.PullRequest.PullRequestId) \
+      --stop-on-failure ${{ parameters.STOP_ON_FAILURE }}
       
       TEST_PLAN_ID=`cat new_test_plan_id.txt`
 
@@ -175,7 +179,7 @@ steps:
       echo "SONiC PR system-level test is powered by SONiC Elastictest, for any issue, please send email to sonicelastictest@microsoft.com"
       echo "Runtime detailed progress at $(FRONTEND_URL)/scheduler/testplan/$TEST_PLAN_ID "
       # When "EXECUTING" finish, it changes into "KVMDUMP", "FAILED", "CANCELLED" or "FINISHED"
-      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-state EXECUTING
+      python ./.azure-pipelines/test_plan.py poll -i "$(TEST_PLAN_ID)" --expected-state EXECUTING --expected-result ${{ parameters.EXPECTED_RESULT }}
     env:
       TESTBED_TOOLS_URL: $(TESTBED_TOOLS_URL)
     displayName: Run test

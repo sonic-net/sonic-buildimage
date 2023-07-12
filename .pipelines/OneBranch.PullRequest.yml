@@ -103,6 +103,8 @@ stages:
           MIN_WORKER: $(T0_INSTANCE_NUM)
           MAX_WORKER: $(T0_INSTANCE_NUM)
           MGMT_BRANCH: internal
+          STOP_ON_FAILURE: False
+          EXPECTED_RESULT: "SUCCESS"
 
   - job: t1_lag_elastictest
     pool:
@@ -117,6 +119,8 @@ stages:
           MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
           MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
           MGMT_BRANCH: internal
+          STOP_ON_FAILURE: False
+          EXPECTED_RESULT: "SUCCESS"
 
   - job: sonic_t0_elastictest
     displayName: "kvmtest-t0-sonic by Elastictest"
@@ -134,6 +138,8 @@ stages:
           MGMT_BRANCH: internal
           COMMON_EXTRA_PARAMS: "--neighbor_type=sonic "
           VM_TYPE: vsonic
+          STOP_ON_FAILURE: False
+          EXPECTED_RESULT: "SUCCESS"
 
   - job: t0_2vlans_elastictest
     pool:
@@ -150,6 +156,8 @@ stages:
         MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
         MGMT_BRANCH: internal
         DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
+        STOP_ON_FAILURE: False
+        EXPECTED_RESULT: "SUCCESS"
 
   - job: dualtor_elastictest
     pool:
@@ -165,6 +173,8 @@ stages:
           MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
           MGMT_BRANCH: internal
           COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
+          STOP_ON_FAILURE: False
+          EXPECTED_RESULT: "SUCCESS"
 
 #  - job: wan_elastictest
 #    displayName: "kvmtest-wan by Elastictest"
@@ -195,3 +205,5 @@ stages:
           MAX_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
           NUM_ASIC: 4
           MGMT_BRANCH: internal
+          STOP_ON_FAILURE: False
+          EXPECTED_RESULT: "SUCCESS"
