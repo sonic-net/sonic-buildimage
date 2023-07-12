@@ -51,7 +51,6 @@ $(DOCKER_PLATFORM_MONITOR)_CONTAINER_NAME = pmon
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += --privileged -t
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro 
-$(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /usr/share/sonic/scripts:/usr/share/sonic/scripts:ro
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /var/run/platform_cache:/var/run/platform_cache:ro
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /usr/share/sonic/device/pddf:/usr/share/sonic/device/pddf:ro
 

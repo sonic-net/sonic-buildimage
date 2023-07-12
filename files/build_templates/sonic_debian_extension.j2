@@ -503,12 +503,6 @@ sudo cp {{sonic_ctrmgmt_py3_wheel_path}} $FILESYSTEM_ROOT/$SONIC_CTRMGMT_WHEEL_N
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install $SONIC_CTRMGMT_WHEEL_NAME
 sudo rm -rf $FILESYSTEM_ROOT/$SONIC_CTRMGMT_WHEEL_NAME
 
-# Copy remote container mangement files
-# File called from each container upon start/stop to record the state
-sudo mkdir -p ${FILESYSTEM_ROOT_USR_SHARE_SONIC_SCRIPTS}
-sudo cp ${files_path}/container_startup.py ${FILESYSTEM_ROOT_USR_SHARE_SONIC_SCRIPTS}/
-sudo chmod a+x ${FILESYSTEM_ROOT_USR_SHARE_SONIC_SCRIPTS}/container_startup.py
-
 # Config file used by container mgmt scripts/service
 fl="${files_path}/remote_ctr.config.json"
 use_k8s_as_http_proxy=$(python3 -c 'import json

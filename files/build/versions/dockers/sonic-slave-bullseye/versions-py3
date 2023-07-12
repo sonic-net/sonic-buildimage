@@ -17,6 +17,7 @@ coverage==5.1
 crc16==0.1.1
 cryptography==3.3.2
 ctypesgen==1.0.2
+dblatex==0.3.12
 dbus-python==1.2.16
 devscripts==2.21.3+deb11u1
 distro-info==1.0

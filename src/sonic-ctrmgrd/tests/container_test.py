@@ -468,7 +468,7 @@ wait_test_data = {
 class TestContainer(object):
 
     def init(self):
-        container.CTR_STATE_SCR_PATH = __file__
+        container.CTRMGRD_SERVICE_PATH = __file__
         container.SONIC_CTR_CONFIG = (
                 common_test.create_remote_ctr_config_json())
 

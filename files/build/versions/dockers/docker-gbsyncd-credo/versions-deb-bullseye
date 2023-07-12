@@ -14,8 +14,8 @@ libhiredis0.14-dbgsym==0.14.1-1
 libicu67==67.1-7
 libipt2==2.0.3-1
 libmpfr6==4.1.0-3
-libsaicredo==0.9.0
-libsaicredo-owl==0.9.0
+libsaicredo==0.8.2
+libsaicredo-owl==0.8.2
 libsaimetadata==1.0.0
 libsairedis==1.0.0
 libsource-highlight-common==3.1.9-3

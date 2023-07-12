@@ -91,10 +91,11 @@ docbook-dsssl==1.79-9.1
 docbook-to-man==1:2.0.0-42
 docbook-utils==0.6.14-3.3
 docbook-xml==4.5-8
-docker-ce==5:20.10.21~3-0~debian-buster
-docker-ce-cli==5:20.10.21~3-0~debian-buster
-docker-ce-rootless-extras==5:24.0.2-1~debian.10~buster
-docker-scan-plugin==0.23.0~debian-buster
+docker-buildx-plugin==0.10.5-1~debian.10~buster
+docker-ce==5:24.0.2-1~debian.10~buster
+docker-ce-cli==5:24.0.2-1~debian.10~buster
+docker-ce-rootless-extras==5:24.0.4-1~debian.10~buster
+docker-compose-plugin==2.18.1-1~debian.10~buster
 docutils-common==0.14+dfsg-4
 docutils-doc==0.14+dfsg-4
 dosfstools==4.1-2
@@ -1115,7 +1116,6 @@ libswscale5==7:4.1.11-0+deb10u1
 libsynctex2==2018.20181218.49446-1+deb10u2
 libsys-hostname-long-perl==1.5-1
 libsystemd-dev==241-7~deb10u10
-libsystemd0==241-7~deb10u10
 libtag1v5==1.11.1+dfsg.1-0.3+deb10u1
 libtag1v5-vanilla==1.11.1+dfsg.1-0.3+deb10u1
 libtask-weaken-perl==1.06-1
@@ -1157,7 +1157,6 @@ libtypes-serialiser-perl==1.0-1
 libubsan1==8.3.0-6
 libuchardet0==0.0.6-3
 libudev-dev==241-7~deb10u10
-libudev1==241-7~deb10u10
 libunbound8==1.9.0-2+deb10u3
 libunicode-utf8-perl==0.62-1
 libunwind-dev==1.2.1-10~deb10u1

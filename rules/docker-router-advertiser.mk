@@ -32,5 +32,4 @@ $(DOCKER_ROUTER_ADVERTISER)_CONTAINER_NAME = radv
 $(DOCKER_ROUTER_ADVERTISER)_RUN_OPT += --privileged -t
 $(DOCKER_ROUTER_ADVERTISER)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_ROUTER_ADVERTISER)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro
-$(DOCKER_ROUTER_ADVERTISER)_RUN_OPT += -v /usr/share/sonic/scripts:/usr/share/sonic/scripts:ro
 $(DOCKER_ROUTER_ADVERTISER)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)

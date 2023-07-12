@@ -23,6 +23,13 @@ startup_test_data = {
                         "set_owner": "local"
                     }
                 }
+            },
+            common_test.STATE_DB_NO: {
+                common_test.FEATURE_TABLE: {
+                    "snmp": {
+                        "system_state": "up"
+                    }
+                }
             }
         },
         common_test.POST: {

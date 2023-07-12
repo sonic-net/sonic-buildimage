@@ -1,9 +1,9 @@
 applibs==1.mlnx.4.5.5142
 applibs-dev==1.mlnx.4.5.5142
 bfnplatform==1.0.0
-bfnsdk==1.0.0
 isc-dhcp-relay==4.4.1-2.3+deb11u2
 kernel-mft-dkms==4.22.1-15
+libdashapi==1.0.0
 libhiredis-dev==0.14.1-1
 libhiredis0.14==0.14.1-1
 libnl-3-dev==3.5.0-1
@@ -14,13 +14,16 @@ libnl-genl-3-dev==3.5.0-1
 libnl-nf-3-200==3.5.0-1
 libnl-nf-3-dev==3.5.0-1
 libnl-route-3-dev==3.5.0-1
+libprotobuf-dev==3.21.12-3
+libprotobuf-lite32==3.21.12-3
+libprotobuf32==3.21.12-3
+libprotoc32==3.21.12-3
 libsaimetadata==1.0.0
 libsaimetadata-dev==1.0.0
 libsairedis==1.0.0
 libsairedis-dev==1.0.0
 libsaithrift-dev==0.9.4
 libsaivs==1.0.0
-libsaivs-dev==1.0.0
 libswsscommon==1.0.0
 libswsscommon-dev==1.0.0
 libtac-dev==1.4.1-1
@@ -30,7 +33,7 @@ libteam-utils==1.30-1
 libteam5==1.30-1
 libteamdctl0==1.30-1
 libthrift-0.11.0==0.11.0-4
-libthrift-dev==0.11.0-4
+libthrift-dev==0.14.1
 libthrift0==0.14.1
 libyang==1.0.73
 libyang-cpp==1.0.73
@@ -40,7 +43,9 @@ linux-headers-5.10.0-18-2-common==5.10.140-1
 lldpd==1.0.4-1
 lm-sensors==1:3.6.0-7
 mft==4.22.1-15
+mlnx-sai==1.mlnx.SAIBuild2305.24.0.1
 net-tools==1.60+git20181103.0eebece-1
+protobuf-compiler==3.21.12-3
 python-thrift==0.11.0-4
 python3-swsscommon==1.0.0
 python3-thrift==0.14.1
@@ -69,7 +74,7 @@ sxd-libs==1.mlnx.4.5.5142
 sxd-libs-dev==1.mlnx.4.5.5142
 syncd==1.0.0
 syncd-vs==1.0.0
-thrift-compiler==0.11.0-4
+thrift-compiler==0.14.1
 wjh-libs==1.mlnx.4.5.5142
 wjh-libs-dev==1.mlnx.4.5.5142
 wpasupplicant==2:2.9.0-14

@@ -1,0 +1,86 @@
+{
+    
+    "XCVR":
+    {
+        "xcvr_present":
+        {
+           "i2c":
+           {
+               "valmap-SFP": {"1":true, "0":false },
+               "valmap-QSFP-DD": {"1":true, "0":false}
+           }
+
+        },
+        "plug_status":
+        {
+            "inserted": "1",
+            "removed": "0"
+        }
+    },
+    "PSU":
+    {
+        "psu_present": 
+        {
+            "i2c":
+            {
+                "valmap": { "1":true, "0":false }
+            },
+            "bmc":
+            {
+                "valmap": { "0x0280|":true, "0x0180|":false }
+            }
+        }, 
+		
+        "psu_power_good": 
+        {
+            "i2c":
+            {
+                "valmap": { "1": true, "0":false }
+            },
+            "bmc":
+            {
+                "valmap": { "0x0280|":true, "0x0180|":false }
+            }        
+        },
+
+        "psu_fan_dir":
+        {
+            "i2c":
+            {
+                "valmap": { "F2B":"EXHAUST", "B2F":"INTAKE" }
+            }
+        },
+
+        "PSU_FAN_MAX_SPEED":"30000"
+    },
+
+    "FAN":
+    {
+        "direction":
+        {
+            "bmc":
+            {
+                "valmap": {"0": "UNKNOW", "1":"INTAKE", "2":"EXHAUST"}
+            }
+        },
+
+        "present":
+        {
+            "i2c":
+            {
+                "valmap": {"1":true, "0":false}
+            },
+            "bmc":
+            {
+                "valmap": { "0x0280|":true, "0x0180|":false }
+            }      
+        },
+        "FAN_R_MAX_SPEED":"32000",
+        "FAN_F_MAX_SPEED":"36200"
+    },
+
+    "REBOOT_CAUSE":
+    {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    }
+}

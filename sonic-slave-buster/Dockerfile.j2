@@ -596,7 +596,7 @@ ENV PATH /usr/share/depot_tools:$PATH
 RUN pip3 install parameterized==0.8.1
 RUN pip3 install pyfakefs
 
-# Install docker engine 17.03.2~ce-0 inside docker and enable experimental feature
+# Install docker engine 24 inside docker and enable experimental feature
 RUN apt-get update
 RUN apt-get install -y \
            apt-transport-https \
@@ -617,7 +617,7 @@ RUN add-apt-repository \
            $(lsb_release -cs) \
            stable"
 RUN apt-get update
-RUN apt-get install -y docker-ce=5:20.10.21~3-0~debian-buster docker-ce-cli=5:20.10.21~3-0~debian-buster
+RUN apt-get install -y docker-ce=5:24.0.2-1~debian.10~buster docker-ce-cli=5:24.0.2-1~debian.10~buster containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.10~buster docker-compose-plugin=2.18.1-1~debian.10~buster
 RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 

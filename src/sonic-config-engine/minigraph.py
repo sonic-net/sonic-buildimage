@@ -1992,6 +1992,10 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             port['mux_cable'] = "true"
 
     if static_routes:
+        # Enable static Route BFD by default for static route in chassis-packet
+        if switch_type == "chassis-packet":
+            for pfx, data in static_routes.items():
+                data.update({"bfd":"true"})
         results['STATIC_ROUTE'] = static_routes
 
     for nghbr in list(neighbors.keys()):
