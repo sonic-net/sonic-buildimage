@@ -23,6 +23,7 @@ dbus==1.12.24-0+deb10u1
 dbus-user-session==1.12.24-0+deb10u1
 dconf-gsettings-backend==0.30.1-2
 dconf-service==0.30.1-2
+debian-archive-keyring==2019.1+deb10u2
 dh-python==3.20190308
 dirmngr==2.2.12-1+deb10u2
 dmsetup==2:1.02.155-3

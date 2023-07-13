@@ -344,8 +344,6 @@ RUN apt-get update && apt-get install -y \
         libnetfilter-conntrack-dev \
         libnftnl-dev \
 # For SAI3.7
-        protobuf-compiler \
-        libprotobuf-dev \
         xxd \
 # For DHCP Monitor tool
         libexplain-dev \
@@ -408,7 +406,13 @@ RUN apt-get update && apt-get install -y \
         pkg-config \
 # For audisp-tacplus
         libauparse-dev \
-        auditd
+        auditd \
+# For protobuf
+        dh-elpa \
+        xmlto \
+        rake-compiler \
+        default-jdk \
+        libgoogle-gson-java
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages
@@ -591,7 +595,7 @@ ENV PATH /usr/share/depot_tools:$PATH
 RUN pip3 install parameterized==0.8.1
 RUN pip3 install pyfakefs
 
-# Install docker engine 20.10 inside docker and enable experimental feature
+# Install docker engine 24 inside docker and enable experimental feature
 RUN apt-get update
 RUN apt-get install -y \
            apt-transport-https \
@@ -612,7 +616,7 @@ RUN add-apt-repository \
            $(lsb_release -cs) \
            stable"
 RUN apt-get update
-RUN apt-get install -y docker-ce=5:20.10.14~3-0~debian-bullseye docker-ce-cli=5:20.10.14~3-0~debian-bullseye containerd.io=1.5.11-1
+RUN apt-get install -y docker-ce=5:24.0.2-1~debian.11~bullseye docker-ce-cli=5:24.0.2-1~debian.11~bullseye containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.11~bullseye docker-compose-plugin=2.18.1-1~debian.11~bullseye
 RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 

@@ -221,6 +221,9 @@ def container_up(feature, owner, version):
     debug_msg("args: feature={}, owner={}, version={} DB: set_owner={} state_data={}".format(
         feature, owner, version, set_owner, json.dumps(state_data, indent=4)))
 
+    if state_data[SYSTEM_STATE] == '':
+        return
+
     if owner == "local":
         update_state(state_db, feature, owner, version)
     else:

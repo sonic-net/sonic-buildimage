@@ -88,7 +88,7 @@ class StaticRouteMgr(Manager):
         so need this checking (skip appl_db deletion) to avoid race condition between StaticRouteMgr(appl_db) and StaticRouteMgr(config_db)
         For more detailed information:
         https://github.com/sonic-net/SONiC/blob/master/doc/static-route/SONiC_static_route_bfd_hld.md#bfd-field-changes-from-true-to-false
-
+        but if the deletion is caused by no nexthop available (bfd field is true but all the sessions are down), need to allow this deletion.
         :param vrf: vrf from the split_key(key) return
         :param ip_prefix: ip_prefix from the split_key(key) return
         :return: True if the deletion comes from APPL_DB and the vrf|ip_prefix exists in CONFIG_DB, otherwise return False
@@ -102,6 +102,17 @@ class StaticRouteMgr(Manager):
 
         #just pop local cache if the route exist in config_db
         cfg_key = "STATIC_ROUTE|" + vrf + "|" + ip_prefix
+        if vrf == "default":
+            default_key = "STATIC_ROUTE|" + ip_prefix
+            bfd = self.config_db.get(self.config_db.CONFIG_DB, default_key, "bfd")
+            if bfd == "true":
+                log_debug("skip_appl_del: {}, key {}, bfd flag {}".format(self.db_name, default_key, bfd))
+                return False
+        bfd = self.config_db.get(self.config_db.CONFIG_DB, cfg_key, "bfd")
+        if bfd == "true":
+            log_debug("skip_appl_del: {}, key {}, bfd flag {}".format(self.db_name, cfg_key, bfd))
+            return False
+
         nexthop = self.config_db.get(self.config_db.CONFIG_DB, cfg_key, "nexthop")
         if nexthop and len(nexthop)>0:
             self.static_routes.setdefault(vrf, {}).pop(ip_prefix, None)
@@ -121,7 +132,7 @@ class StaticRouteMgr(Manager):
         is_ipv6 = TemplateFabric.is_ipv6(ip_prefix)
 
         if self.skip_appl_del(vrf, ip_prefix):
-            log_debug("{} ignore appl_db static route deletion because of key {} exist in config_db".format(self.db_name, key))
+            log_debug("{} ignore appl_db static route deletion because of key {} exist in config_db and bfd is not true".format(self.db_name, key))
             return
 
         ip_nh_set = IpNextHopSet(is_ipv6)

@@ -50,7 +50,7 @@ cmake==3.18.4-2+deb11u1
 cmake-data==3.18.4-2+deb11u1
 cmocka-doc==1.1.5-2
 comerr-dev==2.1-1.46.2-2
-containerd.io==1.5.11-1
+containerd.io==1.6.21-1
 cowbuilder==0.89
 cowdancer==0.89
 cpio==2.13+dfsg-4
@@ -59,6 +59,8 @@ cpp-10==10.2.1-6
 cppcheck==2.3-1
 cron==3.0pl1-137
 curl==7.74.0-1.3+deb11u7
+dblatex==0.3.12py3-1
+dblatex-doc==0.3.12py3-1
 dbus==1.12.24-0+deb11u1
 dbus-user-session==1.12.24-0+deb11u1
 dconf-gsettings-backend==0.38.0-2
@@ -67,6 +69,7 @@ dctrl-tools==2.24-3+b1
 debhelper==13.3.4
 debian-keyring==2021.07.26
 debootstrap==1.0.123+deb11u1
+default-jdk==2:1.11-72
 default-jdk-headless==2:1.11-72
 default-jre==2:1.11-72
 default-jre-headless==2:1.11-72
@@ -75,6 +78,7 @@ device-tree-compiler==1.6.0-1
 devscripts==2.21.3+deb11u1
 dh-apparmor==2.13.6-10
 dh-autoreconf==20
+dh-elpa==2.0.8
 dh-exec==0.23.2
 dh-make==2.202003
 dh-python==4.20201102+nmu1
@@ -93,10 +97,12 @@ docbook-dsssl==1.79-9.2
 docbook-to-man==1:2.0.0-45
 docbook-utils==0.6.14-3.4
 docbook-xml==4.5-9
-docker-ce==5:20.10.14~3-0~debian-bullseye
-docker-ce-cli==5:20.10.14~3-0~debian-bullseye
-docker-ce-rootless-extras==5:24.0.2-1~debian.11~bullseye
-docker-scan-plugin==0.23.0~debian-bullseye
+docbook-xsl==1.79.2+dfsg-1
+docker-buildx-plugin==0.10.5-1~debian.11~bullseye
+docker-ce==5:24.0.2-1~debian.11~bullseye
+docker-ce-cli==5:24.0.2-1~debian.11~bullseye
+docker-ce-rootless-extras==5:24.0.4-1~debian.11~bullseye
+docker-compose-plugin==2.18.1-1~debian.11~bullseye
 docutils-common==0.16+dfsg-4
 dosfstools==4.2-1
 doxygen==1.9.1-1
@@ -109,6 +115,10 @@ dwarves==1.20-1
 dwz==0.13+20210201-1
 eatmydata==105-9
 ed==1.17-1
+emacs-bin-common==1:27.1+1-3.1+deb11u2
+emacs-common==1:27.1+1-3.1+deb11u2
+emacs-el==1:27.1+1-3.1+deb11u2
+emacs-nox==1:27.1+1-3.1+deb11u2
 emacsen-common==3.0.4
 equivs==2.3.1
 exim4-base==4.94.2-7
@@ -124,6 +134,8 @@ fonts-dejavu-core==2.37-2
 fonts-dejavu-extra==2.37-2
 fonts-droid-fallback==1:6.0.1r16-1.1
 fonts-font-awesome==5.0.10+really4.7.0~dfsg-4.1
+fonts-gfs-baskerville==1.1-6
+fonts-gfs-porson==1.1-7
 fonts-lato==2.0-2.1
 fonts-liberation==1:1.07.4-11
 fonts-lmodern==2.004.5-6.1
@@ -247,6 +259,8 @@ libarchive-zip-perl==1.68-1
 libarchive13==3.4.3-2+deb11u1
 libargon2-1==0~20171227-0.2
 libarray-intspan-perl==2.004-1
+libarray-unique-perl==0.08-2.1
+libarray-utils-perl==0.5-1.1
 libasan6==10.2.1-6
 libasm-java==9.1-1
 libasound2==1.2.4-1.1
@@ -385,6 +399,8 @@ libcc1-0==10.2.1-6
 libcdi-api-java==1.2-3
 libcdparanoia0==3.10.2+debian-13.1
 libcdt5==2.42.2-5
+libcgi-fast-perl==1:2.15-1
+libcgi-pm-perl==4.51-1
 libcgraph6==2.42.2-5
 libchromaprint1==1.5.0-2
 libcjson-dev==1.7.14-1
@@ -458,6 +474,7 @@ libdbus-glib-1-dev-bin==0.110-6
 libdconf1==0.38.0-2
 libde265-0==1.0.11-0+deb11u1
 libdebhelper-perl==13.3.4
+libdebian-source-perl==0.116
 libdebuginfod1==0.183-1
 libdeflate0==1.7-1
 libdevel-callchecker-perl==0.008-1+b2
@@ -502,6 +519,7 @@ libel-api-java==3.0.0-3
 libelf-dev==0.183-1
 libelf1==0.183-1
 libemail-address-xs-perl==1.04-1+b3
+libemail-date-format-perl==1.005-1.1
 libencode-locale-perl==1.05-1.1
 libepoxy-dev==1.5.5-1
 libepoxy0==1.5.5-1
@@ -521,6 +539,7 @@ libexpat1==2.2.10-2+deb11u5
 libexpat1-dev==2.2.10-2+deb11u5
 libexplain-dev==1.4.D001-11+deb11u1
 libexplain51==1.4.D001-11+deb11u1
+libexporter-lite-perl==0.08-1
 libexporter-tiny-perl==1.002002-1
 libfabric1==1.11.0-2
 libfakeroot==1.25.3-1.1
@@ -611,6 +630,7 @@ libgmp-dev==2:6.2.1+dfsg-1+deb11u1
 libgmpxx4ldbl==2:6.2.1+dfsg-1+deb11u1
 libgnutls-dane0==3.7.1-5+deb11u3
 libgomp1==10.2.1-6
+libgoogle-gson-java==2.8.6-1+deb11u1
 libgoogle-perftools4==2.8.1-1
 libgpgme11==1.14.0-1+b2
 libgpm2==1.20.7-8
@@ -655,6 +675,7 @@ libhttp-daemon-perl==6.12-1+deb11u1
 libhttp-date-perl==6.05-1
 libhttp-message-perl==6.28-1
 libhttp-negotiate-perl==6.01-1
+libhttp-server-simple-perl==0.52-1.1
 libhttp-tiny-multipart-perl==0.08-1.1
 libhttpclient-java==4.5.13-2
 libhttpcore-java==4.4.14-1
@@ -688,6 +709,7 @@ libip6tc-dev==1.8.7-1
 libip6tc2==1.8.7-1
 libipc-run-perl==20200505.0-1
 libipc-run3-perl==0.048-2
+libipc-shareable-perl==0.61-2
 libipc-system-simple-perl==1.30-1
 libipt2==2.0.3-1
 libiptc-dev==1.8.7-1
@@ -766,6 +788,8 @@ liblmdb0==0.9.24-1
 liblocale-gettext-perl==1.07-4+b1
 liblog-any-adapter-screen-perl==0.140-1
 liblog-any-perl==1.709-1
+liblog-dispatch-perl==2.70-1
+liblog-log4perl-perl==1.54-1
 liblog4j1.2-java==1.2.17-10+deb11u1
 liblognorm5==2.0.5-1.1
 liblqr-1-0==0.4.2-2.1
@@ -817,7 +841,10 @@ libmd-dev==1.0.3-3
 libmd0==1.0.3-3
 libmd4c0==0.4.7-2
 libmfx1==21.1.0-1
+libmime-charset-perl==1.012.2-1
+libmime-lite-perl==3.031-1
 libmime-tools-perl==5.509-1
+libmime-types-perl==2.18-1
 libmnl-dev==1.0.4-3
 libmnl0==1.0.4-3
 libmodule-implementation-perl==0.09-1.1
@@ -921,7 +948,9 @@ libpaper1==1.1.28+b1
 libparams-classify-perl==0.015-1+b3
 libparams-util-perl==1.102-1+b1
 libparams-validate-perl==1.30-1+b1
+libparams-validationcompiler-perl==0.30-1
 libparboiled-java==1.1.7-2.1
+libparse-debcontrol-perl==2.005-4.1
 libpath-iterator-rule-perl==1.014-1
 libpath-tiny-perl==0.118-1
 libpathplan4==2.42.2-5
@@ -984,10 +1013,7 @@ libpostproc55==7:4.3.6-0+deb11u1
 libproc-processtable-perl==0.59-2+b1
 libprocps8==2:3.3.17-5
 libprotobuf-c1==1.3.3-1+b2
-libprotobuf-dev==3.12.4-1
-libprotobuf-lite23==3.12.4-1
 libprotobuf23==3.12.4-1
-libprotoc23==3.12.4-1
 libproxy1v5==0.4.17-1
 libpsl5==0.21.0-1.2
 libpsm-infinipath1==3.3+20.604758e7-6.1
@@ -1089,6 +1115,7 @@ libsnmp40==5.9+dfsg-4+deb11u1
 libsoap-lite-perl==1.27-1
 libsodium-dev==1.0.18-1
 libsodium23==1.0.18-1
+libsombok3==2.4.0-2+b1
 libsord-0-0==0.16.8-2
 libsort-key-perl==1.33-2+b3
 libsort-versions-perl==1.62-1
@@ -1097,6 +1124,7 @@ libsoup2.4-1==2.72.0-2
 libsource-highlight-common==3.1.9-3
 libsource-highlight4v5==3.1.9-3+b1
 libsoxr0==0.1.3-4
+libspecio-perl==0.47-1
 libspeex1==1.2~rc1.2-1.1
 libsphinxbase3==0.8+5prealpha+1-12
 libspice-server1==0.14.3-2.1
@@ -1176,6 +1204,7 @@ libucx0==1.10.1~rc1+really.1.10.0-1
 libudev-dev==247.3-7+deb11u2
 libudfread0==1.1.1-1
 libunbound8==1.13.1-1+deb11u1
+libunicode-linebreak-perl==0.0.20190101-1+b3
 libunicode-utf8-perl==0.62-1+b2
 libunivocity-parsers-java==2.8.3-2
 libunwind-dev==1.3.2-2
@@ -1234,6 +1263,7 @@ libwmf0.2-7==0.2.8.4-17
 libwoff1==1.0.2-1+b1
 libwrap0==7.6.q-31
 libwrap0-dev==7.6.q-31
+libwww-mechanize-perl==2.03-1
 libwww-perl==6.52-1
 libwww-robotrules-perl==6.02-1
 libx11-6==2:1.7.2-1+deb11u1
@@ -1341,6 +1371,7 @@ libxrender1==1:0.9.10-1
 libxshmfence1==1.3-1
 libxslt1.1==1.1.34-4+deb11u1
 libxss1==1:1.2.3-1
+libxstring-perl==0.005-1+b1
 libxt-dev==1:1.2.0-1
 libxt6==1:1.2.0-1
 libxtables-dev==1.8.7-1
@@ -1356,6 +1387,7 @@ libyajl2==2.1.0-3
 libyaml-0-2==0.2.2-1
 libyaml-dev==0.2.2-1
 libyaml-libyaml-perl==0.82+repack-1+b1
+libyaml-tiny-perl==1.73-1
 libz3-4==4.8.10-1
 libz3-dev==4.8.10-1
 libzmq3-dev==4.3.4-1
@@ -1496,7 +1528,6 @@ preview-latex-style==12.2-1
 pristine-tar==1.49
 procmail==3.22-26+deb11u1
 procps==2:3.3.17-5
-protobuf-compiler==3.12.4-1
 psmisc==23.4-2
 psutils==1.17.dfsg-4
 publicsuffix==20220811.1734-0+deb11u1
@@ -1629,6 +1660,7 @@ qtchooser==66-2
 qttranslations5-l10n==5.15.2-2
 quilt==0.66-2.1
 rake==13.0.3-1
+rake-compiler==1.1.1-1
 readline-common==8.1-1
 rrdtool==1.7.2-3+b7
 rsync==3.2.3-4+deb11u1
@@ -1636,9 +1668,15 @@ rsyslog==8.2102.0-2+deb11u1
 ruby==1:2.7+2
 ruby-all-dev==1:2.7+2
 ruby-asciidoctor==2.0.12-2
+ruby-diff-lcs==1.4.4-1
 ruby-minitest==5.13.0-1
 ruby-net-telnet==0.1.1-2
 ruby-power-assert==1.1.7-2
+ruby-rspec==3.9.0c2e2m1s3-2
+ruby-rspec-core==3.9.0c2e2m1s3-2
+ruby-rspec-expectations==3.9.0c2e2m1s3-2
+ruby-rspec-mocks==3.9.0c2e2m1s3-2
+ruby-rspec-support==3.9.0c2e2m1s3-2
 ruby-rubygems==3.2.5-2
 ruby-test-unit==3.3.9-1
 ruby-xmlrpc==0.3.0-2
@@ -1679,15 +1717,21 @@ tex-common==6.16
 tex-gyre==20180621-3.1
 texi2html==1.82+dfsg1-6
 texinfo==6.7.0.dfsg.2-6
+texlive==2020.20210202-3
 texlive-base==2020.20210202-3
+texlive-bibtex-extra==2020.20210202-3
 texlive-binaries==2020.20200327.54578-7+deb11u1
+texlive-extra-utils==2020.20210202-3
 texlive-fonts-recommended==2020.20210202-3
 texlive-formats-extra==2020.20210202-3
+texlive-lang-greek==2020.20210202-2
 texlive-latex-base==2020.20210202-3
 texlive-latex-extra==2020.20210202-3
 texlive-latex-recommended==2020.20210202-3
+texlive-luatex==2020.20210202-3
 texlive-pictures==2020.20210202-3
 texlive-plain-generic==2020.20210202-3
+texlive-science==2020.20210202-3
 texlive-xetex==2020.20210202-3
 thin-provisioning-tools==0.9.0-1
 time==1.9-0.1
@@ -1726,6 +1770,7 @@ xfonts-encodings==1:1.0.4-2.1
 xfonts-utils==1:7.7+6
 xkb-data==2.29-2
 xml-core==0.18+nmu1
+xmlto==0.0.28-2.1
 xorg-sgml-doctools==1:1.11-1.1
 xsltproc==1.1.34-4+deb11u1
 xtrans-dev==1.4.0-1

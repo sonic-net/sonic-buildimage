@@ -18,7 +18,7 @@ busybox==1:1.30.1-6+b3
 ca-certificates==20210119
 cgroup-tools==0.41-11
 conntrack==1:1.4.6-2
-containerd.io==1.5.11-1
+containerd.io==1.6.21-1
 cpio==2.13+dfsg-4
 cpp==4:10.2.1-1
 cpp-10==10.2.1-6
@@ -31,8 +31,8 @@ dirmngr==2.2.27-2+deb11u2
 distro-info-data==0.51+deb11u3
 dmidecode==3.3-2
 dmsetup==2:1.02.175-2.1
-docker-ce==5:20.10.14~3-0~debian-bullseye
-docker-ce-cli==5:20.10.14~3-0~debian-bullseye
+docker-ce==5:24.0.2-1~debian.11~bullseye
+docker-ce-cli==5:24.0.2-1~debian.11~bullseye
 dpkg-dev==1.20.12
 eatmydata==105-9
 ebtables==2.0.11-4+b1

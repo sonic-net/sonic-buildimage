@@ -1,0 +1,13 @@
+Source: sonic
+Maintainer: Ze Gan <zegan@microsoft.com>
+Section: net
+Priority: optional
+Build-Depends: dh-exec (>=0.3), debhelper (>= 12), autotools-dev,
+Standards-Version: 1.0.0
+
+Package: libdashapi
+Architecture: any
+Build-Depends: protobuf-compiler (>=3.21.12), libprotobuf-dev (>=3.21.12)
+Depends: libprotobuf32 (>=3.21.12), libprotobuf-lite32 (>=3.21.12)
+Section: libs
+Description: DASH API definition for the SONiC project.

@@ -44,6 +44,7 @@ RUN pip3 install redis==4.5.4
 
 # Copy files
 COPY ["files/swss_vars.j2", "/usr/share/sonic/templates/"]
+COPY ["files/container_startup.py", "/usr/share/sonic/scripts/"]
 
 ## Clean up
 RUN apt-get purge -y               \

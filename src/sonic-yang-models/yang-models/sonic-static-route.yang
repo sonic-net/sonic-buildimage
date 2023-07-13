@@ -54,6 +54,12 @@ module sonic-static-route {
           }
           default "false";
         }
+        leaf bfd {
+          type string {
+            pattern "((true|false),)*(true|false)";
+          }
+          default "false";
+        }
       }
       list STATIC_ROUTE_LIST {
         key "vrf_name prefix";

@@ -11,7 +11,7 @@ import datetime
 import docker
 from swsscommon import swsscommon
 
-CTR_STATE_SCR_PATH = '/usr/share/sonic/scripts/container_startup.py'
+CTRMGRD_SERVICE_PATH = '/lib/systemd/system/ctrmgrd.service'
 
 state_db = None
 
@@ -62,7 +62,7 @@ def init():
     cfg_db = swsscommon.DBConnector("CONFIG_DB", 0)
     state_db = swsscommon.DBConnector("STATE_DB", 0)
 
-    remote_ctr_enabled = os.path.exists(CTR_STATE_SCR_PATH)
+    remote_ctr_enabled = os.path.exists(CTRMGRD_SERVICE_PATH)
 
 
 def get_config_data(fld, dflt):
