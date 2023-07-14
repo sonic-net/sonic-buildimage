@@ -256,7 +256,7 @@ stages:
           variables:
             PLATFORM_ARCH: armhf
           script: |
-            OPTIONS="$(BUILD_OPTIONS) PASSWORD=$PASSWORD"
+            OPTIONS="$(BUILD_OPTIONS) INCLUDE_RESTAPI=y PASSWORD=$PASSWORD"
             make $OPTIONS target/sonic-marvell-armhf.bin
         - name: cisco-8000
           variables:
@@ -312,7 +312,7 @@ stages:
             displayName: "Override cisco sai packages"
           - script: |
               set -ex
-              OPTIONS="$(BUILD_OPTIONS) ENABLE_NAT=n INCLUDE_RESTAPI=y INCLUDE_RESTAPI=y INCLUDE_VNET_MONITOR=y PASSWORD=$PASSWORD"
+              OPTIONS="$(BUILD_OPTIONS) ENABLE_NAT=n INCLUDE_RESTAPI=y INCLUDE_VNET_MONITOR=y PASSWORD=$PASSWORD"
               make $OPTIONS target/sonic-cisco-8000.bin
               make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-cisco-rpc.gz
             env:
