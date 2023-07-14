@@ -40,6 +40,7 @@ stages:
     MIRROR_SNAPSHOT: 'y'
     DEFAULT_CONTAINER_REGISTRY: 'publicmirror.azurecr.io'
     ENABLE_DOCKER_BASE_PULL: 'y'
+    INCLUDE_RESTAPI: 'y'
   jobs:
   - template: .azure-pipelines/azure-pipelines-job-groups.yml@acs-buildimage
     parameters:
@@ -83,6 +84,7 @@ stages:
     MIRROR_SNAPSHOT: 'y'
     DEFAULT_CONTAINER_REGISTRY: 'publicmirror.azurecr.io'
     ENABLE_DOCKER_BASE_PULL: 'y'
+    INCLUDE_RESTAPI: 'y'
   jobs:
   - template: .azure-pipelines/azure-pipelines-job-groups.yml@acs-buildimage
     parameters:
