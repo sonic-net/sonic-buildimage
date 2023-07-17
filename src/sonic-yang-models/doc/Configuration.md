@@ -51,7 +51,7 @@ Table of Contents
          * [MUX_LINKMGR](#mux_linkmgr)
          * [NEIGH](#neigh)
          * [NTP Global Configuration](#ntp-global-configuration)
-         * [NTP and SYSLOG servers](#ntp-and-syslog-servers)
+         * [NTP Servers](#ntp-servers)
          * [Peer Switch](#peer-switch)
          * [Policer](#policer)
          * [Port](#port)
@@ -60,7 +60,8 @@ Table of Contents
          * [Scheduler](#scheduler)
          * [Port QoS Map](#port-qos-map)
          * [Queue](#queue)
-         * [Syslog Rate Limit](#syslog-rate-limit)
+         * [Syslog Global Configuration](#syslog-global-configuration)
+         * [Syslog Servers](#syslog-servers)
          * [Sflow](#sflow)
          * [Restapi](#restapi)
          * [System Port](#system-port)
@@ -79,6 +80,7 @@ Table of Contents
          * [LOGGER](#logger)
          * [WRED_PROFILE](#wred_profile)
          * [PASSWORD_HARDENING](#password_hardening)
+         * [SSH_SERVER](#ssh_server)  
          * [SYSTEM_DEFAULTS table](#systemdefaults-table)
          * [RADIUS](#radius)
          * [Static DNS](#static-dns)
@@ -1511,7 +1513,7 @@ for that address.
 }
 ```
 
-### NTP and SYSLOG servers
+### NTP servers
 
 These information are configured in individual tables. Domain name or IP
 address of the server is used as object key. Currently there are no
@@ -1530,35 +1532,6 @@ attributes in those objects.
     "NTP_SERVER": {
         "23.92.29.245": {},
         "204.2.134.164": {}
-    }
-}
-```
-
-***Syslog server***
-```
-{
-    "SYSLOG_SERVER": {
-        "10.0.0.5": {},
-        "10.0.0.6": {},
-        "10.11.150.5": {}
-    },
-
-    "SYSLOG_SERVER" : {
-        "2.2.2.2": {
-            "source": "1.1.1.1",
-            "port": "514",
-            "vrf": "default"
-        },
-        "4.4.4.4": {
-            "source": "3.3.3.3",
-            "port": "514",
-            "vrf": "mgmt"
-        },
-        "2222::2222": {
-            "source": "1111::1111",
-            "port": "514",
-            "vrf": "Vrf-Data"
-        }
     }
 }
 ```
@@ -1848,7 +1821,33 @@ key - name
 | collector_port | Destination L4 port of the Sflow collector                                              |             | 6343      |             |
 | collector_vrf  | Specify the Collector VRF. In this revision, it is either default VRF or Management VRF.|             |           |             |
 
-### Syslog Rate Limit
+### Syslog Global Configuration
+
+These configuration options are used to configure rsyslog utility and the way
+the system generates logs.
+
+***Configuration sample***
+```
+{
+    "SYSLOG_CONFIG": {
+        "GLOBAL": {
+            "rate_limit_interval": "5",
+            "rate_limit_burst": "100",
+            "format": "welf",
+            "welf_firewall_name": "bla",
+            "severity": "info"
+        }
+    }
+}
+```
+
+* `rate_limit_interval` - determines the amount of time that is being measured for rate limiting: `unsigned integer`
+* `rate_limit_burst` - defines the amount of messages, that have to occur in the time limit: `unsigned integer`
+* `format` - syslog log format: `{standard, welf}`
+* `welf_firewall_name` - WELF format firewall name: `string`
+* `severity` - global log severity: `{emerg, alert, crit, error, warning, notice, info, debug}`
+
+***Syslog Rate Limit***
 
 Host side configuration:
 
@@ -1879,6 +1878,50 @@ Container side configuration:
   }
 }
 ```
+
+### Syslog servers
+
+These information are configured in individual tables. Domain name or IP
+address of the server is used as object key. Each server can be configurable.
+
+***Configuration sample***
+```
+{
+    "SYSLOG_SERVER": {
+        "10.0.0.5": {},
+        "10.0.0.6": {},
+        "10.11.150.5": {}
+    },
+
+    "SYSLOG_SERVER" : {
+        "4.4.4.4": {
+            "source": "3.3.3.3",
+            "port": "514",
+            "vrf": "mgmt"
+        },
+        "2222::2222": {
+            "source": "1111::1111",
+            "port": "514",
+            "vrf": "Vrf-Data"
+        },
+        "somehostname": {
+            "filter": "include",
+            "filter_regex": "ololo",
+            "port": "514",
+            "protocol": "tcp",
+            "severity": "notice",
+            "vrf": "default"
+        }
+    }
+}
+```
+
+* `filter` - determines if syslog will include or exclude messages specified by regex: `{include, exclude}`
+* `filter_regex` - filter messages by this regex: `string`
+* `port` - network port to use to connect to remote server: `integer: 1..65535`
+* `protocol` - network protocol to use to connect to remote server: `{tcp, udp}`
+* `severity` - per-server log severity, overrifes global one: `{emerg, alert, crit, error, warning, notice, info, debug}`
+
 
 ### System Port
 Every port on the system requires a global representation, known as a System Port,
@@ -2318,6 +2361,25 @@ There are 4 classes
         "special_class": "true"
     }
   }
+}
+```
+
+### SSH_SERVER
+
+In this table, we allow configuring ssh server global settings. This will feature includes 3 configurations:
+
+-   authentication_retries - number of login attepmts 1-100
+-   login_timeout - Timeout in seconds for login session for user to connect 1-600
+-   ports - Ssh port numbers - string of port numbers seperated by ','
+```
+{
+    "SSH_SERVER": {
+        "POLICIES":{
+            "authentication_retries": "6",
+            "login_timeout": "120",
+            "ports": "22"
+        }
+    }
 }
 ```
 

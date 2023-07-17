@@ -365,7 +365,7 @@ endif
 export SONIC_ROUTING_STACK
 export FRR_USER_UID
 export FRR_USER_GID
-export ENABLE_FIPS_FEATURE
+export INCLUDE_FIPS
 export ENABLE_FIPS
 
 ###############################################################################
@@ -443,7 +443,7 @@ $(info "INCLUDE_TEAMD"                   : "$(INCLUDE_TEAMD)")
 $(info "INCLUDE_ROUTER_ADVERTISER"       : "$(INCLUDE_ROUTER_ADVERTISER)")
 $(info "INCLUDE_BOOTCHART                : "$(INCLUDE_BOOTCHART)")
 $(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
-$(info "ENABLE_FIPS_FEATURE"             : "$(ENABLE_FIPS_FEATURE)")
+$(info "INCLUDE_FIPS"             : "$(INCLUDE_FIPS)")
 $(info "ENABLE_TRANSLIB_WRITE"           : "$(ENABLE_TRANSLIB_WRITE)")
 $(info "ENABLE_NATIVE_WRITE"             : "$(ENABLE_NATIVE_WRITE)")
 $(info "ENABLE_AUTO_TECH_SUPPORT"        : "$(ENABLE_AUTO_TECH_SUPPORT)")
@@ -1260,7 +1260,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $$(addprefix $(FILES_PATH)/,$$($$*_FILES)) \
         $(addsuffix -install,$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(DEBOOTSTRAP))) \
         $(if $(findstring y,$(ENABLE_ZTP)),$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(SONIC_ZTP))) \
-        $(if $(findstring y,$(ENABLE_FIPS_FEATURE)),$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(SYMCRYPT_OPENSSL))) \
+        $(if $(findstring y,$(INCLUDE_FIPS)),$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(SYMCRYPT_OPENSSL))) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_UTILITIES_PY3)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PY_COMMON_PY2)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PY_COMMON_PY3)) \

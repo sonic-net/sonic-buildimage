@@ -499,12 +499,23 @@
                 "source": "1111::1111",
                 "port": "514",
                 "vrf": "Vrf_blue"
+            },
+            "somehostname": {
+                "filter": "include",
+                "filter_regex": "ololo",
+                "port": "514",
+                "protocol": "tcp",
+                "severity": "notice",
+                "vrf": "default"
             }
         },
         "SYSLOG_CONFIG" : {
             "GLOBAL": {
                 "rate_limit_interval": "5",
-                "rate_limit_burst": "100"
+                "rate_limit_burst": "100",
+                "format": "welf",
+                "welf_firewall_name": "bla",
+                "severity": "info"
             }
         },
         "SYSLOG_CONFIG_FEATURE" : {
@@ -2222,6 +2233,14 @@
                 "lower_class": "true",
                 "special_class": "true",
                 "upper_class": "true"
+            }
+        },
+
+        "SSH_SERVER": {
+            "POLICIES":{
+                "authentication_retries": "6",
+                "login_timeout": "120",
+                "ports": "22"
             }
         },
 

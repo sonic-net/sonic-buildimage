@@ -1002,7 +1002,6 @@ def parse_meta(meta, hname):
     dhcp_servers = []
     dhcpv6_servers = []
     ntp_servers = []
-    dns_nameservers = []
     tacacs_servers = []
     mgmt_routes = []
     erspan_dst = []
@@ -1033,8 +1032,6 @@ def parse_meta(meta, hname):
                     dhcp_servers = value_group
                 elif name == "NtpResources":
                     ntp_servers = value_group
-                elif name == "DnsNameserverResources":
-                    dns_nameservers = value_group
                 elif name == "SyslogResources":
                     syslog_servers = value_group
                 elif name == "TacacsServer":
@@ -1074,7 +1071,7 @@ def parse_meta(meta, hname):
                     qos_profile = value
                 elif name == "RackMgmtMap":
                     rack_mgmt_map = value
-    return syslog_servers, dhcp_servers, dhcpv6_servers, ntp_servers, dns_nameservers, tacacs_servers, mgmt_routes, erspan_dst, deployment_id, region, cloudtype, resource_type, downstream_subrole, switch_id, switch_type, max_cores, kube_data, macsec_profile, downstream_redundancy_types, redundancy_type, qos_profile, rack_mgmt_map
+    return syslog_servers, dhcp_servers, dhcpv6_servers, ntp_servers, tacacs_servers, mgmt_routes, erspan_dst, deployment_id, region, cloudtype, resource_type, downstream_subrole, switch_id, switch_type, max_cores, kube_data, macsec_profile, downstream_redundancy_types, redundancy_type, qos_profile, rack_mgmt_map
 
 
 def parse_linkmeta(meta, hname):
@@ -1501,7 +1498,6 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     dhcp_servers = []
     dhcpv6_servers = []
     ntp_servers = []
-    dns_nameservers = []
     tacacs_servers = []
     mgmt_routes = []
     erspan_dst = []
@@ -1557,7 +1553,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             elif child.tag == str(QName(ns, "UngDec")):
                 (u_neighbors, u_devices, _, _, _, _, _, _) = parse_png(child, hostname, None)
             elif child.tag == str(QName(ns, "MetadataDeclaration")):
-                (syslog_servers, dhcp_servers, dhcpv6_servers, ntp_servers, dns_nameservers, tacacs_servers, mgmt_routes, erspan_dst, deployment_id, region, cloudtype, resource_type, downstream_subrole, switch_id, switch_type, max_cores, kube_data, macsec_profile, downstream_redundancy_types, redundancy_type, qos_profile, rack_mgmt_map) = parse_meta(child, hostname)
+                (syslog_servers, dhcp_servers, dhcpv6_servers, ntp_servers, tacacs_servers, mgmt_routes, erspan_dst, deployment_id, region, cloudtype, resource_type, downstream_subrole, switch_id, switch_type, max_cores, kube_data, macsec_profile, downstream_redundancy_types, redundancy_type, qos_profile, rack_mgmt_map) = parse_meta(child, hostname)
             elif child.tag == str(QName(ns, "LinkMetadataDeclaration")):
                 linkmetas = parse_linkmeta(child, hostname)
             elif child.tag == str(QName(ns, "DeviceInfos")):
@@ -2013,14 +2009,6 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     results['DHCP_SERVER'] = dict((item, {}) for item in dhcp_servers)
     results['DHCP_RELAY'] = dhcp_relay_table
     results['NTP_SERVER'] = dict((item, {}) for item in ntp_servers)
-    # Set default DNS nameserver for different cloud
-    if len(dns_nameservers) == 0:
-        if cloudtype is None:
-            dns_nameservers.append(dns_dict["public"])
-        else:
-            addr = dns_dict.get(cloudtype.lower(), dns_dict["public"])
-            dns_nameservers.append(addr)
-    results['DNS_NAMESERVER'] = dict((item, {}) for item in dns_nameservers)
     results['TACPLUS_SERVER'] = dict((item, {'priority': '1', 'tcp_port': '49'}) for item in tacacs_servers)
     if len(acl_table_types) > 0:
         results['ACL_TABLE_TYPE'] = acl_table_types
