@@ -46,7 +46,7 @@ RUN pip3 install aiohttp \
                  azure-kusto-data \
                  azure-kusto-ingest \
                  defusedxml \
-                 celery[redis]==4.4.7 \
+                 celery[redis]==5.2.7 \
                  cffi \
                  contextlib2==0.6.0.post1 \
                  cryptography==3.3.2 \
@@ -54,7 +54,7 @@ RUN pip3 install aiohttp \
                  "future>=0.16.0" \
                  gitpython \
                  ipaddr \
-                 ipython==5.4.1 \
+                 ipython==8.12.2 \
                  ixnetwork-restpy==1.0.64 \
                  ixnetwork-open-traffic-generator==0.0.79 \
                  jinja2==2.10.1 \
@@ -210,6 +210,27 @@ RUN dpkg -i \
 debs/{{ deb }}{{' '}}
 {%- endfor %}
 
+# Install protobuf 3.21.12
+RUN mkdir -p /tmp/protobuf \
+    cd /tmp/protobuf \
+    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-dev_3.21.12-3_amd64.deb \
+    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-lite32_3.21.12-3_amd64.deb \
+    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf32_3.21.12-3_amd64.deb \
+    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotoc-dev_3.21.12-3_amd64.deb \
+    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotoc32_3.21.12-3_amd64.deb \
+    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/protobuf-compiler_3.21.12-3_amd64.deb \
+    && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/python3-protobuf_3.21.12-3_amd64.deb \
+    && dpkg -i *.deb \
+    && rm -rf /tmp/protobuf
+
+# Install dash-api
+RUN cd /tmp \
+    && mkdir -p /usr/lib/python3/dist-packages/dash_api \
+    && wget https://raw.githubusercontent.com/sonic-net/sonic-buildimage/master/src/sonic-dash-api/pypkg/__init__.py -O /usr/lib/python3/dist-packages/dash_api/__init__.py \
+    && git clone https://github.com/sonic-net/sonic-dash-api.git \
+    && protoc -I=sonic-dash-api/proto --python_out=/usr/lib/python3/dist-packages/dash_api sonic-dash-api/proto/*.proto \
+    && rm -rf /tmp/sonic-dash-api
+
 RUN mkdir /var/run/sshd
 EXPOSE 22
 
@@ -259,7 +280,7 @@ RUN python3 -m pip install aiohttp \
                            azure-kusto-data \
                            azure-kusto-ingest \
                            defusedxml \
-                           celery[redis]==4.4.7 \
+                           celery[redis]==5.2.7 \
                            cffi \
                            contextlib2==0.6.0.post1 \
                            cryptography==3.3.2 \
@@ -267,7 +288,7 @@ RUN python3 -m pip install aiohttp \
                            "future>=0.16.0" \
                            gitpython \
                            ipaddr \
-                           ipython==5.4.1 \
+                           ipython==8.12.2 \
                            ixnetwork-restpy==1.0.64 \
                            ixnetwork-open-traffic-generator==0.0.79 \
                            jinja2==2.10.1 \

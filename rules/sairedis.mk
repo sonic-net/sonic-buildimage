@@ -46,7 +46,7 @@ $(LIBSAIMETADATA_DBG)_RDEPENDS += $(LIBSAIMETADATA)
 $(eval $(call add_derived_package,$(LIBSAIREDIS),$(LIBSAIMETADATA_DBG)))
 
 ifeq ($(ENABLE_PY2_MODULES), n)
-    $(LIBSAIREDIS)_BUILD_ENV += DEB_BUILD_PROFILES=nopython2
+    $(LIBSAIREDIS)_DEB_BUILD_PROFILES += nopython2
 endif
 
 # The .c, .cpp, .h & .hpp files under src/{$DBG_SRC_ARCHIVE list}

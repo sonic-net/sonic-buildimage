@@ -13,7 +13,7 @@
 [program:dhcp6relay]
 command=/usr/sbin/dhcp6relay
 {#- Dual ToR Option #}
-{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -d{% endif %}
+{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %} -u Loopback0 {% endif %}
 
 priority=3
 autostart=false

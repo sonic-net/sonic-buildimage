@@ -21,7 +21,7 @@ ifeq ($(ENABLE_PY2_MODULES), y)
     PYTHON_SWSSCOMMON = python-swsscommon_$(LIBSWSSCOMMON_VERSION)_$(CONFIGURED_ARCH).deb
     $(eval $(call add_derived_package,$(LIBSWSSCOMMON),$(PYTHON_SWSSCOMMON)))
 else
-    $(LIBSWSSCOMMON)_BUILD_ENV += DEB_BUILD_PROFILES=nopython2
+    $(LIBSWSSCOMMON)_DEB_BUILD_PROFILES += nopython2
 endif
 
 PYTHON3_SWSSCOMMON = python3-swsscommon_$(LIBSWSSCOMMON_VERSION)_$(CONFIGURED_ARCH).deb

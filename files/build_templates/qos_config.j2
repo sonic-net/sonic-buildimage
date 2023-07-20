@@ -1,5 +1,24 @@
 {%- set PORT_ALL = [] %}
 {%- set PORT_BP = [] %}
+{%- set SYSTEM_PORT_ALL = [] %}
+
+{%- set voq_chassis = false %}
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['switch_type'] is defined and  DEVICE_METADATA['localhost']['switch_type']  == 'voq' %}
+{%-  set voq_chassis = true %}
+{%- endif -%}
+
+{%- if voq_chassis %}
+    {%- for system_port in SYSTEM_PORT %}
+    {% if '|' not in system_port %}
+        {%- set system_port_name = system_port|join("|")  %}
+    {% else %}
+        {%- set system_port_name = system_port  %}
+    {% endif %}
+    {%- if 'cpu' not  in system_port_name.lower() and 'IB' not in system_port_name and 'Rec' not in system_port_name %}
+        {%- if SYSTEM_PORT_ALL.append(system_port_name) %}{%- endif %}
+    {%- endif %}
+    {%- endfor %}
+{%- endif %}
 {%- for port in PORT %}
     {%- if not port.startswith('Ethernet-Rec') and not port.startswith('Ethernet-IB') %}
         {%- if PORT_ALL.append(port) %}{% endif %}
@@ -307,7 +326,48 @@
         }
     },
 {% endif %}
+{% if voq_chassis %}
     "QUEUE": {
+{% for system_port in SYSTEM_PORT_ALL %}
+        "{{ system_port }}|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+{% endfor %}
+{% for system_port in SYSTEM_PORT_ALL %}
+        "{{ system_port }}|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+{% endfor %}
+{% for system_port in SYSTEM_PORT_ALL %}
+        "{{ system_port }}|0": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for system_port in SYSTEM_PORT_ALL %}
+        "{{ system_port }}|1": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for system_port in SYSTEM_PORT_ALL %}
+        "{{ system_port }}|2": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for system_port in SYSTEM_PORT_ALL %}
+        "{{ system_port }}|5": {
+            "scheduler": "scheduler.0"
+        },
+{% endfor %}
+{% for system_port in SYSTEM_PORT_ALL %}
+        "{{ system_port }}|6": {
+            "scheduler": "scheduler.0"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
+    }
+{% else %}
+   "QUEUE": {
 {% for port in PORT_ACTIVE %}
         "{{ port }}|3": {
             "scheduler"   : "scheduler.1",
@@ -372,4 +432,5 @@
 
 {% endfor %}
     }
+{% endif %}
 }

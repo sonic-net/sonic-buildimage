@@ -2,7 +2,8 @@
 SPATH       := $($(LIB_SONIC_DASH_API)_SRC_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/sonic-dash-api.mk rules/sonic-dash-api.dep   
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-SMDEP_FILES := $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files))
+DEP_FILES   += $(shell git ls-files $(SPATH) | grep -v sonic-dash-api)
+SMDEP_FILES := $(addprefix $(SPATH)/sonic-dash-api/,$(shell cd $(SPATH)/sonic-dash-api && git ls-files))
 
 $(LIB_SONIC_DASH_API)_CACHE_MODE  := GIT_CONTENT_SHA 
 $(LIB_SONIC_DASH_API)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)

@@ -3,8 +3,8 @@
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:disk-usage": {
                 "fs": "FILESYSTEM",
-                "usage": -30,
-                "limit": 99,
+                "usage": "INCORRECT_USAGE",
+                "limit": "2.0",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }
@@ -13,7 +13,7 @@
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:disk-usage": {
                 "fs": "FILESYSTEM",
-                "usage": 32,
+                "usage": "2.0",
                 "limit": "INCORRECT_LIMIT",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
@@ -23,8 +23,8 @@
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:disk-usage": {
                 "fs": "FILESYSTEM",
-                "usage": 32,
-                "limit": 99,
+                "usage": "2.0",
+                "limit": "2.0",
                 "timestamp": "INCORRECT_TIMESTAMP"
             }
         }
@@ -33,8 +33,8 @@
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:disk-usage": {
                 "fs": "FILESYSTEM",
-                "usage": 32,
-                "limit": 99,
+                "usage": "2.0",
+                "limit": "2.0",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }
@@ -42,8 +42,8 @@
     "SONIC_EVENTS_HOST_MEMORY_USAGE_INCORRECT_USAGE": {
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:memory-usage": {
-                "usage": -30,
-                "limit": 99,
+                "usage": "INCORRECT_USAGE",
+                "limit": "2.0",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }
@@ -51,7 +51,7 @@
     "SONIC_EVENTS_HOST_MEMORY_USAGE_INCORRECT_LIMIT": {
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:memory-usage": {
-                "usage": 32,
+                "usage": "2.0",
                 "limit": "INCORRECT_LIMIT",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
@@ -60,8 +60,8 @@
     "SONIC_EVENTS_HOST_MEMORY_USAGE_INCORRECT_TIMESTAMP": {
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:memory-usage": {
-                "usage": 32,
-                "limit": 99,
+                "usage": "2.0",
+                "limit": "2.0",
                 "timestamp": "INCORRECT_TIMESTAMP"
             }
         }
@@ -69,8 +69,8 @@
     "SONIC_EVENTS_HOST_MEMORY_USAGE_VALID": {
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:memory-usage": {
-                "usage": 32,
-                "limit": 99,
+                "usage": "2.0",
+                "limit": "2.0",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }
@@ -78,8 +78,8 @@
     "SONIC_EVENTS_HOST_CPU_USAGE_INCORRECT_USAGE": {
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:cpu-usage": {
-                "usage": -30,
-                "limit": 99,
+                "usage": "INCORRECT_USAGE",
+                "limit": "2.0",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }
@@ -87,7 +87,7 @@
     "SONIC_EVENTS_HOST_CPU_USAGE_INCORRECT_LIMIT": {
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:cpu-usage": {
-                "usage": 32,
+                "usage": "2.0",
                 "limit": "INCORRECT_LIMIT",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
@@ -96,8 +96,8 @@
     "SONIC_EVENTS_HOST_CPU_USAGE_INCORRECT_TIMESTAMP": {
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:cpu-usage": {
-                "usage": 32,
-                "limit": 99,
+                "usage": "2.0",
+                "limit": "2.0",
                 "timestamp": "INCORRECT_TIMESTAMP"
             }
         }
@@ -105,8 +105,8 @@
     "SONIC_EVENTS_HOST_CPU_USAGE_VALID": {
         "sonic-events-host:sonic-events-host": {
             "sonic-events-host:cpu-usage": {
-                "usage": 32,
-                "limit": 99,
+                "usage": "2.0",
+                "limit": "2.0",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }

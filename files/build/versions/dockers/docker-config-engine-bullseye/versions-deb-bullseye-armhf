@@ -10,5 +10,5 @@ libxml2==2.9.10+dfsg-6.7+deb11u4
 libxml2-dev==2.9.10+dfsg-6.7+deb11u4
 libxslt1-dev==1.1.34-4+deb11u1
 libxslt1.1==1.1.34-4+deb11u1
-linux-libc-dev==5.10.179-1
+linux-libc-dev==5.10.179-2
 zlib1g-dev==1:1.2.11.dfsg-2+deb11u2

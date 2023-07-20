@@ -120,5 +120,6 @@ $RepeatedMsgReduction on
 {% if filter %}
 :msg, {{ fmodifier }}ereregex, "{{ regex }}"
 {% endif %}
-*.* action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Device="{{ device }}"{{ options }})
+*.*
+action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Device="{{ device }}"{{ options }})
 {% endfor %}

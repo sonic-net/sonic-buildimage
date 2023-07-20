@@ -35,7 +35,7 @@
 - bus: '00'
   dev: '01'
   fn: '2'
-  id: 0159
+  id: '0159'
   name: 'PCI bridge: Intel Corporation Xeon E3-1200 v2/3rd Gen Core processor PCI
     Express Root Port (rev 09)'
 - bus: '00'

@@ -244,11 +244,6 @@ stop_test_data = {
                         "container_id": "",
                         "container_version": "20201230.1.15"
                     }
-                },
-                common_test.KUBE_LABEL_TABLE: {
-                    "SET": {
-                        "snmp_enabled": "false"
-                    }
                 }
             }
         },

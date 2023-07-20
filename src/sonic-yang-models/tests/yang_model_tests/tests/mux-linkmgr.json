@@ -4,5 +4,8 @@
     },
     "MUX_LINKMGR_LINK_PROBER_CHANGE_MAC_ADDR": {
         "desc": "Use well-known mac and vlan mac as dst/src in linkmgrd link prober. "
+    },
+    "MUX_LINKMGR_MUXLOGGER_CHANGE_VERBOSITY_LEVEL": {
+        "desc": "Consume verbosity level config changes. "
     }
 }

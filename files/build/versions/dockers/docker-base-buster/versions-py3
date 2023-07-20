@@ -1,7 +1,7 @@
 j2cli==0.3.10
 jinja2==3.1.2
 markupsafe==2.1.3
-pip==23.1.2
+pip==23.2
 setuptools==49.6.0
 supervisor==4.2.1
 supervisord-dependent-startup==1.4.0

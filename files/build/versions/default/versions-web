@@ -49,6 +49,8 @@ https://github.com/Marvell-switching/sonic-marvell-binaries/raw/master/armhf/sai
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2010.5144/fw-SPC-rel-13_2010_5144-EVB.mfa==49de2652fc105ce1d8624d15cb02033d
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2010.5144/fw-SPC2-rel-29_2010_5144-EVB.mfa==0415936df3dfbbed9015d30b8244d110
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2010.5144/fw-SPC3-rel-30_2010_5144-EVB.mfa==c0b6b9d92320341da004c22ce14c2e52
+https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sai-SAIBuild2305.24.0.1-bullseye-amd64/mlnx-sai-dbgsym_1.mlnx.SAIBuild2305.24.0.1_amd64.deb==796605c9b759059c2b3ee099d924d76c
+https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sai-SAIBuild2305.24.0.1-bullseye-amd64/mlnx-sai_1.mlnx.SAIBuild2305.24.0.1_amd64.deb==865bbb442e7db0f67eb48e957d10738c
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.5.5142-bullseye-amd64/applibs-dev_1.mlnx.4.5.5142_amd64.deb==ddbee8ca24473dac9109b11ecafbc2ff
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.5.5142-bullseye-amd64/applibs_1.mlnx.4.5.5142_amd64.deb==3c0925b00e1844291f0c1bff00f7192d
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/sdk-4.5.5142-bullseye-amd64/python-sdk-api_1.mlnx.4.5.5142_amd64.deb==0deb403e4cd293f5b4f94fda120e9441

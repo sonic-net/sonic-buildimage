@@ -350,5 +350,4 @@ dport_map_port_5=55
 dport_map_port_41=56
 
 mmu_init_config="TD3-DELL-lossless"
-#sai_preinit_cmd_file=/usr/share/sonic/hwsku/sai_preinit_cmd.soc
-
+sai_preinit_cmd_file=/usr/share/sonic/hwsku/sai_preinit_cmd.soc

@@ -280,419 +280,2382 @@
         }
     },
     "QUEUE": {
-        "Ethernet0|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet0|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet8|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet8|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet16|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet16|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet24|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet24|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet32|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet32|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet40|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet40|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet48|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet48|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet56|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet56|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet64|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet64|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet72|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet72|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet80|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet80|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet88|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet88|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet96|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet96|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet104|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet104|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet112|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet112|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet120|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet120|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet128|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet128|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet136|3": {
+        "svcstr-7250-lc1-1|asic0|Ethernet136|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet0|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet144|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet8|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet152|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet16|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet160|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet24|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet168|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet32|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet176|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet40|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet184|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet48|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet192|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet56|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet200|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet64|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet208|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet72|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet216|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet80|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet224|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet88|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet232|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet96|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet240|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet104|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet248|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet112|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet256|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet120|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet264|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet128|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet272|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet136|4": {
+        "svcstr-7250-lc1-1|asic1|Ethernet280|3": {
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
         },
-        "Ethernet0|0": {
+        "svcstr-7250-lc2-1|asic0|Ethernet0|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet8|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet16|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet24|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet32|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet40|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet48|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet56|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet64|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet72|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet80|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet88|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet96|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet104|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet112|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet120|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet128|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet136|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet144|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet152|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet160|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet168|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet176|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet184|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet192|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet200|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet208|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet216|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet224|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet232|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet240|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet248|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet256|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet264|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet272|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet280|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet0|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet8|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet16|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet24|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet32|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet40|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet48|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet56|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet64|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet72|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet80|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet88|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet96|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet104|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet112|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet120|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet128|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet136|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet144|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet152|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet160|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet168|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet176|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet184|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet192|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet200|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet208|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet216|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet224|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet232|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet240|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet248|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet256|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet264|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet272|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet280|3": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet0|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet8|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet16|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet24|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet32|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet40|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet48|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet56|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet64|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet72|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet80|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet88|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet96|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet104|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet112|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet120|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet128|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet136|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet144|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet152|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet160|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet168|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet176|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet184|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet192|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet200|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet208|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet216|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet224|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet232|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet240|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet248|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet256|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet264|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet272|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet280|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet0|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet8|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet16|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet24|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet32|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet40|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet48|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet56|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet64|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet72|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet80|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet88|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet96|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet104|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet112|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet120|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet128|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet136|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet144|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet152|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet160|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet168|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet176|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet184|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet192|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet200|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet208|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet216|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet224|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet232|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet240|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet248|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet256|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet264|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet272|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet280|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet0|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet8|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet16|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet24|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet32|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet40|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet48|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet56|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet64|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet72|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet80|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet88|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet96|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet104|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet112|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet120|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet128|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet136|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet144|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet152|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet160|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet168|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet176|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet184|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet192|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet200|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet208|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet216|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet224|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet232|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet240|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet248|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet256|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet264|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet272|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet280|4": {
+            "scheduler"   : "scheduler.1",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet0|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet8|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet16|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet24|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet32|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet40|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet48|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet56|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet64|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet72|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet80|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet88|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet96|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet104|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet112|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet120|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet128|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet136|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet144|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet152|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet160|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet168|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet176|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet184|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet192|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet200|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet208|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet216|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet224|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet232|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet240|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet248|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet256|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet264|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet272|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet280|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet0|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet8|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet16|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet24|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet32|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet40|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet48|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet56|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet64|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet72|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet80|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet88|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet96|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet104|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet112|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet120|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet128|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet136|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet144|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet152|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet160|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet168|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet176|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet184|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet192|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet200|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet208|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet216|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet224|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet232|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet240|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet248|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet256|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet264|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet272|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet280|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet0|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet8|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet16|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet24|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet32|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet40|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet48|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet56|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet64|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet72|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet80|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet88|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet96|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet104|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet112|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet120|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet128|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet136|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet144|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet152|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet160|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet168|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet176|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet184|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet192|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet200|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet208|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet216|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet224|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet232|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet240|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet248|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet256|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet264|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet272|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet280|0": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet0|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet8|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet16|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet24|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet32|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet40|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet48|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet56|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet64|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet72|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet80|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet88|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet96|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet104|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet112|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet120|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet128|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet136|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet144|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet152|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet160|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet168|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet176|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet184|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet192|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet200|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet208|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet216|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet224|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet232|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet240|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet248|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet256|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet264|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet272|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet280|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet0|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet8|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet16|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet24|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet32|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet40|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet48|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet56|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet64|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet72|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet80|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet88|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet96|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet104|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet112|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet120|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet128|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet136|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet144|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet152|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet160|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet168|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet176|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet184|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet192|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet200|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet208|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet216|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet224|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet232|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet240|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet248|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet256|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet264|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet272|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet280|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet0|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet8|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet16|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet24|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet32|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet40|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet48|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet56|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet64|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet72|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet80|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet88|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet96|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet104|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet112|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet120|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet128|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet136|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet144|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet152|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet160|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet168|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet176|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet184|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet192|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet200|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet208|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet216|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet224|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet232|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet240|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet248|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet256|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet264|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet272|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet280|1": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet0|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet8|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet16|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet24|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet32|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet40|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet48|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet56|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet64|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet72|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet80|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet88|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet96|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet104|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet112|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet120|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet128|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet136|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet144|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet152|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet160|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet168|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet176|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet184|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet192|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet200|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet208|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet216|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet224|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet232|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet240|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet248|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet256|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet264|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet272|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet280|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet0|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet8|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet16|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet24|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet32|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet40|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet48|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet56|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet64|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet72|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet80|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet88|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet96|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet104|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet112|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet120|2": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet128|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet8|0": {
+        "svcstr-7250-lc2-1|asic0|Ethernet136|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet16|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet144|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet24|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet152|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet32|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet160|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet40|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet168|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet48|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet176|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet56|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet184|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet64|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet192|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet72|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet200|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet80|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet208|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet88|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet216|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet96|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet224|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet104|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet232|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet112|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet240|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet120|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet248|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet128|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet256|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet136|0": {
+        "svcstr-7250-lc2-1|asic1|Ethernet264|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet0|1": {
+        "svcstr-7250-lc2-1|asic1|Ethernet272|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet8|1": {
+        "svcstr-7250-lc2-1|asic1|Ethernet280|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet16|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet0|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet24|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet8|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet32|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet16|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet40|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet24|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet48|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet32|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet56|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet40|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet64|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet48|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet72|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet56|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet80|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet64|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet88|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet72|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet96|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet80|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet104|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet88|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet112|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet96|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet120|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet104|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet128|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet112|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet136|1": {
+        "svcstr-7250-lc3-1|asic0|Ethernet120|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet0|2": {
+        "svcstr-7250-lc3-1|asic0|Ethernet128|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet8|2": {
+        "svcstr-7250-lc3-1|asic0|Ethernet136|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet16|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet144|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet24|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet152|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet32|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet160|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet40|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet168|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet48|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet176|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet56|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet184|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet64|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet192|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet72|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet200|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet80|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet208|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet88|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet216|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet96|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet224|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet104|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet232|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet112|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet240|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet120|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet248|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet128|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet256|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet136|2": {
+        "svcstr-7250-lc3-1|asic1|Ethernet264|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet0|5": {
+        "svcstr-7250-lc3-1|asic1|Ethernet272|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet8|5": {
+        "svcstr-7250-lc3-1|asic1|Ethernet280|2": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet16|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet0|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet24|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet8|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet32|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet16|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet40|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet24|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet48|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet32|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet56|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet40|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet64|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet48|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet72|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet56|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet80|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet64|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet88|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet72|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet96|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet80|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet104|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet88|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet112|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet96|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet120|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet104|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet128|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet112|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet136|5": {
+        "svcstr-7250-lc1-1|asic0|Ethernet120|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet0|6": {
+        "svcstr-7250-lc1-1|asic0|Ethernet128|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet8|6": {
+        "svcstr-7250-lc1-1|asic0|Ethernet136|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet16|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet144|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet24|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet152|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet32|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet160|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet40|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet168|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet48|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet176|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet56|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet184|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet64|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet192|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet72|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet200|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet80|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet208|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet88|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet216|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet96|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet224|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet104|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet232|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet112|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet240|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet120|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet248|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet128|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet256|5": {
             "scheduler": "scheduler.0"
         },
-        "Ethernet136|6": {
+        "svcstr-7250-lc1-1|asic1|Ethernet264|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet272|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic1|Ethernet280|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet0|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet8|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet16|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet24|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet32|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet40|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet48|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet56|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet64|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet72|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet80|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet88|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet96|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet104|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet112|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet120|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet128|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic0|Ethernet136|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet144|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet152|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet160|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet168|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet176|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet184|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet192|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet200|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet208|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet216|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet224|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet232|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet240|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet248|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet256|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet264|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet272|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc2-1|asic1|Ethernet280|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet0|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet8|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet16|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet24|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet32|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet40|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet48|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet56|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet64|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet72|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet80|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet88|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet96|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet104|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet112|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet120|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet128|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic0|Ethernet136|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet144|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet152|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet160|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet168|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet176|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet184|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet192|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet200|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet208|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet216|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet224|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet232|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet240|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet248|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet256|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet264|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet272|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc3-1|asic1|Ethernet280|5": {
+            "scheduler": "scheduler.0"
+        },
+        "svcstr-7250-lc1-1|asic0|Ethernet0|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet8|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet16|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet24|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet32|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet40|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet48|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet56|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet64|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet72|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet80|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet88|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet96|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet104|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet112|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet120|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet128|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic0|Ethernet136|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet144|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet152|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet160|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet168|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet176|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet184|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet192|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet200|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet208|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet216|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet224|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet232|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet240|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet248|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet256|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet264|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet272|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc1-1|asic1|Ethernet280|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet0|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet8|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet16|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet24|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet32|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet40|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet48|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet56|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet64|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet72|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet80|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet88|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet96|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet104|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet112|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet120|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet128|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic0|Ethernet136|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet144|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet152|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet160|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet168|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet176|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet184|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet192|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet200|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet208|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet216|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet224|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet232|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet240|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet248|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet256|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet264|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet272|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc2-1|asic1|Ethernet280|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet0|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet8|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet16|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet24|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet32|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet40|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet48|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet56|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet64|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet72|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet80|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet88|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet96|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet104|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet112|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet120|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet128|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic0|Ethernet136|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet144|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet152|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet160|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet168|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet176|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet184|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet192|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet200|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet208|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet216|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet224|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet232|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet240|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet248|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet256|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet264|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet272|6": {
+            "scheduler": "scheduler.0"
+        },        "svcstr-7250-lc3-1|asic1|Ethernet280|6": {
             "scheduler": "scheduler.0"
-        }
+        }    
     }
 }

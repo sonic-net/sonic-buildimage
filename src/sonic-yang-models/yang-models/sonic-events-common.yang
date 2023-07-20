@@ -30,19 +30,15 @@ module sonic-events-common {
 
     grouping sonic-events-usage {
         leaf usage {
-            type uint8 {
-                range "0..100" {
-                    error-message "Incorrect val for %";
-                }
+            type decimal64 {
+                fraction-digits 1;
             }
             description "Percentage in use";
         }
 
         leaf limit {
-            type uint8 {
-                range "0..100" {
-                    error-message "Incorrect val for %";
-                }
+            type decimal64 {
+                fraction-digits 1;
             }
             description "Percentage limit set";
         }

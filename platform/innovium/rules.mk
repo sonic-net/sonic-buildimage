@@ -1,5 +1,6 @@
 include $(PLATFORM_PATH)/invm-sai.mk
 include $(PLATFORM_PATH)/platform-modules-cel.mk
+include $(PLATFORM_PATH)/platform-modules-supermicro.mk
 #include $(PLATFORM_PATH)/platform-modules-delta.mk
 include $(PLATFORM_PATH)/platform-modules-wistron.mk
 #include $(PLATFORM_PATH)/platform-modules-netberg.mk
