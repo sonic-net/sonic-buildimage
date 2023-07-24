@@ -1,0 +1,19 @@
+!
+! template: bgpd/templates/msft.general/v6.tor.backend/policy.conf.j2
+!
+ipv6 prefix-list DEFAULT_IPV6 permit any
+ipv6 prefix-list BE_LOOPBACKS_V6 seq 5 deny ::1/128
+ipv6 prefix-list BE_LOOPBACKS_V6 seq 15 permit ::/0 ge 128
+!
+route-map FROM_FE_TIER0_V6 permit 10
+   match ipv6 address prefix-list DEFAULT_IPV6
+!
+route-map FROM_FE_TIER0_V6 deny 100
+!
+route-map TO_FE_TIER0_V6 permit 10
+   match ipv6 address prefix-list BE_LOOPBACKS_V6
+!
+route-map TO_FE_TIER0_V6 deny 100
+!
+! end of template: bgpd/templates/msft.general/v6.tor.backend/policy.conf.j2
+!

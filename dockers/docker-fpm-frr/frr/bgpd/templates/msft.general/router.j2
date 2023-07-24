@@ -9,6 +9,10 @@
 {% if is_storage_device is not defined or is_storage_device | length == 0 %}
 {% set is_storage_device = "false" %}
 {% endif %}
+{% set is_ai_device = CONFIG_DB__DEVICE_METADATA['localhost']['ai_device'] %}
+{% if is_ai_device is not defined or is_ai_device | length == 0 %}
+{% set is_ai_device = "false" %}
+{% endif %}
 {% if neighbor_deployment_id is not defined or neighbor_deployment_id | length == 0 %}
 {% set neighbor_deployment_id = 0 %}
 {% endif %}
@@ -34,6 +38,8 @@
 {%             include path_template % "v4.tor.frontend" %}
 {%         elif neighbor_type == 'BackEndLeafRouter' and is_storage_device == 'true' and device_type == 'BackEndToRRouter' %}
 {%             include path_template % "v4.tor.storage.backend" %}
+{%         elif neighbor_type == 'BackEndLeafRouter' and is_ai_device == 'true' and device_type == 'BackEndToRRouter' %}
+{%             include path_template % "v4.tor.ai.backend" %}
 {%         elif neighbor_type == 'ToRRouter' %}
 {%             include path_template % "v4.tor.backend" %}
 {%         else %}
@@ -47,6 +53,8 @@
 {%                 include path_template % "v4.leaf.tor.tycoon" %}
 {%             elif neighbor_type == 'BackEndToRRouter' and is_storage_device == 'true' and device_type == 'BackEndLeafRouter' %}
 {%                 include path_template % "v4.leaf.storage.backend" %}
+{%             elif neighbor_type == 'BackEndToRRouter' and is_ai_device == 'true' and device_type == 'BackEndLeafRouter' %}
+{%                 include path_template % "v4.leaf.ai.backend" %}
 {%             else %}
 {%                 include path_template % "v4.leaf.tor.all" %}
 {%             endif %}
@@ -86,6 +94,12 @@
 {%     elif device_type in ['ToRRouter', 'BackEndToRRouter'] %}
 {%         if deployment_id is defined and deployment_id == '26' %}
 {%             include path_template % "v6.tor.rotterdam" %}
+{%         elif neighbor_type == 'BackEndToRRouter' and is_ai_device == 'true' %}
+{%             include path_template % "v6.tor.frontend" %}
+{%         elif neighbor_type == 'BackEndLeafRouter' and is_ai_device == 'true' and device_type == 'BackEndToRRouter' %}
+{%             include path_template % "v6.tor.ai.backend" %}
+{%         elif neighbor_type == 'ToRRouter' and is_ai_device == 'true' %}
+{%             include path_template % "v6.tor.backend" %}
 {%         else %}
 {%             include path_template % "v6.tor" %}
 {%         endif %}
@@ -99,6 +113,8 @@
 {%                 include path_template % "v6.leaf.tor.dnsagg" %}
 {%             elif neighbor_deployment_id is defined and neighbor_deployment_id == '21' %}
 {%                 include path_template % "v6.leaf.tor.dnsagg" %}				
+{%             elif neighbor_type == 'BackEndToRRouter' and is_ai_device == 'true' and device_type == 'BackEndLeafRouter' %}
+{%                 include path_template % "v6.leaf.ai.backend" %}
 {%             else %}
 {%                 include path_template % "v6.leaf.tor.all" %}
 {%             endif %}
