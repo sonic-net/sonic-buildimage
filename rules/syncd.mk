@@ -34,7 +34,7 @@ $(eval $(call add_derived_package,$(SYNCD),$(SYNCD_RPC_DBG)))
 endif
 
 ifeq ($(ENABLE_PY2_MODULES), n)
-    $(SYNCD)_BUILD_ENV += DEB_BUILD_PROFILES=nopython2
+    $(SYNCD)_DEB_BUILD_PROFILES += nopython2
 endif
 
 endif

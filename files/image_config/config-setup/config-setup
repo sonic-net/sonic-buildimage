@@ -40,6 +40,7 @@ CONFIG_SETUP_VAR_DIR=/var/lib/config-setup
 CONFIG_SETUP_PRE_MIGRATION_FLAG=${CONFIG_SETUP_VAR_DIR}/pending_pre_migration
 CONFIG_SETUP_POST_MIGRATION_FLAG=${CONFIG_SETUP_VAR_DIR}/pending_post_migration
 CONFIG_SETUP_INITIALIZATION_FLAG=${CONFIG_SETUP_VAR_DIR}/pending_initialization
+CONFIG_SETUP_CONF=/etc/config-setup/config-setup.conf
 
 TACACS_JSON_BACKUP=tacacs.json
 
@@ -56,17 +57,31 @@ usage()
 EOF
 }
 
+# Factory command usage and help
+usage_factory()
+{
+    cat << EOF
+ Usage:  config-setup factory < keep-basic >
+
+         Create factory default configuration and save it to
+         to ${CONFIG_DB_JSON}.
+
+         keep-basic  - Preserves basic configurations only.
+EOF
+}
+
 # run given script
 run_hook() {
     local script="$1"
+    local script_param="$2"
     local exit_status=0
 
     if [ -f $script ]; then
         # Check hook for syntactical correctness before executing it
-        /bin/bash -n $script
+        /bin/bash -n $script $script_param
         exit_status=$?
         if [ "$exit_status" -eq 0 ]; then
-            . $script
+            . $script $script_param
         fi
         exit_status=$?
     fi
@@ -82,6 +97,7 @@ run_hook() {
 run_hookdir() {
     local dir="$1"
     local progress_file="$2"
+    local script_param="$3"
     local exit_status=0
 
     if [ -d "$dir" ]; then
@@ -94,7 +110,7 @@ run_hookdir() {
         fi
 
         for script in $SCRIPT_LIST; do
-            run_hook $script
+            run_hook $script $script_param
             exit_status=$((exit_status|$?))
             script_name=$(basename $script)
             sed -i "/$script_name/d" $progress_file
@@ -215,10 +231,33 @@ generate_config()
     if [ "$1" = "ztp" ]; then
         /usr/lib/ztp/ztp-profile.sh create ${DEST_FILE}
     elif [ "$1" = "factory" ]; then
+        FACTORY_TYPE=$3
         rv=1
 
+        if [ "$FACTORY_TYPE" = "keep-basic" ]; then
+            TMP_FILE="/tmp/tmp_keep_basic.$$.json"
+            # Verify the DEST_FILE exists and KEEP_BASIC_TABLES was defined in CONFIG_SETUP_CONF
+            if [ ! -f ${DEST_FILE} ] || [ -z "${KEEP_BASIC_TABLES}" ]; then
+                # Create empty valid json file
+                echo {} > ${TMP_FILE}
+            else
+                # Create filtered json file with keep-basic tables only
+                jq 'with_entries(select([.key] | inside($tables)))' --argjson tables "$KEEP_BASIC_TABLES" ${DEST_FILE} > ${TMP_FILE}
+            fi
+            # Create factory default
+            sonic-cfggen -H -k ${HW_KEY} --preset ${DEFAULT_PRESET}  > ${DEST_FILE}
+            rv=$?
+            if [ $rv -ne 0 ]; then
+                rm -f ${TMP_FILE}
+                return $rv
+            fi
+            # Merge factory default config with filtered json
+            jq --indent 4 -s '.[0] * .[1]' ${DEST_FILE} ${TMP_FILE} > tmp.$$.json && mv tmp.$$.json ${DEST_FILE}
+            rm -f ${TMP_FILE}
+        fi
+
         # Execute config initialization hooks
-        run_hookdir ${FACTORY_DEFAULT_HOOKS} ${CONFIG_SETUP_INITIALIZATION_FLAG}
+        run_hookdir ${FACTORY_DEFAULT_HOOKS} ${CONFIG_SETUP_INITIALIZATION_FLAG} ${FACTORY_TYPE}
 
         # Use preset defined in default_sku
         if [ ! -e ${DEST_FILE} ]; then
@@ -415,6 +454,9 @@ boot_config()
 # read SONiC immutable variables
 [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
 
+# read config-setup.conf
+[ -f $CONFIG_SETUP_CONF ] && . $CONFIG_SETUP_CONF
+
 ### Execution starts here ###
 PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
 # Parse the device specific asic conf file, if it exists
@@ -439,7 +481,13 @@ fi
 
 # Process factory default configuration creation request
 if [ "$CMD" = "factory" ]; then
-    generate_config factory ${CONFIG_DB_JSON}
+    FACTORY_TYPE=$2
+    if [ "$FACTORY_TYPE" = "help" ] || [ "$FACTORY_TYPE" = "-h" ] || \
+       [ "$FACTORY_TYPE" = "--help" ]; then
+        usage_factory
+        exit 1
+    fi
+    generate_config factory ${CONFIG_DB_JSON} ${FACTORY_TYPE}
 fi
 
 # Take a backup of current configuration

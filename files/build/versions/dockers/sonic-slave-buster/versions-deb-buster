@@ -1341,7 +1341,7 @@ libxxf86vm-dev==1:1.1.4-1+b2
 libxxf86vm1==1:1.1.4-1+b2
 libxxhash0==0.6.5-2
 libxz-java==1.8-2
-libyajl2==2.1.0-3+deb10u1
+libyajl2==2.1.0-3+deb10u2
 libyaml-0-2==0.2.1-1
 libyaml-dev==0.2.1-1
 libyaml-libyaml-perl==0.76+repack-1

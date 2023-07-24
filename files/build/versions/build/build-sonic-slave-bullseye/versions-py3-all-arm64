@@ -2,3 +2,4 @@ bcrypt==3.2.2
 bitarray==1.5.3
 click==7.0
 requests==2.31.0
+zipp==1.2.0

@@ -1,0 +1,26 @@
+{
+    "SSH_SERVER_VALID": {
+        "desc": "Configure default SSH_SERVER."
+    },
+    "SSH_SERVER_VALID_MODIFIED": {
+        "desc": "Configure modified SSH_SERVER."
+    },
+    "SSH_SERVER_INVALID_AUTH_RETRIES": {
+        "desc": "Configure invalid number of authentication retries in SSH_SERVER.",
+        "eStrKey" : "Pattern",
+        "eStr": ["1..100"]
+    },
+    "SSH_SERVER_INVALID_LOGIN_TIMEOUT": {
+        "desc": "Configure invalid login timeout value in SSH_SERVER.",
+        "eStrKey" : "Pattern",
+        "eStr": ["1..600"]
+    },
+    "SSH_SERVER_INVALID_PORTS_1": {
+        "desc": "Configure invalid port value in SSH_SERVER.",
+        "eStr": "Invalid port numbers value"
+    },
+    "SSH_SERVER_INVALID_PORTS_2": {
+        "desc": "Configure invalid port value in SSH_SERVER.",
+        "eStr": "Invalid port numbers value"
+    }
+}

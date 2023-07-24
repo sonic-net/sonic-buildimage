@@ -49,6 +49,44 @@ module sonic-syslog {
         }
     }
 
+    typedef log-format {
+        description "Represents syslog log format";
+        type enumeration {
+            enum welf;
+            enum standard;
+        }
+    }
+
+    typedef rsyslog-protocol {
+        description "The protocol to send logs to remote server";
+        type enumeration {
+            enum tcp;
+            enum udp;
+        }
+    }
+
+    typedef syslog-filter-type {
+        description "The filter type";
+        type enumeration {
+            enum include;
+            enum exclude;
+        }
+    }
+
+    typedef rsyslog-severity {
+        description "The protocol to send logs to remote server";
+        type enumeration {
+            enum none;
+            enum debug;
+            enum info;
+            enum notice;
+            enum warn;
+            enum error;
+            enum crit;
+        }
+    }
+
+
     container sonic-syslog {
 
         container SYSLOG_SERVER {
@@ -61,7 +99,7 @@ module sonic-syslog {
 
                 leaf server_address {
                     description "Syslog server IP address";
-                    type inet:ip-address;
+                    type inet:host;
                 }
 
                 leaf source {
@@ -88,6 +126,26 @@ module sonic-syslog {
                     or (/mvrf:sonic-mgmt_vrf/mvrf:MGMT_VRF_CONFIG/mvrf:vrf_global/mvrf:mgmtVrfEnabled = 'true')";
                 }
 
+                leaf filter {
+                    description "Syslog filter type";
+                    type syslog-filter-type;
+                }
+
+                leaf filter_regex {
+                    description "Filter regex";
+                    type string;
+                }
+
+                leaf protocol {
+                    description "The protocol to send logs to remote server";
+                    type rsyslog-protocol;
+                }
+
+                leaf severity {
+                    description "Limit the severity to send logs to remote server";
+                    type rsyslog-severity;
+                }
+
             }
             /* end of list SYSLOG_SERVER_LIST */
         }
@@ -105,6 +163,24 @@ module sonic-syslog {
                 leaf rate_limit_burst {
                     type syslog-rate-limit-burst;
                 }
+
+                leaf format {
+                    description "Log format";
+                    type log-format;
+                    default standard;
+                }
+
+                leaf welf_firewall_name {
+                    description "WELF format Firewall name";
+                    type string;
+                    must "(../format != 'standard')";
+                }
+
+                leaf severity {
+                    type rsyslog-severity;
+                    default notice;
+                }
+
             }
             /* end of list SYSLOG_CONFIG_LIST */
         }

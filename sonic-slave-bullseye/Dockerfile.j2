@@ -483,7 +483,7 @@ RUN apt-get install -y kernel-wedge
 
 # For gobgp and telemetry build
 RUN apt-get install -y golang-1.15 && ln -s /usr/lib/go-1.15 /usr/local/go
-{%- if ENABLE_FIPS_FEATURE == "y" %}
+{%- if INCLUDE_FIPS == "y" %}
 RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.1/{{ CONFIGURED_ARCH }}/golang-1.15-go_1.15.15-1~deb11u4%2Bfips_{{ CONFIGURED_ARCH }}.deb' \
  && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.1/{{ CONFIGURED_ARCH }}/golang-1.15-src_1.15.15-1~deb11u4%2Bfips_{{ CONFIGURED_ARCH }}.deb' \
  && dpkg -i golang-go.deb golang-src.deb \
@@ -545,7 +545,8 @@ RUN pip3 uninstall -y enum34
 RUN pip3 install j2cli==0.3.10
 
 # For sonic-mgmt-framework
-RUN pip3 install "PyYAML==5.4.1"
+# The option --no-build-isolation can be removed when upgrading PyYAML to 6.0.1
+RUN pip3 install "PyYAML==5.4.1" --no-build-isolation
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 RUN pip3 install "lxml==4.9.1"
 {%- endif %}

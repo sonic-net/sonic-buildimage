@@ -288,7 +288,7 @@ def container_stop(feature, **kwargs):
     set_owner, _ , _ = read_config(feature)
     current_owner, remote_state, _ = read_state(feature)
     docker_id = container_id(feature)
-    remove_label = (remote_state != "pending") or (set_owner == "local")
+    remove_label = (set_owner == "local")
 
     debug_msg("{}: set_owner:{} current_owner:{} remote_state:{} docker_id:{}".format(
         feature, set_owner, current_owner, remote_state, docker_id))

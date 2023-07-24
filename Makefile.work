@@ -176,13 +176,13 @@ DOCKER_ROOT = $(PWD)/fsroot.docker.$(BLDENV)
 
 # Support FIPS feature, armhf not supported yet
 ifeq ($(PLATFORM_ARCH),armhf)
-ENABLE_FIPS_FEATURE := n
+INCLUDE_FIPS := n
 ENABLE_FIPS := n
 endif
 
-ifeq ($(ENABLE_FIPS_FEATURE), n)
+ifeq ($(INCLUDE_FIPS), n)
 ifeq ($(ENABLE_FIPS), y)
-    $(error Cannot set fips config ENABLE_FIPS=y when ENABLE_FIPS_FEATURE=n)
+    $(error Cannot set fips config ENABLE_FIPS=y when INCLUDE_FIPS=n)
 endif
 endif
 
@@ -209,7 +209,7 @@ $(shell \
 $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON) \
 	CROSS_BUILD_ENVIRON=$(CROSS_BUILD_ENVIRON) \
-	ENABLE_FIPS_FEATURE=$(ENABLE_FIPS_FEATURE) \
+	INCLUDE_FIPS=$(INCLUDE_FIPS) \
 	DOCKER_EXTRA_OPTS=$(DOCKER_EXTRA_OPTS) \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
 	GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
@@ -562,7 +562,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            ENABLE_ASAN=$(ENABLE_ASAN) \
                            SONIC_INCLUDE_BOOTCHART=$(INCLUDE_BOOTCHART) \
                            SONIC_ENABLE_BOOTCHART=$(ENABLE_BOOTCHART) \
-                           ENABLE_FIPS_FEATURE=$(ENABLE_FIPS_FEATURE) \
+                           INCLUDE_FIPS=$(INCLUDE_FIPS) \
                            ENABLE_FIPS=$(ENABLE_FIPS) \
                            SONIC_SLAVE_DOCKER_DRIVER=$(SONIC_SLAVE_DOCKER_DRIVER) \
                            MIRROR_URLS=$(MIRROR_URLS) \

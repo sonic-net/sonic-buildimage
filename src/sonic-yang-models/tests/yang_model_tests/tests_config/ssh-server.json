@@ -1,0 +1,60 @@
+{
+    "SSH_SERVER_VALID": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "authentication_retries": "6",
+                    "login_timeout": "120",
+                    "ports": "22"
+                }
+            }
+        }
+    },
+    "SSH_SERVER_VALID_MODIFIED": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "authentication_retries": "16",
+                    "login_timeout": "140",
+                    "ports": "22,222"
+                }
+            }
+        }
+    },
+    "SSH_SERVER_INVALID_AUTH_RETRIES": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "authentication_retries": "200"
+                }
+            }
+        }
+    },
+    "SSH_SERVER_INVALID_LOGIN_TIMEOUT": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "login_timeout": "606"
+                }
+            }
+        }
+    },
+    "SSH_SERVER_INVALID_PORTS_1": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "ports": "port22"
+                }
+            }
+        }
+    },
+    "SSH_SERVER_INVALID_PORTS_2": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "ports": "22.222"
+                }
+            }
+        }
+    }
+}

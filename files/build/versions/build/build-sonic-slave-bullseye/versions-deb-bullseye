@@ -43,7 +43,6 @@ linux-headers-5.10.0-18-2-common==5.10.140-1
 lldpd==1.0.4-1
 lm-sensors==1:3.6.0-7
 mft==4.22.1-15
-mlnx-sai==1.mlnx.SAIBuild2305.24.0.1
 net-tools==1.60+git20181103.0eebece-1
 protobuf-compiler==3.21.12-3
 python-thrift==0.11.0-4

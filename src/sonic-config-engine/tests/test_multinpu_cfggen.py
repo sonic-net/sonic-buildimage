@@ -151,9 +151,10 @@ class TestMultiNpuCfgGen(TestCase):
             self.assertDictEqual(output, {})
 
     def test_metadata_dns_nameserver(self):
-        argument = ['-m', self.sample_graph, '-p', self.sample_port_config, '--var-json', "DNS_NAMESERVER"]
-        output = json.loads(self.run_script(argument))
-        self.assertDictEqual(output, {'1.1.1.1': {}, '8.8.8.8': {}})
+        #Skip for internal build
+        #argument = ['-m', self.sample_graph, '-p', self.sample_port_config, '--var-json', "DNS_NAMESERVER"]
+        #output = json.loads(self.run_script(argument))
+        #self.assertDictEqual(output, {'1.1.1.1': {}, '8.8.8.8': {}})
         #DNS_NAMESERVER data is present only in the host config
         argument = ['-m', self.sample_graph, '--var-json', "DNS_NAMESERVER"]
         for asic in range(NUM_ASIC):

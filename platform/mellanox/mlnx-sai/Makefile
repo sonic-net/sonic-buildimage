@@ -6,7 +6,8 @@ MAIN_TARGET = mlnx-sai_1.mlnx.$(MLNX_SAI_VERSION)_$(CONFIGURED_ARCH).deb
 DERIVED_TARGETS = mlnx-sai-dbgsym_1.mlnx.$(MLNX_SAI_VERSION)_$(CONFIGURED_ARCH).deb
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
-	pushd SAI-Implementation
+	rm -rf mlnx_sai
+	wget -c $(MLNX_SAI_SOURCE_BASE_URL)/$(MLNX_SAI_VERSION).tar.gz -O - | tar -xz
 	pushd mlnx_sai
 
 	chmod a+x autogen.sh
@@ -14,4 +15,3 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	popd
 
 	mv $(DERIVED_TARGETS) $* $(DEST)/
-	popd

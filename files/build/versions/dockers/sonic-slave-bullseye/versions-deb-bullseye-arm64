@@ -18,6 +18,6 @@ libstdc++6-armhf-cross==10.2.1-6cross1
 libubsan1-armhf-cross==10.2.1-6cross1
 libunicode-linebreak-perl==0.0.20190101-1+b2
 libxslt1-dev==1.1.34-4+deb11u1
-linux-headers-5.10.0-23-arm64==5.10.179-1
-linux-headers-arm64==5.10.179-1
+linux-headers-5.10.0-23-arm64==5.10.179-2
+linux-headers-arm64==5.10.179-2
 nodejs==14.21.3-deb-1nodesource1

@@ -35,7 +35,7 @@ libtirpc-dev==1.3.1-1+deb11u1
 libtsan0==10.2.1-6
 libubsan1==10.2.1-6
 libunwind8==1.3.2-2
-linux-libc-dev==5.10.179-1
+linux-libc-dev==5.10.179-2
 openssh-client==1:8.4p1-5+deb11u1
 sonic-gnmi==0.1
 sonic-mgmt-common==1.0.0

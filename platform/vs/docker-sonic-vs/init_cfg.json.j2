@@ -2,16 +2,20 @@
     "DEVICE_METADATA": {
         "localhost": {
             "mac": "{{ system_mac }}",
+            "switch_type": "{{ switch_type }}",
             "buffer_model": "traditional"
         }
     },
-{% set features = ["swss", "bgp", "teamd", "nat", "database", "lldp", "dhcp_relay", "macsec"] %}
+{% if switch_type != "dpu" %}
+{% set features = ({"swss": "enabled", "bgp": "enabled", "teamd": "enabled", "nat": "enabled", "database": "enabled", "lldp": "enabled", "dhcp_relay": "enabled", "macsec": "enabled"}) %}
+{% else %}
+{% set features = ({"swss": "enabled", "bgp": "enabled", "teamd": "disabled", "nat": "disabled", "database": "enabled", "lldp": "enabled", "dhcp_relay": "disabled", "macsec": "disabled"}) %}
+{% endif %}
     "FEATURE": {
-{% for feature in features %}
+{% for feature, state in features.items() %}
         "{{ feature }}": {
-            "state": "enabled"
+            "state": "{{ state }}"
         }{% if not loop.last %},{% endif %}
 {% endfor %}
     }
 }
-

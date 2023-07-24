@@ -165,8 +165,11 @@ class Fan(FanBase):
             int: percentage of the max fan speed
         """
         if self.max_speed == 0:
-            self.max_speed = self.fru.get_fru_data(self.max_speed_offset, 2)[1]
-            self.max_speed = self.max_speed[1] << 8 | self.max_speed[0]
+            is_valid, max_speed = self.fru.get_fru_data(self.max_speed_offset, 2)
+            if not is_valid:
+                return 0
+            self.max_speed = max_speed[1]
+            self.max_speed = max_speed[1] << 8 | max_speed[0]
         is_valid, fan_speed = self.speed_sensor.get_reading()
         if not is_valid or self.max_speed == 0:
             return None

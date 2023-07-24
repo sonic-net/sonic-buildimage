@@ -266,7 +266,7 @@ tag_latest_test_data = {
     },
     2: {
         common_test.DESCR: "Tag a unstable container",
-        common_test.RETVAL: 0,
+        common_test.RETVAL: -1,
         common_test.ARGS: ["snmp", "123456", "v1"],
         common_test.PROC_CMD: [
             "docker ps |grep 123456"
@@ -382,11 +382,30 @@ clean_image_test_data = {
         common_test.ARGS: ["snmp", "20201231.84", ""],
         common_test.PROC_CMD: [
             "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
-            "docker tag 507f8d28bf6e sonick8scue.azurecr.io/docker-sonic-telemetry:20201231.74 && docker rmi docker-sonic-telemetry:20201231.74"
+            "docker rmi docker-sonic-telemetry:20201231.74"
         ],
         common_test.PROC_OUT: [
             "docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
              sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6e",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            0
+        ]
+    },
+    5: {
+        common_test.DESCR: "Clean image successfuly(local to dry-kube to kube)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
+            "docker rmi sonick8scue.azurecr.io/docker-sonic-telemetry:20201231.74 && docker tag 507f8d28bf6e sonick8scue.azurecr.io/docker-sonic-telemetry:20201231.74 && docker rmi docker-sonic-telemetry:20201231.74"
+        ],
+        common_test.PROC_OUT: [
+            "docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6f\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6g",
             ""
         ],
         common_test.PROC_CODE: [

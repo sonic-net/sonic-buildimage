@@ -65,9 +65,6 @@
 [submodule "src/scapy"]
 	path = src/scapy
 	url = https://github.com/secdev/scapy.git
-[submodule "platform/mellanox/mlnx-sai/SAI-Implementation"]
-	path = platform/mellanox/mlnx-sai/SAI-Implementation
-	url = https://github.com/Mellanox/SAI-Implementation
 [submodule "src/sonic-mgmt-framework"]
 	path = src/sonic-mgmt-framework
 	url = https://github.com/sonic-net/sonic-mgmt-framework

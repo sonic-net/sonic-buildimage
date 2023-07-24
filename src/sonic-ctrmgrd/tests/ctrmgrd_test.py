@@ -324,6 +324,37 @@ feature_test_data = {
                 }
             }
         }
+    },
+    4: {
+        common_test.DESCR: "Restart immediately to go back to local when remote_state changes to none from stopped",
+        common_test.ARGS: "ctrmgrd",
+        common_test.PRE: {
+            common_test.STATE_DB_NO: {
+                common_test.FEATURE_TABLE: {
+                    "snmp": {
+                        "remote_state": "stopped",
+                    }
+                }
+            }
+        },
+        common_test.UPD: {
+            common_test.STATE_DB_NO: {
+                common_test.FEATURE_TABLE: {
+                    "snmp": {
+                        "remote_state": "none",
+                    }
+                }
+            }
+        },
+        common_test.POST: {
+            common_test.STATE_DB_NO: {
+                common_test.FEATURE_TABLE: {
+                    "snmp": {
+                        "restart": "true"
+                    }
+                }
+            }
+        }
     }
 }
 

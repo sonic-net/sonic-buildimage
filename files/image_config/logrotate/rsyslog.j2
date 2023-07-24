@@ -37,6 +37,8 @@
 {
 {% if var_log_kb <= 204800 %}
     size 1M
+{% elif var_log_kb <= 409600 %}
+    size 2M
 {% else %}
     size 16M
 {% endif %}
@@ -53,6 +55,8 @@
         # Adjust LOG_FILE_ROTATE_SIZE_KB to reflect the "size" parameter specified above, in kB
 {% if var_log_kb <= 204800 %}
         LOG_FILE_ROTATE_SIZE_KB=1024
+{% elif var_log_kb <= 409600 %}
+        LOG_FILE_ROTATE_SIZE_KB=2048
 {% else %}
         LOG_FILE_ROTATE_SIZE_KB=16384
 {% endif %}

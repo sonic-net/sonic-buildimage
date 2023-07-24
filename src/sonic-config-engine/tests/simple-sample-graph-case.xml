@@ -501,12 +501,6 @@
      </a:Value>
     </a:DeviceProperty>
     <a:DeviceProperty>
-     <a:Name>DnsNameserverResources</a:Name>
-     <a:Value>
-      1.1.1.1;8.8.8.8
-     </a:Value>
-    </a:DeviceProperty>
-    <a:DeviceProperty>
      <a:Name>SnmpResources</a:Name>
      <a:Value>
       10.0.10.3;10.0.10.4

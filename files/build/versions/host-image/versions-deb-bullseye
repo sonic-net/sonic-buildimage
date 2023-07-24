@@ -242,8 +242,8 @@ libyang-cpp==1.0.73
 libzmq5==4.3.4-1
 linux-base==4.6
 linux-image-5.10.0-18-2-amd64-unsigned==5.10.140-1
-linux-perf==5.10.179-1
-linux-perf-5.10==5.10.179-1
+linux-perf==5.10.179-2
+linux-perf-5.10==5.10.179-2
 locales==2.31-13+deb11u6
 logrotate==3.18.0-2+deb11u1
 lsb-release==11.1.0

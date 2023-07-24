@@ -541,8 +541,9 @@ RUN pip3 install MarkupSafe==2.0.1
 RUN pip3 install Jinja2==3.0.3
 
 # For sonic-mgmt-framework
-RUN pip2 install "PyYAML==5.4.1"
-RUN pip3 install "PyYAML==5.4.1"
+# The option --no-build-isolation can be removed when upgrading PyYAML to 6.0.1
+RUN pip2 install "PyYAML==5.4.1" --no-build-isolation
+RUN pip3 install "PyYAML==5.4.1" --no-build-isolation
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 RUN pip2 install "lxml==4.9.1"

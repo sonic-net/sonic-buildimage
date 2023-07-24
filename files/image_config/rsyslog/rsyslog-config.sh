@@ -17,7 +17,10 @@ if [[ ($NUM_ASIC -gt 1) ]]; then
 else
     udp_server_ip=$(ip -j -4 addr list lo scope host | jq -r -M '.[0].addr_info[0].local')
 fi
+hostname=$(hostname)
 
-sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 -a "{\"udp_server_ip\": \"$udp_server_ip\"}"  >/etc/rsyslog.conf
+sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
+    -a "{\"udp_server_ip\": \"$udp_server_ip\", \"hostname\": \"$hostname\"}" \
+    > /etc/rsyslog.conf
 
 systemctl restart rsyslog

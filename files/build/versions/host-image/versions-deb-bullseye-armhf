@@ -14,7 +14,7 @@ libxml2-dev==2.9.10+dfsg-6.7+deb11u4
 libxslt1-dev==1.1.34-4+deb11u1
 libxslt1.1==1.1.34-4+deb11u1
 linux-image-5.10.0-18-2-armmp==5.10.140-1
-linux-libc-dev==5.10.179-1
+linux-libc-dev==5.10.179-2
 mrvlprestera==1.0
 ntpstat==0.0.0.1-2
 openssh-client==1:8.4p1-5+deb11u1

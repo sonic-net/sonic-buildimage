@@ -765,7 +765,6 @@ class Chassis(ChassisBase):
             'reset_hotswap_or_halt'     :   self.REBOOT_CAUSE_HARDWARE_OTHER,
             'reset_voltmon_upgrade_fail':   self.REBOOT_CAUSE_HARDWARE_OTHER,
             'reset_reload_bios'         :   self.REBOOT_CAUSE_HARDWARE_BIOS,
-            'reset_from_comex'          :   self.REBOOT_CAUSE_HARDWARE_CPU,
             'reset_fw_reset'            :   self.REBOOT_CAUSE_HARDWARE_RESET_FROM_ASIC,
             'reset_from_asic'           :   self.REBOOT_CAUSE_HARDWARE_RESET_FROM_ASIC,
             'reset_long_pb'             :   self.REBOOT_CAUSE_HARDWARE_BUTTON,

@@ -40,7 +40,7 @@ libswsscommon-dbgsym==1.0.0
 libtirpc-dev==1.3.1-1+deb11u1
 libunwind8==1.3.2-2
 libxml2==2.9.10+dfsg-6.7+deb11u4
-linux-libc-dev==5.10.179-1
+linux-libc-dev==5.10.179-2
 mft==4.22.1-15
 mlnx-sai==1.mlnx.SAIBuild2305.24.0.1
 openssh-client==1:8.4p1-5+deb11u1
