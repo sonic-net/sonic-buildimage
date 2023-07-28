@@ -152,3 +152,15 @@ def test_voq_chassis_pg():
 def test_voq_chassis_instance():
     test_data = load_tests("voq_chassis", "instance.conf")
     run_tests("voq_chassis_instance", *test_data)
+
+def test_sentinel_policies():
+    test_data = load_tests("sentinels", "policies.conf")
+    run_tests("sentinel_policies", *test_data)
+
+def test_sentinel_pg():
+    test_data = load_tests("sentinels", "peer-group.conf")
+    run_tests("sentinel_pg", *test_data)
+
+def test_sentinel_instance():
+    test_data = load_tests("sentinels", "instance.conf")
+    run_tests("sentinel_instance", *test_data)

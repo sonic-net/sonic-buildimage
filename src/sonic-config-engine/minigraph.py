@@ -896,6 +896,7 @@ def parse_cpg(cpg, hname, local_devices=[]):
     bgp_voq_chassis_sessions = {}
     myasn = None
     bgp_peers_with_range = {}
+    bgp_sentinel_sessions = {}
     for child in cpg:
         tag = child.tag
         if tag == str(QName(ns, "PeeringSessions")):
@@ -965,14 +966,22 @@ def parse_cpg(cpg, hname, local_devices=[]):
                             name = bgpPeer.find(str(QName(ns1, "Name"))).text
                             ip_range = bgpPeer.find(str(QName(ns1, "PeersRange"))).text
                             ip_range_group = ip_range.split(';') if ip_range and ip_range != "" else []
-                            bgp_peers_with_range[name] = {
-                                'name': name,
-                                'ip_range': ip_range_group
-                            }
-                            if bgpPeer.find(str(QName(ns, "Address"))) is not None:
-                                bgp_peers_with_range[name]['src_address'] = bgpPeer.find(str(QName(ns, "Address"))).text
-                            if bgpPeer.find(str(QName(ns1, "PeerAsn"))) is not None:
-                                bgp_peers_with_range[name]['peer_asn'] = bgpPeer.find(str(QName(ns1, "PeerAsn"))).text
+                            if name == "BGPSentinel" or name == "BGPSentinelV6":
+                                bgp_sentinel_sessions[name] = {
+                                    'name': name,
+                                    'ip_range': ip_range_group
+                                }
+                                if bgpPeer.find(str(QName(ns, "Address"))) is not None:
+                                    bgp_sentinel_sessions[name]['src_address'] = bgpPeer.find(str(QName(ns, "Address"))).text
+                            else:
+                                bgp_peers_with_range[name] = {
+                                    'name': name,
+                                    'ip_range': ip_range_group
+                                }
+                                if bgpPeer.find(str(QName(ns, "Address"))) is not None:
+                                    bgp_peers_with_range[name]['src_address'] = bgpPeer.find(str(QName(ns, "Address"))).text
+                                if bgpPeer.find(str(QName(ns1, "PeerAsn"))) is not None:
+                                    bgp_peers_with_range[name]['peer_asn'] = bgpPeer.find(str(QName(ns1, "PeerAsn"))).text
                 else:
                     for peer in bgp_sessions:
                         bgp_session = bgp_sessions[peer]
@@ -994,7 +1003,7 @@ def parse_cpg(cpg, hname, local_devices=[]):
     bgp_internal_sessions = filter_bad_asn(bgp_internal_sessions)
     bgp_voq_chassis_sessions = filter_bad_asn(bgp_voq_chassis_sessions)
 
-    return bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, myasn, bgp_peers_with_range, bgp_monitors
+    return bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, myasn, bgp_peers_with_range, bgp_monitors, bgp_sentinel_sessions
 
 
 def parse_meta(meta, hname):
@@ -1548,7 +1557,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             if child.tag == str(QName(ns, "DpgDec")):
                 (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, hostname)
             elif child.tag == str(QName(ns, "CpgDec")):
-                (bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, bgp_asn, bgp_peers_with_range, bgp_monitors) = parse_cpg(child, hostname)
+                (bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, bgp_asn, bgp_peers_with_range, bgp_monitors, bgp_sentinel_sessions) = parse_cpg(child, hostname)
             elif child.tag == str(QName(ns, "PngDec")):
                 (neighbors, devices, console_dev, console_port, mgmt_dev, mgmt_port, port_speed_png, console_ports, mux_cable_ports, png_ecmp_content) = parse_png(child, hostname, dpg_ecmp_content)
             elif child.tag == str(QName(ns, "UngDec")):
@@ -1564,7 +1573,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
                 (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, asic_name)
                 host_lo_intfs = parse_host_loopback(child, hostname)
             elif child.tag == str(QName(ns, "CpgDec")):
-                (bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, bgp_asn, bgp_peers_with_range, bgp_monitors) = parse_cpg(child, asic_name, local_devices)
+                (bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, bgp_asn, bgp_peers_with_range, bgp_monitors, bgp_sentinel_sessions) = parse_cpg(child, asic_name, local_devices)
             elif child.tag == str(QName(ns, "PngDec")):
                 (neighbors, devices, port_speed_png) = parse_asic_png(child, asic_name, hostname)
             elif child.tag == str(QName(ns, "MetadataDeclaration")):
@@ -1681,6 +1690,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     results['BGP_PEER_RANGE'] = bgp_peers_with_range
     results['BGP_INTERNAL_NEIGHBOR'] = bgp_internal_sessions
     results['BGP_VOQ_CHASSIS_NEIGHBOR'] = bgp_voq_chassis_sessions
+    results['BGP_SENTINELS'] = bgp_sentinel_sessions
     if mgmt_routes and mgmt_intf and len(mgmt_intf):
         # TODO: differentiate v4 and v6
         next(iter(mgmt_intf.values()))['forced_mgmt_routes'] = mgmt_routes
@@ -1973,6 +1983,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     if is_storage_device and 'BackEnd' in current_device['type']:
         results['BGP_MONITORS'] = {}
         results['BGP_PEER_RANGE'] = {}
+        results['BGP_SENTINELS'] = {}
 
     results['VLAN'] = vlans
     results['VLAN_MEMBER'] = vlan_members

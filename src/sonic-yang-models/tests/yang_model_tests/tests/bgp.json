@@ -197,6 +197,20 @@
     "BGP_ALLOWED_PREFIXES_LIST_INVALID_PREFIXES_IPV6": {
         "desc": "Invalid IPv6 prefix.",
         "eStrKey" : "Pattern"
+    },
+    "BGP_SENTINEL_ALL_VALID_V4": {
+        "desc": "Configure BGP Sentinel table."
+    },
+    "BGP_SENTINEL_ALL_VALID_V6": {
+        "desc": "Configure BGP SentinelV6 table."
+    },
+    "BGP_SENTINEL_INVALID_RANGE_IPV4": {
+        "desc": "does not satisfy.",
+        "eStr": "Invalid value \"10.0.0.0/48\" in \"ip_range\" element."
+    },
+    "BGP_SENTINEL_INVALID_RANGE_IPV6": {
+        "desc": "does not satisfy.",
+        "eStr": "Invalid value \"fc00:f0::/129\" in \"ip_range\" element."
     }
 }
 
