@@ -502,5 +502,126 @@
                 ]
             }
          }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_LIST": [
+                    {
+                       "agent_ip": "10.0.0.1",
+                       "port": "161",
+                       "vrf_name": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_IPV6": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_LIST": [
+                    {
+                       "agent_ip": "fd00::1",
+                       "port": "161",
+                       "vrf_name": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_EMPTY_PORT_NUMBER": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_LIST": [
+                    {
+                       "agent_ip": "10.0.0.1",
+                       "port": "",
+                       "vrf_name": "mgmt"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_MGMT_VRF": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_LIST": [
+                    {
+                       "agent_ip": "10.0.0.1",
+                       "port": "161",
+                       "vrf_name": "mgmt"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_NO_VRF": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_LIST": [
+                    {
+                       "agent_ip": "10.0.0.1",
+                       "port": "161"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_INVALID_PORT": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_LIST": [
+                    {
+                       "agent_ip": "10.0.0.1",
+		       "port": "65536",
+                       "vrf_name": "mgmt"
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_DUPLICATE_IP_PORT": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_LIST": [
+                    {
+                       "agent_ip": "10.0.0.1",
+                       "port": "161",
+                       "vrf_name": "mgmt"
+                    },
+                    {
+                       "agent_ip": "10.0.0.1",
+                       "port": "161",
+                       "vrf_name": ""
+                    } 
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_INVALID_IPV4_ADDRESS": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_LIST": [
+                    {
+                       "agent_ip": "340.1.1.10",
+                       "port": "161",
+                       "vrf_name": ""
+                    }
+                ]
+            }
+         }
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_INVALID_IPV6_ADDRESS": {
+        "sonic-snmp:sonic-snmp": {
+            "sonic-snmp:SNMP_AGENT_ADDRESS_CONFIG": {
+                "SNMP_AGENT_ADDRESS_LIST": [
+                    {
+                       "agent_ip": "2001:aa:aa:aa",
+                       "port": "161",
+                       "vrf_name": ""
+                    }
+                ]
+            }
+         }
     }
 }

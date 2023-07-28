@@ -1,0 +1,5 @@
+depmod -a
+systemctl enable pddf-platform-init.service
+systemctl start pddf-platform-init.service
+systemctl enable platform-swss-restart.service
+systemctl start --no-block platform-swss-restart.service

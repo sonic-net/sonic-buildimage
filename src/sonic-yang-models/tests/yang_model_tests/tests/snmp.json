@@ -113,5 +113,40 @@
     "SNMP_USER_PRIV_LONG_ENCRYPT_PASS_NEG_TEST": {
         "desc": "Load SNMP user with user type Priv with long encryption password",
         "eStrKey": "Range"
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG": {
+        "desc": "Load SNMP agent address config"
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_IPV6": {
+        "desc": "Load SNMP agent address config"
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_EMPTY_PORT_NUMBER": {
+        "desc": "Load SNMP agent address config with empty port number"
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_MGMT_VRF": {
+        "desc": "Load SNMP agent address config with mgmt vrf"
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_NO_VRF": {
+        "desc": "Load SNMP agent address config with no vrf",
+	"eStr": ["Missing required element"]
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_INVALID_PORT": {
+        "desc": "Load SNMP agent address config with invalid port",
+        "eStrKey": "InvalidValue"
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_DUPLICATE_IP_PORT": {
+        "desc": "Load two SNMP agent address config same ip and port",
+	"eStr": ["Unique data leaf(s)"]
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_INVALID_IPV4_ADDRESS": {
+        "desc": "Load SNMP agent address config with invalid IPv4 address",
+        "eStrKey": "InvalidValue",
+        "eStr": ["ip"]
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_INVALID_IPV6_ADDRESS": {
+        "desc": "Load SNMP agent address config with invalid IPV6 address",
+        "eStrKey": "InvalidValue",
+        "eStr": ["ip"]
     }
 }
+
