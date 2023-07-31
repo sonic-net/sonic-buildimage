@@ -1591,6 +1591,62 @@
                 ]
             }
         }
+    },
+    "BGP_SENTINEL_ALL_VALID_V4": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinel",
+                        "name": "BGPSentinel",
+                        "src_address": "10.1.0.32",
+                        "ip_range": ["10.1.0.0/24"]
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_SENTINEL_ALL_VALID_V6": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinelV6",
+                        "name": "BGPSentinelV6",
+                        "src_address": "fc00:1::32",
+                        "ip_range": ["2603:10a0:321:82f9::/64", "2603:10a1:30a:8000::/59"]
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_SENTINEL_INVALID_RANGE_IPV4": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinel",
+                        "name": "BGPSentinel",
+                        "src_address": "10.1.0.32",
+                        "ip_range": ["10.0.0.0/48", "10.1.0.0/24"]
+                    }
+                ]
+            }
+        }
+    },
+    "BGP_SENTINEL_INVALID_RANGE_IPV6": {
+        "sonic-bgp-sentinel:sonic-bgp-sentinel": {
+            "sonic-bgp-sentinel:BGP_SENTINELS": {
+                "BGP_SENTINELS_LIST": [
+                    {
+                        "sentinel_name": "BGPSentinelV6",
+                        "name": "BGPSentinelV6",
+                        "src_address": "fc00:1::32",
+                        "ip_range": ["fc00:f0::/129", "fc00:a0::/64"]
+                    }
+                ]
+            }
+        }
     }
 }
 

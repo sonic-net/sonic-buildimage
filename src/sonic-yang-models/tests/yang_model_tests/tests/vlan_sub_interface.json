@@ -55,5 +55,9 @@
         "desc": "INCORRECT LOOPBACK ACTION IN VLAN_SUB_INTERFACE TABLE.",
         "eStrKey" : "Pattern",
         "eStr": ["drop|forward"]
+    },
+    "VLAN_SUB_INTERFACE_SHORT_NAME_FORMAT_VLAN_CHECK_MUST_CONDITION_FALSE_TEST": {
+        "desc": "Configure valid short name format vlan sub interface vlan must check condition false.",
+        "eStrKey": "Must"
     }
 }

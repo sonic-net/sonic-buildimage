@@ -1,0 +1,68 @@
+{
+
+    "XCVR":
+    {
+        "xcvr_present":
+        {
+           "i2c":
+           {
+               "valmap-SFP": {"1":true, "0":false},
+               "valmap-QSFP": {"1":true, "0":false}
+           }
+        }
+    },
+    "PSU":
+    {
+        "psu_present":
+        {
+            "i2c":
+            {
+                "valmap": { "1":true, "0":false }
+            },
+            "bmc":
+            {
+                "valmap": { "0x0280|":true, "0x0180|":false }
+            }
+        },
+
+        "psu_power_good":
+        {
+            "i2c":
+            {
+                "valmap": { "1": true, "0":false }
+            },
+            "bmc":
+            {
+                "valmap": { "0x0280|":true, "0x0180|":false }
+            }
+        },
+
+        "PSU_FAN_MAX_SPEED":"18000"
+    },
+
+    "FAN":
+    {
+        "direction":
+        {
+            "bmc":
+            {
+                "valmap": {"0": "UNKNOWN", "1":"INTAKE", "2":"EXHAUST"}
+            }
+        },
+
+        "present":
+        {
+            "i2c":
+            {
+                "valmap": {"1":true, "0":false}
+            },
+            "bmc":
+            {
+                "valmap": { "0x0280|":true, "0x0180|":false }
+            }
+        },
+        "FAN_R_MAX_SPEED":"22000",
+        "FAN_F_MAX_SPEED":"22000"
+    }
+
+}

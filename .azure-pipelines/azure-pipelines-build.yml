@@ -130,6 +130,10 @@ jobs:
               make $BUILD_OPTIONS ENABLE_ASAN=y target/docker-sonic-vs.gz
               mv target/docker-sonic-vs.gz target/docker-sonic-vs-asan.gz
             fi
+            if [ $(K8S_OPTIONS) == 'INCLUDE_KUBERNETES_MASTER=y' ]; then
+              make $BUILD_OPTIONS $(K8S_OPTIONS) target/sonic-vs.img.gz
+              mv target/sonic-vs.img.gz target/sonic-vs-k8s.img.gz
+            fi
             make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
             make $BUILD_OPTIONS target/docker-ptf-sai.gz
             if [ $(Build.Reason) != 'PullRequest' ];then

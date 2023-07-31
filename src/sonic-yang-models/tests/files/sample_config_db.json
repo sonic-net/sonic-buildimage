@@ -1098,12 +1098,14 @@
             "Ethernet12.10|10.0.1.56/31": {},
             "Ethernet12.10|fc00::1:71/126": {},
             "Po0003.10": {
-                "admin_status": "up"
+                "admin_status": "up",
+                "vlan": "10"
             },
             "Po0003.10|10.0.1.58/31": {},
             "Po0003.10|fc00::1:75/126": {},
             "Eth120.10": {
-                "admin_status": "up"
+                "admin_status": "up",
+                "vlan": "10"
             },
             "Eth120.10|10.0.1.60/31": {},
             "Eth120.10|fc00::1:79/126": {}
@@ -1616,6 +1618,23 @@
                 ],
                 "name": "BGPVac",
                 "src_address": "10.1.0.32"
+            }
+        },
+        "BGP_SENTINELS": {
+            "BGPSentinel": {
+                "ip_range": [
+                    "10.1.0.0/24"
+                ],
+                "name": "BGPSentinel", 
+                "src_address": "10.1.0.32"
+            },
+            "BGPSentinelV6": {
+                "ip_range": [
+                    "2603:10a0:321:82f9::/64",
+                    "2603:10a1:30a:8000::/59"
+                ],
+                "name": "BGPSentinelV6",
+                "src_address": "fc00:1::32"
             }
         },
         "BGP_MONITORS": {

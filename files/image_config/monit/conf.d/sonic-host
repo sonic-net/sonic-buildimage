@@ -31,6 +31,13 @@ check program routeCheck with path "/usr/local/bin/route_check.py"
     every 5 cycles
     if status != 0 for 3 cycle then alert repeat every 1 cycles
 
+# dualtor_neighbor_check.py: script to check if the neighbor entries in APPL_DB
+# has correct neighbor or tunnel route entries in ASIC_DB based on the mux
+# states.
+check program dualtorNeighborCheck with path "/usr/local/bin/dualtor_neighbor_check.py -o SYSLOG -s ERROR"
+    every 5 cycles
+    if status != 0 for 3 cycle then alert repeat every 1 cycles
+
 # Check if /etc & /home are writable. If not, make them writable.
 # Raise syslog error message, in case of underlying issues
 #

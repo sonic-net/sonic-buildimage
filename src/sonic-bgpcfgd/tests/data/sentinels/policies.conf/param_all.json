@@ -1,0 +1,7 @@
+{
+    "constants": {
+        "bgp": {
+            "sentinel_community": "12345:12346"
+        }
+    }
+}

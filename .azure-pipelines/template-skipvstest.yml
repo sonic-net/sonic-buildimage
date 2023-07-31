@@ -2,7 +2,13 @@ steps:
 - ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
   - script: |
       set -ex
-      tar_branch=origin/$(System.PullRequest.TargetBranch)
+      tar_branch=origin/$(System.PullRequest.TargetBranchName)
+      # Check if k8s master entrance script is changed
+      if ! git diff $tar_branch..HEAD --name-only | grep -F files/image_config/kubernetes/kubernetes_master_entrance.sh; then
+        echo "##vso[task.setvariable variable=K8S_OPTIONS;]INCLUDE_KUBERNETES_MASTER=n"
+      else
+        echo "##vso[task.setvariable variable=K8S_OPTIONS;]INCLUDE_KUBERNETES_MASTER=y"
+      fi
       git diff $tar_branch..HEAD --name-only | grep -v -f .azure-pipelines/vstest-exclude && exit 0
       git diff $tar_branch..HEAD --name-only | grep -f .azure-pipelines/vstest-include && exit 0
       set +x

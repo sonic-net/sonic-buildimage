@@ -3,6 +3,12 @@ module sonic-snmp {
   prefix ssnmp;
   yang-version 1.1;
 
+  import ietf-inet-types {
+      prefix inet;
+  }
+  import sonic-vrf {
+    prefix vrf;
+  }
 
   organization
     "SONiC";
@@ -153,6 +159,43 @@ module sonic-snmp {
                 (current()/../SNMP_USER_TYPE = 'Priv' and string-length(current()) >= 8)";
           description
             "Encryption password for the user.";
+        }
+      }
+    }
+    container SNMP_AGENT_ADDRESS_CONFIG {
+      list SNMP_AGENT_ADDRESS_LIST {
+        key "agent_ip port vrf_name";
+        unique "agent_ip port";
+        description "List of SNMP agent listening IP Addresses and ports.";
+
+        leaf agent_ip {
+          type inet:ip-address;
+          description "SNMP agent listening IP";
+        }
+        leaf port {
+          type union {
+            type string {
+              pattern '';
+            }
+            type inet:port-number;
+          }
+          default "";
+          description "SNMP agent listening port number";
+        }
+        leaf vrf_name {
+          type union {
+            type string {
+              pattern '';
+            }
+            type string {
+              pattern 'mgmt';
+            }
+            type string {
+              pattern "Vrf[a-zA-Z0-9_-]+";
+            }
+          }
+          default "";
+          description "VRF name";
         }
       }
     }

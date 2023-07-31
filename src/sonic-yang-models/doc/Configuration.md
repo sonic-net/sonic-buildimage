@@ -424,7 +424,14 @@ group name and IP ranges in **BGP_PEER_RANGE** table.
         "ip_range": [
             "10.2.0.0/16"
         ]
-    }
+    },
+    "BGPSentinel": {
+        "name": "BGPSentinel",
+        "ip_range": [
+            "10.1.0.0/24"
+        ],
+        "src_address": "10.1.0.32"
+     }
   }
 }
 ```
