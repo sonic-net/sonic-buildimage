@@ -4,7 +4,7 @@ azure-storage==0.36.0
 bcrypt==3.2.2
 bitarray==1.5.3
 blessed==1.20.0
-certifi==2023.5.7
+certifi==2023.7.22
 cffi==1.15.1
 charset-normalizer==3.2.0
 click==7.0
@@ -40,7 +40,7 @@ paramiko==2.11.0
 pathtools==0.1.2
 pddf-platform==1.0
 pexpect==4.8.0
-pip==23.2
+pip==23.2.1
 prefixed==0.7.0
 prettyprinter==0.18.0
 protobuf==3.20.3
