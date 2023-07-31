@@ -661,6 +661,10 @@ then
 
 fi
 
+## Set FIPS runtime default option
+sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "mkdir -p /etc/fips"
+sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo 0 > /etc/fips/fips_enable"
+
 # #################
 #   secure boot
 # #################

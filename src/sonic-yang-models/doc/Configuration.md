@@ -2508,6 +2508,21 @@ The DNS_NAMESERVER table introduces static DNS nameservers configuration.
 }
 ```
 
+### FIPS
+
+The FIPS table introduces FIPS  configuration.
+
+```json
+{
+    "FIPS": {
+        "global" : {
+            "enable": "true",
+            "enforce": "false"
+        }
+    }
+}
+```
+
 #### 5.2.3 Update value directly in db memory
 
 For Developers
