@@ -9,8 +9,10 @@
 {% if is_storage_device is not defined or is_storage_device | length == 0 %}
 {% set is_storage_device = "false" %}
 {% endif %}
-{% set is_compute_ai = CONFIG_DB__DEVICE_METADATA['localhost']['compute_ai'] %}
-{% if is_compute_ai is not defined or is_compute_ai | length == 0 %}
+{% set resource_type = CONFIG_DB__DEVICE_METADATA['localhost']['resource_type'] %}
+{% if resource_type is defined and resource_type == 'Compute_AI' %}
+{% set is_compute_ai = "true" %}
+{% else %}
 {% set is_compute_ai = "false" %}
 {% endif %}
 {% if neighbor_deployment_id is not defined or neighbor_deployment_id | length == 0 %}
