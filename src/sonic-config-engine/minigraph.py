@@ -5,6 +5,7 @@ import math
 import os
 import sys
 import json
+import jinja2
 import subprocess
 from collections import defaultdict
 
@@ -2021,14 +2022,27 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     results['DHCP_SERVER'] = dict((item, {}) for item in dhcp_servers)
     results['DHCP_RELAY'] = dhcp_relay_table
     results['NTP_SERVER'] = dict((item, {}) for item in ntp_servers)
-    # Set default DNS nameserver for different cloud
-    if len(dns_nameservers) == 0:
-        if cloudtype is None:
-            dns_nameservers.append(dns_dict["public"])
+    # Set default DNS nameserver from dns.j2
+    results['DNS_NAMESERVER'] = {}
+    if os.environ.get("CFGGEN_UNIT_TESTING", "0") == "2":
+        dns_conf = os.path.join(os.path.dirname(__file__), "tests/", "dns.j2")
+    else:
+        dns_conf = "/usr/share/sonic/templates/dns.j2"
+    if os.path.isfile(dns_conf):
+        text = ""
+        with open(dns_conf) as template_file:
+            # Semgrep does not allow to use jinja2 directly, but we do need jinja2 for SONiC
+            environment = jinja2.Environment(trim_blocks=True) # nosemgrep
+            dns_template = environment.from_string(template_file.read())
+            text = dns_template.render(results)
+        try:
+            dns_res = json.loads(text)
+        except ValueError as e:
+            sys.exit("Error: fail to load dns configuration, %s" % str(e))
         else:
-            addr = dns_dict.get(cloudtype.lower(), dns_dict["public"])
-            dns_nameservers.append(addr)
-    results['DNS_NAMESERVER'] = dict((item, {}) for item in dns_nameservers)
+            dns_nameservers = dns_res.get('DNS_NAMESERVER', {})
+            for k in dns_nameservers.keys():
+                results['DNS_NAMESERVER'][str(k)] = {}
     results['TACPLUS_SERVER'] = dict((item, {'priority': '1', 'tcp_port': '49'}) for item in tacacs_servers)
     if len(acl_table_types) > 0:
         results['ACL_TABLE_TYPE'] = acl_table_types
