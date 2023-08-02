@@ -193,8 +193,11 @@ stages:
         - name: vs
           script: |
             set -ex
-            OPTIONS="$(BUILD_OPTIONS) SONIC_DPKG_CACHE_METHOD=wcache PASSWORD=$PASSWORD BUILD_MULTIASIC_KVM=y"
+            OPTIONS="$(BUILD_OPTIONS) INCLUDE_KUBERNETES_MASTER=y INCLUDE_RESTAPI=y ENABLE_DHCP_GRAPH_SERVICE=n SONIC_DPKG_CACHE_METHOD=wcache PASSWORD=$PASSWORD BUILD_MULTIASIC_KVM=y"
             make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
+            gzip -kd target/sonic-vs.img.gz
+            qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx
+            gzip target/sonic-vs.vhdx
         - name: generic
           script: |
             OPTIONS="$(BUILD_OPTIONS) SONIC_DPKG_CACHE_METHOD=wcache PASSWORD=$PASSWORD"
