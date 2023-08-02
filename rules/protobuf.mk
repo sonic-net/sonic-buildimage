@@ -17,9 +17,9 @@ $(eval $(call add_derived_package,$(PROTOBUF),$(PROTOBUF_DEV)))
 PROTOBUF_LITE = libprotobuf-lite32_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(PROTOBUF),$(PROTOBUF_LITE)))
 
-PROTOC = libprotoc_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
-$(PROTOC)_RDEPENDS = $(PROTOBUF) $(PROTOBUF_LITE)
-$(eval $(call add_derived_package,$(PROTOBUF),$(PROTOC)))
+PROTOC_DEV = libprotoc-dev_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+$(PROTOC_DEV)_RDEPENDS = $(PROTOBUF) $(PROTOBUF_LITE)
+$(eval $(call add_derived_package,$(PROTOBUF),$(PROTOC_DEV)))
 
 PROTOC32 = libprotoc32_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(PROTOC32)_RDEPENDS = $(PROTOBUF) $(PROTOBUF_LITE)
@@ -27,7 +27,7 @@ $(eval $(call add_derived_package,$(PROTOBUF),$(PROTOC32)))
 
 PROTOBUF_COMPILER = protobuf-compiler_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(PROTOBUF_COMPILER)_DEPENDS = $(PROTOC32)
-$(PROTOBUF_COMPILER)_RDEPENDS = $(PROTOC)
+$(PROTOBUF_COMPILER)_RDEPENDS = $(PROTOC32)
 $(eval $(call add_derived_package,$(PROTOBUF),$(PROTOBUF_COMPILER)))
 
 PYTHON3_PROTOBUF = python3-protobuf_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
