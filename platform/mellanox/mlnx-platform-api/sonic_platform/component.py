@@ -536,8 +536,8 @@ class ComponentSSD(Component):
         try:
             reboot_required = self.get_firmware_update_notification(image_path) is not None
         except RuntimeError as e:
-            return FW_AUTO_ERR_UNKNOWN                    
-        
+            return FW_AUTO_ERR_UNKNOWN
+
         # Update if no reboot needed
         if not reboot_required:
             self.update_firmware(image_path)
@@ -810,9 +810,9 @@ class ComponentCPLD(Component):
         # Install burn. Error if fail.
         if not self.install_firmware(image_path):
             return FW_AUTO_ERR_UNKNOWN
-            
+
         # Schedule refresh
-        return FW_AUTO_SCHEDULED    
+        return FW_AUTO_SCHEDULED
 
     def get_firmware_version(self):
         part_number_file = self.CPLD_PART_NUMBER_FILE.format(self.idx)
@@ -844,7 +844,7 @@ class ComponentCPLD(Component):
 
     def get_firmware_update_notification(self, image_path):
         name, ext = os.path.splitext(os.path.basename(image_path))
-        if ext == self.COMPONENT_FIRMWARE_EXTENSION:
+        if ext in self.COMPONENT_FIRMWARE_EXTENSION:
             return "Power cycle (with 30 sec delay) or refresh image is required to complete {} firmware update".format(self.name)
 
         return "Immediate power cycle is required to complete {} firmware update".format(self.name)

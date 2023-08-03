@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -179,3 +179,40 @@ class TestLed:
         psu = FixedPsu(0)
         physical_led = psu.led
         self._verify_non_shared_led(physical_led, psu)
+
+    def test_get_actual_color(self):
+        led = Led()
+        assert led._get_actual_color('red') is None
+        led.supported_colors.add('orange')
+        assert led._get_actual_color('red') is 'orange'
+
+    @mock.patch('os.path.exists')
+    @mock.patch('time.sleep', mock.MagicMock())
+    def test_wait_files_ready(self, mock_exists):
+        mock_exists.side_effect = [True, True]
+        led = Led()
+        assert led._wait_files_ready(['a', 'b'])
+        mock_exists.side_effect = [False, False, True, True]
+        assert led._wait_files_ready(['a', 'b'])
+        mock_exists.side_effect = None
+        mock_exists.return_value = False
+        assert not led._wait_files_ready(['a', 'b'])
+
+    @mock.patch('sonic_platform.utils.write_file')
+    @mock.patch('sonic_platform.led.Led.get_led_path', mock.MagicMock())
+    @mock.patch('sonic_platform.led.Led._stop_blink', mock.MagicMock())
+    @mock.patch('sonic_platform.led.Led.get_capability', mock.MagicMock())
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_simx_platform', mock.MagicMock(return_value=False))
+    def test_get_set_led_status(self, mock_write):
+        led = Led()
+        led._led_id = 'fan'
+        led.supported_colors.add('red')
+        led.supported_colors.add('green')
+        assert not led.set_status('black')
+        assert led.set_status(led.STATUS_LED_COLOR_OFF)
+        assert mock_write.call_count == 2
+        mock_write.side_effect = ValueError('')
+        assert not led.set_status(led.STATUS_LED_COLOR_OFF)
+
+        led.supported_colors.clear()
+        assert led.get_status() == led.STATUS_LED_COLOR_OFF

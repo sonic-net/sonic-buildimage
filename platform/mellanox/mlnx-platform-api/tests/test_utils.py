@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -122,11 +122,44 @@ class TestUtils:
     def test_run_command(self):
         output = utils.run_command(['ls'])
         assert output
+        assert utils.run_command(['not_a_command']) is None
 
+    def test_run_command_exception(self):
+        output = utils.run_command(['ls'])
+        assert output
+
+    @mock.patch('sonic_platform.utils.load_json_file')
+    @mock.patch('os.path.exists')
+    @mock.patch('sonic_py_common.device_info.get_path_to_port_config_file', mock.MagicMock(return_value=''))
     @mock.patch('sonic_py_common.device_info.get_path_to_hwsku_dir', mock.MagicMock(return_value='/tmp'))
-    def test_extract_RJ45_ports_index(self):
+    def test_extract_RJ45_ports_index(self, mock_exists, mock_load_json):
+        mock_exists.return_value = False
         rj45_list = utils.extract_RJ45_ports_index()
         assert rj45_list is None
+
+        mock_exists.return_value = True
+        platform_json = {
+            'interfaces': {
+                "Ethernet0": {
+                    "index": "1",
+                    "lanes": "0",
+                    "breakout_modes": {
+                        "1x1000[100,10]": ["etp1"]
+                    }
+                }
+            }
+        }
+        hwsku_json = {
+            'interfaces': {
+                "Ethernet0": {
+                    "default_brkout_mode": "1x1000[100,10]",
+                    "port_type": "RJ45"
+                }
+            }
+        }
+
+        mock_load_json.side_effect = [platform_json, hwsku_json]
+        assert utils.extract_RJ45_ports_index() == [0]
 
     def test_wait_until(self):
         values = []
@@ -141,3 +174,20 @@ class TestUtils:
         t.start()
         assert utils.wait_until(lambda: len(values) > 0, timeout=5)
         t.join()
+
+    def test_load_json_file(self):
+        assert utils.load_json_file('some_file') is None
+
+        mock_os_open = mock.mock_open(read_data='')
+        with mock.patch('sonic_platform.utils.open', mock_os_open):
+            assert utils.load_json_file('some_file') is None
+
+        mock_os_open = mock.mock_open(read_data='{"a": "b"}')
+        with mock.patch('sonic_platform.utils.open', mock_os_open):
+            data = utils.load_json_file('some_file')
+            assert data['a'] == 'b'
+
+    def test_read_key_value_file(self):
+        mock_os_open = mock.mock_open(read_data='a:b')
+        with mock.patch('sonic_platform.utils.open', mock_os_open):
+            assert utils.read_key_value_file('some_file') == {'a':'b'}
