@@ -27,23 +27,28 @@ class Eeprom(TlvInfoDecoder):
         self.is_psu_eeprom = is_psu
         self.is_fan_eeprom = is_fan
         self.is_sys_eeprom = not (is_psu | is_fan)
+        
+        if self.is_sys_eeprom:
+            self.start_offset = 0
+            self.eeprom_path = self.I2C_DIR + "i2c-0/0-0053/eeprom"
+            # System EEPROM is in ONIE TlvInfo EEPROM format
+            super(Eeprom, self).__init__(self.eeprom_path,
+                                         self.start_offset, '', True)
+            self._load_system_eeprom()
+        
+        else:
+            if self.is_psu_eeprom:
+                self.index = psu_index
+                self.part_number = '1'
+                self.model_str = 'PJT-12V100WBBA'
+                self.serial_number = 'NA'
+                self.serial_number = 'NA'                
 
-        self.start_offset = 0
-        self.eeprom_path = self.I2C_DIR + "i2c-0/0-0053/eeprom"
-        # System EEPROM is in ONIE TlvInfo EEPROM format
-        super(Eeprom, self).__init__(self.eeprom_path,
-                                     self.start_offset, '', True)
-        self._load_system_eeprom()
-
-        if self.is_psu_eeprom:
-            self.index = psu_index
-            self.part_number = '1'
-            self.model_str = 'PJT-12V100WBBA'
-
-        if self.is_fan_eeprom:
-            self.index = fan_index
-            self.part_number = '1'
-            self.model_str = 'FFB0412UHN-BC2EA12'
+            if self.is_fan_eeprom:
+                self.index = fan_index
+                self.part_number = '1'
+                self.model_str = 'FFB0412UHN-BC2EA12'
+                self.serial_number = 'NA'                
 
 
     def _load_system_eeprom(self):
@@ -61,7 +66,7 @@ class Eeprom(TlvInfoDecoder):
             self.serial_number = 'NA'
             self.part_number = 'NA'
             self.model_str = 'NA'
-            self.serial = 'NA'
+            self.service_tag = 'NA'
             self.eeprom_tlv_dict = dict()
         else:
             eeprom = self.eeprom_data
@@ -73,7 +78,7 @@ class Eeprom(TlvInfoDecoder):
                 self.serial_number = 'NA'
                 self.part_number = 'NA'
                 self.model_str = 'NA'
-                self.serial = 'NA'
+                self.service_tag = 'NA'
                 return
 
             total_length = (eeprom[9] << 8) | eeprom[10]
@@ -88,12 +93,7 @@ class Eeprom(TlvInfoDecoder):
                              + eeprom[tlv_index + 1]]
                 code = "0x%02X" % (tlv[0])
 
-                if tlv[0] == self._TLV_CODE_VENDOR_EXT:
-                    value = str((tlv[2] << 24) | (tlv[3] << 16) |
-                                (tlv[4]<< 8) | tlv[5])
-                    value += str(tlv[6:6 + tlv[1]])
-                else:
-                    name, value = self.decoder(None, tlv)
+                name, value = self.decoder(None, tlv)
 
                 self.eeprom_tlv_dict[code] = value
                 if eeprom[tlv_index] == self._TLV_CODE_CRC_32:
@@ -109,7 +109,7 @@ class Eeprom(TlvInfoDecoder):
                 "0x%X" % (self._TLV_CODE_PART_NUMBER), 'NA')
             self.model_str = self.eeprom_tlv_dict.get(
                 "0x%X" % (self._TLV_CODE_PRODUCT_NAME), 'NA')
-            self.serial = self.eeprom_tlv_dict.get(
+            self.service_tag = self.eeprom_tlv_dict.get(
                 "0x%X" % (self._TLV_CODE_SERVICE_TAG), 'NA')
 
     def _get_eeprom_field(self, field_name):
@@ -160,11 +160,11 @@ class Eeprom(TlvInfoDecoder):
         """
         return self.model_str
 
-    def serial_str(self):
+    def service_tag_str(self):
         """
         Returns the servicetag number.
         """
-        return self.serial
+        return self.service_tag
 
     def system_eeprom_info(self):
         """

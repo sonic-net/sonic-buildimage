@@ -11,6 +11,7 @@ from sonic_platform_base.watchdog_base import WatchdogBase
 from sonic_py_common import logger
 
 """ ioctl constants """
+IO_WRITE = 0x40000000
 IO_READ = 0x80000000
 IO_SIZE_INT = 0x00040000
 IO_READ_WRITE = 0xC0000000
@@ -24,6 +25,8 @@ WDIOC_SETOPTIONS = 4 | WDR_INT
 WDIOC_KEEPALIVE = 5 | WDR_INT
 WDIOC_SETTIMEOUT = 6 | WDWR_INT
 WDIOC_GETTIMEOUT = 7 | WDR_INT
+WDIOC_SETPRETIMEOUT = 8 | WDWR_INT
+WDIOC_GETPRETIMEOUT = 9 | WDR_INT
 WDIOC_GETTIMELEFT = 10 | WDR_INT
 
 """ Watchdog status constants """
@@ -49,6 +52,7 @@ class WatchdogImplBase(WatchdogBase):
         Open a watchdog handle
         @param wd_device_path Path to watchdog device
         """
+        super(WatchdogImplBase, self).__init__()
 
         self.watchdog_path = wd_device_path
         self.watchdog = os.open(self.watchdog_path, os.O_WRONLY)

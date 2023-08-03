@@ -98,6 +98,20 @@ module sonic-mux-linkmgr {
                     description "Linkmgrd log verbosity level. ";
                 }
             }
+
+            container SERVICE_MGMT {
+
+                leaf kill_radv {
+                    type enumeration {
+                        enum True;
+                        enum False;
+                    }
+
+                    default True;
+
+                    description "Kill radv service instead of gracefully stopping it. ";
+                }
+            }
         }
     }
 }

@@ -11,28 +11,46 @@
         ],
         "fans": [
             {
-                "name": "Fan1"
+                "name": "Fan1",
+                "status_led": {
+                    "controllable": false
+                }
             },
             {
-                "name": "Fan2"
+                "name": "Fan2",
+                "status_led": {
+                    "controllable": false
+                }
             }
         ],
         "fan_drawers": [
             {
                 "name": "drawer1",
+                "status_led": {
+                    "controllable": false
+                },
                 "max_consumed_power": false,
                 "fans": [
                     {
-                        "name": "Fan1"
+                        "name": "Fan1",
+                        "status_led": {
+                            "controllable": false
+                        }
                     }
                 ]
             },
             {
                 "name": "drawer2",
+                "status_led": {
+                    "controllable": false
+                },
                 "max_consumed_power": false,
                 "fans": [
                     {
-                        "name": "Fan2"
+                        "name": "Fan2",
+                        "status_led": {
+                            "controllable": false
+                        }
                     }
                 ]
             }
@@ -40,6 +58,9 @@
         "psus": [
             {
                 "name": "PSU1",
+                "status_led": {
+                    "controllable": false
+                },
                 "current": false,
                 "power": false,
                 "max_power": false,
@@ -49,6 +70,9 @@
             },
             {
                 "name": "PSU2",
+                "status_led": {
+                    "controllable": false
+                },
                 "current": false,
                 "power": false,
                 "max_power": false,
@@ -73,12 +97,18 @@
                 "high-crit-threshold": false
             },
             {
-                "name": "CPU Core",
+                "name": "AC5X CORE",
+                "controllable": false,
+                "low-threshold": false,
+                "low-crit-threshold": false,
+                "high-crit-threshold": false
+            },
+            {
+                "name": "OOB PHY",
                 "controllable": false,
                 "low-threshold": false,
                 "high-threshold": false,
-                "low-crit-threshold": false,
-                "high-crit-threshold": false
+                "low-crit-threshold": false
             }
         ],
         "sfps": [
@@ -227,16 +257,16 @@
                 "name": "Ethernet47"
             },
             {
-                "name": "Ethernet48"
+                "name": "SFP48"
             },
             {
-                "name": "Ethernet49"
+                "name": "SFP49"
             },
             {
-                "name": "Ethernet50"
+                "name": "SFP50"
             },
             {
-                "name": "Ethernet51"
+                "name": "SFP51"
             }
        	]
     },

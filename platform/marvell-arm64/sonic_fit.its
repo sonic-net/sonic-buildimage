@@ -29,6 +29,17 @@
                 algo = "sha1";
             };
         };
+        fdt_7215_a1 {
+            description = "Flattened Device Tree blob for 7215_IXS_A1";
+            data = /incbin/("/usr/lib/linux-image-5.10.0-18-2-arm64/marvell/7215-ixs-a1.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x2 0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
         ramdisk_ac5x {
             description = "ramdisk for AC5x";
             data = /incbin/("/boot/initrd.img-5.10.0-18-2-arm64");
@@ -49,6 +60,15 @@
             description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
             kernel = "kernel_ac5x";
             fdt = "fdt_ac5x";
+            ramdisk = "ramdisk_ac5x";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_7215_a1 {
+            description = "Boot Linux kernel with FDT blob + ramdisk for 7125_IXS_A1";
+            kernel = "kernel_ac5x";
+            fdt = "fdt_7215_a1";
             ramdisk = "ramdisk_ac5x";
             hash@1 {
                 algo = "sha1";

@@ -1,13 +1,14 @@
 # Name: sfp.py, version: 1.0
 #
 # Description: Module contains the definitions of SFP related APIs
-# for Nokia IXR 7250 platform.
+# for Nokia IXS 7215 platform.
 #
 # Copyright (c) 2023, Nokia
 # All rights reserved.
 #
 
 try:
+    import os
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_py_common.logger import Logger
     from sonic_py_common import device_info
@@ -18,20 +19,13 @@ except ImportError as e:
 
 import subprocess as cmd
 
-smbus_present = 1
-
-try:
-    import smbus
-except ImportError as e:
-    smbus_present = 0
-
 COPPER_TYPE = "COPPER"
 SFP_TYPE = "SFP"
 
 # SFP PORT numbers
 SFP_PORT_START = 49
 SFP_PORT_END = 52
-
+CPLD_DIR = "/sys/bus/i2c/devices/0-0041/"
 logger = Logger()
 
 class Sfp(SfpOptoeBase):
@@ -71,7 +65,24 @@ class Sfp(SfpOptoeBase):
         logger.log_debug("Sfp __init__ index {} setting name to {} and eeprom_path to {}".format(index, self.name, self.eeprom_path))
 
         Sfp.instances.append(self)
-        
+
+    def _read_sysfs_file(self, sysfs_file):
+        # On successful read, returns the value read from given
+        # reg_name and on failure returns 'ERR'
+        rv = 'ERR'
+
+        if (not os.path.isfile(sysfs_file)):
+            return rv
+        try:
+            with open(sysfs_file, 'r') as fd:
+                rv = fd.read()
+        except Exception as e:
+            rv = 'ERR'
+
+        rv = rv.rstrip('\r\n')
+        rv = rv.lstrip(" ")
+        return rv
+ 
     def get_eeprom_path(self):
         return self.eeprom_path
 
@@ -83,22 +94,8 @@ class Sfp(SfpOptoeBase):
         """
         if self.sfp_type == COPPER_TYPE:
             return False
-
-        if smbus_present == 0:  # if called from sfputil outside of pmon
-            # cmdstatus, sfpstatus = cmd.getstatusoutput('sudo i2cget -y 0 0x41 0x3')
-            cmdstatus, sfpstatus = getstatusoutput_noshell(['sudo', 'i2cget', '-y', '0', '0x41', '0x3'])            
-            sfpstatus = int(sfpstatus, 16)
-        else:
-            bus = smbus.SMBus(0)
-            DEVICE_ADDRESS = 0x41
-            DEVICE_REG = 0x3
-            sfpstatus = bus.read_byte_data(DEVICE_ADDRESS, DEVICE_REG)
-
-        pos = [1, 2, 4, 8]
-        bit_pos = pos[self.index-SFP_PORT_START]
-        sfpstatus = sfpstatus & (bit_pos)
-
-        if sfpstatus == 0:
+        sfpstatus = self._read_sysfs_file(CPLD_DIR+"sfp{}_present".format(self.index))      
+        if sfpstatus == '1':
             return True
 
         return False
@@ -157,7 +154,6 @@ class Sfp(SfpOptoeBase):
             error_description = self.SFP_STATUS_OK
 
         return error_description
-        # return NotImplementedError
 
     def get_reset_status(self):
         """
