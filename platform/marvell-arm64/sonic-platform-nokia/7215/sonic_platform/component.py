@@ -34,10 +34,7 @@ class Component(ComponentBase):
         ["System-CPLD", "Used for managing SFPs, LEDs, PSUs and FANs "],
         ["U-Boot", "Performs initialization during booting"],
     ]
-    CPLD_UPDATE_COMMAND1 = ['cp', '/usr/sbin/vme', '/tmp']
-    CPLD_UPDATE_COMMAND2 = ['cp', '', '/tmp']
-    CPLD_UPDATE_COMMAND3 = ['cd', '/tmp']
-    CPLD_UPDATE_COMMAND4 = ['./vme', '']
+    CPLD_UPDATE_COMMAND = ['./cpldupd_A1', '']
 
     def __init__(self, component_index):
         self.index = component_index
@@ -192,23 +189,25 @@ class Component(ComponentBase):
             A boolean, True if install was successful, False if not
         """
         image_name = ntpath.basename(image_path)
-        print(" ixs7215 - install cpld {}".format(image_name))
+        print(" ixs-7215-A1 - install cpld {}".format(image_name))
 
         # check whether the image file exists
         if not os.path.isfile(image_path):
             print("ERROR: the cpld image {} doesn't exist ".format(image_path))
             return False
 
-        self.CPLD_UPDATE_COMMAND2[1] = image_path
-        self.CPLD_UPDATE_COMMAND4[1] = image_name
+        # check whether the cpld exe exists
+        if not os.path.isfile('/tmp/cpldupd_A1'):
+            print("ERROR: the cpld exe {} doesn't exist ".format('/tmp/cpldupd_A1'))
+            return False
+
+        self.CPLD_UPDATE_COMMAND[1] = image_name
 
         success_flag = False
  
         try:   
-            subprocess.check_call(self.CPLD_UPDATE_COMMAND1, stderr=subprocess.STDOUT)
-            subprocess.check_call(self.CPLD_UPDATE_COMMAND2, stderr=subprocess.STDOUT)
-            subprocess.check_call(self.CPLD_UPDATE_COMMAND3, stderr=subprocess.STDOUT)
-            subprocess.check_call(self.CPLD_UPDATE_COMMAND4, stderr=subprocess.STDOUT)
+            subprocess.check_call(self.CPLD_UPDATE_COMMAND, stderr=subprocess.STDOUT)
+
             success_flag = True
         except subprocess.CalledProcessError as e:
             print("ERROR: Failed to upgrade CPLD: rc={}".format(e.returncode))

@@ -32,5 +32,15 @@
                     }
             }
         }
+    },
+    "MUX_LINKMGR_SERVICE_MGMT_KILL_RADV_DISABLED": {
+        "sonic-mux-linkmgr:sonic-mux-linkmgr": {
+            "sonic-mux-linkmgr:MUX_LINKMGR": {
+                "sonic-mux-linkmgr:SERVICE_MGMT": 
+                    {
+                        "kill_radv": "False"
+                    }
+            }
+        }
     }
 }

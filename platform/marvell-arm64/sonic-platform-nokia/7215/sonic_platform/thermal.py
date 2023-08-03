@@ -24,8 +24,9 @@ class Thermal(ThermalBase):
                        ['i2c-0/0-0049/hwmon/', 1])
 
     HWMON_CLASS_DIR = "/sys/class/hwmon/hwmon0/"
+    AC5X_THERMAL_DIR = "/sys/class/hwmon/hwmon1/"
 
-    THERMAL_NAME = ("PCB BACK", "PCB FRONT", "CPU Core")
+    THERMAL_NAME = ("PCB BACK", "PCB FRONT", "AC5X CORE", "OOB PHY")
 
     def __init__(self, thermal_index):
         ThermalBase.__init__(self)
@@ -39,12 +40,19 @@ class Thermal(ThermalBase):
         if self.index < 3:
             i2c_path = self.I2C_CLASS_DIR + self.I2C_DEV_MAPPING[self.index - 1][0]
             sensor_index = self.I2C_DEV_MAPPING[self.index - 1][1]
-            sensor_high_suffix = None
-            sensor_high_crit_suffix = "max"
+            sensor_high_suffix = "max"
+            sensor_high_crit_suffix = None
             hwmon_node = os.listdir(i2c_path)[0]
             self.SENSOR_DIR = i2c_path + hwmon_node + '/'
 
         # SOC temperature sensor
+        elif self.index == 3:
+            dev_path = self.AC5X_THERMAL_DIR
+            sensor_index = 1
+            sensor_high_suffix = "max"
+            sensor_high_crit_suffix = None
+            self.SENSOR_DIR = dev_path
+        #
         else:
             dev_path = self.HWMON_CLASS_DIR
             sensor_index = 1

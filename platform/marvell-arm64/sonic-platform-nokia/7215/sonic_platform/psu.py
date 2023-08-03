@@ -167,11 +167,11 @@ class Psu(PsuBase):
             e.g. 12.1
         """
         if(self.get_status()):
-            psu_voltage = self._read_sysfs_file(INA230_DIR+"in_voltage1_scale")
+            psu_voltage = self._read_sysfs_file(INA230_DIR+"in_voltage1_raw")
         else:
             psu_voltage = 0.0
         
-        psu_voltage = float(psu_voltage)*10
+        psu_voltage = (float(psu_voltage)*1.25)/1000
 
         return psu_voltage
     
@@ -184,8 +184,8 @@ class Psu(PsuBase):
         """
         num_psus = self._get_active_psus()
         if(self.get_status()):
-            psu_current = self._read_sysfs_file(INA230_DIR+"in_current3_scale")
-            psu_current = (float(psu_current)*10)/num_psus
+            psu_current = self._read_sysfs_file(INA230_DIR+"in_current3_raw")
+            psu_current = ((float(psu_current)*0.5)/1000)/num_psus
         else:
             psu_current = 0.0
 

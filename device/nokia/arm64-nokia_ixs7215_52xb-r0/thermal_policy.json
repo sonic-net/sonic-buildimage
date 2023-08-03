@@ -43,7 +43,9 @@
             "actions": [
                 {
                     "type": "thermal.temp_check_and_set_all_fan_speed",
-                    "default_speed": "50",
+                    "default_speed": "25",
+                    "threshold1_speed": "40",
+                    "threshold2_speed": "75",
                     "hightemp_speed": "100"
                 }
             ]

@@ -44,6 +44,4 @@ class EmmcUtil(SsdBase):
       return ''
 
 def SsdUtil(diskdev):
-   if os.path.basename(diskdev).startswith('mmcblk'):
-      return EmmcUtil(diskdev)
-   return SsdUtilDefault(diskdev)
+   return EmmcUtil('/dev/mmcblk0')
