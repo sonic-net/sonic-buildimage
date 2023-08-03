@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -326,3 +326,8 @@ class TestChassis:
             exceptionRaised = True
 
         assert exceptionRaised
+
+    def test_parse_dmi(self):
+        chassis = Chassis()
+        content = chassis._parse_dmi(os.path.join(test_path, 'dmi_file'))
+        assert content.get('Version') == 'A4'

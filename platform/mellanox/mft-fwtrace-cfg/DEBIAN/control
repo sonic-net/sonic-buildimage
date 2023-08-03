@@ -1,0 +1,7 @@
+Package: mft-fwtrace-cfg
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: all
+Maintainer: Vadym Hlushko <vadymh@nvidia.com>
+Description: fwtrace_cfg files for the mlxtrace utility from the MFT debian package

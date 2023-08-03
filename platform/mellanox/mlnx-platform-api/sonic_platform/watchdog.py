@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -80,7 +80,7 @@ class WatchdogImplBase(WatchdogBase):
         super(WatchdogImplBase, self).__init__()
 
         self.watchdog_path = wd_device_path
-        self.watchdog = os.open(self.watchdog_path, os.O_WRONLY)
+        self.watchdog = self.open_handle()
 
         # Opening a watchdog descriptor starts
         # watchdog timer;
@@ -89,6 +89,9 @@ class WatchdogImplBase(WatchdogBase):
         self.armed = False
 
         self.timeout = self._gettimeout()
+
+    def open_handle(self):
+        return os.open(self.watchdog_path, os.O_WRONLY)
 
     def _enablecard(self):
         """
@@ -290,6 +293,7 @@ def get_watchdog():
     for device in os.listdir("/dev/"):
         if device.startswith("watchdog") and is_mlnx_wd_main(device):
             watchdog_main_device_name = device
+            break
 
     if watchdog_main_device_name is None:
         return None

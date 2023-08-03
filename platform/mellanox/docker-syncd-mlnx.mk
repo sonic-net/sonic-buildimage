@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016-2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2016-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@
 DOCKER_SYNCD_PLATFORM_CODE = mlnx
 include $(PLATFORM_PATH)/../template/docker-syncd-bullseye.mk
 
-$(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD) $(PYTHON_SDK_API) $(MFT) $(IPROUTE2_MLNX)
+$(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD) $(PYTHON_SDK_API) $(MFT) $(MFT_FWTRACE_CFG) $(IPROUTE2_MLNX)
 
 ifeq ($(ENABLE_ASAN), y)
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD_DBG)

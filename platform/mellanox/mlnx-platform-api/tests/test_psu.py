@@ -37,8 +37,14 @@ class TestPsu:
         assert psu.get_model() == 'N/A'
         assert psu.get_serial() == 'N/A'
         assert psu.get_revision() == 'N/A'
+        avail, msg = psu.get_power_available_status()
+        assert not avail
+        assert msg == 'absence of power'
         utils.read_int_from_file = mock.MagicMock(return_value=1)
         assert psu.get_powergood_status()
+        avail, msg = psu.get_power_available_status()
+        assert avail
+        assert msg == ''
         utils.read_int_from_file = mock.MagicMock(return_value=0)
         assert not psu.get_powergood_status()
         assert psu.get_presence()
@@ -69,6 +75,7 @@ class TestPsu:
             psu.psu_temp_threshold: 50678,
             psu.psu_voltage_in: 102345,
             psu.psu_current_in: 676,
+            psu.psu_power_max: 1234567
         }
 
         def mock_read_int_from_file(file_path, **kwargs):
@@ -77,8 +84,12 @@ class TestPsu:
         utils.read_int_from_file = mock_read_int_from_file
         utils.read_str_from_file = mock.MagicMock(return_value='min max')
         assert psu.get_presence() is True
+        assert psu.get_maximum_supplied_power() == 1.234567
         mock_sysfs_content[psu.psu_presence] = 0
         assert psu.get_presence() is False
+        avail, msg = psu.get_power_available_status()
+        assert not avail
+        assert msg == 'absence of PSU'
 
         assert psu.get_powergood_status() is True
         mock_sysfs_content[psu.psu_oper_status] = 0
@@ -91,6 +102,7 @@ class TestPsu:
         assert psu.get_temperature_high_threshold() is None
         assert psu.get_input_voltage() is None
         assert psu.get_input_current() is None
+        assert psu.get_maximum_supplied_power() is None
 
         mock_sysfs_content[psu.psu_oper_status] = 1
         assert psu.get_voltage() == 10.234
