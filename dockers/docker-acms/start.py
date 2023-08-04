@@ -22,6 +22,7 @@ SONIC_CREDS_PATH = "/etc/sonic/credentials/"
 SONIC_ACMS_BOOTSTRAP_PATTERN = "sonic_acms_bootstrap-.*\.pfx"
 
 WAIT_TIME_FOR_BOOTSTRAP_CERT = 60
+MAX_WAIT_TIME_FOR_BOOTSTRAP_CERT = 3600
 
 def exec_cmd(cmd):
     process = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -98,6 +99,7 @@ def main():
     sonic_logger.log_info("start: main: "+CLIENT_DIR_PATH+" has been created")
 
     ctr = 0
+    wait_time = WAIT_TIME_FOR_BOOTSTRAP_CERT
     # Bootstrap ACMS
     while(get_bootstrap_status() == False):
         # Fresh copy of acms_secrets.ini
@@ -127,7 +129,11 @@ def main():
                 ctr = ctr % len(boostrap_certs)
         else:
             sonic_logger.log_info("start: main: Waiting for bootstrap cert")
-        time.sleep(WAIT_TIME_FOR_BOOTSTRAP_CERT)
+        time.sleep(wait_time)
+        if wait_time >= (MAX_WAIT_TIME_FOR_BOOTSTRAP_CERT >> 1):
+            wait_time = MAX_WAIT_TIME_FOR_BOOTSTRAP_CERT
+        else:
+            wait_time = (wait_time << 1)
 
     sonic_logger.log_info("start: main: ACMS bootstrapping complete")
 

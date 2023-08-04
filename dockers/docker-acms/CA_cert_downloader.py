@@ -18,6 +18,8 @@ except:
 
 ROOT_CERT = "/acms/AME_ROOT_CERTIFICATE.pem"
 CERTS_PATH = "/etc/sonic/credentials/"
+WAIT_TIME_FOR_URL = 60
+MAX_WAIT_TIME_FOR_URL = 3600
 # ACMS config file
 acms_conf = "/var/opt/msft/client/acms_secrets.ini"
 url_path_dict = {
@@ -109,6 +111,7 @@ def url_validator(url):
         return False
 
 def main():
+    wait_time = WAIT_TIME_FOR_URL
     while True:
         url = get_url(acms_conf)
         sonic_logger.log_info("CA_cert_downloader: main: url is "+url)
@@ -116,8 +119,12 @@ def main():
         if url_validator(url):
             if "https://" in url and "region-dsms" not in url:
                 break
-        # Poll url every 1 min
-        time.sleep(60)
+        # Poll url from 1 min to 1 hour
+        time.sleep(wait_time)
+        if wait_time >= (MAX_WAIT_TIME_FOR_URL >> 1):
+            wait_time = MAX_WAIT_TIME_FOR_URL
+        else:
+            wait_time = (wait_time << 1)
 
     cloud = dSMS_config_modifier.get_device_cloudtype()
     cloud_type = cloud.lower()
