@@ -7,11 +7,4 @@ if [ -e /boot/System.map-${kernel_version} ]; then
     depmod -a -F /boot/System.map-${kernel_version} ${kernel_version} || true
 fi
 
-# enable platform-service
-depmod -a
-# systemctl enable platform-modules-ra-b6510-48v8c.service
-# systemctl start platform-modules-ra-b6510-48v8c.service
-systemctl enable pddf-platform-init.service
-systemctl start pddf-platform-init.service
-
 #DEBHELPER#
