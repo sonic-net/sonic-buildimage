@@ -1,0 +1,12 @@
+{
+    "chassis": {
+        "DCS-7060DX5-32": {
+            "component": {
+                "Aboot()": {},
+                "Scd(addr=0000:00:18.7)": {},
+                "Scd(addr=0000:01:00.0)": {},
+                "LorikeetSysCpld(addr=13-0023)": {}
+            }
+        }
+    }
+}

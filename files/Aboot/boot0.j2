@@ -554,6 +554,9 @@ write_platform_specific_cmdline() {
     if [ "$sid" = "BlackhawkT4DD" ]; then
         aboot_machine=arista_7050dx4_32s
     fi
+    if [ "$sid" = "BlackhawkTH4DD" ] || [ "$sid" = "BlackhawkTh4Dd" ]; then
+           aboot_machine=arista_7060dx5_32
+    fi
     if [ "$sid" = "Smartsville" ]; then
         aboot_machine=arista_7280cr3_32p4
     fi
