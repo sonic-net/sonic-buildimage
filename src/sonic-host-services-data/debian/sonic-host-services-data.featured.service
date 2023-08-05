@@ -1,0 +1,10 @@
+[Unit]
+Description=Feature configuration daemon
+Requires=updategraph.service
+After=updategraph.service
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/featured

@@ -21,12 +21,23 @@ function ParseArguments() {
 }
 
 function SafePwrCycle() {
-    sync ; sync
-    umount -fa > /dev/null 2&>1
+    sync; sync
+    umount -fa > /dev/null 2>&1
     echo 1 > $SYSFS_PWR_CYCLE
 }
 
 ParseArguments "$@"
+
+# Reboot immediately if the kdump capture kernel is running
+VMCORE_FILE=/proc/vmcore
+if [ -s $VMCORE_FILE ]; then
+    sync; sync
+    umount -fa > /dev/null 2>&1
+
+    # Run Debian reboot because the platform reboot isn't available
+    /sbin/reboot
+fi
+
 
 ${FW_UPGRADE_SCRIPT} --upgrade --verbose
 EXIT_CODE="$?"

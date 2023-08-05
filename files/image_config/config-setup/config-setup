@@ -295,6 +295,7 @@ do_config_initialization()
     fi
 
     rm -f /tmp/pending_config_initialization
+    sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
 }
 
 # Restore config-setup post migration hooks from a backup copy
@@ -344,13 +345,14 @@ check_all_config_db_present()
 }
 
 # DB schema is subject to change between two images
-# Perform DB schema migration after loading backup config from previous image
+# Perform DB schema migration after loading backup config/minigraph from previous image
 do_db_migration()
 {
     if [[ -x /usr/local/bin/db_migrator.py ]]; then
         # Migrate the DB to the latest schema version if needed
         /usr/local/bin/db_migrator.py -o migrate
     fi
+    sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
 }
 
 # Perform configuration migration from backup copy.
