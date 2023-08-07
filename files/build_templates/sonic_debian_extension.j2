@@ -389,6 +389,13 @@ echo "ntpsec.service" | sudo tee -a $GENERATED_SERVICE_FILE
 # Copy DNS templates
 sudo cp $BUILD_TEMPLATES/dns.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 
+# Copy cli-sessions config files
+sudo cp $IMAGE_CONFIGS/cli_sessions/tmout-env.sh.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
+sudo cp $IMAGE_CONFIGS/cli_sessions/sysrq-sysctl.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
+sudo cp $IMAGE_CONFIGS/cli_sessions/serial-config.sh $FILESYSTEM_ROOT/usr/bin/
+sudo cp $IMAGE_CONFIGS/cli_sessions/serial-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+echo "serial-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
+
 # Copy warmboot-finalizer files
 sudo LANG=C cp $IMAGE_CONFIGS/warmboot-finalizer/finalize-warmboot.sh $FILESYSTEM_ROOT/usr/local/bin/finalize-warmboot.sh
 sudo LANG=C cp $IMAGE_CONFIGS/warmboot-finalizer/warmboot-finalizer.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
