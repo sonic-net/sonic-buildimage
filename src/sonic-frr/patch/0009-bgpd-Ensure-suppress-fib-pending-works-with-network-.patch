@@ -1,8 +1,9 @@
-From 5a1d3c9e24791ebdb7e375a02afe9c5f6146c488 Mon Sep 17 00:00:00 2001
+From c4a198c977168a6bd420197d19c8a4c0f4eacc8a Mon Sep 17 00:00:00 2001
 From: Donald Sharp <sharpd@nvidia.com>
 Date: Wed, 22 Mar 2023 11:35:28 -0400
-Subject: [PATCH] bgpd: Ensure suppress-fib-pending works with network
- statements
+Subject: [PATCH] From 5a1d3c9e24791ebdb7e375a02afe9c5f6146c488 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH] bgpd: Ensure suppress-fib-pending works with
+ network  statements
 
 The flag for telling BGP that a route is expected to be installed
 first before notifying a peer was always being set upon receipt
@@ -22,17 +23,12 @@ cover the case when a network statement is added after the route has
 been learned from a peer.
 
 Signed-off-by: Donald Sharp <sharpd@nvidia.com>
----
- bgpd/bgp_route.c                              | 22 -------------------
- bgpd/bgp_zebra.c                              | 14 ++++++++++++
- .../bgp_suppress_fib/test_bgp_suppress_fib.py | 14 ++++++++++++
- 3 files changed, 28 insertions(+), 22 deletions(-)
 
 diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
-index d4b5066c6..c01e2fd2c 100644
+index f00c54c40..a7a5c9849 100644
 --- a/bgpd/bgp_route.c
 +++ b/bgpd/bgp_route.c
-@@ -2994,11 +2994,6 @@ static void bgp_process_main_one(struct bgp *bgp, struct bgp_dest *dest,
+@@ -3203,11 +3203,6 @@ static void bgp_process_main_one(struct bgp *bgp, struct bgp_dest *dest,
  			if (bgp_fibupd_safi(safi)
  			    && !bgp_option_check(BGP_OPT_NO_FIB)) {
  
@@ -44,7 +40,7 @@ index d4b5066c6..c01e2fd2c 100644
  				if (new_select->type == ZEBRA_ROUTE_BGP
  				    && (new_select->sub_type == BGP_ROUTE_NORMAL
  					|| new_select->sub_type
-@@ -3104,10 +3099,6 @@ static void bgp_process_main_one(struct bgp *bgp, struct bgp_dest *dest,
+@@ -3313,10 +3308,6 @@ static void bgp_process_main_one(struct bgp *bgp, struct bgp_dest *dest,
  			|| new_select->sub_type == BGP_ROUTE_AGGREGATE
  			|| new_select->sub_type == BGP_ROUTE_IMPORTED)) {
  
@@ -55,10 +51,10 @@ index d4b5066c6..c01e2fd2c 100644
  			/* if this is an evpn imported type-5 prefix,
  			 * we need to withdraw the route first to clear
  			 * the nh neigh and the RMAC entry.
-@@ -3953,19 +3944,6 @@ int bgp_update(struct peer *peer, const struct prefix *p, uint32_t addpath_id,
+@@ -4261,18 +4252,6 @@ void bgp_update(struct peer *peer, const struct prefix *p, uint32_t addpath_id,
+ 		bgp_attr_flush(&new_attr);
  		goto filtered;
  	}
- 
 -	/* The flag BGP_NODE_FIB_INSTALL_PENDING is for the following
 -	 * condition :
 -	 * Suppress fib is enabled
@@ -71,17 +67,16 @@ index d4b5066c6..c01e2fd2c 100644
 -	    && (!bgp_option_check(BGP_OPT_NO_FIB))
 -	    && (!CHECK_FLAG(dest->flags, BGP_NODE_FIB_INSTALLED)))
 -		SET_FLAG(dest->flags, BGP_NODE_FIB_INSTALL_PENDING);
--
- 	/* If maximum prefix count is configured and current prefix
- 	 * count exeed it.
- 	 */
+ 
+ 	/* If neighbor soo is configured, tag all incoming routes with
+ 	 * this SoO tag and then filter out advertisements in
 diff --git a/bgpd/bgp_zebra.c b/bgpd/bgp_zebra.c
-index 21912d143..71816813a 100644
+index 95e80ba1b..efcf49785 100644
 --- a/bgpd/bgp_zebra.c
 +++ b/bgpd/bgp_zebra.c
-@@ -1269,6 +1269,14 @@ void bgp_zebra_announce(struct bgp_dest *dest, const struct prefix *p,
- 	uint32_t nhg_id = 0;
- 	bool is_add;
+@@ -1322,6 +1322,14 @@ void bgp_zebra_announce(struct bgp_dest *dest, const struct prefix *p,
+ 	uint32_t bos = 0;
+ 	uint32_t exp = 0;
  
 +	/*
 +	 * BGP is installing this route and bgp has been configured
@@ -94,7 +89,7 @@ index 21912d143..71816813a 100644
  	/* Don't try to install if we're not connected to Zebra or Zebra doesn't
  	 * know of this instance.
  	 */
-@@ -1681,6 +1689,12 @@ void bgp_zebra_withdraw(const struct prefix *p, struct bgp_path_info *info,
+@@ -1758,6 +1766,12 @@ void bgp_zebra_withdraw(const struct prefix *p, struct bgp_path_info *info,
  	struct zapi_route api;
  	struct peer *peer;
  
@@ -108,10 +103,10 @@ index 21912d143..71816813a 100644
  	 * know of this instance.
  	 */
 diff --git a/tests/topotests/bgp_suppress_fib/test_bgp_suppress_fib.py b/tests/topotests/bgp_suppress_fib/test_bgp_suppress_fib.py
-index 96a294cae..f812079c7 100644
+index 6d2b65a61..7bcb28166 100644
 --- a/tests/topotests/bgp_suppress_fib/test_bgp_suppress_fib.py
 +++ b/tests/topotests/bgp_suppress_fib/test_bgp_suppress_fib.py
-@@ -229,6 +229,20 @@ def test_bgp_allow_as_in():
+@@ -230,6 +230,20 @@ def test_bgp_allow_as_in():
      assertmsg = '"r2" 192.168.1.1/32 route should be gone'
      assert result is None, assertmsg
  
@@ -133,5 +128,5 @@ index 96a294cae..f812079c7 100644
  if __name__ == "__main__":
      args = ["-s"] + sys.argv[1:]
 -- 
-2.20.1
+2.17.1
 

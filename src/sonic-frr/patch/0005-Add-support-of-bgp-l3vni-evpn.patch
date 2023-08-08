@@ -1,22 +1,16 @@
-From 369bbb4d62aa47d5a6d5157ca6ea819c4cb80f15 Mon Sep 17 00:00:00 2001
+From f5f0018266c98ad96cdbe69ae60d501de21e5600 Mon Sep 17 00:00:00 2001
 From: Stepan Blyschak <stepanb@nvidia.com>
 Date: Thu, 20 Oct 2022 13:19:31 +0000
-Subject: [PATCH 07/13] Added support of L3VNI EVPN
+Subject: [PATCH] From 369bbb4d62aa47d5a6d5157ca6ea819c4cb80f15 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 07/13] Added support of L3VNI EVPN
 
 This is temp patch till Prefix to ARP indirection is add in neighorch
 
 Signed-off-by: Kishore Kunal <kishore.kunal@broadcom.com>
 Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
----
- lib/nexthop.c        |  1 +
- lib/nexthop.h        |  7 ++++++-
- zebra/rt_netlink.c   | 15 ++++++++++++++-
- zebra/zapi_msg.c     |  4 ++++
- zebra/zebra_dplane.c |  2 +-
- 5 files changed, 26 insertions(+), 3 deletions(-)
 
 diff --git a/lib/nexthop.c b/lib/nexthop.c
-index a1ce22e3b..10a87f072 100644
+index 7ebc4fefb..2f7bb0e7b 100644
 --- a/lib/nexthop.c
 +++ b/lib/nexthop.c
 @@ -813,6 +813,7 @@ void nexthop_copy_no_recurse(struct nexthop *copy,
@@ -28,13 +22,13 @@ index a1ce22e3b..10a87f072 100644
  		nexthop_add_labels(copy, nexthop->nh_label_type,
  				   nexthop->nh_label->num_labels,
 diff --git a/lib/nexthop.h b/lib/nexthop.h
-index 320b46315..77eea3674 100644
+index f1309aa52..7b4bbbafd 100644
 --- a/lib/nexthop.h
 +++ b/lib/nexthop.h
 @@ -66,6 +66,11 @@ enum nh_encap_type {
  /* Backup index value is limited */
  #define NEXTHOP_BACKUP_IDX_MAX 255
-
+ 
 +struct vxlan_nh_encap {
 +	vni_t vni;
 +	struct ethaddr rmac;
@@ -43,31 +37,31 @@ index 320b46315..77eea3674 100644
  /* Nexthop structure. */
  struct nexthop {
  	struct nexthop *next;
-@@ -135,7 +140,7 @@ struct nexthop {
+@@ -137,7 +142,7 @@ struct nexthop {
  	/* Encapsulation information. */
  	enum nh_encap_type nh_encap_type;
  	union {
 -		vni_t vni;
 +		struct vxlan_nh_encap encap_data;
  	} nh_encap;
-
+ 
  	/* SR-TE color used for matching SR-TE policies */
 diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
-index 03c84d6dc..a56a95276 100644
+index 79d79d74b..325199eff 100644
 --- a/zebra/rt_netlink.c
 +++ b/zebra/rt_netlink.c
-@@ -1869,6 +1869,7 @@ static int netlink_route_nexthop_encap(struct nlmsghdr *n, size_t nlen,
+@@ -1969,6 +1969,7 @@ static int netlink_route_nexthop_encap(struct nlmsghdr *n, size_t nlen,
  				       struct nexthop *nh)
  {
  	struct rtattr *nest;
 +	struct vxlan_nh_encap* encap_data;
-
+ 
  	switch (nh->nh_encap_type) {
  	case NET_VXLAN:
-@@ -1879,9 +1880,21 @@ static int netlink_route_nexthop_encap(struct nlmsghdr *n, size_t nlen,
+@@ -1979,9 +1980,21 @@ static int netlink_route_nexthop_encap(struct nlmsghdr *n, size_t nlen,
  		if (!nest)
  			return false;
-
+ 
 +		encap_data = &nh->nh_encap.encap_data;
 +
  		if (!nl_attr_put32(n, nlen, 0 /* VXLAN_VNI */,
@@ -88,10 +82,10 @@ index 03c84d6dc..a56a95276 100644
  		break;
  	}
 diff --git a/zebra/zapi_msg.c b/zebra/zapi_msg.c
-index 5cf7d815d..529cbb44b 100644
+index c0945eae2..157c33ced 100644
 --- a/zebra/zapi_msg.c
 +++ b/zebra/zapi_msg.c
-@@ -1577,6 +1577,8 @@ static struct nexthop *nexthop_from_zapi(const struct zapi_nexthop *api_nh,
+@@ -1605,6 +1605,8 @@ static struct nexthop *nexthop_from_zapi(const struct zapi_nexthop *api_nh,
  			vtep_ip.ipa_type = IPADDR_V4;
  			memcpy(&(vtep_ip.ipaddr_v4), &(api_nh->gate.ipv4),
  			       sizeof(struct in_addr));
@@ -99,8 +93,8 @@ index 5cf7d815d..529cbb44b 100644
 +				   &api_nh->rmac, ETH_ALEN);
  			zebra_rib_queue_evpn_route_add(
  				api_nh->vrf_id, &api_nh->rmac, &vtep_ip, p);
- 		}
-@@ -1610,6 +1612,8 @@ static struct nexthop *nexthop_from_zapi(const struct zapi_nexthop *api_nh,
+ 			SET_FLAG(nexthop->flags, NEXTHOP_FLAG_EVPN);
+@@ -1639,6 +1641,8 @@ static struct nexthop *nexthop_from_zapi(const struct zapi_nexthop *api_nh,
  			vtep_ip.ipa_type = IPADDR_V6;
  			memcpy(&vtep_ip.ipaddr_v6, &(api_nh->gate.ipv6),
  			       sizeof(struct in6_addr));
@@ -108,12 +102,12 @@ index 5cf7d815d..529cbb44b 100644
 +				   &api_nh->rmac, ETH_ALEN);
  			zebra_rib_queue_evpn_route_add(
  				api_nh->vrf_id, &api_nh->rmac, &vtep_ip, p);
- 		}
+ 			SET_FLAG(nexthop->flags, NEXTHOP_FLAG_EVPN);
 diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
-index 656ebcf3b..bd59df189 100644
+index f6f436f39..c8511bd28 100644
 --- a/zebra/zebra_dplane.c
 +++ b/zebra/zebra_dplane.c
-@@ -2420,7 +2420,7 @@ int dplane_ctx_route_init(struct zebra_dplane_ctx *ctx, enum dplane_op_e op,
+@@ -2917,7 +2917,7 @@ int dplane_ctx_route_init(struct zebra_dplane_ctx *ctx, enum dplane_op_e op,
  		zl3vni = zl3vni_from_vrf(nexthop->vrf_id);
  		if (zl3vni && is_l3vni_oper_up(zl3vni)) {
  			nexthop->nh_encap_type = NET_VXLAN;
@@ -121,7 +115,7 @@ index 656ebcf3b..bd59df189 100644
 +			nexthop->nh_encap.encap_data.vni = zl3vni->vni;
  		}
  	}
-
---
-2.30.2
+ 
+-- 
+2.17.1
 

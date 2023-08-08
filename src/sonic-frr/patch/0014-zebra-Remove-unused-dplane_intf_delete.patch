@@ -1,0 +1,48 @@
+From 88f7441f56bf61008a52adda97525ffb20f9543d Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Fri, 14 Apr 2023 07:43:19 -0400
+Subject: [PATCH] zebra: Remove unused dplane_intf_delete
+
+There is no need for this functionality and it is
+not used.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index 4927af5625..a6c08f7371 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -4648,18 +4648,6 @@ enum zebra_dplane_result dplane_intf_update(const struct interface *ifp)
+ 	return ret;
+ }
+ 
+-/*
+- * Enqueue a interface delete for the dataplane.
+- */
+-enum zebra_dplane_result dplane_intf_delete(const struct interface *ifp)
+-{
+-	enum zebra_dplane_result ret = ZEBRA_DPLANE_REQUEST_FAILURE;
+-
+-	if (ifp)
+-		ret = dplane_intf_update_internal(ifp, DPLANE_OP_INTF_DELETE);
+-	return ret;
+-}
+-
+ /*
+  * Enqueue vxlan/evpn mac add (or update).
+  */
+diff --git a/zebra/zebra_dplane.h b/zebra/zebra_dplane.h
+index ae13243a16..9ef0afd3a8 100644
+--- a/zebra/zebra_dplane.h
++++ b/zebra/zebra_dplane.h
+@@ -758,7 +758,6 @@ enum zebra_dplane_result dplane_intf_addr_unset(const struct interface *ifp,
+  */
+ enum zebra_dplane_result dplane_intf_add(const struct interface *ifp);
+ enum zebra_dplane_result dplane_intf_update(const struct interface *ifp);
+-enum zebra_dplane_result dplane_intf_delete(const struct interface *ifp);
+ 
+ /*
+  * Enqueue tc link changes for the dataplane.
+-- 
+2.17.1
+
