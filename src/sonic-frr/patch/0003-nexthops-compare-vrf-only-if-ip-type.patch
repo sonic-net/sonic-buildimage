@@ -1,15 +1,12 @@
-From 786087468520db44c55e3566f77438b41f52763f Mon Sep 17 00:00:00 2001
+From 2b778b1984c5f88500625a0e96a5ba1d1fe0316c Mon Sep 17 00:00:00 2001
 From: Pavel Shirshov <pavelsh@microsoft.com>
 Date: Mon, 16 Nov 2020 18:35:01 -0800
-Subject: [PATCH 5/8] nexthops compare vrf only if ip type
+Subject: [PATCH] From 786087468520db44c55e3566f77438b41f52763f Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 5/8] nexthops compare vrf only if ip type
 
----
- lib/nexthop.c | 12 ++++++------
- lib/zclient.c | 12 ++++++------
- 2 files changed, 12 insertions(+), 12 deletions(-)
 
 diff --git a/lib/nexthop.c b/lib/nexthop.c
-index e17eeb830..a1ce22e3b 100644
+index 248acd270..7ebc4fefb 100644
 --- a/lib/nexthop.c
 +++ b/lib/nexthop.c
 @@ -140,12 +140,6 @@ static int _nexthop_cmp_no_labels(const struct nexthop *next1,
@@ -39,10 +36,10 @@ index e17eeb830..a1ce22e3b 100644
  		if (ret != 0)
  			return ret;
 diff --git a/lib/zclient.c b/lib/zclient.c
-index 445837017..c104623b7 100644
+index 07c7e5aea..0082b2148 100644
 --- a/lib/zclient.c
 +++ b/lib/zclient.c
-@@ -864,12 +864,6 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
+@@ -869,12 +869,6 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
  {
  	int ret = 0;
  
@@ -55,7 +52,7 @@ index 445837017..c104623b7 100644
  	if (next1->type < next2->type)
  		return -1;
  
-@@ -885,6 +879,12 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
+@@ -890,6 +884,12 @@ static int zapi_nexthop_cmp_no_labels(const struct zapi_nexthop *next1,
  	switch (next1->type) {
  	case NEXTHOP_TYPE_IPV4:
  	case NEXTHOP_TYPE_IPV6:
@@ -69,5 +66,5 @@ index 445837017..c104623b7 100644
  					 &next2->gate);
  		if (ret != 0)
 -- 
-2.12.2
+2.17.1
 

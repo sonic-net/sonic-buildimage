@@ -1,52 +1,47 @@
-From ece218405fe4c086017f2a4f2b2b4c86b9790db0 Mon Sep 17 00:00:00 2001
+From 611505531a96375000184fdf191d91bd021bd35f Mon Sep 17 00:00:00 2001
 From: Saikrishna Arcot <sarcot@microsoft.com>
 Date: Wed, 6 Jul 2022 11:28:16 -0700
-Subject: [PATCH] Make changes to support crosscompilation in SONiC
+Subject: [PATCH] From ece218405fe4c086017f2a4f2b2b4c86b9790db0 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH] Make changes to support crosscompilation in
+ SONiC
 
 Signed-off-by: Saikrishna Arcot <sarcot@microsoft.com>
----
- debian/frr-doc.info |  1 -
- debian/frr.manpages | 16 ----------------
- debian/rules        | 17 ++++++++++++-----
- 3 files changed, 12 insertions(+), 22 deletions(-)
- delete mode 100644 debian/frr-doc.info
- delete mode 100644 debian/frr.manpages
 
 diff --git a/debian/frr-doc.info b/debian/frr-doc.info
 deleted file mode 100644
-index a83255a24..000000000
+index 1976365e3..000000000
 --- a/debian/frr-doc.info
 +++ /dev/null
 @@ -1 +0,0 @@
--doc/user/_build/texinfo/frr.info
+-build/doc/user/_build/texinfo/frr.info
 diff --git a/debian/frr.manpages b/debian/frr.manpages
 deleted file mode 100644
-index 5075fd763..000000000
+index 5a1b74cfc..000000000
 --- a/debian/frr.manpages
 +++ /dev/null
 @@ -1,16 +0,0 @@
--doc/manpages/_build/man/frr-bgpd.8
--doc/manpages/_build/man/frr-eigrpd.8
--doc/manpages/_build/man/frr-fabricd.8
--doc/manpages/_build/man/frr-isisd.8
--doc/manpages/_build/man/frr-ldpd.8
--doc/manpages/_build/man/frr-nhrpd.8
--doc/manpages/_build/man/frr-ospf6d.8
--doc/manpages/_build/man/frr-ospfd.8
--doc/manpages/_build/man/frr-pimd.8
--doc/manpages/_build/man/frr-ripd.8
--doc/manpages/_build/man/frr-ripngd.8
--doc/manpages/_build/man/frr-watchfrr.8
--doc/manpages/_build/man/frr-zebra.8
--doc/manpages/_build/man/frr.1
--doc/manpages/_build/man/mtracebis.8
--doc/manpages/_build/man/vtysh.1
+-build/doc/manpages/_build/man/frr-bgpd.8
+-build/doc/manpages/_build/man/frr-eigrpd.8
+-build/doc/manpages/_build/man/frr-fabricd.8
+-build/doc/manpages/_build/man/frr-isisd.8
+-build/doc/manpages/_build/man/frr-ldpd.8
+-build/doc/manpages/_build/man/frr-nhrpd.8
+-build/doc/manpages/_build/man/frr-ospf6d.8
+-build/doc/manpages/_build/man/frr-ospfd.8
+-build/doc/manpages/_build/man/frr-pimd.8
+-build/doc/manpages/_build/man/frr-ripd.8
+-build/doc/manpages/_build/man/frr-ripngd.8
+-build/doc/manpages/_build/man/frr-watchfrr.8
+-build/doc/manpages/_build/man/frr-zebra.8
+-build/doc/manpages/_build/man/frr.1
+-build/doc/manpages/_build/man/mtracebis.8
+-build/doc/manpages/_build/man/vtysh.1
 diff --git a/debian/rules b/debian/rules
-index 0fa9c3a3b..6b005ea5f 100755
+index 43e5d7e61..aa13106fe 100755
 --- a/debian/rules
 +++ b/debian/rules
-@@ -27,10 +27,17 @@ else
-   CONF_LUA=--enable-scripting
+@@ -33,10 +33,17 @@ else
+   CONF_PIM6=--disable-pim6d
  endif
  
 +DEB_BUILD_ARCH ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH)
@@ -59,28 +54,26 @@ index 0fa9c3a3b..6b005ea5f 100755
 +endif
  
  %:
--	dh $@
-+	dh $@ --builddirectory=build
+-	dh $@ -Bbuild --with=sphinxdoc
++	dh $@ -Bbuild --with=sphinxdoc --builddirectory=build
  
  override_dh_auto_configure:
  	$(shell dpkg-buildflags --export=sh); \
-@@ -67,12 +74,12 @@ override_dh_auto_configure:
+@@ -74,10 +81,10 @@ override_dh_auto_configure:
  override_dh_auto_install:
  	dh_auto_install
  
 -	sed -e '1c #!/usr/bin/python3' -i debian/tmp/usr/lib/frr/frr-reload.py
 -	sed -e '1c #!/usr/bin/python3' -i debian/tmp/usr/lib/frr/generate_support_bundle.py
+-	sed -e '1c #!/usr/bin/python3' -i debian/tmp/usr/lib/frr/frr_babeltrace.py
+-	sed -e '1c #!/usr/bin/python3' -i debian/tmp/usr/lib/frr/ospfclient.py
 +	sed -e '1c #!$(shell which $PYTHON)' -i debian/tmp/usr/lib/frr/frr-reload.py
 +	sed -e '1c #!$(shell which $PYTHON)' -i debian/tmp/usr/lib/frr/generate_support_bundle.py
++	sed -e '1c #!$(shell which $PYTHON)' -i debian/tmp/usr/lib/frr/frr_babeltrace.py
++	sed -e '1c #!$(shell which $PYTHON)' -i debian/tmp/usr/lib/frr/ospfclient.py
  
  # let dh_systemd_* and dh_installinit do their thing automatically
--	cp tools/frr.service debian/frr.service
--	cp tools/frrinit.sh debian/frr.init
-+	cp build/tools/frr.service debian/frr.service
-+	cp build/tools/frrinit.sh debian/frr.init
- 	-rm -f debian/tmp/usr/lib/frr/frr
- 
- # install config files
+ 	cp build/tools/frr.service debian/frr.service
 -- 
-2.25.1
+2.17.1
 

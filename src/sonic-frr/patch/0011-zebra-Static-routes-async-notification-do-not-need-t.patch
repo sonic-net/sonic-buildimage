@@ -1,0 +1,99 @@
+From 56d349ef47ba24bcf838488b1e40474755655259 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Thu, 29 Jun 2023 09:35:00 -0400
+Subject: [PATCH] zebra: Static routes async notification do not need this test
+
+When using asic_offload with an asynchronous notification the
+rib_route_match_ctx function is testing for distance and tag
+being correct against the re.
+
+Normal route notification for static routes is this(well really all routes):
+a) zebra dplane generates a ctx to send to the dplane for route install
+b) dplane installs it in the kernel
+c) if the dplane_fpm_nl.c module is being used it installs it.
+d) The context's success code is set to it worked and passes the context
+back up to zebra for processing.
+e) Zebra master receives this and checks the distance and tag are correct
+for static routes and accepts the route and marks it installed.
+
+If the operator is using a wait for install mechansim where the dplane
+is asynchronously sending the result back up at a future time *and*
+it is using the dplane_fpm_nl.c code where it uses the rt_netlink.c
+route parsing code, then there is no way to set distance as that we
+do not pass distance to the kernel.
+
+As such static routes were never being properly handled since the re and
+context would not match and the route would still be marked as queued.
+
+Modify the code such that the asynchronous path notification for static
+routes ignores the distance and tag's as that there is no way to test
+for this data from that path at this point in time.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+
+diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
+index fd6df441c6..039c44cc09 100644
+--- a/zebra/zebra_rib.c
++++ b/zebra/zebra_rib.c
+@@ -1465,7 +1465,7 @@ static void zebra_rib_evaluate_mpls(struct route_node *rn)
+  */
+ static bool rib_route_match_ctx(const struct route_entry *re,
+ 				const struct zebra_dplane_ctx *ctx,
+-				bool is_update)
++				bool is_update, bool async)
+ {
+ 	bool result = false;
+ 
+@@ -1481,13 +1481,12 @@ static bool rib_route_match_ctx(const struct route_entry *re,
+ 			/* We use an extra test for statics, and another for
+ 			 * kernel routes.
+ 			 */
+-			if (re->type == ZEBRA_ROUTE_STATIC &&
++			if (re->type == ZEBRA_ROUTE_STATIC && !async &&
+ 			    (re->distance != dplane_ctx_get_old_distance(ctx) ||
+ 			     re->tag != dplane_ctx_get_old_tag(ctx))) {
+ 				result = false;
+ 			} else if (re->type == ZEBRA_ROUTE_KERNEL &&
+-				   re->metric !=
+-				   dplane_ctx_get_old_metric(ctx)) {
++				   re->metric != dplane_ctx_get_old_metric(ctx)) {
+ 				result = false;
+ 			}
+ 		}
+@@ -1509,7 +1508,7 @@ static bool rib_route_match_ctx(const struct route_entry *re,
+ 			/* We use an extra test for statics, and another for
+ 			 * kernel routes.
+ 			 */
+-			if (re->type == ZEBRA_ROUTE_STATIC &&
++			if (re->type == ZEBRA_ROUTE_STATIC && !async &&
+ 			    (re->distance != dplane_ctx_get_distance(ctx) ||
+ 			     re->tag != dplane_ctx_get_tag(ctx))) {
+ 				result = false;
+@@ -1973,13 +1972,13 @@ static void rib_process_result(struct zebra_dplane_ctx *ctx)
+ 	RNODE_FOREACH_RE(rn, rib) {
+ 
+ 		if (re == NULL) {
+-			if (rib_route_match_ctx(rib, ctx, false))
++			if (rib_route_match_ctx(rib, ctx, false, false))
+ 				re = rib;
+ 		}
+ 
+ 		/* Check for old route match */
+ 		if (is_update && (old_re == NULL)) {
+-			if (rib_route_match_ctx(rib, ctx, true /*is_update*/))
++			if (rib_route_match_ctx(rib, ctx, true, false))
+ 				old_re = rib;
+ 		}
+ 
+@@ -2247,7 +2246,7 @@ static void rib_process_dplane_notify(struct zebra_dplane_ctx *ctx)
+ 	 * info.
+ 	 */
+ 	RNODE_FOREACH_RE(rn, re) {
+-		if (rib_route_match_ctx(re, ctx, false /*!update*/))
++		if (rib_route_match_ctx(re, ctx, false, true))
+ 			break;
+ 	}
+ 
+-- 
+2.17.1
+

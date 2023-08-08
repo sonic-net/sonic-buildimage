@@ -1,0 +1,25 @@
+From 44ed2b0d2a2ca6029238118603264e02e2e965f4 Mon Sep 17 00:00:00 2001
+From: Pavel Shirshov <pavelsh@microsoft.com>
+Date: Mon, 16 Nov 2020 18:33:46 -0800
+Subject: [PATCH] From afff474c79e0c177e090d1b45d68c9f816a52e3e Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 4/8] Allow BGP attr NEXT_HOP to be 0.0.0.0 due
+ to  alleviate
+
+
+diff --git a/bgpd/bgp_route.c b/bgpd/bgp_route.c
+index f4dff0d80..f00c54c40 100644
+--- a/bgpd/bgp_route.c
++++ b/bgpd/bgp_route.c
+@@ -3835,8 +3835,7 @@ bool bgp_update_martian_nexthop(struct bgp *bgp, afi_t afi, safi_t safi,
+ 
+ 	/* If NEXT_HOP is present, validate it. */
+ 	if (attr->flag & ATTR_FLAG_BIT(BGP_ATTR_NEXT_HOP)) {
+-		if (attr->nexthop.s_addr == INADDR_ANY ||
+-		    !ipv4_unicast_valid(&attr->nexthop) ||
++		if (!ipv4_unicast_valid(&attr->nexthop) ||
+ 		    bgp_nexthop_self(bgp, afi, type, stype, attr, dest))
+ 			return true;
+ 	}
+-- 
+2.17.1
+

@@ -1,18 +1,16 @@
-From 349e3f758860be0077b69919c39764d3486ec44a Mon Sep 17 00:00:00 2001
+From 44f3736ee601e06e43e978fa075402c3da4823bd Mon Sep 17 00:00:00 2001
 From: Stepan Blyschak <stepanb@nvidia.com>
 Date: Mon, 16 Jan 2023 11:45:19 +0000
-Subject: [PATCH] use vrf id instead of table id
+Subject: [PATCH] From 349e3f758860be0077b69919c39764d3486ec44a Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH] use vrf id instead of table id
 
 Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
----
- zebra/rt_netlink.c | 74 ++++++++++++++++++++++++++++++++++++++--------
- 1 file changed, 61 insertions(+), 13 deletions(-)
 
 diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
-index 29137a09f..e7b808754 100644
+index 325199eff..587045eac 100644
 --- a/zebra/rt_netlink.c
 +++ b/zebra/rt_netlink.c
-@@ -388,6 +388,30 @@ vrf_id_t vrf_lookup_by_table(uint32_t table_id, ns_id_t ns_id)
+@@ -406,6 +406,30 @@ vrf_id_t vrf_lookup_by_table(uint32_t table_id, ns_id_t ns_id)
  	return VRF_DEFAULT;
  }
  
@@ -43,7 +41,7 @@ index 29137a09f..e7b808754 100644
  /**
   * @parse_encap_mpls() - Parses encapsulated mpls attributes
   * @tb:         Pointer to rtattr to look for nested items in.
-@@ -754,14 +778,26 @@ int netlink_route_change_read_unicast_internal(struct nlmsghdr *h,
+@@ -782,14 +806,26 @@ int netlink_route_change_read_unicast_internal(struct nlmsghdr *h,
  	if (rtm->rtm_family == AF_MPLS)
  		return 0;
  
@@ -77,8 +75,8 @@ index 29137a09f..e7b808754 100644
  	if (vrf_id == VRF_DEFAULT) {
  		if (!is_zebra_valid_kernel_table(table)
  		    && !is_zebra_main_routing_table(table))
-@@ -2004,12 +2040,24 @@ ssize_t netlink_route_multipath_msg_encode(int cmd,
- #endif
+@@ -2102,12 +2138,24 @@ ssize_t netlink_route_multipath_msg_encode(int cmd,
+ 
  	/* Table corresponding to this route. */
  	table_id = dplane_ctx_get_table(ctx);
 -	if (table_id < 256)
@@ -109,5 +107,5 @@ index 29137a09f..e7b808754 100644
  
  	if (IS_ZEBRA_DEBUG_KERNEL)
 -- 
-2.30.2
+2.17.1
 

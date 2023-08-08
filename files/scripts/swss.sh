@@ -318,6 +318,16 @@ function check_macsec()
     fi
 }
 
+function check_add_bgp_dependency()
+{
+    if ! is_chassis_supervisor; then
+        if [ "$DEV" ]; then
+            DEPENDENT="${DEPENDENT} bgp@${DEV}"
+        else
+            DEPENDENT="${DEPENDENT} bgp"
+        fi
+    fi
+}
 function check_ports_present()
 {
     PORT_CONFIG_INI=/usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV/port_config.ini
@@ -353,11 +363,9 @@ fi
 if [ "$DEV" ]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
     SONIC_DB_CLI="sonic-db-cli -n $NET_NS"
-    DEPENDENT+=" bgp@${DEV}"
 else
     NET_NS=""
     SONIC_DB_CLI="sonic-db-cli"
-    DEPENDENT+=" bgp"
 fi
 
 PLATFORM=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' platform`
@@ -365,7 +373,7 @@ HWSKU=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' hwsku`
 
 check_peer_gbsyncd
 check_macsec
-
+check_add_bgp_dependency
 check_ports_present
 PORTS_PRESENT=$?
 

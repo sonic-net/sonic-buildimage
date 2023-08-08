@@ -1,13 +1,11 @@
-From dfe0158344ea581370dd2dba8e4db189cf369147 Mon Sep 17 00:00:00 2001
+From 54ac159d360a8fc9e8fcb19d984e8230e16f6fc0 Mon Sep 17 00:00:00 2001
 From: Syed Hasan Raza Naqvi <syed.naqvi@broadcom.com>
 Date: Wed, 4 May 2022 05:11:01 +0000
-Subject: [PATCH] Disable ipv6 src address test in pcep. Docker lo interface
- doesn't have ipv6 enabled. Socket bind returns cannot assign requested
- address.
+Subject: [PATCH] From dfe0158344ea581370dd2dba8e4db189cf369147 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH] Disable ipv6 src address test in pcep. Docker
+ lo interface  doesn't have ipv6 enabled. Socket bind returns cannot assign
+ requested  address.
 
----
- pceplib/test/pcep_socket_comm_test.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/pceplib/test/pcep_socket_comm_test.c b/pceplib/test/pcep_socket_comm_test.c
 index 116531f12..8b71a5090 100644
@@ -23,5 +21,5 @@ index 116531f12..8b71a5090 100644
  
  void pcep_socket_comm_test_teardown()
 -- 
-2.20.1
+2.17.1
 

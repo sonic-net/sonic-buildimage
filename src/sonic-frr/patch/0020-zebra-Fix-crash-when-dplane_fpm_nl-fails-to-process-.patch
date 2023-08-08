@@ -1,0 +1,50 @@
+From 6d7a251e5075a6fbced11e43fcdaa9e324c3871f Mon Sep 17 00:00:00 2001
+From: Carmine Scarpitta <carmine.scarpitta@uniroma2.it>
+Date: Fri, 7 Jul 2023 02:57:07 +0200
+Subject: [PATCH 2/2] zebra: Fix crash when `dplane_fpm_nl` fails to process
+ received routes
+
+When `dplane_fpm_nl` receives a route, it allocates memory for a dplane
+context and calls `netlink_route_change_read_unicast_internal` without
+initializing the `intf_extra_list` contained in the dplane context. If
+`netlink_route_change_read_unicast_internal` is not able to process the
+route, we call `dplane_ctx_fini` to free the dplane context. This causes
+a crash because `dplane_ctx_fini` attempts to access the intf_extra_list
+which is not initialized.
+
+To solve this issue, we can call `dplane_ctx_route_init`to initialize
+the dplane route context properly, just after the dplane context
+allocation.
+
+(gdb) bt
+#0 0x0000555dd5ceae80 in dplane_intf_extra_list_pop (h=0x7fae1c007e68) at ../zebra/zebra_dplane.c:427
+#1 dplane_ctx_free_internal (ctx=0x7fae1c0074b0) at ../zebra/zebra_dplane.c:724
+#2 0x0000555dd5cebc99 in dplane_ctx_free (pctx=0x7fae2aa88c98) at ../zebra/zebra_dplane.c:869
+#3 dplane_ctx_free (pctx=0x7fae2aa88c98, pctx@entry=0x7fae2aa78c28) at ../zebra/zebra_dplane.c:855
+#4 dplane_ctx_fini (pctx=pctx@entry=0x7fae2aa88c98) at ../zebra/zebra_dplane.c:890
+#5 0x00007fae31e93f29 in fpm_read (t=) at ../zebra/dplane_fpm_nl.c:605
+#6 0x00007fae325191dd in thread_call (thread=thread@entry=0x7fae2aa98da0) at ../lib/thread.c:2006
+#7 0x00007fae324c42b8 in fpt_run (arg=0x555dd74777c0) at ../lib/frr_pthread.c:309
+#8 0x00007fae32405ea7 in start_thread () from /lib/x86_64-linux-gnu/libpthread.so.0
+#9 0x00007fae32325a2f in clone () from /lib/x86_64-linux-gnu/libc.so.6
+
+Fixes: #13754
+Signed-off-by: Carmine Scarpitta <carmine.scarpitta@uniroma2.it>
+
+diff --git a/zebra/dplane_fpm_nl.c b/zebra/dplane_fpm_nl.c
+index 9f38401618..caa2f988e2 100644
+--- a/zebra/dplane_fpm_nl.c
++++ b/zebra/dplane_fpm_nl.c
+@@ -599,7 +599,8 @@ static void fpm_read(struct thread *t)
+ 		switch (hdr->nlmsg_type) {
+ 		case RTM_NEWROUTE:
+ 			ctx = dplane_ctx_alloc();
+-			dplane_ctx_set_op(ctx, DPLANE_OP_ROUTE_NOTIFY);
++			dplane_ctx_route_init(ctx, DPLANE_OP_ROUTE_NOTIFY, NULL,
++					      NULL);
+ 			if (netlink_route_change_read_unicast_internal(
+ 				    hdr, 0, false, ctx) != 1) {
+ 				dplane_ctx_fini(&ctx);
+-- 
+2.17.1
+

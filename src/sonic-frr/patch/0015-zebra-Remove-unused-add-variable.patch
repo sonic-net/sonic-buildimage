@@ -1,0 +1,53 @@
+From 4cc6c7af6f7c72ddf18ab562f4e2c2b25e32f1b5 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Sat, 15 Apr 2023 08:04:51 -0400
+Subject: [PATCH] zebra: Remove unused add variable
+
+Function was not using the add variable.  Remove it.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+
+diff --git a/zebra/if_netlink.c b/zebra/if_netlink.c
+index 95889e22fd..e54fb09022 100644
+--- a/zebra/if_netlink.c
++++ b/zebra/if_netlink.c
+@@ -670,7 +670,7 @@ static void netlink_interface_update_l2info(struct interface *ifp,
+ 		struct zebra_l2info_bridge bridge_info;
+ 
+ 		netlink_extract_bridge_info(link_data, &bridge_info);
+-		zebra_l2_bridge_add_update(ifp, &bridge_info, add);
++		zebra_l2_bridge_add_update(ifp, &bridge_info);
+ 	} else if (IS_ZEBRA_IF_VLAN(ifp)) {
+ 		struct zebra_l2info_vlan vlan_info;
+ 
+diff --git a/zebra/zebra_l2.c b/zebra/zebra_l2.c
+index 8a9f3dffe3..07bbc6e3bc 100644
+--- a/zebra/zebra_l2.c
++++ b/zebra/zebra_l2.c
+@@ -258,8 +258,7 @@ void zebra_l2if_update_bond(struct interface *ifp, bool add)
+  * map slaves (if any) to the bridge.
+  */
+ void zebra_l2_bridge_add_update(struct interface *ifp,
+-				struct zebra_l2info_bridge *bridge_info,
+-				int add)
++				struct zebra_l2info_bridge *bridge_info)
+ {
+ 	struct zebra_if *zif;
+ 
+diff --git a/zebra/zebra_l2.h b/zebra/zebra_l2.h
+index 1c3e98158d..8fef008f52 100644
+--- a/zebra/zebra_l2.h
++++ b/zebra/zebra_l2.h
+@@ -109,8 +109,7 @@ extern void zebra_l2_map_slave_to_bridge(struct zebra_l2info_brslave *br_slave,
+ extern void
+ zebra_l2_unmap_slave_from_bridge(struct zebra_l2info_brslave *br_slave);
+ extern void zebra_l2_bridge_add_update(struct interface *ifp,
+-				       struct zebra_l2info_bridge *bridge_info,
+-				       int add);
++				       struct zebra_l2info_bridge *bridge_info);
+ extern void zebra_l2_bridge_del(struct interface *ifp);
+ extern void zebra_l2_vlanif_update(struct interface *ifp,
+ 				   struct zebra_l2info_vlan *vlan_info);
+-- 
+2.17.1
+
