@@ -212,7 +212,7 @@ debs/{{ deb }}{{' '}}
 
 # Install protobuf 3.21.12
 RUN mkdir -p /tmp/protobuf \
-    cd /tmp/protobuf \
+    && cd /tmp/protobuf \
     && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-dev_3.21.12-3_amd64.deb \
     && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-lite32_3.21.12-3_amd64.deb \
     && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf32_3.21.12-3_amd64.deb \
@@ -263,7 +263,7 @@ WORKDIR /var/$user
 # Add az symlink for backwards compatibility
 RUN mkdir bin && ln -s /usr/bin/az bin/az
 
-RUN python3 -m venv env-python3
+RUN python3 -m venv --system-site-packages env-python3
 
 # Activating a virtualenv. The virtualenv automatically works for RUN, ENV and CMD.
 ENV VIRTUAL_ENV=env-python3
