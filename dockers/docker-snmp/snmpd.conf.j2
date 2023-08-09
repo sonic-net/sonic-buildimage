@@ -30,16 +30,27 @@ agentAddress {{ protocol(agentip) }}:[{{ agentip }}]{% if port %}:{{ port }}{% e
 {% endfor %}
 {% elif NAMESPACE_COUNT is not defined or NAMESPACE_COUNT|int <= 1 %}
 {% if MGMT_INTERFACE is defined %}
-{% for if, ip in MGMT_INTERFACE %}
-{% set agentip = ip.split('/')[0] %}
-agentAddress {{ protocol(agentip) }}:[{{ agentip }}]:161
+{% for intf, ip in MGMT_INTERFACE %}
+{% set agentip = ip.split('/')[0]|lower %}
+{% set zoneid = '' %}
+# Use interface as zoneid for link local ipv6
+{% if agentip.startswith('fe80') %}
+{% set zoneid = '%' + intf %}
+{% endif %}
+agentAddress {{ protocol(agentip) }}:[{{ agentip }}{{ zoneid }}]:161
 {% endfor %}
 {% endif %}
 {% if LOOPBACK_INTERFACE is defined %}
 {% for lo in LOOPBACK_INTERFACE %}
 {% if lo | length == 2 %}
-{% set agentip = lo[1].split('/')[0] %}
-agentAddress {{ protocol(agentip) }}:[{{ agentip }}]:161
+{% set intf = lo[0] %}
+{% set agentip = lo[1].split('/')[0]|lower %}
+{% set zoneid = '' %}
+# Use interface as zoneid for link local ipv6
+{% if agentip.startswith('fe80') %}
+{% set zoneid = '%' + intf %}
+{% endif %}
+agentAddress {{ protocol(agentip) }}:[{{ agentip }}{{ zoneid }}]:161
 {% endif %}
 {% endfor %}
 {% endif %}

@@ -107,6 +107,18 @@ void get_fan_extra_default_sysfs(int idx, char *str)
         case FAN12_PRESENT:
             strcpy(str, "fan12_status");
             break;
+        case FAN13_PRESENT:
+            strcpy(str, "fan13_status");
+            break;
+        case FAN14_PRESENT:
+            strcpy(str, "fan14_status");
+            break;
+        case FAN15_PRESENT:
+            strcpy(str, "fan15_status");
+            break;
+        case FAN16_PRESENT:
+            strcpy(str, "fan16_status");
+            break;
 		default:
 			break;
 	}
@@ -242,6 +254,10 @@ ssize_t fan_show_default(struct device *dev, struct device_attribute *da, char *
 		case FAN10_PRESENT:
 		case FAN11_PRESENT:
 		case FAN12_PRESENT:
+		case FAN13_PRESENT:
+		case FAN14_PRESENT:
+		case FAN15_PRESENT:
+		case FAN16_PRESENT:
 		case FAN1_DIRECTION:
 		case FAN2_DIRECTION:
 		case FAN3_DIRECTION:
@@ -254,6 +270,10 @@ ssize_t fan_show_default(struct device *dev, struct device_attribute *da, char *
 		case FAN10_DIRECTION:
 		case FAN11_DIRECTION:
 		case FAN12_DIRECTION:
+		case FAN13_DIRECTION:
+		case FAN14_DIRECTION:
+		case FAN15_DIRECTION:
+		case FAN16_DIRECTION:
 		case FAN1_INPUT:
 		case FAN2_INPUT:
 		case FAN3_INPUT:
@@ -266,6 +286,10 @@ ssize_t fan_show_default(struct device *dev, struct device_attribute *da, char *
 		case FAN10_INPUT:
 		case FAN11_INPUT:
 		case FAN12_INPUT:
+		case FAN13_INPUT:
+		case FAN14_INPUT:
+		case FAN15_INPUT:
+		case FAN16_INPUT:
 		case FAN1_PWM:
 		case FAN2_PWM:
 		case FAN3_PWM:
@@ -278,6 +302,10 @@ ssize_t fan_show_default(struct device *dev, struct device_attribute *da, char *
 		case FAN10_PWM:
 		case FAN11_PWM:
 		case FAN12_PWM:
+		case FAN13_PWM:
+		case FAN14_PWM:
+		case FAN15_PWM:
+		case FAN16_PWM:
 		case FAN1_FAULT:
 		case FAN2_FAULT:
 		case FAN3_FAULT:
@@ -290,6 +318,10 @@ ssize_t fan_show_default(struct device *dev, struct device_attribute *da, char *
 		case FAN10_FAULT:
 		case FAN11_FAULT:
 		case FAN12_FAULT:
+		case FAN13_FAULT:
+		case FAN14_FAULT:
+		case FAN15_FAULT:
+		case FAN16_FAULT:
 		case FAN_DUTY_CYCLE:
             status = attr_info->val.intval;
 			break;
@@ -359,6 +391,10 @@ ssize_t fan_store_default(struct device *dev, struct device_attribute *da, const
 		case FAN10_PWM:
 		case FAN11_PWM:
 		case FAN12_PWM:
+		case FAN13_PWM:
+		case FAN14_PWM:
+		case FAN15_PWM:
+		case FAN16_PWM:
 			ret = kstrtoint(buf, 10, &val);
 			if (ret)
 			{
