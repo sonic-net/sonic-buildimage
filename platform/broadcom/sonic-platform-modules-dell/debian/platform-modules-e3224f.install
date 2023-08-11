@@ -1,0 +1,12 @@
+e3224f/scripts/e3224f_platform.sh usr/local/bin
+e3224f/scripts/platform_sensors.py usr/local/bin
+e3224f/scripts/sensors usr/bin
+e3224f/scripts//portiocfg.py usr/local/bin
+e3224f/scripts//ports_xcvrd_notify.py usr/local/bin
+e3224f/systemd/platform-modules-e3224f.service etc/systemd/system
+e3224f/cfg/e3224f-modules.conf etc/modules-load.d
+common/dell_i2c_utils.sh usr/local/bin
+e3224f/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dell_e3224f-r0
+common/platform_reboot usr/share/sonic/device/x86_64-dell_e3224f-r0
+common/fw-updater /usr/local/bin
+common/onie_mode_set usr/local/bin
