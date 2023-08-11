@@ -5,7 +5,7 @@ export INSTALL_MOD_DIR:=extra
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= s6000 z9100 s6100 z9264f s5212f s5224f s5232f s5248f z9332f z9432f s5296f n3248pxe n3248te
+MODULE_DIRS:= s6000 z9100 s6100 z9264f s5212f s5224f s5232f s5248f z9332f z9432f s5296f n3248pxe n3248te e3224f
 COMMON_DIR := common
 
 %:
@@ -82,6 +82,10 @@ override_dh_auto_build:
 			python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
 			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "n3248pxe" ]; then \
+			cd $(MOD_SRC_DIR)/$${mod}; \
+			python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
+			cd $(MOD_SRC_DIR); \
+		elif [ $$mod = "e3224f" ]; then \
 			cd $(MOD_SRC_DIR)/$${mod}; \
 			python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
 			cd $(MOD_SRC_DIR); \
@@ -183,6 +187,11 @@ override_dh_clean:
 			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
 			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "n3248te" ]; then \
+			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
+			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
+			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
+			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
+		elif [ $$mod = "e3224f" ]; then \
 			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
 			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \

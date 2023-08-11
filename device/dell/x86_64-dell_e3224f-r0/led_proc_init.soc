@@ -1,0 +1,7 @@
+# LED microprocessor initialization for Dell E3224F
+#
+#
+#Led0
+#led auto on
+m0 load 0 0x3800 /usr/share/sonic/hwsku/custom_led.bin
+led start
