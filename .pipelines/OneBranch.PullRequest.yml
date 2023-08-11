@@ -100,7 +100,7 @@ stages:
       vmImage: 'ubuntu-20.04'
     displayName: "kvmtest-t0 by Elastictest"
     timeoutInMinutes: 240
-    continueOnError: false
+    continueOnError: true
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
@@ -117,7 +117,7 @@ stages:
       vmImage: 'ubuntu-20.04'
     displayName: "kvmtest-t1-lag by Elastictest"
     timeoutInMinutes: 240
-    continueOnError: false
+    continueOnError: true
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
@@ -134,7 +134,7 @@ stages:
     pool:
       vmImage: 'ubuntu-20.04'
     timeoutInMinutes: 240
-    continueOnError: false
+    continueOnError: true
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
@@ -154,7 +154,7 @@ stages:
       vmImage: 'ubuntu-20.04'
     displayName: "kvmtest-t0-2vlans by Elastictest"
     timeoutInMinutes: 240
-    continueOnError: false
+    continueOnError: true
     steps:
     - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
       parameters:
@@ -173,7 +173,7 @@ stages:
       vmImage: 'ubuntu-20.04'
     displayName: "kvmtest-dualtor-t0 by Elastictest"
     timeoutInMinutes: 240
-    continueOnError: false
+    continueOnError: true
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
@@ -205,7 +205,7 @@ stages:
     pool:
       vmImage: 'ubuntu-20.04'
     timeoutInMinutes: 240
-    continueOnError: false
+    continueOnError: true
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
@@ -218,3 +218,53 @@ stages:
           MGMT_URL: $(MGMT_INT_URL)
           STOP_ON_FAILURE: False
           EXPECTED_RESULT: "SUCCESS"
+
+- stage: ADO
+  dependsOn: Test
+  condition: eq(dependencies.Test.result,'SucceededWithIssues')
+  variables:
+    - name: BRANCH
+      ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+        value: $(System.PullRequest.TargetBranchName)
+      ${{ else }}:
+        value: $(Build.SourceBranchName)
+    - name: job1
+      value: $[ stageDependencies.Test.t0_elastictest.result ]
+    - name: job2
+      value: $[ stageDependencies.Test.t1_lag_elastictest.result ]
+    - name: job3
+      value: $[ stageDependencies.Test.sonic_t0_elastictest.result ]
+    - name: job4
+      value: $[ stageDependencies.Test.t0_2vlans_elastictest.result ]
+    - name: job5
+      value: $[ stageDependencies.Test.dualtor_elastictest.result ]
+    - name: job6
+      value: $[ stageDependencies.Test.multi_asic_elastictest.result ]
+  jobs:
+  - job:
+    pool:
+      vmImage: 'ubuntu-20.04'
+    steps:
+    - checkout: none
+    - bash: |
+        set -ex
+        # create ADO item to sonicbld
+        DISSCUSSION=""
+        [[ $(job1) == 'SucceededWithIssues' ]] && DISSCUSSION+="----t0_elastictest<br>"
+        [[ $(job2) == 'SucceededWithIssues' ]] && DISSCUSSION+="----t1_lag_elastictest<br>"
+        [[ $(job3) == 'SucceededWithIssues' ]] && DISSCUSSION+="----sonic_t0_elastictest<br>"
+        [[ $(job4) == 'SucceededWithIssues' ]] && DISSCUSSION+="----t0_2vlans_elastictest<br>"
+        [[ $(job5) == 'SucceededWithIssues' ]] && DISSCUSSION+="----dualtor_elastictest<br>"
+        [[ $(job6) == 'SucceededWithIssues' ]] && DISSCUSSION+="----multi_asic_elastictest<br>"
+        if [ -n "$DISSCUSSION" ];then
+          if echo "$(System.PullRequest.SourceBranch)" | grep "^refs/heads/sonicbld/code-sync/internal";then
+            DISSCUSSION="https://dev.azure.com/msazure/One/_build/results?buildId=$(Build.BuildId)<br>$(BRANCH)<br>"$DISSCUSSION
+            az boards work-item update --org https://dev.azure.com/msazure/ --id $ADO_ID --discussion "$DISSCUSSION" --description "$DISSCUSSION"
+            exit 0
+          fi
+          exit 1
+        fi
+      displayName: check result
+      env:
+        AZURE_DEVOPS_EXT_PAT: $(MSAZURE_ADO_PAT)
+        ADO_ID: $(ADO_ID)
