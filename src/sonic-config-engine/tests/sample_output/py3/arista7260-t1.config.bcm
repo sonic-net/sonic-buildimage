@@ -2,6 +2,7 @@
 l3_alpm_hit_skip=1
 
 mmu_init_config="MSFT-TH2-Tier1"
+sai_tunnel_support=1
 
 hybrid_pfc_deadlock_enable=1
 pfc_deadlock_seq_control=1
