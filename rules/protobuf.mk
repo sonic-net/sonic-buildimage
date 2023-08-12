@@ -17,10 +17,6 @@ $(eval $(call add_derived_package,$(PROTOBUF),$(PROTOBUF_DEV)))
 PROTOBUF_LITE = libprotobuf-lite32_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(PROTOBUF),$(PROTOBUF_LITE)))
 
-PROTOC_DEV = libprotoc-dev_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
-$(PROTOC_DEV)_RDEPENDS = $(PROTOBUF) $(PROTOBUF_LITE)
-$(eval $(call add_derived_package,$(PROTOBUF),$(PROTOC_DEV)))
-
 PROTOC32 = libprotoc32_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(PROTOC32)_RDEPENDS = $(PROTOBUF) $(PROTOBUF_LITE)
 $(eval $(call add_derived_package,$(PROTOBUF),$(PROTOC32)))

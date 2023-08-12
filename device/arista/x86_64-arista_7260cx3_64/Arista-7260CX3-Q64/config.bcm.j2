@@ -14,8 +14,7 @@
 {%-         set switch_subtype = DEVICE_METADATA['localhost']['subtype'] -%}
 {%-         if 'dualtor' in switch_subtype.lower() %}
 {%-             set IPinIP_sock =
-'sai_tunnel_support=1
-sai_tunnel_underlay_route_mode=1
+'sai_tunnel_underlay_route_mode=1
 host_as_route_disable=1
 l3_ecmp_levels=2' -%}
 {%-             set map_prio = 'sai_remap_prio_on_tnl_egress=1' -%}
@@ -1048,5 +1047,6 @@ serdes_preemphasis_116=0x105004
 serdes_preemphasis_117=0x105004
 
 {{ mmu_sock }}
+sai_tunnel_support=1
 {{ IPinIP_sock }}
 phy_an_lt_msft=1
