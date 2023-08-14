@@ -1,0 +1,89 @@
+#!/bin/bash
+
+SYSLOG_IDENTIFIER="cpu_wdt"
+CPUWDT_MAIN_TASK_RUNNING_FLAG=true
+TIMEOUT=180
+KEEPALIVE=60
+
+function log_info()
+{
+    logger -p info -t ${SYSLOG_IDENTIFIER}  "$@"
+}
+
+function usage()
+{
+    echo "Usage: $0 ACTION [OPTIONS]..."
+    echo ""
+    echo "Actions:"
+    echo "  start    Start CPU WDT"
+    echo "  stop     Stop CPU WDT"
+    echo ""
+    echo "Options:"
+    echo "  -h              Show this help"
+    echo "  -t <timeout>    WDT timeout period: {30|60|180}, default 180"
+    echo "  -k <keepalive>  WDT keep alive period, {1..(timeout-5)}, default 60"
+    exit 1
+}
+
+function validate_action()
+{
+    if [[ "${ACTION}" != "start" && "${ACTION}" != "stop" ]]; then
+        echo -e "Invalid action: ${ACTION}\n"
+        usage
+    fi
+}
+
+function validate_options()
+{
+    if [[ ${TIMEOUT} != "30" && ${TIMEOUT} != "60" && ${TIMEOUT} != "180" ]]; then
+        echo -e "Invalid timeout value: ${TIMEOUT}\n"
+        usage
+    fi
+    if [[ ${KEEPALIVE} -le 0 || ${KEEPALIVE} -gt $((TIMEOUT - 5)) ]]; then
+        echo "Invalid keepalive value: ${KEEPALIVE}"
+        echo ""
+        usage
+    fi
+}
+
+trap 'log_info "Caught SIGHUP - ignoring..."' SIGHUP
+trap 'log_info "Caught SIGINT - exiting..."; CPUWDT_MAIN_TASK_RUNNING_FLAG=false' SIGINT
+trap 'log_info "Caught SIGTERM - exiting..."; CPUWDT_MAIN_TASK_RUNNING_FLAG=false' SIGTERM
+
+ACTION=$1
+shift
+validate_action
+
+while getopts "t:k:" OPTION; do
+    case $OPTION in
+    t)
+        TIMEOUT=${OPTARG}
+        ;;
+    k)
+        KEEPALIVE=${OPTARG}
+        ;;
+    *)
+        usage
+    esac
+done
+
+validate_options
+
+if [[ "${ACTION}" == "start" ]]; then
+    # enable
+    log_info "Enable CPU WDT.."
+    watchdogutil arm -s "${TIMEOUT}" > /dev/null
+    log_info "CPU WDT has been enabled with $TIMEOUT seconds timeout"
+
+    # keep alive
+    log_info "Enable keep alive messaging every $KEEPALIVE seconds"
+    while [[ ${CPUWDT_MAIN_TASK_RUNNING_FLAG} == "true" ]]; do
+        watchdogutil arm -s "${TIMEOUT}" > /dev/null
+        sleep "${KEEPALIVE}"
+    done
+    log_info "Keep alive messaging has been disabled"
+fi
+
+log_info "Disable CPU WDT.."
+watchdogutil disarm
+log_info "CPU WDT has been disabled!"

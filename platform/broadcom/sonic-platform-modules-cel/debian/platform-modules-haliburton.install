@@ -1,5 +1,6 @@
 haliburton/cfg/haliburton-modules.conf etc/modules-load.d
 haliburton/systemd/platform-modules-haliburton.service lib/systemd/system
+haliburton/systemd/cpu_wdt.service lib/systemd/system
 haliburton/script/fancontrol.sh etc/init.d
 haliburton/script/fancontrol.service lib/systemd/system
 services/fancontrol/fancontrol  usr/local/bin
@@ -8,4 +9,5 @@ services/platform_api/platform_api_mgnt.sh usr/local/bin
 haliburton/script/popmsg.sh usr/local/bin
 haliburton/script/udev_prefix.sh usr/local/bin
 haliburton/script/reload_udev.sh usr/local/bin
+haliburton/script/cpu_wdt usr/local/bin
 haliburton/script/50-ttyUSB-C0.rules etc/udev/rules.d
