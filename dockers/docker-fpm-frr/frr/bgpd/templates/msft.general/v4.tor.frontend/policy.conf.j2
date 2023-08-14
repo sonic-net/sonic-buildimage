@@ -2,7 +2,7 @@
 ! template: bgpd/templates/msft.general/v4.tor.frontend/policy.conf.j2
 !
 ip prefix-list DEFAULT_IPV4 permit 0.0.0.0/0
-{% if is_ai_device == "true" %}
+{% if is_compute_ai == "true" %}
 ip prefix-list BE_LOOPBACKS seq 5 deny 172.16.0.0/12 le 32
 {% else %}
 ip prefix-list BE_LOOPBACKS seq 5 deny 172.16.0.0/16 le 32
