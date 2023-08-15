@@ -17,8 +17,8 @@ fi
 mkdir -p /var/log/swss
 ORCHAGENT_ARGS="-d /var/log/swss "
 
-# Set orchagent pop batch size to 8192
-ORCHAGENT_ARGS+="-b 8192 "
+# Set orchagent pop batch size to 1024
+ORCHAGENT_ARGS+="-b 1024 "
 
 # Set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')

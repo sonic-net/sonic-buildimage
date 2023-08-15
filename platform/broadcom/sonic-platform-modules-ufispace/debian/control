@@ -1,7 +1,7 @@
 Source: sonic-ufispace-platform-modules
 Section: main
 Priority: extra
-Maintainer: Leo Lin <leo.yt.lin@ufispace.com>
+Maintainer: Leo Lin <leo.yt.lin@ufispace.com>, Nonodark Huang <nonodark.huang@ufispace.com>, Jason Tsai <jason.cy.tsai@ufispace.com>
 Build-Depends: debhelper (>= 9), bzip2
 Standards-Version: 1.0.0
 
@@ -9,3 +9,18 @@ Package: sonic-platform-ufispace-s9300-32d
 Architecture: amd64 
 Description: This package contains s9300-32d platform driver utility for SONiC project.
 
+Package: sonic-platform-ufispace-s9110-32x
+Architecture: amd64
+Description: This package contains s9110-32x platform driver utility for SONiC project.
+
+Package: sonic-platform-ufispace-s8901-54xc
+Architecture: amd64
+Description: This package contains s8901-54xc platform driver utility for SONiC project.
+
+Package: sonic-platform-ufispace-s7801-54xs
+Architecture: amd64
+Description: This package contains s7801-54xs platform driver utility for SONiC project.
+
+Package: sonic-platform-ufispace-s6301-56st
+Architecture: amd64
+Description: This package contains s6301-56st platform driver utility for SONiC project.

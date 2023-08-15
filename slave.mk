@@ -1538,7 +1538,7 @@ SONIC_CLEAN_TARGETS += $(addsuffix -clean,$(addprefix $(TARGET_PATH)/, \
 		       $(SONIC_SIMPLE_DOCKER_IMAGES) \
 		       $(SONIC_INSTALLERS)))
 $(SONIC_CLEAN_TARGETS) :: $(TARGET_PATH)/%-clean : .platform
-	$(Q)rm -f $(TARGET_PATH)/$* target/versions/dockers/$(subst .gz,,$*)
+	$(Q)rm -rf $(TARGET_PATH)/$* target/versions/dockers/$(subst .gz,,$*)
 
 SONIC_CLEAN_STDEB_DEBS = $(addsuffix -clean,$(addprefix $(PYTHON_DEBS_PATH)/, \
 		     $(SONIC_PYTHON_STDEB_DEBS)))

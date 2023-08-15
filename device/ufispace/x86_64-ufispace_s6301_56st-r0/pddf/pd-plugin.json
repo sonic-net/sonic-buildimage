@@ -1,0 +1,79 @@
+{
+
+    "XCVR":
+    {
+        "xcvr_present":
+        {
+           "i2c":
+           {
+               "valmap-SFP+": {"0":true, "1":false }
+           }
+
+        },
+        "plug_status":
+        {
+            "inserted": "1",
+            "removed": "0"
+        }
+    },
+    "PSU":
+    {
+        "psu_present":
+        {
+            "i2c":
+            {
+                "valmap": { "1":true, "0":false }
+            }
+        },
+
+        "psu_power_good":
+        {
+            "i2c":
+            {
+                "valmap": { "1": true, "0":false }
+            }
+        },
+        "psu_support_list":
+        [
+            {"Mfr_id": "ASPOWER","Model": "U1A-K10150-DRB-13", "Dir": "EXHAUST"},
+            {"Mfr_id": "ASPOWER","Model": "U1A-K0150-B-13", "Dir": "INTAKE"},
+            {"Mfr_id": "ASPOWER","Model": "U1D-K0150-A-13", "Dir": "EXHAUST"},
+            {"Mfr_id": "ASPOWER","Model": "U1D-K0150-B-13", "Dir": "INTAKE"}
+        ],
+        "PSU_FAN_MAX_SPEED":"13000"
+    },
+
+    "FAN":
+    {
+        "direction":
+        {
+            "i2c":
+            {
+                "valmap": {"0":"INTAKE", "1":"EXHAUST"}
+            }
+        },
+
+        "present":
+        {
+            "i2c":
+            {
+                "valmap": {"1":true, "0":false}
+            }
+        },
+
+        "FAN_MAX_SPEED":"25000"
+    },
+
+    "LED":
+    {
+        "capability":
+        {
+            "ro": ["SYS_LED", "FAN_LED", "PSU1_LED", "PSU2_LED"],
+            "rw": ["ID_LED"]
+        }
+    },
+    "REBOOT_CAUSE":
+    {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    }
+}
