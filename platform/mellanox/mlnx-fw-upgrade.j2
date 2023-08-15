@@ -1,3 +1,16 @@
+{#
+    Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
+    Apache-2.0
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+#}
 #!/bin/bash
 
 declare -r SCRIPT_NAME="$(basename "$0")"
@@ -28,6 +41,7 @@ declare -r LIST_CONTENT_FILE="/tmp/mlxfwmanager-list-content.log"
 declare -r SPC1_ASIC="spc1"
 declare -r SPC2_ASIC="spc2"
 declare -r SPC3_ASIC="spc3"
+declare -r SPC4_ASIC="spc4"
 declare -r UNKN_ASIC="unknown"
 declare -r UNKN_MST="unknown"
 
@@ -35,6 +49,7 @@ declare -rA FW_FILE_MAP=( \
     [$SPC1_ASIC]="fw-SPC.mfa" \
     [$SPC2_ASIC]="fw-SPC2.mfa" \
     [$SPC3_ASIC]="fw-SPC3.mfa" \
+    [$SPC4_ASIC]="fw-SPC4.mfa" \
 )
 
 IMAGE_UPGRADE="${NO_PARAM}"
@@ -160,6 +175,7 @@ function GetAsicType() {
     local -r SPC1_PRODUCT_ID="cb84"
     local -r SPC2_PRODUCT_ID="cf6c"
     local -r SPC3_PRODUCT_ID="cf70"
+    local -r SPC4_PRODUCT_ID="cf80"
 
     if lspci -n | grep "${VENDOR_ID}:${SPC1_PRODUCT_ID}" &>/dev/null; then
         echo "${SPC1_ASIC}"
@@ -169,6 +185,9 @@ function GetAsicType() {
         exit "${EXIT_SUCCESS}"
     elif lspci -n | grep "${VENDOR_ID}:${SPC3_PRODUCT_ID}" &>/dev/null; then
         echo "${SPC3_ASIC}"
+        exit "${EXIT_SUCCESS}"
+    elif lspci -n | grep "${VENDOR_ID}:${SPC4_PRODUCT_ID}" &>/dev/null; then
+        echo "${SPC4_ASIC}"
         exit "${EXIT_SUCCESS}"
     fi
 
