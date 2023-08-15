@@ -1,5 +1,29 @@
 sonic-ufispace-platform-modules (1.0.0) unstable; urgency=low
 
+  * Add support for S6301-56ST
+
+ -- Ufispace <leo.yt.lin@ufispace.com>  Thu, 27 Jul 2023 15:50:23 +0800
+
+sonic-ufispace-platform-modules (1.0.0) unstable; urgency=low
+
+  * Add support for S7801-54XS
+
+ -- Ufispace <jason.cy.tsai@ufispace.com>  Thu, 27 Jul 2023 11:49:07 +0800
+
+sonic-ufispace-platform-modules (1.0.0) unstable; urgency=low
+
+  * Add support for S8901-54XC 
+
+ -- Ufispace <jason.cy.tsai@ufispace.com>  Thu, 27 Jul 2023 11:12:21 +0800
+
+sonic-ufispace-platform-modules (1.0.0) unstable; urgency=low
+
+  * Add support for S9110-32X.
+
+ -- Ufispace <nonodark.huang@ufispace.com>  Wed, 26 Jul 2023 18:03:14 +0800
+
+sonic-ufispace-platform-modules (1.0.0) unstable; urgency=low
+
   * Add support for S9300-32D.
 
  -- Ufispace <leo.yt.lin@ufispace.com>  Thur, 27 Apr 2023 17:10:58 +0800

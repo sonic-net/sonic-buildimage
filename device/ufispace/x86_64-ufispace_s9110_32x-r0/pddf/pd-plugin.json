@@ -1,0 +1,85 @@
+{
+
+    "XCVR":
+    {
+        "xcvr_present":
+        {
+           "i2c":
+           {
+               "valmap-SFP": {"1":true, "0":false },
+               "valmap-QSFP-DD": {"1":true, "0":false},
+               "valmap-QSFP": {"1":true, "0":false}
+           }
+        },
+        "status":
+        {
+            "inserted": "1",
+            "removed": "0"
+        }
+    },
+
+    "PSU":
+    {
+        "psu_present":
+        {
+            "i2c":
+            {
+                "valmap": { "1":true, "0":false }
+            }
+        },
+
+        "psu_power_good":
+        {
+            "i2c":
+            {
+                "valmap": { "1": true, "0":false }
+            }
+        },
+
+        "psu_fan_dir":
+        {
+            "bmc":
+            {
+                "valmap": {"0": "UNKNOWN", "1":"INTAKE", "2":"EXHAUST"}
+            }
+        },
+        "psu_support_list":
+        [
+            {"Manufacturer": "FSPGROUP","Name": "YNEE0750EM", "MaxSpd": "PSU_AC_FAN_MAX_SPEED"},
+            {"Manufacturer": "FSPGROUP","Name": "YNEE0750BM", "MaxSpd": "PSU_AC_FAN_MAX_SPEED"},
+            {"Manufacturer": "FSPGROUP","Name": "YNEE0750AM", "MaxSpd": "PSU_DC_FAN_MAX_SPEED"}
+        ],
+
+        "valmap": {"PSU_AC_FAN_MAX_SPEED": "26500", "PSU_DC_FAN_MAX_SPEED":"29000"}
+    },
+
+    "FAN":
+    {
+        "direction":
+        {
+            "bmc":
+            {
+                "valmap": {"0": "UNKNOWN", "1":"INTAKE", "2":"EXHAUST"}
+            }
+        },
+
+        "present":
+        {
+            "i2c":
+            {
+                "valmap": {"1":true, "0":false}
+            },
+            "bmc":
+            {
+                "valmap": {"Device Present":true, "Device Absent":false}
+            }
+        },
+        "FAN_R_MAX_SPEED":"32000",
+        "FAN_F_MAX_SPEED":"36200"
+    },
+
+    "REBOOT_CAUSE":
+    {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    }
+}
