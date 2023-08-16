@@ -28,7 +28,7 @@ SONIC_DOCKER_DBG_IMAGES += $(DOCKER_LLDP_DBG)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_LLDP_DBG)
 
 $(DOCKER_LLDP)_CONTAINER_NAME = lldp
-$(DOCKER_LLDP)_RUN_OPT += --privileged -t
+$(DOCKER_LLDP)_RUN_OPT += -t --cap-add=NET_ADMIN
 $(DOCKER_LLDP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_LLDP)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro 
 
