@@ -588,10 +588,6 @@ RUN cd /usr/src/gtest && cmake . && make -C /usr/src/gtest
 RUN mkdir /var/run/sshd
 EXPOSE 22
 
-# Install depot-tools (for git-retry)
-RUN git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git /usr/share/depot_tools
-ENV PATH /usr/share/depot_tools:$PATH
-
 # Install dependencies for dhcp relay test
 RUN pip3 install parameterized==0.8.1
 RUN pip3 install pyfakefs
