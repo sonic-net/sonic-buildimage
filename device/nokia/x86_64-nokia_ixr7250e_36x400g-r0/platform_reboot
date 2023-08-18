@@ -1,23 +1,24 @@
 #!/bin/bash
 
-update_reboot_cause_for_supervisor_reboot()
+update_reboot_cause()
 {
     DEVICE_MGR_REBOOT_FILE=/tmp/device_mgr_reboot
     REBOOT_CAUSE_FILE=/host/reboot-cause/reboot-cause.txt
-    TMP_REBOOT_CAUSE_FILE=/tmp/tmp-reboot-cause.txt
-    if [ -f  $DEVICE_MGR_REBOOT_FILE ]; then
-        if [ -f $REBOOT_CAUSE_FILE ]; then
-            t1=`sudo grep "User: ," $REBOOT_CAUSE_FILE`
-            if [ ! -z "$t1" ]; then
-                echo $t1 | sed 's/reboot/reboot from Supervisor/g' | sed 's/User: /User: admin/g' > $TMP_REBOOT_CAUSE_FILE
-                cp $TMP_REBOOT_CAUSE_FILE $REBOOT_CAUSE_FILE
-            fi
+    DEVICE_REBOOT_CAUSE_FILE=/etc/opt/srlinux/reboot-cause.txt
+    if [ -e  $DEVICE_MGR_REBOOT_FILE ]; then
+        if [ -e $DEVICE_REBOOT_CAUSE_FILE ]; then
+            cp -f $DEVICE_REBOOT_CAUSE_FILE $REBOOT_CAUSE_FILE
         fi
+        rm -f $DEVICE_MGR_REBOOT_FILE
+    else
+        touch /etc/opt/srlinux/devmgr_reboot_cause.done
+        rm -f $DEVICE_REBOOT_CAUSE_FILE &> /dev/null
     fi
+    sync
 }
 
 # update the reboot_cuase file when reboot is trigger by device-mgr
-update_reboot_cause_for_supervisor_reboot
+update_reboot_cause
 
 systemctl stop nokia-watchdog.service
 sleep 2
@@ -25,7 +26,5 @@ echo "w" > /dev/watchdog
 kick_date=`date -u`
 echo "last watchdog kick $kick_date" > /var/log/nokia-watchdog-last.log
 rm -f /sys/firmware/efi/efivars/dump-*
-touch /etc/opt/srlinux/devmgr_reboot_cause.done
-rm -f /etc/opt/srlinux/reboot-cause.txt
 sync
 exec /sbin/reboot $@
