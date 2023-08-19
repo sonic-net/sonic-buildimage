@@ -157,7 +157,7 @@ def get_current_namespace(pid=None):
     """
 
     net_namespace = None
-    command = ["sudo", '/bin/ip', 'netns', 'identify', "{}".format(os.getpid() if not pid else pid)]
+    command = ['/bin/ip', 'netns', 'identify', "{}".format(os.getpid() if not pid else pid)]
     proc = subprocess.Popen(command,
                             stdout=subprocess.PIPE,
                             universal_newlines=True,

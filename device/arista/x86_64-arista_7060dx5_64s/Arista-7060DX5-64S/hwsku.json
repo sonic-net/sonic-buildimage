@@ -255,6 +255,14 @@
         "Ethernet504": {
             "default_brkout_mode": "1x400G[200G,100G,50G,40G,25G,10G]",
             "fec": "rs"
+        },
+        "Ethernet512": {
+            "default_brkout_mode": "1x10G",
+            "fec": "none"
+        },
+        "Ethernet513": {
+            "default_brkout_mode": "1x10G",
+            "fec": "none"
         }
     }
 }

@@ -49,52 +49,52 @@
         ],
         "thermals": [
             {
-                "name": "Cpu temp sensor"
+                "name": "Board sensor",
+                "controllable": false
             },
             {
-                "name": "CPU board temp sensor"
+                "name": "TH4 exhaust temp sensor",
+                "controllable": false
             },
             {
-                "name": "Back-panel temp sensor"
+                "name": "Inlet temp sensor",
+                "controllable": false
             },
             {
-                "name": "Board sensor"
+                "name": "CPU board temp sensor",
+                "controllable": false
             },
             {
-                "name": "Switch board middle sensor"
+                "name": "Back panel temp sensor",
+                "controllable": false
             },
             {
-                "name": "Switch board left sensor"
+                "name": "Front panel temp sensor",
+                "controllable": false
             },
             {
-                "name": "Front-panel temp sensor"
+                "name": "Power supply 1 hotspot sensor",
+                "controllable": false
             },
             {
-                "name": "Switch chip diode 1 sensor"
+                "name": "Power supply 1 inlet temp sensor",
+                "controllable": false
             },
             {
-                "name": "Switch chip diode 2 sensor"
+                "name": "Power supply 1 exhaust temp sensor",
+                "controllable": false
             },
             {
-                "name": "Front-panel temp sensor"
+                "name": "Power supply 2 hotspot sensor",
+                "controllable": false
             },
             {
-                "name": "Power supply 1 inlet temp sensor"
+                "name": "Power supply 2 inlet temp sensor",
+                "controllable": false
             },
             {
-                "name": "Power supply 1 secondary hotspot sensor"
-            },
-            {
-                "name": "Power supply 1 primary hotspot sensor"
-            },
-            {
-                "name": "Power supply 2 inlet temp sensor"
-            },
-            {
-                "name": "Power supply 2 secondary hotspot sensor"
-            },
-            {
-                "name": "Power supply 2 primary hotspot sensor"
+                "name": "Power supply 2 exhaust temp sensor",
+                "controllable": false
             }
         ],
         "sfps": [
@@ -2152,6 +2152,24 @@
                     "Ethernet64/6",
                     "Ethernet64/7",
                     "Ethernet64/8"
+                ]
+            }
+        },
+        "Ethernet512": {
+            "index": "65",
+            "lanes": "258",
+            "breakout_modes": {
+                "1x10G": [
+                    "Ethernet65"
+                ]
+            }
+        },
+        "Ethernet513": {
+            "index": "66",
+            "lanes": "257",
+            "breakout_modes": {
+                "1x10G": [
+                    "Ethernet66"
                 ]
             }
         }
