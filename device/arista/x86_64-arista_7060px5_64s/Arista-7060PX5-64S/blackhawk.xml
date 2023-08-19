@@ -4,12 +4,6 @@
   <phy_addr>0</phy_addr>
   <mode>retimer</mode>
   <topology>1</topology>
-  <tx-taps>
-      <PAM4>2,-8,17,0,0</PAM4>
-      <NRZ>0,-8,17,0,0</NRZ>
-   </tx-taps>
-   <tx-taps-scale>0,0,1,0,0</tx-taps-scale>
-
   <lane id="0" tx-polarity="0" rx-polarity="0" />
   <lane id="1" tx-polarity="0" rx-polarity="0" />
   <lane id="2" tx-polarity="0" rx-polarity="0" />
@@ -26,4 +20,23 @@
   <lane id="13" tx-polarity="0" rx-polarity="0" />
   <lane id="14" tx-polarity="0" rx-polarity="0" />
   <lane id="15" tx-polarity="0" rx-polarity="0" />
+
+  <PAM4>
+    <lane id="0" tx-taps="0,0,-8,117,-2,0,0"/>
+    <lane id="1" tx-taps="0,0,-8,117,-2,0,0"/>
+    <lane id="2" tx-taps="0,0,-8,117,-2,0,0"/>
+    <lane id="3" tx-taps="0,0,-8,117,-2,0,0"/>
+    <lane id="4" tx-taps="0,0,-8,117,-2,0,0"/>
+    <lane id="5" tx-taps="0,0,-8,117,-2,0,0"/>
+    <lane id="6" tx-taps="0,0,-8,117,-2,0,0"/>
+    <lane id="7" tx-taps="0,0,-8,117,-2,0,0"/>
+    <lane id="8" tx-taps="0,10,-22,93,-2,0,0"/>
+    <lane id="9" tx-taps="0,10,-22,93,-2,0,0"/>
+    <lane id="10" tx-taps="0,10,-22,93,-2,0,0"/>
+    <lane id="11" tx-taps="0,10,-22,93,-2,0,0"/>
+    <lane id="12" tx-taps="0,10,-22,93,-2,0,0"/>
+    <lane id="13" tx-taps="0,10,-22,93,-2,0,0"/>
+    <lane id="14" tx-taps="0,10,-22,93,-2,0,0"/>
+    <lane id="15" tx-taps="0,10,-22,93,-2,0,0"/>
+  </PAM4>
 </root>

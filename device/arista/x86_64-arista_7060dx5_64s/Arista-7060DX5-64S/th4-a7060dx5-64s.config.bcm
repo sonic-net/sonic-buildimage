@@ -34,7 +34,7 @@ bcm_device:
             sai_field_group_auto_prioritize: 1
             #l3_intf_vlan_split_egress for MTU at L3IF
             l3_intf_vlan_split_egress : 1
-
+            bcm_tunnel_term_compatible_mode: 1
 ---
 device:
     0:
@@ -1073,6 +1073,14 @@ device:
                 PORT_ID: 258
             :
                 PC_PHYS_PORT_ID: 253
+            ?
+                PORT_ID: 152
+            :
+                PC_PHYS_PORT_ID: 257
+            ?
+                PORT_ID: 50
+            :
+                PC_PHYS_PORT_ID: 258
 ...
 ---
 device:
@@ -1083,6 +1091,13 @@ device:
             :
                 &port_mode_10g
                 ENABLE: 1
+                SPEED: 10000
+                NUM_LANES: 1
+            ?
+                PORT_ID: [[50, 50], [152, 152]]
+            :
+                ENABLE: 1
+                MAX_FRAME_SIZE: 9416
                 SPEED: 10000
                 NUM_LANES: 1
             ?
@@ -1103,7 +1118,7 @@ device:
                           [238, 241],
                           [255, 258]]
             :
-                ENABLE: 1
+                ENABLE: 0
                 SPEED: 400000
                 NUM_LANES: 8
                 FEC_MODE: PC_FEC_RS544_2XN
