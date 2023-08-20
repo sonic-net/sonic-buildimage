@@ -1,4 +1,4 @@
-async-timeout==4.0.2
+async-timeout==4.0.3
 bitarray==1.5.3
 ijson==2.6.1
 importlib-metadata==6.7.0
@@ -12,7 +12,7 @@ pyangbind==0.8.1
 pyyaml==5.4.1
 redis==4.5.4
 redis-dump-load==1.1
-regex==2023.6.3
+regex==2023.8.8
 six==1.16.0
 tabulate==0.8.2
 typing_extensions==4.7.1

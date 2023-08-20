@@ -16,7 +16,7 @@ libpopt0==1.16-12
 libswsscommon-dbgsym==1.0.0
 libunwind8==1.2.1-10~deb10u1
 libxml2==2.9.4+dfsg1-7+deb10u6
-openssh-client==1:7.9p1-10+deb10u2
+openssh-client==1:7.9p1-10+deb10u3
 sonic-mgmt-common==1.0.0
 sonic-mgmt-framework==1.0-01
 sonic-mgmt-framework-dbg==1.0-01

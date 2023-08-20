@@ -13,7 +13,7 @@ fontconfig-config==2.13.1-4.2
 fonts-dejavu-core==2.37-2
 fonts-font-awesome==5.0.10+really4.7.0~dfsg-4.1
 fonts-lato==2.0-2.1
-frr==8.2.2-sonic-0
+frr==8.5.1-sonic-0
 gettext-base==0.21-4
 gir1.2-glib-2.0==1.66.1-1+b1
 gnupg==2.2.27-2+deb11u2
@@ -98,7 +98,7 @@ libxml2==2.9.10+dfsg-6.7+deb11u4
 libxml2-dev==2.9.10+dfsg-6.7+deb11u4
 libyang2==2.0.112-6
 libzmq3-dev==4.3.4-1
-linux-libc-dev==5.10.179-2
+linux-libc-dev==5.10.179-5
 logrotate==3.18.0-2+deb11u1
 lsof==4.93.2+dfsg-1.1
 mailcap==3.69

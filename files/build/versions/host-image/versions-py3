@@ -51,7 +51,7 @@ pyangbind==0.8.1
 pycairo==1.24.0
 pycparser==2.21
 pycurl==7.43.0.6
-pygments==2.15.1
+pygments==2.16.1
 pygobject==3.44.1
 pynacl==1.5.0
 pyroute2==0.5.19
@@ -59,7 +59,7 @@ python-apt==2.2.1
 python-dateutil==2.8.2
 pyyaml==5.4.1
 redis==3.5.3
-regex==2023.6.3
+regex==2023.8.8
 requests==2.31.0
 scapy==2.4.4
 semantic-version==2.10.0
@@ -69,7 +69,7 @@ systemd-python==235
 tabulate==0.8.2
 thrift==0.13.0
 toposort==1.6
-urllib3==1.26.16
+urllib3==2.0.4
 watchdog==0.10.3
 wcwidth==0.2.6
 websocket-client==1.6.1

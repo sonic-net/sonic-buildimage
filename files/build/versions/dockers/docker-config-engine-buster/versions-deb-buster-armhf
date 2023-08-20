@@ -9,6 +9,6 @@ libxml2==2.9.4+dfsg1-7+deb10u6
 libxml2-dev==2.9.4+dfsg1-7+deb10u6
 libxslt1-dev==1.1.32-2.2~deb10u2
 libxslt1.1==1.1.32-2.2~deb10u2
-linux-libc-dev==4.19.282-1
+linux-libc-dev==4.19.289-2
 pkg-config==0.29-6
 zlib1g-dev==1:1.2.11.dfsg-1+deb10u2
