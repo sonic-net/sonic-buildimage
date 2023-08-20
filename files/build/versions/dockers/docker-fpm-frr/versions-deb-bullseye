@@ -1,8 +1,8 @@
 cron==3.0pl1-137
-frr==8.2.2-sonic-0
-frr-dbgsym==8.2.2-sonic-0
-frr-snmp==8.2.2-sonic-0
-frr-snmp-dbgsym==8.2.2-sonic-0
+frr==8.5.1-sonic-0
+frr-dbgsym==8.5.1-sonic-0
+frr-snmp==8.5.1-sonic-0
+frr-snmp-dbgsym==8.5.1-sonic-0
 gdb==10.1-1.7
 gdbserver==10.1-1.7
 libbabeltrace1==1.5.8-1+b3

@@ -18,9 +18,7 @@ libipt2==2.0.3-1
 libkmod2==28-1
 libmpfr6==4.1.0-3
 libsaimetadata==1.0.0
-libsaimetadata-dbg==1.0.0
 libsairedis==1.0.0
-libsairedis-dbg==1.0.0
 libsource-highlight-common==3.1.9-3
 libsource-highlight4v5==3.1.9-3+b1
 libswsscommon-dbgsym==1.0.0
@@ -30,6 +28,5 @@ openssh-client==1:8.4p1-5+deb11u1
 sshpass==1.09-1+b1
 strace==5.10-1
 syncd==1.0.0
-syncd-dbg==1.0.0
 vim==2:8.2.2434-3+deb11u1
 vim-runtime==2:8.2.2434-3+deb11u1

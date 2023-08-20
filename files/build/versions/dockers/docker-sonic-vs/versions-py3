@@ -28,7 +28,7 @@ prettyprinter==0.18.0
 ptyprocess==0.7.0
 pycairo==1.24.0
 pycparser==2.21
-pygments==2.15.1
+pygments==2.16.1
 pygobject==3.44.1
 pynacl==1.5.0
 pyroute2==0.5.14
@@ -39,7 +39,7 @@ semantic-version==2.10.0
 systemd-python==235
 toposort==1.6
 typing_extensions==4.5.0
-urllib3==1.26.16
+urllib3==2.0.4
 wcwidth==0.2.6
 websocket-client==1.6.1
 www-authenticate==0.9.2

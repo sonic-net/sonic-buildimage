@@ -42,7 +42,7 @@ libsasl2-modules-db==2.1.27+dfsg-1+deb10u2
 libsodium23==1.0.17-1
 libsqlite3-0==3.27.2-3+deb10u2
 libssh2-1==1.8.0-2.1
-libssl1.1==1.1.1n-0+deb10u5
+libssl1.1==1.1.1n-0+deb10u6
 libwrap0==7.6.q-28
 libzmq5==4.3.1-4+deb10u2
 lsb-base==10.2019051400
@@ -50,7 +50,7 @@ lua-bitop==1.0.2-5
 lua-cjson==2.1.0+dfsg-2.1
 mime-support==3.62
 net-tools==1.60+git20180626.aebd88e-1
-openssl==1.1.1n-0+deb10u5
+openssl==1.1.1n-0+deb10u6
 perl==5.28.1-6+deb10u1
 perl-modules-5.28==5.28.1-6+deb10u1
 procps==2:3.3.15-2

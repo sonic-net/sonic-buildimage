@@ -6,7 +6,7 @@ packet-helper==0.0.1
 psutil==5.9.5
 ptf==0.0.0
 pyperclip==1.8.2
-pysubnettree==0.35
+pysubnettree==0.37
 scapy-helper==0.14.8
 tabulate==0.8.10
 thrift==0.14.1
