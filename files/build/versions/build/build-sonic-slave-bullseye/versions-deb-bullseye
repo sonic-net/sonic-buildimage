@@ -24,6 +24,7 @@ libsairedis==1.0.0
 libsairedis-dev==1.0.0
 libsaithrift-dev==0.9.4
 libsaivs==1.0.0
+libsaivs-dev==1.0.0
 libswsscommon==1.0.0
 libswsscommon-dev==1.0.0
 libtac-dev==1.4.1-1
