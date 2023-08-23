@@ -128,14 +128,14 @@ module sonic-acl {
 					}
 				}
 
-				leaf-list IN_PORTS {
-					/* Values in leaf list are UNIQUE */
-					type uint16;
+				leaf IN_PORTS {
+					/* Values is a list of SONiC port name (/port:sonic-port/port:PORT/port:PORT_LIST/port:name) joined by comma */
+					type string;
 				}
 
-				leaf-list OUT_PORTS {
-					/* Values in leaf list are UNIQUE */
-					type uint16;
+				leaf OUT_PORTS {
+					/* Values is a list of SONiC port name (/port:sonic-port/port:PORT/port:PORT_LIST/port:name) joined by comma */
+					type string;
 				}
 
 				choice src_port {

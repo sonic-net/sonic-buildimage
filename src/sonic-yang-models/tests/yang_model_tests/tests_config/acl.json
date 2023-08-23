@@ -482,6 +482,114 @@
             }
         }
     },
+    "ACL_RULE_WITH_VALID_IN_PORTS": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "NO-NSW-PACL-V4",
+                        "IN_PORTS": "Ethernet0,Ethernet1",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 9999,
+                        "RULE_NAME": "Rule_20",
+                        "SRC_IPV6": "2001::1/64"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "NO-NSW-PACL-V4",
+                        "policy_desc": "Filter IPv4",
+                        "ports": [
+                            "Ethernet0",
+                            "Ethernet1"
+                        ],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth1",
+                        "description": "Ethernet1",
+                        "lanes": "4,5,6,7",
+                        "mtu": 9000,
+                        "name": "Ethernet1",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_WITH_VALID_OUT_PORTS": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "NO-NSW-PACL-V4",
+                        "OUT_PORTS": "Ethernet0,Ethernet1",
+                        "PACKET_ACTION": "FORWARD",
+                        "PRIORITY": 9999,
+                        "RULE_NAME": "Rule_20",
+                        "SRC_IPV6": "2001::1/64"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "NO-NSW-PACL-V4",
+                        "policy_desc": "Filter IPv4",
+                        "ports": [
+                            "Ethernet0",
+                            "Ethernet1"
+                        ],
+                        "stage": "EGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    },
+                    {
+                        "admin_status": "up",
+                        "alias": "eth1",
+                        "description": "Ethernet1",
+                        "lanes": "4,5,6,7",
+                        "mtu": 9000,
+                        "name": "Ethernet1",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
     "ACL_TABLE_DEFAULT_VALUE_STAGE": {
         "sonic-acl:sonic-acl": {
             "sonic-acl:ACL_TABLE": {
