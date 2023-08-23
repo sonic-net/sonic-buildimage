@@ -84,46 +84,58 @@ class TestWatchdog:
         mock_exists.return_value = test_para
         assert is_wd_type2('') is test_para
 
-    @mock.patch('sonic_platform.watchdog.WatchdogImplBase.open_handle', mock.MagicMock())
-    @mock.patch('sonic_platform.watchdog.fcntl.ioctl', mock.MagicMock())
-    def test_arm_disarm_watchdog2(self):
+    @mock.patch('sonic_platform.utils.read_str_from_file')
+    def test_is_armed(self, mock_read):
         watchdog = WatchdogType2('watchdog2')
-        assert watchdog.arm(-1) == -1
+        mock_read.return_value = 'inactive'
         assert not watchdog.is_armed()
-        watchdog.arm(10)
+        mock_read.return_value = 'active'
         assert watchdog.is_armed()
-        watchdog.arm(5)
-        assert watchdog.is_armed()
-        watchdog.disarm()
-        assert not watchdog.is_armed()
 
     @mock.patch('sonic_platform.watchdog.WatchdogImplBase.open_handle', mock.MagicMock())
     @mock.patch('sonic_platform.watchdog.fcntl.ioctl', mock.MagicMock())
-    def test_arm_disarm_watchdog1(self):
+    @mock.patch('sonic_platform.watchdog.WatchdogImplBase.is_armed')
+    def test_arm_disarm_watchdog2(self, mock_is_armed):
+        watchdog = WatchdogType2('watchdog2')
+        assert watchdog.arm(-1) == -1
+        mock_is_armed.return_value = False
+        watchdog.arm(10)
+        mock_is_armed.return_value = True
+        watchdog.arm(5)
+        watchdog.disarm()
+
+    @mock.patch('sonic_platform.watchdog.WatchdogImplBase.open_handle', mock.MagicMock())
+    @mock.patch('sonic_platform.watchdog.fcntl.ioctl', mock.MagicMock())
+    @mock.patch('sonic_platform.watchdog.WatchdogImplBase.is_armed')
+    def test_arm_disarm_watchdog1(self, mock_is_armed):
         watchdog = WatchdogType1('watchdog1')
         assert watchdog.arm(-1) == -1
-        assert not watchdog.is_armed()
+        mock_is_armed.return_value = False
         watchdog.arm(10)
-        assert watchdog.is_armed()
+        mock_is_armed.return_value = True
         watchdog.arm(5)
-        assert watchdog.is_armed()
         watchdog.disarm()
-        assert not watchdog.is_armed()
 
     @mock.patch('sonic_platform.watchdog.WatchdogImplBase.open_handle', mock.MagicMock())
     @mock.patch('sonic_platform.watchdog.fcntl.ioctl', mock.MagicMock())
     @mock.patch('sonic_platform.watchdog.WatchdogImplBase._gettimeleft', mock.MagicMock(return_value=10))
-    def test_get_remaining_time_watchdog2(self):
+    @mock.patch('sonic_platform.watchdog.WatchdogImplBase.is_armed')
+    def test_get_remaining_time_watchdog2(self, mock_is_armed):
         watchdog = WatchdogType2('watchdog2')
+        mock_is_armed.return_value = False
         assert watchdog.get_remaining_time() == -1
         watchdog.arm(10)
+        mock_is_armed.return_value = True
         assert watchdog.get_remaining_time() == 10
 
     @mock.patch('sonic_platform.watchdog.WatchdogImplBase.open_handle', mock.MagicMock())
     @mock.patch('sonic_platform.watchdog.fcntl.ioctl', mock.MagicMock())
     @mock.patch('sonic_platform.watchdog.WatchdogImplBase._gettimeleft', mock.MagicMock(return_value=10))
-    def test_get_remaining_time_watchdog1(self):
+    @mock.patch('sonic_platform.watchdog.WatchdogImplBase.is_armed')
+    def test_get_remaining_time_watchdog1(self, mock_is_armed):
         watchdog = WatchdogType1('watchdog2')
+        mock_is_armed.return_value = False
         assert watchdog.get_remaining_time() == -1
         watchdog.arm(10)
+        mock_is_armed.return_value = True
         assert watchdog.get_remaining_time() > 0
