@@ -14,6 +14,12 @@
         "eStrKey" : "Mandatory",
         "eStr": ["ACL_RULE", "PRIORITY"]
     },
+    "ACL_RULE_WITH_VALID_IN_PORTS": {
+        "desc": "Configure ACL_RULE with valid IN_PORTS."
+    },
+    "ACL_RULE_WITH_VALID_OUT_PORTS": {
+        "desc": "Configure ACL_RULE with valid OUT_PORTS."
+    },
     "ACL_TABLE_EMPTY_PORTS": {
         "desc": "Configure ACL_TABLE with empty ports."
     },
