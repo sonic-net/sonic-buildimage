@@ -2,7 +2,11 @@
 ! template: bgpd/templates/msft.monitors/instance.conf.j2
 !
   neighbor {{ neighbor_addr }} remote-as {{ bgp_asn }}
+{% if neighbor_addr | ipv6 %}
+  neighbor {{ neighbor_addr }} peer-group BGPMON_V6
+{% else %}
   neighbor {{ neighbor_addr }} peer-group BGPMON
+{% endif %}
   neighbor {{ neighbor_addr }} description {{ bgp_session['name'] }}
   neighbor {{ neighbor_addr }} activate
   address-family ipv6

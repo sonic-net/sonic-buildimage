@@ -12,6 +12,15 @@
          <KeepAliveTime>3</KeepAliveTime>
       </BGPSession>
       <BGPSession>
+         <StartRouter>switch-t0</StartRouter>
+         <StartPeer>fc00:1::32</StartPeer>
+         <EndRouter>BGPMonitor</EndRouter>
+         <EndPeer>2064:100::20</EndPeer>
+         <Multihop>30</Multihop>
+         <HoldTime>10</HoldTime>
+         <KeepAliveTime>3</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
         <MacSec>false</MacSec>
         <StartRouter>switch-t0</StartRouter>
         <StartPeer>10.0.0.56</StartPeer>

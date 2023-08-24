@@ -1,0 +1,12 @@
+{
+    "bgp_asn": "555",
+    "neighbor_addr": "fc00:1::32",
+    "bgp_session": {
+        "name": "monitor"
+    },
+    "constants": {
+        "deployment_id_asn_map": {
+            "5": "51111"
+        }
+    }
+}
