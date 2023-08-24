@@ -33,22 +33,6 @@ SYSTEM_LED_REG          = 0x24
 SYSTEM_BEACON_LED_SET   = 0x8
 SYSTEM_BEACON_LED_CLEAR = 0xFFFFFFF7
 
-media_part_num_list = set([ \
-"8T47V","XTY28","MHVPK","GF76J","J6FGD","F1KMV","9DN5J","H4DHD","6MCNV","0WRX0","X7F70","5R2PT","WTRD1","WTRD1","WTRD1","WTRD1","5250G","WTRD1","C5RNH","C5RNH","FTLX8571D3BCL-FC",
-"C5RNH","5250G","N8TDR","7D64H","7D64H","RN84N","RN84N","HMTNW","6K3Y6","6K3Y6","TY5FM","50M0R","PGYJT","WP2PP","85Y13","1HCGH","FP9R1","FYD0M","C6Y7M","C6Y7M","V250M","V250M",
-"5CWK6","5CWK6","53HVN","53HVN","358VV","358VV","MV799","MV799","YJF03","P9GND","T1KCN","1DXKP","MT7R2","K0T7R","W5G04","7TCDN","7TCDN","7TCDN","7TCDN","7TCDN","V3XJK","0MV31",
-"5FVP7","N6KM9","C41MF","77KC3","XW7J0","V4NJV","2XJHY","H93DH","H93DH","F8CG0","F8CG0","F8CG0","119N6","WFMF5","794RX","288F6","1M31V","1M31V","5NP8R","5NP8R","4TC09","4TC09",
-"FC6KV","FC6KV","J90VN","J90VN","05RH0","05RH0","YDN52","0C2YV","YDN52","0C2YV","9JT65","D7M6H","6GW14","FYVFW","0VF5H","P4YPY","P4YPY","TCPM2","TCPM2","JNPF8","JNPF8","27GG5",
-"27GG5","P8T4W","P8T4W","JR54Y","M6N0J","XJYD0","K44H9","035KG","P7C7N","76V43","3CC35","FN4FC","26FN3","YFNDD","YFNDD","7R9N9","035KG","P7C7N","76V43","3CC35","PLRXPLSCS43811",
-"FN4FC","26FN3","YFNDD","YFNDD","7R9N9","G86YJ","V407F","V407F","9KH6T","G86YJ","V407F","9KH6T","2JVDD","D0R73","VXFJY","9X8JP","2JVDD","D0R73","VXFJY","9X8JP","2JVDD","D0R73","VXFJY",
-"9X8JP","GMFC5","GMFC5","GMFC5","D7P80","3MFXG","3MFXG","0GWXJ","THPF3","THPF3","THPF3","THPF3","THPF3","PJ62G","3XCX1","JJYKG","RRRTK","16K56","86JM2","K5R6C","7MG2C","WTPPN","9HTT2",
-"NKM4F","VXGGG","JC9W6","6MR8M","RP3GV","M5PPJ","XKY55","TKCXT","05J8P","5WGKD","XFDRT","NW8DM","YPKH3","5WGKD","XFDRT","NW8DM","YPKH3","71XXK","MVCX6","0XYP6","HPPVW","3GHRT","71XXK",
-"MVCX6","0XYP6","HPPVW","3GHRT","2X5T6","135V2","KD5MV","2X5T6","KD5MV","HHFK0","3YWG7","5CMT2","RCVP5","X5DH4","HHFK0","3YWG7","5CMT2","RCVP5","X5DH4","3YWG7","5CMT2","RCVP5","X5DH4",
-"4WJ41","4WJ41","14NV5","14NV5","14NV5","4WGYD","YKMH7","X7CCC","X7CCC","0X9CT","0CY8V","P7D7R","W4GPP","W4GPP","W4GPP","HHHCHC","07RN7","07RN7","0YR96","0YR96","JCYM9","FTLX8571D3BCL",
-"DDW0X","VPFDJ","229KM","9FC7D","DDW0X","VPFDJ","6FMR5","J7K20","N3K9W","6FMR5","8R4VM","7VN5T","D9YM8","8R4VM","VYXPW","87TPX","WY6FK","VYXPW","87TPX","WY6FK","WG8C4","N8K82","2DV6Y",
-"77C3C","RC0HM","77C3C","RC0HM","JHXTN","3P3PG","92YVM","4VX5M","4VX5M","6RRGD","W4JWV","22V6R","XR11M","9GMDY","JMCWK","TP2F0","6MGDY","78RHK", "C0TP5","0WDNV","FCLF8522P2BTL"\
-])
-
 class Chassis(ChassisBase):
     """
     DELLEMC Platform-specific Chassis class
@@ -59,7 +43,6 @@ class Chassis(ChassisBase):
     PCI_RES = "/sys/bus/pci/devices/0000:04:00.0/resource0"
     oir_fd = -1
 
-    sysled_offset = 0x0024
     SYSLED_COLOR_TO_REG = {
         "blinking_green": 0x0,
         "green"         : 0x10,
@@ -272,6 +255,9 @@ class Chassis(ChassisBase):
         """
         return True
 
+    def initizalize_system_led(self):
+        self.sys_ledcolor = "green"
+
     def set_status_led(self, color):
         """
         Sets the state of the system LED
@@ -284,10 +270,10 @@ class Chassis(ChassisBase):
         if color not in list(self.SYSLED_COLOR_TO_REG.keys()):
             return False
 
-        val = pci_get_value(self.PCI_RES, self.sysled_offset)
+        val = pci_get_value(self.PCI_RES, SYSTEM_LED_REG)
         val = (val & 0xFFCF) | self.SYSLED_COLOR_TO_REG[color]
 
-        pci_set_value(self.PCI_RES, val, self.sysled_offset)
+        pci_set_value(self.PCI_RES, val, SYSTEM_LED_REG)
         self.sys_ledcolor = color
         return True
 
@@ -298,7 +284,7 @@ class Chassis(ChassisBase):
             A string, one of the valid LED color strings which could be
             vendor specified.
         """
-        val = pci_get_value(self.PCI_RES, self.sysled_offset)
+        val = pci_get_value(self.PCI_RES, SYSTEM_LED_REG)
         if val != -1:
             val = val & 0x30
             return self.REG_TO_SYSLED_COLOR.get(val)
@@ -399,9 +385,6 @@ class Chassis(ChassisBase):
             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Reset Button Cold Reboot")
         else:
             return (self.REBOOT_CAUSE_NON_HARDWARE, None)
-
-    def get_qualified_media_list(self):
-        return media_part_num_list
 
     def set_locator_led(self, color):
         """
