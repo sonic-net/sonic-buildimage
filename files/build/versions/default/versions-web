@@ -36,8 +36,8 @@ https://download.docker.com/linux/debian/gpg==1afae06b34a13c1b3d9cb61a26285a15
 https://github.com/aristanetworks/sonic-firmware/raw/446f30ccd8626f904d89d5798da7294948e090a6/phy/phy-credo_1.0_amd64.deb==6c3d6c32477615cbe049b9161ce15bd5
 https://github.com/barefootnetworks/sonic-release-pkgs/raw/dev/bfnplatform_20221130_sai_1.11.0_deb11.deb==4a77e5f35b75ad7ce062f631581b40e2
 https://github.com/barefootnetworks/sonic-release-pkgs/raw/dev/bfnsdk_20221130_sai_1.11.0_deb11.deb==c2b0dfb4122dcdbd4af58826e2010640
-https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==d9f6a4c3197625b1835b523697eb953e
-https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==6105edb638de24bce2c368b8f8f698a4
+https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==0334fd679ec178f14882b73ebc10d7d8
+https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==e07f07d9f758cdcf57ba5d2ff9f3d491
 https://github.com/CentecNetworks/sonic-binaries/raw/master/amd64/sai/libsai-dev_1.11.0-1_amd64.deb==6a9e27b3830d96e980651de15b291933
 https://github.com/CentecNetworks/sonic-binaries/raw/master/amd64/sai/libsai_1.11.0-1_amd64.deb==8bd907c4baeacf6467c0794bee0d723c
 https://github.com/CentecNetworks/sonic-binaries/raw/master/amd64/third_party/advantech/_Susi4.so==5e1b8daef522c9da00af400abe25810b
