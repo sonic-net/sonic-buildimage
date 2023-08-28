@@ -1915,6 +1915,15 @@
                 "pbs": "2048",
                 "pir": "2560000",
                 "type": "STRICT"
+            },
+            "port_scheduler": {
+                "cbs": "256",
+                "cir": "1250000",
+                "meter_type": "bytes",
+                "pbs": "1024",
+                "pir": "25000000",
+                "type": "DWRR",
+                "weight": "10"
             }
 	},
 
@@ -2079,14 +2088,15 @@
         },
         "PORT_QOS_MAP": {
            "Ethernet0": {
-              "dot1p_to_tc_map" : "Dot1p_to_tc_map1",
-              "dscp_to_tc_map": "Dscp_to_tc_map1",
-	          "tc_to_queue_map": "tc_to_q_map1",
-	          "tc_to_pg_map": "tc_to_pg_map1",
-	          "pfc_to_queue_map": "pfc_prio_to_q_map1",
-	          "pfc_to_pg_map"   : "pfc_prio_to_pg_map1",
-	          "pfc_enable"      : "3,4",
-	          "pfcwd_sw_enable" : "3,4"
+               "dot1p_to_tc_map" : "Dot1p_to_tc_map1",
+               "dscp_to_tc_map": "Dscp_to_tc_map1",
+               "tc_to_queue_map": "tc_to_q_map1",
+               "tc_to_pg_map": "tc_to_pg_map1",
+               "pfc_to_queue_map": "pfc_prio_to_q_map1",
+               "pfc_to_pg_map"   : "pfc_prio_to_pg_map1",
+               "pfc_enable"      : "3,4",
+               "pfcwd_sw_enable" : "3,4",
+               "scheduler"       : "port_scheduler"
             },
             "Ethernet4": {
               "dot1p_to_tc_map" : "Dot1p_to_tc_map2",
