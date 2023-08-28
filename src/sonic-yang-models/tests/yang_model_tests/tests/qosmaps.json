@@ -96,6 +96,11 @@
         "eStrKey": "LeafRef"
     },
 
+    "PORT_QOS_MAP_APPLY_NON_EXISTS_SCHEDULER": {
+        "desc": "Configure non exists scheduler on port.",
+        "eStrKey": "LeafRef"
+    },
+
     "PORT_QOS_MAP_APPLY_NON_EXISTS_PORT": {
         "desc": "Configure port qos map entry on non exists port.",
         "eStr": "Invalid value"

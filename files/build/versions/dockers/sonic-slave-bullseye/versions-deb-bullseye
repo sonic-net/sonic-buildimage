@@ -39,7 +39,7 @@ byacc==20140715-1+b1
 bzip2==1.0.8-4
 bzip2-doc==1.0.8-4
 ca-certificates==20210119
-ca-certificates-java==20190909
+ca-certificates-java==20190909+deb11u1
 cdbs==0.4.163
 check==0.15.2-2
 chrpath==0.16-2+b1
@@ -1072,8 +1072,8 @@ librhash0==1.4.1-2
 librole-tiny-perl==2.002004-1
 librrd-dev==1.7.2-3+b7
 librrd8==1.7.2-3+b7
-librsvg2-2==2.50.3+dfsg-1
-librsvg2-common==2.50.3+dfsg-1
+librsvg2-2==2.50.3+dfsg-1+deb11u1
+librsvg2-common==2.50.3+dfsg-1+deb11u1
 librtmp1==2.4+20151223.gitfa8646d.1-2+b2
 librubberband2==1.9.0-1
 libruby2.7==2.7.4-1+deb11u1

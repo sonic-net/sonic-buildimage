@@ -34,6 +34,10 @@ module sonic-port-qos-map {
         prefix dot1ptm;
     }
 
+    import sonic-scheduler {
+        prefix sch;
+    }
+
     organization
         "SONiC";
 
@@ -116,6 +120,13 @@ module sonic-port-qos-map {
                     type leafref {
                         path "/dot1ptm:sonic-dot1p-tc-map/dot1ptm:DOT1P_TO_TC_MAP/dot1ptm:DOT1P_TO_TC_MAP_LIST/dot1ptm:name";
                     }
+                }
+
+                leaf scheduler {
+                    type leafref {
+                        path "/sch:sonic-scheduler/sch:SCHEDULER/sch:SCHEDULER_LIST/sch:name"; //Reference to SCHEDULER table
+                    }
+                    description "Scheduler for port.";
                 }
             }
         }

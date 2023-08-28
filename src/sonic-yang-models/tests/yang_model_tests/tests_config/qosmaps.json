@@ -657,6 +657,24 @@
                 ]
             }
         },
+
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"port_scheduler",
+                    "cbs": "256",
+                    "cir": "1250000",
+                    "meter_type": "bytes",
+                    "pbs": "1024",
+                    "pir": "25000000",
+                    "type": "DWRR",
+                    "weight": "10"
+                }
+                ]
+            }
+        },
+
         "sonic-port-qos-map:sonic-port-qos-map": {
             "sonic-port-qos-map:PORT_QOS_MAP": {
                 "PORT_QOS_MAP_LIST": [
@@ -670,7 +688,8 @@
                         "dscp_to_tc_map": "map1",
                         "dot1p_to_tc_map": "map1",
                         "pfc_enable": "2,3,4,6",
-                        "pfcwd_sw_enable" : "2,3,4,6"
+                        "pfcwd_sw_enable" : "2,3,4,6",
+                        "scheduler" : "port_scheduler"
                     }
                 ]
             }
@@ -745,6 +764,35 @@
                         "dot1p_to_tc_map": "map2",
                         "pfc_enable": "3,4",
                         "pfcwd_sw_enable" : "3,4"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_QOS_MAP_APPLY_NON_EXISTS_SCHEDULER": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet0",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet0",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "scheduler": "scheduler1"
                     }
                 ]
             }
