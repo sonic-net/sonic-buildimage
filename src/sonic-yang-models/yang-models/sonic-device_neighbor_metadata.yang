@@ -83,7 +83,7 @@ module sonic-device_neighbor_metadata {
                 leaf type {
                     description "Network element type";
                     type string {
-                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|Asic|Supervior|MgmtToRRouter|MgmtLeafRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|Server|MiniPower|SmartCable|Ixia|not-provisioned";
+                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|Asic|Supervior|MgmtToRRouter|MgmtLeafRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|Server|Bmc|MiniPower|SmartCable|Ixia|not-provisioned";
                     }
                 }
 

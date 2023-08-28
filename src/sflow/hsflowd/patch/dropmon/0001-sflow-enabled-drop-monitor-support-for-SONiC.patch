@@ -3,47 +3,27 @@ From: Vadym Hlushko <vadymh@nvidia.com>
 Date: Tue, 25 Jan 2022 12:59:40 +0000
 Subject: [PATCH] [sflow] enabled drop monitor support for SONiC
 
-Signed-off-by: Vadym Hlushko <vadymh@nvidia.com>
----
- src/Linux/Makefile                   | 2 +-
- src/Linux/hsflowd.c                  | 8 ++++++++
- src/Linux/scripts/hsflowd.conf.sonic | 2 ++
- 3 files changed, 11 insertions(+), 1 deletion(-)
-
-diff --git a/src/Linux/Makefile b/src/Linux/Makefile
-index 8128cf2..cf538e7 100644
---- a/src/Linux/Makefile
-+++ b/src/Linux/Makefile
-@@ -34,7 +34,7 @@ FEATURES_DENT= DENT PSAMPLE SYSTEMD DROPMON
- FEATURES_EOS= EAPI
- FEATURES_OS10= OS10 DBUS SYSTEMD
- FEATURES_OPX= OPX DBUS SYSTEMD
--FEATURES_SONIC= SONIC PSAMPLE DOCKER
-+FEATURES_SONIC= SONIC PSAMPLE DOCKER DROPMON
- FEATURES_XEN= XEN OVS
- FEATURES_HOST= NFLOG PCAP TCP DOCKER KVM OVS DBUS SYSTEMD
- 
 diff --git a/src/Linux/hsflowd.c b/src/Linux/hsflowd.c
-index 5d94e79..25031d1 100644
+index a29da54..4b6acc1 100644
 --- a/src/Linux/hsflowd.c
 +++ b/src/Linux/hsflowd.c
-@@ -1877,6 +1877,14 @@ extern "C" {
+@@ -1922,6 +1922,14 @@ extern "C" {
      sp->psample.ingress = YES;
-     sp->psample.egress = NO;
-     sp->psample.group = 1;
+     sp->psample.egress = YES;
+     sp->psample.group = 1; // Ingress PSAMPLE group number. Expects egress on (group+1).
 +    // drop-monitor support
 +    myLog(LOG_INFO, "drop-monitor support for SONiC");
 +    sp->dropmon.dropmon = YES;
-+    sp->dropmon.group = 1;
 +    sp->dropmon.start = NO;
 +    sp->dropmon.limit = 1000;
 +    sp->dropmon.sw = NO;
 +    sp->dropmon.hw = YES;
++
  #endif /* HSP_LOAD_SONIC */
  
  #ifdef HSP_LOAD_XEN
 diff --git a/src/Linux/scripts/hsflowd.conf.sonic b/src/Linux/scripts/hsflowd.conf.sonic
-index e675730..fb52a54 100644
+index e675730..0604c5d 100644
 --- a/src/Linux/scripts/hsflowd.conf.sonic
 +++ b/src/Linux/scripts/hsflowd.conf.sonic
 @@ -4,6 +4,8 @@
@@ -55,6 +35,3 @@ index e675730..fb52a54 100644
    # ====== detect new interfaces ======
    refreshAdaptors=60
    # ======  Agent IP selection ======
--- 
-2.17.1
-

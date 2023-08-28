@@ -3,4 +3,9 @@
 . /usr/local/share/buildinfo/scripts/buildinfo_base.sh
 [ -z $REAL_COMMAND ] && REAL_COMMAND=/usr/bin/curl
 
+if [ "$SKIP_BUILD_HOOK" == y ]; then
+    $REAL_COMMAND "$@"
+    exit $?
+fi
+
 REAL_COMMAND=$REAL_COMMAND download_packages "$@"
