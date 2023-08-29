@@ -48,6 +48,7 @@ class Test_yang_models:
             'Range': ['does not satisfy', 'range'],
             'MinElements': ['Too few'],
             'MaxElements': ['Too many'],
+            'UnknownElement': ['Unknown element'],
             'None': []
         }
 

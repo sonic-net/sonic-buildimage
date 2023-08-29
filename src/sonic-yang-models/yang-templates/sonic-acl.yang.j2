@@ -295,17 +295,17 @@ module sonic-acl {
 					type string;
 				}
 
-				leaf-list matches {
+				leaf-list MATCHES {
 					type string;
 					min-elements 1;
 				}
 
-				leaf-list actions {
+				leaf-list ACTIONS {
 					type string;
 					default "";
 				}
 
-				leaf-list bind_points {
+				leaf-list BIND_POINTS {
 					type enumeration {
 						enum PORT;
 						enum LAG;

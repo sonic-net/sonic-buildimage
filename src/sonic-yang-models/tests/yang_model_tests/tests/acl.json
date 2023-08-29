@@ -98,13 +98,17 @@
         "eStrKey": "MinElements"
     },
     "ACL_TABLE_CUSTOM_TABLE_TYPE_NO_ACTIONS": {
-        "desc": "ACL_TABLE LOAD TABLE TYPE SUCCESSFULLY WITH NO ACTIONS.",
+        "desc": "ACL_TABLE LOAD TABLE TYPE WITH NO ACTIONS.",
         "eStrKey" : "Verify",
         "verify": {
             "xpath": "/sonic-acl:sonic-acl/ACL_TABLE_TYPE/ACL_TABLE_TYPE_LIST[ACL_TABLE_TYPE_NAME='CUSTOM_L3']/ACL_TABLE_TYPE_NAME",
-            "key": "sonic-acl:actions",
+            "key": "sonic-acl:ACTIONS",
             "value": [""]
         }
+    },
+    "ACL_TABLE_CUSTOM_TABLE_TYPE_LOWERCASE_KEY": {
+        "desc": "ACL_TABLE LOAD TABLE TYPE WITH KEY ACTIONS/BIND_POINTS/MATCHES WRITTEN IN LOWERCASE.",
+        "eStrKey": "UnknownElement"
     },
     "ACL_TABLE_L2_ACL_FIELDS": {
         "desc": "Configure L2 ACL with proper rule fields"

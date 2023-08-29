@@ -723,14 +723,14 @@
                 "ACL_TABLE_TYPE_LIST": [
                     {
                         "ACL_TABLE_TYPE_NAME": "CUSTOM_L3",
-                        "matches": [
+                        "MATCHES": [
                             "SRC_IP",
                             "IN_PORTS"
                         ],
-                        "actions": [
+                        "ACTIONS": [
                             "PACKET_ACTION"
                         ],
-                        "bind_points": [
+                        "BIND_POINTS": [
                             "PORT"
                         ]
                     }
@@ -772,10 +772,10 @@
                 "ACL_TABLE_TYPE_LIST": [
                     {
                         "ACL_TABLE_TYPE_NAME": "CUSTOM_L3",
-                        "actions": [
+                        "ACTIONS": [
                             "PACKET_ACTION"
                         ],
-                        "bind_points": [
+                        "BIND_POINTS": [
                             "PORT"
                         ]
                     }
@@ -817,11 +817,11 @@
                 "ACL_TABLE_TYPE_LIST": [
                     {
                         "ACL_TABLE_TYPE_NAME": "CUSTOM_L3",
-                        "matches": [
+                        "MATCHES": [
                             "SRC_IP",
                             "IN_PORTS"
                         ],
-                        "actions": [
+                        "ACTIONS": [
                             "PACKET_ACTION"
                         ]
                     }
@@ -863,9 +863,58 @@
                 "ACL_TABLE_TYPE_LIST": [
                     {
                         "ACL_TABLE_TYPE_NAME": "CUSTOM_L3",
+                        "MATCHES": [
+                            "SRC_IP",
+                            "IN_PORTS"
+                        ],
+                        "BIND_POINTS": [
+                            "PORT"
+                        ]
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "0,1,2,3",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_TABLE_CUSTOM_TABLE_TYPE_LOWERCASE_KEY": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "NO-NSW-PACL-V6",
+                        "policy_desc": "Filter IPv6",
+                        "ports": [
+                            "Ethernet0"
+                        ],
+                        "stage": "EGRESS",
+                        "type": "CUSTOM_L3"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE_TYPE": {
+                "ACL_TABLE_TYPE_LIST": [
+                    {
+                        "ACL_TABLE_TYPE_NAME": "CUSTOM_L3",
                         "matches": [
                             "SRC_IP",
                             "IN_PORTS"
+                        ],
+                        "actions": [
+                            "PACKET_ACTION"
                         ],
                         "bind_points": [
                             "PORT"
