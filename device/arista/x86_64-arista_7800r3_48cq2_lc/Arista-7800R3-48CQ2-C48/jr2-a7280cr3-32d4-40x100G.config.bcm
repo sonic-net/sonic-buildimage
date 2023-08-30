@@ -860,3 +860,4 @@ dma_desc_aggregator_timeout_usec.BCM8869X=1000
 dma_desc_aggregator_enable_specific_MDB_LPM.BCM8869X=1
 dma_desc_aggregator_enable_specific_MDB_FEC.BCM8869X=1
 sai_pfc_dlr_init_capability=0 
+sai_default_cpu_tx_tc=7

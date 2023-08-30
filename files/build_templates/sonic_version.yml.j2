@@ -30,3 +30,8 @@ built_by: {{ built_by }}
 asan: 'yes'
 {% endif -%}
 sonic_os_version: {{ sonic_os_version }}
+{% if SECURE_UPGRADE_MODE == "dev" or SECURE_UPGRADE_MODE == "prod" -%}
+secure_boot_image: 'yes'
+{% else -%}
+secure_boot_image: 'no'
+{% endif -%}

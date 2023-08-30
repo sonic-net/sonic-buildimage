@@ -1031,3 +1031,4 @@ serdes_tx_taps_36=nrz:-7:85:-25:0:0:0
 xflow_macsec_secure_chan_to_num_secure_assoc_encrypt=2
 xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=4
 sai_pfc_dlr_init_capability=0
+sai_default_cpu_tx_tc=7

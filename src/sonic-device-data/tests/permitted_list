@@ -348,3 +348,4 @@ svi_my_station_optimization
 sai_nbr_bcast_ifp_optimized
 sai_pfc_defaults_disable
 sai_optimized_mmu
+sai_default_cpu_tx_tc

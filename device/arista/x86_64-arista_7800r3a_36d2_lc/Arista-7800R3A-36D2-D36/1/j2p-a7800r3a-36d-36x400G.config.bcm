@@ -1051,3 +1051,4 @@ appl_param_nof_ports_per_modid=64
 xflow_macsec_secure_chan_to_num_secure_assoc_encrypt=2
 xflow_macsec_secure_chan_to_num_secure_assoc_decrypt=4
 sai_pfc_dlr_init_capability=0
+sai_default_cpu_tx_tc=7
