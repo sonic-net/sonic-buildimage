@@ -15,13 +15,34 @@ trigger: none
 pr: none
 
 jobs:
-- job: Build
+- job: Amd
   pool: sonicbld
   timeoutInMinutes: 5
   steps:
   - checkout: none
   - script: |
-      set -xe
+      df -h
       sudo find /nfs/dpkg_cache/ -name *.tgz -mtime +30 -type f -delete
+      df -h
     displayName: clean dpkg cache
-    
+- job: Armhf
+  pool: sonicbld-armhf
+  timeoutInMinutes: 5
+  steps:
+  - checkout: none
+  - script: |
+      df -h
+      sudo find /nfs/dpkg_cache/ -name *.tgz -mtime +30 -type f -delete
+      df -h
+    displayName: clean dpkg cache
+- job: Arm64
+  pool: sonicbld-arm64
+  timeoutInMinutes: 5
+  steps:
+  - checkout: none
+  - script: |
+      df -h
+      sudo find /nfs/dpkg_cache/ -name *.tgz -mtime +30 -type f -delete
+      df -h
+    displayName: clean dpkg cache
+

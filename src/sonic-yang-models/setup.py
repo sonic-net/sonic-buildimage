@@ -178,7 +178,6 @@ setup(
                          './yang-models/sonic-dscp-fc-map.yang',
                          './yang-models/sonic-exp-fc-map.yang',
                          './yang-models/sonic-dscp-tc-map.yang',
-                         './yang-models/sonic-dhcp-server-ipv4.yang',
                          './yang-models/sonic-dot1p-tc-map.yang',
                          './yang-models/sonic-storm-control.yang',
                          './yang-models/sonic-tc-priority-group-map.yang',
