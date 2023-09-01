@@ -661,6 +661,7 @@ mock_srv_props={
 @patch('health_checker.sysmonitor.Sysmonitor.run_systemctl_show', MagicMock(return_value=mock_srv_props['mock_bgp.service']))
 @patch('health_checker.sysmonitor.Sysmonitor.get_app_ready_status', MagicMock(return_value=('Down','-','-')))
 @patch('health_checker.sysmonitor.Sysmonitor.post_unit_status', MagicMock())
+@patch('health_checker.sysmonitor.Sysmonitor.publish_system_status', MagicMock())
 def test_check_unit_status():
     sysmon = Sysmonitor()
     sysmon.check_unit_status('mock_bgp.service')
@@ -761,14 +762,31 @@ def test_post_system_status():
     print("post system status result:{}".format(result))
     assert result == "UP"
 
-@patch('health_checker.sysmonitor.Sysmonitor.publish_system_status', MagicMock())
-@patch('health_checker.sysmonitor.Sysmonitor.post_system_status', test_post_system_status())
+    sysmon.post_system_status("DOWN")
+    result = swsscommon.SonicV2Connector.get(MockConnector, 0, "SYSTEM_READY|SYSTEM_STATE", 'Status')
+    print("post system status result:{}".format(result))
+    assert result == "DOWN"
+
+@patch('health_checker.sysmonitor.Sysmonitor.print_console_message', MagicMock())
+@patch('health_checker.sysmonitor.Sysmonitor.post_system_status', MagicMock())
+def test_publish_system_status_allowed_status():
+    sysmon = Sysmonitor()
+    sysmon.publish_system_status('UP')
+    sysmon.publish_system_status('DOWN')
+    
+    expected_calls = [
+        (("UP",), {}),
+        (("DOWN",), {})
+    ]
+    for call_args in sysmon.post_system_status.call_args_list:
+        assert call_args in expected_calls
+
 @patch('health_checker.sysmonitor.Sysmonitor.print_console_message', MagicMock())
 def test_publish_system_status():
     sysmon = Sysmonitor()
     sysmon.publish_system_status('UP')
     result = swsscommon.SonicV2Connector.get(MockConnector, 0, "SYSTEM_READY|SYSTEM_STATE", 'Status')
-    assert result == "UP"
+    assert result == "UP" 
 
 @patch('health_checker.sysmonitor.Sysmonitor.get_all_system_status', test_get_all_system_status_ok())
 @patch('health_checker.sysmonitor.Sysmonitor.publish_system_status', test_publish_system_status())

@@ -1,0 +1,878 @@
+{
+    "DHCP_SERVER_IPV4_VALID_FORMAT": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel1",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "etp1",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "1",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "customized_options": [
+                            "option60"
+                        ],
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "text",
+                        "value": "dummy_value"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "range1",
+                        "range": [
+                            "192.168.0.2",
+                            "192.168.0.3"
+                        ]
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_PORT": {
+                "DHCP_SERVER_IPV4_PORT_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "port": "Ethernet0",
+                        "ranges": [
+                            "range1"
+                        ]
+                    },
+                    {
+                        "name": "Vlan1000",
+                        "port": "PortChannel1",
+                        "ips": [
+                            "192.168.0.4"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_WITH_INVALID_VLAN": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan8090",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "state": "enabled"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_INCORRECT_GATEWAY": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.300",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "customized_options": [],
+                        "state": "enabled"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_INCORRECT_NETMASK": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.300",
+                        "customized_options": [],
+                        "state": "enabled"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_STATE_WRONG_VALUE": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "state": "dis-abled"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_MODE_WRONG_VALUE": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "pool",
+                        "netmask": "255.255.255.0",
+                        "state": "enabled"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SREVER_IPV4_NON_EXIST_OPTION": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "text",
+                        "value": "dummy_value"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "customized_options": [
+                            "option61"
+                        ],
+                        "state": "enabled"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_PORT_WITH_NO_EXIST_NAME": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "etp1",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "1",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "customized_options": [
+                            "option60"
+                        ],
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "text",
+                        "value": "dummy_value"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_PORT": {
+                "DHCP_SERVER_IPV4_PORT_LIST": [
+                    {
+                        "name": "Vlan2000",
+                        "port": "Ethernet0",
+                        "ips": [
+                            "192.168.0.4"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_TEXT": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "text",
+                        "value": "dummy_value"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_IPV4_ADDRESS": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "ipv4-address",
+                        "value": "dummy_value"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_UINT8": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "uint8",
+                        "value": "dummy_value"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_UINT16": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "uint16",
+                        "value": "dummy_value"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_UINT32": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "uint32",
+                        "value": "dummy_value"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_WRONG_VALUE": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "texts",
+                        "value": "dummy_value"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_RANGE_INVALID_END": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "range1",
+                        "range": [
+                            "192.168.0.2",
+                            "192.168.0.300"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_RANGE_RANGES_WITH_IP": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "etp1",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "1",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "range1",
+                        "range": [
+                            "192.168.0.2",
+                            "192.168.0.3"
+                        ]
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_PORT": {
+                "DHCP_SERVER_IPV4_PORT_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "port": "Ethernet0",
+                        "ranges": [
+                            "range1"
+                        ],
+                        "ips": [
+                            "192.168.0.4"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_GATEWAY_ABSENT": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel1"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "etp1",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "1",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "customized_options": [
+                            "option60"
+                        ],
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "text",
+                        "value": "dummy_value"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "range1",
+                        "range": [
+                            "192.168.0.2",
+                            "192.168.0.3"
+                        ]
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_PORT": {
+                "DHCP_SERVER_IPV4_PORT_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "port": "Ethernet0",
+                        "ranges": [
+                            "range1"
+                        ]
+                    },
+                    {
+                        "name": "Vlan1000",
+                        "port": "PortChannel1",
+                        "ips": [
+                            "192.168.0.4"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_LEASE_TIME_ABSENT": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel1"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "etp1",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "1",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.1",
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "customized_options": [
+                            "option60"
+                        ],
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "text",
+                        "value": "dummy_value"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "range1",
+                        "range": [
+                            "192.168.0.2",
+                            "192.168.0.3"
+                        ]
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_PORT": {
+                "DHCP_SERVER_IPV4_PORT_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "port": "Ethernet0",
+                        "ranges": [
+                            "range1"
+                        ]
+                    },
+                    {
+                        "name": "Vlan1000",
+                        "port": "PortChannel1",
+                        "ips": [
+                            "192.168.0.4"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_MODE_ABSENT": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel1"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "etp1",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "1",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "netmask": "255.255.255.0",
+                        "customized_options": [
+                            "option60"
+                        ],
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "text",
+                        "value": "dummy_value"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "range1",
+                        "range": [
+                            "192.168.0.2",
+                            "192.168.0.3"
+                        ]
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_PORT": {
+                "DHCP_SERVER_IPV4_PORT_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "port": "Ethernet0",
+                        "ranges": [
+                            "range1"
+                        ]
+                    },
+                    {
+                        "name": "Vlan1000",
+                        "port": "PortChannel1",
+                        "ips": [
+                            "192.168.0.4"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_NETMASK_ABSENT": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel1"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "etp1",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "1",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "customized_options": [
+                            "option60"
+                        ],
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "text",
+                        "value": "dummy_value"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "range1",
+                        "range": [
+                            "192.168.0.2",
+                            "192.168.0.3"
+                        ]
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_PORT": {
+                "DHCP_SERVER_IPV4_PORT_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "port": "Ethernet0",
+                        "ranges": [
+                            "range1"
+                        ]
+                    },
+                    {
+                        "name": "Vlan1000",
+                        "port": "PortChannel1",
+                        "ips": [
+                            "192.168.0.4"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_STATE_ABSENT": {
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "name": "PortChannel1"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "etp1",
+                        "description": "Ethernet0",
+                        "mtu": 9000,
+                        "lanes": "1",
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "customized_options": [
+                            "option60"
+                        ]
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "text",
+                        "value": "dummy_value"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "range1",
+                        "range": [
+                            "192.168.0.2",
+                            "192.168.0.3"
+                        ]
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_PORT": {
+                "DHCP_SERVER_IPV4_PORT_LIST": [
+                    {
+                        "name": "Vlan1000",
+                        "port": "Ethernet0",
+                        "ranges": [
+                            "range1"
+                        ]
+                    },
+                    {
+                        "name": "Vlan1000",
+                        "port": "PortChannel1",
+                        "ips": [
+                            "192.168.0.4"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ID_ABSENT": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "type": "text",
+                        "value": "dummy_value"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_VALUE_ABSENT": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
+                    {
+                        "name": "option60",
+                        "id": 60,
+                        "type": "text"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_RANGE_RANGE_ABSENT": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "range1"
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_RANGE_SINGLE_IP": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "range1",
+                        "range": [
+                            "192.168.0.2"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_RANGE_THREE_IP": {
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
+                "DHCP_SERVER_IPV4_RANGE_LIST": [
+                    {
+                        "name": "range1",
+                        "range": [
+                            "192.168.0.2",
+                            "192.168.0.3",
+                            "192.168.0.4"
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+}
