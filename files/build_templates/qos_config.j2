@@ -79,6 +79,12 @@
 {
 {% if (generate_tc_to_pg_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_pg_map() }}
+{% elif (generate_tc_to_pg_map is defined) and
+        ('type' in DEVICE_METADATA['localhost'] and
+          DEVICE_METADATA['localhost']['type'] in backend_device_types) and
+        ('resource_type' in DEVICE_METADATA['localhost'] and
+          DEVICE_METADATA['localhost']['resource_type'] == 'Compute-AI') %}
+    {{- generate_tc_to_pg_map() }}
 {% else %}
     "TC_TO_PRIORITY_GROUP_MAP": {
         "AZURE": {
@@ -136,6 +142,12 @@
         }
     },
 {% elif (generate_dscp_to_tc_map is defined) and tunnel_qos_remap_enable %}
+    {{- generate_dscp_to_tc_map() }}
+{% elif (generate_dscp_to_tc_map is defined) and
+         ('type' in DEVICE_METADATA['localhost'] and
+           DEVICE_METADATA['localhost']['type'] in backend_device_types) and
+         ('resource_type' in DEVICE_METADATA['localhost'] and
+           DEVICE_METADATA['localhost']['resource_type'] == 'Compute-AI') %}
     {{- generate_dscp_to_tc_map() }}
 {% else %}
     "DSCP_TO_TC_MAP": {
@@ -223,6 +235,29 @@
         "scheduler.2": {
             "type"  : "DWRR",
             "weight": "100"
+        }
+    },
+{% elif (generate_tc_to_pg_map is defined) and
+        ('type' in DEVICE_METADATA['localhost'] and
+          DEVICE_METADATA['localhost']['type'] in backend_device_types) and
+        ('resource_type' in DEVICE_METADATA['localhost'] and
+          DEVICE_METADATA['localhost']['resource_type'] == 'Compute-AI') %}
+    "SCHEDULER": {
+        "scheduler.0": {
+            "type"  : "DWRR",
+            "weight": "40"
+        },
+        "scheduler.1": {
+            "type"  : "DWRR",
+            "weight": "30"
+        },
+        "scheduler.2": {
+            "type"  : "DWRR",
+            "weight": "25"
+        },
+        "scheduler.3": {
+            "type"  : "DWRR",
+            "weight": "5"
         }
     },
 {% else %}
@@ -368,6 +403,27 @@
     }
 {% else %}
    "QUEUE": {
+{% if 'type' in DEVICE_METADATA['localhost'] and
+       DEVICE_METADATA['localhost']['type'] in backend_device_types and
+      'resource_type' in DEVICE_METADATA['localhost'] and
+       DEVICE_METADATA['localhost']['resource_type'] == 'Compute-AI' %}
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|0": {
+            "scheduler": "scheduler.0"
+        },
+        "{{ port }}|1": {
+            "scheduler": "scheduler.1"
+        },
+        "{{ port }}|3": {
+            "scheduler"   : "scheduler.2",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "{{ port }}|4": {
+            "scheduler"   : "scheduler.3",
+            "wred_profile": "AZURE_LOSSLESS"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
+{% else %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|3": {
             "scheduler"   : "scheduler.1",
@@ -431,6 +487,7 @@
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
+{% endif %}
     }
 {% endif %}
 }

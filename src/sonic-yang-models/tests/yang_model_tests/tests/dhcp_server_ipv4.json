@@ -1,0 +1,100 @@
+{
+    "DHCP_SERVER_IPV4_VALID_FORMAT": {
+        "desc": "Add dhcp_server_ipv4 in correct format."
+    },
+    "DHCP_SERVER_IPV4_WITH_INVALID_VLAN": {
+        "desc": "Configure vlan-id in DHCP_SERVER_IPV4 table which is invalid.",
+        "eStrKey" : "Pattern"
+    },
+    "DHCP_SERVER_IPV4_INCORRECT_GATEWAY": {
+        "desc": "Add gateway which is not in correct ip-prefix format.",
+        "eStrKey": "Pattern"
+    },
+    "DHCP_SERVER_IPV4_INCORRECT_NETMASK": {
+        "desc": "Add netmask which is not in correct ip-prefix format.",
+        "eStrKey": "Pattern"
+    },
+    "DHCP_SERVER_IPV4_STATE_WRONG_VALUE": {
+        "desc": "Configure wrong value for state.",
+        "eStrKey": "InvalidValue"
+    },
+    "DHCP_SERVER_IPV4_MODE_WRONG_VALUE": {
+        "desc": "Configure wrong value for mode.",
+        "eStrKey": "InvalidValue"
+    },
+    "DHCP_SREVER_IPV4_NON_EXIST_OPTION": {
+        "desc": "Configure option in DHCP_SERVER_IPV4 table which does not exist in DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS table.",
+        "eStrKey": "LeafRef"
+    },
+    "DHCP_SERVER_IPV4_PORT_WITH_NO_EXIST_NAME": {
+        "desc": "Configure DHCP interface in DHCP_SERVER_IPV4_PORT table which is no exist.",
+        "eStrKey": "LeafRef"
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_WRONG_VALUE": {
+        "desc": "Configure wrong value for type.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["type"]
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_TEXT": {
+        "desc": "Add text type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_IPV4_ADDRESS": {
+        "desc": "Add ipv4-address type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_UINT8": {
+        "desc": "Add uint8 type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_UINT16": {
+        "desc": "Add uint16 type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_UINT32": {
+        "desc": "Add uint32 type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."
+    },
+    "DHCP_SERVER_IPV4_RANGE_INVALID_END": {
+        "desc": "Configure wrong end ip of range.",
+        "eStrKey": "Pattern"
+    },
+    "DHCP_SERVER_IPV4_RANGE_RANGES_WITH_IP": {
+        "desc": "Configure both ip and ranges in DHCP_SERVER_IPV4_RANGE_RANGES",
+        "eStr": ["Statement of 'ips' and 'ranges' cannot both exist"]
+    },
+    "DHCP_SERVER_IPV4_GATEWAY_ABSENT": {
+        "desc": "Missing gateway in DHCP_SERVER_IPV4",
+        "eStrKey" : "Mandatory"
+    },
+    "DHCP_SERVER_IPV4_LEASE_TIME_ABSENT": {
+        "desc": "Missing lease_time in DHCP_SERVER_IPV4",
+        "eStrKey" : "Mandatory"
+    },
+    "DHCP_SERVER_IPV4_MODE_ABSENT": {
+        "desc": "Missing mode in DHCP_SERVER_IPV4",
+        "eStrKey" : "Mandatory"
+    },
+    "DHCP_SERVER_IPV4_NETMASK_ABSENT": {
+        "desc": "Missing netmask in DHCP_SERVER_IPV4",
+        "eStrKey" : "Mandatory"
+    },
+    "DHCP_SERVER_IPV4_STATE_ABSENT": {
+        "desc": "Missing state in DHCP_SERVER_IPV4",
+        "eStrKey" : "Mandatory"
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_ID_ABSENT": {
+        "desc": "Missing id in DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS",
+        "eStrKey" : "Mandatory"
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_VALUE_ABSENT": {
+        "desc": "Missing value in DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS",
+        "eStrKey" : "Mandatory"
+    },
+    "DHCP_SERVER_IPV4_RANGE_RANGE_ABSENT": {
+        "desc": "Missing ranges in DHCP_SERVER_IPV4_RANGE",
+        "eStrKey": "Must"
+    },
+    "DHCP_SERVER_IPV4_RANGE_SINGLE_IP": {
+        "desc": "Single ip in DHCP_SERVER_IPV4_RANGE"
+    },
+    "DHCP_SERVER_IPV4_RANGE_THREE_IP": {
+        "desc": "Three ips in DHCP_SERVER_IPV4_RANGE",
+        "eStrKey": "Must"
+    }
+}

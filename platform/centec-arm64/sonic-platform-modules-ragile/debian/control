@@ -1,0 +1,11 @@
+Source: sonic-centec-platform-modules
+Section: main
+Priority: extra
+Maintainer: shil <shil@centecnetworks.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+
+Package: platform-modules-ra-b6010-48gt4x
+Architecture: arm64
+Description: kernel modules for platform devices such as fan, led, sfp
+

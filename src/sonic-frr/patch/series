@@ -20,3 +20,4 @@ cross-compile-changes.patch
 0018-zebra-Use-zebra-dplane-for-RTM-link-and-addr.patch
 0019-zebra-Abstract-dplane_ctx_route_init-to-init-route-w.patch
 0020-zebra-Fix-crash-when-dplane_fpm_nl-fails-to-process-.patch
+0021-zebra-remove-duplicated-nexthops-when-sending-fpm-msg.patch

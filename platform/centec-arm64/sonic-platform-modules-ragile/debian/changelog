@@ -1,0 +1,6 @@
+sonic-centec-platform-modules (1.3) unstable; urgency=low
+
+  * Add support for ragile ra-b6010-48gt4x
+
+ -- sonic_rd <sonic_rd@ragile.com.cn>  Mon, 21 Sep 2020 13:34:33 +0800
+

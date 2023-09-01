@@ -74,7 +74,7 @@ class MonitorSystemBusTask(ProcessTaskBase):
         self.task_queue = myQ
 
     def on_job_removed(self, id, job, unit, result):
-        if result == "done":
+        if result == "done" or result == "failed":
             timestamp = "{}".format(datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
             msg = {"unit": unit, "evt_src":"sysbus", "time":timestamp}
             self.task_notify(msg)

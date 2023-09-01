@@ -140,6 +140,11 @@ def get_running_container_names():
         running_container_list = docker_client.containers.list(filters={"status": "running"})
         running_container_names = [ container.name for container in running_container_list ]
     except (docker.errors.APIError, docker.errors.DockerException) as err:
+        if not is_service_active("docker"):
+            syslog.syslog(syslog.LOG_INFO,
+                          "[memory_checker] Docker service is not running. Error message is: '{}'".format(err))
+            return []
+
         syslog.syslog(syslog.LOG_ERR,
                       "Failed to retrieve the running container list from docker daemon! Error message is: '{}'"
                       .format(err))

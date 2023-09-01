@@ -1,0 +1,240 @@
+module sonic-dhcp-server-ipv4 {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-dhcp-server-ipv4";
+
+    prefix dhcp-server-ipv4;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    // Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
+    // import sonic-vlan {
+    //     prefix vlan;
+    // }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    description "DHCP_SERVER_IPV4 YANG module for SONiC OS";
+
+    revision 2023-07-19 {
+        description "Initial version";
+    }
+
+    container sonic-dhcp-server-ipv4 {
+        container DHCP_SERVER_IPV4 {
+
+            description "DHCP_SERVER_IPV4 part of config_db.json";
+
+            list DHCP_SERVER_IPV4_LIST {
+
+                description "DHCP_SERVER_IPV4 list part of config_db.json";
+
+                key "name";
+
+                leaf name {
+                    description "Interface name for DHCP server";
+                    // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
+                    // type leafref {
+                    //     path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
+                    // }
+                    type string {
+                        pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                    }
+                }
+
+                leaf gateway {
+                    description "Gateway IP for DHCP server";
+                    mandatory true;
+                    type inet:ipv4-address;
+                }
+
+                leaf lease_time {
+                    description "Lease time of DHCP IP in second";
+                    mandatory true;
+                    type uint32 {
+                        range "1..4294967295";
+                    }
+                }
+
+                leaf mode {
+                    description "Mode of assigning IP";
+                    mandatory true;
+                    type enumeration {
+                        enum PORT;
+                    }
+                }
+
+                leaf netmask {
+                    description "Subnet mask value for DHCP server";
+                    mandatory true;
+                    type inet:ipv4-address-no-zone;
+                }
+
+                leaf-list customized_options {
+                    description "Customized options list";
+                    type leafref {
+                        path "/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS/dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST/dhcp-server-ipv4:name";
+                    }
+                }
+
+                leaf state {
+                    description "State of DHCP server";
+                    mandatory true;
+                    type stypes:admin_mode;
+                }
+            }
+            /* end of DHCP_SERVER_IPV4_LIST */
+        }
+        /* end of DHCP_SERVER_IPV4 container */
+
+        container DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS {
+
+            description "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS part of config_db.json";
+
+            list DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST {
+
+                description "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS list part of config_db.json";
+
+                key "name";
+
+                leaf name {
+                    description "Name of customized option";
+                    type string {
+                        length 1..255 {
+                            error-message "Invalid length for the customized options name";
+                        }
+                    }
+                }
+
+                leaf id {
+                    description "Customized PortChannel0003option ID";
+                    mandatory true;
+                    type uint8 {
+                        range "1..254";
+                    }
+                }
+
+                leaf type {
+                    description "Type of customized option, for standard DHCP option, this field is invalid";
+                    type enumeration {
+                        enum text;
+                        enum ipv4-address;
+                        enum uint8;
+                        enum uint16;
+                        enum uint32;
+                    }
+                }
+
+                leaf value {
+                    description "Value of customized option";
+                    mandatory true;
+                    type union {
+                        type string {
+                            length 0..255;
+                        }
+                        type inet:ipv4-address;
+                        type uint8;
+                        type uint16;
+                        type uint32;
+                    }
+                }
+            }
+            /* end of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST */
+        }
+        /* end of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS container */
+
+        container DHCP_SERVER_IPV4_RANGE {
+
+            description "DHCP_SERVER_IPV4_RANGE part of config_db.json";
+
+            list DHCP_SERVER_IPV4_RANGE_LIST {
+
+                description "DHCP_SERVER_IPV4_RANGE list part of config_db.json";
+
+                key "name";
+
+                leaf name {
+                    description "Name of IP range";
+                    type string {
+                        length 1..255 {
+                            error-message "Invalid length for the IP range name";
+                        }
+                    }
+                }
+
+                leaf-list range {
+                    description "Range of IPs";
+                    type inet:ipv4-address;
+                }
+
+                must "((count(range) <= 2) and (count(range) >= 1))";
+            }
+            /* end of DHCP_SERVER_IPV4_RANGE_LIST */
+        }
+        /* end of DHCP_SERVER_IPV4_RANGE */
+
+        container DHCP_SERVER_IPV4_PORT {
+
+            description "DHCP_SERVER_IPV4_PORT part of config_db.json";
+
+            list DHCP_SERVER_IPV4_PORT_LIST {
+
+                description "DHCP_SERVER_IPV4_PORT list part of config_db.json";
+
+                key "name port";
+
+                leaf name {
+                    description "Name of DHCP interface";
+                    type leafref {
+                        path "/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4/dhcp-server-ipv4:DHCP_SERVER_IPV4_LIST/dhcp-server-ipv4:name";
+                    }
+                }
+
+                leaf port {
+                    description "Interface under vlan";
+                    type union {
+                        type leafref {
+                            path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                    }
+                }
+
+                leaf-list ips {
+                    description "Assigned IPs";
+                    must "(not(boolean(../ranges)))"{
+                        error-message "Statement of 'ips' and 'ranges' cannot both exist";
+                    }
+                    type inet:ipv4-address;
+                }
+
+                leaf-list ranges {
+                    description "IP ranges";
+                    must "(not(boolean(../ips)))"{
+                        error-message "Statement of 'ips' and 'ranges' cannot both exist";
+                    }
+                    type leafref {
+                        path "/dhcp-server-ipv4:sonic-dhcp-server-ipv4/dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE/dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE_LIST/dhcp-server-ipv4:name";
+                    }
+                }
+            }
+            /* end of DHCP_SERVER_IPV4_PORT_LIST */
+        }
+        /* end of DHCP_SERVER_IPV4_PORT container */
+    }
+}

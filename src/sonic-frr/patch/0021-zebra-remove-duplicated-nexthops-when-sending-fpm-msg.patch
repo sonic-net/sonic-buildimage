@@ -1,0 +1,30 @@
+From 4aa1aace3e32039b668c04cd682b01e0397144ea Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=E6=81=AD=E7=AE=80?= <gongjian.lhr@alibaba-inc.com>
+Date: Wed, 26 Jul 2023 09:51:51 +0800
+Subject: [PATCH] zebra: remove duplicated nexthops when sending fpm msg
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When zebra send msg to fpm client, it doesn't handle duplicated nexthops especially, which means if zebra has a route with NUM1 recursive nexthops, each resolved to the same NUM2 connected nexthops, it will send to fpm client a route with NUM1*NUM2 nexthops. But actually there are only NUM2 useful nexthops, the left NUM1*NUM2-NUM2 nexthops are all duplicated nexthops. By the way, zebra has duplicated nexthop remove logic when sending msg to kernel.
+Add duplicated nexthop remove logic to zebra when sending msg to fpm client.
+
+Signed-off-by: 恭简 <gongjian.lhr@alibaba-inc.com>
+
+---
+ zebra/zebra_fpm_netlink.c |    2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/zebra/zebra_fpm_netlink.c b/zebra/zebra_fpm_netlink.c
+index 06c45578a..231047143 100644
+--- a/zebra/zebra_fpm_netlink.c
++++ b/zebra/zebra_fpm_netlink.c
+@@ -305,6 +305,8 @@ static int netlink_route_info_fill(struct netlink_route_info *ri, int cmd,
+ 
+ 		if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
+ 			continue;
++		if (CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_DUPLICATE))
++			continue;
+ 
+ 		if (nexthop->type == NEXTHOP_TYPE_BLACKHOLE) {
+ 			switch (nexthop->bh_type) {
