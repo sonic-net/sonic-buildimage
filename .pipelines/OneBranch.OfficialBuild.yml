@@ -196,7 +196,7 @@ stages:
             OPTIONS="$(BUILD_OPTIONS) INCLUDE_KUBERNETES_MASTER=y INCLUDE_RESTAPI=y SONIC_DPKG_CACHE_METHOD=wcache PASSWORD=$PASSWORD BUILD_MULTIASIC_KVM=y"
             make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
             gzip -kd target/sonic-vs.img.gz
-            qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx
+            SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make sonic-slave-run
             gzip target/sonic-vs.vhdx
         - name: generic
           script: |
