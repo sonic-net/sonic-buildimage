@@ -1,8 +1,8 @@
-From d2d0080ec104f01fbf0d6b4750f70f1ebe013495 Mon Sep 17 00:00:00 2001
+From 2f12c9f7cd1d91732ee64d11611cc4cb6baf69a6 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:42 +0200
-Subject: [PATCH] mlxsw: core_thermal: Rename labels according to naming
- convention
+Subject: [PATCH backport 5.10 100/182] mlxsw: core_thermal: Rename labels
+ according to naming convention
 
 Rename labels for error flow handling in order to align with naming
 convention used in rest of 'mlxsw' code.
@@ -15,10 +15,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 23 insertions(+), 20 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index cc4cddbdb..e5997b6a0 100644
+index 91abc7a3f7ea..f471f03e0094 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -401,11 +401,11 @@ static int mlxsw_thermal_module_bind(struct thermal_zone_device *tzdev,
+@@ -393,11 +393,11 @@ static int mlxsw_thermal_module_bind(struct thermal_zone_device *tzdev,
  						       trip->min_state,
  						       THERMAL_WEIGHT_DEFAULT);
  		if (err < 0)
@@ -32,7 +32,7 @@ index cc4cddbdb..e5997b6a0 100644
  	for (j = i - 1; j >= 0; j--)
  		thermal_zone_unbind_cooling_device(tzdev, j, cdev);
  	return err;
-@@ -807,7 +807,7 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
+@@ -766,7 +766,7 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
  	for (i = 0; i < thermal->tz_module_num; i++) {
  		err = mlxsw_thermal_module_init(dev, core, thermal, i);
  		if (err)
@@ -41,7 +41,7 @@ index cc4cddbdb..e5997b6a0 100644
  	}
  
  	for (i = 0; i < thermal->tz_module_num; i++) {
-@@ -816,12 +816,13 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
+@@ -775,12 +775,13 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
  			continue;
  		err = mlxsw_thermal_module_tz_init(module_tz);
  		if (err)
@@ -57,7 +57,7 @@ index cc4cddbdb..e5997b6a0 100644
  	for (i = thermal->tz_module_num - 1; i >= 0; i--)
  		mlxsw_thermal_module_fini(&thermal->tz_module_arr[i]);
  	kfree(thermal->tz_module_arr);
-@@ -912,12 +913,12 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
+@@ -871,12 +872,12 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  		gearbox_tz->parent = thermal;
  		err = mlxsw_thermal_gearbox_tz_init(gearbox_tz);
  		if (err)
@@ -72,7 +72,7 @@ index cc4cddbdb..e5997b6a0 100644
  	for (i--; i >= 0; i--)
  		mlxsw_thermal_gearbox_tz_fini(&thermal->tz_gearbox_arr[i]);
  	kfree(thermal->tz_gearbox_arr);
-@@ -961,7 +962,7 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -920,7 +921,7 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  	err = mlxsw_reg_query(thermal->core, MLXSW_REG(mfcr), mfcr_pl);
  	if (err) {
  		dev_err(dev, "Failed to probe PWMs\n");
@@ -81,7 +81,7 @@ index cc4cddbdb..e5997b6a0 100644
  	}
  	mlxsw_reg_mfcr_unpack(mfcr_pl, &freq, &tacho_active, &pwm_active);
  
-@@ -975,14 +976,14 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -934,14 +935,14 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  			err = mlxsw_reg_query(thermal->core, MLXSW_REG(mfsl),
  					      mfsl_pl);
  			if (err)
@@ -98,7 +98,7 @@ index cc4cddbdb..e5997b6a0 100644
  		}
  	}
  	for (i = 0; i < MLXSW_MFCR_PWMS_MAX; i++) {
-@@ -995,7 +996,7 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -954,7 +955,7 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  			if (IS_ERR(cdev)) {
  				err = PTR_ERR(cdev);
  				dev_err(dev, "Failed to register cooling device\n");
@@ -107,7 +107,7 @@ index cc4cddbdb..e5997b6a0 100644
  			}
  			thermal->cdevs[i] = cdev;
  		}
-@@ -1020,38 +1021,40 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -978,38 +979,40 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  	if (IS_ERR(thermal->tzdev)) {
  		err = PTR_ERR(thermal->tzdev);
  		dev_err(dev, "Failed to register thermal zone\n");
@@ -158,5 +158,5 @@ index cc4cddbdb..e5997b6a0 100644
  	return err;
  }
 -- 
-2.30.2
+2.20.1
 

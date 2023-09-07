@@ -1,0 +1,158 @@
+From 66c331a304f41a5f1806a827b42bc97ba090c745 Mon Sep 17 00:00:00 2001
+From: Asmaa Mnebhi <asmaa@nvidia.com>
+Date: Tue, 5 Jul 2022 14:49:03 -0400
+Subject: [PATCH backport 5.10 26/63] UBUNTU: SAUCE: Add support to pwr-mlxbf.c
+ driver
+
+BugLink: https://launchpad.net/bugs/1980768
+
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Signed-off-by: Ike Panhc <ike.pan@canonical.com>
+
+1
+
+Signed-off-by: Ike Panhc <ike.pan@canonical.com>
+---
+ drivers/power/reset/Kconfig     |   6 ++
+ drivers/power/reset/Makefile    |   1 +
+ drivers/power/reset/pwr-mlxbf.c | 103 ++++++++++++++++++++++++++++++++
+ 3 files changed, 110 insertions(+)
+ create mode 100644 drivers/power/reset/pwr-mlxbf.c
+
+diff --git a/drivers/power/reset/Kconfig b/drivers/power/reset/Kconfig
+index d55b3727e..41ee02f87 100644
+--- a/drivers/power/reset/Kconfig
++++ b/drivers/power/reset/Kconfig
+@@ -284,5 +284,11 @@ config NVMEM_REBOOT_MODE
+ 	  then the bootloader can read it and take different
+ 	  action according to the mode.
+ 
++config POWER_MLXBF
++	tristate "Mellanox BlueField power handling driver"
++	depends on (GPIO_MLXBF2 && ACPI)
++	help
++	  This driver supports reset or low power mode handling for Mellanox BlueField.
++
+ endif
+ 
+diff --git a/drivers/power/reset/Makefile b/drivers/power/reset/Makefile
+index c51eceba9..51801a5b5 100644
+--- a/drivers/power/reset/Makefile
++++ b/drivers/power/reset/Makefile
+@@ -33,3 +33,4 @@ obj-$(CONFIG_REBOOT_MODE) += reboot-mode.o
+ obj-$(CONFIG_SYSCON_REBOOT_MODE) += syscon-reboot-mode.o
+ obj-$(CONFIG_POWER_RESET_SC27XX) += sc27xx-poweroff.o
+ obj-$(CONFIG_NVMEM_REBOOT_MODE) += nvmem-reboot-mode.o
++obj-$(CONFIG_POWER_MLXBF) += pwr-mlxbf.o
+diff --git a/drivers/power/reset/pwr-mlxbf.c b/drivers/power/reset/pwr-mlxbf.c
+new file mode 100644
+index 000000000..3f587a372
+--- /dev/null
++++ b/drivers/power/reset/pwr-mlxbf.c
+@@ -0,0 +1,103 @@
++// SPDX-License-Identifier: GPL-2.0-only or BSD-3-Clause
++
++/*
++ *  Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES.
++ */
++
++#include <linux/acpi.h>
++#include <linux/device.h>
++#include <linux/devm-helpers.h>
++#include <linux/interrupt.h>
++#include <linux/kernel.h>
++#include <linux/mod_devicetable.h>
++#include <linux/module.h>
++#include <linux/platform_device.h>
++#include <linux/pm.h>
++#include <linux/reboot.h>
++#include <linux/types.h>
++#include <linux/version.h>
++
++#include <linux/devm-helpers.h>
++
++#define DRV_VERSION "1.1"
++
++struct pwr_mlxbf {
++	struct work_struct send_work;
++	const char *hid;
++};
++
++static void pwr_mlxbf_send_work(struct work_struct *work)
++{
++	acpi_bus_generate_netlink_event("button/power.*", "Power Button", 0x80, 1);
++}
++
++static irqreturn_t pwr_mlxbf_irq(int irq, void *ptr)
++{
++	const char *rst_pwr_hid = "MLNXBF24";
++	const char *low_pwr_hid = "MLNXBF29";
++	struct pwr_mlxbf *priv = ptr;
++
++	if (!strncmp(priv->hid, rst_pwr_hid, 8))
++		emergency_restart();
++
++	if (!strncmp(priv->hid, low_pwr_hid, 8))
++		schedule_work(&priv->send_work);
++
++	return IRQ_HANDLED;
++}
++
++static int pwr_mlxbf_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct acpi_device *adev;
++	struct pwr_mlxbf *priv;
++	const char *hid;
++	int irq, err;
++
++	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
++	if (!priv)
++		return -ENOMEM;
++
++	adev = ACPI_COMPANION(dev);
++	if (!adev)
++		return -ENXIO;
++
++	hid = acpi_device_hid(adev);
++	priv->hid = hid;
++
++	irq = acpi_dev_gpio_irq_get(ACPI_COMPANION(dev), 0);
++	if (irq < 0)
++		return dev_err_probe(dev, irq, "Error getting %s irq.\n", priv->hid);
++
++	err = devm_work_autocancel(dev, &priv->send_work, pwr_mlxbf_send_work);
++	if (err)
++		return err;
++
++	err = devm_request_irq(dev, irq, pwr_mlxbf_irq, 0, hid, priv);
++	if (err)
++		dev_err(dev, "Failed request of %s irq\n", priv->hid);
++
++	return err;
++}
++
++static const struct acpi_device_id __maybe_unused pwr_mlxbf_acpi_match[] = {
++	{ "MLNXBF24", 0 },
++	{ "MLNXBF29", 0 },
++	{},
++};
++MODULE_DEVICE_TABLE(acpi, pwr_mlxbf_acpi_match);
++
++static struct platform_driver pwr_mlxbf_driver = {
++	.driver = {
++		.name = "pwr_mlxbf",
++		.acpi_match_table = pwr_mlxbf_acpi_match,
++	},
++	.probe    = pwr_mlxbf_probe,
++};
++
++module_platform_driver(pwr_mlxbf_driver);
++
++MODULE_DESCRIPTION("Mellanox BlueField power driver");
++MODULE_AUTHOR("Asmaa Mnebhi <asmaa@nvidia.com>");
++MODULE_LICENSE("Dual BSD/GPL");
++MODULE_VERSION(DRV_VERSION);
+-- 
+2.20.1
+

@@ -1,7 +1,8 @@
-From e46f9bfa89b8b9caced49a74db695e86e963b35d Mon Sep 17 00:00:00 2001
+From 5d8d4899f493e3b18712fc96a45eb020985740b1 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 3 Jan 2022 10:20:49 +0000
-Subject: [PATCH] mlxsw: reg: Add Management DownStream Device Query Register
+Subject: [PATCH backport 5.10 132/182] mlxsw: reg: Add Management DownStream
+ Device Query Register
 
 The MDDQ register allows to query the DownStream device properties.
 
@@ -11,10 +12,10 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 234 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 42169957c..d5301bd6f 100644
+index 93e3366cfcb9..ad7faeb95646 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-@@ -10297,6 +10297,239 @@ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,
+@@ -10296,6 +10296,239 @@ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,
  		*num_of_slots = mlxsw_reg_mgpir_num_of_slots_get(payload);
  }
  
@@ -254,7 +255,7 @@ index 42169957c..d5301bd6f 100644
  /* MFDE - Monitoring FW Debug Register
   * -----------------------------------
   */
-@@ -11496,6 +11729,7 @@ static const struct mlxsw_reg_info *mlxsw_reg_infos[] = {
+@@ -11495,6 +11728,7 @@ static const struct mlxsw_reg_info *mlxsw_reg_infos[] = {
  	MLXSW_REG(mtptpt),
  	MLXSW_REG(mfgd),
  	MLXSW_REG(mgpir),
@@ -263,5 +264,5 @@ index 42169957c..d5301bd6f 100644
  	MLXSW_REG(tngcr),
  	MLXSW_REG(tnumt),
 -- 
-2.30.2
+2.20.1
 

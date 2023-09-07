@@ -1,0 +1,52 @@
+From a8ab0bbc8f17a0099c4982f3e0cb78f6c323fa46 Mon Sep 17 00:00:00 2001
+From: David Thompson <davthompson@nvidia.com>
+Date: Thu, 5 May 2022 12:23:09 -0400
+Subject: [PATCH backport 5.10 30/63] mlxbf_gige: increase MDIO polling rate to
+ 5us
+
+BugLink: https://bugs.launchpad.net/bugs/1979827
+
+This patch increases the polling rate used by the
+mlxbf_gige driver on the MDIO bus.  The previous
+polling rate was every 100us, and the new rate is
+every 5us.  With this change the amount of time
+spent waiting for the MDIO BUSY signal to de-assert
+drops from ~100us to ~27us for each operation.
+
+Signed-off-by: David Thompson <davthompson@nvidia.com>
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Link: https://lore.kernel.org/r/20220505162309.20050-1-davthompson@nvidia.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+(cherry picked from commit 0a02e282bad4dad455553fc2b9268cf1d003f132)
+Signed-off-by: Ike Panhc <ike.pan@canonical.com>
+---
+ drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c
+index e32dd34fd..6c8a4a529 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c
+@@ -105,7 +105,8 @@ static int mlxbf_gige_mdio_read(struct mii_bus *bus, int phy_add, int phy_reg)
+ 	writel(cmd, priv->mdio_io + MLXBF_GIGE_MDIO_GW_OFFSET);
+ 
+ 	ret = readl_poll_timeout_atomic(priv->mdio_io + MLXBF_GIGE_MDIO_GW_OFFSET,
+-					val, !(val & MLXBF_GIGE_MDIO_GW_BUSY_MASK), 100, 1000000);
++					val, !(val & MLXBF_GIGE_MDIO_GW_BUSY_MASK),
++					5, 1000000);
+ 
+ 	if (ret) {
+ 		writel(0, priv->mdio_io + MLXBF_GIGE_MDIO_GW_OFFSET);
+@@ -137,7 +138,8 @@ static int mlxbf_gige_mdio_write(struct mii_bus *bus, int phy_add,
+ 
+ 	/* If the poll timed out, drop the request */
+ 	ret = readl_poll_timeout_atomic(priv->mdio_io + MLXBF_GIGE_MDIO_GW_OFFSET,
+-					temp, !(temp & MLXBF_GIGE_MDIO_GW_BUSY_MASK), 100, 1000000);
++					temp, !(temp & MLXBF_GIGE_MDIO_GW_BUSY_MASK),
++					5, 1000000);
+ 
+ 	return ret;
+ }
+-- 
+2.20.1
+

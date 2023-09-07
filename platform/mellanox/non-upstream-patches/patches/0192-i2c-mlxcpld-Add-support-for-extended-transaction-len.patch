@@ -1,0 +1,57 @@
+From 22447625fff0e742b3dc9c2f78bbaac29b1f1031 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 27 Nov 2022 10:43:23 +0200
+Subject: [PATCH backport 5.10 06/10] i2c: mlxcpld: Add support for extended
+ transaction length for i2c-mlxcpld
+
+Add support for extended length of read and write transactions.
+New FPGA logic allows to increase size of the read and write
+transactions length. This feature is verified through capability
+register 'CPBLTY_REG'. Two bits 5 and 6 of the register are used for
+length capability detection. Value '10' indicates support of extended
+transaction length - 128 bytes for read transactions and 132 for write
+transactions.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/i2c/busses/i2c-mlxcpld.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
+index cd5401ce4..0e1807be7 100644
+--- a/drivers/i2c/busses/i2c-mlxcpld.c
++++ b/drivers/i2c/busses/i2c-mlxcpld.c
+@@ -22,6 +22,7 @@
+ #define MLXCPLD_I2C_BUS_NUM		1
+ #define MLXCPLD_I2C_DATA_REG_SZ		36
+ #define MLXCPLD_I2C_DATA_SZ_BIT		BIT(5)
++#define MLXCPLD_I2C_DATA_EXT2_SZ_BIT	BIT(6)
+ #define MLXCPLD_I2C_DATA_SZ_MASK	GENMASK(6, 5)
+ #define MLXCPLD_I2C_SMBUS_BLK_BIT	BIT(7)
+ #define MLXCPLD_I2C_MAX_ADDR_LEN	4
+@@ -466,6 +467,13 @@ static const struct i2c_adapter_quirks mlxcpld_i2c_quirks_ext = {
+ 	.max_comb_1st_msg_len = 4,
+ };
+ 
++static const struct i2c_adapter_quirks mlxcpld_i2c_quirks_ext2 = {
++	.flags = I2C_AQ_COMB_WRITE_THEN_READ,
++	.max_read_len = (MLXCPLD_I2C_DATA_REG_SZ - 4) * 4,
++	.max_write_len = (MLXCPLD_I2C_DATA_REG_SZ - 4) * 4 + MLXCPLD_I2C_MAX_ADDR_LEN,
++	.max_comb_1st_msg_len = 4,
++};
++
+ static struct i2c_adapter mlxcpld_i2c_adapter = {
+ 	.owner          = THIS_MODULE,
+ 	.name           = "i2c-mlxcpld",
+@@ -550,6 +558,8 @@ static int mlxcpld_i2c_probe(struct platform_device *pdev)
+ 	/* Check support for extended transaction length */
+ 	if ((val & MLXCPLD_I2C_DATA_SZ_MASK) == MLXCPLD_I2C_DATA_SZ_BIT)
+ 		mlxcpld_i2c_adapter.quirks = &mlxcpld_i2c_quirks_ext;
++	else if ((val & MLXCPLD_I2C_DATA_SZ_MASK) == MLXCPLD_I2C_DATA_EXT2_SZ_BIT)
++		mlxcpld_i2c_adapter.quirks = &mlxcpld_i2c_quirks_ext2;
+ 	/* Check support for smbus block transaction */
+ 	if (val & MLXCPLD_I2C_SMBUS_BLK_BIT)
+ 		priv->smbus_block = true;
+-- 
+2.20.1
+

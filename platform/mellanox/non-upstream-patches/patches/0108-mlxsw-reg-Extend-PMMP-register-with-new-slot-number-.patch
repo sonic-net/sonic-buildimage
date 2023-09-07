@@ -1,7 +1,8 @@
-From d707ce17ce596c2deb97b481dffb24b8c4537fa2 Mon Sep 17 00:00:00 2001
+From 0aebe300b70a084161c12e813396025b255d91d7 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:51 +0200
-Subject: [PATCH] mlxsw: reg: Extend PMMP register with new slot number field
+Subject: [PATCH backport 5.10 108/182] mlxsw: reg: Extend PMMP register with
+ new slot number field
 
 Extend PMMP (Port Module Memory Map Properties Register) with new
 field specifying the slot number. The purpose of this field is to
@@ -21,10 +22,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  2 files changed, 9 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-index d88033ec6..49c58197b 100644
+index 2ac8444aa8b2..ad27a1c90f92 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-@@ -503,7 +503,7 @@ static int mlxsw_env_module_low_power_set(struct mlxsw_core *mlxsw_core,
+@@ -501,7 +501,7 @@ static int mlxsw_env_module_low_power_set(struct mlxsw_core *mlxsw_core,
  	u16 eeprom_override_mask, eeprom_override;
  	char pmmp_pl[MLXSW_REG_PMMP_LEN];
  
@@ -34,7 +35,7 @@ index d88033ec6..49c58197b 100644
  	/* Mask all the bits except low power mode. */
  	eeprom_override_mask = ~MLXSW_REG_PMMP_EEPROM_OVERRIDE_LOW_POWER_MASK;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 243d91f1d..c19db16bf 100644
+index acde0cd00944..aad0cb1497aa 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -5633,6 +5633,12 @@ MLXSW_REG_DEFINE(pmmp, MLXSW_REG_PMMP_ID, MLXSW_REG_PMMP_LEN);
@@ -63,5 +64,5 @@ index 243d91f1d..c19db16bf 100644
  }
  
 -- 
-2.30.2
+2.20.1
 

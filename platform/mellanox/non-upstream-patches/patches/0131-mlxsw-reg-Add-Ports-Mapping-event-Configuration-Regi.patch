@@ -1,7 +1,8 @@
-From ec8e91d320c8cccb8ad59663d2d59810ea5aecb9 Mon Sep 17 00:00:00 2001
+From 4a49468e7fc7e94a83703215445d9b3919642eb9 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 29 Jan 2021 08:45:09 +0100
-Subject: [PATCH] mlxsw: reg: Add Ports Mapping event Configuration Register
+Subject: [PATCH backport 5.10 131/182] mlxsw: reg: Add Ports Mapping event
+ Configuration Register
 
 The PMECR register use to enable/disable event trigger in case of
 local port mapping change.
@@ -12,7 +13,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 64 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 9de037b9a..42169957c 100644
+index 98c627ffe039..93e3366cfcb9 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -5524,6 +5524,69 @@ static inline void mlxsw_reg_pplr_pack(char *payload, u8 local_port,
@@ -85,7 +86,7 @@ index 9de037b9a..42169957c 100644
  /* PMPE - Port Module Plug/Unplug Event Register
   * ---------------------------------------------
   * This register reports any operational status change of a module.
-@@ -11376,6 +11439,7 @@ static const struct mlxsw_reg_info *mlxsw_reg_infos[] = {
+@@ -11375,6 +11438,7 @@ static const struct mlxsw_reg_info *mlxsw_reg_infos[] = {
  	MLXSW_REG(pspa),
  	MLXSW_REG(pmaos),
  	MLXSW_REG(pplr),
@@ -94,5 +95,5 @@ index 9de037b9a..42169957c 100644
  	MLXSW_REG(pddr),
  	MLXSW_REG(pmtm),
 -- 
-2.30.2
+2.20.1
 

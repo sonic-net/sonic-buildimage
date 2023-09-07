@@ -46,7 +46,7 @@ module sonic-macsec {
 
                 leaf primary_cak {
                     type string {
-                        pattern "[0-9a-fA-F]{32}|[0-9a-fA-F]{64}";
+                        pattern "[0-9a-fA-F]{66}|[0-9a-fA-F]{130}";
                     }
                     mandatory true;
                 }
@@ -60,7 +60,7 @@ module sonic-macsec {
 
                 leaf fallback_cak {
                     type string {
-                        pattern "[0-9a-fA-F]{32}|[0-9a-fA-F]{64}";
+                        pattern "[0-9a-fA-F]{66}|[0-9a-fA-F]{130}";
                     }
                 }
 
@@ -69,10 +69,6 @@ module sonic-macsec {
                         pattern "[0-9a-fA-F]{32}|[0-9a-fA-F]{64}";
                     }
                 }
-
-                must "string-length(primary_cak) = string-length(primary_ckn)";
-
-                must "string-length(fallback_cak) = string-length(fallback_ckn)";
 
                 must "string-length(fallback_cak) = string-length(primary_cak)";
 

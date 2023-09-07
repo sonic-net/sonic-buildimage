@@ -15,7 +15,7 @@ dbus-python==1.2.16
 docker==6.1.1
 docker-image-py==0.1.12
 enlighten==1.11.2
-filelock==3.12.2
+filelock==3.12.3
 grpcio==1.39.0
 grpcio-tools==1.39.0
 idna==3.4
@@ -69,6 +69,7 @@ systemd-python==235
 tabulate==0.8.2
 thrift==0.13.0
 toposort==1.6
+typing_extensions==4.7.1
 urllib3==2.0.4
 watchdog==0.10.3
 wcwidth==0.2.6

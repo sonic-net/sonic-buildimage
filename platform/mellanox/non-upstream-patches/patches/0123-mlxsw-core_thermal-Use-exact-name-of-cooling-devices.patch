@@ -1,8 +1,8 @@
-From 34251eb77f3f50ac2d574876f33c65d8d2c70e9c Mon Sep 17 00:00:00 2001
+From 7e5f922bac5153137a8b1f486728d9d95b4922bc Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:37 +0200
-Subject: [PATCH] mlxsw: core_thermal: Use exact name of cooling devices for
- binding
+Subject: [PATCH backport 5.10 123/182] mlxsw: core_thermal: Use exact name of
+ cooling devices for binding
 
 Modular system supports additional cooling devices "mlxreg_fan1",
 "mlxreg_fan2", etcetera. Thermal zones in "mlxsw" driver should be
@@ -17,10 +17,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index 421555d3f..a20a91285 100644
+index 4964c9164c2d..64c6a78f3aa0 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -141,8 +141,7 @@ static int mlxsw_get_cooling_device_idx(struct mlxsw_thermal *thermal,
+@@ -133,8 +133,7 @@ static int mlxsw_get_cooling_device_idx(struct mlxsw_thermal *thermal,
  
  	/* Allow mlxsw thermal zone binding to an external cooling device */
  	for (i = 0; i < ARRAY_SIZE(mlxsw_thermal_external_allowed_cdev); i++) {
@@ -31,5 +31,5 @@ index 421555d3f..a20a91285 100644
  	}
  
 -- 
-2.30.2
+2.20.1
 

@@ -1,0 +1,50 @@
+From 64006a4de979012d8a55e67690b9ce743d5be433 Mon Sep 17 00:00:00 2001
+From: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Date: Wed, 21 Apr 2021 21:11:32 +0300
+Subject: [PATCH backport 5.10 24/63] devm-helpers: Fix
+ devm_delayed_work_autocancel() kerneldoc
+
+The kerneldoc for devm_delayed_work_autocancel() contains invalid
+parameter description.
+
+Fix the parameter description. And while at it - make it more obvous that
+this function operates on delayed_work. That helps differentiating with
+resource-managed INIT_WORK description (which should follow in near future)
+
+Fixes: 0341ce544394 ("workqueue: Add resource managed version of delayed work init")
+Reviewed-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Link: https://lore.kernel.org/r/db3a8b4b8899fdf109a0cc760807de12d3b4f09b.1619028482.git.matti.vaittinen@fi.rohmeurope.com
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ include/linux/devm-helpers.h | 13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/include/linux/devm-helpers.h b/include/linux/devm-helpers.h
+index f64e0c9f3..f40f77717 100644
+--- a/include/linux/devm-helpers.h
++++ b/include/linux/devm-helpers.h
+@@ -32,13 +32,14 @@ static inline void devm_delayed_work_drop(void *res)
+ }
+ 
+ /**
+- * devm_delayed_work_autocancel - Resource-managed work allocation
+- * @dev: Device which lifetime work is bound to
+- * @pdata: work to be cancelled when driver is detached
++ * devm_delayed_work_autocancel - Resource-managed delayed work allocation
++ * @dev:	Device which lifetime work is bound to
++ * @w:		Work item to be queued
++ * @worker:	Worker function
+  *
+- * Initialize work which is automatically cancelled when driver is detached.
+- * A few drivers need delayed work which must be cancelled before driver
+- * is detached to avoid accessing removed resources.
++ * Initialize delayed work which is automatically cancelled when driver is
++ * detached. A few drivers need delayed work which must be cancelled before
++ * driver is detached to avoid accessing removed resources.
+  * devm_delayed_work_autocancel() can be used to omit the explicit
+  * cancelleation when driver is detached.
+  */
+-- 
+2.20.1
+

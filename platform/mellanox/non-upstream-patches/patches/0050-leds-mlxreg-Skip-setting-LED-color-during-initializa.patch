@@ -1,0 +1,38 @@
+From 3d0e396f29b5da17385c279946b70ee5cd373efe Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 7 Jul 2021 10:18:14 +0000
+Subject: [PATCH backport 5.10 050/182] leds: mlxreg: Skip setting LED color
+ during initialization
+
+Hardware controls LED through CPLD device and LED control ownership
+passes to the software after it performs the first write operation for
+any LED on a system.
+For example, hardware sets "system" LED "green blink" during boot and
+might change it to "red", in case something is went wrong from hardware
+point of view.
+The motivation for not setting LED during kernel initialization is for
+keeping hardware settings visible for user, until user will not decide
+to set LEDs according to user OS specific requirements.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/leds/leds-mlxreg.c | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
+index 82aea1cd0c12..7df4653a80d7 100644
+--- a/drivers/leds/leds-mlxreg.c
++++ b/drivers/leds/leds-mlxreg.c
+@@ -243,9 +243,6 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
+ 		if (err)
+ 			return err;
+ 
+-		if (led_cdev->brightness)
+-			mlxreg_led_brightness_set(led_cdev,
+-						  led_cdev->brightness);
+ 		dev_info(led_cdev->dev, "label: %s, mask: 0x%02x, offset:0x%02x\n",
+ 			 data->label, data->mask, data->reg);
+ 	}
+-- 
+2.20.1
+

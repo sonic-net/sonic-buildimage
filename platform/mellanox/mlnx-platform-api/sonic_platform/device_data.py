@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,10 +23,6 @@ from . import utils
 DEVICE_DATA = {
     'x86_64-mlnx_msn2700-r0': {
         'thermal': {
-            'minimum_table': {
-                "unk_trust":   {"-127:30":13, "31:40":14 , "41:120":15},
-                "unk_untrust": {"-127:25":13, "26:30":14 , "31:35":15, "36:120":16}
-            },
             "capability": {
                 "comex_amb": False
             }
@@ -34,10 +30,6 @@ DEVICE_DATA = {
     },
     'x86_64-mlnx_msn2740-r0': {
         'thermal': {
-            'minimum_table': {
-                "unk_trust":   {"-127:120":13},
-                "unk_untrust": {"-127:15":13, "16:25":14 , "26:30":15, "31:120":17},
-            },
             "capability": {
                 "cpu_pack": False,
                 "comex_amb": False
@@ -46,10 +38,6 @@ DEVICE_DATA = {
     },
     'x86_64-mlnx_msn2100-r0': {
         'thermal': {
-            'minimum_table': {
-                "unk_trust":   {"-127:40":12, "41:120":13},
-                "unk_untrust": {"-127:15":12, "16:25":13, "26:30":14, "31:35":15, "36:120":16}
-            },
             "capability": {
                 "cpu_pack": False,
                 "comex_amb": False
@@ -58,10 +46,6 @@ DEVICE_DATA = {
     },
     'x86_64-mlnx_msn2410-r0': {
         'thermal': {
-            'minimum_table': {
-                "unk_trust":   {"-127:30":13, "31:40":14 , "41:120":15},
-                "unk_untrust": {"-127:25":13, "26:30":14 , "31:35":15, "36:120":16}
-            },
             "capability": {
                 "comex_amb": False
             }
@@ -69,10 +53,6 @@ DEVICE_DATA = {
     },
     'x86_64-mlnx_msn2010-r0': {
         'thermal': {
-            'minimum_table': {
-                "unk_trust":   {"-127:120":12},
-                "unk_untrust": {"-127:15":12, "16:20":13 , "21:30":14, "31:35":15, "36:120":16}
-            },
             "capability": {
                 "cpu_pack": False,
                 "comex_amb": False
@@ -80,75 +60,26 @@ DEVICE_DATA = {
         }
     },
     'x86_64-mlnx_msn3700-r0': {
-        'thermal': {
-            'minimum_table': {
-                "unk_trust":   {"-127:25":12, "26:40":13 , "41:120":14},
-                "unk_untrust": {"-127:15":12, "16:30":13 , "31:35":14, "36:40":15, "41:120":16},
-            }
-        }
     },
     'x86_64-mlnx_msn3700c-r0': {
-        'thermal': {
-            'minimum_table': {
-                "unk_trust":   {"-127:40":12, "41:120":13},
-                "unk_untrust": {"-127:10":12, "11:20":13 , "21:30":14, "31:35":15, "36:120":16},
-            }
-        }
     },
     'x86_64-mlnx_msn3800-r0': {
-        'thermal': {
-            'minimum_table': {
-                "unk_trust":   {"-127:30":12, "31:40":13 , "41:120":14},
-                "unk_untrust": {"-127:0":12, "1:10":13 , "11:15":14, "16:20":15, "21:35":16, "36:120":17},
-            }
-        }
     },
     'x86_64-mlnx_msn4700-r0': {
-       'thermal': {
-            'minimum_table': {
-                "unk_trust":   {"-127:35":14, "36:120":15},
-                "unk_untrust": {"-127:35":14, "36:120":15},
-            }
-        }
     },
     'x86_64-mlnx_msn4410-r0': {
-       'thermal': {
-            'minimum_table': {
-                "unk_trust":   {"-127:40":12, "41:120":13},
-                "unk_untrust": {"-127:10":12, "11:20":13, "21:30":14, "31:35":15, "36:120":16},
-            }
-        }
     },
     'x86_64-mlnx_msn3420-r0': {
-        'thermal': {
-            'minimum_table': {
-                "unk_trust":   {"-127:120":12},
-                "unk_untrust": {"-127:25":12, "26:35":13, "36:40":14, "41:120":16},
-            }
-        }
     },
     'x86_64-mlnx_msn4600c-r0': {
-        'thermal': {
-            'minimum_table': {
-                "unk_trust":   {"-127:40":12, "41:120":13},
-                "unk_untrust": {"-127:5":12, "6:20":13, "21:30":14, "31:35":15, "36:40":16, "41:120":17},
-            }
-        }
     },
     'x86_64-mlnx_msn4600-r0': {
-        'thermal': {
-            'minimum_table': {
-                "unk_trust": {"-127:40": 12, "41:120": 13},
-                "unk_untrust": {"-127:5": 12, "6:20": 13, "21:30": 14, "31:35": 15, "36:40": 16, "41:120": 17},
-            }
-        }
     },
     'x86_64-nvidia_sn4800-r0': {
         'thermal': {
             "capability": {
                 "comex_amb": False
-            },
-            'cpu_threshold': (80, 95)  # min=80, max=95
+            }
         },
         'sfp': {
             'max_port_per_line_card': 16
@@ -156,10 +87,6 @@ DEVICE_DATA = {
     },
     'x86_64-nvidia_sn2201-r0': {
         'thermal': {
-            'minimum_table': {
-                "unk_trust": {"-127:30": 13, "31:35": 14, "36:40": 15, "41:120": 16},
-                "unk_untrust": {"-127:15": 13, "16:20": 14, "21:25": 15, "26:30": 16, "31:35": 17, "36:40": 18, "41:120": 19},
-            },
             "capability": {
                 "comex_amb": False,
                 "cpu_amb": True
@@ -244,19 +171,6 @@ class DeviceDataManager:
 
     @classmethod
     @utils.read_only_cache()
-    def get_minimum_table(cls):
-        platform_data = DEVICE_DATA.get(cls.get_platform_name(), None)
-        if not platform_data:
-            return None
-
-        thermal_data = platform_data.get('thermal', None)
-        if not thermal_data:
-            return None
-
-        return thermal_data.get('minimum_table', None)
-
-    @classmethod
-    @utils.read_only_cache()
     def get_thermal_capability(cls):
         platform_data = DEVICE_DATA.get(cls.get_platform_name(), None)
         if not platform_data:
@@ -284,23 +198,6 @@ class DeviceDataManager:
         if not sfp_data:
             return 0
         return sfp_data.get('max_port_per_line_card', 0)
-
-    @classmethod
-    def is_cpu_thermal_control_supported(cls):
-        return cls.get_cpu_thermal_threshold() != (None, None)
-
-    @classmethod
-    @utils.read_only_cache()
-    def get_cpu_thermal_threshold(cls):
-        platform_data = DEVICE_DATA.get(cls.get_platform_name(), None)
-        if not platform_data:
-            return None, None
-
-        thermal_data = platform_data.get('thermal', None)
-        if not thermal_data:
-            return None, None
-
-        return thermal_data.get('cpu_threshold', (None, None))
 
     @classmethod
     def get_bios_component(cls):

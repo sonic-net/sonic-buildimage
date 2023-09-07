@@ -1,8 +1,8 @@
-From 8279b3c273fac860394fb922c70c336993e6f087 Mon Sep 17 00:00:00 2001
+From e4830f23af9d14fac42764dd077f49de8de7bff2 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Thu, 10 Jun 2021 15:32:00 +0200
-Subject: [PATCH] mlxsw: core_linecards: Expose device FW version over device
- info
+Subject: [PATCH backport 5.10 143/182] mlxsw: core_linecards: Expose device FW
+ version over device info
 
 Extend MDDQ to obtain FW version of line card device and implement
 device_info_get() op to fill up the info with that.
@@ -13,7 +13,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 100 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
-index 720ad6d82..cb872f918 100644
+index 720ad6d82798..cb872f918f01 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 @@ -64,13 +64,31 @@ static const char *mlxsw_linecard_type_name(struct mlxsw_linecard *linecard)
@@ -173,5 +173,5 @@ index 720ad6d82..cb872f918 100644
  
  static int mlxsw_linecard_init(struct mlxsw_core *mlxsw_core,
 -- 
-2.30.2
+2.20.1
 

@@ -1,69 +1,103 @@
-From 422b64397f2f33b394d037820f0ceb4c09e3a725 Mon Sep 17 00:00:00 2001
-From: Alexander Allen <arallen@nvidia.com>
-Date: Fri, 21 Jan 2022 16:47:19 +0000
-Subject: [PATCH 2/4] Disable hw-mgmt on SimX platforms
+From eb3a76d7fbd0cbf2c370ecadd912960b094403d6 Mon Sep 17 00:00:00 2001
+From: Junchao-Mellanox <junchao@nvidia.com>
+Date: Wed, 23 Aug 2023 14:33:44 +0800
+Subject: [PATCH] [PATCH 2/4] Disable hw-mgmt on SimX platforms
 
 ---
- usr/usr/bin/hw-management-ready.sh | 11 +++++++----
- usr/usr/bin/hw-management.sh       |  9 +++++++++
- 2 files changed, 16 insertions(+), 4 deletions(-)
+ usr/usr/bin/hw-management-ready.sh |  3 ---
+ usr/usr/bin/hw-management.sh       | 21 +++++++++------------
+ 2 files changed, 9 insertions(+), 15 deletions(-)
 
 diff --git a/usr/usr/bin/hw-management-ready.sh b/usr/usr/bin/hw-management-ready.sh
-index 88672a8..7558c68 100755
+index 840bb0b..2f8547f 100755
 --- a/usr/usr/bin/hw-management-ready.sh
 +++ b/usr/usr/bin/hw-management-ready.sh
-@@ -51,17 +51,20 @@ if [ -d /var/run/hw-management ]; then
- 	rm -fr /var/run/hw-management
- fi
- 
--case $board_type in
--VMOD0014)
-+if [ -z "$(lspci -vvv | grep SimX)" ]; then
-+    case $board_type in
-+    VMOD0014)
- 	if [ ! -d /sys/devices/pci0000:00/0000:00:1f.0/NVSN2201:00/mlxreg-hotplug/hwmon ]; then
- 		timeout 180 bash -c 'until [ -d /sys/devices/pci0000:00/0000:00:1f.0/NVSN2201:00/mlxreg-hotplug/hwmon ]; do sleep 0.2; done'
- 	fi
- 	;;
--*)
-+    *)
- 	if [ ! -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]; then
- 		timeout 180 bash -c 'until [ -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]; do sleep 0.2; done'
- 	fi
- 	;;
--esac
-+    esac
-+fi
-+
- echo "Start Chassis HW management service."
- logger -t hw-management -p daemon.notice "Start Chassis HW management service."
+@@ -56,9 +56,6 @@ fi
+ # environment, TC need to be stopped.
+ if [ -n "$(lspci -vvv | grep SimX)" ]; then
+ 	case $product_sku in
+-		HI130|HI122)
+-			# Let the TC continue to run
+-			;;
+ 		*)
+ 			if systemctl is-enabled --quiet hw-management-tc; then
+ 				echo "Stopping and disabling hw-management-tc on SimX"
 diff --git a/usr/usr/bin/hw-management.sh b/usr/usr/bin/hw-management.sh
-index 1ee05b5..50d922b 100755
+index d3914d1..a60dba9 100755
 --- a/usr/usr/bin/hw-management.sh
 +++ b/usr/usr/bin/hw-management.sh
-@@ -2310,6 +2310,13 @@ do_chip_down()
- 	/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p
- }
+@@ -545,7 +545,7 @@ function restore_i2c_bus_frequency_default()
+ function find_regio_sysfs_path_helper()
+ {
+ 	# Find hwmon{n} sysfs path for regio device
+-	case $board_type in 
++	case $board_type in
+ 	VMOD0014)
+ 		for path in /sys/devices/pci0000:00/*/NVSN2201:*/mlxreg-io/hwmon/hwmon*; do
+ 			if [ -d "$path" ]; then
+@@ -732,10 +732,10 @@ set_jtag_gpio()
+ 	gpio_tdi=$((gpiobase+jtag_tdi))
+ 	echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
  
-+check_simx()
-+{
-+	if [ -n "$(lspci -vvv | grep SimX)" ]; then
-+		exit 0
+-	# In SN2201 system. 
++	# In SN2201 system.
+ 	# GPIO0 for CPU request to reset the Main Board I2C Mux.
+-	# GPIO1 for CPU control the CPU Board MUX when doing the ISP programming. 
+-	# GPIO13 for CPU request Main Board JTAG control signal. 
++	# GPIO1 for CPU control the CPU Board MUX when doing the ISP programming.
++	# GPIO13 for CPU request Main Board JTAG control signal.
+ 	if [ "$board_type" == "VMOD0014" ]; then
+ 		mux_reset=27
+ 		jtag_mux_en=33
+@@ -1294,7 +1294,7 @@ connect_msn4700_msn4600_A1()
+ 		#  msn4600C with removed A2D
+ 		connect_table+=(${msn4600C_A1_base_connect_table[@]})
+ 	else
+-		# msn4700/msn4600 respin 
++		# msn4700/msn4600 respin
+ 		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
+ 	fi
+ 	add_cpu_board_to_connection_table
+@@ -2144,7 +2144,7 @@ create_symbolic_links()
+ 	fi
+ 	if [ ! -d $thermal_path ]; then
+ 		mkdir $thermal_path
+-	fi	
 +	fi
-+}
-+
- __usage="
- Usage: $(basename "$0") [Options]
+ 	if [ ! -d $config_path ]; then
+ 		mkdir $config_path
+ 	fi
+@@ -2341,7 +2341,7 @@ do_start()
+ 	check_system
+ 	set_asic_pci_id
  
-@@ -2335,6 +2342,8 @@ Options:
- 	force-reload	Performs hw-management 'stop' and the 'start.
- "
- 
-+check_simx
-+
- case $ACTION in
- 	start)
- 		if [ -d /var/run/hw-management ]; then
+-	asic_control=$(< $config_path/asic_control) 
++	asic_control=$(< $config_path/asic_control)
+ 	if [[ $asic_control -ne 0 ]]; then
+ 		get_asic_bus
+ 		get_asic2_bus
+@@ -2379,9 +2379,9 @@ do_start()
+ 	else
+ 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
+ 	fi
+-	if [ -v "lm_sensors_labels" ] && [ -f $lm_sensors_labels ]; then 
++	if [ -v "lm_sensors_labels" ] && [ -f $lm_sensors_labels ]; then
+ 		ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
+-	fi 
++	fi
+ 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
+ 		ln -sf $thermal_control_config $config_path/tc_config.json
+ 	else
+@@ -2528,9 +2528,6 @@ do_chip_up_down()
+ check_simx()
+ {
+ 	case $sku in
+-		HI130|HI122)
+-			# Let the initialization go through
+-			;;
+ 		*)
+ 			if [ -n "$(lspci -vvv | grep SimX)" ]; then
+ 				exit 0
 -- 
-2.20.1
+1.9.1
 

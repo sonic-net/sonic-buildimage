@@ -1736,8 +1736,7 @@ static bool ctcmac_new_page(struct ctcmac_priv_rx_q *rxq,
 	struct page *page;
 	dma_addr_t addr;
 
-	//page = dev_alloc_page();
-	page = __dev_alloc_pages(GFP_DMA | GFP_ATOMIC | __GFP_NOWARN, 0);
+	page = dev_alloc_page();
 	if (unlikely(!page))
 		return false;
 

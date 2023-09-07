@@ -1,0 +1,194 @@
+From 7a45b6a2a14c292e89a09afde8fcc7d1ceb20ebd Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 22 Jun 2022 13:01:15 +0300
+Subject: [PATCH backport 5.10 171/182] platform/mellanox: mlxreg-lc: Fix
+ cleanup on failure and add more verbosity in error flow
+
+Clean client object in case of probing failure.
+Prevent running remove routine in case probing failed.
+Add error log for each kind of failures during probing.
+
+Fixes: 62f9529b8d5c ("platform/mellanox: mlxreg-lc: Add initial support for Nvidia line card devices")
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/mlxreg-lc.c | 85 ++++++++++++++++++++-------
+ 1 file changed, 63 insertions(+), 22 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
+index 75c28179dd07..e3caccb1a528 100644
+--- a/drivers/platform/mellanox/mlxreg-lc.c
++++ b/drivers/platform/mellanox/mlxreg-lc.c
+@@ -569,9 +569,6 @@ static int mlxreg_lc_event_handler(void *handle, enum mlxreg_hotplug_kind kind,
+ 	dev_info(mlxreg_lc->dev, "linecard#%d state %d event kind %d action %d\n",
+ 		 mlxreg_lc->data->slot, mlxreg_lc->state, kind, action);
+ 
+-	if (!(mlxreg_lc->state & MLXREG_LC_INITIALIZED))
+-		return 0;
+-
+ 	switch (kind) {
+ 	case MLXREG_HOTPLUG_LC_SYNCED:
+ 		/*
+@@ -725,8 +722,12 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+ 	switch (regval) {
+ 	case MLXREG_LC_SN4800_C16:
+ 		err = mlxreg_lc_sn4800_c16_config_init(mlxreg_lc, regmap, data);
+-		if (err)
++		if (err) {
++			dev_err(dev, "Failed to config client %s at bus %d at addr 0x%02x\n",
++				data->hpdev.brdinfo->type, data->hpdev.nr,
++				data->hpdev.brdinfo->addr);
+ 			return err;
++		}
+ 		break;
+ 	default:
+ 		return -ENODEV;
+@@ -739,8 +740,11 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+ 	mlxreg_lc->mux = platform_device_register_resndata(dev, "i2c-mux-mlxcpld", data->hpdev.nr,
+ 							   NULL, 0, mlxreg_lc->mux_data,
+ 							   sizeof(*mlxreg_lc->mux_data));
+-	if (IS_ERR(mlxreg_lc->mux))
++	if (IS_ERR(mlxreg_lc->mux)) {
++		dev_err(dev, "Failed to create mux infra for client %s at bus %d at addr 0x%02x\n",
++			data->hpdev.brdinfo->type, data->hpdev.nr, data->hpdev.brdinfo->addr);
+ 		return PTR_ERR(mlxreg_lc->mux);
++	}
+ 
+ 	/* Register IO access driver. */
+ 	if (mlxreg_lc->io_data) {
+@@ -749,6 +753,9 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+ 		platform_device_register_resndata(dev, "mlxreg-io", data->hpdev.nr, NULL, 0,
+ 						  mlxreg_lc->io_data, sizeof(*mlxreg_lc->io_data));
+ 		if (IS_ERR(mlxreg_lc->io_regs)) {
++			dev_err(dev, "Failed to create regio for client %s at bus %d at addr 0x%02x\n",
++				data->hpdev.brdinfo->type, data->hpdev.nr,
++				data->hpdev.brdinfo->addr);
+ 			err = PTR_ERR(mlxreg_lc->io_regs);
+ 			goto fail_register_io;
+ 		}
+@@ -762,6 +769,9 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+ 						  mlxreg_lc->led_data,
+ 						  sizeof(*mlxreg_lc->led_data));
+ 		if (IS_ERR(mlxreg_lc->led)) {
++			dev_err(dev, "Failed to create LED objects for client %s at bus %d at addr 0x%02x\n",
++				data->hpdev.brdinfo->type, data->hpdev.nr,
++				data->hpdev.brdinfo->addr);
+ 			err = PTR_ERR(mlxreg_lc->led);
+ 			goto fail_register_led;
+ 		}
+@@ -818,7 +828,8 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
+ 	if (!data->hpdev.adapter) {
+ 		dev_err(&pdev->dev, "Failed to get adapter for bus %d\n",
+ 			data->hpdev.nr);
+-		return -EFAULT;
++		err = -EFAULT;
++		goto i2c_get_adapter_fail;
+ 	}
+ 
+ 	/* Create device at the top of line card I2C tree.*/
+@@ -827,32 +838,40 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
+ 	if (IS_ERR(data->hpdev.client)) {
+ 		dev_err(&pdev->dev, "Failed to create client %s at bus %d at addr 0x%02x\n",
+ 			data->hpdev.brdinfo->type, data->hpdev.nr, data->hpdev.brdinfo->addr);
+-
+-		i2c_put_adapter(data->hpdev.adapter);
+-		data->hpdev.adapter = NULL;
+-		return PTR_ERR(data->hpdev.client);
++		err = PTR_ERR(data->hpdev.client);
++		goto i2c_new_device_fail;
+ 	}
+ 
+ 	regmap = devm_regmap_init_i2c(data->hpdev.client,
+ 				      &mlxreg_lc_regmap_conf);
+ 	if (IS_ERR(regmap)) {
++		dev_err(&pdev->dev, "Failed to create regmap for client %s at bus %d at addr 0x%02x\n",
++			data->hpdev.brdinfo->type, data->hpdev.nr, data->hpdev.brdinfo->addr);
+ 		err = PTR_ERR(regmap);
+-		goto mlxreg_lc_probe_fail;
++		goto devm_regmap_init_i2c_fail;
+ 	}
+ 
+ 	/* Set default registers. */
+ 	for (i = 0; i < mlxreg_lc_regmap_conf.num_reg_defaults; i++) {
+ 		err = regmap_write(regmap, mlxreg_lc_regmap_default[i].reg,
+ 				   mlxreg_lc_regmap_default[i].def);
+-		if (err)
+-			goto mlxreg_lc_probe_fail;
++		if (err) {
++			dev_err(&pdev->dev, "Failed to set default regmap %d for client %s at bus %d at addr 0x%02x\n",
++				i, data->hpdev.brdinfo->type, data->hpdev.nr,
++				data->hpdev.brdinfo->addr);
++			goto regmap_write_fail;
++		}
+ 	}
+ 
+ 	/* Sync registers with hardware. */
+ 	regcache_mark_dirty(regmap);
+ 	err = regcache_sync(regmap);
+-	if (err)
+-		goto mlxreg_lc_probe_fail;
++	if (err) {
++		dev_err(&pdev->dev, "Failed to sync regmap for client %s at bus %d at addr 0x%02x\n",
++			data->hpdev.brdinfo->type, data->hpdev.nr, data->hpdev.brdinfo->addr);
++		err = PTR_ERR(regmap);
++		goto regcache_sync_fail;
++	}
+ 
+ 	par_pdata = data->hpdev.brdinfo->platform_data;
+ 	mlxreg_lc->par_regmap = par_pdata->regmap;
+@@ -863,12 +882,27 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
+ 	/* Configure line card. */
+ 	err = mlxreg_lc_config_init(mlxreg_lc, regmap, data);
+ 	if (err)
+-		goto mlxreg_lc_probe_fail;
++		goto mlxreg_lc_config_init_fail;
+ 
+ 	return err;
+ 
+-mlxreg_lc_probe_fail:
++mlxreg_lc_config_init_fail:
++regcache_sync_fail:
++regmap_write_fail:
++devm_regmap_init_i2c_fail:
++	if (data->hpdev.client) {
++		i2c_unregister_device(data->hpdev.client);
++		data->hpdev.client = NULL;
++	}
++i2c_new_device_fail:
+ 	i2c_put_adapter(data->hpdev.adapter);
++	data->hpdev.adapter = NULL;
++i2c_get_adapter_fail:
++	/* Clear event notification callback and handle. */
++	if (data->notifier) {
++		data->notifier->user_handler = NULL;
++		data->notifier->handle = NULL;
++	}
+ 	return err;
+ }
+ 
+@@ -877,11 +911,18 @@ static int mlxreg_lc_remove(struct platform_device *pdev)
+ 	struct mlxreg_core_data *data = dev_get_platdata(&pdev->dev);
+ 	struct mlxreg_lc *mlxreg_lc = platform_get_drvdata(pdev);
+ 
+-	/* Clear event notification callback. */
+-	if (data->notifier) {
+-		data->notifier->user_handler = NULL;
+-		data->notifier->handle = NULL;
+-	}
++	/*
++	 * Probing and removing are invoked by hotplug events raised on line card insertion and
++	 * removing. If probing procedure fails all data is cleared. However, hotplug event still
++	 * will be raised on line card removing and activate removing procedure. In this case there
++	 * is nothing to remove.
++	 */
++	if (!data->notifier || !data->notifier->handle)
++		return 0;
++
++	/* Clear event notification callback and handle. */
++	data->notifier->user_handler = NULL;
++	data->notifier->handle = NULL;
+ 
+ 	/* Destroy static I2C device feeding by main power. */
+ 	mlxreg_lc_destroy_static_devices(mlxreg_lc, mlxreg_lc->main_devs,
+-- 
+2.20.1
+

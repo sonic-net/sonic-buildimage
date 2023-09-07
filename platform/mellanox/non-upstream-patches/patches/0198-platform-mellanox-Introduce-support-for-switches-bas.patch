@@ -1,0 +1,253 @@
+From bcdfc7d1d106889fa9af3404f252fb1260f5a0fd Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 15 Nov 2022 11:51:47 +0200
+Subject: [PATCH backport 5.10 086/150] platform: mellanox: Introduce support
+ for switches based on BlueField-3/ARM64 COMe
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add support for Nvidia MQM97xx family switches providing a
+high-performance solution by delivering high bandwidth with low latency
+to Enterprise Data Centers.
+
+These switches are based on previous generation of MQM97xx switches,
+excepting CFL based COMe module is replaced by new BlueField®-3 COMe
+module.
+
+Switches of this class are equipped with:
+- Nvidia Quantum™-2 ASIC, providing up to 64x400GB/s (IB) full
+  bidirectional bandwidth per port using PAM-4 modulation.
+- Com-Express type 7 module, based on Nvidia NVIDIA® BlueField®-3
+  processing unit and equipped with LATTICE LFD2NX40 Certus™-NX FPGA
+  secured device with fail safe
+  mechanism, connected by PCIe bus.
+- Switch board with two Lattice LCMXO3D-9400HC secured with fail safe
+  mechanism, connected by PCEi-to-LPC bridge.
+- Fan board to supporting 7 fans.
+- 2x power extender boards.
+- 7x FRU fans.
+- 2x 2000W AC/DC PSU (FRU).
+
+New switches platform configuration is based on the new VMOD0016
+class. Configuration is extended to support new register map with
+callbacks supporting indirect addressing for PCIe-to-LPC bridge.
+This bridge provides interface between FPAG at COMe board (directly
+connected to CPU PCIe root complex) to CPLDs on switch board (which
+cannot be connected directly to PCIe root complex).
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 147 ++++++++++++++++++++++-
+ 1 file changed, 146 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index f3df56c41..b1c8632d6 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -270,6 +270,7 @@
+ /* Maximum number of possible physical buses equipped on system */
+ #define MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM	16
+ #define MLXPLAT_CPLD_MAX_PHYS_EXT_ADAPTER_NUM	24
++#define MLXPLAT_CPLD_DEFAULT_MUX_HOTPLUG_VECTOR	0
+ 
+ /* Number of channels in group */
+ #define MLXPLAT_CPLD_GRP_CHNL_NUM		8
+@@ -331,6 +332,17 @@
+ #define PCI_VENDOR_ID_LATTICE		0x1204
+ #define PCI_DEVICE_ID_LATTICE_LFD2NX40	0x9c1d
+ #define MLXPLAT_FPGA_PCI_BAR0_SIZE	0x4000
++#define MLXPLAT_FPGA_PCI_BASE_OFFSET	0x00000000
++#define MLXPLAT_FPGA_PCI_ADDR_OFFSET	MLXPLAT_FPGA_PCI_BASE_OFFSET
++#define MLXPLAT_FPGA_PCI_DATA_OFFSET	(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x02)
++#define MLXPLAT_FPGA_PCI_CTRL_OFFSET	(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x04)
++#define MLXPLAT_FPGA_PCI_STAT_OFFSET	(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x06)
++#define MLXPLAT_FPGA_PCI_I2C_LPC_OFFSET	(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x400)
++
++#define MLXPLAT_FPGA_PCI_CTRL_READ	BIT(0)
++#define MLXPLAT_FPGA_PCI_CTRL_WRITE	BIT(1)
++#define MLXPLAT_FPGA_PCI_COMPLETED	BIT(0)
++#define MLXPLAT_FPGA_PCI_TO		50 /* usec */
+ 
+ /* mlxplat_priv - platform private data
+  * @pdev_i2c - i2c controller platform device
+@@ -443,6 +455,28 @@ static struct i2c_mux_reg_platform_data mlxplat_default_mux_data[] = {
+ 
+ };
+ 
++/* Default channels vector for regmap mux. */
++static int mlxplat_default_regmap_mux_chan[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
++
++/* Platform regmap mux data */
++static struct i2c_mux_regmap_platform_data mlxplat_default_regmap_mux_data[] = {
++	{
++		.parent = 1,
++		.chan_ids = mlxplat_default_regmap_mux_chan,
++		.num_adaps = ARRAY_SIZE(mlxplat_default_regmap_mux_chan),
++		.sel_reg_addr = MLXPLAT_CPLD_LPC_REG_I2C_CH1_OFFSET,
++		.reg_size = 1,
++	},
++	{
++		.parent = 1,
++		.chan_ids = mlxplat_default_regmap_mux_chan,
++		.num_adaps = ARRAY_SIZE(mlxplat_default_regmap_mux_chan),
++		.sel_reg_addr = MLXPLAT_CPLD_LPC_REG_I2C_CH2_OFFSET,
++		.reg_size = 1,
++	},
++
++};
++
+ /* Platform mux configuration variables */
+ static int mlxplat_max_adap_num;
+ static int mlxplat_mux_num;
+@@ -5796,6 +5830,84 @@ static const struct regmap_config mlxplat_mlxcpld_regmap_config_eth_modular = {
+ 	.reg_write = mlxplat_mlxcpld_reg_write,
+ };
+ 
++/* Wait completion routine for indirect access for register map */
++static int mlxplat_fpga_completion_wait(struct mlxplat_mlxcpld_regmap_context *ctx)
++{
++	unsigned long end;
++	u16 status;
++
++	end = jiffies + msecs_to_jiffies(MLXPLAT_FPGA_PCI_TO);
++	do {
++		status = ioread16(ctx->base + MLXPLAT_FPGA_PCI_STAT_OFFSET);
++		if (status & MLXPLAT_FPGA_PCI_COMPLETED)
++			return 0;
++		cond_resched();
++	} while (time_before(jiffies, end));
++
++	return -EIO;
++}
++
++/* Read callback for indirect register map access */
++static int mlxplat_fpga_reg_read(void *context, unsigned int reg, unsigned int *val)
++{
++	struct mlxplat_mlxcpld_regmap_context *ctx = context;
++	int err;
++
++	/* Verify there is no pending transactions */
++	err = mlxplat_fpga_completion_wait(ctx);
++	if (err)
++		return err;
++
++	/* Set address in register space */
++	iowrite16(reg, ctx->base + MLXPLAT_FPGA_PCI_ADDR_OFFSET);
++	/* Activate read operation */
++	iowrite16(MLXPLAT_FPGA_PCI_CTRL_READ, ctx->base + MLXPLAT_FPGA_PCI_CTRL_OFFSET);
++	/* Verify transaction completion */
++	err = mlxplat_fpga_completion_wait(ctx);
++	if (err)
++		return err;
++
++	/* Read data */
++	*val = ioread16(ctx->base + MLXPLAT_FPGA_PCI_DATA_OFFSET);
++
++	return 0;
++}
++
++/* Write callback for indirect register map access */
++static int mlxplat_fpga_reg_write(void *context, unsigned int reg, unsigned int val)
++{
++	struct mlxplat_mlxcpld_regmap_context *ctx = context;
++	int err;
++
++	/* Verify there is no pending transactions */
++	err = mlxplat_fpga_completion_wait(ctx);
++	if (err)
++		return err;
++
++	/* Set address in register space */
++	iowrite16(reg, ctx->base + MLXPLAT_FPGA_PCI_ADDR_OFFSET);
++	/* Set data to be written */
++	iowrite16(val, ctx->base + MLXPLAT_FPGA_PCI_DATA_OFFSET);
++	/* Activate write operation */
++	iowrite16(MLXPLAT_FPGA_PCI_CTRL_WRITE, ctx->base + MLXPLAT_FPGA_PCI_CTRL_OFFSET);
++
++	return 0;
++}
++
++static const struct regmap_config mlxplat_fpga_regmap_config_bf3_comex_default = {
++	.reg_bits = 16,
++	.val_bits = 8,
++	.max_register = 512,
++	.cache_type = REGCACHE_FLAT,
++	.writeable_reg = mlxplat_mlxcpld_writeable_reg,
++	.readable_reg = mlxplat_mlxcpld_readable_reg,
++	.volatile_reg = mlxplat_mlxcpld_volatile_reg,
++	.reg_defaults = mlxplat_mlxcpld_regmap_ng400,
++	.num_reg_defaults = ARRAY_SIZE(mlxplat_mlxcpld_regmap_ng400),
++	.reg_read = mlxplat_fpga_reg_read,
++	.reg_write = mlxplat_fpga_reg_write,
++};
++
+ static struct resource mlxplat_mlxcpld_resources[] = {
+ 	[0] = DEFINE_RES_IRQ_NAMED(MLXPLAT_CPLD_LPC_SYSIRQ, "mlxreg-hotplug"),
+ };
+@@ -6175,6 +6287,29 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
+ 	return 1;
+ }
+ 
++static int __init mlxplat_dmi_bf3_comex_default_matched(const struct dmi_system_id *dmi)
++{
++	int i;
++
++	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
++	mlxplat_mux_hotplug_num = MLXPLAT_CPLD_DEFAULT_MUX_HOTPLUG_VECTOR;
++	mlxplat_mux_num = ARRAY_SIZE(mlxplat_default_regmap_mux_data);
++	mlxplat_mux_regmap_data = mlxplat_default_regmap_mux_data;
++	mlxplat_hotplug = &mlxplat_mlxcpld_ext_data;
++	mlxplat_hotplug->deferred_nr =
++		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
++	mlxplat_led = &mlxplat_default_ng_led_data;
++	mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
++	mlxplat_fan = &mlxplat_default_fan_data;
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
++		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
++	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
++	mlxplat_regmap_config = &mlxplat_fpga_regmap_config_bf3_comex_default;
++	pm_power_off = mlxplat_poweroff;
++
++	return 1;
++}
++
+ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+ 	{
+ 		.callback = mlxplat_dmi_default_wc_matched,
+@@ -6270,6 +6405,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+ 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0015"),
+ 		},
+ 	},
++	{
++		.callback = mlxplat_dmi_bf3_comex_default_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0016"),
++		},
++	},
+ 	{
+ 		.callback = mlxplat_dmi_l1_switch_matched,
+ 		.matches = {
+@@ -6502,6 +6643,11 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
+ 		err = -EIO;
+ 		goto fail_ioremap;
+ 	}
++
++	/* Set mapped base address of I2C-LPC bridge over PCIe */
++	mlxplat_i2c->addr = mlxplat_mlxcpld_regmap_ctx.base +
++			    MLXPLAT_FPGA_PCI_I2C_LPC_OFFSET;
++
+ 	pci_set_master(pci_dev);
+ 
+ 	mlxplat_dev = platform_device_register_simple(MLX_PLAT_DEVICE_NAME, PLATFORM_DEVID_NONE,
+@@ -6782,7 +6928,6 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
+ 	nr = (nr == mlxplat_max_adap_num) ? -1 : nr;
+ 	mlxplat_i2c->regmap = priv->regmap;
+ 	mlxplat_i2c->handle = priv;
+-
+ 	priv->pdev_i2c = platform_device_register_resndata(&mlxplat_dev->dev, "i2c_mlxcpld",
+ 							   nr, priv->hotplug_resources,
+ 							   priv->hotplug_resources_size,
+-- 
+2.20.1
+

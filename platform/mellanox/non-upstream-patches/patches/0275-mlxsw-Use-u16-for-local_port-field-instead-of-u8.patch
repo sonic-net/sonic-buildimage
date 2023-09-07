@@ -1,0 +1,61 @@
+From 2aa5016c277751bcc11c6874a58abbe194708f9f Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 9 Mar 2023 22:37:40 +0000
+Subject: [PATCH backport v.5.10 2/3] mlxsw: Use u16 for local_port field
+ instead of u8
+
+Currently, local_port field is saved as u8, which means that maximum 256
+ports can be used.
+
+As preparation for Spectrum-4, which will support more than 256 ports,
+local_port field should be extended.
+
+Save local_port as u16 to allow use of additional ports.
+
+Signed-off-by: Amit Cohen <amcohen@nvidia.com>
+Reviewed-by: Petr Machata <petrm@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core.c | 4 ++--
+ drivers/net/ethernet/mellanox/mlxsw/core.h | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
+index a26c6d880..9475cd656 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
+@@ -2842,7 +2842,7 @@ u64 mlxsw_core_res_get(struct mlxsw_core *mlxsw_core,
+ }
+ EXPORT_SYMBOL(mlxsw_core_res_get);
+ 
+-static int __mlxsw_core_port_init(struct mlxsw_core *mlxsw_core, u8 local_port,
++static int __mlxsw_core_port_init(struct mlxsw_core *mlxsw_core, u16 local_port,
+ 				  enum devlink_port_flavour flavour,
+ 				  u8 slot_index, u32 port_number, bool split,
+ 				  u32 split_port_subnumber,
+@@ -2892,7 +2892,7 @@ static void __mlxsw_core_port_fini(struct mlxsw_core *mlxsw_core, u8 local_port)
+ 	memset(mlxsw_core_port, 0, sizeof(*mlxsw_core_port));
+ }
+ 
+-int mlxsw_core_port_init(struct mlxsw_core *mlxsw_core, u8 local_port,
++int mlxsw_core_port_init(struct mlxsw_core *mlxsw_core, u16 local_port,
+ 			 u8 slot_index, u32 port_number, bool split,
+ 			 u32 split_port_subnumber,
+ 			 bool splittable, u32 lanes,
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
+index b09f9013d..842f365eb 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
+@@ -213,7 +213,7 @@ void mlxsw_core_lag_mapping_clear(struct mlxsw_core *mlxsw_core,
+ 				  u16 lag_id, u8 local_port);
+ 
+ void *mlxsw_core_port_driver_priv(struct mlxsw_core_port *mlxsw_core_port);
+-int mlxsw_core_port_init(struct mlxsw_core *mlxsw_core, u8 local_port,
++int mlxsw_core_port_init(struct mlxsw_core *mlxsw_core, u16 local_port,
+ 			 u8 slot_index, u32 port_number, bool split,
+ 			 u32 split_port_subnumber,
+ 			 bool splittable, u32 lanes,
+-- 
+2.20.1
+

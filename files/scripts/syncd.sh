@@ -41,7 +41,11 @@ function startplatform() {
             /usr/bin/flint -d $_MST_DEVICE --clear_semaphore
         fi
 
-        /usr/bin/mlnx-fw-upgrade.sh
+        /usr/bin/mlnx-fw-upgrade.sh -v
+        if [[ "$?" -ne "${EXIT_SUCCESS}" ]]; then
+            debug "Failed to upgrade fw. " "$?" "Restart syncd"
+            exit 1
+        fi
         /etc/init.d/sxdkernel restart
         debug "Firmware update procedure ended"
     fi

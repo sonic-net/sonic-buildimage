@@ -1,0 +1,48 @@
+From a75294f3e540e2d76a39583dbae875c428196f79 Mon Sep 17 00:00:00 2001
+From: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
+Date: Mon, 16 Aug 2021 14:59:50 +0300
+Subject: [PATCH backport 5.10 48/63] gpio: mlxbf2: Use
+ devm_platform_ioremap_resource()
+
+Simplify the platform_get_resource() and devm_ioremap_resource()
+calls with devm_platform_ioremap_resource().
+
+Signed-off-by: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
+Acked-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Signed-off-by: Bartosz Golaszewski <bgolaszewski@baylibre.com>
+---
+ drivers/gpio/gpio-mlxbf2.c | 11 +++--------
+ 1 file changed, 3 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/gpio/gpio-mlxbf2.c b/drivers/gpio/gpio-mlxbf2.c
+index 8e6f78092..661d5a831 100644
+--- a/drivers/gpio/gpio-mlxbf2.c
++++ b/drivers/gpio/gpio-mlxbf2.c
+@@ -228,7 +228,6 @@ mlxbf2_gpio_probe(struct platform_device *pdev)
+ 	struct mlxbf2_gpio_context *gs;
+ 	struct device *dev = &pdev->dev;
+ 	struct gpio_chip *gc;
+-	struct resource *res;
+ 	unsigned int npins;
+ 	int ret;
+ 
+@@ -237,13 +236,9 @@ mlxbf2_gpio_probe(struct platform_device *pdev)
+ 		return -ENOMEM;
+ 
+ 	/* YU GPIO block address */
+-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+-	if (!res)
+-		return -ENODEV;
+-
+-	gs->gpio_io = devm_ioremap(dev, res->start, resource_size(res));
+-	if (!gs->gpio_io)
+-		return -ENOMEM;
++	gs->gpio_io = devm_platform_ioremap_resource(pdev, 0);
++	if (IS_ERR(gs->gpio_io))
++		return PTR_ERR(gs->gpio_io);
+ 
+ 	ret = mlxbf2_gpio_get_lock_res(pdev);
+ 	if (ret) {
+-- 
+2.20.1
+

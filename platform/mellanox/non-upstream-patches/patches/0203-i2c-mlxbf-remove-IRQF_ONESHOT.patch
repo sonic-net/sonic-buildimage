@@ -1,0 +1,37 @@
+From 9cd9614ce49f3c793efcc47dbbbfa90d793ed543 Mon Sep 17 00:00:00 2001
+From: Asmaa Mnebhi <asmaa@nvidia.com>
+Date: Thu, 8 Sep 2022 13:35:37 -0400
+Subject: [PATCH backport 5.10 04/63] i2c: mlxbf: remove IRQF_ONESHOT
+
+BugLink: https://bugs.launchpad.net/bugs/1991551
+
+IRQF_ONESHOT is not needed so remove it.
+
+Reviewed-by: Khalil Blaiech <kblaiech@nvidia.com>
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Signed-off-by: Wolfram Sang <wsa@kernel.org>
+(cherry picked from commit 92be2c122e495f0249090c0048f4fd05fe1efa9e)
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/i2c/busses/i2c-mlxbf.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/i2c/busses/i2c-mlxbf.c b/drivers/i2c/busses/i2c-mlxbf.c
+index d78fb24d5..066bfeb8a 100644
+--- a/drivers/i2c/busses/i2c-mlxbf.c
++++ b/drivers/i2c/busses/i2c-mlxbf.c
+@@ -2382,7 +2382,7 @@ static int mlxbf_i2c_probe(struct platform_device *pdev)
+ 	if (irq < 0)
+ 		return irq;
+ 	ret = devm_request_irq(dev, irq, mlxbf_smbus_irq,
+-			       IRQF_ONESHOT | IRQF_SHARED | IRQF_PROBE_SHARED,
++			       IRQF_SHARED | IRQF_PROBE_SHARED,
+ 			       dev_name(dev), priv);
+ 	if (ret < 0) {
+ 		dev_err(dev, "Cannot get irq %d\n", irq);
+-- 
+2.20.1
+

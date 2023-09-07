@@ -17,24 +17,21 @@ try:
 except KeyError:
     pass
 
-expected_counts = """\
-       Message Type     Vlan1000
--------------------  -----------
-            Unknown
-            Solicit
-          Advertise
-            Request
-            Confirm
-              Renew
-             Rebind
-              Reply
-            Release
-            Decline
-        Reconfigure
-Information-Request
-      Relay-Forward
-        Relay-Reply
-          Malformed
+expected_counts_v6 = """\
+  Message Type     Vlan1000(RX)
+--------------  ---------------
+
+  Message Type     Vlan1000(TX)
+--------------  ---------------
+
+"""
+
+expected_counts_v4 = """\
+  Message Type     Vlan1000(RX)
+--------------  ---------------
+
+  Message Type     Vlan1000(TX)
+--------------  ---------------
 
 """
 
@@ -43,5 +40,14 @@ class TestDhcp6RelayCounters(object):
     def test_show_counts(self):           
         runner = CliRunner()
         result = runner.invoke(show.dhcp6relay_counters.commands["counts"], ["-i Vlan1000"])
-        assert result.output == expected_counts
+        print(result.output)
+        assert result.output == expected_counts_v6
+
+class TestDhcpRelayCounters(object):
+
+    def test_show_counts(self):           
+        runner = CliRunner()
+        result = runner.invoke(show.dhcp4relay_counters.commands["counts"], ["-i Vlan1000"])
+        print(result.output)
+        assert result.output == expected_counts_v4
 

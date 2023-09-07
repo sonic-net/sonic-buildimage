@@ -1,8 +1,8 @@
-From aa8cdb2df37cbfb7bb37f90879d385428e32ae23 Mon Sep 17 00:00:00 2001
+From 15f2f79bffb77324a389b7e174f32406924d3a3a Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:31 +0200
-Subject: [PATCH] mlxsw: core_hwmon: Introduce slot parameter in hwmon
- interfaces
+Subject: [PATCH backport 5.10 117/182] mlxsw: core_hwmon: Introduce slot
+ parameter in hwmon interfaces
 
 Add 'slot' parameter to 'mlxsw_hwmon_dev' structure. Use this parameter
 in mlxsw_reg_mtmp_pack(), mlxsw_reg_mtbr_pack() and
@@ -18,7 +18,7 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 18 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
-index 31b370862..0d7edabf1 100644
+index 31b370862131..0d7edabf19a4 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 @@ -50,6 +50,7 @@ struct mlxsw_hwmon_dev {
@@ -125,5 +125,5 @@ index 31b370862..0d7edabf1 100644
  	err = mlxsw_hwmon_temp_init(mlxsw_hwmon->main);
  	if (err)
 -- 
-2.30.2
+2.20.1
 

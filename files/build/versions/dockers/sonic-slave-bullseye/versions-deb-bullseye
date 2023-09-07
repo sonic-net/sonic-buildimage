@@ -748,8 +748,8 @@ libjs-popper.js==1.16.1+ds-3
 libjs-sizzle==2.3.5+ds-2
 libjs-sphinxdoc==3.4.3-2
 libjs-underscore==1.9.1~dfsg-3
-libjson-c-dev==0.15-2
-libjson-c5==0.15-2
+libjson-c-dev==0.15-2+deb11u1
+libjson-c5==0.15-2+deb11u1
 libjson-glib-1.0-0==1.6.2-1
 libjson-glib-1.0-common==1.6.2-1
 libjson-maybexs-perl==1.004003-1

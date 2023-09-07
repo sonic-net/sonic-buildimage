@@ -1,0 +1,33 @@
+From 6531f28d37beb20fb423f4835eab47beaaf002bb Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 19 Mar 2023 15:04:26 +0000
+Subject: [PATCH backport v.5.10 2/3] platform/mellanox: mlxreg-hotplug: Extend
+ condition for notification callback processing
+
+Allow processing of notification callback in routine
+mlxreg_hotplug_device_create() in case hotplug object is configured
+with action "MLXREG_HOTPLUG_DEVICE_NO_ACTION" in case no I2C parent bus
+is specified.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/platform/mellanox/mlxreg-hotplug.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
+index b7dcc64cd..c5abedd35 100644
+--- a/drivers/platform/mellanox/mlxreg-hotplug.c
++++ b/drivers/platform/mellanox/mlxreg-hotplug.c
+@@ -113,7 +113,7 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
+ 	 * Return if adapter number is negative. It could be in case hotplug
+ 	 * event is not associated with hotplug device.
+ 	 */
+-	if (data->hpdev.nr < 0)
++	if (data->hpdev.nr < 0 && data->hpdev.action != MLXREG_HOTPLUG_DEVICE_NO_ACTION)
+ 		return 0;
+ 
+ 	pdata = dev_get_platdata(&priv->pdev->dev);
+-- 
+2.20.1
+

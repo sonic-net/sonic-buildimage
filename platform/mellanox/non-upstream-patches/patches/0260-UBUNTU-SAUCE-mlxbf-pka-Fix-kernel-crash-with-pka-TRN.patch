@@ -1,0 +1,67 @@
+From 9d0cd0fb6fbdf825454b3d9f9518d8b569b0cdea Mon Sep 17 00:00:00 2001
+From: Shih-Yi Chen <shihyic@nvidia.com>
+Date: Wed, 4 Jan 2023 10:03:06 -0500
+Subject: [PATCH backport 5.10 1/6] UBUNTU: SAUCE: mlxbf-pka: Fix kernel crash
+ with pka TRNG ioctl call
+
+BugLink: https://bugs.launchpad.net/bugs/2001564
+
+Bluefield encounters kernel crash/oops when HTTPS client uses OpenSSL
+with PKA engine during TLS handshake. The issue is with TRNG ioctl call.
+The kernel logs show the following errors.
+
+Unable to handle kernel access to user memory outside uaccess routines at virtual address 0000ffffce65d328
+
+Signed-off-by: Shih-Yi Chen <shihyic@nvidia.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Acked-by: Cengiz Can <cengiz.can@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/platform/mellanox/mlxbf_pka/mlxbf_pka_drv.c | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxbf_pka/mlxbf_pka_drv.c b/drivers/platform/mellanox/mlxbf_pka/mlxbf_pka_drv.c
+index b8b5a465e..9e26ccf21 100644
+--- a/drivers/platform/mellanox/mlxbf_pka/mlxbf_pka_drv.c
++++ b/drivers/platform/mellanox/mlxbf_pka/mlxbf_pka_drv.c
+@@ -467,7 +467,7 @@ static long pka_drv_ring_ioctl(void *device_data,
+ 	} else if (cmd == PKA_CLEAR_RING_COUNTERS) {
+ 		return pka_dev_clear_ring_counters(ring_dev->ring);
+ 	} else if (cmd == PKA_GET_RANDOM_BYTES) {
+-		pka_dev_trng_info_t *trng_data;
++		pka_dev_trng_info_t trng_data;
+ 		pka_dev_shim_t *shim;
+ 		bool trng_present;
+ 		uint32_t byte_cnt;
+@@ -476,12 +476,17 @@ static long pka_drv_ring_ioctl(void *device_data,
+ 
+ 		ret = -ENOENT;
+ 		shim = ring_dev->ring->shim;
+-		trng_data = (pka_dev_trng_info_t *)arg;
++		ret = copy_from_user(&trng_data, (void __user *)(arg), sizeof(pka_dev_trng_info_t));
++		if (ret) {
++			PKA_DEBUG(PKA_DRIVER, "Failed to copy user request.\n");
++			return -EFAULT;
++		}
++
+ 		/*
+ 		 * We need byte count which is multiple of 4 as
+ 		 * required by pka_dev_trng_read() interface.
+ 		 */
+-		byte_cnt = round_up(trng_data->count, 4);
++		byte_cnt = round_up(trng_data.count, 4);
+ 
+ 		data = kzalloc(byte_cnt, GFP_KERNEL);
+ 		if (data == NULL) {
+@@ -502,7 +507,7 @@ static long pka_drv_ring_ioctl(void *device_data,
+ 			return ret;
+ 		}
+ 
+-		ret = copy_to_user((void __user *)(trng_data->data), data, trng_data->count);
++		ret = copy_to_user((void __user *)(trng_data.data), data, trng_data.count);
+ 		kfree(data);
+ 		return ret ? -EFAULT : 0;
+ 	}
+-- 
+2.20.1
+

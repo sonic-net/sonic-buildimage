@@ -1,8 +1,8 @@
-From a719653b2a7f0943e757c04dab73df324e469436 Mon Sep 17 00:00:00 2001
+From 44b270551552a48c2a0799f1660b7bfdd0c10519 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 12 May 2021 22:57:37 +0300
-Subject: [PATCH] mlxsw: reg: Introduce Management Temperature Extended
- Capabilities Register
+Subject: [PATCH backport 5.10 139/182] mlxsw: reg: Introduce Management
+ Temperature Extended Capabilities Register
 
 Introduce new register MTECR (Management Temperature Extended
 Capabilities Register). This register exposes the capabilities of the
@@ -16,10 +16,10 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 67 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 89b21910f..c1ce0b42e 100644
+index e060f054e0a9..5757c4f40277 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-@@ -10297,6 +10297,72 @@ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,
+@@ -10296,6 +10296,72 @@ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,
  		*num_of_slots = mlxsw_reg_mgpir_num_of_slots_get(payload);
  }
  
@@ -92,7 +92,7 @@ index 89b21910f..c1ce0b42e 100644
  /* MBCT - Management Binary Code Transfer Register
   * -----------------------------------------------
   * This register allows to transfer binary codes from the Host to
-@@ -11884,6 +11950,7 @@ static const struct mlxsw_reg_info *mlxsw_reg_infos[] = {
+@@ -11883,6 +11949,7 @@ static const struct mlxsw_reg_info *mlxsw_reg_infos[] = {
  	MLXSW_REG(mtptpt),
  	MLXSW_REG(mfgd),
  	MLXSW_REG(mgpir),
@@ -101,5 +101,5 @@ index 89b21910f..c1ce0b42e 100644
  	MLXSW_REG(mddq),
  	MLXSW_REG(mddc),
 -- 
-2.30.2
+2.20.1
 

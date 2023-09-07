@@ -1,8 +1,8 @@
-From ab0f9b9dd1f7326242eee0b0a643d6d34e557ae3 Mon Sep 17 00:00:00 2001
+From 8851888004e82e73629f031e8af592c36b12c469 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:33 +0200
-Subject: [PATCH] mlxsw: core_thermal: Extend internal structures to support
- multi thermal areas
+Subject: [PATCH backport 5.10 119/182] mlxsw: core_thermal: Extend internal
+ structures to support multi thermal areas
 
 Introduce intermediate level for thermal zones areas.
 Currently all thermal zones are associated with thermal objects located
@@ -29,10 +29,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 83 insertions(+), 51 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index 3f9062f1c..77a484a55 100644
+index 4f84c4bb66af..5f8b1e92475b 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -91,6 +91,15 @@ struct mlxsw_thermal_module {
+@@ -83,6 +83,15 @@ struct mlxsw_thermal_module {
  	struct thermal_zone_device *tzdev;
  	struct mlxsw_thermal_trip trips[MLXSW_THERMAL_NUM_TRIPS];
  	int module; /* Module or gearbox number */
@@ -48,7 +48,7 @@ index 3f9062f1c..77a484a55 100644
  };
  
  struct mlxsw_thermal {
-@@ -101,10 +110,7 @@ struct mlxsw_thermal {
+@@ -93,10 +102,7 @@ struct mlxsw_thermal {
  	struct thermal_cooling_device *cdevs[MLXSW_MFCR_PWMS_MAX];
  	u8 cooling_levels[MLXSW_THERMAL_MAX_STATE + 1];
  	struct mlxsw_thermal_trip trips[MLXSW_THERMAL_NUM_TRIPS];
@@ -60,7 +60,7 @@ index 3f9062f1c..77a484a55 100644
  	unsigned int tz_highest_score;
  	struct thermal_zone_device *tz_highest_dev;
  };
-@@ -159,13 +165,15 @@ mlxsw_thermal_module_trips_update(struct device *dev, struct mlxsw_core *core,
+@@ -151,13 +157,15 @@ mlxsw_thermal_module_trips_update(struct device *dev, struct mlxsw_core *core,
  	 * EEPROM if we got valid thresholds from MTMP.
  	 */
  	if (!emerg_temp || !crit_temp) {
@@ -78,7 +78,7 @@ index 3f9062f1c..77a484a55 100644
  							   SFP_TEMP_HIGH_ALARM,
  							   &emerg_temp);
  		if (err)
-@@ -432,15 +440,16 @@ static int mlxsw_thermal_module_unbind(struct thermal_zone_device *tzdev,
+@@ -424,15 +432,16 @@ static int mlxsw_thermal_module_unbind(struct thermal_zone_device *tzdev,
  
  static void
  mlxsw_thermal_module_temp_and_thresholds_get(struct mlxsw_core *core,
@@ -98,7 +98,7 @@ index 3f9062f1c..77a484a55 100644
  	err = mlxsw_reg_query(core, MLXSW_REG(mtmp), mtmp_pl);
  	if (err) {
  		/* Set temperature and thresholds to zero to avoid passing
-@@ -471,6 +480,7 @@ static int mlxsw_thermal_module_temp_get(struct thermal_zone_device *tzdev,
+@@ -463,6 +472,7 @@ static int mlxsw_thermal_module_temp_get(struct thermal_zone_device *tzdev,
  
  	/* Read module temperature and thresholds. */
  	mlxsw_thermal_module_temp_and_thresholds_get(thermal->core,
@@ -106,7 +106,7 @@ index 3f9062f1c..77a484a55 100644
  						     sensor_index, &temp,
  						     &crit_temp, &emerg_temp);
  	*p_temp = temp;
-@@ -585,7 +595,7 @@ static int mlxsw_thermal_gearbox_temp_get(struct thermal_zone_device *tzdev,
+@@ -577,7 +587,7 @@ static int mlxsw_thermal_gearbox_temp_get(struct thermal_zone_device *tzdev,
  	int err;
  
  	index = MLXSW_REG_MTMP_GBOX_INDEX_MIN + tz->module;
@@ -115,7 +115,7 @@ index 3f9062f1c..77a484a55 100644
  
  	err = mlxsw_reg_query(thermal->core, MLXSW_REG(mtmp), mtmp_pl);
  	if (err)
-@@ -745,25 +755,28 @@ static void mlxsw_thermal_module_tz_fini(struct thermal_zone_device *tzdev)
+@@ -704,25 +714,28 @@ static void mlxsw_thermal_module_tz_fini(struct thermal_zone_device *tzdev)
  
  static int
  mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
@@ -147,7 +147,7 @@ index 3f9062f1c..77a484a55 100644
  						     &crit_temp, &emerg_temp);
  	/* Update trip point according to the module data. */
  	return mlxsw_thermal_module_trips_update(dev, core, module_tz,
-@@ -781,34 +794,39 @@ static void mlxsw_thermal_module_fini(struct mlxsw_thermal_module *module_tz)
+@@ -740,34 +753,39 @@ static void mlxsw_thermal_module_fini(struct mlxsw_thermal_module *module_tz)
  
  static int
  mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
@@ -198,7 +198,7 @@ index 3f9062f1c..77a484a55 100644
  		if (!module_tz->parent)
  			continue;
  		err = mlxsw_thermal_module_tz_init(module_tz);
-@@ -820,20 +838,21 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
+@@ -779,20 +797,21 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
  
  err_thermal_module_tz_init:
  err_thermal_module_init:
@@ -227,7 +227,7 @@ index 3f9062f1c..77a484a55 100644
  }
  
  static int
-@@ -869,7 +888,8 @@ mlxsw_thermal_gearbox_tz_fini(struct mlxsw_thermal_module *gearbox_tz)
+@@ -828,7 +847,8 @@ mlxsw_thermal_gearbox_tz_fini(struct mlxsw_thermal_module *gearbox_tz)
  
  static int
  mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
@@ -237,7 +237,7 @@ index 3f9062f1c..77a484a55 100644
  {
  	enum mlxsw_reg_mgpir_device_type device_type;
  	struct mlxsw_thermal_module *gearbox_tz;
-@@ -889,19 +909,20 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
+@@ -848,19 +868,20 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  	    !gbox_num)
  		return 0;
  
@@ -265,7 +265,7 @@ index 3f9062f1c..77a484a55 100644
  		err = mlxsw_thermal_gearbox_tz_init(gearbox_tz);
  		if (err)
  			goto err_thermal_gearbox_tz_init;
-@@ -911,19 +932,20 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
+@@ -870,19 +891,20 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  
  err_thermal_gearbox_tz_init:
  	for (i--; i >= 0; i--)
@@ -292,7 +292,7 @@ index 3f9062f1c..77a484a55 100644
  }
  
  int mlxsw_thermal_init(struct mlxsw_core *core,
-@@ -943,9 +965,16 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -902,9 +924,16 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  	if (!thermal)
  		return -ENOMEM;
  
@@ -309,7 +309,7 @@ index 3f9062f1c..77a484a55 100644
  
  	err = mlxsw_reg_query(thermal->core, MLXSW_REG(mfcr), mfcr_pl);
  	if (err) {
-@@ -1012,11 +1041,11 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -970,11 +999,11 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  		goto err_thermal_zone_device_register;
  	}
  
@@ -323,7 +323,7 @@ index 3f9062f1c..77a484a55 100644
  	if (err)
  		goto err_thermal_gearboxes_init;
  
-@@ -1028,9 +1057,9 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -986,9 +1015,9 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  	return 0;
  
  err_thermal_zone_device_enable:
@@ -335,7 +335,7 @@ index 3f9062f1c..77a484a55 100644
  err_thermal_modules_init:
  	if (thermal->tzdev) {
  		thermal_zone_device_unregister(thermal->tzdev);
-@@ -1043,6 +1072,8 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -1001,6 +1030,8 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  			thermal_cooling_device_unregister(thermal->cdevs[i]);
  err_reg_write:
  err_reg_query:
@@ -344,7 +344,7 @@ index 3f9062f1c..77a484a55 100644
  	devm_kfree(dev, thermal);
  	return err;
  }
-@@ -1051,8 +1082,8 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
+@@ -1009,8 +1040,8 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
  {
  	int i;
  
@@ -355,7 +355,7 @@ index 3f9062f1c..77a484a55 100644
  	if (thermal->tzdev) {
  		thermal_zone_device_unregister(thermal->tzdev);
  		thermal->tzdev = NULL;
-@@ -1065,5 +1096,6 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
+@@ -1023,5 +1054,6 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
  		}
  	}
  
@@ -363,5 +363,5 @@ index 3f9062f1c..77a484a55 100644
  	devm_kfree(thermal->bus_info->dev, thermal);
  }
 -- 
-2.30.2
+2.20.1
 

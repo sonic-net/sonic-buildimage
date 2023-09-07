@@ -1,0 +1,275 @@
+From cafef2e9c3fc7113396fb53f55e0b6dfa6115e6a Mon Sep 17 00:00:00 2001
+From: Liming Sun <limings@nvidia.com>
+Date: Thu, 12 Jan 2023 13:58:47 -0500
+Subject: [PATCH backport 5.10 5/6] UBUNTU: SAUCE: platform/mellanox: Add ctrl
+ message and MAC configuration
+
+BugLink: https://bugs.launchpad.net/bugs/2002689
+
+This commit adds control message support and MAC configuration
+based on the control message.
+
+Signed-off-by: Liming Sun <limings@nvidia.com>
+Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+[bzolnier: use a short URL version for BugLink]
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/platform/mellanox/mlxbf-tmfifo.c | 172 ++++++++++++++++++++---
+ 1 file changed, 151 insertions(+), 21 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxbf-tmfifo.c b/drivers/platform/mellanox/mlxbf-tmfifo.c
+index f401bbbd0..97956c9c9 100644
+--- a/drivers/platform/mellanox/mlxbf-tmfifo.c
++++ b/drivers/platform/mellanox/mlxbf-tmfifo.c
+@@ -159,7 +159,9 @@ struct mlxbf_tmfifo_irq_info {
+  * @timer: background timer
+  * @vring: Tx/Rx ring
+  * @spin_lock: Tx/Rx spin lock
++ * @ctrl_mac: MAC address received in control message
+  * @is_ready: ready flag
++ * @send_ctrl: flag to send control message when ready
+  */
+ struct mlxbf_tmfifo {
+ 	struct mlxbf_tmfifo_vdev *vdev[MLXBF_TMFIFO_VDEV_MAX];
+@@ -180,7 +182,16 @@ struct mlxbf_tmfifo {
+ 	struct timer_list timer;
+ 	struct mlxbf_tmfifo_vring *vring[2];
+ 	spinlock_t spin_lock[2];	/* spin lock */
+-	bool is_ready;
++	u8 ctrl_mac[ETH_ALEN];
++	u32 is_ready : 1;
++	u32 send_ctrl : 1;
++};
++
++/* Internal message types defined in reverse order starting from 0xFF. */
++enum {
++	MLXBF_TMFIFO_MSG_CTRL_REQ = 0xFD,
++	MLXBF_TMFIFO_MSG_MAC_1 = 0xFE,
++	MLXBF_TMFIFO_MSG_MAC_2 = 0xFF
+ };
+ 
+ /**
+@@ -190,11 +201,17 @@ struct mlxbf_tmfifo {
+  *       will be read by the other side as data stream in the same byte order.
+  *       The length needs to be encoded into network order so both sides
+  *       could understand it.
++ * @mac: first or second half of the MAC address depending on the type.
++ * @checksum: checksum of the message header (only control message for now).
+  */
+ struct mlxbf_tmfifo_msg_hdr {
+ 	u8 type;
+ 	__be16 len;
+-	u8 unused[5];
++	union {
++		u8 mac[3];
++		u8 unused[4];
++	} __packed;
++	u8 checksum;
+ } __packed __aligned(sizeof(u64));
+ 
+ /*
+@@ -491,6 +508,8 @@ static int mlxbf_tmfifo_get_rx_avail(struct mlxbf_tmfifo *fifo)
+ 	return FIELD_GET(MLXBF_TMFIFO_RX_STS__COUNT_MASK, sts);
+ }
+ 
++
++
+ /* Get the number of available words in the TmFifo for sending. */
+ static int mlxbf_tmfifo_get_tx_avail(struct mlxbf_tmfifo *fifo, int vdev_id)
+ {
+@@ -509,6 +528,127 @@ static int mlxbf_tmfifo_get_tx_avail(struct mlxbf_tmfifo *fifo, int vdev_id)
+ 	return fifo->tx_fifo_size - tx_reserve - count;
+ }
+ 
++/* Read the configured network MAC address from efi variable. */
++static void mlxbf_tmfifo_get_cfg_mac(u8 *mac)
++{
++	efi_guid_t guid = EFI_GLOBAL_VARIABLE_GUID;
++	unsigned long size = ETH_ALEN;
++	u8 buf[ETH_ALEN];
++	efi_status_t rc;
++
++	rc = efi.get_variable(mlxbf_tmfifo_efi_name, &guid, NULL, &size, buf);
++	if (rc == EFI_SUCCESS && size == ETH_ALEN)
++		ether_addr_copy(mac, buf);
++	else
++		ether_addr_copy(mac, mlxbf_tmfifo_net_default_mac);
++}
++
++/* Set the configured network MAC address into efi variable. */
++static efi_status_t mlxbf_tmfifo_set_cfg_mac(u8 *mac)
++{
++	efi_guid_t guid = EFI_GLOBAL_VARIABLE_GUID;
++	efi_status_t status = EFI_SUCCESS;
++	u8 old_mac[ETH_ALEN] = {0};
++
++	mlxbf_tmfifo_get_cfg_mac(old_mac);
++
++	if (memcmp(old_mac, mac, ETH_ALEN)) {
++		status = efi.set_variable(mlxbf_tmfifo_efi_name, &guid,
++					  EFI_VARIABLE_NON_VOLATILE |
++					  EFI_VARIABLE_BOOTSERVICE_ACCESS |
++					  EFI_VARIABLE_RUNTIME_ACCESS,
++					  ETH_ALEN, mac);
++	}
++
++	return status;
++}
++
++/* Just adds up all the bytes of the header. */
++static u8 mlxbf_tmfifo_ctrl_checksum(struct mlxbf_tmfifo_msg_hdr *hdr)
++{
++	u8 checksum = 0;
++	int i;
++
++	for (i = 0; i < sizeof(*hdr); i++)
++		checksum += ((u8 *)hdr)[i];
++
++	return checksum;
++}
++
++static void mlxbf_tmfifo_ctrl_update_checksum(struct mlxbf_tmfifo_msg_hdr *hdr)
++{
++	u8 checksum;
++
++	hdr->checksum = 0;
++	checksum = mlxbf_tmfifo_ctrl_checksum(hdr);
++	hdr->checksum = ~checksum + 1;
++}
++
++static bool mlxbf_tmfifo_ctrl_verify_checksum(struct mlxbf_tmfifo_msg_hdr *hdr)
++{
++	u8 checksum = mlxbf_tmfifo_ctrl_checksum(hdr);
++
++	return checksum ? false : true;
++}
++
++static void mlxbf_tmfifo_ctrl_rx(struct mlxbf_tmfifo *fifo,
++				 struct mlxbf_tmfifo_msg_hdr *hdr)
++{
++	if (!mlxbf_tmfifo_ctrl_verify_checksum(hdr))
++		return;
++
++	switch (hdr->type) {
++	case MLXBF_TMFIFO_MSG_CTRL_REQ:
++		/*
++		 * Set a flag to send the MAC address later. It can't be sent
++		 * here since another packet might be still in the middle of
++		 * transmission.
++		 */
++		fifo->send_ctrl = 1;
++		test_and_set_bit(MLXBF_TM_TX_LWM_IRQ, &fifo->pend_events);
++		schedule_work(&fifo->work);
++		break;
++	case MLXBF_TMFIFO_MSG_MAC_1:
++		/* Get the first half of the MAC address. */
++		memcpy(fifo->ctrl_mac, hdr->mac, sizeof(hdr->mac));
++		break;
++	case MLXBF_TMFIFO_MSG_MAC_2:
++		/* Get the second half of the MAC address and update. */
++		memcpy(fifo->ctrl_mac + sizeof(hdr->mac), hdr->mac,
++		       sizeof(hdr->mac));
++		mlxbf_tmfifo_set_cfg_mac(fifo->ctrl_mac);
++		break;
++	default:
++		break;
++	}
++}
++
++static void mlxbf_tmfifo_ctrl_tx(struct mlxbf_tmfifo *fifo, int *num_avail)
++{
++	struct mlxbf_tmfifo_msg_hdr hdr;
++	u8 mac[ETH_ALEN] = { 0 };
++
++	/* Send the MAC address with two control messages. */
++	if (fifo->send_ctrl && *num_avail >= 2) {
++		mlxbf_tmfifo_get_cfg_mac(mac);
++
++		hdr.type = MLXBF_TMFIFO_MSG_MAC_1;
++		hdr.len = 0;
++		memcpy(hdr.mac, mac, sizeof(hdr.mac));
++		mlxbf_tmfifo_ctrl_update_checksum(&hdr);
++		writeq(*(u64 *)&hdr, fifo->tx_data);
++		(*num_avail)--;
++
++		hdr.type = MLXBF_TMFIFO_MSG_MAC_2;
++		memcpy(hdr.mac, mac + sizeof(hdr.mac), sizeof(hdr.mac));
++		mlxbf_tmfifo_ctrl_update_checksum(&hdr);
++		writeq(*(u64 *)&hdr, fifo->tx_data);
++		(*num_avail)--;
++
++		fifo->send_ctrl = 0;
++	}
++}
++
+ /* Console Tx (move data from the output buffer into the TmFifo). */
+ static void mlxbf_tmfifo_console_tx(struct mlxbf_tmfifo *fifo, int avail)
+ {
+@@ -634,9 +774,11 @@ static void mlxbf_tmfifo_rxtx_header(struct mlxbf_tmfifo_vring *vring,
+ 		/* Drain one word from the FIFO. */
+ 		*(u64 *)&hdr = readq(fifo->rx_data);
+ 
+-		/* Skip the length 0 packets (keepalive). */
+-		if (hdr.len == 0)
++		/* Handle the zero-length packets (control msg). */
++		if (hdr.len == 0) {
++			mlxbf_tmfifo_ctrl_rx(fifo, &hdr);
+ 			return;
++		}
+ 
+ 		/* Check packet type. */
+ 		if (hdr.type == VIRTIO_ID_NET) {
+@@ -804,6 +946,9 @@ static void mlxbf_tmfifo_rxtx(struct mlxbf_tmfifo_vring *vring, bool is_rx)
+ 
+ 		/* Console output always comes from the Tx buffer. */
+ 		if (!is_rx && devid == VIRTIO_ID_CONSOLE) {
++			/* Check if there is any control data to send. */
++			mlxbf_tmfifo_ctrl_tx(fifo, &avail);
++
+ 			mlxbf_tmfifo_console_tx(fifo, avail);
+ 			break;
+ 		}
+@@ -1149,21 +1294,6 @@ static int mlxbf_tmfifo_delete_vdev(struct mlxbf_tmfifo *fifo, int vdev_id)
+ 	return 0;
+ }
+ 
+-/* Read the configured network MAC address from efi variable. */
+-static void mlxbf_tmfifo_get_cfg_mac(u8 *mac)
+-{
+-	efi_guid_t guid = EFI_GLOBAL_VARIABLE_GUID;
+-	unsigned long size = ETH_ALEN;
+-	u8 buf[ETH_ALEN];
+-	efi_status_t rc;
+-
+-	rc = efi.get_variable(mlxbf_tmfifo_efi_name, &guid, NULL, &size, buf);
+-	if (rc == EFI_SUCCESS && size == ETH_ALEN)
+-		ether_addr_copy(mac, buf);
+-	else
+-		ether_addr_copy(mac, mlxbf_tmfifo_net_default_mac);
+-}
+-
+ /* Set TmFifo thresolds which is used to trigger interrupts. */
+ static void mlxbf_tmfifo_set_threshold(struct mlxbf_tmfifo *fifo)
+ {
+@@ -1196,7 +1326,7 @@ static void mlxbf_tmfifo_cleanup(struct mlxbf_tmfifo *fifo)
+ {
+ 	int i;
+ 
+-	fifo->is_ready = false;
++	fifo->is_ready = 0;
+ 	del_timer_sync(&fifo->timer);
+ 	mlxbf_tmfifo_disable_irqs(fifo);
+ 	cancel_work_sync(&fifo->work);
+@@ -1296,7 +1426,7 @@ static int mlxbf_tmfifo_probe(struct platform_device *pdev)
+ 
+ 	mod_timer(&fifo->timer, jiffies + MLXBF_TMFIFO_TIMER_INTERVAL);
+ 
+-	fifo->is_ready = true;
++	fifo->is_ready = 1;
+ 	return 0;
+ 
+ fail:
+-- 
+2.20.1
+

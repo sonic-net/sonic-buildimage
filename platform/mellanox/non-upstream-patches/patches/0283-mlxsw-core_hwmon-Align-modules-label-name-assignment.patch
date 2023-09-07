@@ -1,0 +1,50 @@
+From 41dd6c60de14f70908fc03ed2c20aa35ae0d1596 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 19 Jun 2023 09:53:41 +0000
+Subject: [PATCH backport 5.10 3/3] mlxsw: core_hwmon: Align modules label name
+ assignment according to the MTCAP sensor counter
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+For some new devices MTCAP register provides the counter of ASIC
+ambient sensors plus additional number of platform sensors.
+In such case 'sensor count' will be greater then 1 and modules labels
+will be shifted by the number of platform sensors.
+
+Thus utilities sensors will expose incorrect modules labels.
+For example, temperatures for module#1, module#2 will be exposed like:
+front panel 002:  +37.0°C  (crit = +70.0°C, emerg = +75.0°C)
+front panel 003:  +47.0°C  (crit = +70.0°C, emerg = +75.0°C)
+instead of:
+front panel 001:  +37.0°C  (crit = +70.0°C, emerg = +75.0°C)
+front panel 002:  +47.0°C  (crit = +70.0°C, emerg = +75.0°C)
+
+Set 'index' used in label name according to the 'sensor_count' value.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index a27146cca..f80050cec 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -412,6 +412,13 @@ mlxsw_hwmon_module_temp_label_show(struct device *dev,
+ 	int index = mlxsw_hwmon_attr->type_index;
+ 
+ 	mlxsw_hwmon_dev = mlxsw_hwmon_attr->mlxsw_hwmon_dev;
++	/* For some devices 'sensor count' provides the number of ASIC sensor
++	 * plus additional platform sensors. Set 'index' used in label name
++	 * according to the 'sensor_count' value to align label name with the
++	 * module index.
++	 */
++	if (mlxsw_hwmon_dev->sensor_count > 1)
++		index += 1 - mlxsw_hwmon_dev->sensor_count;
+ 	if (strlen(mlxsw_hwmon_dev->name))
+ 		index += 1;
+ 
+-- 
+2.20.1
+

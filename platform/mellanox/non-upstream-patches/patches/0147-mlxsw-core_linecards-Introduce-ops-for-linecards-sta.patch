@@ -1,8 +1,8 @@
-From 19bae5f5978a43a22258843cc999b592d0e4b414 Mon Sep 17 00:00:00 2001
+From 5e3bebf1e096e4770cad3aaf3d03fa22429fe5f9 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 22 Jan 2021 15:01:06 +0100
-Subject: [PATCH] mlxsw: core_linecards: Introduce ops for linecards status
- change tracking
+Subject: [PATCH backport 5.10 147/182] mlxsw: core_linecards: Introduce ops
+ for linecards status change tracking
 
 Introduce an infrastructure allowing the core to register set of ops
 which are called whenever line card gets provisione/unprovisioned
@@ -15,7 +15,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  2 files changed, 150 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
-index 30f00da0a..10ea541bb 100644
+index 30f00da0a48d..10ea541bb19d 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
 @@ -582,4 +582,26 @@ int mlxsw_linecard_status_process(struct mlxsw_core *mlxsw_core,
@@ -46,7 +46,7 @@ index 30f00da0a..10ea541bb 100644
 +
  #endif
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
-index 9f9ee582f..3a2fdd22d 100644
+index 9f9ee582fce2..3a2fdd22dc21 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 @@ -576,6 +576,59 @@ static void mlxsw_linecard_provision_fail(struct mlxsw_core *mlxsw_core,
@@ -273,5 +273,5 @@ index 9f9ee582f..3a2fdd22d 100644
 +
  MODULE_FIRMWARE(MLXSW_LINECARDS_INI_BUNDLE_FILE);
 -- 
-2.30.2
+2.20.1
 

@@ -14,7 +14,7 @@
     },
     {
         "key": "monitor_action",
-        "stringval": "reboot"
+        "stringval": "warn"
     },
     {
         "key": "grpc_thermal_monitor",
@@ -42,7 +42,7 @@
     },
     {
       "key": "sonic_log_level",
-      "stringval": "error"
+      "stringval": "debug"
     }
     ]
 }

@@ -1,8 +1,8 @@
-From 8d6f7da411b62b4450db1ebb8b687dbc5a386300 Mon Sep 17 00:00:00 2001
+From d037308b118ee4a1ccf557dc3f1c47b81bb62c4c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 13 Dec 2021 12:54:36 +0000
-Subject: [PATCH] mlxsw: core: Add interfaces for line card initialization and
- de-initialization
+Subject: [PATCH backport 5.10 148/182] mlxsw: core: Add interfaces for line
+ card initialization and de-initialization
 
 Add callback functions for line card cables info initialization and
 de-initialization.
@@ -19,10 +19,10 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 78 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-index c27cd424b..f9c770eec 100644
+index 4f3fc25af013..98f7cf672d9e 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-@@ -1162,6 +1162,77 @@ mlxsw_env_module_event_disable(struct mlxsw_env *mlxsw_env, u8 slot_index)
+@@ -1160,6 +1160,77 @@ mlxsw_env_module_event_disable(struct mlxsw_env *mlxsw_env, u8 slot_index)
  {
  }
  
@@ -100,7 +100,7 @@ index c27cd424b..f9c770eec 100644
  int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
  {
  	u8 module_count, num_of_slots, max_module_count;
-@@ -1198,6 +1269,10 @@ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
+@@ -1196,6 +1267,10 @@ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
  	mutex_init(&env->line_cards_lock);
  	*p_env = env;
  
@@ -111,7 +111,7 @@ index c27cd424b..f9c770eec 100644
  	err = mlxsw_env_temp_warn_event_register(mlxsw_core);
  	if (err)
  		goto err_temp_warn_event_register;
-@@ -1225,6 +1300,8 @@ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
+@@ -1223,6 +1298,8 @@ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
  err_module_plug_event_register:
  	mlxsw_env_temp_warn_event_unregister(env);
  err_temp_warn_event_register:
@@ -120,7 +120,7 @@ index c27cd424b..f9c770eec 100644
  	mutex_destroy(&env->line_cards_lock);
  	mlxsw_env_line_cards_free(env);
  err_mlxsw_env_line_cards_alloc:
-@@ -1239,6 +1316,7 @@ void mlxsw_env_fini(struct mlxsw_env *env)
+@@ -1237,6 +1314,7 @@ void mlxsw_env_fini(struct mlxsw_env *env)
  	/* Make sure there is no more event work scheduled. */
  	mlxsw_core_flush_owq();
  	mlxsw_env_temp_warn_event_unregister(env);
@@ -129,5 +129,5 @@ index c27cd424b..f9c770eec 100644
  	mlxsw_env_line_cards_free(env);
  	kfree(env);
 -- 
-2.30.2
+2.20.1
 

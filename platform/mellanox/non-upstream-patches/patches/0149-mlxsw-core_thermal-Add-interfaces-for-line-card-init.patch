@@ -1,8 +1,8 @@
-From 62b2da593b9ee1042b0d65c7b84e9f463497ecd8 Mon Sep 17 00:00:00 2001
+From 71416a2dd1900ac8eb9b7d5cd08911d331b074ff Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 12 May 2021 22:57:39 +0300
-Subject: [PATCH] mlxsw: core_thermal: Add interfaces for line card
- initialization and de-initialization
+Subject: [PATCH backport 5.10 149/182] mlxsw: core_thermal: Add interfaces for
+ line card initialization and de-initialization
 
 Add callback functions for line card thermal area initialization and
 de-initialization. Each line card is associated with the relevant
@@ -34,10 +34,10 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 129 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index e860cade5..88a2f63c8 100644
+index b9253c9f70d9..529108aea3c6 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -96,6 +96,7 @@ struct mlxsw_thermal_module {
+@@ -88,6 +88,7 @@ struct mlxsw_thermal_module {
  };
  
  struct mlxsw_thermal_area {
@@ -45,7 +45,7 @@ index e860cade5..88a2f63c8 100644
  	struct mlxsw_thermal_module *tz_module_arr;
  	u8 tz_module_num;
  	struct mlxsw_thermal_module *tz_gearbox_arr;
-@@ -113,6 +114,7 @@ struct mlxsw_thermal {
+@@ -105,6 +106,7 @@ struct mlxsw_thermal {
  	u8 cooling_levels[MLXSW_THERMAL_MAX_STATE + 1];
  	struct mlxsw_thermal_trip trips[MLXSW_THERMAL_NUM_TRIPS];
  	struct mlxsw_thermal_area *main;
@@ -53,7 +53,7 @@ index e860cade5..88a2f63c8 100644
  	unsigned int tz_highest_score;
  	struct thermal_zone_device *tz_highest_dev;
  };
-@@ -989,6 +991,126 @@ mlxsw_thermal_gearboxes_fini(struct mlxsw_thermal *thermal,
+@@ -948,6 +950,126 @@ mlxsw_thermal_gearboxes_fini(struct mlxsw_thermal *thermal,
  		mlxsw_thermal_gearbox_tz_fini(&area->tz_gearbox_arr[i]);
  }
  
@@ -180,7 +180,7 @@ index e860cade5..88a2f63c8 100644
  int mlxsw_thermal_init(struct mlxsw_core *core,
  		       const struct mlxsw_bus_info *bus_info,
  		       struct mlxsw_thermal **p_thermal)
-@@ -1094,6 +1216,10 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -1052,6 +1174,10 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  	if (err)
  		goto err_thermal_gearboxes_init;
  
@@ -191,7 +191,7 @@ index e860cade5..88a2f63c8 100644
  	err = thermal_zone_device_enable(thermal->tzdev);
  	if (err)
  		goto err_thermal_zone_device_enable;
-@@ -1102,6 +1228,8 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -1060,6 +1186,8 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  	return 0;
  
  err_thermal_zone_device_enable:
@@ -200,7 +200,7 @@ index e860cade5..88a2f63c8 100644
  	mlxsw_thermal_gearboxes_fini(thermal, thermal->main);
  err_thermal_gearboxes_init:
  	mlxsw_thermal_gearboxes_main_fini(thermal->main);
-@@ -1129,6 +1257,7 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
+@@ -1087,6 +1215,7 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
  {
  	int i;
  
@@ -209,5 +209,5 @@ index e860cade5..88a2f63c8 100644
  	mlxsw_thermal_gearboxes_main_fini(thermal->main);
  	mlxsw_thermal_modules_fini(thermal, thermal->main);
 -- 
-2.30.2
+2.20.1
 

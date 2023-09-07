@@ -1,0 +1,186 @@
+From e831f971fd9895b74c0966b3cf3cd2e18c2f8fca Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 10 Nov 2022 08:53:49 +0200
+Subject: [PATCH backport 5.10 085/150] platform: mellanox: Add initial support
+ for PCIe based programming logic device
+
+Extend driver to support logic implemented by FPGA device connected
+through PCIe bus.
+
+The motivation two support new generation of Nvidia COME module, based
+on ARM64 architecture, and equipped with Lattice LFD2NX-40 FPGA device.
+
+In order to support new Nvidia COME module FPGA device driver
+initialization flow is modified. In case FPGA device is detected,
+system resources are to be mapped to this device, otherwise system
+resources are to be mapped same as it has been done before for Lattice
+LPC based CPLD.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 106 ++++++++++++++++++++++-
+ 1 file changed, 105 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index 773d110c9..f3df56c41 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -12,6 +12,7 @@
+ #include <linux/i2c-mux.h>
+ #include <linux/io.h>
+ #include <linux/module.h>
++#include <linux/pci.h>
+ #include <linux/platform_device.h>
+ #include <linux/platform_data/i2c-mux-reg.h>
+ #include <linux/platform_data/i2c-mux-regmap.h>
+@@ -315,6 +316,7 @@
+ #define MLXPLAT_CPLD_WD_MAX_DEVS	2
+ 
+ #define MLXPLAT_CPLD_LPC_SYSIRQ		17
++#define MLXPLAT_FPGA_PCIE_SYSIRQ	17
+ 
+ /* Minimum power required for turning on Ethernet modular system (WATT) */
+ #define MLXPLAT_CPLD_ETH_MODULAR_PWR_MIN	50
+@@ -325,6 +327,11 @@
+ #define MLXPLAT_I2C_MAIN_BUS_NOTIFIED 		0x01
+ #define MLXPLAT_I2C_MAIN_BUS_HANDLE_CREATED	0x02
+ 
++/* Lattice FPGA PCI configuration */
++#define PCI_VENDOR_ID_LATTICE		0x1204
++#define PCI_DEVICE_ID_LATTICE_LFD2NX40	0x9c1d
++#define MLXPLAT_FPGA_PCI_BAR0_SIZE	0x4000
++
+ /* mlxplat_priv - platform private data
+  * @pdev_i2c - i2c controller platform device
+  * @pdev_mux - array of mux platform devices
+@@ -5793,6 +5800,11 @@ static struct resource mlxplat_mlxcpld_resources[] = {
+ 	[0] = DEFINE_RES_IRQ_NAMED(MLXPLAT_CPLD_LPC_SYSIRQ, "mlxreg-hotplug"),
+ };
+ 
++static struct resource mlxplat_mlxfpga_resources[] = {
++	[0] = DEFINE_RES_IRQ_NAMED(MLXPLAT_FPGA_PCIE_SYSIRQ, "mlxreg-hotplug"),
++};
++
++static struct platform_device *mlxplat_dev;
+ static struct mlxreg_core_hotplug_platform_data *mlxplat_i2c;
+ static struct mlxreg_core_hotplug_platform_data *mlxplat_hotplug;
+ static struct mlxreg_core_platform_data *mlxplat_led;
+@@ -5802,6 +5814,7 @@ static struct mlxreg_core_platform_data
+ 	*mlxplat_wd_data[MLXPLAT_CPLD_WD_MAX_DEVS];
+ static const struct regmap_config *mlxplat_regmap_config;
+ static struct spi_board_info *mlxplat_spi;
++static struct pci_dev *fpga_dev;
+ 
+ /* Platform default poweroff function */
+ static void mlxplat_poweroff(void)
+@@ -6443,15 +6456,106 @@ static void mlxplat_lpc_cpld_device_exit(void)
+ 	platform_device_unregister(mlxplat_dev);
+ }
+ 
++static int
++mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
++			     unsigned int *hotplug_resources_size, struct pci_dev **fpga_dev)
++{
++	struct pci_dev *pci_dev;
++	int err;
++
++	pci_dev = pci_get_device(PCI_VENDOR_ID_LATTICE, PCI_DEVICE_ID_LATTICE_LFD2NX40, NULL);
++	if (!pci_dev)
++		return -ENODEV;
++
++	err = pci_enable_device(pci_dev);
++	if (err) {
++		dev_err(&mlxplat_dev->dev, "pci_enable_device failed\n");
++		goto fail_pci_enable_device;
++	}
++
++	err = pci_request_regions(pci_dev, "mlx-patform");
++	if (err) {
++		dev_err(&mlxplat_dev->dev, "pci_request_regions failed\n");
++		goto fail_pci_request_regions;
++	}
++
++	err = dma_set_mask_and_coherent(&mlxplat_dev->dev, DMA_BIT_MASK(64));
++	if (err) {
++		err = dma_set_mask(&mlxplat_dev->dev, DMA_BIT_MASK(32));
++		if (err) {
++			dev_err(&mlxplat_dev->dev, "dma_set_mask failed\n");
++			goto fail_pci_set_dma_mask;
++		}
++	}
++
++	if (pci_resource_len(pci_dev, 0) < MLXPLAT_FPGA_PCI_BAR0_SIZE) {
++		dev_err(&mlxplat_dev->dev, "invalid PCI region size\n");
++		err = -EINVAL;
++		goto fail_pci_resource_len_check;
++	}
++
++	mlxplat_mlxcpld_regmap_ctx.base = devm_ioremap(&mlxplat_dev->dev,
++						       pci_resource_start(pci_dev, 0),
++						       pci_resource_len(pci_dev, 0));
++	if (!mlxplat_mlxcpld_regmap_ctx.base) {
++		dev_err(&mlxplat_dev->dev, "ioremap failed\n");
++		err = -EIO;
++		goto fail_ioremap;
++	}
++	pci_set_master(pci_dev);
++
++	mlxplat_dev = platform_device_register_simple(MLX_PLAT_DEVICE_NAME, PLATFORM_DEVID_NONE,
++						      NULL, 0);
++	if (IS_ERR(mlxplat_dev)) {
++		err = PTR_ERR(mlxplat_dev);
++		goto fail_platform_device_register_simple;
++	}
++
++	*hotplug_resources = mlxplat_mlxfpga_resources;
++	*hotplug_resources_size = ARRAY_SIZE(mlxplat_mlxfpga_resources);
++	*fpga_dev = pci_dev;
++
++	return 0;
++
++fail_platform_device_register_simple:
++fail_ioremap:
++fail_pci_resource_len_check:
++fail_pci_set_dma_mask:
++	pci_release_regions(pci_dev);
++fail_pci_request_regions:
++	pci_disable_device(pci_dev);
++fail_pci_enable_device:
++	return err;
++}
++
++static void mlxplat_pci_fpga_device_exit(void)
++{
++	platform_device_unregister(mlxplat_dev);
++	iounmap(mlxplat_mlxcpld_regmap_ctx.base);
++	pci_release_regions(fpga_dev);
++	pci_disable_device(fpga_dev);
++}
++
+ static int
+ mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_resources_size)
+ {
++	int err;
++
++	err = mlxplat_pci_fpga_device_init(hotplug_resources, hotplug_resources_size, &fpga_dev);
++	if (!err)
++		return 0;
++	else if (err != -ENODEV)
++		return err;
++
+ 	return mlxplat_lpc_cpld_device_init(hotplug_resources, hotplug_resources_size);
+ }
+ 
+ static void mlxplat_post_exit(void)
+ {
+-	mlxplat_lpc_cpld_device_exit();
++	if (fpga_dev)
++		mlxplat_pci_fpga_device_exit();
++	else
++		mlxplat_lpc_cpld_device_exit();
+ }
+ 
+ static int mlxplat_post_init(struct mlxplat_priv *priv)
+-- 
+2.20.1
+

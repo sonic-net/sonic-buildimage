@@ -117,6 +117,8 @@ RUN apt-get update && apt-get install -y \
         libzmq3-dev \
         uuid-dev \
         jq \
+# For sonic-swss-common
+        nlohmann-json3-dev \
 # For quagga build
         libreadline-dev \
         texlive-latex-base \
@@ -409,6 +411,8 @@ RUN apt-get update && apt-get install -y \
         libgirepository1.0-dev \
         libsystemd-dev \
         pkg-config \
+# For sonic-swss-common build
+        libhiredis-dev \
 # For audisp-tacplus
         libauparse-dev \
         auditd

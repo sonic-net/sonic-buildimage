@@ -1,0 +1,46 @@
+From 7c7da04799f5fe6f7f5751d413dcdf04abe5ea53 Mon Sep 17 00:00:00 2001
+From: David Thompson <davthompson@nvidia.com>
+Date: Tue, 13 Sep 2022 13:15:14 -0400
+Subject: [PATCH backport 5.10 37/63] UBUNTU: SAUCE: mlxbf_gige: clear MDIO
+ gateway lock after read
+
+BugLink: https://bugs.launchpad.net/bugs/1989495
+
+The MDIO gateway (GW) lock in BlueField-2 GIGE logic is
+set after read.  This patch adds logic to make sure the
+lock is always cleared at the end of each MDIO transaction.
+
+Reviewed-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Signed-off-by: David Thompson <davthompson@nvidia.com>
+Signed-off-by: Ike Panhc <ike.pan@canonical.com>
+---
+ drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c
+index 6c8a4a529..b7363c6c3 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c
+@@ -117,6 +117,9 @@ static int mlxbf_gige_mdio_read(struct mii_bus *bus, int phy_add, int phy_reg)
+ 	/* Only return ad bits of the gw register */
+ 	ret &= MLXBF_GIGE_MDIO_GW_AD_MASK;
+ 
++	/* The MDIO lock is set on read. To release it, clear gw register */
++	writel(0, priv->mdio_io + MLXBF_GIGE_MDIO_GW_OFFSET);
++
+ 	return ret;
+ }
+ 
+@@ -141,6 +144,9 @@ static int mlxbf_gige_mdio_write(struct mii_bus *bus, int phy_add,
+ 					temp, !(temp & MLXBF_GIGE_MDIO_GW_BUSY_MASK),
+ 					5, 1000000);
+ 
++	/* The MDIO lock is set on read. To release it, clear gw register */
++	writel(0, priv->mdio_io + MLXBF_GIGE_MDIO_GW_OFFSET);
++
+ 	return ret;
+ }
+ 
+-- 
+2.20.1
+

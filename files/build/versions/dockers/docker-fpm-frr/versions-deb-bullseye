@@ -19,7 +19,7 @@ libgpm2==1.20.7-8
 libhiredis0.14-dbgsym==0.14.1-1
 libicu67==67.1-7
 libipt2==2.0.3-1
-libjson-c5==0.15-2
+libjson-c5==0.15-2+deb11u1
 libmpfr6==4.1.0-3
 libpci3==1:3.7.0-5
 libpopt0==1.18-2

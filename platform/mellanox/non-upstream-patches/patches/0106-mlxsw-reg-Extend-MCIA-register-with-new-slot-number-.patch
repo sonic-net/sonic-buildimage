@@ -1,7 +1,8 @@
-From d494bb0c59dd1f6150f189e2878babf53b67e111 Mon Sep 17 00:00:00 2001
+From 4f10b61f33bdaee774b31b7fe37a76058b755561 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:47 +0200
-Subject: [PATCH] mlxsw: reg: Extend MCIA register with new slot number field
+Subject: [PATCH backport 5.10 106/182] mlxsw: reg: Extend MCIA register with
+ new slot number field
 
 Extend MCIA (Management Cable Info Access Register) with new field
 specifying the slot number. The purpose of this field is to support
@@ -21,7 +22,7 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  2 files changed, 18 insertions(+), 9 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-index 7feefb38b..21eacbe0a 100644
+index c2aa05be5bcc..a516c04ad19b 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 @@ -35,8 +35,8 @@ static int mlxsw_env_validate_cable_ident(struct mlxsw_core *core, int id,
@@ -35,7 +36,7 @@ index 7feefb38b..21eacbe0a 100644
  	err = mlxsw_reg_query(core, MLXSW_REG(mcia), mcia_pl);
  	if (err)
  		return err;
-@@ -111,7 +111,8 @@ mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
+@@ -110,7 +110,8 @@ mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
  		}
  	}
  
@@ -45,7 +46,7 @@ index 7feefb38b..21eacbe0a 100644
  
  	err = mlxsw_reg_query(mlxsw_core, MLXSW_REG(mcia), mcia_pl);
  	if (err)
-@@ -185,12 +186,12 @@ int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, int module,
+@@ -184,12 +185,12 @@ int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, int module,
  			page = MLXSW_REG_MCIA_TH_PAGE_CMIS_NUM;
  		else
  			page = MLXSW_REG_MCIA_TH_PAGE_NUM;
@@ -60,7 +61,7 @@ index 7feefb38b..21eacbe0a 100644
  				    MLXSW_REG_MCIA_PAGE0_LO,
  				    off, MLXSW_REG_MCIA_TH_ITEM_SIZE,
  				    MLXSW_REG_MCIA_I2C_ADDR_HIGH);
-@@ -371,7 +372,7 @@ mlxsw_env_get_module_eeprom_by_page(struct mlxsw_core *mlxsw_core, u8 module,
+@@ -369,7 +370,7 @@ mlxsw_env_get_module_eeprom_by_page(struct mlxsw_core *mlxsw_core, u8 module,
  		size = min_t(u8, page->length - bytes_read,
  			     MLXSW_REG_MCIA_EEPROM_SIZE);
  
@@ -70,7 +71,7 @@ index 7feefb38b..21eacbe0a 100644
  				    page->i2c_address);
  		mlxsw_reg_mcia_bank_number_set(mcia_pl, page->bank);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 56927c772..2714e316c 100644
+index df210bd9a29c..bdbe198a9053 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -8798,6 +8798,12 @@ MLXSW_ITEM32(reg, mcia, l, 0x00, 31, 1);
@@ -86,7 +87,7 @@ index 56927c772..2714e316c 100644
  enum {
  	MLXSW_REG_MCIA_STATUS_GOOD = 0,
  	/* No response from module's EEPROM. */
-@@ -8897,11 +8903,13 @@ MLXSW_ITEM_BUF(reg, mcia, eeprom, 0x10, MLXSW_REG_MCIA_EEPROM_SIZE);
+@@ -8896,11 +8902,13 @@ MLXSW_ITEM_BUF(reg, mcia, eeprom, 0x10, MLXSW_REG_MCIA_EEPROM_SIZE);
  				MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH) / \
  				MLXSW_REG_MCIA_EEPROM_UP_PAGE_LENGTH + 1)
  
@@ -104,5 +105,5 @@ index 56927c772..2714e316c 100644
  	mlxsw_reg_mcia_l_set(payload, lock);
  	mlxsw_reg_mcia_page_number_set(payload, page_number);
 -- 
-2.30.2
+2.20.1
 

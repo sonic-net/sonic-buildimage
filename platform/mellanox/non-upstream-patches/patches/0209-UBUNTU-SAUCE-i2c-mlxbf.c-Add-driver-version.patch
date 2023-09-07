@@ -1,0 +1,37 @@
+From c78abc95294213920e386abb941df6e23ba1ede3 Mon Sep 17 00:00:00 2001
+From: Asmaa Mnebhi <asmaa@nvidia.com>
+Date: Tue, 11 Oct 2022 14:28:57 -0400
+Subject: [PATCH backport 5.10 10/63] UBUNTU: SAUCE: i2c-mlxbf.c: Add driver
+ version
+
+BugLink: https://bugs.launchpad.net/bugs/1991551
+
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/i2c/busses/i2c-mlxbf.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/i2c/busses/i2c-mlxbf.c b/drivers/i2c/busses/i2c-mlxbf.c
+index 67548702f..0eb92bbc1 100644
+--- a/drivers/i2c/busses/i2c-mlxbf.c
++++ b/drivers/i2c/busses/i2c-mlxbf.c
+@@ -19,6 +19,8 @@
+ #include <linux/platform_device.h>
+ #include <linux/string.h>
+ 
++#define DRV_VERSION "3.2"
++
+ /* Defines what functionality is present. */
+ #define MLXBF_I2C_FUNC_SMBUS_BLOCK \
+ 	(I2C_FUNC_SMBUS_BLOCK_DATA | I2C_FUNC_SMBUS_BLOCK_PROC_CALL)
+@@ -2532,3 +2534,4 @@ MODULE_DESCRIPTION("Mellanox BlueField I2C bus driver");
+ MODULE_AUTHOR("Khalil Blaiech <kblaiech@nvidia.com>");
+ MODULE_AUTHOR("Asmaa Mnebhi <asmaa@nvidia.com>");
+ MODULE_LICENSE("GPL v2");
++MODULE_VERSION(DRV_VERSION);
+-- 
+2.20.1
+

@@ -1,8 +1,8 @@
-From 3c23c52a44d6f87f7caaf09babb6196e523d1e7c Mon Sep 17 00:00:00 2001
+From 59c953deed31161dc358e6d397af2b5b0f5ee61c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 22 Dec 2021 16:06:54 +0000
-Subject: [PATCH] mlxsw: core_linecards: Add line card objects and implement
- provisioning
+Subject: [PATCH backport 5.10 135/182] mlxsw: core_linecards: Add line card
+ objects and implement provisioning
 
 Introduce objects for line cards and an infrastructure around that.
 Use devlink_linecard_create/destroy() to register the line card with
@@ -21,7 +21,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  create mode 100644 drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/Makefile b/drivers/net/ethernet/mellanox/mlxsw/Makefile
-index 892724380..ca7260a14 100644
+index 892724380ea2..ca7260a145f5 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/Makefile
 +++ b/drivers/net/ethernet/mellanox/mlxsw/Makefile
 @@ -1,7 +1,8 @@
@@ -35,7 +35,7 @@ index 892724380..ca7260a14 100644
  mlxsw_core-$(CONFIG_MLXSW_CORE_THERMAL) += core_thermal.o
  obj-$(CONFIG_MLXSW_PCI)		+= mlxsw_pci.o
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
-index 0b1888318..246db548f 100644
+index 0b1888318ef1..246db548f011 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
 @@ -82,6 +82,7 @@ struct mlxsw_core {
@@ -112,7 +112,7 @@ index 0b1888318..246db548f 100644
  	kfree(mlxsw_core->lag.mapping);
  	mlxsw_ports_fini(mlxsw_core);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
-index 0ceb7dae9..d3c5d8289 100644
+index 0ceb7dae95f6..d3c5d8289a85 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
 @@ -30,6 +30,8 @@ unsigned int mlxsw_core_max_ports(const struct mlxsw_core *mlxsw_core);
@@ -175,7 +175,7 @@ index 0ceb7dae9..d3c5d8289 100644
  #endif
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 new file mode 100644
-index 000000000..a324ce243
+index 000000000000..a324ce2436e8
 --- /dev/null
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 @@ -0,0 +1,775 @@
@@ -955,7 +955,7 @@ index 000000000..a324ce243
 +
 +MODULE_FIRMWARE(MLXSW_LINECARDS_INI_BUNDLE_FILE);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
-index 5066fcc46..d7a230828 100644
+index e0424f490c6f..bc233a5c8a79 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
 @@ -2076,6 +2076,72 @@ static void mlxsw_sp_pude_event_func(const struct mlxsw_reg_info *reg,
@@ -1041,7 +1041,7 @@ index 5066fcc46..d7a230828 100644
  	MLXSW_SP_RXL_NO_MARK(FID_MISS, TRAP_TO_CPU, FID_MISS, false),
  	/* L3 traps */
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/trap.h b/drivers/net/ethernet/mellanox/mlxsw/trap.h
-index 57f9e2460..f3e522de2 100644
+index 57f9e24602d0..f3e522de2f68 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/trap.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/trap.h
 @@ -132,6 +132,12 @@ enum mlxsw_event_trap_id {
@@ -1058,5 +1058,5 @@ index 57f9e2460..f3e522de2 100644
  
  #endif /* _MLXSW_TRAP_H */
 -- 
-2.30.2
+2.20.1
 

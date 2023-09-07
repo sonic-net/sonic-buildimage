@@ -1,7 +1,8 @@
-From c5235b3c4a8ab2b758140d75a7422117e917478c Mon Sep 17 00:00:00 2001
+From 8d7807e7b8326c537aa7db4fe31b2ca183d32248 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 19 Dec 2021 09:12:58 +0000
-Subject: [PATCH] mlxsw: i2c: Add support for system events handling
+Subject: [PATCH backport v5.10.164 1/1] mlxsw: i2c: Add support for system
+ events handling
 
 Extend i2c bus driver with interrupt handler to support system specific
 hotplug events, related to line card state change.
@@ -17,7 +18,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 110 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
-index b75416561..e5883b4e8 100644
+index cc99ec3f4e96..02f5733cfcc6 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
 @@ -9,6 +9,7 @@
@@ -41,33 +42,33 @@ index b75416561..e5883b4e8 100644
  /**
   * struct mlxsw_i2c - device private data:
   * @cmd: command attributes;
-@@ -64,6 +71,12 @@
+@@ -63,6 +70,12 @@
+  * @core: switch core pointer;
   * @bus_info: bus info block;
   * @block_size: maximum block size allowed to pass to under layer;
-  * @status: status to indicate chip reset or in-service update;
 + * @pdata: device platform data;
 + * @dwork_irq: interrupts delayed work queue;
 + * @lock - lock for interrupts sync;
 + * @sys_event_handler: system events handler callback;
 + * @irq: IRQ line number;
 + * @irq_unhandled_count: number of unhandled interrupts;
+  * @status: status to indicate chip reset or in-service update;
   */
  struct mlxsw_i2c {
- 	struct {
-@@ -78,6 +91,12 @@ struct mlxsw_i2c {
+@@ -77,6 +90,12 @@ struct mlxsw_i2c {
+ 	struct mlxsw_core *core;
  	struct mlxsw_bus_info bus_info;
  	u16 block_size;
- 	u8 status;
 +	struct mlxreg_core_hotplug_platform_data *pdata;
 +	struct delayed_work dwork_irq;
 +	spinlock_t lock; /* sync with interrupt */
 +	void (*sys_event_handler)(struct mlxsw_core *mlxsw_core);
 +	int irq;
 +	atomic_t irq_unhandled_count;
+ 	u8 status;
  };
  
- #define MLXSW_I2C_READ_MSG(_client, _addr_buf, _buf, _len) {	\
-@@ -538,6 +557,7 @@ mlxsw_i2c_init(void *bus_priv, struct mlxsw_core *mlxsw_core,
+@@ -537,6 +556,7 @@ mlxsw_i2c_init(void *bus_priv, struct mlxsw_core *mlxsw_core,
  	int err;
  
  	mlxsw_i2c->core = mlxsw_core;
@@ -75,7 +76,7 @@ index b75416561..e5883b4e8 100644
  
  	mbox = mlxsw_cmd_mbox_alloc();
  	if (!mbox)
-@@ -568,6 +588,87 @@ static void mlxsw_i2c_fini(void *bus_priv)
+@@ -567,6 +587,87 @@ static void mlxsw_i2c_fini(void *bus_priv)
  	mlxsw_i2c->core = NULL;
  }
  
@@ -163,7 +164,7 @@ index b75416561..e5883b4e8 100644
  static const struct mlxsw_bus mlxsw_i2c_bus = {
  	.kind			= "i2c",
  	.init			= mlxsw_i2c_init,
-@@ -662,6 +763,7 @@ static int mlxsw_i2c_probe(struct i2c_client *client,
+@@ -661,6 +762,7 @@ static int mlxsw_i2c_probe(struct i2c_client *client,
  	mlxsw_i2c->bus_info.dev = &client->dev;
  	mlxsw_i2c->bus_info.low_frequency = true;
  	mlxsw_i2c->dev = &client->dev;
@@ -171,7 +172,7 @@ index b75416561..e5883b4e8 100644
  
  	err = mlxsw_core_bus_device_register(&mlxsw_i2c->bus_info,
  					     &mlxsw_i2c_bus, mlxsw_i2c, false,
-@@ -671,6 +773,12 @@ static int mlxsw_i2c_probe(struct i2c_client *client,
+@@ -670,6 +772,12 @@ static int mlxsw_i2c_probe(struct i2c_client *client,
  		return err;
  	}
  
@@ -184,7 +185,7 @@ index b75416561..e5883b4e8 100644
  	return 0;
  
  errout:
-@@ -684,6 +792,8 @@ static int mlxsw_i2c_remove(struct i2c_client *client)
+@@ -683,6 +791,8 @@ static int mlxsw_i2c_remove(struct i2c_client *client)
  {
  	struct mlxsw_i2c *mlxsw_i2c = i2c_get_clientdata(client);
  
@@ -194,5 +195,5 @@ index b75416561..e5883b4e8 100644
  	mutex_destroy(&mlxsw_i2c->cmd.lock);
  
 -- 
-2.30.2
+2.20.1
 

@@ -31,7 +31,7 @@ https://deb.debian.org/debian/pool/main/k/kdump-tools/kdump-tools_1.6.8.4.tar.xz
 https://deb.nodesource.com/gpgkey/nodesource.gpg.key==003b51a89a133b5db4cca98b2dea3117
 https://deb.nodesource.com/node_14.x/dists/bullseye/Release==6b7d50c433d129d4c6fd95bdf56070fa
 https://deb.nodesource.com/node_14.x/dists/buster/Release==42875141604382f0abb4d047f645dfe1
-https://deb.nodesource.com/setup_14.x==472c9614e7c6dd029f205890ed356a22
+https://deb.nodesource.com/setup_14.x==c30873f4a513bb935afaf8f65e7de9e1
 https://download.docker.com/linux/debian/gpg==1afae06b34a13c1b3d9cb61a26285a15
 https://github.com/aristanetworks/sonic-firmware/raw/446f30ccd8626f904d89d5798da7294948e090a6/phy/phy-credo_1.0_amd64.deb==6c3d6c32477615cbe049b9161ce15bd5
 https://github.com/barefootnetworks/sonic-release-pkgs/raw/dev/bfnplatform_20221130_sai_1.11.0_deb11.deb==4a77e5f35b75ad7ce062f631581b40e2
@@ -149,9 +149,6 @@ https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.8/arm64/python
 https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.8/arm64/python3.9_3.9.2-1+fips_arm64.deb==4d6307dabcd3060235d6188cfa0346b8
 https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.8/arm64/symcrypt-openssl_0.8_arm64.deb==0ab2a6b1c621508eb5b39da92fd69060
 https://sonicstorage.blob.core.windows.net/public/sai/bcmpai/REL_3.8/3.8/libsaibroncos_3.8_amd64.deb==f7c3f0ed8c97c2572e3c2e59faaae4a8
-https://sonicstorage.blob.core.windows.net/public/sai/bcmsai/REL_7.0_SAI_1.11/7.1.111.1/libsaibcm_dnx_7.1.111.1_amd64.deb==458f404279c3f30ec71de6bad7373323
-https://sonicstorage.blob.core.windows.net/public/sai/sai-broadcom/SAI_8.4.0_GA/8.4.0.2/xgs/libsaibcm-dev_8.4.0.2_amd64.deb==50bc5321ebdf6c3f065ba53509a742e4
-https://sonicstorage.blob.core.windows.net/public/sai/sai-broadcom/SAI_8.4.0_GA/8.4.0.2/xgs/libsaibcm_8.4.0.2_amd64.deb==dabee9c96305e5300eb060f46419c6e6
 https://storage.googleapis.com/golang/go1.15.15.linux-amd64.tar.gz==b75227438c6129b5013da053b3aa3f38
 https://storage.googleapis.com/golang/go1.15.15.linux-arm64.tar.gz==6d721146a9195592d92a80cf27d475f9
 https://storage.googleapis.com/golang/go1.15.15.linux-armv6l.tar.gz==23d140bbeedc978b954de1a199a22bdb

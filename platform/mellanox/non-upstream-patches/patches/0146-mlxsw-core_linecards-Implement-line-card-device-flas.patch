@@ -1,7 +1,8 @@
-From b721c11b90bb0ef2fcd0bfccd6334948153edea2 Mon Sep 17 00:00:00 2001
+From 0e642e558b98e1a686b39acb53f53c1fb9735b02 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 5 Mar 2021 09:33:21 +0100
-Subject: [PATCH] mlxsw: core_linecards: Implement line card device flashing
+Subject: [PATCH backport 5.10 146/182] mlxsw: core_linecards: Implement line
+ card device flashing
 
 Generate flash component name and register it internally within mlxsw
 for flashing. Also, propagate the component name to devlink core which
@@ -15,7 +16,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 334 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
-index cb872f918..9f9ee582f 100644
+index cb872f918f01..9f9ee582fce2 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 @@ -73,6 +73,7 @@ struct mlxsw_linecard_device_info {
@@ -396,5 +397,5 @@ index cb872f918..9f9ee582f 100644
  }
  
 -- 
-2.30.2
+2.20.1
 

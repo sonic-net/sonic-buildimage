@@ -1,7 +1,8 @@
-From ad972c6b6591023ddc7547bbcbc5c5e1941b29c5 Mon Sep 17 00:00:00 2001
+From 2e6cd3d593c0bf1cc38093a73ec7777a5b806bfe Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:44 +0200
-Subject: [PATCH] mlxsw: reg: Add "mgpir_" prefix to MGPIR fields comments
+Subject: [PATCH backport 5.10 102/182] mlxsw: reg: Add "mgpir_" prefix to
+ MGPIR fields comments
 
 Do the same as for other registers and have "mgpir_" prefix for the
 MGPIR fields.
@@ -14,10 +15,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index a9119451d..7f7cdb3fc 100644
+index 7f9b902049db..c3fb2e4d4458 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-@@ -10131,24 +10131,24 @@ enum mlxsw_reg_mgpir_device_type {
+@@ -10130,24 +10130,24 @@ enum mlxsw_reg_mgpir_device_type {
  	MLXSW_REG_MGPIR_DEVICE_TYPE_GEARBOX_DIE,
  };
  
@@ -47,5 +48,5 @@ index a9119451d..7f7cdb3fc 100644
   * Access: RO
   */
 -- 
-2.30.2
+2.20.1
 

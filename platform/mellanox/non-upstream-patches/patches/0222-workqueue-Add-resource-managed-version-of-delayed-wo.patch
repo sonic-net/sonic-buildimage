@@ -1,0 +1,84 @@
+From 48998b5918e9320b47c26c78d3b14cc3e1faac8a Mon Sep 17 00:00:00 2001
+From: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Date: Tue, 23 Mar 2021 15:56:17 +0200
+Subject: [PATCH backport 5.10 23/63] workqueue: Add resource managed version
+ of delayed work init
+
+A few drivers which need a delayed work-queue must cancel work at driver
+detach. Some of those implement remove() solely for this purpose. Help
+drivers to avoid unnecessary remove and error-branch implementation by
+adding managed verision of delayed work initialization. This will also
+help drivers to avoid mixing manual and devm based unwinding when other
+resources are handled by devm.
+
+Reviewed-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Link: https://lore.kernel.org/r/51769ea4668198deb798fe47fcfb5f5288d61586.1616506559.git.matti.vaittinen@fi.rohmeurope.com
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ include/linux/devm-helpers.h | 53 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 53 insertions(+)
+ create mode 100644 include/linux/devm-helpers.h
+
+diff --git a/include/linux/devm-helpers.h b/include/linux/devm-helpers.h
+new file mode 100644
+index 000000000..f64e0c9f3
+--- /dev/null
++++ b/include/linux/devm-helpers.h
+@@ -0,0 +1,53 @@
++/* SPDX-License-Identifier: GPL-2.0-only */
++#ifndef __LINUX_DEVM_HELPERS_H
++#define __LINUX_DEVM_HELPERS_H
++
++/*
++ * Functions which do automatically cancel operations or release resources upon
++ * driver detach.
++ *
++ * These should be helpful to avoid mixing the manual and devm-based resource
++ * management which can be source of annoying, rarely occurring,
++ * hard-to-reproduce bugs.
++ *
++ * Please take into account that devm based cancellation may be performed some
++ * time after the remove() is ran.
++ *
++ * Thus mixing devm and manual resource management can easily cause problems
++ * when unwinding operations with dependencies. IRQ scheduling a work in a queue
++ * is typical example where IRQs are often devm-managed and WQs are manually
++ * cleaned at remove(). If IRQs are not manually freed at remove() (and this is
++ * often the case when we use devm for IRQs) we have a period of time after
++ * remove() - and before devm managed IRQs are freed - where new IRQ may fire
++ * and schedule a work item which won't be cancelled because remove() was
++ * already ran.
++ */
++
++#include <linux/device.h>
++#include <linux/workqueue.h>
++
++static inline void devm_delayed_work_drop(void *res)
++{
++	cancel_delayed_work_sync(res);
++}
++
++/**
++ * devm_delayed_work_autocancel - Resource-managed work allocation
++ * @dev: Device which lifetime work is bound to
++ * @pdata: work to be cancelled when driver is detached
++ *
++ * Initialize work which is automatically cancelled when driver is detached.
++ * A few drivers need delayed work which must be cancelled before driver
++ * is detached to avoid accessing removed resources.
++ * devm_delayed_work_autocancel() can be used to omit the explicit
++ * cancelleation when driver is detached.
++ */
++static inline int devm_delayed_work_autocancel(struct device *dev,
++					       struct delayed_work *w,
++					       work_func_t worker)
++{
++	INIT_DELAYED_WORK(w, worker);
++	return devm_add_action(dev, devm_delayed_work_drop, w);
++}
++
++#endif
+-- 
+2.20.1
+

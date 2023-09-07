@@ -1,0 +1,39 @@
+From 89d0e497e62b90e8faa2b67c298cedeab47b8f8b Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 27 Feb 2023 16:09:17 +0000
+Subject: [PATCH backport 5.10 2/3] platform: mellanox: Fix order in exit flow
+
+Fix exit flow order: call mlxplat_post_exit() after
+mlxplat_i2c_main_exit() in order to unregister main i2c driver before
+to "mlxplat" driver.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index 656056089..42fd7e4e0 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -6929,8 +6929,6 @@ static void mlxplat_i2c_mux_topology_exit(struct mlxplat_priv *priv)
+ 		if (priv->pdev_mux[i])
+ 			platform_device_unregister(priv->pdev_mux[i]);
+ 	}
+-
+-	mlxplat_post_exit();
+ }
+ 
+ static int mlxplat_i2c_main_complition_notify(void *handle, int id)
+@@ -7068,6 +7066,7 @@ static void __exit mlxplat_exit(void)
+ 		unregister_reboot_notifier(mlxplat_reboot_nb);
+ 	mlxplat_pre_exit(priv);
+ 	mlxplat_i2c_main_exit(priv);
++	mlxplat_post_exit();
+ }
+ module_exit(mlxplat_exit);
+ 
+-- 
+2.20.1
+

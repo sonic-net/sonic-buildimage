@@ -1,7 +1,8 @@
-From 1ea36b4966e21d9d599da7e4e3195364841d9318 Mon Sep 17 00:00:00 2001
+From 3614c1e72e48e03c64ce88d269d97ee4743f9cc4 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 13 Dec 2021 12:29:10 +0000
-Subject: [PATCH] mlxsw: core: Add APIs for thermal sensor mapping
+Subject: [PATCH backport 5.10 140/182] mlxsw: core: Add APIs for thermal
+ sensor mapping
 
 Add APIs mlxsw_env_sensor_map_init() and mlxsw_env_sensor_map_fini(().
 The purpose of the first one is to allocate and create thermal sensors
@@ -21,10 +22,10 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  2 files changed, 59 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-index 94d44db1a..c27cd424b 100644
+index 4553dfa68f96..4f3fc25af013 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-@@ -626,6 +626,53 @@ mlxsw_env_set_module_power_mode(struct mlxsw_core *mlxsw_core, u8 slot_index,
+@@ -624,6 +624,53 @@ mlxsw_env_set_module_power_mode(struct mlxsw_core *mlxsw_core, u8 slot_index,
  }
  EXPORT_SYMBOL(mlxsw_env_set_module_power_mode);
  
@@ -79,7 +80,7 @@ index 94d44db1a..c27cd424b 100644
  					    u8 slot_index, u8 module,
  					    bool *p_has_temp_sensor)
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.h b/drivers/net/ethernet/mellanox/mlxsw/core_env.h
-index 03d027870..336c9ee57 100644
+index 03d027870d65..336c9ee579cb 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_env.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.h
 @@ -9,6 +9,11 @@
@@ -109,5 +110,5 @@ index 03d027870..336c9ee57 100644
  mlxsw_env_get_module_eeprom_by_page(struct mlxsw_core *mlxsw_core,
  				    u8 slot_index, u8 module,
 -- 
-2.30.2
+2.20.1
 

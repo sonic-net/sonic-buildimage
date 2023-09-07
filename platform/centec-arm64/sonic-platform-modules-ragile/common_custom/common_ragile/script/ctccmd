@@ -1,3 +1,0 @@
-#! /bin/bash
-
-docker exec -i syncd ctc_shell -e "$@"

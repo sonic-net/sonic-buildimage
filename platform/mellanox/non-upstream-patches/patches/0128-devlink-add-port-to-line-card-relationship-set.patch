@@ -1,7 +1,8 @@
-From ce052dd9aec77733b55fe1285a9be5c4cbcc87b3 Mon Sep 17 00:00:00 2001
+From fb810d890bd142a7cfc14fb7e5f1519eee366208 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 22 Dec 2021 14:10:14 +0000
-Subject: [PATCH] devlink: add port to line card relationship set
+Subject: [PATCH backport 5.10 128/182] devlink: add port to line card
+ relationship set
 
 In order to properly inform user about relationship between port and
 line card, introduce a driver API to set line card for a port. Use this
@@ -16,7 +17,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  2 files changed, 32 insertions(+), 6 deletions(-)
 
 diff --git a/include/net/devlink.h b/include/net/devlink.h
-index d9b2b559c..3d4ceb290 100644
+index d9b2b559c9a2..3d4ceb2902b8 100644
 --- a/include/net/devlink.h
 +++ b/include/net/devlink.h
 @@ -140,6 +140,8 @@ struct devlink_port {
@@ -38,7 +39,7 @@ index d9b2b559c..3d4ceb290 100644
  devlink_linecard_create(struct devlink *devlink, unsigned int linecard_index,
  			const struct devlink_linecard_ops *ops, void *priv);
 diff --git a/net/core/devlink.c b/net/core/devlink.c
-index 724633810..b43e93ccc 100644
+index 724633810758..b43e93ccc672 100644
 --- a/net/core/devlink.c
 +++ b/net/core/devlink.c
 @@ -905,6 +905,10 @@ static int devlink_nl_port_fill(struct sk_buff *msg, struct devlink *devlink,
@@ -97,5 +98,5 @@ index 724633810..b43e93ccc 100644
  	case DEVLINK_PORT_FLAVOUR_CPU:
  	case DEVLINK_PORT_FLAVOUR_DSA:
 -- 
-2.30.2
+2.20.1
 

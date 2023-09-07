@@ -181,7 +181,7 @@ gsfonts==1:8.11+urwcyr1.0.7~pre44-4.4
 gstreamer1.0-libav==1.15.0.1+git20180723+db823502-2+deb10u1
 gstreamer1.0-plugins-base==1.14.4-2+deb10u2
 gstreamer1.0-plugins-good==1.14.4-1+deb10u3
-gstreamer1.0-plugins-ugly==1.14.4-1+deb10u1
+gstreamer1.0-plugins-ugly==1.14.4-1+deb10u2
 gstreamer1.0-x==1.14.4-2+deb10u2
 gtk-update-icon-cache==3.24.5-1
 guile-2.0-libs==2.0.13+1-5.1

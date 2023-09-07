@@ -1,0 +1,34 @@
+From 0fcfc9b2eb7f071f3aa64845d262f1e8e4f741e7 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 9 Nov 2022 10:35:58 +0200
+Subject: [PATCH backport 5.10 05/10] i2c: mlxcpld: Allow to configure base
+ address of register space
+
+Allow to use configured base address.
+
+Currently driver uses constant base address of register space.
+On new systems this base address could be different, thus it could be
+passed to the driver through platform data.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/i2c/busses/i2c-mlxcpld.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
+index 57aea396c..cd5401ce4 100644
+--- a/drivers/i2c/busses/i2c-mlxcpld.c
++++ b/drivers/i2c/busses/i2c-mlxcpld.c
+@@ -538,6 +538,9 @@ static int mlxcpld_i2c_probe(struct platform_device *pdev)
+ 		err = mlxcpld_i2c_set_frequency(priv, pdata);
+ 		if (err)
+ 			goto mlxcpld_i2_probe_failed;
++
++		if (pdata->addr)
++			priv->base_addr = (*(u64 __force *)pdata->addr);
+ 	}
+ 
+ 	/* Register with i2c layer */
+-- 
+2.20.1
+

@@ -1,8 +1,8 @@
-From 9780cd7afe3455d0ee428f5009514780e858c133 Mon Sep 17 00:00:00 2001
+From a18e5112ed12150e245e275e187ecd6d87d66b0e Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:30 +0200
-Subject: [PATCH] mlxsw: core_hwmon: Extend internal structures to support
- multi hwmon objects
+Subject: [PATCH backport 5.10 116/182] mlxsw: core_hwmon: Extend internal
+ structures to support multi hwmon objects
 
 Currently, mlxsw supports a single hwmon device and registers it with
 attributes corresponding to the various objects found on the main
@@ -32,7 +32,7 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 112 insertions(+), 80 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
-index 7061c18b7..31b370862 100644
+index 7061c18b7edc..31b370862131 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 @@ -27,7 +27,7 @@
@@ -537,5 +537,5 @@ index 7061c18b7..31b370862 100644
  	kfree(mlxsw_hwmon);
  }
 -- 
-2.30.2
+2.20.1
 

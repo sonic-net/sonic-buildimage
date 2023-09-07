@@ -1,0 +1,108 @@
+From 30e4a53201f1f1cd9ca90057cd8f191c93fdab15 Mon Sep 17 00:00:00 2001
+From: David Thompson <davthompson@nvidia.com>
+Date: Wed, 20 Jul 2022 17:50:36 -0400
+Subject: [PATCH backport 5.10 34/63] UBUNTU: SAUCE: Fix OOB handling RX
+ packets in heavy traffic
+
+BugLink: https://bugs.launchpad.net/bugs/1982424
+
+This is reproducible on systems which already have heavy background
+traffic. On top of that, the user issues one of the 2 docker pulls below:
+docker pull nvcr.io/ea-doca-hbn/hbn/hbn:latest
+OR
+docker pull gitlab-master.nvidia.com:5005/dl/dgx/tritonserver:22.02-py3-qa
+
+The second one is a very large container (17GB)
+
+When they run docker pull, the OOB interface stops being pingable,
+the docker pull is interrupted for a very long time (>3mn) or
+times out.
+
+The main reason for the above is because RX PI = RX CI. I have verified that
+by reading RX_CQE_PACKET_CI and RX_WQE_PI. This means the WQEs are full and
+HW has nowhere else to put the RX packets.
+
+I believe there is a race condition after SW receives a RX interrupt,
+and the interrupt is disabled. I believe HW still tries to add RX
+packets to the RX WQEs. So we need to stop the RX traffic by disabling
+the DMA. Also, move reading the RX CI before writing the increased value
+of RX PI to MLXBF_GIGE_RX_WQE_PI. Normally RX PI should always be > RX CI.
+I suspect that when entering mlxbf_gige_rx_packet, for example we have:
+MLXBF_GIGE_RX_WQE_PI = 128
+RX_CQE_PACKET_CI = 128
+(128 being the max size of the WQE)
+
+Then this code will make MLXBF_GIGE_RX_WQE_PI = 129:
+rx_pi++;
+/* Ensure completion of all writes before notifying HW of replenish */
+wmb();
+writeq(rx_pi, priv->base + MLXBF_GIGE_RX_WQE_PI);
+
+which means HW has one more slot to populate and in that time span, the HW
+populates that WQE and increases the RX_CQE_PACKET_CI = 129.
+
+Then this code is subject to a race condition:
+
+rx_ci = readq(priv->base + MLXBF_GIGE_RX_CQE_PACKET_CI);
+rx_ci_rem = rx_ci % priv->rx_q_entries;
+return rx_pi_rem != rx_ci_rem;
+
+because rx_pi_rem will be equal to rx_ci_rem.
+so remaining_pkts will be 0 and we will exit mlxbf_gige_poll
+
+Change-Id: I25a816b9182471643db95b05c803b9f6349bcc87
+Signed-off-by: David Thompson <davthompson@nvidia.com>
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Signed-off-by: Ike Panhc <ike.pan@canonical.com>
+---
+ .../ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c    | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c
+index afa3b92a6..96230763c 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c
+@@ -266,6 +266,9 @@ static bool mlxbf_gige_rx_packet(struct mlxbf_gige *priv, int *rx_pkts)
+ 		priv->stats.rx_truncate_errors++;
+ 	}
+ 
++	rx_ci = readq(priv->base + MLXBF_GIGE_RX_CQE_PACKET_CI);
++	rx_ci_rem = rx_ci % priv->rx_q_entries;
++
+ 	/* Let hardware know we've replenished one buffer */
+ 	rx_pi++;
+ 
+@@ -278,8 +281,6 @@ static bool mlxbf_gige_rx_packet(struct mlxbf_gige *priv, int *rx_pkts)
+ 	rx_pi_rem = rx_pi % priv->rx_q_entries;
+ 	if (rx_pi_rem == 0)
+ 		priv->valid_polarity ^= 1;
+-	rx_ci = readq(priv->base + MLXBF_GIGE_RX_CQE_PACKET_CI);
+-	rx_ci_rem = rx_ci % priv->rx_q_entries;
+ 
+ 	if (skb)
+ 		netif_receive_skb(skb);
+@@ -299,6 +300,10 @@ int mlxbf_gige_poll(struct napi_struct *napi, int budget)
+ 
+ 	mlxbf_gige_handle_tx_complete(priv);
+ 
++	data = readq(priv->base + MLXBF_GIGE_RX_DMA);
++	data &= ~MLXBF_GIGE_RX_DMA_EN;
++	writeq(data, priv->base + MLXBF_GIGE_RX_DMA);
++
+ 	do {
+ 		remaining_pkts = mlxbf_gige_rx_packet(priv, &work_done);
+ 	} while (remaining_pkts && work_done < budget);
+@@ -314,6 +319,10 @@ int mlxbf_gige_poll(struct napi_struct *napi, int budget)
+ 		data = readq(priv->base + MLXBF_GIGE_INT_MASK);
+ 		data &= ~MLXBF_GIGE_INT_MASK_RX_RECEIVE_PACKET;
+ 		writeq(data, priv->base + MLXBF_GIGE_INT_MASK);
++
++		data = readq(priv->base + MLXBF_GIGE_RX_DMA);
++		data |= MLXBF_GIGE_RX_DMA_EN;
++		writeq(data, priv->base + MLXBF_GIGE_RX_DMA);
+ 	}
+ 
+ 	return work_done;
+-- 
+2.20.1
+

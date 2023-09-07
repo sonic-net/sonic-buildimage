@@ -147,5 +147,16 @@
 {% endif %}
         }
 {% endif %}
+    },
+    "KDUMP": {
+        "config": {
+{%- if sonic_asic_platform == "cisco-8000" %}
+            "enabled": "true",
+{% else %}
+            "enabled": "false",
+{% endif %}
+            "memory": "0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-:448M",
+            "num_dumps": "3"
+        }
     }
 }

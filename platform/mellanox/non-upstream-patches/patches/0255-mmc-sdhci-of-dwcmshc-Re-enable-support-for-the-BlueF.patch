@@ -1,0 +1,77 @@
+From 990bb46dc1f0fd103e9d01d8e87c046fbe879d53 Mon Sep 17 00:00:00 2001
+From: Liming Sun <limings@nvidia.com>
+Date: Tue, 9 Aug 2022 13:37:42 -0400
+Subject: [PATCH] mmc: sdhci-of-dwcmshc: Re-enable support for the BlueField-3
+ SoC
+X-NVConfidentiality: public
+
+BugLink: https://bugs.launchpad.net/bugs/1991831
+
+[ Upstream commit a0753ef66c34c1739580219dca664eda648164b7 ]
+
+The commit 08f3dff799d4 (mmc: sdhci-of-dwcmshc: add rockchip platform
+support") introduces the use of_device_get_match_data() to check for some
+chips. Unfortunately, it also breaks the BlueField-3 FW, which uses ACPI.
+
+To fix the problem, let's add the ACPI match data and the corresponding
+quirks to re-enable the support for the BlueField-3 SoC.
+
+Reviewed-by: David Woods <davwoods@nvidia.com>
+Signed-off-by: Liming Sun <limings@nvidia.com>
+Acked-by: Adrian Hunter <adrian.hunter@intel.com>
+Fixes: 08f3dff799d4 ("mmc: sdhci-of-dwcmshc: add rockchip platform support")
+Cc: stable@vger.kernel.org
+Link: https://lore.kernel.org/r/20220809173742.178440-1-limings@nvidia.com
+[Ulf: Clarified the commit message a bit]
+Signed-off-by: Ulf Hansson <ulf.hansson@linaro.org>
+Signed-off-by: Sasha Levin <sashal@kernel.org>
+Signed-off-by: Kamal Mostafa <kamal@canonical.com>
+Signed-off-by: Stefan Bader <stefan.bader@canonical.com>
+---
+ drivers/mmc/host/sdhci-of-dwcmshc.c | 16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mmc/host/sdhci-of-dwcmshc.c b/drivers/mmc/host/sdhci-of-dwcmshc.c
+index bac874ab0..a0c73ddaa 100644
+--- a/drivers/mmc/host/sdhci-of-dwcmshc.c
++++ b/drivers/mmc/host/sdhci-of-dwcmshc.c
+@@ -279,6 +279,15 @@ static const struct sdhci_pltfm_data sdhci_dwcmshc_pdata = {
+ 	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN,
+ };
+ 
++#ifdef CONFIG_ACPI
++static const struct sdhci_pltfm_data sdhci_dwcmshc_bf3_pdata = {
++	.ops = &sdhci_dwcmshc_ops,
++	.quirks = SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN,
++	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
++		   SDHCI_QUIRK2_ACMD23_BROKEN,
++};
++#endif
++
+ static const struct sdhci_pltfm_data sdhci_dwcmshc_rk3568_pdata = {
+ 	.ops = &sdhci_dwcmshc_rk3568_ops,
+ 	.quirks = SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN |
+@@ -336,7 +345,10 @@ MODULE_DEVICE_TABLE(of, sdhci_dwcmshc_dt_ids);
+ 
+ #ifdef CONFIG_ACPI
+ static const struct acpi_device_id sdhci_dwcmshc_acpi_ids[] = {
+-	{ .id = "MLNXBF30" },
++	{
++		.id = "MLNXBF30",
++		.driver_data = (kernel_ulong_t)&sdhci_dwcmshc_bf3_pdata,
++	},
+ 	{}
+ };
+ #endif
+@@ -352,7 +364,7 @@ static int dwcmshc_probe(struct platform_device *pdev)
+ 	int err;
+ 	u32 extra;
+ 
+-	pltfm_data = of_device_get_match_data(&pdev->dev);
++	pltfm_data = device_get_match_data(&pdev->dev);
+ 	if (!pltfm_data) {
+ 		dev_err(&pdev->dev, "Error: No device match data found\n");
+ 		return -ENODEV;
+-- 
+2.14.1
+

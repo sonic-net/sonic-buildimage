@@ -1,0 +1,81 @@
+From 3a61ad447e2ec437079c86c277b80acde19e9173 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 26 Dec 2022 22:28:33 +0200
+Subject: [PATCH backport 5.10 073/150] platform: mellanox: Extend all systems
+ with I2C notification callback
+
+Motivation is to provide synchronization between I2C main bus and other
+platform drivers using this notification callback.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/x86/mlx-platform.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 05a630135..1ef0bb975 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -365,6 +365,11 @@ static const struct resource mlxplat_lpc_resources[] = {
+ 			       IORESOURCE_IO),
+ };
+ 
++/* Platform systems default i2c data */
++static struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_i2c_default_data = {
++	.completion_notify = mlxplat_i2c_main_complition_notify,
++};
++
+ /* Platform i2c next generation systems data */
+ static struct mlxreg_core_data mlxplat_mlxcpld_i2c_ng_items_data[] = {
+ 	{
+@@ -5807,6 +5812,7 @@ static int __init mlxplat_dmi_default_matched(const struct dmi_system_id *dmi)
+ 	mlxplat_led = &mlxplat_default_led_data;
+ 	mlxplat_regs_io = &mlxplat_default_regs_io_data;
+ 	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
++	mlxplat_i2c = &mlxplat_mlxcpld_i2c_default_data;
+ 
+ 	return 1;
+ }
+@@ -5829,6 +5835,7 @@ static int __init mlxplat_dmi_default_wc_matched(const struct dmi_system_id *dmi
+ 	mlxplat_led = &mlxplat_default_led_wc_data;
+ 	mlxplat_regs_io = &mlxplat_default_regs_io_data;
+ 	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
++	mlxplat_i2c = &mlxplat_mlxcpld_i2c_default_data;
+ 
+ 	return 1;
+ }
+@@ -5876,6 +5883,7 @@ static int __init mlxplat_dmi_msn21xx_matched(const struct dmi_system_id *dmi)
+ 	mlxplat_led = &mlxplat_msn21xx_led_data;
+ 	mlxplat_regs_io = &mlxplat_msn21xx_regs_io_data;
+ 	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
++	mlxplat_i2c = &mlxplat_mlxcpld_i2c_default_data;
+ 
+ 	return 1;
+ }
+@@ -5898,6 +5906,7 @@ static int __init mlxplat_dmi_msn274x_matched(const struct dmi_system_id *dmi)
+ 	mlxplat_led = &mlxplat_default_led_data;
+ 	mlxplat_regs_io = &mlxplat_msn21xx_regs_io_data;
+ 	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
++	mlxplat_i2c = &mlxplat_mlxcpld_i2c_default_data;
+ 
+ 	return 1;
+ }
+@@ -5920,6 +5929,7 @@ static int __init mlxplat_dmi_msn201x_matched(const struct dmi_system_id *dmi)
+ 	mlxplat_led = &mlxplat_msn21xx_led_data;
+ 	mlxplat_regs_io = &mlxplat_msn21xx_regs_io_data;
+ 	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
++	mlxplat_i2c = &mlxplat_mlxcpld_i2c_default_data;
+ 
+ 	return 1;
+ }
+@@ -5969,6 +5979,7 @@ static int __init mlxplat_dmi_comex_matched(const struct dmi_system_id *dmi)
+ 	mlxplat_fan = &mlxplat_default_fan_data;
+ 	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
+ 		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
++	mlxplat_i2c = &mlxplat_mlxcpld_i2c_default_data;
+ 	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_comex;
+ 
+ 	return 1;
+-- 
+2.20.1
+

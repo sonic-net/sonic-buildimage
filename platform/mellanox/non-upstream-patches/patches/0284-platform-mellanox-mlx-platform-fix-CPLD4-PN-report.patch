@@ -1,0 +1,32 @@
+From 21cafe13f2452a7c41c623dc63af9cbaa301108d Mon Sep 17 00:00:00 2001
+From: Michael Shych <michaelsh@nvidia.com>
+Date: Wed, 28 Jun 2023 12:23:43 +0000
+Subject: [PATCH v1 1/1] platform: mellanox: mlx-platform: fix CPLD4 PN report.
+
+Add two lines from upstream commits:
+[9045512ca6cdb221cd1ed32d483eac3c30c53bed]
+[ae1aabf44bd672a07c4fa3ef56f069ed7daa7823]
+
+Fix PN report of CPLD4.
+
+Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index 00e62366b..641e7fe1f 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -5605,6 +5605,8 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_CPLD2_PN1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_CPLD3_PN_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_CPLD3_PN1_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_CPLD4_PN_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_CPLD4_PN1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET:
+-- 
+2.14.1
+

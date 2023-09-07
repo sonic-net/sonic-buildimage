@@ -1,7 +1,8 @@
-From fdc91e1289c5e491e93f7d7a872d2d656d1d0e7f Mon Sep 17 00:00:00 2001
+From 13e29cf4f38755ae717615071b07cd438e8819e6 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 19 Feb 2021 09:36:15 +0100
-Subject: [PATCH] devlink: introduce linecard info get message
+Subject: [PATCH backport 5.10 129/182] devlink: introduce linecard info get
+ message
 
 Allow the driver to provide per line card info get op to fill-up info,
 similar to the "devlink dev info".
@@ -14,7 +15,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  3 files changed, 140 insertions(+), 5 deletions(-)
 
 diff --git a/include/net/devlink.h b/include/net/devlink.h
-index 3d4ceb290..059bed6ae 100644
+index 3d4ceb2902b8..059bed6aef3c 100644
 --- a/include/net/devlink.h
 +++ b/include/net/devlink.h
 @@ -162,6 +162,8 @@ struct devlink_linecard {
@@ -53,7 +54,7 @@ index 3d4ceb290..059bed6ae 100644
  /**
   * struct devlink_region_ops - Region operations
 diff --git a/include/uapi/linux/devlink.h b/include/uapi/linux/devlink.h
-index 5ace55666..2c9f7d584 100644
+index 5ace55666d27..2c9f7d584b48 100644
 --- a/include/uapi/linux/devlink.h
 +++ b/include/uapi/linux/devlink.h
 @@ -136,6 +136,8 @@ enum devlink_command {
@@ -74,7 +75,7 @@ index 5ace55666..2c9f7d584 100644
  	/* add new attributes above here, update the policy in devlink.c */
  
 diff --git a/net/core/devlink.c b/net/core/devlink.c
-index b43e93ccc..04f8038f8 100644
+index b43e93ccc672..04f8038f8e23 100644
 --- a/net/core/devlink.c
 +++ b/net/core/devlink.c
 @@ -1245,6 +1245,10 @@ struct devlink_linecard_type {
@@ -241,5 +242,5 @@ index b43e93ccc..04f8038f8 100644
  		.cmd = DEVLINK_CMD_SB_GET,
  		.validate = GENL_DONT_VALIDATE_STRICT | GENL_DONT_VALIDATE_DUMP,
 -- 
-2.30.2
+2.20.1
 

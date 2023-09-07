@@ -1,7 +1,8 @@
-From 45dc72bca025600611d6d08e00758618ddb5d7d0 Mon Sep 17 00:00:00 2001
+From 320a964b80a8f9245da0515a26c2d41e035b3d10 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:41 +0200
-Subject: [PATCH] mlxsw: core_hwmon: Fix variable names for hwmon attributes
+Subject: [PATCH backport 5.10 099/182] mlxsw: core_hwmon: Fix variable names
+ for hwmon attributes
 
 Replace all local variables 'mlwsw_hwmon_attr' by 'mlxsw_hwmon_attr'.
 All variable prefixes should start with 'mlxsw' according to the naming
@@ -15,7 +16,7 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 38 insertions(+), 38 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
-index d41afdfbd..3788d02b5 100644
+index d41afdfbd085..3788d02b5244 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 @@ -57,14 +57,14 @@ static ssize_t mlxsw_hwmon_temp_show(struct device *dev,
@@ -251,5 +252,5 @@ index d41afdfbd..3788d02b5 100644
  
  	return sprintf(buf, "gearbox %03u\n", index);
 -- 
-2.30.2
+2.20.1
 

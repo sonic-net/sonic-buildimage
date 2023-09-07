@@ -1,0 +1,37 @@
+From 72d369a9be4bc4b92ab1e006dc36c612f0305b46 Mon Sep 17 00:00:00 2001
+From: Wei Yongjun <weiyongjun1@huawei.com>
+Date: Tue, 23 Mar 2021 11:29:56 +0000
+Subject: [PATCH backport 5.10 55/63] mmc: sdhci-of-dwcmshc: fix error return
+ code in dwcmshc_probe()
+
+Fix to return negative error code -ENOMEM from the error handling
+case instead of 0, as done elsewhere in this function.
+
+Fixes: c2c4da37837e ("mmc: sdhci-of-dwcmshc: add rockchip platform support")
+Reported-by: Hulk Robot <hulkci@huawei.com>
+Signed-off-by: Wei Yongjun <weiyongjun1@huawei.com>
+Link: https://lore.kernel.org/r/20210323112956.1016884-1-weiyongjun1@huawei.com
+Signed-off-by: Ulf Hansson <ulf.hansson@linaro.org>
+---
+ drivers/mmc/host/sdhci-of-dwcmshc.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mmc/host/sdhci-of-dwcmshc.c b/drivers/mmc/host/sdhci-of-dwcmshc.c
+index 1113a56fe..34d26e388 100644
+--- a/drivers/mmc/host/sdhci-of-dwcmshc.c
++++ b/drivers/mmc/host/sdhci-of-dwcmshc.c
+@@ -404,8 +404,10 @@ static int dwcmshc_probe(struct platform_device *pdev)
+ 
+ 	if (pltfm_data == &sdhci_dwcmshc_rk3568_pdata) {
+ 		rk_priv = devm_kzalloc(&pdev->dev, sizeof(struct rk3568_priv), GFP_KERNEL);
+-		if (!rk_priv)
++		if (!rk_priv) {
++			err = -ENOMEM;
+ 			goto err_clk;
++		}
+ 
+ 		priv->priv = rk_priv;
+ 
+-- 
+2.20.1
+

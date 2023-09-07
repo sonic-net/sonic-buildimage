@@ -25,29 +25,35 @@ while /bin/true; do
       for i in ${!STATIC_ROUTE_NEXTHOPS[@]}; do
           nexthop="${STATIC_ROUTE_NEXTHOPS[i]}"
           if [[ $nexthop == *"."* ]]; then
-              neigh_state=( $(ip -4 neigh show | grep -w $nexthop | tr -s ' ' | cut -d ' ' -f 3,4) )
+              neigh_state=$(ip -4 neigh show | grep -w $nexthop | tr -s ' ')
               ping_prefix=ping
           elif [[ $nexthop == *":"* ]] ; then
-              neigh_state=( $(ip -6 neigh show | grep -w $nexthop | tr -s ' ' | cut -d ' ' -f 3,4) )
+              neigh_state=$(ip -6 neigh show | grep -w $nexthop | tr -s ' ')
               ping_prefix=ping6
           fi
-          if [[ -z "${neigh_state}" ]] || [[ "${neigh_state[1]}" == "INCOMPLETE" ]] || [[ "${neigh_state[1]}" == "FAILED" ]]; then
+          # Check if there is an INCOMPLETE, FAILED, or STALE entry and try to resolve it again.
+          # STALE entries may be present if there is no traffic on a path. A far-end down event may not
+          # clear the STALE entry. Refresh the STALE entry to clear the table.
+          if [[ -z "${neigh_state}" ]] || [[ -n $(echo ${neigh_state} | grep 'INCOMPLETE\|FAILED\|STALE') ]]; then
               interface="${STATIC_ROUTE_IFNAMES[i]}"
               if [[ -z "$interface" ]]; then
                   # should never be here, handling just in case
                   logger "ERR: arp_update: missing interface entry for static route $nexthop"
-                  interface=${neigh_state[0]}
+                  continue
               fi
               intf_up=$(ip link show $interface | grep "state UP")
               if [[ -n "$intf_up" ]]; then
                   pingcmd="timeout 0.2 $ping_prefix -I ${interface} -n -q -i 0 -c 1 -W 1 $nexthop >/dev/null"
                   eval $pingcmd
-                  logger "arp_update: static route nexthop not resolved, pinging $nexthop on ${neigh_state[0]}"
+                  # STALE entries may appear more often, not logging to prevent periodic syslogs
+                  if [[ -z $(echo ${neigh_state} | grep 'STALE') ]]; then
+                      logger "arp_update: static route nexthop not resolved ($neigh_state), pinging $nexthop on $interface"
+                  fi
               fi
           fi
       done
 
-      sleep 300
+      sleep 150
       continue
   fi
   # find L3 interfaces which are UP, send ipv6 multicast pings

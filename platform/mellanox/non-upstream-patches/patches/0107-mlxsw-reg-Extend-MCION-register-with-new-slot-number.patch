@@ -1,7 +1,8 @@
-From 9c4ce1a56515e927399a87b63deeacd77ada6b3b Mon Sep 17 00:00:00 2001
+From aba06998f55ba715e6161a427356fccc17b466fc Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:50 +0200
-Subject: [PATCH] mlxsw: reg: Extend MCION register with new slot number field
+Subject: [PATCH backport 5.10 107/182] mlxsw: reg: Extend MCION register with
+ new slot number field
 
 Extend MCION (Management Cable IO and Notifications Register) with new
 field specifying the slot number. The purpose of this field is to
@@ -22,10 +23,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  2 files changed, 9 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-index 21eacbe0a..d88033ec6 100644
+index a516c04ad19b..2ac8444aa8b2 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-@@ -460,7 +460,7 @@ mlxsw_env_get_module_power_mode(struct mlxsw_core *mlxsw_core, u8 module,
+@@ -458,7 +458,7 @@ mlxsw_env_get_module_power_mode(struct mlxsw_core *mlxsw_core, u8 module,
  
  	params->policy = mlxsw_env->module_info[module].power_mode_policy;
  
@@ -35,10 +36,10 @@ index 21eacbe0a..d88033ec6 100644
  	if (err) {
  		NL_SET_ERR_MSG_MOD(extack, "Failed to retrieve module's power mode");
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 2714e316c..243d91f1d 100644
+index bdbe198a9053..acde0cd00944 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-@@ -9328,6 +9328,12 @@ MLXSW_REG_DEFINE(mcion, MLXSW_REG_MCION_ID, MLXSW_REG_MCION_LEN);
+@@ -9327,6 +9327,12 @@ MLXSW_REG_DEFINE(mcion, MLXSW_REG_MCION_ID, MLXSW_REG_MCION_LEN);
   */
  MLXSW_ITEM32(reg, mcion, module, 0x00, 16, 8);
  
@@ -51,7 +52,7 @@ index 2714e316c..243d91f1d 100644
  enum {
  	MLXSW_REG_MCION_MODULE_STATUS_BITS_PRESENT_MASK = BIT(0),
  	MLXSW_REG_MCION_MODULE_STATUS_BITS_LOW_POWER_MASK = BIT(8),
-@@ -9339,9 +9345,10 @@ enum {
+@@ -9338,9 +9344,10 @@ enum {
   */
  MLXSW_ITEM32(reg, mcion, module_status_bits, 0x04, 0, 16);
  
@@ -64,5 +65,5 @@ index 2714e316c..243d91f1d 100644
  }
  
 -- 
-2.30.2
+2.20.1
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-01-23-1.03" profile="Askboard" dsig="md5">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-05-05-1.04" profile="Askboard" dsig="md5">
   <askboardplt:ASK-Board xmlns:askboardplt="urn:marvell:askboard:yang">
     <askboardplt:typedefs>
       <askboardplt:typedef>
@@ -1199,6 +1199,7 @@ lowercase characters.</askboardplt:description>
           <askboardplt:ledPosition askboardplt:type="led-position-type">0</askboardplt:ledPosition>
           <askboardplt:polarityInvertList-list>
             <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
           </askboardplt:polarityInvertList-list>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">true</askboardplt:portForceDataSupported>
           <askboardplt:portForceDataLocation>
@@ -1226,6 +1227,7 @@ lowercase characters.</askboardplt:description>
           <askboardplt:ledPosition askboardplt:type="led-position-type">1</askboardplt:ledPosition>
           <askboardplt:polarityInvertList-list>
             <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
           </askboardplt:polarityInvertList-list>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">true</askboardplt:portForceDataSupported>
           <askboardplt:portForceDataLocation>
@@ -1365,11 +1367,11 @@ lowercase characters.</askboardplt:description>
           <askboardplt:class13select askboardplt:type="led-stream-class13-select-type">CLASS_13_SELECT_LINK_DOWN</askboardplt:class13select>
           <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           <askboardplt:ledClockFrequency askboardplt:type="led-stream-clock-out-frequency-type">CLOCK_OUT_FREQUENCY_1000</askboardplt:ledClockFrequency>
+          <askboardplt:ledClockPosEdgeModeEnable askboardplt:type="boolean-type">false</askboardplt:ledClockPosEdgeModeEnable>
         </askboardplt:ledstream-configSet>
         <askboardplt:ledstream-class-manipulation-list>
           <askboardplt:classNum askboardplt:type="led-class-num-type">1</askboardplt:classNum>
           <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
-          <askboardplt:ledUnit askboardplt:type="led-unit-or-no-unit-type">0</askboardplt:ledUnit>
           <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
           <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
@@ -1381,7 +1383,6 @@ lowercase characters.</askboardplt:description>
         <askboardplt:ledstream-class-manipulation-list>
           <askboardplt:classNum askboardplt:type="led-class-num-type">2</askboardplt:classNum>
           <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
-          <askboardplt:ledUnit askboardplt:type="led-unit-or-no-unit-type">0</askboardplt:ledUnit>
           <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           <askboardplt:blinkEnable askboardplt:type="boolean-type">true</askboardplt:blinkEnable>
           <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
@@ -1392,7 +1393,6 @@ lowercase characters.</askboardplt:description>
         <askboardplt:ledstream-class-manipulation-list>
           <askboardplt:classNum askboardplt:type="led-class-num-type">3</askboardplt:classNum>
           <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
-          <askboardplt:ledUnit askboardplt:type="led-unit-or-no-unit-type">0</askboardplt:ledUnit>
           <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
           <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
@@ -1930,6 +1930,7 @@ lowercase characters.</askboardplt:description>
           <askboardplt:ledPosition askboardplt:type="led-position-type">0</askboardplt:ledPosition>
           <askboardplt:polarityInvertList-list>
             <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
           </askboardplt:polarityInvertList-list>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">true</askboardplt:portForceDataSupported>
           <askboardplt:portForceDataLocation>
@@ -1957,6 +1958,7 @@ lowercase characters.</askboardplt:description>
           <askboardplt:ledPosition askboardplt:type="led-position-type">1</askboardplt:ledPosition>
           <askboardplt:polarityInvertList-list>
             <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
           </askboardplt:polarityInvertList-list>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">true</askboardplt:portForceDataSupported>
           <askboardplt:portForceDataLocation>
@@ -2096,11 +2098,11 @@ lowercase characters.</askboardplt:description>
           <askboardplt:class13select askboardplt:type="led-stream-class13-select-type">CLASS_13_SELECT_LINK_DOWN</askboardplt:class13select>
           <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           <askboardplt:ledClockFrequency askboardplt:type="led-stream-clock-out-frequency-type">CLOCK_OUT_FREQUENCY_1000</askboardplt:ledClockFrequency>
+          <askboardplt:ledClockPosEdgeModeEnable askboardplt:type="boolean-type">false</askboardplt:ledClockPosEdgeModeEnable>
         </askboardplt:ledstream-configSet>
         <askboardplt:ledstream-class-manipulation-list>
           <askboardplt:classNum askboardplt:type="led-class-num-type">1</askboardplt:classNum>
           <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
-          <askboardplt:ledUnit askboardplt:type="led-unit-or-no-unit-type">0</askboardplt:ledUnit>
           <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
           <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
@@ -2112,7 +2114,6 @@ lowercase characters.</askboardplt:description>
         <askboardplt:ledstream-class-manipulation-list>
           <askboardplt:classNum askboardplt:type="led-class-num-type">2</askboardplt:classNum>
           <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
-          <askboardplt:ledUnit askboardplt:type="led-unit-or-no-unit-type">0</askboardplt:ledUnit>
           <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           <askboardplt:blinkEnable askboardplt:type="boolean-type">true</askboardplt:blinkEnable>
           <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
@@ -2123,7 +2124,6 @@ lowercase characters.</askboardplt:description>
         <askboardplt:ledstream-class-manipulation-list>
           <askboardplt:classNum askboardplt:type="led-class-num-type">3</askboardplt:classNum>
           <askboardplt:portType askboardplt:type="led-stream-port-type">PORT_TYPE_XG</askboardplt:portType>
-          <askboardplt:ledUnit askboardplt:type="led-unit-or-no-unit-type">0</askboardplt:ledUnit>
           <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
           <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>

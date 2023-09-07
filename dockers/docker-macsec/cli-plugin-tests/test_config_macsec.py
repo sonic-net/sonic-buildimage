@@ -8,7 +8,7 @@ import macsec
 
 
 profile_name = "test"
-primary_cak = "01234567890123456789012345678912"
+primary_cak = "2363647040534355560e000802065d574d400e000e030307075f0e5050000e5541"
 primary_ckn = "01234567890123456789012345678912"
 
 
@@ -48,7 +48,7 @@ class TestConfigMACsec(object):
 
         profile_name = "test"
         profile_map = {
-            "primary_cak": "0123456789012345678901234567891201234567890123456789012345678912",
+            "primary_cak": "3946080a0407070303530256560a04504650530352565e731f1a5c4f524f4b5a5e547b79777c6663754b5e465253050d0d0503565a48470b0b030604020c520a54",
             "primary_ckn": "01234567890123456789012345678912",
             "priority": 64,
             "cipher_suite": "GCM-AES-XPN-256",
@@ -109,7 +109,7 @@ class TestConfigMACsec(object):
         runner = CliRunner()
 
         result = runner.invoke(macsec.macsec, ["profile", "add", "test",
-                "--primary_cak=01234567890123456789012345678912","--primary_ckn=01234567890123456789012345678912"],
+                "--primary_cak=2363647040534355560e000802065d574d400e000e030307075f0e5050000e5541","--primary_ckn=01234567890123456789012345678912"],
                 obj=cfgdb)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
         result = runner.invoke(macsec.macsec, ["port", "add", "Ethernet0", "test"], obj=cfgdb)
@@ -141,8 +141,8 @@ class TestConfigMACsec(object):
         result = runner.invoke(macsec.macsec, ["profile", "del", "test"], obj=cfgdb)
         assert result.exit_code != 0
 
-        result = runner.invoke(macsec.macsec, ["profile", "add", "test", "--primary_cak=01234567890123456789012345678912","--primary_ckn=01234567890123456789012345678912"], obj=cfgdb)
+        result = runner.invoke(macsec.macsec, ["profile", "add", "test", "--primary_cak=2363647040534355560e000802065d574d400e000e030307075f0e5050000e5541","--primary_ckn=01234567890123456789012345678912"], obj=cfgdb)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
         # Repeat add profile
-        result = runner.invoke(macsec.macsec, ["profile", "add", "test", "--primary_cak=01234567890123456789012345678912","--primary_ckn=01234567890123456789012345678912"], obj=cfgdb)
+        result = runner.invoke(macsec.macsec, ["profile", "add", "test", "--primary_cak=2363647040534355560e000802065d574d400e000e030307075f0e5050000e5541","--primary_ckn=01234567890123456789012345678912"], obj=cfgdb)
         assert result.exit_code != 0

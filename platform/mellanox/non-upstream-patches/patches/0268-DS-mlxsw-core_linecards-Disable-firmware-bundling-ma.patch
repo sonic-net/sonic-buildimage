@@ -1,0 +1,30 @@
+From a98a8781b6a6fad632a0fcaa3c78a05007b15f2e Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 20 Feb 2023 15:15:46 +0200
+Subject: [PATCH net backport 5.10 1/1] DS: mlxsw: core_linecards: Disable
+ firmware bundling macros
+
+Remove line card firmware bundling flow in non upstream environment to
+avoid warning in case path /lib/firmware/mellanox is not available.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_linecards.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
+index 30665a6f3..4bae0643a 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
+@@ -1501,5 +1501,7 @@ void mlxsw_linecards_event_ops_unregister(struct mlxsw_core *mlxsw_core,
+ 	}
+ }
+ EXPORT_SYMBOL(mlxsw_linecards_event_ops_unregister);
+-
++/* Skip for non-upstream flow. */
++#if 0
+ MODULE_FIRMWARE(MLXSW_LINECARDS_INI_BUNDLE_FILE);
++#endif
+-- 
+2.20.1
+

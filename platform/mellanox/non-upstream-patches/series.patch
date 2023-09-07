@@ -1,11 +1,22 @@
-diff --git a/patch/series b/patch/series
-index e86f858..61144ff 100755
 --- a/patch/series
 +++ b/patch/series
-@@ -155,12 +155,71 @@ kernel-compat-always-include-linux-compat.h-from-net-compat.patch
- 0097-hwmon-mlxreg-fan-Support-distinctive-names-per-.patch
- 0999-Revert-mlxsw-thermal-Fix-out-of-bounds-memory-a.patch
- 0098-mlxsw-i2c-Prevent-transaction-execution-for.patch
+@@ -108,6 +108,9 @@
+ 0045-i2c-mlxcpld-Fix-criteria-for-frequency-setting.patch
+ 0046-i2c-mlxcpld-Reduce-polling-time-for-performance-impr.patch
+ 0047-i2c-mlxcpld-Allow-flexible-polling-time-setting-for-.patch
++0049-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch
++0050-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch
++0051-leds-mlxreg-Allow-multi-instantiation-of-same-name-L.patch
+ 0053-mlxsw-core-Avoid-creation-virtual-hwmon-objects-by-t.patch
+ 0054-mlxsw-minimal-Simplify-method-of-modules-number-dete.patch
+ 0055-platform_data-mlxreg-Add-new-type-to-support-modular.patch
+@@ -155,7 +158,68 @@
+ 0097-1-mlxsw-Use-u16-for-local_port-field.patch
+ 0097-2-mlxsw-i2c-Fix-chunk-size-setting.patch
+ 0097-3-mlxsw-core_hwmon-Adjust-module-label-names.patch
++0098-1-Revert-mlxsw-Use-u16-for-local_port-field.patch
++0098-2-Revert-mlxsw-i2c-Fix-chunk-size-setting.patch
++0098-3-Revert-mlxsw-core_hwmon-Adjust-module-label-names.patch
 +0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch
 +0100-mlxsw-core_thermal-Rename-labels-according-to-naming.patch
 +0101-mlxsw-core_thermal-Remove-obsolete-API-for-query-res.patch
@@ -60,6 +71,7 @@ index e86f858..61144ff 100755
 +0150-mlxsw-core_hwmon-Add-interfaces-for-line-card-initia.patch
 +0151-mlxsw-minimal-Prepare-driver-for-modular-system-supp.patch
 +0152-mlxsw-core-Extend-bus-init-function-with-event-handl.patch
+ 0152-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch
 +0153-mlxsw-i2c-Add-support-for-system-events-handling.patch
 +0154-mlxsw-core-Export-line-card-API.patch
 +0155-mlxsw-minimal-Add-system-event-handler.patch
@@ -67,20 +79,129 @@ index e86f858..61144ff 100755
  0157-platform-x86-mlx-platform-Make-activation-of-some-dr.patch
  0158-platform-x86-mlx-platform-Add-cosmetic-changes-for-a.patch
  0159-mlx-platform-Add-support-for-systems-equipped-with-t.patch
- 0160-platform-mellanox-Introduce-support-for-COMe-NVSwitc.patch
- 0161-platform-x86-mlx-platform-Add-support-for-new-system.patch
- 0162-platform-mellanox-Add-COME-board-revision-register.patch
-+0163-platform-mellanox-Introduce-support-for-rack-manager.patch
+@@ -166,21 +230,125 @@
  0164-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch
  0165-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch
- 0167-leds-mlxreg-Send-udev-change-event.patch
-@@ -168,6 +227,9 @@ kernel-compat-always-include-linux-compat.h-from-net-compat.patch
- 0171-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch
- 0173-core-Add-support-for-OSFP-transceiver-modules.patch
+ 0166-DS-leds-leds-mlxreg-Send-udev-event-from-leds-mlxreg.patch
++0167-DS-lan743x-Add-support-for-fixed-phy.patch
++0168-TMP-mlxsw-minimal-Ignore-error-reading-SPAD-register.patch
+ 0170-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch
++0171-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch
++0172-DS-platform-mlx-platform-Add-SPI-path-for-rack-switc.patch
+ 0173-mlxsw-core-Add-support-for-OSFP-transceiver-modules.patch
++0174-DS-mlxsw-core_linecards-Skip-devlink-and-provisionin.patch
  0175-hwmon-pmbus-Add-support-for-Infineon-Digital-Multi-p.patch
-+0176-platform-mellanox-fix-reset_pwr_converter_fail-attri.patch
-+0177-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch
-+0178-platform-mellanox-Introduce-support-for-next-generat.patch
+ 0176-platform-mellanox-fix-reset_pwr_converter_fail-attri.patch
+ 0177-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch
+ 0178-platform-mellanox-Introduce-support-for-next-generat.patch
  0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch
++0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch
++0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch
++0183-platform-mellanox-Split-initialization-procedure.patch
++0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch
++0185-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch
+ 0186-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch
++0187-platform_data-mlxreg-Add-field-with-mapped-resource-.patch
++0188-i2c-mux-Add-register-map-based-mux-driver.patch
++0189-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch
++0190-i2c-mlxcpld-Modify-base-address-type.patch
++0191-i2c-mlxcpld-Allow-to-configure-base-address-of-regis.patch
++0192-i2c-mlxcpld-Add-support-for-extended-transaction-len.patch
++0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch
++0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch
++0195-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch
+ 0195-platform-x86-MLX_PLATFORM-select-REGMAP-instead-of-d.patch
++0196-platform-mellanox-Relocate-mlx-platform-driver.patch
++0197-platform-mellanox-Add-initial-support-for-PCIe-based.patch
++0198-platform-mellanox-Introduce-support-for-switches-bas.patch
++0199-platform-mellanox-mlx-platform-Add-reset-and-extend-.patch
++0200-dt-bindings-i2c-mellanox-i2c-mlxbf-convert-txt-to-YA.patch
+ 0201-i2c-mlxbf-incorrect-base-address-passed-during-io-wr.patch
+ 0202-i2c-mlxbf-prevent-stack-overflow-in-mlxbf_i2c_smbus_.patch
++0203-i2c-mlxbf-remove-IRQF_ONESHOT.patch
+ 0204-i2c-mlxbf-Fix-frequency-calculation.patch
+ 0205-i2c-mlxbf-support-lock-mechanism.patch
++0206-i2c-mlxbf-add-multi-slave-functionality.patch
++0207-i2c-mlxbf-support-BlueField-3-SoC.patch
++0208-i2c-mlxbf-remove-device-tree-support.patch
++0209-UBUNTU-SAUCE-i2c-mlxbf.c-Add-driver-version.patch
++0210-platform-mellanox-Typo-fix-in-the-file-mlxbf-bootctl.patch
++0211-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-boot.patch
++0212-platform-mellanox-mlxbf-pmc-Add-Mellanox-BlueField-P.patch
++0213-platform-mellanox-mlxbf-pmc-fix-kernel-doc-notation.patch
++0214-platform-mellanox-mlxbf-pmc-Fix-an-IS_ERR-vs-NULL-bu.patch
++0215-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-pmc.patch
++0216-UBUNTU-SAUCE-mlxbf_pmc-Fix-references-to-sprintf.patch
++0217-UBUNTU-SAUCE-mlxbf-pmc-Fix-error-when-reading-unprog.patch
++0218-UBUNTU-SAUCE-platform-mellanox-Add-mlx-trio-driver.patch
++0219-UBUNTU-SAUCE-platform-mellanox-mlxbf-tmfifo-Add-Blue.patch
++0220-UBUNTU-SAUCE-pka-Add-pka-driver.patch
++0221-UBUNTU-SAUCE-platform-mellanox-Add-mlxbf-livefish-dr.patch
++0222-workqueue-Add-resource-managed-version-of-delayed-wo.patch
++0223-devm-helpers-Fix-devm_delayed_work_autocancel-kernel.patch
++0224-devm-helpers-Add-resource-managed-version-of-work-in.patch
++0225-UBUNTU-SAUCE-Add-support-to-pwr-mlxbf.c-driver.patch
++0226-Add-Mellanox-BlueField-Gigabit-Ethernet-driver.patch
++0227-mlxbf_gige-clear-valid_polarity-upon-open.patch
++0228-net-mellanox-mlxbf_gige-Replace-non-standard-interru.patch
++0229-mlxbf_gige-increase-MDIO-polling-rate-to-5us.patch
++0230-mlxbf_gige-remove-driver-managed-interrupt-counts.patch
++0231-mlxbf_gige-remove-own-module-name-define-and-use-KBU.patch
++0232-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch
++0233-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch
++0234-UBUNTU-SAUCE-mlxbf_gige-add-validation-of-ACPI-table.patch
++0235-UBUNTU-SAUCE-mlxbf_gige-set-driver-version-to-1.27.patch
++0236-UBUNTU-SAUCE-mlxbf_gige-clear-MDIO-gateway-lock-afte.patch
++0237-mlxbf_gige-compute-MDIO-period-based-on-i1clk.patch
++0238-net-mlxbf_gige-Fix-an-IS_ERR-vs-NULL-bug-in-mlxbf_gi.patch
++0239-UBUNTU-SAUCE-mlxbf_gige-add-MDIO-support-for-BlueFie.patch
++0240-UBUNTU-SAUCE-mlxbf_gige-support-10M-100M-1G-speeds-o.patch
++0241-UBUNTU-SAUCE-mlxbf_gige-add-BlueField-3-Serdes-confi.patch
++0242-UBUNTU-SAUCE-mlxbf_gige-add-BlueField-3-ethtool_ops.patch
++0243-UBUNTU-SAUCE-bluefield_edac-Add-SMC-support.patch
++0244-UBUNTU-SAUCE-bluefield_edac-Update-license-and-copyr.patch
++0245-gpio-mlxbf2-Convert-to-device-PM-ops.patch
++0246-gpio-mlxbf2-Drop-wrong-use-of-ACPI_PTR.patch
++0247-gpio-mlxbf2-Use-devm_platform_ioremap_resource.patch
++0248-gpio-mlxbf2-Use-DEFINE_RES_MEM_NAMED-helper-macro.patch
++0249-gpio-mlxbf2-Introduce-IRQ-support.patch
++0250-UBUNTU-SAUCE-gpio-mlxbf2.c-support-driver-version.patch
++0251-mmc-sdhci-of-dwcmshc-add-rockchip-platform-support.patch
++0252-mmc-sdhci-of-dwcmshc-add-ACPI-support-for-BlueField-.patch
++0253-mmc-sdhci-of-dwcmshc-fix-error-return-code-in-dwcmsh.patch
++0254-mmc-sdhci-of-dwcmshc-set-MMC_CAP_WAIT_WHILE_BUSY.patch
++0255-mmc-sdhci-of-dwcmshc-Re-enable-support-for-the-BlueF.patch
++0256-UBUNTU-SAUCE-Support-BlueField-3-GPIO-driver.patch
++0257-regmap-debugfs-Enable-writing-to-the-regmap-debugfs-.patch
++0258-UBUNTU-SAUCE-mlx-bootctl-support-icm-carveout-eeprom.patch
++0259-mmc-sdhci-of-dwcmshc-Enable-host-V4-support-for-Blue.patch
++0260-UBUNTU-SAUCE-mlxbf-pka-Fix-kernel-crash-with-pka-TRN.patch
++0261-mlxbf-ptm-power-and-thermal-management-debugfs-drive.patch
++0262-UBUNTU-SAUCE-mlxbf-pmc-Fix-event-string-typo.patch
++0263-UBUNTU-SAUCE-mlxbf-pmc-Support-for-BlueField-3-perfo.patch
++0264-UBUNTU-SAUCE-platform-mellanox-Add-ctrl-message-and-.patch
+ 0265-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch
++0266-UBUNTU-SAUCE-mlxbf-pmc-Bug-fix-for-BlueField-3-count.patch
++0267-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch
++0268-DS-mlxsw-core_linecards-Disable-firmware-bundling-ma.patch
++0269-platform-mellanox-Cosmetic-changes.patch
++0270-platform-mellanox-Fix-order-in-exit-flow.patch
++0271-platform-mellanox-Add-new-attributes.patch
++0272-platform-mellanox-Change-register-offset-addresses.patch
++0273-platform-mellanox-Add-field-upgrade-capability-regis.patch
++0274-platform-mellanox-Modify-reset-causes-description.patch
++0275-mlxsw-Use-u16-for-local_port-field-instead-of-u8.patch
++0276-mlxsw-minimal-Change-type-for-local-port.patch
++0277-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch
++0278-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch
++0279-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch
++0280-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch
++0281-platform-mellanox-mlx-platform-Modify-health-and-pow.patch
++0282-platform-mellanox-mlx-platform-add-support-of-5th-CP.patch
++0283-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch
++0284-platform-mellanox-mlx-platform-fix-CPLD4-PN-report.patch
+ 0285-platform-mellanox-nvsw-sn2201-change-fans-i2c-busses.patch
++9002-TMP-fix-for-fan-minimum-speed.patch
  ###-> mellanox_hw_mgmt-end
  
+ # Cisco patches for 5.10 kernel

@@ -1,0 +1,50 @@
+From 6b12d567b86b79ff28397aa428778d9f159fb8da Mon Sep 17 00:00:00 2001
+From: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
+Date: Mon, 16 Aug 2021 14:59:49 +0300
+Subject: [PATCH backport 5.10 47/63] gpio: mlxbf2: Drop wrong use of
+ ACPI_PTR()
+
+ACPI_PTR() is more harmful than helpful. For example, in this case
+if CONFIG_ACPI=n, the ID table left unused which is not what we want.
+
+Instead of adding ifdeffery here and there, drop ACPI_PTR() and
+replace acpi.h with mod_devicetable.h.
+
+Signed-off-by: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
+Acked-by: Asmaa Mnehi <asmaa@nvidia.com>
+Signed-off-by: Bartosz Golaszewski <bgolaszewski@baylibre.com>
+---
+ drivers/gpio/gpio-mlxbf2.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpio/gpio-mlxbf2.c b/drivers/gpio/gpio-mlxbf2.c
+index 68c471c10..8e6f78092 100644
+--- a/drivers/gpio/gpio-mlxbf2.c
++++ b/drivers/gpio/gpio-mlxbf2.c
+@@ -1,6 +1,5 @@
+ // SPDX-License-Identifier: GPL-2.0
+ 
+-#include <linux/acpi.h>
+ #include <linux/bitfield.h>
+ #include <linux/bitops.h>
+ #include <linux/device.h>
+@@ -8,6 +7,7 @@
+ #include <linux/io.h>
+ #include <linux/ioport.h>
+ #include <linux/kernel.h>
++#include <linux/mod_devicetable.h>
+ #include <linux/module.h>
+ #include <linux/platform_device.h>
+ #include <linux/pm.h>
+@@ -314,7 +314,7 @@ MODULE_DEVICE_TABLE(acpi, mlxbf2_gpio_acpi_match);
+ static struct platform_driver mlxbf2_gpio_driver = {
+ 	.driver = {
+ 		.name = "mlxbf2_gpio",
+-		.acpi_match_table = ACPI_PTR(mlxbf2_gpio_acpi_match),
++		.acpi_match_table = mlxbf2_gpio_acpi_match,
+ 		.pm = &mlxbf2_pm_ops,
+ 	},
+ 	.probe    = mlxbf2_gpio_probe,
+-- 
+2.20.1
+

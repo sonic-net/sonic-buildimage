@@ -1,7 +1,8 @@
-From 4d15dd7f69b89a370731b08cb3f13e5dd591c189 Mon Sep 17 00:00:00 2001
+From 1a451b46c16494cfa38bb47495ad632626502681 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:29 +0200
-Subject: [PATCH] mlxsw: core_hwmon: Split gearbox initialization
+Subject: [PATCH backport 5.10 115/182] mlxsw: core_hwmon: Split gearbox
+ initialization
 
 Split gearbox initialization in two functions - the first one is to be
 used for gearbox configuration validation, the second for creation of
@@ -24,7 +25,7 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 33 insertions(+), 10 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
-index 5df54a5bf..7061c18b7 100644
+index 5df54a5bf292..7061c18b7edc 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 @@ -700,13 +700,11 @@ static int mlxsw_hwmon_module_init(struct mlxsw_hwmon *mlxsw_hwmon)
@@ -117,5 +118,5 @@ index 5df54a5bf..7061c18b7 100644
  	kfree(mlxsw_hwmon);
  }
 -- 
-2.30.2
+2.20.1
 

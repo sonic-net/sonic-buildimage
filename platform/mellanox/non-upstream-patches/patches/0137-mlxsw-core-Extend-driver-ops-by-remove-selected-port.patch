@@ -1,7 +1,8 @@
-From 063ca0577ceb2355884555d96a24a740a2c03bdb Mon Sep 17 00:00:00 2001
+From a0e62e8df42c4ae6eabba2ea0c2d076d8c8d06fb Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 22 Dec 2021 16:26:43 +0000
-Subject: [PATCH] mlxsw: core: Extend driver ops by remove selected ports op
+Subject: [PATCH backport 5.10 137/182] mlxsw: core: Extend driver ops by
+ remove selected ports op
 
 In case of line card implementation, the core has to have a way to
 remove relevant ports manually. Extend the Spectrum driver ops by an op
@@ -15,7 +16,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  3 files changed, 32 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
-index 246db548f..2b4f9844b 100644
+index 246db548f011..2b4f9844b1d6 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
 @@ -2870,6 +2870,15 @@ mlxsw_core_port_devlink_port_get(struct mlxsw_core *mlxsw_core,
@@ -35,7 +36,7 @@ index 246db548f..2b4f9844b 100644
  {
  	return mlxsw_core->env;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
-index ecd91bb8c..70f97ef74 100644
+index ecd91bb8ca77..70f97ef74a2c 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
 @@ -223,6 +223,10 @@ enum devlink_port_type mlxsw_core_port_type_get(struct mlxsw_core *mlxsw_core,
@@ -61,7 +62,7 @@ index ecd91bb8c..70f97ef74 100644
  			   unsigned int sb_index, u16 pool_index,
  			   struct devlink_sb_pool_info *pool_info);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
-index d7a230828..75b418fbe 100644
+index bc233a5c8a79..82acff318dcd 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
 @@ -1736,6 +1736,20 @@ static void mlxsw_sp_ports_remove(struct mlxsw_sp *mlxsw_sp)
@@ -94,5 +95,5 @@ index d7a230828..75b418fbe 100644
  	.sb_pool_set			= mlxsw_sp_sb_pool_set,
  	.sb_port_pool_get		= mlxsw_sp_sb_port_pool_get,
 -- 
-2.30.2
+2.20.1
 

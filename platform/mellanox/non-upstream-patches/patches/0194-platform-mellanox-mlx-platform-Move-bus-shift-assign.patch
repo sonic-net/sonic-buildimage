@@ -1,0 +1,35 @@
+From deb8517499160d77e94b2969a98b3c01bed1a649 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 18 Jan 2023 15:25:37 +0200
+Subject: [PATCH backport 5.10 082/150] platform: mellanox: mlx-platform: Move
+ bus shift assignment out of the loop
+
+Move assignment of bus shift setting out of the loop to avoid redundant
+operation.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/x86/mlx-platform.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index de8fd0886..9d4cab937 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -6371,10 +6371,11 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+ 		shift = *nr - mlxplat_mux_data[i].parent;
+ 		mlxplat_mux_data[i].parent = *nr;
+ 		mlxplat_mux_data[i].base_nr += shift;
+-		if (shift > 0)
+-			mlxplat_hotplug->shift_nr = shift;
+ 	}
+ 
++	if (shift > 0)
++		mlxplat_hotplug->shift_nr = shift;
++
+ 	return 0;
+ }
+ 
+-- 
+2.20.1
+

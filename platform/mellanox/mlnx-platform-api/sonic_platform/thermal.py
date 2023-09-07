@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2022 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,12 +27,11 @@ try:
     from sonic_py_common.logger import Logger
     import copy
     import os
-    import glob
 
     from .device_data import DeviceDataManager
     from . import utils
 except ImportError as e:
-    raise ImportError (str(e) + "- required module not found")
+    raise ImportError(str(e) + "- required module not found")
 
 # Global logger class instance
 logger = Logger()
@@ -143,23 +142,6 @@ THERMAL_NAMING_RULE = {
 }
 
 CHASSIS_THERMAL_SYSFS_FOLDER = '/run/hw-management/thermal'
-COOLING_STATE_PATH = "/var/run/hw-management/thermal/cooling_cur_state"
-THERMAL_ZONE_ASIC_PATH = '/var/run/hw-management/thermal/mlxsw/'
-THERMAL_ZONE_FOLDER_WILDCARD = '/run/hw-management/thermal/mlxsw*'
-THERMAL_ZONE_HIGH_THRESHOLD = 'temp_trip_high'
-THERMAL_ZONE_HOT_THRESHOLD = 'temp_trip_hot'
-THERMAL_ZONE_NORMAL_THRESHOLD = 'temp_trip_norm'
-THERMAL_ZONE_MODE_FILE = 'thermal_zone_mode'
-THERMAL_ZONE_POLICY_FILE = 'thermal_zone_policy'
-THERMAL_ZONE_TEMP_FILE = 'thermal_zone_temp'
-THERMAL_ZONE_HYSTERESIS = 5000
-MODULE_TEMP_FAULT_WILDCARRD = '/run/hw-management/thermal/module*_temp_fault'
-MAX_AMBIENT_TEMP = 120
-# Min allowed cooling level when all thermal zones are in normal state
-MIN_COOLING_LEVEL_FOR_NORMAL = 2
-# Min allowed cooling level when any thermal zone is in high state but no thermal zone is in emergency state
-MIN_COOLING_LEVEL_FOR_HIGH = 4
-MAX_COOLING_LEVEL = 10
 
 
 def initialize_chassis_thermals():
@@ -368,175 +350,6 @@ class Thermal(ThermalBase):
             bool: True if it is replaceable.
         """
         return False
-
-    @classmethod
-    def set_thermal_algorithm_status(cls, status, force=True):
-        """
-        Enable/disable kernel thermal algorithm.
-        When enable kernel thermal algorithm, kernel will adjust fan speed
-        according to thermal zones temperature. Please note that kernel will
-        only adjust fan speed when temperature across some "edge", e.g temperature
-        changes to exceed high threshold.
-        When disable kernel thermal algorithm, kernel no longer adjust fan speed.
-        We usually disable the algorithm when we want to set a fix speed. E.g, when
-        a fan unit is removed from system, we will set fan speed to 100% and disable
-        the algorithm to avoid it adjust the speed.
-
-        Returns:
-            True if thermal algorithm status changed.
-        """
-        if not force and cls.thermal_algorithm_status == status:
-            return False
-
-        cls.thermal_algorithm_status = status
-        mode = "enabled" if status else "disabled"
-        policy = "step_wise" if status else "user_space"
-        for thermal_zone_folder in glob.iglob(THERMAL_ZONE_FOLDER_WILDCARD):
-            policy_file = os.path.join(thermal_zone_folder, THERMAL_ZONE_POLICY_FILE)
-            utils.write_file(policy_file, policy)
-            mode_file = os.path.join(thermal_zone_folder, THERMAL_ZONE_MODE_FILE)
-            utils.write_file(mode_file, mode)
-
-        return True
-
-    @classmethod
-    def get_min_allowed_cooling_level_by_thermal_zone(cls):
-        """Get min allowed cooling level according to thermal zone status:
-            1. If temperature of all thermal zones is less than normal threshold, min allowed cooling level is
-               $MIN_COOLING_LEVEL_FOR_NORMAL = 2
-            2. If temperature of any thermal zone is greater than normal threshold, but no thermal zone temperature
-               is greater than high threshold, min allowed cooling level is $MIN_COOLING_LEVEL_FOR_HIGH = 4
-            3. Otherwise, there is no minimum allowed value and policy should not adjust cooling level
-        Returns:
-            int: minimum allowed cooling level
-        """
-        min_allowed = MIN_COOLING_LEVEL_FOR_NORMAL
-        thermal_zone_present = False
-        try:
-            for thermal_zone_folder in glob.iglob(THERMAL_ZONE_FOLDER_WILDCARD):
-                current = utils.read_int_from_file(os.path.join(thermal_zone_folder, THERMAL_ZONE_TEMP_FILE))
-                if current == 0:
-                    # Temperature value 0 means that this thermal zone has no
-                    # sensor and it should be ignored in this loop
-                    continue
-
-                thermal_zone_present = True
-                normal_thresh = utils.read_int_from_file(os.path.join(thermal_zone_folder, THERMAL_ZONE_NORMAL_THRESHOLD))
-                if current < normal_thresh - THERMAL_ZONE_HYSTERESIS:
-                    continue
-
-                hot_thresh = utils.read_int_from_file(os.path.join(thermal_zone_folder, THERMAL_ZONE_HIGH_THRESHOLD))
-                if current < hot_thresh - THERMAL_ZONE_HYSTERESIS:
-                    min_allowed = MIN_COOLING_LEVEL_FOR_HIGH
-                else:
-                    min_allowed = None
-                    break
-        except Exception as e:
-            logger.log_error('Failed to get thermal zone status for {} - {}'.format(thermal_zone_folder, repr(e)))
-            return None
-
-        return min_allowed if thermal_zone_present else None
-
-    @classmethod
-    def check_module_temperature_trustable(cls):
-        for file_path in glob.iglob(MODULE_TEMP_FAULT_WILDCARRD):
-            fault = utils.read_int_from_file(file_path)
-            if fault != 0:
-                return 'untrust'
-        return 'trust'
-
-    @classmethod
-    def get_min_amb_temperature(cls):
-        fan_ambient_path = os.path.join(CHASSIS_THERMAL_SYSFS_FOLDER, 'fan_amb')
-        port_ambient_path = os.path.join(CHASSIS_THERMAL_SYSFS_FOLDER, 'port_amb')
-
-        try:
-            fan_ambient_temp = utils.read_int_from_file(fan_ambient_path, raise_exception=True)
-            port_ambient_temp = utils.read_int_from_file(port_ambient_path, raise_exception=True)
-            return fan_ambient_temp if fan_ambient_temp < port_ambient_temp else port_ambient_temp
-        except Exception as e:
-            # Can't get ambient temperature, return maximum
-            logger.log_error('Failed to get minimum ambient temperature, use pessimistic instead')
-            return MAX_AMBIENT_TEMP
-
-    @classmethod
-    def set_cooling_level(cls, level):
-        """
-        Change cooling level. The input level should be an integer value [1, 10].
-        1 means 10%, 2 means 20%, 10 means 100%.
-        """
-        if cls.last_set_cooling_level != level:
-            utils.write_file(COOLING_STATE_PATH, level + 10, raise_exception=True)
-            cls.last_set_cooling_level = level
-
-    @classmethod
-    def set_cooling_state(cls, state):
-        """Change cooling state.
-        Args:
-            state (int): cooling state
-        """
-        if cls.last_set_cooling_state != state:
-            utils.write_file(COOLING_STATE_PATH, state, raise_exception=True)
-            cls.last_set_cooling_state = state
-
-    @classmethod
-    def get_cooling_level(cls):
-        try:
-            return utils.read_int_from_file(COOLING_STATE_PATH, raise_exception=True)
-        except (ValueError, IOError) as e:
-            raise RuntimeError("Failed to get cooling level - {}".format(e))
-
-    @classmethod
-    def set_expect_cooling_level(cls, expect_value):
-        """During thermal policy running, cache the expect cooling level generated by policies. The max expect
-           cooling level will be committed to hardware.
-        Args:
-            expect_value (int): Expected cooling level value
-        """
-        if cls.expect_cooling_level is None or cls.expect_cooling_level < expect_value:
-            cls.expect_cooling_level = int(expect_value)
-
-    @classmethod
-    def commit_cooling_level(cls, thermal_info_dict):
-        """Commit cooling level to hardware. This will affect system fan and PSU fan speed.
-        Args:
-            thermal_info_dict (dict): Thermal information dictionary
-        """
-        if cls.expect_cooling_level is not None:
-            cls.set_cooling_level(cls.expect_cooling_level)
-
-        if cls.expect_cooling_state is not None:
-            cls.set_cooling_state(cls.expect_cooling_state)
-        elif cls.expect_cooling_level is not None:
-            cls.set_cooling_state(cls.expect_cooling_level)
-
-        cls.expect_cooling_level = None
-        # We need to set system fan speed here because kernel will automaticlly adjust fan speed according to cooling level and cooling state
-
-        # Commit PSU fan speed with current state
-        from .thermal_infos import ChassisInfo
-        if ChassisInfo.INFO_NAME in thermal_info_dict and isinstance(thermal_info_dict[ChassisInfo.INFO_NAME], ChassisInfo):
-            cooling_level = cls.get_cooling_level()
-            if cls.last_set_psu_cooling_level == cooling_level:
-                return
-            speed = cooling_level * 10
-            chassis = thermal_info_dict[ChassisInfo.INFO_NAME].get_chassis()
-            for psu in chassis.get_all_psus():
-                for psu_fan in psu.get_all_fans():
-                    psu_fan.set_speed(speed)
-            cls.last_set_psu_cooling_level = cooling_level
-
-    @classmethod
-    def monitor_asic_themal_zone(cls):
-        """This is a protection for asic thermal zone, if asic temperature is greater than hot threshold + THERMAL_ZONE_HYSTERESIS,
-           and if cooling state is not MAX, we need enforce the cooling state to MAX
-        """
-        asic_temp = utils.read_int_from_file(os.path.join(THERMAL_ZONE_ASIC_PATH, THERMAL_ZONE_TEMP_FILE), raise_exception=True)
-        hot_thresh = utils.read_int_from_file(os.path.join(THERMAL_ZONE_ASIC_PATH, THERMAL_ZONE_HOT_THRESHOLD), raise_exception=True)
-        if asic_temp >= hot_thresh + THERMAL_ZONE_HYSTERESIS:
-            cls.expect_cooling_state = MAX_COOLING_LEVEL
-        else:
-            cls.expect_cooling_state = None
 
 
 class RemovableThermal(Thermal):
