@@ -19,7 +19,7 @@ SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_RESTAPI)
 endif
 
 $(DOCKER_RESTAPI)_CONTAINER_NAME = restapi
-$(DOCKER_RESTAPI)_RUN_OPT += --cap-add NET_ADMIN --privileged -t
+$(DOCKER_RESTAPI)_RUN_OPT += -t
 $(DOCKER_RESTAPI)_RUN_OPT += -v /var/run/redis/redis.sock:/var/run/redis/redis.sock
 $(DOCKER_RESTAPI)_RUN_OPT += -v /etc/sonic/credentials:/etc/sonic/credentials:ro
 $(DOCKER_RESTAPI)_RUN_OPT += -p=8081:8081/tcp

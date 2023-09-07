@@ -38,7 +38,7 @@ endif
 $(DOCKER_MACSEC)_CONTAINER_NAME = macsec
 $(DOCKER_MACSEC)_VERSION = 1.0.0
 $(DOCKER_MACSEC)_PACKAGE_NAME = macsec
-$(DOCKER_MACSEC)_RUN_OPT += --privileged -t
+$(DOCKER_MACSEC)_RUN_OPT += -t
 $(DOCKER_MACSEC)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_MACSEC)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro 
 $(DOCKER_MACSEC)_RUN_OPT += -v /host/warmboot:/var/warmboot
