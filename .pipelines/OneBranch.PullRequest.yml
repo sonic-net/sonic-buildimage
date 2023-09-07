@@ -31,58 +31,104 @@ variables:
   - template: .pipelines/azure-pipelines-repd-build-variables.yml@acs-buildimage
 
 stages:
-- stage: Build
+- stage: BuildVS
   pool: sonic-image-builder-1ES
   variables:
-    CACHE_MODE: rcache
-    ${{ if eq(variables['Build.SourceBranchName'], '202012') }}:
-      VERSION_CONTROL_OPTIONS: 'SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker'
+    SONIC_DPKG_CACHE_METHOD: 'rcache'
+    SONIC_VERSION_CONTROL_COMPONENTS: 'deb,py2,py3,web,git,docker'
+    SONIC_BUILD_JOBS: 4
+    MIRROR_SNAPSHOT: 'y'
+    DEFAULT_CONTAINER_REGISTRY: 'publicmirror.azurecr.io'
+    ENABLE_DOCKER_BASE_PULL: 'y'
   jobs:
-  - template: /.azure-pipelines/azure-pipelines-build.yml
+  - template: .azure-pipelines/azure-pipelines-job-groups.yml@acs-buildimage
     parameters:
-      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
-      jobGroups:
-      - name: broadcom
-        variables:
-          swi_image: yes
-          dbg_image: yes
-      - name: mellanox
-        variables:
-          dbg_image: yes
-          docker_syncd_rpc_image: yes
-          platform_rpc: mlnx
       preSteps:
         - template: .pipelines/prepare_agent.yml@acs-buildimage
+        - template: .azure-pipelines/cleanup.yml@acs-buildimage
+        - checkout: self
+          submodules: recursive
+          clean: true
       postSteps:
-        - bash: |
-            echo $(System.PullRequest.targetBranchName)
-            git log origin/$(System.PullRequest.targetBranchName)..HEAD --oneline --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) [%an]' | head -n2 | grep -E "Merge branch .* of .* into internal.* \[Sonic Automation\]" && echo skiptest && echo "##vso[task.setvariable variable=SKIP_VSTEST;isOutput=true]YES" || true
-          name: SetVarInt
+        - publish: $(Build.ArtifactStagingDirectory)
+          artifact: 'sonic-buildimage.$(GROUP_NAME)'
+          displayName: "Archive sonic image"
+        - publish: $(Build.ArtifactStagingDirectory)
+          condition: or(failed(), canceled())
+          artifact: 'sonic-buildimage.$(GROUP_NAME)$(System.JobAttempt)'
+          displayName: "Archive failed sonic image"
+      jobGroups:
+        - name: vs
+          script: |
+            set -ex
+            make PLATFORM=vs PLATFORM_ARCH=amd64 configure
+            make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz target/docker-ptf-sai.gz
+            mv target $(Build.ArtifactStagingDirectory)
 
-- stage: BuildVS
+- stage: Build
   pool: sonic-image-builder-1ES
   dependsOn: []
   variables:
-    CACHE_MODE: rcache
-    ${{ if eq(variables['Build.SourceBranchName'], '202012') }}:
-      VERSION_CONTROL_OPTIONS: 'SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker'
+    SONIC_DPKG_CACHE_METHOD: 'rcache'
+    SONIC_VERSION_CONTROL_COMPONENTS: 'deb,py2,py3,web,git,docker'
+    SONIC_BUILD_JOBS: 4
+    ENABLE_SYNCD_RPC: 'y'
+    MIRROR_SNAPSHOT: 'y'
+    DEFAULT_CONTAINER_REGISTRY: 'publicmirror.azurecr.io'
+    ENABLE_DOCKER_BASE_PULL: 'y'
   jobs:
-  - template: .azure-pipelines/azure-pipelines-build.yml@acs-buildimage
+  - template: .azure-pipelines/azure-pipelines-job-groups.yml@acs-buildimage
     parameters:
-      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }} BUILD_MULTIASIC_KVM=y'
-      jobGroups:
-      - name: vs
       preSteps:
         - template: .pipelines/prepare_agent.yml@acs-buildimage
+        - template: .azure-pipelines/cleanup.yml@acs-buildimage
+        - checkout: self
+          submodules: recursive
+          clean: true
       postSteps:
-        - bash: |
-            echo $(System.PullRequest.targetBranchName)
-            git log origin/$(System.PullRequest.targetBranchName)..HEAD --oneline --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) [%an]' | head -n2 | grep -E "Merge branch .* of .* into internal.* \[Sonic Automation\]" && echo skiptest && echo "##vso[task.setvariable variable=SKIP_VSTEST;isOutput=true]YES" || true
-          name: SetVarInt
+        - publish: $(Build.ArtifactStagingDirectory)
+          artifact: 'sonic-buildimage.$(GROUP_NAME)'
+          displayName: "Archive sonic image"
+        - publish: $(System.DefaultWorkingDirectory)/target
+          condition: or(failed(), canceled())
+          artifact: 'sonic-buildimage.$(GROUP_NAME)$(System.JobAttempt)'
+          displayName: "Archive failed sonic image"
+      jobGroups:
+        - name: broadcom
+          script: |
+            set -ex
+            make PLATFORM=broadcom PLATFORM_ARCH=amd64 configure
+            make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/broadcom target/docker-syncd-brcm-rpc.gz target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi target/sonic-broadcom.raw
+            mv target $(Build.ArtifactStagingDirectory)
+        - name: mellanox
+          script: |
+            set -ex
+            make PLATFORM=mellanox PLATFORM_ARCH=amd64 configure
+            make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/mellanox INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin target/docker-syncd-mlnx-rpc.gz
+            mv target $(Build.ArtifactStagingDirectory)
+        - name: barefoot
+          script: |
+            set -ex
+            sudo modprobe overlay
+            make PLATFORM=barefoot PLATFORM_ARCH=amd64 configure
+            make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/barefoot target/sonic-barefoot.bin target/sonic-aboot-barefoot.swi target/docker-syncd-bfn-rpc.gz
+            mv target $(Build.ArtifactStagingDirectory)
+        - name: marvell-armhf
+          pool: sonic-armhf
+          timeoutInMinutes: 2160
+          variables:
+            PLATFORM_ARCH: armhf
+            # official build didn't enable RPC
+            ENABLE_SYNCD_RPC: 'n'
+          script: |
+            set -ex
+            make PLATFORM=marvell-armhf PLATFORM_ARCH=armhf configure
+            make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/armhf target/sonic-marvell-armhf.bin
+            mv target $(Build.ArtifactStagingDirectory)
 
 - stage: Test
   dependsOn: BuildVS
-  condition: and(in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues'), ne(stageDependencies.BuildVS.outputs['vs.SetVarInt.SKIP_VSTEST'], 'YES'))
+  condition: in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')
   variables:
     - group: SONiC-Elastictest
     - name: inventory
@@ -262,6 +308,7 @@ stages:
             az boards work-item update --org https://dev.azure.com/msazure/ --id $ADO_ID --discussion "$DISSCUSSION" --description "$DISSCUSSION"
             exit 0
           fi
+          echo PR checker failed!
           exit 1
         fi
       displayName: check result
