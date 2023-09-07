@@ -1,8 +1,8 @@
 # Centec SAI
 
-export CENTEC_SAI_VERSION = 1.11.0-1
-export CENTEC_SAI = libsai_$(CENTEC_SAI_VERSION)_$(PLATFORM_ARCH).deb
-export CENTEC_SAI_DEV = libsai-dev_$(CENTEC_SAI_VERSION)_$(PLATFORM_ARCH).deb
+export CENTEC_SAI_VERSION = 1.12.0-1
+export CENTEC_SAI = libsaictc_$(CENTEC_SAI_VERSION)_$(PLATFORM_ARCH).deb
+export CENTEC_SAI_DEV = libsaictc-dev_$(CENTEC_SAI_VERSION)_$(PLATFORM_ARCH).deb
 export CENTEC_SAI_URL_PREFIX = "https://github.com/CentecNetworks/sonic-binaries/raw/master/$(PLATFORM_ARCH)/sai"
 
 $(CENTEC_SAI)_URL = $(CENTEC_SAI_URL_PREFIX)/$(CENTEC_SAI)

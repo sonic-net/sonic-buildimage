@@ -5,7 +5,7 @@
 
 set -x
 
-# mount disk from host
+# Mount disk from host
 mount_point="/from_host"
 disk_by_path_dir="/dev/disk/by-path"
 # We can't ensure the mounted disk name is sda or sdb

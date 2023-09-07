@@ -1,8 +1,8 @@
-From ecf655b1e2329f2376f014c2cad0f81ec2ac5deb Mon Sep 17 00:00:00 2001
+From 81cb237570a4d0251455d17e073337f73c1b4aa9 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 4 Jun 2021 10:25:35 +0200
-Subject: [PATCH] mlxfw: Get the PSID value using op instead of passing it in
- struct
+Subject: [PATCH backport 5.10 145/182] mlxfw: Get the PSID value using op
+ instead of passing it in struct
 
 In preparation for line card device flashing, where the PSID is going to
 be obtained dynamically using MGIR register for each individual line
@@ -17,7 +17,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  4 files changed, 52 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlx5/core/fw.c b/drivers/net/ethernet/mellanox/mlx5/core/fw.c
-index 02558ac2a..06edfd5b1 100644
+index 02558ac2ace6..06edfd5b12e0 100644
 --- a/drivers/net/ethernet/mellanox/mlx5/core/fw.c
 +++ b/drivers/net/ethernet/mellanox/mlx5/core/fw.c
 @@ -494,6 +494,20 @@ struct mlx5_mlxfw_dev {
@@ -60,7 +60,7 @@ index 02558ac2a..06edfd5b1 100644
  		},
  		.mlx5_core_dev = dev
 diff --git a/drivers/net/ethernet/mellanox/mlxfw/mlxfw.h b/drivers/net/ethernet/mellanox/mlxfw/mlxfw.h
-index 7654841a0..b83651246 100644
+index 7654841a05c2..b83651246c1f 100644
 --- a/drivers/net/ethernet/mellanox/mlxfw/mlxfw.h
 +++ b/drivers/net/ethernet/mellanox/mlxfw/mlxfw.h
 @@ -11,8 +11,6 @@
@@ -82,7 +82,7 @@ index 7654841a0..b83651246 100644
  			       u32 *p_max_size, u8 *p_align_bits,
  			       u16 *p_max_write_size);
 diff --git a/drivers/net/ethernet/mellanox/mlxfw/mlxfw_fsm.c b/drivers/net/ethernet/mellanox/mlxfw/mlxfw_fsm.c
-index bcd166911..329ddf1b3 100644
+index bcd166911d44..329ddf1b3b89 100644
 --- a/drivers/net/ethernet/mellanox/mlxfw/mlxfw_fsm.c
 +++ b/drivers/net/ethernet/mellanox/mlxfw/mlxfw_fsm.c
 @@ -303,7 +303,8 @@ static int mlxfw_flash_component(struct mlxfw_dev *mlxfw_dev,
@@ -152,7 +152,7 @@ index bcd166911..329ddf1b3 100644
  err_fsm_reactivate:
  err_state_wait_idle_to_locked:
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
-index f55071982..8c1280781 100644
+index f55071982271..8c128078105a 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
 @@ -890,6 +890,21 @@ struct mlxsw_core_fw_info {
@@ -196,5 +196,5 @@ index f55071982..8c1280781 100644
  		},
  		.mlxsw_core = mlxsw_core
 -- 
-2.30.2
+2.20.1
 

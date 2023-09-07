@@ -1,7 +1,8 @@
-From a1421cadee435540d09a5526525f692821a271cd Mon Sep 17 00:00:00 2001
+From 1eb0843255d6e92aa96d0ea11a15ab1f86b20e4f Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 26 Feb 2021 18:40:28 +0100
-Subject: [PATCH] mlxsw: core: Introduce flash update components
+Subject: [PATCH backport 5.10 144/182] mlxsw: core: Introduce flash update
+ components
 
 Introduce an infrastructure allowing to have multiple components for
 flashing purposes that can be registered from inside the driver. Convert
@@ -15,7 +16,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  3 files changed, 125 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
-index 68ef007ac..f55071982 100644
+index 68ef007ac48c..f55071982271 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
 @@ -91,6 +91,10 @@ struct mlxsw_core {
@@ -188,7 +189,7 @@ index 68ef007ac..f55071982 100644
  	return;
  
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
-index 593470d14..30f00da0a 100644
+index 593470d14815..30f00da0a48d 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
 @@ -41,6 +41,18 @@ mlxsw_core_fw_rev_minor_subminor_validate(const struct mlxsw_fw_rev *rev,
@@ -211,7 +212,7 @@ index 593470d14..30f00da0a 100644
  				   const struct mlxsw_bus *mlxsw_bus,
  				   void *bus_priv, bool reload,
 diff --git a/include/net/devlink.h b/include/net/devlink.h
-index 06b61c1d7..fafbec26d 100644
+index 06b61c1d7938..fafbec26d2c4 100644
 --- a/include/net/devlink.h
 +++ b/include/net/devlink.h
 @@ -19,6 +19,7 @@
@@ -239,5 +240,5 @@ index 06b61c1d7..fafbec26d 100644
  	const char *component;
  	u32 overwrite_mask;
 -- 
-2.30.2
+2.20.1
 

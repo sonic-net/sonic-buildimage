@@ -1,0 +1,99 @@
+From 723dacff3d93f270a52195c895e2ddf233b146d7 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 7 Nov 2022 11:52:34 +0200
+Subject: [PATCH backport 5.10 084/150] platform: mellanox: Relocate
+ mlx-platform driver
+
+Move 'mlx-platform' driver 'x86' to 'mellanox' folder.
+
+Motivation to allow running it on systems with ARM architecture.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/Kconfig                 | 12 ++++++++++++
+ drivers/platform/mellanox/Makefile                |  1 +
+ drivers/platform/{x86 => mellanox}/mlx-platform.c |  0
+ drivers/platform/x86/Kconfig                      | 12 ------------
+ drivers/platform/x86/Makefile                     |  1 -
+ 5 files changed, 13 insertions(+), 13 deletions(-)
+ rename drivers/platform/{x86 => mellanox}/mlx-platform.c (100%)
+
+diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
+index 75e2bee17..ff8267329 100644
+--- a/drivers/platform/mellanox/Kconfig
++++ b/drivers/platform/mellanox/Kconfig
+@@ -14,6 +14,19 @@ menuconfig MELLANOX_PLATFORM
+ 
+ if MELLANOX_PLATFORM
+ 
++config MLX_PLATFORM
++	tristate "Mellanox Technologies platform support"
++	depends on I2C
++	select REGMAP
++	help
++	  This option enables system support for the Mellanox Technologies
++	  platform. The Mellanox systems provide data center networking
++	  solutions based on Virtual Protocol Interconnect (VPI) technology
++	  enable seamless connectivity to 56/100Gb/s InfiniBand or 10/40/56GbE
++	  connection.
++
++	  If you have a Mellanox system, say Y or M here.
++
+ config MLXREG_HOTPLUG
+ 	tristate "Mellanox platform hotplug driver support"
+ 	depends on REGMAP
+diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
+index 6af37ee88..23919e56a 100644
+--- a/drivers/platform/mellanox/Makefile
++++ b/drivers/platform/mellanox/Makefile
+@@ -3,6 +3,7 @@
+ # Makefile for linux/drivers/platform/mellanox
+ # Mellanox Platform-Specific Drivers
+ #
++obj-$(CONFIG_MLX_PLATFORM)	+= mlx-platform.o
+ obj-$(CONFIG_MLXBF_BOOTCTL)	+= mlxbf-bootctl.o
+ obj-$(CONFIG_MLXBF_TMFIFO)	+= mlxbf-tmfifo.o
+ obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+similarity index 100%
+rename from drivers/platform/x86/mlx-platform.c
+rename to drivers/platform/mellanox/mlx-platform.c
+diff --git a/drivers/platform/x86/Kconfig b/drivers/platform/x86/Kconfig
+index a1858689d..4270d4c17 100644
+--- a/drivers/platform/x86/Kconfig
++++ b/drivers/platform/x86/Kconfig
+@@ -1193,19 +1193,6 @@ config I2C_MULTI_INSTANTIATE
+ 	  To compile this driver as a module, choose M here: the module
+ 	  will be called i2c-multi-instantiate.
+ 
+-config MLX_PLATFORM
+-	tristate "Mellanox Technologies platform support"
+-	depends on I2C
+-	select REGMAP
+-	help
+-	  This option enables system support for the Mellanox Technologies
+-	  platform. The Mellanox systems provide data center networking
+-	  solutions based on Virtual Protocol Interconnect (VPI) technology
+-	  enable seamless connectivity to 56/100Gb/s InfiniBand or 10/40/56GbE
+-	  connection.
+-
+-	  If you have a Mellanox system, say Y or M here.
+-
+ config TOUCHSCREEN_DMI
+ 	bool "DMI based touchscreen configuration info"
+ 	depends on ACPI && DMI && I2C=y && TOUCHSCREEN_SILEAD
+diff --git a/drivers/platform/x86/Makefile b/drivers/platform/x86/Makefile
+index 5f823f7ef..1db86675f 100644
+--- a/drivers/platform/x86/Makefile
++++ b/drivers/platform/x86/Makefile
+@@ -122,7 +122,6 @@ obj-$(CONFIG_TOPSTAR_LAPTOP)	+= topstar-laptop.o
+ 
+ # Platform drivers
+ obj-$(CONFIG_I2C_MULTI_INSTANTIATE)	+= i2c-multi-instantiate.o
+-obj-$(CONFIG_MLX_PLATFORM)		+= mlx-platform.o
+ obj-$(CONFIG_TOUCHSCREEN_DMI)		+= touchscreen_dmi.o
+ 
+ # Intel uncore drivers
+-- 
+2.20.1
+

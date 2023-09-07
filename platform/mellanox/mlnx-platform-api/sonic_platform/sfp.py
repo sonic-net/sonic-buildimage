@@ -215,7 +215,7 @@ class NvidiaSFPCommon(SfpOptoeBase):
         return SFP.shared_sdk_handle
 
     @classmethod
-    def _get_module_info(self, sdk_handle, sdk_index):
+    def _get_module_info(self, sdk_index):
         """
         Get oper state and error code of the SFP module
 
@@ -436,7 +436,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             The error description
         """
-        oper_status, error_code = self._get_module_info(self.sdk_handle, self.sdk_index)
+        oper_status, error_code = self._get_module_info(self.sdk_index)
         if oper_status == SX_PORT_MODULE_STATUS_INITIALIZING:
             error_description = self.SFP_STATUS_INITIALIZING
         elif oper_status == SX_PORT_MODULE_STATUS_PLUGGED:

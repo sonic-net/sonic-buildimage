@@ -1,0 +1,245 @@
+From 9a21e6cf3c87954516a7933539fbcb5b373f9fa2 Mon Sep 17 00:00:00 2001
+From: Liming Sun <limings@nvidia.com>
+Date: Sun, 26 Jun 2022 01:10:07 -0400
+Subject: [PATCH backport 5.10 20/63] UBUNTU: SAUCE: platform/mellanox:
+ mlxbf-tmfifo: Add BlueField-3 support
+
+BugLink: https://launchpad.net/bugs/1980847
+
+This commit adds BlueField-3 support which has different resource
+mapping and is identified by the ACPI UID.
+
+Signed-off-by: Liming Sun <limings@nvidia.com>
+Change-Id: I104472a89741c1083168bacb4a7652c7767cceff
+Signed-off-by: Ike Panhc <ike.pan@canonical.com>
+---
+ drivers/platform/mellanox/mlxbf-tmfifo-regs.h | 10 +++
+ drivers/platform/mellanox/mlxbf-tmfifo.c      | 82 ++++++++++++++-----
+ 2 files changed, 70 insertions(+), 22 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxbf-tmfifo-regs.h b/drivers/platform/mellanox/mlxbf-tmfifo-regs.h
+index e4f0d2eda..1358dad0c 100644
+--- a/drivers/platform/mellanox/mlxbf-tmfifo-regs.h
++++ b/drivers/platform/mellanox/mlxbf-tmfifo-regs.h
+@@ -60,4 +60,14 @@
+ #define MLXBF_TMFIFO_RX_CTL__MAX_ENTRIES_RMASK		GENMASK_ULL(8, 0)
+ #define MLXBF_TMFIFO_RX_CTL__MAX_ENTRIES_MASK		GENMASK_ULL(40, 32)
+ 
++/* BF3 resource 0 register offset. */
++#define MLXBF_TMFIFO_RX_DATA_BF3			0x0000
++#define MLXBF_TMFIFO_TX_DATA_BF3			0x1000
++
++/* BF3 resource 1 register offset. */
++#define MLXBF_TMFIFO_RX_STS_BF3				0x0000
++#define MLXBF_TMFIFO_RX_CTL_BF3				0x0008
++#define MLXBF_TMFIFO_TX_STS_BF3				0x0100
++#define MLXBF_TMFIFO_TX_CTL_BF3				0x0108
++
+ #endif /* !defined(__MLXBF_TMFIFO_REGS_H__) */
+diff --git a/drivers/platform/mellanox/mlxbf-tmfifo.c b/drivers/platform/mellanox/mlxbf-tmfifo.c
+index 38800e86e..f401bbbd0 100644
+--- a/drivers/platform/mellanox/mlxbf-tmfifo.c
++++ b/drivers/platform/mellanox/mlxbf-tmfifo.c
+@@ -47,6 +47,9 @@
+ /* Message with data needs at least two words (for header & data). */
+ #define MLXBF_TMFIFO_DATA_MIN_WORDS		2
+ 
++/* ACPI chip identifier for BlueField-3. */
++#define MLXBF_TMFIFO_BF3_UID			"1"
++
+ struct mlxbf_tmfifo;
+ 
+ /**
+@@ -140,8 +143,14 @@ struct mlxbf_tmfifo_irq_info {
+  * mlxbf_tmfifo - Structure of the TmFifo
+  * @vdev: array of the virtual devices running over the TmFifo
+  * @lock: lock to protect the TmFifo access
+- * @rx_base: mapped register base address for the Rx FIFO
+- * @tx_base: mapped register base address for the Tx FIFO
++ * @res0: mapped register base for resource 0
++ * @res1: mapped register base for resource 1
++ * @rx_ctl: TMFIFO_RX_CTL register
++ * @rx_sts: TMFIFO_RX_STS register
++ * @rx_data: TMFIFO_RX_DATA register
++ * @tx_ctl: TMFIFO_TX_CTL register
++ * @tx_sts: TMFIFO_TX_STS register
++ * @tx_data: TMFIFO_TX_DATA register
+  * @rx_fifo_size: number of entries of the Rx FIFO
+  * @tx_fifo_size: number of entries of the Tx FIFO
+  * @pend_events: pending bits for deferred events
+@@ -155,8 +164,14 @@ struct mlxbf_tmfifo_irq_info {
+ struct mlxbf_tmfifo {
+ 	struct mlxbf_tmfifo_vdev *vdev[MLXBF_TMFIFO_VDEV_MAX];
+ 	struct mutex lock;		/* TmFifo lock */
+-	void __iomem *rx_base;
+-	void __iomem *tx_base;
++	void __iomem *res0;
++	void __iomem *res1;
++	void __iomem *rx_ctl;
++	void __iomem *rx_sts;
++	void __iomem *rx_data;
++	void __iomem *tx_ctl;
++	void __iomem *tx_sts;
++	void __iomem *tx_data;
+ 	int rx_fifo_size;
+ 	int tx_fifo_size;
+ 	unsigned long pend_events;
+@@ -472,7 +487,7 @@ static int mlxbf_tmfifo_get_rx_avail(struct mlxbf_tmfifo *fifo)
+ {
+ 	u64 sts;
+ 
+-	sts = readq(fifo->rx_base + MLXBF_TMFIFO_RX_STS);
++	sts = readq(fifo->rx_sts);
+ 	return FIELD_GET(MLXBF_TMFIFO_RX_STS__COUNT_MASK, sts);
+ }
+ 
+@@ -489,7 +504,7 @@ static int mlxbf_tmfifo_get_tx_avail(struct mlxbf_tmfifo *fifo, int vdev_id)
+ 	else
+ 		tx_reserve = 1;
+ 
+-	sts = readq(fifo->tx_base + MLXBF_TMFIFO_TX_STS);
++	sts = readq(fifo->tx_sts);
+ 	count = FIELD_GET(MLXBF_TMFIFO_TX_STS__COUNT_MASK, sts);
+ 	return fifo->tx_fifo_size - tx_reserve - count;
+ }
+@@ -525,7 +540,7 @@ static void mlxbf_tmfifo_console_tx(struct mlxbf_tmfifo *fifo, int avail)
+ 	/* Write header. */
+ 	hdr.type = VIRTIO_ID_CONSOLE;
+ 	hdr.len = htons(size);
+-	writeq(*(u64 *)&hdr, fifo->tx_base + MLXBF_TMFIFO_TX_DATA);
++	writeq(*(u64 *)&hdr, fifo->tx_data);
+ 
+ 	/* Use spin-lock to protect the 'cons->tx_buf'. */
+ 	spin_lock_irqsave(&fifo->spin_lock[0], flags);
+@@ -542,7 +557,7 @@ static void mlxbf_tmfifo_console_tx(struct mlxbf_tmfifo *fifo, int avail)
+ 			memcpy((u8 *)&data + seg, cons->tx_buf.buf,
+ 			       sizeof(u64) - seg);
+ 		}
+-		writeq(data, fifo->tx_base + MLXBF_TMFIFO_TX_DATA);
++		writeq(data, fifo->tx_data);
+ 
+ 		if (size >= sizeof(u64)) {
+ 			cons->tx_buf.tail = (cons->tx_buf.tail + sizeof(u64)) %
+@@ -573,7 +588,7 @@ static void mlxbf_tmfifo_rxtx_word(struct mlxbf_tmfifo_vring *vring,
+ 
+ 	/* Read a word from FIFO for Rx. */
+ 	if (is_rx)
+-		data = readq(fifo->rx_base + MLXBF_TMFIFO_RX_DATA);
++		data = readq(fifo->rx_data);
+ 
+ 	if (vring->cur_len + sizeof(u64) <= len) {
+ 		/* The whole word. */
+@@ -595,7 +610,7 @@ static void mlxbf_tmfifo_rxtx_word(struct mlxbf_tmfifo_vring *vring,
+ 
+ 	/* Write the word into FIFO for Tx. */
+ 	if (!is_rx)
+-		writeq(data, fifo->tx_base + MLXBF_TMFIFO_TX_DATA);
++		writeq(data, fifo->tx_data);
+ }
+ 
+ /*
+@@ -617,7 +632,7 @@ static void mlxbf_tmfifo_rxtx_header(struct mlxbf_tmfifo_vring *vring,
+ 	/* Read/Write packet header. */
+ 	if (is_rx) {
+ 		/* Drain one word from the FIFO. */
+-		*(u64 *)&hdr = readq(fifo->rx_base + MLXBF_TMFIFO_RX_DATA);
++		*(u64 *)&hdr = readq(fifo->rx_data);
+ 
+ 		/* Skip the length 0 packets (keepalive). */
+ 		if (hdr.len == 0)
+@@ -661,7 +676,7 @@ static void mlxbf_tmfifo_rxtx_header(struct mlxbf_tmfifo_vring *vring,
+ 		hdr.type = (vring->vdev_id == VIRTIO_ID_NET) ?
+ 			    VIRTIO_ID_NET : VIRTIO_ID_CONSOLE;
+ 		hdr.len = htons(vring->pkt_len - hdr_len);
+-		writeq(*(u64 *)&hdr, fifo->tx_base + MLXBF_TMFIFO_TX_DATA);
++		writeq(*(u64 *)&hdr, fifo->tx_data);
+ 	}
+ 
+ 	vring->cur_len = hdr_len;
+@@ -1155,7 +1170,7 @@ static void mlxbf_tmfifo_set_threshold(struct mlxbf_tmfifo *fifo)
+ 	u64 ctl;
+ 
+ 	/* Get Tx FIFO size and set the low/high watermark. */
+-	ctl = readq(fifo->tx_base + MLXBF_TMFIFO_TX_CTL);
++	ctl = readq(fifo->tx_ctl);
+ 	fifo->tx_fifo_size =
+ 		FIELD_GET(MLXBF_TMFIFO_TX_CTL__MAX_ENTRIES_MASK, ctl);
+ 	ctl = (ctl & ~MLXBF_TMFIFO_TX_CTL__LWM_MASK) |
+@@ -1164,17 +1179,17 @@ static void mlxbf_tmfifo_set_threshold(struct mlxbf_tmfifo *fifo)
+ 	ctl = (ctl & ~MLXBF_TMFIFO_TX_CTL__HWM_MASK) |
+ 		FIELD_PREP(MLXBF_TMFIFO_TX_CTL__HWM_MASK,
+ 			   fifo->tx_fifo_size - 1);
+-	writeq(ctl, fifo->tx_base + MLXBF_TMFIFO_TX_CTL);
++	writeq(ctl, fifo->tx_ctl);
+ 
+ 	/* Get Rx FIFO size and set the low/high watermark. */
+-	ctl = readq(fifo->rx_base + MLXBF_TMFIFO_RX_CTL);
++	ctl = readq(fifo->rx_ctl);
+ 	fifo->rx_fifo_size =
+ 		FIELD_GET(MLXBF_TMFIFO_RX_CTL__MAX_ENTRIES_MASK, ctl);
+ 	ctl = (ctl & ~MLXBF_TMFIFO_RX_CTL__LWM_MASK) |
+ 		FIELD_PREP(MLXBF_TMFIFO_RX_CTL__LWM_MASK, 0);
+ 	ctl = (ctl & ~MLXBF_TMFIFO_RX_CTL__HWM_MASK) |
+ 		FIELD_PREP(MLXBF_TMFIFO_RX_CTL__HWM_MASK, 1);
+-	writeq(ctl, fifo->rx_base + MLXBF_TMFIFO_RX_CTL);
++	writeq(ctl, fifo->rx_ctl);
+ }
+ 
+ static void mlxbf_tmfifo_cleanup(struct mlxbf_tmfifo *fifo)
+@@ -1194,9 +1209,15 @@ static int mlxbf_tmfifo_probe(struct platform_device *pdev)
+ {
+ 	struct virtio_net_config net_config;
+ 	struct device *dev = &pdev->dev;
++	struct acpi_device *device;
+ 	struct mlxbf_tmfifo *fifo;
++	const char *uid;
+ 	int i, rc;
+ 
++	device = ACPI_COMPANION(dev);
++	if (!device)
++		return -ENODEV;
++
+ 	fifo = devm_kzalloc(dev, sizeof(*fifo), GFP_KERNEL);
+ 	if (!fifo)
+ 		return -ENOMEM;
+@@ -1207,14 +1228,31 @@ static int mlxbf_tmfifo_probe(struct platform_device *pdev)
+ 	mutex_init(&fifo->lock);
+ 
+ 	/* Get the resource of the Rx FIFO. */
+-	fifo->rx_base = devm_platform_ioremap_resource(pdev, 0);
+-	if (IS_ERR(fifo->rx_base))
+-		return PTR_ERR(fifo->rx_base);
++	fifo->res0 = devm_platform_ioremap_resource(pdev, 0);
++	if (IS_ERR(fifo->res0))
++		return PTR_ERR(fifo->res0);
+ 
+ 	/* Get the resource of the Tx FIFO. */
+-	fifo->tx_base = devm_platform_ioremap_resource(pdev, 1);
+-	if (IS_ERR(fifo->tx_base))
+-		return PTR_ERR(fifo->tx_base);
++	fifo->res1 = devm_platform_ioremap_resource(pdev, 1);
++	if (IS_ERR(fifo->res1))
++		return PTR_ERR(fifo->res1);
++
++	uid = acpi_device_uid(device);
++	if (uid && !strcmp(uid, MLXBF_TMFIFO_BF3_UID)) {
++		fifo->rx_data = fifo->res0 + MLXBF_TMFIFO_RX_DATA_BF3;
++		fifo->tx_data = fifo->res0 + MLXBF_TMFIFO_TX_DATA_BF3;
++		fifo->rx_sts = fifo->res1 + MLXBF_TMFIFO_RX_STS_BF3;
++		fifo->rx_ctl = fifo->res1 + MLXBF_TMFIFO_RX_CTL_BF3;
++		fifo->tx_sts = fifo->res1 + MLXBF_TMFIFO_TX_STS_BF3;
++		fifo->tx_ctl = fifo->res1 + MLXBF_TMFIFO_TX_CTL_BF3;
++	} else {
++		fifo->rx_ctl = fifo->res0 + MLXBF_TMFIFO_RX_CTL;
++		fifo->rx_sts = fifo->res0 + MLXBF_TMFIFO_RX_STS;
++		fifo->rx_data = fifo->res0 + MLXBF_TMFIFO_RX_DATA;
++		fifo->tx_ctl = fifo->res1 + MLXBF_TMFIFO_TX_CTL;
++		fifo->tx_sts = fifo->res1 + MLXBF_TMFIFO_TX_STS;
++		fifo->tx_data = fifo->res1 + MLXBF_TMFIFO_TX_DATA;
++	}
+ 
+ 	platform_set_drvdata(pdev, fifo);
+ 
+-- 
+2.20.1
+

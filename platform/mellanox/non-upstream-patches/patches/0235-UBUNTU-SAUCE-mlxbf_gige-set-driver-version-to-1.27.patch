@@ -1,0 +1,39 @@
+From 438c36fd4f5ca577d03d50d0d037e44a2d25edd1 Mon Sep 17 00:00:00 2001
+From: David Thompson <davthompson@nvidia.com>
+Date: Wed, 20 Jul 2022 18:59:14 -0400
+Subject: [PATCH backport 5.10 36/63] UBUNTU: SAUCE: mlxbf_gige: set driver
+ version to 1.27
+
+BugLink: https://bugs.launchpad.net/bugs/1982431
+
+This patch adds logic to specify the driver version
+via MODULE_VERSION() and sets the value to 1.27
+
+Change-Id: I91f775df119877ad6d6eeaa5e5f93dcf1b55c8d2
+Signed-off-by: David Thompson <davthompson@nvidia.com>
+Signed-off-by: Ike Panhc <ike.pan@canonical.com>
+---
+ drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+index c9176a2e6..66a50e35f 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+@@ -19,6 +19,8 @@
+ #include "mlxbf_gige.h"
+ #include "mlxbf_gige_regs.h"
+ 
++#define DRV_VERSION 1.27
++
+ /* This setting defines the version of the ACPI table
+  * content that is compatible with this driver version.
+  */
+@@ -470,3 +472,4 @@ MODULE_DESCRIPTION("Mellanox BlueField SoC Gigabit Ethernet Driver");
+ MODULE_AUTHOR("David Thompson <davthompson@nvidia.com>");
+ MODULE_AUTHOR("Asmaa Mnebhi <asmaa@nvidia.com>");
+ MODULE_LICENSE("Dual BSD/GPL");
++MODULE_VERSION(__stringify(DRV_VERSION));
+-- 
+2.20.1
+

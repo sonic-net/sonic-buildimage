@@ -5,6 +5,10 @@ Maintainer: Netberg <support@netbergtw.com>
 Build-Depends: debhelper (>= 9)
 Standards-Version: 1.0.0
 
+Package: sonic-platform-netberg-aurora-750
+Architecture: amd64 
+Description: This package contains Aurora 750 platform driver utility for SONiC project.
+
 Package: sonic-platform-netberg-aurora-710
 Architecture: amd64 
 Description: This package contains Aurora 710 platform driver utility for SONiC project.

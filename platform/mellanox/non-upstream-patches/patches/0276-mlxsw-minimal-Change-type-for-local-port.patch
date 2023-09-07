@@ -1,0 +1,41 @@
+From 299ee861fd4b081f0ab5d168048c9696a12de2f5 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 9 Mar 2023 09:05:38 +0000
+Subject: [PATCH backport v.5.10 1/3] mlxsw: minimal: Change type for local
+ port
+
+Since maximum port number available on system has been increased from
+128 to 258, change relevant types from u8 to u16:
+- 'max_ports' field in structure 'mlxsw_m';
+- 'local_port' argument in mlxsw_m_port_mapping_get().
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+index 5fd319697..9f74ca704 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+@@ -31,7 +31,7 @@ struct mlxsw_m {
+ 	struct mlxsw_core *core;
+ 	const struct mlxsw_bus_info *bus_info;
+ 	u8 base_mac[ETH_ALEN];
+-	u8 max_ports;
++	u16 max_ports;
+ 	u8 max_module_count; /* Maximum number of modules per-slot. */
+ 	u8 num_of_slots; /* Including the main board. */
+ 	struct mlxsw_m_line_card **line_cards;
+@@ -230,7 +230,7 @@ mlxsw_m_port_dev_addr_get(struct mlxsw_m_port *mlxsw_m_port)
+ 
+ static struct
+ mlxsw_m_port_mapping *mlxsw_m_port_mapping_get(struct mlxsw_m *mlxsw_m,
+-					       u8 slot_index, u8 local_port)
++					       u8 slot_index, u16 local_port)
+ {
+ 	return &mlxsw_m->line_cards[slot_index]->port_mapping[local_port];
+ }
+-- 
+2.20.1
+

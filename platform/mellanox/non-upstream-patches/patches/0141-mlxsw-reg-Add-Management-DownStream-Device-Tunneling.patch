@@ -1,8 +1,8 @@
-From 46563dcd511270f67a9e771497ccfc73907aa4d3 Mon Sep 17 00:00:00 2001
+From d7353e41900e4d6fa44fa5e51a483b9f01432846 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Thu, 25 Feb 2021 10:17:53 +0100
-Subject: [PATCH] mlxsw: reg: Add Management DownStream Device Tunneling
- Register
+Subject: [PATCH backport 5.10 141/182] mlxsw: reg: Add Management DownStream
+ Device Tunneling Register
 
 The MDDT register allows deliver query and request messages
 (PRM registers, commands) to a DownStream device.
@@ -13,10 +13,10 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 91 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index c1ce0b42e..f8c828e05 100644
+index 5757c4f40277..7b71e9ae3d51 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-@@ -10482,6 +10482,96 @@ mlxsw_reg_mbct_unpack(const char *payload, u8 *p_slot_index,
+@@ -10481,6 +10481,96 @@ mlxsw_reg_mbct_unpack(const char *payload, u8 *p_slot_index,
  		*p_fsm_state = mlxsw_reg_mbct_fsm_state_get(payload);
  }
  
@@ -113,7 +113,7 @@ index c1ce0b42e..f8c828e05 100644
  /* MDDQ - Management DownStream Device Query Register
   * --------------------------------------------------
   * This register allows to query the DownStream device properties. The desired
-@@ -11952,6 +12042,7 @@ static const struct mlxsw_reg_info *mlxsw_reg_infos[] = {
+@@ -11951,6 +12041,7 @@ static const struct mlxsw_reg_info *mlxsw_reg_infos[] = {
  	MLXSW_REG(mgpir),
  	MLXSW_REG(mtecr),
  	MLXSW_REG(mbct),
@@ -122,5 +122,5 @@ index c1ce0b42e..f8c828e05 100644
  	MLXSW_REG(mddc),
  	MLXSW_REG(mfde),
 -- 
-2.30.2
+2.20.1
 

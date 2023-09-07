@@ -1,0 +1,93 @@
+From 8b0f2061c6f8d799b7da9b7f50edb18208e67bb8 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 22 Jul 2022 01:15:43 +0300
+Subject: [PATCH backport 5.10 174/182] DS: mlxsw: core_linecards: Skip devlink
+ and provisioning operation
+
+Do not execute provisioning / unprovisioning flow in not upstream
+environment.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ .../net/ethernet/mellanox/mlxsw/core_linecards.c    | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
+index 3a2fdd22dc21..30665a6f3e4d 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
+@@ -651,8 +651,11 @@ mlxsw_linecard_provision_set(struct mlxsw_core *mlxsw_core,
+ 						linecard);
+ 	if (err)
+ 		goto err_cbs_call;
++
+ 	linecard->provisioned = true;
++#if 0
+ 	devlink_linecard_provision_set(linecard->devlink_linecard, type);
++#endif
+ 	return 0;
+ 
+ err_cbs_call:
+@@ -670,12 +673,15 @@ static void mlxsw_linecard_provision_clear(struct mlxsw_core *mlxsw_core,
+ 					    linecard);
+ 	mlxsw_linecard_devices_detach(linecard->linecards->mlxsw_core,
+ 				      linecard);
++#if 0
+ 	devlink_linecard_provision_clear(linecard->devlink_linecard);
++#endif
+ }
+ 
+ static int mlxsw_linecard_ready_set(struct mlxsw_core *mlxsw_core,
+ 				    struct mlxsw_linecard *linecard)
+ {
++#if 0
+ 	char mddc_pl[MLXSW_REG_MDDC_LEN];
+ 	int err;
+ 
+@@ -683,6 +689,7 @@ static int mlxsw_linecard_ready_set(struct mlxsw_core *mlxsw_core,
+ 	err = mlxsw_reg_write(mlxsw_core, MLXSW_REG(mddc), mddc_pl);
+ 	if (err)
+ 		return err;
++#endif
+ 	linecard->ready = true;
+ 	return 0;
+ }
+@@ -690,6 +697,7 @@ static int mlxsw_linecard_ready_set(struct mlxsw_core *mlxsw_core,
+ static int mlxsw_linecard_ready_clear(struct mlxsw_core *mlxsw_core,
+ 				      struct mlxsw_linecard *linecard)
+ {
++#if 0
+ 	char mddc_pl[MLXSW_REG_MDDC_LEN];
+ 	int err;
+ 
+@@ -697,6 +705,7 @@ static int mlxsw_linecard_ready_clear(struct mlxsw_core *mlxsw_core,
+ 	err = mlxsw_reg_write(mlxsw_core, MLXSW_REG(mddc), mddc_pl);
+ 	if (err)
+ 		return err;
++#endif
+ 	linecard->ready = false;
+ 	return 0;
+ }
+@@ -722,7 +731,9 @@ static int mlxsw_linecard_active_set(struct mlxsw_core *mlxsw_core,
+ 		item->event_ops->got_active(mlxsw_core, linecard->slot_index,
+ 					    linecard, item->priv);
+ 	}
++#if 0
+ 	devlink_linecard_activate(linecard->devlink_linecard);
++#endif
+ 	return 0;
+ }
+ 
+@@ -739,7 +750,9 @@ static void mlxsw_linecard_active_clear(struct mlxsw_core *mlxsw_core,
+ 		item->event_ops->got_inactive(mlxsw_core, linecard->slot_index,
+ 					      linecard, item->priv);
+ 	}
++#if 0
+ 	devlink_linecard_deactivate(linecard->devlink_linecard);
++#endif
+ }
+ 
+ static int __mlxsw_linecard_status_process(struct mlxsw_core *mlxsw_core,
+-- 
+2.20.1
+

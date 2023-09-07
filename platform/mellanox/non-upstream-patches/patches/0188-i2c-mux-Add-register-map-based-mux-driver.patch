@@ -1,0 +1,253 @@
+From 03195e7418ec41d0a118973a392165f11ba881cf Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 9 Nov 2022 12:22:12 +0200
+Subject: [PATCH backport 5.10 026/100] i2c: mux: Add register map based mux
+ driver
+
+Add 'regmap' mux driver to allow virtual bus switching by setting a
+single selector register.
+The 'regmap' is supposed to be passed to driver within a platform data
+by parent platform driver.
+
+Motivation is to support indirect access to register space where
+selector register is located.
+For example, Lattice FPGA LFD2NX-40 device, being connected through
+PCIe bus provides SPI or LPC bus logic through PCIe-to-SPI or
+PCIe-to-LPC bridging. Thus, FPGA operates a as host controller and
+some slave devices can be connected to it. For example:
+- CPU (PCIe) -> FPGA (PCIe-to-SPI bridge) -> CPLD or another FPGA.
+- CPU (PCIe) -> FPGA (PCIe-to-LPC bridge) -> CPLD or another FPGA.
+Where 1-st FPGA connected to PCIe is located on carrier board, while
+2-nd programming logic device is located on some switch board and
+cannot be connected to CPU PCIe root complex.
+
+In case mux selector register is located within the 2-nd device, SPI or
+LPC transactions are sent indirectly through pre-defined protocol.
+
+To support such protocol reg_read()/reg_write() callbacks are provided
+to 'regmap' object and these callback implements required indirect
+access.
+
+For example, flow in reg_write() will be as following:
+- Verify there is no pending transactions.
+- Set address in PCIe register space.
+- Set data to be written in PCIe register space.
+- Activate write operation in PCIe register space.
+- LPC or SPI write transaction is performed.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/i2c/muxes/Kconfig                    |  12 ++
+ drivers/i2c/muxes/Makefile                   |   1 +
+ drivers/i2c/muxes/i2c-mux-regmap.c           | 123 +++++++++++++++++++
+ include/linux/platform_data/i2c-mux-regmap.h |  34 +++++
+ 4 files changed, 170 insertions(+)
+ create mode 100644 drivers/i2c/muxes/i2c-mux-regmap.c
+ create mode 100644 include/linux/platform_data/i2c-mux-regmap.h
+
+diff --git a/drivers/i2c/muxes/Kconfig b/drivers/i2c/muxes/Kconfig
+index 1708b1a82..48becd945 100644
+--- a/drivers/i2c/muxes/Kconfig
++++ b/drivers/i2c/muxes/Kconfig
+@@ -99,6 +99,18 @@ config I2C_MUX_REG
+ 	  This driver can also be built as a module.  If so, the module
+ 	  will be called i2c-mux-reg.
+ 
++config I2C_MUX_REGMAP
++	tristate "Register map based I2C multiplexer"
++	depends on REGMAP
++	help
++	  If you say yes to this option, support will be included for a
++	  register map based I2C multiplexer. This driver provides access to
++	  I2C busses connected through a MUX, which is controlled
++	  by a single register through the regmap.
++
++	  This driver can also be built as a module. If so, the module
++	  will be called i2c-mux-regmap.
++
+ config I2C_DEMUX_PINCTRL
+ 	tristate "pinctrl-based I2C demultiplexer"
+ 	depends on PINCTRL && OF
+diff --git a/drivers/i2c/muxes/Makefile b/drivers/i2c/muxes/Makefile
+index 6d9d865e8..092dca428 100644
+--- a/drivers/i2c/muxes/Makefile
++++ b/drivers/i2c/muxes/Makefile
+@@ -14,5 +14,6 @@ obj-$(CONFIG_I2C_MUX_PCA9541)	+= i2c-mux-pca9541.o
+ obj-$(CONFIG_I2C_MUX_PCA954x)	+= i2c-mux-pca954x.o
+ obj-$(CONFIG_I2C_MUX_PINCTRL)	+= i2c-mux-pinctrl.o
+ obj-$(CONFIG_I2C_MUX_REG)	+= i2c-mux-reg.o
++obj-$(CONFIG_I2C_MUX_REGMAP)	+= i2c-mux-regmap.o
+ 
+ ccflags-$(CONFIG_I2C_DEBUG_BUS) := -DDEBUG
+diff --git a/drivers/i2c/muxes/i2c-mux-regmap.c b/drivers/i2c/muxes/i2c-mux-regmap.c
+new file mode 100644
+index 000000000..e155c039a
+--- /dev/null
++++ b/drivers/i2c/muxes/i2c-mux-regmap.c
+@@ -0,0 +1,123 @@
++// SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
++/*
++ * Regmap i2c mux driver
++ *
++ * Copyright (C) 2023 Nvidia Technologies Ltd.
++ */
++
++#include <linux/device.h>
++#include <linux/i2c.h>
++#include <linux/i2c-mux.h>
++#include <linux/io.h>
++#include <linux/init.h>
++#include <linux/module.h>
++#include <linux/platform_data/i2c-mux-regmap.h>
++#include <linux/platform_device.h>
++#include <linux/regmap.h>
++#include <linux/slab.h>
++
++/* i2c_mux_regmap - mux control structure:
++ * @last_val - last selected register value or -1 if mux deselected;
++ * @pdata: platform data;
++ */
++struct i2c_mux_regmap {
++	int last_val;
++	struct i2c_mux_regmap_platform_data pdata;
++};
++
++static int i2c_mux_regmap_select_chan(struct i2c_mux_core *muxc, u32 chan)
++{
++	struct i2c_mux_regmap *mux = i2c_mux_priv(muxc);
++	int err = 0;
++
++	/* Only select the channel if its different from the last channel */
++	if (mux->last_val != chan) {
++		err = regmap_write(mux->pdata.regmap, mux->pdata.sel_reg_addr, chan);
++		mux->last_val = err < 0 ? -1 : chan;
++	}
++
++	return err;
++}
++
++static int i2c_mux_regmap_deselect(struct i2c_mux_core *muxc, u32 chan)
++{
++	struct i2c_mux_regmap *mux = i2c_mux_priv(muxc);
++
++	/* Deselect active channel */
++	mux->last_val = -1;
++
++	return regmap_write(mux->pdata.regmap, mux->pdata.sel_reg_addr, 0);
++}
++
++/* Probe/reomove functions */
++static int i2c_mux_regmap_probe(struct platform_device *pdev)
++{
++	struct i2c_mux_regmap_platform_data *pdata = dev_get_platdata(&pdev->dev);
++	struct i2c_mux_regmap *mux;
++	struct i2c_adapter *parent;
++	struct i2c_mux_core *muxc;
++	int num, err;
++
++	if (!pdata)
++		return -EINVAL;
++
++	mux = devm_kzalloc(&pdev->dev, sizeof(*mux), GFP_KERNEL);
++	if (!mux)
++		return -ENOMEM;
++
++	memcpy(&mux->pdata, pdata, sizeof(*pdata));
++	parent = i2c_get_adapter(mux->pdata.parent);
++	if (!parent)
++		return -EPROBE_DEFER;
++
++	muxc = i2c_mux_alloc(parent, &pdev->dev, pdata->num_adaps, sizeof(*mux), 0,
++			     i2c_mux_regmap_select_chan, i2c_mux_regmap_deselect);
++	if (!muxc)
++		return -ENOMEM;
++
++	platform_set_drvdata(pdev, muxc);
++	muxc->priv = mux;
++	mux->last_val = -1; /* force the first selection */
++
++	/* Create an adapter for each channel. */
++	for (num = 0; num < pdata->num_adaps; num++) {
++		err = i2c_mux_add_adapter(muxc, 0, pdata->chan_ids[num], 0);
++		if (err)
++			goto err_i2c_mux_add_adapter;
++	}
++
++	/* Notify caller when all channels' adapters are created. */
++	if (pdata->completion_notify)
++		pdata->completion_notify(pdata->handle, muxc->parent, muxc->adapter);
++
++	return 0;
++
++err_i2c_mux_add_adapter:
++	i2c_mux_del_adapters(muxc);
++	return err;
++}
++
++static int i2c_mux_regmap_remove(struct platform_device *pdev)
++{
++	struct i2c_mux_core *muxc = platform_get_drvdata(pdev);
++
++	i2c_mux_del_adapters(muxc);
++	i2c_put_adapter(muxc->parent);
++
++	return 0;
++}
++
++static struct platform_driver i2c_mux_regmap_driver = {
++	.driver = {
++		.name = "i2c-mux-regmap",
++	},
++	.probe = i2c_mux_regmap_probe,
++	.remove = i2c_mux_regmap_remove,
++};
++
++module_platform_driver(i2c_mux_regmap_driver);
++
++MODULE_AUTHOR("Vadim Pasternak (vadimp@nvidia.com)");
++MODULE_DESCRIPTION("Regmap I2C multiplexer driver");
++MODULE_LICENSE("Dual BSD/GPL");
++MODULE_ALIAS("platform:i2c-mux-regmap");
+diff --git a/include/linux/platform_data/i2c-mux-regmap.h b/include/linux/platform_data/i2c-mux-regmap.h
+new file mode 100644
+index 000000000..a06614e5e
+--- /dev/null
++++ b/include/linux/platform_data/i2c-mux-regmap.h
+@@ -0,0 +1,34 @@
++/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
++/*
++ * Regmap i2c mux driver
++ *
++ * Copyright (C) 2023 Nvidia Technologies Ltd.
++ */
++
++#ifndef __LINUX_PLATFORM_DATA_I2C_MUX_REGMAP_H
++#define __LINUX_PLATFORM_DATA_I2C_MUX_REGMAP_H
++
++/**
++ * struct i2c_mux_regmap_platform_data - Platform-dependent data for i2c-mux-regmap
++ * @regmap: register map of parent device;
++ * @parent: Parent I2C bus adapter number
++ * @chan_ids - channels array
++ * @num_adaps - number of adapters
++ * @sel_reg_addr - mux select register offset in CPLD space
++ * @reg_size: register size in bytes
++ * @handle: handle to be passed by callback
++ * @completion_notify: callback to notify when all the adapters are created
++ */
++struct i2c_mux_regmap_platform_data {
++	void *regmap;
++	int parent;
++	const unsigned int *chan_ids;
++	int num_adaps;
++	int sel_reg_addr;
++	u8 reg_size;
++	void *handle;
++	int (*completion_notify)(void *handle, struct i2c_adapter *parent,
++				 struct i2c_adapter *adapters[]);
++};
++
++#endif	/* __LINUX_PLATFORM_DATA_I2C_MUX_REGMAP_H */
+-- 
+2.20.1
+

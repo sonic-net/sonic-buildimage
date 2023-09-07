@@ -1,0 +1,46 @@
+From 62164fc6ed2a1ae28dbf3cf16c9ecfa0c23b2b3d Mon Sep 17 00:00:00 2001
+From: David Thompson <davthompson@nvidia.com>
+Date: Tue, 14 Jun 2022 17:26:02 -0400
+Subject: [PATCH backport 5.10 32/63] mlxbf_gige: remove own module name define
+ and use KBUILD_MODNAME instead
+
+BugLink: https://bugs.launchpad.net/bugs/1979827
+
+This patch adds use of KBUILD_MODNAME as defined by the build system,
+replacing the definition and use of a custom-defined name.
+
+Signed-off-by: David Thompson <davthompson@nvidia.com>
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Link: https://lore.kernel.org/r/20220614212602.28061-1-davthompson@nvidia.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+(cherry picked from commit linux-next cfbc80e34e3a905f5e89e7c0bc133a9507b05a28)
+Signed-off-by: Ike Panhc <ike.pan@canonical.com>
+---
+ drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+index e4ed38bbd..e8f9290a8 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+@@ -19,8 +19,6 @@
+ #include "mlxbf_gige.h"
+ #include "mlxbf_gige_regs.h"
+ 
+-#define DRV_NAME    "mlxbf_gige"
+-
+ /* Allocate SKB whose payload pointer aligns with the Bluefield
+  * hardware DMA limitation, i.e. DMA operation can't cross
+  * a 4KB boundary.  A maximum packet size of 2KB is assumed in the
+@@ -442,7 +440,7 @@ static struct platform_driver mlxbf_gige_driver = {
+ 	.remove = mlxbf_gige_remove,
+ 	.shutdown = mlxbf_gige_shutdown,
+ 	.driver = {
+-		.name = DRV_NAME,
++		.name = KBUILD_MODNAME,
+ 		.acpi_match_table = ACPI_PTR(mlxbf_gige_acpi_match),
+ 	},
+ };
+-- 
+2.20.1
+

@@ -1,7 +1,8 @@
-From f2ecea65348e527345e9e7a59766162eb2297a53 Mon Sep 17 00:00:00 2001
+From e7379493c9f7e30f7d20459ed07a435095e9a889 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 22 Jan 2021 14:45:06 +0100
-Subject: [PATCH] mlxsw: core_linecards: Implement line card activation process
+Subject: [PATCH backport 5.10 136/182] mlxsw: core_linecards: Implement line
+ card activation process
 
 Allow to process events generated upon line card getting "ready" and
 "active".
@@ -13,7 +14,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  2 files changed, 80 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
-index d3c5d8289..ecd91bb8c 100644
+index d3c5d8289a85..ecd91bb8ca77 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
 @@ -521,6 +521,9 @@ struct mlxsw_linecard {
@@ -27,7 +28,7 @@ index d3c5d8289..ecd91bb8c 100644
  
  struct mlxsw_linecard_types_info;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
-index a324ce243..134437f49 100644
+index a324ce2436e8..134437f49219 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 @@ -67,6 +67,8 @@ static const char *mlxsw_linecard_type_name(struct mlxsw_linecard *linecard)
@@ -201,5 +202,5 @@ index a324ce243..134437f49 100644
  
  void mlxsw_linecards_fini(struct mlxsw_core *mlxsw_core,
 -- 
-2.30.2
+2.20.1
 

@@ -1,0 +1,118 @@
+From 02aa895d298c83e5e6e0f6e64f04895e50235a33 Mon Sep 17 00:00:00 2001
+From: Asmaa Mnebhi <asmaa@nvidia.com>
+Date: Mon, 31 Oct 2022 12:18:52 -0400
+Subject: [PATCH backport 5.10 60/63] UBUNTU: SAUCE: mlx-bootctl: support icm
+ carveout eeprom region read/write
+
+BugLink: https://bugs.launchpad.net/bugs/1995296
+
+The BlueField-3 ICM carveout feature will enable NIC FW to bypass the SMMU block
+to access DRAM memory. The amount of memory accessible by FW will be controlled by ARM.
+This patch enables setting the size of the large ICM carveout from
+userspace. The max size is 1TB, has a granularity of 128MB and will be passed
+and printed in hex. The size unit is MB.
+
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Acked-by: Cory Todd <cory.todd@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/platform/mellanox/mlxbf-bootctl.c | 40 +++++++++++++++++++++++
+ drivers/platform/mellanox/mlxbf-bootctl.h |  9 +++++
+ 2 files changed, 49 insertions(+)
+
+diff --git a/drivers/platform/mellanox/mlxbf-bootctl.c b/drivers/platform/mellanox/mlxbf-bootctl.c
+index 2302e1e09..e8877a19d 100644
+--- a/drivers/platform/mellanox/mlxbf-bootctl.c
++++ b/drivers/platform/mellanox/mlxbf-bootctl.c
+@@ -104,6 +104,7 @@ enum {
+ 
+ /* This mutex is used to serialize MFG write and lock operations. */
+ static DEFINE_MUTEX(mfg_ops_lock);
++static DEFINE_MUTEX(icm_ops_lock);
+ 
+ #define MLNX_MFG_OOB_MAC_LEN         ETH_ALEN
+ #define MLNX_MFG_OPN_VAL_LEN         24
+@@ -383,6 +384,43 @@ static ssize_t oob_mac_store(struct device_driver *drv, const char *buf,
+ 	return res.a0 ? -EPERM : count;
+ }
+ 
++static ssize_t large_icm_show(struct device_driver *drv, char *buf)
++{
++	char icm_str[MAX_ICM_BUFFER_SIZE] = { 0 };
++	struct arm_smccc_res res;
++
++	arm_smccc_smc(MLNX_HANDLE_GET_ICM_INFO, 0, 0, 0, 0,
++		      0, 0, 0, &res);
++	if (res.a0)
++		return -EPERM;
++
++	sprintf(icm_str, "0x%lx", res.a1);
++
++	return snprintf(buf, sizeof(icm_str), "%s", icm_str);
++}
++
++static ssize_t large_icm_store(struct device_driver *drv, const char *buf,
++			     size_t count)
++{
++	struct arm_smccc_res res;
++	unsigned long icm_data;
++	int err;
++
++	err = kstrtoul(buf, 16, &icm_data);
++	if (err)
++		return err;
++
++	if (((icm_data != 0) && (icm_data < 0x80)) ||
++	    (icm_data > 0x100000) || (icm_data % 128))
++		return -EPERM;
++
++	mutex_lock(&icm_ops_lock);
++	arm_smccc_smc(MLNX_HANDLE_SET_ICM_INFO, icm_data, 0, 0, 0, 0, 0, 0, &res);
++	mutex_unlock(&icm_ops_lock);
++
++	return res.a0 ? -EPERM : count;
++}
++
+ static ssize_t opn_show(struct device_driver *drv, char *buf)
+ {
+ 	u64 opn_data[MLNX_MFG_VAL_QWORD_CNT(OPN)] = { 0 };
+@@ -1170,6 +1208,7 @@ static DRIVER_ATTR_RW(uuid);
+ static DRIVER_ATTR_RW(rev);
+ static DRIVER_ATTR_WO(mfg_lock);
+ static DRIVER_ATTR_RW(rsh_log);
++static DRIVER_ATTR_RW(large_icm);
+ 
+ static struct attribute *mbc_dev_attrs[] = {
+ 	&driver_attr_post_reset_wdog.attr,
+@@ -1187,6 +1226,7 @@ static struct attribute *mbc_dev_attrs[] = {
+ 	&driver_attr_rev.attr,
+ 	&driver_attr_mfg_lock.attr,
+ 	&driver_attr_rsh_log.attr,
++	&driver_attr_large_icm.attr,
+ 	NULL
+ };
+ 
+diff --git a/drivers/platform/mellanox/mlxbf-bootctl.h b/drivers/platform/mellanox/mlxbf-bootctl.h
+index 3e9dda829..c70204770 100644
+--- a/drivers/platform/mellanox/mlxbf-bootctl.h
++++ b/drivers/platform/mellanox/mlxbf-bootctl.h
+@@ -95,6 +95,15 @@
+ #define MLNX_HANDLE_GET_MFG_INFO    0x8200000F
+ #define MLNX_HANDLE_LOCK_MFG_INFO   0x82000011
+ 
++/*
++ * SMC function IDs to set and get the large ICM carveout size
++ * stored in the eeprom.
++ */
++#define MLNX_HANDLE_SET_ICM_INFO    0x82000012
++#define MLNX_HANDLE_GET_ICM_INFO    0x82000013
++
++#define MAX_ICM_BUFFER_SIZE 10
++
+ /* SMC function IDs for SiP Service queries */
+ #define MLNX_SIP_SVC_CALL_COUNT		0x8200ff00
+ #define MLNX_SIP_SVC_UID		0x8200ff01
+-- 
+2.20.1
+

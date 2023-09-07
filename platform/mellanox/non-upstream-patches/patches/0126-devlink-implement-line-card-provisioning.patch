@@ -1,7 +1,8 @@
-From b0a30f401ca5d69f3cd78a0bf6dd1471f7aea0be Mon Sep 17 00:00:00 2001
+From 37d223fa389636092d519ca903f186d608eed3c8 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Thu, 31 Dec 2020 17:35:08 +0100
-Subject: [PATCH] devlink: implement line card provisioning
+Subject: [PATCH backport 5.10 126/182] devlink: implement line card
+ provisioning
 
 In order to be able to configure all needed stuff on a port/netdevice
 of a line card without the line card being present, introduce line card
@@ -28,7 +29,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  3 files changed, 346 insertions(+), 21 deletions(-)
 
 diff --git a/include/net/devlink.h b/include/net/devlink.h
-index e8f046590..44b60085e 100644
+index e8f046590579..44b60085ec16 100644
 --- a/include/net/devlink.h
 +++ b/include/net/devlink.h
 @@ -142,11 +142,43 @@ struct devlink_port {
@@ -93,7 +94,7 @@ index e8f046590..44b60085e 100644
  			u32 size, u16 ingress_pools_count,
  			u16 egress_pools_count, u16 ingress_tc_count,
 diff --git a/include/uapi/linux/devlink.h b/include/uapi/linux/devlink.h
-index ff07ad596..d88336645 100644
+index ff07ad596035..d8833664522f 100644
 --- a/include/uapi/linux/devlink.h
 +++ b/include/uapi/linux/devlink.h
 @@ -334,6 +334,18 @@ enum devlink_reload_limit {
@@ -126,7 +127,7 @@ index ff07ad596..d88336645 100644
  	/* add new attributes above here, update the policy in devlink.c */
  
 diff --git a/net/core/devlink.c b/net/core/devlink.c
-index 645fe0612..943973ffc 100644
+index 645fe0612b53..943973ffc450 100644
 --- a/net/core/devlink.c
 +++ b/net/core/devlink.c
 @@ -265,8 +265,10 @@ devlink_linecard_get_from_info(struct devlink *devlink, struct genl_info *info)
@@ -550,5 +551,5 @@ index 645fe0612..943973ffc 100644
  			u32 size, u16 ingress_pools_count,
  			u16 egress_pools_count, u16 ingress_tc_count,
 -- 
-2.30.2
+2.20.1
 

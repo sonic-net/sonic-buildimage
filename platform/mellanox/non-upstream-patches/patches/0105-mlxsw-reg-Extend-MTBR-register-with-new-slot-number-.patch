@@ -1,7 +1,8 @@
-From c9c0ae28ab85836ee15920ddafaa3ba45e0dcaeb Mon Sep 17 00:00:00 2001
+From c9c07da3e3dadf102a25e27f49d0ce4f414c096c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:46 +0200
-Subject: [PATCH] mlxsw: reg: Extend MTBR register with new slot number field
+Subject: [PATCH backport 5.10 105/182] mlxsw: reg: Extend MTBR register with
+ new slot number field
 
 Extend MTBR (Management Temperature Bulk Register) with new field
 specifying the slot number. The purpose of this field is to support
@@ -22,10 +23,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  3 files changed, 13 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-index 0b43029b2..7feefb38b 100644
+index 32faedfd2ea8..c2aa05be5bcc 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-@@ -593,8 +593,8 @@ static int mlxsw_env_module_has_temp_sensor(struct mlxsw_core *mlxsw_core,
+@@ -591,8 +591,8 @@ static int mlxsw_env_module_has_temp_sensor(struct mlxsw_core *mlxsw_core,
  	u16 temp;
  	int err;
  
@@ -37,7 +38,7 @@ index 0b43029b2..7feefb38b 100644
  	if (err)
  		return err;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
-index 71ca3b561..f4bc711a1 100644
+index 71ca3b561e62..f4bc711a16cf 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 @@ -271,8 +271,8 @@ static ssize_t mlxsw_hwmon_module_temp_fault_show(struct device *dev,
@@ -52,7 +53,7 @@ index 71ca3b561..f4bc711a1 100644
  	if (err) {
  		dev_err(dev, "Failed to query module temperature sensor\n");
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 52cb58c6d..56927c772 100644
+index 0428904b99d2..df210bd9a29c 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -8707,6 +8707,12 @@ MLXSW_ITEM_BIT_ARRAY(reg, mtwe, sensor_warning, 0x0, 0x10, 1);
@@ -83,5 +84,5 @@ index 52cb58c6d..56927c772 100644
  	mlxsw_reg_mtbr_num_rec_set(payload, num_rec);
  }
 -- 
-2.30.2
+2.20.1
 

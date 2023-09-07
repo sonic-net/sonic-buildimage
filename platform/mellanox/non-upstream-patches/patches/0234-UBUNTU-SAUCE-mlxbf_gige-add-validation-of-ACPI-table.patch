@@ -1,0 +1,62 @@
+From 8c7dd66540096a636aa35406cdb023dd549e2755 Mon Sep 17 00:00:00 2001
+From: David Thompson <davthompson@nvidia.com>
+Date: Wed, 20 Jul 2022 18:17:09 -0400
+Subject: [PATCH backport 5.10 35/63] UBUNTU: SAUCE: mlxbf_gige: add validation
+ of ACPI table version
+
+BugLink: https://bugs.launchpad.net/bugs/1982427
+
+This patch checks the "version" property in the OOB ACPI table,
+ensuring that the driver probe will only succeed if the expected
+version is found.
+
+Change-Id: I8dc1f877338f9b23ab3560c0315a1727e144dd57
+Signed-off-by: David Thompson <davthompson@nvidia.com>
+Signed-off-by: Ike Panhc <ike.pan@canonical.com>
+---
+ .../mellanox/mlxbf_gige/mlxbf_gige_main.c     | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+index e8f9290a8..c9176a2e6 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+@@ -19,6 +19,11 @@
+ #include "mlxbf_gige.h"
+ #include "mlxbf_gige_regs.h"
+ 
++/* This setting defines the version of the ACPI table
++ * content that is compatible with this driver version.
++ */
++#define MLXBF_GIGE_ACPI_TABLE_VERSION 2
++
+ /* Allocate SKB whose payload pointer aligns with the Bluefield
+  * hardware DMA limitation, i.e. DMA operation can't cross
+  * a 4KB boundary.  A maximum packet size of 2KB is assumed in the
+@@ -282,9 +287,23 @@ static int mlxbf_gige_probe(struct platform_device *pdev)
+ 	void __iomem *plu_base;
+ 	void __iomem *base;
+ 	int addr, phy_irq;
++	u32 version;
+ 	u64 control;
+ 	int err;
+ 
++	version = 0;
++	err = device_property_read_u32(&pdev->dev, "version", &version);
++	if (err) {
++		dev_err(&pdev->dev, "ACPI table version not found\n");
++		return -EINVAL;
++	}
++
++	if (version != MLXBF_GIGE_ACPI_TABLE_VERSION) {
++		dev_err(&pdev->dev, "ACPI table version mismatch: expected %d found %d\n",
++			MLXBF_GIGE_ACPI_TABLE_VERSION, version);
++		return -EINVAL;
++	}
++
+ 	mac_res = platform_get_resource(pdev, IORESOURCE_MEM, MLXBF_GIGE_RES_MAC);
+ 	if (!mac_res)
+ 		return -ENXIO;
+-- 
+2.20.1
+

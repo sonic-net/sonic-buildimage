@@ -1,8 +1,8 @@
-From 70bc337251ccbfe095a89457ded233c3ad5b9bbc Mon Sep 17 00:00:00 2001
+From 51f5cf36b8b2c94d8a71bfa17d5f71257048c314 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 26 Feb 2021 13:15:09 +0100
-Subject: [PATCH] mlxsw: core_linecards: Probe devices for provisioned line
- card and attach them
+Subject: [PATCH backport 5.10 142/182] mlxsw: core_linecards: Probe devices
+ for provisioned line card and attach them
 
 In case the line card is provisioned, go over all possible existing
 devices (gearboxes) on it and attach them, so devlink core is aware of
@@ -15,7 +15,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  2 files changed, 108 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
-index 8e738ddb3..593470d14 100644
+index 8e738ddb39c8..593470d14815 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
 @@ -533,6 +533,9 @@ struct mlxsw_linecard {
@@ -29,7 +29,7 @@ index 8e738ddb3..593470d14 100644
  
  struct mlxsw_linecard_types_info;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
-index 134437f49..720ad6d82 100644
+index 134437f49219..720ad6d82798 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 @@ -64,27 +64,120 @@ static const char *mlxsw_linecard_type_name(struct mlxsw_linecard *linecard)
@@ -220,5 +220,5 @@ index 134437f49..720ad6d82 100644
  	mutex_destroy(&linecard->lock);
  }
 -- 
-2.30.2
+2.20.1
 

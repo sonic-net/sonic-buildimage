@@ -1,0 +1,95 @@
+From 33acf11a1ea46d88fbb27afff1537bdf5dd0e822 Mon Sep 17 00:00:00 2001
+From: David Thompson <davthompson@nvidia.com>
+Date: Fri, 28 Oct 2022 18:08:46 -0400
+Subject: [PATCH backport 5.10 43/63] UBUNTU: SAUCE: mlxbf_gige: add
+ BlueField-3 ethtool_ops
+
+BugLink: https://bugs.launchpad.net/bugs/1995148
+
+This patch adds logic to support initialization of a
+BlueField-3 specific "ethtool_ops" data structure. The
+BlueField-3 data structure supports the "set_link_ksettings"
+callback, while the BlueField-2 data structure does not.
+
+Signed-off-by: David Thompson <davthompson@nvidia.com>
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+---
+ .../ethernet/mellanox/mlxbf_gige/mlxbf_gige.h   |  3 ++-
+ .../mellanox/mlxbf_gige/mlxbf_gige_ethtool.c    | 17 ++++++++++++++++-
+ .../mellanox/mlxbf_gige/mlxbf_gige_main.c       |  4 +++-
+ 3 files changed, 21 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige.h b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige.h
+index e9bd09ee0..cbabdac3e 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige.h
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige.h
+@@ -200,7 +200,8 @@ struct sk_buff *mlxbf_gige_alloc_skb(struct mlxbf_gige *priv,
+ int mlxbf_gige_request_irqs(struct mlxbf_gige *priv);
+ void mlxbf_gige_free_irqs(struct mlxbf_gige *priv);
+ int mlxbf_gige_poll(struct napi_struct *napi, int budget);
+-extern const struct ethtool_ops mlxbf_gige_ethtool_ops;
++extern const struct ethtool_ops mlxbf_gige_bf2_ethtool_ops;
++extern const struct ethtool_ops mlxbf_gige_bf3_ethtool_ops;
+ void mlxbf_gige_update_tx_wqe_next(struct mlxbf_gige *priv);
+ 
+ #endif /* !defined(__MLXBF_GIGE_H__) */
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_ethtool.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_ethtool.c
+index 257724323..3156ef064 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_ethtool.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_ethtool.c
+@@ -158,7 +158,7 @@ static void mlxbf_gige_get_pauseparam(struct net_device *netdev,
+ 	pause->tx_pause = 1;
+ }
+ 
+-const struct ethtool_ops mlxbf_gige_ethtool_ops = {
++const struct ethtool_ops mlxbf_gige_bf2_ethtool_ops = {
+ 	.get_link		= ethtool_op_get_link,
+ 	.get_ringparam		= mlxbf_gige_get_ringparam,
+ 	.set_ringparam		= mlxbf_gige_set_ringparam,
+@@ -171,3 +171,18 @@ const struct ethtool_ops mlxbf_gige_ethtool_ops = {
+ 	.get_pauseparam		= mlxbf_gige_get_pauseparam,
+ 	.get_link_ksettings	= phy_ethtool_get_link_ksettings,
+ };
++
++const struct ethtool_ops mlxbf_gige_bf3_ethtool_ops = {
++	.get_link		= ethtool_op_get_link,
++	.get_ringparam		= mlxbf_gige_get_ringparam,
++	.set_ringparam		= mlxbf_gige_set_ringparam,
++	.get_regs_len           = mlxbf_gige_get_regs_len,
++	.get_regs               = mlxbf_gige_get_regs,
++	.get_strings            = mlxbf_gige_get_strings,
++	.get_sset_count         = mlxbf_gige_get_sset_count,
++	.get_ethtool_stats      = mlxbf_gige_get_ethtool_stats,
++	.nway_reset		= phy_ethtool_nway_reset,
++	.get_pauseparam		= mlxbf_gige_get_pauseparam,
++	.get_link_ksettings	= phy_ethtool_get_link_ksettings,
++	.set_link_ksettings	= phy_ethtool_set_link_ksettings,
++};
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+index f97e49670..197ec8ccb 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+@@ -451,7 +451,6 @@ static int mlxbf_gige_probe(struct platform_device *pdev)
+ 
+ 	SET_NETDEV_DEV(netdev, &pdev->dev);
+ 	netdev->netdev_ops = &mlxbf_gige_netdev_ops;
+-	netdev->ethtool_ops = &mlxbf_gige_ethtool_ops;
+ 	priv = netdev_priv(netdev);
+ 	priv->netdev = netdev;
+ 
+@@ -468,9 +467,12 @@ static int mlxbf_gige_probe(struct platform_device *pdev)
+ 	priv->hw_version = soc_version;
+ 
+ 	if (priv->hw_version == MLXBF_GIGE_VERSION_BF3) {
++		netdev->ethtool_ops = &mlxbf_gige_bf3_ethtool_ops;
+ 		err = mlxbf_gige_config_uphy(priv);
+ 		if (err)
+ 			return err;
++	} else {
++		netdev->ethtool_ops = &mlxbf_gige_bf2_ethtool_ops;
+ 	}
+ 
+ 	/* Attach MDIO device */
+-- 
+2.20.1
+

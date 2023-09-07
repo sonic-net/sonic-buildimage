@@ -1,0 +1,26 @@
+From 91a6100aaadcea0a30d91a32897ef21452e48460 Mon Sep 17 00:00:00 2001
+From: Oleksandr Shamray <oleksandrs@nvidia.com>
+Date: Tue, 4 Apr 2023 09:56:48 +0000
+Subject: [PATCH] TMP fix for fan minimum speed
+
+Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
+---
+ drivers/hwmon/mlxreg-fan.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
+index 5a93fc0..b999ca6 100644
+--- a/drivers/hwmon/mlxreg-fan.c
++++ b/drivers/hwmon/mlxreg-fan.c
+@@ -364,7 +364,7 @@ static int mlxreg_fan_set_cur_state(struct thermal_cooling_device *cdev,
+ 		 * For configuration non-zero value is to be returned to avoid thermal
+ 		 * statistics update.
+ 		 */
+-		config = 1;
++		config = 0; /*1*/;
+ 		state -= MLXREG_FAN_MAX_STATE;
+ 		for (i = 0; i < state; i++)
+ 			pwm->cooling_levels[i] = state;
+-- 
+2.14.1
+

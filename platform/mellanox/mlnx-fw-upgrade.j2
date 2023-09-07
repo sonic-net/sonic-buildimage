@@ -55,6 +55,7 @@ declare -rA FW_FILE_MAP=( \
 IMAGE_UPGRADE="${NO_PARAM}"
 SYSLOG_LOGGER="${NO_PARAM}"
 VERBOSE_LEVEL="${VERBOSE_MIN}"
+MFT_DIAGNOSIS_FLAGS=""
 
 function PrintHelp() {
     echo
@@ -82,6 +83,7 @@ function ParseArguments() {
             ;;
             -v|--verbose)
                 VERBOSE_LEVEL="${VERBOSE_MAX}"
+                MFT_DIAGNOSIS_FLAGS="FLASH_ACCESS_DEBUG=1 FW_COMPS_DEBUG=1"
             ;;
             -s|--syslog)
                 SYSLOG_LOGGER="${YES_PARAM}"
@@ -165,8 +167,16 @@ function WaitForDevice() {
     while [[ ("${QUERY_RETRY_COUNT}" -lt "${QUERY_RETRY_COUNT_MAX}") && ("$?" -ne "${EXIT_SUCCESS}") ]]; do
         sleep 1s
         ((QUERY_RETRY_COUNT++))
-        ${QUERY_CMD} > /dev/null
+        output=$(eval ${MFT_DIAGNOSIS_FLAGS} ${QUERY_CMD}) > /dev/null
     done
+
+    ERROR_CODE="$?"
+    if [[ "${ERROR_CODE}" != "${EXIT_SUCCESS}" ]]; then
+        # Exit failure and print the detailed information
+        echo "$output"
+        failure_msg="${output#*Fail : }"
+        ExitFailure "FW Query command: ${QUERY_CMD} failed to wait for device with error: ${failure_msg}"
+    fi
 }
 
 function GetAsicType() {
@@ -224,7 +234,7 @@ function RunCmd() {
 
 function RunFwUpdateCmd() {
     local ERROR_CODE="${EXIT_SUCCESS}"
-    local COMMAND="${BURN_CMD} $@"
+    local COMMAND="${MFT_DIAGNOSIS_FLAGS} ${BURN_CMD} $@"
 
     if [[ "${VERBOSE_LEVEL}" -eq "${VERBOSE_MAX}" ]]; then
         output=$(eval "${COMMAND}")
@@ -234,6 +244,7 @@ function RunFwUpdateCmd() {
 
     ERROR_CODE="$?"
     if [[ "${ERROR_CODE}" != "${EXIT_SUCCESS}" ]]; then
+        echo "${output}"
         failure_msg="${output#*Fail : }"
         ExitFailure "FW Update command: ${COMMAND} failed with error: ${failure_msg}"
     fi

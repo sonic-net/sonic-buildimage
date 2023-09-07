@@ -38,6 +38,7 @@ dependent_startup=true
 {%- endif -%}
 command=/bin/bash -c "{ [[ -s /var/lib/{{ redis_inst }}/dump.rdb ]] || rm -f /var/lib/{{ redis_inst }}/dump.rdb; } && mkdir -p /var/lib/{{ redis_inst }} && exec /usr/bin/redis-server /etc/redis/redis.conf --bind {{ LOOPBACK_IP }} {{ redis_items['hostname'] }} --port {{ redis_items['port'] }} --unixsocket {{ redis_items['unix_socket_path'] }} --pidfile /var/run/redis/{{ redis_inst }}.pid --dir /var/lib/{{ redis_inst }}"
 priority=2
+user=redis
 autostart=false
 autorestart=false
 stdout_logfile=syslog

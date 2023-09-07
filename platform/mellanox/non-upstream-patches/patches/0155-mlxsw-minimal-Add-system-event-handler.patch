@@ -1,7 +1,8 @@
-From b526413a86afcd1d6bd3f4e05f25631c8103f617 Mon Sep 17 00:00:00 2001
+From deb4f328672850d9ac4d8d51be7e0d8e727387af Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 19 Dec 2021 09:25:35 +0000
-Subject: [PATCH] mlxsw: minimal: Add system event handler
+Subject: [PATCH backport 5.10 155/182] mlxsw: minimal: Add system event
+ handler
 
 Add system event handler for treating line card specific signals on
 modular system. These signals indicate line card state changes, like
@@ -16,7 +17,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 23 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index 59c5053dc..27afb28e4 100644
+index 59c5053dc5fd..27afb28e439f 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 @@ -527,6 +527,28 @@ static void mlxsw_m_line_cards_free(struct mlxsw_m *mlxsw_m)
@@ -57,5 +58,5 @@ index 59c5053dc..27afb28e4 100644
  	.res_query_enabled	= true,
  };
 -- 
-2.30.2
+2.20.1
 

@@ -1,0 +1,35 @@
+From 8650b784688c0822951993d98f196e1c7689a5cc Mon Sep 17 00:00:00 2001
+From: Liming Sun <limings@nvidia.com>
+Date: Fri, 25 Nov 2022 22:29:23 -0500
+Subject: [PATCH backport 5.10 61/63] mmc: sdhci-of-dwcmshc: Enable host V4
+ support for BlueField-3 SoC
+
+This commit enables SDHCI Host V4 support on Bluefield-3 SoC to be
+consistent with UEFI setting.
+
+Change-Id: I4d5ea43ca5f36c6c642443b9335c321924cca2ed
+Signed-off-by: Liming Sun <limings@nvidia.com>
+---
+ drivers/mmc/host/sdhci-of-dwcmshc.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/mmc/host/sdhci-of-dwcmshc.c b/drivers/mmc/host/sdhci-of-dwcmshc.c
+index 173a9167a..ea972bd3c 100644
+--- a/drivers/mmc/host/sdhci-of-dwcmshc.c
++++ b/drivers/mmc/host/sdhci-of-dwcmshc.c
+@@ -426,6 +426,12 @@ static int dwcmshc_probe(struct platform_device *pdev)
+ 			goto err_clk;
+ 	}
+ 
++#ifdef CONFIG_ACPI
++	if (pltfm_data == &sdhci_dwcmshc_bf3_pdata) {
++		sdhci_enable_v4_mode(host);
++	}
++#endif
++
+ 	host->mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY;
+ 
+ 	err = sdhci_add_host(host);
+-- 
+2.20.1
+

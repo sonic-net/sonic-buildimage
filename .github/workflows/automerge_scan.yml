@@ -16,11 +16,26 @@ jobs:
         set -e
 
         echo ${TOKEN} | gh auth login --with-token
-        gh pr list -R sonic-net/sonic-buildimage -A mssonicbld --json additions,assignees,author,baseRefName,body,changedFiles,closed,closedAt,comments,commits,createdAt,deletions,files,headRefName,headRepository,headRepositoryOwner,id,isCrossRepository,isDraft,labels,latestReviews,maintainerCanModify,mergeCommit,mergeStateStatus,mergeable,mergedAt,mergedBy,milestone,number,potentialMergeCommit,projectCards,reactionGroups,reviewDecision,reviewRequests,reviews,state,statusCheckRollup,title,updatedAt,url > prs.log
+        gh pr list -R sonic-net/sonic-buildimage -A mssonicbld -L 100 -S "label:automerge" --json url,body,title,createdAt,labels,statusCheckRollup > prs.log
         cat prs.log | jq
     - name: Main
       run: |
         set -e
+
+        # PR merge run per 2 hours
+        # Other operation run per day.
+        # Cherry pick PR:
+        # more than 3 days, comment @author to check
+        # more than 10 days, stop comment.
+        # more than 28 days, comment @author PR will be closed
+        # more than 30 days, close PR
+        date_3d_ago=$(date --date "3 day ago" -u +"%FT%TZ")
+        date_10d_ago=$(date --date "10 day ago" -u +"%FT%TZ")
+        date_28d_ago=$(date --date "28 day ago" -u +"%FT%TZ")
+        date_30d_ago=$(date --date "30 day ago" -u +"%FT%TZ")
+        date_now=$(date -u +"%T")
+        operate=false
+        [[ "$date_now" < "02:00:00" ]] && operate=true
 
         count=$(cat prs.log | jq 'length')
         for ((i=0;i<$count;i++))
@@ -28,46 +43,47 @@ jobs:
           url=$(cat prs.log | jq -r ".[$i].url")
           body=$(cat prs.log | jq -r ".[$i].body")
           title=$(cat prs.log | jq -r ".[$i].title")
+          origin_pr_id=$(echo $title | grep -Eo "\[action\] \[PR:[0-9]*\]" | grep -Eo [0-9]* || true)
           created_at=$(cat prs.log | jq -r ".[$i].createdAt")
-          echo PR: $(($i+1))/$count, URL: $url, createdAt: $created_at, now: $(date -u +"%FT%TZ")
+          echo PR: $(($i+1))/$count, URL: $url, origin PR: $origin_pr_id, createdAt: $created_at, operate: $operate
           [[ "$url" == "" ]] && continue
           [[ $created_at > $(date --date "1 hour ago" -u +"%FT%TZ") ]] && continue
-          # only check automerge PR.
-          cat prs.log | jq -r ".[$i].labels[].name" | grep automerge || continue
 
           checks=$(cat prs.log | jq ".[$i].statusCheckRollup")
           checks_count=$(echo $checks | jq 'length')
-          echo Checks count: $checks_count
+          pr_success=true
           for ((j=0;j<$checks_count;j++))
           do
             check=$(echo $checks | jq ".[$j]")
-            state=$(echo $check | jq -r '.state')
+            status=$(echo $check | jq -r '.status')
             conclusion=$(echo $check | jq -r '.conclusion')
             name=$(echo $check | jq -r '.name')
 
             # EasyCLA success flag:  state=SUCCESS
             # Others success flag:   conclusion in SUCCESS,NEUTRAL
-            # Ignore Azure.sonic-buildimage stage check result. It may be set continueOnError
-            echo "$name" | grep "Azure.sonic-buildimage (" && continue
-            # rerun Azure.sonic-buildimage per day
-            if [[ "$name" == "Azure.sonic-buildimage" ]] && [[ "$conclusion" == "FAILURE" ]];then
-              completedAt=$(echo $check | jq -r '.completedAt')
-              [[ "$completedAt" < $(date --date "2 hour ago" -u +"%FT%TZ") ]] && [[ $(date -u +"%T") < "02:00:00" ]] && gh pr comment $url --body "/azp run Azure.sonic-buildimage"
-            fi
-            # Ignore Semgrep, it has issues.
-            [[ "$name" == "Semgrep" ]] && continue
-            if [[ "$state" == "SUCCESS" ]];then
-              # check pass
-              continue
-            elif [[ "$conclusion" == "SUCCESS" ]] || [[ "$conclusion" == "NEUTRAL" ]];then
-              # check pass
-              continue
-            else
-              echo "$url Check failed!!!"
-              echo $check | jq
-              continue 2
-            fi
+            # only check Azure.sonic-buildimage currently
+            echo "$name" | grep -v "Azure.sonic-buildimage" > /dev/null && continue
+            [[ "$status" != "COMPLETED" ]] && echo "$name: $status" && continue 2
+
+            success=true
+            ( [[ "$conclusion" == "FAILURE" ]] || [[ "$conclusion" == "CANCELLED" ]] ) && success=false && pr_success=false
+            ! $success && echo "FAIL: $name"
           done
+
+          # rerun Azure.sonic-buildimage per day
+          ! $pr_success && $operate && gh pr comment $url --body "/azp run Azure.sonic-buildimage"
+
+          # If auto cherry pick PRs failed, comment in original PR and close cherry pick PR
+          if [ -n "$origin_pr_id" ] && [[ $created_at < $date_3d_ago ]] && ! $pr_success;then
+            origin_pr_url=https://github.com/sonic-net/sonic-buildimage/pull/$origin_pr_id
+            author=$(gh pr view $origin_pr_url --json author | jq .author.login -r)
+            echo "Original author will check."
+            $operate && [[ $created_at > $date_10d_ago ]] && gh pr comment $origin_pr_url --body "@$author cherry pick PR didn't pass PR checker. Please check!!!<br>$url"
+            $operate && [[ $created_at < $date_28d_ago ]] && gh pr comment $origin_pr_url --body "@$author cherry pick PR didn't pass PR checker. Please check!!! Auto cherry pick PR will be closed in 2 days.<br>$url"
+            $operate && [[ $created_at < $date_30d_ago ]] && echo "$url Closed" && gh pr close $url
+          fi
+
+          ! $pr_success && continue
           # merge the PR
           echo ========Merging  PR========
           if echo $title | grep "^\[submodule\]";then
@@ -77,3 +93,4 @@ jobs:
           fi
           echo ========Finished PR========
         done
+

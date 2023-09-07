@@ -137,11 +137,11 @@ def add_profile(profile, priority, cipher_suite, primary_cak, primary_ckn, polic
     profile_table["cipher_suite"] = cipher_suite
 
     if "128" in cipher_suite:
-        if len(primary_cak) != 32:
-            ctx.fail("Expect the length of CAK is 32, but got {}".format(len(primary_cak)))
+        if len(primary_cak) != 66:
+            ctx.fail("Expect the length of CAK is 66, but got {}".format(len(primary_cak)))
     elif "256" in cipher_suite:
-        if len(primary_cak) != 64:
-            ctx.fail("Expect the length of CAK is 64, but got {}".format(len(primary_cak)))
+        if len(primary_cak) != 130:
+            ctx.fail("Expect the length of CAK is 130, but got {}".format(len(primary_cak)))
     if not is_hexstring(primary_cak):
         ctx.fail("Expect the primary_cak is valid hex string")
     if not is_hexstring(primary_ckn):

@@ -13,6 +13,8 @@ ENV IMAGE_VERSION=$image_version
 # Update apt's cache of available packages
 RUN apt-get update
 
+RUN apt-get install -y libjsoncpp-dev
+
 {% if docker_dhcp_relay_debs.strip() -%}
 # Copy built Debian packages
 {{ copy_files("debs/", docker_dhcp_relay_debs.split(' '), "/debs/") }}

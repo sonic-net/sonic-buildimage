@@ -1,0 +1,37 @@
+From e3e44e5389d723c49f187d91c16df0ec1b67ce53 Mon Sep 17 00:00:00 2001
+From: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
+Date: Mon, 16 Aug 2021 14:59:51 +0300
+Subject: [PATCH backport 5.10 49/63] gpio: mlxbf2: Use DEFINE_RES_MEM_NAMED()
+ helper macro
+
+Use DEFINE_RES_MEM_NAMED() to save a couple of lines of code, which makes
+the code a bit shorter and easier to read.
+
+Signed-off-by: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
+Acked-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Signed-off-by: Bartosz Golaszewski <bgolaszewski@baylibre.com>
+---
+ drivers/gpio/gpio-mlxbf2.c | 7 ++-----
+ 1 file changed, 2 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/gpio/gpio-mlxbf2.c b/drivers/gpio/gpio-mlxbf2.c
+index 661d5a831..177d03ef4 100644
+--- a/drivers/gpio/gpio-mlxbf2.c
++++ b/drivers/gpio/gpio-mlxbf2.c
+@@ -69,11 +69,8 @@ struct mlxbf2_gpio_param {
+ 	struct mutex *lock;
+ };
+ 
+-static struct resource yu_arm_gpio_lock_res = {
+-	.start = YU_ARM_GPIO_LOCK_ADDR,
+-	.end   = YU_ARM_GPIO_LOCK_ADDR + YU_ARM_GPIO_LOCK_SIZE - 1,
+-	.name  = "YU_ARM_GPIO_LOCK",
+-};
++static struct resource yu_arm_gpio_lock_res =
++	DEFINE_RES_MEM_NAMED(YU_ARM_GPIO_LOCK_ADDR, YU_ARM_GPIO_LOCK_SIZE, "YU_ARM_GPIO_LOCK");
+ 
+ static DEFINE_MUTEX(yu_arm_gpio_lock_mutex);
+ 
+-- 
+2.20.1
+

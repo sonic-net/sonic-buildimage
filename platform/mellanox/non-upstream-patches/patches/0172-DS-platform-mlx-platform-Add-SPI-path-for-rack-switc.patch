@@ -1,0 +1,84 @@
+From b1e9734f4dc29c65e05a8f35ec67efb7784d321f Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 15 May 2022 14:31:10 +0300
+Subject: [PATCH backport 5.10 172/182] DS: platform: mlx-platform: Add SPI
+ path for rack switch for EROT access
+
+Create spidev for OOB access to External Root of Trusts devices.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/x86/mlx-platform.c | 16 ++++++++++++++++
+ drivers/spi/spi.c                   |  1 +
+ 2 files changed, 17 insertions(+)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 3ad85934d6e3..135ccea3a34e 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -16,6 +16,7 @@
+ #include <linux/platform_data/i2c-mux-reg.h>
+ #include <linux/platform_data/mlxreg.h>
+ #include <linux/regmap.h>
++#include <linux/spi/spi.h>
+ 
+ #define MLX_PLAT_DEVICE_NAME		"mlxplat"
+ 
+@@ -2299,6 +2300,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_rack_switch_data = {
+ 	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW,
+ };
+ 
++static struct spi_board_info rack_switch_switch_spi_board_info[] = {
++	{
++		.modalias       = "spidev",
++		.irq            = -1,
++		.max_speed_hz   = 20000000,
++		.bus_num        = 0,
++		.chip_select    = 0,
++	},
++};
++
+ /* Platform led default data */
+ static struct mlxreg_core_data mlxplat_mlxcpld_default_led_data[] = {
+ 	{
+@@ -5254,6 +5265,7 @@ static struct mlxreg_core_platform_data *mlxplat_fan;
+ static struct mlxreg_core_platform_data
+ 	*mlxplat_wd_data[MLXPLAT_CPLD_WD_MAX_DEVS];
+ static const struct regmap_config *mlxplat_regmap_config;
++static struct spi_board_info *mlxplat_spi;
+ 
+ static int __init mlxplat_dmi_default_matched(const struct dmi_system_id *dmi)
+ {
+@@ -5551,6 +5563,7 @@ static int __init mlxplat_dmi_rack_switch_matched(const struct dmi_system_id *dm
+ 		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
+ 	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
+ 	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_rack_switch;
++	mlxplat_spi = rack_switch_switch_spi_board_info;
+ 
+ 	return 1;
+ }
+@@ -5917,6 +5930,9 @@ static int __init mlxplat_init(void)
+ 		}
+ 	}
+ 
++	if (mlxplat_spi)
++		spi_register_board_info(mlxplat_spi, 1);
++
+ 	/* Add WD drivers. */
+ 	err = mlxplat_mlxcpld_check_wd_capability(priv->regmap);
+ 	if (err)
+diff --git a/drivers/spi/spi.c b/drivers/spi/spi.c
+index 857a1399850c..2efafa34ff22 100644
+--- a/drivers/spi/spi.c
++++ b/drivers/spi/spi.c
+@@ -790,6 +790,7 @@ int spi_register_board_info(struct spi_board_info const *info, unsigned n)
+ 
+ 	return 0;
+ }
++EXPORT_SYMBOL(spi_register_board_info);
+ 
+ /*-------------------------------------------------------------------------*/
+ 
+-- 
+2.20.1
+

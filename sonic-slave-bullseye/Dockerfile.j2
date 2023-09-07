@@ -116,6 +116,8 @@ RUN apt-get update && apt-get install -y \
         uuid-dev \
         jq \
         cron \
+# For sonic-swss-common
+        nlohmann-json3-dev \
 # For quagga build
         libreadline-dev \
         texlive-latex-base \
@@ -348,6 +350,7 @@ RUN apt-get update && apt-get install -y \
 # For DHCP Monitor tool
         libexplain-dev \
         libevent-dev \
+        libjsoncpp-dev \
 # For libyang
         swig \
 # For build dtb
@@ -404,6 +407,8 @@ RUN apt-get update && apt-get install -y \
         libgirepository1.0-dev \
         libsystemd-dev \
         pkg-config \
+# For sonic-swss-common build
+        libhiredis-dev \
 # For audisp-tacplus
         libauparse-dev \
         auditd \

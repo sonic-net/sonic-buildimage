@@ -1,8 +1,8 @@
-From 9c8482e7c487a0a19f0d6d5df06c70aa529d3023 Mon Sep 17 00:00:00 2001
+From 13a7ef7fcdc09def9d9756510f49da82283d78df Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:35 +0200
-Subject: [PATCH] mlxsw: core_thermal: Extend thermal area with gearbox mapping
- field
+Subject: [PATCH backport 5.10 121/182] mlxsw: core_thermal: Extend thermal
+ area with gearbox mapping field
 
 Add gearbox mapping field 'gearbox_sensor_map' to
 'mlxsw_thermal_module' structure. It should provide the mapping for
@@ -18,10 +18,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 25 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index a8ecd8fea..2efedd35b 100644
+index 313856b88f6c..bde5489d9240 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -85,9 +85,11 @@ static const struct mlxsw_thermal_trip default_thermal_trips[] = {
+@@ -77,9 +77,11 @@ static const struct mlxsw_thermal_trip default_thermal_trips[] = {
  #define MLXSW_THERMAL_TRIP_MASK	(BIT(MLXSW_THERMAL_NUM_TRIPS) - 1)
  
  struct mlxsw_thermal;
@@ -33,7 +33,7 @@ index a8ecd8fea..2efedd35b 100644
  	struct thermal_zone_device *tzdev;
  	struct mlxsw_thermal_trip trips[MLXSW_THERMAL_NUM_TRIPS];
  	int module; /* Module or gearbox number */
-@@ -100,6 +102,7 @@ struct mlxsw_thermal_area {
+@@ -92,6 +94,7 @@ struct mlxsw_thermal_area {
  	struct mlxsw_thermal_module *tz_gearbox_arr;
  	u8 tz_gearbox_num;
  	u8 slot_index;
@@ -41,7 +41,7 @@ index a8ecd8fea..2efedd35b 100644
  };
  
  struct mlxsw_thermal {
-@@ -594,7 +597,7 @@ static int mlxsw_thermal_gearbox_temp_get(struct thermal_zone_device *tzdev,
+@@ -586,7 +589,7 @@ static int mlxsw_thermal_gearbox_temp_get(struct thermal_zone_device *tzdev,
  	int temp;
  	int err;
  
@@ -50,7 +50,7 @@ index a8ecd8fea..2efedd35b 100644
  	mlxsw_reg_mtmp_pack(mtmp_pl, tz->slot_index, index, false, false);
  
  	err = mlxsw_reg_query(thermal->core, MLXSW_REG(mtmp), mtmp_pl);
-@@ -768,6 +771,7 @@ mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
+@@ -727,6 +730,7 @@ mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
  	if (module_tz->parent)
  		return 0;
  	module_tz->module = module;
@@ -58,7 +58,7 @@ index a8ecd8fea..2efedd35b 100644
  	module_tz->slot_index = area->slot_index;
  	module_tz->parent = thermal;
  	memcpy(module_tz->trips, default_thermal_trips,
-@@ -892,36 +896,48 @@ mlxsw_thermal_gearboxes_main_init(struct device *dev, struct mlxsw_core *core,
+@@ -851,36 +855,48 @@ mlxsw_thermal_gearboxes_main_init(struct device *dev, struct mlxsw_core *core,
  {
  	enum mlxsw_reg_mgpir_device_type device_type;
  	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
@@ -114,7 +114,7 @@ index a8ecd8fea..2efedd35b 100644
  	kfree(area->tz_gearbox_arr);
  }
  
-@@ -942,6 +958,7 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
+@@ -901,6 +917,7 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  		       sizeof(thermal->trips));
  		gearbox_tz->module = i;
  		gearbox_tz->parent = thermal;
@@ -123,5 +123,5 @@ index a8ecd8fea..2efedd35b 100644
  		err = mlxsw_thermal_gearbox_tz_init(gearbox_tz);
  		if (err)
 -- 
-2.30.2
+2.20.1
 

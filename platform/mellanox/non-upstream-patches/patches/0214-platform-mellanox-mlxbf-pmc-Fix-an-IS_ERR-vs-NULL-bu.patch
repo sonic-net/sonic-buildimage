@@ -1,0 +1,42 @@
+From fd81d5b65715344eeb492dfb3d818551446021c9 Mon Sep 17 00:00:00 2001
+From: Miaoqian Lin <linmq006@gmail.com>
+Date: Fri, 10 Dec 2021 07:07:53 +0000
+Subject: [PATCH backport 5.10 15/63] platform/mellanox: mlxbf-pmc: Fix an
+ IS_ERR() vs NULL bug in mlxbf_pmc_map_counters
+
+BugLink: https://bugs.launchpad.net/bugs/1956926
+
+[ Upstream commit 804034c4ffc502795cea9b3867acb2ec7fad99ba ]
+
+The devm_ioremap() function returns NULL on error, it doesn't return
+error pointers. Also according to doc of device_property_read_u64_array,
+values in info array are properties of device or NULL.
+
+Signed-off-by: Miaoqian Lin <linmq006@gmail.com>
+Link: https://lore.kernel.org/r/20211210070753.10761-1-linmq006@gmail.com
+Reviewed-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Sasha Levin <sashal@kernel.org>
+Signed-off-by: Paolo Pisati <p.pisati@gmail.com>
+---
+ drivers/platform/mellanox/mlxbf-pmc.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxbf-pmc.c b/drivers/platform/mellanox/mlxbf-pmc.c
+index 04bc3b50a..65b4a819f 100644
+--- a/drivers/platform/mellanox/mlxbf-pmc.c
++++ b/drivers/platform/mellanox/mlxbf-pmc.c
+@@ -1374,8 +1374,8 @@ static int mlxbf_pmc_map_counters(struct device *dev)
+ 		pmc->block[i].counters = info[2];
+ 		pmc->block[i].type = info[3];
+ 
+-		if (IS_ERR(pmc->block[i].mmio_base))
+-			return PTR_ERR(pmc->block[i].mmio_base);
++		if (!pmc->block[i].mmio_base)
++			return -ENOMEM;
+ 
+ 		ret = mlxbf_pmc_create_groups(dev, i);
+ 		if (ret)
+-- 
+2.20.1
+

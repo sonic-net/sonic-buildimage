@@ -1,0 +1,158 @@
+From d1fbdc9c5bd0939362ebdb4d76a701cb938f3837 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 18 Jan 2023 19:12:12 +0200
+Subject: [PATCH backport 5.10 083/150] platform/mellanox: Add support for
+ dynamic I2C channels infrastructure
+
+Allow to support platform configuration for dynamically allocated I2C
+channels.
+Motivation is to support I2C channels allocated in a non-continuous
+way.
+
+Currently hotplug platform driver data structure contains static mux
+channels for I2C hotplug devices. These channels numbers can be updated
+dynamically and returned by mux driver's callback through the adapters
+array.
+Thus, hotplug mux channels will be aligned according to the dynamic
+adapters data.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/x86/mlx-platform.c | 69 ++++++++++++++++++++++++-----
+ 1 file changed, 59 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 9d4cab937..773d110c9 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -14,6 +14,7 @@
+ #include <linux/module.h>
+ #include <linux/platform_device.h>
+ #include <linux/platform_data/i2c-mux-reg.h>
++#include <linux/platform_data/i2c-mux-regmap.h>
+ #include <linux/platform_data/mlxreg.h>
+ #include <linux/reboot.h>
+ #include <linux/regmap.h>
+@@ -336,6 +337,7 @@
+  * @hotplug_resources: system hotplug resources
+  * @hotplug_resources_size: size of system hotplug resources
+  * @hi2c_main_init_status: init status of I2C main bus
++ * @mux_added: number of added mux segments
+  */
+ struct mlxplat_priv {
+ 	struct platform_device *pdev_i2c;
+@@ -349,6 +351,7 @@ struct mlxplat_priv {
+ 	struct resource *hotplug_resources;
+ 	unsigned int hotplug_resources_size;
+ 	u8 i2c_main_init_status;
++	int mux_added;
+ };
+ 
+ static struct platform_device *mlxplat_dev;
+@@ -436,7 +439,9 @@ static struct i2c_mux_reg_platform_data mlxplat_default_mux_data[] = {
+ /* Platform mux configuration variables */
+ static int mlxplat_max_adap_num;
+ static int mlxplat_mux_num;
++static int mlxplat_mux_hotplug_num;
+ static struct i2c_mux_reg_platform_data *mlxplat_mux_data;
++static struct i2c_mux_regmap_platform_data *mlxplat_mux_regmap_data;
+ 
+ /* Platform extended mux data */
+ static struct i2c_mux_reg_platform_data mlxplat_extended_mux_data[] = {
+@@ -6368,12 +6373,17 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+ 	/* Shift adapter ids, since expected parent adapter is not free. */
+ 	*nr = i;
+ 	for (i = 0; i < mlxplat_mux_num; i++) {
+-		shift = *nr - mlxplat_mux_data[i].parent;
+-		mlxplat_mux_data[i].parent = *nr;
+-		mlxplat_mux_data[i].base_nr += shift;
++		if (mlxplat_mux_data) {
++			shift = *nr - mlxplat_mux_data[i].parent;
++			mlxplat_mux_data[i].parent = *nr;
++			mlxplat_mux_data[i].base_nr += shift;
++		} else if (mlxplat_mux_regmap_data) {
++			mlxplat_mux_regmap_data[i].parent = *nr;
++		}
+ 	}
+ 
+-	if (shift > 0)
++	/* Shift bus only if mux provided by 'mlxplat_mux_data'. */
++	if (shift > 0 && mlxplat_mux_data)
+ 		mlxplat_hotplug->shift_nr = shift;
+ 
+ 	return 0;
+@@ -6563,8 +6573,31 @@ mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent,
+ 				  struct i2c_adapter *adapters[])
+ {
+ 	struct mlxplat_priv *priv = handle;
++	struct mlxreg_core_item *item;
++	int i, j;
++
++	/*
++	 * Hotplug platform driver data structure contains static mux channels for I2C hotplug
++	 * devices. These channels numbers can be updated dynamically and returned by mux callback
++	 * through the adapters array. Update mux channels according to the dynamic adapters data.
++	 */
++	if (priv->mux_added == mlxplat_mux_hotplug_num) {
++		item = mlxplat_hotplug->items;
++		for (i = 0; i < mlxplat_hotplug->counter; i++, item++) {
++			struct mlxreg_core_data *data = item->data;
++
++			for (j = 0; j < item->count; j++, data++) {
++				if (data->hpdev.nr != MLXPLAT_CPLD_NR_NONE)
++					data->hpdev.nr = adapters[data->hpdev.nr - 2]->nr;
++			}
++		}
++	}
+ 
+-	return mlxplat_post_init(priv);
++	/* Start post initialization only after last nux segment is added */
++	if (++priv->mux_added == mlxplat_mux_num)
++		return mlxplat_post_init(priv);
++
++	return 0;
+ }
+ 
+ static int mlxplat_i2c_mux_topolgy_init(struct mlxplat_priv *priv)
+@@ -6578,17 +6611,33 @@ static int mlxplat_i2c_mux_topolgy_init(struct mlxplat_priv *priv)
+ 
+ 	priv->i2c_main_init_status = MLXPLAT_I2C_MAIN_BUS_HANDLE_CREATED;
+ 	for (i = 0; i < mlxplat_mux_num; i++) {
+-		priv->pdev_mux[i] = platform_device_register_resndata(&priv->pdev_i2c->dev,
+-								      "i2c-mux-reg", i, NULL, 0,
+-								      &mlxplat_mux_data[i],
+-								      sizeof(mlxplat_mux_data[i]));
++		if (mlxplat_mux_data) {
++			priv->pdev_mux[i] =
++				platform_device_register_resndata(&priv->pdev_i2c->dev,
++								  "i2c-mux-reg", i, NULL, 0,
++								  &mlxplat_mux_data[i],
++								  sizeof(mlxplat_mux_data[i]));
++		} else {
++			mlxplat_mux_regmap_data[i].handle = priv;
++			mlxplat_mux_regmap_data[i].regmap = priv->regmap;
++			mlxplat_mux_regmap_data[i].completion_notify =
++								mlxplat_i2c_mux_complition_notify;
++			priv->pdev_mux[i] =
++			platform_device_register_resndata(&priv->pdev_i2c->dev,
++							  "i2c-mux-regmap", i, NULL, 0,
++							   &mlxplat_mux_regmap_data[i],
++							   sizeof(mlxplat_mux_regmap_data[i]));
++		}
+ 		if (IS_ERR(priv->pdev_mux[i])) {
+ 			err = PTR_ERR(priv->pdev_mux[i]);
+ 			goto fail_platform_mux_register;
+ 		}
+ 	}
+ 
+-	return mlxplat_i2c_mux_complition_notify(priv, NULL, NULL);
++	if (mlxplat_mux_regmap_data && mlxplat_mux_regmap_data->completion_notify)
++		return 0;
++
++	return mlxplat_post_init(priv);
+ 
+ fail_platform_mux_register:
+ 	while (--i >= 0)
+-- 
+2.20.1
+

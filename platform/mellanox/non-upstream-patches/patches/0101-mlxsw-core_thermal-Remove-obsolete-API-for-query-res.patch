@@ -1,7 +1,8 @@
-From 1186332d9cbf3f7cbd2ed52dfcb594ce4e2d2df8 Mon Sep 17 00:00:00 2001
+From d0a94e237cb6d2020a0a1c27f357a9c3bfc0b1d5 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:43 +0200
-Subject: [PATCH] mlxsw: core_thermal: Remove obsolete API for query resource
+Subject: [PATCH backport 5.10 101/182] mlxsw: core_thermal: Remove obsolete
+ API for query resource
 
 Remove obsolete API mlxsw_core_res_query_enabled(), which is only
 relevant for end-of-life SwitchX-2 ASICs. Support for these ASICs was
@@ -18,7 +19,7 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  4 files changed, 23 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
-index 7938bad70..0b1888318 100644
+index 7938bad70e37..0b1888318ef1 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
 @@ -129,12 +129,6 @@ void *mlxsw_core_driver_priv(struct mlxsw_core *mlxsw_core)
@@ -35,7 +36,7 @@ index 7938bad70..0b1888318 100644
  {
  	return mlxsw_core->driver->temp_warn_enabled;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
-index 56efb8e48..0ceb7dae9 100644
+index 56efb8e48022..0ceb7dae95f6 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
 @@ -30,8 +30,6 @@ unsigned int mlxsw_core_max_ports(const struct mlxsw_core *mlxsw_core);
@@ -48,7 +49,7 @@ index 56efb8e48..0ceb7dae9 100644
  
  bool
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
-index 3788d02b5..8b170ad92 100644
+index 3788d02b5244..8b170ad92302 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 @@ -655,9 +655,6 @@ static int mlxsw_hwmon_module_init(struct mlxsw_hwmon *mlxsw_hwmon)
@@ -62,10 +63,10 @@ index 3788d02b5..8b170ad92 100644
  	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mgpir), mgpir_pl);
  	if (err)
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index e5997b6a0..9b0cd6f79 100644
+index f471f03e0094..80942c78d9e5 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -787,9 +787,6 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
+@@ -746,9 +746,6 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
  	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
  	int i, err;
  
@@ -75,7 +76,7 @@ index e5997b6a0..9b0cd6f79 100644
  	mlxsw_reg_mgpir_pack(mgpir_pl);
  	err = mlxsw_reg_query(core, MLXSW_REG(mgpir), mgpir_pl);
  	if (err)
-@@ -834,9 +831,6 @@ mlxsw_thermal_modules_fini(struct mlxsw_thermal *thermal)
+@@ -793,9 +790,6 @@ mlxsw_thermal_modules_fini(struct mlxsw_thermal *thermal)
  {
  	int i;
  
@@ -85,7 +86,7 @@ index e5997b6a0..9b0cd6f79 100644
  	for (i = thermal->tz_module_num - 1; i >= 0; i--)
  		mlxsw_thermal_module_fini(&thermal->tz_module_arr[i]);
  	kfree(thermal->tz_module_arr);
-@@ -884,9 +878,6 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
+@@ -843,9 +837,6 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  	int i;
  	int err;
  
@@ -95,7 +96,7 @@ index e5997b6a0..9b0cd6f79 100644
  	mlxsw_reg_mgpir_pack(mgpir_pl);
  	err = mlxsw_reg_query(core, MLXSW_REG(mgpir), mgpir_pl);
  	if (err)
-@@ -930,9 +921,6 @@ mlxsw_thermal_gearboxes_fini(struct mlxsw_thermal *thermal)
+@@ -889,9 +880,6 @@ mlxsw_thermal_gearboxes_fini(struct mlxsw_thermal *thermal)
  {
  	int i;
  
@@ -106,5 +107,5 @@ index e5997b6a0..9b0cd6f79 100644
  		mlxsw_thermal_gearbox_tz_fini(&thermal->tz_gearbox_arr[i]);
  	kfree(thermal->tz_gearbox_arr);
 -- 
-2.30.2
+2.20.1
 

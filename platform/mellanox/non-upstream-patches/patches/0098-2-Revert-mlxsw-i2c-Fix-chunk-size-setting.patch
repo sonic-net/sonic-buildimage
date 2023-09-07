@@ -1,0 +1,26 @@
+From 0dda3bcede5f26c2bd44edbd90c7e9f0aab9ccf0 Mon Sep 17 00:00:00 2001
+From: Ciju Rajan K <crajank@nvidia.com>
+Date: Thu, 17 Aug 2023 10:00:59 +0000
+Subject: Revert "mlxsw: i2c: Fix chunk size setting in output mailbox buffer"
+
+This reverts commit ac91378962238d34030bb4035308f88ba173165f.
+---
+ drivers/net/ethernet/mellanox/mlxsw/i2c.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
+index cc99ec3f4e96..b8a5c0cbb6b5 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
+@@ -447,7 +447,7 @@ mlxsw_i2c_cmd(struct device *dev, u16 opcode, u32 in_mod, size_t in_mbox_size,
+ 	} else {
+ 		/* No input mailbox is case of initialization query command. */
+ 		reg_size = MLXSW_I2C_MAX_DATA_SIZE;
+-		num = DIV_ROUND_UP(reg_size, mlxsw_i2c->block_size);
++		num = reg_size / mlxsw_i2c->block_size;
+ 
+ 		if (mutex_lock_interruptible(&mlxsw_i2c->cmd.lock) < 0) {
+ 			dev_err(&client->dev, "Could not acquire lock");
+-- 
+2.14.1
+

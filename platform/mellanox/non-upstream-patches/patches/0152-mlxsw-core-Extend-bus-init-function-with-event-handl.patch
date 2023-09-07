@@ -1,8 +1,8 @@
-From bf88a40c8d0379e1ce8a6cc0a2bf4f935f90307c Mon Sep 17 00:00:00 2001
+From da7c615b231402e3084dae855468be117538535c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 15 Dec 2021 08:59:14 +0000
-Subject: [PATCH] mlxsw: core: Extend bus init function with event handler
- argument
+Subject: [PATCH backport 5.10 152/182] mlxsw: core: Extend bus init function
+ with event handler argument
 
 The purpose of new argument - is to introduce system event handler for
 treating line card activation / deactivation signals on modular system.
@@ -16,7 +16,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  4 files changed, 13 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
-index 8c1280781..a9bb43837 100644
+index 8c128078105a..a9bb43837b33 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
 @@ -2005,7 +2005,8 @@ __mlxsw_core_bus_device_register(const struct mlxsw_bus_info *mlxsw_bus_info,
@@ -30,7 +30,7 @@ index 8c1280781..a9bb43837 100644
  		goto err_bus_init;
  
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
-index 10ea541bb..b09f9013d 100644
+index 10ea541bb19d..b09f9013db77 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
 @@ -390,6 +390,7 @@ struct mlxsw_driver {
@@ -52,10 +52,10 @@ index 10ea541bb..b09f9013d 100644
  	bool (*skb_transmit_busy)(void *bus_priv,
  				  const struct mlxsw_tx_info *tx_info);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
-index b8a5c0cbb..b75416561 100644
+index ce843ea91464..0cdb9b9d8353 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
-@@ -530,7 +530,8 @@ static int mlxsw_i2c_skb_transmit(void *bus_priv, struct sk_buff *skb,
+@@ -509,7 +509,8 @@ static int mlxsw_i2c_skb_transmit(void *bus_priv, struct sk_buff *skb,
  static int
  mlxsw_i2c_init(void *bus_priv, struct mlxsw_core *mlxsw_core,
  	       const struct mlxsw_config_profile *profile,
@@ -66,7 +66,7 @@ index b8a5c0cbb..b75416561 100644
  	struct mlxsw_i2c *mlxsw_i2c = bus_priv;
  	char *mbox;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/pci.c b/drivers/net/ethernet/mellanox/mlxsw/pci.c
-index dbb16ce25..e8e91130c 100644
+index dbb16ce25bdf..e8e91130cdf5 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/pci.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/pci.c
 @@ -1411,9 +1411,12 @@ static void mlxsw_pci_free_irq_vectors(struct mlxsw_pci *mlxsw_pci)
@@ -86,5 +86,5 @@ index dbb16ce25..e8e91130c 100644
  	struct mlxsw_pci *mlxsw_pci = bus_priv;
  	struct pci_dev *pdev = mlxsw_pci->pdev;
 -- 
-2.30.2
+2.20.1
 

@@ -1,0 +1,72 @@
+From 96de5181b880adf2fd65fa85fbc3e0c74f976788 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 1 Mar 2023 17:49:08 +0000
+Subject: [PATCH backport 5.10 5/6] platform: mellanox: Add field upgrade
+ capability register
+
+Add new register to indicate the method of FPGA/CPLD field upgrade
+supported on the specific system.
+Currently two masks are available:
+b00 - field upgrade through LPC gateway (new method introduced to
+      accelerate field upgrade process).
+b11 - field upgrade through CPU GPIO pins (old method).
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index b5d51673f..f674d9173 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -66,6 +66,7 @@
+ #define MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET	0x37
+ #define MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET	0x3a
+ #define MLXPLAT_CPLD_LPC_REG_AGGR_MASK_OFFSET	0x3b
++#define MLXPLAT_CPLD_LPC_REG_FU_CAP_OFFSET	0x3c
+ #define MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET	0x40
+ #define MLXPLAT_CPLD_LPC_REG_AGGRLO_MASK_OFFSET	0x41
+ #define MLXPLAT_CPLD_LPC_REG_AGGRCO_OFFSET	0x42
+@@ -241,6 +242,7 @@
+ #define MLXPLAT_CPLD_VOLTREG_UPD_MASK	GENMASK(5, 4)
+ #define MLXPLAT_CPLD_GWP_MASK		GENMASK(0, 0)
+ #define MLXPLAT_CPLD_EROT_MASK		GENMASK(1, 0)
++#define MLXPLAT_CPLD_FU_CAP_MASK	GENMASK(1, 0)
+ #define MLXPLAT_CPLD_PWR_BUTTON_MASK	BIT(0)
+ #define MLXPLAT_CPLD_LATCH_RST_MASK	BIT(5)
+ #define MLXPLAT_CPLD_THERMAL1_PDB_MASK	BIT(3)
+@@ -3956,6 +3958,13 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(5),
+ 		.mode = 0200,
+ 	},
++	{
++		.label = "jtag_cap",
++		.reg = MLXPLAT_CPLD_LPC_REG_FU_CAP_OFFSET,
++		.mask = MLXPLAT_CPLD_FU_CAP_MASK,
++		.bit = 1,
++		.mode = 0444,
++	},
+ 	{
+ 		.label = "jtag_enable",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_GP2_OFFSET,
+@@ -5424,6 +5433,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_SAFE_BIOS_WP_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGR_MASK_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FU_CAP_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_DBG1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_DBG2_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_DBG3_OFFSET:
+@@ -5582,6 +5592,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_SAFE_BIOS_WP_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGR_MASK_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FU_CAP_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_DBG1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_DBG2_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_DBG3_OFFSET:
+-- 
+2.20.1
+

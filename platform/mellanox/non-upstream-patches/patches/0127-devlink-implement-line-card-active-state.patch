@@ -1,7 +1,8 @@
-From 999c148a0a19a6a6c96dbc5b6615285d80c28de9 Mon Sep 17 00:00:00 2001
+From 9edffb671d73df181e382930bda0a3870e6ac120 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Wed, 6 Jan 2021 16:03:43 +0100
-Subject: [PATCH] devlink: implement line card active state
+Subject: [PATCH backport 5.10 127/182] devlink: implement line card active
+ state
 
 Allow driver to mark a linecard as active. Expose this state to the
 userspace over devlink netlink interface with proper notifications.
@@ -14,7 +15,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  3 files changed, 40 insertions(+)
 
 diff --git a/include/net/devlink.h b/include/net/devlink.h
-index 44b60085e..d9b2b559c 100644
+index 44b60085ec16..d9b2b559c9a2 100644
 --- a/include/net/devlink.h
 +++ b/include/net/devlink.h
 @@ -157,6 +157,7 @@ struct devlink_linecard {
@@ -35,7 +36,7 @@ index 44b60085e..d9b2b559c 100644
  			u32 size, u16 ingress_pools_count,
  			u16 egress_pools_count, u16 ingress_tc_count,
 diff --git a/include/uapi/linux/devlink.h b/include/uapi/linux/devlink.h
-index d88336645..5ace55666 100644
+index d8833664522f..5ace55666d27 100644
 --- a/include/uapi/linux/devlink.h
 +++ b/include/uapi/linux/devlink.h
 @@ -341,6 +341,7 @@ enum devlink_linecard_state {
@@ -47,7 +48,7 @@ index d88336645..5ace55666 100644
  	__DEVLINK_LINECARD_STATE_MAX,
  	DEVLINK_LINECARD_STATE_MAX = __DEVLINK_LINECARD_STATE_MAX - 1
 diff --git a/net/core/devlink.c b/net/core/devlink.c
-index 943973ffc..724633810 100644
+index 943973ffc450..724633810758 100644
 --- a/net/core/devlink.c
 +++ b/net/core/devlink.c
 @@ -9001,6 +9001,42 @@ void devlink_linecard_provision_fail(struct devlink_linecard *linecard)
@@ -94,5 +95,5 @@ index 943973ffc..724633810 100644
  			u32 size, u16 ingress_pools_count,
  			u16 egress_pools_count, u16 ingress_tc_count,
 -- 
-2.30.2
+2.20.1
 

@@ -1,7 +1,8 @@
-From 219381cde0a7294834aff7e3f30584182b26a2b6 Mon Sep 17 00:00:00 2001
+From ed83386ce79974230c5fa59245efe760046d944c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:34 +0200
-Subject: [PATCH] mlxsw: core_thermal: Split gearbox initialization
+Subject: [PATCH backport 5.10 120/182] mlxsw: core_thermal: Split gearbox
+ initialization
 
 Split gearbox initialization in two routines - the first one is to be
 used for gearbox configuration validation, the second for creation of
@@ -26,10 +27,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 34 insertions(+), 9 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index 77a484a55..a8ecd8fea 100644
+index 5f8b1e92475b..313856b88f6c 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -887,15 +887,12 @@ mlxsw_thermal_gearbox_tz_fini(struct mlxsw_thermal_module *gearbox_tz)
+@@ -846,15 +846,12 @@ mlxsw_thermal_gearbox_tz_fini(struct mlxsw_thermal_module *gearbox_tz)
  }
  
  static int
@@ -47,7 +48,7 @@ index 77a484a55..a8ecd8fea 100644
  	int err;
  
  	mlxsw_reg_mgpir_pack(mgpir_pl, 0);
-@@ -905,8 +902,11 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
+@@ -864,8 +861,11 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  
  	mlxsw_reg_mgpir_unpack(mgpir_pl, &gbox_num, &device_type, NULL,
  			       NULL, NULL);
@@ -61,7 +62,7 @@ index 77a484a55..a8ecd8fea 100644
  		return 0;
  
  	area->tz_gearbox_num = gbox_num;
-@@ -916,6 +916,26 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
+@@ -875,6 +875,26 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  	if (!area->tz_gearbox_arr)
  		return -ENOMEM;
  
@@ -88,7 +89,7 @@ index 77a484a55..a8ecd8fea 100644
  	for (i = 0; i < area->tz_gearbox_num; i++) {
  		gearbox_tz = &area->tz_gearbox_arr[i];
  		memcpy(gearbox_tz->trips, default_thermal_trips,
-@@ -933,7 +953,6 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
+@@ -892,7 +912,6 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  err_thermal_gearbox_tz_init:
  	for (i--; i >= 0; i--)
  		mlxsw_thermal_gearbox_tz_fini(&area->tz_gearbox_arr[i]);
@@ -96,7 +97,7 @@ index 77a484a55..a8ecd8fea 100644
  	return err;
  }
  
-@@ -945,7 +964,6 @@ mlxsw_thermal_gearboxes_fini(struct mlxsw_thermal *thermal,
+@@ -904,7 +923,6 @@ mlxsw_thermal_gearboxes_fini(struct mlxsw_thermal *thermal,
  
  	for (i = area->tz_gearbox_num - 1; i >= 0; i--)
  		mlxsw_thermal_gearbox_tz_fini(&area->tz_gearbox_arr[i]);
@@ -104,7 +105,7 @@ index 77a484a55..a8ecd8fea 100644
  }
  
  int mlxsw_thermal_init(struct mlxsw_core *core,
-@@ -1045,6 +1063,10 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -1003,6 +1021,10 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  	if (err)
  		goto err_thermal_modules_init;
  
@@ -115,7 +116,7 @@ index 77a484a55..a8ecd8fea 100644
  	err = mlxsw_thermal_gearboxes_init(dev, core, thermal, thermal->main);
  	if (err)
  		goto err_thermal_gearboxes_init;
-@@ -1059,6 +1081,8 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -1017,6 +1039,8 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  err_thermal_zone_device_enable:
  	mlxsw_thermal_gearboxes_fini(thermal, thermal->main);
  err_thermal_gearboxes_init:
@@ -124,7 +125,7 @@ index 77a484a55..a8ecd8fea 100644
  	mlxsw_thermal_modules_fini(thermal, thermal->main);
  err_thermal_modules_init:
  	if (thermal->tzdev) {
-@@ -1083,6 +1107,7 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
+@@ -1041,6 +1065,7 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
  	int i;
  
  	mlxsw_thermal_gearboxes_fini(thermal, thermal->main);
@@ -133,5 +134,5 @@ index 77a484a55..a8ecd8fea 100644
  	if (thermal->tzdev) {
  		thermal_zone_device_unregister(thermal->tzdev);
 -- 
-2.30.2
+2.20.1
 

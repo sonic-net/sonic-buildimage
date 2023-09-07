@@ -60,7 +60,7 @@ libip4tc2==1.8.7-1
 libip6tc2==1.8.7-1
 libjs-sphinxdoc==3.4.3-2
 libjs-underscore==1.9.1~dfsg-3
-libjson-c5==0.15-2
+libjson-c5==0.15-2+deb11u1
 libjudydebian1==1.0.5-5+b2
 libk5crypto3==1.18.3-6+deb11u3
 libkadm5clnt-mit12==1.18.3-6+deb11u3

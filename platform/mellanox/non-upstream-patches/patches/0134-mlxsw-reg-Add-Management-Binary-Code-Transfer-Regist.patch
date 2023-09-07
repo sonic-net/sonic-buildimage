@@ -1,7 +1,8 @@
-From 618665ccbf600c2838fb2e181246aef0fa90bac2 Mon Sep 17 00:00:00 2001
+From e9afbd683a14e3369ba25dcb9c8147a8b478b5c0 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Thu, 10 Dec 2020 18:27:38 +0100
-Subject: [PATCH] mlxsw: reg: Add Management Binary Code Transfer Register
+Subject: [PATCH backport 5.10 134/182] mlxsw: reg: Add Management Binary Code
+ Transfer Register
 
 The MBCT register allows to transfer binary codes from the Host to
 the management FW by transferring it by chunks of maximum 1KB.
@@ -12,10 +13,10 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 120 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 9cbdf407f..89b21910f 100644
+index cddfe5702140..e060f054e0a9 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-@@ -10297,6 +10297,125 @@ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,
+@@ -10296,6 +10296,125 @@ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,
  		*num_of_slots = mlxsw_reg_mgpir_num_of_slots_get(payload);
  }
  
@@ -141,7 +142,7 @@ index 9cbdf407f..89b21910f 100644
  /* MDDQ - Management DownStream Device Query Register
   * --------------------------------------------------
   * This register allows to query the DownStream device properties. The desired
-@@ -11765,6 +11884,7 @@ static const struct mlxsw_reg_info *mlxsw_reg_infos[] = {
+@@ -11764,6 +11883,7 @@ static const struct mlxsw_reg_info *mlxsw_reg_infos[] = {
  	MLXSW_REG(mtptpt),
  	MLXSW_REG(mfgd),
  	MLXSW_REG(mgpir),
@@ -150,5 +151,5 @@ index 9cbdf407f..89b21910f 100644
  	MLXSW_REG(mddc),
  	MLXSW_REG(mfde),
 -- 
-2.30.2
+2.20.1
 

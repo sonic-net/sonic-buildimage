@@ -4,6 +4,3 @@ libnl-3-200==3.5.0-1
 libnl-3-dev==3.5.0-1
 libnl-route-3-200==3.5.0-1
 libnl-route-3-dev==3.5.0-1
-libsnmp-base==5.7.3+dfsg-5
-libsnmp-dev==5.7.3+dfsg-5
-libsnmp30==5.7.3+dfsg-5

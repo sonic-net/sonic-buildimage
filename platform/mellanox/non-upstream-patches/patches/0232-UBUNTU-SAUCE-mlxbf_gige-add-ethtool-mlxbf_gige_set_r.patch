@@ -1,0 +1,78 @@
+From 422290c8c36a7a92a64fecea45f431794dc99be6 Mon Sep 17 00:00:00 2001
+From: David Thompson <davthompson@nvidia.com>
+Date: Thu, 14 Jul 2022 17:47:18 -0400
+Subject: [PATCH backport 5.10 33/63] UBUNTU: SAUCE: mlxbf_gige: add ethtool
+ mlxbf_gige_set_ringparam
+
+This patch adds the "set_ringparam" callback, to be used by
+ethtool when changing the size of the mlxbf_gige driver rings.
+
+BugLink: https://launchpad.net/bugs/1981766
+
+Change-Id: I0198f6fbf6b8ea13bd34ed152e13298265138c76
+Signed-off-by: David Thompson <davthompson@nvidia.com>
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Signed-off-by: Ike Panhc <ike.pan@canonical.com>
+---
+ .../mellanox/mlxbf_gige/mlxbf_gige_ethtool.c  | 38 +++++++++++++++++++
+ 1 file changed, 38 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_ethtool.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_ethtool.c
+index af46b0cd7..257724323 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_ethtool.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_ethtool.c
+@@ -42,6 +42,43 @@ static void mlxbf_gige_get_ringparam(struct net_device *netdev,
+ 	ering->tx_pending = priv->tx_q_entries;
+ }
+ 
++static int mlxbf_gige_set_ringparam(struct net_device *netdev,
++				    struct ethtool_ringparam *ering)
++{
++	const struct net_device_ops *ops = netdev->netdev_ops;
++	struct mlxbf_gige *priv = netdev_priv(netdev);
++	int new_rx_q_entries, new_tx_q_entries;
++
++	/* Device does not have separate queues for small/large frames */
++	if (ering->rx_mini_pending || ering->rx_jumbo_pending)
++		return -EINVAL;
++
++	/* Round up to supported values */
++	new_rx_q_entries = roundup_pow_of_two(ering->rx_pending);
++	new_tx_q_entries = roundup_pow_of_two(ering->tx_pending);
++
++	/* Check against min values, core checks against max values */
++	if (new_tx_q_entries < MLXBF_GIGE_MIN_TXQ_SZ ||
++	    new_rx_q_entries < MLXBF_GIGE_MIN_RXQ_SZ)
++		return -EINVAL;
++
++	/* If queue sizes did not change, exit now */
++	if (new_rx_q_entries == priv->rx_q_entries &&
++	    new_tx_q_entries == priv->tx_q_entries)
++		return 0;
++
++	if (netif_running(netdev))
++		ops->ndo_stop(netdev);
++
++	priv->rx_q_entries = new_rx_q_entries;
++	priv->tx_q_entries = new_tx_q_entries;
++
++	if (netif_running(netdev))
++		ops->ndo_open(netdev);
++
++	return 0;
++}
++
+ static const struct {
+ 	const char string[ETH_GSTRING_LEN];
+ } mlxbf_gige_ethtool_stats_keys[] = {
+@@ -124,6 +161,7 @@ static void mlxbf_gige_get_pauseparam(struct net_device *netdev,
+ const struct ethtool_ops mlxbf_gige_ethtool_ops = {
+ 	.get_link		= ethtool_op_get_link,
+ 	.get_ringparam		= mlxbf_gige_get_ringparam,
++	.set_ringparam		= mlxbf_gige_set_ringparam,
+ 	.get_regs_len           = mlxbf_gige_get_regs_len,
+ 	.get_regs               = mlxbf_gige_get_regs,
+ 	.get_strings            = mlxbf_gige_get_strings,
+-- 
+2.20.1
+

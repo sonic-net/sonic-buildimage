@@ -1,0 +1,96 @@
+From 4db801c656712234c840883b68429e6d45080ea3 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 6 Jul 2021 18:38:29 +0000
+Subject: [PATCH backport v5.10.43 49/67] leds: mlxreg: Provide conversion for
+ hardware LED color code
+
+In case register is set by hardware, convert hardware color code to
+expose correct color to "sysfs".
+For some LED color at initial state is set by hardware. Hardware
+controls LED color until the first software write access to any LED
+register - the first software access cancels hardware control.
+If LED is under hardware control - detect the color in brightness_get()
+function.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/leds/leds-mlxreg.c | 27 ++++++++++++++++++++++-----
+ 1 file changed, 22 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
+index 82aea1cd0c12..aa82f6a521f8 100644
+--- a/drivers/leds/leds-mlxreg.c
++++ b/drivers/leds/leds-mlxreg.c
+@@ -17,7 +17,9 @@
+ #define MLXREG_LED_OFFSET_BLINK_3HZ	0x01 /* Offset from solid: 3Hz blink */
+ #define MLXREG_LED_OFFSET_BLINK_6HZ	0x02 /* Offset from solid: 6Hz blink */
+ #define MLXREG_LED_IS_OFF		0x00 /* Off */
+-#define MLXREG_LED_RED_SOLID		0x05 /* Solid red */
++#define MLXREG_LED_RED_SOLID_HW		0x01 /* Solid red or orange by hardware */
++#define MLXREG_LED_RED_SOLID		0x05 /* Solid red or orange */
++#define MLXREG_LED_GREEN_SOLID_HW	0x09 /* Solid green by hardware */
+ #define MLXREG_LED_GREEN_SOLID		0x0D /* Solid green */
+ #define MLXREG_LED_AMBER_SOLID		0x09 /* Solid amber */
+ #define MLXREG_LED_BLINK_3HZ		167 /* ~167 msec off/on - HW support */
+@@ -30,6 +32,7 @@
+  * @data: led configuration data;
+  * @led_classdev: led class data;
+  * @base_color: base led color (other colors have constant offset from base);
++ * @base_color_hw: base led color set by hardware;
+  * @led_data: led data;
+  * @data_parent: pointer to private device control data of parent;
+  */
+@@ -37,6 +40,7 @@ struct mlxreg_led_data {
+ 	struct mlxreg_core_data *data;
+ 	struct led_classdev led_cdev;
+ 	u8 base_color;
++	u8 base_color_hw;
+ 	void *data_parent;
+ 	char led_cdev_name[MLXREG_CORE_LABEL_MAX_SIZE];
+ };
+@@ -124,8 +128,17 @@ mlxreg_led_get_hw(struct mlxreg_led_data *led_data)
+ 	regval = regval & ~data->mask;
+ 	regval = (ror32(data->mask, data->bit) == 0xf0) ? ror32(regval,
+ 		 data->bit) : ror32(regval, data->bit + 4);
+-	if (regval >= led_data->base_color &&
+-	    regval <= (led_data->base_color + MLXREG_LED_OFFSET_BLINK_6HZ))
++
++	/*
++	 * For some LED color at initial state is set by hardware. Hardware controls LED color
++	 * until the first write access to any LED register. If LED is under hardware control -
++	 * convert the value to the software mask to expose correct color. The first LED set by
++	 * software cancels hardware control.
++	 */
++	if ((regval >= led_data->base_color &&
++	     regval <= (led_data->base_color + MLXREG_LED_OFFSET_BLINK_6HZ)) ||
++	    (led_data->base_color_hw && regval >= led_data->base_color_hw &&
++	     regval <= (led_data->base_color_hw + MLXREG_LED_OFFSET_BLINK_6HZ)))
+ 		return LED_FULL;
+ 
+ 	return LED_OFF;
+@@ -217,16 +230,20 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
+ 
+ 		led_cdev = &led_data->led_cdev;
+ 		led_data->data_parent = priv;
+-		if (strstr(data->label, "red") ||
+-		    strstr(data->label, "orange")) {
++		if (strstr(data->label, "red")) {
++			brightness = LED_OFF;
++			led_data->base_color = MLXREG_LED_RED_SOLID;
++		} else if (strstr(data->label, "orange")) {
+ 			brightness = LED_OFF;
+ 			led_data->base_color = MLXREG_LED_RED_SOLID;
++			led_data->base_color_hw = MLXREG_LED_RED_SOLID_HW;
+ 		} else if (strstr(data->label, "amber")) {
+ 			brightness = LED_OFF;
+ 			led_data->base_color = MLXREG_LED_AMBER_SOLID;
+ 		} else {
+ 			brightness = LED_OFF;
+ 			led_data->base_color = MLXREG_LED_GREEN_SOLID;
++			led_data->base_color_hw = MLXREG_LED_GREEN_SOLID_HW;
+ 		}
+ 		snprintf(led_data->led_cdev_name, sizeof(led_data->led_cdev_name),
+ 			 "mlxreg:%s", data->label);
+-- 
+2.20.1
+

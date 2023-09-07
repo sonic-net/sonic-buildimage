@@ -2,7 +2,7 @@
     "MACSEC_PROFILE|macsec_profile": {
             "cipher_suite": "GCM-AES-XPN-256",
             "policy": "security",
-            "primary_cak": "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF",
+            "primary_cak": "5207554155500e5d5157786d6c2a3d2031425a5e577e7e727f6b6c03312432262706080a00005b554f4e007975707670725b0a54540c0252445e5d7a29252b046a",
             "primary_ckn": "6162636465666768696A6B6C6D6E6F707172737475767778797A303132333435",
             "priority": "0",
             "rekey_period": "900",

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-01-23-1.03" profile="SAI" dsig="md5">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-05-05-1.04" profile="SAI" dsig="md5">
   <SAIplt:SAI xmlns:SAIplt="urn:marvell:SAI:yang">
     <SAIplt:typedefs>
       <SAIplt:typedef>

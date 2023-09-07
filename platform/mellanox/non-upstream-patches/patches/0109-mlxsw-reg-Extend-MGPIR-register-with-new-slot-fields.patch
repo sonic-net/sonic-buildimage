@@ -1,7 +1,8 @@
-From 1373ed22ae41e92c081bb80df4b3c4c0630edbb9 Mon Sep 17 00:00:00 2001
+From 441a7861ef61f4d0d55dee542d4704487694f68c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 22 Dec 2021 06:11:50 +0000
-Subject: [PATCH] mlxsw: reg: Extend MGPIR register with new slot fields
+Subject: [PATCH backport 5.10 109/182] mlxsw: reg: Extend MGPIR register with
+ new slot fields
 
 Extend MGPIR (Management General Peripheral Information Register) with
 new fields specifying the slot number and number of the slots available
@@ -25,10 +26,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  5 files changed, 31 insertions(+), 14 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-index 49c58197b..b1a1204e7 100644
+index ad27a1c90f92..8ab15d5bd7f5 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-@@ -985,12 +985,12 @@ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
+@@ -983,12 +983,12 @@ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
  	u8 module_count;
  	int i, err;
  
@@ -44,7 +45,7 @@ index 49c58197b..b1a1204e7 100644
  	env = kzalloc(struct_size(env, module_info, module_count), GFP_KERNEL);
  	if (!env)
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
-index f4bc711a1..2bc4c4556 100644
+index f4bc711a16cf..2bc4c4556895 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 @@ -656,13 +656,13 @@ static int mlxsw_hwmon_module_init(struct mlxsw_hwmon *mlxsw_hwmon)
@@ -80,10 +81,10 @@ index f4bc711a1..2bc4c4556 100644
  	    !gbox_num)
  		return 0;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index 8d88633c9..56e0291f1 100644
+index f4f0f8ce8597..21a7415c8ef5 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -787,13 +787,13 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
+@@ -746,13 +746,13 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
  	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
  	int i, err;
  
@@ -99,7 +100,7 @@ index 8d88633c9..56e0291f1 100644
  
  	thermal->tz_module_arr = kcalloc(thermal->tz_module_num,
  					 sizeof(*thermal->tz_module_arr),
-@@ -878,13 +878,13 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
+@@ -837,13 +837,13 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  	int i;
  	int err;
  
@@ -116,7 +117,7 @@ index 8d88633c9..56e0291f1 100644
  	    !gbox_num)
  		return 0;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index 3d07c2dcf..b2ffcfda8 100644
+index 3d07c2dcf08d..b2ffcfda8374 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 @@ -280,13 +280,13 @@ static int mlxsw_m_ports_create(struct mlxsw_m *mlxsw_m)
@@ -136,10 +137,10 @@ index 3d07c2dcf..b2ffcfda8 100644
  		return 0;
  
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index c19db16bf..e981630fd 100644
+index aad0cb1497aa..a5fa25d4bd8f 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-@@ -10167,6 +10167,12 @@ enum mlxsw_reg_mgpir_device_type {
+@@ -10166,6 +10166,12 @@ enum mlxsw_reg_mgpir_device_type {
  	MLXSW_REG_MGPIR_DEVICE_TYPE_GEARBOX_DIE,
  };
  
@@ -152,7 +153,7 @@ index c19db16bf..e981630fd 100644
  /* mgpir_device_type
   * Access: RO
   */
-@@ -10184,21 +10190,29 @@ MLXSW_ITEM32(reg, mgpir, devices_per_flash, 0x00, 16, 8);
+@@ -10183,21 +10189,29 @@ MLXSW_ITEM32(reg, mgpir, devices_per_flash, 0x00, 16, 8);
   */
  MLXSW_ITEM32(reg, mgpir, num_of_devices, 0x00, 0, 8);
  
@@ -184,7 +185,7 @@ index c19db16bf..e981630fd 100644
  {
  	if (num_of_devices)
  		*num_of_devices = mlxsw_reg_mgpir_num_of_devices_get(payload);
-@@ -10209,6 +10223,8 @@ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,
+@@ -10208,6 +10222,8 @@ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,
  				mlxsw_reg_mgpir_devices_per_flash_get(payload);
  	if (num_of_modules)
  		*num_of_modules = mlxsw_reg_mgpir_num_of_modules_get(payload);
@@ -194,5 +195,5 @@ index c19db16bf..e981630fd 100644
  
  /* MFDE - Monitoring FW Debug Register
 -- 
-2.30.2
+2.20.1
 

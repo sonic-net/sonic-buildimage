@@ -1,0 +1,36 @@
+From 51ec31f1bfb39fd87dea8861b4642d03cbd6c887 Mon Sep 17 00:00:00 2001
+From: Liming Sun <limings@nvidia.com>
+Date: Fri, 3 Feb 2023 07:52:18 -0500
+Subject: [PATCH 12/12] UBUNTU: SAUCE: mmc: sdhci-of-dwcmshc: add the missing
+ device table IDs for acpi
+X-NVConfidentiality: public
+
+BugLink: https://bugs.launchpad.net/bugs/2004645
+
+This commit adds the missing MODULE_DEVICE_TABLE for acpi, or else
+it won't be loaded automatically when compiled as a kernel module.
+
+Signed-off-by: Liming Sun <limings@nvidia.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+[bzolnier: use a short URL version for BugLink]
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/mmc/host/sdhci-of-dwcmshc.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/mmc/host/sdhci-of-dwcmshc.c b/drivers/mmc/host/sdhci-of-dwcmshc.c
+index ea972bd3c..565489ee7 100644
+--- a/drivers/mmc/host/sdhci-of-dwcmshc.c
++++ b/drivers/mmc/host/sdhci-of-dwcmshc.c
+@@ -349,6 +349,7 @@ static const struct acpi_device_id sdhci_dwcmshc_acpi_ids[] = {
+ 	},
+ 	{}
+ };
++MODULE_DEVICE_TABLE(acpi, sdhci_dwcmshc_acpi_ids);
+ #endif
+ 
+ static int dwcmshc_probe(struct platform_device *pdev)
+-- 
+2.14.1
+

@@ -1,8 +1,8 @@
-From 9eb9b3172a238d5818d2925e2db6b0f686b31411 Mon Sep 17 00:00:00 2001
+From 3c3be37747cb938fff1178f88d611eb00159297b Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:28 +0200
-Subject: [PATCH] mlxsw: core: Move port module events enablement to a separate
- function
+Subject: [PATCH backport 5.10 114/182] mlxsw: core: Move port module events
+ enablement to a separate function
 
 Use a separate function for enablement of port module events such
 plug/unplug and temperature threshold crossing. The motivation is to
@@ -15,10 +15,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 34 insertions(+), 10 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-index 2a6630547..94d44db1a 100644
+index 606d89b6f50f..4553dfa68f96 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-@@ -1089,6 +1089,32 @@ static void mlxsw_env_line_cards_free(struct mlxsw_env *env)
+@@ -1087,6 +1087,32 @@ static void mlxsw_env_line_cards_free(struct mlxsw_env *env)
  		kfree(env->line_cards[i]);
  }
  
@@ -51,7 +51,7 @@ index 2a6630547..94d44db1a 100644
  int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
  {
  	u8 module_count, num_of_slots, max_module_count;
-@@ -1137,20 +1163,17 @@ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
+@@ -1135,20 +1161,17 @@ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
  	 * is to be set after line card is activated.
  	 */
  	env->line_cards[0]->module_count = num_of_slots ? 0 : module_count;
@@ -79,7 +79,7 @@ index 2a6630547..94d44db1a 100644
  	mlxsw_env_module_plug_event_unregister(env);
  err_module_plug_event_register:
  	mlxsw_env_temp_warn_event_unregister(env);
-@@ -1164,6 +1187,7 @@ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
+@@ -1162,6 +1185,7 @@ int mlxsw_env_init(struct mlxsw_core *mlxsw_core, struct mlxsw_env **p_env)
  
  void mlxsw_env_fini(struct mlxsw_env *env)
  {
@@ -88,5 +88,5 @@ index 2a6630547..94d44db1a 100644
  	/* Make sure there is no more event work scheduled. */
  	mlxsw_core_flush_owq();
 -- 
-2.30.2
+2.20.1
 

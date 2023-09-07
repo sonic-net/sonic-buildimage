@@ -1,0 +1,42 @@
+From f6a48751ea5c5943d9eb6e0d7711215ac5aad6c3 Mon Sep 17 00:00:00 2001
+From: Peng Wu <wupeng58@huawei.com>
+Date: Fri, 30 Sep 2022 11:24:45 -0400
+Subject: [PATCH backport 5.10 39/63] net/mlxbf_gige: Fix an IS_ERR() vs NULL
+ bug in mlxbf_gige_mdio_probe
+
+BugLink: https://bugs.launchpad.net/bugs/1991403
+
+The devm_ioremap() function returns NULL on error, it doesn't return
+error pointers.
+
+Fixes: 3a1a274e933f ("mlxbf_gige: compute MDIO period based on i1clk")
+Signed-off-by: Peng Wu <wupeng58@huawei.com>
+Link: https://lore.kernel.org/r/20220923023640.116057-1-wupeng58@huawei.com
+Signed-off-by: Jakub Kicinski <kuba@kernel.org>
+(cherry picked from commit 4774db8dfc6a2e6649920ebb2fc8e2f062c2080d)
+Signed-off-by: David Thompson <davthompson@nvidia.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Acked-by: Kleber Sacilotto de Souza <kleber.souza@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c
+index 736849d07..daa31ddb2 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_mdio.c
+@@ -250,8 +250,8 @@ int mlxbf_gige_mdio_probe(struct platform_device *pdev, struct mlxbf_gige *priv)
+ 	}
+ 
+ 	priv->clk_io = devm_ioremap(dev, res->start, resource_size(res));
+-	if (IS_ERR(priv->clk_io))
+-		return PTR_ERR(priv->clk_io);
++	if (!priv->clk_io)
++		return -ENOMEM;
+ 
+ 	mlxbf_gige_mdio_cfg(priv);
+ 
+-- 
+2.20.1
+

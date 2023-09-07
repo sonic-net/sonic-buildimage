@@ -1,0 +1,36 @@
+From 127bcf5d9412ee246b6620d9b38b7fca6fe4d66d Mon Sep 17 00:00:00 2001
+From: James Hurley <jahurley@nvidia.com>
+Date: Tue, 6 Dec 2022 11:31:55 -0500
+Subject: [PATCH backport 5.10 3/6] UBUNTU: SAUCE: mlxbf-pmc: Fix event string
+ typo
+
+BugLink: https://bugs.launchpad.net/bugs/1998863
+
+Fix event string typo so that the proper events are displayed.
+
+Signed-off-by: James hurley <jahurley@nvidia.com>
+Reviewed-by: David Thompson <davthompson@nvidia.com>
+Signed-off-by: James hurley <jahurley@nvidia.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/platform/mellanox/mlxbf-pmc.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/mlxbf-pmc.h b/drivers/platform/mellanox/mlxbf-pmc.h
+index 894c3cc88..a6f7aade4 100644
+--- a/drivers/platform/mellanox/mlxbf-pmc.h
++++ b/drivers/platform/mellanox/mlxbf-pmc.h
+@@ -364,7 +364,7 @@ struct mlxbf_pmc_events mlxbf2_hnfnet_events[] = {
+ {0x32, "DDN_DIAG_W_INGRESS"},
+ {0x33, "DDN_DIAG_C_INGRESS"},
+ {0x34, "DDN_DIAG_CORE_SENT"},
+-{0x35, "NDN_DIAG_S_OUT_OF_CRED"},
++{0x35, "NDN_DIAG_N_OUT_OF_CRED"},
+ {0x36, "NDN_DIAG_S_OUT_OF_CRED"},
+ {0x37, "NDN_DIAG_E_OUT_OF_CRED"},
+ {0x38, "NDN_DIAG_W_OUT_OF_CRED"},
+-- 
+2.20.1
+

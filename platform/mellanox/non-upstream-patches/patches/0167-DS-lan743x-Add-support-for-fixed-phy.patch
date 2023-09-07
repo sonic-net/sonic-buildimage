@@ -1,0 +1,97 @@
+From 12b2a85b4b3bb17f44611b9c320fd4e84915b122 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 6 May 2022 16:52:53 +0300
+Subject: [PATCH backport 5.10 167/182] DS: lan743x: Add support for fixed phy
+
+Add support for fixed phy for non DTS architecture.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/microchip/Kconfig        | 11 ++++++++
+ drivers/net/ethernet/microchip/lan743x_main.c | 26 ++++++++++++++++---
+ 2 files changed, 33 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/ethernet/microchip/Kconfig b/drivers/net/ethernet/microchip/Kconfig
+index d0f6dfe0dcf3..6c66b55bc811 100644
+--- a/drivers/net/ethernet/microchip/Kconfig
++++ b/drivers/net/ethernet/microchip/Kconfig
+@@ -54,4 +54,15 @@ config LAN743X
+ 	  To compile this driver as a module, choose M here. The module will be
+ 	  called lan743x.
+ 
++config LAN743X_FIXED_PHY
++	bool "Direct R/G/MII connection without PHY"
++	default n
++	depends on LAN743X
++	select FIXED_PHY
++	help
++	 Direct R/G/MII connection to a remote MII device without PHY in between.
++	 No mdio bus will be used in this case and no auto-negotiation takes place.
++	 The configuration settings below need to mirror the configuration of the
++	 remote MII device.
++
+ endif # NET_VENDOR_MICROCHIP
+diff --git a/drivers/net/ethernet/microchip/lan743x_main.c b/drivers/net/ethernet/microchip/lan743x_main.c
+index 481f89d193f7..b6250a7469da 100644
+--- a/drivers/net/ethernet/microchip/lan743x_main.c
++++ b/drivers/net/ethernet/microchip/lan743x_main.c
+@@ -798,6 +798,7 @@ static int lan743x_mac_init(struct lan743x_adapter *adapter)
+ 
+ 	/* disable auto duplex, and speed detection. Phylib does that */
+ 	data = lan743x_csr_read(adapter, MAC_CR);
++
+ 	data &= ~(MAC_CR_ADD_ | MAC_CR_ASD_);
+ 	data |= MAC_CR_CNTR_RST_;
+ 	lan743x_csr_write(adapter, MAC_CR, data);
+@@ -1002,7 +1003,10 @@ static void lan743x_phy_close(struct lan743x_adapter *adapter)
+ 	struct net_device *netdev = adapter->netdev;
+ 
+ 	phy_stop(netdev->phydev);
+-	phy_disconnect(netdev->phydev);
++	if (IS_REACHABLE(CONFIG_LAN743X_FIXED_PHY))
++		fixed_phy_unregister(netdev->phydev);
++	else
++		phy_disconnect(netdev->phydev);
+ 	netdev->phydev = NULL;
+ }
+ 
+@@ -1038,11 +1042,24 @@ static int lan743x_phy_open(struct lan743x_adapter *adapter)
+ 
+ 	if (!phydev) {
+ 		/* try internal phy */
+-		phydev = phy_find_first(adapter->mdiobus);
++		if (IS_REACHABLE(CONFIG_LAN743X_FIXED_PHY)) {
++			struct fixed_phy_status phy_status;
++
++			phy_status.link = 1;
++			phy_status.speed = 1000;
++			phy_status.duplex = DUPLEX_FULL;
++			phy_status.pause = 0;
++			phy_status.asym_pause = 0;
++			adapter->phy_mode = PHY_INTERFACE_MODE_RGMII;
++			phydev = fixed_phy_register(PHY_POLL, &phy_status, 0);
++		} else {
++			adapter->phy_mode = PHY_INTERFACE_MODE_GMII;
++			phydev = phy_find_first(adapter->mdiobus);
++		}
++
+ 		if (!phydev)
+ 			goto return_error;
+ 
+-		adapter->phy_mode = PHY_INTERFACE_MODE_GMII;
+ 		ret = phy_connect_direct(netdev, phydev,
+ 					 lan743x_phy_link_status_change,
+ 					 adapter->phy_mode);
+@@ -1059,7 +1076,8 @@ static int lan743x_phy_open(struct lan743x_adapter *adapter)
+ 	phy->fc_autoneg = phydev->autoneg;
+ 
+ 	phy_start(phydev);
+-	phy_start_aneg(phydev);
++	if (!IS_REACHABLE(CONFIG_LAN743X_FIXED_PHY))
++		phy_start_aneg(phydev);
+ 	return 0;
+ 
+ return_error:
+-- 
+2.20.1
+

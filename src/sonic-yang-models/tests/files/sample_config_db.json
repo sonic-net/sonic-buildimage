@@ -2322,9 +2322,9 @@
             "test": {
                 "priority": "64",
                 "cipher_suite": "GCM-AES-128",
-                "primary_cak": "0123456789ABCDEF0123456789ABCDEF",
+                "primary_cak": "1159485744465e5a537272050a1011073557475152020c0e040c57223a357d7d71",
                 "primary_ckn": "6162636465666768696A6B6C6D6E6F70",
-                "fallback_cak": "00000000000000000000000000000000",
+                "fallback_cak": "000000000000000000000000000000000000000000000000000000000000000000",
                 "fallback_ckn": "11111111111111111111111111111111",
                 "policy": "security",
                 "enable_replay_protect": "true",

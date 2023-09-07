@@ -1,0 +1,59 @@
+From b73a2da62dcb4d975c1b226280868f951533142b Mon Sep 17 00:00:00 2001
+From: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Date: Tue, 8 Jun 2021 13:09:34 +0300
+Subject: [PATCH backport 5.10 25/63] devm-helpers: Add resource managed
+ version of work init
+
+A few drivers which need a work-queue must cancel work at driver detach.
+Some of those implement remove() solely for this purpose. Help drivers to
+avoid unnecessary remove and error-branch implementation by adding managed
+verision of work initialization. This will also help drivers to avoid
+mixing manual and devm based unwinding when other resources are handled by
+devm.
+
+Signed-off-by: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Reviewed-by: Krzysztof Kozlowski <krzysztof.kozlowski@canonical.com>
+Reviewed-by: Hans de Goede <hdegoede@redhat.com>
+Link: https://lore.kernel.org/r/94ff4175e7f2ff134ed2fa7d6e7641005cc9784b.1623146580.git.matti.vaittinen@fi.rohmeurope.com
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+---
+ include/linux/devm-helpers.h | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+diff --git a/include/linux/devm-helpers.h b/include/linux/devm-helpers.h
+index f40f77717..748918022 100644
+--- a/include/linux/devm-helpers.h
++++ b/include/linux/devm-helpers.h
+@@ -51,4 +51,29 @@ static inline int devm_delayed_work_autocancel(struct device *dev,
+ 	return devm_add_action(dev, devm_delayed_work_drop, w);
+ }
+ 
++static inline void devm_work_drop(void *res)
++{
++	cancel_work_sync(res);
++}
++
++/**
++ * devm_work_autocancel - Resource-managed work allocation
++ * @dev:	Device which lifetime work is bound to
++ * @w:		Work to be added (and automatically cancelled)
++ * @worker:	Worker function
++ *
++ * Initialize work which is automatically cancelled when driver is detached.
++ * A few drivers need to queue work which must be cancelled before driver
++ * is detached to avoid accessing removed resources.
++ * devm_work_autocancel() can be used to omit the explicit
++ * cancelleation when driver is detached.
++ */
++static inline int devm_work_autocancel(struct device *dev,
++				       struct work_struct *w,
++				       work_func_t worker)
++{
++	INIT_WORK(w, worker);
++	return devm_add_action(dev, devm_work_drop, w);
++}
++
+ #endif
+-- 
+2.20.1
+

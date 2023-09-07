@@ -1,0 +1,35 @@
+From e71b4be56c799c407a4b8b08528dc3a1bb31cda3 Mon Sep 17 00:00:00 2001
+From: Asmaa Mnebhi <asmaa@nvidia.com>
+Date: Fri, 8 Jul 2022 16:56:40 -0400
+Subject: [PATCH backport 5.10 52/63] UBUNTU: SAUCE: gpio-mlxbf2.c: support
+ driver version
+
+BugLink: https://launchpad.net/bugs/1981108
+
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Signed-off-by: Ike Panhc <ike.pan@canonical.com>
+---
+ drivers/gpio/gpio-mlxbf2.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/gpio/gpio-mlxbf2.c b/drivers/gpio/gpio-mlxbf2.c
+index 3d89912a0..cf9dbe8e5 100644
+--- a/drivers/gpio/gpio-mlxbf2.c
++++ b/drivers/gpio/gpio-mlxbf2.c
+@@ -20,6 +20,8 @@
+ #include <linux/spinlock.h>
+ #include <linux/types.h>
+ 
++#define DRV_VERSION "1.5"
++
+ /*
+  * There are 3 YU GPIO blocks:
+  * gpio[0]: HOST_GPIO0->HOST_GPIO31
+@@ -460,3 +462,4 @@ module_platform_driver(mlxbf2_gpio_driver);
+ MODULE_DESCRIPTION("Mellanox BlueField-2 GPIO Driver");
+ MODULE_AUTHOR("Asmaa Mnebhi <asmaa@nvidia.com>");
+ MODULE_LICENSE("GPL v2");
++MODULE_VERSION(DRV_VERSION);
+-- 
+2.20.1
+

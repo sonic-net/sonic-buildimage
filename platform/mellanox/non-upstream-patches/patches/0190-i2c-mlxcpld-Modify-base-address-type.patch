@@ -1,0 +1,49 @@
+From d2130ff4d3aed72611f07213e9eceeb084f0fc65 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 9 Nov 2022 10:29:22 +0200
+Subject: [PATCH backport 5.10 04/10] i2c: mlxcpld: Modify base address type
+
+Change type of base address from 'u32' to 'u64'.
+
+Motivation is to support memory mapped virtual base address on ARM64
+architecture.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/i2c/busses/i2c-mlxcpld.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
+index 72fcfb17d..57aea396c 100644
+--- a/drivers/i2c/busses/i2c-mlxcpld.c
++++ b/drivers/i2c/busses/i2c-mlxcpld.c
+@@ -68,7 +68,7 @@ struct  mlxcpld_i2c_curr_xfer {
+ 
+ struct mlxcpld_i2c_priv {
+ 	struct i2c_adapter adap;
+-	u32 base_addr;
++	u64 base_addr;
+ 	struct mutex lock;
+ 	struct  mlxcpld_i2c_curr_xfer xfer;
+ 	struct device *dev;
+@@ -99,7 +99,7 @@ static void mlxcpld_i2c_lpc_read_buf(u8 *data, u8 len, u32 addr)
+ static void mlxcpld_i2c_read_comm(struct mlxcpld_i2c_priv *priv, u8 offs,
+ 				  u8 *data, u8 datalen)
+ {
+-	u32 addr = priv->base_addr + offs;
++	u64 addr = priv->base_addr + offs;
+ 
+ 	switch (datalen) {
+ 	case 1:
+@@ -124,7 +124,7 @@ static void mlxcpld_i2c_read_comm(struct mlxcpld_i2c_priv *priv, u8 offs,
+ static void mlxcpld_i2c_write_comm(struct mlxcpld_i2c_priv *priv, u8 offs,
+ 				   u8 *data, u8 datalen)
+ {
+-	u32 addr = priv->base_addr + offs;
++	u64 addr = priv->base_addr + offs;
+ 
+ 	switch (datalen) {
+ 	case 1:
+-- 
+2.20.1
+

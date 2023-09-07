@@ -1,0 +1,53 @@
+From 245dc6df595b3c11096d96df641fbde3b38f6bb1 Mon Sep 17 00:00:00 2001
+From: David Thompson <davthompson@nvidia.com>
+Date: Wed, 15 Sep 2021 14:08:48 -0400
+Subject: [PATCH backport 5.10 28/63] mlxbf_gige: clear valid_polarity upon
+ open
+
+The network interface managed by the mlxbf_gige driver can
+get into a problem state where traffic does not flow.
+In this state, the interface will be up and enabled, but
+will stop processing received packets.  This problem state
+will happen if three specific conditions occur:
+    1) driver has received more than (N * RxRingSize) packets but
+       less than (N+1 * RxRingSize) packets, where N is an odd number
+       Note: the command "ethtool -g <interface>" will display the
+       current receive ring size, which currently defaults to 128
+    2) the driver's interface was disabled via "ifconfig oob_net0 down"
+       during the window described in #1.
+    3) the driver's interface is re-enabled via "ifconfig oob_net0 up"
+
+This patch ensures that the driver's "valid_polarity" field is
+cleared during the open() method so that it always matches the
+receive polarity used by hardware.  Without this fix, the driver
+needs to be unloaded and reloaded to correct this problem state.
+
+Fixes: f92e1869d74e ("Add Mellanox BlueField Gigabit Ethernet driver")
+Reviewed-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Signed-off-by: David Thompson <davthompson@nvidia.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+index a0a059e01..04c7dc224 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+@@ -142,6 +142,13 @@ static int mlxbf_gige_open(struct net_device *netdev)
+ 	err = mlxbf_gige_clean_port(priv);
+ 	if (err)
+ 		goto free_irqs;
++
++	/* Clear driver's valid_polarity to match hardware,
++	 * since the above call to clean_port() resets the
++	 * receive polarity used by hardware.
++	 */
++	priv->valid_polarity = 0;
++
+ 	err = mlxbf_gige_rx_init(priv);
+ 	if (err)
+ 		goto free_irqs;
+-- 
+2.20.1
+

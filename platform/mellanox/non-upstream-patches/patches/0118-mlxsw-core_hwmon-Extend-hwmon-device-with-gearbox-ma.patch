@@ -1,8 +1,8 @@
-From 94d3b63c64fc202bfe525cc3b500c23e92d38fbf Mon Sep 17 00:00:00 2001
+From c627292817e68e29abdf5fd9be93340251d71f7a Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:32 +0200
-Subject: [PATCH] mlxsw: core_hwmon: Extend hwmon device with gearbox mapping
- field
+Subject: [PATCH backport 5.10 118/182] mlxsw: core_hwmon: Extend hwmon device
+ with gearbox mapping field
 
 Add gearbox mapping field to 'mlxsw_hwmon_dev' structure. It should
 provide the mapping for gearbox sensor indexes, given gearbox number.
@@ -17,7 +17,7 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 31 insertions(+), 9 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
-index 0d7edabf1..6af23f472 100644
+index 0d7edabf19a4..6af23f4724e4 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 @@ -32,10 +32,11 @@ struct mlxsw_hwmon_attr {
@@ -132,5 +132,5 @@ index 0d7edabf1..6af23f472 100644
  				    sensor_index, true, true);
  		err = mlxsw_reg_write(mlxsw_hwmon->core,
 -- 
-2.30.2
+2.20.1
 

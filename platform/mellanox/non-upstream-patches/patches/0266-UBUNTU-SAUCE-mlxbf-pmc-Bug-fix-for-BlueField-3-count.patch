@@ -1,0 +1,94 @@
+From 8cceb490410ba87b8f50ecbc5576f8eaab9f31bd Mon Sep 17 00:00:00 2001
+From: Shravan Kumar Ramani <shravankr@nvidia.com>
+Date: Tue, 31 Jan 2023 03:20:57 -0500
+Subject: [PATCH 11/12] UBUNTU: SAUCE: mlxbf-pmc: Bug fix for BlueField-3
+ counter offsets
+X-NVConfidentiality: public
+
+BugLink: https://bugs.launchpad.net/bugs/2004235
+
+The performance counter modules inside each HW block are not
+identical and are dependent on the number of counters present
+in each case. Hence the offsets for the control and data regs
+should be calculated accordingly.
+
+Signed-off-by: Shravan Kumar Ramani <shravankr@nvidia.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/platform/mellanox/mlxbf-pmc.c | 12 +++++++-----
+ drivers/platform/mellanox/mlxbf-pmc.h |  4 ++--
+ 2 files changed, 9 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxbf-pmc.c b/drivers/platform/mellanox/mlxbf-pmc.c
+index 285b7433e..9be5a2d68 100644
+--- a/drivers/platform/mellanox/mlxbf-pmc.c
++++ b/drivers/platform/mellanox/mlxbf-pmc.c
+@@ -427,7 +427,8 @@ int mlxbf_clear_crspace_counter(int blk_num, uint32_t cnt_num)
+ {
+ 	void *addr;
+ 
+-	addr = pmc->block[blk_num].mmio_base + MLXBF_CRSPACE_PERFMON_VAL0 +
++	addr = pmc->block[blk_num].mmio_base +
++		MLXBF_CRSPACE_PERFMON_VAL0(pmc->block[blk_num].counters) +
+ 		(cnt_num * 4);
+ 
+ 	return mlxbf_pmc_writel(0x0, addr);
+@@ -532,7 +533,8 @@ int mlxbf_read_crspace_counter(int blk_num, uint32_t cnt_num, uint64_t *result)
+ 	int status = 0;
+ 
+ 	status = mlxbf_pmc_readl(&value, pmc->block[blk_num].mmio_base +
+-		MLXBF_CRSPACE_PERFMON_VAL0 + (cnt_num * 4));
++		MLXBF_CRSPACE_PERFMON_VAL0(pmc->block[blk_num].counters) +
++		(cnt_num * 4));
+ 	if (status)
+ 		return status;
+ 
+@@ -935,7 +937,7 @@ static ssize_t mlxbf_show_counter_state(struct kobject *ko,
+ 
+ 	if (pmc->block[blk_num].type == MLXBF_PERFTYPE_CRSPACE) {
+ 		err = mlxbf_pmc_readl(&word, pmc->block[blk_num].mmio_base +
+-			MLXBF_CRSPACE_PERFMON_CTL);
++			MLXBF_CRSPACE_PERFMON_CTL(pmc->block[blk_num].counters));
+ 		if (err)
+ 			return -EINVAL;
+ 		value = FIELD_GET(MLXBF_CRSPACE_PERFMON_EN, word);
+@@ -967,7 +969,7 @@ static ssize_t mlxbf_enable_counters(struct kobject *ko,
+ 		return err;
+ 	if (pmc->block[blk_num].type == MLXBF_PERFTYPE_CRSPACE) {
+ 		err = mlxbf_pmc_readl(&word, pmc->block[blk_num].mmio_base +
+-			MLXBF_CRSPACE_PERFMON_CTL);
++			MLXBF_CRSPACE_PERFMON_CTL(pmc->block[blk_num].counters));
+ 		if (err)
+ 			return -EINVAL;
+ 		word &= ~MLXBF_CRSPACE_PERFMON_EN;
+@@ -975,7 +977,7 @@ static ssize_t mlxbf_enable_counters(struct kobject *ko,
+ 		if (en)
+ 			word |= FIELD_PREP(MLXBF_CRSPACE_PERFMON_CLR, 1);
+ 		mlxbf_pmc_writel(word, pmc->block[blk_num].mmio_base +
+-			MLXBF_CRSPACE_PERFMON_CTL);
++			MLXBF_CRSPACE_PERFMON_CTL(pmc->block[blk_num].counters));
+ 	} else {
+ 		if (en == 0) {
+ 			err = mlxbf_config_l3_counters(blk_num, false, false);
+diff --git a/drivers/platform/mellanox/mlxbf-pmc.h b/drivers/platform/mellanox/mlxbf-pmc.h
+index fe2516616..2ee7efc3b 100644
+--- a/drivers/platform/mellanox/mlxbf-pmc.h
++++ b/drivers/platform/mellanox/mlxbf-pmc.h
+@@ -152,10 +152,10 @@ struct mlxbf_pmc_context {
+ #define MLXBF_CRSPACE_PERFMON_REG0		0x0
+ #define MLXBF_CRSPACE_PERFSEL0			GENMASK(23, 16)
+ #define MLXBF_CRSPACE_PERFSEL1			GENMASK(7, 0)
+-#define MLXBF_CRSPACE_PERFMON_CTL		0x40
++#define MLXBF_CRSPACE_PERFMON_CTL(n)		(n * 2)
+ #define MLXBF_CRSPACE_PERFMON_EN		BIT(30)
+ #define MLXBF_CRSPACE_PERFMON_CLR		BIT(28)
+-#define MLXBF_CRSPACE_PERFMON_VAL0		0x4c
++#define MLXBF_CRSPACE_PERFMON_VAL0(n)		(MLXBF_CRSPACE_PERFMON_CTL(n) + 0xc)
+ 
+ struct mlxbf_pmc_events {
+ 	uint32_t evt_num;
+-- 
+2.14.1
+

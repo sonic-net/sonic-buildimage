@@ -30,7 +30,7 @@
     },
     {
       "key": "sonic_log_level",
-      "stringval": "error"
+      "stringval": "debug"
     }
     ]
 }

@@ -1,0 +1,28 @@
+From e0f5c6c6572fd70ad8fa0d268ee95fb8aba1bd98 Mon Sep 17 00:00:00 2001
+From: Ciju Rajan K <crajank@nvidia.com>
+Date: Thu, 17 Aug 2023 10:01:22 +0000
+Subject: Revert "mlxsw: core_hwmon: Adjust module label names based on MTCAP
+ sensor counter"
+
+This reverts commit 33aa62a331425d5828d417eeac7fab697eb45286.
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index 464787b10b73..d41afdfbd085 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -377,8 +377,7 @@ mlxsw_hwmon_module_temp_label_show(struct device *dev,
+ 			container_of(attr, struct mlxsw_hwmon_attr, dev_attr);
+ 
+ 	return sprintf(buf, "front panel %03u\n",
+-		       mlwsw_hwmon_attr->type_index + 1 -
+-		       mlwsw_hwmon_attr->hwmon->sensor_count);
++		       mlwsw_hwmon_attr->type_index);
+ }
+ 
+ static ssize_t
+-- 
+2.14.1
+

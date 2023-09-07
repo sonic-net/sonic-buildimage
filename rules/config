@@ -157,7 +157,7 @@ INCLUDE_NAT = n
 INCLUDE_DHCP_RELAY = y
 
 # INCLUDE_P4RT - build docker-p4rt for P4RT support
-INCLUDE_P4RT = y
+INCLUDE_P4RT = n
 
 # ENABLE_AUTO_TECH_SUPPORT - Enable the configuration for event-driven techsupport & coredump mgmt feature
 ENABLE_AUTO_TECH_SUPPORT = y

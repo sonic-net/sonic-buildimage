@@ -1,0 +1,32 @@
+From 17e98239da6fd921a76cbee7ac8dcc3c437ad5d6 Mon Sep 17 00:00:00 2001
+From: Jisheng Zhang <Jisheng.Zhang@synaptics.com>
+Date: Wed, 24 Mar 2021 15:47:21 +0800
+Subject: [PATCH backport 5.10 56/63] mmc: sdhci-of-dwcmshc: set
+ MMC_CAP_WAIT_WHILE_BUSY
+
+The host supports HW busy detection of the device busy signaling over
+dat0 line. Set MMC_CAP_wAIT_WHILE_BUSY host capability.
+
+Signed-off-by: Jisheng Zhang <Jisheng.Zhang@synaptics.com>
+Link: https://lore.kernel.org/r/20210324154703.69f97fde@xhacker.debian
+Signed-off-by: Ulf Hansson <ulf.hansson@linaro.org>
+---
+ drivers/mmc/host/sdhci-of-dwcmshc.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/mmc/host/sdhci-of-dwcmshc.c b/drivers/mmc/host/sdhci-of-dwcmshc.c
+index 34d26e388..bac874ab0 100644
+--- a/drivers/mmc/host/sdhci-of-dwcmshc.c
++++ b/drivers/mmc/host/sdhci-of-dwcmshc.c
+@@ -416,6 +416,8 @@ static int dwcmshc_probe(struct platform_device *pdev)
+ 			goto err_clk;
+ 	}
+ 
++	host->mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY;
++
+ 	err = sdhci_add_host(host);
+ 	if (err)
+ 		goto err_clk;
+-- 
+2.20.1
+

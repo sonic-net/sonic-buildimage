@@ -1,0 +1,41 @@
+From b66ec3f67d61b7e380c61a12771cc2fee2f0a10e Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 9 Mar 2023 09:16:33 +0000
+Subject: [PATCH backport v.5.10 3/3] mlxsw: i2c: Fix chunk size setting in
+ output mailbox buffer
+
+Set output mailbox buffer size multiple of minimal chunk size (32).
+
+Full buffer size is 256 bytes, while chunk size, which can be sent to
+device on some controllers could be for example 32 + 4, 64 + 4, 128 +
+4. Thus, last chunk maybe missed, and transaction tail will be lost.
+
+For example, if transaction size is 256 bytes and chunk size is 64 + 4,
+only 204 (68 * 3) bytes will be read instead of 256.
+
+With this fix chunk size will be multiple of 2^n (where n could be 5, 6,
+7) and last chunk will be handled.
+
+Fixes: 95b75cbd1bc5 ("mlxsw: i2c: Extend input parameters list of command API")
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/i2c.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
+index ba31540f1..e04557afc 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
+@@ -466,7 +466,8 @@ mlxsw_i2c_cmd(struct device *dev, u16 opcode, u32 in_mod, size_t in_mbox_size,
+ 	} else {
+ 		/* No input mailbox is case of initialization query command. */
+ 		reg_size = MLXSW_I2C_MAX_DATA_SIZE;
+-		num = reg_size / mlxsw_i2c->block_size;
++		num = reg_size / (mlxsw_i2c->block_size -
++				  (mlxsw_i2c->block_size % MLXSW_I2C_BLK_DEF));
+ 
+ 		if (mutex_lock_interruptible(&mlxsw_i2c->cmd.lock) < 0) {
+ 			dev_err(&client->dev, "Could not acquire lock");
+-- 
+2.20.1
+

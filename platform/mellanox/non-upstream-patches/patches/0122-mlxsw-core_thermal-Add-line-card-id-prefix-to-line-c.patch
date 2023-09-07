@@ -1,8 +1,8 @@
-From 3f3548804a89b7fbe15fa92ea8686f08b990b083 Mon Sep 17 00:00:00 2001
+From 901e0ed6354f716b23854ad2f8e4eeb9a74414ab Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:36 +0200
-Subject: [PATCH] mlxsw: core_thermal: Add line card id prefix to line card
- thermal zone name
+Subject: [PATCH backport 5.10 122/182] mlxsw: core_thermal: Add line card id
+ prefix to line card thermal zone name
 
 Add prefix "lc#n" to thermal zones associated with the thermal objects
 found on line cards.
@@ -21,10 +21,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 12 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index 2efedd35b..421555d3f 100644
+index bde5489d9240..4964c9164c2d 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -730,8 +730,12 @@ mlxsw_thermal_module_tz_init(struct mlxsw_thermal_module *module_tz)
+@@ -689,8 +689,12 @@ mlxsw_thermal_module_tz_init(struct mlxsw_thermal_module *module_tz)
  	char tz_name[MLXSW_THERMAL_ZONE_MAX_NAME];
  	int err;
  
@@ -39,7 +39,7 @@ index 2efedd35b..421555d3f 100644
  	module_tz->tzdev = thermal_zone_device_register(tz_name,
  							MLXSW_THERMAL_NUM_TRIPS,
  							MLXSW_THERMAL_TRIP_MASK,
-@@ -865,8 +869,12 @@ mlxsw_thermal_gearbox_tz_init(struct mlxsw_thermal_module *gearbox_tz)
+@@ -824,8 +828,12 @@ mlxsw_thermal_gearbox_tz_init(struct mlxsw_thermal_module *gearbox_tz)
  	char tz_name[MLXSW_THERMAL_ZONE_MAX_NAME];
  	int ret;
  
@@ -55,5 +55,5 @@ index 2efedd35b..421555d3f 100644
  						MLXSW_THERMAL_NUM_TRIPS,
  						MLXSW_THERMAL_TRIP_MASK,
 -- 
-2.30.2
+2.20.1
 

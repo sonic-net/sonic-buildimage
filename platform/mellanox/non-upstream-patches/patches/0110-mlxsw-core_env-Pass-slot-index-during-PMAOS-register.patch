@@ -1,8 +1,8 @@
-From 562fe3c68c9dbcff172eeae8b4f0a84484b5e3e9 Mon Sep 17 00:00:00 2001
+From 7c2049bccef11b265fd4a4458b92277ea8ea97fc Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:52 +0200
-Subject: [PATCH] mlxsw: core_env: Pass slot index during PMAOS register write
- call
+Subject: [PATCH backport 5.10 110/182] mlxsw: core_env: Pass slot index during
+ PMAOS register write call
 
 Pass the slot index down to PMAOS pack helper alongside with the module.
 
@@ -15,10 +15,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  2 files changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-index b1a1204e7..45058d4cf 100644
+index 8ab15d5bd7f5..b7c1fd3dbf45 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-@@ -400,7 +400,7 @@ static int mlxsw_env_module_reset(struct mlxsw_core *mlxsw_core, u8 module)
+@@ -398,7 +398,7 @@ static int mlxsw_env_module_reset(struct mlxsw_core *mlxsw_core, u8 module)
  {
  	char pmaos_pl[MLXSW_REG_PMAOS_LEN];
  
@@ -27,7 +27,7 @@ index b1a1204e7..45058d4cf 100644
  	mlxsw_reg_pmaos_rst_set(pmaos_pl, true);
  
  	return mlxsw_reg_write(mlxsw_core, MLXSW_REG(pmaos), pmaos_pl);
-@@ -488,7 +488,7 @@ static int mlxsw_env_module_enable_set(struct mlxsw_core *mlxsw_core,
+@@ -486,7 +486,7 @@ static int mlxsw_env_module_enable_set(struct mlxsw_core *mlxsw_core,
  	enum mlxsw_reg_pmaos_admin_status admin_status;
  	char pmaos_pl[MLXSW_REG_PMAOS_LEN];
  
@@ -36,7 +36,7 @@ index b1a1204e7..45058d4cf 100644
  	admin_status = enable ? MLXSW_REG_PMAOS_ADMIN_STATUS_ENABLED :
  				MLXSW_REG_PMAOS_ADMIN_STATUS_DISABLED;
  	mlxsw_reg_pmaos_admin_status_set(pmaos_pl, admin_status);
-@@ -878,7 +878,7 @@ mlxsw_env_module_oper_state_event_enable(struct mlxsw_core *mlxsw_core,
+@@ -876,7 +876,7 @@ mlxsw_env_module_oper_state_event_enable(struct mlxsw_core *mlxsw_core,
  	for (i = 0; i < module_count; i++) {
  		char pmaos_pl[MLXSW_REG_PMAOS_LEN];
  
@@ -46,7 +46,7 @@ index b1a1204e7..45058d4cf 100644
  				      MLXSW_REG_PMAOS_E_GENERATE_EVENT);
  		mlxsw_reg_pmaos_ee_set(pmaos_pl, true);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index e981630fd..748a22ec4 100644
+index a5fa25d4bd8f..07f68fd1a4e5 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -5481,9 +5481,10 @@ enum mlxsw_reg_pmaos_e {
@@ -62,5 +62,5 @@ index e981630fd..748a22ec4 100644
  }
  
 -- 
-2.30.2
+2.20.1
 

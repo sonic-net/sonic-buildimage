@@ -1,7 +1,7 @@
-From 4392d92a40328fe18d1152fae6fada74f46fa1a3 Mon Sep 17 00:00:00 2001
+From 7b7f5f88374c3377fc28e48a0bc77ae4aa783fda Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 7 Dec 2021 16:07:31 +0200
-Subject: [PATCH] mlxsw: core: Remove unnecessary asserts
+Subject: [PATCH backport 5.10 103/182] mlxsw: core: Remove unnecessary asserts
 
 Remove unnecessary asserts for module index validation. Leave only one
 that is actually necessary in mlxsw_env_pmpe_listener_func() where the
@@ -14,10 +14,10 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 24 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-index 61f7a40c0..4cbed2e3b 100644
+index 6dd4ae2f45f4..c1d51b4b6b36 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-@@ -416,9 +416,6 @@ int mlxsw_env_reset_module(struct net_device *netdev,
+@@ -414,9 +414,6 @@ int mlxsw_env_reset_module(struct net_device *netdev,
  	    !(req & (ETH_RESET_PHY << ETH_RESET_SHARED_SHIFT)))
  		return 0;
  
@@ -27,7 +27,7 @@ index 61f7a40c0..4cbed2e3b 100644
  	mutex_lock(&mlxsw_env->module_info_lock);
  
  	if (mlxsw_env->module_info[module].num_ports_up) {
-@@ -458,9 +455,6 @@ mlxsw_env_get_module_power_mode(struct mlxsw_core *mlxsw_core, u8 module,
+@@ -456,9 +453,6 @@ mlxsw_env_get_module_power_mode(struct mlxsw_core *mlxsw_core, u8 module,
  	u32 status_bits;
  	int err;
  
@@ -37,7 +37,7 @@ index 61f7a40c0..4cbed2e3b 100644
  	mutex_lock(&mlxsw_env->module_info_lock);
  
  	params->policy = mlxsw_env->module_info[module].power_mode_policy;
-@@ -562,9 +556,6 @@ mlxsw_env_set_module_power_mode(struct mlxsw_core *mlxsw_core, u8 module,
+@@ -560,9 +554,6 @@ mlxsw_env_set_module_power_mode(struct mlxsw_core *mlxsw_core, u8 module,
  	bool low_power;
  	int err = 0;
  
@@ -47,7 +47,7 @@ index 61f7a40c0..4cbed2e3b 100644
  	if (policy != ETHTOOL_MODULE_POWER_MODE_POLICY_HIGH &&
  	    policy != ETHTOOL_MODULE_POWER_MODE_POLICY_AUTO) {
  		NL_SET_ERR_MSG_MOD(extack, "Unsupported power mode policy");
-@@ -903,9 +894,6 @@ mlxsw_env_module_overheat_counter_get(struct mlxsw_core *mlxsw_core, u8 module,
+@@ -901,9 +892,6 @@ mlxsw_env_module_overheat_counter_get(struct mlxsw_core *mlxsw_core, u8 module,
  {
  	struct mlxsw_env *mlxsw_env = mlxsw_core_env(mlxsw_core);
  
@@ -57,7 +57,7 @@ index 61f7a40c0..4cbed2e3b 100644
  	mutex_lock(&mlxsw_env->module_info_lock);
  	*p_counter = mlxsw_env->module_info[module].module_overheat_counter;
  	mutex_unlock(&mlxsw_env->module_info_lock);
-@@ -918,9 +906,6 @@ void mlxsw_env_module_port_map(struct mlxsw_core *mlxsw_core, u8 module)
+@@ -916,9 +904,6 @@ void mlxsw_env_module_port_map(struct mlxsw_core *mlxsw_core, u8 module)
  {
  	struct mlxsw_env *mlxsw_env = mlxsw_core_env(mlxsw_core);
  
@@ -67,7 +67,7 @@ index 61f7a40c0..4cbed2e3b 100644
  	mutex_lock(&mlxsw_env->module_info_lock);
  	mlxsw_env->module_info[module].num_ports_mapped++;
  	mutex_unlock(&mlxsw_env->module_info_lock);
-@@ -931,9 +916,6 @@ void mlxsw_env_module_port_unmap(struct mlxsw_core *mlxsw_core, u8 module)
+@@ -929,9 +914,6 @@ void mlxsw_env_module_port_unmap(struct mlxsw_core *mlxsw_core, u8 module)
  {
  	struct mlxsw_env *mlxsw_env = mlxsw_core_env(mlxsw_core);
  
@@ -77,7 +77,7 @@ index 61f7a40c0..4cbed2e3b 100644
  	mutex_lock(&mlxsw_env->module_info_lock);
  	mlxsw_env->module_info[module].num_ports_mapped--;
  	mutex_unlock(&mlxsw_env->module_info_lock);
-@@ -945,9 +927,6 @@ int mlxsw_env_module_port_up(struct mlxsw_core *mlxsw_core, u8 module)
+@@ -943,9 +925,6 @@ int mlxsw_env_module_port_up(struct mlxsw_core *mlxsw_core, u8 module)
  	struct mlxsw_env *mlxsw_env = mlxsw_core_env(mlxsw_core);
  	int err = 0;
  
@@ -87,7 +87,7 @@ index 61f7a40c0..4cbed2e3b 100644
  	mutex_lock(&mlxsw_env->module_info_lock);
  
  	if (mlxsw_env->module_info[module].power_mode_policy !=
-@@ -977,9 +956,6 @@ void mlxsw_env_module_port_down(struct mlxsw_core *mlxsw_core, u8 module)
+@@ -975,9 +954,6 @@ void mlxsw_env_module_port_down(struct mlxsw_core *mlxsw_core, u8 module)
  {
  	struct mlxsw_env *mlxsw_env = mlxsw_core_env(mlxsw_core);
  
@@ -98,5 +98,5 @@ index 61f7a40c0..4cbed2e3b 100644
  
  	mlxsw_env->module_info[module].num_ports_up--;
 -- 
-2.30.2
+2.20.1
 

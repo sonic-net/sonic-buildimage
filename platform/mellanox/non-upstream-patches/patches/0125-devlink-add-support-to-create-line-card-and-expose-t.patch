@@ -1,7 +1,8 @@
-From 242d6e2b00a25ec4184a63cec76c9f7f7c235594 Mon Sep 17 00:00:00 2001
+From 36a2e4e93d7d1ca2ed670b4cf827400ba367e290 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 22 Dec 2021 08:57:27 +0000
-Subject: [PATCH] devlink: add support to create line card and expose to user
+Subject: [PATCH backport 5.10 125/182] devlink: add support to create line
+ card and expose to user
 
 Extend the devlink API so the driver is going to be able to create and
 destroy linecard instances. There can be multiple line cards per devlink
@@ -16,7 +17,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  3 files changed, 339 insertions(+), 1 deletion(-)
 
 diff --git a/include/net/devlink.h b/include/net/devlink.h
-index b01bb9bca..e8f046590 100644
+index b01bb9bca5a2..e8f046590579 100644
 --- a/include/net/devlink.h
 +++ b/include/net/devlink.h
 @@ -31,6 +31,7 @@ struct devlink_dev_stats {
@@ -70,7 +71,7 @@ index b01bb9bca..e8f046590 100644
  			u32 size, u16 ingress_pools_count,
  			u16 egress_pools_count, u16 ingress_tc_count,
 diff --git a/include/uapi/linux/devlink.h b/include/uapi/linux/devlink.h
-index cf89c318f..ff07ad596 100644
+index cf89c318f2ac..ff07ad596035 100644
 --- a/include/uapi/linux/devlink.h
 +++ b/include/uapi/linux/devlink.h
 @@ -126,6 +126,16 @@ enum devlink_command {
@@ -110,7 +111,7 @@ index cf89c318f..ff07ad596 100644
  
  	__DEVLINK_ATTR_MAX,
 diff --git a/net/core/devlink.c b/net/core/devlink.c
-index 72047750d..645fe0612 100644
+index 72047750dcd9..645fe0612b53 100644
 --- a/net/core/devlink.c
 +++ b/net/core/devlink.c
 @@ -91,6 +91,25 @@ static const struct nla_policy devlink_function_nl_policy[DEVLINK_PORT_FUNCTION_
@@ -527,5 +528,5 @@ index 72047750d..645fe0612 100644
  			u32 size, u16 ingress_pools_count,
  			u16 egress_pools_count, u16 ingress_tc_count,
 -- 
-2.30.2
+2.20.1
 
