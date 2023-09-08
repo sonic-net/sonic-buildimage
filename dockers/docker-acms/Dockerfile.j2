@@ -74,7 +74,6 @@ RUN rm -rf /var/lib/apt/lists/*
 
 RUN rm -rf /tmp/*
 
-COPY ["start.py", "cert_converter.py", "dSMS_config_modifier.py", "CA_cert_downloader.py", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
