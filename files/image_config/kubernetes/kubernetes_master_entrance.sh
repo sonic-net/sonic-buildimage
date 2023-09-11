@@ -33,7 +33,7 @@ disk="${disk_by_path_dir}/${disk_path_file}"
 mkdir -p $mount_point
 mount $disk $mount_point
 
-# check whether it is the first time to boot
+# Check whether it is the first time to boot
 first_boot_flag_file="/from_host/first_boot_flag"
 if [ -f $first_boot_flag_file ]; then
     exit 0
