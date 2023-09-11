@@ -62,7 +62,7 @@ stages:
           script: |
             set -ex
             make PLATFORM=vs PLATFORM_ARCH=amd64 configure
-            make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz target/docker-ptf-sai.gz
+            make BUILD_MULTIASIC_KVM=y SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz target/docker-ptf-sai.gz
             mv target $(Build.ArtifactStagingDirectory)
 
 - stage: Build
