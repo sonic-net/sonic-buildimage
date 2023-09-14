@@ -98,7 +98,7 @@ stages:
           script: |
             set -ex
             make PLATFORM=broadcom PLATFORM_ARCH=amd64 configure
-            make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/broadcom target/docker-syncd-brcm-rpc.gz target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi target/sonic-broadcom.raw
+            make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/broadcom target/docker-syncd-brcm-rpc.gz target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
             mv target $(Build.ArtifactStagingDirectory)
         - name: mellanox
           script: |
