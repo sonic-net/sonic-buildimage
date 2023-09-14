@@ -3,16 +3,6 @@
         "tag": "bgp-state",
         "regex": "Peer .default\\|([0-9a-f:.]*[0-9a-f]*). admin state is set to .(up|down).",
         "params": [ "ip", "status" ]
-    },
-    {
-        "tag": "zebra-no-buff",
-        "regex": "No buffer space available",
-        "params": []
-    },
-    {
-        "tag": "notification",
-        "regex": "NOTIFICATION: (received|sent) (?:to|from) neighbor ([0-9a-f:.]*[0-9a-f+]*)\\s*.* (\\d*)\/(\\d*)",
-        "params": [ "is_sent", "ip", "major_code", "minor_code" ]
     }
 ]
 

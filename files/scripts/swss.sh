@@ -124,12 +124,7 @@ function clean_up_tables()
 #       SYSTEM_LAG_ID_TABLE and SYSTEM_LAG_ID_SET are adjusted appropriately
 function clean_up_chassis_db_tables()
 {
-    if [[ !($($SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0) ]]; then
-        return
-    fi
 
-    lc=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'hostname'`
-    asic=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'asic_name'`
     switch_type=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'switch_type'`
 
     # Run clean up only in swss running for voq switches
@@ -137,8 +132,16 @@ function clean_up_chassis_db_tables()
         return
     fi
 
+    if [[ !($($SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0) ]]; then
+        return
+    fi
+
+    lc=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'hostname'`
+    asic=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'asic_name'`
+
     # First, delete SYSTEM_NEIGH entries
-    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    num_neigh=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local nn = 0
     local host = string.gsub(ARGV[1], '%-', '%%-')
     local dev = ARGV[2]
     local ps = 'SYSTEM_NEIGH*|' .. host .. '|' .. dev
@@ -146,19 +149,26 @@ function clean_up_chassis_db_tables()
     for j,key in ipairs(keylist) do
         if string.match(key, ps) ~= nil then
             redis.call('DEL', key)
+            nn = nn + 1
         end
     end
-    return " 0 $lc $asic
+    return nn" 0 $lc $asic`
+
+    debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_NEIGH entries deleted: $num_neigh"
 
     # Wait for some time before deleting system interface so that the system interface's "object in use"
     # is cleared in both orchangent and in syncd. Without this delay, the orchagent clears the refcount
     # but the syncd (meta) still has no-zero refcount. Because of this, orchagent gets "object still in use"
     # error and aborts.
+    # This delay is needed only if some system neighbors were deleted.
 
-    sleep 30
+    if [[ $num_neigh > 0 ]]; then
+        sleep 30
+    fi
 
     # Next, delete SYSTEM_INTERFACE entries
-    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    num_sys_intf=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local nsi = 0
     local host = string.gsub(ARGV[1], '%-', '%%-')
     local dev = ARGV[2]
     local ps = 'SYSTEM_INTERFACE*|' .. host .. '|' .. dev
@@ -166,12 +176,16 @@ function clean_up_chassis_db_tables()
     for j,key in ipairs(keylist) do
         if string.match(key, ps) ~= nil then
             redis.call('DEL', key)
+            nsi = nsi + 1
         end
     end
-    return " 0 $lc $asic
+    return nsi" 0 $lc $asic`
+
+    debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_INTERFACE entries deleted: $num_sys_intf"
 
     # Next, delete SYSTEM_LAG_MEMBER_TABLE entries
-    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    num_lag_mem=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local nlm = 0
     local host = string.gsub(ARGV[1], '%-', '%%-')
     local dev = ARGV[2]
     local ps = 'SYSTEM_LAG_MEMBER_TABLE*|' .. host .. '|' .. dev
@@ -179,17 +193,24 @@ function clean_up_chassis_db_tables()
     for j,key in ipairs(keylist) do
         if string.match(key, ps) ~= nil then
             redis.call('DEL', key)
+            nlm = nlm + 1
         end
     end
-    return " 0 $lc $asic
+    return nlm" 0 $lc $asic`
+
+    debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_LAG_MEMBER_TABLE entries deleted: $num_lag_mem"
 
     # Wait for some time before deleting system lag so that the all the memebers of the
     # system lag will be cleared. 
+    # This delay is needed only if some system lag members were deleted
 
-    sleep 15
+    if [[ $num_lag_mem > 0 ]]; then
+        sleep 15
+    fi
 
     # Finally, delete SYSTEM_LAG_TABLE entries and deallot LAG IDs
-    $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    num_sys_lag=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local nsl = 0
     local host = string.gsub(ARGV[1], '%-', '%%-')
     local dev = ARGV[2]
     local ps = 'SYSTEM_LAG_TABLE*|' .. '(' .. host .. '|' .. dev ..'.*' .. ')'
@@ -201,9 +222,12 @@ function clean_up_chassis_db_tables()
             local lagid = redis.call('HGET', 'SYSTEM_LAG_ID_TABLE', lagname)
             redis.call('SREM', 'SYSTEM_LAG_ID_SET', lagid)
             redis.call('HDEL', 'SYSTEM_LAG_ID_TABLE', lagname)
+            nsl = nsl + 1
         end
     end
-    return " 0 $lc $asic
+    return nsl" 0 $lc $asic`
+
+    debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_LAG_TABLE entries deleted: $num_sys_lag"
 
 }
 
@@ -275,7 +299,7 @@ start() {
         $SONIC_DB_CLI GB_ASIC_DB FLUSHDB
         $SONIC_DB_CLI GB_COUNTERS_DB FLUSHDB
         $SONIC_DB_CLI RESTAPI_DB FLUSHDB
-        clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*'"
+        clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*','SYSTEM_NEIGH_TABLE*'"
         $SONIC_DB_CLI APPL_STATE_DB FLUSHDB
         clean_up_chassis_db_tables
         rm -rf /tmp/cache
