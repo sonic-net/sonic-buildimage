@@ -113,8 +113,8 @@ index 2de00a6..048745a 100644
  
      for(srvr=0; srvr < tac_srv_no && !done; srvr++) {
          arep.msg = NULL;
-@@ -748,7 +823,7 @@ lookup_tacacs_user(struct pwbuf *pb)
-                     tac_ntop(tac_srv[srvr].addr->ai_addr) : "unknown", tac_fd);
+@@ -747,7 +822,7 @@ lookup_tacacs_user(struct pwbuf *pb)
+                 tac_ntop(tac_srv[srvr].addr->ai_addr) : "unknown", tac_fd);
              continue;
          }
 -        ret = tac_author_send(tac_fd, pb->name, "", "", attr);

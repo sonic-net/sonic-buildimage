@@ -101,9 +101,6 @@ jobs:
         if [ ${{ parameters.swi_image }} == true ]; then
           make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-${{ parameters.platform }}.swi
         fi
-        if [ ${{ parameters.raw_image }} == true ]; then
-          make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/sonic-${{ parameters.platform }}.raw
-        fi
         if [ ${{ parameters.sync_rpc_image }} == true ]; then
           make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y target/docker-syncd-${{ parameters.platform_short }}-rpc.gz
           # workaround for issue in rules/sairedis.dep,  git ls-files will list un-exist files for cache

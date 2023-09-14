@@ -56,7 +56,7 @@ class DHCPv4_Counter(object):
         interfaces = []
         for key in self.db.keys(self.db.STATE_DB):
             if DHCPv4_COUNTER_TABLE in key:
-                interfaces.append(key[21:])
+                interfaces.append(key[19:])
         return interfaces
 
     def get_dhcp4relay_msg_count(self, interface, dir):
@@ -274,6 +274,10 @@ def dhcp_relay_ipv4_destination():
 def dhcp_relay_ipv6_destination():
     get_dhcp_relay(DHCP_RELAY, DHCPV6_SERVERS, with_header=True)
 
+@dhcp_relay_ipv4.command("counters")
+@click.option('-i', '--interface', required=False)
+def dhcp_relay_ip4counters(interface):
+    ipv4_counters(interface)
 
 @dhcp_relay_ipv6.command("counters")
 @click.option('-i', '--interface', required=False)

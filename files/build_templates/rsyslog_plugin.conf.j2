@@ -7,8 +7,6 @@ template(name="prog_msg" type="list") {
     constant(value="\n")
 }
 
-$ModLoad omprog
-
 {% for proc in proclist %}
 if re_match($programname, "{{ proc.name }}") then {
     action(type="omprog"

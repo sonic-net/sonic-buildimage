@@ -35,7 +35,6 @@ jobs:
       dbg_image: no
       asan_image: no
       swi_image: no
-      raw_image: no
       docker_syncd_rpc_image: no
       syncd_rpc_image: no
       platform_rpc: no
@@ -62,7 +61,6 @@ jobs:
           variables:
             dbg_image: yes
             swi_image: yes
-            raw_image: yes
             docker_syncd_rpc_image: yes
             platform_rpc: brcm
 
@@ -148,9 +146,6 @@ jobs:
             fi
             if [ $(swi_image) == yes ]; then
               make $BUILD_OPTIONS ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-$(GROUP_NAME).swi
-            fi
-            if [ $(raw_image) == yes ]; then
-              make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).raw
             fi
             if [ $(docker_syncd_rpc_image) == yes ]; then
               # workaround for issue in rules/sairedis.dep, git ls-files will list un-exist files for cache

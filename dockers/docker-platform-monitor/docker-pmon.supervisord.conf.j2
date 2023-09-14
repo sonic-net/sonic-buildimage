@@ -112,7 +112,7 @@ dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
 {% endif %}
 
-{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}
+{% if DEVICE_METADATA and 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}
 {% if not skip_ycabled %}
 [program:ycabled]
 {% if delay_ycabled %}

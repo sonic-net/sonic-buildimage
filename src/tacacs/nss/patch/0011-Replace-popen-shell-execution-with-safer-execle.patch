@@ -4,11 +4,11 @@ Date: Mon, 26 Jun 2023 09:18:44 -0700
 Subject: [PATCH] Replace popen shell execution with safer execle
 
 ---
- nss_tacplus.c | 63 ++++++++++++++++++++++++++++++++++++++++++---------
- 1 file changed, 52 insertions(+), 11 deletions(-)
+ nss_tacplus.c | 54 ++++++++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 47 insertions(+), 7 deletions(-)
 
 diff --git a/nss_tacplus.c b/nss_tacplus.c
-index cd73870..7574374 100644
+index 50e560d..33e3e8c 100644
 --- a/nss_tacplus.c
 +++ b/nss_tacplus.c
 @@ -34,6 +34,8 @@
@@ -72,7 +72,7 @@ index cd73870..7574374 100644
      fp = fopen(user_conf, "ab+");
      if(!fp) {
          syslog(LOG_ERR, "%s: %s fopen failed", nssname, user_conf);
-@@ -495,18 +535,19 @@ static int create_or_modify_local_user(const char *name, int level, bool existin
+@@ -495,18 +535,18 @@ static int create_or_modify_local_user(const char *name, int level, bool existin
      while(lvl >= MIN_TACACS_USER_PRIV) {
          user = &useradd_grp_list[lvl];
          if(user->info && user->secondary_grp && user->shell) {
@@ -83,21 +83,16 @@ index cd73870..7574374 100644
 -            if(!fp || -1 == pclose(fp)) {
 -                syslog(LOG_ERR, "%s: %s popen failed errno=%d %s",
 -                        nssname, command, errno, strerror(errno));
--                delete_conf_line(name);
--                return -1;
--            }
--            if(debug)
 +            char sgid[10] = {0};
 +            char home[64] = {0};
 +            snprintf(sgid, 10, "%d", user->gid);
 +            snprintf(home, 63, "/home/%s", name);
 +            if(0 != user_mod_add(command, name, sgid, user->secondary_grp, user->info, home, user->shell)) {
-+                if(debug)
-+                    syslog(LOG_ERR, "%s: %s %s failed", nssname, command, name);
-+                 delete_conf_line(name);
-+                 return -1;
-+             }
-+             if(debug)
++                syslog(LOG_ERR, "%s: %s %s failed", nssname, command, name);
+                 delete_conf_line(name);
+                 return -1;
+             }
+             if(debug)
                  syslog(LOG_DEBUG, "%s: %s %s success", nssname, command, name);
 +
              delete_conf_line(name);

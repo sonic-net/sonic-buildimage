@@ -117,6 +117,10 @@ stages:
       displayName: "Download sonic-buildimage.vs artifact"
 
     - script: |
+        sudo src/sonic-swss-common/.azure-pipelines/build_and_install_module.sh
+      displayName: "Install kernel modules"
+
+    - script: |
         sudo apt-get update
         sudo apt-get install -y make libtool m4 autoconf dh-exec debhelper cmake pkg-config \
                          libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev swig3.0 \

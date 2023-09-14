@@ -540,7 +540,9 @@ start() {
     # TODO: Mellanox will remove the --tmpfs exception after SDK socket path changed in new SDK version
 {%- endif %}
     docker create {{docker_image_run_opt}} \
+{%- if docker_container_name != "dhcp_server" %}
         --net=$NET \
+{%- endif %}
         -e RUNTIME_OWNER=local \
         --uts=host \{# W/A: this should be set per-docker, for those dockers which really need host's UTS namespace #}
 {%- if install_debug_image == "y" %}

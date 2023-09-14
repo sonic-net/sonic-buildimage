@@ -13,8 +13,8 @@ flask==1.0
 flask-httpauth==2.5.0
 future==0.18.3
 futures==3.2.0
-grpcio==1.18.0
-grpcio-tools==1.15.0
+grpcio==1.41.1
+grpcio-tools==1.41.1
 importlib-resources==3.3.1
 ipaddress==1.0.23
 ipython==5.4.1
