@@ -219,8 +219,8 @@ stages:
             echo "==== Finished building slim images"
 
             echo "==== Building regular images"
-            make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi target/sonic-broadcom.raw
-            mv target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi target/sonic-broadcom.raw target/release/
+            make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
+            mv target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi target/release/
             echo "==== Finished building regular images"
 
             echo "==== Building syncd-rpc docker"
