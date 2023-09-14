@@ -67,3 +67,14 @@ class TestConfigModifier(TestCase):
         cloudtype = dSMS_config_modifier.get_device_cloudtype()
         self.assertEqual(cloudtype, 'Public')
 
+    @mock.patch("swsscommon.swsscommon.DBConnector")
+    @mock.patch("swsscommon.swsscommon.Table")
+    def test_cloudtype_02(self, mock_table, mock_conn):
+        '''
+        Get cloud type and raise exception
+        Should return emptry string
+        '''
+        swsscommon_err = Exception("redis error")
+        mock_table.side_effect = [swsscommon_err]
+        cloudtype = dSMS_config_modifier.get_device_cloudtype()
+        self.assertEqual(cloudtype, '')

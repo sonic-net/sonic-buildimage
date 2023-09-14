@@ -17,11 +17,15 @@ sonic_logger = logger.Logger()
 sonic_logger.set_min_log_priority_info()
 
 def get_device_cloudtype():
-    config_db = swsscommon.DBConnector("CONFIG_DB", REDIS_TIMEOUT_MS, True)
-    device_metadata = swsscommon.Table(config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
-    (status, tuples) = device_metadata.get("localhost")
-    localhost = dict(tuples)
-    return localhost.get('cloudtype', '')
+    try:
+        config_db = swsscommon.DBConnector("CONFIG_DB", REDIS_TIMEOUT_MS, True)
+        device_metadata = swsscommon.Table(config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
+        (status, tuples) = device_metadata.get("localhost")
+        localhost = dict(tuples)
+        return localhost.get('cloudtype', '')
+    except Exception as e:
+        sonic_logger.log_error("dSMS_config_modifier: Unable to get cloudtype " + str(e))
+        return ""
 
 def get_device_region_from_bootstrap_cert(path_to_bootstrap_cert):
     # /etc/sonic/credentials/sonic_acms_bootstrap-uswestcentral.pfx
