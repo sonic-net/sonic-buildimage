@@ -53,6 +53,7 @@ COPY ["TSC", "/usr/bin/TSC"]
 COPY ["TS", "/usr/bin/TS"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["zsocket.sh", "/usr/bin/"]
+COPY ["00-frr.conf", "/etc/rsyslog.d/"]
 COPY ["*.json", "/etc/rsyslog.d/"]
 COPY ["files/rsyslog_plugin.conf.j2", "/etc/rsyslog.d/"]
 RUN chmod a+x /usr/bin/TSA && \

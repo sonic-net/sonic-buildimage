@@ -39,7 +39,6 @@ stages:
         - name: broadcom
           variables:
             swi_image: yes
-            raw_image: yes
             docker_syncd_rpc_image: yes
             platform_rpc: brcm
         - name: mellanox
