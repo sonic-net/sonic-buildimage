@@ -27,7 +27,6 @@ def get_device_cloudtype():
     localhost = dict(tuples)
     return localhost.get('cloudtype', '')
 
-
 def get_device_region_from_bootstrap_cert(path_to_bootstrap_cert):
     # /etc/sonic/credentials/sonic_acms_bootstrap-uswestcentral.pfx
     cert = os.path.basename(path_to_bootstrap_cert)
