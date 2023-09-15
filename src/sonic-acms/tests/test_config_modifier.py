@@ -74,7 +74,21 @@ class TestConfigModifier(TestCase):
         Get cloud type and raise exception
         Should return emptry string
         '''
-        swsscommon_err = Exception("redis error")
+        swsscommon_err = RuntimeError("redis error")
         mock_table.side_effect = [swsscommon_err]
         cloudtype = dSMS_config_modifier.get_device_cloudtype()
         self.assertEqual(cloudtype, '')
+
+    @mock.patch("swsscommon.swsscommon.DBConnector")
+    @mock.patch("swsscommon.swsscommon.Table")
+    def test_cloudtype_03(self, mock_table, mock_conn):
+        '''
+        Get cloud type and raise exception
+        Should raise exception
+        '''
+        expect_err = Exception("unknown error")
+        mock_table.side_effect = [expect_err]
+        try:
+            dSMS_config_modifier.get_device_cloudtype()
+        except Exception as e:
+            self.assertEqual(e, expect_err)
