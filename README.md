@@ -353,6 +353,10 @@ on the SAI version for each SONiC release.
     [managing, configuring and monitoring SONiC](https://github.com/sonic-net/sonic-mgmt)
     (gzip tar archive)
 
+## SONiC Image Azure Pipelines
+
+All SONiC project build pipeline could be found at [Download Portal for SONiC Images](https://sonic-build.azurewebsites.net)
+
 ## Contribution Guide
 
 All contributors must sign a contribution license agreement before contributions
