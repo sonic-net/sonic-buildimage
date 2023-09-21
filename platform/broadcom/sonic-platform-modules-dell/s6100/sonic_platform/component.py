@@ -321,3 +321,16 @@ class Component(ComponentBase):
             A boolean, True if install was successful, False if not
         """
         return False
+
+    def update_firmware(self,image_path):
+       """
+         Updates firmware to the componenent
+
+        Args:
+            image_path: A string, path to firmware image
+
+        Returns:
+            A boolean, True if install was successful, False if not
+
+       """
+       return False

@@ -5,8 +5,8 @@
 # Load required kernel-mode drivers
 load_kernel_drivers() {
     echo "Loading Kernel Drivers"
-    sudo insmod /lib/modules/5.10.0-18-2-arm64/nokia_7215_ixs_a1_cpld.ko
-    sudo insmod /lib/modules/5.10.0-18-2-arm64/ac5_thermal_sensor.ko
+    sudo insmod /lib/modules/5.10.0-23-2-arm64/nokia_7215_ixs_a1_cpld.ko
+    sudo insmod /lib/modules/5.10.0-23-2-arm64/ac5_thermal_sensor.ko
 }
 
 nokia_7215_profile()
