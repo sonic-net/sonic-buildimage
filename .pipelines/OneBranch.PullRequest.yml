@@ -49,6 +49,13 @@ stages:
         - checkout: self
           submodules: recursive
           clean: true
+        - bash: |
+            set -e
+            git show HEAD
+            output=n
+            [[ "$(git log -n 1 --format=%aN)" == "Project Collection Build Service (msazure)" ]] && output=y && echo "Automation PR."
+            echo "##vso[task.setvariable variable=autoPR;isOutput=true]$output"
+          name: checkAutoPR
       postSteps:
         - publish: $(Build.ArtifactStagingDirectory)
           artifact: 'sonic-buildimage.$(GROUP_NAME)'
@@ -146,7 +153,7 @@ stages:
       vmImage: 'ubuntu-20.04'
     displayName: "kvmtest-t0 by Elastictest"
     timeoutInMinutes: 240
-    continueOnError: true
+    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
@@ -163,7 +170,7 @@ stages:
       vmImage: 'ubuntu-20.04'
     displayName: "kvmtest-t1-lag by Elastictest"
     timeoutInMinutes: 240
-    continueOnError: true
+    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
@@ -180,7 +187,7 @@ stages:
     pool:
       vmImage: 'ubuntu-20.04'
     timeoutInMinutes: 240
-    continueOnError: true
+    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
@@ -200,7 +207,7 @@ stages:
       vmImage: 'ubuntu-20.04'
     displayName: "kvmtest-t0-2vlans by Elastictest"
     timeoutInMinutes: 240
-    continueOnError: true
+    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
     - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
       parameters:
@@ -219,7 +226,7 @@ stages:
       vmImage: 'ubuntu-20.04'
     displayName: "kvmtest-dualtor-t0 by Elastictest"
     timeoutInMinutes: 240
-    continueOnError: true
+    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
@@ -237,7 +244,7 @@ stages:
 #    pool:
 #      vmImage: 'ubuntu-20.04'
 #    timeoutInMinutes: 240
-#    continueOnError: false
+#    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
 #    steps:
 #      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
 #        parameters:
@@ -251,7 +258,7 @@ stages:
     pool:
       vmImage: 'ubuntu-20.04'
     timeoutInMinutes: 240
-    continueOnError: true
+    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
@@ -267,13 +274,10 @@ stages:
 
 - stage: ADO
   dependsOn: Test
-  condition: eq(dependencies.Test.result,'SucceededWithIssues')
+  condition: eq(dependencies.Test.result, 'SucceededWithIssues')
   variables:
     - name: BRANCH
-      ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-        value: $(System.PullRequest.TargetBranchName)
-      ${{ else }}:
-        value: $(Build.SourceBranchName)
+      value: $(System.PullRequest.TargetBranchName)
     - name: job1
       value: $[ stageDependencies.Test.t0_elastictest.result ]
     - name: job2
@@ -304,8 +308,8 @@ stages:
         [[ $(job6) == 'SucceededWithIssues' ]] && DISSCUSSION+="----multi_asic_elastictest<br>"
         if [ -n "$DISSCUSSION" ];then
           if echo "$(System.PullRequest.SourceBranch)" | grep "^refs/heads/sonicbld/code-sync/internal";then
-            DISSCUSSION="https://dev.azure.com/msazure/One/_build/results?buildId=$(Build.BuildId)<br>$(BRANCH)<br>"$DISSCUSSION
-            az boards work-item update --org https://dev.azure.com/msazure/ --id $ADO_ID --discussion "$DISSCUSSION" --description "$DISSCUSSION"
+            DISSCUSSION="$(BRANCH) merge PR kvmtest failure Alert!!!<br>https://dev.azure.com/msazure/One/_build/results?buildId=$(Build.BuildId)<br>"$DISSCUSSION
+            az boards work-item update --org https://dev.azure.com/mssonic/ --id $ADO_ID --discussion "$DISSCUSSION" --description "$DISSCUSSION"
             exit 0
           fi
           echo PR checker failed!
@@ -313,5 +317,5 @@ stages:
         fi
       displayName: check result
       env:
-        AZURE_DEVOPS_EXT_PAT: $(MSAZURE_ADO_PAT)
+        AZURE_DEVOPS_EXT_PAT: $(MSSONIC_ADO_TOKEN)
         ADO_ID: $(ADO_ID)
