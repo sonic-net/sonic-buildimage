@@ -84,7 +84,9 @@ static void intel_spi_enable_bios_write(struct pci_dev *pci_dev, struct intel_sp
             INTEL_SPI_PLATFORM_VERBOSE("Warning: Setting Bios Control at 0x%x from 0x%02x to 0x%02x failed.\n"
                 "New value is 0x%02x.\n", BIOS_CNTL, value, want, new);
         } else {
+#if 0
             info->writeable = !!(new & BIOS_CNTL_WN);
+#endif
         }
         INTEL_SPI_PLATFORM_VERBOSE("Bios Control is 0x%x\n", new);
     } else {
@@ -123,8 +125,10 @@ static int intel_spi_platform_probe(struct platform_device *pdev)
         INTEL_SPI_PLATFORM_ERROR("info type[%d] not need set writeable.\n",info->type);
         break;
     }
+#if 0
     INTEL_SPI_PLATFORM_VERBOSE("intel spi boardinfo writeable is %sabled\n",
             info->writeable ? "en" : "dis");
+#endif
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	ispi = intel_spi_probe(&pdev->dev, mem, info);

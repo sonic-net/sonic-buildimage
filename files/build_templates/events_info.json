@@ -14,10 +14,6 @@
             "parse_json": "systemd_regex.json"
         },
         {
-            "name": "syncd",
-            "parse_json": "syncd_regex.json"
-        },
-        {
             "name": "kernel",
             "parse_json": "kernel_regex.json"
         },

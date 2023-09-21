@@ -1,6 +1,6 @@
 --- a/patch/series
 +++ b/patch/series
-@@ -108,6 +108,9 @@
+@@ -111,6 +111,9 @@
  0045-i2c-mlxcpld-Fix-criteria-for-frequency-setting.patch
  0046-i2c-mlxcpld-Reduce-polling-time-for-performance-impr.patch
  0047-i2c-mlxcpld-Allow-flexible-polling-time-setting-for-.patch
@@ -10,7 +10,7 @@
  0053-mlxsw-core-Avoid-creation-virtual-hwmon-objects-by-t.patch
  0054-mlxsw-minimal-Simplify-method-of-modules-number-dete.patch
  0055-platform_data-mlxreg-Add-new-type-to-support-modular.patch
-@@ -155,7 +158,68 @@
+@@ -158,7 +161,68 @@
  0097-1-mlxsw-Use-u16-for-local_port-field.patch
  0097-2-mlxsw-i2c-Fix-chunk-size-setting.patch
  0097-3-mlxsw-core_hwmon-Adjust-module-label-names.patch
@@ -79,7 +79,7 @@
  0157-platform-x86-mlx-platform-Make-activation-of-some-dr.patch
  0158-platform-x86-mlx-platform-Add-cosmetic-changes-for-a.patch
  0159-mlx-platform-Add-support-for-systems-equipped-with-t.patch
-@@ -166,21 +230,125 @@
+@@ -169,15 +233,119 @@
  0164-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch
  0165-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch
  0166-DS-leds-leds-mlxreg-Send-udev-event-from-leds-mlxreg.patch
@@ -110,17 +110,12 @@
 +0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch
 +0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch
 +0195-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch
- 0195-platform-x86-MLX_PLATFORM-select-REGMAP-instead-of-d.patch
 +0196-platform-mellanox-Relocate-mlx-platform-driver.patch
 +0197-platform-mellanox-Add-initial-support-for-PCIe-based.patch
 +0198-platform-mellanox-Introduce-support-for-switches-bas.patch
 +0199-platform-mellanox-mlx-platform-Add-reset-and-extend-.patch
 +0200-dt-bindings-i2c-mellanox-i2c-mlxbf-convert-txt-to-YA.patch
- 0201-i2c-mlxbf-incorrect-base-address-passed-during-io-wr.patch
- 0202-i2c-mlxbf-prevent-stack-overflow-in-mlxbf_i2c_smbus_.patch
 +0203-i2c-mlxbf-remove-IRQF_ONESHOT.patch
- 0204-i2c-mlxbf-Fix-frequency-calculation.patch
- 0205-i2c-mlxbf-support-lock-mechanism.patch
 +0206-i2c-mlxbf-add-multi-slave-functionality.patch
 +0207-i2c-mlxbf-support-BlueField-3-SoC.patch
 +0208-i2c-mlxbf-remove-device-tree-support.patch
@@ -180,7 +175,6 @@
 +0262-UBUNTU-SAUCE-mlxbf-pmc-Fix-event-string-typo.patch
 +0263-UBUNTU-SAUCE-mlxbf-pmc-Support-for-BlueField-3-perfo.patch
 +0264-UBUNTU-SAUCE-platform-mellanox-Add-ctrl-message-and-.patch
- 0265-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch
 +0266-UBUNTU-SAUCE-mlxbf-pmc-Bug-fix-for-BlueField-3-count.patch
 +0267-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch
 +0268-DS-mlxsw-core_linecards-Disable-firmware-bundling-ma.patch
