@@ -21,6 +21,9 @@ RUN pip3 install crc16          \
         importlib-metadata      \
         xmlrunner
 
+# 8.0.1 breaks build on 09/20/2023
+RUN pip3 install setuptools_scm==7.1.0
+
 COPY \
 {% for deb in docker_ptf_sai_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
