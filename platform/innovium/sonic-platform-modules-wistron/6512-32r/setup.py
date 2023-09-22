@@ -1,7 +1,5 @@
 from setuptools import setup
 
-DEVICE_NAME = 'wistron'
-HW_SKU = 'x86_64-wistron_6512_32r-r0'
 
 setup(
     name='sonic-platform',
@@ -16,9 +14,8 @@ setup(
     packages=[
         'sonic_platform',
     ],
-    package_dir={
-        'sonic_platform': '../../../../device/{}/{}/sonic_platform'.format(DEVICE_NAME, HW_SKU)},
-    classifiers=[
+   package_dir={'sonic_platform': 'sonic_platform'},
+   classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Plugins',
         'Intended Audience :: Developers',

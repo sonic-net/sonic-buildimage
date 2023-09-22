@@ -44,13 +44,8 @@ add_byte(){
 # string_read [start byte] [length]
 string_read(){
 	value=""
-	len=$(echo $val | awk '{print $'"$1"'}')
-	byte_hex_test $len
-	if [ $? -eq 0 ]; then
-		return 0
-	fi
-	len=$(printf "%d" 0x$len)
-	s=$(($1 + 1))
+	len=$2
+	s=$(($1))
 	e=$(($1 + len - 1))
 	for i in $(seq $s $e)
 	do
@@ -189,6 +184,17 @@ get_PSU_information()
 		if [ $? -eq 1 ];then
 			echo $value > /sys/bus/i2c/devices/0-0059/fault
 		fi
+
+		byte_read 41
+		if [ $? -eq 1 ];then
+			echo $value > /sys/bus/i2c/devices/0-005a/pwm
+		fi
+
+		byte_read 42
+		if [ $? -eq 1 ];then
+			echo $value > /sys/bus/i2c/devices/0-0059/pwm
+		fi
+
 	fi
 
 	#____________________________________________________________________________
@@ -196,34 +202,45 @@ get_PSU_information()
 	val=$(ipmitool raw 0x30 0x8a 2>>/dev/null)
 	if [ -e /sys/bus/i2c/devices/0-005a/vendor ] && [ -e /sys/bus/i2c/devices/0-0059/vendor ];then
 		#PSU1 mfr_ID
-		string_read 1
+		string_read 1 20
 		if [ $? -eq 1 ];then
 			echo $value > /sys/bus/i2c/devices/0-005a/vendor
 		fi
 		#PSU2 mfr_ID
-		string_read 21
+		string_read 21 20
 		if [ $? -eq 1 ];then
 			echo $value > /sys/bus/i2c/devices/0-0059/vendor
 		fi
 		#PSU1 mfr_model
-		string_read 41
+		string_read 41 20
 		if [ $? -eq 1 ];then
 			echo $value > /sys/bus/i2c/devices/0-005a/model
 		fi
 		#PSU2 mfr_model
-		string_read 61
+		string_read 61 20
 		if [ $? -eq 1 ];then
 			echo $value > /sys/bus/i2c/devices/0-0059/model
 		fi
 		#PSU1 mfr_serial
-		string_read 81
+		string_read 81 30
 		if [ $? -eq 1 ];then
 			echo $value > /sys/bus/i2c/devices/0-005a/sn
 		fi
-		#PSU1 mfr_serial
-		string_read 111
+		#PSU2 mfr_serial
+		string_read 111 30
 		if [ $? -eq 1 ];then
 			echo $value > /sys/bus/i2c/devices/0-0059/sn
+		fi
+
+		#PSU1 mfr_rev
+		string_read 141 2
+		if [ $? -eq 1 ];then
+			echo $value > /sys/bus/i2c/devices/0-005a/rev
+		fi
+		#PSU2 mfr_serial
+		string_read 143 2
+		if [ $? -eq 1 ];then
+			echo $value > /sys/bus/i2c/devices/0-0059/rev
 		fi
 	fi
 }

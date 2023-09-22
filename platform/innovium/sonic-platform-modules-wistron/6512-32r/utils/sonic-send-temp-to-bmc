@@ -1,0 +1,51 @@
+#!/bin/bash
+board_ver=$(ipmitool raw 0x30 0x25 0x1 0xe0 0x1 0x0 1>/dev/null 2>/dev/null; echo $?) #error will get 1 means EVT, otherwise DVT
+
+send_temp_to_bmc()
+{
+	c_path=$(ls /sys/devices/platform/coretemp.0/hwmon/)
+	c_temp=$(cat /sys/class/hwmon/$c_path/temp1_input)
+	cputemp=`expr $c_temp / 1000`
+
+	transceiver_temp=""
+	for i in $(seq 1 32);
+	do
+		index=$((i + 15));
+		path="/sys/bus/i2c/devices/0-00$(printf "%x" $index)/temp";
+		t_temp=$(cat $path)
+		transceiver_temp+="$transcevicer_temp $t_temp"
+	done
+
+	m2_temp=$(smartctl -A /dev/sda | egrep ^194 | awk '{print $10}')
+
+	d_dev=$(find /sys/devices/ -name 1-00\*)
+	d_path=$(ls $d_dev/hwmon/)
+	d_temp=$(cat /sys/class/hwmon/$d_path/temp1_input)
+	dimm_temp=`expr $d_temp / 1000`
+
+	ipmitool raw 0x30 0x8b $cputemp $transceiver_temp $m2_temp $dimm_temp
+}
+
+SEND_TEMP()
+{
+	boot_time_barrier=1
+	while true
+	do
+		if [ -e /sys/bus/i2c/devices/0-0006/port1_present ] && [ -e /sys/bus/i2c/devices/0-0007/port32_present ] && [ -e /sys/bus/i2c/devices/0-002f/eeprom1 ];then
+
+			if [ $board_ver == 0 ]; then
+				if [ $boot_time_barrier == 1 ]; then
+					if [ -e /tmp/eeprom_init_done ]; then
+						boot_time_barrier=0
+					fi
+				else
+					send_temp_to_bmc
+				fi
+			fi
+
+			sleep 1;
+		fi
+	done
+}
+
+SEND_TEMP

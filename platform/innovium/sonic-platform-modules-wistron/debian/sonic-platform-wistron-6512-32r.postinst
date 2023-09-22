@@ -37,3 +37,5 @@ systemctl enable 6512-32r-platform.service
 systemctl start 6512-32r-platform.service
 systemctl enable 6512-32r-syseeprom.service
 systemctl start 6512-32r-syseeprom.service
+systemctl enable 6512-32r-firmware_ver.service
+systemctl start 6512-32r-firmware_ver.service
