@@ -19,7 +19,6 @@ RUN apt-get update &&     \
 RUN pip3 install --upgrade pip
 RUN apt-get purge -y python3-pip
 RUN pip3 install \
-         scapy==2.4.4 \
          pyroute2==0.5.14 \
          netifaces==0.10.9
 
