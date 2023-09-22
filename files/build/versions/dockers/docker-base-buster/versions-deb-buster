@@ -41,7 +41,7 @@ libsasl2-2==2.1.27+dfsg-1+deb10u2
 libsasl2-modules-db==2.1.27+dfsg-1+deb10u2
 libsodium23==1.0.17-1
 libsqlite3-0==3.27.2-3+deb10u2
-libssh2-1==1.8.0-2.1
+libssh2-1==1.8.0-2.1+deb10u1
 libssl1.1==1.1.1n-0+deb10u6
 libwrap0==7.6.q-28
 libzmq5==4.3.1-4+deb10u2

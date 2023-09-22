@@ -98,7 +98,7 @@ libblas3==3.8.0-2
 libboost-atomic1.71.0==1.71.0-6~bpo10+1
 libbrotli1==1.0.7-2+deb10u1
 libbsd0==0.9.1-2+deb10u1
-libc-ares2==1.14.0-1+deb10u3
+libc-ares2==1.14.0-1+deb10u4
 libc-dev-bin==2.28-10+deb10u2
 libc6-dbg==2.28-10+deb10u2
 libc6-dev==2.28-10+deb10u2
@@ -353,7 +353,7 @@ libsoup2.4-1==2.64.2-2
 libspandsp2==0.0.6+dfsg-2
 libsqlite3-0==3.27.2-3+deb10u2
 libssh-gcrypt-4==0.8.7-1+deb10u2
-libssh2-1==1.8.0-2.1
+libssh2-1==1.8.0-2.1+deb10u1
 libssl-dev==1.1.1n-0+deb10u6
 libssl1.1==1.1.1n-0+deb10u6
 libstdc++-8-dev==8.3.0-6
@@ -395,9 +395,9 @@ libwayland-client0==1.16.0-1
 libwayland-cursor0==1.16.0-1
 libwayland-egl1==1.16.0-1
 libwayland-server0==1.16.0-1
-libwebp6==0.6.1-2+deb10u2
-libwebpdemux2==0.6.1-2+deb10u2
-libwebpmux3==0.6.1-2+deb10u2
+libwebp6==0.6.1-2+deb10u3
+libwebpdemux2==0.6.1-2+deb10u3
+libwebpmux3==0.6.1-2+deb10u3
 libwireshark-data==2.6.20-0+deb10u7
 libwireshark11==2.6.20-0+deb10u7
 libwiretap8==2.6.20-0+deb10u7

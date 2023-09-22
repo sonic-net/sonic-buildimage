@@ -16,7 +16,7 @@ libicu67==67.1-7
 libipt2==2.0.3-1
 libkmod2==28-1
 libmpfr6==4.1.0-3
-libsai==1.11.0-1
+libsai==1.12.0-1
 libsaimetadata==1.0.0
 libsairedis==1.0.0
 libsource-highlight-common==3.1.9-3
