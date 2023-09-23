@@ -105,6 +105,9 @@ override_dh_auto_install:
 		if [ $$mod = "s6000" ]; then \
 			dh_installdirs -pplatform-modules-$${mod} usr/local/bin ; \
 			cp -r $(MOD_SRC_DIR)/$${mod}/scripts/* debian/platform-modules-$${mod}/usr/local/bin; \
+		elif [ $$mod = "s6100" ] && [ -d $(MOD_SRC_DIR)/$${mod}/bin ] && [ -n "$$(ls -A $(MOD_SRC_DIR)/$${mod}/bin)" ]; then \
+			dh_installdirs -pplatform-modules-$${mod} usr/share/sonic/device/x86_64-dell_s6100_c2538-r0/bin; \
+			cp $(MOD_SRC_DIR)/$${mod}/bin/* debian/platform-modules-$${mod}/usr/share/sonic/device/x86_64-dell_s6100_c2538-r0/bin; \
 		fi; \
 	done); \
 	set +e

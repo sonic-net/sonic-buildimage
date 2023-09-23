@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,10 +128,6 @@ class Chassis(ChassisBase):
     def __del__(self):
         if self.sfp_event:
             self.sfp_event.deinitialize()
-
-        if self._sfp_list:
-            if self.sfp_module.SFP.shared_sdk_handle:
-                self.sfp_module.deinitialize_sdk_handle(self.sfp_module.SFP.shared_sdk_handle)
 
     @property
     def RJ45_port_list(self):

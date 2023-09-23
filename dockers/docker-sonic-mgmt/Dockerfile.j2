@@ -210,7 +210,7 @@ RUN dpkg -i \
 debs/{{ deb }}{{' '}}
 {%- endfor %}
 
-# Install protobuf 3.21.12
+# Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
 RUN mkdir -p /tmp/protobuf \
     && cd /tmp/protobuf \
     && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/libprotobuf-dev_3.21.12-3_amd64.deb \

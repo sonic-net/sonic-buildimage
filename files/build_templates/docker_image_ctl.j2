@@ -191,6 +191,9 @@ function postStartAction()
                    ip link add name ns-eth1"$NET_NS" type veth peer name eth1@"$NET_NS"
                    ip link set dev eth1@"$NET_NS" master br1
                    ip link set dev eth1@"$NET_NS" up
+                   # For chassis system where Linux bridge is used on supervisor for midplane communication
+                   # assign alternate name as eth1-midplane for generic design
+                   ip link property add dev br1 altname eth1-midplane
            else
                    ip link add name ns-eth1"$NET_NS" link eth1-midplane type macvlan mode bridge
            fi

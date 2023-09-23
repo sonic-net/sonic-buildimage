@@ -35,30 +35,12 @@ try:
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
-try:
-    # python_sdk_api does not support python3 for now. Daemons like thermalctld or psud
-    # also import this file without actually use the sdk lib. So we catch the ImportError
-    # and ignore it here. Meanwhile, we have to trigger xcvrd using python2 now because it
-    # uses the sdk lib.
-    from python_sdk_api.sxd_api import *
-    from python_sdk_api.sx_api import *
-except ImportError as e:
-    pass
-
-try:
-    if os.environ["PLATFORM_API_UNIT_TESTING"] == "1":
-        # Unable to import SDK constants under unit test
-        # Define them here
-        SX_PORT_MODULE_STATUS_INITIALIZING = 0
-        SX_PORT_MODULE_STATUS_PLUGGED = 1
-        SX_PORT_MODULE_STATUS_UNPLUGGED = 2
-        SX_PORT_MODULE_STATUS_PLUGGED_WITH_ERROR = 3
-        SX_PORT_MODULE_STATUS_PLUGGED_DISABLED = 4
-        SX_PORT_ADMIN_STATUS_UP = True
-        SX_PORT_ADMIN_STATUS_DOWN = False
-except KeyError:
-    pass
-
+# Define the sdk constants
+SX_PORT_MODULE_STATUS_INITIALIZING = 0
+SX_PORT_MODULE_STATUS_PLUGGED = 1
+SX_PORT_MODULE_STATUS_UNPLUGGED = 2
+SX_PORT_MODULE_STATUS_PLUGGED_WITH_ERROR = 3
+SX_PORT_MODULE_STATUS_PLUGGED_DISABLED = 4
 
 # identifier value of xSFP module which is in the first byte of the EEPROM
 # if the identifier value falls into SFP_TYPE_CODE_LIST the module is treated as a SFP module and parsed according to 8472
@@ -178,41 +160,11 @@ limited_eeprom = {
 logger = Logger()
 
 
-# SDK initializing stuff, called from chassis
-def initialize_sdk_handle():
-    rc, sdk_handle = sx_api_open(None)
-    if (rc != SX_STATUS_SUCCESS):
-        logger.log_warning("Failed to open api handle, please check whether SDK is running.")
-        sdk_handle = None
-
-    return sdk_handle
-
-
-def deinitialize_sdk_handle(sdk_handle):
-    if sdk_handle is not None:
-        rc = sx_api_close(sdk_handle)
-        if (rc != SX_STATUS_SUCCESS):
-            logger.log_warning("Failed to close api handle.")
-
-        return rc == SXD_STATUS_SUCCESS
-    else:
-         logger.log_warning("Sdk handle is none")
-         return False
-
-
 class NvidiaSFPCommon(SfpOptoeBase):
     def __init__(self, sfp_index):
         super(NvidiaSFPCommon, self).__init__()
         self.index = sfp_index + 1
         self.sdk_index = sfp_index
-
-    @property
-    def sdk_handle(self):
-        if not SFP.shared_sdk_handle:
-            SFP.shared_sdk_handle = initialize_sdk_handle()
-            if not SFP.shared_sdk_handle:
-                logger.log_error('Failed to open SDK handle')
-        return SFP.shared_sdk_handle
 
     @classmethod
     def _get_module_info(self, sdk_index):
@@ -233,7 +185,6 @@ class NvidiaSFPCommon(SfpOptoeBase):
 
 class SFP(NvidiaSFPCommon):
     """Platform-specific SFP class"""
-    shared_sdk_handle = None
     SFP_MLNX_ERROR_DESCRIPTION_LONGRANGE_NON_MLNX_CABLE = 'Long range for non-Mellanox cable or module'
     SFP_MLNX_ERROR_DESCRIPTION_ENFORCE_PART_NUMBER_LIST = 'Enforce part number list'
     SFP_MLNX_ERROR_DESCRIPTION_PMD_TYPE_NOT_ENABLED = 'PMD type not enabled'

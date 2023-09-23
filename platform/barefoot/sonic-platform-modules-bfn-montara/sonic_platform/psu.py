@@ -110,7 +110,7 @@ class Psu(PsuBase):
 
     @cancel_on_sigterm
     def get_metric_value(self, metric_name):
-        return get_metric_value(Psu.__sensors_get(), "PSU%d ".format(self.__index) + metric_name)
+        return get_metric_value(Psu.__sensors_get(), "PSU{} ".format(self.__index) + metric_name)
 
     @staticmethod
     def get_num_psus():

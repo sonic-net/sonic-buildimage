@@ -47,16 +47,16 @@ bcm_device:
             sai_tunnel_ecmp_sharing_mode: 0 # change to 2 if SAI_NEXT_HOP_GROUP_ATTR_LEVEL_1 used
 
             # bfd
-            bfd_enable: 1
-            bfd_sha1_keys: 5
-            bfd_num_sessions: 2048
-            bfd_simple_password_keys: 5
-            num_queues_pci: 47
-            num_queues_uc0: 1
-            bfd_feature_enable: 1
-            bfd_use_endpoint_id_as_discriminator: 1
-            bfd_tx_raw_ingress_enable: 1
-            sai_eapp_config_file: "/usr/share/sonic/device/x86_64-broadcom_common/eapps/eapp_config.json"
+            #bfd_enable: 1
+            #bfd_sha1_keys: 5
+            #bfd_num_sessions: 2048
+            #bfd_simple_password_keys: 5
+            #num_queues_pci: 47
+            #num_queues_uc0: 1
+            #bfd_feature_enable: 1
+            #bfd_use_endpoint_id_as_discriminator: 1
+            #bfd_tx_raw_ingress_enable: 1
+            #sai_eapp_config_file: "/usr/share/sonic/device/x86_64-broadcom_common/eapps/eapp_config.json"
 ---
 device:
     0:

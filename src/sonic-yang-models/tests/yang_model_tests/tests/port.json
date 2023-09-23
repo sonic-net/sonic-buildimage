@@ -128,5 +128,8 @@
          "desc": "Out of range subport number",
          "eStrKey": "Range",
          "eStr": "0..8"
+     },
+     "PORT_AUTO_FEC_TEST": {
+         "desc": "PORT_AUTO_FEC_TEST validate auto mode in fec."
      }
 }

@@ -39,9 +39,9 @@ ARG PYTHON_CROSS_PLATFORM=linux_aarch64
 RUN echo "deb http://ftp.debian.org/debian buster-backports main" >> /etc/apt/sources.list
 
 RUN dpkg --add-architecture $arch
-RUN apt-get update
-RUN apt-get install -y crossbuild-essential-$arch
-RUN apt-get install -y gcc-$gcc_arch
+RUN apt-get update && apt-get install -y eatmydata
+RUN eatmydata apt-get install -y crossbuild-essential-$arch
+RUN eatmydata apt-get install -y gcc-$gcc_arch
 
 RUN apt-mark hold g++-$gcc_arch
 RUN apt-mark hold g++-8-$gcc_arch
@@ -56,10 +56,10 @@ ARG CROSS_CXX=${gcc_arch}-g++
 ENV DEBIAN_FRONTEND=noninteractive
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
-RUN apt-get install -y python3 python3-pip
-RUN apt-get install -y python:$arch python3-minimal:$arch python3.7:$arch python3:$arch python-setuptools:$arch
-RUN apt-get download python3-distutils && dpkg --force-all -i python3-distutils*
-RUN apt-get download python3-pip && dpkg --force-all -i python3-pip*
+RUN eatmydata apt-get install -y python3 python3-pip
+RUN eatmydata apt-get install -y python:$arch python3-minimal:$arch python3.7:$arch python3:$arch python-setuptools:$arch
+RUN apt-get download python3-distutils && eatmydata dpkg --force-all -i python3-distutils*
+RUN apt-get download python3-pip && eatmydata dpkg --force-all -i python3-pip*
 RUN which pip3 && pip3 install enum34
 RUN pip3 install virtualenv
 
@@ -71,10 +71,10 @@ RUN cd /python_virtualenv && python3 -m virtualenv --copies -p /usr/bin/python3 
 RUN PATH=/python_virtualenv/env2/bin/:$PATH pip2 install setuptools==40.8.0 wheel==0.35.1 fastentrypoints pytest pytest-cov pytest-runner==4.4 nose==1.3.7 mockredispy==2.9.3 mock==3.0.5 j2cli==0.3.10 PyYAML==5.4.1 pexpect==4.6.0 Pympler==0.8 ctypesgen==1.0.2 natsort==6.2.1 redis==3.5.3 protobuf==3.17.3
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install setuptools==49.6.00 wheel==0.35.1 fastentrypoints pytest pytest-cov pytest-runner==5.2 nose==1.3.7 mockredispy==2.9.3 mock==3.0.5 PyYAML==5.4.1 redis==3.5.3 pexpect==4.8.0 Pympler==0.8 parameterized natsort==6.2.1 MarkupSafe==2.0.1 Jinja2==3.0.3 sphinx && ln -s /python_virtualenv/env3/bin/pytest /python_virtualenv/env3/bin/pytest-3
 
-RUN apt-get --fix-broken install -y
-RUN LIBPYTHON3_DEPS="`apt-cache depends libpython3-dev:$arch |grep Depends|awk {'print \$2;'}|tr "\n" " "`" && apt-get install -y libpython2.7-dev:$arch $LIBPYTHON3_DEPS libxml2-dev:$arch libxslt-dev:$arch libssl-dev:$arch libz-dev:$arch
+RUN eatmydata apt-get --fix-broken install -y
+RUN LIBPYTHON3_DEPS="`apt-cache depends libpython3-dev:$arch |grep Depends|awk {'print \$2;'}|tr "\n" " "`" && eatmydata apt-get install -y libpython2.7-dev:$arch $LIBPYTHON3_DEPS libxml2-dev:$arch libxslt-dev:$arch libssl-dev:$arch libz-dev:$arch
 
-RUN apt-get install -y swig libssl-dev
+RUN eatmydata apt-get install -y swig libssl-dev
 
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyang==2.4.0
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyangbind==0.8.1
@@ -82,7 +82,7 @@ RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip uninstall -y enum34
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --force-reinstall --no-cache-dir coverage
 {%- endif %}
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install -y \
         apt-utils \
         default-jre-headless \
         openssh-server \
@@ -418,7 +418,7 @@ RUN apt-get update && apt-get install -y \
         auditd
 
 # For iproute2
-RUN apt-get install -y -t buster-backports \
+RUN eatmydata apt-get install -y -t buster-backports \
         libbpf-dev \
         dwz \
         debhelper
@@ -426,15 +426,15 @@ RUN apt-get install -y -t buster-backports \
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages
 RUN apt-get remove -y libnl-3-200 libsnmp30
-RUN apt-get install -y libpcre2-dev:$arch libpcre3:$arch
+RUN eatmydata apt-get install -y libpcre2-dev:$arch libpcre3:$arch
 {%- endif %}
 
-RUN apt-get -y build-dep openssh
+RUN eatmydata apt-get -y build-dep openssh
 
 # Build fix for ARMHF buster libsairedis
 {%- if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
        # Install doxygen build dependency packages
-       RUN apt install -y libxapian-dev yui-compressor libclang-3.9-dev texlive-extra-utils \
+       RUN eatmydata apt install -y libxapian-dev yui-compressor libclang-3.9-dev texlive-extra-utils \
            texlive-font-utils  rdfind llvm-6.0-dev libclang-6.0-dev sassc
        # Update doxygen with 64bit file offset patch
        RUN dget -u http://deb.debian.org/debian/pool/main/d/doxygen/doxygen_1.8.13-10.dsc && \
@@ -442,12 +442,12 @@ RUN apt-get -y build-dep openssh
            sed -i '56 a add_definitions(-D_FILE_OFFSET_BITS=64)' CMakeLists.txt && \
            DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -us -uc -b && \
            cd .. && \
-           dpkg -i ./doxygen_1.8.13-10_armhf.deb && \
+           eatmydata dpkg -i ./doxygen_1.8.13-10_armhf.deb && \
            rm -fr doxygen*
 
        # Aspell is unable to locate the language dictionaries.
        # Re-installing aspell-en dictionary to fix it.
-       RUN apt-get install --reinstall -y aspell-en
+       RUN eatmydata apt-get install --reinstall -y aspell-en
 
        # workaround because of https://bugs.launchpad.net/qemu/+bug/1805913, just disable aspell
        RUN cp /bin/true /usr/bin/aspell
@@ -463,9 +463,9 @@ RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confold"
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 # For linux build
-RUN apt-get -y build-dep linux
+RUN eatmydata apt-get -y build-dep linux
 {%- else %}
-RUN apt-get install -y kernel-wedge
+RUN eatmydata apt-get install -y kernel-wedge
 {%- endif %}
 
 # For gobgp and telemetry build
@@ -510,11 +510,11 @@ RUN pip3 install mockredispy==2.9.3
 {%- if CONFIGURED_ARCH == "armhf" %}
 RUN TMP_DIR=$(mktemp -d) && \
     cd $TMP_DIR && \
-    apt-get install -y nasm && \
+    eatmydata apt-get install -y nasm && \
     apt-get source libjpeg-turbo && \
     cd $(ls -d libjpeg-turbo*/) && \
     dpkg-buildpackage -rfakeroot -b -us -uc > $TMP_DIR/libjpeg-dev.log && \
-    dpkg -i $TMP_DIR/libjpeg*-dev*.deb && \
+    eatmydata dpkg -i $TMP_DIR/libjpeg*-dev*.deb && \
     rm -rf $TMP_DIR
 {%- endif %}
 RUN pip3 install pillow==9.4.0
@@ -573,16 +573,16 @@ RUN pip3 install pyang==2.4.0
 RUN pip2 install mmh3==2.5.1
 RUN pip3 install mmh3==2.5.1
 
-RUN apt-get install -y xsltproc
+RUN eatmydata apt-get install -y xsltproc
 
 # Install dependencies for isc-dhcp-relay build
-RUN apt-get -y build-dep isc-dhcp
+RUN eatmydata apt-get -y build-dep isc-dhcp
 
 # Install vim
-RUN apt-get install -y vim
+RUN eatmydata apt-get install -y vim
 
 # Install rsyslog
-RUN apt-get install -y rsyslog
+RUN eatmydata apt-get install -y rsyslog
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN cd /usr/src/gtest && CXX=$CROSS_CXX CC=$CROSS_CC cmake . && make -C /usr/src/gtest
@@ -603,7 +603,7 @@ RUN pip3 install pyfakefs
 
 # Install docker engine 24 inside docker and enable experimental feature
 RUN apt-get update
-RUN apt-get install -y \
+RUN eatmydata apt-get install -y \
            apt-transport-https \
            ca-certificates \
            curl \
@@ -622,7 +622,7 @@ RUN add-apt-repository \
            $(lsb_release -cs) \
            stable"
 RUN apt-get update
-RUN apt-get install -y docker-ce=5:24.0.2-1~debian.10~buster docker-ce-cli=5:24.0.2-1~debian.10~buster containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.10~buster docker-compose-plugin=2.18.1-1~debian.10~buster
+RUN eatmydata apt-get install -y docker-ce=5:24.0.2-1~debian.10~buster docker-ce-cli=5:24.0.2-1~debian.10~buster containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.10~buster docker-compose-plugin=2.18.1-1~debian.10~buster
 RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 
@@ -635,21 +635,21 @@ RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261
 {% if CONFIGURED_ARCH != "amd64" -%}
 # Install node.js for azure pipeline
 RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
-RUN apt-get install -y nodejs
+RUN eatmydata apt-get install -y nodejs
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
-RUN apt-get install -y rsync dh-python
+RUN eatmydata apt-get install -y rsync dh-python
 
-RUN apt-get install -y libelf-dev:$arch libdw-dev:$arch  libbz2-dev:$arch liblzo2-dev:$arch libedit-dev:$arch libevent-dev:$arch libopts25-dev:$arch libssl-dev:$arch pps-tools:$arch libpam-cap:$arch libcap-dev:$arch libpam0g-dev:$arch libaudit-dev:$arch libgtk-3-dev:$arch libkrb5-dev:$arch libsystemd-dev:$arch libwrap0-dev:$arch libkrb5-dev:$arch libboost1.67-dev:$arch libboost-dev:$arch libzmq5:$arch libzmq3-dev:$arch libdaemon-dev:$arch libjansson-dev:$arch libmnl-dev:$arch libsensors5:$arch libsensors4-dev:$arch libperl-dev:$arch libmariadb-dev:$arch libmariadb-dev-compat:$arch libpci-dev:$arch libjson-c3:$arch libjson-c-dev:$arch libreadline-dev:$arch librtr-dev:$arch librrd-dev:$arch libnetfilter-conntrack-dev:$arch libnetfilter-conntrack3:$arch libnfnetlink-dev:$arch libnftnl-dev:$arch libldap2-dev:$arch libbind-export-dev:$arch check:$arch libboost-atomic-dev:$arch libboost-test-dev:$arch libglib2.0-dev:$arch qt5-default:$arch libexplain-dev:$arch libc-ares-dev:$arch libip4tc0:$arch libip6tc0:$arch libiptc0:$arch libxtables12:$arch iptables-dev:$arch libatm1-dev:$arch libdb-dev:$arch pkg-config:$arch libnghttp2-14:$arch librtmp1:$arch libssh2-1:$arch libcjson1:$arch libcjson-dev:$arch libcurl4-openssl-dev:$arch libboost-thread1.67-dev:$arch libboost-thread-dev:$arch libboost-system1.67-dev:$arch libboost-system-dev:$arch libgtest-dev:$arch libgmock-dev:$arch
+RUN eatmydata apt-get install -y libelf-dev:$arch libdw-dev:$arch  libbz2-dev:$arch liblzo2-dev:$arch libedit-dev:$arch libevent-dev:$arch libopts25-dev:$arch libssl-dev:$arch pps-tools:$arch libpam-cap:$arch libcap-dev:$arch libpam0g-dev:$arch libaudit-dev:$arch libgtk-3-dev:$arch libkrb5-dev:$arch libsystemd-dev:$arch libwrap0-dev:$arch libkrb5-dev:$arch libboost1.67-dev:$arch libboost-dev:$arch libzmq5:$arch libzmq3-dev:$arch libdaemon-dev:$arch libjansson-dev:$arch libmnl-dev:$arch libsensors5:$arch libsensors4-dev:$arch libperl-dev:$arch libmariadb-dev:$arch libmariadb-dev-compat:$arch libpci-dev:$arch libjson-c3:$arch libjson-c-dev:$arch libreadline-dev:$arch librtr-dev:$arch librrd-dev:$arch libnetfilter-conntrack-dev:$arch libnetfilter-conntrack3:$arch libnfnetlink-dev:$arch libnftnl-dev:$arch libldap2-dev:$arch libbind-export-dev:$arch check:$arch libboost-atomic-dev:$arch libboost-test-dev:$arch libglib2.0-dev:$arch qt5-default:$arch libexplain-dev:$arch libc-ares-dev:$arch libip4tc0:$arch libip6tc0:$arch libiptc0:$arch libxtables12:$arch iptables-dev:$arch libatm1-dev:$arch libdb-dev:$arch pkg-config:$arch libnghttp2-14:$arch librtmp1:$arch libssh2-1:$arch libcjson1:$arch libcjson-dev:$arch libcurl4-openssl-dev:$arch libboost-thread1.67-dev:$arch libboost-thread-dev:$arch libboost-system1.67-dev:$arch libboost-system-dev:$arch libgtest-dev:$arch libgmock-dev:$arch
 
-RUN apt-get install -y -t buster-backports \
+RUN eatmydata apt-get install -y -t buster-backports \
         libbpf-dev:$arch
 
-RUN apt-get download libgirepository1.0-dev:$arch && dpkg --force-all -i libgirepository1.0-dev*
+RUN apt-get download libgirepository1.0-dev:$arch && eatmydata dpkg --force-all -i libgirepository1.0-dev*
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install pycairo
 
 # Install libpcsclite-dev for wpasupplicant using download because regular install removes amd64 python package
-RUN apt-get download libpcsclite1:$arch && dpkg --force-all -i libpcsclite1* && apt-get download libpcsclite-dev:$arch && dpkg --force-all -i libpcsclite-dev*
+RUN apt-get download libpcsclite1:$arch && eatmydata dpkg --force-all -i libpcsclite1* && apt-get download libpcsclite-dev:$arch && eatmydata dpkg --force-all -i libpcsclite-dev*
 {% endif %}
 
 # Tell azure pipeline to use node.js in the docker

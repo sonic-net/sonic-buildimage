@@ -9,10 +9,6 @@ RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%s
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y gnupg
-COPY ["sonic-dev.gpg.key", "/etc/apt/"]
-RUN apt-key add /etc/apt/sonic-dev.gpg.key
-RUN echo "deb http://packages.microsoft.com/repos/sonic-dev/ jessie main" >> /etc/apt/sources.list
-RUN apt-get update
 
 RUN apt-get install -y net-tools \
                        arping \

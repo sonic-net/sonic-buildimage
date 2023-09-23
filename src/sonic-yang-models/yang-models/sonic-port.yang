@@ -151,7 +151,7 @@ module sonic-port{
 
 				leaf fec {
 					type string {
-						pattern "rs|fc|none";
+						pattern "rs|fc|none|auto";
 					}
 				}
 

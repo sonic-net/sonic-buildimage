@@ -153,7 +153,6 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
-{% endif %}
 
 [program:bgpmon]
 command=/usr/local/bin/bgpmon
@@ -165,6 +164,8 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
+
+{% endif %}
 
 {% if DEVICE_METADATA.localhost.docker_routing_config_mode is defined and (DEVICE_METADATA.localhost.docker_routing_config_mode == "unified" or DEVICE_METADATA.localhost.docker_routing_config_mode == "split-unified") %}
 [program:vtysh_b]
