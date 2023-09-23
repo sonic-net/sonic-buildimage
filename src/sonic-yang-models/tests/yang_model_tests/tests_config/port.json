@@ -638,5 +638,24 @@
                 ]
             }
         }
+    },
+
+    "PORT_AUTO_FEC_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "auto",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
     }
 }

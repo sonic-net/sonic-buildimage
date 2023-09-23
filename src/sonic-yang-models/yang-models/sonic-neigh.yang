@@ -11,6 +11,11 @@ module sonic-neigh {
 		prefix yang;
 	}
 
+	// TODO: Uncomment the following lines when sonic-vlan.yang is available
+	// import sonic-vlan {
+	// 	prefix svlan;
+	// }
+
 	organization "SONiC";
 	contact "SONiC";
 
@@ -27,10 +32,15 @@ module sonic-neigh {
 				key "vlan neighbor";
 
 				leaf vlan {
+					// TODO: Remove the following lines when sonic-vlan.yang is available
 					description "Neighbor Vlan interface ex. Vlan1000";
 					type string {
 						pattern "Vlan[0-9]+";
 					}
+					// TODO: Uncomment the following lines when sonic-vlan.yang is available
+					// type leafref {
+					// 	path "/svlan:sonic-vlan/svlan:VLAN/svlan:VLAN_LIST/svlan:name";
+					// }
 				}
 
 				leaf neighbor {

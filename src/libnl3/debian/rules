@@ -1,39 +1,4 @@
 #!/usr/bin/make -f
 
-DEB_BUILDDIR = debian/build
-DEB_MAKE_FLAVORS = main udeb
-
-udeb_libnl=libnl-3-200-udeb
-udeb_libnl_genl=libnl-genl-3-200-udeb
-
-TG_BRANCHES := debian/etc-libnl-3,debian/out-of-tree,debian/no-symvers
-
--include /usr/share/topgit/tg2quilt.mk
-
-# to export the patch series use
-#	debian/rules tg-clean
-#	debian/rules tg-export
-
-
-include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/rules/autoreconf.mk
-include /usr/share/cdbs/1/class/autotools.mk
-
-# FIXME: not honoured
-#CFLAGS_udeb += $(CFLAGS) -Os
-CFLAGS += $(if $(findstring udeb,$(cdbs_make_curflavor)),-Os)
-
-DEB_DH_STRIP_ARGS := --dbg-package=libnl-3-200-dbg
-DEB_DH_MAKESHLIBS_ARGS_libnl-3-200 := --add-udeb=$(udeb_libnl)
-DEB_DH_MAKESHLIBS_ARGS_libnl-genl-3-200 := --add-udeb=$(udeb_libnl_genl)
-
-DEB_MAKE_DESTDIRSKEL = $(CURDIR)/debian/tmp
-DEB_MAKE_DESTDIRSKEL_udeb = $(CURDIR)/debian/tmp/udeb
-
-DEB_DH_INSTALL_ARGS_$(udeb) += --sourcedir=debian/tmp/udeb
-
-DEB_CONFIGURE_EXTRA_FLAGS += --libdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH)
-
-clean::
-	# from some unknown reason CDBS does not remove the builddir
-	rm -rf $(DEB_BUILDDIR)
+%:
+	dh $@

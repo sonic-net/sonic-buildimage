@@ -869,7 +869,7 @@
                 "alias": "Eth31/1",
                 "lanes": "121,122",
                 "description": "",
-                "fec": "fc",
+                "fec": "auto",
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up"
