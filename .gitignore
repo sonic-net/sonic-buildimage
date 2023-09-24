@@ -106,3 +106,6 @@ htmlcov/
 # Debian mirror Sources
 sources.list.*
 !sources.list*.j2
+
+# Generated mirror configs
+apt-retries-count
