@@ -3,10 +3,12 @@ import cert_converter
 
 class TestCertConverter(TestCase):
 
+    @mock.patch("swsscommon.swsscommon.DBConnector")
+    @mock.patch("swsscommon.swsscommon.Table")
     @mock.patch("cert_converter.convert_certs")
     @mock.patch("os.path.isfile")
     @mock.patch("time.sleep")
-    def test_main_01(self, mock_sleep, mock_isfile, mock_convert):
+    def test_main_01(self, mock_sleep, mock_isfile, mock_convert, mock_table, mock_db):
         '''
         Run cert_converter, and break the loop
         Compare exception and check sleep
@@ -14,6 +16,8 @@ class TestCertConverter(TestCase):
         expect_error = Exception("Break the loop")
         mock_isfile.side_effect = [False, True]
         mock_convert.side_effect = [False, True, expect_error]
+        mock_table.return_value = {"localhost": (True, (('', ''),))}
+        mock_db.return_value = None
         try:
             cert_converter.main()
         except Exception as e:
@@ -57,3 +61,53 @@ class TestCertConverter(TestCase):
         self.assertEqual(len(mock_cmd.call_args_list), 6)
         self.assertEqual(mock_cmd.call_args_list[0], mock.call(["openssl", "pkcs12", "-clcerts", "-nokeys", "-in", "abc/restapiserver.pfx.1", "-out", "xyz/restapiserver.crt.1", "-password", "pass:", "-passin", "pass:"]))
         self.assertEqual(mock_cmd.call_args_list[3], mock.call(["openssl", "pkcs12", "-clcerts", "-nokeys", "-in", "abc/restapiserver.pfx.6", "-out", "xyz/restapiserver.crt.6", "-password", "pass:", "-passin", "pass:"]))
+
+    @mock.patch("swsscommon.swsscommon.DBConnector")
+    @mock.patch("swsscommon.swsscommon.Table")
+    def test_set_acms_certs_path_from_db_01(self, mock_table, mock_db):
+        '''
+        Get certs path from db, no path in db
+        Check certs path should be as default
+        '''
+        mock_table.return_value = {"localhost": (True, (('', ''),))}
+        mock_db.return_value = None
+        cert_converter.set_acms_certs_path_from_db()
+        self.assertEqual(cert_converter.acms_certs_path, "/var/opt/msft/client/dsms/sonic-prod/certificates/chained/")
+
+    @mock.patch("swsscommon.swsscommon.DBConnector")
+    @mock.patch("swsscommon.swsscommon.Table")
+    def test_set_acms_certs_path_from_db_02(self, mock_table, mock_db):
+        '''
+        Get certs path from db, redis connection error
+        Check certs path should be as default
+        '''
+        swsscommon_err = RuntimeError("redis error")
+        mock_table.side_effect = [swsscommon_err]
+        cert_converter.set_acms_certs_path_from_db()
+        self.assertEqual(cert_converter.acms_certs_path, "/var/opt/msft/client/dsms/sonic-prod/certificates/chained/")
+
+    @mock.patch("swsscommon.swsscommon.DBConnector")
+    @mock.patch("swsscommon.swsscommon.Table")
+    def test_set_acms_certs_path_from_db_03(self, mock_table, mock_db):
+        '''
+        Get certs path from db, unknown error
+        Check exception should be raised
+        '''
+        expect_err = Exception("unknown error")
+        mock_table.side_effect = [expect_err]
+        try:
+            cert_converter.set_acms_certs_path_from_db()
+        except Exception as e:
+            self.assertEqual(e, expect_err)
+
+    @mock.patch("swsscommon.swsscommon.DBConnector")
+    @mock.patch("swsscommon.swsscommon.Table")
+    def test_set_acms_certs_path_from_db_04(self, mock_table, mock_db):
+        '''
+        Get certs path from db, path in db
+        Check certs path should be as in db
+        '''
+        mock_table.return_value = {"localhost": (True, (('dsms_cert_path', 'sonick8s-test/certificates/chained/sonick8s'),))}
+        mock_db.return_value = None
+        cert_converter.set_acms_certs_path_from_db()
+        self.assertEqual(cert_converter.acms_certs_path, "/var/opt/msft/client/dsms/sonick8s-test/certificates/chained/sonick8s/")

@@ -8,6 +8,7 @@ It watches for changes to the uber notify file by dSMS and triggers the conversi
 import os, subprocess, time
 import random, string
 from sonic_py_common import logger
+from swsscommon import swsscommon
 
 # Location where this script finally puts the certs after format conversion
 certs_path = "/etc/sonic/credentials/"
@@ -19,9 +20,26 @@ uber_notify_file_path = "/var/opt/msft/client/anysecret.notify"
 password_length = 64
 # Duration between polling for cert changes in seconds
 polling_frequency = 3600
+# Redis DB information
+REDIS_TIMEOUT_MS = 0
 
 sonic_logger = logger.Logger()
 sonic_logger.set_min_log_priority_info()
+
+def set_acms_certs_path_from_db():
+    global acms_certs_path
+    try:
+        config_db = swsscommon.DBConnector("CONFIG_DB", REDIS_TIMEOUT_MS, True)
+        device_metadata = swsscommon.Table(config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
+    except RuntimeError as e:
+        # TODO: Use specific exception swsscommon.RedisError
+        sonic_logger.log_error("cert_converter : Unable to get dsms_cert_path " + str(e))
+        return
+    (_, tuples) = device_metadata.get("localhost")
+    localhost = dict(tuples)
+    postfix = localhost.get('dsms_cert_path', None)
+    acms_certs_path = f"/var/opt/msft/client/dsms/{postfix}/" if postfix else acms_certs_path
+    sonic_logger.log_info("cert_converter : acms_certs_path = " + acms_certs_path)
 
 def execute_cmd(cmd):
     response = subprocess.run(cmd, capture_output=True)
@@ -124,6 +142,7 @@ def convert_certs(acms_certs_path, certs_path, password_length):
 
 
 def main():
+    set_acms_certs_path_from_db()
     while True:
         sonic_logger.log_info("cert_converter : main : Check if uber_notify_file is present")
         if os.path.isfile(uber_notify_file_path):
