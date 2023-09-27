@@ -1,0 +1,18 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "VirtualMachine",
+            "baremetal_v4": "10.20.30.40",
+            "baremetal_v6": "abcd::"
+        }
+    },
+    "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {
+        "remote_peer": {
+            "type": "ToRRouter"
+        }
+    },
+    "neighbor_addr" : "1.2.3.4",
+    "bgp_session": {
+        "name": "remote_peer"
+    }
+}

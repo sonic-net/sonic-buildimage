@@ -77,6 +77,8 @@
 {%         elif neighbor_type == 'LeafRouter' %}
 {%                 include path_template % "v4.spine.leaf" %}
 {%         endif %}
+{%     elif device_type in ['VirtualMachine'] %}
+{%         include path_template % "v4.vm" %}
 {%     endif %}
 {% endif %}
 {% if neighbor_addr | ipv6 %}
@@ -137,6 +139,8 @@
 {%         elif neighbor_type == 'LeafRouter' %}
 {%                 include path_template % "v6.spine.leaf" %}
 {%         endif %}
+{%     elif device_type in ['VirtualMachine'] %}
+{%         include path_template % "v6.vm" %}
 {%     endif %}
 {% endif %}
 {% endmacro %}

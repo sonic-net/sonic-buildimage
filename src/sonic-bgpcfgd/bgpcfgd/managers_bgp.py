@@ -106,7 +106,6 @@ class BGPPeerMgrBase(Manager):
 
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
-            ("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0"),
             ("LOCAL", "local_addresses", ""),
             ("LOCAL", "interfaces", ""),
         ]
@@ -121,6 +120,14 @@ class BGPPeerMgrBase(Manager):
         self.check_deployment_id = 'bgp' in self.constants \
                                and 'use_deployment_id' in self.constants['bgp'] \
                                and self.constants['bgp']['use_deployment_id']
+        
+        self.use_loopback = 'bgp' not in self.constants \
+                            or 'use_loopback' not in self.constants['bgp'] \
+                            or self.constants['bgp']['use_loopback']
+
+        self.load_mgmt_intf = 'bgp' in self.constants \
+                            and 'load_mgmt_intf' in self.constants['bgp'] \
+                            and self.constants['bgp']['load_mgmt_intf']
 
         if self.check_neig_meta:
             deps.append(("CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME, ""))
@@ -130,6 +137,9 @@ class BGPPeerMgrBase(Manager):
 
         if self.peer_type == 'internal':
             deps.append(("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback4096"))
+
+        if self.use_loopback:
+            deps.append(("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0"))
 
         super(BGPPeerMgrBase, self).__init__(
             common_objs,
@@ -167,7 +177,7 @@ class BGPPeerMgrBase(Manager):
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
         #
         lo0_ipv4 = self.get_lo_ipv4("Loopback0|")
-        if lo0_ipv4 is None:
+        if lo0_ipv4 is None and self.use_loopback:
             log_warn("Loopback0 ipv4 address is not presented yet")
             return False
         #
@@ -202,7 +212,6 @@ class BGPPeerMgrBase(Manager):
             'vrf': vrf,
             'neighbor_addr': nbr,
             'bgp_session': data,
-            'loopback0_ipv4': lo0_ipv4,
             'CONFIG_DB__LOOPBACK_INTERFACE':{ tuple(key.split('|')) : {} for key in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME)
                                                                          if '|' in key }
         }
@@ -212,6 +221,12 @@ class BGPPeerMgrBase(Manager):
                 log_info("DEVICE_NEIGHBOR_METADATA is not ready for neighbor '%s' - '%s'" % (nbr, data['name']))
                 return False
             kwargs['CONFIG_DB__DEVICE_NEIGHBOR_METADATA'] = neigmeta
+
+        if self.use_loopback:
+            kwargs['loopback0_ipv4'] = lo0_ipv4
+
+        if self.load_mgmt_intf:
+            kwargs['CONFIG_DB__MGMT_INTERFACE'] = { tuple(key.split('|')) : {} for key in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_MGMT_INTERFACE_TABLE_NAME) if '|' in key }
 
         tag = data['name'] if 'name' in data else nbr
         self.peer_group_mgr.update(tag, **kwargs)

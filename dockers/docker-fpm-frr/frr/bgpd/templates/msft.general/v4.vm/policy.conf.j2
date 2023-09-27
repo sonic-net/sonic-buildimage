@@ -1,0 +1,22 @@
+!
+! template: bgpd/templates/msft.general/v4.vm/policy.conf.j2
+!
+{% set baremetal_v4 = CONFIG_DB__DEVICE_METADATA['localhost']['baremetal_v4'] %}
+{% set baremetal_v6 = CONFIG_DB__DEVICE_METADATA['localhost']['baremetal_v6'] %}
+route-map TO_TIER0_V4 permit 10
+  set ip next-hop {{ baremetal_v4 }}
+
+route-map FROM_TIER0_V4 deny 10
+  match ip address 0.0.0.0/0
+
+ipv6 prefix-list v6_default seq 5 permit any
+
+route-map TO_TIER0_V6 permit 10
+  set ipv6 next-hop global  {{ baremetal_v6 }}
+
+route-map FROM_TIER0_V6 deny 10
+  match ipv6 address prefix-list v6_default
+
+!
+! end of template: bgpd/templates/msft.general/v4.vm/policy.conf.j2
+!
