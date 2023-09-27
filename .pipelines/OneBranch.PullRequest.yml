@@ -114,6 +114,7 @@ stages:
             make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/mellanox INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin target/docker-syncd-mlnx-rpc.gz
             mv target $(Build.ArtifactStagingDirectory)
         - name: barefoot
+          condition: ne(variables['SKIP_BAREFOOT'], 'y')
           script: |
             set -ex
             sudo modprobe overlay

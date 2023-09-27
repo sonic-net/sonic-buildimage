@@ -241,6 +241,7 @@ stages:
             make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-mlnx-rpc.gz
             cp target/debs/bullseye/python-saithrift_0.9.4_amd64.deb target/python-saithrift_0.9.4_amd64.deb
         - name: barefoot
+          condition: ne(variables['SKIP_BAREFOOT'], 'y')
           script: |
             set -ex
             sudo modprobe overlay
