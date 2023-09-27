@@ -11,7 +11,3 @@ libxslt1-dev==1.1.32-2.2~deb10u2
 linux-compiler-gcc-8-arm==4.19.289-2
 nasm==2.14-1
 nodejs==14.21.3-deb-1nodesource1
-openjdk-11-jdk==11.0.18+10-1~deb10u1
-openjdk-11-jdk-headless==11.0.18+10-1~deb10u1
-openjdk-11-jre==11.0.18+10-1~deb10u1
-openjdk-11-jre-headless==11.0.18+10-1~deb10u1

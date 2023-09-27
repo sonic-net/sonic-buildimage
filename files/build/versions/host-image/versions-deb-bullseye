@@ -82,7 +82,7 @@ isc-dhcp-client==4.4.1-2.3+deb11u2
 iso-codes==4.6.0-1
 jq==1.6-2.1
 kdump-tools==1:1.6.8.4
-kernel-mft-dkms-modules-5.10.0-18-2-amd64==4.25.0
+kernel-mft-dkms-modules-5.10.0-23-2-amd64==4.25.0
 kexec-tools==1:2.0.20-2.1
 klibc-utils==2.0.8-6.1
 kmod==28-1
@@ -243,7 +243,7 @@ libyang==1.0.73
 libyang-cpp==1.0.73
 libzmq5==4.3.4-1
 linux-base==4.6
-linux-image-5.10.0-18-2-amd64-unsigned==5.10.140-1
+linux-image-5.10.0-23-2-amd64-unsigned==5.10.179-3
 linux-perf==5.10.191-1
 linux-perf-5.10==5.10.191-1
 locales==2.31-13+deb11u6

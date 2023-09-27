@@ -2,14 +2,17 @@ crc16==0.1.1
 getmac==0.9.4
 importlib-metadata==6.7.0
 netifaces==0.11.0
+packaging==23.1
 packet-helper==0.0.1
 psutil==5.9.5
 ptf==0.0.0
 pyperclip==1.8.2
 pysubnettree==0.37
 scapy-helper==0.14.8
+setuptools-scm==7.1.0
 tabulate==0.8.10
 thrift==0.14.1
+tomli==2.0.1
 typing-extensions==4.7.1
 xmlrunner==1.7.7
 zipp==3.15.0

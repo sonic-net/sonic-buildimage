@@ -5,7 +5,3 @@ libdrm-tegra0==2.4.97-1
 libtext-iconv-perl==1.7-5+b6
 libxslt1-dev==1.1.32-2.2~deb10u2
 nodejs==14.21.3-deb-1nodesource1
-openjdk-11-jdk==11.0.18+10-1~deb10u1
-openjdk-11-jdk-headless==11.0.18+10-1~deb10u1
-openjdk-11-jre==11.0.18+10-1~deb10u1
-openjdk-11-jre-headless==11.0.18+10-1~deb10u1

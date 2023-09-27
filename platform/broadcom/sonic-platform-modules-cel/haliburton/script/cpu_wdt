@@ -79,6 +79,7 @@ if [[ "${ACTION}" == "start" ]]; then
     log_info "Enable keep alive messaging every $KEEPALIVE seconds"
     while [[ ${CPUWDT_MAIN_TASK_RUNNING_FLAG} == "true" ]]; do
         watchdogutil arm -s "${TIMEOUT}" > /dev/null
+        log_info "Keep alive message sent [RC=$?]. Will sleep ${KEEPALIVE} seconds."
         sleep "${KEEPALIVE}"
     done
     log_info "Keep alive messaging has been disabled"
