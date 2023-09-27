@@ -17,8 +17,13 @@ sonic_logger = logger.Logger()
 sonic_logger.set_min_log_priority_info()
 
 def get_device_cloudtype():
-    config_db = swsscommon.DBConnector("CONFIG_DB", REDIS_TIMEOUT_MS, True)
-    device_metadata = swsscommon.Table(config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
+    try:
+        config_db = swsscommon.DBConnector("CONFIG_DB", REDIS_TIMEOUT_MS, True)
+        device_metadata = swsscommon.Table(config_db, swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)
+    except RuntimeError as e:
+        # TODO: Use specific exception swsscommon.RedisError
+        sonic_logger.log_error("dSMS_config_modifier: Unable to get cloudtype " + str(e))
+        return ""
     (status, tuples) = device_metadata.get("localhost")
     localhost = dict(tuples)
     return localhost.get('cloudtype', '')
