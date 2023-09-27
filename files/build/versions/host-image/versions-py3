@@ -14,7 +14,7 @@ cryptography==3.3.2
 dbus-python==1.2.16
 docker==6.1.1
 docker-image-py==0.1.12
-enlighten==1.11.2
+enlighten==1.12.0
 filelock==3.12.4
 grpcio==1.39.0
 grpcio-tools==1.39.0
@@ -69,7 +69,7 @@ systemd-python==235
 tabulate==0.8.2
 thrift==0.13.0
 toposort==1.6
-urllib3==2.0.4
+urllib3==2.0.5
 watchdog==0.10.3
 wcwidth==0.2.6
 websocket-client==1.6.3

@@ -24,9 +24,9 @@ autopoint==0.21-4
 autotools-dev==20180224.1+nmu1
 bash-completion==1:2.11-2
 bc==1.07.1-2+b2
-bind9-dnsutils==1:9.16.42-1~deb11u1
-bind9-host==1:9.16.42-1~deb11u1
-bind9-libs==1:9.16.42-1~deb11u1
+bind9-dnsutils==1:9.16.44-1~deb11u1
+bind9-host==1:9.16.44-1~deb11u1
+bind9-libs==1:9.16.44-1~deb11u1
 binfmt-support==2.2.1-1+deb11u1
 binutils==2.35.2-2
 binutils-common==2.35.2-2
@@ -91,7 +91,7 @@ distro-info-data==0.51+deb11u3
 dkms==2.8.4-3
 dmeventd==2:1.02.175-2.1
 dmsetup==2:1.02.175-2.1
-dnsutils==1:9.16.42-1~deb11u1
+dnsutils==1:9.16.44-1~deb11u1
 docbook==4.5-6
 docbook-dsssl==1.79-9.2
 docbook-to-man==1:2.0.0-45

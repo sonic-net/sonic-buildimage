@@ -42,7 +42,7 @@ https://github.com/CentecNetworks/sonic-binaries/raw/master/amd64/third_party/ad
 https://github.com/CentecNetworks/sonic-binaries/raw/master/arm64/sai/libsaictc-dev_1.12.0-1_arm64.deb==75350b2a4a662268cc413427e47cd588
 https://github.com/CentecNetworks/sonic-binaries/raw/master/arm64/sai/libsaictc_1.12.0-1_arm64.deb==7699a44a090208ff0c5cd5d1674ab47b
 https://github.com/CumulusNetworks/ifupdown2/archive/3.0.0-1.tar.gz==755459b3a58fbc11625336846cea7420
-https://github.com/Marvell-switching/sonic-marvell-binaries/raw/master/armhf/sai-plugin/mrvllibsai_1.12.0-1_armhf.deb==ce85e4fef6710619aff6dff8ebe06b11
+https://github.com/Marvell-switching/sonic-marvell-binaries/raw/master/armhf/sai-plugin/mrvllibsai_1.12.0-2_armhf.deb==e2890daebc864898775d8b0a7379d4aa
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2012.1062/fw-SPC-rel-13_2012_1062-EVB.mfa==ded5ea46c37ba564a29e306ad233a83c
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2012.1062/fw-SPC2-rel-29_2012_1062-EVB.mfa==74700208646225d39afff0154642648a
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2012.1062/fw-SPC3-rel-30_2012_1062-EVB.mfa==3de91549a489dc45250e3e1ca11b74e3
@@ -74,9 +74,9 @@ https://launchpad.net/debian/+archive/primary/+sourcefiles/bash/5.1-2/bash_5.1-2
 https://launchpad.net/debian/+archive/primary/+sourcefiles/bash/5.1-2/bash_5.1.orig.tar.xz==6ddb13b6111f601db08fc7c72afa0263
 https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py==963c345c75fe5c5bdedc05ed98a5fd1f
 https://repo1.maven.org/maven2/io/swagger/swagger-codegen-cli/2.4.5/swagger-codegen-cli-2.4.5.jar==219f1453ff22482d9e080effbfa7fa81
-https://sonicstorage.blob.core.windows.net/debian-security/pool/updates/main/l/linux/linux_5.10.140-1.debian.tar.xz==9813a002af43da3a5be05f3d31e85328
-https://sonicstorage.blob.core.windows.net/debian-security/pool/updates/main/l/linux/linux_5.10.140-1.dsc==84ab224b073f97978802d9f998248fcc
-https://sonicstorage.blob.core.windows.net/debian-security/pool/updates/main/l/linux/linux_5.10.140.orig.tar.xz==925a4af3dffcc9e2838d223e413d6ebb
+https://sonicstorage.blob.core.windows.net/debian-security/pool/updates/main/l/linux/linux_5.10.179-3.debian.tar.xz==d7df508e9f8139cd066f23b45d9ae37b
+https://sonicstorage.blob.core.windows.net/debian-security/pool/updates/main/l/linux/linux_5.10.179-3.dsc==6324f828e630f775e861e64e3b4f38fd
+https://sonicstorage.blob.core.windows.net/debian-security/pool/updates/main/l/linux/linux_5.10.179.orig.tar.xz==0c6a7ee447e5628fa9c05c56654fa40b
 https://sonicstorage.blob.core.windows.net/debian/pool/main/l/lldpd/lldpd_1.0.4-1.debian.tar.xz==0a529cf8d1717b5c3dbe0c61b3512aa1
 https://sonicstorage.blob.core.windows.net/debian/pool/main/l/lldpd/lldpd_1.0.4-1.dsc==b88b922d96688c948e90987fcaa3a2de
 https://sonicstorage.blob.core.windows.net/debian/pool/main/l/lldpd/lldpd_1.0.4.orig.tar.gz==33e8d58623f99184e4e709cbbfe45db3

@@ -159,11 +159,19 @@ void run_cap(void *zctx, bool &term, string &read_source,
     internal_event_t ev_int;
     int block_ms = 200;
     int i=0;
+    static int proxy_finished_init = false;
 
     EXPECT_TRUE(NULL != mock_cap);
     EXPECT_EQ(0, zmq_connect(mock_cap, get_config(CAPTURE_END_KEY).c_str()));
     EXPECT_EQ(0, zmq_setsockopt(mock_cap, ZMQ_SUBSCRIBE, "", 0));
     EXPECT_EQ(0, zmq_setsockopt(mock_cap, ZMQ_RCVTIMEO, &block_ms, sizeof (block_ms)));
+
+    if(!proxy_finished_init) {
+        zmq_msg_t msg;
+        zmq_msg_init(&msg);
+        EXPECT_EQ(1, zmq_msg_recv(&msg, mock_cap, 0)); // Subscription message
+        proxy_finished_init = true;
+    }
 
     while(!term) {
         string source;

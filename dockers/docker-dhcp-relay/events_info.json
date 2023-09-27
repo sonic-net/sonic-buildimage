@@ -2,7 +2,7 @@
     "yang_module": "sonic-events-dhcp-relay",
     "proclist": [
         {
-            "name": "dhcp_relay",
+            "name": "dhc*",
             "parse_json": "dhcp_relay_regex.json"
         }
     ]
