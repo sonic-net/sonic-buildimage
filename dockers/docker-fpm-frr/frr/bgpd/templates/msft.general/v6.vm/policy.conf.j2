@@ -6,6 +6,7 @@ ipv6 prefix-list v6_default seq 5 permit any
 
 route-map TO_TIER0_V6 permit 10
   set ipv6 next-hop global  {{ baremetal_ipv6 }}
+  set origin igp
 
 route-map FROM_TIER0_V6 deny 10
   match ipv6 address prefix-list v6_default
