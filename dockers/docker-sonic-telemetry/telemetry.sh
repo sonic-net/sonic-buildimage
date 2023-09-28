@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 EXIT_TELEMETRY_VARS_FILE_NOT_FOUND=1
-INCORRECT_TELEMETRY_VALUE = 2
+INCORRECT_TELEMETRY_VALUE=2
 TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
 
 if [ ! -f "$TELEMETRY_VARS_FILE" ]; then
@@ -75,7 +75,7 @@ THRESHOLD_CONNECTIONS=$(echo $GNMI | jq -r '.threshold')
 if [[ $THRESHOLD_CONNECTIONS =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" --threshold $THRESHOLD_CONNECTIONS"
 else
-    if [[ $THRESHOLD_CONNECTIONS == "null" ]]; then
+    if [ -z $GNMI ] || [[ $THRESHOLD_CONNECTIONS == "null" ]]; then
         TELEMETRY_ARGS+=" --threshold 100"
     else
         echo "Incorrect threshold value, expecting positive integers" >&2
@@ -88,7 +88,7 @@ IDLE_CONN_DURATION=$(echo $GNMI | jq -r '.idle_conn_duration')
 if [[ $IDLE_CONN_DURATION =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" --idle_conn_duration $IDLE_CONN_DURATION"
 else
-    if [[ $IDLE_CONN_DURATION == "null" ]]; then
+    if [ -z $GNMI ] || [[ $IDLE_CONN_DURATION == "null" ]]; then
         TELEMETRY_ARGS+=" --idle_conn_duration 5"
     else
         echo "Incorrect idle_conn_duration value, expecting positive integers" >&2
