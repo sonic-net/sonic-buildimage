@@ -777,8 +777,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT fuser -vm /proc
 ## Kill the processes
 sudo LANG=C chroot $FILESYSTEM_ROOT fuser -km /proc || true
 ## Wait fuser fully kill the processes
-sleep 15
-sudo LANG=C chroot $FILESYSTEM_ROOT umount /proc || true
+sudo timeout 15s bash -c 'until LANG=C chroot $0 umount /proc; do sleep 1; done' $FILESYSTEM_ROOT || true
 
 ## Prepare empty directory to trigger mount move in initramfs-tools/mount_loop_root, implemented by patching
 sudo mkdir $FILESYSTEM_ROOT/host
