@@ -12,3 +12,4 @@
 0011-dhcp-relay-Prevent-Buffer-Overrun.patch
 0012-add-option-si-to-support-using-src-intf-ip-in-relay.patch
 0013-Fix-dhcrelay-agent-option-buffer-pointer-logic.patch
+0014-enable-parallel-build.patch

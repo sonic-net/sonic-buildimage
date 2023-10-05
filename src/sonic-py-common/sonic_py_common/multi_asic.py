@@ -483,4 +483,7 @@ def get_asic_presence_list():
                 for asic in asics_presence_list:
                     # asic is asid id: asic0, asic1.... asicN. Get the numeric value.
                     asics_list.append(int(get_asic_id_from_name(asic)))
+    else:
+        # This is not multi-asic, all asics should be present.
+        asics_list = list(range(0, get_num_asics()))
     return asics_list

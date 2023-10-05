@@ -40,7 +40,7 @@ if [ -f $first_boot_flag_file ]; then
 fi
 touch $first_boot_flag_file
 
-# execute entrance script
+# Execute entrance script
 init_file_name="entrance.sh"
 init_file=${mount_point}/${init_file_name}
 chmod +x $init_file

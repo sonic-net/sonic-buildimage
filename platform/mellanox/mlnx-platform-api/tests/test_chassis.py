@@ -194,6 +194,7 @@ class TestChassis:
         assert status is True
         assert 'sfp' in event_dict and not event_dict['sfp']
 
+    @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=True))
     def test_reboot_cause(self):
         from sonic_platform import utils
         from sonic_platform.chassis import REBOOT_CAUSE_ROOT
@@ -241,6 +242,22 @@ class TestChassis:
             assert major == chassis.REBOOT_CAUSE_NON_HARDWARE
             assert minor == value
             mock_file_content[file_path] = 0
+
+    @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=False))
+    def test_reboot_cause_timeout(self):
+        chassis = Chassis()
+        major, minor = chassis.get_reboot_cause()
+        assert major == chassis.REBOOT_CAUSE_NON_HARDWARE
+        assert minor == ''
+
+    @mock.patch('sonic_platform.utils.read_int_from_file')
+    @mock.patch('sonic_platform.chassis.time.sleep', mock.MagicMock())
+    def test_wait_reboot_cause_ready(self, mock_read_int):
+        mock_read_int.return_value = 1
+        chassis = Chassis()
+        assert chassis._wait_reboot_cause_ready()
+        mock_read_int.return_value = 0
+        assert not chassis._wait_reboot_cause_ready()
 
     def test_parse_warmfast_reboot_from_proc_cmdline(self):
         chassis = Chassis()

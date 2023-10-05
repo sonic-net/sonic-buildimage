@@ -23,3 +23,5 @@ cross-compile-changes.patch
 0021-zebra-remove-duplicated-nexthops-when-sending-fpm-msg.patch
 0022-bgpd-Don-t-read-the-first-byte-of-ORF-header-if-we-a.patch
 0023-bgpd-Make-sure-we-have-enough-data-to-read-two-bytes.patch
+0024-bgpd-Do-not-process-NLRIs-if-the-attribute-length-is.patch
+0025-bgpd-Use-treat-as-withdraw-for-tunnel-encapsulation-.patch

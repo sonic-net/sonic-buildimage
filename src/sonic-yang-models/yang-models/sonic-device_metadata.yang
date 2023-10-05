@@ -234,6 +234,14 @@ module sonic-device_metadata {
                     description "The TZ database name to use for the system, such as 'Europe/Stockholm'.";
                     reference "IANA Time Zone Database http://www.iana.org/time-zones";
                 }
+
+                leaf create_only_config_db_buffers {
+                    type boolean;
+                    description "If this attribute exists and is equal to true - the buffers will be created
+                                 according to the config_db configuration (for example BUFFER_QUEUE|* table),
+                                 otherwise the maximum available buffers (which are read from SAI) will be
+                                 created, regardless of the CONFIG_DB buffers configuration.";
+                }
             }
             /* end of container localhost */
         }
