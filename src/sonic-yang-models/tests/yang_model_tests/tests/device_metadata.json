@@ -149,5 +149,12 @@
     "DEVICE_METADATA_INVALID_TIMEZONE": {
         "desc": "Verifying invalid timezone value",
         "eStrKey": "Range"
+    },
+    "DEVICE_METADATA_VALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
+        "desc": "Verifying the create_only_config_db_buffers value"
+    },
+    "DEVICE_METADATA_INVALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
+        "desc": "Verifying invalid create_only_config_db_buffers value",
+        "eStrKey": "InvalidValue"
     }
 }

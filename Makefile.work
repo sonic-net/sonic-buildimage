@@ -571,6 +571,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
                            MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
                            SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
+                           ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 

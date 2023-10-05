@@ -398,5 +398,23 @@
                 }
             }
         }
+    },
+    "DEVICE_METADATA_VALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "create_only_config_db_buffers": "true"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "create_only_config_db_buffers": "invalid"
+                }
+            }
+        }
     }
 }

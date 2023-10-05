@@ -96,6 +96,13 @@ echo "onie_platform: $onie_platform"
 # Get platform specific linux kernel command line arguments
 ONIE_PLATFORM_EXTRA_CMDLINE_LINUX=""
 
+# Start with build time value, set either using env variable
+# or from onie-image.conf. onie-mk-demo.sh will string replace
+# below value to env value. Platform specific installer.conf
+# will override this value if necessary by reading $onie_platform
+# after this.
+ONIE_IMAGE_PART_SIZE="%%ONIE_IMAGE_PART_SIZE%%"
+
 # Default var/log device size in MB
 VAR_LOG_SIZE=4096
 
@@ -138,9 +145,8 @@ fi
 # with "OS" or "DIAG".
 demo_type="%%DEMO_TYPE%%"
 
-# The build system prepares this script by replacing %%ONIE_IMAGE_PART_SIZE%%
-# with the partition size
-demo_part_size="%%ONIE_IMAGE_PART_SIZE%%"
+# take final partition size after platform installer.conf override
+demo_part_size=$ONIE_IMAGE_PART_SIZE
 
 # The build system prepares this script by replacing %%IMAGE_VERSION%%
 # with git revision hash as a version identifier

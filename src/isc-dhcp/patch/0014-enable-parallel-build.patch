@@ -1,0 +1,42 @@
+diff --git a/debian/rules b/debian/rules
+index 3c8318f..28f4657 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -37,6 +37,13 @@ export DO_LPF=1
+ CONFFLAGS+=--enable-use-sockets
+ endif
+ 
++ifeq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
++  PARALLEL :=
++else
++  PARALLEL := \
++       -j$(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
++endif
++
+ %:
+ 	dh $@ --parallel --with autoreconf
+ 
+@@ -46,17 +53,17 @@ override_dh_auto_build:
+ 	# ldap-enabled build
+ 	test -f Makefile && $(MAKE) distclean || true
+ 	./configure --with-ldap --with-ldapcrypto CFLAGS="$(CFLAGS) -DNSUPDATE" LIBS="-lirs-export $(LIBS)" $(CONFFLAGS)
+-	$(MAKE)
++	$(MAKE) $(PARALLEL)
+ 	mv server/dhcpd dhcpd
+ 	# ddns-disabled build
+ 	test -f Makefile && $(MAKE) distclean || true
+ 	./configure CFLAGS="$(CFLAGS)" $(CONFFLAGS)
+-	$(MAKE)
++	$(MAKE) $(PARALLEL)
+ 	mv client/dhclient dhclient
+ 	# ldap-disabled build
+ 	test -f Makefile && $(MAKE) distclean || true
+ 	./configure CFLAGS="$(CFLAGS) -DNSUPDATE" LIBS="-lirs-export $(LIBS)" $(CONFFLAGS)
+-	$(MAKE)
++	$(MAKE) $(PARALLEL)
+ 
+ override_dh_install:
+ 	# rename some upstream files
+-- 
+2.34.1
+

@@ -59,8 +59,9 @@ HWMGMT_SYSTEM_ROOT = '/var/run/hw-management/system/'
 
 #reboot cause related definitions
 REBOOT_CAUSE_ROOT = HWMGMT_SYSTEM_ROOT
-
-REBOOT_CAUSE_FILE_LENGTH = 1
+REBOOT_CAUSE_MAX_WAIT_TIME = 45
+REBOOT_CAUSE_CHECK_INTERVAL = 5
+REBOOT_CAUSE_READY_FILE = '/run/hw-management/config/reset_attr_ready'
 
 REBOOT_TYPE_KEXEC_FILE = "/proc/cmdline"
 REBOOT_TYPE_KEXEC_PATTERN_WARM = ".*SONIC_BOOT_TYPE=(warm|fastfast).*"
@@ -782,6 +783,16 @@ class Chassis(ChassisBase):
                 return 'fast-reboot'
         return None
 
+    def _wait_reboot_cause_ready(self):
+        max_wait_time = REBOOT_CAUSE_MAX_WAIT_TIME
+        while max_wait_time > 0:
+            if utils.read_int_from_file(REBOOT_CAUSE_READY_FILE, log_func=None) == 1:
+                return True
+            time.sleep(REBOOT_CAUSE_CHECK_INTERVAL)
+            max_wait_time -= REBOOT_CAUSE_CHECK_INTERVAL
+
+        return False
+
     def get_reboot_cause(self):
         """
         Retrieves the cause of the previous reboot
@@ -801,6 +812,10 @@ class Chassis(ChassisBase):
             reboot_cause = self._parse_warmfast_reboot_from_proc_cmdline()
             if reboot_cause:
                 return self.REBOOT_CAUSE_NON_HARDWARE, ''
+
+        if not self._wait_reboot_cause_ready():
+            logger.log_error("Hardware reboot cause is not ready")
+            return self.REBOOT_CAUSE_NON_HARDWARE, ''
 
         if not self.reboot_cause_initialized:
             self.initialize_reboot_cause()

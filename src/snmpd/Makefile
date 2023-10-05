@@ -14,6 +14,8 @@ DERIVED_TARGETS = snmptrapd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp-dev_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp-perl_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  tkmib_$(SNMPD_VERSION_FULL)_all.deb
+
+SNMPD_MAKE_JOBS_NUM = $(SONIC_CONFIG_MAKE_JOBS)
 else
 DERIVED_TARGETS = snmptrapd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  snmp_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
@@ -25,6 +27,8 @@ DERIVED_TARGETS = snmptrapd_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp-dev_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  libsnmp-perl_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 		  tkmib_$(SNMPD_VERSION_FULL)_all.deb
+
+SNMPD_MAKE_JOBS_NUM = 1
 endif
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
@@ -46,9 +50,9 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	stg import -s ../patch-$(SNMPD_VERSION)/series
 
 ifneq ($(CROSS_BUILD_ENVIRON), y)
-	dpkg-buildpackage -rfakeroot -b -d -us -uc -j1 --admindir $(SONIC_DPKG_ADMINDIR)
+	dpkg-buildpackage -rfakeroot -b -d -us -uc -j$(SNMPD_MAKE_JOBS_NUM) --admindir $(SONIC_DPKG_ADMINDIR)
 else
-	PYTHONPATH=/usr/lib/python2.7/plat-arm-linux-gnueabihf/ dpkg-buildpackage -rfakeroot -b -d -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j1 --admindir $(SONIC_DPKG_ADMINDIR)
+	PYTHONPATH=/usr/lib/python2.7/plat-arm-linux-gnueabihf/ dpkg-buildpackage -rfakeroot -b -d -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SNMPD_MAKE_JOBS_NUM) --admindir $(SONIC_DPKG_ADMINDIR)
 endif
 	popd
 

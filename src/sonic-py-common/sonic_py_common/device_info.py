@@ -479,7 +479,7 @@ def get_platform_info(config_db=None):
     if hw_info_dict:
         return hw_info_dict
 
-    from .multi_asic import get_num_asics
+    from .multi_asic import get_asic_presence_list
 
     version_info = get_sonic_version_info()
 
@@ -487,7 +487,10 @@ def get_platform_info(config_db=None):
     hw_info_dict['hwsku'] = get_hwsku()
     if version_info:
         hw_info_dict['asic_type'] = version_info.get('asic_type')
-    hw_info_dict['asic_count'] = get_num_asics()
+    try:
+        hw_info_dict['asic_count'] = len(get_asic_presence_list())
+    except:
+        hw_info_dict['asic_count'] = 'N/A'
 
     try:
         # TODO: enforce caller to provide config_db explicitly and remove its default value
