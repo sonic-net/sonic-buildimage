@@ -30,9 +30,9 @@ index 19e42a8..38f8619 100755
 +            for src_ip in src_ip_range:
 +                ip_ntwrk = ipaddress.ip_network(src_ip, strict=False)
 +                if isinstance(ip_ntwrk, ipaddress.IPv4Network):
-+                    allow_restapi_commands.append(self.iptables_cmd_ns_prefix[namespace] + "iptables -A INPUT -s {} -p tcp --dport {} -j ACCEPT".format(src_ip, dport))
++                    allow_restapi_commands.append(self.iptables_cmd_ns_prefix[namespace] + ["iptables", "-A", "INPUT", "-s", src_ip, "-p", "tcp", "--dport", dport, "-j", "ACCEPT"])
 +                else:
-+                    allow_restapi_commands.append(self.iptables_cmd_ns_prefix[namespace] + "ip6tables -A INPUT -s {} -p tcp --dport {} -j ACCEPT".format(src_ip, dport))
++                    allow_restapi_commands.append(self.iptables_cmd_ns_prefix[namespace] + ["ip6tables", "-A", "INPUT", "-s", src_ip, "-p", "tcp", "--dport", dport, "-j", "ACCEPT"])
 +
 +        return allow_restapi_commands
 +
@@ -40,16 +40,16 @@ index 19e42a8..38f8619 100755
          feature_tb_info = self.config_db_map[DEFAULT_NAMESPACE].get_table(self.FEATURE_TABLE)
          if feature_tb_info:
 @@ -517,6 +535,10 @@ class ControlPlaneAclManager(daemon_base.DaemonBase):
-         iptables_cmds.append(self.iptables_cmd_ns_prefix[namespace] + "iptables -A INPUT -p tcp --dport 179 -j ACCEPT")
-         iptables_cmds.append(self.iptables_cmd_ns_prefix[namespace] + "ip6tables -A INPUT -p tcp --dport 179 -j ACCEPT")
+         iptables_cmds.append(self.iptables_cmd_ns_prefix[namespace] + ['iptables', '-A', 'INPUT', '-p', 'tcp', '--dport', '179', '-j', 'ACCEPT'])
+         iptables_cmds.append(self.iptables_cmd_ns_prefix[namespace] + ['ip6tables', '-A', 'INPUT', '-p', 'tcp', '--dport', '179', '-j', 'ACCEPT'])
  
 +        # Add iptables/ip6tables commands to allow all restapi/http/https requests
 +        if "restapi" in self.feature_present and self.feature_present.get("restapi"):
 +            iptables_cmds += self.generate_allow_restapi_iptables_commands(namespace)
 +
          # Get current ACL tables and rules from Config DB
-         self._tables_db_info = self.config_db_map[namespace].get_table(self.ACL_TABLE)
-         self._rules_db_info = self.config_db_map[namespace].get_table(self.ACL_RULE)
+ 
+         self._tables_db_info = config_db_connector.get_table(self.ACL_TABLE)
 -- 
 2.25.1
 
@@ -80,14 +80,14 @@ index 38f8619..a4daae8 100755
          allow_restapi_commands = []
 @@ -222,6 +222,13 @@ class ControlPlaneAclManager(daemon_base.DaemonBase):
                  else:
-                     allow_restapi_commands.append(self.iptables_cmd_ns_prefix[namespace] + "ip6tables -A INPUT -s {} -p tcp --dport {} -j ACCEPT".format(src_ip, dport))
+                     allow_restapi_commands.append(self.iptables_cmd_ns_prefix[namespace] + ["ip6tables", "-A", "INPUT", "-s", src_ip, "-p", "tcp", "--dport", dport, "-j", "ACCEPT"])
  
 +            for dest_ip in dest_ip_range:
 +                ip_ntwrk = ipaddress.ip_network(dest_ip, strict=False)
 +                if isinstance(ip_ntwrk, ipaddress.IPv4Network):
-+                    allow_restapi_commands.append(self.iptables_cmd_ns_prefix[namespace] + "iptables -A INPUT -d {} -p tcp --dport {} -j ACCEPT".format(dest_ip, dport))
++                    allow_restapi_commands.append(self.iptables_cmd_ns_prefix[namespace] + ["iptables", "-A", "INPUT", "-d", dest_ip, "-p", "tcp", "--dport", dport, "-j", "ACCEPT"])
 +                else:
-+                    allow_restapi_commands.append(self.iptables_cmd_ns_prefix[namespace] + "ip6tables -A INPUT -d {} -p tcp --dport {} -j ACCEPT".format(dest_ip, dport))
++                    allow_restapi_commands.append(self.iptables_cmd_ns_prefix[namespace] + ["ip6tables", "-A", "INPUT", "-d", dest_ip, "-p", "tcp", "--dport", dport, "-j", "ACCEPT"])
 +
          return allow_restapi_commands
  
