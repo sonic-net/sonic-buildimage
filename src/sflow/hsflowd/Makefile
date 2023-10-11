@@ -16,11 +16,6 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	stg init
 	stg import -s ../patch/series
 
-	if [[ $(ENABLE_SFLOW_DROPMON) == y ]]; then
-		stg repair
-		stg import -s ../patch/dropmon/series
-	fi
-
 	mkdir -p debian
 	cp -r DEBIAN_build/* debian
 	chmod u+x debian/rules

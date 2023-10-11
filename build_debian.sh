@@ -59,6 +59,9 @@ TRUSTED_GPG_DIR=$BUILD_TOOL_PATH/trusted.gpg.d
     exit 1
 }
 
+## Check if not a last stage of RFS build
+if [[ $RFS_SPLIT_LAST_STAGE != y ]]; then
+
 ## Prepare the file system directory
 if [[ -d $FILESYSTEM_ROOT ]]; then
     sudo rm -rf $FILESYSTEM_ROOT || die "Failed to clean chroot directory"
@@ -70,11 +73,6 @@ touch $FILESYSTEM_ROOT/$PLATFORM_DIR/firsttime
 
 ## ensure proc is mounted
 sudo mount proc /proc -t proc || true
-
-## make / as a mountpoint in chroot env, needed by dockerd
-pushd $FILESYSTEM_ROOT
-sudo mount --bind . .
-popd
 
 ## Build the host debian base system
 echo '[INFO] Build host debian base system...'
@@ -593,24 +591,11 @@ if [ -f files/image_config/ntp/ntp-systemd-wrapper ]; then
     sudo cp ./files/image_config/ntp/ntp-systemd-wrapper $FILESYSTEM_ROOT/usr/lib/ntp/
 fi
 
-## Version file
+## Version file part 1
 sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic
 if [ -f files/image_config/sonic_release ]; then
     sudo cp files/image_config/sonic_release $FILESYSTEM_ROOT/etc/sonic/
 fi
-export build_version="${SONIC_IMAGE_VERSION}"
-export debian_version="$(cat $FILESYSTEM_ROOT/etc/debian_version)"
-export kernel_version="${kversion}"
-export asic_type="${sonic_asic_platform}"
-export asic_subtype="${TARGET_MACHINE}"
-export commit_id="$(git rev-parse --short HEAD)"
-export branch="$(git rev-parse --abbrev-ref HEAD)"
-export release="$(if [ -f $FILESYSTEM_ROOT/etc/sonic/sonic_release ]; then cat $FILESYSTEM_ROOT/etc/sonic/sonic_release; fi)"
-export build_date="$(date -u)"
-export build_number="${BUILD_NUMBER:-0}"
-export built_by="$USER@$BUILD_HOSTNAME"
-export sonic_os_version="${SONIC_OS_VERSION}"
-j2 files/build_templates/sonic_version.yml.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/sonic_version.yml
 
 # Default users info
 export password_expire="$( [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]] && echo true || echo false )"
@@ -631,6 +616,60 @@ if [[ ! -f './asic_config_checksum' ]]; then
     exit 1
 fi
 sudo cp ./asic_config_checksum $FILESYSTEM_ROOT/etc/sonic/asic_config_checksum
+
+## Check if not a last stage of RFS build
+fi
+
+if [[ $RFS_SPLIT_FIRST_STAGE == y ]]; then
+    echo '[INFO] Finished with RFS first stage'
+    echo '[INFO] Umount all'
+
+    ## Display all process details access /proc
+    sudo LANG=C chroot $FILESYSTEM_ROOT fuser -vm /proc
+    ## Kill the processes
+    sudo LANG=C chroot $FILESYSTEM_ROOT fuser -km /proc || true
+    ## Wait fuser fully kill the processes
+    sudo timeout 15s bash -c 'until LANG=C chroot $0 umount /proc; do sleep 1; done' $FILESYSTEM_ROOT || true
+
+    sudo rm -f $TARGET_PATH/$RFS_SQUASHFS_NAME
+    sudo mksquashfs $FILESYSTEM_ROOT $TARGET_PATH/$RFS_SQUASHFS_NAME -Xcompression-level 1
+
+    exit 0
+fi
+
+if [[ $RFS_SPLIT_LAST_STAGE == y ]]; then
+    echo '[INFO] RFS build: second stage'
+
+    ## ensure proc is mounted
+    sudo mount proc /proc -t proc || true
+
+    sudo fuser -vm $FILESYSTEM_ROOT || true
+    sudo rm -rf $FILESYSTEM_ROOT
+    sudo unsquashfs -d $FILESYSTEM_ROOT $TARGET_PATH/$RFS_SQUASHFS_NAME
+
+    ## make / as a mountpoint in chroot env, needed by dockerd
+    pushd $FILESYSTEM_ROOT
+    sudo mount --bind . .
+    popd
+
+    trap_push 'sudo LANG=C chroot $FILESYSTEM_ROOT umount /proc || true'
+    sudo LANG=C chroot $FILESYSTEM_ROOT mount proc /proc -t proc
+fi
+
+## Version file part 2
+export build_version="${SONIC_IMAGE_VERSION}"
+export debian_version="$(cat $FILESYSTEM_ROOT/etc/debian_version)"
+export kernel_version="${kversion}"
+export asic_type="${sonic_asic_platform}"
+export asic_subtype="${TARGET_MACHINE}"
+export commit_id="$(git rev-parse --short HEAD)"
+export branch="$(git rev-parse --abbrev-ref HEAD)"
+export release="$(if [ -f $FILESYSTEM_ROOT/etc/sonic/sonic_release ]; then cat $FILESYSTEM_ROOT/etc/sonic/sonic_release; fi)"
+export build_date="$(date -u)"
+export build_number="${BUILD_NUMBER:-0}"
+export built_by="$USER@$BUILD_HOSTNAME"
+export sonic_os_version="${SONIC_OS_VERSION}"
+j2 files/build_templates/sonic_version.yml.j2 | sudo tee $FILESYSTEM_ROOT/etc/sonic/sonic_version.yml
 
 if [ -f sonic_debian_extension.sh ]; then
     ./sonic_debian_extension.sh $FILESYSTEM_ROOT $PLATFORM_DIR $IMAGE_DISTRO

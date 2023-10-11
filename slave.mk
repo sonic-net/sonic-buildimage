@@ -432,7 +432,6 @@ $(info "INCLUDE_SYSTEM_GNMI"             : "$(INCLUDE_SYSTEM_GNMI)")
 $(info "ENABLE_HOST_SERVICE_ON_START"    : "$(ENABLE_HOST_SERVICE_ON_START)")
 $(info "INCLUDE_RESTAPI"                 : "$(INCLUDE_RESTAPI)")
 $(info "INCLUDE_SFLOW"                   : "$(INCLUDE_SFLOW)")
-$(info "ENABLE_SFLOW_DROPMON"            : "$(ENABLE_SFLOW_DROPMON)")
 $(info "INCLUDE_NAT"                     : "$(INCLUDE_NAT)")
 $(info "INCLUDE_DHCP_RELAY"              : "$(INCLUDE_DHCP_RELAY)")
 $(info "INCLUDE_DHCP_SERVER"             : "$(INCLUDE_DHCP_SERVER)")
@@ -463,6 +462,34 @@ $(info )
 else
 $(info SONiC Build System for $(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH))
 endif
+
+# Definition of SONIC_RFS_TARGETS
+define rfs_get_installer_dependencies
+$(call rfs_build_target_name,$(1),$($(1)_MACHINE))
+endef
+
+define rfs_build_target_name
+$(1)__$(2)__rfs.squashfs
+endef
+
+define rfs_define_target
+$(eval rfs_target=$(call rfs_build_target_name,$(1),$($(1)_MACHINE)))
+$(eval $(rfs_target)_INSTALLER=$(1))
+$(eval $(rfs_target)_MACHINE=$($(1)_MACHINE))
+$(eval SONIC_RFS_TARGETS+=$(rfs_target))
+
+$(if $($(1)_DEPENDENT_MACHINE),\
+	$(eval dependent_rfs_target=$(call rfs_build_target_name,$(1),$($(1)_DEPENDENT_MACHINE)))
+	$(eval $(dependent_rfs_target)_INSTALLER=$(1))
+	$(eval $(dependent_rfs_target)_MACHINE=$($(1)_DEPENDENT_MACHINE))
+	$(eval SONIC_RFS_TARGETS+=$(dependent_rfs_target))
+	$(eval $(rfs_target)_DEPENDENT_RFS=$(dependent_rfs_target)))
+endef
+
+$(foreach installer,$(SONIC_INSTALLERS),$(eval $(call rfs_define_target,$(installer))))
+$(foreach installer, $(SONIC_INSTALLERS), $(eval $(installer)_RFS_DEPENDS=$(call rfs_get_installer_dependencies,$(installer))))
+
+SONIC_TARGET_LIST += $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS))
 
 # Overwrite the buildinfo in slave container
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
@@ -1226,6 +1253,62 @@ $(DOCKER_LOAD_TARGETS) : $(TARGET_PATH)/%.gz-load : .platform docker-start $$(TA
 ## Installers
 ###############################################################################
 
+$(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
+        .platform \
+        build_debian.sh \
+        $(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) $(LINUX_KERNEL)) \
+        $(addsuffix -install,$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(DEBOOTSTRAP))) \
+        $$(addprefix $(TARGET_PATH)/,$$($$*_DEPENDENT_RFS)) \
+        $(call dpkg_depend,$(TARGET_PATH)/%.dep)
+	$(HEADER)
+
+	$(call LOAD_CACHE,$*,$@)
+
+	# Skip building the target if it is already loaded from cache
+	if [ -z '$($*_CACHE_LOADED)' ] ; then
+
+		$(eval installer=$($*_INSTALLER))
+		$(eval machine=$($*_MACHINE))
+
+		export debs_path="$(IMAGE_DISTRO_DEBS_PATH)"
+		export initramfs_tools="$(IMAGE_DISTRO_DEBS_PATH)/$(INITRAMFS_TOOLS)"
+		export linux_kernel="$(IMAGE_DISTRO_DEBS_PATH)/$(LINUX_KERNEL)"
+		export kversion="$(KVERSION)"
+		export image_type="$($(installer)_IMAGE_TYPE)"
+		export sonicadmin_user="$(USERNAME)"
+		export sonic_asic_platform="$(patsubst %-$(CONFIGURED_ARCH),%,$(CONFIGURED_PLATFORM))"
+		export RFS_SPLIT_FIRST_STAGE=y
+		export RFS_SPLIT_LAST_STAGE=n
+
+		j2 -f env files/initramfs-tools/union-mount.j2 onie-image.conf > files/initramfs-tools/union-mount
+		j2 -f env files/initramfs-tools/arista-convertfs.j2 onie-image.conf > files/initramfs-tools/arista-convertfs
+
+		RFS_SQUASHFS_NAME=$* \
+		USERNAME="$(USERNAME)" \
+		PASSWORD="$(PASSWORD)" \
+		CHANGE_DEFAULT_PASSWORD="$(CHANGE_DEFAULT_PASSWORD)" \
+		TARGET_MACHINE=$(machine) \
+		IMAGE_TYPE=$($(installer)_IMAGE_TYPE) \
+		TARGET_PATH=$(TARGET_PATH) \
+		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
+		SONIC_ENABLE_SECUREBOOT_SIGNATURE="$(SONIC_ENABLE_SECUREBOOT_SIGNATURE)" \
+		SIGNING_KEY="$(SIGNING_KEY)" \
+		SIGNING_CERT="$(SIGNING_CERT)" \
+		PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
+		DBGOPT='$(DBGOPT)' \
+		SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
+		MULTIARCH_QEMU_ENVIRON=$(MULTIARCH_QEMU_ENVIRON) \
+		CROSS_BUILD_ENVIRON=$(CROSS_BUILD_ENVIRON) \
+		MASTER_KUBERNETES_VERSION=$(MASTER_KUBERNETES_VERSION) \
+		MASTER_CRI_DOCKERD=$(MASTER_CRI_DOCKERD) \
+			./build_debian.sh $(LOG)
+
+		$(call SAVE_CACHE,$*,$@)
+
+	fi
+
+	$(FOOTER)
+
 # targets for building installers with base image
 $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         .platform \
@@ -1280,7 +1363,9 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $(addprefix $(FILES_PATH)/,$($(SONIC_CTRMGRD)_FILES)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_YANG_MGMT_PY3)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SYSTEM_HEALTH)) \
-        $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_HOST_SERVICES_PY3))
+        $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_HOST_SERVICES_PY3)) \
+        $$(addprefix $(TARGET_PATH)/,$$($$*_RFS_DEPENDS))
+
 	$(HEADER)
 	# Pass initramfs and linux kernel explicitly. They are used for all platforms
 	export debs_path="$(IMAGE_DISTRO_DEBS_PATH)"
@@ -1440,6 +1525,9 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		chmod +x sonic_debian_extension.sh,
 	)
 
+	export RFS_SPLIT_FIRST_STAGE=n
+	export RFS_SPLIT_LAST_STAGE=y
+
 	# Build images for the MACHINE, DEPENDENT_MACHINE defined.
 	$(foreach dep_machine, $($*_MACHINE) $($*_DEPENDENT_MACHINE), \
 		DEBUG_IMG="$(INSTALL_DEBUG_TOOLS)" \
@@ -1447,6 +1535,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		DEBUG_SRC_ARCHIVE_FILE="$(DBG_SRC_ARCHIVE_FILE)" \
 			scripts/dbg_files.sh
 
+		RFS_SQUASHFS_NAME=$*__$(dep_machine)__rfs.squashfs \
 		DEBUG_IMG="$(INSTALL_DEBUG_TOOLS)" \
 		DEBUG_SRC_ARCHIVE_FILE="$(DBG_SRC_ARCHIVE_FILE)" \
 		USERNAME="$(USERNAME)" \
@@ -1541,7 +1630,9 @@ SONIC_CLEAN_TARGETS += $(addsuffix -clean,$(addprefix $(TARGET_PATH)/, \
 		       $(SONIC_DOCKER_IMAGES) \
 		       $(SONIC_DOCKER_DBG_IMAGES) \
 		       $(SONIC_SIMPLE_DOCKER_IMAGES) \
-		       $(SONIC_INSTALLERS)))
+		       $(SONIC_INSTALLERS) \
+		       $(SONIC_RFS_TARGETS)))
+
 $(SONIC_CLEAN_TARGETS) :: $(TARGET_PATH)/%-clean : .platform
 	$(Q)rm -rf $(TARGET_PATH)/$* target/versions/dockers/$(subst .gz,,$*)
 

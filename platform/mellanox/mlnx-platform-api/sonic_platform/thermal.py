@@ -65,8 +65,8 @@ THERMAL_NAMING_RULE = {
     "psu thermals":
     {
         "name": "PSU-{} Temp",
-        "temperature": "psu{}_temp",
-        "high_threshold": "psu{}_temp_max",
+        "temperature": "psu{}_temp1",
+        "high_threshold": "psu{}_temp1_max",
         "type": "indexable"
     },
     "chassis thermals": [
