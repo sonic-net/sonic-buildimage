@@ -20,7 +20,7 @@
         };
         fdt_ac5x {
             description = "Flattened Device Tree blob for AC5x";
-            data = /incbin/("/boot/ac5x.dtb");
+            data = /incbin/("/usr/lib/linux-image-5.10.0-23-2-arm64/marvell/ac5-98dx35xx-rd.dtb");
             type = "flat_dt";
             arch = "arm64";
             compression = "none";

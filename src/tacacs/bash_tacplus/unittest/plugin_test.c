@@ -5,6 +5,10 @@
 #include "mock_helper.h"
 #include <libtac/support.h>
 
+#define IS_LOCAL_USER              0
+#define IS_REMOTE_USER             1
+#define ERROR_CHECK_LOCAL_USER     2
+
 /* tacacs debug flag */
 extern int tacacs_ctrl;
 
@@ -112,6 +116,8 @@ void testcase_authorization_with_host_and_tty_success() {
 /* Test check_and_load_changed_tacacs_config */
 void testcase_check_and_load_changed_tacacs_config() {
 
+	set_test_scenario(TEST_SCEANRIO_LOAD_CHANGED_TACACS_CONFIG);
+
 	// test connection failed case
 	check_and_load_changed_tacacs_config();
 
@@ -171,6 +177,43 @@ void testcase_on_shell_execve_failed() {
 	CU_ASSERT_STRING_EQUAL(mock_syslog_message_buffer, "test_command not authorized by TACACS+ with given arguments, not executing\n");
 }
 
+/* Test is_local_user unknown user */
+void testcase_is_local_user_unknown() {
+	set_test_scenario(TEST_SCEANRIO_IS_LOCAL_USER_UNKNOWN);
+	int result = is_local_user("UNKNOWN");
+
+    // check unknown user is remote.
+	CU_ASSERT_EQUAL(result, IS_REMOTE_USER);
+}
+
+/* Test is_local_user not found user */
+void testcase_is_local_user_not_found() {
+	set_test_scenario(TEST_SCEANRIO_IS_LOCAL_USER_NOT_FOUND);
+	int result = is_local_user("notexist");
+
+    // check unknown user is remote.
+	CU_ASSERT_EQUAL(result, ERROR_CHECK_LOCAL_USER);
+	CU_ASSERT_STRING_EQUAL(mock_syslog_message_buffer, "get user information user failed, user: notexist not found\n");
+}
+
+/* Test is_local_user root user */
+void testcase_is_local_user_root() {
+	set_test_scenario(TEST_SCEANRIO_IS_LOCAL_USER_ROOT);
+	int result = is_local_user("root");
+
+    // check unknown user is remote.
+	CU_ASSERT_EQUAL(result, IS_LOCAL_USER);
+}
+
+/* Test is_local_user remote user */
+void testcase_is_local_user_remote() {
+	set_test_scenario(TEST_SCEANRIO_IS_LOCAL_USER_REMOTE);
+	int result = is_local_user("test_user");
+
+    // check unknown user is remote.
+	CU_ASSERT_EQUAL(result, IS_REMOTE_USER);
+}
+
 int main(void) {
   if (CUE_SUCCESS != CU_initialize_registry()) {
     return CU_get_error();
@@ -196,7 +239,11 @@ int main(void) {
 	  || !CU_add_test(ste, "Test testcase_check_and_load_changed_tacacs_config()...\n", testcase_check_and_load_changed_tacacs_config)
 	  || !CU_add_test(ste, "Test testcase_on_shell_execve_success()...\n", testcase_on_shell_execve_success)
 	  || !CU_add_test(ste, "Test testcase_on_shell_execve_denined()...\n", testcase_on_shell_execve_denined)
-	  || !CU_add_test(ste, "Test testcase_on_shell_execve_failed()...\n", testcase_on_shell_execve_failed)) {
+	  || !CU_add_test(ste, "Test testcase_on_shell_execve_failed()...\n", testcase_on_shell_execve_failed)
+	  || !CU_add_test(ste, "Test testcase_is_local_user_unknown()...\n", testcase_is_local_user_unknown)
+	  || !CU_add_test(ste, "Test testcase_is_local_user_not_found()...\n", testcase_is_local_user_not_found)
+	  || !CU_add_test(ste, "Test testcase_is_local_user_root()...\n", testcase_is_local_user_root)
+	  || !CU_add_test(ste, "Test testcase_is_local_user_remote()...\n", testcase_is_local_user_remote)) {
     CU_cleanup_registry();
     return CU_get_error();
   }

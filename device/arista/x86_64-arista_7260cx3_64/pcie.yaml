@@ -100,12 +100,6 @@
   id: 8c24
   name: 'Signal processing controller: Intel Corporation 8 Series Chipset Family Thermal
     Management Controller (rev 05)'
-- bus: '01'
-  dev: '00'
-  fn: '0'
-  id: '1682'
-  name: 'Ethernet controller: Broadcom Limited NetXtreme BCM57762 Gigabit Ethernet
-    PCIe (rev 20)'
 - bus: '02'
   dev: '00'
   fn: '0'

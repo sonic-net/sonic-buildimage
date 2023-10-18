@@ -615,6 +615,14 @@ write_platform_specific_cmdline() {
         aboot_machine=arista_7280cr3mk_32p4
         flash_size=7382
     fi
+
+    # disable cpu c-state other than C1
+    local cpuvendor="$(sed -nr 's/vendor_id[\t ]*: (.*)/\1/p' /proc/cpuinfo | head -n 1)"
+    cmdline_add processor.max_cstate=1
+    if [ "$cpuvendor" = "GenuineIntel" ]; then
+        cmdline_add intel_idle.max_cstate=0
+    fi
+
     if in_array "$platform" "rook" "magpie" "woodpecker" "sprucefish"; then
         cmdline_add tsc=reliable
         cmdline_add pcie_ports=native
@@ -625,7 +633,6 @@ write_platform_specific_cmdline() {
     if in_array "$platform" "rook" "sprucefish"; then
         cmdline_add iommu=on
         cmdline_add intel_iommu=on
-        cmdline_add intel_idle.max_cstate=0
         read_system_eeprom
     fi
     if in_array "$platform" "rook"; then
@@ -643,7 +650,6 @@ write_platform_specific_cmdline() {
         read_system_eeprom
     fi
     if in_array "$platform" "lorikeet" "hedgehog"; then
-        cmdline_add processor.max_cstate=1
         cmdline_add reassign_prefmem
         read_system_eeprom
     fi

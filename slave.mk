@@ -808,7 +808,7 @@ SONIC_TARGET_LIST += $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS))
 # we depend on it and move our deb to other targets
 # Add new dev package:
 #     $(eval $(call add_derived_package,$(ORIGINAL_DEB),derived_deb_file.deb))
-$(addprefix $(DEBS_PATH)/, $(SONIC_DERIVED_DEBS)) : $(DEBS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS)))
+$(addprefix $(DEBS_PATH)/, $(SONIC_DERIVED_DEBS)) : $(DEBS_PATH)/% : .platform $$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))
 	$(HEADER)
 	# All noise takes place in main deb recipe, so we are just telling that
 	# we depend on it

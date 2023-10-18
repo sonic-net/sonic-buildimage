@@ -359,6 +359,7 @@ endef
 
 RFS_DEP_FILES := $(wildcard \
 	$(addprefix scripts/, build_debian_base_system.sh prepare_debian_image_buildinfo.sh build_mirror_config.sh) \
+	$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) $(LINUX_KERNEL)) \
 	$(shell git ls-files files/initramfs-tools) \
 	$(shell git ls-files files/image_config) \
 	$(shell git ls-files files/apparmor) \

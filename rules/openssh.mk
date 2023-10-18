@@ -10,10 +10,10 @@ $(OPENSSH_SERVER)_DEPENDS +=  $(LIBNL3_DEV) $(LIBNL_ROUTE3_DEV)
 SONIC_MAKE_DEBS += $(OPENSSH_SERVER)
 
 OPENSSH_CLIENT = openssh-client_$(OPENSSH_VERSION)_$(CONFIGURED_ARCH).deb
-#$(eval $(call add_derived_package,$(OPENSSH_SERVER),$(OPENSSH_CLIENT)))
+$(eval $(call add_derived_package,$(OPENSSH_SERVER),$(OPENSSH_CLIENT)))
 
 OPENSSH_SFTP_SERVER = openssh-sftp-server_$(OPENSSH_VERSION)_$(CONFIGURED_ARCH).deb
-#$(eval $(call add_derived_package,$(OPENSSH_SERVER),$(OPENSSH_SFTP_SERVER)))
+$(eval $(call add_derived_package,$(OPENSSH_SERVER),$(OPENSSH_SFTP_SERVER)))
 
 # The .c, .cpp, .h & .hpp files under src/{$DBG_SRC_ARCHIVE list}
 # are archived into debug one image to facilitate debugging.

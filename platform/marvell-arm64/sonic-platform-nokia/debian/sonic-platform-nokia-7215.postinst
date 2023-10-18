@@ -20,8 +20,9 @@ set -e
 
 case "$1" in
     configure)
-        sh /usr/local/bin/nokia-7215_plt_setup.sh
         chmod a+x /usr/local/bin/nokia-7215-init.sh
+        depmod -a
+        systemctl restart kmod
         systemctl enable nokia-7215init.service
         systemctl start nokia-7215init.service
 
