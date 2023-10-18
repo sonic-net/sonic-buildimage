@@ -42,7 +42,7 @@ When upgrading to a new image above 202305, even the design state is not the sam
 
 There are two solutions to improve it, one is to pass the FIPS design state to SONiC installation script ([install.sh](https://github.com/sonic-net/sonic-buildimage/blob/master/installer/install.sh)) when installing the SONiC. It has dependency on the Hardware proxy, needs to know the design state before installing the new image. The other one is to patch the reboot script in old image to read the design state and change the FIPS reboot option after the new image installed. It is very hard to implement it, since it needs to patch for different versions of the reboot script in the old images.
 
-For the first solution, it only needs to pass an environment **SONIC_FIPS=1|0** to override the image default option to enable or disable FIPS when installing the SONiC image, see [PR #16637](https://github.com/sonic-net/sonic-buildimage/pull/16637/files).
+The first solution is proposal, it only needs to pass an environment **SONIC_FIPS=1|0** to override the image default option to enable or disable FIPS when installing the SONiC image, see [PR #16637](https://github.com/sonic-net/sonic-buildimage/pull/16637/files).
 
 ## Test cases
 ### Test case #1 – Test to install a FIPS enabled image, cover aboot, grub, uboot
@@ -51,7 +51,7 @@ For the first solution, it only needs to pass an environment **SONIC_FIPS=1|0** 
 1. Reboot
 1. Verify the FIPS enabled
 
-### Test case #1 – Test to design state change
+### Test case #2 – Test to design state change
 1. Setup the test environment to the FIPS Enabled.
 1. Disable the FIPS in golden config db and apply the change to config db.
 1. Reboot
