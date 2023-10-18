@@ -11,10 +11,13 @@ ifneq ($(CROSS_BUILD_ENVIRON), y)
 KVERSION   ?= $(shell uname -r)
 endif
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
+INSTALL_MOD_DIR := kernel/extra/
 MOD_SRC_DIR:= $(shell pwd)
 MODULE_DIRS:= 7215
 UTILS_DIR := utils
 MODULE_DIR:= modules
+MRVL_MODULE_DIR:= mrvl-modules
+PRESTERA_MODULE_SRC := mrvl-prestera/drivers/generic/cpssEnabler/linuxNoKernelModule/drivers
 SERVICE_DIR := service
 PLATFORM_DIR := sonic_platform
 
@@ -28,6 +31,12 @@ clean:
 
 build:
 	(for mod in $(MODULE_DIRS); do \
+		cd $(MOD_SRC_DIR)/../$(PRESTERA_MODULE_SRC)/; \
+		make clean; \
+		make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVMBUS=y CONFIG_KM_MVINT=y || exit 1; \
+		mkdir $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR); \
+		cp *.ko $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/; \
+		cd $(MOD_SRC_DIR); \
 		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
 		python3 $${mod}/setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
 	done)
@@ -50,6 +59,7 @@ binary-indep:
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /lib/systemd/system; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/mvcpss.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
 		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
 		python3 $${mod}/setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
 	done)

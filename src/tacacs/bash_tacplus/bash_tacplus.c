@@ -14,8 +14,8 @@
 /* Remote user gecos prefix, which been assigned by nss_tacplus */
 #define REMOTE_USER_GECOS_PREFIX      "remote_user"
 
-/* Default value for _SC_GETPW_R_SIZE_MAX */
-#define DEFAULT_SC_GETPW_R_SIZE_MAX     1024
+/* Default value for getpwent */
+#define DEFAULT_GETPWENT_SIZE_MAX     4096
 
 /* Return value for is_local_user method */
 #define IS_LOCAL_USER              0
@@ -31,6 +31,7 @@
 /* Output syslog to mock method when build with UT */
 #if defined (BASH_PLUGIN_UT)
 #define syslog mock_syslog
+#define getpwent_r mock_getpwent_r
 #endif
 
 /* Tacacs+ log format */
@@ -353,40 +354,39 @@ int is_local_user(char *user)
     }
 
     struct passwd pwd;
-    struct passwd *pwdresult;
-    char *buf;
-    size_t bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
-    if (bufsize == -1) {
-        bufsize = DEFAULT_SC_GETPW_R_SIZE_MAX;
-    }
-
-    buf = malloc(bufsize);
-    if (buf == NULL) {
-       output_error("failed to allocate getpwnam_r buffer.\n");
-       return ERROR_CHECK_LOCAL_USER;
-    }
-
-    int s = getpwnam_r(user, &pwd, buf, bufsize, &pwdresult);
-    int result = IS_LOCAL_USER;
-    if (pwdresult == NULL) {
-        if (s == 0)
-            output_error("get user information user failed, user: %s not found\n", user);
-        else {
-            output_error("get user information failed, user: %s, errorno: %d\n", user, s);
+    struct passwd *ppwd;
+    char buf[DEFAULT_GETPWENT_SIZE_MAX];
+    int pwdresult;
+    int result = ERROR_CHECK_LOCAL_USER;
+    setpwent();
+    while (1) {
+        pwdresult = getpwent_r(&pwd, buf, sizeof(buf), &ppwd);
+        if (pwdresult) {
+            // no more pw entry
+            break;
         }
 
-        result = ERROR_CHECK_LOCAL_USER;
+        if (strcmp(ppwd->pw_name, user) != 0) {
+            continue;
+        }
+
+        // compare passwd entry, for remote user pw_gecos will start as 'remote_user'
+        if (strncmp(ppwd->pw_gecos, REMOTE_USER_GECOS_PREFIX, strlen(REMOTE_USER_GECOS_PREFIX)) == 0) {
+            output_debug("user: %s, UID: %d, GECOS: %s is remote user.\n", user, ppwd->pw_uid, ppwd->pw_gecos);
+            result = IS_REMOTE_USER;
+        }
+        else {
+            output_debug("user: %s, UID: %d, GECOS: %s is local user.\n", user, ppwd->pw_uid, ppwd->pw_gecos);
+            result = IS_LOCAL_USER;
+        }
+        break;
     }
-    else if (strncmp(pwd.pw_gecos, REMOTE_USER_GECOS_PREFIX, strlen(REMOTE_USER_GECOS_PREFIX)) == 0) {
-        output_debug("user: %s, UID: %d, GECOS: %s is remote user.\n", user, pwd.pw_uid, pwd.pw_gecos);
-        result = IS_REMOTE_USER;
-    }
-    else {
-        output_debug("user: %s, UID: %d, GECOS: %s is local user.\n", user, pwd.pw_uid, pwd.pw_gecos);
-        result = IS_LOCAL_USER;
+    endpwent();
+
+    if (result == ERROR_CHECK_LOCAL_USER) {
+        output_error("get user information user failed, user: %s not found\n", user);
     }
 
-    free(buf);
     return result;
 }
 
