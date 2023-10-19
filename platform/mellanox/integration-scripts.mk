@@ -25,7 +25,6 @@ TEMP_HW_MGMT_DIR = /tmp/hw_mgmt
 PTCH_DIR = $(TEMP_HW_MGMT_DIR)/patch_dir/
 NON_UP_PTCH_DIR = $(TEMP_HW_MGMT_DIR)/non_up_patch_dir/
 PTCH_LIST  = $(TEMP_HW_MGMT_DIR)/series
-KCFG_LIST = $(TEMP_HW_MGMT_DIR)/kconfig
 HWMGMT_NONUP_LIST = $(BUILD_WORKDIR)/$($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hwmgmt_nonup_patches
 HWMGMT_USER_OUTFILE = $(BUILD_WORKDIR)/integrate-mlnx-hw-mgmt_user.out
 SDK_USER_OUTFILE = $(BUILD_WORKDIR)/integrate-mlnx-sdk_user.out
@@ -36,11 +35,33 @@ SLK_COM_MSG := $(shell mktemp -t slk_commit_msg_file_XXXXX.log)
 SB_HEAD = $(shell git rev-parse --short HEAD)
 SLK_HEAD = $(shell cd src/sonic-linux-kernel; git rev-parse --short HEAD)
 
+# kconfig related variables
+KCFG_BASE_TMPDIR = $(TEMP_HW_MGMT_DIR)/linux_kconfig/
+KCFG_BASE = $(KCFG_BASE_TMPDIR)/amd64.config
+KCFG_LIST = $(TEMP_HW_MGMT_DIR)/kconfig_amd64
+KCFG_DOWN_LIST = $(TEMP_HW_MGMT_DIR)/kconfig_downstream_amd64
+KCFG_BASE_ARM = $(KCFG_BASE_TMPDIR)/arm64.config
+KCFG_LIST_ARM = $(TEMP_HW_MGMT_DIR)/kconfig_arm64
+KCFG_DOWN_LIST_ARM = $(TEMP_HW_MGMT_DIR)/kconfig_downstream_arm64
+
+
 integrate-mlnx-hw-mgmt:
 	$(FLUSH_LOG)
 	rm -rf $(TEMP_HW_MGMT_DIR) $(TMPFILE_OUT)
-	mkdir -p $(PTCH_DIR) $(NON_UP_PTCH_DIR)
-	touch $(PTCH_LIST) $(KCFG_LIST)
+	mkdir -p $(PTCH_DIR) $(NON_UP_PTCH_DIR) $(KCFG_BASE_TMPDIR)
+	touch $(PTCH_LIST) $(KCFG_LIST) $(KCFG_DOWN_LIST) $(KCFG_LIST_ARM) $(KCFG_DOWN_LIST_ARM)
+
+	# Fetch the vanilla .config files
+	pushd $(KCFG_BASE_TMPDIR) $(LOG_SIMPLE)
+	rm -rf linux/; mkdir linux
+	# Note: gregkh is the stable linux mirror
+	git clone --depth 1 --branch v$(KERNEL_VERSION) https://github.com/gregkh/linux.git linux $(LOG_SIMPLE)
+
+	pushd linux
+	rm -rf .config; make ARCH=x86_64 defconfig; cp -f .config $(KCFG_BASE) $(LOG_SIMPLE)
+	rm -rf .config; make ARCH=arm64 defconfig; cp -f .config $(KCFG_BASE_ARM) $(LOG_SIMPLE)
+	popd
+	popd $(LOG_SIMPLE)
 
 	# clean up existing untracked files
 	pushd $(BUILD_WORKDIR); git clean -f -- platform/mellanox/
@@ -69,17 +90,32 @@ endif
 
 	# Pre-processing before runing hw_mgmt script
 	integration-scripts/hwmgmt_kernel_patches.py pre \
-							--config_inclusion $(KCFG_LIST) \
+							--config_base_amd $(KCFG_BASE) \
+							--config_base_arm $(KCFG_BASE_ARM) \
+							--config_inc_amd $(KCFG_LIST) \
+							--config_inc_arm $(KCFG_LIST_ARM) \
 							--build_root $(BUILD_WORKDIR) \
 							--kernel_version $(KERNEL_VERSION) \
-							--hw_mgmt_ver ${MLNX_HW_MANAGEMENT_VERSION}  $(LOG_SIMPLE)
+							--hw_mgmt_ver ${MLNX_HW_MANAGEMENT_VERSION} $(LOG_SIMPLE)
 
 	$(BUILD_WORKDIR)/$($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hw-mgmt/recipes-kernel/linux/deploy_kernel_patches.py \
 							--dst_accepted_folder $(PTCH_DIR) \
 							--dst_candidate_folder $(NON_UP_PTCH_DIR) \
 							--series_file $(PTCH_LIST) \
-							--config_file $(KCFG_LIST) \
+							--config_file $(KCFG_LIST_ARM) \
+							--config_file_downstream $(KCFG_DOWN_LIST_ARM) \
 							--kernel_version $(KERNEL_VERSION) \
+							--arch arm64 \
+							--os_type sonic $(LOG_SIMPLE)
+	
+	$(BUILD_WORKDIR)/$($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hw-mgmt/recipes-kernel/linux/deploy_kernel_patches.py \
+							--dst_accepted_folder $(PTCH_DIR) \
+							--dst_candidate_folder $(NON_UP_PTCH_DIR) \
+							--series_file $(PTCH_LIST) \
+							--config_file $(KCFG_LIST) \
+							--config_file_downstream $(KCFG_DOWN_LIST) \
+							--kernel_version $(KERNEL_VERSION) \
+							--arch amd64 \
 							--os_type sonic $(LOG_SIMPLE)
 
 	# Post-processing
@@ -88,7 +124,12 @@ endif
 							--non_up_patches $(NON_UP_PTCH_DIR) \
 							--kernel_version $(KERNEL_VERSION) \
 							--hw_mgmt_ver ${MLNX_HW_MANAGEMENT_VERSION} \
-							--config_inclusion $(KCFG_LIST) \
+							--config_base_amd $(KCFG_BASE) \
+							--config_base_arm $(KCFG_BASE_ARM) \
+							--config_inc_amd $(KCFG_LIST) \
+							--config_inc_arm $(KCFG_LIST_ARM) \
+							--config_inc_down_amd $(KCFG_DOWN_LIST) \
+							--config_inc_down_arm $(KCFG_DOWN_LIST_ARM) \
 							--series $(PTCH_LIST) \
 							--current_non_up_patches $(HWMGMT_NONUP_LIST) \
 							--build_root $(BUILD_WORKDIR) \
@@ -121,8 +162,11 @@ endif
 	git add -- $(PLATFORM_PATH)/non-upstream-patches/
 	git add -- $(PLATFORM_PATH)/hw-management.mk
 
-	echo -en '\n###-> Non Upstream series.patch changes <-###\n' >> ${HWMGMT_USER_OUTFILE}
-	git diff --no-color --staged -- $(PLATFORM_PATH)/non-upstream-patches/series.patch >> ${HWMGMT_USER_OUTFILE}
+	echo -en '\n###-> Non Upstream external-changes.patch changes <-###\n' >> ${HWMGMT_USER_OUTFILE}
+	git diff --no-color --staged -- $(PLATFORM_PATH)/non-upstream-patches/external-changes.patch >> ${HWMGMT_USER_OUTFILE}
+
+	echo -en '\n###-> Non Upstream kconfig-inclusions.patch changes <-###\n' >> ${HWMGMT_USER_OUTFILE}
+	git diff --no-color --staged -- $(PLATFORM_PATH)/non-upstream-patches/kconfig-inclusions.patch >> ${HWMGMT_USER_OUTFILE}
 
 	echo -en '\n###-> Non Upstream patch list file <-###\n' >> ${HWMGMT_USER_OUTFILE}
 	git diff --no-color --staged -- $($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hwmgmt_nonup_patches >> ${HWMGMT_USER_OUTFILE}
@@ -141,6 +185,8 @@ endif
 	popd
 
 	popd $(LOG_SIMPLE)
+
+	rm -rf $(TEMP_HW_MGMT_DIR)
 
 integrate-mlnx-sdk:
 	$(FLUSH_LOG)

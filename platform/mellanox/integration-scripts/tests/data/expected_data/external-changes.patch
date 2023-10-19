@@ -11,4 +11,22 @@
  0188-i2c-mux-Add-register-map-based-mux-driver.patch
  ###-> mellanox_hw_mgmt-end
  
- # Cisco patches for 5.10 kernel
+
+--- a/patch/kconfig-inclusions
++++ b/patch/kconfig-inclusions
+@@ -41,4 +41,15 @@
+ CONFIG_HWMON=y
+ CONFIG_OF=y
+ CONFIG_THERMAL_NETLINK=y
++CONFIG_SENSORS_MP2891=m
++CONFIG_MMC_SDHCI_OF_DWCMSHC=m
++CONFIG_VFIO_PLATFORM=m
++CONFIG_SENSORS_ARM_SCMI=m
++CONFIG_MLXBF_GIGE=m
++CONFIG_I2C_MLXBF=m
++CONFIG_GPIO_MLXBF3=m
++CONFIG_MLXBF_TMFIFO=m
++CONFIG_MLXBF_BOOTCTL=m
++CONFIG_MLXBF_PMC=m
++CONFIG_MLXBF_PTM=m
+ 

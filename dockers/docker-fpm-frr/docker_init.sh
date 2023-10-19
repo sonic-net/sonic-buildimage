@@ -46,7 +46,8 @@ write_default_zebra_config()
     FILE_NAME=${1}
 
     grep -q '^no fpm use-next-hop-groups' $FILE_NAME || {
-        sed -i '1i no fpm use-next-hop-groups\nfpm address 127.0.0.1' $FILE_NAME
+        echo "no fpm use-next-hop-groups" >> $FILE_NAME
+        echo "fpm address 127.0.0.1" >> $FILE_NAME
     }
 }
 
