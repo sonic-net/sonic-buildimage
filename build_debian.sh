@@ -809,6 +809,11 @@ sudo LANG=C chroot $FILESYSTEM_ROOT bash -c 'rm -rf /usr/share/doc/* /usr/share/
 ## Clean up pip cache
 sudo LANG=C chroot $FILESYSTEM_ROOT pip3 cache purge
 
+## Remove /etc/bash_completion.d/ scripts installed by mft-*-x86_64.deb
+## These scripts will run 100+ commands after user login and cause user login latency
+sudo LANG=C chroot $FILESYSTEM_ROOT bash -c 'rm -rf /etc/bash_completion.d/mft/ /etc/bash_completion.d/mlx* /etc/bash_completion.d/mst_complete \
+ /etc/bash_completion.d/devmon_complete /etc/bash_completion.d/flint_complete /etc/bash_completion.d/mget_temp_complete'
+
 ## Umount all
 echo '[INFO] Umount all'
 ## Display all process details access /proc
