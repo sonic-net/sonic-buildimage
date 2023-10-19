@@ -11,10 +11,10 @@ EXTERNAL_KERNEL_PATCH_LOC/
              ├── 0002-mlx5-Implement-get_module_eeprom_by_page.patch.patch
              ├── 0005-mlx5-Add-support-for-DSFP-module-EEPROM-dumps.patch
              ├── .............
-       ├──── series.patch
+       ├──── external-changes.patch
 ```
 
-  1. It should contain a file named series.patch. This should contain a diff that is applied on the sonic-linux-kernel/patch/series file. The diff should include all the non-upstream patches.
+  1. It should contain a file named external-changes.patch. This should contain a diff that is applied on the sonic-linux-kernel/patch/* files. The diff should include all the non-upstream patches.
   2. All the patches should be present in the patches folder
   3. Developers should make sure patches apply cleanly over the existing patches present in the src/sonic-linux-kernel .
 

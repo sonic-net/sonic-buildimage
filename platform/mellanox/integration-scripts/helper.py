@@ -17,10 +17,12 @@
 
 import os
 import glob
-import re
+from collections import OrderedDict
 
 MARK_ID = "###->"
-MLNX_KFG_MARKER = "mellanox"
+MLNX_KFG_MARKER = "mellanox_amd64"
+MLNX_NOARCH_MARKER = "mellanox_common"
+MLNX_ARM_KFG_SECTION = "mellanox-arm64"
 SDK_MARKER = "mellanox_sdk"
 HW_MGMT_MARKER = "mellanox_hw_mgmt"
 SLK_PATCH_LOC = "src/sonic-linux-kernel/patch/"
@@ -29,7 +31,7 @@ SLK_KCONFIG_EXCLUDE = SLK_PATCH_LOC + "kconfig-exclusions"
 SLK_SERIES = SLK_PATCH_LOC + "series"
 NON_UP_PATCH_DIR = "platform/mellanox/non-upstream-patches/"
 NON_UP_PATCH_LOC = NON_UP_PATCH_DIR + "patches"
-NON_UP_PATCH_DIFF = NON_UP_PATCH_DIR + "series.patch"
+NON_UP_DIFF = NON_UP_PATCH_DIR + "external-changes.patch"
 KCFG_HDR_RE = "\[(.*)\]"
 KERNEL_BACKPORTS = "kernel_backports"
  # kconfig_inclusion headers to consider
@@ -100,83 +102,35 @@ class FileHandler:
         return (i_start, i_end)
 
     @staticmethod
-    def read_kconfig_inclusion(path, marker=MLNX_KFG_MARKER):
-        lines = FileHandler.read_strip(path)
-        if not marker:
-            return lines
-        i_start, i_end = FileHandler.find_marker_indices(lines, marker)
-        
-        if i_start < 0 or i_end >= len(lines):
-            print("-> WARNING No Marker Found")
-            return []
+    def read_kconfig(path) -> dict:
+        # read the .config file generated during kernel compilation
+        lines = FileHandler.read_strip_minimal(path)
+        config_data = OrderedDict()
+        for line in lines:
+            if line.strip().startswith("#"):
+                continue
+            tokens = line.strip().split('=')
+            if len(tokens) == 2:
+                key = tokens[0].strip()
+                value = tokens[1].strip()
+                config_data[key] = value
+        return config_data
 
-        return lines[i_start+1:i_end]
+    @staticmethod
+    def insert_lines(lines: list, start: int, end: int, new_data: list) -> list:
+        return lines[0:start+1] + new_data + lines[end:]
     
     @staticmethod
-    def write_lines_marker(path, writable_opts: list, marker=None):
-        # if marker is none, just write the opts into the file,
-        # otherwise write the data only b/w the marker
-        curr_data = FileHandler.read_raw(path)
-        i_start, i_end = FileHandler.find_marker_indices(curr_data, marker)
-        newline_writ_opts = [opt + "\n" for opt in writable_opts]
-        if i_start < 0 or i_end >= len(curr_data):
-            print("-> WARNING No Marker Found, writing data at the end of file")
-            curr_data.extend(["\n"])
-            curr_data.extend(newline_writ_opts)
-        else:
-            curr_data = curr_data[0:i_start+1] + newline_writ_opts + curr_data[i_end:]
-
-        print("-> INFO Written the following opts: \n{}".format("".join(FileHandler.read_raw(path))))
-        FileHandler.write_lines(path, curr_data, True)
-
+    def insert_kcfg_data(lines: list, start: int, end: int, new_data: OrderedDict) -> dict:
+        # inserts data into the lines, escape every lines
+        new_data_lines = ["{}={}\n".format(cfg, val) for (cfg, val) in new_data.items()]
+        return FileHandler.insert_lines(lines, start, end, new_data_lines)
+    
     @staticmethod
-    def read_kconfig_parser(path) -> dict:
-        # kconfig_inclusion output formatted to {"no_parent", "common":[,], "amd64": [,], "arm64": [,]}
-        lines = FileHandler.read_strip_minimal(path)
-        ret = dict({"no_parent":[]})
-        curr_hdr = ""
-        for line in lines:
-            match = re.search(KCFG_HDR_RE, line)
-            if match:
-                curr_hdr = match.group(1)
-                ret[curr_hdr] = []
-            elif curr_hdr in ret:
-                ret[curr_hdr].append(line)
-            else:
-                ret["no_parent"].append(line)
-        return ret
-
-
-class KCFG:
-
-    @staticmethod
-    def parse_opt_str(opt: str) -> tuple:
-        if not opt.startswith("CONFIG"):
-            print("-> DEBUG: Malformed kconfig opt, {}".format(opt))
-            return ()
-
-        tmp = opt.split("=")
-        if len(tmp) != 2:
-            print("-> DEBUG: Malformed kconfig opt, {}".format(opt))
-            return ()
-        
-        return (tmp[0], tmp[1])
-
-    @staticmethod
-    def parse_opts_strs(kcfg_sec: list) -> list(tuple()):
-        opts = [] # list of tuples (CONFIG_*, "m|y|n")
-        for kcfg in kcfg_sec:
-            tmp = KCFG.parse_opt_str(kcfg)
-            if tmp: 
-                opts.append(tmp)
-        return opts
-
-    @staticmethod
-    def get_writable_opts(opts):
-        lines = []
-        for opt in opts:
-            lines.append("{}={}".format(opt[0], opt[1]))
-        return lines
+    def insert_kcfg_excl_data(lines: list, start: int, end: int, new_data: OrderedDict) -> dict:
+        # inserts data into the lines, escape every lines
+        new_data_lines = ["{}\n".format(cfg) for (cfg, val) in new_data.items()]
+        return FileHandler.insert_lines(lines, start, end, new_data_lines)
 
 
 class Action():

@@ -46,27 +46,16 @@ CONFIG_LOG_BUF_SHIFT=20
 [amd64]
 CONFIG_SENSORS_DPS1900=m
 
-###-> mellanox-start
+###-> mellanox_amd64-start
 CONFIG_OF=y
 CONFIG_THERMAL_OF=y
 CONFIG_DW_DMAC_PCI=y
-###-> mellanox-end
+###-> mellanox_amd64-end
 
 [armhf]
 CONFIG_EEPROM_SFF_8436=m
 CONFIG_EEPROM_OPTOE=m
 CONFIG_I2C_MUX_GPIO=y
-"""
-
-UPDATED_MLNX_KCFG = """\
-CONFIG_OF=y
-CONFIG_THERMAL_OF=y
-CONFIG_DW_DMAC_PCI=y
-CONFIG_I2C_I801=m
-CONFIG_PINCTRL=y
-CONFIG_PINCTRL_INTEL=m
-CONFIG_I2C_MUX_PCA954x=m
-CONFIG_SPI_PXA2XX=m
 """
 
 FINAL_MOCK_SLK_KCFG = """\
@@ -78,7 +67,7 @@ CONFIG_LOG_BUF_SHIFT=20
 [amd64]
 CONFIG_SENSORS_DPS1900=m
 
-###-> mellanox-start
+###-> mellanox_amd64-start
 CONFIG_OF=y
 CONFIG_THERMAL_OF=y
 CONFIG_DW_DMAC_PCI=y
@@ -87,12 +76,50 @@ CONFIG_PINCTRL=y
 CONFIG_PINCTRL_INTEL=m
 CONFIG_I2C_MUX_PCA954x=m
 CONFIG_SPI_PXA2XX=m
-###-> mellanox-end
+###-> mellanox_amd64-end
 
 [armhf]
 CONFIG_EEPROM_SFF_8436=m
 CONFIG_EEPROM_OPTOE=m
 CONFIG_I2C_MUX_GPIO=y
+"""
+
+MOCK_SLK_EXCL = """\
+[common]
+CONFIG_CGROUP_NET_CLASSID
+CONFIG_NET_CLS_CGROUP
+CONFIG_NETFILTER_XT_MATCH_CGROUP
+CONFIG_CGROUP_NET_PRIO
+
+[amd64]
+# Unset X86_PAT according to Broadcom's requirement
+CONFIG_X86_PAT
+CONFIG_MLXSW_PCI
+###-> mellanox_amd64-start
+###-> mellanox_amd64-end
+
+[arm64]
+CONFIG_SQUASHFS_DECOMP_MULTI_PERCPU
+"""
+
+FINAL_MOCK_SLK_EXCL = """\
+[common]
+CONFIG_CGROUP_NET_CLASSID
+CONFIG_NET_CLS_CGROUP
+CONFIG_NETFILTER_XT_MATCH_CGROUP
+CONFIG_CGROUP_NET_PRIO
+
+[amd64]
+# Unset X86_PAT according to Broadcom's requirement
+CONFIG_X86_PAT
+CONFIG_MLXSW_PCI
+###-> mellanox_amd64-start
+CONFIG_OF
+CONFIG_THERMAL_OF
+###-> mellanox_amd64-end
+
+[arm64]
+CONFIG_SQUASHFS_DECOMP_MULTI_PERCPU
 """
 
 LINES_WRITE = []
@@ -137,40 +164,39 @@ class TestFilehandler:
         print(i_start, i_end)
         assert i_start == -1
         assert i_end == len(lines)
-    
+
     @mock.patch('helper.FileHandler.read_raw', side_effect=read_raw_mock)
-    def test_read_kconfig_parser(self, mock_read_raw):
+    def test_insert_kcfg(self, mock_read_raw):
         global LINES_READ
-        LINES_READ = MOCK_SLK_KCFG.split("\n")
-        all_cfg = FileHandler.read_kconfig_parser("")
-        print(all_cfg)
-        assert all_cfg['no_parent'] == ['CONFIG_RANDOM=rrr']
-        assert all_cfg['common'] == ['CONFIG_LOG_BUF_SHIFT=20']
-        assert all_cfg['amd64'] == ['CONFIG_SENSORS_DPS1900=m', 'CONFIG_OF=y', 'CONFIG_THERMAL_OF=y', 'CONFIG_DW_DMAC_PCI=y']
-        assert all_cfg['armhf'] == ['CONFIG_EEPROM_SFF_8436=m', 'CONFIG_EEPROM_OPTOE=m', 'CONFIG_I2C_MUX_GPIO=y']
-    
-    @mock.patch('helper.FileHandler.write_lines', side_effect=writer_mock)
-    @mock.patch('helper.FileHandler.read_raw', side_effect=read_raw_mock)
-    def test_write_lines_marker(self, mock_read_raw, mock_write_lines_marker):
-        global LINES_READ
-        global LINES_WRITE
         LINES_READ = MOCK_SLK_KCFG.splitlines(True)
-        LINES_WRITE = FINAL_MOCK_SLK_KCFG.splitlines(True)
+        kcfg_inc_raw = FileHandler.read_raw("")
+        new_opts = OrderedDict({
+                "CONFIG_OF" : "y",
+                "CONFIG_THERMAL_OF" : "y",
+                "CONFIG_DW_DMAC_PCI" : "y",
+                "CONFIG_I2C_I801" : "m",
+                "CONFIG_PINCTRL" : "y",
+                "CONFIG_PINCTRL_INTEL" : "m",
+                "CONFIG_I2C_MUX_PCA954x" : "m",
+                "CONFIG_SPI_PXA2XX" : "m"
+        })
+        x86_start, x86_end = FileHandler.find_marker_indices(kcfg_inc_raw, MLNX_KFG_MARKER)
+        assert "###-> mellanox_amd64-start" in kcfg_inc_raw[x86_start]
+        assert "###-> mellanox_amd64-end" in kcfg_inc_raw[x86_end]
+        final_kcfg = FileHandler.insert_kcfg_data(kcfg_inc_raw, x86_start, x86_end, new_opts)
+        assert final_kcfg == FINAL_MOCK_SLK_KCFG.splitlines(True)
 
-        list_opts = KCFG.parse_opts_strs(UPDATED_MLNX_KCFG.split("\n"))
-        writable_opts = KCFG.get_writable_opts(list_opts)
-
-        FileHandler.write_lines_marker("", writable_opts, marker="mellanox")
-
-    @mock.patch('helper.FileHandler.write_lines', side_effect=writer_mock)
     @mock.patch('helper.FileHandler.read_raw', side_effect=read_raw_mock)
-    def test_read_kconfig_inclusion(self, mock_read_raw, mock_write_lines_marker):
+    def test_insert_kcfg_excl(self, mock_read_raw):
         global LINES_READ
-        LINES_READ = FINAL_MOCK_SLK_KCFG.splitlines(True)
-        opts = FileHandler.read_kconfig_inclusion("")
-
-        global LINES_WRITE
-        LINES_WRITE = UPDATED_MLNX_KCFG.splitlines()
-        writable_opts = KCFG.get_writable_opts(KCFG.parse_opts_strs(opts))
-        print(writable_opts)
-        FileHandler.write_lines("", writable_opts)
+        LINES_READ = MOCK_SLK_EXCL.splitlines(True)
+        kcfg_inc_raw = FileHandler.read_raw("")
+        new_opts = OrderedDict({
+                "CONFIG_OF" : "y",
+                "CONFIG_THERMAL_OF" : "y"
+        })
+        x86_start, x86_end = FileHandler.find_marker_indices(kcfg_inc_raw, MLNX_KFG_MARKER)
+        assert "###-> mellanox_amd64-start" in kcfg_inc_raw[x86_start]
+        assert "###-> mellanox_amd64-end" in kcfg_inc_raw[x86_end]
+        final_kcfg = FileHandler.insert_kcfg_excl_data(kcfg_inc_raw, x86_start, x86_end, new_opts)
+        assert final_kcfg == FINAL_MOCK_SLK_EXCL.splitlines(True)

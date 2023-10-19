@@ -20,7 +20,9 @@ import shutil
 from unittest import mock, TestCase
 from pyfakefs.fake_filesystem_unittest import Patcher
 sys.path.append('../')
+from hwmgmt_helper import *
 from hwmgmt_kernel_patches import *
+
 
 NEW_NONUP_LIST = """ \
 0168-TMP-mlxsw-minimal-Ignore-error-reading-SPAD-register.patch
@@ -76,6 +78,7 @@ Intgerate HW-MGMT 7.0030.0937 Changes
 REL_INPUTS_DIR = "platform/mellanox/integration-scripts/tests/data/"
 MOCK_INPUTS_DIR = "/sonic/" + REL_INPUTS_DIR
 MOCK_WRITE_FILE = MOCK_INPUTS_DIR + "test_writer_file.out"
+MOCK_KCFG_DIR = MOCK_INPUTS_DIR + "/kconfig"
 
 def write_lines_mock(path, lines, raw=False):
     # Create the dir if it doesn't exist already
@@ -90,7 +93,12 @@ def mock_hwmgmt_args():
     with mock.patch("sys.argv", ["hwmgmt_kernel_patches.py", "post",
                                 "--patches", "/tmp",
                                 "--non_up_patches", "/tmp",
-                                "--config_inclusion", MOCK_INPUTS_DIR+"/new_kconfig",
+                                "--config_inc_amd", MOCK_KCFG_DIR+"/new_x86.config",
+                                "--config_inc_arm", MOCK_KCFG_DIR+"/new_arm.config",
+                                "--config_base_amd", MOCK_KCFG_DIR+"/x86.config",
+                                "--config_base_arm", MOCK_KCFG_DIR+"/arm64.config",
+                                "--config_inc_down_amd", MOCK_KCFG_DIR+"/new_x86_down.config",
+                                "--config_inc_down_arm", MOCK_KCFG_DIR+"/new_arm_down.config",
                                 "--series", MOCK_INPUTS_DIR+"/new_series",
                                 "--current_non_up_patches", MOCK_INPUTS_DIR+"/hwmgmt_nonup_patches",
                                 "--kernel_version", "5.10.140",
@@ -113,74 +121,56 @@ def check_file_content(path):
 
 @mock.patch('helper.SLK_PATCH_LOC', REL_INPUTS_DIR)
 @mock.patch('helper.SLK_SERIES', REL_INPUTS_DIR+"series")
-@mock.patch('helper.SLK_KCONFIG', REL_INPUTS_DIR+"kconfig-inclusion")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG', REL_INPUTS_DIR+"kconfig-inclusions")
+@mock.patch('hwmgmt_helper.SLK_KCONFIG_EXCLUDE', REL_INPUTS_DIR+"kconfig-exclusions")
 class TestHwMgmtPostAction(TestCase):
     def setUp(self):
         self.action = HwMgmtAction.get(mock_hwmgmt_args())
         self.action.read_data()
+        self.kcfgaction = KConfigTask(mock_hwmgmt_args())
+        self.kcfgaction.read_data()
         # Populate the new_up, new_non_up list
         Data.new_up = NEW_UP_LIST.splitlines()
         Data.new_non_up = NEW_NONUP_LIST.splitlines()
         Data.old_series = FileHandler.read_raw(MOCK_INPUTS_DIR+"/series")
-        all_kcfg = FileHandler.read_kconfig_parser(MOCK_INPUTS_DIR+"/kconfig-inclusions")
-        Data.current_kcfg = []
-        for hdr in HDRS:
-            Data.current_kcfg.extend(all_kcfg.get(hdr, []))
-        Data.current_kcfg = KCFG.parse_opts_strs(Data.current_kcfg)
-        Data.kcfg_exclude = FileHandler.read_raw(MOCK_INPUTS_DIR+"/kconfig-exclusions")
+
+    def tearDown(self):
+        KCFGData.x86_incl.clear()
+        KCFGData.arm_incl.clear()
+        KCFGData.x86_excl.clear()
+        KCFGData.arm_excl.clear()
+        KCFGData.x86_down.clear()
+        KCFGData.arm_down.clear()
+        KCFGData.noarch_incl.clear()
+        KCFGData.noarch_excl.clear()
+        KCFGData.noarch_down.clear()
 
     def test_find_mlnx_hw_mgmt_markers(self):
         self.action.find_mlnx_hw_mgmt_markers()
         print(Data.i_mlnx_start, Data.i_mlnx_end)
         assert Data.old_series[Data.i_mlnx_start].strip() == "###-> mellanox_hw_mgmt-start"
         assert Data.old_series[Data.i_mlnx_end].strip() == "###-> mellanox_hw_mgmt-end"
-    
-    def test_check_kconfig_conflicts(self):
-        # Add a line to create conflict
-        print(Data.current_kcfg)
-        Data.updated_kcfg.append(["CONFIG_EEPROM_OPTOE", "n"])
-        self.action.find_mlnx_hw_mgmt_markers()
-        assert self.action.check_kconfig_conflicts() == True
-
-        # Add a duplicate option
-        Data.updated_kcfg.pop(-1)
-        Data.updated_kcfg.append(["CONFIG_EEPROM_OPTOE", "m"])
-        assert self.action.check_kconfig_conflicts() == False
-
-        # Check with no conflicts or duplicates
-        Data.updated_kcfg.pop(-1)
-        assert self.action.check_kconfig_conflicts() == False
 
     @mock.patch('helper.FileHandler.write_lines', side_effect=write_lines_mock)
     def test_write_final_slk_series(self, mock_write_lines):
         self.action.find_mlnx_hw_mgmt_markers()
-        assert not self.action.check_kconfig_conflicts()
         self.action.write_final_slk_series()
         assert check_file_content(MOCK_INPUTS_DIR+"expected_data/series")
-
-    def test_write_kconfig_inclusion(self):
-        self.action.find_mlnx_hw_mgmt_markers()
-        assert not self.action.check_kconfig_conflicts()
-        print(Data.updated_kcfg)
-        shutil.copy(MOCK_INPUTS_DIR+"/kconfig-inclusions", MOCK_WRITE_FILE)
-        FileHandler.write_lines_marker(MOCK_WRITE_FILE, KCFG.get_writable_opts(Data.updated_kcfg), MLNX_KFG_MARKER)
-        assert check_file_content(MOCK_INPUTS_DIR+"expected_data/kconfig-inclusions")
     
     @mock.patch('helper.FileHandler.write_lines', side_effect=write_lines_mock)
-    def test_handle_exclusions(self, mock_write_lines):
-        self.action.find_mlnx_hw_mgmt_markers()
-        self.action.handle_exclusions()
-        assert check_file_content(MOCK_INPUTS_DIR+"expected_data/kconfig-exclusions")
-    
-    @mock.patch('helper.FileHandler.write_lines', side_effect=write_lines_mock)
-    def test_write_series_diff(self, mock_write_lines):
+    def test_write_final_diff(self, mock_write_lines):
         self.action.find_mlnx_hw_mgmt_markers()
         self.action.write_final_slk_series()
         self.action.construct_series_with_non_up()
-        self.action.write_series_diff()
-        assert check_file_content(MOCK_INPUTS_DIR+"expected_data/series.patch")
+        series_diff = self.action.get_series_diff()
+        kcfg_diff = self._get_kcfg_incl_diff()
+        final_diff = self.action.get_merged_diff(series_diff, kcfg_diff)
+        print("".join(final_diff))
+        FileHandler.write_lines(os.path.join(self.action.args.build_root, NON_UP_DIFF), final_diff, True)
+        assert check_file_content(MOCK_INPUTS_DIR+"expected_data/external-changes.patch")
 
     def test_commit_msg(self):
+        self.action.find_mlnx_hw_mgmt_markers()
         root_dir = "/sonic/" + PATCH_TABLE_LOC + PATCHWORK_LOC.format("5.10")
         content = "patchwork_link: https://patchwork.ozlabs.org/project/linux-i2c/patch/20230215195322.21955-1-vadimp@nvidia.com/\n"
         file = "0188-i2c-mux-Add-register-map-based-mux-driver.patch.txt"
@@ -193,3 +183,84 @@ class TestHwMgmtPostAction(TestCase):
             assert slk.split() == TEST_SLK_COMMIT.split()
             assert sb.split() == TEST_SB_COMMIT.split()
 
+    def _parse_inc_excl(self):
+        KCFGData.x86_incl, KCFGData.x86_excl = self.kcfgaction.parse_inc_exc(KCFGData.x86_base, KCFGData.x86_updated)
+        KCFGData.arm_incl, KCFGData.arm_excl = self.kcfgaction.parse_inc_exc(KCFGData.arm_base, KCFGData.arm_updated)
+
+    def _parse_noarch_inc_excl(self):
+        self._parse_inc_excl()
+        self.kcfgaction.parse_noarch_inc_exc()
+    
+    def _get_kcfg_incl_raw(self):
+        self._parse_noarch_inc_excl()
+        return self.kcfgaction.get_kconfig_inc()
+
+    def _get_kcfg_incl_diff(self):
+        kcfg_raw = self._get_kcfg_incl_raw()
+        return self.kcfgaction.get_downstream_kconfig_inc(kcfg_raw)
+
+    def test_parse_inc_excl(self):
+        self._parse_inc_excl()
+        test_x86_incl = OrderedDict({
+            "CONFIG_THERMAL" : "y",
+            "CONFIG_THERMAL_OF" : "y",
+            "CONFIG_PINCTRL" : "y",
+            "CONFIG_DW_DMAC_PCI" : "y",
+            "CONFIG_TI_ADS1015" : "m",
+            "CONFIG_I2C_DESIGNWARE_CORE" : "m",
+            "CONFIG_I2C_DESIGNWARE_PCI" : "m"
+        })
+        test_arm_incl = OrderedDict({
+            "CONFIG_THERMAL" : "y",
+            "CONFIG_THERMAL_OF" : "y",
+            "CONFIG_MELLANOX_PLATFORM" : "y",
+            "CONFIG_THERMAL_WRITABLE_TRIPS" : "y",
+            "CONFIG_PMBUS" : "m",
+            "CONFIG_SENSORS_PMBUS" : "m",
+            "CONFIG_HWMON" : "y",
+            "CONFIG_OF" : "y",
+            "CONFIG_THERMAL_NETLINK" : "y"
+        })
+        test_x86_excl = OrderedDict({"CONFIG_I2C_DESIGNWARE_BAYTRAIL" : "y"})
+        assert KCFGData.x86_incl == test_x86_incl
+        assert KCFGData.x86_excl == test_x86_excl
+        assert KCFGData.arm_incl == test_arm_incl
+
+    def test_parse_inc_excl_noarch(self):
+        self._parse_noarch_inc_excl()
+        test_x86_incl = OrderedDict({
+            "CONFIG_PINCTRL" : "y",
+            "CONFIG_DW_DMAC_PCI" : "y",
+            "CONFIG_TI_ADS1015" : "m",
+            "CONFIG_I2C_DESIGNWARE_CORE" : "m",
+            "CONFIG_I2C_DESIGNWARE_PCI" : "m"
+        })
+        test_arm_incl = OrderedDict({
+            "CONFIG_MELLANOX_PLATFORM" : "y",
+            "CONFIG_THERMAL_WRITABLE_TRIPS" : "y",
+            "CONFIG_PMBUS" : "m",
+            "CONFIG_SENSORS_PMBUS" : "m",
+            "CONFIG_HWMON" : "y",
+            "CONFIG_OF" : "y",
+            "CONFIG_THERMAL_NETLINK" : "y"
+        })
+        test_noarch_incl = OrderedDict({
+            "CONFIG_THERMAL" : "y",
+            "CONFIG_THERMAL_OF" : "y"
+        })
+        assert KCFGData.x86_incl == test_x86_incl
+        assert KCFGData.noarch_incl == test_noarch_incl
+        assert KCFGData.arm_incl == test_arm_incl
+
+    @mock.patch('helper.FileHandler.write_lines', side_effect=write_lines_mock)
+    def test_kcfg_incl_file(self, mock_write_lines_mock):
+        kcfg_raw = self._get_kcfg_incl_raw()
+        FileHandler.write_lines("", kcfg_raw, True)
+        assert check_file_content(MOCK_INPUTS_DIR+"expected_data/kconfig-inclusions")
+    
+    @mock.patch('helper.FileHandler.write_lines', side_effect=write_lines_mock)
+    def test_kcfg_excl(self, mock_write_lines_mock):
+        self._parse_noarch_inc_excl()
+        kcfg_excl = self.kcfgaction.get_kconfig_excl()
+        FileHandler.write_lines("", kcfg_excl, True)
+        assert check_file_content(MOCK_INPUTS_DIR+"expected_data/kconfig-exclusions")
