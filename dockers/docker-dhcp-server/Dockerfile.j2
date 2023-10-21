@@ -3,6 +3,7 @@ FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG image_version
+RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -13,6 +14,7 @@ ENV IMAGE_VERSION=$image_version
 RUN apt-get update &&       \
     apt-get install -f -y   \
         tcpdump             \
+        python3-dev         \
 # For kea build environment
         automake            \
         libtool             \
@@ -47,7 +49,9 @@ RUN echo "/usr/local/lib/kea/hooks" > /etc/ld.so.conf.d/kea.conf && \
 RUN cd /usr/local/sbin && rm -f kea-admin kea-ctrl-agent kea-dhcp-ddns kea-dhcp6 keactrl
 # Remove hook lib we don't need
 RUN cd /usr/local/lib/kea/hooks && rm -f libdhcp_bootp.so libdhcp_flex_option.so libdhcp_stat_cmds.so
-# RUN pip3 install psutil
+RUN pip3 install psutil
+# TODO issue on remote rsyslog server in non-host container
+RUN rm -f /etc/supervisor/conf.d/containercfgd.conf
 
 {% if docker_dhcp_server_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -57,12 +61,21 @@ RUN cd /usr/local/lib/kea/hooks && rm -f libdhcp_bootp.so libdhcp_flex_option.so
 {{ install_debian_packages(docker_dhcp_server_debs.split(' ')) }}
 {%- endif %}
 
+{% if docker_dhcp_server_whls.strip() %}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_dhcp_server_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_dhcp_server_whls.split(' ')) }}
+{% endif %}
+
 # Remove build stuff we don't need
 RUN apt-get remove -y devscripts    \
                 automake            \
                 libtool             \
                 pkg-config          \
                 build-essential     \
+                python3-dev         \
                 ccache
 
 RUN apt-get clean -y        && \
@@ -70,10 +83,14 @@ RUN apt-get clean -y        && \
     apt-get autoremove -y   && \
     rm -rf /debs
 
-COPY ["docker_init.sh", "/usr/bin/"]
+COPY ["docker_init.sh", "start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
+COPY ["port-name-alias-map.txt.j2", "rsyslog/rsyslog.conf.j2", "kea-dhcp4.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor/"]
+COPY ["lease_update.sh", "/etc/kea/"]
+COPY ["kea-dhcp4-init.conf", "/etc/kea/kea-dhcp4.conf"]
 COPY ["cli", "/cli/"]
+COPY ["rsyslog/default.conf", "/etc/rsyslog.d"]
 
 ENTRYPOINT ["/usr/bin/docker_init.sh"]

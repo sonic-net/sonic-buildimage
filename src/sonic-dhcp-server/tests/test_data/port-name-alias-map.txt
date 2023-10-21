@@ -1,0 +1,3 @@
+Ethernet24 etp7
+Ethernet28 etp8
+Ethernet32
