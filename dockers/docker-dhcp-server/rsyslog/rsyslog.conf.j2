@@ -1,0 +1,96 @@
+###############################################################################
+# Managed by Ansible
+# file: ansible/roles/acs/templates/rsyslog.conf.j2
+###############################################################################
+#
+#  /etc/rsyslog.conf    Configuration file for rsyslog.
+#
+#                       For more information see
+#                       /usr/share/doc/rsyslog-doc/html/rsyslog_conf.html
+
+
+#################
+#### MODULES ####
+#################
+
+$ModLoad imuxsock # provides support for local system logging
+
+{% set gconf = (SYSLOG_CONFIG | d({})).get('GLOBAL', {}) -%}
+{% set rate_limit_interval = gconf.get('rate_limit_interval') %}
+{% set rate_limit_burst = gconf.get('rate_limit_burst') %}
+
+{% if rate_limit_interval is not none %}
+$SystemLogRateLimitInterval {{ rate_limit_interval }}
+{% endif %}
+{% if rate_limit_burst is not none %}
+$SystemLogRateLimitBurst {{ rate_limit_burst }}
+{% endif %}
+
+$ModLoad imklog   # provides kernel logging support
+#$ModLoad immark  # provides --MARK-- message capability
+
+# provides UDP syslog reception
+$ModLoad imudp
+$UDPServerAddress {{udp_server_ip}}  #bind to localhost before udp server run
+$UDPServerRun 514
+
+# provides TCP syslog reception
+#$ModLoad imtcp
+#$InputTCPServerRun 514
+
+
+###########################
+#### GLOBAL DIRECTIVES ####
+###########################
+{% set format = gconf.get('format', 'standard') -%}
+{% set fw_name = gconf.get('welf_firewall_name', hostname) -%}
+#
+# Use traditional timestamp format.
+# To enable high precision timestamps, comment out the following line.
+#
+#$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+
+# Define a custom template
+$template SONiCFileFormat,"%TIMESTAMP%.%timestamp:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% dhcp_server#%syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$ActionFileDefaultTemplate SONiCFileFormat
+
+template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall time=\"%timereported\
+:::date-year%-%timereported:::date-month%-%timereported:::date-day% %timereported:::date-hour%:%timereported:::date-minute%:%timereported\
+:::date-second%\" fw=\"{{ fw_name }}\" pri=%syslogpriority% msg=\"%syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\"\n")
+
+#
+# Set the default permissions for all log files.
+#
+$FileOwner root
+$FileGroup adm
+$FileCreateMode 0640
+$DirCreateMode 0755
+$Umask 0022
+
+#
+# Where to place spool and state files
+#
+$WorkDirectory /var/spool/rsyslog
+
+#
+# Include all config files in /etc/rsyslog.d/
+#
+$IncludeConfig /etc/rsyslog.d/*.conf
+
+#
+# Suppress duplicate messages and report "message repeated n times"
+#
+$RepeatedMsgReduction on
+
+###############
+#### RULES ####
+###############
+
+#
+# Remote syslog logging
+#
+
+# The omfwd plug-in provides the core functionality of traditional message
+# forwarding via UDP and plain TCP. It is a built-in module that does not need
+# to be loaded.
+# TODO rsyslog issue in bridge mode container, don't update to remote server for now
