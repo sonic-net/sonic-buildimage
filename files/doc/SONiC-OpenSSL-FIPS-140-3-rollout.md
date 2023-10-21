@@ -24,7 +24,7 @@ It is for the security requirement, the FIPS 140-3 should be enforced for the de
 
 ## Scopes
 1. The FIPS 140-3 is only available on SONiC OS Version 11 or above.
-2. FIPS is supported on 20230531+ branches.
+2. FIPS is supported on 202305+ branches.
 3. FIPS is only supported on architectures AMD64, ARM64, but not supported on archetecture ARMHF currently, for instance, Nokia 7215.
 
 ## How to enable FIPS
@@ -38,7 +38,7 @@ The image FIPS default option should be the same as the design state in Network 
 If the design state changed, a device FIPS config is not the same with the image default value, then it is required to do any kinds of reboot for the device, such as warm reboot, fast reboot, or cold reboot, to align the design state after upgrading the the new image.
 
 ## Limitation and enhancement
-When upgrading to a new image above 202305, even the design state is not the same as the image default option, the desired behavior is to set the FIPS design state option in the kernel before the SONiC OS loading into the the new image, not necessary to do the second reboot to make sure the running state align the design.
+When upgrading to a new image above 20230531, even the design state is not the same as the image default option, the desired behavior is to set the FIPS design state option in the kernel before the SONiC OS loading into the the new image, not necessary to do the second reboot to make sure the running state align the design.
 
 There are two solutions to improve it, one is to pass the FIPS design state to SONiC installation script ([install.sh](https://github.com/sonic-net/sonic-buildimage/blob/master/installer/install.sh)) when installing the SONiC. It has dependency on the Hardware proxy, needs to know the design state before installing the new image. The other one is to patch the reboot script in old image to read the design state and change the FIPS reboot option after the new image installed. It is very hard to implement it, since it needs to patch for different versions of the reboot script in the old images.
 
