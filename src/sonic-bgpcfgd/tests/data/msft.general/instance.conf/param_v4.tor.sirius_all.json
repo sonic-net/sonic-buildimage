@@ -1,0 +1,19 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "ToRRouter",
+            "resource_type": "SiriusAppliance"
+        }
+    },
+    "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {
+        "neig_device": {
+            "type": "LeafRouter"
+        }
+    },
+    "bgp_session": {
+        "asn": "11111",
+        "name": "neig_device",
+        "admin_status": "down"
+    },
+    "neighbor_addr": "11.11.11.11"
+}

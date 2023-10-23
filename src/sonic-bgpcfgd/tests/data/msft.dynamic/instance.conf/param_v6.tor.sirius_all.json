@@ -1,0 +1,22 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {
+            "type": "ToRRouter",
+            "resource_type": "SiriusAppliance"
+        }
+    },
+    "CONFIG_DB__LOOPBACK_INTERFACE": {
+        "Loopback1|55.55.55.55/32": {}
+    },
+    "bgp_session": {
+        "ip_range": "fc:2::/64",
+        "name": "dyn_name_v6",
+        "peer_asn": "11111",
+        "src_address": "fc:1::1"
+    },
+    "constants": {
+        "deployment_id_asn_map": {
+            "5": "51111"
+        }
+    }
+}

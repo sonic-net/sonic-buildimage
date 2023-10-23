@@ -36,6 +36,8 @@
 {%     elif device_type in ['ToRRouter', 'BackEndToRRouter'] %}
 {%         if deployment_id is defined and deployment_id == '26' %}
 {%             include path_template % "v4.tor.rotterdam" %}
+{%         elif resource_type is defined and (resource_type == 'FPGASTP' or resource_type == 'SDNAPPLIANCE' or resource_type == 'SiriusAppliance') %}
+{%             include path_template % "v4.tor.rotterdam" %}
 {%         elif neighbor_type == 'BackEndToRRouter' %}
 {%             include path_template % "v4.tor.frontend" %}
 {%         elif neighbor_type == 'BackEndLeafRouter' and is_storage_device == 'true' and device_type == 'BackEndToRRouter' %}
@@ -97,6 +99,8 @@
 {%         endif %}
 {%     elif device_type in ['ToRRouter', 'BackEndToRRouter'] %}
 {%         if deployment_id is defined and deployment_id == '26' %}
+{%             include path_template % "v6.tor.rotterdam" %}
+{%         elif resource_type is defined and (resource_type == 'FPGASTP' or resource_type == 'SDNAPPLIANCE' or resource_type == 'SiriusAppliance') %}
 {%             include path_template % "v6.tor.rotterdam" %}
 {%         elif neighbor_type == 'BackEndToRRouter' and is_compute_ai == 'true' %}
 {%             include path_template % "v6.tor.frontend" %}

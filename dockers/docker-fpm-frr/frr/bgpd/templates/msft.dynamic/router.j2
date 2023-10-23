@@ -6,7 +6,7 @@
 {% if device_type in ['ToRRouter', 'BackEndToRRouter'] %}
 {%     if deployment_id is defined and deployment_id == '26' %}
 {%         include path_template % "tor.rotterdam" %}
-{%     elif resource_type is defined and (resource_type == 'FPGASTP' or resource_type == 'SDNAPPLIANCE') %}
+{%     elif resource_type is defined and (resource_type == 'FPGASTP' or resource_type == 'SDNAPPLIANCE' or resource_type == 'SiriusAppliance') %}
 {%         include path_template % "tor.rotterdam" %}
 {%     else %}
 {%         include path_template % "tor" %}

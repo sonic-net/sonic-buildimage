@@ -28,7 +28,11 @@
 {% if bgp_session['ip_range'].split(',')[0] | ipv4 %}
   address-family ipv4
     neighbor {{ bgp_session['name'] }} activate
+{%   if resource_type == 'SiriusAppliance' %}
+    neighbor {{ bgp_session['name'] }} maximum-prefix 32 79
+{%   else %}
     neighbor {{ bgp_session['name'] }} maximum-prefix 5 79
+{%   endif %}
     neighbor {{ bgp_session['name'] }} route-map FROM_SDN_APPLIANCE_V4 in
     neighbor {{ bgp_session['name'] }} route-map TO_SDN_APPLIANCE_V4 out
     neighbor {{ bgp_session['name'] }} soft-reconfiguration inbound
@@ -38,7 +42,11 @@
 {% if bgp_session['ip_range'].split(',')[0] | ipv6 %}
   address-family ipv6
     neighbor {{ bgp_session['name'] }} activate
+{%   if resource_type == 'SiriusAppliance' %}
+    neighbor {{ bgp_session['name'] }} maximum-prefix 32 79
+{%   else %}
     neighbor {{ bgp_session['name'] }} maximum-prefix 5 79
+{%   endif %}
     neighbor {{ bgp_session['name'] }} route-map FROM_SDN_APPLIANCE_V6 in
     neighbor {{ bgp_session['name'] }} route-map TO_SDN_APPLIANCE_V6 out
     neighbor {{ bgp_session['name'] }} soft-reconfiguration inbound
