@@ -326,3 +326,9 @@ GZ_COMPRESS_PROGRAM ?= gzip
 
 # SONIC_OS_VERSION - sonic os version
 SONIC_OS_VERSION ?= 11
+
+# PIP timeout for http connection
+PIP_HTTP_TIMEOUT ?= 60
+
+# BUILD_REDUCE_IMAGE_SIZE - reduce the image size as much as possbible
+BUILD_REDUCE_IMAGE_SIZE = n

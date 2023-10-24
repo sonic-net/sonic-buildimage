@@ -288,7 +288,7 @@ download_packages()
 
 run_pip_command()
 {
-    declare -a parameters=("$@")
+    declare -a parameters=("--default-timeout" "$PIP_HTTP_TIMEOUT" "$@")
     PIP_CACHE_PATH=${PKG_CACHE_PATH}/pip
     PKG_CACHE_OPTION="--cache-dir=${PIP_CACHE_PATH}"
 

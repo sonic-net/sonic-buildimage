@@ -59,6 +59,10 @@ TRUSTED_GPG_DIR=$BUILD_TOOL_PATH/trusted.gpg.d
     exit 1
 }
 
+if [ "$IMAGE_TYPE" = "aboot" ]; then
+    TARGET_BOOTLOADER="aboot"
+fi
+
 ## Check if not a last stage of RFS build
 if [[ $RFS_SPLIT_LAST_STAGE != y ]]; then
 
@@ -68,8 +72,13 @@ if [[ -d $FILESYSTEM_ROOT ]]; then
 fi
 mkdir -p $FILESYSTEM_ROOT
 mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR
-mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
 touch $FILESYSTEM_ROOT/$PLATFORM_DIR/firsttime
+
+bootloader_packages=""
+if [ "$TARGET_BOOTLOADER" != "aboot" ]; then
+    mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/grub
+    bootloader_packages="grub2-common"
+fi
 
 ## ensure proc is mounted
 sudo mount proc /proc -t proc || true
@@ -365,7 +374,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     gdisk                   \
     sysfsutils              \
     squashfs-tools          \
-    grub2-common            \
+    $bootloader_packages    \
     screen                  \
     hping3                  \
     tcptraceroute           \
@@ -846,6 +855,17 @@ sudo mkdir -p $FILESYSTEM_ROOT/var/lib/docker
 ## Clear DNS configuration inherited from the build server
 sudo rm -f $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/original
 sudo cp files/image_config/resolv-config/resolv.conf.head $FILESYSTEM_ROOT/etc/resolvconf/resolv.conf.d/head
+
+## Optimize filesystem size
+if [ "$BUILD_REDUCE_IMAGE_SIZE" = "y" ]; then
+   sudo scripts/build-optimize-fs-size.py "$FILESYSTEM_ROOT" \
+      --image-type "$IMAGE_TYPE" \
+      --hardlinks var/lib/docker \
+      --hardlinks usr/share/sonic/device \
+      --remove-docs \
+      --remove-mans \
+      --remove-licenses
+fi
 
 sudo mksquashfs $FILESYSTEM_ROOT $FILESYSTEM_SQUASHFS -comp zstd -b 1M -e boot -e var/lib/docker -e $PLATFORM_DIR
 
