@@ -203,6 +203,7 @@ $(shell \
 	SONIC_VERSION_CACHE_SOURCE=$(SONIC_VERSION_CACHE_SOURCE) \
 	DBGOPT='$(DBGOPT)' \
 	MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
+	PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
 	scripts/generate_buildinfo_config.sh)
 
 # Generate the slave Dockerfile, and prepare build info for it
@@ -573,6 +574,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
                            ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
+                           PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset
@@ -595,6 +597,7 @@ export MIRROR_URLS
 export MIRROR_SECURITY_URLS
 export MIRROR_SNAPSHOT
 export SONIC_VERSION_CONTROL_COMPONENTS
+export PIP_HTTP_TIMEOUT
 
 %:: | sonic-build-hooks
 ifneq ($(filter y, $(MULTIARCH_QEMU_ENVIRON) $(CROSS_BUILD_ENVIRON)),)
