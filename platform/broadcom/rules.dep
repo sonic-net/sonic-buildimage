@@ -29,5 +29,7 @@ include $(PLATFORM_PATH)/one-aboot.dep
 include $(PLATFORM_PATH)/libsaithrift-dev.dep
 include $(PLATFORM_PATH)/docker-syncd-brcm-dnx.dep
 include $(PLATFORM_PATH)/docker-syncd-brcm-dnx-rpc.dep
+ifeq ($(INCLUDE_GBSYNCD), y)
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-credo.dep
 include $(PLATFORM_PATH)/../components/docker-gbsyncd-broncos.dep
+endif
