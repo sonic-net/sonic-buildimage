@@ -665,10 +665,11 @@ write_platform_specific_cmdline() {
        else
            varlog_size=256
            cmdline_add logs_inram=on
-           cmdline_add docker_inram=on
-           cmdline_add docker_inram_algo=zstd
+
            if [ $flash_size -le 2000 ]; then
                # enable docker_inram for switches with less than 2G of flash
+               cmdline_add docker_inram=on
+               cmdline_add docker_inram_algo=zstd
                varlog_size=128
            fi
        fi
