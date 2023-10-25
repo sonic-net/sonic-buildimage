@@ -176,6 +176,9 @@ ENABLE_DIALOUT = n
 # INCLUDE_MACSEC - build docker-macsec for macsec support
 INCLUDE_MACSEC = y
 
+# INCLUDE_GBSYNCD - build docker-gbsyncd-* for gearbox support
+INCLUDE_GBSYNCD ?= y
+
 # INCLUDE_TEAMD - build docker-teamd for LAG protocol support
 INCLUDE_TEAMD ?= y
 
