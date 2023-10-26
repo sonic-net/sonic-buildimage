@@ -270,6 +270,9 @@ extern int lkbde_cpu_read(int d, uint32 addr, uint32 *buf);
 extern int lkbde_cpu_pci_register(int d);
 #endif
 
+extern int lkbde_intr_cb_register(int d,
+                                  int (*intr_pending)(void*),
+                                  void *intr_pending_data);
 /*
  * This flag must be OR'ed onto the device number when calling
  * interrupt_connect/disconnect and irq_mask_set functions from

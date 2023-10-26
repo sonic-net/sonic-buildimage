@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -62,6 +62,21 @@
 #endif
 
 /* Compatibility Macros */
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,5,0)
+#define PROC_OWNER(_m)
+#else
+#define PROC_OWNER(_m) .owner = _m,
+#define proc_ops file_operations
+#define proc_open open
+#define proc_read read
+#define proc_write write
+#define proc_lseek llseek
+#define proc_release release
+#define proc_ioctl unlocked_ioctl
+#define proc_compat_ioctl compat_ioctl
+#define proc_mmap mmap
+#endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 #define PROC_CREATE(_entry, _name, _acc, _path, _fops)                  \

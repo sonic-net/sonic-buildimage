@@ -88,6 +88,7 @@ typedef struct ibde_s {
 #define BDE_AXI_DEV_TYPE      SAL_AXI_DEV_TYPE    /* AXI device */
 #define BDE_EMMI_DEV_TYPE     SAL_EMMI_DEV_TYPE   /* EMMI device */
 #define BDE_COMPOSITE_DEV_TYPE SAL_COMPOSITE_DEV_TYPE /* Composite device, composed of sub-devices with buses */
+#define BDE_SUB_DEV_TYPE      SAL_SUB_DEV_TYPE    /* A sub-device (with a bus) of a composite device */
 #define BDE_USER_DEV_TYPE     SAL_USER_DEV_TYPE   /* The user implements his own method of access to the device */
 #define BDE_DEV_BUS_ALT       SAL_DEV_BUS_ALT     /* Alternate Access */
 #define BDE_DEV_BUS_MSI       SAL_DEV_BUS_MSI     /* Message-signaled interrupts */
@@ -186,6 +187,23 @@ typedef struct ibde_s {
     uint64  (*read64)(int d, uint32 addr);
     void    (*write64)(int d, uint32 addr, uint64 data);
 
+    /*
+     * Probe for new devices.
+     *
+     * This function will normally be called implicitly by the BDE
+     * initialization function, but it may be called at a later time
+     * by the application to detect removed or added devices.
+     *
+     * Existing devices are not affected by this operation.
+     *
+     * If a device has been hot-swapped, then it will be assigned the
+     * same resources as before the hot-swap.
+     *
+     * Return value:
+     *   0: Device probe completed successfully.
+     *  -1: An error happened during device probe.
+     */
+    int     (*probe)(void);
 } ibde_t;
 
 

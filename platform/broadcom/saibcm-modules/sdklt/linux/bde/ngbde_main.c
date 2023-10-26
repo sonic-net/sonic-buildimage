@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -30,7 +30,7 @@ MODULE_LICENSE("GPL");
 
 /*! \cond */
 static int mmap_debug = 0;
-module_param(mmap_debug, int, 0);
+module_param(mmap_debug, int, S_IRUSR | S_IWUSR);
 MODULE_PARM_DESC(mmap_debug,
 "MMAP debug output enable (default 0).");
 /*! \endcond */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Broadcom
+ * Copyright 2022 Broadcom
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
@@ -24,6 +24,7 @@
 #include <lkm/lkm.h>
 #include <linux/netdevice.h>
 
+//#define PSAMPLE_SUPPORT 1  // TODO: MLI@BRCM - Add this as part of conditional in Makefile
 #define PSAMPLE_CB_NAME "psample"
 
 extern int
@@ -33,14 +34,14 @@ extern int
 psample_cleanup(void);
 
 extern struct sk_buff*
-psample_rx_cb(struct sk_buff *skb);
+psample_rx_cb(struct net_device *dev, struct sk_buff *skb);
 
 /* psample data per interface */
 typedef struct {
     struct list_head list;
     struct net_device *dev;
     uint16_t id;
-    uint8_t  port;
+    uint16_t port;
     uint16_t vlan;
     uint16_t qnum;
     uint32_t sample_rate;

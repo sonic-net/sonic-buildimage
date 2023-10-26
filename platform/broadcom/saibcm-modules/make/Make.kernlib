@@ -36,17 +36,6 @@ targetlibsoname = ${lib}.so.${SHAREDLIBVER}
 targetlibrealname = ${targetlibsoname}
 targetlibso = ${LIBDIR}/${targetlibrealname}
 
-ifeq ($(TOOLS),Borland)
-
-LIBSUFFIX=lib
-
-${LIBDIR}/%.lib: ${BORLAND_BOBJS}
-	$(RM) $@
-	$(FOREACH) -subdir "$(LIBDIR)" \
-		"tlib $@ $(foreach obj, $(BORLAND_LOBJS), +-$(obj))"
-
-else	# !Borland
-
 LIBSUFFIX=a
 
 ${LIBDIR}/%.a: ${BOBJS}
@@ -60,7 +49,6 @@ ifeq ($(targetbase),unix)
 	$(CC) -shared -Wl,-soname,${targetlibsoname} -o ${targetlibso} ${BOBJS} -lc
 endif
 endif # LINUX_MAKE_SHARED_LIB #
-endif	# !Borland
 
 targetlib = ${LIBDIR}/${lib}.${LIBSUFFIX}
 

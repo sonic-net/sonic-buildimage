@@ -93,7 +93,6 @@ ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f1 -d.` \>= 9)" "1"
 	CFLAGS += -Wno-address-of-packed-member
 endif
 ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f1 -d.` \== 10)" "1"
-	#There might be a bug in GCC10 that cannot detect initialization correctly.
 	CFLAGS += -Wno-error=uninitialized
 	CFLAGS += -Wno-error=format-overflow
 	CFLAGS += -fcommon

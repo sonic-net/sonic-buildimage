@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -24,7 +24,7 @@
 
 /*! \cond */
 static int intr_debug = 0;
-module_param(intr_debug, int, 0);
+module_param(intr_debug, int, S_IRUSR | S_IWUSR);
 MODULE_PARM_DESC(intr_debug,
 "Interrupt debug output enable (default 0).");
 /*! \endcond */
@@ -476,17 +476,20 @@ ngbde_intr_reg_add(int kdev, unsigned int irq_num,
     if (ic->irq_active) {
         /*
          * If the interrupt is connected, then we only update the
-         * kernel mask for existing entries.
+         * kernel mask for existing entries, and only if the kernel
+         * mask is marked as valid and differs from the existing mask.
          */
         for (idx = 0; idx < ic->num_regs; idx++) {
             ir = &ic->regs[idx];
             if (ir->status_reg == ireg->status_reg &&
                 ir->mask_reg == ireg->mask_reg) {
-                ir->kmask = ireg->kmask;
-                if (intr_debug) {
-                    printk("INTR: Updating interrupt register "
-                           "0x%08x/0x%08x (0x%08x)\n",
-                           ir->status_reg, ir->mask_reg, ir->kmask);
+                if (ir->kmask != ireg->kmask && ireg->kmask_valid) {
+                    ir->kmask = ireg->kmask;
+                    if (intr_debug) {
+                        printk("INTR: Updating interrupt register "
+                               "0x%08x/0x%08x (0x%08x)\n",
+                               ir->status_reg, ir->mask_reg, ir->kmask);
+                    }
                 }
                 return 0;
             }

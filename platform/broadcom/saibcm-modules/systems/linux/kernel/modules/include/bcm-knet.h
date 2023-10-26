@@ -75,7 +75,7 @@ typedef int
 (*knet_hw_tstamp_enable_cb_f)(int dev_no, int phys_port, int tx_type);
 
 typedef int
-(*knet_hw_tstamp_tx_time_get_cb_f)(int dev_no, int phys_port, uint8_t *pkt, uint64_t *ts);
+(*knet_hw_tstamp_tx_time_get_cb_f)(int dev_no, int phys_port, uint8_t *pkt, uint64_t *ts, int tx_type);
 
 typedef int
 (*knet_hw_tstamp_tx_meta_get_cb_f)(int dev_no, int hwts, int hdrlen, struct sk_buff *skb, uint64_t *ts, uint32_t **md);
@@ -182,7 +182,6 @@ bkn_netif_destroy_cb_register(knet_netif_cb_f netif_cb);
 
 extern int
 bkn_netif_destroy_cb_unregister(knet_netif_cb_f netif_cb);
-
 #endif
 
 #endif /* __LINUX_BCM_KNET_H__ */

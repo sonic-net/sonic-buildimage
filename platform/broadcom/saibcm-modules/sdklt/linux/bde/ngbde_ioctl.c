@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -156,8 +156,12 @@ ngbde_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         irq_num = ioc.op.irq_reg_add.irq_num;
         ireg.status_reg = ioc.op.irq_reg_add.status_reg;
         ireg.mask_reg = ioc.op.irq_reg_add.mask_reg;
-        ireg.kmask = ioc.op.irq_reg_add.kmask;
-        ireg.status_is_masked = false;
+        ireg.kmask = 0;
+        ireg.kmask_valid = false;
+        if (ioc.op.irq_reg_add.flags & NGBDE_DEV_IRQ_REG_F_KMASK) {
+            ireg.kmask = ioc.op.irq_reg_add.kmask;
+            ireg.kmask_valid = true;
+        }
         if (ioc.op.irq_reg_add.flags & NGBDE_DEV_IRQ_REG_F_MASKED) {
             ireg.status_is_masked = true;
         }

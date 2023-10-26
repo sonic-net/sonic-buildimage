@@ -9,7 +9,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -237,6 +237,13 @@ struct ngbde_ioc_intr_ctrl_s {
 
 /*! IRQ status register is a bitwise AND of mask and raw status. */
 #define NGBDE_DEV_IRQ_REG_F_MASKED      (1 << 1)
+
+/*!
+ * Indicates that the kmask value is valid. This is mainly to
+ * distinguish a mask value of zero from the mask value being
+ * uninitialized, as this matters during a warm boot.
+ */
+#define NGBDE_DEV_IRQ_REG_F_KMASK       (1 << 2)
 
 /*! \} */
 

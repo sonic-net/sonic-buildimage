@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2019 Broadcom
+ * Copyright 2017-2022 Broadcom
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
@@ -44,6 +44,7 @@
 #include <net/net_namespace.h>
 #include <net/psample.h>
 #include "psample-cb.h"
+#include "ngknet_main.h"
 
 #define PSAMPLE_CB_DBG
 #ifdef PSAMPLE_CB_DBG 
@@ -64,15 +65,23 @@ extern int debug;
 #define PSAMPLE_RATE_DFLT 1
 #define PSAMPLE_SIZE_DFLT 128
 static int psample_size = PSAMPLE_SIZE_DFLT;
-MODULE_PARAM(psample_size, int, 0);
+module_param(psample_size, int, 0);
 MODULE_PARM_DESC(psample_size,
 "psample pkt size (default 128 bytes)");
 
 #define PSAMPLE_QLEN_DFLT 1024
 static int psample_qlen = PSAMPLE_QLEN_DFLT;
-MODULE_PARAM(psample_qlen, int, 0);
+module_param(psample_qlen, int, 0);
 MODULE_PARM_DESC(psample_qlen,
 "psample queue length (default 1024 buffers)");
+
+#if !IS_ENABLED(CONFIG_PSAMPLE)
+inline struct 
+psample_group *psample_group_get(struct net *net, u32 group_num)
+{
+    return NULL;
+}
+#endif
 
 /* driver proc entry root */
 static struct proc_dir_entry *psample_proc_root = NULL;
@@ -153,6 +162,8 @@ psample_netif_lookup_by_ifindex(int ifindex)
 }
         
 static psample_netif_t*
+psample_netif_lookup_by_port(int port)  __attribute__ ((unused));
+static psample_netif_t*
 psample_netif_lookup_by_port(int port)
 {
     struct list_head *list;
@@ -173,50 +184,6 @@ psample_netif_lookup_by_port(int port)
 }
 
 static int
-psample_meta_sample_reason(uint8_t *pkt, void *pkt_meta)
-{
-    uint32_t *metadata = (uint32_t*)pkt_meta;
-    uint32_t reason = 0;
-    uint32_t reason_hi = 0;
-    uint32_t sample_rx_reason_mask = 0;
-
-    if (metadata) {
-        /* Sample Pkt reason code (bcmRxReasonSampleSource) */
-        switch(g_psample_info.dcb_type) {
-            case 36: /* TD3 */
-            case 38: /* TH3 */
-                reason_hi = *(metadata + 4);
-                reason    = *(metadata + 5);
-                sample_rx_reason_mask = (1 << 3);
-                break;
-            case 32: /* TH1/TH2 */
-            case 26: /* TD2 */
-            case 23: /* HX4 */
-                reason_hi = *(metadata + 2);
-                reason    = *(metadata + 3);
-                sample_rx_reason_mask = (1 << 5);
-                break;
-            default:
-                break;
-        }
-    }
-    PSAMPLE_CB_DBG_PRINT("%s: DCB%d sample_rx_reason_mask: 0x%08x, reason: 0x%08x, reason_hi: 0x%08x\n",
-            __func__, g_psample_info.dcb_type, sample_rx_reason_mask, reason, reason_hi);
-
-    /* Check if only sample reason code is set.
-     * If only sample reason code, then consume pkt.
-     * If other reason codes exist, then pkt should be
-     * passed through to Linux network stack.
-     */
-    if ((reason & ~sample_rx_reason_mask) || reason_hi) {
-        return 0; /* multiple reasons set, pass through */
-    }
-
-    /* only sample rx reason set, consume pkt */
-    return (PSAMPLE_PKT_HANDLED);
-}
-
-static int
 psample_meta_get(struct sk_buff *skb, psample_meta_t *sflow_meta)
 {
     int src_ifindex = 0;
@@ -224,18 +191,18 @@ psample_meta_get(struct sk_buff *skb, psample_meta_t *sflow_meta)
     int sample_size = PSAMPLE_SIZE_DFLT;
     psample_netif_t *psample_netif = NULL;
     const struct ngknet_callback_desc *cbd = NGKNET_SKB_CB(skb);
-    const struct ngknet_private *netif = cbd->priv;
+    ngknet_netif_t *netif = cbd->netif;
     memset(sflow_meta, 0, sizeof(psample_meta_t));    
 
     /* find src port */
-    if ((psample_netif = psample_netif_lookup_by_ifindex(netif->net_dev->ifindex))) {
+    if ((psample_netif = psample_netif_lookup_by_ifindex(netif->id))) {
         src_ifindex = psample_netif->dev->ifindex;
         sample_rate = psample_netif->sample_rate;
         sample_size = psample_netif->sample_size;
     } else {
         g_psample_stats.pkts_d_meta_srcport++;
         PSAMPLE_CB_DBG_PRINT("%s: could not find psample netif for src dev %s (ifidx %d)\n", 
-                             __func__, netif->net_dev->name, netif->net_dev->ifindex);
+                             __func__, netif->name, netif->id);
     }
 
     sflow_meta->src_ifindex = src_ifindex;
@@ -251,7 +218,6 @@ psample_task(struct work_struct *work)
     unsigned long flags;
     struct list_head *list_ptr, *list_next;
     psample_pkt_t *pkt;
-    struct psample_metadata md = {0};
 
     spin_lock_irqsave(&psample_work->lock, flags);
     list_for_each_safe(list_ptr, list_next, &psample_work->pkt_list) {
@@ -263,18 +229,32 @@ psample_task(struct work_struct *work)
  
         /* send to psample */
         if (pkt) {
+#if ((IS_ENABLED(CONFIG_PSAMPLE) && LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) || \
+     (defined PSAMPLE_MD_EXTENDED_ATTR && PSAMPLE_MD_EXTENDED_ATTR))
+            struct psample_metadata md = {0};
+            md.trunc_size = pkt->meta.trunc_size;
+            md.in_ifindex = pkt->meta.src_ifindex;
+            md.out_ifindex = pkt->meta.dst_ifindex;
+#endif
             PSAMPLE_CB_DBG_PRINT("%s: group 0x%x, trunc_size %d, src_ifdx 0x%x, dst_ifdx 0x%x, sample_rate %d\n",
                     __func__, pkt->group->group_num, 
                     pkt->meta.trunc_size, pkt->meta.src_ifindex, 
                     pkt->meta.dst_ifindex, pkt->meta.sample_rate);
 
-            md.trunc_size = pkt->meta.trunc_size;
-            md.in_ifindex = pkt->meta.src_ifindex;
-            md.out_ifindex = pkt->meta.dst_ifindex;
+#if ((IS_ENABLED(CONFIG_PSAMPLE) && LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) || \
+     (defined PSAMPLE_MD_EXTENDED_ATTR && PSAMPLE_MD_EXTENDED_ATTR))
             psample_sample_packet(pkt->group, 
-                                  pkt->skb, 
+                                  pkt->skb,
                                   pkt->meta.sample_rate,
                                   &md);
+#else
+            psample_sample_packet(pkt->group, 
+                                  pkt->skb, 
+                                  pkt->meta.trunc_size,
+                                  pkt->meta.src_ifindex,
+                                  pkt->meta.dst_ifindex,
+                                  pkt->meta.sample_rate);
+#endif
             g_psample_stats.pkts_f_psample_mod++;
  
             dev_kfree_skb_any(pkt->skb);
@@ -286,7 +266,7 @@ psample_task(struct work_struct *work)
 }
 
 struct sk_buff*
-psample_rx_cb(struct sk_buff *skb)
+psample_rx_cb(struct net_device *dev, struct sk_buff *skb)
 {
     struct psample_group *group;
     psample_meta_t meta;   
@@ -302,7 +282,7 @@ psample_rx_cb(struct sk_buff *skb)
         return (NULL);
     }
     cbd = NGKNET_SKB_CB(skb);
-    netif = cbd->priv;
+    netif = netdev_priv(dev);
     filt_src = cbd->filt;
     filt = netif->filt_cb;
 
@@ -429,13 +409,6 @@ psample_rx_cb(struct sk_buff *skb)
     }
 
 PSAMPLE_FILTER_CB_PKT_HANDLED:
-    /* if sample reason only, consume pkt. else pass through */
-    rv = psample_meta_sample_reason(skb->data, cbd->pmd);
-    if (PSAMPLE_PKT_HANDLED == rv) {
-        g_psample_stats.pkts_f_handled++;
-        dev_kfree_skb_any(skb);
-        return NULL;
-    }
     g_psample_stats.pkts_f_pass_through++;
     return skb;
 }
@@ -464,22 +437,22 @@ psample_netif_create_cb(struct net_device *dev)
     spin_lock_irqsave(&g_psample_info.lock, flags);
 
     psample_netif->dev = dev;
-    psample_netif->id = netif->id;
+    psample_netif->id = netif->netif.id;
     /*Application has encoded the port in netif user data 0 & 1 */
-    if (netif->type == NGKNET_NETIF_T_PORT)
+    if (netif->netif.type == NGKNET_NETIF_T_PORT)
     {
-        psample_netif->port = netif->user_data[0];
-        psample_netif->port |= netif->user_data[1] << 8;
+        psample_netif->port = netif->netif.user_data[0];
+        psample_netif->port |= netif->netif.user_data[1] << 8;
     }
-    psample_netif->vlan = netif->vlan;
+    psample_netif->vlan = netif->netif.vlan;
     psample_netif->sample_rate = PSAMPLE_RATE_DFLT;
     psample_netif->sample_size = PSAMPLE_SIZE_DFLT;
-
+    printk("\r\n Type %d vlan %d", netif->netif.type, psample_netif->vlan);
     /* insert netif sorted by ID similar to bkn_knet_netif_create() */
     found = 0;
     list_for_each(list, &g_psample_info.netif_list) {
         lpsample_netif = (psample_netif_t*)list;
-        if (netif->id < lpsample_netif->id) {
+        if (netif->netif.id < lpsample_netif->id) {
             found = 1;
             g_psample_info.netif_count++; 
             break;
@@ -519,7 +492,7 @@ psample_netif_destroy_cb(struct net_device *dev)
     
     list_for_each(list, &g_psample_info.netif_list) {
         psample_netif = (psample_netif_t*)list;
-        if (netif->id == psample_netif->id) {
+        if (netif->netif.id == psample_netif->id) {
             found = 1; 
             list_del(&psample_netif->list);
             PSAMPLE_CB_DBG_PRINT("%s: removing psample netif '%s'\n", __func__, dev->name);
@@ -532,7 +505,6 @@ psample_netif_destroy_cb(struct net_device *dev)
     spin_unlock_irqrestore(&g_psample_info.lock, flags);
     
     if (!found) {    
-        printk("%s: netif ID %d not found!\n", __func__, netif->id);
         return (-1);
     }
     return (0);
@@ -631,11 +603,12 @@ psample_proc_rate_write(struct file *file, const char *buf,
 }
 
 struct proc_ops psample_proc_rate_file_ops = {
-    proc_open:       psample_proc_rate_open,
-    proc_read:       seq_read,
-    proc_lseek:     seq_lseek,
-    proc_write:      psample_proc_rate_write,
-    proc_release:    single_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =       psample_proc_rate_open,
+    .proc_read =       seq_read,
+    .proc_lseek =      seq_lseek,
+    .proc_write =       psample_proc_rate_write,
+    .proc_release =    single_release,
 };
 
 /*
@@ -729,11 +702,12 @@ psample_proc_size_write(struct file *file, const char *buf,
 }
 
 struct proc_ops psample_proc_size_file_ops = {
-    proc_open:       psample_proc_size_open,
-    proc_read:       seq_read,
-    proc_lseek:     seq_lseek,
-    proc_write:      psample_proc_size_write,
-    proc_release:    single_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =       psample_proc_size_open,
+    .proc_read =       seq_read,
+    .proc_lseek =      seq_lseek,
+    .proc_write =       psample_proc_size_write,
+    .proc_release =    single_release,
 };
 
 /*
@@ -769,11 +743,12 @@ psample_proc_map_open(struct inode * inode, struct file * file)
 }
 
 struct proc_ops psample_proc_map_file_ops = {
-    proc_open:       psample_proc_map_open,
-    proc_read:       seq_read,
-    proc_lseek:     seq_lseek,
-    proc_write:      NULL,
-    proc_release:    single_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =       psample_proc_map_open,
+    .proc_read =       seq_read,
+    .proc_lseek =      seq_lseek,
+    .proc_write =       NULL,
+    .proc_release =    single_release,
 };
 
 /*
@@ -834,11 +809,12 @@ psample_proc_debug_write(struct file *file, const char *buf,
 }
 
 struct proc_ops psample_proc_debug_file_ops = {
-    proc_open:       psample_proc_debug_open,
-    proc_read:       seq_read,
-    proc_lseek:     seq_lseek,
-    proc_write:      psample_proc_debug_write,
-    proc_release:    single_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =       psample_proc_debug_open,
+    .proc_read =       seq_read,
+    .proc_lseek =      seq_lseek,
+    .proc_write =       psample_proc_debug_write,
+    .proc_release =    single_release,
 };
 
 static int
@@ -895,11 +871,12 @@ psample_proc_stats_write(struct file *file, const char *buf,
     return count;
 }
 struct proc_ops psample_proc_stats_file_ops = {
-    proc_open:       psample_proc_stats_open,
-    proc_read:       seq_read,
-    proc_lseek:     seq_lseek,
-    proc_write:      psample_proc_stats_write,
-    proc_release:    single_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =       psample_proc_stats_open,
+    .proc_read =       seq_read,
+    .proc_lseek =      seq_lseek,
+    .proc_write =      psample_proc_stats_write,
+    .proc_release =    single_release,
 };
 
 int psample_cleanup(void)

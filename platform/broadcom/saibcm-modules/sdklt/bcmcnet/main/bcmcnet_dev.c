@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -143,7 +143,7 @@ bcn_tx_queues_alloc(struct pdma_dev *dev)
             txq->group_id = gi;
             txq->chan_id = qi + gi * dev->grp_queues;
             txq->ctrl = ctrl;
-            txq->sem = sal_sem_create("bcmcnetTxMutexSem", SAL_SEM_BINARY, 0);
+            txq->sem = sal_sem_create("bcmcnetTxMutexSem", SAL_SEM_BINARY, 1);
             if (!txq->sem) {
                 goto error;
             }
@@ -220,8 +220,8 @@ bcn_rx_queue_group_parse(struct pdma_dev *dev, uint32_t qbm)
                 }
                 rxq->buf_size += dev->rx_ph_size;
                 /* Set mode and state for the queue */
-                rxq->mode = bm->rx_buf_mode(dev, rxq);
-                rxq->state = PDMA_RX_QUEUE_USED;
+                rxq->buf_mode = bm->rx_buf_mode(dev, rxq);
+                rxq->state |= PDMA_RX_QUEUE_USED;
                 if (dev->flags & PDMA_RX_BATCHING) {
                     rxq->free_thresh = rxq->nb_desc / 4;
                     rxq->state |= PDMA_RX_BATCH_REFILL;
@@ -297,7 +297,7 @@ bcn_tx_queue_group_parse(struct pdma_dev *dev, uint32_t qbm)
                     ctrl->grp[gi].nb_desc[qi] = txq->nb_desc;
                 }
                 /* Set mode and state for the queue */
-                txq->state = PDMA_TX_QUEUE_USED;
+                txq->state |= PDMA_TX_QUEUE_USED;
                 if (dev->flags & PDMA_TX_POLLING) {
                     txq->free_thresh = txq->nb_desc / 4;
                     txq->state |= PDMA_TX_QUEUE_POLL;
@@ -364,7 +364,7 @@ bcmcnet_pdma_config(struct pdma_dev *dev, uint32_t bm_rxq, uint32_t bm_txq)
         }
         /* Update group metadata */
         if (!ctrl->grp[gi].bm_rxq && !ctrl->grp[gi].bm_txq) {
-            ctrl->grp[gi].attached = 0;
+            ctrl->grp[gi].attached = false;
             ctrl->bm_grp &= ~(1 << gi);
             ctrl->nb_grp--;
             continue;
@@ -398,7 +398,7 @@ bcmcnet_pdma_close(struct pdma_dev *dev)
         ctrl->nb_grp--;
         ctrl->grp[gi].irq_mask = 0;
         ctrl->grp[gi].poll_queues = 0;
-        ctrl->grp[gi].attached = 0;
+        ctrl->grp[gi].attached = false;
     }
 
     bcn_rx_queues_free(dev);
@@ -420,8 +420,12 @@ bcmcnet_pdma_suspend(struct pdma_dev *dev)
         bcmcnet_pdma_rx_queue_suspend(dev, qi);
     }
 
-    for (qi = 0; qi < ctrl->nb_txq; qi++) {
-        bcmcnet_pdma_tx_queue_suspend(dev, qi);
+    if (dev->ndev_detach) {
+        dev->ndev_detach(dev);
+    } else {
+        for (qi = 0; qi < ctrl->nb_txq; qi++) {
+            bcmcnet_pdma_tx_queue_suspend(dev, qi);
+        }
     }
 
     return SHR_E_NONE;
@@ -436,12 +440,16 @@ bcmcnet_pdma_resume(struct pdma_dev *dev)
     struct dev_ctrl *ctrl = &dev->ctrl;
     uint32_t qi;
 
-    for (qi = 0; qi < ctrl->nb_rxq; qi++) {
-        bcmcnet_pdma_rx_queue_resume(dev, qi);
+    if (dev->ndev_attach) {
+        dev->ndev_attach(dev);
+    } else {
+        for (qi = 0; qi < ctrl->nb_txq; qi++) {
+            bcmcnet_pdma_tx_queue_resume(dev, qi);
+        }
     }
 
-    for (qi = 0; qi < ctrl->nb_txq; qi++) {
-        bcmcnet_pdma_tx_queue_resume(dev, qi);
+    for (qi = 0; qi < ctrl->nb_rxq; qi++) {
+        bcmcnet_pdma_rx_queue_resume(dev, qi);
     }
 
     return SHR_E_NONE;
@@ -485,6 +493,7 @@ bcmcnet_pdma_info_get(struct pdma_dev *dev)
         }
         dev->info.rx_buf_size[qi] = rxq->buf_size;
         dev->info.nb_rx_desc[qi] = rxq->nb_desc;
+        dev->info.rxq_state[qi] = rxq->state;
     }
 
     for (qi = 0; qi < ctrl->nb_txq; qi++) {
@@ -493,6 +502,7 @@ bcmcnet_pdma_info_get(struct pdma_dev *dev)
             continue;
         }
         dev->info.nb_tx_desc[qi] = txq->nb_desc;
+        dev->info.txq_state[qi] = txq->state;
     }
 }
 
@@ -681,7 +691,6 @@ bcmcnet_pdma_rx_queue_start(struct pdma_dev *dev, int queue)
 
     rxq = (struct pdma_rx_queue *)ctrl->rx_queue[queue];
     rxq->state |= PDMA_RX_QUEUE_ACTIVE;
-    rxq->state &= ~PDMA_RX_QUEUE_XOFF;
 
     return hw->hdls.chan_start(hw, rxq->chan_id);
 }
@@ -702,7 +711,6 @@ bcmcnet_pdma_rx_queue_stop(struct pdma_dev *dev, int queue)
 
     rxq = (struct pdma_rx_queue *)ctrl->rx_queue[queue];
     rxq->state &= ~PDMA_RX_QUEUE_ACTIVE;
-    rxq->state |= PDMA_RX_QUEUE_XOFF;
 
     return hw->hdls.chan_stop(hw, rxq->chan_id);
 }
@@ -723,7 +731,6 @@ bcmcnet_pdma_tx_queue_start(struct pdma_dev *dev, int queue)
 
     txq = (struct pdma_tx_queue *)ctrl->tx_queue[queue];
     txq->state |= PDMA_TX_QUEUE_ACTIVE;
-    txq->state &= ~PDMA_TX_QUEUE_XOFF;
 
     return dev->flags & PDMA_CHAIN_MODE ? SHR_E_NONE :
            hw->hdls.chan_start(hw, txq->chan_id);
@@ -745,7 +752,6 @@ bcmcnet_pdma_tx_queue_stop(struct pdma_dev *dev, int queue)
 
     txq = (struct pdma_tx_queue *)ctrl->tx_queue[queue];
     txq->state &= ~PDMA_TX_QUEUE_ACTIVE;
-    txq->state |= PDMA_TX_QUEUE_XOFF;
 
     return hw->hdls.chan_stop(hw, txq->chan_id);
 }
@@ -876,7 +882,11 @@ bcmcnet_pdma_tx_queue_intr_disable(struct pdma_dev *dev, int queue)
 
     txq = (struct pdma_tx_queue *)ctrl->tx_queue[queue];
 
-    return hw->hdls.chan_intr_disable(hw, txq->chan_id);
+    if (txq->state & PDMA_TX_QUEUE_POLL) {
+        return SHR_E_NONE;
+    } else {
+        return hw->hdls.chan_intr_disable(hw, txq->chan_id);
+    }
 }
 
 /*!
@@ -1008,8 +1018,8 @@ bcmcnet_pdma_open(struct pdma_dev *dev)
         hdl->group = gi;
         hdl->chan = chan;
         hdl->dev = dev;
-        hdl->intr_num = hw->hdls.chan_intr_num_get(hw, chan);
-        if (hdl->intr_num < 0) {
+        hdl->inum = hw->hdls.chan_intr_num_get(hw, chan);
+        if (hdl->inum < 0) {
             return SHR_E_INTERNAL;
         }
     }

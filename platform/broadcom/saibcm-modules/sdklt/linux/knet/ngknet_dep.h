@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -29,8 +29,9 @@
 /*! Memorry barrier */
 #define MEMORY_BARRIER      smp_mb()
 
-/*! CNET print uitility */
-#define CNET_PR(fmt, args...)   printk(fmt, ##args)
+/*! CNET log macros */
+#define CNET_INFO(unit, fmt, args...)   printk(KERN_INFO fmt, ##args)
+#define CNET_ERROR(unit, fmt, args...)  printk(KERN_ERR fmt, ##args)
 
 struct pdma_dev;
 

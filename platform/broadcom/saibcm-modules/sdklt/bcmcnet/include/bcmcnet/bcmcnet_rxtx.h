@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -148,13 +148,19 @@ struct pdma_rx_queue {
 #define PDMA_RX_QUEUE_ACTIVE    (1 << 2)
     /*! Queue is busy */
 #define PDMA_RX_QUEUE_BUSY      (1 << 3)
+    /*! Queue in batch refilling mode */
+#define PDMA_RX_BATCH_REFILL    (1 << 4)
+
+    /*! Queue status */
+    uint32_t status;
     /*! Queue is suspended */
-#define PDMA_RX_QUEUE_XOFF      (1 << 4)
-    /*! Queue is batch refilled */
-#define PDMA_RX_BATCH_REFILL    (1 << 5)
+#define PDMA_RX_QUEUE_XOFF      (1 << 0)
 
     /*! DMA buffer mode */
-    enum buf_mode mode;
+    enum buf_mode buf_mode;
+
+    /*! Page order in PDMA_BUF_MODE_PAGE mode */
+    uint32_t page_order;
 };
 
 /*!
@@ -248,13 +254,16 @@ struct pdma_tx_queue {
 #define PDMA_TX_QUEUE_ACTIVE    (1 << 2)
     /*! Queue is setup */
 #define PDMA_TX_QUEUE_BUSY      (1 << 3)
+    /*! Queue in polling mode */
+#define PDMA_TX_QUEUE_POLL      (1 << 4)
+
+    /*! Queue status */
+    uint32_t status;
     /*! Queue is suspended */
-#define PDMA_TX_QUEUE_XOFF      (1 << 4)
-    /*! Queue is poll mode */
-#define PDMA_TX_QUEUE_POLL      (1 << 5)
+#define PDMA_TX_QUEUE_XOFF      (1 << 0)
 
     /*! DMA buffer mode */
-    enum buf_mode mode;
+    enum buf_mode buf_mode;
 };
 
 /*!

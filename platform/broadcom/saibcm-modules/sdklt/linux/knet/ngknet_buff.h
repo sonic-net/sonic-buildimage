@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -30,11 +30,9 @@
 /*! Rx SKB reserved size */
 #define PDMA_SKB_RESV           (PDMA_RXB_RESV + SKB_DATA_ALIGN(sizeof(struct skb_shared_info)))
 /*! Rx buffer size */
-#define PDMA_RXB_SIZE(len)      (SKB_DATA_ALIGN(len + NET_SKB_PAD) + PDMA_SKB_RESV)
+#define PDMA_RXB_SIZE(len)      (SKB_DATA_ALIGN(len) + PDMA_SKB_RESV)
 /*! Rx reserved meta size */
 #define PDMA_RXB_META           64
-/*! Max page buffer size */
-#define PDMA_PAGE_BUF_MAX       2048
 
 /*!
  * \brief Rx buffer.

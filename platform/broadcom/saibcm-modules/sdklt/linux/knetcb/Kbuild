@@ -2,7 +2,7 @@
 #
 # Linux KNET Callback module.
 #
-# $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+# $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -17,23 +17,32 @@
 # A copy of the GNU General Public License version 2 (GPLv2) can
 # be found in the LICENSES folder.$
 #
-ifneq ($(CONFIG_PSAMPLE),)
+
+ifeq ($(BUILD_PSAMPLE),1)
+PSAMPLE_CFLAGS=-DPSAMPLE_SUPPORT
 PSAMPLE_CB_OBJS=psample-cb.o
 endif
 
+ifneq ($(OUTPUT_DIR),)
+INCLUDES := -I$(OUTPUT_DIR)/knet/generated/include -I$(OUTPUT_DIR)/knet/generated
+endif
 obj-m := linux_ngknetcb.o
 
 ccflags-y := $(KNETCB_CPPFLAGS) $(LKM_CFLAGS) \
-	     $(SDK_PMD_KFLAGS) \
-	     -I$(SDK)/shr/include \
-	     -I$(SDK)/bcmdrd/include \
-	     -I$(SDK)/bcmltd/include \
-	     -I$(SDK)/bcmlrd/include \
-	     -I$(SDK)/linux/include \
-	     -I$(SDK)/linux/knet/include \
-	     -I$(SDK)/linux/knetcb \
-	     -I$(SDK)/linux/knet \
-	     $(PSAMPLE_CFLAGS)
+             $(SDK_PMD_KFLAGS) \
+             -I$(SDK)/shr/include \
+             -I$(SDK)/bcmdrd/include \
+             -I$(SDK)/bcmltd/include \
+             -I$(SDK)/bcmlrd/include \
+             -I$(SDK)/bcmcnet/include \
+             -I$(SDK)/linux/include \
+             -I$(SDK)/linux/knetcb  \
+             -I$(SDK)/linux/knet \
+             -I$(SDK)/linux/knet/generated/include \
+             -I$(SDK)/linux/knet/generated \
+             $(INCLUDES) \
+             $(PSAMPLE_CFLAGS) \
 
-linux_ngknetcb-y := $(SDK_PMD_KOBJS) ngknetcb_main.o \
-                    $(PSAMPLE_CB_OBJS)
+linux_ngknetcb-y := $(SDK_PMD_KOBJS) \
+                    ngknetcb_main.o \
+                    $(PSAMPLE_CB_OBJS) 

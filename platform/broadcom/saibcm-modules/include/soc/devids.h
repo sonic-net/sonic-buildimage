@@ -25,7 +25,7 @@
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
  */
 /*
- * Copyright: (c) 2021 Broadcom.
+ * Copyright: (c) 2022 Broadcom.
  * All Rights Reserved.
  */
 
@@ -1389,10 +1389,6 @@
 #define BCM56068_DEVICE_ID      0xb068
 #define BCM56068_A0_REV_ID      1
 #define BCM56068_B0_REV_ID      0x11
-
-#define BCM56068_DEVICE_ID      0xb068
-#define BCM56068_A0_REV_ID      1
-#define BCM56068_B0_REV_ID      0x11
 #define BCM56068_B1_REV_ID      0x12
 
 #define BCM56069_DEVICE_ID      0xb069
@@ -1532,6 +1528,9 @@
 #define BCM53549_DEVICE_ID      0x8549
 #define BCM53549_A0_REV_ID      1
 
+#define BCM53642_DEVICE_ID      0x8642
+#define BCM53642_A0_REV_ID      1
+
 #define BCM5665_DEVICE_ID       0x5665
 #define BCM5665_A0_REV_ID       1
 #define BCM5665_B0_REV_ID       0x11
@@ -1549,8 +1548,6 @@
 
 #define BROADCOM_PHYID_HIGH 0x0040
 
-#define GEDI_DEVICE_ID          0xa100 
-#define GEDI_REV_ID             0x0001 
 #define ARAD_DEVICE_ID          0x8650 
 #define ARAD_A0_REV_ID          0x0000
 #define ARAD_B0_REV_ID          0x0011  
@@ -1580,6 +1577,7 @@
 #define BCM88956_A1_REV_ID      0x0002
 #define DNXC_A0_REV_ID          0x0001
 #define DNXC_A1_REV_ID          0x0002
+#define DNXC_A2_REV_ID          0x0003
 #define DNXC_B0_REV_ID          0x0011
 #define DNXC_B1_REV_ID          0x0012
 #define DNXC_DEVID_FAMILY_MASK  0xfff0
@@ -1601,6 +1599,42 @@
 #define BCM8879D_DEVICE_ID      0x879D
 #define BCM8879E_DEVICE_ID      0x879E
 #define BCM8879F_DEVICE_ID      0x879F
+#ifdef BCM_DNXF3_SUPPORT
+#define BCM88910_DEVICE_ID      0x8910
+#define BCM88910_A0_REV_ID      DNXC_A0_REV_ID
+#define BCM88911_DEVICE_ID      0x8911
+#define BCM88912_DEVICE_ID      0x8912
+#define BCM88913_DEVICE_ID      0x8913
+#define BCM88914_DEVICE_ID      0x8914
+#define BCM88915_DEVICE_ID      0x8915
+#define BCM88916_DEVICE_ID      0x8916
+#define BCM88917_DEVICE_ID      0x8917
+#define BCM88918_DEVICE_ID      0x8918
+#define BCM88919_DEVICE_ID      0x8919
+#define BCM8891A_DEVICE_ID      0x891A
+#define BCM8891B_DEVICE_ID      0x891B
+#define BCM8891C_DEVICE_ID      0x891C
+#define BCM8891D_DEVICE_ID      0x891D
+#define BCM8891E_DEVICE_ID      0x891E
+#define BCM8891F_DEVICE_ID      0x891F
+#define BCM88920_DEVICE_ID      0x8920
+#define BCM88920_A0_REV_ID      DNXC_A0_REV_ID
+#define BCM88921_DEVICE_ID      0x8921
+#define BCM88922_DEVICE_ID      0x8922
+#define BCM88923_DEVICE_ID      0x8923
+#define BCM88924_DEVICE_ID      0x8924
+#define BCM88925_DEVICE_ID      0x8925
+#define BCM88926_DEVICE_ID      0x8926
+#define BCM88927_DEVICE_ID      0x8927
+#define BCM88928_DEVICE_ID      0x8928
+#define BCM88929_DEVICE_ID      0x8929
+#define BCM8892A_DEVICE_ID      0x892A
+#define BCM8892B_DEVICE_ID      0x892B
+#define BCM8892C_DEVICE_ID      0x892C
+#define BCM8892D_DEVICE_ID      0x892D
+#define BCM8892E_DEVICE_ID      0x892E
+#define BCM8892F_DEVICE_ID      0x892F
+#endif
 #define ARADPLUS_DEVICE_ID      0x8660
 #define ARADPLUS_A0_REV_ID      0x0001 
 #define BCM88660_DEVICE_ID      ARADPLUS_DEVICE_ID
@@ -1806,9 +1840,11 @@
 #define J2P_DEVICE_ID                 0x8850
 #define J2P_A0_REV_ID           DNXC_A0_REV_ID
 #define J2P_A1_REV_ID           DNXC_A1_REV_ID
+#define J2P_A2_REV_ID           DNXC_A2_REV_ID
 #define BCM88850_DEVICE_ID      J2P_DEVICE_ID
 #define BCM88850_A0_REV_ID      J2P_A0_REV_ID
 #define BCM88850_A1_REV_ID      J2P_A1_REV_ID
+#define BCM88850_A2_REV_ID      J2P_A2_REV_ID
 #define BCM88851_DEVICE_ID      0x8851
 #define BCM88852_DEVICE_ID      0x8852
 #define BCM88853_DEVICE_ID      0x8853
@@ -1842,6 +1878,10 @@
 #define BCM8884E_DEVICE_ID      0x884E
 #define BCM8884F_DEVICE_ID      0x884F
 
+#define J2X_DEVICE_ID                 0x8830
+#define J2X_A0_REV_ID           DNXC_A0_REV_ID
+#define BCM88830_DEVICE_ID      J2X_DEVICE_ID
+#define BCM88830_A0_REV_ID      J2X_A0_REV_ID
 #define BCM88831_DEVICE_ID      0x8831
 #define BCM88832_DEVICE_ID      0x8832
 #define BCM88833_DEVICE_ID      0x8833
@@ -1858,6 +1898,16 @@
 #define BCM8883E_DEVICE_ID      0x883E
 #define BCM8883F_DEVICE_ID      0x883F
 
+#ifdef BCM_DNX3_SUPPORT
+#define JERICHO3_DEVICE_ID            0x8860
+#define JERICHO3_A0_REV_ID      DNXC_A0_REV_ID
+#define BCM88860_DEVICE_ID      JERICHO3_DEVICE_ID
+#define BCM88860_A0_REV_ID      JERICHO3_A0_REV_ID
+#define Q4_DEVICE_ID            0x8870
+#define Q4_A0_REV_ID            DNXC_A0_REV_ID
+#define BCM88870_DEVICE_ID      Q4_DEVICE_ID
+#define BCM88870_A0_REV_ID      Q4_A0_REV_ID
+#endif
 
 #define Q2A_DEVICE_ID           0x8480 
 #define Q2A_A0_REV_ID           DNXC_A0_REV_ID
@@ -1996,14 +2046,10 @@
 #define BCM88952_A0_REV_ID		0x0001
 #define BCM88952_A1_REV_ID		0x0002
 
-#define PCP_PCI_VENDOR_ID 0x1172
-#define PCP_PCI_DEVICE_ID 0x4
-
-#define ACP_PCI_VENDOR_ID 0x10ee
-#define ACP_PCI_DEVICE_ID 0x7011
-#define ACP_PCI_REV_ID    0x0001
-
 #define PLX9056_DEVICE_ID       0x9056 
+
+#define BCM56890_DEVICE_ID 0xb890
+#define BCM56890_A0_REV_ID 0x0001
 
 #define BCM56880_DEVICE_ID 0xb880
 #define BCM56880_A0_REV_ID 0x0001
@@ -2044,9 +2090,8 @@
 #define BCM56991_B0_REV_ID 0x0011
 #define BCM56992_DEVICE_ID 0xb992
 #define BCM56992_B0_REV_ID 0x0011
-
-#define BCM56995_DEVICE_ID 0xb995
-#define BCM56995_A0_REV_ID 0x0001
+#define BCM56993_DEVICE_ID 0xb993
+#define BCM56993_B0_REV_ID 0x0011
 
 #define BCM56996_DEVICE_ID 0xb996
 #define BCM56996_A0_REV_ID 0x0001
@@ -2064,5 +2109,25 @@
 #define BCM56998_DEVICE_ID 0xb998
 #define BCM56998_A0_REV_ID 0x0001
 
-#endif  
+#define BCM56999_DEVICE_ID 0xb999
+#define BCM56999_A0_REV_ID 0x0001
+#define BCM56999_B0_REV_ID 0x0011
+#define BCM56995_DEVICE_ID 0xb995
+#define BCM56995_A0_REV_ID 0x0001
+#define BCM56995_B0_REV_ID 0x0011
 
+#define BCM78900_DEVICE_ID 0xf900
+#define BCM78900_B0_REV_ID 0x0011
+
+#define BCM56080_DEVICE_ID 0xb080
+#define BCM56080_A0_REV_ID 0x0001
+#define BCM56081_DEVICE_ID 0xb081
+#define BCM56081_A0_REV_ID 0x0001
+#define BCM56082_DEVICE_ID 0xb082
+#define BCM56082_A0_REV_ID 0x0001
+#define BCM56083_DEVICE_ID 0xb083
+#define BCM56083_A0_REV_ID 0x0001
+#define BCM56084_DEVICE_ID 0xb084
+#define BCM56084_A0_REV_ID 0x0001
+
+#endif  

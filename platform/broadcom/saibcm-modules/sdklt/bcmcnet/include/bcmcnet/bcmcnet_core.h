@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -125,7 +125,7 @@ struct intr_handle {
     void *priv;
 
     /*! Interrupt number */
-    int intr_num;
+    int inum;
 
     /*! Interrupt flags */
     uint32_t intr_flags;
@@ -190,7 +190,7 @@ struct queue_group {
     uint32_t irq_mask;
 
     /*! Indicating the group is attached */
-    int attached;
+    bool attached;
 };
 
 /*!
@@ -722,6 +722,20 @@ typedef int (*pdma_rx_f)(struct pdma_dev *dev, int queue, void *buf);
 typedef int (*pdma_tx_f)(struct pdma_dev *dev, int queue, void *buf);
 
 /*!
+ * Network device detach.
+ *
+ * \param [in] dev Pointer to device structure.
+ */
+typedef void (*sys_ndev_detach_f)(struct pdma_dev *dev);
+
+/*!
+ * Network device attach.
+ *
+ * \param [in] dev Pointer to device structure.
+ */
+typedef void (*sys_ndev_attach_f)(struct pdma_dev *dev);
+
+/*!
  * Suspend Tx queue.
  *
  * \param [in] dev Pointer to device structure.
@@ -842,6 +856,12 @@ struct pdma_dev {
     /*! Packet transmission */
     pdma_tx_f pkt_xmit;
 
+    /*! Network device detach */
+    sys_ndev_detach_f ndev_detach;
+
+    /*! Network device attach */
+    sys_ndev_attach_f ndev_attach;
+
     /*! Tx suspend */
     sys_tx_suspend_f tx_suspend;
 
@@ -902,13 +922,13 @@ struct pdma_dev {
     dev_mode_t mode;
 
     /*! Device is started */
-    int started;
+    bool started;
 
     /*! Device is started but suspended */
-    int suspended;
+    bool suspended;
 
     /*! Device is initialized and HMI driver is attached */
-    int attached;
+    bool attached;
 };
 
 /*!
