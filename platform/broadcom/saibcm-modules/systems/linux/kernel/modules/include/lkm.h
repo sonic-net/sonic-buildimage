@@ -42,7 +42,7 @@
 
 #include <linux/init.h>
 #include <linux/version.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
 #error Kernel too old
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)

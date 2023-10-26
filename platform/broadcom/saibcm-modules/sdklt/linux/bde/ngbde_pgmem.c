@@ -31,7 +31,7 @@
  * likely these requests are to succeed.
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -62,14 +62,14 @@
 
 /*! \cond */
 static int pgmem_chunk_size = 0;
-module_param(pgmem_chunk_size, int, 0);
+module_param(pgmem_chunk_size, int, S_IRUSR);
 MODULE_PARM_DESC(pgmem_chunk_size,
 "Memory chunk size in KB used by page allocator (default auto).");
 /*! \endcond */
 
 /*! \cond */
 static int pgmem_debug = 0;
-module_param(pgmem_debug, int, 0);
+module_param(pgmem_debug, int, S_IRUSR | S_IWUSR);
 MODULE_PARM_DESC(pgmem_debug,
 "Enable page memory allocator debug output (default 0).");
 /*! \endcond */

@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -59,7 +59,13 @@ cmicd_pdma_intr_enable(struct pdma_hw *hw, int cmc, int chan, uint32_t mask)
 {
     uint32_t reg = CMICD_IRQ_STAT(cmc);
 
-    hw->dev->intr_unmask(hw->dev, cmc, chan, reg, mask);
+    if (hw->dev->mode == DEV_MODE_UNET || hw->dev->mode == DEV_MODE_VNET) {
+        hw->dev->intr_unmask(hw->dev, cmc, chan, 0, 0);
+        return;
+    }
+
+    hw->dev->ctrl.grp[cmc].irq_mask |= mask;
+    hw->dev->intr_unmask(hw->dev, cmc, chan, reg, 0);
 }
 
 /*!
@@ -70,7 +76,13 @@ cmicd_pdma_intr_disable(struct pdma_hw *hw, int cmc, int chan, uint32_t mask)
 {
     uint32_t reg = CMICD_IRQ_STAT(cmc);
 
-    hw->dev->intr_mask(hw->dev, cmc, chan, reg, mask);
+    if (hw->dev->mode == DEV_MODE_UNET || hw->dev->mode == DEV_MODE_VNET) {
+        hw->dev->intr_mask(hw->dev, cmc, chan, 0, 0);
+        return;
+    }
+
+    hw->dev->ctrl.grp[cmc].irq_mask &= ~mask;
+    hw->dev->intr_mask(hw->dev, cmc, chan, reg, 0);
 }
 
 /*!
@@ -449,61 +461,61 @@ cmicd_pdma_chan_reg_dump(struct pdma_hw *hw, int chan)
     que = chan % CMICD_PDMA_CMC_CHAN;
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_CTRL(grp, que), &val);
-    CNET_PR("CMIC_CMC%d_CH%d_DMA_CTRL: 0x%08x\n", grp, que, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_CH%d_DMA_CTRL: 0x%08x\n", grp, que, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_DESC(grp, que), &val);
-    CNET_PR("CMIC_CMC%d_DMA_DESC%d: 0x%08x\n", grp, que, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_DMA_DESC%d: 0x%08x\n", grp, que, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_CURR_DESC(grp, que), &val);
-    CNET_PR("CMIC_CMC%d_CH%d_DMA_CURR_DESC: 0x%08x\n", grp, que, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_CH%d_DMA_CURR_DESC: 0x%08x\n", grp, que, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_DESC_HALT(grp, que), &val);
-    CNET_PR("CMIC_CMC%d_DMA_CH%d_DESC_HALT_ADDR: 0x%08x\n", grp, que, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_DMA_CH%d_DESC_HALT_ADDR: 0x%08x\n", grp, que, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_COS_RX0(grp, que), &val);
-    CNET_PR("CMIC_CMC%d_CH%d_COS_CTRL_RX_0: 0x%08x\n", grp, que, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_CH%d_COS_CTRL_RX_0: 0x%08x\n", grp, que, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_COS_RX1(grp, que), &val);
-    CNET_PR("CMIC_CMC%d_CH%d_COS_CTRL_RX_1: 0x%08x\n", grp, que, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_CH%d_COS_CTRL_RX_1: 0x%08x\n", grp, que, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_COS_MASK0(grp), &val);
-    CNET_PR("CMIC_CMC%d_PROGRAMMABLE_COS_MASK0: 0x%08x\n", grp, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_PROGRAMMABLE_COS_MASK0: 0x%08x\n", grp, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_COS_MASK1(grp), &val);
-    CNET_PR("CMIC_CMC%d_PROGRAMMABLE_COS_MASK1: 0x%08x\n", grp, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_PROGRAMMABLE_COS_MASK1: 0x%08x\n", grp, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_INTR_COAL(grp, que), &val);
-    CNET_PR("CMIC_CMC%d_DMA_CH%d_INTR_COAL: 0x%08x\n", grp, que, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_DMA_CH%d_INTR_COAL: 0x%08x\n", grp, que, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_RBUF_THRE(grp, que), &val);
-    CNET_PR("CMIC_CMC%d_CH%d_RXBUF_THRESHOLD_CONFIG: 0x%08x\n", grp, que, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_CH%d_RXBUF_THRESHOLD_CONFIG: 0x%08x\n", grp, que, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_STAT(grp), &val);
-    CNET_PR("CMIC_CMC%d_DMA_STAT: 0x%08x\n", grp, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_DMA_STAT: 0x%08x\n", grp, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_STAT_HI(grp), &val);
-    CNET_PR("CMIC_CMC%d_DMA_STAT_HI: 0x%08x\n", grp, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_DMA_STAT_HI: 0x%08x\n", grp, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_STAT_CLR(grp), &val);
-    CNET_PR("CMIC_CMC%d_DMA_STAT_CLR: 0x%08x\n", grp, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_DMA_STAT_CLR: 0x%08x\n", grp, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_COUNT_RX(grp, que), &val);
-    CNET_PR("CMIC_CMC%d_PKT_COUNT_CH%d_RXPKT: 0x%08x\n", grp, que, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_PKT_COUNT_CH%d_RXPKT: 0x%08x\n", grp, que, val);
 
     hw->hdls.reg_rd32(hw, CMICD_PDMA_COUNT_TX(grp, que), &val);
-    CNET_PR("CMIC_CMC%d_PKT_COUNT_CH%d_TXPKT: 0x%08x\n", grp, que, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_PKT_COUNT_CH%d_TXPKT: 0x%08x\n", grp, que, val);
 
     hw->hdls.reg_rd32(hw, CMICD_IRQ_STAT(grp), &val);
-    CNET_PR("CMIC_CMC%d_IRQ_STAT0: 0x%08x\n", grp, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_IRQ_STAT0: 0x%08x\n", grp, val);
 
     hw->hdls.reg_rd32(hw, CMICD_IRQ_PCI_MASK(grp), &val);
-    CNET_PR("CMIC_CMC%d_PCIE_IRQ_MASK0: 0x%08x\n", grp, val);
+    CNET_INFO(hw->unit, "CMIC_CMC%d_PCIE_IRQ_MASK0: 0x%08x\n", grp, val);
 
     hw->hdls.reg_rd32(hw, CMICD_DEV_REV_ID, &val);
-    CNET_PR("CMIC_DEV_REV_ID: 0x%08x\n", val);
+    CNET_INFO(hw->unit, "CMIC_DEV_REV_ID: 0x%08x\n", val);
 
     hw->hdls.reg_rd32(hw, CMICD_CMICM_REV_ID, &val);
-    CNET_PR("CMIC_CMICM_REV_ID: 0x%08x\n", val);
+    CNET_INFO(hw->unit, "CMIC_CMICM_REV_ID: 0x%08x\n", val);
 
     return SHR_E_NONE;
 }

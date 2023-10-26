@@ -1,8 +1,5 @@
-# -*- Makefile -*-
 #
-# Linux KNET module.
-#
-# $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+# $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -17,11 +14,17 @@
 # A copy of the GNU General Public License version 2 (GPLv2) can
 # be found in the LICENSES folder.$
 #
+# Linux KNET module.
+#
 
 CNETDIR = $(SDK)/bcmcnet
 KNETDIR = $(SDK)/linux/knet
+GENDIR = $(KNETDIR)/generated
 SRCIDIR = $(CNETDIR)/include/bcmcnet
-DSTIDIR = $(KNETDIR)/include/bcmcnet
+ifneq ($(OUTPUT_DIR),)
+GENDIR = $(OUTPUT_DIR)/knet/generated
+endif
+DSTIDIR = $(GENDIR)/include/bcmcnet
 
 # Change comma-separated list to space-separated list
 comma = ,
@@ -54,7 +57,7 @@ endif
 .PHONY: mklinks rmlinks
 
 knet: mklinks
-	$(MAKE) all
+	$(MAKE) -C $(GENDIR) all
 
 #
 # Suppress symlink error messages.
@@ -77,17 +80,19 @@ mklinks:
 	-ln -s $(SRCIDIR)/bcmcnet_cmicx.h $(DSTIDIR) $(R)
 	-ln -s $(SRCIDIR)/bcmcnet_cmicr.h $(DSTIDIR) $(R)
 	-ln -s $(SRCIDIR)/bcmcnet_cmicr_acc.h $(DSTIDIR) $(R)
-	-ln -s $(CNETDIR)/chip/*/*attach.c $(KNETDIR) $(R)
-	-ln -s $(CNETDIR)/hmi/cmicd/*.c $(KNETDIR) $(R)
-	-ln -s $(CNETDIR)/hmi/cmicx/*.c $(KNETDIR) $(R)
-	-ln -s $(CNETDIR)/hmi/cmicr/*.c $(KNETDIR) $(R)
-	-ln -s $(CNETDIR)/main/bcmcnet_core.c $(KNETDIR) $(R)
-	-ln -s $(CNETDIR)/main/bcmcnet_dev.c $(KNETDIR) $(R)
-	-ln -s $(CNETDIR)/main/bcmcnet_rxtx.c $(KNETDIR) $(R)
+	-ln -s $(CNETDIR)/chip/*/*attach.c $(GENDIR) $(R)
+	-ln -s $(CNETDIR)/hmi/cmicd/*.c $(GENDIR) $(R)
+	-ln -s $(CNETDIR)/hmi/cmicx/*.c $(GENDIR) $(R)
+	-ln -s $(CNETDIR)/hmi/cmicr/*.c $(GENDIR) $(R)
+	-ln -s $(CNETDIR)/main/bcmcnet_core.c $(GENDIR) $(R)
+	-ln -s $(CNETDIR)/main/bcmcnet_dev.c $(GENDIR) $(R)
+	-ln -s $(CNETDIR)/main/bcmcnet_rxtx.c $(GENDIR) $(R)
+	-ln -s $(KNETDIR)/*.[ch] $(GENDIR) $(R)
+	-ln -s $(KNETDIR)/Makefile $(GENDIR) $(R)
+	-ln -s $(KNETDIR)/Kbuild $(GENDIR) $(R)
 
 rmlinks:
-	-rm -f bcm*
-	-rm -rf include
+	-rm -rf $(GENDIR)
 
 CHIP_SRCS := $(addsuffix _pdma_attach.c,$(KNET_CHIPS))
 CHIP_OBJS ?= $(patsubst %.c, %.o, $(CHIP_SRCS))
@@ -105,4 +110,4 @@ endif
 
 .PHONY: distclean
 
-distclean: rmlinks
+distclean:: rmlinks

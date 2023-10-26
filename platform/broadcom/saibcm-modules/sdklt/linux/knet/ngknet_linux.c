@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -39,19 +39,7 @@
 unsigned long
 sal_time_usecs(void)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
-    struct timeval tv;
-
-    kal_time_val_get(&tv);
-
-    return tv.tv_sec * 1000000 + tv.tv_usec;
-#else
-    struct timespec64 tv;
-
-    kal_time_val_get(&tv);
-
-    return tv.tv_sec * 1000000 + tv.tv_nsec / 1000;
-#endif
+    return (unsigned long)kal_time_usecs();
 }
 
 void

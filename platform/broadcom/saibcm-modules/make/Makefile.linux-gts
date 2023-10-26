@@ -45,7 +45,7 @@
 #endif
 
 # some basic path variables for tools and kernel source, etc #
-XLR_TOOLS_BASE = /projects/ntsw-tools/linux/xlr-54
+XLR_TOOLS_BASE ?= /projects/ntsw-tools/linux/xlr-510
 TOOLCHAIN_DIR = $(XLR_TOOLS_BASE)/buildroot/host/usr
 KERNDIR       = $(XLR_TOOLS_BASE)/kernel/linux
 # Target machine for EDK-Host defconfig
@@ -112,6 +112,9 @@ ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f1 -d.` \== 10)" "1"
 	CFLAGS += -Wno-error=uninitialized
 	CFLAGS += -Wno-error=format-overflow
 	CFLAGS += -fcommon
+ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f2 -d.` \== 2)" "1"
+	CFLAGS += -Wno-zero-length-bounds
+endif
 endif
 endif # Compiler-specific CFLAGS
 
@@ -200,5 +203,3 @@ ifneq ($(targetplat),user)
 BCM_CFLAGS   = -Wall
 include ${SDK}/make/Makefile.linux-kernel-2_6
 endif
-
-

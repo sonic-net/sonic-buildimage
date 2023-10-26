@@ -8,7 +8,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -30,7 +30,7 @@
 
 /*! \cond */
 static int iproc_debug = 0;
-module_param(iproc_debug, int, 0);
+module_param(iproc_debug, int, S_IRUSR | S_IWUSR);
 MODULE_PARM_DESC(iproc_debug,
 "IPROC debug output enable (default 0).");
 /*! \endcond */

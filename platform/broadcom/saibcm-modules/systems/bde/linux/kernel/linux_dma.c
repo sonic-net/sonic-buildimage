@@ -285,7 +285,7 @@ static void __iomem *_dma_vbase = NULL;
 /* CPU physical address of the DMA buffer pool, used for mmap */
 static phys_addr_t _cpu_pbase = 0;
 /*
- * DMA buffer poool PCIe bus address, it is either identical to the CPU
+ * DMA buffer pool PCIe bus address, it is either identical to the CPU
  * physical address or another address(IOVA) translated by IOMMU.
  */
 static phys_addr_t _dma_pbase = 0;
@@ -797,12 +797,9 @@ _mpool_free(void)
         _use_dma_mapping = 0;
     }
 
-#ifndef REMAP_DMA_NONCACHED
-    if (_use_himem)
+#ifdef REMAP_DMA_NONCACHED
+    iounmap(_dma_vbase);
 #endif
-    {
-        iounmap(_dma_vbase);
-    }
 
     switch (dmaalloc) {
 #if _SIMPLE_MEMORY_ALLOCATION_
@@ -1036,16 +1033,13 @@ void _dma_per_device_init(int dev_index)
         _dma_pbase = dma_addr;
         _dma_pool_alloc_state = DMA_POOL_MAPPED;
 
-#ifndef REMAP_DMA_NONCACHED
-        if (_use_himem)
-#endif
-        {
-            if (dma_debug >= 2) {
-                gprintk("remapping DMA buffer pool from physical:0x%lx original kernel_virt:0x%lx\n",
-                    (unsigned long)_dma_pbase, (unsigned long)_dma_vbase);
-            }
-            _dma_vbase = ioremap(_dma_pbase, _dma_mem_size);
+#ifdef REMAP_DMA_NONCACHED
+        if (dma_debug >= 2) {
+            gprintk("remapping DMA buffer pool from physical:0x%lx original kernel_virt:0x%lx\n",
+                (unsigned long)_dma_pbase, (unsigned long)_dma_vbase);
         }
+        _dma_vbase = ioremap(_dma_pbase, _dma_mem_size);
+#endif
 
         if (dma_debug >= 1) {
             gprintk("Mapped DMA buffer pool _use_dma_mapping:%d kernel_virt:0x%lx dma_bus:0x%lx physical:0x%lx size:0x%x dmaalloc:%d, dma64_support:%d\n",

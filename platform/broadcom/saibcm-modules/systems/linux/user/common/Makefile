@@ -144,6 +144,7 @@ endif
 ifdef BUILD_PSAMPLE
 ADD_TO_CFLAGS += -DPSAMPLE_SUPPORT
 endif
+
 ADD_TO_CFLAGS += -I$(SDK)/systems/linux/kernel/modules/include
 COND_KNET_LIBS = libuser.$(libext)
 endif
@@ -204,7 +205,7 @@ clean::
 		subdirs="shared bcm-knet knet-cb" \
 		override-target=linux-$(platform) $@
 	$(RM) $(KERNEL_BDE) $(USER_BDE)
-	$(RM) $(BCM_KNET) $(KNET_CB) $(PSAMPLE)
+	$(RM) $(BCM_KNET) $(KNET_CB)
 	$(RM) $(KERN_BLDROOT)/linux-kernel-bde.$(KOBJ)
 	$(RM) $(KERN_BLDROOT)/linux-user-bde.$(KOBJ)
 	$(RM) $(KERN_BLDROOT)/linux-bcm-knet.$(KOBJ)

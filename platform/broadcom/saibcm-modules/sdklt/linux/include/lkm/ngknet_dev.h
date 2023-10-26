@@ -9,7 +9,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -28,7 +28,14 @@
 #ifndef NGKNET_DEV_H
 #define NGKNET_DEV_H
 
-#include <bcmcnet/bcmcnet_types.h>
+#include <lkm/ngbde_kapi.h>
+
+/*! Maximum number of devices supported */
+#ifdef NGBDE_NUM_SWDEV_MAX
+#define NUM_PDMA_DEV_MAX        NGBDE_NUM_SWDEV_MAX
+#else
+#define NUM_PDMA_DEV_MAX        16
+#endif
 
 /*! Device name length */
 #define NGKNET_DEV_NAME_MAX     16
@@ -285,6 +292,20 @@ typedef struct ngknet_filter_s {
 } ngknet_filter_t;
 
 /*!
+ * \brief Device information.
+ */
+typedef struct ngknet_dev_info_s {
+    /*! Device number (from BDE) */
+    int dev_no;
+
+    /*! Device type string */
+    char type_str[NGKNET_DEV_NAME_MAX];
+
+    /*! Device variant string */
+    char var_str[NGKNET_DEV_NAME_MAX];
+} ngknet_dev_info_t;
+
+/*!
  * \brief Device configure structure.
  */
 typedef struct ngknet_dev_cfg_s {
@@ -294,14 +315,14 @@ typedef struct ngknet_dev_cfg_s {
     /*! Device type string */
     char type_str[NGKNET_DEV_NAME_MAX];
 
-    /*! Variant string */
+    /*! Device variant string */
     char var_str[NGKNET_DEV_NAME_MAX];
 
     /*! Device ID */
     uint32_t dev_id;
 
     /*! Device mode */
-    dev_mode_t mode;
+    int mode;
 
     /*! Number of groups */
     uint32_t nb_grp;

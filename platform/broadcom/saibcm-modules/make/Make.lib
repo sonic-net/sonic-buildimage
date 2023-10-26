@@ -43,17 +43,6 @@ ifeq ($(FAST),1)
   endif
 endif
 
-ifeq ($(TOOLS),Borland)
-
-LIBSUFFIX=lib
-
-${LIBDIR}/%.lib: ${BORLAND_BOBJS}
-	$(RM) $@
-	$(FOREACH) -subdir "$(LIBDIR)" \
-		"tlib $@ $(foreach obj, $(BORLAND_LOBJS), +-$(obj))"
-
-else	# !Borland
-
 ifeq ($(LINUX_MAKE_SHARED_LIB),1)
 LIBSUFFIX=so.${SHAREDLIBVER}
 else
@@ -76,8 +65,6 @@ else
 	$(AR) ${ARFLAGS} $@ $(sort ${BOBJS})
 endif
 
-endif	# !Borland
-
 
 install:: all
 
@@ -89,3 +76,7 @@ endif
 	$Q$(RM) ${targetlib}
 
 distclean:: clean
+
+ifeq ($(DNX_FAST_MODE),1)
+-include $(SDK)/tools/dnx/make/lib.mk
+endif

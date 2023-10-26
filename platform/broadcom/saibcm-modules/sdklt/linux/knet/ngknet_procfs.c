@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -88,24 +88,14 @@ proc_debug_level_release(struct inode *inode, struct file *file)
     return single_release(inode, file);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
-static struct file_operations proc_debug_level_fops = {
-    owner:      THIS_MODULE,
-    open:       proc_debug_level_open,
-    read:       seq_read,
-    write:      proc_debug_level_write,
-    llseek:     seq_lseek,
-    release:    proc_debug_level_release,
-};
-#else
 static struct proc_ops proc_debug_level_fops = {
-    proc_open:       proc_debug_level_open,
-    proc_read:       seq_read,
-    proc_write:      proc_debug_level_write,
-    proc_lseek:     seq_lseek,
-    proc_release:    proc_debug_level_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =        proc_debug_level_open,
+    .proc_read =        seq_read,
+    .proc_write =       proc_debug_level_write,
+    .proc_lseek =       seq_lseek,
+    .proc_release =     proc_debug_level_release,
 };
-#endif
 
 static int
 proc_device_info_show(struct seq_file *m, void *v)
@@ -151,8 +141,14 @@ proc_device_info_show(struct seq_file *m, void *v)
         for (qi = 0; qi < info->nb_rx_queues; qi++) {
             seq_printf(m, "nb_rx_desc[%d]:  %d\n", qi, info->nb_rx_desc[qi]);
         }
+        for (qi = 0; qi < info->nb_rx_queues; qi++) {
+            seq_printf(m, "rxq_state[%d]:   0x%x\n", qi, info->rxq_state[qi]);
+        }
         for (qi = 0; qi < info->nb_tx_queues; qi++) {
             seq_printf(m, "nb_tx_desc[%d]:  %d\n", qi, info->nb_tx_desc[qi]);
+        }
+        for (qi = 0; qi < info->nb_tx_queues; qi++) {
+            seq_printf(m, "txq_state[%d]:   0x%x\n", qi, info->txq_state[qi]);
         }
     }
 
@@ -178,22 +174,13 @@ proc_device_info_release(struct inode *inode, struct file *file)
     return single_release(inode, file);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
-static struct file_operations proc_device_info_fops = {
-    owner:      THIS_MODULE,
-    open:       proc_device_info_open,
-    read:       seq_read,
-    llseek:     seq_lseek,
-    release:    proc_device_info_release,
-};
-#else
 static struct proc_ops proc_device_info_fops = {
-    proc_open:       proc_device_info_open,
-    proc_read:       seq_read,
-    proc_lseek:     seq_lseek,
-    proc_release:    proc_device_info_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =        proc_device_info_open,
+    .proc_read =        seq_read,
+    .proc_lseek =       seq_lseek,
+    .proc_release =     proc_device_info_release,
 };
-#endif
 
 static int
 proc_filter_info_show(struct seq_file *m, void *v)
@@ -269,22 +256,13 @@ proc_filter_info_release(struct inode *inode, struct file *file)
     return single_release(inode, file);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
-static struct file_operations proc_filter_info_fops = {
-    owner:      THIS_MODULE,
-    open:       proc_filter_info_open,
-    read:       seq_read,
-    llseek:     seq_lseek,
-    release:    proc_filter_info_release,
-};
-#else
 static struct proc_ops proc_filter_info_fops = {
-    proc_open:       proc_filter_info_open,
-    proc_read:       seq_read,
-    proc_lseek:     seq_lseek,
-    proc_release:    proc_filter_info_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =        proc_filter_info_open,
+    .proc_read =        seq_read,
+    .proc_lseek =       seq_lseek,
+    .proc_release =     proc_filter_info_release,
 };
-#endif
 
 static int
 proc_netif_info_show(struct seq_file *m, void *v)
@@ -370,22 +348,13 @@ proc_netif_info_release(struct inode *inode, struct file *file)
     return single_release(inode, file);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
-static struct file_operations proc_netif_info_fops = {
-    owner:      THIS_MODULE,
-    open:       proc_netif_info_open,
-    read:       seq_read,
-    llseek:     seq_lseek,
-    release:    proc_netif_info_release,
-};
-#else
 static struct proc_ops proc_netif_info_fops = {
-    proc_open:       proc_netif_info_open,
-    proc_read:       seq_read,
-    proc_lseek:     seq_lseek,
-    proc_release:    proc_netif_info_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =        proc_netif_info_open,
+    .proc_read =        seq_read,
+    .proc_lseek =       seq_lseek,
+    .proc_release =     proc_netif_info_release,
 };
-#endif
 
 static int
 proc_pkt_stats_show(struct seq_file *m, void *v)
@@ -455,22 +424,13 @@ proc_pkt_stats_release(struct inode *inode, struct file *file)
     return single_release(inode, file);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
-static struct file_operations proc_pkt_stats_fops = {
-    owner:      THIS_MODULE,
-    open:       proc_pkt_stats_open,
-    read:       seq_read,
-    llseek:     seq_lseek,
-    release:    proc_pkt_stats_release,
-};
-#else
 static struct proc_ops proc_pkt_stats_fops = {
-    proc_open:       proc_pkt_stats_open,
-    proc_read:       seq_read,
-    proc_lseek:     seq_lseek,
-    proc_release:    proc_pkt_stats_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =        proc_pkt_stats_open,
+    .proc_read =        seq_read,
+    .proc_lseek =       seq_lseek,
+    .proc_release =     proc_pkt_stats_release,
 };
-#endif
 
 static int
 proc_rate_limit_show(struct seq_file *m, void *v)
@@ -510,24 +470,14 @@ proc_rate_limit_release(struct inode *inode, struct file *file)
     return single_release(inode, file);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
-static struct file_operations proc_rate_limit_fops = {
-    owner:      THIS_MODULE,
-    open:       proc_rate_limit_open,
-    read:       seq_read,
-    write:      proc_rate_limit_write,
-    llseek:     seq_lseek,
-    release:    proc_rate_limit_release,
-};
-#else
 static struct proc_ops proc_rate_limit_fops = {
-    proc_open:       proc_rate_limit_open,
-    proc_read:       seq_read,
-    proc_write:      proc_rate_limit_write,
-    proc_lseek:     seq_lseek,
-    proc_release:    proc_rate_limit_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =        proc_rate_limit_open,
+    .proc_read =        seq_read,
+    .proc_write =       proc_rate_limit_write,
+    .proc_lseek =       seq_lseek,
+    .proc_release =     proc_rate_limit_release,
 };
-#endif
 
 static int
 proc_reg_status_show(struct seq_file *m, void *v)
@@ -571,22 +521,13 @@ proc_reg_status_release(struct inode *inode, struct file *file)
     return single_release(inode, file);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
-static struct file_operations proc_reg_status_fops = {
-    owner:      THIS_MODULE,
-    open:       proc_reg_status_open,
-    read:       seq_read,
-    llseek:     seq_lseek,
-    release:    proc_reg_status_release,
-};
-#else
 static struct proc_ops proc_reg_status_fops = {
-    proc_open:       proc_reg_status_open,
-    proc_read:       seq_read,
-    proc_lseek:     seq_lseek,
-    proc_release:    proc_reg_status_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =        proc_reg_status_open,
+    .proc_read =        seq_read,
+    .proc_lseek =       seq_lseek,
+    .proc_release =     proc_reg_status_release,
 };
-#endif
 
 static int
 proc_ring_status_show(struct seq_file *m, void *v)
@@ -634,22 +575,13 @@ proc_ring_status_release(struct inode *inode, struct file *file)
     return single_release(inode, file);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
-static struct file_operations proc_ring_status_fops = {
-    owner:      THIS_MODULE,
-    open:       proc_ring_status_open,
-    read:       seq_read,
-    llseek:     seq_lseek,
-    release:    proc_ring_status_release,
-};
-#else
 static struct proc_ops proc_ring_status_fops = {
-    proc_open:       proc_ring_status_open,
-    proc_read:       seq_read,
-    proc_lseek:     seq_lseek,
-    proc_release:    proc_ring_status_release,
+    PROC_OWNER(THIS_MODULE)
+    .proc_open =        proc_ring_status_open,
+    .proc_read =        seq_read,
+    .proc_lseek =       seq_lseek,
+    .proc_release =     proc_ring_status_release,
 };
-#endif
 
 int
 ngknet_procfs_init(void)

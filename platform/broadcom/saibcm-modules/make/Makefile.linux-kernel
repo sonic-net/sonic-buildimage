@@ -112,12 +112,3 @@ endif
 ifdef DEBUG_PEDANTIC
 DEBUG_PEDANTIC = FALSE
 endif
-
-#
-# DEPEND is used as a command to generate the list of dependencies.
-# The format of the output must be 
-#	"file.o : file.c a/b/c.h d/e/f.h ...", 
-# if it is on multiple lines, each line must end in a backslash. 
-# The output MUST be on standard out.
-#
-DEPEND = ${CC} -M $(CFLAGS) $< 

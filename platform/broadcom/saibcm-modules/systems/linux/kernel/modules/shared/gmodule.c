@@ -141,11 +141,11 @@ static int _gmodule_proc_release(struct inode * inode, struct file * file) {
 
 struct proc_ops _gmodule_proc_fops = {
     PROC_OWNER(THIS_MODULE)
-    .proc_open =       _gmodule_proc_open,
-    .proc_read =       seq_read,
-    .proc_lseek =      seq_lseek,
-    .proc_write =      _gmodule_proc_write,
-    .proc_release =    _gmodule_proc_release,
+    .proc_open =        _gmodule_proc_open,
+    .proc_read =        seq_read,
+    .proc_lseek =       seq_lseek,
+    .proc_write =       _gmodule_proc_write,
+    .proc_release =     _gmodule_proc_release,
 };
 #else
 int

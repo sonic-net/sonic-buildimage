@@ -9,7 +9,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -82,6 +82,9 @@
 /*! Handle EDK software interrupt. */
 #define NGEDK_IOC_SW_INTR       _IOW(NGEDK_IOC_MAGIC, 7, __u64)
 
+/*! Handle EDK timer interrupt. */
+#define NGEDK_IOC_TIMER_INTR    _IOW(NGEDK_IOC_MAGIC, 8, __u64)
+
 /*! \} */
 
 /*! IOCTL command return code for success. */
@@ -89,6 +92,18 @@
 
 /*! IOCTL command return code for failure. */
 #define NGEDK_IOC_FAIL          ((__u32)-1)
+
+/*!
+ * \name EDK IOC flags.
+ * \anchor NGEDK_IOC_F_xxx
+ */
+
+/*! \{ */
+
+/*! Interrupt enable/disable registers are "write 1 to clear". */
+#define NGEDK_IOC_F_W1TC         (1 << 0)
+
+/*! \} */
 
 /*! Kernel module information. */
 struct ngedk_ioc_mod_info_s {
@@ -129,14 +144,17 @@ struct ngedk_ioc_intr_s {
     /*! Timer interrupts status offset */
     __u32 timer_intrc_stat_reg;
 
-    /*! Timer interrupts enable offset */
-    __u32 timer_intrc_enable_reg;
+    /*! Timer interrupts disable offset */
+    __u32 timer_intrc_disable_reg;
 
     /*! Timer interrupts mask */
     __u32 timer_intrc_mask_val;
 
     /*! Bitmap of cores that triggered SW interrupt. */
     __u32 sw_intr_cores;
+
+    /*! EDK ioctl flags (\ref NGEDK_IOC_F_xxx). */
+    __u32 flags;
 };
 
 /*! IOCTL operation data. */

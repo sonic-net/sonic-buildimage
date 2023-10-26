@@ -98,6 +98,14 @@ LKM_MOD_PARAM(psample_qlen, "i", int, 0);
 MODULE_PARM_DESC(psample_qlen,
 "psample queue length (default 1024 buffers)");
 
+#if !IS_ENABLED(CONFIG_PSAMPLE)
+inline struct 
+psample_group *psample_group_get(struct net *net, u32 group_num)
+{
+    return NULL;
+}
+#endif
+
 /* driver proc entry root */
 static struct proc_dir_entry *psample_proc_root = NULL;
 static struct proc_dir_entry *knet_cb_proc_root = NULL;
@@ -394,7 +402,6 @@ psample_task(struct work_struct *work)
     unsigned long flags;
     struct list_head *list_ptr, *list_next;
     psample_pkt_t *pkt;
-    struct psample_metadata md = {0};
 
     spin_lock_irqsave(&psample_work->lock, flags);
     list_for_each_safe(list_ptr, list_next, &psample_work->pkt_list) {
@@ -406,18 +413,32 @@ psample_task(struct work_struct *work)
  
         /* send to psample */
         if (pkt) {
+#if ((IS_ENABLED(CONFIG_PSAMPLE) && LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) || \
+     (defined PSAMPLE_MD_EXTENDED_ATTR && PSAMPLE_MD_EXTENDED_ATTR))
+            struct psample_metadata md = {0};
+            md.trunc_size = pkt->meta.trunc_size;
+            md.in_ifindex = pkt->meta.src_ifindex;
+            md.out_ifindex = pkt->meta.dst_ifindex;
+#endif
             PSAMPLE_CB_DBG_PRINT("%s: group 0x%x, trunc_size %d, src_ifdx 0x%x, dst_ifdx 0x%x, sample_rate %d\n",
                     __func__, pkt->group->group_num, 
                     pkt->meta.trunc_size, pkt->meta.src_ifindex, 
                     pkt->meta.dst_ifindex, pkt->meta.sample_rate);
 
-            md.trunc_size = pkt->meta.trunc_size;
-            md.in_ifindex = pkt->meta.src_ifindex;
-            md.out_ifindex = pkt->meta.dst_ifindex;
+#if ((IS_ENABLED(CONFIG_PSAMPLE) && LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) || \
+     (defined PSAMPLE_MD_EXTENDED_ATTR && PSAMPLE_MD_EXTENDED_ATTR))
             psample_sample_packet(pkt->group, 
                                   pkt->skb,
                                   pkt->meta.sample_rate,
                                   &md);
+#else
+            psample_sample_packet(pkt->group, 
+                                  pkt->skb, 
+                                  pkt->meta.trunc_size,
+                                  pkt->meta.src_ifindex,
+                                  pkt->meta.dst_ifindex,
+                                  pkt->meta.sample_rate);
+#endif
             g_psample_stats.pkts_f_psample_mod++;
  
             dev_kfree_skb_any(pkt->skb);
@@ -511,7 +532,7 @@ psample_filter_cb(uint8_t * pkt, int size, int dev_no, void *pkt_meta,
         /* setup skb to point to pkt */
         memcpy(skb->data, pkt, meta.trunc_size);
         skb_put(skb, meta.trunc_size);
-        skb->len = size; /* SONIC-55684 */
+        skb->len = meta.trunc_size;
         psample_pkt->skb = skb;
 
         spin_lock_irqsave(&g_psample_work.lock, flags);
@@ -1016,7 +1037,7 @@ int psample_init(void)
     struct proc_dir_entry *entry;
 
     /* create procfs for psample */
-    proc_mkdir(PSAMPLE_PROCFS_PATH, NULL);
+    knet_cb_proc_root = proc_mkdir(PSAMPLE_PROCFS_PATH, NULL);
     snprintf(psample_procfs_path, sizeof(psample_procfs_path), "%s/%s", PSAMPLE_PROCFS_PATH, PSAMPLE_CB_NAME);
     psample_proc_root = proc_mkdir(psample_procfs_path, NULL);
 

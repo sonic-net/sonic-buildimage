@@ -185,6 +185,17 @@ be made.
 /* Defines used to distinguish CMICe from CMICm */
 #define CMICE_DEV_REV_ID                (0x178 / sizeof(uint32))
 
+#ifdef BCM_DNX3_SUPPORT
+#ifndef NEED_CMICX_GEN2_INTERRUPT
+#define NEED_CMICX_GEN2_INTERRUPT
+#endif
+#endif
+#ifdef BCM_DNXF3_SUPPORT
+#ifndef NEED_CMICX_GEN2_INTERRUPT
+#define NEED_CMICX_GEN2_INTERRUPT
+#endif
+#endif
+
 static uint32 *ihost_intr_status_base = NULL;
 static uint32 *ihost_intr_enable_base = NULL;
 
@@ -570,6 +581,34 @@ _cmicx_interrupt_prepare(bde_ctrl_t *ctrl)
     }
 
     return ret;
+}
+
+static int
+_cmicx_interrupt_pending(void *data)
+{
+    int d, ind;
+    uint32 stat, iena;
+    bde_ctrl_t *ctrl = (bde_ctrl_t *)data;
+
+    if (ctrl->dev_type & BDE_PCI_DEV_TYPE) {
+
+        d = (((uint8 *)ctrl - (uint8 *)_devices) / sizeof (bde_ctrl_t));
+
+        for (ind = 0; ind < ctrl->intr_regs.intc_intr_nof_regs; ind++) {
+            IPROC_READ(d, ctrl->intr_regs.intc_intr_status_base + 4 * ind, stat);
+            IPROC_READ(d, ctrl->intr_regs.intc_intr_enable_base + 4 * ind, iena);
+            if (debug >= 2) {
+                gprintk("INTC_INTR_STATUS_REG_%d = 0x%x\n", ind, stat);
+                gprintk("INTC_INTR_ENABLE_REG_%d = 0x%x\n", ind, iena);
+            }
+            if (stat & iena) {
+                return 1;
+            }
+        }
+    }
+
+    /* No pending interrupts */
+    return 0;
 }
 
 static void
@@ -1187,6 +1226,7 @@ _devices_init(int d)
         case BCM56575_DEVICE_ID:
         case BCM56175_DEVICE_ID:
         case BCM56176_DEVICE_ID:
+        case BCM53642_DEVICE_ID:
             ctrl->isr = (isr_f)_cmicx_interrupt;
             if (ctrl->dev_type & BDE_AXI_DEV_TYPE) {
                 if (!ihost_intr_enable_base) {
@@ -1240,6 +1280,7 @@ _devices_init(int d)
           case Q2U_DEVICE_ID:
           case Q2N_DEVICE_ID:
           case J2P_DEVICE_ID:
+          case J2X_DEVICE_ID:
 #endif
 #ifdef BCM_DNXF_SUPPORT
           case  BCM88790_DEVICE_ID:
@@ -1248,6 +1289,19 @@ _devices_init(int d)
             _intr_regs_init(ctrl, 0);
             break;
 
+#ifdef BCM_DNX3_SUPPORT
+          case JERICHO3_DEVICE_ID:
+          case Q4_DEVICE_ID:
+#endif
+#ifdef BCM_DNXF3_SUPPORT
+          case  BCM88910_DEVICE_ID:
+          case  BCM88920_DEVICE_ID:
+#endif
+#if defined(BCM_DNX3_SUPPORT) || defined(BCM_DNXF3_SUPPORT)
+            ctrl->isr = (isr_f)_cmicx_gen2_interrupt;
+            _intr_regs_init(ctrl, 2);
+            break;
+#endif
         }
 #endif /* defined(BCM_DNXF_SUPPORT) || defined(BCM_DNX_SUPPORT) */
 
@@ -1760,6 +1814,14 @@ _ioctl(unsigned int cmd, unsigned long arg)
         }
         if (_devices[io.dev].dev_type & BDE_SWITCH_DEV_TYPE) {
             if (_devices[io.dev].isr && !_devices[io.dev].enabled) {
+                /* PCI/CMICX Devices */
+                if ((_devices[io.dev].dev_type & BDE_PCI_DEV_TYPE) &&
+                    (_devices[io.dev].isr == (isr_f)_cmicx_interrupt)) {
+                    lkbde_intr_cb_register(io.dev,
+                                           _cmicx_interrupt_pending,
+                                           _devices+io.dev);
+                }
+
                 user_bde->interrupt_connect(io.dev,
                                             _devices[io.dev].isr,
                                             _devices+io.dev);

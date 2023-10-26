@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -24,14 +24,14 @@
 
 /*! \cond */
 static int use_msi = 1;
-module_param(use_msi, int, 0);
+module_param(use_msi, int, S_IRUSR);
 MODULE_PARM_DESC(use_msi,
 "Use MSI interrupts if supported by the kernel (default 1).");
 /*! \endcond */
 
 /*! \cond */
 static int pci_debug = 0;
-module_param(pci_debug, int, 0);
+module_param(pci_debug, int, S_IRUSR | S_IWUSR);
 MODULE_PARM_DESC(pci_debug,
 "PCI debug output enable (default 0).");
 /*! \endcond */

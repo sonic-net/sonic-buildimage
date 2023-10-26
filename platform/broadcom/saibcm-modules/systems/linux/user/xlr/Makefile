@@ -62,7 +62,7 @@ endif
 
 export SDK
 
-override kernel_version=5_4
+override kernel_version=5_10
 platform=xlr
 
 LINUX_MAKE_USER=1

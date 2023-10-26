@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -124,6 +124,13 @@ typedef struct ngbde_irq_reg_s {
 
     /*! Mask register is of type "write 1 to clear". */
     bool mask_w1tc;
+
+    /*!
+     * Indicates that the kmask value is valid. This is mainly to
+     * distinguish a mask value of zero from the mask value being
+     * uninitialized, as this matters during a warm boot.
+     */
+    bool kmask_valid;
 
     /*! Mask identifying the register bits owned by the kernel mode driver. */
     uint32_t kmask;
