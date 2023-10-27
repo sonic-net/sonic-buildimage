@@ -9,7 +9,7 @@ extern "C"
 #include <memory>
 #include <regex>
 #include "gtest/gtest.h"
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 #include "events.h"
 #include "../rsyslog_plugin/rsyslog_plugin.h"
 #include "../rsyslog_plugin/syslog_parser.h"

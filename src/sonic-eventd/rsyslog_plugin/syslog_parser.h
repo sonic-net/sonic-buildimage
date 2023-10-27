@@ -11,7 +11,7 @@ extern "C"
 #include <vector>
 #include <string>
 #include <regex>
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 #include "events.h"
 #include "timestamp_formatter.h"
 
