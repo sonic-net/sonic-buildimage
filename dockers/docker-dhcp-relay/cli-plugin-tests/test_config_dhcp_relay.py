@@ -224,6 +224,36 @@ class TestConfigDhcpRelay(object):
             db.cfgdb.set_entry.assert_called_once_with(config_db_table, "Vlan1000",
                                                        expected_dhcp_relay_del_config_db_output[ip_version])
 
+    def test_config_add_del_dhcp_relay_with_enable_dhcp_server(self, mock_cfgdb):
+        runner = CliRunner()
+        db = Db()
+        db.cfgdb = mock_cfgdb
+        ip_version = "ipv4"
+        test_ip = IP_VER_TEST_PARAM_MAP[ip_version]["ips"][0]
+
+        with mock.patch("utilities_common.cli.run_command"), \
+             mock.patch.object(dhcp_relay, "is_dhcp_server_enabled", return_value=True):
+            # add new dhcp relay
+            result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
+                                   .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
+                                   .commands["add"], ["1000", test_ip], obj=db)
+            print(result.exit_code)
+            print(result.output)
+            assert result.exit_code == 0
+            assert "Cannot change ipv4 dhcp_relay configuration when dhcp_server feature is enabled" in result.output
+
+        db.cfgdb.set_entry.reset_mock()
+        # del dhcp relay
+        with mock.patch("utilities_common.cli.run_command"), \
+             mock.patch.object(dhcp_relay, "is_dhcp_server_enabled", return_value=True):
+            result = runner.invoke(dhcp_relay.dhcp_relay.commands[ip_version]
+                                   .commands[IP_VER_TEST_PARAM_MAP[ip_version]["command"]]
+                                   .commands["del"], ["1000", test_ip], obj=db)
+            print(result.exit_code)
+            print(result.output)
+            assert result.exit_code == 0
+            assert "Cannot change ipv4 dhcp_relay configuration when dhcp_server feature is enabled" in result.output
+
     def test_config_add_del_multiple_dhcp_relay(self, mock_cfgdb, ip_version):
         runner = CliRunner()
         db = Db()

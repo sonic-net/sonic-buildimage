@@ -13,6 +13,14 @@ ENV IMAGE_VERSION=$image_version
 # Update apt's cache of available packages
 RUN apt-get update
 
+RUN apt-get install -y libjsoncpp-dev {%- if INCLUDE_DHCP_SERVER == "y" %}\
+                       python3-dev         \
+                       build-essential{%- endif %}
+
+{% if INCLUDE_DHCP_SERVER == "y" -%}
+RUN pip3 install psutil
+{%- endif %}
+
 RUN apt-get install -y libjsoncpp-dev
 
 {% if docker_dhcp_relay_debs.strip() -%}
@@ -29,7 +37,19 @@ RUN pip3 install psutil
 
 RUN apt-get purge -y gcc python3-dev
 
+{% if docker_dhcp_relay_whls.strip() %}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_dhcp_relay_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_dhcp_relay_whls.split(' ')) }}
+{% endif %}
+
 # Clean up
+{% if INCLUDE_DHCP_SERVER == "y" -%}
+RUN apt-get remove -y build-essential     \
+                python3-dev
+{%- endif %}
 RUN apt-get clean -y         && \
     apt-get autoclean -y     && \
     apt-get autoremove -y    && \

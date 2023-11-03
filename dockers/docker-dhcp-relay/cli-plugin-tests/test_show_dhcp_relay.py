@@ -1,5 +1,6 @@
 import pytest
 import sys
+import click
 import os
 sys.path.append('../cli/show/plugins/')
 import show_dhcp_relay as show
@@ -32,6 +33,14 @@ expected_ipv4_table_with_header = """\
 +=============+======================+
 |    Vlan1000 |            192.0.0.1 |
 |             |            192.0.0.2 |
++-------------+----------------------+
+"""
+
+expected_ipv4_table_with_enabled_dhcp_server_with_header = """\
++-------------+----------------------+
+|   Interface |   DHCP Relay Address |
++=============+======================+
+|    Vlan1000 |                  N/A |
 +-------------+----------------------+
 """
 
@@ -86,12 +95,18 @@ def test_plugin_registration():
     assert 'DHCP Helper Address' in dict(vlan.VlanBrief.COLUMNS)
 
 
-def test_dhcp_relay_column_output():
+@pytest.mark.parametrize("feature_table", [{}, {"dhcp_server": {"state": "disabled"}},
+                                           {"dhcp_server": {"state": "enabled"}}, {"dhcp_server": {}}])
+def test_dhcp_relay_column_output(feature_table):
     ctx = (
         ({'Vlan1001': {'dhcp_servers': ['192.0.0.1', '192.168.0.2']}}, {}, {}),
-        (),
+        (MockDb({"FEATURE": feature_table})),
     )
-    assert show.get_dhcp_helper_address(ctx, 'Vlan1001') == '192.0.0.1\n192.168.0.2'
+    if "dhcp_server" in feature_table and "state" in feature_table["dhcp_server"] and \
+       feature_table["dhcp_server"]["state"] == "enabled":
+        assert show.get_dhcp_helper_address(ctx, 'Vlan1001') == 'N/A'
+    else:
+        assert show.get_dhcp_helper_address(ctx, 'Vlan1001') == '192.0.0.1\n192.168.0.2'
 
 
 @parameterized.expand(COMMON_TEST_DATA)
@@ -103,7 +118,7 @@ def test_show_dhcp_relay(test_name, test_data, fs):
     config_db = MockConfigDb()
     ip_version = "ipv4" if "ipv4" in test_name else "ipv6"
     table = config_db.get_table(IP_VER_TEST_PARAM_MAP[ip_version]["table"])
-    if test_name == "ipv4_with_header":
+    if test_name in ["ipv4_with_header", "ipv4_with_disabled_dhcp_server_with_header"]:
         result = show.get_dhcp_relay_data_with_header(table, IP_VER_TEST_PARAM_MAP[ip_version]["entry"])
         expected_output = expected_ipv4_table_with_header
     elif test_name == "ipv6_with_header":
@@ -112,6 +127,9 @@ def test_show_dhcp_relay(test_name, test_data, fs):
     elif test_name == "ipv6_without_header":
         result = show.get_data(table, "Vlan1000")
         expected_output = expected_ipv6_table_without_header
+    elif test_name == "ipv4_with_enabled_dhcp_server_with_header":
+        result = show.get_dhcp_relay_data_with_header(table, IP_VER_TEST_PARAM_MAP[ip_version]["entry"], True)
+        expected_output = expected_ipv4_table_with_enabled_dhcp_server_with_header
     assert result == expected_output
 
 
@@ -153,3 +171,31 @@ def test_show_multi_dhcp_relay(test_name, test_data, fs):
     else:
         expected_output = expected_ipv6_table_multi_with_header
     assert result == expected_output
+
+
+def test_show_dhcp_relay_ipv4_counter_with_enabled_dhcp_server():
+    with mock.patch.object(show, "is_dhcp_server_enabled", return_value=True), \
+         mock.patch.object(swsscommon.ConfigDBConnector, "connect", return_value=None), \
+         mock.patch.object(swsscommon.ConfigDBConnector, "get_table", return_value=None), \
+         mock.patch.object(click, "echo", return_value=None) as mock_echo:
+        show.ipv4_counters("Etherner1")
+        expected_param = "Unsupport to check dhcp_relay ipv4 counter when dhcp_server feature is enabled"
+        mock_echo.assert_called_once_with(expected_param)
+
+
+@pytest.mark.parametrize("enable_dhcp_server", [True, False])
+def test_is_dhcp_server_enabled(enable_dhcp_server):
+    result = show.is_dhcp_server_enabled({"dhcp_server": {"state": "enabled" if enable_dhcp_server else "disabled"}})
+    assert result == enable_dhcp_server
+
+
+class MockDb(object):
+    class MockCfgDb(object):
+        def __init__(self, mock_cfgdb):
+            self.mock_cfgdb = mock_cfgdb
+
+        def get_table(self, table_name):
+            return self.mock_cfgdb.get(table_name, {})
+
+    def __init__(self, mock_cfgdb):
+        self.cfgdb = self.MockCfgDb(mock_cfgdb)

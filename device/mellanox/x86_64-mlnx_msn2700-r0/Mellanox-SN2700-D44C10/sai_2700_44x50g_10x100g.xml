@@ -15,7 +15,6 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
 <root>
     <platform_info type="2700">
 
@@ -27,6 +26,9 @@
 
         <!-- Number of ports in the following port list -->
         <number-of-physical-ports>32</number-of-physical-ports>
+
+        <!-- Global port late create -->
+        <late-create-all-ports>1</late-create-all-ports>
 
         <!-- List of ports in the device -->
         <ports-list>

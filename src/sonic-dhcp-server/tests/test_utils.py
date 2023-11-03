@@ -1,4 +1,4 @@
-import dhcp_server.dhcp_server_utils as dhcp_server_utils
+import dhcp_server.common.utils as utils
 import ipaddress
 import pytest
 from swsscommon import swsscommon
@@ -29,7 +29,7 @@ interval_test_data = {
 
 
 def test_construct_without_sock(mock_swsscommon_dbconnector_init):
-    dhcp_server_utils.DhcpDbConnector()
+    utils.DhcpDbConnector()
     mock_swsscommon_dbconnector_init.assert_has_calls([
         call(swsscommon.CONFIG_DB, "127.0.0.1", 6379, 0),
         call(swsscommon.STATE_DB, "127.0.0.1", 6379, 0)
@@ -38,7 +38,7 @@ def test_construct_without_sock(mock_swsscommon_dbconnector_init):
 
 def test_construct_sock(mock_swsscommon_dbconnector_init):
     redis_sock = "/var/run/redis/redis.sock"
-    dhcp_db_connector = dhcp_server_utils.DhcpDbConnector(redis_sock=redis_sock)
+    dhcp_db_connector = utils.DhcpDbConnector(redis_sock=redis_sock)
     assert dhcp_db_connector.redis_sock == redis_sock
 
     mock_swsscommon_dbconnector_init.assert_has_calls([
@@ -48,15 +48,13 @@ def test_construct_sock(mock_swsscommon_dbconnector_init):
 
 
 def test_get_config_db_table(mock_swsscommon_dbconnector_init, mock_swsscommon_table_init):
-    dhcp_db_connector = dhcp_server_utils.DhcpDbConnector()
+    dhcp_db_connector = utils.DhcpDbConnector()
     with patch.object(swsscommon.Table, "getKeys", return_value=["key1", "key2"]) as mock_get_keys, \
-         patch.object(dhcp_server_utils, "get_entry", return_value={"list": "1,2", "value": "3,4"}), \
+         patch.object(utils, "get_entry", return_value={"list": "1,2", "value": "3,4"}), \
          patch.object(swsscommon.Table, "hget", side_effect=mock_hget):
         ret = dhcp_db_connector.get_config_db_table("VLAN")
         mock_swsscommon_table_init.assert_called_once_with(dhcp_db_connector.config_db, "VLAN")
-        print(ret)
         mock_get_keys.assert_called_once_with()
-        print(ret)
         assert ret == {
             "key1": {"list": ["1", "2"], "value": "3,4"},
             "key2": {"list": ["1", "2"], "value": "3,4"}
@@ -67,7 +65,7 @@ def test_get_config_db_table(mock_swsscommon_dbconnector_init, mock_swsscommon_t
 def test_merge_intervals(test_type):
     intervals = convert_ip_address_intervals(interval_test_data[test_type]["intervals"])
     expected_res = convert_ip_address_intervals(interval_test_data[test_type]["expected_res"])
-    assert dhcp_server_utils.merge_intervals(intervals) == expected_res
+    assert utils.merge_intervals(intervals) == expected_res
 
 
 def mock_hget(_, field):

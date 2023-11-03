@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
 import ipaddress
-import json
 import os
 import syslog
 
 from jinja2 import Environment, FileSystemLoader
-from .dhcp_server_utils import merge_intervals
+from dhcp_server.common.utils import merge_intervals
 
 PORT_MAP_PATH = "/tmp/port-name-alias-map.txt"
 UNICODE_TYPE = str
