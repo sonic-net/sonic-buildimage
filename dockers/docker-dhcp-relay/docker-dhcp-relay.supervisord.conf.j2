@@ -57,7 +57,7 @@ dependent_startup_wait_for=rsyslogd:running
 {% endif %}
 {% endfor %}
 
-{% if 'dhcp_server' in DEVICE_METADATA['localhost'] and 'enable' in DEVICE_METADATA['localhost']['dhcp_server'] %}
+{% if not dhcp_server_ipv4_enabled and 'dhcp_server' in DEVICE_METADATA['localhost'] and 'enable' in DEVICE_METADATA['localhost']['dhcp_server'] %}
 [group:dhcp-server]
 programs=dnsmasq,host-monitor
 
