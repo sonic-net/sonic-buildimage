@@ -53,6 +53,7 @@ stages:
     BUILD_OPTIONS: 'SONIC_BUILD_JOBS=4 ENABLE_DHCP_GRAPH_SERVICE=y SHUTDOWN_BGP_ON_START=y ENABLE_PFCWD_ON_START=y SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(GROUP_NAME) ${{ variables.VERSION_CONTROL_OPTIONS }}'
     VERSION_PATH: target/sonic.version
     DOCKER_DATA_ROOT_FOR_MULTIARCCH: /data/march/docker
+    INCLUDE_RESTAPI: y
   jobs:
   - template: .azure-pipelines/azure-pipelines-job-groups.yml@acs-buildimage
     parameters:
@@ -193,7 +194,7 @@ stages:
         - name: vs
           script: |
             set -ex
-            OPTIONS="$(BUILD_OPTIONS) INCLUDE_KUBERNETES_MASTER=y INCLUDE_RESTAPI=y SONIC_DPKG_CACHE_METHOD=wcache PASSWORD=$PASSWORD BUILD_MULTIASIC_KVM=y"
+            OPTIONS="$(BUILD_OPTIONS) INCLUDE_KUBERNETES_MASTER=y SONIC_DPKG_CACHE_METHOD=wcache PASSWORD=$PASSWORD BUILD_MULTIASIC_KVM=y"
             make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
             gzip -kd target/sonic-vs.img.gz
             SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $OPTIONS sonic-slave-run
@@ -214,6 +215,7 @@ stages:
             echo "INCLUDE_P4RT = n" >> rules/config.user
             echo "BUILD_REDUCE_IMAGE_SIZE = y" >> rules/config.user
             echo "INCLUDE_GBSYNCD = n" >> rules/config.user
+            echo "INCLUDE_RESTAPI = n" >> rules/config.user
             make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
             mv target/sonic-broadcom.bin target/sonic-broadcom-slim.bin
             mv target/sonic-aboot-broadcom.swi target/sonic-aboot-broadcom-slim.swi
@@ -221,7 +223,7 @@ stages:
             echo "==== Finished building slim images"
 
             echo "==== Building regular images"
-            make $OPTIONS  INCLUDE_RESTAPI=y target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
+            make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
             mv target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi target/release/
             echo "==== Finished building regular images"
 
@@ -230,7 +232,7 @@ stages:
             echo "==== Finished building syncd-rpc docker"
 
             echo "==== Building one debug image"
-            make $OPTIONS INSTALL_DEBUG_TOOLS=y INCLUDE_RESTAPI=y target/sonic-broadcom.bin
+            make $OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-broadcom.bin
             mv target/sonic-broadcom.bin target/sonic-broadcom-dbg.bin
             echo "==== Finished building one debug image"
 
@@ -238,7 +240,7 @@ stages:
         - name: mellanox
           script: |
             set -ex
-            OPTIONS="$(BUILD_OPTIONS) SONIC_DPKG_CACHE_METHOD=wcache INCLUDE_RESTAPI=y PASSWORD=$PASSWORD"
+            OPTIONS="$(BUILD_OPTIONS) SONIC_DPKG_CACHE_METHOD=wcache PASSWORD=$PASSWORD"
             make $OPTIONS INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin
             make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-mlnx-rpc.gz
             cp target/debs/bullseye/python-saithrift_0.9.4_amd64.deb target/python-saithrift_0.9.4_amd64.deb
@@ -247,7 +249,7 @@ stages:
           script: |
             set -ex
             sudo modprobe overlay
-            OPTIONS="$(BUILD_OPTIONS) INCLUDE_RESTAPI=y PASSWORD=$PASSWORD"
+            OPTIONS="$(BUILD_OPTIONS) PASSWORD=$PASSWORD"
             make $OPTIONS target/sonic-barefoot.bin target/sonic-aboot-barefoot.swi
             make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-bfn-rpc.gz
         - name: marvell-armhf
@@ -256,7 +258,7 @@ stages:
           variables:
             PLATFORM_ARCH: armhf
           script: |
-            OPTIONS="$(BUILD_OPTIONS) INCLUDE_RESTAPI=y PASSWORD=$PASSWORD"
+            OPTIONS="$(BUILD_OPTIONS) PASSWORD=$PASSWORD"
             make $OPTIONS target/sonic-marvell-armhf.bin
         - name: cisco-8000
           variables:
@@ -312,7 +314,7 @@ stages:
             displayName: "Override cisco sai packages"
           - script: |
               set -ex
-              OPTIONS="$(BUILD_OPTIONS) ENABLE_NAT=n INCLUDE_RESTAPI=y INCLUDE_VNET_MONITOR=y PASSWORD=$PASSWORD"
+              OPTIONS="$(BUILD_OPTIONS) ENABLE_NAT=n INCLUDE_VNET_MONITOR=y PASSWORD=$PASSWORD"
               make $OPTIONS target/sonic-cisco-8000.bin
               make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-cisco-rpc.gz
             env:
