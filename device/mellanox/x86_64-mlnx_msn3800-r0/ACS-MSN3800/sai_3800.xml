@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES.
+  Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
   Apache-2.0
 
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,11 +21,14 @@
         <!-- Device MAC address  -->
         <device-mac-address>00:02:03:04:05:00</device-mac-address>
 
-	<!-- ISSU enabled -->
-	<issu-enabled>1</issu-enabled>
+        <!-- ISSU enabled -->
+        <issu-enabled>1</issu-enabled>
 
         <!-- Number of ports in the following port list -->
         <number-of-physical-ports>64</number-of-physical-ports>
+
+        <!-- Global port late create -->
+        <late-create-all-ports>1</late-create-all-ports>
 
         <!-- List of ports in the device -->
         <ports-list>

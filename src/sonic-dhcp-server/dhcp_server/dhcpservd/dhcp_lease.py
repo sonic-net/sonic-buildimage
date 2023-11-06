@@ -1,5 +1,3 @@
-import ipaddress
-import json
 import signal
 import syslog
 import threading
@@ -66,12 +64,13 @@ class LeaseHanlder(object):
         old_lease_table = self.db_connector.get_state_db_table(DHCP_SERVER_IPV4_LEASE)
         old_lease_key = set(old_lease_table.keys())
 
-        # 1.1 If start time equal to end time, means lease has been released
+        # 1.1 If start time equal to end time or lease expired, means lease has been released
         #     1.1.1 If current lease table has this old lease, delete it
         #     1.1.2 Else skip
         # 1.2 Else, means lease valid, save it.
         for key, value in new_lease.items():
-            if value["lease_start"] == value["lease_end"]:
+            unix_time = datetime.now().timestamp()
+            if value["lease_start"] == value["lease_end"] or unix_time >= int(value["lease_end"]):
                 if key in old_lease_key:
                     self.db_connector.state_db.delete("{}|{}".format(DHCP_SERVER_IPV4_LEASE, key))
                 continue

@@ -4,6 +4,10 @@
             "hostname": "sonic-host"
         }
     },
+    "VLAN": {
+        "Vlan1000": {},
+        "Vlan2000": {}
+    },
     "VLAN_INTERFACE": {
         "Vlan1000|192.168.0.1/21": {
             "NULL": "NULL"
@@ -77,6 +81,17 @@
             "mode": "PORT",
             "netmask": "255.255.255.0",
             "state": "enabled"
+        },
+        "Vlan5000": {
+            "customized_options": [
+                "option60",
+                "option223"
+            ],
+            "gateway": "192.168.4.1",
+            "lease_time": "900",
+            "mode": "PORT",
+            "netmask": "255.255.255.0",
+            "state": "disabled"
         }
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {

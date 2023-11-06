@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES.
+  Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
   Apache-2.0
 
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,9 +23,12 @@
 
         <!-- ISSU enabled -->
         <issu-enabled>1</issu-enabled>
-	
+
         <!-- Number of ports in the following port list -->
         <number-of-physical-ports>64</number-of-physical-ports>
+
+        <!-- Global port late create -->
+        <late-create-all-ports>1</late-create-all-ports>
 
         <!-- List of ports in the device -->
         <ports-list>
@@ -484,4 +487,3 @@
         </ports-list>
     </platform_info>
 </root>
-

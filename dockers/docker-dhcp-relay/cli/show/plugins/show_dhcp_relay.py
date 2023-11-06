@@ -32,13 +32,15 @@ config_db = ConfigDBConnector()
 
 
 def get_dhcp_helper_address(ctx, vlan):
-    cfg, _ = ctx
+    cfg, db = ctx
     vlan_dhcp_helper_data, _, _ = cfg
     vlan_config = vlan_dhcp_helper_data.get(vlan)
     if not vlan_config:
         return ""
 
-    dhcp_helpers = vlan_config.get('dhcp_servers', [])
+    feature_data = db.cfgdb.get_table("FEATURE")
+    dhcp_server_enabled = is_dhcp_server_enabled(feature_data)
+    dhcp_helpers = ["N/A"] if dhcp_server_enabled else vlan_config.get('dhcp_servers', [])
 
     return '\n'.join(natsorted(dhcp_helpers))
 
@@ -96,6 +98,11 @@ def dhcp4relay_counters():
 
 
 def ipv4_counters(interface):
+    config_db.connect()
+    feature_tbl = config_db.get_table("FEATURE")
+    if is_dhcp_server_enabled(feature_tbl):
+        click.echo("Unsupport to check dhcp_relay ipv4 counter when dhcp_server feature is enabled")
+        return
     counter = DHCPv4_Counter()
     counter_intf = counter.get_interface()
 
@@ -193,7 +200,7 @@ def dhcp_relay_helper():
     pass
 
 
-def get_dhcp_relay_data_with_header(table_data, entry_name):
+def get_dhcp_relay_data_with_header(table_data, entry_name, dhcp_server_enabled=False):
     vlan_relay = {}
     vlans = table_data.keys()
     for vlan in vlans:
@@ -203,13 +210,23 @@ def get_dhcp_relay_data_with_header(table_data, entry_name):
             continue
 
         vlan_relay[vlan] = []
-        for address in dhcp_relay_data:
-            vlan_relay[vlan].append(address)
+        if dhcp_server_enabled:
+            vlan_relay[vlan].append("N/A")
+        else:
+            for address in dhcp_relay_data:
+                vlan_relay[vlan].append(address)
 
     dhcp_relay_vlan_keys = vlan_relay.keys()
     relay_address_list = ["\n".join(vlan_relay[key]) for key in dhcp_relay_vlan_keys]
     data = {"Interface": dhcp_relay_vlan_keys, "DHCP Relay Address": relay_address_list}
     return tabulate(data, tablefmt='grid', stralign='right', headers='keys') + '\n'
+
+
+def is_dhcp_server_enabled(feature_tbl):
+    if feature_tbl is not None and "dhcp_server" in feature_tbl and "state" in feature_tbl["dhcp_server"] and \
+       feature_tbl["dhcp_server"]["state"] == "enabled":
+        return True
+    return False
 
 
 def get_dhcp_relay(table_name, entry_name, with_header):
@@ -221,8 +238,13 @@ def get_dhcp_relay(table_name, entry_name, with_header):
     if table_data is None:
         return
 
+    dhcp_server_enabled = False
+    if table_name == VLAN:
+        feature_tbl = config_db.get_table("FEATURE")
+        dhcp_server_enabled = is_dhcp_server_enabled(feature_tbl)
+
     if with_header:
-        output = get_dhcp_relay_data_with_header(table_data, entry_name)
+        output = get_dhcp_relay_data_with_header(table_data, entry_name, dhcp_server_enabled)
         print(output)
     else:
         vlans = config_db.get_keys(table_name)

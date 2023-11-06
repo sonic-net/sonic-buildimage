@@ -56,6 +56,16 @@ def get_entry(table, entry_name):
     return dict(entry)
 
 
+def terminate_proc(proc):
+    """
+    Terminate process, to make sure it exit successfully
+    Args:
+        proc: Process object in psutil
+    """
+    proc.terminate()
+    proc.wait()
+
+
 def merge_intervals(intervals):
     """
     Merge ip range intervals.

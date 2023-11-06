@@ -2,14 +2,19 @@
 import psutil
 import signal
 import time
+import sys
+import syslog
 from .dhcp_cfggen import DhcpServCfgGenerator
 from .dhcp_lease import LeaseManager
-from .dhcp_server_utils import DhcpDbConnector
+from dhcp_server.common.utils import DhcpDbConnector
 
 KEA_DHCP4_CONFIG = "/etc/kea/kea-dhcp4.conf"
 KEA_DHCP4_PROC_NAME = "kea-dhcp4"
 KEA_LEASE_FILE_PATH = "/tmp/kea-lease.csv"
 REDIS_SOCK_PATH = "/var/run/redis/redis.sock"
+DHCP_SERVER_IPV4_SERVER_IP = "DHCP_SERVER_IPV4_SERVER_IP"
+DHCP_SERVER_INTERFACE = "eth0"
+AF_INET = 2
 
 
 class DhcpServd(object):
@@ -37,8 +42,27 @@ class DhcpServd(object):
             # After refresh kea-config, we need to SIGHUP kea-dhcp4 process to read new config
             self._notify_kea_dhcp4_proc()
 
+    def _update_dhcp_server_ip(self):
+        """
+        Add ip address of "eth0" inside dhcp_server container as dhcp_server_ip into state_db
+        """
+        dhcp_server_ip = None
+        for _ in range(10):
+            dhcp_interface = psutil.net_if_addrs().get(DHCP_SERVER_INTERFACE, [])
+            for address in dhcp_interface:
+                if address.family == AF_INET:
+                    dhcp_server_ip = address.address
+                    self.db_connector.state_db.hset("{}|{}".format(DHCP_SERVER_IPV4_SERVER_IP, DHCP_SERVER_INTERFACE),
+                                                    "ip", dhcp_server_ip)
+                    return
+            else:
+                time.sleep(5)
+                syslog.syslog(syslog.LOG_INFO, "Cannot get ip address of {}".format(DHCP_SERVER_INTERFACE))
+        sys.exit(1)
+
     def start(self):
         self.dump_dhcp4_config()
+        self._update_dhcp_server_ip()
         lease_manager = LeaseManager(self.db_connector, KEA_LEASE_FILE_PATH)
         lease_manager.start()
 

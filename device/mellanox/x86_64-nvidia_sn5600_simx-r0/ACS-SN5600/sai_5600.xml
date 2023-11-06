@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
+  Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
   Apache-2.0
 
   Licensed under the Apache License, Version 2.0 (the "License");
@@ -222,11 +222,7 @@
                 <local-port>105</local-port>
                 <width>8</width>
                 <module>48</module>
-
-                <!-- 0 none, 1=2, 2=4, 3=2,4 -->
                 <breakout-modes>3</breakout-modes>
-
-                <!-- (BITMASK) 2 - 1Gb , 16 - 10Gb , 32 - 40Gb , 384 - 50Gb , 1536 - 100Gb , 4096 - 200Gb, 32768 - 400G, 262144 - 800G -->
                 <port-speed>1536</port-speed>
             </port-info>
             <port-info>
@@ -450,11 +446,7 @@
                 <local-port>233</local-port>
                 <width>8</width>
                 <module>14</module>
-
-                <!-- 0 none, 1=2, 2=4, 3=2,4 -->
                 <breakout-modes>3</breakout-modes>
-
-                <!-- (BITMASK) 2 - 1Gb , 16 - 10Gb , 32 - 40Gb , 384 - 50Gb , 1536 - 100Gb , 4096 - 200Gb -->
                 <port-speed>1536</port-speed>
             </port-info>
             <port-info>
@@ -502,4 +494,3 @@
         </ports-list>
     </platform_info>
 </root>
-
