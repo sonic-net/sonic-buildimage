@@ -7,11 +7,11 @@ After setting the retry count to some custom value, if a normal LACP
 packet comes in without a custom retry count, don't reset it back to
 the default retry count for 60 seconds since the last new packet.
 ---
- teamd/teamd_runner_lacp.c |   60 +++++++++++++++++++++++++++++++++++++++------
- 1 file changed, 52 insertions(+), 8 deletions(-)
+ teamd/teamd_runner_lacp.c |   58 +++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 50 insertions(+), 8 deletions(-)
 
 diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
-index 3e8a0f6..c5dad35 100644
+index 3e8a0f6..b6a8647 100644
 --- a/teamd/teamd_runner_lacp.c
 +++ b/teamd/teamd_runner_lacp.c
 @@ -180,6 +180,7 @@ struct lacp {
@@ -60,7 +60,7 @@ index 3e8a0f6..c5dad35 100644
  
  	if (!lacpdu_check(lacpdu)) {
  		teamd_log_warn("malformed LACP PDU came.");
-@@ -1523,17 +1529,55 @@ static int lacpdu_process(struct lacp_port *lacp_port, struct lacpdu* lacpdu)
+@@ -1523,14 +1529,38 @@ static int lacpdu_process(struct lacp_port *lacp_port, struct lacpdu* lacpdu)
  					lacp_port->partner_retry_count,
  					lacpdu->v2.actor_retry_count);
  			lacp_port->partner_retry_count = lacpdu->v2.actor_retry_count;
@@ -104,6 +104,10 @@ index 3e8a0f6..c5dad35 100644
  		}
  	}
  
+@@ -1540,10 +1570,21 @@ static int lacpdu_process(struct lacp_port *lacp_port, struct lacpdu* lacpdu)
+ 
+ 	lacp_port_actor_update(lacp_port);
+ 
 +	if (lacp_port->last_received_lacpdu_version != lacpdu->version_number) {
 +		teamd_log_dbg(lacp_port->ctx, "%s: LACPDU version changed from %u to %u",
 +				lacp_port->tdport->ifname,
@@ -114,15 +118,8 @@ index 3e8a0f6..c5dad35 100644
 +		err = lacpdu_send(lacp_port);
 +		if (err)
 +			return err;
-+	} else {
-+		lacp_port->last_received_lacpdu_version = lacpdu->version_number;
 +	}
 +
- 	err = lacp_port_set_state(lacp_port, PORT_STATE_CURRENT);
- 	if (err)
- 		return err;
-@@ -1542,8 +1586,7 @@ static int lacpdu_process(struct lacp_port *lacp_port, struct lacpdu* lacpdu)
- 
  	/* Check if the other side has correct info about us */
  	if (memcmp(&lacpdu->partner, &lacp_port->actor, sizeof(struct lacpdu_info))
 -			|| (lacpdu->version_number == 0xf1 && lacp_port->lacp->cfg.retry_count != lacpdu->v2.partner_retry_count)
@@ -131,7 +128,7 @@ index 3e8a0f6..c5dad35 100644
  		err = lacpdu_send(lacp_port);
  		if (err)
  			return err;
-@@ -2210,6 +2253,7 @@ static int lacp_state_retry_count_work(struct teamd_context *ctx,
+@@ -2210,6 +2251,7 @@ static int lacp_state_retry_count_work(struct teamd_context *ctx,
  		if (lacp_port_selected(lacp_port)) {
  			teamd_log_dbg(ctx, "%s: Notifying partner of updated retry count",
  					   lacp_port->tdport->ifname);

@@ -147,6 +147,10 @@ ifeq ($(ENABLE_DOCKER_BASE_PULL),)
 	override ENABLE_DOCKER_BASE_PULL = n
 endif
 
+ifeq ($(LEGACY_SONIC_MGMT_DOCKER),)
+	override LEGACY_SONIC_MGMT_DOCKER = y
+endif
+
 ifneq ($(GZ_COMPRESS_PROGRAM), pigz)
 override GZ_COMPRESS_PROGRAM = gzip
 endif
@@ -575,6 +579,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
+                           LEGACY_SONIC_MGMT_DOCKER=$(LEGACY_SONIC_MGMT_DOCKER) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset

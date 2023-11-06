@@ -1705,8 +1705,9 @@ ngknet_ndev_init(ngknet_netif_t *netif, struct net_device **nd)
     memcpy(ndev->dev_addr, ma, ETH_ALEN);
 
     /* Initialize the device features */
-    ndev->hw_features = NETIF_F_RXCSUM | NETIF_F_HW_CSUM |
-                        NETIF_F_HW_VLAN_CTAG_RX | NETIF_F_HW_VLAN_CTAG_TX;
+    ndev->hw_features = NETIF_F_RXCSUM |
+                        NETIF_F_HW_VLAN_CTAG_RX |
+                        NETIF_F_HW_VLAN_CTAG_TX;
     ndev->features = ndev->hw_features | NETIF_F_HIGHDMA;
 
     /* Register the kernel network device */
