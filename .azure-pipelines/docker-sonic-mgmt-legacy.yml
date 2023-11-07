@@ -1,0 +1,63 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+# Build and push sonic-mgmt image
+
+schedules:
+- cron: "0 8 * * *"
+  branches:
+    include:
+    - master
+  always: true
+
+trigger: none
+pr:
+  branches:
+    include:
+    - master
+  paths:
+    include:
+    - dockers/docker-sonic-mgmt
+
+parameters:
+- name: registry_url
+  type: string
+  default: sonicdev-microsoft.azurecr.io
+- name: registry_conn
+  type: string
+  default: sonicdev
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    pool: sonicbld
+    timeoutInMinutes: 360
+    steps:
+    - template: cleanup.yml
+    - checkout: self
+      clean: true
+    - bash: |
+        set -xe
+        git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data
+
+        make SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y configure PLATFORM=generic
+        make SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y LEGACY_SONIC_MGMT_DOCKER=y target/docker-sonic-mgmt.gz
+        cp target -r $(Build.ArtifactStagingDirectory)/target
+        docker load -i target/docker-sonic-mgmt.gz
+        docker tag docker-sonic-mgmt $REGISTRY_SERVER/docker-sonic-mgmt:legacy
+      env:
+        REGISTRY_SERVER: ${{ parameters.registry_url }}
+      displayName: Build docker-sonic-mgmt.gz
+    - task: Docker@2
+      displayName: Upload image
+      inputs:
+        containerRegistry: ${{ parameters.registry_conn }}
+        repository: docker-sonic-mgmt
+        command: push
+        tags: latest
+    - publish:  $(Build.ArtifactStagingDirectory)
+      artifact: 'docker-sonic-mgmt'
+      displayName: "Archive docker image sonic-mgmt"
+
