@@ -53,6 +53,7 @@ stages:
     BUILD_OPTIONS: 'SONIC_BUILD_JOBS=4 ENABLE_DHCP_GRAPH_SERVICE=y SHUTDOWN_BGP_ON_START=y ENABLE_PFCWD_ON_START=y SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(GROUP_NAME) ${{ variables.VERSION_CONTROL_OPTIONS }}'
     VERSION_PATH: target/sonic.version
     DOCKER_DATA_ROOT_FOR_MULTIARCCH: /data/march/docker
+    INCLUDE_RESTAPI: y
   jobs:
   - template: .azure-pipelines/azure-pipelines-job-groups.yml@acs-buildimage
     parameters:
@@ -193,7 +194,7 @@ stages:
         - name: vs
           script: |
             set -ex
-            OPTIONS="$(BUILD_OPTIONS) INCLUDE_KUBERNETES_MASTER=y INCLUDE_RESTAPI=y SONIC_DPKG_CACHE_METHOD=wcache PASSWORD=$PASSWORD BUILD_MULTIASIC_KVM=y"
+            OPTIONS="$(BUILD_OPTIONS) INCLUDE_KUBERNETES_MASTER=y SONIC_DPKG_CACHE_METHOD=wcache PASSWORD=$PASSWORD BUILD_MULTIASIC_KVM=y"
             make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
             gzip -kd target/sonic-vs.img.gz
             SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $OPTIONS sonic-slave-run
@@ -214,6 +215,7 @@ stages:
             echo "INCLUDE_P4RT = n" >> rules/config.user
             echo "BUILD_REDUCE_IMAGE_SIZE = y" >> rules/config.user
             echo "INCLUDE_GBSYNCD = n" >> rules/config.user
+            echo "INCLUDE_RESTAPI = n" >> rules/config.user
             make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
             mv target/sonic-broadcom.bin target/sonic-broadcom-slim.bin
             mv target/sonic-aboot-broadcom.swi target/sonic-aboot-broadcom-slim.swi
@@ -312,7 +314,7 @@ stages:
             displayName: "Override cisco sai packages"
           - script: |
               set -ex
-              OPTIONS="$(BUILD_OPTIONS) ENABLE_NAT=n INCLUDE_RESTAPI=y INCLUDE_VNET_MONITOR=y PASSWORD=$PASSWORD"
+              OPTIONS="$(BUILD_OPTIONS) ENABLE_NAT=n INCLUDE_VNET_MONITOR=y PASSWORD=$PASSWORD"
               make $OPTIONS target/sonic-cisco-8000.bin
               make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-cisco-rpc.gz
             env:
