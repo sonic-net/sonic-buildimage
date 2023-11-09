@@ -70,18 +70,12 @@ else
     TELEMETRY_ARGS+=" -v=2"
 fi
 
-# Enable ZMQ for SmartSwitch
-LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget localhost "subtype"`
-if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
-    TELEMETRY_ARGS+=" -zmq_address=tcp://127.0.0.1:8100"
-fi
-
 # Server will handle threshold connections consecutively
 THRESHOLD_CONNECTIONS=$(echo $GNMI | jq -r '.threshold')
 if [[ $THRESHOLD_CONNECTIONS =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" --threshold $THRESHOLD_CONNECTIONS"
 else
-    if [ -z $GNMI ] || [[ $THRESHOLD_CONNECTIONS == "null" ]]; then
+    if [ -z "$GNMI" ] || [[ $THRESHOLD_CONNECTIONS == "null" ]]; then
         TELEMETRY_ARGS+=" --threshold 100"
     else
         echo "Incorrect threshold value, expecting positive integers" >&2
@@ -94,13 +88,13 @@ IDLE_CONN_DURATION=$(echo $GNMI | jq -r '.idle_conn_duration')
 if [[ $IDLE_CONN_DURATION =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" --idle_conn_duration $IDLE_CONN_DURATION"
 else
-    if [ -z $GNMI ] || [[ $IDLE_CONN_DURATION == "null" ]]; then
+    if [ -z "$GNMI" ] || [[ $IDLE_CONN_DURATION == "null" ]]; then
         TELEMETRY_ARGS+=" --idle_conn_duration 5"
     else
         echo "Incorrect idle_conn_duration value, expecting positive integers" >&2
         exit $INCORRECT_TELEMETRY_VALUE
     fi
 fi
-
+TELEMETRY_ARGS+=" -gnmi_native_write=false"
 
 exec /usr/sbin/telemetry ${TELEMETRY_ARGS}

@@ -1,4 +1,4 @@
-# docker image for gnmi agent
+# docker image for GNMI agent
 
 DOCKER_GNMI_STEM = docker-sonic-gnmi
 DOCKER_GNMI = $(DOCKER_GNMI_STEM).gz
@@ -28,8 +28,9 @@ SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_GNMI_DBG)
 endif
 
 $(DOCKER_GNMI)_CONTAINER_NAME = gnmi
-$(DOCKER_GNMI)_RUN_OPT += --privileged -t
-$(DOCKER_GNMI)_RUN_OPT += -v /etc/sonic:/etc/sonic:rw
+$(DOCKER_GNMI)_RUN_OPT += -t
+$(DOCKER_GNMI)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
+$(DOCKER_GNMI)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro
 $(DOCKER_GNMI)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
 
 $(DOCKER_GNMI)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)

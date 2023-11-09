@@ -87,10 +87,10 @@ class ServiceChecker(HealthChecker):
         for feature_name, feature_entry in feature_table.items():
             if feature_entry["state"] not in ["disabled", "always_disabled"]:
                 if multi_asic.is_multi_asic():
-                    if feature_entry["has_global_scope"] == "True":
+                    if feature_entry.get("has_global_scope", "True") == "True":
                         expected_running_containers.add(feature_name)
                         container_feature_dict[feature_name] = feature_name
-                    if feature_entry["has_per_asic_scope"] == "True":
+                    if feature_entry.get("has_per_asic_scope", "False") == "True":
                         num_asics = multi_asic.get_num_asics()
                         for asic_id in range(num_asics):
                             if asic_id in asics_id_presence or feature_name in run_all_instance_list:
