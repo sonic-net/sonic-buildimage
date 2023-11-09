@@ -2,17 +2,6 @@
     "DEVICE_NEIGHBOR_METADATA_TABLE": {
         "desc": "DEVICE_NEIGHBOR_METADATA_TABLE config pattern."
     },
-    "DEVICE_NEIGHBOR_METADATA_TYPE_INCORRECT_PATTERN": {
-        "desc": "DEVICE_NEIGHBOR_METADATA_TYPE_INCORRECT_PATTERN pattern failure.",
-        "eStrKey" : "Pattern"
-    },
-    "DEVICE_NEIGHBOR_METADATA_TYPE_CORRECT_PATTERN": {
-        "desc": "DEVICE_NEIGHBOR_METADATA correct value for Type field"
-    },
-    "DEVICE_NEIGHBOR_METADATA_TYPE_INCORRECT_PATTERN_BMC": {
-        "desc": "DEVICE_NEIGHBOR_METADATA_TYPE_INCORRECT_PATTERN pattern failure with IncorrectTypeBmc.",
-        "eStrKey" : "Pattern"
-    },
     "DEVICE_NEIGHBOR_METADATA_TYPE_CORRECT_PATTERN_BMC": {
         "desc": "DEVICE_NEIGHBOR_METADATA correct value for type field for Bmc"
     },

@@ -207,6 +207,7 @@ class TestCfgGenCaseInsensitive(TestCase):
 
         expected_table = {
             'switch2-t0': {
+                'cluster': 'DB5PrdApp11',
                 'lo_addr': '25.1.1.10/32',
                 'mgmt_addr': '10.7.0.196/26',
                 'hwsku': 'Force10-S6000',
@@ -227,6 +228,7 @@ class TestCfgGenCaseInsensitive(TestCase):
                 'type': 'Server'
             },
             'switch-01t1': {
+                'cluster': 'DB5PrdApp11',
                 'lo_addr': '10.1.0.186/32',
                 'deployment_id': '2',
                 'hwsku': 'Force10-S6000',

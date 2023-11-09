@@ -40,6 +40,11 @@ module sonic-device_neighbor_metadata {
                     }
                 }
 
+                leaf cluster {
+                    description "The switch is a member of this cluster";
+                    type string;
+                }
+
                 leaf hwsku {
                     type stypes:hwsku;
                 }
@@ -82,9 +87,7 @@ module sonic-device_neighbor_metadata {
 
                 leaf type {
                     description "Network element type";
-                    type string {
-                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|Asic|Supervior|MgmtToRRouter|MgmtLeafRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|Server|Bmc|MiniPower|SmartCable|Ixia|EdgeZoneAggregator|not-provisioned";
-                    }
+                    type string;
                 }
 
                 leaf deployment_id {

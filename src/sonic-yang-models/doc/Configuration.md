@@ -954,12 +954,14 @@ instance is supported in SONiC.
 {
 "DEVICE_NEIGHBOR_METADATA": {
     "ARISTA01T1": {
+        "cluster": "AAA00PrdStr00",
         "lo_addr": "None",
         "mgmt_addr": "10.11.150.45",
         "hwsku": "Arista-VM",
         "type": "LeafRouter"
     },
     "ARISTA02T1": {
+        "cluster": "AAA00PrdStr00",
         "lo_addr": "None",
         "mgmt_addr": "10.11.150.46",
         "hwsku": "Arista-VM",
