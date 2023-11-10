@@ -124,9 +124,11 @@ SONIC_DPKG_CACHE_SOURCE ?= /var/cache/sonic/artifacts
 # Default VS build memory preparation
 DEFAULT_VS_PREPARE_MEM = yes
 
+# INCLUDE_SYSTEM_GNMI - build docker-sonic-gnmi for system gnmi support
+INCLUDE_SYSTEM_GNMI = y
 
 # INCLUDE_SYSTEM_TELEMETRY - build docker-sonic-telemetry for system telemetry support
-INCLUDE_SYSTEM_TELEMETRY = y
+INCLUDE_SYSTEM_TELEMETRY = n
 
 # INCLUDE_SYSTEM_GNMI - build docker-sonic-gnmi for system gnmi support
 INCLUDE_SYSTEM_GNMI = y
@@ -141,7 +143,7 @@ INCLUDE_SFLOW = n
 INCLUDE_MGMT_FRAMEWORK = n
 
 # ENABLE_HOST_SERVICE_ON_START - enable sonic-host-server for mgmt-framework and/or
-# telemetry containers to access host functionality by default
+# gnmi containers to access host functionality by default
 ENABLE_HOST_SERVICE_ON_START = y
 
 # INCLUDE_RESTAPI - build docker-sonic-restapi for configuring the switch using REST APIs
@@ -167,7 +169,6 @@ ENABLE_AUTO_TECH_SUPPORT = y
 # ENABLE_TRANSLIB_WRITE = y
 
 # ENABLE_NATIVE_WRITE - Enable native write/config operations via the gNMI interface.
-# Uncomment to enable:
 ENABLE_NATIVE_WRITE = y
 
 # ENABLE_DIALOUT - Disable dialout related code from internal branch.
