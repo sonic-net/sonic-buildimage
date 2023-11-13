@@ -21,7 +21,7 @@ $(DOCKER_ACMS)_VERSION = 2.0.0
 $(DOCKER_ACMS)_PACKAGE_NAME = acms
 
 $(DOCKER_ACMS)_CONTAINER_NAME = acms
-$(DOCKER_ACMS)_RUN_OPT += --privileged -t
+$(DOCKER_ACMS)_RUN_OPT += -t
 $(DOCKER_ACMS)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_ACMS)_RUN_OPT += -v /etc/sonic/credentials:/etc/sonic/credentials:rw
 $(DOCKER_ACMS)_RUN_OPT += -v /var/opt/msft:/var/opt/msft:rw
