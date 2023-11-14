@@ -30,15 +30,15 @@ build()
 {
   case $mach in
     x86_64)
-      make SONIC_BUILD_JOBS=2 target/sonic-broadcom.bin || \
+      make target/sonic-broadcom.bin || \
         ( rm -f target/*.bin && make target/sonic-broadcom.bin )
       ;;
     armhf)
-      make SONIC_BUILD_JOBS=2 target/sonic-marvell-armhf.bin || \
+      make target/sonic-marvell-armhf.bin || \
         ( rm -f target/*.bin && make target/sonic-marvell-armhf.bin )
       ;;
     aarch64)
-      make SONIC_BUILD_JOBS=2 target/sonic-marvell-arm64.bin || \
+      make target/sonic-marvell-arm64.bin || \
         ( rm -f target/*.bin && make target/sonic-marvell-arm64.bin )
       ;;
   esac
