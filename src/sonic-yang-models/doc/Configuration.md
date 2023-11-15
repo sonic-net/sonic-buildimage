@@ -343,7 +343,7 @@ and migration plan
             ],
             "BIND_POINTS": [
                 "PORT",
-                "LAG"
+                "PORTCHANNEL"
             ]
         }
     },
@@ -1857,7 +1857,7 @@ SFLOW
 
 | Field            | Description                                                                             | Mandatory   | Default   | Reference                                 |
 |------------------|-----------------------------------------------------------------------------------------|-------------|-----------|-------------------------------------------|
-| admin_state      | Global sflow admin state                                                                |             | down      |    
+| admin_state      | Global sflow admin state                                                                |             | down      |
 | sample_direction | Global sflow sample direction                                                           |             | rx        |                                        |
 | polling_interval | The interval within which sFlow data is collected and sent to the configured collectors |             | 20        |                                           |
 | agent_id         | Interface name                                                                          |             |           | PORT:name,PORTCHANNEL:name,MGMT_PORT:name, VLAN:name |

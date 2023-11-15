@@ -1,0 +1,50 @@
+From b914b0ad506649b5d341b549a37d3cb73e72b494 Mon Sep 17 00:00:00 2001
+From: Stepan Blyschak <stepanb@nvidia.com>
+Date: Mon, 30 Oct 2023 14:31:45 +0200
+Subject: [PATCH] zebra: Add encap type when building packet for FPM
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
+Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
+---
+ zebra/rt_netlink.c | 22 ++++++++++++----------
+ 1 file changed, 12 insertions(+), 10 deletions(-)
+
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 6b9b04785..71505e037 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -2269,19 +2269,21 @@ ssize_t netlink_route_multipath_msg_encode(int cmd,
+ 					    p, routedesc, bytelen, nexthop,
+ 					    &req->n, &req->r, datalen, cmd))
+ 					return 0;
++
++				/*
++				 * Add encapsulation information when
++				 * installing via FPM.
++				 */
++				if (fpm) {
++					if (!netlink_route_nexthop_encap(&req->n,
++									 datalen,
++									 nexthop))
++						return 0;
++				}
++
+ 				nexthop_num++;
+ 				break;
+ 			}
+-
+-			/*
+-			 * Add encapsulation information when installing via
+-			 * FPM.
+-			 */
+-			if (fpm) {
+-				if (!netlink_route_nexthop_encap(
+-					    &req->n, datalen, nexthop))
+-					return 0;
+-			}
+ 		}
+ 
+ 		if (setsrc) {
+-- 
+2.17.1
+

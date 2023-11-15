@@ -731,7 +731,8 @@
                             "PACKET_ACTION"
                         ],
                         "BIND_POINTS": [
-                            "PORT"
+                            "PORT",
+                            "PORTCHANNEL"
                         ]
                     }
                 ]
