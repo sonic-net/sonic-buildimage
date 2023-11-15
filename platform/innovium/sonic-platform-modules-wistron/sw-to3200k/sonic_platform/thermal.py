@@ -16,7 +16,6 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-IPMI_GET_SENSOR_THRESHOLD_CMD = "ipmitool raw 0x4 0x27 {}"
 
 class Thermal(ThermalBase):
     """Platform-specific Thermal class"""
@@ -53,8 +52,10 @@ class Thermal(ThermalBase):
         self.__initialize_threshold()
 
     def __initialize_threshold(self):
+        cmd = ["ipmitool", "raw", "0x4", "0x27"]
         if self.lnc is None:
-            p = subprocess.Popen(IPMI_GET_SENSOR_THRESHOLD_CMD.format(self.IPMI_SENSOR_NR[self.index]), shell=True, stdout=subprocess.PIPE)
+            cmd.append(self.IPMI_SENSOR_NR[self.index])
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             out, err = p.communicate()
             self.unc = float(int(out.split()[4],16))
             self.ucr = float(int(out.split()[5],16))

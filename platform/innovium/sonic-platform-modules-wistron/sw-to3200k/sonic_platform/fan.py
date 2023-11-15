@@ -70,7 +70,7 @@ class Fan(FanBase):
             for file in dirs:
                 if file.startswith("hwmon"):
                     return file
-        except BaseException:
+        except IOError:
             pass
         return ''
 
@@ -98,6 +98,7 @@ class Fan(FanBase):
             A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
             depending on fan direction
         """
+        direction = 0
         if self.is_psu_fan:
             path= "{}/psu_fan_dir".format(self.psu_status_path)
             direction=self.__read_txt_file(path)

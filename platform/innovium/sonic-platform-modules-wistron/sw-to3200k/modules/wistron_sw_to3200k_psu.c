@@ -140,7 +140,7 @@ static ssize_t set_string(struct device *dev, struct device_attribute *da, const
     struct sw_to3200k_psu_data      *data = i2c_get_clientdata(client);
     char                            tmp_str[32];
 
-    memset(&tmp_str, 0x0, sizeof(tmp_str));
+    memzero_explicit(&tmp_str, sizeof(tmp_str));
     if (attr->index == PSU_MODEL_NAME)
     {
         if (sscanf(buf, "%16s", tmp_str) != 1)
