@@ -11,7 +11,7 @@ class TestSecurityCipher(object):
     def test_passkey_decryption(self):
         encrypt, err = temp.encrypt_passkey("RADIUS", "passkey2", "TEST2")
         assert err == None 
-        decrypt, err = temp.decrypt_passkey("TACPLUS", encrypt)
+        decrypt, err = temp.decrypt_passkey("RADIUS", encrypt)
         assert err == None 
         assert decrypt == "passkey2"
 
