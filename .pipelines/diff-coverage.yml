@@ -1,0 +1,99 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+pr:
+  branches:
+    include:
+      - internal
+      - internal-202???
+  paths:
+    include:
+      - src/sonic-acms
+      - src/sonic-py-common
+
+name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
+variables:
+  - name: BUILD_BRANCH
+    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      value: $(System.PullRequest.TargetBranch)
+    ${{ else }}:
+      value: $(Build.SourceBranchName)
+
+jobs:
+  - job:
+    timeoutInMinutes: 60
+    pool: sonic-image-builder-1ES
+    container:
+      image: sonicdev-microsoft.azurecr.io:443/sonic-slave-bullseye:master
+    steps:
+    - checkout: self
+      clean: true
+      displayName: 'Checkout code'
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        source: specific
+        project: One
+        pipeline: 191476
+        artifact: sonic-buildimage.vs
+        runVersion: 'latestFromBranch'
+        runBranch: 'refs/heads/internal'
+        path: $(Build.ArtifactStagingDirectory)/download
+        patterns: |
+          debs/bullseye/libswsscommon_1.0.0_*.deb
+          debs/bullseye/libswsscommon-dev_1.0.0_*.deb
+          debs/bullseye/libnl-3*.deb
+          debs/bullseye/libnl-nf*.deb
+          debs/bullseye/libnl-route*.deb
+          debs/bullseye/libyang_*.deb
+          debs/bullseye/python3-swsscommon*.deb
+          python-wheels/bullseye/sonic_py_common*.whl
+          python-wheels/bullseye/swsssdk-*.whl
+
+    - script: |
+        set -ex
+        sudo dpkg -i $(find $(Build.ArtifactStagingDirectory)/download -name *.deb)
+        sudo pip3 install $(Build.ArtifactStagingDirectory)/download/python-wheels/bullseye/*.whl
+        cd src/sonic-acms
+        sudo pytest-3 --junitxml="tests_tr.xml" tests/
+        cd -
+        cd src/sonic-py-common
+        sudo pytest-3 --junitxml="tests_tr.xml" tests/
+        cd -
+        mkdir -p .diff-coverage/htmlcov/
+        cp src/sonic-acms/coverage.xml .diff-coverage/acms-coverage.xml
+        cp src/sonic-py-common/coverage.xml .diff-coverage/pycommon-coverage.xml
+      displayName: "Compile sonic swss common"
+
+    - bash: |
+        set -ex
+        sudo pip3 install diff-cover
+        targetBranch=$(BUILD_BRANCH)
+        first_commit=$(git log origin/${targetBranch#refs/heads/}..HEAD --format=%H | tail -n 1)~
+        diff-cover .diff-coverage/*coverage.xml --ignore-unstaged --ignore-staged --ignore-whitespace --compare-branch=$first_commit --html-report=.diff-coverage/htmlcov/index.html --json-report=.diff-coverage/diff-cover.json
+        diff-cover .diff-coverage/*coverage.xml --ignore-unstaged --ignore-staged --ignore-whitespace --compare-branch=$(git log --format=%H | tail -n 1) --html-report=.diff-coverage/htmlcov/full.html
+        sed -i 's#<h1>Diff Coverage</h1>#<h1>Diff Coverage</h1><a href="full.html">Full Coverage</a>#' .diff-coverage/htmlcov/index.html
+        diff_coverage=$(cat .diff-coverage/diff-cover.json | jq .total_percent_covered)
+        if (( $diff_coverage < $(DIFF_COVERAGE_THRESHOLD) ));then
+          echo "Diff coverage: $diff_coverage. Threshold: $(DIFF_COVERAGE_THRESHOLD_ACMS)"
+          exit 1
+        fi
+      displayName: "Compute code coverage"
+
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/.diff-coverage/*coverage.xml'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/.diff-coverage/htmlcov/'
+      displayName: 'Publish coverage'
+      condition: always()
+      continueOnError: true
+
+    - task: PublishTestResults@2
+      condition: always()
+      inputs:
+        testResultsFiles: '**/tests_tr.xml'
+        testRunTitle: acms-test
+
