@@ -1,4 +1,4 @@
-from sonic_py_common.secure_cipher import secure_cipher
+from sonic_py_common.security_cipher import security_cipher
 
 temp = security_cipher()
 
