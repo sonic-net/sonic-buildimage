@@ -504,7 +504,12 @@ start() {
     {%- endif %}
 
     if [ -z "$DEV" ]; then
+        {%- if docker_container_name == "snmp" %}
+        NET="bridge"
+        {%- else %}
         NET="host"
+        {%- endif %}
+
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
         # namespaces, into the single instance dockers like snmp, pmon on linux host. These global dockers
@@ -544,6 +549,8 @@ start() {
         {%- if docker_container_name == "database" %}
         NET="bridge"
         DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis:rw "
+	{%- elif docker_container_name == "snmp" %}
+        NET="bridge"
         {%- else %}
         NET="container:database$DEV"
         DB_OPT=""
@@ -560,9 +567,44 @@ start() {
 {%- if sonic_asic_platform == "mellanox" %}
     # TODO: Mellanox will remove the --tmpfs exception after SDK socket path changed in new SDK version
 {%- endif %}
+{%- if docker_container_name == "snmp" %}
+# get snmp listening address and port list from redis
+addr_port_values=$(python3 -c 'from swsscommon.swsscommon import ConfigDBConnector; cfg_db = ConfigDBConnector();  cfg_db.connect(wait_for_init=True, retry_on=True); [print(k[0] + "|" + k[1]) for k in cfg_db.get_keys("SNMP_AGENT_ADDRESS_CONFIG|*")]')
+NAMESPACE_COUNT=$NUM_ASIC
+if [ -z $addr_port_values ]; then
+if [ -z $NAMESPACE_COUNT ] || [ $NAMESPACE_COUNT -lt 2 ]; then
+addr_port_values=$(python3 -c 'from swsscommon.swsscommon import ConfigDBConnector; cfg_db = ConfigDBConnector();  cfg_db.connect(wait_for_init=True, retry_on=True); [print(k[1].split("/")[0].lower() + "%" + k[0]) if len(k) == 2 and k[1].split('/')[0].lower().startswith("fe80") else print(k[1].split("/")[0].lower()) for k in cfg_db.get_keys("LOOPBACK_INTERFACE|*")+cfg_db.get_keys("MGMT_INTERFACE|*") if len(k) == 2]')
+fi
+fi
+fwd_port_values=""
+# Loop over each value in the list
+while read -r value; do
+  # Split the value and port number (if any)
+  parts=(${value//|/ })
+  value="${parts[0]}"
+  port="${parts[1]:-}"
+  if [ -z $port ]; then
+    port=161
+  fi
+  # Check if the value is an IPv4 address
+  if [ "$fwd_port_values" != "" ]; then
+    fwd_port_values="$fwd_port_values"$'\n'
+  fi
+  if [[ $value =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    # IPv4 address, use as is
+    fwd_port_values="$fwd_port_values$value:$port:161/udp"
+  else
+    # Not an IPv4 address, wrap in []
+    fwd_port_values="$fwd_port_values[$value]:$port:161/udp"
+  fi
+done <<< "$addr_port_values"
+
+{%- endif %}
     docker create {{docker_image_run_opt}} \
 {%- if docker_container_name != "dhcp_server" %}
         --net=$NET \
+{%- elif docker_container_name == "snmp" %}
+        $(echo "$fwd_port_values" | sed 's/^/-p /' | tr '\n' ' ') \
 {%- endif %}
         -e RUNTIME_OWNER=local \
         --uts=host \{# W/A: this should be set per-docker, for those dockers which really need host's UTS namespace #}
@@ -678,6 +720,9 @@ stop() {
     /usr/local/bin/container stop -t 60 $DOCKERNAME
     {%- else %}
     /usr/local/bin/container stop $DOCKERNAME
+    {%- if docker_container_name == "snmp" %}
+    docker rm $DOCKERNAME
+    {%- endif %}
     {%- endif %}
 }
 
