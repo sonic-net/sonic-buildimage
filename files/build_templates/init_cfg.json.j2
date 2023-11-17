@@ -56,7 +56,6 @@
 {%- if include_macsec == "y" %}{% do features.append(("macsec", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}{% endif %}
 {%- if include_system_gnmi == "y" %}{% do features.append(("gnmi", "enabled", true, "enabled")) %}{% endif %}
 {%- if include_system_telemetry == "y" %}{% do features.append(("telemetry", "enabled", true, "enabled")) %}{% endif %}
-{%- if include_system_gnmi == "y" %}{% do features.append(("gnmi", "enabled", true, "enabled")) %}{% endif %}
 {%- if include_acms == "y" %}{% do features.append(("acms", "enabled", false, "enabled")) %}{% endif %}
 {%- if include_vnet_monitor == "y" %}{% do features.append(("vnet-monitor", "{% if DEVICE_METADATA is defined and 'localhost' in DEVICE_METADATA and 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}enabled{% else %}always_disabled{% endif %}", false, "enabled")) %}{% endif %}
     "FEATURE": {
