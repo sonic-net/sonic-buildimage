@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "MSN2700": {
+        "MSN2700-A1": {
             "component": {
                 "ONIE": { },
                 "SSD": { },

@@ -1,6 +1,17 @@
 {%- set default_lease_time = 900 -%}
 {
     "Dhcp4": {
+{%- if customized_options %}
+        "option-def": [
+    {%- for option_name, config in customized_options.items() %}
+            {
+                "name": "{{ option_name }}",
+                "code": {{ config["id"] }},
+                "type": "{{ config["type"] }}"
+            }{% if not loop.last %},{% endif %}
+    {%- endfor %}
+        ],
+{%- endif %}
         "hooks-libraries": [
             {
                 "library": "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
@@ -44,6 +55,13 @@
     {%- endfor%}
                 ],
                 "option-data": [
+    {%- for option_name, config in subnet_info["customized_options"].items() %}
+                    {
+                        "name": "{{ option_name }}",
+                        "data": "{{ config["value"] }}",
+                        "always-send": {{ config["always_send"] }}
+                    },
+    {%- endfor %}
                     {
                         "name": "routers",
                         "data": "{{ subnet_info["gateway"] if "gateway" in subnet_info else subnet_info["server_id"] }}"

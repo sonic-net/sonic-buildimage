@@ -43,7 +43,7 @@ stages:
         git submodule update --init --recursive -- src/sonic-platform-daemons src/sonic-genl-packet src/sonic-sairedis src/ptf src/sonic-device-data
 
         make SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y configure PLATFORM=generic
-        make SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y target/docker-sonic-mgmt.gz
+        make SONIC_BUILD_JOBS=$(nproc) DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y LEGACY_SONIC_MGMT_DOCKER=y target/docker-sonic-mgmt.gz
         cp target -r $(Build.ArtifactStagingDirectory)/target
         docker load -i target/docker-sonic-mgmt.gz
         docker tag docker-sonic-mgmt $REGISTRY_SERVER/docker-sonic-mgmt:latest

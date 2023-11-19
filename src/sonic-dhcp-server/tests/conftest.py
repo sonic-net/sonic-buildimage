@@ -5,10 +5,12 @@ import sys
 from unittest.mock import patch, PropertyMock
 from dhcp_server.dhcpservd.dhcp_cfggen import DhcpServCfgGenerator
 
+
 test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
 sys.path.insert(0, test_path)
 sys.path.insert(0, modules_path)
+
 
 @pytest.fixture(scope="function")
 def mock_swsscommon_dbconnector_init():
@@ -39,4 +41,3 @@ def mock_parse_port_map_alias(scope="function"):
                       new_callable=PropertyMock), \
          patch.object(DhcpServCfgGenerator, "lease_path", return_value="/tmp/kea-lease.csv", new_callable=PropertyMock):
         yield mock_map
-

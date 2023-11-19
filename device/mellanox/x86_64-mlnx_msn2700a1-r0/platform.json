@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "MSN2700",
+        "name": "MSN2700-A1",
         "components": [
             {
                 "name": "ONIE"

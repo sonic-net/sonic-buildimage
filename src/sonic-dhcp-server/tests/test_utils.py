@@ -26,6 +26,37 @@ interval_test_data = {
         "expected_res": [["192.168.0.10", "192.168.0.10"]]
     }
 }
+validate_str_type_data = [
+    # type, value, expected_res
+    ["string", 123, False],
+    ["string", "123", True],
+    ["binary", "01020304ef", True],
+    # False because we only support octet-based binary
+    ["binary", "01020304e", False],
+    ["binary", "0102ab0304ef", True],
+    ["binary", "we", False],
+    ["boolean", "true", True],
+    ["boolean", "false", True],
+    ["boolean", "0", False],
+    ["boolean", "1", False],
+    ["boolean", True, False],
+    ["boolean", "213", False],
+    ["ipv4-address", "192.168.0.1", True],
+    ["ipv4-address", "300.168.0.1", False],
+    ["ipv4-address", 123, False],
+    ["ipv4-address", "123", False],
+    ["ipv4-address", "192.168.0.1/24", False],
+    ["uint8", "e123", False],
+    ["uint8", 123, False],
+    ["uint8", "300", False],
+    ["uint8", "128", True],
+    ["uint16", "1000", True],
+    ["uint16", "65536", False],
+    ["uint32", "4294967296", False],
+    ["uint32", "65536", True],
+    # False because we don't support uint64
+    ["uint64", "65536", False]
+]
 
 
 def test_construct_without_sock(mock_swsscommon_dbconnector_init):
@@ -47,18 +78,38 @@ def test_construct_sock(mock_swsscommon_dbconnector_init):
     ])
 
 
-def test_get_config_db_table(mock_swsscommon_dbconnector_init, mock_swsscommon_table_init):
+def test_get_db_table(mock_swsscommon_dbconnector_init, mock_swsscommon_table_init):
     dhcp_db_connector = utils.DhcpDbConnector()
     with patch.object(swsscommon.Table, "getKeys", return_value=["key1", "key2"]) as mock_get_keys, \
          patch.object(utils, "get_entry", return_value={"list": "1,2", "value": "3,4"}), \
          patch.object(swsscommon.Table, "hget", side_effect=mock_hget):
         ret = dhcp_db_connector.get_config_db_table("VLAN")
-        mock_swsscommon_table_init.assert_called_once_with(dhcp_db_connector.config_db, "VLAN")
-        mock_get_keys.assert_called_once_with()
         assert ret == {
             "key1": {"list": ["1", "2"], "value": "3,4"},
             "key2": {"list": ["1", "2"], "value": "3,4"}
         }
+        ret = dhcp_db_connector.get_state_db_table("VLAN")
+        mock_swsscommon_table_init.assert_has_calls([
+            call(dhcp_db_connector.config_db, "VLAN"),
+            call(dhcp_db_connector.state_db, "VLAN")
+        ])
+        mock_get_keys.assert_has_calls([
+            call(),
+            call()
+        ])
+        assert ret == {
+            "key1": {"list": ["1", "2"], "value": "3,4"},
+            "key2": {"list": ["1", "2"], "value": "3,4"}
+        }
+
+
+def test_get_entry(mock_swsscommon_dbconnector_init, mock_swsscommon_table_init):
+    tested_entry = {"key": "value"}
+    dhcp_db_connector = utils.DhcpDbConnector()
+    with patch.object(swsscommon.Table, "get", return_value=(None, tested_entry)) as mock_get:
+        res = utils.get_entry(swsscommon.Table(dhcp_db_connector.config_db, "VLAN"), "dummy_entry")
+        assert res == tested_entry
+        mock_get.assert_called_once_with("dummy_entry")
 
 
 @pytest.mark.parametrize("test_type", interval_test_data.keys())
@@ -80,3 +131,9 @@ def convert_ip_address_intervals(intervals):
     for interval in intervals:
         ret.append([ipaddress.ip_address(interval[0]), ipaddress.ip_address(interval[1])])
     return ret
+
+
+@pytest.mark.parametrize("test_data", validate_str_type_data)
+def test_validate_ttr_type(test_data):
+    res = utils.validate_str_type(test_data[0], test_data[1])
+    assert res == test_data[2]

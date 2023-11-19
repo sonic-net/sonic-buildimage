@@ -2057,7 +2057,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     results['ACL_TABLE'] = filter_acl_table_bindings(acls, neighbors, pcs, pc_members, sub_role, current_device['type'] if current_device else None, is_storage_device, vlan_members)
     results['FEATURE'] = {
         'telemetry': {
-            'state': 'enabled'
+            'state': 'disabled'
         }
     }
     results['TELEMETRY'] = {

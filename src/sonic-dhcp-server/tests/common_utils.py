@@ -3,7 +3,17 @@ import json
 import psutil
 
 MOCK_CONFIG_DB_PATH = "tests/test_data/mock_config_db.json"
-MOCK_STATE_DB_PATH = "tests/test_data/mock_state_db.json"
+TEST_DATA_PATH = "tests/test_data/dhcp_db_monitor_test_data.json"
+DHCP_SERVER_IPV4 = "DHCP_SERVER_IPV4"
+DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS = "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS"
+DHCP_SERVER_IPV4_RANGE = "DHCP_SERVER_IPV4_RANGE"
+DHCP_SERVER_IPV4_PORT = "DHCP_SERVER_IPV4_PORT"
+VLAN = "VLAN"
+VLAN_INTERFACE = "VLAN_INTERFACE"
+VLAN_MEMBER = "VLAN_MEMBER"
+PORT_MODE_CHECKER = ["DhcpServerTableCfgChangeEventChecker", "DhcpPortTableEventChecker", "DhcpRangeTableEventChecker",
+                     "DhcpOptionTableEventChecker", "VlanTableEventChecker", "VlanIntfTableEventChecker",
+                     "VlanMemberTableEventChecker"]
 
 
 class MockConfigDb(object):
@@ -25,21 +35,16 @@ class MockSelect(object):
 
 class MockSubscribeTable(object):
     def __init__(self, tables):
+        """
+        Args:
+            tables: table update event, sample: [
+                ("Vlan1000", "SET", (("state", "enabled"),)),
+                ("Vlan1000", "SET", (("customized_options", "option1"), ("state", "enabled"),))
+            ]
+        """
         self.stack = []
         for item in tables:
             heapq.heappush(self.stack, item)
-        # if table_name == "DHCP_SERVER_IPV4":
-        #     heapq.heappush(self.stack, ("Vlan1000", "SET", (("state", "enabled"),)))
-        #     heapq.heappush(self.stack, ("Vlan1000", "SET", (("customized_options", "option1"), ("state", "enabled"),)))
-        #     heapq.heappush(self.stack, ("Vlan2000", "SET", (("state", "enabled"),)))
-        #     heapq.heappush(self.stack, ("Vlan1000", "DEL", ()))
-        #     heapq.heappush(self.stack, ("Vlan2000", "DEL", ()))
-        # if table_name == "VLAN":
-        #     heapq.heappush(self.stack, ("Vlan1000", "SET", (("vlanid", "1000"),)))
-        #     heapq.heappush(self.stack, ("Vlan1001", "SET", (("vlanid", "1001"),)))
-        #     heapq.heappush(self.stack, ("Vlan1001", "DEL", (("vlanid", "1001"),)))
-        #     heapq.heappush(self.stack, ("Vlan1002", "SET", (("vlanid", "1002"),)))
-        #     heapq.heappush(self.stack, ("Vlan2000", "SET", (("vlanid", "2000"),)))
 
     def pop(self):
         res = heapq.heappop(self.stack)
@@ -85,3 +90,21 @@ class MockProc(object):
 class MockPopen(object):
     def __init__(self, pid):
         self.pid = pid
+
+
+def mock_exit_func(status):
+    raise SystemExit(status)
+
+
+def get_subscribe_table_tested_data(test_name):
+    test_obj = {}
+    with open(TEST_DATA_PATH, "r") as file:
+        test_obj = json.loads(file.read())
+    tested_data = test_obj[test_name]
+    for data in tested_data:
+        for i in range(len(data["table"])):
+            for j in range(len(data["table"][i][2])):
+                data["table"][i][2][j] = tuple(data["table"][i][2][j])
+            data["table"][i][2] = tuple(data["table"][i][2])
+            data["table"][i] = tuple(data["table"][i])
+    return tested_data

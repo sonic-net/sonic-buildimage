@@ -13,7 +13,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Remove any stale files
 	rm -rf protobuf-$(PROTOBUF_VERSION)
 
-	dget protobuf_$(PROTOBUF_VERSION_FULL).dsc http://deb.debian.org/debian/pool/main/p/protobuf/protobuf_$(PROTOBUF_VERSION_FULL).dsc
+	dget -u protobuf_$(PROTOBUF_VERSION_FULL).dsc http://deb.debian.org/debian/pool/main/p/protobuf/protobuf_$(PROTOBUF_VERSION_FULL).dsc
 
 	pushd protobuf-$(PROTOBUF_VERSION)
 

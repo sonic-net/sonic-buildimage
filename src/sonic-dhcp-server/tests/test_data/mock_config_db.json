@@ -94,18 +94,6 @@
             "state": "disabled"
         }
     },
-    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
-        "option223": {
-            "id": "223",
-            "type": "text",
-            "value": "dummy_value"
-        },
-        "option60": {
-            "id": "60",
-            "type": "text",
-            "value": "dummy_value"
-        }
-    },
     "DHCP_SERVER_IPV4_RANGE": {
         "range3": {
             "range": [
