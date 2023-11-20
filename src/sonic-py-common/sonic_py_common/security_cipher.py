@@ -16,6 +16,7 @@ from swsscommon.swsscommon import ConfigDBConnector
 class security_cipher:
     _instance = None
     _lock = threading.Lock()
+    _initialized = False
 
     def __new__(cls):
         with cls._lock:
