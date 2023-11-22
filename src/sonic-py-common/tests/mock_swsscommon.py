@@ -21,7 +21,7 @@ class ConfigDBConnector:
         self.CONFIG_DB = 'CONFIG_DB'
         self.data = {"key_encrypt": "True"}
 
-    def connect(self, db):
+    def connect(self):
         pass
 
     def get(self, db, table, field):
