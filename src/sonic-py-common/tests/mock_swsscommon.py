@@ -17,7 +17,7 @@ class SonicV2Connector:
 
 
 class ConfigDBConnector:
-     def __init__(self):
+    def __init__(self):
         self.CONFIG_DB = 'CONFIG_DB'
         self.data = {"key_encrypt": "True"}
 
