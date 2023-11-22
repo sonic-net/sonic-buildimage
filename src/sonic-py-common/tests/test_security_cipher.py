@@ -1,5 +1,12 @@
+import sys
+
+if sys.version_info.major == 3:
+    from unittest import mock
+else:
+    import mock
+
 from sonic_py_common.security_cipher import security_cipher
-from .mock_swsscommon import ConfigDBConnector 
+from .mock_swsscommon import ConfigDBConnector
 
 
 class TestSecurityCipher(object):
