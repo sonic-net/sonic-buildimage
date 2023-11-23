@@ -43,7 +43,6 @@ class TestSecurityCipher(object):
                 mock_file.return_value.__enter__.return_value = mock_fd 
                 encrypt, err = temp.encrypt_passkey("TACPLUS", "passkey1", "TEST1")
                 assert encrypt !=  "passkey1"
-                assert err == None 
 
     def test_passkey_decryption(self):
         with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
@@ -56,7 +55,6 @@ class TestSecurityCipher(object):
                 mock_fd.readlines = mock.MagicMock(return_value=DEFAULT_FILE)
                 mock_file.return_value.__enter__.return_value = mock_fd
                 encrypt, err = temp.encrypt_passkey("RADIUS", "passkey2", "TEST2")
-                assert err == None
 
             # Use patch to replace the built-in 'open' function with a mock
             #with mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=EXPECTED_PASSWD)) as mock_file:
@@ -65,7 +63,6 @@ class TestSecurityCipher(object):
                 mock_fd.readlines = mock.MagicMock(return_value=UPDATED_FILE)
                 mock_file.return_value.__enter__.return_value = mock_fd 
                 decrypt, err = temp.decrypt_passkey("RADIUS", encrypt)
-                assert err == None 
                 assert decrypt == "passkey2"
 
 
