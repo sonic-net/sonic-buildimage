@@ -9,6 +9,12 @@ import pytest
 from sonic_py_common.security_cipher import security_cipher
 from .mock_swsscommon import ConfigDBConnector
 
+# TODO: Remove this if/else block once we no longer support Python 2
+if sys.version_info.major == 3:
+    BUILTINS = "builtins"
+else:
+    BUILTINS = "__builtin__"
+
 EXPECTED_PASSWD = "TEST2" 
 
 class TestSecurityCipher(object):
