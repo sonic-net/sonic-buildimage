@@ -15,7 +15,20 @@ if sys.version_info.major == 3:
 else:
     BUILTINS = "__builtin__"
 
-EXPECTED_PASSWD = "TEST2" 
+DEFAULT_FILE = [
+        "#Auto generated file for storing the encryption passwords",
+        "TACPLUS : ",
+        "RADIUS : ", 
+        "LDAP :"
+        ]
+
+UPDATED_FILE = [
+        "#Auto generated file for storing the encryption passwords",
+        "TACPLUS : ",
+        "RADIUS : TEST2",
+        "LDAP :"
+        ]
+
 
 class TestSecurityCipher(object):
     def test_passkey_encryption(self):
@@ -25,6 +38,9 @@ class TestSecurityCipher(object):
 
             # Use patch to replace the built-in 'open' function with a mock
             with mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file:
+                mock_fd = mock.MagicMock()
+                mock_fd.readlines = mock.MagicMock(return_value=DEFAULT_FILE)
+                mock_file.return_value.__enter__.return_value = mock_fd 
                 encrypt, err = temp.encrypt_passkey("TACPLUS", "passkey1", "TEST1")
                 assert encrypt !=  "passkey1"
                 assert err == None 
@@ -36,11 +52,18 @@ class TestSecurityCipher(object):
 
             # Use patch to replace the built-in 'open' function with a mock
             with mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file:
-                encrypt, err = temp.encrypt_passkey("RADIUS", "passkey2", EXPECTED_PASSWD)
+                mock_fd = mock.MagicMock()
+                mock_fd.readlines = mock.MagicMock(return_value=DEFAULT_FILE)
+                mock_file.return_value.__enter__.return_value = mock_fd
+                encrypt, err = temp.encrypt_passkey("RADIUS", "passkey2", "TEST2")
                 assert err == None
 
             # Use patch to replace the built-in 'open' function with a mock
-            with mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=EXPECTED_PASSWD)) as mock_file: 
+            #with mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=EXPECTED_PASSWD)) as mock_file:
+            with mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file:
+                mock_fd = mock.MagicMock()
+                mock_fd.readlines = mock.MagicMock(return_value=UPDATED_FILE)
+                mock_file.return_value.__enter__.return_value = mock_fd 
                 decrypt, err = temp.decrypt_passkey("RADIUS", encrypt)
                 assert err == None 
                 assert decrypt == "passkey2"
