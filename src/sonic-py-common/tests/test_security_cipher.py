@@ -13,7 +13,8 @@ EXPECTED_PASSWD = "TEST2"
 
 class TestSecurityCipher(object):
     def test_passkey_encryption(self):
-        with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector):
+        with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
+             mock.patch("builtins.open", mock_open()) as mock_file:
             temp = security_cipher()
 
             # Use patch to replace the built-in 'open' function with a mock
@@ -23,7 +24,8 @@ class TestSecurityCipher(object):
                 assert err == None 
 
     def test_passkey_decryption(self):
-        with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector):
+        with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
+             mock.patch("builtins.open", mock_open()) as mock_file:
             temp = security_cipher()
 
             # Use patch to replace the built-in 'open' function with a mock
