@@ -1,7 +1,7 @@
-From 038bce6bf808ec9d082e96fec4184e060b3a85a9 Mon Sep 17 00:00:00 2001
+From e45320c61765b07f5d73f6c207f9f1d3b4d21721 Mon Sep 17 00:00:00 2001
 From: Stephen Sun <stephens@nvidia.com>
 Date: Mon, 28 Nov 2022 03:55:14 +0000
-Subject: [PATCH 4/4] Make system-health service starts after hw-management to
+Subject: [PATCH 3/3] Make system-health service starts after hw-management to
  avoid failures
 
 On SN2410, it can fail to read the file led_status_capability if it starts from ONIE
@@ -12,7 +12,7 @@ Signed-off-by: Stephen Sun <stephens@nvidia.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/debian/hw-management.hw-management.service b/debian/hw-management.hw-management.service
-index 1c25ffb..0fbd877 100755
+index 1c25ffb2..639bd3cd 100755
 --- a/debian/hw-management.hw-management.service
 +++ b/debian/hw-management.hw-management.service
 @@ -1,7 +1,7 @@
@@ -25,5 +25,5 @@ index 1c25ffb..0fbd877 100755
  [Service]
  Type=oneshot
 -- 
-2.20.1
+2.30.2
 

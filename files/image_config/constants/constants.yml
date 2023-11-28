@@ -6,6 +6,8 @@ constants:
     "4" : 64523
   bgp:
     traffic_shift_community: 8075:8847
+    internal_community: 11111:11111
+    internal_community_match_tag: 1002
     sentinel_community: 8075:8821
     families:
       - ipv4

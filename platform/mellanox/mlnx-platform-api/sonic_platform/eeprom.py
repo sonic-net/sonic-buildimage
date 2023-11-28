@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +41,7 @@ logger = Logger()
 #
 EEPROM_SYMLINK = "/var/run/hw-management/eeprom/vpd_info"
 platform_name = DeviceDataManager.get_platform_name()
-if platform_name and 'simx' in platform_name:
+if platform_name and 'simx' in platform_name and '4700' not in platform_name:
     if not os.path.exists(EEPROM_SYMLINK):
         if is_host():
             platform_path = os.path.join('/usr/share/sonic/device', platform_name)

@@ -30,6 +30,7 @@ declare -r VERBOSE_MIN="${VERBOSE_ERROR}"
 
 declare -r EXIT_SUCCESS="0"
 declare -r EXIT_FAILURE="1"
+declare -r FW_ALREADY_UPDATED_FAILURE="2"
 
 declare -r QUERY_CMD="mlxfwmanager --query"
 declare -r LIST_CONTENT_CMD="mlxfwmanager --list-content"
@@ -243,6 +244,22 @@ function RunFwUpdateCmd() {
     fi
 
     ERROR_CODE="$?"
+
+    if [[ "${ERROR_CODE}" == "${FW_ALREADY_UPDATED_FAILURE}" ]]; then
+        LogInfo "FW reactivation is required. Reactivating and updating FW ..."
+        local -r _MST_DEVICE="$(GetMstDevice)"
+        local -r _CMD="flint -d ${_MST_DEVICE} ir"
+        output=$(eval "${_CMD}")
+
+        if [[ "${VERBOSE_LEVEL}" -eq "${VERBOSE_MAX}" ]]; then
+            output=$(eval "${COMMAND}")
+        else
+            output=$(eval "${COMMAND}") >/dev/null 2>&1
+        fi
+    fi
+
+    ERROR_CODE="$?"
+
     if [[ "${ERROR_CODE}" != "${EXIT_SUCCESS}" ]]; then
         echo "${output}"
         failure_msg="${output#*Fail : }"

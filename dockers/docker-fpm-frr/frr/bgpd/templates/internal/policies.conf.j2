@@ -4,26 +4,56 @@
 !
 {% from "common/functions.conf.j2" import get_ipv4_loopback_address %}
 !
-route-map FROM_BGP_INTERNAL_PEER_V4 permit 100
-!
-route-map TO_BGP_INTERNAL_PEER_V4 permit 100
-!
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' %}
+route-map FROM_BGP_INTERNAL_PEER_V4 permit 1
+ set originator-id {{ get_ipv4_loopback_address(CONFIG_DB__LOOPBACK_INTERFACE, "Loopback4096") | ip }}
 !
 route-map FROM_BGP_INTERNAL_PEER_V6 permit 1
  set ipv6 next-hop prefer-global
  on-match next
 !
+route-map FROM_BGP_INTERNAL_PEER_V6 permit 2
+ set originator-id {{ get_ipv4_loopback_address(CONFIG_DB__LOOPBACK_INTERFACE, "Loopback4096") | ip }}
+{% elif CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
+bgp community-list standard DEVICE_INTERNAL_COMMUNITY permit {{ constants.bgp.internal_community }}
+!
+route-map FROM_BGP_INTERNAL_PEER_V4 permit 1
+  match community DEVICE_INTERNAL_COMMUNITY
+  set comm-list DEVICE_INTERNAL_COMMUNITY delete
+  set tag {{ constants.bgp.internal_community_match_tag }}
+!
+route-map FROM_BGP_INTERNAL_PEER_V6 permit 1
+ set ipv6 next-hop prefer-global
+ on-match next
+!
+route-map FROM_BGP_INTERNAL_PEER_V6 permit 2
+  match community DEVICE_INTERNAL_COMMUNITY
+  set comm-list DEVICE_INTERNAL_COMMUNITY delete
+  set tag {{ constants.bgp.internal_community_match_tag }}
+!
+route-map TO_BGP_INTERNAL_PEER_V4 permit 1
+  match ip address prefix-list PL_LoopbackV4
+  set community {{ constants.bgp.internal_community }}
+!
+route-map TO_BGP_INTERNAL_PEER_V6 permit 2
+  match ipv6 address prefix-list PL_LoopbackV6
+  set community {{ constants.bgp.internal_community }}
+!
+{% else %}
+route-map FROM_BGP_INTERNAL_PEER_V6 permit 1
+ set ipv6 next-hop prefer-global
+ on-match next
+!
+{% endif %}
+!
+route-map FROM_BGP_INTERNAL_PEER_V4 permit 100
+!
 route-map FROM_BGP_INTERNAL_PEER_V6 permit 100
+!
+route-map TO_BGP_INTERNAL_PEER_V4 permit 100
 !
 route-map TO_BGP_INTERNAL_PEER_V6 permit 100
 !
-{% if CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' %}
-route-map FROM_BGP_INTERNAL_PEER_V4 permit 2
- set originator-id {{ get_ipv4_loopback_address(CONFIG_DB__LOOPBACK_INTERFACE, "Loopback4096") | ip }}
-!
-route-map FROM_BGP_INTERNAL_PEER_V6 permit 2
- set originator-id {{ get_ipv4_loopback_address(CONFIG_DB__LOOPBACK_INTERFACE, "Loopback4096") | ip }}
-{% endif %}
 !
 ! end of template: bgpd/templates/internal/policies.conf.j2
 !

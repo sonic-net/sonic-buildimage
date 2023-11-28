@@ -339,7 +339,9 @@
                     "L4_SRC_PORT",
                     "INNER_DST_IP",
                     "INNER_SRC_IP"
-                ]
+                ],
+                "ecmp_hash_algorithm": "CRC",
+                "lag_hash_algorithm": "XOR"
             }
         },
         "DEVICE_METADATA": {

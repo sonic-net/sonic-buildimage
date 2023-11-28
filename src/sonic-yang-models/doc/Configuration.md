@@ -1194,7 +1194,7 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 
 ### Hash
 
-Generic hash allows user to configure which hash fields are suppose to be used by a hashing algorithm.
+Generic hash allows user to configure various aspects of hashing algorithm.  
 The configuration is applied globally for each ECMP and LAG on a switch.
 
 ***ECMP/LAG HASH***
@@ -1238,7 +1238,9 @@ The configuration is applied globally for each ECMP and LAG on a switch.
                 "INNER_SRC_IP",
                 "INNER_L4_DST_PORT",
                 "INNER_L4_SRC_PORT"
-            ]
+            ],
+            "ecmp_hash_algorithm": "CRC",
+            "lag_hash_algorithm": "CRC"
         }
     }
 }

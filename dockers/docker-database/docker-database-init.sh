@@ -17,6 +17,18 @@ then
     host_ip=127.0.0.1
 fi
 
+redis_port=6379
+
+if [[ $DATABASE_TYPE == "dpudb" ]]; then
+    host_ip="169.254.200.254"
+    if ! ip -4 -o addr | awk '{print $4}' | grep $host_ip; then
+        host_ip=127.0.0.1
+    fi
+    DPU_ID=`echo $DEV | tr -dc '0-9'`
+    redis_port=`expr 6381 + $DPU_ID`
+fi
+
+
 REDIS_DIR=/var/run/redis$NAMESPACE_ID
 mkdir -p $REDIS_DIR/sonic-db
 mkdir -p /etc/supervisor/conf.d/
@@ -24,7 +36,7 @@ mkdir -p /etc/supervisor/conf.d/
 if [ -f /etc/sonic/database_config$NAMESPACE_ID.json ]; then
     cp /etc/sonic/database_config$NAMESPACE_ID.json $REDIS_DIR/sonic-db/database_config.json
 else
-    HOST_IP=$host_ip j2 /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+    HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE j2 /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
 fi
 
 # on VoQ system, we only publish redis_chassis instance and CHASSIS_APP_DB when
@@ -59,7 +71,7 @@ if [[ $DATABASE_TYPE == "chassisdb" ]]; then
 fi
 
 # copy/generate the database_global.json file if this is global database service in multi asic platform.
-if [[ $NAMESPACE_ID == "" ]] && [[ $NAMESPACE_COUNT -gt 1 ]]
+if [[ $DATABASE_TYPE == "" ]] && [[ $NAMESPACE_COUNT -gt 1 || $NUM_DPU -gt 1 ]]
 then
     if [ -f /etc/sonic/database_global.json ]; then
         cp /etc/sonic/database_global.json $REDIS_DIR/sonic-db/database_global.json
