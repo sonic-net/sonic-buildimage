@@ -20,7 +20,9 @@
                         "L4_SRC_PORT",
                         "INNER_DST_IP",
                         "INNER_SRC_IP"
-                    ]
+                    ],
+                    "ecmp_hash_algorithm": "CRC",
+                    "lag_hash_algorithm": "XOR"
                 }
             }
         }
@@ -43,6 +45,24 @@
                     "lag_hash": [
                         "INVALID_VALUE"
                     ]
+                }
+            }
+        }
+    },
+    "SWITCH_HASH_INVALID_ECMP_HASH_ALGORITHM": {
+        "sonic-hash:sonic-hash": {
+            "sonic-hash:SWITCH_HASH": {
+                "sonic-hash:GLOBAL": {
+                    "ecmp_hash_algorithm": "INVALID_VALUE"
+                }
+            }
+        }
+    },
+    "SWITCH_HASH_INVALID_LAG_HASH_ALGORITHM": {
+        "sonic-hash:sonic-hash": {
+            "sonic-hash:SWITCH_HASH": {
+                "sonic-hash:GLOBAL": {
+                    "lag_hash_algorithm": "INVALID_VALUE"
                 }
             }
         }

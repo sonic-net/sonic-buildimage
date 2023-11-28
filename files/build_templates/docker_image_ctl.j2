@@ -58,7 +58,7 @@ function updateSyslogConf()
 }
 function ebtables_config()
 {
-    if [ "$DEV" ]; then
+    if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         # Install ebtables filter in namespaces on multi-asic.
         ip netns exec $NET_NS ebtables-restore < /etc/ebtables.filter.cfg
     else
@@ -169,7 +169,7 @@ function postStartAction()
 {%- if docker_container_name == "database" %}
     CHASSISDB_CONF="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
-    if [ "$DEV" ]; then
+    if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         # Enable the forwarding on eth0 interface in namespace.
         SYSCTL_NET_CONFIG="/etc/sysctl.d/sysctl-net.conf"
         docker exec -i database$DEV sed -i -e "s/^net.ipv4.conf.eth0.forwarding=0/net.ipv4.conf.eth0.forwarding=1/;
@@ -223,7 +223,7 @@ function postStartAction()
     # databases are not availbale until database container is ready.
     # also chassisdb doesn't support warm/fast reboot, its dump.rdb is deleted
     # at service startup time, nothing need to be done here.
-    if [ "$DATABASE_TYPE" != "chassisdb" ]; then
+    if [[ "$DATABASE_TYPE" != "chassisdb" ]]; then
         # Wait until supervisord and redis starts. This change is needed
         # because now database_config.json is jinja2 templated based
         # and by the time file gets generated if we do redis ping
@@ -503,7 +503,7 @@ start() {
     fi
     {%- endif %}
 
-    if [ -z "$DEV" ]; then
+    if [[ -z "$DEV" || $DATABASE_TYPE == "dpudb" ]]; then
         NET="host"
 
         # For Multi-ASIC platform we have to mount the redis paths for database instances running in different
@@ -528,6 +528,11 @@ start() {
             DB_OPT=$DB_OPT" --env DATABASE_TYPE=$DATABASE_TYPE"
         else
             DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis:rw "
+            DB_OPT=$DB_OPT" --env DATABASE_TYPE=$DATABASE_TYPE "
+            DB_OPT=$DB_OPT" --env NUM_DPU=$NUM_DPU "
+            if [[ "$DEV" ]]; then
+                DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
+            fi
         fi
         {%- endif %}
     else
@@ -557,6 +562,12 @@ start() {
         fi
     fi
 {%- endif %}
+
+    NAMESPACE_ID="$DEV"
+    if [[ $DATABASE_TYPE == "dpudb" ]]; then
+        NAMESPACE_ID=""
+    fi
+
 {%- if sonic_asic_platform == "mellanox" %}
     # TODO: Mellanox will remove the --tmpfs exception after SDK socket path changed in new SDK version
 {%- endif %}
@@ -630,9 +641,10 @@ start() {
 {%- if mount_default_tmpfs|default("n") == "y" %}
         --tmpfs /var/tmp \
 {%- endif %}
-        --env "NAMESPACE_ID"="$DEV" \
+        --env "NAMESPACE_ID"="$NAMESPACE_ID" \
         --env "NAMESPACE_PREFIX"="$NAMESPACE_PREFIX" \
-        --env "NAMESPACE_COUNT"=$NUM_ASIC \
+        --env "NAMESPACE_COUNT"="$NUM_ASIC" \
+        --env "DEV"="$DEV" \
         --env "CONTAINER_NAME"=$DOCKERNAME \
         --name=$DOCKERNAME \
 {%- if docker_container_name == "gbsyncd" %}
@@ -668,7 +680,7 @@ wait() {
 stop() {
     {%- if docker_container_name == "database" %}
     docker stop $DOCKERNAME
-    if [ "$DEV" ]; then
+    if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         ip netns delete "$NET_NS"
     fi
     {%- elif docker_container_name == "teamd" %}
@@ -684,7 +696,7 @@ stop() {
 kill() {
     {%- if docker_container_name == "database" %}
     docker kill $DOCKERNAME
-    if [ "$DEV" ]; then
+    if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         ip netns delete "$NET_NS"
     fi
     {%- else %}
@@ -701,11 +713,16 @@ if [ "$DEV" == "chassisdb" ]; then
       DOCKERNAME=$DOCKERNAME"-chassis"
       unset DEV
 fi
+
+if [[ "$DEV" == *"dpu"* ]]; then
+    DATABASE_TYPE="dpudb"
+fi
+
 {%- endif %}
 NAMESPACE_PREFIX="asic"
 DOCKERNAME=$DOCKERNAME$DEV
 CONTAINER_EXISTS="no"
-if [ "$DEV" ]; then
+if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
 
     SONIC_CFGGEN="sonic-cfggen -n $NET_NS"

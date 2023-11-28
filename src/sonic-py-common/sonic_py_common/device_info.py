@@ -45,6 +45,9 @@ CHASSIS_INFO_SERIAL_FIELD = 'serial'
 CHASSIS_INFO_MODEL_FIELD = 'model'
 CHASSIS_INFO_REV_FIELD = 'revision'
 
+# DPU constants
+DPU_NAME_PREFIX = "dpu"
+
 # Cacheable Objects
 sonic_ver_info = {}
 hw_info_dict = {}
@@ -841,3 +844,26 @@ def is_frontend_port_present_in_host():
         if not namespace_id:
             return False
     return True
+
+
+def get_num_dpus():
+    # Todo: we should use platform api to get the dpu number
+    # instead of rely on the platform env config.
+    num_dpus = 0
+    platform_env_conf_file_path = get_platform_env_conf_file_path()
+
+    # platform_env.conf file not present for platform
+    if platform_env_conf_file_path is None:
+        return num_dpus
+
+    # Else open the file check for keyword - num_dpu -
+    with open(platform_env_conf_file_path) as platform_env_conf_file:
+        for line in platform_env_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+               continue
+            if tokens[0].lower() == 'num_dpu':
+                num_dpus = tokens[1].strip()
+                break
+    return int(num_dpus)
+

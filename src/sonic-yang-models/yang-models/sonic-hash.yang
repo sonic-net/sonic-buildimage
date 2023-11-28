@@ -11,6 +11,10 @@ module sonic-hash {
 
     description "HASH YANG Module for SONiC OS";
 
+    revision 2023-09-25 {
+        description "Added hashing algorithm configuration";
+    }
+
     revision 2022-09-05 {
         description "First Revision";
     }
@@ -55,6 +59,16 @@ module sonic-hash {
                 leaf-list lag_hash  {
                     description "Hash fields for hashing packets going through LAG";
                     type hash:hash-field;
+                }
+
+                leaf ecmp_hash_algorithm {
+                    description "Hash algorithm for hashing packets going through ECMP";
+                    type stypes:hash-algorithm;
+                }
+
+                leaf lag_hash_algorithm {
+                    description "Hash algorithm for hashing packets going through LAG";
+                    type stypes:hash-algorithm;
                 }
 
             }

@@ -334,6 +334,19 @@ module sonic-types {
         }
     }
 
+    typedef hash-algorithm {
+        description "Represents hash algorithm";
+        type enumeration {
+            enum CRC;
+            enum XOR;
+            enum RANDOM;
+            enum CRC_32LO;
+            enum CRC_32HI;
+            enum CRC_CCITT;
+            enum CRC_XOR;
+        }
+    }
+
     typedef timezone-name-type {
         type string;
         description

@@ -70,6 +70,13 @@ DEVICE_DATA = {
             }
         }
     },
+    'x86_64-mlnx_msn4700_simx-r0': {
+        'thermal': {
+            "capability": {
+                "cpu_pack": False
+            }
+        }
+    },
     'x86_64-mlnx_msn3700-r0': {
     },
     'x86_64-mlnx_msn3700c-r0': {
