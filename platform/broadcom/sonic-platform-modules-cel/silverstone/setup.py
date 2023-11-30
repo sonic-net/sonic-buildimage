@@ -1,8 +1,5 @@
 from setuptools import setup
 
-DEVICE_NAME = 'celestica'
-HW_SKU = 'x86_64-cel_silverstone-r0'
-
 setup(
     name='sonic-platform',
     version='1.0',
@@ -17,7 +14,7 @@ setup(
         'sonic_platform',
     ],
     package_dir={
-        'sonic_platform': '../../../../device/{}/{}/sonic_platform'.format(DEVICE_NAME, HW_SKU)},
+        'sonic_platform': 'sonic_platform'},
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Plugins',
