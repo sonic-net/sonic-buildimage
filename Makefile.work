@@ -69,6 +69,7 @@ USER := $(shell id -un)
 PWD := $(shell pwd)
 USER_LC := $(shell echo $(USER) | tr A-Z a-z)
 DOCKER_MACHINE := $(shell docker run --rm debian:buster uname -m)
+HOST_DOCKERD_GID := $(shell getent group docker | cut -d : -f3)
 
 comma := ,
 
@@ -121,7 +122,9 @@ else
 TARGET_BOOTLOADER = uboot
 endif
 
-ifeq ($(BLDENV), bullseye)
+ifeq ($(BLDENV), bookworm)
+SLAVE_DIR = sonic-slave-bookworm
+else ifeq ($(BLDENV), bullseye)
 SLAVE_DIR = sonic-slave-bullseye
 else ifeq ($(BLDENV), buster)
 SLAVE_DIR = sonic-slave-buster
@@ -182,6 +185,12 @@ DOCKER_ROOT = $(PWD)/fsroot.docker.$(BLDENV)
 ifeq ($(PLATFORM_ARCH),armhf)
 INCLUDE_FIPS := n
 ENABLE_FIPS := n
+endif
+
+# FIPS not yet available on Bookworm
+ifeq ($(BLDENV),bookworm)
+$(warning FIPS support not yet available on Bookworm)
+INCLUDE_FIPS := n
 endif
 
 ifeq ($(INCLUDE_FIPS), n)
@@ -381,7 +390,7 @@ endif
 
 ifeq ($(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD), y)
 ifneq ($(MULTIARCH_QEMU_ENVIRON), y)
-    DOCKER_RUN += -v /var/run/docker.sock:/var/run/docker.sock
+    DOCKER_RUN += -v /var/run/docker.sock:/var/run/docker.sock --group-add $(HOST_DOCKERD_GID)
 endif
 endif
 

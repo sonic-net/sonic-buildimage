@@ -78,20 +78,21 @@ class ThermalUtil(object):
                 self.logger.error('GET. unable to open file: %s', str(e))
                 return None
 
-        content = val_file.readline().rstrip()
+            content = val_file.readline().rstrip()
 
-        if content == '':
-            self.logger.debug('GET. content is NULL. device_path:%s', device_path)
+            if content == '':
+                self.logger.debug('GET. content is NULL. device_path:%s', device_path)
             return None
 
-        try:
-		    val_file.close()
-        except:
-            self.logger.debug('GET. unable to close file. device_path:%s', device_path)
-            return None
+            try:
+                val_file.close()
+            except:
+                self.logger.debug('GET. unable to close file. device_path:%s', device_path)
+                return None
       
-        return int(content)
+            return int(content)
 
+        return 0
 
     def get_num_thermals(self):
         return self.THERMAL_NUM_ON_MAIN_BROAD
@@ -116,13 +117,3 @@ class ThermalUtil(object):
     def get_thermal_temp(self):
         return (self._get_thermal_node_val(self.THERMAL_NUM_1_IDX) + self._get_thermal_node_val(self.THERMAL_NUM_2_IDX) +self._get_thermal_node_val(self.THERMAL_NUM_3_IDX))
 
-#def main():
-#    thermal = ThermalUtil()
-#
-#    print 'get_size_node_map : %d' % thermal.get_size_node_map()
-#    print 'get_size_path_map : %d' % thermal.get_size_path_map()
-#    for x in range(thermal.get_idx_thermal_start(), thermal.get_num_thermals()+1):
-#        print thermal.get_thermal_to_device_path(x)
-#
-#if __name__ == '__main__':
-#    main()

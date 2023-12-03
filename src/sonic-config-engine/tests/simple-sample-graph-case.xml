@@ -138,6 +138,7 @@
           <VlanID>1000</VlanID>
           <Tag>1000</Tag>
           <Subnets>192.168.0.0/27</Subnets>
+          <SecondarySubnets>192.168.1.0/27</SecondarySubnets>
           <MacAddress>00:aa:bb:cc:dd:ee</MacAddress>
         </VlanInterface>
         <VlanInterface>
@@ -175,6 +176,11 @@
           <Name i:nil="true"/>
           <AttachTo>ab1</AttachTo>
           <Prefix>192.168.0.1/27</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>ab1</AttachTo>
+          <Prefix>192.168.1.1/27</Prefix>
         </IPInterface>
       </IPInterfaces>
       <DataAcls/>

@@ -1,0 +1,26 @@
+{
+    "DHCP_SERVER_IPV4_LEASE|Vlan1000|10:70:fd:b6:13:00": {
+        "lease_start": "1677640581",
+        "lease_end": "1677641481",
+        "ip": "192.168.0.1"
+    },
+    "DHCP_SERVER_IPV4_LEASE|Vlan1000|10:70:fd:b6:13:01": {
+        "lease_start": "1677640581",
+        "lease_end": "1677641481",
+        "ip": "192.168.0.2"
+    },
+    "DHCP_SERVER_IPV4_LEASE|Vlan1001|10:70:fd:b6:13:02": {
+        "lease_start": "1677640581",
+        "lease_end": "1677641481",
+        "ip": "192.168.0.3"
+    },
+    "DHCP_SERVER_IPV4_SERVER_IP|eth0": {
+        "ip": "240.127.1.2"
+    },
+    "FDB_TABLE|Vlan1000:10:70:fd:b6:13:00": {
+        "port": "Ethernet10"
+    },
+    "FDB_TABLE|Vlan1000:10:70:fd:b6:13:01": {
+        "port": "Ethernet11"
+    }
+}

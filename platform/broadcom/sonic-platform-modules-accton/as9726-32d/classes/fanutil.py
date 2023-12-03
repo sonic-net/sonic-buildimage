@@ -56,7 +56,7 @@ class FanUtil(object):
 #fan1_fault
 #fan1_present
 
- #(FAN_NUM_2_IDX, FAN_NODE_DUTY_IDX_OF_MAP): 'fan2_duty_cycle_percentage',
+
     _fan_device_node_mapping = {
            (FAN_NUM_1_IDX, FAN_NODE_FAULT_IDX_OF_MAP): 'fan1_fault',           
            (FAN_NUM_1_IDX, FAN_NODE_DIR_IDX_OF_MAP): 'fan1_direction',           
@@ -104,7 +104,7 @@ class FanUtil(object):
             return None
 
         try:
-		    val_file.close()
+            val_file.close()
         except IOError:
             logging.debug('GET. unable to close file. device_path:%s', device_path)
             return None
@@ -135,7 +135,7 @@ class FanUtil(object):
         val_file.write(content)
 
         try:
-		    val_file.close()
+            val_file.close()
         except BaseException:
             logging.debug('GET. unable to close file. device_path:%s', device_path)
             return None
@@ -178,7 +178,7 @@ class FanUtil(object):
         return self._get_fan_node_val(fan_num, self.FAN_NODE_DIR_IDX_OF_MAP)
 
     def get_fan_duty_cycle(self):
-        #duty_path = self.FAN_DUTY_PATH
+
         try:
             val_file = open(self.FAN_DUTY_PATH)
         except IOError as e:

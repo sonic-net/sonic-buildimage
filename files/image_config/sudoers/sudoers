@@ -11,6 +11,7 @@ Defaults        env_reset
 Defaults        secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Defaults        env_keep += "SONIC_CLI_IFACE_MODE"
 Defaults        env_keep += "VTYSH_PAGER"
+Defaults        lecture = once
 Defaults        lecture_file = /etc/sudoers.lecture
 
 # Host alias specification

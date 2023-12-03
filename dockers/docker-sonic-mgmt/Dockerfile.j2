@@ -261,6 +261,7 @@ WORKDIR /var/$user
 # Add az symlink for backwards compatibility
 RUN mkdir bin && ln -s /usr/bin/az bin/az
 
+{% if legacy == 'y' or legacy == '1' %}
 RUN python3 -m venv --system-site-packages env-python3
 
 # Activating a virtualenv. The virtualenv automatically works for RUN, ENV and CMD.
@@ -341,12 +342,13 @@ RUN python3 -m pip install aiohttp \
 
 # Deactivating a virtualenv
 ENV PATH="$BACKUP_OF_PATH"
+{% endif %}
 
 USER root
 WORKDIR /azp
 COPY start.sh \
      0001-Fix-getattr-AttributeError-in-multi-thread-scenario.patch \
-     ./ 
+     ./
 RUN chmod +x start.sh \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && ln -sf `which pip3` /usr/bin/pip \

@@ -131,6 +131,7 @@ pip3 install --user j2cli
   system to allow running the 'docker' command without 'sudo':
   * Add current user to the docker group: `sudo gpasswd -a ${USER} docker`
   * Log out and log back in so that your group membership is re-evaluated
+  * If you are using Linux kernel 5.3 or newer, then you must use Docker 20.10.10 or newer. This is because older Docker versions did not allow the `clone3` syscall, which is now used in Bookworm.
 
 > Note: If a previous installation of Docker using snap was present on the
 > system, remove it and also remove docker from snap before reinstallating docker.
@@ -186,9 +187,6 @@ The supported ASIC vendors are:
 * PLATFORM=vs
 
 ## Usage for ARM Architecture
-
-ARM build has dependency in docker version 18.
-If docker version is 19, downgrade to 18 with:
 
 ```shell
 sudo apt-get install --allow-downgrades -y docker-ce=5:18.09.0~3-0~ubuntu-xenial

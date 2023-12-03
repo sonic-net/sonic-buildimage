@@ -4,6 +4,7 @@ NOJESSIE ?= 1
 NOSTRETCH ?= 1
 NOBUSTER ?= 0
 NOBULLSEYE ?= 0
+NOBOOKWORM ?= 0
 
 override Q := @
 ifeq ($(QUIET),n)
@@ -29,6 +30,10 @@ ifeq ($(NOBULLSEYE),0)
 BUILD_BULLSEYE=1
 endif
 
+ifeq ($(NOBOOKWORM),0)
+BUILD_BOOKWORM=1
+endif
+
 PLATFORM_PATH := platform/$(if $(PLATFORM),$(PLATFORM),$(CONFIGURED_PLATFORM))
 PLATFORM_CHECKOUT := platform/checkout
 PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM).ini
@@ -47,9 +52,12 @@ ifeq ($(NOBUSTER), 0)
 	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=buster -f Makefile.work buster
 endif
 ifeq ($(NOBULLSEYE), 0)
-	$(MAKE_WITH_RETRY) BLDENV=bullseye -f Makefile.work $@
+	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=bullseye -f Makefile.work bullseye
 endif
-	BLDENV=bullseye $(MAKE) -f Makefile.work docker-cleanup
+ifeq ($(NOBOOKWORM), 0)
+	$(MAKE_WITH_RETRY) BLDENV=bookworm -f Makefile.work $@
+endif
+	BLDENV=bookworm $(MAKE) -f Makefile.work docker-cleanup
 
 jessie:
 	@echo "+++ Making $@ +++"
@@ -69,6 +77,12 @@ ifeq ($(NOBUSTER), 0)
 	$(MAKE) -f Makefile.work buster
 endif
 
+bullseye:
+	@echo "+++ Making $@ +++"
+ifeq ($(NOBUSTER), 0)
+	$(MAKE) -f Makefile.work bullseye
+endif
+
 init:
 	@echo "+++ Making $@ +++"
 	$(MAKE) -f Makefile.work $@
@@ -82,6 +96,7 @@ define make_work
 	$(if $(BUILD_STRETCH),BLDENV=stretch $(MAKE) -f Makefile.work $@,)
 	$(if $(BUILD_BUSTER),BLDENV=buster $(MAKE) -f Makefile.work $@,)
 	$(if $(BUILD_BULLSEYE),BLDENV=bullseye $(MAKE) -f Makefile.work $@,)
+	$(if $(BUILD_BOOKWORM),BLDENV=bookworm $(MAKE) -f Makefile.work $@,)
 endef
 
 .PHONY: $(PLATFORM_PATH)

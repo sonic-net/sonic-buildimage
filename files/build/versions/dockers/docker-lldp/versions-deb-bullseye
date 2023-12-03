@@ -3,7 +3,7 @@ gdbserver==10.1-1.7
 libbabeltrace1==1.5.8-1+b3
 libboost-regex1.74.0==1.74.0-9
 libcbor0==0.5.0+dfsg-2
-libcurl3-gnutls==7.74.0-1.3+deb11u7
+libcurl3-gnutls==7.74.0-1.3+deb11u10
 libdebuginfod1==0.183-1
 libdw1==0.183-1
 libedit2==3.1-20191231-2+b1
@@ -24,9 +24,9 @@ libsource-highlight4v5==3.1.9-3+b1
 libswsscommon-dbgsym==1.0.0
 libunwind8==1.3.2-2
 libxml2==2.9.10+dfsg-6.7+deb11u4
-lldpd==1.0.4-1
-lldpd-dbgsym==1.0.4-1
-openssh-client==1:8.4p1-5+deb11u1
+lldpd==1.0.16-1+deb12u1
+lldpd-dbgsym==1.0.16-1+deb12u1
+openssh-client==1:8.4p1-5+deb11u2
 pci.ids==0.0~2021.02.08-1
 sshpass==1.09-1+b1
 strace==5.10-1

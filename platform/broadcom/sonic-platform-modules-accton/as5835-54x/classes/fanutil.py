@@ -174,14 +174,10 @@ class FanUtil(object):
     def get_fan_fault(self, fan_num):
         return self._get_fan_node_val(fan_num, self.FAN_NODE_FAULT_IDX_OF_MAP)
 
-    #def get_fan_speed(self, fan_num):
-    #    return self._get_fan_node_val(fan_num, self.FAN_NODE_SPEED_IDX_OF_MAP)
-
     def get_fan_dir(self, fan_num):
         return self._get_fan_node_val(fan_num, self.FAN_NODE_DIR_IDX_OF_MAP)
 
     def get_fan_duty_cycle(self):
-        #duty_path = self.FAN_DUTY_PATH
         try:
             val_file = open(self.FAN_DUTY_PATH)
         except IOError as e:
@@ -203,8 +199,6 @@ class FanUtil(object):
         fan_file.close()
         return True
 
-    #def get_fanr_fault(self, fan_num):
-    #    return self._get_fan_node_val(fan_num, self.FANR_NODE_FAULT_IDX_OF_MAP)
 
     def get_fanr_speed(self, fan_num):
         return self._get_fan_node_val(fan_num, self.FANR_NODE_SPEED_IDX_OF_MAP)
@@ -217,10 +211,6 @@ class FanUtil(object):
         if self.get_fan_fault(fan_num) is not None and self.get_fan_fault(fan_num) > 0:
             logging.debug('GET. FAN fault. fan_num, %d', fan_num)
             return False
-
-        #if self.get_fanr_fault(fan_num) is not None and self.get_fanr_fault(fan_num) > 0:
-        #    logging.debug('GET. FANR fault. fan_num, %d', fan_num)
-        #   return False
 
         return True
 

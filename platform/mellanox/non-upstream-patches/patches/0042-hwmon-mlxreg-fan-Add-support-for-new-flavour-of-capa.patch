@@ -1,0 +1,65 @@
+From bb46d45ce13c8faf9c2ab57b945c3a3adc587918 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 23 Jul 2023 06:26:09 +0000
+Subject: [PATCH backport 6.1.42 42/85] hwmon: (mlxreg-fan) Add support for new
+ flavour of capability register
+
+FAN platform data is common across the various systems, while fan
+driver should be able to apply only the fan instances relevant
+to specific system.
+
+For example, platform data might contain descriptions for fan1,
+fan2, ..., fan{n}, while some systems equipped with all 'n' fans,
+others with less.
+Also, on some systems fan drawer can be equipped with several
+tachometers and on others only with one.
+
+For detection of the real number of equipped drawers and tachometers
+special capability registers are used.
+These registers used to indicate presence of drawers and tachometers
+through the bitmap.
+
+For some new big modular systems this register will provide presence
+data by counter.
+
+Use slot parameter to distinct whether capability register contains
+bitmask or counter.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/hwmon/mlxreg-fan.c | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
+index 96017cc8da7e..dad94d2892b2 100644
+--- a/drivers/hwmon/mlxreg-fan.c
++++ b/drivers/hwmon/mlxreg-fan.c
+@@ -390,7 +390,7 @@ static int mlxreg_fan_connect_verify(struct mlxreg_fan *fan,
+ 		return err;
+ 	}
+ 
+-	return !!(regval & data->bit);
++	return data->slot ? (data->slot <= regval ? 1 : 0) : !!(regval & data->bit);
+ }
+ 
+ static int mlxreg_pwm_connect_verify(struct mlxreg_fan *fan,
+@@ -527,7 +527,15 @@ static int mlxreg_fan_config(struct mlxreg_fan *fan,
+ 			return err;
+ 		}
+ 
+-		drwr_avail = hweight32(regval);
++		/*
++		 * The number of drawers could be specified in registers by counters for newer
++		 * systems, or by bitmasks for older systems. In case the data is provided by
++		 * counter, it is indicated through 'version' field.
++		 */
++		if (pdata->version)
++			drwr_avail = regval;
++		else
++			drwr_avail = hweight32(regval);
+ 		if (!tacho_avail || !drwr_avail || tacho_avail < drwr_avail) {
+ 			dev_err(fan->dev, "Configuration is invalid: drawers num %d tachos num %d\n",
+ 				drwr_avail, tacho_avail);
+-- 
+2.20.1
+

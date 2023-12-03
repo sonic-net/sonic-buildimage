@@ -20,10 +20,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf lldpd-$(LLDPD_VERSION)
 
 	# download debian LLDPDD
-	wget -NO "$(DSC_FILE)" $(DSC_FILE_URL)
-	wget -NO "$(ORIG_FILE)" $(ORIG_FILE_URL)
-	wget -NO "$(DEBIAN_FILE)" $(DEBIAN_FILE_URL)
-	dpkg-source -x lldpd_$(LLDPD_VERSION_FULL).dsc
+	dget $(DSC_FILE_URL)
 
 	pushd lldpd-$(LLDPD_VERSION)
 	git init

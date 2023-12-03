@@ -27,3 +27,5 @@ $(DOCKER_ACMS)_RUN_OPT += -v /etc/sonic/credentials:/etc/sonic/credentials:rw
 $(DOCKER_ACMS)_RUN_OPT += -v /var/opt/msft:/var/opt/msft:rw
 
 $(DOCKER_ACMS)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
+
+SONIC_BULLSEYE_DOCKERS += $(DOCKER_ACMS)

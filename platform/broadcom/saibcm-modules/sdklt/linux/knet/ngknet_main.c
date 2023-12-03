@@ -1430,7 +1430,7 @@ ngknet_set_mac_address(struct net_device *ndev, void *addr)
     }
 
     netdev_info(ndev, "Setting new MAC address\n");
-    memcpy(ndev->dev_addr, ((struct sockaddr *)addr)->sa_data, ndev->addr_len);
+    eth_hw_addr_set(ndev, ((struct sockaddr *)addr)->sa_data);
 
     return 0;
 }
@@ -1702,7 +1702,7 @@ ngknet_ndev_init(ngknet_netif_t *netif, struct net_device **nd)
         ngknet_dev_mac[5]++;
         ma = ngknet_dev_mac;
     }
-    memcpy(ndev->dev_addr, ma, ETH_ALEN);
+    eth_hw_addr_set(ndev, ma);
 
     /* Initialize the device features */
     ndev->hw_features = NETIF_F_RXCSUM |
@@ -1916,7 +1916,7 @@ ngknet_dev_probe(int dn, ngknet_netif_t *netif)
             priv_hdl[hdl->unit][hdl->chan].hdl = hdl;
             hdl->priv = &priv_hdl[hdl->unit][hdl->chan];
             netif_napi_add(ndev, (struct napi_struct *)hdl->priv,
-                           ngknet_poll, pdev->ctrl.budget);
+                           ngknet_poll);
             if (pdev->flags & PDMA_GROUP_INTR) {
                 break;
             }

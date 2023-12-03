@@ -82,7 +82,7 @@ class SDKAction(Action):
         major_kernel_path = os.path.join(KERNEL_BACKPORTS, "{}.{}".format(kernel, major))
 
         # if the k_dir with actual minor doesn't exit, use the closest minor version
-        for minor_i in range(minor_int, 0, -1):
+        for minor_i in range(minor_int, -1, -1):
             path = os.path.join(major_kernel_path, "{}.{}.{}".format(kernel, major, minor_i))
             if os.path.exists(os.path.join(self.args.patches, path)):
                 minor = str(minor_i)
@@ -137,6 +137,18 @@ class SDKAction(Action):
         Data.new_patches = FileHandler.read_dir(patches_path, "*.patch")
         Data.new_patches.sort()
 
+    def cleanup_old_patches(self):
+        patches_del = copy.deepcopy(Data.old_patches)
+        for patch in Data.new_patches:
+            if patch in Data.old_patches:
+                patches_del.remove(patch)
+        print(f" -> Patches to be removed are : {patches_del}")
+        for patch in patches_del:
+            file_n = os.path.join(self.args.build_root, os.path.join(SLK_PATCH_LOC, patch))
+            if os.path.exists(file_n):
+                print(f"{file_n} is deleted")
+                os.remove(file_n)
+
     def refresh_markers(self):
         print("-> INFO Refreshing Markers ")
         (Data.i_sdk_start, Data.i_sdk_end) = FileHandler.find_marker_indices(Data.old_series, SDK_MARKER)
@@ -187,6 +199,7 @@ class SDKAction(Action):
         self.refresh_markers()
         self.add_new_patch_series()
         self.process_update()
+        self.cleanup_old_patches()
         patch_table = self.fetch_patch_table(os.path.join(self.args.patches, Data.k_dir))
         slk_msg = self.create_commit_msg(patch_table)
         if self.args.slk_msg:

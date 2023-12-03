@@ -62,7 +62,8 @@ MODULE_PARM_DESC(poll_interval, "Time interval for data polling, in unit of seco
 #define CHASSIS_LED_COUNT           (2)
 #define CHASSIS_PSU_VOUT_COUNT      (1)    /*V output only.*/
 #define CHASSIS_PSU_VOUT_INDEX      (1)    /*V output start index.*/
-
+#define MAX_MODEL_NAME               21
+#define MAX_SERIAL_NUMBER            19
 
 #define ATTR_ALLOC_EXTRA	        1   /*For last attribute which is NUll.*/
 #define ATTR_NAME_SIZE		        24
@@ -102,6 +103,14 @@ enum sensor_type_e {
     SENSOR_TYPE_PSU2,
     SENSOR_TYPE_PSU3,
     SENSOR_TYPE_PSU4,
+    SENSOR_TYPE_PSU1_MODEL,
+    SENSOR_TYPE_PSU2_MODEL,
+    SENSOR_TYPE_PSU3_MODEL,
+    SENSOR_TYPE_PSU4_MODEL,
+    SENSOR_TYPE_PSU1_SERIAL,
+    SENSOR_TYPE_PSU2_SERIAL,
+    SENSOR_TYPE_PSU3_SERIAL,
+    SENSOR_TYPE_PSU4_SERIAL,
     SENSOR_TYPE_MAX,
 };
 
@@ -113,6 +122,14 @@ enum sysfs_attributes_index {
     INDEX_PSU2_START        = SENSOR_TYPE_PSU2      *ATTR_TYPE_INDEX_GAP,
     INDEX_PSU3_START        = SENSOR_TYPE_PSU3      *ATTR_TYPE_INDEX_GAP,
     INDEX_PSU4_START        = SENSOR_TYPE_PSU4      *ATTR_TYPE_INDEX_GAP,
+    INDEX_PSU1_MODEL        = SENSOR_TYPE_PSU1_MODEL      *ATTR_TYPE_INDEX_GAP,
+    INDEX_PSU2_MODEL        = SENSOR_TYPE_PSU2_MODEL      *ATTR_TYPE_INDEX_GAP,
+    INDEX_PSU3_MODEL        = SENSOR_TYPE_PSU3_MODEL      *ATTR_TYPE_INDEX_GAP,
+    INDEX_PSU4_MODEL        = SENSOR_TYPE_PSU4_MODEL      *ATTR_TYPE_INDEX_GAP,
+    INDEX_PSU1_SERIAL       = SENSOR_TYPE_PSU1_SERIAL      *ATTR_TYPE_INDEX_GAP,
+    INDEX_PSU2_SERIAL       = SENSOR_TYPE_PSU2_SERIAL      *ATTR_TYPE_INDEX_GAP,
+    INDEX_PSU3_SERIAL       = SENSOR_TYPE_PSU3_SERIAL      *ATTR_TYPE_INDEX_GAP,
+    INDEX_PSU4_SERIAL       = SENSOR_TYPE_PSU4_SERIAL      *ATTR_TYPE_INDEX_GAP,
     INDEX_NAME              = SENSOR_TYPE_MAX       *ATTR_TYPE_INDEX_GAP,
 };
 
@@ -123,6 +140,9 @@ enum sysfs_attributes_index {
 #define PMBUS_READ_IOUT			0x8C
 #define PMBUS_READ_POUT			0x96
 #define PMBUS_READ_PIN			0x97
+#define PMBUS_READ_FAN			0x90
+#define PMBUS_READ_TEMP			0x8D
+
 
 #define PMBUS_REG_START  PMBUS_READ_VIN
 #define PMBUS_REG_END    PMBUS_READ_PIN
@@ -134,6 +154,8 @@ enum psu_data_e {
     PSU_DATA_IOUT,
     PSU_DATA_PIN,
     PSU_DATA_POUT,
+    PSU_DATA_FAN,
+    PSU_DATA_TEMP,
     PSU_DATA_MAX,
 };
 
@@ -147,6 +169,8 @@ struct pmbus_reg_t {
     [PSU_DATA_IOUT] = {PMBUS_READ_IOUT, false},
     [PSU_DATA_PIN ] = {PMBUS_READ_PIN, true},
     [PSU_DATA_POUT] = {PMBUS_READ_POUT, true},
+    [PSU_DATA_FAN] =  {PMBUS_READ_FAN, false},
+    [PSU_DATA_TEMP] = {PMBUS_READ_TEMP, false},
 };
 
 struct sensor_data {
@@ -154,6 +178,8 @@ struct sensor_data {
     int fan_rpm[MAX_FAN_COUNT];
     int fan_rpm_dn[MAX_FAN_COUNT];
     int psu_data [MAX_PSU_COUNT][PSU_DATA_MAX];
+    int psu_model [MAX_PSU_COUNT][MAX_MODEL_NAME];
+    int psu_serial [MAX_PSU_COUNT][MAX_SERIAL_NUMBER];
     int led_bright[CHASSIS_LED_COUNT];
 };
 
@@ -225,6 +251,10 @@ static struct attr_pattern psu##index##_curr =  {CHASSIS_PSU_CHAR_COUNT, \
 CHASSIS_PSU_CHAR_COUNT*index, "curr","_input", S_IRUGO, _attr_show, NULL}; \
 static struct attr_pattern psu##index##_pwr =  {CHASSIS_PSU_CHAR_COUNT, \
 CHASSIS_PSU_CHAR_COUNT*index, "power","_input", S_IRUGO, _attr_show, NULL}; \
+static struct attr_pattern psu##index##_fan_speed =  {1, \
+1*index, "psu","_fan_speed", S_IRUGO, _attr_show, NULL}; \
+static struct attr_pattern psu##index##_temp_input =  {1, \
+1*index, "psu","_temp_input", S_IRUGO, _attr_show, NULL}; \
 static struct attr_pattern psu##index##_vmax =  {CHASSIS_PSU_VOUT_COUNT, \
 CHASSIS_PSU_CHAR_COUNT*index + 1, "in","_max", S_IRUGO, show_psu_vout_max, NULL};\
 static struct attr_pattern psu##index##_vmin =  {CHASSIS_PSU_VOUT_COUNT, \
@@ -232,7 +262,21 @@ CHASSIS_PSU_CHAR_COUNT*index + 1, "in","_min", S_IRUGO, show_psu_vout_min, NULL}
 
 #define DECLARE_PSU_ATTR(index) \
     &psu##index##_vin, &psu##index##_curr, &psu##index##_pwr, \
-    &psu##index##_vmax, &psu##index##_vmin
+    &psu##index##_fan_speed, &psu##index##_temp_input ,&psu##index##_vmax, &psu##index##_vmin
+
+#define DECLARE_PSU_MODEL_NAME_SENSOR_DEVICE_ATTR(index) \
+static struct attr_pattern psu##index##_model_name =  {1, \
+1*index, "psu","_model_name", S_IRUGO, _attr_show, NULL};
+
+#define DECLARE_PSU_MODEL_NAME_ATTR(index) \
+    &psu##index##_model_name
+    
+#define DECLARE_PSU_SERIAL_NUMBER_SENSOR_DEVICE_ATTR(index) \
+static struct attr_pattern psu##index##_serial_name =  {1, \
+1*index, "psu","_serial_num", S_IRUGO, _attr_show, NULL};
+
+#define DECLARE_PSU_SERIAL_NUMBER_ATTR(index) \
+    &psu##index##_serial_name
 
 
 DECLARE_PSU_SENSOR_DEVICE_ATTR(0);
@@ -240,6 +284,15 @@ DECLARE_PSU_SENSOR_DEVICE_ATTR(1);
 DECLARE_PSU_SENSOR_DEVICE_ATTR(2);
 DECLARE_PSU_SENSOR_DEVICE_ATTR(3);
 
+DECLARE_PSU_MODEL_NAME_SENSOR_DEVICE_ATTR(0);
+DECLARE_PSU_MODEL_NAME_SENSOR_DEVICE_ATTR(1);
+DECLARE_PSU_MODEL_NAME_SENSOR_DEVICE_ATTR(2);
+DECLARE_PSU_MODEL_NAME_SENSOR_DEVICE_ATTR(3);
+
+DECLARE_PSU_SERIAL_NUMBER_SENSOR_DEVICE_ATTR(0);
+DECLARE_PSU_SERIAL_NUMBER_SENSOR_DEVICE_ATTR(1);
+DECLARE_PSU_SERIAL_NUMBER_SENSOR_DEVICE_ATTR(2);
+DECLARE_PSU_SERIAL_NUMBER_SENSOR_DEVICE_ATTR(3);
 
 
 static char tty_cmd[SENSOR_TYPE_MAX][TTY_CMD_MAX_LEN] = {
@@ -259,6 +312,14 @@ static char tty_cmd[SENSOR_TYPE_MAX][TTY_CMD_MAX_LEN] = {
     "i2cdump -y -f -r "\
     __stringify(PMBUS_REG_START)"-" __stringify(PMBUS_REG_END)\
     " 56 0x58 w\r",
+    "i2cdump -y -f 49 0x59 s 0x9a|tail -n +2|cut -c56-\r",    
+    "i2cdump -y -f 48 0x58 s 0x9a|tail -n +2|cut -c56-\r",
+    "i2cdump -y -f 57 0x59 s 0x9a|tail -n +2|cut -c56-\r",
+    "i2cdump -y -f 56 0x58 s 0x9a|tail -n +2|cut -c56-\r",
+    "i2cdump -y -f 49 0x59 s 0x9e|tail -n +2|cut -c56-\r",
+    "i2cdump -y -f 48 0x58 s 0x9e|tail -n +2|cut -c56-\r",
+    "i2cdump -y -f 57 0x59 s 0x9e|tail -n +2|cut -c56-\r",
+    "i2cdump -y -f 56 0x58 s 0x9e|tail -n +2|cut -c56-\r",
 };
 
 static struct attr_pattern temp_in =
@@ -305,6 +366,31 @@ struct sensor_set model_ssets[SENSOR_TYPE_MAX] =
     {   PSU_DATA_MAX, INDEX_PSU4_START, tty_cmd[SENSOR_TYPE_PSU4],
         TTY_PMBUS_INTERVAL, {DECLARE_PSU_ATTR(3), NULL},
     },
+    {   1, INDEX_PSU1_MODEL, tty_cmd[SENSOR_TYPE_PSU1_MODEL],
+        TTY_PMBUS_INTERVAL, {DECLARE_PSU_MODEL_NAME_ATTR(0), NULL},        
+    },
+    {   1, INDEX_PSU2_MODEL, tty_cmd[SENSOR_TYPE_PSU2_MODEL],
+        TTY_PMBUS_INTERVAL, {DECLARE_PSU_MODEL_NAME_ATTR(1), NULL},        
+    },
+    {   1, INDEX_PSU3_MODEL, tty_cmd[SENSOR_TYPE_PSU3_MODEL],
+        TTY_PMBUS_INTERVAL, {DECLARE_PSU_MODEL_NAME_ATTR(2), NULL},
+    },
+    {   1, INDEX_PSU4_MODEL, tty_cmd[SENSOR_TYPE_PSU4_MODEL],
+        TTY_PMBUS_INTERVAL, {DECLARE_PSU_MODEL_NAME_ATTR(3), NULL},        
+    },
+     {   1, INDEX_PSU1_SERIAL, tty_cmd[SENSOR_TYPE_PSU1_SERIAL],
+        TTY_PMBUS_INTERVAL, {DECLARE_PSU_SERIAL_NUMBER_ATTR(0), NULL},        
+    },
+    {   1, INDEX_PSU2_SERIAL, tty_cmd[SENSOR_TYPE_PSU2_SERIAL],
+        TTY_PMBUS_INTERVAL, {DECLARE_PSU_SERIAL_NUMBER_ATTR(1), NULL},        
+    },
+    {   1, INDEX_PSU3_SERIAL, tty_cmd[SENSOR_TYPE_PSU3_SERIAL],
+        TTY_PMBUS_INTERVAL, {DECLARE_PSU_SERIAL_NUMBER_ATTR(2), NULL},
+    },
+    {   1, INDEX_PSU4_SERIAL, tty_cmd[SENSOR_TYPE_PSU4_SERIAL],
+        TTY_PMBUS_INTERVAL, {DECLARE_PSU_SERIAL_NUMBER_ATTR(3), NULL},        
+    },
+    
 };
 static struct minipack_data *mp_data = NULL;
 
@@ -359,9 +445,7 @@ static int _tty_open(struct file **fd)
         kt.c_iflag = IGNPAR;
         kt.c_oflag = 0;
         kt.c_lflag = 0;
-        kt.c_cc[VMIN] = (unsigned char)
-                        ((MAXIMUM_TTY_STRING_LENGTH > 0xFF) ?
-                         0xFF : MAXIMUM_TTY_STRING_LENGTH);
+        kt.c_cc[VMIN] = 0;
         kt.c_cc[VTIME] = 0;
         tty_set_termios(tty, &kt);
 
@@ -393,11 +477,9 @@ static int _tty_tx(struct file *tty_fd, const char *str)
     /*Sanity check*/
     if (tty_fd == NULL)
         return -EINVAL;
-    if(!(tty_fd->f_op) || !(tty_fd->f_op->read) ||!(tty_fd->f_op->write)) {
-        return -EINVAL;
-    }
 
-    rc = tty_fd->f_op->write(tty_fd, str, strlen(str)+1,0);
+    rc = kernel_write(tty_fd, str, strlen(str)+1,0);
+    
     if (rc < 0) {
         pr_info( "failed to write(%d)\n", rc);
         return -EBUSY;
@@ -414,14 +496,11 @@ static int _tty_rx(struct file *tty_fd, char *buf, int max_len)
     /*Sanity check*/
     if (tty_fd == NULL)
         return -EINVAL;
-    if(!(tty_fd->f_op) || !(tty_fd->f_op->read) ||!(tty_fd->f_op->write)) {
-        return -EINVAL;
-    }
 
     /*Clear for remained data cause ambiguous string*/
     memset(buf, 0, max_len);
     do {
-        rc = tty_fd->f_op->read(tty_fd, buf, max_len, 0);
+        rc = kernel_read(tty_fd, buf, max_len, 0);
         if (rc == 0) {  /*Buffer Empty, waits. */
             timeout++;
             _tty_wait(TTY_RETRY_INTERVAL);
@@ -441,22 +520,19 @@ static int _tty_rx(struct file *tty_fd, char *buf, int max_len)
 /*Clear Rx buffer by reading it out.*/
 static int _tty_clear_rxbuf(struct file *tty_fd, char* buf, size_t max_size) {
     int rc, i;
-    mm_segment_t old_fs;
     int retry = TTY_CMD_RETRY;
 
     if (tty_fd == NULL) {
         return -EINVAL;
     }
-    old_fs = get_fs();
-    set_fs(KERNEL_DS);
+
     i = 0;
     do {
-        rc = tty_fd->f_op->read(tty_fd, buf, max_size, 0);
+        rc = kernel_read(tty_fd, buf, max_size, 0);
         memset(buf, 0, max_size);
         i++;
     } while (rc > 0 && i < retry);
 
-    set_fs(old_fs);
     return rc;
 }
 
@@ -464,20 +540,13 @@ static int _tty_writeNread(struct file *tty_fd,
                            char *wr_p, char *rd_p, int rx_max_len, u32 mdelay)
 {
     int     rc;
-    mm_segment_t old_fs;
 
     /*Presumed file is opened!*/
     if (tty_fd == NULL)
         return -EINVAL;
 
-    if(!(tty_fd->f_op) || !(tty_fd->f_op->read) ||!(tty_fd->f_op->write)) {
-        pr_info("file %s cann't readable or writable?\n", TTY_DEVICE);
-        return -EINVAL;
-    }
-
     memset(rd_p, 0, rx_max_len);
-    old_fs = get_fs();
-    set_fs(KERNEL_DS);
+
     rc = _tty_tx(tty_fd, wr_p);
     if (rc < 0) {
         DEBUG_INTR( "failed to write(%d)\n", rc);
@@ -491,7 +560,6 @@ static int _tty_writeNread(struct file *tty_fd,
     }
 
 exit:
-    set_fs(old_fs);
     return rc;
 }
 
@@ -810,6 +878,27 @@ static int get_pmbus_regs_partial(int *in, int in_cnt, int *out, int *out_cnt)
     return 0;
 }
 
+static int extract_psu_str(int type, char *buf, int *out, int len)
+{
+    char *ptr;
+    int  x, i;
+
+    ptr = buf;
+    
+    i=0;
+    for (x = 0; x < strlen(ptr); x++) {
+        if(ptr[x] > 0x7A || ptr[x] <0x1E)             
+            continue;
+
+        out[i]=ptr[x];
+        i++;
+        if(i==(len-2))
+            break;
+    }
+    out[len-1]=0x0;
+
+    return  0;
+}
 
 static int comm2BMC(enum sensor_type_e type, int *out, int out_cnt)
 {
@@ -853,6 +942,18 @@ static int comm2BMC(enum sensor_type_e type, int *out, int out_cnt)
             get_pmbus_regs_partial(reg, total, out, &out_cnt);
         break;
     }
+    case SENSOR_TYPE_PSU1_MODEL:
+    case SENSOR_TYPE_PSU2_MODEL:
+    case SENSOR_TYPE_PSU3_MODEL:
+    case SENSOR_TYPE_PSU4_MODEL:
+        ret=extract_psu_str(type, ptr, out, MAX_MODEL_NAME);
+        break;
+    case SENSOR_TYPE_PSU1_SERIAL:
+    case SENSOR_TYPE_PSU2_SERIAL:
+    case SENSOR_TYPE_PSU3_SERIAL:
+    case SENSOR_TYPE_PSU4_SERIAL:
+        ret=extract_psu_str(type ,ptr, out, MAX_SERIAL_NUMBER);
+        break;
     default:
         return -EINVAL;
     }
@@ -881,6 +982,18 @@ static int get_type_data (
     case SENSOR_TYPE_PSU3:
     case SENSOR_TYPE_PSU4:
         *out = &data->psu_data[type-SENSOR_TYPE_PSU1][index];
+        break;
+    case SENSOR_TYPE_PSU1_MODEL:
+    case SENSOR_TYPE_PSU2_MODEL:
+    case SENSOR_TYPE_PSU3_MODEL:
+    case SENSOR_TYPE_PSU4_MODEL:
+        *out = &data->psu_model[type-SENSOR_TYPE_PSU1_MODEL][index];
+        break;
+    case SENSOR_TYPE_PSU1_SERIAL:
+    case SENSOR_TYPE_PSU2_SERIAL:
+    case SENSOR_TYPE_PSU3_SERIAL:
+    case SENSOR_TYPE_PSU4_SERIAL:
+        *out = &data->psu_serial[type-SENSOR_TYPE_PSU1_SERIAL][index];
         break;
     default:
         return -EINVAL;
@@ -942,6 +1055,9 @@ static ssize_t _attr_show(struct device *dev, struct device_attribute *da,
     struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
     struct sensor_data* data;
     int *out = NULL;
+    int i;
+    char model_name[MAX_MODEL_NAME];
+    char serial_number[MAX_SERIAL_NUMBER];
     enum sensor_type_e type;
 
     type = attr->index / ATTR_TYPE_INDEX_GAP;
@@ -958,6 +1074,35 @@ static ssize_t _attr_show(struct device *dev, struct device_attribute *da,
 
     if( index > count)
         return -EINVAL;
+        
+    if(type >=SENSOR_TYPE_PSU1_MODEL && type <=SENSOR_TYPE_PSU4_MODEL)
+    {
+        for(i=0; i<MAX_MODEL_NAME; i++)
+        {
+            model_name[i]=out[i];
+        }
+        if(strstr(model_name, "Error")!=NULL)
+        {
+            model_name[0]='\0';
+        }
+   
+        return sprintf(buf, "%s\n",  model_name);
+    }
+    if(type >=SENSOR_TYPE_PSU1_SERIAL && type <=SENSOR_TYPE_PSU4_SERIAL)
+    {
+        
+        for(i=0; i<MAX_SERIAL_NUMBER; i++)
+        {
+            serial_number[i]=out[i];
+        }        
+        if(strstr(serial_number, "Error")!=NULL)
+        {
+            serial_number[0]='\0';
+        }
+        return sprintf(buf, "%s\n",  serial_number);
+
+    }
+
 
     return sprintf(buf, "%d\n",  *out);
 }

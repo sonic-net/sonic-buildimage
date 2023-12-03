@@ -4,12 +4,6 @@ import os
 from unittest import TestCase
 
 output1="""\
-Error: Table or all option is required
-usage: sonic-cfg-help [-h] [-t TABLE] [-f FIELD] [-p PRINT_FORMAT] [-a]
-
-Description of table name
-
-optional arguments:
   -h, --help            show this help message and exit
   -t TABLE, --table TABLE
                         Table name
@@ -25,6 +19,7 @@ techsupport_table_output="""\
 AUTO_TECHSUPPORT
 Description: AUTO_TECHSUPPORT part of config_db.json
 
+key - GLOBAL
 +-------------------------+----------------------------------------------------+-------------+-----------+-------------+
 | Field                   | Description                                        | Mandatory   | Default   | Reference   |
 +=========================+====================================================+=============+===========+=============+
@@ -62,6 +57,7 @@ techsupport_table_field_output="""\
 AUTO_TECHSUPPORT
 Description: AUTO_TECHSUPPORT part of config_db.json
 
+key - GLOBAL
 +---------+--------------------------------------------------+-------------+-----------+-------------+
 | Field   | Description                                      | Mandatory   | Default   | Reference   |
 +=========+==================================================+=============+===========+=============+
@@ -118,6 +114,25 @@ key - ACL_TABLE_NAME:RULE_NAME
 
 """
 
+snmp_table_output="""\
+
+SNMP
+
+key - CONTACT
++---------+----------------------+-------------+-----------+-------------+
+| Field   | Description          | Mandatory   | Default   | Reference   |
++=========+======================+=============+===========+=============+
+| Contact | SNMP System Contact. |             |           |             |
++---------+----------------------+-------------+-----------+-------------+
+key - LOCATION
++----------+-----------------------+-------------+-----------+-------------+
+| Field    | Description           | Mandatory   | Default   | Reference   |
++==========+=======================+=============+===========+=============+
+| Location | SNMP System Location. |             |           |             |
++----------+-----------------------+-------------+-----------+-------------+
+
+"""
+
 class TestCfgHelp(TestCase):
 
     def setUp(self):
@@ -140,7 +155,7 @@ class TestCfgHelp(TestCase):
     def test_dummy_run(self):
         argument = []
         output = self.run_script(argument)
-        self.assertEqual(output, output1)
+        self.assertIn(output1, output)
 
     def test_single_table(self):
         argument = ['-t', 'AUTO_TECHSUPPORT']
@@ -167,3 +182,8 @@ class TestCfgHelp(TestCase):
         argument = ['-t', 'ACL_RULE', '-f', 'ICMP_TYPE']
         output = self.run_script(argument)
         self.assertEqual(output, acl_rule_table_field_output)
+
+    def test_nested_container(self):
+        argument = ['-t', 'SNMP']
+        output = self.run_script(argument)
+        self.assertEqual(output, snmp_table_output)

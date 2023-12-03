@@ -13,13 +13,11 @@ ENV IMAGE_VERSION=$image_version
 # Update apt's cache of available packages
 RUN apt-get update
 
-RUN apt-get install -y libjsoncpp-dev {%- if INCLUDE_DHCP_SERVER == "y" %}\
-                       python3-dev         \
-                       build-essential{%- endif %}
+RUN apt-get install -y libjsoncpp-dev \
+                       python3-dev    \
+                       build-essential
 
-{% if INCLUDE_DHCP_SERVER == "y" -%}
 RUN pip3 install psutil
-{%- endif %}
 
 RUN apt-get install -y libjsoncpp-dev
 
@@ -46,10 +44,8 @@ RUN apt-get purge -y gcc python3-dev
 {% endif %}
 
 # Clean up
-{% if INCLUDE_DHCP_SERVER == "y" -%}
 RUN apt-get remove -y build-essential     \
                 python3-dev
-{%- endif %}
 RUN apt-get clean -y         && \
     apt-get autoclean -y     && \
     apt-get autoremove -y    && \

@@ -26,3 +26,8 @@ cross-compile-changes.patch
 0024-bgpd-Do-not-process-NLRIs-if-the-attribute-length-is.patch
 0025-bgpd-Use-treat-as-withdraw-for-tunnel-encapsulation-.patch
 0026-zebra-Add-encap-type-when-building-packet-for-FPM.patch
+0027-zebra-Fix-non-notification-of-better-admin-won.patch
+0028-bgpd-Check-mandatory-attributes-more-carefully-for-U.patch
+0029-bgpd-Handle-MP_REACH_NLRI-malformed-packets-with-ses.patch
+0030-bgpd-Treat-EOR-as-withdrawn-to-avoid-unwanted-handli.patch
+0031-bgpd-Ignore-handling-NLRIs-if-we-received-MP_UNREACH.patch

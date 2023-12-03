@@ -571,7 +571,7 @@ exit:
     return status;
 }
 
-static int as7716_32x_cpld_remove(struct i2c_client *client)
+static void as7716_32x_cpld_remove(struct i2c_client *client)
 {
     struct as7716_32x_cpld_data *data = i2c_get_clientdata(client);
 
@@ -580,7 +580,6 @@ static int as7716_32x_cpld_remove(struct i2c_client *client)
     kfree(data);
 	as7716_32x_cpld_remove_client(client);
 
-    return 0;
 }
 
 int as7716_32x_cpld_read(unsigned short cpld_addr, u8 reg)

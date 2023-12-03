@@ -66,7 +66,7 @@ if [ ! -f ${LOCAL_SIGN_FILE} ]; then
 fi
 
 if [ -z ${LOCAL_EXTRACT_CERT} ]; then
-    LOCAL_EXTRACT_CERT="/usr/lib/linux-kbuild-${kbuild_ver_major}/scripts/extract-cert"
+    LOCAL_EXTRACT_CERT="/usr/lib/linux-kbuild-${kbuild_ver_major}/certs/extract-cert"
 fi
 
 if [ ! -f ${LOCAL_EXTRACT_CERT} ]; then

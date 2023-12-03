@@ -721,7 +721,7 @@ exit_mux_register:
     return ret;
 } 
 
-static int as6712_32x_cpld_mux_remove(struct i2c_client *client)
+static void as6712_32x_cpld_mux_remove(struct i2c_client *client)
 {
     struct i2c_mux_core *muxc = i2c_get_clientdata(client);
     struct as6712_32x_cpld_data *data = i2c_mux_priv(muxc);
@@ -750,7 +750,6 @@ static int as6712_32x_cpld_mux_remove(struct i2c_client *client)
 
     i2c_mux_del_adapters(muxc);
 
-    return 0;
 }
 
 static int as6712_32x_cpld_read_internal(struct i2c_client *client, u8 reg)

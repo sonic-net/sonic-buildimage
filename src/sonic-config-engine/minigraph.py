@@ -695,6 +695,17 @@ def parse_dpg(dpg, hname):
             if vlanmac is not None and vlanmac.text is not None:
                 vlan_attributes['mac'] = vlanmac.text
 
+            vintf_node = vintf.find(str(QName(ns, "SecondarySubnets")))
+            if vintf_node is not None and vintf_node.text is not None:
+                subnets = vintf_node.text.split(';')
+                for subnet in subnets:
+                    if sys.version_info >= (3, 0):
+                        network_def = ipaddress.ip_network(subnet, strict=False)
+                    else:
+                        network_def = ipaddress.ip_network(unicode(subnet), strict=False)
+                    prefix = str(network_def[1]) + "/" + str(network_def.prefixlen)
+                    intfs[(vintfname, prefix)]["secondary"] = "true"
+
             sonic_vlan_name = "Vlan%s" % vlanid
             if sonic_vlan_name != vintfname:
                 vlan_attributes['alias'] = vintfname
@@ -1740,6 +1751,9 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         if intf[0][0:4] == 'Vlan':
             vlan_intfs[intf] = {}
 
+            if "secondary" in intfs[intf]:
+                vlan_intfs[intf]["secondary"] = "true"
+
             if bool(results['PEER_SWITCH']):
                 vlan_intfs[intf[0]] = {
                     'proxy_arp': 'enabled',
@@ -1749,6 +1763,9 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
                 vlan_intfs[intf[0]] = {}
         elif intf[0] in vlan_invert_mapping:
             vlan_intfs[(vlan_invert_mapping[intf[0]], intf[1])] = {}
+
+            if "secondary" in intfs[intf]:
+                vlan_intfs[(vlan_invert_mapping[intf[0]], intf[1])]["secondary"] = "true"
 
             if bool(results['PEER_SWITCH']):
                 vlan_intfs[vlan_invert_mapping[intf[0]]] = {

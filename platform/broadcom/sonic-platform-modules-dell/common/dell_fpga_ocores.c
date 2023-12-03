@@ -1531,5 +1531,4 @@ module_exit (fpgapci_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("joyce_yu@dell.com");
 MODULE_DESCRIPTION ("Driver for FPGA Logic I2C bus");
-MODULE_SUPPORTED_DEVICE ("FPGA Logic I2C bus");
 MODULE_VERSION ("01.01");

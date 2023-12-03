@@ -1,8 +1,2 @@
 # This series applies on GIT commit 396961a038a38675d46f96eaa7b430b2a1f8701b
 0001-return-error-when-port-does-not-exist.patch
-0004-lldpctl-put-a-lock-around-some-commands-to-avoid-rac.patch
-0006-lib-fix-memory-leak.patch
-0007-lib-fix-memory-leak-when-handling-I-O.patch
-0010-Ported-fix-for-length-exceeded-from-lldp-community.patch
-0011-fix-med-location-len.patch
-0012-fix-recreate-socket-on-ifindex-change.patch

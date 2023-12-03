@@ -22,7 +22,7 @@ sonic-cel-platform-modules (0.6) unstable; urgency=low
   * Remove unused port-mode switch script. This should be done by hwsku config script.
   * Add script to turn off QSFP low power mode when boot up.
 
- -- Pradchaya Phucharoen <pphuchar@celestica.com>  Wed, 26 July 2017 10:43:00 +0700
+ -- Pradchaya Phucharoen <pphuchar@celestica.com>  Wed, 26 Jul 2017 10:43:00 +0700
 
 sonic-cel-platform-modules (0.5) unstable; urgency=low
 
@@ -30,13 +30,13 @@ sonic-cel-platform-modules (0.5) unstable; urgency=low
   * Fix garbage data when using sfputil to read QSFP-transceiver's eeprom.
   * Fix incorrect endian in eeprom read word data.
 
- -- Pradchaya Phucharoen <pphuchar@celestica.com>  Tue, 18 July 2017 11:30:00 +0700
+ -- Pradchaya Phucharoen <pphuchar@celestica.com>  Tue, 18 Jul 2017 11:30:00 +0700
 
 sonic-cel-platform-modules (0.4) unstable; urgency=low
 
   * Add support for DX010's fancontrol, automatic run-up and FIX bug lpmod
 
- -- Pariwat Leamsumran <pleamsum@celestica.com>  Thu, 14 June 2017 16:25:00 +0700
+ -- Pariwat Leamsumran <pleamsum@celestica.com>  Thu, 14 Jun 2017 16:25:00 +0700
 
 sonic-cel-platform-modules (0.3) unstable; urgency=low
 

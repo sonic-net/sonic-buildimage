@@ -424,13 +424,12 @@ exit:
     return status;
 }
 
-static int as7816_64x_fan_remove(struct i2c_client *client)
+static void as7816_64x_fan_remove(struct i2c_client *client)
 {
     struct as7816_64x_fan_data *data = i2c_get_clientdata(client);
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &as7816_64x_fan_group);
     
-    return 0;
 }
 
 /* Addresses to scan */

@@ -447,7 +447,7 @@ exit:
     return status;
 }
 
-static int as5812_54t_cpld_remove(struct i2c_client *client)
+static void as5812_54t_cpld_remove(struct i2c_client *client)
 {
     struct as5812_54t_cpld_data *data = i2c_get_clientdata(client);
 
@@ -456,7 +456,6 @@ static int as5812_54t_cpld_remove(struct i2c_client *client)
     kfree(data);
     as5812_54t_cpld_remove_client(client);
 
-    return 0;
 }
 
 int as5812_54t_cpld_read(unsigned short cpld_addr, u8 reg)

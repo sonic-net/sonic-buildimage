@@ -76,7 +76,7 @@ class ThermalUtil(object):
                 logging.debug('GET. content is NULL. device_path:%s', device_path)
                 return None
             try:
-		        val_file.close()
+                val_file.close()
             except:
                 logging.debug('GET. unable to close file. device_path:%s', device_path)
                 return None
@@ -94,9 +94,3 @@ class ThermalUtil(object):
     def get_thermal_path(self, thermal_num):
         return self.thermal_sysfspath[thermal_num][0]
    
-
-def main():
-    thermal = ThermalUtil()   
-
-if __name__ == '__main__':
-    main()

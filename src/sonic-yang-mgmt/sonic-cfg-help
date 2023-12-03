@@ -54,7 +54,14 @@ class SonicCfgDescriber:
                 self.print_field_desc(table['list'], field)
                 print()
         elif table.get('container') is not None:
-            self.print_field_desc(table.get('container'), field)
+            if isinstance(table['container'], dict):
+                print("key - " + table['container'].get('@name'))
+                self.print_field_desc(table.get('container'), field)
+            elif isinstance(table['container'], list):
+                for c in table['container']:
+                    print("key - " + c.get('@name'))
+                    self.print_field_desc(c, field)
+
             print()
 
     def get_referenced_table_field(self, ref):

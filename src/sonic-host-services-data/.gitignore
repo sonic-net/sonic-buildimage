@@ -1,6 +1,0 @@
-debian/*.debhelper
-debian/debhelper-build-stamp
-debian/sonic-host-services-data/
-sonic-host-services-data_*.buildinfo
-sonic-host-services-data_*.changes
-sonic-host-services-data_*.deb

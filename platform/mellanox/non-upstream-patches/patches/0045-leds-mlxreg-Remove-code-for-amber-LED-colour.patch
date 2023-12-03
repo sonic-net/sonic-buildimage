@@ -1,0 +1,47 @@
+From af93d2527b5af3f2e53507c7e35bcd9c9bd521cb Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 20 Jul 2023 11:17:31 +0000
+Subject: [PATCH backport 6.1.42 45/85] leds: mlxreg: Remove code for amber LED
+ colour
+
+Remove unused code for amber LED colour.
+
+In case system LED color is "green", "orange" or "amber" same code is
+to be used for colour setting.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/leds/leds-mlxreg.c | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
+index 063a9cb50a2b..215132f67c07 100644
+--- a/drivers/leds/leds-mlxreg.c
++++ b/drivers/leds/leds-mlxreg.c
+@@ -19,7 +19,6 @@
+ #define MLXREG_LED_IS_OFF		0x00 /* Off */
+ #define MLXREG_LED_RED_SOLID		0x05 /* Solid red */
+ #define MLXREG_LED_GREEN_SOLID		0x0D /* Solid green */
+-#define MLXREG_LED_AMBER_SOLID		0x09 /* Solid amber */
+ #define MLXREG_LED_BLINK_3HZ		167 /* ~167 msec off/on - HW support */
+ #define MLXREG_LED_BLINK_6HZ		83 /* ~83 msec off/on - HW support */
+ #define MLXREG_LED_CAPABILITY_CLEAR	GENMASK(31, 8) /* Clear mask */
+@@ -224,13 +223,10 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
+ 		}
+ 		led_cdev = &led_data->led_cdev;
+ 		led_data->data_parent = priv;
+-		if (strstr(data->label, "red") ||
+-		    strstr(data->label, "orange")) {
++		if (strstr(data->label, "red") || strstr(data->label, "orange") ||
++		    strstr(data->label, "amber")) {
+ 			brightness = LED_OFF;
+ 			led_data->base_color = MLXREG_LED_RED_SOLID;
+-		} else if (strstr(data->label, "amber")) {
+-			brightness = LED_OFF;
+-			led_data->base_color = MLXREG_LED_AMBER_SOLID;
+ 		} else {
+ 			brightness = LED_OFF;
+ 			led_data->base_color = MLXREG_LED_GREEN_SOLID;
+-- 
+2.20.1
+

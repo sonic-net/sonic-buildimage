@@ -8,8 +8,9 @@ declare -r SYSLOG_INFO="info"
 
 declare -r HW_MGMT_CONFIG="/var/run/hw-management/config"
 
-declare -r MODULE_COUNTER="${HW_MGMT_CONFIG}/module_counter"
-declare -r SFP_COUNTER="${HW_MGMT_CONFIG}/sfp_counter"
+declare -r ASIC_INIT_DONE="${HW_MGMT_CONFIG}/asics_init_done"
+declare -r NUM_ASICS="${HW_MGMT_CONFIG}/asic_num"
+declare -r ASIC_CHIPUP_COMPLETED="${HW_MGMT_CONFIG}/asic_chipup_completed"
 
 declare -r EXIT_SUCCESS="0"
 declare -r EXIT_TIMEOUT="1"
@@ -26,12 +27,11 @@ function log_info() {
     eval "${SYSLOG_LOGGER} -t ${SYSLOG_IDENTIFIER} -p ${SYSLOG_INFO} $@"
 }
 
-function wait_for_sfp() {
-    local -r _NUM_MATCH="^[0-9]+$"
-    local -r _NUM_ZERO="0"
+function wait_for_asic_chipup() {
 
-    local _MODULE_CNT="0"
-    local _SFP_CNT="0"
+    local _ASIC_INIT="0"
+    local _ASIC_COUNT="0"
+    local _ASICS_CHIPUP="0"
 
     local -i _WDOG_CNT="1"
     local -ir _WDOG_MAX="300"
@@ -39,31 +39,30 @@ function wait_for_sfp() {
     local -r _TIMEOUT="1s"
 
     while [[ "${_WDOG_CNT}" -le "${_WDOG_MAX}" ]]; do
-        _MODULE_CNT="$(cat ${MODULE_COUNTER} 2>&1)"
-        _SFP_CNT="$(cat ${SFP_COUNTER} 2>&1)"
+        _ASIC_INIT="$(cat ${ASIC_INIT_DONE} 2>&1)"
+        _ASIC_COUNT="$(cat ${NUM_ASICS} 2>&1)"
+        _ASICS_CHIPUP="$(cat ${ASIC_CHIPUP_COMPLETED} 2>&1)"
 
-        if [[ "${_MODULE_CNT}" =~ ${_NUM_MATCH} && "${_SFP_CNT}" =~ ${_NUM_MATCH} ]]; then
-            if [[ "${_SFP_CNT}" -gt "${_NUM_ZERO}" && "${_MODULE_CNT}" -eq "${_SFP_CNT}" ]]; then
-                return "${EXIT_SUCCESS}"
-            fi
+        if [[ "${_ASIC_INIT}" -eq 1 && "${_ASIC_COUNT}" -eq "${_ASICS_CHIPUP}" ]]; then
+            return "${EXIT_SUCCESS}"
         fi
 
         let "_WDOG_CNT++"
         sleep "${_TIMEOUT}"
     done
 
+    log_error "Mellanox ASIC is not ready: INIT: ${_ASIC_INIT}, NUM_ASIC: ${_ASIC_COUNT}, CHIPUP: ${_ASICS_CHIPUP} timeout...."
     return "${EXIT_TIMEOUT}"
 }
 
-log_info "Wait for SFP interfaces to be ready"
+log_info "Wait for Mellanox ASIC to be ready"
 
-wait_for_sfp
+wait_for_asic_chipup
 EXIT_CODE="$?"
 if [[ "${EXIT_CODE}" != "${EXIT_SUCCESS}" ]]; then
-    log_error "SFP interfaces are not ready: timeout"
     exit "${EXIT_CODE}"
 fi
 
-log_info "SFP interfaces are ready"
+log_notice "Mellanox ASIC is ready"
 
 exit "${EXIT_SUCCESS}"
