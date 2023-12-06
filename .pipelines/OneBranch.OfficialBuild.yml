@@ -220,7 +220,7 @@ stages:
             echo "==== Building slim images"
             echo "INCLUDE_ACMS = y" >> rules/config.user
             echo "INCLUDE_MUX = n" >> rules/config.user
-            echo "INCLUDE_KUBERNETES = y" >> rules/config.user
+            echo "INCLUDE_KUBERNETES = n" >> rules/config.user
             echo "INCLUDE_MACSEC = n" >> rules/config.user
             echo "INCLUDE_P4RT = n" >> rules/config.user
             echo "BUILD_REDUCE_IMAGE_SIZE = y" >> rules/config.user
