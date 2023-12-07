@@ -53,7 +53,7 @@ dependent_startup_wait_for=rsyslogd:running
 {% endif %}
 {% endfor %}
 
-{% if not dhcp_server_ipv4_enabled and 'dhcp_server' in DEVICE_METADATA['localhost'] and 'enable' in DEVICE_METADATA['localhost']['dhcp_server'] %}
+{% if 'dhcp_server' in DEVICE_METADATA['localhost'] and 'enable' in DEVICE_METADATA['localhost']['dhcp_server'] %}
 [group:dhcp-server]
 programs=dnsmasq,host-monitor
 
@@ -98,6 +98,7 @@ programs=
 {% include 'dhcp-relay.monitors.j2' %}
 {% endif %}
 {% endif %}
+{% if 'dhcp_server' not in DEVICE_METADATA['localhost'] or 'enable' not in DEVICE_METADATA['localhost']['dhcp_server'] %}
 [program:dhcprelayd]
 command=/usr/local/bin/dhcprelayd
 priority=3
@@ -107,3 +108,4 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
 dependent_startup_wait_for=start:exited
+{% endif %}
