@@ -787,7 +787,7 @@ out_kfree:
 
 }
 
-static int accton_i2c_cpld_remove(struct i2c_client *client)
+static void accton_i2c_cpld_remove(struct i2c_client *client)
 {
     struct cpld_data *data = i2c_get_clientdata(client);
 
@@ -795,7 +795,6 @@ static int accton_i2c_cpld_remove(struct i2c_client *client)
     sysfs_remove_group(&client->dev.kobj, &data->group);
     kfree(data->group.attrs);
     accton_i2c_cpld_remove_client(client);
-    return 0;
 }
 
 int accton_i2c_cpld_read(u8 cpld_addr, u8 reg)

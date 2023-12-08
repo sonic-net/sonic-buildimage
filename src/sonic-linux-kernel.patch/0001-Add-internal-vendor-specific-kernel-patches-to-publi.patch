@@ -9,7 +9,6 @@ Subject: [PATCH] Add internal vendor-specific kernel patches to public kernel
  patch/driver-hwmon-pmbus-cisco-solvan.patch             |  1 +
  patch/driver-hwmon-pmbus-cisco_n2200-update.patch       |  1 +
  patch/driver-hwmon-pmbus-cisco_n2200.patch              |  1 +
- patch/driver-mfd-enable-dh89xxcc-gpio.patch             |  1 +
  patch/driver-rtc-cmos-address-space-256.patch           |  1 +
  patch/include-asm-generic-gpio-ARCH_NR_GPIOs-1024.patch |  1 +
  11 files changed, 20 insertions(+)
@@ -17,7 +16,6 @@ Subject: [PATCH] Add internal vendor-specific kernel patches to public kernel
  create mode 120000 patch/driver-hwmon-pmbus-cisco-solvan.patch
  create mode 120000 patch/driver-hwmon-pmbus-cisco_n2200-update.patch
  create mode 120000 patch/driver-hwmon-pmbus-cisco_n2200.patch
- create mode 120000 patch/driver-mfd-enable-dh89xxcc-gpio.patch
  create mode 120000 patch/driver-rtc-cmos-address-space-256.patch
  create mode 120000 patch/include-asm-generic-gpio-ARCH_NR_GPIOs-1024.patch
 
@@ -52,14 +50,6 @@ index 0000000..1fa3258
 +++ b/patch/driver-hwmon-pmbus-cisco_n2200.patch
 @@ -0,0 +1 @@
 +../../sonic-linux-kernel.patch/patch/driver-hwmon-pmbus-cisco_n2200.patch
-\ No newline at end of file
-diff --git a/patch/driver-mfd-enable-dh89xxcc-gpio.patch b/patch/driver-mfd-enable-dh89xxcc-gpio.patch
-new file mode 120000
-index 0000000..715a9b8
---- /dev/null
-+++ b/patch/driver-mfd-enable-dh89xxcc-gpio.patch
-@@ -0,0 +1 @@
-+../../sonic-linux-kernel.patch/patch/driver-mfd-enable-dh89xxcc-gpio.patch
 \ No newline at end of file
 diff --git a/patch/driver-rtc-cmos-address-space-256.patch b/patch/driver-rtc-cmos-address-space-256.patch
 new file mode 120000

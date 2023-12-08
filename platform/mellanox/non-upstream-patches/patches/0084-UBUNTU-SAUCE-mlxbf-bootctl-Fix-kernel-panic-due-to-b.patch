@@ -1,0 +1,56 @@
+From 9c9944b7c98fc61161c204b7ef397a3ac05977ba Mon Sep 17 00:00:00 2001
+From: Asmaa Mnebhi <asmaa@nvidia.com>
+Date: Thu, 20 Jul 2023 16:37:37 -0400
+Subject: [PATCH backport 6.1.42 13/20] UBUNTU: SAUCE: mlxbf-bootctl: Fix
+ kernel panic due to buffer overflow
+
+BugLink: https://bugs.launchpad.net/bugs/2028309
+
+Running the following LTP (linux-test-project) script, causes
+a kernel panic and a reboot of the DPU:
+ltp/testcases/bin/read_all -d /sys -q -r 10
+
+The above test reads all directory and files under /sys.
+Reading the sysfs entry "large_icm" causes the kernel panic
+due to a garbage value returned via i2c read. That garbage
+value causes a buffer overflow in sprintf.
+
+Replace sprintf with snprintf. And also add missing lock and
+increase the buffer size to PAGE_SIZE.
+
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/platform/mellanox/mlxbf-bootctl.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxbf-bootctl.c b/drivers/platform/mellanox/mlxbf-bootctl.c
+index a68bf5b27013..52666ee360b2 100644
+--- a/drivers/platform/mellanox/mlxbf-bootctl.c
++++ b/drivers/platform/mellanox/mlxbf-bootctl.c
+@@ -387,17 +387,16 @@ static ssize_t oob_mac_store(struct device_driver *drv, const char *buf,
+ 
+ static ssize_t large_icm_show(struct device_driver *drv, char *buf)
+ {
+-	char icm_str[MAX_ICM_BUFFER_SIZE] = { 0 };
+ 	struct arm_smccc_res res;
+ 
++	mutex_lock(&icm_ops_lock);
+ 	arm_smccc_smc(MLNX_HANDLE_GET_ICM_INFO, 0, 0, 0, 0,
+ 		      0, 0, 0, &res);
++	mutex_unlock(&icm_ops_lock);
+ 	if (res.a0)
+ 		return -EPERM;
+ 
+-	sprintf(icm_str, "0x%lx", res.a1);
+-
+-	return snprintf(buf, sizeof(icm_str), "%s", icm_str);
++	return snprintf(buf, PAGE_SIZE, "0x%lx", res.a1);
+ }
+ 
+ static ssize_t large_icm_store(struct device_driver *drv, const char *buf,
+-- 
+2.25.1
+

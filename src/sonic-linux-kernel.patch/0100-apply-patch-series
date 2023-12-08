@@ -2,7 +2,7 @@ Index: sonic-linux-kernel/patch/series
 ===================================================================
 --- sonic-linux-kernel.orig/patch/series
 +++ sonic-linux-kernel/patch/series
-@@ -76,3 +76,11 @@ driver-ixgbe-external-phy.patch
+@@ -196,3 +196,10 @@ cisco-npu-disable-other-bars.patch
  # Do not add any public patch below this marker
  #
  ############################################################
@@ -11,6 +11,5 @@ Index: sonic-linux-kernel/patch/series
 +driver-hwmon-pmbus-cisco_n2200-update.patch
 +driver-hwmon-pmbus-cisco_n2200-update2.patch
 +driver-hwmon-pmbus-cisco-solvan.patch
-+driver-mfd-enable-dh89xxcc-gpio.patch
 +driver-rtc-cmos-address-space-256.patch
 +include-asm-generic-gpio-ARCH_NR_GPIOs-1024.patch

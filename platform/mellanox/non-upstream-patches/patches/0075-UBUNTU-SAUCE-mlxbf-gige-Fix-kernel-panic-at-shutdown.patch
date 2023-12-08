@@ -1,0 +1,48 @@
+From 7124b7b040a0cda35c09be51ac40e8e52026ec2d Mon Sep 17 00:00:00 2001
+From: Asmaa Mnebhi <asmaa@nvidia.com>
+Date: Fri, 2 Jun 2023 13:04:25 -0400
+Subject: [PATCH backport 6.1.42 75/85] UBUNTU: SAUCE: mlxbf-gige: Fix kernel
+ panic at shutdown
+
+BugLink: https://bugs.launchpad.net/bugs/2022370
+
+We occasionally see a race condition (once every 350 reboots) where napi is still
+running (mlxbf_gige_poll) while a shutdown has been initiated through "reboot".
+Since mlxbf_gige_poll is still running, it tries to access a NULL pointer and as
+a result causes a kernel panic.
+
+The fix is to explicitly disable napi and dequeue it during shutdown.
+mlxbf_gige_remove already calls:
+unregister_netdev->unregister_netdevice->unregister_netdev_queue->
+rollback_registered->rollback_registered_many->dev_close_many->
+__dev_close_many->ndo_stop->mlxbf_gige_stop which stops napi
+
+So use mlxbf_gige_remove in place of the existing shutdown logic.
+
+Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+index 0af086703bcd..fe35b5a24219 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+@@ -485,10 +485,7 @@ static int mlxbf_gige_remove(struct platform_device *pdev)
+ 
+ static void mlxbf_gige_shutdown(struct platform_device *pdev)
+ {
+-	struct mlxbf_gige *priv = platform_get_drvdata(pdev);
+-
+-	writeq(0, priv->base + MLXBF_GIGE_INT_EN);
+-	mlxbf_gige_clean_port(priv);
++	mlxbf_gige_remove(pdev);
+ }
+ 
+ static const struct acpi_device_id __maybe_unused mlxbf_gige_acpi_match[] = {
+-- 
+2.20.1
+

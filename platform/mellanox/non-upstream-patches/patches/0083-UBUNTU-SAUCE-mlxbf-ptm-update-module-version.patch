@@ -1,0 +1,31 @@
+From efaf25dc1e11de91140b9010e743182bc763124c Mon Sep 17 00:00:00 2001
+From: Jitendra Lanka <jlanka@nvidia.com>
+Date: Wed, 22 Mar 2023 11:39:57 -0400
+Subject: [PATCH backport 6.1.42 83/85] UBUNTU: SAUCE: mlxbf-ptm: update module
+ version
+
+BugLink: https://bugs.launchpad.net/bugs/2011738
+
+update module version
+
+Signed-off-by: Jitendra Lanka <jlanka@nvidia.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/platform/mellanox/mlxbf-ptm.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/mlxbf-ptm.c b/drivers/platform/mellanox/mlxbf-ptm.c
+index a2845aa57c5b..eb4460cb058b 100644
+--- a/drivers/platform/mellanox/mlxbf-ptm.c
++++ b/drivers/platform/mellanox/mlxbf-ptm.c
+@@ -227,4 +227,4 @@ module_exit(mlxbf_ptm_exit);
+ MODULE_AUTHOR("Jitendra Lanka <jlanka@nvidia.com>");
+ MODULE_DESCRIPTION("Nvidia Bluefield power and thermal debugfs driver");
+ MODULE_LICENSE("Dual BSD/GPL");
+-MODULE_VERSION("1.0");
++MODULE_VERSION("1.1");
+-- 
+2.20.1
+

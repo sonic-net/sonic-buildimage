@@ -498,7 +498,7 @@ exit:
     return status;
 }
 
-static int as5712_54x_sfp_remove(struct i2c_client *client)
+static void as5712_54x_sfp_remove(struct i2c_client *client)
 {
     struct as5712_54x_sfp_data *data = i2c_get_clientdata(client);
 
@@ -506,7 +506,6 @@ static int as5712_54x_sfp_remove(struct i2c_client *client)
     sysfs_remove_group(&client->dev.kobj, &as5712_54x_sfp_group);
     kfree(data);
 
-    return 0;
 }
 
 enum port_numbers {

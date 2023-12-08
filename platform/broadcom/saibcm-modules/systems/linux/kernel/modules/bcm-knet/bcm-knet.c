@@ -5670,7 +5670,7 @@ bkn_set_mac_address(struct net_device *dev, void *addr)
 #endif
         return -EINVAL;
     }
-    memcpy(dev->dev_addr, ((struct sockaddr *)addr)->sa_data, dev->addr_len);
+    eth_hw_addr_set(dev, ((struct sockaddr *)addr)->sa_data);
     return 0;
 }
 #endif
@@ -6969,7 +6969,7 @@ bkn_init_ndev(u8 *mac, char *name)
 #endif
 
     /* Set the device MAC address */
-    memcpy(dev->dev_addr, mac, 6);
+    eth_hw_addr_set(dev, mac);
 
     /* Device information -- not available right now */
     dev->irq = 0;
@@ -8511,7 +8511,7 @@ bkn_knet_hw_init(kcom_msg_hw_init_t *kmsg, int len)
     /* Ensure 32-bit PCI DMA is mapped properly on 64-bit platforms */
     dev_type = kernel_bde->get_dev_type(sinfo->dev_no);
     if (dev_type & BDE_PCI_DEV_TYPE && sinfo->cmic_type != 'x') {
-        if (pci_set_dma_mask(sinfo->pdev, 0xffffffff)) {
+        if (dma_set_mask_and_coherent(&sinfo->pdev->dev, 0xffffffff)) {
             cfg_api_unlock(sinfo, &flags);
             gprintk("No suitable DMA available for SKBs\n");
             kmsg->hdr.status = KCOM_E_RESOURCE;
@@ -9688,7 +9688,7 @@ bkn_knet_dev_init(int d)
     }
 
     if (use_napi) {
-        netif_napi_add(dev, &sinfo->napi, bkn_poll, napi_weight);
+        netif_napi_add(dev, &sinfo->napi, bkn_poll);
     }
     return 0;
 }

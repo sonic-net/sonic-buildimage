@@ -1,2 +1,0 @@
-templates/*.j2    /usr/share/sonic/templates/
-org.sonic.hostservice.conf /etc/dbus-1/system.d

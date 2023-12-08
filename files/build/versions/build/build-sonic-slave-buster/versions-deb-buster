@@ -13,7 +13,6 @@ libswsscommon==1.0.0
 libswsscommon-dev==1.0.0
 libthrift-0.11.0==0.11.0-4
 libthrift-dev==0.11.0-4
-libthrift0==0.14.1
 libyang==1.0.73
 libyang-cpp==1.0.73
 libyang-dev==1.0.73
@@ -23,5 +22,4 @@ python3-swsscommon==1.0.0
 python3-yang==1.0.73
 sonic-mgmt-common==1.0.0
 sonic-mgmt-common-codegen==1.0.0
-sonic-mgmt-framework==1.0-01
 thrift-compiler==0.11.0-4

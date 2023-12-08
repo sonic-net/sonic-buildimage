@@ -349,4 +349,3 @@ module_exit (pddf_fpgapci_driver_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION ("PDDF Driver for FPGAPCI Logic I2C bus");
-MODULE_SUPPORTED_DEVICE ("PDDF FPGAPCI Logic I2C bus");

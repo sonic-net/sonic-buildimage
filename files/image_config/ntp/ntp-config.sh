@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ntp_default_file='/etc/default/ntp'
+ntp_default_file='/etc/default/ntpsec'
 ntp_temp_file='/tmp/ntp.orig'
 
 reboot_type='cold'
@@ -23,10 +23,10 @@ function modify_ntp_default
     sed -e "$1" ${ntp_temp_file} >${ntp_default_file}
 }
 
-sonic-cfggen -d -t /usr/share/sonic/templates/ntp.conf.j2 >/etc/ntp.conf
+sonic-cfggen -d -t /usr/share/sonic/templates/ntp.conf.j2 >/etc/ntpsec/ntp.conf
 
 get_database_reboot_type
 echo "Disabling NTP long jump for reboot type ${reboot_type} ..."
-modify_ntp_default "s/NTPD_OPTS='-g'/NTPD_OPTS='-x'/"
+modify_ntp_default "s/NTPD_OPTS=\"-g -N\"/NTPD_OPTS=\"-x -N\"/"
 
 systemctl --no-block restart ntp

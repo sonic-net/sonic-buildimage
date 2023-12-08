@@ -124,8 +124,8 @@ class TestFan:
         assert fan.get_presence() is False
         mock_path_exists.return_value = True
         assert fan.get_presence() is True
-        mock_read_int.return_value = 7
-        assert fan.get_target_speed() == 70
+        mock_read_int.return_value = int(255 / 10 * 7)
+        assert fan.get_target_speed() == 60
         mock_read_int.return_value = FAN_DIR_VALUE_INTAKE
         assert fan.get_direction() == Fan.FAN_DIRECTION_INTAKE
         mock_read_int.return_value = FAN_DIR_VALUE_EXHAUST

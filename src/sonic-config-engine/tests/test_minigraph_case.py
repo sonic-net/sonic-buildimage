@@ -138,7 +138,10 @@ class TestCfgGenCaseInsensitive(TestCase):
     def test_minigraph_vlan_interfaces_keys(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "VLAN_INTERFACE.keys()|list"]
         output = self.run_script(argument)
-        self.assertEqual(output.strip(), "[('Vlan1000', '192.168.0.1/27'), 'Vlan1000']")
+        expected_list_dict = {
+            'list': ['Vlan1000', 'Vlan1000|192.168.0.1/27', 'Vlan1000|192.168.1.1/27']
+        }
+        self.assertEqual(utils.liststr_to_dict(output.strip()), expected_list_dict)
 
     def test_minigraph_vlan_interfaces(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "VLAN_INTERFACE"]
@@ -148,6 +151,9 @@ class TestCfgGenCaseInsensitive(TestCase):
             'Vlan1000': {
                 'proxy_arp': 'enabled',
                 'grat_arp': 'enabled'
+            },
+            'Vlan1000|192.168.1.1/27': {
+                'secondary': 'true'
             }
         }
         self.assertEqual(utils.to_dict(output.strip()), expected_table)

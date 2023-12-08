@@ -914,7 +914,7 @@ out_kfree:
 }
 
 
-static int as7315_i2c_cpld_remove(struct i2c_client *client)
+static void as7315_i2c_cpld_remove(struct i2c_client *client)
 {
     struct cpld_data *data = i2c_get_clientdata(client);
     struct i2c_mux_core *muxc = data->muxc;
@@ -925,7 +925,6 @@ static int as7315_i2c_cpld_remove(struct i2c_client *client)
         i2c_mux_del_adapters(muxc);
     }
     accton_i2c_cpld_remove_client(client);
-    return 0;
 }
 
 int accton_i2c_cpld_read(u8 cpld_addr, u8 reg)

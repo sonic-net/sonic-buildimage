@@ -1,0 +1,60 @@
+From d6703416953dd1c3fe6e84a76c6d85a73fcbdc4b Mon Sep 17 00:00:00 2001
+From: Jitendra Lanka <jlanka@nvidia.com>
+Date: Wed, 22 Mar 2023 11:39:54 -0400
+Subject: [PATCH backport 6.1.42 80/85] UBUNTU: SAUCE: mlxbf-ptm: update
+ license
+
+BugLink: https://bugs.launchpad.net/bugs/2011738
+
+Update license
+
+Signed-off-by: Jitendra Lanka <jlanka@nvidia.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/platform/mellanox/mlxbf-ptm.c | 26 ++------------------------
+ 1 file changed, 2 insertions(+), 24 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxbf-ptm.c b/drivers/platform/mellanox/mlxbf-ptm.c
+index 3692018b9d60..79c3e2902070 100644
+--- a/drivers/platform/mellanox/mlxbf-ptm.c
++++ b/drivers/platform/mellanox/mlxbf-ptm.c
+@@ -1,32 +1,10 @@
+ // SPDX-License-Identifier: GPL-2.0 or BSD-3-Clause
+ /*
++ *  Copyright (C) 2023 NVIDIA Corporation & Affiliates.
++ *
+  *  Nvidia Bluefield power and thermal debugfs driver
+  *  This driver provides a debugfs interface for systems management
+  *  software to monitor power and thermal actions.
+- *
+- *  Copyright (C) 2023 NVIDIA Corporation.  All rights reserved.
+- *  This Software is licensed under one of the following licenses:
+- *
+- * 1) under the terms of the "Common Public License 1.0" a copy of which is
+- *    available from the Open Source Initiative, see
+- *    http://www.opensource.org/licenses/cpl.php.
+- *
+- * 2) under the terms of the "The BSD License" a copy of which is
+- *    available from the Open Source Initiative, see
+- *    http://www.opensource.org/licenses/bsd-license.php.
+- *
+- * 3) under the terms of the "GNU General Public License (GPL) Version 2" a
+- *    copy of which is available from the Open Source Initiative, see
+- *    http://www.opensource.org/licenses/gpl-license.php.
+- *
+- * Licensee has the right to choose one of the above licenses.
+- *
+- * Redistributions of source code must retain the above copyright
+- * notice and one of the license notices.
+- *
+- * Redistributions in binary form must reproduce both the above copyright
+- * notice, one of the license notices in the documentation
+- * and/or other materials provided with the distribution.
+  */
+ 
+ #include <linux/kernel.h>
+-- 
+2.20.1
+

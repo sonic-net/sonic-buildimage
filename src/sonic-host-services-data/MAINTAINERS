@@ -1,7 +1,0 @@
-# This file describes the maintainers for sonic-host-services-data
-# See the SONiC project governance document for more information
-
-Name = "Joe LeVeque"
-Email = "jolevequ@microsoft.com"
-Github = jleveque
-Mailinglist = sonicproject@googlegroups.com

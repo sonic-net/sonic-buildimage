@@ -449,10 +449,9 @@ exit:
     return status;
 }
 
-static int dell_z9100_iom_cpld_remove(struct i2c_client *client)
+static void dell_z9100_iom_cpld_remove(struct i2c_client *client)
 {
     dell_z9100_iom_cpld_remove_client(client);
-    return 0;
 }
 
 

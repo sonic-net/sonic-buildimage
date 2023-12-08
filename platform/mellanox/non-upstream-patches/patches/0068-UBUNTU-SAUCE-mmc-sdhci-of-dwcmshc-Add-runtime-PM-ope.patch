@@ -1,0 +1,158 @@
+From be8912e006b49c4f9febcd2556030876737e1b72 Mon Sep 17 00:00:00 2001
+From: Liming Sun <limings@nvidia.com>
+Date: Tue, 4 Apr 2023 19:30:00 -0400
+Subject: [PATCH backport 6.1.42 68/85] UBUNTU: SAUCE: mmc: sdhci-of-dwcmshc:
+ Add runtime PM operations for BlueField-3
+
+BugLink: https://bugs.launchpad.net/bugs/2015307
+
+This commit implements the runtime PM operations For BlueField-3 SoC
+to disable eMMC card clock when idle.
+
+Reviewed-by: Khalil Blaiech <kblaiech@nvidia.com>
+Signed-off-by: Liming Sun <limings@nvidia.com>
+Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+Acked-by: Andrei Gherzan <andrei.gherzan@canonical.com>
+[bzolnier: use a short URL version for BugLink]
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/mmc/host/sdhci-of-dwcmshc.c | 102 +++++++++++++++++++++++++++-
+ 1 file changed, 101 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mmc/host/sdhci-of-dwcmshc.c b/drivers/mmc/host/sdhci-of-dwcmshc.c
+index 7d657d29af21..32fd0668b427 100644
+--- a/drivers/mmc/host/sdhci-of-dwcmshc.c
++++ b/drivers/mmc/host/sdhci-of-dwcmshc.c
+@@ -17,6 +17,7 @@
+ #include <linux/of_device.h>
+ #include <linux/reset.h>
+ #include <linux/sizes.h>
++#include <linux/pm_runtime.h>
+ 
+ #include "sdhci-pltfm.h"
+ 
+@@ -91,6 +92,21 @@ struct dwcmshc_priv {
+ 	void *priv; /* pointer to SoC private stuff */
+ };
+ 
++/* Last jiffies when entering idle state */
++static uint64_t idle_last_jiffies;
++
++/* Total jiffies in idle state */
++static uint64_t idle_total_jiffies;
++
++/* Total idle time */
++static int idle_time;
++module_param(idle_time, int, 0444);
++MODULE_PARM_DESC(idle_time, "idle time (seconds)");
++
++/* The current idle state */
++static int idle_state;
++module_param(idle_state, int, 0444);
++MODULE_PARM_DESC(idle_state, "idle state (0: not idle, 1: idle)");
+ /*
+  * If DMA addr spans 128MB boundary, we split the DMA transfer into two
+  * so that each DMA transfer doesn't exceed the boundary.
+@@ -532,6 +548,7 @@ static int dwcmshc_probe(struct platform_device *pdev)
+ #ifdef CONFIG_ACPI
+ 	if (pltfm_data == &sdhci_dwcmshc_bf3_pdata) {
+ 		sdhci_enable_v4_mode(host);
++		pm_runtime_enable(dev);
+ 	}
+ #endif
+ 
+@@ -635,7 +652,90 @@ static int dwcmshc_resume(struct device *dev)
+ }
+ #endif
+ 
+-static SIMPLE_DEV_PM_OPS(dwcmshc_pmops, dwcmshc_suspend, dwcmshc_resume);
++#ifdef CONFIG_PM
++
++#ifdef CONFIG_ACPI
++static void dwcmshc_enable_card_clk(struct sdhci_host *host)
++{
++	u16 ctrl;
++
++	ctrl = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
++	ctrl |= SDHCI_CLOCK_CARD_EN;
++	sdhci_writew(host, ctrl, SDHCI_CLOCK_CONTROL);
++}
++
++static void dwcmshc_disable_card_clk(struct sdhci_host *host)
++{
++	u16 ctrl;
++
++	ctrl = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
++	ctrl &= ~SDHCI_CLOCK_CARD_EN;
++	sdhci_writew(host, ctrl, SDHCI_CLOCK_CONTROL);
++}
++#endif
++
++static int dwcmshc_runtime_suspend(struct device *dev)
++{
++	struct sdhci_host *host = dev_get_drvdata(dev);
++	const struct sdhci_pltfm_data *pltfm_data;
++	int ret = 0;
++
++	pltfm_data = device_get_match_data(dev);
++	if (!pltfm_data)
++		return -ENODEV;
++
++#ifdef CONFIG_ACPI
++	if (pltfm_data == &sdhci_dwcmshc_bf3_pdata) {
++		ret = sdhci_runtime_suspend_host(host);
++		if (!ret) {
++			dwcmshc_disable_card_clk(host);
++
++			if (!idle_state) {
++				idle_state = 1;
++				idle_last_jiffies = jiffies;
++			}
++		}
++	}
++#endif
++
++	return ret;
++}
++
++static int dwcmshc_runtime_resume(struct device *dev)
++{
++	struct sdhci_host *host = dev_get_drvdata(dev);
++	const struct sdhci_pltfm_data *pltfm_data;
++	int ret = 0;
++
++	pltfm_data = device_get_match_data(dev);
++	if (!pltfm_data)
++		return -ENODEV;
++
++#ifdef CONFIG_ACPI
++	if (pltfm_data == &sdhci_dwcmshc_bf3_pdata) {
++		dwcmshc_enable_card_clk(host);
++
++		if (idle_state) {
++			idle_state = 0;
++			idle_total_jiffies = jiffies - idle_last_jiffies;
++			idle_time += jiffies_to_msecs(
++					idle_total_jiffies) / 1000;
++		}
++
++		ret = sdhci_runtime_resume_host(host, 0);
++	}
++#endif
++
++	return ret;
++}
++
++#endif
++
++static const struct dev_pm_ops dwcmshc_pmops = {
++	SET_SYSTEM_SLEEP_PM_OPS(dwcmshc_suspend, dwcmshc_resume)
++	SET_RUNTIME_PM_OPS(dwcmshc_runtime_suspend,
++			dwcmshc_runtime_resume, NULL)
++};
+ 
+ static struct platform_driver sdhci_dwcmshc_driver = {
+ 	.driver	= {
+-- 
+2.20.1
+

@@ -18,7 +18,7 @@ setuptools.setup(
     install_requires = [
         'jinja2>=2.10',
         'netaddr==0.8.0',
-        'pyyaml==5.4.1',
+        'pyyaml==6.0.1',
         'ipaddress==1.0.23'
     ],
     setup_requires = [

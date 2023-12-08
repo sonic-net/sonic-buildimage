@@ -403,8 +403,6 @@ static ssize_t fan_value_store(struct device *dev, struct device_attribute *da,
     int status = -EINVAL;
     int index;
     long keyin = 0;
-    //printk("fan_value_store\n");
-    //printk("attr->index=%d\n", attr->index);
     mutex_lock(&data->update_lock);
     switch (attr->index)
     {
@@ -505,8 +503,6 @@ static ssize_t fan_value_show(struct device *dev, struct device_attribute *da,
     struct as7716_32xb_fan_data *data = i2c_get_clientdata(client);
     int status = -EINVAL;
     int index=0;
-    //printk("ffan_value_show\n");
-    //printk("attr->index=%d\n", attr->index);
     mutex_lock(&data->update_lock);
     switch (attr->index)
     {
@@ -662,13 +658,12 @@ exit:
     return status;
 }
 
-static int as7716_32xb_fan_remove(struct i2c_client *client)
+static void as7716_32xb_fan_remove(struct i2c_client *client)
 {
     struct as7716_32xb_fan_data *data = i2c_get_clientdata(client);
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &as7716_32xb_fan_group);
 
-    return 0;
 }
 
 /* Addresses to scan */

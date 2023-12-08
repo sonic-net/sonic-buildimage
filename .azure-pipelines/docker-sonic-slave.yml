@@ -8,7 +8,7 @@ resources:
   - repository: buildimage
     type: github
     name: sonic-net/sonic-buildimage
-    ref: master
+    ref: bookworm
     endpoint: sonic-net
 
 schedules:
@@ -44,6 +44,7 @@ parameters:
 - name: 'dists'
   type: object
   default:
+  - bookworm
   - bullseye
   - buster
   - stretch

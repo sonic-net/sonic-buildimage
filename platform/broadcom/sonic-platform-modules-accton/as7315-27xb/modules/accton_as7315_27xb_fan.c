@@ -630,14 +630,13 @@ out_kfree:
 }
 
 
-static int fan_remove(struct i2c_client *client)
+static void fan_remove(struct i2c_client *client)
 {
     struct fan_data_t *data = i2c_get_clientdata(client);
 
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &data->group);
     kfree(data->group.attrs);
-    return 0;
 }
 
 

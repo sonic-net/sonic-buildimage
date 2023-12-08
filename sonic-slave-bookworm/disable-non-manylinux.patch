@@ -1,0 +1,10 @@
+--- a/tags.py	2022-07-12 00:07:22.710207780 +0000
++++ b/tags.py	2022-07-12 00:07:13.185890659 +0000
+@@ -424,7 +424,6 @@
+     _, arch = linux.split("_", 1)
+     yield from _manylinux.platform_tags(linux, arch)
+     yield from _musllinux.platform_tags(arch)
+-    yield linux
+ 
+ 
+ def _generic_platforms() -> Iterator[str]:

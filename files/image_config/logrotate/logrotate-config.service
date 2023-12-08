@@ -6,6 +6,7 @@ After=updategraph.service
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/logrotate-config.sh
+RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target

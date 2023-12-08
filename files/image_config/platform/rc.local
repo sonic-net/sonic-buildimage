@@ -294,7 +294,7 @@ if [ -f $FIRST_BOOT_FILE ]; then
             # Use only the trivial repo and apt to support lazy package dependencies
             mv /etc/apt/sources.list /etc/apt/sources.list.rc-local
             echo "deb [trusted=yes] file:///host/image-$SONIC_VERSION/platform/common /" > /etc/apt/sources.list.d/sonic_debian_extension.list
-            LANG=C DEBIAN_FRONTEND=noninteractive apt-get update
+            LANG=C DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=1 update
             LANG=C DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Path=$PATH:/usr/local/bin -y install /host/image-$SONIC_VERSION/platform/$platform/*.deb
             # Cleanup
             rm -f /etc/apt/sources.list.d/sonic_debian_extension.list

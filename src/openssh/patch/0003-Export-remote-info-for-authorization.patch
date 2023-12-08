@@ -14,9 +14,9 @@ diff --git a/auth.c b/auth.c
 index c3693ba3f..96d551922 100644
 --- a/auth.c
 +++ b/auth.c
-@@ -914,3 +914,14 @@ auth_authorise_keyopts(struct ssh *ssh, struct passwd *pw,
- 
- 	return 0;
+@@ -764,3 +764,14 @@ auth_authorise_keyopts(struct ssh *ssh, struct passwd *pw,
+ 		fatal_f("failed to restrict session");
+ 	sshauthopt_free(restricted);
  }
 +
 +/* Export remote IP address and port for authorization. */

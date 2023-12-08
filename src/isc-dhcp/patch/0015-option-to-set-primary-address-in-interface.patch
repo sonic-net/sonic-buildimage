@@ -1,0 +1,114 @@
+diff --git a/common/discover.c b/common/discover.c
+index ab50234..40e13f5 100644
+--- a/common/discover.c
++++ b/common/discover.c
+@@ -1614,3 +1614,16 @@ void interface_snorf (struct interface_info *tmp, int ir)
+ 	}
+ 	interface_reference (&interfaces, tmp, MDL);
+ }
++
++void set_primary_addr_in_intf (struct in_addr primary_addr)	{
++	for (struct interface_info *tmp = interfaces; tmp; tmp = tmp->next) {
++		for (int i = 0; i < tmp->address_count; i++)	{
++			if (tmp->addresses[i].s_addr == primary_addr.s_addr)	{
++				struct in_addr tmp_ip = tmp->addresses[0];
++				tmp->addresses[0] = primary_addr;
++				tmp->addresses[i] = tmp_ip;
++				break;
++			}
++		}
++	}
++}
+\ No newline at end of file
+diff --git a/includes/dhcpd.h b/includes/dhcpd.h
+index 257b31e..e7f9f06 100644
+--- a/includes/dhcpd.h
++++ b/includes/dhcpd.h
+@@ -2873,6 +2873,7 @@ extern int interface_count;
+ extern int interface_max;
+ isc_result_t interface_initialize(omapi_object_t *, const char *, int);
+ void discover_interfaces(int);
++void set_primary_addr_in_intf (struct in_addr );
+ int setup_fallback (struct interface_info **, const char *, int);
+ int if_readsocket (omapi_object_t *);
+ void reinitialize_interfaces (void);
+diff --git a/relay/dhcrelay.c b/relay/dhcrelay.c
+index ff0ad17..31fe61b 100644
+--- a/relay/dhcrelay.c
++++ b/relay/dhcrelay.c
+@@ -92,6 +92,11 @@ struct downstream_intf_list {
+ 	struct interface_info *interface;
+ } *downstream_intfs = NULL;
+ 
++struct primary_gw_list	{
++	struct primary_gw_list *next;
++	struct in_addr gateway_addr;
++} *primary_gws = NULL;
++
+ #ifdef DHCPv6
+ 	/* Force use of DHCPv6 interface-id option. */
+ isc_boolean_t use_if_id = ISC_FALSE;
+@@ -199,6 +204,7 @@ char *progname;
+ "                     [-i interface0 [ ... -i interfaceN]\n" \
+ "                     [-iu interface0 [ ... -iu interfaceN]\n" \
+ "                     [-id interface0 [ ... -id interfaceN]\n" \
++"					  [-pg ip-address0 [ ... -pg ip-addressN]]\n" \
+ "                     [-U interface]\n" \
+ "                     [-dt]\n"\
+ "                     server0 [ ... serverN]\n\n" \
+@@ -221,6 +227,7 @@ char *progname;
+ "                     [-i interface0 [ ... -i interfaceN]\n" \
+ "                     [-iu interface0 [ ... -iu interfaceN]\n" \
+ "                     [-id interface0 [ ... -id interfaceN]\n" \
++"					  [-pg ip-address0 [ ... -pg ip-addressN]]\n" \
+ "                     [-U interface]\n" \
+ "                     [-dt]\n"\
+ "                     server0 [ ... serverN]\n\n" \
+@@ -649,6 +656,34 @@ main(int argc, char **argv) {
+ 				usage(use_noarg, argv[i-1]);
+ 			path_dhcrelay_pid = argv[i];
+ 			no_dhcrelay_pid = ISC_TRUE;
++		} else if (!strcmp(argv[i], "-pg")) {
++			if (++i == argc)
++				usage(use_noarg, argv[i-1]);
++#ifdef DHCPv6
++			if (local_family_set && (local_family == AF_INET6)) {
++				usage(use_v4command, argv[i]);
++			}
++			local_family_set = 1;
++			local_family = AF_INET;
++#endif
++			struct in_addr gw = {0};
++			if (inet_pton(AF_INET, argv[i], &gw) <= 0) {
++				usage("Invalid gateway address '%s'", argv[i]);
++			} else {
++				struct primary_gw_list *pg = ((struct primary_gw_list *)dmalloc(sizeof(struct primary_gw_list), MDL));
++				pg->gateway_addr = gw;
++				pg->next = NULL;
++
++				if (primary_gws == NULL)	{
++					primary_gws = pg;
++				} else	{
++					struct primary_gw_list *tmp = primary_gws;
++					while (tmp->next != NULL)	{
++						tmp = tmp->next;
++					}
++					tmp->next = pg;
++				}
++			}
+ 		} else if (!strcmp(argv[i], "--no-pid")) {
+ 			no_pid_file = ISC_TRUE;
+ 		} else if (!strcmp(argv[i], "--name-alias-map-file")) {
+@@ -818,6 +853,12 @@ main(int argc, char **argv) {
+ 	/* Discover all the network interfaces. */
+ 	discover_interfaces(DISCOVER_RELAY);
+ 
++	struct primary_gw_list *tmp = primary_gws;
++	while (tmp != NULL)	{
++		set_primary_addr_in_intf(tmp->gateway_addr);
++		tmp = tmp->next;
++	}
++
+ #ifdef DHCPv6
+ 	if (local_family == AF_INET6)
+ 		setup_streams();

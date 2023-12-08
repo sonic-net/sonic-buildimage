@@ -43,9 +43,9 @@ diff --git a/drivers/hwmon/pmbus/Kconfig b/drivers/hwmon/pmbus/Kconfig
 index eda871222..c3e72c6e7 100644
 --- a/drivers/hwmon/pmbus/Kconfig
 +++ b/drivers/hwmon/pmbus/Kconfig
-@@ -227,4 +227,14 @@ config SENSORS_DPS1900
+@@ -461,4 +461,14 @@ config SENSORS_ZL6100
  	  This driver can also be built as a module. If so, the module will
- 	  be called dps1900.
+ 	  be called zl6100.
  
 +config SENSORS_CISCO_N2200
 +	tristate "Cisco N2200 and compatibles"
@@ -62,10 +62,10 @@ diff --git a/drivers/hwmon/pmbus/Makefile b/drivers/hwmon/pmbus/Makefile
 index edc7c315c..df9119c0d 100644
 --- a/drivers/hwmon/pmbus/Makefile
 +++ b/drivers/hwmon/pmbus/Makefile
-@@ -36,3 +36,4 @@ obj-$(CONFIG_SENSORS_UCD9200)	+= ucd9200.o
+@@ -48,3 +48,4 @@ obj-$(CONFIG_SENSORS_UCD9200)	+= ucd9200.o
  obj-$(CONFIG_SENSORS_XDPE152)	+= xdpe152c4.o
  obj-$(CONFIG_SENSORS_ZL6100)	+= zl6100.o
- obj-$(CONFIG_SENSORS_DPS1900)	+= dps1900.o
+ obj-$(CONFIG_SENSORS_PIM4328)	+= pim4328.o
 +obj-$(CONFIG_SENSORS_CISCO_N2200) += cisco_n2200.o
 diff --git a/drivers/hwmon/pmbus/cisco_n2200.c b/drivers/hwmon/pmbus/cisco_n2200.c
 new file mode 100644

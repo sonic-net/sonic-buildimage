@@ -1,0 +1,37 @@
+From 276c9eae3cf83bb65c575b423c785d0ff37b6da0 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 17 Jul 2023 15:40:08 +0000
+Subject: [PATCH backport 6.1.42 46/85] Extend driver to support Infineon
+ Digital Multi-phase XDPE1A2G7 device.
+
+From telemetry perspective device is almost the same as XDPE15284, but
+does not support READ_EIN (86h) and READ_EOUT (87h) commands.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/hwmon/pmbus/xdpe152c4.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/hwmon/pmbus/xdpe152c4.c b/drivers/hwmon/pmbus/xdpe152c4.c
+index b8a36ef73e45..1ef1141ba537 100644
+--- a/drivers/hwmon/pmbus/xdpe152c4.c
++++ b/drivers/hwmon/pmbus/xdpe152c4.c
+@@ -44,6 +44,7 @@ static int xdpe152_probe(struct i2c_client *client)
+ }
+ 
+ static const struct i2c_device_id xdpe152_id[] = {
++	{"xdpe1a2g7", 0},
+ 	{"xdpe152c4", 0},
+ 	{"xdpe15284", 0},
+ 	{}
+@@ -52,6 +53,7 @@ static const struct i2c_device_id xdpe152_id[] = {
+ MODULE_DEVICE_TABLE(i2c, xdpe152_id);
+ 
+ static const struct of_device_id __maybe_unused xdpe152_of_match[] = {
++	{.compatible = "infineon,xdpe1a2g7"},
+ 	{.compatible = "infineon,xdpe152c4"},
+ 	{.compatible = "infineon,xdpe15284"},
+ 	{}
+-- 
+2.20.1
+

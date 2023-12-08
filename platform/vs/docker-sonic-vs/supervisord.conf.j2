@@ -314,3 +314,14 @@ stderr_logfile=syslog
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/tunnelmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
+
+[program:fabricmgrd]
+command=/usr/bin/fabricmgrd
+priority=27
+autostart=false
+autorestart=false
+stdout_logfile=syslog
+stderr_logfile=syslog
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/fabricmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}

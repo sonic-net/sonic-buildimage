@@ -1,3 +1,0 @@
-# server[:port]      shared_secret    timeout(s)    source_ip     vrf
-[{{ server.ip }}]:{{ server.auth_port }}  {{ server.passkey }}  {{ server.timeout }} {% if server.src_ip %}  {{ server.src_ip }}  {% endif %} {% if server.vrf %} {% if not server.src_ip %} - {% endif %} {{ server.vrf }}{% endif %}
-

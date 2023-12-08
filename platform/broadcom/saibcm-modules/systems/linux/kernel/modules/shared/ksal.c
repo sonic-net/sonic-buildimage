@@ -46,7 +46,7 @@
 #endif
 #include <linux/time.h>
 
-#ifdef MAX_USER_RT_PRIO
+#if defined(MAX_USER_RT_PRIO) || defined(MAX_RT_PRIO)
 /* Assume 2.6 scheduler */
 #define SAL_YIELD(task) \
     yield()

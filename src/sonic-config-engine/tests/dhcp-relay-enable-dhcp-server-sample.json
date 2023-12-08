@@ -1,7 +1,0 @@
-{
-    "FEATURE": {
-        "dhcp_server": {
-            "state": "enabled"
-        }
-    }
-}

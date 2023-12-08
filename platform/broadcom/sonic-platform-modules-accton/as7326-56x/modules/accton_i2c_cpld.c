@@ -1031,7 +1031,7 @@ exit:
 	return ret;
 }
 
-static int as7326_56x_cpld_remove(struct i2c_client *client)
+static void as7326_56x_cpld_remove(struct i2c_client *client)
 {
     struct as7326_56x_cpld_data *data = i2c_get_clientdata(client);
     const struct attribute_group *group = NULL;
@@ -1059,7 +1059,6 @@ static int as7326_56x_cpld_remove(struct i2c_client *client)
 
     kfree(data);
 
-    return 0;
 }
 
 static int as7326_56x_cpld_read_internal(struct i2c_client *client, u8 reg)

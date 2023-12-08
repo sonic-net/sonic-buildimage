@@ -591,12 +591,12 @@ exit:
     return status;
 }
 
-static int nokia_7215_ixs_a1_cpld_remove(struct i2c_client *client)
+static void nokia_7215_ixs_a1_cpld_remove(struct i2c_client *client)
 {
     struct cpld_data *data = i2c_get_clientdata(client);
     sysfs_remove_group(&client->dev.kobj, &nokia_7215_ixs_a1_cpld_group);
     kfree(data);
-    return 0;
+    return;
 }
 
 static const struct of_device_id nokia_7215_ixs_a1_cpld_of_ids[] = {

@@ -78,7 +78,8 @@ SONIC_COMMON_DPKG_LIST  :=  debian/control debian/changelog debian/rules \
 SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-jessie/Dockerfile.j2 sonic-slave-jessie/Dockerfile.user.j2 \
                                  sonic-slave-stretch/Dockerfile.j2 sonic-slave-stretch/Dockerfile.user.j2 \
                                  sonic-slave-buster/Dockerfile.j2 sonic-slave-buster/Dockerfile.user.j2 \
-                                 sonic-slave-bullseye/Dockerfile.j2 sonic-slave-bullseye/Dockerfile.user.j2
+                                 sonic-slave-bullseye/Dockerfile.j2 sonic-slave-bullseye/Dockerfile.user.j2 \
+                                 sonic-slave-bookworm/Dockerfile.j2 sonic-slave-bookworm/Dockerfile.user.j2
 
 
 

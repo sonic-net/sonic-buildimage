@@ -618,7 +618,7 @@ static const struct sensor_device_attribute *emc2305_fan_attrs[] = {
  * driver interface
  */
 
-static int emc2305_remove(struct i2c_client *client)
+static void emc2305_remove(struct i2c_client *client)
 {
 	struct emc2305_data *data = i2c_get_clientdata(client);
 	int fan_idx, i;
@@ -636,7 +636,6 @@ static int emc2305_remove(struct i2c_client *client)
 				   &emc2305_attr_common[i].dev_attr);
 
 	kfree(data);
-	return 0;
 }
 
 
