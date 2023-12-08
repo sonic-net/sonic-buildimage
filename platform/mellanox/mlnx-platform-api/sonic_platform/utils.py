@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@ import functools
 import subprocess
 import json
 import sys
+import threading
 import time
 import os
 from sonic_py_common import device_info
@@ -100,15 +101,15 @@ def read_float_from_file(file_path, default=0.0, raise_exception=False, log_func
     return read_from_file(file_path=file_path, target_type=float, default=default, raise_exception=raise_exception, log_func=log_func)
 
 
-def _key_value_converter(content):
+def _key_value_converter(content, delimeter):
     ret = {}
     for line in content.splitlines():
-        k,v = line.split(':')
+        k,v = line.split(delimeter)
         ret[k.strip()] = v.strip()
     return ret
 
 
-def read_key_value_file(file_path, default={}, raise_exception=False, log_func=logger.log_error):
+def read_key_value_file(file_path, default={}, raise_exception=False, log_func=logger.log_error, delimeter=':'):
     """Read file content and parse the content to a dict. The file content should like:
        key1:value1
        key2:value2
@@ -119,7 +120,8 @@ def read_key_value_file(file_path, default={}, raise_exception=False, log_func=l
         raise_exception (bool, optional): If exception should be raised or hiden. Defaults to False.
         log_func (optional): logger function.. Defaults to logger.log_error.
     """
-    return read_from_file(file_path=file_path, target_type=_key_value_converter, default=default, raise_exception=raise_exception, log_func=log_func)
+    converter = lambda content: _key_value_converter(content, delimeter)
+    return read_from_file(file_path=file_path, target_type=converter, default=default, raise_exception=raise_exception, log_func=log_func)
 
 
 def write_file(file_path, content, raise_exception=False, log_func=logger.log_error):
@@ -285,3 +287,26 @@ def wait_until(predict, timeout, interval=1, *args, **kwargs):
         time.sleep(interval)
         timeout -= interval
     return False
+
+
+class DbUtils:
+    lock = threading.Lock()
+    db_instances = threading.local()
+
+    @classmethod
+    def get_db_instance(cls, db_name, **kargs):
+        try:
+            if not hasattr(cls.db_instances, 'data'):
+                with cls.lock:
+                    if not hasattr(cls.db_instances, 'data'):
+                        cls.db_instances.data = {}
+
+            if db_name not in cls.db_instances.data:
+                from swsscommon.swsscommon import SonicV2Connector
+                db = SonicV2Connector(use_unix_socket_path=True)
+                db.connect(db_name)
+                cls.db_instances.data[db_name] = db
+            return cls.db_instances.data[db_name]
+        except Exception as e:
+            logger.log_error(f'Failed to get DB instance for DB {db_name} - {e}')
+            raise e

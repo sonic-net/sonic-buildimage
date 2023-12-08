@@ -417,11 +417,8 @@ RUN apt-get update && apt-get install -y \
         libauparse-dev \
         auditd \
 # For protobuf
-        dh-elpa \
-        xmlto \
-        rake-compiler \
-        default-jdk \
-        libgoogle-gson-java
+        protobuf-compiler \
+        libprotobuf-dev
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages

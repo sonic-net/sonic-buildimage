@@ -1,0 +1,14 @@
+Source: ionic
+Section: main
+Priority: extra
+Maintainer: Shantanu Shrivastava <shanshri@amd.com>
+Build-Depends: debhelper (>= 8.0.0), bzip2
+Standards-Version: 3.9.3
+#Vcs-Git: git://git.debian.org/collab-maint/bcmsdk.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/bcmsdk.git;a=summary
+
+Package: ionic-modules
+Architecture: arm64
+Section: main
+Depends: linux-image-6.1.0-11-2-arm64-unsigned
+Description: kernel modules for pensando elba

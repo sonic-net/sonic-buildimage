@@ -1,0 +1,331 @@
+#!/bin/sh
+
+R=""
+export LD_LIBRARY_PATH=/platform/lib:/nic/lib:$LD_LIBRARY_PATH
+export PATH=/platform/bin:$PATH
+if [ $(arch) != aarch64 ]; then
+    export PATH=$(pwd)/bin:$PATH
+    R=$(pwd)/data
+fi
+root_mnt=$R/mnt
+
+image_version={{ SONIC_IMAGE_VERSION }}
+
+image_dir=image-$image_version
+
+INSTALLER_PAYLOAD=fs.zip
+DOCKERFS_DIR=docker
+FILESYSTEM_DOCKERFS=dockerfs.tar.gz
+BL_CONF=boot.conf
+
+DATA_PARTUUID=6ED62003-DD8D-44B8-9538-0A2B7C7E628F
+ROOT_PARTUUID=C7F48DD2-C265-404B-959D-C64D21D49168
+
+ROOT_PARTSIZE=24G
+
+exec 0< /dev/tty 1> /dev/tty 2> /dev/tty
+
+PKG=""
+ACTION=""
+
+root_pn=0
+data_pn=0
+
+REPART_NEEDED=0
+
+set -e
+
+fatal()
+{
+    echo "FATAL: $1" >&2
+    exit 1
+}
+
+hash()
+{
+    sha512sum $1 | awk '{ print $1 }'
+}
+
+check_running_goldfw()
+{
+    local fw=$(expr "$(cat $R/proc/cmdline)" : '.*FW_NAME=\([a-z]\+\)')
+    if [ "$fw" != "goldfw" ]; then
+        fatal "Installer can only be run from goldfw"
+    fi
+}
+
+check_package()
+{
+    local f want_hash got_hash
+
+    echo "==> Checking package"
+    for f in $(jq -r ".shas | keys | join(\" \") | tostring" MANIFEST); do
+        echo -n "${f}..."
+        want_hash=$(jq -r .shas.\"$f\" MANIFEST)
+        got_hash=$(tar xfO $PKG $f | hash /dev/stdin)
+        if [ "$got_hash" != "$want_hash" ]; then
+            echo " BAD"
+            echo "WANT: $want_hash"
+            echo "GOT:  $got_hash"
+            fatal "Package file error"
+        else
+            echo " OK"
+        fi
+    done
+}
+
+get_install_mode()
+{
+    local  r
+
+    while [ -z "$install_mode" ]; do
+        echo "### Select install mode:"
+        echo "###    1. Whole disk (wipe all Pensando filesystems)"
+        echo "###    2. Half of /data (lose /data contents)"
+        echo "###    3. Half of /data (save/restore /data contents)"
+        read -p '### Selection: ' r
+        case "X-$r" in
+            X-1) install_mode=FULL_DISK; ;;
+            X-2) install_mode=DATA_LOSE; ;;
+            X-3) install_mode=DATA_KEEP; ;;
+            *)   fatal "ABORTED"; ;;
+        esac
+    done
+}
+
+check_existing_parts()
+{
+    local nparts i partuuid boot_partsize boot_lastsec data_firstsec
+
+    nparts=$(sgdisk -p /dev/mmcblk0 | grep '^[ ]*[1-9]' | wc -l)
+    for i in $(seq $nparts); do
+        partuuid=$(sgdisk -i $i /dev/mmcblk0 | awk '/Partition unique GUID/ { print $NF }')
+        case "$partuuid" in
+        $DATA_PARTUUID) data_pn=$i; ;;
+        $ROOT_PARTUUID) root_pn=$i; ;;
+        esac
+    done
+
+    if [ $install_mode != FULL_DISK ]; then
+        if [ $root_pn -ne 0 ]; then
+            boot_partsize=$(sgdisk -i $root_pn /dev/mmcblk0 | awk -F '[( ]' '/Partition size/ {print int($6)}')
+            boot_lastsec=$(sgdisk -i $root_pn /dev/mmcblk0 | awk '/Last sector/ {print $3}')
+            if [ ${boot_partsize}G = $ROOT_PARTSIZE ]; then
+                echo "SONiC root partitions already present with requested size. No repartition, only formatting"
+            else
+                echo "SONiC root partitions already present with mismatch size ${partsize}G. Repartition needed"
+                REPART_NEEDED=1
+            fi
+        fi
+
+        if [ $data_pn -eq 0 ]; then
+            echo "Data partition not found; Repartition needed"
+            REPART_NEEDED=1
+        elif [ $data_pn -ne $nparts ]; then
+            fatal "Data partition is not the last partition; exiting." >&2
+        else
+            data_firstsec=$(sgdisk -i $data_pn /dev/mmcblk0 | awk '/First sector/ {print $3}')
+            if [ $data_firstsec -ne $((boot_lastsec+1)) ]; then
+                echo "Data partition not contigent with boot partition. Repartition needed"
+                REPART_NEEDED=1
+            fi
+        fi
+    fi
+}
+
+save_data()
+{
+    echo "==> Saving /data"
+    mount /dev/mmcblk0p$data_pn $R/mnt
+    tar cvf $R/root/data.tar -C $R/mnt .
+    umount $R/mnt
+}
+
+setup_partitions_full()
+{
+    local i
+
+    echo "==> Setting up partitions..."
+    root_pn=1
+
+    set +e
+    sgdisk -Z /dev/mmcblk0 >/dev/null 2>&1
+    partprobe >/dev/null 2>&1
+    sgdisk \
+        -n $root_pn:+0:+$ROOT_PARTSIZE -t $root_pn:8300 \
+        -u $root_pn:$ROOT_PARTUUID -c $root_pn:"SONiC Root Filesystem" \
+        /dev/mmcblk0 >/dev/null
+    while true; do
+        partprobe
+        if [ ! -e $R/dev/mmcblk0p3 ]; then
+            break
+        fi
+        sleep 1
+    done
+
+    echo "==> Creating filesystems"
+    for i in $root_pn; do
+        mkfs.ext4 -F -q /dev/mmcblk0p$i >/dev/null
+    done
+    set -e
+}
+
+setup_partitions_multi()
+{
+    echo "==> Setting up partitions..."
+
+    set +e
+    if [ $REPART_NEEDED -eq 0 ]; then
+        mkfs.ext4 -F -q /dev/mmcblk0p$root_pn >/dev/null
+    else
+
+        if [ $root_pn -ne 0 ]; then
+            sgdisk -d $root_pn /dev/mmcblk0 >/dev/null
+        fi
+        [ $data_pn -ne 0 ] && sgdisk -d $data_pn /dev/mmcblk0 >/dev/null
+
+        if [ $root_pn -eq 0 ]; then
+            root_pn=10
+            data_pn=$(($root_pn + 1))
+        fi
+
+        if [ $data_pn -eq 0 ]; then
+            data_pn=$(($root_pn + 1))
+        fi
+
+        sgdisk \
+            -n $root_pn:+0:+$ROOT_PARTSIZE -t $root_pn:8300 \
+            -u $root_pn:$ROOT_PARTUUID -c $root_pn:"SONiC Root Filesystem" \
+            -n $data_pn:+0:0 -t $data_pn:8300 -u $data_pn:$DATA_PARTUUID \
+            -c $data_pn:"Data Filesystem" \
+            /dev/mmcblk0 >/dev/null
+        sgdisk -U R /dev/mmcblk0 >/dev/null
+
+        while true; do
+            partprobe
+            if [ -e $R/dev/mmcblk0p$data_pn ]; then
+                break
+            fi
+            sleep 1
+        done
+
+        echo "==> Creating filesystems"
+        for i in $root_pn $data_pn; do
+            mkfs.ext4 -F -q /dev/mmcblk0p$i >/dev/null
+        done
+    fi
+    set -e
+}
+
+setup_partitions()
+{
+    if [ $install_mode = INSTALL_FULL ]; then
+        setup_partitions_full
+    else
+        setup_partitions_multi
+    fi
+}
+
+restore_data()
+{
+    echo "==> Restoring /data"
+    if [ -f $R/root/data.tar ]; then
+        mount /dev/mmcblk0p$data_pn $R/mnt
+        tar xpvf $R/root/data.tar -C $R/mnt
+        umount $R/mnt
+    fi
+}
+
+create_bootloader_conf()
+{
+    echo "==> Create bootloader config"
+
+cat <<EOF >> $root_mnt/$BL_CONF
+default main
+
+label main
+    kernel /$image_dir/boot/vmlinuz-6.1.0-11-2-arm64
+    initrd /$image_dir/boot/initrd.img-6.1.0-11-2-arm64
+    devicetree /$image_dir/boot/elba-asic-psci.dtb
+    append softdog.soft_panic=1 FW_NAME=mainfwa root=/dev/mmcblk0p10 rw rootwait rootfstype=ext4 loopfstype=squashfs loop=/$image_dir/fs.squashfs
+}
+EOF
+}
+
+install_root_filesystem()
+{
+    echo "==> Installing root filesystem"
+
+    mount /dev/mmcblk0p$root_pn $root_mnt
+    mkdir -p $root_mnt/$image_dir
+
+    # Decompress the file for the file system directly to the partition
+    if [ x"$docker_inram" = x"on" ]; then
+        # when disk is small, keep dockerfs.tar.gz in disk, expand it into ramfs during initrd
+        tar xfO $PKG $INSTALLER_PAYLOAD | unzip -o - -x "platform.tar.gz" -d $root_mnt/$image_dir
+    else
+        tar xfO $PKG $INSTALLER_PAYLOAD | unzip -o - -x "$FILESYSTEM_DOCKERFS" "platform.tar.gz" -d $root_mnt/$image_dir
+
+        TAR_EXTRA_OPTION="--numeric-owner"
+        mkdir -p $root_mnt/$image_dir/$DOCKERFS_DIR
+        tar xfO $PKG $INSTALLER_PAYLOAD | unzip -op - "$FILESYSTEM_DOCKERFS" | tar xz $TAR_EXTRA_OPTION -f - -C $root_mnt/$image_dir/$DOCKERFS_DIR
+    fi
+
+    create_bootloader_conf
+
+    umount $root_mnt
+}
+
+set_boot_command()
+{
+    local pn
+    #set to mainfwa where sonic is installed
+    mtd=/dev/$(grep fwsel /proc/mtd | sed -e 's/:.*//')
+    flash_erase -q $mtd 0 1
+    echo -n mainfwa | dd of=$mtd status=none
+
+    echo "==> Setting u-boot environment for Debian Boot"
+    pn=$(printf "%x" $root_pn)
+    fwenv -E \
+        -s kernel_comp_addr_r 88000000 \
+        -s kernel_comp_size 8000000 \
+        -s kernel_addr_r a0000000 \
+        -s fdt_addr_r bb100000 \
+        -s ramdisk_addr_r a4000000 \
+        -s bootcmd "sysboot mmc 0:$pn any bf000000 /$BL_CONF"
+}
+
+main()
+{
+    while getopts ":p:i:" opt; do
+        case "$opt" in
+        p) PKG=$OPTARG; ;;
+        i) ACTION=INSTALL; ;;
+        *) true; ;;
+        esac
+    done
+
+    if [ "$PKG" = "" -o "$ACTION" != "INSTALL" ]; then
+        fatal "Needs -p filename -i all"
+    fi
+
+    tar xf $PKG MANIFEST
+
+    check_running_goldfw
+    check_package
+    # get_install_mode
+    install_mode=DATA_KEEP
+    check_existing_parts
+    if [ $install_mode = DATA_KEEP -a $REPART_NEEDED -eq 1 -a $data_pn -ne 0 ]; then
+        save_data
+    fi
+    setup_partitions
+    if [ $install_mode = DATA_KEEP -a $REPART_NEEDED -eq 1 ]; then
+        restore_data
+    fi
+    install_root_filesystem
+    set_boot_command
+    echo "==> Installation complete"
+}
+
+main "$@"

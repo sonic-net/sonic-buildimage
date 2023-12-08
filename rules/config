@@ -153,7 +153,7 @@ INCLUDE_NAT = n
 INCLUDE_DHCP_RELAY = y
 
 # INCLUDE_DHCP_SERVER - build and install dhcp-server package
-INCLUDE_DHCP_SERVER = n
+INCLUDE_DHCP_SERVER ?= n
 
 # INCLUDE_P4RT - build docker-p4rt for P4RT support
 INCLUDE_P4RT = n

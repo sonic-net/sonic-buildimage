@@ -7,9 +7,12 @@ import sys
 
 level1_keys = ["GLOBAL_MEDIA_SETTINGS","PORT_MEDIA_SETTINGS"]
 
-setting_keys = ["preemphasis","idriver","ipredriver",\
-                "main","pre1","pre2","pre3",\
-                "post1","post2","post3","attn"]
+si_param_list = ["preemphasis", "idriver", "ipredriver", \
+                 "main", "pre1", "pre2", "pre3", \
+                 "post1", "post2", "post3", "attn", \
+                 "ob_m2lp", "ob_alev_out", "obplev", "obnlev", \
+                 "regn_bfm1p", "regn_bfm1n"]
+lane_speed_key_prefix = 'speed:'
 lane_prefix = "lane"
 comma_separator = ","
 range_separator = "-"
@@ -46,17 +49,32 @@ def check_media_dict(vendor_dict):
             print("Expecting settings for vendor type " + vendor_key)
             return False
 
+        lane_speed_hierarchy_exists = None
+
         for value_key in value_dict:
-            if value_key not in setting_keys:
-                print("Unknown media setting " + value_key)
-                return False
-
-            lane_dict = value_dict[value_key]
-            for lanes in lane_dict:
-                if not check_lane_and_value(lanes, lane_dict[lanes]):
+            if value_key.startswith(lane_speed_key_prefix):
+                if lane_speed_hierarchy_exists is False:
+                    print("Inconsistent lane speed hierarchy levels for the same entry")
                     return False
-    return True
+                lane_speed_hierarchy_exists = True
+                settings_dict = value_dict[value_key]
+            else:
+                if lane_speed_hierarchy_exists is True:
+                    print("Inconsistent lane speed hierarchy levels for the same entry")
+                    return False
+                lane_speed_hierarchy_exists = False
+                settings_dict = value_dict
 
+            for si_param in settings_dict:
+                if si_param not in si_param_list:
+                    print("Unknown media setting " + si_param)
+                    return False
+
+                lane_dict = settings_dict[si_param]
+                for lanes in lane_dict:
+                    if not check_lane_and_value(lanes, lane_dict[lanes]):
+                        return False
+    return True
 
 def check_valid_port(port_name):
     try:

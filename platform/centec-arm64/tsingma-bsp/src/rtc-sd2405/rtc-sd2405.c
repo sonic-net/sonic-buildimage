@@ -210,7 +210,7 @@ sd2405_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (IS_ERR(rtc))
 		return PTR_ERR(rtc);
 	rtc->ops = &sd2405_rtc_ops;
-	ret = rtc_register_device(rtc);
+	ret = devm_rtc_register_device(rtc);
 	if (ret)
 		return ret;
 

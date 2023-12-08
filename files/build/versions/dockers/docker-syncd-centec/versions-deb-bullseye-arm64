@@ -1,7 +1,7 @@
 dmsetup==2:1.02.175-2.1
 iputils-ping==3:20210202-1
 keyutils==1.6.1-2
-libdbus-1-dev==1.12.24-0+deb11u1
+libdbus-1-dev==1.12.28-0+deb11u1
 libdevmapper1.02.1==2:1.02.175-2.1
 libdpkg-perl==1.20.12
 libevent-2.1-7==2.1.12-stable-1

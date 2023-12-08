@@ -54,17 +54,18 @@ class TestSfp:
         assert sfp.sdk_index == 1
         assert sfp.index == 5
 
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
     @mock.patch('sonic_platform.sfp.SFP.read_eeprom', mock.MagicMock(return_value=None))
     @mock.patch('sonic_platform.sfp.SFP.shared_sdk_handle', mock.MagicMock(return_value=2))
     @mock.patch('sonic_platform.sfp.SFP._get_module_info')
     @mock.patch('sonic_platform.chassis.Chassis.get_num_sfps', mock.MagicMock(return_value=2))
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
-    def test_sfp_get_error_status(self, mock_get_error_code):
+    def test_sfp_get_error_status(self, mock_get_error_code, mock_control):
         chassis = Chassis()
 
         # Fetch an SFP module to test
         sfp = chassis.get_sfp(1)
-
+        mock_control.return_value = False
         description_dict = sfp._get_error_description_dict()
         for error in description_dict.keys():
             mock_get_error_code.return_value = (SX_PORT_MODULE_STATUS_PLUGGED_WITH_ERROR, error)
@@ -87,6 +88,14 @@ class TestSfp:
             description = sfp.get_error_description()
 
             assert description == expected_description
+
+        mock_control.return_value = True
+        description = sfp.get_error_description()
+        assert description == 'Not supported'
+
+        mock_control.side_effect = RuntimeError('')
+        description = sfp.get_error_description()
+        assert description == 'Initializing'
 
     @mock.patch('sonic_platform.sfp.SFP._get_page_and_page_offset')
     @mock.patch('sonic_platform.sfp.SFP._is_write_protected')
@@ -277,6 +286,31 @@ class TestSfp:
         assert sfp.get_transceiver_bulk_status()
         assert sfp.get_transceiver_threshold_info()
         sfp.reinit()
+
+    @mock.patch('sonic_platform.utils.read_int_from_file')
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode')
+    @mock.patch('sonic_platform.utils.DbUtils.get_db_instance')
+    def test_is_sw_control(self, mock_get_db, mock_mode, mock_read):
+        sfp = SFP(0)
+        mock_mode.return_value = False
+        assert not sfp.is_sw_control()
+        mock_mode.return_value = True
+
+        mock_db = mock.MagicMock()
+        mock_get_db.return_value = mock_db
+        mock_db.get = mock.MagicMock(return_value=None)
+        with pytest.raises(Exception):
+            sfp.is_sw_control()
+
+        mock_read.return_value = 0
+        mock_db.get.return_value = 'FW_CONTROL'
+        assert not sfp.is_sw_control()
+        mock_read.return_value = 1
+        mock_db.get.return_value = 'SW_CONTROL'
+        assert sfp.is_sw_control()
+        mock_read.return_value = 0
+        with pytest.raises(Exception):
+            sfp.is_sw_control()
 
     @mock.patch('sonic_platform.utils.is_host', mock.MagicMock(side_effect = [True, True, False, False]))
     @mock.patch('subprocess.check_output', mock.MagicMock(side_effect = ['True', 'False']))

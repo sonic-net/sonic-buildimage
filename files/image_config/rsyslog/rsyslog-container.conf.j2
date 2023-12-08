@@ -53,9 +53,9 @@ $SystemLogRateLimitBurst 20000
 #### GLOBAL DIRECTIVES ####
 ###########################
 {% if container_name == 'pmon' %}
-{% if platform == 'x86_64-mlnx_msn2700-r0' or platform == 'x86_64-mlnx_msn2700a1-r0' %}
+{% if platform == 'x86_64-mlnx_msn2700-r0' or platform == 'x86_64-mlnx_msn2700a1-r0' or platform == 'x86_64-mlnx_msn2410-r0' %}
 
-# This rsyslog configuration is intended to resolve the following error message that only appears on the MSN2700 platform:
+# This rsyslog configuration is intended to resolve the following error message that only appears on the MSN2700 and MSN2410 platforms:
 # "ERR pmon#sensord: Error getting sensor data: dps460/#10: Can't read"
 # This error is because of firmware issue with some type of PSU, we are not able to upgrade the FW online.
 # Since there is no functional impact, this error log can be ignored safely.

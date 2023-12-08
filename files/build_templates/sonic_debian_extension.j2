@@ -31,6 +31,7 @@ IMAGE_DISTRO=$3
 set -x -e
 
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
+CONFIGURED_PLATFORM=$([ -f .platform ] && cat .platform || echo generic)
 
 . functions.sh
 BUILD_SCRIPTS_DIR=files/build_scripts
@@ -761,6 +762,14 @@ sudo LANG=C DOCKER_HOST="$DOCKER_HOST" chroot $FILESYSTEM_ROOT docker tag {{imag
 {% endif %}
 fi
 {% endfor %}
+
+if [[ $CONFIGURED_PLATFORM == pensando ]]; then
+#Disable rc.local
+sudo LANG=C chroot $FILESYSTEM_ROOT chmod -x /etc/rc.local
+sudo cp files/dsc/dpu.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+sudo cp files/dsc/dpu.init $FILESYSTEM_ROOT/etc/init.d/dpu
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable dpu.service
+fi
 
 SONIC_PACKAGE_MANAGER_FOLDER="/var/lib/sonic-package-manager/"
 sudo mkdir -p $FILESYSTEM_ROOT/$SONIC_PACKAGE_MANAGER_FOLDER

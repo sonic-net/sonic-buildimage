@@ -31,3 +31,4 @@ cross-compile-changes.patch
 0029-bgpd-Handle-MP_REACH_NLRI-malformed-packets-with-ses.patch
 0030-bgpd-Treat-EOR-as-withdrawn-to-avoid-unwanted-handli.patch
 0031-bgpd-Ignore-handling-NLRIs-if-we-received-MP_UNREACH.patch
+0032-zebra-Fix-fpm-multipath-encap-addition.patch

@@ -38,10 +38,13 @@ iface eth0 inet6 static
     up ip -6 route add default via 2603:10e2:0:2902::1 dev eth0 table default metric 201
     up ip -6 route add 2603:10e2:0:2902::/64 dev eth0 table default
     up ip -6 rule add pref 32765 from 2603:10e2:0:2902::8/128 table default
+    # IPV6 default table not add to lookup by default, management server need this to access IPV6 address when BGP shutdown
+    up ip -6 rule add pref 32767 lookup default
     # management port down rules
     pre-down ip -6 route delete default via 2603:10e2:0:2902::1 dev eth0 table default
     pre-down ip -6 route delete 2603:10e2:0:2902::/64 dev eth0 table default
     pre-down ip -6 rule delete pref 32765 from 2603:10e2:0:2902::8/128 table default
+    pre-down ip -6 rule delete pref 32767 lookup default
 #
 source /etc/network/interfaces.d/*
 #

@@ -229,7 +229,7 @@ sd2405_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	i2c_set_clientdata(client, rtc);
 	rtc->ops = &sd2405_rtc_ops;
 
-	return rtc_register_device(rtc);
+	return devm_rtc_register_device(rtc);
 }
 
 static struct i2c_device_id sd2405_id[] = {
