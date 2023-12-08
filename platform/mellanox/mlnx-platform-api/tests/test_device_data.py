@@ -52,5 +52,14 @@ class TestDeviceData:
     def test_get_bios_component(self):
         assert DeviceDataManager.get_bios_component() is not None
 
+    @mock.patch('sonic_py_common.device_info.get_paths_to_platform_and_hwsku_dirs', mock.MagicMock(return_value=('', '/tmp')))
+    @mock.patch('sonic_platform.device_data.utils.read_key_value_file')
+    def test_is_independent_mode(self, mock_read):
+        mock_read.return_value = {}
+        assert not DeviceDataManager.is_independent_mode()
+        mock_read.return_value = {'SAI_INDEPENDENT_MODULE_MODE': '1'}
+        assert DeviceDataManager.is_independent_mode()
+
+
 
 

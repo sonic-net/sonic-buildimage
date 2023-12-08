@@ -1,0 +1,17 @@
+[Unit]
+Description=dpu sw
+Requires=docker.service
+After=docker.service
+Requires=local-fs.target
+After=local-fs.target
+Requires=ionic-modules.service
+After=ionic-modules.service
+
+[Service]
+Type=oneshot
+ExecStart=/etc/init.d/dpu start
+ExecStop=/etc/init.d/dpu stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,65 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+include /usr/share/dpkg/pkg-info.mk
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+export INSTALL_MOD_DIR:=extra
+
+PACKAGE_PRE_NAME := ionic-modules
+KVERSION   ?= $(shell uname -r)
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+MOD_SRC_DIR:= $(shell pwd)
+
+%:
+	dh $@
+
+clean:
+	dh_testdir
+	dh_testroot
+	dh_clean
+	ARCH=aarch64 KSRC=/lib/modules/$(KVERSION)/build KMOD_OUT_DIR=$(CURDIR)/src/drivers/linux/build KMOD_SRC_DIR=$(CURDIR)/src/drivers/linux make -C $(CURDIR)/src/drivers/linux clean
+
+build:
+	ARCH=aarch64 KSRC=/lib/modules/$(KVERSION)/build KMOD_OUT_DIR=$(CURDIR)/src/drivers/linux/build KMOD_SRC_DIR=$(CURDIR)/src/drivers/linux make -C $(CURDIR)/src/drivers/linux
+
+binary: binary-arch binary-indep
+	# Nothing to do
+
+binary-arch:
+	# Nothing to do
+
+#install: build
+	#dh_testdir
+	#dh_testroot
+	#dh_clean -k
+	#dh_installdirs
+
+binary-indep:
+	dh_testdir
+	dh_installdirs
+
+	# Resuming debhelper scripts
+	dh_testroot
+	dh_install
+	dh_installchangelogs
+	dh_installdocs
+	dh_systemd_enable
+	dh_installinit
+	dh_systemd_start
+	dh_link
+	dh_fixperms
+	dh_compress
+	dh_strip
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+.PHONY: build binary binary-arch binary-indep clean

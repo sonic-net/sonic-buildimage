@@ -234,3 +234,12 @@ class DeviceDataManager:
             # Currently, only fetching BIOS version is supported
             return ComponentCPLDSN2201.get_component_list()
         return ComponentCPLD.get_component_list()
+
+    @classmethod
+    @utils.read_only_cache()
+    def is_independent_mode(cls):
+        from sonic_py_common import device_info
+        _, hwsku_dir = device_info.get_paths_to_platform_and_hwsku_dirs()
+        sai_profile_file = os.path.join(hwsku_dir, 'sai.profile')
+        data = utils.read_key_value_file(sai_profile_file, delimeter='=')
+        return data.get('SAI_INDEPENDENT_MODULE_MODE') == '1'
