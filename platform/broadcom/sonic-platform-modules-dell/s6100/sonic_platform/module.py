@@ -139,7 +139,7 @@ class Module(ModuleBase):
         Returns:
             string: Serial number of module
         """
-        return self._eeprom.serial_str()
+        return self._eeprom.serial_number_str()
 
     def get_status(self):
         """

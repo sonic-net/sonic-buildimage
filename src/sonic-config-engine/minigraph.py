@@ -16,6 +16,7 @@ from natsort import natsorted, ns as natsortns
 
 from portconfig import get_port_config, get_fabric_port_config, get_fabric_monitor_config
 from sonic_py_common.interface import backplane_prefix
+from sonic_py_common.multi_asic import is_multi_asic
 
 # TODO: Remove this once we no longer support Python 2
 if sys.version_info.major == 3:
@@ -1740,6 +1741,21 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             results['LOOPBACK_INTERFACE'][host_lo_intf[0]] = {}
 
     results['MGMT_VRF_CONFIG'] = mvrf
+
+    # Update SNMP_AGENT_ADDRESS_CONFIG with Management IP and Loopback IP
+    # if available.
+    if not is_multi_asic() and asic_name is None:
+        results['SNMP_AGENT_ADDRESS_CONFIG'] = {}
+        port = '161'
+        for mgmt_intf in mgmt_intf.keys():
+            snmp_key = mgmt_intf[1].split('/')[0] + '|' + port + '|'
+            results['SNMP_AGENT_ADDRESS_CONFIG'][snmp_key] = {}
+        # Add Loopback IP as agent address for single asic
+        for loip in lo_intfs.keys():
+            snmp_key = loip[1].split('/')[0] + '|' + port + '|'
+            results['SNMP_AGENT_ADDRESS_CONFIG'][snmp_key] = {}
+    else:
+        results['SNMP_AGENT_ADDRESS_CONFIG'] = {}
 
     phyport_intfs = {}
     vlan_intfs = {}

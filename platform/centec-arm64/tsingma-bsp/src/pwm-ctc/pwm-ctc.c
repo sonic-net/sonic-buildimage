@@ -133,7 +133,33 @@ static void ctc_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 	ctc_pwm_writel(pc, pwm->hwpwm, CTC_CR_PWM, cur_value);
 }
 
-static void ctc_pwm_get_state(struct pwm_chip *chip, struct pwm_device *pwm,
+static int ctc_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
+			  const struct pwm_state *state)
+{
+	int err;
+
+	if (state->polarity != PWM_POLARITY_NORMAL)
+		return -EINVAL;
+
+	if (!state->enabled)
+	{
+		if(pwm->state.enabled)
+			ctc_pwm_disable(chip,pwm);
+		return 0;
+	}
+
+	err = ctc_pwm_config(pwm->chip, pwm, state->duty_cycle, state->period);
+	if (err)
+		return err;
+	
+	if (!pwm->state.enabled)
+		err = ctc_pwm_enable(chip, pwm);
+	
+	return err;
+}
+
+
+static int ctc_pwm_get_state(struct pwm_chip *chip, struct pwm_device *pwm,
 			      struct pwm_state *state)
 {
 	struct ctc_pwm_chip *pc = to_ctc_pwm_chip(chip);
@@ -154,6 +180,8 @@ static void ctc_pwm_get_state(struct pwm_chip *chip, struct pwm_device *pwm,
 	cur_value_2 = ctc_pwm_readl(pc, pwm->hwpwm, CTC_DUTY_PWM);
 
 	state->duty_cycle = cur_value_2 * 1000;	// in nanoseconds
+
+	return 0;
 }
 
 static int ctc_pwm_capture(struct pwm_chip *chip, struct pwm_device *pwm,
@@ -173,9 +201,9 @@ static int ctc_pwm_capture(struct pwm_chip *chip, struct pwm_device *pwm,
 }
 
 static const struct pwm_ops ctc_pwm_ops = {
-	.config = ctc_pwm_config,
-	.enable = ctc_pwm_enable,
-	.disable = ctc_pwm_disable,
+	.apply = ctc_pwm_apply,
+	//.enable = ctc_pwm_enable,
+	//.disable = ctc_pwm_disable,
 	.get_state = ctc_pwm_get_state,
 	.capture = ctc_pwm_capture,
 	.owner = THIS_MODULE,
@@ -225,7 +253,7 @@ static int ctc_pwm_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int ctc_pwm_remove(struct platform_device *pdev)
+static void ctc_pwm_remove(struct platform_device *pdev)
 {
 	struct ctc_pwm_chip *pc = platform_get_drvdata(pdev);
 	int i;
@@ -233,7 +261,7 @@ static int ctc_pwm_remove(struct platform_device *pdev)
 	for (i = 0; i < CTC_NUM_PWM; i++)
 		pwm_disable(&pc->chip.pwms[i]);
 
-	return pwmchip_remove(&pc->chip);
+	pwmchip_remove(&pc->chip);
 }
 
 static const struct of_device_id ctc_pwm_of_match[] = {
@@ -249,7 +277,7 @@ static struct platform_driver ctc_pwm_driver = {
 		   .of_match_table = ctc_pwm_of_match,
 		   },
 	.probe = ctc_pwm_probe,
-	.remove = ctc_pwm_remove,
+	.remove_new = ctc_pwm_remove,
 };
 
 module_platform_driver(ctc_pwm_driver);
