@@ -27,7 +27,7 @@
 config_chassis_db() {
     startdb_file="/etc/sonic/chassisdb.conf"
     [ ! -e $startdb_file ] || rm $startdb_file
-    platform=$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+    platform=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
     # database-chassis services will start when $chassis_config file exists
     chassis_config="/usr/share/sonic/device/$platform/chassisdb.conf"
     if [ ! -e $chassis_config ]; then
@@ -53,6 +53,9 @@ config_chassis_db() {
        fi
     fi
 }
+
+# read SONiC immutable variables
+[ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
 
 config_chassis_db
 

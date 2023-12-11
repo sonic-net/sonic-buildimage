@@ -167,7 +167,8 @@ class DeviceDataManager:
     @classmethod
     @utils.read_only_cache()
     def get_sfp_count(cls):
-        return utils.read_int_from_file('/run/hw-management/config/module_counter')
+        sfp_count = utils.read_int_from_file('/run/hw-management/config/sfp_counter')
+        return sfp_count if sfp_count > 0 else len(glob.glob('/sys/module/sx_core/asic0/module*'))
 
     @classmethod
     def get_linecard_sfp_count(cls, lc_index):

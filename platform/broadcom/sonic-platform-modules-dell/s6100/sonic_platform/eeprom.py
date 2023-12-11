@@ -83,8 +83,14 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
                 self.eeprom_tlv_dict[mac_code] = '00:00:00:00:00:00'
 
     def serial_number_str(self):
-        (is_valid, results) = self.get_tlv_field(
-                    self.eeprom_data, self._TLV_CODE_SERIAL_NUMBER)
+        # For Chassis, return service tag instead of serial number
+        if not self.is_module:
+            (is_valid, results) = self.get_tlv_field(
+                        self.eeprom_data, self._TLV_CODE_SERVICE_TAG)
+        else:
+            (is_valid, results) = self.get_tlv_field(
+                        self.eeprom_data, self._TLV_CODE_SERIAL_NUMBER)
+
         if not is_valid:
             return "N/A"
 
@@ -113,14 +119,6 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
     def part_number_str(self):
         (is_valid, results) = self.get_tlv_field(
                     self.eeprom_data, self._TLV_CODE_PART_NUMBER)
-        if not is_valid:
-            return "N/A"
-
-        return results[2].decode('ascii')
-
-    def serial_str(self):
-        (is_valid, results) = self.get_tlv_field(
-                    self.eeprom_data, self._TLV_CODE_SERVICE_TAG)
         if not is_valid:
             return "N/A"
 
