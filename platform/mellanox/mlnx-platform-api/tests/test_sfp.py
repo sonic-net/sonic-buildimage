@@ -312,6 +312,8 @@ class TestSfp:
         with pytest.raises(Exception):
             sfp.is_sw_control()
 
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.utils.is_host', mock.MagicMock(side_effect = [True, True, False, False]))
     @mock.patch('subprocess.check_output', mock.MagicMock(side_effect = ['True', 'False']))
     @mock.patch('sonic_platform.sfp.SFP._get_lpmode', mock.MagicMock(side_effect = [True, False]))
@@ -323,6 +325,8 @@ class TestSfp:
         assert sfp.get_lpmode()
         assert not sfp.get_lpmode()
 
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.utils.is_host', mock.MagicMock(side_effect = [True, True, False, False]))
     @mock.patch('subprocess.check_output', mock.MagicMock(side_effect = ['True', 'False']))
     @mock.patch('sonic_platform.sfp.SFP._set_lpmode', mock.MagicMock(side_effect = [True, False]))
@@ -332,4 +336,46 @@ class TestSfp:
         assert sfp.set_lpmode(True)
         assert not sfp.set_lpmode(True)
         assert sfp.set_lpmode(False)
+        assert not sfp.set_lpmode(False)
+        
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode', mock.MagicMock(return_value=True))
+    @mock.patch('sonic_platform.utils.read_int_from_file')
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
+    def test_get_lpmode_cmis_host_mangagement(self, mock_control, mock_read):
+        mock_control.return_value = True
+        sfp = SFP(0)
+        sfp.get_xcvr_api = mock.MagicMock(return_value=None)
+        assert not sfp.get_lpmode()
+        
+        mock_api = mock.MagicMock()
+        sfp.get_xcvr_api.return_value = mock_api
+        mock_api.get_lpmode = mock.MagicMock(return_value=False)
+        assert not sfp.get_lpmode()
+        
+        mock_api.get_lpmode.return_value = True
+        assert sfp.get_lpmode()
+        
+        mock_control.return_value = False
+        mock_read.return_value = 1
+        assert sfp.get_lpmode()
+        
+        mock_read.return_value = 2
+        assert not sfp.get_lpmode()
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode', mock.MagicMock(return_value=True))
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
+    def test_set_lpmode_cmis_host_mangagement(self, mock_control):
+        mock_control.return_value = True
+        sfp = SFP(0)
+        sfp.get_xcvr_api = mock.MagicMock(return_value=None)
+        assert not sfp.set_lpmode(False)
+        
+        mock_api = mock.MagicMock()
+        sfp.get_xcvr_api.return_value = mock_api
+        mock_api.get_lpmode = mock.MagicMock(return_value=False)
+        assert sfp.set_lpmode(False)
+        assert not sfp.set_lpmode(True)
+        
+        mock_control.return_value = False
+        assert not sfp.set_lpmode(True)
         assert not sfp.set_lpmode(False)

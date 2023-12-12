@@ -477,14 +477,36 @@
         },
         "NTP": {
             "global": {
+                "authentication": "disabled",
+                "dhcp": "enabled",
+                "server_role": "disabled",
+                "admin_state": "enabled",
                 "vrf": "mgmt",
                 "src_intf": "eth0;Loopback0"
             }
         },
         "NTP_SERVER": {
-            "0.debian.pool.ntp.org": {},
-            "23.92.29.245": {},
-            "2001:aa:aa::aa": {}
+            "0.debian.pool.ntp.org": {
+                "association_type": "pool",
+                "resolve_as": "0.debian.pool.ntp.org"
+            },
+            "time.google.com": {
+                "association_type": "server",
+                "resolve_as": "216.239.35.4"
+            },
+            "23.92.29.245": {
+                "admin_state": "enabled",
+                "association_type": "server",
+                "resolve_as": "23.92.29.245",
+                "iburst": "off",
+                "trusted": "yes"
+            },
+            "2001:aa:aa::aa": {
+                "admin_state": "disabled",
+                "iburst": "on",
+                "association_type": "server",
+                "resolve_as": "2001:aa:aa::aa"
+            }
         },
         "SYSLOG_SERVER" : {
             "10.13.14.17": {
