@@ -58,5 +58,82 @@
         "desc": "CONFIGURE NON-EXISTING MGMT INTERFACE AS NTP SOURCE INTERFACE.",
         "eStrKey": "InvalidValue",
         "eStr": ["src"]
+    },
+    "NTP_GLOB_VALID1": {
+        "desc": "NTP global params valid config 1"
+    },
+    "NTP_GLOB_VALID2": {
+        "desc": "NTP global params valid config 2"
+    },
+    "NTP_AUTH_INVALID1": {
+        "desc": "NTP authentication state invalid 1",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_AUTH_INVALID2": {
+        "desc": "NTP authentication state invalid 2",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_DHCP_INVALID1": {
+        "desc": "NTP DHCP state invalid 1",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_DHCP_INVALID2": {
+        "desc": "NTP DHCP state invalid 2",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_ROLE_INVALID1": {
+        "desc": "NTP server role state invalid 1",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_ROLE_INVALID2": {
+        "desc": "NTP server role state invalid 2",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_STATE_INVALID1": {
+        "desc": "NTP daemon state invalid 1",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_STATE_INVALID2": {
+        "desc": "NTP daemon state invalid 2",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_ASSOCIATION_INVALID": {
+        "desc": "NTP server type invalid",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_IBURST_INVALID": {
+        "desc": "NTP server aggressive mode invalid",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_KEY_INVALID": {
+        "desc": "NTP server authentication key invalid",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_STATE_INVALID": {
+        "desc": "NTP server state invalid",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_SERVER_TRUSTED_INVALID": {
+        "desc": "NTP server trusted mode invalid",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_KEY_VALID": {
+        "desc": "NTP authentication keys inventory"
+    },
+    "NTP_KEY_ID_INVALID": {
+        "desc": "NTP authentication keys invalid key id",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_KEY_TRUSTED_INVALID": {
+        "desc": "NTP authentication keys invalid trustiness",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_KEY_TYPE_INVALID": {
+        "desc": "NTP authentication keys invalid key type",
+        "eStrKey": "InvalidValue"
+    },
+    "NTP_KEY_VALUE_INVALID": {
+        "desc": "NTP authentication keys bad key value",
+        "eStrKey": "Range"
     }
 }

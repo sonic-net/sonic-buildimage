@@ -360,6 +360,22 @@ module sonic-types {
             "BCP 175: Procedures for Maintaining the Time Zone Database";
     }
 
+    typedef yes-no {
+        description "Yes/No configuration";
+        type enumeration {
+            enum yes;
+            enum no;
+        }
+    }
+
+    typedef on-off {
+        description "On/Off configuration";
+        type enumeration {
+            enum on;
+            enum off;
+        }
+    }
+
     {% if yang_model_type == "cvl" %}
     /* Required for CVL */
     container operation {
