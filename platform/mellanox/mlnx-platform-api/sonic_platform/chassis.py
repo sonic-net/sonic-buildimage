@@ -82,6 +82,8 @@ class Chassis(ChassisBase):
     # System UID LED
     _led_uid = None
 
+    chassis_instance = None
+
     def __init__(self):
         super(Chassis, self).__init__()
 
@@ -126,6 +128,8 @@ class Chassis(ChassisBase):
         # Build the RJ45 port list from platform.json and hwsku.json
         self._RJ45_port_inited = False
         self._RJ45_port_list = None
+
+        Chassis.chassis_instance = self
 
         self.modules_mgmt_thread = threading.Thread()
         self.modules_changes_queue = queue.Queue()

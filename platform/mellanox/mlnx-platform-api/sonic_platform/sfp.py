@@ -31,6 +31,8 @@ try:
     from . import utils
     from .device_data import DeviceDataManager
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
+    from sonic_platform_base.sonic_xcvr.fields import consts
+    from sonic_platform_base.sonic_xcvr.api.public import sff8636, sff8436
 
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
@@ -155,6 +157,10 @@ SFP_TYPE_SFF8636 = 'sff8636'
 # SFP stderr
 SFP_EEPROM_NOT_AVAILABLE = 'Input/output error'
 
+SFP_DEFAULT_TEMP_WARNNING_THRESHOLD = 70.0
+SFP_DEFAULT_TEMP_CRITICAL_THRESHOLD = 80.0
+SFP_TEMPERATURE_SCALE = 8.0
+
 # SFP EEPROM limited bytes
 limited_eeprom = {
     SFP_TYPE_CMIS: {
@@ -264,7 +270,7 @@ class SFP(NvidiaSFPCommon):
 
         if slot_id == 0: # For non-modular chassis
             from .thermal import initialize_sfp_thermal
-            self._thermal_list = initialize_sfp_thermal(sfp_index)
+            self._thermal_list = initialize_sfp_thermal(self)
         else: # For modular chassis
             # (slot_id % MAX_LC_CONUNT - 1) * MAX_PORT_COUNT + (sfp_index + 1) * (MAX_PORT_COUNT / LC_PORT_COUNT)
             max_linecard_count = DeviceDataManager.get_linecard_count()
@@ -771,6 +777,13 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if the limited bytes is hit
         """
+        try:
+            if self.is_sw_control():
+                return False
+        except Exception as e:
+            logger.log_notice(f'Module is under initialization, cannot write module EEPROM - {e}')
+            return True
+
         eeprom_path = self._get_eeprom_path()
         limited_data = limited_eeprom.get(self._get_sfp_type_str(eeprom_path))
         if not limited_data:
@@ -814,6 +827,77 @@ class SFP(NvidiaSFPCommon):
         """
         api = self.get_xcvr_api()
         return [False] * api.NUM_CHANNELS if api else None
+
+    def get_temperature(self):
+        try:
+            if not self.is_sw_control():
+                temp_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/input'
+                if not os.path.exists(temp_file):
+                    logger.log_error(f'Failed to read from file {temp_file} - not exists')
+                    return None
+                temperature = utils.read_int_from_file(temp_file,
+                                                       log_func=None)
+                return temperature / SFP_TEMPERATURE_SCALE if temperature is not None else None
+        except:
+            return 0.0
+
+        self.reinit()
+        temperature = super().get_temperature()
+        return temperature if temperature is not None else None
+
+    def get_temperature_warning_threashold(self):
+        """Get temperature warning threshold
+
+        Returns:
+            int: temperature warning threshold
+        """
+        try:
+            if not self.is_sw_control():
+                emergency = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/emergency',
+                                                     log_func=None,
+                                                     default=None)
+                return emergency / SFP_TEMPERATURE_SCALE if emergency is not None else SFP_DEFAULT_TEMP_WARNNING_THRESHOLD
+        except:
+            return SFP_DEFAULT_TEMP_WARNNING_THRESHOLD
+
+        thresh = self._get_temperature_threshold()
+        if thresh and consts.TEMP_HIGH_WARNING_FIELD in thresh:
+            return thresh[consts.TEMP_HIGH_WARNING_FIELD]
+        return SFP_DEFAULT_TEMP_WARNNING_THRESHOLD
+
+    def get_temperature_critical_threashold(self):
+        """Get temperature critical threshold
+
+        Returns:
+            int: temperature critical threshold
+        """
+        try:
+            if not self.is_sw_control():
+                critical = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/critical',
+                                                    log_func=None,
+                                                    default=None)
+                return critical / SFP_TEMPERATURE_SCALE if critical is not None else SFP_DEFAULT_TEMP_CRITICAL_THRESHOLD
+        except:
+            return SFP_DEFAULT_TEMP_CRITICAL_THRESHOLD
+
+        thresh = self._get_temperature_threshold()
+        if thresh and consts.TEMP_HIGH_ALARM_FIELD in thresh:
+            return thresh[consts.TEMP_HIGH_ALARM_FIELD]
+        return SFP_DEFAULT_TEMP_CRITICAL_THRESHOLD
+
+    def _get_temperature_threshold(self):
+        self.reinit()
+        api = self.get_xcvr_api()
+        if not api:
+            return None
+
+        thresh_support = api.get_transceiver_thresholds_support()
+        if thresh_support:
+            if isinstance(api, sff8636.Sff8636Api) or isinstance(api, sff8436.Sff8436Api):
+                return api.xcvr_eeprom.read(consts.TEMP_THRESHOLDS_FIELD)
+            return api.xcvr_eeprom.read(consts.THRESHOLDS_FIELD)
+        else:
+            return None
 
     def get_xcvr_api(self):
         """
