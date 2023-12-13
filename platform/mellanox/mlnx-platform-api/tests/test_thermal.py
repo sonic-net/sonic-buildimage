@@ -31,6 +31,7 @@ sys.path.insert(0, modules_path)
 import sonic_platform.chassis
 from sonic_platform.chassis import Chassis
 from sonic_platform.device_data import DeviceDataManager
+from sonic_platform.sfp import SFP
 
 sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
 
@@ -148,23 +149,27 @@ class TestThermal:
 
     @mock.patch('os.path.exists', mock.MagicMock(return_value=True))
     def test_sfp_thermal(self):
-        from sonic_platform.thermal import initialize_sfp_thermal, THERMAL_NAMING_RULE
-        thermal_list = initialize_sfp_thermal(0)
+        from sonic_platform.thermal import THERMAL_NAMING_RULE
+        sfp = SFP(0)
+        thermal_list = sfp.get_all_thermals()
         assert len(thermal_list) == 1
         thermal = thermal_list[0]
         rule = THERMAL_NAMING_RULE['sfp thermals']
         start_index = rule.get('start_index', 1)
         assert thermal.get_name() == rule['name'].format(start_index)
-        assert rule['temperature'].format(start_index) in thermal.temperature
-        assert rule['high_threshold'].format(start_index) in thermal.high_threshold
-        assert rule['high_critical_threshold'].format(start_index) in thermal.high_critical_threshold
         assert thermal.get_position_in_parent() == 1
         assert thermal.is_replaceable() == False
+        sfp.get_temperature = mock.MagicMock(return_value=35.4)
+        sfp.get_temperature_warning_threashold = mock.MagicMock(return_value=70)
+        sfp.get_temperature_critical_threashold = mock.MagicMock(return_value=80)
+        assert thermal.get_temperature() == 35.4
+        assert thermal.get_high_threshold() == 70
+        assert thermal.get_high_critical_threshold() == 80
 
     @mock.patch('sonic_platform.utils.read_float_from_file')
     def test_get_temperature(self, mock_read):
         from sonic_platform.thermal import Thermal
-        thermal = Thermal('test', 'temp_file', None, None, 1)
+        thermal = Thermal('test', 'temp_file', None, None, None, None, 1000, 1)
         mock_read.return_value = 35727
         assert thermal.get_temperature() == 35.727
 
@@ -177,7 +182,7 @@ class TestThermal:
     @mock.patch('sonic_platform.utils.read_float_from_file')
     def test_get_high_threshold(self, mock_read):
         from sonic_platform.thermal import Thermal
-        thermal = Thermal('test', None, None, None, 1)
+        thermal = Thermal('test', None, None, None, None, None, 1000, 1)
         assert thermal.get_high_threshold() is None
 
         thermal.high_threshold = 'high_th_file'
@@ -193,7 +198,7 @@ class TestThermal:
     @mock.patch('sonic_platform.utils.read_float_from_file')
     def test_get_high_critical_threshold(self, mock_read):
         from sonic_platform.thermal import Thermal
-        thermal = Thermal('test', None, None, None, 1)
+        thermal = Thermal('test', None, None, None, None, None, 1000, 1)
         assert thermal.get_high_critical_threshold() is None
 
         thermal.high_critical_threshold = 'high_th_file'

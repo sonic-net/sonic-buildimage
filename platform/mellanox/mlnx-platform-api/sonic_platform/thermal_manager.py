@@ -15,9 +15,36 @@
 # limitations under the License.
 #
 from sonic_platform_base.sonic_thermal_control.thermal_manager_base import ThermalManagerBase
+from . import thermal_updater
+from .device_data import DeviceDataManager
 
 
 class ThermalManager(ThermalManagerBase):
+    thermal_updater_task = None
+
     @classmethod
     def run_policy(cls, chassis):
         pass
+
+    @classmethod
+    def initialize(cls):
+        """
+        Initialize thermal manager, including register thermal condition types and thermal action types
+        and any other vendor specific initialization.
+        :return:
+        """
+        if DeviceDataManager.is_independent_mode():
+            from .chassis import Chassis
+            cls.thermal_updater_task = thermal_updater.ThermalUpdater(Chassis.chassis_instance.get_all_sfps())
+            cls.thermal_updater_task.start()
+
+
+    @classmethod
+    def deinitialize(cls):
+        """
+        Destroy thermal manager, including any vendor specific cleanup. The default behavior of this function
+        is a no-op.
+        :return:
+        """
+        if DeviceDataManager.is_independent_mode():
+            cls.thermal_updater_task.stop()

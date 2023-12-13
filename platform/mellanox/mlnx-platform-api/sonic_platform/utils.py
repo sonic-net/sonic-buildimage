@@ -18,6 +18,7 @@ import ctypes
 import functools
 import subprocess
 import json
+import queue
 import sys
 import threading
 import time
@@ -287,6 +288,60 @@ def wait_until(predict, timeout, interval=1, *args, **kwargs):
         time.sleep(interval)
         timeout -= interval
     return False
+
+
+class TimerEvent:
+    def __init__(self, interval, cb, repeat):
+        self.interval = interval
+        self._cb = cb
+        self.repeat = repeat
+
+    def execute(self):
+        self._cb()
+
+
+class Timer(threading.Thread):
+    def __init__(self):
+        super(Timer, self).__init__()
+        self._timestamp_queue = queue.PriorityQueue()
+        self._wait_event = threading.Event()
+        self._stop_event = threading.Event()
+        self._min_timestamp = None
+
+    def schedule(self, interval, cb, repeat=True, run_now=True):
+        timer_event = TimerEvent(interval, cb, repeat)
+        self.add_timer_event(timer_event, run_now)
+
+    def add_timer_event(self, timer_event, run_now=True):
+        timestamp = time.time()
+        if not run_now:
+            timestamp += timer_event.interval
+
+        self._timestamp_queue.put_nowait((timestamp, timer_event))
+        if self._min_timestamp is not None and timestamp < self._min_timestamp:
+            self._wait_event.set()
+
+    def stop(self):
+        if self.is_alive():
+            self._wait_event.set()
+            self._stop_event.set()
+            self.join()
+
+    def run(self):
+        while not self._stop_event.is_set():
+            now = time.time()
+            item = self._timestamp_queue.get()
+            self._min_timestamp = item[0]
+            if self._min_timestamp > now:
+                self._wait_event.wait(self._min_timestamp - now)
+                self._wait_event.clear()
+                self._timestamp_queue.put(item)
+                continue
+
+            timer_event = item[1]
+            timer_event.execute()
+            if timer_event.repeat:
+                self.add_timer_event(timer_event, False)
 
 
 class DbUtils:
