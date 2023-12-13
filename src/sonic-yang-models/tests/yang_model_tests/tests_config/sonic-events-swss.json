@@ -180,9 +180,9 @@
     "SONIC_EVENTS_SWSS_CHK_CRM_THRESHOLD_VALID": {
         "sonic-events-swss:sonic-events-swss": {
             "sonic-events-swss:chk_crm_threshold": {
-                "percent": 0,
-                "used_cnt": 0,
-                "free_cnt": 0,
+                "percent": 80,
+                "used_cnt": 6414,
+                "free_cnt": 65300,
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }

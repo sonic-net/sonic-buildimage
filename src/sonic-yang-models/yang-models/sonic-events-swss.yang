@@ -102,11 +102,11 @@ module sonic-events-swss {
             }
 
             leaf used_cnt {
-                type uint8;
+                type uint32;
             }
 
             leaf free_cnt {
-                type uint64;
+                type uint32;
             }
 
             uses evtcmn:sonic-events-cmn;
