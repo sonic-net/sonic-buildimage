@@ -34,7 +34,7 @@ stages:
         mkdir -p /tmp/artifacts
       displayName: "Install dependencies"
     - script: |
-        SONIC_CONFIG_MAKE_JOBS=$(nproc) CONFIGURED_ARCH=amd64 DEST=/tmp/artifacts make -f ../rules/protobuf.mk -f protobuf/Makefile
+        BLDENV=bullseye SONIC_CONFIG_MAKE_JOBS=$(nproc) CONFIGURED_ARCH=amd64 DEST=/tmp/artifacts make -f ../rules/protobuf.mk -f protobuf/Makefile
       workingDirectory: src
       displayName: "Build protobuf"
     - script: |

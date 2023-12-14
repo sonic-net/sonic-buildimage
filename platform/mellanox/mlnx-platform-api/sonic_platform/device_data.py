@@ -17,6 +17,7 @@
 
 import glob
 import os
+import time
 
 from . import utils
 
@@ -167,8 +168,11 @@ class DeviceDataManager:
     @classmethod
     @utils.read_only_cache()
     def get_sfp_count(cls):
-        sfp_count = utils.read_int_from_file('/run/hw-management/config/sfp_counter')
-        return sfp_count if sfp_count > 0 else len(glob.glob('/sys/module/sx_core/asic0/module*'))
+        from sonic_py_common import device_info
+        platform_path = device_info.get_path_to_platform_dir()
+        platform_json_path = os.path.join(platform_path, 'platform.json')
+        platform_data = utils.load_json_file(platform_json_path)
+        return len(platform_data['chassis']['sfps'])
 
     @classmethod
     def get_linecard_sfp_count(cls, lc_index):
@@ -244,3 +248,23 @@ class DeviceDataManager:
         sai_profile_file = os.path.join(hwsku_dir, 'sai.profile')
         data = utils.read_key_value_file(sai_profile_file, delimeter='=')
         return data.get('SAI_INDEPENDENT_MODULE_MODE') == '1'
+    
+    @classmethod
+    def wait_platform_ready(cls):
+        """
+        Wait for Nvidia platform related services(SDK, hw-management) ready
+        Returns:
+            bool: True if wait success else timeout
+        """
+        conditions = []
+        sysfs_nodes = ['power_mode', 'power_mode_policy', 'present', 'reset', 'status', 'statuserror']
+        if cls.is_independent_mode():
+            sysfs_nodes.extend(['control', 'frequency', 'frequency_support', 'hw_present', 'hw_reset',
+                                'power_good', 'power_limit', 'power_on', 'temperature/input'])
+        else:
+            conditions.append(lambda: utils.read_int_from_file('/var/run/hw-management/config/asics_init_done') == 1)
+        sfp_count = cls.get_sfp_count()
+        for sfp_index in range(sfp_count):
+            for sysfs_node in sysfs_nodes:
+                conditions.append(lambda: os.path.exists(f'/sys/module/sx_core/asic0/module{sfp_index}/{sysfs_node}'))
+        return utils.wait_until_conditions(conditions, 300, 1)
