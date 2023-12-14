@@ -20,6 +20,11 @@ function waitplatform() {
 }
 
 function stopplatform1() {
+    if ! docker top gbsyncd$DEV | grep -q /usr/bin/syncd; then
+        debug "syncd process in container gbsyncd$DEV is not running"
+        return
+    fi
+
     # Invoke platform specific pre shutdown routine.
     PLATFORM=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' platform`
     PLATFORM_PRE_SHUTDOWN="/usr/share/sonic/device/$PLATFORM/plugins/gbsyncd_request_pre_shutdown"
