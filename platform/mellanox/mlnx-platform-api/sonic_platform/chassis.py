@@ -124,6 +124,7 @@ class Chassis(ChassisBase):
         self.reboot_cause_initialized = False
 
         self.sfp_module = None
+        self.sfp_lock = threading.Lock()
 
         # Build the RJ45 port list from platform.json and hwsku.json
         self._RJ45_port_inited = False
@@ -277,38 +278,49 @@ class Chassis(ChassisBase):
 
     def initialize_single_sfp(self, index):
         sfp_count = self.get_num_sfps()
+        # Use double checked locking mechanism for:
+        #     1. protect shared resource self._sfp_list
+        #     2. performance (avoid locking every time)
         if index < sfp_count:
-            if not self._sfp_list:
-                self._sfp_list = [None] * sfp_count
+            if not self._sfp_list or not self._sfp_list[index]:
+                with self.sfp_lock:
+                    if not self._sfp_list:
+                        self._sfp_list = [None] * sfp_count
 
-            if not self._sfp_list[index]:
-                sfp_module = self._import_sfp_module()
-                if self.RJ45_port_list and index in self.RJ45_port_list:
-                    self._sfp_list[index] = sfp_module.RJ45Port(index)
-                else:
-                    self._sfp_list[index] = sfp_module.SFP(index)
-                self.sfp_initialized_count += 1
+                    if not self._sfp_list[index]:
+                        sfp_module = self._import_sfp_module()
+                        if self.RJ45_port_list and index in self.RJ45_port_list:
+                            self._sfp_list[index] = sfp_module.RJ45Port(index)
+                        else:
+                            self._sfp_list[index] = sfp_module.SFP(index)
+                        self.sfp_initialized_count += 1
 
     def initialize_sfp(self):
-        if not self._sfp_list:
-            sfp_module = self._import_sfp_module()
-            sfp_count = self.get_num_sfps()
-            for index in range(sfp_count):
-                if self.RJ45_port_list and index in self.RJ45_port_list:
-                    sfp_object = sfp_module.RJ45Port(index)
-                else:
-                    sfp_object = sfp_module.SFP(index)
-                self._sfp_list.append(sfp_object)
-            self.sfp_initialized_count = sfp_count
-        elif self.sfp_initialized_count != len(self._sfp_list):
-            sfp_module = self._import_sfp_module()
-            for index in range(len(self._sfp_list)):
-                if self._sfp_list[index] is None:
-                    if self.RJ45_port_list and index in self.RJ45_port_list:
-                        self._sfp_list[index] = sfp_module.RJ45Port(index)
-                    else:
-                        self._sfp_list[index] = sfp_module.SFP(index)
-            self.sfp_initialized_count = len(self._sfp_list)
+        sfp_count = self.get_num_sfps()
+        # Use double checked locking mechanism for:
+        #     1. protect shared resource self._sfp_list
+        #     2. performance (avoid locking every time)
+        if sfp_count != self.sfp_initialized_count:
+            with self.sfp_lock:
+                if sfp_count != self.sfp_initialized_count:
+                    if not self._sfp_list:
+                        sfp_module = self._import_sfp_module()
+                        for index in range(sfp_count):
+                            if self.RJ45_port_list and index in self.RJ45_port_list:
+                                sfp_object = sfp_module.RJ45Port(index)
+                            else:
+                                sfp_object = sfp_module.SFP(index)
+                            self._sfp_list.append(sfp_object)
+                        self.sfp_initialized_count = sfp_count
+                    elif self.sfp_initialized_count != len(self._sfp_list):
+                        sfp_module = self._import_sfp_module()
+                        for index in range(len(self._sfp_list)):
+                            if self._sfp_list[index] is None:
+                                if self.RJ45_port_list and index in self.RJ45_port_list:
+                                    self._sfp_list[index] = sfp_module.RJ45Port(index)
+                                else:
+                                    self._sfp_list[index] = sfp_module.SFP(index)
+                        self.sfp_initialized_count = len(self._sfp_list)
 
     def get_num_sfps(self):
         """

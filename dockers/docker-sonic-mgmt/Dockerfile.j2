@@ -224,7 +224,7 @@ RUN mkdir -p /tmp/protobuf \
 # Install dash-api
 RUN cd /tmp \
     && mkdir -p /usr/lib/python3/dist-packages/dash_api \
-    && wget https://raw.githubusercontent.com/sonic-net/sonic-buildimage/master/src/sonic-dash-api/pypkg/__init__.py -O /usr/lib/python3/dist-packages/dash_api/__init__.py \
+    && wget https://raw.githubusercontent.com/sonic-net/sonic-dash-api/master/misc/pypkg/dash_api/__init__.py -O /usr/lib/python3/dist-packages/dash_api/__init__.py \
     && git clone https://github.com/sonic-net/sonic-dash-api.git \
     && protoc -I=sonic-dash-api/proto --python_out=/usr/lib/python3/dist-packages/dash_api sonic-dash-api/proto/*.proto \
     && rm -rf /tmp/sonic-dash-api

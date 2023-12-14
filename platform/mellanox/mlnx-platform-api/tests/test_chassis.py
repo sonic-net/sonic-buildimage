@@ -16,8 +16,10 @@
 #
 
 import os
+import random
 import sys
 import subprocess
+import threading
 
 from mock import MagicMock
 if sys.version_info.major == 3:
@@ -166,6 +168,30 @@ class TestChassis:
         sfp_list = chassis.get_all_sfps()
         assert len(sfp_list) == 3
         assert chassis.sfp_initialized_count == 3
+
+    def test_create_sfp_in_multi_thread(self):
+        DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
+
+        iteration_num = 100
+        while iteration_num > 0:
+            chassis = Chassis()
+            assert chassis.sfp_initialized_count == 0
+            t1 = threading.Thread(target=lambda: chassis.get_sfp(1))
+            t2 = threading.Thread(target=lambda: chassis.get_sfp(1))
+            t3 = threading.Thread(target=lambda: chassis.get_all_sfps())
+            t4 = threading.Thread(target=lambda: chassis.get_all_sfps())
+            threads = [t1, t2, t3, t4]
+            random.shuffle(threads)
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            assert len(chassis.get_all_sfps()) == 3
+            assert chassis.sfp_initialized_count == 3
+            for index, s in enumerate(chassis.get_all_sfps()):
+                assert s.sdk_index == index
+            iteration_num -= 1
+
 
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', MagicMock(return_value=3))
     def test_change_event(self):
