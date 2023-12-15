@@ -65,6 +65,7 @@ stages:
       - name: broadcom
         variables:
           swi_image: yes
+          INCLUDE_RESTAPI: y
       - name: mellanox
         variables:
           dbg_image: yes
@@ -79,6 +80,7 @@ stages:
         timeoutInMinutes: 1200
         variables:
           PLATFORM_ARCH: armhf
+          INCLUDE_RESTAPI: y
 
 - stage: Test
   dependsOn: BuildVS

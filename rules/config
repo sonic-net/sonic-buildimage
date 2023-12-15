@@ -144,7 +144,7 @@ INCLUDE_MGMT_FRAMEWORK = n
 ENABLE_HOST_SERVICE_ON_START = y
 
 # INCLUDE_RESTAPI - build docker-sonic-restapi for configuring the switch using REST APIs
-INCLUDE_RESTAPI = n
+INCLUDE_RESTAPI ?= n
 
 # INCLUDE_NAT - build docker-nat for nat support
 INCLUDE_NAT = n
