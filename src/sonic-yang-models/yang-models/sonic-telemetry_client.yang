@@ -86,33 +86,26 @@ module sonic-telemetry_client {
                 }
             }
 
-            list TELEMETRY_CLIENT_DS_LIST {
+            list TELEMETRY_CLIENT_LIST {
                 ordered-by user;
-                key "prefix";
+                key "prefix name";
 
                 leaf prefix {
                     type string {
-                        pattern "DestinationGroup_" + ".*";
+                        pattern 'Subscription|DestinationGroup';
                     }
+                }
+
+                leaf name {
+                    type string;
                 }
 
                 leaf dst_addr {
                     type ipv4-port;
                 }
-            }
-
-            list TELEMETRY_CLIENT_SUB_LIST {
-                ordered-by user;
-                key "prefix";
-
-                leaf prefix {
-                    type string {
-                        pattern "Subscription_" + ".*";
-                    }
-                }
 
                 leaf dst_group {
-                    must "(contains(../../TELEMETRY_CLIENT_DS_LIST/prefix, current()))";
+                    must "(contains(../../TELEMETRY_CLIENT_LIST/name, current()))";
                     type string;
                 }
 

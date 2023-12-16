@@ -70,6 +70,7 @@ Table of Contents
          * [TC to Priority group map](#tc-to-priority-group-map)
          * [TC to Queue map](#tc-to-queue-map)
          * [Telemetry](#telemetry)
+         * [Telemetry client](#telemetry-client)
          * [Tunnel](#tunnel)
          * [Versions](#versions)
          * [VLAN](#vlan)
@@ -2216,6 +2217,31 @@ and is listed in this table.
             "client_auth": "true",
             "log_level": "2",
             "port": "50051"
+        }
+    }
+}
+```
+
+### Telemetry client
+
+```
+{
+    "TELEMETRY_CLIENT": {
+        "Global": {
+            "encoding": "JSON_IETF",
+            "retry_interval": "30",
+            "src_ip": "30.57.185.38",
+            "unidirectional": "true"
+        },
+        "DestinationGroup|HS": {
+            "dst_addr": "30.57.186.214:8081,30.57.185.39:8081"
+        },
+        "Subscription|HS_RDMA": {
+            "dst_group": "HS",
+            "path_target": "COUNTERS_DB",
+            "paths": "COUNTERS/Ethernet*,COUNTERS_PORT_NAME_MAP",
+            "report_interval": "5000",
+            "report_type": "periodic"
         }
     }
 }
