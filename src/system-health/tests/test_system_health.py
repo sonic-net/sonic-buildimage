@@ -298,7 +298,8 @@ def test_hardware_checker():
             'status': 'True',
             'speed': '60',
             'speed_target': '60',
-            'speed_tolerance': '20',
+            'is_under_speed': 'False',
+            'is_over_speed': 'False',
             'direction': 'intake'
         },
         'FAN_INFO|fan2': {
@@ -306,28 +307,40 @@ def test_hardware_checker():
             'status': 'True',
             'speed': '60',
             'speed_target': '60',
-            'speed_tolerance': '20'
+            'is_under_speed': 'False',
+            'is_over_speed': 'False',
         },
         'FAN_INFO|fan3': {
             'presence': 'True',
             'status': 'False',
             'speed': '60',
             'speed_target': '60',
-            'speed_tolerance': '20'
+            'is_under_speed': 'False',
+            'is_over_speed': 'False',
         },
         'FAN_INFO|fan4': {
             'presence': 'True',
             'status': 'True',
             'speed': '20',
             'speed_target': '60',
-            'speed_tolerance': '20'
+            'is_under_speed': 'True',
+            'is_over_speed': 'False',
         },
         'FAN_INFO|fan5': {
             'presence': 'True',
             'status': 'True',
+            'speed': '90',
+            'speed_target': '60',
+            'is_under_speed': 'False',
+            'is_over_speed': 'True',
+        },
+        'FAN_INFO|fan6': {
+            'presence': 'True',
+            'status': 'True',
             'speed': '60',
             'speed_target': '60',
-            'speed_tolerance': '20',
+            'is_under_speed': 'False',
+            'is_over_speed': 'False',
             'direction': 'exhaust'
         }
     })
@@ -426,7 +439,10 @@ def test_hardware_checker():
 
     assert 'fan5' in checker._info
     assert checker._info['fan5'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
-    assert checker._info['fan5'][HealthChecker.INFO_FIELD_OBJECT_MSG] == 'fan5 direction exhaust is not aligned with fan1 direction intake'
+
+    assert 'fan6' in checker._info
+    assert checker._info['fan6'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_NOT_OK
+    assert checker._info['fan6'][HealthChecker.INFO_FIELD_OBJECT_MSG] == 'fan6 direction exhaust is not aligned with fan1 direction intake'
 
     assert 'PSU 1' in checker._info
     assert checker._info['PSU 1'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK

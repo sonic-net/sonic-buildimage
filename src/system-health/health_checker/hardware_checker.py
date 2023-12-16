@@ -102,37 +102,39 @@ class HardwareChecker(HealthChecker):
             if not self._ignore_check(config.ignore_devices, 'fan', name, 'speed'):
                 speed = data_dict.get('speed', None)
                 speed_target = data_dict.get('speed_target', None)
-                speed_tolerance = data_dict.get('speed_tolerance', None)
+                is_under_speed = data_dict.get('is_under_speed', None)
+                is_over_speed = data_dict.get('is_over_speed', None)
                 if not speed:
                     self.set_object_not_ok('Fan', name, 'Failed to get actual speed data for {}'.format(name))
                     continue
                 elif not speed_target:
                     self.set_object_not_ok('Fan', name, 'Failed to get target speed date for {}'.format(name))
                     continue
-                elif not speed_tolerance:
-                    self.set_object_not_ok('Fan', name, 'Failed to get speed tolerance for {}'.format(name))
+                elif is_under_speed is None:
+                    self.set_object_not_ok('Fan', name, 'Failed to get under speed threshold check for {}'.format(name))
+                    continue
+                elif is_over_speed is None:
+                    self.set_object_not_ok('Fan', name, 'Failed to get over speed threshold check for {}'.format(name))
                     continue
                 else:
                     try:
                         speed = float(speed)
                         speed_target = float(speed_target)
-                        speed_tolerance = float(speed_tolerance)
-                        speed_min_th = speed_target * (1 - float(speed_tolerance) / 100)
-                        speed_max_th = speed_target * (1 + float(speed_tolerance) / 100)
-                        if speed < speed_min_th or speed > speed_max_th:
+                        if 'true' in (is_under_speed.lower(), is_over_speed.lower()):
                             self.set_object_not_ok('Fan', name,
-                                                   '{} speed is out of range, speed={}, range=[{},{}]'.format(name,
-                                                                                                              speed,
-                                                                                                              speed_min_th,
-                                                                                                              speed_max_th))
+                                                   '{} speed is out of range, speed={}, target={}'.format(
+                                                       name,
+                                                       speed,
+                                                       speed_target))
                             continue
                     except ValueError:
                         self.set_object_not_ok('Fan', name,
-                                               'Invalid fan speed data for {}, speed={}, target={}, tolerance={}'.format(
+                                               'Invalid fan speed data for {}, speed={}, target={}, is_under_speed={}, is_over_speed={}'.format(
                                                    name,
                                                    speed,
                                                    speed_target,
-                                                   speed_tolerance))
+                                                   is_under_speed,
+                                                   is_over_speed))
                         continue
 
             if not self._ignore_check(config.ignore_devices, 'fan', name, 'direction'):
