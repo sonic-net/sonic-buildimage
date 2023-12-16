@@ -1235,10 +1235,10 @@
                 "src_ip": "30.57.185.38",
                 "unidirectional": "true"
             },
-            "DestinationGroup_HS": {
+            "DestinationGroup|HS": {
                 "dst_addr": "30.57.186.214:8081,30.57.185.39:8081"
             },
-            "Subscription_HS_RDMA": {
+            "Subscription|HS_RDMA": {
                 "dst_group": "HS",
                 "path_target": "COUNTERS_DB",
                 "paths": "COUNTERS/Ethernet*,COUNTERS_PORT_NAME_MAP",
