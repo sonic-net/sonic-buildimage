@@ -266,9 +266,14 @@ class TestSfp:
     @mock.patch('sonic_platform.utils.write_file')
     def test_reset(self, mock_write):
         sfp = SFP(0)
+        sfp.is_sw_control = mock.MagicMock(return_value=False)
         mock_write.return_value = True
         assert sfp.reset()
         mock_write.assert_called_with('/sys/module/sx_core/asic0/module0/reset', '1')
+        sfp.is_sw_control.return_value = True
+        assert sfp.reset()
+        sfp.is_sw_control.side_effect = Exception('')
+        assert not sfp.reset()
 
     @mock.patch('sonic_platform.sfp.SFP.read_eeprom')
     def test_get_xcvr_api(self, mock_read):
@@ -332,30 +337,32 @@ class TestSfp:
         assert sfp.get_temperature_warning_threashold() == 75.0
         assert sfp.get_temperature_critical_threashold() == 85.0
 
+    @mock.patch('sonic_platform.sfp.NvidiaSFPCommon.get_logical_port_by_sfp_index')
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode')
     @mock.patch('sonic_platform.utils.DbUtils.get_db_instance')
-    def test_is_sw_control(self, mock_get_db, mock_mode, mock_read):
+    def test_is_sw_control(self, mock_get_db, mock_mode, mock_read, mock_get_logical):
         sfp = SFP(0)
         mock_mode.return_value = False
         assert not sfp.is_sw_control()
         mock_mode.return_value = True
+        
+        mock_get_logical.return_value = None
+        with pytest.raises(Exception):
+            sfp.is_sw_control()
 
+        mock_get_logical.return_value = 'Ethernet0'
         mock_db = mock.MagicMock()
         mock_get_db.return_value = mock_db
-        mock_db.get = mock.MagicMock(return_value=None)
+        mock_db.exists = mock.MagicMock(return_value=False)
         with pytest.raises(Exception):
             sfp.is_sw_control()
 
+        mock_db.exists.return_value = True
         mock_read.return_value = 0
-        mock_db.get.return_value = 'FW_CONTROL'
         assert not sfp.is_sw_control()
         mock_read.return_value = 1
-        mock_db.get.return_value = 'SW_CONTROL'
         assert sfp.is_sw_control()
-        mock_read.return_value = 0
-        with pytest.raises(Exception):
-            sfp.is_sw_control()
 
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=False))
