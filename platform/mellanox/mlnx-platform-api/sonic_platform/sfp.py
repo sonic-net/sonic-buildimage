@@ -26,6 +26,7 @@ try:
     import ctypes
     import subprocess
     import os
+    import threading
     from sonic_py_common.logger import Logger
     from sonic_py_common.general import check_output_pipe
     from . import utils
@@ -219,6 +220,9 @@ class SdkHandleContext(object):
         deinitialize_sdk_handle(self.sdk_handle)
 
 class NvidiaSFPCommon(SfpOptoeBase):
+    sfp_index_to_logical_port_dict = {}
+    sfp_index_to_logical_lock = threading.Lock()
+    
     def __init__(self, sfp_index):
         super(NvidiaSFPCommon, self).__init__()
         self.index = sfp_index + 1
@@ -247,7 +251,31 @@ class NvidiaSFPCommon(SfpOptoeBase):
         error_type = utils.read_int_from_file(status_error_file_path)
 
         return oper_state, error_type
-
+    
+    @classmethod
+    def get_sfp_index_to_logical_port(cls, force=False):
+        if not cls.sfp_index_to_logical_port_dict or force:
+            config_db = utils.DbUtils.get_db_instance('CONFIG_DB')
+            port_data = config_db.get_table('PORT')
+            for key, data in port_data.items():
+                if data['index'] not in cls.sfp_index_to_logical_port_dict:
+                    cls.sfp_index_to_logical_port_dict[int(data['index']) - 1] = key
+    
+    @classmethod
+    def get_logical_port_by_sfp_index(cls, sfp_index):
+        with cls.sfp_index_to_logical_lock:
+            cls.get_sfp_index_to_logical_port()
+            logical_port_name = cls.sfp_index_to_logical_port_dict.get(sfp_index)
+            if not logical_port_name:
+                cls.get_sfp_index_to_logical_port(force=True)
+            else:
+                config_db = utils.DbUtils.get_db_instance('CONFIG_DB')
+                current_index = int(config_db.get('CONFIG_DB', f'PORT|{logical_port_name}', 'index'))
+                if current_index != sfp_index:
+                    cls.get_sfp_index_to_logical_port(force=True)
+                    logical_port_name = cls.sfp_index_to_logical_port_dict.get(sfp_index)
+            return logical_port_name
+  
 
 class SFP(NvidiaSFPCommon):
     """Platform-specific SFP class"""
@@ -299,6 +327,17 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if device is present, False if not
         """
+        if DeviceDataManager.is_independent_mode():
+            if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/control') != 0:
+                if not utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_present'):
+                    return False
+                if not utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/power_good'):
+                    return False
+                if not utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/power_on'):
+                    return False
+                if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_reset') == 1:
+                    return False
+                
         eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
         return eeprom_raw is not None
 
@@ -455,8 +494,17 @@ class SFP(NvidiaSFPCommon):
 
         refer plugins/sfpreset.py
         """
-        file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_RESET
-        return utils.write_file(file_path, '1')
+        try:
+            if not self.is_sw_control():
+                file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_RESET
+                return utils.write_file(file_path, '1')
+            else:
+                file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_HWRESET
+                return utils.write_file(file_path, '0') and utils.write_file(file_path, '1')
+        except Exception as e:
+            print(f'Failed to reset module - {e}')
+            logger.log_error(f'Failed to reset module - {e}')
+            return False
 
 
     @classmethod
@@ -918,15 +966,15 @@ class SFP(NvidiaSFPCommon):
             return False
 
         db = utils.DbUtils.get_db_instance('STATE_DB')
-        control_type = db.get('STATE_DB', f'TRANSCEIVER_MODULES_MGMT|{self.sdk_index}', 'control_type')
-        control_file_value = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/control')
-
-        if control_type == 'SW_CONTROL' and control_file_value == 1:
-            return True
-        elif control_type == 'FW_CONTROL' and control_file_value == 0:
-            return False
-        else:
-            raise Exception(f'Module {self.sdk_index} is in initialization, please retry later')
+        logical_port = NvidiaSFPCommon.get_logical_port_by_sfp_index(self.sdk_index)
+        if not logical_port:
+            raise Exception(f'Module {self.sdk_index} is not present or in initialization')
+        
+        initialized = db.exists('STATE_DB', f'TRANSCEIVER_STATUS|{logical_port}')
+        if not initialized:
+            raise Exception(f'Module {self.sdk_index} is not present or in initialization')
+        
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/control') == 1
 
 
 class RJ45Port(NvidiaSFPCommon):

@@ -381,9 +381,9 @@ class DbUtils:
                         cls.db_instances.data = {}
 
             if db_name not in cls.db_instances.data:
-                from swsscommon.swsscommon import SonicV2Connector
-                db = SonicV2Connector(use_unix_socket_path=True)
-                db.connect(db_name)
+                from swsscommon.swsscommon import ConfigDBConnector
+                db = ConfigDBConnector(use_unix_socket_path=True)
+                db.db_connect(db_name)
                 cls.db_instances.data[db_name] = db
             return cls.db_instances.data[db_name]
         except Exception as e:
