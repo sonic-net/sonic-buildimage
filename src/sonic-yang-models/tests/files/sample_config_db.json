@@ -2558,6 +2558,20 @@
                 "bank": "1",
                 "link": "PortChannel2"
             }
+        },
+        "MID_PLANE_BRIDGE": {
+            "GLOBAL" : {
+                "bridge": "bridge_midplane",
+                "ip_prefix": "169.254.200.254/24"
+            }
+        },
+        "DPUS": {
+            "dpu0": {
+                "midplane_interface": "dpu0"
+            },
+            "dpu1": {
+                "midplane_interface": "dpu1"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {

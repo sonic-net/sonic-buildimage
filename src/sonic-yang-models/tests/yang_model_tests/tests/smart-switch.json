@@ -1,0 +1,9 @@
+{
+    "SMART_SWITCH_MID_PLANE_BRIDGE_WITH_DPU_TEST" : {
+        "desc": "Valid configuration in MID_PLANE_BRIDGE and DPUS tables."
+    },
+    "SMART_SWITCH_DPU_NAME_TEST" : {
+        "desc": "DPU name validation.",
+        "eStr": "does not satisfy the constraint"
+    }
+}

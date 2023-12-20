@@ -2718,6 +2718,37 @@ The FIPS table introduces FIPS  configuration.
     }
 }
 ```
+### MID_PLANE_BRIDGE"
+
+The MID_PLANE_BRIDGE" table introduces the configuration for the midplane bridge interface for Smart Switch.
+
+```json
+{
+    "MID_PLANE_BRIDGE": {
+        "GLOBAL" : {
+            "bridge": "bridge_midplane",
+            "ip_prefix": "169.254.200.254/24"
+        }
+    }
+}
+```
+
+### DPUS
+
+The DPUS table introduces the information on the DPUs (Data Processing Unit) available on the platform.
+
+```json
+{
+    "DPUS": {
+        "dpu0": {
+            "midplane_interface": "dpu0"
+        },
+        "dpu1": {
+            "midplane_interface": "dpu1"
+        }
+    }
+}
+```
 
 #### 5.2.3 Update value directly in db memory
 
