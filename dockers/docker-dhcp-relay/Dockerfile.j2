@@ -30,6 +30,8 @@ RUN apt-get install -y libjsoncpp-dev
 {%- endif %}
 
 RUN apt-get install -y dnsmasq gcc python3-dev
+# Indicate we have installed dnsmasq in dhcp_relay container, it requires NET_ADMIN permission added to container.
+ENV include_dnsmasq y
 
 RUN pip3 install psutil
 
