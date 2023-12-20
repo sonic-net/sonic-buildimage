@@ -1,0 +1,80 @@
+module sonic-smart-switch {
+
+    yang-version 1.1;
+
+	namespace "http://github.com/sonic-net/sonic-smart-switch";
+	prefix smart-switch;
+
+	import ietf-inet-types {
+		prefix inet;
+	}
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+	import sonic-port {
+        prefix port;
+    }
+
+	description "Smart Switch yang Module for SONiC OS";
+
+	revision 2023-10-17 {
+		description "First Revision";
+	}
+
+	container sonic-smart-switch {
+
+		container MID_PLANE_BRIDGE {
+
+			description "MID_PLANE_BRIDGE part of config_db.json";
+
+			container GLOBAL {
+				leaf bridge {
+					type string {
+						pattern "bridge_midplane";
+					}
+					description "Name of the midplane bridge";
+
+					must "(current()/../ip_prefix)";
+				}
+
+				leaf ip_prefix {
+					type stypes:sonic-ip4-prefix;
+					description "IP prefix of the midplane bridge";
+				}
+			}
+			/* end of container GLOBAL */
+		}
+		/* end of container MID_PLANE_BRIDGE */
+
+		container DPUS {
+			description "DPUS part of config_db.json";
+
+			list DPUS_LIST {
+				key "dpu_name";
+
+				leaf dpu_name {
+					description "Name of the DPU";
+					type string {
+						pattern "dpu[0-9]+";
+					}
+				}
+
+				leaf midplane_interface {
+					description "Name of the interface that represents DPU";
+
+					type string {
+						pattern "dpu[0-9]+";
+					}
+
+					must "(current() = current()/../dpu_name)";
+				}
+			}
+			/* end of container DPUS_LIST */
+		}
+		/* end of container DPUS */
+	}
+	/* end of container sonic-smart-switch */
+}
+/* end of module sonic-smart-switch */

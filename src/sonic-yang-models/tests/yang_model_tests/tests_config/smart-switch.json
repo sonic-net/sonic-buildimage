@@ -1,0 +1,40 @@
+{
+    "SMART_SWITCH_MID_PLANE_BRIDGE_WITH_DPU_TEST": {
+        "sonic-smart-switch:sonic-smart-switch": {
+            "sonic-smart-switch:MID_PLANE_BRIDGE": {
+                "GLOBAL": {
+                    "bridge": "bridge_midplane",
+                    "ip_prefix": "169.254.200.254/24"
+                }
+            },
+            "sonic-smart-switch:DPUS": {
+                "DPUS_LIST": [
+                    {
+                        "dpu_name": "dpu0",
+                        "midplane_interface": "dpu0"
+                    },
+                    {
+                        "dpu_name": "dpu1",
+                        "midplane_interface": "dpu1"
+                    }
+                ]
+            }
+        }
+    },
+    "SMART_SWITCH_DPU_NAME_TEST": {
+        "sonic-smart-switch:sonic-smart-switch": {
+            "sonic-smart-switch:DPUS": {
+                "DPUS_LIST": [
+                    {
+                        "dpu_name": "dpu0",
+                        "midplane_interface": "dpuX"
+                    },
+                    {
+                        "dpu_name": "dpu1",
+                        "midplane_interface": "dpu0"
+                    }
+                ]
+            }
+        }
+    }
+}
