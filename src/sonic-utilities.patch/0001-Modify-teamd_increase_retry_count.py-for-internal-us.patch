@@ -1,0 +1,58 @@
+From 97c56d0077044048c4d32f6c314cfa0ca525b639 Mon Sep 17 00:00:00 2001
+From: Saikrishna Arcot <sarcot@microsoft.com>
+Date: Wed, 20 Dec 2023 16:01:45 -0800
+Subject: [PATCH] Modify teamd_increase_retry_count.py for internal use
+
+In our internal images, we have special handling for BGP sessions on T0.
+Specifically, in our internal images, the default BGP status is down.
+However, on T0, BGP is brought up automatically. Because of that, when
+this script is checking CONFIG_DB and APPL_DB to determine what BGP
+sessions are up, the handling for this needs to be a bit different.
+Specifically, assume BGP sessions are up unless `admin_status=down` is
+explicitly seen.
+
+Signed-off-by: Saikrishna Arcot <sarcot@microsoft.com>
+---
+ scripts/teamd_increase_retry_count.py | 13 +++----------
+ 1 file changed, 3 insertions(+), 10 deletions(-)
+
+diff --git a/scripts/teamd_increase_retry_count.py b/scripts/teamd_increase_retry_count.py
+index d5151b69..40681113 100755
+--- a/scripts/teamd_increase_retry_count.py
++++ b/scripts/teamd_increase_retry_count.py
+@@ -130,14 +130,6 @@ def getPortChannels():
+                 "adminUp": False
+                 }
+ 
+-    deviceMetadataTable = Table(configDb, "DEVICE_METADATA")
+-    metadata = deviceMetadataTable.get("localhost")
+-    defaultBgpStatus = True
+-    for key, value in metadata[1]:
+-        if key == "default_bgp_status":
+-            defaultBgpStatus = value == "up"
+-            break
+-
+     bgpTable = Table(configDb, "BGP_NEIGHBOR")
+     bgpNeighbors = bgpTable.getKeys()
+     for bgpNeighbor in bgpNeighbors:
+@@ -145,14 +137,15 @@ def getPortChannels():
+         if not neighborData[0]:
+             continue
+         localAddr = None
+-        isAdminUp = defaultBgpStatus
++        isAdminUp = True
+         for key, value in neighborData[1]:
+             if key == "local_addr":
+                 if value not in portChannelData:
+                     break
+                 localAddr = value.lower()
+             elif key == "admin_status":
+-                isAdminUp = value == "up"
++                if value == "down":
++                    isAdminUp = False
+         if not localAddr:
+             continue
+         portChannelData[localAddr]["adminUp"] = isAdminUp
+-- 
+2.34.1
+
