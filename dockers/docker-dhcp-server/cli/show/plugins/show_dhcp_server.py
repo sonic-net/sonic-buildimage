@@ -79,5 +79,26 @@ def range(db, range_name):
     click.echo(tabulate(table, headers=headers))
 
 
+@ipv4.command()
+@click.argument('dhcp_interface', required=False)
+@click.option('--with_customized_options', default=False, is_flag=True)
+@clicommon.pass_db
+def info(db, dhcp_interface, with_customized_options):
+    if not dhcp_interface:
+        dhcp_interface = "*"
+    headers = ["Interface", "Mode", "Gateway", "Netmask", "Lease Time(s)", "State"]
+    if with_customized_options:
+        headers.append("Customized Options")
+    table = []
+    dbconn = db.db
+    for key in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4|" + dhcp_interface):
+        entry = dbconn.get_all("CONFIG_DB", key)
+        interface = key.split("|")[1]
+        table.append([interface, entry["mode"], entry["gateway"], entry["netmask"], entry["lease_time"], entry["state"]])
+        if with_customized_options:
+            table[-1].append(entry["customized_options"])
+    click.echo(tabulate(table, headers=headers))
+
+
 def register(cli):
     cli.add_command(dhcp_server)
