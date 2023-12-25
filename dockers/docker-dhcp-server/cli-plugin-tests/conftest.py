@@ -62,10 +62,19 @@ def mock_db():
         if table == "STATE_DB":
             return key in mock_state_db
 
+    def delete(table, key):
+        assert table == "CONFIG_DB" or table == "STATE_DB"
+        if table == "CONFIG_DB":
+            del mock_config_db[key]
+        if table == "STATE_DB":
+            del mock_state_db[key]
+
+
     db.keys = mock.Mock(side_effect=keys)
     db.get_all = mock.Mock(side_effect=get_all)
     db.get = mock.Mock(side_effect=get)
     db.hmset = mock.Mock(side_effect=hmset)
     db.exists = mock.Mock(side_effect=exists)
+    db.delete = mock.Mock(side_effect=delete)
 
     yield db

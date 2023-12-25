@@ -102,6 +102,20 @@ def dhcp_server_ipv4_add(db, mode, lease_time, dup_gw_nm, gateway, netmask, dhcp
             })
 
 
+@dhcp_server_ipv4.command(name="del")
+@click.argument("dhcp_interface", required=True)
+@clicommon.pass_db
+def dhcp_server_ipv4_del(db, dhcp_interface):
+    ctx = click.get_current_context()
+    dbconn = db.db
+    key = "DHCP_SERVER_IPV4|" + dhcp_interface
+    if dbconn.exists("CONFIG_DB", key):
+        click.echo("Dhcp interface %s exists in config db, proceed to delete".format(dhcp_interface))
+        dbconn.delete("CONFIG_DB", key)
+    else:
+        ctx.fail("Dhcp interface %s does not exist in config db".format(dhcp_interface))
+
+
 def register(cli):
     # cli.add_command(dhcp_server)
     pass
