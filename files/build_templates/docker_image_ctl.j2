@@ -34,27 +34,16 @@ function updateSyslogConf()
     # Also update the container name
     if [[ ($NUM_ASIC -gt 1) ]]; then
         TARGET_IP=$(docker network inspect bridge --format={{ "'{{(index .IPAM.Config 0).Gateway}}'" }})
-    else
-        if [ "$CONTAINER_EXISTS" = "yes" ]; then
-            # database configuration has been synced to /etc/rsyslog.conf
-            # no need generate it to save boot time
-            return
-        fi
-        TARGET_IP="127.0.0.1"
+        CONTAINER_NAME="$DOCKERNAME"
+        TMP_FILE="/tmp/rsyslog.$CONTAINER_NAME.conf"
+        {%- if docker_container_name == "database" %}
+        python -c "import jinja2, os; paths=['/usr/share/sonic/templates']; loader = jinja2.FileSystemLoader(paths); env = jinja2.Environment(loader=loader, trim_blocks=True); template_file='/usr/share/sonic/templates/rsyslog-container.conf.j2'; template = env.get_template(os.path.basename(template_file)); data=template.render({\"target_ip\":\"$TARGET_IP\",\"container_name\":\"$CONTAINER_NAME\"}); print(data)" > $TMP_FILE
+        {%- else %}
+        sonic-cfggen -t /usr/share/sonic/templates/rsyslog-container.conf.j2 -a "{\"target_ip\": \"$TARGET_IP\", \"container_name\": \"$CONTAINER_NAME\" }"  > $TMP_FILE
+        {%- endif %}
+        docker cp $TMP_FILE ${DOCKERNAME}:/etc/rsyslog.conf
+        rm -rf $TMP_FILE
     fi
-    CONTAINER_NAME="$DOCKERNAME"
-    TMP_FILE="/tmp/rsyslog.$CONTAINER_NAME.conf"
-    {%- if docker_container_name == "database" %}
-    python -c "import jinja2, os; paths=['/usr/share/sonic/templates']; loader = jinja2.FileSystemLoader(paths); env = jinja2.Environment(loader=loader, trim_blocks=True); template_file='/usr/share/sonic/templates/rsyslog-container.conf.j2'; template = env.get_template(os.path.basename(template_file)); data=template.render({\"target_ip\":\"$TARGET_IP\",\"container_name\":\"$CONTAINER_NAME\"}); print(data)" > $TMP_FILE
-    {%- else %}
-    sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog-container.conf.j2 -a "{\"target_ip\": \"$TARGET_IP\", \"container_name\": \"$CONTAINER_NAME\", \"platform\": \"$PLATFORM\" }"  > $TMP_FILE
-    if [ $? -ne 0 ]; then
-      echo "Error: Execute sonic-cfggen -d failed. Execute without '-d'."
-      sonic-cfggen -t /usr/share/sonic/templates/rsyslog-container.conf.j2 -a "{\"target_ip\": \"$TARGET_IP\", \"container_name\": \"$CONTAINER_NAME\", \"platform\": \"$PLATFORM\" }"  > $TMP_FILE
-    fi
-    {%- endif %}
-    docker cp $TMP_FILE ${DOCKERNAME}:/etc/rsyslog.conf
-    rm -rf $TMP_FILE
 }
 function ebtables_config()
 {
@@ -326,11 +315,16 @@ start() {
     # Obtain our platform as we will mount directories with these names in each docker
     PLATFORM=${PLATFORM:-`$SONIC_CFGGEN -H -v DEVICE_METADATA.localhost.platform`}
 
-
     # Parse the device specific asic conf file, if it exists
     ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
     if [ -f "$ASIC_CONF" ]; then
         source $ASIC_CONF
+    fi
+
+    # Default rsyslog target IP for single ASIC platform
+    SYSLOG_TARGET_IP=127.0.0.1
+    if [[ ($NUM_ASIC -gt 1) ]]; then
+        SYSLOG_TARGET_IP=$(docker network inspect bridge --format={{ "'{{(index .IPAM.Config 0).Gateway}}'" }})
     fi
 
     PLATFORM_ENV_CONF=/usr/share/sonic/device/$PLATFORM/platform_env.conf
@@ -655,6 +649,8 @@ start() {
         --env "DEV"="$DEV" \
         --env "CONTAINER_NAME"=$DOCKERNAME \
         $CAP_ADD \
+        --env "SYSLOG_TARGET_IP"=$SYSLOG_TARGET_IP \
+        --env "PLATFORM"=$PLATFORM \
         --name=$DOCKERNAME \
 {%- if docker_container_name == "gbsyncd" %}
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \

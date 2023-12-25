@@ -2,14 +2,22 @@
     "FEATURE|dhcp_server": {
         "state": "enabled"
     },
+    "VLAN_INTERFACE|Vlan100": {
+    },
+    "VLAN_INTERFACE|Vlan100|100.1.1.1/24": {
+    },
+    "VLAN_INTERFACE|Vlan200": {
+    },
+    "VLAN_INTERFACE|Vlan200|100.1.1.2/24": {
+    },
+    "VLAN_INTERFACE|Vlan300": {
+    },
     "DHCP_SERVER_IPV4|Vlan100": {
         "gateway": "100.1.1.1",
         "lease_time": "3600",
         "mode": "PORT",
         "netmask": "255.255.255.0",
-        "customized_options": [
-            "option60"
-        ],
+        "customized_options": "option60",
         "state": "enabled"
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS|option60": {
