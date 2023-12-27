@@ -283,7 +283,8 @@ def get_watchdog():
     """
     Return WatchdogType1 or WatchdogType2 based on system
     """
-
+    
+    utils.wait_until(lambda: os.path.exists('/run/hw-management/watchdog/main/state'), timeout=10, interval=1)
     watchdog_main_device_name = None
 
     for device in os.listdir("/dev/"):
