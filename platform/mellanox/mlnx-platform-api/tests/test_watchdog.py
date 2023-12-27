@@ -36,6 +36,7 @@ from sonic_platform.watchdog import get_watchdog,    \
 
 
 class TestWatchdog:
+    @mock.patch('sonic_platform.utils.wait_until', mock.MagicMock())
     @mock.patch('sonic_platform.watchdog.is_mlnx_wd_main')
     @mock.patch('sonic_platform.watchdog.os.listdir')
     def test_get_watchdog_no_device(self, mock_listdir, mock_is_main):
@@ -50,6 +51,7 @@ class TestWatchdog:
         mock_is_main.return_value = False
         assert get_watchdog() is None
 
+    @mock.patch('sonic_platform.utils.wait_until', mock.MagicMock())
     @mock.patch('sonic_platform.watchdog.is_mlnx_wd_main')
     @mock.patch('sonic_platform.watchdog.is_wd_type2')
     @mock.patch('sonic_platform.watchdog.os.listdir', mock.MagicMock(return_value=['watchdog1', 'watchdog2']))
