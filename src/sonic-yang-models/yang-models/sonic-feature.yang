@@ -78,6 +78,13 @@ module sonic-feature{
                     default "false";
                 }
 
+                leaf has_per_dpu_scope {
+                    description "This configuration identicates there will only one service
+                                spawned per DPU";
+                    type feature-scope-status;
+                    default "false";
+                }
+
                 leaf high_mem_alert {
                     description "This configuration controls the trigger to generate
                                 alert on high memory utilization";
