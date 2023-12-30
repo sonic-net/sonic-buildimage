@@ -1825,6 +1825,7 @@
                 "auto_restart": "always_enabled",
                 "has_global_scope": "true",
                 "has_per_asic_scope": "true",
+                "has_per_dpu_scope": "true",
                 "delayed": "false",
                 "high_mem_alert": "disabled",
                 "state": "always_enabled",

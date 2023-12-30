@@ -10,6 +10,7 @@
                         "delayed": "False",
                         "has_global_scope": "True",
                         "has_per_asic_scope": "True",
+                        "has_per_dpu_scope": "True",
                         "set_owner": "local",
                         "check_up_status": "False",
                         "support_syslog_rate_limit": "true"
