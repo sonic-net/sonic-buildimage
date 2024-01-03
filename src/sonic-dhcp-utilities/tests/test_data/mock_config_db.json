@@ -6,7 +6,8 @@
     },
     "VLAN": {
         "Vlan1000": {},
-        "Vlan2000": {}
+        "Vlan2000": {},
+        "Vlan3000": {}
     },
     "VLAN_INTERFACE": {
         "Vlan1000|192.168.0.1/21": {
@@ -26,6 +27,9 @@
         },
         "Vlan2000": {
             "NULL": "NULL"
+        },
+        "Vlan3000": {
+            "NULL": "NULL"
         }
     },
     "VLAN_MEMBER": {
@@ -36,6 +40,9 @@
             "tagging_mode": "untagged"
         },
         "Vlan1000|Ethernet40": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan3000|Ethernet44": {
             "tagging_mode": "untagged"
         }
     },
@@ -92,6 +99,13 @@
             "mode": "PORT",
             "netmask": "255.255.255.0",
             "state": "disabled"
+        },
+        "Vlan6000": {
+            "gateway": "192.168.2.1",
+            "lease_time": "900",
+            "mode": "PORT",
+            "netmask": "255.255.255.0",
+            "state": "enabled"
         }
     },
     "DHCP_SERVER_IPV4_RANGE": {
@@ -157,6 +171,11 @@
             ]
         },
         "Vlan1000|Ethernet40": {
+            "ips": [
+                "192.168.0.10"
+            ]
+        },
+        "Vlan3000|Ethernet44": {
             "ips": [
                 "192.168.0.10"
             ]

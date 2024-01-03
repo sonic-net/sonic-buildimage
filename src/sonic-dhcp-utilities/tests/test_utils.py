@@ -142,5 +142,13 @@ def test_validate_ttr_type(test_data):
 
 
 def test_get_target_process_cmds():
-    with patch.object(psutil, "process_iter", return_value=[MockProc("dhcrelay", 1), MockProc("dhcpmon", 2)], new_callable=PropertyMock):
+    with patch.object(psutil, "process_iter", return_value=[MockProc("dhcrelay", 1), MockProc("dhcpmon", 2)],
+                      new_callable=PropertyMock):
         res = utils.get_target_process_cmds("dhcrelay")
+        expected_res = [
+            [
+                "/usr/sbin/dhcrelay", "-d", "-m", "discard", "-a", "%h:%p", "%P", "--name-alias-map-file",
+                "/tmp/port-name-alias-map.txt", "-id", "Vlan1000", "-iu", "docker0", "240.127.1.2"
+            ]
+        ]
+        assert res == expected_res

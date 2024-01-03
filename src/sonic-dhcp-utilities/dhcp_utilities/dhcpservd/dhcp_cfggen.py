@@ -136,6 +136,7 @@ class DhcpServCfgGenerator(object):
         client_classes = []
         enabled_dhcp_interfaces = set()
         used_options = set()
+        customized_option_keys = customized_options.keys()
         # Different mode would subscribe different table, always subscribe DHCP_SERVER_IPV4
         subscribe_table = set(["DhcpServerTableCfgChangeEventChecker"])
         for dhcp_interface_name, dhcp_config in dhcp_server_ipv4.items():
@@ -149,8 +150,12 @@ class DhcpServCfgGenerator(object):
                                   .format(dhcp_interface_name))
                     continue
                 curr_options = {}
-                for option in dhcp_config["customized_options"]:
-                    if option in customized_options.keys():
+                if "customized_options" in dhcp_config:
+                    for option in dhcp_config["customized_options"]:
+                        if option not in customized_option_keys:
+                            syslog.syslog(syslog.LOG_WARNING, "Customized option {} configured for {} is not defined"
+                                          .format(option, dhcp_interface_name))
+                            continue
                         curr_options[option] = {
                             "always_send": customized_options[option]["always_send"],
                             "value": customized_options[option]["value"]
@@ -354,6 +359,9 @@ class DhcpServCfgGenerator(object):
                 syslog.syslog(syslog.LOG_WARNING, f"Cannot find {splits[1]} in port_alias_map")
                 continue
             port = self.port_alias_map[splits[1]]
+            if dhcp_interface_name not in vlan_interfaces:
+                syslog.syslog(syslog.LOG_WARNING, f"Interface {dhcp_interface_name} doesn't have IPv4 address")
+                continue
             if dhcp_interface_name not in port_ips:
                 port_ips[dhcp_interface_name] = {}
             # Get ip information of Vlan

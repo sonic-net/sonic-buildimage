@@ -35,7 +35,8 @@ def mock_get_render_template():
 def mock_parse_port_map_alias(scope="function"):
     with patch("dhcp_utilities.dhcpservd.dhcp_cfggen.DhcpServCfgGenerator._parse_port_map_alias",
                return_value=None) as mock_map, \
-         patch.object(DhcpServCfgGenerator, "port_alias_map", return_value={"Ethernet24": "etp7", "Ethernet28": "etp8"},
+         patch.object(DhcpServCfgGenerator, "port_alias_map", return_value={"Ethernet24": "etp7", "Ethernet28": "etp8",
+                                                                            "Ethernet44": "etp12"},
                       new_callable=PropertyMock), \
          patch.object(DhcpServCfgGenerator, "lease_update_script_path", return_value="/etc/kea/lease_update.sh",
                       new_callable=PropertyMock), \
