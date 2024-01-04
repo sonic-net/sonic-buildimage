@@ -46,5 +46,5 @@ class ThermalManager(ThermalManagerBase):
         is a no-op.
         :return:
         """
-        if DeviceDataManager.is_independent_mode():
+        if DeviceDataManager.is_independent_mode() and cls.thermal_updater_task:
             cls.thermal_updater_task.stop()
