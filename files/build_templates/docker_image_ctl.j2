@@ -283,6 +283,12 @@ function postStartAction()
     fi
     chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
 {%- elif docker_container_name == "swss" %}
+    # Wait until swss container state is Running
+    until [[ ($(docker inspect -f {{"'{{.State.Running}}'"}} swss$DEV) == "true") ]]; do
+        sleep 0.1
+    done
+    echo "swss container is up and running"
+
     docker exec swss$DEV rm -f /ready   # remove cruft
     if [[ "$BOOT_TYPE" == "fast" ]] && [[ -d /host/fast-reboot ]]; then
         test -e /host/fast-reboot/fdb.json && docker cp /host/fast-reboot/fdb.json swss$DEV:/
@@ -292,6 +298,9 @@ function postStartAction()
         rm -fr /host/fast-reboot
     fi
     docker exec swss$DEV touch /ready # signal swssconfig.sh to go
+    # Re-confirm that file is indeed created and log an error if not
+    docker exec swss$DEV test -f /ready && echo "File swss:/ready created" || echo "Error: File swss:/ready doesn't exist"
+
 {%- elif docker_container_name == "pmon" %}
 
     DEVPATH="/usr/share/sonic/device"

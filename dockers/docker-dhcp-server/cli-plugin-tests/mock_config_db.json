@@ -20,6 +20,14 @@
         "customized_options": "option60",
         "state": "enabled"
     },
+    "DHCP_SERVER_IPV4|Vlan300": {
+        "gateway": "100.1.1.1",
+        "lease_time": "3600",
+        "mode": "PORT",
+        "netmask": "255.255.255.0",
+        "customized_options": "option60",
+        "state": "disabled"
+    },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS|option60": {
         "id": "60",
         "type": "string",

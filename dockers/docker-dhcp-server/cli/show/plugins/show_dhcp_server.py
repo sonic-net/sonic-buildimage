@@ -100,5 +100,21 @@ def info(db, dhcp_interface, with_customized_options):
     click.echo(tabulate(table, headers=headers))
 
 
+@ipv4.command()
+@click.argument("option_name", required=False)
+@clicommon.pass_db
+def option(db, option_name):
+    if not option_name:
+        option_name = "*"
+    headers = ["Option Name", "Option ID", "Value", "Type"]
+    table = []
+    dbconn = db.db
+    for key in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS|" + option_name):
+        entry = dbconn.get_all("CONFIG_DB", key)
+        name = key.split("|")[1]
+        table.append([name, entry["id"], entry["value"], entry["type"]])
+    click.echo(tabulate(table, headers=headers))
+
+
 def register(cli):
     cli.add_command(dhcp_server)
