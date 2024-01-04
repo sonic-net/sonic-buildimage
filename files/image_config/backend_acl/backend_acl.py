@@ -78,7 +78,7 @@ def load_backend_acl(device_type):
         if os.path.isfile(BACKEND_ACL_TEMPLATE_FILE):
             run_command(['sudo', SONIC_CFGGEN_PATH, '-d', '-t', '{},{}'.format(BACKEND_ACL_TEMPLATE_FILE, BACKEND_ACL_FILE)])
         if os.path.isfile(BACKEND_ACL_FILE):
-            run_command(['acl-loader', 'update', 'incremental', BACKEND_ACL_FILE])
+            run_command(['acl-loader', 'update', 'full', BACKEND_ACL_FILE, '--table_name', 'DATAACL'])
     else:
         log_info("Skipping backend acl load - conditions not met")
 

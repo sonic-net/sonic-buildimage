@@ -113,8 +113,9 @@ range3   100.1.1.10  100.1.1.10           1
     def test_show_dhcp_server_ipv4_info_without_intf(self, mock_db):
         expected_stdout = """\
 Interface    Mode    Gateway    Netmask          Lease Time(s)  State
------------  ------  ---------  -------------  ---------------  -------
+-----------  ------  ---------  -------------  ---------------  --------
 Vlan100      PORT    100.1.1.1  255.255.255.0             3600  enabled
+Vlan300      PORT    100.1.1.1  255.255.255.0             3600  disabled
 """
         runner = CliRunner()
         db = clicommon.Db()
@@ -149,3 +150,28 @@ Vlan100      PORT    100.1.1.1  255.255.255.0             3600  enabled  option6
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
         assert result.stdout == expected_stdout
 
+    def test_show_dhcp_server_ipv4_option_without_name(self, mock_db):
+        expected_stdout = """\
+Option Name      Option ID  Value        Type
+-------------  -----------  -----------  ------
+option60                60  dummy_value  string
+"""
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(show_dhcp_server.dhcp_server.commands["ipv4"].commands["option"], [], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert result.stdout == expected_stdout
+
+    def test_show_dhcp_server_ipv4_option_with_name(self, mock_db):
+        expected_stdout = """\
+Option Name      Option ID  Value        Type
+-------------  -----------  -----------  ------
+option60                60  dummy_value  string
+"""
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(show_dhcp_server.dhcp_server.commands["ipv4"].commands["option"], ["option60"], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert result.stdout == expected_stdout

@@ -116,6 +116,19 @@ def dhcp_server_ipv4_del(db, dhcp_interface):
         ctx.fail("Dhcp interface %s does not exist in config db".format(dhcp_interface))
 
 
+@dhcp_server_ipv4.command(name="enable")
+@click.argument("dhcp_interface", required=True)
+@clicommon.pass_db
+def dhcp_server_ipv4_enable(db, dhcp_interface):
+    ctx = click.get_current_context()
+    dbconn = db.db
+    key = "DHCP_SERVER_IPV4|" + dhcp_interface
+    if dbconn.exists("CONFIG_DB", key):
+        dbconn.set("CONFIG_DB", key, "state", "enabled")
+    else:
+        ctx.fail("Failed to enable, dhcp interface %s does not exist".format(dhcp_interface))
+
+
 def register(cli):
     # cli.add_command(dhcp_server)
     pass
