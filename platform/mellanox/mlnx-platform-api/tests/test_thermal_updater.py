@@ -97,23 +97,23 @@ class TestThermalUpdater:
         mock_read.return_value = 8
         updater = ThermalUpdater(None)
         assert updater.get_asic_temp() == 1000
-        assert updater.get_asic_temp_warning_threashold() == 1000
-        assert updater.get_asic_temp_critical_threashold() == 1000
+        assert updater.get_asic_temp_warning_threshold() == 1000
+        assert updater.get_asic_temp_critical_threshold() == 1000
         updater.update_asic()
         hw_management_independent_mode_update.thermal_data_set_asic.assert_called_once()
 
         mock_read.return_value = None
         assert updater.get_asic_temp() is None
-        assert updater.get_asic_temp_warning_threashold() == ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD
-        assert updater.get_asic_temp_critical_threashold() == ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
+        assert updater.get_asic_temp_warning_threshold() == ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD
+        assert updater.get_asic_temp_critical_threshold() == ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD
 
     def test_update_module(self):
         mock_sfp = mock.MagicMock()
         mock_sfp.sdk_index = 10
         mock_sfp.get_presence = mock.MagicMock(return_value=True)
         mock_sfp.get_temperature = mock.MagicMock(return_value=55.0)
-        mock_sfp.get_temperature_warning_threashold = mock.MagicMock(return_value=70.0)
-        mock_sfp.get_temperature_critical_threashold = mock.MagicMock(return_value=80.0)
+        mock_sfp.get_temperature_warning_threshold = mock.MagicMock(return_value=70.0)
+        mock_sfp.get_temperature_critical_threshold = mock.MagicMock(return_value=80.0)
         updater = ThermalUpdater([mock_sfp])
         updater.update_module()
         hw_management_independent_mode_update.thermal_data_set_module.assert_called_once_with(0, 11, 55000, 80000, 70000, 0)

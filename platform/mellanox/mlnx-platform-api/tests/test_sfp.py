@@ -230,14 +230,18 @@ class TestSfp:
         assert page == '/tmp/1/data'
         assert page_offset is 0
 
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
     @mock.patch('sonic_platform.sfp.SFP._read_eeprom')
-    def test_sfp_get_presence(self, mock_read):
+    def test_sfp_get_presence(self, mock_read, mock_control):
         sfp = SFP(0)
         mock_read.return_value = None
         assert not sfp.get_presence()
 
         mock_read.return_value = 0
         assert sfp.get_presence()
+        
+        mock_control.side_effect = RuntimeError('')
+        assert not sfp.get_presence()
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
     def test_rj45_get_presence(self, mock_read_int):
@@ -318,14 +322,16 @@ class TestSfp:
     def test_get_temperature_threshold(self):
         sfp = SFP(0)
         sfp.is_sw_control = mock.MagicMock(return_value=True)
-        assert sfp.get_temperature_warning_threashold() == 70.0
-        assert sfp.get_temperature_critical_threashold() == 80.0
 
         mock_api = mock.MagicMock()
         mock_api.get_transceiver_thresholds_support = mock.MagicMock(return_value=False)
-        sfp.get_xcvr_api = mock.MagicMock(return_value=mock_api)
-        assert sfp.get_temperature_warning_threashold() == 70.0
-        assert sfp.get_temperature_critical_threashold() == 80.0
+        sfp.get_xcvr_api = mock.MagicMock(return_value=None)
+        assert sfp.get_temperature_warning_threshold() is None
+        assert sfp.get_temperature_critical_threshold() is None
+        
+        sfp.get_xcvr_api.return_value = mock_api
+        assert sfp.get_temperature_warning_threshold() == 0.0
+        assert sfp.get_temperature_critical_threshold() == 0.0
 
         from sonic_platform_base.sonic_xcvr.fields import consts
         mock_api.get_transceiver_thresholds_support.return_value = True
@@ -334,8 +340,8 @@ class TestSfp:
             consts.TEMP_HIGH_ALARM_FIELD: 85.0,
             consts.TEMP_HIGH_WARNING_FIELD: 75.0
         })
-        assert sfp.get_temperature_warning_threashold() == 75.0
-        assert sfp.get_temperature_critical_threashold() == 85.0
+        assert sfp.get_temperature_warning_threshold() == 75.0
+        assert sfp.get_temperature_critical_threshold() == 85.0
 
     @mock.patch('sonic_platform.sfp.NvidiaSFPCommon.get_logical_port_by_sfp_index')
     @mock.patch('sonic_platform.utils.read_int_from_file')

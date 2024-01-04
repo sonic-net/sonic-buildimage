@@ -327,17 +327,10 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if device is present, False if not
         """
-        if DeviceDataManager.is_independent_mode():
-            if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/control') != 0:
-                if not utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_present'):
-                    return False
-                if not utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/power_good'):
-                    return False
-                if not utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/power_on'):
-                    return False
-                if utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_reset') == 1:
-                    return False
-                
+        try:
+            self.is_sw_control()
+        except:
+            return False
         eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
         return eeprom_raw is not None
 
@@ -877,6 +870,13 @@ class SFP(NvidiaSFPCommon):
         return [False] * api.NUM_CHANNELS if api else None
 
     def get_temperature(self):
+        """Get SFP temperature
+
+        Returns:
+            None if there is an error (sysfs does not exist or sysfs return None or module EEPROM not readable)
+            0.0 if module temperature is not supported or module is under initialization
+            other float value if module temperature is available
+        """
         try:
             if not self.is_sw_control():
                 temp_file = f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/input'
@@ -893,59 +893,68 @@ class SFP(NvidiaSFPCommon):
         temperature = super().get_temperature()
         return temperature if temperature is not None else None
 
-    def get_temperature_warning_threashold(self):
+    def get_temperature_warning_threshold(self):
         """Get temperature warning threshold
 
         Returns:
-            int: temperature warning threshold
+            None if there is an error (module EEPROM not readable)
+            0.0 if warning threshold is not supported or module is under initialization
+            other float value if warning threshold is available
         """
         try:
-            if not self.is_sw_control():
-                emergency = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/emergency',
-                                                     log_func=None,
-                                                     default=None)
-                return emergency / SFP_TEMPERATURE_SCALE if emergency is not None else SFP_DEFAULT_TEMP_WARNNING_THRESHOLD
+            self.is_sw_control()
         except:
-            return SFP_DEFAULT_TEMP_WARNNING_THRESHOLD
+            return 0.0
+        
+        support, thresh = self._get_temperature_threshold()
+        if support is None or thresh is None:
+            # Failed to read from EEPROM
+            return None
+        if support is False:
+            # Do not support
+            return 0.0
+        return thresh.get(consts.TEMP_HIGH_WARNING_FIELD, SFP_DEFAULT_TEMP_WARNNING_THRESHOLD)
 
-        thresh = self._get_temperature_threshold()
-        if thresh and consts.TEMP_HIGH_WARNING_FIELD in thresh:
-            return thresh[consts.TEMP_HIGH_WARNING_FIELD]
-        return SFP_DEFAULT_TEMP_WARNNING_THRESHOLD
-
-    def get_temperature_critical_threashold(self):
+    def get_temperature_critical_threshold(self):
         """Get temperature critical threshold
 
         Returns:
-            int: temperature critical threshold
+            None if there is an error (module EEPROM not readable)
+            0.0 if critical threshold is not supported or module is under initialization
+            other float value if critical threshold is available
         """
         try:
-            if not self.is_sw_control():
-                critical = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/critical',
-                                                    log_func=None,
-                                                    default=None)
-                return critical / SFP_TEMPERATURE_SCALE if critical is not None else SFP_DEFAULT_TEMP_CRITICAL_THRESHOLD
+            self.is_sw_control()
         except:
-            return SFP_DEFAULT_TEMP_CRITICAL_THRESHOLD
+            return 0.0
 
-        thresh = self._get_temperature_threshold()
-        if thresh and consts.TEMP_HIGH_ALARM_FIELD in thresh:
-            return thresh[consts.TEMP_HIGH_ALARM_FIELD]
-        return SFP_DEFAULT_TEMP_CRITICAL_THRESHOLD
+        support, thresh = self._get_temperature_threshold()
+        if support is None or thresh is None:
+            # Failed to read from EEPROM
+            return None
+        if support is False:
+            # Do not support
+            return 0.0
+        return thresh.get(consts.TEMP_HIGH_ALARM_FIELD, SFP_DEFAULT_TEMP_CRITICAL_THRESHOLD)
 
     def _get_temperature_threshold(self):
+        """Get temperature thresholds data from EEPROM
+
+        Returns:
+            tuple: (support, thresh_dict)
+        """
         self.reinit()
         api = self.get_xcvr_api()
         if not api:
-            return None
+            return None, None
 
         thresh_support = api.get_transceiver_thresholds_support()
         if thresh_support:
             if isinstance(api, sff8636.Sff8636Api) or isinstance(api, sff8436.Sff8436Api):
-                return api.xcvr_eeprom.read(consts.TEMP_THRESHOLDS_FIELD)
-            return api.xcvr_eeprom.read(consts.THRESHOLDS_FIELD)
+                return thresh_support, api.xcvr_eeprom.read(consts.TEMP_THRESHOLDS_FIELD)
+            return thresh_support, api.xcvr_eeprom.read(consts.THRESHOLDS_FIELD)
         else:
-            return None
+            return thresh_support, {}
 
     def get_xcvr_api(self):
         """
@@ -964,17 +973,22 @@ class SFP(NvidiaSFPCommon):
     def is_sw_control(self):
         if not DeviceDataManager.is_independent_mode():
             return False
-
+        
         db = utils.DbUtils.get_db_instance('STATE_DB')
         logical_port = NvidiaSFPCommon.get_logical_port_by_sfp_index(self.sdk_index)
         if not logical_port:
-            raise Exception(f'Module {self.sdk_index} is not present or in initialization')
+            raise Exception(f'Module {self.sdk_index} is not present or under initialization')
         
         initialized = db.exists('STATE_DB', f'TRANSCEIVER_STATUS|{logical_port}')
         if not initialized:
-            raise Exception(f'Module {self.sdk_index} is not present or in initialization')
+            raise Exception(f'Module {self.sdk_index} is not present or under initialization')
         
-        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/control') == 1
+        try:
+            return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/control', 
+                                            raise_exception=True, log_func=None) == 1
+        except:
+            # just in case control file does not exist
+            raise Exception(f'Module {self.sdk_index} is under initialization')
 
 
 class RJ45Port(NvidiaSFPCommon):
