@@ -1597,6 +1597,11 @@
                 "local_ip": "12.12.0.2"
             }
         },
+        "BGP_BBR": {
+            "all": {
+                "status": "enabled"
+            }
+        },
         "BGP_GLOBALS": {
             "default": {
                 "router_id": "5.5.5.5",
