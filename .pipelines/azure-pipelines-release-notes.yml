@@ -1,0 +1,261 @@
+# Publish the SONiC release notes to PhynetTSG
+
+schedules:
+- cron: "0 8 * * *"
+  displayName: Daily build
+  branches:
+    include:
+    - internal
+  always: false
+trigger: none
+pr: none
+resources:
+  repositories:
+  - repository: PhynetTSG
+    type: git
+    name: PhyNet/PhynetTSG
+    ref: PhynetTSG
+
+name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
+pool:
+  vmImage: 'ubuntu-20.04'
+
+parameters:
+- name: 'releaseVersions'
+  type: string
+  default: ' '
+
+variables:
+  DEFAULT_BRANCH_REGEX: "^refs/remotes/origin/internal-(202012|202205|2023[0-9][0-9]|20[3-9][0-9][0-9][0-9])$"
+  DEFAULT_TAG_REGEX: '^refs/tags/20[0-9]{6}\.[0-9]{1,3}$'
+  PHYNET_URL_PREFIX: "https://dev.azure.com/msazure/PhyNet/_apis/git/repositories/PhynetTSG/pullrequests"
+  SOURCE_BRANCH: sonic/release-notes
+  TARGET_BRANCH: PhynetTSG
+
+stages:
+- stage: Build
+  jobs:
+  - job: Publish
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.x'
+        addToPath: true
+        architecture: 'x64'
+    - checkout: self
+      fetchTags: true
+    - checkout: PhynetTSG
+      persistCredentials: true
+    - script: |
+        sudo apt update
+        sudo apt install -y jq python3
+        sudo pip3 install j2cli PyYAML
+        pip3 install PyYAML
+      displayName: "Install tools"
+    - script: |
+        cd PhynetTSG
+        git checkout -b $SOURCE_BRANCH origin/$TARGET_BRANCH
+        cd wiki/sonic/release-notes
+        releasenotes=$(ls 202*/*.md | sed 's/sonic.-/sonic./i' | grep -iE '^[0-9]+/SONiC\.[0-9]{8}\.[0-9]{1,3}\.md')
+        echo "$releasenotes"
+        maxReleaseVersions=$(echo "$releasenotes" | cut -d. -f2,3 | sort -n -t. -r -k1,1 -k2 | sort -n -r -t. -k1,1 -u | xargs | tr ' ' ',')
+        echo "The maximum release versions:"
+        echo "$maxReleaseVersions"
+        echo "##vso[task.setvariable variable=MAX_RELEASE_VERSIONS]$maxReleaseVersions"
+      displayName: "Set variables"
+    - task: ADXQuery@1
+      inputs:
+        targetType: 'inline'
+        script: |
+          GetReleaseNotesByReleaseVersions("$(MAX_RELEASE_VERSIONS)", "${{ parameters.releaseVersions }}")
+        kustoUrls: 'https://sonic.westus2.kusto.windows.net:443?DatabaseName=internal'
+        customAuth: true
+        connectedServiceName: 'SONiCDataExplorer'
+        minThreshold: '0'
+        maxThreshold: '100'
+        OutputFile: 'release_notes.json'
+    - task: PythonScript@0
+      displayName: "Generate release notes"
+      inputs:
+        scriptSource: 'inline'
+        workingDirectory: '$(Build.SourcesDirectory)/PhynetTSG/wiki/sonic/release-notes'
+        script: |
+          import json
+          import os
+          import re
+          import subprocess
+          import yaml
+          from yaml.loader import SafeLoader
+          class SafeLineLoader(SafeLoader):
+            def construct_mapping(self, node, deep=False):
+              mapping = super(SafeLineLoader, self).construct_mapping(node, deep=deep)
+              mapping['__line__'] = node.start_mark.line
+              return mapping
+          RELEASE_NOTES_TEMPLATE = "../../../../Networking-acs-buildimage/.pipelines/templates/release-notes-template.j2"
+          RELEASE_NOTES_INDEX_TEMPLATE = "../../../../Networking-acs-buildimage/.pipelines/templates/release-notes-index-template.j2"
+          TOC_FILE = "../../toc.yml"
+          with open('../../../../release_notes.json') as f:
+            d = json.load(f)
+          releaseVersions = "${{ parameters.releaseVersions }}".strip()
+          reMainVersion = re.compile("^[0-9]{8}$")
+          tmpfile = "tmp_data.json"
+          releaseNotesCount = 0
+          rows = d['body']['Tables'][0]['Rows']
+          rows = sorted(rows, key = lambda x: (toint(x[1]), toint(x[2]))
+          for row in d['body']['Tables'][0]['Rows']:
+            note = row[0]
+            mainVersion = row[1]
+            subVersion = row[2]
+            releaseDate = row[3]
+            version = mainVersion + "." + subVersion
+            subversionName = "SONiC." + version
+            subVersionFileName = "sonic." + version + ".md"
+            if not reMainVersion.search(mainVersion):
+              continue
+            branch = mainVersion[0:6]
+            if not os.path.isdir(mainVersion):
+              os.mkdir(mainVersion)
+            releaseFile = os.path.join(mainVersion, subVersionFileName)
+            indexFile = os.path.join(mainVersion, "index.md")
+            if os.path.exists(releaseFile) and not releaseVersions:
+              print("Skipped the version {0}, since the file {1} exists".format(version, releaseFile))
+            data = {"SONIC_VERSION": version, "SONIC_BRANCH": branch, "RELEASE_NOTES": note, "RELEASE_DATE": releaseDate}
+            with open(tmpfile, "w") as f:
+              f.write(json.dumps(data))
+            result = subprocess.run(['j2', "-o", releaseFile, RELEASE_NOTES_TEMPLATE, tmpfile], stdout=subprocess.PIPE, check=True, text=True)
+            if result.returncode != 0:
+              print("Failed to run the j2 command")
+              exit(1)
+            if not os.path.exists(indexFile):
+              data = { "SONIC_MAIN_VERSION": mainVersion }
+              with open(tmpfile, "w") as f:
+                f.write(json.dumps(data))
+              print("Generate the index file for version {0}".format(mainVersion))
+              result = subprocess.run(['j2', "-o", indexFile, RELEASE_NOTES_INDEX_TEMPLATE, tmpfile], stdout=subprocess.PIPE, check=True, text=True)
+              if result.returncode != 0:
+                print("Failed to run the j2 command")
+                exit(1)
+            # Check and add release note link in the index.md
+            with open(indexFile) as f:
+              lines=f.readlines()
+            linkVersion = 'sonic' + mainVersion + subVersion
+            releaseNoteLink = f"### ** [{version}](https://eng.ms/docs/cloud-ai-platform/azure-core/azure-networking/network-infra-nikothar/fabric-network-devices/phynettsg/wiki/sonic/release-notes/{mainVersion}/{linkVersion}) **\n"
+            checkVersion = f"[{version}]"
+            for i in range(4, len(lines)):
+              line = lines[i]
+              if checkVersion in line:
+                break
+              if "----" in line:
+                lines.insert(i-1, releaseNoteLink)
+                with open(indexFile, 'w') as f:
+                  f.writelines(lines)
+                break
+            # Check and add the toc
+            lines = []
+            with open(TOC_FILE) as f:
+              lines = f.readlines()
+            stripLines = []
+            for line in lines:
+              stripLines.append(line.rstrip())
+            tocContent = '\n'.join(stripLines)
+            toc = yaml.load(tocContent, Loader=SafeLineLoader)
+            tocChanged = False
+            for i in range(0, len(toc)):
+              o = toc[i]
+              name = o.get('name', None)
+              if name == "SONiC":
+                print(f"Found the SONiC at line {o["__line__"]}.")
+                releaseNotesItem = o["items"][0]
+                if releaseNotesItem["name"] != "Release Notes":
+                  print("Expect the first item of SONiC is the Release Note.")
+                  exit(1)
+                releaseMainVersionItems = releaseNotesItem["items"]
+                releaseMainVersion = None
+                for j in range(0, len(releaseMainVersionItems)):
+                  releaseMainVersionItem = releaseMainVersionItems[j]
+                  releaseMainVersion = releaseMainVersionItem["name"]
+                  if releaseMainVersion == mainVersion:
+                    print(f"Found the main version {mainVersion}.")
+                    releaseSubVersionItems = releaseMainVersionItem.get("items", [])
+                    releaseSubVersionName = None
+                    for k in range(0, len(releaseSubVersionItems)):
+                      subversionItem = releaseSubVersionItems[k]
+                      releaseSubVersionName = subversionItem["name"]
+                      if subversionName == releaseSubVersionName:
+                        break
+                    if subversionName != releaseSubVersionName:
+                      print(f"Found the main version {mainVersion}.")
+                      if k < len(releaseSubVersionItems) - 1:
+                        position = releaseSubVersionItems[k + 1]["__line__"]
+                      elif j < len(releaseMainVersionItems) - 1:
+                        position = releaseMainVersionItems[j + 1]["__line__"]
+                      else:
+                        position = o["items"][1]["__line__"]
+                      if lines[position].strip() == "":
+                        position -= 1
+                      lines.insert(position, fr"        href: sonic\release-notes\{mainVersion}\{subVersionFileName}" + "\n")
+                      lines.insert(position, fr"      - name: sonic\release-notes\{mainVersion}" + "\n")
+                    break
+                if releaseMainVersion != mainVersion:
+                  if j < len(releaseMainVersionItems) - 1:
+                    position = releaseMainVersionItems[j + 1]["__line__"]
+                  else:
+                    position = o["items"][1]["__line__"]
+                  if lines[position].strip() == "":
+                    position -= 1
+                  print(f"Cannot find the {mainVersion}, inserting the main version at position {position}.")
+                  lines.insert(position, fr"        href: sonic\release-notes\{mainVersion}\{subVersionFileName}" + "\n")
+                  lines.insert(position, fr"      - name: sonic\release-notes\{mainVersion}" + "\n")
+                  lines.insert(position, fr"      items:" + "\n")
+                  lines.insert(position, fr"      href: sonic\release-notes\{mainVersion}\index.md" + "\n")
+                  lines.insert(position, fr"    - name: '{mainVersion}'" + "\n")
+            if len(stripLines) != len(lines):
+              with open(TOC_FILE, 'w') as f:
+                f.writelines(lines)
+            releaseNotesCount += 1
+          print("Verify the format of toc.yml is good")
+          with open(TOC_FILE) as f:
+            lines = f.readlines()
+          stripLines = []
+          for line in lines:
+            stripLines.append(line.rstrip())
+          tocContent = '\n'.join(stripLines)
+          toc = yaml.load(tocContent, Loader=SafeLineLoader)
+          print(f"The release note count is {releaseNotesCount}.")
+          print(f'##vso[task.setvariable variable=RELEASE_NOTES_COUNT;]{releaseNotesCount}')
+    - script: |
+        ls -lt
+        echo "MAX_RELEASE_VERSION=$MAX_RELEASE_VERSIONS"
+        echo "RELEASE_NOTES_COUNT=$RELEASE_NOTES_COUNT"
+        # See https://dev.azure.com/msazure/One/_apis/git/repositories/Networking-acs-buildimage/pullrequests/9296449/reviewers?api-version=7.1
+        REVIEWER_ID=1b5f2f1b-141f-65e4-b96d-29a1a9a73edd
+        TAG=20220531.11
+        TITLE="Add SONiC release notes"
+        DESCRIPTION=$TITLE
+        BODY='{"sourceRefName": "refs/heads/'$SOURCE_BRANCH'", "targetRefName": "refs/heads/'$TARGET_BRANCH'", "title": "'$TITLE'", "description": "'$DESCRIPTION'"}'
+        git config --global user.email "sonicbld@microsoft.com"
+        git config --global user.name "Sonic Build Admin"
+        cd PhynetTSG
+        git status
+        echo "add *.md"
+        git add '*.md'
+        git add 'wiki/toc.yml'
+        git status
+        git commit -m "$TITLE"
+        # Force Push
+        git push --set-upstream origin $SOURCE_BRANCH  -f
+        # Submit the PR
+        curl -X POST -L -H 'Content-Type: application/json' -H 'Accept: application/json' -u :$(System.AccessToken) "$PHYNET_URL_PREFIX?api-version=7.0" -d "$BODY"
+        # Query the PR
+        PRID=$(curl -L -H 'Content-Type: application/json' -H 'Accept: application/json' -u :$(System.AccessToken) "$PHYNET_URL_PREFIX?api-version=7.0&searchCriteria.sourceRefName=refs/heads/$SOURCE_BRANCH" | jq '.value[0].pullRequestId')
+        if [ -z "$PRID" ]; then
+            echo "Failed to query the PR" 1>&2
+            exit 1
+        fi
+        # sonicbld will approve the PR for PR complete automation
+        curl -X PUT -L -H 'Content-Type: application/json' -H 'Accept: application/json' -u :$(MSAZURE_PAT) "$PHYNET_URL_PREFIX/$PRID/reviewers/$REVIEWER_ID?api-version=7.0" -d '{"vote":10}'
+        # Print the PR link
+        echo "Pull Request: https://dev.azure.com/msazure/PhyNet/_git/PhynetTSG/pullrequest/$PRID"
+      condition: ne(variables['RELEASE_NOTES_COUNT'], '0')
+      displayName: "Send or update Pull Request"
