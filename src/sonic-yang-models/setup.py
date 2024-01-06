@@ -85,6 +85,7 @@ setup(
     data_files=[
         ('yang-models', ['./yang-models/sonic-acl.yang',
                          './yang-models/sonic-auto_techsupport.yang',
+                         './yang-models/sonic-bgp-bbr.yang',
                          './yang-models/sonic-bgp-common.yang',
                          './yang-models/sonic-bgp-device-global.yang',
                          './yang-models/sonic-bgp-global.yang',

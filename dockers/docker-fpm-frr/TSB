@@ -16,7 +16,8 @@ then
   TSB_FILE=$(mktemp)
   for route_map_name in $(echo "$config" | sed -ne 's/  neighbor \S* route-map \(\S*\) out/\1/p' | uniq);
   do
-    is_internal_route_map $route_map_name && continue
+    is_internal_route_map $route_map_name
+    internal_route_map=$?
     case "$route_map_name" in
       *V4*)
       ;;
@@ -26,7 +27,7 @@ then
         continue
       ;;
     esac
-    sonic-cfggen -d -a "{\"route_map_name\":\"$route_map_name\"}" -t /usr/share/sonic/templates/bgpd/tsa/bgpd.tsa.unisolate.conf.j2 > "$TSB_FILE"
+    sonic-cfggen -d -a "{\"route_map_name\":\"$route_map_name\", \"internal_route_map\": \"$internal_route_map\"}" -t /usr/share/sonic/templates/bgpd/tsa/bgpd.tsa.unisolate.conf.j2 > "$TSB_FILE"
     vtysh -f "$TSB_FILE"
     rm -f "$TSB_FILE"
   done

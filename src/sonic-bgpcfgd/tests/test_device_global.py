@@ -11,6 +11,7 @@ from copy import deepcopy
 
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
 BASE_PATH = os.path.abspath('../sonic-bgpcfgd/tests/data/general/peer-group.conf/')
+INTERNAL_BASE_PATH = os.path.abspath('../sonic-bgpcfgd/tests/data/internal/peer-group.conf/')
 global_constants = {
     "bgp":  {
         "traffic_shift_community" :"12345:12345",
@@ -18,7 +19,7 @@ global_constants = {
     }
 }
 
-def constructor():
+def constructor(check_internal=False):
     cfg_mgr = MagicMock()
     def get_text():
         text = []
@@ -29,7 +30,10 @@ def constructor():
         text += ["     "]
         return text
     def update():
-        cfg_mgr.changes = get_string_from_file("/result_all.conf")
+        if check_internal:
+            cfg_mgr.changes = get_string_from_file("/result_chasiss_packet.conf", INTERNAL_BASE_PATH)
+        else:
+            cfg_mgr.changes = get_string_from_file("/result_all.conf")
     def push(cfg):
         cfg_mgr.changes += cfg + "\n"
     def get_config():
@@ -60,12 +64,30 @@ def test_isolate_device(mocked_log_info):
     assert m.cfg_mgr.get_config() == get_string_from_file("/result_all_isolate.conf")
 
 @patch('bgpcfgd.managers_device_global.log_debug')
+def test_isolate_device_internal_session(mocked_log_info):
+    m = constructor(check_internal=True)
+    res = m.set_handler("STATE", {"tsa_enabled": "true"})
+    assert res, "Expect True return value for set_handler"
+    mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
+    assert m.cfg_mgr.get_config() == get_string_from_file("/result_chassis_packet_isolate.conf", INTERNAL_BASE_PATH)
+
+
+@patch('bgpcfgd.managers_device_global.log_debug')
 def test_unisolate_device(mocked_log_info):
     m = constructor()
     res = m.set_handler("STATE", {"tsa_enabled": "false"})
     assert res, "Expect True return value for set_handler"
     mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
     assert m.cfg_mgr.get_config() == get_string_from_file("/result_all_unisolate.conf")
+
+@patch('bgpcfgd.managers_device_global.log_debug')
+def test_unisolate_device_internal_session(mocked_log_info):
+    m = constructor(check_internal=True)
+    res = m.set_handler("STATE", {"tsa_enabled": "false"})
+    assert res, "Expect True return value for set_handler"
+    mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
+    assert m.cfg_mgr.get_config() == get_string_from_file("/result_chassis_packet_unisolate.conf", INTERNAL_BASE_PATH)
+
 
 def test_check_state_and_get_tsa_routemaps():
     m = constructor()
@@ -93,8 +115,8 @@ def test_get_tsb_routemaps():
     expected_res = get_string_from_file("/result_unisolate.conf")
     assert res == expected_res
 
-def get_string_from_file(filename):
-    fp = open(BASE_PATH + filename, "r")
+def get_string_from_file(filename, base_path=BASE_PATH):
+    fp = open(base_path + filename, "r")
     cfg = fp.read()
     fp.close()
 

@@ -91,14 +91,16 @@ class DeviceGlobalCfgMgr(Manager):
             # For packet-based chassis, the bgp session between the linecards are also considered internal sessions
             # While isolating a single linecard, these sessions should not be skipped
             if "_INTERNAL_" in rm or "VOQ_" in rm:
-                continue
+                is_internal="1"
+            else:
+                is_internal="0"
             if "V4" in rm:
                 ipv="V4" ; ipp="ip"
             elif "V6" in rm:
                 ipv="V6" ; ipp="ipv6"
             else:
                 continue
-            cmd += template.render(route_map_name=rm,ip_version=ipv,ip_protocol=ipp, constants=self.constants)
+            cmd += template.render(route_map_name=rm,ip_version=ipv,ip_protocol=ipp,internal_route_map=is_internal, constants=self.constants)
             cmd += "\n"
         return cmd
 
