@@ -63,9 +63,10 @@ stages:
         TITLE="Update SONiC Firmware Profile doc"
         DESCRIPTION=$TITLE
         BODY='{"sourceRefName": "refs/heads/'$SOURCE_BRANCH'", "targetRefName": "refs/heads/'$TARGET_BRANCH'", "title": "'$TITLE'", "description": "'$DESCRIPTION'"}'
-        export UPDATE_TIMESTAMPE=$(cat ../firmware_profile.json | jq -r '.body.Tables[0].Rows[0][1]')
-        export FIRMWARE_PROFILE_VERSIONS=$(cat ../firmware_profile.json | jq -r '.body.Tables[0].Rows[0][0]')
+        export UPDATE_TIMESTAMPE=$(cat firmware_profile.json | jq -r '.body.Tables[0].Rows[0][1]')
+        export FIRMWARE_PROFILE_VERSIONS=$(cat firmware_profile.json | jq -r '.body.Tables[0].Rows[0][0]')
         j2 Networking-acs-buildimage/.pipelines/templates/firmware-profile-versions.md.j2 > PhynetTSG/wiki/sonic/release-notes/firmware-profile-versions.md
+        cat PhynetTSG/wiki/sonic/release-notes/firmware-profile-versions.md
         cd PhynetTSG
         git checkout -b $SOURCE_BRANCH origin/$TARGET_BRANCH
         git config --global user.email "sonicbld@microsoft.com"
@@ -89,5 +90,4 @@ stages:
         curl -X PUT -L -H 'Content-Type: application/json' -H 'Accept: application/json' -u :$(MSAZURE_PAT) "$PHYNET_URL_PREFIX/$PRID/reviewers/$REVIEWER_ID?api-version=7.0" -d '{"vote":10}'
         # Print the PR link
         echo "Pull Request: https://dev.azure.com/msazure/PhyNet/_git/PhynetTSG/pullrequest/$PRID"
-      condition: ne(variables['RELEASE_NOTES_COUNT'], '0')
       displayName: "Send or update Pull Request"

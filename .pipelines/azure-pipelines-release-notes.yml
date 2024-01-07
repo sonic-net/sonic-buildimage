@@ -101,9 +101,8 @@ stages:
           reMainVersion = re.compile("^[0-9]{8}$")
           tmpfile = "tmp_data.json"
           releaseNotesCount = 0
-          rows = d['body']['Tables'][0]['Rows']
-          rows = sorted(rows, key = lambda x: (toint(x[1]), toint(x[2]))
-          for row in d['body']['Tables'][0]['Rows']:
+          rows = sorted(d['body']['Tables'][0]['Rows'], key = lambda x: (int(x[1]), int(x[2])))
+          for row in rows:
             note = row[0]
             mainVersion = row[1]
             subVersion = row[2]
@@ -111,6 +110,7 @@ stages:
             version = mainVersion + "." + subVersion
             subversionName = "SONiC." + version
             subVersionFileName = "sonic." + version + ".md"
+            print(f"subVersionFileName={subVersionFileName}")
             if not reMainVersion.search(mainVersion):
               continue
             branch = mainVersion[0:6]
@@ -257,5 +257,5 @@ stages:
         curl -X PUT -L -H 'Content-Type: application/json' -H 'Accept: application/json' -u :$(MSAZURE_PAT) "$PHYNET_URL_PREFIX/$PRID/reviewers/$REVIEWER_ID?api-version=7.0" -d '{"vote":10}'
         # Print the PR link
         echo "Pull Request: https://dev.azure.com/msazure/PhyNet/_git/PhynetTSG/pullrequest/$PRID"
-      condition: ne(variables['RELEASE_NOTES_COUNT'], '0')
+      condition: and(succeeded(), ne(variables['RELEASE_NOTES_COUNT'], '0'))
       displayName: "Send or update Pull Request"
