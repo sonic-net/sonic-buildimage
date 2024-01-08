@@ -1,0 +1,31 @@
+{
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "true"
+    },
+    "info_types": [
+        {
+            "type": "chassis_info"
+        },
+        {
+            "type": "fan_info"
+        },
+        {
+            "type": "thermal_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "temp over high critical threshold",
+            "conditions": [
+                {
+                    "type": "thermal.over.high_critical_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "switch.power_cycling"
+                }
+            ]
+        }
+    ]
+}

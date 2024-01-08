@@ -1,0 +1,14 @@
+{
+    "chassis": {
+        "FN8656-BNF": {
+            "component": {
+                "CPLD-A": {},
+                "CPLD-B": {},
+                "CPLD-C": {},
+                "CPLD-D": {},
+                "MCU": {},
+                "BIOS": {}
+            }
+        }
+    }
+}
