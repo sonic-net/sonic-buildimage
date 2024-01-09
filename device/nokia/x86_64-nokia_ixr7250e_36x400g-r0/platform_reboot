@@ -17,6 +17,10 @@ update_reboot_cause()
     sync
 }
 
+echo "Disable all SFPs"
+python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); platform_chassis.tx_disable_all_sfps()'
+sleep 3
+
 # update the reboot_cuase file when reboot is trigger by device-mgr
 update_reboot_cause
 
