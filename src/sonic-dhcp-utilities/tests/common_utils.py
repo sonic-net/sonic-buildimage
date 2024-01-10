@@ -14,6 +14,7 @@ VLAN_MEMBER = "VLAN_MEMBER"
 PORT_MODE_CHECKER = ["DhcpServerTableCfgChangeEventChecker", "DhcpPortTableEventChecker", "DhcpRangeTableEventChecker",
                      "DhcpOptionTableEventChecker", "VlanTableEventChecker", "VlanIntfTableEventChecker",
                      "VlanMemberTableEventChecker"]
+SMART_SWITCH_CHECKER = ["DpusTableEventChecker", "MidPlaneTableEventChecker"]
 
 
 class MockConfigDb(object):
