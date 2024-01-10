@@ -25,14 +25,16 @@ class TestCertConverter(TestCase):
         expect_delay = [mock.call(60), mock.call(cert_converter.polling_frequency)]
         self.assertEqual(mock_sleep.call_args_list, expect_delay)
 
+    @mock.patch("os.path.exists")
     @mock.patch("os.path.isfile")
     @mock.patch("os.path.islink")
     @mock.patch("os.listdir")
-    def test_cert_list_01(self, mock_listdir, mock_islink, mock_isfile):
+    def test_cert_list_01(self, mock_listdir, mock_islink, mock_isfile, mock_exists):
         '''
         Generate list of certs
         Verify cert list
         '''
+        mock_exists.return_value = True
         mock_isfile.return_value = True
         mock_islink.return_value = False
         mock_listdir.return_value = [
@@ -46,6 +48,14 @@ class TestCertConverter(TestCase):
             ]
         result = sorted(cert_converter.get_list_of_certs(""))
         self.assertEqual(result, ['restapiserver.1', 'restapiserver.2'])
+
+    def test_cert_list_02(self):
+        '''
+        Generate list of certs for invalid path
+        Verify cert list
+        '''
+        result = cert_converter.get_list_of_certs("/invalid/path/")
+        self.assertEqual(result, [])
 
     @mock.patch("cert_converter.get_list_of_certs")
     @mock.patch("cert_converter.execute_cmd")
