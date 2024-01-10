@@ -152,3 +152,9 @@ def test_get_target_process_cmds():
             ]
         ]
         assert res == expected_res
+
+
+@pytest.mark.parametrize("is_smart_switch", [True, False])
+def test_is_smart_switch(is_smart_switch):
+    device_metadata = {"localhost": {"subtype": "SmartSwitch"}} if is_smart_switch else {"localhost": {}}
+    assert utils.is_smart_switch(device_metadata) == is_smart_switch

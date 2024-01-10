@@ -5,7 +5,7 @@ import os
 import syslog
 
 from jinja2 import Environment, FileSystemLoader
-from dhcp_utilities.common.utils import merge_intervals, validate_str_type
+from dhcp_utilities.common.utils import merge_intervals, validate_str_type, is_smart_switch
 
 PORT_MAP_PATH = "/tmp/port-name-alias-map.txt"
 UNICODE_TYPE = str
@@ -15,9 +15,12 @@ DHCP_SERVER_IPV4_RANGE = "DHCP_SERVER_IPV4_RANGE"
 DHCP_SERVER_IPV4_PORT = "DHCP_SERVER_IPV4_PORT"
 VLAN_INTERFACE = "VLAN_INTERFACE"
 VLAN_MEMBER = "VLAN_MEMBER"
+DPUS = "DPUS"
+MID_PLANE_BRIDGE = "MID_PLANE_BRIDGE"
 PORT_MODE_CHECKER = ["DhcpServerTableCfgChangeEventChecker", "DhcpPortTableEventChecker", "DhcpRangeTableEventChecker",
                      "DhcpOptionTableEventChecker", "VlanTableEventChecker", "VlanIntfTableEventChecker",
                      "VlanMemberTableEventChecker"]
+SMART_SWITCH_CHECKER = ["DpusTableEventChecker", "MidPlaneTableEventChecker"]
 LEASE_UPDATE_SCRIPT_PATH = "/etc/kea/lease_update.sh"
 DEFAULT_LEASE_TIME = 900
 DEFAULT_LEASE_PATH = "/tmp/kea-lease.csv"
@@ -58,20 +61,61 @@ class DhcpServCfgGenerator(object):
         # Get host name
         device_metadata = self.db_connector.get_config_db_table("DEVICE_METADATA")
         hostname = self._parse_hostname(device_metadata)
+        smart_switch = is_smart_switch(device_metadata)
         # Get ip information of vlan
         vlan_interface = self.db_connector.get_config_db_table(VLAN_INTERFACE)
         vlan_member_table = self.db_connector.get_config_db_table(VLAN_MEMBER)
         vlan_interfaces, vlan_members = self._parse_vlan(vlan_interface, vlan_member_table)
+
+        # Parse dpu
+        dpus_table = self.db_connector.get_config_db_table(DPUS)
+        mid_plane_table = self.db_connector.get_config_db_table(MID_PLANE_BRIDGE)
+        mid_plane, dpus = self._parse_dpu(dpus_table, mid_plane_table) if smart_switch else {}, {}
+
         dhcp_server_ipv4, customized_options_ipv4, range_ipv4, port_ipv4 = self._get_dhcp_ipv4_tables_from_db()
         # Parse range table
         ranges = self._parse_range(range_ipv4)
 
         # Parse port table
-        port_ips, used_ranges = self._parse_port(port_ipv4, vlan_interfaces, vlan_members, ranges)
+        dhcp_interfaces = vlan_interfaces
+        if smart_switch and "bridge" in mid_plane and "ip_prefix" in mid_plane:
+            mid_plane_name = mid_plane["bridge"]
+            dhcp_interfaces[mid_plane_name] = [{
+                "network": ipaddress.ip_network(mid_plane["ip_prefix"], strict=False),
+                "ip": mid_plane["ip_prefix"]
+            }]
+            dpus = ["{}|{}".format(mid_plane_name, dpu) for dpu in dpus]
+        dhcp_members = vlan_members | set(dpus)
+        port_ips, used_ranges = self._parse_port(port_ipv4, dhcp_interfaces, dhcp_members, ranges)
         customized_options = self._parse_customized_options(customized_options_ipv4)
         render_obj, enabled_dhcp_interfaces, used_options, subscribe_table = \
             self._construct_obj_for_template(dhcp_server_ipv4, port_ips, hostname, customized_options)
+
+        if smart_switch:
+            subscribe_table |= set(SMART_SWITCH_CHECKER)
+
         return self._render_config(render_obj), used_ranges, enabled_dhcp_interfaces, used_options, subscribe_table
+
+    def _parse_dpu(self, dpus_table, mid_plane_table):
+        """
+        Parse dpu related tables
+        Args:
+            dpus_table: DPU table dict
+            mid_plane_table: mid_plane table dict
+        Returns:
+            Parsed obj, sample:
+                mid_plane = {
+                    "bridge": "bridge_midplane",
+                    "address": "169.254.200.254/24"
+                }
+                dpus = {
+                    "dpu0"
+                }
+        """
+        mid_plane = mid_plane_table.get("GLOBAL", {})
+        dpus = set([dpu_value["midplane_interface"] for dpu_value in dpus_table.values()
+                   if "midplane_interface" in dpu_value])
+        return mid_plane, dpus
 
     def _parse_customized_options(self, customized_options_ipv4):
         customized_options = {}
@@ -107,7 +151,7 @@ class DhcpServCfgGenerator(object):
 
     def _parse_vlan(self, vlan_interface, vlan_member):
         vlan_interfaces = self._get_vlan_ipv4_interface(vlan_interface.keys())
-        vlan_members = vlan_member.keys()
+        vlan_members = set(vlan_member.keys())
         return vlan_interfaces, vlan_members
 
     def _parse_hostname(self, device_metadata):
@@ -306,19 +350,19 @@ class DhcpServCfgGenerator(object):
             port_ips[dhcp_interface_name][dhcp_interface_ip_str][port].append([range[0], range[1]])
             break
 
-    def _parse_port(self, port_ipv4, vlan_interfaces, vlan_members, ranges):
+    def _parse_port(self, port_ipv4, dhcp_interfaces, dhcp_members, ranges):
         """
         Parse content in DHCP_SERVER_IPV4_PORT table to below format, which indicate ip ranges assign to interface.
         Args:
             port_ipv4: Table object.
-            vlan_interfaces: Vlan information, sample:
+            dhcp_interfaces: DHCP interfaces information, sample:
                 {
                     'Vlan1000': [{
                         'network': IPv4Network('192.168.0.0/24'),
                         'ip': '192.168.0.1/24'
                     }]
                 }
-            vlan_members: List of vlan members
+            dhcp_members: List of DHCP members
             ranges: Dict of ranges
         Returns:
             Dict of dhcp conf, sample:
@@ -349,23 +393,21 @@ class DhcpServCfgGenerator(object):
                 continue
             splits = port_key.split("|")
             # Skip port not in correct vlan
-            if port_key not in vlan_members:
+            if port_key not in dhcp_members:
                 syslog.syslog(syslog.LOG_WARNING, f"Port {splits[1]} is not in {splits[0]}")
                 continue
             # Get dhcp interface name like Vlan1000
             dhcp_interface_name = splits[0]
-            # Get dhcp member interface name like etp1
-            if splits[1] not in self.port_alias_map:
-                syslog.syslog(syslog.LOG_WARNING, f"Cannot find {splits[1]} in port_alias_map")
-                continue
-            port = self.port_alias_map[splits[1]]
-            if dhcp_interface_name not in vlan_interfaces:
+            # Get dhcp member interface name like etp1, be consistent with dhcp_relay, if alias doesn't exist,
+            # use port name directly
+            port = self.port_alias_map[splits[1]] if splits[1] in self.port_alias_map else splits[1]
+            if dhcp_interface_name not in dhcp_interfaces:
                 syslog.syslog(syslog.LOG_WARNING, f"Interface {dhcp_interface_name} doesn't have IPv4 address")
                 continue
             if dhcp_interface_name not in port_ips:
                 port_ips[dhcp_interface_name] = {}
             # Get ip information of Vlan
-            dhcp_interface = vlan_interfaces[dhcp_interface_name]
+            dhcp_interface = dhcp_interfaces[dhcp_interface_name]
 
             for dhcp_interface_ip in dhcp_interface:
                 ip_ports[str(dhcp_interface_ip["network"])] = dhcp_interface_name

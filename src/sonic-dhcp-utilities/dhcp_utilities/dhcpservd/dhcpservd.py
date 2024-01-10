@@ -9,7 +9,7 @@ from .dhcp_lease import LeaseManager
 from dhcp_utilities.common.utils import DhcpDbConnector
 from dhcp_utilities.common.dhcp_db_monitor import DhcpServdDbMonitor, DhcpServerTableCfgChangeEventChecker, \
     DhcpOptionTableEventChecker, DhcpRangeTableEventChecker, DhcpPortTableEventChecker, VlanIntfTableEventChecker, \
-    VlanMemberTableEventChecker, VlanTableEventChecker
+    VlanMemberTableEventChecker, VlanTableEventChecker, MidPlaneTableEventChecker, DpusTableEventChecker
 from swsscommon import swsscommon
 
 KEA_DHCP4_CONFIG = "/etc/kea/kea-dhcp4.conf"
@@ -110,6 +110,8 @@ def main():
     checkers.append(VlanTableEventChecker(sel, dhcp_db_connector.config_db))
     checkers.append(VlanIntfTableEventChecker(sel, dhcp_db_connector.config_db))
     checkers.append(VlanMemberTableEventChecker(sel, dhcp_db_connector.config_db))
+    checkers.append(DpusTableEventChecker(sel, dhcp_db_connector.config_db))
+    checkers.append(MidPlaneTableEventChecker(sel, dhcp_db_connector.config_db))
     dhcp_servd_monitor = DhcpServdDbMonitor(dhcp_db_connector, sel, checkers, DEFAULT_SELECT_TIMEOUT)
     dhcpservd = DhcpServd(dhcp_cfg_generator, dhcp_db_connector, dhcp_servd_monitor)
     dhcpservd.start()
