@@ -44,5 +44,17 @@
     },
     "DHCP_SERVER_IPV4_IP|eth0": {
         "ip": "240.127.1.2"
+    },
+    "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet4": {
+        "ips": "100.1.1.10,10.1.1.11"
+    },
+    "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet7": {
+        "ranges": "range1,range2"
+    },
+    "DHCP_SERVER_IPV4_PORT|Vlan200|Ethernet8": {
+        "ranges": "range3,range4"
+    },
+    "DHCP_SERVER_IPV4_PORT|Ethernet9": {
+        "ranges": "range5,range6"
     }
 }

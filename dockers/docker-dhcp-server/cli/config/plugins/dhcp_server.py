@@ -91,7 +91,7 @@ def dhcp_server_ipv4_add(db, mode, lease_time, dup_gw_nm, gateway, netmask, dhcp
         ctx.fail("gateway and netmask must be valid ipv4 string")
     key = "DHCP_SERVER_IPV4|" + dhcp_interface
     if dbconn.exists("CONFIG_DB", key):
-        ctx.fail("Dhcp_interface %s already exist".format(dhcp_interface))
+        ctx.fail("Dhcp_interface {} already exist".format(dhcp_interface))
     else:
         dbconn.hmset("CONFIG_DB", key, {
             "mode": mode,
@@ -110,10 +110,10 @@ def dhcp_server_ipv4_del(db, dhcp_interface):
     dbconn = db.db
     key = "DHCP_SERVER_IPV4|" + dhcp_interface
     if dbconn.exists("CONFIG_DB", key):
-        click.echo("Dhcp interface %s exists in config db, proceed to delete".format(dhcp_interface))
+        click.echo("Dhcp interface {} exists in config db, proceed to delete".format(dhcp_interface))
         dbconn.delete("CONFIG_DB", key)
     else:
-        ctx.fail("Dhcp interface %s does not exist in config db".format(dhcp_interface))
+        ctx.fail("Dhcp interface {} does not exist in config db".format(dhcp_interface))
 
 
 @dhcp_server_ipv4.command(name="enable")
@@ -126,7 +126,20 @@ def dhcp_server_ipv4_enable(db, dhcp_interface):
     if dbconn.exists("CONFIG_DB", key):
         dbconn.set("CONFIG_DB", key, "state", "enabled")
     else:
-        ctx.fail("Failed to enable, dhcp interface %s does not exist".format(dhcp_interface))
+        ctx.fail("Failed to enable, dhcp interface {} does not exist".format(dhcp_interface))
+
+
+@dhcp_server_ipv4.command(name="disable")
+@click.argument("dhcp_interface", required=True)
+@clicommon.pass_db
+def dhcp_server_ipv4_disable(db, dhcp_interface):
+    ctx = click.get_current_context()
+    dbconn = db.db
+    key = "DHCP_SERVER_IPV4|" + dhcp_interface
+    if dbconn.exists("CONFIG_DB", key):
+        dbconn.set("CONFIG_DB", key, "state", "disabled")
+    else:
+        ctx.fail("Failed to disable, dhcp interface {} does not exist".format(dhcp_interface))
 
 
 def register(cli):
