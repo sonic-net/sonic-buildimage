@@ -5,6 +5,8 @@ import utilities_common.cli as clicommon
 
 import ipaddress
 from datetime import datetime
+import fnmatch
+import re
 
 
 def ts_to_str(ts):
@@ -79,6 +81,17 @@ def range(db, range_name):
     click.echo(tabulate(table, headers=headers))
 
 
+def dhcp_interface_is_match(input_, key):
+    regex = fnmatch.translate(input_)
+    regex = re.compile(regex)
+    if regex.match(key):
+        return True
+    for item in key.split("|"):
+        if regex.match(item):
+            return True
+    return False
+
+
 @ipv4.command()
 @click.argument('dhcp_interface', required=False)
 @click.option('--with_customized_options', default=False, is_flag=True)
@@ -113,6 +126,26 @@ def option(db, option_name):
         entry = dbconn.get_all("CONFIG_DB", key)
         name = key.split("|")[1]
         table.append([name, entry["id"], entry["value"], entry["type"]])
+    click.echo(tabulate(table, headers=headers))
+
+
+@ipv4.command()
+@click.argument('interface', required=False)
+@clicommon.pass_db
+def port(db, interface):
+    if not interface:
+        interface = "*"
+    headers = ["Interface", "Bind"]
+    table = []
+    dbconn = db.db
+    for key in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|*"):
+        intf = key[len("DHCP_SERVER_IPV4_PORT|"):]
+        if dhcp_interface_is_match(interface, intf):
+            entry = dbconn.get_all("CONFIG_DB", key)
+            if "ranges" in entry:
+                table.append([intf, entry["ranges"].replace(",", "\n")])
+            if "ips" in entry:
+                table.append([intf, entry["ips"].replace(",", "\n")])
     click.echo(tabulate(table, headers=headers))
 
 

@@ -175,3 +175,81 @@ option60                60  dummy_value  string
         result = runner.invoke(show_dhcp_server.dhcp_server.commands["ipv4"].commands["option"], ["option60"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
         assert result.stdout == expected_stdout
+
+    def test_show_dhcp_server_ipv4_port_without_intf(self, mock_db):
+        expected_stdout = """\
+Interface          Bind
+-----------------  ----------
+Vlan100|Ethernet4  100.1.1.10
+                   10.1.1.11
+Vlan100|Ethernet7  range1
+                   range2
+Vlan200|Ethernet8  range3
+                   range4
+Ethernet9          range5
+                   range6
+"""
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(show_dhcp_server.dhcp_server.commands["ipv4"].commands["port"], [], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert result.stdout == expected_stdout
+
+    def test_show_dhcp_server_ipv4_port_with_port(self, mock_db):
+        expected_stdout = """\
+Interface          Bind
+-----------------  ------
+Vlan100|Ethernet7  range1
+                   range2
+"""
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(show_dhcp_server.dhcp_server.commands["ipv4"].commands["port"], ["Ethernet7"], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert result.stdout == expected_stdout
+
+    def test_show_dhcp_server_ipv4_port_with_vlan(self, mock_db):
+        expected_stdout = """\
+Interface          Bind
+-----------------  ----------
+Vlan100|Ethernet4  100.1.1.10
+                   10.1.1.11
+Vlan100|Ethernet7  range1
+                   range2
+"""
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(show_dhcp_server.dhcp_server.commands["ipv4"].commands["port"], ["Vlan100"], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert result.stdout == expected_stdout
+
+    def test_show_dhcp_server_ipv4_port_with_port_and_vlan(self, mock_db):
+        expected_stdout = """\
+Interface          Bind
+-----------------  ------
+Vlan200|Ethernet8  range3
+                   range4
+"""
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(show_dhcp_server.dhcp_server.commands["ipv4"].commands["port"], ["Vlan200|Ethernet8"], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert result.stdout == expected_stdout
+
+    def test_show_dhcp_server_ipv4_port_with_single_port(self, mock_db):
+        expected_stdout = """\
+Interface    Bind
+-----------  ------
+Ethernet9    range5
+             range6
+"""
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(show_dhcp_server.dhcp_server.commands["ipv4"].commands["port"], ["Ethernet9"], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert result.stdout == expected_stdout
