@@ -116,6 +116,50 @@ def dhcp_server_ipv4_del(db, dhcp_interface):
         ctx.fail("Dhcp interface {} does not exist in config db".format(dhcp_interface))
 
 
+@dhcp_server_ipv4.command(name="update")
+@click.argument("dhcp_interface", required=True)
+@click.option("--mode", required=False)
+@click.option("--lease_time", required=False)
+@click.option("--dup_gw_nm", required=False, default=False, is_flag=True)
+@click.option("--gateway", required=False)
+@click.option("--netmask", required=False)
+@clicommon.pass_db
+def dhcp_server_ipv4_update(db, mode, lease_time, dup_gw_nm, gateway, netmask, dhcp_interface):
+    ctx = click.get_current_context()
+    dbconn = db.db
+    key = "DHCP_SERVER_IPV4|" + dhcp_interface
+    if not dbconn.exists("CONFIG_DB", key):
+        ctx.fail("Dhcp interface {} does not exist in config db".format(dhcp_interface))
+    if mode:
+        if mode != "PORT":
+            ctx.fail("Only mode PORT is supported")
+        else:
+            dbconn.set("CONFIG_DB", key, "mode", mode)
+    if lease_time:
+        if not validate_str_type("uint32", lease_time):
+            ctx.fail("lease_time is required and must be nonnegative integer")
+        else:
+            dbconn.set("CONFIG_DB", key, "lease_time", lease_time)
+    if dup_gw_nm:
+        dup_success = False
+        for key in dbconn.keys("CONFIG_DB", "VLAN_INTERFACE|" + dhcp_interface + "|*"):
+            intf = ipaddress.ip_interface(key.split("|")[2])
+            if intf.version != 4:
+                continue
+            dup_success = True
+            gateway, netmask = str(intf.ip), str(intf.netmask)
+        if not dup_success:
+            ctx.fail("failed to found gateway and netmask for Vlan interface {}".format(dhcp_interface))
+    elif gateway and not validate_str_type("ipv4-address", gateway):
+        ctx.fail("gateway must be valid ipv4 string")
+    elif netmask and not validate_str_type("ipv4-address", netmask):
+        ctx.fail("netmask must be valid ipv4 string")
+    if gateway:
+        dbconn.set("CONFIG_DB", key, "gateway", gateway)
+    if netmask:
+        dbconn.set("CONFIG_DB", key, "netmask", netmask)
+
+
 @dhcp_server_ipv4.command(name="enable")
 @click.argument("dhcp_interface", required=True)
 @clicommon.pass_db

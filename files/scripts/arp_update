@@ -68,7 +68,7 @@ while /bin/true; do
 
   ALL_INTERFACE="$INTERFACE $PC_INTERFACE $VLAN_SUB_INTERFACE"
   for intf in $ALL_INTERFACE; do
-      ping6cmd="ping6 -I $intf -n -q -i 0 -c 1 -W 0 ff02::1 >/dev/null"
+      ping6cmd="timeout 0.2 ping6 -I $intf -n -q -i 0 -c 1 -W 0 ff02::1 >/dev/null"
       intf_up=$(ip link show $intf | grep "state UP")
       if [[ -n "$intf_up" ]]; then
           eval $ping6cmd
