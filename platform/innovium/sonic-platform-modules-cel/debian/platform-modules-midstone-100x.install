@@ -1,0 +1,6 @@
+midstone-100x/scripts/sensors usr/bin
+midstone-100x/scripts/platform_sensors.py usr/local/bin
+midstone-100x/cfg/midstone-100x-modules.conf etc/modules-load.d
+midstone-100x/systemd/platform-modules-midstone-100x.service lib/systemd/system
+midstone-100x/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_midstone-100x-r0
+services/platform_api/platform_api_mgnt.sh usr/local/bin

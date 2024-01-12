@@ -1,0 +1,5 @@
+depmod -a
+systemctl enable platform-modules-midstone-100x.service
+systemctl start platform-modules-midstone-100x.service
+
+/usr/local/bin/platform_api_mgnt.sh install
