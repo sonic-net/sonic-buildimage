@@ -40,6 +40,9 @@
 #  * ENABLE_NATIVE_WRITE: Enable native write/config operations via the gNMI interface.
 #  *                 Default: unset
 #  *                 Values: y
+#  * ENABLE_DIALOUT: Enable dialout client in telemetry.
+#  *                 Default: unset
+#  *                 Values: y
 #  * SONIC_DPKG_CACHE_METHOD: Specifying method of obtaining the Debian packages from cache: none or cache
 #  * SONIC_DPKG_CACHE_SOURCE: Debian package cache location when cache enabled for debian packages
 #  * BUILD_LOG_TIMESTAMP: Set timestamp in the build log (simple/none)
@@ -562,6 +565,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_INCLUDE_MUX=$(INCLUDE_MUX) \
                            ENABLE_TRANSLIB_WRITE=$(ENABLE_TRANSLIB_WRITE) \
                            ENABLE_NATIVE_WRITE=$(ENABLE_NATIVE_WRITE) \
+			   ENABLE_DIALOUT=$(ENABLE_DIALOUT) \
                            EXTRA_DOCKER_TARGETS=$(EXTRA_DOCKER_TARGETS) \
                            BUILD_LOG_TIMESTAMP=$(BUILD_LOG_TIMESTAMP) \
                            SONIC_ENABLE_IMAGE_SIGNATURE=$(ENABLE_IMAGE_SIGNATURE) \
