@@ -51,7 +51,11 @@
 {%- if include_mux == "y" %}{% do features.append(("mux", "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}", false, "enabled")) %}{% endif %}
 {%- if include_nat == "y" %}{% do features.append(("nat", "disabled", false, "enabled")) %}{% endif %}
 {%- if include_p4rt == "y" %}{% do features.append(("p4rt", "disabled", false, "enabled")) %}{% endif %}
-{%- if include_restapi == "y" %}{% do features.append(("restapi", "enabled", false, "enabled")) %}{% endif %}
+{%- if include_restapi == "y" and BUILD_REDUCE_IMAGE_SIZE == "y" and sonic_asic_platform == "broadcom" %}
+    {% do features.append(("restapi", "{% if (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['LeafRouter', 'BackEndLeafRouter']) %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}
+{%- elif include_restapi == "y" %}
+    {% do features.append(("restapi", "enabled", false, "enabled")) %}
+{%- endif %}
 {%- if include_sflow == "y" %}{% do features.append(("sflow", "disabled", true, "enabled")) %}{% endif %}
 {%- if include_macsec == "y" %}{% do features.append(("macsec", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}{% endif %}
 {%- if include_system_gnmi == "y" %}{% do features.append(("gnmi", "enabled", true, "enabled")) %}{% endif %}
