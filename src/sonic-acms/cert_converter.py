@@ -49,6 +49,8 @@ def execute_cmd(cmd):
     return True
 
 def get_list_of_certs(path):
+    if not os.path.exists(path):
+        return []
     # Make list of the certs at a given location
     files = [file_t for file_t in os.listdir(path) if (os.path.isfile(os.path.join(path, file_t)) and not os.path.islink(os.path.join(path, file_t)))]
     cert_list = []
