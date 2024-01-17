@@ -240,3 +240,133 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["update"], ["Vlan100", "--netmask=255.255.254"], obj=db)
         assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
 
+    def test_config_dhcp_server_ipv4_range_add(self, mock_db):
+        expected_value = {
+            "range": "10.10.10.10,10.10.10.11"
+        }
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["add"], \
+                ["range4", "10.10.10.10", "10.10.10.11"], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert mock_db.get_all("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range4") == expected_value
+
+    def test_config_dhcp_server_ipv4_range_add_existing(self, mock_db):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["add"], \
+                ["range1", "10.10.10.10", "10.10.10.11"], obj=db)
+        assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+
+    def test_config_dhcp_server_ipv4_range_add_single_ip(self, mock_db):
+        expected_value = {
+            "range": "10.10.10.10,10.10.10.10"
+        }
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["add"], \
+                ["range4", "10.10.10.10"], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert mock_db.get_all("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range4") == expected_value
+
+    def test_config_dhcp_server_ipv4_range_add_wrong_ip(self, mock_db):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["add"], \
+                ["range4", "10.10.10"], obj=db)
+        assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+
+    def test_config_dhcp_server_ipv4_range_add_wrong_order(self, mock_db):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["add"], \
+                ["range4", "10.10.10.10", "10.10.10.9"], obj=db)
+        assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+
+    def test_config_dhcp_server_ipv4_range_update(self, mock_db):
+        expected_value = {
+            "range": "10.10.10.10,10.10.10.11"
+        }
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["update"], \
+                ["range1", "10.10.10.10", "10.10.10.11"], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert mock_db.get_all("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range1") == expected_value
+
+    def test_config_dhcp_server_ipv4_range_update_nonexisting(self, mock_db):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["update"], \
+                ["range4", "10.10.10.10", "10.10.10.11"], obj=db)
+        assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+
+    def test_config_dhcp_server_ipv4_range_update_single_ip(self, mock_db):
+        expected_value = {
+            "range": "10.10.10.10,10.10.10.10"
+        }
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["update"], \
+                ["range1", "10.10.10.10"], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert mock_db.get_all("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range1") == expected_value
+
+    def test_config_dhcp_server_ipv4_range_update_wrong_ip(self, mock_db):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["update"], \
+                ["range1", "10.10.10"], obj=db)
+        assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+
+    def test_config_dhcp_server_ipv4_range_add_wrong_order(self, mock_db):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["update"], \
+                ["range1", "10.10.10.10", "10.10.10.9"], obj=db)
+        assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+
+    def test_config_dhcp_server_ipv4_range_delete(self, mock_db):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["del"], \
+                ["range2"], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert mock_db.exists("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range2") == False
+
+    def test_config_dhcp_server_ipv4_range_delete_nonexisting(self, mock_db):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["del"], \
+                ["range4"], obj=db)
+        assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+
+    def test_config_dhcp_server_ipv4_range_delete_referenced(self, mock_db):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["del"], \
+                ["range1"], obj=db)
+        assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+
+    def test_config_dhcp_server_ipv4_range_delete_referenced_force(self, mock_db):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["range"].commands["del"], \
+                ["range1", "--force"], obj=db)
+        assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+        assert mock_db.exists("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|range1") == False
+
