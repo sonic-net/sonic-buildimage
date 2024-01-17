@@ -335,6 +335,7 @@ phy_pcs_repeater
 l3_alpm_hit_skip
 sai_verify_incoming_chksum
 phy_an_lt_msft
+phy_unlos_msft
 system_ref_core_clock_khz
 xflow_macsec_secure_chan_to_num_secure_assoc_encrypt
 xflow_macsec_secure_chan_to_num_secure_assoc_decrypt

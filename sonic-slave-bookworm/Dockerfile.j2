@@ -1,11 +1,11 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {%- if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-arm-7.2.0-1 as qemu
-FROM {{ prefix }}multiarch/debian-debootstrap:armhf-bookworm
+FROM --platform=linux/arm/v7 {{ prefix }}debian:bookworm
 COPY --from=qemu /usr/bin/qemu-arm-static /usr/bin
 {%- elif CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-aarch64-7.2.0-1 as qemu
-FROM {{ prefix }}multiarch/debian-debootstrap:arm64-bookworm
+FROM --platform=linux/arm64 {{ prefix }}debian:bookworm
 COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin
 {%- elif CONFIGURED_ARCH == "armhf" and CROSS_BUILD_ENVIRON == "y" %}
 FROM {{ prefix }}multiarch/qemu-user-static:x86_64-arm-7.2.0-1 as qemu

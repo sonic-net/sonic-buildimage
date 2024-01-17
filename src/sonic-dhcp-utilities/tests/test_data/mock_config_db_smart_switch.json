@@ -1,0 +1,27 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "sonic-host",
+            "subtype": "SmartSwitch"
+        }
+    },
+    "MID_PLANE_BRIDGE": {
+        "GLOBAL": {
+            "bridge": "bridge_midplane",
+            "address": "169.254.200.254/24"
+        }
+    },
+    "DHCP_SERVER_IPV4": {
+        "bridge_midplane": {
+            "customized_options": [
+                "option60",
+                "option223"
+            ],
+            "gateway": "169.254.200.254",
+            "lease_time": "900",
+            "mode": "PORT",
+            "netmask": "255.255.255.0",
+            "state": "enabled"
+        }
+    }
+}
