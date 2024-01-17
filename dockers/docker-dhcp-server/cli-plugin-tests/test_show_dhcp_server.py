@@ -215,9 +215,9 @@ class TestShowDHCPServer(object):
 |                   | 10.1.1.11  |
 +-------------------+------------+
 | Vlan100|Ethernet7 | range1     |
-|                   | range2     |
+|                   | range3     |
 +-------------------+------------+
-| Vlan200|Ethernet8 | range3     |
+| Vlan200|Ethernet8 | range1     |
 |                   | range4     |
 +-------------------+------------+
 | Ethernet9         | range5     |
@@ -237,7 +237,7 @@ class TestShowDHCPServer(object):
 | Interface         | Bind   |
 +===================+========+
 | Vlan100|Ethernet7 | range1 |
-|                   | range2 |
+|                   | range3 |
 +-------------------+--------+
 """
         runner = CliRunner()
@@ -256,7 +256,7 @@ class TestShowDHCPServer(object):
 |                   | 10.1.1.11  |
 +-------------------+------------+
 | Vlan100|Ethernet7 | range1     |
-|                   | range2     |
+|                   | range3     |
 +-------------------+------------+
 """
         runner = CliRunner()
@@ -271,7 +271,7 @@ class TestShowDHCPServer(object):
 +-------------------+--------+
 | Interface         | Bind   |
 +===================+========+
-| Vlan200|Ethernet8 | range3 |
+| Vlan200|Ethernet8 | range1 |
 |                   | range4 |
 +-------------------+--------+
 """
