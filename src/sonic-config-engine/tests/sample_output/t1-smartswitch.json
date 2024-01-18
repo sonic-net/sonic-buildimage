@@ -554,7 +554,7 @@
     "MID_PLANE_BRIDGE": {
         "GLOBAL": {
             "bridge": "bridge_midplane",
-            "address": "169.254.200.254/24"
+            "ip_prefix": "169.254.200.254/24"
         }
     },
     "DHCP_SERVER_IPV4": {
