@@ -86,7 +86,7 @@ def generate_t1_smartswitch_sample_config(data):
     data['MID_PLANE_BRIDGE'] = {
         'GLOBAL': {
             'bridge': bridge_name,
-            'address': '{}/24'.format(mpbr_address)
+            'ip_prefix': '{}/24'.format(mpbr_address)
         }
     }
 
