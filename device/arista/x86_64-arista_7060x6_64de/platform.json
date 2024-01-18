@@ -1,0 +1,315 @@
+{
+    "chassis": {
+        "name": "DCS-7060X6-64DE",
+        "components": [
+            {
+                "name": "Aboot()"
+            },
+            {
+                "name": "Scd(addr=0000:00:18.7)"
+            },
+            {
+                "name": "Scd(addr=0000:03:00.0)"
+            },
+            {
+                "name": "ShearwaterSysCpld(addr=13-0023)"
+            }
+        ],
+        "fans": [],
+        "fan_drawers": [
+            {
+                "name": "slot1",
+                "fans": [
+                    {
+                        "name": "fan1"
+                    }
+                ]
+            },
+            {
+                "name": "slot2",
+                "fans": [
+                    {
+                        "name": "fan2"
+                    }
+                ]
+            },
+            {
+                "name": "slot3",
+                "fans": [
+                    {
+                        "name": "fan3"
+                    }
+                ]
+            },
+            {
+                "name": "slot4",
+                "fans": [
+                    {
+                        "name": "fan4"
+                    }
+                ]
+            }
+        ],
+        "psus": [
+            {
+                "name": "psu1",
+                "voltage_high_threshold": false,
+                "voltage_low_threshold": false,
+                "fans": [
+                    {
+                        "name": "psu1/1",
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "psu2",
+                "voltage_high_threshold": false,
+                "voltage_low_threshold": false,
+                "fans": [
+                    {
+                        "name": "psu2/1",
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "Cpu temp sensor",
+                "controllable": false
+            },
+            {
+                "name": "Ambient",
+                "controllable": false
+            },
+            {
+                "name": "Outlet",
+                "controllable": false
+            },
+            {
+                "name": "Switch Card temp sensor",
+                "controllable": false
+            },
+            {
+                "name": "Air Exit Behind TH5",
+                "controllable": false
+            },
+            {
+                "name": "Left Edge PCB Near Rear of Switch",
+                "controllable": false
+            },
+            {
+                "name": "Air Inlet",
+                "controllable": false
+            },
+            {
+                "name": "TH5 Diode 1",
+                "controllable": false
+            },
+            {
+                "name": "TH5 Diode 2",
+                "controllable": false
+            }
+        ],
+        "sfps": [
+            {
+                "name": "osfp1"
+            },
+            {
+                "name": "osfp2"
+            },
+            {
+                "name": "osfp3"
+            },
+            {
+                "name": "osfp4"
+            },
+            {
+                "name": "osfp5"
+            },
+            {
+                "name": "osfp6"
+            },
+            {
+                "name": "osfp7"
+            },
+            {
+                "name": "osfp8"
+            },
+            {
+                "name": "osfp9"
+            },
+            {
+                "name": "osfp10"
+            },
+            {
+                "name": "osfp11"
+            },
+            {
+                "name": "osfp12"
+            },
+            {
+                "name": "osfp13"
+            },
+            {
+                "name": "osfp14"
+            },
+            {
+                "name": "osfp15"
+            },
+            {
+                "name": "osfp16"
+            },
+            {
+                "name": "osfp17"
+            },
+            {
+                "name": "osfp18"
+            },
+            {
+                "name": "osfp19"
+            },
+            {
+                "name": "osfp20"
+            },
+            {
+                "name": "osfp21"
+            },
+            {
+                "name": "osfp22"
+            },
+            {
+                "name": "osfp23"
+            },
+            {
+                "name": "osfp24"
+            },
+            {
+                "name": "osfp25"
+            },
+            {
+                "name": "osfp26"
+            },
+            {
+                "name": "osfp27"
+            },
+            {
+                "name": "osfp28"
+            },
+            {
+                "name": "osfp29"
+            },
+            {
+                "name": "osfp30"
+            },
+            {
+                "name": "osfp31"
+            },
+            {
+                "name": "osfp32"
+            },
+            {
+                "name": "osfp33"
+            },
+            {
+                "name": "osfp34"
+            },
+            {
+                "name": "osfp35"
+            },
+            {
+                "name": "osfp36"
+            },
+            {
+                "name": "osfp37"
+            },
+            {
+                "name": "osfp38"
+            },
+            {
+                "name": "osfp39"
+            },
+            {
+                "name": "osfp40"
+            },
+            {
+                "name": "osfp41"
+            },
+            {
+                "name": "osfp42"
+            },
+            {
+                "name": "osfp43"
+            },
+            {
+                "name": "osfp44"
+            },
+            {
+                "name": "osfp45"
+            },
+            {
+                "name": "osfp46"
+            },
+            {
+                "name": "osfp47"
+            },
+            {
+                "name": "osfp48"
+            },
+            {
+                "name": "osfp49"
+            },
+            {
+                "name": "osfp50"
+            },
+            {
+                "name": "osfp51"
+            },
+            {
+                "name": "osfp52"
+            },
+            {
+                "name": "osfp53"
+            },
+            {
+                "name": "osfp54"
+            },
+            {
+                "name": "osfp55"
+            },
+            {
+                "name": "osfp56"
+            },
+            {
+                "name": "osfp57"
+            },
+            {
+                "name": "osfp58"
+            },
+            {
+                "name": "osfp59"
+            },
+            {
+                "name": "osfp60"
+            },
+            {
+                "name": "osfp61"
+            },
+            {
+                "name": "osfp62"
+            },
+            {
+                "name": "osfp63"
+            },
+            {
+                "name": "osfp64"
+            }
+        ]
+    },
+    "interfaces": {}
+}
