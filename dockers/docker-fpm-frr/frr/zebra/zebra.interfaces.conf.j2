@@ -24,5 +24,13 @@ interface {{ pc }}
 link-detect
 !
 {% endfor %}
+{% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('subtype' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['subtype'].lower() == 'dualtor') %}
+! Disable link-detect on VLAN interfaces for dualtor
+{% for (name, prefix) in VLAN_INTERFACE|pfx_filter|unique(attribute=0) %}
+interface {{ name }}
+no link-detect
+!
+{% endfor %}
+{% endif %}
 {% endblock interfaces %}
 !
