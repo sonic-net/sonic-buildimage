@@ -2,7 +2,7 @@
     "CONFIG_DB__DEVICE_METADATA": {
         "localhost": {
             "type": "BackEndToRRouter",
-            "resource_type": "Compute_AI"
+            "resource_type": "ComputeAI"
         }
     },
     "CONFIG_DB__DEVICE_NEIGHBOR_METADATA": {

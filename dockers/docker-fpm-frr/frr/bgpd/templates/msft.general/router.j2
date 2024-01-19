@@ -10,7 +10,7 @@
 {% set is_storage_device = "false" %}
 {% endif %}
 {% set resource_type = CONFIG_DB__DEVICE_METADATA['localhost']['resource_type'] %}
-{% if resource_type is defined and resource_type == 'Compute_AI' %}
+{% if resource_type is defined and resource_type == 'ComputeAI' %}
 {% set is_compute_ai = "true" %}
 {% else %}
 {% set is_compute_ai = "false" %}
