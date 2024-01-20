@@ -1,9 +1,9 @@
 {% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
 {% if CONFIGURED_ARCH == "armhf" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
-FROM {{ prefix }}multiarch/debian-debootstrap:armhf-bookworm
+FROM --platform=linux/arm/v7 {{ prefix }}debian:bookworm
 {% elif CONFIGURED_ARCH == "arm64" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
-FROM {{ prefix }}multiarch/debian-debootstrap:arm64-bookworm
+FROM --platform=linux/arm64 {{ prefix }}debian:bookworm
 {% else %}
 FROM {{ prefix }}{{DOCKER_BASE_ARCH}}/debian:bookworm
 {% endif %}
@@ -30,7 +30,6 @@ COPY ["dpkg_01_drop", "/etc/dpkg/dpkg.cfg.d/01_drop"]
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
-COPY ["apt-multiple-retries", "/etc/apt/apt.conf.d"]
 
 # Update apt cache and
 # pre-install fundamental packages
