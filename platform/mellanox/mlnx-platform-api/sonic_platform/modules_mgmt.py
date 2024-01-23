@@ -279,8 +279,8 @@ class ModulesMgmtTask(threading.Thread):
                     module_fd_path = module_obj.module_power_good_fd_path
                 self.fds_events_count_dict[module_obj.port_num][fd_name] += 1
                 try:
-                    val = module_fd.read()
                     module_fd.seek(0)
+                    val = module_fd.read()
                     logger.log_info("dynamic detection got module_obj {} with port {} from fd number {} path {} val {} count {}"
                                   .format(module_obj, module_obj.port_num, fd, module_fd_path
                                           , val, self.fds_events_count_dict[module_obj.port_num]))
@@ -450,8 +450,9 @@ class ModulesMgmtTask(threading.Thread):
                     utils.write_file(module_fd_indep_path_po, "1")
                 if os.path.isfile(module_fd_indep_path_r):
                     logger.log_info("powerOnModule resetting via {} for port {}".format(module_fd_indep_path_r, port))
-                    # echo 0 > /sys/module/sx_core/$asic/$module/hw_reset
-                    utils.write_file(module_fd_indep_path_r, "0")
+                    # de-assert hw_reset - low polarity. 1 for de-assert 0 for assert
+                    # echo 1 > /sys/module/sx_core/$asic/$module/hw_reset
+                    utils.write_file(module_fd_indep_path_r, "1")
                 self.add_port_to_wait_reset(module_sm_obj)
             except Exception as e:
                 logger.log_info("exception in powerOnModule {} for port {}".format(e, port))

@@ -7,7 +7,6 @@ import syslog
 from jinja2 import Environment, FileSystemLoader
 from dhcp_utilities.common.utils import merge_intervals, validate_str_type, is_smart_switch
 
-PORT_MAP_PATH = "/tmp/port-name-alias-map.txt"
 UNICODE_TYPE = str
 DHCP_SERVER_IPV4 = "DHCP_SERVER_IPV4"
 DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS = "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS"
@@ -35,14 +34,14 @@ class DhcpServCfgGenerator(object):
     lease_update_script_path = ""
     lease_path = ""
 
-    def __init__(self, dhcp_db_connector, lease_path=DEFAULT_LEASE_PATH, port_map_path=PORT_MAP_PATH,
+    def __init__(self, dhcp_db_connector, lease_path=DEFAULT_LEASE_PATH,
                  lease_update_script_path=LEASE_UPDATE_SCRIPT_PATH, dhcp_option_path=DHCP_OPTION_FILE,
                  kea_conf_template_path=KEA_DHCP4_CONF_TEMPLATE_PATH):
         self.db_connector = dhcp_db_connector
         self.lease_path = lease_path
         self.lease_update_script_path = lease_update_script_path
         # Read port alias map file, this file is render after container start, so it would not change any more
-        self._parse_port_map_alias(port_map_path)
+        self._parse_port_map_alias()
         # Get kea config template
         self._get_render_template(kea_conf_template_path)
         self._read_dhcp_option(dhcp_option_path)
@@ -70,7 +69,7 @@ class DhcpServCfgGenerator(object):
         # Parse dpu
         dpus_table = self.db_connector.get_config_db_table(DPUS)
         mid_plane_table = self.db_connector.get_config_db_table(MID_PLANE_BRIDGE)
-        mid_plane, dpus = self._parse_dpu(dpus_table, mid_plane_table) if smart_switch else {}, {}
+        mid_plane, dpus = self._parse_dpu(dpus_table, mid_plane_table) if smart_switch else ({}, {})
 
         dhcp_server_ipv4, customized_options_ipv4, range_ipv4, port_ipv4 = self._get_dhcp_ipv4_tables_from_db()
         # Parse range table
@@ -166,14 +165,13 @@ class DhcpServCfgGenerator(object):
         env = Environment(loader=FileSystemLoader(os.path.dirname(kea_conf_template_path)))  # nosemgrep
         self.kea_template = env.get_template(os.path.basename(kea_conf_template_path))
 
-    def _parse_port_map_alias(self, port_map_path):
-        with open(port_map_path, "r") as file:
-            lines = file.readlines()
-            for line in lines:
-                splits = line.strip().split(" ")
-                if len(splits) != 2:
-                    continue
-                self.port_alias_map[splits[0]] = splits[1]
+    def _parse_port_map_alias(self):
+        port_table = self.db_connector.get_config_db_table("PORT")
+        pc_table = self.db_connector.get_config_db_table("PORTCHANNEL")
+        for port_name, item in port_table.items():
+            self.port_alias_map[port_name] = item.get("alias", port_name)
+        for pc_name in pc_table.keys():
+            self.port_alias_map[pc_name] = pc_name
 
     def _construct_obj_for_template(self, dhcp_server_ipv4, port_ips, hostname, customized_options):
         subnets = []

@@ -180,5 +180,38 @@
                 "192.168.0.10"
             ]
         }
+    },
+    "PORT": {
+        "Ethernet0": {
+            "admin_status": "up",
+            "alias": "etp1",
+            "description": "Servers0:eth0",
+            "index": "1",
+            "lanes": "25",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "1000",
+            "tpid": "0x8100"
+        },
+        "Ethernet1": {
+            "admin_status": "up",
+            "alias": "etp2",
+            "description": "Servers1:eth0",
+            "index": "2",
+            "lanes": "26",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "1000",
+            "tpid": "0x8100"
+        }
+    },
+    "PORTCHANNEL": {
+        "PortChannel101": {
+            "admin_status": "up",
+            "lacp_key": "auto",
+            "min_links": "1",
+            "mtu": "9100",
+            "tpid": "0x8100"
+        }
     }
 }
