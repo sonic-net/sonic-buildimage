@@ -787,7 +787,7 @@
           <a:DeviceProperty>
             <a:Name>ForcedMgmtRoutes</a:Name>
             <a:Reference i:nil="true"/>
-            <a:Value>11.11.11.11;22.22.22.0/23</a:Value>
+            <a:Value>11.11.11.11;22.22.22.0/23;33:33:33::0/64</a:Value>
           </a:DeviceProperty>
           <a:DeviceProperty>
             <a:Name>ErspanDestinationIpv4</a:Name>

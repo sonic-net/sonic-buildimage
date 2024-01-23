@@ -86,7 +86,7 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
     up ip {{ '-4' if prefix | ipv4 else '-6' }} route add {{ prefix | network }}/{{ prefix | prefixlen }} dev {{ name }} table {{ vrf_table }}
     up ip {{ '-4' if prefix | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority + 1 }} from {{ prefix | ip }}/{{ '32' if prefix | ipv4 else '128' }} table {{ vrf_table }}
 {% for route in MGMT_INTERFACE[(name, prefix)]['forced_mgmt_routes'] %}
-    up ip rule add pref {{ force_mgmt_route_priority }} to {{ route }} table {{ vrf_table }}
+    up ip {{ '-4' if prefix | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority }} to {{ route }} table {{ vrf_table }}
 {% endfor %}
 {% if prefix | ipv6 and vrf_table == 'default'%}
     # IPV6 default table not add to lookup by default, management server need this to access IPV6 address when BGP shutdown
@@ -97,7 +97,7 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
     pre-down ip {{ '-4' if prefix | ipv4 else '-6' }} route delete {{ prefix | network }}/{{ prefix | prefixlen }} dev {{ name }} table {{ vrf_table }}
     pre-down ip {{ '-4' if prefix | ipv4 else '-6' }} rule delete pref {{ force_mgmt_route_priority + 1 }} from {{ prefix | ip }}/{{ '32' if prefix | ipv4 else '128' }} table {{ vrf_table }}
 {% for route in MGMT_INTERFACE[(name, prefix)]['forced_mgmt_routes'] %}
-    pre-down ip rule delete pref {{ force_mgmt_route_priority }} to {{ route }} table {{ vrf_table }}
+    pre-down ip {{ '-4' if route | ipv4 else '-6' }} rule delete pref {{ force_mgmt_route_priority }} to {{ route }} table {{ vrf_table }}
 {% endfor %}
 {% if prefix | ipv6 and vrf_table == 'default'%}
     pre-down ip -6 rule delete pref {{ force_mgmt_route_priority + 3 }} lookup {{ vrf_table }}

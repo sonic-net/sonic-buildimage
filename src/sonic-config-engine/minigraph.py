@@ -1469,6 +1469,33 @@ def select_mmu_profiles(profile, platform, hwsku):
                 base_file = os.path.join(path, file_item)
                 exec_cmd(["sudo", "cp", file_in_dir, base_file])
 
+def address_type(address):
+    # encode and decode to unicode, because when address is bytes type, ip_network will throw AddressValueError
+    # set strict to False because address may set host bit, for example 192.168.0.1/24
+    return type(ipaddress.ip_network(UNICODE_TYPE(address), False))
+
+def update_forced_mgmt_route(mgmt_intf, mgmt_routes):
+    for mgmt_intf_key in mgmt_intf.keys():
+        forced_mgmt_routes = []
+
+        try:
+            # get mgmt interface type
+            mgmt_intf_addr = mgmt_intf_key[1]
+            mgmt_iftype = address_type(mgmt_intf_addr)
+
+            # add mgmt route to different mgmt interface by address type
+            for mgmt_route in mgmt_routes:
+                route_iftype = address_type(mgmt_route)
+                if mgmt_iftype == route_iftype:
+                    forced_mgmt_routes.append(mgmt_route)
+        except ValueError as e:
+            print("Warning: invalid management routes in minigraph, exception: {}".format(e), file=sys.stderr)
+            continue
+
+        # forced_mgmt_routes yang model not support empty list
+        if len(forced_mgmt_routes) > 0:
+            mgmt_intf[mgmt_intf_key]['forced_mgmt_routes'] = forced_mgmt_routes
+
 ###############################################################################
 #
 # Main functions
@@ -1711,8 +1738,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     results['BGP_VOQ_CHASSIS_NEIGHBOR'] = bgp_voq_chassis_sessions
     results['BGP_SENTINELS'] = bgp_sentinel_sessions
     if mgmt_routes and mgmt_intf and len(mgmt_intf):
-        # TODO: differentiate v4 and v6
-        next(iter(mgmt_intf.values()))['forced_mgmt_routes'] = mgmt_routes
+        update_forced_mgmt_route(mgmt_intf, mgmt_routes)
     results['MGMT_PORT'] = {}
     results['MGMT_INTERFACE'] = {}
     mgmt_intf_count = 0

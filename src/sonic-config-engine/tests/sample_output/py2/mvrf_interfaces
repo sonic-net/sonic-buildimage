@@ -34,14 +34,14 @@ iface eth0 inet static
     up ip -4 route add default via 10.0.0.1 dev eth0 table 5000 metric 201
     up ip -4 route add 10.0.0.0/24 dev eth0 table 5000
     up ip -4 rule add pref 32765 from 10.0.0.100/32 table 5000
-    up ip rule add pref 32764 to 11.11.11.11 table 5000
-    up ip rule add pref 32764 to 22.22.22.0/23 table 5000
+    up ip -4 rule add pref 32764 to 11.11.11.11 table 5000
+    up ip -4 rule add pref 32764 to 22.22.22.0/23 table 5000
     # management port down rules
     pre-down ip -4 route delete default via 10.0.0.1 dev eth0 table 5000
     pre-down ip -4 route delete 10.0.0.0/24 dev eth0 table 5000
     pre-down ip -4 rule delete pref 32765 from 10.0.0.100/32 table 5000
-    pre-down ip rule delete pref 32764 to 11.11.11.11 table 5000
-    pre-down ip rule delete pref 32764 to 22.22.22.0/23 table 5000
+    pre-down ip -4 rule delete pref 32764 to 11.11.11.11 table 5000
+    pre-down ip -4 rule delete pref 32764 to 22.22.22.0/23 table 5000
 iface eth0 inet6 static
     address 2603:10e2:0:2902::8
     netmask 64
@@ -53,10 +53,12 @@ iface eth0 inet6 static
     up ip -6 route add default via 2603:10e2:0:2902::1 dev eth0 table 5000 metric 201
     up ip -6 route add 2603:10e2:0:2902::/64 dev eth0 table 5000
     up ip -6 rule add pref 32765 from 2603:10e2:0:2902::8/128 table 5000
+    up ip -6 rule add pref 32764 to 33:33:33::0/64 table 5000
     # management port down rules
     pre-down ip -6 route delete default via 2603:10e2:0:2902::1 dev eth0 table 5000
     pre-down ip -6 route delete 2603:10e2:0:2902::/64 dev eth0 table 5000
     pre-down ip -6 rule delete pref 32765 from 2603:10e2:0:2902::8/128 table 5000
+    pre-down ip -6 rule delete pref 32764 to 33:33:33::0/64 table 5000
 #
 source /etc/network/interfaces.d/*
 #
