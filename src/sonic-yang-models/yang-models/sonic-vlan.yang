@@ -113,6 +113,14 @@ module sonic-vlan {
                     description "Packet action when a packet ingress and gets routed on the same IP interface";
                     type stypes:loopback_action;
                 }
+
+				leaf ipv6_use_link_local_only {
+					description "Enable/disable IPv6 link-local";
+					type enumeration {
+						enum enable;
+						enum disable;
+					}
+				}
 			}
 			/* end of VLAN_INTERFACE_LIST */
 

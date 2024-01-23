@@ -67,6 +67,14 @@ module sonic-interface {
                                         default "0";
 				}
 
+				leaf ipv6_use_link_local_only {
+					description "Enable/disable IPv6 link-local";
+					type enumeration {
+						enum enable;
+						enum disable;
+					}
+				}
+
 				leaf mpls {
 					description "Enable/disable MPLS routing for the interface";
 					type enumeration {
