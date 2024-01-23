@@ -12,7 +12,6 @@ hostname=$(hostname)
 sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
     -a "{\"udp_server_ip\": \"$udp_server_ip\", \"hostname\": \"$hostname\"}" \
     > /etc/rsyslog.conf
-sonic-cfggen -d -t /usr/share/sonic/templates/port-name-alias-map.txt.j2,/tmp/port-name-alias-map.txt
 
 # Make the script that waits for all interfaces to come up executable
 chmod +x /etc/kea/lease_update.sh /usr/bin/start.sh

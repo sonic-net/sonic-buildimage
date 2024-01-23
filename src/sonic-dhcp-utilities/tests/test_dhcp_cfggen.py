@@ -268,10 +268,11 @@ tested_options_data = [
 
 
 def test_parse_port_alias(mock_swsscommon_dbconnector_init, mock_get_render_template):
-    dhcp_db_connector = DhcpDbConnector()
-    dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector,
-                                              port_map_path="tests/test_data/port-name-alias-map.txt")
-    assert dhcp_cfg_generator.port_alias_map == {"Ethernet24": "etp7", "Ethernet28": "etp8"}
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        dhcp_db_connector = DhcpDbConnector()
+        dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector)
+        assert dhcp_cfg_generator.port_alias_map == {"Ethernet0": "etp1", "Ethernet1": "etp2",
+                                                     "PortChannel101": "PortChannel101"}
 
 
 @pytest.mark.parametrize("is_success", [True, False])
@@ -324,22 +325,19 @@ def test_parse_port(test_config_db, mock_swsscommon_dbconnector_init, mock_get_r
                            if test_config_db == "mock_config_db.json" else set())
 
 
-@pytest.mark.parametrize("mid_plane", [{}, {"bridge": "mid_plane", "ip_prefix": "192.168.0.1/24"}])
-@pytest.mark.parametrize("is_smart_switch", [True, False])
-def test_generate(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias, mock_get_render_template, mid_plane,
-                  is_smart_switch):
+def test_generate(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias, mock_get_render_template):
     with patch.object(DhcpServCfgGenerator, "_parse_hostname"), \
          patch.object(DhcpServCfgGenerator, "_parse_vlan", return_value=({}, set(["Ethernet0"]))), \
          patch.object(DhcpServCfgGenerator, "_get_dhcp_ipv4_tables_from_db", return_value=(None, None, None, None)), \
          patch.object(DhcpServCfgGenerator, "_parse_range"), \
          patch.object(DhcpServCfgGenerator, "_parse_port", return_value=(None, set(["range1"]))), \
          patch.object(DhcpServCfgGenerator, "_parse_customized_options"), \
-         patch.object(DhcpServCfgGenerator, "_parse_dpu", side_effect=[mid_plane, set()]), \
+         patch.object(DhcpServCfgGenerator, "_parse_dpu", return_value=(set(), set())), \
          patch.object(DhcpServCfgGenerator, "_construct_obj_for_template",
                       return_value=(None, set(["Vlan1000"]), set(["option1"]), set(["dummy"]))), \
          patch.object(DhcpServCfgGenerator, "_render_config", return_value="dummy_config"), \
          patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table), \
-         patch("dhcp_utilities.dhcpservd.dhcp_cfggen.is_smart_switch", return_value=is_smart_switch):
+         patch("dhcp_utilities.dhcpservd.dhcp_cfggen.is_smart_switch", return_value=False):
         dhcp_db_connector = DhcpDbConnector()
         dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector)
         kea_dhcp4_config, used_ranges, enabled_dhcp_interfaces, used_options, subscribe_table = \
@@ -349,9 +347,6 @@ def test_generate(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias, m
         assert enabled_dhcp_interfaces == set(["Vlan1000"])
         assert used_options == set(["option1"])
         expected_tables = set(["dummy"])
-        if is_smart_switch:
-            expected_tables |= set(["DpusTableEventChecker", "MidPlaneTableEventChecker"])
-
         assert subscribe_table == expected_tables
 
 

@@ -29,10 +29,10 @@ def test_dump_dhcp4_config(mock_swsscommon_dbconnector_init, enabled_checker):
                       new_callable=PropertyMock), \
          patch.object(DhcpServdDbMonitor, "disable_checkers") as mock_unsubscribe, \
          patch.object(DhcpServdDbMonitor, "enable_checkers") as mock_subscribe, \
-         patch.object(DhcpServd, "enabled_checker", return_value=enabled_checker, new_callable=PropertyMock):
+         patch.object(DhcpServd, "enabled_checker", return_value=enabled_checker, new_callable=PropertyMock), \
+         patch.object(DhcpServCfgGenerator, "_parse_port_map_alias"):
         dhcp_db_connector = DhcpDbConnector()
         dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector,
-                                                  port_map_path="tests/test_data/port-name-alias-map.txt",
                                                   kea_conf_template_path="tests/test_data/kea-dhcp4.conf.j2")
         dhcpservd = DhcpServd(dhcp_cfg_generator, dhcp_db_connector, None,
                               kea_dhcp4_config_path="/tmp/kea-dhcp4.conf")

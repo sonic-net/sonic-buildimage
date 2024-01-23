@@ -1,8 +1,0 @@
-{# Generate port name-alias map for isc-dhcp-relay to parse. Each line contains one #}
-{#  name-alias pair of the form "<name> <alias>" #}
-{% for port, config in PORT.items() %}
-    {{- port }} {% if "alias" in config %}{{ config["alias"] }}{% else %}{{ port }}{% endif %} {{- "\n" -}}
-{% endfor -%}
-{% for pc, config in PORTCHANNEL.items() %}
-    {{- pc }} {{ pc }} {{- "\n" -}}
-{% endfor -%}
