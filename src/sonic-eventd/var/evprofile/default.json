@@ -1,0 +1,12 @@
+{
+    "__README__" : "This is default map of events that eventd uses. Developer can modify this file and send SIGINT to eventd to make it read and use the updated file. Alternatively developer can test the new event by adding it to a custom event profile and use 'event profile <filename>' command to apply that profile without having to send SIGINT to eventd. Developer need to commit default.json file with the new event after testing it out. Supported severities are: CRITICAL, MAJOR, MINOR, WARNING and INFORMATIONAL. Supported enable flag values are: true and false.",
+    "events":[
+        {
+            "name" : "LICENSE_STATE",
+            "severity" : "WARNING",
+            "enable" : "true",
+            "message" : "License State changed -"
+        }
+    ]
+}
+           
