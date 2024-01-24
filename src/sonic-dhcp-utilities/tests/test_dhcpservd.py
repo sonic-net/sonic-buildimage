@@ -32,7 +32,7 @@ def test_dump_dhcp4_config(mock_swsscommon_dbconnector_init, enabled_checker):
          patch.object(DhcpServd, "enabled_checker", return_value=enabled_checker, new_callable=PropertyMock), \
          patch.object(DhcpServCfgGenerator, "_parse_port_map_alias"):
         dhcp_db_connector = DhcpDbConnector()
-        dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector,
+        dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
                                                   kea_conf_template_path="tests/test_data/kea-dhcp4.conf.j2")
         dhcpservd = DhcpServd(dhcp_cfg_generator, dhcp_db_connector, None,
                               kea_dhcp4_config_path="/tmp/kea-dhcp4.conf")
@@ -56,7 +56,7 @@ def test_notify_kea_dhcp4_proc(process_list, mock_swsscommon_dbconnector_init, m
     with patch.object(psutil, "process_iter", return_value=proc_list), \
          patch.object(MockProc, "send_signal", MagicMock()) as mock_send_signal:
         dhcp_db_connector = DhcpDbConnector()
-        dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector)
+        dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so")
         dhcpservd = DhcpServd(dhcp_cfg_generator, dhcp_db_connector, None)
         dhcpservd._notify_kea_dhcp4_proc()
         if "kea-dhcp4" in process_list:
@@ -81,7 +81,7 @@ def test_update_dhcp_server_ip(mock_swsscommon_dbconnector_init, mock_parse_port
          patch.object(time, "sleep") as mock_sleep, \
          patch.object(sys, "exit") as mock_exit:
         dhcp_db_connector = DhcpDbConnector()
-        dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector)
+        dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so")
         dhcpservd = DhcpServd(dhcp_cfg_generator, dhcp_db_connector, None)
         dhcpservd._update_dhcp_server_ip()
         if mock_intf:
@@ -99,7 +99,7 @@ def test_start(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias, mock
          patch.object(DhcpServd, "_update_dhcp_server_ip") as mock_update_dhcp_server_ip, \
          patch.object(DhcpServdDbMonitor, "enable_checkers"):
         dhcp_db_connector = DhcpDbConnector()
-        dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector)
+        dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so")
         dhcpservd = DhcpServd(dhcp_cfg_generator, dhcp_db_connector, MagicMock())
         dhcpservd.start()
         mock_dump.assert_called_once_with()

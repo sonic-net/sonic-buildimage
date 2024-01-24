@@ -14,7 +14,7 @@
 {%- endif %}
         "hooks-libraries": [
             {
-                "library": "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
+                "library": "{{ hook_lib_path }}",
                 "parameters": {
                     "name": "{{ lease_update_script_path }}",
                     "sync": false
