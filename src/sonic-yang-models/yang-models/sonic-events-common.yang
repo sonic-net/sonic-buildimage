@@ -21,10 +21,51 @@ module sonic-events-common {
             "Common reusable definitions";
     }
 
+    typedef action-type {
+        type enumeration {
+            enum RAISE {
+                description "Event with raise alarm action.";
+            }
+            enum CLEAR {
+                description "Event with clear alarm action.";
+            }
+            enum ACKNOWLEDGE {
+                description "Event with ack alarm action.";
+            }
+            enum UNACKNOWLEDGE {
+                description "Event with unacknowledge alarm action.";
+            }
+        }
+        description
+        "This type defines the actions associated with an event notification.";
+    }
+
     grouping sonic-events-cmn {
         leaf timestamp {
             type yang:date-and-time;
             description "time of the event";
+        }
+        leaf type-id {
+            type string;
+            description
+            "The abbreviated name of the event, for example FAN_SPEED_STATUS,
+            SYSTEM_STATUS, or PSU_FAULTY.;
+        }
+
+        leaf text {
+            type string;
+            description
+            "The string used to inform operators about the event. This
+            MUST contain enough information for an operator to be able
+            to understand the problem. If this string contains structure,
+            this format should be clearly documented for programs to be
+            able to parse that information";
+        }
+
+        leaf action {
+            type action-type;
+            description
+            "This denotes the action associated with the event.";
         }
     }
 
