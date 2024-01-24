@@ -2,6 +2,7 @@
 import psutil
 import signal
 import time
+import subprocess
 import sys
 import syslog
 from .dhcp_cfggen import DhcpServCfgGenerator
@@ -100,7 +101,12 @@ class DhcpServd(object):
 
 def main():
     dhcp_db_connector = DhcpDbConnector(redis_sock=REDIS_SOCK_PATH)
-    dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector)
+    hook_lib_path_res = subprocess.run(["find", "/", "-name", "libdhcp_run_script.so"],
+                                       capture_output=True).stdout.decode().strip()
+    if len(hook_lib_path_res) == 0:
+        syslog.syslog(syslog.LOG_ERR, "Cannot find hook lib for kea-dhcp-server")
+        sys.exit(1)
+    dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, hook_lib_path_res.split("\n")[0])
     sel = swsscommon.Select()
     checkers = []
     checkers.append(DhcpServerTableCfgChangeEventChecker(sel, dhcp_db_connector.config_db))

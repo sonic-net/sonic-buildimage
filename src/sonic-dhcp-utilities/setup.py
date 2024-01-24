@@ -1,12 +1,12 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 dependencies = [
-    "psutil"
+    "psutil",
+    "freezegun"
 ]
 
 test_deps = [
     "pytest",
-    "freezegun"
 ]
 
 setup(
@@ -20,7 +20,7 @@ setup(
     author_email="yaqiangzhu@microsoft.com",
     setup_requires=[
         "pytest-runner",
-        "wheel",
+        "wheel"
     ],
     packages=[
         "dhcp_utilities.common",

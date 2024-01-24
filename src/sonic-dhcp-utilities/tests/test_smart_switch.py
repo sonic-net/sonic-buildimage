@@ -122,7 +122,7 @@ def test_dhcprelayd_proceed_with_check_res(mock_swsscommon_dbconnector_init, moc
 def test_dhcp_dhcp_cfggen_generate(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias):
     with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
         dhcp_db_connector = DhcpDbConnector()
-        dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector,
+        dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
                                                   kea_conf_template_path="tests/test_data/kea-dhcp4.conf.j2")
         kea_dhcp4_config, used_ranges, enabled_dhcp_interfaces, used_options, subscribe_table = \
             dhcp_cfg_generator.generate()

@@ -33,13 +33,15 @@ class DhcpServCfgGenerator(object):
     port_alias_map = {}
     lease_update_script_path = ""
     lease_path = ""
+    hook_lib_path = ""
 
-    def __init__(self, dhcp_db_connector, lease_path=DEFAULT_LEASE_PATH,
+    def __init__(self, dhcp_db_connector, hook_lib_path, lease_path=DEFAULT_LEASE_PATH,
                  lease_update_script_path=LEASE_UPDATE_SCRIPT_PATH, dhcp_option_path=DHCP_OPTION_FILE,
                  kea_conf_template_path=KEA_DHCP4_CONF_TEMPLATE_PATH):
         self.db_connector = dhcp_db_connector
         self.lease_path = lease_path
         self.lease_update_script_path = lease_update_script_path
+        self.hook_lib_path = hook_lib_path
         # Read port alias map file, this file is render after container start, so it would not change any more
         self._parse_port_map_alias()
         # Get kea config template
@@ -235,7 +237,8 @@ class DhcpServCfgGenerator(object):
             "client_classes": client_classes,
             "lease_update_script_path": self.lease_update_script_path,
             "lease_path": self.lease_path,
-            "customized_options": customized_options
+            "customized_options": customized_options,
+            "hook_lib_path": self.hook_lib_path
         }
         return render_obj, enabled_dhcp_interfaces, used_options, subscribe_table
 

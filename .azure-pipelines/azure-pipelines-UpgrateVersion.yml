@@ -33,13 +33,14 @@ parameters:
   type: object
   default:
   - vs
-  - barefoot
   - broadcom
   - centec
   - centec-arm64
   - generic
   - marvell-armhf
+  - marvell-arm64
   - mellanox
+  - pensando
 
 stages:
 - stage: Prepare
