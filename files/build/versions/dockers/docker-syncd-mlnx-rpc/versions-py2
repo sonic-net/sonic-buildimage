@@ -3,7 +3,7 @@ nnpy==1.4.2
 pip==20.3.4
 ptf==0.9.1
 pycparser==2.21
-python-sdk-api==4.6.1062
+python-sdk-api==4.6.2134
 scapy==2.4.0
 setuptools==44.1.1
 wheel==0.37.1

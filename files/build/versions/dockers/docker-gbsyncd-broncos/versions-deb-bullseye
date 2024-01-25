@@ -6,7 +6,7 @@ libc-dev-bin==2.31-13+deb11u7
 libc6-dev==2.31-13+deb11u7
 libcbor0==0.5.0+dfsg-2
 libcrypt-dev==1:4.4.18-4
-libcurl3-gnutls==7.74.0-1.3+deb11u10
+libcurl3-gnutls==7.74.0-1.3+deb11u11
 libdebuginfod1==0.183-1
 libdw1==0.183-1
 libedit2==3.1-20191231-2+b1
@@ -20,7 +20,7 @@ libnsl-dev==1.3.0-2
 libprotobuf-dev==3.12.4-1+deb11u1
 libprotobuf-lite23==3.12.4-1+deb11u1
 libprotobuf23==3.12.4-1+deb11u1
-libsaibroncos==3.8
+libsaibroncos==3.11
 libsaimetadata==1.0.0
 libsairedis==1.0.0
 libsource-highlight-common==3.1.9-3
@@ -28,8 +28,8 @@ libsource-highlight4v5==3.1.9-3+b1
 libswsscommon-dbgsym==1.0.0
 libtirpc-dev==1.3.1-1+deb11u1
 libunwind8==1.3.2-2
-linux-libc-dev==5.10.197-1
-openssh-client==1:8.4p1-5+deb11u2
+linux-libc-dev==5.10.205-2
+openssh-client==1:8.4p1-5+deb11u3
 sshpass==1.09-1+b1
 strace==5.10-1
 syncd==1.0.0

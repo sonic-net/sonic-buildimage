@@ -1,5 +1,6 @@
-debootstrap==1.0.123+deb11u1
+applibs==1.mlnx.4.6.2134
 kernel-mft-dkms==4.25.0-62
+libnl-3-200==3.5.0-1
 libnl-3-dev==3.5.0-1
 libnl-cli-3-200==3.5.0-1
 libnl-cli-3-dev==3.5.0-1
@@ -7,6 +8,7 @@ libnl-genl-3-200==3.5.0-1
 libnl-genl-3-dev==3.5.0-1
 libnl-nf-3-200==3.5.0-1
 libnl-nf-3-dev==3.5.0-1
+libnl-route-3-200==3.5.0-1
 libnl-route-3-dev==3.5.0-1
 libswsscommon==1.0.0
 libswsscommon-dev==1.0.0
@@ -16,9 +18,16 @@ libyang==1.0.73
 libyang-cpp==1.0.73
 libyang-dev==1.0.73
 linux-headers-6.1.0-11-2-amd64==6.1.38-4
+linux-headers-6.1.0-11-2-arm64==6.1.38-4
 linux-headers-6.1.0-11-2-common==6.1.38-4
 net-tools==2.10-0.1
 python3-swsscommon==1.0.0
 python3-yang==1.0.73
 sonic-platform-pddf==1.1
 sonic-platform-pddf-sym==1.1
+sx-complib==1.mlnx.4.6.2134
+sx-complib-dev==1.mlnx.4.6.2134
+sx-gen-utils==1.mlnx.4.6.2134
+sx-gen-utils-dev==1.mlnx.4.6.2134
+sxd-libs==1.mlnx.4.6.2134
+sxd-libs-dev==1.mlnx.4.6.2134

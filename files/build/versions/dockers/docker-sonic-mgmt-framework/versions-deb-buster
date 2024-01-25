@@ -2,9 +2,9 @@ gdb==8.2.1-2+b3
 gdbserver==8.2.1-2+b3
 libbabeltrace1==1.5.6-2+deb10u1
 libbsd0==0.9.1-2+deb10u1
-libcjson-dev==1.7.10-1.1+deb10u1
-libcjson1==1.7.10-1.1+deb10u1
-libcurl3-gnutls==7.64.0-4+deb10u7
+libcjson-dev==1.7.10-1.1+deb10u2
+libcjson1==1.7.10-1.1+deb10u2
+libcurl3-gnutls==7.64.0-4+deb10u8
 libdw1==0.176-1.1+deb10u1
 libedit2==3.1-20181209-1
 libglib2.0-0==2.58.3-2+deb10u5
@@ -15,7 +15,7 @@ libpopt0==1.16-12
 libswsscommon-dbgsym==1.0.0
 libunwind8==1.2.1-10~deb10u1
 libxml2==2.9.4+dfsg1-7+deb10u6
-openssh-client==1:7.9p1-10+deb10u3
+openssh-client==1:7.9p1-10+deb10u4
 sonic-mgmt-common==1.0.0
 sonic-mgmt-framework==1.0-01
 sonic-mgmt-framework-dbg==1.0-01
