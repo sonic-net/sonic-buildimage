@@ -4,7 +4,7 @@ import pickle
 import re
 
 from swsscommon import swsscommon
-from sonic_py_common import multi_asic
+from sonic_py_common import multi_asic, device_info
 from sonic_py_common.logger import Logger
 from .health_checker import HealthChecker
 from . import utils
@@ -99,7 +99,9 @@ class ServiceChecker(HealthChecker):
                 else:
                     expected_running_containers.add(feature_name)
                     container_feature_dict[feature_name] = feature_name
-
+                    
+        if device_info.is_supervisor():
+            expected_running_containers.add("database-chassis")
         return expected_running_containers, container_feature_dict
 
     def get_current_running_containers(self):
