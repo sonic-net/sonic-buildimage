@@ -1,9 +1,13 @@
+libnl-3-200==3.5.0-1
+libnl-3-dev==3.5.0-1
 libnl-cli-3-200==3.5.0-1
 libnl-cli-3-dev==3.5.0-1
 libnl-genl-3-200==3.5.0-1
 libnl-genl-3-dev==3.5.0-1
 libnl-nf-3-200==3.5.0-1
 libnl-nf-3-dev==3.5.0-1
+libnl-route-3-200==3.5.0-1
+libnl-route-3-dev==3.5.0-1
 libsaimetadata==1.0.0
 libsaimetadata-dev==1.0.0
 libsairedis==1.0.0

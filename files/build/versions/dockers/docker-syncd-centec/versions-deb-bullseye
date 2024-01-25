@@ -4,7 +4,7 @@ kmod==28-1
 libbabeltrace1==1.5.8-1+b3
 libboost-regex1.74.0==1.74.0-9
 libcbor0==0.5.0+dfsg-2
-libcurl3-gnutls==7.74.0-1.3+deb11u10
+libcurl3-gnutls==7.74.0-1.3+deb11u11
 libdebuginfod1==0.183-1
 libdw1==0.183-1
 libedit2==3.1-20191231-2+b1
@@ -16,7 +16,7 @@ libicu67==67.1-7
 libipt2==2.0.3-1
 libkmod2==28-1
 libmpfr6==4.1.0-3
-libsai==1.12.0-1
+libsai==1.13.0-1
 libsaimetadata==1.0.0
 libsairedis==1.0.0
 libsource-highlight-common==3.1.9-3
@@ -24,7 +24,7 @@ libsource-highlight4v5==3.1.9-3+b1
 libswsscommon-dbg==1.0.0
 libswsscommon-dbgsym==1.0.0
 libunwind8==1.3.2-2
-openssh-client==1:8.4p1-5+deb11u2
+openssh-client==1:8.4p1-5+deb11u3
 sshpass==1.09-1+b1
 strace==5.10-1
 syncd==1.0.0

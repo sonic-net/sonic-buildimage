@@ -57,7 +57,7 @@ libtsan0==10.2.1-6
 libubsan1==10.2.1-6
 libuv1==1.40.0-2
 libxml2==2.9.10+dfsg-6.7+deb11u4
-linux-libc-dev==5.10.197-1
+linux-libc-dev==5.10.205-2
 mailcap==3.69
 make==4.3-4.1
 mime-support==3.66

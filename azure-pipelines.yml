@@ -43,6 +43,11 @@ variables:
   value: rcache
 - name: ENABLE_FIPS
   value: n
+- name: BUILD_BRANCH
+  ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+    value: $(System.PullRequest.TargetBranch)
+  ${{ else }}:
+    value: $(Build.SourceBranchName)
 
 stages:
 - stage: BuildVS
@@ -166,7 +171,7 @@ stages:
         TOPOLOGY: t0
         MIN_WORKER: $(T0_INSTANCE_NUM)
         MAX_WORKER: $(T0_INSTANCE_NUM)
-        MGMT_BRANCH: "master"
+        MGMT_BRANCH: $(BUILD_BRANCH)
 
   - job: t0_2vlans_elastictest
     pool: ubuntu-20.04
@@ -180,7 +185,7 @@ stages:
         TEST_SET: t0-2vlans
         MIN_WORKER: $(T0_2VLANS_INSTANCE_NUM)
         MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
-        MGMT_BRANCH: "master"
+        MGMT_BRANCH: $(BUILD_BRANCH)
         DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
 
   - job: t1_lag_elastictest
@@ -194,7 +199,7 @@ stages:
         TOPOLOGY: t1-lag
         MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
         MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
-        MGMT_BRANCH: "master"
+        MGMT_BRANCH: $(BUILD_BRANCH)
 
   - job: multi_asic_elastictest
     displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
@@ -209,7 +214,7 @@ stages:
           MIN_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
           MAX_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
           NUM_ASIC: 4
-          MGMT_BRANCH: "master"
+          MGMT_BRANCH: $(BUILD_BRANCH)
 
   - job: dualtor_elastictest
     pool: ubuntu-20.04
@@ -222,7 +227,7 @@ stages:
           TOPOLOGY: dualtor
           MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
           MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          MGMT_BRANCH: "master"
+          MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
 
   - job: sonic_t0_elastictest
@@ -237,7 +242,7 @@ stages:
           MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
           MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
           TEST_SET: t0-sonic
-          MGMT_BRANCH: "master"
+          MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--neighbor_type=sonic "
           VM_TYPE: vsonic
 
@@ -252,8 +257,7 @@ stages:
           TOPOLOGY: dpu
           MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
           MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
-          KVM_IMAGE_BRANCH: "master"
-          MGMT_BRANCH: "master"
+          MGMT_BRANCH: $(BUILD_BRANCH)
 
 
 #  - job: wan_elastictest

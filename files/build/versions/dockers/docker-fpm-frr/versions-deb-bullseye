@@ -9,7 +9,7 @@ libbabeltrace1==1.5.8-1+b3
 libboost-regex1.74.0==1.74.0-9
 libc-ares2==1.17.1-1+deb11u3
 libcbor0==0.5.0+dfsg-2
-libcurl3-gnutls==7.74.0-1.3+deb11u10
+libcurl3-gnutls==7.74.0-1.3+deb11u11
 libdebuginfod1==0.183-1
 libdw1==0.183-1
 libedit2==3.1-20191231-2+b1
@@ -34,7 +34,7 @@ libyang2==2.0.112-6
 libyang2-dbgsym==2.0.112-6
 logrotate==3.18.0-2+deb11u2
 lsof==4.93.2+dfsg-1.1
-openssh-client==1:8.4p1-5+deb11u2
+openssh-client==1:8.4p1-5+deb11u3
 pci.ids==0.0~2021.02.08-1
 sensible-utils==0.0.14
 sonic-rsyslog-plugin==1.0.0-0

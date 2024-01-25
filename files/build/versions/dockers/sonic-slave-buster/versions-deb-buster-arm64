@@ -1,7 +1,1 @@
-binutils-aarch64-linux-gnu==2.31.1-16
-libdrm-etnaviv1==2.4.97-1
-libdrm-freedreno1==2.4.97-1
-libdrm-tegra0==2.4.97-1
 libtext-iconv-perl==1.7-5+b6
-libxslt1-dev==1.1.32-2.2~deb10u2
-nodejs==14.21.3-deb-1nodesource1
