@@ -29,7 +29,7 @@ SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_NAT_DBG)
 endif
 
 $(DOCKER_NAT)_CONTAINER_NAME = nat
-$(DOCKER_NAT)_RUN_OPT += --privileged -t
+$(DOCKER_NAT)_RUN_OPT += -t --cap-add=NET_ADMIN
 $(DOCKER_NAT)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_NAT)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro 
 $(DOCKER_NAT)_RUN_OPT += -v /host/warmboot:/var/warmboot

@@ -209,6 +209,14 @@ module sonic-types {
         }
     }
 
+    typedef switchport_mode {
+        type string {
+            pattern "routed|access|trunk";
+        }
+        description
+            "SwitchPort Modes for Port & PortChannel";
+    }
+
     typedef meter_type {
         type enumeration {
             enum packets;
