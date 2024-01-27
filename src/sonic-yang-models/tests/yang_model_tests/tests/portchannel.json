@@ -19,6 +19,11 @@
         "eStrKey" : "Pattern",
         "eStr": ["0x8100|0x9100|0x9200|0x88a8|0x88A8"]
     },
+    "PORT_CHANNEL_INVALID_MODE": {
+        "desc": "INCORRECT VALUE OF MODE IN PORT_CHANNEL TABLE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["routed|access|trunk"]
+    },
     "PORT_CHANNEL_INVALID_FALLBACK": {
         "desc": "INCORRECT PORTCHANNEL FALLBACK IN PORT_CHANNEL TABLE.",
         "eStrKey" : "Pattern",

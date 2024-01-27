@@ -73,7 +73,7 @@ def get_group_and_process_list(process_file):
     return group_list, process_list
 
 
-def generate_alerting_message(process_name, status, dead_minutes):
+def generate_alerting_message(process_name, status, dead_minutes, priority=syslog.LOG_ERR):
     """
     @summary: If a critical process was not running, this function will determine it resides in host
               or in a specific namespace. Then an alerting message will be written into syslog.
@@ -86,7 +86,7 @@ def generate_alerting_message(process_name, status, dead_minutes):
     else:
         namespace = namespace_prefix + namespace_id
 
-    syslog.syslog(syslog.LOG_ERR, "Process '{}' is {} in namespace '{}' ({} minutes)."
+    syslog.syslog(priority, "Process '{}' is {} in namespace '{}' ({} minutes)."
                   .format(process_name, status, namespace, dead_minutes))
 
 
@@ -213,7 +213,7 @@ def main(argv):
             elapsed_secs = epoch_time - process_heart_beat_info[process]["last_heart_beat"]
             if elapsed_secs >= ALERTING_INTERVAL_SECS:
                 elapsed_mins = elapsed_secs // 60
-                generate_alerting_message(process, "stuck", elapsed_mins)
+                generate_alerting_message(process, "stuck", elapsed_mins, syslog.LOG_WARNING)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

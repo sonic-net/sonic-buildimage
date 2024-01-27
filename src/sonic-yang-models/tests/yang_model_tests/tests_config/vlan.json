@@ -224,7 +224,8 @@
                 "PORTCHANNEL_LIST": [
                     {
                         "admin_status": "up",
-                        "name": "PortChannel5"
+                        "name": "PortChannel5",
+                        "mode":"trunk"
                     }
                 ]
             }
@@ -373,7 +374,8 @@
                         "mtu": 9000,
                         "lanes": "1",
                         "name": "Ethernet0",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     }
                 ]
             }
@@ -425,7 +427,8 @@
                         "mtu": 9000,
                         "lanes": "1",
                         "name": "Ethernet0",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     }
                 ]
             }
@@ -481,7 +484,8 @@
                         "mtu": 9000,
                         "lanes": "1",
                         "name": "Ethernet0",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     }
                 ]
             }
@@ -638,7 +642,8 @@
                         "mtu": 9000,
                         "lanes": "1",
                         "name": "Ethernet0",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     }
                 ]
             }
