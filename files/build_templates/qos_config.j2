@@ -83,7 +83,7 @@
         ('type' in DEVICE_METADATA['localhost'] and
           DEVICE_METADATA['localhost']['type'] in backend_device_types) and
         ('resource_type' in DEVICE_METADATA['localhost'] and
-          DEVICE_METADATA['localhost']['resource_type'] == 'Compute-AI') %}
+          DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     {{- generate_tc_to_pg_map() }}
 {% else %}
     "TC_TO_PRIORITY_GROUP_MAP": {
@@ -147,7 +147,7 @@
          ('type' in DEVICE_METADATA['localhost'] and
            DEVICE_METADATA['localhost']['type'] in backend_device_types) and
          ('resource_type' in DEVICE_METADATA['localhost'] and
-           DEVICE_METADATA['localhost']['resource_type'] == 'Compute-AI') %}
+           DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     {{- generate_dscp_to_tc_map() }}
 {% else %}
     "DSCP_TO_TC_MAP": {
@@ -241,7 +241,7 @@
         ('type' in DEVICE_METADATA['localhost'] and
           DEVICE_METADATA['localhost']['type'] in backend_device_types) and
         ('resource_type' in DEVICE_METADATA['localhost'] and
-          DEVICE_METADATA['localhost']['resource_type'] == 'Compute-AI') %}
+          DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     "SCHEDULER": {
         "scheduler.0": {
             "type"  : "DWRR",
@@ -406,7 +406,7 @@
 {% if 'type' in DEVICE_METADATA['localhost'] and
        DEVICE_METADATA['localhost']['type'] in backend_device_types and
       'resource_type' in DEVICE_METADATA['localhost'] and
-       DEVICE_METADATA['localhost']['resource_type'] == 'Compute-AI' %}
+       DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI' %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|0": {
             "scheduler": "scheduler.0"
