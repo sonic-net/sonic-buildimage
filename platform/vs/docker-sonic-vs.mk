@@ -34,6 +34,10 @@ else
 $(DOCKER_SONIC_VS)_DEPENDS += $(GOBGP)
 endif
 
+ifeq ($(INCLUDE_FIPS), y)
+$(DOCKER_SONIC_VS)_DEPENDS += $(FIPS_KRB5_ALL)
+endif
+
 $(DOCKER_SONIC_VS)_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                             $(ARP_UPDATE_SCRIPT) \
                             $(ARP_UPDATE_VARS_TEMPLATE) \
