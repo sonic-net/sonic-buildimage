@@ -2,8 +2,9 @@ CC := g++
 
 TEST_OBJS += ./src/eventd.o
 OBJS += ./src/eventd.o ./src/main.o
+EVENTDB_OBJS += ./src/eventdb.o ./src/eventconsume.o ./src/loghandler.o ./src/eventutils.o
 
-C_DEPS += ./src/eventd.d ./src/main.d
+C_DEPS += ./src/eventd.d ./src/main.d ./src/eventdb.d ./src/eventconsume.d ./src/loghandler.d ./src/eventutils.d
 
 src/%.o: src/%.cpp
 	@echo 'Building file: $<'

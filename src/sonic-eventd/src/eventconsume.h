@@ -2,9 +2,9 @@
 #define __EVENTCONSUME_H__
 
 #include <string>
-#include <chrono>
 #include <map>
 #include "events.h"
+#include "eventutils.h"
 #include "dbconnector.h"
 #include "subscriberstatetable.h"
 
@@ -14,7 +14,9 @@ using namespace std;
 class EventConsume
 {
 public:
-    EventConsume(DBConnector *dbConn);
+    EventConsume(DBConnector *dbConn,
+                 string evProfile =EVENTD_DEFAULT_MAP_FILE,
+                 string dbProfile =EVENTD_CONF_FILE);
     ~EventConsume();
     void read_eventd_config(bool read_all=true);
     void run();
@@ -24,7 +26,9 @@ private:
     Table m_alarmTable;
     Table m_eventStatsTable;
     Table m_alarmStatsTable;
-    u_int32_t days, count;
+    u_int32_t m_days, m_count;
+    string m_evProfile;
+    string m_dbProfile;
 
     void handle_notification(const event_receive_op_t& evt);
     void read_events();

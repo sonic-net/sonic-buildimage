@@ -1,6 +1,5 @@
 RM := rm -rf
 EVENTD_TARGET := eventd
-EVENTD_DB_TARGET := eventdb
 EVENTD_TEST := tests/tests
 EVENTD_TOOL := tools/events_tool
 EVENTD_PUBLISH_TOOL := tools/events_publish_tool.py
@@ -8,8 +7,9 @@ RSYSLOG-PLUGIN_TARGET := rsyslog_plugin/rsyslog_plugin
 RSYSLOG-PLUGIN_TEST := rsyslog_plugin_tests/tests
 EVENTD_MONIT := tools/events_monit_test.py
 EVENTD_MONIT_CONF := tools/monit_events
-EVENTD_DEFAULT_PROFILE := var/evprofile/default.json
-EVENT_DB_PROF := etc/eventd.json
+EVENTDB_TARGET := eventdb
+EVENTDB_DEFAULT_PROFILE := var/evprofile/default.json
+EVENTDB_PROF := etc/eventd.json
 
 CP := cp
 MKDIR := mkdir
@@ -22,7 +22,7 @@ PWD := $(shell pwd)
 
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(strip $(C_DEPS)),)
--include $(C_DEPS) $(OBJS)
+-include $(C_DEPS) $(OBJS) $(EVENTDB_OBJS)
 endif
 endif
 
@@ -38,7 +38,7 @@ sonic-eventd: $(OBJS) $(EVENTDB_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: G++ Linker'
 	$(CC) $(LDFLAGS) -o $(EVENTD_TARGET) $(OBJS) $(LIBS)
-	$(CC) $(LDFLAGS) -o $(EVENTD_DB_TARGET) $(EVENTDB_OBJS) $(LIBS)	
+	$(CC) $(LDFLAGS) -o $(EVENTDB_TARGET) $(EVENTDB_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -79,14 +79,14 @@ install:
 	$(MKDIR) -p $(DESTDIR)/etc/monit/conf.d
 	$(MKDIR) -p $(DESTDIR)/etc/evprofile
 	$(CP) $(EVENTD_TARGET) $(DESTDIR)/usr/bin
-	$(CP) $(EVENTD_DB_TARGET) $(DESTDIR)/usr/bin	
 	$(CP) $(EVENTD_TOOL) $(DESTDIR)/usr/bin
 	$(CP) $(EVENTD_PUBLISH_TOOL) $(DESTDIR)/usr/bin
 	$(CP) $(RSYSLOG-PLUGIN_TARGET) $(DESTDIR)/usr/bin
 	$(CP) $(EVENTD_MONIT) $(DESTDIR)/usr/bin
 	$(CP) $(EVENTD_MONIT_CONF) $(DESTDIR)/etc/monit/conf.d
-	$(CP) $(EVENT_DB_PROF) $(DESTDIR)/etc/eventd.json
-	$(CP) $(EVENTD_DEFAULT_PROFILE) $(DESTDIR)/etc/evprofile/default.json
+	$(CP) $(EVENTDB_TARGET) $(DESTDIR)/usr/bin
+	$(CP) $(EVENTDB_PROF) $(DESTDIR)/etc/eventd.json
+	$(CP) $(EVENTDB_DEFAULT_PROFILE) $(DESTDIR)/etc/evprofile/default.json
 
 deinstall:
 	$(RM) -rf $(DESTDIR)/usr
