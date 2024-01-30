@@ -46,11 +46,15 @@ static string flood_ev_action;
 static string flood_ev_resource;
 static string flood_ev_msg;
 
-EventConsume::EventConsume(DBConnector *dbConn):
+EventConsume::EventConsume(DBConnector* dbConn,
+                           string evProfile,
+                           string dbProfile):
     m_eventTable(dbConn, EVENT_HISTORY_TABLE_NAME),
     m_alarmTable(dbConn, EVENT_CURRENT_ALARM_TABLE_NAME),
     m_eventStatsTable(dbConn, EVENT_STATS_TABLE_NAME),
-    m_alarmStatsTable(dbConn, EVENT_ALARM_STATS_TABLE_NAME) {
+    m_alarmStatsTable(dbConn, EVENT_ALARM_STATS_TABLE_NAME),
+    m_evProfile(evProfile),
+    m_dbProfile(dbProfile) {
 
     // open syslog connection
     openSyslog();
@@ -106,7 +110,7 @@ void EventConsume::read_eventd_config(bool read_all) {
 
     // read from default map
     static_event_table.clear();
-    if (!parse(EVENTD_DEFAULT_MAP_FILE, static_event_table)) {
+    if (!parse(m_evProfile.c_str(), static_event_table)) {
         SWSS_LOG_ERROR("Can not initialize event map");
         closeSyslog();
         exit(0);
@@ -399,9 +403,9 @@ void EventConsume::purge_events() {
     SWSS_LOG_ENTER();
     uint32_t size = event_history_list.size();
 
-    while (size >= count) {
+    while (size >= m_count) {
         pair <uint64_t,uint64_t> oldest_entry = event_history_list.top();
-        SWSS_LOG_NOTICE("Rollover based on count(%d/%d). Deleting %lu", size, count, oldest_entry.first);
+        SWSS_LOG_NOTICE("Rollover based on count(%d/%d). Deleting %lu", size, m_count, oldest_entry.first);
         m_eventTable.del(to_string(oldest_entry.first));
         modifyEventStats(to_string(oldest_entry.first));
         event_history_list.pop();
@@ -416,7 +420,7 @@ void EventConsume::purge_events() {
 	unsigned old_seconds = oldest_entry.second / 1000000000ULL;
 
         if ((tnow_seconds - old_seconds) > PURGE_SECONDS) {
-            SWSS_LOG_NOTICE("Rollover based on time (%lu days). Deleting %lu.. now %u old %u", (PURGE_SECONDS/days), oldest_entry.second, tnow_seconds, old_seconds);
+            SWSS_LOG_NOTICE("Rollover based on time (%lu days). Deleting %lu.. now %u old %u", (PURGE_SECONDS/m_days), oldest_entry.second, tnow_seconds, old_seconds);
             m_eventTable.del(to_string(oldest_entry.first));
             modifyEventStats(to_string(oldest_entry.first));
             event_history_list.pop();
@@ -428,14 +432,14 @@ void EventConsume::purge_events() {
 }
 
 void EventConsume::read_config_and_purge() {
-    days = 0;
-    count = 0;
+    m_days = 0;
+    m_count = 0;
     // read from the manifest file
-    parse_config(EVENTD_CONF_FILE, days, count);
-    SWSS_LOG_NOTICE("max-days %d max-records %d", days, count);
+    parse_config(m_dbProfile.c_str(), m_days, m_count);
+    SWSS_LOG_NOTICE("max-days %d max-records %d", m_days, m_count);
 
     // update the nanosecond limit
-    PURGE_SECONDS *= days; 
+    PURGE_SECONDS *= m_days; 
 
     // purge events based on # of days
     purge_events();

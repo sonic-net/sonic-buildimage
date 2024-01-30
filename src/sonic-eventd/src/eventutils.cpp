@@ -1,8 +1,12 @@
 #include "eventutils.h"
 #include <swss/logger.h>
 #include <swss/table.h>
+#include <string.h>
 #include <cstdlib>
+#include <iostream>
 #include <fstream>
+#include <sstream>
+#include <vector>
 #include <unistd.h>
 #include <nlohmann/json.hpp>
 
