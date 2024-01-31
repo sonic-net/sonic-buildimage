@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2016-2021 NVIDIA CORPORATION & AFFILIATES.
+## Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES.
 ## Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,23 +25,27 @@ RUN mkdir -p /var/run/sx_sdk
 RUN apt-get purge -y syncd
 
 ## Pre-install the fundamental packages
-RUN apt-get update \
- && apt-get -y install  \
-    net-tools           \
-    python-setuptools   \
-    build-essential     \
-    libssl-dev          \
-    libffi-dev          \
-    python-dev          \
-    wget                \
-    cmake               \
-    libqt5core5a        \
-    libqt5network5      \
-    libboost-atomic1.74.0
+RUN apt-get update        \
+ && apt-get -y install    \
+    net-tools             \
+    build-essential       \
+    libssl-dev            \
+    libffi-dev            \
+    wget                  \
+    cmake                 \
+    libqt5core5a          \
+    libqt5network5        \
+    libboost-atomic1.74.0 \
+    python3-pip           \
+    python3-dev           \
+    python-is-python3     \
+    python3-setuptools
+
+RUN pip3 install --upgrade pip
 
 # Build and install python-scapy
-RUN curl http://ftp.us.debian.org/debian/pool/main/s/scapy/python-scapy_2.4.0-2_all.deb --output python-scapy_2.4.0-2_all.deb \
- && dpkg -i python-scapy_2.4.0-2_all.deb \
+RUN curl http://ftp.us.debian.org/debian/pool/main/s/scapy/python3-scapy_2.4.0-2_all.deb --output python3-scapy_2.4.0-2_all.deb \
+ && dpkg -i python3-scapy_2.4.0-2_all.deb \
  && apt install -f
 
 {% if docker_syncd_mlnx_rpc_debs.strip() -%}
@@ -64,10 +68,6 @@ RUN curl http://ftp.us.debian.org/debian/pool/main/s/scapy/python-scapy_2.4.0-2_
 {{ install_debian_packages(docker_syncd_mlnx_rpc_pydebs.split(' ')) }}
 {% endif %}
 
-# Install pip2 since it is no longer in the APT upstream
-RUN curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py \
- && python2 get-pip.py
-
 RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
  && tar xvfz 1.0.0.tar.gz \
  && cd nanomsg-1.0.0    \
@@ -78,10 +78,10 @@ RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
  && cd ..               \
  && rm -fr nanomsg-1.0.0 \
  && rm -f 1.0.0.tar.gz  \
- && pip2 install cffi==1.7.0    \
- && pip2 install --upgrade cffi==1.7.0 \
- && pip2 install wheel  \
- && pip2 install nnpy    \
+ && pip3 install cffi==1.16.0    \
+ && pip3 install wheel  \
+ && pip3 install nnpy   \
+ && pip3 install ptf    \
  && mkdir -p /opt       \
  && cd /opt             \
  && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py \

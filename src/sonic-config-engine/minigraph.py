@@ -689,8 +689,8 @@ def parse_dpg(dpg, hname):
                 vdhcpserver_list = vintfdhcpservers.split(';')
                 vlan_attributes['dhcpv6_servers'] = vdhcpserver_list
                 dhcp_attributes['dhcpv6_servers'] = vdhcpserver_list
-            sonic_vlan_member_name = "Vlan%s" % (vlanid)
-            dhcp_relay_table[sonic_vlan_member_name] = dhcp_attributes
+                sonic_vlan_member_name = "Vlan%s" % (vlanid)
+                dhcp_relay_table[sonic_vlan_member_name] = dhcp_attributes
 
             vlanmac = vintf.find(str(QName(ns, "MacAddress")))
             if vlanmac is not None and vlanmac.text is not None:
