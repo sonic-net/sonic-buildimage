@@ -38,7 +38,6 @@
                    ("lldp", "enabled", true, "enabled"),
                    ("pmon", "enabled", true, "enabled"),
                    ("snmp", "enabled", true, "enabled"),
-                   ("eventd", "enabled", false, "enabled"),
                    ("swss", "enabled", false, "enabled"),
                    ("syncd", "enabled", false, "enabled")] %}
 {%- if include_router_advertiser == "y" %}{% do features.append(("radv", "enabled", false, "enabled")) %}{% endif %}
@@ -62,6 +61,11 @@
 {%- if include_system_telemetry == "y" %}{% do features.append(("telemetry", "enabled", true, "enabled")) %}{% endif %}
 {%- if include_acms == "y" %}{% do features.append(("acms", "enabled", false, "enabled")) %}{% endif %}
 {%- if include_vnet_monitor == "y" %}{% do features.append(("vnet-monitor", "{% if DEVICE_METADATA is defined and 'localhost' in DEVICE_METADATA and 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'LeafRouter' %}enabled{% else %}always_disabled{% endif %}", false, "enabled")) %}{% endif %}
+{%- if include_system_eventd == "y" and BUILD_REDUCE_IMAGE_SIZE == "y" and sonic_asic_platform == "broadcom" %}
+    {% do features.append(("eventd","disabled", false, "enabled")) %}
+{%- elif include_system_eventd == "y" %}
+    {% do features.append(("eventd", "enabled", false, "enabled")) %}
+{%- endif %}
     "FEATURE": {
 {# delayed field if set, will start the feature systemd .timer unit instead of .service unit #}
 {%- for feature, state, delayed, autorestart in features %}
