@@ -5,6 +5,9 @@ template(name="prog_msg" type="list") {
     constant(value="\n")
 }
 
+{% if include_system_eventd == "y" %}
+{% if build_reduce_image_size != "y" or sonic_asic_platform != "broadcom" %}
+
 $ModLoad omprog
 
 if re_match($programname, "bgp[0-9]*#(frr|zebra|staticd|watchfrr)") then {
@@ -24,6 +27,9 @@ if re_match($programname, "bgp[0-9]*#bgpd") then {
         template="prog_msg")
     stop
 }
+
+{% endif %}
+{% endif %}
 
 ## Teamd rules
 
