@@ -30,7 +30,7 @@ SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_VNET_MONITOR_DBG)
 endif
 
 $(DOCKER_VNET_MONITOR)_CONTAINER_NAME = vnet-monitor
-$(DOCKER_VNET_MONITOR)_RUN_OPT += --privileged -t
+$(DOCKER_VNET_MONITOR)_RUN_OPT += -t
 $(DOCKER_VNET_MONITOR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_VNET_MONITOR)_RUN_OPT += -v /etc/network/interfaces:/etc/network/interfaces:ro
 $(DOCKER_VNET_MONITOR)_RUN_OPT += -v /etc/network/interfaces.d/:/etc/network/interfaces.d/:ro
