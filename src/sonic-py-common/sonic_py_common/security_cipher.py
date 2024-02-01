@@ -37,6 +37,7 @@ class security_cipher:
                 with open(self._file_path, 'w') as file:
                     file.writelines("#Auto generated file for storing the encryption passwords\n")
                     file.writelines("TACPLUS : \nRADIUS : \nLDAP :\n")
+                    os.chmod(self._file_path, 0o640)
             self._initialized = True
 
     # Write cipher_pass file
@@ -52,8 +53,10 @@ class security_cipher:
                     # Update the password for given feature
                     lines[self._feature_list.index(feature_type)] = feature_type + ' : ' + passwd + '\n'
 
+                    os.chmod(self._file_path, 0o777)
                     with open(self._file_path, 'w') as file:
                         file.writelines(lines)
+                    os.chmod(self._file_path, 0o640)
             except FileNotFoundError:
                 syslog.syslog(syslog.LOG_ERR, "__write_passwd_file: File {} no found".format(self._file_path))
             except PermissionError:
@@ -69,12 +72,13 @@ class security_cipher:
 
         if feature_type in self._feature_list:
            try:
+               os.chmod(self._file_path, 0o644)
                with open(self._file_path, "r") as file:
                    lines = file.readlines()
                    for line in lines:
                        if feature_type in line:
                            passwd = line.split(' : ')[1]
-
+               os.chmod(self._file_path, 0o640)
            except FileNotFoundError:
                 syslog.syslog(syslog.LOG_ERR, "__read_passwd_file: File {} no found".format(self._file_path))
            except PermissionError:
