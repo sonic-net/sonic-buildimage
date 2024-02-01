@@ -376,7 +376,7 @@ class StaticRouteBfd(object):
 
         valid, is_ipv4, ip = check_ip(ip_prefix)
         if not valid:
-            log_err("invalid ip prefix for static route: ", key)
+            log_err("invalid ip prefix for static route: '%s'"%(key))
             return True
 
         #use lower case if there is letter in IPv6 address string
