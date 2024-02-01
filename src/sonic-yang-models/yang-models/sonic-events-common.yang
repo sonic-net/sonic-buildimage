@@ -29,12 +29,6 @@ module sonic-events-common {
             enum CLEAR {
                 description "Event with clear alarm action.";
             }
-            enum ACKNOWLEDGE {
-                description "Event with ack alarm action.";
-            }
-            enum UNACKNOWLEDGE {
-                description "Event with unacknowledge alarm action.";
-            }
         }
         description
         "This type defines the actions associated with an event notification.";
