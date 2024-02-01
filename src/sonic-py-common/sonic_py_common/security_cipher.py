@@ -116,3 +116,15 @@ class security_cipher:
                 return data[key]
         return False
 
+    def del_cipher_pass(self):
+        try:
+            # Check if the file exists
+            if os.path.exists(self._file_path):
+                # Attempt to delete the file
+                os.remove(self._file_path)
+                syslog.syslog(syslog.LOG_INFO, "del_cipher_pass: {} file has been removed".format((self._file_path)))
+            else:
+                syslog.syslog(syslog.LOG_INFO, "del_cipher_pass: {} file doesn't exist".format((self._file_path)))
+        except Exception as e:
+            syslog.syslog(syslog.LOG_ERR, "del_cipher_pass: {} Exception occurred: {}".format((e)))
+
