@@ -33,11 +33,13 @@ UPDATED_FILE = [
 class TestSecurityCipher(object):
     def test_passkey_encryption(self):
         with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
-             mock.patch("{}.open".format(BUILTINS),mock.mock_open()) as mock_file:
+                mock.patch("os.chmod") as mock_chmod, \
+                mock.patch("{}.open".format(BUILTINS),mock.mock_open()) as mock_file:
             temp = security_cipher()
 
             # Use patch to replace the built-in 'open' function with a mock
-            with mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file:
+            with mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file, \
+                    mock.patch("os.chmod") as mock_chmod:
                 mock_fd = mock.MagicMock()
                 mock_fd.readlines = mock.MagicMock(return_value=DEFAULT_FILE)
                 mock_file.return_value.__enter__.return_value = mock_fd 
@@ -46,11 +48,13 @@ class TestSecurityCipher(object):
 
     def test_passkey_decryption(self):
         with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
-             mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file:
+                mock.patch("os.chmod") as mock_chmod, \
+                mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file:
             temp = security_cipher()
 
             # Use patch to replace the built-in 'open' function with a mock
-            with mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file:
+            with mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file, \
+                    mock.patch("os.chmod") as mock_chmod:
                 mock_fd = mock.MagicMock()
                 mock_fd.readlines = mock.MagicMock(return_value=DEFAULT_FILE)
                 mock_file.return_value.__enter__.return_value = mock_fd
@@ -58,7 +62,8 @@ class TestSecurityCipher(object):
 
             # Use patch to replace the built-in 'open' function with a mock
             #with mock.patch("{}.open".format(BUILTINS), mock.mock_open(read_data=EXPECTED_PASSWD)) as mock_file:
-            with mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file:
+            with mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file, \
+                    mock.patch("os.chmod") as mock_chmod:
                 mock_fd = mock.MagicMock()
                 mock_fd.readlines = mock.MagicMock(return_value=UPDATED_FILE)
                 mock_file.return_value.__enter__.return_value = mock_fd 
