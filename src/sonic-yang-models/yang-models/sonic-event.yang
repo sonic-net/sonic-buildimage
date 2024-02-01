@@ -1,0 +1,134 @@
+  module sonic-event {
+    namespace "http://github.com/Azure/sonic-event";
+    prefix sevents;
+    yang-version 1.1;
+
+    organization
+    "SONiC";
+
+    contact
+    "SONiC";
+
+    description
+    "This module defines operational state data for SONiC events.";
+
+    revision "2024-01-30" {
+      description
+      "Initial revision.";
+    }
+
+    typedef severity-type {
+        type enumeration {
+          enum CRITICAL;
+          enum MAJOR;
+          enum MINOR;
+          enum WARNING;
+          enum INFORMATIONAL;
+        }
+        description
+        "Severity of a raised condition.";
+      }
+
+    typedef action-type {
+        type enumeration {
+          enum RAISE;
+          enum CLEAR;
+          enum ACKNOWLEDGE;
+          enum UNACKNOWLEDGE;
+        }
+        description
+        "Action on a raised condition.";
+      }
+
+    grouping event-state {
+
+      leaf id {
+        type string;
+        description "Sequence identifier for events.";
+      }
+
+      leaf resource {
+        type string;
+        description "The item in the device that raised the event.";
+      }          
+
+      leaf text {
+        type string;
+        description "Dynamic message raised with the event.";
+      }
+
+      leaf time-created {
+        type uint64;
+        description
+          "The time at which the event was raised by the system.
+          Expressed in epoch time.";
+      }
+
+      leaf type-id {
+        type string;
+        description "Type of event raised by the device.";
+      }
+
+      leaf severity {
+        type severity-type;
+        description
+        "Severity of the event.";
+      }
+
+      leaf action {
+        type action-type;
+        description "Action on the event.";
+      }
+    }
+
+    container sonic-event {
+
+      container EVENT {
+
+        list EVENT_LIST {
+          key "id";
+          uses event-state;
+        }
+      }
+
+      container EVENT_STATS {
+
+
+        list EVENT_STATS_LIST {
+
+          key "id";
+          leaf id {
+            type enumeration {
+              enum state;
+            }
+            description
+            "Table identifier value defined as state.";
+          }
+          
+          leaf events {
+            type uint64;
+            description
+            "Total number of events in the system store.";
+          }
+
+          leaf raised {
+            type uint64;
+            description
+            "Total number of events for raise operation in system store.";
+          }
+
+          leaf acked {
+            type uint64;
+            description
+            "Total number of events for ack operation in system store.";
+          }
+
+          leaf cleared {
+            type uint64;
+            description
+            "Total number of events for clear operation in system store.";
+          }
+        }
+      }
+    }
+  }
