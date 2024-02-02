@@ -84,7 +84,6 @@ class security_cipher:
            except PermissionError:
                 syslog.syslog(syslog.LOG_ERR, "__read_passwd_file: Read permission denied: {}".format(self._file_path))
 
-        syslog.syslog(syslog.LOG_ERR, "NIKHIL PASSWORD {}".format(passwd))
         return passwd
     
     # Encrypt the passkey
