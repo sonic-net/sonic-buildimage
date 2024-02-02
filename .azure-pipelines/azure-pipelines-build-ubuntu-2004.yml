@@ -9,6 +9,16 @@ trigger:
   branches:
     include:
     - master
+    - 202???
+
+schedules:
+- cron: "0 0 * * *"
+  displayName: Daily build
+  branches:
+    include:
+      - master
+      - 202???
+  always: true
 
 stages:
 - stage: Build
@@ -29,7 +39,8 @@ stages:
                          debhelper-compat dh-elpa dh-sequence-python3 python3-all \
                          libpython3-all-dev python3-six xmlto unzip rake-compiler gem2deb pkg-php-tools \
                          ant default-jdk maven-repo-helper libguava-java \
-                         libboost-all-dev libgtest-dev build-essential
+                         libboost-all-dev libgtest-dev build-essential swig4.0 swig
+        sudo pip3 install pytest click
         wget http://ftp.us.debian.org/debian/pool/main/libg/libgoogle-gson-java/libgoogle-gson-java_2.8.6-1+deb11u1_all.deb
         sudo dpkg -i libgoogle-gson-java_2.8.6-1+deb11u1_all.deb
         mkdir -p /tmp/artifacts
