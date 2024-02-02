@@ -5,7 +5,8 @@ DOCKER_DATABASE = $(DOCKER_DATABASE_STEM).gz
 DOCKER_DATABASE_DBG = $(DOCKER_DATABASE_STEM)-$(DBG_IMAGE_MARK).gz
 
 $(DOCKER_DATABASE)_DEPENDS += $(LIBSWSSCOMMON) \
-                              $(SONIC_DB_CLI)
+                              $(SONIC_DB_CLI) \
+                              $(LIB_SONIC_DASH_API)
 
 $(DOCKER_DATABASE)_PATH = $(DOCKERS_PATH)/$(DOCKER_DATABASE_STEM)
 
