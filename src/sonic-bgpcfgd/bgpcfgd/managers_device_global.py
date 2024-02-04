@@ -1,6 +1,8 @@
+import re
+import jinja2
+
 from .manager import Manager
 from .log import log_err, log_debug, log_notice
-import re
 from swsscommon import swsscommon
 
 class DeviceGlobalCfgMgr(Manager):
@@ -19,6 +21,7 @@ class DeviceGlobalCfgMgr(Manager):
         self.constants = common_objs['constants']
         self.tsa_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.isolate.conf.j2")
         self.tsb_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.unisolate.conf.j2")
+        self.wcmp_template = common_objs['tf'].from_file("bgpd/wcmp/bgpd.wcmp.conf.j2")
         self.directory.subscribe([("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/switch_type"),], self.on_switch_type_change)
         super(DeviceGlobalCfgMgr, self).__init__(
             common_objs,
@@ -34,24 +37,67 @@ class DeviceGlobalCfgMgr(Manager):
         log_debug("DeviceGlobalCfgMgr:: Switch type: %s" % self.switch_type)
 
     def set_handler(self, key, data):
+        """ Handle device TSA/WCMP state change """
         log_debug("DeviceGlobalCfgMgr:: set handler")
+
         if self.switch_type:
             log_debug("DeviceGlobalCfgMgr:: Switch type: %s" % self.switch_type)
-        """ Handle device tsa_enabled state change """
         if not data:
             log_err("DeviceGlobalCfgMgr:: data is None")
             return False
 
+        status = False
+
         if "tsa_enabled" in data:
-            self.cfg_mgr.commit()
-            self.cfg_mgr.update()
-            self.isolate_unisolate_device(data["tsa_enabled"])
-            self.directory.put(self.db_name, self.table_name, "tsa_enabled", data["tsa_enabled"])
-            return True
-        return False
+            if self.is_update_required("tsa_enabled", data["tsa_enabled"]):
+                self.cfg_mgr.commit()
+                self.cfg_mgr.update()
+                self.isolate_unisolate_device(data["tsa_enabled"])
+                self.directory.put(self.db_name, self.table_name, "tsa_enabled", data["tsa_enabled"])
+                status = True
+
+        if "wcmp_enabled" in data:
+            if self.is_update_required("wcmp_enabled", data["wcmp_enabled"]):
+                if self.set_wcmp(data["wcmp_enabled"]):
+                    self.directory.put(self.db_name, self.table_name, "wcmp_enabled", data["wcmp_enabled"])
+                    status = True
+
+        return status
 
     def del_handler(self, key):
         log_debug("DeviceGlobalCfgMgr:: del handler")
+        return True
+
+    def is_update_required(self, key, value):
+        if self.directory.path_exist(self.db_name, self.table_name, key):
+            return value != self.directory.get(self.db_name, self.table_name, key)
+        return True
+
+    def set_wcmp(self, status):
+        """ API to set/unset WCMP """
+
+        if status not in ["true", "false"]:
+            log_err("WCMP: invalid value({}) is provided for 'SET' command".format(status))
+            return False
+
+        if status == "true":
+            log_notice("DeviceGlobalCfgMgr:: Enabling WCMP...")
+        else:
+            log_notice("DeviceGlobalCfgMgr:: Disabling WCMP...")
+
+        cmd = "\n"
+
+        try:
+            cmd += self.wcmp_template.render(wcmp_enabled=status)
+        except jinja2.TemplateError as e:
+            msg = "WCMP: error in rendering the template for 'SET' command"
+            log_err("%s: %s" % (msg, str(e)))
+            return False
+
+        self.cfg_mgr.push(cmd)
+
+        log_debug("DeviceGlobalCfgMgr::Done")
+
         return True
 
     def check_state_and_get_tsa_routemaps(self, cfg):

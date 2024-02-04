@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import MagicMock, patch
 
 import os
@@ -9,15 +10,24 @@ import bgpcfgd.managers_device_global
 from swsscommon import swsscommon
 from copy import deepcopy
 
+#
+# Constants -----------------------------------------------------------------------------------------------------------
+#
+
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
 BASE_PATH = os.path.abspath('../sonic-bgpcfgd/tests/data/general/peer-group.conf/')
 INTERNAL_BASE_PATH = os.path.abspath('../sonic-bgpcfgd/tests/data/internal/peer-group.conf/')
+WCMP_BASE_PATH = os.path.abspath('../sonic-bgpcfgd/tests/data/wcmp/')
 global_constants = {
     "bgp":  {
         "traffic_shift_community" :"12345:12345",
         "internal_community_match_tag" : "1001"
     }
 }
+
+#
+# Helpers -------------------------------------------------------------------------------------------------------------
+#
 
 def constructor(check_internal=False):
     cfg_mgr = MagicMock()
@@ -54,6 +64,9 @@ def constructor(check_internal=False):
     cfg_mgr.update()
     return mgr
 
+#
+# TSA -----------------------------------------------------------------------------------------------------------------
+#
 
 @patch('bgpcfgd.managers_device_global.log_debug')
 def test_isolate_device(mocked_log_info):
@@ -134,3 +147,40 @@ def test_del_handler():
     res = m.del_handler("STATE")
     assert res, "Expect True return value for del_handler"
 
+#
+# WCMP ----------------------------------------------------------------------------------------------------------------
+#
+
+@pytest.mark.parametrize(
+    "value,result", [
+        pytest.param(
+            "true",
+            get_string_from_file("/wcmp.set.conf", WCMP_BASE_PATH),
+            id="enabled"
+        ),
+        pytest.param(
+            "false",
+            get_string_from_file("/wcmp.unset.conf", WCMP_BASE_PATH),
+            id="disabled"
+        )
+    ]
+)
+@patch('bgpcfgd.managers_device_global.log_debug')
+def test_wcmp(mocked_log_info, value, result):
+    m = constructor()
+    m.cfg_mgr.changes = ""
+    res = m.set_handler("STATE", {"wcmp_enabled": value})
+    assert res, "Expect True return value for set_handler"
+    mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
+    assert m.cfg_mgr.get_config() == result
+
+@pytest.mark.parametrize(
+    "value", [ "invalid_value" ]
+)
+@patch('bgpcfgd.managers_device_global.log_err')
+def test_wcmp_neg(mocked_log_err, value):
+    m = constructor()
+    m.cfg_mgr.changes = ""
+    res = m.set_handler("STATE", {"wcmp_enabled": value})
+    assert not res, "Expect False return value for set_handler"
+    mocked_log_err.assert_called_with("WCMP: invalid value({}) is provided for 'SET' command".format(value))
