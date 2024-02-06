@@ -7,4 +7,3 @@ questone2/scripts/questone2_platform_shutdown.sh usr/local/bin
 questone2/scripts/sensors usr/bin
 questone2/scripts/platform_sensors.py usr/local/bin
 services/platform_api/platform_api_mgnt.sh usr/local/bin
-services/platform_api/ps_mem.py usr/local/bin

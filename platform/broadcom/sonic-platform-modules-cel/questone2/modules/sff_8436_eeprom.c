@@ -777,7 +777,7 @@ static ssize_t sff_8436_bin_write(struct file *filp, struct kobject *kobj,
 
 /*-------------------------------------------------------------------------*/
 
-static int sff_8436_remove(struct i2c_client *client)
+static void sff_8436_remove(struct i2c_client *client)
 {
 	struct sff_8436_data *sff_8436;
 
@@ -786,7 +786,6 @@ static int sff_8436_remove(struct i2c_client *client)
 
 	kfree(sff_8436->writebuf);
 	kfree(sff_8436);
-	return 0;
 }
 static int sff_8436_eeprom_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)

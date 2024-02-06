@@ -381,7 +381,7 @@ exit:
         return err;
 }
 
-static int switch_cpld_remove(struct i2c_client *client)
+static void switch_cpld_remove(struct i2c_client *client)
 {
         struct switch_cpld_data *data = i2c_get_clientdata(client);
 
@@ -389,7 +389,6 @@ static int switch_cpld_remove(struct i2c_client *client)
         sysfs_remove_link(&data->client2->dev.kobj, "CPLD2");
         sysfs_remove_link(&client->dev.kobj, "CPLD1");
         i2c_unregister_device(data->client2);
-        return 0;
 }
 
 static const struct i2c_device_id switch_cpld_ids[] = {
