@@ -72,10 +72,7 @@ else
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 fi
 
-# Enable ZMQ for SmartSwitch
-LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget localhost "subtype"`
-if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
-    ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
-fi
+# [Hua] test code, always enable ZMQ for route performance POC
+ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
 
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}
