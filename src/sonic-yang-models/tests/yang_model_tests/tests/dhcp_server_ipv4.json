@@ -43,8 +43,8 @@
         "desc": "Configure DHCP port in DHCP_SERVER_IPV4_PORT table which is no exist.",
         "eStrKey": "InvalidValue"
     },
-    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_TEXT": {
-        "desc": "Add text type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_STRING": {
+        "desc": "Add string type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_IPV4_ADDRESS": {
         "desc": "Add ipv4-address type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."

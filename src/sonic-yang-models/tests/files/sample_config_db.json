@@ -1970,7 +1970,7 @@
         "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
             "option60": {
                 "id": "60",
-                "type": "text",
+                "type": "string",
                 "value": "dummy_value"
             }
         },
