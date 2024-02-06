@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2022 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -336,6 +336,7 @@ class sfp_event:
         uint32_t_p_assign(port_cnt_p, 0)
         label_port_list = []
         module_state = 0
+        error_type = pmpe_t.error_type
 
         rc = sx_lib_host_ifc_recv(fd_p, pkt, pkt_size_p, recv_info_p)
         if rc != 0:

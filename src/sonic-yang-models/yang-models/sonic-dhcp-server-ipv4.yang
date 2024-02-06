@@ -139,7 +139,7 @@ module sonic-dhcp-server-ipv4 {
                 leaf type {
                     description "Type of customized option, for standard DHCP option, this field is invalid";
                     type enumeration {
-                        enum text;
+                        enum string;
                         enum ipv4-address;
                         enum uint8;
                         enum uint16;

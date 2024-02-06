@@ -1024,7 +1024,7 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
         "option60": {
             "id": 60,
-            "type": "text",
+            "type": "string",
             "value": "dummy_value"
         }
     },

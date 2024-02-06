@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -280,13 +280,10 @@ class ModulesMgmtTask(threading.Thread):
                 self.fds_events_count_dict[module_obj.port_num][fd_name] += 1
                 try:
                     module_fd.seek(0)
-                    val = module_fd.read()
+                    val = module_fd.read().strip()
                     logger.log_info("dynamic detection got module_obj {} with port {} from fd number {} path {} val {} count {}"
                                   .format(module_obj, module_obj.port_num, fd, module_fd_path
                                           , val, self.fds_events_count_dict[module_obj.port_num]))
-                    # workaround for garbage received after the 0 or 1 value of sysfs i.e. 0#012 or 1#012
-                    if len(val) > 1:
-                        val = val[0]
                     if self.is_dummy_event(int(val), module_obj):
                         logger.log_info(f"dynamic detection dummy event port {module_obj.port_num} from fd number {fd}")
                         continue
