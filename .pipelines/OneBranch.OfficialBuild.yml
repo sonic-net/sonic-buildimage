@@ -229,6 +229,7 @@ stages:
             mv target/sonic-broadcom.bin target/sonic-broadcom-slim.bin
             mv target/sonic-aboot-broadcom.swi target/sonic-aboot-broadcom-slim.swi
             rm rules/config.user
+            rm target/docker-sonic-gnmi.gz
             echo "==== Finished building slim images"
 
             echo "==== Building regular images"
