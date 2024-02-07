@@ -22,6 +22,9 @@ function getBootType()
     *SONIC_BOOT_TYPE=fastfast*)
         TYPE='fastfast'
         ;;
+    *SONIC_BOOT_TYPE=express*)
+        TYPE='express'
+        ;;
     *SONIC_BOOT_TYPE=fast*|*fast-reboot*)
         TYPE='fast'
         ;;
