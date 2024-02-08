@@ -66,8 +66,12 @@ SYSFS_INDEPENDENT_FD_FW_CONTROL = os.path.join(SYSFS_INDEPENDENT_FD_PREFIX, "con
 SYSFS_INDEPENDENT_FD_FREQ = os.path.join(SYSFS_INDEPENDENT_FD_PREFIX, "frequency")
 SYSFS_INDEPENDENT_FD_FREQ_SUPPORT = os.path.join(SYSFS_INDEPENDENT_FD_PREFIX, "frequency_support")
 IS_INDEPENDENT_MODULE = 'is_independent_module'
+PROC_CMDLINE = "/proc/cmdline"
+CMDLINE_STR_TO_LOOK_FOR = 'SONIC_BOOT_TYPE='
+CMDLINE_VAL_TO_LOOK_FOR = 'fastfast'
 
 MAX_EEPROM_ERROR_RESET_RETRIES = 4
+
 
 class ModulesMgmtTask(threading.Thread):
 
@@ -93,6 +97,8 @@ class ModulesMgmtTask(threading.Thread):
         self.delete_ports_and_reset_states_dict = {}
         self.setName("ModulesMgmtTask")
         self.register_hw_present_fds = []
+        self.is_warm_reboot = False
+        self.port_control_dict = {}
 
     # SFPs state machine
     def get_sm_func(self, sm, port):
@@ -146,13 +152,35 @@ class ModulesMgmtTask(threading.Thread):
         num_of_ports = DeviceDataManager.get_sfp_count()
         # create the modules sysfs fds poller
         self.poll_obj = select.poll()
+        # read cmdline to check if warm reboot done. cannot use swsscommon warmstart since this code runs after
+        # warm-reboot is finished. if done, need to read control sysfs per port and act accordingly since modules are
+        # not reset in warm-reboot
+        cmdline_dict = {}
+        proc_cmdline_str = utils.read_str_from_file(PROC_CMDLINE)
+        if CMDLINE_STR_TO_LOOK_FOR in proc_cmdline_str:
+            cmdline_dict[CMDLINE_STR_TO_LOOK_FOR] = proc_cmdline_str.split(CMDLINE_STR_TO_LOOK_FOR)[1]
+        if CMDLINE_STR_TO_LOOK_FOR in cmdline_dict.keys():
+            self.is_warm_reboot = cmdline_dict[CMDLINE_STR_TO_LOOK_FOR] == CMDLINE_VAL_TO_LOOK_FOR
+            logger.log_info(f"system was warm rebooted is_warm_reboot: {self.is_warm_reboot}")
         for port in range(num_of_ports):
             # check sysfs per port whether it's independent mode or legacy
             temp_module_sm = ModuleStateMachine(port_num=port, initial_state=STATE_HW_NOT_PRESENT
                                               , current_state=STATE_HW_NOT_PRESENT)
             module_fd_indep_path = SYSFS_INDEPENDENT_FD_PRESENCE.format(port)
             logger.log_info("system in indep mode: {} port {}".format(self.is_supported_indep_mods_system, port))
-            if self.is_supported_indep_mods_system and os.path.isfile(module_fd_indep_path):
+            if self.is_warm_reboot:
+                logger.log_info("system was warm rebooted is_warm_reboot: {} trying to read control sysfs for port {}"
+                                .format(self.is_warm_reboot, port))
+                port_control_file = SYSFS_INDEPENDENT_FD_FW_CONTROL.format(port)
+                try:
+                    port_control = utils.read_int_from_file(port_control_file, raise_exception=True)
+                    self.port_control_dict[port] = port_control
+                    logger.log_info(f"port control sysfs is {port_control} for port {port}")
+                except Exception as e:
+                    logger.log_error("exception {} for port {} trying to read port control sysfs {}"
+                                     .format(e, port, port_control_file))
+            if (self.is_supported_indep_mods_system and os.path.isfile(module_fd_indep_path)) \
+                    and not (self.is_warm_reboot and 0 == port_control):
                 logger.log_info("system in indep mode: {} port {} reading file {}".format(self.is_supported_indep_mods_system, port, module_fd_indep_path))
                 temp_module_sm.set_is_indep_modules(True)
                 temp_module_sm.set_module_fd_path(module_fd_indep_path)
@@ -380,7 +408,7 @@ class ModulesMgmtTask(threading.Thread):
                 elif 1 == val_int:
                     logger.log_info("returning {} for val {}".format(STATE_HW_PRESENT, val_int))
                     retval_state = STATE_HW_PRESENT
-                    if not self.is_supported_indep_mods_system:
+                    if not self.is_supported_indep_mods_system or (self.is_warm_reboot and 0 == self.port_control_dict[port] and not dynamic):
                         module_sm_obj.set_final_state(retval_state, detection_method)
                         self.register_fd_for_polling(module_sm_obj, module_sm_obj.module_fd, 'presence')
                     return retval_state
