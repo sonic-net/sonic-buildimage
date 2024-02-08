@@ -190,6 +190,19 @@ environment=ASAN_OPTIONS="log_path=/var/log/asan/portmgrd-asan.log{{ asan_extra_
 {% endif %}
 {%- endif %}
 
+[program:fabricmgrd]
+command=/usr/bin/fabricmgrd
+priority=10
+autostart=false
+autorestart=false
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/fabricmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+
 {% if is_fabric_asic == 0 %}
 [program:buffermgrd]
 command=/usr/bin/buffermgrd.sh
