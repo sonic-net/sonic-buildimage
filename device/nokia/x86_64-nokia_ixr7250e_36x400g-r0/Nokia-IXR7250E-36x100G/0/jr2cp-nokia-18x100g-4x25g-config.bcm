@@ -2094,3 +2094,4 @@ cmic_dma_abort_in_cold_boot=0
 sai_pfc_dlr_init_capability=0
 trunk_group_max_members=16
 sai_default_cpu_tx_tc=7
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc

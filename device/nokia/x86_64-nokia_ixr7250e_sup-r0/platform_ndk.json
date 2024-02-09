@@ -38,11 +38,11 @@
     },
     {
       "key": "thermal_log_current_threshold",
-      "intval": 3
+      "intval": 5
     },
     {
       "key": "thermal_log_margin_threshold",
-      "intval": 3
+      "intval": 5
     },
     {
       "key": "thermal_log_min_threshold",
