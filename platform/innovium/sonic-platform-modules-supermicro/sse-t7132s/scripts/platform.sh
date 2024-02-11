@@ -62,26 +62,63 @@ update_share_password() {
     echo "Update shared password !!!"
     SONIC_VERSION=$(cat /etc/sonic/sonic_version.yml | grep "build_version" | sed -e "s/build_version: //g;s/'//g")
     image_dir=$(cat /proc/cmdline | sed -e 's/.*loop=\(\S*\)\/.*/\1/')
+    host_images=$(find /host -maxdepth 1 -name "*image-*" | sed -e 's/\/host\/image-//')
     if [ -f /host/reboot-cause/platform/last_boot_image ]; then
         last_image_ver=$(cat /host/reboot-cause/platform/last_boot_image)
+        echo "The last boot image is ${last_image_ver}"
     else
         last_image_ver=""
-    fi
-    echo "last_image_ver=${last_image_ver}"
+        echo "The last boot image tag file is not found."
 
-        find /host -name "*image-*" | sed -e 's/\/host\/image-//' | while read var ; do
-        #echo "var=${var} image_dir=${image_dir}"
-        if [ "image-${var}" != "$image_dir" ] && [ "$last_image_ver" != "${SONIC_VERSION}" ]; then
-            cp /host/image-${var}/rw/etc/shadow /host/${image_dir}/rw/etc/shadow
-            cp /host/image-${var}/rw/etc/passwd /host/${image_dir}/rw/etc/passwd
-            cp /host/image-${var}/rw/etc/gshadow /host/${image_dir}/rw/etc/gshadow
-            cp /host/image-${var}/rw/etc/group /host/${image_dir}/rw/etc/group
+        # try to detect reset-factory
+        # reset-factory deletes all docker containers except "database"
+        while read -r var; do
+            names=$(find /host/image-${var}/docker/containers -name config.v2.json -exec jq ".Name" {} \;)
+            echo "image-${var} docker containers: ${names}"
+            if [ "$names" == '"/database"' ]; then
+                echo "image-${var} was reset-factory"
+                # if already found current image has reset-factory,
+                # then keep last_image_ver to be current image,
+                # to skip copy password
+                if [ "$last_image_ver" != "${SONIC_VERSION}" ]; then
+                    last_image_ver=${var}
+                fi
+            fi
+        done <<< "$host_images"
+
+        if [ -z "$last_image_ver" ]; then
+            echo "No reset-factory is detected"
         fi
-    done
-
-    if [ -d /host/reboot-cause/platform ]; then
-        echo "${SONIC_VERSION}" | sudo tee /host/reboot-cause/platform/last_boot_image > /dev/null
     fi
+
+    echo "last_image_ver = ${last_image_ver}"
+    COPIED=""
+    if [ -n "$last_image_ver" ]; then
+        if [ "$last_image_ver" == "${SONIC_VERSION}" ]; then
+            echo "No need to copy password to the same firmware"
+        else
+            while read -r var; do
+                #echo "var=${var} image_dir=${image_dir}"
+                if [ "image-${var}" != "$image_dir" ]; then
+                    cp /host/image-${var}/rw/etc/shadow /host/${image_dir}/rw/etc/shadow
+                    cp /host/image-${var}/rw/etc/passwd /host/${image_dir}/rw/etc/passwd
+                    cp /host/image-${var}/rw/etc/gshadow /host/${image_dir}/rw/etc/gshadow
+                    cp /host/image-${var}/rw/etc/group /host/${image_dir}/rw/etc/group
+                    echo "Copied password from image-${var} to ${image_dir}"
+                    COPIED="image-${var}"
+                fi
+            done <<< "$host_images"
+        fi
+    fi
+    echo "COPIED = ${COPIED}"
+    if [ -z "$COPIED" ]; then
+        echo "No password is copied"
+    fi
+
+    if [ ! -d /host/reboot-cause/platform ]; then
+        mkdir -p /host/reboot-cause/platform
+    fi
+    echo "${SONIC_VERSION}" | sudo tee /host/reboot-cause/platform/last_boot_image > /dev/null
 }
 
 
@@ -92,6 +129,7 @@ if [ "$1" == "init" ]; then
     modprobe t7132s
     install_python_api_package
     update_share_password
+    /usr/bin/python3 /usr/local/bin/delay_start_services.py &
 elif [ "$1" == "deinit" ]; then
     echo "De-initializing hardware components ..."
     modprobe -r t7132s

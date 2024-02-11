@@ -7,6 +7,7 @@
 #############################################################################
 
 import subprocess
+import re
 
 try:
     from sonic_platform_base.fan_base import FanBase
@@ -18,8 +19,6 @@ except ImportError as e:
 
 FAN_NAME_LIST = ["FAN-1", "FAN-2", "FAN-3", "FAN-4", "FAN-5", "FAN-6"]
 
-IPMI_SENSOR_NETFN = "0x04"
-IPMI_SS_READ_CMD = "0x2D {}"
 IPMI_OEM_NETFN = "0x30"
 IPMI_GET_FAN_SPEED_CMD = "0x70 0x66 0x00 {}"
 IPMI_SET_FAN_SPEED_CMD = "0x70 0x66 0x01 {} {}"
@@ -92,8 +91,11 @@ class Fan(FanBase):
         if "T7132SR" in part_number:
             # "SSE-T7132SR"
             direction = self.FAN_DIRECTION_INTAKE
+        elif "T7132DR" in part_number:
+            # "SSE-T7132DR"
+            direction = self.FAN_DIRECTION_INTAKE
         else:
-            # "SSE-T7132S"
+            # "SSE-T7132S", "SSE-T7132D"
             direction = self.FAN_DIRECTION_EXHAUST
 
         return direction
@@ -110,10 +112,12 @@ class Fan(FanBase):
                 IPMI_OEM_NETFN, IPMI_GET_PSU_FAN_SPEED_CMD.format(self.psu_index + 1, "0x08"))
             rpm_speed = int("".join(raw_ss_read.split()[::-1]), 16) if status else 0
         else:
-            status, raw_ss_read = self._api_helper.ipmi_raw(
-                IPMI_SENSOR_NETFN, IPMI_SS_READ_CMD.format(self.sensor_reading_addr))
-            # factor 140 should read from SDR
-            rpm_speed = int(raw_ss_read.split()[0], 16) * 140 if status else 0
+            output_sdr = subprocess.getoutput ('ipmitool sdr get {}'.format(FAN_LIST[self.index][0]))
+            re_read = re.search(" Sensor Reading        : ([0-9]*)", output_sdr)
+            if re_read:
+                rpm_speed = int(re_read.group(1))
+            else:
+                rpm_speed = 0
 
         return rpm_speed
 
@@ -175,6 +179,34 @@ class Fan(FanBase):
                  considered tolerable
         """
         return SPEED_TOLERANCE
+
+    def is_under_speed(self):
+        """
+        Calculates if the fan speed is under the tolerated low speed threshold
+        Default calculation requires get_speed_tolerance to be implemented, and checks
+        if the current fan speed (expressed as a percentage) is lower than <get_speed_tolerance>
+        percent below the target fan speed (expressed as a percentage)
+        Returns:
+            A boolean, True if fan speed is under the low threshold, False if not
+        """
+        if self.is_psu_fan:
+            # not support
+            return False
+        return super().is_under_speed()
+
+    def is_over_speed(self):
+        """
+        Calculates if the fan speed is over the tolerated high speed threshold
+        Default calculation requires get_speed_tolerance to be implemented, and checks
+        if the current fan speed (expressed as a percentage) is higher than <get_speed_tolerance>
+        percent above the target fan speed (expressed as a percentage)
+        Returns:
+            A boolean, True if fan speed is over the high threshold, False if not
+        """
+        if self.is_psu_fan:
+            # not support
+            return False
+        return super().is_over_speed()
 
     def set_speed(self, speed):
         """
@@ -266,7 +298,7 @@ class Fan(FanBase):
             string: The name of the device
         """
         if self.is_psu_fan:
-            fan_name = "PSU {} FAN-{}".format(self.psu_index+1, self.index+1)
+            fan_name = "{} FAN-{}".format(self.psu.get_name(), self.index+1)
         else:
             fan_name = FAN_NAME_LIST[self.index]
 
