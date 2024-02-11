@@ -1,6 +1,7 @@
 include $(PLATFORM_PATH)/invm-sai.mk
 include $(PLATFORM_PATH)/platform-modules-cel.mk
 include $(PLATFORM_PATH)/platform-modules-delta.mk
+include $(PLATFORM_PATH)/platform-modules-netberg.mk
 include $(PLATFORM_PATH)/docker-syncd-invm.mk
 include $(PLATFORM_PATH)/docker-syncd-invm-rpc.mk
 include $(PLATFORM_PATH)/one-image.mk
