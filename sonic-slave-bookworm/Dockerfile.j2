@@ -451,12 +451,10 @@ RUN apt-get install -y kernel-wedge
 # For gobgp and telemetry build
 RUN apt-get install -y golang
 {%- if INCLUDE_FIPS == "y" %}
-# FIPS not yet available
-RUN false
-RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/0.1/{{ CONFIGURED_ARCH }}/golang-1.15-go_1.15.15-1~deb11u4%2Bfips_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/0.1/{{ CONFIGURED_ARCH }}/golang-1.15-src_1.15.15-1~deb11u4%2Bfips_{{ CONFIGURED_ARCH }}.deb' \
+RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
  && dpkg -i golang-go.deb golang-src.deb \
- && ln -sf /usr/lib/go-1.15 /usr/local/go \
+ && ln -sf /usr/lib/go-1.19 /usr/local/go \
  && rm golang-go.deb golang-src.deb
 {%- else %}
 RUN apt-get install -y golang-go \
