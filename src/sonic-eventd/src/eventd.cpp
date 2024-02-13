@@ -546,9 +546,9 @@ capture_service::set_control(capture_control_t ctrl, event_serialized_lst_t *lst
     switch(ctrl) {
         case INIT_CAPTURE:
             m_thr = thread(&capture_service::do_capture, this);
-            for(int i=0; !m_cap_run && (i < 100); ++i) {
+            for(int i=0; !m_cap_run && (i < CAPTURE_SERVICE_POLLING_RETRIES); ++i) {
                 /* Wait max a second for thread to init */
-                this_thread::sleep_for(chrono::milliseconds(10));
+                this_thread::sleep_for(chrono::milliseconds(CAPTURE_SERVICE_POLLING_DURATION));
             }
             RET_ON_ERR(m_cap_run, "Failed to init capture");
             m_ctrl = ctrl;

@@ -21,6 +21,8 @@ typedef enum {
 
 #define EVENTS_STATS_FIELD_NAME "value"
 #define STATS_HEARTBEAT_MIN 300
+#define CAPTURE_SERVICE_POLLING_DURATION 10
+#define CAPTURE_SERVICE_POLLING_RETRIES 100
 
 /*
  *  Started by eventd_service.
