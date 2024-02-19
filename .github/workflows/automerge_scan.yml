@@ -6,7 +6,8 @@ on:
 
 jobs:
   automerge_scan:
-    if: github.repository_owner == 'sonic-net'
+    # Disable workflow, and use pipeline instead to have same logic with other automation
+    if: github.repository_owner == 'sonic-net' && false
     runs-on: ubuntu-latest
     steps:
     - name: Debug
