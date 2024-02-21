@@ -18,7 +18,7 @@ unordered_map<string, uint64_t> cal_lookup_map;
 // temporary map to hold merge of default map of events and any event profile
 EventMap static_event_table;
 
-volatile bool g_run = true;
+bool g_run = true;
 uint64_t seq_id = 0;
 uint64_t PURGE_SECONDS = 86400;
 
@@ -78,28 +78,22 @@ EventConsume::~EventConsume() {
 
 void EventConsume::run()
 {
+
     SWSS_LOG_ENTER();
-    int total_missed =0;
     event_handle_t hsub;
     hsub = events_init_subscriber();
     
-    while (true) {
+    while (g_run) {
         event_receive_op_t evt;
         map_str_str_t evtOp;
-
         int rc = event_receive(hsub, evt); 
         if (rc != 0) {
             SWSS_LOG_ERROR("Failed to receive rc=%d", rc);
              continue;
         }
-
-        total_missed += evt.missed_cnt;
-        //evtOp[evt.key] = t_map_to_str(evt.params);
         handle_notification(evt);
     }
-
     events_deinit_subscriber(hsub);
-
 }
 
 void EventConsume::read_eventd_config(bool read_all) {
@@ -149,21 +143,19 @@ void EventConsume::handle_notification(const event_receive_op_t& evt)
 
     // increment save seq-id for the newly received event
     uint64_t new_seq_id = seq_id + 1;
+
     FieldValueTuple seqfv("id", to_string(new_seq_id));
     vec.push_back(seqfv);
 
-    if (ev_act.length() > 0)
-    {
+    if (ev_act.length() > 0) {
         SWSS_LOG_DEBUG("ev_act %s", ev_act.c_str());
         ev_type = "ALARM";
         string almkey = ev_id;
-        if (!ev_src.empty())
-        {
+        if (!ev_src.empty()) {
             almkey += "|" + ev_src;
         }
 
-        if (ev_act.compare(EVENT_ACTION_RAISE_STR) == 0)
-        {
+        if (ev_act.compare(EVENT_ACTION_RAISE_STR) == 0) {
             is_raise = true;
             // add entry to the lookup map
             cal_lookup_map.insert(make_pair(almkey, new_seq_id));
@@ -175,35 +167,27 @@ void EventConsume::handle_notification(const event_receive_op_t& evt)
 
             // update alarm counters
             updateAlarmStatistics(ev_sev, ev_act);
-        }
-        else if (ev_act.compare(EVENT_ACTION_CLEAR_STR) == 0)
-        {
+        } else if (ev_act.compare(EVENT_ACTION_CLEAR_STR) == 0) {
             is_clear = true;
             SWSS_LOG_DEBUG(" Received clear alarm for %s", almkey.c_str());
 
             bool ack_flag = false;
             // remove entry from local cache, alarm table
-            if (!udpateLocalCacheAndAlarmTable(almkey, ack_flag))
-            {
+            if (!udpateLocalCacheAndAlarmTable(almkey, ack_flag)) {
                 SWSS_LOG_ERROR("Received clear for non-existent alarm %s", almkey.c_str());
                 return;
             }
 
             // update alarm counters ONLY if it has not been ack'd before.
             // This is because when alarm is ack'd, alarms/severity counter is reduced already.
-            if (!ack_flag)
-            {
+            if (!ack_flag) {
                 updateAlarmStatistics(ev_sev, ev_act);
-            }
-            else
-            {
+            } else {
                 // if it has been ack'd before, ack counter would have been incremented for this alrm.
                 // Now is the time reduce it.
                 clearAckAlarmStatistic();
             }
-        }
-        else
-        {
+        } else {
             // ack/unack events comes with seq-id of raised alarm as resource field.
             // fetch details of "raised" alarm record
             string raise_act;
@@ -217,38 +201,28 @@ void EventConsume::handle_notification(const event_receive_op_t& evt)
                 return;
             }
 
-            if (ev_act.compare(EVENT_ACTION_ACK_STR) == 0)
-            {
-                if (raise_ack_flag.compare("true") == 0)
-                {
+            if (ev_act.compare(EVENT_ACTION_ACK_STR) == 0) {
+                if (raise_ack_flag.compare("true") == 0) {
                     SWSS_LOG_INFO("%s/%s is already acknowledged", ev_id.c_str(), ev_src.c_str());
                     return;
                 }
-                if (raise_act.compare(EVENT_ACTION_RAISE_STR) == 0)
-                {
+                if (raise_act.compare(EVENT_ACTION_RAISE_STR) == 0) {
                     is_ack = true;
                     SWSS_LOG_DEBUG("Received acknowledge event - %s/%s", ev_id.c_str(), ev_src.c_str());
 
                     // update the record with ack flag and ack-time and stats
                     updateAckInfo(is_ack, ev_timestamp, ev_sev, ev_act, ev_src);
-                }
-                else
-                {
+                } else {
                     SWSS_LOG_ERROR("Alarm %s/%s not in RAISE state", ev_id.c_str(), ev_src.c_str());
                     return;
                 }
-            }
-            else if (ev_act.compare(EVENT_ACTION_UNACK_STR) == 0)
-            {
-                if (raise_ack_flag.compare("true") == 0)
-                {
+            } else if (ev_act.compare(EVENT_ACTION_UNACK_STR) == 0) {
+                if (raise_ack_flag.compare("true") == 0) {
                     SWSS_LOG_DEBUG(" received un-ACKnowledge event - %s/%s", ev_id.c_str(), ev_src.c_str());
 
                     // update the record with ack flag and ack-time and stats
                     updateAckInfo(is_ack, ev_timestamp, ev_sev, ev_act, ev_src);
-                }
-                else
-                {
+                } else {
                     SWSS_LOG_INFO(" %s/%s is already un-acknowledged", ev_id.c_str(), ev_src.c_str());
                     return;
                 }
@@ -417,7 +391,7 @@ void EventConsume::purge_events() {
 
     while (!event_history_list.empty()) {
         pair <uint64_t,uint64_t> oldest_entry = event_history_list.top();
-	unsigned old_seconds = oldest_entry.second / 1000000000ULL;
+	    unsigned old_seconds = oldest_entry.second / 1000000000ULL;
 
         if ((tnow_seconds - old_seconds) > PURGE_SECONDS) {
             SWSS_LOG_NOTICE("Rollover based on time (%lu days). Deleting %lu.. now %u old %u", (PURGE_SECONDS/m_days), oldest_entry.second, tnow_seconds, old_seconds);
