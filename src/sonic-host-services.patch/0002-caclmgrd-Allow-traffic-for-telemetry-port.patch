@@ -1,0 +1,25 @@
+From cc41052cbfb834be19716df68f2c661c66e09877 Mon Sep 17 00:00:00 2001
+From: Zain Budhwani <zainbudhwani@microsoft.com>
+Date: Sat, 10 Feb 2024 01:18:09 +0000
+Subject: [PATCH] Allow traffic for telemetry port
+
+---
+ scripts/caclmgrd | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/scripts/caclmgrd b/scripts/caclmgrd
+index 02cc506..eff7e43 100755
+--- a/scripts/caclmgrd
++++ b/scripts/caclmgrd
+@@ -101,7 +101,7 @@ class ControlPlaneAclManager(daemon_base.DaemonBase):
+         },
+         "SSH": {
+             "ip_protocols": ["tcp"],
+-            "dst_ports": ["22"],
++            "dst_ports": ["22", "50051"], # Allow Streaming Telemetry (50051)
+             "multi_asic_ns_to_host_fwd":True
+         },
+         "EXTERNAL_CLIENT": {
+-- 
+2.25.1
+
