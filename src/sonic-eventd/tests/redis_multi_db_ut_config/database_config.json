@@ -97,11 +97,11 @@
             "separator": ":",
             "instance" : "redis"
         },
-        "TEST_DB" : {
+        "EVENT_DB" : {
             "id" : 15,
             "separator": ":",
             "instance" : "redis"
-        }
+        }   
     },
     "VERSION" : "1.0"
 }

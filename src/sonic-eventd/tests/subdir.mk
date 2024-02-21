@@ -1,8 +1,8 @@
 CC := g++
 
-TEST_OBJS += ./tests/eventd_ut.o ./tests/main.o
+TEST_OBJS += ./tests/eventd_ut.o ./tests/eventdb_ut.o ./tests/main.o
 
-C_DEPS += ./tests/eventd_ut.d ./tests/main.d
+C_DEPS += ./tests/eventd_ut.d ./tests/eventdb_ut.d ./tests/main.d
 
 tests/%.o: tests/%.cpp
 	@echo 'Building file: $<'
