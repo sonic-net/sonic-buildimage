@@ -1,5 +1,5 @@
   module sonic-event {
-    namespace "http://github.com/Azure/sonic-event";
+    namespace "http://github.com/sonic-net/sonic-event";
     prefix sevents;
     yang-version 1.1;
 
