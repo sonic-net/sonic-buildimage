@@ -36,7 +36,7 @@
 {%- set features = [("bgp", "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}disabled{% else %}enabled{% endif %}", false, "enabled"),
                    ("database", "always_enabled", false, "always_enabled"),
                    ("lldp", "enabled", true, "enabled"),
-                   ("pmon", "enabled", true, "enabled"),
+                   ("pmon", "enabled", false, "enabled"),
                    ("snmp", "enabled", true, "enabled"),
                    ("eventd", "enabled", false, "enabled"),
                    ("swss", "enabled", false, "enabled"),
