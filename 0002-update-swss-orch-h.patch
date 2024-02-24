@@ -1,0 +1,10 @@
+--- 202311-w6010/src/sonic-swss/orchagent/orch.h	2024-01-04 15:58:21.437495113 +0800
++++ 202311-w6010-bak/src/sonic-swss/orchagent/orch.h	2024-01-04 16:12:16.271238847 +0800
+@@ -44,6 +44,7 @@
+ #define MRVL_PLATFORM_SUBSTRING "marvell"
+ #define CISCO_8000_PLATFORM_SUBSTRING "cisco-8000"
+ #define XS_PLATFORM_SUBSTRING   "xsight"
++#define CENTEC_PLATFORM_SUBSTRING "centec"
+ 
+ #define CONFIGDB_KEY_SEPARATOR "|"
+ #define DEFAULT_KEY_SEPARATOR  ":"

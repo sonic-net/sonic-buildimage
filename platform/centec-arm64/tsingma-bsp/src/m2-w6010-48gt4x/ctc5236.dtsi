@@ -1,0 +1,428 @@
+/*
+ * dts file for Centec CTC5236(TsingMa) SoC
+ *
+ * (C) Copyright 2004-2017 Centec Networks (suzhou) Co., LTD.
+ *
+ * Jay Cao <caoj@centecnetworks.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ */
+
+#include "arm-gic.h"
+#include "ctc5236-clks.h"
+#include "../pinctrl-ctc/pinctrl-ctc.h"
+
+/ {
+	compatible = "centec,ctc5236";
+	#address-cells = <2>;
+	#size-cells = <2>;
+	interrupt-parent = <&gic>;
+
+	cpus {
+		#address-cells = <2>;
+		#size-cells = <0>;
+
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&cpu0>;
+				};
+				core1 {
+					cpu = <&cpu1>;
+				};
+			};
+		};
+
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53", "arm,armv8";
+			reg = <0 0x000>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0 0x0010fff0>;
+		};
+
+		cpu1: cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53", "arm,armv8";
+			reg = <0 0x001>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0 0x0010fff0>;
+		};
+	};
+	
+	gic: interrupt-controller@31201000 {
+			compatible = "arm,gic-400";
+			#interrupt-cells = <3>;
+			interrupt-controller;
+			reg = <0x0 0x31201000 0 0x1000>,
+		  	      <0x0 0x31202000 0 0x2000>,
+			      <0x0 0x31204000 0 0x2000>,
+			      <0x0 0x31206000 0 0x2000>;
+			interrupts = <GIC_PPI 9 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>;
+                };
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupt-parent = <&gic>;
+		interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW)>;
+	};
+
+	soc: soc {
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+		
+		#include "ctc5236-clock.dtsi"
+		ocram: sram@00100000 {
+			compatible = "mmio-sram";
+			reg = <0x0 0x00100000 0x0 0x10000>;
+		};
+
+                memory-controller@30600000 {
+                        compatible = "ctc,ctc5236-ddr-ctrl";
+                        reg = <0x0 0x30600000 0x0 0x100000>;
+                        interrupts = <GIC_SPI 54 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 100 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 101 IRQ_TYPE_EDGE_RISING>,
+				<GIC_SPI 6 IRQ_TYPE_LEVEL_HIGH>;
+			ctc,sysctrl = <&sysctrl>;
+                };
+
+		sysctrl: sysctrl@33200000 {
+			compatible = "ctc,ctc5236-sysctrl", "syscon";
+			reg = <0x0 0x33200000 0x0 0x100000>;
+			little-endian;
+		};
+		
+		serial0: serial@33000000 {
+                        compatible = "arm,pl011","arm,primecell";
+                        reg = <0x0 0x33000000 0x0 0x1000>;
+                        interrupts = <GIC_SPI 25 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>;
+                        clocks = <&uart_clk>, <&sup_clk>;
+                        clock-names = "uart_clk", "apb_pclk";
+                        status="disabled";
+                };
+		serial1: serial@33001000 {
+                        compatible = "arm,pl011","arm,primecell";
+                        reg = <0x0 0x33001000 0x0 0x1000>;
+                        interrupts = <GIC_SPI 26 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>;
+                        clocks = <&uart_clk>, <&sup_clk>;
+                        clock-names = "uart_clk", "apb_pclk";
+                        status="disabled";
+                };
+		serial2: serial@33002000 {
+                        compatible = "arm,pl011","arm,primecell";
+                        reg = <0x0 0x33002000 0x0 0x1000>;
+                        interrupts = <GIC_SPI 27 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>;
+                        clocks = <&uart_clk>, <&sup_clk>;
+                        clock-names = "uart_clk", "apb_pclk";
+                        status="disabled";
+                };				
+		mdio: mdio@33620000 {
+			compatible = "ctc,mdio";
+			reg = <0x0 0x33620000 0x0 0x10000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+		
+		enet0: ethernet@33410000 {
+			compatible = "ctc,mac";
+			device_type = "network";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			interrupt-parent = <&gic>;
+			status = "disabled";
+			local-mac-address = [00 00 00 00 00 00];
+			index = <0x00>;
+			reg = <0x0 0x33410000 0x0 0x10000>,
+				<0x0 0x33400000 0x0 0x10000>;
+			interrupts = <GIC_SPI 40 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 41 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 44 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 136 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 102 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>;
+			ctc,sysctrl = <&sysctrl>;
+		};
+
+		enet1: ethernet@33420000 {
+			compatible = "ctc,mac";
+			device_type = "network";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			interrupt-parent = <&gic>;
+			status = "disabled";
+			local-mac-address = [00 00 00 00 00 00];
+			index = <0x01>;
+			reg = <0x0 0x33420000 0x0 0x10000>,
+				<0x0 0x33400000 0x0 0x10000>;
+			interrupts = <GIC_SPI 42 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 43 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 44 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 137 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 103 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>;
+			ctc,sysctrl = <&sysctrl>;
+		};
+		
+		ehci0: usb@30500000 {
+			compatible = "ctc-ehci";
+			reg = <0x0 0x30500000 0x0 0x1000>;
+			interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL_HIGH>;
+			ctc,sysctrl = <&sysctrl>;
+			status = "disabled";
+		};
+		
+		ohci0: usb@30580000 {
+			compatible = "generic-ohci";
+			reg = <0x0 0x30580000 0x0 0x1000>;
+			interrupts = <GIC_SPI 46 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+		
+		spi: spi@33100000 {
+			compatible = "arm,pl022","arm,primecell";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x0 0x33100000 0x0 0x100000>;
+			clocks = <&spi_clk>, <&sup_clk>;
+			clock-names = "spi_clk", "apb_pclk";    
+			num-cs = <4>;   
+			interrupts = <GIC_SPI 37 IRQ_TYPE_LEVEL_HIGH>;
+			ctc,sysctrl = <&sysctrl>;
+			status ="disabled";
+		};
+		
+		qspi: qspi@10000000 {
+			compatible = "ctc, igdaxi001a-qspi";
+			#address-cells = <1>;	
+			#size-cells = <0>;
+			reg = <0x0 0x10000000 0x0 0x10000>; 
+			pclk = <500000000>;
+			num-cs = <2>;
+			idle-cycle = <2>;
+			post-cycle = <1>;
+			pre-cycle = <2>;
+			interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+		switch: switch@31100000 {                      
+			compatible = "centec,dal-localbus";    
+			reg = <0x0 0x31100000 0x0 0x1000>,
+				 <0x0 0x33290000 0x0 0x10000>; 
+			interrupts = <GIC_SPI 128 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 129 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 130 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 131 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 132 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 133 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 134 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>,
+				<GIC_SPI 135 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_HIGH)>;
+			status ="disabled";                     
+		};  
+		switch1: switch1@31101000 {                      
+			compatible = "centec,switch";    
+			reg = <0x0 0x31101000 0x0 0x1000>; 
+			status ="disabled";                     
+		}; 
+		
+		i2c0: i2c0@33700000{
+			compatible = "ctc,i2c";
+			#address-cells = <1>;	
+			#size-cells = <0>;
+			reg = <0x0 0x33700000 0x0 0x1000>;
+			interrupts = <GIC_SPI 58 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&i2c_clk>;
+			ctc,sysctrl = <&sysctrl>;
+			i2c-num = <0>;
+			status ="disabled";
+		};		
+		
+		i2c1: i2c1@33701000{
+			compatible = "ctc,i2c";
+			#address-cells = <1>;	
+			#size-cells = <0>;
+			reg = <0x0 0x33701000 0x0 0x1000>;
+			interrupts = <GIC_SPI 59 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&i2c_clk>;
+			ctc,sysctrl = <&sysctrl>;
+			i2c-num = <1>;
+			status ="disabled";
+		};
+		
+		pcie: pcie@20000000 {
+			compatible = "centec,ctc5236-pcie";
+			reg =   <0x0 0x20000000 0x0 0x10000000
+				0x0 0x30000000 0x0 0x1000>;
+			reg-names = "cfg", "ctrl";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			#interrupt-cells = <1>;
+			device_type = "pci";
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi","aer","pme";
+			msi-parent = <&pcie>;
+			bus-range = <0 0xff>;
+			ranges = <0x42000000 0 0x00000000 0  0x40000000 0 0x20000000
+                               0x02000000 0 0x20000000 0  0x60000000 0 0x20000000>;
+			num-lanes = <1>;
+			ctc,sysctrl = <&sysctrl>;
+			status ="disabled"; 
+		};
+
+		wtd0: wtd0@33500000{
+			compatible = "arm,sp805-wdt", "arm,primecell";
+			#address-cells = <1>;	
+			#size-cells = <0>;
+			reg = <0x0 0x33500000 0x0 0x1000>;
+			clocks = <&wdog_clk>, <&sup_clk>;
+			clock-names = "wdog_clk", "apb_pclk"; 
+			ctc,sysctrl = <&sysctrl>;
+			interrupts = <GIC_SPI 38 IRQ_TYPE_EDGE_RISING>;
+			status="disabled";
+		};
+		wtd1: wtd1@33501000{
+			compatible = "arm,sp805-wdt", "arm,primecell";
+			#address-cells = <1>;	
+			#size-cells = <0>;
+			reg = <0x0 0x33501000 0x0 0x1000>;
+			clocks = <&wdog_clk>, <&sup_clk>;
+			clock-names = "wdog_clk", "apb_pclk"; 
+			ctc,sysctrl = <&sysctrl>;
+			interrupts = <GIC_SPI 39 IRQ_TYPE_EDGE_RISING>;
+			status="disabled";
+		};
+
+		sdhci: sdhci@30400000 {
+			compatible = "centec,ctc5236-sdhci";
+			status = "disabled";
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 52 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mmc_clk>;
+			clock-names = "mmc_clk";
+			ctc,sysctrl = <&sysctrl>;
+			reg = <0x0 0x30400000 0x0 0x1000>;
+                };	
+				
+		timer0: timer0@33600000{
+			compatible = "snps,dw-apb-timer";
+			reg = <0x0 0x33600000 0x0 0x20>;
+			clocks = <&timer_clk>;
+			clock-names = "timer";
+			interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
+			DivNum = <0x3c>;
+			status="disabled";
+		};		
+		timer1: timer1@33600020{
+			compatible = "snps,dw-apb-timer";
+			reg = <0x0 0x33600020 0x0 0x20>;
+			clocks = <&timer_clk>;
+			clock-names = "timer";
+			interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
+			DivNum = <0x3c>;
+			status="disabled";
+		};
+		
+		pwm: pwm@33200240{
+			compatible = "centec-pwm";
+			ctc,sysctrl = <&sysctrl>;
+			#pwm-cells = <2>;	
+			
+			status="disabled";
+		};
+
+		fan: fan-ctc5236 {
+		    compatible = "fan-ctc5236";
+		    pwms = <&pwm 0 1000000>,
+		           <&pwm 1 1000000>,
+		           <&pwm 2 1000000>,
+		           <&pwm 3 1000000>;
+		    pwm-names = "pwm1","pwm2","pwm3","pwm4";
+		};
+		
+		gpio0: gpio@33610000 {
+			compatible = "ctc,apb-gpio";
+			reg = <0x0 0x33610000 0x0 0x10000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			ctc,sysctrl = <&sysctrl>;
+			
+			porta: gpio-port@0 {
+                		compatible = "ctc,apb-gpio-porta";
+                		gpio-controller;
+                		#gpio-cells = <2>;
+                		ctc,nr-gpios = <16>;
+                		reg = <0>;
+                		interrupt-controller;
+                		#interrupt-cells = <2>;
+                		interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
+			};
+			portb: gpio-port@1 {
+                		compatible = "ctc,apb-gpio-portb";
+               			gpio-controller;
+                		#gpio-cells = <2>;
+                		ctc,nr-gpios = <18>;
+                		reg = <1>;
+                		interrupt-controller;
+                		#interrupt-cells = <2>;
+                		interrupts = <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>;
+			};
+		};
+		
+		pinctrl: pinctrl {
+			compatible = "ctc,ctc5236-pinctrl";
+			#address-cells = <0x2>;
+			#size-cells = <0x2>;
+			ctc,pinctrl-bank0 = <16>;
+			ctc,pinctrl-bank1 = <8>;
+			ctc,sysctrl = <&sysctrl>;
+			
+			spi {
+				spi_pin: spi_pin {
+					ctc,pins = <0 0 PIN_FUNC_SPI>,
+  					           <0 2 PIN_FUNC_SPI>,
+  					           <0 3 PIN_FUNC_SPI>,
+  					           <0 4 PIN_FUNC_SPI>,
+  					           <0 5 PIN_FUNC_SPI>,
+  					           <0 6 PIN_FUNC_SPI>,
+  					           <0 7 PIN_FUNC_SPI>;
+				};
+			};
+
+			uart2 {
+				uart2_pin: uart2_pin {
+					ctc,pins = <0 10 PIN_FUNC_UART>,
+  				     	       <0 11 PIN_FUNC_UART>,
+  				        	   <0 12 PIN_FUNC_UART>,
+ 				               <0 13 PIN_FUNC_UART>,
+ 				           	   <0 14 PIN_FUNC_UART>,
+						       <0 15 PIN_FUNC_UART>;
+				};
+			};	
+	
+			fc {
+				fc_pin: fc_pin {
+					ctc,pins = <1 0 PIN_FUNC_FC>,
+  				    	       <1 1 PIN_FUNC_FC>,
+  				        	   <1 2 PIN_FUNC_FC>,
+  				         	   <1 3 PIN_FUNC_FC>,
+							   <1 4 PIN_FUNC_FC>,
+							   <1 5 PIN_FUNC_FC>,
+							   <1 6 PIN_FUNC_FC>,
+							   <1 7 PIN_FUNC_FC>;
+				};
+			};
+		};
+	};
+   
+};
+  

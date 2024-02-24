@@ -6,7 +6,7 @@ parameters:
   default: ''
 - name: 'buildOptions'
   type: string
-  default: 'SONIC_CONFIG_BUILD_JOBS=1'
+  default: 'SONIC_CONFIG_BUILD_JOBS=4'
 - name: 'preSteps'
   type: stepList
   default: []
@@ -118,6 +118,8 @@ jobs:
       - template: .azure-pipelines/template-skipvstest.yml@buildimage
       - template: .azure-pipelines/template-daemon.yml@buildimage
       - bash: |
+          patch -p1 < 0001-update-swss-main-cpp.patch
+          patch -p1 < 0002-update-swss-orch-h.patch
           set -ex
           if [ $(GROUP_NAME) == vs ]; then
             if [ $(dbg_image) == yes ]; then
