@@ -16,7 +16,7 @@ index 02cc506..eff7e43 100755
          "SSH": {
              "ip_protocols": ["tcp"],
 -            "dst_ports": ["22"],
-+            "dst_ports": ["22", "50051"], # Allow Streaming Telemetry (50051)
++            "dst_ports": ["22", "50051", "50052"], # Allow Streaming Telemetry and GNMI
              "multi_asic_ns_to_host_fwd":True
          },
          "EXTERNAL_CLIENT": {
