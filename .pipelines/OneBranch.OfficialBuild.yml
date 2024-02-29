@@ -245,7 +245,6 @@ stages:
             make $OPTIONS target/sonic-broadcom.bin
             mv target/sonic-broadcom.bin target/sonic-broadcom-slim.bin
             rm rules/config.user
-            rm target/docker-sonic-gnmi.gz
             echo "==== Finished building Celestica slim images"
 
             echo "==== Building regular images"
