@@ -217,7 +217,7 @@ stages:
           script: |
             set -ex
             OPTIONS="$(BUILD_OPTIONS) SONIC_DPKG_CACHE_METHOD=wcache PASSWORD=$PASSWORD"
-            echo "==== Building slim images"
+            echo "==== Building Arista slim images"
             echo "INCLUDE_ACMS = y" >> rules/config.user
             echo "INCLUDE_MUX = n" >> rules/config.user
             echo "INCLUDE_KUBERNETES = n" >> rules/config.user
@@ -225,12 +225,28 @@ stages:
             echo "INCLUDE_P4RT = n" >> rules/config.user
             echo "BUILD_REDUCE_IMAGE_SIZE = y" >> rules/config.user
             echo "INCLUDE_GBSYNCD = n" >> rules/config.user
-            make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
-            mv target/sonic-broadcom.bin target/sonic-broadcom-slim.bin
+            make $OPTIONS target/sonic-aboot-broadcom.swi
             mv target/sonic-aboot-broadcom.swi target/sonic-aboot-broadcom-slim.swi
             rm rules/config.user
             rm target/docker-sonic-gnmi.gz
-            echo "==== Finished building slim images"
+            echo "==== Finished building Arista slim images"
+
+            echo "==== Building Celestica slim images"
+            echo "INCLUDE_ACMS = n" >> rules/config.user
+            echo "INCLUDE_RESTAPI = n" >> rules/config.user
+            echo "INCLUDE_SYSTEM_TELEMETRY = n" >> rules/config.user
+            echo "INCLUDE_SYSTEM_GNMI = n" >> rules/config.user
+            echo "INCLUDE_MUX = n" >> rules/config.user
+            echo "INCLUDE_KUBERNETES = n" >> rules/config.user
+            echo "INCLUDE_MACSEC = n" >> rules/config.user
+            echo "INCLUDE_P4RT = n" >> rules/config.user
+            echo "BUILD_REDUCE_IMAGE_SIZE = y" >> rules/config.user
+            echo "INCLUDE_GBSYNCD = n" >> rules/config.user
+            make $OPTIONS target/sonic-broadcom.bin
+            mv target/sonic-broadcom.bin target/sonic-broadcom-slim.bin
+            rm rules/config.user
+            rm target/docker-sonic-gnmi.gz
+            echo "==== Finished building Celesetica slim images"
 
             echo "==== Building regular images"
             make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
