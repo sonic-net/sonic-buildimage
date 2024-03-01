@@ -7,6 +7,10 @@ module sonic-system-aaa {
         prefix stypes;
     }
 
+    import sonic-system-tacacs{
+        prefix tacacs;
+    }
+
     revision 2021-10-12 {
         description "Add AAA authorization/accounting support.";
     }
@@ -37,6 +41,10 @@ module sonic-system-aaa {
                     }
                     description "AAA authentication/authorization/accounting methods - radius/tacacs+/local/default";
                     default "local";
+                }
+
+                must 'not(./type = "authorization" and contains(./login, "tacacs+") and not(/tacacs:sonic-system-tacacs/tacacs:TACPLUS/tacacs:global/tacacs:passkey))' {
+                    error-message "Authorization with 'tacacs+' is not allowed when passkey not exists.";
                 }
 
                 leaf failthrough {

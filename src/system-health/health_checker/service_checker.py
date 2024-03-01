@@ -102,6 +102,7 @@ class ServiceChecker(HealthChecker):
                     
         if device_info.is_supervisor():
             expected_running_containers.add("database-chassis")
+            container_feature_dict["database-chassis"] = "database"
         return expected_running_containers, container_feature_dict
 
     def get_current_running_containers(self):

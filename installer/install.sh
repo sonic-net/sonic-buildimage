@@ -141,6 +141,8 @@ if [ "$install_env" = "onie" ]; then
     onie_initrd_tmp=/
 fi
 
+arch="%%ARCH%%"
+
 # The build system prepares this script by replacing %%DEMO-TYPE%%
 # with "OS" or "DIAG".
 demo_type="%%DEMO_TYPE%%"

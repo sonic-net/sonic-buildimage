@@ -13,7 +13,7 @@ def ts_to_str(ts):
     return datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d %H:%M:%S")
 
 
-@click.group(cls=clicommon.AliasedGroup)
+@click.group(cls=clicommon.AbbreviationGroup, name="dhcp_server")
 @clicommon.pass_db
 def dhcp_server(db):
     """Show dhcp_server related info"""

@@ -183,3 +183,16 @@ startsecs=10
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
 {% endif %}
+
+{% if include_sensormond %}
+[program:sensormond]
+command=/usr/local/bin/sensormond
+priority=10
+autostart=false
+autorestart=unexpected
+stdout_logfile=syslog
+stderr_logfile=syslog
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% endif %}

@@ -53,6 +53,25 @@
                         "login": "tacacs+"
                 }]
             }
+        },
+        "sonic-system-tacacs:sonic-system-tacacs": {
+            "sonic-system-tacacs:TACPLUS": {
+                "global": {
+                        "timeout": 5,
+                        "passkey": "aabb"
+                }
+            }
+        }
+    },
+
+    "AAA_AUTHORIZATION_TEST_TACACS_WITHOUT_TACPLUS": {
+        "sonic-system-aaa:sonic-system-aaa": {
+            "sonic-system-aaa:AAA": {
+                "AAA_LIST": [{
+                        "type": "authorization",
+                        "login": "tacacs+"
+                }]
+            }
         }
     },
 
