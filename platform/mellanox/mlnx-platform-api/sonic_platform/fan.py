@@ -46,9 +46,11 @@ CONFIG_PATH = "/var/run/hw-management/config"
 FAN_DIR = "/var/run/hw-management/thermal/fan{}_dir"
 FAN_DIR_VALUE_EXHAUST = 0
 FAN_DIR_VALUE_INTAKE = 1
+FAN_DIR_VALUE_NOT_APPLICABLE = 2
 FAN_DIR_MAPPING = {
     FAN_DIR_VALUE_EXHAUST: FanBase.FAN_DIRECTION_EXHAUST,
     FAN_DIR_VALUE_INTAKE: FanBase.FAN_DIRECTION_INTAKE,
+    FAN_DIR_VALUE_NOT_APPLICABLE: FanBase.FAN_DIRECTION_NOT_APPLICABLE,
 }
 
 class MlnxFan(FanBase):
@@ -170,7 +172,7 @@ class PsuFan(MlnxFan):
         Retrieves the fan's direction
 
         Returns:
-            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
+            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST or FAN_DIRECTION_NOT_APPLICABLE
             depending on fan direction
 
         Notes:
@@ -181,6 +183,7 @@ class PsuFan(MlnxFan):
             Air flow from QSFP side to fans side, for example: MSN2700-CS2R
             which means exhaust in community
             According to hw-mgmt:
+                2 stands for N/A, in case fan direction could not be determined
                 1 stands for forward, in other words intake
                 0 stands for reverse, in other words exhaust
         """
@@ -275,7 +278,7 @@ class Fan(MlnxFan):
         Retrieves the fan's direction
 
         Returns:
-            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
+            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST or FAN_DIRECTION_NOT_APPLICABLE
             depending on fan direction
 
         Notes:
@@ -286,6 +289,7 @@ class Fan(MlnxFan):
             Air flow from QSFP side to fans side, for example: MSN2700-CS2R
             which means exhaust in community
             According to hw-mgmt:
+                2 stands for N/A, in case fan direction could not be determined
                 1 stands for forward, in other words intake
                 0 stands for reverse, in other words exhaust
         """

@@ -30,6 +30,9 @@ nokia_7215_profile()
 # Install kernel drivers required for i2c bus access
 load_kernel_drivers
 
+# Disable sysrq-trigger
+echo 0 > /proc/sys/kernel/sysrq
+
 # LOGIC to enumerate SFP eeprom devices - send 0x50 to kernel i2c driver - initialize devices
 # the mux may be enumerated at number 4 or 5 so we check for the mux and skip if needed
 

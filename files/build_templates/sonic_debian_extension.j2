@@ -101,6 +101,10 @@ sudo mkdir -p $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/ifupdown2_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
 
+# Install a patched version of ipmitool  (and its dependencies via 'apt-get -y install -f')
+sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/ipmitool_*.deb || \
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
+
 # Install a patched version of ntp  (and its dependencies via 'apt-get -y install -f')
 sudo dpkg --root=$FILESYSTEM_ROOT --force-confdef --force-confold -i $debs_path/ntp_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y \
@@ -833,7 +837,7 @@ sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install statsd
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install kubernetes
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install pyOpenSSL
 # Install python packages to upload and download etcd backup files for backup and restore service usage
-sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install azure-storage-blob azure-identity
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install azure-storage-blob azure-identity azure-keyvault-secrets
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable kubelet.service
 # Add kubernetes master entrance
 sudo cp files/image_config/kubernetes/kubernetes_master_entrance.service ${FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM}/

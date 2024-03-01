@@ -64,7 +64,7 @@ index 6b43916..3e8a0f6 100644
  }
  
  static bool lacpdu_check(struct lacpdu *lacpdu)
-@@ -100,14 +123,31 @@ static bool lacpdu_check(struct lacpdu *lacpdu)
+@@ -100,12 +123,31 @@ static bool lacpdu_check(struct lacpdu *lacpdu)
  	/*
  	 * According to 43.4.12 version_number, tlv_type and reserved fields
  	 * should not be checked.
@@ -74,33 +74,32 @@ index 6b43916..3e8a0f6 100644
 +	 * need to be checked.
  	 */
  
--	if (lacpdu->subtype		!= 0x01 ||
--	    lacpdu->actor_info_len	!= 0x14 ||
+-	if (lacpdu->actor_info_len	!= 0x14 ||
 -	    lacpdu->partner_info_len	!= 0x14 ||
 -	    lacpdu->collector_info_len	!= 0x10 ||
--	    lacpdu->terminator_info_len	!= 0x00)
-+	if (lacpdu->subtype	!= 0x01)
-+		return false;
+-	    lacpdu->terminator_info_len	!= 0x00) {
 +	if (lacpdu->version_number == 0x01) {
 +	    if (lacpdu->actor_info_len	!= 0x14 ||
 +			lacpdu->partner_info_len	!= 0x14 ||
 +			lacpdu->collector_info_len	!= 0x10 ||
-+			lacpdu->v1.terminator_info_len	!= 0x00)
++			lacpdu->v1.terminator_info_len	!= 0x00) {
++			teamd_log_warn("malformed LACPv1 PDU came.");
 +			return false;
++		}
 +	} else if (lacpdu->version_number == 0xf1) {
 +	    if (lacpdu->actor_info_len	!= 0x14 ||
 +			lacpdu->partner_info_len	!= 0x14 ||
 +			lacpdu->collector_info_len	!= 0x10 ||
 +			lacpdu->v2.actor_retry_tlv_len != 0x04 ||
 +			lacpdu->v2.partner_retry_tlv_len != 0x04 ||
-+			lacpdu->v2.terminator_info_len	!= 0x00)
++			lacpdu->v2.terminator_info_len	!= 0x00) {
++			teamd_log_warn("malformed LACPv241 PDU came.");
 +			return false;
++		}
 +	} else {
+ 		teamd_log_warn("malformed LACP PDU came.");
  		return false;
-+	}
- 	return true;
- }
- 
+ 	}
 @@ -154,6 +194,10 @@ struct lacp {
  #define		LACP_CFG_DFLT_MIN_PORTS_MAX 1024
  		enum lacp_agg_select_policy agg_select_policy;

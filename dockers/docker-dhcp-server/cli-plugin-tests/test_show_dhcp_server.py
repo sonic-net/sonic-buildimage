@@ -185,7 +185,9 @@ class TestShowDHCPServer(object):
 +---------------+-------------+-------------+--------+
 | Option Name   |   Option ID | Value       | Type   |
 +===============+=============+=============+========+
-| option60      |          60 | dummy_value | string |
+| option60      |         163 | dummy_value | string |
++---------------+-------------+-------------+--------+
+| option61      |         164 | dummy_value | string |
 +---------------+-------------+-------------+--------+
 """
         runner = CliRunner()
@@ -200,7 +202,7 @@ class TestShowDHCPServer(object):
 +---------------+-------------+-------------+--------+
 | Option Name   |   Option ID | Value       | Type   |
 +===============+=============+=============+========+
-| option60      |          60 | dummy_value | string |
+| option60      |         163 | dummy_value | string |
 +---------------+-------------+-------------+--------+
 """
         runner = CliRunner()
