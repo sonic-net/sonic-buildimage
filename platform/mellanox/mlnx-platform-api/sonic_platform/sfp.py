@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -640,7 +640,12 @@ class SFP(NvidiaSFPCommon):
                 if api.get_lpmode() == lpmode:
                     return True
                 api.set_lpmode(lpmode)
-                return api.get_lpmode() == lpmode
+                # check_lpmode is a lambda function which checks if current lpmode already updated to the desired lpmode
+                check_lpmode = lambda api, lpmode: api.get_lpmode() == lpmode
+                # utils.wait_until function will call check_lpmode function every 1 second for a total timeout of 2 seconds.
+                # If at some point get_lpmode=desired_lpmode, it will return true.
+                # If after timeout ends, lpmode will not be desired_lpmode, it will return false.
+                return utils.wait_until(check_lpmode, 2, 1, api=api, lpmode=lpmode)
             elif DeviceDataManager.is_independent_mode():
                 # FW control under CMIS host management mode. 
                 # Currently, we don't support set LPM under this mode.
