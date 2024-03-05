@@ -33,7 +33,7 @@ build:
 	(for mod in $(MODULE_DIRS); do \
 		cd $(MOD_SRC_DIR)/../$(PRESTERA_MODULE_SRC)/; \
 		make clean; \
-		make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVMBUS=y CONFIG_KM_MVINT=y || exit 1; \
+		make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
 		mkdir $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR); \
 		cp *.ko $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/; \
 		cd $(MOD_SRC_DIR); \

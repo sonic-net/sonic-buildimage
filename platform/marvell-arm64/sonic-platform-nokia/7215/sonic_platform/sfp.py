@@ -30,7 +30,7 @@ logger = Logger()
 
 class Sfp(SfpOptoeBase):
     """
-    Nokia IXR-7215 Platform-specific Sfp refactor class
+    Nokia IXS-7215 Platform-specific Sfp refactor class
     """
     instances = []
 

@@ -97,17 +97,22 @@
                 "high-crit-threshold": false
             },
             {
-                "name": "AC5X CORE",
+                "name": "PCB MID",
                 "controllable": false,
                 "low-threshold": false,
                 "low-crit-threshold": false,
                 "high-crit-threshold": false
             },
             {
-                "name": "OOB PHY",
+                "name": "ASIC",
                 "controllable": false,
                 "low-threshold": false,
-                "high-threshold": false,
+                "low-crit-threshold": false
+            },
+            {
+                "name": "CPU CORE",
+                "controllable": false,
+                "low-threshold": false,
                 "low-crit-threshold": false
             }
         ],

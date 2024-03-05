@@ -10,6 +10,7 @@
 try:
     import os
     from sonic_platform_base.thermal_base import ThermalBase
+    from swsscommon.swsscommon import SonicV2Connector
     from sonic_py_common import logger
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -21,12 +22,13 @@ class Thermal(ThermalBase):
 
     I2C_CLASS_DIR = "/sys/class/i2c-adapter/"
     I2C_DEV_MAPPING = (['i2c-0/0-0048/hwmon/', 1],
-                       ['i2c-0/0-0049/hwmon/', 1])
+                       ['i2c-0/0-0049/hwmon/', 1],
+                       ['i2c-0/0-004a/hwmon/', 1])
 
-    HWMON_CLASS_DIR = "/sys/class/hwmon/hwmon0/"
-    AC5X_THERMAL_DIR = "/sys/class/hwmon/hwmon1/"
+    CN9130_THERMAL_DIR = "/sys/class/hwmon/hwmon1/"
+    ASIC_TEMP_INFO = "ASIC_TEMPERATURE_INFO"
 
-    THERMAL_NAME = ("PCB BACK", "PCB FRONT", "AC5X CORE", "OOB PHY")
+    THERMAL_NAME = ("PCB BACK", "PCB FRONT", "PCB MID", "ASIC", "CPU CORE")
 
     def __init__(self, thermal_index):
         ThermalBase.__init__(self)
@@ -37,7 +39,7 @@ class Thermal(ThermalBase):
         self._maximum = None
         self.thermal_high_threshold_file = None
         # PCB temperature sensors
-        if self.index < 3:
+        if self.index < 4:
             i2c_path = self.I2C_CLASS_DIR + self.I2C_DEV_MAPPING[self.index - 1][0]
             sensor_index = self.I2C_DEV_MAPPING[self.index - 1][1]
             sensor_high_suffix = "max"
@@ -45,24 +47,26 @@ class Thermal(ThermalBase):
             hwmon_node = os.listdir(i2c_path)[0]
             self.SENSOR_DIR = i2c_path + hwmon_node + '/'
 
-        # SOC temperature sensor
-        elif self.index == 3:
-            dev_path = self.AC5X_THERMAL_DIR
-            sensor_index = 1
-            sensor_high_suffix = "max"
-            sensor_high_crit_suffix = None
-            self.SENSOR_DIR = dev_path
-        #
-        else:
-            dev_path = self.HWMON_CLASS_DIR
-            sensor_index = 1
+        #ASIC temperature sensor
+        elif self.index == 4:
             sensor_high_suffix = None
-            sensor_high_crit_suffix = "crit"
+            sensor_high_crit_suffix = None
+            self.sensor_high_threshold = 100.0
+            self.sensor_crit_threshold = 110.0
+            self.SENSOR_DIR = None
+
+        # CPU CN9130 temperature sensor
+        elif self.index == 5:
+            dev_path = self.CN9130_THERMAL_DIR
+            sensor_index = 1
+            sensor_high_suffix = "crit"
+            sensor_high_crit_suffix = "max"
             self.SENSOR_DIR = dev_path
 
         # sysfs file for current temperature value
-        self.thermal_temperature_file = self.SENSOR_DIR \
-            + "temp{}_input".format(sensor_index)
+        if self.SENSOR_DIR:
+            self.thermal_temperature_file = self.SENSOR_DIR \
+                + "temp{}_input".format(sensor_index)
 
         # sysfs file for high threshold value if supported for this sensor
         if sensor_high_suffix:
@@ -156,16 +160,23 @@ class Thermal(ThermalBase):
             A float number of current temperature in Celsius up to
             nearest thousandth of one degree Celsius, e.g. 30.125
         """
-        thermal_temperature = self._read_sysfs_file(
-            self.thermal_temperature_file)
-        if (thermal_temperature != 'ERR'):
-            thermal_temperature = float(thermal_temperature) / 1000
-            if self._minimum is None or self._minimum > thermal_temperature:
-                self._minimum = thermal_temperature
-            if self._maximum is None or self._maximum < thermal_temperature:
-                self._maximum = thermal_temperature
+        #read from state_db for asic temperature
+        if self.index == 4:
+            db = SonicV2Connector()
+            db.connect(db.STATE_DB)
+            data_dict = db.get_all(db.STATE_DB, self.ASIC_TEMP_INFO)
+            thermal_temperature = float(data_dict['maximum_temperature'])
         else:
-            thermal_temperature = 0
+            thermal_temperature = self._read_sysfs_file(self.thermal_temperature_file)
+            if (thermal_temperature != 'ERR'):
+                thermal_temperature = float(thermal_temperature) / 1000
+            else:
+                thermal_temperature = 0
+
+        if self._minimum is None or self._minimum > thermal_temperature:
+            self._minimum = thermal_temperature
+        if self._maximum is None or self._maximum < thermal_temperature:
+            self._maximum = thermal_temperature
 
         return float("{:.3f}".format(thermal_temperature))
 
@@ -178,12 +189,13 @@ class Thermal(ThermalBase):
             Celsius up to nearest thousandth of one degree Celsius,
             e.g. 30.125
         """
+        if self.index == 4:
+            return float("{:.3f}".format(self.sensor_high_threshold))
         # Not implemented for this sensor
         if not self.thermal_high_threshold_file:
             raise  NotImplementedError
 
-        thermal_high_threshold = self._read_sysfs_file(
-            self.thermal_high_threshold_file)
+        thermal_high_threshold = self._read_sysfs_file(self.thermal_high_threshold_file)
         if (thermal_high_threshold != 'ERR'):
             thermal_high_threshold = float(thermal_high_threshold) / 1000
         else:
@@ -213,7 +225,8 @@ class Thermal(ThermalBase):
             A float number, the high critical threshold temperature of thermal in Celsius
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
-
+        if self.index == 4:
+            return float("{:.3f}".format(self.sensor_crit_threshold))
         # Not implemented for this sensor
         if not self.thermal_high_crit_threshold_file:
             raise  NotImplementedError

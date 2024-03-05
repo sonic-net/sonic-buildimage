@@ -26,6 +26,9 @@ case "$1" in
         systemctl enable nokia-7215init.service
         systemctl start nokia-7215init.service
 
+        systemctl enable cpu_wdt.service
+        systemctl start cpu_wdt.service
+
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
