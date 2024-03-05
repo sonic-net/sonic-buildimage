@@ -73,14 +73,22 @@ class ThermalInfo(ThermalPolicyInfoBase):
         self._current_threshold_level = 0
         self._num_fan_levels = 3
         self._high_crital_threshold = 75
-        self._level_up_threshold = [[31,39,58,46],
-                                    [39,46,65,54],
-                                    [51,57,77,68]]
+        #THERMAL_NAME ("PCB BACK", "PCB FRONT", "PCB MID", "ASIC", "CPU CORE")
+        self._f2b_level_up_threshold = [[38,30,37,60,77],
+                                        [51,44,50,72,90],
+                                        [61,57,61,77,94]]
         
-        self._level_down_threshold = [[24,31,47,40],
-                                      [31,38,53,46],
-                                      [48,54,72,63]]
-
+        self._f2b_level_down_threshold = [[29,24,29,50,64],
+                                          [40,37,40,59,75],
+                                          [58,54,58,72,90]]
+        
+        self._b2f_level_up_threshold = [[30,38,41,65,71],
+                                        [43,50,54,76,86],
+                                        [53,59,61,79,92]]
+        
+        self._b2f_level_down_threshold = [[22,30,33,54,60],
+                                          [37,44,46,62,73],
+                                          [51,57,58,75,90]]
     def collect(self, chassis):
         """
         Collect thermal sensor temperature change status
@@ -99,6 +107,13 @@ class ThermalInfo(ThermalPolicyInfoBase):
         for index in range(num_of_thermals):
             self._temps.insert(index, chassis.get_thermal(index).get_temperature())
         
+        fan_direction=chassis.get_fan(1).get_direction()
+        if(fan_direction == "intake"):
+            level_up_threshold=self._f2b_level_up_threshold
+            level_down_threshold=self._f2b_level_down_threshold
+        else:
+            level_up_threshold=self._b2f_level_up_threshold
+            level_down_threshold=self._b2f_level_down_threshold
 
        # Find current required threshold level
         max_level =0
@@ -106,10 +121,10 @@ class ThermalInfo(ThermalPolicyInfoBase):
         for index in range(num_of_thermals):
             for level in range(self._num_fan_levels):
 
-                if self._temps[index]>self._level_up_threshold[level][index]:
+                if self._temps[index]>level_up_threshold[level][index]:
                     if max_level<level+1:
                         max_level=level+1
-                if self._temps[index]<self._level_down_threshold[level][index]:
+                if self._temps[index]<level_down_threshold[level][index]:
                     if min_level[index]>level:
                         min_level[index]=level
 

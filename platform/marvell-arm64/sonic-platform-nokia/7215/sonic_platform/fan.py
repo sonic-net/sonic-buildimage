@@ -16,8 +16,8 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-MAX_IXS7215_FAN_SPEED = 24000
-WORKING_IXS7215_FAN_SPEED = 2400
+MAX_IXS7215_FAN_SPEED = 23000
+WORKING_IXS7215_FAN_SPEED = 2300
 
 
 sonic_logger = logger.Logger('fan')
@@ -26,10 +26,10 @@ sonic_logger = logger.Logger('fan')
 class Fan(FanBase):
     """Nokia platform-specific Fan class"""
 
-    def __init__(self, fan_index, fan_drawer, psu_fan=False, dependency=None):
+    def __init__(self, fan_index, fan_drawer, chassis_model, psu_fan=False, dependency=None):
         self.is_psu_fan = psu_fan
         EMC2302_DIR = " "
-        i2c_path = "/sys/bus/i2c/devices/0-002e/hwmon/"
+        i2c_path = "/sys/bus/i2c/devices/0-002f/hwmon/"
         if(os.path.exists(i2c_path)):
             hwmon_node = os.listdir(i2c_path)[0]
             EMC2302_DIR = i2c_path + hwmon_node + '/'
@@ -38,6 +38,7 @@ class Fan(FanBase):
             # Fan is 1-based in Nokia platforms
             self.index = fan_index + 1
             self.fan_drawer = fan_drawer
+            self.chassis_model = chassis_model
             self.set_fan_speed_reg = EMC2302_DIR+"pwm{}".format(self.index)
             self.get_fan_speed_reg = EMC2302_DIR+"fan{}_input".format(self.index)
             self.max_fan_speed = MAX_IXS7215_FAN_SPEED
@@ -116,7 +117,16 @@ class Fan(FanBase):
         Returns:
             string: Model number of Fan. Use part number for this.
         """
-        return self.eeprom.part_number_str()
+        return self.eeprom.modelstr()
+    
+    def get_chassis_model(self):
+        """
+        Retrieves the model number of the Fan
+
+        Returns:
+            string: Model number of Fan. Use part number for this.
+        """
+        return self.chassis_model
 
     def get_serial(self):
         """
@@ -169,8 +179,14 @@ class Fan(FanBase):
             A string, either FAN_DIRECTION_INTAKE or
             FAN_DIRECTION_EXHAUST depending on fan direction
         """
+        ch_model=self.get_chassis_model()
+        #compare first 8 characters of chassis molel string
+        if(ch_model[:8]=='3HE18723'):
+            direction = 'intake'
+        else:
+            direction = 'exhaust'
 
-        return 'intake'
+        return direction
 
     def get_position_in_parent(self):
         """
@@ -219,8 +235,10 @@ class Fan(FanBase):
             which is considered tolerable
         """
         if self.get_presence():
-            # The tolerance value is fixed as 25% for this platform
-            tolerance = 50
+            if self.get_target_speed()<50:
+                tolerance=60
+            else:
+                tolerance = 25
         else:
             tolerance = 0
 

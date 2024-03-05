@@ -19,6 +19,8 @@ except ImportError as e:
 sonic_logger = logger.Logger('psu')
 INA230_DIR = "/sys/bus/i2c/devices/0-0040/iio:device0/"
 CPLD_DIR = "/sys/bus/i2c/devices/0-0041/"
+PSU_GPIO_DIR = ["/sys/class/gpio/gpio61/value", "/sys/class/gpio/gpio62/value"]
+
 
 class Psu(PsuBase):
     """Nokia platform-specific PSU class for 7215 """
@@ -32,6 +34,8 @@ class Psu(PsuBase):
 
         # PSU eeprom
         self.eeprom = Eeprom(is_psu=True, psu_index=self.index)
+        self.MAX_VOLTAGE = 14
+        self.MIN_VOLTAGE = 10
 
     def _read_sysfs_file(self, sysfs_file):
         # On successful read, returns the value read from given
@@ -80,8 +84,8 @@ class Psu(PsuBase):
             Integer: Number of active PSU's
         """  
         active_psus = 0
-        psu1_good = self._read_sysfs_file(CPLD_DIR+"psu1_power_good")
-        psu2_good = self._read_sysfs_file(CPLD_DIR+"psu2_power_good")
+        psu1_good = self._read_sysfs_file(PSU_GPIO_DIR[0])
+        psu2_good = self._read_sysfs_file(PSU_GPIO_DIR[1])
 
         active_psus = int(psu1_good) + int(psu2_good)
         
@@ -150,7 +154,7 @@ class Psu(PsuBase):
         Returns:
             bool: True if PSU is operating properly, False if not
         """
-        psu_sysfs_str=CPLD_DIR+"psu{}_power_good".format(self.index)
+        psu_sysfs_str=PSU_GPIO_DIR[self.index-1]
         psu_status = self._read_sysfs_file(psu_sysfs_str)
 
         if psu_status == '1':
@@ -212,6 +216,26 @@ class Psu(PsuBase):
         """
         return self.index
 
+    def get_voltage_high_threshold(self):
+        """
+        Retrieves the high threshold PSU voltage output
+
+        Returns:
+            A float number, the high threshold output voltage in volts,
+            e.g. 12.1
+        """
+        return self.MAX_VOLTAGE
+
+    def get_voltage_low_threshold(self):
+        """
+        Retrieves the low threshold PSU voltage output
+
+        Returns:
+            A float number, the low threshold output voltage in volts,
+            e.g. 12.1
+        """
+        return self.MIN_VOLTAGE
+
     def is_replaceable(self):
         """
         Indicate whether this device is replaceable.
@@ -227,7 +251,7 @@ class Psu(PsuBase):
             A boolean, True if PSU has stablized its output voltages and
             passed all its internal self-tests, False if not.
         """
-        psu_sysfs_str=CPLD_DIR+"psu{}_power_good".format(self.index)
+        psu_sysfs_str=PSU_GPIO_DIR[self.index-1]
         psu_pg_status = self._read_sysfs_file(psu_sysfs_str)
 
         if psu_pg_status == '1':

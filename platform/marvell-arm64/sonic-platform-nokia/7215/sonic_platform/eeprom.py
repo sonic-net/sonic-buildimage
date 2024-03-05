@@ -41,8 +41,7 @@ class Eeprom(TlvInfoDecoder):
                 self.index = psu_index
                 self.part_number = '1'
                 self.model_str = 'PJT-12V100WBBA'
-                self.serial_number = 'NA'
-                self.serial_number = 'NA'                
+                self.serial_number = 'NA'               
 
             if self.is_fan_eeprom:
                 self.index = fan_index

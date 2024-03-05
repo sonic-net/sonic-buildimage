@@ -35,7 +35,7 @@ MAX_7215_COMPONENT=2
 MAX_7215_FAN_DRAWERS = 2
 MAX_7215_FANS_PER_DRAWER = 1
 MAX_7215_PSU = 2
-MAX_7215_THERMAL = 4
+MAX_7215_THERMAL = 5
 CPLD_DIR = "/sys/bus/i2c/devices/0-0041/"
 
 SYSLOG_IDENTIFIER = "chassis"
@@ -92,7 +92,7 @@ class Chassis(ChassisBase):
             drawer = drawer_ctor(drawer_index)
             self._fan_drawer_list.append(drawer)
             for index in range(fan_num_per_drawer):
-                fan = Fan(fan_index, drawer)
+                fan = Fan(fan_index, drawer, self.get_model())
                 fan_index += 1
                 drawer._fan_list.append(fan)
                 self._fan_list.append(fan)
@@ -259,10 +259,21 @@ class Chassis(ChassisBase):
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
         """
-        # The ixs7215 CPLD does not have a hardware reboot cause register so
-        # the hardware portion of reboot cause can't be implemented
-
-        return (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
+        value = self._read_sysfs_file(CPLD_DIR+"last_reset_cause")
+        thermal = self._read_sysfs_file(CPLD_DIR+"temp_event_status")
+        if (value == 'cold_reset'):
+            reboot_cause=(ChassisBase.REBOOT_CAUSE_POWER_LOSS, "Cold Reset")
+        elif (value == 'warm_reset'):
+            reboot_cause=(ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, "Warm Reset")
+        elif (value == 'wdog_reset'):
+            reboot_cause=(ChassisBase.REBOOT_CAUSE_WATCHDOG, None)
+        elif (value == 'thermal_reset'):
+            reboot_cause=(ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, thermal)
+        else:
+            reboot_cause=(ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
+        #unmask temperature event    
+        self._write_sysfs_file(CPLD_DIR+"temp_event_mask", 0)
+        return reboot_cause
 
     def get_watchdog(self):
         """
