@@ -165,7 +165,7 @@ stages:
               o = toc[i]
               name = o.get('name', None)
               if name == "SONiC":
-                print(f"Found the SONiC at line {o["__line__"]}.")
+                print(f'Found the SONiC at line {o["__line__"]}.')
                 releaseNotesItem = o["items"][0]
                 if releaseNotesItem["name"] != "Release Notes":
                   print("Expect the first item of SONiC is the Release Note.")
@@ -192,21 +192,21 @@ stages:
                         position = releaseMainVersionItems[j + 1]["__line__"]
                       else:
                         position = o["items"][1]["__line__"]
-                      if lines[position].strip() == "":
+                      if position > 0 and lines[position-1].strip() == "":
                         position -= 1
                       lines.insert(position, fr"        href: sonic\release-notes\{mainVersion}\{subVersionFileName}" + "\n")
-                      lines.insert(position, fr"      - name: sonic\release-notes\{mainVersion}" + "\n")
+                      lines.insert(position, fr"      - name: SONiC.{version}" + "\n")
                     break
                 if releaseMainVersion != mainVersion:
                   if j < len(releaseMainVersionItems) - 1:
                     position = releaseMainVersionItems[j + 1]["__line__"]
                   else:
                     position = o["items"][1]["__line__"]
-                  if lines[position].strip() == "":
+                  if position > 0 and lines[position-1].strip() == "":
                     position -= 1
                   print(f"Cannot find the {mainVersion}, inserting the main version at position {position}.")
                   lines.insert(position, fr"        href: sonic\release-notes\{mainVersion}\{subVersionFileName}" + "\n")
-                  lines.insert(position, fr"      - name: sonic\release-notes\{mainVersion}" + "\n")
+                  lines.insert(position, fr"      - name: SONiC.{version}" + "\n")
                   lines.insert(position, fr"      items:" + "\n")
                   lines.insert(position, fr"      href: sonic\release-notes\{mainVersion}\index.md" + "\n")
                   lines.insert(position, fr"    - name: '{mainVersion}'" + "\n")
@@ -259,3 +259,11 @@ stages:
         echo "Pull Request: https://dev.azure.com/msazure/PhyNet/_git/PhynetTSG/pullrequest/$PRID"
       condition: and(succeeded(), ne(variables['RELEASE_NOTES_COUNT'], '0'))
       displayName: "Send or update Pull Request"
+    - script: |
+        set -x
+        ls -l $(Build.SourcesDirectory)/
+        cp $(Build.SourcesDirectory)/release_notes.json $(Build.ArtifactStagingDirectory)/
+      workingDirectory: "$(Build.SourcesDirectory)"
+      displayName: "Prepare publish"
+    - publish: $(Build.ArtifactStagingDirectory)
+      artifact: 'artifacts'
