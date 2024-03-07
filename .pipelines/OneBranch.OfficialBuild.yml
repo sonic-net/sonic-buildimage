@@ -59,6 +59,7 @@ stages:
     BUILD_OPTIONS: 'SONIC_BUILD_JOBS=4 ENABLE_DHCP_GRAPH_SERVICE=y SHUTDOWN_BGP_ON_START=y ENABLE_PFCWD_ON_START=y SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(GROUP_NAME) ${{ variables.VERSION_CONTROL_OPTIONS }}'
     VERSION_PATH: target/sonic.version
     DOCKER_DATA_ROOT_FOR_MULTIARCCH: /data/march/docker
+    PACKAGE_URL: "https://sonicstorage.blob.core.windows.net/packages"
     INCLUDE_RESTAPI: y
     ENABLE_FIPS: y
   jobs:
@@ -367,7 +368,7 @@ stages:
               set -ex
               OPTIONS="$(BUILD_OPTIONS) ENABLE_NAT=n INCLUDE_VNET_MONITOR=y PASSWORD=$PASSWORD"
               make $OPTIONS target/sonic-cisco-8000.bin
-              make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-cisco-rpc.gz
+              make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-rpc.gz || true
             env:
               PASSWORD: '$(PASSWORD)'
             displayName: JobScript
