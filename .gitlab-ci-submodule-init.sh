@@ -13,6 +13,8 @@ die () {
 trap 'die ${LINENO}' ERR
 
 git submodule deinit -f --all
+rm -fr .git/modules/src/sonic-utilities/
+rm -fr .git/modules/platform/broadcom/sonic-platform-modules-nokia/
 # sync/update 1st level subs
 git submodule sync
 git submodule update --init
