@@ -340,5 +340,9 @@ svi_my_station_optimization
 sai_nbr_bcast_ifp_optimized
 sai_pfc_defaults_disable
 sai_optimized_mmu
+svi_my_station_optimization
+warmboot_knet_shutdown_mode
+sai_stats_support_mask
 sai_default_cpu_tx_tc
+oversubscribe_mixed_sister_25_50_enable
 sai_disable_srcmacqedstmac_ctrl
