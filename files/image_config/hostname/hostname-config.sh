@@ -6,6 +6,7 @@ HOSTNAME=`sonic-cfggen -d -v DEVICE_METADATA[\'localhost\'][\'hostname\']`
 if [ -z "$HOSTNAME" ] ; then
        echo "Missing hostname in the config file, setting to default 'sonic'"
        HOSTNAME='sonic'
+       sonic-cfggen -a '{"DEVICE_METADATA":{"localhost":{"hostname":"sonic"}}}' -w
 fi
 
 echo $HOSTNAME > /etc/hostname
