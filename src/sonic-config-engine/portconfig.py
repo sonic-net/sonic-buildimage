@@ -363,6 +363,7 @@ class BreakoutCfg(object):
 
         lane_id = 0
         alias_id = 0
+        subport_id = 1
 
         for entry in self._breakout_mode_entry:
             lanes_per_port = entry.num_assigned_lanes // entry.num_ports
@@ -376,11 +377,13 @@ class BreakoutCfg(object):
                     'alias': self._breakout_capabilities[alias_id],
                     'lanes': ','.join(lanes),
                     'speed': str(entry.default_speed),
-                    'index': self._indexes[lane_id]
+                    'index': self._indexes[lane_id],
+                    'subport': subport_id
                 }
 
                 lane_id += lanes_per_port
                 alias_id += 1
+                subport_id += 1
 
         return ports
 

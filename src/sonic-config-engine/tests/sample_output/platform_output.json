@@ -5,6 +5,7 @@
     "description": "Eth3/1",
     "mtu": "9100",
     "alias": "Eth3/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -15,6 +16,7 @@
     "description": "Eth3/2",
     "mtu": "9100",
     "alias": "Eth3/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -25,6 +27,7 @@
     "description": "Eth10/1",
     "mtu": "9100",
     "alias": "Eth10/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -35,6 +38,7 @@
     "description": "Eth25/2",
     "mtu": "9100",
     "alias": "Eth25/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -47,6 +51,7 @@
     "admin_status": "up",
     "mtu": "9100",
     "alias": "Eth1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "100000",
     "tpid": "0x8100"
@@ -58,6 +63,7 @@
     "admin_status": "up",
     "mtu": "9100",
     "alias": "Eth2/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -69,6 +75,7 @@
     "admin_status": "up",
     "mtu": "9100",
     "alias": "Eth2/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -79,6 +86,7 @@
     "description": "Eth28/2",
     "mtu": "9100",
     "alias": "Eth28/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -89,6 +97,7 @@
     "description": "Eth28/1",
     "mtu": "9100",
     "alias": "Eth28/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -99,6 +108,7 @@
     "description": "Eth5/2",
     "mtu": "9100",
     "alias": "Eth5/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -110,6 +120,7 @@
     "description": "Eth26",
     "mtu": "9100",
     "alias": "Eth26",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "100000",
     "tpid": "0x8100"
@@ -120,6 +131,7 @@
     "description": "Eth9/3",
     "mtu": "9100",
     "alias": "Eth9/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -130,6 +142,7 @@
     "description": "Eth27/1",
     "mtu": "9100",
     "alias": "Eth27/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -140,6 +153,7 @@
     "description": "Eth27/2",
     "mtu": "9100",
     "alias": "Eth27/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -150,6 +164,7 @@
     "description": "Eth24/3",
     "mtu": "9100",
     "alias": "Eth24/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -160,6 +175,7 @@
     "description": "Eth32/2",
     "mtu": "9100",
     "alias": "Eth32/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -170,6 +186,7 @@
     "description": "Eth25/1",
     "mtu": "9100",
     "alias": "Eth25/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -180,6 +197,7 @@
     "description": "Eth32/1",
     "mtu": "9100",
     "alias": "Eth32/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -188,6 +206,7 @@
     "index": "23",
     "lanes": "90",
     "description": "Eth23/3",
+    "subport": 3,
     "mtu": "9100",
     "alias": "Eth23/3",
     "pfc_asym": "off",
@@ -200,6 +219,7 @@
     "description": "Eth23/4",
     "mtu": "9100",
     "alias": "Eth23/4",
+    "subport": 4,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -210,6 +230,7 @@
     "description": "Eth24/1",
     "mtu": "9100",
     "alias": "Eth24/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -220,6 +241,7 @@
     "description": "Eth24/2",
     "mtu": "9100",
     "alias": "Eth24/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -230,6 +252,7 @@
     "description": "Eth13/3",
     "mtu": "9100",
     "alias": "Eth13/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -240,6 +263,7 @@
     "description": "Eth13/4",
     "mtu": "9100",
     "alias": "Eth13/4",
+    "subport": 4,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -250,6 +274,7 @@
     "description": "Eth14/1",
     "mtu": "9100",
     "alias": "Eth14/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -260,6 +285,7 @@
     "description": "Eth14/2",
     "mtu": "9100",
     "alias": "Eth14/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -270,6 +296,7 @@
     "description": "Eth14/3",
     "mtu": "9100",
     "alias": "Eth14/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -280,6 +307,7 @@
     "description": "Eth25/3",
     "mtu": "9100",
     "alias": "Eth25/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -290,6 +318,7 @@
     "description": "Eth15/1",
     "mtu": "9100",
     "alias": "Eth15/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -300,6 +329,7 @@
     "description": "Eth29/2",
     "mtu": "9100",
     "alias": "Eth29/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -310,6 +340,7 @@
     "description": "Eth20/1",
     "mtu": "9100",
     "alias": "Eth20/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -320,6 +351,7 @@
     "description": "Eth19/3",
     "mtu": "9100",
     "alias": "Eth19/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -330,6 +362,7 @@
     "description": "Eth10/3",
     "mtu": "9100",
     "alias": "Eth10/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -340,6 +373,7 @@
     "description": "Eth19/1",
     "mtu": "9100",
     "alias": "Eth19/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -350,6 +384,7 @@
     "description": "Eth19/2",
     "mtu": "9100",
     "alias": "Eth19/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -360,6 +395,7 @@
     "description": "Eth18/3",
     "mtu": "9100",
     "alias": "Eth18/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -370,6 +406,7 @@
     "description": "Eth18/4",
     "mtu": "9100",
     "alias": "Eth18/4",
+    "subport": 4,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -380,6 +417,7 @@
     "description": "Eth9/1",
     "mtu": "9100",
     "alias": "Eth9/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -390,6 +428,7 @@
     "description": "Eth9/2",
     "mtu": "9100",
     "alias": "Eth9/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -400,6 +439,7 @@
     "description": "Eth5/1",
     "mtu": "9100",
     "alias": "Eth5/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -410,6 +450,7 @@
     "description": "Eth28/4",
     "mtu": "9100",
     "alias": "Eth28/4",
+    "subport": 4,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -420,6 +461,7 @@
     "description": "Eth3/3",
     "mtu": "9100",
     "alias": "Eth3/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -430,6 +472,7 @@
     "description": "Eth3/4",
     "mtu": "9100",
     "alias": "Eth3/4",
+    "subport": 4,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -440,6 +483,7 @@
     "description": "Eth4/1",
     "mtu": "9100",
     "alias": "Eth4/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -450,6 +494,7 @@
     "description": "Eth4/2",
     "mtu": "9100",
     "alias": "Eth4/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -460,6 +505,7 @@
     "description": "Eth15/2",
     "mtu": "9100",
     "alias": "Eth15/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -470,6 +516,7 @@
     "description": "Eth5/3",
     "mtu": "9100",
     "alias": "Eth5/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -480,6 +527,7 @@
     "description": "Eth15/3",
     "mtu": "9100",
     "alias": "Eth15/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -490,6 +538,7 @@
     "description": "Eth10/2",
     "mtu": "9100",
     "alias": "Eth10/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -500,6 +549,7 @@
     "description": "Eth20/2",
     "mtu": "9100",
     "alias": "Eth20/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -510,6 +560,7 @@
     "description": "Eth18/1",
     "mtu": "9100",
     "alias": "Eth18/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -520,6 +571,7 @@
     "description": "Eth4/3",
     "mtu": "9100",
     "alias": "Eth4/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -530,6 +582,7 @@
     "description": "Eth23/2",
     "mtu": "9100",
     "alias": "Eth23/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -540,6 +593,7 @@
     "description": "Eth23/1",
     "mtu": "9100",
     "alias": "Eth23/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -550,6 +604,7 @@
     "description": "Eth30/2",
     "mtu": "9100",
     "alias": "Eth30/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -560,6 +615,7 @@
     "description": "Eth30/3",
     "mtu": "9100",
     "alias": "Eth30/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -570,6 +626,7 @@
     "description": "Eth30/1",
     "mtu": "9100",
     "alias": "Eth30/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -580,6 +637,7 @@
     "description": "Eth29/3",
     "mtu": "9100",
     "alias": "Eth29/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -591,6 +649,7 @@
     "description": "Eth21",
     "mtu": "9100",
     "alias": "Eth21",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "100000",
     "tpid": "0x8100"
@@ -601,6 +660,7 @@
     "description": "Eth29/1",
     "mtu": "9100",
     "alias": "Eth29/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -611,6 +671,7 @@
     "description": "Eth22/2",
     "mtu": "9100",
     "alias": "Eth22/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -621,6 +682,7 @@
     "description": "Eth28/3",
     "mtu": "9100",
     "alias": "Eth28/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -631,6 +693,7 @@
     "description": "Eth22/1",
     "mtu": "9100",
     "alias": "Eth22/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -641,6 +704,7 @@
     "description": "Eth8/4",
     "mtu": "9100",
     "alias": "Eth8/4",
+    "subport": 4,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -651,6 +715,7 @@
     "description": "Eth13/2",
     "mtu": "9100",
     "alias": "Eth13/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -661,6 +726,7 @@
     "description": "Eth13/1",
     "mtu": "9100",
     "alias": "Eth13/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -671,6 +737,7 @@
     "description": "Eth12/2",
     "mtu": "9100",
     "alias": "Eth12/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -681,6 +748,7 @@
     "description": "Eth8/3",
     "mtu": "9100",
     "alias": "Eth8/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -691,6 +759,7 @@
     "description": "Eth8/2",
     "mtu": "9100",
     "alias": "Eth8/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -702,6 +771,7 @@
     "description": "Eth11",
     "mtu": "9100",
     "alias": "Eth11",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "100000",
     "tpid": "0x8100"
@@ -713,6 +783,7 @@
     "description": "Eth31",
     "mtu": "9100",
     "alias": "Eth31",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "100000",
     "tpid": "0x8100"
@@ -723,6 +794,7 @@
     "description": "Eth8/1",
     "mtu": "9100",
     "alias": "Eth8/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -733,6 +805,7 @@
     "description": "Eth17/2",
     "mtu": "9100",
     "alias": "Eth17/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -744,6 +817,7 @@
     "description": "Eth16",
     "mtu": "9100",
     "alias": "Eth16",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "100000",
     "tpid": "0x8100"
@@ -754,6 +828,7 @@
     "description": "Eth17/1",
     "mtu": "9100",
     "alias": "Eth17/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -764,6 +839,7 @@
     "description": "Eth12/1",
     "mtu": "9100",
     "alias": "Eth12/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -776,6 +852,7 @@
     "admin_status": "up",
     "mtu": "9100",
     "alias": "Eth6",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "100000",
     "tpid": "0x8100"
@@ -786,6 +863,7 @@
     "description": "Eth20/3",
     "mtu": "9100",
     "alias": "Eth20/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -796,6 +874,7 @@
     "description": "Eth18/2",
     "mtu": "9100",
     "alias": "Eth18/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000",
     "tpid": "0x8100"
@@ -806,6 +885,7 @@
     "description": "Eth7/1",
     "mtu": "9100",
     "alias": "Eth7/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -816,6 +896,7 @@
     "description": "Eth7/2",
     "mtu": "9100",
     "alias": "Eth7/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "50000",
     "tpid": "0x8100"
@@ -827,6 +908,7 @@
     "tpid": "0x8100",
     "mtu": "9100",
     "alias": "Eth33",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "40000"
   },
@@ -837,6 +919,7 @@
     "tpid": "0x8100",
     "mtu": "9100",
     "alias": "Eth34",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000"
   },
@@ -847,6 +930,7 @@
     "tpid": "0x8100",
     "mtu": "9100",
     "alias": "Eth35/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "10000"
   },
@@ -857,6 +941,7 @@
     "tpid": "0x8100",
     "mtu": "9100",
     "alias": "Eth35/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "10000"
   },
@@ -867,6 +952,7 @@
     "tpid": "0x8100",
     "mtu": "9100",
     "alias": "Eth35/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "10000"
   },
@@ -877,6 +963,7 @@
     "tpid": "0x8100",
     "mtu": "9100",
     "alias": "Eth35/4",
+    "subport": 4,
     "pfc_asym": "off",
     "speed": "10000"
   },
@@ -887,6 +974,7 @@
     "tpid": "0x8100",
     "mtu": "9100",
     "alias": "Eth36/1",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "25000"
   },
@@ -897,6 +985,7 @@
     "tpid": "0x8100",
     "mtu": "9100",
     "alias": "Eth36/2",
+    "subport": 2,
     "pfc_asym": "off",
     "speed": "25000"
   },
@@ -907,6 +996,7 @@
     "tpid": "0x8100",
     "mtu": "9100",
     "alias": "Eth36/3",
+    "subport": 3,
     "pfc_asym": "off",
     "speed": "50000"
   },
@@ -917,6 +1007,7 @@
     "tpid": "0x8100",
     "mtu": "9100",
     "alias": "Eth37",
+    "subport": 1,
     "pfc_asym": "off",
     "speed": "100000",
     "fec": "rs"
