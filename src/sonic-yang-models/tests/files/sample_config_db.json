@@ -2623,6 +2623,14 @@
             "dpu1": {
                 "midplane_interface": "dpu1"
             }
+        },
+        "LOGGING": {
+            "debug": {
+                "disk_percentage": "46.0",
+                "frequency": "daily",
+                "max_number": "100",
+                "size": "20.0"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
