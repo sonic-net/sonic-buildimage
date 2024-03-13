@@ -1,10 +1,10 @@
 [Unit]
 Description=VNET_MONITOR container
-Requires=database.service updategraph.service swss.service
+Requires=database.service config-setup.service swss.service
 After=swss.service
 BindsTo=sonic.target
 After=sonic.target
-After=updategraph.service
+After=config-setup.service
 Before=ntp-config.service
 StartLimitIntervalSec=1200
 StartLimitBurst=3

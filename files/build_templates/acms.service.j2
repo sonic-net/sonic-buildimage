@@ -1,7 +1,7 @@
 [Unit]
 Description=ACMS container
-Requires=updategraph.service
-After=updategraph.service
+Requires=config-setup.service
+After=config-setup.service
 Before=ntp-config.service
 
 [Service]
