@@ -68,7 +68,7 @@ dependent_startup=true
 dependent_startup_wait_for=start:exited
 
 [program:host-monitor]
-command=/usr/bin/updateHostAddresses.py
+command=/usr/bin/updateHostAddresses.py --update-every=10
 priority=3
 autostart=false
 autorestart=false
