@@ -183,12 +183,19 @@ stages:
             PORT=443
             DOCKERS=$(ls target/docker-*.gz)
             BRANCH=$(Build.SourceBranchName)
-            [[ "$BRANCH" == "internal" ]] && BRANCH="$BRANCH latest"
+            arch=$(cat .arch)
+            if echo "$arch" | grep arm; then
+              LABELS=$BRANCH-$arch
+              [[ "$BRANCH" == "internal" ]] && LABELS="$LABELS latest-$arch"
+            else
+              LABELS=$BRANCH
+              [[ "$BRANCH" == "internal" ]] && LABELS="$LABELS latest"
+            fi
             for f in $DOCKERS; do
               echo $f
-              ./push_docker.sh $f $REGISTRY_SERVER_INTERNAL $PORT $REGISTRY_USERNAME "$REGISTRY_PASSWD" "$SONIC_VERSION $BRANCH"
+              ./push_docker.sh $f $REGISTRY_SERVER_INTERNAL $PORT $REGISTRY_USERNAME "$REGISTRY_PASSWD" "$LABELS"
               if [ "$UPLOAD_HL_ACR" = "true" ]; then
-                ./push_docker.sh $f $HL_REGISTRY_SERVER $PORT $HL_REGISTRY_USERNAME "$HL_REGISTRY_PASSWD" "$SONIC_VERSION $BRANCH"
+                ./push_docker.sh $f $HL_REGISTRY_SERVER $PORT $HL_REGISTRY_USERNAME "$HL_REGISTRY_PASSWD" "$LABELS"
               fi
             done
           env:
