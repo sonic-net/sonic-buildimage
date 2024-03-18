@@ -180,7 +180,7 @@ index 79e62b9..ecfa0b0 100644
  
  /*
   * pwbuf is used to reduce number of arguments passed around; the strings in
-@@ -63,255 +59,239 @@ struct pwbuf {
+@@ -63,255 +59,245 @@ struct pwbuf {
  typedef struct {
      struct addrinfo *addr;
      char *key;
@@ -445,9 +445,15 @@ index 79e62b9..ecfa0b0 100644
 +                tac_srv[tac_srv_no].key = strdup(token + 7);
 +            }
 +            else if(!strncmp(token, "timeout=", 8)) {
-+                tac_srv[tac_srv_no].timeout = (int)strtoul(token + 8, NULL, 0);
-+                if(tac_srv[tac_srv_no].timeout < 0)
-+                    tac_srv[tac_srv_no].timeout = 0;
++                int timeout = (int)strtoul(token + 8, NULL, 0);
++                if(timeout < 0) {
++                   tac_srv[tac_srv_no].timeout = 0;
++                   tac_readtimeout_enable = 0;
++                }
++                else {
++                   tac_srv[tac_srv_no].timeout = timeout;
++                   tac_readtimeout_enable = 1;
++                }
 +                /* Limit timeout to make sure upper application not wait
 +                 * for a long time*/
 +                if(tac_srv[tac_srv_no].timeout > 5)

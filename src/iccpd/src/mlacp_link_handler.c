@@ -258,39 +258,6 @@ done:
  * Port-Channel Status Handler
  *
  ****************************************/
-static void set_route_by_linux_route(struct CSM* csm,
-                                     struct LocalInterface *local_if,
-                                     int is_add)
-{
-    /* TODO Need to remove this function
-         when set static route with zebra works fine*/
-
-    char ipv4_dest_str[INET_ADDRSTRLEN];
-    char syscmd[128];
-    char *ptr;
-    int ret = 0;
-
-    /* enable kernel forwarding support*/
-    system("echo 1 > /proc/sys/net/ipv4/ip_forward");
-
-    if (!csm || !local_if)
-        return;
-
-    sprintf(ipv4_dest_str, "%s", show_ip_str(htonl(local_if->ipv4_addr)));
-    ptr = strrchr(ipv4_dest_str, '.');
-    strcpy(ptr, ".0\0");
-
-    /* set gw route */
-    /* sprintf(syscmd, "ip route %s %s/%d proto static metric 200 nexthop via %s > /dev/null 2>&1", */
-    sprintf(syscmd, "ip route %s %s/%d metric 200 nexthop via %s > /dev/null 2>&1",
-            (is_add) ? "add" : "del", ipv4_dest_str, local_if->prefixlen, csm->peer_ip);
-
-    ret = system(syscmd);
-    ICCPD_LOG_DEBUG(__FUNCTION__, "%s  ret = %d", syscmd, ret);
-
-    return;
-}
-
 static void update_vlan_if_info(struct CSM *csm,
                                 struct LocalInterface *local_if,
                                 struct LocalInterface *vlan_if,
@@ -354,7 +321,6 @@ static void set_l3_itf_state(struct CSM *csm,
         /* set static route*/
         if (route_type == ROUTE_ADD)
         {
-            /*set_route_by_linux_route(csm, set_l3_local_if, 1);*/   /*add static route by linux route tool*/
             /*If the L3 intf is not Vlan, del ARP; else wait ARP age*/
             if (strncmp(set_l3_local_if->name, VLAN_PREFIX, 4) != 0)
             {
@@ -364,7 +330,6 @@ static void set_l3_itf_state(struct CSM *csm,
         }
         else if (route_type == ROUTE_DEL)
         {
-            /*set_route_by_linux_route(csm, set_l3_local_if, 0);*/    /*del static route by linux route tool*/
             arp_set_handler(csm, set_l3_local_if, 1);     /* add arp*/
             ndisc_set_handler(csm, set_l3_local_if, 1); /* add nd */
         }

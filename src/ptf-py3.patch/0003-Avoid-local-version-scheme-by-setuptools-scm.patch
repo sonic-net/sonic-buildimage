@@ -1,0 +1,23 @@
+From 5e46050967f5c29c6572b318d9aebb184f8275cf Mon Sep 17 00:00:00 2001
+From: Vivek Reddy <vkarri@nvidia.com>
+Date: Wed, 21 Feb 2024 19:04:40 +0000
+Subject: [PATCH] Avoid local version scheme by setuptools-scm
+
+Signed-off-by: Vivek Reddy <vkarri@nvidia.com>
+---
+ pyproject.toml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/pyproject.toml b/pyproject.toml
+index 74a5350..33af092 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -11,4 +11,5 @@ build-backend = 'setuptools.build_meta'
+ root = "./"
+ # use current tag and not next one
+ version_scheme = "post-release"
++local_scheme = "no-local-version"
+ write_to = "src/ptf/_version.py"
+-- 
+2.17.1
+

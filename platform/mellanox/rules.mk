@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 include $(PLATFORM_PATH)/sdk.mk
+include $(PLATFORM_PATH)/cpld.mk
 include $(PLATFORM_PATH)/fw.mk
 include $(PLATFORM_PATH)/mft.mk
 include $(PLATFORM_PATH)/mft-fwtrace-cfg.mk

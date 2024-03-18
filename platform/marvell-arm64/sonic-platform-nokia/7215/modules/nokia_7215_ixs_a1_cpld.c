@@ -56,18 +56,14 @@
 #define SYSTEM_STATUS_LED_CONTROL_REG 0x07
 #define POWER_AND_FAN_LED_CONTROL_REG 0x08
 #define SFP_TX_FAULT_STATUS_REG       0x09
-#define PSU1_PSU2_DEVICE_STATUS_REG   0x0A
-#define FAN_ENABLE_REG                0x0B
-#define USB_POWER_ENABLE_REG          0x0C
+#define TEMP_EVENT_STATUS_REG         0x0D
+#define TEMP_EVENT_MASK_REG           0x0E 
 #define SFP_LED_TEST_REG              0x0F
 #define RESET_REG                     0x10
-#define PHY_IRQ_LIVE_STATE_REG        0x11
 #define MISC_IRQ_LIVE_STATE_REG       0x12
 #define INTERRUPT_REG                 0x13
 #define INTERRUPT_MASK_REG            0x14
-#define PHY_INT_STATUS_REG            0x15
 #define MISC_INT_STATUS_REG           0x16
-#define PHY_INT_MASK_REG              0x17
 #define MISC_INT_MASK_REG             0x18
 #define GPIO_DIRECTION_REG            0x19
 #define GPIO_DATA_IN_REG              0x1A
@@ -79,6 +75,7 @@
 #define RESET_CAUSE_REG_WARM_RESET    0x2
 #define RESET_CAUSE_REG_WDOG_RESET    0x4
 #define RESET_CAUSE_REG_SYS_RESET     0x8
+#define RESET_CAUSE_REG_THERMAL_OL    0x10
 
 #define SFP_PRESENCE_REG_SFP49        0x0
 #define SFP_PRESENCE_REG_SFP50        0x1
@@ -95,6 +92,13 @@
 #define SFP_TX_DISABLE_REG_SFP51      0x2
 #define SFP_TX_DISABLE_REG_SFP52      0x3
 #define SFP_TX_DISABLE_REG_LED_MUX    0x4
+
+#define TS1_ALERT_EVENT               0x2
+#define TS2_ALERT_EVENT               0x4
+#define TS3_ALERT_EVENT               0x8
+#define CPU_TEMP_EVENT                0x10
+#define AC5X_HIGHTEMP_EVENT           0x20  
+#define DIMM_TEMP_EVENT               0x40     
 
 #define MAC_INIT_STATUS_REG_INIT_DONE 0x2
 
@@ -128,14 +132,6 @@ char *power_fan_led_mode_str[]={"off", "green", "amber", "blink-green", "invalid
 #define SFP_TX_FAULT_STATUS_SFP50  0x1
 #define SFP_TX_FAULT_STATUS_SFP51  0x2
 #define SFP_TX_FAULT_STATUS_SFP52  0x3
-
-#define PSU1_POWERGOOD   2
-#define PSU2_POWERGOOD   3
-
-#define FAN1_ENABLE      0
-#define FAN2_ENABLE      1
-
-#define USB_POWER_ENABLE 0
 
 #define RESET_REG_WARM_RESET   0x0
 #define RESET_REG_COLD_RESET   0x4
@@ -193,22 +189,26 @@ static ssize_t show_last_reset_cause(struct device *dev, struct device_attribute
     val = nokia_7215_ixs_a1_cpld_read(data, RESET_CAUSE_REG);
     switch (val) {
     case RESET_CAUSE_REG_COLD_RESET:
-        reason="cold reset";
+        reason="cold_reset";
         break;
     case RESET_CAUSE_REG_WARM_RESET:
-        reason="warm reset";
+        reason="warm_reset";
         break;
     case RESET_CAUSE_REG_WDOG_RESET:
-        reason="wdog reset";
+        reason="wdog_reset";
         break;
     case RESET_CAUSE_REG_SYS_RESET:
-        reason="sys reset";
+        reason="sys_reset";
         break;
+    case RESET_CAUSE_REG_THERMAL_OL:
+        reason="thermal_reset";
+        break;
+        
     default:
         reason="unknown";
         break;
     }
-    return sprintf(buf,"0x%02x %s\n",val, reason);
+    return sprintf(buf,"%s\n",reason);
 }
 
 static ssize_t show_cpld_version(struct device *dev, struct device_attribute *devattr, char *buf) 
@@ -343,82 +343,38 @@ static ssize_t show_sfp_tx_fault(struct device *dev, struct device_attribute *de
     return sprintf(buf,"%d\n",(val>>sda->index) & 0x1 ? 1:0);
 }
 
-
-static ssize_t show_psu_pg_status(struct device *dev, struct device_attribute *devattr, char *buf) 
+static ssize_t show_temp_event_status(struct device *dev, struct device_attribute *devattr, char *buf) 
 {
     struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
     u8 val=0;
-    val = nokia_7215_ixs_a1_cpld_read(data, PSU1_PSU2_DEVICE_STATUS_REG);
-    
-    /* If the bit is set, psu power is good */
-    return sprintf(buf,"%d\n",(val>>sda->index) & 0x1 ? 1:0);
-}
-
-static ssize_t show_fan_enable_status(struct device *dev, struct device_attribute *devattr, char *buf) 
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val=0;
-    val = nokia_7215_ixs_a1_cpld_read(data, FAN_ENABLE_REG);
-    
-    /* If the bit is set, fan is disabled. So, toggling intentionally */
-    return sprintf(buf,"%d\n",(val>>sda->index) & 0x1 ? 0:1);
-}
-
-static ssize_t set_fan_enable_status(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 reg_val=0, usr_val=0, mask;
-    int ret=kstrtou8(buf,10, &usr_val);
-    if (ret != 0) {
-        return ret; 
+    char *reason=NULL;
+    val = nokia_7215_ixs_a1_cpld_read(data, TEMP_EVENT_STATUS_REG);
+    switch (val) {
+    case TS1_ALERT_EVENT:
+        reason="ts1";
+        break;
+    case TS2_ALERT_EVENT:
+        reason="ts2";
+        break;
+    case TS3_ALERT_EVENT:
+        reason="ts3";
+        break;
+    case CPU_TEMP_EVENT:
+        reason="cpu";
+        break;
+    case AC5X_HIGHTEMP_EVENT:
+        reason="ac5x";
+        break;
+    case DIMM_TEMP_EVENT:
+        reason="dimm";
+        break;
+ 
+    default:
+        reason="none";
+        break;
     }
-    if (usr_val > 1) {
-        return -EINVAL;
-    }
+    return sprintf(buf,"0x%02x %s\n",val, reason);
 
-    mask = (~(1 << sda->index)) & 0xFF;
-    reg_val = nokia_7215_ixs_a1_cpld_read(data, RESET_REG);
-    reg_val = reg_val & mask;
-
-    usr_val = !usr_val; // If the bit is set, fan is disabled. So, toggling intentionally
-    usr_val = usr_val << sda->index;
-
-    nokia_7215_ixs_a1_cpld_write(data, FAN_ENABLE_REG, (reg_val|usr_val));
-
-    return count;
-
-}
-
-static ssize_t show_usb_enable_status(struct device *dev, struct device_attribute *devattr, char *buf) 
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    struct sensor_device_attribute *sda = to_sensor_dev_attr(devattr);
-    u8 val=0;
-    val = nokia_7215_ixs_a1_cpld_read(data, USB_POWER_ENABLE_REG);
-    
-    /* If the bit is set, usb power is disabled. So, toggling intentionally */
-    return sprintf(buf,"%d\n",(val>>sda->index) & 0x1 ? 0:1);
-}
-
-static ssize_t set_usb_enable_status(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
-{
-    struct cpld_data *data = dev_get_drvdata(dev);
-    u8 usr_val=0;
-    int ret=kstrtou8(buf,16, &usr_val);
-    if (ret != 0) {
-        return ret; 
-    }
-    if(usr_val > 1) {
-        return -EINVAL;
-    }
-    /* If the bit is set, usb power is disabled. So, toggling intentionally */
-    usr_val = !usr_val;
-
-    nokia_7215_ixs_a1_cpld_write(data, USB_POWER_ENABLE_REG, usr_val);
-    return count;
 }
 
 static ssize_t show_sfp_ledtest_status(struct device *dev, struct device_attribute *devattr, char *buf) 
@@ -438,6 +394,26 @@ static ssize_t set_sfp_ledtest_status(struct device *dev, struct device_attribut
     }
 
     nokia_7215_ixs_a1_cpld_write(data, SFP_LED_TEST_REG, usr_val);
+    return count;
+}
+
+static ssize_t show_temp_event_mask_status(struct device *dev, struct device_attribute *devattr, char *buf) 
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    u8 val = nokia_7215_ixs_a1_cpld_read(data, TEMP_EVENT_MASK_REG);
+    return sprintf(buf,"0x%02x\n",val);
+}
+
+static ssize_t set_temp_event_mask_status(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) 
+{
+    struct cpld_data *data = dev_get_drvdata(dev);
+    u8 usr_val=0;
+    int ret=kstrtou8(buf,16, &usr_val);
+    if (ret != 0) {
+        return ret; 
+    }
+
+    nokia_7215_ixs_a1_cpld_write(data, TEMP_EVENT_MASK_REG, usr_val);
     return count;
 }
 
@@ -499,12 +475,9 @@ static SENSOR_DEVICE_ATTR(sfp49_tx_fault, S_IRUGO, show_sfp_tx_fault, NULL, SFP_
 static SENSOR_DEVICE_ATTR(sfp50_tx_fault, S_IRUGO, show_sfp_tx_fault, NULL, SFP_TX_FAULT_STATUS_SFP50);
 static SENSOR_DEVICE_ATTR(sfp51_tx_fault, S_IRUGO, show_sfp_tx_fault, NULL, SFP_TX_FAULT_STATUS_SFP51);
 static SENSOR_DEVICE_ATTR(sfp52_tx_fault, S_IRUGO, show_sfp_tx_fault, NULL, SFP_TX_FAULT_STATUS_SFP52);
-static SENSOR_DEVICE_ATTR(psu1_power_good, S_IRUGO, show_psu_pg_status, NULL, PSU1_POWERGOOD);
-static SENSOR_DEVICE_ATTR(psu2_power_good, S_IRUGO, show_psu_pg_status, NULL, PSU2_POWERGOOD);
-static SENSOR_DEVICE_ATTR(fan1_enable, S_IRUGO | S_IWUSR, show_fan_enable_status, set_fan_enable_status, FAN1_ENABLE);
-static SENSOR_DEVICE_ATTR(fan2_enable, S_IRUGO | S_IWUSR, show_fan_enable_status, set_fan_enable_status, FAN2_ENABLE);
-static SENSOR_DEVICE_ATTR(usb_power_enable, S_IRUGO | S_IWUSR, show_usb_enable_status, set_usb_enable_status, 0);
+static SENSOR_DEVICE_ATTR(temp_event_status, S_IRUGO, show_temp_event_status, NULL, 0);
 static SENSOR_DEVICE_ATTR(sfp_led_test, S_IRUGO | S_IWUSR, show_sfp_ledtest_status, set_sfp_ledtest_status, 0);
+static SENSOR_DEVICE_ATTR(temp_event_mask, S_IRUGO | S_IWUSR, show_temp_event_mask_status, set_temp_event_mask_status, 0);
 static SENSOR_DEVICE_ATTR(warm_reset, S_IRUGO | S_IWUSR, show_reset_reg, set_reset_reg, RESET_REG_WARM_RESET);
 static SENSOR_DEVICE_ATTR(cold_reset, S_IRUGO | S_IWUSR, show_reset_reg, set_reset_reg, RESET_REG_COLD_RESET);
 static SENSOR_DEVICE_ATTR(i2cmux_reset, S_IRUGO | S_IWUSR, show_reset_reg, set_reset_reg, RESET_REG_I2CMUX_RESET);
@@ -526,6 +499,7 @@ static struct attribute *nokia_7215_ixs_a1_cpld_attributes[] = {
     &sensor_dev_attr_sfp50_tx_disable.dev_attr.attr,
     &sensor_dev_attr_sfp51_tx_disable.dev_attr.attr,
     &sensor_dev_attr_sfp52_tx_disable.dev_attr.attr,
+    &sensor_dev_attr_temp_event_status.dev_attr.attr,
     &sensor_dev_attr_system_led.dev_attr.attr,
     &sensor_dev_attr_psu_led.dev_attr.attr,
     &sensor_dev_attr_fan_led.dev_attr.attr,
@@ -533,12 +507,8 @@ static struct attribute *nokia_7215_ixs_a1_cpld_attributes[] = {
     &sensor_dev_attr_sfp50_tx_fault.dev_attr.attr,
     &sensor_dev_attr_sfp51_tx_fault.dev_attr.attr,
     &sensor_dev_attr_sfp52_tx_fault.dev_attr.attr,
-    &sensor_dev_attr_psu1_power_good.dev_attr.attr,
-    &sensor_dev_attr_psu2_power_good.dev_attr.attr,
-    &sensor_dev_attr_fan1_enable.dev_attr.attr,
-    &sensor_dev_attr_fan2_enable.dev_attr.attr,
-    &sensor_dev_attr_usb_power_enable.dev_attr.attr,
     &sensor_dev_attr_sfp_led_test.dev_attr.attr,
+    &sensor_dev_attr_temp_event_mask.dev_attr.attr,
     &sensor_dev_attr_warm_reset.dev_attr.attr,
     &sensor_dev_attr_cold_reset.dev_attr.attr,
     &sensor_dev_attr_i2cmux_reset.dev_attr.attr,

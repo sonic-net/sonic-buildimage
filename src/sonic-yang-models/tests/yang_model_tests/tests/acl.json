@@ -20,6 +20,12 @@
     "ACL_RULE_WITH_VALID_OUT_PORTS": {
         "desc": "Configure ACL_RULE with valid OUT_PORTS."
     },
+    "ACL_RULE_WITH_VALID_ICMPV4_CODE": {
+        "desc": "Configure ACL_RULE with valid ICMPV4 type and code."
+    },
+    "ACL_RULE_WITH_VALID_ICMPV6_CODE": {
+        "desc": "Configure ACL_RULE with valid ICMPV6 type and code."
+    },
     "ACL_TABLE_EMPTY_PORTS": {
         "desc": "Configure ACL_TABLE with empty ports."
     },
