@@ -1,7 +1,7 @@
 [Unit]
 Description=DHCP relay container
-Requires=updategraph.service
-After=updategraph.service swss.service syncd.service teamd.service
+Requires=config-setup.service
+After=config-setup.service swss.service syncd.service teamd.service
 BindsTo=sonic.target
 After=sonic.target
 Before=ntp-config.service

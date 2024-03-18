@@ -44,7 +44,7 @@ $(DOCKER_MACSEC)_CONTAINER_VOLUMES += /etc/sonic:/etc/sonic:ro
 $(DOCKER_MACSEC)_CONTAINER_VOLUMES += /etc/timezone:/etc/timezone:ro
 $(DOCKER_MACSEC)_CONTAINER_VOLUMES += /host/warmboot:/var/warmboot
 
-$(DOCKER_MACSEC)_SERVICE_REQUIRES = updategraph
+$(DOCKER_MACSEC)_SERVICE_REQUIRES = config-setup
 $(DOCKER_MACSEC)_SERVICE_AFTER = swss syncd
 
 $(DOCKER_MACSEC)_CLI_CONFIG_PLUGIN = /cli/config/plugins/macsec.py

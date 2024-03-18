@@ -1,7 +1,7 @@
 [Unit]
 Description=Delays tacacs apply until SONiC has started
 PartOf=tacacs-config.service
-After=updategraph.service
+After=config-setup.service
 
 [Timer]
 OnUnitActiveSec=0 sec
