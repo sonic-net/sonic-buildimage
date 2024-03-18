@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-05-05-1.04" profile="Askpp" dsig="md5">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-11-20-1.05" profile="Askpp" sid="fdf5b1c2-b80a-47a6-ac37-47e174286524">
   <askppplt:ASK-PP xmlns:askppplt="urn:marvell:askpp:yang">
     <askppplt:typedefs>
       <askppplt:typedef>
@@ -357,28 +357,28 @@
         <askppplt:enum>
           <askppplt:name>NATIVE</askppplt:name>
           <askppplt:description>NATIVE
-   	 *  the trunk members are filled
-   	 *  according to the order given by application.
-   	 *  Regular trunk may hold max of 8 members.
-   	 *  Cascade trunk may hold :
-   	 *  max of 64 members</askppplt:description>
+*  the trunk members are filled
+*  according to the order given by application.
+*  Regular trunk may hold max of 8 members.
+*  Cascade trunk may hold :
+*  max of 64 members</askppplt:description>
           <askppplt:value>0</askppplt:value>
         </askppplt:enum>
         <askppplt:enum>
           <askppplt:name>FLEX</askppplt:name>
           <askppplt:description>FLEX
-   	 *  A mode to allows flexibility for
-   	 *  each Regular trunk to state it's max number of members (before starting to add members).
-   	 *  (this mode not effect 'cascade trunk' members)
-   	 *  Regular trunk may hold : max of 4K members. (each trunk set it's own limit)
-   	 *  Cascade trunk may hold : max of 64 members.</askppplt:description>
+*  A mode to allows flexibility for
+*  each Regular trunk to state it's max number of members (before starting to add members).
+*  (this mode not effect 'cascade trunk' members)
+*  Regular trunk may hold : max of 4K members. (each trunk set it's own limit)
+*  Cascade trunk may hold : max of 64 members.</askppplt:description>
           <askppplt:value>2</askppplt:value>
         </askppplt:enum>
       </askppplt:typedef>
       <askppplt:typedef>
         <askppplt:name>number-physical-port-type</askppplt:name>
         <askppplt:type>enumeration</askppplt:type>
-        <askppplt:description>ac5x 128, falcon 64,128,256, 512, 1024</askppplt:description>
+        <askppplt:description>AC3X/AC5X 128, falcon 64, 128, 256, 512, 1024</askppplt:description>
         <askppplt:enum>
           <askppplt:name>no-ports</askppplt:name>
           <askppplt:description>no-ports</askppplt:description>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-05-05-1.04" profile="Askboard" dsig="md5">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-11-20-1.05" profile="Askboard" sid="20929980-c61f-4f1d-b08a-4e64f6d717c2">
   <askboardplt:ASK-Board xmlns:askboardplt="urn:marvell:askboard:yang">
     <askboardplt:typedefs>
       <askboardplt:typedef>
@@ -82,9 +82,9 @@
       <askboardplt:typedef>
         <askboardplt:name>device-id-type</askboardplt:name>
         <askboardplt:type>uint32</askboardplt:type>
-        <askboardplt:description>Device ID 0..1023</askboardplt:description>
+        <askboardplt:description>Device ID 0..1</askboardplt:description>
         <askboardplt:min>0</askboardplt:min>
-        <askboardplt:max>1023</askboardplt:max>
+        <askboardplt:max>1</askboardplt:max>
       </askboardplt:typedef>
       <askboardplt:typedef>
         <askboardplt:name>port-mapping-type</askboardplt:name>
@@ -111,11 +111,9 @@
       <askboardplt:typedef>
         <askboardplt:name>txq-port-number-type</askboardplt:name>
         <askboardplt:type>uint32</askboardplt:type>
-        <askboardplt:description>0 - 8 queues are configured per port (legacy mode),
-1...16 - the number of queues configured per port
-   	SIP 5 : Bobcat2,BobK:0..71 ;Bobcat3: 0..576 ;Aldrin2:0..99</askboardplt:description>
+        <askboardplt:description>TXq port number </askboardplt:description>
         <askboardplt:min>0</askboardplt:min>
-        <askboardplt:max>576</askboardplt:max>
+        <askboardplt:max>99</askboardplt:max>
       </askboardplt:typedef>
       <askboardplt:typedef>
         <askboardplt:name>phy-smi-interface-type</askboardplt:name>
@@ -162,12 +160,14 @@
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>alaska-88E3140</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E3140, used for Copper with speeds of 100M/1G/10G. Uses with FW SolarFlare next generation.</askboardplt:description>
+          <askboardplt:description>Specifies PHY identifier 88E3140, used for Copper with speeds of 100M/1G/10G.
+Uses with FW SolarFlare next generation.</askboardplt:description>
           <askboardplt:value>5</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>alaska-88E3240</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E3240, used for Copper with speeds of 100M/1G/10G. Uses with FW, SolarFlare next generation.</askboardplt:description>
+          <askboardplt:description>Specifies PHY identifier 88E3240, used for Copper with speeds of 100M/1G/10G.
+Uses with FW, SolarFlare next generation.</askboardplt:description>
           <askboardplt:value>6</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
@@ -177,7 +177,8 @@
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>alaska-88E3220</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E3220, used for Combo port with speeds of 100M/1G/10G. Uses FW, SolarFlare next generation.</askboardplt:description>
+          <askboardplt:description>Specifies PHY identifier 88E3220, used for Combo port with speeds of 100M/1G/10G.
+Uses FW, SolarFlare next generation.</askboardplt:description>
           <askboardplt:value>8</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
@@ -212,17 +213,20 @@
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>alaska-88E1780</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E1780, Integrated Octal 10/100/1000 Mbps Energy Efficient Ethernet Transceiver</askboardplt:description>
+          <askboardplt:description>Specifies PHY identifier 88E1780, Integrated Octal 10/100/1000 Mbps Energy
+Efficient Ethernet Transceiver</askboardplt:description>
           <askboardplt:value>15</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>alaska-88E2540</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E2540, 4 ports 10/100/1000/2.5G/5GBASE-T Ethernet Transceiver with IEEE 1588v2 PTP Support</askboardplt:description>
+          <askboardplt:description>Specifies PHY identifier 88E2540, 4 ports 10/100/1000/2.5G/5GBASE-T Ethernet
+Transceiver with IEEE 1588v2 PTP Support</askboardplt:description>
           <askboardplt:value>16</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>alaska-88E2580</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E12580, Octal 10/100/1000/2.5G/5GBASE-T Ethernet Transceiver with IEEE 1588v2 PTP Support</askboardplt:description>
+          <askboardplt:description>Specifies PHY identifier 88E12580, Octal 10/100/1000/2.5G/5GBASE-T Ethernet Transceiver
+with IEEE 1588v2 PTP Support</askboardplt:description>
           <askboardplt:value>17</askboardplt:value>
         </askboardplt:enum>
       </askboardplt:typedef>
@@ -510,7 +514,7 @@
         <askboardplt:type>uint32</askboardplt:type>
         <askboardplt:description>serdes lane</askboardplt:description>
         <askboardplt:min>0</askboardplt:min>
-        <askboardplt:max>255</askboardplt:max>
+        <askboardplt:max>7</askboardplt:max>
       </askboardplt:typedef>
       <askboardplt:typedef>
         <askboardplt:name>cpu-type</askboardplt:name>
@@ -589,12 +593,12 @@ lowercase characters.</askboardplt:description>
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>sip5</askboardplt:name>
-          <askboardplt:description>SIP5: AC5, AC3x</askboardplt:description>
+          <askboardplt:description>SIP5: AC3x</askboardplt:description>
           <askboardplt:value>5</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>sip6</askboardplt:name>
-          <askboardplt:description>SIP6: Falcon, AC5x, AC5P</askboardplt:description>
+          <askboardplt:description>SIP6: Falcon, AC5x</askboardplt:description>
           <askboardplt:value>6</askboardplt:value>
         </askboardplt:enum>
       </askboardplt:typedef>
@@ -665,7 +669,23 @@ lowercase characters.</askboardplt:description>
           <askboardplt:value>1</askboardplt:value>
         </askboardplt:enum>
       </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>asic-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>ASIC Type</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>ASIC_AC3X</askboardplt:name>
+          <askboardplt:description>AC3X</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>ASIC_AC5X</askboardplt:name>
+          <askboardplt:description>AC5X</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
     </askboardplt:typedefs>
+    <askboardplt:ASIC_Type askboardplt:type="asic-type">ASIC_AC3X</askboardplt:ASIC_Type>
     <askboardplt:boardName askboardplt:type="std-string">M0-48x1G-4x10G</askboardplt:boardName>
     <askboardplt:osCallType askboardplt:type="board-callback-type">linux-static</askboardplt:osCallType>
     <askboardplt:extDrvCallType askboardplt:type="board-callback-type">linux-static</askboardplt:extDrvCallType>

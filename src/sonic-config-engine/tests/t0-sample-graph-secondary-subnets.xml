@@ -12,15 +12,6 @@
          <KeepAliveTime>3</KeepAliveTime>
       </BGPSession>
       <BGPSession>
-         <StartRouter>switch-t0</StartRouter>
-         <StartPeer>fc00:1::32</StartPeer>
-         <EndRouter>BGPMonitor</EndRouter>
-         <EndPeer>2064:100::20</EndPeer>
-         <Multihop>30</Multihop>
-         <HoldTime>10</HoldTime>
-         <KeepAliveTime>3</KeepAliveTime>
-      </BGPSession>
-      <BGPSession>
         <MacSec>false</MacSec>
         <StartRouter>switch-t0</StartRouter>
         <StartPeer>10.0.0.56</StartPeer>
@@ -59,10 +50,20 @@
         <KeepAliveTime>60</KeepAliveTime>
       </BGPSession>
       <BGPSession>
+        <MacSec>false</MacSec>
         <StartRouter>switch-t0</StartRouter>
-        <StartPeer>FC00::75</StartPeer>
-        <EndRouter>ARISTA02T1</EndRouter>
-        <EndPeer>FC00::76</EndPeer>
+        <StartPeer>10.0.0.60</StartPeer>
+        <EndRouter>ARISTA03T1</EndRouter>
+        <EndPeer>10.0.0.61</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>switch-t0</StartRouter>
+        <StartPeer>FC00::79</StartPeer>
+        <EndRouter>ARISTA03T1</EndRouter>
+        <EndPeer>FC00::7A</EndPeer>
         <Multihop>1</Multihop>
         <HoldTime>180</HoldTime>
         <KeepAliveTime>60</KeepAliveTime>
@@ -70,18 +71,26 @@
       <BGPSession>
         <MacSec>false</MacSec>
         <StartRouter>switch-t0</StartRouter>
-        <StartPeer>10.2.0.20</StartPeer>
-        <EndRouter>CHASSIS_PEER</EndRouter>
-        <EndPeer>10.2.0.21</EndPeer>
+        <StartPeer>10.0.0.62</StartPeer>
+        <EndRouter>ARISTA04T1</EndRouter>
+        <EndPeer>10.0.0.63</EndPeer>
         <Multihop>1</Multihop>
         <HoldTime>180</HoldTime>
         <KeepAliveTime>60</KeepAliveTime>
-        <ChassisInternal>voq</ChassisInternal>
+      </BGPSession>
+      <BGPSession>
+        <StartRouter>switch-t0</StartRouter>
+        <StartPeer>FC00::7D</StartPeer>
+        <EndRouter>ARISTA04T1</EndRouter>
+        <EndPeer>FC00::7E</EndPeer>
+        <Multihop>1</Multihop>
+        <HoldTime>180</HoldTime>
+        <KeepAliveTime>60</KeepAliveTime>
       </BGPSession>
     </PeeringSessions>
     <Routers xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
       <a:BGPRouterDeclaration>
-          <a:ASN>0</a:ASN>
+          <a:ASN>1</a:ASN>
           <a:BgpGroups/>
           <a:Hostname>BGPMonitor</a:Hostname>
           <a:Peers>
@@ -112,28 +121,16 @@
             <Vrf i:nil="true"/>
           </BGPPeer>
           <BGPPeer>
-            <Address>10.2.0.21</Address>
+            <Address>10.0.0.61</Address>
             <RouteMapIn i:nil="true"/>
             <RouteMapOut i:nil="true"/>
             <Vrf i:nil="true"/>
           </BGPPeer>
-          <BGPPeer i:type="a:BGPPeerPassive">
-            <ElementType>BGPPeer</ElementType>
-            <Address>10.2.0.20</Address>
+          <BGPPeer>
+            <Address>10.0.0.63</Address>
             <RouteMapIn i:nil="true"/>
             <RouteMapOut i:nil="true"/>
             <Vrf i:nil="true"/>
-            <a:Name>BGPSentinel</a:Name>
-            <a:PeersRange>10.154.232.0/21;10.42.168.0/21</a:PeersRange>
-          </BGPPeer>
-          <BGPPeer i:type="a:BGPPeerPassive">
-            <ElementType>BGPPeer</ElementType>
-            <Address>fc00:1::32</Address>
-            <RouteMapIn i:nil="true"/>
-            <RouteMapOut i:nil="true"/>
-            <Vrf i:nil="true"/>
-            <a:Name>BGPSentinelV6</a:Name>
-            <a:PeersRange>2603:10a0:321:82f9::/64;2603:10a1:30a:8000::/59</a:PeersRange>
           </BGPPeer>
         </a:Peers>
         <a:RouteMaps/>
@@ -158,11 +155,6 @@
         <a:Hostname>ARISTA04T1</a:Hostname>
         <a:RouteMaps/>
       </a:BGPRouterDeclaration>
-      <a:BGPRouterDeclaration>
-        <a:ASN>65100</a:ASN>
-        <a:Hostname>CHASSIS_PEER</a:Hostname>
-        <a:RouteMaps/>
-      </a:BGPRouterDeclaration>
     </Routers>
   </CpgDec>
   <DpgDec>
@@ -185,7 +177,31 @@
           </a:Prefix>
           <a:PrefixStr>FC00:1::32/128</a:PrefixStr>
         </a:LoopbackIPInterface>
-      </LoopbackIPInterfaces>
+        <a:LoopbackIPInterface>
+          <Name>LoopbackIP1</Name>
+          <AttachTo>Loopback1</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>10.10.0.99/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>10.10.0.99/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+        <a:LoopbackIPInterface>
+          <Name>LoopbackIP2</Name>
+          <AttachTo>Loopback2</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>10.21.0.64/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>10.21.0.64/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+        <a:LoopbackIPInterface>
+          <Name>LoopbackIP3</Name>
+          <AttachTo>Loopback3</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>10.21.64.2/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>10.21.64.2/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+       </LoopbackIPInterfaces>
       <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
         <a:ManagementIPInterface>
           <Name>HostIP</Name>
@@ -195,6 +211,14 @@
           </a:Prefix>
           <a:PrefixStr>10.0.0.100/24</a:PrefixStr>
         </a:ManagementIPInterface>
+        <a:ManagementIPInterface>
+          <Name>HostIP</Name>
+          <AttachTo>eth0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>2603:10e2:0:2902::8/64</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>2603:10e2:0:2902::8/64</a:PrefixStr>
+        </a:ManagementIPInterface>
       </ManagementIPInterfaces>
       <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
       <MplsInterfaces/>
@@ -203,103 +227,198 @@
       <Hostname>switch-t0</Hostname>
       <PortChannelInterfaces>
         <PortChannel>
-          <Name>PortChannel1</Name>
-          <AttachTo>fortyGigE0/4</AttachTo>
+          <Name>PortChannel01</Name>
+          <AttachTo>fortyGigE0/112</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <Name>PortChannel02</Name>
+          <AttachTo>fortyGigE0/116</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <Name>PortChannel03</Name>
+          <AttachTo>fortyGigE0/120</AttachTo>
+          <SubInterface/>
+        </PortChannel>
+        <PortChannel>
+          <Name>PortChannel04</Name>
+          <AttachTo>fortyGigE0/124</AttachTo>
           <SubInterface/>
         </PortChannel>
       </PortChannelInterfaces>
       <VlanInterfaces>
         <VlanInterface>
-          <Name>ab1</Name>
-          <AttachTo>fortyGigE0/8</AttachTo>
+          <Name>Vlan1000</Name>
+          <AttachTo>fortyGigE0/4;fortyGigE0/8;fortyGigE0/12;fortyGigE0/16;fortyGigE0/20;fortyGigE0/24;fortyGigE0/28;fortyGigE0/32;fortyGigE0/36;fortyGigE0/40;fortyGigE0/44;fortyGigE0/48;fortyGigE0/52;fortyGigE0/56;fortyGigE0/60;fortyGigE0/64;fortyGigE0/68;fortyGigE0/72;fortyGigE0/76;fortyGigE0/80;fortyGigE0/84;fortyGigE0/88;fortyGigE0/92;fortyGigE0/96</AttachTo>
+          <NoDhcpRelay>False</NoDhcpRelay>
+          <StaticDHCPRelay>0.0.0.0/0</StaticDHCPRelay>
+          <FhrpProtoType i:nil="true"/>
+          <Type i:nil="true"/>
           <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
+          <Dhcpv6Relays>fc02:2000::1;fc02:2000::2</Dhcpv6Relays>
           <VlanID>1000</VlanID>
           <Tag>1000</Tag>
           <Subnets>192.168.0.0/27</Subnets>
+          <MacAddress i:nil="true"/>
+          <SecondarySubnets>192.168.1.0/27</SecondarySubnets>
         </VlanInterface>
         <VlanInterface>
-          <Name>ab4</Name>
-          <AttachTo>fortyGigE0/8</AttachTo>
-          <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
-          <VlanID>1001</VlanID>
-          <Tag>1001</Tag>
-          <Subnets>192.168.0.32/27</Subnets>
-        </VlanInterface>
-        <VlanInterface>
-          <Name>kk1</Name>
-          <AttachTo>fortyGigE0/12</AttachTo>
-          <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
-          <VlanID>2020</VlanID>
-          <Tag>2020</Tag>
-          <Type>Tagged</Type>
-          <Subnets>192.168.0.0/28</Subnets>
-        </VlanInterface>
-        <VlanInterface>
-          <Name>ab2</Name>
-          <AttachTo>fortyGigE0/12</AttachTo>
-          <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
+          <Name>Vlan2000</Name>
+          <AttachTo>fortyGigE0/112;fortyGigE0/116;fortyGigE0/120</AttachTo>
+          <NoDhcpRelay>False</NoDhcpRelay>
+          <StaticDHCPRelay>0.0.0.0/0</StaticDHCPRelay>
+          <FhrpProtoType i:nil="true"/>
+          <Type i:nil="true"/>
+          <DhcpRelays>192.0.0.3;192.0.0.4</DhcpRelays>
+          <Dhcpv6Relays>fc02:2000::3;fc02:2000::4</Dhcpv6Relays>
           <VlanID>2000</VlanID>
           <Tag>2000</Tag>
-          <Type>Tagged</Type>
-          <Subnets>192.168.0.240/27</Subnets>
+          <Subnets>192.168.200.0/27</Subnets>
+          <MacAddress i:nil="true"/>
+          <SecondarySubnets/>
         </VlanInterface>
         <VlanInterface>
-          <Name>ab3</Name>
-          <AttachTo>fortyGigE0/12</AttachTo>
+          <Name>Vlan99</Name>
+          <AttachTo>fortyGigE0/100</AttachTo>
+          <NoDhcpRelay>False</NoDhcpRelay>
+          <StaticDHCPRelay>0.0.0.0/0</StaticDHCPRelay>
+          <FhrpProtoType i:nil="true"/>
+          <Type>UserDefinedL2Vlan</Type>
           <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
-          <VlanID>2001</VlanID>
-          <Tag>2001</Tag>
-          <Subnets>192.168.0.240/27</Subnets>
+          <VlanID>99</VlanID>
+          <Tag>99</Tag>
+          <Subnets/>
+          <MacAddress i:nil="true"/>
+          <SecondarySubnets/>
+        </VlanInterface>
+        <VlanInterface>
+          <Name>Vlan98</Name>
+          <AttachTo>fortyGigE0/100;PortChannel01;PortChannel03</AttachTo>
+          <NoDhcpRelay>False</NoDhcpRelay>
+          <StaticDHCPRelay>0.0.0.0/0</StaticDHCPRelay>
+          <FhrpProtoType i:nil="true"/>
+          <Type>UserDefinedL2Vlan</Type>
+          <DhcpRelays>192.0.0.1;192.0.0.2</DhcpRelays>
+          <VlanID>98</VlanID>
+          <Tag>98</Tag>
+          <Subnets/>
+          <MacAddress i:nil="true"/>
+          <SecondarySubnets/>
         </VlanInterface>
       </VlanInterfaces>
       <IPInterfaces>
         <IPInterface>
           <Name i:nil="true"/>
-          <AttachTo>PortChannel1</AttachTo>
+          <AttachTo>PortChannel01</AttachTo>
           <Prefix>10.0.0.56/31</Prefix>
         </IPInterface>
         <IPInterface>
           <Name i:Name="true"/>
-          <AttachTo>PortChannel1</AttachTo>
+          <AttachTo>PortChannel01</AttachTo>
           <Prefix>FC00::71/126</Prefix>
         </IPInterface>
         <IPInterface>
           <Name i:nil="true"/>
-          <AttachTo>PortChannel1001</AttachTo>
-          <Prefix>10.0.0.57/31</Prefix>
-        </IPInterface>
-        <IPInterface>
-          <Name i:Name="true"/>
-          <AttachTo>PortChannel1001</AttachTo>
-          <Prefix>FC00::72/126</Prefix>
-        </IPInterface>
-        <IPInterface>
-          <Name i:nil="true"/>
-          <AttachTo>fortyGigE0/0</AttachTo>
+          <AttachTo>PortChannel02</AttachTo>
           <Prefix>10.0.0.58/31</Prefix>
         </IPInterface>
         <IPInterface>
-          <Name i:nil="true"/>
-          <AttachTo>fortyGigE0/0</AttachTo>
+          <Name i:Name="true"/>
+          <AttachTo>PortChannel02</AttachTo>
           <Prefix>FC00::75/126</Prefix>
         </IPInterface>
         <IPInterface>
           <Name i:nil="true"/>
-          <AttachTo>ab1</AttachTo>
+          <AttachTo>PortChannel03</AttachTo>
+          <Prefix>10.0.0.60/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>PortChannel03</AttachTo>
+          <Prefix>FC00::79/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>PortChannel04</AttachTo>
+          <Prefix>10.0.0.62/31</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:Name="true"/>
+          <AttachTo>PortChannel04</AttachTo>
+          <Prefix>FC00::7D/126</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>Vlan1000</AttachTo>
           <Prefix>192.168.0.1/27</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>Vlan1000</AttachTo>
+          <Prefix>192.168.1.1/27</Prefix>
+        </IPInterface>
+        <IPInterface>
+          <Name i:nil="true"/>
+          <AttachTo>Vlan2000</AttachTo>
+          <Prefix>192.168.200.1/27</Prefix>
         </IPInterface>
       </IPInterfaces>
       <DataAcls/>
       <AclInterfaces>
         <AclInterface>
-          <AttachTo>PortChannel1</AttachTo>
-          <InAcl>DataAcl</InAcl>
+          <AttachTo>ERSPAN</AttachTo>
+          <InAcl>everflow</InAcl>
+          <Type>Everflow</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>ERSPANv6</AttachTo>
+          <InAcl>everflowV6</InAcl>
+          <Type>Everflow</Type>
+        </AclInterface>
+	<AclInterface>
+          <AttachTo>EGRESS_ERSPAN</AttachTo>
+	  <OutAcl>everflow_egress</OutAcl>
+	  <Type>Everflow</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>PortChannel01;PortChannel02;PortChannel03;PortChannel04</AttachTo>
+          <InAcl>DataAclIngress</InAcl>
+          <Type>DataPlane</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>PortChannel01;PortChannel02;Vlan98</AttachTo>
+          <OutAcl>DataAclEgress</OutAcl>
           <Type>DataPlane</Type>
         </AclInterface>
         <AclInterface>
           <AttachTo>SNMP</AttachTo>
           <InAcl>SNMP_ACL</InAcl>
           <Type>SNMP</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>NTP</AttachTo>
+          <InAcl>NTP_ACL</InAcl>
+          <Type>NTP</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>SSH</AttachTo>
+          <InAcl>SSH_ACL</InAcl>
+          <Type>SSH</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>SSH</AttachTo>
+          <InAcl>ROUTER-PROTECT</InAcl>
+          <Type>SSH</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>SNMP</AttachTo>
+          <InAcl>ROUTER-PROTECT</InAcl>
+          <Type>SNMP</Type>
+        </AclInterface>
+        <AclInterface>
+          <AttachTo>NTP</AttachTo>
+          <InAcl>NTP_ACL</InAcl>
         </AclInterface>
       </AclInterfaces>
       <DownstreamSummaries/>
@@ -308,41 +427,64 @@
   </DpgDec>
   <PngDec>
     <DeviceInterfaceLinks>
-      <DeviceLinkBase i:type="DeviceInterfaceLink">
+      <DeviceLinkBase>
         <ElementType>DeviceInterfaceLink</ElementType>
-        <Bandwidth>1000</Bandwidth>
         <EndDevice>ARISTA01T1</EndDevice>
-        <EndPort>et1</EndPort>
-        <FlowControl>true</FlowControl>
+        <EndPort>Ethernet1/1</EndPort>
         <StartDevice>switch-t0</StartDevice>
-        <StartPort>fortyGigE0/8</StartPort>
-        <Validate>true</Validate>
+        <StartPort>fortyGigE0/112</StartPort>
       </DeviceLinkBase>
-      <DeviceLinkBase i:type="DeviceMgmtLink">
-        <ElementType>DeviceMgmtLink</ElementType>
-        <Bandwidth>1000</Bandwidth>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA02T1</EndDevice>
+        <EndPort>Ethernet1/1</EndPort>
+        <StartDevice>switch-t0</StartDevice>
+        <StartPort>fortyGigE0/116</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA03T1</EndDevice>
+        <EndPort>Ethernet1/1</EndPort>
+        <StartDevice>switch-t0</StartDevice>
+        <StartPort>fortyGigE0/120</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>ARISTA04T1</EndDevice>
+        <EndPort>Ethernet1/1</EndPort>
+        <StartDevice>switch-t0</StartDevice>
+        <StartPort>fortyGigE0/124</StartPort>
+        <Bandwidth>100000</Bandwidth>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <Bandwidth>100000</Bandwidth>
         <EndDevice>switch-t0</EndDevice>
-        <EndPort>fortyGigE0/16</EndPort>
+        <EndPort>fortyGigE0/4</EndPort>
         <FlowControl>true</FlowControl>
-        <StartDevice>ChassisMTS1</StartDevice>
-        <StartPort>mgmt0</StartPort>
+        <StartDevice>ARISTA05T1</StartDevice>
+        <StartPort>Ethernet1/33</StartPort>
         <Validate>true</Validate>
       </DeviceLinkBase>
-      <DeviceLinkBase i:type="DeviceMgmtLink">
-      <ElementType>DeviceMgmtLink</ElementType>
-      <Bandwidth>1000</Bandwidth>
-      <EndDevice>switch-t0</EndDevice>
-      <EndPort>Management1</EndPort>
-      <StartDevice>switch-m0</StartDevice>
-      <StartPort>Management1</StartPort>
-      <Validate>true</Validate>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>Servers0</EndDevice>
+        <EndPort>eth0</EndPort>
+        <StartDevice>switch-t0</StartDevice>
+        <StartPort>fortyGigE0/4</StartPort>
+      </DeviceLinkBase>
+      <DeviceLinkBase>
+        <ElementType>DeviceInterfaceLink</ElementType>
+        <EndDevice>Servers100</EndDevice>
+        <EndPort>eth0</EndPort>
+        <StartDevice>switch-t0</StartDevice>
+        <StartPort>fortyGigE0/100</StartPort>
       </DeviceLinkBase>
     </DeviceInterfaceLinks>
     <Devices>
       <Device i:type="ToRRouter">
         <Hostname>switch-t0</Hostname>
         <HwSku>Force10-S6000</HwSku>
-        <ClusterName>AAA00PrdStr00</ClusterName>
       </Device>
       <Device i:type="LeafRouter">
         <Hostname>ARISTA01T1</Hostname>
@@ -370,428 +512,417 @@
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/0</InterfaceName>
-          <InterfaceType i:nil="true"/>
-          <MultiPortsInterface>false</MultiPortsInterface>
-          <PortName>0</PortName>
-          <Priority>0</Priority>
-          <Speed>10000</Speed>
-        </a:EthernetInterface>
-        <a:EthernetInterface>
-          <ElementType>DeviceInterface</ElementType>
-          <AlternateSpeeds i:nil="true"/>
-          <EnableFlowControl>true</EnableFlowControl>
-          <Index>1</Index>
-          <InterfaceName>Ethernet1</InterfaceName>
-          <InterfaceType i:nil="true"/>
-          <MultiPortsInterface>false</MultiPortsInterface>
-          <PortName>0</PortName>
-          <Priority>0</Priority>
-          <Speed>10000</Speed>
-        </a:EthernetInterface>
-        <a:EthernetInterface>
-          <ElementType>DeviceInterface</ElementType>
-          <AlternateSpeeds i:nil="true"/>
-          <EnableFlowControl>true</EnableFlowControl>
-          <Index>1</Index>
-          <InterfaceName>Ethernet2</InterfaceName>
-          <InterfaceType i:nil="true"/>
-          <MultiPortsInterface>false</MultiPortsInterface>
-          <PortName>0</PortName>
-          <Priority>0</Priority>
-          <Speed>10000</Speed>
-        </a:EthernetInterface>
-        <a:EthernetInterface>
-          <ElementType>DeviceInterface</ElementType>
-          <AlternateSpeeds i:nil="true"/>
-          <EnableFlowControl>true</EnableFlowControl>
-          <Index>1</Index>
-          <InterfaceName>fortyGigE0/4</InterfaceName>
-          <InterfaceType i:nil="true"/>
-          <MultiPortsInterface>false</MultiPortsInterface>
-          <PortName>0</PortName>
-          <Priority>0</Priority>
-          <Speed>25000</Speed>
-        </a:EthernetInterface>
-        <a:EthernetInterface>
-          <ElementType>DeviceInterface</ElementType>
-          <AlternateSpeeds i:nil="true"/>
-          <EnableFlowControl>true</EnableFlowControl>
-          <Index>1</Index>
-          <InterfaceName>fortyGigE0/8</InterfaceName>
+          <InterfaceName>Ethernet0</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
           <Speed>40000</Speed>
-          <Description>Interface description</Description>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/12</InterfaceName>
+          <InterfaceName>Ethernet8</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
-          <Description>Interface description</Description>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/16</InterfaceName>
+          <InterfaceName>Ethernet12</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/20</InterfaceName>
+          <InterfaceName>Ethernet16</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/24</InterfaceName>
+          <InterfaceName>Ethernet20</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/28</InterfaceName>
+          <InterfaceName>Ethernet24</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/32</InterfaceName>
+          <InterfaceName>Ethernet28</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/36</InterfaceName>
+          <InterfaceName>Ethernet32</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/40</InterfaceName>
+          <InterfaceName>Ethernet36</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/44</InterfaceName>
+          <InterfaceName>Ethernet40</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/48</InterfaceName>
+          <InterfaceName>Ethernet44</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/52</InterfaceName>
+          <InterfaceName>Ethernet48</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/56</InterfaceName>
+          <InterfaceName>Ethernet52</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/60</InterfaceName>
+          <InterfaceName>Ethernet56</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/64</InterfaceName>
+          <InterfaceName>Ethernet60</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/68</InterfaceName>
+          <InterfaceName>Ethernet64</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/72</InterfaceName>
+          <InterfaceName>Ethernet68</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/76</InterfaceName>
+          <InterfaceName>Ethernet72</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/80</InterfaceName>
+          <InterfaceName>Ethernet76</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/84</InterfaceName>
+          <InterfaceName>Ethernet80</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/88</InterfaceName>
+          <InterfaceName>Ethernet84</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/92</InterfaceName>
+          <InterfaceName>Ethernet88</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/96</InterfaceName>
+          <InterfaceName>Ethernet92</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/100</InterfaceName>
+          <InterfaceName>Ethernet96</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/104</InterfaceName>
+          <InterfaceName>Ethernet100</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/108</InterfaceName>
+          <InterfaceName>Ethernet104</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/112</InterfaceName>
+          <InterfaceName>Ethernet108</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/116</InterfaceName>
+          <InterfaceName>Ethernet112</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/120</InterfaceName>
+          <InterfaceName>Ethernet116</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
         <a:EthernetInterface>
           <ElementType>DeviceInterface</ElementType>
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
-          <InterfaceName>fortyGigE0/124</InterfaceName>
+          <InterfaceName>Ethernet120</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
           <PortName>0</PortName>
           <Priority>0</Priority>
-          <Speed>100000</Speed>
+          <Speed>40000</Speed>
         </a:EthernetInterface>
       </EthernetInterfaces>
-      <FlowControl>true</FlowControl>
-      <Height>0</Height>
       <HwSku>Force10-S6000</HwSku>
-      <ManagementInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
-	<a:ManagementInterface>
-	  <ElementType>DeviceInterface</ElementType>
-	  <AlternateSpeeds i:nil="true"/>
-	  <Index>1</Index>
-	  <InterfaceName>Management1</InterfaceName>
-	  <MultiPortsInterface>false</MultiPortsInterface>
-	  <PortName>mgmt1</PortName>
-	  <Speed>1000</Speed>
-  	</a:ManagementInterface>
-      </ManagementInterfaces>
+      <ManagementInterfaces/>
     </DeviceInfo>
   </DeviceInfos>
+  <MetadataDeclaration>
+    <Devices xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:DeviceMetadata>
+        <a:Name>switch-t0</a:Name>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>ErspanDestinationIpv4</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>2.2.2.2</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+      </a:DeviceMetadata>
+    </Devices>
+    <Properties xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+  </MetadataDeclaration>
+  <LinkMetadataDeclaration>
+    <Link xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>FECDisabled</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>ARISTA05T1:Ethernet1/33;switch-t0:fortyGigE0/4</a:Key>
+      </a:LinkMetadata>
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>AutoNegotiation</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>False</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>FECDisabled</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>True</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>ARISTA06T1:Ethernet1/34;switch-t0:fortyGigE0/8</a:Key>
+      </a:LinkMetadata>
+    </Link>
+  </LinkMetadataDeclaration>
 <MetadataDeclaration>
  <Devices xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
   <a:DeviceMetadata>

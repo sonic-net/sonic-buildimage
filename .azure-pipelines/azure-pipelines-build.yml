@@ -135,9 +135,13 @@ jobs:
               make $BUILD_OPTIONS ENABLE_ASAN=y target/docker-sonic-vs.gz
               mv target/docker-sonic-vs.gz target/docker-sonic-vs-asan.gz
             fi
-            if [ "$(K8S_OPTIONS)" == 'INCLUDE_KUBERNETES_MASTER=y' ]; then
-              make $BUILD_OPTIONS $(K8S_OPTIONS) target/sonic-vs.img.gz
-              mv target/sonic-vs.img.gz target/sonic-vs-k8s.img.gz
+            if [ "$(K8S_MASTER_CHANGED)" == 'YES' ]; then
+              make $BUILD_OPTIONS INCLUDE_KUBERNETES_MASTER=y target/sonic-vs.img.gz
+              gzip -d target/sonic-vs.img.gz
+              SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make $BUILD_OPTIONS sonic-slave-run
+              gzip target/sonic-vs.vhdx
+              mv target/sonic-vs.vhdx.gz target/sonic-vs-k8s.vhdx.gz
+              rm target/sonic-vs.img
             fi
             make $BUILD_OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
             make $BUILD_OPTIONS target/docker-ptf-sai.gz

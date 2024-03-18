@@ -6,7 +6,14 @@
 load_kernel_drivers() {
     echo "Loading Kernel Drivers"
     sudo insmod /lib/modules/6.1.0-11-2-arm64/kernel/extra/nokia_7215_ixs_a1_cpld.ko
-    sudo insmod /lib/modules/6.1.0-11-2-arm64/kernel/extra/ac5_thermal_sensor.ko
+    sudo insmod /lib/modules/6.1.0-11-2-arm64/kernel/extra/cn9130_cpu_thermal_sensor.ko
+}
+
+fw_uboot_env_cfg()
+{
+    echo "Setting up U-Boot environment for Nokia-7215-A1"
+    FW_ENV_DEFAULT='/dev/mtd1 0x0 0x10000 0x10000'
+    echo $FW_ENV_DEFAULT > /etc/fw_env.config
 }
 
 nokia_7215_profile()
@@ -33,8 +40,8 @@ file_exists() {
 # Install kernel drivers required for i2c bus access
 load_kernel_drivers
 
-# Enumerate RTC
-echo m41t11 0x68 > /sys/bus/i2c/devices/i2c-0/new_device
+#setting up uboot environment
+fw_uboot_env_cfg
 
 # Enumerate the SFP eeprom device on each mux channel
 echo pca9546 0x70> /sys/bus/i2c/devices/i2c-1/new_device
@@ -43,11 +50,12 @@ echo pca9546 0x70> /sys/bus/i2c/devices/i2c-1/new_device
 echo ina230 0x40 > /sys/bus/i2c/devices/i2c-0/new_device
 
 # Enumerate fan
-echo emc2305 0x2e > /sys/bus/i2c/devices/i2c-0/new_device
+echo emc2305 0x2f > /sys/bus/i2c/devices/i2c-0/new_device
 
 # Enumerate Thermals
 echo tmp75 0x48 > /sys/bus/i2c/devices/i2c-0/new_device
 echo tmp75 0x49 > /sys/bus/i2c/devices/i2c-0/new_device
+echo tmp75 0x4A > /sys/bus/i2c/devices/i2c-0/new_device
 
 #Enumerate CPLD
 echo nokia_7215_a1_cpld 0x41 > /sys/bus/i2c/devices/i2c-0/new_device
@@ -62,6 +70,12 @@ if [ "$status" == "1" ]; then
 else
     echo "SYSEEPROM file not foud"
 fi
+
+#Enumurate GPIO
+echo 41 > /sys/class/gpio/export
+echo 61 > /sys/class/gpio/export
+echo 62 > /sys/class/gpio/export
+chmod 666 /sys/class/gpio/gpio41/value
 
 # Get list of the mux channels
 for((i=0; i<10; i++));
@@ -85,8 +99,8 @@ do
     echo 0 > /sys/bus/i2c/devices/0-0041/sfp${i}_tx_disable
 done
 
-#slow down fan speed to 50 untill thermal algorithm kicks in%
-i2c_path="/sys/bus/i2c/devices/0-002e/hwmon/hwmon?"  
+#slow down fan speed to 50% untill thermal algorithm kicks in
+i2c_path="/sys/bus/i2c/devices/0-002f/hwmon/hwmon?"  
 echo 128 > $i2c_path/pwm1
 echo 128 > $i2c_path/pwm2 
 

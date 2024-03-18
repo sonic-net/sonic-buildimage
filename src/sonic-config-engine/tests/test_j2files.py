@@ -19,6 +19,7 @@ class TestJ2Files(TestCase):
         self.ztp_ip = os.path.join(self.test_dir, "sample-ztp-ip.json")
         self.ztp_inband_ip = os.path.join(self.test_dir, "sample-ztp-inband-ip.json")
         self.t0_minigraph = os.path.join(self.test_dir, 't0-sample-graph.xml')
+        self.t0_minigraph_secondary_subnets = os.path.join(self.test_dir, 't0-sample-graph-secondary-subnets.xml')
         self.t0_mvrf_minigraph = os.path.join(self.test_dir, 't0-sample-graph-mvrf.xml')
         self.t0_minigraph_nomgmt = os.path.join(self.test_dir, 't0-sample-graph-nomgmt.xml')
         self.t0_minigraph_two_mgmt = os.path.join(self.test_dir, 't0-sample-graph-two-mgmt.xml')
@@ -172,6 +173,14 @@ class TestJ2Files(TestCase):
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
                                                'docker-dhcp-relay-no-ip-helper.supervisord.conf'), self.output_file))
+        
+        # Test generation of docker-dhcp-relay.supervisord.conf when a vlan has secondary subnets specified
+        template_path = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-dhcp-relay',
+                                     'docker-dhcp-relay.supervisord.conf.j2')
+        argument = ['-m', self.t0_minigraph_secondary_subnets, '-p', self.t0_port_config, '-t', template_path]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR,
+                                               'docker-dhcp-relay-secondary-subnets.supervisord.conf'), self.output_file))
 
     def test_radv(self):
         # Test generation of radvd.conf with multiple ipv6 prefixes

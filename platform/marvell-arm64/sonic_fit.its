@@ -35,7 +35,7 @@
             type = "flat_dt";
             arch = "arm64";
             compression = "none";
-            load = <0x2 0x1000000>;
+            load = <0x11000000>;
             hash@1 {
                 algo = "sha1";
             };
@@ -79,6 +79,32 @@
                 algo = "sha1";
             };
         };
+        kernel_2 {
+            description = "Linux Kernel";
+            data = /incbin/("/boot/vmlinuz-6.1.0-11-2-arm64");
+            type = "kernel";
+            arch = "arm64";
+            os = "linux";
+            compression = "none";
+            load = <0x12000000>;
+            entry = <0x12000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        ramdisk_2 {
+            description = "ramdisk";
+            data = /incbin/("/boot/initrd.img-6.1.0-11-2-arm64");
+            type = "ramdisk";
+            arch = "arm64";
+            os = "linux";
+            compression = "gzip";
+            load = <0x18000000>;
+            entry = <0x18000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
         fdt_cn9131 {
             description = "Flattened Device Tree blob";
             data = /incbin/("/boot/cn9131-db-comexpress.dtb");
@@ -105,9 +131,9 @@
         };
         conf_7215_a1 {
             description = "Boot Linux kernel with FDT blob + ramdisk for 7125_IXS_A1";
-            kernel = "kernel_ac5x";
+            kernel = "kernel_2";
             fdt = "fdt_7215_a1";
-            ramdisk = "ramdisk_ac5x";
+            ramdisk = "ramdisk_2";
             hash@1 {
                 algo = "sha1";
             };
