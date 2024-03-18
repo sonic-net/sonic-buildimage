@@ -5,8 +5,6 @@
 #
 #  * PLATFORM: Specific platform we wish to build images for.
 #  * BUILD_NUMBER: Desired version-number to pass to the building-system.
-#  * ENABLE_DHCP_GRAPH_SERVICE: Enables get-graph service to fetch minigraph files
-#    through http.
 #  * ENABLE_ZTP: Enables zero touch provisioning.
 #  * SHUTDOWN_BGP_ON_START: Sets admin-down state for all bgp peerings after restart.
 #  * INCLUDE_KUBERNETES: Allows including Kubernetes
@@ -523,7 +521,6 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) \
                            SONIC_IMAGE_VERSION=$(SONIC_IMAGE_VERSION) \
                            SLAVE_TAG=$(SLAVE_TAG) \
-                           ENABLE_DHCP_GRAPH_SERVICE=$(ENABLE_DHCP_GRAPH_SERVICE) \
                            ENABLE_ZTP=$(ENABLE_ZTP) \
                            INCLUDE_PDE=$(INCLUDE_PDE) \
                            SHUTDOWN_BGP_ON_START=$(SHUTDOWN_BGP_ON_START) \

@@ -134,6 +134,14 @@
          "eStrKey": "Range",
          "eStr": "0..8"
      },
+     "PORT_VALID_DOM_POLLING": {
+        "desc": "PORT_VALID_DOM_POLLING no failure."
+    },
+    "PORT_INVALID_DOM_POLLING": {
+        "desc": "PORT_INVALID_DOM_POLLING invalid condition failure.",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["dom_polling"]
+    },
      "PORT_AUTO_FEC_TEST": {
          "desc": "PORT_AUTO_FEC_TEST validate auto mode in fec."
      }

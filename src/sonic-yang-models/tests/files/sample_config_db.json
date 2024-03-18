@@ -605,7 +605,8 @@
                 "adv_speeds": "all",
                 "adv_interface_types": "all",
                 "subport" : "0",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dom_polling":"enabled"
             },
             "Ethernet3": {
                 "alias": "Eth1/4",
@@ -625,7 +626,8 @@
                 "tpid": "0x9100",
                 "admin_status": "up",
                 "subport": "2",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dom_polling":"enabled"
             },
             "Ethernet5": {
                 "alias": "Eth2/2",

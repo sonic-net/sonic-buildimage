@@ -1,7 +1,7 @@
 [Unit]
 Description=ICCPD container
-Requires=updategraph.service swss.service
-After=updategraph.service swss.service
+Requires=config-setup.service swss.service
+After=config-setup.service swss.service
 BindsTo=sonic.target
 After=sonic.target
 

@@ -669,6 +669,48 @@
         }
     },
 
+    "PORT_INVALID_DOM_POLLING": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "lanes": "60, 61",
+                        "speed": 100000,
+                        "subport": 1,
+                        "dom_polling": "on"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_VALID_DOM_POLLING": {
+       "sonic-port:sonic-port": {
+           "sonic-port:PORT": {
+               "PORT_LIST": [
+                   {
+                       "name": "Ethernet0",
+                       "alias": "etp1a",
+                       "lanes": "60, 61",
+                       "speed": 100000,
+                       "subport": 1,
+                       "dom_polling": "enabled"
+                   },
+                   {
+                      "name": "Ethernet2",
+                       "alias": "etp1b",
+                       "lanes": "62, 63",
+                       "speed": 100000,
+                       "subport": 2,
+                       "dom_polling": "disabled"
+                   }
+               ]
+           }
+       }
+   },
+
     "PORT_AUTO_FEC_TEST": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {

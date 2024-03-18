@@ -113,6 +113,18 @@
             }
         }
     },
+    "SONIC_EVENTS_SWSS_PFC_STORM_VALID_WITH_ADDITIONAL_INFO_FRAGMENT": {
+        "sonic-events-swss:sonic-events-swss": {
+            "sonic-events-swss:pfc-storm": {
+                "ifname": "Ethernet0",
+                "queue_index": 0,
+                "queue_id": 0,
+                "port_id": 0,
+                "additional_info": "info1:1.2|info2:3.25",
+                "timestamp": "1985-04-12T23:20:50.52Z"
+            }
+        }
+    },
     "SONIC_EVENTS_SWSS_PFC_STORM_WITH_INVALID_ADDITIONAL_INFO_1": {
         "sonic-events-swss:sonic-events-swss": {
             "sonic-events-swss:pfc-storm": {
