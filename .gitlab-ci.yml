@@ -9,11 +9,12 @@ variables:
   NOJESSIE: 1
   NOSTRETCH: 1
   BUILD_NUMBER: "${CI_PIPELINE_ID}-${CI_COMMIT_BRANCH}"
-  PLUTO_PARENT_BRANCH: master
+  PLUTO_PARENT_BRANCH: nokia-master
   PLUTO_BRANCH_DIR: files/sonic/build/${CI_COMMIT_BRANCH}
   PLUTO_COMMIT_DIR: files/sonic/build/${CI_COMMIT_BRANCH}/${CI_PIPELINE_ID}
   PLUTO_POSTED_LATEST: files/sonic/build/${PLUTO_PARENT_BRANCH}/latest
   DOCKER_EXTRA_OPTS: '--registry-mirror=https://docker-registry-remote.artifactory-fpark1.int.net.nokia.com'
+  LEAN: "false" # set true to stub out most jobs, useful for debugging this file
 
 before_script: |
   sudo rm -fr fsroot
@@ -32,40 +33,47 @@ stages:
   - build
   - test
   - post
-  - deploy
 
-configure:sonic:
+.configure:sonic:
   # one configure step to build all docker images used by subsequent build stage(s).
   # This is required to avoid conflicting docker image creation between 
   # build:broadcom and build:docker-syncd-brcm-rpc
   stage: configure
-  parallel:
-    matrix:
-    - BUILD_ARCH: x86_64
-    - BUILD_ARCH: armhf
-    - BUILD_ARCH: aarch64
+  only:
+    - branches
   tags:
     - ${BUILD_ARCH}
   script: |
     ./.gitlab-ci-submodule-init.sh
     . .ci-env
+    case "$LEAN" in true) echo LEAN ; exit 0 ; esac
     ./build.sh
 
-# Build with option to display build time for each component and sorted list of longest build times
-build:sonic:
+configure:sonic:x86_64:
+  extends: .configure:sonic
+  variables:
+    BUILD_ARCH: x86_64
+
+configure:sonic:armhf:
+  extends: .configure:sonic
+  variables:
+    BUILD_ARCH: armhf
+
+configure:sonic:aarch64:
+  extends: .configure:sonic
+  variables:
+    BUILD_ARCH: aarch64
+
+.build:sonic:
   stage: build
-  parallel:
-    matrix:
-    - BUILD_ARCH: x86_64
-    - BUILD_ARCH: armhf
-    - BUILD_ARCH: aarch64
+  only:
+    - branches
   tags:
     - ${BUILD_ARCH}
-  needs:
-    - configure:sonic
   script: |
     ./.gitlab-ci-submodule-init.sh
     . .ci-env
+    case "$LEAN" in true) echo LEAN ; exit 0 ; esac
     ./build.sh
   artifacts:
     name: "$CI_COMMIT_REF_NAME"
@@ -73,17 +81,39 @@ build:sonic:
       - target/sonic-*.bin
     expire_in: 1 week
 
-express:hw:ixre:
+build:sonic:x86_64:
+  extends: .build:sonic
+  needs:
+    - configure:sonic:x86_64
+  variables: 
+    BUILD_ARCH: x86_64
+
+build:sonic:armhf:
+  extends: .build:sonic
+  needs:
+    - configure:sonic:armhf
+  variables:
+    BUILD_ARCH: armhf
+
+build:sonic:aarch64:
+  extends: .build:sonic
+  needs:
+    - configure:sonic:aarch64
+  variables:
+    BUILD_ARCH: aarch64
+
+express:chassis7:
   stage: test
+  only:
+    - branches
   tags:
     - regress_chassis7
   needs:
-    - build:sonic
-  rules:
-    - if: $EXPRESS_HW == "true"
-    - if: $BUILD_ARCH == "x86_64"
+    - build:sonic:x86_64
+  when: manual
   script: |
     docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    case "$LEAN" in true) echo LEAN ; exit 0 ; esac
     echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
     ./run_test.sh -i target/sonic-broadcom-dnx.bin \
       -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net \
@@ -98,6 +128,8 @@ express:hw:ixre:
 
 .post:
   stage: post
+  only:
+    - branches
   tags:
     - post
   script: |
@@ -112,8 +144,17 @@ express:hw:ixre:
       rm -f latest && ln -sf ${CI_PIPELINE_ID} latest && \
       find . -maxdepth 1 -type d -ctime +7 -exec rm -fr {} \+
 
-post:sonic:
+post:sonic:x86_64:
   extends: .post
   needs:
-    - build:sonic
+    - build:sonic:x86_64
 
+post:sonic:armhf:
+  extends: .post
+  needs:
+    - build:sonic:armhf
+
+post:sonic:aarch64:
+  extends: .post
+  needs:
+    - build:sonic:aarch64
