@@ -183,7 +183,7 @@ class Common:
             return False
         return True
 
-    def is_host():
+    def is_host(self):
         """
         Test whether current process is running on the host or an docker
         return True for host and False for docker
