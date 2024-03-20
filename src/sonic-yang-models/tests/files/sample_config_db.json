@@ -667,7 +667,8 @@
                 "tpid": "0x8100",
                 "admin_status": "up",
                 "subport": "6",
-                "mode":"routed"
+                "mode":"routed",
+                "pt_interface_id": "128"
             },
             "Ethernet9": {
                 "alias": "Eth3/2",
@@ -677,7 +678,9 @@
                 "tpid": "0x8100",
                 "admin_status": "up",
                 "subport": "7",
-                "mode":"routed"
+                "mode":"routed",
+                "pt_interface_id": "129",
+                "pt_timestamp_template": "template2"
             },
             "Ethernet10": {
                 "alias": "Eth3/3",
