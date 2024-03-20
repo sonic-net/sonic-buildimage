@@ -21,16 +21,16 @@ $(SYNCD)_DEPENDS += $(LIBSWSSCOMMON_DEV) $(LIBTHRIFT_DEV)
 $(SYNCD)_DEB_BUILD_PROFILES += rpc
 endif
 
-SYNCD_DBGSYM = syncd-dbgsym_1.0.0_$(CONFIGURED_ARCH).deb
-$(SYNCD_DBGSYM)_DEPENDS += $(SYNCD)
-$(SYNCD_DBGSYM)_RDEPENDS += $(SYNCD)
-$(eval $(call add_derived_package,$(SYNCD),$(SYNCD_DBGSYM)))
+SYNCD_DBG = syncd-dbgsym_1.0.0_$(CONFIGURED_ARCH).deb
+$(SYNCD_DBG)_DEPENDS += $(SYNCD)
+$(SYNCD_DBG)_RDEPENDS += $(SYNCD)
+$(eval $(call add_derived_package,$(SYNCD),$(SYNCD_DBG)))
 
 ifeq ($(ENABLE_SYNCD_RPC),y)
-SYNCD_RPC_DBGSYM = syncd-rpc-dbgsym_1.0.0_$(CONFIGURED_ARCH).deb
-$(SYNCD_RPC_DBGSYM)_DEPENDS += $(SYNCD_RPC)
-$(SYNCD_RPC_DBGSYM)_RDEPENDS += $(SYNCD_RPC)
-$(eval $(call add_derived_package,$(SYNCD),$(SYNCD_RPC_DBGSYM)))
+SYNCD_RPC_DBG = syncd-rpc-dbgsym_1.0.0_$(CONFIGURED_ARCH).deb
+$(SYNCD_RPC_DBG)_DEPENDS += $(SYNCD_RPC)
+$(SYNCD_RPC_DBG)_RDEPENDS += $(SYNCD_RPC)
+$(eval $(call add_derived_package,$(SYNCD),$(SYNCD_RPC_DBG)))
 endif
 
 ifeq ($(ENABLE_PY2_MODULES), n)
