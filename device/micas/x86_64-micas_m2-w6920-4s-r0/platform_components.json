@@ -1,0 +1,23 @@
+{
+    "chassis": {
+        "M2-W6920-4S": {
+            "component": {
+                "CPU_CPLD": { },
+                "FAN_CPLD_A": { },
+                "FAN_CPLD_B": { },
+                "MAC_CPLD_A": { },
+                "MAC_CPLD_B": { },
+                "LC1_CPLD_2": { },
+                "LC1_CPLD_1": { },
+                "LC2_CPLD_2": { },
+                "LC2_CPLD_1": { },
+                "LC3_CPLD_2": { },
+                "LC3_CPLD_1": { },
+                "LC4_CPLD_2": { },
+                "LC4_CPLD_1": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
+
