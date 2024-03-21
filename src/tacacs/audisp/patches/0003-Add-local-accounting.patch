@@ -70,12 +70,12 @@ index 0000000..e23acec
 +#include "trace.h"
 +
 +/* Accounting log format. */
-+#define ACCOUNTING_LOG_FORMAT "Accounting: user: %s, tty: %s, host: %s, command: %s, type: %d, task ID: %d"
++#define ACCOUNTING_LOG_FORMAT "Audisp-tacplus: Accounting: user: %s, tty: %s, host: %s, command: %s, type: %d, task ID: %d"
 +
 +/* Write the accounting information to syslog. */
 +void accounting_to_syslog(char *user, char *tty, char *host, char *cmdmsg, int type, uint16_t task_id)
 +{
-+    trace(ACCOUNTING_LOG_FORMAT, user, tty, host, cmdmsg, type, task_id);
++    syslog(LOG_INFO, ACCOUNTING_LOG_FORMAT, user, tty, host, cmdmsg, type, task_id);
 +}
 \ No newline at end of file
 diff --git a/local_accounting.h b/local_accounting.h
