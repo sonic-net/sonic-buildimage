@@ -4,3 +4,4 @@ export DOCKER_EXTRA_OPTS='--registry-mirror=https://docker-registry-remote.artif
 export NOJESSIE=1
 export NOSTRETCH=1
 export SONIC_BUILD_JOBS=2
+export SONIC_VERSION_CONTROL_COMPONENTS=py3
