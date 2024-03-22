@@ -418,7 +418,9 @@ RUN apt-get update && apt-get install -y \
         auditd \
 # For protobuf
         protobuf-compiler \
-        libprotobuf-dev
+        libprotobuf-dev \
+# For sonic-dhcp6relay build
+        libjsoncpp-dev
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages
