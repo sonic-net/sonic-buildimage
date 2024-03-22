@@ -1,0 +1,35 @@
+- bus: '00'
+  dev: '1f'
+  fn: '3'
+  id: 8c22
+  name: 'SMBus: Intel Corporation 8 Series/C220 Series Chipset Family SMBus Controller (rev 05)'
+
+- bus: '04'
+  dev: '00'
+  fn: '0'
+  id: 15ab
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection X552 10 GbE Backplane'
+
+- bus: '04'
+  dev: '00'
+  fn: '1'
+  id: 15ab
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection X552 10 GbE Backplane'
+
+- bus: '06'
+  dev: '00'
+  fn: '0'
+  id: b980
+  name: 'Ethernet controller: Broadcom Inc. and subsidiaries Device b980 (rev 11)'
+
+- bus: '0f'
+  dev: '00'
+  fn: '0'
+  id: 1533
+  name: 'Ethernet controller: Intel Corporation I210 Gigabit Network Connection (rev 03)'
+
+- bus: '10'
+  dev: '00'
+  fn: '0'
+  id: 7021
+  name: 'Memory controller: Xilinx Corporation Device 7021'
