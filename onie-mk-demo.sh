@@ -174,7 +174,7 @@ if [ "$SECURE_UPGRADE_MODE" = "dev" -o "$SECURE_UPGRADE_MODE" = "prod" ]; then
     # append signature to binary
     cat ${CMS_SIG} >> ${output_file}
     sudo rm -rf ${CMS_SIG}
-elif [ "$SECURE_UPGRADE_MODE" -ne "no_sign" ]; then
+elif [ "$SECURE_UPGRADE_MODE" != "no_sign" ]; then
     echo "SECURE_UPGRADE_MODE not defined or defined as $SECURE_UPGRADE_MODE - build without signing"
 fi
 
