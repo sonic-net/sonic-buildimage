@@ -168,6 +168,10 @@
       {
          "file" : "test-vlan.yang",
          "module" : "test-vlan"
+      },
+      {
+         "file" : "test-yang-structure.yang",
+         "module" : "test-yang-structure"
       }
    ],
    "new_nodes" : [
@@ -244,6 +248,10 @@
       {
          "module_name" : "test-vlan",
          "module_prefix" : "vlan"
+      },
+      {
+         "module_name" : "test-yang-structure",
+         "module_prefix" : "yangstructtest"
       }
    ],
    "schema_dependencies" : [

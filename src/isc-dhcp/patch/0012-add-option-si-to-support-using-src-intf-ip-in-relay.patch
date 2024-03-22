@@ -4,13 +4,13 @@ Date: Fri, 12 Mar 2021 23:30:56 -0800
 Subject: [PATCH] add option -si to support using src intf ip in relay
 
 ---
- common/socket.c  | 119 ++++++++++++++++++++++++++++++++++++-----------
+ common/socket.c  | 120 +++++++++++++++++++++++++++++++++++------------
  includes/dhcpd.h |   1 +
- relay/dhcrelay.c |   8 ++++
- 3 files changed, 100 insertions(+), 28 deletions(-)
+ relay/dhcrelay.c |   2 +
+ 3 files changed, 94 insertions(+), 29 deletions(-)
 
 diff --git a/common/socket.c b/common/socket.c
-index 483eb9c..da9f501 100644
+index 3953eac..eae86e8 100644
 --- a/common/socket.c
 +++ b/common/socket.c
 @@ -83,6 +83,29 @@ static unsigned int global_v4_socket_references = 0;
@@ -43,7 +43,7 @@ index 483eb9c..da9f501 100644
  /*
   * If we can't bind() to a specific interface, then we can only have
   * a single socket. This variable insures that we don't try to listen
-@@ -712,37 +735,77 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
+@@ -722,38 +745,77 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
  	struct hardware *hto;
  {
  	int result;
@@ -59,8 +59,9 @@ index 483eb9c..da9f501 100644
 -			pktinfo.ipi_ifindex = interface->ifp->ifr_index;
 -			if (setsockopt(interface->wfdesc, IPPROTO_IP,
 -				       IP_PKTINFO, (char *)&pktinfo,
--				       sizeof(pktinfo)) < 0) 
--				log_fatal("setsockopt: IP_PKTINFO: %m");
+-				       sizeof(pktinfo)) < 0)
+-				log_fatal("setsockopt: IP_PKTINFO for %s: %m",
+-					  (char*)(interface->ifp));
 +	struct msghdr m;
 +	struct iovec v;
 +	struct sockaddr_in dst;
@@ -150,10 +151,10 @@ index 483eb9c..da9f501 100644
  }
  
 diff --git a/includes/dhcpd.h b/includes/dhcpd.h
-index 36cd518..0c25582 100644
+index b54a36e..68d44cf 100644
 --- a/includes/dhcpd.h
 +++ b/includes/dhcpd.h
-@@ -2660,6 +2660,7 @@ ssize_t send_fallback6(struct interface_info *, struct packet *,
+@@ -2676,6 +2676,7 @@ ssize_t send_fallback6(struct interface_info *, struct packet *,
  #endif
  
  #ifdef USE_SOCKET_SEND
@@ -162,10 +163,10 @@ index 36cd518..0c25582 100644
  void if_register_send (struct interface_info *);
  void if_deregister_send (struct interface_info *);
 diff --git a/relay/dhcrelay.c b/relay/dhcrelay.c
-index 221106a..c44a79d 100644
+index ccf7417..6aa1179 100644
 --- a/relay/dhcrelay.c
 +++ b/relay/dhcrelay.c
-@@ -431,6 +431,8 @@ main(int argc, char **argv) {
+@@ -440,6 +440,8 @@ main(int argc, char **argv) {
  #endif
  		} else if (!strcmp(argv[i], "-d")) {
  			/* no_daemon = 1; */
@@ -175,5 +176,5 @@ index 221106a..c44a79d 100644
  			quiet = 1;
  			quiet_interface_discovery = 1;
 -- 
-2.17.1
+2.25.1
 

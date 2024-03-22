@@ -14,10 +14,10 @@ didn't discover the interface(s) when it started up.
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/common/discover.c b/common/discover.c
-index 8d5b958..5efff49 100644
+index 32f2516..31dae3c 100644
 --- a/common/discover.c
 +++ b/common/discover.c
-@@ -1016,7 +1016,8 @@ discover_interfaces(int state) {
+@@ -668,7 +668,8 @@ discover_interfaces(int state) {
  		      info.flags & IFF_LOOPBACK ||
  		      info.flags & IFF_POINTOPOINT) && !tmp) ||
  		    (!(info.flags & IFF_UP) &&
@@ -25,8 +25,8 @@ index 8d5b958..5efff49 100644
 +		     state != DISCOVER_UNCONFIGURED &&
 +		     state != DISCOVER_RELAY))
  			continue;
- 		
+ 
  		/* If there isn't already an interface by this name,
 -- 
-2.17.1
+2.25.1
 

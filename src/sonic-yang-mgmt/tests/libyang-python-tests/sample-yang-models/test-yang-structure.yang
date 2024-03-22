@@ -1,0 +1,105 @@
+module test-yang-structure {
+
+  namespace "http://github.com/sonic-net/test";
+  prefix yangstructtest;
+
+  yang-version 1.1;
+
+  import ietf-yang-types {
+    prefix yang;
+  }
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+
+  import test-head {
+    prefix head;
+    revision-date 2019-07-01;
+  }
+
+  revision 2021-10-30 {
+    description "First Revision";
+  }
+
+  container test-yang-container {
+
+    container YANG_STRUCT_TEST {
+
+      description "sample test container";
+
+      list YANG_LIST_TEST_LIST {
+
+        key "name";
+
+        leaf name {
+          type string;
+        }
+
+        leaf-list leaf-list-test {
+          description "Test leaf-list statement";
+          type inet:ipv6-address;
+        }
+
+        container container-in-list-test {
+          leaf leaf-1 {
+            description "test leaf in container";
+            type string {
+              pattern "false|true";
+            }
+          }
+
+          leaf leaf-2 {
+            description "test leaf in container";
+            type string;
+          }
+
+          choice multi-choice-in-container-test-1 {
+            case mc-case-test-1 {
+              leaf mc-case-leaf-1 {
+                description "test leaf in multi choice";
+                type uint32;
+              }
+            }
+
+            case mc-case-test-2 {
+              leaf mc-case-leaf-2 {
+                description "test leaf in multi choice";
+                type uint8;
+              }
+            }
+          }
+
+          choice multi-choice-in-container-test-2 {
+            case mc-case-test-3 {
+              leaf mc-case-leaf-3 {
+                description "test leaf in multi choice";
+                type uint16;
+              }
+            }
+          }
+        }
+
+        choice single-choice-in-list-test {
+          case case-test-1 {
+            leaf case-leaf-1 {
+              description "test leaf in single choice";
+              type uint32;
+            }
+          }
+
+          case case-test-2 {
+            leaf case-leaf-2 {
+              description "test leaf in single choice";
+              type uint16;
+            }
+          }
+        }
+      }
+      /* end of YANG_LIST_TEST_LIST */
+    }
+    /* end of container YANG_STRUCT_TEST */
+  }
+  /* end of container test-yang-container */
+}
+/* end of module test-yang-structure */
