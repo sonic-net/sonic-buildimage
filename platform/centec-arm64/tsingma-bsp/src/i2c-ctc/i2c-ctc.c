@@ -789,6 +789,11 @@ static int ctc_i2c_plat_probe(struct platform_device *pdev)
 	of_property_read_u32(pdev->dev.of_node, "clock-frequency", &clk_freq);
 
 	dev->clk_freq = clk_freq;
+
+	dev->functionality = I2C_FUNC_10BIT_ADDR | CTC_IC_DEFAULT_FUNCTIONALITY;
+	dev->master_cfg = CTC_IC_CON_MASTER | CTC_IC_CON_SLAVE_DISABLE |
+		CTC_IC_CON_RESTART_EN;
+
 	if (dev->clk_freq <= 100000)
 		dev->master_cfg |= CTC_IC_CON_SPEED_STD;
 	else if (dev->clk_freq <= 400000)

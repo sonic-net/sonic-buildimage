@@ -1,9 +1,8 @@
 # Centec SAI
 
-export CENTEC_SAI_VERSION = 1.9.1-0
+export CENTEC_SAI_VERSION = 1.10.2-1
 export CENTEC_SAI = libsai_$(CENTEC_SAI_VERSION)_$(PLATFORM_ARCH).deb
 
-$(CENTEC_SAI)_URL = https://github.com/CentecNetworks/sonic-binaries/raw/master/$(PLATFORM_ARCH)/sai/$(CENTEC_SAI)
-$(eval $(call add_conflict_package,$(CENTEC_SAI),$(LIBSAIVS_DEV)))
+$(CENTEC_SAI)_URL = https://raw.githubusercontent.com/philo-micas/sonic-binaries/main/centec-arm64/sai/$(CENTEC_SAI)
 SONIC_ONLINE_DEBS += $(CENTEC_SAI)
 

@@ -1,0 +1,10 @@
+--- sonic-buildimage-one/src/sonic-swss/orchagent/orch.h	2023-06-07 15:33:45.528034877 +0800
++++ sonic-buildimage-two/src/sonic-swss/orchagent/orch.h	2023-06-07 15:37:55.085516362 +0800
+@@ -40,6 +40,7 @@
+ #define NPS_PLATFORM_SUBSTRING  "nephos"
+ #define MRVL_PLATFORM_SUBSTRING "marvell"
+ #define CISCO_8000_PLATFORM_SUBSTRING "cisco-8000"
++#define CENTEC_PLATFORM_SUBSTRING "centec"
+ 
+ #define CONFIGDB_KEY_SEPARATOR "|"
+ #define DEFAULT_KEY_SEPARATOR  ":"

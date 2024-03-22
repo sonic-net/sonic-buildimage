@@ -314,3 +314,6 @@ static struct mdio_device_id __maybe_unused mars_tbl[] = {
 };
 
 MODULE_DEVICE_TABLE(mdio, mars_tbl);
+
+MODULE_AUTHOR("Centec, Inc.");
+MODULE_LICENSE("GPL");

@@ -1159,6 +1159,10 @@ static void ctcmac_hw_init(struct ctcmac_private *priv)
 		     BIT(CPU_MAC_SGMII_AUTO_NEG_CFG_W0_CFG_AN_ENABLE_BIT));
 		writel(val, &priv->cpumac_reg->CpuMacSgmiiAutoNegCfg);
 	}
+	clrsetbits(&priv->cpumac_reg->CpuMacSgmiiAutoNegCfg,
+		   0, BIT(CPU_MAC_SGMII_AUTO_NEG_CFG_W0_CFG_IGNORE_ANEG_ERR_BIT));
+	clrsetbits(&priv->cpumac_reg->CpuMacSgmiiAutoNegCfg,
+		   0, BIT(CPU_MAC_SGMII_AUTO_NEG_CFG_W0_CFG_IGNORE_LINK_FAILURE_BIT));
 	/* disable rx link filter */
 	clrsetbits(&priv->cpumac_reg->CpuMacSgmiiCfg[0],
 		   BIT(CPU_MAC_SGMII_CFG_W0_CFG_MII_RX_LINK_FILTER_EN_BIT), 0);
@@ -1736,7 +1740,8 @@ static bool ctcmac_new_page(struct ctcmac_priv_rx_q *rxq,
 	struct page *page;
 	dma_addr_t addr;
 
-	page = dev_alloc_page();
+	//page = dev_alloc_page();
+	page = __dev_alloc_pages(GFP_DMA | GFP_ATOMIC | __GFP_NOWARN, 0);
 	if (unlikely(!page))
 		return false;
 
