@@ -168,7 +168,6 @@ ifp_inports_support_enable
 port_flex_enable
 pdma_descriptor_prefetch_enable
 pktdma_poll_mode_channel_bitmap
-warmboot_knet_shutdown_mode
 num_queues_pci
 num_queues_uc0
 num_queues_uc1
@@ -335,10 +334,15 @@ cmic_dma_abort_in_cold_boot
 hybrid_pfc_deadlock_enable
 sai_pfc_dlr_init_capability
 appl_param_nof_ports_per_modid
+svi_my_station_optimization
+warmboot_knet_shutdown_mode
+sai_fdb_entry_l2_discard_src_enable
+sai_pfc_defaults_disable
 sai_fdb_entry_l2_discard_src_enable
 svi_my_station_optimization
 sai_nbr_bcast_ifp_optimized
 sai_pfc_defaults_disable
 sai_optimized_mmu
+sai_stats_support_mask
 sai_default_cpu_tx_tc
 sai_disable_srcmacqedstmac_ctrl

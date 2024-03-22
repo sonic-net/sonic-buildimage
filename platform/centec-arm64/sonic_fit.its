@@ -48,6 +48,18 @@
 				algo = "crc32";			
 			};
 		};
+                ctc_fdtw6010 {
+                        description = "dtb for m2-w6010-48gt4x-r0";
+                        data = /incbin/("./m2-w6010-48gt4x-r0.dtb");
+                        type = "flat_dt";
+                        arch = "arm64";
+                        os = "linux";
+                        compression = "none";
+                        load = <0x88000000>;
+                        hash {
+                                algo = "crc32";
+                        };
+                };
 	};
 	configurations {
 		default = "arm64-centec_e530_24x2c-r0";
@@ -86,5 +98,17 @@
 			ramdisk = "initramfs";
 			fdt = "ctc_fdt";
 			};
+                arm64-micas_m2-w6010-48gt4x-fa-r0 {
+                        description = "config for micas_m2-w6010-48gt4x-fa";
+                        kernel = "kernel_ctc";
+                        ramdisk = "initramfs";
+                        fdt = "ctc_fdtw6010";
+                        };
+                arm64-micas_m2-w6010-48gt4x-ra-r0 {
+                        description = "config for micas_m2-w6010-48gt4x-ra";
+                        kernel = "kernel_ctc";
+                        ramdisk = "initramfs";
+                        fdt = "ctc_fdtw6010";
+                        };
 	};
 };
