@@ -61,12 +61,16 @@ cp $db_cfg_file $db_cfg_file_tmp
 if [[ $DATABASE_TYPE == "chassisdb" ]]; then
     # Docker init for database-chassis
     echo "Init docker-database-chassis..."
+    VAR_LIB_REDIS_CHASSIS_DIR="/var/lib/redis_chassis"
+    mkdir -p $VAR_LIB_REDIS_CHASSIS_DIR   
     update_chassisdb_config -j $db_cfg_file_tmp -k -p $chassis_db_port
     # generate all redis server supervisord configuration file
     sonic-cfggen -j $db_cfg_file_tmp \
     -t /usr/share/sonic/templates/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf \
     -t /usr/share/sonic/templates/critical_processes.j2,/etc/supervisor/critical_processes
     rm $db_cfg_file_tmp
+    chown -R redis:redis $VAR_LIB_REDIS_CHASSIS_DIR
+    chown -R redis:redis $REDIS_DIR
     exec /usr/local/bin/supervisord
     exit 0
 fi
