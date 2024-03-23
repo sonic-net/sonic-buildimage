@@ -4,11 +4,11 @@ Date: Tue, 1 Dec 2020 16:33:34 -0800
 Subject: [PATCH] support for dual tor scenario
 
 ---
- relay/dhcrelay.c | 117 +++++++++++++++++++++++++++++++++++++++--------
- 1 file changed, 98 insertions(+), 19 deletions(-)
+ relay/dhcrelay.c | 115 +++++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 97 insertions(+), 18 deletions(-)
 
 diff --git a/relay/dhcrelay.c b/relay/dhcrelay.c
-index e158efe..055d97f 100644
+index 9143e85..4134a58 100644
 --- a/relay/dhcrelay.c
 +++ b/relay/dhcrelay.c
 @@ -56,6 +56,8 @@ int bogus_agent_drops = 0;	/* Packets dropped because agent option
@@ -34,52 +34,51 @@ index e158efe..055d97f 100644
  #ifdef DHCPv6
  	/* Force use of DHCPv6 interface-id option. */
  isc_boolean_t use_if_id = ISC_FALSE;
-@@ -156,6 +165,8 @@ static int load_interface_alias_map(const char *port_alias_map_file_path);
+@@ -165,6 +174,8 @@ static int load_interface_alias_map(const char *port_alias_map_file_path);
  static int get_interface_alias_by_name(const char *if_name, char *if_alias_out);
  static void free_interface_alias_map(void);
  
 +static void free_downstream_intfs(void);
 +
  static const char copyright[] =
- "Copyright 2004-2018 Internet Systems Consortium.";
+ "Copyright 2004-2022 Internet Systems Consortium.";
  static const char arr[] = "All rights reserved.";
-@@ -189,6 +200,7 @@ char *progname;
+@@ -198,6 +209,7 @@ char *progname;
  "                     [-iu interface0 [ ... -iu interfaceN]\n" \
  "                     [-id interface0 [ ... -id interfaceN]\n" \
- "                     [-U interface]\n" \
+ "                     [-U interface] [-g <ip-address>]\n" \
 +"                     [-dt]\n"\
  "                     server0 [ ... serverN]\n\n" \
  "       %s -6   [-d] [-q] [-I] [-c <hops>]\n" \
  "                     [-p <port> | -rp <relay-port>]\n" \
-@@ -210,6 +222,7 @@ char *progname;
+@@ -219,6 +231,7 @@ char *progname;
  "                     [-iu interface0 [ ... -iu interfaceN]\n" \
  "                     [-id interface0 [ ... -id interfaceN]\n" \
- "                     [-U interface]\n" \
+ "                     [-U interface] [-g <ip-address>]\n" \
 +"                     [-dt]\n"\
  "                     server0 [ ... serverN]\n\n" \
  "       %s -6   [-d] [-q] [-I] [-c <hops>] [-p <port>]\n" \
  "                     [-pf <pid-file>] [--no-pid]\n" \
-@@ -231,6 +244,7 @@ char *progname;
+@@ -240,6 +253,7 @@ char *progname;
  "                [-iu interface0 [ ... -iu interfaceN]\n" \
  "                [-id interface0 [ ... -id interfaceN]\n" \
- "                [-U interface]\n" \
+ "                [-U interface] [-g <ip-address>]\n" \
 +"                [-dt]\n"\
  "                server0 [ ... serverN]\n\n" DHCRELAY_OPTION82_USAGE \
  "       %s {--version|--help|-h}"
  #else
-@@ -242,6 +256,7 @@ char *progname;
+@@ -251,6 +265,7 @@ char *progname;
  "                [-iu interface0 [ ... -iu interfaceN]\n" \
  "                [-id interface0 [ ... -id interfaceN]\n" \
- "                [-U interface]\n" \
+ "                [-U interface] [-g <ip-address>]\n" \
 +"                [-dt]\n"\
  "                server0 [ ... serverN]\n\n" DHCRELAY_OPTION82_USAGE \
  "       %s {--version|--help|-h}"
  #endif
-@@ -639,7 +654,16 @@ main(int argc, char **argv) {
+@@ -663,6 +678,15 @@ main(int argc, char **argv) {
  				usage(use_noarg, argv[i-1]);
  			if (load_interface_alias_map(argv[i]) != 0)
  				log_fatal("Failed to load interface name-alias map.");
-- 		} else if (argv[i][0] == '-') {
 +		} else if (!strcmp(argv[i], "-dt")) {
 +#ifdef DHCPv6
 +			if (local_family_set && (local_family == AF_INET6)) {
@@ -89,11 +88,10 @@ index e158efe..055d97f 100644
 +			local_family = AF_INET;
 +#endif
 +			enable_support_for_dual_tor = 1;
-+		} else if (argv[i][0] == '-') {
+  		} else if (argv[i][0] == '-') {
  			usage("Unknown command: %s", argv[i]);
   		} else {
- 			struct hostent *he;
-@@ -747,7 +771,6 @@ main(int argc, char **argv) {
+@@ -771,7 +795,6 @@ main(int argc, char **argv) {
  			log_fatal("No servers specified.");
  		}
  
@@ -101,7 +99,7 @@ index e158efe..055d97f 100644
  		/* Set up the server sockaddrs. */
  		for (sp = servers; sp; sp = sp->next) {
  			sp->to.sin_port = local_port;
-@@ -862,6 +885,8 @@ main(int argc, char **argv) {
+@@ -886,6 +909,8 @@ main(int argc, char **argv) {
  
  	/* In fact dispatch() never returns. */
  	free_interface_alias_map();
@@ -110,7 +108,7 @@ index e158efe..055d97f 100644
  	return (0);
  }
  
-@@ -885,25 +910,50 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
+@@ -909,25 +934,50 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
  		return;
  	}
  
@@ -174,7 +172,7 @@ index e158efe..055d97f 100644
  	}
  
  	/* If it's a bootreply, forward it to the client. */
-@@ -913,6 +963,10 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
+@@ -937,6 +987,10 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
  			return;
  		}
  
@@ -182,10 +180,10 @@ index e158efe..055d97f 100644
 +		if (enable_support_for_dual_tor && !out)
 +			return;
 +
+ 		log_debug("BOOTREPLY giaddr: %s\n", inet_ntoa(packet->giaddr));
  		if (!(packet->flags & htons(BOOTP_BROADCAST)) &&
  			can_unicast_without_arp(out)) {
- 			to.sin_addr = packet->yiaddr;
-@@ -945,9 +999,13 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
+@@ -970,9 +1024,13 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
  			return;
  
  		if (!out) {
@@ -202,7 +200,7 @@ index e158efe..055d97f 100644
  			return;
  		}
  
-@@ -989,6 +1047,7 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
+@@ -1023,6 +1081,7 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
  	   that set giaddr, so we won't see it. */
  	if (!packet->giaddr.s_addr)
  		packet->giaddr = ip->addresses[0];
@@ -210,7 +208,7 @@ index e158efe..055d97f 100644
  	if (packet->hops < max_hop_count)
  		packet->hops = packet->hops + 1;
  	else
-@@ -1264,7 +1323,6 @@ find_interface_by_agent_option(struct dhcp_packet *packet,
+@@ -1305,7 +1364,6 @@ find_interface_by_agent_option(struct dhcp_packet *packet,
  
  	/* Scan the interface list looking for an interface whose
  	   name matches the one specified in circuit_id. */
@@ -218,7 +216,7 @@ index e158efe..055d97f 100644
  	for (ip = interfaces; ip; ip = ip->next) {
  		if (ip->circuit_id &&
  		    ip->circuit_id_len == circuit_id_len &&
-@@ -1668,6 +1726,7 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
+@@ -1714,6 +1772,7 @@ add_relay_agent_options(struct interface_info *ip, struct dhcp_packet *packet,
  			*sp++ = 4u;
  			memcpy(sp, &giaddr.s_addr, 4);
  			sp += 4;
@@ -226,7 +224,7 @@ index e158efe..055d97f 100644
  			packet->giaddr = uplink->addresses[0];
  			log_debug ("Adding link selection suboption"
  				   " with addr: %s", inet_ntoa(giaddr));
-@@ -2398,6 +2457,7 @@ void request_v4_interface(const char* name, int flags) {
+@@ -2451,6 +2510,7 @@ void request_v4_interface(const char* name, int flags) {
          struct interface_info *tmp = NULL;
          int len = strlen(name);
          isc_result_t status;
@@ -234,7 +232,7 @@ index e158efe..055d97f 100644
  
          if (len >= sizeof(tmp->name)) {
                  log_fatal("%s: interface name too long (is %d)", name, len);
-@@ -2413,6 +2473,15 @@ void request_v4_interface(const char* name, int flags) {
+@@ -2466,6 +2526,15 @@ void request_v4_interface(const char* name, int flags) {
  		  (flags & INTERFACE_UPSTREAM ? 'Y' : 'N'),
  		  (flags & INTERFACE_DOWNSTREAM ? 'Y' : 'N'));
  
@@ -247,10 +245,10 @@ index e158efe..055d97f 100644
 +		ci->interface = tmp;
 +	}
 +
-         strncpy(tmp->name, name, len);
+         memcpy(tmp->name, name, len);
          interface_snorf(tmp, (INTERFACE_REQUESTED | flags));
          interface_dereference(&tmp, MDL);
-@@ -2487,3 +2556,13 @@ free_interface_alias_map(void) {
+@@ -2540,3 +2609,13 @@ free_interface_alias_map(void) {
  	free(g_interface_name_alias_map);
  	g_interface_name_alias_map_size = 0;
  }
@@ -265,5 +263,5 @@ index e158efe..055d97f 100644
 +	}
 +}
 -- 
-2.17.1
+2.25.1
 

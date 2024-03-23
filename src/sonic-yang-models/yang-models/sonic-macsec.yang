@@ -70,9 +70,9 @@ module sonic-macsec {
                     }
                 }
 
-                must "string-length(fallback_cak) = string-length(primary_cak)";
+                must "string-length(fallback_cak) = 0 or string-length(fallback_cak) = string-length(primary_cak)";
 
-                must "primary_ckn != fallback_ckn";
+                must "string-length(fallback_ckn) = 0 or primary_ckn != fallback_ckn";
 
                 leaf policy {
                     type string {

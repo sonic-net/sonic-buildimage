@@ -256,5 +256,39 @@
 				}
 			]
 		}
+	},
+
+	"test-yang-structure:test-yang-container": {
+		"test-yang-structure:YANG_STRUCT_TEST": {
+			"YANG_LIST_TEST_LIST": [{
+					"name" : "Vlan1001",
+					"leaf-list-test": [
+						"fc02:2000::1",
+						"fc02:2000::2"
+					],
+					"container-in-list-test": {
+						"leaf-1": true,
+						"leaf-2": "test1",
+						"mc-case-leaf-1": 55,
+						"mc-case-leaf-3": 1234
+					},
+					"case-leaf-1": 101
+				},
+				{
+					"name" : "Test123",
+					"leaf-list-test": [
+						"3003:2000::1",
+						"2002:2001::2"
+					],
+					"container-in-list-test": {
+						"leaf-1": false,
+						"leaf-2": "test2",
+						"mc-case-leaf-2": 77,
+						"mc-case-leaf-3": 4321
+					},
+					"case-leaf-2": 1001
+				}
+			]
+		}
 	}
 }

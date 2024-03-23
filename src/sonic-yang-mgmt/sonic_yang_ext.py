@@ -378,10 +378,17 @@ class SonicYangExtMixin:
         #choices, this is tricky, since leafs are under cases in tree.
         choices = model.get('choice')
         if choices:
-            for choice in choices:
-                cases = choice['case']
+            # If single choice exists in container/list
+            if isinstance(choices, dict):
+                cases = choices['case']
                 for case in cases:
                     self._fillLeafDict(case.get('leaf'), leafDict)
+            # If multiple choices exist in container/list
+            else:
+                for choice in choices:
+                    cases = choice['case']
+                    for case in cases:
+                        self._fillLeafDict(case.get('leaf'), leafDict)
 
         # leaf-lists
         self._fillLeafDict(model.get('leaf-list'), leafDict, True)
@@ -536,6 +543,29 @@ class SonicYangExtMixin:
         return
 
     """
+    Process container inside a List.
+    This function will call xlateContainer based on Container(s) present
+    in outer List.
+    """
+    def _xlateContainerInList(self, model, yang, configC, table):
+        ccontainer = model
+        ccName = ccontainer.get('@name')
+        if ccName not in configC:
+            # Inner container doesn't exist in config
+            return
+
+        if bool(configC[ccName]):
+            # Empty container - return
+            return
+
+        self.sysLog(msg="xlateProcessListOfContainer: {}".format(ccName))
+        self.elementPath.append(ccName)
+        self._xlateContainer(ccontainer, yang, configC[ccName], table)
+        self.elementPath.pop()
+
+        return
+
+    """
     Xlate a list
     This function will xlate from a dict in config DB to a Yang JSON list
     using yang model. Output will be go in self.xlateJson
@@ -552,6 +582,9 @@ class SonicYangExtMixin:
             self.sysLog(msg="_xlateType1MapList: {}".format(model['@name']))
             self._xlateType1MapList(model, yang, config, table, exceptionList)
             return
+
+        # For handling of container(s) in list
+        ccontainer = model.get('container')
 
         #create a dict to map each key under primary key with a dict yang model.
         #This is done to improve performance of mapping from values of TABLEs in
@@ -572,6 +605,19 @@ class SonicYangExtMixin:
                 keyDict = self._extractKey(pkey, listKeys)
                 # fill rest of the values in keyDict
                 for vKey in config[pkey]:
+                    if ccontainer and vKey == ccontainer.get('@name'):
+                        self.sysLog(syslog.LOG_DEBUG, "xlateList Handle container {} in list {}".\
+                            format(vKey, table))
+                        yangContainer = dict()
+                        if isinstance(ccontainer, dict) and bool(config):
+                            self._xlateContainerInList(ccontainer, yangContainer, config[pkey], table)
+                        # If multi-list exists in container,
+                        elif ccontainer and isinstance(ccontainer, list) and bool(config):
+                            for modelContainer in ccontainer:
+                                self._xlateContainerInList(modelContainer, yangContainer, config[pkey], table)
+                        if len(yangContainer):
+                            keyDict[vKey] = yangContainer
+                        continue
                     self.elementPath.append(vKey)
                     self.sysLog(syslog.LOG_DEBUG, "xlateList vkey {}".format(vKey))
                     try:
@@ -617,7 +663,7 @@ class SonicYangExtMixin:
     """
     def _xlateContainerInContainer(self, model, yang, configC, table):
         ccontainer = model
-        ccName = ccontainer['@name']
+        ccName = ccontainer.get('@name')
         yang[ccName] = dict()
         if ccName not in configC:
             # Inner container doesn't exist in config
@@ -876,6 +922,9 @@ class SonicYangExtMixin:
            self._revXlateType1MapList(model, yang, config, table)
            return
 
+        # For handling of container(s) in list
+        ccontainer = model.get('container')
+
         # get keys from YANG model list itself
         listKeys = model['key']['@value']
         # create a dict to map each key under primary key with a dict yang model.
@@ -894,6 +943,17 @@ class SonicYangExtMixin:
                 # fill rest of the entries
                 for key in entry:
                     if key not in pkeydict:
+                        if ccontainer and key == ccontainer['@name']:
+                            self.sysLog(syslog.LOG_DEBUG, "revXlateList handle container {} in list {}".format(pkey, table))
+                            # IF container has only one inner container
+                            if isinstance(ccontainer, dict):
+                                self._revXlateContainerInContainer(ccontainer, entry, config[pkey], table)
+                            # IF container has many inner container
+                            elif isinstance(ccontainer, list):
+                                for modelContainer in ccontainer:
+                                    self._revXlateContainerInContainer(modelContainer, entry, config[pkey], table)
+                            continue
+
                         self.elementPath.append(key)
                         config[pkey][key] = self._revFindYangTypedValue(key, \
                             entry[key], leafDict)

@@ -6,16 +6,16 @@ Subject: [PATCH 3/3] If destination of BOOTREQUEST is directed broadcast,
  interfaces
 
 ---
- common/discover.c | 46 +++++++++++++++++++---
+ common/discover.c | 40 +++++++++++++++++++--
  includes/dhcpd.h  |  3 ++
- relay/dhcrelay.c  | 98 +++++++++++++++++++++++++++++++++++++++++------
- 3 files changed, 131 insertions(+), 16 deletions(-)
+ relay/dhcrelay.c  | 90 +++++++++++++++++++++++++++++++++++++++++++----
+ 3 files changed, 123 insertions(+), 10 deletions(-)
 
 diff --git a/common/discover.c b/common/discover.c
-index 98ac46a..53afecc 100644
+index 0c5ad39..32f2516 100644
 --- a/common/discover.c
 +++ b/common/discover.c
-@@ -236,6 +236,7 @@ struct iface_conf_list {
+@@ -239,6 +239,7 @@ struct iface_conf_list {
  struct iface_info {
  	char name[IF_NAMESIZE+1];	/* name of the interface, e.g. "bge0" */
  	struct sockaddr_storage addr;	/* address information */
@@ -23,7 +23,7 @@ index 98ac46a..53afecc 100644
  	isc_uint64_t flags;		/* interface flags, e.g. IFF_LOOPBACK */
  };
  
-@@ -367,6 +368,17 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
+@@ -370,6 +371,17 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
  	}
  	info->flags = tmp.lifr_flags;
  
@@ -41,7 +41,7 @@ index 98ac46a..53afecc 100644
  	ifaces->next++;
  	*err = 0;
  	return 1;
-@@ -410,6 +422,7 @@ struct iface_conf_list {
+@@ -413,6 +425,7 @@ struct iface_conf_list {
  struct iface_info {
  	char name[IFNAMSIZ];		/* name of the interface, e.g. "bge0" */
  	struct sockaddr_storage addr;	/* address information */
@@ -49,17 +49,17 @@ index 98ac46a..53afecc 100644
  	isc_uint64_t flags;		/* interface flags, e.g. IFF_LOOPBACK */
  };
  
-@@ -487,7 +500,8 @@ end_iface_scan(struct iface_conf_list *ifaces) {
+@@ -490,7 +503,8 @@ end_iface_scan(struct iface_conf_list *ifaces) {
  /* XXX: perhaps create drealloc() rather than do it manually */
  void
- add_ipv4_addr_to_interface(struct interface_info *iface, 
+ add_ipv4_addr_to_interface(struct interface_info *iface,
 -			   const struct in_addr *addr) {
 +			   const struct in_addr *addr,
 +			   const struct in_addr *netmask) {
  	/*
  	 * We don't expect a lot of addresses per IPv4 interface, so
  	 * we use 4, as our "chunk size" for collecting addresses.
-@@ -498,6 +512,11 @@ add_ipv4_addr_to_interface(struct interface_info *iface,
+@@ -501,6 +515,11 @@ add_ipv4_addr_to_interface(struct interface_info *iface,
  			log_fatal("Out of memory saving IPv4 address "
  			          "on interface.");
  		}
@@ -71,7 +71,7 @@ index 98ac46a..53afecc 100644
  		iface->address_count = 0;
  		iface->address_max = 4;
  	} else if (iface->address_count >= iface->address_max) {
-@@ -515,9 +534,23 @@ add_ipv4_addr_to_interface(struct interface_info *iface,
+@@ -518,9 +537,23 @@ add_ipv4_addr_to_interface(struct interface_info *iface,
  		       iface->address_max * sizeof(struct in_addr));
  		dfree(iface->addresses, MDL);
  		iface->addresses = tmp;
@@ -96,15 +96,15 @@ index 98ac46a..53afecc 100644
  }
  
  #ifdef DHCPv6
-@@ -656,6 +689,7 @@ discover_interfaces(int state) {
- 		if ((info.addr.ss_family == AF_INET) && 
+@@ -661,6 +694,7 @@ discover_interfaces(int state) {
+ 		if ((info.addr.ss_family == AF_INET) &&
  		    (local_family == AF_INET)) {
  			struct sockaddr_in *a = (struct sockaddr_in*)&info.addr;
 +			struct sockaddr_in *n = (struct sockaddr_in*)&info.netmask;
  			struct iaddr addr;
  
  			/* We don't want the loopback interface. */
-@@ -670,7 +704,7 @@ discover_interfaces(int state) {
+@@ -675,7 +709,7 @@ discover_interfaces(int state) {
  			if (a->sin_addr.s_addr != htonl(INADDR_ANY))
  				tmp->configured = 1;
  
@@ -114,10 +114,10 @@ index 98ac46a..53afecc 100644
  			/* invoke the setup hook */
  			addr.len = 4;
 diff --git a/includes/dhcpd.h b/includes/dhcpd.h
-index df3da59..2c7f059 100644
+index 20f9bfb..b54a36e 100644
 --- a/includes/dhcpd.h
 +++ b/includes/dhcpd.h
-@@ -1369,6 +1369,9 @@ struct interface_info {
+@@ -1380,6 +1380,9 @@ struct interface_info {
  	struct in_addr *addresses;	/* Addresses associated with this
  					 * interface.
  					 */
@@ -128,7 +128,7 @@ index df3da59..2c7f059 100644
  	int address_max;		/* Size of addresses buffer. */
  	struct in6_addr *v6addresses;	/* IPv6 addresses associated with
 diff --git a/relay/dhcrelay.c b/relay/dhcrelay.c
-index 54f132a..beae977 100644
+index b72b1bc..9143e85 100644
 --- a/relay/dhcrelay.c
 +++ b/relay/dhcrelay.c
 @@ -30,6 +30,7 @@
@@ -139,7 +139,7 @@ index 54f132a..beae977 100644
  #include <isc/file.h>
  
  TIME default_lease_time = 43200; /* 12 hours... */
-@@ -1001,20 +1002,95 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
+@@ -1030,20 +1031,95 @@ do_relay4(struct interface_info *ip, struct dhcp_packet *packet,
  	/* Otherwise, it's a BOOTREQUEST, so forward it to all the
  	   servers. */
  	for (sp = servers; sp; sp = sp->next) {
@@ -147,7 +147,6 @@ index 54f132a..beae977 100644
 -				 ? fallback_interface : interfaces),
 -				 NULL, packet, length, ip->addresses[0],
 -				 &sp->to, NULL) < 0) {
--			++client_packet_errors;
 +		int packet_relay_attempted = 0;
 +
 +		log_debug("Server IP: %s", inet_ntoa(sp->to.sin_addr));
@@ -180,14 +179,16 @@ index 54f132a..beae977 100644
 +					log_debug("Packet destined for broadcast IP of %s", out->name);
 +					if (send_packet(out, NULL, packet,
 +							length, ip->addresses[0],&sp->to, NULL) < 0) {
-+						++client_packet_errors;
-+					} else {
-+						log_debug("Forwarded BOOTREQUEST for %s to %s on interface %s",
-+						       print_hw_addr(packet->htype, packet->hlen,
-+								      packet->chaddr),
-+						       inet_ntoa(sp->to.sin_addr), out->name);
+ 			++client_packet_errors;
+ 		} else {
+-			log_debug("Forwarded BOOTREQUEST for %s to %s",
++			log_debug("Forwarded BOOTREQUEST for %s to %s on interface %s",
+ 			       print_hw_addr(packet->htype, packet->hlen,
+ 					      packet->chaddr),
+-			       inet_ntoa(sp->to.sin_addr));
++			       inet_ntoa(sp->to.sin_addr), out->name);
 +
-+						++client_packets_relayed;
+ 			++client_packets_relayed;
 +					}
 +
 +					packet_relay_attempted = 1;
@@ -198,8 +199,9 @@ index 54f132a..beae977 100644
 +
 +			if (packet_relay_attempted)
 +				break;
-+		}
-+
+ 		}
+-	}
+ 
 +		if (packet_relay_attempted)
 +			continue;
 +
@@ -217,12 +219,7 @@ index 54f132a..beae977 100644
 +
 +				++client_packets_relayed;
 +			}
- 		} else {
--			log_debug("Forwarded BOOTREQUEST for %s to %s",
--			       print_hw_addr(packet->htype, packet->hlen,
--					      packet->chaddr),
--			       inet_ntoa(sp->to.sin_addr));
--			++client_packets_relayed;
++		} else {
 +			for (out = interfaces; out; out = out->next) {
 +				// Only relay BOOTREQUEST on upstream interfaces
 +				if (!(out->flags & INTERFACE_UPSTREAM))
@@ -240,12 +237,11 @@ index 54f132a..beae977 100644
 +					++client_packets_relayed;
 +				}
 +			}
- 		}
- 	}
--				 
++		}
++	}
  }
  
- /* Strip any Relay Agent Information options from the DHCP packet
+ #endif /* UNIT_TEST */
 -- 
-2.17.1
+2.25.1
 
