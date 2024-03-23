@@ -2084,7 +2084,7 @@ serdes_lane_config_channel_mode_447=force_nr
 
 rif_id_max=24576
 dpp_db_path=/usr/share/bcm/db
-sai_recycle_port_lane_base=96
+sai_recycle_port_lane_base=200
 appl_param_nof_ports_per_modid=64
 udh_exists=1
 modreg IPS_FORCE_LOCAL_OR_FABRIC FORCE_FABRIC=1
