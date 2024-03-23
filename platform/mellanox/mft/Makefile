@@ -42,27 +42,13 @@ DERIVED_TARGETS = mft-oem_$(MFT_VERSION)-$(MFT_REVISION)_$(CONFIGURED_ARCH).deb
 DKMS_CTRL = /var/lib/dkms/kernel-mft-dkms/
 DKMS_TMP := $(shell mktemp -u -d -t dkms.XXXXXXXXXX)
 
-MFT_DEB_TMP := $(shell mktemp -u -d -t mft.deb.XXXXXXXXXX)
-MFT_TMP := $(shell mktemp -u -d -t mft.XXXXXXXXXX)
+MFT_TMP = /tmp/mft_build/
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	mkdir -p $(MFT_TMP)
 	pushd $(MFT_TMP)
 	wget -O $(MFT_TGZ) $(MFT_TGZ_URL)
 	tar xzf $(MFT_TGZ)
-
-	# w/a: disable bash autocompletion
-	mkdir -p $(MFT_DEB_TMP)/DEBIAN
-
-	dpkg -e $(MFT_NAME)/DEBS/$(MAIN_TARGET) $(MFT_DEB_TMP)/DEBIAN
-	dpkg -x $(MFT_NAME)/DEBS/$(MAIN_TARGET) $(MFT_DEB_TMP)
-
-	rm -rf $(MFT_DEB_TMP)/etc/bash_completion.d
-	sed -i '/bash_completion.d/d' $(MFT_DEB_TMP)/DEBIAN/conffiles
-
-	dpkg -b $(MFT_DEB_TMP) $(MFT_NAME)/DEBS/$(MAIN_TARGET)
-
-	rm -rf $(MFT_DEB_TMP)
 
 	# fix timestamp
 	touch $(MFT_NAME)/DEBS/*.deb
