@@ -109,7 +109,7 @@ $RepeatedMsgReduction on
 {% set regex = conf.get('filter_regex') -%}
 
 {% set fmodifier = '!' if filter == 'exclude' else '' %}
-{% set device = 'eth0' if vrf == 'default' else vrf -%}
+{% set device = vrf if vrf != '' and vrf != 'default' -%}
 {% set template = 'WelfRemoteFormat' if format == 'welf' else 'SONiCForwardFormat' -%}
 
 {# Server extra options -#}
@@ -117,11 +117,16 @@ $RepeatedMsgReduction on
 
 {% if source -%}
     {% set options = options ~ ' Address="' ~ source ~ '"'-%}
+    {% set device = device if device != 'eth0' else '' -%}
+{% endif -%}
+
+{% if device -%}
+    {% set options = options ~ ' Device="' ~ device ~ '"'-%}
 {% endif -%}
 
 {% if filter %}
 :msg, {{ fmodifier }}ereregex, "{{ regex }}"
 {% endif %}
 *.*
-action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Device="{{ device }}" Template="{{ template }}"{{ options }})
+action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}"{{ options }})
 {% endfor %}
