@@ -1,0 +1,14 @@
+{
+    "BANNER_MESSAGE_TEST_STATE": {
+        "desc": "Configure Banner feature state."
+    },
+    "BANNER_MESSAGE_TEST_LOGIN" : {
+        "desc": "Banner login messages configuration in BANNER_MESSAGE table."
+    },
+    "BANNER_MESSAGE_TEST_MOTD" : {
+        "desc": "Banner MOTD messages configuration in BANNER_MESSAGE table."
+    },
+    "BANNER_MESSAGE_TEST_LOGOUT" : {
+        "desc": "Banner logout messages configuration in BANNER_MESSAGE table."
+    }
+}
