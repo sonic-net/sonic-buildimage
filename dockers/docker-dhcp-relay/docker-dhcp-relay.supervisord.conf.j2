@@ -53,7 +53,7 @@ dependent_startup_wait_for=rsyslogd:running
 {% endif %}
 {% endfor %}
 
-{% if 'dhcp_server' in DEVICE_METADATA['localhost'] and 'enable' in DEVICE_METADATA['localhost']['dhcp_server'] %}
+{% if 'dhcp_server' in DEVICE_METADATA['localhost'] and 'enable' in DEVICE_METADATA['localhost']['dhcp_server'] and ('dhcp_server' not in FEATURE or 'state' not in FEATURE['dhcp_server'] or FEATURE['dhcp_server']['state'] != 'enabled') %}
 [group:dhcp-server]
 programs=dnsmasq,host-monitor
 
@@ -95,10 +95,12 @@ programs=
 {% endfor %}
 
 {% include 'dhcpv6-relay.agents.j2' %}
+{% if 'dhcp_server' not in DEVICE_METADATA['localhost'] or 'enable' not in DEVICE_METADATA['localhost']['dhcp_server'] %}
 {% include 'dhcp-relay.monitors.j2' %}
 {% endif %}
 {% endif %}
-{% if 'dhcp_server' not in DEVICE_METADATA['localhost'] or 'enable' not in DEVICE_METADATA['localhost']['dhcp_server'] %}
+{% endif %}
+{% if 'dhcp_server' not in DEVICE_METADATA['localhost'] or 'enable' not in DEVICE_METADATA['localhost']['dhcp_server'] or ('dhcp_server' in FEATURE and 'state' in FEATURE['dhcp_server'] and FEATURE['dhcp_server']['state'] == 'enabled')%}
 [program:dhcprelayd]
 command=/usr/local/bin/dhcprelayd
 priority=3

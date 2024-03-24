@@ -1,6 +1,6 @@
 {%- set add_preceding_comma = { 'flag': False } %}
 [group:dhcp-relay]
-programs={%- if 'dhcp_server' not in DEVICE_METADATA['localhost'] or 'enable' not in DEVICE_METADATA['localhost']['dhcp_server'] %}
+programs={%- if 'dhcp_server' not in DEVICE_METADATA['localhost'] or 'enable' not in DEVICE_METADATA['localhost']['dhcp_server'] or ('dhcp_server' in FEATURE and 'state' in FEATURE['dhcp_server'] and FEATURE['dhcp_server']['state'] == 'enabled') %}
 {%- set _dummy = add_preceding_comma.update({'flag': True}) %}
 dhcprelayd
 {%- endif %}
