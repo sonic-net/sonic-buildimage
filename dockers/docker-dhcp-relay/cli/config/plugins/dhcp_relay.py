@@ -1,6 +1,7 @@
 import click
 import ipaddress
 import utilities_common.cli as clicommon
+import subprocess
 
 DHCP_RELAY_TABLE = "DHCP_RELAY"
 DHCPV6_SERVERS = "dhcpv6_servers"
@@ -184,6 +185,28 @@ def del_dhcp_relay_ipv4_helper(db, vid, dhcp_relay_helpers):
         return
     del_dhcp_relay(vid, dhcp_relay_helpers, db, IPV4)
 
+@click.group(cls=clicommon.AbbreviationGroup, name='dhcp_relay')
+def dhcp_relay():
+    """Configure DHCP_Relay information"""
+    pass
+@dhcp_relay.group(cls=clicommon.AbbreviationGroup, name="mitigation-rate")
+def dhcp_relay_mitigation_rate():
+    """Configure DHCP relay mitigation rate"""
+    pass
+@dhcp_relay_mitigation_rate.command("add")
+@click.argument("rate", metavar="<number of packets per second>", required=True, type=int)
+@click.argument("dev", metavar="<interface name>", required=True, type=str)
+def add_dhcp_relay_mitigation_rate(rate, dev):
+    """Add DHCP relay mitigation rate"""
+    rate = rate * 406  # Multiply the rate by 406 (adjust as needed)
+    
+    # Generate the tc commands with the specified rate and interface
+    tc_qdisc_command = f"sudo tc qdisc add dev {dev} handle ffff: ingress"
+    tc_filter_command = f"sudo tc filter add dev {dev} protocol ip parent ffff: prio 1 u32 match ip protocol 17 0xff match ip dport 67 0xffff police rate {rate}bps burst {rate}b conform-exceed drop"
+    
+    # Apply the tc commands
+    subprocess.run(tc_qdisc_command, shell=True)
+    subprocess.run(tc_filter_command, shell=True)
 
 # subcommand of vlan
 @click.group(cls=clicommon.AbbreviationGroup, name='dhcp_relay')
@@ -293,6 +316,8 @@ def del_vlan_dhcp_relay_destination(db, vid, dhcp_relay_destination_ips):
         restart_dhcp_relay_service()
     except SystemExit as e:
         ctx.fail("Restart service dhcp_relay failed with error {}".format(e))
+
+
 
 
 def register(cli):
