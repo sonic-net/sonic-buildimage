@@ -132,12 +132,23 @@ function clean_up_chassis_db_tables()
         return
     fi
 
-    if [[ !($($SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0) ]]; then
-        return
-    fi
+    until [[ $($SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0 ]]; do
+        sleep 1
+    done
 
     lc=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'hostname'`
+    until [[ -n "${lc}" ]]; do
+        lc=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'hostname'`
+        sleep 1
+    done
+    debug "Chassis db clean up for ${SERVICE}$DEV. hostname=$lc"
+
     asic=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'asic_name'`
+    until [[ -n "${asic}" ]]; do
+        asic=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'asic_name'`
+        sleep 1
+    done
+    debug "Chassis db clean up for ${SERVICE}$DEV. asic=$asic"
 
     # First, delete SYSTEM_NEIGH entries
     num_neigh=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
