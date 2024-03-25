@@ -115,6 +115,36 @@ build:sonic:aarch64:
     BUILD_ARCH: aarch64
     TARGET_BIN: sonic-marvell-arm64.bin
 
+.build:brcm-rpc:
+  stage: build
+  only:
+    - branches
+  tags:
+    - ${BUILD_ARCH}
+  script: |
+    ./.gitlab-ci-submodule-init.sh
+    . .ci-env
+    case "$LEAN" in true) echo LEAN ; exit 0 ; esac
+    if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
+      # skip build and use the latest
+      mkdir -p target
+      curl -o target/docker-syncd-brcm-dnx-rpc.gz http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/docker-syncd-brcm-dnx-rpc.gz
+    else
+      ./build.sh --rpc
+    fi
+  artifacts:
+    name: "$CI_COMMIT_REF_NAME"
+    paths:
+      - target/docker-syncd-brcm*rpc.gz
+    expire_in: 1 week
+
+build:brcm-rpc:x86_64:
+  extends: .build:brcm-rpc
+  needs:
+    - configure:sonic:x86_64
+  variables:
+    BUILD_ARCH: x86_64
+
 express:chassis7:
   stage: test
   only:
@@ -209,11 +239,18 @@ regress:t2:chassis11:
     mkdir -p /var/www/html/${PLUTO_COMMIT_DIR}
     for f in `ls target/sonic-*.bin` ; do \
       cp -a --no-preserve=mode $f /var/www/html/${PLUTO_COMMIT_DIR}/ ; done
+    for f in `ls target/docker-syncd-*rpc.gz` ; do \
+      cp -a --no-preserve=mode $f /var/www/html/${PLUTO_COMMIT_DIR}/ ; done
     echo "sonic_commitid=${CI_COMMIT_SHORT_SHA}" > /var/www/html/${PLUTO_COMMIT_DIR}/build-info.txt
     # make latest link and remove anything older than a week
     cd /var/www/html/${PLUTO_BRANCH_DIR} && \
       rm -f latest && ln -sf ${CI_PIPELINE_ID} latest && \
       find . -maxdepth 1 -type d -ctime +7 -exec rm -fr {} \+
+
+post:brcm-rpc:x86_64:
+  extends: .post
+  needs:
+    - build:brcm-rpc:x86_64
 
 post:sonic:x86_64:
   extends: .post
