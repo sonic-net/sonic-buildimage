@@ -213,6 +213,8 @@ enum {
     STATE_READ,
     STATE_STOP,
     STATE_ERROR,
+    STATE_NACK,
+    STATE_ARBLOST,
 };
 
 #define TYPE_FPGALOGIC		0
@@ -527,13 +529,17 @@ static void fpgai2c_process(struct fpgalogic_i2c *i2c)
         return;
     }
 
-    if ((i2c->state == STATE_STOP) || (i2c->state == STATE_ERROR)) {
+    if ((i2c->state == STATE_STOP) || (i2c->state == STATE_NACK) ||
+        (i2c->state == STATE_ARBLOST)) {
         /* stop has been sent */
         PRINT("fpgai2c_process FPGAI2C_REG_CMD_IACK stat = 0x%x Set FPGAI2C_REG_CMD(0%x) FPGAI2C_REG_CMD_IACK = 0x%x\n" \
                 ,stat, FPGAI2C_REG_CMD, FPGAI2C_REG_CMD_IACK);
         fpgai2c_reg_set(i2c, FPGAI2C_REG_CMD, FPGAI2C_REG_CMD_IACK);
         if(i2c->state == STATE_STOP) {
             i2c->state = STATE_DONE;
+        }
+        if ((i2c->state == STATE_NACK) || (i2c->state == STATE_ARBLOST)) {
+            i2c->state = STATE_ERROR;
         }
         wake_up(&i2c->wait);
         return;
@@ -542,7 +548,7 @@ static void fpgai2c_process(struct fpgalogic_i2c *i2c)
 
     /* error? */
     if (stat & FPGAI2C_REG_STAT_ARBLOST) {
-        i2c->state = STATE_ERROR;
+        i2c->state = STATE_ARBLOST;
         PRINT("fpgai2c_process FPGAI2C_REG_STAT_ARBLOST FPGAI2C_REG_CMD_STOP\n");
         fpgai2c_stop(i2c);
         return;
@@ -559,7 +565,7 @@ static void fpgai2c_process(struct fpgalogic_i2c *i2c)
             (msg->flags & I2C_M_RD) ? STATE_READ : STATE_WRITE;
 
         if (stat & FPGAI2C_REG_STAT_NACK) {
-            i2c->state = STATE_ERROR;
+            i2c->state = STATE_NACK;
             fpgai2c_stop(i2c);
             return;
         }
@@ -712,7 +718,8 @@ static int fpgai2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
         fpgai2c_reg_set(i2c, FPGAI2C_REG_CMD, FPGAI2C_REG_CMD_START);
 
         /* Interrupt mode, wait for MSI, timeout in error conditions */
-        if (wait_event_timeout(i2c->wait, (i2c->state == STATE_DONE), HZ/4))
+        if (wait_event_timeout(i2c->wait,
+            ((i2c->state == STATE_DONE) || (i2c->state == STATE_ERROR)), HZ/2))
             ret = (i2c->state == STATE_DONE) ? num : -EIO;
         return ret;
     }
@@ -1531,4 +1538,4 @@ module_exit (fpgapci_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("joyce_yu@dell.com");
 MODULE_DESCRIPTION ("Driver for FPGA Logic I2C bus");
-MODULE_VERSION ("01.01");
+MODULE_VERSION ("02.02");
