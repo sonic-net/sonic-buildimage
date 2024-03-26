@@ -1,0 +1,13 @@
+[Unit]
+Description=SWSS restart service
+After=swss.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/platform_swss_restart.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

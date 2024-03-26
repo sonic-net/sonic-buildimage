@@ -1,0 +1,5 @@
+sonic-ufispace-platform-modules (1.1.0) unstable; urgency=low
+
+  * Add support for S9180-32X.
+
+ -- Ufispace <leo.yt.lin@ufispace.com>  Tue, 19 Apr 2022 17:10:58 +0800
