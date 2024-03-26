@@ -1,0 +1,34 @@
+{
+"cdt_bypass": false,
+"mbr_bypass": false,
+"pfe_bypass": false,
+"bm_size": 80,
+"device_list": [
+{
+"ip": "localhost",
+"id": 0,
+"port": 49153
+}
+],
+"managementLinks": [
+  {
+   "portId": 256,
+   "deviceId": 0,
+   "breakoutMode": 9
+  }
+],
+"tdt_bypass": false,
+"ind_dir_bypass": false,
+"bid_bypass": false,
+"mac_crc_bypass": false,
+"dies_num": 1,
+"version": "0.0",
+"ifu_mode": "full",
+"mac_bypass": false,
+"qqm_number": 4,
+"hw_mode": "full",
+"pcs_disable_bypass": true,
+"bypass_all": false,
+"serdes_disable_bypass": true,
+"reg_mem_access_file": false
+}

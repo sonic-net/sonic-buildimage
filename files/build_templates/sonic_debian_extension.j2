@@ -198,6 +198,25 @@ sudo rm -rf $FILESYSTEM_ROOT/$PLATFORM_PDDF_COMMON_PY3_WHEEL_NAME
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install thrift==0.13.0
 {% endif %}
 
+{# Xsight platform files and packages #}
+{% if sonic_asic_platform == "xsight" %}
+
+## Add support for log output into journalctl from python services
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install \
+    python3-systemd
+
+## X1 scripts
+sudo cp -a platform/xsight/files/xlx $FILESYSTEM_ROOT/home/admin/
+sudo cp -a platform/xsight/files/xlink.cfg $FILESYSTEM_ROOT/etc/sonic/
+sudo chmod +x $FILESYSTEM_ROOT/home/admin/xlx/*.sh
+sudo LANG=C chroot $FILESYSTEM_ROOT chown -R $USERNAME /home/admin/xlx
+
+## Default ixgbe module loading is happening to early for udev interface renaming
+## Thus blacklisting ixgbe. It will be loaded in xlx/start.sh.
+echo 'blacklist ixgbe' | sudo tee -a  $FILESYSTEM_ROOT/etc/modprobe.d/xpci.conf
+
+{% endif %}
+
 # Install system-health Python 3 package
 SYSTEM_HEALTH_PY3_WHEEL_NAME=$(basename {{system_health_py3_wheel_path}})
 sudo cp {{system_health_py3_wheel_path}} $FILESYSTEM_ROOT/$SYSTEM_HEALTH_PY3_WHEEL_NAME

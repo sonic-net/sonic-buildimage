@@ -1,0 +1,6 @@
+#DPKG FRK
+#include $(PLATFORM_PATH)/xsight-sai.dep
+#include $(PLATFORM_PATH)/docker-syncd-xsight.dep
+include $(PLATFORM_PATH)/one-image.dep
+include $(PLATFORM_PATH)/libsaithrift-dev.dep
+

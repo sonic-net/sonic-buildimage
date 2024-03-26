@@ -1,0 +1,18 @@
+{
+    "chassis": {
+        "es9632xq-O32x400G": {
+            "component": {
+                "BIOS": {  "firmware" : "/usr/local/lib/firmware/fires9632x_bios_v40.01.01.01.bin",
+                           "version"  : "v40.01.01.01" },
+                "ONIE": {  "firmware" : "/usr/local/lib/firmware/onie-updater-x86_64-es9632xx-r0_V2020.11.00.09",
+                           "version"  : "2020.11.00.09" },
+                "CPLD1": { "firmware" : "/usr/local/lib/firmware/Q_RB2_FPGAv7_CPLD2v9_CPLD3v9_20211206.jbc",
+                           "version"  : "7" },
+                "CPLD2": { "firmware" : "/usr/local/lib/firmware/Q_RB2_FPGAv7_CPLD2v9_CPLD3v9_20211206.jbc",
+                           "version"  : "9" },
+                "CPLD3": { "firmware" : "/usr/local/lib/firmware/Q_RB2_FPGAv7_CPLD2v9_CPLD3v9_20211206.jbc",
+                           "version"  : "9" }
+            }
+        }
+    }
+}

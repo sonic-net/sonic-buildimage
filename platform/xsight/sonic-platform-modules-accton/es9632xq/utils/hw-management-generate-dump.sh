@@ -1,0 +1,1 @@
+../../es9632xx/utils/hw-management-generate-dump.sh
