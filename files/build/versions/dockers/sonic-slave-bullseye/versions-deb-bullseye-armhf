@@ -35,9 +35,9 @@ libxapian-dev==1.4.18-3+deb11u1
 libxslt1-dev==1.1.34-4+deb11u1
 libxstring-perl==0.005-1+b1
 libyaml-tiny-perl==1.73-1
-linux-compiler-gcc-10-arm==5.10.205-2
-linux-headers-5.10.0-27-armmp==5.10.205-2
-linux-headers-armmp==5.10.205-2
+linux-compiler-gcc-10-arm==5.10.209-2
+linux-headers-5.10.0-28-armmp==5.10.209-2
+linux-headers-armmp==5.10.209-2
 mat2==0.12.1-2+deb11u1
 nasm==2.15.05-1
 nodejs==14.21.3-deb-1nodesource1
