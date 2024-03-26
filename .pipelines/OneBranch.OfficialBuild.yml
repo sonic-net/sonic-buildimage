@@ -87,6 +87,7 @@ stages:
       postSteps:
         - task: ManifestGeneratorTask@0
           condition: and(succeeded(), ne(variables.SKIP_MG, 'y'))
+          continueOnError: true
           displayName: "Manifest Generator"
           inputs:
             BuildDropPath: $(System.DefaultWorkingDirectory)/target
