@@ -1,0 +1,28 @@
+{
+    "VNET_VALID_TEST1": {
+        "desc": "Valid VNET Configuration."
+    },
+    "VNET_VALID_TEST2": {
+        "desc": "Valid VNET Configuration."
+    },
+    "VNET_INVALID_VALUE_TEST1": {
+        "desc": "Invalid values in parameters.",
+        "eStr": [ "Invalid VRF name" ]
+    },
+    "VNET_INVALID_VALUE_TEST2": {
+        "desc": "Invalid values in parameters.",
+        "eStr": [ "Invalid value" ]
+    },
+    "VNET_INVALID_VALUE_TEST3": {
+        "desc": "Invalid values in parameters.",
+        "eStr": [ "does not satisfy the constraint" ]
+    },
+    "VNET_INVALID_VALUE_TEST4": {
+        "desc": "Invalid values in parameters.",
+        "eStr": [ "does not satisfy the constraint" ]
+    },
+    "VNET_INVALID_VXLAN_VTEP": {
+        "desc": "Missing Vxlan_TUNNEL configuration",
+        "eStr" : [ "points to a non-existing leaf" ]
+    }
+}
