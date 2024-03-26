@@ -284,6 +284,14 @@ else
     echo '[INFO] Skipping Install kubernetes'
 fi
 
+if [ "$INCLUDE_DEVICE_HEALTH" == "y" ]
+then
+    sudo mkdir -p $FILESYSTEM_ROOT/usr/share/device_health/
+else
+    echo '[INFO] Skipping Install of device-health'
+fi
+
+
 if [ "$INCLUDE_KUBERNETES_MASTER" == "y" ]
 then
     ## Install Kubernetes master
@@ -647,6 +655,11 @@ fi
 
 # Collect host image version files before cleanup
 scripts/collect_host_image_version_files.sh $TARGET_PATH $FILESYSTEM_ROOT
+
+# Create LoM archive
+if [[ -f src/sonic-device-health/LoM-Install/sonic/make-install-archive.sh ]]; then
+    src/sonic-device-health/LoM-Install/sonic/make-install-archive.sh
+fi
 
 # Remove GCC
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y remove gcc
