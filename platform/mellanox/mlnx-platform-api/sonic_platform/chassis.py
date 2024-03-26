@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -329,7 +329,13 @@ class Chassis(ChassisBase):
         Returns:
             An integer, the number of sfps available on this chassis
         """
-        return DeviceDataManager.get_sfp_count()
+        if not self._RJ45_port_inited:
+            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_inited = True
+        if self._RJ45_port_list is not None:
+            return DeviceDataManager.get_sfp_count() + len(self._RJ45_port_list)
+        else:
+            return DeviceDataManager.get_sfp_count()
 
     def get_all_sfps(self):
         """

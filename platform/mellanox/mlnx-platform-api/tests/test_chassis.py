@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -168,6 +168,13 @@ class TestChassis:
         sfp_list = chassis.get_all_sfps()
         assert len(sfp_list) == 3
         assert chassis.sfp_initialized_count == 3
+
+        # Get all SFPs, with RJ45 ports
+        sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[0,1,2])
+        DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
+        chassis = Chassis()
+        assert chassis.get_num_sfps() == 6
+        sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
 
     def test_create_sfp_in_multi_thread(self):
         DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
