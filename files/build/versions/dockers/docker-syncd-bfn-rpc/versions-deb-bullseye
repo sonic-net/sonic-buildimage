@@ -10,7 +10,7 @@ libqt5dbus5==5.15.2+dfsg-9
 libqt5network5==5.15.2+dfsg-9
 librhash0==1.4.1-2
 libthrift0==0.14.1
-libuv1==1.40.0-2
+libuv1==1.40.0-2+deb11u1
 mailcap==3.69
 mime-support==3.66
 python-pip-whl==20.3.4-4+deb11u1
