@@ -1,0 +1,12 @@
+{
+    "chassis": {
+        "x86_64-ufispace_s7801_54xs-r0": {
+            "component": {
+                "CPLD1": { },
+                "CPLD2": { },
+                "BIOS": { },
+                "BMC": {}
+            }
+        }
+    }
+}
