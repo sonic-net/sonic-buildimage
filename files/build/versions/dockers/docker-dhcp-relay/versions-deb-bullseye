@@ -13,7 +13,7 @@ libedit2==3.1-20191231-2+b1
 libevent-2.1-7==2.1.12-stable-1
 libexplain51==1.4.D001-11+deb11u1
 libfido2-1==1.6.0-2
-libglib2.0-0==2.66.8-1
+libglib2.0-0==2.66.8-1+deb11u1
 libgpm2==1.20.7-8
 libhiredis0.14-dbgsym==0.14.1-1
 libicu67==67.1-7
@@ -21,6 +21,8 @@ libipt2==2.0.3-1
 libirs-export161==1:9.11.19+dfsg-2.1
 libisc-export1105==1:9.11.19+dfsg-2.1
 libisccfg-export163==1:9.11.19+dfsg-2.1
+libjsoncpp-dev==1.9.4-4
+libjsoncpp24==1.9.4-4
 libmpfr6==4.1.0-3
 libsource-highlight-common==3.1.9-3
 libsource-highlight4v5==3.1.9-3+b1
