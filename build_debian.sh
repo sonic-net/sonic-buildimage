@@ -277,16 +277,25 @@ sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y remove software-properties-common
 
 install_kubernetes () {
     local ver="$1"
-    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -fsSL \
-        https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
-        sudo LANG=C chroot $FILESYSTEM_ROOT apt-key add -
-    ## Check out the sources list update matches current Debian version
-    sudo cp files/image_config/kubernetes/kubernetes.list $FILESYSTEM_ROOT/etc/apt/sources.list.d/
-    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get update
-    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install kubernetes-cni=${KUBERNETES_CNI_VERSION}
-    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install kubelet=${ver}
-    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install kubectl=${ver}
-    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install kubeadm=${ver}
+    ## Install k8s package from storage
+    local storage_prefix="https://sonicstorage.blob.core.windows.net/public/kubernetes"
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/cri-tools.deb -fsSL \
+        ${storage_prefix}/cri-tools_${KUBERNETES_CRI_TOOLS_VERSION}_${CONFIGURED_ARCH}.deb
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/kubernetes-cni.deb -fsSL \
+        ${storage_prefix}/kubernetes-cni_${KUBERNETES_CNI_VERSION}_${CONFIGURED_ARCH}.deb
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/kubelet.deb -fsSL \
+        ${storage_prefix}/kubelet_${ver}_${CONFIGURED_ARCH}.deb
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/kubectl.deb -fsSL \
+        ${storage_prefix}/kubectl_${ver}_${CONFIGURED_ARCH}.deb
+    sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT curl -o /tmp/kubeadm.deb -fsSL \
+        ${storage_prefix}/kubeadm_${ver}_${CONFIGURED_ARCH}.deb
+
+    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install -f /tmp/cri-tools.deb
+    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install -f /tmp/kubernetes-cni.deb
+    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install -f /tmp/kubelet.deb
+    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install -f /tmp/kubectl.deb
+    sudo LANG=C chroot $FILESYSTEM_ROOT apt-get -y install -f /tmp/kubeadm.deb
+    sudo LANG=C chroot $FILESYSTEM_ROOT rm -f /tmp/{cri-tools,kubernetes-cni,kubelet,kubeadm,kubectl}.deb
 }
 
 if [ "$INCLUDE_KUBERNETES" == "y" ]
