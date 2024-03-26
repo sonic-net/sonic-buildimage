@@ -1,0 +1,29 @@
+{
+    "chassis": {
+        "M2-W6910-64C": {
+            "component": {
+                "CPU_CPLD": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6910-64c-r0/latest_firmware/cpu_cpld_upgrade_header.bin",
+                    "version": "45190831"
+                },
+                "CONNECT_CPLDA": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6910-64c-r0/latest_firmware/other_cpld_upgrade_header.vme",
+                    "version": "16190724"
+                },
+                "MAC_CPLDA": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6910-64c-r0/latest_firmware/other_cpld_upgrade_header.vme",
+                    "version" : "13190605"
+                },
+                "MAC_CPLDB": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6910-64c-r0/latest_firmware/other_cpld_upgrade_header.vme",
+                    "version" : "14190726"
+                },
+                "BIOS": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6910-64c-r0/latest_firmware/bios_upgrade_header.bin",
+                    "version" : "5.11(3BARB023)"
+                }
+            }
+        }
+    }
+}
+

@@ -1,0 +1,65 @@
+{
+    "chassis": {
+        "M2-W6920-4S": {
+            "component": {
+                "CPU_CPLD": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/cpld_upgrade_header.vme",
+                    "version": "27190923"
+                },
+                "FAN_CPLD_A": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/cpld_upgrade_header.vme",
+                    "version": "13191126"
+                },
+                "FAN_CPLD_B": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/cpld_upgrade_header.vme",
+                    "version": "13191126"
+                },
+                "MAC_CPLD_A": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/cpld_upgrade_header.vme",
+                    "version" : "0d191126"
+                },
+                "MAC_CPLD_B": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/cpld_upgrade_header.vme",
+                    "version" : "15210611"
+                },
+                "LC1_CPLD_2": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/slot_cpld_upgrade_header.vme",
+                    "version" : "11190903"
+                },
+                "LC1_CPLD_1": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/slot_cpld_upgrade_header.vme",
+                    "version" : "02191206"
+                },
+                "LC2_CPLD_2": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/slot_cpld_upgrade_header.vme",
+                    "version" : "11190903"
+                },
+                "LC2_CPLD_1": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/slot_cpld_upgrade_header.vme",
+                    "version" : "02191206"
+                },
+                "LC3_CPLD_2": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/slot_cpld_upgrade_header.vme",
+                    "version" : "11190903"
+                },
+                "LC3_CPLD_1": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/slot_cpld_upgrade_header.vme",
+                    "version" : "02191206"
+                },
+                "LC4_CPLD_2": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/slot_cpld_upgrade_header.vme",
+                    "version" : "11190903"
+                },
+                "LC4_CPLD_1": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/slot_cpld_upgrade_header.vme",
+                    "version" : "02191206"
+                },
+                "BIOS": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6920-4s-r0/latest_firmware/bios_upgrade_header.bin",
+                    "version" : "5.11(3BARB023)"
+                }
+            }
+        }
+    }
+}
+

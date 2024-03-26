@@ -86,6 +86,16 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(UFISPACE_S9110_32X_PLATFORM_MODULE) \
                                $(UFISPACE_S8901_54XC_PLATFORM_MODULE) \
                                $(UFISPACE_S7801_54XS_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6510_48V8C_PLATFORM_MODULE) \
+                               $(MICAS_M2_W6910_64C_PLATFORM_MODULE) \
+                               $(MICAS_M2_W6510_32C_PLATFORM_MODULE) \
+                               $(MICAS_M2_W6920_4S_PLATFORM_MODULE) \
+                               $(MICAS_M2_W6520_24DC8QC_PLATFORM_MODULE) \
+                               $(MICAS_M2_W6930_64QC_PLATFORM_MODULE) \
+                               $(MICAS_M2_W6510_48GT4V_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6920_32QC2X_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6940_128QC_PLATFORM_MODULE) \
+                               $(MICAS_M2_W6940_128X1_FR4_PLATFORM_MODULE)
                                $(UFISPACE_S6301_56ST_PLATFORM_MODULE)
 
 $(SONIC_ONE_IMAGE)_LAZY_BUILD_INSTALLS = $(BRCM_OPENNSL_KERNEL) $(BRCM_DNX_OPENNSL_KERNEL)

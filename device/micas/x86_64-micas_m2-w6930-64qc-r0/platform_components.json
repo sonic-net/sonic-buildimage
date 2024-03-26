@@ -1,0 +1,53 @@
+{
+    "chassis": {
+        "M2-W6930-64QC": {
+            "component": {
+                "CPU_CPLD": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6930-64qc-r0/latest_firmware/cpu_cpld_upgrade_header.vme",
+                    "version": "16210909"
+                },
+                "CONNECT_CPLD": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6930-64qc-r0/latest_firmware/base_cpld_upgrade_header.vme",
+                    "version": "30220304"
+                },
+                "FAN_CPLDA": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6930-64qc-r0/latest_firmware/fan1_cpld_upgrade_header.vme",
+                    "version": "20220720"
+                },
+                "FAN_CPLDB": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6930-64qc-r0/latest_firmware/fan2_cpld_upgrade_header.vme",
+                    "version": "20220720"
+                },
+                "MAC_CPLDA": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6930-64qc-r0/latest_firmware/mac_cplda_upgrade_header.vme",
+                    "version" : "20220628"
+                },
+                "MAC_CPLDB": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6930-64qc-r0/latest_firmware/mac_cpldb_upgrade_header.vme",
+                    "version" : "20220628"
+                },
+                "PORT_CPLDA": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6930-64qc-r0/latest_firmware/port_cplda_upgrade_header.vme",
+                    "version" : "20220628"
+                },
+                "PORT_CPLDB": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6930-64qc-r0/latest_firmware/port_cpldb_upgrade_header.vme",
+                    "version" : "20220628"
+                },
+                "MAC_FPGA": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6930-64qc-r0/latest_firmware/mac_fpga_upgrade_header.bin",
+                    "version": "7a640c08"
+                },
+                "PORT_FPGA": {
+                    "firmware": "/usr/share/sonic/device/x86_64-micas_m2-w6930-64qc-r0/latest_firmware/port_fpga_upgrade_header.bin",
+                    "version": "7a640d06"
+                },
+                "BIOS": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-micas_m2-w6930-64qc-r0/latest_firmware/bios_upgrade_header.bin",
+                    "version" : "5.14(3CNHU022)"
+                }
+            }
+        }
+    }
+}
+
