@@ -1612,6 +1612,22 @@
                 "timeout": "5"
             }
         },
+        "LDAP": {
+            "global": {
+                "bind_dn": "test_bind",
+                "bind_password": "secret",
+                "bind_timeout": "5",
+                "version": "3",
+                "base_dn": "test_base",
+                "port": "389",
+                "timeout": "5"
+            }
+        },
+        "LDAP_SERVER": {
+            "192.168.1.1": {
+                "priority": "5"
+            }
+        },
         "NAT_BINDINGS": {
             "bind1": {
                 "nat_pool": "pool1",

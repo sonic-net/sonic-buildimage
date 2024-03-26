@@ -35,11 +35,11 @@ module sonic-system-aaa {
 
                 leaf login {
                     type string {
-                        pattern '((tacacs\+|local|radius|default),)*(tacacs\+|local|radius|default)' {
+                        pattern '((ldap|tacacs\+|local|radius|default),)*(ldap|tacacs\+|local|radius|default)' {
                             error-message "Invalid login choice";
                         }
                     }
-                    description "AAA authentication/authorization/accounting methods - radius/tacacs+/local/default";
+                    description "AAA authentication/authorization/accounting methods - radius/tacacs+/ldap|local/default";
                     default "local";
                 }
 

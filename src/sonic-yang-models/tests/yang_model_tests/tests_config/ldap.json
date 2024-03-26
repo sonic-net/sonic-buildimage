@@ -1,0 +1,61 @@
+{
+    "LDAP_TABLE": {
+        "sonic-system-ldap:sonic-system-ldap": {
+            "sonic-system-ldap:LDAP": {
+                "global":{
+                    "bind_dn": "test_bind",
+                    "bind_password": "secret",
+                    "bind_timeout": "5",
+                    "version": "3",
+                    "base_dn": "test_base",
+                    "port": "389",
+                    "timeout": "5"
+                }
+            }
+        }
+    },
+    "LDAP_INVALID_TIMEOUT_TEST": {
+        "sonic-system-ldap:sonic-system-ldap": {
+            "sonic-system-ldap:LDAP": {
+                "global": {
+                    "bind_dn": "test_bind",
+                    "bind_password": "secret",
+                    "bind_timeout": "5",
+                    "version": "3",
+                    "base_dn": "test_base",
+                    "port": "389",
+                    "timeout": 150
+                }
+            }
+        }
+    },
+    "LDAP_SERVER_TEST": {
+        "sonic-system-ldap:sonic-system-ldap": {
+            "sonic-system-ldap:LDAP_SERVER": {
+                "LDAP_SERVER_LIST": [
+                {
+                        "hostname": "192.168.1.1",
+                        "priority": 1
+                },
+                {
+                        "hostname": "ldap_server_1",
+                        "priority": 2
+                }
+                ]
+            }
+        }
+    },
+
+    "LDAP_SERVER_INVALID_PRIORITY_TEST": {
+        "sonic-system-ldap:sonic-system-ldap": {
+            "sonic-system-ldap:LDAP_SERVER": {
+                "LDAP_SERVER_LIST": [
+                {
+                    "hostname": "192.168.1.1",
+                    "priority": 70
+                }
+                ]
+            }
+        }
+    }
+}
