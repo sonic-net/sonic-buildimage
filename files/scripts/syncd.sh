@@ -21,7 +21,27 @@ function startplatform() {
     # start mellanox drivers regardless of
     # boot type
     if [[ x"$sonic_asic_platform" == x"mellanox" ]]; then
-        BOOT_TYPE=`getBootType`
+        metadata=$(sonic-cfggen -d -v 'DEVICE_METADATA["localhost"]')
+        platform=$(echo "$metadata" | grep -oP "'platform': '\K[^']+")
+        platform_dir="/usr/share/sonic/device/$platform"
+        hwsku=$(echo "$metadata" | grep -oP "'hwsku': '\K[^']+")
+        hwsku_dir="$platform_dir/$hwsku"
+
+        sai_profile_json_file="$hwsku_dir/sai.profile"
+        is_sw_module_mgmt_enabled=$(grep '^SAI_INDEPENDENT_MODULE_MODE=' $sai_profile_json_file | cut -d '=' -f 2)
+        if [[ "$is_sw_module_mgmt_enabled" == "1" ]]; then
+            if [[ -f $platform_dir/media_settings_src.json ]]; then
+                cat $platform_dir/media_settings_src.json > $platform_dir/media_settings.json
+            else
+                echo "Failed to create media_settings.json because media_settings_src.json is missing"
+            fi
+        else
+            if [[ -f $platform_dir/media_settings.json ]]; then
+                rm -f $platform_dir/media_settings.json
+            fi
+        fi
+
+	BOOT_TYPE=`getBootType`
         if [[ x"$WARM_BOOT" == x"true" || x"$BOOT_TYPE" == x"fast" ]]; then
             export FAST_BOOT=1
         fi
