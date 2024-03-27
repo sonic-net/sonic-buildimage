@@ -487,3 +487,16 @@ def get_asic_presence_list():
         # This is not multi-asic, all asics should be present.
         asics_list = list(range(0, get_num_asics()))
     return asics_list
+
+
+def get_container_name_from_asic_id(service_name, asic_id):
+    """Get the container name for a service according to the ASIC ID
+
+    Args:
+        service_name (str): feature/service name
+        asic_id (int): ASIC ID
+
+    Returns:
+        str: container name of the service in the given ASIC namespace
+    """
+    return '{}{}'.format(service_name, asic_id)
