@@ -31,8 +31,10 @@ libpython3-dev==3.9.2-3
 libpython3.9-dev==3.9.2-1
 libsaimetadata==1.0.0
 libsaimetadata-dbg==1.0.0
+libsaimetadata-dbgsym==1.0.0
 libsairedis==1.0.0
 libsairedis-dbg==1.0.0
+libsairedis-dbgsym==1.0.0
 libsource-highlight-common==3.1.9-3
 libsource-highlight4v5==3.1.9-3+b1
 libswsscommon-dbg==1.0.0
@@ -41,7 +43,7 @@ libtirpc-dev==1.3.1-1+deb11u1
 libunwind8==1.3.2-2
 libxml2==2.9.10+dfsg-6.7+deb11u4
 linux-libc-dev==5.10.209-2
-mft==4.25.0-62
+mft==4.27.0-83
 mft-fwtrace-cfg==1.0.0
 mlnx-sai==1.mlnx.SAIBuild2311.26.0.28
 openssh-client==1:8.4p1-5+deb11u3
@@ -79,6 +81,7 @@ sxd-libs==1.mlnx.4.6.2202
 sxd-libs-dev==1.mlnx.4.6.2202
 syncd==1.0.0
 syncd-dbg==1.0.0
+syncd-dbgsym==1.0.0
 vim==2:8.2.2434-3+deb11u1
 vim-runtime==2:8.2.2434-3+deb11u1
 wjh-libs==1.mlnx.4.6.2202

@@ -48,7 +48,7 @@ libstdc++-10-dev==10.2.1-6
 libthrift-0.11.0==0.11.0-4
 libtsan0==10.2.1-6
 libubsan1==10.2.1-6
-libuv1==1.40.0-2
+libuv1==1.40.0-2+deb11u1
 mailcap==3.69
 make==4.3-4.1
 mime-support==3.66

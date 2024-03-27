@@ -1,7 +1,6 @@
 applibs==1.mlnx.4.6.2202
 applibs-dev==1.mlnx.4.6.2202
-debootstrap==1.0.123+deb11u1
-kernel-mft-dkms==4.25.0-62
+kernel-mft-dkms==4.27.0-83
 libdashapi==1.0.0
 libnl-3-dev==3.5.0-1
 libnl-cli-3-200==3.5.0-1

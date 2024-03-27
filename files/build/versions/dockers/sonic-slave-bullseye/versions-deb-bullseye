@@ -101,7 +101,7 @@ docbook-xsl==1.79.2+dfsg-1
 docker-buildx-plugin==0.10.5-1~debian.11~bullseye
 docker-ce==5:24.0.2-1~debian.11~bullseye
 docker-ce-cli==5:24.0.2-1~debian.11~bullseye
-docker-ce-rootless-extras==5:25.0.3-1~debian.11~bullseye
+docker-ce-rootless-extras==5:26.0.0-1~debian.11~bullseye
 docker-compose-plugin==2.18.1-1~debian.11~bullseye
 docutils-common==0.16+dfsg-4
 dosfstools==4.2-1
@@ -204,9 +204,9 @@ i965-va-driver==2.4.1+dfsg1-1
 ibverbs-providers==33.2-1
 icc-profiles-free==2.0.1+dfsg-1.1
 icu-devtools==67.1-7
-imagemagick==8:6.9.11.60+dfsg-1.3+deb11u2
-imagemagick-6-common==8:6.9.11.60+dfsg-1.3+deb11u2
-imagemagick-6.q16==8:6.9.11.60+dfsg-1.3+deb11u2
+imagemagick==8:6.9.11.60+dfsg-1.3+deb11u3
+imagemagick-6-common==8:6.9.11.60+dfsg-1.3+deb11u3
+imagemagick-6.q16==8:6.9.11.60+dfsg-1.3+deb11u3
 install-info==6.7.0.dfsg.2-6
 intel-media-va-driver==21.1.1+dfsg1-1
 intltool-debian==0.35.0+20060710.5
@@ -810,9 +810,9 @@ liblzo2-2==2.10-2
 liblzo2-dev==2.10-2
 libmagic-mgc==1:5.39-3+deb11u1
 libmagic1==1:5.39-3+deb11u1
-libmagickcore-6.q16-6==8:6.9.11.60+dfsg-1.3+deb11u2
-libmagickcore-6.q16-6-extra==8:6.9.11.60+dfsg-1.3+deb11u2
-libmagickwand-6.q16-6==8:6.9.11.60+dfsg-1.3+deb11u2
+libmagickcore-6.q16-6==8:6.9.11.60+dfsg-1.3+deb11u3
+libmagickcore-6.q16-6-extra==8:6.9.11.60+dfsg-1.3+deb11u3
+libmagickwand-6.q16-6==8:6.9.11.60+dfsg-1.3+deb11u3
 libmail-sendmail-perl==0.80-1.1
 libmailtools-perl==2.21-1
 libmailutils7==1:3.10-3+b1
@@ -1220,7 +1220,7 @@ libusb-1.0-0-dev==2:1.0.24-3
 libusb-1.0-doc==2:1.0.24-3
 libusb-dev==2:0.1.12-32
 libusbredirparser1==0.8.0-1+b1
-libuv1==1.40.0-2
+libuv1==1.40.0-2+deb11u1
 libv4l-0==1.20.0-2
 libv4lconvert0==1.20.0-2
 libva-drm2==2.10.0-1
