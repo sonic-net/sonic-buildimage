@@ -25,7 +25,7 @@ build:
 	cd mrvl-prestera && git checkout ${MRVL_PRESTERA_SRC_TAG} && cd ..
 	sed "s/KVERSION/${KVERSION}/g" /sonic/platform/marvell-armhf/prestera/debian/mrvlprestera.install.template > /sonic/platform/marvell-armhf/prestera/debian/mrvlprestera.install
 
-	make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$(MODULE_DIR)/
+	make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$(MODULE_DIR)/ CONFIG_KM_MVPCI=y CONFIG_KM_MVDMA=y CONFIG_KM_MVINT=y
 
 binary: binary-arch binary-indep
 	# Nothing to do
