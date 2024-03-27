@@ -1,6 +1,8 @@
 !
 ! template: bgpd/templates/msft.general/v4.tor.backend/policy.conf.j2
 !
+bgp community-list standard ComputeAI_BackEnd permit 8075:9314
+!
 ip prefix-list DEFAULT_IPV4 permit 0.0.0.0/0
 {% if is_compute_ai == "true" %}
 ip prefix-list BE_LOOPBACKS seq 5 deny 172.16.0.0/12 le 32
@@ -16,6 +18,10 @@ route-map FROM_FE_TIER0_V4 deny 100
 !
 route-map TO_FE_TIER0_V4 permit 10
    match ip address prefix-list BE_LOOPBACKS
+   set community 8075:9314
+!
+route-map TO_FE_TIER0_V4 permit 20
+   match community ComputeAI_BackEnd
 !
 route-map TO_FE_TIER0_V4 deny 100
 !

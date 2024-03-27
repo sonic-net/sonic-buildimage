@@ -1,7 +1,13 @@
 !
 ! template: bgpd/templates/msft.general/v4.leaf.ai.backend/policy.conf.j2
 !
+bgp community-list standard ComputeAI_BackEnd permit 8075:9314
+!
 route-map TO_BE_TIER0_V4 permit 10
+    match ip address prefix-list PL_LoopbackV4
+    set community 8075:9314
+!
+route-map TO_BE_TIER0_V4 permit 20
 !
 route-map FROM_BE_TIER0_V4 permit 10
 !
