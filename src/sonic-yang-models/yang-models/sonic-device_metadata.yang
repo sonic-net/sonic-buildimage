@@ -40,6 +40,12 @@ module sonic-device_metadata {
                     type stypes:hwsku;
                 }
 
+                leaf asic_id {
+                    type string {
+                        length 0..16;
+                    }
+                }
+
                 leaf default_bgp_status {
                     type enumeration {
                         enum up;

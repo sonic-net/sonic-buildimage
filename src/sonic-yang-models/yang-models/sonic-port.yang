@@ -17,6 +17,10 @@ module sonic-port{
 		prefix macsec;
 	}
 
+    import sonic-device_metadata {
+        prefix dm;
+    }
+
 	description "PORT yang Module for SONiC OS";
 
 	revision 2019-07-01 {
@@ -39,6 +43,24 @@ module sonic-port{
 					}
 				}
 
+                		leaf numVoq {
+		                    type string {
+		                        length 0..16;
+		                    }
+		                }
+
+		                leaf coreId {
+		                    type string {
+		                        length 0..16;
+		                    }
+		                }
+
+		                leaf corePortId {
+		                    type string {
+		                        length 0..16;
+		                    }
+		                }
+
 				leaf alias {
 					type string {
 						length 1..128;
@@ -46,15 +68,16 @@ module sonic-port{
 				}
 
 				leaf lanes {
-					mandatory true;
-					type string {
-						length 1..128;
+                    when "(/dm:sonic-device_metadata/dm:DEVICE_METADATA/dm:localhost/dm:switch_type != 'chassis-packet')";
+					must "current() != ''" {
+						error-message "Non chassis-packet should have lanes";
 					}
+					type string;
 				}
-                
+
 				leaf mode {
-					description "SwitchPort Modes possible values are routed|access|trunk. Default value  for mode is routed"; 
-					type stypes:switchport_mode; 
+					description "SwitchPort Modes possible values are routed|access|trunk. Default value  for mode is routed";
+					type stypes:switchport_mode;
 					default "routed";
 				}
 
