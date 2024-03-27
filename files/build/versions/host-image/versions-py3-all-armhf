@@ -1,7 +1,7 @@
 colorful==0.5.6
 cryptography==3.3.1
 enlighten==1.12.4
-filelock==3.13.1
+filelock==3.13.3
 lazy-object-proxy==1.10.0
 m2crypto==0.41.0
 pexpect==4.9.0

@@ -65,7 +65,7 @@ libxml2==2.9.10+dfsg-6.7+deb11u4
 libxrender1==1:0.9.10-1
 lm-sensors==1:3.6.0-7
 lm-sensors-dbgsym==1:3.6.0-7
-mft==4.25.0-62
+mft==4.27.0-83
 openssh-client==1:8.4p1-5+deb11u3
 pci.ids==0.0~2021.02.08-1
 pciutils==1:3.7.0-5

@@ -81,7 +81,7 @@ isc-dhcp-client==4.4.1-2.3+deb11u2
 iso-codes==4.6.0-1
 jq==1.6-2.1
 kdump-tools==1:1.6.8.4
-kernel-mft-dkms-modules-5.10.0-23-2-amd64==4.25.0
+kernel-mft-dkms-modules-5.10.0-23-2-amd64==4.27.0
 kexec-tools==1:2.0.20-2.1
 klibc-utils==2.0.8-6.1
 kmod==28-1
@@ -250,9 +250,9 @@ lsof==4.93.2+dfsg-1.1
 makedev==2.3.1-94.1
 makedumpfile==1:1.6.8-4
 media-types==4.0.0
-mft==4.25.0-62
+mft==4.27.0-83
 mft-fwtrace-cfg==1.0.0
-mft-oem==4.25.0-62
+mft-oem==4.27.0-83
 mokutil==0.6.0-2~deb11u1
 monit==1:5.20.0-6
 mtd-utils==1:2.1.2-2

@@ -9,7 +9,7 @@ libnl-cli-3-200==3.5.0-1
 libnl-genl-3-200==3.5.0-1
 libnl-nf-3-200==3.5.0-1
 libnl-route-3-200==3.5.0-1
-libpython3.7==3.7.3-2+deb10u6
+libpython3.7==3.7.3-2+deb10u7
 libswsscommon==1.0.0
 libyang==1.0.73
 libyang-cpp==1.0.73
