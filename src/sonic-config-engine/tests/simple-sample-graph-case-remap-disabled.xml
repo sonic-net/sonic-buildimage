@@ -142,7 +142,7 @@
         </VlanInterface>
         <VlanInterface>
           <Name>ab2</Name>
-          <AttachTo>fortyGigE0/4</AttachTo>
+          <AttachTo>PortChannel01</AttachTo>
           <DhcpRelays>192.0.0.1</DhcpRelays>
           <Dhcpv6Relays>fc02:2000::3;fc02:2000::4</Dhcpv6Relays>
           <VlanID>2000</VlanID>
