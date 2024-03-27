@@ -50,7 +50,7 @@ dependent_startup=true
 dependent_startup_wait_for=start:exited
 
 [program:snmp-subagent]
-command=/usr/bin/env python3 -m sonic_ax_impl
+command=/usr/bin/env python3 -m sonic_ax_impl {% if update_frequency %} -f {{ update_frequency }} {% endif %}
 priority=4
 autostart=false
 autorestart=false
