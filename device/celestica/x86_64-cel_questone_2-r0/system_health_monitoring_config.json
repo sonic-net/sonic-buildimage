@@ -1,0 +1,17 @@
+{
+    "services_to_ignore": [],
+    "devices_to_ignore": [
+	"asic",
+        "psu.temperature",
+        "PSU-2 FAN-1",
+        "PSU-1 FAN-1"
+    ],
+    "user_defined_checkers": [],
+    "polling_interval": 60,
+    "led_color": {
+        "fault": "amber",
+        "normal": "green",
+        "booting": "orange_blink"
+    }
+}
+
