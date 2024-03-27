@@ -6,30 +6,24 @@
  * Copyright (c) 2021 by Cisco Systems, Inc.
  *------------------------------------------------------------------
  */
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /* expose global vars for testing purpose */
-extern const char* UNIT_FILE_PREFIX;
-extern const char* CONFIG_FILE;
-extern const char* MACHINE_CONF_FILE;
-extern const char* ASIC_CONF_FORMAT;
-extern const char* g_unit_file_prefix;
-extern const char* g_config_file;
-extern const char* g_machine_config_file;
-extern const char* g_asic_conf_format;
+extern const std::string UNIT_FILE_PREFIX;
+extern const std::string CONFIG_FILE;
+extern const std::string MACHINE_CONF_FILE;
+extern const std::vector<std::string> ASIC_CONF_FORMAT;
+extern std::string g_unit_file_prefix;
+extern std::string g_config_file;
+extern std::string g_machine_config_file;
+extern std::vector<std::string> g_asic_conf_format;
 
 /* C-functions under test */
-extern const char* get_unit_file_prefix();
-extern const char* get_config_file();
-extern const char* get_machine_config_file();
-extern const char* get_asic_conf_format();
-extern char* insert_instance_number(char* unit_file, int instance);
+extern const std::string get_unit_file_prefix();
+extern const std::string get_config_file();
+extern const std::string get_machine_config_file();
+extern const std::string get_asic_conf_format();
+extern std::string insert_instance_number(const std::string& unit_file, int instance);
 extern int ssg_main(int argc, char** argv);
 extern int get_num_of_asic();
-extern int get_install_targets(char* unit_file, char* targets[]);
-extern int get_unit_files(char* unit_files[]);
-#ifdef __cplusplus
-}
-#endif
+extern std::vector<std::string> get_install_targets(std::string unit_file);
+extern std::vector<std::string> get_unit_files();

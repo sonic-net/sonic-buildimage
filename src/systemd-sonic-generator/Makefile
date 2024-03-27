@@ -2,15 +2,15 @@ CC=gcc
 CFLAGS += -std=gnu99 -D_GNU_SOURCE
 
 CXX=g++
-CXXFLAGS += -std=c++11 -D_GNU_SOURCE
-LDFLAGS += -lpthread -lboost_filesystem -lboost_system -lgtest
+CXXFLAGS += -std=c++14 -D_GNU_SOURCE
+LDFLAGS += -lstdc++ -lpthread -lboost_filesystem -lboost_system -lgtest
 
 BINARY = systemd-sonic-generator
 
-$(BINARY): systemd-sonic-generator.c
+$(BINARY): systemd-sonic-generator.cpp
 	rm -f ./systemd-sonic-generator
 
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
 install: $(BINARY)
 	mkdir -p $(DESTDIR)
@@ -26,8 +26,10 @@ test: ssg_test
 ssg_test: ssg-test.cc systemd-sonic-generator.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
-systemd-sonic-generator.o: systemd-sonic-generator.c
-	$(CC) $(CFLAGS) -D_SSG_UNITTEST -o $@ -c $^
+systemd-sonic-generator.o: systemd-sonic-generator.cpp
+	$(CXX) $(CXXFLAGS) -D_SSG_UNITTEST -o $@ -c $^
+
+all: $(BINARY) test
 
 clean:
 	rm -f ./systemd-sonic-generator
