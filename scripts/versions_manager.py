@@ -419,6 +419,8 @@ class VersionModule:
             return os.path.join(source_path, 'files/build/versions', module_name)
         if module_name.startswith('build-sonic-slave-'):
             return os.path.join(source_path, 'files/build/versions/build', module_name)
+        if module_name.endswith('-dbg'):
+            return os.path.join(source_path, 'files/build/versions/dockers', module_name.removesuffix('-dbg'))
         return os.path.join(source_path, 'files/build/versions/dockers', module_name)
 
     def __repr__(self):
