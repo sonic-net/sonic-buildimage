@@ -365,6 +365,11 @@ ifneq ($(SIGNING_CERT),)
 endif
 endif
 
+# Allow user-defined environmental variables to be imported into the build containers
+ifneq ($(DOCKER_USER_ENV),)
+	DOCKER_RUN += $(foreach var,$(subst $(comma), ,$(DOCKER_USER_ENV)), $(addprefix -e , $(var)))
+endif
+
 # User name and tag for "docker-*" images created by native dockerd mode.
 ifeq ($(strip $(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD)),y)
 DOCKER_USERNAME = $(USER_LC)
