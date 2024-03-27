@@ -8,7 +8,6 @@ FANCONTROL_CONF_FILE="/usr/share/sonic/platform/fancontrol"
 
 SUPERVISOR_CONF_TEMPLATE="/usr/share/sonic/templates/docker-pmon.supervisord.conf.j2"
 SUPERVISOR_CONF_FILE="/etc/supervisor/conf.d/supervisord.conf"
-PMON_DAEMON_CONTROL_FILE="/usr/share/sonic/platform/pmon_daemon_control.json"
 MODULAR_CHASSISDB_CONF_FILE="/usr/share/sonic/platform/chassisdb.conf"
 
 HAVE_SENSORS_CONF=0
@@ -16,6 +15,13 @@ HAVE_FANCONTROL_CONF=0
 IS_MODULAR_CHASSIS=0
 # Default use python2 version
 SONIC_PLATFORM_API_PYTHON_VERSION=2
+
+if [ -e /usr/share/sonic/hwsku/pmon_daemon_control.json ];
+then
+    PMON_DAEMON_CONTROL_FILE="/usr/share/sonic/hwsku/pmon_daemon_control.json"
+else
+    PMON_DAEMON_CONTROL_FILE="/usr/share/sonic/platform/pmon_daemon_control.json"
+fi
 
 declare -r EXIT_SUCCESS="0"
 
