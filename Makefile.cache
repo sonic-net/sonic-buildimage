@@ -164,8 +164,9 @@ define GET_MOD_SHA
 	$(if $(MDEBUG), $(info $(1)_MOD_DEP_FILES: $($(1)_MOD_DEP_FILES)))
 	$(eval $(1)_MOD_HASH    := $(if $(filter GIT_COMMIT_SHA,$($(1)_CACHE_MODE)),\
                             $(shell cd $($(1)_MOD_SRC_PATH) && git log -1 --format="%H"| awk '{print substr($$1,0,23);}' ),\
-                            $(shell git hash-object $($(1)_MOD_DEP_FILES)| \
-                                   sha1sum | awk '{print substr($$1,0,23);}')))
+                            $(if $(filter "", "$($(1)_MOD_DEP_FILES)"), \
+                            $(shell git hash-object $($(1)_MOD_DEP_FILES) | sha1sum | awk '{print substr($$1,0,23);}'), \
+                            $(shell realpath --relative-to=. $($(1)_MOD_DEP_FILES) | xargs git hash-object | sha1sum | awk '{print substr($$1,0,23);}'))))
 endef
 
 
@@ -190,8 +191,11 @@ define GET_MOD_DEP_SHA
 	# Include package dependencies hash values into package hash calculation
 	$(eval $(1)_DEP_PKGS_SHA := $(foreach dfile,$($(1)_MOD_DEP_PKGS),$($(dfile)_DEP_MOD_SHA) $($(dfile)_MOD_HASH)))
 
-	$(eval $(1)_DEP_MOD_SHA := $(shell bash -c "git hash-object  $($(1)_DEP_MOD_SHA_FILES) && echo $($(1)_DEP_PKGS_SHA)" \
-                            | sha1sum | awk '{print substr($$1,0,23);}'))
+	$(eval $(1)_DEP_MOD_SHA := $(if $(filter "","$($(1)_DEP_MOD_SHA_FILES)"), \
+                            $(shell bash -c "git hash-object  $($(1)_DEP_MOD_SHA_FILES) && echo $($(1)_DEP_PKGS_SHA)" \
+	                        | sha1sum | awk '{print substr($$1,0,23);}'), \
+                            $(shell bash -c "realpath --relative-to=. $($(1)_DEP_MOD_SHA_FILES) | xargs git hash-object && echo $($(1)_DEP_PKGS_SHA)" \
+	                        | sha1sum | awk '{print substr($$1,0,23);}')))
 endef
 
 
@@ -548,7 +552,7 @@ $(addsuffix .$(3),$(addprefix $(2)/, $(1))) : $(2)/%.$(3) : \
 	$(2)/%.flags   $$$$($$$$*_SMDEP_FILES)
 	@$$(eval $$*_SMDEP_FILES_MODIFIED := $$? )
 	@$$(file >$$@,$$(patsubst $$($$*_MOD_SRC_PATH)/%,%,$$($$*_SMDEP_FILES)))
-	@( cd $$($$*_MOD_SRC_PATH) ; cat $$($$*_BASE_PATH)/$$@  |xargs git hash-object ) >$$@.smsha
+	@( cd $$($$*_MOD_SRC_PATH) ; cat $$($$*_BASE_PATH)/$$@ | xargs realpath --relative-to=. | xargs git hash-object ) >$$@.smsha
 	@$$(if $$(MDEBUG), $$(info SMDEP:$$@, MOD:$$?))
 endef
 $(eval $(call SMSHA_DEP_RULES, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS), $(DEBS_PATH),smdep))
@@ -600,7 +604,7 @@ $(addsuffix .$(3),$(addprefix $(2)/, $(1))) : $(2)/%.$(3) : \
 	$(2)/%.flags $$$$($$$$*_DEP_FILES) $$$$(if $$$$($$$$*_SMDEP_FILES), $(2)/%.smdep)
 	@$$(eval $$*_DEP_FILES_MODIFIED := $$? )
 	@$$(file >$$@.tmp,$$($$*_DEP_FILES))
-	@cat $$@.tmp |xargs git hash-object >$$@.sha.tmp
+	@cat $$@.tmp | xargs realpath --relative-to=. | xargs git hash-object >$$@.sha.tmp
 	@if ! cmp -s $$@.sha.tmp $$@.sha; then cp $$@.tmp $$@; cp $$@.sha.tmp $$@.sha; fi
 	@rm -f $$@.tmp $$@.sha.tmp
 	@$$(if $$(MDEBUG), $$(info DEP: $$@, MOD:$$?))
