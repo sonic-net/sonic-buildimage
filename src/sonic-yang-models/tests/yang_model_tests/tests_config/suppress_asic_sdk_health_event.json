@@ -1,0 +1,93 @@
+{
+    "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST_VALID_FATAL": {
+        "sonic-suppress-asic-sdk-health-event:sonic-suppress-asic-sdk-health-event": {
+            "sonic-suppress-asic-sdk-health-event:SUPPRESS_ASIC_SDK_HEALTH_EVENT": {
+                "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST": [
+                    {
+                        "severity": "fatal",
+                        "categories": ["software","firmware"]
+                    }
+                ]
+            }
+        }
+    },
+
+    "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST_VALID_WARNING": {
+        "sonic-suppress-asic-sdk-health-event:sonic-suppress-asic-sdk-health-event": {
+            "sonic-suppress-asic-sdk-health-event:SUPPRESS_ASIC_SDK_HEALTH_EVENT": {
+                "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST": [
+                    {
+                        "severity": "warning",
+                        "categories": ["asic_hw","cpu_hw"]
+                    }
+                ]
+            }
+        }
+    },
+
+    "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST_VALID_NOTICE": {
+        "sonic-suppress-asic-sdk-health-event:sonic-suppress-asic-sdk-health-event": {
+            "sonic-suppress-asic-sdk-health-event:SUPPRESS_ASIC_SDK_HEALTH_EVENT": {
+                "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST": [
+                    {
+                        "severity": "notice",
+                        "categories": ["software","firmware","cpu_hw","asic_hw"],
+                        "max_events": "100"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST_INVALID_SEVERITY": {
+        "sonic-suppress-asic-sdk-health-event:sonic-suppress-asic-sdk-health-event": {
+            "sonic-suppress-asic-sdk-health-event:SUPPRESS_ASIC_SDK_HEALTH_EVENT": {
+                "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST": [
+                    {
+                        "severity": "unknown",
+                        "categories": ["software","firmware","cpu_hw","asic_hw"]
+                    }
+                ]
+            }
+        }
+    },
+
+    "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST_INVALID_CATEGORY": {
+        "sonic-suppress-asic-sdk-health-event:sonic-suppress-asic-sdk-health-event": {
+            "sonic-suppress-asic-sdk-health-event:SUPPRESS_ASIC_SDK_HEALTH_EVENT": {
+                "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST": [
+                    {
+                        "severity": "notice",
+                        "categories": ["software","unknown","cpu_hw","asic_hw"]
+                    }
+                ]
+            }
+        }
+    },
+
+    "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST_NEGATIVE_MAX_EVENTS": {
+        "sonic-suppress-asic-sdk-health-event:sonic-suppress-asic-sdk-health-event": {
+            "sonic-suppress-asic-sdk-health-event:SUPPRESS_ASIC_SDK_HEALTH_EVENT": {
+                "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST": [
+                    {
+                        "severity": "notice",
+                        "max_events": "-1"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST_INVALID_MAX_EVENTS": {
+        "sonic-suppress-asic-sdk-health-event:sonic-suppress-asic-sdk-health-event": {
+            "sonic-suppress-asic-sdk-health-event:SUPPRESS_ASIC_SDK_HEALTH_EVENT": {
+                "SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST": [
+                    {
+                        "severity": "notice",
+                        "max_events": "NaN"
+                    }
+                ]
+            }
+        }
+    }
+}
