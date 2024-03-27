@@ -1,0 +1,385 @@
+{
+  "chassis": {
+    "name": "Celestica-Redstone-XP",
+    "components": [
+      {
+        "name": "CPLD1"
+      },
+      {
+        "name": "CPLD2"
+      },
+      {
+        "name": "CPLD3"
+      },
+      {
+        "name": "CPLD4"
+      },
+      {
+        "name": "BIOS"
+      }
+    ],
+    "fans": [
+      {
+        "name": "FAN-1F"
+      },
+      {
+        "name": "FAN-1R"
+      },
+      {
+        "name": "FAN-2F"
+      },
+      {
+        "name": "FAN-2R"
+      },
+      {
+        "name": "FAN-3F"
+      },
+      {
+        "name": "FAN-3R"
+      },
+      {
+        "name": "FAN-4F"
+      },
+      {
+        "name": "FAN-4R"
+      }
+    ],
+    "fan_drawers": [
+      {
+        "name": "Drawer1",
+        "fans": [
+          {
+            "name": "FAN-1F"
+          },
+          {
+            "name": "FAN-1R"
+          }
+        ]
+      },
+      {
+        "name": "Drawer2",
+        "fans": [
+          {
+            "name": "FAN-2F"
+          },
+          {
+            "name": "FAN-2R"
+          }
+        ]
+      },
+      {
+        "name": "Drawer3",
+        "fans": [
+          {
+            "name": "FAN-3F"
+          },
+          {
+            "name": "FAN-3R"
+          }
+        ]
+      },
+      {
+        "name": "Drawer4",
+        "fans": [
+          {
+            "name": "FAN-4F"
+          },
+          {
+            "name": "FAN-4R"
+          }
+        ]
+      }
+    ],
+    "psus": [
+      {
+        "name": "PSU-1",
+        "fans": [
+          {
+            "name": "PSU-1 FAN-1"
+          }
+        ]
+      },
+      {
+        "name": "PSU-2",
+        "fans": [
+          {
+            "name": "PSU-2 FAN-1"
+          }
+        ]
+      }
+    ],
+    "thermals": [
+      {
+        "name": "Front-panel temp sensor 1"
+      },
+      {
+        "name": "Front-panel temp sensor 2"
+      },
+      {
+        "name": "ASIC temp sensor"
+      },
+      {
+        "name": "Rear-panel temp sensor 1"
+      },
+      {
+        "name": "Rear-panel temp sensor 2"
+      }
+    ],
+    "sfps": [
+      {
+        "name": "Ethernet1"
+      },
+      {
+        "name": "Ethernet2"
+      },
+      {
+        "name": "Ethernet3"
+      },
+      {
+        "name": "Ethernet4"
+      },
+      {
+        "name": "Ethernet5"
+      },
+      {
+        "name": "Ethernet6"
+      },
+      {
+        "name": "Ethernet7"
+      },
+      {
+        "name": "Ethernet8"
+      },
+      {
+        "name": "Ethernet9"
+      },
+      {
+        "name": "Ethernet10"
+      },
+      {
+        "name": "Ethernet11"
+      },
+      {
+        "name": "Ethernet12"
+      },
+      {
+        "name": "Ethernet13"
+      },
+      {
+        "name": "Ethernet14"
+      },
+      {
+        "name": "Ethernet15"
+      },
+      {
+        "name": "Ethernet16"
+      },
+      {
+        "name": "Ethernet17"
+      },
+      {
+        "name": "Ethernet18"
+      },
+      {
+        "name": "Ethernet19"
+      },
+      {
+        "name": "Ethernet20"
+      },
+      {
+        "name": "Ethernet21"
+      },
+      {
+        "name": "Ethernet22"
+      },
+      {
+        "name": "Ethernet23"
+      },
+      {
+        "name": "Ethernet24"
+      },
+      {
+        "name": "Ethernet25"
+      },
+      {
+        "name": "Ethernet26"
+      },
+      {
+        "name": "Ethernet27"
+      },
+      {
+        "name": "Ethernet28"
+      },
+      {
+        "name": "Ethernet29"
+      },
+      {
+        "name": "Ethernet30"
+      },
+      {
+        "name": "Ethernet31"
+      },
+      {
+        "name": "Ethernet32"
+      },
+      {
+        "name": "Ethernet33"
+      },
+      {
+        "name": "Ethernet34"
+      },
+      {
+        "name": "Ethernet35"
+      },
+      {
+        "name": "Ethernet36"
+      },
+      {
+        "name": "Ethernet37"
+      },
+      {
+        "name": "Ethernet38"
+      },
+      {
+        "name": "Ethernet39"
+      },
+      {
+        "name": "Ethernet40"
+      },
+      {
+        "name": "Ethernet41"
+      },
+      {
+        "name": "Ethernet42"
+      },
+      {
+        "name": "Ethernet43"
+      },
+      {
+        "name": "Ethernet44"
+      },
+      {
+        "name": "Ethernet45"
+      },
+      {
+        "name": "Ethernet46"
+      },
+      {
+        "name": "Ethernet47"
+      },
+      {
+        "name": "Ethernet48"
+      },
+      {
+        "name": "Ethernet49"
+      },
+      {
+        "name": "Ethernet53"
+      },
+      {
+        "name": "Ethernet57"
+      },
+      {
+        "name": "Ethernet61"
+      },
+      {
+        "name": "Ethernet65"
+      },
+      {
+        "name": "Ethernet69"
+      }
+    ]
+  },
+  "interfaces": {
+    "Ethernet49": {
+      "lanes": "97,98,99,100",
+      "index": "49",
+      "breakout_modes": {
+        "1x40G": [
+          "fortyGigE48"
+        ],
+        "4x10G": [
+          "fortyGigE48/1",
+          "fortyGigE48/2",
+          "fortyGigE48/3",
+          "fortyGigE48/4"
+        ]
+      }
+    },
+    "Ethernet53": {
+      "lanes": "101,102,103,104",
+      "index": "50",
+      "breakout_modes": {
+        "1x40G": [
+          "fortyGigE52"
+        ],
+        "4x10G": [
+          "fortyGigE52/1",
+          "fortyGigE52/2",
+          "fortyGigE52/3",
+          "fortyGigE52/4"
+        ]
+      }
+    },
+    "Ethernet57": {
+      "lanes": "81,82,83,84",
+      "index": "51",
+      "breakout_modes": {
+        "1x40G": [
+          "fortyGigE56"
+        ],
+        "4x10G": [
+          "fortyGigE56/1",
+          "fortyGigE56/2",
+          "fortyGigE56/3",
+          "fortyGigE56/4"
+        ]
+      }
+    },
+    "Ethernet61": {
+      "lanes": "105,106,107,108",
+      "index": "52",
+      "breakout_modes": {
+        "1x40G": [
+          "fortyGigE60"
+        ],
+        "4x10G": [
+          "fortyGigE60/1",
+          "fortyGigE60/2",
+          "fortyGigE60/3",
+          "fortyGigE60/4"
+        ]
+      }
+    },
+    "Ethernet65": {
+      "lanes": "109,110,111,112",
+      "index": "53",
+      "breakout_modes": {
+        "1x40G": [
+          "fortyGigE64"
+        ],
+        "4x10G": [
+          "fortyGigE64/1",
+          "fortyGigE64/2",
+          "fortyGigE64/3",
+          "fortyGigE64/4"
+        ]
+      }
+    },
+    "Ethernet69": {
+      "lanes": "77,78,79,80",
+      "index": "54",
+      "breakout_modes": {
+        "1x40G": [
+          "fortyGigE68"
+        ],
+        "4x10G": [
+          "fortyGigE68/1",
+          "fortyGigE68/2",
+          "fortyGigE68/3",
+          "fortyGigE68/4"
+        ]
+      }
+    }
+  }
+}
