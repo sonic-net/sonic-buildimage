@@ -1,0 +1,5 @@
+{
+    "HOSTAPD_TEST": {
+        "desc": "HOSTAPD configuration in global configuration table."
+    }
+}

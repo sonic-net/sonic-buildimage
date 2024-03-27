@@ -1,0 +1,39 @@
+module sonic-hostapd {
+    namespace "http://github.com/sonic-net/sonic-hostapd";
+    prefix shostapd;
+    yang-version 1.1;
+
+    description
+        "SONiC HOSTAPD";
+
+    revision 2023-08-02 {
+        description "Initial revision.";
+    }
+
+    container sonic-hostapd {
+        description "HOSTAPD top level container.";
+
+        container HOSTAPD_GLOBAL_CONFIG {
+            description
+                "Container for hostapd global config.";
+
+            list HOSTAPD_GLOBAL_CONFIG_LIST {
+                key "global";
+
+                leaf global {
+                    type enumeration {
+                        enum GLOBAL;
+                    }
+                    description
+                        "Configure dot1x/hostapd global configuration.";
+                }
+
+                leaf dot1x_system_auth_control {
+                    type boolean;
+                    description
+                        "Indicates whether dot1x/hostapd is enabled/disabled on the switch.";
+                }
+            }
+        }
+    }
+}

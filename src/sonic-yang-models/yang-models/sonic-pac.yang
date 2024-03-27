@@ -1,0 +1,234 @@
+module sonic-pac {
+    namespace "http://github.com/sonic-net/sonic-pac";
+    prefix spac;
+    yang-version 1.1;
+
+    import sonic-port {
+        prefix prt;
+    }
+
+    description
+       "SONiC PAC";
+
+    revision 2023-03-28 {
+        description "Initial revision.";
+    }
+
+    typedef port_mode_enumeration {
+        type enumeration {
+            enum auto {
+                description
+                    "Enable auto port control mode on a port.";
+            }
+
+            enum force-authorized {
+                description
+                    "Enable force authorized port control mode on a port.";
+            }
+
+            enum force-unauthorized {
+                description
+                    "Enable force unauthorized port control mode on a port.";
+            }
+        }
+    }
+
+    typedef host_mode_enumeration {
+        type enumeration {
+            enum single-host {
+                description
+                    "One data client or one voice client can be authenticated on the port.";
+            }
+
+            enum multi-auth {
+                description
+                    "Multiple data client and one voice client can be authenticated on the port.";
+            }
+
+            enum multi-host {
+                description
+                    "One data client can be authenticated on the port. Rest of the
+                        clients tailgate once the first client is authenticated.";
+            }
+        }
+    }
+
+    typedef auth_order_enumeration {
+        type enumeration {
+            enum dot1x {
+                description
+                    "Configure authmgr authentication order as dot1x";
+            }
+
+            enum mab {
+                description
+                    "Configure authmgr authentication order as mab";
+            }
+        }
+    }
+
+    typedef auth_priority_enumeration {
+        type enumeration {
+            enum dot1x {
+                description
+                    "Configure authmgr authentication priority as dot1x";
+            }
+
+            enum mab {
+                description
+                    "Configure authmgr authentication priority as mab";
+            }
+        }
+    }
+
+    typedef port_role_enumeration {
+        type enumeration {
+            enum authenticator {
+                description
+                    "Allows config of dot1x port's pae role as authenticator.";
+            }
+
+            enum none {
+                description
+                    "Allows config of dot1x port's pae role as none.";
+            }
+        }
+    }
+
+    typedef auth_type_enumeration {
+        type enumeration {
+            enum eap-md5 {
+                description
+                    "Configure EAP-MD5 auth type for MAB.";
+            }
+
+            enum pap {
+                description
+                    "Configure PAP auth type for MAB.";
+            }
+
+            enum chap {
+                description
+                    "Configure CHAP auth type for MAB.";
+            }
+        }
+    }
+
+    container sonic-pac {
+
+        description 
+            "pac top level container.";
+
+        container PAC_PORT_CONFIG {
+
+            description
+                "Container for port config table.";
+
+            list PAC_PORT_CONFIG_TABLE_LIST {
+                key "port";
+
+                leaf port {
+                    type leafref {
+                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                    }
+                    description
+                        "Name of the interface on which PAC configuration gets applied.";
+                }
+
+                leaf port_control_mode {
+                    type port_mode_enumeration;
+                    description
+                        "Determines whether or not to enforce authentication on an interface.";
+                }
+
+                leaf host_control_mode {
+                    type host_mode_enumeration;
+                    description
+                        "Allow for single or multiple hosts to communicate through
+                           a PAC controlled port.";
+                }
+
+                leaf reauth_enable {
+                    type boolean;
+                    description
+                        "Indicates whether Reauthentication is enabled on
+                            the port.";
+                }
+
+                leaf reauth_period {
+                    type uint32 {
+                        range 1..65535 {
+                            error-message "reauth period value must be in range of 1-65535.";
+                            error-app-tag reauth-period-invalid;
+                        }
+                    }
+                    units seconds;
+                    description
+                         "The value of the timer that defines the period
+                              after which the Authenticator will reauthenticate the Supplicant.";
+                }
+
+                leaf max_users_per_port {
+                    type uint8 {
+                        range 1..48 {
+                            error-message "max users per port value must be in range of 1-48.";
+                            error-app-tag max-users-per-port-invalid;
+                        }
+                    }
+                    description
+                        "Maximum number of clients that can be authenticated
+                             on the port. This is applicable only for multi-auth host mode.";
+                }
+
+                leaf-list method_list {
+                    type auth_order_enumeration;
+                    description
+                        "Enables configuration of authmgr authentication methods order.";
+                }
+
+                leaf-list priority_list {
+                    type auth_priority_enumeration;
+                     description
+                         "Enables configuration of authmgr authentication methods priority.";
+                }
+
+                leaf port_pae_role {
+                    type port_role_enumeration;
+                    description
+                        "Enables configuration of dot1x port's pae role.
+                          Note: Enabling PAC on the port will revert all switchport configurations on the
+                          port,
+                          if port control mode is auto/force-unauthorized and port pae role is
+                          authenticator.";
+                }
+            }
+        }
+
+        container MAB_PORT_CONFIG {
+
+            list MAB_PORT_CONFIG_TABLE_LIST {
+                key "port";
+
+                leaf port {
+                    type leafref {
+                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                    }
+                    description
+                        "Name of the interface on which mab gets applied.";
+                }
+
+                leaf mab {
+                    type boolean;
+                    description
+                        "Enable mab on the interface.";
+                }
+
+                leaf mab_auth_type {
+                    type auth_type_enumeration;
+                    description
+                        "MAB authentication type.";
+                }
+            }
+        }
+    }
+}

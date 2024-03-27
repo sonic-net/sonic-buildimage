@@ -1,0 +1,16 @@
+{
+    "PAC_PORT_CONFIG_TEST" : {
+        "desc": "PAC configuration for port."
+    },
+    "PAC_PORT_INVALID_REAUTH_TIMER_TEST": {
+        "desc": "PAC configuration with invalid re-auth timer in PAC_PORT_CONFIG table.",
+        "eStr": "reauth period value must be in range of 1-65535."
+    },
+    "PAC_PORT_INVALID_MAX_USERS_TEST" : {
+        "desc": "PAC configuration with invalid max users in PAC_PORT_CONFIG table.",
+        "eStr": "max users per port value must be in range of 1-48."
+    },
+    "MAB_PORT_CONFIG_TEST" : {
+        "desc": "MAB configuration for port."
+    }
+}

@@ -1,0 +1,127 @@
+{
+    "PAC_PORT_CONFIG_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-pac:sonic-pac": {
+            "sonic-pac:PAC_PORT_CONFIG": {
+                "PAC_PORT_CONFIG_TABLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "port_control_mode": "auto",
+                        "host_control_mode": "single-host",
+                        "reauth_enable": "true",
+                        "reauth_period": 30,
+                        "max_users_per_port": 25,
+                        "method_list": ["dot1x", "mab"],
+                        "priority_list": ["dot1x", "mab"],
+                        "port_pae_role": "authenticator"
+                    }
+                ]
+            }
+        }
+    },
+    "PAC_PORT_INVALID_REAUTH_TIMER_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-pac:sonic-pac": {
+            "sonic-pac:PAC_PORT_CONFIG": {
+                "PAC_PORT_CONFIG_TABLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "port_control_mode": "auto",
+                        "host_control_mode": "single-host",
+                        "reauth_enable": "true",
+                        "reauth_period": 65573,
+                        "max_users_per_port": 25,
+                        "port_pae_role": "none"
+                    }
+                ]
+            }
+        }
+    },
+    "PAC_PORT_INVALID_MAX_USERS_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-pac:sonic-pac": {
+            "sonic-pac:PAC_PORT_CONFIG": {
+                "PAC_PORT_CONFIG_TABLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "port_control_mode": "auto",
+                        "host_control_mode": "single-host",
+                        "reauth_enable": "true",
+                        "max_users_per_port": 55,
+                        "port_pae_role": "none"
+                    }
+                ]
+            }
+        }
+    },
+    "MAB_PORT_CONFIG_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-pac:sonic-pac": {
+            "sonic-pac:MAB_PORT_CONFIG": {
+                "MAB_PORT_CONFIG_TABLE_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "mab": "true",
+                        "mab_auth_type": "eap-md5"
+                    }
+                ]
+            }
+        }
+    }
+}

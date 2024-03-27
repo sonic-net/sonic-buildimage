@@ -89,6 +89,7 @@ Table of Contents
          * [SYSTEM_DEFAULTS table](#systemdefaults-table)
          * [RADIUS](#radius)
          * [Static DNS](#static-dns)
+         * [PAC](#pac)
    * [For Developers](#for-developers)
       * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
       * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -2767,6 +2768,44 @@ The DPUS table introduces the information on the DPUs (Data Processing Unit) ava
             "midplane_interface": "dpu1"
         }
     }
+}
+```
+
+### PAC 
+
+The PAC and HOSTAPD tables define the PAC configuration parameters.
+
+```
+"PAC_PORT_CONFIG": {
+  "Ethernet1": {
+    "method_list": [
+      "dot1x",
+      "mab"
+    ],
+    "priority_list": [
+      "dot1x",
+      "mab"
+    ],
+    "port_pae_role": "authenticator",
+    "port_control_mode": "auto",
+    "host_control_mode": "multi_auth",
+    "reauth_period": 60,
+    "reauth_enable": "true",
+    "max_users_per_port": 16,
+  }
+}
+
+"HOSTAPD_GLOBAL_CONFIG": {
+  "global": {
+    "dot1x_system_auth_control": "enable"
+  }
+}
+
+"MAB_PORT_CONFIG": {
+  "Ethernet1": {
+    "mab": "enable",
+    "mab_auth_type": "eap-md5",
+  }
 }
 ```
 

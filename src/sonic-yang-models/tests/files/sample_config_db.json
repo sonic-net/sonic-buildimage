@@ -2612,6 +2612,35 @@
                 "link": "PortChannel2"
             }
         },
+	"PAC_PORT_CONFIG": {
+             "Ethernet0": {
+                 "method_list": [
+                    "dot1x",
+                    "mab"
+                 ],
+                 "priority_list": [
+                    "dot1x",
+                    "mab"
+                 ],
+                 "port_pae_role": "authenticator",
+                 "port_control_mode": "auto",
+                 "host_control_mode": "multi_auth",
+                 "reauth_period": 60,
+                 "reauth_enable": "true",
+                 "max_users_per_port": 16
+             }
+        },
+        "MAB_PORT_CONFIG": {
+             "Ethernet0": {
+                 "mab": "enable",
+                 "mab_auth_type": "eap-md5"
+             }
+	},
+	"HOSTAPD_GLOBAL_CONFIG": {
+             "global": {
+                 "dot1x_system_auth_control": "enable"
+             }
+        },
         "MID_PLANE_BRIDGE": {
             "GLOBAL" : {
                 "bridge": "bridge_midplane",
