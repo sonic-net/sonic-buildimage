@@ -169,16 +169,19 @@ class ModulesMgmtTask(threading.Thread):
             module_fd_indep_path = SYSFS_INDEPENDENT_FD_PRESENCE.format(port)
             logger.log_info("system in indep mode: {} port {}".format(self.is_supported_indep_mods_system, port))
             if self.is_warm_reboot:
-                logger.log_info("system was warm rebooted is_warm_reboot: {} trying to read control sysfs for port {}"
-                                .format(self.is_warm_reboot, port))
-                port_control_file = SYSFS_INDEPENDENT_FD_FW_CONTROL.format(port)
-                try:
-                    port_control = utils.read_int_from_file(port_control_file, raise_exception=True)
-                    self.port_control_dict[port] = port_control
-                    logger.log_info(f"port control sysfs is {port_control} for port {port}")
-                except Exception as e:
-                    logger.log_error("exception {} for port {} trying to read port control sysfs {}"
-                                     .format(e, port, port_control_file))
+                if self.is_supported_indep_mods_system:
+                    logger.log_info("system was warm rebooted is_warm_reboot: {} trying to read control sysfs for port {}"
+                                    .format(self.is_warm_reboot, port))
+                    port_control_file = SYSFS_INDEPENDENT_FD_FW_CONTROL.format(port)
+                    try:
+                        port_control = utils.read_int_from_file(port_control_file, raise_exception=True)
+                        self.port_control_dict[port] = port_control
+                        logger.log_info(f"port control sysfs is {port_control} for port {port}")
+                    except Exception as e:
+                        logger.log_error("exception {} for port {} trying to read port control sysfs {}"
+                                        .format(e, port, port_control_file))
+                else:
+                    self.port_control_dict[port] = 0
             if (self.is_supported_indep_mods_system and os.path.isfile(module_fd_indep_path)) \
                     and not (self.is_warm_reboot and 0 == port_control):
                 logger.log_info("system in indep mode: {} port {} reading file {}".format(self.is_supported_indep_mods_system, port, module_fd_indep_path))
