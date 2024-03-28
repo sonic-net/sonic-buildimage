@@ -271,27 +271,60 @@ def get_port_table(namespace=None):
     Returns:
         a dict of all the ports
     """
-    all_ports = {}
+    return get_table(PORT_CFG_DB_TABLE, namespace)
+
+
+def get_table(table, namespace=None):
+    """
+    Retrieves a merged table containing all entries across specified namespaces
+
+    Returns:
+        a dict of all entries of table across namespaces
+    """
+    merged_table = {}
     ns_list = get_namespace_list(namespace)
 
     for ns in ns_list:
-        ports = get_port_table_for_asic(ns)
-        all_ports.update(ports)
+        ns_table = get_table_for_asic(table, ns)
+        merged_table.update(ns_table)
 
-    return all_ports
+    return merged_table
+
 
 def get_port_entry_for_asic(port, namespace):
 
-    config_db = connect_config_db_for_ns(namespace)
-    ports = config_db.get_entry(PORT_CFG_DB_TABLE, port)
-    return ports
+    return get_table_entry_for_asic(PORT_CFG_DB_TABLE, port, namespace)
 
+
+def get_table_entry_for_asic(table, entry, namespace):
+
+    config_db = connect_config_db_for_ns(namespace)
+    return config_db.get_entry(table, entry)
 
 def get_port_table_for_asic(namespace):
 
+    return get_table_for_asic(PORT_CFG_DB_TABLE, namespace)
+
+
+def get_table_for_asic(table, namespace):
+
     config_db = connect_config_db_for_ns(namespace)
-    ports = config_db.get_table(PORT_CFG_DB_TABLE)
-    return ports
+    return config_db.get_table(table)
+
+
+def mod_entry(table, key, value, namespace=None, modIfExists=False):
+    """
+    Modifies an entry in a table with a value in a specified namespace.
+    If no namespace is specified all namespaces are modified.
+    If modIfExists is true, the entry will be modified only if the key
+    already exists in the table.
+    """
+    ns_list = get_namespace_list(namespace)
+
+    for ns in ns_list:
+        if not modIfExists or get_table_entry_for_asic(table, key, ns):
+            config_db = connect_config_db_for_ns(ns)
+            config_db.mod_entry(table, key, value)
 
 
 def get_namespace_for_port(port_name):
