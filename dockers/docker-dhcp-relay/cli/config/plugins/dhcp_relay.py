@@ -1,5 +1,6 @@
 import click
 import ipaddress
+import subprocess
 import utilities_common.cli as clicommon
 
 DHCP_RELAY_TABLE = "DHCP_RELAY"
@@ -185,6 +186,121 @@ def del_dhcp_relay_ipv4_helper(db, vid, dhcp_relay_helpers):
     del_dhcp_relay(vid, dhcp_relay_helpers, db, IPV4)
 
 
+@dhcp_relay.group(cls=clicommon.AbbreviationGroup, name="mitigation-rate")
+def mitigation_rate():
+    pass
+
+
+@mitigation_rate.command("add")
+@click.argument("rate", metavar="<number of packets per second>", required=True, type=int)
+@click.argument("port", metavar="<interface name>", required=True, type=str)
+@clicommon.pass_db
+def add_dhcp_relay_mitigation_rate(db, rate, port):
+    """ Add a DHCP rate limit on a port """
+
+    ctx = click.get_current_context()
+    byte_rate = rate * 406
+
+    # Check if rate is valid
+    if rate < 1:
+        ctx.fail("Invalid rate (>1)".format(port))
+
+    # Check if port/portchannel exists
+    config_db = db.cfgdb
+    if clicommon.is_valid_port(config_db, port):
+        pass
+    elif clicommon.is_valid_portchannel(config_db, port):
+        pass
+    else:
+        ctx.fail("{} does not exist".format(port))
+    
+    # Check if DHCP rate limit already exists
+    show_tc_filter_command = f"sudo tc filter show dev {port} root"
+    show_tc_filter_capture = subprocess.run(show_tc_filter_command, shell=True, capture_output=True)
+    show_tc_filter_output = str(show_tc_filter_capture.stdout, 'utf-8')
+    show_tc_filter_error = show_tc_filter_capture.returncode
+    if show_tc_filter_error != 0:
+        ctx.fail("Failed to fetch traffic control filters")
+    rate_exists_matches = [
+        "filter parent ffff:",
+        "match 00110000/00ff0000 at 8",
+        "match 00000043/0000ffff at 20",
+        "police 0x1 rate"
+    ]
+    if all(x in show_tc_filter_output for x in rate_exists_matches):
+        ctx.fail("DHCP rate limit already exists on {}".format(port))
+
+    # Add ingress qdisc on port if not already added
+    show_tc_qdisc_command = f"sudo tc qdisc show dev {port}"
+    show_tc_qdisc_capture = subprocess.run(show_tc_filter_command, shell=True, capture_output=True)
+    show_tc_qdisc_output = str(show_tc_qdisc_capture.stdout, 'utf-8')
+    show_tc_qdisc_error = show_tc_qdisc_capture.returncode
+    if show_tc_qdisc_error != 0:
+        ctx.fail("Failed to fetch traffic control qdiscs")
+    if "qdisc ingress ffff: parent ffff:fff1" in show_tc_qdisc_output:
+        pass
+    else:
+        add_tc_qdisc_command = f"sudo tc qdisc add dev {port} handle ffff: ingress"
+        add_tc_qdisc_error = subprocess.run(add_tc_qdisc_command, shell=True, capture_output=True).returncode
+        if add_tc_qdisc_error != 0:
+            ctx.fail("Failed to add traffic control qdisc on {}".format(port))
+
+    # Generate DHCP rate limit traffic control command
+    add_tc_filter_command = f"sudo tc filter add dev {port} protocol ip parent ffff: prio 1 u32 match ip protocol 17 0xff match ip dport 67 0xffff police rate {byte_rate}bps burst {byte_rate}b conform-exceed drop"    
+    # Apply DHCP rate limit on port
+    add_tc_filter_error = subprocess.run(add_tc_filter_command, shell=True, capture_output=True).returncode
+    if add_tc_filter_error != 0:
+        ctx.fail("Failed to add DHCP rate limit on {}".format(port))
+
+@mitigation_rate.command("del")
+@click.argument("rate", metavar="<number of packets per second>", required=True, type=int)
+@click.argument("port", metavar="<interface name>", required=True, type=str)
+@clicommon.pass_db
+def add_dhcp_relay_mitigation_rate(db, rate, port):
+    """ Delete a DHCP rate limit on a port """
+
+    ctx = click.get_current_context()
+    byte_rate = rate * 406
+    
+    # Check if rate is valid
+    if rate < 1:
+        ctx.fail("Invalid rate (>1)".format(port))
+
+    # Check if port/portchannel exists
+    config_db = db.cfgdb
+    if clicommon.is_valid_port(config_db, port):
+        pass
+    elif clicommon.is_valid_portchannel(config_db, port):
+        pass
+    else:
+        ctx.fail("{} does not exist".format(port))
+    
+    # Check if specified DHCP rate limit exists
+    show_tc_filter_command = f"sudo tc filter show dev {port} root"
+    show_tc_filter_capture = subprocess.run(show_tc_filter_command, shell=True, capture_output=True)
+    show_tc_filter_output = str(show_tc_filter_capture.stdout, 'utf-8')
+    show_tc_filter_error = show_tc_filter_capture.returncode
+    if show_tc_filter_error != 0:
+        ctx.fail("Failed to fetch traffic control filters")
+    rate_exists_matches = [
+        "filter parent ffff:",
+        "match 00110000/00ff0000 at 8",
+        "match 00000043/0000ffff at 20",
+        "police 0x1 rate {}bit".format(rate * 3248)
+    ]
+
+    # Generate traffic control filter delete command
+    del_tc_filter_command = f"sudo tc filter del dev {port} protocol ip parent ffff: prio 1 u32 match ip protocol 17 0xff match ip dport 67 0xffff police rate {byte_rate}bps burst {byte_rate}b conform-exceed drop"
+
+    # Run delete rate limit command if specified DHCP rate limit exists
+    if all(x in show_tc_filter_output for x in rate_exists_matches):
+        del_tc_filter_error = subprocess.run(del_tc_filter_command, shell=True, capture_output=True).returncode
+        if del_tc_filter_error != 0:
+            ctx.fail("Failed to delete DHCP rate limit on {}".format(port))
+    else:
+        ctx.fail("DHCP rate limit does not exist on {}".format(port))
+
+
 # subcommand of vlan
 @click.group(cls=clicommon.AbbreviationGroup, name='dhcp_relay')
 def vlan_dhcp_relay():
@@ -293,11 +409,13 @@ def del_vlan_dhcp_relay_destination(db, vid, dhcp_relay_destination_ips):
         restart_dhcp_relay_service()
     except SystemExit as e:
         ctx.fail("Restart service dhcp_relay failed with error {}".format(e))
-
+  
 
 def register(cli):
     cli.add_command(dhcp_relay)
     cli.commands['vlan'].add_command(vlan_dhcp_relay)
+
+
 
 
 if __name__ == '__main__':
