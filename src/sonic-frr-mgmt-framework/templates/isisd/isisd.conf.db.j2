@@ -1,0 +1,168 @@
+! template: isisd/isisd.conf.db.j2
+!
+! ISIS configuration
+!
+{% if ISIS_GLOBAL is defined and ISIS_GLOBAL|length > 0 %}
+{% for keys, isis_instance in ISIS_GLOBAL.items() %}
+{% set vrf = keys[0] %}
+{% set instance = keys[1] %}
+{% if instance and instance.lower() != 'null' and vrf and vrf.lower() != 'null' %}
+router isis {{ instance }} vrf {{vrf}}
+{% if 'net' in isis_instance and isis_instance['net'] != 'None' %}
+net {{ isis_instance['net'] }}
+{% endif %}
+{% if 'level_capability' in isis_instance %}
+{% if isis_instance['level_capability'] == 'LEVEL_1' %}
+is-type level-1
+{% elif isis_instance['level_capability'] == 'LEVEL_2' %} 
+is-type level-2-only
+{% elif isis_instance['level_capability'] == 'LEVEL_1_2' %} 
+is-type level-1-2
+{% endif %}
+{% endif %}
+{% if 'dynamic_hostname' in isis_instance %}
+{% if isis_instance['dynamic_hostname'] == 'true' %} 
+hostname dynamic 
+{% elif isis_instance['dynamic_hostname'] == 'false' %} 
+no hostname dynamic 
+{% endif %}
+{% endif %}
+{% if 'attach_send' in isis_instance  %}
+{% if isis_instance['attach_send'] == 'true' %} 
+attached-bit send 
+{% elif isis_instance['attach_send'] == 'false' %} 
+no attached-bit send 
+{% endif %}
+{% endif %}
+{% if 'attach_receive_ignore' in isis_instance %}
+{% if isis_instance['attach_receive_ignore'] == 'true' %} 
+attached-bit receive ignore 
+{% elif isis_instance['attach_receive_ignore'] == 'false' %} 
+no attached-bit receive ignore 
+{% endif %}
+{% endif %}
+{% if 'set_overload_bit' in isis_instance %}
+{% if isis_instance['set_overload_bit'] == 'true' %} 
+set-overload-bit 
+{% elif isis_instance['set_overload_bit'] == 'false' %} 
+no set-overload-bit 
+{% endif %}
+{% endif %}
+{% if 'lsp_mtu_size' in isis_instance %} 
+lsp-mtu {{ isis_instance['lsp_mtu_size'] }}
+{% endif %}
+{% if 'spf_init_delay' in isis_instance and 'spf_short_delay' in isis_instance and 'spf_long_delay' in isis_instance and 'spf_hold_down' in isis_instance and 'spf_time_to_learn' in isis_instance %} 
+spf-delay-ietf init-delay {{ isis_instance['spf_init_delay'] }} short-delay {{ isis_instance['spf_short_delay'] }} long-delay {{ isis_instance['spf_long_delay'] }} holddown {{ isis_instance['spf_hold_down'] }} time-to-learn {{ isis_instance['spf_time_to_learn'] }}
+{% endif %}
+{% if 'log_adjacency_changes' in isis_instance %}
+{% if isis_instance['log_adjacency_changes'] == 'true' %}
+log-adjacency-changes
+{% elif isis_instance['log_adjacency_changes'] == 'false' %}
+no log-adjacency-changes
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+!
+{% if ISIS_LEVELS is defined and ISIS_LEVELS|length > 0 %}
+{% for keys, isis_level_data in ISIS_LEVELS.items() %}
+{% set vrf = keys[0] %}
+{% set instance = keys[1] %}
+{% set level_number = keys[2] %}
+{% if instance and instance.lower() != 'null' and vrf and vrf.lower() != 'null' and level_number and (level_number == '1' or level_number == '2') %}
+router isis {{ instance }} vrf {{vrf}}
+{% if level_number == '1' %}
+{% set level = 'level-1' %}
+{% elif level_number == '2' %}
+{% set level = 'level-2' %}
+{% endif %}
+{% if 'lsp_refresh_interval' in isis_level_data %}
+lsp-refresh-interval {{ level }} {{ isis_level_data['lsp_refresh_interval'] }}
+{% endif %}
+{% if 'lsp_maximum_lifetime' in isis_level_data %}
+max-lsp-lifetime {{ level }} {{ isis_level_data['lsp_maximum_lifetime'] }}
+{% endif %}
+{% if 'lsp_generation_interval' in isis_level_data %}
+lsp-gen-interval {{ level }} {{ isis_level_data['lsp_generation_interval'] }}
+{% endif %}
+{% if 'spf_minimum_interval' in isis_level_data %}
+spf-interval {{ level }} {{ isis_level_data['spf_minimum_interval'] }}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+!
+{% if ISIS_INTERFACE is defined and ISIS_INTERFACE|length > 0 %}
+{% for keys, isis_interface_data in ISIS_INTERFACE.items() %}
+{% set instance = keys[0] %}
+{% set interface = keys[1] %}
+{% if instance and instance.lower() != 'null' and interface and interface.lower() != 'null' %}
+interface {{ interface }}
+{% if (('ipv4_routing_instance' in isis_interface_data and not (isis_interface_data['ipv4_routing_instance'] == 'None' or isis_interface_data['ipv4_routing_instance'].lower() == 'null' )) or 
+       ('ipv6_routing_instance' in isis_interface_data and not (isis_interface_data['ipv6_routing_instance'] == 'None' or isis_interface_data['ipv6_routing_instance'].lower() == 'null'))) %}
+{% if 'ipv4_routing_instance' in isis_interface_data and not (isis_interface_data['ipv4_routing_instance'] == 'None' or isis_interface_data['ipv4_routing_instance'].lower() == 'null' ) %}
+ip router isis {{ isis_interface_data['ipv4_routing_instance'] }}
+{% endif %}
+{% if 'ipv6_routing_instance' in isis_interface_data and not (isis_interface_data['ipv6_routing_instance'] == 'None' or isis_interface_data['ipv6_routing_instance'].lower() == 'null') %}
+ipv6 router isis {{ isis_interface_data['ipv6_routing_instance'] }}
+{% endif %}
+{% if 'passive' in isis_interface_data %}
+{% if isis_interface_data['passive'] == 'true' %}
+isis passive
+{% elif isis_interface_data['passive'] == 'false' %}
+no isis passive
+{% endif %}
+{% endif %}
+{% if 'hello_padding' in isis_interface_data %}
+{% if isis_interface_data['hello_padding'] == 'true' %}
+isis hello padding
+{% elif isis_interface_data['hello_padding'] == 'false' %}
+no isis hello padding
+{% endif %}
+{% endif %}
+{% if 'network_type' in isis_interface_data %}
+{% if isis_interface_data['network_type'] == 'POINT_TO_POINT' %}
+isis network point-to-point
+{% endif %}
+{% endif %}
+{% if 'authentication_key' in isis_interface_data and 'authentication_type' in isis_interface_data and not 
+      (isis_interface_data['authentication_key'] == 'None' or isis_interface_data['authentication_key'].lower() == 'null') %}
+{% if isis_interface_data['authentication_type'] == 'TEXT'  %}
+isis password clear {{ isis_interface_data['authentication_key'] }}
+{% elif isis_interface_data['authentication_type'] == 'MD5'  %}
+isis password md5 {{ isis_interface_data['authentication_key'] }}
+{% endif %}
+{% endif %}
+{% if 'enable_bfd' in isis_interface_data %}
+{% if isis_interface_data['enable_bfd'] == 'true' %}
+isis bfd
+{% elif isis_interface_data['enable_bfd'] == 'false' %}
+no isis bfd
+{% endif %}
+{% endif %}
+{% if 'bfd_profile' in isis_interface_data and not (isis_interface_data['bfd_profile'] == 'None' or isis_interface_data['bfd_profile'].lower() == 'null') %}
+isis bfd profile {{ isis_interface_data['bfd_profile'] }}
+{% endif %}
+{% if 'metric' in isis_interface_data %}
+isis metric {{ isis_interface_data['metric'] }}
+{% endif %}
+{% if 'csnp_interval' in isis_interface_data %}
+isis csnp-interval {{ isis_interface_data['csnp_interval'] }}
+{% endif %}
+{% if 'psnp_interval' in isis_interface_data %}
+isis psnp-interval {{ isis_interface_data['psnp_interval'] }}
+{% endif %}
+{% if 'hello_interval' in isis_interface_data %}
+isis hello-interval {{ isis_interface_data['hello_interval'] }}
+{% endif %}
+{% if 'hello_multiplier' in isis_interface_data %}
+isis hello-multiplier {{ isis_interface_data['hello_multiplier'] }}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+!
+! end of template: isisd/isisd.conf.db.j2
+!

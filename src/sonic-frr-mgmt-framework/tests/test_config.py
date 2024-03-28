@@ -149,6 +149,82 @@ bgp_globals_data = [
                        conf_bgp_af_cmd('Vrf_red', 200, 'ipv6') + ['{}import vrf route-map test_map']),
 ]
 
+conf_isis_cmd = lambda vrf, instance: [conf_cmd, 'router isis %s vrf %s' % (instance, vrf)]
+conf_isis_if_cmd = lambda instance, ifname: [conf_cmd, 'interface %s' % (ifname)]
+conf_isis_level_cmd = lambda vrf, instance, level: conf_isis_cmd(vrf, instance)
+
+isis_data = [
+        CmdMapTestInfo('ISIS_GLOBAL', 'default|100', {'net': '49.0001.1040.4400.0249.00'},
+                       conf_isis_cmd('default', 100) + ['{}net 49.0001.1040.4400.0249.00']),
+        CmdMapTestInfo('ISIS_GLOBAL', 'default|100', {'level_capability': 'LEVEL_2'},
+                       conf_isis_cmd('default', 100) + ['{}is-type level-2']),
+        CmdMapTestInfo('ISIS_GLOBAL', 'default|100', {'dynamic_hostname': 'true'},
+                       conf_isis_cmd('default', 100) + ['{}hostname dynamic'], True),
+        CmdMapTestInfo('ISIS_GLOBAL', 'default|100', {'dynamic_hostname': 'None'},
+                       conf_isis_cmd('default', 100) + ['{}hostname dynamic'], True),
+        CmdMapTestInfo('ISIS_GLOBAL', 'default|100', {'attach_send': 'true'},
+                       conf_isis_cmd('default', 100) + ['{}attached-bit send'], True),
+        CmdMapTestInfo('ISIS_GLOBAL', 'default|100', {'attach_send': 'None'},
+                       conf_isis_cmd('default', 100) + ['{}attached-bit send'], True),
+        CmdMapTestInfo('ISIS_GLOBAL', 'default|100', {'attach_receive_ignore': 'true'},
+                       conf_isis_cmd('default', 100) + ['{}attached-bit receive ignore'], True),
+        CmdMapTestInfo('ISIS_GLOBAL', 'default|100', {'attach_receive_ignore': 'None'},
+                       conf_isis_cmd('default', 100) + ['no attached-bit receive ignore'], True),
+        CmdMapTestInfo('ISIS_GLOBAL', 'default|100', {'set_overload_bit': 'true'},
+                       conf_isis_cmd('default', 100) + ['{}set-overload-bit']),
+        CmdMapTestInfo('ISIS_GLOBAL', 'default|100', {'lsp_mtu_size': '1500'},
+                       conf_isis_cmd('default', 100) + ['{}lsp-mtu 1500']),
+        CmdMapTestInfo('ISIS_GLOBAL', 'default|100', {'log_adjacency_changes': 'true'},
+                       conf_isis_cmd('default', 100) + ['{}log-adjacency-changes']),
+        CmdMapTestInfo('ISIS_GLOBAL', 'default|100', {'spf_init_delay': 15,
+                                              'spf_short_delay': 15,
+                                              'spf_long_delay': 5, 
+                                              'spf_hold_down': 15, 
+                                              'spf_time_to_learn': 5},
+                       conf_isis_cmd('default', 100) + ['{}spf-delay-ietf init-delay 15 short-delay 15 long-delay 5 holddown 15 time-to-learn 5']),
+
+        CmdMapTestInfo('ISIS_LEVELS', 'default|100|2', {'lsp_refresh_interval': '4'},
+                       conf_isis_level_cmd('default', 100, '2') + ['{}lsp-refresh-interval level-2 4']),
+        CmdMapTestInfo('ISIS_LEVELS', 'default|100|2', {'lsp_maximum_lifetime': '4'},
+                       conf_isis_level_cmd('default', 100, '2') + ['{}max-lsp-lifetime level-2 4']),
+        CmdMapTestInfo('ISIS_LEVELS', 'default|100|2', {'lsp_generation_interval': '4'},
+                       conf_isis_level_cmd('default', 100, '2') + ['{}lsp-gen-interval level-2 4']),
+        CmdMapTestInfo('ISIS_LEVELS', 'default|100|2', {'spf_minimum_interval': '4'},
+                       conf_isis_level_cmd('default', 100, '2') + ['{}spf-interval level-2 4']),
+
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'ipv4_routing_instance': '100'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}ip router isis 100']),
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'ipv6_routing_instance': '100'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}ipv6 router isis 100']),
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'passive': 'true'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}isis passive']),
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'hello_padding': 'true'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}isis hello padding'], True),
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'hello_padding': 'None'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}isis hello padding'], True),
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'network_type': 'POINT_TO_POINT'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}isis network point-to-point']),
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'authentication_type': 'TEXT',
+                                                           'authentication_key': 'password'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}isis password clear password']),
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'enable_bfd': 'true'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}isis bfd'], True), 
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'enable_bfd': 'None'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['no isis bfd'], True), 
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'bfd_profile': 'PROFILE'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}isis bfd profile PROFILE']),
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'metric': '500'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}isis metric 500']),
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'csnp_interval': '4'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}isis csnp-interval 4']),
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'psnp_interval': '4'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}isis psnp-interval 4']),
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'hello_interval': '4'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}isis hello-interval 4']),
+        CmdMapTestInfo('ISIS_INTERFACE', '100|ethernet2', {'hello_multiplier': '4'},
+                       conf_isis_if_cmd(100, 'ethernet2') + ['{}isis hello-multiplier 4'])
+]
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def data_set_del_test(test_data, run_cmd):
@@ -176,3 +252,4 @@ def data_set_del_test(test_data, run_cmd):
 
 def test_bgp_globals():
     data_set_del_test(bgp_globals_data)
+    data_set_del_test(isis_data)
