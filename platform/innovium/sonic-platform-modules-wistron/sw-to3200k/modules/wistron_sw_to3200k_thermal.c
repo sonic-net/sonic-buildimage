@@ -140,7 +140,7 @@ static int sw_to3200k_thermal_probe(struct i2c_client *client, const struct i2c_
         goto exit_free;
     }
 
-	data->hwmon_dev = hwmon_device_register_with_info(&client->dev, "wistron_thermal", NULL, NULL, NULL);
+	data->hwmon_dev = hwmon_device_register_with_groups(&client->dev, "wistron_thermal", NULL, NULL);
     if (IS_ERR(data->hwmon_dev))
     {
         status = PTR_ERR(data->hwmon_dev);
@@ -159,14 +159,13 @@ exit:
     return status;
 }
 
-static int sw_to3200k_thermal_remove(struct i2c_client *client)
+static void sw_to3200k_thermal_remove(struct i2c_client *client)
 {
     struct sw_to3200k_thermal_data *data = i2c_get_clientdata(client);
 
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &sw_to3200k_thermal_group);
     kfree(data);
-    return 0;
 }
 
 

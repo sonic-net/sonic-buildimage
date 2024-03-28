@@ -283,7 +283,7 @@ static int sw_to3200k_fan_probe
         goto exit_free;
     }
 
-	data->hwmon_dev = hwmon_device_register_with_info(&client->dev, "wistron_fan", NULL, NULL, NULL);
+	data->hwmon_dev = hwmon_device_register_with_groups(&client->dev, "wistron_fan", NULL, NULL);
     if (IS_ERR(data->hwmon_dev))
     {
         status = PTR_ERR(data->hwmon_dev);
@@ -302,12 +302,11 @@ exit:
     return status;
 }
 
-static int sw_to3200k_fan_remove(struct i2c_client *client)
+static void sw_to3200k_fan_remove(struct i2c_client *client)
 {
     struct sw_to3200k_fan_data *data = i2c_get_clientdata(client);
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &sw_to3200k_fan_group);
-    return 0;
 }
 
 /* Addresses to scan */
