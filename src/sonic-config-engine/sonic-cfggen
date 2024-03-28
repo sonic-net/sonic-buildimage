@@ -359,9 +359,9 @@ def main():
             }}}
         deep_update(data, hardware_data)
         if args.port_config is None:
-            args.port_config = device_info.get_path_to_port_config_file(hwsku)
+            args.port_config = device_info.get_path_to_port_config_file(hwsku, asic_id)
         load_namespace_config(asic_name)
-        (ports, _, _) = get_port_config(hwsku, platform, args.port_config, asic_id)
+        (ports, _, _) = get_port_config(hwsku, platform, args.port_config, hwsku_config_file=args.hwsku_config, asic_name=asic_name)
         if ports is None:
             print('Failed to get port config', file=sys.stderr)
             sys.exit(1)
