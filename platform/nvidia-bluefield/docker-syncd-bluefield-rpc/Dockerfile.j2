@@ -1,0 +1,98 @@
+##
+## Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+## Apache-2.0
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+## http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+FROM docker-syncd-bluefield-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get purge -y syncd
+
+## Pre-install the fundamental packages
+RUN apt-get update \
+ && apt-get -y install  \
+    net-tools           \
+    python-setuptools   \
+    build-essential     \
+    libssl-dev          \
+    libffi-dev          \
+    python-dev          \
+    wget                \
+    cmake               \
+    libqt5core5a        \
+    libqt5network5      \
+    libboost-atomic1.74.0 \
+    ethtool
+
+# Build and install python-scapy
+RUN curl http://ftp.us.debian.org/debian/pool/main/s/scapy/python-scapy_2.4.0-2_all.deb --output python-scapy_2.4.0-2_all.deb \
+ && dpkg -i python-scapy_2.4.0-2_all.deb \
+ && apt install -f
+
+{% if docker_syncd_bluefield_rpc_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_syncd_bluefield_rpc_debs.split(' '), "/debs/") }}
+{% endif %}
+
+{% if docker_syncd_bluefield_rpc_pydebs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("python-debs/", docker_syncd_bluefield_rpc_pydebs.split(' '), "/debs/") }}
+{% endif %}
+
+{% if docker_syncd_bluefield_rpc_debs.strip() -%}
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_syncd_bluefield_rpc_debs.split(' ')) }}
+{% endif %}
+
+{% if docker_syncd_bluefield_rpc_pydebs.strip() -%}
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_syncd_bluefield_rpc_pydebs.split(' ')) }}
+{% endif %}
+
+# Install pip2 since it is no longer in the APT upstream
+RUN curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py \
+ && python2 get-pip.py
+
+RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
+ && tar xvfz 1.0.0.tar.gz \
+ && cd nanomsg-1.0.0    \
+ && mkdir -p build      \
+ && cmake .             \
+ && make install        \
+ && ldconfig            \
+ && cd ..               \
+ && rm -fr nanomsg-1.0.0 \
+ && rm -f 1.0.0.tar.gz  \
+ && pip2 install cffi==1.7.0    \
+ && pip2 install --upgrade cffi==1.7.0 \
+ && pip2 install wheel  \
+ && pip2 install nnpy    \
+ && mkdir -p /opt       \
+ && cd /opt             \
+ && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py \
+ && apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y \
+ && rm -rf /root/deps
+
+COPY ["ptf_nn_agent.conf", "/etc/supervisor/conf.d/"]
+
+## Clean up
+RUN apt-get clean -y && \
+    apt-get autoclean -y && \
+    apt-get autoremove -y && \
+    rm -rf /debs
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]
