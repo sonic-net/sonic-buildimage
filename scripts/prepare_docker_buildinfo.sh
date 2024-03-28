@@ -8,9 +8,9 @@ BUILDINFO_BASE=/usr/local/share/buildinfo
 
 SCRIPT_SRC_PATH=src/sonic-build-hooks
 if [ -e ${SCRIPT_SRC_PATH} ]; then
-	. ${SCRIPT_SRC_PATH}/scripts/utils.sh
+       . ${SCRIPT_SRC_PATH}/scripts/utils.sh
 else
-	. ${BUILDINFO_BASE}/scripts/utils.sh
+       . ${BUILDINFO_BASE}/scripts/utils.sh
 fi
 
 IMAGENAME=$1
@@ -19,16 +19,12 @@ ARCH=$3
 DOCKERFILE_TARGET=$4
 DISTRO=$5
 
-
 [ -z "$BUILD_SLAVE" ] && BUILD_SLAVE=n
 [ -z "$DOCKERFILE_TARGET" ] && DOCKERFILE_TARGET=$DOCKERFILE
 DOCKERFILE_PATH=$(dirname "$DOCKERFILE_TARGET")
 BUILDINFO_PATH="${DOCKERFILE_PATH}/buildinfo"
 BUILDINFO_VERSION_PATH="${BUILDINFO_PATH}/versions"
 DOCKER_PATH=$(dirname $DOCKERFILE)
-
-[ -d $BUILDINFO_PATH ] && rm -rf $BUILDINFO_PATH
-mkdir -p $BUILDINFO_VERSION_PATH
 
 # Get the debian distribution from the docker base image
 if [ -z "$DISTRO" ]; then
@@ -74,8 +70,10 @@ if [ ! -f $DOCKERFILE_TARGET ] || ! grep -q "Auto-Generated for buildinfo" $DOCK
 fi
 
 # Copy the build info config
-mkdir -p ${BUILDINFO_PATH}
-cp -rf src/sonic-build-hooks/buildinfo/* $BUILDINFO_PATH
+if ls /usr/local/share/buildinfo &>/dev/null ;then
+    mkdir -p ${BUILDINFO_PATH}
+    cp -rf /usr/local/share/buildinfo/* $BUILDINFO_PATH
+fi
 
 # Generate the version lock files
 scripts/versions_manager.py generate -t "$BUILDINFO_VERSION_PATH" -n "$IMAGENAME" -d "$DISTRO" -a "$ARCH"

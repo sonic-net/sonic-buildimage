@@ -17,10 +17,6 @@ GRAY=\033[0m
 endif
 endif
 
-ifeq ($(BUILD_LOG_TIMESTAMP),simple)
-PROCESS_LOG_OPTION = -t
-endif
-
 # Print red colored output
 # call:
 #       log_red message
@@ -47,8 +43,7 @@ log_green = echo -e "$(GREEN)$(1)$(GRAY)"
 
 FLUSH_LOG = rm -f $@.log
 
-LOG_SIMPLE = &>> $(PROJECT_ROOT)/$@.log || { [ $$? -eq 0 ] || pushd $(PROJECT_ROOT) > /dev/null ; ./update_screen.sh -e $@ ; popd > /dev/null ; false ; }
-LOG = < /dev/null |& $(PROJECT_ROOT)/scripts/process_log.sh $(PROCESS_LOG_OPTION) &>> $(PROJECT_ROOT)/$@.log ; test $${PIPESTATUS[-2]} -eq 0 || { [ $$? -eq 0 ] || pushd $(PROJECT_ROOT) > /dev/null ; ./update_screen.sh -e $@ ; popd > /dev/null ; false ; }
+LOG = < /dev/null |& $(PROJECT_ROOT)/scripts/process_log.sh -t &>> $(PROJECT_ROOT)/$@.log ; test $${PIPESTATUS[-2]} -eq 0 || { [ $$? -eq 0 ] || pushd $(PROJECT_ROOT) > /dev/null ; ./update_screen.sh -e $@ ; popd > /dev/null ; false ; }
 
 ###############################################################################
 ## Header and footer for each target

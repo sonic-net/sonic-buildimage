@@ -37,8 +37,6 @@ resources:
     ref: master
 
 variables:
-- template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
-- template: .azure-pipelines/template-variables.yml@buildimage
 - name: CACHE_MODE
   value: rcache
 - name: ENABLE_FIPS
@@ -55,7 +53,7 @@ stages:
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
-      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILD_TIMEOUT=3600 MIRROR_SNAPSHOT=y DOCKER_BUILDKIT=0 SONIC_SLAVE_DOCKER_DRIVER=overlay2 BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y'
       jobGroups:
       - name: vs
 
@@ -65,7 +63,7 @@ stages:
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
-      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
+      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILD_TIMEOUT=3600 MIRROR_SNAPSHOT=y DOCKER_BUILDKIT=0 SONIC_SLAVE_DOCKER_DRIVER=overlay2'
       jobGroups:
       - name: broadcom
         variables:

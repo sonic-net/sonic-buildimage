@@ -254,8 +254,6 @@ PREPARE_DOCKER=BUILD_SLAVE=y \
 		"" \
 		$(BLDENV)
 
-$(shell $(PREPARE_DOCKER) )
-
 # Add the versions in the tag, if the version change, need to rebuild the slave
 SLAVE_BASE_TAG = $(shell \
 	cat $(SLAVE_DIR)/Dockerfile \
@@ -616,33 +614,28 @@ export MIRROR_SNAPSHOT
 export SONIC_VERSION_CONTROL_COMPONENTS
 export PIP_HTTP_TIMEOUT
 
-%:: | sonic-build-hooks
-ifneq ($(filter y, $(MULTIARCH_QEMU_ENVIRON) $(CROSS_BUILD_ENVIRON)),)
-	$(Q)$(DOCKER_MULTIARCH_CHECK)
-ifneq ($(BLDENV), )
-	$(Q)$(DOCKER_SERVICE_MULTIARCH_CHECK)
-	$(Q)$(DOCKER_SERVICE_DOCKERFS_CHECK)
-endif
-endif
-	$(Q)$(OVERLAY_MODULE_CHECK)
-	$(Q)$(SONIC_SLAVE_BASE_BUILD)
-	$(Q)$(SONIC_SLAVE_USER_BUILD)
-
+target/%: sonic-slave-build
 	$(Q)$(DOCKER_RUN) \
 		$(SLAVE_IMAGE):$(SLAVE_TAG) \
 		bash -c "$(SONIC_BUILD_INSTRUCTION) $@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)" 
 	$(Q)$(docker-image-cleanup)
 
+jessie stretch buster bullseye bookworm: sonic-slave-build
+	$(Q)$(DOCKER_RUN) \
+		$(SLAVE_IMAGE):$(SLAVE_TAG) \
+		bash -c "$(SONIC_BUILD_INSTRUCTION) $@; $(COLLECT_BUILD_VERSION); $(SLAVE_SHELL)"
+	$(Q)$(docker-image-cleanup)
+
 docker-cleanup:
 	$(Q)$(docker-image-cleanup)
 
-.PHONY: sonic-build-hooks
+.PHONY: sonic-build-hooks configure
 sonic-build-hooks:
-	$(Q)pushd src/sonic-build-hooks; TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) $(MAKE) all; popd
-	$(Q)mkdir -p $(SLAVE_DIR)/buildinfo
-	$(Q)cp src/sonic-build-hooks/buildinfo/sonic-build-hooks* $(SLAVE_DIR)/buildinfo
+	$(Q)cp -r src/sonic-build-hooks $(SLAVE_DIR); pushd $(SLAVE_DIR)/sonic-build-hooks; TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) $(MAKE) all; popd; mkdir -p $(SLAVE_DIR)/buildinfo
+	$(Q)cp -r $(SLAVE_DIR)/sonic-build-hooks/buildinfo/*.deb $(SLAVE_DIR)/buildinfo
+	$(Q)rm -rf $(SLAVE_DIR)/sonic-build-hooks
 
-sonic-slave-base-build : | sonic-build-hooks
+sonic-slave-base-build : sonic-build-hooks
 ifeq ($(MULTIARCH_QEMU_ENVIRON), y)
 	$(Q)$(DOCKER_MULTIARCH_CHECK)
 endif
@@ -661,6 +654,11 @@ sonic-slave-run : sonic-slave-build
 showtag:
 	$(Q)echo $(SLAVE_IMAGE):$(SLAVE_TAG)
 	$(Q)echo $(SLAVE_BASE_IMAGE):$(SLAVE_BASE_TAG)
+
+configure:
+	$(Q)for dist in jessie stretch buster bullseye bookworm; do mkdir -p target/debs/$$dist target/files/$$dist target/python-debs/$$dist target/python-wheels/$$dist dpkg target/vcache; done
+	$(Q)echo $(PLATFORM) > .platform
+	$(Q)echo $(PLATFORM_ARCH) > .arch
 
 init :
 	$(Q)git submodule update --init --recursive
