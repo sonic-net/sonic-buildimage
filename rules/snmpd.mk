@@ -1,6 +1,9 @@
 # snmpd package
 
-ifeq ($(BLDENV),bullseye)
+ifeq ($(BLDENV),bookworm)
+SNMPD_VERSION = 5.9.3+dfsg
+SNMPD_VERSION_FULL = $(SNMPD_VERSION)-2
+else ifeq ($(BLDENV),bullseye)
 SNMPD_VERSION = 5.9+dfsg
 SNMPD_VERSION_FULL = $(SNMPD_VERSION)-4+deb11u1
 else
@@ -37,7 +40,9 @@ $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(SNMP_DBG)))
 SNMPD_DBG = snmpd-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(SNMPD_DBG)))
 
-ifeq ($(BLDENV),bullseye)
+ifeq ($(BLDENV),bookworm)
+LIBSNMP = libsnmp40_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+else ifeq ($(BLDENV),bullseye)
 LIBSNMP = libsnmp40_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 else
 LIBSNMP = libsnmp30_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
@@ -45,7 +50,9 @@ endif
 $(LIBSNMP)_RDEPENDS += $(LIBSNMP_BASE)
 $(eval $(call add_derived_package,$(LIBSNMP_BASE),$(LIBSNMP)))
 
-ifeq ($(BLDENV),bullseye)
+ifeq ($(BLDENV),bookworm)
+LIBSNMP_DBG = libsnmp40-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+else ifeq ($(BLDENV),bullseye)
 LIBSNMP_DBG = libsnmp40-dbgsym_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 else
 LIBSNMP_DBG = libsnmp30-dbg_$(SNMPD_VERSION_FULL)_$(CONFIGURED_ARCH).deb
