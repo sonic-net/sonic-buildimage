@@ -1,0 +1,14 @@
+{
+    "chassis": {
+        "M2-W6910-64C": {
+            "component": {
+                "CPU_CPLD": { },
+                "CONNECT_CPLDA": { },
+                "MAC_CPLDA": { },
+                "MAC_CPLDB": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
+
