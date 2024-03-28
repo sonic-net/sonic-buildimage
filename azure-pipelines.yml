@@ -40,7 +40,7 @@ variables:
 - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
 - template: .azure-pipelines/template-variables.yml@buildimage
 - name: CACHE_MODE
-  value: rcache
+  value: none
 - name: ENABLE_FIPS
   value: n
 - name: BUILD_BRANCH
