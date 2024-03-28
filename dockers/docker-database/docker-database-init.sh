@@ -28,6 +28,19 @@ if [[ $DATABASE_TYPE == "dpudb" ]]; then
     redis_port=`expr 6381 + $DPU_ID`
 fi
 
+# TODO: Check the current platform is DPU
+midplane_ip=$(ip -4 -o addr | grep -v "169.254.200.254" | grep "169.254.200" | awk '{print $4}' | cut -d'/' -f1 | head -1 )
+if [[ $midplane_ip != "" ]]
+then
+    export DATABASE_TYPE="dpudb"
+    export REMOTE_DB_IP="169.254.200.254"
+    IFS=. read -r a b c d <<< "169.254.200.1"
+    midplane_base_ip_num=$((a * 256 ** 3 + b * 256 ** 2 + c * 256 + d))
+    # Determine the DB PORT from midplane IP
+    IFS=. read -r a b c d <<< $midplane_ip
+    midplane_ip_num=$((a * 256 ** 3 + b * 256 ** 2 + c * 256 + d))
+    export REMOTE_DB_PORT=$((6381 + $midplane_ip_num - $midplane_base_ip_num))
+fi
 
 REDIS_DIR=/var/run/redis$NAMESPACE_ID
 mkdir -p $REDIS_DIR/sonic-db
