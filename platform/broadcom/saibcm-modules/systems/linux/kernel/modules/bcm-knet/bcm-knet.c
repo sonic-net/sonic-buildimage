@@ -8736,6 +8736,8 @@ bkn_knet_netif_create(kcom_msg_netif_create_t *kmsg, int len)
         priv->phys_port = kmsg->netif.phys_port;
         priv->qnum = kmsg->netif.qnum;
         memset(&(priv->link_settings), 0, sizeof(struct ethtool_link_settings));
+        gprintk("   KDEBUG[%s.%d]: Create; PORT: %3u; PHYS: %3u; QNUM: %2u\n",
+            __func__, __LINE__, kmsg->netif.port, kmsg->netif.phys_port, kmsg->netif.qnum); 
     } else {
         if (device_is_sand(sinfo) && (priv->type == KCOM_NETIF_T_VLAN)) {
             /* PTCH.SSPA */
@@ -8829,6 +8831,9 @@ bkn_knet_netif_create(kcom_msg_netif_create_t *kmsg, int len)
         }
     }
 
+    gprintk("  KDEBUG[%s.%d]: New Intf; ID: %3u; TYPE: %2u; PORT: %5u [%04X]; NAME: %s\n", 
+        __func__, __LINE__, kmsg->netif.id, kmsg->netif.type,
+	    kmsg->netif.port, kmsg->netif.port, kmsg->netif.name);
     return sizeof(*kmsg);
 }
 
@@ -8974,6 +8979,10 @@ bkn_knet_netif_get(kcom_msg_netif_get_t *kmsg, int len)
         kmsg->netif.port = priv->port;
     }
     kmsg->netif.qnum = priv->qnum;
+
+    gprintk("  KDEBUG[%s.%d]: Get Intf; ID: %3u; TYPE: %2u; PORT: %5u [%04X]; NAME: %s\n", 
+        __func__, __LINE__, kmsg->netif.id, kmsg->netif.type,
+    kmsg->netif.port, kmsg->netif.port, kmsg->netif.name);
 
     spin_unlock_irqrestore(&sinfo->lock, flags);
 
