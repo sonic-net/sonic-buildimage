@@ -9,4 +9,5 @@ include $(PLATFORM_PATH)/libsaithrift-dev.dep
 include $(PLATFORM_PATH)/one-image.dep
 include $(PLATFORM_PATH)/onie.dep
 include $(PLATFORM_PATH)/kvm-image.dep
+include $(PLATFORM_PATH)/docker-dash-engine.dep
 

@@ -1,0 +1,8 @@
+DPATH       := $($(DOCKER_DASH_ENGINE)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/vs/docker-dash-engine.mk platform/vs/docker-dash-engine.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_DASH_ENGINE)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(DOCKER_DASH_ENGINE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_DASH_ENGINE)_DEP_FILES   := $(DEP_FILES)

@@ -426,6 +426,36 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         default-jdk \
         libgoogle-gson-java
 
+# For DASH BMv2
+RUN eatmydata apt install -y \
+# For grpc
+        libgflags-dev                       \
+        libgoogle-perftools-dev             \
+        ruby-googleauth                     \
+        ruby-googleapis-common-protos-types \
+        ruby-simplecov                      \
+        cython3                             \
+# For p4 libraries
+        valgrind \
+        thrift-compiler \
+        gfortran \
+        libopenmpi-dev \
+        libthrift-0.13.0 \
+        libthrift-dev \
+        libboost-all-dev \
+        libboost-graph-dev \
+        libboost-iostreams-dev \
+        libgc-dev \
+        tcpdump \
+        llvm \
+        net-tools \
+        python3-pyroute2 \
+        python3-ply \
+        python3-scapy \
+        python3-thrift \
+        libabsl20200923 libc-ares2 python3-six libboost-thread1.74.0 libboost-dev libboost-system-dev libboost-thread-dev libboost-filesystem1.74.0 libboost-program-options1.74.0 libboost-thread1.74.0 libnanomsg5 libpcap0.8 libthrift-0.13.0 libboost-dev libboost-filesystem-dev libboost-program-options-dev libgmp-dev libnanomsg-dev libpcap-dev libtool pkg-config libthrift-dev python3-thrift thrift-compiler libboost-iostreams1.74.0 libgc1 cpp libboost-dev libboost-all-dev libboost-graph-dev libboost-iostreams-dev libfl-dev libgc-dev libgmp-dev libbpf-dev tcpdump libelf-dev llvm clang python3-pyroute2 python3-ply python3-scapy python3-setuptools python3-thrift libthrift-0.13.0
+
+
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages
 RUN apt-get remove -y libnl-3-200
@@ -494,6 +524,8 @@ RUN apt-get purge -y python3-pip python3-yaml
 # For building Python packages
 RUN pip3 install setuptools==49.6.00
 RUN pip3 install wheel==0.38.1
+
+RUN pip3 install jsonpath-ng
 
 {%- if CONFIGURED_ARCH == "armhf" %}
 # Allow only manylinux wheels on armhf, to ensure that binaries/libraries work correctly on armhf

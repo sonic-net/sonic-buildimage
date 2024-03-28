@@ -420,7 +420,33 @@ RUN apt-get update && apt-get install -y \
         protobuf-compiler \
         libprotobuf-dev \
 # For sonic-dhcp6relay build
-        libjsoncpp-dev
+        libjsoncpp-dev \
+# For p4 libraries
+        libgrpc++-dev \
+        libgrpc-dev \
+        libprotoc-dev \
+        protobuf-compiler-grpc \
+        valgrind \
+        python3-protobuf \
+        python3-grpcio \
+        thrift-compiler \
+        gfortran \
+        libopenmpi-dev \
+        libthrift-0.17.0 \
+        libthrift-dev \
+        libboost-all-dev \
+        libboost-graph-dev \
+        libboost-iostreams-dev \
+        libgc-dev \
+        tcpdump \
+        llvm \
+        net-tools \
+        python3-pyroute2 \
+        python3-ply \
+        python3-scapy \
+        python3-thrift
+
+
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages

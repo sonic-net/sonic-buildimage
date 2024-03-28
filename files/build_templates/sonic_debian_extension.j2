@@ -603,6 +603,9 @@ sudo cp $IMAGE_CONFIGS/misc/docker-wait-any $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/topology/topology.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "topology.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $IMAGE_CONFIGS/topology/topology.sh $FILESYSTEM_ROOT/usr/bin
+
+sudo cp platform/vs/dash-engine.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable dash-engine
 {%- endif %}
 
 # Copy platform topology configuration scripts
