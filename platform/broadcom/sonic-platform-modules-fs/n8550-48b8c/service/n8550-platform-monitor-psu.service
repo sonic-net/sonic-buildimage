@@ -1,0 +1,16 @@
+[Unit]
+Description=FS N8550-48B8C Platform Monitoring PSU service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+ExecStart=sudo /usr/bin/python3 /usr/local/bin/fs_n8550_monitor_psu.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=FS N5850 Platform Monitoring PSU service
+Before=pmon.service
+After=n5850-48s6c-platform-monitor.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/fs_n5850_48s6c_monitor_psu.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

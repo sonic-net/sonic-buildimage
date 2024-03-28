@@ -1,0 +1,15 @@
+[Unit]
+Description=FS N8550-48B8C Platform MAC handle service
+Before=opennsl-modules.service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=sudo /usr/bin/bash /usr/local/bin/idt_init.sh
+RemainAfterExit=yes
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=opennsl-modules.service

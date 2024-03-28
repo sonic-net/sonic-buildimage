@@ -1,0 +1,16 @@
+[Unit]
+Description=FS N8550-48B8C Platform Monitoring service
+Before=pmon.service
+After=pddf-platform-init.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=sudo /usr/bin/python3 /usr/local/bin/fs_n8550_pddf_monitor.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

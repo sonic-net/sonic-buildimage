@@ -1,0 +1,16 @@
+[Unit]
+Description=FS N8550-32C Platform Monitoring FAN service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+ExecStart=sudo /usr/bin/python3 /usr/local/bin/fs_n8550_32c_monitor_fan.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
