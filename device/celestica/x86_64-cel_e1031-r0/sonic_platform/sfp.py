@@ -9,7 +9,7 @@
 try:
     import time
     from ctypes import c_char
-    from sonic_platform_base.sfp_base import SfpBase
+    from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_platform_base.sonic_sfp.sff8472 import sff8472InterfaceId
     from sonic_platform_base.sonic_sfp.sff8472 import sff8472Dom
     from sonic_platform_base.sonic_sfp.sff8436 import sff8436InterfaceId
@@ -157,7 +157,7 @@ PORT_START = 1
 PORT_END = 55
 
 
-class Sfp(SfpBase):
+class Sfp(SfpOptoeBase):
     """Platform-specific Sfp class"""
 
     # Port I2C number
@@ -172,7 +172,7 @@ class Sfp(SfpBase):
     PRS_PATH = "/sys/devices/platform/e1031.smc/SFP/sfp_modabs"
 
     def __init__(self, sfp_index, sfp_name):
-        SfpBase.__init__(self)
+        SfpOptoeBase.__init__(self)
 
         # Init common function
         self._api_common = Common()
