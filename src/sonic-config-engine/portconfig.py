@@ -37,7 +37,7 @@ PORT_STR = "Ethernet"
 BRKOUT_MODE = "default_brkout_mode"
 CUR_BRKOUT_MODE = "brkout_mode"
 INTF_KEY = "interfaces"
-OPTIONAL_HWSKU_ATTRIBUTES = ["fec", "autoneg", "subport"]
+OPTIONAL_HWSKU_ATTRIBUTES = ["fec", "autoneg", "subport", "role"]
 
 BRKOUT_PATTERN = r'(\d{1,6})x(\d{1,6}G?)(\[(\d{1,6}G?,?)*\])?(\((\d{1,6})\))?'
 BRKOUT_PATTERN_GROUPS = 6

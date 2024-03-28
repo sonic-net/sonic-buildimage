@@ -908,7 +908,8 @@
     "mtu": "9100",
     "alias": "Eth36/3",
     "pfc_asym": "off",
-    "speed": "50000"
+    "speed": "50000",
+    "role": "Dpc"
   },
   "Ethernet144": {
     "index": "37",

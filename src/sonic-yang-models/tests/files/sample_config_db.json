@@ -601,6 +601,7 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
+                "role": "Dpc",
                 "autoneg": "on",
                 "adv_speeds": "all",
                 "adv_interface_types": "all",
