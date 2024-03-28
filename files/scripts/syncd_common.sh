@@ -101,7 +101,39 @@ start() {
 
     lock_service_state_change
 
+    # Create directories if they don't exist
     mkdir -p /host/warmboot
+    mkdir -p /host/warmboot.bak
+	
+    if [ -n "$(ls -A /host/warmboot)" ]; then
+	echo "/host/warmboot has contents."
+	echo "Moving them to /host/warmboot.bak."
+	mv /host/warmboot/* /host/warmboot.bak
+    else
+	echo "/host/warmboot is empty."
+    fi
+
+    # Check if /host/warmboot is already mounted on tmpfs
+    if [[ "$(findmnt /host/warmboot -o FSTYPE -n)" != "tmpfs" ]]; then
+	mount -t tmpfs tmpfs /host/warmboot
+    fi
+
+    # Check if a specific file exists in /pmem/
+    if [ -f "/pmem/example_file.txt" ]; then
+	echo "Found example_file.txt in /pmem/. Copying from /pmem/ to /host/warmboot."
+	cp -r /pmem/* "/host/warmboot/."
+    elif [ -n "$(ls -A /host/warmboot.bak)" ]; then
+	echo "No example_file.txt found in /pmem/. Copying from /host/warmboot.bak/ to /host/warmboot."
+	cp -r /host/warmboot.bak/* "/host/warmboot/."
+    else
+	echo "Neither example_file.txt found in /pmem/ nor /host/warmboot.bak/ has contents."
+	echo "Nothing to copy to /host/warmboot."
+    fi
+
+
+    # case 1. logic correctly determine whether we are taking contents /pmem/ or /host/warmboot.bak, old state should not be restored
+    # case 2. logic to determine which one to correctly use /pmem/ or /host/warmboot.bak if both contents
+    # both the copies should not run in an ideal case, only 1 should be run 
 
     wait_for_database_service
     check_warm_boot

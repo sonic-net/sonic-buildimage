@@ -494,6 +494,8 @@ write_platform_specific_cmdline() {
     if in_array "$sid" "Upperlake" "UpperlakeES" "UpperlakeElite"; then
         aboot_machine=arista_7060_cx32s
         flash_size=3700
+	cmdline_add memmap=512M!4G
+        cmdline_add mount_pmem=on
     fi
     if [ "$sid" = "UpperlakePlus" ]; then
         aboot_machine=arista_7060cx2_32s
