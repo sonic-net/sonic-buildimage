@@ -1,9 +1,0 @@
-SPATH       := $($(MRVL_SAI)_SRC_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/marvell-armhf/sai.mk platform/marvell-armhf/sai.dep
-DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES	+= $(shell git ls-files $(SPATH))
-SMDEP_PATHS := $(SPATH)
-
-$(MRVL_SAI)_CACHE_MODE  := GIT_CONTENT_SHA
-$(MRVL_SAI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
-$(MRVL_SAI)_DEP_FILES   := $(DEP_FILES)

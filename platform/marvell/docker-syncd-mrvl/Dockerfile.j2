@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
-FROM docker-config-engine-buster-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -14,16 +14,20 @@ debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
 
-RUN apt-get -y install libpcap-dev libxml2-dev python-dev swig libsensors4-dev libatomic1 liblua5.1-0 lua-bitop lua-cjson nfs-common
+RUN apt-get update \
+ && apt-get -y install  \
+    net-tools           \
+    iputils-ping
+
+RUN apt-get -y install libpcap-dev libxml2-dev python-dev swig libsensors4-dev nfs-common
 
 RUN dpkg -i \
 {% for deb in docker_syncd_mrvl_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor %}
 
-COPY ["syncd.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
+COPY ["files/supervisor-proc-exit-listener", "/usr/bin/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 
 ## Clean up

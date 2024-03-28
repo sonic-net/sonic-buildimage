@@ -1,9 +1,0 @@
-include $(PLATFORM_PATH)/sai.dep
-include $(PLATFORM_PATH)/prestera.dep
-include $(PLATFORM_PATH)/docker-syncd-mrvl.dep
-include $(PLATFORM_PATH)/docker-syncd-mrvl-rpc.dep
-include $(PLATFORM_PATH)/docker-saiserver-mrvl.dep
-include $(PLATFORM_PATH)/libsaithrift-dev.dep
-include $(PLATFORM_PATH)/platform-et6448m.dep
-include $(PLATFORM_PATH)/platform-nokia.dep
-include $(PLATFORM_PATH)/one-image.dep

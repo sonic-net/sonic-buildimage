@@ -781,7 +781,7 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
             ## Overwriting the initrd image with uInitrd
             sudo LANG=C chroot $FILESYSTEM_ROOT mv /boot/u${INITRD_FILE} /boot/$INITRD_FILE
         else
-            sudo cp -v $PLATFORM_DIR/${sonic_asic_platform}-${CONFIGURED_ARCH}/sonic_fit.its $FILESYSTEM_ROOT/boot/
+            sudo cp -v $PLATFORM_DIR/$CONFIGURED_PLATFORM/sonic_fit.its $FILESYSTEM_ROOT/boot/
             sudo LANG=C chroot $FILESYSTEM_ROOT mkimage -f /boot/sonic_fit.its /boot/sonic_${CONFIGURED_ARCH}.fit
         fi
     fi
