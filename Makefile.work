@@ -142,6 +142,7 @@ rules/config.user:
 
 include rules/config
 -include rules/config.user
+include rules/sonic-fips.mk
 
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
 override DEFAULT_CONTAINER_REGISTRY := $(DEFAULT_CONTAINER_REGISTRY)/
@@ -182,18 +183,6 @@ endif
 SLAVE_IMAGE = $(SLAVE_BASE_IMAGE)-$(USER_LC)
 DOCKER_ROOT = $(PWD)/fsroot.docker.$(BLDENV)
 
-# Support FIPS feature, armhf not supported yet
-ifeq ($(PLATFORM_ARCH),armhf)
-INCLUDE_FIPS := n
-ENABLE_FIPS := n
-endif
-
-# FIPS not yet available on Bookworm
-ifeq ($(BLDENV),bookworm)
-$(warning FIPS support not yet available on Bookworm)
-INCLUDE_FIPS := n
-endif
-
 ifeq ($(INCLUDE_FIPS), n)
 ifeq ($(ENABLE_FIPS), y)
     $(error Cannot set fips config ENABLE_FIPS=y when INCLUDE_FIPS=n)
@@ -228,6 +217,8 @@ $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	DOCKER_EXTRA_OPTS=$(DOCKER_EXTRA_OPTS) \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
 	GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
+	FIPS_VERSION=$(FIPS_VERSION) \
+	FIPS_GOLANG_VERSION=$(FIPS_GOLANG_VERSION) \
 	j2 $(SLAVE_DIR)/Dockerfile.j2 > $(SLAVE_DIR)/Dockerfile)
 
 $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
