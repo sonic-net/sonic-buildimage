@@ -13,30 +13,25 @@
 #### MODULES ####
 #################
 
-$ModLoad imuxsock # provides support for local system logging
-
 {% set gconf = (SYSLOG_CONFIG | d({})).get('GLOBAL', {}) -%}
 {% set rate_limit_interval = gconf.get('rate_limit_interval') %}
 {% set rate_limit_burst = gconf.get('rate_limit_burst') %}
 
-{% if rate_limit_interval is not none %}
-$SystemLogRateLimitInterval {{ rate_limit_interval }}
-{% endif %}
-{% if rate_limit_burst is not none %}
-$SystemLogRateLimitBurst {{ rate_limit_burst }}
-{% endif %}
-
-$ModLoad imklog   # provides kernel logging support
-#$ModLoad immark  # provides --MARK-- message capability
+module(load="imuxsock" {% if rate_limit_interval is not none %}SysSock.RateLimit.Interval="{{ rate_limit_interval }}"{% endif %} {% if rate_limit_burst is not none %}SysSock.RateLimit.Burst="{{ rate_limit_burst }}"{% endif %}) # provides support for local system logging
+module(load="imklog")   # provides kernel logging support
+#module(load="immark")  # provides --MARK-- message capability
 
 # provides UDP syslog reception
-$ModLoad imudp
-$UDPServerAddress {{udp_server_ip}}  #bind to localhost before udp server run
-$UDPServerRun 514
+#module(load="imudp")
+#input(type="imudp" port="514")
 
 # provides TCP syslog reception
-#$ModLoad imtcp
-#$InputTCPServerRun 514
+#module(load="imtcp")
+#input(type="imtcp" port="514")
+
+# provides RELP syslog reception
+module(load="imrelp")
+input(type="imrelp" port="2514")
 
 
 ###########################
@@ -51,7 +46,7 @@ $UDPServerRun 514
 #$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
 
 # Define a custom template
-$template SONiCFileFormat,"%timegenerated%.%timegenerated:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCFileFormat,"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 $ActionFileDefaultTemplate SONiCFileFormat
 
 template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall time=\"%timereported\

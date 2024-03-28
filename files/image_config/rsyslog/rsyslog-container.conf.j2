@@ -9,8 +9,6 @@
 #### MODULES ####
 #################
 
-$ModLoad imuxsock # provides support for local system logging
-
 #
 # Set a rate limit on messages from the container
 #
@@ -26,27 +24,17 @@ $ModLoad imuxsock # provides support for local system logging
 {% endif %}
 {% endif %}
 
-{% if rate_limit_interval is defined %}
-$SystemLogRateLimitInterval {{ rate_limit_interval }}
-{% else %}
-$SystemLogRateLimitInterval 300
-{% endif %}
-{% if rate_limit_burst is defined %}
-$SystemLogRateLimitBurst {{ rate_limit_burst }}
-{% else %}
-$SystemLogRateLimitBurst 20000
-{% endif %}
-
-#$ModLoad imklog  # provides kernel logging support
-#$ModLoad immark  # provides --MARK-- message capability
+module(load="imuxsock" SysSock.RateLimit.Interval="{{ rate_limit_interval|default('300') }}" SysSock.RateLimit.Burst="{{ rate_limit_burst|default('20000') }}") # provides support for local system logging
+#module(load="imklog")   # provides kernel logging support
+#module(load="immark")  # provides --MARK-- message capability
 
 # provides UDP syslog reception
-#$ModLoad imudp
-#$UDPServerRun 514
+#module(load="imudp")
+#input(type="imudp" port="514")
 
 # provides TCP syslog reception
-#$ModLoad imtcp
-#$InputTCPServerRun 514
+#module(load="imtcp")
+#input(type="imtcp" port="514")
 
 
 ###########################
@@ -71,17 +59,8 @@ if ($.PLATFORM == "x86_64-mlnx_msn2700-r0" or $.PLATFORM == "x86_64-mlnx_msn2700
 
 # Set remote syslog server
 template (name="ForwardFormatInContainer" type="string" string="<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %$.CONTAINER_NAME%#%syslogtag%%msg:::sp-if-no-1st-sp%%msg%")
-*.* action(type="omfwd" target=`echo $SYSLOG_TARGET_IP` port="514" protocol="udp" Template="ForwardFormatInContainer")
-
-#
-# Use traditional timestamp format.
-# To enable high precision timestamps, comment out the following line.
-#
-#$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
-
-# Define a custom template
-$template SONiCFileFormat,"%TIMESTAMP%.%timestamp:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %$.CONTAINER_NAME%#%syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
-$ActionFileDefaultTemplate SONiCFileFormat
+module(load="omrelp")
+*.* action(type="omrelp" target=`echo $SYSLOG_TARGET_IP` port="2514" action.resumeRetryCount="-1" queue.type="LinkedList" Template="ForwardFormatInContainer" RepeatedMsgReduction="on")
 
 #
 # Set the default permissions for all log files.
@@ -101,11 +80,6 @@ $WorkDirectory /var/spool/rsyslog
 # Include all config files in /etc/rsyslog.d/
 #
 $IncludeConfig /etc/rsyslog.d/*.conf
-
-#
-# Suppress duplicate messages and report "message repeated n times"
-#
-$RepeatedMsgReduction on
 
 ###############
 #### RULES ####
