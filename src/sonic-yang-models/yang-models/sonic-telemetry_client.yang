@@ -69,7 +69,7 @@ module sonic-telemetry_client {
             container Global {
                 leaf retry_interval {
                     type uint64;
-                    description "retry_interval unit s";
+                    description " retry_interval unit s";
                 }
 
                 leaf src_ip {
