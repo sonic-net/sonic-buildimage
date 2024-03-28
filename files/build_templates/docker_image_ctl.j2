@@ -660,6 +660,9 @@ start() {
 {%- else %}
         {{docker_image_id}} \
 {%- endif %}
+{%- if docker_entrypoint is defined %}
+        {{docker_entrypoint}} \
+{%- endif %}
         || {
             echo "Failed to docker run" >&1
             exit 4

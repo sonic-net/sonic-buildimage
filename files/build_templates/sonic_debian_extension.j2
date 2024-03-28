@@ -787,6 +787,13 @@ if [ "${PIPESTATUS[0]}" != "0" ]; then
     exit 1
 fi
 
+sudo mkdir -p $FILESYSTEM_ROOT/$SONIC_PACKAGE_MANAGER_FOLDER/manifests
+j2 $BUILD_TEMPLATES/default_manifest.j2 | sudo tee $FILESYSTEM_ROOT/$SONIC_PACKAGE_MANAGER_FOLDER/manifests/default_manifest
+if [ "${PIPESTATUS[0]}" != "0" ]; then
+    echo "Failed to generate default_manifest" >&2
+    exit 1
+fi
+
 # Copy docker_image_ctl.j2 for SONiC Package Manager
 sudo cp $BUILD_TEMPLATES/docker_image_ctl.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/docker_image_ctl.j2
 
