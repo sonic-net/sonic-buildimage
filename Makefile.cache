@@ -406,7 +406,7 @@ $(foreach pkg, $(SONIC_INSTALL_PKGS), \
 $(foreach pkg, $(SONIC_RFS_TARGETS), \
         $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(TARGET_PATH))) \
         $(eval $(pkg)_CACHE_MODE := GIT_CONTENT_SHA) \
-        $(eval $(pkg)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST)) \
+        $(eval $(pkg)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST) $(USERNAME) $(PASSWORD)) \
         $(eval $(pkg)_DEP_FILES := $(SONIC_COMMON_BASE_FILES_LIST) $(RFS_DEP_FILES)) \
         $(eval $(TARGET_PATH)/$(pkg)_TARGET := $(pkg)) )
 
