@@ -365,6 +365,8 @@ class SFP(NvidiaSFPCommon):
                 content = f.read(num_bytes)
                 if ctypes.get_errno() != 0:
                     raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
+            logger.log_debug(f'read EEPROM sfp={self.sdk_index}, page={page}, page_offset={page_offset}, \
+                    size={num_bytes}, data={content}')
         except (OSError, IOError) as e:
             if log_on_error:
                 logger.log_warning(f'Failed to read sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, \
@@ -403,6 +405,8 @@ class SFP(NvidiaSFPCommon):
                     raise IOError(f'write return code = {ret}')
                 if ctypes.get_errno() != 0:
                     raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
+            logger.log_debug(f'write EEPROM sfp={self.sdk_index}, page={page}, page_offset={page_offset}, \
+                    size={num_bytes}, data={write_buffer}')
         except (OSError, IOError) as e:
             data = ''.join('{:02x}'.format(x) for x in write_buffer)
             logger.log_error(f'Failed to write EEPROM data sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, size={num_bytes}, \
