@@ -47,7 +47,7 @@ def validate_str_type(type_, value):
 
 @click.group(cls=clicommon.AbbreviationGroup, name="dhcp_server")
 @clicommon.pass_db
-def dhcp_server():
+def dhcp_server(db):
     """config DHCP Server information"""
     ctx = click.get_current_context()
     dbconn = db.db
