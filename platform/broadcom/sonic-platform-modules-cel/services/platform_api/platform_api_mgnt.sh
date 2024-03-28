@@ -5,6 +5,7 @@ DEVICE="/usr/share/sonic/device"
 PLATFORM=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
 FILES=$DEVICE/$PLATFORM/api_files
 PY3_PACK=$DEVICE/$PLATFORM/sonic_platform-1.0-py3-none-any.whl
+export PATH=$PATH:/usr/local/bin
 
 install() {
     # Install python3 sonic-platform package

@@ -4,6 +4,7 @@ PREV_REBOOT_CAUSE="/host/reboot-cause/"
 DEVICE="/usr/share/sonic/device"
 PLATFORM=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
 FILES=$DEVICE/$PLATFORM/api_files
+export PATH=$PATH:/usr/local/bin
 
 install() {
     # Install sonic-platform package
