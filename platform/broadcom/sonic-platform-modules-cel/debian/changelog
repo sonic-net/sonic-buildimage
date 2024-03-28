@@ -1,3 +1,11 @@
+sonic-cel-platform-modules (1.0) unstable; urgency=low
+
+  * Add questone2 platform module.
+  * Rename Belgite to DS1000
+  * Hardened platform bug fixes
+
+ -- Jemston Fernando <sjemstonirudayam.fernando@celestica.com>  Thu, 30 Nov 2023 15:00:00 +0530
+
 sonic-cel-platform-modules (0.9) unstable; urgency=low
 
   * Add haliburton platform module.

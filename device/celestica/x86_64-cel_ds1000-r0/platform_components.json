@@ -1,0 +1,12 @@
+{
+    "chassis": {
+        "DS1000": {
+            "component": {
+                "BIOS": {},
+                "ONIE": {},
+                "CPLD SW": {},
+                "SSD": {}
+            }
+        }
+    }
+}

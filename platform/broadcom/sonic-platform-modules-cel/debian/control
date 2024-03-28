@@ -26,7 +26,12 @@ Architecture: amd64
 Depends: linux-image-6.1.0-11-2-amd64-unsigned
 Description: kernel modules for platform devices such as led, sfp.
 
-Package: platform-modules-belgite
+Package: platform-modules-ds1000
+Architecture: amd64
+Depends: linux-image-6.1.0-11-2-amd64-unsigned
+Description: kernel modules for platform devices such as led, sfp
+
+Package: platform-modules-questone2
 Architecture: amd64
 Depends: linux-image-6.1.0-11-2-amd64-unsigned
 Description: kernel modules for platform devices such as led, sfp

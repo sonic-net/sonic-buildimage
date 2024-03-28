@@ -1,0 +1,13 @@
+{
+    "services_to_ignore": [],
+    "devices_to_ignore": [
+        "psu.temperature"
+    ],
+    "user_defined_checkers": [],
+    "polling_interval": 60,
+    "led_color": {
+        "fault": "amber",
+        "normal": "green",
+        "booting": "green_blink_1hz"
+    }
+}
