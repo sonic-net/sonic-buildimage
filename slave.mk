@@ -1555,6 +1555,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 
 	export RFS_SPLIT_FIRST_STAGE=n
 	export RFS_SPLIT_LAST_STAGE=y
+	( for ((i=1; i<=360; i++)); do date -Is $(LOG); sleep 10; done  ) &
 
 	# Build images for the MACHINE, DEPENDENT_MACHINE defined.
 	$(foreach dep_machine, $($*_MACHINE) $($*_DEPENDENT_MACHINE), \
