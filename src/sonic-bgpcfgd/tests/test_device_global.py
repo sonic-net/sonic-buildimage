@@ -88,6 +88,8 @@ def test_isolate_device_internal_session(mocked_log_info):
 @patch('bgpcfgd.managers_device_global.log_debug')
 def test_unisolate_device(mocked_log_info):
     m = constructor()
+    # By default feature is disabled. Simulate enabled state
+    m.directory.put(m.db_name, m.table_name, "tsa_enabled", "true")
     res = m.set_handler("STATE", {"tsa_enabled": "false"})
     assert res, "Expect True return value for set_handler"
     mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
@@ -96,6 +98,8 @@ def test_unisolate_device(mocked_log_info):
 @patch('bgpcfgd.managers_device_global.log_debug')
 def test_unisolate_device_internal_session(mocked_log_info):
     m = constructor(check_internal=True)
+    # By default feature is disabled. Simulate enabled state
+    m.directory.put(m.db_name, m.table_name, "tsa_enabled", "true")
     res = m.set_handler("STATE", {"tsa_enabled": "false"})
     assert res, "Expect True return value for set_handler"
     mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
@@ -147,6 +151,17 @@ def test_del_handler():
     res = m.del_handler("STATE")
     assert res, "Expect True return value for del_handler"
 
+@pytest.mark.parametrize(
+    "value", [ "invalid_value" ]
+)
+@patch('bgpcfgd.managers_device_global.log_err')
+def test_tsa_neg(mocked_log_err, value):
+    m = constructor()
+    m.cfg_mgr.changes = ""
+    res = m.set_handler("STATE", {"tsa_enabled": value})
+    assert res, "Expect True return value for set_handler"
+    mocked_log_err.assert_called_with("TSA: invalid value({}) is provided".format(value))
+
 #
 # WCMP ----------------------------------------------------------------------------------------------------------------
 #
@@ -169,6 +184,9 @@ def test_del_handler():
 def test_wcmp(mocked_log_info, value, result):
     m = constructor()
     m.cfg_mgr.changes = ""
+    if value == "false":
+        # By default feature is disabled. Simulate enabled state
+        m.directory.put(m.db_name, m.table_name, "wcmp_enabled", "true")
     res = m.set_handler("STATE", {"wcmp_enabled": value})
     assert res, "Expect True return value for set_handler"
     mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
@@ -182,5 +200,5 @@ def test_wcmp_neg(mocked_log_err, value):
     m = constructor()
     m.cfg_mgr.changes = ""
     res = m.set_handler("STATE", {"wcmp_enabled": value})
-    assert not res, "Expect False return value for set_handler"
-    mocked_log_err.assert_called_with("WCMP: invalid value({}) is provided for 'SET' command".format(value))
+    assert res, "Expect True return value for set_handler"
+    mocked_log_err.assert_called_with("WCMP: invalid value({}) is provided".format(value))
