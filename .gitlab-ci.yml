@@ -47,6 +47,9 @@ stages:
     ./.gitlab-ci-submodule-init.sh
     . .ci-env
     case "$LEAN" in true) echo LEAN ; exit 0 ; esac
+    if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
+      exit 0
+    fi
     ./build.sh
 
 configure:sonic:x86_64:
@@ -74,6 +77,13 @@ configure:sonic:aarch64:
     ./.gitlab-ci-submodule-init.sh
     . .ci-env
     case "$LEAN" in true) echo LEAN ; exit 0 ; esac
+     # schedules can set NO_SKIP_BUILD to force a build to happen
+    if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
+      # skip build and use the latest
+      mkdir -p target
+      curl -o target/${TARGET_BIN} http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/${TARGET_BIN}
+      exit 0
+    fi
     ./build.sh
   artifacts:
     name: "$CI_COMMIT_REF_NAME"
@@ -87,6 +97,7 @@ build:sonic:x86_64:
     - configure:sonic:x86_64
   variables: 
     BUILD_ARCH: x86_64
+    TARGET_BIN: sonic-broadcom-dnx.bin
 
 build:sonic:armhf:
   extends: .build:sonic
@@ -94,6 +105,7 @@ build:sonic:armhf:
     - configure:sonic:armhf
   variables:
     BUILD_ARCH: armhf
+    TARGET_BIN: sonic-marvell-armhf.bin
 
 build:sonic:aarch64:
   extends: .build:sonic
@@ -101,6 +113,7 @@ build:sonic:aarch64:
     - configure:sonic:aarch64
   variables:
     BUILD_ARCH: aarch64
+    TARGET_BIN: sonic-marvell-arm64.bin
 
 express:chassis7:
   stage: test
