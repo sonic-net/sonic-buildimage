@@ -150,8 +150,11 @@ def clean_current_certs(certs_path):
     files = [f for f in os.listdir(certs_path)]
     supported_cert_ext = ['crt', 'key']
     for file_t in files:
-        file_ext = file_t.split(".")[1]
-        file_name = file_t.split(".")[0]
+        file_data = file_t.split(".")
+        if len(file_data) < 2:
+            continue
+        file_ext = file_data[1]
+        file_name = file_data[0]
         if (file_ext in supported_cert_ext) and ("sonic_acms_bootstrap" not in file_name) and ("temp" not in file_name) and ("test" not in file_name):
             os.remove(os.path.join(certs_path, file_t))
 
