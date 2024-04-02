@@ -13,7 +13,7 @@ def ts_to_str(ts):
     return datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d %H:%M:%S")
 
 
-@click.group(cls=clicommon.AbbreviationGroup, name="dhcp_server")
+@click.group(cls=clicommon.AbbreviationGroup, name="dhcp_server", invoke_without_command=True)
 @clicommon.pass_db
 def dhcp_server(db):
     """Show dhcp_server related info"""
@@ -21,6 +21,9 @@ def dhcp_server(db):
     dbconn = db.db
     if dbconn.get("CONFIG_DB", "FEATURE|dhcp_server", "state") != "enabled":
         ctx.fail("Feature dhcp_server is not enabled")
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+        ctx.exit()
 
 
 @dhcp_server.group(cls=clicommon.AliasedGroup)

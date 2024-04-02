@@ -33,6 +33,22 @@ class TestConfigDHCPServer(object):
     def test_validate_str_type(self, type, value, result):
         assert dhcp_server.validate_str_type(type, value) == result
 
+    @pytest.mark.parametrize("state", ["disabled", "enabled"])
+    def test_config_dhcp_server_feature_state_checking(self, mock_db, state):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        mock_db.set("CONFIG_DB", "FEATURE|dhcp_server", "state", state)
+        result = runner.invoke(dhcp_server.dhcp_server, obj=db)
+        if state == "disabled":
+            assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+            assert "Feature dhcp_server is not enabled" in result.output
+        elif state == "enabled":
+            assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+            assert "Usage: dhcp_server [OPTIONS] COMMAND [ARGS]" in result.output
+        else:
+            assert False
+
     def test_config_dhcp_server_ipv4_add(self, mock_db):
         expected_value = {
             "gateway": "10.10.10.10",
