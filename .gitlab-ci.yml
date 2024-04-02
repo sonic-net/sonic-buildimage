@@ -147,6 +147,9 @@ express:chassis7:
     - post
   script: |
     . .ci-env
+    if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
+      exit 0
+    fi
     # with all express passed, we post images and update the symlink latest
     mkdir -p /var/www/html/${PLUTO_COMMIT_DIR}
     for f in `ls target/sonic-*.bin` ; do \
