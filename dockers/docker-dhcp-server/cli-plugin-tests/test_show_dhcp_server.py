@@ -1,3 +1,4 @@
+import pytest
 import sys
 from unittest import mock
 
@@ -13,6 +14,22 @@ class TestShowDHCPServer(object):
     def test_plugin_registration(self):
         cli = mock.MagicMock()
         show_dhcp_server.register(cli)
+
+    @pytest.mark.parametrize("state", ["disabled", "enabled"])
+    def test_show_dhcp_server_feature_state_checking(self, mock_db, state):
+        runner = CliRunner()
+        db = clicommon.Db()
+        db.db = mock_db
+        mock_db.set("CONFIG_DB", "FEATURE|dhcp_server", "state", state)
+        result = runner.invoke(show_dhcp_server.dhcp_server, obj=db)
+        if state == "disabled":
+            assert result.exit_code == 2, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+            assert "Feature dhcp_server is not enabled" in result.output
+        elif state == "enabled":
+            assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
+            assert "Usage: dhcp_server [OPTIONS] COMMAND [ARGS]" in result.output
+        else:
+            assert False
 
     def test_show_dhcp_server_ipv4_lease_without_dhcpintf(self, mock_db):
         expected_stdout = """\

@@ -45,14 +45,17 @@ def validate_str_type(type_, value):
     return False
 
 
-@click.group(cls=clicommon.AbbreviationGroup, name="dhcp_server")
+@click.group(cls=clicommon.AbbreviationGroup, name="dhcp_server", invoke_without_command=True)
 @clicommon.pass_db
-def dhcp_server():
+def dhcp_server(db):
     """config DHCP Server information"""
     ctx = click.get_current_context()
     dbconn = db.db
     if dbconn.get("CONFIG_DB", "FEATURE|dhcp_server", "state") != "enabled":
         ctx.fail("Feature dhcp_server is not enabled")
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+        ctx.exit()
 
 
 @dhcp_server.group(cls=clicommon.AliasedGroup, name="ipv4")
