@@ -109,7 +109,7 @@ pciehw_barrd_notify(const int port, notify_entry_t *nentry)
 {
     const tlpauxinfo_t *info = &nentry->info;
     const pciehw_spmt_t *spmt = pciesvc_spmt_get(info->pmti);
-    pciehwdev_t *phwdev = pciehwdev_get(spmt->owner);
+    pciehwdev_t *phwdev = pciehwdev_get(spmt->owner + info->vfid);
     pcie_stlp_t stlpbuf, *stlp = &stlpbuf;
 
     pcietlp_decode(stlp, nentry->rtlp, sizeof(nentry->rtlp));
@@ -126,7 +126,7 @@ pciehw_barwr_notify(const int port, notify_entry_t *nentry)
 {
     const tlpauxinfo_t *info = &nentry->info;
     const pciehw_spmt_t *spmt = pciesvc_spmt_get(info->pmti);
-    pciehwdev_t *phwdev = pciehwdev_get(spmt->owner);
+    pciehwdev_t *phwdev = pciehwdev_get(spmt->owner + info->vfid);
     pcie_stlp_t stlpbuf, *stlp = &stlpbuf;
 
     pcietlp_decode(stlp, nentry->rtlp, sizeof(nentry->rtlp));
@@ -143,7 +143,7 @@ pciehw_barrd_indirect(const int port, indirect_entry_t *ientry)
 {
     const tlpauxinfo_t *info = &ientry->info;
     const pciehw_spmt_t *spmt = pciesvc_spmt_get(info->pmti);
-    pciehwdev_t *phwdev = pciehwdev_get(spmt->owner);
+    pciehwdev_t *phwdev = pciehwdev_get(spmt->owner + info->vfid);
     const pciehwbar_t *phwbar = pciehw_bar_get(phwdev, spmt->cfgidx);
 
     switch (phwbar->hnd) {
@@ -197,7 +197,7 @@ pciehw_barwr_indirect(const int port, indirect_entry_t *ientry)
 {
     const tlpauxinfo_t *info = &ientry->info;
     const pciehw_spmt_t *spmt = pciesvc_spmt_get(info->pmti);
-    pciehwdev_t *phwdev = pciehwdev_get(spmt->owner);
+    pciehwdev_t *phwdev = pciehwdev_get(spmt->owner + info->vfid);
     const pciehwbar_t *phwbar = pciehw_bar_get(phwdev, spmt->cfgidx);
     pcie_stlp_t stlpbuf, *stlp = &stlpbuf;
 

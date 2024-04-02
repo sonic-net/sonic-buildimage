@@ -133,6 +133,52 @@ ifneq ($(words $(subst :, ,$(CURDIR))), 1)
   $(error Sources directory '$(CURDIR)' cannot contain spaces nor colons. Rename directory or move sources to another path)
 endif
 
+########################
+# Extract config value #
+########################
+
+get_config_value = $(shell ${CC} -E -dM ${CONFIG_FILE} 2> /dev/null |\
+                           grep -m 1 ${1} | awk '{ print $$3 }')
+
+########################
+# Check module signing #
+########################
+
+CONFIG_MODULE_SIG_ALL := $(call get_config_value,CONFIG_MODULE_SIG_ALL)
+CONFIG_MODULE_SIG_FORCE := $(call get_config_value,CONFIG_MODULE_SIG_FORCE)
+CONFIG_MODULE_SIG_KEY := $(call get_config_value,CONFIG_MODULE_SIG_KEY)
+
+SIG_KEY_SP := ${KOBJ}/${CONFIG_MODULE_SIG_KEY} \
+              ${KOBJ}/certs/signing_key.pem
+
+SIG_KEY_FILE := $(firstword $(foreach file, ${SIG_KEY_SP}, $(call test_file,${file})))
+
+# print a warning if the kernel configuration attempts to sign modules but
+# the signing key can't be found.
+ifneq (${SIG_KEY_FILE},)
+warn_signed_modules := : ;
+else
+warn_signed_modules :=
+ifeq (${CONFIG_MODULE_SIG_ALL},1)
+warn_signed_modules += \
+    echo "****************************************************************" ; \
+    echo "*** The target kernel has CONFIG_MODULE_SIG_ALL enabled, but ***" ; \
+    echo "*** the signing key cannot be found. Module signing has been ***" ; \
+    echo "*** disabled for this build.                                 ***" ; \
+    echo "****************************************************************" ;
+endif # CONFIG_MODULE_SIG_ALL=y
+ifeq (${CONFIG_MODULE_SIG_FORCE},1)
+  warn_signed_modules += \
+    echo "**************************************************************" ; \
+    echo "*** warning: The target kernel has CONFIG_MODULE_SIG_FORCE ***" ; \
+    echo "*** warning: enabled, but the signing key cannot be found. ***" ; \
+    echo "*** warning: The module must be signed manually using      ***" ; \
+    echo "*** warning: 'scripts/sign-file'.                          ***" ; \
+    echo "**************************************************************" ;
+endif # CONFIG_MODULE_SIG_FORCE
+DISABLE_MODULE_SIGNING := Yes
+endif
+
 #######################
 # Linux Version Setup #
 #######################
