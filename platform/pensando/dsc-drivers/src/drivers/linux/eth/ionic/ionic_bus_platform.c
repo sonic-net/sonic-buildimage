@@ -94,14 +94,17 @@ static void __iomem *ionic_ioremap_shared_resource(struct ionic_shared_resource 
 	return base;
 }
 
-static void ionic_iounmap_shared_resource(struct ionic_shared_resource *shres,
+static void ionic_iounmap_shared_resource(struct ionic *ionic,
+					  struct ionic_shared_resource *shres,
 					  void __iomem *vaddr,
 					  resource_size_t start,
 					  resource_size_t n)
 {
 	mutex_lock(&shres->lock);
 
-	if (WARN_ON(!shres->refs)) {
+	if (!shres->refs) {
+		dev_warn(ionic->dev, "%s: no references exist for shared resource\n",
+			 __func__);
 		mutex_unlock(&shres->lock);
 		return;
 	}
@@ -274,7 +277,8 @@ static void ionic_unmap_bars(struct ionic *ionic)
 			dev_info(dev, "Unmapping BAR %d @%p, bus_addr: %llx\n",
 				 i, bars[i].vaddr, bars[i].bus_addr);
 			if (i == IONIC_TSTAMP_BAR) {
-				ionic_iounmap_shared_resource(&tstamp_res, bars[i].vaddr, bars[i].bus_addr, bars[i].len);
+				ionic_iounmap_shared_resource(ionic, &tstamp_res, bars[i].vaddr,
+							      bars[i].bus_addr, bars[i].len);
 			} else {
 				devm_iounmap(dev, bars[i].vaddr);
 				devm_release_mem_region(dev, bars[i].bus_addr, bars[i].len);
@@ -445,6 +449,16 @@ int ionic_remove(struct platform_device *pfdev)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(ionic_remove);
+
+void ionic_reset_prepare(struct pci_dev *pdev)
+{
+	dev_info(&pdev->dev, "reset_prepare not supported\n");
+}
+
+void ionic_reset_done(struct pci_dev *pdev)
+{
+	dev_info(&pdev->dev, "reset_done not supported\n");
+}
 
 static const struct of_device_id mnic_of_match[] = {
 		{.compatible = "pensando,ionic-mnic"},
