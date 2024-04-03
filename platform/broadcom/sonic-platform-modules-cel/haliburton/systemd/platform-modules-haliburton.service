@@ -2,7 +2,7 @@
 [Unit]
 Description=Celestica haliburton platform modules
 After=local-fs.target
-Before=pmon.service
+Before=process-reboot-cause.service determine-reboot-cause.service pmon.service
 
 [Service]
 Type=oneshot
