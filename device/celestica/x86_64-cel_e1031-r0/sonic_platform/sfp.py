@@ -9,7 +9,7 @@
 try:
     import time
     from ctypes import c_char
-    from sonic_platform_base.sfp_base import SfpBase
+    from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_platform_base.sonic_sfp.sff8472 import sff8472InterfaceId
     from sonic_platform_base.sonic_sfp.sff8472 import sff8472Dom
     from sonic_platform_base.sonic_sfp.sff8436 import sff8436InterfaceId
@@ -157,7 +157,7 @@ PORT_START = 1
 PORT_END = 55
 
 
-class Sfp(SfpBase):
+class Sfp(SfpOptoeBase):
     """Platform-specific Sfp class"""
 
     # Port I2C number
@@ -172,7 +172,7 @@ class Sfp(SfpBase):
     PRS_PATH = "/sys/devices/platform/e1031.smc/SFP/sfp_modabs"
 
     def __init__(self, sfp_index, sfp_name):
-        SfpBase.__init__(self)
+        SfpOptoeBase.__init__(self)
 
         # Init common function
         self._api_common = Common()
@@ -235,7 +235,7 @@ class Sfp(SfpBase):
         for i in range(0, num_bytes):
             eeprom_raw.append("0x00")
 
-        sysfs_sfp_i2c_client_eeprom_path = self.port_to_eeprom_mapping[self.port_num]
+        sysfs_sfp_i2c_client_eeprom_path = self.get_eeprom_path()
         try:
             sysfsfile_eeprom = open(
                 sysfs_sfp_i2c_client_eeprom_path, mode="rb", buffering=0)
@@ -354,6 +354,9 @@ class Sfp(SfpBase):
             self.dom_volt_supported = False
             self.dom_rx_power_supported = False
             self.dom_tx_power_supported = False
+
+    def get_eeprom_path(self):
+        return self.port_to_eeprom_mapping[self.port_num]
 
     def get_transceiver_info(self):
         """
@@ -1176,7 +1179,7 @@ class Sfp(SfpBase):
         if self.dom_tx_disable_supported:
             # SFP status/control register at address A2h, byte 110
             offset = 256
-            sysfs_sfp_i2c_client_eeprom_path = self.port_to_eeprom_mapping[self.port_num]
+            sysfs_sfp_i2c_client_eeprom_path = self.get_eeprom_path()
             status_control_raw = self._read_eeprom_specific_bytes(
                 (offset + SFP_STATUS_CONTROL_OFFSET), SFP_STATUS_CONTROL_WIDTH)
             if status_control_raw is not None:
