@@ -22,7 +22,7 @@ libdouble-conversion3==3.1.5-6.1
 libdpkg-perl==1.20.13
 libffi-dev==3.3-6
 libgcc-10-dev==10.2.1-6
-libglib2.0-0==2.66.8-1
+libglib2.0-0==2.66.8-1+deb11u1
 libgomp1==10.2.1-6
 libisl23==0.23-1
 libitm1==10.2.1-6
@@ -48,7 +48,7 @@ libstdc++-10-dev==10.2.1-6
 libthrift-0.11.0==0.11.0-4
 libtsan0==10.2.1-6
 libubsan1==10.2.1-6
-libuv1==1.40.0-2
+libuv1==1.40.0-2+deb11u1
 mailcap==3.69
 make==4.3-4.1
 mime-support==3.66
@@ -65,6 +65,7 @@ python2-minimal==2.7.18-3
 python2.7==2.7.18-8+deb11u1
 python2.7-dev==2.7.18-8+deb11u1
 python2.7-minimal==2.7.18-8+deb11u1
+python3-scapy==2.4.0-2
 shared-mime-info==2.0-1
 syncd-rpc==1.0.0
 wget==1.21-1+deb11u1

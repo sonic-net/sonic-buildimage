@@ -1,6 +1,6 @@
 bitarray==2.8.1
 contextlib2==0.6.0.post1
-future==0.18.3
+future==1.0.0
 importlib-resources==3.3.1
 ipaddress==1.0.23
 natsort==6.2.1

@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG image_version
@@ -15,7 +15,6 @@ RUN apt-get update &&   \
     apt-get install -y  \
         build-essential \
         python3-dev     \
-        ipmitool        \
         librrd8         \
         librrd-dev      \
         rrdtool         \
@@ -27,17 +26,18 @@ RUN apt-get update &&   \
         libpci3         \
         iputils-ping    \
         pciutils        \
+        ethtool &&	\
 # smartmontools version should match the installed smartmontools in sonic_debian_extension build template
-        smartmontools=7.2-1 \
-        ethtool
+    apt-get install -y -t bookworm-backports \
+        smartmontools
 
 # On Arista devices, the sonic_platform wheel is not installed in the container.
 # Instead, the installation directory is mounted from the host OS. However, this method
 # doesn't ensure all dependencies are installed in the container. So here we
 # install any dependencies required by the Arista sonic_platform package.
 # TODO: eliminate the need to install these explicitly.
-RUN pip3 install grpcio==1.39.0 \
-        grpcio-tools==1.39.0
+RUN pip3 install grpcio==1.51.1 \
+        grpcio-tools==1.51.1
 
 # Barefoot platform vendors' sonic_platform packages import these Python libraries
 RUN pip3 install thrift==0.13.0 netifaces

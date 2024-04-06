@@ -20,7 +20,7 @@ ctypesgen==1.0.2
 dblatex==0.3.12
 dbus-python==1.2.16
 devscripts==2.21.3+deb11u1
-distro-info==1.0
+distro-info==1.0+deb11u1
 docutils==0.16
 fastentrypoints==0.12
 gbp==0.9.22
@@ -60,9 +60,9 @@ parameterized==0.8.1
 parse==1.6.6
 pexpect==4.8.0
 pillow==9.4.0
-pip==23.3.2
+pip==24.0
 pluggy==0.13.0
-protobuf==4.25.2
+protobuf==4.25.3
 ptyprocess==0.7.0
 py==1.10.0
 pyang==2.4.0
@@ -70,7 +70,7 @@ pyangbind==0.8.1
 pyasn1==0.4.8
 pyasn1-modules==0.2.1
 pycurl==7.43.0.6
-pyfakefs==5.3.4
+pyfakefs==5.3.5
 pygments==2.7.1
 pygobject==3.38.0
 pyhamcrest==1.9.0
@@ -88,7 +88,7 @@ python-magic==0.4.20
 pytz==2021.1
 pyxdg==0.27
 pyyaml==5.4.1
-redis==5.0.1
+redis==5.0.3
 regex==2023.12.25
 requests==2.25.1
 roman==2.0.0
