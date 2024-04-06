@@ -4,7 +4,7 @@ libbabeltrace1==1.5.6-2+deb10u1
 libbsd0==0.9.1-2+deb10u1
 libcjson-dev==1.7.10-1.1+deb10u2
 libcjson1==1.7.10-1.1+deb10u2
-libcurl3-gnutls==7.64.0-4+deb10u8
+libcurl3-gnutls==7.64.0-4+deb10u9
 libdw1==0.176-1.1+deb10u1
 libedit2==3.1-20181209-1
 libglib2.0-0==2.58.3-2+deb10u5
