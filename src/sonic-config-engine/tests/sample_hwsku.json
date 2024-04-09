@@ -268,7 +268,8 @@
             "default_brkout_mode": "2x25G(2)+1x50000(2)"
         },
         "Ethernet142": {
-            "default_brkout_mode": "2x25G(2)+1x50000(2)"
+            "default_brkout_mode": "2x25G(2)+1x50000(2)",
+            "role": "Dpc"
         },
         "Ethernet144": {
             "default_brkout_mode": "1x100000[50G,40000,25G,10000]"

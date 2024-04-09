@@ -728,5 +728,21 @@
                 ]
             }
         }
+    },
+
+    "PORT_DPC_ROLE_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "lanes": "60, 61",
+                        "speed": 100000,
+                        "role": "Dpc"
+                    }
+                ]
+            }
+        }
     }
 }
