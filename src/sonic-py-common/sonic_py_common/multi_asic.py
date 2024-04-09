@@ -7,6 +7,7 @@ from swsscommon import swsscommon
 
 from .device_info import get_asic_conf_file_path
 from .device_info import is_supervisor, is_chassis
+from .interface import inband_prefix, backplane_prefix, recirc_prefix, front_panel_prefix
 
 ASIC_NAME_PREFIX = 'asic'
 NAMESPACE_PATH_GLOB = '/run/netns/*'
@@ -17,7 +18,8 @@ FABRIC_ASIC_SUB_ROLE = 'Fabric'
 EXTERNAL_PORT = 'Ext'
 INTERNAL_PORT = 'Int'
 INBAND_PORT = 'Inb'
-RECIRC_PORT ='Rec'
+RECIRC_PORT = 'Rec'
+DPU_CONNECT_PORT = 'Dpc'
 PORT_CHANNEL_MEMBER_CFG_DB_TABLE = 'PORTCHANNEL_MEMBER'
 PORT_CFG_DB_TABLE = 'PORT'
 BGP_NEIGH_CFG_DB_TABLE = 'BGP_NEIGHBOR'
@@ -323,15 +325,18 @@ def get_port_role(port_name, namespace=None):
     role = ports_config[PORT_ROLE]
     return role
 
+def is_role_internal(role=None):
+    """
+    Check if the role belongs to one of the internal variants
+    """
+    if role and role in [INTERNAL_PORT, INBAND_PORT, RECIRC_PORT, DPU_CONNECT_PORT]:
+        return True
+    return False
+
 
 def is_port_internal(port_name, namespace=None):
-
     role = get_port_role(port_name, namespace)
-
-    if role in [INTERNAL_PORT, INBAND_PORT, RECIRC_PORT]:
-        return True
-
-    return False
+    return is_role_internal(role)
 
 
 def get_external_ports(port_names, namespace=None):
@@ -487,3 +492,21 @@ def get_asic_presence_list():
         # This is not multi-asic, all asics should be present.
         asics_list = list(range(0, get_num_asics()))
     return asics_list
+
+
+def is_front_panel_port(port, role=None):
+    """
+    @summary: This function will check if the interface is a front-panel port
+    @return:  Boolean
+    """
+    if not port.startswith(front_panel_prefix()):
+        return False
+
+    if port.startswith((backplane_prefix(), inband_prefix(), recirc_prefix())):
+        return False
+
+    # subinterfaces
+    if '.' in port:
+        return False
+
+    return not is_role_internal(role)
