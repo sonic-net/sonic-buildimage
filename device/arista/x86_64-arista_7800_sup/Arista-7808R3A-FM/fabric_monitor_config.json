@@ -3,6 +3,7 @@
       "monErrThreshCrcCells": 1,
       "monErrThreshRxCells": 61035156,
       "monPollThreshRecovery": 8,
-      "monPollThreshIsolation": 1
+      "monPollThreshIsolation": 1,
+      "monCapacityThreshWarn": 10
    }
 }
