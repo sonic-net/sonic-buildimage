@@ -159,7 +159,7 @@ static int xcvr_probe(struct i2c_client *client,
         goto exit_free;
     }
 
-    data->xdev = hwmon_device_register_with_info(&client->dev, client->name, NULL, NULL, NULL);
+    data->xdev = hwmon_device_register_with_groups(&client->dev, client->name, NULL, NULL);
     if (IS_ERR(data->xdev)) {
         status = PTR_ERR(data->xdev);
         goto exit_remove;

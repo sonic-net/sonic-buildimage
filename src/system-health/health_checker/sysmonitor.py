@@ -10,8 +10,10 @@ from swsscommon import swsscommon
 from sonic_py_common.logger import Logger
 from . import utils
 from sonic_py_common.task_base import ProcessTaskBase
+from sonic_py_common import device_info
 from .config import Config
 import signal
+import jinja2
 
 SYSLOG_IDENTIFIER = "system#monitor"
 REDIS_TIMEOUT_MS = 0
@@ -159,6 +161,26 @@ class Sysmonitor(ProcessTaskBase):
         dir_list.sort()
         return dir_list
 
+    def get_render_value_for_field(self, configuration, device_config, expected_values):
+        """ Returns the target value by rendering the configuration as J2 template.
+
+        Args:
+            configuration (str): Table value from CONFIG_DB for given field
+            device_config (dict): DEVICE_METADATA section of CONFIG_DB and populated Device Running Metadata which is needed for rendering
+            expected_values (list): Expected set of values for given field
+        Returns:
+            (str): Target value for given key
+        """
+
+        if configuration is None:
+            return None
+
+        template = jinja2.Template(configuration)
+        target_value = template.render(device_config) # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
+        if target_value not in expected_values:
+            raise ValueError('Invalid value rendered for configuration {}: {}'.format(configuration, target_value))
+        return target_value
+
     def get_service_from_feature_table(self, dir_list):
         """Get service from CONFIG DB FEATURE table. During "config reload" command, filling FEATURE table
            is not an atomic operation, sonic-cfggen do it with two steps:
@@ -178,12 +200,16 @@ class Sysmonitor(ProcessTaskBase):
         while max_retry > 0:
             success = True
             feature_table = self.config_db.get_table("FEATURE")
+            device_config = {}
+            device_config['DEVICE_METADATA'] = self.config_db.get_table('DEVICE_METADATA')
+            device_config.update(device_info.get_device_runtime_metadata())
             for srv, fields in feature_table.items():
                 if 'state' not in fields:
                     success = False
                     logger.log_warning("FEATURE table is not fully ready: {}, retrying".format(feature_table))
                     break
-                if fields["state"] not in ["disabled", "always_disabled"]:
+                state = self.get_render_value_for_field(fields["state"], device_config, ['enabled', 'disabled', 'always_enabled', 'always_disabled'])
+                if state not in ["disabled", "always_disabled"]:
                     srvext = srv + ".service"
                     if srvext not in dir_list:
                         dir_list.append(srvext)

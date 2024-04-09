@@ -25,6 +25,19 @@ from swsscommon import swsscommon
 EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
 EVENTS_PUBLISHER_TAG = "event-down-ctr"
 
+def check_docker_image(image_name):
+    """
+    @summary: This function will check if docker image exists.
+    @return:  True if the image exists, otherwise False.
+    """
+    try:
+        DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
+        DOCKER_CLIENT.images.get(image_name)
+        return True
+    except (docker.errors.ImageNotFound, docker.errors.APIError) as err:
+        print("Failed to get image '{}'. Error: '{}'".format(image_name, err))
+        return False
+
 def get_expected_running_containers():
     """
     @summary: This function will get the expected running & always-enabled containers by following the rule:
@@ -55,7 +68,24 @@ def get_expected_running_containers():
     # it will be removed from exception list.
     run_all_instance_list = ['database', 'bgp']
 
+    container_list = []
     for container_name in feature_table.keys():
+        # slim image does not have telemetry container and corresponding docker image
+        if container_name == "telemetry":
+            ret = check_docker_image("docker-sonic-telemetry")
+            if not ret:
+                # If telemetry container image is not present, check gnmi container image
+                # If gnmi container image is not present, ignore telemetry container check
+                # if gnmi container image is present, check gnmi container instead of telemetry
+                ret = check_docker_image("docker-sonic-gnmi")
+                if not ret:
+                    print("Ignoring telemetry container check on image which has no corresponding docker image")
+                else:
+                    container_list.append("gnmi")
+                continue
+        container_list.append(container_name)
+
+    for container_name in container_list:
         if feature_table[container_name]["state"] not in ["disabled", "always_disabled"]:
             if multi_asic.is_multi_asic():
                 if feature_table[container_name].get("has_global_scope", "True") == "True":

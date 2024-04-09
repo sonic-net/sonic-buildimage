@@ -47,6 +47,7 @@ snmp-subagent               EXITED    Oct 19 01:53 AM
 """
 device_info.get_platform = MagicMock(return_value='unittest')
 
+device_runtime_metadata = {"DEVICE_RUNTIME_METADATA": {"ETHERNET_PORTS_PRESENT":True}}
 
 def setup():
     if os.path.exists(ServiceChecker.CRITICAL_PROCESS_CACHE):
@@ -583,6 +584,7 @@ def test_utils():
 @patch('docker.DockerClient')
 @patch('health_checker.utils.run_command')
 @patch('swsscommon.swsscommon.ConfigDBConnector')
+@patch('sonic_py_common.device_info.get_device_runtime_metadata', MagicMock(return_value=device_runtime_metadata))
 def test_get_all_service_list(mock_config_db, mock_run, mock_docker_client):
     mock_db_data = MagicMock()
     mock_get_table = MagicMock()
@@ -841,6 +843,7 @@ def test_system_service():
     sysmon.task_stop()
 
 
+@patch('sonic_py_common.device_info.get_device_runtime_metadata', MagicMock(return_value=device_runtime_metadata))
 def test_get_service_from_feature_table():
     sysmon = Sysmonitor()
     sysmon.config_db = MagicMock()
@@ -851,8 +854,18 @@ def test_get_service_from_feature_table():
             'swss': {}
         },
         {
-            'bgp': {'state': 'enabled'},
+            'localhost': {
+                'type': 'ToRRouter'
+            }
+        },
+        {
+            'bgp': {'state': "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}enabled{% else %}disabled{% endif %}"},
             'swss': {'state': 'disabled'}
+        },
+        {
+            'localhost': {
+                'type': 'ToRRouter'
+            }
         }
     ]
     dir_list = []
