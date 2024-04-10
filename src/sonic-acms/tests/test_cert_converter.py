@@ -121,3 +121,60 @@ class TestCertConverter(TestCase):
         mock_db.return_value = None
         cert_converter.set_acms_certs_path_from_db()
         self.assertEqual(cert_converter.acms_certs_path, "/var/opt/msft/client/dsms/sonick8s-test/certificates/chained/sonick8s/")
+
+    @mock.patch("swsscommon.swsscommon.DBConnector")
+    @mock.patch("swsscommon.swsscommon.Table")
+    @mock.patch("os.remove")
+    @mock.patch("os.path.exists")
+    @mock.patch("os.path.islink")
+    @mock.patch("os.path.isfile")
+    @mock.patch("os.listdir")
+    def test_clean_cert_01(self, mock_listdir, mock_isfile, mock_islink, mock_exists, mock_remove, mock_table, mock_db):
+        '''
+        clean link file in certs path
+        Compare removed file
+        '''
+        mock_exists.return_value = True
+        mock_islink.return_value = True
+        mock_listdir.return_value = ["restapiserver.crt", "restapiserver.key"]
+        mock_isfile.return_value = True
+        mock_table.return_value = {"localhost": (True, (('', ''),))}
+        mock_db.return_value = None
+        cert_converter.clean_current_certs("/dummy/")
+        expect_remove = [mock.call("/dummy/restapiserver.crt"), mock.call("/dummy/restapiserver.key")]
+        self.assertEqual(mock_remove.call_args_list, expect_remove)
+
+    @mock.patch("swsscommon.swsscommon.DBConnector")
+    @mock.patch("swsscommon.swsscommon.Table")
+    @mock.patch("os.remove")
+    @mock.patch("os.path.exists")
+    @mock.patch("os.path.islink")
+    @mock.patch("os.path.isfile")
+    @mock.patch("os.listdir")
+    def test_clean_cert_02(self, mock_listdir, mock_isfile, mock_islink, mock_exists, mock_remove, mock_table, mock_db):
+        '''
+        clean crt file and key file in certs path
+        Compare removed file
+        '''
+        mock_exists.return_value = True
+        mock_islink.return_value = False
+        mock_listdir.return_value = [
+            "restapiserver.crt.11",
+            "restapiserver.crt.12",
+            "restapiserver.key.11",
+            "restapiserver.key.12"
+            ]
+        mock_isfile.return_value = True
+        mock_table.return_value = {"localhost": (True, (('', ''),))}
+        mock_db.return_value = None
+        cert_converter.clean_current_certs("/dummy/")
+        expect_remove = [
+            mock.call("/dummy/restapiserver.crt.11"),
+            mock.call("/dummy/restapiserver.key.11"),
+            mock.call("/dummy/restapiserver.crt.12"),
+            mock.call("/dummy/restapiserver.key.12")
+            ]
+        expect_remove.sort()
+        remove_list = mock_remove.call_args_list
+        remove_list.sort()
+        self.assertEqual(remove_list, expect_remove)

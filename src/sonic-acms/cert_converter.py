@@ -143,11 +143,29 @@ def convert_certs(acms_certs_path, certs_path, password_length):
     return True
 
 
+def clean_current_certs(certs_path):
+    if not os.path.exists(certs_path):
+        return
+    # Remove chained crt, chained key and link file
+    files = [f for f in os.listdir(certs_path)]
+    supported_cert_ext = ['crt', 'key']
+    for file_t in files:
+        file_data = file_t.split(".")
+        if len(file_data) < 2:
+            continue
+        file_ext = file_data[1]
+        file_name = file_data[0]
+        if (file_ext in supported_cert_ext) and ("sonic_acms_bootstrap" not in file_name) and ("temp" not in file_name) and ("test" not in file_name):
+            os.remove(os.path.join(certs_path, file_t))
+
+
 def main():
     set_acms_certs_path_from_db()
     while True:
         sonic_logger.log_info("cert_converter : main : Check if uber_notify_file is present")
         if os.path.isfile(uber_notify_file_path):
+            sonic_logger.log_info("cert_converter : main : uber_notify_file found, clean old certs...")
+            clean_current_certs(certs_path)
             sonic_logger.log_info("cert_converter : main : uber_notify_file found, converting all certs...")
             if not convert_certs(acms_certs_path, certs_path, password_length):
                 sonic_logger.log_error("cert_converter : main : Cert conversion failed!")
