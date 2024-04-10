@@ -6,9 +6,11 @@
  * Copyright (c) 2021 by Cisco Systems, Inc.
  *------------------------------------------------------------------
  */
-#ifdef __cplusplus
-extern "C" {
-#endif
+// #ifdef __cplusplus
+// extern "C" {
+// #endif
+#include <string>
+#include <unordered_set>
 
 /* expose global vars for testing purpose */
 extern const char* UNIT_FILE_PREFIX;
@@ -29,11 +31,11 @@ extern const char* get_unit_file_prefix();
 extern const char* get_config_file();
 extern const char* get_machine_config_file();
 extern const char* get_asic_conf_format();
-extern char* insert_instance_number(char* unit_file, int instance, const char *instance_prefix);
+extern std::string insert_instance_number(const std::string& unit_file, int instance, const std::string& instance_prefix);
 extern int ssg_main(int argc, char** argv);
 extern int get_num_of_asic();
-extern int get_install_targets(char* unit_file, char* targets[]);
+extern int get_install_targets(std::string unit_file, char* targets[]);
 extern int get_unit_files(char* unit_files[]);
-#ifdef __cplusplus
-}
-#endif
+// #ifdef __cplusplus
+// }
+// #endif
