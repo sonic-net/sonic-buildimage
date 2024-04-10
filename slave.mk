@@ -169,6 +169,12 @@ ifeq ($(SONIC_INCLUDE_SYSTEM_EVENTD),y)
 INCLUDE_SYSTEM_EVENTD = y
 endif
 
+# The configuration option ENABLE_GNMI_TWO_PROCESS is only compatible with the system gNMI feature,
+# which is enabled by setting SONIC_INCLUDE_SYSTEM_GNMI to y.
+ifeq ($(SONIC_INCLUDE_SYSTEM_GNMI),y)
+export ENABLE_GNMI_TWO_PROCESS
+endif
+
 ifeq ($(SONIC_INCLUDE_RESTAPI),y)
 INCLUDE_RESTAPI = y
 endif
@@ -455,6 +461,7 @@ $(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
 $(info "INCLUDE_FIPS"             : "$(INCLUDE_FIPS)")
 $(info "ENABLE_TRANSLIB_WRITE"           : "$(ENABLE_TRANSLIB_WRITE)")
 $(info "ENABLE_NATIVE_WRITE"             : "$(ENABLE_NATIVE_WRITE)")
+$(info "ENABLE_GNMI_TWO_PROCESS"         : "$(ENABLE_GNMI_TWO_PROCESS)")
 $(info "ENABLE_DIALOUT"                  : "$(ENABLE_DIALOUT)")
 $(info "ENABLE_AUTO_TECH_SUPPORT"        : "$(ENABLE_AUTO_TECH_SUPPORT)")
 $(info "PDDF_SUPPORT"                    : "$(PDDF_SUPPORT)")

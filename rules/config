@@ -127,6 +127,9 @@ INCLUDE_SYSTEM_EVENTD = y
 # INCLUDE_SYSTEM_TELEMETRY - build docker-sonic-telemetry for system telemetry support
 INCLUDE_SYSTEM_TELEMETRY = y
 
+# ENABLE_GNMI_TWO_PROCESS - Enable two processes in single GNMI container.
+ENABLE_GNMI_TWO_PROCESS = n
+
 # INCLUDE_ICCPD - build docker-iccpd for mclag support
 INCLUDE_ICCPD = n
 

@@ -26,9 +26,15 @@ RUN apt-get clean -y      && \
     rm -rf /debs
 
 COPY ["start.sh", "gnmi-native.sh", "/usr/bin/"]
-COPY ["telemetry_vars.j2", "/usr/share/sonic/templates/"]
+COPY ["gnmi_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
+{% if ENABLE_GNMI_TWO_PROCESS == "y" %}
+COPY ["telemetry.sh", "/usr/bin/"]
+COPY ["telemetry_vars.j2", "/usr/share/sonic/templates/"]
+COPY ["supervisord.conf.2", "/etc/supervisor/conf.d/supervisord.conf"]
+COPY ["critical_processes.2", "/etc/supervisor/critical_processes"]
+{% endif %}
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
