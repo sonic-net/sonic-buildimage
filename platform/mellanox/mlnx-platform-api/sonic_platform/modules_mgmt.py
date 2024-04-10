@@ -103,10 +103,10 @@ class ModulesMgmtTask(threading.Thread):
     # SFPs state machine
     def get_sm_func(self, sm, port):
         SFP_SM_ENUM = {STATE_HW_NOT_PRESENT: self.check_if_hw_present
-            , STATE_HW_PRESENT: self.check_if_module_available
-            , STATE_MODULE_AVAILABLE: self.check_if_power_on
+            , STATE_HW_PRESENT: self.check_if_power_on
             , STATE_NOT_POWERED: self.power_on_module
-            , STATE_POWERED: self.check_module_type
+            , STATE_POWERED: self.check_if_module_available
+            , STATE_MODULE_AVAILABLE: self.check_module_type
             , STATE_FW_CONTROL: self.save_module_control_mode
             , STATE_SW_CONTROL: self.save_module_control_mode
             , STATE_ERROR_HANDLER: STATE_ERROR_HANDLER
