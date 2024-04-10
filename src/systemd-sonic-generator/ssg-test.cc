@@ -210,8 +210,7 @@ class SsgMainTest : public SsgFunctionTest {
 
     /* Find a string in a file */
     bool find_string_in_file(std::string str,
-                             std::string file_name,
-                             int num_asics) {
+                             std::string file_name) {
         bool found = false;
             std::string line;
 
@@ -243,7 +242,7 @@ class SsgMainTest : public SsgFunctionTest {
                     /* Run once for single instance */
                     finished = true;
                 }
-                EXPECT_EQ(find_string_in_file(str_t, target, num_asics),
+                EXPECT_EQ(find_string_in_file(str_t, target),
                         expected_result)
                         << "Error validating " + str_t + " in " + target;
             }
@@ -600,9 +599,8 @@ TEST_F(SsgFunctionTest, insert_instance_number) {
     char input[] = "test@.service";
     for (int i = 0; i <= 100; ++i) {
         std::string out = "test@" + std::to_string(i) + ".service";
-        char* ret = insert_instance_number(input, i, "");
-        ASSERT_NE(ret, nullptr);
-        EXPECT_STREQ(ret, out.c_str());
+        std::string ret = insert_instance_number(input, i, "");
+        EXPECT_EQ(ret, out);
     }
 }
 
@@ -670,7 +668,6 @@ TEST_F(SsgFunctionTest, get_unit_files) {
 
 /* TEST ssg_main() argv error */
 TEST_F(SsgMainTest, ssg_main_argv) {
-        FILE* fp;
         std::vector<char*> argv_;
         std::vector<std::string> arguments = {
                     "ssg_main",

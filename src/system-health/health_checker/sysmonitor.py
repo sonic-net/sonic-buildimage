@@ -482,7 +482,7 @@ class Sysmonitor(ProcessTaskBase):
                 logger.log_debug("Main process- received event:{} from source:{} time:{}".format(event,event_src,event_time))
                 logger.log_info("check_unit_status for [ "+event+" ] ")
                 self.check_unit_status(event)
-            except Empty:
+            except (Empty, EOFError):
                 pass
             except Exception as e:
                 logger.log_error("system_service"+str(e))

@@ -341,6 +341,18 @@ start() {
         source $PLATFORM_ENV_CONF
     fi
 
+    # Parse the platform.json file to get the platform specific information
+    PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
+    if [ -f "$PLATFORM_JSON" ]; then
+        NUM_DPU=$(jq -r '.DPUS | length' $PLATFORM_JSON 2>/dev/null)
+        jq -e '.DPU' $PLATFORM_JSON >/dev/null
+        if [[ $? -eq 0 ]]; then
+            IS_DPU_DEVICE="true"
+        else
+            IS_DPU_DEVICE="false"
+        fi
+    fi
+
     {%- if sonic_asic_platform == "broadcom" %}
     {%- if docker_container_name == "syncd" %}
     # Set the SYNCD_SHM_SIZE if this variable not defined
@@ -490,7 +502,7 @@ start() {
         redis_dir_list=`/usr/bin/python -c "import sys; import os; import json; f=open(sys.argv[1]); \
                         global_db_dir = os.path.dirname(sys.argv[1]); data=json.load(f); \
                         print(\" \".join([os.path.normpath(global_db_dir+'/'+elem['include']).partition('sonic-db')[0]\
-                        for elem in data['INCLUDES'] if 'namespace' in elem])); f.close()" $SONIC_DB_GLOBAL_JSON`
+                        for elem in data['INCLUDES'] if 'namespace' in elem or 'container_name' in elem ])); f.close()" $SONIC_DB_GLOBAL_JSON`
     fi
 
     {%- if docker_container_name == "database" %}
@@ -533,6 +545,7 @@ start() {
             DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis:rw "
             DB_OPT=$DB_OPT" --env DATABASE_TYPE=$DATABASE_TYPE "
             DB_OPT=$DB_OPT" --env NUM_DPU=$NUM_DPU "
+            DB_OPT=$DB_OPT" --env IS_DPU_DEVICE=$IS_DPU_DEVICE "
             if [[ "$DEV" ]]; then
                 DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
             fi

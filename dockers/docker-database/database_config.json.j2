@@ -1,3 +1,4 @@
+{% set include_remote_db = (REMOTE_DB_IP is defined and REMOTE_DB_PORT is defined) %}
 {
     "INSTANCES": {
         "redis":{
@@ -15,6 +16,14 @@
             "unix_socket_path": "/var/run/redis-chassis/redis_chassis.sock",
             "persistence_for_warm_boot" : "yes"
         }
+{% if include_remote_db %}
+        ,"remote_redis":{
+            "hostname" : "{{REMOTE_DB_IP}}",
+            "port" : {{REMOTE_DB_PORT}},
+            "unix_socket_path": ""
+            "persistence_for_warm_boot" : "yes"
+        }
+{% endif %}
     },
     "DATABASES" : {
         "APPL_DB" : {
@@ -102,23 +111,23 @@
         "DPU_APPL_DB" : {
             "id" : 15,
             "separator": ":",
-            "instance" : "redis",
+            "instance" : {% if include_remote_db %} "remote_redis" {% else %} "redis" {% endif %},
             "format": "proto"
         },
         "DPU_APPL_STATE_DB" : {
             "id" : 16,
             "separator": "|",
-            "instance" : "redis"
+            "instance" : {% if include_remote_db %} "remote_redis" {% else %} "redis" {% endif %}
         },
         "DPU_STATE_DB" : {
             "id" : 17,
             "separator": "|",
-            "instance" : "redis"
+            "instance" : {% if include_remote_db %} "remote_redis" {% else %} "redis" {% endif %}
         },
         "DPU_COUNTERS_DB" : {
             "id" : 18,
             "separator": ":",
-            "instance" : "redis"
+            "instance" : {% if include_remote_db %} "remote_redis" {% else %} "redis" {% endif %}
         }
 {% endif %}
     },
