@@ -40,6 +40,13 @@ module sonic-device_metadata {
                     type stypes:hwsku;
                 }
 
+                leaf asic_id {
+                    type string {
+                        length 1..16;
+                    }
+                    description "asic_id is unique identifier of the asic used by SAI for initialization.";
+                }
+
                 leaf default_bgp_status {
                     type enumeration {
                         enum up;

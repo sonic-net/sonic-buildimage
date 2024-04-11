@@ -39,6 +39,27 @@ module sonic-port{
 					}
 				}
 
+				leaf numVoq {
+					description "The number of virtual output queue supportted on this port.";
+					type string {
+						length 1..16;
+					}
+				}
+
+				leaf coreId {
+					description "The ASIC core where the port belongs to.";
+					type string {
+						length 1..16;
+					}
+				}
+
+				leaf corePortId {
+					description "The ASIC core port for this port.";
+					type string {
+						length 1..16;
+					}
+				}
+
 				leaf alias {
 					type string {
 						length 1..128;
@@ -51,7 +72,7 @@ module sonic-port{
 						length 1..128;
 					}
 				}
-                
+
 				leaf mode {
 					description "SwitchPort Modes possible values are routed|access|trunk. Default value  for mode is routed"; 
 					type stypes:switchport_mode; 
@@ -172,8 +193,8 @@ module sonic-port{
 
 				leaf tpid {
 					description "This leaf describes the possible TPID value that can be configured
-					            to the specified port if the HW supports TPID configuration. The possible
-					            values are 0x8100, 0x9100, 0x9200, 0x88a8, and 0x88A8";
+								to the specified port if the HW supports TPID configuration. The possible
+								values are 0x8100, 0x9100, 0x9200, 0x88a8, and 0x88A8";
 					type stypes:tpid_type;
 				}
 

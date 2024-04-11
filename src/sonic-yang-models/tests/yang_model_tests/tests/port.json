@@ -60,6 +60,15 @@
     "PORT_VALID_TYPE_TEST": {
         "desc": "PORT_VALID_TYPE_TEST no failure."
     },
+    "PORT_COREID_TYPE_TEST": {
+        "desc": "PORT_COREID_TYPE_TEST no failure."
+    },
+    "PORT_COREPORTID_TYPE_TEST": {
+        "desc": "PORT_COREPORTID_TYPE_TEST no failure."
+    },
+    "PORT_NUMVOQ_TYPE_TEST": {
+        "desc": "PORT_NUMVOQ_TYPE_TEST no failure."
+    },
     "PORT_INVALID_TYPE_TEST": {
         "desc": "PORT_INVALID_TYPE_TEST InvalidValue condition failure.",
         "eStrKey" : "InvalidValue",
