@@ -11,6 +11,34 @@
             }
         }
     },
+    "DEVICE_METADATA_ASIC_ID": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "DUT-CSW",
+                    "asic_id": "06:00.0",
+                    "asic_name": "asic0",
+                    "platform": "Stone-DX010"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_ASIC_NAME": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "DUT-CSW",
+                    "asic_id": "06:00.0",
+                    "asic_name": "asic0",
+                    "platform": "Stone-DX010"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_DEFAULT_DOCKER_ROUTING_CONFIG_MODE": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {

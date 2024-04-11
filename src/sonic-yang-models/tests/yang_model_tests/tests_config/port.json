@@ -278,6 +278,66 @@
         }
     },
 
+    "PORT_COREID_TYPE_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "alias": "eth8",
+                        "coreId": "1",
+                        "corePortId": "1",
+                        "numVoq": "8",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "autoneg": "on",
+                        "interface_type": "CR4"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_COREPORTID_TYPE_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "alias": "eth8",
+                        "coreId": "1",
+                        "corePortId": "1",
+                        "numVoq": "8",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "autoneg": "on",
+                        "interface_type": "CR4"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_NUMVOQ_TYPE_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "alias": "eth8",
+                        "coreId": "1",
+                        "corePortId": "1",
+                        "numVoq": "8",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "autoneg": "on",
+                        "interface_type": "CR4"
+                    }
+                ]
+            }
+        }
+    },
+
     "PORT_INVALID_TYPE_TEST": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
