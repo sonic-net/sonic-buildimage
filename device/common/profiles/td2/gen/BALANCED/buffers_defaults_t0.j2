@@ -1,5 +1,12 @@
 {%- set default_cable = '0m' %}
 
+{%- set ports2cable = {
+        'torrouter_server'       : '300m',
+        'leafrouter_torrouter'   : '300m',
+        'spinerouter_leafrouter' : '300m'
+        }
+-%}
+
 {%- include 'buffer_ports_t0.j2' %}
 
 {%- macro generate_buffer_pool_and_profiles() %}
