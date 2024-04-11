@@ -13,7 +13,7 @@ import syslog
 import os
 from swsscommon.swsscommon import ConfigDBConnector
 
-class security_cipher:
+class master_key_mgr:
     _instance = None
     _lock = threading.Lock()
     _initialized = False
@@ -21,7 +21,7 @@ class security_cipher:
     def __new__(cls):
         with cls._lock:
             if cls._instance is None:
-                cls._instance = super(security_cipher, cls).__new__(cls)
+                cls._instance = super(master_key_mgr, cls).__new__(cls)
                 cls._instance._initialized = False
         return cls._instance
 

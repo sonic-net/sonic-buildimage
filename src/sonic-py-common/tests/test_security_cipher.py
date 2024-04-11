@@ -6,7 +6,7 @@ else:
     import mock
 
 import pytest
-from sonic_py_common.security_cipher import security_cipher
+from sonic_py_common.security_cipher import master_key_mgr 
 from .mock_swsscommon import ConfigDBConnector
 
 # TODO: Remove this if/else block once we no longer support Python 2
@@ -35,7 +35,7 @@ class TestSecurityCipher(object):
         with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
                 mock.patch("os.chmod") as mock_chmod, \
                 mock.patch("{}.open".format(BUILTINS),mock.mock_open()) as mock_file:
-            temp = security_cipher()
+            temp = master_key_mgr()
 
             # Use patch to replace the built-in 'open' function with a mock
             with mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file, \
@@ -50,7 +50,7 @@ class TestSecurityCipher(object):
         with mock.patch("sonic_py_common.security_cipher.ConfigDBConnector", new=ConfigDBConnector), \
                 mock.patch("os.chmod") as mock_chmod, \
                 mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file:
-            temp = security_cipher()
+            temp = master_key_mgr()
 
             # Use patch to replace the built-in 'open' function with a mock
             with mock.patch("{}.open".format(BUILTINS), mock.mock_open()) as mock_file, \
