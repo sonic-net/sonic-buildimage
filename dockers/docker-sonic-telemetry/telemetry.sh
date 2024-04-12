@@ -19,6 +19,7 @@ CERTS=$(echo $TELEMETRY_VARS | jq -r '.certs')
 
 TELEMETRY_ARGS=" -logtostderr"
 export CVL_SCHEMA_PATH=/usr/sbin/schema
+export GOTRACEBACK=crash
 
 if [ -n "$CERTS" ]; then
     SERVER_CRT=$(echo $CERTS | jq -r '.server_crt')
