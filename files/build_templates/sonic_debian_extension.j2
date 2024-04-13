@@ -1025,6 +1025,9 @@ sudo rm -rf $FILESYSTEM_ROOT/$MLNX_SONIC_PLATFORM_PY3_WHEEL_NAME
 # Install service that manages Nvidia specific shared storage
 sudo cp platform/mellanox/nv-syncd-shared/nv-syncd-shared.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable nv-syncd-shared
+
+# Install minicom package
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install minicom
 {% endif %}
 
 {%- if SONIC_ROUTING_STACK == "frr" %}
