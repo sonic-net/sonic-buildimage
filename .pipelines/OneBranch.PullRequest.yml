@@ -133,7 +133,7 @@ stages:
             ENABLE_SYNCD_RPC: 'n'
           script: |
             set -ex
-            make PLATFORM=marvell-armhf PLATFORM_ARCH=armhf configure
+            make PLATFORM=marvell PLATFORM_ARCH=armhf configure
             make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/armhf target/sonic-marvell-armhf.bin
             mv target $(Build.ArtifactStagingDirectory)
 

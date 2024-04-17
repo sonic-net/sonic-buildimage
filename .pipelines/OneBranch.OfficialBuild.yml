@@ -82,7 +82,9 @@ stages:
             echo "SONIC_VERSION=$SONIC_VERSION, LATEST_TAG=$LATEST_TAG"
             echo "##vso[task.setvariable variable=SONIC_VERSION]$SONIC_VERSION"
             echo "##vso[task.setvariable variable=LATEST_TAG]$LATEST_TAG"
-            ENABLE_DOCKER_BASE_PULL=y make PLATFORM=$(GROUP_NAME) PLATFORM_ARCH=$(PLATFORM_ARCH) $(BUILD_OPTIONS) configure
+            PLATFORM=$(GROUP_NAME)
+            [ -n "$PLATFORM_NAME" ] && PLATFORM=$PLATFORM_NAME
+            ENABLE_DOCKER_BASE_PULL=y make PLATFORM=$PLATFORM PLATFORM_ARCH=$(PLATFORM_ARCH) $(BUILD_OPTIONS) configure
           displayName: 'Make configure'
       postSteps:
         - task: ManifestGeneratorTask@0
@@ -277,6 +279,7 @@ stages:
           timeoutInMinutes: 2160
           variables:
             PLATFORM_ARCH: armhf
+            PLATFORM_NAME: marvell
           script: |
             OPTIONS="$(BUILD_OPTIONS) PASSWORD=$PASSWORD"
             make $OPTIONS target/sonic-marvell-armhf.bin
