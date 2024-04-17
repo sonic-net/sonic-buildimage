@@ -2636,6 +2636,14 @@
             "dpu1": {
                 "midplane_interface": "dpu1"
             }
+        },
+        "BANNER_MESSAGE": {
+            "global": {
+                "state": "enabled",
+                "login": "Some login message",
+                "motd": "Some message of the day",
+                "logout": "Some logout message"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {

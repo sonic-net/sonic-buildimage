@@ -19,13 +19,6 @@
                                                                      "config": {
                                                                              "vlan_id": "1000"
                                                                      }
-                                                             },
-                                                             "input_interface": {
-                                                                     "interface_ref": {
-                                                                             "config": {
-                                                                                     "interface": "Ethernet12,Ethernet16,Ethernet20,Ethernet24,Ethernet28,Ethernet32,Ethernet36,Ethernet4,Ethernet40,Ethernet44,Ethernet48,Ethernet52,Ethernet56,Ethernet60,Ethernet64,Ethernet68,Ethernet72,Ethernet76,Ethernet8"
-                                                                             }
-                                                                      }
                                                              }
 
                                                      }

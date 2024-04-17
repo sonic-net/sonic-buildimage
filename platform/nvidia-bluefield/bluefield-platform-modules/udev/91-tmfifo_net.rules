@@ -1,0 +1,1 @@
+SUBSYSTEM=="net", ACTION=="add", DEVPATH=="/devices/platform/MLNXBF01:00/virtio1/net/eth*", NAME="tmfifo_net0"

@@ -1,8 +1,0 @@
-nokia-7215_plt_setup.sh usr/sbin
-7215/scripts/nokia-7215init.sh  usr/local/bin
-7215/scripts/cpu_wdt.py  usr/local/bin
-7215/service/nokia-7215init.service  etc/systemd/system
-7215/service/cpu_wdt.service  etc/systemd/system
-7215/service/fstrim.timer/timer-override.conf  /lib/systemd/system/fstrim.timer.d
-7215/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/armhf-nokia_ixs7215_52x-r0
-inband_mgmt.sh etc/

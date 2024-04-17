@@ -1,0 +1,106 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+#export DH_VERBOSE = 1
+
+include /usr/share/dpkg/pkg-info.mk
+#--------------------------------------------------------
+
+PACKAGE_PRE_NAME := sonic-platform-nokia
+ifneq ($(CROSS_BUILD_ENVIRON), y)
+KVERSION   ?= $(shell uname -r)
+endif
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+INSTALL_MOD_DIR := kernel/extra/
+MOD_SRC_DIR:= $(shell pwd)
+MODULE_DIRS:= 7215 7215-a1
+UTILS_DIR := utils
+MODULE_DIR:= modules
+MRVL_MODULE_DIR:= mrvl-modules
+PRESTERA_MODULE_PREFIX := mrvl-prestera/drivers/generic/
+PRESTERA_MODULE_PREFIX_ARMHF := mrvl-prestera/drivers/armhf/
+PRESTERA_MODULE_SRC := /cpssEnabler/linuxNoKernelModule/drivers/
+SERVICE_DIR := service
+PLATFORM_DIR := sonic_platform
+
+%:
+	dh $@ --with systemd,python3 --buildsystem=pybuild
+
+clean:
+	dh_testdir
+	dh_testroot
+	dh_clean
+	(for mod in $(MODULE_DIRS); do \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		rm -rf build/; \
+		rm -rf $(MRVL_MODULE_DIR)/; \
+		rm -rf *.egg-info/; \
+		rm -f *.whl; \
+		cd $(MOD_SRC_DIR)/; \
+	done)
+
+build:
+	(for mod in $(MODULE_DIRS); do \
+		mkdir -p $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR); \
+		if [ $$mod = "7215-a1" ] && [ $(CONFIGURED_ARCH) = "arm64" ]; then \
+			cp -r $(MOD_SRC_DIR)/../$(PRESTERA_MODULE_PREFIX)/* $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/; \
+			cd $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/$(PRESTERA_MODULE_SRC); \
+			make clean; \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+			cd $(MOD_SRC_DIR); \
+			make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
+		elif [ $$mod = "7215" ] && [ $(CONFIGURED_ARCH) = "armhf" ]; then \
+			cp -r $(MOD_SRC_DIR)/../$(PRESTERA_MODULE_PREFIX_ARMHF)/* $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/; \
+			cd $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/$(PRESTERA_MODULE_SRC); \
+			make clean; \
+			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVDMA=y CONFIG_KM_MVINT=y || exit 1; \
+		fi; \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		python3 setup.py build; \
+		python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+		cd $(MOD_SRC_DIR); \
+	done)
+
+binary: binary-arch binary-indep
+	# Nothing to do
+
+binary-arch:
+	# Nothing to do
+
+binary-indep:
+	dh_testdir
+	dh_installdirs
+
+	# Custom package commands
+	(for mod in $(MODULE_DIRS); do \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/local/bin; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /boot; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /lib/systemd/system; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/$(PRESTERA_MODULE_SRC)/mvcpss.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		python3 setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
+		cd $(MOD_SRC_DIR); \
+	done)
+
+	# Resuming debhelper scripts
+	dh_testroot
+	dh_install
+	dh_installchangelogs
+	dh_installdocs
+	dh_systemd_enable
+	dh_installinit
+	dh_systemd_start
+	dh_link
+	dh_fixperms
+	dh_compress
+	dh_strip
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+.PHONY: build binary binary-arch binary-indep clean

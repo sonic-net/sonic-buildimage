@@ -1,8 +1,0 @@
-DPATH       := $($(DOCKER_SAISERVER_MRVL)_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/marvell-armhf/docker-saiserver-mrvl.mk platform/marvell-armhf/docker-saiserver-mrvl.dep
-DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES   += $(shell git ls-files $(DPATH))
-
-$(DOCKER_SAISERVER_MRVL)_CACHE_MODE  := GIT_CONTENT_SHA 
-$(DOCKER_SAISERVER_MRVL)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
-$(DOCKER_SAISERVER_MRVL)_DEP_FILES   := $(DEP_FILES)

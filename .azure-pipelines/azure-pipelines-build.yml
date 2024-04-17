@@ -90,6 +90,7 @@ jobs:
             pool: sonicbld-armhf
           timeoutInMinutes: 2880
           variables:
+            PLATFORM_NAME: marvell
             PLATFORM_ARCH: armhf
 
         - name: marvell-arm64
@@ -97,6 +98,7 @@ jobs:
             pool: sonicbld-arm64
           timeoutInMinutes: 2880
           variables:
+            PLATFORM_NAME: marvell
             PLATFORM_ARCH: arm64
 
         - name: marvell

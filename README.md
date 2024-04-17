@@ -204,7 +204,7 @@ make target/sonic-[ASIC_VENDER]-armhf.bin
 _example:_
 
 ```shell
-make configure PLATFORM=marvell-armhf PLATFORM_ARCH=armhf
+make configure PLATFORM=marvell PLATFORM_ARCH=armhf
 make target/sonic-marvell-armhf.bin
 ```
 
@@ -215,7 +215,7 @@ using cross-compilation, run the following commands:
 # Execute make configure once to configure ASIC and ARCH for cross-compilation build
 
 NOJESSIE=1 NOSTRETCH=1 BLDENV=buster CROSS_BLDENV=1 \
-make configure PLATFORM=marvell-armhf PLATFORM_ARCH=armhf
+make configure PLATFORM=marvell PLATFORM_ARCH=armhf
 
 # Execute Arm32 build using cross-compilation environment
 
@@ -234,7 +234,7 @@ make configure PLATFORM=[ASIC_VENDOR] PLATFORM_ARCH=arm64
 
 # example:
 
-make configure PLATFORM=marvell-arm64 PLATFORM_ARCH=arm64
+make configure PLATFORM=marvell PLATFORM_ARCH=arm64
 ```
 
  **NOTE**:
