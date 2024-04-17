@@ -79,11 +79,13 @@ stages:
       - name: marvell-arm64
         pool: sonicbld-arm64
         variables:
+           PLATFORM_NAME: marvell
            PLATFORM_ARCH: arm64
       - name: marvell-armhf
         pool: sonicbld-armhf
         timeoutInMinutes: 1200
         variables:
+          PLATFORM_NAME: marvell
           PLATFORM_ARCH: armhf
           INCLUDE_RESTAPI: y
 

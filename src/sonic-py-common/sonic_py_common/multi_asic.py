@@ -527,6 +527,19 @@ def get_asic_presence_list():
     return asics_list
 
 
+def get_container_name_from_asic_id(service_name, asic_id):
+    """Get the container name for a service according to the ASIC ID
+
+    Args:
+        service_name (str): feature/service name
+        asic_id (int): ASIC ID
+
+    Returns:
+        str: container name of the service in the given ASIC namespace
+    """
+    return '{}{}'.format(service_name, asic_id)
+
+  
 def is_front_panel_port(port, role=None):
     """
     @summary: This function will check if the interface is a front-panel port

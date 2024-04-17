@@ -1,0 +1,18 @@
+# postinst script for sonic-platform-modules-bluefield2
+
+set +e
+
+depmod -a
+{% if driver_targets.strip() %}
+{%- for k_module in driver_targets.strip().split() -%}
+modprobe {{ k_module.split(".")[0] }}
+{% endfor %}
+{% endif -%}
+
+sync
+
+systemctl enable serial-getty@hvc0.service
+systemctl enable serial-getty@ttyAMA0.service
+systemctl enable serial-getty@ttyAMA1.service
+
+#DEBHELPER#

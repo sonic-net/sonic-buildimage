@@ -1,0 +1,12 @@
+[Unit]
+Description=DPU initialization routine
+After=getty.target
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/bfrshlog "Linux up"
+ExecStart=/usr/bin/bfrshlog "DPU is ready"
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target

@@ -107,7 +107,7 @@ echo -n "."
 cp -r $onie_installer_payload $tmp_installdir || clean_up 1
 echo -n "."
 [ -r "$platform_conf" ] && {
-    cp $platform_conf $tmp_installdir || clean_up 1
+    cp $platform_conf $tmp_installdir/platform.conf || clean_up 1
 }
 echo "machine=$machine" > $tmp_installdir/machine.conf
 echo "platform=$platform" >> $tmp_installdir/machine.conf

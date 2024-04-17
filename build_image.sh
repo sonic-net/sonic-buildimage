@@ -9,7 +9,11 @@ set -x -e
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 if [[ $CONFIGURED_ARCH == armhf || $CONFIGURED_ARCH == arm64 ]]; then
-    . ./onie-image-${CONFIGURED_ARCH}.conf
+    if [ -r ./platform/${CONFIGURED_PLATFORM}/onie-image-${CONFIGURED_ARCH}.conf ]; then
+        . ./platform/${CONFIGURED_PLATFORM}/onie-image-${CONFIGURED_ARCH}.conf
+    else
+        . ./onie-image-${CONFIGURED_ARCH}.conf
+    fi
 else
     . ./onie-image.conf
 fi
@@ -82,10 +86,14 @@ generate_onie_installer_image()
         done
     done
 
+    platform_conf_file="platform/$TARGET_MACHINE/platform_${CONFIGURED_ARCH}.conf"
+    if [ ! -f $platform_conf_file ]; then
+        platform_conf_file="platform/$TARGET_MACHINE/platform.conf"
+    fi
     ## Generate an ONIE installer image
     ## Note: Don't leave blank between lines. It is single line command.
     ./onie-mk-demo.sh $CONFIGURED_ARCH $TARGET_MACHINE $TARGET_PLATFORM-$TARGET_MACHINE-$ONIEIMAGE_VERSION \
-          installer platform/$TARGET_MACHINE/platform.conf $output_file OS $IMAGE_VERSION $ONIE_IMAGE_PART_SIZE \
+          installer $platform_conf_file $output_file OS $IMAGE_VERSION $ONIE_IMAGE_PART_SIZE \
           $INSTALLER_PAYLOAD $SECURE_UPGRADE_SIGNING_CERT $SECURE_UPGRADE_DEV_SIGNING_KEY
 }
 
