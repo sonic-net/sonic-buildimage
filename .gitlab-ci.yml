@@ -139,6 +139,61 @@ express:chassis7:
       - output_files/
     expire_in: 1 month
 
+.regress:
+  stage: test
+  needs:
+    - build:sonic:x86_64
+  script: |
+    if [ -n "${DELAY_START}" ]; then sleep ${DELAY_START}; fi
+    docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
+    ./run_test.sh -i target/sonic-broadcom-dnx.bin \
+      -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net \
+      -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test \
+      --run_in_order false --topology t2 ${EXTRA_RUN_TEST_ARGS} \
+      --no_cleanup --post_results > ${CI_PROJECT_DIR}/run.log
+  allow_failure: true
+  artifacts:
+    name: "$CI_COMMIT_REF_NAME"
+    when: always
+    paths:
+      - output_files/
+      - ${CI_PROJECT_DIR}/run.log
+    expire_in: 1 month
+
+regress:t2:chassis8:
+  extends: .regress
+  tags:
+    - regress_chassis8
+  variables:
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS: --suite masic
+  only:
+    variables:
+      - $REGRESS_T2_CHASSIS8
+
+regress:t2:chassis9:
+  extends: .regress
+  tags:
+    - regress_chassis9
+  variables:
+    DELAY_START: 100
+    EXTRA_RUN_TEST_ARGS: --suite masic
+  only:
+    variables:
+      - $REGRESS_T2_CHASSIS9
+
+regress:t2:chassis11:
+  extends: .regress
+  tags:
+    - regress_chassis11
+  variables:
+    DELAY_START: 300
+    EXTRA_RUN_TEST_ARGS: --suite masic
+  only:
+    variables:
+      - $REGRESS_T2_CHASSIS11
+
 .post:
   stage: post
   only:
