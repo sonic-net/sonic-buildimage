@@ -106,6 +106,7 @@ class BGPPeerMgrBase(Manager):
 
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
+            ("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "tsa_enabled"),
             ("LOCAL", "local_addresses", ""),
             ("LOCAL", "interfaces", ""),
         ]

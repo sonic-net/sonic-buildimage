@@ -5,7 +5,7 @@ include $(PLATFORM_PATH)/sai.mk
 # * Juniper
 # * Ragile
 # * Ufispace
-#include $(PLATFORM_PATH)/platform-modules-nokia.mk
+include $(PLATFORM_PATH)/platform-modules-nokia.mk
 include $(PLATFORM_PATH)/platform-modules-dell.mk
 include $(PLATFORM_PATH)/platform-modules-arista.mk
 #include $(PLATFORM_PATH)/platform-modules-ingrasys.mk

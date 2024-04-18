@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,6 +62,7 @@ endif
 
 MLNX_FILES += $(MLNX_FW_FILES)
 
+export MLNX_SPC_FW_VERSION MLNX_SPC2_FW_VERSION MLNX_SPC3_FW_VERSION MLNX_SPC4_FW_VERSION
 export MLNX_SPC_FW_FILE
 export MLNX_SPC2_FW_FILE
 export MLNX_SPC3_FW_FILE

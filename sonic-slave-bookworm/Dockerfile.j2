@@ -421,7 +421,29 @@ RUN apt-get update && apt-get install -y \
         protobuf-compiler \
         libprotobuf-dev \
 # For sonic-dhcp6relay build
-        libjsoncpp-dev
+        libjsoncpp-dev \
+#for nvidia-blufield driver compilation
+        pciutils \
+        dh-dkms \
+        rpm2cpio \
+        libsnmp-dev \
+        libpopt-dev \
+{%- if CONFIGURED_ARCH == "arm64" %}
+        grub-efi-arm64-bin \
+{%- endif %}
+        efibootmgr \
+        watchdog \
+        dmidecode \
+# For nvidia-blufield sdk compilation
+        cython3 \
+        pandoc \
+        valgrind \
+        udev \
+        inkscape \
+        meson \
+        python3-pyelftools \
+        hwdata \
+        libzip-dev
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages

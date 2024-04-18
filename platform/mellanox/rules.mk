@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,6 +34,7 @@ include $(PLATFORM_PATH)/mlnx-ssd-fw-update.mk
 include $(PLATFORM_PATH)/iproute2.mk
 include $(PLATFORM_PATH)/install-pending-fw.mk
 include $(PLATFORM_PATH)/integration-scripts.mk
+include $(PLATFORM_PATH)/component-versions.mk
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) \
              $(DOCKER_FPM)

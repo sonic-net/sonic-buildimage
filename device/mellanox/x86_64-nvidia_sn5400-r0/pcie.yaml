@@ -1,0 +1,145 @@
+##
+## Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+## Apache-2.0
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+## http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: 3ec4
+  name: 'Host bridge: Intel Corporation 8th Gen Core Processor Host Bridge/DRAM Registers
+    (rev 07)'
+- bus: '00'
+  dev: '01'
+  fn: '0'
+  id: '1901'
+  name: 'PCI bridge: Intel Corporation 6th-10th Gen Core Processor PCIe Controller
+    (x16) (rev 07)'
+- bus: '00'
+  dev: '01'
+  fn: '1'
+  id: '1905'
+  name: 'PCI bridge: Intel Corporation Xeon E3-1200 v5/E3-1500 v5/6th Gen Core Processor
+    PCIe Controller (x8) (rev 07)'
+- bus: '00'
+  dev: 08
+  fn: '0'
+  id: '1911'
+  name: 'System peripheral: Intel Corporation Xeon E3-1200 v5/v6 / E3-1500 v5 / 6th/7th/8th
+    Gen Core Processor Gaussian Mixture Model'
+- bus: '00'
+  dev: '12'
+  fn: '0'
+  id: a379
+  name: 'Signal processing controller: Intel Corporation Cannon Lake PCH Thermal Controller
+    (rev 10)'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: a36d
+  name: 'USB controller: Intel Corporation Cannon Lake PCH USB 3.1 xHCI Host Controller
+    (rev 10)'
+- bus: '00'
+  dev: '14'
+  fn: '2'
+  id: a36f
+  name: 'RAM memory: Intel Corporation Cannon Lake PCH Shared SRAM (rev 10)'
+- bus: '00'
+  dev: '15'
+  fn: '0'
+  id: a368
+  name: 'Serial bus controller [0c80]: Intel Corporation Cannon Lake PCH Serial IO
+    I2C Controller #0 (rev 10)'
+- bus: '00'
+  dev: '16'
+  fn: '0'
+  id: a360
+  name: 'Communication controller: Intel Corporation Cannon Lake PCH HECI Controller
+    (rev 10)'
+- bus: '00'
+  dev: '17'
+  fn: '0'
+  id: a353
+  name: 'SATA controller: Intel Corporation Cannon Lake Mobile PCH SATA AHCI Controller
+    (rev 10)'
+- bus: '00'
+  dev: 1b
+  fn: '0'
+  id: a340
+  name: 'PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #17 (rev
+    f0)'
+- bus: '00'
+  dev: 1b
+  fn: '4'
+  id: a32c
+  name: 'PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #21 (rev
+    f0)'
+- bus: '00'
+  dev: 1c
+  fn: '0'
+  id: a33d
+  name: 'PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #6 (rev
+    f0)'
+- bus: '00'
+  dev: 1c
+  fn: '6'
+  id: a33e
+  name: 'PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #7 (rev
+    f0)'
+- bus: '00'
+  dev: 1c
+  fn: '7'
+  id: a33f
+  name: 'PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #8 (rev
+    f0)'
+- bus: '00'
+  dev: 1d
+  fn: '0'
+  id: a334
+  name: 'PCI bridge: Intel Corporation Cannon Lake PCH PCI Express Root Port #13 (rev
+    f0)'
+- bus: '00'
+  dev: 1e
+  fn: '0'
+  id: a328
+  name: 'Communication controller: Intel Corporation Cannon Lake PCH Serial IO UART
+    Host Controller (rev 10)'
+- bus: '00'
+  dev: 1f
+  fn: '0'
+  id: a30e
+  name: 'ISA bridge: Intel Corporation Cannon Lake LPC Controller (rev 10)'
+- bus: '00'
+  dev: 1f
+  fn: '4'
+  id: a323
+  name: 'SMBus: Intel Corporation Cannon Lake PCH SMBus Controller (rev 10)'
+- bus: '00'
+  dev: 1f
+  fn: '5'
+  id: a324
+  name: 'Serial bus controller [0c80]: Intel Corporation Cannon Lake PCH SPI Controller
+    (rev 10)'
+- bus: '00'
+  dev: 1f
+  fn: '6'
+  id: 15bb
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection (7) I219-LM (rev
+    10)'
+- bus: '01'
+  dev: '00'
+  fn: '0'
+  id: cf80
+  name: 'Ethernet controller: Mellanox Technologies Spectrum-4'

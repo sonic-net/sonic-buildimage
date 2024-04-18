@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -109,6 +109,14 @@ DEVICE_DATA = {
             "capability": {
                 "comex_amb": False,
                 "cpu_amb": True
+            }
+        }
+    },
+    'x86_64-nvidia_sn5400-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False,
+                "pch_temp": True
             }
         }
     },
