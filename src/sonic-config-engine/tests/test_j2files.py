@@ -384,6 +384,9 @@ class TestJ2Files(TestCase):
     def test_qos_arista7260_render_template(self):
         self._test_qos_render_template('arista', 'x86_64-arista_7260cx3_64', 'Arista-7260CX3-D96C16', 'sample-arista-7260-t1-minigraph-remap-disabled.xml', 'qos-arista7260.json')
 
+    def test_qos_arista7260t0_render_template(self):
+        self._test_qos_render_template('arista', 'x86_64-arista_7260cx3_64', 'Arista-7260CX3-D92C16', 'sample-arista-7260-t0-minigraph.xml', 'qos-arista7260-t0.json')
+
     def _test_qos_render_template(self, vendor, platform, sku, minigraph, expected, copy_files=False):
         file_exist, dir_exist = self.create_machine_conf(platform, vendor)
         dir_path = os.path.join(self.test_dir, '..', '..', '..', 'device', vendor, platform, sku)
@@ -571,6 +574,9 @@ class TestJ2Files(TestCase):
 
     def test_buffers_mellanox2410_render_template(self):
         self._test_buffers_render_template('mellanox', 'x86_64-mlnx_msn2410-r0', 'ACS-MSN2410', 'sample-mellanox-2410-t1-minigraph.xml', 'buffers.json.j2', 'buffers-mellanox2410.json')
+
+    def test_buffers_arista7260_render_template(self):
+        self._test_buffers_render_template('arista', 'x86_64-arista_7260cx3_64', 'Arista-7260CX3-D92C16', 'sample-arista-7260-t0-minigraph.xml', 'buffers.json.j2', 'buffer-arista7260-t0.json')
 
     def test_buffers_mellanox2410_dynamic_render_template(self):
         self._test_buffers_render_template('mellanox', 'x86_64-mlnx_msn2410-r0', 'ACS-MSN2410', 'sample-mellanox-2410-t1-minigraph.xml', 'buffers_dynamic.json.j2', 'buffers-mellanox2410-dynamic.json')
