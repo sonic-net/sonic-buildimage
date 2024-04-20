@@ -1,0 +1,10 @@
+sonic-platform-vs (1.0) UNRELEASED; urgency=low
+
+  * Initial release of the sonic-platform-vs package.
+  * This package provides platform-specific modules for SONiC on virtualized VS platforms.
+  * Included modules:
+    - Chassis module
+  * This package is part of the initial release of SONiC for VS platforms.
+
+ -- Deepak Singhal <deepsinghal@microsoft.com>  Fri, 26 Feb 2024 12:00:00 +0000
+

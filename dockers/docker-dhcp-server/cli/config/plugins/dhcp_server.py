@@ -427,14 +427,19 @@ def dhcp_server_ipv4_option_unbind(db, dhcp_interface, option_list, all_):
     if not dbconn.exists("CONFIG_DB", key):
         ctx.fail("Interface {} is not valid dhcp interface".format(dhcp_interface))
     if all_:
-        dbconn.set("CONFIG_DB", key, "customized_options@", "")
+        redis_client = dbconn.get_redis_client("CONFIG_DB")
+        redis_client.hdel(key, "customized_options@")
     else:
         unbind_value = set(option_list.split(","))
         existing_value = dbconn.get("CONFIG_DB", key, "customized_options@")
         value_set = set(existing_value.split(",")) if existing_value else set()
         if value_set.issuperset(unbind_value):
             new_value_set = value_set.difference(unbind_value)
-            dbconn.set("CONFIG_DB", key, "customized_options@", ",".join(new_value_set))
+            if new_value_set:
+                dbconn.set("CONFIG_DB", key, "customized_options@", ",".join(new_value_set))
+            else:
+                redis_client = dbconn.get_redis_client("CONFIG_DB")
+                redis_client.hdel(key, "customized_options@")
         else:
             ctx.fail("Attempting to unbind option that is not binded")
 

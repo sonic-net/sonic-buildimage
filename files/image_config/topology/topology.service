@@ -12,5 +12,4 @@ ExecStart=/usr/bin/topology.sh start
 ExecStop=/usr/bin/topology.sh stop
 
 [Install]
-WantedBy=multi-user.target
-
+WantedBy=sonic.target
