@@ -31,7 +31,7 @@ import base64
 from collections import OrderedDict
 from config_samples import generate_sample_config, get_available_config
 from functools import partial
-from minigraph import minigraph_encoder, parse_xml, parse_device_desc_xml, parse_asic_sub_role, parse_asic_switch_type
+from minigraph import minigraph_encoder, parse_xml, parse_device_desc_xml, parse_asic_sub_role, parse_asic_switch_type, parse_hostname
 from portconfig import get_port_config, get_breakout_mode
 from smartswitch_config import get_smartswitch_config
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic
@@ -431,18 +431,23 @@ def main():
     if args.platform_info:
         asic_role = None
         switch_type = None
+        hostname = None
+
+        if args.minigraph is not None:
+            hostname = parse_hostname(args.minigraph)
+
         if asic_name is not None:
             if args.minigraph is not None:
                 asic_role = parse_asic_sub_role(args.minigraph, asic_name)
                 switch_type = parse_asic_switch_type(args.minigraph, asic_name)
-
             if ((switch_type is not None and switch_type.lower() == "chassis-packet") or
-                (asic_role is not None and asic_role.lower() == "backend")):
-                mac = device_info.get_system_mac(namespace=asic_name)
+                (asic_role is not None and asic_role.lower() == "backend") or
+                (platform == device_info.VS_PLATFORM)) :
+                mac = device_info.get_system_mac(namespace=asic_name, hostname=hostname)
             else:
                 mac = device_info.get_system_mac()
         else:
-            mac = device_info.get_system_mac()
+            mac = device_info.get_system_mac(hostname=hostname)
 
         hardware_data = {'DEVICE_METADATA': {'localhost': {
             'platform': platform,

@@ -755,7 +755,7 @@ class TestConfigDHCPServer(object):
                 ["Vlan100", "option60"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
         result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "customized_options@")
-        assert result == None or result == ""
+        assert result == None
 
     def test_config_dhcp_server_ipv4_option_unbind_nonexisting_intf(self, mock_db):
         runner = CliRunner()
