@@ -1,7 +1,7 @@
 ifneq ($(KERNELRELEASE),)
 obj-m:= wistron_6512_32r_cpld.o wistron_6512_32r_fan.o \
 		wistron_6512_32r_oom.o wistron_6512_32r_psu.o \
-		wistron_6512_32r_thermal.o i2c-imc.o \
+		wistron_6512_32r_thermal.o i2c-imc.o oldjc42.o \
 		wistron_6512_32r_leds.o wistron_6512_32r_syseeprom.o
 else
 ifeq (,$(KERNEL_SRC))
