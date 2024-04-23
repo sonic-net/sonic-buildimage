@@ -110,7 +110,7 @@ class Watchdog(WatchdogBase):
     def _gettimeout(self):
         #IPMI_WDT_GET_TIMEOUT_CMD
         out, err = self.pipeline("ipmitool mc watchdog get", "grep Present", "awk '{print $3}'")
-        return int(out.decode().rstrip('\n'), 10)
+        return int(float(out.decode().rstrip('\n')))
 
     def arm(self, seconds):
         """
