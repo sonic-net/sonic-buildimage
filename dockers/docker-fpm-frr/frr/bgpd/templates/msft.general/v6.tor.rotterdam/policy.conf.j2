@@ -1,7 +1,7 @@
 !
 ! template: bgpd/templates/msft.general/v6.tor.rotterdam/policy.conf.j2
 !
-ip community-list standard COMM_SDN_APPLIANCE permit 8075:9302
+bgp community-list standard COMM_SDN_APPLIANCE permit 8075:9302
 !
 route-map FROM_TIER1_V6 permit 1
   set ipv6 next-hop prefer-global
