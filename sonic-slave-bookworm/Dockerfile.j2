@@ -590,6 +590,12 @@ RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 # Install m2crypto package, needed by SWI tools
 RUN apt-get install python3-m2crypto
 
+# Install libthrift package needed by saithrift
+RUN apt-get install  libthrift-0.17 \
+        libthrift-dev \
+        thrift-compiler\
+        python3-thrift
+
 # Install swi tools
 RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261770237f7dd21ace3774ba04a017e9
 
