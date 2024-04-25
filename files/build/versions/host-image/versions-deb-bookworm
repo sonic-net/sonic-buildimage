@@ -62,7 +62,7 @@ grub2-common==2.06-13+deb12u1
 haveged==1.9.14-1+b1
 hdparm==9.65+ds-1
 hping3==3.a2.ds2-10
-hw-management==1.mlnx.7.0030.2008
+hw-management==1.mlnx.7.0030.3008
 i2c-tools==4.3-2+b3
 icu-devtools==72.1-3
 ifmetric==0.3-5
@@ -269,8 +269,8 @@ libzmq5==4.3.4-6
 linux-base==4.9
 linux-image-6.1.0-11-2-amd64-unsigned==6.1.38-4
 linux-image-6.1.0-11-2-arm64-unsigned==6.1.38-4
-linux-libc-dev==6.1.76-1
-linux-perf==6.1.76-1
+linux-libc-dev==6.1.85-1
+linux-perf==6.1.85-1
 locales==2.36-9+deb12u4
 logrotate==3.21.0-1
 lsof==4.95.0-1
@@ -280,6 +280,7 @@ media-types==10.0.0
 mft==4.27.0-83
 mft-fwtrace-cfg==1.0.0
 mft-oem==4.27.0-83
+minicom==2.8-2
 mokutil==0.6.0-2
 monit==1:5.20.0-6
 mount==2.38.1-5+deb12u1
@@ -297,9 +298,9 @@ ntpsec-ntpdate==1.2.2+dfsg1-1+deb12u1
 ntpsec-ntpdig==1.2.2+dfsg1-1+deb12u1
 ntpstat==0.0.0.1-2+b1
 opennsl-modules==7.1.0.0
-openssh-client==1:9.2p1-2+deb12u1
-openssh-server==1:9.2p1-2+deb12u1
-openssh-sftp-server==1:9.2p1-2+deb12u1
+openssh-client==1:9.2p1-2+deb12u2
+openssh-server==1:9.2p1-2+deb12u2
+openssh-sftp-server==1:9.2p1-2+deb12u2
 openssl==3.0.11-1~deb12u2
 pci.ids==0.0~2023.04.11-1
 pciutils==1:3.9.0-4
@@ -356,7 +357,7 @@ sonic-utilities-data==1.0-1
 sqlite3==3.40.1-2
 squashfs-tools==1:4.5.1-1
 sudo==1.9.13p3-1+deb12u1
-sx-kernel==1.mlnx.4.6.2202
+sx-kernel==1.mlnx.4.6.3064
 sysfsutils==2.1.1-4
 sysstat==12.6.1-1
 systemd==252.22-1~deb12u1

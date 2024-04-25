@@ -95,7 +95,7 @@ docbook-xml==4.5-8
 docker-buildx-plugin==0.10.5-1~debian.10~buster
 docker-ce==5:24.0.2-1~debian.10~buster
 docker-ce-cli==5:24.0.2-1~debian.10~buster
-docker-ce-rootless-extras==5:26.0.0-1~debian.10~buster
+docker-ce-rootless-extras==5:26.0.2-1~debian.10~buster
 docker-compose-plugin==2.18.1-1~debian.10~buster
 docutils-common==0.14+dfsg-4
 docutils-doc==0.14+dfsg-4
@@ -112,7 +112,7 @@ equivs==2.2.0
 exim4-base==4.92-8+deb10u9
 exim4-config==4.92-8+deb10u9
 exim4-daemon-light==4.92-8+deb10u9
-expat==2.2.6-2+deb10u6
+expat==2.2.6-2+deb10u7
 exuberant-ctags==1:5.9~svn20110310-12+deb10u1
 fakeroot==1.23-1
 file==1:5.35-4+deb10u2
@@ -292,7 +292,7 @@ libbind9-161==1:9.11.5.P4+dfsg-5.1+deb10u10
 libbinutils==2.31.1-16
 libbison-dev==2:3.3.2.dfsg-1
 libbit-vector-perl==7.4-1+b5
-libblkid-dev==2.33.1-0.1
+libblkid-dev==2.33.1-0.1+deb10u1
 libbluetooth3==5.50-1.2~deb10u4
 libbluray2==1:1.1.0-1+deb10u1
 libboost-atomic1.71-dev==1.71.0-6~bpo10+1
@@ -350,7 +350,7 @@ libc6-dev-i386==2.28-10+deb10u2
 libc6-dev-x32==2.28-10+deb10u2
 libc6-i386==2.28-10+deb10u2
 libc6-x32==2.28-10+deb10u2
-libcaca0==0.99.beta19-2.1
+libcaca0==0.99.beta19-2.1+deb10u1
 libcacard0==1:2.6.1-1
 libcaf-openmpi-3==2.4.0-2
 libcairo-gobject2==1.16.0-4+deb10u1
@@ -498,8 +498,8 @@ libevent-dev==2.1.8-stable-4
 libevent-extra-2.1-6==2.1.8-stable-4
 libevent-openssl-2.1-6==2.1.8-stable-4
 libevent-pthreads-2.1-6==2.1.8-stable-4
-libexpat1==2.2.6-2+deb10u6
-libexpat1-dev==2.2.6-2+deb10u6
+libexpat1==2.2.6-2+deb10u7
+libexpat1-dev==2.2.6-2+deb10u7
 libexplain-dev==1.4.D001-8
 libexplain51==1.4.D001-8
 libexporter-tiny-perl==1.002001-1
@@ -541,7 +541,7 @@ libgbm1==18.3.6-2+deb10u1
 libgc1c2==1:7.6.4-0.4
 libgcc-8-dev==8.3.0-6
 libgd-perl==2.71-2
-libgd3==2.2.5-5.2
+libgd3==2.2.5-5.2+deb10u1
 libgdbm-compat4==1.18.1-4
 libgdbm6==1.18.1-4
 libgdk-pixbuf2.0-0==2.38.1+dfsg-1
@@ -697,7 +697,7 @@ libjbig0==2.1-3.1+b2
 libjbig2dec0==0.16-1+deb10u1
 libjemalloc-dev==5.1.0-3
 libjemalloc2==5.1.0-3
-libjetty9-java==9.4.50-4+deb10u1
+libjetty9-java==9.4.50-4+deb10u2
 libjpeg62-turbo==1:1.5.2-2+deb10u1
 libjq1==1.5+dfsg-2+b1
 libjs-bootstrap==3.4.1+dfsg-1
@@ -802,7 +802,7 @@ libmodule-runtime-perl==0.016-1
 libmoo-perl==2.003004-2
 libmoose-perl==2.2011-1+b1
 libmoosex-aliases-perl==0.11-1
-libmount-dev==2.33.1-0.1
+libmount-dev==2.33.1-0.1+deb10u1
 libmp3lame0==3.100-2+b1
 libmpc3==1.1.0-1
 libmpdec2==2.4.2-2
@@ -1546,7 +1546,7 @@ python-packaging==19.0-1
 python-parse==1.6.6-0.1
 python-pathlib2==2.3.3-1
 python-pbr==4.2.0-5
-python-pil==5.4.1-2+deb10u5
+python-pil==5.4.1-2+deb10u6
 python-pip-whl==18.1-5
 python-pkg-resources==40.8.0-1
 python-pluggy==0.8.0-1
@@ -1631,7 +1631,7 @@ python3-nose2==0.8.0-1
 python3-olefile==0.46-1
 python3-packaging==19.0-1
 python3-pbr==4.2.0-5
-python3-pil==5.4.1-2+deb10u5
+python3-pil==5.4.1-2+deb10u6
 python3-pkg-resources==40.8.0-1
 python3-pluggy==0.8.0-1
 python3-py==1.7.0-2
@@ -1745,7 +1745,7 @@ tk8.6-blt2.5==2.5.3+dfsg-4
 ucf==3.0038+nmu1
 unattended-upgrades==1.11.2
 unzip==6.0-23+deb10u3
-uuid-dev==2.33.1-0.1
+uuid-dev==2.33.1-0.1+deb10u1
 va-driver-all==2.4.0-1
 vdpau-driver-all==1.1.1-10
 velocity==1.7-5+deb10u1

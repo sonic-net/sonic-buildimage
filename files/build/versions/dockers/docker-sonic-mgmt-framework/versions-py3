@@ -7,7 +7,7 @@ connexion==2.7.0
 flask==2.2.5
 grpcio==1.58.0
 grpcio-tools==1.20.0
-idna==3.6
+idna==3.7
 importlib-resources==5.12.0
 inflection==0.5.1
 itsdangerous==2.1.2

@@ -1304,6 +1304,13 @@
                 "report_type": "periodic"
             }
         },
+        "BMP": {
+            "table": {
+                "bgp_neighbor_table": "true",
+                "bgp_rib_in_table": "false",
+                "bgp_rib_out_table": "false"
+            }
+        },
         "GNMI": {
             "certs": {
                 "ca_crt": "/etc/sonic/credentials/dsmsroot.cer",

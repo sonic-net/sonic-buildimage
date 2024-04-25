@@ -33,6 +33,7 @@ Table of Contents
          * [Device neighbor metada](#device-neighbor-metada)
          * [DHCP_RELAY](#dhcp_relay)
          * [DHCP Server IPV4](#dhcp_server_ipv4)
+         * [BMP](#bmp)
          * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
          * [FG_NHG](#fg_nhg)
          * [FG_NHG_MEMBER](#fg_nhg_member)
@@ -1005,6 +1006,21 @@ instance is supported in SONiC.
     "interface_id": "true"
 }
 
+```
+
+### BMP
+BMP related configuration are defined in **bgp_neighbor_table**,**bgp_rib_in_table**, **bgp_rib_out_table** tables.
+
+```
+{
+    "BMP": {
+        "table": {
+            "bgp_neighbor_table": "true",
+            "bgp_rib_in_table": "false",
+            "bgp_rib_out_table": "false"
+        }
+    }
+}
 ```
 
 ### DHCP_SERVER_IPV4

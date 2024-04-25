@@ -1,3 +1,6 @@
 mrvlprestera==1.0
 ntpstat==0.0.0.1-2
+openssh-client==1:9.2p1-2+deb12u1
+openssh-server==1:9.2p1-2+deb12u1
+openssh-sftp-server==1:9.2p1-2+deb12u1
 tsingma-bsp==1.0
