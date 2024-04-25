@@ -127,6 +127,14 @@ DEVICE_DATA = {
                 "pch_temp": True
             }
         }
+    },
+    'x86_64-nvidia_sn4280_simx-r0': {
+        'thermal': {
+            "capability": {
+                "cpu_pack": False,
+                "comex_amb": False
+            }
+        }
     }
 }
 

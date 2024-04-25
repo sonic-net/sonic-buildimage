@@ -7,8 +7,6 @@ libatomic1==12.2.0-14
 libbpf1==1:1.1.0-1
 libbrotli1==1.0.9-2+b6
 libbsd0==0.11.7-2
-libc-bin==2.36-9+deb12u4
-libc6==2.36-9+deb12u4
 libcap2-bin==1:2.66-4
 libcurl4==7.88.1-10+deb12u5
 libdaemon0==0.14-7.1

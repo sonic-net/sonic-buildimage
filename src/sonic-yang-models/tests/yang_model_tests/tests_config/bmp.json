@@ -1,0 +1,24 @@
+{
+    "BMP_TABLE_WITH_VALID_CONFIG": {
+        "sonic-bmp:sonic-bmp": {
+            "sonic-bmp:BMP": {
+                "table": {
+                    "bgp_neighbor_table": "true",
+                    "bgp_rib_in_table": "false",
+                    "bgp_rib_out_table": "false"
+                }
+            }
+        }
+    },
+    "BMP_TABLE_WITH_INVALID_CONFIG": {
+        "sonic-bmp:sonic-bmp": {
+            "sonic-bmp:BMP": {
+                "table": {
+                    "bgp_neighbor_table": "up",
+                    "bgp_rib_in_table": "false",
+                    "bgp_rib_out_table": "false"
+                }
+            }
+        }
+    }
+}
