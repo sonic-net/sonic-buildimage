@@ -162,5 +162,12 @@
     "DEVICE_METADATA_INVALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
         "desc": "Verifying invalid create_only_config_db_buffers value",
         "eStrKey": "InvalidValue"
+    },
+    "DEVICE_METADATA_VALID_BGP_ROUTER_ID": {
+        "desc": "Verifying bgp_router_id configuration."
+    },
+    "DEVICE_METADATA_INVALID_BGP_ROUTER_ID": {
+        "desc": "Verifying invalid bgp_router_id configuration.",
+        "eStrKey": "Pattern"
     }
 }

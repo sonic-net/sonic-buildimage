@@ -444,5 +444,23 @@
                 }
             }
         }
+    },
+    "DEVICE_METADATA_VALID_BGP_ROUTER_ID": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_router_id": "8.8.8.8"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_BGP_ROUTER_ID": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "bgp_router_id": "8.8.8.300"
+                }
+            }
+        }
     }
 }
