@@ -368,7 +368,8 @@
                 "bgp_adv_lo_prefix_as_128": "true",
                 "yang_config_validation": "disable",
                 "rack_mgmt_map": "dummy_value",
-                "timezone": "Europe/Kiev"
+                "timezone": "Europe/Kiev",
+                "bgp_router_id": "8.8.8.8"
             }
         },
         "VLAN": {
