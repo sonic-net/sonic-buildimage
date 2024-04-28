@@ -182,7 +182,7 @@ tested_parsed_port = {
 expected_render_obj = {
     "subnets": [
         {
-            "subnet": "192.168.0.0/21",
+            "subnet": "192.168.0.0/21", 'id': '1000',
             "pools": [{"range": "192.168.0.2 - 192.168.0.6", "client_class": "sonic-host:etp8"},
                       {"range": "192.168.0.10 - 192.168.0.10", "client_class": "sonic-host:etp8"},
                       {"range": "192.168.0.7 - 192.168.0.7", "client_class": "sonic-host:etp7"}],
@@ -211,61 +211,53 @@ expected_render_obj = {
     },
     "hook_lib_path": "/usr/local/lib/kea/hooks/libdhcp_run_script.so"
 }
-tested_options_data = [
-    {
-        "data": {
-            "option223": {
-                "id": "223",
-                "type": "string",
-                "value": "dummy_value"
-            }
+tested_options_data = {
+    "data": {
+        "option223": {
+            "id": "223",
+            "type": "string",
+            "value": "dummy_value"
         },
-        "res": True
+        "option60": {
+            "id": "60",
+            "type": "string",
+            "value": "dummy_value"
+        },
+        "option222": {
+            "id": "222",
+            "type": "text",
+            "value": "dummy_value"
+        },
+        "option219": {
+            "id": "219",
+            "type": "uint8",
+            "value": "259"
+        },
+        "option218": {
+            "id": "218",
+            "type": "string",
+            "value": "long_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_value" +
+                        "long_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_value" +
+                        "long_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_value" +
+                        "long_valuelong_valuelong_valuelong_valuelong_value"
+        },
+        "option217": {
+            "id": "217",
+            "type": "string",
+            "value": "dummy_value,dummy_value"
+        },
+        "option216": {
+            "id": "216",
+            "type": "uint8",
+            "value": "8"
+        }
     },
-    {
-        "data": {
-            "option60": {
-                "id": "60",
-                "type": "string",
-                "value": "dummy_value"
-            }
-        },
-        "res": False
-    },
-    {
-        "data": {
-            "option222": {
-                "id": "222",
-                "type": "text",
-                "value": "dummy_value"
-            }
-        },
-        "res": False
-    },
-    {
-        "data": {
-            "option219": {
-                "id": "219",
-                "type": "uint8",
-                "value": "259"
-            }
-        },
-        "res": False
-    },
-    {
-        "data": {
-            "option223": {
-                "id": "223",
-                "type": "string",
-                "value": "long_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_value" +
-                         "long_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_value" +
-                         "long_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_valuelong_value" +
-                         "long_valuelong_valuelong_valuelong_valuelong_value"
-            }
-        },
-        "res": False
+    "res": {
+        "option223": "dummy_value",
+        "option217": "dummy_value\\\\,dummy_value",
+        "option216": "8"
     }
-]
+}
 
 
 def test_parse_port_alias(mock_swsscommon_dbconnector_init, mock_get_render_template):
@@ -402,24 +394,21 @@ def test_render_config(mock_swsscommon_dbconnector_init, mock_parse_port_map_ali
     assert json.loads(config) == expected_config if with_port_config else expected_config
 
 
-@pytest.mark.parametrize("tested_options_data", tested_options_data)
 def test_parse_customized_options(mock_swsscommon_dbconnector_init, mock_get_render_template,
-                                  mock_parse_port_map_alias, tested_options_data):
+                                  mock_parse_port_map_alias):
     dhcp_db_connector = DhcpDbConnector()
     dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so")
     customized_options_ipv4 = tested_options_data["data"]
     customized_options = dhcp_cfg_generator._parse_customized_options(customized_options_ipv4)
-    if tested_options_data["res"]:
-        assert customized_options == {
-            "option223": {
-                "id": "223",
-                "value": "dummy_value",
-                "type": "string",
-                "always_send": "true"
-            }
+    expected_res = {}
+    for key, value in tested_options_data["res"].items():
+        expected_res[key] = {
+            "id": customized_options_ipv4[key]["id"],
+            "value": value,
+            "type": customized_options_ipv4[key]["type"],
+            "always_send": "true"
         }
-    else:
-        assert customized_options == {}
+    assert customized_options == expected_res
 
 
 def test_parse_dpus(mock_swsscommon_dbconnector_init, mock_get_render_template, mock_parse_port_map_alias):

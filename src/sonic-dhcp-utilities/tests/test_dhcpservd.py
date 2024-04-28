@@ -1,4 +1,5 @@
 import pytest
+import json
 import psutil
 import signal
 import sys
@@ -18,11 +19,18 @@ PORT_MODE_CHECKER = ["DhcpServerTableCfgChangeEventChecker", "DhcpPortTableEvent
                      "VlanMemberTableEventChecker"]
 
 
+tested_config = """
+{
+    "key": "dummy_value\\\\,dummy_value"
+}
+"""
+
+
 @pytest.mark.parametrize("enabled_checker", [None, set(PORT_MODE_CHECKER)])
 def test_dump_dhcp4_config(mock_swsscommon_dbconnector_init, enabled_checker):
     new_enabled_checker = set(["VlanTableEventChecker"])
     with patch("dhcp_utilities.dhcpservd.dhcp_cfggen.DhcpServCfgGenerator.generate",
-               return_value=("dummy_config", set(), set(), set(), new_enabled_checker)) as mock_generate, \
+               return_value=(tested_config, set(), set(), set(), new_enabled_checker)) as mock_generate, \
          patch("dhcp_utilities.dhcpservd.dhcpservd.DhcpServd._notify_kea_dhcp4_proc",
                MagicMock()) as mock_notify_kea_dhcp4_proc, \
          patch.object(DhcpServd, "dhcp_servd_monitor", return_value=DhcpServdDbMonitor,
@@ -39,6 +47,11 @@ def test_dump_dhcp4_config(mock_swsscommon_dbconnector_init, enabled_checker):
         dhcpservd.dump_dhcp4_config()
         # Verfiy whether generate() func of dhcp_cfggen is called
         mock_generate.assert_called_once_with()
+        with open("tests/test_data/test_kea_config.conf", "r") as file, \
+             open("/tmp/kea-dhcp4.conf", "r") as output:
+            expected_content = file.read()
+            actual_content = output.read()
+            assert json.loads(expected_content) == json.loads(actual_content)
         # Verify whether notify func of dhcpservd is called, which is expected to call after new config generated
         mock_notify_kea_dhcp4_proc.assert_called_once_with()
         if enabled_checker is None:

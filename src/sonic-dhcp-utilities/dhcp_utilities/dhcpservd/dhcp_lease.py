@@ -106,7 +106,6 @@ class KeaDhcp4LeaseHandler(LeaseHanlder):
             syslog.syslog(syslog.LOG_ERR, "Cannot find lease file: {}".format(self.lease_file))
             raise err
 
-        fdb_info = self._get_fdb_info()
         new_lease = {}
         # Get newest lease information of each client
         while dq:
@@ -119,11 +118,9 @@ class KeaDhcp4LeaseHandler(LeaseHanlder):
             mac_address = splits[1]
             valid_lifetime = splits[3]
             lease_end = splits[4]
+            subnet_id = splits[5]
 
-            if mac_address not in fdb_info:
-                syslog.syslog(syslog.LOG_WARNING, "Cannot not find {} in fdb table".format(mac_address))
-                continue
-            new_key = "{}|{}".format(fdb_info[mac_address], mac_address)
+            new_key = "{}|{}".format("Vlan" + subnet_id, mac_address)
             if new_key in new_lease:
                 continue
             new_lease[new_key] = {
@@ -132,22 +129,6 @@ class KeaDhcp4LeaseHandler(LeaseHanlder):
                 "ip": ip_str
             }
         return new_lease
-
-    def _get_fdb_info(self):
-        """
-        Get fdb information, indicate that mac address comes from which dhcp interface.
-        Returns:
-            Dict of fdb information, sample:
-            {
-                "aa:bb:cc:dd:ee:ff": "Vlan1000"
-            }
-        """
-        fdb_table = self.db_connector.get_state_db_table("FDB_TABLE")
-        ret = {}
-        for key in fdb_table.keys():
-            splits = key.split(":", 1)
-            ret[splits[1]] = splits[0]
-        return ret
 
     def _update_lease(self, signum, frame):
         self.update_lease()

@@ -1828,9 +1828,9 @@ optional attributes.
             "laser_freq": "191300",
             "tx_power": "-27.3",
             "dom_polling": "enabled",
-            "coreId": "1",
-            "corePortId": "1",
-            "numVoq": "8"
+            "core_id": "1",
+            "core_port_id": "1",
+            "num_voq": "8"
         },
         "Ethernet1": {
             "index": "1",
@@ -1844,9 +1844,9 @@ optional attributes.
             "laser_freq": "191300",
             "tx_power": "-27.3",
             "dom_polling": "enabled",
-            "coreId": "0",
-            "corePortId": "14",
-            "numVoq": "8"
+            "core_id": "0",
+            "core_port_id": "14",
+            "num_voq": "8"
         },
         "Ethernet63": {
             "index": "63",
@@ -1858,9 +1858,9 @@ optional attributes.
             "laser_freq": "191300",
             "tx_power": "-27.3",
             "dom_polling": "disabled",
-            "coreId": "0",
-            "corePortId": "15",
-            "numVoq": "8"
+            "core_id": "0",
+            "core_port_id": "15",
+            "num_voq": "8"
         }
     }
 }
