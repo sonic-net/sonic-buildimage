@@ -22,9 +22,8 @@ try:
 
     from sonic_py_common import daemon_base
     from swsscommon import swsscommon
-    from sonic_py_common.interface import inband_prefix, recirc_prefix
+    from sonic_py_common.interface import inband_prefix, recirc_prefix, backplane_prefix
     from sonic_py_common import device_info
-
 except ImportError as err:
     raise ImportError("%s - required module not found" % str(err))
 
@@ -138,9 +137,8 @@ class LldpManager(daemon_base.DaemonBase):
         """
         port_desc = None
 
-        # Skip recirc and inband interface prefixes. These are recycle ports exposed in PORT_TABLE for
-        # asic-to-asic communication in VOQ based chassis system. We do not configure LLDP on these.
-        if port_name.startswith(inband_prefix()) or port_name.startswith(recirc_prefix()):
+        # Skip special (recirc/inband) and backplane interfaces as we don't enable lldp on those interfaaces.
+        if any([port_name.startswith(inband_prefix()),port_name.startswith(recirc_prefix()),port_name.startswith(backplane_prefix())]):
             return
  
         # Get the port alias. If None or empty string, use port name instead

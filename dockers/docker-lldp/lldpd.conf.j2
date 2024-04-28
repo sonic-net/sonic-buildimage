@@ -8,11 +8,13 @@
 {% endfor %}
 {% endif %}
 {% if mgmt_if %}
+{% if not (namespace_id is defined and namespace_id|length) %}
 {# If MGMT port alias is available, use it for port ID subtype, otherwise use port name #}
 {% if MGMT_PORT and MGMT_PORT[mgmt_if.port_name] and MGMT_PORT[mgmt_if.port_name].alias %}
 configure ports eth0 lldp portidsubtype local {{ MGMT_PORT[mgmt_if.port_name].alias }}
 {% else %}
 configure ports eth0 lldp portidsubtype local {{ mgmt_if.port_name }}
+{% endif %}
 {% endif %}
 configure system ip management pattern {{ mgmt_if.ipv4 }}
 {% endif %}

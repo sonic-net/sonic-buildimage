@@ -140,7 +140,7 @@ class DhcpServCfgGenerator(object):
             always_send = config["always_send"] if "always_send" in config else "true"
             customized_options[option_name] = {
                 "id": config["id"],
-                "value": config["value"],
+                "value": config["value"].replace(",", "\\\\,") if option_type == "string" else config["value"],
                 "type": option_type,
                 "always_send": always_send
             }
@@ -223,6 +223,7 @@ class DhcpServCfgGenerator(object):
                                                                                                 client_class)
                             })
                     subnet_obj = {
+                        "id": dhcp_interface_name.replace("Vlan", ""),
                         "subnet": str(ipaddress.ip_network(dhcp_interface_ip, strict=False)),
                         "pools": pools,
                         "gateway": dhcp_config["gateway"],
