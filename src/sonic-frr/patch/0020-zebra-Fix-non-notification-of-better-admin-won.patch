@@ -1,23 +1,29 @@
-From 41b759505afb261211f40e386a30f6cf3870a094 Mon Sep 17 00:00:00 2001
-From: dgsudharsan <sudharsand@nvidia.com>
-Date: Tue, 21 Nov 2023 17:55:24 +0000
-Subject: [PATCH] zebra: Fix non-notification of better admin won If there
- happens to be a entry in the zebra rib that has a lower admin distance then a
- newly received re, zebra would not notify the upper level protocol about this
- happening.  Imagine a case where there is a connected route for say a /32 and
- bgp receives a route from a peer that is the same route as the connected. 
- Since BGP has no network statement and perceives the route as being `good`
- bgp will install the route into zebra.  Zebra will look at the new bgp re and
- correctly identify that the re is not something that it will use and do
- nothing.  This change notices this and sends up a BETTER_ADMIN_WON route
- notification.
+From 9513d3a158e493623a6bc1e5e3e44b6ed277ac28 Mon Sep 17 00:00:00 2001
+From: Donald Sharp <sharpd@nvidia.com>
+Date: Tue, 14 Nov 2023 10:15:42 -0500
+Subject: [PATCH] zebra: Fix non-notification of better admin won
 
+If there happens to be a entry in the zebra rib
+that has a lower admin distance then a newly received
+re, zebra would not notify the upper level protocol
+about this happening.  Imagine a case where there
+is a connected route for say a /32 and bgp receives
+a route from a peer that is the same route as the
+connected.  Since BGP has no network statement and
+perceives the route as being `good` bgp will install
+the route into zebra.  Zebra will look at the new
+bgp re and correctly identify that the re is not
+something that it will use and do nothing.  This
+change notices this and sends up a BETTER_ADMIN_WON
+route notification.
+
+Signed-off-by: Donald Sharp <sharpd@nvidia.com>
 
 diff --git a/zebra/zebra_rib.c b/zebra/zebra_rib.c
-index 039c44cc09..f2f20bcf7b 100644
+index 2c3bb28d6..d37fe98f8 100644
 --- a/zebra/zebra_rib.c
 +++ b/zebra/zebra_rib.c
-@@ -1209,6 +1209,7 @@ static void rib_process(struct route_node *rn)
+@@ -1227,6 +1227,7 @@ static void rib_process(struct route_node *rn)
  	rib_dest_t *dest;
  	struct zebra_vrf *zvrf = NULL;
  	struct vrf *vrf;
@@ -25,7 +31,7 @@ index 039c44cc09..f2f20bcf7b 100644
  
  	vrf_id_t vrf_id = VRF_UNKNOWN;
  
-@@ -1278,6 +1279,7 @@ static void rib_process(struct route_node *rn)
+@@ -1296,6 +1297,7 @@ static void rib_process(struct route_node *rn)
  		 * skip it.
  		 */
  		if (CHECK_FLAG(re->status, ROUTE_ENTRY_CHANGED)) {
@@ -33,7 +39,7 @@ index 039c44cc09..f2f20bcf7b 100644
  			if (!nexthop_active_update(rn, re)) {
  				const struct prefix *p;
  				struct rib_table_info *info;
-@@ -1363,6 +1365,8 @@ static void rib_process(struct route_node *rn)
+@@ -1381,6 +1383,8 @@ static void rib_process(struct route_node *rn)
  	 * new_selected --- RE entry that is newly SELECTED
  	 * old_fib      --- RE entry currently in kernel FIB
  	 * new_fib      --- RE entry that is newly to be in kernel FIB
@@ -42,7 +48,7 @@ index 039c44cc09..f2f20bcf7b 100644
  	 *
  	 * new_selected will get SELECTED flag, and is going to be redistributed
  	 * the zclients. new_fib (which can be new_selected) will be installed
-@@ -1417,6 +1421,22 @@ static void rib_process(struct route_node *rn)
+@@ -1435,6 +1439,22 @@ static void rib_process(struct route_node *rn)
  		}
  	}
  
