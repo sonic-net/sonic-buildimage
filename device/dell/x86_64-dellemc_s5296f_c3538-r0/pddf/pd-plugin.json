@@ -1,0 +1,69 @@
+{
+    "PSU":
+    {
+        "psu_present": 
+        {
+            "i2c": 
+            {
+                "valmap": { "1":true, "0":false }
+            },
+            "bmc": 
+            {
+                "valmap": { "1":true, "0":false }
+            }
+        },
+
+        "psu_power_good": 
+        {
+            "i2c":
+            {
+                "valmap": { "1": true, "0":false }
+            },
+            "bmc":
+            {
+                "valmap": { "0": true, "2":false }
+            }
+        },
+
+        "psu_fan_dir":
+        {
+            "i2c":
+            {
+                "valmap": { "F2B":"INTAKE", "B2F":"EXHAUST" }
+            },
+            "bmc":
+            {
+                "valmap": { "0":"EXHAUST", "1":"INTAKE" }
+            }
+        },
+
+        "PSU_FAN_MAX_SPEED":"25500"
+    },
+
+    "FAN":
+    {
+	    "direction":
+	    {
+	        "bmc":
+	        {
+                "valmap": {"0":"EXHAUST", "1":"INTAKE"}
+            }
+        },
+		
+        "present":
+        {
+            "i2c":
+            {
+               "valmap": {"1":true, "0":false}
+            },
+            "bmc":
+            {
+               "valmap": {"ok":true, "na":false}
+            }
+        },
+        
+		"pwm_to_duty_cycle": "lambda pwm: (pwm*1.0)"
+
+    }
+
+}
