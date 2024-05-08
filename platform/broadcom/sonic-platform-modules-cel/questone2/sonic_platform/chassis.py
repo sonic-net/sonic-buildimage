@@ -16,6 +16,8 @@ try:
     import shutil
     from sonic_platform_base.chassis_base import ChassisBase
     from .helper import APIHelper
+    from sonic_platform_base.sfp_base import SfpBase
+
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -439,3 +441,24 @@ class Chassis(ChassisBase):
             self._airflow_direction = direction
 
         return self._airflow_direction
+
+    def get_port_or_cage_type(self, index):
+        """
+        Retrieves sfp port or cage type corresponding to physical port <index>
+
+        Args:
+            index: An integer (>=0), the index of the sfp to retrieve.
+
+        Returns:
+            The masks of all types of port or cage that can be supported on the port
+            Types are defined in sfp_base.py
+        """
+        if index in range(1, 48+1):
+            return (SfpBase.SFP_PORT_TYPE_BIT_SFP_PLUS | SfpBase.SFP_PORT_TYPE_BIT_SFP28 | \
+                    SfpBase.SFP_PORT_TYPE_BIT_SFP)
+        elif index in range(49, 56+1):
+            return SfpBase.SFP_PORT_TYPE_BIT_QSFP28
+        else:
+            raise NotImplementedError
+
+

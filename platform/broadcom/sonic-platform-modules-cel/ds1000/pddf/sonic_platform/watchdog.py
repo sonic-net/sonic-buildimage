@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #############################################################################
-# 
+#
 # Watchdog contains an implementation of SONiC Platform Base Watchdog API
 #
 #############################################################################
@@ -55,14 +55,14 @@ class CpldWatchdog(WatchdogBase):
     watchdog = None
     def __init__(self):
         global watchdog
-        self.status_path = "/sys/devices/platform/cpld_wdt/status" 
-        self.state_path = "/sys/devices/platform/cpld_wdt/state" 
-        self.timeout_path = "/sys/devices/platform/cpld_wdt/timeout" 
+        self.status_path = "/sys/devices/platform/cpld_wdt/status"
+        self.state_path = "/sys/devices/platform/cpld_wdt/state"
+        self.timeout_path = "/sys/devices/platform/cpld_wdt/timeout"
         # Set default value
         with open("/sys/devices/platform/cpld_wdt/state", "r") as fd:
             txt = fd.read()
-        state = txt.strip() 
-        self.armed = True if state == "active" else False 
+        state = txt.strip()
+        self.armed = True if state == "active" else False
         self.timeout = DEFAULT_TIMEOUT
         if not watchdog:
             watchdog = os.open("/dev/cpld_wdt", os.O_RDWR)
@@ -160,7 +160,7 @@ class CpldWatchdog(WatchdogBase):
             else:
                 self._enable()
                 self.armed = True
-           
+
             ret = self.timeout
         except IOError as e:
             pass
@@ -226,4 +226,3 @@ class Watchdog(CpldWatchdog):
         CpldWatchdog.__init__(self)
 
     # Provide the functions/variables below for which implementation is to be overwritten
-

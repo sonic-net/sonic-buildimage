@@ -6,7 +6,6 @@
 #
 #############################################################################
 
-import json
 import os.path
 import subprocess
 import re
@@ -24,13 +23,13 @@ VER_API_IDX = 2
 BASE_CPLD_VER_CMD = "0x03 0x00 0x01 0x00"
 FAN_CPLD_VER_CMD = "0x03 0x01 0x01 0x00"
 BIOS_VER_PATH = "/sys/class/dmi/id/bios_version"
-BMC_VER_CMD = "ipmitool mc info | grep 'Firmware Revision'"
-ONIE_VER_CMD = "cat /host/machine.conf"
-SSD_VER_CMD = "smartctl -i /dev/sda"
+BMC_VER_CMD1 = ["ipmitool", "mc", "info"]
+BMC_VER_CMD2 = ["grep", "Firmware Revision"]
+ONIE_VER_CMD = ["cat", "/host/machine.conf"]
+SSD_VER_CMD = ["smartctl", " -i", "/dev/sda"]
 BASE_GETREG_PATH = "/sys/devices/platform/baseboard-lpc/getreg"
 MEM_PCI_RESOURCE = "/sys/bus/pci/devices/0000:09:00.0/resource0"
 FPGA_VER_MEM_OFFSET = 0
-
 NETFN = "0x3A"
 COME_CPLD_VER_REG = "0xA1E0"
 
@@ -78,7 +77,7 @@ class Component(ComponentBase):
 
     def __get_bmc_ver(self):
         bmc_ver = "Unknown"
-        status, raw_bmc_data = self._api_helper.run_command(BMC_VER_CMD)
+        status, raw_bmc_data = self._api_helper.run_command(BMC_VER_CMD1, BMC_VER_CMD2)
         if status:
             bmc_ver_data = raw_bmc_data.split(":")
             bmc_ver = bmc_ver_data[-1].strip() if len(

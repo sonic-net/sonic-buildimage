@@ -6,7 +6,7 @@
 #############################################################################
 
 try:
-    from sonic_platform_pddf_base.pddf_fan_drawer import PddfFanDrawer 
+    from sonic_platform_pddf_base.pddf_fan_drawer import PddfFanDrawer
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -16,8 +16,8 @@ class FanDrawer(PddfFanDrawer):
     def __init__(self, tray_idx, pddf_data=None, pddf_plugin_data=None):
         # idx is 0-based
         PddfFanDrawer.__init__(self, tray_idx, pddf_data, pddf_plugin_data)
-        
-        
+
+
     def set_status_led(self, color):
         return self._fan_list[0].set_status_led(color)
 

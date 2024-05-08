@@ -6,7 +6,7 @@ except ImportError as e:
 
 class Eeprom(PddfEeprom):
 
-    _TLV_DISPLAY_VENDOR_EXT = True  
+    _TLV_DISPLAY_VENDOR_EXT = True
     _TLV_INFO_MAX_LEN = 256
     pddf_obj = {}
     plugin_data = {}

@@ -29,7 +29,7 @@ def ipmi_sensor_dump(cmd):
     sensor_dump = ''
 
     try:
-        sensor_dump = subprocess.check_output(IPMI_SDR_CMD, universal_newlines=True)
+        sensor_dump = subprocess.check_output(cmd, universal_newlines=True)
     except subprocess.CalledProcessError as e:
         logging.error('Error! Failed to execute: {}'.format(cmd))
         sys.exit(1)

@@ -10,6 +10,7 @@ try:
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform_base.sonic_sfp.sfputilhelper import SfpUtilHelper
     from sonic_py_common import device_info
+    from sonic_platform_base.sfp_base import SfpBase
     from .helper import APIHelper
     import time
     import os
@@ -434,3 +435,22 @@ class Chassis(ChassisBase):
             self._airflow_direction = direction
 
         return self._airflow_direction
+
+    def get_port_or_cage_type(self, index):
+        """
+        Retrieves sfp port or cage type corresponding to physical port <index>
+
+        Args:
+            index: An integer (>=0), the index of the sfp to retrieve.
+
+        Returns:
+            The masks of all types of port or cage that can be supported on the port
+            Types are defined in sfp_base.py
+        """
+        if index in range(1, 32+1):
+            return (SfpBase.SFP_PORT_TYPE_BIT_QSFP28 | SfpBase.SFP_PORT_TYPE_BIT_SFP28 | \
+                    SfpBase.SFP_PORT_TYPE_BIT_SFP_PLUS | SfpBase.SFP_PORT_TYPE_BIT_QSFPDD | SfpBase.SFP_PORT_TYPE_BIT_QSFP)
+        else:
+            raise NotImplementedError
+
+

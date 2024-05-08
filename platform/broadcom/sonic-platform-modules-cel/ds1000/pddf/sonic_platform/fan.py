@@ -21,6 +21,9 @@ class Fan(PddfFan):
 
         self.max_speed_rpm = 28600 #Max RPM from FAN spec
 
+        # Remap LED color READ and OFF to AMBER as they are unsupported
+        self.STATUS_LED_COLOR_RED = "amber"
+        self.STATUS_LED_COLOR_OFF = "amber"
 
     def get_presence(self):
         if not self.is_psu_fan:
@@ -118,12 +121,6 @@ class Fan(PddfFan):
 
         if self.get_status_led() == color:
             return True
-            
-        color_dict = {
-            'green': "STATUS_LED_COLOR_GREEN",
-            'amber': "STATUS_LED_COLOR_AMBER",
-        }
-        color = color_dict.get(color, "STATUS_LED_COLOR_AMBER")
 
         return super().set_status_led(color)
 
@@ -132,3 +129,25 @@ class Fan(PddfFan):
             return "PSU {} Fan {}".format(self.fans_psu_index, self.fan_index)
         else:
             return "Fan {}".format(self.fantray_index)
+    
+    def is_under_speed(self):
+        speed = float(self.get_speed())
+        target_speed = float(self.get_target_speed())
+        speed_tolerance = self.get_speed_tolerance()
+
+        speed_min_th = target_speed * (1 - float(speed_tolerance) / 100)
+        if speed < speed_min_th:
+            return True
+        else:
+            return False
+
+    def is_over_speed(self):
+        speed = float(self.get_speed())
+        target_speed = float(self.get_target_speed())
+        speed_tolerance = self.get_speed_tolerance()
+
+        speed_max_th = target_speed * (1 + float(speed_tolerance) / 100)
+        if speed > speed_max_th:
+            return True
+        else:
+            return False

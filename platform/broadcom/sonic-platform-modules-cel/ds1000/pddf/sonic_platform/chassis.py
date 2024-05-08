@@ -134,7 +134,7 @@ class Chassis(PddfChassis):
             description = 'Soft-Set Warm Reset'
         elif hw_reboot_cause == "0x11":
             reboot_cause = self.REBOOT_CAUSE_POWER_LOSS
-            description = 'Power Loss'			
+            description = 'Power Loss'
         elif hw_reboot_cause == "0x00":
             reboot_cause = self.REBOOT_CAUSE_HARDWARE_OTHER
             description = 'Cold Powercycle'
@@ -154,7 +154,7 @@ class Chassis(PddfChassis):
             reboot_cause = self.REBOOT_CAUSE_NON_HARDWARE
             description = 'Unkown Reason'
 
-        return (reboot_cause, description)	
+        return (reboot_cause, description)
 
     def get_revision(self):
         version_str = self._eeprom.revision_str()
@@ -163,26 +163,20 @@ class Chassis(PddfChassis):
             return str(bytearray(version_str, 'ascii')[0])
 
         return version_str
-		
+
     @staticmethod
     def get_position_in_parent():
         return -1
-		
+
     @staticmethod
     def is_replaceable():
         return False
 
     def set_status_led(self, color):
-        color_dict = {
-            'green': "STATUS_LED_COLOR_GREEN",
-            'red': "STATUS_LED_COLOR_AMBER",
-            'amber': "STATUS_LED_COLOR_AMBER",
-            'off': "STATUS_LED_COLOR_OFF"
-        }
         if color == self.get_system_led("SYS_LED"):
-            return False
-        else:
-            return self.set_system_led("SYS_LED", color_dict.get(color, "STATUS_LED_COLOR_OFF"))
+            return True
+
+        return self.set_system_led("SYS_LED", color)
 
     def get_status_led(self):
         return self.get_system_led("SYS_LED")

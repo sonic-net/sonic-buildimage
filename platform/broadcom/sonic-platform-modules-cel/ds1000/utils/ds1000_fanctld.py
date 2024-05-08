@@ -74,7 +74,7 @@ def valid_never(fan_dir):
     return False
 
 # Core data for Thermal FAN speed evaluation
-# {<thermal-name>: [low_temp, high_temp, critical_temp, fatal_temp, current_temp, fanspeed, validate_function]} 
+# {<thermal-name>: [low_temp, high_temp, critical_temp, fatal_temp, current_temp, fanspeed, validate_function]}
 SENSOR_PARAM = {
     'Front Right Temp': [34, 47, None, None, NOMINAL_TEMP, FAN_DUTY_MIN, valid_if_exhaust],
     'Front Left Temp': [None, None, None, None, NOMINAL_TEMP, FAN_DUTY_MIN, valid_never],
@@ -130,7 +130,7 @@ class Ds1000FanControl(daemon_base.DaemonBase):
                 sys.exit(1)
 
             # Initialize the thermal temperature dict
-            # {<thermal-name>: [thermal_temp, fanspeed]} 
+            # {<thermal-name>: [thermal_temp, fanspeed]}
             for thermal in self.thermal_list:
                 thermal_name = thermal.get_name()
                 SENSOR_PARAM[thermal_name][SP_REF_TEMP] = thermal.get_temperature()
@@ -273,7 +273,7 @@ class Ds1000FanControl(daemon_base.DaemonBase):
                 else:
                     self.log_error("Set '{}' to speed {}% failed".format(fan_name, speed))
             except Exception as e:
-                self.log_error("Set '{}' to speed {}% failed due to {}".format(fan_name, speed, repr(e))) 
+                self.log_error("Set '{}' to speed {}% failed due to {}".format(fan_name, speed, repr(e)))
 
         return False
 

@@ -86,7 +86,7 @@ class Component(ComponentBase):
             pass
 
         return version
-                
+
     def get_name(self):
         """
         Retrieves the name of the component
@@ -157,7 +157,7 @@ class Component(ComponentBase):
 
     def get_presence(self):
         return True
- 
+
     def get_serial(self):
         return 'N/A'
 

@@ -56,6 +56,11 @@ TH_HNC = 3 # High Non-critical threshold
 TH_HCR = 4 # High Critical threshold
 TH_HNR = 5 # High Non-recoverable threshold
 
+PSU_VOUT_SS_ID = ["0x36", "0x40"]
+PSU_COUT_SS_ID = ["0x37", "0x41"]
+PSU_POUT_SS_ID = ["0x38", "0x42"]
+PSU_STATUS_REG = ["0x39", "0x2f"]
+
 
 class Psu(PsuBase):
     """Platform-specific Psu class"""
@@ -114,6 +119,7 @@ class Psu(PsuBase):
         value = output.split()[ANALOG_READ_OFFSET]
         # Formula: Rx68x10^-1
         psu_power = int(value, 16) * 68 / 10.0
+
         return psu_power
 
     def get_powergood_status(self):
