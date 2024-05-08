@@ -19,10 +19,11 @@ class APIHelper():
 
     def get_register_value(self, getreg_path, register):
         cmd = "echo {1} > {0}; cat {0}".format(getreg_path, register)
-        p = subprocess.Popen(
-            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        raw_data, err = p.communicate()
-        return raw_data.strip().decode('UTF-8') if not err else None
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
+            return None
+        else:
+            return data
 
     def hex_to_bin(self, ini_string):
         return bin(int(ini_string, SCALE)).zfill(BIN_BITS)
@@ -46,14 +47,12 @@ class APIHelper():
     def run_command(self, cmd):
         status = True
         result = ""
-        try:
-            p = subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err.decode('UTF-8') == '':
-                result = raw_data.strip().decode('UTF-8')
-        except Exception:
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = data
+        
         return status, result
 
     def run_interactive_command(self, cmd):
@@ -101,52 +100,40 @@ class APIHelper():
     def ipmi_raw(self, netfn, cmd):
         status = True
         result = ""
-        try:
-            cmd = "ipmitool raw {} {}".format(str(netfn), str(cmd))
-            p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-            else:
-                status = False
-        except Exception:
+        cmd = "ipmitool raw {} {}".format(str(netfn), str(cmd))
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = data
+        
         return status, result
 
     def ipmi_fru_id(self, id, key=None):
         status = True
         result = ""
-        try:
-            cmd = "ipmitool fru print {}".format(str(
-                id)) if not key else "ipmitool fru print {0} | grep '{1}' ".format(str(id), str(key))
+        cmd = "ipmitool fru print {}".format(str(
+            id)) if not key else "ipmitool fru print {0} | grep '{1}' ".format(str(id), str(key))
 
-            p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-            else:
-                status = False
-        except Exception:
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = data
+        
         return status, result
 
     def ipmi_set_ss_thres(self, id, threshold_key, value):
         status = True
         result = ""
-        try:
-            cmd = "ipmitool sensor thresh '{}' {} {}".format(
-                str(id), str(threshold_key), str(value))
-            p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-            else:
-                status = False
-        except Exception:
+        cmd = "ipmitool sensor thresh '{}' {} {}".format(
+            str(id), str(threshold_key), str(value))
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = data
+        
         return status, result
 
     def fru_decode_product_serial(self, data):

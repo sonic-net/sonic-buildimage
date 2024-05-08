@@ -2,7 +2,11 @@ import fcntl
 import os
 import struct
 import subprocess
+import fcntl
+
 from mmap import *
+from sonic_py_common.general import check_output_pipe
+from sonic_py_common.device_info import get_platform_and_hwsku
 
 from sonic_py_common import device_info
 
@@ -13,10 +17,13 @@ EMPTY_STRING = ""
 class APIHelper():
 
     def __init__(self):
-        (self.platform, self.hwsku) = device_info.get_platform_and_hwsku()
+        (self.platform, self.hwsku) = get_platform_and_hwsku()
 
     def is_host(self):
-        return os.system(HOST_CHK_CMD) == 0
+        ret,data = subprocess.getstatusoutput(HOST_CHK_CMD)
+        if ret != 0:
+            return False
+        return True
 
     def pci_get_value(self, resource, offset):
         status = True
@@ -31,22 +38,19 @@ class APIHelper():
             status = False
         return status, result
 
-    def run_command(self, cmd):
+    def run_command(self, cmd1_args, cmd2_args=None):
         status = True
         result = ""
+        args = [cmd1_args] + ([cmd2_args] if cmd2_args is not None else [])
         try:
-            p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-        except:
+            result = check_output_pipe(*args)
+        except subprocess.CalledProcessError:
             status = False
         return status, result
 
     def run_interactive_command(self, cmd):
         try:
-            os.system(cmd)
+            subprocess.call(cmd)
         except:
             return False
         return True
@@ -85,52 +89,41 @@ class APIHelper():
     def ipmi_raw(self, netfn, cmd):
         status = True
         result = ""
-        try:
-            cmd = "ipmitool raw {} {}".format(str(netfn), str(cmd))
-            p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-            else:
-                status = False
-        except:
+        cmd = "ipmitool raw {} {}".format(netfn, cmd)
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = data
+        
         return status, result
 
     def ipmi_fru_id(self, id, key=None):
         status = True
         result = ""
-        try:
-            cmd = "ipmitool fru print {}".format(str(
-                id)) if not key else "ipmitool fru print {0} | grep '{1}' ".format(str(id), str(key))
-
-            p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-            else:
+        cmd1_args = ["ipmitool", "fru", "print", str(id)]
+        if not key:
+            ret, data = subprocess.getstatusoutput(cmd)
+            if ret != 0:
                 status = False
-        except:
-            status = False
+            else:
+                result = data
+        else:
+            cmd2_args = ["grep", str(key)]
+            status, result = self.run_command(cmd1_args, cmd2_args)
         return status, result
 
     def ipmi_set_ss_thres(self, id, threshold_key, value):
         status = True
         result = ""
-        try:
-            cmd = "ipmitool sensor thresh '{}' {} {}".format(
-                str(id), str(threshold_key), str(value))
-            p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-            else:
-                status = False
-        except:
+        cmd = "ipmitool sensor thresh '{}' {} {}".format(
+            str(id), str(threshold_key), str(value))
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = data
+        
         return status, result
 
     def lpc_getreg(self, getreg_path, reg):
