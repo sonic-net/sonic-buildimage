@@ -10,19 +10,9 @@ bgp as-path access-list WAN_ASNS permit _8074_
 bgp as-path access-list WAN_ASNS permit _8072_
 bgp as-path access-list RNG_ASNS permit _64915_
 bgp as-path access-list RNG_ASNS permit _64945_
-bgp as-path access-list T2_LOOPBACK permit ^$
 !
 ip prefix-list DEFAULT_IPV4 permit 0.0.0.0/0
 !
-route-map FROM_AZNG_MIGRATION_FILTER_V4 permit 1
-  match community FABRIC_INFRA_COMMUNITY
-!
-route-map FROM_AZNG_MIGRATION_FILTER_V4 deny 2
-!
-{% if slice_type is not defined or slice_type != 'AZNGProduction' %}
-route-map FROM_AH_V4 permit 10
-  call FROM_AZNG_MIGRATION_FILTER_V4
-{% endif %}
 route-map FROM_AH_V4 deny 100
   match ip address prefix-list DEFAULT_IPV4
 !
@@ -43,22 +33,6 @@ route-map FROM_AH_V4 permit 1000
   set local-preference 80
   set community no-export additive
 !
-route-map TO_AZNG_MIGRATION_FILTER_V4 permit 1
-  match ip address prefix-list DEFAULT_IPV4
-!
-route-map TO_AZNG_MIGRATION_FILTER_V4 permit 2
-  match as-path T2_LOOPBACK
-  set community community-list FABRIC_INFRA_COMMUNITY
-!
-route-map TO_AZNG_MIGRATION_FILTER_V4 permit 3
-  match community FABRIC_INFRA_COMMUNITY
-!
-route-map TO_AZNG_MIGRATION_FILTER_V4 deny 4
-!
-{% if slice_type is not defined or slice_type != 'AZNGProduction' %}
-route-map TO_AH_V4 permit 10
-  call TO_AZNG_MIGRATION_FILTER_V4
-{% endif %}
 route-map TO_AH_V4 permit 100
   match ip address prefix-list DEFAULT_IPV4
 !
