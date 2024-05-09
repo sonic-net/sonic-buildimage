@@ -410,3 +410,5 @@ dport_map_port_15=54
 dport_map_port_2=55
 dport_map_port_16=56
 #dport_map_port_64=57
+
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc

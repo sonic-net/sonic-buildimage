@@ -1692,7 +1692,7 @@ static struct i2c_adapter * seastone2_i2c_init(struct platform_device *pdev, int
     new_data->pca9548.master_bus = fpga_i2c_bus_dev[portid].master_bus;
     new_data->pca9548.switch_addr = fpga_i2c_bus_dev[portid].switch_addr;
     new_data->pca9548.channel = fpga_i2c_bus_dev[portid].channel;
-    strcpy(new_data->pca9548.calling_name,fpga_i2c_bus_dev[portid].calling_name);
+    strcpy(new_data->pca9548.calling_name, fpga_i2c_bus_dev[portid].calling_name);
 
     snprintf(new_adapter->name, sizeof(new_adapter->name),
         "SMBus I2C Adapter PortID: %s", new_data->pca9548.calling_name);

@@ -29,7 +29,8 @@ class APIHelper():
         return bin(int(ini_string, SCALE)).zfill(BIN_BITS)
 
     def is_host(self):
-        return os.system(HOST_CHK_CMD) == 0
+        rv, _ = subprocess.getstatusoutput(HOST_CHK_CMD)
+        return (rv == 0)
 
     def pci_get_value(self, resource, offset):
         status = True
@@ -54,13 +55,6 @@ class APIHelper():
             result = data
         
         return status, result
-
-    def run_interactive_command(self, cmd):
-        try:
-            os.system(cmd)
-        except Exception:
-            return False
-        return True
 
     def read_txt_file(self, file_path):
         try:

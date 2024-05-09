@@ -11,14 +11,14 @@
     },
     "PSU":
     {
-        "psu_present": 
+        "psu_present":
         {
             "i2c":
             {
                 "valmap": { "1":true, "0":false }
             }
         },
-        "psu_power_good": 
+        "psu_power_good":
         {
             "i2c":
             {

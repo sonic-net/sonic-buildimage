@@ -27,7 +27,6 @@
 #include <linux/platform_device.h>
 #include <linux/types.h>
 #include <uapi/linux/stat.h>
-#include <linux/string.h>
 
 #define DRIVER_NAME "sys_cpld"
 /**

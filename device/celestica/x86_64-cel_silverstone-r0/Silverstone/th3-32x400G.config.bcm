@@ -227,4 +227,4 @@ port_flex_enable=1
 #firmware load method, use fast load
 load_firmware=0x2
 
-
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc

@@ -355,3 +355,5 @@ scache_filename=/tmp/scache
 schan_intr_enable=0
 stable_size=0x5500000
 tdma_timeout_usec=3000000
+
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc

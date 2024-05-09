@@ -1,7 +1,7 @@
-import os.path
 import subprocess
 import sys
 import re
+import os
 
 try:
     from sonic_psu.psu_base import PsuBase
@@ -12,14 +12,25 @@ except ImportError as e:
 class PsuUtil(PsuBase):
     """Platform-specific PSUutil class"""
 
+    __IPMI_BASE_COMMAND = ["ipmitool", "raw", "0x04", "0x2d"]
+    __IPMI_CONTAINER_PREFIX = ["docker", "exec", "-ti", "pmon"]
+
+    def __container_prefix(self, cmdlist):
+        # If running inside container, nothing to prefix. Else, prefix container
+        # invocation.
+        if os.environ.get("CONTAINER_NAME") != None:
+            return cmdlist
+
+        return self.__IPMI_CONTAINER_PREFIX + cmdlist
+
     def __init__(self):
-        self.ipmi_raw = "docker exec -ti pmon ipmitool raw 0x4 0x2d"
+        self.ipmi_raw = self.__container_prefix(self.__IPMI_BASE_COMMAND)
         self.psu1_id = "0x2f"
         self.psu2_id = "0x39"
         PsuBase.__init__(self)
 
     def run_command(self, command):
-        proc = subprocess.Popen(command, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+        proc = subprocess.Popen(command, universal_newlines=True, stdout=subprocess.PIPE)
         (out, err) = proc.communicate()
 
         if proc.returncode != 0:
@@ -52,7 +63,7 @@ class PsuUtil(PsuBase):
             return False
 
         psu_id = self.psu1_id if index == 1 else self.psu2_id
-        res_string = self.run_command(self.ipmi_raw + ' ' + psu_id)
+        res_string = self.run_command(self.ipmi_raw + [psu_id])
         status_byte = self.find_value(res_string)
 
         if status_byte is None:
@@ -76,7 +87,7 @@ class PsuUtil(PsuBase):
             return False
 
         psu_id = self.psu1_id if index == 1 else self.psu2_id
-        res_string = self.run_command(self.ipmi_raw + ' ' + psu_id)
+        res_string = self.run_command(self.ipmi_raw + [psu_id])
         status_byte = self.find_value(res_string)
 
         if status_byte is None:

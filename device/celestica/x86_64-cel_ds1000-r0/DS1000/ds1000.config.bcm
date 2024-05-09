@@ -166,4 +166,5 @@ portmap_56=63:10
 
 pbmp_xport_xe=0x01FFFFFFFFFFFFFE
 
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc
 #
