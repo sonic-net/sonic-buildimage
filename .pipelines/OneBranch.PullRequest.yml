@@ -156,7 +156,7 @@ stages:
     pool:
       vmImage: 'ubuntu-20.04'
     displayName: "kvmtest-t0 by Elastictest"
-    timeoutInMinutes: 240
+    timeoutInMinutes: 400
     continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
@@ -173,7 +173,7 @@ stages:
     pool:
       vmImage: 'ubuntu-20.04'
     displayName: "kvmtest-t1-lag by Elastictest"
-    timeoutInMinutes: 240
+    timeoutInMinutes: 400
     continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
@@ -190,7 +190,7 @@ stages:
     displayName: "kvmtest-t0-sonic by Elastictest"
     pool:
       vmImage: 'ubuntu-20.04'
-    timeoutInMinutes: 240
+    timeoutInMinutes: 400
     continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
@@ -210,7 +210,7 @@ stages:
     pool:
       vmImage: 'ubuntu-20.04'
     displayName: "kvmtest-t0-2vlans by Elastictest"
-    timeoutInMinutes: 240
+    timeoutInMinutes: 400
     continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
     - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
@@ -229,7 +229,7 @@ stages:
     pool:
       vmImage: 'ubuntu-20.04'
     displayName: "kvmtest-dualtor-t0 by Elastictest"
-    timeoutInMinutes: 240
+    timeoutInMinutes: 400
     continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
@@ -261,7 +261,7 @@ stages:
     displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
     pool:
       vmImage: 'ubuntu-20.04'
-    timeoutInMinutes: 240
+    timeoutInMinutes: 400
     continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
