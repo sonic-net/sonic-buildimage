@@ -21,7 +21,7 @@ def load_constant_files():
     return constant_files
 
 
-def constructor(constants_path):
+def constructor(constants_path, with_lo0_ipv4=True, bgp_router_id=""):
     cfg_mgr = MagicMock()
     constants = load_constants(constants_path)['constants']
     common_objs = {
@@ -41,8 +41,12 @@ def constructor(constants_path):
     assert m.peer_type == "general"
     assert m.check_neig_meta == ('bgp' in constants and 'use_neighbors_meta' in constants['bgp'] and constants['bgp']['use_neighbors_meta'])
 
-    m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost", {"bgp_asn": "65100"})
-    m.directory.put("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0|11.11.11.11/32", {})
+    localhost_obj = {"bgp_asn": "65100"}
+    if len(bgp_router_id) != 0:
+        localhost_obj["bgp_router_id"] = bgp_router_id
+    m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost", localhost_obj)
+    if with_lo0_ipv4:
+        m.directory.put("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0|11.11.11.11/32", {})
     m.directory.put("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0|FC00:1::32/128", {})
     m.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME, "ARISTA01T0", {"type": "ToRRouter", "deployment_id": "4"})
     m.directory.put("LOCAL", "local_addresses", "30.30.30.30", {"interface": "Ethernet4|30.30.30.30/24"})
@@ -133,6 +137,24 @@ def test_add_peer_mgmt():
     m = constructor_mgmt()
     res = m.set_handler("11.11.11.10", {'asn': '64001', 'holdtime': '180', 'keepalive': '60', 'local_addr': '11.11.11.11', 'name': 'ARISTA01T0'})
     assert res, "Expect True return value"
+
+def test_add_peer_router_id():
+    for constant in load_constant_files():
+        m = constructor(constant, bgp_router_id="8.8.8.8")
+        res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert res, "Expect True return value"
+
+def test_add_peer_without_lo_ipv4():
+    for constant in load_constant_files():
+        m = constructor(constant, with_lo0_ipv4=False)
+        res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert not res, "Expect False return value"
+
+def test_add_peer_without_lo_ipv4_router_id():
+    for constant in load_constant_files():
+        m = constructor(constant, with_lo0_ipv4=False, bgp_router_id="8.8.8.8")
+        res = m.set_handler("30.30.30.1", {'asn': '65200', 'holdtime': '180', 'keepalive': '60', 'local_addr': '30.30.30.30', 'name': 'TOR', 'nhopself': '0', 'rrclient': '0'})
+        assert res, "Expect True return value"
 
 def test_add_peer_ipv6():
     for constant in load_constant_files():
