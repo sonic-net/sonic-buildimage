@@ -294,6 +294,7 @@ stages:
       value: $[ stageDependencies.Test.dualtor_elastictest.result ]
     - name: job6
       value: $[ stageDependencies.Test.multi_asic_elastictest.result ]
+    - group: SONiC-sonicbld
   jobs:
   - job:
     pool:
@@ -321,5 +322,5 @@ stages:
         fi
       displayName: check result
       env:
-        AZURE_DEVOPS_EXT_PAT: $(MSSONIC_ADO_TOKEN)
+        AZURE_DEVOPS_EXT_PAT: $(MSSONIC-TOKEN)
         ADO_ID: $(ADO_ID)
