@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2020-2022 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -107,6 +107,7 @@ system_reboot() {
 
     # Use SONiC reboot scenario
     /usr/local/bin/reboot
+    exit $?
 }
 
 terminate_handler() {

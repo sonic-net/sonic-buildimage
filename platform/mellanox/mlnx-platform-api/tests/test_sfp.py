@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,10 +61,7 @@ class TestSfp:
     @mock.patch('sonic_platform.chassis.Chassis.get_num_sfps', mock.MagicMock(return_value=2))
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
     def test_sfp_get_error_status(self, mock_get_error_code, mock_control):
-        chassis = Chassis()
-
-        # Fetch an SFP module to test
-        sfp = chassis.get_sfp(1)
+        sfp = SFP(1)
         mock_control.return_value = False
         description_dict = sfp._get_error_description_dict()
         for error in description_dict.keys():
@@ -131,6 +128,17 @@ class TestSfp:
             handle.write.side_effect = OSError('')
             assert not sfp.write_eeprom(0, 1, bytearray([1]))
 
+        mo = mock.mock_open()
+        print('after mock open')
+        with mock.patch('sonic_platform.sfp.open', mo):
+            handle = mo()
+            handle.write.side_effect = [128, 128, 64]
+            handle.seek.side_effect = [0, 128, 0, 128, 0]
+            bytes_to_write = bytearray([0]*128 + [1]*128 + [2]*64)
+            assert sfp.write_eeprom(0, 320, bytes_to_write)
+            expected_calls = [mock.call(bytes_to_write), mock.call(bytes_to_write[128:]), mock.call(bytes_to_write[256:])]
+            handle.write.assert_has_calls(expected_calls)
+
     @mock.patch('sonic_platform.sfp.SFP._get_page_and_page_offset')
     def test_sfp_read_eeprom(self, mock_get_page):
         sfp = SFP(0)
@@ -151,6 +159,13 @@ class TestSfp:
 
             handle.read.side_effect = OSError('')
             assert sfp.read_eeprom(0, 1) is None
+
+        mo = mock.mock_open()
+        with mock.patch('sonic_platform.sfp.open', mo):
+            handle = mo()
+            handle.read.side_effect = [b'\x00'*128, b'\x01'*128, b'\x02'*64]
+            handle.seek.side_effect = [0, 128, 0, 128, 0]
+            assert sfp.read_eeprom(0, 320) == bytearray([0]*128 + [1]*128 + [2]*64)
 
     @mock.patch('sonic_platform.sfp.SFP._fetch_port_status')
     def test_is_port_admin_status_up(self, mock_port_status):
@@ -230,18 +245,14 @@ class TestSfp:
         assert page == '/tmp/1/data'
         assert page_offset is 0
 
-    @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
     @mock.patch('sonic_platform.sfp.SFP._read_eeprom')
-    def test_sfp_get_presence(self, mock_read, mock_control):
+    def test_sfp_get_presence(self, mock_read):
         sfp = SFP(0)
         mock_read.return_value = None
         assert not sfp.get_presence()
 
         mock_read.return_value = 0
         assert sfp.get_presence()
-        
-        mock_control.side_effect = RuntimeError('')
-        assert not sfp.get_presence()
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
     def test_rj45_get_presence(self, mock_read_int):
@@ -343,34 +354,20 @@ class TestSfp:
         assert sfp.get_temperature_warning_threshold() == 75.0
         assert sfp.get_temperature_critical_threshold() == 85.0
 
-    @mock.patch('sonic_platform.sfp.NvidiaSFPCommon.get_logical_port_by_sfp_index')
     @mock.patch('sonic_platform.utils.read_int_from_file')
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode')
-    @mock.patch('sonic_platform.utils.DbUtils.get_db_instance')
-    def test_is_sw_control(self, mock_get_db, mock_mode, mock_read, mock_get_logical):
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode')
+    def test_is_sw_control(self, mock_mode, mock_read):
         sfp = SFP(0)
         mock_mode.return_value = False
         assert not sfp.is_sw_control()
         mock_mode.return_value = True
         
-        mock_get_logical.return_value = None
-        with pytest.raises(Exception):
-            sfp.is_sw_control()
-
-        mock_get_logical.return_value = 'Ethernet0'
-        mock_db = mock.MagicMock()
-        mock_get_db.return_value = mock_db
-        mock_db.exists = mock.MagicMock(return_value=False)
-        with pytest.raises(Exception):
-            sfp.is_sw_control()
-
-        mock_db.exists.return_value = True
         mock_read.return_value = 0
         assert not sfp.is_sw_control()
         mock_read.return_value = 1
         assert sfp.is_sw_control()
 
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.utils.is_host', mock.MagicMock(side_effect = [True, True, False, False]))
     @mock.patch('subprocess.check_output', mock.MagicMock(side_effect = ['True', 'False']))
@@ -383,7 +380,7 @@ class TestSfp:
         assert sfp.get_lpmode()
         assert not sfp.get_lpmode()
 
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=False))
     @mock.patch('sonic_platform.utils.is_host', mock.MagicMock(side_effect = [True, True, False, False]))
     @mock.patch('subprocess.check_output', mock.MagicMock(side_effect = ['True', 'False']))
@@ -396,7 +393,7 @@ class TestSfp:
         assert sfp.set_lpmode(False)
         assert not sfp.set_lpmode(False)
         
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode', mock.MagicMock(return_value=True))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
     def test_get_lpmode_cmis_host_mangagement(self, mock_control, mock_read):
@@ -420,7 +417,7 @@ class TestSfp:
         mock_read.return_value = 2
         assert not sfp.get_lpmode()
 
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode', mock.MagicMock(return_value=True))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
     def test_set_lpmode_cmis_host_mangagement(self, mock_control):
         mock_control.return_value = True
@@ -437,3 +434,115 @@ class TestSfp:
         mock_control.return_value = False
         assert not sfp.set_lpmode(True)
         assert not sfp.set_lpmode(False)
+
+    def test_determine_control_type(self):
+        sfp = SFP(0)
+        sfp.get_xcvr_api = mock.MagicMock(return_value=None)
+        assert sfp.determine_control_type() == 0
+        
+        sfp.get_xcvr_api.return_value = 1 # Just make it not None
+        sfp.is_supported_for_software_control = mock.MagicMock(return_value=True)
+        assert sfp.determine_control_type() == 1
+        
+        sfp.is_supported_for_software_control.return_value = False
+        assert sfp.determine_control_type() == 0
+        
+    def test_check_power_capability(self):
+        sfp = SFP(0)
+        sfp.get_module_max_power = mock.MagicMock(return_value=-1)
+        assert not sfp.check_power_capability()
+        
+        sfp.get_module_max_power.return_value = 48
+        sfp.get_power_limit = mock.MagicMock(return_value=48)
+        assert sfp.check_power_capability()
+        
+        sfp.get_power_limit.return_value = 1
+        assert not sfp.check_power_capability()
+        
+    def test_get_module_max_power(self):
+        sfp = SFP(0)
+        sfp.is_cmis_api = mock.MagicMock(return_value=True)
+        sfp.read_eeprom = mock.MagicMock(return_value=bytearray([48]))
+        assert sfp.get_module_max_power() == 48
+        
+        sfp.is_cmis_api.return_value = False
+        sfp.is_sff_api = mock.MagicMock(return_value=True)
+        sfp.read_eeprom.return_value = bytearray([128])
+        assert sfp.get_module_max_power() == 2.5 * 4
+        
+        sfp.read_eeprom.return_value = bytearray([32])
+        assert sfp.get_module_max_power() == 3.2 * 4
+        
+        # Simulate invalid value
+        sfp.read_eeprom.return_value = bytearray([33])
+        assert sfp.get_module_max_power() == -1
+        
+        # Simulate unsupported module type
+        sfp.is_sff_api .return_value = False
+        assert sfp.get_module_max_power() == -1
+        
+    def test_update_i2c_frequency(self):
+        sfp = SFP(0)
+        sfp.get_frequency_support = mock.MagicMock(return_value=False)
+        sfp.set_frequency = mock.MagicMock()
+        sfp.update_i2c_frequency()
+        sfp.set_frequency.assert_not_called()
+        
+        sfp.get_frequency_support.return_value = True
+        sfp.update_i2c_frequency()
+        sfp.set_frequency.assert_not_called()
+        
+        sfp.is_cmis_api = mock.MagicMock(return_value=True)
+        sfp.read_eeprom = mock.MagicMock(return_value=bytearray([0]))
+        sfp.update_i2c_frequency()
+        sfp.set_frequency.assert_called_with(0)
+        
+        sfp.is_cmis_api.return_value = False
+        sfp.is_sff_api = mock.MagicMock(return_value=True)
+        sfp.update_i2c_frequency()
+        sfp.set_frequency.assert_called_with(0)
+        
+    def test_disable_tx_for_sff_optics(self):
+        sfp = SFP(0)
+        mock_api = mock.MagicMock()
+        sfp.get_xcvr_api = mock.MagicMock(return_value=mock_api)
+        mock_api.tx_disable = mock.MagicMock()
+        sfp.disable_tx_for_sff_optics()
+        mock_api.tx_disable.assert_not_called()
+        
+        sfp.is_sff_api = mock.MagicMock(return_value=True)
+        mock_api.get_tx_disable_support = mock.MagicMock(return_value=True)
+        sfp.disable_tx_for_sff_optics()
+        mock_api.tx_disable.assert_called_with(True)
+        
+    @mock.patch('sonic_platform.utils.read_int_from_file')
+    def test_get_error_info_from_sdk_error_type(self, mock_read):
+        sfp = SFP(0)
+        # Unknown error
+        mock_read.return_value = -1
+        sfp_state, error_desc = sfp.get_error_info_from_sdk_error_type()
+        assert sfp_state == '2'
+        assert 'Unknown error' in error_desc
+        
+        mock_read.return_value = 2
+        sfp_state, error_desc = sfp.get_error_info_from_sdk_error_type()
+        assert sfp_state == '11'
+        assert error_desc is None
+
+    @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
+    def test_initialize_sfp_modules(self):
+        c = Chassis()
+        c.initialize_sfp()
+        s = c._sfp_list[0]
+        s.get_hw_present = mock.MagicMock(return_value=True)
+        s.get_power_on = mock.MagicMock(return_value=False)
+        s.get_reset_state = mock.MagicMock(return_value=True)
+        s.get_power_good = mock.MagicMock(return_value=True)
+        s.determine_control_type = mock.MagicMock(return_value=1) # software control
+        s.set_control_type = mock.MagicMock()
+        SFP.initialize_sfp_modules(c._sfp_list)
+        assert s.in_stable_state()
+        SFP.wait_ready_task.stop()
+        SFP.wait_ready_task.join()
+        SFP.wait_ready_task = None

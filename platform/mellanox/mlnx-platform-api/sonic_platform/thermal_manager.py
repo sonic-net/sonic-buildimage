@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,7 +33,7 @@ class ThermalManager(ThermalManagerBase):
         and any other vendor specific initialization.
         :return:
         """
-        if DeviceDataManager.is_independent_mode():
+        if DeviceDataManager.is_module_host_management_mode():
             from .chassis import Chassis
             cls.thermal_updater_task = thermal_updater.ThermalUpdater(Chassis.chassis_instance.get_all_sfps())
             cls.thermal_updater_task.start()
@@ -46,5 +46,5 @@ class ThermalManager(ThermalManagerBase):
         is a no-op.
         :return:
         """
-        if DeviceDataManager.is_independent_mode() and cls.thermal_updater_task:
+        if DeviceDataManager.is_module_host_management_mode() and cls.thermal_updater_task:
             cls.thermal_updater_task.stop()

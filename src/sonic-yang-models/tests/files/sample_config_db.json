@@ -7,7 +7,8 @@
         },
         "DHCP_SERVER": {
             "192.0.0.8": {},
-            "192.0.0.8": {}
+            "192.0.0.8": {},
+            "2603:10e1:0:6f4::1": {}
         },
         "DNS_NAMESERVER": {
             "1.1.1.1": {},
@@ -1631,6 +1632,22 @@
                 "timeout": "5"
             }
         },
+        "LDAP": {
+            "global": {
+                "bind_dn": "test_bind",
+                "bind_password": "secret",
+                "bind_timeout": "5",
+                "version": "3",
+                "base_dn": "test_base",
+                "port": "389",
+                "timeout": "5"
+            }
+        },
+        "LDAP_SERVER": {
+            "192.168.1.1": {
+                "priority": "5"
+            }
+        },
         "NAT_BINDINGS": {
             "bind1": {
                 "nat_pool": "pool1",
@@ -2522,6 +2539,12 @@
                 "SNMP_USER_ENCRYPTION_PASSWORD": ""
             }
 
+        },
+        "SUPPRESS_ASIC_SDK_HEALTH_EVENT": {
+            "notice": {
+                "categories": ["firmware", "asic_hw"],
+                "max_events": "1024"
+            }
         },
         "SYSTEM_DEFAULTS": {
             "tunnel_qos_remap": {

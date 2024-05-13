@@ -104,7 +104,7 @@ $RepeatedMsgReduction on
 {% set port = conf.get('port', 514) -%}
 {% set proto = conf.get('protocol', 'udp') -%}
 {% set vrf = conf.get('vrf', 'default') -%}
-{% set severity = conf.get('severity', gconf.get('severity', 'notice')) -%}
+{% set severity = conf.get('severity', gconf.get('severity', '*')) -%}
 {% set filter = conf.get('filter') -%}
 {% set regex = conf.get('filter_regex') -%}
 

@@ -124,6 +124,7 @@ class TestChassis:
         chassis._fan_drawer_list = []
         assert chassis.get_num_fan_drawers() == 2
 
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
     def test_sfp(self):
         # Test get_num_sfps, it should not create any SFP objects
         DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
@@ -176,6 +177,7 @@ class TestChassis:
         assert chassis.get_num_sfps() == 6
         sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
 
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
     def test_create_sfp_in_multi_thread(self):
         DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
 
@@ -198,25 +200,6 @@ class TestChassis:
             for index, s in enumerate(chassis.get_all_sfps()):
                 assert s.sdk_index == index
             iteration_num -= 1
-
-
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', MagicMock(return_value=3))
-    def test_change_event(self):
-        chassis = Chassis()
-        chassis.modules_mgmt_thread.is_alive = MagicMock(return_value=True)
-        chassis.modules_changes_queue.get = MagicMock(return_value={1: '1'})
-
-        # Call get_change_event with timeout=0, wait until an event is detected
-        status, event_dict = chassis.get_change_event()
-        assert status is True
-        assert 'sfp' in event_dict and event_dict['sfp'][1] == '1'
-        assert len(chassis._sfp_list) == 3
-
-        # Call get_change_event with timeout=1.0
-        chassis.modules_changes_queue.get.return_value = {}
-        status, event_dict = chassis.get_change_event(timeout=1.0)
-        assert status is True
-        assert 'sfp' in event_dict and not event_dict['sfp']
 
     @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=True))
     def test_reboot_cause(self):

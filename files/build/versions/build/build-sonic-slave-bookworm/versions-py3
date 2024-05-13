@@ -8,8 +8,8 @@ deepdiff==6.2.2
 docker==7.0.0
 docker-image-py==0.1.12
 enlighten==1.12.4
-filelock==3.13.4
-freezegun==1.4.0
+filelock==3.14.0
+freezegun==1.5.0
 ijson==3.2.3
 ipaddress==1.0.23
 jsondiff==2.0.0
@@ -31,6 +31,7 @@ pycairo==1.26.0
 pycparser==2.22
 pynacl==1.5.0
 pyroute2==0.5.19
+python-arptable==0.0.2
 pyyaml==6.0.1
 semantic-version==2.10.0
 systemd-python==235

@@ -19,7 +19,7 @@ SDK_BASE_PATH = $(PLATFORM_PATH)/sdk-src/sonic-bluefield-packages/bin
 
 # Place here URL where SDK sources exist
 SDK_SOURCE_BASE_URL =
-SDK_VERSION = 24.1-RC3
+SDK_VERSION = 24.4-RC2
 
 SDK_COLLECTX_URL = https://linux.mellanox.com/public/repo/doca/1.5.2/debian12/aarch64/
 
@@ -213,20 +213,6 @@ export DPDK_DERIVED_DEBS
 SDK_DEBS += $(DPDK) $(DPDK_DERIVED_DEBS)
 SDK_SRC_TARGETS += $(DPDK)
 
-# Collectx
-
-COLLECTX_CLXAPI = collectx_1.14.3-9642347-debian12.1-aarch64-clxapi.deb
-$(COLLECTX_CLXAPI)_URL = $(SDK_COLLECTX_URL)/collectx_1.14.3-9642347-debian12.1-aarch64-clxapi.deb
-$(COLLECTX_CLXAPI)_RDEPENDS = $(IB_UMAD)
-
-COLLECTX_CLXAPI_DEV = collectx_1.14.3-9642347-debian12.1-aarch64-clxapidev.deb
-$(COLLECTX_CLXAPI_DEV)_URL = $(SDK_COLLECTX_URL)/collectx_1.14.3-9642347-debian12.1-aarch64-clxapidev.deb
-$(COLLECTX_CLXAPI_DEV)_DEPENDS = $(COLLECTX_CLXAPI)
-$(COLLECTX_CLXAPI_DEV)_RDEPENDS = $(IB_UMAD)
-
-SDK_DEBS += $(COLLECTX_CLXAPI) $(COLLECTX_CLXAPI_DEV)
-SDK_ONLINE_TARGETS += $(COLLECTX_CLXAPI) $(COLLECTX_CLXAPI_DEV)
-
 # RXP compiler and derived packages
 
 RXPCOMPILER_VER = $(call get_sdk_package_version_full,"rxp-tools")
@@ -244,20 +230,6 @@ export RXPCOMPILER_DERIVED_DEBS
 
 SDK_DEBS += $(RXPCOMPILER) $(RXPCOMPILER_DERIVED_DEBS)
 SDK_SRC_TARGETS += $(RXPCOMPILER)
-
-# UCX and derived packages
-
-UCX_VER = $(call get_sdk_package_version_full,"ucx")
-
-UCX = ucx_$(UCX_VER)_arm64.deb
-$(UCX)_DEPENDS = $(IB_VERBS_PROV) $(IB_VERBS) $(IB_VERBS_DEV) $(RDMACM) $(RDMACM_DEV)
-$(UCX)_RDEPENDS = $(IB_VERBS_PROV) $(IB_VERBS)
-$(UCX)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/ucx
-
-export UCX_VER UCX
-
-SDK_DEBS += $(UCX)
-SDK_SRC_TARGETS += $(UCX)
 
 # GRPC and derived packages
 
@@ -282,12 +254,12 @@ SDK_SRC_TARGETS += $(LIBGRPC_DEV)
 DOCA_VERSION = $(call get_sdk_package_version_full,"doca")
 DOCA_DEB_VERSION = $(DOCA_VERSION)-1
 
-DOCA_LIBS = doca-libs_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
+DOCA_LIBS = doca-cx-libs_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
 $(DOCA_LIBS)_SRC_PATH = $(PLATFORM_PATH)/sdk-src/doca
-$(DOCA_LIBS)_RDEPENDS = $(DPDK) $(COLLECTX_CLXAPI) $(RXPCOMPILER) $(LIBRXPCOMPILER_DEV) $(UCX) $(LIBGRPC_DEV) $(FLEXIO)
-$(DOCA_LIBS)_DEPENDS = $(COLLECTX_CLXAPI) $(COLLECTX_CLXAPI_DEV) $(RXPCOMPILER) $(LIBRXPCOMPILER_DEV) $(UCX) $(DPDK_DEV) $(LIBGRPC_DEV) $(FLEXIO)
-DOCA_LIBS_DEV = libdoca-libs-dev_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
-DOCA_LIBS_DBG = doca-libs-dbgsym_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
+$(DOCA_LIBS)_RDEPENDS = $(DPDK) $(RXPCOMPILER) $(LIBRXPCOMPILER_DEV) $(LIBGRPC_DEV) $(FLEXIO)
+$(DOCA_LIBS)_DEPENDS = $(RXPCOMPILER) $(LIBRXPCOMPILER_DEV) $(DPDK_DEV) $(LIBGRPC_DEV) $(FLEXIO)
+DOCA_LIBS_DEV = libdoca-cx-libs-dev_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
+DOCA_LIBS_DBG = doca-cx-libs-dbgsym_${DOCA_DEB_VERSION}_${CONFIGURED_ARCH}.deb
 
 $(eval $(call add_derived_package,$(DOCA_LIBS),$(DOCA_LIBS_DEV)))
 $(eval $(call add_derived_package,$(DOCA_LIBS),$(DOCA_LIBS_DBG)))

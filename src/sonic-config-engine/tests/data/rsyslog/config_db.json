@@ -1,0 +1,914 @@
+{
+    "AUTO_TECHSUPPORT_FEATURE": {
+        "acms": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "bgp": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "database": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "dhcp_relay": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "lldp": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "macsec": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "mux": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "pmon": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "radv": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "restapi": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "snmp": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "swss": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "syncd": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "teamd": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "telemetry": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "vnet-monitor": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        }
+    },
+    "BGP_NEIGHBOR": {
+        "10.0.0.57": {
+            "admin_status": "up",
+            "asn": "64600",
+            "holdtime": "10",
+            "keepalive": "3",
+            "local_addr": "10.0.0.56",
+            "name": "ARISTA01T1",
+            "nhopself": "0",
+            "rrclient": "0"
+        },
+        "10.0.0.59": {
+            "admin_status": "up",
+            "asn": "64600",
+            "holdtime": "10",
+            "keepalive": "3",
+            "local_addr": "10.0.0.58",
+            "name": "ARISTA02T1",
+            "nhopself": "0",
+            "rrclient": "0"
+        },
+        "10.0.0.61": {
+            "admin_status": "up",
+            "asn": "64600",
+            "holdtime": "10",
+            "keepalive": "3",
+            "local_addr": "10.0.0.60",
+            "name": "ARISTA03T1",
+            "nhopself": "0",
+            "rrclient": "0"
+        },
+        "10.0.0.63": {
+            "admin_status": "up",
+            "asn": "64600",
+            "holdtime": "10",
+            "keepalive": "3",
+            "local_addr": "10.0.0.62",
+            "name": "ARISTA04T1",
+            "nhopself": "0",
+            "rrclient": "0"
+        },
+        "fc00::7a": {
+            "admin_status": "up",
+            "asn": "64600",
+            "holdtime": "10",
+            "keepalive": "3",
+            "local_addr": "fc00::79",
+            "name": "ARISTA03T1",
+            "nhopself": "0",
+            "rrclient": "0"
+        },
+        "fc00::7e": {
+            "admin_status": "up",
+            "asn": "64600",
+            "holdtime": "10",
+            "keepalive": "3",
+            "local_addr": "fc00::7d",
+            "name": "ARISTA04T1",
+            "nhopself": "0",
+            "rrclient": "0"
+        },
+        "fc00::72": {
+            "admin_status": "up",
+            "asn": "64600",
+            "holdtime": "10",
+            "keepalive": "3",
+            "local_addr": "fc00::71",
+            "name": "ARISTA01T1",
+            "nhopself": "0",
+            "rrclient": "0"
+        },
+        "fc00::76": {
+            "admin_status": "up",
+            "asn": "64600",
+            "holdtime": "10",
+            "keepalive": "3",
+            "local_addr": "fc00::75",
+            "name": "ARISTA02T1",
+            "nhopself": "0",
+            "rrclient": "0"
+        }
+    },
+    "CONSOLE_SWITCH": {
+        "console_mgmt": {
+            "enabled": "no"
+        }
+    },
+    "DEVICE_METADATA": {
+        "localhost": {
+            "bgp_asn": "65100",
+            "buffer_model": "traditional",
+            "cloudtype": "Public",
+            "default_bgp_status": "down",
+            "default_pfcwd_status": "enable",
+            "deployment_id": "1",
+            "docker_routing_config_mode": "separated",
+            "hostname": "kvm-host",
+            "hwsku": "Mellanox-SN2700",
+            "mac": "98:03:9B:F6:02:80",
+            "platform": "x86_64-mlnx_msn2700-r0",
+            "region": "None",
+            "synchronous_mode": "enable",
+            "type": "ToRRouter"
+        }
+    },
+    "DEVICE_NEIGHBOR": {
+        "Ethernet112": {
+            "name": "ARISTA01T1",
+            "port": "Ethernet1"
+        },
+        "Ethernet116": {
+            "name": "ARISTA02T1",
+            "port": "Ethernet1"
+        },
+        "Ethernet120": {
+            "name": "ARISTA03T1",
+            "port": "Ethernet1"
+        },
+        "Ethernet124": {
+            "name": "ARISTA04T1",
+            "port": "Ethernet1"
+        }
+    },
+    "DEVICE_NEIGHBOR_METADATA": {
+        "ARISTA01T1": {
+            "hwsku": "Arista-VM",
+            "mgmt_addr": "172.16.190.114",
+            "type": "LeafRouter"
+        },
+        "ARISTA02T1": {
+            "hwsku": "Arista-VM",
+            "mgmt_addr": "172.16.190.115",
+            "type": "LeafRouter"
+        },
+        "ARISTA03T1": {
+            "hwsku": "Arista-VM",
+            "mgmt_addr": "172.16.190.116",
+            "type": "LeafRouter"
+        },
+        "ARISTA04T1": {
+            "hwsku": "Arista-VM",
+            "mgmt_addr": "172.16.190.117",
+            "type": "LeafRouter"
+        }
+    },
+    "DHCP_RELAY": {
+        "Vlan1000": {
+            "dhcpv6_servers": [
+                "fc02:2000::1",
+                "fc02:2000::2",
+                "fc02:2000::3",
+                "fc02:2000::4"
+            ]
+        }
+    },
+    "DHCP_SERVER": {
+        "192.0.0.1": {},
+        "192.0.0.2": {},
+        "192.0.0.3": {},
+        "192.0.0.4": {}
+    },
+    "FEATURE": {
+        "acms": {
+            "auto_restart": "enabled",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "delayed": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "enabled"
+        },
+        "bgp": {
+            "auto_restart": "enabled",
+            "check_up_status": "false",
+            "has_global_scope": "False",
+            "has_per_asic_scope": "True",
+            "delayed": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "enabled"
+        },
+        "database": {
+            "auto_restart": "always_enabled",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "True",
+            "delayed": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "always_enabled"
+        },
+        "dhcp_relay": {
+            "auto_restart": "enabled",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "delayed": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "enabled"
+        },
+        "lldp": {
+            "auto_restart": "enabled",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "True",
+            "delayed": "True",
+            "high_mem_alert": "disabled",
+            "set_owner": "kube",
+            "state": "enabled"
+        },
+        "macsec": {
+            "auto_restart": "enabled",
+            "has_global_scope": "False",
+            "has_per_asic_scope": "True",
+            "delayed": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "disabled"
+        },
+        "mux": {
+            "auto_restart": "enabled",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "delayed": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "always_disabled"
+        },
+        "pmon": {
+            "auto_restart": "enabled",
+            "check_up_status": "false",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "delayed": "True",
+            "high_mem_alert": "disabled",
+            "set_owner": "kube",
+            "state": "enabled"
+        },
+        "radv": {
+            "auto_restart": "enabled",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "delayed": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "kube",
+            "state": "enabled"
+        },
+        "restapi": {
+            "auto_restart": "enabled",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "delayed": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "enabled"
+        },
+        "snmp": {
+            "auto_restart": "enabled",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "delayed": "True",
+            "high_mem_alert": "disabled",
+            "set_owner": "kube",
+            "state": "enabled"
+        },
+        "swss": {
+            "auto_restart": "enabled",
+            "check_up_status": "false",
+            "has_global_scope": "False",
+            "has_per_asic_scope": "True",
+            "delayed": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "enabled"
+        },
+        "syncd": {
+            "auto_restart": "enabled",
+            "has_global_scope": "False",
+            "has_per_asic_scope": "True",
+            "delayed": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "enabled"
+        },
+        "teamd": {
+            "auto_restart": "enabled",
+            "has_global_scope": "False",
+            "has_per_asic_scope": "True",
+            "delayed": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "enabled"
+        },
+        "telemetry": {
+            "auto_restart": "enabled",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "delayed": "True",
+            "high_mem_alert": "disabled",
+            "set_owner": "kube",
+            "state": "enabled"
+        },
+        "vnet-monitor": {
+            "auto_restart": "enabled",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "delayed": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "disabled"
+        }
+    },
+    "FLEX_COUNTER_TABLE": {
+        "ACL": {
+            "FLEX_COUNTER_DELAY_STATUS": "false",
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        }
+    },
+    "KDUMP": {
+        "config": {
+            "enabled": "false",
+            "memory": "0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-:448M",
+            "num_dumps": "3"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0": {},
+        "Loopback0|10.1.0.32/32": {},
+        "Loopback0|FC00:1::32/128": {}
+    },
+    "MGMT_INTERFACE": {
+        "eth0|10.150.22.115/23": {
+            "gwaddr": "10.150.22.1"
+        },
+        "eth0|2404:f801:10:2200::a96:1673/64": {
+            "gwaddr": "2404:f801:10:2200::1"
+        }
+    },
+    "MGMT_PORT": {
+        "eth0": {
+            "admin_status": "up",
+            "alias": "eth0"
+        }
+    },
+    "PORT": {
+        "Ethernet0": {
+            "alias": "etp1",
+            "description": "etp1",
+            "fec": "rs",
+            "index": "1",
+            "lanes": "0,1,2,3",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet4": {
+            "admin_status": "up",
+            "alias": "etp2",
+            "description": "Servers0:eth0",
+            "fec": "rs",
+            "index": "2",
+            "lanes": "4,5,6,7",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet8": {
+            "admin_status": "up",
+            "alias": "etp3",
+            "description": "Servers1:eth0",
+            "fec": "rs",
+            "index": "3",
+            "lanes": "8,9,10,11",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet12": {
+            "admin_status": "up",
+            "alias": "etp4",
+            "description": "Servers2:eth0",
+            "fec": "rs",
+            "index": "4",
+            "lanes": "12,13,14,15",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet16": {
+            "admin_status": "up",
+            "alias": "etp5",
+            "description": "Servers3:eth0",
+            "fec": "rs",
+            "index": "5",
+            "lanes": "16,17,18,19",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet20": {
+            "admin_status": "up",
+            "alias": "etp6",
+            "description": "Servers4:eth0",
+            "fec": "rs",
+            "index": "6",
+            "lanes": "20,21,22,23",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet24": {
+            "admin_status": "up",
+            "alias": "etp7",
+            "description": "Servers5:eth0",
+            "fec": "rs",
+            "index": "7",
+            "lanes": "24,25,26,27",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet28": {
+            "admin_status": "up",
+            "alias": "etp8",
+            "description": "Servers6:eth0",
+            "fec": "rs",
+            "index": "8",
+            "lanes": "28,29,30,31",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet32": {
+            "admin_status": "up",
+            "alias": "etp9",
+            "description": "Servers7:eth0",
+            "fec": "rs",
+            "index": "9",
+            "lanes": "32,33,34,35",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet36": {
+            "admin_status": "up",
+            "alias": "etp10",
+            "description": "Servers8:eth0",
+            "fec": "rs",
+            "index": "10",
+            "lanes": "36,37,38,39",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet40": {
+            "admin_status": "up",
+            "alias": "etp11",
+            "description": "Servers9:eth0",
+            "fec": "rs",
+            "index": "11",
+            "lanes": "40,41,42,43",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet44": {
+            "admin_status": "up",
+            "alias": "etp12",
+            "description": "Servers10:eth0",
+            "fec": "rs",
+            "index": "12",
+            "lanes": "44,45,46,47",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet48": {
+            "admin_status": "up",
+            "alias": "etp13",
+            "description": "Servers11:eth0",
+            "fec": "rs",
+            "index": "13",
+            "lanes": "48,49,50,51",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet52": {
+            "admin_status": "up",
+            "alias": "etp14",
+            "description": "Servers12:eth0",
+            "fec": "rs",
+            "index": "14",
+            "lanes": "52,53,54,55",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet56": {
+            "admin_status": "up",
+            "alias": "etp15",
+            "description": "Servers13:eth0",
+            "fec": "rs",
+            "index": "15",
+            "lanes": "56,57,58,59",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet60": {
+            "admin_status": "up",
+            "alias": "etp16",
+            "description": "Servers14:eth0",
+            "fec": "rs",
+            "index": "16",
+            "lanes": "60,61,62,63",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet64": {
+            "admin_status": "up",
+            "alias": "etp17",
+            "description": "Servers15:eth0",
+            "fec": "rs",
+            "index": "17",
+            "lanes": "64,65,66,67",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet68": {
+            "admin_status": "up",
+            "alias": "etp18",
+            "description": "Servers16:eth0",
+            "fec": "rs",
+            "index": "18",
+            "lanes": "68,69,70,71",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet72": {
+            "admin_status": "up",
+            "alias": "etp19",
+            "description": "Servers17:eth0",
+            "fec": "rs",
+            "index": "19",
+            "lanes": "72,73,74,75",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet76": {
+            "admin_status": "up",
+            "alias": "etp20",
+            "description": "Servers18:eth0",
+            "fec": "rs",
+            "index": "20",
+            "lanes": "76,77,78,79",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet80": {
+            "admin_status": "up",
+            "alias": "etp21",
+            "description": "Servers19:eth0",
+            "fec": "rs",
+            "index": "21",
+            "lanes": "80,81,82,83",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet84": {
+            "admin_status": "up",
+            "alias": "etp22",
+            "description": "Servers20:eth0",
+            "fec": "rs",
+            "index": "22",
+            "lanes": "84,85,86,87",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet88": {
+            "admin_status": "up",
+            "alias": "etp23",
+            "description": "Servers21:eth0",
+            "fec": "rs",
+            "index": "23",
+            "lanes": "88,89,90,91",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet92": {
+            "admin_status": "up",
+            "alias": "etp24",
+            "description": "Servers22:eth0",
+            "fec": "rs",
+            "index": "24",
+            "lanes": "92,93,94,95",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet96": {
+            "admin_status": "up",
+            "alias": "etp25",
+            "description": "Servers23:eth0",
+            "fec": "rs",
+            "index": "25",
+            "lanes": "96,97,98,99",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet100": {
+            "alias": "etp26",
+            "description": "etp26",
+            "fec": "rs",
+            "index": "26",
+            "lanes": "100,101,102,103",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet104": {
+            "alias": "etp27",
+            "description": "etp27",
+            "fec": "rs",
+            "index": "27",
+            "lanes": "104,105,106,107",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet108": {
+            "alias": "etp28",
+            "description": "etp28",
+            "fec": "rs",
+            "index": "28",
+            "lanes": "108,109,110,111",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet112": {
+            "admin_status": "up",
+            "alias": "etp29",
+            "description": "ARISTA01T1:Ethernet1",
+            "fec": "rs",
+            "index": "29",
+            "lanes": "112,113,114,115",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet116": {
+            "admin_status": "up",
+            "alias": "etp30",
+            "description": "ARISTA02T1:Ethernet1",
+            "fec": "rs",
+            "index": "30",
+            "lanes": "116,117,118,119",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet120": {
+            "admin_status": "up",
+            "alias": "etp31",
+            "description": "ARISTA03T1:Ethernet1",
+            "fec": "rs",
+            "index": "31",
+            "lanes": "120,121,122,123",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        },
+        "Ethernet124": {
+            "admin_status": "up",
+            "alias": "etp32",
+            "description": "ARISTA04T1:Ethernet1",
+            "fec": "rs",
+            "index": "32",
+            "lanes": "124,125,126,127",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "100000",
+            "tpid": "0x8100"
+        }
+    },
+    "PORTCHANNEL": {
+        "PortChannel101": {
+            "admin_status": "up",
+            "lacp_key": "auto",
+            "min_links": "1",
+            "mtu": "9100",
+            "tpid": "0x8100"
+        },
+        "PortChannel102": {
+            "admin_status": "up",
+            "lacp_key": "auto",
+            "min_links": "1",
+            "mtu": "9100",
+            "tpid": "0x8100"
+        },
+        "PortChannel103": {
+            "admin_status": "up",
+            "lacp_key": "auto",
+            "min_links": "1",
+            "mtu": "9100",
+            "tpid": "0x8100"
+        },
+        "PortChannel104": {
+            "admin_status": "up",
+            "lacp_key": "auto",
+            "min_links": "1",
+            "mtu": "9100",
+            "tpid": "0x8100"
+        }
+    },
+    "PORTCHANNEL_INTERFACE": {
+        "PortChannel101": {},
+        "PortChannel101|10.0.0.56/31": {},
+        "PortChannel101|FC00::71/126": {},
+        "PortChannel102": {},
+        "PortChannel102|10.0.0.58/31": {},
+        "PortChannel102|FC00::75/126": {},
+        "PortChannel103": {},
+        "PortChannel103|10.0.0.60/31": {},
+        "PortChannel103|FC00::79/126": {},
+        "PortChannel104": {},
+        "PortChannel104|10.0.0.62/31": {},
+        "PortChannel104|FC00::7D/126": {}
+    },
+    "PORTCHANNEL_MEMBER": {
+        "PortChannel101|Ethernet112": {},
+        "PortChannel102|Ethernet116": {},
+        "PortChannel103|Ethernet120": {},
+        "PortChannel104|Ethernet124": {}
+    },
+    "SNMP": {
+        "LOCATION": {
+            "Location": "public"
+        }
+    },
+    "SNMP_COMMUNITY": {
+        "public": {
+            "TYPE": "RO"
+        }
+    },
+    "SYSLOG_SERVER": {
+        "10.150.22.222": {}
+    },
+    "VERSIONS": {
+        "DATABASE": {
+            "VERSION": "version_3_0_7"
+        }
+    },
+    "VLAN": {
+        "Vlan1000": {
+            "dhcp_servers": [
+                "192.0.0.1",
+                "192.0.0.2",
+                "192.0.0.3",
+                "192.0.0.4"
+            ],
+            "dhcpv6_servers": [
+                "fc02:2000::1",
+                "fc02:2000::2",
+                "fc02:2000::3",
+                "fc02:2000::4"
+            ],
+            "vlanid": "1000"
+        }
+    },
+    "VLAN_INTERFACE": {
+        "Vlan1000": {},
+        "Vlan1000|192.168.0.1/21": {},
+        "Vlan1000|fc02:1000::1/64": {}
+    },
+    "VLAN_MEMBER": {
+        "Vlan1000|Ethernet4": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet8": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet12": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet16": {
+            "tagging_mode": "untagged"
+        }
+    }
+}
+

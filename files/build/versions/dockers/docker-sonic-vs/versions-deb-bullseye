@@ -13,7 +13,7 @@ fontconfig-config==2.13.1-4.2
 fonts-dejavu-core==2.37-2
 fonts-font-awesome==5.0.10+really4.7.0~dfsg-4.1
 fonts-lato==2.0-2.1
-frr==8.5.1-sonic-0
+frr==8.5.4-sonic-0
 gettext-base==0.21-4
 gir1.2-glib-2.0==1.66.1-1+b1
 gnupg==2.2.27-2+deb11u2
@@ -29,7 +29,7 @@ grub-common==2.06-3~deb11u6
 grub2-common==2.06-3~deb11u6
 icu-devtools==67.1-7
 ifupdown==0.8.36
-iproute2==5.10.0-4sonic1
+iproute2==6.1.0-3~bpo11+1
 iptables==1.8.7-1
 krb5-multidev==1.18.3-6+deb11u4+fips
 libapparmor1==2.13.6-10
@@ -38,8 +38,8 @@ libblkid-dev==2.36.1-8+deb11u2
 libblkid1==2.36.1-8+deb11u2
 libbsd-dev==0.11.3-1+deb11u1
 libc-ares2==1.17.1-1+deb11u3
-libc-dev-bin==2.31-13+deb11u8
-libc6-dev==2.31-13+deb11u8
+libc-dev-bin==2.31-13+deb11u10
+libc6-dev==2.31-13+deb11u10
 libcbor0==0.5.0+dfsg-2
 libcrypt-dev==1:4.4.18-4
 libdevmapper1.02.1==2:1.02.175-2.1
@@ -52,8 +52,8 @@ libfreetype6==2.10.4+dfsg-1+deb11u1
 libfreetype6-dev==2.10.4+dfsg-1+deb11u1
 libfuse2==2.9.9-5
 libgirepository-1.0-1==1.66.1-1+b1
-libglib2.0-0==2.66.8-1+deb11u1
-libglib2.0-data==2.66.8-1+deb11u1
+libglib2.0-0==2.66.8-1+deb11u3
+libglib2.0-data==2.66.8-1+deb11u3
 libgssapi-krb5-2==1.18.3-6+deb11u4+fips
 libgssrpc4==1.18.3-6+deb11u4+fips
 libicu-dev==67.1-7
@@ -104,7 +104,7 @@ libxml2==2.9.10+dfsg-6.7+deb11u4
 libxml2-dev==2.9.10+dfsg-6.7+deb11u4
 libyang2==2.0.112-6
 libzmq3-dev==4.3.4-1+deb11u1
-linux-libc-dev==5.10.209-2
+linux-libc-dev==5.10.216-1
 logrotate==3.18.0-2+deb11u2
 lsof==4.93.2+dfsg-1.1
 mailcap==3.69

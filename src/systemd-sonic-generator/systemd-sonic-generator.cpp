@@ -27,6 +27,7 @@ const char* CONFIG_FILE = "/etc/sonic/generated_services.conf";
 const char* MACHINE_CONF_FILE = "/host/machine.conf";
 const char* ASIC_CONF_FORMAT = "/usr/share/sonic/device/%s/asic.conf";
 const char* PLATFORM_FILE_FORMAT = "/usr/share/sonic/device/%s/platform.json";
+const char* PLATFORM_CONF_FORMAT = "/usr/share/sonic/device/%s/services.conf";
 const char* DPU_PREFIX = "dpu";
 
 
@@ -64,6 +65,13 @@ const char* g_platform_file_format = NULL;
 const char* get_platform_file_format() {
     return (g_platform_file_format) ? g_platform_file_format : PLATFORM_FILE_FORMAT;
 }
+
+const char* g_platform_conf_format = NULL;
+const char* get_platform_conf_format() {
+    return (g_platform_conf_format) ? g_platform_conf_format : PLATFORM_CONF_FORMAT;
+}
+
+const char* get_platform();
 
 static int num_asics;
 static char** multi_instance_services;
@@ -440,16 +448,15 @@ int get_install_targets(std::string unit_file, char* targets[]) {
 }
 
 
-int get_unit_files(char* unit_files[]) {
+int get_unit_files(const char* config_file, char* unit_files[], int unit_files_size) {
     /***
-    Reads a list of unit files to be installed from /etc/sonic/generated_services.conf
+    Reads a list of unit files to be installed from config_file
     ***/
     FILE *fp;
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
     char *pos;
-    const char* config_file = get_config_file();
 
     fp = fopen(config_file, "r");
 
@@ -459,12 +466,14 @@ int get_unit_files(char* unit_files[]) {
     }
 
     int num_unit_files = 0;
-    num_multi_inst = 0;
 
-    multi_instance_services = (char**) calloc(MAX_NUM_UNITS, sizeof(char *));
+    if (!multi_instance_services) {
+        num_multi_inst = 0;
+        multi_instance_services = (char**) calloc(MAX_NUM_UNITS, sizeof(char *));
+    }
 
     while ((read = getline(&line, &len, fp)) != -1) {
-        if (num_unit_files >= MAX_NUM_UNITS) {
+        if (num_unit_files >= unit_files_size) {
             fprintf(stderr, "Maximum number of units exceeded, ignoring extras\n");
             break;
         }
@@ -499,6 +508,23 @@ int get_unit_files(char* unit_files[]) {
     fclose(fp);
 
     return num_unit_files;
+}
+
+int get_platform_unit_files(char* unit_files[], int unit_files_size)
+{
+    const char* platform = get_platform();
+    if (!platform) {
+        return 0;
+    }
+
+    char config_file[PATH_MAX];
+    snprintf(config_file, PATH_MAX, get_platform_conf_format(), platform);
+
+    if (access(config_file, R_OK) != 0) {
+        return 0;
+    }
+
+    return get_unit_files(config_file, unit_files, unit_files_size);
 }
 
 
@@ -957,7 +983,7 @@ static int render_network_service_for_smart_switch() {
     size_t file_size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
     size_t len = file_size + buffer_instruction.length() + 1;
-    char *unit_content = (char*) malloc(len);
+    char *unit_content = (char*) calloc(len, sizeof(unit_content));
     if (unit_content == NULL) {
         fprintf(stderr, "Failed to allocate memory for %s\n", unit_path.c_str());
         fclose(fp);
@@ -1080,7 +1106,9 @@ int ssg_main(int argc, char **argv) {
     num_dpus = get_num_of_dpu();
 
     install_dir = std::string(argv[1]) + "/";
-    num_unit_files = get_unit_files(unit_files);
+    const char* config_file = get_config_file();
+    num_unit_files = get_unit_files(config_file, unit_files, MAX_NUM_UNITS);
+    num_unit_files += get_platform_unit_files(&unit_files[num_unit_files], MAX_NUM_UNITS - num_unit_files);
 
     // Install and render midplane network service for smart switch
     if (smart_switch) {
@@ -1125,6 +1153,8 @@ int ssg_main(int argc, char **argv) {
         free(multi_instance_services[i]);
     }
     free(multi_instance_services);
+    multi_instance_services = NULL;
+    num_multi_inst = 0;
 
     if (is_valid_pointer(platform_info)) {
         json_object_put(platform_info);

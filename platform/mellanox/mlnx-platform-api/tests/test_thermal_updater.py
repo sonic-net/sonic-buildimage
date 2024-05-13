@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,10 +61,8 @@ class TestThermalUpdater:
 
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_asic', mock.MagicMock())
     @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.update_module', mock.MagicMock())
-    @mock.patch('sonic_platform.thermal_updater.ThermalUpdater.wait_all_sfp_ready')
     @mock.patch('sonic_platform.utils.write_file')
-    def test_start_stop(self, mock_write, mock_wait):
-        mock_wait.return_value = True
+    def test_start_stop(self, mock_write):
         mock_sfp = mock.MagicMock()
         mock_sfp.sdk_index = 1
         updater = ThermalUpdater([mock_sfp])
@@ -76,21 +74,6 @@ class TestThermalUpdater:
         updater.stop()
         assert not updater._timer.is_alive()
         mock_write.assert_called_once_with('/run/hw-management/config/suspend', 1)
-
-        mock_wait.return_value = False
-        mock_write.reset_mock()
-        updater.start()
-        mock_write.assert_called_once_with('/run/hw-management/config/suspend', 1)
-        updater.stop()
-
-    @mock.patch('sonic_platform.thermal_updater.time.sleep', mock.MagicMock())
-    def test_wait_all_sfp_ready(self):
-        mock_sfp = mock.MagicMock()
-        mock_sfp.is_sw_control = mock.MagicMock(return_value=True)
-        updater = ThermalUpdater([mock_sfp])
-        assert updater.wait_all_sfp_ready()
-        mock_sfp.is_sw_control.side_effect = Exception('')
-        assert not updater.wait_all_sfp_ready()
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
     def test_update_asic(self, mock_read):

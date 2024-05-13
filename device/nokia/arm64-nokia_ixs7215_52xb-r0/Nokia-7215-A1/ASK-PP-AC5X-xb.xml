@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-11-20-1.05" profile="Askpp" sid="fdf5b1c2-b80a-47a6-ac37-47e174286524">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-02-19-1.06" profile="Askpp" sid="34f1c14a-b581-422d-bd10-426dfac013dd">
   <askppplt:ASK-PP xmlns:askppplt="urn:marvell:askpp:yang">
     <askppplt:typedefs>
       <askppplt:typedef>
@@ -519,7 +519,28 @@
           <askppplt:value>1</askppplt:value>
         </askppplt:enum>
       </askppplt:typedef>
+      <askppplt:typedef>
+        <askppplt:name>asic-type</askppplt:name>
+        <askppplt:type>enumeration</askppplt:type>
+        <askppplt:description>ASIC Type</askppplt:description>
+        <askppplt:enum>
+          <askppplt:name>ASIC_AC3X</askppplt:name>
+          <askppplt:description>AC3X</askppplt:description>
+          <askppplt:value>0</askppplt:value>
+        </askppplt:enum>
+        <askppplt:enum>
+          <askppplt:name>ASIC_AC5X</askppplt:name>
+          <askppplt:description>AC5X</askppplt:description>
+          <askppplt:value>1</askppplt:value>
+        </askppplt:enum>
+        <askppplt:enum>
+          <askppplt:name>ASIC_Falcon</askppplt:name>
+          <askppplt:description>FALCON</askppplt:description>
+          <askppplt:value>2</askppplt:value>
+        </askppplt:enum>
+      </askppplt:typedef>
     </askppplt:typedefs>
+    <askppplt:ASIC_Type askppplt:type="asic-type">ASIC_AC5X</askppplt:ASIC_Type>
     <askppplt:PPInit>
       <askppplt:PP-name askppplt:type="std-string">AC5X-RD</askppplt:PP-name>
       <askppplt:Phase1>
@@ -842,7 +863,6 @@
       <askppplt:LogicalInit>
         <askppplt:routingMode askppplt:type="routing-mode-type">TCAM_ROUTER_BASED</askppplt:routingMode>
         <askppplt:maxNumOfPbrEntries askppplt:type="uint32">0</askppplt:maxNumOfPbrEntries>
-        <askppplt:sharedTableMode askppplt:type="shared-table-mode-type">MID_L3_MID_L2_NO_EM</askppplt:sharedTableMode>
         <askppplt:ingressDropEnable askppplt:type="boolean-type">true</askppplt:ingressDropEnable>
       </askppplt:LogicalInit>
       <askppplt:LibInit>

@@ -25,7 +25,7 @@ liblognorm5==2.0.5-1
 liblua5.1-0==5.1.5-8.1+b2
 libmpdec2==2.4.2-2
 libncurses6==6.1+20181013-2+deb10u5
-libnghttp2-14==1.36.0-2+deb10u2
+libnghttp2-14==1.36.0-2+deb10u3
 libnorm1==1.5.8+dfsg2-1
 libonig5==6.9.1-1
 libperl5.28==5.28.1-6+deb10u1
