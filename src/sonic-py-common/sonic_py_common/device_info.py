@@ -728,7 +728,7 @@ def get_system_mac(namespace=None, hostname=None):
     if platform == VS_PLATFORM:
         return generate_mac_for_vs(hostname, namespace)
 
-    elif (version_info['asic_type'] == 'mellanox'):
+    if (version_info['asic_type'] in ['mellanox', 'nvidia-bluefield']):
         # With Mellanox ONIE release(2019.05-5.2.0012) and above
         # "onie_base_mac" was added to /host/machine.conf:
         # onie_base_mac=e4:1d:2d:44:5e:80

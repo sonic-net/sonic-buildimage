@@ -36,12 +36,13 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	find . -type f -exec touch {} +
 
 	patch -p1 < ../0001-Allow-compilation-with-warnings.patch
-	patch -p1 < ../0001-Remove-meson-from-dependencies.patch
+	patch -p1 < ../0001-Remove-meson-from-connectx-dependencies.patch
+
 	source /etc/profile.d/libgrpc.sh
 	source /etc/profile.d/mlnx-dpdk-aarch64-linux-gnu.sh
 
 	# Build the Debs
-	PATH=/opt/mellanox/grpc/bin:/usr/bin/:$(PATH) dpkg-buildpackage -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+	PATH=/opt/mellanox/grpc/bin:/usr/bin/:$(PATH) ./devtools/doca_package_build.sh connectx
 
 	popd
 	mv $(DERIVED_TARGETS) $* $(DEST)/

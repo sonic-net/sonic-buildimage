@@ -8,7 +8,7 @@ libdebuginfod1==0.183-1
 libdw1==0.183-1
 libedit2==3.1-20191231-2+b1
 libfido2-1==1.6.0-2
-libglib2.0-0==2.66.8-1+deb11u1
+libglib2.0-0==2.66.8-1+deb11u3
 libgpm2==1.20.7-8
 libicu67==67.1-7
 libipt2==2.0.3-1

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-01-08-1.05" profile="SAI" sid="fd56a8b4-6b41-4ead-9a27-c491bc2f95b9">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-02-19-1.06" profile="SAI" dsig="md5" sid="c310bbb1-ffca-4c99-9bae-f7d4caff5941">
   <SAIplt:SAI xmlns:SAIplt="urn:marvell:SAI:yang">
     <SAIplt:typedefs>
       <SAIplt:typedef>
@@ -37,6 +37,26 @@
         </SAIplt:enum>
       </SAIplt:typedef>
       <SAIplt:typedef>
+        <SAIplt:name>InDropCounter-type</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description>Router In Drop Reason Feature Options</SAIplt:description>
+        <SAIplt:enum>
+          <SAIplt:name>TTL_HOPLIMIT_EXCEEDED</SAIplt:name>
+          <SAIplt:description>Router In Drop Counters track TTL &amp; Hop Limit Exceeded Packets</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>ROUTE_BLACKHOLE</SAIplt:name>
+          <SAIplt:description>Router In Drop Counters track Route Black Hole Packets</SAIplt:description>
+          <SAIplt:value>1</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>IN_DROP_ANY</SAIplt:name>
+          <SAIplt:description>Router In Drop Counters track either TTL &amp; Hop Limit Exceeded or Route Black Hole Packets</SAIplt:description>
+          <SAIplt:value>2</SAIplt:value>
+        </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
         <SAIplt:name>log-dest-file-path-type</SAIplt:name>
         <SAIplt:type>string</SAIplt:type>
         <SAIplt:description>A string with path to file for logging feature</SAIplt:description>
@@ -61,6 +81,11 @@
           <SAIplt:name>control-acl</SAIplt:name>
           <SAIplt:description>ACLs for control packet handling</SAIplt:description>
           <SAIplt:value>2</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>debug-counter-acl</SAIplt:name>
+          <SAIplt:description>ACLs for Debug Counters</SAIplt:description>
+          <SAIplt:value>3</SAIplt:value>
         </SAIplt:enum>
       </SAIplt:typedef>
       <SAIplt:typedef>
@@ -125,6 +150,11 @@
           <SAIplt:name>ASIC_AC5X</SAIplt:name>
           <SAIplt:description>AC5X</SAIplt:description>
           <SAIplt:value>1</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>ASIC_Falcon</SAIplt:name>
+          <SAIplt:description>FALCON</SAIplt:description>
+          <SAIplt:value>2</SAIplt:value>
         </SAIplt:enum>
       </SAIplt:typedef>
     </SAIplt:typedefs>
@@ -400,15 +430,19 @@
       <SAIplt:max_ipv4_tunnel SAIplt:type="uint32">8</SAIplt:max_ipv4_tunnel>
       <SAIplt:max_ipv6_tunnel SAIplt:type="uint32">8</SAIplt:max_ipv6_tunnel>
       <SAIplt:max_tti SAIplt:type="uint32">1024</SAIplt:max_tti>
-      <SAIplt:wred_size SAIplt:type="uint32">0</SAIplt:wred_size>
-      <SAIplt:max_nat SAIplt:type="uint32">0</SAIplt:max_nat>
     </SAIplt:scalingAC5>
+    <SAIplt:Counters>
+      <SAIplt:cnc-base-list>
+        <SAIplt:counter-base SAIplt:type="uint32">0</SAIplt:counter-base>
+      </SAIplt:cnc-base-list>
+      <SAIplt:router-in-drop-counter SAIplt:type="InDropCounter-type">IN_DROP_ANY</SAIplt:router-in-drop-counter>
+    </SAIplt:Counters>
     <SAIplt:Logging>
       <SAIplt:log_dest SAIplt:type="logDest-type">SAI_LOG_SYSLOG</SAIplt:log_dest>
     </SAIplt:Logging>
     <SAIplt:Features-using-acl>
       <SAIplt:feature SAIplt:type="acl-feature-name-type">control-acl</SAIplt:feature>
-      <SAIplt:feature-priority SAIplt:type="feature-priority-type">2</SAIplt:feature-priority>
+      <SAIplt:feature-priority SAIplt:type="feature-priority-type">3</SAIplt:feature-priority>
       <SAIplt:Ingress>
         <SAIplt:ingress-stage SAIplt:type="ingress-acl-stage-type">IPCL0</SAIplt:ingress-stage>
         <SAIplt:hit-number SAIplt:type="hit-number-type">1</SAIplt:hit-number>
@@ -420,7 +454,7 @@
     </SAIplt:Features-using-acl>
     <SAIplt:Features-using-acl>
       <SAIplt:feature SAIplt:type="acl-feature-name-type">port-sFlow</SAIplt:feature>
-      <SAIplt:feature-priority SAIplt:type="feature-priority-type">3</SAIplt:feature-priority>
+      <SAIplt:feature-priority SAIplt:type="feature-priority-type">4</SAIplt:feature-priority>
       <SAIplt:Ingress>
         <SAIplt:ingress-stage SAIplt:type="ingress-acl-stage-type">IPCL0</SAIplt:ingress-stage>
         <SAIplt:hit-number SAIplt:type="hit-number-type">0</SAIplt:hit-number>
@@ -432,7 +466,7 @@
     </SAIplt:Features-using-acl>
     <SAIplt:Features-using-acl>
       <SAIplt:feature SAIplt:type="acl-feature-name-type">port-counters-ipv4-ipv6</SAIplt:feature>
-      <SAIplt:feature-priority SAIplt:type="feature-priority-type">4</SAIplt:feature-priority>
+      <SAIplt:feature-priority SAIplt:type="feature-priority-type">5</SAIplt:feature-priority>
       <SAIplt:Ingress>
         <SAIplt:ingress-stage SAIplt:type="ingress-acl-stage-type">IPCL0</SAIplt:ingress-stage>
         <SAIplt:hit-number SAIplt:type="hit-number-type">3</SAIplt:hit-number>
@@ -440,6 +474,16 @@
       <SAIplt:Egress>
         <SAIplt:egress-stage SAIplt:type="egress-acl-stage-type">EPCL0</SAIplt:egress-stage>
         <SAIplt:hit-number SAIplt:type="hit-number-type">0</SAIplt:hit-number>
+      </SAIplt:Egress>
+    </SAIplt:Features-using-acl>
+    <SAIplt:Features-using-acl>
+      <SAIplt:feature SAIplt:type="acl-feature-name-type">debug-counter-acl</SAIplt:feature>
+      <SAIplt:feature-priority SAIplt:type="feature-priority-type">2</SAIplt:feature-priority>
+      <SAIplt:Ingress>
+        <SAIplt:ingress-stage SAIplt:type="ingress-acl-stage-type">disabled</SAIplt:ingress-stage>
+      </SAIplt:Ingress>
+      <SAIplt:Egress>
+        <SAIplt:egress-stage SAIplt:type="egress-acl-stage-type">disabled</SAIplt:egress-stage>
       </SAIplt:Egress>
     </SAIplt:Features-using-acl>
   </SAIplt:SAI>

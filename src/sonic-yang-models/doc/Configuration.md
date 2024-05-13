@@ -13,6 +13,7 @@ Table of Contents
 
          * [ACL and Mirroring](#acl-and-mirroring)
          * [BGP BBR](#bgp-bbr)
+         * [ASIC SDK health event](#asic-sdk-health-event)
          * [BGP Device Global](#bgp-device-global)
          * [BGP Sessions](#bgp-sessions)
          * [BUFFER_PG](#buffer_pg)
@@ -383,6 +384,27 @@ The **BGP_BBR** table contains device-level BBR state.
         }
 }
 ```
+### ASIC SDK health event
+
+ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HEALTH_EVENT** table.
+
+```
+"SUPPRESS_ASIC_SDK_HEALTH_EVENT": {
+    "notice": {
+        "categories": [
+            "asic_hw"
+        ],
+        "max_events": "1000"
+    },
+    "warning": {
+        "categories": [
+            "software",
+            "cpu_hw"
+        ]
+    }
+}
+```
+
 ### BGP Device Global
 
 The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.

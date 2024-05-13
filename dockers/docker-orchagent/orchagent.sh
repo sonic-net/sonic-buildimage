@@ -64,6 +64,8 @@ elif [ "$platform" == "mellanox" ]; then
     ORCHAGENT_ARGS+=""
 elif [ "$platform" == "innovium" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
+elif [ "$platform" == "nvidia-bluefield" ]; then
+    ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "pensando" ]; then
     MAC_ADDRESS=$(ip link property add dev oob_mnic0 altname eth0; ip link show oob_mnic0 | grep ether | awk '{print $2}')
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"

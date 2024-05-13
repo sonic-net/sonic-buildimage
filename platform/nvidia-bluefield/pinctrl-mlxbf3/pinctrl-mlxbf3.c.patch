@@ -1,0 +1,13 @@
+diff --git a/pinctrl-mlxbf3.c b/pinctrl-mlxbf3.c
+index 8371d83..d3746f6 100644
+--- a/pinctrl-mlxbf3.c
++++ b/pinctrl-mlxbf3.c
+@@ -18,7 +18,7 @@
+ 
+ #define DRV_VERSION "1.0"
+ 
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+ struct pinfunction {
+ 	const char *name;
+ 	const char * const *groups;

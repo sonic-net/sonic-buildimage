@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,7 +56,7 @@ NEW_UP_LIST = """\
 """
 
 TEST_SLK_COMMIT = """\
-Intgerate HW-MGMT 7.0030.0937 Changes
+Integrate HW-MGMT 7.0030.0937 Changes
  ## Patch List
 * 0002-i2c-mlxcpld-Decrease-polling-time-for-performance-im.patch : https://github.com/torvalds/linux/commit/cb9744178f33
 * 0003-i2c-mlxcpld-Add-support-for-I2C-bus-frequency-settin.patch : https://github.com/torvalds/linux/commit/66b0c2846ba8
@@ -71,7 +71,7 @@ Intgerate HW-MGMT 7.0030.0937 Changes
 """
 
 TEST_SB_COMMIT = """\
-Intgerate HW-MGMT 7.0030.0937 Changes
+Integrate HW-MGMT 7.0030.0937 Changes
 
 """
 
@@ -165,8 +165,8 @@ class TestHwMgmtPostAction(TestCase):
         series_diff = self.action.get_series_diff()
         kcfg_diff = self._get_kcfg_incl_diff()
         final_diff = self.action.get_merged_diff(series_diff, kcfg_diff)
+        self.action.write_non_up_diff(series_diff, kcfg_diff)
         print("".join(final_diff))
-        FileHandler.write_lines(os.path.join(self.action.args.build_root, NON_UP_DIFF), final_diff, True)
         assert check_file_content(MOCK_INPUTS_DIR+"expected_data/external-changes.patch")
 
     def test_commit_msg(self):

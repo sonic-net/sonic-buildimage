@@ -99,8 +99,8 @@ python-magic==0.4.26
 pytz==2022.7.1
 pyxdg==0.28
 pyyaml==6.0
-redis==5.0.3
-regex==2024.4.16
+redis==5.0.4
+regex==2024.5.10
 requests==2.28.1
 roman==3.3
 scour==0.38.2
@@ -115,6 +115,7 @@ sphinx==5.3.0
 sphinx-rtd-theme==1.2.0
 stdeb==0.10.0
 stgit==0.19
+thrift==0.17.0
 toml==0.10.2
 tomli==2.0.1
 tomlkit==0.11.7

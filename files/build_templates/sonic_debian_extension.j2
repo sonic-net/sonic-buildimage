@@ -284,6 +284,19 @@ sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/sonic-device-data_*.deb || \
 # package for supporting password hardening
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libpam-pwquality
 
+# Install pam-ldap, nss-ldap, ldap-utils
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
+    libnss-ldapd \
+    libpam-ldapd \
+    ldap-utils
+
+# add networking.service dependancy to nslcd
+sudo LANG=C chroot $FILESYSTEM_ROOT sed -i '/# Required-Start:/ s/$/ networking.service/' /etc/init.d/nslcd
+
+# nslcd disable default
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl stop nslcd.service
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl mask nslcd.service
+
 # Install pam-tacplus and nss-tacplus
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/libtac2_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
@@ -297,14 +310,14 @@ sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/bash-tacplus_*.deb || \
 # Install audisp-tacplus
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/audisp-tacplus_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
-# Disable tacplus by default
+# Disable tacplus and LDAP by default
 ## NOTE: this syntax of pam-auth-update is meant to be used when the package gets removed, not for specifying
 ## some local configuration of a PAM module. Currently, there's no clean way of noninteractively specifying
 ## whether some PAM module needs to be enabled or disabled on a system (there are hacky ways, though).
 ##
 ## If there is some PAM module that's installed/removed after this point, then this setting will end up having
 ## no impact, and there may be errors/test failures related to authentication.
-sudo LANG=C chroot $FILESYSTEM_ROOT pam-auth-update --remove tacplus
+sudo LANG=C chroot $FILESYSTEM_ROOT pam-auth-update --remove tacplus ldap
 sudo sed -i -e '/^passwd/s/ tacplus//' $FILESYSTEM_ROOT/etc/nsswitch.conf
 
 # Install pam-radius-auth and nss-radius
@@ -1038,6 +1051,25 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable nv-syncd-shared
 
 # Install minicom package
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install minicom
+
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable rshim.service
+{% endif %}
+
+{% if sonic_asic_platform == "nvidia-bluefield" %}
+declare -rA FW_FILE_MAP=( \
+    [$BF3_FW_FILE]="fw-BF3.mfa" \
+)
+sudo mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/dpu/
+sudo mkdir -p $FILESYSTEM_ROOT/etc/bluefield/
+for fw_file_name in ${!FW_FILE_MAP[@]}; do
+    sudo cp $files_path/$fw_file_name $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/dpu/${FW_FILE_MAP[$fw_file_name]}
+    sudo ln -s /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/dpu/${FW_FILE_MAP[$fw_file_name]} $FILESYSTEM_ROOT/etc/bluefield/${FW_FILE_MAP[$fw_file_name]}
+done
+
+SONIC_PLATFORM_PY3_WHEEL_NAME=$(basename {{platform_api_py3_wheel_path}})
+sudo cp {{platform_api_py3_wheel_path}} $FILESYSTEM_ROOT/$SONIC_PLATFORM_PY3_WHEEL_NAME
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install $SONIC_PLATFORM_PY3_WHEEL_NAME
+sudo rm -rf $FILESYSTEM_ROOT/$SONIC_PLATFORM_PY3_WHEEL_NAME
 {% endif %}
 
 {%- if SONIC_ROUTING_STACK == "frr" %}

@@ -16,8 +16,8 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-MAX_IXS7215_FAN_SPEED = 23000
-WORKING_IXS7215_FAN_SPEED = 2300
+MAX_IXS7215_FAN_SPEED = 24000
+WORKING_IXS7215_FAN_SPEED = 2400
 
 
 sonic_logger = logger.Logger('fan')

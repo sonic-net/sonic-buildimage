@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
-FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -19,7 +19,7 @@ RUN apt-get update \
     net-tools           \
     iputils-ping
 
-RUN apt-get -y install libpcap-dev libxml2-dev python-dev swig libsensors4-dev nfs-common
+RUN apt-get -y install libpcap-dev libxml2-dev python3-dev swig
 
 RUN dpkg -i \
 {% for deb in docker_syncd_mrvl_debs.split(' ') -%}

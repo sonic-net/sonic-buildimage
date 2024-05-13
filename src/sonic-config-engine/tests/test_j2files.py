@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import subprocess
+import re
 
 from unittest import TestCase
 import tests.common_utils as utils
@@ -744,6 +745,21 @@ class TestJ2Files(TestCase):
     def test_buffers_edgezone_aggregator_render_template(self):
         self._test_buffers_render_template('arista', 'x86_64-arista_7060_cx32s', 'Arista-7060CX-32S-D48C8', 'sample-arista-7060-t0-minigraph.xml', 'buffers.json.j2', 'buffer-arista7060-t0.json')
 
+    def test_rsyslog_conf(self):
+        if utils.PYvX_DIR != 'py3':
+            # Skip on python2 as the change will not be backported to previous version
+            return
+
+        conf_template = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'rsyslog', 'rsyslog.conf.j2')
+        config_db_json = os.path.join(self.test_dir, "data", "rsyslog", "config_db.json")
+        additional_data = "{\"udp_server_ip\": \"10.150.22.222\", \"hostname\": \"kvm-host\"}"
+
+        argument = ['-j', config_db_json, '-t', conf_template, '-a', additional_data]
+        self.run_script(argument, output_file=self.output_file)
+        with open(self.output_file) as file:
+            pattern = r'^action.*Device="eth0".*'
+            for line in file:
+                assert not bool(re.match(pattern, line.strip())), "eth0 is not allowed in Mgfx device"
 
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""

@@ -64,7 +64,7 @@ python-magic==0.4.16
 pytz==2019.1
 pyxdg==0.25
 pyyaml==5.4.1
-redis==5.0.3
+redis==5.0.4
 regex==2024.4.16
 requests==2.21.0
 roman==2.0.0

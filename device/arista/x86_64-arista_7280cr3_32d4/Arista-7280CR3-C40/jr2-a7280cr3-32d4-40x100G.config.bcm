@@ -1,5 +1,6 @@
 soc_family.BCM8869X=BCM8869X
 
+dpp_db_path=/usr/share/bcm/db
 custom_feature_ucode_path=u_code_db2pem.txt
 system_headers_mode=1
 suppress_unknown_prop_warnings=1
