@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-05-05-1.04" profile="Askpp" dsig="md5">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-02-19-1.06" profile="Askpp" sid="34f1c14a-b581-422d-bd10-426dfac013dd">
   <askppplt:ASK-PP xmlns:askppplt="urn:marvell:askpp:yang">
     <askppplt:typedefs>
       <askppplt:typedef>
@@ -357,28 +357,28 @@
         <askppplt:enum>
           <askppplt:name>NATIVE</askppplt:name>
           <askppplt:description>NATIVE
-   	 *  the trunk members are filled
-   	 *  according to the order given by application.
-   	 *  Regular trunk may hold max of 8 members.
-   	 *  Cascade trunk may hold :
-   	 *  max of 64 members</askppplt:description>
+*  the trunk members are filled
+*  according to the order given by application.
+*  Regular trunk may hold max of 8 members.
+*  Cascade trunk may hold :
+*  max of 64 members</askppplt:description>
           <askppplt:value>0</askppplt:value>
         </askppplt:enum>
         <askppplt:enum>
           <askppplt:name>FLEX</askppplt:name>
           <askppplt:description>FLEX
-   	 *  A mode to allows flexibility for
-   	 *  each Regular trunk to state it's max number of members (before starting to add members).
-   	 *  (this mode not effect 'cascade trunk' members)
-   	 *  Regular trunk may hold : max of 4K members. (each trunk set it's own limit)
-   	 *  Cascade trunk may hold : max of 64 members.</askppplt:description>
+*  A mode to allows flexibility for
+*  each Regular trunk to state it's max number of members (before starting to add members).
+*  (this mode not effect 'cascade trunk' members)
+*  Regular trunk may hold : max of 4K members. (each trunk set it's own limit)
+*  Cascade trunk may hold : max of 64 members.</askppplt:description>
           <askppplt:value>2</askppplt:value>
         </askppplt:enum>
       </askppplt:typedef>
       <askppplt:typedef>
         <askppplt:name>number-physical-port-type</askppplt:name>
         <askppplt:type>enumeration</askppplt:type>
-        <askppplt:description>ac5x 128, falcon 64,128,256, 512, 1024</askppplt:description>
+        <askppplt:description>AC3X/AC5X 128, falcon 64, 128, 256, 512, 1024</askppplt:description>
         <askppplt:enum>
           <askppplt:name>no-ports</askppplt:name>
           <askppplt:description>no-ports</askppplt:description>
@@ -519,7 +519,28 @@
           <askppplt:value>1</askppplt:value>
         </askppplt:enum>
       </askppplt:typedef>
+      <askppplt:typedef>
+        <askppplt:name>asic-type</askppplt:name>
+        <askppplt:type>enumeration</askppplt:type>
+        <askppplt:description>ASIC Type</askppplt:description>
+        <askppplt:enum>
+          <askppplt:name>ASIC_AC3X</askppplt:name>
+          <askppplt:description>AC3X</askppplt:description>
+          <askppplt:value>0</askppplt:value>
+        </askppplt:enum>
+        <askppplt:enum>
+          <askppplt:name>ASIC_AC5X</askppplt:name>
+          <askppplt:description>AC5X</askppplt:description>
+          <askppplt:value>1</askppplt:value>
+        </askppplt:enum>
+        <askppplt:enum>
+          <askppplt:name>ASIC_Falcon</askppplt:name>
+          <askppplt:description>FALCON</askppplt:description>
+          <askppplt:value>2</askppplt:value>
+        </askppplt:enum>
+      </askppplt:typedef>
     </askppplt:typedefs>
+    <askppplt:ASIC_Type askppplt:type="asic-type">ASIC_AC5X</askppplt:ASIC_Type>
     <askppplt:PPInit>
       <askppplt:PP-name askppplt:type="std-string">AC5X-RD</askppplt:PP-name>
       <askppplt:Phase1>
@@ -842,7 +863,6 @@
       <askppplt:LogicalInit>
         <askppplt:routingMode askppplt:type="routing-mode-type">TCAM_ROUTER_BASED</askppplt:routingMode>
         <askppplt:maxNumOfPbrEntries askppplt:type="uint32">0</askppplt:maxNumOfPbrEntries>
-        <askppplt:sharedTableMode askppplt:type="shared-table-mode-type">MID_L3_MID_L2_NO_EM</askppplt:sharedTableMode>
         <askppplt:ingressDropEnable askppplt:type="boolean-type">true</askppplt:ingressDropEnable>
       </askppplt:LogicalInit>
       <askppplt:LibInit>
