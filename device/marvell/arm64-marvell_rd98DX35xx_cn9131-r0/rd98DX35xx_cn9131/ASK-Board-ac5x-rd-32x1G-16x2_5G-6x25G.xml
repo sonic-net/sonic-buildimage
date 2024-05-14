@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-05-05-1.04" profile="Askboard" dsig="md5">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-02-19-1.06" profile="Askboard" sid="eb53f80b-5892-4f8b-9197-a6f626effaba">
   <askboardplt:ASK-Board xmlns:askboardplt="urn:marvell:askboard:yang">
     <askboardplt:typedefs>
       <askboardplt:typedef>
@@ -52,7 +52,7 @@
       <askboardplt:typedef>
         <askboardplt:name>board-pp-interface-channel-type</askboardplt:name>
         <askboardplt:type>enumeration</askboardplt:type>
-        <askboardplt:description>Specifies interface tunnel.</askboardplt:description>
+        <askboardplt:description>Specifies channel interface type.</askboardplt:description>
         <askboardplt:enum>
           <askboardplt:name>pci</askboardplt:name>
           <askboardplt:description>PCI</askboardplt:description>
@@ -64,27 +64,37 @@
           <askboardplt:value>1</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
-          <askboardplt:name>pex</askboardplt:name>
-          <askboardplt:description>PEX</askboardplt:description>
-          <askboardplt:value>3</askboardplt:value>
+          <askboardplt:name>twsi</askboardplt:name>
+          <askboardplt:description>TWSI</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>board-pp-as-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies Address space type.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>4_regions</askboardplt:name>
+          <askboardplt:description>address-space 4 regions</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
-          <askboardplt:name>pex_eagle</askboardplt:name>
-          <askboardplt:description>PEX EAGLE</askboardplt:description>
-          <askboardplt:value>5</askboardplt:value>
+          <askboardplt:name>8_regions</askboardplt:name>
+          <askboardplt:description>address-space 8 regions</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
-          <askboardplt:name>pex_falcon_z</askboardplt:name>
-          <askboardplt:description>PEX FALCON Z</askboardplt:description>
-          <askboardplt:value>6</askboardplt:value>
+          <askboardplt:name>atu</askboardplt:name>
+          <askboardplt:description>address translation unit</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
         </askboardplt:enum>
       </askboardplt:typedef>
       <askboardplt:typedef>
         <askboardplt:name>device-id-type</askboardplt:name>
         <askboardplt:type>uint32</askboardplt:type>
-        <askboardplt:description>Device ID 0..1023</askboardplt:description>
+        <askboardplt:description>Device ID 0..1</askboardplt:description>
         <askboardplt:min>0</askboardplt:min>
-        <askboardplt:max>1023</askboardplt:max>
+        <askboardplt:max>1</askboardplt:max>
       </askboardplt:typedef>
       <askboardplt:typedef>
         <askboardplt:name>port-mapping-type</askboardplt:name>
@@ -111,11 +121,9 @@
       <askboardplt:typedef>
         <askboardplt:name>txq-port-number-type</askboardplt:name>
         <askboardplt:type>uint32</askboardplt:type>
-        <askboardplt:description>0 - 8 queues are configured per port (legacy mode),
-1...16 - the number of queues configured per port
-   	SIP 5 : Bobcat2,BobK:0..71 ;Bobcat3: 0..576 ;Aldrin2:0..99</askboardplt:description>
+        <askboardplt:description>TXq port number </askboardplt:description>
         <askboardplt:min>0</askboardplt:min>
-        <askboardplt:max>576</askboardplt:max>
+        <askboardplt:max>99</askboardplt:max>
       </askboardplt:typedef>
       <askboardplt:typedef>
         <askboardplt:name>phy-smi-interface-type</askboardplt:name>
@@ -162,12 +170,14 @@
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>alaska-88E3140</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E3140, used for Copper with speeds of 100M/1G/10G. Uses with FW SolarFlare next generation.</askboardplt:description>
+          <askboardplt:description>Specifies PHY identifier 88E3140, used for Copper with speeds of 100M/1G/10G.
+Uses with FW SolarFlare next generation.</askboardplt:description>
           <askboardplt:value>5</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>alaska-88E3240</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E3240, used for Copper with speeds of 100M/1G/10G. Uses with FW, SolarFlare next generation.</askboardplt:description>
+          <askboardplt:description>Specifies PHY identifier 88E3240, used for Copper with speeds of 100M/1G/10G.
+Uses with FW, SolarFlare next generation.</askboardplt:description>
           <askboardplt:value>6</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
@@ -177,7 +187,8 @@
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>alaska-88E3220</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E3220, used for Combo port with speeds of 100M/1G/10G. Uses FW, SolarFlare next generation.</askboardplt:description>
+          <askboardplt:description>Specifies PHY identifier 88E3220, used for Combo port with speeds of 100M/1G/10G.
+Uses FW, SolarFlare next generation.</askboardplt:description>
           <askboardplt:value>8</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
@@ -212,17 +223,20 @@
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>alaska-88E1780</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E1780, Integrated Octal 10/100/1000 Mbps Energy Efficient Ethernet Transceiver</askboardplt:description>
+          <askboardplt:description>Specifies PHY identifier 88E1780, Integrated Octal 10/100/1000 Mbps Energy
+Efficient Ethernet Transceiver</askboardplt:description>
           <askboardplt:value>15</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>alaska-88E2540</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E2540, 4 ports 10/100/1000/2.5G/5GBASE-T Ethernet Transceiver with IEEE 1588v2 PTP Support</askboardplt:description>
+          <askboardplt:description>Specifies PHY identifier 88E2540, 4 ports 10/100/1000/2.5G/5GBASE-T Ethernet
+Transceiver with IEEE 1588v2 PTP Support</askboardplt:description>
           <askboardplt:value>16</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>alaska-88E2580</askboardplt:name>
-          <askboardplt:description>Specifies PHY identifier 88E12580, Octal 10/100/1000/2.5G/5GBASE-T Ethernet Transceiver with IEEE 1588v2 PTP Support</askboardplt:description>
+          <askboardplt:description>Specifies PHY identifier 88E12580, Octal 10/100/1000/2.5G/5GBASE-T Ethernet Transceiver
+with IEEE 1588v2 PTP Support</askboardplt:description>
           <askboardplt:value>17</askboardplt:value>
         </askboardplt:enum>
       </askboardplt:typedef>
@@ -510,7 +524,7 @@
         <askboardplt:type>uint32</askboardplt:type>
         <askboardplt:description>serdes lane</askboardplt:description>
         <askboardplt:min>0</askboardplt:min>
-        <askboardplt:max>255</askboardplt:max>
+        <askboardplt:max>7</askboardplt:max>
       </askboardplt:typedef>
       <askboardplt:typedef>
         <askboardplt:name>cpu-type</askboardplt:name>
@@ -589,12 +603,12 @@ lowercase characters.</askboardplt:description>
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>sip5</askboardplt:name>
-          <askboardplt:description>SIP5: AC5, AC3x</askboardplt:description>
+          <askboardplt:description>SIP5: AC3x</askboardplt:description>
           <askboardplt:value>5</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
           <askboardplt:name>sip6</askboardplt:name>
-          <askboardplt:description>SIP6: Falcon, AC5x, AC5P</askboardplt:description>
+          <askboardplt:description>SIP6: Falcon, AC5x</askboardplt:description>
           <askboardplt:value>6</askboardplt:value>
         </askboardplt:enum>
       </askboardplt:typedef>
@@ -665,13 +679,35 @@ lowercase characters.</askboardplt:description>
           <askboardplt:value>1</askboardplt:value>
         </askboardplt:enum>
       </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>asic-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>ASIC Type</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>ASIC_AC3X</askboardplt:name>
+          <askboardplt:description>AC3X</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>ASIC_AC5X</askboardplt:name>
+          <askboardplt:description>AC5X</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>ASIC_Falcon</askboardplt:name>
+          <askboardplt:description>FALCON</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
     </askboardplt:typedefs>
+    <askboardplt:ASIC_Type askboardplt:type="asic-type">ASIC_AC5X</askboardplt:ASIC_Type>
     <askboardplt:boardName askboardplt:type="std-string">AC5X-RD-32x1G-16x2.5G-6x25G</askboardplt:boardName>
     <askboardplt:osCallType askboardplt:type="board-callback-type">linux-static</askboardplt:osCallType>
     <askboardplt:extDrvCallType askboardplt:type="board-callback-type">linux-static</askboardplt:extDrvCallType>
     <askboardplt:mapType askboardplt:type="board-pp-map-type">autoscan</askboardplt:mapType>
     <askboardplt:cpuType askboardplt:type="cpu-type">external</askboardplt:cpuType>
-    <askboardplt:mngInterfaceType askboardplt:type="board-pp-interface-channel-type">pex_eagle</askboardplt:mngInterfaceType>
+    <askboardplt:mngInterfaceType askboardplt:type="board-pp-interface-channel-type">pci</askboardplt:mngInterfaceType>
+    <askboardplt:adressSpaceType askboardplt:type="board-pp-as-type">atu</askboardplt:adressSpaceType>
     <askboardplt:device-list>
       <askboardplt:devNum askboardplt:type="device-id-type">0</askboardplt:devNum>
       <askboardplt:deviceId askboardplt:type="device-id-type">0</askboardplt:deviceId>
@@ -683,10 +719,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">1</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">0</askboardplt:phyNumber>
@@ -704,10 +738,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">0</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">0</askboardplt:phyNumber>
@@ -725,10 +757,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">3</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">0</askboardplt:phyNumber>
@@ -746,10 +776,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">2</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">0</askboardplt:phyNumber>
@@ -767,10 +795,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">5</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">0</askboardplt:phyNumber>
@@ -788,10 +814,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">4</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">0</askboardplt:phyNumber>
@@ -809,10 +833,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">7</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">0</askboardplt:phyNumber>
@@ -830,10 +852,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">6</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">0</askboardplt:phyNumber>
@@ -851,10 +871,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">9</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">1</askboardplt:phyNumber>
@@ -872,10 +890,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">8</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">1</askboardplt:phyNumber>
@@ -893,10 +909,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">11</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">1</askboardplt:phyNumber>
@@ -914,10 +928,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">10</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">1</askboardplt:phyNumber>
@@ -935,10 +947,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">13</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">1</askboardplt:phyNumber>
@@ -956,10 +966,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">12</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">1</askboardplt:phyNumber>
@@ -977,10 +985,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">15</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">1</askboardplt:phyNumber>
@@ -998,10 +1004,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">14</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">1</askboardplt:phyNumber>
@@ -1019,10 +1023,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">17</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">2</askboardplt:phyNumber>
@@ -1040,10 +1042,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">16</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">2</askboardplt:phyNumber>
@@ -1061,10 +1061,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">19</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">2</askboardplt:phyNumber>
@@ -1082,10 +1080,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">18</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">2</askboardplt:phyNumber>
@@ -1103,10 +1099,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">21</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">2</askboardplt:phyNumber>
@@ -1124,10 +1118,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">20</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">2</askboardplt:phyNumber>
@@ -1145,10 +1137,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">23</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">2</askboardplt:phyNumber>
@@ -1166,10 +1156,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">22</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">2</askboardplt:phyNumber>
@@ -1187,10 +1175,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">25</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">3</askboardplt:phyNumber>
@@ -1208,10 +1194,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">24</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">3</askboardplt:phyNumber>
@@ -1229,10 +1213,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">27</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">3</askboardplt:phyNumber>
@@ -1250,10 +1232,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">26</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">3</askboardplt:phyNumber>
@@ -1271,10 +1251,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">29</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">3</askboardplt:phyNumber>
@@ -1292,10 +1270,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">28</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">3</askboardplt:phyNumber>
@@ -1313,10 +1289,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">31</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">3</askboardplt:phyNumber>
@@ -1334,10 +1308,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">30</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">3</askboardplt:phyNumber>
@@ -1355,10 +1327,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">33</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2580</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">4</askboardplt:phyNumber>
@@ -1376,10 +1346,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">46</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2540</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">6</askboardplt:phyNumber>
@@ -1397,10 +1365,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">47</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2540</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">6</askboardplt:phyNumber>
@@ -1418,10 +1384,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">44</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2540</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">6</askboardplt:phyNumber>
@@ -1439,10 +1403,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">45</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2540</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">6</askboardplt:phyNumber>
@@ -1460,10 +1422,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">42</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2540</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">5</askboardplt:phyNumber>
@@ -1481,10 +1441,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">43</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2540</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">5</askboardplt:phyNumber>
@@ -1502,10 +1460,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">40</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2540</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">5</askboardplt:phyNumber>
@@ -1523,10 +1479,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">41</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2540</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">5</askboardplt:phyNumber>
@@ -1544,10 +1498,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">38</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2580</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">4</askboardplt:phyNumber>
@@ -1565,10 +1517,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">39</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2580</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">4</askboardplt:phyNumber>
@@ -1586,10 +1536,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">36</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2580</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">4</askboardplt:phyNumber>
@@ -1607,10 +1555,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">37</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2580</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">4</askboardplt:phyNumber>
@@ -1628,10 +1574,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">34</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2580</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">4</askboardplt:phyNumber>
@@ -1649,10 +1593,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">35</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2580</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">4</askboardplt:phyNumber>
@@ -1670,10 +1612,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">32</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">alaska-88E2580</askboardplt:phyType>
           <askboardplt:phyNumber askboardplt:type="uint32">4</askboardplt:phyNumber>
@@ -1691,10 +1631,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">48</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
         </askboardplt:phy>
@@ -1713,10 +1651,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">49</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
         </askboardplt:phy>
@@ -1735,10 +1671,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">50</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
         </askboardplt:phy>
@@ -1757,10 +1691,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">51</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
         </askboardplt:phy>
@@ -1779,10 +1711,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">52</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
         </askboardplt:phy>
@@ -1801,10 +1731,8 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">ethernet_mac</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">53</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
         </askboardplt:phy>
@@ -1823,20 +1751,16 @@ lowercase characters.</askboardplt:description>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">cpu_sdma</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">54</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
       </askboardplt:portMap-list>
       <askboardplt:portMap-list>
         <askboardplt:portNumber askboardplt:type="physical-port-num-type">60</askboardplt:portNumber>
         <askboardplt:TXQueue>
           <askboardplt:mappingType askboardplt:type="port-mapping-type">cpu_sdma</askboardplt:mappingType>
           <askboardplt:interfaceNum askboardplt:type="interface-num-type">55</askboardplt:interfaceNum>
-          <askboardplt:txqPortNumber askboardplt:type="txq-port-number-type">0</askboardplt:txqPortNumber>
           <askboardplt:reservePreemptiveChannel askboardplt:type="boolean-type">false</askboardplt:reservePreemptiveChannel>
         </askboardplt:TXQueue>
-        <askboardplt:portCscd askboardplt:type="port-cscd-type">NETWORK</askboardplt:portCscd>
       </askboardplt:portMap-list>
       <askboardplt:Ledstream-interface-list>
         <askboardplt:ledstream-interface-number askboardplt:type="led-interface-type">0</askboardplt:ledstream-interface-number>
