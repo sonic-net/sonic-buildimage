@@ -46,8 +46,11 @@ snmpd                       RUNNING   pid 67, uptime 1:03:56
 snmp-subagent               EXITED    Oct 19 01:53 AM
 """
 device_info.get_platform = MagicMock(return_value='unittest')
-
+ 
 device_runtime_metadata = {"DEVICE_RUNTIME_METADATA": {"ETHERNET_PORTS_PRESENT":True}}
+
+def no_op(*args, **kwargs):
+    pass  # This function does nothing
 
 def setup():
     if os.path.exists(ServiceChecker.CRITICAL_PROCESS_CACHE):
@@ -875,7 +878,9 @@ def test_get_service_from_feature_table():
 
 
 @patch('healthd.time.time')
-def test_healthd_check_interval(mock_time):
+@patch('healthd.HealthDaemon.log_notice', side_effect=lambda *args, **kwargs: None)
+@patch('healthd.HealthDaemon.log_warning', side_effect=lambda *args, **kwargs: None)
+def test_healthd_check_interval(mock_log_warning, mock_log_notice, mock_time):
     daemon = HealthDaemon()
     manager = MagicMock()
     manager.check = MagicMock()
@@ -888,6 +893,8 @@ def test_healthd_check_interval(mock_time):
     daemon.stop_event.wait.return_value = False
     manager.config.interval = 60
     mock_time.side_effect = [0, 3, 0, 61, 0, 1]
+    mock_log_notice.side_effect = no_op
+    mock_log_warning.side_effect = no_op
     assert daemon._run_checker(manager, chassis)
     daemon.stop_event.wait.assert_called_with(57)
     assert daemon._run_checker(manager, chassis)
