@@ -845,6 +845,11 @@ if [ "${PIPESTATUS[0]}" != "0" ]; then
     exit 1
 fi
 
+#Copy the default manifest file to SONIC_PACKAGE_MANAGER_FOLDER directly
+sudo cp $BUILD_TEMPLATES/default_manifest $FILESYSTEM_ROOT/$SONIC_PACKAGE_MANAGER_FOLDER/default_manifest
+#Create a new manifests subdirectory under SONIC_PACKAGE_MANAGER_FOLDER for all the user created custom manifests
+sudo mkdir -p $FILESYSTEM_ROOT/$SONIC_PACKAGE_MANAGER_FOLDER/manifests
+
 # Copy docker_image_ctl.j2 for SONiC Package Manager
 sudo cp $BUILD_TEMPLATES/docker_image_ctl.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/docker_image_ctl.j2
 
