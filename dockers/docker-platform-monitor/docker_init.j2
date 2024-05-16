@@ -91,6 +91,10 @@ if [ -e $SENSORS_CONF_PATH_GETTER ]; then
 fi
 {% endif %}
 
+{% if CONFIGURED_PLATFORM == "nvidia-bluefield" %}
+    mount -t debugfs none /sys/kernel/debug
+{% endif %}
+
 if [ -e $SENSORS_CONF_FILE ]; then
     HAVE_SENSORS_CONF=1
     mkdir -p /etc/sensors.d

@@ -1,3 +1,6 @@
+{% if DEVICE_METADATA['localhost']['switch_type'] == "dpu" %}
+[]
+{% else %}
 {% set ipv4_addresses = [] %}
 {% set ipv6_addresses = [] %}
 {% set ipv4_loopback_addresses = [] %}
@@ -77,3 +80,5 @@
     }
 {% endif %}
 ]
+{% endif %}
+
