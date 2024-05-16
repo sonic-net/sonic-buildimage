@@ -129,7 +129,7 @@ def test_dhcp_dhcp_cfggen_generate(mock_swsscommon_dbconnector_init, mock_parse_
         assert json.loads(kea_dhcp4_config) == expected_kea_config
         assert used_ranges == set()
         assert enabled_dhcp_interfaces == set(["bridge_midplane"])
-        assert used_options == set()
+        assert used_options == set(["option60", "option223"])
         expected_tables = set(["DpusTableEventChecker", "MidPlaneTableEventChecker", "VlanTableEventChecker",
                                "VlanIntfTableEventChecker", "DhcpRangeTableEventChecker", "VlanMemberTableEventChecker",
                                "DhcpOptionTableEventChecker", "DhcpPortTableEventChecker",

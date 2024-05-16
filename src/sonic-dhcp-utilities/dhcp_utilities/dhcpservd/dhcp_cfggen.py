@@ -196,6 +196,7 @@ class DhcpServCfgGenerator(object):
                 curr_options = {}
                 if "customized_options" in dhcp_config:
                     for option in dhcp_config["customized_options"]:
+                        used_options.add(option)
                         if option not in customized_option_keys:
                             syslog.syslog(syslog.LOG_WARNING, "Customized option {} configured for {} is not defined"
                                           .format(option, dhcp_interface_name))
@@ -231,7 +232,6 @@ class DhcpServCfgGenerator(object):
                         "lease_time": dhcp_config["lease_time"] if "lease_time" in dhcp_config else DEFAULT_LEASE_TIME,
                         "customized_options": curr_options
                     }
-                    used_options = used_options | set(subnet_obj["customized_options"])
                     subnets.append(subnet_obj)
         render_obj = {
             "subnets": subnets,
@@ -422,10 +422,10 @@ class DhcpServCfgGenerator(object):
                                               port_ips)
             if "ranges" in port_config and len(port_config["ranges"]) != 0:
                 for range_name in list(port_config["ranges"]):
+                    used_ranges.add(range_name)
                     if range_name not in ranges:
                         syslog.syslog(syslog.LOG_WARNING, f"Range {range_name} is not in range table, skip")
                         continue
-                    used_ranges.add(range_name)
                     range = ranges[range_name]
                     # Loop the IP of the dhcp interface and find the network that target range is in this network.
                     self._match_range_network(dhcp_interface, dhcp_interface_name, port, range, port_ips)
