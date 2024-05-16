@@ -23,7 +23,7 @@ SELECT_TIMEOUT_MSECS = 1000
 QUEUE_TIMEOUT = 15
 TASK_STOP_TIMEOUT = 10
 logger = Logger(log_identifier=SYSLOG_IDENTIFIER)
-
+exclude_srv_list = ['ztp.service']
 
 #Subprocess which subscribes to STATE_DB FEATURE table for any update
 #and push service events to main process via queue
@@ -157,6 +157,11 @@ class Sysmonitor(ProcessTaskBase):
             for srv in self.config.ignore_services:
                 if srv in dir_list:
                     dir_list.remove(srv)
+
+	#Remove services from exclude list Eg.ztp.service
+        for srv in exclude_srv_list:
+            if srv in dir_list:
+                dir_list.remove(srv)
 
         dir_list.sort()
         return dir_list
