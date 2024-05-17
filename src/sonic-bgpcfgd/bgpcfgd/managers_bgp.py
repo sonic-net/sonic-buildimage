@@ -178,11 +178,9 @@ class BGPPeerMgrBase(Manager):
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
         #
         lo0_ipv4 = self.get_lo_ipv4("Loopback0|")
-        if (lo0_ipv4 is None and self.use_loopback and "bgp_router_id"
-            not in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]):
-            log_warn("Loopback0 ipv4 address is not presented yet and bgp_router_id not configured")
+        if lo0_ipv4 is None and self.use_loopback:
+            log_warn("Loopback0 ipv4 address is not presented yet")
             return False
-
         #
         if self.peer_type == 'internal':
             lo4096_ipv4 = self.get_lo_ipv4("Loopback4096|")
@@ -218,8 +216,6 @@ class BGPPeerMgrBase(Manager):
             'CONFIG_DB__LOOPBACK_INTERFACE':{ tuple(key.split('|')) : {} for key in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME)
                                                                          if '|' in key }
         }
-        if lo0_ipv4 is not None:
-            kwargs['loopback0_ipv4'] = lo0_ipv4
         if self.check_neig_meta:
             neigmeta = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME)
             if 'name' in data and data["name"] not in neigmeta:
