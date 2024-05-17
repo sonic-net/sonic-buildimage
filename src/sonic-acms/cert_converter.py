@@ -57,11 +57,15 @@ def get_list_of_certs(path):
     supported_cert_ext = ['pfx', 'crt', 'key']
     for file_t in files:
         if ("notify" not in file_t) and ("metadata" not in file_t):
+            file_data = file_t.split(".")
+            if len(file_data) < 3:
+                sonic_logger.log_info("cert_converter : ignore " + file_t)
+                continue
             file_ext = file_t.split(".")[1]
             file_name = file_t.split(".")[0]
             if (file_ext in supported_cert_ext) and ("sonic_acms_bootstrap" not in file_name) and ("temp" not in file_name) and ("test" not in file_name):
                 cert_name = file_name
-                cert_ver = file_t.split(".")[2]
+                cert_ver = file_data[2]
                 cert_list.append(cert_name+"."+cert_ver)
     cert_list = list(set(cert_list))
     return cert_list

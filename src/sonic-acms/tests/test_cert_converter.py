@@ -43,6 +43,7 @@ class TestCertConverter(TestCase):
             'restapiserver.key.1',
             'restapiserver.crt.2',
             'restapiserver.key.2',
+            'private.key',
             'temp.crt.3',
             'temp.key'
             ]
@@ -136,12 +137,12 @@ class TestCertConverter(TestCase):
         '''
         mock_exists.return_value = True
         mock_islink.return_value = True
-        mock_listdir.return_value = ["restapiserver.crt", "restapiserver.key"]
+        mock_listdir.return_value = ["restapiserver.crt", "restapiserver.key", "private.key"]
         mock_isfile.return_value = True
         mock_table.return_value = {"localhost": (True, (('', ''),))}
         mock_db.return_value = None
         cert_converter.clean_current_certs("/dummy/")
-        expect_remove = [mock.call("/dummy/restapiserver.crt"), mock.call("/dummy/restapiserver.key")]
+        expect_remove = [mock.call("/dummy/restapiserver.crt"), mock.call("/dummy/restapiserver.key"), mock.call("/dummy/private.key")]
         self.assertEqual(mock_remove.call_args_list, expect_remove)
 
     @mock.patch("swsscommon.swsscommon.DBConnector")
