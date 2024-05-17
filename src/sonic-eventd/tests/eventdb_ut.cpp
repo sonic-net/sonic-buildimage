@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 #include "events_common.h"
 #include "events.h"
+#include <unordered_map>
 
 #include<sstream>
 #include "../src/eventd.h"
@@ -132,8 +133,13 @@ internal_event_t create_ev(const int id, const int ev_id, const string& event,
 {
     internal_event_t event_data;
     stringstream ss;
-    //new data
-    test_data_t data = {id, "source" +id, "tag" + id, "guid-" + id, to_string(id)};
+
+    test_data_t data;
+    data.id = id;
+    data.source = "source" + to_string(id);
+    data.tag = "tag" + to_string(id);
+    data.rid = "guid-" + to_string(id);
+    data.seq = to_string(id);
 
     event_data[EVENT_STR_DATA] = convert_to_json(
             data.source + ":" + data.tag, map(event_data_t[make_pair(event, action)].ev_data));
@@ -145,33 +151,26 @@ internal_event_t create_ev(const int id, const int ev_id, const string& event,
     event_data[EVENT_EPOCH] = ss.str();
     unordered_map<string, string> ev_val(event_data_t[make_pair(event, action)].ev_data.begin(),
                                          event_data_t[make_pair(event, action)].ev_data.end());
-    ev_val.insert({"id", to_string(ev_id)});
-    ev_val.insert({"time-created", ss.str()});
-    ev_val.insert({"severity", event_data_t[make_pair(event, action)].severity});
- 
+    ev_val.insert({{"id", to_string(ev_id)}});
+    ev_val.insert({{"time-created", ss.str()}});
+    ev_val.insert({{"severity", event_data_t[make_pair(event, action)].severity}});
+
     if (action == "RAISE") {
-        ev_val.insert({"acknowledged", "false"});
-        ev_val.insert({"action", action});
-    }    
+        ev_val.insert({{"acknowledged", "false"}});
+        ev_val.insert({{"action", action}});
+    }
     verify_data.insert({to_string(ev_id), ev_val});
 
     return event_data;
 }
 
-#if 0
-void run_pub(void *mock_pub, const string wr_source, internal_events_lst_t &lst)
-{
-    for(internal_events_lst_t::const_iterator itc = lst.begin(); itc != lst.end(); ++itc) {
-        EXPECT_EQ(0, zmq_message_send(mock_pub, wr_source, *itc));
-    }
-}
-#endif
 
 void verify_events(map<string, unordered_map<string, string>> verifyData) 
 {
     DBConnector eventDb("EVENT_DB", 0, true);
     auto dbKeys = eventDb.keys("EVENT:*");
     EXPECT_EQ(verifyData.size(), dbKeys.size());
+
     for (const auto& vKey : verifyData)
     {
         string evtKey = "EVENT:" + vKey.first;
@@ -206,6 +205,8 @@ void verify_alarms_raise(map<string, unordered_map<string, string>> verifyData)
 
 TEST_F(EventDbFixture, validate_events)
 {  
+    printf("Validate events TEST started\n");
+
     internal_events_lst_t wr_evts;
     string wr_source("eventd-test");        
 
@@ -229,13 +230,16 @@ TEST_F(EventDbFixture, validate_events)
     wr_evts.push_back(create_ev(301, 3, "SYSTEM_STATE", "NOTIFY", verify_data));
     run_pub(mock_pub, wr_source, wr_evts);
     this_thread::sleep_for(chrono::milliseconds(2000));
-    zmq_close(mock_pub);  
+    zmq_close(mock_pub);
+
+    printf("Validate events TEST completed\n");
  
 }
 
 
 TEST_F(EventDbFixture, validate_alarms)
 {  
+    printf("Validate alarms TEST started\n");
     internal_events_lst_t wr_evts;
     string wr_source("eventd-test");
     void *mock_pub = init_publish(zctx);
@@ -263,12 +267,14 @@ TEST_F(EventDbFixture, validate_alarms)
     wr_evts.push_back(create_ev(302, 3, "SYSTEM_STATE", "NOTIFY", verify_data));
     run_pub(mock_pub, wr_source, wr_evts); 
     this_thread::sleep_for(chrono::milliseconds(2000));
-    zmq_close(mock_pub);    
+    zmq_close(mock_pub);
+    printf("Validate alarms TEST completed\n");
 }
 
 
 TEST_F(EventDbFixture, expiry_purge)
 {
+    printf("Expiry purge TEST started\n");
     internal_events_lst_t wr_evts;
     string wr_source("eventd-test");
     void *mock_pub = init_publish(zctx);
@@ -304,12 +310,13 @@ TEST_F(EventDbFixture, expiry_purge)
     run_pub(mock_pub, wr_source, wr_evts); 
     this_thread::sleep_for(chrono::milliseconds(2000));    
     zmq_close(mock_pub);
+    printf("Expiry purge TEST completed\n");    
 }
 
 
-
-TEST_F(EventDbFixture, overflow_purge)
+TEST_F(EventDbFixture, rollover_purge)
 {
+    printf("Rollover purge TEST started\n");
     internal_events_lst_t wr_evts;
     string wr_source("eventd-test");
     void *mock_pub = init_publish(zctx);
@@ -345,4 +352,5 @@ TEST_F(EventDbFixture, overflow_purge)
     run_pub(mock_pub, wr_source, wr_evts); 
     this_thread::sleep_for(chrono::milliseconds(2000));        
     zmq_close(mock_pub);
+    printf("Rollover purge TEST completed\n");
 }
