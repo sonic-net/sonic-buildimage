@@ -120,17 +120,17 @@ def convert_certs(acms_certs_path, certs_path, password_length):
                 string_choice = string.ascii_uppercase + string.ascii_lowercase + string.digits
                 random_password = ''.join(random.choice(string_choice) for _ in range(password_length))
                 # Extract the private key from the pfx file
-                cmd = ["openssl", "pkcs12", "-nocerts", "-in", acms_certs_path+name+".pfx."+ver, "-out", certs_path+"private.key", "-password", "pass:", "-passin", "pass:", "-passout", "pass:"+random_password]
+                cmd = ["openssl", "pkcs12", "-nocerts", "-in", acms_certs_path+name+".pfx."+ver, "-out", "/tmp/private.key", "-password", "pass:", "-passin", "pass:", "-passout", "pass:"+random_password]
                 if not execute_cmd(cmd):
                     sonic_logger.log_error("cert_converter : convert_certs : Creating private key from pfx failed!", True)
                     return False
                 # Decrypt the private key
-                cmd = ["openssl", "rsa", "-in", certs_path+"private.key", "-out", certs_path+name+".key."+ver, "-passin", "pass:"+random_password]
+                cmd = ["openssl", "rsa", "-in", "/tmp/private.key", "-out", certs_path+name+".key."+ver, "-passin", "pass:"+random_password]
                 if not execute_cmd(cmd):
                     sonic_logger.log_error("cert_converter : convert_certs : Extracting key from pfx failed!", True)
                     return False
                 try:
-                    os.remove(certs_path+"private.key")
+                    os.remove("/tmp/private.key")
                 except:
                     sonic_logger.log_error("cert_converter : convert_certs : Removing private key failed!", True)
                     return False
