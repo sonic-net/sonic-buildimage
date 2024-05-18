@@ -22,6 +22,8 @@ password_length = 64
 polling_frequency = 3600
 # Redis DB information
 REDIS_TIMEOUT_MS = 0
+# prviate key path
+private_key_path = "/tmp/private.key"
 
 sonic_logger = logger.Logger()
 sonic_logger.set_min_log_priority_info()
@@ -120,17 +122,17 @@ def convert_certs(acms_certs_path, certs_path, password_length):
                 string_choice = string.ascii_uppercase + string.ascii_lowercase + string.digits
                 random_password = ''.join(random.choice(string_choice) for _ in range(password_length))
                 # Extract the private key from the pfx file
-                cmd = ["openssl", "pkcs12", "-nocerts", "-in", acms_certs_path+name+".pfx."+ver, "-out", "/tmp/private.key", "-password", "pass:", "-passin", "pass:", "-passout", "pass:"+random_password]
+                cmd = ["openssl", "pkcs12", "-nocerts", "-in", acms_certs_path+name+".pfx."+ver, "-out", private_key_path, "-password", "pass:", "-passin", "pass:", "-passout", "pass:"+random_password]
                 if not execute_cmd(cmd):
                     sonic_logger.log_error("cert_converter : convert_certs : Creating private key from pfx failed!", True)
                     return False
                 # Decrypt the private key
-                cmd = ["openssl", "rsa", "-in", "/tmp/private.key", "-out", certs_path+name+".key."+ver, "-passin", "pass:"+random_password]
+                cmd = ["openssl", "rsa", "-in", private_key_path, "-out", certs_path+name+".key."+ver, "-passin", "pass:"+random_password]
                 if not execute_cmd(cmd):
                     sonic_logger.log_error("cert_converter : convert_certs : Extracting key from pfx failed!", True)
                     return False
                 try:
-                    os.remove("/tmp/private.key")
+                    os.remove(private_key_path)
                 except:
                     sonic_logger.log_error("cert_converter : convert_certs : Removing private key failed!", True)
                     return False
