@@ -14,11 +14,6 @@ string global_existing_file = "./tests/redis_multi_db_ut_config/database_global.
 #define TEST_NAMESPACE  "asic0"
 #define INVALID_NAMESPACE  "invalid"
 
-//std::string  TEST_DB=  "APPL_DB";
-//std::string TEST_NAMESPACE=  "asic0";
-//std::string INVALID_NAMESPACE=  "invalid";
-
-
 bool g_is_redis_available = false;
 
 class SwsscommonEnvironment : public ::testing::Environment {
@@ -58,7 +53,7 @@ public:
         // Get this info handy
         try
         {
-            DBConnector db("EVENT_DB", 0, true);
+            DBConnector db("TEST_DB", 0, true);
             g_is_redis_available = true;
         }
         catch (exception &e)
