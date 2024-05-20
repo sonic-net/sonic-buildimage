@@ -40,7 +40,6 @@ bcm_device:
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 12288
             fpem_mem_entries: 64000
-            default_cpu_tx_queue: 7
 ---
 device:
   0:
@@ -1092,7 +1091,7 @@ device:
   0:
     PC_PORT:
       ?
-        PORT_ID: [152, 50]
+        PORT_ID: [50, 152]
       :
         ENABLE: 0
         SPEED: 10000

@@ -41,7 +41,6 @@ bcm_device:
             bcm_tunnel_term_compatible_mode: 1
             l3_ecmp_member_first_lkup_mem_size: 12288
             fpem_mem_entries: 64000
-            default_cpu_tx_queue: 7
 ---
 device:
     0:
@@ -630,32 +629,11 @@ device:
         #    FLEX_STATE_ING_OPERMODE_PIPEUNIQUE: 0
         #    FLEX_STATE_EGR_OPERMODE_PIPEUNIQUE: 1
 
+        # Lossy vs Lossless mode
+        TM_THD_CONFIG:
+            THRESHOLD_MODE: LOSSLESS
+
         # IFP mode
         FP_CONFIG:
             FP_ING_OPERMODE: GLOBAL_PIPE_AWARE
-...
----
-device:
-    0:
-        TM_THD_CONFIG:
-            THRESHOLD_MODE: LOSSY_AND_LOSSLESS
-...
----
-device:
-    0:
-        TM_ING_PORT_PRI_GRP:
-            ?
-                PORT_ID: [[1, 4],
-                          [17, 20],
-                          [34, 37],
-                          50,
-                          [51, 54],
-                          [204, 207],
-                          [221, 224],
-                          [238, 241],
-                          [255, 258]]
-                TM_PRI_GRP_ID: [3,4]
-            :
-                PFC: 1
-                LOSSLESS: 1
 ...
