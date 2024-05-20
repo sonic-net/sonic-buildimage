@@ -1,0 +1,8 @@
+{
+    "INCLUDES" : [
+        {
+            "include" : "eventdb_database_config.json"
+        }
+    ],
+    "VERSION" : "1.0"
+}
