@@ -1,6 +1,7 @@
 CC := g++
 
 TEST_OBJS += ./src/eventd.o ./src/eventconsume.o ./src/eventutils.o ./src/loghandler.o
+EVENTDB_TEST_OBJS += ./src/eventd.o ./src/eventconsume.o ./src/eventutils.o ./src/loghandler.o
 OBJS += ./src/eventd.o ./src/main.o
 EVENTDB_OBJS += ./src/eventdb.o ./src/eventconsume.o ./src/loghandler.o ./src/eventutils.o
 

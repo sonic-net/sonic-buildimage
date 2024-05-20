@@ -3,6 +3,8 @@
 #include "events_common.h"
 #include "events.h"
 #include <unordered_map>
+#include "dbconnector.h"
+#include <iostream>
 
 #include<sstream>
 #include "../src/eventd.h"
@@ -19,7 +21,18 @@ typedef pair<uint64_t, uint64_t> pi;
 extern priority_queue<pi, vector<pi>, greater<pi> > event_history_list;
 extern EventMap static_event_table;
 
-extern void run_pub(void *mock_pub, const string wr_source, internal_events_lst_t &lst);
+
+#define TEST_DB  "APPL_DB"
+#define TEST_NAMESPACE  "asic0"
+#define INVALID_NAMESPACE  "invalid"
+
+//extern void run_pub(void *mock_pub, const string wr_source, internal_events_lst_t &lst);
+
+string existing_file = "./tests//eventdb_database_config.json";
+string nonexisting_file = "./tests//database_config_nonexisting.json";
+string global_existing_file = "./tests//eventdb_database_global.json";
+
+
 
 typedef struct {
     map<string, string> ev_data;
@@ -71,6 +84,12 @@ void clear_eventdb_data()
     static_event_table.clear();
 }
 
+void run_pub(void *mock_pub, const string wr_source, internal_events_lst_t &lst)
+{
+    for(internal_events_lst_t::const_iterator itc = lst.begin(); itc != lst.end(); ++itc) {
+        EXPECT_EQ(0, zmq_message_send(mock_pub, wr_source, *itc));
+    }
+}
 
 class EventDbFixture : public ::testing::Test { 
     protected:
@@ -87,6 +106,7 @@ class EventDbFixture : public ::testing::Test {
         DBConnector eventDb("EVENT_DB", 0, true);
         //delete any entries in the EVENT_DB        
         delete_evdb(eventDb);
+
         try
         {
             /* Start Eventdb in a separate thread*/
@@ -353,4 +373,62 @@ TEST_F(EventDbFixture, rollover_purge)
     this_thread::sleep_for(chrono::milliseconds(2000));        
     zmq_close(mock_pub);
     printf("Rollover purge TEST completed\n");
+}
+
+class SwsscommonEnvironment : public ::testing::Environment {
+public:
+    // Override this to define how to set up the environment
+    void SetUp() override {
+        // by default , init should be false
+        cout << "Default : isInit = " << SonicDBConfig::isInit() << endl;
+        EXPECT_FALSE(SonicDBConfig::isInit());
+        EXPECT_THROW(SonicDBConfig::initialize(nonexisting_file), runtime_error);
+
+        EXPECT_FALSE(SonicDBConfig::isInit());
+
+        // load local config file, init should be true
+        SonicDBConfig::initialize(existing_file);
+        cout << "INIT: load local db config file, isInit = " << SonicDBConfig::isInit() << endl;
+        EXPECT_TRUE(SonicDBConfig::isInit());
+
+        // Test the database_global.json file
+        // by default , global_init should be false
+        cout << "Default : isGlobalInit = " << SonicDBConfig::isGlobalInit() << endl;
+        EXPECT_FALSE(SonicDBConfig::isGlobalInit());
+
+        // Call an API which actually needs the data populated by SonicDBConfig::initializeGlobalConfig
+//        EXPECT_THROW(SonicDBConfig::getDbId(EVENT_DB, TEST_NAMESPACE), runtime_error);
+
+        // load local global file, init should be true
+        SonicDBConfig::initializeGlobalConfig(global_existing_file);
+        cout<<"INIT: load global db config file, isInit = "<<SonicDBConfig::isGlobalInit()<<endl;
+        EXPECT_TRUE(SonicDBConfig::isGlobalInit());
+
+        // Call an API with wrong namespace passed
+        cout << "INIT: Invoking SonicDBConfig::getDbId(APPL_DB, invalid)" << endl;
+//        EXPECT_THROW(SonicDBConfig::getDbId(EVENT_DB, INVALID_NAMESPACE), out_of_range);
+
+        // Get this info handy
+        try
+        {
+            DBConnector db("EVENT_DB", 0, true);
+        }
+        catch (exception &e)
+        {
+            printf("Unable to get DB Connector, e=(%s)\n", e.what());            
+            GTEST_SKIP() << "Condition not met";
+        }
+    }
+};
+
+
+int main(int argc, char* argv[])
+{
+    testing::InitGoogleTest(&argc, argv);
+    // Registers a global test environment, and verifies that the
+    // registration function returns its argument.
+    
+    SwsscommonEnvironment* const env = new SwsscommonEnvironment;
+    testing::AddGlobalTestEnvironment(env);
+    return RUN_ALL_TESTS();
 }

@@ -1,6 +1,7 @@
 RM := rm -rf
 EVENTD_TARGET := eventd
 EVENTD_TEST := tests/tests
+EVENTDB_TEST := tests/eventdb
 EVENTD_TOOL := tools/events_tool
 EVENTD_PUBLISH_TOOL := tools/events_publish_tool.py
 RSYSLOG-PLUGIN_TARGET := rsyslog_plugin/rsyslog_plugin
@@ -56,12 +57,14 @@ rsyslog-plugin: $(RSYSLOG-PLUGIN_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
-eventd-tests: $(TEST_OBJS)
+eventd-tests: $(TEST_OBJS) $(EVENTDB_TEST_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: G++ Linker'
 	$(CC) $(LDFLAGS) -o $(EVENTD_TEST) $(TEST_OBJS) $(LIBS) $(TEST_LIBS)
+	$(CC) $(LDFLAGS) -o $(EVENTDB_TEST) $(EVENTDB_TEST_OBJS) $(LIBS) $(TEST_LIBS)
 	@echo 'Finished building target: $@'
 	$(EVENTD_TEST)
+	$(EVENTDB_TEST)
 	@echo 'Finished running tests'
 	@echo ' '
 
