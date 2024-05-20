@@ -4,16 +4,25 @@
 !
 {% from "common/functions.conf.j2" import get_ipv4_loopback_address %}
 !
+{% set lo4096_ipv4 = get_ipv4_loopback_address(CONFIG_DB__LOOPBACK_INTERFACE, "Loopback4096") | ip %}
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' %}
 route-map FROM_BGP_INTERNAL_PEER_V4 permit 1
- set originator-id {{ get_ipv4_loopback_address(CONFIG_DB__LOOPBACK_INTERFACE, "Loopback4096") | ip }}
+{% if "localhost" in CONFIG_DB__DEVICE_METADATA and "bgp_router_id" in CONFIG_DB__DEVICE_METADATA["localhost"] %}
+ set originator-id {{ CONFIG_DB__DEVICE_METADATA["localhost"]["bgp_router_id"] }}
+{% elif lo4096_ipv4 is not none%}
+ set originator-id {{ lo4096_ipv4 }}
+{% endif %}
 !
 route-map FROM_BGP_INTERNAL_PEER_V6 permit 1
  set ipv6 next-hop prefer-global
  on-match next
 !
 route-map FROM_BGP_INTERNAL_PEER_V6 permit 2
- set originator-id {{ get_ipv4_loopback_address(CONFIG_DB__LOOPBACK_INTERFACE, "Loopback4096") | ip }}
+{% if "localhost" in CONFIG_DB__DEVICE_METADATA and "bgp_router_id" in CONFIG_DB__DEVICE_METADATA["localhost"] %}
+ set originator-id {{ CONFIG_DB__DEVICE_METADATA["localhost"]["bgp_router_id"] }}
+ {% elif lo4096_ipv4 is not none%}
+ set originator-id {{ lo4096_ipv4 }}
+ {% endif %}
 {% elif CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
 bgp community-list standard DEVICE_INTERNAL_COMMUNITY permit {{ constants.bgp.internal_community }}
 bgp community-list standard NO_EXPORT permit no-export

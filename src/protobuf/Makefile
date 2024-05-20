@@ -7,7 +7,9 @@ DERIVED_TARGETS = protobuf-compiler_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).
 					libprotobuf-dev_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 					libprotobuf-lite32_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
 					libprotoc32_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
-					python3-protobuf_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+					libprotoc-dev_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+					python3-protobuf_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb \
+					ruby-google-protobuf_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Remove any stale files

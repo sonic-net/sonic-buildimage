@@ -9,7 +9,7 @@ docker==7.0.0
 docker-image-py==0.1.12
 enlighten==1.12.4
 filelock==3.14.0
-freezegun==1.5.0
+freezegun==1.5.1
 ijson==3.2.3
 ipaddress==1.0.23
 jsondiff==2.0.0

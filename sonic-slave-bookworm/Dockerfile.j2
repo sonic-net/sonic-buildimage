@@ -88,7 +88,8 @@ RUN apt-get update && apt-get install -y \
         curl \
         wget \
         unzip \
-        {{ GZ_COMPRESS_PROGRAM }} \
+        gzip \
+        pigz \
         git \
         build-essential \
         remake \
@@ -447,6 +448,34 @@ RUN apt-get update && apt-get install -y \
         hwdata \
         libzip-dev
 
+{%- if CONFIGURED_ARCH != "arm64" and CONFIGURED_ARCH != "armhf" %}
+RUN apt-get update && apt-get install -y \
+# For p4 libraries
+        libgrpc++-dev \
+        libgrpc-dev \
+        libprotoc-dev \
+        protobuf-compiler-grpc \
+        valgrind \
+        python3-protobuf \
+        python3-grpcio \
+        thrift-compiler \
+        gfortran \
+        libopenmpi-dev \
+        libthrift-0.17.0 \
+        libthrift-dev \
+        libboost-all-dev \
+        libboost-graph-dev \
+        libboost-iostreams-dev \
+        libgc-dev \
+        tcpdump \
+        llvm \
+        net-tools \
+        python3-pyroute2 \
+        python3-ply \
+        python3-scapy \
+        python3-thrift
+{%- endif %}
+
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages
 RUN apt-get remove -y libnl-3-200
@@ -506,6 +535,9 @@ RUN patch -p1 -i /disable-non-manylinux.patch /usr/local/lib/python3.11/dist-pac
 # For building sonic-utilities
 RUN pip3 install fastentrypoints mock
 
+# For DASH BMv2
+RUN pip3 install jsonpath_ng
+
 # For building sonic_ycabled
 # Note: Match version in bookworm
 RUN pip3 install grpcio==1.51.1 grpcio-tools==1.51.1
@@ -531,6 +563,7 @@ RUN pip3 uninstall -y enum34
 
 # For sonic-platform-common testing
 RUN pip3 install redis
+RUN pip3 install psutil
 
 # For sonic-swss-common testing
 RUN pip3 install Pympler==1.0
@@ -694,12 +727,11 @@ RUN apt-get download python3.11-dev:$arch && apt-get download python3-dev:$arch 
 LABEL "com.azure.dev.pipelines.agent.handler.node.path"="/usr/bin/node"
 {% endif -%}
 
+RUN apt install -y python-is-python3
+
 # Install Bazel build system (amd64 and arm64 architectures are supported using this method)
 # TODO(PINS): Remove once pre-build Bazel binaries are available for armhf (armv7l)
 {%- if CONFIGURED_ARCH == "amd64" or CONFIGURED_ARCH == "arm64" %}
 ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-{{ CONFIGURED_ARCH }}
 RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
-# Bazel requires "python"
-# TODO(PINS): remove when Bazel is okay with "python3" binary name
-RUN apt install -y python-is-python3
 {% endif -%}

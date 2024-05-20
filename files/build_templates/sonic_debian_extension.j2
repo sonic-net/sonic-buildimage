@@ -633,6 +633,10 @@ sudo cp $IMAGE_CONFIGS/misc/docker-wait-any $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/topology/topology.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "topology.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $IMAGE_CONFIGS/topology/topology.sh $FILESYSTEM_ROOT/usr/bin
+
+sudo cp platform/vs/dash-engine.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable dash-engine
+
 {%- endif %}
 
 # Copy platform topology configuration scripts
@@ -1054,8 +1058,8 @@ sudo rm -rf $FILESYSTEM_ROOT/$MLNX_SONIC_PLATFORM_PY3_WHEEL_NAME
 sudo cp platform/mellanox/nv-syncd-shared/nv-syncd-shared.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable nv-syncd-shared
 
-# Install minicom package
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install minicom
+# Install required packages specific for mellanox platform
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install minicom xmlstarlet
 
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable rshim.service
 {% endif %}

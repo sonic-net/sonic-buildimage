@@ -54,9 +54,6 @@
 #  * ENABLE_BOOTCHART: Enable SONiC bootchart
 #  *                 Default: n
 #  *                 Values: y,n
-#  * GZ_COMPRESS_PROGRAM: Select pigz to reduce build time
-#  *                 Default: gzip
-#  *                 Values: pigz,gzip
 #  * UNATTENDED: Don't wait for interactive input from terminal, setting this
 #  *             value to anything will enable it
 #  *             Default: unset
@@ -157,10 +154,6 @@ ifeq ($(LEGACY_SONIC_MGMT_DOCKER),)
 	override LEGACY_SONIC_MGMT_DOCKER = y
 endif
 
-ifneq ($(GZ_COMPRESS_PROGRAM), pigz)
-override GZ_COMPRESS_PROGRAM = gzip
-endif
-
 ifeq ($(CONFIGURED_ARCH),amd64)
 SLAVE_BASE_IMAGE = $(SLAVE_DIR)
 MULTIARCH_QEMU_ENVIRON = n
@@ -229,7 +222,6 @@ $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	INCLUDE_FIPS=$(INCLUDE_FIPS) \
 	DOCKER_EXTRA_OPTS=$(DOCKER_EXTRA_OPTS) \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
-	GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
 	j2 $(SLAVE_DIR)/Dockerfile.j2 > $(SLAVE_DIR)/Dockerfile)
 
 $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
@@ -590,7 +582,6 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_SLAVE_DOCKER_DRIVER=$(SONIC_SLAVE_DOCKER_DRIVER) \
                            MIRROR_URLS=$(MIRROR_URLS) \
                            MIRROR_SECURITY_URLS=$(MIRROR_SECURITY_URLS) \
-                           GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
                            MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
                            SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
                            ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \

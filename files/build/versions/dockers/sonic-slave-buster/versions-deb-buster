@@ -95,7 +95,7 @@ docbook-xml==4.5-8
 docker-buildx-plugin==0.10.5-1~debian.10~buster
 docker-ce==5:24.0.2-1~debian.10~buster
 docker-ce-cli==5:24.0.2-1~debian.10~buster
-docker-ce-rootless-extras==5:26.1.2-1~debian.10~buster
+docker-ce-rootless-extras==5:26.1.3-1~debian.10~buster
 docker-compose-plugin==2.18.1-1~debian.10~buster
 docutils-common==0.14+dfsg-4
 docutils-doc==0.14+dfsg-4
@@ -566,11 +566,11 @@ libgl1-mesa-dri==18.3.6-2+deb10u1
 libglapi-mesa==18.3.6-2+deb10u1
 libgles1==1.1.0-1
 libgles2==1.1.0-1
-libglib2.0-0==2.58.3-2+deb10u5
-libglib2.0-bin==2.58.3-2+deb10u5
-libglib2.0-data==2.58.3-2+deb10u5
-libglib2.0-dev==2.58.3-2+deb10u5
-libglib2.0-dev-bin==2.58.3-2+deb10u5
+libglib2.0-0==2.58.3-2+deb10u6
+libglib2.0-bin==2.58.3-2+deb10u6
+libglib2.0-data==2.58.3-2+deb10u6
+libglib2.0-dev==2.58.3-2+deb10u6
+libglib2.0-dev-bin==2.58.3-2+deb10u6
 libglu1-mesa==9.0.0-2.1+b3
 libglu1-mesa-dev==9.0.0-2.1+b3
 libglvnd-core-dev==1.1.0-1

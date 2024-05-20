@@ -362,7 +362,6 @@
                 "region": "usfoo",
                 "asic_name": "Asic0",
                 "switch_id": "2",
-                "switch_type": "voq",
                 "max_cores": "8",
                 "sub_role": "FrontEnd",
                 "dhcp_server": "disabled",
@@ -1198,10 +1197,7 @@
             "Vlan111|Ethernet0": {
                 "tagging_mode": "untagged"
             },
-            "Vlan111|Ethernet1": {
-                "tagging_mode": "untagged"
-            },
-            "Vlan111|Ethernet2": {
+            "Vlan111|PortChannel0004": {
                 "tagging_mode": "untagged"
             },
             "Vlan111|Ethernet3": {
@@ -2298,7 +2294,7 @@
             "span": {
                 "direction": "RX",
                 "type": "SPAN",
-                "dst_port": "Ethernet2",
+                "dst_port": "Ethernet7",
                 "src_port": "Ethernet3,Ethernet4"
             }
         },

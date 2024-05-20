@@ -26,3 +26,4 @@
 0026-bgp-fib-suppress-announce-fix.patch
 0027-lib-Do-not-convert-EVPN-prefixes-into-IPv4-IPv6-if-n.patch
 0028-zebra-fix-parse-attr-problems-for-encap.patch
+0029-zebra-nhg-fix-on-intf-up.patch

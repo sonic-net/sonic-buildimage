@@ -58,9 +58,9 @@ pynacl==1.5.0
 pyroute2==0.5.19
 python-apt==2.6.0
 python-dateutil==2.9.0.post0
-pyyaml==5.4.1
+pyyaml==6.0.1
 redis==3.5.3
-regex==2024.5.10
+regex==2024.5.15
 requests==2.31.0
 scapy==2.4.4
 semantic-version==2.10.0

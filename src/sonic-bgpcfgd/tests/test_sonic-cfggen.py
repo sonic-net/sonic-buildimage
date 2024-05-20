@@ -24,6 +24,9 @@ def run_test(name, template_path, json_path, match_path):
     with open(match_path) as result_fp:
         raw_saved_result = result_fp.read()
     canonical_saved_result = ConfigMgr.to_canonical(raw_saved_result)
+    print(canonical_generated_result)
+    print("----")
+    print(canonical_saved_result)
     assert canonical_saved_result == canonical_generated_result, "Test %s" % name
 
 
@@ -165,6 +168,24 @@ def test_bgp_conf_all():
              "bgpd.conf.j2/all.json",
              "bgpd.conf.j2/all.conf")
 
+def test_bgp_conf_packet_chassis_ipv6_lo4096():
+    run_test("packet chassis ipv6 loopback4096 bgpd.main.conf.j2",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/packet_chassis_ipv6_lo4096.json",
+             "bgpd.main.conf.j2/packet_chassis_ipv6_lo4096.conf")
+
+def test_bgp_conf_packet_chassis_ipv6_lo4096_router_id():
+    run_test("packet chassis ipv6 loopback4096 with router_id bgpd.main.conf.j2",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/packet_chassis_ipv6_lo4096_router_id.json",
+             "bgpd.main.conf.j2/packet_chassis_ipv6_lo4096_router_id.conf")
+
+def test_bgp_conf_packet_chassis_router_id():
+    run_test("packet chassis with router_id bgpd.main.conf.j2",
+             "bgpd/bgpd.main.conf.j2",
+             "bgpd.main.conf.j2/packet_chassis_router_id.json",
+             "bgpd.main.conf.j2/packet_chassis_router_id.conf")
+
 def test_bgpd_main_conf_lo0_ipv6_only():
     run_test("Base bgpd.main.conf.j2",
              "bgpd/bgpd.main.conf.j2",
@@ -182,4 +203,3 @@ def test_bgpd_main_conf_defaults_router_id():
              "bgpd/bgpd.main.conf.j2",
              "bgpd.main.conf.j2/defaults_router_id.json",
              "bgpd.main.conf.j2/defaults_router_id.conf")
-    

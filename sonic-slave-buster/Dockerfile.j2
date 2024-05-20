@@ -90,7 +90,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         curl \
         wget \
         unzip \
-        {{ GZ_COMPRESS_PROGRAM }} \
+        gzip \
+        pigz \
         git \
         build-essential \
         remake \

@@ -174,8 +174,8 @@ libgirepository-1.0-1==1.58.3-2
 libgl1==1.1.0-1
 libgl1-mesa-dri==18.3.6-2+deb10u1
 libglapi-mesa==18.3.6-2+deb10u1
-libglib2.0-0==2.58.3-2+deb10u5
-libglib2.0-data==2.58.3-2+deb10u5
+libglib2.0-0==2.58.3-2+deb10u6
+libglib2.0-data==2.58.3-2+deb10u6
 libglvnd0==1.1.0-1
 libglx-mesa0==18.3.6-2+deb10u1
 libglx0==1.1.0-1

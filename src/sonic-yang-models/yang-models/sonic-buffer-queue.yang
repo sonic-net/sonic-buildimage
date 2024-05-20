@@ -14,6 +14,14 @@ module sonic-buffer-queue {
         prefix bpf;
     }
 
+    import sonic-device_metadata {
+        prefix sdm;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
     organization
         "SONiC";
 
@@ -34,12 +42,59 @@ module sonic-buffer-queue {
         container BUFFER_QUEUE {
 
             list BUFFER_QUEUE_LIST {
+                when "not(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type) or
+                    (/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type!='voq')";
+
                 key "port qindex";
 
                 leaf port {
                     type leafref {
                         path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
                     }
+                }
+
+                leaf qindex {
+                    type string {
+                        pattern "(1[0-5]|[0-9])((-)(1[0-5]|[0-9]))?"{
+                            error-message "Invalid Q-index";
+                            error-app-tag qindex-invalid;
+                        }
+                    }
+                    description "Egress Queue Index for a port";
+                }
+
+                leaf profile {
+                    default 0;
+                    type leafref {
+                        path "/bpf:sonic-buffer-profile/bpf:BUFFER_PROFILE/bpf:BUFFER_PROFILE_LIST/bpf:name";
+                    }
+                    description "Buffer Profile associated with Priority Queue for a port";
+                }
+
+            }
+            list VOQ_BUFFER_QUEUE_LIST {
+                when "boolean(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type) and
+                    (/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='voq')";
+
+                key "hostname asic_name port qindex";
+
+
+                leaf hostname {
+                    type stypes:hostname;
+                }
+
+                leaf asic_name {
+                    type string {
+                        pattern "[Aa]sic[0-4]";
+                    }
+                }
+
+                leaf port {
+                    type string {
+                        length 1..128;
+                    }
+
+                    description "port name.";
                 }
 
                 leaf qindex {

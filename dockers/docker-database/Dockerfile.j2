@@ -28,7 +28,7 @@ RUN apt-get clean -y                                  && \
     apt-get autoclean -y                              && \
     apt-get autoremove -y                             && \
     rm -rf /debs ~/.cache                             && \
-    sed -ri 's/^(save .*$)/# \1/g;                       \
+    sed -ri 's/^# save ""$/save ""/g;                    \
              s/^daemonize yes$/daemonize no/;            \
              s/^logfile .*$/logfile ""/;                 \
              s/^# syslog-enabled no$/syslog-enabled no/; \
