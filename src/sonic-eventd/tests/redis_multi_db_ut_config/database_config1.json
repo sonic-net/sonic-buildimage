@@ -77,7 +77,7 @@
             "separator": ":",
             "instance" : "redis"
         },
-        "EVENT_DB" : {
+        "TEST_DB" : {
             "id" : 15,
             "separator": ":",
             "instance" : "redis"
