@@ -13,7 +13,6 @@
 {% endif %}
 !
 {% set lo0_ipv4 = get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip %}
-{% set lo4096_ipv4 = get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback4096") | ip %}
 {% if lo0_ipv4 is not none %}
 ip prefix-list PL_LoopbackV4 permit {{ lo0_ipv4 }}/32
 {% endif %}
@@ -94,11 +93,7 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
 !
 {# set router-id #}
 {% if DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' or DEVICE_METADATA['localhost']['switch_type'] == 'voq' or DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
-{% if 'bgp_router_id' in DEVICE_METADATA['localhost'] %}
-  bgp router-id {{ DEVICE_METADATA["localhost"]["bgp_router_id"] }}
-{% elif lo4096_ipv4 is not none %}
-  bgp router-id {{ lo4096_ipv4 }}
-{% endif %}
+  bgp router-id {{ get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback4096") | ip }}
 {% else %}
 {% if "localhost" in DEVICE_METADATA and "bgp_router_id" in DEVICE_METADATA["localhost"] %}
   bgp router-id {{ DEVICE_METADATA["localhost"]["bgp_router_id"] }}
@@ -111,8 +106,8 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
 {% if (is_storage_device != 'true' or 'BackEnd' not in DEVICE_METADATA['localhost']['type']) and lo0_ipv4 is not none %}
   network {{ lo0_ipv4 }}/32
 {% endif %}
-{% if lo4096_ipv4 is not none and ((multi_asic is defined and DEVICE_METADATA['localhost']['switch_type'] != 'chassis-packet') or (DEVICE_METADATA['localhost']['switch_type'] == 'voq')) %}
-  network {{ lo4096_ipv4 }}/32 route-map HIDE_INTERNAL
+{% if ((multi_asic is defined and DEVICE_METADATA['localhost']['switch_type'] != 'chassis-packet') or (DEVICE_METADATA['localhost']['switch_type'] == 'voq')) %}
+  network {{ get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback4096") | ip }}/32 route-map HIDE_INTERNAL
 {% endif %}
 !
 {% if is_storage_device != 'true' or 'BackEnd' not in DEVICE_METADATA['localhost']['type'] %}
