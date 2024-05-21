@@ -213,6 +213,17 @@ regress:t2:chassis9:
     variables:
       - $REGRESS_T2_CHASSIS9
 
+regress:t2:chassis10:
+  extends: .regress
+  tags:
+    - regress_chassis10
+  variables:
+    DELAY_START: 200
+    EXTRA_RUN_TEST_ARGS: --suite masic
+  only:
+    variables:
+      - $REGRESS_T2_CHASSIS10
+
 regress:t2:chassis11:
   extends: .regress
   tags:
@@ -223,6 +234,17 @@ regress:t2:chassis11:
   only:
     variables:
       - $REGRESS_T2_CHASSIS11
+
+regress:t2:chassis12:
+  extends: .regress
+  tags:
+    - regress_chassis12
+  variables:
+    DELAY_START: 300
+    EXTRA_RUN_TEST_ARGS: --suite masic
+  only:
+    variables:
+      - $REGRESS_T2_CHASSIS12
 
 .post:
   stage: post
