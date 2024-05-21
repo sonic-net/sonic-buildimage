@@ -136,9 +136,6 @@ class BGPPeerMgrBase(Manager):
         if self.check_deployment_id:
             deps.append(("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/deployment_id"))
 
-        if self.peer_type == 'internal':
-            deps.append(("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback4096"))
-
         if self.use_loopback:
             deps.append(("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0"))
 
@@ -186,8 +183,9 @@ class BGPPeerMgrBase(Manager):
         #
         if self.peer_type == 'internal':
             lo4096_ipv4 = self.get_lo_ipv4("Loopback4096|")
-            if lo4096_ipv4 is None:
-                log_warn("Loopback4096 ipv4 address is not presented yet")
+            if (lo4096_ipv4 is None and "bgp_router_id"
+                not in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]):
+                log_warn("Loopback4096 ipv4 address is not presented yet and bgp_router_id not configured")
                 return False
 
         if "local_addr" not in data:

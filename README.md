@@ -1,6 +1,5 @@
 *master builds*:
 
-[![Barefoot](https://dev.azure.com/mssonic/build/_apis/build/status/barefoot/Azure.sonic-buildimage.official.barefoot?branchName=master&label=Barefoot)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=146&branchName=master)
 [![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=master&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=master)
 [![Centec](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec?branchName=master&label=Centec)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=143&branchName=master)
 [![Centec(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec-arm64?branchName=master&label=Centec-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=140&branchName=master)
@@ -9,7 +8,19 @@
 [![Marvell(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-armhf?branchName=master&label=Marvell-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=master)
 [![Marvell(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-arm64?branchName=master&label=Marvell-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=master)
 [![Nephos](https://dev.azure.com/mssonic/build/_apis/build/status/nephos/Azure.sonic-buildimage.official.nephos?branchName=master&label=Nephos)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=149&branchName=master)
+[![Pensando](https://dev.azure.com/mssonic/build/_apis/build/status/pensando/Azure.sonic-buildimage.official.pensando?branchName=master&label=Pensando)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1366&branchName=master)
 [![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=master&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=master)
+
+*202311 builds*:
+
+[![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=202311&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=202311)
+[![Centec](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec?branchName=202311&label=Centec)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=143&branchName=202311)
+[![Centec(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec-arm64?branchName=202311&label=Centec-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=140&branchName=202311)
+[![Innovium](https://dev.azure.com/mssonic/build/_apis/build/status/innovium/Azure.sonic-buildimage.official.innovium?branchName=202311&label=Innovium)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=148&branchName=202311)
+[![Mellanox](https://dev.azure.com/mssonic/build/_apis/build/status/mellanox/Azure.sonic-buildimage.official.mellanox?branchName=202311&label=Mellanox)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=139&branchName=202311)
+[![Marvell(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-armhf?branchName=202311&label=Marvell-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=202311)
+[![Marvell(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-arm64?branchName=202311&label=Marvell-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=202311)
+[![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=202311&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=202311)
 
 *202305 builds*:
 

@@ -13,5 +13,8 @@
     "BUFFER_QUEUE_WRONG_PORT_VALUE": {
         "desc": "BUFFER_QUEUE_WRONG_PORT_VALUE pattern failure",
         "eStr": "wrong"
+    },
+    "VOQ_BUFFER_QUEUE_CONFIG": {
+        "desc": "VOQ_BUFFER_QUEUE_CONFIG has no failure"
     }
 }

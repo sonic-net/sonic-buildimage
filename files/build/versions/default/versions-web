@@ -14,7 +14,16 @@ http://deb.debian.org/debian/pool/main/l/lm-sensors/lm-sensors_3.6.0.orig.tar.gz
 http://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.debian.tar.xz==f457e44218a7d4cc7b7ab0ed696096e3
 http://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc==d8e34e7b07473c6903f9d245934524fb
 http://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12.orig.tar.gz==d38562490234d8080bdbe8eb7baf937a
-http://www.iana.org/assignments/enterprise-numbers.txt==1ab53990feba6e1917592d0b085740ff
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-7.debian.tar.xz==f4d249b77d4f8d120b229834aac02df5
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0-7.dsc==6882841200ce58acc8db7f3e6a15e91d
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-bmv2_1.15.0.orig.tar.gz==cbbb4a0d5b1e17dca0532c3ca761e05c
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.debian.tar.xz==7ea7d64c9147bd93a790af57693ce36f
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2-2.dsc==49a4c37e4030348958320e7d95a08209
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.4.2.orig.tar.gz==b1008dffbe236d065c5557f2d4629aa9
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-15.debian.tar.xz==b9d8e4ce4cb66385250cf6dded0ef57a
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-15.dsc==9bfdfc3b6bf96e4e8c3a6a72fc56fded
+http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0.orig.tar.gz==551d3780d615557674e93fa11210499d
+http://www.iana.org/assignments/enterprise-numbers.txt==a08ba53e0976a8776b3b1a2cc9f91feb
 http://www.mellanox.com/downloads/MFT/mft-4.27.0-83-x86_64-deb.tgz==e475ca87a9252ba8d0abb6b05d5d94d0
 https://archive.apache.org/dist/thrift/0.14.1/thrift-0.14.1.tar.gz==c64434548438df2cb1e53fb27c600e85
 https://bootstrap.pypa.io/pip/2.7/get-pip.py==60e8267eb1b7bc71dc4843eb7bd294d3
@@ -162,9 +171,6 @@ https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.10/arm64/symcr
 https://sonicstorage.blob.core.windows.net/public/onie/onie-recovery-x86_64-kvm_x86_64-r0.iso==54e11e450a461b1f4ae39c3ce3f15eff
 https://sonicstorage.blob.core.windows.net/public/onie/onie-recovery-x86_64-kvm_x86_64_4_asic-r0.iso==1d8b8d3fa37f842d0184b5205be22be9
 https://sonicstorage.blob.core.windows.net/public/onie/onie-recovery-x86_64-kvm_x86_64_6_asic-r0.iso==58494305d4ac201daedf9364a1018a1b
-https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1_bpo10+1_arm64.deb==282b4766cc9ac7d8bb70622bd69d9f5c
-https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1_bpo10+1_armhf.deb==62f287117afab6caaec564232ebbb5de
-https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1~bpo10+1_amd64.deb==2d58c3c3358290c04d5e0ba70f297f18
 https://sonicstorage.blob.core.windows.net/public/sai/bcmpai/REL_3.11/3.11/libsaibroncos_3.11_amd64.deb==6e21a16126e833516a9659d4c35c284e
 https://storage.googleapis.com/golang/go1.15.15.linux-amd64.tar.gz==b75227438c6129b5013da053b3aa3f38
 https://storage.googleapis.com/golang/go1.15.15.linux-arm64.tar.gz==6d721146a9195592d92a80cf27d475f9

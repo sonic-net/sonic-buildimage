@@ -60,10 +60,10 @@ generate_kvm_image()
         exit 1
     }
 
-    $GZ_COMPRESS_PROGRAM $KVM_IMAGE_DISK
+    pigz $KVM_IMAGE_DISK
 
     [ -r $KVM_IMAGE_DISK.gz ] || {
-        echo "Error : $GZ_COMPRESS_PROGRAM $KVM_IMAGE_DISK failed!"
+        echo "Error : pigz $KVM_IMAGE_DISK failed!"
         exit 1
     }
 

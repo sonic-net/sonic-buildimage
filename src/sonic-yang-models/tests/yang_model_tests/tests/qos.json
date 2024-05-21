@@ -85,5 +85,8 @@
     "QUEUE_WRED_NOT_EXIST": {
         "desc": "Referring non-existing WRED table.",
         "eStrKey" : "LeafRef"
+    },
+    "VOQ_QUEUE_CONFIG": {
+        "desc": "Attach scheduler and wred profiles to VOQ."
     }
 }

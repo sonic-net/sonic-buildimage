@@ -184,12 +184,13 @@ def get_primary_addr(value):
             intf_with_secondary.remove(name)
     return primary_gateways
 
-def load_namespace_config(asic_name):
-    if not SonicDBConfig.isInit():
-        if is_multi_asic():
-            SonicDBConfig.load_sonic_global_db_config(namespace=asic_name)
-        else:
-            SonicDBConfig.load_sonic_db_config()
+def load_namespace_config():
+    if is_multi_asic():
+        if not SonicDBConfig.isGlobalInit():
+            SonicDBConfig.initializeGlobalConfig()
+    else:
+        if not SonicDBConfig.isInit():
+            SonicDBConfig.initialize()
 
 class FormatConverter:
     """Convert config DB based schema to legacy minigraph based schema for backward capability.
@@ -240,7 +241,6 @@ TODO(taoyl): Current version of config db only supports BGP admin states.
                     if new_key != key:
                         data[table][new_key] = data[table].pop(key)
         return data
-
 
 def deep_update(dst, src):
     """ Deep update of dst dict with contest of src dict"""
@@ -360,7 +360,7 @@ def main():
         deep_update(data, hardware_data)
         if args.port_config is None:
             args.port_config = device_info.get_path_to_port_config_file(hwsku)
-        load_namespace_config(asic_name)
+        load_namespace_config()
         (ports, _, _) = get_port_config(hwsku, platform, args.port_config, asic_id)
         if ports is None:
             print('Failed to get port config', file=sys.stderr)
@@ -391,7 +391,7 @@ def main():
 
     if args.minigraph is not None:
         minigraph = args.minigraph
-        load_namespace_config(asic_name)
+        load_namespace_config()
         if platform:
             if args.port_config is not None:
                 deep_update(data, parse_xml(minigraph, platform, args.port_config, asic_name=asic_name, hwsku_config_file=args.hwsku_config))
@@ -419,7 +419,7 @@ def main():
         if args.namespace is None:
             configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, **db_kwargs)
         else:
-            SonicDBConfig.load_sonic_global_db_config(namespace=args.namespace)
+            load_namespace_config()
             configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, namespace=args.namespace, **db_kwargs)
 
         configdb.connect()
@@ -496,7 +496,7 @@ def main():
         if args.namespace is None:
             configdb = ConfigDBPipeConnector(use_unix_socket_path=True, **db_kwargs)
         else:
-            SonicDBConfig.load_sonic_global_db_config(namespace=args.namespace)
+            load_namespace_config()
             configdb = ConfigDBPipeConnector(use_unix_socket_path=True, namespace=args.namespace, **db_kwargs)
 
         configdb.connect(False)

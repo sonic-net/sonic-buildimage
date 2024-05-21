@@ -28,7 +28,6 @@ libteam-utils==1.31-1
 libteam5==1.31-1
 libteamdctl0==1.31-1
 libthrift-0.11.0==0.11.0-4
-libthrift-dev==0.11.0-4
 libyang==1.0.73
 libyang-cpp==1.0.73
 libyang-dev==1.0.73
@@ -36,6 +35,3 @@ protobuf-compiler==3.21.12-3
 python-thrift==0.11.0-4
 python3-swsscommon==1.0.0
 python3-yang==1.0.73
-sonic-mgmt-common==1.0.0
-sonic-mgmt-common-codegen==1.0.0
-thrift-compiler==0.11.0-4

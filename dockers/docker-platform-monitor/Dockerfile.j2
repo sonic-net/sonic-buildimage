@@ -27,9 +27,10 @@ RUN apt-get update &&   \
         iputils-ping    \
         pciutils        \
         nvme-cli        \
-        ethtool &&	\
+        ethtool
+
 # smartmontools version should match the installed smartmontools in sonic_debian_extension build template
-    apt-get install -y -t bookworm-backports \
+RUN apt-get install -y -t bookworm-backports \
         smartmontools
 
 # On Arista devices, the sonic_platform wheel is not installed in the container.
@@ -48,6 +49,9 @@ RUN pip3 install requests
 
 # We install the libpci module in order to be able to do PCI transactions
 RUN pip3 install libpci
+
+# Install psutil for process and system monitoring operations
+RUN pip3 install psutil
 
 {% if docker_platform_monitor_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -92,6 +96,7 @@ COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
 
+RUN mkdir -p /usr/share/stormond
 RUN sonic-cfggen -a "{\"CONFIGURED_PLATFORM\":\"{{CONFIGURED_PLATFORM}}\"}" -t /usr/share/sonic/templates/docker_init.j2 > /usr/bin/docker_init.sh
 RUN rm -f /usr/share/sonic/templates/docker_init.j2
 RUN chmod 755 /usr/bin/docker_init.sh

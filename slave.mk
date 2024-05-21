@@ -92,7 +92,6 @@ export DOCKER_BASE_ARCH
 export CROSS_BUILD_ENVIRON
 export BLDENV
 export BUILD_WORKDIR
-export GZ_COMPRESS_PROGRAM
 export MIRROR_SNAPSHOT
 export SONIC_OS_VERSION
 export FILES_PATH
@@ -263,7 +262,6 @@ endif
 ifeq ($(SONIC_ENABLE_BOOTCHART),y)
 ENABLE_BOOTCHART = y
 endif
-
 
 ifeq ($(ENABLE_ASAN),y)
 ifneq ($(CONFIGURED_ARCH),amd64)
@@ -479,7 +477,6 @@ ifeq ($(CONFIGURED_PLATFORM),vs)
 $(info "BUILD_MULTIASIC_KVM"             : "$(BUILD_MULTIASIC_KVM)")
 endif
 $(info "CROSS_BUILD_ENVIRON"             : "$(CROSS_BUILD_ENVIRON)")
-$(info "GZ_COMPRESS_PROGRAM"             : "$(GZ_COMPRESS_PROGRAM)")
 $(info "LEGACY_SONIC_MGMT_DOCKER"        : "$(LEGACY_SONIC_MGMT_DOCKER)")
 $(info "INCLUDE_EXTERNAL_PATCHES"        : "$(INCLUDE_EXTERNAL_PATCHES)")
 $(info "PTF_ENV_PY_VER"                  : "$(PTF_ENV_PY_VER)")
@@ -571,7 +568,7 @@ define docker-image-save
     @echo "Tagging docker image $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) as $(1):$(call docker-get-tag,$(1))" $(LOG)
     docker tag $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) $(1):$(call docker-get-tag,$(1)) $(LOG)
     @echo "Saving docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
-        docker save $(1):$(call docker-get-tag,$(1)) | $(GZ_COMPRESS_PROGRAM) -c > $(2)
+        docker save $(1):$(call docker-get-tag,$(1)) | pigz -c > $(2)
     if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then
         @echo "Removing docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
         docker rmi -f $(1):$(call docker-get-tag,$(1)) $(LOG)

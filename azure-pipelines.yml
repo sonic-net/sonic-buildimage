@@ -261,6 +261,21 @@ stages:
           MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
           MGMT_BRANCH: $(BUILD_BRANCH)
 
+  - job: onboarding_elastictest_t0
+    displayName: "onboarding testcases by Elastictest"
+    timeoutInMinutes: 240
+    continueOnError: true
+    pool: ubuntu-20.04
+    steps:
+      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: t0
+          MIN_WORKER: $(T0_ONBOARDING_SONIC_INSTANCE_NUM)
+          MAX_WORKER: $(T0_ONBOARDING_SONIC_INSTANCE_NUM)
+          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+          MGMT_BRANCH: $(BUILD_BRANCH)
+          TEST_SET: onboarding_t0
+
 
 #  - job: wan_elastictest
 #    displayName: "kvmtest-wan by Elastictest"

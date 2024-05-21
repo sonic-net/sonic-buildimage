@@ -12,6 +12,7 @@ libnl-nf-3-200==3.5.0-1
 libnl-nf-3-dev==3.5.0-1
 libnl-route-3-200==3.5.0-1
 libnl-route-3-dev==3.5.0-1
+libsai==1.0.0
 libsaimetadata==1.0.0
 libsaimetadata-dev==1.0.0
 libsairedis==1.0.0
@@ -32,9 +33,13 @@ libyang-dev==1.0.73
 linux-headers-6.1.0-11-2-amd64==6.1.38-4
 linux-headers-6.1.0-11-2-arm64==6.1.38-4
 linux-headers-6.1.0-11-2-common==6.1.38-4
-net-tools==2.10-0.1
+p4lang-bmv2==1.15.0-7
+p4lang-p4c==1.2.4.2-2
+p4lang-pi==0.1.0-15
 python3-swsscommon==1.0.0
 python3-yang==1.0.73
+sonic-mgmt-common==1.0.0
+sonic-mgmt-common-codegen==1.0.0
 sonic-platform-pddf==1.1
 sonic-platform-pddf-sym==1.1
 sx-acl-helper==1.mlnx.4.6.3064
