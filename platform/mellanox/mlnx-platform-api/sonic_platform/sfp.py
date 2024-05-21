@@ -507,7 +507,7 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bytearray: the content of EEPROM
         """
-        result = None
+        result = bytearray(0)
         while num_bytes > 0:
             _, page, page_offset = self._get_page_and_page_offset(offset)
             if not page:
