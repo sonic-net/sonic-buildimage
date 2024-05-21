@@ -149,6 +149,8 @@ class TestSfp:
         mo = mock.mock_open()
         with mock.patch('sonic_platform.sfp.open', mo):
             handle = mo()
+            assert sfp.read_eeprom(0, 0) == bytearray(0)
+
             handle.read.return_value = b'\x00'
             assert sfp.read_eeprom(0, 1) == bytearray([0])
             handle.seek.assert_called_once_with(0)

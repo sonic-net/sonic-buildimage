@@ -24,9 +24,6 @@ def run_test(name, template_path, json_path, match_path):
     with open(match_path) as result_fp:
         raw_saved_result = result_fp.read()
     canonical_saved_result = ConfigMgr.to_canonical(raw_saved_result)
-    print(canonical_generated_result)
-    print("----")
-    print(canonical_saved_result)
     assert canonical_saved_result == canonical_generated_result, "Test %s" % name
 
 
