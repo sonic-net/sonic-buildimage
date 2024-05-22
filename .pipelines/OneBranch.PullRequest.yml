@@ -141,6 +141,7 @@ stages:
   dependsOn: BuildVS
   condition: in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')
   variables:
+    - group: SONiC-sonicbld
     - group: SONiC-Elastictest
     - name: inventory
       value: veos_vtb
