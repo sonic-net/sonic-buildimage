@@ -163,7 +163,7 @@ def test_tsa_neg(mocked_log_err, value):
     mocked_log_err.assert_called_with("TSA: invalid value({}) is provided".format(value))
 
 #
-# WCMP ----------------------------------------------------------------------------------------------------------------
+# W-ECMP --------------------------------------------------------------------------------------------------------------
 #
 
 @pytest.mark.parametrize(
@@ -201,4 +201,4 @@ def test_wcmp_neg(mocked_log_err, value):
     m.cfg_mgr.changes = ""
     res = m.set_handler("STATE", {"wcmp_enabled": value})
     assert res, "Expect True return value for set_handler"
-    mocked_log_err.assert_called_with("WCMP: invalid value({}) is provided".format(value))
+    mocked_log_err.assert_called_with("W-ECMP: invalid value({}) is provided".format(value))

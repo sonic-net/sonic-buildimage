@@ -33,7 +33,7 @@ class DeviceGlobalCfgMgr(Manager):
         # By default TSA feature is disabled
         if not self.directory.path_exist(self.db_name, self.table_name, "tsa_enabled"):
             self.directory.put(self.db_name, self.table_name, "tsa_enabled", "false")
-        # By default WCMP feature is disabled
+        # By default W-ECMP feature is disabled
         if not self.directory.path_exist(self.db_name, self.table_name, "wcmp_enabled"):
             self.directory.put(self.db_name, self.table_name, "wcmp_enabled", "false")
 
@@ -44,7 +44,7 @@ class DeviceGlobalCfgMgr(Manager):
         log_debug("DeviceGlobalCfgMgr:: Switch type: %s" % self.switch_type)
 
     def set_handler(self, key, data):
-        """ Handle device TSA/WCMP state change """
+        """ Handle device TSA/W-ECMP state change """
         log_debug("DeviceGlobalCfgMgr:: set handler")
 
         if self.switch_type:
@@ -55,7 +55,7 @@ class DeviceGlobalCfgMgr(Manager):
 
         # TSA configuration
         self.configure_tsa(data)
-        # WCMP configuration
+        # W-ECMP configuration
         self.configure_wcmp(data)
 
         return True
@@ -65,7 +65,7 @@ class DeviceGlobalCfgMgr(Manager):
 
         # TSA configuration
         self.configure_tsa()
-        # WCMP configuration
+        # W-ECMP configuration
         self.configure_wcmp()
 
         return True
@@ -93,7 +93,7 @@ class DeviceGlobalCfgMgr(Manager):
             log_notice("DeviceGlobalCfgMgr:: TSA configuration is up-to-date")
 
     def configure_wcmp(self, data=None):
-        """ Configure WCMP feature"""
+        """ Configure W-ECMP feature"""
 
         state = "false"
 
@@ -105,26 +105,26 @@ class DeviceGlobalCfgMgr(Manager):
             if self.set_wcmp(state):
                 self.directory.put(self.db_name, self.table_name, "wcmp_enabled", state)
         else:
-            log_notice("DeviceGlobalCfgMgr:: WCMP configuration is up-to-date")
+            log_notice("DeviceGlobalCfgMgr:: W-ECMP configuration is up-to-date")
 
     def set_wcmp(self, status):
-        """ API to set/unset WCMP """
+        """ API to set/unset W-ECMP """
 
         if status not in ["true", "false"]:
-            log_err("WCMP: invalid value({}) is provided".format(status))
+            log_err("W-ECMP: invalid value({}) is provided".format(status))
             return False
 
         if status == "true":
-            log_notice("DeviceGlobalCfgMgr:: Enabling WCMP...")
+            log_notice("DeviceGlobalCfgMgr:: Enabling W-ECMP...")
         else:
-            log_notice("DeviceGlobalCfgMgr:: Disabling WCMP...")
+            log_notice("DeviceGlobalCfgMgr:: Disabling W-ECMP...")
 
         cmd = "\n"
 
         try:
             cmd += self.wcmp_template.render(wcmp_enabled=status)
         except jinja2.TemplateError as e:
-            msg = "WCMP: error in template rendering"
+            msg = "W-ECMP: error in template rendering"
             log_err("%s: %s" % (msg, str(e)))
             return False
 
