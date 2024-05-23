@@ -1,4 +1,5 @@
-FROM docker-config-engine-stretch-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
+FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -15,8 +16,9 @@ debs/
 
 # Needed for Innovium Debug Shell
 RUN apt-get install -y net-tools
-RUN apt-get install -y libpython2.7
 RUN apt-get install -y libjansson4
+RUN apt-get install -y libyaml-dev
+RUN pip3 install numpy
 
 RUN dpkg -i \
 {% for deb in docker_syncd_invm_debs.split(' ') -%}
