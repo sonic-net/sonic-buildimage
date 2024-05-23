@@ -21,6 +21,8 @@ import time
 
 from . import utils
 
+DEFAULT_WD_PERIOD = 65535
+
 DEVICE_DATA = {
     'x86_64-mlnx_msn2700-r0': {
         'thermal': {
@@ -54,6 +56,9 @@ DEVICE_DATA = {
                 "cpu_pack": False,
                 "comex_amb": False
             }
+        },
+        'watchdog': {
+            "max_period": 32
         }
     },
     'x86_64-mlnx_msn2410-r0': {
@@ -69,6 +74,9 @@ DEVICE_DATA = {
                 "cpu_pack": False,
                 "comex_amb": False
             }
+        },
+        'watchdog': {
+            "max_period": 32
         }
     },
     'x86_64-mlnx_msn4700_simx-r0': {
@@ -284,3 +292,16 @@ class DeviceDataManager:
             for sysfs_node in sysfs_nodes:
                 conditions.append(lambda: os.path.exists(f'/sys/module/sx_core/asic0/module{sfp_index}/{sysfs_node}'))
         return utils.wait_until_conditions(conditions, 300, 1)
+
+    @classmethod
+    @utils.read_only_cache()
+    def get_watchdog_max_period(cls):
+        platform_data = DEVICE_DATA.get(cls.get_platform_name(), None)
+        if not platform_data:
+            return DEFAULT_WD_PERIOD
+
+        watchdog_data = platform_data.get('watchdog', None)
+        if not watchdog_data:
+            return DEFAULT_WD_PERIOD
+
+        return watchdog_data.get('max_period', None)

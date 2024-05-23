@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +28,7 @@ import time
 
 from sonic_platform_base.watchdog_base import WatchdogBase
 from . import utils
+from .device_data import DeviceDataManager
 
 """ ioctl constants """
 IO_WRITE = 0x40000000
@@ -150,7 +151,7 @@ class WatchdogImplBase(WatchdogBase):
         """
 
         ret = WD_COMMON_ERROR
-        if seconds < 0:
+        if seconds < 0 or seconds > DeviceDataManager.get_watchdog_max_period():
             return ret
 
         try:

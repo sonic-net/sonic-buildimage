@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES.
+## Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES.
 ## Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,12 +56,6 @@
   fn: '2'
   id: a36f
   name: 'RAM memory: Intel Corporation Cannon Lake PCH Shared SRAM (rev 10)'
-- bus: '00'
-  dev: '15'
-  fn: '0'
-  id: a368
-  name: 'Serial bus controller [0c80]: Intel Corporation Cannon Lake PCH Serial IO
-    I2C Controller #0 (rev 10)'
 - bus: '00'
   dev: '16'
   fn: '0'

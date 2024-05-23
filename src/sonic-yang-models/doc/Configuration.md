@@ -2072,6 +2072,27 @@ key - name
 | collector_port | Destination L4 port of the Sflow collector                                              |             | 6343      |             |
 | collector_vrf  | Specify the Collector VRF. In this revision, it is either default VRF or Management VRF.|             |           |             |
 
+### Storage Monitoring Daemon Interval Configuration
+
+These options are used to configure the daemon polling and sync-to-disk interval
+of the Storage Monitoring Daemon (stormond)
+
+**Config Sample**
+```
+{
+    "STORMOND_CONFIG": {
+        "INTERVALS": {
+            "daemon_polling_interval" : "60",
+            "fsstats_sync_interval"   : "360"
+        }
+    }
+}
+```
+
+*   `daemon_polling_interval` - Determines how often stormond queries the disk for relevant information and posts to STATE_DB
+*   `fsstats_sync_interval`   - Determines how often key information from the STATE_DB is synced to a file on disk
+
+
 ### Syslog Global Configuration
 
 These configuration options are used to configure rsyslog utility and the way
