@@ -169,5 +169,12 @@
     "DEVICE_METADATA_INVALID_BGP_ROUTER_ID": {
         "desc": "Verifying invalid bgp_router_id configuration.",
         "eStrKey": "Pattern"
+    },
+    "DEVICE_METADATA_VALID_SYSREADY": {
+        "desc": "Verifying valid system-ready state"
+    },
+    "DEVICE_METADATA_INVALID_SYSREADY": {
+        "desc": "Verifying invalid system-ready state",
+        "eStrKey": "InvalidValue"
     }
 }

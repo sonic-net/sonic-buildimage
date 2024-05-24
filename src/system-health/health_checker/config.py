@@ -32,6 +32,9 @@ class Config(object):
     # Monit service start delay configuration entry
     MONIT_START_DELAY_CONFIG = 'with start delay'
 
+    # Default system ready timeout
+    DEFAULT_SYSREADY_TIMEOUT = 10
+
     def __init__(self):
         """
         Constructor. Initialize all configuration entry to default value in case there is no configuration file.
@@ -44,6 +47,9 @@ class Config(object):
         self.ignore_services = None
         self.ignore_devices = None
         self.user_defined_checkers = None
+        self.wait_services = None
+        self.services_to_report_app_status = None
+        self.timeout = Config.DEFAULT_SYSREADY_TIMEOUT
 
     def config_file_exists(self):
         return os.path.exists(self._config_file)
@@ -70,9 +76,13 @@ class Config(object):
 
                 self.interval = self.config_data.get('polling_interval', Config.DEFAULT_INTERVAL)
                 self.ignore_services = self._get_list_data('services_to_ignore')
+                self.wait_services = self._get_list_data('services_to_wait')
+                self.services_to_report_app_status = self._get_list_data('services_to_report_app_status')
+                self.timeout = self.config_data.get('timeout', Config.DEFAULT_SYSREADY_TIMEOUT)
                 self.ignore_devices = self._get_list_data('devices_to_ignore')
                 self.user_defined_checkers = self._get_list_data('user_defined_checkers')
             except Exception as e:
+                # TODO: Add log here. Unexpected fail is not visible
                 self._reset()
 
     def _reset(self):
