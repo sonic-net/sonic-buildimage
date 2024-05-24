@@ -169,5 +169,11 @@
     "DEVICE_METADATA_INVALID_BGP_ROUTER_ID": {
         "desc": "Verifying invalid bgp_router_id configuration.",
         "eStrKey": "Pattern"
+    },
+    "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
+        "desc": "Verifying nexthop_group configuration."
+    },
+    "DEVICE_METADATA_INVALID_NEXTHOP_GROUP": {
+        "desc": "Verifying invalid nexthop_group configuration.",
     }
 }

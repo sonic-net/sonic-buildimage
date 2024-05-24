@@ -369,7 +369,8 @@
                 "yang_config_validation": "disable",
                 "rack_mgmt_map": "dummy_value",
                 "timezone": "Europe/Kiev",
-                "bgp_router_id": "8.8.8.8"
+                "bgp_router_id": "8.8.8.8",
+                "nexthop_group": "disable"
             }
         },
         "VLAN": {
