@@ -1,5 +1,10 @@
 {
-    "DEVICE_METADATA": {"localhost": {"hwsku": "Mellanox-SN2700"}},
+    "DEVICE_METADATA": {
+	"localhost": {
+	    "hostname": "sonic",
+	    "hwsku": "Mellanox-SN2700"
+	}
+    },
     "PORT": {
         "Ethernet8": {
             "alias": "fortyGigE0/8",
