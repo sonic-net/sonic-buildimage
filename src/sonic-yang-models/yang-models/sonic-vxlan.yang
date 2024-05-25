@@ -49,17 +49,15 @@ module sonic-vxlan {
                 max-elements 1;
 
                 leaf name {
-                /* vni devices are created of the form 'name'-vlanid
-                   The kernel has a max limit of 15 chars for netdevices.
-                   keeping aside 5 chars for hyphen and vlanid the
-                   name should have a max of 10 chars */
-
-                    type string {
-                        length 1..10;
-                    }
+                    type string;
                 }
+                must "string-length(name) != 0";
 
                 leaf src_ip {
+                    type inet:ip-address;
+                }
+
+                leaf dst_ip {
                     type inet:ip-address;
                 }
             }

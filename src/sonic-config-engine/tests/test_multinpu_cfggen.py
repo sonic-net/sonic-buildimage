@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import unittest
 import yaml
 import tests.common_utils as utils
@@ -10,6 +11,10 @@ import tests.common_utils as utils
 from unittest import TestCase
 from sonic_py_common.general import getstatusoutput_noshell
 
+if sys.version_info.major == 3:
+    from unittest import mock
+else:
+    import mock
 
 SKU = 'multi-npu-01'
 ASIC_SKU = 'multi-npu-asic'
@@ -27,6 +32,7 @@ class TestMultiNpuCfgGen(TestCase):
         self.sample_graph = os.path.join(self.test_data_dir, 'sample-minigraph.xml')
         self.sample_graph1 = os.path.join(self.test_data_dir, 'sample-minigraph-noportchannel.xml')
         self.sample_port_config = os.path.join(self.test_data_dir, 'sample_port_config.ini')
+        self.sample_port_config_0 = os.path.join(self.test_data_dir, 'sample_port_config-0.ini')
         self.port_config = []
         for asic in range(NUM_ASIC):
             self.port_config.append(os.path.join(self.test_data_dir, "sample_port_config-{}.ini".format(asic)))
@@ -226,6 +232,24 @@ class TestMultiNpuCfgGen(TestCase):
              "Ethernet-BP4": { "admin_status": "up",  "alias": "Eth5-ASIC0",  "asic_port_name": "Eth5-ASIC0",  "description": "ASIC2:Eth1-ASIC2",  "index": "1",  "lanes": "17,18,19,20",  "mtu": "9100", "tpid": "0x8100", "pfc_asym": "off",  "role": "Int",  "speed": "40000" },
              "Ethernet-BP8": { "admin_status": "up",  "alias": "Eth6-ASIC0",  "asic_port_name": "Eth6-ASIC0",  "description": "ASIC3:Eth0-ASIC3",  "index": "2",  "lanes": "21,22,23,24",  "mtu": "9100", "tpid": "0x8100", "pfc_asym": "off",  "role": "Int",  "speed": "40000" },
              "Ethernet-BP12": { "admin_status": "up",  "alias": "Eth7-ASIC0",  "asic_port_name": "Eth7-ASIC0",  "description": "ASIC3:Eth1-ASIC3",  "index": "3",  "lanes": "25,26,27,28",  "mtu": "9100", "tpid": "0x8100", "pfc_asym": "off",  "role": "Int",  "speed": "40000" }})
+
+    def test_hwsku_option_port_list_port_config_ini(self):
+        mock.patch('device_info.get_path_to_port_config_file', mock.MagicMock(return_value=self.sample_port_config_0))
+        argument = ["-k", ASIC_SKU, "-n", "asic0", "-v", "PORT.keys()|list"]
+        output = self.run_script(argument)
+        self.assertEqual(
+            utils.liststr_to_dict(output.strip()),
+            utils.liststr_to_dict("['Ethernet0','Ethernet4','Ethernet8','Ethernet12','Ethernet-BP0','Ethernet-BP4','Ethernet-BP8','Ethernet-BP12']")
+        )
+
+    def test_hwsku_option_port_list_configdb(self):
+        mock.patch('device_info.get_path_to_port_config_file', mock.MagicMock(return_value=None))
+        argument = ["-k", ASIC_SKU, "-n", "asic0", "-v", "PORT.keys()|list"]
+        output = self.run_script(argument)
+        self.assertEqual(
+            utils.liststr_to_dict(output.strip()),
+            utils.liststr_to_dict("['Ethernet0','Ethernet4','Ethernet8','Ethernet12','Ethernet-BP0','Ethernet-BP4','Ethernet-BP8','Ethernet-BP12']")
+        )
 
     def test_frontend_asic_ports_config_db(self):
         argument = ["-m", self.sample_graph, "-p", self.port_config[0], "-n", "asic0", "--var-json", "PORT"]

@@ -42,7 +42,7 @@ variables:
 - name: CACHE_MODE
   value: rcache
 - name: ENABLE_FIPS
-  value: n
+  value: y
 - name: BUILD_BRANCH
   ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
     value: $(System.PullRequest.TargetBranch)

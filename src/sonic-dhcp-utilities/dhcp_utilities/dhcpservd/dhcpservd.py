@@ -59,8 +59,8 @@ class DhcpServd(object):
         self.used_options = used_options
         with open(self.kea_dhcp4_config_path, "w") as write_file:
             write_file.write(kea_dhcp4_config)
-            # After refresh kea-config, we need to SIGHUP kea-dhcp4 process to read new config
-            self._notify_kea_dhcp4_proc()
+        # After refresh kea-config, we need to SIGHUP kea-dhcp4 process to read new config
+        self._notify_kea_dhcp4_proc()
 
     def _update_dhcp_server_ip(self):
         """
