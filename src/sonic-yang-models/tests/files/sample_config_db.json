@@ -2683,5 +2683,11 @@
             "global": {
             }
         }
+    },
+    "STORMOND_CONFIG": {
+        "INTERVALS": {
+            "daemon_polling_interval" : "3600",
+            "fsstats_sync_interval"   : "86400"
+        }
     }
 }

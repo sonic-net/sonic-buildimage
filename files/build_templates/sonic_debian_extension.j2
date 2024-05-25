@@ -510,6 +510,11 @@ sudo cp $IMAGE_CONFIGS/corefile_uploader/core_analyzer.rc.json $FILESYSTEM_ROOT_
 sudo chmod og-rw $FILESYSTEM_ROOT_ETC_SONIC/core_analyzer.rc.json
 
 if [[ $CONFIGURED_ARCH == amd64 ]]; then
+    # Install rasdaemon package
+    # NOTE: Can be installed from debian directly when we move to trixie
+    sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/rasdaemon_*.deb || \
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
+
     # Rasdaemon service configuration. Use timer to start rasdaemon with a delay for better fast/warm boot performance
     sudo cp $IMAGE_CONFIGS/rasdaemon/rasdaemon.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT systemctl disable rasdaemon.service
@@ -1038,6 +1043,7 @@ sudo cp $files_path/$COMPONENT_VERSIONS_FILE $FILESYSTEM_ROOT/etc/mlnx/component
 sudo cp $files_path/$MLNX_FFB_SCRIPT $FILESYSTEM_ROOT/usr/bin/mlnx-ffb.sh
 sudo cp $files_path/$MLNX_ONIE_FW_UPDATE $FILESYSTEM_ROOT/usr/bin/$MLNX_ONIE_FW_UPDATE
 sudo cp $files_path/$MLNX_SSD_FW_UPDATE $FILESYSTEM_ROOT/usr/bin/$MLNX_SSD_FW_UPDATE
+sudo cp $files_path/$MLNX_SONIC_BFB_INSTALL $FILESYSTEM_ROOT/usr/bin/$MLNX_SONIC_BFB_INSTALL
 sudo cp $files_path/$MLNX_INSTALL_PENDING_FW $FILESYSTEM_ROOT/usr/bin/$MLNX_INSTALL_PENDING_FW
 sudo mkdir -p $FILESYSTEM_ROOT/etc/mlnx/cpld/
 for MLNX_CPLD_ARCHIVE in $MLNX_CPLD_ARCHIVES; do
