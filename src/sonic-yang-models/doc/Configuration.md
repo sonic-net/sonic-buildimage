@@ -2508,7 +2508,8 @@ VXLAN_EVPN_NVO holds the VXLAN_TUNNEL object to be used for BGP-EVPN discovered 
 {
 "VXLAN_TUNNEL": {
         "vtep1": {
-            "src_ip": "10.10.10.10"
+            "src_ip": "10.10.10.10",
+            "dst_ip": "12.12.12.12"
         }
   }
 "VXLAN_TUNNEL_MAP" : {

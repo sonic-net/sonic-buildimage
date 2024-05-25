@@ -732,6 +732,13 @@ exit 101
 EOF
 sudo chmod a+x $FILESYSTEM_ROOT/usr/sbin/policy-rc.d
 
+if [ "$INCLUDE_FIPS" == y ]; then
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libatomic1
+    # The package openssh-client 9.2 is conflict with FIPS, the line below can be removed when the openssh-client version>=9.4
+    # The package will be reinstalled when isntalling the FIPS packages
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y remove openssh-client
+fi
+
 {% if installer_debs.strip() -%}
 {% for deb in installer_debs.strip().split(' ') -%}
 sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}} || sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
