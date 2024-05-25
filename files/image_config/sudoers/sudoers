@@ -46,6 +46,7 @@ Cmnd_Alias      READ_ONLY_CMDS = /bin/cat /var/log/syslog, /bin/cat /var/log/sys
                                  /usr/local/bin/sfputil show *, \
                                  /usr/local/bin/storyteller *
 
+Defaults!READ_ONLY_CMDS !syslog
 
 Cmnd_Alias      PASSWD_CMDS = /usr/local/bin/config tacacs passkey *, \
                               /usr/local/bin/config radius passkey *, \
