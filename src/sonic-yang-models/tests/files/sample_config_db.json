@@ -369,7 +369,8 @@
                 "yang_config_validation": "disable",
                 "rack_mgmt_map": "dummy_value",
                 "timezone": "Europe/Kiev",
-                "bgp_router_id": "8.8.8.8"
+                "bgp_router_id": "8.8.8.8",
+                "chassis_hostname": "str-sonic-chassis-1"
             }
         },
         "VLAN": {
@@ -1707,7 +1708,8 @@
         },
         "BGP_DEVICE_GLOBAL": {
             "STATE": {
-                "tsa_enabled": "false"
+                "tsa_enabled": "false",
+                "idf_isolation_state": "unisolated"
             }
         },
         "BGP_PEER_RANGE": {

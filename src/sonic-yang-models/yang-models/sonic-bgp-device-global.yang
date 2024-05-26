@@ -27,6 +27,20 @@ module sonic-bgp-device-global {
                     description
                     "When set to true, Traffic is shifted away (TSA), i.e, BGP routes are not advertised to neighboring routers";
                 }
+                leaf idf_isolation_state {
+                    type enumeration {
+                        enum isolated_no_export {
+                            description "IDF isolated using no-export community tag";
+                        }
+                        enum isolated_withdraw_all {
+                            description "IDF isolated by withdrawing routes";
+                        }
+                        enum unisolated {
+                            description "IDF un-isolated";
+                        }
+                    }
+                    default unisolated;
+                }
             } /* end of STATE container */
         } /* end of BGP_DEVICE_GLOBAL container */
 
