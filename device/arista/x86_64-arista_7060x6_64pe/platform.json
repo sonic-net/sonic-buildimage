@@ -304,6 +304,12 @@
             },
             {
                 "name": "osfp64"
+            },
+            {
+                "name": "sfp65"
+            },
+            {
+                "name": "sfp66"
             }
         ]
     },
@@ -1713,6 +1719,24 @@
                     "Ethernet64/3",
                     "Ethernet64/5",
                     "Ethernet64/7"
+                ]
+            }
+        },
+        "Ethernet512": {
+            "index": "65",
+            "lanes": "513",
+            "breakout_modes": {
+                "1x10G": [
+                    "Ethernet65"
+                ]
+            }
+        },
+        "Ethernet513": {
+            "index": "66",
+            "lanes": "515",
+            "breakout_modes": {
+                "1x10G": [
+                    "Ethernet66"
                 ]
             }
         }

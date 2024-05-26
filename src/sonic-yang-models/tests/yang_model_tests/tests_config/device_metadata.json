@@ -462,5 +462,14 @@
                 }
             }
         }
+    },
+    "DEVICE_METADATA_VALID_CHASSIS_HOSTNAME": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "chassis_hostname": "sonic-chassis-1"
+                }
+            }
+        }
     }
 }

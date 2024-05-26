@@ -169,5 +169,8 @@
     "DEVICE_METADATA_INVALID_BGP_ROUTER_ID": {
         "desc": "Verifying invalid bgp_router_id configuration.",
         "eStrKey": "Pattern"
+    },
+    "DEVICE_METADATA_VALID_CHASSIS_HOSTNAME": {
+        "desc": "Verifying valid chassis hostname configuration."
     }
 }

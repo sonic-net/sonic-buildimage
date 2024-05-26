@@ -8,9 +8,23 @@
     "BGP_DEVICE_GLOBAL_WITH_TSB_TEST": {
         "desc": "Load bgp device global table with tsa_enabled set to false"
     },
-    "BGP_DEVICE_GLOBAL_WITH_INVALID_VALUE": {
+    "BGP_DEVICE_GLOBAL_WITH_IDF_ISOLATION_TEST_1": {
+        "desc": "Load bgp device global table with idf_isolation_state set to isolated_no_export"
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_ISOLATION_TEST_2": {
+        "desc": "Load bgp device global table with idf_isolation_state set to isolated_withdraw_all"        
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_ISOLATION_TEST_3": {
+        "desc": "Load bgp device global table with idf_isolation_state set to unisolated"        
+    },
+    "BGP_DEVICE_GLOBAL_WITH_INVALID_VALUE_1": {
         "desc": "Load bgp device global table with invalid value",
         "eStrKey": "InvalidValue",
         "eStr": ["tsa_enabled"]
+    },
+    "BGP_DEVICE_GLOBAL_WITH_INVALID_VALUE_2": {
+        "desc": "Load bgp device global table with invalid value",
+        "eStrKey": "InvalidValue",
+        "eStr": ["idf_isolation_state"]
     }
 }
