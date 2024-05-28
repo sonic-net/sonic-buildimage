@@ -1,0 +1,10 @@
+Source: sonic-netberg-platform-modules
+Section: main
+Priority: extra
+Maintainer: Netberg <support@netbergtw.com>
+Build-Depends: debhelper (>= 9), bzip2
+Standards-Version: 1.0.0
+
+Package: sonic-platform-netberg-aurora-221
+Architecture: amd64
+Description: This package contains aurora-221 platform driver utility for SONiC project.
