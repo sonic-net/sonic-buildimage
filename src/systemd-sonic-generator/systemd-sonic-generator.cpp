@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 // #include <stdbool.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -10,7 +11,10 @@
 #include <json-c/json.h>
 #include <string>
 #include <sstream>
+#include <vector>
 #include <unordered_set>
+
+#include "systemd-sonic-generator.h"
 
 #define MAX_NUM_TARGETS 48
 #define MAX_NUM_INSTALL_LINES 48
@@ -29,6 +33,7 @@ const char* ASIC_CONF_FORMAT = "/usr/share/sonic/device/%s/asic.conf";
 const char* PLATFORM_FILE_FORMAT = "/usr/share/sonic/device/%s/platform.json";
 const char* PLATFORM_CONF_FORMAT = "/usr/share/sonic/device/%s/services.conf";
 const char* DPU_PREFIX = "dpu";
+const char* SHELL_PATH = "/usr/bin/sh";
 
 
 const char* g_lib_systemd = NULL;
@@ -69,6 +74,11 @@ const char* get_platform_file_format() {
 const char* g_platform_conf_format = NULL;
 const char* get_platform_conf_format() {
     return (g_platform_conf_format) ? g_platform_conf_format : PLATFORM_CONF_FORMAT;
+}
+
+const char* g_shell_path = NULL;
+const char* get_shell_path() {
+    return (g_shell_path) ? g_shell_path : SHELL_PATH;
 }
 
 const char* get_platform();
@@ -163,6 +173,49 @@ static bool is_devnull(const char* path)
         return false;
     }
     return strcmp(resolved_path, "/dev/null") == 0;
+}
+
+
+static int run_command(const std::string& cmd) {
+    /***
+    Runs a command in a child process
+
+    Forks a child process and runs the given command in it
+    ***/
+    pid_t pid;
+    int status;
+
+    pid = fork();
+
+    if (pid == -1) {
+        fprintf(stderr, "Failed to fork\n");
+        return -1;
+    }
+
+    if (pid == 0) {
+        std::vector<char*> c_command;
+        c_command.push_back(const_cast<char*>(get_shell_path()));
+        c_command.push_back(const_cast<char*>("-c"));
+        c_command.push_back(const_cast<char*>(cmd.c_str()));
+        c_command.push_back(NULL);
+        if (execvp(c_command[0], c_command.data()) != 0) {
+            fprintf(stderr, "Failed to execute %s\n", c_command[0]);
+            exit(EXIT_FAILURE);
+        } else {
+            exit(EXIT_SUCCESS);
+        }
+    }
+
+    if (waitpid(pid, &status, 0) == -1) {
+        fprintf(stderr, "Failed to wait for child process (%s)\n", strerror(errno));
+        return -1;
+    }
+
+    if (WIFEXITED(status)) {
+        return WEXITSTATUS(status);
+    }
+
+    return 0;
 }
 
 
@@ -1080,6 +1133,27 @@ static int install_network_service_for_smart_switch() {
 }
 
 
+
+static int systemctl_enable(const std::string &service_name) {
+    std::string command = "systemctl enable " + service_name;
+    if (run_command(command) != 0) {
+        fprintf(stderr, "Failed to enable %s\n", service_name.c_str());
+        return -1;
+    }
+    return 0;
+}
+
+
+static int systemctl_start(const std::string &service_name) {
+    std::string command = "systemctl start " + service_name;
+    if (run_command(command) != 0) {
+        fprintf(stderr, "Failed to start %s\n", service_name.c_str());
+        return -1;
+    }
+    return 0;
+}
+
+
 int ssg_main(int argc, char **argv) {
     char* unit_files[MAX_NUM_UNITS];
     std::string install_dir;
@@ -1116,6 +1190,10 @@ int ssg_main(int argc, char **argv) {
             return -1;
         }
         if (install_network_service_for_smart_switch() != 0) {
+            return -1;
+        }
+        // Enable and start networkd service for smart switch
+        if (systemctl_enable("systemd-networkd") != 0 || systemctl_start("systemd-networkd") != 0) {
             return -1;
         }
     }
