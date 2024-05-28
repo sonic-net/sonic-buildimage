@@ -23,7 +23,7 @@ route-map FROM_AZNG_MIGRATION_FILTER_V6 permit 2
 !
 route-map FROM_AZNG_MIGRATION_FILTER_V6 deny 3
 !
-{% if slice_type is not defined or slice_type != 'AZNGProduction' %}
+{% if slice_type is not defined or slice_type != 'AZNG_Production' %}
 route-map FROM_AH_V6 permit 10
   call FROM_AZNG_MIGRATION_FILTER_V6
 {% endif %}
@@ -64,7 +64,7 @@ route-map TO_AZNG_MIGRATION_FILTER_V6 permit 3
 !
 route-map TO_AZNG_MIGRATION_FILTER_V6 deny 4
 !
-{% if slice_type is not defined or slice_type != 'AZNGProduction' %}
+{% if slice_type is not defined or slice_type != 'AZNG_Production' %}
 route-map TO_AH_V6 permit 10
   call TO_AZNG_MIGRATION_FILTER_V6
 {% endif %}
