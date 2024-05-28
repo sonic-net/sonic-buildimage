@@ -106,6 +106,7 @@ class BGPPeerMgrBase(Manager):
 
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
+            ("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0"),
             ("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "tsa_enabled"),
             ("LOCAL", "local_addresses", ""),
             ("LOCAL", "interfaces", ""),
@@ -138,6 +139,9 @@ class BGPPeerMgrBase(Manager):
 
         if self.use_loopback:
             deps.append(("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0"))
+
+        if self.peer_type == 'internal':
+            deps.append(("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback4096"))
 
         super(BGPPeerMgrBase, self).__init__(
             common_objs,
