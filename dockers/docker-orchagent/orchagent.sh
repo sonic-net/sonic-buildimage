@@ -82,7 +82,7 @@ if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     if [[ $midplane_ip != "" ]]; then
         # Enable ZMQ with eth0-midplane address
         ORCHAGENT_ARGS+=" -q tcp://${midplane_mgmt_ip}:8100"
-    elif [[ $mgmt_ip != "" ]]; then
+    elif [[ $mgmt_ip != "" ]] && [[ $mgmt_ip != "null" ]]; then
         # If eth0-midplane interface does not exist, enable ZMQ with eth0 address
         ORCHAGENT_ARGS+=" -q tcp://${mgmt_ip}:8100"
     else
