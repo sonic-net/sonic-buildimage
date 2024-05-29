@@ -1492,8 +1492,9 @@ class SFP(NvidiaSFPCommon):
         
     @classmethod
     def action_on_fw_control(cls, sfp):
-        logger.log_info(f'SFP {sfp.sdk_index} is set to firmware control')
-        sfp.set_control_type(SFP_FW_CONTROL)
+        if sfp.get_control_type() != SFP_FW_CONTROL:
+            logger.log_info(f'SFP {sfp.sdk_index} is set to firmware control')
+            sfp.set_control_type(SFP_FW_CONTROL)
         
     @classmethod
     def action_on_cancel_wait(cls, sfp):
