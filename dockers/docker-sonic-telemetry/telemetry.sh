@@ -71,6 +71,14 @@ else
     TELEMETRY_ARGS+=" -v=2"
 fi
 
+# gNMI save-on-set behavior is disabled by default.
+# Save-on-set can be turned on by setting the "TELEMETRY|gnmi|save_on_set"
+# to "true".
+readonly SAVE_ON_SET=$(echo $GNMI | jq -r '.save_on_set // empty')
+if [ ! -z "$SAVE_ON_SET" ]; then
+    TELEMETRY_ARGS+=" --with-save-on-set=$SAVE_ON_SET"
+fi
+
 # Server will handle threshold connections consecutively
 THRESHOLD_CONNECTIONS=$(echo $GNMI | jq -r '.threshold')
 if [[ $THRESHOLD_CONNECTIONS =~ ^[0-9]+$ ]]; then
