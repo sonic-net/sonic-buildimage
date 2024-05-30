@@ -24,7 +24,7 @@ pr: none
 
 stages:
 - stage: Build
-  pool: sonicbld
+  pool: sonicbld-1es
   variables:
   - name: CACHE_MODE
     value: cache
