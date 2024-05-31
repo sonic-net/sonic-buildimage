@@ -1,0 +1,37 @@
+From 59953e070125eca9eabf23c3f83ab69b5be2eeda Mon Sep 17 00:00:00 2001
+From: ubuntu <ubuntu@contoso.com>
+Date: Fri, 23 Sep 2022 02:48:16 +0000
+Subject: [PATCH 4/4] Remove some debug log
+
+---
+ regex_helper.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/regex_helper.c b/regex_helper.c
+index 97c0afc..19a56c3 100644
+--- a/regex_helper.c
++++ b/regex_helper.c
+@@ -30,17 +30,17 @@ int remove_password_by_regex(char* command, regex_t regex)
+ {
+     regmatch_t pmatch[REGEX_MATCH_GROUP_COUNT];
+     if (regexec(&regex, command, REGEX_MATCH_GROUP_COUNT, pmatch, 0) == REG_NOMATCH) {
+-        trace("User command not match.\n");
++        // trace("User command not match.\n");
+         return PASSWORD_NOT_FOUND;
+     }
+ 
+     if (pmatch[1].rm_so < 0) {
+-        trace("Password not found.\n");
++        // trace("Password not found.\n");
+         return PASSWORD_NOT_FOUND;
+     }
+ 
+     /* Found password between pmatch[1].rm_so to pmatch[1].rm_eo, replace it. */
+-    trace("Found password between: %d -- %d\n", pmatch[1].rm_so, pmatch[1].rm_eo);
++    // trace("Found password between: %d -- %d\n", pmatch[1].rm_so, pmatch[1].rm_eo);
+ 
+     /* Replace password with mask. */
+     size_t command_length = strlen(command);
+-- 
+2.30.2
+
