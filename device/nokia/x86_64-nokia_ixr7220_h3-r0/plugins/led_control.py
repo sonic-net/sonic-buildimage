@@ -49,6 +49,7 @@ class LedControl(LedControlBase):
         try:
             with open(sysfs_file, 'r') as fd:
                 rv = fd.read()
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -65,7 +66,8 @@ class LedControl(LedControlBase):
             return rv
         try:
             with open(sysfs_file, 'w') as fd:
-                rv = fd.write(str(value))
+                rv = fd.write(value)
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 

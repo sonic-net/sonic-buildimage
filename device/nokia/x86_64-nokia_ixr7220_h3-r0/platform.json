@@ -3,7 +3,10 @@
         "name": "7220 IXR-H3",
         "components": [
             {
-                "name": "CPU-PLD"
+                "name": "BIOS"
+            },
+            {
+                "name": "CPUPLD"
             },
             {
                 "name": "SW1-PLD"
