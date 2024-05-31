@@ -1015,6 +1015,9 @@ sudo LANG=C cp $SCRIPTS_DIR/write_standby.py $FILESYSTEM_ROOT/usr/local/bin/writ
 # Copy mark_dhcp_packet script
 sudo LANG=C cp $SCRIPTS_DIR/mark_dhcp_packet.py $FILESYSTEM_ROOT/usr/local/bin/mark_dhcp_packet.py
 
+# Copy Azng Migration Script
+sudo LANG=C cp $SCRIPTS_DIR/azng_migration $FILESYSTEM_ROOT/usr/local/bin/azng_migration
+
 sudo cp files/build_templates/startup_tsa_tsb.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 echo "startup_tsa_tsb.service" | sudo tee -a $GENERATED_SERVICE_FILE
 

@@ -1,0 +1,314 @@
+#!/bin/bash
+AZNG_MIGRATION_SCRIPT_NAME=$(basename $0)
+EXIT_SUCCESS=0
+EXIT_FAILURE=1
+function showHelpAndExit()
+{
+    echo "Usage: ${AZNG_MIGRATION_SCRIPT_NAME} [options]"
+    echo "    -h,-? : get this help"
+    echo "    -d    : Apply Deny Inbound/Outbound route-map"
+    echo "    -i    : Apply Permit Inbound route-map"
+    echo "    -o    : Apply Permit Outbound route-map"
+    echo "    -p    : Set the device to AZNG Production State"
+    exit "${EXIT_SUCCESS}"
+}
+
+function get_asic_count() {
+    trap 'handle_error $? $LINENO' ERR
+    local redirect_eval=""
+    local cmd="python -c 'from sonic_py_common.multi_asic import get_num_asics; print(get_num_asics())'"
+    echo `eval ${cmd} ${redirect_eval}`
+}
+
+function check_and_apply_frr_config_helper()
+{
+    NUM_ASIC=$(get_asic_count)
+    local timeout_cmd="timeout 2"
+    ah_present_asic=()
+    asic_num=0
+    while [[ ($asic_num -lt $NUM_ASIC) && ($NUM_ASIC -gt 0) ]]; do
+        if [[ $NUM_ASIC -gt 1 ]]; then
+            asic_suffix=$asic_num
+        else
+            asic_suffix=''
+        fi
+        local vtysh_cmd="sudo docker exec -t bgp${asic_suffix} vtysh -c 'show route-map TO_AH_V6 json' | jq -r '.BGP | length'"
+        local route_map_exist=($(eval "${timeout_cmd} ${vtysh_cmd}"))
+        if [[ $? -ne 0 ]]; then
+            echo "Command: $vtysh_cmd timedout or failed after 2 seconds."
+        fi
+        for i in "${route_map_exist[@]}"
+        do
+            if [[ $i -gt 0 ]] ; then
+                ah_present_asic+=($asic_num)
+                break
+            fi
+        done 
+        ((asic_num = asic_num + 1))
+    done
+    #If check mode then check the sanity and return
+    if [[ "$1" == "check" ]]; then
+        declare -a checkCmdlist=("${!2}")
+        for asic_num in "${ah_present_asic[@]}"; do
+            if [[ $NUM_ASIC -gt 1 ]]; then
+                asic_suffix=$asic_num
+            else
+                asic_suffix=''
+            fi
+            for cmd in "${checkCmdlist[@]}"; do
+                local check_cmd="sudo docker exec -t bgp${asic_suffix} vtysh -c 'show running-config' | grep -w '${cmd}'"
+                eval "${timeout_cmd} ${check_cmd}>/dev/null"
+                if [[ $? -ne $3 ]]; then
+                    echo "Command: $check_cmd timedout or failed after 2 seconds."
+                    return ${EXIT_FAILURE}
+		fi
+            done
+        done
+        return ${EXIT_SUCCESS}
+    else
+        local frr_config_temp_file=$2
+    fi
+    # Copy the file to the docker
+    for asic_num in "${ah_present_asic[@]}"; do
+        if [[ $NUM_ASIC -gt 1 ]]; then
+            asic_suffix=$asic_num
+        else
+            asic_suffix=''
+        fi
+        local cp_cmd="sudo docker cp ${frr_config_temp_file} bgp${asic_suffix}:/"
+        eval "${timeout_cmd} ${cp_cmd}"
+        if [[ $? -ne 0 ]]; then
+            echo "Command: $cp_cmd timedout or failed after 2 seconds."
+            return ${EXIT_FAILURE}
+        fi
+    done
+    # Ececute the command
+    for asic_num in "${ah_present_asic[@]}"; do
+        if [[ $NUM_ASIC -gt 1 ]]; then
+            asic_suffix=$asic_num
+        else
+            asic_suffix=''
+        fi
+        local file_name=$(basename "$frr_config_temp_file")
+        local vtysh_cmd="sudo docker exec -t bgp${asic_suffix} vtysh -f /${file_name}"
+        eval "${timeout_cmd} ${vtysh_cmd}"
+        if [[ $? -ne 0 ]]; then
+            echo "Command: $vtysh_cmd timedout or failed after 2 seconds."
+            return ${EXIT_FAILURE}
+        fi
+    done
+    # Delete the file
+    for asic_num in "${ah_present_asic[@]}"; do
+        if [[ $NUM_ASIC -gt 1 ]]; then
+            asic_suffix=$asic_num
+        else
+            asic_suffix=''
+        fi
+        local file_name=$(basename "$frr_config_temp_file")
+        local rm_cmd="sudo docker exec -t bgp${asic_suffix} rm /${file_name}"
+        eval "${timeout_cmd} ${rm_cmd}"
+        if [[ $? -ne 0 ]]; then
+            echo "Command: $rm_cmd timedout or failed after 2 seconds."
+            return ${EXIT_FAILURE}
+        fi
+    done
+    return ${EXIT_SUCCESS}
+}
+
+function aznz_migration_with_deny()
+{
+
+   local ah_premigation_route_maps=(
+        "FROM_AH_V6 permit 10"
+        "TO_AH_V6 permit 10"
+        "FROM_AH_V4 permit 10"
+        "TO_AH_V4 permit 10"
+    )
+
+   check_and_apply_frr_config_helper "check" ah_premigation_route_maps[@] 0
+   if [[ $? -eq $EXIT_FAILURE ]]; then
+       LOG="AZNG_MIGRATION: Pre check Failed when applying deny route-maps"
+       logger "$LOG"
+       echo "$LOG"
+       exit ${EXIT_FAILURE}
+   fi
+   AZNG_DENY_TEMP_FILE=$(mktemp)
+   echo "route-map FROM_AH_V4 deny 5" >> $AZNG_DENY_TEMP_FILE
+   echo "route-map FROM_AH_V6 deny 5" >> $AZNG_DENY_TEMP_FILE
+   echo "route-map TO_AH_V4 deny 5" >> $AZNG_DENY_TEMP_FILE
+   echo "route-map TO_AH_V6 deny 5" >> $AZNG_DENY_TEMP_FILE
+   echo "no route-map FROM_AH_V6 permit 10" >> $AZNG_DENY_TEMP_FILE
+   echo "no route-map TO_AH_V6 permit 10" >> $AZNG_DENY_TEMP_FILE
+   echo "no route-map FROM_AH_V4 permit 10" >> $AZNG_DENY_TEMP_FILE
+   echo "no route-map TO_AH_V4 permit 10" >> $AZNG_DENY_TEMP_FILE
+   check_and_apply_frr_config_helper "apply" $AZNG_DENY_TEMP_FILE 0
+   if [[ $? -eq $EXIT_FAILURE ]]; then
+       LOG="AZNG_MIGRATION: Failed when applying deny route-maps and removing pre-migation route-maps"
+       logger "$LOG"
+       echo "$LOG"
+       rm -f "$AZNG_DENY_TEMP_FILE"
+       exit ${EXIT_FAILURE}
+   fi
+   local ah_deny_route_maps=(
+        "FROM_AH_V6 deny 5"
+        "TO_AH_V6 deny 5"
+        "FROM_AH_V4 deny 5"
+        "TO_AH_V4 deny 5"
+    )
+   check_and_apply_frr_config_helper "check" ah_deny_route_maps[@] 0
+   if [[ $? -eq $EXIT_FAILURE ]]; then
+       LOG="AZNG_MIGRATION: Post check Failed for deny route-maps not present"
+       logger "$LOG"
+       echo "$LOG"
+       rm -f "$AZNG_DENY_TEMP_FILE"
+       exit ${EXIT_FAILURE}
+   fi
+   check_and_apply_frr_config_helper "check" ah_premigation_route_maps[@] 1
+   if [[ $? -eq $EXIT_FAILURE ]]; then
+       LOG="AZNG_MIGRATION: Post check Failed for pre-migation route-maps did not removed"
+       logger "$LOG"
+       echo "$LOG"
+       rm -f "$AZNG_DENY_TEMP_FILE"
+       exit ${EXIT_FAILURE}
+   fi
+   rm -f "$AZNG_DENY_TEMP_FILE"
+
+   LOG="AZNG_MIGRATION: Switch from Pre-Migration to Production AZNG route-maps with Deny successful"
+   logger "$LOG"
+   echo "$LOG"
+   exit ${EXIT_SUCCESS}
+}
+
+function aznz_migration_outbound_allow()
+{
+   local ah_deny_route_maps=(
+        "FROM_AH_V6 deny 5"
+        "FROM_AH_V4 deny 5"
+    )
+   check_and_apply_frr_config_helper "check" ah_deny_route_maps[@] 0
+   if [[ $? -eq $EXIT_FAILURE ]]; then
+       LOG="AZNG_MIGRATION: Pre check Failed for inbound deny route-maps not present"
+       logger "$LOG"
+       echo "$LOG"
+       exit ${EXIT_FAILURE}
+   fi
+   AZNG_ALLOW_OUTBOUND_TEMP_FILE=$(mktemp)
+   echo "no route-map FROM_AH_V4 deny 5" >> $AZNG_ALLOW_OUTBOUND_TEMP_FILE
+   echo "no route-map FROM_AH_V6 deny 5" >> $AZNG_ALLOW_OUTBOUND_TEMP_FILE
+   check_and_apply_frr_config_helper "apply" $AZNG_ALLOW_OUTBOUND_TEMP_FILE 0
+   if [[ $? -eq $EXIT_FAILURE ]]; then
+       LOG="AZNG_MIGRATION: Failed to remove inbound deny route-maps"
+       logger "$LOG"
+       echo "$LOG"
+       rm -f "$AZNG_ALLOW_OUTBOUND_TEMP_FILE"
+       exit ${EXIT_FAILURE}
+   fi
+   check_and_apply_frr_config_helper "check" ah_deny_route_maps[@] 1
+   if [[ $? -eq $EXIT_FAILURE ]]; then
+       LOG="AZNG_MIGRATION: Post check Failed for inbound deny route-maps still present"
+       logger "$LOG"
+       echo "$LOG"
+       rm -f "$AZNG_ALLOW_OUTBOUND_TEMP_FILE"
+       exit ${EXIT_FAILURE}
+   fi
+   rm -f "$AZNG_ALLOW_OUTBOUND_TEMP_FILE"
+   LOG="AZNG_MIGRATION: Inbound Deny Route-map removed successfully"
+   logger "$LOG"
+   echo "$LOG"
+   exit ${EXIT_SUCCESS}
+}
+
+function aznz_migration_inbound_allow()
+{
+   local ah_deny_route_maps=(
+        "TO_AH_V6 deny 5"
+        "TO_AH_V4 deny 5"
+    )
+   check_and_apply_frr_config_helper "check" ah_deny_route_maps[@] 0
+   if [[ $? -eq $EXIT_FAILURE ]]; then
+       LOG="AZNG_MIGRATION: Pre check Failed for outbound deny route-maps not present"
+       logger "$LOG"
+       echo "$LOG"
+       exit ${EXIT_FAILURE}
+   fi
+   AZNG_ALLOW_INBOUND_TEMP_FILE=$(mktemp)
+   echo "no route-map TO_AH_V4 deny 5" >> $AZNG_ALLOW_INBOUND_TEMP_FILE
+   echo "no route-map TO_AH_V6 deny 5" >> $AZNG_ALLOW_INBOUND_TEMP_FILE
+   check_and_apply_frr_config_helper "apply" $AZNG_ALLOW_INBOUND_TEMP_FILE 0
+   if [[ $? -eq $EXIT_FAILURE ]]; then
+       LOG="AZNG_MIGRATION: Failed to remove outbound deny route-maps"
+       logger "$LOG"
+       echo "$LOG"
+       rm -f "$AZNG_ALLOW_INBOUND_TEMP_FILE"
+       exit ${EXIT_FAILURE}
+   fi
+   check_and_apply_frr_config_helper "check" ah_deny_route_maps[@] 1
+   if [[ $? -eq $EXIT_FAILURE ]]; then
+       LOG="AZNG_MIGRATION: Post check Failed for outbound deny route-maps still present"
+       logger "$LOG"
+       echo "$LOG"
+       rm -f "$AZNG_ALLOW_INBOUND_TEMP_FILE"
+       exit ${EXIT_FAILURE}
+   fi
+   rm -f "$AZNG_ALLOW_INBOUND_TEMP_FILE"
+   LOG="AZNG_MIGRATION: Outbound Deny Route-map removed successfully"
+   logger "$LOG"
+   echo "$LOG"
+   exit ${EXIT_SUCCESS}
+}
+
+function aznz_set_production()
+{
+    NUM_ASIC=$(get_asic_count)
+    local timeout_cmd="timeout 2"
+    asic_num=0
+    while [[ ($asic_num -lt $NUM_ASIC) && ($NUM_ASIC -gt 0) ]]; do
+        if [[ $NUM_ASIC -gt 1 ]]; then
+            asic_suffix="-n asic${asic_num}"
+        else
+            asic_suffix=''
+        fi
+        local sonic_db_cli_cmd='sonic-db-cli ${asic_suffix} CONFIG_DB HSET "DEVICE_METADATA|localhost" slice_type AZNG_Production' 
+        eval "${timeout_cmd} ${sonic_db_cli_cmd}>/dev/null" || RC=$?
+        if [[ $RC -ne 0 ]]; then
+            echo "Command: $sonic_db_cli_cmd timedout or failed after 2 seconds."
+            exit ${EXIT_FAILURE}
+        fi
+        ((asic_num = asic_num + 1))
+    done
+    local config_save_cmd="timeout 10 sudo config save -y"
+    eval "${config_save_cmd}" || RC=$?
+    if [[ $RC -ne 0 ]]; then
+        echo "Command: $config_save_cmd timedout or failed after 10 seconds."
+        exit ${EXIT_FAILURE}
+    fi
+    LOG="AZNG_MIGRATION: Device Metadata successfully updated."
+    logger "$LOG"
+    echo "$LOG"
+    exit ${EXIT_SUCCESS}
+}
+
+function parseOptions()
+{
+    while getopts "hdiop" opt; do
+        case ${opt} in
+            h|\? )
+                showHelpAndExit
+                ;;
+            d )
+                aznz_migration_with_deny
+                ;;
+            i )
+                aznz_migration_inbound_allow
+                ;;
+            o )
+                aznz_migration_outbound_allow
+                ;;
+            p )
+                aznz_set_production
+                ;;
+        esac
+    done
+}
+
+parseOptions $@
