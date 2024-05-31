@@ -74,6 +74,23 @@ def test_bgpd_main_storage_be_t1():
              "bgpd/bgpd.main.conf.j2",
              "bgpd.main.conf.j2/stbk_t1.json",
              "bgpd.main.conf.j2/stbk_t1.conf")
+def test_idf_isolated_no_export():
+    run_test("IDF isolation with no export",
+             "bgpd/idf_isolate/idf_isolate.conf.j2",
+             "idf_isolate/idf_isolated_no_export.json",
+             "idf_isolate/idf_isolated_no_export.conf")
+
+def test_idf_isolated_withdraw_all():
+    run_test("IDF isolation withdraw all",
+             "bgpd/idf_isolate/idf_isolate.conf.j2",
+             "idf_isolate/idf_isolated_withdraw_all.json",
+             "idf_isolate/idf_isolated_withdraw_all.conf")
+
+def test_idf_unisolated():
+    run_test("IDF unisolated",
+             "bgpd/idf_isolate/idf_unisolate.conf.j2",
+             "idf_isolate/idf_unisolated.json",
+             "idf_isolate/idf_unisolated.conf")
 
 def test_tsa_isolate():
     run_test("tsa/bgpd.tsa.isolate.conf.j2",
