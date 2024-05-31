@@ -268,7 +268,7 @@ function aznz_set_production()
         else
             asic_suffix=''
         fi
-        local sonic_db_cli_cmd='sonic-db-cli ${asic_suffix} CONFIG_DB HSET "DEVICE_METADATA|localhost" slice AZNGProduction' 
+        local sonic_db_cli_cmd='sonic-db-cli ${asic_suffix} CONFIG_DB HSET "DEVICE_METADATA|localhost" slice_type AZNG_Production' 
         eval "${timeout_cmd} ${sonic_db_cli_cmd}>/dev/null" || RC=$?
         if [[ $RC -ne 0 ]]; then
             echo "Command: $sonic_db_cli_cmd timedout or failed after 2 seconds."
