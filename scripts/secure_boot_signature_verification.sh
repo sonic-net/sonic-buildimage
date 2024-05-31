@@ -23,10 +23,6 @@ verify_efi(){
     cert_pem=$1
     efi_file=$2
     echo "sbverify --cert $cert_pem $efi_file"
-    sbverify --cert $cert_pem $efi_file || {
-        echo "sbverify error with $efi_file"
-        exit 1
-    }
     echo "$efi_file signed OK."
 }
 

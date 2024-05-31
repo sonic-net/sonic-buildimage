@@ -65,3 +65,17 @@ else
             docker exec -i bgp /usr/bin/$1
         fi
 fi
+
+# If TSA was issued by startup_tsa_tsb.service, show it
+if [[ $1 == "TSC" ]]; then
+   service='startup_tsa_tsb.service'
+   if [[ $(/bin/systemctl show $service --property ActiveState  --value) == "active" ]] && \
+      [[ $(/bin/systemctl show $service --property SubState  --value) == "running" ]]; then
+       TSA_TSB_CONF=/usr/share/sonic/device/$PLATFORM/startup-tsa-tsb.conf
+       [ -f $TSA_TSB_CONF ] && . $TSA_TSB_CONF
+       service_start_sec=$(date -d "$(systemctl show --property=ActiveEnterTimestamp $service --value)" +%s)
+       service_elapsed_sec=$(( $(date +%s) - service_start_sec))
+       tsb_time_remaining=$((STARTUP_TSB_TIMER - service_elapsed_sec))
+       echo "TSB  : Pending (Time Remaining:$tsb_time_remaining seconds,  service:$service)"
+   fi
+fi

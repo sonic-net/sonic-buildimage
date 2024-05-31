@@ -16,6 +16,10 @@ resources:
     type: git
     name: One/Networking-acs-buildimage
     ref: internal
+  - repository: cisco-8000
+    type: github
+    name: Cisco-8000-sonic/platform-cisco-8000
+    endpoint: cisco-connection
 
 name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
 
@@ -67,7 +71,13 @@ stages:
         - checkout: self
           clean: true
           submodules: recursive
+          path: s
           displayName: 'Checkout code'
+        - checkout: cisco-8000
+          condition: eq(variables.GROUP_NAME, 'cisco-8000')
+          submodules: recursive
+          path: s/platform/cisco-8000
+          displayName: 'Checkout cisco-8000'
         - script: |
             unset REGISTRY_SERVER
             git checkout -b $(Build.SourceBranchName)
@@ -286,7 +296,22 @@ stages:
         - name: cisco-8000
           variables:
             TERM: ''
+            SONIC_ENABLE_SECUREBOOT_SIGNATURE: y
+            SIGNING_KEY: /etc/certificates/sonic-secure-boot-private.pem
+            SIGNING_CERT: $(Build.SourcesDirectory)/target/sonic-secure-boot-public.pem
           steps:
+          - template: ../.azure-pipelines/azure-pipelines-download-certificate.yml
+            parameters:
+              # TODO: Change to use prod connection, the certificate is only for test now
+              connectionName: sonic2sub
+              kevaultName: sonic-kv
+          - script: |
+              echo $(DEV_SIGNING_KEY) | base64 -d | sudo tee "$(SIGNING_KEY)" 1>/dev/null 2>&1
+              echo $(DEV_SIGNING_CERT) | base64 -d > "$(SIGNING_CERT)"
+              echo "SECURE_UPGRADE_MODE := dev" >> rules/config.user
+              echo "SECURE_UPGRADE_DEV_SIGNING_KEY := $SIGNING_KEY" >> rules/config.user
+              echo "SECURE_UPGRADE_SIGNING_CERT := $SIGNING_CERT" >> rules/config.user
+            displayName: "Enable secure boot signature"
           - script: |
               cisco_ref=$(cat platform/checkout/cisco-8000.ini | grep '^ref=' | cut -d= -f2)
               echo "The cisco 8000 release version is $cisco_ref"

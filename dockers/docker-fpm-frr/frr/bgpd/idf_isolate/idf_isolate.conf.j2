@@ -1,0 +1,20 @@
+route-map CHECK_IDF_ISOLATION permit 1
+    match ip address prefix-list PL_LoopbackV4
+    set community {{ constants.bgp.traffic_shift_community }}
+route-map CHECK_IDF_ISOLATION permit 2
+    match ipv6 address prefix-list PL_LoopbackV6
+    set community {{ constants.bgp.traffic_shift_community }}
+route-map CHECK_IDF_ISOLATION permit 3
+    match tag {{ constants.bgp.internal_community_match_tag }}
+    set community {{ constants.bgp.traffic_shift_community }}
+{# #}
+{%- if isolation_status == "isolated_withdraw_all" -%}
+    route-map CHECK_IDF_ISOLATION deny 4
+    route-map CHECK_IDF_ISOLATION permit 10
+        no set community no-export additive{# Added to clean up state, in case of transition from isolated_no_export (not expected) #}
+{%- elif isolation_status == "isolated_no_export" -%}
+    route-map CHECK_IDF_ISOLATION permit 10
+        set community no-export additive
+    no route-map CHECK_IDF_ISOLATION deny 4{# Added to clean up state, in case of transition from isolated_withdraw_all (not expected) #}
+{# #}
+{%- endif -%}

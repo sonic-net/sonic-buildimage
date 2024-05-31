@@ -59,14 +59,15 @@ class BGPPeerGroupMgr(object):
         try:
             pg = self.peergroup_template.render(**kwargs)
             tsa_rm = self.device_global_cfgmgr.check_state_and_get_tsa_routemaps(pg)
+            idf_isolation_rm = self.device_global_cfgmgr.check_state_and_get_idf_isolation_routemaps()
         except jinja2.TemplateError as e:
             log_err("Can't render peer-group template: '%s': %s" % (name, str(e)))
             return False
 
         if kwargs['vrf'] == 'default':
-            cmd = ('router bgp %s\n' % kwargs['bgp_asn']) + pg + tsa_rm
+            cmd = ('router bgp %s\n' % kwargs['bgp_asn']) + pg + tsa_rm + idf_isolation_rm
         else:
-            cmd = ('router bgp %s vrf %s\n' % (kwargs['bgp_asn'], kwargs['vrf'])) + pg + tsa_rm
+            cmd = ('router bgp %s vrf %s\n' % (kwargs['bgp_asn'], kwargs['vrf'])) + pg + tsa_rm + idf_isolation_rm
         self.update_entity(cmd, "Peer-group for peer '%s'" % name)
         return True
 
@@ -107,6 +108,7 @@ class BGPPeerMgrBase(Manager):
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
             ("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "tsa_enabled"),
+            ("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "idf_isolation_state"),
             ("LOCAL", "local_addresses", ""),
             ("LOCAL", "interfaces", ""),
         ]
@@ -138,6 +140,9 @@ class BGPPeerMgrBase(Manager):
 
         if self.use_loopback:
             deps.append(("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0"))
+
+        if self.peer_type == 'internal':
+            deps.append(("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback4096"))
 
         super(BGPPeerMgrBase, self).__init__(
             common_objs,

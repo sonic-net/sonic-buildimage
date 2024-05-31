@@ -19,6 +19,8 @@ class DeviceGlobalCfgMgr(Manager):
         self.constants = common_objs['constants']
         self.tsa_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.isolate.conf.j2")
         self.tsb_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.unisolate.conf.j2")
+        self.idf_isolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_isolate.conf.j2")
+        self.idf_unisolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_unisolate.conf.j2")
         self.directory.subscribe([("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/switch_type"),], self.on_switch_type_change)
         super(DeviceGlobalCfgMgr, self).__init__(
             common_objs,
@@ -42,13 +44,31 @@ class DeviceGlobalCfgMgr(Manager):
             log_err("DeviceGlobalCfgMgr:: data is None")
             return False
 
+        tsa_status = "false"
+        idf_isolation_state = "unisolated"
+
+        if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "tsa_enabled"):
+            tsa_status = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME)["tsa_enabled"]
+        if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "idf_isolation_state"):
+            idf_isolation_state = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME)["idf_isolation_state"]
+
         if "tsa_enabled" in data:
-            self.cfg_mgr.commit()
-            self.cfg_mgr.update()
-            self.isolate_unisolate_device(data["tsa_enabled"])
             self.directory.put(self.db_name, self.table_name, "tsa_enabled", data["tsa_enabled"])
-            return True
-        return False
+            if tsa_status != data["tsa_enabled"]:
+                self.cfg_mgr.commit()
+                self.cfg_mgr.update()
+                self.isolate_unisolate_device(data["tsa_enabled"])
+
+            
+        if "idf_isolation_state" in data:
+            self.directory.put(self.db_name, self.table_name, "idf_isolation_state", data["idf_isolation_state"])
+            if idf_isolation_state != data["idf_isolation_state"]:
+                if self.switch_type and self.switch_type != "SpineRouter":
+                    log_debug("DeviceGlobalCfgMgr:: Skipping IDF isolation configuration on Switch type: %s" % self.switch_type)
+                    return True
+                self.downstream_isolate_unisolate(data["idf_isolation_state"])
+            
+        return True
 
     def del_handler(self, key):
         log_debug("DeviceGlobalCfgMgr:: del handler")
@@ -113,3 +133,24 @@ class DeviceGlobalCfgMgr(Manager):
                 route_map_names.add(result.group(1))
         return route_map_names
 
+    def downstream_isolate_unisolate(self, idf_isolation_state):
+        cmd = "\n"
+        if idf_isolation_state == "unisolated":
+            cmd += self.idf_unisolate_template.render(constants=self.constants)
+            log_notice("DeviceGlobalCfgMgr:: IDF un-isolated")
+        else:
+            cmd += self.idf_isolate_template.render(isolation_status=idf_isolation_state, constants=self.constants)
+            log_notice("DeviceGlobalCfgMgr:: IDF isolated, {} policy applied".format(idf_isolation_state))
+
+        self.cfg_mgr.push(cmd)
+        log_debug("DeviceGlobalCfgMgr::Done")
+
+    def check_state_and_get_idf_isolation_routemaps(self):
+        """ API to get TSA route-maps if device is isolated"""
+        cmd = ""
+        if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "idf_isolation_state"):
+            idf_isolation_state = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME)["idf_isolation_state"]
+            if idf_isolation_state != "unisolated":                
+                log_notice("DeviceGlobalCfgMgr:: IDF is isolated. Applying required route-maps")
+                cmd = self.idf_isolate_template.render(isolation_status=idf_isolation_state, constants=self.constants)           
+        return cmd

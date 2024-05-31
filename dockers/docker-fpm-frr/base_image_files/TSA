@@ -21,6 +21,15 @@ then
   sudo config mux mode standby all
 fi
 
+if [ -z "$STARTED_BY_TSA_TSB_SERVICE" ]; then
+  service='startup_tsa_tsb.service'
+  if [[ $(/bin/systemctl show $service --property ActiveState  --value) == "active" ]] && \
+     [[ $(/bin/systemctl show $service --property SubState  --value) == "running" ]]; then
+      echo "Stopping $service before configuring TSA"
+      systemctl stop $service
+  fi
+fi
+
 /usr/bin/TS TSA
 if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)" == *"SpineRouter"* ]] ; then
   if [[ "$1" != "chassis" ]] ; then

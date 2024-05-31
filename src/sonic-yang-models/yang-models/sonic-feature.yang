@@ -67,7 +67,7 @@ module sonic-feature{
                 leaf has_global_scope {
                     description "This configuration identicates there will only one service
                                 spawned for the device";
-                    type stypes:boolean_type;
+                    type feature-scope-status;
                     default "false";
                 }
 
