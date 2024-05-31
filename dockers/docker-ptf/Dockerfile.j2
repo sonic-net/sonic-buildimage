@@ -73,6 +73,7 @@ RUN apt-get update          \
         python3-six         \
         libpcap-dev         \
 # TODO check if tacacs+ is required by tests
+# tacacs+ has been dropped from bullseye
 {% if PTF_ENV_PY_VER == "mixed" %}
         tacacs+             \
 {% endif %}
@@ -90,6 +91,7 @@ RUN apt-get update          \
 
 {% if PTF_ENV_PY_VER == "py3" %}
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
+    && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1 \
     && update-alternatives --install /usr/bin/pdb pdb /usr/bin/pdb3 1 \
     && update-alternatives --install /usr/bin/pydoc pydoc /usr/bin/pydoc3 1 \
     && update-alternatives --install /usr/bin/pygettext pygettext /usr/bin/pygettext3 1
@@ -113,6 +115,10 @@ RUN rm -rf /debs \
     && python setup.py install \
     && cd .. \
     && rm -fr scapy-vxlan \
+{% else %}
+    && wget --https-only https://bootstrap.pypa.io/pip/get-pip.py \
+    && python get-pip.py \
+    && rm -f get-pip.py \
 {% endif %}
     && git clone https://github.com/sflow/sflowtool \
     && cd sflowtool \
@@ -160,19 +166,19 @@ RUN rm -rf /debs \
     && cd /opt             \
     && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py
 
+{% if PTF_ENV_PY_VER == "mixed" %}
 RUN python3 -m venv --system-site-packages env-python3
-
 # Activating a virtualenv. The virtualenv automatically works for RUN, ENV and CMD.
 ENV VIRTUAL_ENV=/root/env-python3
 ARG BACKUP_OF_PATH="$PATH"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONIOENCODING=UTF-8
+{% endif %}
 
 {% if PTF_ENV_PY_VER == "mixed" %}
 RUN python3 -m pip install --upgrade --ignore-installed pip
 {% else %}
-RUN pip install --upgrade --ignore-installed pip
+RUN pip3 install --upgrade --ignore-installed pip
 {% endif %}
 
 # Install all python modules from pypi. python3-scapy is exception, ptf debian package requires python3-scapy
@@ -212,8 +218,10 @@ RUN pip3 install setuptools \
 {{ install_python_wheels(docker_ptf_whls.split(' ')) }}
 {% endif %}
 
+{% if PTF_ENV_PY_VER == "mixed" %}
 # Deactivating a virtualenv.
 ENV PATH="$BACKUP_OF_PATH"
+{% endif %}
 
 ## Adjust sshd settings
 RUN mkdir /var/run/sshd \
