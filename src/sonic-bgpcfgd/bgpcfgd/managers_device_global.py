@@ -14,6 +14,7 @@ class DeviceGlobalCfgMgr(Manager):
         :param table: name of the table in the db
         """
         self.switch_type = ""
+        self.chassis_tsa = ""
         self.directory = common_objs['directory']
         self.cfg_mgr = common_objs['cfg_mgr']
         self.constants = common_objs['constants']
@@ -54,12 +55,13 @@ class DeviceGlobalCfgMgr(Manager):
 
         if "tsa_enabled" in data:
             self.directory.put(self.db_name, self.table_name, "tsa_enabled", data["tsa_enabled"])
-            if tsa_status != data["tsa_enabled"]:
+
+            self.chassis_tsa = self.get_chassis_tsa_status()
+            if self.chassis_tsa == "false" and tsa_status != data["tsa_enabled"]:
                 self.cfg_mgr.commit()
                 self.cfg_mgr.update()
                 self.isolate_unisolate_device(data["tsa_enabled"])
 
-            
         if "idf_isolation_state" in data:
             self.directory.put(self.db_name, self.table_name, "idf_isolation_state", data["idf_isolation_state"])
             if idf_isolation_state != data["idf_isolation_state"]:
@@ -79,7 +81,9 @@ class DeviceGlobalCfgMgr(Manager):
         cmd = ""
         if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "tsa_enabled"):
             tsa_status = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME)["tsa_enabled"]
-            if tsa_status == "true":
+            chassis_tsa = self.get_chassis_tsa_status()
+
+            if tsa_status == "true" or chassis_tsa == "true":
                 cmds = cfg.replace("#012", "\n").split("\n")
                 log_notice("DeviceGlobalCfgMgr:: Device is isolated. Applying TSA route-maps")
                 cmd = self.get_ts_routemaps(cmds, self.tsa_template)
@@ -132,6 +136,17 @@ class DeviceGlobalCfgMgr(Manager):
             if result:
                 route_map_names.add(result.group(1))
         return route_map_names
+
+    def get_chassis_tsa_status(self):
+        chassis_tsa_status = "false"
+        try:
+            ch = swsscommon.SonicV2Connector(use_unix_socket_path=False)
+            ch.connect(ch.CHASSIS_APP_DB, False)
+            chassis_tsa_status = ch.get(ch.CHASSIS_APP_DB, "BGP_DEVICE_GLOBAL|STATE", 'tsa_enabled')
+        except Exception:
+            pass
+
+        return chassis_tsa_status
 
     def downstream_isolate_unisolate(self, idf_isolation_state):
         cmd = "\n"

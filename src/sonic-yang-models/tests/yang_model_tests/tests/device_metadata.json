@@ -172,5 +172,8 @@
     },
     "DEVICE_METADATA_VALID_CHASSIS_HOSTNAME": {
         "desc": "Verifying valid chassis hostname configuration."
+    },
+    "DEVICE_METADATA_VALID_SLICE_TYPE": {
+        "desc": "Verifying valid slice_type configuration."
     }
 }
