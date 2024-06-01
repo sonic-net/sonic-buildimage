@@ -6,13 +6,23 @@
 PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
 
 if [[ $1 == "TSA" ]]; then
+    TSA_CHASSIS_STATE="$(sonic-db-cli CHASSIS_APP_DB HGET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled)"
     TSA_STATE_UPDATE='{"BGP_DEVICE_GLOBAL":{"STATE":{"tsa_enabled": "true"}}}'
-    log_msg='System Mode: Normal -> Maintenance'
+    if [[ $TSA_CHASSIS_STATE == true ]]; then
+        log_msg='System Mode: Maintenance -> Maintenance'
+    else
+        log_msg='System Mode: Normal -> Maintenance'
+    fi
     err_msg='System is already in Maintenance'
     desired_tsa_state=true 
 elif [[ $1 == "TSB" ]]; then
+    TSA_CHASSIS_STATE="$(sonic-db-cli CHASSIS_APP_DB HGET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled)"
     TSA_STATE_UPDATE='{"BGP_DEVICE_GLOBAL":{"STATE":{"tsa_enabled": "false"}}}'
-    log_msg='System Mode: Maintenance -> Normal'
+    if [[ $TSA_CHASSIS_STATE == true ]]; then
+        log_msg='System Mode: Maintenance -> Maintenance'
+    else
+        log_msg='System Mode: Maintenance -> Normal'
+    fi
     err_msg='System is already in Normal mode'
     desired_tsa_state=false    
 fi

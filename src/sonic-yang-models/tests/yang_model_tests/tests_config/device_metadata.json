@@ -471,5 +471,14 @@
                 }
             }
         }
+    },
+    "DEVICE_METADATA_VALID_SLICE_TYPE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "slice_type": "AZNG_Production"
+                }
+            }
+        }
     }
 }

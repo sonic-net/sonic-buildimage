@@ -370,7 +370,8 @@
                 "rack_mgmt_map": "dummy_value",
                 "timezone": "Europe/Kiev",
                 "bgp_router_id": "8.8.8.8",
-                "chassis_hostname": "str-sonic-chassis-1"
+                "chassis_hostname": "str-sonic-chassis-1",
+                "slice_type": "AZNG_Production"
             }
         },
         "VLAN": {

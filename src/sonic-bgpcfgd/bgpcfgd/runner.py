@@ -39,7 +39,10 @@ class Runner(object):
         table_name = manager.get_table_name()
         db = swsscommon.SonicDBConfig.getDbId(db_name)
         if db not in self.db_connectors:
-            self.db_connectors[db] = swsscommon.DBConnector(db_name, 0)
+            if db_name == "CHASSIS_APP_DB":
+                self.db_connectors[db] = swsscommon.DBConnector(db_name, 0, True, '')
+            else:
+                self.db_connectors[db] = swsscommon.DBConnector(db_name, 0)
 
         if table_name not in self.callbacks[db]:
             conn = self.db_connectors[db]
