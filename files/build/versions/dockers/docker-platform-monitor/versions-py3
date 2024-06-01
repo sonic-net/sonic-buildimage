@@ -9,6 +9,7 @@ jsonschema==2.6.0
 libpci==0.2
 netifaces==0.11.0
 protobuf==4.25.3
+psutil==5.9.8
 pyrsistent==0.18.1
 python-sdk-api==4.6.3064
 requests==2.31.0

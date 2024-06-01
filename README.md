@@ -8,7 +8,9 @@
 [![Marvell(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-armhf?branchName=master&label=Marvell-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=master)
 [![Marvell(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-arm64?branchName=master&label=Marvell-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=master)
 [![Nephos](https://dev.azure.com/mssonic/build/_apis/build/status/nephos/Azure.sonic-buildimage.official.nephos?branchName=master&label=Nephos)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=149&branchName=master)
+[![Nvidia-Bluefield](https://dev.azure.com/mssonic/build/_apis/build/status/nvidia/Azure.sonic-buildimage.official.nvidia-bluefield?branchName=master&label=Nvidia-Bluefield)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1665&branchName=master)
 [![Pensando](https://dev.azure.com/mssonic/build/_apis/build/status/pensando/Azure.sonic-buildimage.official.pensando?branchName=master&label=Pensando)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1366&branchName=master)
+
 [![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=master&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=master)
 
 *202311 builds*:
@@ -98,6 +100,10 @@
 [![Innovium](https://dev.azure.com/mssonic/build/_apis/build/status/innovium/Azure.sonic-buildimage.official.innovium?branchName=201811&label=Innovium)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=148&branchName=201811)
 [![Nephos](https://dev.azure.com/mssonic/build/_apis/build/status/nephos/Azure.sonic-buildimage.official.nephos?branchName=201811&label=Nephos)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=149&branchName=201811)
 [![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=201811&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=201811)
+
+## SONiC Image Azure Pipelines
+
+All SONiC project build pipeline could be found at [Download Portal for SONiC Images](https://sonic-build.azurewebsites.net)
 
 # sonic-buildimage
 
@@ -194,6 +200,7 @@ The supported ASIC vendors are:
 * PLATFORM=cavium
 * PLATFORM=centec
 * PLATFORM=nephos
+* PLATFORM=nvidia-bluefield
 * PLATFORM=innovium
 * PLATFORM=vs
 
@@ -361,10 +368,6 @@ on the SAI version for each SONiC release.
   * docker-sonic-mgmt.gz: docker image for
     [managing, configuring and monitoring SONiC](https://github.com/sonic-net/sonic-mgmt)
     (gzip tar archive)
-
-## SONiC Image Azure Pipelines
-
-All SONiC project build pipeline could be found at [Download Portal for SONiC Images](https://sonic-build.azurewebsites.net)
 
 ## Contribution Guide
 

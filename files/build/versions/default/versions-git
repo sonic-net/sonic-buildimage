@@ -4,8 +4,8 @@ https://github.com/CESNET/libyang.git==4c733412e7173219166be7053940326a92699765
 https://github.com/daveolson53/audisp-tacplus.git==559c9f22edd4f2dea0ecedffb3ad9502b12a75b6
 https://github.com/daveolson53/libnss-tacplus.git==19008ab68d9d504aa58eb34d5f564755a1613b8b
 https://github.com/dyninc/OpenBFDD.git==e35f43ad8d2b3f084e96a84c392528a90d05a287
-https://github.com/flashrom/flashrom.git==643ae4d1fcb9b3bda6f35e8ff6f5b71b1104f600
-https://github.com/FreeRADIUS/freeradius-server.git==66cf26be5e195b56c70288c98a3e62680ff38154
+https://github.com/flashrom/flashrom.git==85b977151b8f5717ad00b7b7204521a823ac1ad2
+https://github.com/FreeRADIUS/freeradius-server.git==3310bf65f2912231fcb1dc59b1624d6894e3ca2a
 https://github.com/FreeRADIUS/pam_radius.git==d802da75cbfc3062ae1b18d0bf26ac2a030ffdaa
 https://github.com/jeroennijhof/pam_tacplus.git==b839c440e33c36eced9dcbc287fcfe6237c4c4ce
 https://github.com/lguohan/gnxi.git==3adf8b97755b49947e465b5a14645f11e79fa0cd
@@ -17,6 +17,6 @@ https://github.com/sflow/host-sflow==6edc82d62a1cf0f7fb821587af67e5520624f50d
 https://github.com/sflow/sflowtool==c42c49cb80b927a4c02e54fc26430417f18f4833
 https://github.com/sonic-net/DASH.git==2cb918fbe22eee60296c7326af530bd25b23398f
 https://github.com/thom311/libnl==49f7822961f5bc6b18cd2a2d3f3b8d2ab0896d3f
-https://salsa.debian.org/kernel-team/initramfs-tools.git==15311e6282434f184fb306c38d415f2217239214
+https://salsa.debian.org/kernel-team/initramfs-tools.git==b7f5a3ceaa306212aa5c7810d5fc5faf82bc4ffe
 https://salsa.debian.org/sk-guest/monit.git==c9da7ebb1f35dfba17b50b5969a6e75e29cbec0d
 https://salsa.debian.org/ssh-team/openssh.git==d150d0d69246f55c711684078f47f999a4bfd6bc
