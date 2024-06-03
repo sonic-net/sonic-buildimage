@@ -18,6 +18,7 @@
 {% if neighbor_deployment_id is not defined or neighbor_deployment_id | length == 0 %}
 {% set neighbor_deployment_id = 0 %}
 {% endif %}
+{% set slice_type = CONFIG_DB__DEVICE_METADATA['localhost']['slice_type'] %}
 {% set path_template = "bgpd/templates/msft.general/%s/" + template_name + ".conf.j2" %}
 {% if neighbor_addr | ipv4 %}
 {%     if device_type in ['MgmtToRRouter', 'MgmtTsToR', 'EPMS', 'BmcMgmtToRRouter'] %}
