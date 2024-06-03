@@ -67,6 +67,7 @@ class TestCertConverter(TestCase):
         Convert cert list
         Check command
         '''
+        mock_cmd.return_value = (True, "")
         mock_list.side_effect = [[], ['restapiserver.1', 'restapiserver.6']]
         cert_converter.convert_certs('abc/', 'xyz/', 10)
         self.assertEqual(len(mock_cmd.call_args_list), 6)
