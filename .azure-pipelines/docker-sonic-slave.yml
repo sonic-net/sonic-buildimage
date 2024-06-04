@@ -8,7 +8,7 @@ resources:
   - repository: buildimage
     type: github
     name: sonic-net/sonic-buildimage
-    ref: bookworm
+    ref: master
     endpoint: sonic-net
 
 schedules:
