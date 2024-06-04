@@ -435,6 +435,8 @@ class ModuleThermal(ThermalBase):
             A float number of current temperature in Celsius up to nearest thousandth
             of one degree Celsius, e.g. 30.125
         """
+        if not self.sfp.get_presence():
+            return None
         value = self.sfp.get_temperature()
         return value if (value != 0.0 and value is not None) else None
 
@@ -446,6 +448,8 @@ class ModuleThermal(ThermalBase):
             A float number, the high threshold temperature of thermal in Celsius
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
+        if not self.sfp.get_presence():
+            return None
         value = self.sfp.get_temperature_warning_threshold()
         return value if (value != 0.0 and value is not None) else None
 
@@ -457,6 +461,8 @@ class ModuleThermal(ThermalBase):
             A float number, the high critical threshold temperature of thermal in Celsius
             up to nearest thousandth of one degree Celsius, e.g. 30.125
         """
+        if not self.sfp.get_presence():
+            return None
         value = self.sfp.get_temperature_critical_threshold()
         return value if (value != 0.0 and value is not None) else None
 

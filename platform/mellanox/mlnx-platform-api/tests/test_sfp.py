@@ -247,14 +247,22 @@ class TestSfp:
         assert page == '/tmp/1/data'
         assert page_offset is 0
 
+    @mock.patch('sonic_platform.utils.read_int_from_file')
     @mock.patch('sonic_platform.sfp.SFP._read_eeprom')
-    def test_sfp_get_presence(self, mock_read):
+    def test_sfp_get_presence(self, mock_read, mock_read_int):
         sfp = SFP(0)
+
+        mock_read_int.return_value = 1
         mock_read.return_value = None
         assert not sfp.get_presence()
-
         mock_read.return_value = 0
         assert sfp.get_presence()
+
+        mock_read_int.return_value = 0
+        mock_read.return_value = None
+        assert not sfp.get_presence()
+        mock_read.return_value = 0
+        assert not sfp.get_presence()
 
     @mock.patch('sonic_platform.utils.read_int_from_file')
     def test_rj45_get_presence(self, mock_read_int):
