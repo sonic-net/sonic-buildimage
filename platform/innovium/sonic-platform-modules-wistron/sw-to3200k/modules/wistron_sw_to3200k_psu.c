@@ -140,7 +140,7 @@ static ssize_t set_string(struct device *dev, struct device_attribute *da, const
     struct sw_to3200k_psu_data      *data = i2c_get_clientdata(client);
     char                            tmp_str[32];
 
-    memset(&tmp_str, 0x0, sizeof(tmp_str));
+    memzero_explicit(&tmp_str, sizeof(tmp_str));
     if (attr->index == PSU_MODEL_NAME)
     {
         if (sscanf(buf, "%16s", tmp_str) != 1)
@@ -205,7 +205,7 @@ static int sw_to3200k_psu_probe(struct i2c_client *client,
         goto exit_free;
     }
 
-    data->hwmon_dev = hwmon_device_register(&client->dev);
+	data->hwmon_dev = hwmon_device_register_with_info(&client->dev, "wistron_psu", NULL, NULL, NULL);
     if (IS_ERR(data->hwmon_dev))
     {
         status = PTR_ERR(data->hwmon_dev);

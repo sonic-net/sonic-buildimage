@@ -140,7 +140,7 @@ static int sw_to3200k_thermal_probe(struct i2c_client *client, const struct i2c_
         goto exit_free;
     }
 
-    data->hwmon_dev = hwmon_device_register(&client->dev);
+	data->hwmon_dev = hwmon_device_register_with_info(&client->dev, "wistron_thermal", NULL, NULL, NULL);
     if (IS_ERR(data->hwmon_dev))
     {
         status = PTR_ERR(data->hwmon_dev);

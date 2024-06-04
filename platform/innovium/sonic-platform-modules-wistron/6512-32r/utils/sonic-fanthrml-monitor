@@ -67,6 +67,23 @@ bmc_fan_speed_ctrl()
 	fi
 }
 
+bmc_fan_direction()
+{
+	if [ -e /sys/bus/i2c/devices/0-0044/fan1_direction ];then
+		for i in $(seq 0 6);
+		do
+			p=$((38+i))
+			fan_dir_val=$(echo $fan_val | awk '{print $'"$p"'}')
+			byte_hex_test $fan_dir_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			fan_dir_val=$( printf "%d" 0x$fan_dir_val )
+			echo $fan_dir_val > /sys/bus/i2c/devices/0-0044/fan$((i+1))_direction
+		done
+	fi
+}
+
 bmc_fan_presence()
 {
 	if [ -e /sys/bus/i2c/devices/0-0044/fan1_present ];then
@@ -135,6 +152,9 @@ do_fan_update()
 {
 	#fan presence
 	bmc_fan_presence
+
+	#fan direction
+	bmc_fan_direction
 
 	#fan speed rpm
 	bmc_fan_speed_rpm

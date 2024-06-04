@@ -1,0 +1,12 @@
+#!/bin/bash
+
+SEND_KICK()
+{
+	while true
+	do
+		ipmitool mc watchdog reset  1>>/dev/null 2>>/dev/null
+		sleep 5;
+	done
+}
+
+SEND_KICK

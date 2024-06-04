@@ -1,0 +1,12 @@
+[Unit]
+Description=Wistron 6512-32R shutdown watchdog
+Before=shutdown.target reboot.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl stop 6512-32r-watchdog.service
+TimeoutStartSec=0
+
+[Install]
+WantedBy=shutdown.target

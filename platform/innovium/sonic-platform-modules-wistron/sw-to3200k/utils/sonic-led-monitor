@@ -2,6 +2,7 @@
 
 #0=off, 1=green, 2=amber, 3=blk_green
 led_state=0
+pre_loc_state=0
 
 #$1=led_no(1=loc, 2=diag, 3=fan, 4=psu1, 5=psu2)
 bmc_led_read()
@@ -128,37 +129,10 @@ bmc_led_read()
     return 0
 }
 
-#$1=led_no(1=loc, 2=diag, 3=fan, 4=psu1, 5=psu2)
-#$2=led_val(0=off, 1=green, 2=amber, 3=blk_green)
+#$1=led_val(0=off, 1=green, 2=amber, 3=blk_green)
 bmc_led_write()
 {
-    led_val=$2
-    val=$(ipmitool raw 0x30 0x97 2>>/dev/null)
-    loc_val=$(echo $val | awk '{printf $1}')
-    diag_val=$(echo $val | awk '{printf $2}')
-    fan_val=$(echo $val | awk '{printf $3}')
-    psu1_val=$(echo $val | awk '{printf $4}')
-    psu2_val=$(echo $val | awk '{printf $5}')
-
-    loc_val=$( printf "%d" 0x$loc_val )
-    diag_val=$( printf "%d" 0x$diag_val )
-    fan_val=$( printf "%d" 0x$fan_val )
-    psu1_val=$( printf "%d" 0x$psu1_val )
-    psu2_val=$( printf "%d" 0x$psu2_val )
-
-    if [ $1 -eq 1 ];then
-        loc_val=$(($loc_val & $led_val))
-    elif [ $1 -eq 2 ];then
-        diag_val=$(($diag_val & $led_val))
-    elif [ $1 -eq 3 ];then
-        fan_val=$(($fan_val & $led_val))
-    elif [ $1 -eq 4 ];then
-        psu1_val=$(($psu1_val & $led_val))
-    else
-        psu2_val=$(($psu2_val & $led_val))
-    fi
-
-    ipmitool raw 0x30 0x96 $loc_val $diag_val $fan_val $psu1_val $psu2_val 1>>/dev/null 2>>/dev/null
+    ipmitool raw 0x30 0x2b 0x2 0xc0 0x0 0x55 0x"$1"0 1>>/dev/null 2>>/dev/null
 }
 
 LED_monitor()
@@ -171,7 +145,13 @@ LED_monitor()
     do
         if [ -e /sys/bus/i2c/devices/0-0060/sys_led_diag ];then
             loc_state=$(cat /sys/bus/i2c/devices/0-0060/sys_led_loc | awk '{printf $1}')
-            bmc_led_write 1 $loc_state
+			if [ $loc_state -gt 4 ]; then
+				loc_state=4
+			fi
+			if [ $loc_state != $pre_loc_state ]; then
+				bmc_led_write $loc_state
+				pre_loc_state=$loc_state
+			fi
 
             bmc_led_read 2
             if [ $? -eq 1 ];then

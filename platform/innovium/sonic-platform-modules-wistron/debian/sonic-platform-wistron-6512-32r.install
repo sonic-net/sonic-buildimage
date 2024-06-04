@@ -1,0 +1,3 @@
+6512-32r/utils/* usr/local/bin
+6512-32r/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-wistron_6512_32r-r0
+6512-32r/service/*.service lib/systemd/system

@@ -68,8 +68,6 @@ mknod =[
 # PSU
 'echo wistron_psu1 0x5a > /sys/bus/i2c/devices/i2c-0/new_device',
 'echo wistron_psu2 0x59 > /sys/bus/i2c/devices/i2c-0/new_device',
-# EEPROM
-'echo wistron_syseeprom 0x55 > /sys/bus/i2c/devices/i2c-0/new_device',
 ]
 
 FORCE = 0
@@ -173,6 +171,7 @@ kos = [
 'modprobe ipmi_watchdog',
 'modprobe i2c_dev',
 'modprobe at24',
+'modprobe i2c-imc',
 'modprobe wistron_6512_32r_syseeprom',
 'modprobe wistron_6512_32r_cpld',
 'modprobe wistron_6512_32r_fan',
@@ -241,6 +240,20 @@ def device_install():
             print(output)
             if FORCE == 0:
                 return status
+
+
+    status, output = log_os_system("i2cget -y 0 0x55 0x0 1>/dev/null 2>/dev/null; echo $?", 1)
+    if status:
+        print(output)
+        if FORCE == 0:
+            return status
+    else:
+        if output == '0':
+            log_os_system("echo 24c02 0x55 > /sys/bus/i2c/devices/i2c-0/new_device", 1)
+        else:
+            log_os_system("echo wistron_syseeprom 0x55 > /sys/bus/i2c/devices/i2c-0/new_device", 1)
+
+
 
     for i in range(0,len(sfp_map)):
         status, output = log_os_system("echo wistron_oom 0x"+str(sfp_map[i])+ " > /sys/bus/i2c/devices/i2c-0/new_device", 1)
@@ -324,12 +337,6 @@ def do_install():
     else:
         print(PROJECT_NAME.upper()+" devices detected....")
 
-    status, output = log_os_system(
-        "/bin/sh /usr/local/bin/platform_api_mgnt.sh init", 1)
-    if status:
-            print(output)
-            if FORCE == 0:
-                return status
     return
 
 def do_uninstall():
