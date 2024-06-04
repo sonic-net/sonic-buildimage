@@ -15,8 +15,8 @@ libarchive13==3.4.3-2+deb11u1
 libasan6==10.2.1-6
 libbinutils==2.35.2-2
 libboost-atomic1.74.0==1.74.0-9
-libc-dev-bin==2.31-13+deb11u7
-libc6-dev==2.31-13+deb11u7
+libc-dev-bin==2.31-13+deb11u10
+libc6-dev==2.31-13+deb11u10
 libcc1-0==10.2.1-6
 libcrypt-dev==1:4.4.18-4
 libctf-nobfd0==2.35.2-2
@@ -26,7 +26,7 @@ libdpkg-perl==1.20.13
 libexpat1-dev==2.2.10-2+deb11u5
 libffi-dev==3.3-6
 libgcc-10-dev==10.2.1-6
-libglib2.0-0==2.66.8-1
+libglib2.0-0==2.66.8-1+deb11u3
 libgomp1==10.2.1-6
 libicu67==67.1-7
 libisl23==0.23-1
@@ -55,9 +55,9 @@ libthrift-0.11.0==0.11.0-4
 libtirpc-dev==1.3.1-1+deb11u1
 libtsan0==10.2.1-6
 libubsan1==10.2.1-6
-libuv1==1.40.0-2
+libuv1==1.40.0-2+deb11u1
 libxml2==2.9.10+dfsg-6.7+deb11u4
-linux-libc-dev==5.10.205-2
+linux-libc-dev==5.10.216-1
 mailcap==3.69
 make==4.3-4.1
 mime-support==3.66

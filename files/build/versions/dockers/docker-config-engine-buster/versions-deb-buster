@@ -15,11 +15,12 @@ gcc-8==8.3.0-6
 libapt-inst2.0==1.8.2.3
 libasan5==8.3.0-6
 libbinutils==2.31.1-16
-libc-dev-bin==2.28-10+deb10u2
-libc6-dev==2.28-10+deb10u2
+libc-dev-bin==2.28-10+deb10u3
+libc6==2.28-10+deb10u3
+libc6-dev==2.28-10+deb10u3
 libcc1-0==8.3.0-6
 libdpkg-perl==1.19.8
-libexpat1-dev==2.2.6-2+deb10u6
+libexpat1-dev==2.2.6-2+deb10u7
 libgcc-8-dev==8.3.0-6
 libgomp1==8.3.0-6
 libhiredis0.14==0.14.1-1
@@ -35,8 +36,8 @@ libnl-genl-3-200==3.5.0-1
 libnl-nf-3-200==3.5.0-1
 libnl-route-3-200==3.5.0-1
 libpython3-dev==3.7.3-1
-libpython3.7==3.7.3-2+deb10u6
-libpython3.7-dev==3.7.3-2+deb10u6
+libpython3.7==3.7.3-2+deb10u7
+libpython3.7-dev==3.7.3-2+deb10u7
 libquadmath0==8.3.0-6
 libstdc++-8-dev==8.3.0-6
 libswsscommon==1.0.0
@@ -50,6 +51,6 @@ patch==2.7.6-3+deb10u1
 python3-dev==3.7.3-1
 python3-swsscommon==1.0.0
 python3-yang==1.0.73
-python3.7-dev==3.7.3-2+deb10u6
+python3.7-dev==3.7.3-2+deb10u7
 sonic-db-cli==1.0.0
 xz-utils==5.2.4-1+deb10u1

@@ -9,6 +9,7 @@ gir1.2-poppler-0.18==20.09.0-3.1+deb11u1
 gir1.2-rsvg-2.0==2.50.3+dfsg-1+deb11u1
 golang-1.15-go==1.15.15-1~deb11u4
 golang-1.15-src==1.15.15-1~deb11u4
+libc-bin==2.31-13+deb11u10
 libclang-11-dev==1:11.0.1-2
 libemail-date-format-perl==1.005-1.1
 libfaketime==0.9.8-9
@@ -35,9 +36,9 @@ libxapian-dev==1.4.18-3+deb11u1
 libxslt1-dev==1.1.34-4+deb11u1
 libxstring-perl==0.005-1+b1
 libyaml-tiny-perl==1.73-1
-linux-compiler-gcc-10-arm==5.10.205-2
-linux-headers-5.10.0-27-armmp==5.10.205-2
-linux-headers-armmp==5.10.205-2
+linux-compiler-gcc-10-arm==5.10.216-1
+linux-headers-5.10.0-29-armmp==5.10.216-1
+linux-headers-armmp==5.10.216-1
 mat2==0.12.1-2+deb11u1
 nasm==2.15.05-1
 nodejs==14.21.3-deb-1nodesource1
