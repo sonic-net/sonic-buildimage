@@ -1,5 +1,14 @@
 [
     {
+        "TUNNEL_DECAP_TABLE:IPINIP_SUBNET" : {
+            "tunnel_type":"IPINIP",
+            "dscp_mode":"uniform",
+            "ecn_mode":"copy_from_outer",
+            "ttl_mode":"pipe"
+        },
+        "OP": "SET"
+    },
+    {
         "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
             "tunnel_type":"IPINIP",
             "dscp_mode":"uniform",
@@ -59,6 +68,15 @@
     {
         "TUNNEL_DECAP_TERM_TABLE:IPINIP_TUNNEL:192.168.200.1" : {
             "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TABLE:IPINIP_SUBNET_V6" : {
+            "tunnel_type":"IPINIP",
+            "dscp_mode":"uniform",
+            "ecn_mode":"copy_from_outer",
+            "ttl_mode":"pipe"
         },
         "OP": "SET"
     },
