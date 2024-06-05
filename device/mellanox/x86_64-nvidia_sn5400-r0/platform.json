@@ -1322,9 +1322,9 @@
                 "1x25G[10G]": ["etp65"]
             }
         },
-        "Ethernet513": {
+        "Ethernet520": {
             "index": "66",
-            "lanes": "513",
+            "lanes": "520",
             "breakout_modes": {
                 "1x25G[10G]": ["etp66"]
             }

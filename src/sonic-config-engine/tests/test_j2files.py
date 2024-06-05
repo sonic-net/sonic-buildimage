@@ -223,6 +223,15 @@ class TestJ2Files(TestCase):
         sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip.json')
         assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
 
+    def test_ipinip_subnet_decap_enable(self):
+        ipinip_file = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent', 'ipinip.json.j2')
+        extra_data = {"SUBNET_DECAP": {"AZURE": {"status": "enable"}}}
+        argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', json.dumps(extra_data), '-t', ipinip_file]
+        self.run_script(argument, output_file=self.output_file)
+
+        sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'ipinip_subnet_decap_enable.json')
+        assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
+
     def test_l2switch_template(self):
         argument = ['-k', 'Mellanox-SN2700', '--preset', 'l2', '-p', self.t0_port_config]
         output = self.run_script(argument)

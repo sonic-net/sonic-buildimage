@@ -5,6 +5,6 @@
       "monPollThreshRecovery": 8,
       "monPollThreshIsolation": 1,
       "monCapacityThreshWarn": 86,
-      "monState": enable
+      "monState": "enable"
    }
 }
