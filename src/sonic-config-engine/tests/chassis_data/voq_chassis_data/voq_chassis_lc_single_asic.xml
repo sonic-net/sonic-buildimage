@@ -45188,7 +45188,7 @@
           <a:IPPrefix>::/0</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -45215,7 +45215,7 @@
           <a:IPPrefix>::/0</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -45242,7 +45242,7 @@
           <a:IPPrefix>::/0</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -45269,7 +45269,7 @@
           <a:IPPrefix>::/0</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -45296,7 +45296,7 @@
           <a:IPPrefix>::/0</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -45323,7 +45323,7 @@
           <a:IPPrefix>::/0</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -45350,7 +45350,7 @@
           <a:IPPrefix>::/0</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -45377,7 +45377,7 @@
           <a:IPPrefix>::/0</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -45404,7 +45404,7 @@
           <a:IPPrefix>::/0</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -45431,7 +45431,7 @@
           <a:IPPrefix>::/0</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -45458,7 +45458,7 @@
           <a:IPPrefix>::/0</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -46133,7 +46133,7 @@
           <a:IPPrefix>fc00:23::1/128</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -46160,7 +46160,7 @@
           <a:IPPrefix>2a01:111:e210:5e::/128</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr/>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
@@ -46187,7 +46187,7 @@
           <a:IPPrefix>2a01:111:e210:5e::/128</a:IPPrefix>
         </AddressV6>
         <AssociatedClustersStr>TestbedForstr-sonic</AssociatedClustersStr>
-        <AssociatedSliceStr>TestbedForstr-sonic</AssociatedSliceStr>
+        <AssociatedSliceStr>AZNG_Production</AssociatedSliceStr>
         <AssociatedTagsStr>None</AssociatedTagsStr>
         <ChassisInternalDevices/>
         <ClusterName>TestbedForstr-sonic</ClusterName>
