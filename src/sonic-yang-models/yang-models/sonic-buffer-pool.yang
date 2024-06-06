@@ -57,6 +57,16 @@ module sonic-buffer-pool {
                     type uint64;
                     description "Buffer Pool Xoff Threshold (in Bytes)";
                 }
+
+                leaf percentage {
+                    type uint8 {
+                        range "1..99";
+                    }
+                    description "Buffer Pool percentage";
+                    must "(not(current()/../size))" {
+                        error-message "Percentage should not be configured along with size";
+                    }
+                }
             }
         }
     }

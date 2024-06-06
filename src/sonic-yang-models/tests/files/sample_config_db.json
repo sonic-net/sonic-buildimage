@@ -36,6 +36,11 @@
                 "size": "12766208",
                 "type": "egress",
                 "mode": "dynamic"
+            },
+            "ingress_percentage_pool": {
+                "type": "ingress",
+                "mode": "dynamic",
+                "percentage": "90"
             }
         },
         "BUFFER_PROFILE": {
