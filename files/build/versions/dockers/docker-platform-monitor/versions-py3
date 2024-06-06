@@ -1,5 +1,5 @@
 attrs==22.2.0
-certifi==2024.2.2
+certifi==2024.6.2
 charset-normalizer==3.3.2
 grpcio==1.51.1
 grpcio-tools==1.51.1
@@ -12,6 +12,6 @@ protobuf==4.25.3
 psutil==5.9.8
 pyrsistent==0.18.1
 python-sdk-api==4.6.3064
-requests==2.31.0
+requests==2.32.3
 thrift==0.13.0
 urllib3==2.2.1

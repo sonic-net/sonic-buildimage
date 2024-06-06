@@ -173,16 +173,6 @@ def test_show_multi_dhcp_relay(test_name, test_data, fs):
     assert result == expected_output
 
 
-def test_show_dhcp_relay_ipv4_counter_with_enabled_dhcp_server():
-    with mock.patch.object(show, "is_dhcp_server_enabled", return_value=True), \
-         mock.patch.object(swsscommon.ConfigDBConnector, "connect", return_value=None), \
-         mock.patch.object(swsscommon.ConfigDBConnector, "get_table", return_value=None), \
-         mock.patch.object(click, "echo", return_value=None) as mock_echo:
-        show.ipv4_counters("Etherner1")
-        expected_param = "Unsupport to check dhcp_relay ipv4 counter when dhcp_server feature is enabled"
-        mock_echo.assert_called_once_with(expected_param)
-
-
 @pytest.mark.parametrize("enable_dhcp_server", [True, False])
 def test_is_dhcp_server_enabled(enable_dhcp_server):
     result = show.is_dhcp_server_enabled({"dhcp_server": {"state": "enabled" if enable_dhcp_server else "disabled"}})

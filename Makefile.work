@@ -339,17 +339,6 @@ ifneq ($(SONIC_VERSION_CACHE_SOURCE),)
 	DOCKER_RUN += -v "$(SONIC_VERSION_CACHE_SOURCE):/vcache:rw"
 endif
 
-ifeq ($(SONIC_ENABLE_SECUREBOOT_SIGNATURE), y)
-ifneq ($(SIGNING_KEY),)
-	DOCKER_SIGNING_SOURCE := $(shell dirname $(SIGNING_KEY))
-	DOCKER_RUN += -v "$(DOCKER_SIGNING_SOURCE):$(DOCKER_SIGNING_SOURCE):ro"
-endif
-ifneq ($(SIGNING_CERT),)
-	DOCKER_SIGNING_SOURCE := $(shell dirname $(SIGNING_CERT))
-	DOCKER_RUN += -v "$(DOCKER_SIGNING_SOURCE):$(DOCKER_SIGNING_SOURCE):ro"
-endif
-endif
-
 # User name and tag for "docker-*" images created by native dockerd mode.
 ifeq ($(strip $(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD)),y)
 DOCKER_USERNAME = $(USER_LC)
@@ -554,7 +543,6 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            EXTRA_DOCKER_TARGETS=$(EXTRA_DOCKER_TARGETS) \
                            BUILD_LOG_TIMESTAMP=$(BUILD_LOG_TIMESTAMP) \
                            SONIC_ENABLE_IMAGE_SIGNATURE=$(ENABLE_IMAGE_SIGNATURE) \
-                           SONIC_ENABLE_SECUREBOOT_SIGNATURE=$(SONIC_ENABLE_SECUREBOOT_SIGNATURE) \
                            SECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \
                            SECURE_UPGRADE_DEV_SIGNING_KEY=$(SECURE_UPGRADE_DEV_SIGNING_KEY) \
                            SECURE_UPGRADE_SIGNING_CERT=$(SECURE_UPGRADE_SIGNING_CERT) \
