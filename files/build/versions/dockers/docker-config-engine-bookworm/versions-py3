@@ -5,7 +5,7 @@ jsondiff==2.0.0
 lxml==4.9.1
 natsort==6.2.1
 netaddr==0.8.0
-pyang==2.6.0
+pyang==2.6.1
 pyangbind==0.8.2
 pyyaml==6.0.1
 redis==5.0.1

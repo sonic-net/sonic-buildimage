@@ -238,13 +238,6 @@ INCLUDE_VNET_MONITOR = n
 # The relative path is build root folder.
 SONIC_ENABLE_IMAGE_SIGNATURE ?= n
 
-# SONIC_ENABLE_SECUREBOOT_SIGNATURE - enable SONiC kernel signing to support UEFI secureboot
-# To support UEFI secureboot chain of trust requires EFI kernel to be signed as a PE binary
-#     SIGNING_KEY =
-#     SIGNING_CERT =
-# The absolute path should be provided.
-SONIC_ENABLE_SECUREBOOT_SIGNATURE ?= n
-
 # Full Secure Boot feature flags.
 # SECURE_UPGRADE_DEV_SIGNING_KEY - path to development signing key, used for image signing during build
 # SECURE_UPGRADE_SIGNING_CERT - path to development signing certificate, used for image signing during build
@@ -328,7 +321,7 @@ INCLUDE_FIPS ?= y
 ENABLE_FIPS ?= n
 
 # SONIC_SLAVE_DOCKER_DRIVER - set the sonic slave docker storage driver
-SONIC_SLAVE_DOCKER_DRIVER ?= vfs
+SONIC_SLAVE_DOCKER_DRIVER ?= overlay2
 
 # SONIC_OS_VERSION - sonic os version
 SONIC_OS_VERSION ?= 12
