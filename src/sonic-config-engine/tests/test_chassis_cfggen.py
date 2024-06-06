@@ -137,7 +137,8 @@ class TestVoqChassisSingleAsic(TestChassis):
             'sub_role': 'FrontEnd',
             'switch_type': 'voq',
             'switch_id': 20,
-            'max_cores': 64})
+            'max_cores': 64,
+            'slice_type': 'AZNG_Production'})
 
     def test_port(self):
         argument = ['-m', self.sample_graph, '-p',
