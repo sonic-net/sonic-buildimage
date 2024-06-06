@@ -1,0 +1,15 @@
+{
+    "chassis": {
+        "Questone_2": {
+            "component": {
+                "BIOS": { },
+                "BASE_CPLD": { },
+                "BMC": { },
+                "CPU_CPLD": { },
+                "SW_CPLD1": { },
+                "SW_CPLD2": { },
+                "FPGA": { }
+            }
+        }
+    }
+}

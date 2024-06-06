@@ -6,7 +6,7 @@ export KBUILD_EXTRA_SYMBOLS := /sonic/platform/pddf/i2c/Module.symvers.PDDF
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= dx010 haliburton silverstone seastone2 belgite
+MODULE_DIRS:= dx010 haliburton silverstone seastone2 belgite questone2
 
 %:
 	dh $@
