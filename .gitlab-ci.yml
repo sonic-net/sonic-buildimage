@@ -128,14 +128,17 @@ build:sonic:aarch64:
     if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
       # skip build and use the latest
       mkdir -p target
-      curl -o target/docker-syncd-brcm-dnx-rpc.gz http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/docker-syncd-brcm-dnx-rpc.gz
+      curl -o target/${TARGET_BIN} http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/${TARGET_BIN}
     else
-      ./build.sh --rpc
+      source nokia-env
+      make init
+      make configure PLATFORM=broadcom
+      make SONIC_BUILD_JOBS=2 ENABLE_SYNCD_RPC=y target/${TARGET_BIN}
     fi
   artifacts:
     name: "$CI_COMMIT_REF_NAME"
     paths:
-      - target/docker-syncd-brcm*rpc.gz
+      - target/${TARGET_BIN}
     expire_in: 1 week
 
 build:brcm-rpc:x86_64:
@@ -144,6 +147,15 @@ build:brcm-rpc:x86_64:
     - configure:sonic:x86_64
   variables:
     BUILD_ARCH: x86_64
+    TARGET_BIN: docker-syncd-brcm-rpc.gz
+
+build:brcm-rpc-dnx:x86_64:
+  extends: .build:brcm-rpc
+  needs:
+    - configure:sonic:x86_64
+  variables:
+    BUILD_ARCH: x86_64
+    TARGET_BIN: docker-syncd-brcm-dnx-rpc.gz
 
 express:chassis7:
   stage: test
@@ -273,6 +285,11 @@ post:brcm-rpc:x86_64:
   extends: .post
   needs:
     - build:brcm-rpc:x86_64
+
+post:brcm-rpc-dnx:x86_64:
+  extends: .post
+  needs:
+    - build:brcm-rpc-dnx:x86_64
 
 post:sonic:x86_64:
   extends: .post
