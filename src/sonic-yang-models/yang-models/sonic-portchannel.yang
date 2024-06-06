@@ -159,6 +159,10 @@ module sonic-portchannel {
                     }
                 }
 
+                leaf arp_reply {
+                    type stypes:arp_reply;
+                }
+
                 leaf vrf_name {
                     type leafref {
                         path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
