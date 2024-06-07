@@ -41,12 +41,12 @@ def set_acms_certs_path_from_db():
     acms_certs_path = f"/var/opt/msft/client/dsms/{postfix}/" if postfix else acms_certs_path
     sonic_logger.log_info("cert_converter : acms_certs_path = " + acms_certs_path)
 
-def execute_cmd(cmd):
-    response = subprocess.run(cmd, capture_output=True)
+def execute_cmd(cmd, input=""):
+    response = subprocess.run(cmd, input=input.encode(), shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if (response.returncode != 0):
-        sonic_logger.log_error(response.stderr, True)
-        return False
-    return True
+        sonic_logger.log_error(response.stderr.decode())
+        return False, ""
+    return True, response.stdout.decode()
 
 def get_list_of_certs(path):
     if not os.path.exists(path):
@@ -55,13 +55,18 @@ def get_list_of_certs(path):
     files = [file_t for file_t in os.listdir(path) if (os.path.isfile(os.path.join(path, file_t)) and not os.path.islink(os.path.join(path, file_t)))]
     cert_list = []
     supported_cert_ext = ['pfx', 'crt', 'key']
+    # Expected file names are restapiserver.crt.x and restapiserver.key.x, and other files will be ignored
     for file_t in files:
         if ("notify" not in file_t) and ("metadata" not in file_t):
+            file_data = file_t.split(".")
+            if len(file_data) < 3:
+                sonic_logger.log_warning("cert_converter : ignore " + file_t)
+                continue
             file_ext = file_t.split(".")[1]
             file_name = file_t.split(".")[0]
             if (file_ext in supported_cert_ext) and ("sonic_acms_bootstrap" not in file_name) and ("temp" not in file_name) and ("test" not in file_name):
                 cert_name = file_name
-                cert_ver = file_t.split(".")[2]
+                cert_ver = file_data[2]
                 cert_list.append(cert_name+"."+cert_ver)
     cert_list = list(set(cert_list))
     return cert_list
@@ -109,26 +114,24 @@ def convert_certs(acms_certs_path, certs_path, password_length):
                 # Extract the certificate from the pfx file
                 cmd = ["openssl", "pkcs12", "-clcerts", "-nokeys", "-in", acms_certs_path+name+".pfx."+ver, "-out", certs_path+name+".crt."+ver, "-password", "pass:", "-passin", "pass:"]
                 sonic_logger.log_info("cert_converter : convert_certs : "+" ".join(cmd))
-                if not execute_cmd(cmd):
+                ret, _ = execute_cmd(cmd)
+                if not ret:
                     sonic_logger.log_error("cert_converter : convert_certs : Extracting crt from pfx failed!", True)
                     return False                
                 # Generate a random password for encrypting the private key
                 string_choice = string.ascii_uppercase + string.ascii_lowercase + string.digits
                 random_password = ''.join(random.choice(string_choice) for _ in range(password_length))
                 # Extract the private key from the pfx file
-                cmd = ["openssl", "pkcs12", "-nocerts", "-in", acms_certs_path+name+".pfx."+ver, "-out", certs_path+"private.key", "-password", "pass:", "-passin", "pass:", "-passout", "pass:"+random_password]
-                if not execute_cmd(cmd):
+                cmd = ["openssl", "pkcs12", "-nocerts", "-in", acms_certs_path+name+".pfx."+ver, "-out", "/dev/stdout", "-password", "pass:", "-passin", "pass:", "-passout", "pass:"+random_password]
+                ret, private_key = execute_cmd(cmd)
+                if not ret:
                     sonic_logger.log_error("cert_converter : convert_certs : Creating private key from pfx failed!", True)
                     return False
                 # Decrypt the private key
-                cmd = ["openssl", "rsa", "-in", certs_path+"private.key", "-out", certs_path+name+".key."+ver, "-passin", "pass:"+random_password]
-                if not execute_cmd(cmd):
+                cmd = ["openssl", "rsa", "-in", "/dev/stdin", "-out", certs_path+name+".key."+ver, "-passin", "pass:"+random_password]
+                ret, _ = execute_cmd(cmd, input=private_key)
+                if not ret:
                     sonic_logger.log_error("cert_converter : convert_certs : Extracting key from pfx failed!", True)
-                    return False
-                try:
-                    os.remove(certs_path+"private.key")
-                except:
-                    sonic_logger.log_error("cert_converter : convert_certs : Removing private key failed!", True)
                     return False
                 new_cert_flag = True
                 sonic_logger.log_info("cert_converter : convert_certs : Finished converting "+cert_name)
