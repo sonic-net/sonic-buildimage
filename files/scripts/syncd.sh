@@ -57,7 +57,7 @@ function startplatform() {
                 platform=$aboot_platform
             elif [ -n "$onie_platform" ]; then
                 platform=$onie_platform
-            else 
+            else
                 platform="unknown"
             fi
             if [[ x"$platform" == x"x86_64-arista_720dt_48s" ]]; then
@@ -96,13 +96,10 @@ function waitplatform() {
 
     BOOT_TYPE=`getBootType`
     if [[ x"$sonic_asic_platform" == x"mellanox" ]]; then
-        if [[ x"$BOOT_TYPE" = @(x"fast"|x"warm"|x"fastfast") ]]; then
-            PMON_TIMER_STATUS=$(systemctl is-active pmon.timer)
-            if [[ x"$PMON_TIMER_STATUS" = x"inactive" ]]; then
-                systemctl start pmon.timer
-            else
-                debug "PMON service is delayed by a timer for better fast/warm boot performance"
-            fi
+        PLATFORM=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' platform`
+        PMON_IMMEDIATE_START="/usr/share/sonic/device/$PLATFORM/pmon_immediate_start"
+        if [[ x"$BOOT_TYPE" = @(x"fast"|x"warm"|x"fastfast") ]] && [[ ! -f $PMON_IMMEDIATE_START ]]; then
+            debug "PMON service is delayed by for better fast/warm boot performance"
         else
             debug "Starting pmon service..."
             /bin/systemctl start pmon

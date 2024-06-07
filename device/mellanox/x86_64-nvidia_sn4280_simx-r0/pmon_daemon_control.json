@@ -1,5 +1,1 @@
-{
-        "skip_ledd": true,
-        "skip_xcvrd": true,
-        "skip_fancontrol": true
-}
+../x86_64-mlnx_msn4700-r0/pmon_daemon_control.json
