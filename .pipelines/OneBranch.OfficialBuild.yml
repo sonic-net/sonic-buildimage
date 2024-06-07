@@ -58,6 +58,7 @@ stages:
     VERSION_PATH: target/sonic.version
     DOCKER_DATA_ROOT_FOR_MULTIARCCH: /data/march/docker
     INCLUDE_RESTAPI: y
+    ENABLE_FIPS: y
   jobs:
   - template: .azure-pipelines/azure-pipelines-job-groups.yml@acs-buildimage
     parameters:
