@@ -60,7 +60,6 @@ const std::string TEST_CONFIG_FILE = TEST_ROOT_DIR + "generated_services.conf";
 const std::string TEST_UNIT_FILES = "tests/testfiles/";
 
 const std::string TEST_PLATFORM_CONFIG = TEST_PLATFORM_DIR + "services.conf";
-const std::string TEST_MOCK_SHELL = TEST_UNIT_FILES + "mock-shell.sh";
 
 /* Input data for generated_services.conf */
 const std::vector<std::string> generated_services = {
@@ -193,9 +192,6 @@ class SsgFunctionTest : public SystemdSonicGeneratorFixture {
 
   private:
 };
-
-
-
 
 
 struct SsgMainConfig {
@@ -336,28 +332,6 @@ class SsgMainTest : public SsgFunctionTest {
             test_service, true, cfg.num_asics);
     }
 
-    void validate_executed_commands(const SsgMainConfig &cfg) {
-        std::string command_output_files = "tests/ssg-test/mock_shell.output";
-        // Run the target script and get the std output
-
-        if (cfg.is_smart_switch_npu || cfg.is_smart_switch_dpu) {
-            // Validate the file is exist
-            EXPECT_TRUE(fs::exists(command_output_files));
-                    std::ifstream file(command_output_files);
-            std::string line;
-            std::vector<std::string> executed_commands;
-            while (getline(file, line)) {
-                executed_commands.push_back(line);
-            }
-            // Validate the executed commands
-            EXPECT_EQ(executed_commands.size(), 2);
-            EXPECT_EQ(executed_commands[0], "systemctl enable systemd-networkd");
-            EXPECT_EQ(executed_commands[1], "systemctl start systemd-networkd");
-        }
-        // Clean up the file
-        fs::remove(command_output_files);
-    }
-
     /*
      * This function validates the list of generated Service Unit Files.
      */
@@ -446,9 +420,6 @@ class SsgMainTest : public SsgFunctionTest {
 
         /* Validate Test Unit file for dependency creation. */
         validate_depedency_in_unit_file(cfg);
-
-        /* Validate all executed commands. */
-        validate_executed_commands(cfg);
     }
 
     /* Save global variables before running tests */
@@ -617,11 +588,6 @@ TEST_F(SystemdSonicGeneratorFixture, get_global_vars) {
     EXPECT_STREQ(get_platform_conf_format(), PLATFORM_CONF_FORMAT);
     g_platform_conf_format = TEST_PLATFORM_CONF_FORMAT.c_str();
     EXPECT_STREQ(get_platform_conf_format(), TEST_PLATFORM_CONF_FORMAT.c_str());
-
-    EXPECT_EQ(g_shell_path, nullptr);
-    EXPECT_STREQ(get_shell_path(), SHELL_PATH);
-    g_shell_path = TEST_MOCK_SHELL.c_str();
-    EXPECT_STREQ(get_shell_path(), TEST_MOCK_SHELL.c_str());
 }
 
 TEST_F(SystemdSonicGeneratorFixture, global_vars) {
