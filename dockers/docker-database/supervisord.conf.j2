@@ -30,6 +30,7 @@ dependent_startup=true
 
 {% if INSTANCES %}
 {%     for redis_inst, redis_items in INSTANCES.items() %}
+{%- if redis_inst != 'remote_redis' %}
 [program:{{ redis_inst }}]
 {% if redis_items['hostname'] != '127.0.0.1' %}
 {%- set ADDITIONAL_OPTS = '--protected-mode no' %}
@@ -47,6 +48,7 @@ autostart=true
 autorestart=false
 stdout_logfile=syslog
 stderr_logfile=syslog
+{%- endif -%}
 {%     endfor %}
 {% endif %}
 
