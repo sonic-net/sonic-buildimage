@@ -4,6 +4,8 @@ from collections import defaultdict
 from ipaddress import ip_interface
 from natsort import natsorted
 
+import smartswitch_config
+
 #TODO: Remove once Python 2 support is removed
 if sys.version_info.major == 3:
     UNICODE_TYPE = str
@@ -75,7 +77,7 @@ def generate_t1_sample_config(data):
         port_count += 1
     return data
 
-def generate_t1_smartswitch_sample_config(data):
+def generate_t1_smartswitch_switch_sample_config(data, ss_config):
     data = generate_t1_sample_config(data)
     data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
 
@@ -83,17 +85,11 @@ def generate_t1_smartswitch_sample_config(data):
     mpbr_address = '{}.254'.format(mpbr_prefix)
 
     bridge_name = 'bridge_midplane'
-    data['MID_PLANE_BRIDGE'] = {
-        'GLOBAL': {
-            'bridge': bridge_name,
-            'ip_prefix': '{}/24'.format(mpbr_address)
-        }
-    }
 
     dhcp_server_ports = {}
 
-    for dpu_name in natsorted(data.get('DPUS', {})):
-        midplane_interface = data['DPUS'][dpu_name]['midplane_interface']
+    for dpu_name in natsorted(ss_config.get('DPUS', {})):
+        midplane_interface = ss_config['DPUS'][dpu_name]['midplane_interface']
         dpu_id = int(midplane_interface.replace('dpu', ''))
         dhcp_server_ports['{}|{}'.format(bridge_name, midplane_interface)] = {'ips': ['{}.{}'.format(mpbr_prefix, dpu_id + 1)]}
 
@@ -110,6 +106,27 @@ def generate_t1_smartswitch_sample_config(data):
         data['DHCP_SERVER_IPV4_PORT'] = dhcp_server_ports
 
     return data
+
+def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
+    data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
+    data['DEVICE_METADATA']['localhost']['switch_type'] = 'dpu'
+    data['DEVICE_METADATA']['localhost']['type'] = 'SonicDpu'
+    data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitcch'
+    data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
+
+    for port in natsorted(data['PORT']):
+        data['PORT'][port]['admin_status'] = 'up'
+        data['PORT'][port]['mtu'] = '9100'
+
+    return data
+
+def generate_t1_smartswitch_sample_config(data):
+    ss_config = smartswitch_config.get_smartswitch_config(data['DEVICE_METADATA']['localhost']['hwsku'])
+
+    if smartswitch_config.DPUS_TABLE in ss_config:
+        return generate_t1_smartswitch_switch_sample_config(data, ss_config)
+    elif smartswitch_config.DPU_TABLE in ss_config:
+        return generate_t1_smartswitch_dpu_sample_config(data, ss_config)
 
 def generate_empty_config(data):
     new_data = {'DEVICE_METADATA': data['DEVICE_METADATA']}

@@ -202,20 +202,6 @@
             "mtu": "9100"
         }
     },
-    "DPUS": {
-        "dpu0": {
-            "midplane_interface": "dpu0"
-        },
-        "dpu1": {
-            "midplane_interface": "dpu1"
-        },
-        "dpu2": {
-            "midplane_interface": "dpu2"
-        },
-        "dpu3": {
-            "midplane_interface": "dpu3"
-        }
-    },
     "FLEX_COUNTER_TABLE": {
         "ACL": {
             "FLEX_COUNTER_STATUS": "disable",
@@ -550,12 +536,6 @@
         "Ethernet232|10.0.0.58/31": {},
         "Ethernet240|10.0.0.60/31": {},
         "Ethernet248|10.0.0.62/31": {}
-    },
-    "MID_PLANE_BRIDGE": {
-        "GLOBAL": {
-            "bridge": "bridge_midplane",
-            "ip_prefix": "169.254.200.254/24"
-        }
     },
     "DHCP_SERVER_IPV4": {
         "bridge_midplane": {

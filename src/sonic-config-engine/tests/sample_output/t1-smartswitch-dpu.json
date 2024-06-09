@@ -1,0 +1,27 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hwsku": "SS-DPU-1x400Gb",
+            "hostname": "sonic",
+            "switch_type": "dpu",
+            "type": "SonicDpu",
+            "subtype": "SmartSwitcch",
+            "bgp_asn": "65100"
+        }
+    },
+    "PORT": {
+        "Ethernet0": {
+            "lanes": "0,1,2,3,4,5,6,7",
+            "alias": "etp1",
+            "admin_status": "up",
+            "mtu": "9100"
+        }
+    },
+    "FLEX_COUNTER_TABLE": {
+        "ACL": {
+            "FLEX_COUNTER_STATUS": "disable",
+            "FLEX_COUNTER_DELAY_STATUS": "true",
+            "POLL_INTERVAL": "10000"
+        }
+    }
+}
