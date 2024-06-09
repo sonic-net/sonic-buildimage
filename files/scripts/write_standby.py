@@ -2,6 +2,7 @@
 
 import argparse
 import time
+import json
 
 from sonic_py_common import logger as log
 from swsscommon.swsscommon import ConfigDBConnector, DBConnector, FieldValuePairs, ProducerStateTable, SonicV2Connector, Table
@@ -92,6 +93,21 @@ class MuxStateWriter(object):
         return 'subtype' in metadata and 'dualtor' in metadata['subtype'].lower()
 
     @property
+    def is_mocked_dualtor(self):
+        """
+        Checks if script is running on a mocked dual ToR system
+        """
+        if not self.is_dualtor:
+            return False
+        subtype = ''
+        with open("/etc/sonic/config_db.json", 'r') as config_file:
+            file_data = json.load(config_file)
+            if 'subtype' in file_data['DEVICE_METADATA']['localhost']:
+                subtype = file_data['DEVICE_METADATA']['localhost']['subtype']
+
+        return 'dualtor' not in subtype.lower()
+
+    @property
     def is_warmrestart(self):
         """
         Checks if a warmrestart is going on
@@ -144,6 +160,10 @@ class MuxStateWriter(object):
             (bool) True if the tunnel has been created
                    False if the timeout period is exceeded
         """
+        if self.is_mocked_dualtor:
+            # If running on a mocked dual ToR system, do not wait
+            logger.log_info("Do not wait for tunnel on mocked dualtor")
+            return True
         logger.log_info("Waiting for tunnel {} with timeout {} seconds".format(self.tunnel_name, timeout))
         start = time.time()
         curr_time = time.time()
