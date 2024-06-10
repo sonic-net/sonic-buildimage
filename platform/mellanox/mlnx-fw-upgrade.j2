@@ -20,6 +20,8 @@ declare -r SCRIPT_NAME="$(basename "$0")"
 declare -r SCRIPT_PATH="$(readlink -f "$0")"
 declare -r SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 
+declare -r LOCKFILE="/tmp/mlxfwmanager-lock"
+
 declare -r YES_PARAM="yes"
 declare -r NO_PARAM="no"
 
@@ -161,6 +163,20 @@ function ExitSuccess() {
     fi
 
     exit "${EXIT_SUCCESS}"
+}
+
+function LockStateChange() {
+    LogInfo "Locking ${LOCKFILE} from ${SCRIPT_NAME}"
+
+    exec {LOCKFD}>${LOCKFILE}
+    /usr/bin/flock -x ${LOCKFD}
+
+    LogInfo "Locked ${LOCKFILE} (${LOCKFD}) from ${SCRIPT_NAME}"
+}
+
+function UnlockStateChange() {
+    LogInfo "Unlocking ${LOCKFILE} (${LOCKFD}) from ${SCRIPT_NAME}"
+    /usr/bin/flock -u ${LOCKFD}
 }
 
 function WaitForDevice() {
@@ -372,9 +388,19 @@ function ExitIfQEMU() {
     fi
 }
 
+function Cleanup() {
+    if [[ -n "${LOCKFD}" ]]; then
+        UnlockStateChange
+    fi
+}
+
+trap Cleanup EXIT
+
 ParseArguments "$@"
 
 ExitIfQEMU
+
+LockStateChange
 
 WaitForDevice
 
