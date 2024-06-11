@@ -35,6 +35,8 @@ parameters:
   - broadcom
   - mellanox
   - marvell-armhf
+  - cisco-8000
+
 - name: 'trusty8LinkPath'
   type: string
   default: 'default'
