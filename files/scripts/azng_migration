@@ -32,20 +32,20 @@ function check_and_apply_frr_config_helper()
         else
             asic_suffix=''
         fi
-        local vtysh_cmd="sudo docker exec -t bgp${asic_suffix} vtysh -c 'show route-map TO_AH_V6 json' | jq -r '.BGP | length'"
-        local route_map_exist=($(eval "${timeout_cmd} ${vtysh_cmd}"))
-        if [[ $? -ne 0 ]]; then
-            echo "Command: $vtysh_cmd timedout or failed after 2 seconds."
+        local vtysh_cmd="sudo docker exec -t bgp${asic_suffix} vtysh -c 'show running-config' | grep -w 'TO_AH_V6'"
+        eval "${timeout_cmd} ${vtysh_cmd}>/dev/null"
+        if [[ $? -eq 0 ]]; then
+            ah_present_asic+=($asic_num)
+        elif [[ $? -ne 1 ]]; then
+            echo "AZNG Neighbor Check Command: $vtysh_cmd timedout or failed after 2 seconds."
+            return ${EXIT_FAILURE}
         fi
-        for i in "${route_map_exist[@]}"
-        do
-            if [[ $i -gt 0 ]] ; then
-                ah_present_asic+=($asic_num)
-                break
-            fi
-        done 
         ((asic_num = asic_num + 1))
     done
+    if [[ -z ${ah_present_asic[@]} ]]; then
+        echo "No AH neighbors are present"
+        return ${EXIT_FAILURE}
+    fi
     #If check mode then check the sanity and return
     if [[ "$1" == "check" ]]; then
         declare -a checkCmdlist=("${!2}")
@@ -76,7 +76,7 @@ function check_and_apply_frr_config_helper()
             asic_suffix=''
         fi
         local cp_cmd="sudo docker cp ${frr_config_temp_file} bgp${asic_suffix}:/"
-        eval "${timeout_cmd} ${cp_cmd}"
+        eval "${timeout_cmd} ${cp_cmd}>/dev/null"
         if [[ $? -ne 0 ]]; then
             echo "Command: $cp_cmd timedout or failed after 2 seconds."
             return ${EXIT_FAILURE}
@@ -91,7 +91,7 @@ function check_and_apply_frr_config_helper()
         fi
         local file_name=$(basename "$frr_config_temp_file")
         local vtysh_cmd="sudo docker exec -t bgp${asic_suffix} vtysh -f /${file_name}"
-        eval "${timeout_cmd} ${vtysh_cmd}"
+        eval "${timeout_cmd} ${vtysh_cmd}>/dev/null"
         if [[ $? -ne 0 ]]; then
             echo "Command: $vtysh_cmd timedout or failed after 2 seconds."
             return ${EXIT_FAILURE}
@@ -106,7 +106,7 @@ function check_and_apply_frr_config_helper()
         fi
         local file_name=$(basename "$frr_config_temp_file")
         local rm_cmd="sudo docker exec -t bgp${asic_suffix} rm /${file_name}"
-        eval "${timeout_cmd} ${rm_cmd}"
+        eval "${timeout_cmd} ${rm_cmd}>/dev/null"
         if [[ $? -ne 0 ]]; then
             echo "Command: $rm_cmd timedout or failed after 2 seconds."
             return ${EXIT_FAILURE}
