@@ -1,7 +1,8 @@
-attrs==20.3.0
+attrs==22.2.0
 importlib-metadata==1.6.0
-jsonschema==3.2.0
+jsonschema==4.10.3
 more-itertools==4.2.0
-pyrsistent==0.15.5
-python_sdk_api==4.6.2202
+pyrsistent==0.18.1
+python-sdk-api==4.6.3064
+python_sdk_api==4.6.3064
 zipp==1.0.0

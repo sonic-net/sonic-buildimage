@@ -33,6 +33,7 @@ module sonic-buffer-pool {
                     type enumeration {
                         enum ingress;
                         enum egress;
+                        enum both;
                     }
                     description "Buffer Pool Type";
                 }

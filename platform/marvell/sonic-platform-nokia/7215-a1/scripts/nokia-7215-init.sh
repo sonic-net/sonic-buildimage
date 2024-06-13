@@ -40,6 +40,9 @@ file_exists() {
 # Install kernel drivers required for i2c bus access
 load_kernel_drivers
 
+# Disable sysrq-trigger
+echo 0 > /proc/sys/kernel/sysrq
+
 #setting up uboot environment
 fw_uboot_env_cfg
 

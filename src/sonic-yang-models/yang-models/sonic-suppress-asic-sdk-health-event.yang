@@ -1,0 +1,59 @@
+module sonic-suppress-asic-sdk-health-event {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-suppress-asic-sdk-health-event";
+
+    prefix sch;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "Suppress ASIC/SDK health event yang Module for SONiC OS";
+
+    revision 2023-11-29 {
+        description
+            "Initial revision";
+    }
+
+    container sonic-suppress-asic-sdk-health-event {
+
+        container SUPPRESS_ASIC_SDK_HEALTH_EVENT {
+
+            description "SUPPRESS_ASIC_SDK_HEALTH_EVENT part of config_db.json";
+
+            list SUPPRESS_ASIC_SDK_HEALTH_EVENT_LIST {
+
+                key "severity";
+
+                leaf severity {
+                    type enumeration {
+                        enum fatal;
+                        enum warning;
+                        enum notice;
+                    }
+                    description "Severity of the ASIC/SDK health event to suppress";
+                }
+
+                leaf max_events {
+                    type uint32;
+                    description "Maximum of events that can be stored in the database";
+                }
+
+                leaf-list categories {
+                    type enumeration {
+                        enum software;
+                        enum firmware;
+                        enum cpu_hw;
+                        enum asic_hw;
+                    }
+                    description "Category of the ASIC/SDK health event to suppress";
+                }
+            }
+        }
+    }
+}

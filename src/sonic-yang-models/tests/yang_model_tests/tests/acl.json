@@ -38,6 +38,12 @@
         "desc": "Configure non-existing ACL_TABLE in ACL_RULE.",
         "eStrKey" : "LeafRef"
     },
+    "ACL_RULE_IP_TYPE_SRC_IPV6ANY": {
+        "desc": "Configure IP_TYPE as ipv6any and SRC_IPV6 in ACL_RULE."
+    },
+    "ACL_RULE_IP_TYPE_DST_IPV4ANY": {
+        "desc": "Configure IP_TYPE as ipv4any and DST_IP in ACL_RULE."
+    },
     "ACL_RULE_IP_TYPE_SRC_IPV6_MISMATCH": {
         "desc": "Configure IP_TYPE as ipv4any and SRC_IPV6 in ACL_RULE.",
         "eStrKey" : "When",
@@ -50,6 +56,12 @@
         "desc": "Configure IP_TYPE as ARP and DST_IPV6 in ACL_RULE.",
         "eStrKey" : "When",
         "eStr": ["IP_TYPE"]
+    },
+    "ACL_RULE_VALID_L4_SRC_PORT_RANGE": {
+        "desc": "Configure l4_src_port_range as 1024-65535 in ACL_RULE"
+    },
+    "ACL_RULE_VALID_L4_DST_PORT_RANGE": {
+        "desc": "Configure l4_src_port_range as 0-65535 in ACL_RULE"
     },
     "ACL_RULE_WRONG_L4_SRC_PORT_RANGE": {
         "desc": "Configure l4_src_port_range as 99999-99999 in ACL_RULE",

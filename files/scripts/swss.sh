@@ -132,12 +132,23 @@ function clean_up_chassis_db_tables()
         return
     fi
 
-    if [[ !($($SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0) ]]; then
-        return
-    fi
+    until [[ $($SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0 ]]; do
+        sleep 1
+    done
 
     lc=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'hostname'`
+    until [[ -n "${lc}" ]]; do
+        lc=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'hostname'`
+        sleep 1
+    done
+    debug "Chassis db clean up for ${SERVICE}$DEV. hostname=$lc"
+
     asic=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'asic_name'`
+    until [[ -n "${asic}" ]]; do
+        asic=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'asic_name'`
+        sleep 1
+    done
+    debug "Chassis db clean up for ${SERVICE}$DEV. asic=$asic"
 
     # First, delete SYSTEM_NEIGH entries
     num_neigh=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
@@ -299,7 +310,7 @@ start() {
         $SONIC_DB_CLI GB_ASIC_DB FLUSHDB
         $SONIC_DB_CLI GB_COUNTERS_DB FLUSHDB
         $SONIC_DB_CLI RESTAPI_DB FLUSHDB
-        clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*','SYSTEM_NEIGH_TABLE*'"
+        clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*', 'SYSTEM_NEIGH_TABLE*', 'FABRIC_PORT_TABLE*'"
         $SONIC_DB_CLI APPL_STATE_DB FLUSHDB
         clean_up_chassis_db_tables
         rm -rf /tmp/cache
@@ -401,7 +412,9 @@ stop() {
         /usr/bin/${SERVICE}.sh stop $DEV
         debug "Stopped ${SERVICE}$DEV service..."
         $SONIC_DB_CLI APPL_DB DEL PORT_TABLE:PortInitDone
-        debug "Cleared PortInitDone from APPL_DB..."
+        debug "Cleared PortInitDone from APPL_DB for ${SERVICE}$DEV..."
+        clean_up_tables STATE_DB "'FABRIC_PORT_TABLE*'"
+        debug "Cleared FABRIC_PORT_TABLE from STATE_DB for ${SERVICE}$DEV..."
     else
         debug "Killing Docker swss..."
         /usr/bin/docker kill swss &> /dev/null || debug "Docker swss is not running ($?) ..."

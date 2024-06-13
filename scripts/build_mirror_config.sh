@@ -11,7 +11,7 @@ export APT_RETRIES_COUNT
 
 DEFAULT_MIRROR_URL_PREFIX=http://packages.trafficmanager.net
 MIRROR_VERSION_FILE=
-[[ "$SONIC_VERSION_CONTROL_COMPONENTS" == *deb* || $SONIC_VERSION_CONTROL_COMPONENTS == *all* ]] && MIRROR_VERSION_FILE=files/build/versions/default/versions-mirror && MIRROR_SNAPSHOT=y
+[[ "$SONIC_VERSION_CONTROL_COMPONENTS" == *deb* || $SONIC_VERSION_CONTROL_COMPONENTS == *all* ]] && MIRROR_VERSION_FILE=files/build/versions/default/versions-mirror
 [ -f target/versions/default/versions-mirror ] && MIRROR_VERSION_FILE=target/versions/default/versions-mirror
 
 # The default mirror urls
@@ -23,6 +23,10 @@ DEFAULT_MIRROR_SECURITY_URLS=http://debian-archive.trafficmanager.net/debian-sec
 if [ "$ARCHITECTURE" == "armhf" ]; then
     DEFAULT_MIRROR_URLS=http://deb.debian.org/debian/
     DEFAULT_MIRROR_SECURITY_URLS=http://deb.debian.org/debian-security/
+fi
+
+if [ "$DISTRIBUTION" == "buster" ]; then
+    DEFAULT_MIRROR_URLS=http://archive.debian.org/debian/
 fi
 
 if [ "$MIRROR_SNAPSHOT" == y ]; then

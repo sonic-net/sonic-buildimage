@@ -18,14 +18,14 @@ leapfile /usr/share/zoneinfo/leap-seconds.list
 {# Adding NTP servers. We need to know if we have some pools, to set proper
 config -#}
 {% set ns = namespace(is_pools=false) %}
-{% for server in NTP_SERVER if NTP_SERVER[server].admin_state != 'disabled' and
-                               NTP_SERVER[server].resolve_as and
-                               NTP_SERVER[server].association_type -%}
+{% for server in NTP_SERVER if NTP_SERVER[server].admin_state != 'disabled' -%}
     {% set config = NTP_SERVER[server] -%}
     {# Server options -#}
     {% set soptions = '' -%}
-    {# Server access control options -#}
-    {% set aoptions = '' -%}
+
+    {# Define defaults if not defined -#}
+    {% set association_type = config.association_type | d('server') -%}
+    {% set resolve_as = config.resolve_as | d(server) -%}
 
     {# Authentication key -#}
     {% if global.authentication == 'enabled' -%}
@@ -47,17 +47,13 @@ config -#}
     {# Check if there are any pool configured. BTW it doesn't matter what was
     configured as "resolve_as" for pools. If they were configured with FQDN they
     must remain like that -#}
-    {% set config_as = config.resolve_as -%}
-    {% if config.association_type == 'pool' -%}
-        {% set ns.is_pools = true -%}
-        {% set config_as = server -%}
-    {% else -%}
-        {% set aoptions = aoptions ~ ' nopeer' -%}
+    {% if association_type == 'pool' -%}
+        {% set resolve_as = server -%}
     {% endif -%}
 
-{{ config.association_type }} {{ config_as }}{{ soptions }}
+{{ association_type }} {{ resolve_as }}{{ soptions }}
 {% if global.server_role == 'disabled' %}
-restrict {{ config_as }} kod limited nomodify notrap noquery{{ aoptions }}
+restrict {{ resolve_as }} kod limited nomodify noquery
 {% endif %}
 
 {% endfor -%}

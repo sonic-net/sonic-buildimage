@@ -83,7 +83,7 @@ ifeq ($(NOBUSTER), 0)
 	$(MAKE) -f Makefile.work bullseye
 endif
 
-init:
+init reset:
 	@echo "+++ Making $@ +++"
 	$(MAKE) -f Makefile.work $@
 
@@ -108,7 +108,7 @@ $(PLATFORM_PATH):
 configure : $(PLATFORM_PATH)
 	$(call make_work, $@)
 
-clean reset showtag docker-cleanup sonic-slave-build sonic-slave-bash :
+clean showtag docker-cleanup sonic-slave-build sonic-slave-bash :
 	$(call make_work, $@)
 
 # Freeze the versions, see more detail options: scripts/versions_manager.py freeze -h

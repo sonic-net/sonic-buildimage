@@ -7,6 +7,9 @@ DERIVED_TARGET = $(FRR_PYTHONTOOLS) $(FRR_DBG) $(FRR_SNMP) $(FRR_SNMP_DBG)
 SUFFIX = $(shell date +%Y%m%d\.%H%M%S)
 STG_BRANCH = stg_temp.$(SUFFIX)
 
+# DEBEMAIL required by gpb dch
+export DEBEMAIL := sonicproject@googlegroups.com
+
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Build the package
 	pushd ./frr

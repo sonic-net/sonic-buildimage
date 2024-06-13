@@ -37,7 +37,7 @@ ARG gcc_arch=aarch64-linux-gnu
 ARG PYTHON_CROSS_PLATFORM=linux_aarch64
 {%- endif %}
 
-RUN echo "deb http://ftp.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+RUN echo "deb http://archive.debian.org/debian/ buster-backports main" >> /etc/apt/sources.list
 
 RUN dpkg --add-architecture $arch
 RUN apt-get update && apt-get install -y eatmydata
@@ -90,9 +90,11 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         curl \
         wget \
         unzip \
-        {{ GZ_COMPRESS_PROGRAM }} \
+        gzip \
+        pigz \
         git \
         build-essential \
+        remake \
         libtool \
         lintian \
         sudo \

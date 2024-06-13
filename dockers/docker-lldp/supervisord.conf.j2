@@ -45,10 +45,10 @@ dependent_startup_wait_for=rsyslogd:running
 # - `-dd` means to stay in foreground, log warnings to console
 # - `-ddd` means to stay in foreground, log warnings and info to console
 # - `-dddd` means to stay in foreground, log all to console
-{% if DEVICE_METADATA['localhost']['sub_role'] is defined and DEVICE_METADATA['localhost']['sub_role']|length %}
-command=/usr/sbin/lldpd -d -I Ethernet* -C Ethernet*
+{% if namespace_id is defined and namespace_id|length %}
+command=/usr/sbin/lldpd -d -I Ethernet[0-9]* -C Ethernet[0-9]*
 {% else %}
-command=/usr/sbin/lldpd -d -I Ethernet*,eth0 -C eth0
+command=/usr/sbin/lldpd -d -I Ethernet[0-9]*,eth0 -C eth0
 {% endif %}
 priority=3
 autostart=false

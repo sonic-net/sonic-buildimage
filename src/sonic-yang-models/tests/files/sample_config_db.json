@@ -7,7 +7,8 @@
         },
         "DHCP_SERVER": {
             "192.0.0.8": {},
-            "192.0.0.8": {}
+            "192.0.0.8": {},
+            "2603:10e1:0:6f4::1": {}
         },
         "DNS_NAMESERVER": {
             "1.1.1.1": {},
@@ -361,14 +362,16 @@
                 "region": "usfoo",
                 "asic_name": "Asic0",
                 "switch_id": "2",
-                "switch_type": "voq",
                 "max_cores": "8",
                 "sub_role": "FrontEnd",
                 "dhcp_server": "disabled",
                 "bgp_adv_lo_prefix_as_128": "true",
                 "yang_config_validation": "disable",
                 "rack_mgmt_map": "dummy_value",
-                "timezone": "Europe/Kiev"
+                "timezone": "Europe/Kiev",
+                "bgp_router_id": "8.8.8.8",
+                "chassis_hostname": "str-sonic-chassis-1",
+                "slice_type": "AZNG_Production"
             }
         },
         "VLAN": {
@@ -566,9 +569,9 @@
         "PORT": {
             "Ethernet0": {
                 "alias": "Eth1/1",
-                "coreId": "1",
-                "corePortId": "1",
-                "numVoq": "8",
+                "core_id": "1",
+                "core_port_id": "1",
+                "num_voq": "8",
                 "lanes": "65",
                 "description": "",
                 "speed": "11100",
@@ -585,9 +588,9 @@
             },
             "Ethernet1": {
                 "alias": "Eth1/2",
-                "coreId": "1",
-                "corePortId": "1",
-                "numVoq": "8",
+                "core_id": "1",
+                "core_port_id": "1",
+                "num_voq": "8",
                 "lanes": "66",
                 "description": "",
                 "speed": "11100",
@@ -603,9 +606,9 @@
             },
             "Ethernet2": {
                 "alias": "Eth1/3",
-                "coreId": "1",
-                "corePortId": "1",
-                "numVoq": "8",
+                "core_id": "1",
+                "core_port_id": "1",
+                "num_voq": "8",
                 "lanes": "67",
                 "description": "",
                 "speed": "11100",
@@ -1196,10 +1199,7 @@
             "Vlan111|Ethernet0": {
                 "tagging_mode": "untagged"
             },
-            "Vlan111|Ethernet1": {
-                "tagging_mode": "untagged"
-            },
-            "Vlan111|Ethernet2": {
+            "Vlan111|PortChannel0004": {
                 "tagging_mode": "untagged"
             },
             "Vlan111|Ethernet3": {
@@ -1302,6 +1302,13 @@
                 "paths": "COUNTERS/Ethernet*,COUNTERS_PORT_NAME_MAP",
                 "report_interval": "5000",
                 "report_type": "periodic"
+            }
+        },
+        "BMP": {
+            "table": {
+                "bgp_neighbor_table": "true",
+                "bgp_rib_in_table": "false",
+                "bgp_rib_out_table": "false"
             }
         },
         "GNMI": {
@@ -1623,6 +1630,22 @@
                 "timeout": "5"
             }
         },
+        "LDAP": {
+            "global": {
+                "bind_dn": "test_bind",
+                "bind_password": "secret",
+                "bind_timeout": "5",
+                "version": "3",
+                "base_dn": "test_base",
+                "port": "389",
+                "timeout": "5"
+            }
+        },
+        "LDAP_SERVER": {
+            "192.168.1.1": {
+                "priority": "5"
+            }
+        },
         "NAT_BINDINGS": {
             "bind1": {
                 "nat_pool": "pool1",
@@ -1686,7 +1709,9 @@
         },
         "BGP_DEVICE_GLOBAL": {
             "STATE": {
-                "tsa_enabled": "false"
+                "tsa_enabled": "false",
+                "wcmp_enabled": "false",
+                "idf_isolation_state": "unisolated"
             }
         },
         "BGP_PEER_RANGE": {
@@ -2273,7 +2298,7 @@
             "span": {
                 "direction": "RX",
                 "type": "SPAN",
-                "dst_port": "Ethernet2",
+                "dst_port": "Ethernet7",
                 "src_port": "Ethernet3,Ethernet4"
             }
         },
@@ -2309,6 +2334,9 @@
                 "use_well_known_mac": "enabled",
                 "src_mac": "ToRMac",
                 "interval_pck_loss_count_update": "3"
+            },
+            "TIMED_OSCILLATION": {
+                "oscillation_enabled": "false"
             },
             "MUXLOGGER": {
                 "log_verbosity": "debug"
@@ -2515,6 +2543,12 @@
             }
 
         },
+        "SUPPRESS_ASIC_SDK_HEALTH_EVENT": {
+            "notice": {
+                "categories": ["firmware", "asic_hw"],
+                "max_events": "1024"
+            }
+        },
         "SYSTEM_DEFAULTS": {
             "tunnel_qos_remap": {
                 "status": "enabled"
@@ -2636,6 +2670,14 @@
             "dpu1": {
                 "midplane_interface": "dpu1"
             }
+        },
+        "BANNER_MESSAGE": {
+            "global": {
+                "state": "enabled",
+                "login": "Some login message",
+                "motd": "Some message of the day",
+                "logout": "Some logout message"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
@@ -2647,6 +2689,12 @@
         "TACPLUS": {
             "global": {
             }
+        }
+    },
+    "STORMOND_CONFIG": {
+        "INTERVALS": {
+            "daemon_polling_interval" : "3600",
+            "fsstats_sync_interval"   : "86400"
         }
     }
 }

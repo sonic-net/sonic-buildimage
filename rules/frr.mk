@@ -1,9 +1,9 @@
 # FRRouting (frr) package
 
-FRR_VERSION = 8.5.1
+FRR_VERSION = 8.5.4
 FRR_SUBVERSION = 0
 FRR_BRANCH = frr/8.5
-FRR_TAG = frr-8.5.1
+FRR_TAG = frr-8.5.4
 export FRR_VERSION FRR_SUBVERSION FRR_BRANCH FRR_TAG
 
 

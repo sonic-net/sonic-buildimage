@@ -27,6 +27,20 @@
             }
         }
     },
+    "BUFFER_POOL_CORRECT_TYPE_BOTH_VALUE": {
+        "sonic-buffer-pool:sonic-buffer-pool": {
+            "sonic-buffer-pool:BUFFER_POOL": {
+                "BUFFER_POOL_LIST": [
+                {
+                    "name": "Ethernet4",
+                    "mode": "static",
+                    "size": "12766208",
+                    "type": "both"
+                }
+                ]
+            }
+        }
+    },
     "BUFFER_POOL_WRONG_TYPE_VALUE": {
         "sonic-buffer-pool:sonic-buffer-pool": {
             "sonic-buffer-pool:BUFFER_POOL": {

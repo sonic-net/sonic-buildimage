@@ -351,13 +351,13 @@ static ssize_t show_temp_event_status(struct device *dev, struct device_attribut
     val = nokia_7215_ixs_a1_cpld_read(data, TEMP_EVENT_STATUS_REG);
     switch (val) {
     case TS1_ALERT_EVENT:
-        reason="ts1";
+        reason="PCB Back";
         break;
     case TS2_ALERT_EVENT:
-        reason="ts2";
+        reason="PCB Front";
         break;
     case TS3_ALERT_EVENT:
-        reason="ts3";
+        reason="PCB Mid";
         break;
     case CPU_TEMP_EVENT:
         reason="cpu";

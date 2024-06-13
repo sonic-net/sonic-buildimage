@@ -129,7 +129,7 @@ class TestCfgGenCaseInsensitive(TestCase):
         output = self.run_script(argument)
         expected = {
                        'Vlan1000|Ethernet8': {'tagging_mode': 'untagged'},
-                       'Vlan2000|Ethernet4': {'tagging_mode': 'untagged'}
+                       'Vlan2000|PortChannel01': {'tagging_mode': 'untagged'}
                    }
         self.assertEqual(
                 utils.to_dict(output.strip()),

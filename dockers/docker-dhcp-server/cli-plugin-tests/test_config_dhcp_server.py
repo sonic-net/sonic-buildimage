@@ -258,7 +258,7 @@ class TestConfigDHCPServer(object):
 
     def test_config_dhcp_server_ipv4_range_add(self, mock_db):
         expected_value = {
-            "range": "10.10.10.10,10.10.10.11"
+            "range@": "10.10.10.10,10.10.10.11"
         }
         runner = CliRunner()
         db = clicommon.Db()
@@ -278,7 +278,7 @@ class TestConfigDHCPServer(object):
 
     def test_config_dhcp_server_ipv4_range_add_single_ip(self, mock_db):
         expected_value = {
-            "range": "10.10.10.10,10.10.10.10"
+            "range@": "10.10.10.10,10.10.10.10"
         }
         runner = CliRunner()
         db = clicommon.Db()
@@ -306,7 +306,7 @@ class TestConfigDHCPServer(object):
 
     def test_config_dhcp_server_ipv4_range_update(self, mock_db):
         expected_value = {
-            "range": "10.10.10.10,10.10.10.11"
+            "range@": "10.10.10.10,10.10.10.11"
         }
         runner = CliRunner()
         db = clicommon.Db()
@@ -326,7 +326,7 @@ class TestConfigDHCPServer(object):
 
     def test_config_dhcp_server_ipv4_range_update_single_ip(self, mock_db):
         expected_value = {
-            "range": "10.10.10.10,10.10.10.10"
+            "range@": "10.10.10.10,10.10.10.10"
         }
         runner = CliRunner()
         db = clicommon.Db()
@@ -394,7 +394,7 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["bind"], \
                 ["Vlan100", "Ethernet2", "--range", "range2,range3"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet2", "ranges")
+        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet2", "ranges@")
         assert result and set(result.split(",")) == set(expected_value.split(","))
 
     def test_config_dhcp_server_ipv4_bind_ip_nonexisting(self, mock_db):
@@ -405,7 +405,7 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["bind"], \
                 ["Vlan100", "Ethernet2", "100.1.1.1,100.1.1.2"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet2", "ips")
+        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet2", "ips@")
         assert result and set(result.split(",")) == set(expected_value.split(","))
 
     def test_config_dhcp_server_ipv4_bind_range_existing_no_duplicate(self, mock_db):
@@ -416,7 +416,7 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["bind"], \
                 ["Vlan100", "Ethernet7", "--range", "range2"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet7", "ranges")
+        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet7", "ranges@")
         assert result and set(result.split(",")) == set(expected_value.split(","))
 
     def test_config_dhcp_server_ipv4_bind_range_existing_duplicate(self, mock_db):
@@ -427,7 +427,7 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["bind"], \
                 ["Vlan100", "Ethernet7", "--range", "range2,range3"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet7", "ranges")
+        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet7", "ranges@")
         assert result and set(result.split(",")) == set(expected_value.split(","))
 
     def test_config_dhcp_server_ipv4_bind_ip_existing_no_duplicate(self, mock_db):
@@ -438,7 +438,7 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["bind"], \
                 ["Vlan100", "Ethernet4", "100.1.1.12,100.1.1.13"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet4", "ips")
+        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet4", "ips@")
         assert result and set(result.split(",")) == set(expected_value.split(","))
 
     def test_config_dhcp_server_ipv4_bind_ip_existing_duplicate(self, mock_db):
@@ -449,7 +449,7 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["bind"], \
                 ["Vlan100", "Ethernet4", "100.1.1.11,100.1.1.12"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet4", "ips")
+        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet4", "ips@")
         assert result and set(result.split(",")) == set(expected_value.split(","))
 
     def test_config_dhcp_server_ipv4_bind_nonexisting_range(self, mock_db):
@@ -524,7 +524,7 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["unbind"], \
                 ["Vlan100", "Ethernet7", "--range", "range3"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet7", "ranges")
+        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet7", "ranges@")
         assert result and set(result.split(",")) == set(expected_value.split(","))
 
     def test_config_dhcp_server_ipv4_unbind_range_with_no_remain(self, mock_db):
@@ -553,7 +553,7 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["unbind"], \
                 ["Vlan100", "Ethernet4", "100.1.1.11"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet4", "ips")
+        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4_PORT|Vlan100|Ethernet4", "ips@")
         assert result and set(result.split(",")) == set(expected_value.split(","))
 
     def test_config_dhcp_server_ipv4_unbind_ip_with_no_remain(self, mock_db):
@@ -624,7 +624,7 @@ class TestConfigDHCPServer(object):
 
     def test_config_dhcp_server_ipv4_option_add(self, mock_db):
         expected_value = {
-            "option_id": "165",
+            "id": "165",
             "type": "string",
             "value": "dummy_value"
         }
@@ -700,7 +700,7 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["option"].commands["bind"], \
                 ["Vlan300", "option60"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan300", "customized_options") == "option60"
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan300", "customized_options@") == "option60"
 
     def test_config_dhcp_server_ipv4_option_bind_multiple_options(self, mock_db):
         runner = CliRunner()
@@ -709,7 +709,7 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["option"].commands["bind"], \
                 ["Vlan300", "option60,option61"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan300", "customized_options")
+        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan300", "customized_options@")
         assert result and set(result.split(",")) == set("option60,option61".split(","))
 
     def test_config_dhcp_server_ipv4_option_bind_to_existing(self, mock_db):
@@ -719,7 +719,7 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["option"].commands["bind"], \
                 ["Vlan100", "option61"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "customized_options")
+        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "customized_options@")
         assert result and set(result.split(",")) == set("option60,option61".split(","))
 
     def test_config_dhcp_server_ipv4_option_bind_same_option_to_existing(self, mock_db):
@@ -729,7 +729,7 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["option"].commands["bind"], \
                 ["Vlan100", "option60"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "customized_options") == "option60"
+        assert mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "customized_options@") == "option60"
 
     def test_config_dhcp_server_ipv4_option_bind_to_nonexisting_intf(self, mock_db):
         runner = CliRunner()
@@ -754,8 +754,8 @@ class TestConfigDHCPServer(object):
         result = runner.invoke(dhcp_server.dhcp_server.commands["ipv4"].commands["option"].commands["unbind"], \
                 ["Vlan100", "option60"], obj=db)
         assert result.exit_code == 0, "exit code: {}, Exception: {}, Traceback: {}".format(result.exit_code, result.exception, result.exc_info)
-        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "customized_options")
-        assert result == None or result == ""
+        result = mock_db.get("CONFIG_DB", "DHCP_SERVER_IPV4|Vlan100", "customized_options@")
+        assert result == None
 
     def test_config_dhcp_server_ipv4_option_unbind_nonexisting_intf(self, mock_db):
         runner = CliRunner()

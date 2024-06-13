@@ -3,8 +3,8 @@ binutils-common==2.40-2
 dpkg-dev==1.21.22
 icu-devtools==72.1-3
 libboost-serialization1.74.0==1.74.0+ds1-21
-libc-dev-bin==2.36-9+deb12u4
-libc6-dev==2.36-9+deb12u4
+libc-dev-bin==2.36-9+deb12u7
+libc6-dev==2.36-9+deb12u7
 libcrypt-dev==1:4.4.33-2
 libhiredis0.14==0.14.1-3
 libicu-dev==72.1-3
@@ -27,7 +27,7 @@ libxslt1.1==1.1.35-1
 libyaml-0-2==0.2.5-1
 libyang==1.0.73
 libyang-cpp==1.0.73
-linux-libc-dev==6.1.76-1
+linux-libc-dev==6.1.90-1
 python3-swsscommon==1.0.0
 python3-yaml==6.0-3+b2
 python3-yang==1.0.73

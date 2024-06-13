@@ -10,14 +10,14 @@
 try:
     import re
     import subprocess
-    from sonic_platform_base.sonic_ssd.ssd_base import SsdBase
+    from sonic_platform_base.sonic_storage.storage_base import StorageBase
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
 NOT_AVAILABLE = "N/A"
 MMC_DATA_PATH = "/sys/class/mmc_host/mmc0/mmc0:0001/{}"
 
-class SsdUtil(SsdBase):
+class SsdUtil(StorageBase):
     """
     Generic implementation of the SSD health API
     """

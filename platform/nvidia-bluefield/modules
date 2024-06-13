@@ -1,0 +1,6 @@
+crc16
+deflate
+zlib_deflate
+ubifs
+squashfs
+sdhci-of-dwcmshc

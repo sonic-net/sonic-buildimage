@@ -39,22 +39,22 @@ module sonic-port{
 					}
 				}
 
-				leaf numVoq {
-					description "The number of virtual output queue supportted on this port.";
-					type string {
-						length 1..16;
-					}
-				}
-
-				leaf coreId {
+				leaf core_id {
 					description "The ASIC core where the port belongs to.";
 					type string {
 						length 1..16;
 					}
 				}
 
-				leaf corePortId {
+				leaf core_port_id {
 					description "The ASIC core port for this port.";
+					type string {
+						length 1..16;
+					}
+				}
+
+				leaf num_voq {
+					description "The number of virtual output queue supportted on this port.";
 					type string {
 						length 1..16;
 					}
@@ -173,6 +173,7 @@ module sonic-port{
 
 				leaf admin_status {
 					type stypes:admin_status;
+					default down;
 				}
 
 				leaf fec {

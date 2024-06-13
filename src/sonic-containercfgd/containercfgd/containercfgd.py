@@ -23,6 +23,7 @@ SYSLOG_RATE_LIMIT_BURST = 'rate_limit_burst'
 
 # Container name
 container_name = None
+service_name = None
 
 
 def run_command(command):
@@ -117,7 +118,7 @@ class SyslogHandler:
             data (dict): Data of the entry: {<field_name>: <field_value>}
         """
         try:
-            if key != container_name:
+            if key != service_name:
                 return
             self.update_syslog_config(data)
         except Exception as e:
@@ -130,8 +131,8 @@ class SyslogHandler:
             init_data (dict): Initial data when first time connecting to CONFIG DB. {<table_name>: {<field_name>: <field_value>}}
         """
         if SYSLOG_CONFIG_FEATURE_TABLE in init_data:
-            if container_name in init_data[SYSLOG_CONFIG_FEATURE_TABLE]:
-                self.update_syslog_config(init_data[SYSLOG_CONFIG_FEATURE_TABLE][container_name])
+            if service_name in init_data[SYSLOG_CONFIG_FEATURE_TABLE]:
+                self.update_syslog_config(init_data[SYSLOG_CONFIG_FEATURE_TABLE][service_name])
 
     def update_syslog_config(self, data):
         """Parse existing syslog conf and apply new syslog conf.
@@ -151,7 +152,7 @@ class SyslogHandler:
         if os.path.exists(self.TMP_SYSLOG_CONF_PATH):
             os.remove(self.TMP_SYSLOG_CONF_PATH)
         with open(self.TMP_SYSLOG_CONF_PATH, 'w+') as f:
-            json_args = f'{{"container_name": "{container_name}" }}'
+            json_args = f'{{"container_name": "{service_name}" }}'
             output = run_command(['sonic-cfggen', '-d', '-t', '/usr/share/sonic/templates/rsyslog-container.conf.j2', '-a', json_args])
             f.write(output)
         run_command(['cp', self.TMP_SYSLOG_CONF_PATH, self.SYSLOG_CONF_PATH])
@@ -185,7 +186,13 @@ class SyslogHandler:
 
 def main():
     global container_name
+    global service_name
+    namespace_id = os.environ['NAMESPACE_ID']
     container_name = os.environ['CONTAINER_NAME']
+    if not namespace_id:
+        service_name = container_name
+    else:
+        service_name = container_name.rstrip(namespace_id)
     daemon = ContainerConfigDaemon()
     daemon.run()
 

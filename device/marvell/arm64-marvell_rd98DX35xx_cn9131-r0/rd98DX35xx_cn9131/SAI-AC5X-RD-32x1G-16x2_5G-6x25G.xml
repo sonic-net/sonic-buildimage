@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-05-05-1.04" profile="SAI" dsig="md5">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-02-19-1.06" profile="SAI" sid="c310bbb1-ffca-4c99-9bae-f7d4caff5941">
   <SAIplt:SAI xmlns:SAIplt="urn:marvell:SAI:yang">
     <SAIplt:typedefs>
       <SAIplt:typedef>
         <SAIplt:name>device-id-type</SAIplt:name>
         <SAIplt:type>uint32</SAIplt:type>
-        <SAIplt:description>Device ID 0..1023</SAIplt:description>
+        <SAIplt:description>Device ID 0..1</SAIplt:description>
         <SAIplt:min>0</SAIplt:min>
-        <SAIplt:max>1023</SAIplt:max>
+        <SAIplt:max>1</SAIplt:max>
       </SAIplt:typedef>
       <SAIplt:typedef>
         <SAIplt:name>port-id-type</SAIplt:name>
@@ -22,7 +22,7 @@
         <SAIplt:description>Logging Feature Options</SAIplt:description>
         <SAIplt:enum>
           <SAIplt:name>SAI_LOG_SYSLOG</SAIplt:name>
-          <SAIplt:description>SYSLOG               {Syslog service should be running to use this option}</SAIplt:description>
+          <SAIplt:description>SYSLOG  {Syslog service should be running to use this option}</SAIplt:description>
           <SAIplt:value>0</SAIplt:value>
         </SAIplt:enum>
         <SAIplt:enum>
@@ -32,7 +32,27 @@
         </SAIplt:enum>
         <SAIplt:enum>
           <SAIplt:name>SAI_LOG_FILE</SAIplt:name>
-          <SAIplt:description>FILE                       {Warning !!! Use with caution. Can cause disk full issues}</SAIplt:description>
+          <SAIplt:description>FILE  {Warning !!! Use with caution. Can cause disk full issues}</SAIplt:description>
+          <SAIplt:value>2</SAIplt:value>
+        </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>InDropCounter-type</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description>Router In Drop Reason Feature Options</SAIplt:description>
+        <SAIplt:enum>
+          <SAIplt:name>TTL_HOPLIMIT_EXCEEDED</SAIplt:name>
+          <SAIplt:description>Router In Drop Counters track TTL &amp; Hop Limit Exceeded Packets</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>ROUTE_BLACKHOLE</SAIplt:name>
+          <SAIplt:description>Router In Drop Counters track Route Black Hole Packets</SAIplt:description>
+          <SAIplt:value>1</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>IN_DROP_ANY</SAIplt:name>
+          <SAIplt:description>Router In Drop Counters track either TTL &amp; Hop Limit Exceeded or Route Black Hole Packets</SAIplt:description>
           <SAIplt:value>2</SAIplt:value>
         </SAIplt:enum>
       </SAIplt:typedef>
@@ -43,11 +63,103 @@
         <SAIplt:min>2</SAIplt:min>
         <SAIplt:max>30</SAIplt:max>
       </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>acl-feature-name-type</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description/>
+        <SAIplt:enum>
+          <SAIplt:name>port-sFlow</SAIplt:name>
+          <SAIplt:description>SFlow over Port</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>port-counters-ipv4-ipv6</SAIplt:name>
+          <SAIplt:description>Port ipv4/ipv6 counters</SAIplt:description>
+          <SAIplt:value>1</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>control-acl</SAIplt:name>
+          <SAIplt:description>ACLs for control packet handling</SAIplt:description>
+          <SAIplt:value>2</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>debug-counter-acl</SAIplt:name>
+          <SAIplt:description>ACLs for Debug Counters</SAIplt:description>
+          <SAIplt:value>3</SAIplt:value>
+        </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>ingress-acl-stage-type</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description/>
+        <SAIplt:enum>
+          <SAIplt:name>disabled</SAIplt:name>
+          <SAIplt:description>Feature not enabled</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>IPCL0</SAIplt:name>
+          <SAIplt:description>Stage IPCL0</SAIplt:description>
+          <SAIplt:value>1</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>IPCL1</SAIplt:name>
+          <SAIplt:description>Stage IPCL1</SAIplt:description>
+          <SAIplt:value>2</SAIplt:value>
+        </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>egress-acl-stage-type</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description/>
+        <SAIplt:enum>
+          <SAIplt:name>disabled</SAIplt:name>
+          <SAIplt:description>Feature not enabled</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>EPCL0</SAIplt:name>
+          <SAIplt:description>Stage EPCL0</SAIplt:description>
+          <SAIplt:value>2</SAIplt:value>
+        </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>feature-priority-type</SAIplt:name>
+        <SAIplt:type>uint32</SAIplt:type>
+        <SAIplt:description>Feature priority</SAIplt:description>
+        <SAIplt:min>2</SAIplt:min>
+        <SAIplt:max>15</SAIplt:max>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>hit-number-type</SAIplt:name>
+        <SAIplt:type>uint32</SAIplt:type>
+        <SAIplt:description>Hit/lookup number</SAIplt:description>
+        <SAIplt:min>0</SAIplt:min>
+        <SAIplt:max>3</SAIplt:max>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>asic-type</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description>ASIC Type</SAIplt:description>
+        <SAIplt:enum>
+          <SAIplt:name>ASIC_AC3X</SAIplt:name>
+          <SAIplt:description>AC3X</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>ASIC_AC5X</SAIplt:name>
+          <SAIplt:description>AC5X</SAIplt:description>
+          <SAIplt:value>1</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>ASIC_Falcon</SAIplt:name>
+          <SAIplt:description>FALCON</SAIplt:description>
+          <SAIplt:value>2</SAIplt:value>
+        </SAIplt:enum>
+      </SAIplt:typedef>
     </SAIplt:typedefs>
+    <SAIplt:ASIC_Type SAIplt:type="asic-type">ASIC_AC5X</SAIplt:ASIC_Type>
     <SAIplt:ASK-BOARD-Profile-Name SAIplt:type="string">ASK-Board-ac5x-rd-32x1G-16x2_5G-6x25G.xml</SAIplt:ASK-BOARD-Profile-Name>
-    <SAIplt:Features>
-      <SAIplt:RoCE SAIplt:type="boolean">false</SAIplt:RoCE>
-    </SAIplt:Features>
     <SAIplt:Ports>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">0</SAIplt:sai_port_id>
@@ -320,7 +432,7 @@
         <SAIplt:sdk_port_id SAIplt:type="port-id-type">53</SAIplt:sdk_port_id>
       </SAIplt:port-list>
     </SAIplt:Ports>
-    <SAIplt:Scaling>
+    <SAIplt:scalingAC5>
       <SAIplt:max_lag_members SAIplt:type="uint32">8</SAIplt:max_lag_members>
       <SAIplt:max_route_ipv4 SAIplt:type="uint32">0</SAIplt:max_route_ipv4>
       <SAIplt:max_route_ipv6 SAIplt:type="uint32">0</SAIplt:max_route_ipv6>
@@ -328,19 +440,61 @@
       <SAIplt:max_ipv4_tunnel SAIplt:type="uint32">8</SAIplt:max_ipv4_tunnel>
       <SAIplt:max_ipv6_tunnel SAIplt:type="uint32">8</SAIplt:max_ipv6_tunnel>
       <SAIplt:max_tti SAIplt:type="uint32">1024</SAIplt:max_tti>
-      <SAIplt:wred_size SAIplt:type="uint32">0</SAIplt:wred_size>
-      <SAIplt:max_nat SAIplt:type="uint32">0</SAIplt:max_nat>
-    </SAIplt:Scaling>
+    </SAIplt:scalingAC5>
     <SAIplt:Counters>
       <SAIplt:cnc-base-list>
         <SAIplt:counter-base SAIplt:type="uint32">0</SAIplt:counter-base>
       </SAIplt:cnc-base-list>
-      <SAIplt:cnc-base-list>
-        <SAIplt:counter-base SAIplt:type="uint32">2048</SAIplt:counter-base>
-      </SAIplt:cnc-base-list>
+      <SAIplt:router-in-drop-counter SAIplt:type="InDropCounter-type">IN_DROP_ANY</SAIplt:router-in-drop-counter>
     </SAIplt:Counters>
     <SAIplt:Logging>
       <SAIplt:log_dest SAIplt:type="logDest-type">SAI_LOG_SYSLOG</SAIplt:log_dest>
     </SAIplt:Logging>
+    <SAIplt:Features-using-acl>
+      <SAIplt:feature SAIplt:type="acl-feature-name-type">control-acl</SAIplt:feature>
+      <SAIplt:feature-priority SAIplt:type="feature-priority-type">3</SAIplt:feature-priority>
+      <SAIplt:Ingress>
+        <SAIplt:ingress-stage SAIplt:type="ingress-acl-stage-type">IPCL0</SAIplt:ingress-stage>
+        <SAIplt:hit-number SAIplt:type="hit-number-type">1</SAIplt:hit-number>
+      </SAIplt:Ingress>
+      <SAIplt:Egress>
+        <SAIplt:egress-stage SAIplt:type="egress-acl-stage-type">EPCL0</SAIplt:egress-stage>
+        <SAIplt:hit-number SAIplt:type="hit-number-type">0</SAIplt:hit-number>
+      </SAIplt:Egress>
+    </SAIplt:Features-using-acl>
+    <SAIplt:Features-using-acl>
+      <SAIplt:feature SAIplt:type="acl-feature-name-type">port-sFlow</SAIplt:feature>
+      <SAIplt:feature-priority SAIplt:type="feature-priority-type">4</SAIplt:feature-priority>
+      <SAIplt:Ingress>
+        <SAIplt:ingress-stage SAIplt:type="ingress-acl-stage-type">IPCL0</SAIplt:ingress-stage>
+        <SAIplt:hit-number SAIplt:type="hit-number-type">0</SAIplt:hit-number>
+      </SAIplt:Ingress>
+      <SAIplt:Egress>
+        <SAIplt:egress-stage SAIplt:type="egress-acl-stage-type">EPCL0</SAIplt:egress-stage>
+        <SAIplt:hit-number SAIplt:type="hit-number-type">0</SAIplt:hit-number>
+      </SAIplt:Egress>
+    </SAIplt:Features-using-acl>
+    <SAIplt:Features-using-acl>
+      <SAIplt:feature SAIplt:type="acl-feature-name-type">port-counters-ipv4-ipv6</SAIplt:feature>
+      <SAIplt:feature-priority SAIplt:type="feature-priority-type">5</SAIplt:feature-priority>
+      <SAIplt:Ingress>
+        <SAIplt:ingress-stage SAIplt:type="ingress-acl-stage-type">IPCL0</SAIplt:ingress-stage>
+        <SAIplt:hit-number SAIplt:type="hit-number-type">3</SAIplt:hit-number>
+      </SAIplt:Ingress>
+      <SAIplt:Egress>
+        <SAIplt:egress-stage SAIplt:type="egress-acl-stage-type">EPCL0</SAIplt:egress-stage>
+        <SAIplt:hit-number SAIplt:type="hit-number-type">0</SAIplt:hit-number>
+      </SAIplt:Egress>
+    </SAIplt:Features-using-acl>
+    <SAIplt:Features-using-acl>
+      <SAIplt:feature SAIplt:type="acl-feature-name-type">debug-counter-acl</SAIplt:feature>
+      <SAIplt:feature-priority SAIplt:type="feature-priority-type">2</SAIplt:feature-priority>
+      <SAIplt:Ingress>
+        <SAIplt:ingress-stage SAIplt:type="ingress-acl-stage-type">disabled</SAIplt:ingress-stage>
+      </SAIplt:Ingress>
+      <SAIplt:Egress>
+        <SAIplt:egress-stage SAIplt:type="egress-acl-stage-type">disabled</SAIplt:egress-stage>
+      </SAIplt:Egress>
+    </SAIplt:Features-using-acl>
   </SAIplt:SAI>
 </data>

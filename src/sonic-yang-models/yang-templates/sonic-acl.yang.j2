@@ -106,7 +106,7 @@ module sonic-acl {
 						}
 					}
 					case ip4_prefix {
-						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='ARP'])";
+						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='IPV4ANY' or .='ARP'])";
 						leaf SRC_IP {
 							type inet:ipv4-prefix;
 						}
@@ -117,7 +117,7 @@ module sonic-acl {
 					}
 
 					case ip6_prefix {
-						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY'])";
+						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY' or .='IPV6ANY'])";
 						leaf SRC_IPV6 {
 							type inet:ipv6-prefix;
 						}
@@ -148,7 +148,7 @@ module sonic-acl {
 					case l4_src_port_range {
 						leaf L4_SRC_PORT_RANGE {
 							type string {
-								pattern '([0-9]{1,4}|[0-5][0-9]{4}|[6][0-4][0-9]{3}|[6][5][0-2][0-9]{2}|[6][5][3][0-5]{2}|[6][5][3][6][0-5])-([0-9]{1,4}|[0-5][0-9]{4}|[6][0-4][0-9]{3}|[6][5][0-2][0-9]{2}|[6][5][3][0-5]{2}|[6][5][3][6][0-5])';
+								pattern '([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])-([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])';
 							}
 						}
 					}
@@ -164,7 +164,7 @@ module sonic-acl {
 					case l4_dst_port_range {
 						leaf L4_DST_PORT_RANGE {
 							type string {
-								pattern '([0-9]{1,4}|[0-5][0-9]{4}|[6][0-4][0-9]{3}|[6][5][0-2][0-9]{2}|[6][5][3][0-5]{2}|[6][5][3][6][0-5])-([0-9]{1,4}|[0-5][0-9]{4}|[6][0-4][0-9]{3}|[6][5][0-2][0-9]{2}|[6][5][3][0-5]{2}|[6][5][3][6][0-5])';
+								pattern '([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])-([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])';
 							}
 						}
 					}
@@ -172,7 +172,7 @@ module sonic-acl {
 
 				leaf ETHER_TYPE {
 					type string {
-                                            pattern "0x0[6-9a-fA-F][0-9a-fA-F]{2}|0x[1-9a-fA-F][0-9a-fA-F]{3}|153[6-9]|15[4-9][0-9]|1[6-9][0-9][0-9]|[2-9][0-9]{3}|[1-5][0-9]{4}|6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}";
+						pattern "0x0[6-9a-fA-F][0-9a-fA-F]{2}|0x[1-9a-fA-F][0-9a-fA-F]{3}|153[6-9]|15[4-9][0-9]|1[6-9][0-9][0-9]|[2-9][0-9]{3}|[1-5][0-9]{4}|6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}";
 					}
 				}
 
@@ -199,7 +199,7 @@ module sonic-acl {
 				choice icmp {
 
 					case icmp4 {
-						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='ARP'])";
+						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV4' or .='IPv4ANY' or .='IPV4ANY' or .='ARP'])";
 						leaf ICMP_TYPE {
 							type uint8 {
 								range 0..255;
@@ -214,7 +214,7 @@ module sonic-acl {
 					}
 
 					case icmp6 {
-						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY'])";
+						when "not(IP_TYPE) or boolean(IP_TYPE[.='ANY' or .='IP' or .='IPV6' or .='IPv6ANY' or .='IPV6ANY'])";
 						leaf ICMPV6_TYPE {
 							type uint8 {
 								range 0..255;

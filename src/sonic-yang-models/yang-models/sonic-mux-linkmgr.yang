@@ -84,6 +84,22 @@ module sonic-mux-linkmgr {
                 }
             }
 
+            container TIMED_OSCILLATION {
+
+                leaf oscillation_enabled {
+                    type boolean;
+                    default true;
+                    description "Flag to enable/disable timed oscillation. ";
+                }
+
+                leaf interval_sec {
+                    type uint32;
+                    default 300;
+                    units seconds;
+                    description "Interval between MUX oscillations. ";
+                }
+            }
+
             container MUXLOGGER {
 
                 leaf log_verbosity {

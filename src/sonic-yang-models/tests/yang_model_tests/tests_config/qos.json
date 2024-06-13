@@ -511,5 +511,68 @@
                 ]
             }
         }
+    },
+    "VOQ_QUEUE_CONFIG": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "switch_type": "voq"
+                }
+            }
+        },
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"Test@0",
+                    "cbs": 256,
+                    "cir": 1250000,
+                    "meter_type": "bytes",
+                    "pbs": 1024,
+                    "pir": 25000000,
+                    "type": "DWRR",
+                    "weight": 10
+                }
+                ]
+            }
+        },
+        "sonic-wred-profile:sonic-wred-profile":{
+            "sonic-wred-profile:WRED_PROFILE": {
+                "WRED_PROFILE_LIST": [
+                {
+                    "name":"Wred1",
+                    "yellow_min_threshold": 2048,
+                    "green_min_threshold": 4096,
+                    "red_min_threshold": 1024,
+                    "yellow_max_threshold": 4096,
+                    "green_max_threshold": 8192,
+                    "red_max_threshold": 2048,
+                    "ecn": "ecn_none",
+                    "wred_green_enable": true,
+                    "wred_yellow_enable": true,
+                    "wred_red_enable": true,
+                    "yellow_drop_probability": 50,
+                    "green_drop_probability": 25,
+                    "red_drop_probability": 100
+                }
+                ]
+            }
+        },
+
+        "sonic-queue:sonic-queue": {
+            "sonic-queue:QUEUE": {
+                "VOQ_QUEUE_LIST": [
+                {
+                    "hostname": "lc1",
+                    "asic_name": "asic0",
+                    "ifname": "Ethernet0",
+                    "qindex": "0",
+                    "scheduler": "Test@0",
+                    "wred_profile": "Wred1"
+                }
+                ]
+            }
+        }
     }
+
 }

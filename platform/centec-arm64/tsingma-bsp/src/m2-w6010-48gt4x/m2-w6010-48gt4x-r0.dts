@@ -1,0 +1,331 @@
+/*
+ * dts file for Centec CTC5236(TsingMa) SoC E530-24X2C Board
+ *
+ * (C) Copyright 2004-2018 Centec Networks (suzhou) Co., LTD.
+ *
+ * liuht <liuht@centecnetworks.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ */
+
+/dts-v1/;
+#include "ctc5236.dtsi"
+
+/ {
+	model = " CTC5236(TsingMa) E530 Board";
+	compatible = "ctc5236,e530-ctc5236";
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0 0x80000000 0x1 0x00000000>;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	aliases {
+		serial0 = &serial0;
+		serial1 = &serial1;
+		ethernet0 = &enet0;
+		ethernet1 = &enet1;
+
+		i2c0 = &i2c1;
+		/* 0 0x70 */
+		i2c1 = &imux1;
+		i2c2 = &imux2;
+		i2c3 = &imux3;
+		i2c4 = &imux4;
+		i2c5 = &imux5;
+		i2c6 = &imux6;
+		i2c7 = &imux7;
+		i2c8 = &imux8;
+		/* 8 0x74 */
+		i2c9 = &imux9;
+		i2c10 = &imux10;
+		i2c11 = &imux11;
+		i2c12 = &imux12;
+		i2c13 = &imux13;
+		i2c14 = &imux14;
+		i2c15 = &imux15;
+		i2c16 = &imux16;
+	};
+
+};
+
+&serial0 {
+	status = "okay";
+};
+
+&serial1 {
+	status = "okay";
+};
+
+&mdio {
+	status = "okay";
+	phy0: ethernet-phy@0 {
+		index = <0x00>;
+		reg = <0x00>;
+	};
+};
+
+&enet0 {
+	status = "okay";
+	auto-nego-mode= "sgmii-mac";
+        fixed-link {
+                speed = <1000>;
+                full-duplex;
+        };
+};
+
+&qspi {
+	status = "okay";
+		
+	qspiflash0: mx25u3235f@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0x0>;
+		spi-cpha; 
+		spi-cpol;
+		spi-max-frequency = <25000000>;
+		
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "u-boot";
+				reg = <0x0 0x300000>;
+			};
+			partition@300000 {
+				label = "uboot-env";
+				reg = <0x300000 0x10000>;
+			};
+			partition@310000 {
+				label = "onie";
+				reg = <0x310000 0x1cf0000>;
+			};
+		};
+	};
+
+	qspiflash1: mx25u3235f@1 {
+		compatible = "jedec,spi-nor";
+		reg = <0x1>;
+		spi-cpha; 
+		spi-cpol;
+		spi-max-frequency = <25000000>;
+		
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "u-boot1";
+				reg = <0x0 0x300000>;
+			};
+			partition@300000 {
+				label = "uboot1-env";
+				reg = <0x300000 0x10000>;
+			};
+			partition@310000 {
+				label = "onie1";
+				reg = <0x310000 0x1cf0000>;
+			};
+		};
+	};
+};
+
+&spi {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi_pin>;
+
+	clock0: ad9559@1 {
+		compatible = "analog,ad9559";
+		reg = <1>;
+		spi-max-frequency = <25000000>;
+	};
+};
+
+&switch {
+	status = "okay";
+};
+
+&switch1 {
+	status = "okay";
+};
+
+
+&i2c1{
+	status = "okay";
+	clock-frequency = <95000>;
+
+	pca9548@70 {
+		compatible = "nxp,pca9548";
+		reg = <0x70>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		imux1:i2c@0 { 
+			reg = <0>; 
+		};
+		imux2:i2c@1 { 
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>; 
+		};
+		imux3:i2c@2 { 
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>; 
+		};
+		imux4:i2c@3 { 
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <3>; 
+		};
+		imux5:i2c@4 { 
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <4>; 
+		};
+		imux6:i2c@5 { 
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <5>; 
+		};
+		imux7:i2c@6 { 
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <6>; 
+		};
+		imux8:i2c@7 { 
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <7>; 
+			pca9548@74 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "nxp,pca9548";
+				reg = <0x74>;
+				imux9:i2c@0 { 
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0>; 
+				};
+				imux10:i2c@1 { 
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <1>; 
+				};
+				imux11:i2c@2 { 
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <2>; 
+				};
+				imux12:i2c@3 { 
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <3>; 
+				};
+				imux13:i2c@4 { 
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <4>; 
+				};
+				imux14:i2c@5 { 
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <5>; 
+				};
+				imux15:i2c@6 { 
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <6>; 
+				};
+				imux16:i2c@7 { 
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <7>; 
+				};
+			};
+		};
+	};
+};
+
+&ehci0 {
+	status = "okay";
+};
+
+&ohci0 {
+	status = "okay";
+};
+
+&wtd0{
+	status = "okay";
+};
+
+&wtd1{
+	status = "disabled";
+};
+
+&sdhci {
+	bus-width = <8>;
+	max-frequency = <100000000>;
+	non-removable;
+	no-sd;
+	no-sdio;
+	voltage-ranges = <3300 3300>;
+	status = "okay";
+};
+
+&timer0 {
+	status = "okay";
+};
+
+&soc {
+	ctc-irq {
+		compatible = "centec,ctc-irq";
+		device_type = "ctc-irq";
+		interrupt-parent=<&porta>;
+		interrupts = < 0 IRQ_TYPE_LEVEL_LOW>,
+			< 1 IRQ_TYPE_LEVEL_LOW>,
+			<15 IRQ_TYPE_LEVEL_LOW>,
+			< 6 IRQ_TYPE_LEVEL_HIGH>,
+			< 7 IRQ_TYPE_LEVEL_HIGH>;
+	};
+};
+
+&pwm {
+	status = "disabled";
+};
+
+
+&pinctrl {
+	spi {
+		spi_pin: spi_pin {
+			status = "disabled";
+			ctc,pins = <0 0 PIN_FUNC_SPI>,
+				<0 2 PIN_FUNC_SPI>,
+				<0 3 PIN_FUNC_SPI>,
+				<0 5 PIN_FUNC_SPI>;
+		};
+	};
+
+	pwm0 {
+		pwm0_pin: pwm0_pin {
+			ctc,pins = <0 8  PIN_FUNC_PWM>,
+  				<0 9  PIN_FUNC_PWM>,
+				<0 10 PIN_FUNC_PWM>,
+				<0 11 PIN_FUNC_PWM>,
+				<0 12 PIN_FUNC_PWM>,
+				<0 13 PIN_FUNC_PWM>,
+				<0 14 PIN_FUNC_PWM>,
+				<0 15 PIN_FUNC_PWM>;
+		};
+	};
+};

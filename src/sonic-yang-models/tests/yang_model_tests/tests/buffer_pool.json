@@ -5,6 +5,9 @@
     "BUFFER_POOL_CORRECT_TYPE_EGRESS_VALUE": {
         "desc": "BUFFER_POOL_CORRECT_TYPE_EGRESS_VALUE no failure."
     },
+    "BUFFER_POOL_CORRECT_TYPE_BOTH_VALUE": {
+        "desc": "BUFFER_POOL_CORRECT_TYPE_BOTH_VALUE no failure."
+    },
     "BUFFER_POOL_WRONG_TYPE_VALUE": {
         "desc": "BUFFER_POOL_WRONG_TYPE_VALUE pattern failure.",
         "eStr": "wrong"

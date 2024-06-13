@@ -75,6 +75,9 @@ else
 ENABLE_PY2_MODULES = y
 endif
 
+# Python version for PTF image
+PTF_ENV_PY_VER = $(if $(SONIC_PTF_ENV_PY_VER),$(SONIC_PTF_ENV_PY_VER),mixed)
+
 export BUILD_NUMBER
 export BUILD_TIMESTAMP
 export SONIC_IMAGE_VERSION
@@ -89,9 +92,11 @@ export DOCKER_BASE_ARCH
 export CROSS_BUILD_ENVIRON
 export BLDENV
 export BUILD_WORKDIR
-export GZ_COMPRESS_PROGRAM
 export MIRROR_SNAPSHOT
 export SONIC_OS_VERSION
+export FILES_PATH
+export PROJECT_ROOT
+export PTF_ENV_PY_VER
 
 ###############################################################################
 ## Utility rules
@@ -244,7 +249,6 @@ ifeq ($(SONIC_ENABLE_BOOTCHART),y)
 ENABLE_BOOTCHART = y
 endif
 
-
 ifeq ($(ENABLE_ASAN),y)
 ifneq ($(CONFIGURED_ARCH),amd64)
 $(Q)echo "Disabling SWSS address sanitizer due to incompatible CPU architecture: $(CONFIGURED_ARCH)"
@@ -393,7 +397,7 @@ $(info "PASSWORD"                        : "$(PASSWORD)")
 $(info "CHANGE_DEFAULT_PASSWORD"         : "$(CHANGE_DEFAULT_PASSWORD)")
 $(info "SECURE_UPGRADE_MODE"             : "$(SECURE_UPGRADE_MODE)")
 $(info "SECURE_UPGRADE_DEV_SIGNING_KEY"  : "$(SECURE_UPGRADE_DEV_SIGNING_KEY)")
-$(info "SECURE_UPGRADE_SIGNING_CERT" : "$(SECURE_UPGRADE_SIGNING_CERT)")
+$(info "SECURE_UPGRADE_SIGNING_CERT"     : "$(SECURE_UPGRADE_SIGNING_CERT)")
 $(info "SECURE_UPGRADE_PROD_SIGNING_TOOL": "$(SECURE_UPGRADE_PROD_SIGNING_TOOL)")
 $(info "SECURE_UPGRADE_PROD_TOOL_ARGS"   : "$(SECURE_UPGRADE_PROD_TOOL_ARGS)")
 $(info "ONIE_IMAGE_PART_SIZE"            : "$(ONIE_IMAGE_PART_SIZE)")
@@ -442,7 +446,7 @@ $(info "INCLUDE_TEAMD"                   : "$(INCLUDE_TEAMD)")
 $(info "INCLUDE_ROUTER_ADVERTISER"       : "$(INCLUDE_ROUTER_ADVERTISER)")
 $(info "INCLUDE_BOOTCHART                : "$(INCLUDE_BOOTCHART)")
 $(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
-$(info "INCLUDE_FIPS"             : "$(INCLUDE_FIPS)")
+$(info "INCLUDE_FIPS"                    : "$(INCLUDE_FIPS)")
 $(info "ENABLE_TRANSLIB_WRITE"           : "$(ENABLE_TRANSLIB_WRITE)")
 $(info "ENABLE_NATIVE_WRITE"             : "$(ENABLE_NATIVE_WRITE)")
 $(info "ENABLE_DIALOUT"                  : "$(ENABLE_DIALOUT)")
@@ -456,9 +460,9 @@ ifeq ($(CONFIGURED_PLATFORM),vs)
 $(info "BUILD_MULTIASIC_KVM"             : "$(BUILD_MULTIASIC_KVM)")
 endif
 $(info "CROSS_BUILD_ENVIRON"             : "$(CROSS_BUILD_ENVIRON)")
-$(info "GZ_COMPRESS_PROGRAM"             : "$(GZ_COMPRESS_PROGRAM)")
 $(info "LEGACY_SONIC_MGMT_DOCKER"        : "$(LEGACY_SONIC_MGMT_DOCKER)")
 $(info "INCLUDE_EXTERNAL_PATCHES"        : "$(INCLUDE_EXTERNAL_PATCHES)")
+$(info "PTF_ENV_PY_VER"                  : "$(PTF_ENV_PY_VER)")
 $(info )
 else
 $(info SONiC Build System for $(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH))
@@ -547,7 +551,7 @@ define docker-image-save
     @echo "Tagging docker image $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) as $(1):$(call docker-get-tag,$(1))" $(LOG)
     docker tag $(1)-$(DOCKER_USERNAME):$(DOCKER_USERTAG) $(1):$(call docker-get-tag,$(1)) $(LOG)
     @echo "Saving docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
-        docker save $(1):$(call docker-get-tag,$(1)) | $(GZ_COMPRESS_PROGRAM) -c > $(2)
+        docker save $(1):$(call docker-get-tag,$(1)) | pigz -c > $(2)
     if [ x$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) == x"y" ]; then
         @echo "Removing docker image $(1):$(call docker-get-tag,$(1))" $(LOG)
         docker rmi -f $(1):$(call docker-get-tag,$(1)) $(LOG)
@@ -726,6 +730,7 @@ SONIC_TARGET_LIST += $(addprefix $(FILES_PATH)/, $(SONIC_MAKE_FILES))
 $(addprefix $(DEBS_PATH)/, $(SONIC_MAKE_DEBS)) : $(DEBS_PATH)/% : .platform $$(addsuffix -install,$$(addprefix $(DEBS_PATH)/,$$($$*_DEPENDS))) \
 			$$(addsuffix -install,$$(addprefix $(PYTHON_WHEELS_PATH)/,$$($$*_WHEEL_DEPENDS))) \
 			$$(addprefix $(DEBS_PATH)/,$$($$*_AFTER)) \
+			$$(addprefix $(FILES_PATH)/,$$($$*_FILES)) \
 			$(call dpkg_depend,$(DEBS_PATH)/%.dep)
 	$(HEADER)
 
@@ -1322,9 +1327,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
 		IMAGE_TYPE=$($(installer)_IMAGE_TYPE) \
 		TARGET_PATH=$(TARGET_PATH) \
 		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
-		SONIC_ENABLE_SECUREBOOT_SIGNATURE="$(SONIC_ENABLE_SECUREBOOT_SIGNATURE)" \
-		SIGNING_KEY="$(SIGNING_KEY)" \
-		SIGNING_CERT="$(SIGNING_CERT)" \
 		PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
 		DBGOPT='$(DBGOPT)' \
 		SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \
@@ -1388,6 +1390,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_API_PY3)) \
         $(if $(findstring y,$(PDDF_SUPPORT)),$(addprefix $(PYTHON_WHEELS_PATH)/,$(PDDF_PLATFORM_API_BASE_PY2))) \
         $(if $(findstring y,$(PDDF_SUPPORT)),$(addprefix $(PYTHON_WHEELS_PATH)/,$(PDDF_PLATFORM_API_BASE_PY3))) \
+        $(if $(findstring amd64,$(CONFIGURED_ARCH)),$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(RASDAEMON))) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_YANG_MODELS_PY3)) \
         $(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_CTRMGRD)) \
         $(addprefix $(FILES_PATH)/,$($(SONIC_CTRMGRD)_FILES)) \
@@ -1575,9 +1578,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 		ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
 		SONIC_ENFORCE_VERSIONS=$(SONIC_ENFORCE_VERSIONS) \
 		TRUSTED_GPG_URLS=$(TRUSTED_GPG_URLS) \
-		SONIC_ENABLE_SECUREBOOT_SIGNATURE="$(SONIC_ENABLE_SECUREBOOT_SIGNATURE)" \
-		SIGNING_KEY="$(SIGNING_KEY)" \
-		SIGNING_CERT="$(SIGNING_CERT)" \
 		PACKAGE_URL_PREFIX=$(PACKAGE_URL_PREFIX) \
 		DBGOPT='$(DBGOPT)' \
 		SONIC_VERSION_CACHE=$(SONIC_VERSION_CACHE) \

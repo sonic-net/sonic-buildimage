@@ -40,13 +40,8 @@ module sonic-system-port {
                 }
 
                 leaf ifname {
-                    type union {
-                        type leafref {
-                            path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
-                        }
-                        type string {
-                            pattern "Cpu0";
-                        }
+                    type string {
+                        length 1..128;
                     }
                 }
 

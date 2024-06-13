@@ -24,16 +24,18 @@
 
 try:
     import ctypes
+    import select
     import subprocess
     import os
     import threading
+    import time
     from sonic_py_common.logger import Logger
     from sonic_py_common.general import check_output_pipe
     from . import utils
     from .device_data import DeviceDataManager
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
     from sonic_platform_base.sonic_xcvr.fields import consts
-    from sonic_platform_base.sonic_xcvr.api.public import sff8636, sff8436
+    from sonic_platform_base.sonic_xcvr.api.public import cmis, sff8636, sff8436
 
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
@@ -127,7 +129,44 @@ NVE_MASK = PORT_TYPE_MASK & (PORT_TYPE_NVE << PORT_TYPE_OFFSET)
 CPU_MASK = PORT_TYPE_MASK & (PORT_TYPE_CPU << PORT_TYPE_OFFSET)
 
 # parameters for SFP presence
+SFP_STATUS_REMOVED = '0'
 SFP_STATUS_INSERTED = '1'
+SFP_STATUS_ERROR = '2'
+SFP_STATUS_UNKNOWN = '-1'
+
+# SFP status from PMAOS register
+# 0x1 plug in
+# 0x2 plug out
+# 0x3 plug in with error
+# 0x4 disabled, at this status SFP eeprom is not accessible, 
+#     and presence status also will be not present, 
+#     so treate it as plug out.
+SDK_SFP_STATE_IN  = 0x1
+SDK_SFP_STATE_OUT = 0x2
+SDK_SFP_STATE_ERR = 0x3
+SDK_SFP_STATE_DIS = 0x4
+SDK_SFP_STATE_UNKNOWN = 0x5
+
+SDK_STATUS_TO_SONIC_STATUS = {
+    SDK_SFP_STATE_IN:  SFP_STATUS_INSERTED,
+    SDK_SFP_STATE_OUT: SFP_STATUS_REMOVED,
+    SDK_SFP_STATE_ERR: SFP_STATUS_ERROR,
+    SDK_SFP_STATE_DIS: SFP_STATUS_REMOVED,
+    SDK_SFP_STATE_UNKNOWN: SFP_STATUS_UNKNOWN
+}
+
+# SDK error definitions begin
+
+# SFP errors that will block eeprom accessing
+SDK_SFP_BLOCKING_ERRORS = [
+    0x2, # SFP.SFP_ERROR_BIT_I2C_STUCK,
+    0x3, # SFP.SFP_ERROR_BIT_BAD_EEPROM,
+    0x5, # SFP.SFP_ERROR_BIT_UNSUPPORTED_CABLE,
+    0x6, # SFP.SFP_ERROR_BIT_HIGH_TEMP,
+    0x7, # SFP.SFP_ERROR_BIT_BAD_CABLE
+]
+
+# SDK error definitions end
 
 # SFP constants
 SFP_PAGE_SIZE = 256          # page size of page0h
@@ -161,6 +200,60 @@ SFP_EEPROM_NOT_AVAILABLE = 'Input/output error'
 SFP_DEFAULT_TEMP_WARNNING_THRESHOLD = 70.0
 SFP_DEFAULT_TEMP_CRITICAL_THRESHOLD = 80.0
 SFP_TEMPERATURE_SCALE = 8.0
+
+# Module host management definitions begin
+SFP_SW_CONTROL = 1
+SFP_FW_CONTROL = 0
+
+CMIS_MAX_POWER_OFFSET = 201
+
+SFF_POWER_CLASS_MASK = 0xE3
+SFF_POWER_CLASS_MAPPING = {
+    0: 1.5,   # 1.5W
+    64: 2,    # 2.0W
+    128: 2.5, # 2.5W
+    192: 3.5, # 3.5W
+    193: 4,   # 4.0W
+    194: 4.5, # 4.5W
+    195: 5    # 5.0W
+}
+SFF_POWER_CLASS_OFFSET = 129
+SFF_POWER_CLASS_8_INDICATOR = 32
+SFF_POWER_CLASS_8_OFFSET = 107
+
+CMIS_MCI_EEPROM_OFFSET = 2
+CMIS_MCI_MASK = 0b00001100
+
+STATE_DOWN = 'Down'                             # Initial state
+STATE_INIT = 'Initializing'                     # Module starts initializing, check module present, also power on the module if need
+STATE_RESETTING = 'Resetting'                   # Module is resetting the firmware
+STATE_POWERED_ON = 'Power On'                   # Module is powered on, module firmware has been loaded, check module power is in good state
+STATE_SW_CONTROL = 'Software Control'           # Module is under software control
+STATE_FW_CONTROL = 'Firmware Control'           # Module is under firmware control
+STATE_POWER_BAD = 'Power Bad'                   # Module power_good returns 0
+STATE_POWER_LIMIT_ERROR = 'Exceed Power Limit'  # Module power exceeds cage power limit
+STATE_NOT_PRESENT = 'Not Present'               # Module is not present
+
+EVENT_START = 'Start'
+EVENT_NOT_PRESENT = 'Not Present'
+EVENT_RESET = 'Reset'
+EVENT_POWER_ON = 'Power On'
+EVENT_RESET_DONE = 'Reset Done'
+EVENT_POWER_BAD = 'Power Bad'
+EVENT_SW_CONTROL = 'Software Control'
+EVENT_FW_CONTROL = 'Firmware Control'
+EVENT_POWER_LIMIT_EXCEED = 'Power Limit Exceed'
+EVENT_POWER_GOOD = 'Power Good'
+EVENT_PRESENT = 'Present'
+
+ACTION_ON_START = 'On Start'
+ACTION_ON_RESET = 'On Reset'
+ACTION_ON_POWERED = 'On Powered'
+ACTION_ON_SW_CONTROL = 'On Software Control'
+ACTION_ON_FW_CONTROL = 'On Firmware Control'
+ACTION_ON_POWER_LIMIT_ERROR = 'On Power Limit Error'
+ACTION_ON_CANCEL_WAIT = 'On Cancel Wait'
+# Module host management definitions end
 
 # SFP EEPROM limited bytes
 limited_eeprom = {
@@ -223,6 +316,38 @@ class NvidiaSFPCommon(SfpOptoeBase):
     sfp_index_to_logical_port_dict = {}
     sfp_index_to_logical_lock = threading.Lock()
     
+    SFP_MLNX_ERROR_DESCRIPTION_LONGRANGE_NON_MLNX_CABLE = 'Long range for non-Mellanox cable or module'
+    SFP_MLNX_ERROR_DESCRIPTION_ENFORCE_PART_NUMBER_LIST = 'Enforce part number list'
+    SFP_MLNX_ERROR_DESCRIPTION_PMD_TYPE_NOT_ENABLED = 'PMD type not enabled'
+    SFP_MLNX_ERROR_DESCRIPTION_PCIE_POWER_SLOT_EXCEEDED = 'PCIE system power slot exceeded'
+    SFP_MLNX_ERROR_DESCRIPTION_RESERVED = 'Reserved'
+
+    SDK_ERRORS_TO_DESCRIPTION = {
+        0x1: SFP_MLNX_ERROR_DESCRIPTION_LONGRANGE_NON_MLNX_CABLE,
+        0x4: SFP_MLNX_ERROR_DESCRIPTION_ENFORCE_PART_NUMBER_LIST,
+        0x8: SFP_MLNX_ERROR_DESCRIPTION_PMD_TYPE_NOT_ENABLED,
+        0xc: SFP_MLNX_ERROR_DESCRIPTION_PCIE_POWER_SLOT_EXCEEDED
+    }
+
+    SFP_MLNX_ERROR_BIT_LONGRANGE_NON_MLNX_CABLE = 0x00010000
+    SFP_MLNX_ERROR_BIT_ENFORCE_PART_NUMBER_LIST = 0x00020000
+    SFP_MLNX_ERROR_BIT_PMD_TYPE_NOT_ENABLED = 0x00040000
+    SFP_MLNX_ERROR_BIT_PCIE_POWER_SLOT_EXCEEDED = 0x00080000
+    SFP_MLNX_ERROR_BIT_RESERVED = 0x80000000
+
+    SDK_ERRORS_TO_ERROR_BITS = {
+        0x0: SfpOptoeBase.SFP_ERROR_BIT_POWER_BUDGET_EXCEEDED,
+        0x1: SFP_MLNX_ERROR_BIT_LONGRANGE_NON_MLNX_CABLE,
+        0x2: SfpOptoeBase.SFP_ERROR_BIT_I2C_STUCK,
+        0x3: SfpOptoeBase.SFP_ERROR_BIT_BAD_EEPROM,
+        0x4: SFP_MLNX_ERROR_BIT_ENFORCE_PART_NUMBER_LIST,
+        0x5: SfpOptoeBase.SFP_ERROR_BIT_UNSUPPORTED_CABLE,
+        0x6: SfpOptoeBase.SFP_ERROR_BIT_HIGH_TEMP,
+        0x7: SfpOptoeBase.SFP_ERROR_BIT_BAD_CABLE,
+        0x8: SFP_MLNX_ERROR_BIT_PMD_TYPE_NOT_ENABLED,
+        0xc: SFP_MLNX_ERROR_BIT_PCIE_POWER_SLOT_EXCEEDED
+    }
+
     def __init__(self, sfp_index):
         super(NvidiaSFPCommon, self).__init__()
         self.index = sfp_index + 1
@@ -251,46 +376,72 @@ class NvidiaSFPCommon(SfpOptoeBase):
         error_type = utils.read_int_from_file(status_error_file_path)
 
         return oper_state, error_type
+
+    def get_fd(self, fd_type):
+        return open(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{fd_type}')
+
+    def get_fd_for_polling_legacy(self):
+        """Get polling fds for when module host management is disabled
+
+        Returns:
+            object: file descriptor of present
+        """
+        return self.get_fd('present')
+
+    def get_module_status(self):
+        """Get value of sysfs status. It could return:
+            SXD_PMPE_MODULE_STATUS_PLUGGED_ENABLED_E = 0x1,
+            SXD_PMPE_MODULE_STATUS_UNPLUGGED_E = 0x2,
+            SXD_PMPE_MODULE_STATUS_MODULE_PLUGGED_ERROR_E = 0x3,
+            SXD_PMPE_MODULE_STATUS_PLUGGED_DISABLED_E = 0x4,
+            SXD_PMPE_MODULE_STATUS_UNKNOWN_E = 0x5,
+
+        Returns:
+            str: sonic status of the module
+        """
+        status = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/status')
+        return SDK_STATUS_TO_SONIC_STATUS[status]
+
+    def get_error_info_from_sdk_error_type(self):
+        """Translate SDK error type to SONiC error state and error description. Only calls
+        when sysfs "present" returns "2".
+
+        Returns:
+            tuple: (error state, error description)
+        """
+        error_type = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/statuserror', default=-1)
+        sfp_state_bits = NvidiaSFPCommon.SDK_ERRORS_TO_ERROR_BITS.get(error_type)
+        if sfp_state_bits is None:
+            logger.log_error(f"Unrecognized error {error_type} detected on SFP {self.sdk_index}")
+            return SFP_STATUS_ERROR, "Unknown error ({})".format(error_type)
+
+        if error_type in SDK_SFP_BLOCKING_ERRORS:
+            # In SFP at error status case, need to overwrite the sfp_state with the exact error code
+            sfp_state_bits |= SfpOptoeBase.SFP_ERROR_BIT_BLOCKING
+
+        # An error should be always set along with 'INSERTED'
+        sfp_state_bits |= SfpOptoeBase.SFP_STATUS_BIT_INSERTED
+
+        # For vendor specific errors, the description should be returned as well
+        error_description = NvidiaSFPCommon.SDK_ERRORS_TO_DESCRIPTION.get(error_type)
+        sfp_state = str(sfp_state_bits)
+        return sfp_state, error_description
     
-    @classmethod
-    def get_sfp_index_to_logical_port(cls, force=False):
-        if not cls.sfp_index_to_logical_port_dict or force:
-            config_db = utils.DbUtils.get_db_instance('CONFIG_DB')
-            port_data = config_db.get_table('PORT')
-            for key, data in port_data.items():
-                if data['index'] not in cls.sfp_index_to_logical_port_dict:
-                    cls.sfp_index_to_logical_port_dict[int(data['index']) - 1] = key
-    
-    @classmethod
-    def get_logical_port_by_sfp_index(cls, sfp_index):
-        with cls.sfp_index_to_logical_lock:
-            cls.get_sfp_index_to_logical_port()
-            logical_port_name = cls.sfp_index_to_logical_port_dict.get(sfp_index)
-            if not logical_port_name:
-                cls.get_sfp_index_to_logical_port(force=True)
-            else:
-                config_db = utils.DbUtils.get_db_instance('CONFIG_DB')
-                current_index = int(config_db.get('CONFIG_DB', f'PORT|{logical_port_name}', 'index'))
-                if current_index != sfp_index:
-                    cls.get_sfp_index_to_logical_port(force=True)
-                    logical_port_name = cls.sfp_index_to_logical_port_dict.get(sfp_index)
-            return logical_port_name
-  
 
 class SFP(NvidiaSFPCommon):
     """Platform-specific SFP class"""
     shared_sdk_handle = None
-    SFP_MLNX_ERROR_DESCRIPTION_LONGRANGE_NON_MLNX_CABLE = 'Long range for non-Mellanox cable or module'
-    SFP_MLNX_ERROR_DESCRIPTION_ENFORCE_PART_NUMBER_LIST = 'Enforce part number list'
-    SFP_MLNX_ERROR_DESCRIPTION_PMD_TYPE_NOT_ENABLED = 'PMD type not enabled'
-    SFP_MLNX_ERROR_DESCRIPTION_PCIE_POWER_SLOT_EXCEEDED = 'PCIE system power slot exceeded'
-    SFP_MLNX_ERROR_DESCRIPTION_RESERVED = 'Reserved'
-
-    SFP_MLNX_ERROR_BIT_LONGRANGE_NON_MLNX_CABLE = 0x00010000
-    SFP_MLNX_ERROR_BIT_ENFORCE_PART_NUMBER_LIST = 0x00020000
-    SFP_MLNX_ERROR_BIT_PMD_TYPE_NOT_ENABLED = 0x00040000
-    SFP_MLNX_ERROR_BIT_PCIE_POWER_SLOT_EXCEEDED = 0x00080000
-    SFP_MLNX_ERROR_BIT_RESERVED = 0x80000000
+    
+    # Class level state machine object, only applicable for module host management
+    sm = None
+    
+    # Class level wait SFP ready task, the task waits for module to load its firmware after resetting,
+    # only applicable for module host management
+    wait_ready_task = None
+    
+    # Class level action table which stores the mapping from action name to action function,
+    # only applicable for module host management
+    action_table = None
 
     def __init__(self, sfp_index, sfp_type=None, slot_id=0, linecard_port_count=0, lc_name=None):
         super(SFP, self).__init__(sfp_index)
@@ -311,6 +462,11 @@ class SFP(NvidiaSFPCommon):
 
         self.slot_id = slot_id
         self._sfp_type_str = None
+        # SFP state, only applicable for module host management
+        self.state = STATE_DOWN
+
+    def __str__(self):
+        return f'SFP {self.sdk_index}'
 
     def reinit(self):
         """
@@ -318,7 +474,7 @@ class SFP(NvidiaSFPCommon):
         :return:
         """
         self._sfp_type_str = None
-        self.refresh_xcvr_api()
+        self._xcvr_api = None
 
     def get_presence(self):
         """
@@ -327,9 +483,8 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if device is present, False if not
         """
-        try:
-            self.is_sw_control()
-        except:
+        presence_sysfs = f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_present' if self.is_sw_control() else f'/sys/module/sx_core/asic0/module{self.sdk_index}/present'
+        if utils.read_int_from_file(presence_sysfs) != 1:
             return False
         eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
         return eeprom_raw is not None
@@ -355,23 +510,40 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bytearray: the content of EEPROM
         """
-        _, page, page_offset = self._get_page_and_page_offset(offset)
-        if not page:
-            return None
+        result = bytearray(0)
+        while num_bytes > 0:
+            _, page, page_offset = self._get_page_and_page_offset(offset)
+            if not page:
+                return None
 
-        try:
-            with open(page, mode='rb', buffering=0) as f:
-                f.seek(page_offset)
-                content = f.read(num_bytes)
-                if ctypes.get_errno() != 0:
-                    raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
-        except (OSError, IOError) as e:
-            if log_on_error:
-                logger.log_warning(f'Failed to read sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, \
-                    size={num_bytes}, offset={offset}, error = {e}')
-            return None
+            try:
+                with open(page, mode='rb', buffering=0) as f:
+                    f.seek(page_offset)
+                    content = f.read(num_bytes)
+                    if not result:
+                        result = content
+                    else:
+                        result += content
+                    read_length = len(content)
+                    num_bytes -= read_length
+                    if num_bytes > 0:
+                        page_size = f.seek(0, os.SEEK_END)
+                        if page_offset + read_length == page_size:
+                            offset += read_length
+                        else:
+                            # Indicate read finished
+                            num_bytes = 0
+                    if ctypes.get_errno() != 0:
+                        raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
+                    logger.log_debug(f'read EEPROM sfp={self.sdk_index}, page={page}, page_offset={page_offset}, '\
+                        f'size={read_length}, data={content}')
+            except (OSError, IOError) as e:
+                if log_on_error:
+                    logger.log_warning(f'Failed to read sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, '\
+                        f'size={num_bytes}, offset={offset}, error = {e}')
+                return None
 
-        return bytearray(content)
+        return bytearray(result)
 
     # write eeprom specfic bytes beginning from offset with size as num_bytes
     def write_eeprom(self, offset, num_bytes, write_buffer):
@@ -387,27 +559,37 @@ class SFP(NvidiaSFPCommon):
             logger.log_error("Error mismatch between buffer length and number of bytes to be written")
             return False
 
-        page_num, page, page_offset = self._get_page_and_page_offset(offset)
-        if not page:
-            return False
+        while num_bytes > 0:
+            page_num, page, page_offset = self._get_page_and_page_offset(offset)
+            if not page:
+                return False
 
-        try:
-            if self._is_write_protected(page_num, page_offset, num_bytes):
-                # write limited eeprom is not supported
-                raise IOError('write limited bytes')
-
-            with open(page, mode='r+b', buffering=0) as f:
-                f.seek(page_offset)
-                ret = f.write(write_buffer[0:num_bytes])
-                if ret != num_bytes:
-                    raise IOError(f'write return code = {ret}')
-                if ctypes.get_errno() != 0:
-                    raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
-        except (OSError, IOError) as e:
-            data = ''.join('{:02x}'.format(x) for x in write_buffer)
-            logger.log_error(f'Failed to write EEPROM data sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, size={num_bytes}, \
-                offset={offset}, data = {data}, error = {e}')
-            return False
+            try:
+                if self._is_write_protected(page_num, page_offset, num_bytes):
+                    # write limited eeprom is not supported
+                    raise IOError('write limited bytes')
+                with open(page, mode='r+b', buffering=0) as f:
+                    f.seek(page_offset)
+                    ret = f.write(write_buffer[0:num_bytes])
+                    written_buffer = write_buffer[0:ret]
+                    if ret != num_bytes:
+                        page_size = f.seek(0, os.SEEK_END)
+                        if page_offset + ret == page_size:
+                            # Move to next page
+                            write_buffer = write_buffer[ret:num_bytes]
+                            offset += ret
+                        else:
+                            raise IOError(f'write return code = {ret}')
+                    num_bytes -= ret
+                    if ctypes.get_errno() != 0:
+                        raise IOError(f'errno = {os.strerror(ctypes.get_errno())}')
+                    logger.log_debug(f'write EEPROM sfp={self.sdk_index}, page={page}, page_offset={page_offset}, '\
+                        f'size={ret}, left={num_bytes}, data={written_buffer}')
+            except (OSError, IOError) as e:
+                data = ''.join('{:02x}'.format(x) for x in write_buffer)
+                logger.log_error(f'Failed to write EEPROM data sfp={self.sdk_index} EEPROM page={page}, page_offset={page_offset}, size={num_bytes}, '\
+                    f'offset={offset}, data = {data}, error = {e}')
+                return False
         return True
 
     @classmethod
@@ -439,7 +621,7 @@ class SFP(NvidiaSFPCommon):
             if self.is_sw_control():
                 api = self.get_xcvr_api()
                 return api.get_lpmode() if api else False
-            elif DeviceDataManager.is_independent_mode():
+            elif DeviceDataManager.is_module_host_management_mode():
                 file_path = SFP_SDK_MODULE_SYSFS_ROOT_TEMPLATE.format(self.sdk_index) + SFP_SYSFS_POWER_MODE
                 power_mode = utils.read_int_from_file(file_path)
                 return power_mode == POWER_MODE_LOW
@@ -646,7 +828,7 @@ class SFP(NvidiaSFPCommon):
                 # If at some point get_lpmode=desired_lpmode, it will return true.
                 # If after timeout ends, lpmode will not be desired_lpmode, it will return false.
                 return utils.wait_until(check_lpmode, 2, 1, api=api, lpmode=lpmode)
-            elif DeviceDataManager.is_independent_mode():
+            elif DeviceDataManager.is_module_host_management_mode():
                 # FW control under CMIS host management mode. 
                 # Currently, we don't support set LPM under this mode.
                 # Just return False to indicate set Fail
@@ -976,24 +1158,535 @@ class SFP(NvidiaSFPCommon):
         return self._xcvr_api
 
     def is_sw_control(self):
-        if not DeviceDataManager.is_independent_mode():
+        if not DeviceDataManager.is_module_host_management_mode():
             return False
-        
-        db = utils.DbUtils.get_db_instance('STATE_DB')
-        logical_port = NvidiaSFPCommon.get_logical_port_by_sfp_index(self.sdk_index)
-        if not logical_port:
-            raise Exception(f'Module {self.sdk_index} is not present or under initialization')
-        
-        initialized = db.exists('STATE_DB', f'TRANSCEIVER_STATUS|{logical_port}')
-        if not initialized:
-            raise Exception(f'Module {self.sdk_index} is not present or under initialization')
-        
         try:
             return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/control', 
                                             raise_exception=True, log_func=None) == 1
         except:
             # just in case control file does not exist
-            raise Exception(f'Module {self.sdk_index} is under initialization')
+            raise Exception(f'control sysfs for SFP {self.sdk_index} does not exist')
+    
+    def get_hw_present(self):
+        """Get hardware present status, only applicable on host management mode
+
+        Returns:
+            bool: True if module is in the cage
+        """
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_present') == 1
+    
+    def get_power_on(self):
+        """Get power on status, only applicable on host management mode
+
+        Returns:
+            bool: True if the module is powered on
+        """
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/power_on') == 1
+    
+    def set_power(self, on):
+        """Control the power of this module, only applicable on host management mode
+
+        Args:
+            on (bool): True if on
+        """
+        value = 1 if on else 0
+        utils.write_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/power_on', value)
+    
+    def get_reset_state(self):
+        """Get reset state of this module, only applicable on host management mode
+
+        Returns:
+            bool: True if module is not in reset status
+        """
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_reset') == 1
+    
+    def set_hw_reset(self, value):
+        """Set the module reset status
+
+        Args:
+            value (int): 1 for reset, 0 for leaving reset
+        """
+        utils.write_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_reset', value)
+    
+    def get_power_good(self):
+        """Get power good status of this module, only applicable on host management mode
+
+        Returns:
+            bool: True if the power is in good status
+        """
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/power_good') == 1
+    
+    def get_control_type(self):
+        """Get control type of this module, only applicable on host management mode
+
+        Returns:
+            int: 1 - software control, 0 - firmware control
+        """
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/control')
+    
+    def set_control_type(self, control_type):
+        """Set control type for the module
+
+        Args:
+            control_type (int): 0 for firmware control, currently only 0 is allowed
+        """
+        utils.write_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/control', control_type)
+    
+    def determine_control_type(self):
+        """Determine control type according to module type
+
+        Returns:
+            enum: software control or firmware control
+        """
+        api = self.get_xcvr_api()
+        if not api:
+            logger.log_error(f'Failed to get api object for SFP {self.sdk_index}, probably module EEPROM is not ready')
+            return SFP_FW_CONTROL
+        
+        if not self.is_supported_for_software_control(api):
+            return SFP_FW_CONTROL
+        else:
+            return SFP_SW_CONTROL
+        
+    def is_cmis_api(self, xcvr_api):
+        """Check if the api type is CMIS
+
+        Args:
+            xcvr_api (object): xcvr api object
+
+        Returns:
+            bool: True if the api is of type CMIS
+        """
+        return isinstance(xcvr_api, cmis.CmisApi)
+
+    def is_sff_api(self, xcvr_api):
+        """Check if the api type is SFF
+
+        Args:
+            xcvr_api (object): xcvr api object
+
+        Returns:
+            bool: True if the api is of type SFF
+        """
+        return isinstance(xcvr_api, sff8636.Sff8636Api) or isinstance(xcvr_api, sff8436.Sff8436Api)
+
+    def is_supported_for_software_control(self, xcvr_api):
+        """Check if the api object supports software control
+
+        Args:
+            xcvr_api (object): xcvr api object
+
+        Returns:
+            bool: True if the api object supports software control
+        """
+        return self.is_cmis_api(xcvr_api) and not xcvr_api.is_flat_memory()
+
+    def check_power_capability(self):
+        """Check module max power with cage power limit
+
+        Returns:
+            bool: True if max power does not exceed cage power limit
+        """
+        max_power = self.get_module_max_power()
+        if max_power < 0:
+            return False
+        
+        power_limit = self.get_power_limit()
+        logger.log_info(f'SFP {self.sdk_index}: max_power={max_power}, power_limit={power_limit}')
+        if max_power <= power_limit:
+            return True
+        else:
+            logger.log_error(f'SFP {self.sdk_index} exceed power limit: max_power={max_power}, power_limit={power_limit}')
+            return False
+            
+    def get_power_limit(self):
+        """Get power limit of this module
+
+        Returns:
+            int: Power limit in unit of 0.25W
+        """
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/power_limit')
+        
+    def get_module_max_power(self):
+        """Get module max power from EEPROM
+
+        Returns:
+            int: max power in terms of 0.25W. Return POWER_CLASS_INVALID if EEPROM data is incorrect.
+        """
+        xcvr_api = self.get_xcvr_api()
+        if self.is_cmis_api(xcvr_api):
+            powercap_raw = self.read_eeprom(CMIS_MAX_POWER_OFFSET, 1)
+            return powercap_raw[0]
+        elif self.is_sff_api(xcvr_api):
+            power_class_raw = self.read_eeprom(SFF_POWER_CLASS_OFFSET, 1)
+            power_class_bit = power_class_raw[0] & SFF_POWER_CLASS_MASK
+            if power_class_bit in SFF_POWER_CLASS_MAPPING:
+                powercap = SFF_POWER_CLASS_MAPPING[power_class_bit]
+            elif power_class_bit == SFF_POWER_CLASS_8_INDICATOR:
+                # According to standard:
+                # Byte 128:
+                #    if bit 5 is 1, "Power Class 8 implemented (Max power declared in byte 107)"
+                # Byte 107: 
+                #    "Maximum power consumption of module. Unsigned integer with LSB = 0.1 W."
+                power_class_8_byte = self.read_eeprom(SFF_POWER_CLASS_8_OFFSET, 1)
+                powercap = power_class_8_byte[0] * 0.1
+            else:
+                logger.log_error(f'SFP {self.sdk_index} got invalid value for power class field: {power_class_bit}')
+                return -1
+
+            # Multiplying the sysfs value (0.25 Watt units) by 4 aligns it with the EEPROM max power value (1 Watt units), 
+            # ensuring both are in the same unit for a meaningful comparison
+            return powercap * 4 #
+        else:
+            # Should never hit, just in case
+            logger.log_error(f'SFP {self.sdk_index} with api type {xcvr_api} does not support getting max power')
+            return -1
+ 
+    def update_i2c_frequency(self):
+        """Update I2C frequency for the module.
+        """
+        if self.get_frequency_support():
+            api = self.get_xcvr_api()
+            if self.is_cmis_api(api):
+                # for CMIS modules, read the module maximum supported clock of Management Comm Interface (MCI) from module EEPROM.
+                # from byte 2 bits 3-2:
+                # 00b means module supports up to 400KHz
+                # 01b means module supports up to 1MHz
+                logger.log_debug(f"Reading mci max frequency for SFP {self.sdk_index}")
+                read_mci = self.read_eeprom(CMIS_MCI_EEPROM_OFFSET, 1)
+                logger.log_debug(f"Read mci max frequency {read_mci[0]} for SFP {self.sdk_index}")
+                frequency = (read_mci[0] & CMIS_MCI_MASK) >> 2
+            elif self.is_sff_api(api):
+                # for SFF modules, frequency is always 400KHz
+                frequency = 0
+            else:
+                # Should never hit, just in case
+                logger.log_error(f'SFP {self.sdk_index} with api type {api} does not support updating frequency but frequency_support sysfs return 1')
+                return
+            
+            logger.log_info(f"Read mci max frequency bits {frequency} for SFP {self.sdk_index}")
+            self.set_frequency(frequency)
+    
+    def get_frequency_support(self):
+        """Get frequency support for this module
+
+        Returns:
+            bool: True if supported
+        """
+        return utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/frequency_support') == 1
+    
+    def set_frequency(self, freqeuncy):
+        """Set module frequency.
+
+        Args:
+            freqeuncy (int): 0 - up to 400KHz, 1 - up to 1MHz
+        """
+        utils.write_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/frequency', freqeuncy)
+    
+    def disable_tx_for_sff_optics(self):
+        """Disable TX for SFF optics
+        """
+        api = self.get_xcvr_api()
+        if self.is_sff_api(api) and api.get_tx_disable_support():
+            logger.log_info(f'Disabling tx for SFP {self.sdk_index}')
+            api.tx_disable(True)
+    
+    @classmethod
+    def get_state_machine(cls):
+        """Get state machine object, create if not exists
+
+        Returns:
+            object: state machine object
+        """
+        if not cls.sm:
+            from .state_machine import StateMachine
+            sm = StateMachine()
+            sm.add_state(STATE_DOWN).add_transition(EVENT_START, STATE_INIT)
+            sm.add_state(STATE_INIT).set_entry_action(ACTION_ON_START) \
+              .add_transition(EVENT_NOT_PRESENT, STATE_NOT_PRESENT) \
+              .add_transition(EVENT_RESET, STATE_RESETTING) \
+              .add_transition(EVENT_POWER_ON, STATE_POWERED_ON) \
+              .add_transition(EVENT_FW_CONTROL, STATE_FW_CONTROL)  # for warm reboot, cable might be in firmware control at startup
+            sm.add_state(STATE_RESETTING).set_entry_action(ACTION_ON_RESET) \
+              .add_transition(EVENT_RESET_DONE, STATE_POWERED_ON) \
+              .add_transition(EVENT_NOT_PRESENT, STATE_NOT_PRESENT, ACTION_ON_CANCEL_WAIT)
+            sm.add_state(STATE_POWERED_ON).set_entry_action(ACTION_ON_POWERED) \
+              .add_transition(EVENT_POWER_BAD, STATE_POWER_BAD) \
+              .add_transition(EVENT_SW_CONTROL, STATE_SW_CONTROL) \
+              .add_transition(EVENT_FW_CONTROL, STATE_FW_CONTROL)
+            sm.add_state(STATE_SW_CONTROL).set_entry_action(ACTION_ON_SW_CONTROL) \
+              .add_transition(EVENT_NOT_PRESENT, STATE_NOT_PRESENT) \
+              .add_transition(EVENT_POWER_LIMIT_EXCEED, STATE_POWER_LIMIT_ERROR) \
+              .add_transition(EVENT_POWER_BAD, STATE_POWER_BAD)
+            sm.add_state(STATE_FW_CONTROL).set_entry_action(ACTION_ON_FW_CONTROL) \
+              .add_transition(EVENT_NOT_PRESENT, STATE_NOT_PRESENT)
+            sm.add_state(STATE_POWER_BAD).add_transition(EVENT_POWER_GOOD, STATE_POWERED_ON) \
+              .add_transition(EVENT_NOT_PRESENT, STATE_NOT_PRESENT)
+            sm.add_state(STATE_NOT_PRESENT).add_transition(EVENT_PRESENT, STATE_INIT)
+            sm.add_state(STATE_POWER_LIMIT_ERROR).set_entry_action(ACTION_ON_POWER_LIMIT_ERROR) \
+              .add_transition(EVENT_POWER_GOOD, STATE_POWERED_ON) \
+              .add_transition(EVENT_NOT_PRESENT, STATE_NOT_PRESENT)
+              
+            cls.action_table = {}
+            cls.action_table[ACTION_ON_START] = cls.action_on_start
+            cls.action_table[ACTION_ON_RESET] = cls.action_on_reset
+            cls.action_table[ACTION_ON_POWERED] = cls.action_on_powered
+            cls.action_table[ACTION_ON_SW_CONTROL] = cls.action_on_sw_control
+            cls.action_table[ACTION_ON_FW_CONTROL] = cls.action_on_fw_control
+            cls.action_table[ACTION_ON_CANCEL_WAIT] = cls.action_on_cancel_wait
+            cls.action_table[ACTION_ON_POWER_LIMIT_ERROR] = cls.action_on_power_limit_error
+            
+            cls.sm = sm
+            
+        return cls.sm
+    
+    @classmethod
+    def action_on_start(cls, sfp):
+        if sfp.get_control_type() == SFP_FW_CONTROL:
+            logger.log_info(f'SFP {sfp.sdk_index} is already FW control, probably in warm reboot')
+            sfp.on_event(EVENT_FW_CONTROL)
+            return
+        
+        if not sfp.get_hw_present():
+            logger.log_info(f'SFP {sfp.sdk_index} is not present')
+            sfp.on_event(EVENT_NOT_PRESENT)
+            return
+        
+        if not sfp.get_power_on():
+            logger.log_info(f'SFP {sfp.sdk_index} is not powered on')
+            sfp.set_power(True)
+            sfp.set_hw_reset(1)
+            sfp.on_event(EVENT_RESET)
+        else:
+            if not sfp.get_reset_state():
+                logger.log_info(f'SFP {sfp.sdk_index} is in reset state')
+                sfp.set_hw_reset(1)
+                sfp.on_event(EVENT_RESET)
+            else:
+                sfp.on_event(EVENT_POWER_ON)
+            
+    @classmethod
+    def action_on_reset(cls, sfp):
+        logger.log_info(f'SFP {sfp.sdk_index} is scheduled to wait for resetting done')
+        cls.get_wait_ready_task().schedule_wait(sfp.sdk_index)
+        
+    @classmethod
+    def action_on_powered(cls, sfp):
+        if not sfp.get_power_good():
+            logger.log_error(f'SFP {sfp.sdk_index} is not in power good state')
+            sfp.on_event(EVENT_POWER_BAD)
+            return
+        
+        control_type = sfp.determine_control_type()
+        if control_type == SFP_SW_CONTROL:
+            sfp.on_event(EVENT_SW_CONTROL)
+        else:
+            sfp.on_event(EVENT_FW_CONTROL)
+            
+    @classmethod
+    def action_on_sw_control(cls, sfp):
+        if not sfp.check_power_capability():
+            sfp.on_event(EVENT_POWER_LIMIT_EXCEED)
+            return
+        
+        sfp.update_i2c_frequency()
+        sfp.disable_tx_for_sff_optics()
+        logger.log_info(f'SFP {sfp.sdk_index} is set to software control')
+        
+    @classmethod
+    def action_on_fw_control(cls, sfp):
+        if sfp.get_control_type() != SFP_FW_CONTROL:
+            logger.log_info(f'SFP {sfp.sdk_index} is set to firmware control')
+            sfp.set_control_type(SFP_FW_CONTROL)
+        
+    @classmethod
+    def action_on_cancel_wait(cls, sfp):
+        cls.get_wait_ready_task().cancel_wait(sfp.sdk_index)
+        
+    @classmethod
+    def action_on_power_limit_error(cls, sfp):
+        logger.log_info(f'SFP {sfp.sdk_index} is powered off due to exceeding power limit')
+        sfp.set_power(False)
+        sfp.set_hw_reset(0)
+    
+    @classmethod
+    def get_wait_ready_task(cls):
+        """Get SFP wait ready task. Create if not exists.
+
+        Returns:
+            object: an instance of WaitSfpReadyTask
+        """
+        if not cls.wait_ready_task:
+            from .wait_sfp_ready_task import WaitSfpReadyTask
+            cls.wait_ready_task = WaitSfpReadyTask()
+        return cls.wait_ready_task
+    
+    def get_state(self):
+        """Return the current state.
+
+        Returns:
+            str: current state
+        """
+        return self.state
+    
+    def change_state(self, new_state):
+        """Change from old state to new state
+
+        Args:
+            new_state (str): new state
+        """
+        self.state = new_state
+
+    def on_action(self, action_name):
+        """Called when a state machine action is executing
+
+        Args:
+            action_name (str): action name
+        """
+        SFP.action_table[action_name](self)
+    
+    def on_event(self, event):
+        """Called when a state machine event arrives
+
+        Args:
+            event (str): State machine event
+        """
+        SFP.get_state_machine().on_event(self, event)
+        
+    def in_stable_state(self):
+        """Indicate whether this module is in a stable state. 'Stable state' means the module is pending on a polling event
+        from SDK.
+
+        Returns:
+            bool: True if the module is in a stable state
+        """
+        return self.state in (STATE_NOT_PRESENT, STATE_SW_CONTROL, STATE_FW_CONTROL, STATE_POWER_BAD, STATE_POWER_LIMIT_ERROR)
+        
+    def get_fds_for_poling(self):            
+        if self.state == STATE_FW_CONTROL:
+            return {
+                'present': self.get_fd('present')
+            } 
+        else:
+            return {
+                'hw_present': self.get_fd('hw_present'),
+                'power_good': self.get_fd('power_good')
+            } 
+    
+    def fill_change_event(self, port_dict):
+        """Fill change event data based on current state.
+
+        Args:
+            port_dict (dict): {<sfp_index>:<sfp_state>}
+        """
+        if self.state == STATE_NOT_PRESENT:
+            port_dict[self.sdk_index + 1] = SFP_STATUS_REMOVED
+        elif self.state == STATE_SW_CONTROL:
+            port_dict[self.sdk_index + 1] = SFP_STATUS_INSERTED
+        elif self.state == STATE_FW_CONTROL:
+            port_dict[self.sdk_index + 1] = SFP_STATUS_INSERTED
+        elif self.state == STATE_POWER_BAD or self.state == STATE_POWER_LIMIT_ERROR:
+            sfp_state = SFP.SFP_ERROR_BIT_POWER_BUDGET_EXCEEDED | SFP.SFP_STATUS_BIT_INSERTED
+            port_dict[self.sdk_index + 1] = str(sfp_state)
+            
+    def refresh_poll_obj(self, poll_obj, all_registered_fds):
+        """Refresh polling object and registered fds. This function is usually called when a cable plugin
+        event occurs. For example, user plugs out a software control module and replaces with a firmware
+        control cable. In such case, poll_obj was polling "hw_present" and "power_good" for software control,
+        and it needs to be changed to poll "present" for new control type which is firmware control.
+
+        Args:
+            poll_obj (object): poll object
+            all_registered_fds (dict): fds that have been registered to poll object
+        """
+        # find fds registered by this SFP
+        current_registered_fds = {item[2]: (fileno, item[1]) for fileno, item in all_registered_fds.items() if item[0] == self.sdk_index}
+        logger.log_debug(f'SFP {self.sdk_index} registered fds are: {current_registered_fds}')
+        if self.state == STATE_FW_CONTROL:
+            target_poll_types = ['present']
+        else:
+            target_poll_types = ['hw_present', 'power_good']
+            
+        for target_poll_type in target_poll_types:
+            if target_poll_type not in current_registered_fds:
+                # need add new fd for polling
+                logger.log_debug(f'SFP {self.sdk_index} is registering file descriptor: {target_poll_type}')
+                fd = self.get_fd(target_poll_type)
+                poll_obj.register(fd, select.POLLERR | select.POLLPRI)
+                all_registered_fds[fd.fileno()] = (self.sdk_index, fd, target_poll_type)
+            else:
+                # the fd is already in polling
+                current_registered_fds.pop(target_poll_type)
+
+        for _, item in current_registered_fds.items():
+            # Deregister poll, close fd
+            logger.log_debug(f'SFP {self.sdk_index} is de-registering file descriptor: {item}')
+            poll_obj.unregister(item[1])
+            all_registered_fds.pop(item[0])
+            item[1].close()
+
+    def is_dummy_event(self, fd_type, fd_value):
+        """Check whether an event is dummy event
+
+        Args:
+            origin_state (str): original state before polling
+            fd_type (str): polling sysfs type
+            fd_value (int): polling sysfs value
+
+        Returns:
+            bool: True if the event is a dummy event
+        """
+        if fd_type == 'hw_present' or fd_type == 'present':
+            if fd_value == int(SFP_STATUS_INSERTED):
+                return self.state in (STATE_SW_CONTROL, STATE_FW_CONTROL, STATE_POWER_BAD, STATE_POWER_LIMIT_ERROR)
+            elif fd_value == int(SFP_STATUS_REMOVED):
+                return self.state == STATE_NOT_PRESENT
+        elif fd_type == 'power_good':
+            if fd_value == 1:
+                return self.state in (STATE_SW_CONTROL, STATE_NOT_PRESENT, STATE_RESETTING)
+            else:
+                return self.state in (STATE_POWER_BAD, STATE_POWER_LIMIT_ERROR, STATE_NOT_PRESENT)
+        return False
+
+    @classmethod
+    def initialize_sfp_modules(cls, sfp_list):
+        """Initialize all modules. Only applicable when module host management is enabled
+
+        Args:
+            sfp_list (object): all sfps
+        """
+        wait_ready_task = cls.get_wait_ready_task()
+        wait_ready_task.start()
+        
+        for s in sfp_list:
+            s.on_event(EVENT_START)
+            
+        if not wait_ready_task.empty():
+            # Wait until wait_ready_task is up
+            while not wait_ready_task.is_alive():
+                pass
+
+            # Resetting SFP requires a reloading of module firmware, it takes up to 3 seconds
+            # according to standard
+            max_wait_time = 3.5
+            begin = time.time()
+            while True:
+                ready_sfp_set = wait_ready_task.get_ready_set()
+                for sfp_index in ready_sfp_set:
+                    s = sfp_list[sfp_index]
+                    logger.log_debug(f'SFP {sfp_index} is recovered from resetting state')
+                    s.on_event(EVENT_RESET_DONE)
+                elapse = time.time() - begin
+                if elapse < max_wait_time:
+                    time.sleep(0.5)
+                else:
+                    break
+
+        # Verify that all modules are in a stable state
+        for index, s in enumerate(sfp_list):
+            if not s.in_stable_state():
+                logger.log_error(f'SFP {index} is not in stable state after initializing, state={s.state}')
+            logger.log_notice(f'SFP {index} is in state {s.state} after module initialization')
 
 
 class RJ45Port(NvidiaSFPCommon):
@@ -1234,3 +1927,17 @@ class RJ45Port(NvidiaSFPCommon):
         :return:
         """
         return
+
+    def get_module_status(self):
+        """Get value of sysfs status. It could return:
+            SXD_PMPE_MODULE_STATUS_PLUGGED_ENABLED_E = 0x1,
+            SXD_PMPE_MODULE_STATUS_UNPLUGGED_E = 0x2,
+            SXD_PMPE_MODULE_STATUS_MODULE_PLUGGED_ERROR_E = 0x3,
+            SXD_PMPE_MODULE_STATUS_PLUGGED_DISABLED_E = 0x4,
+            SXD_PMPE_MODULE_STATUS_UNKNOWN_E = 0x5,
+
+        Returns:
+            str: sonic status of the module
+        """
+        status = super().get_module_status()
+        return SFP_STATUS_REMOVED if status == SFP_STATUS_UNKNOWN else status

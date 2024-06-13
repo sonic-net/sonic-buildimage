@@ -416,28 +416,33 @@ start() {
 
     DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
     if [ "$?" -eq "0" ]; then
-        {%- if docker_container_name == "database" %}
-        DOCKERMOUNT=""
-        {%- else %}
-        DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
-        {%- endif %}
-        if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
-            CONTAINER_EXISTS="yes"
-            preStartAction
-            {%- if docker_container_name == "database" %}
-            echo "Starting existing ${DOCKERNAME} container"
-            docker start ${DOCKERNAME}
-            {%- else %}
-            echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
-            /usr/local/bin/container start ${DOCKERNAME}
-            {%- endif %}
-            postStartAction
-            exit $?
-        fi
-
-        # docker created with a different HWSKU, remove and recreate
-        echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
+        {%- if docker_container_name == "database" and sonic_asic_platform == "vs" %}
+        echo "Removing existing ${DOCKERNAME} container"
         docker rm -f ${DOCKERNAME}
+        {%- else %}
+            {%- if docker_container_name == "database" %}
+            DOCKERMOUNT=""
+            {%- else %}
+            DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
+            {%- endif %}
+            if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
+                CONTAINER_EXISTS="yes"
+                preStartAction
+                {%- if docker_container_name == "database" %}
+                echo "Starting existing ${DOCKERNAME} container"
+                docker start ${DOCKERNAME}
+                {%- else %}
+                echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
+                /usr/local/bin/container start ${DOCKERNAME}
+                {%- endif %}
+                postStartAction
+                exit $?
+            fi
+
+            # docker created with a different HWSKU, remove and recreate
+            echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
+            docker rm -f ${DOCKERNAME}
+        {%- endif %}
     fi
 
     {%- if docker_container_name == "database" %}
@@ -602,6 +607,7 @@ start() {
 {%- if sonic_asic_platform == "mellanox" %}
 {%- if docker_container_name == "syncd" %}
         -v /var/log/mellanox:/var/log/mellanox:rw \
+	-v /var/log/sdk_dbg:/var/log/sdk_dbg:rw \
         -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/:/tmp \
         -v /dev/shm:/dev/shm:rw \

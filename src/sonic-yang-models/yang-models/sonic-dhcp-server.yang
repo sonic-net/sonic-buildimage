@@ -40,7 +40,7 @@ module sonic-dhcp-server {
 
                 leaf ip {
                     description "IP as DHCP_SERVER";
-                    type inet:ipv4-address;
+                    type inet:ip-address;
                 }
 
             } /* end of list IPS_LIST */

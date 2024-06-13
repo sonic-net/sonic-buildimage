@@ -249,6 +249,22 @@ module sonic-device_metadata {
                                  otherwise the maximum available buffers (which are read from SAI) will be
                                  created, regardless of the CONFIG_DB buffers configuration.";
                 }
+
+                leaf bgp_router_id {
+                    type inet:ipv4-address;
+                    description "BGP Router identifier";
+                }
+
+                leaf chassis_hostname {
+                    description "hostname of the chassis to which this linecard or supervisor belongs to";
+                    type stypes:hostname;
+                }
+
+                leaf slice_type {
+                    description "Metadata tag for the device.";
+                    type string;
+                }
+
             }
             /* end of container localhost */
         }

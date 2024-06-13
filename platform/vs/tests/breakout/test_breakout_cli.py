@@ -74,22 +74,22 @@ class TestBreakoutCli(object):
         print("**** Breakout Cli test Starts ****")
         output_dict = self.breakout(dvs, 'Ethernet0', '2x50G')
         expected_dict = expected["Ethernet0_2x50G"]
-        assert output_dict == expected_dict
+        assert output_dict == expected_dict, "output: {} != expected: {}".format(output_dict, expected_dict)
         print("**** 1X100G --> 2x50G passed ****")
 
         output_dict = self.breakout(dvs, 'Ethernet4', '4x25G[10G]')
         expected_dict = expected["Ethernet4_4x25G"]
-        assert output_dict == expected_dict
+        assert output_dict == expected_dict, "output: {} != expected: {}".format(output_dict, expected_dict)
         print("**** 1X100G --> 4x25G[10G] passed ****")
 
         output_dict = self.breakout(dvs, 'Ethernet8', '2x25G(2)+1x50G(2)')
         expected_dict = expected["Ethernet8_2x25G_1x50G"]
-        assert output_dict == expected_dict
+        assert output_dict == expected_dict, "output: {} != expected: {}".format(output_dict, expected_dict)
         print("**** 1X100G --> 2x25G(2)+1x50G(2) passed ****")
 
         output_dict = self.breakout(dvs, 'Ethernet12', '1x50G(2)+2x25G(2)')
         expected_dict = expected["Ethernet12_1x50G_2x25G"]
-        assert output_dict == expected_dict
+        assert output_dict == expected_dict, "output: {} != expected: {}".format(output_dict, expected_dict)
         print("**** 1X100G --> 1x50G(2)+2x25G(2) passed ****")
 
         # TODOFIX: remove comments once #4442 PR got merged and

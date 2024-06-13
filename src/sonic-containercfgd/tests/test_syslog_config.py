@@ -12,6 +12,7 @@ sys.path.insert(0, modules_path)
 from containercfgd import containercfgd
 
 containercfgd.container_name = 'swss'
+containercfgd.service_name = 'swss'
 
 
 def test_handle_config():

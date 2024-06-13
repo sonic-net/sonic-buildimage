@@ -5,9 +5,10 @@ from bgpcfgd.template import TemplateFabric
 from copy import deepcopy
 from . import swsscommon_test
 
+import sys
+sys.modules["swsscommon"] = swsscommon_test
 
-with patch.dict("sys.modules", swsscommon=swsscommon_test):
-    from bgpcfgd.managers_bbr import BBRMgr
+from bgpcfgd.managers_bbr import BBRMgr
 
 global_constants = {
     "bgp": {

@@ -87,6 +87,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 # Apply environtment configuration files
 sudo cp $IMAGE_CONFIGS/environment/environment $FILESYSTEM_ROOT/etc/
 sudo cp $IMAGE_CONFIGS/environment/motd $FILESYSTEM_ROOT/etc/
+sudo cp $IMAGE_CONFIGS/environment/logout_message $FILESYSTEM_ROOT/etc/
 
 # Create all needed directories
 sudo mkdir -p $FILESYSTEM_ROOT/etc/sonic/
@@ -228,6 +229,7 @@ sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/bash_*.deb || \
 # sonic-utilities-data installs bash-completion as a dependency. However, it is disabled by default
 # in bash.bashrc, so we copy a version of the file with it enabled here.
 sudo cp -f $IMAGE_CONFIGS/bash/bash.bashrc $FILESYSTEM_ROOT/etc/
+sudo cp -f $IMAGE_CONFIGS/bash/bash.bash_logout $FILESYSTEM_ROOT/etc/
 
 # Install readline's initialization file
 sudo cp -f $IMAGE_CONFIGS/readline/inputrc $FILESYSTEM_ROOT/etc/
@@ -282,6 +284,19 @@ sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/sonic-device-data_*.deb || \
 # package for supporting password hardening
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libpam-pwquality
 
+# Install pam-ldap, nss-ldap, ldap-utils
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
+    libnss-ldapd \
+    libpam-ldapd \
+    ldap-utils
+
+# add networking.service dependancy to nslcd
+sudo LANG=C chroot $FILESYSTEM_ROOT sed -i '/# Required-Start:/ s/$/ networking.service/' /etc/init.d/nslcd
+
+# nslcd disable default
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl stop nslcd.service
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl mask nslcd.service
+
 # Install pam-tacplus and nss-tacplus
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/libtac2_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
@@ -295,14 +310,14 @@ sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/bash-tacplus_*.deb || \
 # Install audisp-tacplus
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/audisp-tacplus_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
-# Disable tacplus by default
+# Disable tacplus and LDAP by default
 ## NOTE: this syntax of pam-auth-update is meant to be used when the package gets removed, not for specifying
 ## some local configuration of a PAM module. Currently, there's no clean way of noninteractively specifying
 ## whether some PAM module needs to be enabled or disabled on a system (there are hacky ways, though).
 ##
 ## If there is some PAM module that's installed/removed after this point, then this setting will end up having
 ## no impact, and there may be errors/test failures related to authentication.
-sudo LANG=C chroot $FILESYSTEM_ROOT pam-auth-update --remove tacplus
+sudo LANG=C chroot $FILESYSTEM_ROOT pam-auth-update --remove tacplus ldap
 sudo sed -i -e '/^passwd/s/ tacplus//' $FILESYSTEM_ROOT/etc/nsswitch.conf
 
 # Install pam-radius-auth and nss-radius
@@ -495,6 +510,11 @@ sudo cp $IMAGE_CONFIGS/corefile_uploader/core_analyzer.rc.json $FILESYSTEM_ROOT_
 sudo chmod og-rw $FILESYSTEM_ROOT_ETC_SONIC/core_analyzer.rc.json
 
 if [[ $CONFIGURED_ARCH == amd64 ]]; then
+    # Install rasdaemon package
+    # NOTE: Can be installed from debian directly when we move to trixie
+    sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/rasdaemon_*.deb || \
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
+
     # Rasdaemon service configuration. Use timer to start rasdaemon with a delay for better fast/warm boot performance
     sudo cp $IMAGE_CONFIGS/rasdaemon/rasdaemon.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT systemctl disable rasdaemon.service
@@ -605,6 +625,11 @@ sudo cp $IMAGE_CONFIGS/hostname/hostname-config.service $FILESYSTEM_ROOT_USR_LIB
 echo "hostname-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $IMAGE_CONFIGS/hostname/hostname-config.sh $FILESYSTEM_ROOT/usr/bin/
 
+# Copy banner configuration scripts
+sudo cp $IMAGE_CONFIGS/bannerconfig/banner-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+echo "banner-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
+sudo cp $IMAGE_CONFIGS/bannerconfig/banner-config.sh $FILESYSTEM_ROOT/usr/bin/
+
 # Copy miscellaneous scripts
 sudo cp $IMAGE_CONFIGS/misc/docker-wait-any $FILESYSTEM_ROOT/usr/bin/
 
@@ -613,6 +638,10 @@ sudo cp $IMAGE_CONFIGS/misc/docker-wait-any $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/topology/topology.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "topology.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $IMAGE_CONFIGS/topology/topology.sh $FILESYSTEM_ROOT/usr/bin
+
+sudo cp platform/vs/dash-engine.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable dash-engine
+
 {%- endif %}
 
 # Copy platform topology configuration scripts
@@ -702,6 +731,13 @@ sudo tee -a $FILESYSTEM_ROOT/usr/sbin/policy-rc.d > /dev/null <<EOF
 exit 101
 EOF
 sudo chmod a+x $FILESYSTEM_ROOT/usr/sbin/policy-rc.d
+
+if [ "$INCLUDE_FIPS" == y ]; then
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install libatomic1
+    # The package openssh-client 9.2 is conflict with FIPS, the line below can be removed when the openssh-client version>=9.4
+    # The package will be reinstalled when isntalling the FIPS packages
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y remove openssh-client
+fi
 
 {% if installer_debs.strip() -%}
 {% for deb in installer_debs.strip().split(' ') -%}
@@ -824,6 +860,11 @@ if [ "${PIPESTATUS[0]}" != "0" ]; then
     echo "Failed to generate packages.json" >&2
     exit 1
 fi
+
+#Copy the default manifest file to SONIC_PACKAGE_MANAGER_FOLDER directly
+sudo cp $BUILD_TEMPLATES/default_manifest $FILESYSTEM_ROOT/$SONIC_PACKAGE_MANAGER_FOLDER/default_manifest
+#Create a new manifests subdirectory under SONIC_PACKAGE_MANAGER_FOLDER for all the user created custom manifests
+sudo mkdir -p $FILESYSTEM_ROOT/$SONIC_PACKAGE_MANAGER_FOLDER/manifests
 
 # Copy docker_image_ctl.j2 for SONiC Package Manager
 sudo cp $BUILD_TEMPLATES/docker_image_ctl.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/docker_image_ctl.j2
@@ -963,6 +1004,7 @@ sudo LANG=C cp $SCRIPTS_DIR/gnmi.sh $FILESYSTEM_ROOT/usr/local/bin/gnmi.sh
 sudo LANG=C cp $SCRIPTS_DIR/mgmt-framework.sh $FILESYSTEM_ROOT/usr/local/bin/mgmt-framework.sh
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.sh $FILESYSTEM_ROOT/usr/local/bin/asic_status.sh
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.py $FILESYSTEM_ROOT/usr/local/bin/asic_status.py
+sudo LANG=C cp $SCRIPTS_DIR/startup_tsa_tsb.py $FILESYSTEM_ROOT/usr/local/bin/startup_tsa_tsb.py
 
 # Copy sonic-netns-exec script
 sudo LANG=C cp $SCRIPTS_DIR/sonic-netns-exec $FILESYSTEM_ROOT/usr/bin/sonic-netns-exec
@@ -972,6 +1014,9 @@ sudo LANG=C cp $SCRIPTS_DIR/write_standby.py $FILESYSTEM_ROOT/usr/local/bin/writ
 
 # Copy mark_dhcp_packet script
 sudo LANG=C cp $SCRIPTS_DIR/mark_dhcp_packet.py $FILESYSTEM_ROOT/usr/local/bin/mark_dhcp_packet.py
+
+sudo cp files/build_templates/startup_tsa_tsb.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
+echo "startup_tsa_tsb.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 sudo cp $BUILD_TEMPLATES/sonic.target $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sonic.target
@@ -1005,14 +1050,18 @@ for fw_file_name in ${!FW_FILE_MAP[@]}; do
 done
 sudo cp $files_path/$ISSU_VERSION_FILE $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/asic/issu-version
 sudo ln -s /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/asic/issu-version $FILESYSTEM_ROOT/etc/mlnx/issu-version
+sudo cp $files_path/$COMPONENT_VERSIONS_FILE $FILESYSTEM_ROOT/etc/mlnx/component-versions
 sudo cp $files_path/$MLNX_FFB_SCRIPT $FILESYSTEM_ROOT/usr/bin/mlnx-ffb.sh
 sudo cp $files_path/$MLNX_ONIE_FW_UPDATE $FILESYSTEM_ROOT/usr/bin/$MLNX_ONIE_FW_UPDATE
 sudo cp $files_path/$MLNX_SSD_FW_UPDATE $FILESYSTEM_ROOT/usr/bin/$MLNX_SSD_FW_UPDATE
+sudo cp $files_path/$MLNX_SONIC_BFB_INSTALL $FILESYSTEM_ROOT/usr/bin/$MLNX_SONIC_BFB_INSTALL
 sudo cp $files_path/$MLNX_INSTALL_PENDING_FW $FILESYSTEM_ROOT/usr/bin/$MLNX_INSTALL_PENDING_FW
 sudo mkdir -p $FILESYSTEM_ROOT/etc/mlnx/cpld/
 for MLNX_CPLD_ARCHIVE in $MLNX_CPLD_ARCHIVES; do
     sudo cp $files_path/$MLNX_CPLD_ARCHIVE $FILESYSTEM_ROOT/etc/mlnx/cpld/
 done
+sudo cp platform/mellanox/get_component_versions/get_component_versions.py $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
 j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 
@@ -1026,8 +1075,27 @@ sudo rm -rf $FILESYSTEM_ROOT/$MLNX_SONIC_PLATFORM_PY3_WHEEL_NAME
 sudo cp platform/mellanox/nv-syncd-shared/nv-syncd-shared.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable nv-syncd-shared
 
-# Install minicom package
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install minicom
+# Install required packages specific for mellanox platform
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install minicom xmlstarlet
+
+sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable rshim.service
+{% endif %}
+
+{% if sonic_asic_platform == "nvidia-bluefield" %}
+declare -rA FW_FILE_MAP=( \
+    [$BF3_FW_FILE]="fw-BF3.mfa" \
+)
+sudo mkdir -p $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/dpu/
+sudo mkdir -p $FILESYSTEM_ROOT/etc/bluefield/
+for fw_file_name in ${!FW_FILE_MAP[@]}; do
+    sudo cp $files_path/$fw_file_name $FILESYSTEM_ROOT/$PLATFORM_DIR/fw/dpu/${FW_FILE_MAP[$fw_file_name]}
+    sudo ln -s /host/image-$SONIC_IMAGE_VERSION/$PLATFORM_DIR/fw/dpu/${FW_FILE_MAP[$fw_file_name]} $FILESYSTEM_ROOT/etc/bluefield/${FW_FILE_MAP[$fw_file_name]}
+done
+
+SONIC_PLATFORM_PY3_WHEEL_NAME=$(basename {{platform_api_py3_wheel_path}})
+sudo cp {{platform_api_py3_wheel_path}} $FILESYSTEM_ROOT/$SONIC_PLATFORM_PY3_WHEEL_NAME
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install $SONIC_PLATFORM_PY3_WHEEL_NAME
+sudo rm -rf $FILESYSTEM_ROOT/$SONIC_PLATFORM_PY3_WHEEL_NAME
 {% endif %}
 
 {%- if SONIC_ROUTING_STACK == "frr" %}

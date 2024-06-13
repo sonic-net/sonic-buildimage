@@ -1150,4 +1150,4 @@ class TestCfgGen(TestCase):
         output = self.run_script(argument)
         self.assertEqual(
             utils.liststr_to_dict(output.strip()),
-            utils.liststr_to_dict("['192.168.200.15|161|', '100.0.0.6|161|', '100.0.0.7|161|']"))
+            utils.liststr_to_dict("['192.168.200.15|161|', '100.0.0.6|161|', '100.0.0.7|161|', 'fe80::1%Management0|161|']"))

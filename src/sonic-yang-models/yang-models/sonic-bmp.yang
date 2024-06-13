@@ -1,0 +1,56 @@
+module sonic-bmp {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-bmp";
+    prefix bmp;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description "BMP YANG Module for SONiC OS";
+
+    revision 2024-03-20 {
+        description "First Revision";
+    }
+
+    container sonic-bmp {
+
+        container BMP {
+
+            description "BMP TABLE control part of config_db.json";
+
+            container table {
+
+                leaf bgp_neighbor_table {
+                    type stypes:boolean_type;
+                    default "true";
+                    description "Flag for enabling/disabling bgp_neighbor_table dump.";
+                }
+
+                leaf bgp_rib_in_table {
+                    type stypes:boolean_type;
+                    default "false";
+                    description "Flag for enabling/disabling bgp_rib_in_table dump.";
+                }
+
+                leaf bgp_rib_out_table {
+                    type stypes:boolean_type;
+                    default "false";
+                    description "Flag for enabling/disabling bgp_rib_out_table dump.";
+                }
+
+            }
+
+        }
+
+    }
+
+}

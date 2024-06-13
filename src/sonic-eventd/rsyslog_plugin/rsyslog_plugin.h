@@ -9,6 +9,7 @@ extern "C"
 }
 #include <string>
 #include <memory>
+#include <csignal>
 #include "syslog_parser.h"
 #include "events.h"
 #include "logger.h"
@@ -24,10 +25,17 @@ using namespace swss;
 
 class RsyslogPlugin {
 public:
+    static bool g_running;
     int onInit();
     bool onMessage(string msg, lua_State* luaState);
     void run();
     RsyslogPlugin(string moduleName, string regexPath);
+    static void signalHandler(int signum) {
+        if (signum == SIGTERM) {
+            SWSS_LOG_INFO("Rsyslog plugin received SIGTERM, shutting down");
+	    RsyslogPlugin::g_running = false;
+        }
+    }
 private:
     unique_ptr<SyslogParser> m_parser;
     event_handle_t m_eventHandle;

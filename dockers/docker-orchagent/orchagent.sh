@@ -64,6 +64,8 @@ elif [ "$platform" == "mellanox" ]; then
     ORCHAGENT_ARGS+=""
 elif [ "$platform" == "innovium" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
+elif [ "$platform" == "nvidia-bluefield" ]; then
+    ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "pensando" ]; then
     MAC_ADDRESS=$(ip link property add dev oob_mnic0 altname eth0; ip link show oob_mnic0 | grep ether | awk '{print $2}')
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
@@ -73,9 +75,19 @@ else
 fi
 
 # Enable ZMQ for SmartSwitch
-LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget localhost "subtype"`
+LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
-    ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
+    midplane_mgmt_ip=$( ip -json -4 addr show eth0-midplane | jq -r ".[0].addr_info[0].local" )
+    mgmt_ip=$( ip -json -4 addr show eth0 | jq -r ".[0].addr_info[0].local" )
+    if [[ $midplane_ip != "" ]]; then
+        # Enable ZMQ with eth0-midplane address
+        ORCHAGENT_ARGS+=" -q tcp://${midplane_mgmt_ip}:8100"
+    elif [[ $mgmt_ip != "" ]] && [[ $mgmt_ip != "null" ]]; then
+        # If eth0-midplane interface does not exist, enable ZMQ with eth0 address
+        ORCHAGENT_ARGS+=" -q tcp://${mgmt_ip}:8100"
+    else
+        ORCHAGENT_ARGS+=" -q tcp://127.0.0.1:8100"
+    fi
 fi
 
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}

@@ -219,7 +219,7 @@ def dhcp_server_ipv4_range_add(db, range_name, ip_start, ip_end):
     if dbconn.exists("CONFIG_DB", key):
         ctx.fail("Range {} already exist".format(range_name))
     else:
-        dbconn.hmset("CONFIG_DB", key, {"range": ip_start + "," + ip_end})
+        dbconn.hmset("CONFIG_DB", key, {"range@": ip_start + "," + ip_end})
 
 
 @dhcp_server_ipv4_range.command(name="update")
@@ -238,7 +238,7 @@ def dhcp_server_ipv4_range_update(db, range_name, ip_start, ip_end):
     dbconn = db.db
     key = "DHCP_SERVER_IPV4_RANGE|" + range_name
     if dbconn.exists("CONFIG_DB", key):
-        dbconn.set("CONFIG_DB", key, "range", ip_start + "," + ip_end)
+        dbconn.set("CONFIG_DB", key, "range@", ip_start + "," + ip_end)
     else:
         ctx.fail("Range {} does not exist, cannot update".format(range_name))
 
@@ -254,7 +254,7 @@ def dhcp_sever_ipv4_range_del(db, range_name, force):
     if dbconn.exists("CONFIG_DB", key):
         if not force:
             for port in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4_PORT*"):
-                ranges = dbconn.get("CONFIG_DB", port, "ranges")
+                ranges = dbconn.get("CONFIG_DB", port, "ranges@")
                 if ranges and range_name in ranges.split(","):
                     ctx.fail("Range {} is referenced in {}, cannot delete, add --force to bypass or range unbind to unbind range first".format(range_name, port))
         dbconn.delete("CONFIG_DB", key)
@@ -280,7 +280,7 @@ def dhcp_server_ipv4_ip_bind(db, dhcp_interface, member_interface, range_, ip_li
         for r in range_:
             if not dbconn.exists("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|" + r):
                 ctx.fail("Cannot bind nonexistent range {} to interface".format(r))
-            ip_range = dbconn.get("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|" + r, "range").split(",")
+            ip_range = dbconn.get("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|" + r, "range@").split(",")
             if len(ip_range) == 1:
                 ip_start = ip_range[0]
                 ip_end = ip_range[0]
@@ -300,7 +300,7 @@ def dhcp_server_ipv4_ip_bind(db, dhcp_interface, member_interface, range_, ip_li
         ctx.fail("Only one of range and ip list need to be provided")
     key = "DHCP_SERVER_IPV4_PORT|" + dhcp_interface + "|" + member_interface
     key_exist = dbconn.exists("CONFIG_DB", key)
-    for bind_value_name, bind_value in [["ips", ip_list], ["ranges", range_]]:
+    for bind_value_name, bind_value in [["ips@", ip_list], ["ranges@", range_]]:
         if key_exist:
             existing_value = dbconn.get("CONFIG_DB", key, bind_value_name)
             if (not not existing_value) == (not bind_value):
@@ -330,7 +330,7 @@ def dhcp_server_ipv4_ip_unbind(db, dhcp_interface, member_interface, range_, ip_
         ctx.fail("Only one of range and ip list need to be provided")
     if not dbconn.exists("CONFIG_DB", key):
         ctx.fail("The specified dhcp_interface and member interface is not bind to ip or range")
-    for unbind_value_name, unbind_value in [["ips", ip_list], ["ranges", range_]]:
+    for unbind_value_name, unbind_value in [["ips@", ip_list], ["ranges@", range_]]:
         if unbind_value:
             unbind_value = set(unbind_value.split(","))
             existing_value = dbconn.get("CONFIG_DB", key, unbind_value_name)
@@ -372,7 +372,7 @@ def dhcp_server_ipv4_option_add(db, option_name, option_id, type_, value):
     if dbconn.exists("CONFIG_DB", key):
         ctx.fail("Option {} already exist".format(option_name))
     dbconn.hmset("CONFIG_DB", key, {
-        "option_id": option_id,
+        "id": option_id,
         "type": type_,
         "value": value,
         })
@@ -388,7 +388,7 @@ def dhcp_server_ipv4_option_del(db, option_name):
     if not dbconn.exists("CONFIG_DB", option_key):
         ctx.fail("Option {} does not exist, cannot delete".format(option_name))
     for key in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4|*"):
-        existing_options = dbconn.get("CONFIG_DB", key, "customized_options")
+        existing_options = dbconn.get("CONFIG_DB", key, "customized_options@")
         if existing_options and option_name in existing_options.split(","):
             ctx.fail("Option {} is referenced in {}, cannot delete".format(option_name, key[len("DHCP_SERVER_IPV4|"):]))
     dbconn.delete("CONFIG_DB", option_key)
@@ -409,10 +409,10 @@ def dhcp_server_ipv4_option_bind(db, dhcp_interface, option_list):
         option_key = "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS|" + option_name
         if not dbconn.exists("CONFIG_DB", option_key):
             ctx.fail("Option {} does not exist, cannot bind".format(option_name))
-    existing_value = dbconn.get("CONFIG_DB", key, "customized_options")
+    existing_value = dbconn.get("CONFIG_DB", key, "customized_options@")
     value_set = set(existing_value.split(",")) if existing_value else set()
     new_value_set = value_set.union(option_list)
-    dbconn.set("CONFIG_DB", key, "customized_options", ",".join(new_value_set))
+    dbconn.set("CONFIG_DB", key, "customized_options@", ",".join(new_value_set))
 
 
 @dhcp_server_ipv4_option.command(name="unbind")
@@ -427,14 +427,19 @@ def dhcp_server_ipv4_option_unbind(db, dhcp_interface, option_list, all_):
     if not dbconn.exists("CONFIG_DB", key):
         ctx.fail("Interface {} is not valid dhcp interface".format(dhcp_interface))
     if all_:
-        dbconn.set("CONFIG_DB", key, "customized_options", "")
+        redis_client = dbconn.get_redis_client("CONFIG_DB")
+        redis_client.hdel(key, "customized_options@")
     else:
         unbind_value = set(option_list.split(","))
-        existing_value = dbconn.get("CONFIG_DB", key, "customized_options")
+        existing_value = dbconn.get("CONFIG_DB", key, "customized_options@")
         value_set = set(existing_value.split(",")) if existing_value else set()
         if value_set.issuperset(unbind_value):
             new_value_set = value_set.difference(unbind_value)
-            dbconn.set("CONFIG_DB", key, "customized_options", ",".join(new_value_set))
+            if new_value_set:
+                dbconn.set("CONFIG_DB", key, "customized_options@", ",".join(new_value_set))
+            else:
+                redis_client = dbconn.get_redis_client("CONFIG_DB")
+                redis_client.hdel(key, "customized_options@")
         else:
             ctx.fail("Attempting to unbind option that is not binded")
 

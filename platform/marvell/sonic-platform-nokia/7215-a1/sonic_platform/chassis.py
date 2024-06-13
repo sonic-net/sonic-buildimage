@@ -271,8 +271,11 @@ class Chassis(ChassisBase):
             reboot_cause=(ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, thermal)
         else:
             reboot_cause=(ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
-        #unmask temperature event    
+
+        #Log reboot cause and unmask temperature event    
+        sonic_logger.log_notice("Reboot-cause reported by platform - {}".format(reboot_cause))
         self._write_sysfs_file(CPLD_DIR+"temp_event_mask", 0)
+
         return reboot_cause
 
     def get_watchdog(self):

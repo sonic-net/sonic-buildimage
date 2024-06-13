@@ -69,7 +69,7 @@
 
 
 /* DIMMs hold jc42 thermal sensors starting at i2c address 0x18 */
-#define DIMM_SENSOR_DRV            "jc42"
+#define DIMM_SENSOR_DRV            "oldjc42"
 #define DIMM_SENSOR_BASE_ADR       0x18
 
 
