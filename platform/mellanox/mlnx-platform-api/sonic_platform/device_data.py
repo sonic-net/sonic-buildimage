@@ -267,12 +267,14 @@ class DeviceDataManager:
     @classmethod
     @utils.read_only_cache()
     def is_module_host_management_mode(cls):
-        from sonic_py_common import device_info
-        _, hwsku_dir = device_info.get_paths_to_platform_and_hwsku_dirs()
-        sai_profile_file = os.path.join(hwsku_dir, 'sai.profile')
+        sai_profile_file = '/tmp/sai.profile'
+        if not os.path.exists(sai_profile_file):
+            from sonic_py_common import device_info
+            _, hwsku_dir = device_info.get_paths_to_platform_and_hwsku_dirs()
+            sai_profile_file = os.path.join(hwsku_dir, 'sai.profile')
         data = utils.read_key_value_file(sai_profile_file, delimeter='=')
         return data.get('SAI_INDEPENDENT_MODULE_MODE') == '1'
-    
+
     @classmethod
     def wait_platform_ready(cls):
         """

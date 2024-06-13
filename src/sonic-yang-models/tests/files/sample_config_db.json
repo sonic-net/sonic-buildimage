@@ -2335,6 +2335,9 @@
                 "src_mac": "ToRMac",
                 "interval_pck_loss_count_update": "3"
             },
+            "TIMED_OSCILLATION": {
+                "oscillation_enabled": "false"
+            },
             "MUXLOGGER": {
                 "log_verbosity": "debug"
             },
