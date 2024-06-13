@@ -98,6 +98,14 @@ fi
 if [ -e $SENSORS_CONF_FILE ]; then
     HAVE_SENSORS_CONF=1
     mkdir -p /etc/sensors.d
+    PSU_SENSORS_CONF_UPDATER="/usr/share/sonic/platform/psu_sensors_conf_updater"
+    if [ -e $PSU_SENSORS_CONF_UPDATER ]; then
+        source $PSU_SENSORS_CONF_UPDATER 
+        update_psu_sensors_configuration $SENSORS_CONF_FILE
+        if [ -f /tmp/sensors.conf ]; then
+            SENSORS_CONF_FILE="/tmp/sensors.conf"
+        fi
+    fi
     /bin/cp -f $SENSORS_CONF_FILE /etc/sensors.d/sensors.conf
 fi
 

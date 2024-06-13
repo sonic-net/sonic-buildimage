@@ -46,6 +46,7 @@ class FixedPsu(PsuBase):
         super(FixedPsu, self).__init__()
         self.index = psu_index + 1
         self._name = "PSU {}".format(self.index)
+        self.model = 'N/A'
         self.psu_oper_status = os.path.join(PSU_PATH, "thermal/psu{}_pwr_status".format(self.index))
         self._led = None
 
@@ -256,6 +257,9 @@ class Psu(FixedPsu):
         from .thermal import initialize_psu_thermal
         self._thermal_list = initialize_psu_thermal(psu_index, self.get_power_available_status)
 
+        # initialize psu model
+        self.model = self.vpd_parser.get_model()
+
     @property
     def psu_voltage(self):
         if not self._psu_voltage:
@@ -304,7 +308,14 @@ class Psu(FixedPsu):
         Returns:
             string: Model/part number of device
         """
-        return self.vpd_parser.get_model()
+        current_model = self.vpd_parser.get_model()
+        if current_model != self.model and os.path.exists('/usr/share/sonic/platform/psu_sensors_conf_updater'):
+            utils.run_command(['cp', '-f', '/etc/sensors.d/sensors.conf', '/tmp/sensors.conf.orig'])
+            utils.run_command(['bash', '-c','source /usr/share/sonic/platform/psu_sensors_conf_updater && update_psu_sensors_configuration /tmp/sensors.conf.orig'])
+            utils.run_command(['cp', '-f', '/tmp/sensors.conf', '/etc/sensors.d/'])
+            utils.run_command(['service', 'sensord', 'restart'])
+        self.model = current_model
+        return current_model
 
     def get_serial(self):
         """

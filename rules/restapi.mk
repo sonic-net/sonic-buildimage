@@ -10,4 +10,4 @@ $(RESTAPI)_RDEPENDS += $(LIBNL3) $(LIBNL_GENL3) \
 SONIC_DPKG_DEBS += $(RESTAPI)
 
 RESTAPI_DBG = sonic-rest-api-dbgsym_1.0.1_$(CONFIGURED_ARCH).deb
-$(eval $(call add_derived_package,$(RESTAPI_DBG),$(RESTAPI_DBG)))
+$(eval $(call add_derived_package,$(RESTAPI),$(RESTAPI_DBG)))
