@@ -341,10 +341,9 @@ static int baseboard_cpld_drv_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int baseboard_cpld_drv_remove(struct platform_device *pdev)
+static void baseboard_cpld_drv_remove(struct platform_device *pdev)
 {
     sysfs_remove_group(&pdev->dev.kobj, &baseboard_cpld_attrs_grp);
-    return 0;
 }
 
 static struct platform_driver baseboard_cpld_drv = {

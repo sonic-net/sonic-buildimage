@@ -661,23 +661,15 @@ static int cpld_wdt_probe(struct platform_device *pdev)
     return 0;
 }
 
-static int cpld_wdt_remove(struct platform_device *pdev)
+static void cpld_wdt_remove(struct platform_device *pdev)
 {
     struct cpld_wdt_private *p = platform_get_drvdata(pdev);
-    /*
-       if (!nowayout)
-       watchdog_stop(&p->wddev);
-       */
-    if(!p)
-        return 0;
 
-    sysfs_remove_group(&pdev->dev.kobj, &wdt_group);
-
-    misc_deregister(&p->mdev);
-
-    unregister_reboot_notifier(&watchdog_notifier);
-
-    return 0;
+    if (!p) {
+        sysfs_remove_group(&pdev->dev.kobj, &wdt_group);
+        misc_deregister(&p->mdev);
+        unregister_reboot_notifier(&watchdog_notifier);
+    }
 }
 
 static struct platform_driver cpld_wdt_driver = {
