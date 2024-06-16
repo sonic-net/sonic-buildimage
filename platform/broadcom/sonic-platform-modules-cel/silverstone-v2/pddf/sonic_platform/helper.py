@@ -96,53 +96,38 @@ class APIHelper(object):
     def ipmi_raw(cmd):
         status = True
         result = ""
-        try:
-            cmd = "ipmitool raw {}".format(str(cmd))
-            p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err.decode("utf-8") == "":
-                result = raw_data.decode("utf-8").strip()
-            else:
-                status = False
-        except Exception:
+        cmd = "ipmitool raw {}".format(str(cmd))
+        ret, raw_data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = raw_data
         return status, result
 
     @staticmethod
     def ipmi_fru_id(key_id, key=None):
         status = True
         result = ""
-        try:
-            cmd = "ipmitool fru print {}".format(str(
-                key_id)) if not key else "ipmitool fru print {0} | grep '{1}' ".format(str(key_id), str(key))
-
-            p = subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-            else:
-                status = False
-        except Exception:
+        cmd = "ipmitool fru print {}".format(str(
+            key_id)) if not key else "ipmitool fru print {0} | grep '{1}' ".format(str(key_id), str(key))
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = data
         return status, result
 
     @staticmethod
     def ipmi_set_ss_thres(id, threshold_key, value):
         status = True
         result = ""
-        try:
-            cmd = "ipmitool sensor thresh '{}' {} {}".format(
-                str(id), str(threshold_key), str(value))
-            p = subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-            else:
-                status = False
-        except Exception:
+        cmd = "ipmitool sensor thresh '{}' {} {}".format(
+             str(id), str(threshold_key), str(value))
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = data
         return status, result
     
     @staticmethod
