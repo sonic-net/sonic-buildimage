@@ -150,7 +150,7 @@ ssize_t fan_show_default(struct device *dev, struct device_attribute *da, char *
         {
 			attr_info = &data->attr_info[i];
             usr_data = &pdata->fan_attrs[i];
-			strcpy(new_str, "");
+			strscpy(new_str, "", ATTR_NAME_LEN);
         }
     }
 

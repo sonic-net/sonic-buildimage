@@ -206,7 +206,7 @@ static ssize_t setreg_store(struct device *dev, struct device_attribute *devattr
 	char clone[20];
 	char *pclone = clone;
 
-	strcpy(clone, buf);
+	strscpy(clone, buf,sizeof(clone));
 
 	mutex_lock(&cpld_data->cpld_lock);
 	tok = strsep((char **)&pclone, " ");

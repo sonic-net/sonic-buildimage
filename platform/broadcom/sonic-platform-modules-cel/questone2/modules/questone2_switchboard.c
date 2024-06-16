@@ -531,7 +531,7 @@ static ssize_t set_fpga_reg_value(struct device *dev, struct device_attribute *d
     char *pclone = clone;
     char *last;
 
-    strcpy(clone, buf);
+    strscpy(clone, buf, count);
 
     mutex_lock(&fpga_data->fpga_lock);
     tok = strsep((char**)&pclone, " ");
@@ -743,7 +743,7 @@ static ssize_t cpld1_setreg_store(struct device *dev, struct device_attribute *a
     int err;
     char *last;
 
-    strcpy(clone, buf);
+    strscpy(clone, buf, size);
 
     tok = strsep((char**)&pclone, " ");
     if(tok == NULL){
@@ -873,7 +873,7 @@ static ssize_t cpld2_setreg_store(struct device *dev, struct device_attribute *a
     int err;
     char *last;
 
-    strcpy(clone, buf);
+    strscpy(clone, buf, size);
 
     tok = strsep((char**)&pclone, " ");
     if(tok == NULL){
@@ -1692,7 +1692,7 @@ static struct i2c_adapter * seastone2_i2c_init(struct platform_device *pdev, int
     new_data->pca9548.master_bus = fpga_i2c_bus_dev[portid].master_bus;
     new_data->pca9548.switch_addr = fpga_i2c_bus_dev[portid].switch_addr;
     new_data->pca9548.channel = fpga_i2c_bus_dev[portid].channel;
-    strcpy(new_data->pca9548.calling_name, fpga_i2c_bus_dev[portid].calling_name);
+    strscpy(new_data->pca9548.calling_name, fpga_i2c_bus_dev[portid].calling_name,sizeof(new_data->pca9548.calling_name));
 
     snprintf(new_adapter->name, sizeof(new_adapter->name),
         "SMBus I2C Adapter PortID: %s", new_data->pca9548.calling_name);

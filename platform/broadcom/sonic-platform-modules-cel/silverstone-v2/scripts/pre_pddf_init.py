@@ -24,13 +24,12 @@ class PrePddfInit(object):
     def run_command(cmd):
         status = True
         result = ""
-        try:
-            p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err.decode("utf-8") == "":
-                result = raw_data.decode("utf-8").strip()
-        except Exception:
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = data
+
         return status, result
 
     def get_kernel_path(self):

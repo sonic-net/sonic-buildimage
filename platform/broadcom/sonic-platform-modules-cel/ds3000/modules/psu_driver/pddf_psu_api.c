@@ -49,19 +49,19 @@ void get_psu_duplicate_sysfs(int idx, char *str)
     switch (idx)
     {
         case PSU_V_OUT:
-            strcpy(str, "in3_input");
+            strscpy(str, "in3_input", ATTR_NAME_LEN);
             break;
         case PSU_I_OUT:
-            strcpy(str, "curr2_input");
+            strscpy(str, "curr2_input", ATTR_NAME_LEN);
             break;
         case PSU_P_OUT:
-            strcpy(str, "power2_input");
+            strscpy(str, "power2_input", ATTR_NAME_LEN);
             break;
         case PSU_FAN1_SPEED:
-            strcpy(str, "fan1_input");
+            strscpy(str, "fan1_input", ATTR_NAME_LEN);
             break;
         case PSU_TEMP1_INPUT:
-            strcpy(str, "temp1_input");
+            strscpy(str, "temp1_input", ATTR_NAME_LEN);
             break;
         default:
             break;
@@ -235,7 +235,7 @@ ssize_t psu_show_default(struct device *dev, struct device_attribute *da, char *
         {
             sysfs_attr_info = &data->attr_info[i];
             usr_data = &pdata->psu_attrs[i];
-            strcpy(new_str, "");
+            strscpy(new_str, "", ATTR_NAME_LEN);
         }
     }
 
@@ -438,9 +438,9 @@ int sonic_i2c_get_psu_block_default(void *client, PSU_DATA_ATTR *adata, void *da
     }
 
     if (strncmp(adata->devtype, "pmbus", strlen("pmbus")) == 0)
-        strncpy(padata->val.strval, buf+1, data_len-1);
+        strscpy(padata->val.strval, buf+1, data_len-1);
     else
-        strncpy(padata->val.strval, buf, data_len);
+        strscpy(padata->val.strval, buf, data_len);
 
     psu_dbg(KERN_ERR "%s: status = %d, buf block: %s\n", __FUNCTION__, status, padata->val.strval);
     return 0;

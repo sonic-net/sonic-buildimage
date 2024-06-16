@@ -201,12 +201,12 @@ ssize_t get_status_led(struct device_attribute *da)
         return sys_val;
     }
 
-    strcpy(temp_data.cur_state.color, "None");
+    strscpy(temp_data.cur_state.color, "None", NAME_SIZE);
     for (state=0; state<MAX_LED_STATUS; state++) {
         color_val = (sys_val & ~ops_ptr->data[state].bits.mask_bits);
         for (j = 0; j < VALUE_SIZE && ops_ptr->data[state].reg_values[j] != 0xff; j++) {
            if ((color_val ^ (ops_ptr->data[state].reg_values[j] << ops_ptr->data[state].bits.pos)) == 0) {
-                strcpy(temp_data.cur_state.color, LED_STATUS_STR[state]);
+                strscpy(temp_data.cur_state.color, LED_STATUS_STR[state], NAME_SIZE);
                 break;
            }
         }
@@ -337,7 +337,7 @@ ssize_t store_pddf_data(struct device *dev, struct device_attribute *da, const c
     switch (ptr->type)
     {
         case PDDF_CHAR:
-            strncpy(ptr->addr, buf, strlen(buf)-1); // to discard newline char form buf
+            memcpy(ptr->addr, buf, strlen(buf)-1); // to discard newline char form buf
             ptr->addr[strlen(buf)-1] = '\0';
 #if DEBUG
             pddf_dbg(LED, KERN_ERR "[ WRITE ] ATTR PTR [%s] PDDF_CHAR  VALUE:%s\n",
@@ -642,7 +642,7 @@ ssize_t store_bits_data(struct device *dev, struct device_attribute *da, const c
     char bits[NAME_SIZE];
     struct pddf_data_attribute *ptr = (struct pddf_data_attribute *)da;
     MASK_BITS* bits_ptr=(MASK_BITS*)(ptr->addr);
-    strncpy(bits_ptr->bits, buf, strlen(buf)-1); // to discard newline char form buf
+    memcpy(bits_ptr->bits, buf, strlen(buf)-1); // to discard newline char form buf
     bits_ptr->bits[strlen(buf)-1] = '\0';
     if((pptr=strstr(buf,":")) != NULL) {
         len = pptr-buf;

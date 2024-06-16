@@ -74,9 +74,15 @@ class Fan(PddfFan):
         else:
             speed_rpm = self.get_speed_rpm()
             if self.fan_index == 1:
-                max_fan_rpm = eval(self.plugin_data['FAN']['FRONT_FAN_MAX_RPM_SPEED'])
+                if(self.plugin_data['FAN']['FRONT_FAN_MAX_RPM_SPEED'].isnumeric()):
+                    max_fan_rpm = int(self.plugin_data['FAN']['FRONT_FAN_MAX_RPM_SPEED'])
+                else:
+                    return target_speed
             else:
-                max_fan_rpm = eval(self.plugin_data['FAN']['REAR_FAN_MAX_RPM_SPEED'])
+                if(self.plugin_data['FAN']['REAR_FAN_MAX_RPM_SPEED'].isnumeric()):
+                    max_fan_rpm = int(self.plugin_data['FAN']['REAR_FAN_MAX_RPM_SPEED'])
+                else:
+                    return target_speed
             speed_percentage = round(int((speed_rpm * 100) / max_fan_rpm))
             target_speed = speed_percentage
 
@@ -152,7 +158,10 @@ class Fan(PddfFan):
             print("Setting fan speed is not allowed !")
             return False
 
-        duty_cycle_to_pwm = eval(self.plugin_data['FAN']['duty_cycle_to_pwm'])
+        if(self.plugin_data['FAN']['duty_cycle_to_pwm'].isnumeric())
+            duty_cycle_to_pwm = int(self.plugin_data['FAN']['duty_cycle_to_pwm'])
+        else:
+            return False
         pwm = int(round(duty_cycle_to_pwm(speed)))
 
         if self._api_helper.is_bmc_present():

@@ -22,13 +22,11 @@ class APIHelper():
         return status, result
 
     def get_cmd_output(self, cmd):
-        try:
-            data = subprocess.check_output(cmd, shell=True,
-                    universal_newlines=True, stderr=subprocess.STDOUT).strip()
-            status = 0
-        except subprocess.CalledProcessError as ex:
-            data = ex.output
-            status = ex.returncode
+        status = 0
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
+            status = ret
+
         return status, data
 
     def read_txt_file(self, file_path):
@@ -122,16 +120,13 @@ class APIHelper():
     def ipmi_raw(cmd):
         status = True
         result = ""
-        try:
-            cmd = "ipmitool raw {}".format(str(cmd))
-            p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err.decode("utf-8") == "":
-                result = raw_data.decode("utf-8").strip()
-            else:
-                status = False
-        except Exception:
+        cmd = "ipmitool raw {}".format(str(cmd))
+        ret, raw_data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = raw_data
+
         return status, result
 
     def is_bmc_present(self):

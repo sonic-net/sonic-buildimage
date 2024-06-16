@@ -52,15 +52,13 @@ class Chassis(PddfChassis):
             self._component_list.append(component)
     
     def _getstatusoutput(self, cmd):
-        try:
-            data = subprocess.check_output(cmd, shell=True,
-                    universal_newlines=True, stderr=subprocess.STDOUT)
-            status = 0
-        except subprocess.CalledProcessError as ex:
-            data = ex.output
-            status = ex.returncode
-        if data[-1:] == '\n':
-            data = data[:-1]
+        status = 0
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
+            status = ret
+        else:
+            return data
+
         return status, data
 
     def initizalize_system_led(self):

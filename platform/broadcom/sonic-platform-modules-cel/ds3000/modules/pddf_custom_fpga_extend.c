@@ -137,7 +137,7 @@ static ssize_t set_fpga_reg_value(struct device *dev, struct device_attribute *d
     char *last;
 	struct fpga_priv *fpga = dev_get_drvdata(dev);
 
-    strcpy(clone, buf);
+    strscpy(clone, buf, count);
     mutex_lock(&fpga->fpga_lock);
     tok = strsep((char**)&pclone, " ");
     if (tok == NULL) {

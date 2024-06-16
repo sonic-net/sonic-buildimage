@@ -205,12 +205,10 @@ class Component():
     def run_command(self, cmd):
         status = True
         result = ""
-        try: 
-            p = subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err.decode('UTF-8') == '': 
-                result = raw_data.strip().decode('UTF-8')
-        except Exception:
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = data
+
         return status, result

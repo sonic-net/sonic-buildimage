@@ -17,13 +17,11 @@ class PsuUtil(PsuBase):
         PsuBase.__init__(self)
 
     def run_command(self, command):
-        proc = subprocess.Popen(command, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
-        (out, err) = proc.communicate()
-
-        if proc.returncode != 0:
-            sys.exit(proc.returncode)
-
-        return out
+        ret, data = subprocess.getstatusoutput(command)
+        if ret != 0:
+            sys.exit(ret)
+        else:
+            return data
 
     def find_value(self, grep_string):
         result = re.search(".+\| (0x\d{2})\d{2}\|.+", grep_string)

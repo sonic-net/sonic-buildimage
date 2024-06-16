@@ -21,13 +21,11 @@ class APIHelper():
         return status, result
 
     def get_cmd_output(self, cmd):
-        try:
-            data = subprocess.check_output(cmd, shell=True,
-                    universal_newlines=True, stderr=subprocess.STDOUT).strip()
-            status = 0
-        except subprocess.CalledProcessError as ex:
-            data = ex.output
-            status = ex.returncode
+        status = 0
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
+            status = ret
+        
         return status, data
 
     def read_txt_file(self, file_path):
@@ -132,12 +130,10 @@ class APIHelper():
     def run_command(self,cmd):
         status = True
         result = ""
-        try:
-            p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-        except:
+        ret, data = subprocess.getstatusoutput(cmd)
+        if ret != 0:
             status = False
+        else:
+            result = data
+
         return status, result
