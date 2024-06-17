@@ -1,0 +1,11 @@
+{
+    "chassis": {
+        "4630-54NPE-O-AC-F": {
+            "component": {
+                "CPLD1": { },
+                "CPLD2": { },
+                "BIOS": { }
+            }
+        }
+    }
+}
