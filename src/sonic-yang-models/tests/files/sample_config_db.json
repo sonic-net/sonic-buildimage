@@ -356,6 +356,7 @@
         },
         "DEVICE_METADATA": {
             "localhost": {
+                "buffer_model": "dynamic",
                 "type": "ToRRouter",
                 "asic_id": "06:00.0",
                 "mac": "00:11:22:33:dd:5a",

@@ -169,6 +169,13 @@
         }
     },
     "BUFFER_POOL_CORRECT_PERCENTAGE_VALUE": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost":{
+                        "buffer_model": "dynamic"
+                }
+            }
+        },
         "sonic-buffer-pool:sonic-buffer-pool": {
             "sonic-buffer-pool:BUFFER_POOL": {
                 "BUFFER_POOL_LIST": [
@@ -176,20 +183,6 @@
                     "name": "ingress_lossless_pool",
                     "mode": "dynamic",
                     "percentage": "99",
-                    "type": "ingress"
-                }
-                ]
-            }
-        }
-    },
-    "BUFFER_POOL_WRONG_PERCENTAGE_VALUE_100": {
-        "sonic-buffer-pool:sonic-buffer-pool": {
-            "sonic-buffer-pool:BUFFER_POOL": {
-                "BUFFER_POOL_LIST": [
-                {
-                    "name": "ingress_lossless_pool",
-                    "mode": "static",
-                    "percentage": "100",
                     "type": "ingress"
                 }
                 ]
