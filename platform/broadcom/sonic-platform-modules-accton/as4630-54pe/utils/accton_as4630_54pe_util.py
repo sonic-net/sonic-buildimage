@@ -16,21 +16,30 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Usage: %(scriptName)s [options] command object
-options:
-    -h | --help     : this help message
-    -d | --debug    : run with debug mode
-    -f | --force    : ignore error during installation or clean
-command:
-    install     : install drivers and generate related sysfs nodes
-    clean       : uninstall drivers and remove related sysfs nodes
+usage: accton_as4630_54pe_util.py [-h] [-d] [-f] {install,clean,api,api_clean,threshold} ...
+
+AS4630-54PE Platform Utility
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d, --debug           run with debug mode
+  -f, --force           ignore error during installation or clean
+
+Utility Command:
+  {install,clean,api,api_clean,threshold}
+    install             : install drivers and generate related sysfs nodes
+    clean               : uninstall drivers and remove related sysfs nodes
+    api                 : install SONiC platform API
+    api_clean           : uninstall SONiC platform API
+    threshold           : modify thermal threshold
 """
 import subprocess
-import getopt
 import sys
 import logging
 import time
 import os
+import argparse
+from sonic_py_common.general import getstatusoutput_noshell
 
 PROJECT_NAME = 'as4630_54pe'
 version = '0.0.1'
@@ -97,40 +106,48 @@ def main():
     global DEBUG
     global args
     global FORCE
+    global THRESHOLD_RANGE_LOW, THRESHOLD_RANGE_HIGH
 
-    if len(sys.argv)<2:
-        show_help()
+    util_parser = argparse.ArgumentParser(description="AS4630-54PE Platform Utility")
+    util_parser.add_argument("-d", "--debug", dest='debug', action='store_true', default=False,
+                             help="run with debug mode")
+    util_parser.add_argument("-f", "--force", dest='force', action='store_true', default=False,
+                             help="ignore error during installation or clean")
+    subcommand = util_parser.add_subparsers(dest='cmd', title='Utility Command', required=True)
+    subcommand.add_parser('install', help=': install drivers and generate related sysfs nodes')
+    subcommand.add_parser('clean', help=': uninstall drivers and remove related sysfs nodes')
+    subcommand.add_parser('api', help=': install SONiC platform API')
+    subcommand.add_parser('api_clean', help=': uninstall SONiC platform API')
+    threshold_parser = subcommand.add_parser('threshold', help=': modify thermal threshold')
+    threshold_parser.add_argument("-l", dest='list', action='store_true', default=False,
+                                  help="list avaliable thermal")
+    threshold_parser.add_argument("-t", dest='thermal', type=str, metavar='THERMAL_NAME',
+                                  help="thermal name, ex: -t 'Temp sensor 1'")
+    threshold_parser.add_argument("-ht", dest='high_threshold', type=restricted_float,
+                                  metavar='THRESHOLD_VALUE',
+                                  help="high threshold: %.1f ~ %.1f" % (THRESHOLD_RANGE_LOW, THRESHOLD_RANGE_HIGH))
+    threshold_parser.add_argument("-hct", dest='high_crit_threshold', type=restricted_float,
+                                  metavar='THRESHOLD_VALUE',
+                                  help="high critical threshold : %.1f ~ %.1f" % (THRESHOLD_RANGE_LOW, THRESHOLD_RANGE_HIGH))
+    args = util_parser.parse_args()
 
-    options, args = getopt.getopt(sys.argv[1:], 'hdf', ['help',
-                                                       'debug',
-                                                       'force',
-                                                          ])
     if DEBUG == True:
-        print(options)
         print(args)
         print(len(sys.argv))
 
-    for opt, arg in options:
-        if opt in ('-h', '--help'):
-            show_help()
-        elif opt in ('-d', '--debug'):
-            DEBUG = True
-            logging.basicConfig(level=logging.INFO)
-        elif opt in ('-f', '--force'):
-            FORCE = 1
-        else:
-            logging.info('no option')
-    for arg in args:
-        if arg == 'install':
-           do_install()
-        elif arg == 'clean':
-           do_uninstall()        
-        elif arg == 'api':
-           do_sonic_platform_install()
-        elif arg == 'api_clean':
-           do_sonic_platform_clean()
-        else:
-            show_help()
+    DEBUG = args.debug
+    FORCE = 1 if args.force else 0
+
+    if args.cmd == 'install':
+        do_install()
+    elif args.cmd == 'clean':
+        do_uninstall()
+    elif args.cmd  == 'api':
+        do_sonic_platform_install()
+    elif args.cmd  == 'api_clean':
+        do_sonic_platform_clean()
+    elif args.cmd == 'threshold':
+        do_threshold()
 
 
     return 0
@@ -381,6 +398,163 @@ def device_exist():
     ret1, log = log_os_system("ls "+i2c_prefix+"*0077", 0)
     ret2, log = log_os_system("ls "+i2c_prefix+"i2c-2", 0)
     return not(ret1 or ret2)
+
+THRESHOLD_RANGE_LOW = 30.0
+THRESHOLD_RANGE_HIGH = 110.0
+# Code to initialize chassis object
+init_chassis_code = \
+    "import sonic_platform.platform\n"\
+    "platform = sonic_platform.platform.Platform()\n"\
+    "chassis = platform.get_chassis()\n\n"
+
+# Looking for thermal
+looking_for_thermal_code = \
+    "thermal = None\n"\
+    "all_thermals = chassis.get_all_thermals()\n"\
+    "for psu in chassis.get_all_psus():\n"\
+    "    all_thermals += psu.get_all_thermals()\n"\
+    "for tmp in all_thermals:\n"\
+    "    if '{}' == tmp.get_name():\n"\
+    "        thermal = tmp\n"\
+    "        break\n"\
+    "if thermal == None:\n"\
+    "    print('{} not found!')\n"\
+    "    exit(1)\n\n"
+
+def avaliable_thermals():
+    global init_chassis_code
+
+    get_all_thermal_name_code = \
+        "thermal_list = []\n"\
+        "all_thermals = chassis.get_all_thermals()\n"\
+        "for psu in chassis.get_all_psus():\n"\
+        "    all_thermals += psu.get_all_thermals()\n"\
+        "for tmp in all_thermals:\n"\
+        "    thermal_list.append(tmp.get_name())\n"\
+        "print(str(thermal_list)[1:-1])\n"
+
+    all_code = "{}{}".format(init_chassis_code, get_all_thermal_name_code)
+
+    status, output = getstatusoutput_noshell(["docker", "exec", "pmon", "python3", "-c", all_code])
+    if status != 0:
+        return ""
+    return output
+
+def restricted_float(x):
+    global THRESHOLD_RANGE_LOW, THRESHOLD_RANGE_HIGH
+
+    try:
+        x = float(x)
+    except ValueError:
+        raise argparse.ArgumentTypeError("%r not a floating-point literal" % (x,))
+
+    if x < THRESHOLD_RANGE_LOW or x > THRESHOLD_RANGE_HIGH:
+        raise argparse.ArgumentTypeError("%r not in range [%.1f ~ %.1f]" % 
+                                         (x, THRESHOLD_RANGE_LOW, THRESHOLD_RANGE_HIGH))
+
+    return x
+
+def get_high_threshold(name):
+    global init_chassis_code, looking_for_thermal_code
+
+    get_high_threshold_code = \
+        "try:\n"\
+        "    print(thermal.get_high_threshold())\n"\
+        "    exit(0)\n"\
+        "except NotImplementedError:\n"\
+        "    print('Not implement the get_high_threshold method!')\n"\
+        "    exit(1)"
+
+    all_code = "{}{}{}".format(init_chassis_code, looking_for_thermal_code.format(name, name),
+                               get_high_threshold_code)
+
+    status, output = getstatusoutput_noshell(["docker", "exec", "pmon", "python3", "-c", all_code])
+    if status == 1:
+        return None
+
+    return float(output)
+
+def get_high_crit_threshold(name):
+    global init_chassis_code, looking_for_thermal_code
+
+    get_high_crit_threshold_code = \
+        "try:\n"\
+        "    print(thermal.get_high_critical_threshold())\n"\
+        "    exit(0)\n"\
+        "except NotImplementedError:\n"\
+        "    print('Not implement the get_high_critical_threshold method!')\n"\
+        "    exit(1)"
+
+    all_code = "{}{}{}".format(init_chassis_code, looking_for_thermal_code.format(name, name),
+                               get_high_crit_threshold_code)
+
+    status, output = getstatusoutput_noshell(["docker", "exec", "pmon", "python3", "-c", all_code])
+    if status == 1:
+        return None
+
+    return float(output)
+
+def do_threshold():
+    global args, init_chassis_code, looking_for_thermal_code
+
+    if args.list:
+        print("Thermals: " + avaliable_thermals())
+        return
+
+    if args.thermal is None:
+        print("The following arguments are required: -t")
+        return
+
+    set_threshold_code = ""
+    if args.high_threshold is not None:
+        if args.high_crit_threshold is not None and \
+            args.high_threshold >= args.high_crit_threshold:
+           print("Invalid Threshold!(High threshold can not be more than " \
+                 "or equal to high critical threshold.)")
+           exit(1)
+
+        high_crit = get_high_crit_threshold(args.thermal)
+        if high_crit is not None and \
+           args.high_threshold >= high_crit:
+           print("Invalid Threshold!(High threshold can not be more than " \
+                 "or equal to high critical threshold.)")
+           exit(1)
+
+        set_threshold_code += \
+            "try:\n"\
+            "    if thermal.set_high_threshold({}) is False:\n"\
+            "        print('{}: set_high_threshold failure!')\n"\
+            "        exit(1)\n"\
+            "except NotImplementedError:\n"\
+            "    print('Not implement the set_high_threshold method!')\n"\
+            "print('Apply the new high threshold successfully.')\n"\
+            "\n".format(args.high_threshold, args.thermal)
+
+    if args.high_crit_threshold is not None:
+        high = get_high_threshold(args.thermal)
+        if high is not None and \
+            args.high_crit_threshold <= high:
+            print("Invalid Threshold!(High critical threshold can not " \
+                  "be less than or equal to high threshold.)")
+            exit(1)
+
+        set_threshold_code += \
+            "try:\n"\
+            "    if thermal.set_high_critical_threshold({}) is False:\n"\
+            "        print('{}: set_high_critical_threshold failure!')\n"\
+            "        exit(1)\n"\
+            "except NotImplementedError:\n"\
+            "    print('Not implement the set_high_critical_threshold method!')\n"\
+            "print('Apply the new high critical threshold successfully.')\n"\
+            "\n".format(args.high_crit_threshold, args.thermal)
+
+    if set_threshold_code == "":
+        return
+
+    all_code = "{}{}{}".format(init_chassis_code, looking_for_thermal_code.format(args.thermal, args.thermal), set_threshold_code)
+
+    status, output = getstatusoutput_noshell(["docker", "exec", "pmon", "python3", "-c", all_code])
+    print(output)
 
 if __name__ == "__main__":
     main()
