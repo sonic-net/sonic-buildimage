@@ -112,16 +112,12 @@
 {% endif %}
 {# ------- route-map in --------------------------- #}
 {% if 'route_map_in' in n_af_val %}
-{% for map in n_af_val['route_map_in'] %}
-  neighbor {{nbr_name}} route-map {{map}} in
-{% endfor %}
+  neighbor {{nbr_name}} route-map {{n_af_val['route_map_in']}} in
 {% endif %}
 {# ------- route-map in end --------------------------- #}
 {# ------- route-map out --------------------------- #}
 {% if 'route_map_out' in n_af_val %}
-{% for map in n_af_val['route_map_out'] %}
-  neighbor {{nbr_name}} route-map {{map}} out
-{% endfor %}
+  neighbor {{nbr_name}} route-map {{n_af_val['route_map_out']}} out
 {% endif %}
 {# ------- route-map out end --------------------------- #}
 {% if 'unsuppress_map_name' in n_af_val %}
