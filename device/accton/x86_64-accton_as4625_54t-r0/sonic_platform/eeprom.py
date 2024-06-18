@@ -1,0 +1,1 @@
+../../x86_64-accton_as4625_54p-r0/sonic_platform/eeprom.py
