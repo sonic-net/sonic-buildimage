@@ -1,0 +1,57 @@
+//
+// Copyright(C) Advanced Micro Devices, Inc. All rights reserved.
+//
+// You may not use this software and documentation (if any) (collectively,
+// the "Materials") except in compliance with the terms and conditions of
+// the Software License Agreement included with the Materials or otherwise as
+// set forth in writing and signed by you and an authorized signatory of AMD.
+// If you do not have a copy of the Software License Agreement, contact your
+// AMD representative for a copy.
+//
+// You agree that you will not reverse engineer or decompile the Materials,
+// in whole or in part, except as allowed by applicable law.
+//
+// THE MATERIALS ARE DISTRIBUTED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OR
+// REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+//
+
+
+//------------------------------------------------------------------------------
+
+//
+// protobuf specification for common meta
+//------------------------------------------------------------------------------
+
+syntax = "proto3";
+package meta;
+option go_package="meta/pds";
+
+import public "gogo.proto";
+import "google/protobuf/timestamp.proto";
+
+// TypeMeta contains the metadata about kind and version for all API objects
+message TypeMeta {
+  // Kind represents the type of the API object.
+  string Kind = 1 [(gogoproto.jsontag) = "kind"];
+}
+
+message Timestamp {
+  google.protobuf.Timestamp Time = 1 [(gogoproto.embed) = true];
+}
+
+// ObjectMeta contains metadata that all objects stored in kvstore must have
+message ObjMeta {
+  // Name of the object, unique within a Namespace for scoped objects.
+  // Should start and end in an alphanumeric character and can contain alphanumeric or ._-: characters
+  // minimum length is 2 and maximum length is 64 characters
+  string Name            = 1 [(gogoproto.jsontag) = "name"];
+  // UUID is the unique identifier for the object. This is generated on creation of the object.
+  // System generated, not updatable by user.
+  string UUID            = 2 [(gogoproto.jsontag) = "uuid,omitempty"];
+  // CreationTime is the creation time of the object
+  //  System generated and updated, not updatable by user.
+  Timestamp CreationTime = 3 [(gogoproto.jsontag) = "creation-time,omitempty"];
+  // ModTime is the Last Modification time of the object
+  // System generated and updated, not updatable by user.
+  Timestamp ModTime      = 4 [(gogoproto.jsontag) = "mod-time,omitempty"];
+}

@@ -1,0 +1,14 @@
+[Unit]
+Description=Pensando DPU health status provider and chassis state db util service
+Requires=system-health.service
+After=system-health.service
+
+[Service]
+ExecStartPre=/bin/sleep 75
+ExecStart= python3 /usr/local/bin/dpu_db_util.py &
+Restart=always
+StandardOutput=syslog+console
+StandardError=syslog+console
+
+[Install]
+WantedBy=multi-user.target
