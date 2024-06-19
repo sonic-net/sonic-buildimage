@@ -16,14 +16,14 @@ kpci += $(pciesvc-obj)
 INCLUDES = -I/sonic/platform/pensando/dsc-drivers/src/drivers/linux/pciesvc \
 	   -I/sonic/platform/pensando/dsc-drivers/src/drivers/linux/pciesvc/pciesvc/include \
 	   -I/sonic/platform/pensando/dsc-drivers/src/drivers/linux/pciesvc/pciesvc/src \
-	   -I/sonic/src/sonic-linux-kernel/linux-6.1.38/include/linux
+	   -I/sonic/src/sonic-linux-kernel/linux-6.1.94/include/linux
 	   #-I/usr/include \
 	   #-I$(PWD) \
-	   #-I/sonic/src/sonic-linux-kernel/linux-6.1.38/debian/build/build_arm64_none_arm64
+	   #-I/sonic/src/sonic-linux-kernel/linux-6.1.94/debian/build/build_arm64_none_arm64
 $(MODNAME)-y := $(kpci) kpci_get_entry.o kpcimgr_module.o kpcinterface.o \
 	     kpci_entry.o kpci_kexec.o kpci_test.o pciesvc_end.o
 
-KDIR := /sonic/src/sonic-linux-kernel/linux-6.1.38/debian/build/build_arm64_none_arm64
+KDIR := /sonic/src/sonic-linux-kernel/linux-6.1.94/debian/build/build_arm64_none_arm64
 PWD := $(shell pwd)
 UTS := X$(shell grep UTS_RELEASE $(KDIR)/include/generated/utsrelease.h)
 REL := $(shell echo $(UTS) | awk '{ print $$3 }' | sed -e 's/"//g')

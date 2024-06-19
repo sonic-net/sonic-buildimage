@@ -176,7 +176,7 @@ static ssize_t run_store(struct device *dev,
 	mod.core_layout.size = bin_valid_bytes;
 	mod.init_layout.base = 0;
 	mod.init_layout.size = 0;
-	strcpy(mod.name, "pciesvc.lib");
+	strcpy_s(mod.name, sizeof(mod.name), "pciesvc.lib");
 
 	ret = kpcimgr_module_register(&mod, ep, 1);
 	if (ret) {

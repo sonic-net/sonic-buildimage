@@ -17,6 +17,7 @@ try:
     from .helper import APIHelper
     import syslog
     import inspect
+    from sonic_py_common import syslogger
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -32,30 +33,16 @@ REBOOT_CAUSE_SOFTWARE = "Software causes"
 REBOOT_CAUSE_EXTERNAL = "External causes"
 RESET_CAUSE_PATH = "/sys/firmware/pensando/rstcause/this_cause"
 
-SYSLOG_IDENTIFIER = "sonic_platform.chassis"
-
 #cpld masks for system led
 SYSTEM_LED_GREEN   = 0x7
 SYSTEM_LED_YELLOW  = 0x38
 SYSTEM_LED_REG     = 0x15
 
-def log_info(msg):
-    syslog.openlog(SYSLOG_IDENTIFIER)
-    syslog.syslog(syslog.LOG_INFO,msg)
-    syslog.closelog()
-    # print(msg)
+SYSLOG_IDENTIFIER = "sonic_platform.chassis"
+logger_instance = syslogger.SysLogger(SYSLOG_IDENTIFIER)
 
-def log_emerg(msg):
-    syslog.openlog(SYSLOG_IDENTIFIER)
-    syslog.syslog(syslog.LOG_EMERG,msg)
-    syslog.closelog()
-    # print(msg)
-
-def log_warning(msg):
-    syslog.openlog(SYSLOG_IDENTIFIER)
-    syslog.syslog(syslog.LOG_WARNING,msg)
-    syslog.closelog()
-    # print(msg)
+def log_info(msg, also_print_to_console=False):
+    logger_instance.log_info(msg, also_print_to_console)
 
 REBOOT_CAUSE_MAP = {
     25 : "ASIC warm reset",
@@ -94,9 +81,6 @@ class Chassis(ChassisBase):
         self.interrupt_handler = None
         self.event_handler = None
 
-        self.__initialize_eeprom()
-        if self._api_helper.is_host():
-            self.__initialize_components()
         log_info("System chassis is ready")
 
     ##############################################
@@ -302,9 +286,10 @@ class Chassis(ChassisBase):
         component = None
 
         try:
-            if not hasattr(self, "_component_list"):
-                self.__initialize_components()
-            component = self._component_list[index]
+            if self._api_helper.is_host():
+                if not hasattr(self, "_component_list"):
+                    self.__initialize_components()
+                component = self._component_list[index]
         except IndexError:
             sys.stderr.write("Component index {} out of range (0-{})\n".format(
                              index, len(self._component_list)-1))
@@ -419,7 +404,7 @@ class Chassis(ChassisBase):
     def get_my_slot(self):
         cmd = "cpldapp -r 0xA"
         try:
-            (status, slot_id) = self._api_helper.run_command(cmd)
+            slot_id = self._api_helper.runCMD(cmd)
             return int(slot_id,16)
         except:
             return -1

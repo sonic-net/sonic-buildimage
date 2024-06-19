@@ -1,0 +1,67 @@
+//
+// {C} Copyright 2020 Pensando Systems Inc. All rights reserved
+//
+//------------------------------------------------------------------------------
+///
+/// \file
+/// protobuf specification for operational info
+///
+//------------------------------------------------------------------------------
+
+syntax = "proto3";
+package operd;
+
+import "types.proto";
+import "events.proto";
+import "flow.proto";
+import "google/protobuf/timestamp.proto";
+
+service OperSvc {
+  // OperInfoSubscribe() API is used to subscribe for the  events of interest;
+  // as and when events happen, they are streamed to the client
+  rpc OperInfoSubscribe (stream OperInfoRequest) returns (stream OperInfoResponse) {}
+}
+
+// Operational Info exported by operd plugin through push / subscription model
+enum OperInfoType {
+  OPER_INFO_TYPE_NONE     = 0;
+  OPER_INFO_TYPE_EVENT    = 1;
+  OPER_INFO_TYPE_FLOW_LOG = 2;
+}
+
+// OperInfoOp indicates whether client is subscribing or unsubscribing
+enum OperInfoOp {
+  OPER_INFO_OP_NONE        = 0;
+  OPER_INFO_OP_SUBSCRIBE   = 1;
+  OPER_INFO_OP_UNSUBSCRIBE = 2;
+}
+
+message OperInfoSpec {
+  // oper info of interest
+  OperInfoType    InfoType    = 1;
+  // action is either subscribe or unsubscribe
+  OperInfoOp      Action      = 2;
+  // any additional InfoType specific filters
+  oneof info_filter {
+    // filter for interested events
+    EventFilter EventFilter   = 3;
+  }
+}
+
+// OperInfoRequest captures client's intereste to subscribe for operational
+// information
+message OperInfoRequest {
+  // list of requests
+  repeated OperInfoSpec Request = 1;
+}
+
+message OperInfoResponse {
+  types.ApiStatus Status      = 1;
+  OperInfoType    InfoType    = 2;
+  // operational information specific to InfoType
+  oneof oper_info {
+      // information specific for events
+      Event       EventInfo   = 3;
+      FlowLog     FlowLogInfo = 4;
+  }
+}

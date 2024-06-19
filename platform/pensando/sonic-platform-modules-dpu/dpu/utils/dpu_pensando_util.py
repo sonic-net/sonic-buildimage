@@ -45,6 +45,8 @@ def fetch_dpu_files():
     run_cmd(cmd)
     cmd = "sudo docker cp {}:/nic/etc/VERSION.json /home/admin".format(docker_id)
     run_cmd(cmd)
+    cmd = "sudo docker cp {}:/usr/bin/mmc /usr/local/bin".format(docker_id)
+    run_cmd(cmd)
 
 def set_onie_version():
     version = ''
@@ -243,6 +245,33 @@ def add_dpu_to_package_json():
     except:
         pass
 
+def start_ssh_keygen():
+    try:
+        ssh_keygen_cmd = "sudo ssh-keygen -A"
+        run_cmd(ssh_keygen_cmd)
+    except:
+        pass
+
+def sync_system_date():
+    try:
+        hwclock_cmd = "sudo hwclock -s"
+        run_cmd(hwclock_cmd)
+    except:
+        pass
+
+def pcie_tx_setup():
+    dpu_slot_id = int(run_cmd("cpldapp -r 0xA").strip(), 16)
+    if dpu_slot_id == 6 or dpu_slot_id == 7:
+        run_cmd("docker exec polaris /nic/tools/run-aacs-server.sh -p 9001 export SERDES_DUT_IP=localhost:9001")
+        run_cmd("docker exec -e SERDES_ADDR=1:1-1:3f -e SERDES_DUT_IP=localhost:9001 -e SERDES_SBUS_RINGS=4 polaris aapl serdes -addr 1:39 -pre 0 -post 0 -atten 10")
+        run_cmd("docker exec -e SERDES_ADDR=1:1-1:3f -e SERDES_DUT_IP=localhost:9001 -e SERDES_SBUS_RINGS=4 polaris aapl serdes -addr 1:3b -pre 0 -post 0 -atten 10")
+        run_cmd("docker exec -e SERDES_ADDR=1:1-1:3f -e SERDES_DUT_IP=localhost:9001 -e SERDES_SBUS_RINGS=4 polaris aapl serdes -addr 1:3d -pre 0 -post 0 -atten 10")
+        run_cmd("docker exec -e SERDES_ADDR=1:1-1:3f -e SERDES_DUT_IP=localhost:9001 -e SERDES_SBUS_RINGS=4 polaris aapl serdes -addr 1:3f -pre 0 -post 0 -atten 10")
+        run_cmd("docker exec -e SERDES_ADDR=1:1-1:3f -e SERDES_DUT_IP=localhost:9001 -e SERDES_SBUS_RINGS=4 polaris aapl dev -addr 1:39 -v 1")
+        run_cmd("docker exec -e SERDES_ADDR=1:1-1:3f -e SERDES_DUT_IP=localhost:9001 -e SERDES_SBUS_RINGS=4 polaris aapl dev -addr 1:3b -v 1")
+        run_cmd("docker exec -e SERDES_ADDR=1:1-1:3f -e SERDES_DUT_IP=localhost:9001 -e SERDES_SBUS_RINGS=4 polaris aapl dev -addr 1:3d -v 1")
+        run_cmd("docker exec -e SERDES_ADDR=1:1-1:3f -e SERDES_DUT_IP=localhost:9001 -e SERDES_SBUS_RINGS=4 polaris aapl dev -addr 1:3f -v 1")
+
 def main():
     #All init routines to be written below
     cmd = 'PATH=$PATH:/usr/sbin/'
@@ -251,7 +280,9 @@ def main():
         set_ubootenv_config()
     except:
         pass
+    start_ssh_keygen()
     time.sleep(10)
+    sync_system_date()
     cp_sonic_platform_helper()
     fetch_dpu_files()
     time.sleep(5)
@@ -266,6 +297,7 @@ def main():
     stop_disable_telemetry_service()
     stop_disable_mgmt_framework_service()
     stop_disable_featured_service()
+    pcie_tx_setup()
 
 if __name__ == "__main__":
     main()
