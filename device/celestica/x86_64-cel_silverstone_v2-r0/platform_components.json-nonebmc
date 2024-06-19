@@ -1,0 +1,16 @@
+{
+  "chassis": {
+          "DS4000": {
+                  "component": {
+                          "Main_BIOS": {},
+                          "Backup_BIOS": {},
+                          "COME_CPLD": {},
+                          "SWCPLD1": {},
+                          "SWCPLD2": {},
+                          "SYSCPLD": {},
+                          "FANCPLD": {},
+                          "FPGA": {}
+                  }
+          }
+  }
+}

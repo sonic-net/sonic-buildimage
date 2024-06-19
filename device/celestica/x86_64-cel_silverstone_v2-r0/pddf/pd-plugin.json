@@ -1,0 +1,118 @@
+{
+    "XCVR":
+    {
+        "xcvr_present": {
+            "i2c":
+            {
+                "valmap-QSFP-DD": {"0": true,"1": false},
+                "valmap-SFP+": { "0": true, "1": false}
+            }
+        }
+    },
+
+    "PSU":
+    {
+        "psu_present":
+        {
+            "bmc":
+            {
+                "valmap": {"0":true, "1":false}
+            },
+            "i2c":
+            {
+                "valmap": {"1":true, "0": false}
+            }
+        },
+        "psu_fan_dir":
+        {
+            "bmc":
+            {
+                "valmap": {"1":"INTAKE", "0":"EXHAUST"}
+            },
+            "i2c":
+            {
+                "valmap":
+                {
+                    "TDPS-1500AB-A 6":"EXHAUST",
+                    "SAC1500D12AA":"EXHAUST",
+                    "TDPS-1500AB-6 B":"EXHAUST",
+                    "TDPS-1500AB-6 D":"EXHAUST",
+                    "TDPS-1500AB-6 E":"EXHAUST",
+                    "SAC1500D12RA":"INTAKE",
+                    "TDPS-1500AB-6 C":"INTAKE",
+                    "TDPS-1500AB-7 C":"INTAKE"
+                }
+            }
+        },
+        "psu_led_color":
+        {
+            "colmap": {"green":"green", "red":"red"}
+        },
+        "psu_power_good":
+        {
+            "bmc":
+            {
+                "valmap": {"0x0180":true}
+            },
+            "i2c":
+            {
+                "valmap": {"1":true, "0": false}
+            }
+        },
+        "PSU_FAN_MAX_SPEED":"29000"
+    },
+
+    "FAN":
+    {
+        "direction":
+        {
+            "bmc":
+            {
+                "valmap": {"1":"INTAKE", "0":"EXHAUST"}
+            },
+            "i2c":
+            {
+                "valmap": {"0":"INTAKE", "1":"EXHAUST"}
+            }
+
+        },
+
+        "present":
+        {
+            "i2c":
+            {
+                "valmap": {"0":true, "1":false}
+            },
+            "bmc":
+            {
+                "valmap": {"0":true, "1":false}
+            }
+        },
+
+        "FAN_MAX_RPM_SPEED":
+        {
+            "0": {"Front": "32000", "Rear": "28000"},
+            "1": {"Front": "32000", "Rear": "30200"}
+        },
+        "pwm_to_duty_cycle": "lambda pwm: ((pwm*100)/255)",
+	    "duty_cycle_to_pwm": "lambda dc: ((dc*255)/100)"
+    },
+
+    "THERMAL":
+    {
+        "NONE_BMC":
+        {
+            "temp1_high_threshold":
+            {
+                "PSU1_TEMP1": {"B2F": "116", "F2B": "116"},
+                "PSU2_TEMP1": {"B2F": "116", "F2B": "116"},
+                "TEMP_FB_U17": {"B2F": "56", "F2B": "N/A"},
+                "TEMP_SW_U16": {"B2F": "N/A", "F2B": "59"},
+                "XP0R8V_Temp": {"B2F": "125", "F2B": "125"},
+                "VDD_CORE_Temp": {"B2F": "125", "F2B": "125"},
+                "XP3R3V_L_Temp": {"B2F": "125", "F2B": "125"},
+                "XP3R3V_R_Temp": {"B2F": "125", "F2B": "125"}
+            }
+        }
+    }
+}
