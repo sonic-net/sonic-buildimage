@@ -1,0 +1,1312 @@
+//
+// Copyright(C) Advanced Micro Devices, Inc. All rights reserved.
+//
+// You may not use this software and documentation (if any) (collectively,
+// the "Materials") except in compliance with the terms and conditions of
+// the Software License Agreement included with the Materials or otherwise as
+// set forth in writing and signed by you and an authorized signatory of AMD.
+// If you do not have a copy of the Software License Agreement, contact your
+// AMD representative for a copy.
+//
+// You agree that you will not reverse engineer or decompile the Materials,
+// in whole or in part, except as allowed by applicable law.
+//
+// THE MATERIALS ARE DISTRIBUTED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OR
+// REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+//
+
+
+//------------------------------------------------------------------------------
+
+//
+// protobuf specification for common types
+//------------------------------------------------------------------------------
+
+syntax = "proto3";
+
+import public "gogo.proto";
+import "google/protobuf/any.proto";
+
+package types;
+option go_package="pds";
+
+// empty message
+message Empty {}
+
+// generic request with uuid
+message Id {
+  bytes Id = 1;
+}
+
+// API return codes (more descriptive than protobuf enums)
+enum ApiStatus {
+  API_STATUS_OK                      = 0;  // success
+  API_STATUS_ERR                     = 1;  // catch-all error
+  API_STATUS_INVALID_ARG             = 2;  // invalid argument
+  API_STATUS_EXISTS_ALREADY          = 3;  // object already exists
+  API_STATUS_OUT_OF_MEM              = 4;  // out of memory
+  API_STATUS_NOT_FOUND               = 5;  // object not found
+  API_STATUS_OUT_OF_RESOURCE         = 6;  // out of resource
+  API_STATUS_RETRY                   = 7;  // if operation can be retried
+  API_STATUS_OPERATION_NOT_ALLOWED   = 8;  // if operation is not allowed on
+                                           // specific type of object
+  API_STATUS_TIMEOUT                 = 9;  // operation timed out
+  API_STATUS_HW_ENTRY_EXISTS         = 10; // entry exists in h/w table
+  API_STATUS_OPERATION_NOT_SUPPORTED = 11; // operation not supported
+  API_STATUS_IN_USE                  = 12; // object in use
+  // sometimes APIs are skipped (i.e. not processed) because other
+  // APIs before that ran into some error
+  API_STATUS_OPERATION_NOT_PROCESSED = 13;
+  API_STATUS_IN_PROGRESS             = 14; // operation in progress
+}
+
+// API error codes (set in cases where ApiStatus is not API_STATUS_OK)
+// error codes are unique for each object
+enum ErrorCode {
+  ERR_CODE_NONE                                                 = 0;
+
+  // generic error codes that can be used across objects
+  // max. no. of currently active rpc clients exceeded supported limit
+  ERR_CODE_RPC_LOAD_EXCEEDED                                    = 1;
+  ERR_CODE_IPV4_INGRESS_POLICY_NOT_FOUND                        = 2;
+  ERR_CODE_IPV6_INGRESS_POLICY_NOT_FOUND                        = 3;
+  ERR_CODE_IPV4_EGRESS_POLICY_NOT_FOUND                         = 4;
+  ERR_CODE_IPV6_EGRESS_POLICY_NOT_FOUND                         = 5;
+  ERR_CODE_REGION_NOT_FOUND                                     = 6;
+  ERR_CODE_IPV4_ROUTE_TABLE_NOT_FOUND                           = 7;
+  ERR_CODE_IPV6_ROUTE_TABLE_NOT_FOUND                           = 8;
+  ERR_CODE_IPV4_METER_POLICY_NOT_FOUND                          = 9;
+  ERR_CODE_IPV6_METER_POLICY_NOT_FOUND                          = 10;
+  ERR_CODE_INGRESS_NAT_POLICY_NOT_FOUND                         = 11;
+  ERR_CODE_EGRESS_NAT_POLICY_NOT_FOUND                          = 12;
+  ERR_CODE_DEVICE_NOT_FOUND                                     = 13;
+  ERR_CODE_VPC_NOT_FOUND                                        = 14;
+  ERR_CODE_IF_NOT_FOUND                                         = 15;
+  ERR_CODE_VNI_NOT_FOUND                                        = 16;
+  ERR_CODE_TUNNEL_NOT_FOUND                                     = 17;
+  ERR_CODE_LIF_NOT_FOUND                                        = 18;
+  ERR_CODE_VNIC_NOT_FOUND                                       = 19;
+  ERR_CODE_NEXTHOP_NOT_FOUND                                    = 20;
+  ERR_CODE_NEXTHOP_GROUP_NOT_FOUND                              = 21;
+  ERR_CODE_IF_TYPE_INVALID                                      = 22;
+  ERR_CODE_VPC_UPD_NOT_ALLOWED                                  = 23;
+  ERR_CODE_ACCESS_ENCAP_UPD_NOT_ALLOWED                         = 24;
+  ERR_CODE_FABRIC_ENCAP_UPD_NOT_ALLOWED                         = 25;
+  ERR_CODE_DEFAULT_POLICY_UPD_NOT_ALLOWED                       = 26;
+  ERR_CODE_REMOTE_SUBNET_UPD_NOT_ALLOWED                        = 27;
+  ERR_CODE_REGION_UPD_NOT_ALLOWED                               = 28;
+  ERR_CODE_INVALID_IP_ADDR                                      = 29;
+  ERR_CODE_IF_TYPE_NOT_SUPPORTED                                = 30;
+  ERR_CODE_LIF_TYPE_NOT_SUPPORTED                               = 31;
+  ERR_CODE_ROUTE_TABLE_NOT_FOUND                                = 32;
+  ERR_CODE_ROUTE_NOT_FOUND                                      = 33;
+  ERR_CODE_SVC_PORTMAP_NOT_FOUND                                = 34;
+  ERR_CODE_NEXTHOP_TYPE_NOT_SUPPORTED                           = 35;
+  ERR_CODE_IP_ADDRESS_FAMILY_MISMATCH                           = 36;
+  ERR_CODE_IP_PROTOCOL_INVALID                                  = 37;
+  ERR_CODE_L4_PORTS_NOT_EXPECTED                                = 38;
+  ERR_CODE_L4_PORT_RANGE_INVALID                                = 39;
+  ERR_CODE_ICMP_TYPECODE_NOT_EXPECTED                           = 40;
+  ERR_CODE_IP_ADDRESS_FAMILY_INVALID                            = 41;
+  ERR_CODE_SVC_REWRITE_IP_ADDRESS_FAMILY_NOT_SUPPORTED          = 42;
+  ERR_CODE_RULE_L3_MATCH_INVALID                                = 43;
+  ERR_CODE_RULE_L4_MATCH_INVALID                                = 44;
+  ERR_CODE_MAX_IPV4_INGRESS_POLICY_EXCEEDED                     = 45;
+  ERR_CODE_MAX_IPV6_INGRESS_POLICY_EXCEEDED                     = 46;
+  ERR_CODE_MAX_IPV4_EGRESS_POLICY_EXCEEDED                      = 47;
+  ERR_CODE_MAX_IPV6_EGRESS_POLICY_EXCEEDED                      = 48;
+  ERR_CODE_MAX_INGRESS_NAT_POLICY_EXCEEDED                      = 49;
+  ERR_CODE_MAX_EGRESS_NAT_POLICY_EXCEEDED                       = 50;
+  ERR_CODE_MAX_TX_MIRROR_SESSION_EXCEEDED                       = 51;
+  ERR_CODE_MAX_RX_MIRROR_SESSION_EXCEEDED                       = 52;
+  ERR_CODE_SUBNET_NOT_FOUND                                     = 53;
+  ERR_CODE_TX_MIRROR_SESSION_NOT_FOUND                          = 54;
+  ERR_CODE_RX_MIRROR_SESSION_NOT_FOUND                          = 55;
+  ERR_CODE_TX_POLICER_NOT_FOUND                                 = 56;
+  ERR_CODE_RX_POLICER_NOT_FOUND                                 = 57;
+  ERR_CODE_HOST_IF_NOT_FOUND                                    = 58;
+  ERR_CODE_MAC_ADDRESS_UPD_NOT_ALLOWED                          = 59;
+  ERR_CODE_NEXTHOP_TYPE_UPD_NOT_ALLOWED                         = 60;
+  ERR_CODE_MAX_IPSEC_DECRYPT_SA_EXCEEDED                        = 61;
+  ERR_CODE_ENCAP_TYPE_NOT_SUPPORTED                             = 62;
+  ERR_CODE_DOT1Q_VALUE_INVALID                                  = 63;
+  ERR_CODE_TCP_FLAGS_NOT_EXPECTED                               = 64;
+  ERR_CODE_MAX_TAGS_EXCEEDED                                    = 65;
+  ERR_CODE_SECONDARY_KEY_UPD_NOT_ALLOWED                        = 66;
+  ERR_CODE_VNF_TUNNEL_NOT_FOUND                                 = 67;
+  ERR_CODE_SECONDARY_KEY_MISSING                                = 68;
+  ERR_CODE_DST_TYPE_NOT_SUPPORTED                               = 69;
+  ERR_CODE_MAX_FLOWMON_COLLECTOR_EXCEEDED                       = 70;
+  ERR_CODE_FLOW_LOG_CONFIG_INVALID                              = 71;
+  ERR_CODE_MAX_TRUSTED_VNI_EXCEEDED                             = 72;
+  ERR_CODE_MAX_SYSTEM_NAME_LENGTH_EXCEEDED                      = 73;
+  ERR_CODE_MAX_BGP_COMMUNITY_EXCEEDED                           = 74;
+  ERR_CODE_MAX_HA_VIP_EXCEEDED                                  = 75;
+  ERR_CODE_HA_VIP_ID_INVALID                                    = 76;
+  ERR_CODE_DSS_HA_ROLE_INVALID                                  = 77;
+  ERR_CODE_HA_HEARTBEAT_COUNT_INVALID                           = 78;
+  ERR_CODE_TUNNEL_INVALID                                       = 79;
+  ERR_CODE_HEALTH_PROBE_MAC_ADDRESS_INVALID                     = 80;
+  ERR_CODE_POLICY_NOT_FOUND                                     = 81;
+  ERR_CODE_METER_POLICY_NOT_FOUND                               = 82;
+  ERR_CODE_IP_PREFIX_LENGTH_INVALID                             = 83;
+  ERR_CODE_IP_ADDRESS_INVALID                                   = 84;
+
+  // specific security policy error codes
+  // max rules exceeded
+  ERR_CODE_POLICY_MAX_RULES_EXCEEDED                            = 4096;
+  // max ALGs per rule execeeded
+  ERR_CODE_RULE_MAX_ALG_EXCEEDED                                = 4097;
+  // rule without match conditions
+  ERR_CODE_RULE_WITHOUT_MATCH_CONDITION                         = 4098;
+  // rule withou l3 match condition
+  ERR_CODE_RULE_WITHOUT_L3_MATCH_CONDITION                      = 4099;
+  // invalid rule action
+  ERR_CODE_RULE_ACTION_INVALID                                  = 4100;
+  // invalid rule priority
+  ERR_CODE_RULE_PRIORITY_INVALID                                = 4101;
+
+  // vpc generic error codes
+  // type cannot be updated
+  ERR_CODE_VPC_TYPE_UPD_NOT_ALLOWED                             = 4224;
+  // local vpc has vnics
+  ERR_CODE_VPC_LOCAL_VPC_IN_USE_BY_VNIC                         = 4225;
+  // vpc is referenced in subnets
+  ERR_CODE_VPC_IN_USE_BY_SUBNET                                 = 4226;
+  // vpc is referenced in service mappings
+  ERR_CODE_VPC_IN_USE_BY_SVC_MAPPING                            = 4227;
+  // vpc is referenced in vpc-peers
+  ERR_CODE_VPC_IN_USE_BY_VPC_PEER                               = 4228;
+  // vpc has local/remote mappings
+  ERR_CODE_VPC_IN_USE_BY_MAPPING                                = 4229;
+  // vpc1 not set for vpc peer
+  ERR_CODE_VPC_PEER_VPC1_NOT_SET                                = 4230;
+  // vpc2/vpc2 encap not set for vpc peer
+  ERR_CODE_VPC_PEER_VPC2_INFO_NOT_SET                           = 4231;
+  // region configuration is allowed only on remote vpc, for local
+  // vpc having region configured is invalid
+  ERR_CODE_VPC_REGION_CONFIG_NOT_ALLOWED                        = 4232;
+  // vpc is referenced in tunnel objects
+  ERR_CODE_VPC_IN_USE_BY_TUNNEL                                 = 4233;
+  // invalid meter class configuration in vpc-peer config spec
+  ERR_CODE_VPC_PEER_INVALID_METER_CLASS                         = 4234;
+
+  // tunnel generic error codes
+  // tunnel type update not allowed
+  ERR_CODE_TUNNEL_TYPE_UPD_NOT_ALLOWED                          = 4352;
+  // tunnel remote IP update not allowed
+  ERR_CODE_TUNNEL_REMOTE_IP_UPD_NOT_ALLOWED                     = 4353;
+  // tunnel is referenced by vnic(s)
+  ERR_CODE_TUNNEL_IN_USE_BY_VNIC                                = 4354;
+  // tunnel local IP update not allowed
+  ERR_CODE_TUNNEL_LOCAL_IP_UPD_NOT_ALLOWED                      = 4355;
+  // remote IP in tunnel has unexpected value
+  ERR_CODE_TUNNEL_REMOTE_IP_INVALID                             = 4356;
+  // another tunnel exists but with different tunnel type
+  ERR_CODE_TUNNEL_TYPE_CONFLICT                                 = 4357;
+  /// invalid meter class mask in tunnel config spec
+  ERR_CODE_TUNNEL_INVALID_METER_CLASS                           = 4358;
+
+  // policer generic error codes
+  // policer direction cannot be updated
+  ERR_CODE_POLICER_DIR_UPD_NOT_ALLOWED                          = 4480;
+
+  // subnet generic error codes
+  // subnet is referenced in vnic
+  ERR_CODE_SUBNET_IN_USE_BY_VNIC                                = 4608;
+  // max dhcp policies on subnet exceeded
+  ERR_CODE_SUBNET_MAX_DHCP_POLICY_EXCEEDED                      = 4609;
+  // max host ifs on subnet exceeded
+  ERR_CODE_SUBNET_MAX_HOST_IF_EXCEEDED                          = 4610;
+
+  // region generic error codes
+  // local region id is reserved
+  ERR_CODE_REGION_LOCAL_REGION_ID_NOT_ALLOWED                   = 4736;
+  // empty prefix list is not allowed
+  ERR_CODE_REGION_EMPTY_PREFIX_LIST_NOT_ALLOWED                 = 4737;
+
+  // mirror generic error codes
+  // mirror session snap len less than min length
+  ERR_CODE_MIRROR_SNAP_LEN_BELOW_MIN                            = 4864;
+  // LSPAN mirror pps more than max supported scale
+  ERR_CODE_MIRROR_LSPAN_PPS_ABOVE_MAX                           = 4865;
+  // unsupported mirror session type
+  ERR_CODE_MIRROR_SESSION_TYPE_NOT_SUPPORTED                    = 4866;
+  // duplicate mirror rule found in mirror policy
+  ERR_CODE_MIRROR_RULE_EXISTS                                   = 4867;
+  // mirror session not found
+  ERR_CODE_MIRROR_SESSION_NOT_FOUND                             = 4868;
+  // invalid mirror collector ip address
+  ERR_CODE_MIRROR_INVALID_COLLECTOR_IP                          = 4869;
+  // ERSPAN destination is not set or invalid
+  ERR_CODE_MIRROR_ERSPAN_COLLECTOR_INVALID                      = 4870;
+  // mirror session snap id more than supported
+  ERR_CODE_MIRROR_ERSPAN_SPAN_ID_INVALID                        = 4871;
+  // ERSPAN config not consistent with erspan type
+  ERR_CODE_ERSPAN_CONFIG_INCONSISTENT_WITH_ERSPAN_TYPE          = 4872;
+  // mirror session snap len out of supported range
+  ERR_CODE_MIRROR_SNAP_LEN_OUT_OF_RANGE                         = 4873;
+  // mirror session dst i.e. lspan/rspan/erspan config  missing
+  ERR_CODE_MIRROR_SESSION_EMPTY_DESTINATION                     = 4874;
+  // mirror policy rule without mirror session
+  ERR_CODE_RULE_WITHOUT_MIRROR_SESSION                          = 4875;
+  // mirror policy rule has more than supported mirror sessions
+  ERR_CODE_RULE_MAX_MIRROR_SESSION_EXCEEDED                     = 4876;
+  // vTAP mirror collector vpc not set
+  ERR_CODE_MIRROR_VTAP_COLLECTOR_VPC_NOT_SET                    = 4877;
+  // vTAP mirror collector dst IP not set
+  ERR_CODE_MIRROR_VTAP_COLLECTOR_DST_IP_NOT_SET                 = 4878;
+  // unsupported vTAP mirror collector encap type specified
+  ERR_CODE_MIRROR_VTAP_COLLECTOR_ENCAP_TYPE_NOT_SUPPORTED       = 4879;
+  // invalid encap source port in vTAP specification
+  ERR_CODE_MIRROR_VTAP_COLLECTOR_ENCAP_SRC_PORT_INVALID         = 4880;
+  // invalid encap destination port in vTAP specification
+  ERR_CODE_MIRROR_VTAP_COLLECTOR_ENCAP_DST_PORT_INVALID         = 4881;
+  // vTAP mirror collector src IP not set
+  ERR_CODE_MIRROR_VTAP_COLLECTOR_SRC_IP_NOT_SET                 = 4882;
+  // mirror session type can't be updated
+  ERR_CODE_MIRROR_SESSION_TYPE_UPD_NOT_ALLOWED                  = 4883;
+  // mirror session vtap vpc can't be updated
+  ERR_CODE_MIRROR_SESSION_VTAP_VPC_UPD_NOT_ALLOWED              = 4884;
+  // mirror session vtap dst ip can't be updated
+  ERR_CODE_MIRROR_SESSION_VTAP_DST_IP_UPD_NOT_ALLOWED           = 4885;
+  // invalid meter class on mirror session
+  ERR_CODE_MIRROR_SESSION_INVALID_METER_CLASS                   = 4886;
+  // invalid meter class mask on mirror session
+  ERR_CODE_MIRROR_SESSION_INVALID_METER_CLASS_MASK              = 4887;
+
+  // route table generic error codes
+  // class priority of route exceeds max value
+  ERR_CODE_ROUTE_CLASS_PRIORITY_MAX_EXCEEDED                    = 4992;
+  // no. of IP nexthops configured is beyond supported limit
+  ERR_CODE_ROUTE_MAX_IP_NEXTHOP_EXCEEDED                        = 4993;
+  // no IP nexthops configured for overlay IP route
+  ERR_CODE_ROUTE_EMPTY_IP_NEXTHOP_NOT_ALLOWED                   = 4994;
+  // no. of overlay MACs are more than IP nexthops
+  ERR_CODE_OVERLAY_NEXTHOP_IP_MAC_COUNT_MISMATCH                = 4995;
+  // route table is too big
+  ERR_CODE_ROUTE_TABLE_TOO_BIG                                  = 4996;
+
+  // vnic not allowed on remote vpc
+  ERR_CODE_VNIC_IN_REMOTE_VPC_NOT_ALLOWED                       = 5248;
+  // vnic encap update not allowed
+  ERR_CODE_VNIC_ENCAP_UPD_NOT_ALLOWED                           = 5249;
+  // invalid vnic encap type specified
+  ERR_CODE_VNIC_ENCAP_TYPE_INVALID                              = 5250;
+  // ip/mac binding checks cannot be enabled on vnf vnics
+  ERR_CODE_VNIC_IP_MAC_BINDING_CHECKS_NOT_SUPPORTED             = 5251;
+  // vip id not set on vnic with HA config
+  ERR_CODE_VNIC_HA_VIP_ID_NOT_SET                               = 5252;
+  // HA owner not set
+  ERR_CODE_VNIC_HA_OWNER_NOT_SET                                = 5253;
+  // primary update not allowed
+  ERR_CODE_VNIC_PRIMARY_UPD_NOT_ALLOWED                         = 5254;
+  // public mac update not allowed
+  ERR_CODE_VNIC_PUBLIC_MAC_UPD_NOT_ALLOWED                      = 5255;
+  // vip id update not allowed
+  ERR_CODE_VNIC_VIP_ID_UPD_NOT_ALLOWED                          = 5256;
+  // HA owner update not allowed
+  ERR_CODE_VNIC_HA_OWNER_UPD_NOT_ALLOWED                        = 5257;
+  // primary vnic update not allowed
+  ERR_CODE_VNIC_PRIMARY_VNIC_UPD_NOT_ALLOWED                    = 5258;
+  // vnic subnet update not allowed
+  ERR_CODE_VNIC_SUBNET_UPD_NOT_ALLOWED                          = 5259;
+  // vnic tunnel update not allowed
+  ERR_CODE_VNIC_TUNNEL_UPD_NOT_ALLOWED                          = 5260;
+  // vnic vpc update not allowed
+  ERR_CODE_VNIC_VPC_UPD_NOT_ALLOWED                             = 5261;
+  // missing subnet and vpc information on vnic
+  ERR_CODE_VNIC_SUBNET_VPC_MISSING                              = 5262;
+  // floating vnic attribute is immutable
+  ERR_CODE_VNIC_FLOATING_VNIC_UPD_NOT_ALLOWED                   = 5263;
+  // src NAT pool configured on floating vnic not found
+  ERR_CODE_VNIC_FLOATING_VNIC_PLS_SRC_NAT_POOL_NOT_FOUND        = 5264;
+  // mandatory src NAT pool on floating vnic not configured
+  ERR_CODE_VNIC_FLOATING_VNIC_PLS_SRC_NAT_POOL_NOT_SET          = 5265;
+  // IGW NAT pool configured on vnic not found
+  ERR_CODE_VNIC_IGW_NAT_POOL_NOT_FOUND                          = 5266;
+  // mandatory IGW NAT pool on vnic not configured
+  ERR_CODE_VNIC_IGW_NAT_POOL_NOT_SET                            = 5267;
+  // max. no of multicast groups configured exceeded the supported limit
+  ERR_CODE_MAX_VNIC_MULTICAST_GROUP_EXCEEDED                    = 5268;
+
+  // max HA vip in active active mode exceeded
+  ERR_CODE_DEVICE_HA_MAX_VIP_EXCEEDED                           = 5376;
+  // HA preemption not supported in active active mode
+  ERR_CODE_DEVICE_HA_PREEMPTION_NOT_SUPPORTED                   = 5377;
+  // flow reconcile not supported in HA active active mode
+  ERR_CODE_DEVICE_HA_FLOW_RECONCILE_NOT_SUPPORTED               = 5378;
+  // device HA mode update not allowed
+  ERR_CODE_DEVICE_HA_MODE_UPD_NOT_ALLOWED                       = 5379;
+  // device HA vip id update not allowed
+  ERR_CODE_DEVICE_HA_VIP_ID_UPD_NOT_ALLOWED                     = 5380;
+  // device HA vip IP address update not allowed
+  ERR_CODE_DEVICE_HA_VIP_IP_ADDRESS_UPD_NOT_ALLOWED             = 5381;
+  // trust vni update not allowed
+  ERR_CODE_DEVICE_TRUSTED_VNI_UPD_NOT_ALLOWED                   = 5382;
+  // firewall action transposition scheme update not allowed
+  ERR_CODE_DEVICE_FW_ACTION_XPOSN_SCHEME_UPD_NOT_ALLOWED        = 5383;
+  // device config file persist failed
+  ERR_CODE_DEVICE_CONF_PERSIST_FAILED                           = 5384;
+  // device IP mapping class priority max value exceeded
+  ERR_CODE_DEVICE_MAPPING_CLASS_PRIORITY_MAX_EXCEEDED           = 5385;
+  // device mgmt network encap type not supported
+  ERR_CODE_DEVICE_MGMT_NW_ENCAP_TYPE_NOT_SUPPORTED              = 5386;
+  // device control network encap type not supported
+  ERR_CODE_DEVICE_CONTROL_NW_ENCAP_TYPE_NOT_SUPPORTED           = 5387;
+  // device drop mirror session not found
+  ERR_CODE_DEVICE_DROP_MIRROR_SESSION_NOT_FOUND                 = 5388;
+  // device HA role invalid
+  ERR_CODE_DEVICE_HA_ROLE_INVALID                               = 5389;
+  // local region id attribute is immutable
+  ERR_CODE_DEVICE_LOCAL_REGION_ID_UPD_NOT_ALLOWED               = 5390;
+
+  // L2 local mappings are not supported
+  ERR_CODE_L2_LOCAL_MAPPINGS_NOT_SUPPORTED                      = 5504;
+  // tags are not supported for local mappings
+  ERR_CODE_MAPPING_TAGS_NOT_SUPPORTED                           = 5505;
+  // mapping direction update i.e. L2R to R2L and vice versa not allowed
+  ERR_CODE_MAPPING_MOVE_NOT_SUPPORTED                           = 5506;
+  // flow reconcile on local mappings is not supported
+  ERR_CODE_LOCAL_MAPPING_FLOW_RECONCILE_NOT_SUPPORTED           = 5507;
+  // invalid meter class on mapping object
+  ERR_CODE_MAPPING_INVALID_METER_CLASS                          = 5508;
+
+  // nexthop group is empty
+  ERR_CODE_NHGROUP_EMPTY                                        = 5632;
+  // nexthop group max size exceeded
+  ERR_CODE_NHGROUP_MAX_SIZE_EXCEEDED                            = 5633;
+  // nexthop group type update not allowed
+  ERR_CODE_NHGROUP_TYPE_UPD_NOT_ALLOWED                         = 5634;
+  // nexthop group size update not allowed
+  ERR_CODE_NHGROUP_SIZE_UPD_NOT_ALLOWED                         = 5635;
+  // nexthop group type is invalid
+  ERR_CODE_NHGROUP_TYPE_INVALID                                 = 5636;
+
+  // vni update not allowed
+  ERR_CODE_VNI_UPD_NOT_ALLOWED                                  = 5760;
+  // invalid meter class in vni config spec
+  ERR_CODE_VNI_INVALID_METER_CLASS                              = 5761;
+  // invalid meter class mask in vni config spec
+  ERR_CODE_VNI_INVALID_METER_CLASS_MASK                         = 5762;
+
+  // underlay allowlist policy prefix list is empty
+  ERR_CODE_UNDERLAY_ALLOWLIST_POLICY_PREFIX_LIST_EMPTY          = 5888;
+  /// underlay allowlist policy max prefix list size exceeded
+  ERR_CODE_UNDERLAY_ALLOWLIST_POLICY_MAX_PREFIX_EXCEEDED        = 5889;
+
+  // config version generic error codes
+  // version list is empty in config version request
+  ERR_CODE_CONFIG_VERSION_EMPTY_VERSION_LIST                    = 6016;
+  // version string cannot be empty
+  ERR_CODE_CONFIG_VERSION_EMPTY_VERSION_STRING                  = 6017;
+
+  // inband mgmt allowlist policy prefix list is empty
+  ERR_CODE_INBAND_MGMT_ALLOWLIST_POLICY_PREFIX_LIST_EMPTY       = 6144;
+  // inband mgmt allowlist policy max prefix list size exceeded
+  ERR_CODE_INBAND_MGMT_ALLOWLIST_POLICY_MAX_PREFIX_EXCEEDED     = 6145;
+  // IPv6 not supported with inband mgmt allow list policy
+  ERR_CODE_INBAND_MGMT_ALLOWLIST_IPV6_NOT_SUPPORTED             = 6146;
+
+  // BITW_SMART_SWITCH mode specific security policy error codes
+  // max classes exceeded
+  ERR_CODE_POLICY_MAX_CLASSES_EXCEEDED                          = 65536;
+  // max tree nodes exceeded
+  ERR_CODE_POLICY_MAX_TREE_NODES_EXCEEDED                       = 65537;
+  // no free policy pool available to accomodate the policy
+  ERR_CODE_POLICY_POOL_NOT_AVAILABLE                            = 65538;
+
+  // BITW_SMART_SWITCH mode specific vpc error codes
+  // fabric encap cannot be updated
+  ERR_CODE_VPC_FABRIC_ENCAP_UPD_NOT_ALLOWED                     = 65664;
+
+  // BITW_SMART_SWITCH mode specific policer error codes
+  // policer rate below lower limit
+  ERR_CODE_POLICER_RATE_BELOW_MIN                               = 65920;
+  // policer direction invalid
+  ERR_CODE_POLICER_DIRECTION_INVALID                            = 65921;
+  // max policers exceeded
+  ERR_CODE_MAX_POLICERS_EXCEEDED                                = 65922;
+
+  // BITW_SMART_SWITCH mode specific mirror error codes
+  // lspan mirror session pps below lower limit
+  ERR_CODE_MIRROR_LSPAN_PPS_BELOW_MIN                           = 66304;
+  // unsupported destination type
+  ERR_CODE_MIRROR_DST_TYPE_NOT_SUPPORTED                        = 66305;
+
+  // BITW_SMART_SWITCH mode specific route table error codes
+  // max routes exceeded
+  ERR_CODE_ROUTE_TABLE_MAX_ROUTES_EXCEEDED                      = 66432;
+  // no free route table pool available to accomodate the route table
+  ERR_CODE_ROUTE_TABLE_POOL_NOT_AVAILABLE                       = 66433;
+  // invalid route priority configured on route
+  ERR_CODE_ROUTE_TABLE_INVALID_ROUTE_PRIORITY                   = 66434;
+  // meter class configured on the route is invalid
+  ERR_CODE_ROUTE_TABLE_INVALID_METER_CLASS                      = 66435;
+  // (overlay) DMAC rewrite not supported on the route configured
+  ERR_CODE_ROUTE_TABLE_DMAC_REWRITE_NOT_SUPPORTED               = 66436;
+  // invalid meter class mask on the route
+  ERR_CODE_ROUTE_TABLE_INVALID_METER_CLASS_MASK                 = 66437;
+
+
+  // BITW_SMART_SWITCH mode specific meter policy error codes
+  // max rules exceeded
+  ERR_CODE_METER_POLICY_MAX_RULES_EXCEEDED                      = 66560;
+  // no free meter policy pool available to accomodate the meter policy
+  ERR_CODE_METER_POLICY_POOL_NOT_AVAILABLE                      = 66561;
+
+  // BITW_SMART_SWITCH mode specific vnic error codes
+  // invalid max cps value specified
+  ERR_CODE_VNIC_MAX_CPS_INVALID                                 = 66688;
+  // invalid HA owner update received
+  ERR_CODE_VNIC_HA_OWNER_UPD_INVALID                            = 66689;
+
+  // device vip id already exists
+  ERR_CODE_DEVICE_VIP_ID_EXISTS                                 = 66816;
+  // device vip hw id mismatch
+  ERR_CODE_DEVICE_VIP_HW_ID_MISMATCH                            = 66817;
+  // device vip id not found
+  ERR_CODE_DEVICE_VIP_ID_NOT_FOUND                              = 66818;
+
+  // pipeline layer generic error codes
+  // src ip address max tree nodes exceeded
+  ERR_CODE_POLICY_SRC_IP_MAX_TREE_NODES_EXCEEDED                = 129024;
+  // src ip address max classes exceeded
+  ERR_CODE_POLICY_SRC_IP_MAX_CLASSES_EXCEEDED                   = 129025;
+  // src tag max tree nodes exceeded
+  ERR_CODE_POLICY_SRC_TAG_MAX_TREE_NODES_EXCEEDED               = 129026;
+  // src tag max classes exceeded
+  ERR_CODE_POLICY_SRC_TAG_MAX_CLASSES_EXCEEDED                  = 129027;
+  // dst ip address max tree nodes exceeded
+  ERR_CODE_POLICY_DST_IP_MAX_TREE_NODES_EXCEEDED                = 129028;
+  // dst ip address max classes exceeded
+  ERR_CODE_POLICY_DST_IP_MAX_CLASSES_EXCEEDED                   = 129029;
+  // dst tag max tree nodes exceeded
+  ERR_CODE_POLICY_DST_TAG_MAX_TREE_NODES_EXCEEDED               = 129030;
+  // dst tag max classes exceeded
+  ERR_CODE_POLICY_DST_TAG_MAX_CLASSES_EXCEEDED                  = 129031;
+  // src port max tree nodes exceeded
+  ERR_CODE_POLICY_SRC_PORT_MAX_TREE_NODES_EXCEEDED              = 129032;
+  // src port max classes exceeded
+  ERR_CODE_POLICY_SRC_PORT_MAX_CLASSES_EXCEEDED                 = 129033;
+  // (dst port, proto) max tree nodes exceeded
+  ERR_CODE_POLICY_DST_PORT_PROTO_MAX_TREE_NODES_EXCEEDED        = 129034;
+  // (dst port, proto) max classes exceeded
+  ERR_CODE_POLICY_DST_PORT_PROTO_MAX_CLASSES_EXCEEDED           = 129035;
+  // dst port max tree nodes exceeded
+  ERR_CODE_POLICY_DST_PORT_MAX_TREE_NODES_EXCEEDED              = 129036;
+  // (src port, proto) max tree nodes exceeded
+  ERR_CODE_POLICY_SRC_PORT_PROTO_MAX_TREE_NODES_EXCEEDED        = 129037;
+  // dst port max classes exceeded
+  ERR_CODE_POLICY_DST_PORT_MAX_CLASSES_EXCEEDED                 = 129038;
+  // (src port, proto) max classes exceeded
+  ERR_CODE_POLICY_SRC_PORT_PROTO_MAX_CLASSES_EXCEEDED           = 129039;
+
+
+
+
+
+  // catch all error code
+  ERR_CODE_UNKNOWN                                              = 0x1FFFFFFF;
+}
+
+// Sync status codes for s/w datapath
+enum SwDatapathSyncStatus {
+  SW_DP_SYNC_STATUS_NONE        = 0;
+  SW_DP_SYNC_STATUS_ENABLED     = 1; // sync enabled
+  SW_DP_SYNC_STATUS_IN_PROGRESS = 2; // sync in progress
+  SW_DP_SYNC_STATUS_COMPLETED   = 3; // sync completed
+  SW_DP_SYNC_STATUS_FAILED      = 4; // catch-all sync failure
+}
+
+// asic types
+enum AsicType {
+  ASIC_TYPE_NONE   = 0;
+  ASIC_TYPE_CAPRI  = 1;
+  ASIC_TYPE_ELBA   = 2;
+  ASIC_TYPE_GIGLIO = 3;
+  ASIC_TYPE_SALINA = 4;
+}
+
+// IP address families
+enum IPAF {
+  IP_AF_NONE  = 0;
+  IP_AF_INET  = 1; // IPv4
+  IP_AF_INET6 = 2; // IPv6
+}
+
+enum WildcardMatch {
+  MATCH_NONE = 0;
+  MATCH_ANY  = 256;
+}
+
+// IP Address object
+message IPAddress {
+  IPAF      Af     = 1 [(gogoproto.moretags) = "meta:mandatory"];
+  // IP address family
+  oneof v4_or_v6 {
+    // IPv4 address
+    fixed32 V4Addr = 2;
+    // IPv6 address
+    bytes   V6Addr = 3;
+  }
+}
+
+// IP Prefix object
+message IPPrefix {
+  // IP prefix address
+  IPAddress Addr = 1;
+  // IP Prefix length
+  uint32    Len  = 2 [(gogoproto.moretags) = "meta:range=0-128"];
+}
+
+// IP Range
+message IPRange {
+  // starting IP address
+  IPAddress Low  = 1;
+  // ending IP address
+  IPAddress High = 2;
+}
+
+// IPEntry represents any form of IP address/prefix/range/tag etc.
+message IPEntry {
+  oneof ip_entry {
+    // IP prefix
+    IPPrefix     Prefix = 1;
+    // IP range
+    AddressRange Range  = 2;
+    // tag that represents IP addres/pfx/range
+    uint32       Tag    = 3 [(gogoproto.moretags) = "meta:range:1-4294967294"];
+  }
+}
+
+// IPList is a list of IPEntry objects
+message IPList {
+  repeated IPEntry IPEntry = 1;
+}
+
+// IPv4 Prefix
+message IPv4Prefix {
+  // IPv4 address portion
+  fixed32 Addr = 1;
+  // prefix length
+  uint32  Len  = 2 [(gogoproto.moretags) = "meta:range=0-32"];
+}
+
+// IPv6 Prefix
+message IPv6Prefix {
+  // IPv6 address bytes
+  bytes  Addr = 1;
+  // prefix length
+  uint32 Len  = 2 [(gogoproto.moretags) = "meta:range=0-128"];
+}
+
+// IPSubnet represents an IPv4 or IPv6 subnet
+message IPSubnet {
+  oneof subnet {
+    // IPv4 subnet
+    IPPrefix IPv4Subnet = 1;
+    // IPv6 subnet
+    IPPrefix IPv6Subnet = 2;
+  }
+}
+
+// AddressRange represents an IPv4 or IPv6 address range
+message AddressRange {
+  oneof range {
+    // IPv4 address range
+    IPRange IPv4Range = 1;
+    // IPv6 address range
+    IPRange IPv6Range = 2;
+  }
+}
+
+// Address object is the prefix or range
+message Address {
+  oneof address {
+    // IPv4 or IPv6 prefix
+    IPSubnet     Prefix = 1;
+    // IPv4 or IPv6 address range
+    AddressRange Range  = 2;
+  }
+}
+
+// PortRange object has low and high end of the port ranges
+message PortRange {
+  uint32 PortLow  = 1 [(gogoproto.moretags) = "meta:range:0-65535"];
+  uint32 PortHigh = 2 [(gogoproto.moretags) = "meta:range:0-65535"];
+}
+
+// direction in which policy is enforced
+// INGRESS/EGRESS is w.r.t vnic (i.e., traffic leaving vnic is marked as
+// EGRESS and traffic going to vnic is marked as INGRESS
+enum PolicyDir {
+  POLICY_DIR_NONE    = 0;
+  POLICY_DIR_INGRESS = 1;
+  POLICY_DIR_EGRESS  = 2;
+}
+
+// L3 rule match criteria
+message RuleL3Match {
+  // IP Protocol
+  // NOTE:
+  // IP protocol match MUST be specified even if it is wildcard
+  oneof protomatch {
+    uint32        ProtoNum      = 1;
+    WildcardMatch ProtoWildcard = 2;  // match ANY protocol
+  }
+  // NOTE:
+  // whenever IPPrefix is used in this, API expects host bits of the prefix are
+  // zero-ed by the client
+  oneof srcmatch {
+    IPPrefix      SrcPrefix     = 3;  // Src IP Prefix
+    AddressRange  SrcRange      = 4;  // Src IP Range
+    uint32        SrcTag        = 5 [(gogoproto.moretags) = "meta:range:1-4294967294"];  // Src Tag
+    IPList        SrcIPList     = 6;  // Src IP List
+  }
+  oneof dstmatch {
+    IPPrefix      DstPrefix     = 7;  // Dst IP Prefix
+    AddressRange  DstRange      = 8;  // Dst IP Range
+    uint32        DstTag        = 9 [(gogoproto.moretags) = "meta:range:1-4294967294"];  // Dst Tag
+    IPList        DstIPList     = 10; // Dst IP List
+  }
+}
+
+// TCP/UDP rule match criteria
+message PortMatch {
+  // source port range
+  PortRange SrcPortRange = 1;
+  // destination port range
+  PortRange DstPortRange = 2;
+}
+
+// ICMPv4/ICMPv6 rule match criteria
+message ICMPMatch {
+  // ICMP type
+  oneof typematch {
+    // match any ICMP type
+    uint32        Type         = 1 [(gogoproto.jsontag) = "Type"];
+    // match any ICMP type
+    WildcardMatch TypeWildcard = 2 [(gogoproto.jsontag) = "TypeWildcard"];
+  }
+  // ICMP code
+  oneof codematch {
+    // match any ICMP code
+    uint32        Code         = 3 [(gogoproto.jsontag) = "Code"];
+    // match any ICMP code
+    WildcardMatch CodeWildcard = 4 [(gogoproto.jsontag) = "CodeWildcard"];
+  }
+}
+
+// TCP/UDP source and destination port list
+message PortListMatch {
+  // list of source ports or port ranges
+  repeated PortRange SrcPortRange = 1;
+  // list of destination ports or port ranges
+  repeated PortRange DstPortRange = 2;
+}
+
+// ICMP type/code match condition list
+message ICMPMatchList {
+  // ICMP type/code list
+  repeated ICMPMatch ICMPMatchList = 1;
+}
+
+// L4 rule match criteria
+message RuleL4Match {
+  oneof l4info {
+    // source and/or destination ports/ranges
+    PortMatch     Ports         = 1;
+    // ICMP type/code match criteria
+    ICMPMatch     TypeCode      = 2;
+    // list of source and/or destination ports/ranges
+    PortListMatch PortList      = 3;
+    // list ICMP type/code match criteria
+    ICMPMatchList ICMPMatchList = 4;
+  }
+}
+
+// rule match criteria
+message RuleMatch {
+  // Layer 3 match criteria
+  RuleL3Match L3Match = 1;
+  // Layer 4 match criteria
+  RuleL4Match L4Match = 2;
+}
+
+// QinQ encap
+message QinQ {
+  // Service VLAN tag
+  uint32 STag = 1 [(gogoproto.moretags) = "meta:mandatory"];
+  // Customer VLAN tag
+  uint32 CTag = 2 [(gogoproto.moretags) = "meta:mandatory"];
+}
+
+// encap types in the network
+enum EncapType {
+  ENCAP_TYPE_NONE     = 0;
+  ENCAP_TYPE_DOT1Q    = 1;
+  ENCAP_TYPE_QINQ     = 2;
+  ENCAP_TYPE_MPLSoUDP = 3;
+  ENCAP_TYPE_VXLAN    = 4;
+  ENCAP_TYPE_NVGRE    = 5;
+}
+
+// based on the encap type in the fabric, one can carry per vnic information
+// for example, in case of MPLSoUDP, MPLS tag (along with source tunnel IP)
+// can uniquely identify the vnic from where the packet is originating and
+// another MPLS tag (along with the destination tunnel IP) can identify the
+// destination VNIC
+message EncapVal {
+  oneof val {
+    // MPLS tag corresponding to the VNIC or mapping
+    uint32  VlanId  = 1;    // VLAN tag
+    uint32  MPLSTag = 2;    // MPLS tag/slot
+    uint32  Vnid    = 3;    // VxLAN vnid
+    QinQ    QinQ    = 4;    // QinQ tag
+    uint32  Vsid    = 5;    // NVGRE VSID
+  }
+}
+
+// fabric encap
+message Encap {
+  EncapType Type  = 1;    // encap type
+  EncapVal  Value = 2;    // encap value
+}
+
+// types of lif
+enum LifType {
+  LIF_TYPE_NONE              = 0;
+  LIF_TYPE_HOST              = 1;
+  LIF_TYPE_HOST_VF           = 2;
+  LIF_TYPE_HOST_MGMT         = 3;
+  LIF_TYPE_OOB_MGMT          = 4;
+  LIF_TYPE_INBAND_MGMT       = 5;
+  LIF_TYPE_INTERNAL_MGMT     = 6;
+  LIF_TYPE_DATAPATH          = 7;
+  LIF_TYPE_LEARN             = 8;
+  LIF_TYPE_CONTROL           = 9;
+  LIF_TYPE_UPLINK            = 10;
+  LIF_TYPE_NVME              = 11;
+  LIF_TYPE_UPT               = 12;
+  LIF_TYPE_CRYPTO            = 13;
+  LIF_TYPE_FTL               = 14;
+  LIF_TYPE_ACCEL             = 15;
+  LIF_TYPE_P2P               = 16;
+  LIF_TYPE_CORE              = 17;
+  LIF_TYPE_CRYPTO_SHARED     = 18;
+  LIF_TYPE_HOST_VIRTIO       = 19;
+  LIF_TYPE_HOST_GVE          = 20;
+  LIF_TYPE_HOST_MGMT_GVE     = 21;
+  LIF_TYPE_OOB_MGMT_GVE      = 22;
+  LIF_TYPE_INTERNAL_MGMT_GVE = 23;
+  LIF_TYPE_INBAND_MGMT_GVE   = 24;
+  LIF_TYPE_CPU_GVE           = 25;
+}
+
+// lif queue purpose
+enum LifQueuePurpose {
+  // unused
+  LIF_QUEUE_PURPOSE_NONE           = 0;
+  // used for admin commands
+  LIF_QUEUE_PURPOSE_ADMIN          = 1;
+  // used for tx descriptors
+  LIF_QUEUE_PURPOSE_TX             = 2;
+  // used for rx descriptors
+  LIF_QUEUE_PURPOSE_RX             = 3;
+  // used for submitting rdma,nvme commands
+  LIF_QUEUE_PURPOSE_SUBMISSION     = 4;
+  // response queue for rdma, nvme commands
+  LIF_QUEUE_PURPOSE_RESPONSE       = 5;
+  // completion queue. having one to many relationships with above queues
+  LIF_QUEUE_PURPOSE_COMPLETION     = 6;
+  // event queue
+  LIF_QUEUE_PURPOSE_EVENT          = 7;
+  // service queue
+  LIF_QUEUE_PURPOSE_SERVICE        = 8;
+}
+
+// security rule action is one of the below
+enum SecurityRuleAction {
+  SECURITY_RULE_ACTION_NONE  = 0;
+  SECURITY_RULE_ACTION_ALLOW = 1;
+  SECURITY_RULE_ACTION_DENY  = 2;
+}
+
+// SecurityPolicyRuleScale indicates the max. rule scale supported
+// per policy
+// NOTE:
+// 1. this is a global configuration per DSC and all policies
+//    will support the configured max rule scale (it is not possible
+//    to have some policies with rule scale different from others)
+// 2. when rule scale is modified, DSC needs to be rebooted for the
+//    configuration to take effect
+enum SecurityPolicyRuleScale {
+  // if no scale is configured, default value is picked
+  SECURITY_POLICY_RULE_SCALE_NONE = 0;
+  // max rules per policy is 1K
+  // NOTE: this is also the default rule scale
+  SECURITY_POLICY_RULE_SCALE_1K   = 1;
+  // max rules per policy is 4K
+  SECURITY_POLICY_RULE_SCALE_4K   = 2;
+}
+
+// firewall policy action transposition scheme
+// NOTE:
+// for every new session from/to a vnic, there are potentially multiple policies
+// that need to be evaluated. For example, ingress/egress policies attached to
+// vnic's vpc, ingress/egress policies attached to vnic's subnet and
+// ingress/egress policies directly attached to vnic must evaluated. Each policy
+// evaluated may give potentially different and conflicting result compared to
+// the previous other policy evaluated w.r.t the action that needs to
+// be taken (allow or deny). So, users must to be able to specify how to resolve
+// this and arrive at final action to pick for that session.
+// FwPolicyXposn defines how such action transposition has to be performed
+// across policies
+// NOTE:
+// within a policy, always highest priority rule within that policy wins in all
+// transposition schemes
+enum FwPolicyXposn {
+  FW_POLICY_XPOSN_NONE              = 0;
+  // if GLOBAL_PRIORITY transposition scheme is configured, rule that is picked
+  // is the rule with highest priority (numerically lowest value) across all
+  // policies that are evaluated for a given packet
+  FW_POLICY_XPOSN_GLOBAL_PRIORITY   = 1;
+  // if ANY_DENY transposition scheme is configured, and a given packet matches
+  // a deny rule (and that rule has highest priority in that policy) in any of
+  // the policies evaluated for that packet, then session is created with
+  // deny/drop action
+  // NOTE:
+  // 1. once a deny rule is hit as highest prioity rule, in this scheme, rest of
+  //    policies in the chain are not evaluated (even though they might have
+  //    terminating rules) so in ANY_DENY scheme once a DENY rule is picked
+  //    that rule and action wins
+  // 2. priority of rules across policies doesn't matter in this scheme (i.e.
+  //    priority values are local to the policy object)
+  FW_POLICY_XPOSN_ANY_DENY          = 2;
+  // if LAST_MATCHED_RULE transposition scheme is configured
+  // 1. from each policy highest priority rule is picked (note that if no rule
+  //    is matched, policy level default action is picked)
+  // 2. if that rule is a terminating rule, corresponding action is picked and
+  //    no more policies are evaluated (i.e. terminating rule wins)
+  // 3. if that rule is not a terminating rule, next policy in the chain is
+  //    evaluated and action from a matching rule (or default action) is picked
+  // 4. the above steps are repeated until all policies are evaluated
+  //
+  // in this scheme, unless a terminating rule is encountered in some policy,
+  // the rule in the last policy evaluated always wins (so for a packet to be
+  // allowed if last policy has allow rule, then that wins even though all other
+  // policies have deny rule that matches the packet (and are not terminating
+  // rules)
+  FW_POLICY_XPOSN_LAST_MATCHED_RULE = 3;
+}
+
+// types of NAT actions supported
+enum NatAction {
+  NAT_ACTION_NONE        = 0;
+  // Address only static NAT
+  NAT_ACTION_STATIC      = 1;
+  // address and port translation to the public (aka. Internet) address space
+  NAT_ACTION_NAPT_PUBLIC = 2;
+  // address and port translation to internal service address space
+  NAT_ACTION_NAPT_SVC    = 3;
+}
+
+// meter classes that can be used on per route basis for accouting
+// (i.e., packet and byte counters)
+enum MeterClass {
+  METER_CLASS_NONE = 0;
+  METER_CLASS_1    = 1;
+  METER_CLASS_2    = 2;
+  METER_CLASS_3    = 3;
+  METER_CLASS_4    = 4;
+  METER_CLASS_5    = 5;
+  METER_CLASS_6    = 6;
+  METER_CLASS_7    = 7;
+  METER_CLASS_8    = 8;
+  METER_CLASS_9    = 9;
+  METER_CLASS_10   = 10;
+  METER_CLASS_11   = 11;
+  METER_CLASS_12   = 12;
+  METER_CLASS_13   = 13;
+  METER_CLASS_14   = 14;
+  METER_CLASS_15   = 15;
+}
+
+// meter class mask used to compute final meter bucket
+message MeterClassMask {
+  // meter class mask value
+  uint32 MeterClassMask = 1 [(gogoproto.moretags) = "meta:range:0-4095,default=4095"];
+}
+
+// BatchCtxt is opaque to application(s) and is expected to be passed
+// back (to identify the batch) in every API call of this batch until
+// BatchCommit() or BatchAbort()
+message BatchCtxt {
+  // opaque cookie
+  uint64 BatchCookie = 1;
+}
+
+// public/Internet or Service/Infra address
+enum AddressType {
+  ADDR_TYPE_NONE    = 0;
+  ADDR_TYPE_PUBLIC  = 1;
+  ADDR_TYPE_SERVICE = 2;
+}
+
+// flow key for non-IP flows
+message MACFlowKey {
+  // subnet identifier
+  bytes  Subnet    = 1;
+  // source MAC address
+  uint64 SrcMAC    = 2;
+  // destination MAC address
+  uint64 DstMAC    = 3;
+  // 16 bits of Ethertype in the Ethernet header
+  uint32 EtherType = 4;
+}
+
+// L4 portion of flow key tuple
+message FlowL4Info {
+  // key fields for TCP/UDP flows
+  message TCPUDPInfo {
+    uint32 SrcPort  = 1;
+    uint32 DstPort  = 2;
+  }
+  // key fields for ICMP flows
+  message ICMPInfo {
+    uint32 Type = 1;
+    uint32 Code = 2;
+    uint32 Id   = 3;
+  }
+  oneof l4_info {
+    TCPUDPInfo TcpUdpInfo = 1;
+    ICMPInfo   IcmpInfo   = 2;
+  }
+}
+
+// flow key for IP flows
+message IPFlowKey {
+  // VPC identifier
+  bytes      VPCId      = 1;
+  // source IP seen in the packet
+  IPAddress  SrcIP      = 2;
+  // destination IP seen in the packet
+  IPAddress  DstIP      = 3;
+  // IP protocol
+  uint32     IPProtocol = 4;
+  // L4 information of the flow key
+  FlowL4Info L4Info     = 5;
+}
+
+// flow key is either IP flow key or non-IP flow key
+message FlowKey {
+  oneof key {
+    // flow key for the IPv4 and IPv6 flows
+    IPFlowKey  IPFlowKey  = 1;
+    // flow key for the non-IP flows
+    MACFlowKey MACFlowKey = 2;
+  }
+}
+
+// admin state of control plane objects
+enum AdminState {
+  ADMIN_STATE_NONE    = 0;
+  ADMIN_STATE_ENABLE  = 1;
+  ADMIN_STATE_DISABLE = 2;
+}
+
+// route type
+enum RouteType {
+  ROUTE_TYPE_NONE   = 0;
+  ROUTE_TYPE_OTHER  = 1;
+  ROUTE_TYPE_REJECT = 2;
+  ROUTE_TYPE_LOCAL  = 3;
+  ROUTE_TYPE_REMOTE = 4;
+}
+
+// route protocols
+enum RouteProtocol {
+  ROUTE_PROTO_NONE   = 0;
+  ROUTE_PROTO_LOCAL  = 2;
+  ROUTE_PROTO_STATIC = 3;
+  ROUTE_PROTO_BGP    = 14;
+}
+
+// HA owner of an object or state (e.g. vnic or VIP etc.)
+enum HAOwner {
+  HA_OWNER_NONE  = 0;
+  // HA owner is the local DSC
+  HA_OWNER_LOCAL = 1;
+  // HA owner is the peer DSC
+  HA_OWNER_PEER  = 2;
+}
+
+// in case of shared services, route/mapping can dictate some rewrites so that
+// the service provider can identify the source subnet/VNET and apply
+// policies etc. on the receiving end
+message SvcRewriteInfo {
+  // IPv6 prefix to embed the overlay/inner source IP of the packet into
+  // NOTE: only IPv6 prefix is supported
+  IPPrefix  SrcPrefix      = 1 [(gogoproto.moretags) = "meta:mandatory"];
+  // IPv6 prefix to embed the overlay/inner destination IP of the packet into
+  // NOTE: only IPv6 prefix is supported
+  IPPrefix  DstPrefix      = 2 [(gogoproto.moretags) = "meta:mandatory"];
+  // DstNatIP is set, if 1:1 destination NAT needs to be done on the
+  // overlay/inner destination IP address inside encapped packet before
+  // embedding into (IPv6) DstPrefix field
+  // NOTE:
+  // DstNatIP must be IPv4 address
+  IPAddress DstNatIP       = 3;
+  // optional service to backend port mapping information (SvcPortMap points
+  // to SvcPortMap object configured to capture the such 1:1 port mappings)
+  bytes     SvcPortMap     = 4;
+  // tunnel pointing to intermediate VNF device, if one exists
+  bytes     VNFTunnel      = 5;
+  // when a route/mapping with UnderlaySrcNat set to true is hit,
+  // 1. local IP provided in tunnel will be used as outer source IP of
+  //    the encapped packet
+  // 2. if local IP is not provided in tunnel, then service IP provided in
+  //    vnic will be used as outer source IP of the encapped packet
+  // 3. if service IP in vnic is also not provided, then no NAT will be done
+  //    on outer source IP of the encapped packet
+  bool      UnderlaySrcNat = 6;
+}
+
+// PortSpeed specifies the speed of the port
+enum PortSpeed {
+  PORT_SPEED_NONE = 0;  // port speed not configured
+  PORT_SPEED_10M  = 1;  // port speed is 10Mbps
+  PORT_SPEED_100M = 2;  // port speed is 100Mbps
+  PORT_SPEED_1G   = 3;  // port speed is 1Gbps
+  PORT_SPEED_10G  = 4;  // port speed is 10Gbps
+  PORT_SPEED_25G  = 5;  // port speed is 25Gbps
+  PORT_SPEED_40G  = 6;  // port speed is 40Gbps
+  PORT_SPEED_50G  = 7;  // port speed is 50Gbps
+  PORT_SPEED_100G = 8;  // port speed is 100Gbps
+  PORT_SPEED_200G = 9;  // port speed is 200Gbps
+  PORT_SPEED_400G = 10; // port speed is 400Gbps
+  PORT_SPEED_RSVD = 11;
+}
+
+// DropNexthop is used to blackhole the traffic
+message DropNexthop {}
+
+// flow role
+enum FlowRole {
+  FLOW_ROLE_NONE      = 0;
+  // initiator flow
+  FLOW_ROLE_INITIATOR = 1;
+  // responder flow
+  FLOW_ROLE_RESPONDER = 2;
+}
+
+// FlowLogAction indicates whether flow logging is enabled or disabled and
+// this log action can be configured on device object or PF/VF object or at
+// a more granular level on per vnic object
+enum FlowLogAction {
+  // FLOW_LOG_ACTION_NONE is invalid and defaults to flow logs being disabled
+  FLOW_LOG_ACTION_NONE    = 0;
+  // FLOW_LOG_ACTION_DISABLE indicates that flow logging is disabled
+  FLOW_LOG_ACTION_DISABLE = 1;
+  // FLOW_LOG_ACTION_ENABLE indicates that flow logging is enabled
+  FLOW_LOG_ACTION_ENABLE  = 2;
+}
+
+// flow logging specific configuration
+// NOTE:
+// 1. if FlowLogSpec is not configured on device object and PF/host
+//    interface and on vnic object, flow logging is disabled by default
+// 2. flow logging configuration can be applied at the device level or at
+//    more granular level like per PF or a vnic as well (as an override). For
+//    a given packet, the most specific configuration (i.e. vnic
+//    object) is picked first, then less specific one (i.e., PF or host
+//    interface), if not configured on the vnic object and then the least
+//    specific one (i.e., device object), if not configured on interface as
+//    well; the first flow log configuraiton seen in that order will be
+//    picked and applied
+// 3. LogOnCreate and LogOnClose are not mutually exclusive, so for a given
+//    session flow logs can be generated both at the flow create and flow
+//    delete time
+message FlowLogSpec {
+  // if LogOnCreate is set to true, flow log is generated when flow/session
+  // is created
+  bool LogOnCreate       = 1 [(gogoproto.moretags) = "meta:default=false"];
+  // if LogOnClose is set to true, flow log is generated when flow/session
+  // is closed/deleted/purged/aged
+  bool LogOnDelete       = 2 [(gogoproto.moretags) = "meta:default=false"];
+  // LogLongLivedFlows, if set, will result in generation of flow logs for
+  // sessions that are active and are consisdered as long lived flows; just
+  // like flow logs generated during the flow close/delete time carry
+  // flow/session statistics, logs generated for long lived flows also carry
+  // statistics
+  bool LogLongLivedFlows = 3 [(gogoproto.moretags) = "meta:default=false"];
+}
+
+// supported learn modes
+enum LearnMode {
+  // when learn mode is set to LEARN_MODE_NONE, learning is completely disabled
+  LEARN_MODE_NONE   = 0;
+  // in LEARN_MODE_NOTIFY mode, when a unknown MAC/IP is seen, notification
+  // is generated via operd to the app, learn module will not populate the
+  // p4 tables with the MAC or IP; they will be programmed when app comes back
+  // and install vnics and/or IP mappings because of these learn notifications
+  // NOTE:
+  // 1. as learn events are simply notified to app, learn module doesn't need to
+  //    perform aging of the MAC/IP entries in this mode.
+  // 2. in order to de-dup back-to-back learn events and not bombard the app
+  //    listening  to these notifications, some state will be maintained about
+  //    the notified MAC/IP entries and will be deleted within short time
+  LEARN_MODE_NOTIFY = 1;
+  // in LEARN_MODE_AUTO, learn module will learn and automatically program the
+  // learnt MAC/IP in the datapath. Additionally, notifications will be
+  // generated for the clients of interest via operd
+  LEARN_MODE_AUTO   = 2;
+}
+
+// supported types of packets for learning
+// NOTE: when all learn sources are set to false, LearnMode must be set to
+//       LEARN_MODE_NONE
+message LearnSource {
+  // when ArpLearnEn is set to true, learning will happen from ARP/GARP/RARP
+  // traffic
+  bool ArpLearnEn     = 1 [(gogoproto.moretags) = "meta:default=true"];
+  // when DhcpLearnEn is se to true, learning will happen from DHCP traffic
+  bool DhcpLearnEn    = 2 [(gogoproto.moretags) = "meta:default=true"];
+  // when DataPktLearnEn is set to true, learning will happen from non-protocol
+  // data traffic
+  bool DataPktLearnEn = 3 [(gogoproto.moretags) = "meta:default=true"];
+}
+
+// MAC/IP learning related configuration knobs
+message LearnSpec {
+  // NOTE: when LearnMode mode is modified, it will take affect only after
+  //       next reboot of DSC
+  LearnMode   LearnMode       = 1 [(gogoproto.moretags) = "meta:default=LEARN_MODE_NONE"];
+  // LearnAgeTimeout is the aging timeout (in seconds) for learnt MAC or IP
+  // addresses if LearningEn is set to true. If this is not set and learning is
+  // enabled, default value is assumed for aging
+  uint32      LearnAgeTimeout = 2 [(gogoproto.moretags) = "meta:range:30-86400,meta:default=300"];
+  // LearnSource captures packet types that can result in MAC/IP learning
+  LearnSource LearnSource     = 3 [(gogoproto.moretags) = "LearnMode!=LEARN_MODE_NONE"];
+}
+
+// ServiceRequestOp encodes the API operation in the user
+// issues request via Unix Domain Socket (UDS)
+enum ServiceRequestOp {
+  SERVICE_OP_NONE           = 0;
+  SERVICE_OP_CREATE         = 1;
+  SERVICE_OP_DELETE         = 2;
+  SERVICE_OP_UPDATE         = 3;
+  SERVICE_OP_READ           = 4;
+  SERVICE_OP_READ_STREAMING = 5;
+}
+
+// ServiceRequestMessage represents the config message from the app
+// and the corresponding operation to be performed
+message ServiceRequestMessage {
+  // one of the CRUD operations
+  ServiceRequestOp    ConfigOp  = 1;
+  // ConfigMsg is protobuf encoded config message and it can be any of the
+  // supported config objects (e.g. VPCRequestMsg etc.)
+  google.protobuf.Any ConfigMsg = 2;
+}
+
+// ServiceResponseMessage is the response to ServiceRequestMessage
+message ServiceResponseMessage {
+  // response or reply status for the request
+  ApiStatus           ApiStatus = 1;
+  // content of the response (esp. for Get requests)
+  google.protobuf.Any Response  = 2;
+}
+
+// Counter holding reason and value
+message Counter {
+  // counter name
+  string Name  = 1 [(gogoproto.jsontag) = "Name"];
+  // counter value
+  uint64 Value = 2 [(gogoproto.jsontag) = "Value"];
+}
+
+// BGP standard community
+message BGPCommunity {
+  // first 16-bit of standard community
+  uint32  Asn       = 1 [(gogoproto.moretags) = "meta:range:0-65535,meta:default=0"];
+  // second 16-bit of standard community
+  uint32  Community = 2 [(gogoproto.moretags) = "meta:range:0-65535,meta:default=0"];
+}
+
+message NATAction {
+  // if SrcNatAction is set to NAT_ACTION_STATIC, floating IP of the
+  // local IP mapping is used to NAT the source IP or else (NAT IP, NAT port)
+  // are dynamically allocated in s/w datapath
+  // NOTE: Floating IP (i.e., public IP in local mapping object is always
+  //       preferred over NAPT port block
+  types.NatAction SrcNatAction = 1;
+  // DstNatIP is set, if 1:1 destination NAT needs to be done
+  // NOTE: if DNAT is done, using the DNAT IP route lookup will be done
+  //       in the same routing table to get forwarding information this time
+  types.IPAddress DstNatIP     = 2;
+  // indicate whether a (NAT address, NAT port) pair already allocated for
+  // a different session earlier can be reused for new sessions/flows
+  // that require NAPT
+  // NOTE: this attribute is valid only SrcNatAction is either
+  //       NAT_ACTION_NAPT_PUBLIC or NAT_ACTION_NAPT_SVC and not applicable
+  //       in any other cases
+  bool            PortReuse    = 3 [(gogoproto.moretags) = "meta:constraints=SrcNatAction==NAT_ACTION_NAPT_PUBLIC|SrcNatAction==NAT_ACTION_NAPT_SVC"];
+}
+
+// NAT mapping (i.e., address-port allocation) as defined in RFC 4787
+enum NatMappingType {
+  // when NAT_MAPPING_TYPE_NONE is configured, NAT IP & port allocated for each
+  // new session has no relation to the previous allocations at all
+  NAT_MAPPING_TYPE_NONE = 0;
+  // Endpoint Independent Mapping (EIM) results NAT IP & port reuse for same
+  // private IP & port across sessions irrespective of the destination IP & port
+  NAT_MAPPING_TYPE_EIM  = 1;
+}
+
+// flow entry type
+enum FlowEntryType {
+    FLOW_ENTRY_TYPE_NONE = 0;
+    FLOW_ENTRY_TYPE_VNIC = 1; // common flow table
+    FLOW_ENTRY_TYPE_NVME = 2; // nvme flow table
+}
+
+// action type
+// indicates if the action is configured/disabled/enabled
+//
+// NOTE: same attribute may be configured with different action at various
+// levels and in such case, action explicitly configured at lowest granular
+// level takes precendence
+enum ActionType {
+  // ACTION_TYPE_NONE is default which means that the attribute is not
+  // configured explicitly; so disabled implicitly unless explicitly configured
+  // at higher/lower granular levels
+  ACTION_TYPE_NONE    = 0;
+  // ACTION_TYPE_DISABLE indicates that the attribute is disabled explicitly
+  ACTION_TYPE_DISABLE = 1;
+  // ACTION_TYPE_ENABLE indicates that the attribute is enabled explicitly
+  ACTION_TYPE_ENABLE  = 2;
+}
+
+// filter to get objects based on device
+message DeviceGetFilter {
+  oneof filter {
+    // device or nic uuid
+    bytes  Device   = 1;
+    // number device or nic identifier
+    uint32 DeviceId = 2;
+  }
+}
+
+// given a vnic and policy direction (ingress/egress) and packet fields,
+// evaluate all the policies and return the results
+message VnicLookupInfo {
+  // vnic uuid
+  bytes              Vnic       = 1;
+  // policy evaluation direction
+  types.PolicyDir    PolicyDir  = 2;
+  // IPv4 or IPv6 policy
+  types.IPAF         AddrFamily = 3;
+}

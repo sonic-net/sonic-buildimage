@@ -40,7 +40,7 @@ class APIHelper():
         result = ""
         try:
             p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                cmd, shell=False, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             raw_data, err = p.communicate()
             if err == '':
                 result = raw_data.strip()

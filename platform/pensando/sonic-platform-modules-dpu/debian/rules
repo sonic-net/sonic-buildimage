@@ -21,6 +21,7 @@ MOD_SRC_DIR:= $(shell pwd)
 MODULE_DIRS:= dpu
 UTILS_DIR := utils
 SERVICE_DIR := service
+CHECKER_DIR := checker
 
 %:
 	dh $@ --with systemd,python2 --buildsystem=pybuild
@@ -56,10 +57,13 @@ binary-indep:
 		python3 setup.py bdist_wheel; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/local/bin; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /lib/systemd/system; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /etc/monit/conf.d; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/share/sonic/device/arm64-elba-asic-r0/Pensando-elba/; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} /usr/share/sonic/device/arm64-elba-asic-flash128-r0/Pensando-elba/; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
-		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(CHECKER_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/etc/monit/conf.d/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.network debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/network/; \
 		cp $(MOD_SRC_DIR)/dist/sonic_platform-1.0-py3-none-any.whl debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/arm64-elba-asic-r0/; \
 		cp $(MOD_SRC_DIR)/dist/sonic_platform-1.0-py3-none-any.whl debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/arm64-elba-asic-flash128-r0/; \
 		$(PYTHON) setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
