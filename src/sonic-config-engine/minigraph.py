@@ -2449,6 +2449,8 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     for port in ports.values():
         port['mtu'] = '9100'
         port['tpid'] = '0x8100'
+        if port.get('lanes', None) is None:
+            port['lanes'] = '0'
 
     # asymmetric PFC is disabled by default
     for port in ports.values():
