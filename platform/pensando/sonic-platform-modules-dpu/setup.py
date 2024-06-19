@@ -13,7 +13,7 @@ setup(
     packages=[
         'sonic_platform',
     ],
-    package_data={'': ['*.json', '*.sh', '*.service']},
+    package_data={'': ['*.json', '*.sh', '*.service', 'meta/*']},
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Plugins',

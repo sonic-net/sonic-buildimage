@@ -419,7 +419,7 @@ class Chassis(ChassisBase):
     def get_my_slot(self):
         cmd = "cpldapp -r 0xA"
         try:
-            (status, slot_id) = self._api_helper.run_command(cmd)
+            slot_id = self._api_helper.runCMD(cmd)
             return int(slot_id,16)
         except:
             return -1

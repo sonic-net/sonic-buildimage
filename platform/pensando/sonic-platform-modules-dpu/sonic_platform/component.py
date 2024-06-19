@@ -28,6 +28,7 @@ sys.path.append(str(Path(__file__).parent.absolute()))
 
 CHASSIS_COMPONENT_MAPPING = None
 MMC_DATA_PATH = "/sys/class/mmc_host/mmc0/mmc0:0001/{}"
+MMC_DEV_PATH = "/dev/mmcblk0"
 
 def parse_re(pattern, buffer, index = 0, alt_val = "N/A"):
         res_list = re.findall(pattern, buffer)
@@ -61,6 +62,7 @@ class Component(ComponentBase):
                 pass
             deviceinfo["firmware version"] = firmware_rev
             deviceinfo["serial number"] = open(MMC_DATA_PATH.format("serial")).read()
+            deviceinfo["ffu capable"] = open(MMC_DATA_PATH.format("ffu_capable")).read()
         except:
             deviceinfo["firmware version"] = "N/A"
             deviceinfo["serial number"] = "N/A"
@@ -163,6 +165,22 @@ class Component(ComponentBase):
         Args: image_path: A string, path to firmware image
         Raises: RuntimeError: update failed
         """
+        return False
+
+    def install_firmware(self, image_path):
+        """
+        Installs firmware of the component
+        In case platform component requires some extra steps (apart from calling
+        Low Level Utility)
+        to load the installed firmware (e.g, reboot, power cycle, etc.) -
+        that has to be done separately
+        Args: image_path: A string, path to firmware image
+        Raises: RuntimeError: update failed
+        """
+        if CHASSIS_COMPONENT_MAPPING.get(self.component_index,{}).get("name", None) == "eMMC":
+            cmd = "mmc ffu " + image_path + " " + MMC_DEV_PATH
+            self._api_helper.runCMD(cmd)
+            return True
         return False
 
     ###################### Device methods ########################
