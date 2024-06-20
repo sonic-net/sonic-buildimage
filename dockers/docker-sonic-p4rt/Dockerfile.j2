@@ -10,6 +10,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
 
+RUN apt-get install -y libgmp-dev
+
 {% if docker_sonic_p4rt_debs.strip() -%}
 # Copy locally-built Debian package dependencies
 {{ copy_files("debs/", docker_sonic_p4rt_debs.split(' '), "/debs/") }}
