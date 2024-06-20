@@ -39,6 +39,12 @@ module sonic-device_metadata {
                 leaf hwsku {
                     type stypes:hwsku;
                 }
+                
+                leaf p4_profile {
+                    type string {
+                        pattern "(x[1-6]|y[1-5])_profile";
+                    }
+                }
 
                 leaf asic_id {
                     type string {
