@@ -57,3 +57,8 @@ class Chassis(PddfChassis):
             sys.stderr.write("SFP index {} out of range (1-{})\n".format(
                              index, len(self._sfp_list)))
         return sfp
+
+    def get_port_or_cage_type(self, port):
+        from sonic_platform_base.sfp_base import SfpBase            
+        return SfpBase.SFP_PORT_TYPE_BIT_QSFP | SfpBase.SFP_PORT_TYPE_BIT_QSFP_PLUS | SfpBase.SFP_PORT_TYPE_BIT_QSFP28
+
