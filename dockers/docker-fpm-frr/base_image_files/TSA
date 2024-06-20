@@ -6,7 +6,16 @@ if [ "$EUID" -ne 0 ] ; then
   exit 1
 fi
 
-if [ -f /etc/sonic/chassisdb.conf ]; then
+PLATFORM="$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform)"
+PLATFORM_ENV_CONF=/usr/share/sonic/device/$PLATFORM/platform_env.conf
+SMARTSWITCH=false
+if [ -f "$PLATFORM_ENV_CONF" ]; then
+    if grep -Fxq "SMARTSWITCH=1" $PLATFORM_ENV_CONF; then
+        SMARTSWITCH=true
+    fi
+fi
+
+if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] ; then
   rexec all -c "sudo TSA chassis"
   echo "Please execute \"rexec all -c 'sudo config save -y'\" to preserve System mode in Maintenance after reboot\
   or config reload on all linecards"
@@ -19,15 +28,6 @@ if
 then
   logger -t TSA -p user.info "Toggle all mux mode to standby"
   sudo config mux mode standby all
-fi
-
-if [ -z "$STARTED_BY_TSA_TSB_SERVICE" ]; then
-  service='startup_tsa_tsb.service'
-  if [[ $(/bin/systemctl show $service --property ActiveState  --value) == "active" ]] && \
-     [[ $(/bin/systemctl show $service --property SubState  --value) == "running" ]]; then
-      echo "Stopping $service before configuring TSA"
-      systemctl stop $service
-  fi
 fi
 
 /usr/bin/TS TSA
