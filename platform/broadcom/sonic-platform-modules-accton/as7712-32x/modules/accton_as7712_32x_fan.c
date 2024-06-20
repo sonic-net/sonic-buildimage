@@ -55,6 +55,7 @@ static ssize_t get_sys_temp(struct device *dev, struct device_attribute *da, cha
  */
 static const u8 fan_reg[] = {
     0x0F,       /* fan 1-6 present status */
+    0x10,       /* fan 1-6 direction(0:B2F 1:F2B) */
     0x11,       /* fan PWM(for all fan) */
     0x12,       /* front fan 1 speed(rpm) */
     0x13,       /* front fan 2 speed(rpm) */
@@ -93,6 +94,7 @@ enum fan_id {
 
 enum sysfs_fan_attributes {
     FAN_PRESENT_REG,
+    FAN_DIRECTION_REG,
     FAN_DUTY_CYCLE_PERCENTAGE, /* Only one CPLD register to control duty cycle for all fans */
     FAN1_FRONT_SPEED_RPM,
     FAN2_FRONT_SPEED_RPM,
@@ -106,6 +108,12 @@ enum sysfs_fan_attributes {
     FAN4_REAR_SPEED_RPM,
     FAN5_REAR_SPEED_RPM,
     FAN6_REAR_SPEED_RPM,
+    FAN1_DIRECTION,
+    FAN2_DIRECTION,
+    FAN3_DIRECTION,
+    FAN4_DIRECTION,
+    FAN5_DIRECTION,
+    FAN6_DIRECTION,
     FAN1_PRESENT,
     FAN2_PRESENT,
     FAN3_PRESENT,
@@ -182,6 +190,13 @@ DECLARE_FAN_PRESENT_SENSOR_DEV_ATTR(3);
 DECLARE_FAN_PRESENT_SENSOR_DEV_ATTR(4);
 DECLARE_FAN_PRESENT_SENSOR_DEV_ATTR(5);
 DECLARE_FAN_PRESENT_SENSOR_DEV_ATTR(6);
+/* 6 fan direction attribute in this platform */
+DECLARE_FAN_DIRECTION_SENSOR_DEV_ATTR(1);
+DECLARE_FAN_DIRECTION_SENSOR_DEV_ATTR(2);
+DECLARE_FAN_DIRECTION_SENSOR_DEV_ATTR(3);
+DECLARE_FAN_DIRECTION_SENSOR_DEV_ATTR(4);
+DECLARE_FAN_DIRECTION_SENSOR_DEV_ATTR(5);
+DECLARE_FAN_DIRECTION_SENSOR_DEV_ATTR(6);
 /* 1 fan duty cycle attribute in this platform */
 DECLARE_FAN_DUTY_CYCLE_SENSOR_DEV_ATTR(1);
 /* System temperature for fancontrol */
@@ -207,6 +222,12 @@ static struct attribute *as7712_32x_fan_attributes[] = {
     DECLARE_FAN_PRESENT_ATTR(4),
     DECLARE_FAN_PRESENT_ATTR(5),
     DECLARE_FAN_PRESENT_ATTR(6),
+    DECLARE_FAN_DIRECTION_ATTR(1),
+    DECLARE_FAN_DIRECTION_ATTR(2),
+    DECLARE_FAN_DIRECTION_ATTR(3),
+    DECLARE_FAN_DIRECTION_ATTR(4),
+    DECLARE_FAN_DIRECTION_ATTR(5),
+    DECLARE_FAN_DIRECTION_ATTR(6),
     DECLARE_FAN_DUTY_CYCLE_ATTR(1),
     DECLARE_FAN_SYSTEM_TEMP_ATTR(),
     NULL
@@ -243,7 +264,14 @@ static u32 reg_val_to_speed_rpm(u8 reg_val)
 {
     return (u32)reg_val * FAN_REG_VAL_TO_SPEED_RPM_STEP;
 }
+static u8 reg_val_to_direction(u8 reg_val, enum fan_id id)
+{
+    u8 mask = (1 << id);
 
+    reg_val &= mask;
+
+    return reg_val ? 1 : 0;
+}
 static u8 reg_val_to_is_present(u8 reg_val, enum fan_id id)
 {
     u8 mask = (1 << id);
@@ -484,6 +512,16 @@ static ssize_t fan_show_value(struct device *dev, struct device_attribute *da,
         case FAN5_FAULT:
         case FAN6_FAULT:
             ret = sprintf(buf, "%d\n", is_fan_fault(data, attr->index - FAN1_FAULT));
+            break;
+        case FAN1_DIRECTION:
+        case FAN2_DIRECTION:
+        case FAN3_DIRECTION:
+        case FAN4_DIRECTION:
+        case FAN5_DIRECTION:
+        case FAN6_DIRECTION:
+            ret = sprintf(buf, "%d\n",
+                          reg_val_to_direction(data->reg_val[FAN_DIRECTION_REG],
+                          attr->index - FAN1_DIRECTION));
             break;
         default:
             break;
