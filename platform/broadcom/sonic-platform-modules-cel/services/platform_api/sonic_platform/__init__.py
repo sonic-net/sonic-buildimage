@@ -1,2 +1,2 @@
-import chassis
-import platform
+from . import chassis
+from . import platform
