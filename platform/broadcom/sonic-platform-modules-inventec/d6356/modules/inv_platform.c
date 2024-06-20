@@ -6,6 +6,7 @@
 #include <linux/platform_device.h>
 #include <linux/delay.h>
 #include <linux/platform_data/pca954x.h>
+#include <linux/gpio/machine.h>
 
 struct inv_i2c_board_info {
     int ch;
@@ -14,6 +15,9 @@ struct inv_i2c_board_info {
 };
 
 #define bus_id(id)  (id)
+#define SCL_PIN  58
+#define SDA_PIN  75
+
 static struct pca954x_platform_mode pca9641_modes_1[] = {
     {.adap_id = bus_id(2),},
 };
@@ -137,49 +141,49 @@ static struct pca954x_platform_data mux_data_0_6 = {
 };
 
 static struct i2c_board_info i2c_device_info0[] __initdata = {
-       {"pca9641",          0, 0x76, &pca9641_data_1, 0, 0},   //PCA9641-1
-       {"pca9641",          0, 0x73, &pca9641_data_3, 0, 0},   //PCA9641-3
-       {"pca9641",          0, 0x09, &pca9641_data_4, 0, 0},   //PCA9641-4
+       {"pca9641",          0, 0x76,  "pca9641-1", &pca9641_data_1, 0, 0},   //PCA9641-1
+       {"pca9641",          0, 0x73,  "pca9641-2", &pca9641_data_3, 0, 0},   //PCA9641-3
+       {"pca9641",          0, 0x09,  "pca9641-3", &pca9641_data_4, 0, 0},   //PCA9641-4
 };
 static struct i2c_board_info i2c_device_info1[] __initdata = {
-       {"pca9641",          0, 0x0A, &pca9641_data_2, 0, 0},   //PCA9641-2
+       {"pca9641",          0, 0x0A,  "pca9641-4", &pca9641_data_2, 0, 0},   //PCA9641-2
 };
 static struct i2c_board_info i2c_device_info2[] __initdata = {
-       {"inv_cpld",         0, 0x77, 0, 0, 0},                  //CPLD
+       {"inv_cpld",         0, 0x77,  "inv_cpld",  0, 0, 0},                  //CPLD
 };
 static struct i2c_board_info i2c_device_info3[] __initdata = {
-       {"tmp75",            0, 0x48, 0, 0, 0},                 //CPU Board Temp
-       {"tmp75",            0, 0x4A, 0, 0, 0},                 //Temp
-       {"tmp75",            0, 0x4D, 0, 0, 0},                 //Temp
-       {"tmp75",            0, 0x4E, 0, 0, 0},                 //Temp
+       {"tmp75",            0, 0x48,  "tmp75-1",   0, 0, 0},                 //CPU Board Temp
+       {"tmp75",            0, 0x4A,  "tmp75-2",   0, 0, 0},                 //Temp
+       {"tmp75",            0, 0x4D,  "tmp75-3",   0, 0, 0},                 //Temp
+       {"tmp75",            0, 0x4E,  "tmp75-4",   0, 0, 0},                 //Temp
 };
 static struct i2c_board_info i2c_device_info4[] __initdata = {
-       {"pmbus",            0, 0x5B, 0, 0, 0},                 //PSU1
-       {"pmbus",            0, 0x5A, 0, 0, 0},                 //PSU2
+       {"pmbus",            0, 0x5B,  "pmbus-1",   0, 0, 0},                 //PSU1
+       {"pmbus",            0, 0x5A,  "pmbus-2",   0, 0, 0},                 //PSU2
 };
 static struct i2c_board_info i2c_device_info5[] __initdata = {
-        {"pca9548",          0, 0x70, &mux_data_0, 0, 0},       //mux root
+        {"pca9548",          0, 0x70, "pca9548-1", &mux_data_0, 0, 0},       //mux root
 };
 static struct i2c_board_info i2c_device_info6[] __initdata = {
-        {"pca9548",         0, 0x72, &mux_data_0_0, 0, 0},
+        {"pca9548",         0, 0x72, "pca9548-2", &mux_data_0_0, 0, 0},
 };
 static struct i2c_board_info i2c_device_info7[] __initdata = {
-        {"pca9548",         0, 0x72, &mux_data_0_1, 0, 0},
+        {"pca9548",         0, 0x72, "pca9548-3", &mux_data_0_1, 0, 0},
 };
 static struct i2c_board_info i2c_device_info8[] __initdata = {
-        {"pca9548",         0, 0x72, &mux_data_0_2, 0, 0},
+        {"pca9548",         0, 0x72, "pca9548-4", &mux_data_0_2, 0, 0},
 };
 static struct i2c_board_info i2c_device_info9[] __initdata = {
-        {"pca9548",         0, 0x72, &mux_data_0_3, 0, 0},
+        {"pca9548",         0, 0x72, "pca9548-5", &mux_data_0_3, 0, 0},
 };
 static struct i2c_board_info i2c_device_info10[] __initdata = {
-        {"pca9548",         0, 0x72, &mux_data_0_4, 0, 0},
+        {"pca9548",         0, 0x72, "pca9548-6", &mux_data_0_4, 0, 0},
 };
 static struct i2c_board_info i2c_device_info11[] __initdata = {
-        {"pca9548",         0, 0x72, &mux_data_0_5, 0, 0},
+        {"pca9548",         0, 0x72, "pca9548-7", &mux_data_0_5, 0, 0},
 };
 static struct i2c_board_info i2c_device_info12[] __initdata = {
-        {"pca9548",         0, 0x72, &mux_data_0_6, 0, 0},
+        {"pca9548",         0, 0x72, "pca9548-8", &mux_data_0_6, 0, 0},
 };
 
 
@@ -203,16 +207,33 @@ static struct inv_i2c_board_info i2cdev_list[] = {
 static int client_list_index = 0;
 static struct i2c_client *client_list[INV_PLATFORM_CLIENT_MAX_NUM] = {0};
 
-/////////////////////////////////////////////////////////////////////////////////////////
-static struct   platform_device         *device_i2c_gpio0;
-static struct   i2c_gpio_platform_data  i2c_gpio_platdata0 = {
-    .scl_pin = 58, //494,
-    .sda_pin = 75, //511,
+static struct gpiod_lookup_table inv_i2c_gpiod_table = {
+	.dev_id = "i2c-gpio.1",
+	.table = {
+		GPIO_LOOKUP_IDX("gpio_ich", SDA_PIN, NULL, 0, GPIO_OPEN_DRAIN), //I2C_SDA
+		GPIO_LOOKUP_IDX("gpio_ich", SCL_PIN, NULL, 1, GPIO_OPEN_DRAIN), //I2C_SCL
+	},
+};
 
-    .udelay  = 5, //5:100kHz
-    .sda_is_open_drain = 0,
-    .scl_is_open_drain = 0,
-    .scl_is_output_only = 0
+static struct i2c_gpio_platform_data i2c_platform_data = {
+	.udelay  = 5, //5:100kHz
+    //.sda_is_open_drain = 0,
+    //.scl_is_open_drain = 0,
+    //.scl_is_output_only = 0,
+};
+
+static void i2cgpio_device_release(struct device *dev)
+{
+	gpiod_remove_lookup_table(&inv_i2c_gpiod_table);
+}
+
+static struct platform_device device_i2c_gpio0 = {
+	.name = "i2c-gpio",
+	.id = 1,
+	.dev = {
+		.platform_data = &i2c_platform_data,
+		.release = i2cgpio_device_release,
+	},
 };
 
 static int __init inv_platform_init(void)
@@ -222,7 +243,6 @@ static int __init inv_platform_init(void)
     int ret = 0;
     int i,j,k;
 
-    //printk("%s  \n", __func__);
 
     //use i2c-gpio
     //register i2c gpio
@@ -234,18 +254,11 @@ static int __init inv_platform_init(void)
     outl( inl(0x501) | (1<<7), 0x501);  //BMC_HEART_BEAT (GPIO15)
     outl( inl(0x503) | (1<<2)|(1<<3), 0x503); //PSOC_HEART_BEAT(26),CPLD_HEART_BEAT(27)
 
-    device_i2c_gpio0 = platform_device_alloc("i2c-gpio", 1);
-    if (!device_i2c_gpio0) {
-        printk(KERN_ERR "i2c-gpio: platform_device_alloc fail\n");
-        return -ENOMEM;
-    }
-    device_i2c_gpio0->name = "i2c-gpio";
-    device_i2c_gpio0->id     = 1;
-    device_i2c_gpio0->dev.platform_data = &i2c_gpio_platdata0;
+    gpiod_add_lookup_table(&inv_i2c_gpiod_table);
 
-    ret = platform_device_add(device_i2c_gpio0);
+    ret = platform_device_register(&device_i2c_gpio0);
     if (ret) {
-        printk(KERN_ERR "i2c-gpio: platform_device_add fail %d\n", ret);
+        printk(KERN_ERR "i2c-gpio: platform_device_register fail %d\n", ret);
     }
     msleep(10);
 
@@ -283,8 +296,7 @@ static void __exit inv_platform_exit(void)
     for(i=client_list_index-1; i>=0; i--) {
         i2c_unregister_device(client_list[i]);
     }
-    device_i2c_gpio0->dev.platform_data = NULL;
-    platform_device_unregister(device_i2c_gpio0);
+    platform_device_unregister(&device_i2c_gpio0);
     printk("inv_platform_exit done\n");
 }
 
