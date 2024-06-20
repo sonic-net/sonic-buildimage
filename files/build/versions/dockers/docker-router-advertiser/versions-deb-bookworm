@@ -19,7 +19,7 @@ libsource-highlight4v5==3.1.9-4.2+b3
 libswsscommon-dbgsym==1.0.0
 libunwind8==1.6.2-3
 openssh-client==1:9.2p1-2+deb12u2
-radvd==1:2.19-1+b1
+radvd==1:2.19-1
 sensible-utils==0.0.17+nmu1
 sshpass==1.09-1+b1
 strace==6.1-0.1
