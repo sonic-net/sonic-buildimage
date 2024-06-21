@@ -68,51 +68,110 @@ def constructor(check_internal=False):
 # TSA -----------------------------------------------------------------------------------------------------------------
 #
 
+@patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.get_chassis_tsa_status')
 @patch('bgpcfgd.managers_device_global.log_debug')
-def test_isolate_device(mocked_log_info):
+def test_isolate_device(mocked_log_info, mock_get_chassis_tsa_status):
     m = constructor()
+
+    mock_get_chassis_tsa_status.return_value = "false"
     res = m.set_handler("STATE", {"tsa_enabled": "true"})
     assert res, "Expect True return value for set_handler"
     mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
     assert m.cfg_mgr.get_config() == get_string_from_file("/result_all_isolate.conf")
 
+    curr_cfg = m.cfg_mgr.get_config()
+    mock_get_chassis_tsa_status.return_value = "true"
+    res = m.set_handler("STATE", {"tsa_enabled": "true"})
+    assert res, "Expect True return value for set_handler"
+    assert m.cfg_mgr.get_config() == curr_cfg
+
+
+@patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.get_chassis_tsa_status')
 @patch('bgpcfgd.managers_device_global.log_debug')
-def test_isolate_device_internal_session(mocked_log_info):
+def test_isolate_device_internal_session(mocked_log_info, mock_get_chassis_tsa_status):
     m = constructor(check_internal=True)
+
+    mock_get_chassis_tsa_status.return_value = "false"
     res = m.set_handler("STATE", {"tsa_enabled": "true"})
     assert res, "Expect True return value for set_handler"
     mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
     assert m.cfg_mgr.get_config() == get_string_from_file("/result_chassis_packet_isolate.conf", INTERNAL_BASE_PATH)
 
+    curr_cfg = m.cfg_mgr.get_config()
+    mock_get_chassis_tsa_status.return_value = "true"
+    res = m.set_handler("STATE", {"tsa_enabled": "true"})
+    assert res, "Expect True return value for set_handler"
+    assert m.cfg_mgr.get_config() == curr_cfg
+
+
+@patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.get_chassis_tsa_status')
 @patch('bgpcfgd.managers_device_global.log_debug')
-def test_unisolate_device(mocked_log_info):
+def test_unisolate_device(mocked_log_info, mock_get_chassis_tsa_status):
     m = constructor()
+
+    mock_get_chassis_tsa_status.return_value = "false"
+
     # By default feature is disabled. Simulate enabled state
     m.directory.put(m.db_name, m.table_name, "tsa_enabled", "true")
+
     res = m.set_handler("STATE", {"tsa_enabled": "false"})
     assert res, "Expect True return value for set_handler"
     mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
     assert m.cfg_mgr.get_config() == get_string_from_file("/result_all_unisolate.conf")
 
+    curr_cfg = m.cfg_mgr.get_config()
+    mock_get_chassis_tsa_status.return_value = "true"
+    res = m.set_handler("STATE", {"tsa_enabled": "false"})
+    assert res, "Expect True return value for set_handler"
+    assert m.cfg_mgr.get_config() == curr_cfg
+
+
+@patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.get_chassis_tsa_status')
 @patch('bgpcfgd.managers_device_global.log_debug')
-def test_unisolate_device_internal_session(mocked_log_info):
+def test_unisolate_device_internal_session(mocked_log_info, mock_get_chassis_tsa_status):
     m = constructor(check_internal=True)
+
+    mock_get_chassis_tsa_status.return_value = "false"
+
     # By default feature is disabled. Simulate enabled state
     m.directory.put(m.db_name, m.table_name, "tsa_enabled", "true")
+
     res = m.set_handler("STATE", {"tsa_enabled": "false"})
     assert res, "Expect True return value for set_handler"
     mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
     assert m.cfg_mgr.get_config() == get_string_from_file("/result_chassis_packet_unisolate.conf", INTERNAL_BASE_PATH)
 
-def test_check_state_and_get_tsa_routemaps():
+    curr_cfg = m.cfg_mgr.get_config()
+    mock_get_chassis_tsa_status.return_value = "true"
+    res = m.set_handler("STATE", {"tsa_enabled": "false"})
+    assert res, "Expect True return value for set_handler"
+    assert m.cfg_mgr.get_config() == curr_cfg
+
+
+@patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.get_chassis_tsa_status')
+def test_check_state_and_get_tsa_routemaps(mock_get_chassis_tsa_status):
     m = constructor()
+
+    mock_get_chassis_tsa_status.return_value = "false"
     m.set_handler("STATE", {"tsa_enabled": "true"})
     res = m.check_state_and_get_tsa_routemaps(m.cfg_mgr.get_config())
     assert res == get_string_from_file("/result_isolate.conf")
 
+    mock_get_chassis_tsa_status.return_value = "true"
+    m.set_handler("STATE", {"tsa_enabled": "true"})
+    res = m.check_state_and_get_tsa_routemaps(m.cfg_mgr.get_config())
+    assert res == get_string_from_file("/result_isolate.conf")
+
+    mock_get_chassis_tsa_status.return_value = "false"
     m.set_handler("STATE", {"tsa_enabled": "false"})
     res = m.check_state_and_get_tsa_routemaps(m.cfg_mgr.get_config())
     assert res == ""
+
+    mock_get_chassis_tsa_status.return_value = "true"
+    m.set_handler("STATE", {"tsa_enabled": "false"})
+    res = m.check_state_and_get_tsa_routemaps(m.cfg_mgr.get_config())
+    assert res == get_string_from_file("/result_isolate.conf")
+
 
 def test_get_tsa_routemaps():
     m = constructor()
@@ -153,9 +212,11 @@ def test_del_handler():
     "value", [ "invalid_value" ]
 )
 @patch('bgpcfgd.managers_device_global.log_err')
-def test_tsa_neg(mocked_log_err, value):
+@patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.get_chassis_tsa_status')
+def test_tsa_neg(mock_get_chassis_tsa_status, mocked_log_err, value):
     m = constructor()
     m.cfg_mgr.changes = ""
+    mock_get_chassis_tsa_status.return_value = "false"
     res = m.set_handler("STATE", {"tsa_enabled": value})
     assert res, "Expect True return value for set_handler"
     mocked_log_err.assert_called_with("TSA: invalid value({}) is provided".format(value))
