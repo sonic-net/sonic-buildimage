@@ -335,10 +335,6 @@ class Chassis(ChassisBase):
 
         return self._watchdog
 
-    def get_thermal_manager(self):
-        from .thermal_manager import ThermalManager
-        return ThermalManager
-
     ##############################################################
     ###################### Device methods ########################
     ##############################################################

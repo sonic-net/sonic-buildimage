@@ -94,7 +94,7 @@ class APIHelper():
         if ret != 0:
             status = False
         else:
-            result = data
+            result = data.strip()
         
         return status, result
 
@@ -107,7 +107,7 @@ class APIHelper():
             if ret != 0:
                 status = False
             else:
-                result = data
+                result = data.strip()
         else:
             cmd2_args = ["grep", str(key)]
             status, result = self.run_command(cmd1_args, cmd2_args)
@@ -122,7 +122,7 @@ class APIHelper():
         if ret != 0:
             status = False
         else:
-            result = data
+            result = data.strip()
         
         return status, result
 
