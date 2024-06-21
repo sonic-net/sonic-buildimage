@@ -77,6 +77,7 @@ struct ym2651y_data {
     u16  mfr_pout_max;   /* Register value */
     u16  mfr_vout_min;   /* Register value */
     u16  mfr_vout_max;   /* Register value */
+    u16  mfr_temp_max;   /* Register value */
 };
 
 static ssize_t show_vout(struct device *dev, struct device_attribute *da,
@@ -123,7 +124,8 @@ enum ym2651y_sysfs_attributes {
     PSU_MFR_IIN_MAX,
     PSU_MFR_IOUT_MAX,
     PSU_MFR_PIN_MAX,
-    PSU_MFR_POUT_MAX
+    PSU_MFR_POUT_MAX,
+    PSU_MFR_TEMP1_MAX
 };
 
 /* sysfs attributes for hwmon
@@ -152,6 +154,7 @@ static SENSOR_DEVICE_ATTR(psu_mfr_iin_max,   S_IRUGO, show_linear, NULL, PSU_MFR
 static SENSOR_DEVICE_ATTR(psu_mfr_iout_max,   S_IRUGO, show_linear, NULL, PSU_MFR_IOUT_MAX);
 static SENSOR_DEVICE_ATTR(psu_mfr_pin_max,   S_IRUGO, show_linear, NULL, PSU_MFR_PIN_MAX);
 static SENSOR_DEVICE_ATTR(psu_mfr_pout_max,   S_IRUGO, show_linear, NULL, PSU_MFR_POUT_MAX);
+static SENSOR_DEVICE_ATTR(psu_mfr_temp1_max,   S_IRUGO, show_linear, NULL, PSU_MFR_TEMP1_MAX);
 
 /*Duplicate nodes for lm-sensors.*/
 static SENSOR_DEVICE_ATTR(in3_input, S_IRUGO, show_vout,    NULL, PSU_V_OUT);
@@ -160,6 +163,7 @@ static SENSOR_DEVICE_ATTR(power2_input, S_IRUGO, show_linear,    NULL, PSU_P_OUT
 static SENSOR_DEVICE_ATTR(temp1_input, S_IRUGO, show_linear,    NULL, PSU_TEMP1_INPUT);
 static SENSOR_DEVICE_ATTR(fan1_input, S_IRUGO, show_linear, NULL, PSU_FAN1_SPEED);
 static SENSOR_DEVICE_ATTR(temp1_fault,  S_IRUGO, show_word,      NULL, PSU_TEMP_FAULT);
+static SENSOR_DEVICE_ATTR(temp1_max, S_IRUGO, show_linear,    NULL, PSU_MFR_TEMP1_MAX);
 
 static struct attribute *ym2651y_attributes[] = {
     &sensor_dev_attr_psu_power_on.dev_attr.attr,
@@ -186,6 +190,7 @@ static struct attribute *ym2651y_attributes[] = {
     &sensor_dev_attr_psu_mfr_vout_min.dev_attr.attr,
     &sensor_dev_attr_psu_mfr_vout_max.dev_attr.attr,
     &sensor_dev_attr_psu_mfr_iout_max.dev_attr.attr,
+    &sensor_dev_attr_psu_mfr_temp1_max.dev_attr.attr,
     /*Duplicate nodes for lm-sensors.*/
     &sensor_dev_attr_curr2_input.dev_attr.attr,
     &sensor_dev_attr_in3_input.dev_attr.attr,
@@ -193,6 +198,7 @@ static struct attribute *ym2651y_attributes[] = {
     &sensor_dev_attr_temp1_input.dev_attr.attr,
     &sensor_dev_attr_fan1_input.dev_attr.attr,
     &sensor_dev_attr_temp1_fault.dev_attr.attr,
+    &sensor_dev_attr_temp1_max.dev_attr.attr,
     NULL
 };
 
@@ -318,6 +324,9 @@ static ssize_t show_linear(struct device *dev, struct device_attribute *da,
         break;
     case PSU_MFR_IIN_MAX:
         value = data->mfr_iin_max;
+        break;
+    case PSU_MFR_TEMP1_MAX:
+        value = data->mfr_temp_max;
         break;
     }
 
@@ -586,7 +595,8 @@ static struct ym2651y_data *ym2651y_update_device(struct device *dev)
             {0xa4, &data->mfr_vout_min},
             {0xa5, &data->mfr_vout_max},
             {0xa6, &data->mfr_iout_max},
-            {0xa7, &data->mfr_pout_max}
+            {0xa7, &data->mfr_pout_max},
+            {0xc0, &data->mfr_temp_max}
         };
 
         dev_dbg(&client->dev, "Starting ym2651 update\n");
