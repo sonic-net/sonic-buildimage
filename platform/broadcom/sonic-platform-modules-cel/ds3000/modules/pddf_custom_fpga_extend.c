@@ -306,12 +306,13 @@ err_exit:
 	return ret;
 }
 
-static void cls_fpga_remove(struct platform_device *pdev)
+static int cls_fpga_remove(struct platform_device *pdev)
 {
 	struct fpga_priv *fpga = dev_get_drvdata(&pdev->dev);
 
 	sysfs_remove_group(&pdev->dev.kobj, &fpga_attr_grp);
 	iounmap(fpga->base);
+	return 0;
 }
 
 static void fpga_dev_release( struct device * dev)

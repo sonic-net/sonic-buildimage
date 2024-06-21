@@ -661,7 +661,7 @@ static int cpld_wdt_probe(struct platform_device *pdev)
     return 0;
 }
 
-static void cpld_wdt_remove(struct platform_device *pdev)
+static int cpld_wdt_remove(struct platform_device *pdev)
 {
     struct cpld_wdt_private *p = platform_get_drvdata(pdev);
 
@@ -670,6 +670,7 @@ static void cpld_wdt_remove(struct platform_device *pdev)
         misc_deregister(&p->mdev);
         unregister_reboot_notifier(&watchdog_notifier);
     }
+    return 0;
 }
 
 static struct platform_driver cpld_wdt_driver = {

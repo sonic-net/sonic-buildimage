@@ -2089,7 +2089,7 @@ static int seastone2_drv_probe(struct platform_device *pdev)
     return 0;
 }
 
-static void seastone2_drv_remove(struct platform_device *pdev)
+static int seastone2_drv_remove(struct platform_device *pdev)
 {
     int portid_count;
     struct sff_device_data *rem_data;
@@ -2124,6 +2124,7 @@ static void seastone2_drv_remove(struct platform_device *pdev)
     kobject_put(cpld2);
     device_destroy(fpgafwclass, MKDEV(0, 0));
     devm_kfree(&pdev->dev, fpga_data);
+    return 0;
 }
 
 static struct platform_driver seastone2_drv = {
