@@ -42,6 +42,7 @@ expected_dhcp_config = {
         },
         "subnet4": [
             {
+                "id": 1000,
                 "subnet": "192.168.0.0/21",
                 "pools": [
                     {

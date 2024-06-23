@@ -16,6 +16,7 @@ VLAN_INTERFACE = "VLAN_INTERFACE"
 VLAN_MEMBER = "VLAN_MEMBER"
 DPUS = "DPUS"
 MID_PLANE_BRIDGE = "MID_PLANE_BRIDGE"
+MID_PLANE_BRIDGE_SUBNET_ID = 10000
 PORT_MODE_CHECKER = ["DhcpServerTableCfgChangeEventChecker", "DhcpPortTableEventChecker", "DhcpRangeTableEventChecker",
                      "DhcpOptionTableEventChecker", "VlanTableEventChecker", "VlanIntfTableEventChecker",
                      "VlanMemberTableEventChecker"]
@@ -90,7 +91,7 @@ class DhcpServCfgGenerator(object):
         port_ips, used_ranges = self._parse_port(port_ipv4, dhcp_interfaces, dhcp_members, ranges)
         customized_options = self._parse_customized_options(customized_options_ipv4)
         render_obj, enabled_dhcp_interfaces, used_options, subscribe_table = \
-            self._construct_obj_for_template(dhcp_server_ipv4, port_ips, hostname, customized_options)
+            self._construct_obj_for_template(dhcp_server_ipv4, port_ips, hostname, customized_options, smart_switch)
 
         if smart_switch:
             subscribe_table |= set(SMART_SWITCH_CHECKER)
@@ -175,7 +176,7 @@ class DhcpServCfgGenerator(object):
         for pc_name in pc_table.keys():
             self.port_alias_map[pc_name] = pc_name
 
-    def _construct_obj_for_template(self, dhcp_server_ipv4, port_ips, hostname, customized_options):
+    def _construct_obj_for_template(self, dhcp_server_ipv4, port_ips, hostname, customized_options, smart_switch=False):
         subnets = []
         client_classes = []
         enabled_dhcp_interfaces = set()
@@ -223,8 +224,9 @@ class DhcpServCfgGenerator(object):
                                 "condition": "substring(relay4[1].hex, -{}, {}) == '{}'".format(class_len, class_len,
                                                                                                 client_class)
                             })
+
                     subnet_obj = {
-                        "id": dhcp_interface_name.replace("Vlan", ""),
+                        "id": MID_PLANE_BRIDGE_SUBNET_ID if smart_switch else dhcp_interface_name.replace("Vlan", ""),
                         "subnet": str(ipaddress.ip_network(dhcp_interface_ip, strict=False)),
                         "pools": pools,
                         "gateway": dhcp_config["gateway"],
