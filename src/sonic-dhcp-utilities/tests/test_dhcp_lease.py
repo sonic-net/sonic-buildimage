@@ -3,6 +3,7 @@ from dhcp_utilities.dhcpservd.dhcp_lease import KeaDhcp4LeaseHandler, LeaseHanld
 from freezegun import freeze_time
 from swsscommon import swsscommon
 from unittest.mock import patch, call, MagicMock
+from common_utils import mock_get_config_db_table
 
 expected_lease = {
     "Vlan1000|10:70:fd:b6:13:00": {
@@ -34,20 +35,22 @@ expected_lease = {
 
 
 def test_read_kea_lease_with_file_not_found(mock_swsscommon_dbconnector_init):
-    db_connector = DhcpDbConnector()
-    kea_lease_handler = KeaDhcp4LeaseHandler(db_connector)
-    try:
-        kea_lease_handler._read()
-    except FileNotFoundError:
-        pass
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector)
+        try:
+            kea_lease_handler._read()
+        except FileNotFoundError:
+            pass
 
 
 def test_read_kea_lease(mock_swsscommon_dbconnector_init):
-    db_connector = DhcpDbConnector()
-    kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file="tests/test_data/kea-lease.csv")
-    # Verify whether lease information read is as expected
-    lease = kea_lease_handler._read()
-    assert lease == expected_lease
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file="tests/test_data/kea-lease.csv")
+        # Verify whether lease information read is as expected
+        lease = kea_lease_handler._read()
+        assert lease == expected_lease
 
 
 # Cannot mock built-in/extension type function(datetime.datetime.timestamp), need to free time
@@ -88,13 +91,14 @@ def test_update_kea_lease(mock_swsscommon_dbconnector_init, mock_swsscommon_tabl
 
 
 def test_no_implement(mock_swsscommon_dbconnector_init):
-    db_connector = DhcpDbConnector()
-    lease_handler = LeaseHanlder(db_connector)
-    try:
-        lease_handler._read()
-    except NotImplementedError:
-        pass
-    try:
-        lease_handler.register()
-    except NotImplementedError:
-        pass
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        lease_handler = LeaseHanlder(db_connector)
+        try:
+            lease_handler._read()
+        except NotImplementedError:
+            pass
+        try:
+            lease_handler.register()
+        except NotImplementedError:
+            pass

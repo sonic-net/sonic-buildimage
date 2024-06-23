@@ -1,6 +1,7 @@
 import json
 import pytest
 from common_utils import MockConfigDb, dhcprelayd_refresh_dhcrelay_test, dhcprelayd_proceed_with_check_res_test
+from dhcp_utilities.dhcpservd.dhcp_lease import KeaDhcp4LeaseHandler
 from dhcp_utilities.dhcprelayd.dhcprelayd import DHCP_SERVER_CHECKER, MID_PLANE_CHECKER
 from dhcp_utilities.dhcpservd.dhcp_cfggen import DhcpServCfgGenerator
 from dhcp_utilities.common.utils import DhcpDbConnector
@@ -35,6 +36,7 @@ expected_kea_config = {
         },
         "subnet4": [
             {
+                "id": 10000,
                 "subnet": "169.254.200.0/24",
                 "pools": [
                     {
@@ -103,6 +105,30 @@ expected_kea_config = {
 }
 
 
+expected_lease = {
+    'bridge_midplane|aa:bb:cc:dd:ff:01': {
+        'ip': '169.254.200.1',
+        'lease_end': '1718053209',
+        'lease_start': '1718052309'
+    },
+    'bridge_midplane|aa:bb:cc:dd:ff:02': {
+        'ip': '169.254.200.2',
+        'lease_end': '1718053210',
+        'lease_start': '1718052310'
+    },
+    'bridge_midplane|aa:bb:cc:dd:ff:03': {
+        'ip': '169.254.200.3',
+        'lease_end': '1718053210',
+        'lease_start': '1718052310'
+    },
+   'bridge_midplane|aa:bb:cc:dd:ff:04': {
+       'ip': '169.254.200.4',
+       'lease_end': '1718053209',
+       'lease_start': '1718052309'
+    }
+}
+
+
 def test_dhcprelayd_refresh_dhcrelay(mock_swsscommon_dbconnector_init):
     expected_checkers = set(["MidPlaneTableEventChecker"])
     dhcprelayd_refresh_dhcrelay_test(expected_checkers, True, mock_get_config_db_table)
@@ -140,3 +166,12 @@ def test_dhcp_dhcp_cfggen_generate(mock_swsscommon_dbconnector_init, mock_parse_
 def mock_get_config_db_table(table_name):
     mock_config_db = MockConfigDb(MOCK_CONFIG_DB_PATH_SMART_SWITCH)
     return mock_config_db.get_config_db_table(table_name)
+
+
+def test_read_kea_lease(mock_swsscommon_dbconnector_init):
+    with patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
+        db_connector = DhcpDbConnector()
+        kea_lease_handler = KeaDhcp4LeaseHandler(db_connector, lease_file="tests/test_data/kea-lease_smart_switch.csv")
+        # Verify whether lease information read is as expected
+        lease = kea_lease_handler._read()
+        assert lease == expected_lease
