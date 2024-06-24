@@ -18,9 +18,11 @@
                 "pddf_xcvr"
             ]
         },
+        "std_perm_kos": [
+            "i2c-i801",
+            "i2c-ismt"
+        ],
         "std_kos": [
-            "i2c_i801",
-            "i2c_ismt",
             "i2c_dev",
             "i2c_mux_pca954x",
             "coretemp",
@@ -33,9 +35,12 @@
             "pddf_cpld_driver",
             "pddf_mux_module",
             "pddf_xcvr_module",
+            "pddf_fpgapci_driver",
             "pddf_xcvr_driver_module",
             "pddf_psu_driver_module",
             "pddf_psu_module",
+            "pddf_fpgai2c_module",
+            "pddf_fpgai2c_driver",
             "pddf_fan_driver_module",
             "pddf_fan_module",
             "pddf_led_module",
@@ -1907,6 +1912,24 @@
                         "bmc_cmd": "ipmitool raw 0x3c 0x30 0x0 | xargs | cut -d' ' -f1",
                         "raw": "1",
                         "type": "raw"
+                    },
+                    {
+                        "attr_name": "psu_v_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU0_VIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU0_VIN",
+                        "field_pos": "2",
+                        "mult": "1000"
+                    },
+                    {
+                        "attr_name": "psu_i_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU0_IIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU0_IIN",
+                        "field_pos": "2",
+                        "mult": "1000"
                     }
                 ]
             }
@@ -2030,6 +2053,24 @@
                         "bmc_cmd": "ipmitool raw 0x3c 0x30 0x0 | xargs | cut -d' ' -f2",
                         "raw": "1",
                         "type": "raw"
+                    },
+                    {
+                        "attr_name": "psu_v_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU1_VIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU1_VIN",
+                        "field_pos": "2",
+                        "mult": "1000"
+                    },
+                    {
+                        "attr_name": "psu_i_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU1_IIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU1_IIN",
+                        "field_pos": "2",
+                        "mult": "1000"
                     }
                 ]
             }
@@ -2463,7 +2504,7 @@
             ]
         }
     },
-    "ID_LED": {
+    "LOC_LED": {
         "dev_info": {
             "device_type": "LED",
             "device_name": "LOC_LED"
