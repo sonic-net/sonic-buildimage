@@ -27,7 +27,7 @@
             },
             "bmc":
             {
-                "valmap": { "0x0280|":true, "0x0180|":false }
+                "valmap": { "Device Present":true, "Device Absent":false }
             }
         }, 
 		
@@ -39,7 +39,7 @@
             },
             "bmc":
             {
-                "valmap": { "0x0280|":true, "0x0180|":false }
+                "valmap": { "State Asserted":true, "State Deasserted":false }
             }        
         },
 
@@ -50,7 +50,7 @@
                 "valmap": { "F2B":"EXHAUST", "B2F":"INTAKE" }
             }
         },
-
+        "DEFAULT_TYPE": "AC",
         "PSU_FAN_MAX_SPEED":"30000"
     },
 

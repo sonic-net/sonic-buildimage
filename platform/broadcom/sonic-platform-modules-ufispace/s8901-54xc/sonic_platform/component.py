@@ -18,9 +18,7 @@ CPLD_SYSFS = {
 }
 
 BMC_CMDS = {
-    "VER1": "ipmitool mc info | grep 'Firmware Revision' | cut -d':' -f2 | cut -d'.' -f1",
-    "VER2": "ipmitool mc info | grep 'Firmware Revision' | cut -d':' -f2 | cut -d'.' -f2",
-    "VER3": "echo $((`ipmitool mc info | grep 'Aux Firmware Rev Info' -A 2 | sed -n '2p'` + 0))",
+    "BMC": "bash -c 'tmp=$(ipmitool raw 0x6 0x1) && r=($(echo \"$tmp\" | cut -d \" \" -f 4,5,16,15,14)) && echo ${r[0]}.${r[1]}.${r[4]}.${r[3]}${r[2]}'",
 }
 
 BIOS_VERSION_PATH = "/sys/class/dmi/id/bios_version"
@@ -69,17 +67,11 @@ class Component(ComponentBase):
 
     def _get_bmc_version(self):
         # Retrieves the BMC firmware version
-        bmc_ver = dict()
-        for ver in BMC_CMDS:
-            status, value = subprocess.getstatusoutput(BMC_CMDS[ver])
-            if not status:
-                bmc_ver[ver] = int(value.rstrip())
-            else:
-                return None
-
-        bmc_version = "{}.{}.{}".format(bmc_ver["VER1"], bmc_ver["VER2"], bmc_ver["VER3"])
-
-        return bmc_version
+        status, value = subprocess.getstatusoutput(BMC_CMDS["BMC"])
+        if not status:
+            return value
+        else:
+            return None
 
     def get_name(self):
         """

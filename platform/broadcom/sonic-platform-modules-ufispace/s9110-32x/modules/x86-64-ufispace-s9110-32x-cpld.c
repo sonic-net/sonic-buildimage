@@ -31,6 +31,7 @@
 #include <linux/err.h>
 #include <linux/mutex.h>
 #include <linux/delay.h>
+#include <linux/version.h>
 #include "x86-64-ufispace-s9110-32x-cpld.h"
 
 #if !defined(SENSOR_DEVICE_ATTR_RO)
@@ -863,7 +864,7 @@ static ssize_t bsp_callback_store(struct device *dev,
     switch (attr->index) {
         case BSP_DEBUG:
             str = bsp_debug;
-            str_len = sizeof(str);
+            str_len = sizeof(bsp_debug);
             ret = bsp_write(buf, str, str_len, count);
 
             if (kstrtou8(buf, 0, &bsp_debug_u8) < 0) {
@@ -1272,8 +1273,6 @@ static int cpld_probe(struct i2c_client *client,
     if (INVALID(ret, cpld1, cpld2)) {
         dev_info(&client->dev,
             "cpld id %d(device) not valid\n", ret);
-        //status = -EPERM;
-        //goto exit;
     }
 
     data->index = dev_id->driver_data;
@@ -1317,7 +1316,12 @@ exit:
 }
 
 /* cpld drvier remove */
-static int cpld_remove(struct i2c_client *client)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+static int
+#else
+static void
+#endif
+cpld_remove(struct i2c_client *client)
 {
     struct cpld_data *data = i2c_get_clientdata(client);
 
@@ -1331,7 +1335,9 @@ static int cpld_remove(struct i2c_client *client)
     }
 
     cpld_remove_client(client);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
     return 0;
+#endif
 }
 
 #if 0 /* FIXME */

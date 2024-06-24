@@ -18,9 +18,11 @@
                 "pddf_xcvr"
             ]
         },
+        "std_perm_kos": [
+            "i2c-i801",
+            "i2c-ismt"
+        ],
         "std_kos": [
-            "i2c_i801",
-            "i2c-ismt",
             "i2c_dev",
             "i2c_mux_pca954x",
             "optoe"
@@ -31,9 +33,12 @@
             "pddf_cpld_driver",
             "pddf_mux_module",
             "pddf_xcvr_module",
+            "pddf_fpgapci_driver",
             "pddf_xcvr_driver_module",
             "pddf_psu_driver_module",
             "pddf_psu_module",
+            "pddf_fpgai2c_module",
+            "pddf_fpgai2c_driver",
             "pddf_fan_driver_module",
             "pddf_fan_module",
             "pddf_led_module"
@@ -65,7 +70,7 @@
     },
     "SMBUS1": {
         "dev_info": {
-            "device_type": "SMBUS", "device_name": "SMBUS1", "device_parent": "SYSTEM" 
+            "device_type": "SMBUS", "device_name": "SMBUS1", "device_parent": "SYSTEM"
         },
         "i2c": {
             "topo_info": {
@@ -752,6 +757,24 @@
                         "bmc_cmd": "ipmitool raw 0x3c 0x30 0x0 | xargs | cut -d' ' -f1",
                         "raw": "1",
                         "type": "raw"
+                    },
+                    {
+                        "attr_name": "psu_v_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU0_VIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU0_VIN",
+                        "field_pos": "2",
+                        "mult": "1000"
+                    },
+                    {
+                        "attr_name": "psu_i_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU0_IIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU0_IIN",
+                        "field_pos": "2",
+                        "mult": "1000"
                     }
                 ]
             }
@@ -875,6 +898,24 @@
                         "bmc_cmd": "ipmitool raw 0x3c 0x30 0x0 | xargs | cut -d' ' -f2",
                         "raw": "1",
                         "type": "raw"
+                    },
+                    {
+                        "attr_name": "psu_v_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU1_VIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU1_VIN",
+                        "field_pos": "2",
+                        "mult": "1000"
+                    },
+                    {
+                        "attr_name": "psu_i_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU1_IIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU1_IIN",
+                        "field_pos": "2",
+                        "mult": "1000"
                     }
                 ]
             }
@@ -1320,7 +1361,7 @@
             ]
         }
     },
-    "ID_LED": {
+    "LOC_LED": {
         "dev_info": {
             "device_type": "LED",
             "device_name": "LOC_LED"
@@ -1360,7 +1401,7 @@
     },
     "PORT1": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT1",
             "device_parent": "MUX3"
         },
@@ -1459,7 +1500,7 @@
     },
     "PORT2": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT2",
             "device_parent": "MUX3"
         },
@@ -1558,7 +1599,7 @@
     },
     "PORT3": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT3",
             "device_parent": "MUX3"
         },
@@ -1657,7 +1698,7 @@
     },
     "PORT4": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT4",
             "device_parent": "MUX3"
         },
@@ -1756,7 +1797,7 @@
     },
     "PORT5": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT5",
             "device_parent": "MUX3"
         },
@@ -1855,7 +1896,7 @@
     },
     "PORT6": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT6",
             "device_parent": "MUX3"
         },
@@ -1954,7 +1995,7 @@
     },
     "PORT7": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT7",
             "device_parent": "MUX3"
         },
@@ -2053,7 +2094,7 @@
     },
     "PORT8": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT8",
             "device_parent": "MUX3"
         },
@@ -2152,7 +2193,7 @@
     },
     "PORT9": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT9",
             "device_parent": "MUX4"
         },
@@ -2251,7 +2292,7 @@
     },
     "PORT10": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT10",
             "device_parent": "MUX4"
         },
@@ -2350,7 +2391,7 @@
     },
     "PORT11": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT11",
             "device_parent": "MUX4"
         },
@@ -2449,7 +2490,7 @@
     },
     "PORT12": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT12",
             "device_parent": "MUX4"
         },
@@ -2548,7 +2589,7 @@
     },
     "PORT13": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT13",
             "device_parent": "MUX4"
         },
@@ -2647,7 +2688,7 @@
     },
     "PORT14": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT14",
             "device_parent": "MUX4"
         },
@@ -2746,7 +2787,7 @@
     },
     "PORT15": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT15",
             "device_parent": "MUX4"
         },
@@ -2845,7 +2886,7 @@
     },
     "PORT16": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT16",
             "device_parent": "MUX4"
         },
@@ -2944,7 +2985,7 @@
     },
     "PORT17": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT17",
             "device_parent": "MUX5"
         },
@@ -3043,7 +3084,7 @@
     },
     "PORT18": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT18",
             "device_parent": "MUX5"
         },
@@ -3142,7 +3183,7 @@
     },
     "PORT19": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT19",
             "device_parent": "MUX5"
         },
@@ -3241,7 +3282,7 @@
     },
     "PORT20": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT20",
             "device_parent": "MUX5"
         },
@@ -3340,7 +3381,7 @@
     },
     "PORT21": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT21",
             "device_parent": "MUX5"
         },
@@ -3439,7 +3480,7 @@
     },
     "PORT22": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT22",
             "device_parent": "MUX5"
         },
@@ -3538,7 +3579,7 @@
     },
     "PORT23": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT23",
             "device_parent": "MUX5"
         },
@@ -3635,17 +3676,17 @@
             ]
         }
     },
-        "PORT24": {
-                "dev_info": {
-                        "device_type": "QSFP",
-                        "device_name": "PORT24",
-                        "device_parent": "MUX5"
-                },
-                "dev_attr": {
-                        "dev_idx": "24"
-                },
-                "i2c": {
-                        "interface": [
+    "PORT24": {
+        "dev_info": {
+            "device_type": "QSFP28",
+            "device_name": "PORT24",
+            "device_parent": "MUX5"
+        },
+        "dev_attr": {
+            "dev_idx": "24"
+        },
+        "i2c": {
+            "interface": [
                 {
                         "itf": "eeprom",
                         "dev": "PORT24-EEPROM"
@@ -3654,9 +3695,9 @@
                         "itf": "control",
                         "dev": "PORT24-CTRL"
                 }
-                        ]
-                }
-        },
+            ]
+        }
+    },
     "PORT24-EEPROM": {
         "dev_info": {
             "device_type": "",
@@ -3736,7 +3777,7 @@
     },
     "PORT25": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT25",
             "device_parent": "MUX6"
         },
@@ -3835,7 +3876,7 @@
     },
     "PORT26": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT26",
             "device_parent": "MUX6"
         },
@@ -3934,7 +3975,7 @@
     },
     "PORT27": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT27",
             "device_parent": "MUX6"
         },
@@ -4033,7 +4074,7 @@
     },
     "PORT28": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT28",
             "device_parent": "MUX6"
         },
@@ -4132,7 +4173,7 @@
     },
     "PORT29": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT29",
             "device_parent": "MUX6"
         },
@@ -4231,7 +4272,7 @@
     },
     "PORT30": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT30",
             "device_parent": "MUX6"
         },
@@ -4330,7 +4371,7 @@
     },
     "PORT31": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT31",
             "device_parent": "MUX6"
         },
@@ -4429,7 +4470,7 @@
     },
     "PORT32": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT32",
             "device_parent": "MUX6"
         },

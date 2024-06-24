@@ -23,6 +23,10 @@
             "i2c":
             {
                 "valmap": { "1":true, "0":false }
+            },
+            "bmc":
+            {
+                "valmap": { "1":true, "0":false }
             }
         },
 
@@ -33,14 +37,15 @@
                 "valmap": { "1": true, "0":false }
             }
         },
+        
         "psu_support_list":
         [
-            {"Mfr_id": "ASPOWER","Model": "U1A-K10150-DRB-13", "Dir": "EXHAUST"},
-            {"Mfr_id": "ASPOWER","Model": "U1A-K0150-B-13", "Dir": "INTAKE"},
-            {"Mfr_id": "ASPOWER","Model": "U1D-K0150-A-13", "Dir": "EXHAUST"},
-            {"Mfr_id": "ASPOWER","Model": "U1D-K0150-B-13", "Dir": "INTAKE"}
+            {"Manufacturer": "ASPOWER","Name": "U1A-K10150-DRB-13", "MaxSpd": "PSU_AC_FAN_MAX_SPEED", "Dir": "EXHAUST", "Type": "AC" },
+            {"Manufacturer": "ASPOWER","Name": "U1A-K0150-B-13", "MaxSpd": "PSU_AC_FAN_MAX_SPEED", "Dir": "INTAKE", "Type": "AC"},
+            {"Manufacturer": "ASPOWER","Name": "U1D-K0150-A-13", "MaxSpd": "PSU_DC_FAN_MAX_SPEED", "Dir": "EXHAUST", "Type": "DC"},
+            {"Manufacturer": "ASPOWER","Name": "U1D-K0150-B-13", "MaxSpd": "PSU_DC_FAN_MAX_SPEED", "Dir": "INTAKE", "Type": "DC"}
         ],
-        "PSU_FAN_MAX_SPEED":"13000"
+        "valmap": {"PSU_FAN_MAX_SPEED": "13000", "PSU_AC_FAN_MAX_SPEED": "13000", "PSU_DC_FAN_MAX_SPEED":"13000", "DEFAULT_TYPE": "AC"}
     },
 
     "FAN":
@@ -62,15 +67,6 @@
         },
 
         "FAN_MAX_SPEED":"25000"
-    },
-
-    "LED":
-    {
-        "capability":
-        {
-            "ro": ["SYS_LED", "FAN_LED", "PSU1_LED", "PSU2_LED"],
-            "rw": ["ID_LED"]
-        }
     },
     "REBOOT_CAUSE":
     {

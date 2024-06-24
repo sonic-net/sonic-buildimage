@@ -36,3 +36,32 @@ class Psu(PddfPsu):
             e.g. 1200.1
         """
         return float(self.PLATFORM_PSU_CAPACITY)
+
+    def get_capacity(self):
+        """
+        Retrieves the maximum supplied power by PSU (or PSU capacity)
+        Returns:
+            A float number, the maximum power output in Watts.
+            e.g. 1200.1
+        """
+        return self.get_maximum_supplied_power()
+
+    def get_type(self):
+        """
+        Gets the type of the PSU
+
+        Returns:
+            A string, the type of PSU (AC/DC)
+        """
+        mfr = self.get_mfr_id()
+        model = self.get_model()
+        ptype = self.plugin_data['PSU']['valmap']['DEFAULT_TYPE']
+
+        if mfr and model :
+            for dev in self.plugin_data['PSU']['psu_support_list']:
+                if dev['Manufacturer'] == mfr and dev['Name'] == model:
+                    ptype = dev['Type']
+                    break
+
+
+        return ptype

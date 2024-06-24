@@ -1,0 +1,13 @@
+{
+    "chassis": {
+        "x86_64-ufispace_s9301_32d-r0": {
+            "component": {
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { },
+                "BIOS": { },
+                "BMC": {}
+            }
+        }
+    }
+}

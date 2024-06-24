@@ -4,7 +4,6 @@ include $(PLATFORM_PATH)/sai.mk
 # * Nokia
 # * Juniper
 # * Ragile
-# * Ufispace
 include $(PLATFORM_PATH)/platform-modules-nokia.mk
 include $(PLATFORM_PATH)/platform-modules-dell.mk
 include $(PLATFORM_PATH)/platform-modules-arista.mk
@@ -21,7 +20,7 @@ include $(PLATFORM_PATH)/platform-modules-quanta.mk
 #include $(PLATFORM_PATH)/platform-modules-ruijie.mk
 #include $(PLATFORM_PATH)/platform-modules-ragile.mk
 #include $(PLATFORM_PATH)/platform-modules-tencent.mk
-#include $(PLATFORM_PATH)/platform-modules-ufispace.mk
+include $(PLATFORM_PATH)/platform-modules-ufispace.mk
 include $(PLATFORM_PATH)/platform-modules-micas.mk
 include $(PLATFORM_PATH)/docker-syncd-brcm.mk
 include $(PLATFORM_PATH)/docker-syncd-brcm-rpc.mk

@@ -1,4 +1,4 @@
-#r1.0.0
+#r1.0.2
 #
 # BCM56880 32x400g port configuration.
 #
@@ -26,19 +26,12 @@ device:
             CORE_CLK_FREQ: CLK_1350MHZ
             # PP CLOCK FREQUENCY
             PP_CLK_FREQ: CLK_1350MHZ
-            VARIANT: DNA_4_9_5_0
 ...
 ---
 device:
     0:
         FP_CONFIG:
             FP_ING_OPERMODE: GLOBAL_PIPE_AWARE
-...
----
-device:
-    0:
-        TM_SCHEDULER_CONFIG:
-            NUM_MC_Q: NUM_MC_Q_4
 ...
 ---
 bcm_device:
@@ -249,7 +242,7 @@ device:
                 SPEED: 400000
                 NUM_LANES: 8
                 FEC_MODE: PC_FEC_RS544_2XN
-                LINK_TRAINING: 1
+                LINK_TRAINING: 0
                 MAX_FRAME_SIZE: 9416
             ?
                 PORT_ID: [38,     # Management port 0 (Pipe 1)
