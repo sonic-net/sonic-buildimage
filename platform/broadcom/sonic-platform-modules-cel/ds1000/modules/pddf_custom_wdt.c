@@ -665,7 +665,7 @@ static int cpld_wdt_remove(struct platform_device *pdev)
 {
     struct cpld_wdt_private *p = platform_get_drvdata(pdev);
 
-    if (!p) {
+    if (p) {
         sysfs_remove_group(&pdev->dev.kobj, &wdt_group);
         misc_deregister(&p->mdev);
         unregister_reboot_notifier(&watchdog_notifier);
