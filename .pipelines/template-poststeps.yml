@@ -1,0 +1,143 @@
+parameters:
+  - name: PLATFORM_NAME
+    type: string
+    values:
+      - vs
+      - generic
+      - broadcom
+      - mellanox
+      - barefoot
+      - marvell-armhf
+      - cisco-8000
+  - name: BRANCH_FOLDER
+    default: 'default'
+  - name: UPLOAD
+    default: n
+
+steps:
+  - task: PublishPipelineArtifact@1
+    continueOnError: true
+    condition: always()
+    inputs:
+      targetPath: $(System.DefaultWorkingDirectory)/target
+      artifact: '${{ parameters.PLATFORM_NAME }}'
+  - script: |
+      set -ex
+      touch target/sonic-installers
+      SONIC_VERSION=$(cat target/sonic.version)
+      for image in `ls target | grep -E "\.(swi|bin|raw|deb)$"`; do
+        version_image=$(echo $image | sed -E "s/(-dbg\.\w+|\.\w+)$/-$SONIC_VERSION\1/")
+        echo "$image,$version_image" >> target/sonic-installers
+        cp -f target/$image target/$version_image
+      done
+    displayName: "Copy installers"
+  - task: ManifestGeneratorTask@0
+    condition: ne(variables.SKIP_MG, 'y')
+    timeoutInMinutes: 60
+    continueOnError: true
+    displayName: "Manifest Generator"
+    inputs:
+      BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
+      ManifestDirPath: 'target/'
+      BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
+  - ${{ if eq(parameters.UPLOAD, 'y') }}:
+    - script: |
+        export AZCOPY_LOG_LOCATION=$(pwd)/azcopy
+        PUBLISH_PLATFORM_URL="https://$(SONIC_STORAGE_ACCOUNT).blob.core.windows.net/images/pipelines/Networking-acs-buildimage-Official/$(Build.SourceBranchName)/${{ parameters.PLATFORM_NAME }}"
+        PUBLISH_URL="$PUBLISH_PLATFORM_URL/$(Build.BuildId)$StorageSASKey"
+        azcopy copy target $PUBLISH_URL --recursive=true --put-md5
+        touch prev_build
+        azcopy copy "$PUBLISH_PLATFORM_URL/latest_build$StorageSASKey" latest_build || true
+        [ -f latest_build ] && mv latest_build prev_build
+        echo $(Build.BuildId) > latest_build
+        azcopy copy latest_build "$PUBLISH_PLATFORM_URL/latest_build$StorageSASKey"  --put-md5
+        azcopy copy prev_build "$PUBLISH_PLATFORM_URL/prev_build$StorageSASKey"  --put-md5
+      env:
+        StorageSASKey: $(SONIC_STORAGE_SASKEY)
+      displayName: "Publish to Azure Storage"
+    - task: SSH@0
+      displayName: "Make soft links for trusty8"
+      inputs:
+        sshEndpoint: 'acs-trusty8'
+        runOptions: 'inline'
+        readyTimeout: '20000'
+        inline: |
+          echo "Make link for pipelines/Networking-acs-buildimage-Official/$(Build.SourceBranchName)"
+          LINK_FOLDERNAMES=.
+          [[ "$(SONIC_VERSION)" == "$(LATEST_TAG)" ]] && LINK_FOLDERNAMES=". tagged"
+          for link_foldername in $LINK_FOLDERNAMES; do
+            LATEST_VERSION=
+            PREVIOUS_VERSION=
+            latest_path=/azmirrors/pipelines/Networking-acs-buildimage-Official/$(Build.SourceBranchName)/${{ parameters.PLATFORM_NAME }}/$(Build.BuildId)
+            BRANCH_NAME=$(Build.SourceBranchName)
+            [[ "${{ parameters.BRANCH_FOLDER }}" != 'default' ]] && BRANCH_NAME=${{ parameters.BRANCH_FOLDER }}
+            link_path=/data/pipelines/Networking-acs-buildimage-Official/${{ parameters.PLATFORM_NAME }}/$BRANCH_NAME/$link_foldername
+            [ -e $link_path/latest ] && LATEST_VERSION=$(cat $link_path/latest/target/sonic.version)
+            mkdir -p $link_path
+   
+            # Skip the change if the latest version is existed
+            if [[ "$LATEST_VERSION" == "$(SONIC_VERSION)" ]]; then
+              echo "Skipped to update the symbol links for version $LATEST_VERSION in $link_path"
+              continue
+            fi
+   
+            # Make soft links for latest and prev
+            prev_link_path=$(realpath $link_path/latest)
+            # If the latest version in the storage account is the same as the current build version, not update the prev link
+            if [ -e $prev_link_path ] && [ "$LATEST_VERSION" != "$(SONIC_VERSION)" ]; then
+              [ -L $link_path/prev ] && PREVIOUS_VERSION=$(cat $link_path/prev/target/sonic.version)
+              ln -nsf "$prev_link_path" "$link_path/prev"
+            fi
+   
+            ln -nsf "$latest_path" "$link_path/latest"
+   
+            # Make soft links for installers
+            installers_path=$link_path/installers
+            mkdir -p $installers_path
+            ln -sf $latest_path/target/sonic.version $installers_path/sonic.version
+            for installer in `cat $latest_path/target/sonic-installers`; do
+              image=$(echo $installer | cut -d, -f1)
+              version_image=$(echo $installer | cut -d, -f2)
+              ln -sf $latest_path/target/$version_image $installers_path/$image
+              ln -sf $latest_path/target/$version_image $link_path/$version_image
+              ln -sf latest/target/$image $link_path/$image
+              ln -sf prev/target/$image $link_path/$image.PREV.1
+            done
+   
+            # Remove the old soft links
+            if [ "$link_foldername" != "tagged" ]; then
+              echo "Remove the old symbol links in $link_foldername"
+              if [ -n "$PREVIOUS_VERSION" ]; then
+                rm -f $link_path/*"$PREVIOUS_VERSION"*
+              fi
+            else
+              echo "Skipped to remove the old symbol links in $link_foldername"
+            fi
+          done
+    - script: |
+        SONIC_VERSION=$(cat target/sonic.version)
+        PORT=443
+        DOCKERS=$(ls target/docker-*.gz)
+        BRANCH=$(Build.SourceBranchName)
+        arch=$(cat .arch)
+        if echo "$arch" | grep arm; then
+          LABELS=$BRANCH-$arch
+          [[ "$BRANCH" == "internal" ]] && LABELS="$LABELS latest-$arch"
+        else
+          LABELS=$BRANCH
+          [[ "$BRANCH" == "internal" ]] && LABELS="$LABELS latest"
+        fi
+        for f in $DOCKERS; do
+          echo $f
+          ./push_docker.sh $f $(REGISTRY_SERVER_INTERNAL) $PORT $(REGISTRY_USERNAME) "$REGISTRY_PASSWD" "$LABELS"
+          if [ "$UPLOAD_HL_ACR" = "true" ]; then
+            ./push_docker.sh $f $(HL_REGISTRY_SERVER) $PORT $(HL_REGISTRY_USERNAME) "$HL_REGISTRY_PASSWD" "$LABELS"
+          fi
+        done
+      env:
+        REGISTRY_PASSWD: $(REGISTRY_PASSWD)
+        HL_REGISTRY_PASSWD: $(HL_REGISTRY_PASSWD)
+      displayName: "Publish to Docker Registry"
+  - template: /.pipelines/post-build-steps.yml
+  - template: /.azure-pipelines/cleanup.yml
+

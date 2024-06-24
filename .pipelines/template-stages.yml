@@ -1,0 +1,239 @@
+parameters:
+  - name: BRANCH_FOLDER
+    default: 'default'
+  - name: CACHE
+    values:
+      - 'SONIC_DPKG_CACHE_METHOD=wcache'
+      - 'SONIC_DPKG_CACHE_METHOD=rcache'
+    default: 'SONIC_DPKG_CACHE_METHOD=rcache'
+  - name: OPTIONS
+    default: 'SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y
+              SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 SONIC_BUILD_JOBS=4
+              PASSWORD=$(SONIC_PASSWORD) INCLUDE_RESTAPI=y ENABLE_FIPS=y SHUTDOWN_BGP_ON_START=y ENABLE_PFCWD_ON_START=y ENABLE_DHCP_GRAPH_SERVICE=y'
+stages:
+- stage: Build
+  variables:
+    - group: SONIC-BUILD-VG-1
+  jobs:
+  - job: vs
+    pool:
+      type: linux
+      isCustom: true
+      name: sonic-image-builder-1ES
+    variables:
+      ob_artifactBaseName: vs
+    steps:
+      - template: /.pipelines/template-presteps.yml@self
+        parameters:
+          PLATFORM_NAME: vs
+          PLATFORM_ARCH: amd64
+          OPTIONS: ${{ parameters.OPTIONS }}
+      - script: |
+          set -ex
+          OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs INCLUDE_KUBERNETES_MASTER=n BUILD_MULTIASIC_KVM=y"
+          make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
+          gzip -kd target/sonic-vs.img.gz
+          SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make BLDENV=bookworm -f Makefile.work $OPTIONS sonic-slave-run
+          gzip target/sonic-vs.vhdx
+        displayName: Build SONiC image
+      - template: /.pipelines/template-poststeps.yml@self
+        parameters:
+          PLATFORM_NAME: vs
+          BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+          ${{ if contains(parameters.CACHE, 'wcache') }}:
+            UPLOAD: y
+
+  - job: broadcom
+    pool:
+      type: linux
+      isCustom: true
+      name: sonic-image-builder-1ES
+    variables:
+      ob_artifactBaseName: broadcom
+    steps:
+      - template: /.pipelines/template-presteps.yml@self
+        parameters:
+          PLATFORM_NAME: broadcom
+          PLATFORM_ARCH: amd64
+          OPTIONS: ${{ parameters.OPTIONS }}
+      - script: |
+          set -ex
+          OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/broadcom"
+          echo "==== Building slim images"
+          echo "INCLUDE_ACMS = y" >> rules/config.user
+          echo "INCLUDE_MUX = n" >> rules/config.user
+          echo "INCLUDE_KUBERNETES = n" >> rules/config.user
+          echo "INCLUDE_MACSEC = n" >> rules/config.user
+          echo "INCLUDE_P4RT = n" >> rules/config.user
+          echo "BUILD_REDUCE_IMAGE_SIZE = y" >> rules/config.user
+          echo "INCLUDE_GBSYNCD = n" >> rules/config.user
+          echo "INCLUDE_SYSTEM_TELEMETRY = n" >> rules/config.user
+          echo "ENABLE_GNMI_TWO_PROCESS = y" >> rules/config.user
+          make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
+          mv target/sonic-broadcom.bin target/sonic-broadcom-slim.bin
+          mv target/sonic-aboot-broadcom.swi target/sonic-aboot-broadcom-slim.swi
+          rm rules/config.user
+          rm target/docker-sonic-gnmi.gz
+          echo "==== Finished building slim images"
+          echo "==== Building regular images"
+          make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
+          mv target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi target/release/
+          echo "==== Finished building regular images"
+          echo "==== Building syncd-rpc docker"
+          make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-rpc.gz
+          echo "==== Finished building syncd-rpc docker"
+          echo "==== Building one debug image"
+          make $OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-broadcom.bin
+          mv target/sonic-broadcom.bin target/sonic-broadcom-dbg.bin
+          echo "==== Finished building one debug image"
+          mv target/release/* target/
+        displayName: Build SONiC image
+      - template: /.pipelines/template-poststeps.yml@self
+        parameters:
+          PLATFORM_NAME: broadcom
+          BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+          ${{ if contains(parameters.CACHE, 'wcache') }}:
+            UPLOAD: y
+
+  - job: mellanox
+    pool:
+      type: linux
+      isCustom: true
+      name: sonic-image-builder-1ES
+    variables:
+      ob_artifactBaseName: mellanox
+    steps:
+      - template: /.pipelines/template-presteps.yml@self
+        parameters:
+          PLATFORM_NAME: mellanox
+          PLATFORM_ARCH: amd64
+          OPTIONS: ${{ parameters.OPTIONS }}
+      - script: |
+          set -ex
+          OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/mellanox"
+          make $OPTIONS INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin
+          make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-mlnx-rpc.gz
+        displayName: Build SONiC image
+      - template: /.pipelines/template-poststeps.yml@self
+        parameters:
+          PLATFORM_NAME: mellanox
+          BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+          ${{ if contains(parameters.CACHE, 'wcache') }}:
+            UPLOAD: y
+
+  - job: marvell_armhf
+    pool:
+      type: linux
+      isCustom: true
+      name: sonic-armhf
+    variables:
+      ob_artifactBaseName: marvell-armhf
+      PLATFORM_ARCH: armhf
+    steps:
+      - template: /.pipelines/template-presteps.yml@self
+        parameters:
+          PLATFORM_NAME: marvell
+          PLATFORM_ARCH: armhf
+          OPTIONS: ${{ parameters.OPTIONS }}
+      - script: |
+          set -ex
+          OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/marvell-armhf"
+          make $OPTIONS target/sonic-marvell-armhf.bin
+        displayName: Build SONiC image
+      - template: /.pipelines/template-poststeps.yml@self
+        parameters:
+          PLATFORM_NAME: marvell-armhf
+          BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+          ${{ if contains(parameters.CACHE, 'wcache') }}:
+            UPLOAD: y
+
+  - job: cisco_8000
+    pool:
+      type: linux
+      isCustom: true
+      name: sonic-image-builder-1ES
+    variables:
+      TERM: ''
+      SONIC_ENABLE_SECUREBOOT_SIGNATURE: y
+      SIGNING_KEY: /etc/certificates/sonic-secure-boot-private.pem
+      SIGNING_CERT: $(Build.SourcesDirectory)/target/sonic-secure-boot-public.pem
+      ob_artifactBaseName: cisco-8000
+    steps:
+    - template: /.pipelines/template-presteps.yml@self
+      parameters:
+        PLATFORM_NAME: cisco-8000
+        PLATFORM_ARCH: amd64
+        OPTIONS: ${{ parameters.OPTIONS }}
+    - template: /.azure-pipelines/azure-pipelines-download-certificate.yml@self
+      parameters:
+        connectionName: sonic2sub
+        kevaultName: sonic-kv
+    - script: |
+        echo $(DEV_SIGNING_KEY) | base64 -d | sudo tee "$(SIGNING_KEY)" 1>/dev/null 2>&1
+        echo $(DEV_SIGNING_CERT) | base64 -d > "$(SIGNING_CERT)"
+        echo "SECURE_UPGRADE_MODE := dev" >> rules/config.user
+        echo "SECURE_UPGRADE_DEV_SIGNING_KEY := $SIGNING_KEY" >> rules/config.user
+        echo "SECURE_UPGRADE_SIGNING_CERT := $SIGNING_CERT" >> rules/config.user
+      displayName: "Enable secure boot signature"
+    - script: |
+        cisco_ref=$(cat platform/checkout/cisco-8000.ini | grep '^ref=' | cut -d= -f2)
+        echo "The cisco 8000 release version is $cisco_ref"
+        echo "##vso[task.setvariable variable=cisco.ref]$cisco_ref"
+      displayName: 'Export cisco release version'
+    - task: DownloadGitHubRelease@0
+      inputs:
+        connection: cisco-connection
+        userRepository: Cisco-8000-sonic/platform-cisco-8000
+        defaultVersionType: specificTag
+        version: $(cisco.ref)
+        itemPattern: 'artifactory-*.tar.gz'
+        downloadPath: '$(System.ArtifactsDirectory)'
+    - script: |
+        tar xvfz $(System.ArtifactsDirectory)/artifactory-*.tar.gz -C platform/cisco-8000
+      displayName: 'Setup cisco artifacts'
+    - script: |
+        if [ ! -e platform/cisco-8000/device/x86_64-8102_64h_o-r0/Cisco-8102-C64 ]; then
+          echo "hwsku Cisco-8102-C64 doesn't exist, copy from 64x100Gb"
+          cp -r platform/cisco-8000/device/x86_64-8102_64h_o-r0/64x100Gb platform/cisco-8000/device/x86_64-8102_64h_o-r0/Cisco-8102-C64
+        else
+          echo "hwsku Cisco-8102-C64 exist"
+        fi
+      displayName: 'Setup cisco hwsku Cisco-8102-C64'
+    - script: |
+        set -ex
+        filename=$(find platform/cisco-8000/artifactory/sonic -name cisco-* -type f | head -n 1)
+        if [ -z "$filename" ]; then
+          echo "Cisco sai package not found" 1>&2
+          exit 1
+        fi
+        cd $(dirname $filename)
+        echo "PWD=$(pwd)"
+        ls -l cisco-*.deb
+        while read -r package; do
+          # Cisco version format: <VERSION>-sai-<sai-ver>-<distribution>-<COMMIT HASH>
+          # The <sai-ver> may contain several values in one build, the part is skipped when publishing to storage
+          # See https://github.com/Cisco-8000-sonic/sdk/blob/master/azure-pipelines.yml
+          # The $PACKAGE_URL is only accessible for AZP
+          PACKAGE_URL=https://sonicstorage.blob.core.windows.net/packages
+          version=$(echo $package | awk -F_ '{print $(NF-1)}' | cut -d- -f1,2,4,5)
+          package_url="$PACKAGE_URL/sai/ciscosai/master/$version/$package"
+          echo "Override package $package from $package_url"
+          wget "$package_url$StorageSASKey" -O "$package"
+        done < <(ls cisco-*.deb)
+      env:
+        StorageSASKey: $(SONIC_PUBLIC_STORAGE_SASKEY)
+      condition: ne(variables.SKIP_OVERRIDE, 'y')
+      continueOnError: true
+      displayName: "Override cisco sai packages"
+    - script: |
+        set -ex
+        OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/cisco-8000  ENABLE_NAT=n INCLUDE_VNET_MONITOR=y"
+        make $OPTIONS target/sonic-cisco-8000.bin
+        make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-cisco-rpc.gz || true
+      displayName: Build SONiC image
+    - template: /.pipelines/template-poststeps.yml@self
+      parameters:
+        PLATFORM_NAME: cisco-8000
+        BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+        ${{ if contains(parameters.CACHE, 'wcache') }}:
+          UPLOAD: y

@@ -1,0 +1,50 @@
+parameters:
+  - name: PLATFORM_ARCH
+    type: string
+    values:
+      - amd64
+      - armhf
+      - arm64
+  - name: PLATFORM_NAME
+    type: string
+    values:
+      - vs
+      - generic
+      - broadcom
+      - mellanox
+      - barefoot
+      - marvell
+      - cisco-8000
+  - name: OPTIONS
+    type: string
+
+steps:
+  - template: /.pipelines/prepare_agent.yml
+  - template: /.azure-pipelines/cleanup.yml
+  - template: /.azure-pipelines/template-daemon.yml
+  - checkout: self
+    clean: true
+    submodules: recursive
+    path: s
+    displayName: 'Checkout code'
+  - ${{ if eq(parameters.PLATFORM_NAME, 'cisco-8000') }}:
+    - checkout: cisco-8000
+      submodules: recursive
+      path: s/platform/cisco-8000
+      displayName: 'Checkout cisco-8000'
+  - script: |
+      unset REGISTRY_SERVER
+      mkdir -p target/release
+      . functions.sh
+      SONIC_VERSION=$(sonic_get_version)
+      echo SONIC_VERSION=${SONIC_VERSION} > sonic.properties
+      echo $SONIC_VERSION > target/sonic.version
+      LATEST_TAG=$(git describe --tags --abbrev=0 | grep -v merge$)
+      echo $LATEST_TAG > target/sonic.latesttag
+      echo "##vso[task.setvariable variable=SONIC_VERSION]$SONIC_VERSION"
+      echo "##vso[task.setvariable variable=LATEST_TAG]$LATEST_TAG"
+      set -ex
+
+      rm -f target/sonic-installers
+      make PLATFORM=${{ parameters.PLATFORM_NAME }} PLATFORM_ARCH=${{ parameters.PLATFORM_ARCH }} ${{ parameters.OPTIONS }} configure
+    displayName: 'Make configure'
