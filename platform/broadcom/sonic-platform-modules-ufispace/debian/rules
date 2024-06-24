@@ -1,0 +1,94 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+include /usr/share/dpkg/pkg-info.mk
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+export INSTALL_MOD_DIR:=extra
+
+PYTHON3     ?= python3
+
+PACKAGE_PRE_NAME := sonic-platform-ufispace
+KVERSION   ?= $(shell uname -r)
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+MOD_SRC_DIR:= $(shell pwd)
+MODULE_DIRS := s9300-32d
+MODULE_DIRS += s9301-32d
+MODULE_DIRS += s9301-32db
+MODULE_DIRS += s9110-32x
+MODULE_DIRS += s8901-54xc
+MODULE_DIRS += s7801-54xs
+MODULE_DIRS += s6301-56st
+MODULE_DIR := modules
+UTILS_DIR := utils
+SERVICE_DIR := service
+CONF_DIR := conf
+
+%:
+	dh $@ --with systemd,python3 --buildsystem=pybuild
+
+clean:
+	dh_testdir
+	dh_testroot
+	dh_clean
+	(for mod in $(MODULE_DIRS); do \
+	    make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
+	done)
+
+
+
+build:
+	(for mod in $(MODULE_DIRS); do \
+		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+		cd -; \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		if [ -f sonic_platform_setup.py ]; then \
+			$(PYTHON3) sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+			echo "Finished makig whl package for $$mod"; \
+		fi; \
+                cd -; \
+	done)
+
+binary: binary-arch binary-indep
+
+binary-arch:
+
+binary-indep:
+	dh_testdir
+	dh_installdirs
+	(for mod in $(MODULE_DIRS); do \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} $(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/local/bin; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin; \
+		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} lib/systemd/system; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system; \
+		cd $(MOD_SRC_DIR)/$${mod}; \
+		cd -; \
+	done)
+
+	# Resuming debhelper scripts
+	dh_testroot
+	dh_install
+	dh_installchangelogs
+	dh_installdocs
+	dh_systemd_enable
+	dh_installinit
+	dh_systemd_start
+	dh_link
+	dh_fixperms
+	dh_compress
+	dh_strip
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+.PHONY: build binary binary-arch binary-indep clean
