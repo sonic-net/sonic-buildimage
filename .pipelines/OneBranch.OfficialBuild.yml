@@ -363,6 +363,7 @@ stages:
             env:
               StorageSASKey: $(SONIC_PUBLIC_STORAGE_SASKEY)
             condition: and(ne(variables['Build.Reason'], 'PullRequest'), ne(variables.SKIP_OVERRIDE, 'y'))
+            continueOnError: true
             displayName: "Override cisco sai packages"
           - script: |
               set -ex
