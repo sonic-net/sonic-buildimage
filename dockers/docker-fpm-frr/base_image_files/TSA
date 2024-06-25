@@ -6,7 +6,16 @@ if [ "$EUID" -ne 0 ] ; then
   exit 1
 fi
 
-if [ -f /etc/sonic/chassisdb.conf ]; then
+PLATFORM="$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform)"
+PLATFORM_ENV_CONF=/usr/share/sonic/device/$PLATFORM/platform_env.conf
+SMARTSWITCH=false
+if [ -f "$PLATFORM_ENV_CONF" ]; then
+    if grep -Fxq "SMARTSWITCH=1" $PLATFORM_ENV_CONF; then
+        SMARTSWITCH=true
+    fi
+fi
+
+if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] ; then
   rexec all -c "sudo TSA chassis"
   echo "Please execute \"rexec all -c 'sudo config save -y'\" to preserve System mode in Maintenance after reboot\
   or config reload on all linecards"
