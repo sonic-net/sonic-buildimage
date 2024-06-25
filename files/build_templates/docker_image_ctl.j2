@@ -243,6 +243,9 @@ function postStartAction()
             fi
 
             if [[ "$BOOT_TYPE" == "fast" ]]; then
+                # Flush ASIC DB. On fast-boot there should be nothing in there.
+                # In the older versions there has been an issue where a queued FDB event might get into ASIC_DB causing syncd crash at boot.
+                $SONIC_DB_CLI ASIC_DB FLUSHDB
                 # this is the case when base OS version does not support fast-reboot with reconciliation logic (dump.rdb is absent)
                 # In this case, we need to set the flag to indicate fast-reboot is in progress. Set the key to expire in 3 minutes
                 $SONIC_DB_CLI STATE_DB SET "FAST_REBOOT|system" "1" "EX" "180"

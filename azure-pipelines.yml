@@ -270,6 +270,8 @@ stages:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
           TOPOLOGY: t0
+          STOP_ON_FAILURE: "False"
+          RETRY_TIMES: 0
           MIN_WORKER: $(T0_ONBOARDING_SONIC_INSTANCE_NUM)
           MAX_WORKER: $(T0_ONBOARDING_SONIC_INSTANCE_NUM)
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
