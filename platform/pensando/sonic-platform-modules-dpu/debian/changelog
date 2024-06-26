@@ -1,0 +1,3 @@
+sonic-pensando-platform-modules (1.0) unstable; urgency=low
+
+  * Add support for DPU.

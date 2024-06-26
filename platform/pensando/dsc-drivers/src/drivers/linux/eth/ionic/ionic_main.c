@@ -35,13 +35,17 @@ unsigned int tx_budget = IONIC_TX_BUDGET_DEFAULT;
 module_param(tx_budget, uint, 0600);
 MODULE_PARM_DESC(tx_budget, "Number of tx completions to process per NAPI poll");
 
-unsigned int devcmd_timeout = DEVCMD_TIMEOUT;
+unsigned int devcmd_timeout = DEVCMD_TOUT_DEF;
 module_param(devcmd_timeout, uint, 0600);
 MODULE_PARM_DESC(devcmd_timeout, "Devcmd timeout in seconds (default 30 secs)");
 
 unsigned long affinity_mask_override;
 module_param(affinity_mask_override, ulong, 0600);
 MODULE_PARM_DESC(affinity_mask_override, "IRQ affinity mask to override (max 64 bits)");
+
+unsigned long asic_addr_len = IONIC_ADDR_LEN;
+module_param(asic_addr_len, ulong, 0600);
+MODULE_PARM_DESC(asic_addr_len, "DMA address bits for mask size");
 
 static const char *ionic_error_to_str(enum ionic_status_code code)
 {
@@ -216,28 +220,6 @@ static const char *ionic_opcode_to_str(enum ionic_cmd_opcode opcode)
 	}
 }
 
-const char *ionic_vf_attr_to_str(enum ionic_vf_attr attr)
-{
-	switch (attr) {
-	case IONIC_VF_ATTR_SPOOFCHK:
-		return "IONIC_VF_ATTR_SPOOFCHK";
-	case IONIC_VF_ATTR_TRUST:
-		return "IONIC_VF_ATTR_TRUST";
-	case IONIC_VF_ATTR_LINKSTATE:
-		return "IONIC_VF_ATTR_LINKSTATE";
-	case IONIC_VF_ATTR_MAC:
-		return "IONIC_VF_ATTR_MAC";
-	case IONIC_VF_ATTR_VLAN:
-		return "IONIC_VF_ATTR_VLAN";
-	case IONIC_VF_ATTR_RATE:
-		return "IONIC_VF_ATTR_RATE";
-	case IONIC_VF_ATTR_STATSADDR:
-		return "IONIC_VF_ATTR_STATSADDR";
-	default:
-		return "IONIC_VF_ATTR_UNKNOWN";
-	}
-}
-
 static void ionic_adminq_flush(struct ionic_lif *lif)
 {
 	struct ionic_desc_info *desc_info;
@@ -401,13 +383,12 @@ int ionic_adminq_wait(struct ionic_lif *lif, struct ionic_admin_ctx *ctx,
 		if (do_msg && !test_bit(IONIC_LIF_F_FW_RESET, lif->state))
 			netdev_err(netdev, "Posting of %s (%d) failed: %d\n",
 				   name, ctx->cmd.cmd.opcode, err);
-
 		ctx->comp.comp.status = IONIC_RC_ERROR;
 		return err;
 	}
 
 	time_start = jiffies;
-	time_limit = time_start + HZ * (ulong)devcmd_timeout;
+	time_limit = time_start + HZ * (ulong)DEVCMD_TIMEOUT;
 	do {
 		remaining = wait_for_completion_timeout(&ctx->work,
 							IONIC_ADMINQ_TIME_SLICE);
@@ -417,7 +398,7 @@ int ionic_adminq_wait(struct ionic_lif *lif, struct ionic_admin_ctx *ctx,
 			break;
 
 		/* force a check of FW status and break out if FW reset */
-		(void) ionic_heartbeat_check(lif->ionic);
+		ionic_heartbeat_check(lif->ionic);
 		if ((test_bit(IONIC_LIF_F_FW_RESET, lif->state) &&
 		     !lif->ionic->idev.fw_status_ready) ||
 		    test_bit(IONIC_LIF_F_FW_STOPPING, lif->state)) {
@@ -447,6 +428,9 @@ static int __ionic_adminq_post_wait(struct ionic_lif *lif,
 
 	/* if platform dev is resetting, don't bother with AdminQ, it's not there */
 	if (lif->ionic->pfdev && test_bit(IONIC_LIF_F_FW_STOPPING, lif->state))
+		return 0;
+
+	if (!ionic_is_fw_running(&lif->ionic->idev))
 		return 0;
 
 	err = ionic_adminq_post(lif, ctx);
@@ -501,7 +485,7 @@ static int __ionic_dev_cmd_wait(struct ionic *ionic, unsigned long max_seconds,
 	 */
 	max_wait = jiffies + (max_seconds * HZ);
 try_again:
-	opcode = ioread8(&idev->dev_cmd_regs->cmd.cmd.opcode);
+	opcode = idev->opcode;
 	start_time = jiffies;
 	for (fw_up = ionic_is_fw_running(idev);
 	     !done && fw_up && time_before(jiffies, max_wait);
@@ -533,7 +517,8 @@ try_again:
 
 	err = ionic_dev_cmd_status(&ionic->idev);
 	if (err) {
-		if (err == IONIC_RC_EAGAIN && !time_after(jiffies, max_wait)) {
+		if (err == IONIC_RC_EAGAIN &&
+		    time_before(jiffies, max_wait)) {
 			dev_dbg(ionic->dev, "DEV_CMD %s (%d), %s (%d) retrying...\n",
 				ionic_opcode_to_str(opcode), opcode,
 				ionic_error_to_str(err), err);
@@ -575,7 +560,8 @@ int ionic_set_dma_mask(struct ionic *ionic)
 #ifdef CONFIG_PPC64
 	ionic->pdev->no_64bit_msi = 1;
 #endif
-	err = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(IONIC_ADDR_LEN));
+	dev_info(dev, "setting %lu bit DMA mask\n", asic_addr_len);
+	err = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(asic_addr_len));
 	if (err)
 		dev_err(dev, "Unable to obtain 64-bit DMA for consistent allocations, aborting.  err=%d\n",
 			err);
@@ -608,13 +594,13 @@ int ionic_identify(struct ionic *ionic)
 
 	ident->drv.os_type = cpu_to_le32(IONIC_OS_TYPE_LINUX);
 	ident->drv.os_dist = 0;
-	strncpy(ident->drv.os_dist_str, utsname()->release,
-		sizeof(ident->drv.os_dist_str) - 1);
+	strscpy(ident->drv.os_dist_str, utsname()->release,
+		sizeof(ident->drv.os_dist_str));
 	ident->drv.kernel_ver = cpu_to_le32(LINUX_VERSION_CODE);
-	strncpy(ident->drv.kernel_ver_str, utsname()->version,
-		sizeof(ident->drv.kernel_ver_str) - 1);
-	strncpy(ident->drv.driver_ver_str, IONIC_DRV_VERSION,
-		sizeof(ident->drv.driver_ver_str) - 1);
+	strscpy(ident->drv.kernel_ver_str, utsname()->version,
+		sizeof(ident->drv.kernel_ver_str));
+	strscpy(ident->drv.driver_ver_str, IONIC_DRV_VERSION,
+		sizeof(ident->drv.driver_ver_str));
 
 	mutex_lock(&ionic->dev_cmd_lock);
 
@@ -626,7 +612,7 @@ int ionic_identify(struct ionic *ionic)
 #else
 	ionic_dev_cmd_identify(idev, IONIC_IDENTITY_VERSION_1);
 #endif
-	err = ionic_dev_cmd_wait(ionic, devcmd_timeout);
+	err = ionic_dev_cmd_wait(ionic, DEVCMD_TIMEOUT);
 	if (!err) {
 		sz = min(sizeof(ident->dev), sizeof(idev->dev_cmd_regs->data));
 		memcpy_fromio(&ident->dev, &idev->dev_cmd_regs->data, sz);
@@ -670,7 +656,7 @@ int ionic_init(struct ionic *ionic)
 
 	mutex_lock(&ionic->dev_cmd_lock);
 	ionic_dev_cmd_init(idev);
-	err = ionic_dev_cmd_wait(ionic, devcmd_timeout);
+	err = ionic_dev_cmd_wait(ionic, DEVCMD_TIMEOUT);
 	mutex_unlock(&ionic->dev_cmd_lock);
 
 	return err;
@@ -686,7 +672,7 @@ int ionic_reset(struct ionic *ionic)
 
 	mutex_lock(&ionic->dev_cmd_lock);
 	ionic_dev_cmd_reset(idev);
-	err = ionic_dev_cmd_wait(ionic, devcmd_timeout);
+	err = ionic_dev_cmd_wait(ionic, DEVCMD_TIMEOUT);
 	mutex_unlock(&ionic->dev_cmd_lock);
 
 	return err;
@@ -703,7 +689,7 @@ int ionic_port_identify(struct ionic *ionic)
 	mutex_lock(&ionic->dev_cmd_lock);
 
 	ionic_dev_cmd_port_identify(idev);
-	err = ionic_dev_cmd_wait(ionic, devcmd_timeout);
+	err = ionic_dev_cmd_wait(ionic, DEVCMD_TIMEOUT);
 	if (!err) {
 		sz = min(sizeof(ident->port), sizeof(idev->dev_cmd_regs->data));
 		memcpy_fromio(&ident->port, &idev->dev_cmd_regs->data, sz);
@@ -746,11 +732,11 @@ int ionic_port_init(struct ionic *ionic)
 
 	memcpy_toio(&idev->dev_cmd_regs->data, &ident->port.config, sz);
 	ionic_dev_cmd_port_init(idev);
-	err = ionic_dev_cmd_wait(ionic, devcmd_timeout);
+	err = ionic_dev_cmd_wait(ionic, DEVCMD_TIMEOUT);
 
 	if (port_init_up) {
 		ionic_dev_cmd_port_state(&ionic->idev, IONIC_PORT_ADMIN_STATE_UP);
-		(void)ionic_dev_cmd_wait(ionic, devcmd_timeout);
+		(void)ionic_dev_cmd_wait(ionic, DEVCMD_TIMEOUT);
 	}
 
 	mutex_unlock(&ionic->dev_cmd_lock);
@@ -776,7 +762,7 @@ int ionic_port_reset(struct ionic *ionic)
 	if (ionic_is_fw_running(idev)) {
 		mutex_lock(&ionic->dev_cmd_lock);
 		ionic_dev_cmd_port_reset(idev);
-		err = ionic_dev_cmd_wait(ionic, devcmd_timeout);
+		err = ionic_dev_cmd_wait(ionic, DEVCMD_TIMEOUT);
 		mutex_unlock(&ionic->dev_cmd_lock);
 	}
 
@@ -816,10 +802,10 @@ static int __init ionic_init_module(void)
 
 static void __exit ionic_cleanup_module(void)
 {
-	/* If there's a long devcmd_timeout set, don't let
+	/* If there's a long DEVCMD_TIMEOUT set, don't let
 	 * hung FW slow us down when exiting
 	 */
-	devcmd_timeout = min_t(int, devcmd_timeout, SHORT_TIMEOUT);
+	DEVCMD_TIMEOUT = min_t(int, DEVCMD_TIMEOUT, SHORT_TIMEOUT);
 
 	ionic_bus_unregister_driver();
 	ionic_debugfs_destroy();
