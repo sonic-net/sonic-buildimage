@@ -1,0 +1,20 @@
+{
+    "SAG_GLOBAL_MAC_TEST": {
+        "sonic-static-anycast-gateway:sonic-static-anycast-gateway": {
+            "sonic-static-anycast-gateway:SAG": {
+                "sonic-static-anycast-gateway:GLOBAL": {
+                    "gateway_mac": "00:11:22:33:44:55"
+                }
+            }
+        }
+    },
+    "SAG_GLOBAL_WITH_INVALID_MAC_TEST": {
+        "sonic-static-anycast-gateway:sonic-static-anycast-gateway": {
+            "sonic-static-anycast-gateway:SAG": {
+                "sonic-static-anycast-gateway:GLOBAL": {
+                    "gateway_mac": "001122334455"
+                }
+            }
+        }
+    }
+}
