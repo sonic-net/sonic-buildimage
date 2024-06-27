@@ -207,22 +207,22 @@
     "DEVICE_NEIGHBOR_METADATA": {
         "ARISTA01T1": {
             "hwsku": "Arista-VM",
-            "mgmt_addr": "172.16.190.114",
+            "mgmt_addr": "3.3.3.14",
             "type": "LeafRouter"
         },
         "ARISTA02T1": {
             "hwsku": "Arista-VM",
-            "mgmt_addr": "172.16.190.115",
+            "mgmt_addr": "3.3.3.15",
             "type": "LeafRouter"
         },
         "ARISTA03T1": {
             "hwsku": "Arista-VM",
-            "mgmt_addr": "172.16.190.116",
+            "mgmt_addr": "3.3.3.16",
             "type": "LeafRouter"
         },
         "ARISTA04T1": {
             "hwsku": "Arista-VM",
-            "mgmt_addr": "172.16.190.117",
+            "mgmt_addr": "3.3.3.17",
             "type": "LeafRouter"
         }
     },
@@ -411,11 +411,11 @@
         "Loopback0|FC00:1::32/128": {}
     },
     "MGMT_INTERFACE": {
-        "eth0|10.150.22.115/23": {
-            "gwaddr": "10.150.22.1"
+        "eth0|1.1.1.15/23": {
+            "gwaddr": "1.1.1.10"
         },
-        "eth0|2404:f801:10:2200::a96:1673/64": {
-            "gwaddr": "2404:f801:10:2200::1"
+        "eth0|2404:::2/64": {
+            "gwaddr": "2404::1"
         }
     },
     "MGMT_PORT": {
@@ -867,7 +867,7 @@
         }
     },
     "SYSLOG_SERVER": {
-        "10.150.22.222": {}
+        "3.3.3.3": {}
     },
     "VERSIONS": {
         "DATABASE": {

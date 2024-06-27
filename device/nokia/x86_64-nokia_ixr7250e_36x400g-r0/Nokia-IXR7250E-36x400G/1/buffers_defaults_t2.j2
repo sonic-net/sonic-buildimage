@@ -28,14 +28,14 @@
     "BUFFER_PROFILE": {
         "ingress_lossy_profile": {
             "pool":"ingress_lossless_pool",
-            "size":"1280",
-	    "xon_offset": "2560",
-            "dynamic_th":"0"
+            "size":"0",
+	    "xon_offset": "0",
+            "dynamic_th":"-5"
         },
         "egress_lossless_profile": {
             "pool":"ingress_lossless_pool",
             "size":"0",
-            "static_th":"33030144"
+            "dynamic_th":"-1"
         },
         "egress_lossy_profile": {
             "pool":"ingress_lossless_pool",
