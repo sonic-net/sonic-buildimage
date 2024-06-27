@@ -13,6 +13,14 @@
         "eStrKey" : "Pattern",
         "eStr": ["rc"]
     },
+     "PORT_VALID_DHCP_RATE_LIMIT": {
+         "desc": "PORT_VALID_DHCP_RATE_LIMIT no failure."
+     },
+     "PORT_INVALID_DHCP_RATE_LIMIT": {
+         "desc": "Out of range for dhcp rate",
+         "eStrKey": "Range",
+         "eStr": "0..800000"
+     },
     "PORT_VALID_MTU_TEST_1": {
         "desc": "PORT_VALID_MTU_TEST_1 no failure."
     },

@@ -91,6 +91,14 @@ module sonic-port{
 					}
 				}
 
+				leaf dhcp_rate_limit {
+					description "DHCP DOS Mitigation Rate with default value 300";
+					type uint32 {
+						range 0..800000;
+					}
+					default 300;
+				}
+
 				leaf link_training {
 					description "Port link training mode";
 

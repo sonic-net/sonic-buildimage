@@ -584,7 +584,8 @@
                 "link_training": "off",
                 "laser_freq": "191600",
                 "tx_power": "-26.6",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet1": {
                 "alias": "Eth1/2",
@@ -602,7 +603,8 @@
                 "link_training": "on",
                 "laser_freq": "191300",
                 "tx_power": "-27.3",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet2": {
                 "alias": "Eth1/3",
@@ -620,7 +622,8 @@
                 "adv_interface_types": "all",
                 "subport" : "0",
                 "mode":"trunk",
-                "dom_polling":"enabled"
+                "dom_polling":"enabled",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet3": {
                 "alias": "Eth1/4",
@@ -630,7 +633,8 @@
                 "tpid": "0x88A8",
                 "admin_status": "up",
                 "subport": "1",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet4": {
                 "alias": "Eth2/1",
@@ -641,7 +645,8 @@
                 "admin_status": "up",
                 "subport": "2",
                 "mode":"trunk",
-                "dom_polling":"enabled"
+                "dom_polling":"enabled",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet5": {
                 "alias": "Eth2/2",
@@ -651,7 +656,8 @@
                 "tpid": "0x9200",
                 "admin_status": "up",
                 "subport": "3",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet6": {
                 "alias": "Eth2/3",
@@ -661,7 +667,8 @@
                 "tpid": "0x8100",
                 "admin_status": "up",
                 "subport": "4",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet7": {
                 "alias": "Eth2/4",
@@ -671,7 +678,8 @@
                 "tpid": "0x8100",
                 "admin_status": "up",
                 "subport": "5",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet8": {
                 "alias": "Eth3/1",
@@ -681,7 +689,8 @@
                 "tpid": "0x8100",
                 "admin_status": "up",
                 "subport": "6",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet9": {
                 "alias": "Eth3/2",
@@ -691,7 +700,8 @@
                 "tpid": "0x8100",
                 "admin_status": "up",
                 "subport": "7",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet10": {
                 "alias": "Eth3/3",
@@ -701,7 +711,8 @@
                 "tpid": "0x8100",
                 "admin_status": "up",
                 "subport": "8",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet11": {
                 "alias": "Eth3/4",
@@ -710,7 +721,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet12": {
                 "alias": "Eth4/1",
@@ -719,7 +731,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet13": {
                 "alias": "Eth4/2",
@@ -728,7 +741,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet14": {
                 "alias": "Eth4/3",
@@ -737,7 +751,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet15": {
                 "alias": "Eth4/4",
@@ -746,7 +761,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet16": {
                 "alias": "Eth5/1",
@@ -755,7 +771,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet17": {
                 "alias": "Eth5/2",
@@ -764,7 +781,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet18": {
                 "alias": "Eth5/3",
@@ -773,7 +791,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet19": {
                 "alias": "Eth5/4",
@@ -782,7 +801,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet20": {
                 "alias": "Eth6/1",
@@ -791,7 +811,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet21": {
                 "alias": "Eth6/2",
@@ -800,7 +821,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet22": {
                 "alias": "Eth6/3",
@@ -809,7 +831,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet23": {
                 "alias": "Eth6/4",
@@ -818,7 +841,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet24": {
                 "alias": "Eth7/1",
@@ -827,7 +851,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet25": {
                 "alias": "Eth7/2",
@@ -836,7 +861,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet26": {
                 "alias": "Eth7/3",
@@ -845,7 +871,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet27": {
                 "alias": "Eth7/4",
@@ -854,7 +881,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet28": {
                 "alias": "Eth8/1",
@@ -863,7 +891,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet29": {
                 "alias": "Eth8/2",
@@ -872,7 +901,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet30": {
                 "alias": "Eth8/3",
@@ -881,7 +911,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet31": {
                 "alias": "Eth8/4",
@@ -890,7 +921,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet32": {
                 "alias": "Eth9/1",
@@ -899,7 +931,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet33": {
                 "alias": "Eth9/2",
@@ -908,7 +941,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet34": {
                 "alias": "Eth9/3",
@@ -917,7 +951,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet35": {
                 "alias": "Eth9/4",
@@ -926,7 +961,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet36": {
                 "alias": "Eth10/1",
@@ -935,7 +971,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet112": {
                 "alias": "Eth29/1",
@@ -945,7 +982,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet120": {
                 "alias": "Eth31/1",
@@ -955,7 +993,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet-BP0": {
                 "admin_status": "up",
@@ -969,7 +1008,8 @@
                 "role": "Int",
                 "speed": "40000",
                 "tpid": "0x8100",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet-BP4": {
                 "admin_status": "up",
@@ -983,7 +1023,8 @@
                 "role": "Int",
                 "speed": "40000",
                 "tpid": "0x8100",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             }
         },
         "LOGGER": {
