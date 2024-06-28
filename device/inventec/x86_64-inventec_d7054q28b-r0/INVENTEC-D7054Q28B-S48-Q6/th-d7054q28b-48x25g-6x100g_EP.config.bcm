@@ -21,14 +21,14 @@ pbmp_xport_xe=0x3fffffffdffffffff7fffffffdfffffffe
 
 
 # EagleCore ports: 36 & 49  
-#portmap_66=129:10
-#portmap_100=131:10
+portmap_66=129:10
+portmap_100=131:10
 
 # Loopback ports
-#portmap_33=132:10
-#portmap_67=133:10
-#portmap_101=134:10
-#portmap_135=135:10
+portmap_33=132:10
+portmap_67=133:10
+portmap_101=134:10
+portmap_135=135:10
 
 # First 12*4 48 ports config for 25G
 # Second 6 ports config for 100G
@@ -97,14 +97,35 @@ portmap_79=83:25
 
 # FC-21 (100G)
 portmap_80=85:100
+portmap_81=86:25:i
+portmap_82=87:25:i
+portmap_83=88:25:i
 
 ## FalconCore[24, 25, 26, 27, 29] (100G)
 portmap_102=97:100
-portmap_103=105:100
-portmap_104=101:100
-portmap_105=117:100
-portmap_107=109:100
+portmap_103=98:25:i
+portmap_104=99:25:i
+portmap_105=100:25:i
 
+portmap_106=105:100
+portmap_107=106:25:i
+portmap_108=107:25:i
+portmap_109=108:25:i
+
+portmap_110=101:100
+portmap_111=102:25:i
+portmap_112=103:25:i
+portmap_113=104:25:i
+
+portmap_114=117:100
+portmap_115=118:25:i
+portmap_116=119:25:i
+portmap_117=120:25:i
+
+portmap_118=109:100
+portmap_119=110:25:i
+portmap_120=111:25:i
+portmap_121=112:25:i
 
 
 # FalconCore[0,1,2,5] ports TX polarity flip for 25G
