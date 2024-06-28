@@ -20,7 +20,7 @@ fpem_mem_entries=16384
 l2xmsg_mode=1
 
 # Platform specfic
-bcm_num_cos=8
+bcm_num_cos=10
 bcm_stat_interval=2000000
 cdma_timeout_usec=3000000
 help_cli_enable=1
