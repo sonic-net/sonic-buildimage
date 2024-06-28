@@ -75,9 +75,15 @@ stages:
           rm rules/config.user
           rm target/docker-sonic-gnmi.gz
           echo "==== Finished building slim images"
+          echo "==== Building swi images"
+          echo "INCLUDE_DHCP_SERVER = y" >> rules/config.user
+          make $OPTIONS target/sonic-aboot-broadcom.swi
+          mv target/sonic-aboot-broadcom.swi target/release/
+          rm rules/config.user
+          echo "==== Finished building swi images"
           echo "==== Building regular images"
-          make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
-          mv target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi target/release/
+          make $OPTIONS target/sonic-broadcom.bin
+          mv target/sonic-broadcom.bin target/release/
           echo "==== Finished building regular images"
           echo "==== Building syncd-rpc docker"
           make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-rpc.gz
@@ -129,6 +135,7 @@ stages:
     variables:
       ob_artifactBaseName: marvell-armhf
       PLATFORM_ARCH: armhf
+      INCLUDE_DHCP_SERVER: 'y'
     steps:
       - template: /.pipelines/template-presteps.yml@self
         parameters:

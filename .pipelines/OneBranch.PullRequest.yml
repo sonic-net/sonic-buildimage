@@ -106,6 +106,8 @@ stages:
           displayName: "Archive failed sonic image"
       jobGroups:
         - name: broadcom
+          variables:
+            INCLUDE_DHCP_SERVER: 'y'
           script: |
             set -ex
             make PLATFORM=broadcom PLATFORM_ARCH=amd64 configure
@@ -132,6 +134,7 @@ stages:
             PLATFORM_ARCH: armhf
             # official build didn't enable RPC
             ENABLE_SYNCD_RPC: 'n'
+            INCLUDE_DHCP_SERVER: 'y'
           script: |
             set -ex
             make PLATFORM=marvell PLATFORM_ARCH=armhf configure
