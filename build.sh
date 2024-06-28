@@ -76,6 +76,7 @@ _submodule_add() {
   # # git revert and/or cherry-picks here
   git remote remove $2 || true
   git remote add -f $2 $3
+  git fetch --all
   git cherry-pick --keep-redundant-commits -x $4 || git cherry-pick --abort
   popd &>/dev/null
 }
