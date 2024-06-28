@@ -155,6 +155,10 @@ function waitForAllInstanceDatabaseConfigJsonFilesReady()
 
 function postStartAction()
 {
+    # Sync timezone from host
+    docker cp /etc/timezone ${DOCKERNAME}:/etc/timezone
+    docker exec ${DOCKERNAME} ln -snf $(readlink -f /etc/localtime) /etc/localtime
+
 {%- if docker_container_name == "database" %}
     CHASSISDB_CONF="/usr/share/sonic/device/$PLATFORM/chassisdb.conf"
     [ -f $CHASSISDB_CONF ] && source $CHASSISDB_CONF
