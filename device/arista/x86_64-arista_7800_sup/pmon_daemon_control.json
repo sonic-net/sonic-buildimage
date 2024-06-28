@@ -1,4 +1,5 @@
 {
+   "skip_fancontrol": true,
    "skip_ledd": true,
    "skip_xcvrd": true
 }
