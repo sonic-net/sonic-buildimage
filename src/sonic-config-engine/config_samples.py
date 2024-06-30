@@ -18,6 +18,14 @@ def generate_common_config(data):
             'POLL_INTERVAL': '10000'
         }
     }
+    # use eth0 as default management port
+    data['MGMT_PORT'] = {
+        'eth0': {
+            'alias': 'eth0',
+            'admin_status': 'up',
+            'description': 'Management Port'
+        }
+    }
     return data
 
 # The following config generation methods exits:

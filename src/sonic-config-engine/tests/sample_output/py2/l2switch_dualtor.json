@@ -6,6 +6,13 @@
             "peer_switch": "peer_switch_hostname"
         }
     },
+    "MGMT_PORT": {
+        "eth0": {
+            "admin_status": "up",
+            "alias": "eth0",
+            "description": "Management Port"
+        }
+    },
     "PORT": {
         "Ethernet0": {
             "lanes": "1,2",

@@ -12,6 +12,13 @@
         }
     },
     {% set ns = {'firstPrinted': False} -%}
+    "MGMT_PORT": {
+        "eth0": {
+            "alias": "eth0",
+            "admin_status": "up",
+            "description": "Management Port"
+        }
+    },
     "PORT": {
         {%- for key, value in PORT.items() -%}
         {%- if ns.firstPrinted %},{% endif %}

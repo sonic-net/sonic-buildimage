@@ -8,6 +8,13 @@
             "subtype": "SmartSwitch"
         }
     },
+    "MGMT_PORT": {
+        "eth0": {
+            "alias": "eth0",
+            "admin_status": "up",
+            "description": "Management Port"
+        }
+    },
     "PORT": {
         "Ethernet0": {
             "lanes": "0,1,2,3,4,5,6,7",

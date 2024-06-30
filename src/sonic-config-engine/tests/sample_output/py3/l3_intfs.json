@@ -1,5 +1,12 @@
 {
     "DEVICE_METADATA": {"localhost": {"hwsku": "32x1000Gb"}},
+    "MGMT_PORT": {
+        "eth0": {
+            "alias": "eth0",
+            "admin_status": "up",
+            "description": "Management Port"
+        }
+    },
     "PORT": {
         "Ethernet0": {
             "admin_status": "up",
