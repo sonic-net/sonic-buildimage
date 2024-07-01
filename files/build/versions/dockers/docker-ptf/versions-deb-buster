@@ -47,8 +47,8 @@ gcc==4:8.3.0-1
 gcc-8==8.3.0-6
 gdb==8.2.1-2+b3
 gir1.2-glib-2.0==1.58.3-2
-git==1:2.20.1-2+deb10u8
-git-man==1:2.20.1-2+deb10u8
+git==1:2.20.1-2+deb10u9
+git-man==1:2.20.1-2+deb10u9
 glib-networking==2.58.0-2+deb10u2
 glib-networking-common==2.58.0-2+deb10u2
 glib-networking-services==2.58.0-2+deb10u2
@@ -464,7 +464,7 @@ libxxf86dga1==2:1.1.4-1+b3
 libxxf86vm1==1:1.1.4-1+b2
 libxxhash0==0.6.5-2
 libzzip-0-13==0.13.62-3.2+deb10u1
-linux-libc-dev==4.19.304-1
+linux-libc-dev==4.19.316-1
 lmodern==2.004.5-6
 logrotate==3.14.0-4
 lsb-base==10.2019051400
