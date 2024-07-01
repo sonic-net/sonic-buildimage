@@ -83,17 +83,23 @@ RUN pip3 install supervisord-dependent-startup==1.4.0
 
 RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
 
-# Install gcc, libc6-dev and python3-dev for compiling python-lzf
-RUN apt-get -y install build-essential libc6-dev python3-dev
+# Install gcc, libc6-dev and git for compiling librdb
+RUN apt-get -y install build-essential libc6-dev git
 
-# Install python-lzf
-RUN pip3 install 'python-lzf==0.2.4'
+# Obtain librdb source codes
+RUN git -C /tmp/ clone https://github.com/redis/librdb.git
 
-# Install rdbtools
-RUN pip3 install 'rdbtools==0.1.15'
+# Build librdb
+RUN cd /tmp/librdb/;git submodule update --init --recursive;make -j4
 
-# Uninstall gcc, libc6-dev and python3-dev for compiling python-lzf
-RUN apt-get -y purge build-essential libc6-dev python3-dev
+# Install rdb-cli
+RUN install -p -D -m 0775 /tmp/librdb/bin/rdb-cli /usr/bin/rdb-cli
+
+# Clear librdb source codes
+RUN rm -rf /tmp/librdb
+
+# Uninstall gcc, libc6-dev and git for compiling librdb
+RUN apt-get -y purge build-essential libc6-dev git
 
 # Uninstall unused dependencies
 RUN apt autoremove -y --purge
