@@ -13,6 +13,17 @@ SONIC_MAKE_DEBS += $(WPASUPPLICANT)
 WPASUPPLICANT_DBG = wpasupplicant-dbgsym_$(WPASUPPLICANT_VERSION)_$(CONFIGURED_ARCH).deb
 $(eval $(call add_derived_package,$(WPASUPPLICANT),$(WPASUPPLICANT_DBG)))
 
+
+HOSTAPD_VERSION = 2.9.0-14
+
+export HOSTAPD_VERSION
+
+HOSTAPD = hostapd_$(HOSTAPD_VERSION)_$(CONFIGURED_ARCH).deb
+$(eval $(call add_derived_package,$(WPASUPPLICANT),$(HOSTAPD)))
+
+HOSTAPD_DBG = hostapd-dbgsym_$(HOSTAPD_VERSION)_$(CONFIGURED_ARCH).deb
+$(eval $(call add_derived_package,$(WPASUPPLICANT),$(HOSTAPD_DBG)))
+
 # The .c, .cpp, .h & .hpp files under src/{$DBG_SRC_ARCHIVE list}
 # are archived into debug one image to facilitate debugging.
 #
