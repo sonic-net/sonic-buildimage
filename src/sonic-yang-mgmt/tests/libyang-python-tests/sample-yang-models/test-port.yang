@@ -69,6 +69,16 @@ module test-port{
 					mandatory true;
 					type head:admin_status;
 				}
+
+				leaf pt_interface_id {
+					type uint16 {
+						range 1..4095;
+					}
+				}
+
+				leaf pt_timestamp_template {
+					type head:path_tracing_timestamp_template;
+				}
 			} /* end of list PORT_LIST */
 
 		} /* end of container PORT */

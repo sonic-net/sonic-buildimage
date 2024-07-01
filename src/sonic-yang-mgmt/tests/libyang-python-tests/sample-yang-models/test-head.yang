@@ -63,4 +63,14 @@ module test-head {
             enum priority_tagged;
         }
     }
+
+    typedef path_tracing_timestamp_template {
+        description "Path Tracing Timestamp Template ";
+        type enumeration {
+            enum template1;
+            enum template2;
+            enum template3;
+            enum template4;
+        }
+    }
 }
