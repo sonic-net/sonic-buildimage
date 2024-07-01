@@ -70,7 +70,6 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
 !
 {% block bgp_init %}
   bgp log-neighbor-changes
-  bgp suppress-fib-pending
   no bgp default ipv4-unicast
   no bgp ebgp-requires-policy
 {% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('subtype' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['subtype'].lower() == 'dualtor') %}

@@ -30,7 +30,7 @@ stderr_logfile=syslog
 dependent_startup=true
 
 [program:zebra]
-command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_nl -M snmp --asic-offload=notify_on_offload
+command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_nl -M snmp
 priority=4
 autostart=false
 autorestart=false
