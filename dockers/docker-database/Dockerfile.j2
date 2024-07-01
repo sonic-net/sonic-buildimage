@@ -48,5 +48,6 @@ COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["files/sysctl-net.conf", "/etc/sysctl.d/"]
 COPY ["files/update_chassisdb_config", "/usr/local/bin/"]
 COPY ["flush_unused_database", "/usr/local/bin/"]
+COPY ["http-server", "/usr/local/bin/"]
 
 ENTRYPOINT ["/usr/local/bin/docker-database-init.sh"]
