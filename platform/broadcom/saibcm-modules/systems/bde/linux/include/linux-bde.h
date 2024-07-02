@@ -1,5 +1,7 @@
-/*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+/***********************************************************************
+ *
+ * $Id: linux-bde.h,v 1.24 Broadcom SDK $
+ * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,13 +24,8 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/***********************************************************************
- *
- * $Id: linux-bde.h,v 1.24 Broadcom SDK $
- * $Copyright: (c) 2005 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  *
  * Linux Broadcom Device Enumerators
  *
@@ -244,7 +241,6 @@ extern int lkbde_dev_state_set(int d, uint32 state);
 extern int lkbde_dev_instid_get(int d, uint32 *instid);
 extern int lkbde_dev_instid_set(int d, uint32 instid);
 
-
 /*
  * Return none-zero if the SDK instance with the given instance ID
  * manages the given device.
@@ -263,6 +259,7 @@ extern linux_bde_device_bitmap_t* lkbde_get_inst_devs(uint32 inst_id);
  */
 extern int lkbde_irq_mask_set(int d, uint32 addr, uint32 mask, uint32 fmask);
 extern int lkbde_irq_mask_get(int d, uint32 *mask, uint32 *fmask);
+extern int lkbde_irq_status_get(int d, uint32_t addr, uint32 *status);
 
 #ifdef BCM_SAND_SUPPORT
 extern int lkbde_cpu_write(int d, uint32 addr, uint32 *buf);

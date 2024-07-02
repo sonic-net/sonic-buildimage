@@ -2,7 +2,7 @@
 #
 # Linux KNET module.
 #
-# $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+# $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -39,6 +39,7 @@ linux_ngknet-y := $(CHIP_OBJS) \
                   bcmcnet_cmicx_pdma_rxtx.o \
                   bcmcnet_cmicr_pdma_hw.o \
                   bcmcnet_cmicr_pdma_rxtx.o \
+                  bcmcnet_cmicr2_pdma_rxtx.o \
                   bcmcnet_core.o \
                   bcmcnet_dev.o \
                   bcmcnet_rxtx.o \

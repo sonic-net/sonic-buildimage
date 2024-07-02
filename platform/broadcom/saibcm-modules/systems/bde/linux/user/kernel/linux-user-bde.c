@@ -1,17 +1,29 @@
 /*
- * Copyright 2017 Broadcom
- *
+ * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * 
+ * Permission is granted to use, copy, modify and/or distribute this
+ * software under either one of the licenses below.
+ * 
+ * License Option 1: GPL
+ * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
  * published by the Free Software Foundation (the "GPL").
- *
+ * 
  * This program is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License version 2 (GPLv2) for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
  * version 2 (GPLv2) along with this source code.
+ * 
+ * 
+ * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+ * 
+ * This software is governed by the Broadcom Open Network Switch APIs license:
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  */
 
 /*
@@ -122,12 +134,18 @@ be made.
 #define CMICX_GEN2_PAXB_0_PAXB_IC_INTRCLR_DELAY_REG0   (0x0292C3b0)
 #define CMICX_GEN2_PAXB_0_PAXB_IC_INTRCLR_DELAY_BASE     (CMICX_GEN2_PAXB_0_PAXB_IC_INTRCLR_DELAY_REG0)
 #define CMICX_GEN2_PAXB_0_PCIE_ERROR_STATUS            (0x0292C024)
-#define CMICX_GEN2_PAXB_0_INTC_INTR_ENABLE_REG0          (0x0292D100)
+#define CMICX_GEN2_PAXB_0_INTC_INTR_ENABLE_REG0          (0x0292d150)
 #define CMICX_GEN2_PAXB_0_INTC_INTR_STATUS_REG0          (0x0292D1A0)
 #define CMICX_GEN2_PAXB_0_INTC_INTR_RAW_STATUS_REG0      (0x0292D178)
+#define CMICX_GEN2_PAXB_0_INTC_SET_INTR_ENABLE_REG0      (0x0292d100)
+#define CMICX_GEN2_PAXB_0_INTC_CLEAR_INTR_ENABLE_REG0    (0x0292d128)
+
 #define CMICX_GEN2_PAXB_0_INTC_INTR_ENABLE_BASE           (CMICX_GEN2_PAXB_0_INTC_INTR_ENABLE_REG0)
 #define CMICX_GEN2_PAXB_0_INTC_INTR_STATUS_BASE           (CMICX_GEN2_PAXB_0_INTC_INTR_STATUS_REG0)
 #define CMICX_GEN2_PAXB_0_INTC_INTR_RAW_STATUS_BASE       (CMICX_GEN2_PAXB_0_INTC_INTR_RAW_STATUS_REG0)
+#define CMICX_GEN2_PAXB_0_INTC_INTR_SET_ENABLE_BASE       (CMICX_GEN2_PAXB_0_INTC_SET_INTR_ENABLE_REG0)
+#define CMICX_GEN2_PAXB_0_INTC_INTR_CLEAR_ENABLE_BASE     (CMICX_GEN2_PAXB_0_INTC_CLEAR_INTR_ENABLE_REG0)
+
 #define CMICX_GEN2_INTC_PDMA_INTR_REG_IND_0             5
 #define CMICX_GEN2_INTC_PDMA_INTR_REG_IND_1             6
 
@@ -154,9 +172,10 @@ be made.
 #define HX5_IHOST_INTR_STATUS_MAP_NUM      (INTC_INTR_REG_NUM * (sizeof(uint32)))
 #define IRQ_BIT(intr)                      (intr % (sizeof(uint32)*8))
 #define IRQ_MASK_INDEX(intr)               (intr / (sizeof(uint32)*8))
-#define HX5_SW_PROG_INTR_PRIORITY          73
-#define INTR_SW_PROG_INTR_BITPOS           (1 << IRQ_BIT(HX5_SW_PROG_INTR_PRIORITY))
-#define INTC_SW_PROG_INTR_REG_IND          IRQ_MASK_INDEX(HX5_SW_PROG_INTR_PRIORITY)
+#define P19_SW_PROG_INTR_IRQ               69
+#define HX5_SW_PROG_INTR_IRQ               73
+#define INTR_SW_PROG_INTR_BITPOS           (1 << IRQ_BIT(ihost_sw_prog_intr_num))
+#define INTC_SW_PROG_INTR_REG_IND          IRQ_MASK_INDEX(ihost_sw_prog_intr_num)
 #define HX5_CHIP_INTR_LOW_PRIORITY         119
 #define INTR_LOW_PRIORITY_BITPOS           (1 << IRQ_BIT(HX5_CHIP_INTR_LOW_PRIORITY))
 #define INTC_LOW_PRIORITY_INTR_REG_IND     IRQ_MASK_INDEX(HX5_CHIP_INTR_LOW_PRIORITY)
@@ -198,6 +217,7 @@ be made.
 
 static uint32 *ihost_intr_status_base = NULL;
 static uint32 *ihost_intr_enable_base = NULL;
+static int ihost_sw_prog_intr_num = HX5_SW_PROG_INTR_IRQ;
 
 /* Module parameter for Interruptible timeout */
 static int intr_timeout = 0;
@@ -228,6 +248,8 @@ typedef void (*isr_f)(void *);
 typedef struct _intr_regs_s {
     uint32 intc_intr_status_base;
     uint32 intc_intr_enable_base;
+    uint32 intc_intr_set_enable_base;
+    uint32 intc_intr_clear_enable_base;
     uint32 intc_intr_raw_status_base;
     uint32 intc_intr_clear_0;
     uint32 intc_intr_clear_1;
@@ -339,7 +361,7 @@ static _dma_pool_t _dma_pool;
  * Returns:
  *    Nothing
  */
-static void 
+static void
 _cmic_interrupt(bde_ctrl_t *ctrl)
 {
     int d;
@@ -650,6 +672,7 @@ _cmicx_gen2_interrupt(bde_ctrl_t *ctrl)
     uint32 stat, iena, mask, fmask;
     int active_interrupts = 0;
     bde_inst_resource_t *res;
+    uint32 intrs = 0;
 
     intr_count++;
     d = (((uint8 *)ctrl - (uint8 *)_devices) / sizeof (bde_ctrl_t));
@@ -664,25 +687,44 @@ _cmicx_gen2_interrupt(bde_ctrl_t *ctrl)
     }
 
     lkbde_irq_mask_get(d, &mask, &fmask);
-    for (ind = 0; ind < CMICX_GEN2_INTC_INTR_REG_NUM; ind++) {
-        IPROC_READ(d, ctrl->intr_regs.intc_intr_status_base + 4 * ind, stat);
-        if (stat == 0) {
-            continue;
-        }
 
-        if (fmask) {
-            /** Packet DMA 8 - 31 bits on IPROC_IRQ_BASE5 */
-            if ((ind == CMICX_GEN2_INTC_PDMA_INTR_REG_IND_0) && !(stat & 0xFF)) {
-                continue;
-            } else if ((ind == CMICX_GEN2_INTC_PDMA_INTR_REG_IND_1) && !(stat & 0xFFFFFF00)) {
-                /** Packet DMA 0 - 7 bits on IPROC_IRQ_BASE6 */
+    if (fmask) {
+        /*
+         * Packet DMA occupies 8 - 31 bits on IPROC_IRQ_BASE5, KNET only uses 8 - 23 bits for CMC0 currently
+         * Prioritizing IPROC_IRQ_BASE5 when ONLY Packet DMA interrupts are raised
+         */
+        IPROC_READ(d, ctrl->intr_regs.intc_intr_status_base + 4 * CMICX_GEN2_INTC_PDMA_INTR_REG_IND_0, stat);
+        IPROC_READ(d, ctrl->intr_regs.intc_intr_enable_base + 4 * CMICX_GEN2_INTC_PDMA_INTR_REG_IND_0, iena);
+        intrs = stat & iena;
+        if (intrs && (intrs == (intrs & fmask))) {
+            IPROC_WRITE(d, ctrl->intr_regs.intc_intr_clear_enable_base + (4 * CMICX_GEN2_INTC_PDMA_INTR_REG_IND_0), 0xFFFFFFFF);
+            IPROC_WRITE(d, ctrl->intr_regs.intc_intr_set_enable_base + (4 * CMICX_GEN2_INTC_PDMA_INTR_REG_IND_0), 0x0);
+
+            for (ind = 0; ind < CMICX_GEN2_INTC_INTR_REG_NUM; ind++) {
+                if (ind == CMICX_GEN2_INTC_PDMA_INTR_REG_IND_0) {
+                    continue;
+                }
+                IPROC_READ(d, ctrl->intr_regs.intc_intr_status_base + 4 * ind, stat);
+                IPROC_READ(d, ctrl->intr_regs.intc_intr_enable_base + 4 * ind, iena);
+                if (stat & iena) {
+                    active_interrupts = 1;
+                    break;
+                }
+            }
+        } else if (intrs) {
+            active_interrupts = 1;
+        }
+    } else {
+        for (ind = 0; ind < CMICX_GEN2_INTC_INTR_REG_NUM; ind++) {
+            IPROC_READ(d, ctrl->intr_regs.intc_intr_status_base + 4 * ind, stat);
+            if (stat == 0) {
                 continue;
             }
-        }
-        IPROC_READ(d, ctrl->intr_regs.intc_intr_enable_base + 4 * ind, iena);
-        if (stat & iena) {
-            active_interrupts = 1;
-            break;
+            IPROC_READ(d, ctrl->intr_regs.intc_intr_enable_base + 4 * ind, iena);
+            if (stat & iena) {
+                active_interrupts = 1;
+                break;
+            }
         }
     }
 
@@ -696,19 +738,11 @@ _cmicx_gen2_interrupt(bde_ctrl_t *ctrl)
      * enumerates the interrupts to be serviced
      */
     for (ind = 0; ind < CMICX_GEN2_INTC_INTR_REG_NUM; ind++) {
-        if (fmask) {
-            /** TODO? change by KNET */
-            if (ind == CMICX_GEN2_INTC_PDMA_INTR_REG_IND_0) {
-                IPROC_READ(d, ctrl->intr_regs.intc_intr_enable_base + 4 * ind, iena);
-                IPROC_WRITE(d, ctrl->intr_regs.intc_intr_enable_base + (4 * ind), iena & ((fmask & 0xFFFFFF) << 8));
-                continue;
-            } else if (ind == CMICX_GEN2_INTC_PDMA_INTR_REG_IND_1) {
-                IPROC_READ(d, ctrl->intr_regs.intc_intr_enable_base + 4 * ind, iena);
-                IPROC_WRITE(d, ctrl->intr_regs.intc_intr_enable_base + (4 * ind), iena & ((fmask & 0xFF) << 24));
-                continue;
-            }
+        if (fmask && (intrs == (intrs & fmask)) && ind == CMICX_GEN2_INTC_PDMA_INTR_REG_IND_0) {
+            continue;
         }
-        IPROC_WRITE(d, ctrl->intr_regs.intc_intr_enable_base + (4 * ind), 0);
+        IPROC_WRITE(d, ctrl->intr_regs.intc_intr_clear_enable_base + (4 * ind), 0xFFFFFFFF);
+        IPROC_WRITE(d, ctrl->intr_regs.intc_intr_set_enable_base + (4 * ind), 0);
     }
 
     /* Notify */
@@ -1024,7 +1058,7 @@ _cmicd_interrupt(bde_ctrl_t *ctrl)
 
 
 /* The actual interrupt handler of ethernet devices */
-static void 
+static void
 _ether_interrupt(bde_ctrl_t *ctrl)
 {
     SSOC_WRITEL(0, ctrl->ba + 0x024/4);
@@ -1047,6 +1081,9 @@ static struct _intr_mode_s {
     { (isr_f)_cmicd_interrupt,      "CMICd" },
     { (isr_f)_cmicd_cmc0_interrupt, "CMICd CMC0" },
     { (isr_f)_cmicx_interrupt,      "CMICx" },
+#ifdef NEED_CMICX_GEN2_INTERRUPT
+    { (isr_f)_cmicx_gen2_interrupt,	"CMICx Gen2" },
+#endif
     { NULL, NULL }
 };
 
@@ -1082,10 +1119,24 @@ _intr_regs_init(bde_ctrl_t *ctrl, int flag)
         ctrl->intr_regs.intc_intr_clear_delay_base = HX5_PAXB_0_PAXB_IC_INTRCLR_DELAY_BASE;
         ctrl->intr_regs.intc_intr_pcie_err_status = HX5_PAXB_0_PCIE_ERROR_STATUS;
         ctrl->intr_regs.intc_intr_nof_regs = INTC_INTR_REG_NUM;
+        if (ctrl->dev_type & BDE_AXI_DEV_TYPE) {
+            switch (ctrl->devid) {
+                case BCM53650_DEVICE_ID:
+                case BCM53651_DEVICE_ID:
+                case BCM53652_DEVICE_ID:
+                case BCM53653_DEVICE_ID:
+                    ihost_sw_prog_intr_num = P19_SW_PROG_INTR_IRQ;
+                    break;
+                default:
+                    break;
+            }
+        }
     } else if (flag == 2){
         ctrl->intr_regs.intc_intr_status_base = CMICX_GEN2_PAXB_0_INTC_INTR_STATUS_BASE;
         ctrl->intr_regs.intc_intr_raw_status_base = CMICX_GEN2_PAXB_0_INTC_INTR_RAW_STATUS_BASE;
         ctrl->intr_regs.intc_intr_enable_base = CMICX_GEN2_PAXB_0_INTC_INTR_ENABLE_BASE;
+        ctrl->intr_regs.intc_intr_set_enable_base = CMICX_GEN2_PAXB_0_INTC_INTR_SET_ENABLE_BASE;
+        ctrl->intr_regs.intc_intr_clear_enable_base = CMICX_GEN2_PAXB_0_INTC_INTR_CLEAR_ENABLE_BASE;
         ctrl->intr_regs.intc_intr_clear_0 = CMICX_GEN2_PAXB_0_PAXB_IC_INTRCLR_0;
         ctrl->intr_regs.intc_intr_clear_1 = CMICX_GEN2_PAXB_0_PAXB_IC_INTRCLR_1;
         ctrl->intr_regs.intc_intr_clear_mode_0 = CMICX_GEN2_PAXB_0_PAXB_IC_INTRCLR_MODE_0;
@@ -1227,6 +1278,10 @@ _devices_init(int d)
         case BCM56175_DEVICE_ID:
         case BCM56176_DEVICE_ID:
         case BCM53642_DEVICE_ID:
+        case BCM53650_DEVICE_ID:
+        case BCM53651_DEVICE_ID:
+        case BCM53652_DEVICE_ID:
+        case BCM53653_DEVICE_ID:
             ctrl->isr = (isr_f)_cmicx_interrupt;
             if (ctrl->dev_type & BDE_AXI_DEV_TYPE) {
                 if (!ihost_intr_enable_base) {
@@ -1291,11 +1346,13 @@ _devices_init(int d)
 
 #ifdef BCM_DNX3_SUPPORT
           case JERICHO3_DEVICE_ID:
-          case Q4_DEVICE_ID:
+          case J3AI_DEVICE_ID:
+
+          case Q3D_DEVICE_ID:
 #endif
 #ifdef BCM_DNXF3_SUPPORT
-          case  BCM88910_DEVICE_ID:
-          case  BCM88920_DEVICE_ID:
+          case  RAMON2_DEVICE_ID:
+          case  RAMON3_DEVICE_ID:
 #endif
 #if defined(BCM_DNX3_SUPPORT) || defined(BCM_DNXF3_SUPPORT)
             ctrl->isr = (isr_f)_cmicx_gen2_interrupt;
@@ -1438,6 +1495,9 @@ _pprint(struct seq_file *m)
     uint32 state, instid;
 
     pprintf(m, "Broadcom Device Enumerator (%s)\n", LINUX_USER_BDE_NAME);
+#ifdef LKM_BUILD_INFO
+    pprintf(m, "%s\n", LKM_BUILD_INFO);
+#endif
     for (idx = 0; idx < user_bde->num_devices(BDE_ALL_DEVICES); idx++) {
         name = _intr_mode_str(_devices[idx].isr);
         if (name == NULL) {
@@ -1477,7 +1537,7 @@ _pprint(struct seq_file *m)
 }
 
 #ifdef BCM_INSTANCE_SUPPORT
-/* 
+/*
  * Allocate the DMA resource from DMA pool
  * Parameter :
  * dma_size (IN): allocate dma_size in MB
@@ -1527,7 +1587,7 @@ _dma_resource_get(unsigned inst_id, phys_addr_t *cpu_pbase, phys_addr_t *dma_pba
 /*
  * Checks if we have the instance in _bde_inst_resource. If not, return LUBDE_SUCCESS==0 (considered a new instance).
  * If it exists with the same dmasize, return 1 (It is considered already in use)
- * Otherwise if the device with the same index of the resource, has resource/instance index 0, return LUBDE_SUCCESS==0. (bug)
+ * Otherwise if the device with the same index of the resource, has resource/instance index 0, return LUBDE_SUCCESS==0. (error)
  * Otherwise return LUBDE_FAIL==-1 (It is considered to exist with a different dmasize).
  */
 static int
@@ -1612,7 +1672,7 @@ _instance_attach(unsigned int inst_id, unsigned int dma_size, linux_bde_device_b
         _bde_inst_resource->is_active = 0;
         /*_bde_inst_resource->dev will not be used when _bde_inst_resource->is_active == 0 */
     }
-    
+
     /* Validate the resource with inst_devices */
     exist = _instance_validate(inst_id, dma_size, inst_devices);
 
@@ -1694,7 +1754,7 @@ _edk_instance_attach(unsigned int inst_id, unsigned int dma_size)
  * Returns:
  *    0 on success, <0 on error
  */
-static int 
+static int
 _ioctl(unsigned int cmd, unsigned long arg)
 {
     lubde_ioctl_t io;
@@ -1708,9 +1768,9 @@ _ioctl(unsigned int cmd, unsigned long arg)
     if (copy_from_user(&io, (void *)arg, sizeof(io))) {
         return -EFAULT;
     }
-  
+
     io.rc = LUBDE_SUCCESS;
-  
+
     switch(cmd) {
     case LUBDE_VERSION:
         io.d0 = KBDE_VERSION;
@@ -1832,7 +1892,7 @@ _ioctl(unsigned int cmd, unsigned long arg)
             /* FIXME: for multiple chips */
             if (!_devices[io.dev].enabled) {
                 user_bde->interrupt_connect(io.dev,
-                                            (void(*)(void *))_ether_interrupt, 
+                                            (void(*)(void *))_ether_interrupt,
                                             _devices+io.dev);
                 _devices[io.dev].enabled = 1;
             }
@@ -1880,7 +1940,7 @@ _ioctl(unsigned int cmd, unsigned long arg)
         if (_devices[io.dev].dev_type & BDE_SWITCH_DEV_TYPE) {
             res = &_bde_inst_resource[_devices[io.dev].inst];
 #ifdef BDE_LINUX_NON_INTERRUPTIBLE
-            wait_event_timeout(res->intr_wq, 
+            wait_event_timeout(res->intr_wq,
                                atomic_read(&res->intr) != 0, 100);
 
 #else
@@ -1913,21 +1973,21 @@ _ioctl(unsigned int cmd, unsigned long arg)
                                       atomic_read(&res->intr) != 0);
             }
 #endif
-            /* 
-             * Even if we get multiple interrupts, we 
+            /*
+             * Even if we get multiple interrupts, we
              * only run the interrupt handler once.
              */
             atomic_set(&res->intr, 0);
         } else {
 #ifdef BDE_LINUX_NON_INTERRUPTIBLE
-            wait_event_timeout(_ether_interrupt_wq,     
+            wait_event_timeout(_ether_interrupt_wq,
                                atomic_read(&_ether_interrupt_has_taken_place) != 0, 100);
 #else
-            wait_event_interruptible(_ether_interrupt_wq,     
+            wait_event_interruptible(_ether_interrupt_wq,
                                      atomic_read(&_ether_interrupt_has_taken_place) != 0);
 
 #endif
-            /* 
+            /*
              * Even if we get multiple interrupts, we
              * only run the interrupt handler once.
              */
@@ -1983,14 +2043,21 @@ _ioctl(unsigned int cmd, unsigned long arg)
         /* CMICx device */
         if (_devices[io.dev].isr == (isr_f)_cmicx_interrupt) {
             io.rc = lkbde_irq_mask_set(io.dev + LKBDE_IPROC_REG, io.d0, io.d1, 0);
-        } else {
+        }
+#ifdef NEED_CMICX_GEN2_INTERRUPT
+        else if (_devices[io.dev].isr == (isr_f)_cmicx_gen2_interrupt)
+        {
+            io.rc = lkbde_irq_mask_set(io.dev | LKBDE_IPROC_REG, io.d0, io.d1, 0);
+        }
+#endif
+        else {
             io.rc = lkbde_irq_mask_set(io.dev, io.d0, io.d1, 0);
         }
         break;
     case LUBDE_SPI_READ_REG:
         if (user_bde->spi_read(io.dev, io.d0, io.dx.buf, io.d1) == -1) {
             io.rc = LUBDE_FAIL;
-        } 
+        }
         break;
     case LUBDE_SPI_WRITE_REG:
         if (user_bde->spi_write(io.dev, io.d0, io.dx.buf, io.d1) == -1) {
@@ -2097,15 +2164,15 @@ _ioctl(unsigned int cmd, unsigned long arg)
 /* Workaround for broken Busybox/PPC insmod */
 static char _modname[] = LINUX_USER_BDE_NAME;
 
-static gmodule_t _gmodule = 
+static gmodule_t _gmodule =
 {
-    .name = LINUX_USER_BDE_NAME, 
-    .major = LINUX_USER_BDE_MAJOR, 
-    .init = _init, 
-    .cleanup = _cleanup, 
-    .pprint = _pprint, 
+    .name = LINUX_USER_BDE_NAME,
+    .major = LINUX_USER_BDE_MAJOR,
+    .init = _init,
+    .cleanup = _cleanup,
+    .pprint = _pprint,
     .ioctl = _ioctl,
-}; 
+};
 
 gmodule_t*
 gmodule_get(void)

@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -33,7 +33,6 @@
  */
 
 #define MODULE_PARAM(n, t, p)   module_param(n, t, p)
-
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0))
 #define NGKNET_ETHTOOL_LINK_SETTINGS 1
@@ -184,16 +183,6 @@ kal_copy_to_user(void __user *to, const void *from,
     }
 
     return copy_to_user(to, from, len);
-}
-
-static inline int
-kal_support_paged_skb(void)
-{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
-    return 1;
-#else
-    return 0;
-#endif
 }
 
 /*!

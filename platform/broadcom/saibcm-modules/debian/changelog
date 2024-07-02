@@ -1,3 +1,9 @@
+opennsl (10.1.0.0) unstable; urgency=medium
+
+  * Update to Broadcom SAI 10.1.0.0
+
+ -- Ziting Guo <zitingguo@microsoft.com> Mon Jun 17 05:18:47 2024 +0000
+
 opennsl (8.4.0.2) unstable; urgency=medium
 
   * Update to Broadcom SAI 8.4.0.2
