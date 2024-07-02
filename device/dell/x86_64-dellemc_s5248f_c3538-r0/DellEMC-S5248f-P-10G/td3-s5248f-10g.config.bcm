@@ -34,6 +34,15 @@ l3_mem_entries=40960
 l3_max_ecmp_mode=1
 
 stable_size=0x5500000
+mem_cache_enable=0
+lpm_scaling_enable=0
+bcm_num_cos=10
+default_cpu_tx_queue=9
+host_as_route_disable=1
+sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
+sai_fast_convergence_support=1
+flow_init_mode=1
+sai_load_hw_config=/usr/lib/cancun/
 
 portmap_1.0=1:100
 portmap_5.0=5:100
