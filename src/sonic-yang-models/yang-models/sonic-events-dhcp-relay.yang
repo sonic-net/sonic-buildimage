@@ -41,7 +41,7 @@ module sonic-events-dhcp-relay {
 
             leaf ifname {
                 type string {
-                    pattern 'Ethernet[0-9]{1,3}';
+                    pattern '[a-zA-Z0-9]+';
                 }
                 description "Name of the i/f discarding";
             }

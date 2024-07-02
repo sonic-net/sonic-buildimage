@@ -2,7 +2,7 @@
     "SONIC_EVENTS_DHCP_RELAY_DHCP_RELAY_DISCARD_INCORRECT_IFNAME": {
         "sonic-events-dhcp-relay:sonic-events-dhcp-relay": {
             "sonic-events-dhcp-relay:dhcp-relay-discard": {
-                "ifname": "Eth",
+                "ifname": "@@@!!!",
                 "timestamp": "1985-04-12T23:20:50.52Z"
             }
         }
