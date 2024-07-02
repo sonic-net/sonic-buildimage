@@ -1,0 +1,10 @@
+NTPD_OPTS="-x -N"
+
+# Set to "yes" to ignore DHCP servers returned by DHCP.
+# For SONiC, NTP configuration is separate from DHCP responses on the mgmt port.
+IGNORE_DHCP="yes"
+
+# If you use certbot to obtain a certificate for ntpd, provide its name here.
+# The ntpsec deploy hook for certbot will handle copying and permissioning the
+# certificate and key files.
+NTPSEC_CERTBOT_CERT_NAME=""
