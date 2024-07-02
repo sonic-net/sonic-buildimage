@@ -1,6 +1,8 @@
 # Define default OS / SAL
 os=unix
 
+sai_hash_seed_config_hash_offset_enable=1
+
 # all XPORTs to XE ports
 #pbmp_xport_xe=0x1fffffffe
 pbmp_xport_xe=0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe

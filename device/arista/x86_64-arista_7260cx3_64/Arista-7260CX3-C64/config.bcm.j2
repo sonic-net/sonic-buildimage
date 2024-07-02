@@ -3,11 +3,15 @@
 {%- set IPinIP_sock = '' -%}
 {%- set map_prio = '' -%}
 {%- set pfcwd_sock = '' -%}
+{%- set hash_seed_offset_enable = '' -%}
 {%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined -%}
 {%-     if DEVICE_METADATA['localhost']['type'] is defined -%}
 {%-         set switch_role = DEVICE_METADATA['localhost']['type'] -%}
 {%-         if 'torrouter' in switch_role.lower() or 'torswitch' in switch_role.lower() %}
 {%-             set mmu_sock = 'mmu_init_config="MSFT-TH2-Tier0"' -%}
+{%-         endif %}
+{%-         if 'leafrouter' in switch_role.lower() %}
+{%-             set hash_seed_offset_enable = 'sai_hash_seed_config_hash_offset_enable=1' -%}
 {%-         endif %}
 {%-     endif %}
 {%-     if DEVICE_METADATA['localhost']['subtype'] is defined -%}
@@ -1051,3 +1055,4 @@ serdes_preemphasis_117=0x133c06
 sai_tunnel_support=1
 {{ IPinIP_sock }}
 phy_an_lt_msft=1
+{{ hash_seed_offset_enable }}

@@ -127,6 +127,7 @@ portmap
 prbs_polynomial
 ptp_bs_fref
 ptp_ts_pll_fref
+sai_hash_seed_config_hash_offset_enable
 rate_ext_mdio_divisor
 robust_hash_disable_egress_vlan
 robust_hash_disable_mpls

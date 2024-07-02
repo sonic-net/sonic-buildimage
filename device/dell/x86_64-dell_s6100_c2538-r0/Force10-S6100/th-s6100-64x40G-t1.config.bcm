@@ -1,5 +1,7 @@
 #TH S6100 64x40
 
+sai_hash_seed_config_hash_offset_enable=1
+
 # disables bcmALPMDH (ALPM distributed hitbit) thread.  This thread is purely for debug purpose
 l3_alpm_hit_skip=1
 

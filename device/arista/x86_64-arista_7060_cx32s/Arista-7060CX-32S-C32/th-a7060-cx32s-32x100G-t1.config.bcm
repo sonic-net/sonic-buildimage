@@ -3,6 +3,8 @@
 # disables bcmALPMDH (ALPM distributed hitbit) thread.  This thread is purely for debug purpose
 l3_alpm_hit_skip=1
 
+sai_hash_seed_config_hash_offset_enable=1
+
 # Disable Counting ACL Drop towards interface RX_DRP counter
 sai_adjust_acl_drop_in_rx_drop=1
 
