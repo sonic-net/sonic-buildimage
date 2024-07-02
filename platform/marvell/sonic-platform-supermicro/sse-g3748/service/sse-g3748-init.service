@@ -1,0 +1,14 @@
+[Unit]
+Description=Platform SSE-G3748 Service
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/sse-g3748-init.sh
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+#StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

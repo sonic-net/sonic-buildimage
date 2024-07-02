@@ -117,6 +117,17 @@
                 algo = "sha1";
             };
         };
+        fdt_smc_sse-g3748 {
+            description = "Flattened Device Tree blob for Supermicro SSE-G3748";
+            data = /incbin/("/usr/lib/linux-image-6.1.0-11-2-arm64/marvell/smc_sse-g3748.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0x2 0x1000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
     };
     configurations {
         default = "conf_ac5x";
@@ -143,6 +154,15 @@
             kernel = "kernel_1";
             fdt = "fdt_cn9131";
             ramdisk = "ramdisk_1";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        conf_smc_sse-g3748 {
+            description = "Boot Linux kernel with FDT blob + ramdisk for Supermicro SSE-G3748";
+            kernel = "kernel_ac5x";
+            fdt = "fdt_smc_sse-g3748";
+            ramdisk = "ramdisk_ac5x";
             hash@1 {
                 algo = "sha1";
             };
