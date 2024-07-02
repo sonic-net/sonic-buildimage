@@ -1323,6 +1323,16 @@
                 "port": "50052"
             }
         },
+        "GNMI_CLIENT_CERT": {
+            "testcert1": {
+                "cert_cname": "testcert1",
+                "role": "RW"
+            },
+            "testcert2": {
+                "cert_cname": "testcert2",
+                "role": "RO"
+            }
+        },
         "TUNNEL": {
             "MuxTunnel0": {
                 "dscp_mode": "uniform",

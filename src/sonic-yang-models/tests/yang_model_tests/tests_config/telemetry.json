@@ -62,5 +62,43 @@
                 }
             }
         }
+    },
+    "TELEMETRY_CLIENT_CERT_LIST_TABLE_WITH_MISSING_CERT_NAME": {
+        "sonic-telemetry:sonic-telemetry": {
+            "sonic-telemetry:TELEMETRY_CLIENT_CERT": {
+                "TELEMETRY_CLIENT_CERT_LIST": [
+                {
+                    "role": "RW"
+                }
+                ]
+            }
+        }
+    },
+    "TELEMETRY_CLIENT_CERT_LIST_TABLE_WITH_MISSING_ROLE": {
+        "sonic-telemetry:sonic-telemetry": {
+            "sonic-telemetry:TELEMETRY_CLIENT_CERT": {
+                "TELEMETRY_CLIENT_CERT_LIST": [
+                {
+                    "cert_cname": "testcert1"
+                }
+                ]
+            }
+        }
+    },
+    "TELEMETRY_CLIENT_CERT_LIST_TABLE_WITH_VALID_CONFIG": {
+        "sonic-telemetry:sonic-telemetry": {
+            "sonic-telemetry:TELEMETRY_CLIENT_CERT": {
+                "TELEMETRY_CLIENT_CERT_LIST": [
+                {
+                    "cert_cname": "testcert1",
+                    "role": "RW"
+                },
+                {
+                    "cert_cname": "testcert2",
+                    "role": "RO"
+                }
+                ]
+            }
+        }
     }
 }
