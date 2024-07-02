@@ -54,6 +54,7 @@ COPY ["TSC", "/usr/bin/TSC"]
 COPY ["TS", "/usr/bin/TS"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["zsocket.sh", "/usr/bin/"]
+COPY ["bgpd_wait_for_intf.sh.j2", "/usr/share/sonic/templates/"]
 RUN chmod a+x /usr/bin/TSA && \
     chmod a+x /usr/bin/TSB && \
     chmod a+x /usr/bin/TSC && \

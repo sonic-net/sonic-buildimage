@@ -76,6 +76,18 @@ dependent_startup=true
 dependent_startup_wait_for=zebra:running
 {% endif %}
 
+[program:bgpd_wait_for_intf]
+command=/usr/bin/bgpd_wait_for_intf.sh
+priority=5
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=zsocket:exited
+
 [program:bgpd]
 command=/usr/lib/frr/bgpd -A 127.0.0.1 -M snmp
 priority=5
@@ -86,7 +98,7 @@ startsecs=0
 stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
-dependent_startup_wait_for=zsocket:exited
+dependent_startup_wait_for=bgpd_wait_for_intf:exited
 
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
 [program:ospfd]

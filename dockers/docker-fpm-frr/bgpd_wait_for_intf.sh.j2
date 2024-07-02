@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+function wait_iface_ready
+{
+    IFACE_NAME=$1
+    IFACE_CIDR=$2
+
+    # Counter to track the number of iterations
+    ITERATION=0
+
+    while [ $ITERATION -lt 5 ]; do
+        RESULT=$(sonic-db-cli STATE_DB HGET "INTERFACE_TABLE|${IFACE_NAME}|${IFACE_CIDR}" "state" 2> /dev/null)
+        if [ x"$RESULT" == x"ok" ]; then
+            return 0
+        fi
+
+        sleep 0.5
+        ((ITERATION++))
+    done
+
+    logger -p error "[bgpd] Error: Interface ${IFACE_NAME} not ready."
+    return 1
+}
+
+start=$(date +%s.%N)
+
+{% for (name, prefix) in INTERFACE|pfx_filter %}
+{% if prefix | ipv4 %}
+wait_iface_ready {{ name }} {{ prefix }}
+{% endif %}
+{% endfor %}
+
+{% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
+{% if prefix | ipv4 %}
+wait_iface_ready {{ name }} {{ prefix }}
+{% endif %}
+{% endfor %}
+
+{% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}
+{% if prefix | ipv4 %}
+wait_iface_ready {{ name }} {{ prefix }}
+{% endif %}
+{% endfor %}
+
+timespan=$(awk "BEGIN {print $(date +%s.%N)-$start; exit}")
+logger -p info "[bgpd] It took ${timespan} seconds for interface to become ready"
