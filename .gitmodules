@@ -9,7 +9,8 @@
 	url = https://github.com/sonic-net/sonic-sairedis
 [submodule "sonic-swss"]
 	path = src/sonic-swss
-	url = https://github.com/sonic-net/sonic-swss
+	url = https://github.com/liuh-80/sonic-swss
+	branch = dev/liuh/add-debug-log
 [submodule "src/p4c-bm/p4c-bm"]
 	path = platform/p4/p4c-bm/p4c-bm
 	url = https://github.com/krambn/p4c-bm
@@ -105,7 +106,8 @@
 	url = https://github.com/sonic-net/sonic-host-services
 [submodule "src/sonic-gnmi"]
 	path = src/sonic-gnmi
-	url = https://github.com/sonic-net/sonic-gnmi.git
+	url = https://github.com/liuh-80/sonic-gnmi.git
+	branch = dev/liuh/add-debug-log
 [submodule "src/sonic-genl-packet"]
 	path = src/sonic-genl-packet
 	url = https://github.com/sonic-net/sonic-genl-packet
