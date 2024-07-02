@@ -2332,7 +2332,8 @@ and is listed in this table.
         "gnmi": {
             "client_auth": "true",
             "log_level": "2",
-            "port": "50051"
+            "port": "50051",
+            "save_on_set": "false"
         }
     }
 }
