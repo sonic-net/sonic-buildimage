@@ -1,0 +1,25 @@
+From 45f5ba53f94d97c4b1cf31fd0bca01167cd727cb Mon Sep 17 00:00:00 2001
+From: Tyler Li <litiezheng@ieisystem.com>
+Date: Tue, 9 Apr 2024 14:43:19 +0800
+Subject: [PATCH] isisd: Fix memory leak
+
+Signed-off-by: Tyler Li <litiezheng@ieisystem.com>
+---
+ isisd/isis_lfa.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/isisd/isis_lfa.c b/isisd/isis_lfa.c
+index 84aac24d5..e99c4b805 100644
+--- a/isisd/isis_lfa.c
++++ b/isisd/isis_lfa.c
+@@ -255,6 +255,7 @@ void isis_lfa_excluded_ifaces_clear(struct isis_circuit *circuit, int level)
+ {
+ 	hash_clean(circuit->lfa_excluded_ifaces[level - 1],
+ 		   lfa_excl_interface_hash_free);
++	hash_free(circuit->lfa_excluded_ifaces[level - 1]);
+ }
+ 
+ /**
+-- 
+2.37.1
+
