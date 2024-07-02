@@ -1740,29 +1740,58 @@
             }
         },
 
+        "VXLAN_TUNNEL": {
+            "vtep1": {
+                "src_ip": "1.2.3.4"
+            }
+        },
+
+        "VXLAN_EVPN_NVO": {
+            "nvo1": {
+                "source_vtep": "vtep1"
+            }
+        },
+
+        "VXLAN_TUNNEL_MAP": {
+            "vtep1|map_100_Vlan100": {
+                "vni" : "100",
+                "vlan": "Vlan100"
+            }
+        },
+
+        "VNET": {
+            "vnet1": {
+                "vxlan_tunnel": "vtep1",
+                "scope": "default",
+                "vni": "100",
+                "peer_list": "",
+                "advertise_prefix": "true",
+                "overlay_dmac": "22:33:44:55:66:77"
+            }
+        },
+
         "PORT_QOS_MAP": {
            "Ethernet0": {
               "dot1p_to_tc_map" : "Dot1p_to_tc_map1",
               "dscp_to_tc_map": "Dscp_to_tc_map1",
-	          "tc_to_queue_map": "tc_to_q_map1",
-	          "tc_to_pg_map": "tc_to_pg_map1",
-	          "pfc_to_queue_map": "pfc_prio_to_q_map1",
-	          "pfc_to_pg_map"   : "pfc_prio_to_pg_map1",
-	          "pfc_enable"      : "3,4",
-	          "pfcwd_sw_enable" : "3,4"
+              "tc_to_queue_map": "tc_to_q_map1",
+              "tc_to_pg_map": "tc_to_pg_map1",
+              "pfc_to_queue_map": "pfc_prio_to_q_map1",
+              "pfc_to_pg_map"   : "pfc_prio_to_pg_map1",
+              "pfc_enable"      : "3,4",
+              "pfcwd_sw_enable" : "3,4"
             },
             "Ethernet4": {
               "dot1p_to_tc_map" : "Dot1p_to_tc_map2",
               "dscp_to_tc_map": "Dscp_to_tc_map2",
-	          "tc_to_queue_map": "tc_to_q_map2",
-	          "tc_to_pg_map": "tc_to_pg_map2",
-	          "pfc_to_queue_map": "pfc_prio_to_q_map2",
-	          "pfc_to_pg_map"   : "pfc_prio_to_pg_map2",
-	          "pfc_enable"      : "3,4",
-	          "pfcwd_sw_enable" : "3,4"
+              "tc_to_queue_map": "tc_to_q_map2",
+              "tc_to_pg_map": "tc_to_pg_map2",
+              "pfc_to_queue_map": "pfc_prio_to_q_map2",
+              "pfc_to_pg_map"   : "pfc_prio_to_pg_map2",
+              "pfc_enable"      : "3,4",
+              "pfcwd_sw_enable" : "3,4"
             }
         },
-
 
         "MCLAG_DOMAIN": {
             "123": {
