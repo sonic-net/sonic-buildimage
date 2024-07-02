@@ -1315,7 +1315,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_RFS_TARGETS)) : $(TARGET_PATH)/% : \
         $(call dpkg_depend,$(TARGET_PATH)/%.dep)
 	$(HEADER)
 
-	# $(call LOAD_CACHE,$*,$@)
+    # $(call LOAD_CACHE,$*,$@)
 
 	# Skip building the target if it is already loaded from cache
 	if [ -z '$($*_CACHE_LOADED)' ] ; then
