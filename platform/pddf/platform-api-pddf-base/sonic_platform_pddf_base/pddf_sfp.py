@@ -196,7 +196,7 @@ class PddfSfp(SfpOptoeBase):
                 lpmode = True
             else:
                 lpmode = False
-        else:
+        elif self.get_presence():
             xcvr_id = self._xcvr_api_factory._get_id()
             if xcvr_id is not None:
                 if xcvr_id == 0x18 or xcvr_id == 0x19 or xcvr_id == 0x1e:
