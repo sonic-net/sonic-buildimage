@@ -1,0 +1,11 @@
+moonstone/systemd/pddf-platform-init.service etc/systemd/system
+moonstone/systemd/pddf-platform-post.service etc/systemd/system
+moonstone/pddf/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_moonstone-r0/pddf
+moonstone/scripts/pre_pddf_init.sh usr/local/bin
+moonstone/scripts/post_pddf_init.sh usr/local/bin
+moonstone/scripts/pddf_pre_driver_install.sh usr/local/bin
+moonstone/scripts/pddf_post_device_create.sh usr/local/bin
+moonstone/utils/afulnx_64 usr/local/bin
+moonstone/utils/fpga_prog usr/local/bin
+moonstone/utils/ispvm usr/local/bin
+moonstone/utils/eeupdate64e usr/local/bin
