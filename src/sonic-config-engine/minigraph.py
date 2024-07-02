@@ -2120,7 +2120,6 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         
     results = {}
     results['DEVICE_METADATA'] = {'localhost': {
-        'bgp_asn': bgp_asn,
         'region': region,
         'cloudtype': cloudtype,
         'docker_routing_config_mode': docker_routing_config_mode,
@@ -2131,6 +2130,9 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         'yang_config_validation': 'disable'
         }
     }
+
+    if bgp_asn:
+        results['DEVICE_METADATA']['localhost']['bgp_asn'] = bgp_asn
 
     if chassis_hostname:
         results['DEVICE_METADATA']['localhost']['chassis_hostname'] = chassis_hostname

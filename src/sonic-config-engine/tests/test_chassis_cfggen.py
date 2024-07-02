@@ -433,7 +433,6 @@ class TestVoqChassisMultiAsic(TestChassis):
         output = json.loads(self.run_script(argument))
         print(output['localhost'])
         self.assertDictEqual(output['localhost'], {
-            'bgp_asn': None,
             'region': 'test',
             'cloudtype': 'Public',
             'docker_routing_config_mode': 'separated',
@@ -910,7 +909,6 @@ class TestVoqChassisSup(TestChassis):
         print(output['localhost'])
         self.assertDictEqual(output['localhost'], 
             {
-                "bgp_asn": None,
                 "region": "test",
                 "cloudtype": "Public",
                 "docker_routing_config_mode": "separated",
@@ -938,7 +936,6 @@ class TestVoqChassisSup(TestChassis):
         print(output['localhost'])
         self.assertDictEqual(output['localhost'], 
             {
-                "bgp_asn": None,
                 "region": "test",
                 "cloudtype": None,
                 "docker_routing_config_mode": "separated",
@@ -1046,7 +1043,6 @@ class TestPacketChassisSup(TestChassis):
         print(output['localhost'])
         self.assertDictEqual(output['localhost'], 
             {
-                "bgp_asn": None,
                 "region": "test",
                 "cloudtype": "Public",
                 "docker_routing_config_mode": "separated",
@@ -1074,7 +1070,6 @@ class TestPacketChassisSup(TestChassis):
         print(output['localhost'])
         self.assertDictEqual(output['localhost'], 
             {
-                "bgp_asn": None,
                 "region": "test",
                 "cloudtype": None,
                 "docker_routing_config_mode": "separated",
