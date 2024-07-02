@@ -494,6 +494,58 @@ class TestJ2Files(TestCase):
             assert utils.cmp(sample_output_file, test_output)
             os.remove(test_output)
 
+    def test_qos_smartswitch_render_template(self):
+        if utils.PYvX_DIR != 'py3':
+            # Skip on python2 as the change will not be backported to previous version
+            return
+
+        dir_paths = [
+            '../../../device/mellanox/x86_64-mlnx_msn4700-r0/Mellanox-SN4700-O28',
+            '../../../device/mellanox/x86_64-mlnx_msn4700-r0/Mellanox-SN4700-O28'
+        ]
+        sample_outputs = [
+            'qos-mellanox4700-o28-t1-smartswitch.json',
+            'qos-mellanox4700-o28-t1-smartswitch_dyn.json'
+        ]
+        sample_minigraph_files = [
+            'sample-mellanox-4700-t1-minigraph-smartswitch.xml',
+            'sample-mellanox-4700-t1-minigraph-smartswitch.xml'
+        ]
+        buffer_files = [
+            'buffers.json.j2', # traditional buffer mode
+            'buffers_dynamic.json.j2' # dynamic buffer mode
+        ]
+
+        for i, path in enumerate(dir_paths):
+            device_template_path = os.path.join(self.test_dir, path)
+            sample_output = sample_outputs[i]
+            sample_minigraph_file = os.path.join(self.test_dir,sample_minigraph_files[i])
+            qos_file = os.path.join(device_template_path, 'qos.json.j2')
+            buf_file = os.path.join(device_template_path, buffer_files[i])
+            hwsku_json_file = os.path.join(device_template_path, 'hwsku.json')
+            plat_json_file = os.path.join(device_template_path, '../platform.json')
+            test_output = os.path.join(self.test_dir, 'output.json')
+
+            # copy qos_config.j2 & buffer_config.j2 to the target directory to have all templates in one directory
+            qos_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'qos_config.j2')
+            shutil.copy2(qos_config_file, device_template_path)
+
+            buf_config_file = os.path.join(self.test_dir, '..', '..', '..', 'files', 'build_templates', 'buffers_config.j2')
+            shutil.copy2(buf_config_file, device_template_path)
+
+            argument = ['-m', sample_minigraph_file, '-p', plat_json_file, '-S', hwsku_json_file, '-t', "{},config-db".format(qos_file), '-t', "{},config-db".format(buf_file), '--print-data']
+            self.run_script(argument, output_file=test_output)
+
+            # cleanup
+            qos_config_file_new = os.path.join(device_template_path, 'qos_config.j2')
+            os.remove(qos_config_file_new)
+            buf_config_file_new = os.path.join(device_template_path, 'buffers_config.j2')
+            os.remove(buf_config_file_new)
+
+            sample_output_file = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, sample_output)
+            assert utils.cmp_tables(sample_output_file, test_output)
+            os.remove(test_output)
+
     def test_config_brcm_render_template(self):
         if utils.PYvX_DIR != 'py3':
             #Skip on python2 as the change will not be backported to previous version
