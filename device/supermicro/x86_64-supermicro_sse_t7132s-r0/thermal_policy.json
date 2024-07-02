@@ -1,0 +1,36 @@
+{
+    "info_types": [
+        {
+            "type": "sfp_irq_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "the sfp interrupt is asserted",
+            "conditions": [
+                {
+                    "type": "sfp.irq.asserted"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "sfp.irq.log"
+                }
+            ]
+        },
+        {
+            "name": "the sfp interrupt with temp high alarm is asserted",
+            "conditions": [
+                {
+                    "type": "sfp.irq.temp.high_alarm.asserted"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "sfp.tx_disable"
+                }
+            ]
+        }
+    ]
+}
+
