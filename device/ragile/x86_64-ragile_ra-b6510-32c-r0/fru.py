@@ -1,15 +1,14 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+#!/usr/bin/python3
 import collections
-from bitarray import bitarray
 from datetime import datetime, timedelta
-import sys
+from bitarray import bitarray
+
 
 __DEBUG__ = "N"
 
 
 class FruException(Exception):
-    def __init__(self,  message='fruerror', code=-100):
+    def __init__(self, message='fruerror', code=-100):
         err = 'errcode: {0} message:{1}'.format(code, message)
         Exception.__init__(self, err)
         self.code = code
@@ -21,7 +20,7 @@ def e_print(err):
 
 
 def d_print(debug_info):
-    if(__DEBUG__ == "Y"):
+    if __DEBUG__ == "Y":
         print(debug_info)
 
 
@@ -40,7 +39,7 @@ class FruUtil():
         starttime = datetime(1996, 1, 1, 0, 0, 0)
         endtime = datetime.now()
         seconds = (endtime - starttime).total_seconds()
-        mins = seconds / 60
+        mins = seconds // 60
         m = int(round(mins))
         return m
 
@@ -50,7 +49,7 @@ class FruUtil():
 
     @staticmethod
     def getTypeLength(value):
-        if value is None:
+        if value is None or len(value) == 0:
             return 0
         a = bitarray(8)
         a.setall(False)
@@ -62,8 +61,8 @@ class FruUtil():
     @staticmethod
     def checksum(b):
         result = 0
-        for i in range(len(b)):
-            result += ord(b[i])
+        for item in b:
+            result += ord(item)
         return (0x100 - (result & 0xff)) & 0xff
 
 
@@ -86,7 +85,6 @@ class BaseArea(object):
         self._size = size
         self._isPresent = False
         self._data = b'\x00' * size
-        self.__dataoffset = 0
 
     @property
     def childList(self):
@@ -141,6 +139,9 @@ class BoardInfoArea(BaseArea):
     _boardTime = None
     _fields = None
     _mfg_date = None
+    areaversion = None
+    _boardversion = None
+    _language = None
 
     def __str__(self):
         formatstr = "version             : %x\n" \
@@ -227,7 +228,6 @@ class BoardInfoArea(BaseArea):
         index += templen + 1
         d_print("decode fruFileId:%s" % self.fruFileId)
 
-
         for i in range(1, 11):
             valtmp = "boardextra%d" % i
             if self.data[index] != chr(0xc1):
@@ -239,6 +239,11 @@ class BoardInfoArea(BaseArea):
             else:
                 break
 
+    def fruSetValue(self, field, value):
+        tmp_field = getattr(self, field, None)
+        if tmp_field is not None:
+            setattr(self, field, value)
+
     def recalcute(self):
         d_print("boardInfoArea version:%x" % ord(self.boardversion))
         d_print("boardInfoArea length:%d" % self.size)
@@ -247,7 +252,7 @@ class BoardInfoArea(BaseArea):
         d_print("boardInfoArea mfg_date:%x" % self.mfg_date)
 
         self.data = chr(ord(self.boardversion)) + \
-            chr(self.size / 8) + chr(self.language)
+            chr(self.size // 8) + chr(self.language)
 
         self.data += chr(self.mfg_date & 0xFF)
         self.data += chr((self.mfg_date >> 8) & 0xFF)
@@ -280,9 +285,7 @@ class BoardInfoArea(BaseArea):
                 valtmpval = getattr(self, valtmp)
                 d_print("boardInfoArea boardextra%d:%s" % (i, valtmpval))
                 self.data += chr(FruUtil.getTypeLength(valtmpval))
-                if valtmpval is None:
-                    pass
-                else:
+                if valtmpval is not None:
                     self.data += valtmpval
             else:
                 break
@@ -290,14 +293,14 @@ class BoardInfoArea(BaseArea):
         self.data += chr(0xc1)
 
         if len(self.data) > (self.size - 1):
-            incr = (len(self.data) - self.size) / 8 + 1
+            incr = (len(self.data) - self.size) // 8 + 1
             self.size += incr * 8
 
-        self.data = self.data[0:1] + chr(self.size / 8) + self.data[2:]
+        self.data = self.data[0:1] + chr(self.size // 8) + self.data[2:]
         d_print("self data:%d" % len(self.data))
         d_print("self size:%d" % self.size)
         d_print("adjust size:%d" % (self.size - len(self.data) - 1))
-        self.data = self.data.ljust((self.size - 1), self.INITVALUE)
+        self.data = self.data.ljust((self.size - 1), chr(self.INITVALUE[0]))
 
         # checksum
         checksum = FruUtil.checksum(self.data)
@@ -388,6 +391,7 @@ class ProductInfoArea(BaseArea):
     _productManufacturer = None
     _productAssetTag = None
     _FRUFileID = None
+    _language = None
 
     def __str__(self):
         formatstr = "version             : %x\n" \
@@ -564,12 +568,17 @@ class ProductInfoArea(BaseArea):
     def fruFileId(self, name):
         self._FRUFileID = name
 
+    def fruSetValue(self, field, value):
+        tmp_field = getattr(self, field, None)
+        if tmp_field is not None:
+            setattr(self, field, value)
+
     def recalcute(self):
         d_print("product version:%x" % ord(self.areaversion))
         d_print("product length:%d" % self.size)
         d_print("product language:%x" % self.language)
         self.data = chr(ord(self.areaversion)) + \
-            chr(self.size / 8) + chr(self.language)
+            chr(self.size // 8) + chr(self.language)
 
         typelength = FruUtil.getTypeLength(self.productManufacturer)
         self.data += chr(typelength)
@@ -600,22 +609,20 @@ class ProductInfoArea(BaseArea):
                 valtmpval = getattr(self, valtmp)
                 d_print("boardInfoArea productextra%d:%s" % (i, valtmpval))
                 self.data += chr(FruUtil.getTypeLength(valtmpval))
-                if valtmpval is None:
-                    pass
-                else:
+                if valtmpval is not None:
                     self.data += valtmpval
             else:
                 break
 
         self.data += chr(0xc1)
         if len(self.data) > (self.size - 1):
-            incr = (len(self.data) - self.size) / 8 + 1
+            incr = (len(self.data) - self.size) // 8 + 1
             self.size += incr * 8
         d_print("self.data:%d" % len(self.data))
         d_print("self.size:%d" % self.size)
 
-        self.data = self.data[0:1] + chr(self.size / 8) + self.data[2:]
-        self.data = self.data.ljust((self.size - 1), self.INITVALUE)
+        self.data = self.data[0:1] + chr(self.size // 8) + self.data[2:]
+        self.data = self.data.ljust((self.size - 1), chr(self.INITVALUE[0]))
         checksum = FruUtil.checksum(self.data)
         d_print("board info checksum:%x" % checksum)
         self.data += chr(checksum)
@@ -632,16 +639,12 @@ class Field(object):
         self.fieldType = fieldType
 
     @property
-    def data(self):
-        return self._data
-
-    @property
     def fieldType(self):
-        return self._fieldType
+        return self.fieldType
 
     @property
     def fieldData(self):
-        return self._fieldData
+        return self.fieldData
 
 
 class ipmifru(BaseArea):
@@ -659,6 +662,7 @@ class ipmifru(BaseArea):
     _bodybin = None
     _version = BaseArea.COMMON_HEAD_VERSION
     _zeroCheckSum = None
+    _frusize = 256
 
     def __str__(self):
         tmpstr = ""
@@ -673,13 +677,13 @@ class ipmifru(BaseArea):
     def decodeBin(self, eeprom):
         commonHead = eeprom[0:8]
         d_print("decode version %x" % ord(commonHead[0]))
-        if self.COMMON_HEAD_VERSION != commonHead[0]:
+        if ord(self.COMMON_HEAD_VERSION) != ord(commonHead[0]):
             raise FruException("HEAD VERSION error,not Fru format!", -10)
         if FruUtil.checksum(commonHead[0:7]) != ord(commonHead[7]):
             strtemp = "check header checksum error [cal:%02x data:%02x]" % (
                 FruUtil.checksum(commonHead[0:7]), ord(commonHead[7]))
             raise FruException(strtemp, -3)
-        if commonHead[1] != self.INITVALUE:
+        if ord(commonHead[1]) != ord(self.INITVALUE):
             d_print("Internal Use Area is present")
             self.internalUseArea = InternalUseArea(
                 name="Internal Use Area", size=self.SUGGESTED_SIZE_INTERNAL_USE_AREA)
@@ -687,7 +691,7 @@ class ipmifru(BaseArea):
             self.internalUserAreaOffset = ord(commonHead[1])
             self.internalUseArea.data = eeprom[self.internalUserAreaOffset * 8: (
                 self.internalUserAreaOffset * 8 + self.internalUseArea.size)]
-        if commonHead[2] != self.INITVALUE:
+        if ord(commonHead[2]) != ord(self.INITVALUE):
             d_print("Chassis Info Area is present")
             self.chassisInfoArea = ChassisInfoArea(
                 name="Chassis Info Area", size=self.SUGGESTED_SIZE_CHASSIS_INFO_AREA)
@@ -695,7 +699,7 @@ class ipmifru(BaseArea):
             self.chassicInfoAreaOffset = ord(commonHead[2])
             self.chassisInfoArea.data = eeprom[self.chassicInfoAreaOffset * 8: (
                 self.chassicInfoAreaOffset * 8 + self.chassisInfoArea.size)]
-        if commonHead[3] != self.INITVALUE:
+        if ord(commonHead[3]) != ord(self.INITVALUE):
             self.boardInfoArea = BoardInfoArea(
                 name="Board Info Area", size=self.SUGGESTED_SIZE_BOARD_INFO_AREA)
             self.boardInfoArea.isPresent = True
@@ -707,12 +711,12 @@ class ipmifru(BaseArea):
             self.boardInfoArea.data = eeprom[self.boardInfoAreaOffset * 8: (
                 self.boardInfoAreaOffset * 8 + self.boardInfoArea.size)]
             if FruUtil.checksum(self.boardInfoArea.data[:-1]) != ord(self.boardInfoArea.data[-1:]):
-                print "check boardInfoArea checksum error[cal:%02x data:%02x]" %  \
+                strtmp = "check boardInfoArea checksum error[cal:%02x data:%02x]" %  \
                     (FruUtil.checksum(
                         self.boardInfoArea.data[:-1]), ord(self.boardInfoArea.data[-1:]))
-                sys.exit(-1)
+                raise FruException(strtmp, -3)
             self.boardInfoArea.decodedata()
-        if commonHead[4] != self.INITVALUE:
+        if ord(commonHead[4]) != ord(self.INITVALUE):
             d_print("Product Info Area is present")
             self.productInfoArea = ProductInfoArea(
                 name="Product Info Area ", size=self.SUGGESTED_SIZE_PRODUCT_INFO_AREA)
@@ -732,7 +736,7 @@ class ipmifru(BaseArea):
                     FruUtil.checksum(self.productInfoArea.data[:-1]), ord(self.productInfoArea.data[-1:]))
                 raise FruException(strtmp, -3)
             self.productInfoArea.decodedata()
-        if commonHead[5] != self.INITVALUE:
+        if ord(commonHead[5]) != ord(self.INITVALUE):
             self.multiRecordArea = MultiRecordArea(
                 name="MultiRecord record Area ")
             d_print("MultiRecord record present")
@@ -748,7 +752,6 @@ class ipmifru(BaseArea):
         self.boardInfoAreaOffset = self.INITVALUE
         self.productinfoAreaOffset = self.INITVALUE
         self.multiRecordAreaOffset = self.INITVALUE
-        self.PAD = self.INITVALUE
         self.zeroCheckSum = self.INITVALUE
         self.offset = self.SUGGESTED_SIZE_COMMON_HEADER
         self.productInfoArea = None
@@ -874,30 +877,31 @@ class ipmifru(BaseArea):
         self.bindata = ""
         self.offset = self.SUGGESTED_SIZE_COMMON_HEADER
         d_print("common Header %d" % self.offset)
+        d_print("fru eeprom size  %d" % self._frusize)
         if self.internalUseArea is not None and self.internalUseArea.isPresent:
-            self.internalUserAreaOffset = self.offset / 8
+            self.internalUserAreaOffset = self.offset // 8
             self.offset += self.internalUseArea.size
             d_print("internalUseArea is present offset:%d" % self.offset)
 
         if self.chassisInfoArea is not None and self.chassisInfoArea.isPresent:
-            self.chassicInfoAreaOffset = self.offset / 8
+            self.chassicInfoAreaOffset = self.offset // 8
             self.offset += self.chassisInfoArea.size
             d_print("chassisInfoArea is present offset:%d" % self.offset)
 
         if self.boardInfoArea is not None and self.boardInfoArea.isPresent:
-            self.boardInfoAreaOffset = self.offset / 8
+            self.boardInfoAreaOffset = self.offset // 8
             self.offset += self.boardInfoArea.size
             d_print("boardInfoArea is present offset:%d" % self.offset)
             d_print("boardInfoArea is present size:%d" %
                     self.boardInfoArea.size)
 
         if self.productInfoArea is not None and self.productInfoArea.isPresent:
-            self.productinfoAreaOffset = self.offset / 8
+            self.productinfoAreaOffset = self.offset // 8
             self.offset += self.productInfoArea.size
             d_print("productInfoArea is present offset:%d" % self.offset)
 
         if self.multiRecordArea is not None and self.multiRecordArea.isPresent:
-            self.multiRecordAreaOffset = self.offset / 8
+            self.multiRecordAreaOffset = self.offset // 8
             d_print("multiRecordArea is present offset:%d" % self.offset)
 
         if self.internalUserAreaOffset == self.INITVALUE:
@@ -914,16 +918,17 @@ class ipmifru(BaseArea):
         self.zeroCheckSum = (0x100 - ord(self.version) - self.internalUserAreaOffset - self.chassicInfoAreaOffset - self.productinfoAreaOffset
                              - self.boardInfoAreaOffset - self.multiRecordAreaOffset) & 0xff
         d_print("zerochecksum:%x" % self.zeroCheckSum)
-        self.data = self.version + chr(self.internalUserAreaOffset) + chr(self.chassicInfoAreaOffset) + chr(
-            self.boardInfoAreaOffset) + chr(self.productinfoAreaOffset) + chr(self.multiRecordAreaOffset) + self.INITVALUE + chr(self.zeroCheckSum)
+        self.data = ""
+        self.data += chr(self.version[0]) + chr(self.internalUserAreaOffset) + chr(self.chassicInfoAreaOffset) + chr(
+            self.boardInfoAreaOffset) + chr(self.productinfoAreaOffset) + chr(self.multiRecordAreaOffset) + chr(self.INITVALUE[0]) + chr(self.zeroCheckSum)
 
         self.bindata = self.data + self.bodybin
         totallen = len(self.bindata)
         d_print("totallen %d" % totallen)
-        if (totallen < 256):
-            self.bindata = self.bindata.ljust(256, self.INITVALUE)
+        if totallen < self._frusize:
+            self.bindata = self.bindata.ljust(self._frusize, chr(self.INITVALUE[0]))
         else:
-            raise FruException('bin data more than 256', -2)
+            raise FruException('bin data more than %d' % self._frusize, -2)
 
     def recalcutebin(self):
         self.bodybin = ""
@@ -945,6 +950,12 @@ class ipmifru(BaseArea):
             d_print("multiRecordArea present")
             self.bodybin += self.productInfoArea.data
 
-    def recalcute(self):
+    def recalcute(self, fru_eeprom_size=256):
+        self._frusize = fru_eeprom_size
         self.recalcutebin()
         self.recalcuteCommonHead()
+
+    def setValue(self, area, field, value):
+        tmp_area = getattr(self, area, None)
+        if tmp_area is not None:
+            tmp_area.fruSetValue(field, value)
