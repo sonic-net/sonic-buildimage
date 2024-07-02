@@ -1,0 +1,16 @@
+{
+  "chassis": {
+          "DS4101": {
+                  "component": {
+                          "Main_BMC": {},
+                          "Backup_BMC": {},
+                          "Main_BIOS": {},
+                          "Backup_BIOS": {},
+                          "COME_CPLD": {},
+                          "SYSCPLD": {},
+                          "FANCPLD": {},
+                          "FPGA": {}
+                  }
+          }
+  }
+}
