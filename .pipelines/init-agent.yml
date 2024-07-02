@@ -6,19 +6,23 @@ steps:
       # It will breaks init step and breaks build.
       sudo sed -i 's/1/0/' /etc/apt/apt.conf.d/20auto-upgrades
 
+      # Install Azure cli
+      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+      echo $sonicclient | base64 > ~/azpw-kv-1-sonicclient-20240627.pfx.base64
+      cat ~/azpw-kv-1-sonicclient-20240627.pfx.base64 | base64 -d | base64 -d > ~/azpw-kv-1-sonicclient-20240627.pfx
+      openssl pkcs12 -in ~/azpw-kv-1-sonicclient-20240627.pfx -out ~/client_ssl.pem -clcerts -nodes -password pass:
+      az login --service-principal --use-cert-sn-issuer -u 08fd13c1-63ab-4b08-9007-f4ff86b61248 -p ~/client_ssl.pem --tenant 72f988bf-86f1-41af-91ab-2d7cd011db47
       # Install Azcopy
-      if [ -z "$(which azcopy)" ]; then
-        azcopy_url=https://aka.ms/downloadazcopy-v10-linux
-        if [[ $PLATFORM_ARCH == arm* ]]; then
-          wget -O- "https://sonicstorageinternal.blob.core.windows.net/images/tools/azcopy_18.04_arm64.tar.gz$StorageSASKey" | tar -zxf -
-        else
-          # v10.22.0 panic when run azcopy -v, use v10.16 instead
-          # wget -O- "https://aka.ms/downloadazcopy-v10-linux" | tar -zxf - --strip-components=1 
-          wget -O- https://azcopyvnext.azureedge.net/release20220721/azcopy_linux_amd64_10.16.0.tar.gz | tar -zxf - --strip-components=1
-        fi
-        sudo mv -f azcopy /usr/local/bin/
-        azcopy  --version
+      if [[ $PLATFORM_ARCH == arm* ]]; then
+        wget -O- "https://aka.ms/downloadazcopy-v10-linux-arm64" | tar -zxf - --strip-components=1
+      else
+        wget -O- "https://aka.ms/downloadazcopy-v10-linux" | tar -zxf - --strip-components=1
       fi
+      sudo chmod a+x azcopy
+      sudo mv -f azcopy /usr/local/bin/
+      azcopy  --version
+      export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
+      azcopy list https://sonicstorageinternal.blob.core.windows.net/agent
 
       if [[ $PLATFORM_ARCH != arm* ]];then
         sudo pip3 install jinja2==3.0.0
@@ -112,5 +116,5 @@ steps:
       sudo chmod u=rwx,g=rwx,o=r /nfs
       df -h
     env:
-      StorageSASKey: $(SONIC_STORAGE_SASKEY)
+      sonicclient: $(sonicclient)
     displayName: 'Init agent'

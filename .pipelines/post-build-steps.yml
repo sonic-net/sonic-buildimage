@@ -5,12 +5,12 @@ parameters:
 - name: 'storageUrlPrefix'
   type: string
   default: 'https://sonicazurepipelines.blob.core.windows.net/buildinternal'
-- name: 'sasKey'
-  type: string
-  default: $(sonicazurepipelines-SasToken)
 
 steps:
 - script: |
+    set -x
+
+    export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
     timestamp=$(date '+%Y%m%d-%H%M%S-%N')
     relative_path="${timestamp:0:4}/${timestamp:4:2}/${timestamp:6:2}"
     timelinefile="buildtimelines_$timestamp.json"
@@ -21,17 +21,16 @@ steps:
     ./collect-build-logs.py "$build_url" "$(System.AccessToken)" "$timelinefile" "$buildlogfile"
     ls -lt "$timelinefile" "$buildlogfile" 2>/dev/null
     if [ -f $timelinefile ]; then
-      azcopy cp $timelinefile $PUBLISH_URL_PREFIX/buildtimelines/$relative_path/$timelinefile$SASKEY
+      azcopy cp $timelinefile $PUBLISH_URL_PREFIX/buildtimelines/$relative_path/$timelinefile
     fi
 
     if [ -f $buildlogfile ]; then
-      azcopy cp $buildlogfile $PUBLISH_URL_PREFIX/buildlogs/$relative_path/$buildlogfile$SASKEY
+      azcopy cp $buildlogfile $PUBLISH_URL_PREFIX/buildlogs/$relative_path/$buildlogfile
     fi
 
     exit 0
   env:
     PUBLISH_URL_PREFIX: ${{ parameters.storageUrlPrefix }}
-    SASKEY: ${{ parameters.sasKey }}
   condition: always()
   continueOnError: true
   displayName: "Collect build logs"

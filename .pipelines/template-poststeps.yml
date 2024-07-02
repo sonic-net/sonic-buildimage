@@ -42,18 +42,19 @@ steps:
       BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
   - ${{ if eq(parameters.UPLOAD, 'y') }}:
     - script: |
+        set -ex
+
         export AZCOPY_LOG_LOCATION=$(pwd)/azcopy
+        export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
         PUBLISH_PLATFORM_URL="https://$(SONIC_STORAGE_ACCOUNT).blob.core.windows.net/images/pipelines/Networking-acs-buildimage-Official/$(Build.SourceBranchName)/${{ parameters.PLATFORM_NAME }}"
-        PUBLISH_URL="$PUBLISH_PLATFORM_URL/$(Build.BuildId)$StorageSASKey"
+        PUBLISH_URL="$PUBLISH_PLATFORM_URL/$(Build.BuildId)"
         azcopy copy target $PUBLISH_URL --recursive=true --put-md5
         touch prev_build
-        azcopy copy "$PUBLISH_PLATFORM_URL/latest_build$StorageSASKey" latest_build || true
+        azcopy copy "$PUBLISH_PLATFORM_URL/latest_build" latest_build || true
         [ -f latest_build ] && mv latest_build prev_build
         echo $(Build.BuildId) > latest_build
-        azcopy copy latest_build "$PUBLISH_PLATFORM_URL/latest_build$StorageSASKey"  --put-md5
-        azcopy copy prev_build "$PUBLISH_PLATFORM_URL/prev_build$StorageSASKey"  --put-md5
-      env:
-        StorageSASKey: $(SONIC_STORAGE_SASKEY)
+        azcopy copy latest_build "$PUBLISH_PLATFORM_URL/latest_build"  --put-md5
+        azcopy copy prev_build "$PUBLISH_PLATFORM_URL/prev_build"  --put-md5
       displayName: "Publish to Azure Storage"
     - task: SSH@0
       displayName: "Make soft links for trusty8"

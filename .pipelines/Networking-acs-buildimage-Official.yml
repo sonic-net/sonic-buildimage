@@ -18,11 +18,15 @@ trigger:
       - internal-202211
       - internal-202012
 variables:
-  CDP_DEFINITION_BUILD_COUNT: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
-  DEBIAN_FRONTEND: noninteractive
-  CDP_CLOUDVAULT_VERSION_SANITIZE: true
-  DOCKER_BUILD_TIMEOUT: 3600
-
+  - name: CDP_DEFINITION_BUILD_COUNT
+    value: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
+  - name: DEBIAN_FRONTEND
+    value: noninteractive
+  - name: CDP_CLOUDVAULT_VERSION_SANITIZE
+    value: true
+  - name: DOCKER_BUILD_TIMEOUT
+    value: 3600
+  - group: SONiC-sonicbld
 resources:
   repositories: 
     - repository: templates
@@ -36,7 +40,14 @@ resources:
 parameters:
 - name: BRANCH_FOLDER
   default: 'default'
-
+- name: jobFilters
+  type: object
+  default:
+  - vs
+  - broadcom
+  - mellanox
+  - marvell-armhf
+  - cisco-8000
 extends:
   template: v2/OneBranch.Official.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
   parameters:
@@ -57,3 +68,4 @@ extends:
       parameters:
         BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
         CACHE: SONIC_DPKG_CACHE_METHOD=wcache
+        JOBS: ${{ parameters.jobFilters }}

@@ -124,18 +124,19 @@ stages:
             done
           displayName: "Copy installers"
         - script: |
+            set -ex
+
+            export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
             export AZCOPY_LOG_LOCATION=$(pwd)/azcopy
             PUBLISH_PLATFORM_URL="https://$(SONIC_STORAGE_ACCOUNT).blob.core.windows.net/images/$(PUBLISH_BLOB_PREFIX)/$(GROUP_NAME)"
-            PUBLISH_URL="$PUBLISH_PLATFORM_URL/$(Build.BuildId)$StorageSASKey"
-            azcopy copy target "$PUBLISH_PLATFORM_URL/$(Build.BuildId)$StorageSASKey" --recursive=true --put-md5
+            PUBLISH_URL="$PUBLISH_PLATFORM_URL/$(Build.BuildId)"
+            azcopy copy target "$PUBLISH_PLATFORM_URL/$(Build.BuildId)" --recursive=true --put-md5
             touch prev_build
-            azcopy copy "$PUBLISH_PLATFORM_URL/latest_build$StorageSASKey" latest_build || true
+            azcopy copy "$PUBLISH_PLATFORM_URL/latest_build" latest_build || true
             [ -f latest_build ] && mv latest_build prev_build
             echo $(Build.BuildId) > latest_build
-            azcopy copy latest_build "$PUBLISH_PLATFORM_URL/latest_build$StorageSASKey"  --put-md5
-            azcopy copy prev_build "$PUBLISH_PLATFORM_URL/prev_build$StorageSASKey"  --put-md5
-          env:
-            StorageSASKey: $(SONIC_STORAGE_SASKEY)
+            azcopy copy latest_build "$PUBLISH_PLATFORM_URL/latest_build"  --put-md5
+            azcopy copy prev_build "$PUBLISH_PLATFORM_URL/prev_build"  --put-md5
           displayName: "Publish to Azure Storage"
         - task: SSH@0
           displayName: "Make soft links for trusty8"
@@ -342,6 +343,7 @@ stages:
             displayName: 'Setup cisco hwsku Cisco-8102-C64'
           - script: |
               set -ex
+              export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
               filename=$(find platform/cisco-8000/artifactory/sonic -name cisco-* -type f | head -n 1)
               if [ -z "$filename" ]; then
                 echo "Cisco sai package not found" 1>&2
@@ -358,10 +360,8 @@ stages:
                 version=$(echo $package | awk -F_ '{print $(NF-1)}' | cut -d- -f1,2,4,5)
                 package_url="$PACKAGE_URL/sai/ciscosai/master/$version/$package"
                 echo "Override package $package from $package_url"
-                wget "$package_url$StorageSASKey" -O "$package"
+                wget "$package_url" -O "$package"
               done < <(ls cisco-*.deb)
-            env:
-              StorageSASKey: $(SONIC_PUBLIC_STORAGE_SASKEY)
             condition: and(ne(variables['Build.Reason'], 'PullRequest'), ne(variables.SKIP_OVERRIDE, 'y'))
             continueOnError: true
             displayName: "Override cisco sai packages"
