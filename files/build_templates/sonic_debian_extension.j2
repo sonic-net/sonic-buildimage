@@ -132,6 +132,9 @@ sudo rm -rf $FILESYSTEM_ROOT/$REDIS_DUMP_LOAD_PY3_WHEEL_NAME
 # Install Python module for psutil
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install psutil
 
+# Install Python module for blkinfo
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install blkinfo
+
 # Install Python module for ipaddr
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install ipaddr
 
