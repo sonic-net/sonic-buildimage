@@ -11,6 +11,11 @@ module sonic-ssh-server {
         description
             "First Revision";
     }
+    
+    revision 2023-06-07 {
+        description
+            "Introduce inactivity timeout and max syslogins options";
+    }
 
     container sonic-ssh-server {
         container SSH_SERVER {
@@ -38,6 +43,20 @@ module sonic-ssh-server {
                             error-message "Invalid port numbers value";
                             error-app-tag ssh-server-ports-invalid-value;
                         }
+                    }
+                }
+                leaf inactivity_timeout {
+                    description "inactivity timeout (in minutes), 0 means no timeout";
+                    default 15;
+                    type uint32 {
+                        range 0..35000;
+                    }
+                }
+                leaf max_sessions {
+                    description "limit of concurrent system logins, 0 means no limit";
+                    default 0;
+                    type uint32 {
+                        range 0..100;
                     }
                 }
             }/*container policies */

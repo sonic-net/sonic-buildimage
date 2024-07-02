@@ -22,5 +22,13 @@
     "SSH_SERVER_INVALID_PORTS_2": {
         "desc": "Configure invalid port value in SSH_SERVER.",
         "eStr": "Invalid port numbers value"
+    },
+    "SSH_SERVER_INVALID_INACTIVITY_TIMEOUT": {
+        "desc": "Configure invalid inactivity_timeout value in SSH_SERVER.",
+        "eStr": "does not satisfy the constraint \"0..35000\""
+    },
+    "SSH_SERVER_INVALID_MAX_SESSIONS": {
+        "desc": "Configure invalid max_sessions value in SSH_SERVER.",
+        "eStr": "does not satisfy the constraint \"0..100\""
     }
 }
