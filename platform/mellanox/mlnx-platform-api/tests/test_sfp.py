@@ -56,7 +56,6 @@ class TestSfp:
 
     @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
     @mock.patch('sonic_platform.sfp.SFP.read_eeprom', mock.MagicMock(return_value=None))
-    @mock.patch('sonic_platform.sfp.SFP.shared_sdk_handle', mock.MagicMock(return_value=2))
     @mock.patch('sonic_platform.sfp.SFP._get_module_info')
     @mock.patch('sonic_platform.chassis.Chassis.get_num_sfps', mock.MagicMock(return_value=2))
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
@@ -168,14 +167,6 @@ class TestSfp:
             handle.read.side_effect = [b'\x00'*128, b'\x01'*128, b'\x02'*64]
             handle.seek.side_effect = [0, 128, 0, 128, 0]
             assert sfp.read_eeprom(0, 320) == bytearray([0]*128 + [1]*128 + [2]*64)
-
-    @mock.patch('sonic_platform.sfp.SFP._fetch_port_status')
-    def test_is_port_admin_status_up(self, mock_port_status):
-        mock_port_status.return_value = (0, True)
-        assert SFP.is_port_admin_status_up(None, None)
-
-        mock_port_status.return_value = (0, False)
-        assert not SFP.is_port_admin_status_up(None, None)
 
     @mock.patch('sonic_platform.sfp.SFP._get_eeprom_path', mock.MagicMock(return_value = None))
     @mock.patch('sonic_platform.sfp.SFP._get_sfp_type_str')
@@ -376,38 +367,11 @@ class TestSfp:
         assert not sfp.is_sw_control()
         mock_read.return_value = 1
         assert sfp.is_sw_control()
-
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
-    @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=False))
-    @mock.patch('sonic_platform.utils.is_host', mock.MagicMock(side_effect = [True, True, False, False]))
-    @mock.patch('subprocess.check_output', mock.MagicMock(side_effect = ['True', 'False']))
-    @mock.patch('sonic_platform.sfp.SFP._get_lpmode', mock.MagicMock(side_effect = [True, False]))
-    @mock.patch('sonic_platform.sfp.SFP.sdk_handle', mock.MagicMock(return_value = None))
-    def test_get_lpmode(self):
-        sfp = SFP(0)
-        assert sfp.get_lpmode()
-        assert not sfp.get_lpmode()
-        assert sfp.get_lpmode()
-        assert not sfp.get_lpmode()
-
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
-    @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=False))
-    @mock.patch('sonic_platform.utils.is_host', mock.MagicMock(side_effect = [True, True, False, False]))
-    @mock.patch('subprocess.check_output', mock.MagicMock(side_effect = ['True', 'False']))
-    @mock.patch('sonic_platform.sfp.SFP._set_lpmode', mock.MagicMock(side_effect = [True, False]))
-    @mock.patch('sonic_platform.sfp.SFP.sdk_handle', mock.MagicMock(return_value = None))
-    def test_set_lpmode(self):
-        sfp = SFP(0)
-        assert sfp.set_lpmode(True)
-        assert not sfp.set_lpmode(True)
-        assert sfp.set_lpmode(False)
-        assert not sfp.set_lpmode(False)
         
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.utils.read_int_from_file')
-    @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
-    def test_get_lpmode_cmis_host_mangagement(self, mock_control, mock_read):
-        mock_control.return_value = True
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=True))
+    def test_get_lpmode_cmis_host_mangagement(self, mock_read):
         sfp = SFP(0)
         sfp.get_xcvr_api = mock.MagicMock(return_value=None)
         assert not sfp.get_lpmode()
@@ -419,18 +383,10 @@ class TestSfp:
         
         mock_api.get_lpmode.return_value = True
         assert sfp.get_lpmode()
-        
-        mock_control.return_value = False
-        mock_read.return_value = 1
-        assert sfp.get_lpmode()
-        
-        mock_read.return_value = 2
-        assert not sfp.get_lpmode()
 
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=True))
-    @mock.patch('sonic_platform.sfp.SFP.is_sw_control')
-    def test_set_lpmode_cmis_host_mangagement(self, mock_control):
-        mock_control.return_value = True
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=True))
+    def test_set_lpmode_cmis_host_mangagement(self):
         sfp = SFP(0)
         sfp.get_xcvr_api = mock.MagicMock(return_value=None)
         assert not sfp.set_lpmode(False)
@@ -440,10 +396,6 @@ class TestSfp:
         mock_api.get_lpmode = mock.MagicMock(return_value=False)
         assert sfp.set_lpmode(False)
         assert not sfp.set_lpmode(True)
-        
-        mock_control.return_value = False
-        assert not sfp.set_lpmode(True)
-        assert not sfp.set_lpmode(False)
 
     def test_determine_control_type(self):
         sfp = SFP(0)
@@ -556,3 +508,26 @@ class TestSfp:
         SFP.wait_ready_task.stop()
         SFP.wait_ready_task.join()
         SFP.wait_ready_task = None
+
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.utils.read_int_from_file')
+    def test_get_lpmode(self, mock_read_int):
+        sfp = SFP(0)
+        mock_read_int.return_value = 1
+        assert sfp.get_lpmode()
+        mock_read_int.assert_called_with('/sys/module/sx_core/asic0/module0/power_mode')
+
+        mock_read_int.return_value = 2
+        assert not sfp.get_lpmode()
+
+    @mock.patch('sonic_platform.sfp.SFP.is_sw_control', mock.MagicMock(return_value=False))
+    @mock.patch('sonic_platform.utils.write_file')
+    @mock.patch('sonic_platform.utils.read_int_from_file')
+    def test_set_lpmode(self, mock_read_int, mock_write):
+        sfp = SFP(0)
+        mock_read_int.return_value = 1
+        assert sfp.set_lpmode(False)
+        assert mock_write.call_count == 0
+
+        assert sfp.set_lpmode(True)
+        mock_write.assert_called_with('/sys/module/sx_core/asic0/module0/power_mode_policy', '3')

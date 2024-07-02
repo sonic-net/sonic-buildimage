@@ -128,10 +128,6 @@ class Chassis(ChassisBase):
         if self.sfp_event:
             self.sfp_event.deinitialize()
 
-        if self._sfp_list:
-            if self.sfp_module.SFP.shared_sdk_handle:
-                self.sfp_module.deinitialize_sdk_handle(self.sfp_module.SFP.shared_sdk_handle)
-
     @property
     def RJ45_port_list(self):
         if not self._RJ45_port_inited:
