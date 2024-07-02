@@ -4,13 +4,19 @@ import os
 import socket
 import sys
 
+# customize python logging to support notice logger
+logging.NOTICE = logging.INFO + 1
+logging.addLevelName(logging.NOTICE, "NOTICE")
+SysLogHandler.priority_map['NOTICE'] = 'notice'
+
+
 class SysLogger:
     """
     SysLogger class for Python applications using SysLogHandler
     """
 
     DEFAULT_LOG_FACILITY = SysLogHandler.LOG_USER
-    DEFAULT_LOG_LEVEL = SysLogHandler.LOG_NOTICE
+    DEFAULT_LOG_LEVEL = logging.NOTICE
 
     def __init__(self, log_identifier=None, log_facility=DEFAULT_LOG_FACILITY, log_level=DEFAULT_LOG_LEVEL):
         if log_identifier is None:
@@ -53,10 +59,11 @@ class SysLogger:
         self.log(logging.WARNING, msg, also_print_to_console)
 
     def log_notice(self, msg, also_print_to_console=False):
-        self.log(logging.INFO, msg, also_print_to_console)
+        self.log(logging.NOTICE, msg, also_print_to_console)
 
     def log_info(self, msg, also_print_to_console=False):
         self.log(logging.INFO, msg, also_print_to_console)
 
     def log_debug(self, msg, also_print_to_console=False):
         self.log(logging.DEBUG, msg, also_print_to_console)
+    
