@@ -214,7 +214,6 @@ port_init_autoneg_101.0=0
 port_init_autoneg_102.0=0
 port_init_autoneg_103.0=0
 port_init_autoneg_104.0=0
-port_init_cl72.0=0
 portmap_1.0=9:10
 portmap_2.0=10:10
 portmap_3.0=11:10
