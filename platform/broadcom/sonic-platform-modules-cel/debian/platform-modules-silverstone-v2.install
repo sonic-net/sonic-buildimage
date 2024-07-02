@@ -1,0 +1,13 @@
+silverstone-v2/systemd/pddf-platform-init.service etc/systemd/system
+silverstone-v2/service/silverstone-v2-pddf-platform-monitor.service lib/systemd/system
+silverstone-v2/scripts/silverstone_v2_platform_shutdown.sh usr/local/bin
+silverstone-v2/scripts/pddf_pre_driver_install.sh usr/local/bin
+silverstone-v2/scripts/pddf_post_device_create.sh usr/local/bin
+silverstone-v2/scripts/pre_pddf_init.py usr/local/bin
+silverstone-v2/scripts/sensors usr/bin
+silverstone-v2/scripts/platform_sensors.py usr/local/bin
+silverstone-v2/utils/pddf_fan_control_sensor_refresh.py usr/local/bin
+silverstone-v2/utils/pddf_sensor_list_refresh.py usr/local/bin
+silverstone-v2/utils/FanControl usr/local/bin
+silverstone-v2/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_silverstone_v2-r0/pddf
+services/platform_api/platform_api_mgnt.sh usr/local/bin
