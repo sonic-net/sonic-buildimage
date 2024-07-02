@@ -68,8 +68,12 @@ enable_onie_fw_update_mode() {
     fi
 
     register_terminate_handler
-
-    grub-editenv ${os_boot}/grub/grubenv set onie_entry="ONIE" || return $?
+    if [ -d /sys/firmware/efi/efivars ]; then
+        onie_boot_num=$(efibootmgr | grep "ONIE:" | awk '{ print $1 }' | cut -b 5-8 )
+        efibootmgr -n $onie_boot_num
+    else
+        grub-editenv ${os_boot}/grub/grubenv set onie_entry="ONIE" || return $?
+    fi
     grub-editenv ${onie_mount}/grub/grubenv set onie_mode="update" || return $?
 
     return 0
@@ -80,7 +84,12 @@ disable_onie_fw_update_mode() {
         return 1
     fi
 
-    grub-editenv ${os_boot}/grub/grubenv unset onie_entry || return $?
+    if [ -d /sys/firmware/efi/efivars ]; then
+        sonic_boot_num=$(efibootmgr | grep "SONiC-OS" | awk '{ print $1 }' | cut -b 5-8 )
+        efibootmgr -n $sonic_boot_num
+    else
+        grub-editenv ${os_boot}/grub/grubenv unset onie_entry || return $?
+    fi
     grub-editenv ${onie_mount}/grub/grubenv set onie_mode="install" || return $?
 
     return 0
@@ -106,7 +115,7 @@ system_reboot() {
     sleep 5s
 
     # Use SONiC reboot scenario
-    /usr/local/bin/reboot
+    /usr/local/bin/reboot -f
     exit $?
 }
 
