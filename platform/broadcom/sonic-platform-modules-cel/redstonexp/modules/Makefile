@@ -1,0 +1,1 @@
+obj-m := mc24lc64t.o emc2305.o slx_gpio_ich.o redstone_xp_cpld.o redstone_xp_i2c.o redstone_xp_wdt.o

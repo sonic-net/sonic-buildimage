@@ -1,0 +1,8 @@
+redstonexp/scripts/redstonexp_check_qsfp.sh usr/local/bin
+redstonexp/cfg/redstonexp-modules.conf etc/modules-load.d
+redstonexp/systemd/platform-modules-redstonexp.service lib/systemd/system
+redstonexp/scripts/fancontrol.sh etc/init.d
+redstonexp/scripts/fancontrol.service lib/systemd/system
+services/fancontrol/fancontrol  usr/local/bin
+redstonexp/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_redstone_xp-r0
+services/platform_api/platform_api_mgnt.sh usr/local/bin
