@@ -456,7 +456,7 @@ echo "system-health.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 # Copy logrotate.d configuration files
 sudo cp -f $IMAGE_CONFIGS/logrotate/logrotate.d/* $FILESYSTEM_ROOT/etc/logrotate.d/
-sudo cp $IMAGE_CONFIGS/logrotate/rsyslog.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
+sudo cp -f $IMAGE_CONFIGS/logrotate/templates/* $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 sudo cp $IMAGE_CONFIGS/logrotate/logrotate-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo cp $IMAGE_CONFIGS/logrotate/logrotate-config.sh $FILESYSTEM_ROOT/usr/bin/
 sudo mkdir -p $FILESYSTEM_ROOT/etc/systemd/system/logrotate.timer.d
@@ -536,6 +536,9 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable systemd-bootchart
 
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install azure-storage==0.36.0
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install watchdog==0.10.3
+
+# Copy defaults template
+sudo cp $BUILD_TEMPLATES/defaults.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 
 {% if include_kubernetes == "y" %}
 # Point to kubelet to /etc/resolv.conf
