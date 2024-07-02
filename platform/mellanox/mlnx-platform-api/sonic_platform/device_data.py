@@ -102,6 +102,13 @@ DEVICE_DATA = {
     },
     'x86_64-mlnx_msn4600-r0': {
     },
+    'x86_64-nvidia_sn4280-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False
+            }
+        }
+    },
     'x86_64-nvidia_sn4800-r0': {
         'thermal': {
             "capability": {
@@ -257,11 +264,13 @@ class DeviceDataManager:
 
     @classmethod
     def get_cpld_component_list(cls):
-        from .component import ComponentCPLD, ComponentCPLDSN2201
+        from .component import ComponentCPLD, ComponentCPLDSN2201, ComponentCPLDSN4280, ComponenetFPGADPU
         if cls.get_platform_name() in ['x86_64-nvidia_sn2201-r0']:
             # For SN2201, special chass is required for handle BIOS
             # Currently, only fetching BIOS version is supported
             return ComponentCPLDSN2201.get_component_list()
+        if cls.get_platform_name() in ['x86_64-nvidia_sn4280-r0']:
+            return ComponentCPLDSN4280.get_component_list() + ComponenetFPGADPU.get_component_list()
         return ComponentCPLD.get_component_list()
 
     @classmethod
