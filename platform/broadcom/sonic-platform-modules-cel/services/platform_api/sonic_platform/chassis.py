@@ -254,6 +254,65 @@ class Chassis(ChassisBase):
 
         return self._api_common.get_event(timeout, self._config['get_change_event'], self._sfp_list)
 
+    ##############################################
+    # System LED methods
+    ##############################################
+
+    def initizalize_system_led(self):
+        self.has_system_led = 'system_led_status' in self._config and 'system_led_color' in self._config
+        return self.has_system_led
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the system LED
+        Args:
+            color: A string representing the color with which to set the
+                   system LED
+        Returns:
+            bool: True if system LED state is set successfully, False if not
+        """
+        if not self.initizalize_system_led():
+            raise NotImplementedError
+
+        led_data = {
+            'green': ('green', 'on'),
+            'green_blink': ('green', '4hz'),
+            'orange': ('yellow', 'on'),
+            'orange_blink': ('yellow', '4hz'),
+            'both_blink': ('both', '4hz'),
+            'off': ('off', 'off')
+        }.get(color, None)
+
+        if not led_data:
+            return False
+
+        return self._api_common.set_output(0, led_data[0], self._config['system_led_color']) and \
+               self._api_common.set_output(0, led_data[1], self._config['system_led_status'])
+
+    def get_status_led(self):
+        """
+        Gets the state of the system LED
+        Returns:
+            A string, one of the valid LED color strings which could be vendor
+            specified.
+        """
+        if not self.initizalize_system_led():
+            raise NotImplementedError
+
+        led_color = self._api_common.get_output(0, self._config['system_led_color'], Common.NULL_VAL)
+        led_status = self._api_common.get_output(0, self._config['system_led_status'], Common.NULL_VAL)
+
+        color_name = {
+            ('green', 'on'): 'green',
+            ('green', '4hz'): 'green_blink',
+            ('yellow', 'on'): 'orange',
+            ('yellow', '4hz'): 'orange_blink',
+            ('both', '4hz'): 'both_blink',
+            ('off', 'off'): 'off'
+        }.get((led_color, led_status), None)
+
+        return color_name
+
     # ##############################################################
     # ###################### Other methods ########################
     # ##############################################################
