@@ -1,0 +1,6 @@
+{% for mirror_domain in MIRROR_DOMAINS.split(',') %}
+# Give a higher preference to packages coming from the snapshot repo
+Package: *
+Pin: origin "{{ mirror_domain }}"
+Pin-Priority: 600
+{% endfor %}
