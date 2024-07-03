@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "7220 IXR-H4",
+        "name": "7220 IXR-H4-64D",
         "components": [
             {
                 "name": "BIOS"
