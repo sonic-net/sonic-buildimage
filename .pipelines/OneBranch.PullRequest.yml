@@ -29,6 +29,7 @@ name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd
 variables:
   - template: .azure-pipelines/template-variables.yml@acs-buildimage
   - template: .pipelines/azure-pipelines-repd-build-variables.yml@acs-buildimage
+  - group: SONiC-sonicbld
 
 stages:
 - stage: BuildVS
@@ -145,7 +146,6 @@ stages:
   dependsOn: BuildVS
   condition: in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')
   variables:
-    - group: SONiC-sonicbld
     - group: SONiC-Elastictest
     - name: inventory
       value: veos_vtb
@@ -293,7 +293,6 @@ stages:
       value: $[ stageDependencies.Test.dualtor_elastictest.result ]
     - name: job6
       value: $[ stageDependencies.Test.multi_asic_elastictest.result ]
-    - group: SONiC-sonicbld
   jobs:
   - job:
     pool: sonic-ubuntu-1c
