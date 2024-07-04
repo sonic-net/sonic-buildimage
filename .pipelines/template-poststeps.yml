@@ -60,6 +60,7 @@ steps:
       displayName: "Publish to Azure Storage"
     - task: SSH@0
       displayName: "Make soft links for trusty8"
+      continueOnError: true
       inputs:
         sshEndpoint: 'acs-trusty8'
         runOptions: 'inline'
