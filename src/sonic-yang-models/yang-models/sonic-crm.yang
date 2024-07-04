@@ -910,6 +910,32 @@ module sonic-crm {
                     type threshold;
                 }
 
+                leaf dram_threshold_type {
+                    description "CRM threshold support for DRAM";
+
+                    must "(((current()='PERCENTAGE' or current()='percentage') and
+                        ../dram_high_threshold<100 and
+                        ../dram_low_threshold<100) or
+                        (current()!='PERCENTAGE' and current()!='percentage'))";
+                    type stypes:crm_threshold_type;
+                }
+
+                leaf dram_high_threshold {
+                    description "CRM threshold support for DRAM";
+
+                    must "(current() > ../dram_low_threshold)"
+                    {
+                        error-message "high_threshold should be more than low_threshold";
+                    }
+                    type threshold;
+                }
+
+                leaf dram_low_threshold {
+                    description "CRM threshold support for DRAM";
+
+                    type threshold;
+                }
+
             }
             /* end of Config */
         }

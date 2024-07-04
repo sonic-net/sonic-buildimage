@@ -33,7 +33,8 @@ resources = [
     'mpls_inseg',
     'mpls_nexthop',
     'srv6_my_sid_entry',
-    'srv6_nexthop'
+    'srv6_nexthop',
+    'dram'
 ]
 
 
