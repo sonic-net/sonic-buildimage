@@ -48,3 +48,10 @@ steps:
       rm -f target/sonic-installers
       make PLATFORM=${{ parameters.PLATFORM_NAME }} PLATFORM_ARCH=${{ parameters.PLATFORM_ARCH }} ${{ parameters.OPTIONS }} configure
     displayName: 'Make configure'
+  - task: CodeQL3000Init@0
+    inputs:
+      ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+        Enabled: true
+      ${{ else }}:
+        Enabled: false
+

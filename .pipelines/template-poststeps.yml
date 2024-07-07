@@ -15,6 +15,8 @@ parameters:
     default: n
 
 steps:
+  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+    - task: CodeQL3000Finalize@0
   - task: PublishPipelineArtifact@1
     continueOnError: true
     condition: always()
