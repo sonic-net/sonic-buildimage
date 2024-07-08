@@ -182,6 +182,9 @@ INCLUDE_MACSEC = y
 # INCLUDE_GBSYNCD - build docker-gbsyncd-* for gearbox support
 INCLUDE_GBSYNCD ?= y
 
+# INCLUDE_POE - build docker-poesyncd-* for PoE support
+INCLUDE_POE = y
+
 # INCLUDE_TEAMD - build docker-teamd for LAG protocol support
 INCLUDE_TEAMD ?= y
 
