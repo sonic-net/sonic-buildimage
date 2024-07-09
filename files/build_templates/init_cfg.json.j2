@@ -17,8 +17,11 @@
                     "ipmc_entry", "mpls_inseg", "mpls_nexthop"] %}
             "{{crm_res}}_threshold_type": "percentage",
             "{{crm_res}}_low_threshold": "70",
-            "{{crm_res}}_high_threshold": "85"{% if not loop.last %},{% endif -%}
-{% endfor %}
+            "{{crm_res}}_high_threshold": "85",
+{%- endfor %}
+            "dram_threshold_type": "percentage",
+            "dram_low_threshold": "90",
+            "dram_high_threshold": "95"
         }
     },
     "FLEX_COUNTER_TABLE": {
