@@ -41,5 +41,15 @@
         "host_path": "/usr/share/sonic/device/x86_64-cel_seastone_2-r0/sonic_platform_config/event.py",
         "pmon_path": "/usr/share/sonic/platform/sonic_platform_config/event.py",
         "class": "SfpEvent"
+    },
+    "system_led_status": {
+        "output_source": "sysfs_value",
+        "set_method": "sysfs_value",
+        "sysfs_path": "/sys/devices/platform/baseboard/sys_led"
+    },
+    "system_led_color": {
+        "output_source": "sysfs_value",
+        "set_method": "sysfs_value",
+        "sysfs_path": "/sys/devices/platform/baseboard/sys_led_color"
     }
 }
