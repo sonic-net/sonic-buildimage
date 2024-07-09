@@ -11,6 +11,7 @@ Usage: $prog [OPTIONS]
 OPTIONS:
   -h, --help            ; this screen
   -c, --configure       ; configure only
+  -s, --submodule       ; test submodule patch function
       --rpc             ; build syncd rpc image only
 "
   exit $1
@@ -24,8 +25,8 @@ OPTIONS:
 # getopt -o hr:o:: -l help,reqarg:,optarg:: -n $prog -- "$@"
 TEMP=`
 getopt \
--o hc \
--l help,configure,rpc \
+-o hcs \
+-l help,configure,rpc,submodule \
 --name="$prog" \
 -- "$@" \
 `
@@ -43,6 +44,7 @@ while true; do
   case "$1" in
     -h | --help )      usage 0 ;;
     -c | --configure)  opt_configure=1; shift ;;
+    -s | --submodule_add)  opt_submodule_test=1; shift ;;
          --rpc )       opt_rpc=1; shift ;;
     --        )        shift;  break ;;
     *         )        break ;;
@@ -74,9 +76,8 @@ _submodule_add() {
     git config user.name "${GITLAB_USER_LOGIN}"
   fi
   # # git revert and/or cherry-picks here
-  git remote remove $2 || true
+  git remote remove $2 &>/dev/null || true
   git remote add -f $2 $3
-  git fetch --all
   git cherry-pick --keep-redundant-commits -x $4 || git cherry-pick --abort
   popd &>/dev/null
 }
@@ -129,6 +130,12 @@ build_rpc () {
   submodule_prs
   make SONIC_BUILD_JOBS=2 ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-dnx-rpc.gz
 }
+
+if [ $opt_submodule_test -eq 1 ]; then
+  echo "Test submodule_prs"
+  submodule_prs
+  exit $?
+fi
 
 configure
 rc=$?
