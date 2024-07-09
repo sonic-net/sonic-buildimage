@@ -1,0 +1,14 @@
+
+[Unit]
+Description=Celestica Redstone XP platform modules
+After=local-fs.target
+Before=pmon.service
+
+[Service]
+Type=oneshot
+ExecStart=-/etc/init.d/platform-modules-redstonexp start
+ExecStop=-/etc/init.d/platform-modules-redstonexp stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
