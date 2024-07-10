@@ -36,7 +36,7 @@ def ip_addr(ip_network_addr):
     A helper function to get the IP address from an IP address with mask
     return a string
     """
-    return str(ip_network(ip_network_addr).network_address)
+    return str(ip_network(ip_network_addr, strict=False).network_address)
 
 def monotonic_ms():
     return time.monotonic_ns()/1000000
@@ -732,7 +732,7 @@ class ReplyMonitor():
         
             if status[0]['state'] == 'up':
                 up_ifaces.append(iface)
-        
+        netlink_api.close()
         return up_ifaces
 
 
