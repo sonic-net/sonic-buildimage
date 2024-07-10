@@ -5,7 +5,8 @@ After=getty.target
 [Service]
 Type=oneshot
 ExecStartPre=/usr/bin/bfrshlog "Linux up"
-ExecStart=/usr/bin/bfrshlog "DPU is ready"
+ExecStartPre=/usr/bin/bfrshlog "DPU is ready"
+ExecStart=/usr/bin/bfup
 StandardOutput=journal+console
 
 [Install]

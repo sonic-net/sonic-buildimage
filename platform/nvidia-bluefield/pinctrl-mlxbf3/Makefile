@@ -32,8 +32,6 @@ $(addprefix $(DEST)/, $(MLXBF3_PINCTRL_DRIVER)): $(DEST)/% :
 
 	pushd ${MLXBF3_PINCTRL}
 
-	patch -p1 < ../../pinctrl-mlxbf3.c.patch
-
 	# Build the package
 	make -C /lib/modules/$(KVERSION)/build M=$(MODULE_DIR)
 
