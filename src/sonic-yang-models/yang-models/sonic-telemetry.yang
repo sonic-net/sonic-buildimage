@@ -77,7 +77,7 @@ module sonic-telemetry {
                 }
 
                 leaf crl_expire_duration {
-                    type uint
+                    type uint32
                     description "Certificate revocation list cache expire duration.";
                 }
 
