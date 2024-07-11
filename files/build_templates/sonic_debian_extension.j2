@@ -1063,6 +1063,8 @@ for MLNX_CPLD_ARCHIVE in $MLNX_CPLD_ARCHIVES; do
 done
 sudo cp platform/mellanox/get_component_versions/get_component_versions.py $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/get_component_versions.py
+sudo cp platform/mellanox/cmis_host_mgmt/cmis_host_mgmt.py $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/cmis_host_mgmt.py
 j2 platform/mellanox/mlnx-fw-upgrade.j2 | sudo tee $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mlnx-fw-upgrade.sh
 
