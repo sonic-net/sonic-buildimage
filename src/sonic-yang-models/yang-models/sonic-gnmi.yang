@@ -71,6 +71,16 @@ module sonic-gnmi {
                     description "Port gnmi runs on.";
                 }
 
+                leaf enable_crl {
+                    type boolean;
+                    description "Flag for enable certificate revocation list.";
+                }
+
+                leaf crl_expire_duration {
+                    type uint
+                    description "Certificate revocation list cache expire duration.";
+                }
+
             }
 
         }
