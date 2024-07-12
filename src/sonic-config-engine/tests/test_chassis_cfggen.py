@@ -104,7 +104,7 @@ class TestVoqChassisSingleAsic(TestChassis):
         argument = ['-m', self.sample_graph, '-p',
                     self.sample_port_config, '--var-json', 'NTP_SERVER']
         output = json.loads(self.run_script(argument))
-        self.assertDictEqual(output, {'17.39.1.130': {}, '17.39.1.129': {}})
+        self.assertDictEqual(output, {'17.39.1.130': {'iburst': 'on'}, '17.39.1.129': {'iburst': 'on'}})
         # NTP data is present only in the host config
         argument = ['-m', self.sample_graph, '--var-json', 'NTP_SERVER']
 
@@ -416,7 +416,7 @@ class TestVoqChassisMultiAsic(TestChassis):
         argument = ['-m', self.sample_graph, '-p',
                     self.sample_port_config, '--var-json', 'NTP_SERVER']
         output = json.loads(self.run_script(argument))
-        self.assertDictEqual(output, {'17.39.1.130': {}, '17.39.1.129': {}})
+        self.assertDictEqual(output, {'17.39.1.130': {'iburst': 'on'}, '17.39.1.129': {'iburst': 'on'}})
         # NTP data is present only in the host config
         argument = ['-m', self.sample_graph, '--var-json', 'NTP_SERVER']
 
@@ -884,7 +884,7 @@ class TestVoqChassisSup(TestChassis):
             '--var-json', 'NTP_SERVER'
         ]
         output = json.loads(self.run_script(argument))
-        self.assertDictEqual(output, {'17.39.1.130': {}, '17.39.1.129': {}})
+        self.assertDictEqual(output, {'17.39.1.130': {'iburst': 'on'}, '17.39.1.129': {'iburst': 'on'}})
 
 
     def test_mgmt_port(self):
@@ -1019,7 +1019,7 @@ class TestPacketChassisSup(TestChassis):
             '--var-json', 'NTP_SERVER'
         ]
         output = json.loads(self.run_script(argument))
-        self.assertDictEqual(output, {'17.39.1.130': {}, '17.39.1.129': {}})
+        self.assertDictEqual(output, {'17.39.1.130': {'iburst': 'on'}, '17.39.1.129': {'iburst': 'on'}})
         # NTP data is present only in the host config
         argument = ['-m', self.sample_graph, '--var-json', 'NTP_SERVER']
 

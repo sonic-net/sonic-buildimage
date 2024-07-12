@@ -2625,7 +2625,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         results['SYSLOG_SERVER'] = dict((item, {}) for item in syslog_servers)
         results['DHCP_SERVER'] = dict((item, {}) for item in dhcp_servers)
         results['DHCP_RELAY'] = dhcp_relay_table
-        results['NTP_SERVER'] = dict((item, {}) for item in ntp_servers)
+        results['NTP_SERVER'] = dict((item, {'iburst': 'on'}) for item in ntp_servers)
         # Set default DNS nameserver from dns.j2
         results['DNS_NAMESERVER'] = {}
         if os.environ.get("CFGGEN_UNIT_TESTING", "0") == "2":
