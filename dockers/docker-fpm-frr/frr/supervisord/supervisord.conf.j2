@@ -141,6 +141,20 @@ stderr_logfile=syslog
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
 
+{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+{% else %}
+[program:staticroutebfd]
+command=/usr/local/bin/staticroutebfd
+priority=6
+autostart=false
+autorestart=true
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+{% endif %}
+
 [program:bgpmon]
 command=/usr/local/bin/bgpmon
 priority=6
