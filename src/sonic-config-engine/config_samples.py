@@ -36,6 +36,7 @@ def generate_l1_config(data):
 def generate_l3_config(data):
     data['LOOPBACK_INTERFACE'] = {"Loopback0": {},
                                   "Loopback0|10.1.0.1/32": {}}
+    data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     data['BGP_NEIGHBOR'] = {}
     data['DEVICE_NEIGHBOR'] = {}
     data['INTERFACE'] = {}
@@ -144,6 +145,7 @@ def generate_global_dualtor_tables():
     return data
 
 def generate_l2_config(data):
+    data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     # Check if dual ToR configs are needed
     if 'is_dualtor' in data and data['is_dualtor']:
         is_dualtor = True
