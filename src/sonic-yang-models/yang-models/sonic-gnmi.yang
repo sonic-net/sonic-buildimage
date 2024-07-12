@@ -77,7 +77,7 @@ module sonic-gnmi {
                 }
 
                 leaf crl_expire_duration {
-                    type uint32
+                    type uint32;
                     description "Certificate revocation list cache expire duration.";
                 }
 
