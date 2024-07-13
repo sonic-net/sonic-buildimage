@@ -1283,7 +1283,9 @@
             "gnmi": {
                 "client_auth": "true",
                 "log_level": "2",
-                "port": "50051"
+                "port": "50051",
+                "enable_crl": "false",
+                "crl_expire_duration": "86400"
             }
         },
         "TELEMETRY_CLIENT": {
@@ -1320,7 +1322,9 @@
             "gnmi": {
                 "client_auth": "true",
                 "log_level": "2",
-                "port": "50052"
+                "port": "50052",
+                "enable_crl": "false",
+                "crl_expire_duration": "86400"
             }
         },
         "TUNNEL": {

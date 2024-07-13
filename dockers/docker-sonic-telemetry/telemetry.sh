@@ -64,6 +64,16 @@ if [ -z $CLIENT_AUTH ] || [ $CLIENT_AUTH == "false" ]; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
 fi
 
+ENABLE_CRL=$(echo $GNMI | jq -r '.enable_crl')
+if [ $ENABLE_CRL == "true" ]; then
+    TELEMETRY_ARGS+=" --enable_crl"
+fi
+
+CRL_EXPIRE_DURATION=$(echo $GNMI | jq -r '.crl_expire_duration')
+if [ -n $CRL_EXPIRE_DURATION ]; then
+    TELEMETRY_ARGS+=" --crl_expire_duration $CRL_EXPIRE_DURATION"
+fi
+
 LOG_LEVEL=$(echo $GNMI | jq -r '.log_level')
 if [[ $LOG_LEVEL =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" -v=$LOG_LEVEL"
