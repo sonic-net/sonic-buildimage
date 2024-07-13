@@ -1,4 +1,5 @@
 iputils-ping==3:20210202-1
+libasan6==10.2.1-6
 libdashapi==1.0.0
 libprotobuf-lite32==3.21.12-3
 libprotobuf32==3.21.12-3

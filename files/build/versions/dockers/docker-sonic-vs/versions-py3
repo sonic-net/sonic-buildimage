@@ -36,6 +36,7 @@ pyroute2==0.5.14
 redis==4.5.2
 requests==2.31.0
 scapy==2.4.4
+scp==0.14.5
 semantic-version==2.10.0
 systemd-python==235
 toposort==1.6
