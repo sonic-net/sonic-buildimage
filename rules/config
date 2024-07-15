@@ -165,6 +165,9 @@ ENABLE_AUTO_TECH_SUPPORT = y
 # ENABLE_NATIVE_WRITE - Enable native write/config operations via the gNMI interface.
 ENABLE_NATIVE_WRITE = y
 
+# INCLUDE_PAC - build docker-pac for pac support
+INCLUDE_PAC = y
+
 # INCLUDE_MACSEC - build docker-macsec for macsec support
 INCLUDE_MACSEC = y
 
