@@ -24,7 +24,7 @@ libdpkg-perl==1.19.8
 libexpat1-dev==2.2.6-2+deb10u6
 libffi-dev==3.2.1-9
 libgcc-8-dev==8.3.0-6
-libglib2.0-0==2.58.3-2+deb10u4
+libglib2.0-0==2.58.3-2+deb10u5
 libgomp1==8.3.0-6
 libicu63==63.1-6+deb10u3
 libisl19==0.20-2
@@ -40,10 +40,10 @@ libpython-dev==2.7.16-1
 libpython-stdlib==2.7.16-1
 libpython2-dev==2.7.16-1
 libpython2-stdlib==2.7.16-1
-libpython2.7==2.7.16-2+deb10u2
-libpython2.7-dev==2.7.16-2+deb10u2
-libpython2.7-minimal==2.7.16-2+deb10u2
-libpython2.7-stdlib==2.7.16-2+deb10u2
+libpython2.7==2.7.16-2+deb10u3
+libpython2.7-dev==2.7.16-2+deb10u3
+libpython2.7-minimal==2.7.16-2+deb10u3
+libpython2.7-stdlib==2.7.16-2+deb10u3
 libqt5core5a==5.11.3+dfsg1-1+deb10u5
 libqt5dbus5==5.11.3+dfsg1-1+deb10u5
 libqt5network5==5.11.3+dfsg1-1+deb10u5
@@ -54,9 +54,9 @@ libstdc++-8-dev==8.3.0-6
 libthrift-0.11.0==0.11.0-4
 libtsan0==8.3.0-6
 libubsan1==8.3.0-6
-libuv1==1.24.1-1+deb10u1
+libuv1==1.24.1-1+deb10u2
 libxml2==2.9.4+dfsg1-7+deb10u6
-linux-libc-dev==4.19.289-2
+linux-libc-dev==4.19.304-1
 make==4.2.1-1.2
 patch==2.7.6-3+deb10u1
 python==2.7.16-1
@@ -71,8 +71,8 @@ python-setuptools==40.8.0-1
 python2==2.7.16-1
 python2-dev==2.7.16-1
 python2-minimal==2.7.16-1
-python2.7==2.7.16-2+deb10u2
-python2.7-dev==2.7.16-2+deb10u2
-python2.7-minimal==2.7.16-2+deb10u2
+python2.7==2.7.16-2+deb10u3
+python2.7-dev==2.7.16-2+deb10u3
+python2.7-minimal==2.7.16-2+deb10u3
 syncd-rpc==1.0.0
 wget==1.20.1-1.1

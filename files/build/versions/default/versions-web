@@ -3,8 +3,8 @@ https://deb.nodesource.com/node_14.x/dists/bullseye/Release==6b7d50c433d129d4c6f
 https://deb.nodesource.com/node_14.x/dists/buster/Release==42875141604382f0abb4d047f645dfe1
 https://deb.nodesource.com/setup_14.x==c30873f4a513bb935afaf8f65e7de9e1
 https://download.docker.com/linux/debian/gpg==1afae06b34a13c1b3d9cb61a26285a15
-https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==0334fd679ec178f14882b73ebc10d7d8
-https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==e07f07d9f758cdcf57ba5d2ff9f3d491
+https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==44124b7ea28b7ffc38cb7a6b770b7844
+https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==13442c16ab9043c7f351f74001c565ac
 https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.1/amd64/golang-1.15-go_1.15.15-1~deb11u4%2Bfips_amd64.deb==b60f6db62805696b47ab422ab798fe56
 https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.1/amd64/golang-1.15-src_1.15.15-1~deb11u4%2Bfips_amd64.deb==1c920937aa49b602a1bfec3c49747131
 https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.1/arm64/golang-1.15-go_1.15.15-1~deb11u4%2Bfips_arm64.deb==0b70c104b907db13ff2fe5d52b3d0008

@@ -1,6 +1,6 @@
 binutils-arm-linux-gnueabihf==2.31.1-16
 icu-devtools==63.1-6+deb10u3
-libglib2.0-0==2.58.3-2+deb10u4
+libglib2.0-0==2.58.3-2+deb10u5
 libicu-dev==63.1-6+deb10u3
 libicu63==63.1-6+deb10u3
 libxml2==2.9.4+dfsg1-7+deb10u6

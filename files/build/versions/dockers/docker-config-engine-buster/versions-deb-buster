@@ -36,8 +36,8 @@ libnl-genl-3-200==3.5.0-1
 libnl-nf-3-200==3.5.0-1
 libnl-route-3-200==3.5.0-1
 libpython3-dev==3.7.3-1
-libpython3.7==3.7.3-2+deb10u5
-libpython3.7-dev==3.7.3-2+deb10u5
+libpython3.7==3.7.3-2+deb10u6
+libpython3.7-dev==3.7.3-2+deb10u6
 libquadmath0==8.3.0-6
 libstdc++-8-dev==8.3.0-6
 libswsscommon==1.0.0
@@ -45,12 +45,12 @@ libtsan0==8.3.0-6
 libubsan1==8.3.0-6
 libyang==1.0.73
 libyang-cpp==1.0.73
-linux-libc-dev==4.19.289-2
+linux-libc-dev==4.19.304-1
 make==4.2.1-1.2
 patch==2.7.6-3+deb10u1
 python3-dev==3.7.3-1
 python3-swsscommon==1.0.0
 python3-yang==1.0.73
-python3.7-dev==3.7.3-2+deb10u5
+python3.7-dev==3.7.3-2+deb10u6
 sonic-db-cli==1.0.0
 xz-utils==5.2.4-1+deb10u1

@@ -4,7 +4,8 @@ libnl-genl-3-200==3.5.0-1
 libnl-genl-3-dev==3.5.0-1
 libnl-nf-3-200==3.5.0-1
 libnl-nf-3-dev==3.5.0-1
-libsai-dev==1.11.0-1
+libsai==1.11.0-2
+libsai-dev==1.11.0-2
 libsaimetadata==1.0.0
 libsaimetadata-dev==1.0.0
 libsairedis==1.0.0
@@ -20,7 +21,6 @@ libteam5==1.30-1
 libteamdctl0==1.30-1
 libthrift-0.11.0==0.11.0-4
 libthrift-dev==0.11.0-4
-libthrift0==0.14.1
 libyang==1.0.73
 libyang-cpp==1.0.73
 libyang-dev==1.0.73
@@ -30,8 +30,4 @@ python3-swsscommon==1.0.0
 python3-yang==1.0.73
 sonic-mgmt-common==1.0.0
 sonic-mgmt-common-codegen==1.0.0
-sonic-mgmt-framework==1.0-01
-swss==1.0.0
-syncd==1.0.0
-syncd-vs==1.0.0
 thrift-compiler==0.11.0-4
