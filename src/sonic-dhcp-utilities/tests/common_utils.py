@@ -65,17 +65,22 @@ def mock_get_config_db_table(table_name):
 
 
 class MockProc(object):
-    def __init__(self, name, pid=None, status=psutil.STATUS_RUNNING):
+    def __init__(self, name, pid=1, exited=False):
         self.proc_name = name
         self.pid = pid
+        self.exited = exited
 
     def name(self):
+        if self.exited:
+            raise psutil.NoSuchProcess(self.pid)
         return self.proc_name
 
     def send_signal(self, sig_num):
         pass
 
     def cmdline(self):
+        if self.exited:
+            raise psutil.NoSuchProcess(self.pid)
         if self.proc_name == "dhcrelay":
             return ["/usr/sbin/dhcrelay", "-d", "-m", "discard", "-a", "%h:%p", "%P", "--name-alias-map-file",
                     "/tmp/port-name-alias-map.txt", "-id", "Vlan1000", "-iu", "docker0", "240.127.1.2"]
