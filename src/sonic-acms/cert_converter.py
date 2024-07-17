@@ -86,14 +86,22 @@ def link_to_latest_cert(acms_certs_path, certs_path):
         crt_versioned_file_name = crt_file_name+"."+cert_ver
         if crt_versioned_file_name not in targets:
             sonic_logger.log_notice("cert_converter : link_to_latest_cert : linking " + crt_versioned_file_name + " to " + crt_file_name, True)
-            if os.path.exists(crt_file_name):
+            if os.path.islink(crt_file_name):
+                # Remove symbolic link
+                os.unlink(crt_file_name)
+            elif os.path.exists(crt_file_name):
+                # Remove file
                 os.remove(crt_file_name)
             os.symlink(crt_versioned_file_name, crt_file_name)
         key_file_name = certs_path+cert_name+".key"
         key_versioned_file_name = key_file_name+"."+cert_ver
         if key_versioned_file_name not in targets:
             sonic_logger.log_notice("cert_converter : link_to_latest_cert : linking " + key_versioned_file_name + " to " + key_file_name, True)
-            if os.path.exists(key_file_name):
+            if os.path.islink(key_file_name):
+                # Remove symbolic link
+                os.unlink(key_file_name)
+            elif os.path.exists(key_file_name):
+                # Remove file
                 os.remove(key_file_name)
             os.symlink(key_versioned_file_name, key_file_name)
         sonic_logger.log_info("cert_converter : link_to_latest_cert : Finished linking cert "+cert_name+".pfx")
