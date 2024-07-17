@@ -4,10 +4,10 @@
 [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
 
 PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
-switch_type=`sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'switch_type'`
+type=`sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'type'`
 TSA_CHASSIS_STATE=false
 
-if [[ $switch_type == 'voq' ]]; then
+if [[ $type == *"SpineRouter"* ]]; then
  TSA_CHASSIS_STATE="$(sonic-db-cli CHASSIS_APP_DB HGET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled)"
 fi
 

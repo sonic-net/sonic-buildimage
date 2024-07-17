@@ -19,7 +19,7 @@ if [ -f /etc/sonic/chassisdb.conf ]; then
     echo "Chassis Mode: Maintenance -> Normal"
     logger -t TSB -p user.info "Chassis Mode: Maintenance -> Normal"
   fi
-  echo "Please execute \"rexec all -c 'sudo config save -y'\" to preserve System mode in Normal state after reboot\
+  echo "Please execute 'sudo config save' to preserve System mode in Normal state after reboot\
   or config reload on all linecards"
   exit 0
 fi

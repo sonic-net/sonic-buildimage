@@ -34,9 +34,7 @@ module sonic-system-port {
                 }
 
                 leaf asic_name {
-                    type string {
-                        pattern "[Aa]sic[0-4]";
-                    }
+                    type stypes:asic_name;
                 }
 
                 leaf ifname {

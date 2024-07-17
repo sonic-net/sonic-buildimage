@@ -33,6 +33,10 @@ $ModLoad imklog   # provides kernel logging support
 $ModLoad imudp
 $UDPServerAddress {{udp_server_ip}}  #bind to localhost before udp server run
 $UDPServerRun 514
+{% if docker0_ip and docker0_ip != "" %}
+$UDPServerAddress {{docker0_ip}}
+$UDPServerRun 514
+{% endif%}
 
 # provides TCP syslog reception
 #$ModLoad imtcp

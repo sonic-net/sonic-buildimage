@@ -66,6 +66,7 @@ def test_dump_dhcp4_config(mock_swsscommon_dbconnector_init, enabled_checker):
 def test_notify_kea_dhcp4_proc(process_list, mock_swsscommon_dbconnector_init, mock_get_render_template,
                                mock_parse_port_map_alias):
     proc_list = [MockProc(process_name) for process_name in process_list]
+    proc_list.append(MockProc("exited_proc", exited=True))
     with patch.object(psutil, "process_iter", return_value=proc_list), \
          patch.object(MockProc, "send_signal", MagicMock()) as mock_send_signal:
         dhcp_db_connector = DhcpDbConnector()

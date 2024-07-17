@@ -346,7 +346,11 @@ start() {
     fi
 
     # Default rsyslog target IP for single ASIC platform
+{%- if docker_container_name == "dhcp_server" %}
+    SYSLOG_TARGET_IP=$(docker network inspect bridge --format={{ "'{{(index .IPAM.Config 0).Gateway}}'" }})
+{%- else %}
     SYSLOG_TARGET_IP=127.0.0.1
+{%- endif %}
     if [[ ($NUM_ASIC -gt 1) ]]; then
         SYSLOG_TARGET_IP=$(docker network inspect bridge --format={{ "'{{(index .IPAM.Config 0).Gateway}}'" }})
     fi

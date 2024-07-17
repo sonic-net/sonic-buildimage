@@ -9,7 +9,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	git stash
 	git apply -3 ../*.patch || exit 1
 	chmod +x ./debian/rules
-	KVERSION=$(KVERSION) dpkg-buildpackage -us -uc -b -rfakeroot -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+	KVERSION=$(KVERSION) LM_DEPENDS=0 dpkg-buildpackage -us -uc -b -rfakeroot -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 	popd
 
 	mv $* $(DEST)/

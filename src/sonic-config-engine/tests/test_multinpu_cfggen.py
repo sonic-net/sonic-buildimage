@@ -151,7 +151,7 @@ class TestMultiNpuCfgGen(TestCase):
     def test_metadata_ntp(self):
         argument = ['-m', self.sample_graph, '-p', self.sample_port_config, '--var-json', "NTP_SERVER"]
         output = json.loads(self.run_script(argument))
-        self.assertDictEqual(output, {'17.39.1.130': {}, '17.39.1.129': {}})
+        self.assertDictEqual(output, {'17.39.1.130': {'iburst': 'on'}, '17.39.1.129': {'iburst': 'on'}})
         #NTP data is present only in the host config
         argument = ['-m', self.sample_graph, '--var-json', "NTP_SERVER"]
         for asic in range(NUM_ASIC):

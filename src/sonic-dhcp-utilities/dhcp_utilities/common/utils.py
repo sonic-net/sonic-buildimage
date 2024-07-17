@@ -160,8 +160,11 @@ def get_target_process_cmds(process_name):
     """
     res = []
     for proc in psutil.process_iter():
-        if proc.name() == process_name:
-            res.append(proc.cmdline())
+        try:
+            if proc.name() == process_name:
+                res.append(proc.cmdline())
+        except psutil.NoSuchProcess:
+            continue
     return res
 
 

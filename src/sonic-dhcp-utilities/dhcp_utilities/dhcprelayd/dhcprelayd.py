@@ -319,16 +319,19 @@ class DhcpRelayd(object):
 
         # Get old dhcrelay process and get old dhcp interfaces
         for proc in psutil.process_iter():
-            if proc.name() == process_name:
-                cmds = proc.cmdline()
-                index = 0
-                target_procs.append(proc)
-                while index < len(cmds):
-                    if cmds[index] == "-id":
-                        old_dhcp_interfaces.add(cmds[index + 1])
-                        index += 2
-                    else:
-                        index += 1
+            try:
+                if proc.name() == process_name:
+                    cmds = proc.cmdline()
+                    index = 0
+                    target_procs.append(proc)
+                    while index < len(cmds):
+                        if cmds[index] == "-id":
+                            old_dhcp_interfaces.add(cmds[index + 1])
+                            index += 2
+                        else:
+                            index += 1
+            except psutil.NoSuchProcess:
+                continue
         if len(target_procs) == 0:
             return NOT_FOUND_PROC
 

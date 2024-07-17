@@ -7,11 +7,6 @@ mkdir -p /etc/supervisor/conf.d/
 mkdir -p /etc/kea/
 udp_server_ip=$(ip -j -4 addr list lo scope host | jq -r -M '.[0].addr_info[0].local')
 hostname=$(hostname)
-# Generate the following files from templates:
-# port-to-alias name map
-sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog.conf.j2 \
-    -a "{\"udp_server_ip\": \"$udp_server_ip\", \"hostname\": \"$hostname\"}" \
-    > /etc/rsyslog.conf
 
 # Make the script that waits for all interfaces to come up executable
 chmod +x /etc/kea/lease_update.sh /usr/bin/start.sh

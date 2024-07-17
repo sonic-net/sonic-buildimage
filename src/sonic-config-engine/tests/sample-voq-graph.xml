@@ -1,14 +1,7 @@
 <DeviceMiniGraph xmlns="Microsoft.Search.Autopilot.Evolution" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
   <CpgDec>
     <PeeringSessions/>
-    <Routers xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
-      <a:BGPRouterDeclaration>
-        <a:ASN>65100</a:ASN>
-          <a:Hostname>linecard-1</a:Hostname>
-          <a:Peers/>
-        <a:RouteMaps/>
-      </a:BGPRouterDeclaration>
-    </Routers>
+    <Routers xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
   </CpgDec>
   <DpgDec>
     <DeviceDataPlaneInfo>
