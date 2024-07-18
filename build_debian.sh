@@ -580,6 +580,10 @@ if [ -f files/image_config/sonic_release ]; then
     sudo cp files/image_config/sonic_release $FILESYSTEM_ROOT/etc/sonic/
 fi
 
+if [ -f files/image_config/grpc_secrets/grpc_secrets.json ]; then
+    sudo cp files/image_config/grpc_secrets/grpc_secrets.json $FILESYSTEM_ROOT/etc/sonic/
+fi
+
 # Default users info
 export password_expire="$( [[ "$CHANGE_DEFAULT_PASSWORD" == "y" ]] && echo true || echo false )"
 export username="${USERNAME}"
