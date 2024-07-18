@@ -1,0 +1,46 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+ARG image_version
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+# Pass the Config location to procs in container
+ENV LOM_CONF_LOCATION=/usr/share/lom/
+
+# Set the binaries to run in Prod mode
+ENV LOM_RUN_MODE=PROD
+
+# Enable core dump
+ENV GOTRACEBACK=crash
+
+# Update apt's cache of available packages
+RUN apt-get update
+
+RUN apt-get -y install uuid-runtime
+
+{% if docker_device_health_debs.strip() -%}
+# Copy built Debian packages
+{{ copy_files("debs/", docker_device_health_debs.split(' '), "/debs/") }}
+
+# Install built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_device_health_debs.split(' ')) }}
+{%- endif %}
+
+# Clean up
+RUN apt-get clean -y         && \
+    apt-get autoclean -y     && \
+    apt-get autoremove -y    && \
+    rm -rf /debs
+
+COPY ["docker_init.sh", "start.sh", "gNMIServer_start.sh", "/usr/bin/"]
+COPY ["lom.supervisord.conf.j2", "telemetry_vars.j2", "/usr/share/sonic/templates/"]
+COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
+COPY ["critical_processes", "/etc/supervisor"]
+
+ENTRYPOINT ["/usr/bin/docker_init.sh"]
