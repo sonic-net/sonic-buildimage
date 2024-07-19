@@ -41,6 +41,9 @@ class PddfFanDrawer(FanDrawerBase):
         Retrieves the fan drawer name
         Returns: String containing fan-drawer name
         """
+        if 'drawer_name' in self.plugin_data['FAN']:
+            return self.plugin_data['FAN']['drawer_name'][str(self.fantray_index)]
+
         return "Fantray{0}".format(self.fantray_index)
 
     def get_presence(self):
