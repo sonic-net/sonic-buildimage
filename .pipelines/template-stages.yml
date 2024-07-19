@@ -8,24 +8,25 @@ parameters:
     values:
       - 'SONIC_DPKG_CACHE_METHOD=wcache'
       - 'SONIC_DPKG_CACHE_METHOD=rcache'
+      - 'SONIC_DPKG_CACHE_METHOD=cache'
     default: 'SONIC_DPKG_CACHE_METHOD=rcache'
   - name: OPTIONS
     default: 'SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker DEFAULT_CONTAINER_REGISTRY=publicmirror.azurecr.io ENABLE_DOCKER_BASE_PULL=y
               SONIC_BUILD_RETRY_COUNT=3 SONIC_BUILD_RETRY_INTERVAL=600 DOCKER_BUILDKIT=0 SONIC_BUILD_JOBS=4
               PASSWORD=$(SONIC_PASSWORD) INCLUDE_RESTAPI=y ENABLE_FIPS=y SHUTDOWN_BGP_ON_START=y ENABLE_PFCWD_ON_START=y ENABLE_DHCP_GRAPH_SERVICE=y'
 stages:
-- stage: Build
-  variables:
-    - group: SONIC-BUILD-VG-1
-  jobs:
-  - ${{ if containsValue(parameters.JOBS, 'vs') }}:
+- ${{ if containsValue(parameters.JOBS, 'vs') }}:
+  - stage: BuildVS
+    jobs:
     - job: vs
+      ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+        timeoutInMinutes: 840
       pool:
         type: linux
         isCustom: true
         name: sonic-image-builder-1ES
       variables:
-        ob_artifactBaseName: vs
+        ob_artifactBaseName: sonic-buildimage.vs
       steps:
         - template: /.pipelines/template-presteps.yml@self
           parameters:
@@ -44,16 +45,20 @@ stages:
           parameters:
             PLATFORM_NAME: vs
             BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
-            ${{ if contains(parameters.CACHE, 'wcache') }}:
-              UPLOAD: y
+
+- stage: Build
+  dependsOn: []
+  jobs:
   - ${{ if containsValue(parameters.JOBS, 'broadcom') }}:
     - job: broadcom
+      ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+        timeoutInMinutes: 840
       pool:
         type: linux
         isCustom: true
         name: sonic-image-builder-1ES
       variables:
-        ob_artifactBaseName: broadcom
+        ob_artifactBaseName: sonic-buildimage.broadcom
       steps:
         - template: /.pipelines/template-presteps.yml@self
           parameters:
@@ -102,16 +107,16 @@ stages:
           parameters:
             PLATFORM_NAME: broadcom
             BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
-            ${{ if contains(parameters.CACHE, 'wcache') }}:
-              UPLOAD: y
   - ${{ if containsValue(parameters.JOBS, 'mellanox') }}:
     - job: mellanox
+      ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+        timeoutInMinutes: 840
       pool:
         type: linux
         isCustom: true
         name: sonic-image-builder-1ES
       variables:
-        ob_artifactBaseName: mellanox
+        ob_artifactBaseName: sonic-buildimage.mellanox
       steps:
         - template: /.pipelines/template-presteps.yml@self
           parameters:
@@ -128,16 +133,16 @@ stages:
           parameters:
             PLATFORM_NAME: mellanox
             BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
-            ${{ if contains(parameters.CACHE, 'wcache') }}:
-              UPLOAD: y
   - ${{ if containsValue(parameters.JOBS, 'marvell-armhf') }}:
     - job: marvell_armhf
+      ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+        timeoutInMinutes: 840
       pool:
         type: linux
         isCustom: true
         name: sonic-armhf
       variables:
-        ob_artifactBaseName: marvell-armhf
+        ob_artifactBaseName: sonic-buildimage.marvell-armhf
         PLATFORM_ARCH: armhf
       steps:
         - template: /.pipelines/template-presteps.yml@self
@@ -154,10 +159,10 @@ stages:
           parameters:
             PLATFORM_NAME: marvell-armhf
             BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
-            ${{ if contains(parameters.CACHE, 'wcache') }}:
-              UPLOAD: y
   - ${{ if containsValue(parameters.JOBS, 'cisco-8000') }}:
     - job: cisco_8000
+      ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+        timeoutInMinutes: 840
       pool:
         type: linux
         isCustom: true
@@ -167,7 +172,7 @@ stages:
         SONIC_ENABLE_SECUREBOOT_SIGNATURE: y
         SIGNING_KEY: /etc/certificates/sonic-secure-boot-private.pem
         SIGNING_CERT: $(Build.SourcesDirectory)/target/sonic-secure-boot-public.pem
-        ob_artifactBaseName: cisco-8000
+        ob_artifactBaseName: sonic-buildimage.cisco-8000
       steps:
       - template: /.pipelines/template-presteps.yml@self
         parameters:
@@ -242,5 +247,4 @@ stages:
         parameters:
           PLATFORM_NAME: cisco-8000
           BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
-          ${{ if contains(parameters.CACHE, 'wcache') }}:
-            UPLOAD: y
+

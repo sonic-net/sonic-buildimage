@@ -27,6 +27,7 @@ variables:
   - name: DOCKER_BUILD_TIMEOUT
     value: 3600
   - group: SONiC-sonicbld
+  - group: SONIC-BUILD-VG-1
 resources:
   repositories: 
     - repository: templates
@@ -69,3 +70,4 @@ extends:
         BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
         CACHE: SONIC_DPKG_CACHE_METHOD=wcache
         JOBS: ${{ parameters.jobFilters }}
+

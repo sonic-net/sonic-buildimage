@@ -11,38 +11,29 @@ parameters:
       - cisco-8000
   - name: BRANCH_FOLDER
     default: 'default'
-  - name: UPLOAD
-    default: n
 
 steps:
   - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
     - task: CodeQL3000Finalize@0
-  - task: PublishPipelineArtifact@1
-    continueOnError: true
-    condition: always()
-    inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/target
-      artifact: '${{ parameters.PLATFORM_NAME }}'
-  - script: |
-      set -ex
-      touch target/sonic-installers
-      SONIC_VERSION=$(cat target/sonic.version)
-      for image in `ls target | grep -E "\.(swi|bin|raw|deb)$"`; do
-        version_image=$(echo $image | sed -E "s/(-dbg\.\w+|\.\w+)$/-$SONIC_VERSION\1/")
-        echo "$image,$version_image" >> target/sonic-installers
-        cp -f target/$image target/$version_image
-      done
-    displayName: "Copy installers"
-  - task: ManifestGeneratorTask@0
-    condition: ne(variables.SKIP_MG, 'y')
-    timeoutInMinutes: 60
-    continueOnError: true
-    displayName: "Manifest Generator"
-    inputs:
-      BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
-      ManifestDirPath: 'target/'
-      BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
-  - ${{ if eq(parameters.UPLOAD, 'y') }}:
+    - script: |
+        set -ex
+        touch target/sonic-installers
+        SONIC_VERSION=$(cat target/sonic.version)
+        for image in `ls target | grep -E "\.(swi|bin|raw|deb)$"`; do
+          version_image=$(echo $image | sed -E "s/(-dbg\.\w+|\.\w+)$/-$SONIC_VERSION\1/")
+          echo "$image,$version_image" >> target/sonic-installers
+          cp -f target/$image target/$version_image
+        done
+      displayName: "Copy installers"
+    - task: ManifestGeneratorTask@0
+      condition: ne(variables.SKIP_MG, 'y')
+      timeoutInMinutes: 60
+      continueOnError: true
+      displayName: "Manifest Generator"
+      inputs:
+        BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
+        ManifestDirPath: 'target/'
+        BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
     - script: |
         set -ex
 
@@ -142,6 +133,15 @@ steps:
         REGISTRY_PASSWD: $(REGISTRY_PASSWD)
         HL_REGISTRY_PASSWD: $(HL_REGISTRY_PASSWD)
       displayName: "Publish to Docker Registry"
+  - script: |
+      mv target $(Build.ArtifactStagingDirectory)/
+    displayName: Move target to ArtifactsDir
+  - task: PublishPipelineArtifact@1
+    continueOnError: true
+    condition: always()
+    inputs:
+      targetPath: $(Build.ArtifactStagingDirectory)
+      artifact: 'sonic-buildimage.${{ parameters.PLATFORM_NAME }}'
   - template: /.pipelines/post-build-steps.yml
   - template: /.azure-pipelines/cleanup.yml
 

@@ -4,143 +4,48 @@ pr:
     include:
       - internal
       - internal-202???
+    exclude:
+      - internal-2021??
+      - internal-202211
+      - internal-202012
   paths:
     exclude:
       - .github
+
 resources:
   repositories:
-  - repository: acs-buildimage
-    type: git
-    name: One/Networking-acs-buildimage
-    ref: internal
-  - repository: buildimage
+  - repository: cisco-8000
     type: github
-    name: sonic-net/sonic-buildimage
-    ref: master
-    endpoint: sonic-net
+    name: Cisco-8000-sonic/platform-cisco-8000
+    endpoint: cisco-connection
   - repository: sonic-mgmt
     type: github
     name: sonic-net/sonic-mgmt
     ref: master
     endpoint: sonic-net
-
-name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
-
+parameters:
+- name: BRANCH_FOLDER
+  default: 'default'
+- name: jobFilters
+  type: object
+  default:
+  - vs
+  - broadcom
+  - mellanox
+  - marvell-armhf
+  - cisco-8000
 variables:
-  - template: .azure-pipelines/template-variables.yml@acs-buildimage
-  - template: .pipelines/azure-pipelines-repd-build-variables.yml@acs-buildimage
+  - name: DOCKER_BUILD_TIMEOUT
+    value: 3600
   - group: SONiC-sonicbld
+  - group: SONIC-BUILD-VG-1
 
 stages:
-- stage: BuildVS
-  pool: sonic-image-builder-1ES
-  variables:
-    SONIC_DPKG_CACHE_METHOD: 'rcache'
-    SONIC_VERSION_CONTROL_COMPONENTS: 'deb,py2,py3,web,git,docker'
-    SONIC_BUILD_JOBS: 4
-    MIRROR_SNAPSHOT: 'y'
-    DEFAULT_CONTAINER_REGISTRY: 'publicmirror.azurecr.io'
-    ENABLE_DOCKER_BASE_PULL: 'y'
-    INCLUDE_RESTAPI: 'y'
-    INCLUDE_DHCP_SERVER: 'y'
-    ENABLE_FIPS: y
-  jobs:
-  - template: .azure-pipelines/azure-pipelines-job-groups.yml@acs-buildimage
-    parameters:
-      preSteps:
-        - template: .pipelines/prepare_agent.yml@acs-buildimage
-        - template: .azure-pipelines/cleanup.yml@acs-buildimage
-        - checkout: self
-          submodules: recursive
-          clean: true
-        - bash: |
-            set -e
-            git show HEAD
-            output=n
-            [[ "$(git log -n 1 --format=%aN)" == "Project Collection Build Service (msazure)" ]] && output=y && echo "Automation PR."
-            echo "##vso[task.setvariable variable=autoPR;isOutput=true]$output"
-          name: checkAutoPR
-      postSteps:
-        - publish: $(Build.ArtifactStagingDirectory)
-          artifact: 'sonic-buildimage.$(GROUP_NAME)'
-          displayName: "Archive sonic image"
-        - publish: $(Build.ArtifactStagingDirectory)
-          condition: or(failed(), canceled())
-          artifact: 'sonic-buildimage.$(GROUP_NAME)$(System.JobAttempt)'
-          displayName: "Archive failed sonic image"
-      jobGroups:
-        - name: vs
-          script: |
-            set -ex
-            make PLATFORM=vs PLATFORM_ARCH=amd64 configure
-            make BUILD_MULTIASIC_KVM=y SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz target/docker-ptf-sai.gz
-            mv target $(Build.ArtifactStagingDirectory)
-
-- stage: Build
-  pool: sonic-image-builder-1ES
-  dependsOn: []
-  variables:
-    SONIC_DPKG_CACHE_METHOD: 'rcache'
-    SONIC_VERSION_CONTROL_COMPONENTS: 'deb,py2,py3,web,git,docker'
-    SONIC_BUILD_JOBS: 4
-    ENABLE_SYNCD_RPC: 'y'
-    MIRROR_SNAPSHOT: 'y'
-    DEFAULT_CONTAINER_REGISTRY: 'publicmirror.azurecr.io'
-    ENABLE_DOCKER_BASE_PULL: 'y'
-    INCLUDE_RESTAPI: 'y'
-  jobs:
-  - template: .azure-pipelines/azure-pipelines-job-groups.yml@acs-buildimage
-    parameters:
-      preSteps:
-        - template: .pipelines/prepare_agent.yml@acs-buildimage
-        - template: .azure-pipelines/cleanup.yml@acs-buildimage
-        - checkout: self
-          submodules: recursive
-          clean: true
-      postSteps:
-        - publish: $(Build.ArtifactStagingDirectory)
-          artifact: 'sonic-buildimage.$(GROUP_NAME)'
-          displayName: "Archive sonic image"
-        - publish: $(System.DefaultWorkingDirectory)/target
-          condition: or(failed(), canceled())
-          artifact: 'sonic-buildimage.$(GROUP_NAME)$(System.JobAttempt)'
-          displayName: "Archive failed sonic image"
-      jobGroups:
-        - name: broadcom
-          variables:
-            INCLUDE_DHCP_SERVER: 'y'
-          script: |
-            set -ex
-            make PLATFORM=broadcom PLATFORM_ARCH=amd64 configure
-            make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/broadcom target/docker-syncd-brcm-rpc.gz target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
-            mv target $(Build.ArtifactStagingDirectory)
-        - name: mellanox
-          script: |
-            set -ex
-            make PLATFORM=mellanox PLATFORM_ARCH=amd64 configure
-            make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/mellanox INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin target/docker-syncd-mlnx-rpc.gz
-            mv target $(Build.ArtifactStagingDirectory)
-        - name: barefoot
-          condition: ne(variables['SKIP_BAREFOOT'], 'y')
-          script: |
-            set -ex
-            sudo modprobe overlay
-            make PLATFORM=barefoot PLATFORM_ARCH=amd64 configure
-            make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/barefoot target/sonic-barefoot.bin target/sonic-aboot-barefoot.swi target/docker-syncd-bfn-rpc.gz
-            mv target $(Build.ArtifactStagingDirectory)
-        - name: marvell-armhf
-          pool: sonic-armhf
-          timeoutInMinutes: 2160
-          variables:
-            PLATFORM_ARCH: armhf
-            # official build didn't enable RPC
-            ENABLE_SYNCD_RPC: 'n'
-            INCLUDE_DHCP_SERVER: 'y'
-          script: |
-            set -ex
-            make PLATFORM=marvell PLATFORM_ARCH=armhf configure
-            make SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/armhf target/sonic-marvell-armhf.bin
-            mv target $(Build.ArtifactStagingDirectory)
+- template: /.pipelines/template-stages.yml@self
+  parameters:
+    BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+    CACHE: SONIC_DPKG_CACHE_METHOD=rcache
+    JOBS: ${{ parameters.jobFilters }}
 
 - stage: Test
   dependsOn: BuildVS
@@ -151,6 +56,8 @@ stages:
       value: veos_vtb
     - name: testbed_file
       value: vtestbed.yaml
+    - name: BUILD_BRANCH
+      value: internal
 
   # For every test job:
   # continueOnError: false means it's a required test job and will block merge if it fails
@@ -161,14 +68,13 @@ stages:
     pool: sonic-ubuntu-1c
     displayName: "kvmtest-t0 by Elastictest"
     timeoutInMinutes: 400
-    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
           TOPOLOGY: t0
           MIN_WORKER: $(T0_INSTANCE_NUM)
           MAX_WORKER: $(T0_INSTANCE_NUM)
-          MGMT_BRANCH: "internal"
+          MGMT_BRANCH: $(BUILD_BRANCH)
           MGMT_URL: $(MGMT_INT_URL)
           STOP_ON_FAILURE: False
           EXPECTED_RESULT: "SUCCESS"
@@ -177,14 +83,13 @@ stages:
     pool: sonic-ubuntu-1c
     displayName: "kvmtest-t1-lag by Elastictest"
     timeoutInMinutes: 400
-    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
           TOPOLOGY: t1-lag
           MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
           MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
-          MGMT_BRANCH: "internal"
+          MGMT_BRANCH: $(BUILD_BRANCH)
           MGMT_URL: $(MGMT_INT_URL)
           STOP_ON_FAILURE: False
           EXPECTED_RESULT: "SUCCESS"
@@ -193,7 +98,6 @@ stages:
     displayName: "kvmtest-t0-sonic by Elastictest"
     pool: sonic-ubuntu-1c
     timeoutInMinutes: 400
-    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
@@ -201,7 +105,7 @@ stages:
           MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
           MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
           TEST_SET: t0-sonic
-          MGMT_BRANCH: "internal"
+          MGMT_BRANCH: $(BUILD_BRANCH)
           MGMT_URL: $(MGMT_INT_URL)
           COMMON_EXTRA_PARAMS: "--neighbor_type=sonic "
           VM_TYPE: vsonic
@@ -212,7 +116,6 @@ stages:
     pool: sonic-ubuntu-1c
     displayName: "kvmtest-t0-2vlans by Elastictest"
     timeoutInMinutes: 400
-    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
     - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
       parameters:
@@ -220,7 +123,7 @@ stages:
         TEST_SET: t0-2vlans
         MIN_WORKER: $(T0_2VLANS_INSTANCE_NUM)
         MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
-        MGMT_BRANCH: "internal"
+        MGMT_BRANCH: $(BUILD_BRANCH)
         MGMT_URL: $(MGMT_INT_URL)
         DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
         STOP_ON_FAILURE: False
@@ -230,38 +133,22 @@ stages:
     pool: sonic-ubuntu-1c
     displayName: "kvmtest-dualtor-t0 by Elastictest"
     timeoutInMinutes: 400
-    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
           TOPOLOGY: dualtor
           MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
           MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          MGMT_BRANCH: "internal"
+          MGMT_BRANCH: $(BUILD_BRANCH)
           MGMT_URL: $(MGMT_INT_URL)
           COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
           STOP_ON_FAILURE: False
           EXPECTED_RESULT: "SUCCESS"
 
-#  - job: wan_elastictest
-#    displayName: "kvmtest-wan by Elastictest"
-#    pool:
-#      vmImage: 'ubuntu-20.04'
-#    timeoutInMinutes: 240
-#    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
-#    steps:
-#      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-#        parameters:
-#          TOPOLOGY: wan-pub
-#          MIN_WORKER: $(WAN_INSTANCE_NUM)
-#          MAX_WORKER: $(WAN_INSTANCE_NUM)
-#          COMMON_EXTRA_PARAMS: "--skip_sanity "
-
   - job: multi_asic_elastictest
     displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
     pool: sonic-ubuntu-1c
     timeoutInMinutes: 400
-    continueOnError: $[ eq(stageDependencies.BuildVS.vs.outputs['checkAutoPR.autoPR'], 'y') ]
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
@@ -270,54 +157,8 @@ stages:
           MIN_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
           MAX_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
           NUM_ASIC: 4
-          MGMT_BRANCH: "internal"
+          MGMT_BRANCH: $(BUILD_BRANCH)
           MGMT_URL: $(MGMT_INT_URL)
           STOP_ON_FAILURE: False
           EXPECTED_RESULT: "SUCCESS"
 
-- stage: ADO
-  dependsOn: Test
-  condition: eq(dependencies.Test.result, 'SucceededWithIssues')
-  variables:
-    - name: BRANCH
-      value: $(System.PullRequest.TargetBranchName)
-    - name: job1
-      value: $[ stageDependencies.Test.t0_elastictest.result ]
-    - name: job2
-      value: $[ stageDependencies.Test.t1_lag_elastictest.result ]
-    - name: job3
-      value: $[ stageDependencies.Test.sonic_t0_elastictest.result ]
-    - name: job4
-      value: $[ stageDependencies.Test.t0_2vlans_elastictest.result ]
-    - name: job5
-      value: $[ stageDependencies.Test.dualtor_elastictest.result ]
-    - name: job6
-      value: $[ stageDependencies.Test.multi_asic_elastictest.result ]
-  jobs:
-  - job:
-    pool: sonic-ubuntu-1c
-    steps:
-    - checkout: none
-    - bash: |
-        set -ex
-        # create ADO item to sonicbld
-        DISSCUSSION=""
-        [[ $(job1) == 'SucceededWithIssues' ]] && DISSCUSSION+="----t0_elastictest<br>"
-        [[ $(job2) == 'SucceededWithIssues' ]] && DISSCUSSION+="----t1_lag_elastictest<br>"
-        [[ $(job3) == 'SucceededWithIssues' ]] && DISSCUSSION+="----sonic_t0_elastictest<br>"
-        [[ $(job4) == 'SucceededWithIssues' ]] && DISSCUSSION+="----t0_2vlans_elastictest<br>"
-        [[ $(job5) == 'SucceededWithIssues' ]] && DISSCUSSION+="----dualtor_elastictest<br>"
-        [[ $(job6) == 'SucceededWithIssues' ]] && DISSCUSSION+="----multi_asic_elastictest<br>"
-        if [ -n "$DISSCUSSION" ];then
-          if echo "$(System.PullRequest.SourceBranch)" | grep "^refs/heads/sonicbld/code-sync/internal";then
-            DISSCUSSION="$(BRANCH) merge PR kvmtest failure Alert!!!<br>https://dev.azure.com/msazure/One/_build/results?buildId=$(Build.BuildId)<br>"$DISSCUSSION
-            az boards work-item update --org https://dev.azure.com/mssonic/ --id $ADO_ID --discussion "$DISSCUSSION" --description "$DISSCUSSION"
-            exit 0
-          fi
-          echo PR checker failed!
-          exit 1
-        fi
-      displayName: check result
-      env:
-        AZURE_DEVOPS_EXT_PAT: $(MSSONIC-TOKEN)
-        ADO_ID: $(ADO_ID)
