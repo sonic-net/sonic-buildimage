@@ -110,5 +110,7 @@ MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgm
 if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
     ORCHAGENT_ARGS+=" -v mgmt"
 fi
+# Enable ring buffer mode
+ORCHAGENT_ARGS+=" -R"
 
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}
