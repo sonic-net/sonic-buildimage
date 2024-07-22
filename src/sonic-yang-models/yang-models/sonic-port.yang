@@ -163,6 +163,10 @@ module sonic-port{
 					description "port name in asic and asic name, e.g Eth0-ASIC1";
 				}
 
+				leaf arp_reply {
+					type stypes:arp_reply;
+				}
+
 				leaf role {
 					type string {
 						pattern "Ext|Int|Inb|Rec|Dpc";

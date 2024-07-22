@@ -140,6 +140,12 @@ module sonic-types {
         }
     }
 
+    typedef arp_reply {
+        type string {
+            pattern "reply_all|reply_iface|reply_subnet|ignore_all";
+        }
+    }
+
     typedef interface_type {
         type enumeration {
             enum CR;
