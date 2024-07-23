@@ -438,6 +438,9 @@ if [[ "$test" == "1" ]]; then
     elif [[ "$dev_type" == "T2-vs" ]]; then
        echo "Executing kvmtest.sh with 'docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box /data/tests/kvmtest.sh -T t2 -p /output_files -d /data vms-kvm-t2 vlab-t2-01,vlab-t2-02,vlab-t2-sup"
        docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box /data/tests/kvmtest.sh -T t2 -p /output_files -d /data vms-kvm-t2 vlab-t2-01,vlab-t2-02,vlab-t2-sup
+    elif [[ "$topology" == "m0" || "$topology" == "mx" ]]; then
+      echo "Executing docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box ./run_tests.sh -a False -d $target_box -i $lab_file,$inv_file -k debug -l info -n $conf_name -t $topology,any -p /output_files/ -r -s ixia  -x  "
+      docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box ./run_tests.sh -a False -d $target_box -i $lab_file,$inv_file -k debug -l info -n $conf_name -t $topology,any -p /output_files/ -r -x -u -c "test_pretest.py"
     else
       echo "Executing docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box ./run_tests.sh -a False -d $target_box -i $lab_file,$inv_file -k debug -l info -n $conf_name -t $topology -p /output_files/ -r -s ixia  -x  "
       docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box ./run_tests.sh -a False -d $target_box -i $lab_file,$inv_file -k debug -l info -n $conf_name -t $topology -p /output_files/ -r -s "ixia crm"  -x 
