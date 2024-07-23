@@ -253,6 +253,7 @@ stages:
             echo "INCLUDE_GBSYNCD = n" >> rules/config.user
             echo "INCLUDE_SYSTEM_TELEMETRY = n" >> rules/config.user
             echo "ENABLE_GNMI_TWO_PROCESS = y" >> rules/config.user
+            echo "INCLUDE_SYSTEM_EVENTD = n" >> rules/config.user
             make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
             mv target/sonic-broadcom.bin target/sonic-broadcom-slim.bin
             mv target/sonic-aboot-broadcom.swi target/sonic-aboot-broadcom-slim.swi
