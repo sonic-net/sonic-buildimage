@@ -9,6 +9,8 @@ variables:
   NOJESSIE: 1
   NOSTRETCH: 1
   BUILD_NUMBER: "${CI_PIPELINE_ID}-${CI_COMMIT_BRANCH}"
+  REGRESS_SONIC_MGMT_BRANCH: nokia-dev
+  REGRESS_TOPO: t2
   PLUTO_PARENT_BRANCH: nokia-master
   PLUTO_BRANCH_DIR: files/sonic/build/${CI_COMMIT_BRANCH}
   PLUTO_COMMIT_DIR: files/sonic/build/${CI_COMMIT_BRANCH}/${CI_PIPELINE_ID}
@@ -26,7 +28,7 @@ before_script: |
   ./.gitlab-ci-submodule-init.sh
   # always use latest of these submodules
   pushd altos && git fetch && git reset --hard origin/master && popd
-  pushd src/sonic-mgmt && git fetch && git reset --hard origin/nokia-dev && popd
+  echo "PLUTO_POSTED_LATEST: ${PLUTO_POSTED_LATEST}"
 
 stages:
   - configure
@@ -168,8 +170,9 @@ express:chassis7:
   when: manual
   script: |
     docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    case "$LEAN" in true) echo LEAN ; exit 0 ; esac
     echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
+    case "$LEAN" in true) echo LEAN ; exit 0 ; esac
+    pushd src/sonic-mgmt && git fetch && git reset --hard origin/${REGRESS_SONIC_MGMT_BRANCH} && popd
     ./run_test.sh -i target/sonic-broadcom-dnx.bin \
       -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net \
       -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test --no_cleanup
@@ -179,20 +182,20 @@ express:chassis7:
     when: always
     paths:
       - output_files/
-    expire_in: 1 month
+    expire_in: 1 week
 
 .regress:
   stage: test
-  needs:
-    - build:sonic:x86_64
   script: |
     if [ -n "${DELAY_START}" ]; then sleep ${DELAY_START}; fi
     docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     echo "runner=${CI_RUNNER_DESCRIPTION} tags=\"${CI_RUNNER_TAGS}\" commit=${CI_COMMIT_SHORT_SHA}"
-    ./run_test.sh -i target/sonic-broadcom-dnx.bin \
+    case "$LEAN" in true) echo LEAN ; exit 0 ; esac
+    pushd src/sonic-mgmt && git fetch && git reset --hard origin/${REGRESS_SONIC_MGMT_BRANCH} && popd
+    ./run_test.sh -i ${RUN_IMAGE} \
       -g https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlabsr.nuq.ion.nokia.net \
       -r ${CI_RUNNER_DESCRIPTION} --upgrade --configure --test \
-      --run_in_order false --topology t2 ${EXTRA_RUN_TEST_ARGS} \
+      --run_in_order false --topology ${REGRESS_TOPO} ${EXTRA_RUN_TEST_ARGS} \
       --no_cleanup --post_results > ${CI_PROJECT_DIR}/run.log
   allow_failure: true
   artifacts:
@@ -201,13 +204,16 @@ express:chassis7:
     paths:
       - output_files/
       - ${CI_PROJECT_DIR}/run.log
-    expire_in: 1 month
+    expire_in: 1 week
 
 regress:t2:chassis8:
   extends: .regress
   tags:
     - regress_chassis8
+  needs:
+    - build:sonic:x86_64
   variables:
+    RUN_IMAGE: target/sonic-broadcom-dnx.bin
     DELAY_START: 0
     EXTRA_RUN_TEST_ARGS: --suite masic
   only:
@@ -218,7 +224,10 @@ regress:t2:chassis9:
   extends: .regress
   tags:
     - regress_chassis9
+  needs:
+    - build:sonic:x86_64
   variables:
+    RUN_IMAGE: target/sonic-broadcom-dnx.bin
     DELAY_START: 100
     EXTRA_RUN_TEST_ARGS: --suite masic
   only:
@@ -229,7 +238,10 @@ regress:t2:chassis10:
   extends: .regress
   tags:
     - regress_chassis10
+  needs:
+    - build:sonic:x86_64
   variables:
+    RUN_IMAGE: target/sonic-broadcom-dnx.bin
     DELAY_START: 200
     EXTRA_RUN_TEST_ARGS: --suite masic
   only:
@@ -240,7 +252,10 @@ regress:t2:chassis11:
   extends: .regress
   tags:
     - regress_chassis11
+  needs:
+    - build:sonic:x86_64
   variables:
+    RUN_IMAGE: target/sonic-broadcom-dnx.bin
     DELAY_START: 300
     EXTRA_RUN_TEST_ARGS: --suite masic
   only:
@@ -251,7 +266,10 @@ regress:t2:chassis12:
   extends: .regress
   tags:
     - regress_chassis12
+  needs:
+    - build:sonic:x86_64
   variables:
+    RUN_IMAGE: target/sonic-broadcom-dnx.bin
     DELAY_START: 300
     EXTRA_RUN_TEST_ARGS: --suite masic
   only:
@@ -268,6 +286,21 @@ regress:t2:chassis19:
   only:
     variables:
       - $REGRESS_T2_CHASSIS19
+
+regress:tb21:
+  extends: .regress
+  tags:
+    - regress_tb21
+  needs:
+    - build:sonic:armhf
+  variables:
+    REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
+    RUN_IMAGE: target/sonic-marvell-armhf.bin
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS:
+  only:
+    variables:
+      - $REGRESS_TB21
 
 .post:
   stage: post
