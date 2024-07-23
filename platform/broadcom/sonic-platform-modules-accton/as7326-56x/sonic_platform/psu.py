@@ -26,10 +26,79 @@ class Psu(PddfPsu):
         """
         return float(self.PLATFORM_PSU_CAPACITY)
 
-    def get_type(self):
+    def get_name(self):
+        return "PSU-{}".format(self.psu_index)
+
+    def get_revision(self):
         """
-        Gets the type of the PSU
+        Retrieves the hardware revision of the device
+
         Returns:
-        A string, the type of PSU (AC/DC)
+            string: Revision value of device
         """
-        return "DC"
+        return 'N/A'
+
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the device
+
+        Returns:
+            string: Model/part number of device
+        """
+        model = super().get_model()
+        if model and model.strip() == "":
+            return None
+
+        return model
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the device
+
+        Returns:
+            string: Serial number of device
+        """
+        serial = super().get_serial()
+        if serial and serial.strip() == "":
+            return None
+
+        return serial
+
+    def get_voltage(self):
+        """
+        Retrieves current PSU voltage output
+
+        Returns:
+            A float number, the output voltage in volts,
+            e.g. 12.1
+        """
+        if self.get_status() is not True:
+            return 0.0
+
+        return super().get_voltage()
+
+    def get_current(self):
+        """
+        Retrieves present electric current supplied by PSU
+
+        Returns:
+            A float number, electric current in amperes,
+            e.g. 15.4
+        """
+        if self.get_status() is not True:
+            return 0.0
+
+        return super().get_current()
+
+    def get_power(self):
+        """
+        Retrieves current energy supplied by PSU
+
+        Returns:
+            A float number, the power in watts,
+            e.g. 302.6
+        """
+        if self.get_status() is not True:
+            return 0.0
+
+        return super().get_power()
