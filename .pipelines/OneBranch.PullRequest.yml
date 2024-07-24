@@ -36,7 +36,7 @@ parameters:
   - cisco-8000
 variables:
   - name: DOCKER_BUILD_TIMEOUT
-    value: 3600
+    value: 5400
   - group: SONiC-sonicbld
   - group: SONIC-BUILD-VG-1
 
