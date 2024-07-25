@@ -1,0 +1,62 @@
+module sonic-logging {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/Azure/sonic-logging";
+    prefix logging;
+
+    description "LOGGING YANG Module for SONiC-based OS";
+
+    revision 2022-08-27 {
+        description "First Revision";
+    }
+
+    container sonic-logging {
+
+        container LOGGING {
+
+            description "LOGGING part of config_db.json";
+
+            list LOGGING_LIST {
+
+                key "name";
+
+                leaf name {
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf disk_percentage {
+                    type decimal64 {
+                        fraction-digits 3;
+                        range 0.001..100;
+                    }
+                }
+
+                leaf frequency {
+                    type string {
+                        pattern "daily|weekly|monthly|yearly";
+                    }
+                }
+
+                leaf max_number {
+                    type int32 {
+                        range "0..999999";
+                    }
+                }
+
+                leaf size {
+                    type decimal64 {
+                        fraction-digits 3;
+                        range 0.001..3500.0;
+                    }
+                }
+            }
+            /* end of list LOG_FILES_LIST */
+        }
+        /* end of container LOGGING */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-logging */

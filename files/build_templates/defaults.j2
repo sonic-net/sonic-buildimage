@@ -1,0 +1,13 @@
+{# Don't use that file to generate something, it is just for holding defaults #}
+{% set def_logging = {
+    'common': {
+        'frequency': 'daily',
+    },
+    'debug': {
+        'max_number': 1,
+        'size': 0.001,
+    },
+    'syslog': {
+        'max_number': 5000,
+    }
+} %}
