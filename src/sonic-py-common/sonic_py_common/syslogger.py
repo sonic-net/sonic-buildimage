@@ -3,7 +3,6 @@ from logging.handlers import SysLogHandler
 import os
 import socket
 import sys
-import threading
 
 CONFIG_DB = 'CONFIG_DB'
 FIELD_LOG_LEVEL = 'LOGLEVEL'
@@ -16,7 +15,6 @@ class SysLogger:
     """
     
     log_registry = {}
-    lock = threading.Lock()
 
     DEFAULT_LOG_FACILITY = SysLogHandler.LOG_USER
     DEFAULT_LOG_LEVEL = SysLogHandler.LOG_NOTICE
@@ -50,11 +48,10 @@ class SysLogger:
         Args:
             log_identifier (str): key of LOGGER table
         """
-        with SysLogger.lock:
-            if log_identifier not in SysLogger.log_registry:
-                SysLogger.log_registry[log_identifier] = [self]
-            else:
-                SysLogger.log_registry[log_identifier].append(self)
+        if log_identifier not in SysLogger.log_registry:
+            SysLogger.log_registry[log_identifier] = [self]
+        else:
+            SysLogger.log_registry[log_identifier].append(self)
             
         from swsscommon import swsscommon
         try:
@@ -79,30 +76,29 @@ class SysLogger:
         Returns:
             tuple: (refresh result, fail reason)
         """
-        with cls.lock:
-            if not cls.log_registry:
-                return True, ''
-            
-            from swsscommon import swsscommon
-            try:
-                config_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
-                config_db.connect(CONFIG_DB)
-                for log_identifier, log_instances in cls.log_registry.items():
-                    log_level_in_db = config_db.get(CONFIG_DB, f'{swsscommon.CFG_LOGGER_TABLE_NAME}|{log_identifier}', FIELD_LOG_LEVEL)
-                    if log_level_in_db:
-                        for log_instance in log_instances:
-                            log_instance.set_min_log_priority(log_instance.log_priority_from_str(log_level_in_db))
-                    else:
-                        for log_instance in log_instances:
-                            data = {
-                                FIELD_LOG_LEVEL: log_instance.log_priority_to_str(log_instance._min_log_level),
-                                FIELD_REQUIRE_REFRESH: 'true'
-                            }
-                            config_db.hmset(CONFIG_DB, f'{swsscommon.CFG_LOGGER_TABLE_NAME}|{log_identifier}', data)
-                            break
-                return True, ''
-            except Exception as e:
-                return False, f'Failed to refresh log configuration - {e}'
+        if not cls.log_registry:
+            return True, ''
+        
+        from swsscommon import swsscommon
+        try:
+            config_db = swsscommon.SonicV2Connector(use_unix_socket_path=True)
+            config_db.connect(CONFIG_DB)
+            for log_identifier, log_instances in cls.log_registry.items():
+                log_level_in_db = config_db.get(CONFIG_DB, f'{swsscommon.CFG_LOGGER_TABLE_NAME}|{log_identifier}', FIELD_LOG_LEVEL)
+                if log_level_in_db:
+                    for log_instance in log_instances:
+                        log_instance.set_min_log_priority(log_instance.log_priority_from_str(log_level_in_db))
+                else:
+                    for log_instance in log_instances:
+                        data = {
+                            FIELD_LOG_LEVEL: log_instance.log_priority_to_str(log_instance._min_log_level),
+                            FIELD_REQUIRE_REFRESH: 'true'
+                        }
+                        config_db.hmset(CONFIG_DB, f'{swsscommon.CFG_LOGGER_TABLE_NAME}|{log_identifier}', data)
+                        break
+            return True, ''
+        except Exception as e:
+            return False, f'Failed to refresh log configuration - {e}'
 
     def log_priority_to_str(self, priority):
         """Convert log priority to string.
