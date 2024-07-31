@@ -14,5 +14,4 @@ common/pcisysfs.py usr/bin
 s5248f/scripts/pddf_switch_svc.py usr/local/bin
 s5248f/scripts/pddf_pre_driver_install.sh usr/local/bin
 s5248f/scripts/pddf_post_device_create.sh usr/local/bin
-s5248f/scripts/platform-modules-s5248f.sh usr/bin/ext/service/
 s5248f/pddf/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_s5248f_c3538-r0/pddf

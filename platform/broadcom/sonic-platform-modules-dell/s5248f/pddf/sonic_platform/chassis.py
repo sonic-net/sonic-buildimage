@@ -123,3 +123,11 @@ class Chassis(PddfChassis):
             return (self.REBOOT_CAUSE_HARDWARE_OTHER, "Reset Button Cold Reboot")
         else:
             return (self.REBOOT_CAUSE_NON_HARDWARE, None)
+
+    def get_revision(self):
+        """
+        Retrieves the hardware revision for the chassis
+        Returns:
+            A string containing the hardware revision for this chassis.
+        """
+        return self._eeprom.revision_str().encode('utf-8').hex()

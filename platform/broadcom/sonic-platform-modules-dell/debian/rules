@@ -26,7 +26,7 @@ override_dh_auto_configure:
 			cp $(COMMON_DIR)/dell_pmc.c $(MOD_SRC_DIR)/$${mod}/modules/dell_mailbox.c; \
 			cp $(COMMON_DIR)/dell_ich.c $(MOD_SRC_DIR)/$${mod}/modules/dell_ich.c; \
 		elif [ $$mod = "z9264f" ]; then \
-			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_z9264f_fpga_ocores.c; \
+		        cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_z9264f_fpga_ocores.c; \
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
 		elif [ $$mod = "s5212f" ]; then \
 		    cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5212f_fpga_ocores.c; \
