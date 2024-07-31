@@ -119,7 +119,7 @@ class SysLogger:
             return 'ERROR'
         else:
             self.log_error(f'Invalid log priority: {priority}')
-            return 'NOTICE'
+            return 'WARN'
 
     def log_priority_from_str(self, priority_in_str):
         """Convert log priority from string.
@@ -140,7 +140,7 @@ class SysLogger:
             return logging.ERROR
         else:
             self.log_error(f'Invalid log priority string: {priority_in_str}')
-            return logging.NOTICE
+            return logging.WARNING
 
     def set_min_log_priority(self, priority):
         """

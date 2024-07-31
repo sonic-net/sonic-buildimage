@@ -37,7 +37,7 @@ class TestSysLogger:
         assert log.log_priority_from_str('NOTICE') == logging.NOTICE
         assert log.log_priority_from_str('WARN') == logging.WARN
         assert log.log_priority_from_str('DEBUG') == logging.DEBUG
-        assert log.log_priority_from_str('invalid') == logging.NOTICE
+        assert log.log_priority_from_str('invalid') == logging.WARN
 
     def test_log_priority_to_str(self):
         log = syslogger.SysLogger()
@@ -46,7 +46,7 @@ class TestSysLogger:
         assert log.log_priority_to_str(logging.DEBUG) == 'DEBUG'
         assert log.log_priority_to_str(logging.WARN) == 'WARN'
         assert log.log_priority_to_str(logging.ERROR) == 'ERROR'
-        assert log.log_priority_to_str(-1) == 'NOTICE'
+        assert log.log_priority_to_str(-1) == 'WARN'
 
     @mock.patch('swsscommon.swsscommon.SonicV2Connector')
     def test_runtime_config(self, mock_connector):
