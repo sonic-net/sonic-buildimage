@@ -113,9 +113,9 @@ libcgraph6==2.40.1-6+deb10u1
 libcolord2==1.4.3-4
 libcroco3==0.6.12-3
 libcryptsetup12==2:2.1.0-5+deb10u2
-libcups2==2.2.10-6+deb10u9
+libcups2==2.2.10-6+deb10u10
 libcupsfilters1==1.21.6-5+deb10u1
-libcupsimage2==2.2.10-6+deb10u9
+libcupsimage2==2.2.10-6+deb10u10
 libcurl3-gnutls==7.64.0-4+deb10u9
 libcurl4==7.64.0-4+deb10u9
 libdaemon0==0.14-7
