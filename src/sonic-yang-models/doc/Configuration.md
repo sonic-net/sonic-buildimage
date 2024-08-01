@@ -12,6 +12,7 @@ Table of Contents
    * [<strong>Redis and Json Schema</strong>](#redis-and-json-schema)
 
          * [ACL and Mirroring](#acl-and-mirroring)
+         * [AUDIT](#audit)
          * [BGP BBR](#bgp-bbr)
          * [ASIC SDK health event](#asic-sdk-health-event)
          * [BGP Device Global](#bgp-device-global)
@@ -371,6 +372,21 @@ and migration plan
         }
     }
 }
+
+### AUDIT
+
+The AUDIT table introduces AUDIT configuration.
+
+```json
+{
+    "AUDIT": {
+        "global": {
+            "enable": "true"
+        }
+    }
+}
+```
+
 ```
 ### BGP BBR
 

@@ -1,0 +1,20 @@
+{
+    "AUDIT_WITH_CORRECT_VALUES_ENABLE": {
+        "sonic-audit:sonic-audit": {
+            "sonic-audit:AUDIT": {
+                "sonic-audit:config": {
+                    "enable": "true"
+                }
+            }
+        }
+    },
+    "AUDIT_WITH_INVALID_VALUES_ENABLE": {
+        "sonic-audit:sonic-audit": {
+            "sonic-audit:AUDIT": {
+                "sonic-audit:config": {
+                    "enable": "Invalid"
+                }
+            }
+        }
+    }
+}

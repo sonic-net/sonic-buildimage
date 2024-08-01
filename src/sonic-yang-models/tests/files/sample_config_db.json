@@ -2641,6 +2641,11 @@
                 "enforce": "true"
             }
         },
+        "AUDIT": {
+            "config": {
+                "enable": "true"
+            }
+        },
         "FG_NHG_MEMBER": {
             "192.168.1.1": {
                 "FG_NHG": "nhg1",

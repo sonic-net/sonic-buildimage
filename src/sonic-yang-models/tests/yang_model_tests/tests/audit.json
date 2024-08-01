@@ -1,0 +1,10 @@
+{
+    "AUDIT_WITH_CORRECT_VALUES_ENABLE": {
+        "desc": "CONFIG AUDIT TABLE WITH ALL THE CORRECT VALUES"
+    },
+    "AUDIT_WITH_INVALID_VALUES_ENABLE": {
+        "desc": "Configure invalid mode in audit.",
+        "eStrKey": "Pattern",
+        "eStr": ["false|true|False|True"]
+    }
+}

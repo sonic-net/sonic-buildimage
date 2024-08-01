@@ -84,6 +84,7 @@ setup(
     cmdclass={'build_py': my_build_py},
     data_files=[
         ('yang-models', ['./yang-models/sonic-acl.yang',
+                         './yang-models/sonic-audit.yang',
                          './yang-models/sonic-auto_techsupport.yang',
                          './yang-models/sonic-bgp-bbr.yang',
                          './yang-models/sonic-banner.yang',
@@ -205,6 +206,7 @@ setup(
                          './yang-models/sonic-bmp.yang',
                          './yang-models/sonic-smart-switch.yang',]),
         ('cvlyang-models', ['./cvlyang-models/sonic-acl.yang',
+                         './cvlyang-models/sonic-audit.yang',
                          './cvlyang-models/sonic-banner.yang',
                          './cvlyang-models/sonic-bgp-common.yang',
                          './cvlyang-models/sonic-bgp-global.yang',
