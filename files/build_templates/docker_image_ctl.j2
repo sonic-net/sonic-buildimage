@@ -731,6 +731,16 @@ stop() {
     /usr/local/bin/container stop -t 60 $DOCKERNAME
     {%- elif docker_container_name in ["swss", "syncd"] and enable_asan == "y" %}
     /usr/local/bin/container stop -t 60 $DOCKERNAME
+    {%- elif docker_container_name in ["swss", "syncd"] %}
+    if [[ -f /etc/sonic/chassisdb.conf ]]; then
+        asic_key=$(sonic-db-cli CHASSIS_STATE_DB keys "CHASSIS_FABRIC_ASIC_TABLE|asic$DEV")
+        container_id=$(docker ps -a -q -f name="$DOCKERNAME")
+        if [[ ! -z "$container_id" ]] || [[ ! -z "$asic_key" ]]; then
+            /usr/local/bin/container stop $DOCKERNAME
+        fi
+    else
+        /usr/local/bin/container stop $DOCKERNAME
+    fi
     {%- else %}
     /usr/local/bin/container stop $DOCKERNAME
     {%- endif %}
