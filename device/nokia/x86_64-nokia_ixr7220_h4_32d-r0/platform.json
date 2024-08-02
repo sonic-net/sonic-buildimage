@@ -337,6 +337,14 @@
                 "high-crit-threshold": true
             },
             {
+                "name": "CPU",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": true
+            },
+            {
                 "name": "ASIC TH4",
                 "controllable": false,
                 "low-threshold": false,
