@@ -16,6 +16,7 @@ sai_tunnel_global_sip_mask_enable=1
 bcm_tunnel_term_compatible_mode=1
 l3_alpm_enable=2
 l3_mem_entries=16384
+default_cpu_tx_queue=7
 ################################################################################
 # Pipe 0
 portmap_1=1:400
