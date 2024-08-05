@@ -76,6 +76,18 @@ dependent_startup=true
 dependent_startup_wait_for=zebra:running
 {% endif %}
 
+[program:vrrpd]
+command=/usr/lib/frr/vrrpd -A 127.0.0.1
+priority=4
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=zebra:running
+
 [program:bgpd]
 command=/usr/lib/frr/bgpd -A 127.0.0.1 -M snmp
 priority=5
@@ -125,13 +137,20 @@ stderr_logfile=syslog
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
 
+[program:macvlanmgrd]
+command=macvlanmgrd
+priority=6
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=vrrpd:running
+
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
 [program:frrcfgd]
 command=/usr/local/bin/frrcfgd
-{% else %}
-[program:bgpcfgd]
-command=/usr/local/bin/bgpcfgd
-{% endif %}
 priority=6
 autostart=false
 autorestart=false
@@ -140,6 +159,29 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
+{% else %}
+[program:bgpcfgd]
+command=/usr/local/bin/bgpcfgd
+priority=6
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+
+[program:vrrpcfgd]
+command=/usr/local/bin/vrrpcfgd
+priority=6
+autostart=false
+autorestart=true
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=bgpd:running
+{% endif %}
 
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
 {% else %}

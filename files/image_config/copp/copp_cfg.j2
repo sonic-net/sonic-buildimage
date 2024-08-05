@@ -74,8 +74,17 @@
 		    "red_action": "drop",
 		    "trap_action": "trap",
 		    "trap_priority": "1"
-
-	    }
+	    },
+            "queue2_group2": {
+                    "cir":"300",
+                    "cbs":"300",
+                    "meter_type":"packets",
+                    "mode":"sr_tcm",
+                    "red_action":"drop",
+                    "trap_action":"trap",
+                    "trap_priority":"7",
+                    "queue": "7"
+            }
     },
     "COPP_TRAP": {
 	    "bgp": {
@@ -118,6 +127,11 @@
 		    "trap_ids": "src_nat_miss,dest_nat_miss",
 		    "trap_group": "queue1_group2"
 	    },
+            "vrrp": {
+                    "trap_ids": "vrrp,vrrpv6",
+                    "trap_group": "queue2_group2",
+                    "always_enabled": "true"
+            },
 	    "sflow": {
 		    "trap_group": "queue2_group1",
 		    "trap_ids": "sample_packet"
