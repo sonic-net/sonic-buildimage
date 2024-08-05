@@ -101,16 +101,30 @@ function check_list()
     echo ${RET_LIST}
 }
 
+function set_cpufreq_governor() {
+    local -r governor="$1"
+    echo "$governor" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor 1> /dev/null \
+        && debug "Set CPUFreq scaling governor to $governor" \
+        || debug "Failed to set CPUFreq scaling governor to $governor"
+}
+
+function finalize_common() {
+    # Read default governor from kernel config
+    local -r default_governor=$(cat "/boot/config-$(uname -r)" | grep -o 'CONFIG_CPU_FREQ_DEFAULT_GOV_[^=]*=y')
+    set_cpufreq_governor "$default_governor"
+}
 
 function finalize_warm_boot()
 {
     debug "Finalizing warmboot..."
+    finalize_common
     sudo config warm_restart disable
 }
 
 function finalize_fast_reboot()
 {
     debug "Finalizing fast-reboot..."
+    finalize_common
     sonic-db-cli STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false" &>/dev/null
     sonic-db-cli CONFIG_DB DEL "WARM_RESTART|teamd" &>/dev/null
 }
