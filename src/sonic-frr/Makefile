@@ -20,6 +20,7 @@ endif
 	stg branch --create $(STG_BRANCH) $(FRR_TAG)
 	stg import -s ../patch/series
 	gbp dch --ignore-branch --new-version=$(FRR_VERSION)-sonic-$(FRR_SUBVERSION) --dch-opt="--force-bad-version" --commit --git-author
+	cp ../dplane_fpm_sonic/dplane_fpm_sonic.c zebra/
 
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	CFLAGS="-I $$CROSS_PERL_CORE_PATH" dpkg-buildpackage -rfakeroot -b -d -us -uc -Ppkg.frr.nortrlib -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
