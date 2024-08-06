@@ -77,6 +77,13 @@
 {% endif %}
 {%- endfor %}
 
+{%- set LOSSLESS_TC = [] %}
+{%- if generate_lossless_tc_list is defined %}
+    {%- if generate_lossless_tc_list(LOSSLESS_TC) %} {% endif %}
+{%- else %}
+    {%- set LOSSLESS_TC = ['3','4'] %}
+{%- endif %}
+
 {%- set pfc_to_pg_map_supported_asics = ['mellanox', 'barefoot', 'marvell'] -%}
 {%- set backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter'] -%}
 {%- set apollo_resource_types = ['DL-NPU-Apollo'] -%}
@@ -339,9 +346,9 @@
 {% if port in port_names_list_extra_queues %}
             "pfc_enable"      : "2,3,4,6",
 {% else %}
-            "pfc_enable"      : "3,4",
+            "pfc_enable"      : "{{ LOSSLESS_TC|join(',') }}",
 {% endif %}
-            "pfcwd_sw_enable" : "3,4",
+            "pfcwd_sw_enable" : "{{ LOSSLESS_TC|join(',') }}",
 {% endif %}
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE"
@@ -370,7 +377,9 @@
         }
     },
 {% endif %}
-{% if voq_chassis %}
+{% if generate_queue_config is defined %}
+    {{- generate_queue_config(PORT_ACTIVE) }}
+{% elif voq_chassis %}
     "QUEUE": {
 {% for system_port in SYSTEM_PORT_ALL %}
         "{{ system_port }}|3": {
