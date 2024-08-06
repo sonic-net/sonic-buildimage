@@ -48,7 +48,7 @@ module sonic-cable-length {
 
                     leaf length {
                         type string {
-                            pattern '[0-9]+m' {
+                            pattern '[0-9]+m|None' {
                                 error-message "Invalid cable length.";
                                 error-app-tag cable-length-invalid-length;
                             }
