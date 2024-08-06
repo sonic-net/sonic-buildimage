@@ -15,6 +15,7 @@ The format of default_sku is a single line:
 | ------ | ------ |
 | Force10-S6000 | Dell Force10 S6000|
 | brcm_gearbox_vs | Similar to Force10-S6000, but implements a virtual BRCM81724 Gearbox Phy |
+| poe_vs | Similar to Force10-S6000, but implements PoE |
 
 ## Allowable values for default_preset
 
@@ -86,3 +87,22 @@ swss docker).
 
 The commands "show gearbox interfaces status" and "show gearbox phys status" can be 
 used to verify the virtual gearbox phy has been created. See https://github.com/Azure/sonic-utilities/blob/master/doc/Command-Reference.md#gearbox for details.
+
+## poe_vs
+
+This sku simulates a device with PoE capabilites. To enable, set default_sku to:
+
+
+```
+poe_vs t1
+```
+
+To build (same as Force-10-S6000):
+
+```
+make init
+make configure PLATFORM=vs
+make target/sonic-vs.img.gz
+```
+
+See https://github.com/sonic-net/sonic-utilities/blob/master/doc/Command-Reference.md#power-over-ethernet for details.

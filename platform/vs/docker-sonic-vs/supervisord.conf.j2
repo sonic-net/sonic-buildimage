@@ -64,6 +64,15 @@ autorestart=false
 stdout_logfile=syslog
 stderr_logfile=syslog
 
+[program:poesyncd]
+command=/usr/bin/poesyncd -p /usr/share/sonic/hwsku/poe_config.json
+startsecs=0
+priority=5
+autostart=false
+autorestart=false
+stdout_logfile=syslog
+stderr_logfile=syslog
+
 [program:portsyncd]
 command=/usr/bin/portsyncd
 priority=5
@@ -128,6 +137,17 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/vlanmgrd-asan.log{{ asan_extra_options }}"
+{% endif %}
+
+[program:poemgrd]
+command=/usr/bin/poemgrd
+priority=10
+autostart=false
+autorestart=false
+stdout_logfile=syslog
+stderr_logfile=syslog
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/poemgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
 
 [program:intfmgrd]
