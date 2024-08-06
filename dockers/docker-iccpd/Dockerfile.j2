@@ -7,7 +7,7 @@ ARG docker_container_name
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -y ebtables
+    apt-get install -y iptables
 
 COPY \
 {% for deb in docker_iccpd_debs.split(' ') -%}
