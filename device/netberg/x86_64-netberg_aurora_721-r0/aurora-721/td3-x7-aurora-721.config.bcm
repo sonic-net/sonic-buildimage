@@ -1,0 +1,671 @@
+# cfg version: r2, 20230713
+
+pbmp_xport_xe=0xFFFFFFFFFFFFFFFFFfffffffffffffffe
+
+# Software config lane swaps
+
+#FC0    QSFP port 0
+phy_chain_rx_lane_map_physical{1}=0x2310
+phy_chain_tx_lane_map_physical{1}=0x0132
+
+#FC1    QSFP port 1
+phy_chain_rx_lane_map_physical{5}=0x3120
+phy_chain_tx_lane_map_physical{5}=0x1203
+
+#FC2    QSFP port 2
+phy_chain_rx_lane_map_physical{9}=0x2310
+phy_chain_tx_lane_map_physical{9}=0x0213
+
+#FC3    QSFP port 3
+phy_chain_rx_lane_map_physical{13}=0x3120
+phy_chain_tx_lane_map_physical{13}=0x1203
+
+#FC4    QSFP port 4
+phy_chain_rx_lane_map_physical{17}=0x2310
+phy_chain_tx_lane_map_physical{17}=0x0132
+
+#FC5    QSFP port 5
+phy_chain_rx_lane_map_physical{21}=0x3120
+phy_chain_tx_lane_map_physical{21}=0x1203
+
+#FC6    QSFP port 6
+phy_chain_rx_lane_map_physical{25}=0x2310
+phy_chain_tx_lane_map_physical{25}=0x0132
+
+#FC7    QSFP port 7
+phy_chain_rx_lane_map_physical{29}=0x3120
+phy_chain_tx_lane_map_physical{29}=0x1203
+
+#FC8    QSFP port 8
+phy_chain_rx_lane_map_physical{33}=0x2310
+phy_chain_tx_lane_map_physical{33}=0x0132
+
+#FC9    QSFP port 9
+phy_chain_rx_lane_map_physical{37}=0x3120
+phy_chain_tx_lane_map_physical{37}=0x1203
+
+#FC10    QSFP port 10
+phy_chain_rx_lane_map_physical{41}=0x2310
+phy_chain_tx_lane_map_physical{41}=0x0132
+
+#FC11    QSFP port 11
+phy_chain_rx_lane_map_physical{45}=0x3120
+phy_chain_tx_lane_map_physical{45}=0x1203
+
+#FC12    QSFP port 12
+phy_chain_rx_lane_map_physical{49}=0x1320
+phy_chain_tx_lane_map_physical{49}=0x0231
+
+#FC13    QSFP port 13
+phy_chain_rx_lane_map_physical{53}=0x3120
+phy_chain_tx_lane_map_physical{53}=0x1203
+
+#FC14    QSFP port 14
+phy_chain_rx_lane_map_physical{57}=0x2310
+phy_chain_tx_lane_map_physical{57}=0x0132
+
+#FC15    QSFP port 15
+phy_chain_rx_lane_map_physical{61}=0x3120
+phy_chain_tx_lane_map_physical{61}=0x1203
+
+#FC16    QSFP port 17
+phy_chain_rx_lane_map_physical{65}=0x3021
+phy_chain_tx_lane_map_physical{65}=0x0312
+
+#FC17    QSFP port 16
+phy_chain_rx_lane_map_physical{69}=0x1032
+phy_chain_tx_lane_map_physical{69}=0x3201
+
+#FC18    QSFP port 19
+phy_chain_rx_lane_map_physical{73}=0x3021
+phy_chain_tx_lane_map_physical{73}=0x1302
+
+#FC19    QSFP port 18
+phy_chain_rx_lane_map_physical{77}=0x2013
+phy_chain_tx_lane_map_physical{77}=0x3210
+
+#FC20    QSFP port 21
+phy_chain_rx_lane_map_physical{81}=0x3021
+phy_chain_tx_lane_map_physical{81}=0x1302
+
+#FC21    QSFP port 20
+phy_chain_rx_lane_map_physical{85}=0x2031
+phy_chain_tx_lane_map_physical{85}=0x3201
+
+#FC22    QSFP port 23
+phy_chain_rx_lane_map_physical{89}=0x3021
+phy_chain_tx_lane_map_physical{89}=0x1302
+
+#FC23    QSFP port 22
+phy_chain_rx_lane_map_physical{93}=0x2031
+phy_chain_tx_lane_map_physical{93}=0x3201
+
+#FC24    QSFP port 25
+phy_chain_rx_lane_map_physical{97}=0x3021
+phy_chain_tx_lane_map_physical{97}=0x1302
+
+#FC25    QSFP port 24
+phy_chain_rx_lane_map_physical{101}=0x2031
+phy_chain_tx_lane_map_physical{101}=0x1302
+
+#FC26    QSFP port 27
+phy_chain_rx_lane_map_physical{105}=0x3021
+phy_chain_tx_lane_map_physical{105}=0x1302
+
+#FC27    QSFP port 26
+phy_chain_rx_lane_map_physical{109}=0x2031
+phy_chain_tx_lane_map_physical{109}=0x1302
+
+#FC28    QSFP port 29
+phy_chain_rx_lane_map_physical{113}=0x2031
+phy_chain_tx_lane_map_physical{113}=0x1302
+
+#FC29    QSFP port 28
+phy_chain_rx_lane_map_physical{117}=0x2031
+phy_chain_tx_lane_map_physical{117}=0x1302
+
+#FC30    QSFP port 31
+phy_chain_rx_lane_map_physical{121}=0x2031
+phy_chain_tx_lane_map_physical{121}=0x1302
+
+#FC31    QSFP port 30
+phy_chain_rx_lane_map_physical{125}=0x2031
+phy_chain_tx_lane_map_physical{125}=0x3201
+
+#MC management port (front port)
+phy_chain_rx_lane_map_physical{129}=0x3210
+phy_chain_tx_lane_map_physical{129}=0x3210
+
+
+####### Polarity flips after lane swaps ######
+
+#FC0    QSFP port 0
+phy_chain_rx_polarity_flip_physical{1}=0x1
+phy_chain_rx_polarity_flip_physical{2}=0x0
+phy_chain_rx_polarity_flip_physical{3}=0x0
+phy_chain_rx_polarity_flip_physical{4}=0x1
+
+phy_chain_tx_polarity_flip_physical{1}=0x1
+phy_chain_tx_polarity_flip_physical{2}=0x0
+phy_chain_tx_polarity_flip_physical{3}=0x0
+phy_chain_tx_polarity_flip_physical{4}=0x1
+
+#FC1    QSFP port 1
+phy_chain_rx_polarity_flip_physical{5}=0x0
+phy_chain_rx_polarity_flip_physical{6}=0x0
+phy_chain_rx_polarity_flip_physical{7}=0x1
+phy_chain_rx_polarity_flip_physical{8}=0x1
+
+phy_chain_tx_polarity_flip_physical{5}=0x0
+phy_chain_tx_polarity_flip_physical{6}=0x1
+phy_chain_tx_polarity_flip_physical{7}=0x1
+phy_chain_tx_polarity_flip_physical{8}=0x1
+
+#FC2    QSFP port 2
+phy_chain_rx_polarity_flip_physical{9}=0x1
+phy_chain_rx_polarity_flip_physical{10}=0x0
+phy_chain_rx_polarity_flip_physical{11}=0x0
+phy_chain_rx_polarity_flip_physical{12}=0x1
+
+phy_chain_tx_polarity_flip_physical{9}=0x0
+phy_chain_tx_polarity_flip_physical{10}=0x1
+phy_chain_tx_polarity_flip_physical{11}=0x1
+phy_chain_tx_polarity_flip_physical{12}=0x0
+
+#FC3    QSFP port 3
+phy_chain_rx_polarity_flip_physical{13}=0x0
+phy_chain_rx_polarity_flip_physical{14}=0x0
+phy_chain_rx_polarity_flip_physical{15}=0x1
+phy_chain_rx_polarity_flip_physical{16}=0x1
+
+phy_chain_tx_polarity_flip_physical{13}=0x0
+phy_chain_tx_polarity_flip_physical{14}=0x1
+phy_chain_tx_polarity_flip_physical{15}=0x1
+phy_chain_tx_polarity_flip_physical{16}=0x1
+
+#FC4    QSFP port 4
+phy_chain_rx_polarity_flip_physical{17}=0x1
+phy_chain_rx_polarity_flip_physical{18}=0x0
+phy_chain_rx_polarity_flip_physical{19}=0x0
+phy_chain_rx_polarity_flip_physical{20}=0x1
+
+phy_chain_tx_polarity_flip_physical{17}=0x0
+phy_chain_tx_polarity_flip_physical{18}=0x0
+phy_chain_tx_polarity_flip_physical{19}=0x1
+phy_chain_tx_polarity_flip_physical{20}=0x1
+
+#FC5    QSFP port 5
+phy_chain_rx_polarity_flip_physical{21}=0x0
+phy_chain_rx_polarity_flip_physical{22}=0x0
+phy_chain_rx_polarity_flip_physical{23}=0x1
+phy_chain_rx_polarity_flip_physical{24}=0x1
+
+phy_chain_tx_polarity_flip_physical{21}=0x0
+phy_chain_tx_polarity_flip_physical{22}=0x1
+phy_chain_tx_polarity_flip_physical{23}=0x1
+phy_chain_tx_polarity_flip_physical{24}=0x1
+
+#FC6    QSFP port 6
+phy_chain_rx_polarity_flip_physical{25}=0x0
+phy_chain_rx_polarity_flip_physical{26}=0x1
+phy_chain_rx_polarity_flip_physical{27}=0x1
+phy_chain_rx_polarity_flip_physical{28}=0x0
+
+phy_chain_tx_polarity_flip_physical{25}=0x1
+phy_chain_tx_polarity_flip_physical{26}=0x0
+phy_chain_tx_polarity_flip_physical{27}=0x0
+phy_chain_tx_polarity_flip_physical{28}=0x0
+
+#FC7    QSFP port 7
+phy_chain_rx_polarity_flip_physical{29}=0x1
+phy_chain_rx_polarity_flip_physical{30}=0x1
+phy_chain_rx_polarity_flip_physical{31}=0x0
+phy_chain_rx_polarity_flip_physical{32}=0x0
+
+phy_chain_tx_polarity_flip_physical{29}=0x0
+phy_chain_tx_polarity_flip_physical{30}=0x1
+phy_chain_tx_polarity_flip_physical{31}=0x1
+phy_chain_tx_polarity_flip_physical{32}=0x1
+
+#FC8    QSFP port 8
+phy_chain_rx_polarity_flip_physical{33}=0x0
+phy_chain_rx_polarity_flip_physical{34}=0x1
+phy_chain_rx_polarity_flip_physical{35}=0x1
+phy_chain_rx_polarity_flip_physical{36}=0x0
+
+phy_chain_tx_polarity_flip_physical{33}=0x0
+phy_chain_tx_polarity_flip_physical{34}=0x0
+phy_chain_tx_polarity_flip_physical{35}=0x1
+phy_chain_tx_polarity_flip_physical{36}=0x1
+
+#FC9    QSFP port 9
+phy_chain_rx_polarity_flip_physical{37}=0x1
+phy_chain_rx_polarity_flip_physical{38}=0x1
+phy_chain_rx_polarity_flip_physical{39}=0x0
+phy_chain_rx_polarity_flip_physical{40}=0x0
+
+phy_chain_tx_polarity_flip_physical{37}=0x0
+phy_chain_tx_polarity_flip_physical{38}=0x1
+phy_chain_tx_polarity_flip_physical{39}=0x1
+phy_chain_tx_polarity_flip_physical{40}=0x1
+
+#FC10    QSFP port 10
+phy_chain_rx_polarity_flip_physical{41}=0x0
+phy_chain_rx_polarity_flip_physical{42}=0x1
+phy_chain_rx_polarity_flip_physical{43}=0x1
+phy_chain_rx_polarity_flip_physical{44}=0x0
+
+phy_chain_tx_polarity_flip_physical{41}=0x1
+phy_chain_tx_polarity_flip_physical{42}=0x0
+phy_chain_tx_polarity_flip_physical{43}=0x0
+phy_chain_tx_polarity_flip_physical{44}=0x1
+
+#FC11    QSFP port 11
+phy_chain_rx_polarity_flip_physical{45}=0x1
+phy_chain_rx_polarity_flip_physical{46}=0x1
+phy_chain_rx_polarity_flip_physical{47}=0x0
+phy_chain_rx_polarity_flip_physical{48}=0x0
+
+phy_chain_tx_polarity_flip_physical{45}=0x0
+phy_chain_tx_polarity_flip_physical{46}=0x1
+phy_chain_tx_polarity_flip_physical{47}=0x1
+phy_chain_tx_polarity_flip_physical{48}=0x1
+
+#FC12    QSFP port 12
+phy_chain_rx_polarity_flip_physical{49}=0x0
+phy_chain_rx_polarity_flip_physical{50}=0x0
+phy_chain_rx_polarity_flip_physical{51}=0x1
+phy_chain_rx_polarity_flip_physical{52}=0x1
+
+phy_chain_tx_polarity_flip_physical{49}=0x1
+phy_chain_tx_polarity_flip_physical{50}=0x0
+phy_chain_tx_polarity_flip_physical{51}=0x0
+phy_chain_tx_polarity_flip_physical{52}=0x1
+
+#FC13    QSFP port 13
+phy_chain_rx_polarity_flip_physical{53}=0x0
+phy_chain_rx_polarity_flip_physical{54}=0x0
+phy_chain_rx_polarity_flip_physical{55}=0x1
+phy_chain_rx_polarity_flip_physical{56}=0x1
+
+phy_chain_tx_polarity_flip_physical{53}=0x1
+phy_chain_tx_polarity_flip_physical{54}=0x0
+phy_chain_tx_polarity_flip_physical{55}=0x0
+phy_chain_tx_polarity_flip_physical{56}=0x0
+
+#FC14    QSFP port 14
+phy_chain_rx_polarity_flip_physical{57}=0x1
+phy_chain_rx_polarity_flip_physical{58}=0x0
+phy_chain_rx_polarity_flip_physical{59}=0x0
+phy_chain_rx_polarity_flip_physical{60}=0x1
+
+phy_chain_tx_polarity_flip_physical{57}=0x1
+phy_chain_tx_polarity_flip_physical{58}=0x1
+phy_chain_tx_polarity_flip_physical{59}=0x1
+phy_chain_tx_polarity_flip_physical{60}=0x0
+
+#FC15    QSFP port 15
+phy_chain_rx_polarity_flip_physical{61}=0x0
+phy_chain_rx_polarity_flip_physical{62}=0x0
+phy_chain_rx_polarity_flip_physical{63}=0x1
+phy_chain_rx_polarity_flip_physical{64}=0x1
+
+phy_chain_tx_polarity_flip_physical{61}=0x1
+phy_chain_tx_polarity_flip_physical{62}=0x0
+phy_chain_tx_polarity_flip_physical{63}=0x0
+phy_chain_tx_polarity_flip_physical{64}=0x0
+
+#FC16    QSFP port 17
+phy_chain_rx_polarity_flip_physical{65}=0x1
+phy_chain_rx_polarity_flip_physical{66}=0x1
+phy_chain_rx_polarity_flip_physical{67}=0x0
+phy_chain_rx_polarity_flip_physical{68}=0x0
+
+phy_chain_tx_polarity_flip_physical{65}=0x1
+phy_chain_tx_polarity_flip_physical{66}=0x0
+phy_chain_tx_polarity_flip_physical{67}=0x0
+phy_chain_tx_polarity_flip_physical{68}=0x0
+
+#FC17    QSFP port 16
+phy_chain_rx_polarity_flip_physical{69}=0x1
+phy_chain_rx_polarity_flip_physical{70}=0x0
+phy_chain_rx_polarity_flip_physical{71}=0x1
+phy_chain_rx_polarity_flip_physical{72}=0x1
+
+phy_chain_tx_polarity_flip_physical{69}=0x1
+phy_chain_tx_polarity_flip_physical{70}=0x0
+phy_chain_tx_polarity_flip_physical{71}=0x0
+phy_chain_tx_polarity_flip_physical{72}=0x0
+
+#FC18    QSFP port 19
+phy_chain_rx_polarity_flip_physical{73}=0x1
+phy_chain_rx_polarity_flip_physical{74}=0x1
+phy_chain_rx_polarity_flip_physical{75}=0x0
+phy_chain_rx_polarity_flip_physical{76}=0x0
+
+phy_chain_tx_polarity_flip_physical{73}=0x1
+phy_chain_tx_polarity_flip_physical{74}=0x1
+phy_chain_tx_polarity_flip_physical{75}=0x0
+phy_chain_tx_polarity_flip_physical{76}=0x1
+
+#FC19    QSFP port 18
+phy_chain_rx_polarity_flip_physical{77}=0x0
+phy_chain_rx_polarity_flip_physical{78}=0x0
+phy_chain_rx_polarity_flip_physical{79}=0x1
+phy_chain_rx_polarity_flip_physical{80}=0x1
+
+phy_chain_tx_polarity_flip_physical{77}=0x0
+phy_chain_tx_polarity_flip_physical{78}=0x0
+phy_chain_tx_polarity_flip_physical{79}=0x0
+phy_chain_tx_polarity_flip_physical{80}=0x0
+
+#FC20    QSFP port 21
+phy_chain_rx_polarity_flip_physical{81}=0x1
+phy_chain_rx_polarity_flip_physical{82}=0x1
+phy_chain_rx_polarity_flip_physical{83}=0x0
+phy_chain_rx_polarity_flip_physical{84}=0x0
+
+phy_chain_tx_polarity_flip_physical{81}=0x1
+phy_chain_tx_polarity_flip_physical{82}=0x1
+phy_chain_tx_polarity_flip_physical{83}=0x0
+phy_chain_tx_polarity_flip_physical{84}=0x1
+
+#FC21    QSFP port 20
+phy_chain_rx_polarity_flip_physical{85}=0x0
+phy_chain_rx_polarity_flip_physical{86}=0x1
+phy_chain_rx_polarity_flip_physical{87}=0x1
+phy_chain_rx_polarity_flip_physical{88}=0x0
+
+phy_chain_tx_polarity_flip_physical{85}=0x0
+phy_chain_tx_polarity_flip_physical{86}=0x0
+phy_chain_tx_polarity_flip_physical{87}=0x1
+phy_chain_tx_polarity_flip_physical{88}=0x0
+
+#FC22    QSFP port 23
+phy_chain_rx_polarity_flip_physical{89}=0x1
+phy_chain_rx_polarity_flip_physical{90}=0x1
+phy_chain_rx_polarity_flip_physical{91}=0x0
+phy_chain_rx_polarity_flip_physical{92}=0x0
+
+phy_chain_tx_polarity_flip_physical{89}=0x1
+phy_chain_tx_polarity_flip_physical{90}=0x1
+phy_chain_tx_polarity_flip_physical{91}=0x0
+phy_chain_tx_polarity_flip_physical{92}=0x1
+
+#FC23    QSFP port 22
+phy_chain_rx_polarity_flip_physical{93}=0x0
+phy_chain_rx_polarity_flip_physical{94}=0x1
+phy_chain_rx_polarity_flip_physical{95}=0x1
+phy_chain_rx_polarity_flip_physical{96}=0x0
+
+phy_chain_tx_polarity_flip_physical{93}=0x0
+phy_chain_tx_polarity_flip_physical{94}=0x1
+phy_chain_tx_polarity_flip_physical{95}=0x1
+phy_chain_tx_polarity_flip_physical{96}=0x0
+
+#FC24    QSFP port 25
+phy_chain_rx_polarity_flip_physical{97}=0x1
+phy_chain_rx_polarity_flip_physical{98}=0x1
+phy_chain_rx_polarity_flip_physical{99}=0x0
+phy_chain_rx_polarity_flip_physical{100}=0x0
+
+phy_chain_tx_polarity_flip_physical{97}=0x1
+phy_chain_tx_polarity_flip_physical{98}=0x1
+phy_chain_tx_polarity_flip_physical{99}=0x0
+phy_chain_tx_polarity_flip_physical{100}=0x1
+
+#FC25    QSFP port 24
+phy_chain_rx_polarity_flip_physical{101}=0x0
+phy_chain_rx_polarity_flip_physical{102}=0x1
+phy_chain_rx_polarity_flip_physical{103}=0x1
+phy_chain_rx_polarity_flip_physical{104}=0x0
+
+phy_chain_tx_polarity_flip_physical{101}=0x1
+phy_chain_tx_polarity_flip_physical{102}=0x0
+phy_chain_tx_polarity_flip_physical{103}=0x0
+phy_chain_tx_polarity_flip_physical{104}=0x1
+
+#FC26    QSFP port 27
+phy_chain_rx_polarity_flip_physical{105}=0x0
+phy_chain_rx_polarity_flip_physical{106}=0x0
+phy_chain_rx_polarity_flip_physical{107}=0x1
+phy_chain_rx_polarity_flip_physical{108}=0x1
+
+phy_chain_tx_polarity_flip_physical{105}=0x1
+phy_chain_tx_polarity_flip_physical{106}=0x1
+phy_chain_tx_polarity_flip_physical{107}=0x0
+phy_chain_tx_polarity_flip_physical{108}=0x1
+
+#FC27    QSFP port 26
+phy_chain_rx_polarity_flip_physical{109}=0x1
+phy_chain_rx_polarity_flip_physical{110}=0x0
+phy_chain_rx_polarity_flip_physical{111}=0x0
+phy_chain_rx_polarity_flip_physical{112}=0x1
+
+phy_chain_tx_polarity_flip_physical{109}=0x1
+phy_chain_tx_polarity_flip_physical{110}=0x0
+phy_chain_tx_polarity_flip_physical{111}=0x0
+phy_chain_tx_polarity_flip_physical{112}=0x0
+
+#FC28    QSFP port 29
+phy_chain_rx_polarity_flip_physical{113}=0x0
+phy_chain_rx_polarity_flip_physical{114}=0x1
+phy_chain_rx_polarity_flip_physical{115}=0x1
+phy_chain_rx_polarity_flip_physical{116}=0x0
+
+phy_chain_tx_polarity_flip_physical{113}=0x1
+phy_chain_tx_polarity_flip_physical{114}=0x1
+phy_chain_tx_polarity_flip_physical{115}=0x0
+phy_chain_tx_polarity_flip_physical{116}=0x1
+
+#FC29    QSFP port 28
+phy_chain_rx_polarity_flip_physical{117}=0x1
+phy_chain_rx_polarity_flip_physical{118}=0x0
+phy_chain_rx_polarity_flip_physical{119}=0x0
+phy_chain_rx_polarity_flip_physical{120}=0x1
+
+phy_chain_tx_polarity_flip_physical{117}=0x1
+phy_chain_tx_polarity_flip_physical{118}=0x0
+phy_chain_tx_polarity_flip_physical{119}=0x0
+phy_chain_tx_polarity_flip_physical{120}=0x1
+
+#FC30    QSFP port 31
+phy_chain_rx_polarity_flip_physical{121}=0x1
+phy_chain_rx_polarity_flip_physical{122}=0x1
+phy_chain_rx_polarity_flip_physical{123}=0x0
+phy_chain_rx_polarity_flip_physical{124}=0x0
+
+phy_chain_tx_polarity_flip_physical{121}=0x1
+phy_chain_tx_polarity_flip_physical{122}=0x1
+phy_chain_tx_polarity_flip_physical{123}=0x0
+phy_chain_tx_polarity_flip_physical{124}=0x1
+
+#FC31    QSFP port 30
+phy_chain_rx_polarity_flip_physical{125}=0x1
+phy_chain_rx_polarity_flip_physical{126}=0x0
+phy_chain_rx_polarity_flip_physical{127}=0x0
+phy_chain_rx_polarity_flip_physical{128}=0x1
+
+phy_chain_tx_polarity_flip_physical{125}=0x0
+phy_chain_tx_polarity_flip_physical{126}=0x0
+phy_chain_tx_polarity_flip_physical{127}=0x1
+phy_chain_tx_polarity_flip_physical{128}=0x0
+
+#MC
+phy_chain_rx_polarity_flip_physical{129}=0x0
+phy_chain_rx_polarity_flip_physical{130}=0x0
+phy_chain_rx_polarity_flip_physical{131}=0x0
+phy_chain_rx_polarity_flip_physical{132}=0x0
+
+phy_chain_tx_polarity_flip_physical{129}=0x0
+phy_chain_tx_polarity_flip_physical{130}=0x0
+phy_chain_tx_polarity_flip_physical{131}=0x0
+phy_chain_tx_polarity_flip_physical{132}=0x0
+
+
+#Portmap setting
+#FC0 QSFP port 0
+portmap_1=1:100
+
+#FC1 QSFP port 1
+portmap_5=5:100
+
+#FC2 QSFP port 2
+portmap_9=9:100
+
+#FC3 QSFP port 3
+portmap_13=13:100
+
+#FC4 QSFP port 4
+portmap_17=17:100
+
+#FC5 QSFP port 5
+portmap_21=21:100
+
+#FC6 QSFP port 6
+portmap_25=25:100
+
+#FC7 QSFP port 7
+portmap_29=29:100
+
+#FC8 QSFP port 8
+portmap_33=33:100
+
+#FC9 QSFP port 9
+portmap_37=37:100
+
+#FC10 QSFP port 10
+portmap_41=41:100
+
+#FC11 QSFP port 11
+portmap_45=45:100
+
+#FC12 QSFP port 12
+portmap_49=49:100
+
+#FC13 QSFP port 13
+portmap_53=53:100
+
+#FC14 QSFP port 14
+portmap_57=57:100
+
+#FC15 QSFP port 15
+portmap_61=61:100
+
+#MC port 66 - management port (front port)
+portmap_66=129:10:m
+
+
+#FC16 QSFP port 17
+portmap_67=65:100
+
+#FC17 QSFP port 16
+portmap_71=69:100
+
+#FC18 QSFP port 19
+portmap_75=73:100
+
+#FC19 QSFP port 18
+portmap_79=77:100
+
+#FC20 QSFP port 21
+portmap_83=81:100
+
+#FC21 QSFP port 20
+portmap_87=85:100
+
+#FC22 QSFP port 23
+portmap_91=89:100
+
+#FC23 QSFP port 22
+portmap_95=93:100
+
+#FC24 QSFP port 25
+portmap_99=97:100
+
+#FC25 QSFP port 24
+portmap_103=101:100
+
+#FC26 QSFP port 27
+portmap_107=105:100
+
+#FC27 QSFP port 26
+portmap_111=109:100
+
+#FC28 QSFP port 29
+portmap_115=113:100
+
+#FC29 QSFP port 28
+portmap_119=117:100
+
+#FC30 QSFP port 31
+portmap_123=121:100
+
+#FC31 QSFP port 30
+portmap_127=125:100
+
+
+dport_map_enable=1
+
+dport_map_port_1=1
+dport_map_port_5=2
+dport_map_port_9=3
+dport_map_port_13=4
+dport_map_port_17=5
+dport_map_port_21=6
+dport_map_port_25=7
+dport_map_port_29=8
+dport_map_port_33=9
+dport_map_port_37=10
+dport_map_port_41=11
+dport_map_port_45=12
+dport_map_port_49=13
+dport_map_port_53=14
+dport_map_port_57=15
+dport_map_port_61=16
+dport_map_port_71=17
+dport_map_port_67=18
+dport_map_port_79=19
+dport_map_port_75=20
+dport_map_port_87=21
+dport_map_port_83=22
+dport_map_port_95=23
+dport_map_port_91=24
+dport_map_port_103=25
+dport_map_port_99=26
+dport_map_port_111=27
+dport_map_port_107=28
+dport_map_port_119=29
+dport_map_port_115=30
+dport_map_port_127=31
+dport_map_port_123=32
+dport_map_port_66=33
+
+
+core_clock_frequency=1525
+dpp_clock_ratio=2:3
+oversubscribe_mode=1
+parity_enable=0
+mem_cache_enable=0
+l2_mem_entries=32768
+l3_mem_entries=16384
+fpem_mem_entries=131072
+l2xmsg_mode=1
+bcm_num_cos=10
+bcm_stat_interval=2000000
+cdma_timeout_usec=3000000
+ipv6_lpm_128b_enable=0x1
+l3_max_ecmp_mode=1
+lpm_scaling_enable=0
+max_vp_lags=0
+miim_intr_enable=0
+module_64ports=1
+schan_intr_enable=0
+stable_size=0x5500000
+tdma_timeout_usec=3000000
+skip_L2_USER_ENTRY=0
+bcm_tunnel_term_compatible_mode=1
+ifp_inports_support_enable=1
+port_flex_enable=1
+
+
