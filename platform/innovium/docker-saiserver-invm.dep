@@ -1,8 +1,0 @@
-DPATH       := $($(DOCKER_SAISERVER_INVM)_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/innovium/docker-saiserver-invm.mk platform/innovium/docker-saiserver-invm.dep
-DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES   += $(shell git ls-files $(DPATH))
-
-$(DOCKER_SAISERVER_INVM)_CACHE_MODE  := GIT_CONTENT_SHA
-$(DOCKER_SAISERVER_INVM)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
-$(DOCKER_SAISERVER_INVM)_DEP_FILES   := $(DEP_FILES)
