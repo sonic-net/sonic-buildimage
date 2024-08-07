@@ -95,7 +95,7 @@ function startplatform() {
 function waitplatform() {
 
     BOOT_TYPE=`getBootType`
-    if [[ x"$sonic_asic_platform" == x"mellanox" ]]; then
+    if [[ x"$sonic_asic_platform" == x"mellanox" ]] || [[ x"$sonic_asic_platform" == x"broadcom" ]]; then
         PLATFORM=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' platform`
         PMON_IMMEDIATE_START="/usr/share/sonic/device/$PLATFORM/pmon_immediate_start"
         if [[ x"$BOOT_TYPE" = @(x"fast"|x"warm"|x"fastfast") ]] && [[ ! -f $PMON_IMMEDIATE_START ]]; then
