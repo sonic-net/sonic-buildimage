@@ -1026,6 +1026,11 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get clean -y
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get autoremove -y
 
+{% if include_netconf_server == 'y' %}
+sudo cp $BUILD_TEMPLATES/netconf-server.timer $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+echo "netconf-server.timer" | sudo tee -a $GENERATED_SERVICE_FILE
+{% endif %}
+
 {% for file in installer_extra_files.split(' ') -%}
 {% if file.strip() -%}
 {% set src = file.split(':')[0] -%}
