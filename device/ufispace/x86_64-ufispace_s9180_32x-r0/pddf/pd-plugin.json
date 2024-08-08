@@ -1,0 +1,85 @@
+{
+
+    "XCVR":
+    {
+        "xcvr_present":
+        {
+           "i2c":
+           {
+               "valmap-SFP": {"1":true, "0":false},
+               "valmap-QSFP": {"1":true, "0":false}
+           }
+        },
+
+        "plug_status":
+        {
+            "inserted": "1",
+            "removed": "0"
+        }
+    },
+    "PSU":
+    {
+        "psu_present":
+        {
+            "i2c":
+            {
+                "valmap": { "1":true, "0":false }
+            },
+            "bmc":
+            {
+                "valmap": { "Device Present":true, "Device Absent":false }
+            }
+        },
+
+        "psu_power_good":
+        {
+            "i2c":
+            {
+                "valmap": { "1": true, "0":false }
+            },
+            "bmc":
+            {
+                "valmap": { "Device Enabled":true, "Device Absent":false  }
+            }
+        },
+
+        "psu_support_list":
+        [
+            {"Manufacturer": "FSP GROUP", "Name": "FSP550-20ERM",   "MaxSpd": "PSU_FAN_MAX_SPEED", "Type": "AC"},
+            {"Manufacturer": "GW",        "Name": "GW-CRPS550",     "MaxSpd": "PSU_FAN_MAX_SPEED", "Type": "AC"}
+        ],
+
+        "valmap": {
+            "PSU_FAN_MAX_SPEED":"18000",
+            "DEFAULT_TYPE": "AC"
+        }
+    },
+    "FAN":
+    {
+        "direction":
+        {
+            "bmc":
+            {
+                "valmap": {"0": "UNKNOWN", "1":"INTAKE", "2":"EXHAUST"}
+            }
+        },
+
+        "present":
+        {
+            "i2c":
+            {
+                "valmap": {"1":true, "0":false}
+            },
+            "bmc":
+            {
+                "valmap": { "Device Present":true, "Device Absent":false}
+            }
+        },
+        "FAN_R_MAX_SPEED":"22000",
+        "FAN_F_MAX_SPEED":"22000"
+    },
+    "REBOOT_CAUSE":
+    {
+        "reboot_cause_file": "/host/reboot-cause/reboot-cause.txt"
+    }
+}
