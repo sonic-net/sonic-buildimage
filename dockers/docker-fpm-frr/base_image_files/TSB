@@ -6,7 +6,18 @@ if [ "$EUID" -ne 0 ] ; then
   exit 1
 fi
 
-if [ -f /etc/sonic/chassisdb.conf ]; then
+PLATFORM="$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform)"
+SMARTSWITCH=false
+# Parse the platform.json file to get the platform specific information
+PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
+if [ -f "$PLATFORM_JSON" ]; then
+    NUM_DPU=$(jq -r '.DPUS | length' $PLATFORM_JSON 2>/dev/null)
+    if [[ $NUM_DPU -gt 0 ]]; then
+        SMARTSWITCH=true
+    fi
+fi
+
+if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] ; then
   CHASSIS_TSA_STATE_UPDATE="CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL\|STATE" tsa_enabled "false""
   CONFIG_DB_TSA_STATE_UPDATE='{"BGP_DEVICE_GLOBAL":{"STATE":{"tsa_enabled": "false"}}}'
   current_tsa_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.tsa_enabled)"
