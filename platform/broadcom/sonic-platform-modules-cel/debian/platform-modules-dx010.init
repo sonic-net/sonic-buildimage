@@ -42,7 +42,7 @@ start)
         echo -n "Setting up board... "
 
         modprobe i2c-dev
-        modprobe i2c-mux-pca954x force-deselect-on-exit=1
+        modprobe i2c-mux-pca954x
         modprobe dx010_wdt
         modprobe leds-dx010
         modprobe lm75
@@ -74,6 +74,11 @@ start)
         # Attach PCA9548 0x77 Channel Extender for Fan's EEPROMs
         echo pca9548 0x77 > /sys/bus/i2c/devices/i2c-${devnum}/new_device
         sleep 0.1
+
+        # Set the PCA9548 mux behavior
+        echo -2 > /sys/bus/i2c/drivers/pca954x/${devnum}-0071/idle_state
+        echo -2 > /sys/bus/i2c/drivers/pca954x/${devnum}-0073/idle_state
+        echo -2 > /sys/bus/i2c/drivers/pca954x/${devnum}-0077/idle_state
 
         # Attach syseeprom
         echo 24lc64t 0x50 > /sys/bus/i2c/devices/i2c-12/new_device
