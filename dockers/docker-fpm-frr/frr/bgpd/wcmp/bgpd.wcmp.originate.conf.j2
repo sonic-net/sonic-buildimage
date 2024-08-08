@@ -1,0 +1,17 @@
+!
+! template: bgpd/wcmp/bgpd.wcmp.originate.conf.j2
+!
+route-map CHECK_ORIGINATE_BANDWIDTH_ENABLED permit 100
+{%- if originate_status == 'cumulative' %}
+  set extcommunity bandwidth cumulative
+{%- elif originate_status == 'num_multipaths' %}
+  set extcommunity bandwidth num-multipaths
+{%- elif originate_status == 'disabled' %}
+  no set extcommunity bandwidth
+{%- else %}
+  set extcommunity bandwidth {{ originate_status }}
+{%- endif %}
+exit
+!
+! end of template: bgpd/wcmp/bgpd.wcmp.originate.conf.j2
+!

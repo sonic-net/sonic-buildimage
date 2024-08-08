@@ -222,45 +222,56 @@ def test_tsa_neg(mock_get_chassis_tsa_status, mocked_log_err, value):
     mocked_log_err.assert_called_with("TSA: invalid value({}) is provided".format(value))
 
 #
-# W-ECMP --------------------------------------------------------------------------------------------------------------
+# Originating bandwidth via W-ECMP --------------------------------------------------------------------------------------------------------------
 #
 
 @pytest.mark.parametrize(
     "value,result", [
         pytest.param(
-            "true",
-            get_string_from_file("/wcmp.set.conf", WCMP_BASE_PATH),
-            id="enabled"
+            "cumulative",
+            get_string_from_file("/wcmp.cumulative.conf", WCMP_BASE_PATH),
+            id="cumulative"
         ),
         pytest.param(
-            "false",
+            "num_multipaths",
+            get_string_from_file("/wcmp.multipath.conf", WCMP_BASE_PATH),
+            id="multipath"
+        ),
+        pytest.param(
+            "disabled",
             get_string_from_file("/wcmp.unset.conf", WCMP_BASE_PATH),
             id="disabled"
+        ),
+        pytest.param(
+            "5",
+            get_string_from_file("/wcmp.weight.conf", WCMP_BASE_PATH),
+            id="weight"
         )
     ]
 )
 @patch('bgpcfgd.managers_device_global.log_debug')
-def test_wcmp(mocked_log_info, value, result):
+def test_originate_bandwidth(mocked_log_info, value, result):
     m = constructor()
     m.cfg_mgr.changes = ""
-    if value == "false":
+    if value == "disabled":
         # By default feature is disabled. Simulate enabled state
-        m.directory.put(m.db_name, m.table_name, "wcmp_enabled", "true")
-    res = m.set_handler("STATE", {"wcmp_enabled": value})
+        m.directory.put(m.db_name, m.table_name, "originate_bandwidth", "cumulative")
+    res = m.set_handler("STATE", {"originate_bandwidth": value})
     assert res, "Expect True return value for set_handler"
     mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
     assert m.cfg_mgr.get_config() == result
 
 @pytest.mark.parametrize(
-    "value", [ "invalid_value" ]
+    "value", [ "0" ]
 )
 @patch('bgpcfgd.managers_device_global.log_err')
-def test_wcmp_neg(mocked_log_err, value):
+def test_originate_bandwidth_neg(mocked_log_err, value):
     m = constructor()
     m.cfg_mgr.changes = ""
-    res = m.set_handler("STATE", {"wcmp_enabled": value})
+    res = m.set_handler("STATE", {"originate_bandwidth": value})
     assert res, "Expect True return value for set_handler"
-    mocked_log_err.assert_called_with("W-ECMP: invalid value({}) is provided".format(value))
+    mocked_log_err.assert_called_with("W-ECMP originate_bandwidth: invalid value({}) is provided".format(value))
+
 
 #
 # IDF -----------------------------------------------------------------------------------------------------------------

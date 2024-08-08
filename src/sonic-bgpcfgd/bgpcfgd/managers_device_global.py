@@ -10,7 +10,7 @@ class DeviceGlobalCfgMgr(Manager):
     """This class responds to change in device-specific state"""
 
     TSA_DEFAULTS = "false"
-    WCMP_DEFAULTS = "false"
+    ORIGINATE_DEFAULTS = "disabled"
     IDF_DEFAULTS = "unisolated"
 
     def __init__(self, common_objs, db, table):
@@ -27,7 +27,7 @@ class DeviceGlobalCfgMgr(Manager):
         self.constants = common_objs['constants']
         self.tsa_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.isolate.conf.j2")
         self.tsb_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.unisolate.conf.j2")
-        self.wcmp_template = common_objs['tf'].from_file("bgpd/wcmp/bgpd.wcmp.conf.j2")
+        self.originate_template = common_objs['tf'].from_file("bgpd/wcmp/bgpd.wcmp.originate.conf.j2")        
         self.idf_isolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_isolate.conf.j2")
         self.idf_unisolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_unisolate.conf.j2")
         self.directory.subscribe([("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/switch_type"),], self.on_switch_type_change)
@@ -41,9 +41,9 @@ class DeviceGlobalCfgMgr(Manager):
         # By default TSA feature is disabled
         if not self.directory.path_exist(self.db_name, self.table_name, "tsa_enabled"):
             self.directory.put(self.db_name, self.table_name, "tsa_enabled", self.TSA_DEFAULTS)
-        # By default W-ECMP feature is disabled
-        if not self.directory.path_exist(self.db_name, self.table_name, "wcmp_enabled"):
-            self.directory.put(self.db_name, self.table_name, "wcmp_enabled", self.WCMP_DEFAULTS)
+        # By default originating bandwidth via W-ECMP feature is disabled
+        if not self.directory.path_exist(self.db_name, self.table_name, "originate_bandwidth"):
+            self.directory.put(self.db_name, self.table_name, "originate_bandwidth", self.ORIGINATE_DEFAULTS)
         # By default IDF feature is unisolated
         if not self.directory.path_exist(self.db_name, self.table_name, "idf_isolation_state"):
             self.directory.put(self.db_name, self.table_name, "idf_isolation_state", self.IDF_DEFAULTS)
@@ -55,7 +55,7 @@ class DeviceGlobalCfgMgr(Manager):
         log_debug("DeviceGlobalCfgMgr:: Switch type: %s" % self.switch_type)
 
     def set_handler(self, key, data):
-        """ Handle device TSA/W-ECMP state change """
+        """ Handle device state in BGP-DEVICE_GLOBAL change """
         log_debug("DeviceGlobalCfgMgr:: set handler")
 
         if self.switch_type:
@@ -66,8 +66,8 @@ class DeviceGlobalCfgMgr(Manager):
 
         # TSA configuration
         self.configure_tsa(data)
-        # W-ECMP configuration
-        self.configure_wcmp(data)
+        # Originate Bandwidth via W-ECMP configuration
+        self.configure_originate_bandwidth(data)
         # IDF configuration
         self.configure_idf(data)
 
@@ -78,8 +78,8 @@ class DeviceGlobalCfgMgr(Manager):
 
         # TSA configuration
         self.configure_tsa()
-        # W-ECMP configuration
-        self.configure_wcmp()
+        # Originate Bandwidth via W-ECMP configuration
+        self.configure_originate_bandwidth()
         # IDF configuration
         self.configure_idf()
 
@@ -112,20 +112,20 @@ class DeviceGlobalCfgMgr(Manager):
         else:
             log_notice("DeviceGlobalCfgMgr:: TSA configuration is up-to-date")
 
-    def configure_wcmp(self, data=None):
-        """ Configure W-ECMP feature"""
+    def configure_originate_bandwidth(self, data=None):
+        """ Configure originating bandwidth via W-ECMP feature"""
 
-        state = self.WCMP_DEFAULTS
+        state = self.ORIGINATE_DEFAULTS
 
         if data is not None:
-            if "wcmp_enabled" in data:
-                state = data["wcmp_enabled"]
+            if "originate_bandwidth" in data:
+                state = data["originate_bandwidth"]
 
-        if self.is_update_required("wcmp_enabled", state):
-            if self.set_wcmp(state):
-                self.directory.put(self.db_name, self.table_name, "wcmp_enabled", state)
+        if self.is_update_required("originate_bandwidth", state):
+            if self.set_originate_bandwidth(state):
+                self.directory.put(self.db_name, self.table_name, "originate_bandwidth", state)
         else:
-            log_notice("DeviceGlobalCfgMgr:: W-ECMP configuration is up-to-date")
+            log_notice("DeviceGlobalCfgMgr:: Originate bandwidth for W-ECMP configuration is up-to-date")
 
     def configure_idf(self, data=None):
         """ Configure IDF feature"""
@@ -142,24 +142,29 @@ class DeviceGlobalCfgMgr(Manager):
         else:
             log_notice("DeviceGlobalCfgMgr:: IDF configuration is up-to-date")
 
-    def set_wcmp(self, status):
-        """ API to set/unset W-ECMP """
+    def set_originate_bandwidth(self, status):
+        """ API to set/unset W-ECMP originate_bandwidth state """
 
-        if status not in ["true", "false"]:
-            log_err("W-ECMP: invalid value({}) is provided".format(status))
+        if status not in ["cumulative", "num_multipaths", "disabled"] and (not status.isdigit() or not (1 <= int(status) <= 25600)):
+            log_err("W-ECMP originate_bandwidth: invalid value({}) is provided".format(status))
             return False
 
-        if status == "true":
-            log_notice("DeviceGlobalCfgMgr:: Enabling W-ECMP...")
+        if status == "cumulative":
+            log_notice("DeviceGlobalCfgMgr:: Enabling W-ECMP originate_bandwidth with cumulative...")
+        elif status == "num_multipaths":
+            log_notice("DeviceGlobalCfgMgr:: Enabling W-ECMP originate_bandwidth with num_multipath...")
+        elif status.isdigit() and (1 <= int(status) <= 25600):
+            log_notice("DeviceGlobalCfgMgr:: Enabling W-ECMP originate_bandwidth with bandwidth (Mbps) value...")
         else:
-            log_notice("DeviceGlobalCfgMgr:: Disabling W-ECMP...")
+            log_notice("DeviceGlobalCfgMgr:: Disabling W-ECMP originate_bandwidth...")
 
         cmd = "\n"
 
         try:
-            cmd += self.wcmp_template.render(wcmp_enabled=status)
+            log_debug("DeviceGlobalCfgMgr::Before template")
+            cmd += self.originate_template.render(originate_status=status)
         except jinja2.TemplateError as e:
-            msg = "W-ECMP: error in template rendering"
+            msg = "W-ECMP originate_bandwidth: error in template rendering"
             log_err("%s: %s" % (msg, str(e)))
             return False
 

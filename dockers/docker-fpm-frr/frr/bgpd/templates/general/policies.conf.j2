@@ -50,6 +50,7 @@ route-map FROM_BGP_PEER_V6 permit 11
 route-map FROM_BGP_PEER_V4 permit 100
 !
 route-map TO_BGP_PEER_V4 permit 100
+ call CHECK_ORIGINATE_BANDWIDTH_ENABLED
 !
 !
 route-map FROM_BGP_PEER_V6 permit 1
@@ -59,6 +60,7 @@ route-map FROM_BGP_PEER_V6 permit 1
 route-map FROM_BGP_PEER_V6 permit 100
 !
 route-map TO_BGP_PEER_V6 permit 100
+ call CHECK_ORIGINATE_BANDWIDTH_ENABLED
 !
 ! end of template: bgpd/templates/general/policies.conf.j2
 !
