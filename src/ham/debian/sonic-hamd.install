@@ -1,0 +1,8 @@
+/etc/dbus-1/system.d/org.SONiC.HostAccountManagement.conf
+/etc/sonic/hamd/config
+/etc/sonic/hamd/group-mapping
+/etc/sonic/hamd/scripts/post-create/README
+/etc/sonic/hamd/scripts/pre-delete/README
+/lib/systemd/system/hamd.service
+/usr/sbin/hamd
+/usr/bin/hamctl
