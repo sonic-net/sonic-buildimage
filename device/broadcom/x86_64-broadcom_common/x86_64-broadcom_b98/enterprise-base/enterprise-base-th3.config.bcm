@@ -1,0 +1,4 @@
+fpem_mem_entries=0
+# Modify RX Drops scope . Removes RDROP, PDISC, VLANDR, RIPD4,RIPD6
+sai_adjust_port_if_in_discards=1
+sai_default_tc_to_pg_map=1

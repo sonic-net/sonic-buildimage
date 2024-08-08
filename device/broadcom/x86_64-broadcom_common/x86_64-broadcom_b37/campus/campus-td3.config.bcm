@@ -1,0 +1,6 @@
+fpem_mem_entries=16384
+l2_mem_entries=16384
+sai_l3_max_ecmp_paths=16
+# Modify RX Drops scope . Removes RDROP, PDISC, VLANDR, RIPD4,RIPD6
+sai_adjust_port_if_in_discards=1
+sai_default_tc_to_pg_map=1
