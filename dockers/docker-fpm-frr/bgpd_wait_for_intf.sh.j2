@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+# Define global timeout in seconds
+GLOBAL_TIMEOUT=60
+GLOBAL_TIMEOUT_REACHED="false"
+
+function wait_iface_ready
+{
+    IFACE_NAME=$1
+    IFACE_CIDR=$2
+    START_TIME=$3
+
+    # First phase: wait for all interfaces until the global timeout is reached
+    while [ "$GLOBAL_TIMEOUT_REACHED" == "false" ]; do
+        CURRENT_TIME=$(date +%s.%N)
+        ELAPSED_TIME=$(awk -v current_time=$CURRENT_TIME -v start_time=$START_TIME 'BEGIN {print current_time - start_time}')
+
+        # Check if global timeout is reached
+        if (( $(awk -v elapsed_time=$ELAPSED_TIME -v global_timeout=$GLOBAL_TIMEOUT 'BEGIN {print (elapsed_time >= global_timeout)}') )); then
+            GLOBAL_TIMEOUT_REACHED="true"
+            break
+        fi
+
+        RESULT=$(sonic-db-cli STATE_DB HGET "INTERFACE_TABLE|${IFACE_NAME}|${IFACE_CIDR}" "state" 2> /dev/null)
+        if [ x"$RESULT" == x"ok" ]; then
+            return 0
+        fi
+        sleep 0.5
+    done
+
+    # Second phase: apply per-interface timeout
+    # Counter to track the number of iterations
+    ITERATION=0
+    while [ $ITERATION -lt 3 ]; do
+        RESULT=$(sonic-db-cli STATE_DB HGET "INTERFACE_TABLE|${IFACE_NAME}|${IFACE_CIDR}" "state" 2> /dev/null)
+        if [ x"$RESULT" == x"ok" ]; then
+            return 0
+        fi
+
+        sleep 0.5
+        ((ITERATION++))
+    done
+
+    logger -p warning "[bgpd] warning: Interface ${IFACE_NAME} not ready."
+    return 1
+}
+
+start=$(date +%s.%N)
+
+{% for (name, prefix) in INTERFACE|pfx_filter %}
+{% if prefix | ipv4 %}
+wait_iface_ready {{ name }} {{ prefix }} $start
+{% endif %}
+{% endfor %}
+
+{% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
+{% if prefix | ipv4 %}
+wait_iface_ready {{ name }} {{ prefix }} $start
+{% endif %}
+{% endfor %}
+
+{% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}
+{% if prefix | ipv4 %}
+wait_iface_ready {{ name }} {{ prefix }} $start
+{% endif %}
+{% endfor %}
+
+end=$(date +%s.%N)
+timespan=$(awk -v start=$start -v end=$end 'BEGIN {print end - start}')
+logger -p info "[bgpd] It took ${timespan} seconds for interfaces to become ready"
