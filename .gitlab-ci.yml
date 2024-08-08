@@ -302,6 +302,21 @@ regress:tb21:
     variables:
       - $REGRESS_TB21
 
+regress:tb25:
+  extends: .regress
+  tags:
+    - regress_tb25
+  needs:
+    - build:sonic:armhf
+  variables:
+    REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
+    RUN_IMAGE: target/sonic-marvell-armhf.bin
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS:
+  only:
+    variables:
+      - $REGRESS_TB25
+
 .post:
   stage: post
   only:
