@@ -124,3 +124,6 @@
 [submodule "platform/innovium/sonic-platform-marvell"]
 	path = platform/innovium/sonic-platform-marvell
 	url = https://github.com/Marvell-switching/sonic-platform-marvell
+[submodule "src/sonic-netconf-server"]
+	path = src/sonic-netconf-server
+	url = https://github.com/sonic-net/sonic-netconf-server
