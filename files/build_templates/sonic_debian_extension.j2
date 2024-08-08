@@ -626,6 +626,15 @@ sudo cp $IMAGE_CONFIGS/hostname/hostname-config.service $FILESYSTEM_ROOT_USR_LIB
 echo "hostname-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp $IMAGE_CONFIGS/hostname/hostname-config.sh $FILESYSTEM_ROOT/usr/bin/
 
+{% if enable_local_users_passwords_reset == "y" %}
+# Copy local-users-passwords-reset configuration scripts
+sudo cp $IMAGE_CONFIGS/local-users-passwords-reset/local-users-passwords-reset.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
+echo "local-users-passwords-reset.service" | sudo tee -a $GENERATED_SERVICE_FILE
+sudo cp $IMAGE_CONFIGS/local-users-passwords-reset/local-users-passwords-reset.py $FILESYSTEM_ROOT/usr/bin/
+# Set execute permissions only
+sudo chmod 100 $FILESYSTEM_ROOT/usr/bin/local-users-passwords-reset.py
+{% endif %}
+
 # Copy banner configuration scripts
 sudo cp $IMAGE_CONFIGS/bannerconfig/banner-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "banner-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
