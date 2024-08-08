@@ -1,0 +1,73 @@
+#!/usr/bin/python
+import os
+import sys
+from sys import argv
+import re
+
+# Quit if user doesn't input all the required variables
+
+if len(argv) < 3 or len(argv) > 5:
+     print('\n' + 'Usage: add_port_range EthernetX-X vlan <vid> [OPTIONS] ' + '\n' + '\n' +
+           'Add ports as Tagged/Untagged and configure VLAN onto them' + '\n' + '\n' +
+           'OPTIONS:' + '\n' +
+           '-u, --untagged' + '\n' +
+           '-h, ?, -?, --help Show this message and exit' + '\n')
+     quit()
+     
+     
+# Quit if user inputs 'help' options
+     
+if '?' in argv or '--help' in argv or '-help' in argv or 'help' in argv or '-?' in argv or '-h' in argv:
+     print('\n' + 'Usage: add_port_range EthernetX-X vlan <vid> [OPTIONS] ' + '\n' + '\n' +
+           'Add ports as Tagged/Untagged and configure VLAN onto them' + '\n' + '\n' +
+           'OPTIONS:' + '\n' +
+           '-u, --untagged' + '\n' +
+           '-h, ?, -?, --help Show this message and exit' + '\n')
+     quit()
+
+# User has to pass the VLAN argument using atleast the first two letters i.e. 'V/v' 'L/l' 
+pattern = '[Vv]+[Ll]'
+
+def match(text):
+    if re.match(pattern,text):
+        return ('Yes')
+    else:
+        return('No')
+
+if ((match(argv[2]) == 'Yes') and (int(argv[3]) < 4094)):
+     command2 = 'sudo config vlan add ' + str(argv[3])
+     os.system(command2)
+else:
+     print('\n' + 'Usage: add_port_range EthernetX-X vlan <vid> [OPTIONS] ' + '\n' + '\n' +
+           'Add ports as Tagged/Untagged and configure VLAN onto them' + '\n' + '\n' +
+           'OPTIONS:' + '\n' +
+           '-u, --untagged' + '\n' +
+           '-h, ?, -?, --help Show this message and exit' + '\n')
+     quit()
+
+#Find and create a list of all the interfaces
+int_range1 = re.findall('[0-9]+-[0-9]+',argv[1])
+int_range = int_range1[0].split('-')
+
+#Add ports as untagged
+
+if ((match(argv[2]) == 'Yes') and ('-u' in argv)):
+    
+    for interface in range(int(int_range[0]),int(int_range[1])):
+        os.system('sudo config vlan member add -u ' + str(argv[3]) + ' Ethernet' + str(interface))
+
+#Add ports as tagged
+        
+elif ((match(argv[2]) == 'Yes') and len(argv)) == 4: 
+    
+    for interface in range(int(int_range[0]),int(int_range[1])):
+        os.system('sudo config vlan member add ' + str(argv[3]) + ' Ethernet' + str(interface))
+
+else:
+    print('\n' + 'Usage: add_port_range EthernetX-X vlan <vid> [OPTIONS] ' + '\n' + '\n' +
+           'Add ports as Tagged/Untagged and configure VLAN onto them' + '\n' + '\n' +
+           'OPTIONS:' + '\n' +
+           '-u, --untagged' + '\n' +
+           '-h, ?, -?, --help Show this message and exit' + '\n')
+    quit()
+
