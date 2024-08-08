@@ -399,7 +399,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 sudo cp $IMAGE_CONFIGS/smartmontools/smartmontools $FILESYSTEM_ROOT/etc/default/smartmontools
 
 # Install custom-built openssh sshd
-sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/openssh-server_${OPENSSH_VERSION}_*.deb $debs_path/openssh-client_${OPENSSH_VERSION}_*.deb $debs_path/openssh-sftp-server_${OPENSSH_VERSION}_*.deb
+sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/openssh-server_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-client_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-sftp-server_${OPENSSH_VERSION_FULL}_*.deb
 
 {% if sonic_asic_platform == 'broadcom' %}
 # Install custom-built flashrom
