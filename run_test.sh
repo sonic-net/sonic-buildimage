@@ -120,6 +120,9 @@ function run_add_topo()
       sleep 360  
       return
     fi
+    if [[ "$topology" == "m0" || "$topology" == "mx" ]]; then
+	    remove_topo $target_box $testbed_file $inv_file $vm_type ${conf_name:0:-2}m0 $topo_builder_dir/results/log/remove-topo.log
+    fi
     add_topo $target_box $testbed_file $inv_file $vm_type $conf_name $topo_builder_dir/results/log/add-topo.log
 
     echo "Sleeping for 90 seconds for simulated DUTs to start"
@@ -334,7 +337,7 @@ source $generated_file_dir/runtime_vars
 
 # start the sonic-mgmt docker
 #docker_map_str="-v $sonic_mgmt_dir:/data -v $dump_dir:/dump_dir -v $pytest_results_dir:/output_files -v $generated_file_dir:/generated_files"
-start_sonic_mgmt_docker $target_box "$sonic_mgmt_dir" "$pytest_results_dir"
+start_sonic_mgmt_docker $target_box "$sonic_mgmt_dir" "$pytest_results_dir" "$topology"
 
 if [[ "$cleanup_only" == "1" ]]; then
   echo "Cleaning up the topology '$topology' and target box '$target_box'"
@@ -439,8 +442,8 @@ if [[ "$test" == "1" ]]; then
        echo "Executing kvmtest.sh with 'docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box /data/tests/kvmtest.sh -T t2 -p /output_files -d /data vms-kvm-t2 vlab-t2-01,vlab-t2-02,vlab-t2-sup"
        docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box /data/tests/kvmtest.sh -T t2 -p /output_files -d /data vms-kvm-t2 vlab-t2-01,vlab-t2-02,vlab-t2-sup
     elif [[ "$topology" == "m0" || "$topology" == "mx" ]]; then
-      echo "Executing docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box ./run_tests.sh -a False -d $target_box -i $lab_file,$inv_file -k debug -l info -n $conf_name -t $topology,any -p /output_files/ -r -s ixia  -x  "
-      docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box ./run_tests.sh -a False -d $target_box -i $lab_file,$inv_file -k debug -l info -n $conf_name -t $topology,any -p /output_files/ -r -x -u -c "test_pretest.py"
+      echo "Executing docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box ./run_tests.sh -a False -d $target_box -i $lab_file,$inv_file -k debug -l info -m individual -n $conf_name -t $topology,any -p /output_files/ -r -x"
+      docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box ./run_tests.sh -a False -d $target_box -i $lab_file,$inv_file -k debug -l info -m individual -n $conf_name -t $topology,any -p /output_files/ -r -x
     else
       echo "Executing docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box ./run_tests.sh -a False -d $target_box -i $lab_file,$inv_file -k debug -l info -n $conf_name -t $topology -p /output_files/ -r -s ixia  -x  "
       docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box ./run_tests.sh -a False -d $target_box -i $lab_file,$inv_file -k debug -l info -n $conf_name -t $topology -p /output_files/ -r -s "ixia crm"  -x 
