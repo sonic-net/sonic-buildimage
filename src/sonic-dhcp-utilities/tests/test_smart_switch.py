@@ -106,22 +106,22 @@ expected_kea_config = {
 
 
 expected_lease = {
-    'bridge_midplane|aa:bb:cc:dd:ff:01': {
+    'bridge-midplane|aa:bb:cc:dd:ff:01': {
         'ip': '169.254.200.1',
         'lease_end': '1718053209',
         'lease_start': '1718052309'
     },
-    'bridge_midplane|aa:bb:cc:dd:ff:02': {
+    'bridge-midplane|aa:bb:cc:dd:ff:02': {
         'ip': '169.254.200.2',
         'lease_end': '1718053210',
         'lease_start': '1718052310'
     },
-    'bridge_midplane|aa:bb:cc:dd:ff:03': {
+    'bridge-midplane|aa:bb:cc:dd:ff:03': {
         'ip': '169.254.200.3',
         'lease_end': '1718053210',
         'lease_start': '1718052310'
     },
-   'bridge_midplane|aa:bb:cc:dd:ff:04': {
+   'bridge-midplane|aa:bb:cc:dd:ff:04': {
        'ip': '169.254.200.4',
        'lease_end': '1718053209',
        'lease_start': '1718052309'
@@ -154,7 +154,7 @@ def test_dhcp_dhcp_cfggen_generate(mock_swsscommon_dbconnector_init, mock_parse_
             dhcp_cfg_generator.generate()
         assert json.loads(kea_dhcp4_config) == expected_kea_config
         assert used_ranges == set()
-        assert enabled_dhcp_interfaces == set(["bridge_midplane"])
+        assert enabled_dhcp_interfaces == set(["bridge-midplane"])
         assert used_options == set(["option60", "option223"])
         expected_tables = set(["DpusTableEventChecker", "MidPlaneTableEventChecker", "VlanTableEventChecker",
                                "VlanIntfTableEventChecker", "DhcpRangeTableEventChecker", "VlanMemberTableEventChecker",

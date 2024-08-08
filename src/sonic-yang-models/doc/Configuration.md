@@ -2846,7 +2846,7 @@ The MID_PLANE_BRIDGE" table introduces the configuration for the midplane bridge
 {
     "MID_PLANE_BRIDGE": {
         "GLOBAL" : {
-            "bridge": "bridge_midplane",
+            "bridge": "bridge-midplane",
             "ip_prefix": "169.254.200.254/24"
         }
     }

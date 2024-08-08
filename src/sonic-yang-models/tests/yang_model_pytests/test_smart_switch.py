@@ -8,7 +8,7 @@ class TestSmartSwitch:
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:MID_PLANE_BRIDGE": {
                     "GLOBAL": {
-                        "bridge": "bridge_midplane",
+                        "bridge": "bridge-midplane",
                         "ip_prefix": "169.254.200.254/24"
                     }
                 },
@@ -31,8 +31,8 @@ class TestSmartSwitch:
 
     @pytest.mark.parametrize(
         "bridge_name, error_message", [
-            ("bridge_midplane", None),
-            ("wrong_name", 'Value "wrong_name" does not satisfy the constraint "bridge_midplane"')]
+            ("bridge-midplane", None),
+            ("wrong_name", 'Value "wrong_name" does not satisfy the constraint "bridge-midplane"')]
         )
     def test_bridge_name(self, yang_model, bridge_name, error_message):
         data = {
@@ -58,7 +58,7 @@ class TestSmartSwitch:
             "sonic-smart-switch:sonic-smart-switch": {
                 "sonic-smart-switch:MID_PLANE_BRIDGE": {
                     "GLOBAL": {
-                        "bridge": "bridge_midplane",
+                        "bridge": "bridge-midplane",
                         "ip_prefix": ip_prefix
                     }
                 }
