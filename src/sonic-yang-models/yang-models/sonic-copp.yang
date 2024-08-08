@@ -11,6 +11,11 @@ module sonic-copp {
 
 	description "CoPP YANG Module for SONiC OS";
 
+	revision 2024-05-29 {
+		description
+			"Added genetlink name and mcgrp leaves";
+	}
+
 	revision 2021-03-31 {
 		description
 			"First Revision";
@@ -133,6 +138,16 @@ module sonic-copp {
 					default "forward";
 					description "Red action";
 				}
+
+                                leaf genetlink_name {
+                                        type string;
+                                        description "Genetlink name. [Optional] 'psample' for sFlow";
+                                }
+
+                                leaf genetlink_mcgrp_name {
+                                        type string;
+                                        description "multicast group name; ;[Optional] 'packets' for sFlow";
+                                }
 			}
 			/* end of list COPP_GROUP_LIST */
 		}

@@ -1848,7 +1848,9 @@
                 "mode":"sr_tcm",
                 "cir":"6000",
                 "cbs":"6000",
-                "red_action":"drop"
+                "red_action":"drop",
+		"genetlink_name":"psample",
+		"genetlink_mcgrp_name":"packets"
             }
         },
         "COPP_TRAP": {
