@@ -1,0 +1,9 @@
+Source: sonic-nettools
+Maintainer: Wenda Chu <wendachu@microsoft.com>
+Standards-Version: 0.0.1
+Section: custom
+
+Package: sonic-nettools
+Priority: optional
+Architecture: any
+Description: Networking command line tools
