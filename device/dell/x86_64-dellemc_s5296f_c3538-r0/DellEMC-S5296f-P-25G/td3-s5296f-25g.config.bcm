@@ -590,7 +590,17 @@ l2_mem_entries=40960
 l3_mem_entries=40960
 l3_max_ecmp_mode=1
 
+
 stable_size=0x5500000
+mem_cache_enable=0
+lpm_scaling_enable=0
+bcm_num_cos=10
+default_cpu_tx_queue=9
+host_as_route_disable=1
+sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
+sai_fast_convergence_support=1
+flow_init_mode=1
+sai_load_hw_config=/usr/lib/cancun/
 
 mmu_init_config="TD3-DELL-lossless"
 sai_preinit_cmd_file=/usr/share/sonic/hwsku/sai_preinit_cmd.soc
