@@ -1,5 +1,5 @@
 colorful==0.5.6
-cryptography==3.3.1
+cryptography==3.3.2
 enlighten==1.12.4
 filelock==3.15.4
 jsonpointer==3.0.0
