@@ -77,7 +77,28 @@ module sonic-gnmi {
                 }
 
             }
+        }
 
+        container GNMI_CLIENT_CERT {
+            description "GNMI client cert list";
+
+            list GNMI_CLIENT_CERT_LIST {
+                max-elements 8;
+                key "cert_cname";
+
+                leaf cert_cname {
+                    type string;
+                    description
+                        "client cert common name";
+                }
+
+                leaf role {
+                    type string;
+                    mandatory true;
+                    description
+                        "role of client cert common name";
+                }
+            }
         }
     }
 }
