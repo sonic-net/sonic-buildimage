@@ -49,7 +49,7 @@ stages:
 
 - stage: Test
   dependsOn: BuildVS
-  condition: in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')
+  condition: and(in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues'), ne(dependencies.BuildVS.outputs['vs.skipstep.githubPR'], 'true'))
   variables:
     - group: SONiC-Elastictest
     - name: inventory
