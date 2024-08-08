@@ -28,6 +28,10 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
 
+[eventlistener:memmon]
+command=memmon -p rsyslogd=100MB
+events=TICK_60
+
 {% set is_fabric_asic = 0 %}
 {% set orchagent_dependent_startup_wait_for = "portsyncd:running" %}
 {% if DEVICE_METADATA.localhost.switch_type %}
