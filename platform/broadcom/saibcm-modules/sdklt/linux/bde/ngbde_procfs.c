@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -35,7 +35,9 @@ proc_show(struct seq_file *m, void *v)
     ngbde_swdev_get_all(&swdev, &num_swdev);
 
     seq_printf(m, "Broadcom Device Enumerator (%s)\n", MOD_NAME);
-
+#ifdef LKM_BUILD_INFO
+    seq_printf(m, "%s\n", LKM_BUILD_INFO);
+#endif
     seq_printf(m, "Found %d switch device(s):\n", num_swdev);
     for (idx = 0; idx < num_swdev; idx++) {
         if (swdev->inactive) {

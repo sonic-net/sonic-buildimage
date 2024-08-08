@@ -9,7 +9,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -43,7 +43,7 @@
 
 /*! Maximum number of mHosts supported per switch device. */
 #ifndef MCS_NUM_UC
-#define MCS_NUM_UC     4
+#define MCS_NUM_UC     6
 #endif
 
 /*!
