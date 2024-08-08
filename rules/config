@@ -152,6 +152,9 @@ INCLUDE_DHCP_RELAY = y
 # INCLUDE_DHCP_SERVER - build and install dhcp-server package
 INCLUDE_DHCP_SERVER ?= n
 
+# INCLUDE_BMP - build and install sonic-bmp package
+INCLUDE_BMP = y
+
 # INCLUDE_P4RT - build docker-p4rt for P4RT support
 INCLUDE_P4RT = n
 
