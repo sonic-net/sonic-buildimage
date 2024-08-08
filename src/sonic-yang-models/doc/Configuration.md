@@ -1197,7 +1197,9 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
         "monErrThreshCrcCells": "1",
         "monErrThreshRxCells": "61035156",
         "monPollThreshIsolation": "1",
-        "monPollThreshRecovery": "8"
+        "monPollThreshRecovery": "8",
+        "monCapacityThreshWarn": "10",
+        "monState": "enable"
     }
   }
 }
@@ -1211,12 +1213,14 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
     "Fabric0": {
         "alias": "Fabric0",
         "isolateStatus": "False",
-        "lanes": "0"
+        "lanes": "0",
+        "forceUnisolateStatus": "0"
     },
     "Fabric1": {
         "alias": "Fabric1",
         "isolateStatus": "False",
-        "lanes": "1"
+        "lanes": "1",
+        "forceUnisolateStatus": "0"
     }
   }
 }

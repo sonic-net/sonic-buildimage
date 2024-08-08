@@ -52,6 +52,12 @@ module sonic-fabric-port{
                     }
                 }
 
+                leaf forceUnisolateStatus {
+                    description "Force unisolate status of a fabric port";
+                    type uint32;
+                    default 0;
+                }
+
             } /* end of list FABRIC_PORT_LIST */
 
         } /* end of container FABRIC_PORT */
