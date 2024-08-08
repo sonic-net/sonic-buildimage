@@ -1,11 +1,7 @@
+# {C} Copyright 2023 AMD Systems Inc. All rights reserved
+# ssd_util.py
 #
-# ssd_generic.py
-#
-# Generic implementation of the SSD health API
-# SSD models supported:
-#  - InnoDisk
-#  - StorFly
-#  - Virtium
+# AMD-pensando implementation of the SSD health API
 
 try:
     import re

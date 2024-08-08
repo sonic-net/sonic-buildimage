@@ -67,7 +67,7 @@ elif [ "$platform" == "innovium" ]; then
 elif [ "$platform" == "nvidia-bluefield" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "pensando" ]; then
-    MAC_ADDRESS=$(ip link property add dev oob_mnic0 altname eth0; ip link show oob_mnic0 | grep ether | awk '{print $2}')
+    MAC_ADDRESS=$(ip link show int_mnic0 | grep ether | awk '{print $2}')
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 else
     # Should we use the fallback MAC in case it is not found in Device.Metadata
