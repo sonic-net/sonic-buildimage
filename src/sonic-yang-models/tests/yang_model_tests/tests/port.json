@@ -153,5 +153,40 @@
     },
      "PORT_AUTO_FEC_TEST": {
          "desc": "PORT_AUTO_FEC_TEST validate auto mode in fec."
-     }
+     },
+    "PORT_VALID_PATH_TRACING_CONFIG_TEST_1": {
+        "desc": "Enable Path Tracing with valid Interface ID and default Timestamp Template.",
+        "eStrKey" : "Verify",
+        "verify": {
+            "xpath": "/sonic-port:sonic-port/PORT/PORT_LIST[name='Ethernet8']/pt_timestamp_template",
+            "key": "sonic-port:pt_timestamp_template",
+            "value": "template3"
+        }
+    },
+    "PORT_VALID_PATH_TRACING_CONFIG_TEST_2": {
+        "desc": "Enable Path Tracing with valid Interface ID and Timestamp Template.",
+        "eStrKey" : "Verify",
+        "verify": {
+            "xpath": "/sonic-port:sonic-port/PORT/PORT_LIST[name='Ethernet9']/pt_timestamp_template",
+            "key": "sonic-port:pt_timestamp_template",
+            "value": "template2"
+        }
+    },
+    "PORT_PATH_TRACING_NOT_ENABLED_BY_DEFAULT": {
+        "desc": "Do not configure Path Tracing. Verify that Path Tracing is disabled by default."
+    },
+    "PORT_INVALID_PATH_TRACING_INTERFACE_ID_TEST": {
+        "desc": "Configure Path Tracing with an Out of range Interface ID.",
+        "eStrKey": "Range",
+        "eStr": "1..4095"
+    },
+    "PORT_INVALID_PATH_TRACING_TIMESTAMP_TEMPLATE_TEST": {
+        "desc": "Configure Path Tracing with an invalid Timestamp Template.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["timestamp_template"]
+    },
+    "PORT_PATH_TRACING_TIMESTAMP_TEMPLATE_WHEN_NOT_ENABLED": {
+        "desc": "Configure Path Tracing Timestamp Template when Path Tracing is not enabled.",
+        "eStrKey": "When"
+    }
 }

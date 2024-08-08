@@ -221,6 +221,20 @@ module sonic-port{
 						type int32;
 				}
 
+				leaf pt_interface_id {
+					description "Path Tracing Interface ID";
+					type uint16 {
+						range 1..4095;
+					}
+				}
+
+				leaf pt_timestamp_template {
+					when "current()/../pt_interface_id";
+					description "Path Tracing Timestamp Template";
+					type stypes:path_tracing_timestamp_template;
+					default template3;
+				}
+
 			} /* end of list PORT_LIST */
 
 		} /* end of container PORT */

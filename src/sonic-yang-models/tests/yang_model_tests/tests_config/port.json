@@ -804,5 +804,114 @@
                 ]
             }
         }
+    },
+
+    "PORT_VALID_PATH_TRACING_CONFIG_TEST_1": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "name": "Ethernet8",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "pt_interface_id": 128
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_VALID_PATH_TRACING_CONFIG_TEST_2": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth9",
+                        "description": "Ethernet9",
+                        "name": "Ethernet9",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "pt_interface_id": 129,
+                        "pt_timestamp_template": "template2"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_PATH_TRACING_NOT_ENABLED_BY_DEFAULT": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth9",
+                        "description": "Ethernet9",
+                        "name": "Ethernet9",
+                        "lanes": "65",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_INVALID_PATH_TRACING_INTERFACE_ID_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "name": "Ethernet8",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "pt_interface_id": 4096
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_INVALID_PATH_TRACING_TIMESTAMP_TEMPLATE_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth9",
+                        "description": "Ethernet9",
+                        "name": "Ethernet9",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "pt_interface_id": 129,
+                        "pt_timestamp_template": "template5"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_PATH_TRACING_TIMESTAMP_TEMPLATE_WHEN_NOT_ENABLED": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth9",
+                        "description": "Ethernet9",
+                        "name": "Ethernet9",
+                        "lanes": "65",
+                        "speed": 25000,
+                        "pt_timestamp_template": "template2"
+                    }
+                ]
+            }
+        }
     }
 }
