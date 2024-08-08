@@ -1,10 +1,8 @@
 {
-    "BGP_DEVICE_GLOBAL_WITH_DEFAULT_VALUES": {
+    "BGP_DEVICE_GLOBAL_WITH_TSA_DEFAULT_VALUE": {
         "sonic-bgp-device-global:sonic-bgp-device-global": {
             "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
                 "STATE":{
-                    "tsa_enabled": "false",
-                    "idf_isolation_state": "unisolated"
                 }
             }
         }
@@ -13,8 +11,7 @@
         "sonic-bgp-device-global:sonic-bgp-device-global": {
             "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
                 "STATE":{
-                    "tsa_enabled": "true",
-                    "idf_isolation_state": "unisolated"
+                    "tsa_enabled": "true"
                 }
             }
         }
@@ -23,8 +20,59 @@
         "sonic-bgp-device-global:sonic-bgp-device-global": {
             "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
                 "STATE":{
-                    "tsa_enabled": "false",
-                    "idf_isolation_state": "unisolated"
+                    "tsa_enabled": "false"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_TSA_INVALID_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "tsa_enabled": "invalid_value"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_WCMP_DEFAULT_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE": {
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_WCMP_ENABLED": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE": {
+                    "wcmp_enabled": "true"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_WCMP_DISABLED": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE": {
+                    "wcmp_enabled": "false"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_WCMP_INVALID_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE": {
+                    "wcmp_enabled": "invalid_value"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_ISOLATION_DEFAULT_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
                 }
             }
         }
@@ -33,7 +81,6 @@
         "sonic-bgp-device-global:sonic-bgp-device-global": {
             "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
                 "STATE":{
-                    "tsa_enabled": "true",
                     "idf_isolation_state": "isolated_no_export"
                 }
             }
@@ -43,7 +90,6 @@
         "sonic-bgp-device-global:sonic-bgp-device-global": {
             "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
                 "STATE":{
-                    "tsa_enabled": "false",
                     "idf_isolation_state": "isolated_withdraw_all"
                 }
             }
@@ -53,28 +99,16 @@
         "sonic-bgp-device-global:sonic-bgp-device-global": {
             "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
                 "STATE":{
-                    "tsa_enabled": "false",
                     "idf_isolation_state": "unisolated"
                 }
             }
         }
     },
-    "BGP_DEVICE_GLOBAL_WITH_INVALID_VALUE_1": {
+    "BGP_DEVICE_GLOBAL_WITH_IDF_INVALID_VALUE": {
         "sonic-bgp-device-global:sonic-bgp-device-global": {
             "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
                 "STATE":{
-                    "tsa_enabled": "FALSE",
-                    "idf_isolation_state": "unisolated"
-                }
-            }
-        }
-    },
-    "BGP_DEVICE_GLOBAL_WITH_INVALID_VALUE_2": {
-        "sonic-bgp-device-global:sonic-bgp-device-global": {
-            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
-                "STATE":{
-                    "tsa_enabled": "false",
-                    "idf_isolation_state": "isolated"
+                    "idf_isolation_state": "invalid_value"
                 }
             }
         }
