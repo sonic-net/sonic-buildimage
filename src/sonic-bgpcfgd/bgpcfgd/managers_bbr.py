@@ -45,26 +45,38 @@ class BBRMgr(Manager):
 
     def __init(self):
         """ Initialize BBRMgr. Extracted from constructor """
-        if not 'bgp' in self.constants:
-            log_err("BBRMgr::Disabled: 'bgp' key is not found in constants")
-            return
-        if 'bbr' in self.constants['bgp'] \
-                and 'enabled' in self.constants['bgp']['bbr'] \
-                and self.constants['bgp']['bbr']['enabled']:
+        # Check BGP_BBR table from config_db first
+        bbr_status_from_config_db = self.get_bbr_status_from_config_db()
+
+        if bbr_status_from_config_db is None:
+            if not 'bgp' in self.constants:
+                log_err("BBRMgr::Disabled: 'bgp' key is not found in constants")
+                return
+            if 'bbr' in self.constants['bgp'] \
+                    and 'enabled' in self.constants['bgp']['bbr'] \
+                    and self.constants['bgp']['bbr']['enabled']:
+                self.bbr_enabled_pgs = self.__read_pgs()
+                if self.bbr_enabled_pgs:
+                    self.enabled = True
+                    if 'default_state' in self.constants['bgp']['bbr'] \
+                            and self.constants['bgp']['bbr']['default_state'] == 'enabled':
+                        default_status = "enabled"
+                    else:
+                        default_status = "disabled"
+                    self.directory.put(self.db_name, self.table_name, 'status', default_status)
+                    log_info("BBRMgr::Initialized and enabled from constants. Default state: '%s'" % default_status)
+                else:
+                    log_info("BBRMgr::Disabled: no BBR enabled peers")
+            else:
+                log_info("BBRMgr::Disabled: no bgp.bbr.enabled in the constants")
+        else:
             self.bbr_enabled_pgs = self.__read_pgs()
             if self.bbr_enabled_pgs:
                 self.enabled = True
-                if 'default_state' in self.constants['bgp']['bbr'] \
-                        and self.constants['bgp']['bbr']['default_state'] == 'enabled':
-                    default_status = "enabled"
-                else:
-                    default_status = "disabled"
-                self.directory.put(self.db_name, self.table_name, 'status', default_status)
-                log_info("BBRMgr::Initialized and enabled. Default state: '%s'" % default_status)
+                self.directory.put(self.db_name, self.table_name, 'status', bbr_status_from_config_db)
+                log_info("BBRMgr::Initialized and enabled from config_db. Default state: '%s'" % bbr_status_from_config_db)
             else:
                 log_info("BBRMgr::Disabled: no BBR enabled peers")
-        else:
-            log_info("BBRMgr::Disabled: no bgp.bbr.enabled in the constants")
 
     def __read_pgs(self):
         """
@@ -81,6 +93,35 @@ class BBRMgr(Manager):
             for pg_name, pg_afs in value['bbr'].items():
                 res[pg_name] = pg_afs
         return res
+
+    def get_bbr_status_from_config_db(self):
+        """
+        Read BBR status from CONFIG_DB
+        :return: BBR status from CONFIG_DB or None if not found
+        """
+        try:
+            config_db = swsscommon.ConfigDBConnector()
+            if config_db is None:
+                log_info("BBRMgr::Failed to connect to CONFIG_DB, get BBR default state from constants.yml")
+                return None
+            config_db.connect()
+        except Exception as e:
+            log_info("BBRMgr::Failed to connect to CONFIG_DB with exception %s, get BBR default state from constants.yml" % str(e))
+            return None
+
+        try:
+            bbr_table_data = config_db.get_table(self.table_name)
+            if bbr_table_data and 'all' in bbr_table_data and 'status' in bbr_table_data["all"]:
+                if bbr_table_data["all"]["status"] == "enabled":
+                    return "enabled"
+                else:
+                    return "disabled"
+            else:
+                log_info("BBRMgr::BBR status is not found in CONFIG_DB, get BBR default state from constants.yml")
+                return None
+        except Exception as e:
+            log_info("BBRMgr::Failed to read BBR status from CONFIG_DB with exception %s, get BBR default state from constants.yml" % str(e))
+            return None
 
     def __set_validation(self, key, data):
         """ Validate set-command arguments
