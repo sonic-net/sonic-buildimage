@@ -31,6 +31,10 @@ $(addprefix $(DEST)/, $(MLNX_RSHIM)): $(DEST)/% :
 	tar xf rshim-${MLNX_RSHIM_DRIVER_VERSION}.tar.gz -C rshim_src --strip-components=1
 
 	pushd rshim_src
+	patch -p1 < ../rename_tmfifo_to_dpu.patch
+
+	# disable default systemd service
+	sed -i 's/	dh_auto_configure/	dh_auto_configure -- --with-systemdsystemunitdir=no/' debian/rules
 
 	# Build the package
 	DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -rfakeroot -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
