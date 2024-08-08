@@ -1,15 +1,11 @@
-From eb3a76d7fbd0cbf2c370ecadd912960b094403d6 Mon Sep 17 00:00:00 2001
-From: Junchao-Mellanox <junchao@nvidia.com>
-Date: Wed, 23 Aug 2023 14:33:44 +0800
-Subject: [PATCH] [PATCH 2/4] Disable hw-mgmt on SimX platforms
+From 42a00c6690ae4d97040afff5bb282b5f0aa9a361 Mon Sep 17 00:00:00 2001
+From: dgsudharsan <sudharsand@nvidia.com>
+Date: Fri, 31 May 2024 15:43:00 +0000
+Subject: [PATCH] Disable hw-mgmt on SimX platforms
 
----
- usr/usr/bin/hw-management-ready.sh |  3 ---
- usr/usr/bin/hw-management.sh       | 21 +++++++++------------
- 2 files changed, 9 insertions(+), 15 deletions(-)
 
 diff --git a/usr/usr/bin/hw-management-ready.sh b/usr/usr/bin/hw-management-ready.sh
-index 840bb0b..2f8547f 100755
+index 840bb0bf..2f8547f8 100755
 --- a/usr/usr/bin/hw-management-ready.sh
 +++ b/usr/usr/bin/hw-management-ready.sh
 @@ -56,9 +56,6 @@ fi
@@ -23,10 +19,10 @@ index 840bb0b..2f8547f 100755
  			if systemctl is-enabled --quiet hw-management-tc; then
  				echo "Stopping and disabling hw-management-tc on SimX"
 diff --git a/usr/usr/bin/hw-management.sh b/usr/usr/bin/hw-management.sh
-index d3914d1..a60dba9 100755
+index 78ac13e8..a6e002b8 100755
 --- a/usr/usr/bin/hw-management.sh
 +++ b/usr/usr/bin/hw-management.sh
-@@ -545,7 +545,7 @@ function restore_i2c_bus_frequency_default()
+@@ -601,7 +601,7 @@ function restore_i2c_bus_frequency_default()
  function find_regio_sysfs_path_helper()
  {
  	# Find hwmon{n} sysfs path for regio device
@@ -35,7 +31,7 @@ index d3914d1..a60dba9 100755
  	VMOD0014)
  		for path in /sys/devices/pci0000:00/*/NVSN2201:*/mlxreg-io/hwmon/hwmon*; do
  			if [ -d "$path" ]; then
-@@ -732,10 +732,10 @@ set_jtag_gpio()
+@@ -780,10 +780,10 @@ set_jtag_gpio()
  	gpio_tdi=$((gpiobase+jtag_tdi))
  	echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
  
@@ -49,7 +45,7 @@ index d3914d1..a60dba9 100755
  	if [ "$board_type" == "VMOD0014" ]; then
  		mux_reset=27
  		jtag_mux_en=33
-@@ -1294,7 +1294,7 @@ connect_msn4700_msn4600_A1()
+@@ -1363,7 +1363,7 @@ connect_msn4700_msn4600_A1()
  		#  msn4600C with removed A2D
  		connect_table+=(${msn4600C_A1_base_connect_table[@]})
  	else
@@ -58,7 +54,7 @@ index d3914d1..a60dba9 100755
  		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
  	fi
  	add_cpu_board_to_connection_table
-@@ -2144,7 +2144,7 @@ create_symbolic_links()
+@@ -2324,7 +2324,7 @@ create_symbolic_links()
  	fi
  	if [ ! -d $thermal_path ]; then
  		mkdir $thermal_path
@@ -67,7 +63,7 @@ index d3914d1..a60dba9 100755
  	if [ ! -d $config_path ]; then
  		mkdir $config_path
  	fi
-@@ -2341,7 +2341,7 @@ do_start()
+@@ -2556,7 +2556,7 @@ do_start()
  	check_system
  	set_asic_pci_id
  
@@ -76,7 +72,7 @@ index d3914d1..a60dba9 100755
  	if [[ $asic_control -ne 0 ]]; then
  		get_asic_bus
  		get_asic2_bus
-@@ -2379,9 +2379,9 @@ do_start()
+@@ -2595,9 +2595,9 @@ do_start()
  	else
  		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
  	fi
@@ -86,18 +82,18 @@ index d3914d1..a60dba9 100755
 -	fi 
 +	fi
  	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
- 		ln -sf $thermal_control_config $config_path/tc_config.json
+ 		cp $thermal_control_config $config_path/tc_config.json
  	else
-@@ -2528,9 +2528,6 @@ do_chip_up_down()
+@@ -2777,9 +2777,6 @@ do_chip_up_down()
  check_simx()
  {
  	case $sku in
--		HI130|HI122)
+-		HI130|HI122|HI144|HI147|HI157)
 -			# Let the initialization go through
 -			;;
  		*)
  			if [ -n "$(lspci -vvv | grep SimX)" ]; then
  				exit 0
 -- 
-1.9.1
+2.43.2
 

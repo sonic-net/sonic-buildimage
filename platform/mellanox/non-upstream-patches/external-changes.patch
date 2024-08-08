@@ -1,6 +1,6 @@
 --- a/patch/series
 +++ b/patch/series
-@@ -108,6 +108,9 @@
+@@ -110,6 +110,9 @@
  0045-i2c-mlxcpld-Fix-criteria-for-frequency-setting.patch
  0046-i2c-mlxcpld-Reduce-polling-time-for-performance-impr.patch
  0047-i2c-mlxcpld-Allow-flexible-polling-time-setting-for-.patch
@@ -10,7 +10,7 @@
  0053-mlxsw-core-Avoid-creation-virtual-hwmon-objects-by-t.patch
  0054-mlxsw-minimal-Simplify-method-of-modules-number-dete.patch
  0055-platform_data-mlxreg-Add-new-type-to-support-modular.patch
-@@ -155,7 +158,68 @@
+@@ -157,7 +160,68 @@
  0097-1-mlxsw-Use-u16-for-local_port-field.patch
  0097-2-mlxsw-i2c-Fix-chunk-size-setting.patch
  0097-3-mlxsw-core_hwmon-Adjust-module-label-names.patch
@@ -79,7 +79,7 @@
  0157-platform-x86-mlx-platform-Make-activation-of-some-dr.patch
  0158-platform-x86-mlx-platform-Add-cosmetic-changes-for-a.patch
  0159-mlx-platform-Add-support-for-systems-equipped-with-t.patch
-@@ -166,14 +230,19 @@
+@@ -168,14 +232,19 @@
  0164-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch
  0165-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch
  0166-DS-leds-leds-mlxreg-Send-udev-event-from-leds-mlxreg.patch
@@ -99,7 +99,7 @@
  0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch
  0183-platform-mellanox-Split-initialization-procedure.patch
  0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch
-@@ -191,24 +260,121 @@
+@@ -193,25 +262,122 @@
  0197-platform-mellanox-Fix-order-in-exit-flow.patch
  0198-platform-mellanox-Add-new-attributes.patch
  0199-platform-mellanox-Change-register-offset-addresses.patch
@@ -217,6 +217,7 @@
 +0326-platform-mellanox-mlxreg-hotplug-Add-support-for-new.patch
 +0327-platform-mellanox-mlx-platform-Change-register-name.patch
 +0328-platform-mellanox-mlx-platform-Add-support-for-new-X.patch
+ 0329-platform-mellanox-indicate-deferred-I2C-bus-creation.patch
 +9002-TMP-fix-for-fan-minimum-speed.patch
  ###-> mellanox_hw_mgmt-end
  
