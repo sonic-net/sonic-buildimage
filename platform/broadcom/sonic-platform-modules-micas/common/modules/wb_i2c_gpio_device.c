@@ -1,3 +1,23 @@
+/*
+ * An wb_i2c_gpio_device driver for i2c gpio device adapter function
+ *
+ * Copyright (C) 2024 Micas Networks Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -64,7 +84,7 @@ static void i2c_gpio_release(struct device *dev)
 }
 
 static struct platform_device wb_i2c_gpio_device = {
-    .name       = "wb-i2c-gpio",
+    .name       = "i2c-gpio",
     .id     = -1,
     .num_resources  = 0,
     .resource   = NULL,
@@ -78,7 +98,7 @@ static struct platform_device wb_i2c_gpio_device = {
  * i2c
  */
 static struct gpiod_lookup_table wb_i2c_gpio_table = {
-    .dev_id = "wb-i2c-gpio",
+    .dev_id = "i2c-gpio",
     .table = {
         GPIO_LOOKUP("wb_gpio_d1500", 17, "sda",
                 GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN),
@@ -104,7 +124,7 @@ static int __init wb_i2c_gpio_device_init(void)
 
     if (bus_num >= 0) {
         wb_i2c_gpio_device.id = bus_num;
-        snprintf(i2c_gpio_dev_name, I2C_GPIO_DEV_NAME_LEN, "wb-i2c-gpio.%d", bus_num);
+        snprintf(i2c_gpio_dev_name, I2C_GPIO_DEV_NAME_LEN, "i2c-gpio.%d", bus_num);
         wb_i2c_gpio_table.dev_id = i2c_gpio_dev_name;
     }
 

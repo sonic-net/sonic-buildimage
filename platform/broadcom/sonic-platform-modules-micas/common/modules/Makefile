@@ -7,8 +7,6 @@ KERNEL_SRC ?=  /lib/modules/$(KVERSION)
 module_out_put_dir := $(PWD)/build
 export module_out_put_dir
 
-KERNEL_MODULES_SRC = $(PWD)/linux
-
 PLAT_SYSFS_DIR = $(PWD)/plat_sysfs
 PINCTRL = $(PWD)/pinctrl
 
@@ -36,9 +34,13 @@ obj-m += wb_xdpe132g5c.o
 obj-m += wb_uio_irq.o
 obj-m += hw_test.o
 obj-m += wb_mdio_gpio_device.o
+obj-m += wb_csu550.o
+obj-m += wb_i2c_mux_pca9641.o
+obj-m += wb_i2c_mux_pca954x.o
+obj-m += wb_xdpe132g5c_pmbus.o
+obj-m += wb_i2c_gpio_device.o
 
 all :
-	$(MAKE) -C $(KERNEL_MODULES_SRC)
 	$(MAKE) -C $(PLAT_SYSFS_DIR)
 	$(MAKE) -C $(PINCTRL)
 	$(MAKE) -C $(KERNEL_SRC)/build M=$(PWD) modules
