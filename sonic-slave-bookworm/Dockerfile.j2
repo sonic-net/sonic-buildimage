@@ -479,6 +479,14 @@ RUN eatmydata apt-get install -y \
         python3-thrift
 {%- endif %}
 
+{%- if CONFIGURED_ARCH == "amd64" %}
+# Upgrade CMAKE version
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh
+RUN chmod +x cmake-3.27.6-linux-x86_64.sh
+RUN sudo ./cmake-3.27.6-linux-x86_64.sh --skip-license --prefix=/usr
+RUN sudo apt-get update -y
+{%- endif %}
+
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages
 RUN apt-get remove -y libnl-3-200
