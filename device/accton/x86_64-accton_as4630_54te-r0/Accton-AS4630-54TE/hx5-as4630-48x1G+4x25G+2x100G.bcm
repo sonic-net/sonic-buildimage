@@ -22,6 +22,7 @@ l2xmsg_mode=1
 l3_alpm_enable=2
 ipv6_lpm_128b_enable=1
 port_flex_enable=1
+pcie_hot_swap_timeout_usec=10000
 ifp_inports_support_enable=1
 
 #3x PM4x10Q (3 * 16 = 48 physical ports)
