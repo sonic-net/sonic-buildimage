@@ -55,11 +55,11 @@ function update_psu_sensors_configuration() {
             # keep looking for the rest psus
             continue
         else
-            if [ "$psu" == "MTEF-PSF-AC-G" ]; then
+            psu=$(echo "$psu" | sed -r 's/-PSR|-PSF//g')
+            if [ "$psu" == "MTEF-AC-G" ]; then
                 vendor=$(cat /var/run/hw-management/eeprom/psu${number}_vpd | grep "MFR_NAME:" | cut -d ' ' -f 2 2>&1)
                 psu="${psu}-${vendor}"
             fi
-            psu=$(echo "$psu" | sed -r 's/-PSR|-PSF//g')
 
             echo "    chip \""$chip"\"" >> $SENSORS_CONFIG_FILE
             mapfile -t opers < <(jq -r --arg psu "$psu" '.psu[$psu] | keys[]' $PSU_SENSORS_CONFIG)
