@@ -24,6 +24,12 @@
             "persistence_for_warm_boot" : "yes"
         }
 {% endif %}
+        ,"redis_bmp":{
+            "hostname" : "{{HOST_IP}}",
+            "port" : {{BMP_DB_PORT}},
+            "unix_socket_path" : "/var/run/redis{{DEV}}/redis_bmp.sock",
+            "persistence_for_warm_boot" : "yes"
+        }
     },
     "DATABASES" : {
         "APPL_DB" : {
@@ -130,6 +136,12 @@
             "instance" : {% if include_remote_db %} "remote_redis" {% else %} "redis" {% endif %}
         }
 {% endif %}
+        ,
+        "BMP_STATE_DB" : {
+            "id" : 20,
+            "separator": "|",
+            "instance" : "redis_bmp"
+        }
     },
     "VERSION" : "1.0"
 }
