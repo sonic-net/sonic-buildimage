@@ -520,7 +520,7 @@ RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fip
  && rm golang-go.deb golang-src.deb
 {%- endif %}
 
-RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade pip==24.2
 RUN apt-get purge -y python3-pip python3-yaml
 
 # For building Python packages
