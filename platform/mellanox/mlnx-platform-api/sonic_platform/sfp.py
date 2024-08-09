@@ -501,6 +501,21 @@ class SFP(NvidiaSFPCommon):
         eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
         return eeprom_raw is not None
 
+    @classmethod
+    def wait_sfp_eeprom_ready(cls, sfp_list, wait_time):
+        not_ready_list = sfp_list
+
+        while wait_time > 0:
+            not_ready_list = [s for s in not_ready_list if s.state == STATE_FW_CONTROL and s._read_eeprom(0, 2,False) is None]
+            if not_ready_list:
+                time.sleep(0.1)
+                wait_time -= 0.1
+            else:
+                return
+
+        for s in not_ready_list:
+            logger.log_error(f'SFP {s.sdk_index} eeprom is not ready')
+
     # read eeprom specfic bytes beginning from offset with size as num_bytes
     def read_eeprom(self, offset, num_bytes):
         """
@@ -1722,6 +1737,8 @@ class SFP(NvidiaSFPCommon):
             if not s.in_stable_state():
                 logger.log_error(f'SFP {index} is not in stable state after initializing, state={s.state}')
             logger.log_notice(f'SFP {index} is in state {s.state} after module initialization')
+
+        cls.wait_sfp_eeprom_ready(sfp_list, 2)
 
 
 class RJ45Port(NvidiaSFPCommon):
