@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,15 +28,24 @@ setup(
     maintainer_email='kevinw@mellanox.com',
     packages=[
         'sonic_platform',
-        'tests'
+        'tests',
+        'smart_switch.dpuctl'
     ],
     setup_requires= [
         'pytest-runner'
+    ],
+    install_requires= [
+        'inotify'
     ],
     tests_require = [
         'pytest',
         'mock>=2.0.0'
     ],
+    entry_points={
+    'console_scripts': [
+            'dpuctl = smart_switch.dpuctl.main:dpuctl',
+    ]
+    },
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Plugins',
