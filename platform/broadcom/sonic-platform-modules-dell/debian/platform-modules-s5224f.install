@@ -7,7 +7,12 @@ s5224f/scripts/qsfp_irq_enable.py usr/bin
 s5224f/cfg/s5224f-modules.conf etc/modules-load.d
 s5224f/cfg/s5224f-params.conf etc/modprobe.d
 s5224f/systemd/platform-modules-s5224f.service etc/systemd/system
+s5224f/systemd/pddf-platform-init.service etc/systemd/system
 s5224f/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_s5224f_c3538-r0
 common/platform_reboot usr/share/sonic/device/x86_64-dellemc_s5224f_c3538-r0
 common/fw-updater usr/local/bin
 common/onie_mode_set usr/local/bin
+s5224f/scripts/pddf_switch_svc.py usr/local/bin
+s5224f/scripts/pddf_pre_driver_install.sh usr/local/bin
+s5224f/scripts/pddf_post_device_create.sh usr/local/bin
+s5224f/pddf/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_s5224f_c3538-r0/pddf
