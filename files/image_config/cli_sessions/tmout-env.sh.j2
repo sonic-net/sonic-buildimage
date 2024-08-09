@@ -1,0 +1,11 @@
+{# Default timeout (15 min) #}
+{% set inactivity_timeout_sec = 900 %}
+
+{% set serial_pol = (SERIAL_CONSOLE | d({})).get('POLICIES', {}) -%}
+{% if serial_pol and serial_pol.inactivity_timeout and serial_pol.inactivity_timeout | int >= 0 %}
+{% set inactivity_timeout_sec = serial_pol.inactivity_timeout | int * 60 %}
+{% endif %}
+
+{# apply only for serial tty #}
+tty | grep -q tty &&  \
+export TMOUT={{ inactivity_timeout_sec }}
