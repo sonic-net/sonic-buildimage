@@ -1079,6 +1079,8 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable nv-syncd-shared
 
 # Install required packages specific for mellanox platform
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install minicom xmlstarlet
+sudo mkdir -p $FILESYSTEM_ROOT/etc/minicom/
+sudo cp platform/mellanox/minirc.dfl $FILESYSTEM_ROOT/etc/minicom/
 
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable rshim.service
 {% endif %}
