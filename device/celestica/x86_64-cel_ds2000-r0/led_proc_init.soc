@@ -1,0 +1,8 @@
+#Enable all ports
+#port all en=1
+#sleep 6
+#linkscan 250000; port xe,ce linkscan=on
+
+#Load LED
+m0 load 0 0x3800 /usr/share/sonic/platform/custom_led.bin
+led auto on; led start
