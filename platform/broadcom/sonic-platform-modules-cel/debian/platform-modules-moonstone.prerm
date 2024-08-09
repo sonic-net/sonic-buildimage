@@ -1,0 +1,5 @@
+# Disable and stop platform services
+systemctl disable pddf-platform-post.service
+systemctl stop pddf-platform-post.service
+systemctl disable pddf-platform-init.service
+systemctl stop pddf-platform-init.service

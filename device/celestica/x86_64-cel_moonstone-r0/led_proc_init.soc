@@ -1,0 +1,6 @@
+led auto off
+led stop
+led load /usr/share/sonic/platform/custom_led.bin
+led auto on
+led start
+shell echo 0x84 0x1 > /sys/devices/platform/cls_sw_fpga/FPGA/setreg
