@@ -8,6 +8,7 @@
 DAEMON=/usr/sbin/ntpd
 PIDFILE=/run/ntpd.pid
 LOCKFILE=/run/lock/ntpsec-ntpdate
+NTPLOGDIR=/var/log/ntpsec
 
 if [ -r /etc/default/ntpsec ]; then
         . /etc/default/ntpsec
@@ -23,6 +24,11 @@ else
 fi
 
 NTPD_OPTS="$NTPD_OPTS -u ntpsec:ntpsec"
+
+if [ ! -e $NTPLOGDIR ]; then
+    mkdir $NTPLOGDIR
+    chmod 777 $NTPLOGDIR
+fi
 
 # Protect the service startup against concurrent ntpdate ifup hooks
 (
