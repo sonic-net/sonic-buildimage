@@ -1,0 +1,6 @@
+{
+    "skip_ledd": true,
+    "skip_fancontrol": true,
+    "skip_xcvrd_cmis_mgr": false
+}
+
