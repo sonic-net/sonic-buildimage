@@ -210,7 +210,40 @@
                 ]
             }
         ],
-        "thermals": [],
+        "thermals": [
+            {
+                "name": "Supervisor front",
+                "controllable": false
+            },
+            {
+                "name": "Physical id 0",
+                "controllable": false
+            },
+            {
+                "name": "CPU core0",
+                "controllable": false
+            },
+            {
+                "name": "CPU core1",
+                "controllable": false
+            },
+            {
+                "name": "CPU core2",
+                "controllable": false
+            },
+            {
+                "name": "CPU core3",
+                "controllable": false
+            },
+            {
+                "name": "CPU core4",
+                "controllable": false
+            },
+            {
+                "name": "CPU core5",
+                "controllable": false
+            }
+        ],
         "sfps": []
     },
     "interfaces": {}
