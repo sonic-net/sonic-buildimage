@@ -280,7 +280,10 @@ regress:t2:chassis19:
   extends: .regress
   tags:
     - regress_tb29
+  needs:
+    - build:sonic:x86_64
   variables:
+    RUN_IMAGE: target/sonic-broadcom-dnx.bin
     DELAY_START: 300
     EXTRA_RUN_TEST_ARGS: --suite masic
   only:
@@ -331,6 +334,20 @@ regress:tb26:
   only:
     variables:
       - $REGRESS_TB26
+
+regress:t2:chassis20:
+  extends: .regress
+  tags:
+    - regress_tb39
+  needs:
+    - build:sonic:x86_64
+  variables:
+    RUN_IMAGE: target/sonic-broadcom-dnx.bin
+    DELAY_START: 300
+    EXTRA_RUN_TEST_ARGS: --suite masic
+  only:
+    variables:
+      - $REGRESS_T2_CHASSIS20
 
 .post:
   stage: post
