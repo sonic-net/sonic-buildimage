@@ -28,6 +28,8 @@ variables:
     value: 5400
   - group: SONiC-sonicbld
   - group: SONIC-BUILD-VG-1
+  - name: BUILD_NUMBER
+    value: $(Build.BuildId)
 resources:
   repositories: 
     - repository: templates

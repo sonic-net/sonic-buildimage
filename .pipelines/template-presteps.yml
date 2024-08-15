@@ -35,6 +35,7 @@ steps:
   - script: |
       unset REGISTRY_SERVER
       mkdir -p target/release
+      [[ "$(Build.Reason)" != "PullRequest" ]] && git checkout -b $(Build.SourceBranchName)
       . functions.sh
       SONIC_VERSION=$(sonic_get_version)
       echo SONIC_VERSION=${SONIC_VERSION} > sonic.properties
