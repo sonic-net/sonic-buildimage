@@ -1,0 +1,7 @@
+[package]
+name = "wol"
+version = "0.0.1"
+
+[dependencies]
+pnet = "0.35.0"
+clap = { version  = "4.5.7", features = ["derive"] }

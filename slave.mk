@@ -362,6 +362,15 @@ CROSS_COMPILE_FLAGS := CGO_ENABLED=1 GOOS=linux GOARCH=$(GOARCH) CROSS_COMPILE=$
 
 endif
 
+ifeq ($(CROSS_BUILD_ENVIRON),y)
+ifeq ($(CONFIGURED_ARCH),armhf)
+RUST_CROSS_COMPILE_TARGET = armv7-unknown-linux-gnueabihf
+else ifeq ($(CONFIGURED_ARCH),arm64)
+RUST_CROSS_COMPILE_TARGET = aarch64-unknown-linux-gnu
+endif
+export RUST_CROSS_COMPILE_TARGET
+endif
+
 ###############################################################################
 ## Routing stack related exports
 ###############################################################################
@@ -1370,6 +1379,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(PYTHON_SWSSCOMMON) \
                 $(PYTHON3_SWSSCOMMON) \
                 $(SONIC_DB_CLI) \
+                $(SONIC_NETTOOLS) \
                 $(SONIC_RSYSLOG_PLUGIN) \
                 $(SONIC_UTILITIES_DATA) \
                 $(SONIC_HOST_SERVICES_DATA) \
