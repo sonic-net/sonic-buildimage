@@ -16,7 +16,10 @@ mkdir -p target/versions/default
 
 . src/sonic-build-hooks/buildinfo/config/buildinfo.config
 
-image_tag=`grep "^FROM " $DOCKERFILE | awk '{print$2}'`
+image_tag=`grep "^ARG BASE=" $DOCKERFILE | cut -d= -f 2`
+if [ -z $image_tag ]; then
+	image_tag=`grep "^FROM " $DOCKERFILE | awk '{print$2}'`
+fi
 image_tag_noprefix=$image_tag
 [ -n "$DEFAULT_CONTAINER_REGISTRY" ] && image_tag_noprefix=$(echo $image_tag | sed "s#$DEFAULT_CONTAINER_REGISTRY##")
 image=`echo $image_tag | cut -f1 -d:`
