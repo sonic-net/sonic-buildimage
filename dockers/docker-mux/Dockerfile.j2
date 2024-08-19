@@ -1,14 +1,14 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ARG docker_container_name
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update &&       \
-    apt-get install -f -y   \
-        libmnl0
+RUN apt-get update
 
 {% if docker_mux_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -18,12 +18,6 @@ RUN apt-get update &&       \
 {{ install_debian_packages(docker_mux_debs.split(' ')) }}
 {%- endif %}
 
-## Clean up
-RUN apt-get clean -y        && \
-    apt-get autoclean -y    && \
-    apt-get autoremove -y   && \
-    rm -rf /debs
-
 COPY ["docker-init.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
@@ -31,5 +25,9 @@ COPY ["critical_processes", "/etc/supervisor/"]
 
 ## Copy all Jinja2 template files into the templates folder
 COPY ["*.j2", "/usr/share/sonic/templates/"]
+
+FROM $BASE
+
+COPY --from=base / /
 
 ENTRYPOINT ["/usr/bin/docker-init.sh"]

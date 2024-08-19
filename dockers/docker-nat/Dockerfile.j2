@@ -1,9 +1,9 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, copy_files %}
-FROM docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ARG docker_container_name
-
-RUN echo
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -12,8 +12,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ## TODO: implicitly install dependencies
 RUN apt-get update        \
 && apt-get install -f -y \
-       libelf1           \
-       libmnl0           \
        bridge-utils      \
        conntrack
 
@@ -33,5 +31,9 @@ COPY ["critical_processes", "/etc/supervisor"]
 
 RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
 RUN rm -rf /debs
+
+FROM $BASE
+
+COPY --from=base / /
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

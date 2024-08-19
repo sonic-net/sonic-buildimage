@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ARG docker_container_name
 
@@ -23,12 +25,8 @@ RUN pip3 install click
 {{ install_debian_packages(docker_database_debs.split(' ')) }}
 {%- endif %}
 
-# Clean up
-RUN apt-get clean -y                                  && \
-    apt-get autoclean -y                              && \
-    apt-get autoremove -y                             && \
-    rm -rf /debs ~/.cache                             && \
-    sed -ri 's/^# save ""$/save ""/g;                    \
+# Configure redis settings
+RUN sed -ri 's/^# save ""$/save ""/g;                    \
              s/^daemonize yes$/daemonize no/;            \
              s/^logfile .*$/logfile ""/;                 \
              s/^# syslog-enabled no$/syslog-enabled no/; \
@@ -49,5 +47,9 @@ COPY ["files/sysctl-net.conf", "/etc/sysctl.d/"]
 COPY ["files/update_chassisdb_config", "/usr/local/bin/"]
 COPY ["flush_unused_database", "/usr/local/bin/"]
 COPY ["multi_database_config.json.j2", "/usr/share/sonic/templates/"]
+
+FROM $BASE
+
+COPY --from=base / /
 
 ENTRYPOINT ["/usr/local/bin/docker-database-init.sh"]

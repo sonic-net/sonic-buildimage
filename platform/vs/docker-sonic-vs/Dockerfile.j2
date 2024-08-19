@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ARG docker_container_name
 
@@ -170,3 +172,7 @@ ENV PLATFORM=x86_64-kvm_x86_64-r0
 ENV HWSKU=Force10-S6000
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
+
+FROM $BASE
+
+COPY --from=base / /

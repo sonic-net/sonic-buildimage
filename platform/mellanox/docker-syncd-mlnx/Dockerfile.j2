@@ -17,7 +17,9 @@
 ##
 
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ARG docker_container_name
 
@@ -59,11 +61,7 @@ RUN apt-get purge -y python-pip
 ## Clean up
 RUN apt-get purge -y         \
         python3-dev          \
-        python3-pip       && \
-    apt-get clean -y      && \
-    apt-get autoclean -y  && \
-    apt-get autoremove -y && \
-    rm -rf /debs
+        python3-pip
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
@@ -82,5 +80,9 @@ COPY ["ecmp_calculator/ecmp_calc.py", "/usr/bin"]
 COPY ["ecmp_calculator/ecmp_calc_sdk.py", "/usr/lib/ecmp_calc"]
 COPY ["ecmp_calculator/packet_scheme.py", "/usr/lib/ecmp_calc"]
 COPY ["lib/port_utils.py", "/usr/lib"]
+
+FROM $BASE
+
+COPY --from=base / /
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

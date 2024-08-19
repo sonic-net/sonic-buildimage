@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-syncd-brcm-dnx-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-syncd-brcm-dnx-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -19,7 +21,6 @@ RUN apt-get update \
     libffi-dev          \
     wget                \
     cmake               \
-    libnanomsg5         \
     libnanomsg-dev
 
 {% if docker_syncd_brcm_dnx_rpc_debs.strip() -%}
@@ -69,3 +70,7 @@ RUN apt-get clean -y && \
     rm -rf /debs
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
+
+FROM $BASE
+
+COPY --from=base / /

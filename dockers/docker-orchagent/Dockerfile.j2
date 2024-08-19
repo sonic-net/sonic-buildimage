@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ARG docker_container_name
 
@@ -13,8 +15,6 @@ RUN apt-get update &&       \
         iproute2            \
         ndisc6              \
         tcpdump             \
-        libelf1             \
-        libmnl0             \
         bridge-utils        \
         conntrack           \
         ndppd               \
@@ -57,15 +57,6 @@ RUN apt-get remove -y gcc
 {{ install_python_wheels(docker_orchagent_whls.split(' ')) }}
 {% endif %}
 
-# Clean up
-RUN apt-get purge -y          \
-        build-essential       \
-        python3-dev        && \
-    apt-get clean -y       && \
-    apt-get autoclean -y   && \
-    apt-get autoremove -y  && \
-    rm -rf /debs ~/.cache
-
 COPY ["files/arp_update", "/usr/bin"]
 COPY ["arp_update.conf", "files/arp_update_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["ndppd.conf", "tunnel_packet_handler.conf", "/usr/share/sonic/templates/"]
@@ -89,5 +80,9 @@ RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin.conf.j2 /etc/rsyslog.d/events_info.
 RUN rm -f /etc/rsyslog.d/rsyslog_plugin.conf.j2
 RUN rm -f /etc/rsyslog.d/events_info.json
 {% endif %}
+
+FROM $BASE
+
+COPY --from=base / /
 
 ENTRYPOINT ["/usr/bin/docker-init.sh"]

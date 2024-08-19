@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python3_wheels, copy_files %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ARG docker_container_name
 ARG image_version
@@ -55,17 +57,6 @@ RUN pip3 install --no-cache-dir \
 
 RUN python3 -m sonic_ax_impl install
 
-# Clean up
-RUN apt-get -y purge     \
-        python3-dev      \
-        gcc              \
-        make                && \
-    apt-get clean -y        && \
-    apt-get autoclean -y    && \
-    apt-get autoremove -y --purge && \
-    find / | grep -E "__pycache__" | xargs rm -rf && \
-    rm -rf /debs /python-wheels ~/.cache
-
 COPY ["start.sh", "/usr/bin/"]
 COPY ["snmp_yml_to_configdb.py", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
@@ -75,5 +66,9 @@ COPY ["critical_processes", "/etc/supervisor"]
 
 # Although exposing ports is not needed for host net mode, keep it for possible bridge mode
 EXPOSE 161/udp 162/udp
+
+FROM $BASE
+
+COPY --from=base / /
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

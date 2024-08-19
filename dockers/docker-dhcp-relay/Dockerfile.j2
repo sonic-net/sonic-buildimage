@@ -1,5 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ARG docker_container_name
 ARG image_version
@@ -38,10 +40,6 @@ RUN pip3 install psutil
 # Clean up
 RUN apt-get remove -y build-essential     \
                 python3-dev
-RUN apt-get clean -y         && \
-    apt-get autoclean -y     && \
-    apt-get autoremove -y    && \
-    rm -rf /debs
 
 COPY ["docker_init.sh", "start.sh", "/usr/bin/"]
 COPY ["docker-dhcp-relay.supervisord.conf.j2", "port-name-alias-map.txt.j2", "wait_for_intf.sh.j2", "/usr/share/sonic/templates/"]
@@ -59,5 +57,9 @@ RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin.conf.j2 /etc/rsyslog.d/events_info.
 RUN rm -f /etc/rsyslog.d/rsyslog_plugin.conf.j2
 RUN rm -f /etc/rsyslog.d/events_info.json
 {% endif %}
+
+FROM $BASE
+
+COPY --from=base / /
 
 ENTRYPOINT ["/usr/bin/docker_init.sh"]

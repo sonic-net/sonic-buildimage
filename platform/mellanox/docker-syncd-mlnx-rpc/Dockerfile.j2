@@ -15,7 +15,9 @@
 ## limitations under the License.
 ##
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-syncd-mlnx-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-syncd-mlnx-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -95,9 +97,8 @@ RUN apt-get -y purge \
     libthrift-dev    \
     build-essential
 
-RUN apt-get clean -y && \
-    apt-get autoclean -y && \
-    apt-get autoremove -y && \
-    rm -rf /debs
+FROM $BASE
+
+COPY --from=base / /
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]
