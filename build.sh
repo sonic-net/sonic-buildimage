@@ -12,7 +12,8 @@ OPTIONS:
   -h, --help            ; this screen
   -c, --configure       ; configure only
   -s, --submodule       ; test submodule patch function
-      --rpc             ; build syncd rpc image only
+      --rpc-dnx         ; build dnx syncd rpc image only
+      --rpc-xgs         ; build xgs syncd rpc image only
 "
   exit $1
 }
@@ -26,7 +27,7 @@ OPTIONS:
 TEMP=`
 getopt \
 -o hcs \
--l help,configure,rpc,submodule \
+-l help,configure,rpc-dnx,rpc-xgs,submodule \
 --name="$prog" \
 -- "$@" \
 `
@@ -37,7 +38,8 @@ eval set -- "$TEMP"
 ###################################
 # default options
 opt_configure=0
-opt_rpc=0
+opt_rpc_dnx=0
+opt_rpc_xgs=0
 debug=echo
 
 while true; do
@@ -45,7 +47,8 @@ while true; do
     -h | --help )      usage 0 ;;
     -c | --configure)  opt_configure=1; shift ;;
     -s | --submodule_add)  opt_submodule_test=1; shift ;;
-         --rpc )       opt_rpc=1; shift ;;
+         --rpc-dnx )       opt_rpc_dnx=1; shift ;;
+         --rpc-xgs )       opt_rpc_xgs=1; shift ;;
     --        )        shift;  break ;;
     *         )        break ;;
   esac
@@ -126,9 +129,14 @@ build()
 
 }
 
-build_rpc () {
+build_rpc_dnx () {
   submodule_prs
   make SONIC_BUILD_JOBS=2 ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-dnx-rpc.gz
+}
+
+build_rpc_xgs () {
+  submodule_prs
+  make SONIC_BUILD_JOBS=2 ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-rpc.gz
 }
 
 if [ $opt_submodule_test -eq 1 ]; then
@@ -143,8 +151,13 @@ if [ "$CI_JOB_STAGE" = "configure" -o $opt_configure -eq 1 ]; then
 	exit $rc
 fi
 
-if [ $opt_rpc -eq 1 ]; then
-  build_rpc
+if [ $opt_rpc_dnx -eq 1 ]; then
+  build_rpc_dnx
+  exit $?
+fi
+
+if [ $opt_rpc_xgs -eq 1 ]; then
+  build_rpc_xgs
   exit $?
 fi
 

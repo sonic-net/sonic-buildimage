@@ -132,10 +132,7 @@ build:sonic:aarch64:
       mkdir -p target
       curl -o target/${TARGET_BIN} http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/${TARGET_BIN}
     else
-      source nokia-env
-      make init
-      make configure PLATFORM=broadcom
-      make SONIC_BUILD_JOBS=2 ENABLE_SYNCD_RPC=y target/${TARGET_BIN}
+      ./build.sh --rpc-${TARGET_SAI}
     fi
   artifacts:
     name: "$CI_COMMIT_REF_NAME"
@@ -150,6 +147,7 @@ build:brcm-rpc:x86_64:
   variables:
     BUILD_ARCH: x86_64
     TARGET_BIN: docker-syncd-brcm-rpc.gz
+    TARGET_SAI: xgs
 
 build:brcm-rpc-dnx:x86_64:
   extends: .build:brcm-rpc
@@ -158,6 +156,7 @@ build:brcm-rpc-dnx:x86_64:
   variables:
     BUILD_ARCH: x86_64
     TARGET_BIN: docker-syncd-brcm-dnx-rpc.gz
+    TARGET_SAI: dnx
 
 express:chassis7:
   stage: test
