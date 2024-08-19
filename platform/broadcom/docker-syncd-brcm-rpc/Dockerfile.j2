@@ -64,13 +64,8 @@ RUN apt-get -y purge \
     libthrift-dev    \
     build-essential
 
-RUN apt-get clean -y && \
-    apt-get autoclean -y && \
-    apt-get autoremove -y && \
-    rm -rf /debs
-
-ENTRYPOINT ["/usr/local/bin/supervisord"]
-
 FROM $BASE
 
 COPY --from=base / /
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

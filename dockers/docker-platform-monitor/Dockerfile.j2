@@ -106,8 +106,4 @@ FROM $BASE
 
 COPY --from=base / /
 
-FROM $BASE
-
-COPY --from=base / /
-
 ENTRYPOINT ["/usr/bin/docker_init.sh"]
