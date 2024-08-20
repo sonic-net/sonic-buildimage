@@ -57,6 +57,9 @@ RUN apt-get remove -y gcc
 {{ install_python_wheels(docker_orchagent_whls.split(' ')) }}
 {% endif %}
 
+# Clean up
+RUN apt-get purge -y build-essential python3-dev
+
 COPY ["files/arp_update", "/usr/bin"]
 COPY ["arp_update.conf", "files/arp_update_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["ndppd.conf", "tunnel_packet_handler.conf", "/usr/share/sonic/templates/"]
