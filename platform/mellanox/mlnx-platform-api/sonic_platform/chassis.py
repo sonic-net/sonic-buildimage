@@ -499,16 +499,18 @@ class Chassis(ChassisBase):
                     s.on_event(event)
                     
                 if s.in_stable_state():
+                    self.sfp_module.SFP.wait_sfp_eeprom_ready([s], 2)
                     s.fill_change_event(port_dict)
                     s.refresh_poll_obj(self.poll_obj, self.registered_fds)
                 else:
                     logger.log_debug(f'SFP {sfp_index} does not reach stable state, state={s.state}')
-                                        
+                    
             ready_sfp_set = wait_ready_task.get_ready_set()
             for sfp_index in ready_sfp_set:
                 s = self._sfp_list[sfp_index]
                 s.on_event(sfp.EVENT_RESET_DONE)
                 if s.in_stable_state():
+                    self.sfp_module.SFP.wait_sfp_eeprom_ready([s], 2)
                     s.fill_change_event(port_dict)
                     s.refresh_poll_obj(self.poll_obj, self.registered_fds)
                 else:

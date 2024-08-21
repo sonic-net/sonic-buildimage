@@ -18,8 +18,10 @@
 import glob
 import os
 import time
+import re
 
 from . import utils
+from sonic_py_common.general import check_output_pipe
 
 DEFAULT_WD_PERIOD = 65535
 
@@ -102,6 +104,13 @@ DEVICE_DATA = {
     },
     'x86_64-mlnx_msn4600-r0': {
     },
+    'x86_64-nvidia_sn4280-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False
+            }
+        }
+    },
     'x86_64-nvidia_sn4800-r0': {
         'thermal': {
             "capability": {
@@ -165,6 +174,13 @@ class DeviceDataManager:
     def is_simx_platform(cls):
         platform_name = cls.get_platform_name()
         return platform_name and 'simx' in platform_name
+
+    @classmethod
+    @utils.read_only_cache()
+    def get_simx_version(cls):
+        version = check_output_pipe(["lspci", "-vv"], ["grep", "SimX"])
+        parsed_version = re.search("([0-9]+\\.[0-9]+-[0-9]+)", version)
+        return parsed_version.group(1) if parsed_version else "N/A"
 
     @classmethod
     @utils.read_only_cache()
@@ -263,11 +279,13 @@ class DeviceDataManager:
 
     @classmethod
     def get_cpld_component_list(cls):
-        from .component import ComponentCPLD, ComponentCPLDSN2201
+        from .component import ComponentCPLD, ComponentCPLDSN2201, ComponentCPLDSN4280, ComponenetFPGADPU
         if cls.get_platform_name() in ['x86_64-nvidia_sn2201-r0']:
             # For SN2201, special chass is required for handle BIOS
             # Currently, only fetching BIOS version is supported
             return ComponentCPLDSN2201.get_component_list()
+        if cls.get_platform_name() in ['x86_64-nvidia_sn4280-r0']:
+            return ComponentCPLDSN4280.get_component_list() + ComponenetFPGADPU.get_component_list()
         return ComponentCPLD.get_component_list()
 
     @classmethod

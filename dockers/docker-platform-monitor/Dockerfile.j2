@@ -27,7 +27,8 @@ RUN apt-get update &&   \
         iputils-ping    \
         pciutils        \
         nvme-cli        \
-        ethtool
+        ethtool         \
+        xxd
 
 # smartmontools version should match the installed smartmontools in sonic_debian_extension build template
 RUN apt-get install -y -t bookworm-backports \

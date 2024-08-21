@@ -97,3 +97,18 @@ def cmp(file1, file2):
         return obj1 == obj2
     except:
         return filecmp.cmp(file1, file2)
+
+def cmp_tables(f_rcvd, f_exp):
+    """ Check if the tables present in rcvd matches with exp """
+    try:
+        with open(f_rcvd, 'r') as f:
+            rcvd = json.load(f)
+        with open(f_exp, 'r') as f:
+            exp = json.load(f)
+
+        for key in rcvd.keys():
+            print(key, rcvd[key], exp.get(key,{}))
+            assert rcvd[key] == exp.get(key,{})
+    except Exception as e:
+        return False
+    return True
