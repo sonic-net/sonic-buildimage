@@ -37,6 +37,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	sed -i.bak '/checkenumlock.sh/d' SAI/SAI/meta/Makefile
 	sed -i.bak '/checkancestry.sh/d' SAI/SAI/meta/Makefile
 	sed -i.bak '/checkstructs.sh/d' SAI/SAI/meta/Makefile
+	sed -i.bak "/.\/saimetadatatest >\/dev\/null/d" SAI/SAI/meta/Makefile
 	pushd SAI/SAI/meta/
 	CFLAGS=-Wdangling-pointer=1 make all libsaimetadata.so
 	popd

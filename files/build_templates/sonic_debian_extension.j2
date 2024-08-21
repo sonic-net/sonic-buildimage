@@ -99,6 +99,11 @@ sudo mkdir -p $FILESYSTEM_ROOT_USR_SHARE_SONIC_FIRMWARE/
 # Keeping it generic. It should not harm anyways.
 sudo mkdir -p $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 
+# Install sonic-nettools
+sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/sonic-nettools_*.deb || \
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
+sudo setcap 'cap_net_raw=+ep' $FILESYSTEM_ROOT/usr/bin/wol
+
 # Install a patched version of ifupdown2  (and its dependencies via 'apt-get -y install -f')
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/ifupdown2_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
@@ -131,6 +136,9 @@ sudo rm -rf $FILESYSTEM_ROOT/$REDIS_DUMP_LOAD_PY3_WHEEL_NAME
 
 # Install Python module for psutil
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install psutil
+
+# Install Python module for blkinfo
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install blkinfo
 
 # Install Python module for ipaddr
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install ipaddr
@@ -396,7 +404,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 sudo cp $IMAGE_CONFIGS/smartmontools/smartmontools $FILESYSTEM_ROOT/etc/default/smartmontools
 
 # Install custom-built openssh sshd
-sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/openssh-server_${OPENSSH_VERSION}_*.deb $debs_path/openssh-client_${OPENSSH_VERSION}_*.deb $debs_path/openssh-sftp-server_${OPENSSH_VERSION}_*.deb
+sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/openssh-server_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-client_${OPENSSH_VERSION_FULL}_*.deb $debs_path/openssh-sftp-server_${OPENSSH_VERSION_FULL}_*.deb
 
 {% if sonic_asic_platform == 'broadcom' %}
 # Install custom-built flashrom
@@ -699,7 +707,7 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable midplane-network-dpu.servi
 # According to the issue: https://github.com/systemd/systemd/issues/19106, To disable ManageForeignRoutingPolicyRules to avoid the ip rules being deleted by systemd-networkd
 sudo sed -i 's/#ManageForeignRoutingPolicyRules=yes/ManageForeignRoutingPolicyRules=no/g' $FILESYSTEM_ROOT/etc/systemd/networkd.conf
 
-sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable systemd-networkd
+sudo ln -s /dev/null $FILESYSTEM_ROOT/etc/systemd/system/systemd-networkd.service
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable systemd-networkd-wait-online.service
 
 # Copy backend-acl script and service file
@@ -1003,6 +1011,7 @@ sudo LANG=C cp $SCRIPTS_DIR/mgmt-framework.sh $FILESYSTEM_ROOT/usr/local/bin/mgm
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.sh $FILESYSTEM_ROOT/usr/local/bin/asic_status.sh
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.py $FILESYSTEM_ROOT/usr/local/bin/asic_status.py
 sudo LANG=C cp $SCRIPTS_DIR/startup_tsa_tsb.py $FILESYSTEM_ROOT/usr/local/bin/startup_tsa_tsb.py
+sudo LANG=C cp $SCRIPTS_DIR/sonic-dpu-mgmt-traffic.sh $FILESYSTEM_ROOT/usr/local/bin/sonic-dpu-mgmt-traffic.sh
 
 # Copy sonic-netns-exec script
 sudo LANG=C cp $SCRIPTS_DIR/sonic-netns-exec $FILESYSTEM_ROOT/usr/bin/sonic-netns-exec

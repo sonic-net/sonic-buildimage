@@ -109,7 +109,9 @@ class DhcpRelayd(object):
         self._disable_checkers(checkers_to_be_disabled)
 
         self._start_dhcrelay_process(dhcp_interfaces, dhcp_server_ip, force_kill)
-        self._start_dhcpmon_process(dhcp_interfaces, force_kill)
+
+        # TODO dhcpmon is not ready for count packet for dhcp_server, hence comment invoke it for now
+        # self._start_dhcpmon_process(dhcp_interfaces, force_kill)
 
     def wait(self):
         """
@@ -307,7 +309,7 @@ class DhcpRelayd(object):
         for pid, cmds in pids_cmds.items():
             proc = psutil.Process(pid)
             if proc.status() == psutil.STATUS_ZOMBIE:
-                syslog.syslog(syslog.LOG_ERR, "Faild to start dhcpmon process: {}".format(cmds))
+                syslog.syslog(syslog.LOG_ERR, "Failed to start dhcpmon process: {}".format(cmds))
                 terminate_proc(proc)
             else:
                 syslog.syslog(syslog.LOG_INFO, "dhcpmon process started successfully, cmds: {}".format(cmds))

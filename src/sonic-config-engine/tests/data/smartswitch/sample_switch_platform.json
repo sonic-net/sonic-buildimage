@@ -1,0 +1,16 @@
+{
+    "DPUS": {
+        "dpu0": {
+            "midplane_interface":  "dpu0"
+        },
+        "dpu1": {
+            "midplane_interface":  "dpu1"
+        },
+        "dpu2": {
+            "midplane_interface":  "dpu2"
+        },
+        "dpu3": {
+            "midplane_interface":  "dpu3"
+        }
+    }
+}

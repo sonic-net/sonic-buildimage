@@ -128,9 +128,9 @@ def get_voq_intf_attributes(ports):
             core_port_index = None
             speed = None
             for k,v in ports.get(port, {}).items():
-                if k.lower() == 'coreid':
+                if k.lower() == 'core_id':
                     core_id = v
-                if k.lower() == 'coreportid':
+                if k.lower() == 'core_port_id':
                     core_port_index = v
                 if k.lower() == 'speed':
                     speed = v

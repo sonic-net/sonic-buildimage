@@ -573,6 +573,7 @@ When the system is running in traditional buffer model, the size of all of the b
 ```
 
 When the system is running in dynamic buffer model, the size of some of the buffer pools can be omitted and will be dynamically calculated.
+In this case, A percentage can be configured on a pool, representing how many the available buffer can be allloced to the pool.
 
 ```
 {
@@ -584,11 +585,12 @@ When the system is running in dynamic buffer model, the size of some of the buff
     },
     "egress_lossy_pool": {
         "type": "egress",
-        "mode": "dynamic",
+        "mode": "dynamic"
     },
     "ingress_lossless_pool": {
         "type": "ingress",
         "mode": "dynamic",
+        "percentage": "80"
     }
   }
 }
@@ -2332,7 +2334,8 @@ and is listed in this table.
         "gnmi": {
             "client_auth": "true",
             "log_level": "2",
-            "port": "50051"
+            "port": "50051",
+            "save_on_set": "false"
         }
     }
 }

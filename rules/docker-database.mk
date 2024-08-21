@@ -28,7 +28,7 @@ SONIC_BOOKWORM_DBG_DOCKERS += $(DOCKER_DATABASE_DBG)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_DATABASE_DBG)
 
 $(DOCKER_DATABASE)_CONTAINER_NAME = database
-$(DOCKER_DATABASE)_RUN_OPT += --privileged -t
+$(DOCKER_DATABASE)_RUN_OPT += -t --security-opt apparmor=unconfined --security-opt="systempaths=unconfined"
 $(DOCKER_DATABASE)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_DATABASE)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro
 

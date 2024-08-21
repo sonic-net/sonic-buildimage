@@ -122,6 +122,7 @@ RUN rm -rf /debs \
 {% endif %}
     && git clone https://github.com/sflow/sflowtool \
     && cd sflowtool \
+    && git checkout v6.04 \
     && ./boot.sh \
     && ./configure \
     && make \
