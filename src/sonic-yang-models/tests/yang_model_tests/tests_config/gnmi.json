@@ -62,5 +62,32 @@
                 }
             }
         }
+    },
+    "GNMI_CLIENT_CERT_LIST_TABLE_WITH_MISSING_ROLE": {
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI_CLIENT_CERT": {
+                "GNMI_CLIENT_CERT_LIST": [
+                {
+                    "cert_cname": "testcert1"
+                }
+                ]
+            }
+        }
+    },
+    "GNMI_CLIENT_CERT_LIST_TABLE_WITH_VALID_CONFIG": {
+        "sonic-gnmi:sonic-gnmi": {
+            "sonic-gnmi:GNMI_CLIENT_CERT": {
+                "GNMI_CLIENT_CERT_LIST": [
+                {
+                    "cert_cname": "testcert1",
+                    "role": "RW"
+                },
+                {
+                    "cert_cname": "testcert2",
+                    "role": "RO"
+                }
+                ]
+            }
+        }
     }
 }
