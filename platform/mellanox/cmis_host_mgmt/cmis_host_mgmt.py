@@ -21,6 +21,8 @@ import click
 import re
 import os
 import subprocess
+import glob
+from pathlib import Path
 
 
 class CMISHostMgmtActivator:
@@ -60,7 +62,7 @@ class CMISHostMgmtActivator:
                         if param == "sai_profile" and not re.search(CMISHostMgmtActivator.PARAMS[param]["disabled_param"], lines):
                             if not re.search(CMISHostMgmtActivator.PARAMS[param]["enabled_param"], lines): 
                                 with open(file_path, 'a') as param_file:
-                                    param_file.write(CMISHostMgmtActivator.PARAMS[param]["enabled_param"])
+                                    param_file.write(CMISHostMgmtActivator.PARAMS[param]["enabled_param"] + '\n')
                                 return
 
                         lines = re.sub(CMISHostMgmtActivator.PARAMS[param]["disabled_param"],
@@ -137,8 +139,19 @@ class CMISHostMgmtActivator:
 
         if not CMISHostMgmtActivator.is_spc_supported(sku_num):
             print("Error: unsupported platform - feature is supported on SPC3 and higher.")
-            
-        CMISHostMgmtActivator.PARAMS["sai_xml"]["file_name"] = "sai_{0}.xml".format(sku_num)
+
+        sai_profile_file = '{}/{}'.format(sku_path, CMISHostMgmtActivator.PARAMS["sai_profile"]["file_name"])
+        lines = None
+        with open(sai_profile_file, 'r') as saiprofile:
+            lines = saiprofile.read()
+        
+        sai_xml_path = re.search("SAI_INIT_CONFIG_FILE.*", lines).group()
+
+        if sai_xml_path:
+            sai_xml_name = Path(sai_xml_path).name
+            CMISHostMgmtActivator.PARAMS["sai_xml"]["file_name"] = sai_xml_name
+        else:
+            print("Error: no sai_*.xml file present")
 
         CMISHostMgmtActivator.copy_file(args[0], sku_path)
         CMISHostMgmtActivator.copy_file(args[1], sku_path)
