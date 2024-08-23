@@ -242,6 +242,17 @@ function clean_up_chassis_db_tables()
 
 }
 
+is_feature_enabled()
+{
+    s=$1
+    service=${s%@*}
+    state=$(sonic-db-cli CONFIG_DB hget "FEATURE|${service}" "state")
+    if [[ $state == "enabled" ]]; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
 start_peer_and_dependent_services() {
     check_warm_boot
 
@@ -254,7 +265,14 @@ start_peer_and_dependent_services() {
             fi
         done
         for dep in ${DEPENDENT}; do
-            /bin/systemctl start ${dep}
+            if [[ $dep == "dhcp_relay" ]]; then
+                state=$(is_feature_enabled $dep)
+                if [[ $state == "true" ]]; then
+                    /bin/systemctl start ${dep}
+                fi
+            else
+                /bin/systemctl start ${dep}
+            fi
         done
         for dep in ${MULTI_INST_DEPENDENT}; do
             if [[ ! -z $DEV ]]; then

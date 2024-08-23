@@ -24,7 +24,7 @@ libxslt1-dev==1.1.34-4+deb11u1
 libxslt1.1==1.1.34-4+deb11u1
 libyang==1.0.73
 libyang-cpp==1.0.73
-linux-libc-dev==5.10.218-1
+linux-libc-dev==5.10.221-1
 python3-swsscommon==1.0.0
 python3-yang==1.0.73
 sonic-db-cli==1.0.0
