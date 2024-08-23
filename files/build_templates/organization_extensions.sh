@@ -48,5 +48,9 @@ echo "Executing SONIC Organization Extensions"
 ## Place your Organization specific code / scipts here ... 
 
 
+# FDB aging script
+sudo cp files/scripts/fdb_aging_update.py ${FILESYSTEM_ROOT}/usr/local/bin/fdb_aging_update.py
+sudo chmod +x ${FILESYSTEM_ROOT}/usr/local/bin/fdb_aging_update.py
+
 echo "SONIC Organization Extensions - Done"
 
