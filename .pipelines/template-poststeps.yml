@@ -13,7 +13,7 @@ parameters:
     default: 'default'
 
 steps:
-  - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+  - ${{ if eq(variables['Build.DefinitionName'], 'Networking-acs-buildimage-Official-OneBranch') }}:
     - task: CodeQL3000Finalize@0
     - script: |
         set -ex
