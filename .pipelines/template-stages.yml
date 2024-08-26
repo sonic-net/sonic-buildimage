@@ -19,7 +19,7 @@ stages:
   - stage: BuildVS
     jobs:
     - job: vs
-      ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      ${{ if ne(variables['Build.DefinitionName'], 'Networking-acs-buildimage-Official-OneBranch') }}:
         timeoutInMinutes: 840
       pool:
         type: linux
