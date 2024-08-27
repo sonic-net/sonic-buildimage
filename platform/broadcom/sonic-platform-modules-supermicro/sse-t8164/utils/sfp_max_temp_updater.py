@@ -6,7 +6,6 @@ This script is to update BMC sensor info with max of SFP temperatures.
 import time
 import syslog
 import subprocess
-import os
 import errno
 import natsort
 import sonic_platform.platform
@@ -90,8 +89,8 @@ class SfpMaxTempUpdater():
                     max_temp = temp
 
             # update BMC sensor reading
-            exit_code = os.system("/usr/bin/ipmitool raw 0x30 0x89 0x09 0x1 0x0 {} > /dev/null {}"
-                                  .format(hex(int(max_temp)), '2>&1' if error_count >= 3 else ''))
+            exit_code = subprocess.call("/usr/bin/ipmitool raw 0x30 0x89 0x09 0x1 0x0 {} > /dev/null {}"
+                                        .format(hex(int(max_temp)), '2>&1' if error_count >= 3 else ''))
             # if ipmitool failed too many times, then stop this daemon
             if exit_code != 0:
                 error_count = error_count + 1
