@@ -1,0 +1,4 @@
+; introduce each owner in a separate line with his/her alias
+;* means that this owner will not be automatically included as a reviewer, this feature should only be used to reduce ownership enforcer email spam.
+*sonicbld
+
