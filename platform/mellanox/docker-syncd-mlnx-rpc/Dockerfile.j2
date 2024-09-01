@@ -101,4 +101,5 @@ FROM $BASE
 
 COPY --from=base / /
 
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

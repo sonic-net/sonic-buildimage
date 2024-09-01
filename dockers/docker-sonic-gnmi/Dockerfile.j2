@@ -32,4 +32,10 @@ FROM $BASE
 
 COPY --from=base / /
 
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
 ENTRYPOINT ["/usr/local/bin/supervisord"]

@@ -30,4 +30,5 @@ FROM $BASE
 
 COPY --from=base / /
 
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/bin/docker-init.sh"]

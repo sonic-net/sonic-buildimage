@@ -9,9 +9,6 @@ ARG image_version
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Pass the image_version to container
-ENV IMAGE_VERSION=$image_version
-
 # Update apt's cache of available packages
 RUN apt-get update
 
@@ -32,4 +29,8 @@ FROM $BASE
 
 COPY --from=base / /
 
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

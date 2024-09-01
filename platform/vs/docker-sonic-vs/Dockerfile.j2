@@ -167,12 +167,12 @@ COPY ["frr/zebra.conf", "/etc/frr/"]
 # Create /var/warmboot/teamd folder for teammgrd
 RUN mkdir -p /var/warmboot/teamd
 
-# Set PLATFORM and HWSKU environment variables
-ENV PLATFORM=x86_64-kvm_x86_64-r0
-ENV HWSKU=Force10-S6000
-
 FROM $BASE
 
 COPY --from=base / /
+
+# Set PLATFORM and HWSKU environment variables
+ENV PLATFORM=x86_64-kvm_x86_64-r0
+ENV HWSKU=Force10-S6000
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

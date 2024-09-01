@@ -106,4 +106,8 @@ FROM $BASE
 
 COPY --from=base / /
 
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/bin/docker_init.sh"]
