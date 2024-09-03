@@ -8,17 +8,30 @@
 
 try:
     import syslog
+    import time
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
+    from sonic_platform.component import Component
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
+
+NUM_COMPONENT = 4
 
 class Chassis(PddfChassis):
     """
     PDDF Platform-specific Chassis class
     """
+    _global_port_pres_dict = {}
 
     def __init__(self, pddf_data=None, pddf_plugin_data=None):
         PddfChassis.__init__(self, pddf_data, pddf_plugin_data)
+        for index in range(0, NUM_COMPONENT):
+            component = Component(index)
+            self._component_list.append(component)
+
+        for port_num in range(1, self.platform_inventory['num_ports']+1):    # start from 1
+            # get_sfp() uses front port index start from 1
+            presence = self.get_sfp(port_num).get_presence()
+            self._global_port_pres_dict[port_num] = '1' if presence else '0'
 
     # Provide the functions/variables below for which implementation is to be overwritten
     def get_sfp(self, index):
@@ -87,6 +100,79 @@ class Chassis(PddfChassis):
         syslog.syslog(syslog.LOG_INFO, "No watchdog reset detected")
         return (self.REBOOT_CAUSE_NON_HARDWARE, 'Unknown reason')
 
+    def get_change_event(self, timeout=0):
+        """
+        Returns a nested dictionary containing all devices which have
+        experienced a change at chassis level
+        Args:
+            timeout: Timeout in milliseconds (optional). If timeout == 0,
+                this method will block until a change is detected.
+        Returns:
+            (bool, dict):
+                - True if call successful, False if not;
+                - A nested dictionary where key is a device type,
+                  value is a dictionary with key:value pairs in the format of
+                  {'device_id':'device_event'},
+                  where device_id is the device ID for this device and
+                        device_event,
+                             status='1' represents device inserted,
+                             status='0' represents device removed.
+                  Ex. {'fan':{'0':'0', '2':'1'}, 'sfp':{'11':'0'}}
+                      indicates that fan 0 has been removed, fan 2
+                      has been inserted and sfp 11 has been removed.
+        """
+        start_ms = time.time() * 1000
+        port_dict = {}
+        change_dict = {}
+        change_dict['sfp'] = port_dict
+        while True:
+            time.sleep(0.5)
+            for port_num in range(1, self.platform_inventory['num_ports']+1):
+                # get_presence() no wait for MgmtInit duration
+                presence = self.get_sfp(port_num).get_presence()
+                if self._global_port_pres_dict[port_num] == '0':
+                    if presence:
+                        self._global_port_pres_dict[port_num] = '1'
+                        port_dict[port_num] = '1'
+                else:
+                    if presence:
+                        if (self.get_sfp(port_num).get_reset_status() == True and
+                            self.get_sfp(port_num).doing_reset == False):
+                            # reset by CPLD, so there was a remove un-detected by this function
+                            presence = False
+                    if not presence:
+                        self._global_port_pres_dict[port_num] = '0'
+                        port_dict[port_num] = '0'
+                        # xcvr_api should be refreshed
+                        self.get_sfp(port_num)._xcvr_api = None
+                        self.get_sfp(port_num).xcvr_id = 0
+
+            if(len(port_dict) > 0):
+                return True, change_dict
+
+            if timeout:
+                now_ms = time.time() * 1000
+                if (now_ms - start_ms >= timeout):
+                    return True, change_dict
+
+    def get_watchdog(self):
+        """
+        Retreives hardware watchdog device on this chassis
+
+        Returns:
+            An object derived from WatchdogBase representing the hardware
+            watchdog device
+        """
+        try:
+            if self._watchdog is None:
+                from sonic_platform.watchdog import Watchdog
+                # Create the watchdog Instance
+                self._watchdog = Watchdog()
+
+        except Exception as e:
+            sys.stderr.write("Fail to load watchdog due to {}".format(e))
+        return self._watchdog
+
     def initizalize_system_led(self):
         return True
 
@@ -96,7 +182,7 @@ class Chassis(PddfChassis):
         else:
             return False
 
-        return super().set_status_led("SYS_LED", color)
+        return super().set_system_led("SYS_LED", color)
 
     def get_status_led(self, *args):
-        return super().get_status_led("SYS_LED")
+        return super().get_system_led("SYS_LED")

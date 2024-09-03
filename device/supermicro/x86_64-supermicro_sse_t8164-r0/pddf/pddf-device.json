@@ -4,7 +4,6 @@
         "num_psus":2,
         "num_fantrays":4,
         "num_fans_pertray":2,
-        "num_components":4,
         "num_ports":66,
         "num_temps":9,
         "pddf_dev_types":
@@ -31,7 +30,6 @@
         },
         "std_kos":
         [
-            "i2c-i801",
             "i2c_dev",
             "i2c_mux_pca954x",
             "gpio-pca953x",
@@ -205,39 +203,6 @@
                 ]
             }
         }
-    },
-
-    "COMPONENT1":
-    {
-        "comp_attr":{ "name": "CPU board CPLD", "type": "cpld", "description": "CPU board CPLD"},
-        "attr_list":
-        [
-            { "attr_name":"version", "get_cmd": "ipmitool raw 0x30 0x89 0xdb 0x00 0x04 0x02" }
-        ]
-    },
-    "COMPONENT2":
-    {
-        "comp_attr":{ "name": "Switch board CPLD1", "type": "cpld", "description": "Switch board CPLD1"},
-        "attr_list":
-        [
-            { "attr_name":"version", "get_cmd": "cat /sys/class/CPLD1/cpld_device/cpld_version" }
-        ]
-    },
-    "COMPONENT3":
-    {
-        "comp_attr":{ "name": "BMC", "type": "bmc", "description": "Baseboard Management Controller "},
-        "attr_list":
-        [
-           { "attr_name":"version", "get_cmd": "output=$(ipmitool raw 0x6 0x1) && echo $(echo $output | awk '{print $3 \".\" $4 \".\" $12}')" }
-        ]
-    },
-    "COMPONENT4":
-    {
-        "comp_attr":{ "name": "BIOS", "type": "bios", "description": "Basic Input/Output System"},
-        "attr_list":
-        [
-             { "attr_name":"version", "get_cmd": "echo `dmidecode -s bios-version`" }
-        ]
     },
 
     "SYS_LED" : { "dev_info": { "device_type":"LED", "device_name":"SYS_LED"},
