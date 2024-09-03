@@ -1,6 +1,8 @@
+import re
+import jinja2
+
 from .manager import Manager
 from .log import log_err, log_debug, log_notice
-import re
 from swsscommon import swsscommon
 
 class DeviceGlobalCfgMgr(Manager):
@@ -19,6 +21,7 @@ class DeviceGlobalCfgMgr(Manager):
         self.constants = common_objs['constants']
         self.tsa_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.isolate.conf.j2")
         self.tsb_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.unisolate.conf.j2")
+        self.wcmp_template = common_objs['tf'].from_file("bgpd/wcmp/bgpd.wcmp.conf.j2")
         self.directory.subscribe([("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/switch_type"),], self.on_switch_type_change)
         super(DeviceGlobalCfgMgr, self).__init__(
             common_objs,
@@ -27,6 +30,13 @@ class DeviceGlobalCfgMgr(Manager):
             table,
         )
 
+        # By default TSA feature is disabled
+        if not self.directory.path_exist(self.db_name, self.table_name, "tsa_enabled"):
+            self.directory.put(self.db_name, self.table_name, "tsa_enabled", "false")
+        # By default W-ECMP feature is disabled
+        if not self.directory.path_exist(self.db_name, self.table_name, "wcmp_enabled"):
+            self.directory.put(self.db_name, self.table_name, "wcmp_enabled", "false")
+
     def on_switch_type_change(self):
         log_debug("DeviceGlobalCfgMgr:: Switch type update handler")
         if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/switch_type"):
@@ -34,24 +44,94 @@ class DeviceGlobalCfgMgr(Manager):
         log_debug("DeviceGlobalCfgMgr:: Switch type: %s" % self.switch_type)
 
     def set_handler(self, key, data):
+        """ Handle device TSA/W-ECMP state change """
         log_debug("DeviceGlobalCfgMgr:: set handler")
+
         if self.switch_type:
             log_debug("DeviceGlobalCfgMgr:: Switch type: %s" % self.switch_type)
-        """ Handle device tsa_enabled state change """
         if not data:
             log_err("DeviceGlobalCfgMgr:: data is None")
             return False
 
-        if "tsa_enabled" in data:
-            self.cfg_mgr.commit()
-            self.cfg_mgr.update()
-            self.isolate_unisolate_device(data["tsa_enabled"])
-            self.directory.put(self.db_name, self.table_name, "tsa_enabled", data["tsa_enabled"])
-            return True
-        return False
+        # TSA configuration
+        self.configure_tsa(data)
+        # W-ECMP configuration
+        self.configure_wcmp(data)
+
+        return True
 
     def del_handler(self, key):
         log_debug("DeviceGlobalCfgMgr:: del handler")
+
+        # TSA configuration
+        self.configure_tsa()
+        # W-ECMP configuration
+        self.configure_wcmp()
+
+        return True
+
+    def is_update_required(self, key, value):
+        if self.directory.path_exist(self.db_name, self.table_name, key):
+            return value != self.directory.get(self.db_name, self.table_name, key)
+        return True
+
+    def configure_tsa(self, data=None):
+        """ Configure TSA feature"""
+
+        state = "false"
+
+        if data is not None:
+            if "tsa_enabled" in data:
+                state = data["tsa_enabled"]
+
+        if self.is_update_required("tsa_enabled", state):
+            self.cfg_mgr.commit()
+            self.cfg_mgr.update()
+            if self.isolate_unisolate_device(state):
+                self.directory.put(self.db_name, self.table_name, "tsa_enabled", state)
+        else:
+            log_notice("DeviceGlobalCfgMgr:: TSA configuration is up-to-date")
+
+    def configure_wcmp(self, data=None):
+        """ Configure W-ECMP feature"""
+
+        state = "false"
+
+        if data is not None:
+            if "wcmp_enabled" in data:
+                state = data["wcmp_enabled"]
+
+        if self.is_update_required("wcmp_enabled", state):
+            if self.set_wcmp(state):
+                self.directory.put(self.db_name, self.table_name, "wcmp_enabled", state)
+        else:
+            log_notice("DeviceGlobalCfgMgr:: W-ECMP configuration is up-to-date")
+
+    def set_wcmp(self, status):
+        """ API to set/unset W-ECMP """
+
+        if status not in ["true", "false"]:
+            log_err("W-ECMP: invalid value({}) is provided".format(status))
+            return False
+
+        if status == "true":
+            log_notice("DeviceGlobalCfgMgr:: Enabling W-ECMP...")
+        else:
+            log_notice("DeviceGlobalCfgMgr:: Disabling W-ECMP...")
+
+        cmd = "\n"
+
+        try:
+            cmd += self.wcmp_template.render(wcmp_enabled=status)
+        except jinja2.TemplateError as e:
+            msg = "W-ECMP: error in template rendering"
+            log_err("%s: %s" % (msg, str(e)))
+            return False
+
+        self.cfg_mgr.push(cmd)
+
+        log_debug("DeviceGlobalCfgMgr::Done")
+
         return True
 
     def check_state_and_get_tsa_routemaps(self, cfg):
@@ -67,6 +147,11 @@ class DeviceGlobalCfgMgr(Manager):
 
     def isolate_unisolate_device(self, tsa_status):
         """ API to get TSA/TSB route-maps and apply configuration"""
+
+        if tsa_status not in ["true", "false"]:
+            log_err("TSA: invalid value({}) is provided".format(tsa_status))
+            return False
+
         cmd = "\n"
         if tsa_status == "true":
             log_notice("DeviceGlobalCfgMgr:: Device isolated. Executing TSA")
@@ -77,6 +162,8 @@ class DeviceGlobalCfgMgr(Manager):
 
         self.cfg_mgr.push(cmd)
         log_debug("DeviceGlobalCfgMgr::Done")
+
+        return True
 
     def get_ts_routemaps(self, cmds, ts_template):
         if not cmds:
