@@ -2,9 +2,9 @@
 
 
 try:
-    import subprocess
     from sonic_platform_pddf_base.pddf_fan import PddfFan
     from swsscommon.swsscommon import SonicV2Connector
+    from sonic_py_common.general import getstatusoutput_noshell_pipe
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -40,12 +40,10 @@ class Fan(PddfFan):
         if "Name" in eeprom_table and eeprom_table["Name"] == "Part Number" and "Value" in eeprom_table:
             part_number = eeprom_table["Value"]
         else:
-            part_number_cmd = "sudo decode-syseeprom | grep 'Part Number' | grep -oE '[^ ]+$'"
-            part_number = subprocess.Popen(part_number_cmd, shell=True, text=True, stdout=subprocess.PIPE).stdout.read()
+            _, output = getstatusoutput_noshell_pipe(["sudo", "decode-syseeprom"], ["grep", "'Part Number'"], ["grep", "-oE", "'[^ ]+$'"])
+            part_number = output.strip()
 
         if "T8164SR" in part_number:
-            direction = self.FAN_DIRECTION_INTAKE
+            return self.FAN_DIRECTION_INTAKE
         else:
-            direction = self.FAN_DIRECTION_EXHAUST
-
-        return direction
+            return self.FAN_DIRECTION_EXHAUST

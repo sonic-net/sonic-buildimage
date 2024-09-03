@@ -82,15 +82,21 @@ class SfpMaxTempUpdater():
                 if status_table.get('status') != '1':
                     continue
                 try:
-                    temp = float(s.get_temperature().rstrip("C"))
+                    temp = s.get_temperature()
                 except Except:
                     temp = None
                 if (temp is not None) and (temp > max_temp):
                     max_temp = temp
 
             # update BMC sensor reading
-            exit_code = subprocess.call("/usr/bin/ipmitool raw 0x30 0x89 0x09 0x1 0x0 {} > /dev/null {}"
-                                        .format(hex(int(max_temp)), '2>&1' if error_count >= 3 else ''))
+            command = ["/usr/bin/ipmitool", "raw", "0x30", "0x89", "0x09", "0x1", "0x0", hex(int(max_temp))]
+            
+            exit_code = subprocess.call(
+                command,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT if error_count >= 3 else None
+            )
+
             # if ipmitool failed too many times, then stop this daemon
             if exit_code != 0:
                 error_count = error_count + 1

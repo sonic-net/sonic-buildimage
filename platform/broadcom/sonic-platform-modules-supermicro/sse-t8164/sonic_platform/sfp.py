@@ -116,18 +116,18 @@ class Sfp(PddfSfp):
         path_val = self.pddf_obj.get_path(device, 'xcvr_lpmode')
 
         if path_val is None:
-            lpmode = super().get_lpmode(lpmode)
+            lpmode = super().get_lpmode()
         else:
             path_dir = re.sub(r'/value$', '/direction', path_val)
             try:
                 with open(path_dir, 'r') as f_dir:
                     dir = f_dir.read()
             except IOError:
-                lpmode = super().get_lpmode(lpmode)
+                lpmode = super().get_lpmode()
                 return lpmode
 
             if not dir:
-                lpmode = super().get_lpmode(lpmode)
+                lpmode = super().get_lpmode()
             else:
                 if dir.rstrip() == 'in':
                     lpmode = True
