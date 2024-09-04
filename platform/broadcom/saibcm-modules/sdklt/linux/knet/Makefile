@@ -1,5 +1,5 @@
 #
-# $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+# $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -25,6 +25,7 @@ ifneq ($(OUTPUT_DIR),)
 GENDIR = $(OUTPUT_DIR)/knet/generated
 endif
 DSTIDIR = $(GENDIR)/include/bcmcnet
+
 
 # Change comma-separated list to space-separated list
 comma = ,
@@ -78,8 +79,9 @@ mklinks:
 	-ln -s $(SRCIDIR)/bcmcnet_rxtx.h $(DSTIDIR) $(R)
 	-ln -s $(SRCIDIR)/bcmcnet_cmicd.h $(DSTIDIR) $(R)
 	-ln -s $(SRCIDIR)/bcmcnet_cmicx.h $(DSTIDIR) $(R)
-	-ln -s $(SRCIDIR)/bcmcnet_cmicr.h $(DSTIDIR) $(R)
 	-ln -s $(SRCIDIR)/bcmcnet_cmicr_acc.h $(DSTIDIR) $(R)
+	-ln -s $(SRCIDIR)/bcmcnet_cmicr.h $(DSTIDIR) $(R)
+	-ln -s $(SRCIDIR)/bcmcnet_cmicr2.h $(DSTIDIR) $(R)
 	-ln -s $(CNETDIR)/chip/*/*attach.c $(GENDIR) $(R)
 	-ln -s $(CNETDIR)/hmi/cmicd/*.c $(GENDIR) $(R)
 	-ln -s $(CNETDIR)/hmi/cmicx/*.c $(GENDIR) $(R)

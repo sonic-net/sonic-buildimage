@@ -476,6 +476,7 @@ class SFP(NvidiaSFPCommon):
             self.state = STATE_DOWN
         else:
             self.state = STATE_FCP_DOWN
+        self.processing_insert_event = False
 
     def __str__(self):
         return f'SFP {self.sdk_index}'
@@ -1504,7 +1505,12 @@ class SFP(NvidiaSFPCommon):
                 sfp.set_hw_reset(1)
                 sfp.on_event(EVENT_RESET)
             else:
-                sfp.on_event(EVENT_POWER_ON)
+                if not sfp.processing_insert_event:
+                    sfp.on_event(EVENT_POWER_ON)
+                else:
+                    sfp.processing_insert_event = False
+                    logger.log_info(f'SFP {sfp.sdk_index} is processing insert event and needs to wait module ready')
+                    sfp.on_event(EVENT_RESET)
 
     @classmethod
     def action_fcp_on_start(cls, sfp):

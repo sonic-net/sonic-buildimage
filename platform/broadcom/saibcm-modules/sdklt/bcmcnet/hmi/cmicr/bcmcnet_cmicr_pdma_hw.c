@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -165,6 +165,7 @@ cmicr_pdma_hw_config(struct pdma_hw *hw)
     CMIC_CMC_PKTDMA_INTR_ENABLEr_t pktdma_intr_enable;
     CMIC_CMC_PKTDMA_INTR_CLRr_t pktdma_intr_clr;
     CMIC_TOP_CONFIGr_t cmic_config;
+    CMIC_CMC_PKTDMA_RXBUF_THRESHOLD_CONFIGr_t pktdma_rxbuf_thresh;
 
     CMIC_CMC_PKTDMA_INTR_ENABLEr_CLR(pktdma_intr_enable);
     CMIC_CMC_PKTDMA_INTR_ENABLEr_DESC_CONTROLLED_INTR_ENABLEf_SET(pktdma_intr_enable, 1);
@@ -181,6 +182,11 @@ cmicr_pdma_hw_config(struct pdma_hw *hw)
         que = rxq->chan_id % CMICR_PDMA_CMC_CHAN;
         que_ctrl = ctrl->grp[grp].que_ctrl[que];
 
+        hw->hdls.reg_rd32(hw, CMICR_PDMA_RBUF_THRE(grp, que),
+                          &CMIC_CMC_PKTDMA_RXBUF_THRESHOLD_CONFIGr_GET(pktdma_rxbuf_thresh));
+        CMIC_CMC_PKTDMA_RXBUF_THRESHOLD_CONFIGr_ENABLEf_SET(pktdma_rxbuf_thresh, 1);
+        hw->hdls.reg_wr32(hw, CMICR_PDMA_RBUF_THRE(grp, que),
+                          CMIC_CMC_PKTDMA_RXBUF_THRESHOLD_CONFIGr_GET(pktdma_rxbuf_thresh));
         hw->hdls.reg_wr32(hw, CMICR_PDMA_INTR_CLR(grp, que),
                           CMIC_CMC_PKTDMA_INTR_CLRr_GET(pktdma_intr_clr));
         CMIC_CMC_PKTDMA_CTRLr_CLR(pktdma_ctrl);

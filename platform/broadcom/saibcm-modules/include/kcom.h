@@ -1,5 +1,6 @@
 /*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+ * $Id: kcom.h,v 1.9 Broadcom SDK $
+ * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,12 +23,8 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/*
- * $Id: kcom.h,v 1.9 Broadcom SDK $
- * $Copyright: (c) 2005 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  *
  * File:    kcom.h
  * Purpose: User/Kernel message definitions
@@ -147,8 +144,7 @@ typedef struct kcom_netif_s {
     uint8 type;
     uint8 flags;
     uint32 cb_user_data;
-    uint8 port;
-    uint8 reserved;
+    uint16 port;
     uint16 vlan;
     uint16 qnum;
     uint8 macaddr[6];

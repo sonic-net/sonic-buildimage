@@ -1,5 +1,5 @@
 #
-# $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+# $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -36,7 +36,11 @@ ifneq ($(LKM_BLDDIR),)
 # output as we want it.
 #
 MDIR := $(LKM_BLDDIR)
-MSRCS := $(patsubst %.o,%.c,$($(MOD_NAME)-y))
+MOBJS := $($(MOD_NAME)-y)
+ifeq (,$(MOBJS))
+MOBJS := $(obj-m)
+endif
+MSRCS := $(patsubst %.o,%.c,$(MOBJS))
 MSRCS += Makefile Kbuild
 BSRCS := $(addprefix $(PWD)/,$(MSRCS))
 else

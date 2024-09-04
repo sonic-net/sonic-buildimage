@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -45,8 +45,8 @@ struct pkt_hdr {
     /*! Data length */
     uint16_t data_len;
 
-    /*! Reserved */
-    uint16_t rsvd2;
+    /*! Header profile */
+    uint16_t hdr_prof;
 
     /*! Meta length */
     uint8_t meta_len;
@@ -129,6 +129,9 @@ struct intr_handle {
 
     /*! Interrupt flags */
     uint32_t intr_flags;
+
+    /*! Extra polling after queue is empty */
+    bool extra_poll;
 };
 
 /*!
@@ -917,6 +920,9 @@ struct pdma_dev {
 #define PDMA_VNET_DOCKED    (1 << 5)
     /*! Abort PDMA mode for suspend and resume */
 #define PDMA_ABORT          (1 << 6)
+
+    /*! Extra poll time in microseconds */
+    int extra_poll_time;
 
     /*! Device mode */
     dev_mode_t mode;

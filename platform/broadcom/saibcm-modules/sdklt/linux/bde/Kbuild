@@ -6,7 +6,7 @@
 # builds of the NGBDE kernel module, for example, using a different
 # default DMA pool size or turning off MSI interrupts.
 #
-# $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+# $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -25,6 +25,7 @@
 obj-m := linux_ngbde.o
 
 ccflags-y := $(LKM_CFLAGS) $(NGBDE_CFLAGS) \
+             $(LKM_BUILD_INFO) \
              -I$(SDK)/linux/include \
              -I$(SDK)/linux/bde \
              -I$(SDK)/bcmdrd/include

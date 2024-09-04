@@ -1,7 +1,7 @@
 async-timeout==4.0.2
 bcrypt==3.2.2
 blessed==1.20.0
-certifi==2024.7.4
+certifi==2024.8.30
 cffi==1.17.0
 charset-normalizer==3.3.2
 click==7.0
@@ -13,7 +13,7 @@ docker==7.1.0
 docker-image-py==0.1.13
 enlighten==1.12.4
 filelock==3.15.4
-idna==3.7
+idna==3.8
 importlib-metadata==6.1.0
 jsonpatch==1.33
 jsonpointer==3.0.0
