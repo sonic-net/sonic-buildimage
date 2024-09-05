@@ -1,4 +1,5 @@
 from unittest import TestCase, mock
+import subprocess
 import start
 
 class TestStart(TestCase):
@@ -73,7 +74,7 @@ class TestStart(TestCase):
         expected = []
         expected.append(mock.call('supervisorctl start rsyslogd'))
         for i in range(count):
-            expected.append(mock.call('/usr/bin/acms -Bootstrap -Dependant client -BaseDirPath /var/opt/msft/'))
+            expected.append(mock.call('/usr/bin/acms -Bootstrap -Dependant client -BaseDirPath /var/opt/msft/', timeout=3600))
         expected.append(mock.call('supervisorctl start acms'))
         self.assertEqual(mock_cmd.call_args_list, expected)
         expected_delay = []
@@ -142,3 +143,22 @@ class TestStart(TestCase):
         mock_cloud_type.return_value = 'Mooncake'
         start.update_acms_config("test.cert")
         self.assertEqual(mock_exit.call_args_list, [mock.call(1)])
+
+    def test_cmd_01(self):
+        '''
+        Verify exec_cmd
+        '''
+        rc, stdoutdata, stderrdata = start.exec_cmd("echo abc")
+        self.assertEqual(rc, 0)
+        output = stdoutdata.strip()
+        self.assertEqual(output, "abc")
+
+    @mock.patch("subprocess.run")
+    def test_cmd_02(self, mock_run):
+        '''
+        Verify exec_cmd
+        '''
+        expect_err = subprocess.TimeoutExpired("dummy timeout", timeout=0)
+        mock_run.side_effect = [expect_err]
+        rc, stdoutdata, stderrdata = start.exec_cmd("echo abc")
+        self.assertEqual(rc, -1)
