@@ -1,33 +1,30 @@
-#
-#  Copyright 2007-2020 Broadcom Inc. All rights reserved.
-#  
-#  Permission is granted to use, copy, modify and/or distribute this
-#  software under either one of the licenses below.
-#  
-#  License Option 1: GPL
-#  
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License, version 2, as
-#  published by the Free Software Foundation (the "GPL").
-#  
-#  This program is distributed in the hope that it will be useful, but
-#  WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  General Public License version 2 (GPLv2) for more details.
-#  
-#  You should have received a copy of the GNU General Public License
-#  version 2 (GPLv2) along with this source code.
-#  
-#  
-#  License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
-#  
-#  This software is governed by the Broadcom Open Network Switch APIs license:
-#  https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
-#
 # -*- Makefile -*-
 # $Id: Makefile,v 1.4 Broadcom SDK $
-# $Copyright: (c) 2005 Broadcom Corp.
-# All Rights Reserved.$
+# $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
 #
 
 SDK :=$(shell if [ -n "$$SDK" ] ; then\
@@ -49,7 +46,6 @@ $(error Please run this in a tree)
 endif 				
 
 export SDK
-
 override-target=linux-$(platform)
 
 ifeq ($(LINUX_MAKE_SHARED_LIB),1)
@@ -94,17 +90,26 @@ ifeq ($(DEST_DIR),)
 DEST_DIR=${BLDDIR}
 endif
 
-KERNEL_BDE_LOCAL :=linux-kernel-bde.$(KOBJ)
-KERNEL_BDE :=$(DEST_DIR)/$(KERNEL_BDE_LOCAL)
+KERNEL_BDE_LOCAL := linux-kernel-bde.$(KOBJ)
+KERNEL_BDE := $(DEST_DIR)/$(KERNEL_BDE_LOCAL)
 
-USER_BDE_LOCAL :=linux-user-bde.$(KOBJ)
-USER_BDE=$(DEST_DIR)/$(USER_BDE_LOCAL)
+USER_BDE_LOCAL := linux-user-bde.$(KOBJ)
+USER_BDE := $(DEST_DIR)/$(USER_BDE_LOCAL)
 
 KNET_CB_LOCAL := linux-knet-cb.$(KOBJ)
 KNET_CB := $(DEST_DIR)/$(KNET_CB_LOCAL)
 
-BCM_KNET_LOCAL :=linux-bcm-knet.$(KOBJ)
-BCM_KNET=$(DEST_DIR)/$(BCM_KNET_LOCAL)
+GENL_PACKET_LOCAL := genl-packet.$(KOBJ)
+GENL_PACKET := $(DEST_DIR)/$(GENL_PACKET_LOCAL)
+ifndef BUILD_GENL_PACKET
+export BUILD_GENL_PACKET = 0
+endif
+
+BCM_GENL_LOCAL := linux-bcm-genl.$(KOBJ)
+BCM_GENL := $(DEST_DIR)/$(BCM_GENL_LOCAL)
+
+BCM_KNET_LOCAL := linux-bcm-knet.$(KOBJ)
+BCM_KNET := $(DEST_DIR)/$(BCM_KNET_LOCAL)
 
 ifeq (,$(findstring DELIVER,$(MAKECMDGOALS)))
 .DEFAULT_GOAL := all
@@ -126,6 +131,7 @@ endif
 ifeq ($(BUILD_KNET),1)
 # Kernel network support
 all_targets += $(BCM_KNET)
+knet_subdirs = bcm-knet
 
 ifeq ($(NO_LOCAL_TARGETS),)
 LOCAL_TARGETS +=$(patsubst %,../$(platform)/%,$(BCM_KNET_LOCAL))
@@ -134,9 +140,30 @@ endif
 
 ifdef BUILD_KNET_CB
 all_targets += $(KNET_CB)
+knet_subdirs += knet-cb
 
 ifeq ($(NO_LOCAL_TARGETS),)
 LOCAL_TARGETS +=$(patsubst %,../$(platform)/%,$(KNET_CB_LOCAL))
+all_targets +=$(LOCAL_TARGETS)
+endif
+endif
+
+export BUILD_BCM_GENL=1
+ifeq ($(BUILD_BCM_GENL),1)
+ifeq ($(BUILD_GENL_PACKET),1)
+all_targets += $(GENL_PACKET)
+knet_subdirs += genl-packet
+
+ifeq ($(NO_LOCAL_TARGETS),)
+LOCAL_TARGETS +=$(patsubst %,../$(platform)/%,$(GENL_PACKET_LOCAL))
+all_targets +=$(LOCAL_TARGETS)
+endif
+endif
+all_targets += $(BCM_GENL)
+knet_subdirs += bcm-genl
+
+ifeq ($(NO_LOCAL_TARGETS),)
+LOCAL_TARGETS +=$(patsubst %,../$(platform)/%,$(BCM_GENL_LOCAL))
 all_targets +=$(LOCAL_TARGETS)
 endif
 endif
@@ -161,9 +188,6 @@ endif
 # User BDE libraries
 ADD_TO_CFLAGS += -I$(SDK)/systems/bde/linux/include
 
-# Use raw IOCTL for KNET
-ADD_TO_CFLAGS += -DPROXY_SUPPORT=0
-
 CFLAGS += $(ADD_TO_CFLAGS)
 
 #SAI_FIXUP
@@ -173,26 +197,45 @@ kernel_modules:
 	$(MAKE) -C $(SDK)/systems/bde/linux/kernel kernel_version=$(kernel_version)
 	$(MAKE) -C $(SDK)/systems/bde/linux/user/kernel kernel_version=$(kernel_version)
 ifeq ($(BUILD_KNET),1)
-	$(MAKE) -C $(SDK)/systems/linux/kernel/modules kernel_version=$(kernel_version) \
-		subdirs="shared bcm-knet" override-target=linux-$(platform) CFLAGS="$(CFLAGS)"
-ifdef BUILD_KNET_CB
-	$(MAKE) -C $(SDK)/systems/linux/kernel/modules kernel_version=$(kernel_version) \
-		subdirs="knet-cb" override-target=linux-$(platform) CFLAGS="$(CFLAGS)"
+	$(MAKE) -C $(SDK)/systems/linux/kernel/modules/shared kernel_version=$(kernel_version) \
+		override-target=linux-$(platform)
+	$(MAKE) -C $(SDK)/systems/linux/kernel/modules/bcm-knet kernel_version=$(kernel_version) \
+		override-target=linux-$(platform)
+ifneq (,$(filter knet-cb,$(knet_subdirs)))
+	$(MAKE) -C $(SDK)/systems/linux/kernel/modules/knet-cb kernel_version=$(kernel_version) \
+		override-target=linux-$(platform)
+endif
+ifneq (,$(filter bcm-genl,$(knet_subdirs)))
+ifneq (,$(filter genl-packet,$(knet_subdirs)))
+	$(MAKE) -C $(SDK)/systems/linux/kernel/modules/genl-packet kernel_version=$(kernel_version) \
+		override-target=linux-$(platform)
+endif
+	$(MAKE) -C $(SDK)/systems/linux/kernel/modules/bcm-genl kernel_version=$(kernel_version) \
+		override-target=linux-$(platform)
 endif
 endif
 
-$(KERNEL_BDE): $(KERN_BLDROOT)/linux-kernel-bde.$(KOBJ)
+$(KERNEL_BDE): $(KERN_BLDROOT)/$(KERNEL_BDE_LOCAL)
 	mkdir -p $(@D)
 	$(OBJCOPY) --strip-debug $< $@
 
-$(USER_BDE): $(KERN_BLDROOT)/linux-user-bde.$(KOBJ)
+$(USER_BDE): $(KERN_BLDROOT)/$(USER_BDE_LOCAL)
 	$(OBJCOPY) --strip-debug $< $@
 
-$(BCM_KNET): $(KERN_BLDROOT)/linux-bcm-knet.$(KOBJ)
+$(BCM_KNET): $(KERN_BLDROOT)/$(BCM_KNET_LOCAL)
 	$(OBJCOPY) --strip-debug $< $@
 
-$(KNET_CB): $(KERN_BLDROOT)/linux-knet-cb.$(KOBJ)
+$(KNET_CB): $(KERN_BLDROOT)/$(KNET_CB_LOCAL)
 	$(OBJCOPY) --strip-debug $< $@
+
+$(GENL_PACKET): $(KERN_BLDROOT)/$(GENL_PACKET_LOCAL)
+	$(OBJCOPY) --strip-debug $< $@
+
+$(BCM_GENL): $(KERN_BLDROOT)/$(BCM_GENL_LOCAL)
+	$(OBJCOPY) --strip-debug $< $@
+
+$(KERN_BLDROOT)/%.$(KOBJ): kernel_modules
+	@echo Force execution of kernel_modules target > /dev/null
 
 ifeq ($(NO_LOCAL_TARGETS),)
 $(foreach targ,$(LOCAL_TARGETS),$(eval $(call LOCAL_TARGET_DEF,$(targ))))
@@ -202,14 +245,16 @@ clean::
 	$(MAKE) -C $(SDK)/systems/bde/linux/kernel $@
 	$(MAKE) -C $(SDK)/systems/bde/linux/user/kernel $@
 	$(MAKE) -C $(SDK)/systems/linux/kernel/modules \
-		subdirs="shared bcm-knet knet-cb" \
+		subdirs="shared $(knet_subdirs)" \
 		override-target=linux-$(platform) $@
 	$(RM) $(KERNEL_BDE) $(USER_BDE)
-	$(RM) $(BCM_KNET) $(KNET_CB)
-	$(RM) $(KERN_BLDROOT)/linux-kernel-bde.$(KOBJ)
-	$(RM) $(KERN_BLDROOT)/linux-user-bde.$(KOBJ)
-	$(RM) $(KERN_BLDROOT)/linux-bcm-knet.$(KOBJ)
-	$(RM) $(KERN_BLDROOT)/linux-knet-cb.$(KOBJ)
+	$(RM) $(BCM_KNET) $(KNET_CB) $(GENL_PACKET) $(BCM_GENL)
+	$(RM) $(KERN_BLDROOT)/$(KERNEL_BDE_LOCAL)
+	$(RM) $(KERN_BLDROOT)/$(USER_BDE_LOCAL)
+	$(RM) $(KERN_BLDROOT)/$(BCM_KNET_LOCAL)
+	$(RM) $(KERN_BLDROOT)/$(KNET_CB_LOCAL)
+	$(RM) $(KERN_BLDROOT)/$(GENL_PACKET_LOCAL)
+	$(RM) $(KERN_BLDROOT)/$(BCM_GENL_LOCAL)
 	$(RM) $(LOCAL_TARGETS)
 
 distclean:: clean

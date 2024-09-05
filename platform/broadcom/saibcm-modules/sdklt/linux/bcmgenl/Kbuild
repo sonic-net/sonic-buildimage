@@ -1,0 +1,63 @@
+# -*- Kbuild -*-
+#
+# Linux Generic Netlink module.
+#
+# $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+# The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
+# 
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# A copy of the GNU General Public License version 2 (GPLv2) can
+# be found in the LICENSES folder.$
+#
+# Enable Kernel PMD
+KNETCB_CPPFLAGS += -DKPMD
+
+# Build Netlink channel for general packetI/O
+BUILD_GENL_PACKET = 0
+
+# Build Netlink channel for packet sampling
+BUILD_GENL_PSAMPLE = 1
+
+## Build Netlink channel for packet sampling when kernel enables CONFIG_PSAMPLE
+#ifeq ($(CONFIG_PSAMPLE),)
+#BUILD_GENL_PSAMPLE = 1
+#endif
+
+ifeq ($(BUILD_GENL_PACKET),1)
+PACKET_CFLAGS = -DPACKET_SUPPORT
+PACKET_CB_OBJS = bcmgenl_packet.o
+endif
+
+ifeq ($(BUILD_GENL_PSAMPLE),1)
+PSAMPLE_CFLAGS = -DPSAMPLE_SUPPORT
+PSAMPLE_CB_OBJS = bcmgenl_psample.o
+endif
+
+obj-m := linux_bcmgenl.o
+
+ccflags-y := $(KNETCB_CPPFLAGS) $(LKM_CFLAGS) \
+	     $(SDK_PMD_KFLAGS) \
+	     -I$(SDK)/shr/include \
+	     -I$(SDK)/bcmdrd/include \
+	     -I$(SDK)/bcmltd/include \
+	     -I$(SDK)/bcmlrd/include \
+	     -I$(SDK)/linux/include \
+	     -I$(SDK)/linux/include/kernel \
+	     -I$(SDK)/linux/knet/include \
+	     -I$(SDK)/linux/knet \
+	     -I$(SDK)/linux/bcmgenl \
+	     $(PACKET_CFLAGS) \
+	     $(PSAMPLE_CFLAGS)
+
+linux_bcmgenl-y := $(SDK_PMD_KOBJS) \
+                   $(PACKET_CB_OBJS) \
+                   $(PSAMPLE_CB_OBJS) \
+                   bcmgenl.o

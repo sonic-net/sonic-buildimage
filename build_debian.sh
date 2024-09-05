@@ -33,7 +33,7 @@ CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 ## docker engine version (with platform)
 DOCKER_VERSION=5:24.0.2-1~debian.12~$IMAGE_DISTRO
 CONTAINERD_IO_VERSION=1.6.21-1
-LINUX_KERNEL_VERSION=6.1.0-11-2
+LINUX_KERNEL_VERSION=6.1.0-22-2
 
 ## Working directory to prepare the file system
 FILESYSTEM_ROOT=./fsroot

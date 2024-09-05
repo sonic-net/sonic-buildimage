@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -150,7 +150,7 @@
 #define CMICR_HW_RETRY_TIMES            100000
 
 /*! Max remaining descriptors */
-#define CMICR_DESC_REMAIN_MAX           8
+#define CMICR_DESC_REMAIN_MAX           63
 
 /*!
  * \brief Initialize HW handles.

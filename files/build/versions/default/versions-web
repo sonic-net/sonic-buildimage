@@ -23,7 +23,7 @@ http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-p4c_1.2.
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-15.debian.tar.xz==b9d8e4ce4cb66385250cf6dded0ef57a
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0-15.dsc==03154ab52843ee9efa380febb8053c06
 http://download.opensuse.org/repositories/home:/p4lang/Debian_11/p4lang-pi_0.1.0.orig.tar.gz==551d3780d615557674e93fa11210499d
-http://www.iana.org/assignments/enterprise-numbers.txt==a1246c0137a93741b1a68322f3c473c2
+http://www.iana.org/assignments/enterprise-numbers.txt==2dc962e3f609c1503727a8028a526d05
 http://www.mellanox.com/downloads/MFT/mft-4.28.0-96-arm64-deb.tgz==39b3244a00029f97734ee75e5a321065
 http://www.mellanox.com/downloads/MFT/mft-4.28.0-96-x86_64-deb.tgz==f552e1faddc8f76fe4eb0b8902606c2a
 https://archive.apache.org/dist/thrift/0.14.1/thrift-0.14.1.tar.gz==c64434548438df2cb1e53fb27c600e85
@@ -42,7 +42,7 @@ https://deb.nodesource.com/node_14.x/dists/bullseye/Release==6b7d50c433d129d4c6f
 https://deb.nodesource.com/node_14.x/dists/buster/Release==42875141604382f0abb4d047f645dfe1
 https://deb.nodesource.com/setup_14.x==c30873f4a513bb935afaf8f65e7de9e1
 https://download.docker.com/linux/debian/gpg==1afae06b34a13c1b3d9cb61a26285a15
-https://github.com/aristanetworks/sonic-firmware/raw/9e34da2a2d2d1e7e972cda3064b7b73c0558b322/phy/phy-credo_1.0_amd64.deb==a9c38d11ae4e34ca728d9b3b92fd89af
+https://github.com/aristanetworks/sonic-firmware/raw/24716c4e03f223d8e18afff786ac427f6ac77fe0/phy/phy-credo_1.0_amd64.deb==14e233cd68bc5db22eb8c9e177242851
 https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64==4c5f03df0d1074addce889dd53d9564a
 https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64==bd02444daced3e97685d1067fbe6498d
 https://github.com/CentecNetworks/sonic-binaries/raw/master/amd64/sai/libsaictc-dev_1.13.0-1_amd64.deb==b2e4b33541d4ab5de4c1b8eb4a783761
@@ -81,7 +81,7 @@ https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sdk-2
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sdk-24.7-RC4-bookworm//rdma-core_2404mlnx51-1.2404066_arm64.deb==fc1135a6c64cc4402732261f12c64bfe
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sdk-24.7-RC4-bookworm//rxp-compiler_22.05.1_arm64.deb==dd7265c708beffaf4a1dc4cdeac28c6e
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sdk-24.7-RC4-bookworm//sdn-appliance_1.5-1mlnx1_arm64.deb==75c91f2efe5b452b4751e45f666e1daf
-https://github.com/Mellanox/sonic-bluefield-packages/releases/download/rshim-2.0.19-bookworm-amd64/rshim_2.0.19_amd64.deb==8128219b0328704b67def640a356df1f
+https://github.com/Mellanox/sonic-bluefield-packages/releases/download/rshim-2.0.29-bookworm-amd64/rshim_2.0.29_amd64.deb==f78f52c7e36ddeb04602c11c95b10181
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2012.4072/fw-SPC-rel-13_2012_4072-EVB.mfa==fbcd5f1192855031a6f4b678474fa2d4
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2012.4072/fw-SPC2-rel-29_2012_4072-EVB.mfa==857c07996d406a7130b2a422dff44d7c
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2012.4072/fw-SPC3-rel-30_2012_4072-EVB.mfa==c040593a9eb8927d85b5394e246ca2d4

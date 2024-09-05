@@ -269,6 +269,20 @@ class DeviceDataManager:
         return sfp_data.get('max_port_per_line_card', 0)
 
     @classmethod
+    @utils.read_only_cache()
+    def get_platform_dpus_data(cls):
+        json_data = cls.get_platform_json_data()
+        return json_data.get('DPUS', None)
+
+    @classmethod
+    @utils.read_only_cache()
+    def get_platform_json_data(cls):
+        from sonic_py_common import device_info
+        platform_path = device_info.get_path_to_platform_dir()
+        platform_json_path = os.path.join(platform_path, 'platform.json')
+        return utils.load_json_file(platform_json_path)
+
+    @classmethod
     def get_bios_component(cls):
         from .component import ComponentBIOS, ComponentBIOSSN2201
         if cls.get_platform_name() in ['x86_64-nvidia_sn2201-r0']:

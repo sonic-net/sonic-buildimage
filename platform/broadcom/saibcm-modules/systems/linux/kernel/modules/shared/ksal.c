@@ -1,5 +1,6 @@
 /*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+ * $Id: ksal.c,v 1.1 Broadcom SDK $
+ * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,12 +23,8 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/*
- * $Id: ksal.c,v 1.1 Broadcom SDK $
- * $Copyright: (c) 2005 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  */
 
 #include <sal/core/sync.h>
@@ -45,6 +42,13 @@
 #include <linux/sched/rt.h>
 #endif
 #include <linux/time.h>
+/* Check if system has ktime_get_ts64() */
+#ifndef LINUX_HAS_MONOTONIC_TIME
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0)
+#include <linux/timekeeping.h>
+#define LINUX_HAS_MONOTONIC_TIME
+#endif
+#endif
 
 #if defined(MAX_USER_RT_PRIO) || defined(MAX_RT_PRIO)
 /* Assume 2.6 scheduler */
@@ -191,20 +195,14 @@ sal_sem_give(sal_sem_t b)
 uint32
 sal_time_usecs(void)
 {
-#if !defined(SAI_FIXUP)
-     struct timeval ltv;
-     do_gettimeofday(&ltv);
-     return (ltv.tv_sec * SECOND_USEC + ltv.tv_usec);
-#else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0)
-    /* ktime_to_us and ktime_get_real_ns return 64-bit integets, but this */
-    /* function is returning a 32-bit integer. This should be fine until 2038. */
-    return ktime_to_us(ktime_get_real_ns());
+#ifdef LINUX_HAS_MONOTONIC_TIME
+    struct timespec64 ts;
+    ktime_get_ts64(&ts);
+    return (ts.tv_sec * SECOND_USEC + ts.tv_nsec / 1000);
 #else
     struct timeval ltv;
     do_gettimeofday(&ltv);
     return (ltv.tv_sec * SECOND_USEC + ltv.tv_usec);
-#endif
 #endif
 }
     

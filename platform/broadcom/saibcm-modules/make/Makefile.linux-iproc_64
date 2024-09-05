@@ -1,37 +1,39 @@
-#
-#  Copyright 2007-2020 Broadcom Inc. All rights reserved.
-#  
-#  Permission is granted to use, copy, modify and/or distribute this
-#  software under either one of the licenses below.
-#  
-#  License Option 1: GPL
-#  
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License, version 2, as
-#  published by the Free Software Foundation (the "GPL").
-#  
-#  This program is distributed in the hope that it will be useful, but
-#  WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  General Public License version 2 (GPLv2) for more details.
-#  
-#  You should have received a copy of the GNU General Public License
-#  version 2 (GPLv2) along with this source code.
-#  
-#  
-#  License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
-#  
-#  This software is governed by the Broadcom Open Network Switch APIs license:
-#  https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
-#
 # $Id: Makefile.linux-iproc Exp $
-# $Copyright: (c) 2007 Broadcom Corp.
-# All Rights Reserved.$
+# $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
 # Makefile for iproc-CMICd
 
 # User must select one platform from below.By default ARM_LINUX is selected. .
 ifeq (,$(BUILD_PLATFORM))
 BUILD_PLATFORM=ARM_LINUX
+endif
+
+# Upgrade TCL version from default 8.3 to 8.4
+ifneq ($(ESW_CHIPS)$(LTSW_CHIPS),)
+export TCL840 := 1
 endif
 
 # TOOLCHAIN_BASE_DIR    Toolchain base directory for iPROC-CMICd devices
@@ -45,8 +47,8 @@ KERN_BASE_DIR ?= $(TOOLCHAIN_BASE_DIR)
 TARGET_ARCHITECTURE ?= aarch64_be-broadcom-linux-uclibc
 KERNDIR ?= $(KERN_BASE_DIR)/kernel/linux
 else
-TOOLCHAIN_BASE_DIR ?= /projects/ntsw-tools/linux/iproc_ldks/XLDK_GCC10/XLDK64
-KERN_BASE_DIR ?= /projects/ntsw-tools/linux/iproc_ldks/xldk61/XLDK64
+TOOLCHAIN_BASE_DIR ?= /projects/ntsw-tools/linux/iproc_ldks/xldk62/XLDK64
+KERN_BASE_DIR ?= /projects/ntsw-tools/linux/iproc_ldks/xldk62/XLDK64
 TARGET_ARCHITECTURE ?= aarch64-broadcom-linux-uclibc
 KERNDIR ?= $(KERN_BASE_DIR)/kernel/linux
 endif
@@ -56,7 +58,8 @@ CROSS_COMPILE:= $(TARGET_ARCHITECTURE)-
 endif
 
 # A72 tools
-TOOLCHAIN_BIN_DIR=$(TOOLCHAIN_BASE_DIR)/buildroot/host/usr/bin
+# JIRA SONIC-69062
+TOOLCHAIN_BIN_DIR ?= $(TOOLCHAIN_BASE_DIR)/buildroot/host/usr/bin
 override PATH:=$(TOOLCHAIN_BASE_DIR)/buildroot/host/usr/$(TARGET_ARCHITECTURE)/bin:$(TOOLCHAIN_BIN_DIR):$(PATH)
 LD_LIBRARY_PATH=$(TOOLCHAIN_BASE_DIR)/buildroot/host/usr/lib
 export TOOLCHAIN_BIN_DIR LD_LIBRARY_PATH
@@ -96,6 +99,10 @@ ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f1 -d.` \== 10)" "1"
 	CFLAGS += -Wno-error=uninitialized
 	CFLAGS += -Wno-error=format-overflow
 	CFLAGS += -fcommon
+endif
+ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f1 -d.` \== 12)" "1"
+	CFLAGS += -flarge-source-files
+	CFLAGS += -Wno-error=address
 endif
 
 CFGFLAGS += -D$(ENDIAN) -DIPROC_CMICD

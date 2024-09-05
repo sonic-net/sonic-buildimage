@@ -47,6 +47,7 @@ mlnx-dpdk==22.11.0-2404.0.2
 mlnx-dpdk-dev==22.11.0-2404.0.2
 mlnx-iproute2==6.7.0-1.2404066
 mlnx-ofed-kernel-utils==24.04.OFED.24.04.0.6.6.1-1
+mlnx-sai==1.mlnx.SAIBuild2405.28.0.33
 mlnx-tools==24.04.0-1.2404066
 mlxbf-bootctl==2.1
 mlxbf-bootimages==4.7.0-13127
