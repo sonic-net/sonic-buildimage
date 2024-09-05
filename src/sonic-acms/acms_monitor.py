@@ -21,7 +21,7 @@ def main():
     while True:
         # Restart the ACMS process daily
         rc, stdoutdata, stderrdata = exec_cmd("supervisorctl status acms")
-        if "RUNNING" in stdoutdata:
+        if rc == 0 and "RUNNING" in stdoutdata:
             sonic_logger.log_info("acms_monitor: restart acms process")
             exec_cmd("supervisorctl restart acms")
         time.sleep(MONITOR_INTERVAL)

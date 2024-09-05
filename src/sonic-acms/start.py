@@ -127,7 +127,10 @@ def main():
             sonic_logger.log_info("start: main: Trying to bootstrap with "+curr_bootstrap_cert)
             if (update_acms_config(curr_bootstrap_cert) == True):
                 # 1 hour timeout to prevent the ACMS process from getting stuck
-                exec_cmd("/usr/bin/acms -Bootstrap -Dependant client -BaseDirPath /var/opt/msft/", timeout=3600)
+                bootstrap_cmd = "/usr/bin/acms -Bootstrap -Dependant client -BaseDirPath /var/opt/msft/"
+                rc, _, _ = exec_cmd(bootstrap_cmd, timeout=3600)
+                if rc != 0:
+                    sonic_logger.log_error("start: ACMS bootstrap command failed: " + str(rc))
                 # Choose a different bootstrap cert for next bootstrap attempt
                 ctr += 1
                 ctr = ctr % len(boostrap_certs)
