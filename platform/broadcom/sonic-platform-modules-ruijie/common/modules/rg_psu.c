@@ -298,7 +298,7 @@ static int psu_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	return status;
 }
 
-static int psu_remove(struct i2c_client *client)
+static void psu_remove(struct i2c_client *client)
 {
 	switch (client->addr) {
 	case 0x50:
@@ -312,7 +312,6 @@ static int psu_remove(struct i2c_client *client)
 	default:
 		break;
 	}
-	return 0;
 }
 
 static const struct i2c_device_id psu_id[] = {
