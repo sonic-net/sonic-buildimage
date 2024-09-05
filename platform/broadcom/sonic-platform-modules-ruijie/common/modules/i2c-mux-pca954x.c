@@ -1713,7 +1713,7 @@ fail_del_adapters:
 	return ret;
 }
 
-static void pca954x_remove(struct i2c_client *client)
+static int pca954x_remove(struct i2c_client *client)
 {
 	struct i2c_mux_core *muxc = i2c_get_clientdata(client);
 	struct pca954x *data = i2c_mux_priv(muxc);
@@ -1728,6 +1728,7 @@ static void pca954x_remove(struct i2c_client *client)
 	}
 
 	i2c_mux_del_adapters(muxc);
+	return 0;
 }
 
 #ifdef CONFIG_PM_SLEEP
