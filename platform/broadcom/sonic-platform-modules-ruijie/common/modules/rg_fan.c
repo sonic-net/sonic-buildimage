@@ -242,10 +242,9 @@ static int fan_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	return 0;
 }
 
-static int fan_remove(struct i2c_client *client)
+static void fan_remove(struct i2c_client *client)
 {
 	sysfs_remove_group(&client->dev.kobj, &fan_sysfs_group);
-	return 0;
 }
 
 static const struct i2c_device_id fan_id[] = { { "rg_fan", 0 }, {} };
