@@ -14,6 +14,3 @@ Package: platform-modules-sse-t8164
 Architecture: amd64
 Description: kernel modules for platform devices such as fan, led, sfp
 
-Package: platform-modules-sse-t8196
-Architecture: amd64
-Description: kernel modules for platform devices such as fan, led, sfp
