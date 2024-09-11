@@ -42,12 +42,12 @@ def main():
                 date_result = pattern.findall(stdoutdata)
             # If the next poll time exceeds one day, restart the ACMS process
             if poll_result and date_result:
+                sonic_logger.log_info("acms_monitor: next poll time is " + poll_result[0])
+                sonic_logger.log_info("acms_monitor: current time is " + date_result[0])
                 poll_time = datetime.datetime.strptime(poll_result[0], "%Y-%m-%d %H:%M:%S")
                 date_time = datetime.datetime.strptime(date_result[0], "%Y-%m-%d %H:%M:%S")
                 delta = date_time - poll_time
                 if delta.total_seconds() >= MONITOR_INTERVAL:
-                    sonic_logger.log_info("acms_monitor: next poll time is "+poll_result[0])
-                    sonic_logger.log_info("acms_monitor: current time is "+date_result[0])
                     sonic_logger.log_info("acms_monitor: restart acms process")
                     exec_cmd("supervisorctl restart acms")
         time.sleep(MONITOR_INTERVAL)
