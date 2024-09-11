@@ -12,7 +12,7 @@ class TestACMSMonitor(TestCase):
         '''
         expect_err = Exception("unknown error")
         dsms_conf = "LastPollUtc=2024-01-01 04:47:40\nNextPollUtc=2024-01-01 21:26:11\nSecureBlobEtag=DEADDEAD\n"
-        current_date = "2024-01-02 22:00:00\n"
+        current_date = "2024-01-02:22:00:00\n"
         mock_cmd.side_effect = [
             (0, "acms   RUNNING   pid 88, uptime 8 days", ""),
             (0, dsms_conf, ""),
@@ -27,7 +27,7 @@ class TestACMSMonitor(TestCase):
         expected = []
         expected.append(mock.call('supervisorctl status acms'))
         expected.append(mock.call('cat /var/opt/msft/client/dsms.conf'))
-        expected.append(mock.call('date "+%Y-%m-%d %H:%M:%S"'))
+        expected.append(mock.call('date +%Y-%m-%d:%H:%M:%S'))
         expected.append(mock.call('supervisorctl restart acms'))
         expected.append(mock.call('supervisorctl status acms'))
         self.assertEqual(mock_cmd.call_args_list, expected)
@@ -42,7 +42,7 @@ class TestACMSMonitor(TestCase):
         '''
         expect_err = Exception("unknown error")
         dsms_conf = "LastPollUtc=2024-01-01 04:47:40\nNextPollUtc=2024-01-01 21:26:11\nSecureBlobEtag=DEADDEAD\n"
-        current_date = "2024-01-02 21:00:00\n"
+        current_date = "2024-01-02:21:00:00\n"
         mock_cmd.side_effect = [
             (0, "acms   RUNNING   pid 88, uptime 8 days", ""),
             (0, dsms_conf, ""),
@@ -56,7 +56,7 @@ class TestACMSMonitor(TestCase):
         expected = []
         expected.append(mock.call('supervisorctl status acms'))
         expected.append(mock.call('cat /var/opt/msft/client/dsms.conf'))
-        expected.append(mock.call('date "+%Y-%m-%d %H:%M:%S"'))
+        expected.append(mock.call('date +%Y-%m-%d:%H:%M:%S'))
         expected.append(mock.call('supervisorctl status acms'))
         self.assertEqual(mock_cmd.call_args_list, expected)
 
