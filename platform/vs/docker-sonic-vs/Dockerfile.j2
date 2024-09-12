@@ -67,7 +67,9 @@ RUN apt-get install -y net-tools \
                        # For libkrb5-dev
                        comerr-dev \
                        libgssrpc4 \
-                       libkdb5-10
+                       libkdb5-10 \
+                       libprotobuf-c-dev \
+                       protobuf-c-compiler
 
 RUN apt-get install -y -t bullseye-backports iproute2
 
