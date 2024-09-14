@@ -88,6 +88,7 @@ elif [ "$CONFIG_TYPE" == "unified" ]; then
     CFGGEN_PARAMS=" \
         -d \
         -y /etc/sonic/constants.yml \
+        -T /usr/local/sonic/frrcfgd \
         -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
     "
     sonic-cfggen $CFGGEN_PARAMS
