@@ -10,6 +10,7 @@ from packaging import version
 sonic_dependencies = ['sonic-py-common']
 
 dependencies = [
+    'python-dateutil'
 ]
 
 py_modules = [
