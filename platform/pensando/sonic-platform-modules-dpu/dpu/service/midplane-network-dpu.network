@@ -1,0 +1,5 @@
+[Match]
+Name=int_mnic0
+
+[Network]
+DHCP=yes
