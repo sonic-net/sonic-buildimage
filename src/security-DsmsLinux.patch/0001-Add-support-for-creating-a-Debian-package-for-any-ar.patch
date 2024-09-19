@@ -57,7 +57,13 @@ new file mode 100644
 index 0000000..cf04caa
 --- /dev/null
 +++ b/src/acms/debian/changelog
-@@ -0,0 +1,114 @@
+@@ -0,0 +1,120 @@
++acms-client (5.29) Release; urgency=medium
++
++  * OpenSSL 3.x changes for Ubuntu 22.04, commit d787e1700df1d17f7646162fb7930b1bbd49580f
++
++ -- MAINTAINER <dsmsdev>  Wed, 19 Sep 2024 16:03:09 -0700
++
 +acms-client (5.22) Release; urgency=medium
 +
 +  * Reduce polling time, commit db0a842a64cbdc7f7172d8564d92a8b583640aac
@@ -255,16 +261,20 @@ diff --git a/src/acms/makefile.prj b/src/acms/makefile.prj
 index ef693e9..aeba2e1 100644
 --- a/src/acms/makefile.prj
 +++ b/src/acms/makefile.prj
-@@ -12,7 +12,7 @@ endif
+@@ -19,10 +19,10 @@ endif
  PROJ_BIN_DIR=$(ROOT)/bin.$(BUILD_ARCH)
  OBJ_DIR=obj.$(BUILD_ARCH)
  
--PROJ_LINKER_FLAGS=-Wl,-z,relro,-z,now -Wl,-z,noexecstack -Wl,--no-undefined -Wl,-rpath,'$$ORIGIN' $(INTERNAL_LINKER_FLAGS)
-+PROJ_LINKER_FLAGS=-Wl,-z,relro,-z,now -Wl,-z,noexecstack -Wl,--no-undefined $(INTERNAL_LINKER_FLAGS)
+-PROJ_LINKER_FLAGS=-pthread -Wl,--no-undefined -Wl,-rpath,'$$ORIGIN' $(INTERNAL_LINKER_FLAGS)
++PROJ_LINKER_FLAGS=-pthread -Wl,--no-undefined $(INTERNAL_LINKER_FLAGS)
  
- PROJ_COMPILER_FLAGS:=-Wl,-z,relro,-z,now -Wl,-z,noexecstack \
-     -Wno-deprecated-declarations -Wconversion -Wempty-body -Wall -Werror \
-@@ -33,6 +33,12 @@ ifeq ($(BUILD_ARCH), aarch64)
+ PROJ_COMPILER_FLAGS=-pthread -Wl,-z,relro,-z,now,-z,noexecstack \
+-    -Wconversion -Wempty-body -Wall -Werror \
++    -Wconversion -Wempty-body -Wall \
+     -fno-strict-aliasing -gdwarf-2 -fthreadsafe-statics -frtti -fno-omit-frame-pointer -fexceptions \
+     -Wstack-protector --param ssp-buffer-size=4 \
+     -std=c++17
+@@ -47,6 +47,12 @@ ifeq ($(BUILD_ARCH), aarch64)
      LD=aarch64-linux-gnu-ld
      OBJCOPY=aarch64-linux-gnu-objcopy
      STRIP=aarch64-linux-gnu-strip
@@ -277,7 +287,7 @@ index ef693e9..aeba2e1 100644
  else ifeq ($(BUILD_ARCH), x86_64)
      ifdef GENERIC
          AR=ar
-@@ -126,9 +132,6 @@ $(TARGET_FULL_NAME): $(PROJ_OBJ_FILES) $(INTERNAL_LINKER_LIBS)
+@@ -141,9 +147,6 @@ $(TARGET_FULL_NAME): $(PROJ_OBJ_FILES) $(INTERNAL_LINKER_LIBS)
  	@mkdir -p $(dir $@)
  	$(info Linking $@)
  	$(CXX) $(PROJ_OBJ_FILES) $(PROJ_LINKER_LIBS) $(PROJ_LINKER_FLAGS) -fPIE -pie -o $@
@@ -287,7 +297,7 @@ index ef693e9..aeba2e1 100644
  	$(CHECK_NOTE_STAMP)
  	$(READ_ELF)
  
-@@ -158,12 +161,8 @@ $(TARGET_FULL_NAME): $(PROJ_OBJ_FILES) $(INTERNAL_LINKER_LIBS)
+@@ -173,12 +176,8 @@ $(TARGET_FULL_NAME): $(PROJ_OBJ_FILES) $(INTERNAL_LINKER_LIBS)
  	@mkdir -p $(dir $@)
  	@mkdir -p $(PROJ_BIN_DIR)
  	$(info Linking $@)
@@ -313,13 +323,6 @@ index fea04ed..8d08387 100644
  
  namespace
  {
-@@ -437,4 +438,4 @@ namespace
-         // restore write permissions
-         ASSERT_EQ(0, chmod(dirpath.c_str(), S_IRWXU|S_IRWXG|S_IRWXO));
-     }
--}
-\ No newline at end of file
-+}
 -- 
 2.25.1
 

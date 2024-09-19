@@ -1,6 +1,6 @@
 # bond package
 
-BOND_VERSION = 8.0.1
+BOND_VERSION = 9.0.5
 
 BOND = libbond_$(BOND_VERSION)-1_$(CONFIGURED_ARCH).deb
 $(BOND)_SRC_PATH = $(SRC_PATH)/bond
