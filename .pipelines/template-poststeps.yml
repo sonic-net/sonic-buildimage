@@ -116,10 +116,10 @@ steps:
         BRANCH=$(Build.SourceBranchName)
         arch=$(cat .arch)
         if echo "$arch" | grep arm; then
-          LABELS=$BRANCH-$arch
+          LABELS="$BRANCH-$arch $SONIC_VERSION-$arch"
           [[ "$BRANCH" == "internal" ]] && LABELS="$LABELS latest-$arch"
         else
-          LABELS=$BRANCH
+          LABELS="$BRANCH $SONIC_VERSION"
           [[ "$BRANCH" == "internal" ]] && LABELS="$LABELS latest"
         fi
         for f in $DOCKERS; do
