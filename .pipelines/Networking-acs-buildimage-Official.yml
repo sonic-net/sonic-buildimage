@@ -50,7 +50,6 @@ parameters:
   - broadcom
   - mellanox
   - marvell-armhf
-  - cisco-8000
 extends:
   template: v2/OneBranch.Official.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
   parameters:
