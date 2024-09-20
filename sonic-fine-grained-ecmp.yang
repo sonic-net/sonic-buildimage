@@ -30,12 +30,12 @@ module sonic-fine-grained-ecmp {
     description
         "SONIC Fine Grained ECMP";
 
-    revision 2024-09-15 {
-        description "Added support for dynamic nexthop group.";
-    }
-
     revision 2023-01-19 {
         description "Initial revision.";
+    }
+
+    revision 2024-09-15 {
+        description "Added support for dynamic nexthop group.";
     }
 
     typedef match-mode-name {
@@ -66,7 +66,7 @@ module sonic-fine-grained-ecmp {
 
             enum dynamic-nhg {
                description
-                 "List of nexthops is dynamically derived from the route updates. FG_NHG_MEMBER table is not configured.";
+                 "List of nexthops is dynamically derived from the route updates. FG_NHG_MEMBER table is not configured.";     
             }
         }
 
@@ -110,7 +110,6 @@ module sonic-fine-grained-ecmp {
 
                 leaf max_next_hops{
                     when "current()/../nhg_mode = 'dynamic-nhg'";
-                    mandatory true;
                     must "current() > 0" {
                         error-message "max_next_hops needs to be a positive value in dynamic-nhg mode";
                     }
@@ -166,7 +165,7 @@ module sonic-fine-grained-ecmp {
                 leaf FG_NHG{
                     type leafref {
                         path "/sfgecmp:sonic-fine-grained-ecmp/sfgecmp:FG_NHG/sfgecmp:FG_NHG_LIST/sfgecmp:name";
-                    }
+                }
                     mandatory true;
                     description "Fine Grained next-hop group name";
                 }

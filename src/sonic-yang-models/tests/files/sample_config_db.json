@@ -2726,6 +2726,12 @@
             "nhg2": {
                 "bucket_size": "32",
                 "match_mode": "route-based"
+            },
+            "nhg3": {
+                "bucket_size": "24",
+                "match_mode": "route-based",
+                "nhg_mode": "dynamic-nhg",
+                "max_next_hops": "6"
             }
         },
         "FG_NHG_PREFIX": {
@@ -2734,6 +2740,9 @@
             },
             "192.168.0.0/16": {
                 "FG_NHG": "nhg2"
+            },
+            "172.17.0.1/32": {
+                "FG_NHG": "nhg3"
             }
         },
         "FIPS":{

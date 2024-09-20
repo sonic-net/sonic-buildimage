@@ -12,6 +12,13 @@
                         "name": "group2",
                         "bucket_size": 20,
                         "match_mode": "route-based"
+                    },
+                    {
+                        "name": "group3",
+                        "bucket_size": 30,
+                        "match_mode": "route-based",
+                        "nhg_mode": "dynamic-nhg",
+                        "max_next_hops": 6
                     }
                 ]
             }
@@ -30,6 +37,13 @@
                         "name": "group2",
                         "bucket_size": 20,
                         "match_mode": "route-based"
+                    },
+                    {
+                        "name": "group3",
+                        "bucket_size": 30,
+                        "match_mode": "route-based",
+                        "nhg_mode": "dynamic-nhg",
+                        "max_next_hops": 6
                     }
                 ]
             },
@@ -44,12 +58,20 @@
                         "FG_NHG": "group2"
                     },
                     {
+                        "ip_prefix": "10.2.0.0/24",
+                        "FG_NHG": "group3"
+                    },
+                    {
                         "ip_prefix": "fe80::/64",
                         "FG_NHG": "group1"
                     },
                     {
                         "ip_prefix": "::/0",
                         "FG_NHG": "group2"
+                    },
+                    {
+                        "ip_prefix": "2001:db8::/32",
+                        "FG_NHG": "group3"
                     }
                 ]
             }
@@ -387,6 +409,49 @@
                         "FG_NHG": "group1",
                         "bank": 3,
                         "link": "Ethernet1"
+                    }
+                ]
+            }
+        }
+    },
+    "FG_NHG_TEST_DYNAMIC_NHG_MISSING_MAX_NEXT_HOPS": {
+        "sonic-fine-grained-ecmp:sonic-fine-grained-ecmp": {
+            "sonic-fine-grained-ecmp:FG_NHG": {
+                "FG_NHG_LIST": [
+                    {
+                        "name": "group3",
+                        "bucket_size": 30,
+                        "match_mode": "route-based",
+                        "nhg_mode": "dynamic-nhg"
+                    }
+                ]
+            }
+        }
+    },
+    "FG_NHG_TEST_DYNAMIC_NHG_MISSING_BUCKET_SIZE": {
+        "sonic-fine-grained-ecmp:sonic-fine-grained-ecmp": {
+            "sonic-fine-grained-ecmp:FG_NHG": {
+                "FG_NHG_LIST": [
+                    {
+                        "name": "group3",
+                        "match_mode": "route-based",
+                        "nhg_mode": "dynamic-nhg",
+                        "max_next_hops": 6
+                    }
+                ]
+            }
+        }
+    },
+    "FG_NHG_TEST_DYNAMIC_NHG_INVALID_MATCH_MODE": {
+        "sonic-fine-grained-ecmp:sonic-fine-grained-ecmp": {
+            "sonic-fine-grained-ecmp:FG_NHG": {
+                "FG_NHG_LIST": [
+                    {
+                        "name": "group3",
+                        "bucket_size": 30,
+                        "match_mode": "nexthop-based",
+                        "nhg_mode": "dynamic-nhg",
+                        "max_next_hops": 6
                     }
                 ]
             }
