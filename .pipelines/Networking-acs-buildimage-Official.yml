@@ -51,7 +51,7 @@ parameters:
   - mellanox
   - marvell-armhf
 extends:
-  template: v2/OneBranch.Official.CrossPlat.yml@templates # https://aka.ms/obpipelines/templates
+  template: v2/OneBranch.Official.CBWorkflow.yml@templates # https://aka.ms/obpipelines/templates
   parameters:
     featureFlags:
       useUbuntu2004: true
