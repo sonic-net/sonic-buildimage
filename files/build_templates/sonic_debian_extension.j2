@@ -590,7 +590,9 @@ sudo cp ${files_path}/ctrmgrd.service ${FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM}/
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable ctrmgrd.service
 
 # kubelet service is controlled by ctrmgrd daemon.
-sudo cat target/sonic-vs.img.gz__vs__rfs.squashfs.log
+{% if sonic_asic_platform == 'broadcom' %}
+    sudo cat target/sonic-broadcom.bin__broadcom__rfs.squashfs.log
+{% endif %}
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable kubelet.service
 {% else %}
 # container script for docker commands, which is required as
