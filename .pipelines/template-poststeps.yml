@@ -136,6 +136,7 @@ steps:
   - script: |
       mv target $(Build.ArtifactStagingDirectory)/
     displayName: Move target to ArtifactsDir
+    condition: always()
   - task: PublishPipelineArtifact@1
     continueOnError: true
     condition: always()
