@@ -34,7 +34,7 @@
 #include <linux/delay.h>
 #include <linux/dmi.h>
 
-#define MAX_MODEL_NAME          20
+#define MAX_MODEL_NAME          12
 #define MAX_SERIAL_NUMBER       19
 
 static ssize_t show_status(struct device *dev, struct device_attribute *da, char *buf);
@@ -94,15 +94,15 @@ static ssize_t show_status(struct device *dev, struct device_attribute *da,
     //printk("data->status=0x%x, attr->index=%d,data->index=%d \n", data->status, attr->index, data->index);
     if (attr->index == PSU_PRESENT) {
         if(data->index==0)
-            status = !( (data->status) & 0x1);
-        else
             status = !( (data->status >> 1) & 0x1);
+        else
+            status = !( (data->status) & 0x1);
     }
     else { /* PSU_POWER_GOOD */
         if(data->index==0)
-           status = ( (data->status >> 2) & 0x1);
+           status = ( (data->status >> 3) & 0x1);
         else
-           status = ( (data->status >> 3) & 0x1); 
+           status = ( (data->status >> 2) & 0x1);
     }
 
     return sprintf(buf, "%d\n", status);
@@ -280,8 +280,8 @@ static struct as9726_32d_psu_data *as9726_32d_psu_update_device(struct device *d
         psu_present = (data->status >> (data->index) & 0x1); //0:present, 1:not present
        
         if (!psu_present) {
-            status = as9726_32d_psu_read_block(client, 0x20, data->model_name,
-                                               ARRAY_SIZE(data->model_name)-1);                                               
+            status = as9726_32d_psu_read_block(client, 0x21, data->model_name,
+                                               ARRAY_SIZE(data->model_name)-1);
             if (status < 0) {
                 data->model_name[0] = '\0';
                 dev_dbg(&client->dev, "unable to read model name from (0x%x)\n", client->addr);
@@ -292,14 +292,15 @@ static struct as9726_32d_psu_data *as9726_32d_psu_update_device(struct device *d
                 
             }
              /* Read from offset 0x35 ~ 0x46 (18 bytes) */
-            status = as9726_32d_psu_read_block(client, 0x35,data->serial_number, MAX_SERIAL_NUMBER);
+            status = as9726_32d_psu_read_block(client, 0x3A,data->serial_number,
+                                               ARRAY_SIZE(data->serial_number)-1);
             if (status < 0)
             {
                 data->serial_number[0] = '\0';
                 dev_dbg(&client->dev, "unable to read model name from (0x%x) offset(0x2e)\n", client->addr);
                 printk("unable to read model name from (0x%x) offset(0x2e)\n", client->addr);
             }
-            data->serial_number[MAX_SERIAL_NUMBER-1]='\0';
+            data->serial_number[ARRAY_SIZE(data->serial_number)-1]='\0';
         }
 
         data->last_updated = jiffies;
