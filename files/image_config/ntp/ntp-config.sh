@@ -2,6 +2,8 @@
 
 ntp_default_file='/etc/default/ntpsec'
 ntp_temp_file='/tmp/ntp.orig'
+etc_ntpsec_dir='/etc/ntpsec'
+var_log_ntpsec_dir='/var/log/ntpsec'
 
 reboot_type='cold'
 
@@ -23,9 +25,12 @@ function modify_ntp_default
     sed -e "$1" ${ntp_temp_file} >${ntp_default_file}
 }
 
-sonic-cfggen -d -t /usr/share/sonic/templates/ntp.conf.j2 >/etc/ntpsec/ntp.conf
-sonic-cfggen -d -t /usr/share/sonic/templates/ntp.keys.j2 >/etc/ntpsec/ntp.keys
-chmod o-r /etc/ntp.keys
+mkdir -p ${var_log_ntpsec_dir}
+chmod a+rw ${var_log_ntpsec_dir}
+
+sonic-cfggen -d -t /usr/share/sonic/templates/ntp.conf.j2 > ${etc_ntpsec_dir}/ntp.conf
+sonic-cfggen -d -t /usr/share/sonic/templates/ntp.keys.j2 > ${etc_ntpsec_dir}/ntp.keys
+chmod o-r ${etc_ntpsec_dir}/ntp.keys
 
 get_database_reboot_type
 echo "Disabling NTP long jump for reboot type ${reboot_type} ..."
