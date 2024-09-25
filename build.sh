@@ -38,6 +38,7 @@ eval set -- "$TEMP"
 ###################################
 # default options
 opt_configure=0
+opt_submodule_test=0
 opt_rpc_dnx=0
 opt_rpc_xgs=0
 debug=echo
@@ -65,6 +66,26 @@ if (docker info --format '{{json .Architecture}}' | grep -q armv8l); then
   mach=armhf
 fi
 
+
+#
+# Synatx: _add_patch module_path patch_file_name
+#
+_add_patch()
+{
+    echo "_add_patch $2 to $1"
+    pushd $1  &>/dev/null
+    git apply $2
+    popd &>/dev/null
+}
+
+apply_patch_files() {
+    echo "Apply patch files"
+    # https://github.com/sonic-net/sonic-swss/pull/3269
+    # [POC] verify route performance issue #3269
+    # _add_patch src/sonic-swss ../../fix34kroute.patch
+    # _add_patch src/sonic-utilities ../../nokia_route_check.patch
+}
+
 # add remote github user repo for cherry-pick
 # arg1: submodule path
 # arg2: friendly name
@@ -81,8 +102,20 @@ _submodule_add() {
   # # git revert and/or cherry-picks here
   git remote remove $2 &>/dev/null || true
   git remote add -f $2 $3
-  git cherry-pick --keep-redundant-commits -x $4 || git cherry-pick --abort
+  git cherry-pick --keep-redundant-commits -x $4 || ( git cherry-pick --abort && false )
   popd &>/dev/null
+}
+
+_submodule_revert() {
+    echo "$prog: submodule change in \"$1\" revert \"$2\""
+    pushd $1 &>/dev/null
+    if [ -n "${CI_JOB_ID}" ]; then
+      # pipeline builds
+      git config user.email "${GITLAB_USER_EMAIL}"
+      git config user.name "${GITLAB_USER_LOGIN}"
+    fi
+    git revert $2 --no-edit
+    popd &>/dev/null
 }
 
 submodule_prs () {
@@ -90,6 +123,31 @@ submodule_prs () {
   # Use this to cherry-pick PRs that have not yet been merged to github.
   # args for submodule cherry-picks here: <directory> <user> <https-url> <commit-id>
   _submodule_add src/sonic-swss-common mlok https://github.com/mlok-nokia/sonic-swss-common.git ed4137c7a2cb
+  # _submodule_add src/sonic-swss-common mlok https://github.com/mlok-nokia/sonic-swss-common.git ed4137c7a2cb
+  # _submodule_add src/sonic-sairedis/SAI saksarav-nokia https://github.com/saksarav-nokia/SAI.git 063fbd4
+  # PR To fix the issue: show_techsupport & saidump errors during testbed testing by replacing redis-rdb-tool with rdb-cli
+  # https://github.com/sonic-net/sonic-buildimage/pull/19268
+  # https://github.com/sonic-net/sonic-sairedis/pull/1391
+  _submodule_add src/sonic-sairedis Junhong https://github.com/JunhongMao/sonic-sairedis.git 4b32eaf
+  _submodule_add src/sonic-sairedis Junhong https://github.com/JunhongMao/sonic-sairedis.git fb2185c
+  _submodule_add ./ Junhong https://github.com/JunhongMao/sonic-buildimage.git 69c914f
+  # PR https://github.com/sonic-net/sonic-swss/pull/3247 - fabric link monitor fix
+  _submodule_add src/sonic-swss jfeng-arista https://github.com/jfeng-arista/sonic-swss.git 04d5b15^..82bd7cd
+
+
+  # https://github.com/sonic-net/sonic-platform-daemons/pull/573
+  _submodule_add src/sonic-platform-daemons mlok-nokia https://github.com/mlok-nokia/sonic-platform-daemons.git 70caabb
+  
+  # https://github.com/sonic-net/sonic-utilities/pull/3676  -- show_tech with BERT info
+  _submodule_add src/sonic-utilities mlok-nokia https://github.com/mlok-nokia/sonic-utilities.git 9b9e3b3^..8349ac1
+   
+  # Revert SAI counter enhancement that breaks SAI 11.X (remove when updated to SAI 12.x)
+  _submodule_revert src/sonic-sairedis/SAI f23185d
+
+  # https://github.com/sonic-net/sonic-swss/pull/3329  <-- 34k routes
+  _submodule_add src/sonic-swss upstream https://github.com/sonic-net/sonic-swss.git d006374
+  # apply patches
+  apply_patch_files
 }
 
 make init
