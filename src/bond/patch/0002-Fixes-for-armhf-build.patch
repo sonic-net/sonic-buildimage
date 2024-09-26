@@ -14,18 +14,16 @@ Also, Fix a compile error that was seen on armhf
 Signed-off-by: Saikrishna Arcot <sarcot@microsoft.com>
 ---
  compiler/stack.yaml                        | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ 1 file changed, 2 insertion(+), 1 deletion(-)
 
 diff --git a/compiler/stack.yaml b/compiler/stack.yaml
-index 94b73fe5..0aaa2066 100644
+index 94b73fe5..ee8505fb 100644
 --- a/compiler/stack.yaml
 +++ b/compiler/stack.yaml
-@@ -5,7 +5,8 @@
- # Resolver to choose a 'specific' stackage snapshot or a compiler version.
+@@ -6,6 +6,7 @@
  # A snapshot resolver dictates the compiler version and the set of packages
  # to be used for project dependencies. For example:
--resolver: lts-14.4
-+resolver: lts-14.4
+ resolver: lts-14.4
 +compiler: ghc-8.6.3
  
  # User packages to be built.
@@ -37,5 +35,6 @@ index 94b73fe5..0aaa2066 100644
 -    warningsAsErrors: true
 \ No newline at end of file
 +    warningsAsErrors: false
+\ No newline at end of file
 -- 
 2.25.1
