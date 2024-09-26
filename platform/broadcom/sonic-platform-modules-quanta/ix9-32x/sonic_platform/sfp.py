@@ -1087,7 +1087,6 @@ class Sfp(SfpBase):
 
         return transceiver_dom_info_dict
 
-
     def get_transceiver_threshold_info(self):
         """
         Retrieves transceiver threshold info of this SFP
@@ -1263,6 +1262,12 @@ class Sfp(SfpBase):
             transceiver_dom_threshold_info_dict['rxpowerlowwarning'] = dom_module_threshold_data['data']['RXPowerLowWarning']['value']
 
         return transceiver_dom_threshold_info_dict
+
+    def get_transceiver_status(self):
+        return {}
+
+    def get_transceiver_pm(self):
+        return {}
 
     def get_reset_status(self):
         """
