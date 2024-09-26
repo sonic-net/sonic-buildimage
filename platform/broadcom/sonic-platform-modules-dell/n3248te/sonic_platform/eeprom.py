@@ -25,37 +25,38 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         self.eeprom_path = f
         super(Eeprom, self).__init__(self.eeprom_path, 0, '', True)
         self.eeprom_tlv_dict = dict()
-        try:
-            self.eeprom_data = self.read_eeprom()
-        except Exception:
-            self.eeprom_data = "N/A"
-            raise RuntimeError("Eeprom is not Programmed")
+        self.eeprom_data = "N/A"
+        
+        if os.geteuid() == 0:
+            try:
+                self.eeprom_data = self.read_eeprom()
+            except Exception:
+                raise RuntimeError("Eeprom is not Programmed")
 
-        eeprom = self.eeprom_data
+            eeprom = self.eeprom_data
 
-        if not self.is_valid_tlvinfo_header(eeprom):
-            return
+            if not self.is_valid_tlvinfo_header(eeprom):
+                return
 
-        total_length = ((eeprom[9]) << 8) | (eeprom[10])
-        tlv_index = self._TLV_INFO_HDR_LEN
-        tlv_end = self._TLV_INFO_HDR_LEN + total_length
+            total_length = ((eeprom[9]) << 8) | (eeprom[10])
+            tlv_index = self._TLV_INFO_HDR_LEN
+            tlv_end = self._TLV_INFO_HDR_LEN + total_length
 
-        while (tlv_index + 2) < len(eeprom) and tlv_index < tlv_end:
-            if not self.is_valid_tlv(eeprom[tlv_index:]):
-                break
+            while (tlv_index + 2) < len(eeprom) and tlv_index < tlv_end:
+                if not self.is_valid_tlv(eeprom[tlv_index:]):
+                    break
 
-            tlv = eeprom[tlv_index:tlv_index + 2
-                         + (eeprom[tlv_index + 1])]
-            code = "0x%02X" % ((tlv[0]))
+                tlv = eeprom[tlv_index:tlv_index + 2
+                             + (eeprom[tlv_index + 1])]
+                code = "0x%02X" % ((tlv[0]))
 
+                name, value = self.decoder(None, tlv)
 
-            name, value = self.decoder(None, tlv)
+                self.eeprom_tlv_dict[code] = value
+                if (eeprom[tlv_index]) == self._TLV_CODE_CRC_32:
+                    break
 
-            self.eeprom_tlv_dict[code] = value
-            if (eeprom[tlv_index]) == self._TLV_CODE_CRC_32:
-                break
-
-            tlv_index += (eeprom[tlv_index+1]) + 2
+                tlv_index += (eeprom[tlv_index+1]) + 2
 
     def serial_number_str(self):
         """
