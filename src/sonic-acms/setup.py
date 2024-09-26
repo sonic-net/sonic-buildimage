@@ -10,6 +10,7 @@ from packaging import version
 sonic_dependencies = ['sonic-py-common']
 
 dependencies = [
+    'python-dateutil'
 ]
 
 py_modules = [
@@ -39,6 +40,7 @@ setup(
     url = 'https://github.com/sonic-net/sonic-buildimage',
     py_modules = py_modules,
     scripts = [
+        'acms_monitor.py',
         'CA_cert_downloader.py',
         'cert_converter.py',
         'start.py',

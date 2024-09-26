@@ -24,10 +24,13 @@ SONIC_ACMS_BOOTSTRAP_PATTERN = "sonic_acms_bootstrap-.*\.pfx"
 WAIT_TIME_FOR_BOOTSTRAP_CERT = 60
 MAX_WAIT_TIME_FOR_BOOTSTRAP_CERT = 3600
 
-def exec_cmd(cmd):
-    process = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdoutdata, stderrdata = process.communicate()
-    return process.returncode, stdoutdata, stderrdata
+def exec_cmd(cmd, timeout=None):
+    try:
+        res = subprocess.run(cmd.split(), capture_output=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        sonic_logger.log_error("Command timeout: " + cmd)
+        return -1, "", ""
+    return res.returncode, res.stdout.decode(), res.stderr.decode()
 
 
 def get_bootstrap_cert_paths():
@@ -123,7 +126,11 @@ def main():
                 ctr = 0
             sonic_logger.log_info("start: main: Trying to bootstrap with "+curr_bootstrap_cert)
             if (update_acms_config(curr_bootstrap_cert) == True):
-                exec_cmd("/usr/bin/acms -Bootstrap -Dependant client -BaseDirPath /var/opt/msft/")
+                # 1 hour timeout to prevent the ACMS process from getting stuck
+                bootstrap_cmd = "/usr/bin/acms -Bootstrap -Dependant client -BaseDirPath /var/opt/msft/"
+                rc, _, _ = exec_cmd(bootstrap_cmd, timeout=3600)
+                if rc != 0:
+                    sonic_logger.log_error("start: ACMS bootstrap command failed: " + str(rc))
                 # Choose a different bootstrap cert for next bootstrap attempt
                 ctr += 1
                 ctr = ctr % len(boostrap_certs)
