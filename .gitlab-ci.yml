@@ -334,6 +334,21 @@ regress:tb26:
     variables:
       - $REGRESS_TB26
 
+regress:tb28:
+  extends: .regress
+  tags:
+    - regress_tb28
+  needs:
+    - build:sonic:aarch64
+  variables:
+    REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
+    RUN_IMAGE: target/sonic-marvell-arm64.bin
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS:
+  only:
+    variables:
+      - $REGRESS_TB28
+
 regress:t2:chassis20:
   extends: .regress
   tags:
