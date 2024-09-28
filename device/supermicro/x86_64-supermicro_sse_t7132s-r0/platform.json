@@ -1,32 +1,56 @@
 {
     "chassis": {
-        "name": "Supermicro-SSE-T7132S-R0",
+        "name": "SSE-T7132",
         "components": [
             {
-                "name": "CPLD1"
+                "name": "BIOS"
             },
             {
-                "name": "CPLD2"
+                "name": "BMC"
+            },
+            {
+                "name": "SWITCH_CPLD1"
+            },
+            {
+                "name": "SWITCH_CPLD2"
             }
         ],
         "fans": [
             {
-                "name": "FAN-1"
+                "name": "FAN-1",
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-2"
+                "name": "FAN-2",
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-3"
+                "name": "FAN-3",
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-4"
+                "name": "FAN-4",
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-5"
+                "name": "FAN-5",
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-6"
+                "name": "FAN-6",
+                "speed": {
+                    "controllable": false
+                }
             }
         ],
         "fan_drawers": [
@@ -34,7 +58,10 @@
                 "name": "Drawer1",
                 "fans": [
                     {
-                        "name": "FAN-1"
+                        "name": "FAN-1",
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             },
@@ -42,7 +69,10 @@
                 "name": "Drawer2",
                 "fans": [
                     {
-                        "name": "FAN-2"
+                        "name": "FAN-2",
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             },
@@ -50,7 +80,10 @@
                 "name": "Drawer3",
                 "fans": [
                     {
-                        "name": "FAN-3"
+                        "name": "FAN-3",
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             },
@@ -58,7 +91,10 @@
                 "name": "Drawer4",
                 "fans": [
                     {
-                        "name": "FAN-4"
+                        "name": "FAN-4",
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             },
@@ -66,7 +102,10 @@
                 "name": "Drawer5",
                 "fans": [
                     {
-                        "name": "FAN-5"
+                        "name": "FAN-5",
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             },
@@ -74,17 +113,20 @@
                 "name": "Drawer6",
                 "fans": [
                     {
-                        "name": "FAN-6"
+                        "name": "FAN-6",
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             }
         ],
         "psus": [
             {
-                "name": "PSU 1",
+                "name": "PSU_1",
                 "fans": [
                     {
-                        "name": "PSU 1 FAN-1",
+                        "name": "PSU_1 FAN-1",
                         "speed": {
                             "controllable": false
                         },
@@ -92,13 +134,16 @@
                             "controllable": false
                         }
                     }
-                ]
+                ],
+                "status_led": {
+                    "controllable": false
+                }
             },
             {
-                "name": "PSU 2",
+                "name": "PSU_2",
                 "fans": [
                     {
-                        "name": "PSU 2 FAN-1",
+                        "name": "PSU_2 FAN-1",
                         "speed": {
                             "controllable": false
                         },
@@ -106,33 +151,39 @@
                             "controllable": false
                         }
                     }
-                ]
+                ],
+                "status_led": {
+                    "controllable": false
+                }
             }
         ],
         "thermals": [
             {
-                "name": "CPU Temp"
+                "name": "CPU_Temp"
             },
             {
-                "name": "PCH Temp"
+                "name": "PCH_Temp"
             },
             {
-                "name": "Peripheral Temp"
+                "name": "System_Temp"
             },
             {
-                "name": "Switch Buttom-1"
+                "name": "Peripheral_Temp"
             },
             {
-                "name": "Switch Buttom-2"
+                "name": "Switch_Top-1"
             },
             {
-                "name": "Switch Top-1"
+                "name": "Switch_Bottom-1"
             },
             {
-                "name": "Switch Top-2"
+                "name": "Switch_Top-2"
             },
             {
-                "name": "System Temp"
+                "name": "Switch_Bottom-2"
+            },
+            {
+                "name": "Switch_Temp"
             }
         ],
         "sfps": [
@@ -231,6 +282,12 @@
             },
             {
                 "name": "Ethernet248"
+            },
+            {
+                "name": "Ethernet256"
+            },
+            {
+                "name": "Ethernet257"
             }
         ]
     },
