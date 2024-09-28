@@ -302,6 +302,8 @@ ifeq ($(DOCKER_BUILDER_WORKDIR),)
 override DOCKER_BUILDER_WORKDIR := "/sonic"
 endif
 
+# Consider removing the --ulimit flag once nothing older
+# than Bullseye is being used as a slave container.
 DOCKER_RUN := docker run --rm=true --privileged --init \
     -v $(DOCKER_BUILDER_MOUNT) \
     -v "$(DOCKER_LOCKDIR):$(DOCKER_LOCKDIR)" \
@@ -310,6 +312,7 @@ DOCKER_RUN := docker run --rm=true --privileged --init \
     -e "https_proxy=$(https_proxy)" \
     -e "no_proxy=$(no_proxy)" \
     -i$(shell { if [ -t 0 ]; then echo t; fi }) \
+    --ulimit nofile=524288:524288 \
     $(SONIC_BUILDER_EXTRA_CMDLINE)
 
 # Mount the $(DOCKER_ROOT) to /var/lib/docker in the slave container, the overlay fs is not supported as dockerd root folder.
