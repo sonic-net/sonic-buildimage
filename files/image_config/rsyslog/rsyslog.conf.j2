@@ -53,6 +53,8 @@ $UDPServerRun 514
 # Define a custom template
 $template SONiCFileFormat,"%timegenerated%.%timegenerated:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 $ActionFileDefaultTemplate SONiCFileFormat
+$template SONiCForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$ActionForwardDefaultTemplate SONiCForwardFormat
 
 template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall time=\"%timereported\
 :::date-year%-%timereported:::date-month%-%timereported:::date-day% %timereported:::date-hour%:%timereported:::date-minute%:%timereported\
