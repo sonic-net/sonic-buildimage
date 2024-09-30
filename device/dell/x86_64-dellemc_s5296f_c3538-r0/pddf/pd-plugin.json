@@ -31,14 +31,14 @@
     "psu_fan_dir": {
       "i2c": {
         "valmap": {
-          "F2B": "Intake",
-          "B2F": "Exhaust"
+          "F2B": "intake",
+          "B2F": "exhaust"
         }
       },
       "bmc": {
         "valmap": {
-          "0": "Exhaust",
-          "1": "Intake"
+          "0": "exhaust",
+          "1": "intake"
         }
       }
     },
@@ -48,8 +48,8 @@
     "direction": {
       "bmc": {
         "valmap": {
-          "0": "Exhaust",
-          "1": "Intake"
+          "0": "exhaust",
+          "1": "intake"
         }
       }
     },

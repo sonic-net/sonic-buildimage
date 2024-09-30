@@ -17,6 +17,7 @@ class Fan(PddfFan):
         PddfFan.__init__(self, tray_idx, fan_idx, pddf_data, pddf_plugin_data, is_psu_fan, psu_index)
 
     # Provide the functions/variables below for which implementation is to be overwritten e.g.
+
     def get_speed_tolerance(self):
         """
         Retrieves the speed tolerance of the fan
@@ -30,3 +31,19 @@ class Fan(PddfFan):
     def set_speed(self, speed):
         print("Setting fan speed is not allowed")
         return False
+
+    def get_model(self):
+        """
+        Retrieves the part number of the FAN
+        Returns:
+            String: Part number of FAN
+        """
+        return 'NA'
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the FAN
+        Returns:
+            String: Serial number of FAN
+        """
+        return 'NA'

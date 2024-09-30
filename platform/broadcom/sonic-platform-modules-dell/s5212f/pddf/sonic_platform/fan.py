@@ -23,7 +23,11 @@ switch_sku = {
   "0X41RN":('AC', 'Exhaust'),
   "0Y3N82":('AC', 'Intake'),
   "0W4CMG":('DC', 'Exhaust'),
-  "04T94Y":('DC', 'Intake')
+  "04T94Y":('DC', 'Intake'),
+  "0MYYKP":('AC', 'exhaust'),
+  "061C11":('AC', 'intake'),
+  "03C99H":('AC', 'intake'),
+  "0MTYT2":('AC', 'exhaust')
 }
 
 class Fan(PddfFan):
@@ -85,3 +89,19 @@ class Fan(PddfFan):
         """
         # In S5212F, Fans are fixed.
         return True
+
+    def get_model(self):
+        """
+        Retrieves the part number of the FAN
+        Returns:
+            String: Part number of FAN
+        """
+        return 'NA'
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the FAN
+        Returns:
+            String: Serial number of FAN
+        """
+        return 'NA'

@@ -10,10 +10,12 @@ try:
     import sys
     import time
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
+    from sonic_platform.component import Component
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 REBOOT_CAUSE_PATH = "/host/reboot-cause/platform/reboot_reason"
+MAX_S5232F_COMPONENT = 6
 
 class Chassis(PddfChassis):
     """
@@ -31,6 +33,10 @@ class Chassis(PddfChassis):
         for index in range(self.PORT_START, self.PORT_END):
             present = self.get_sfp(index).get_presence()
             self._global_port_pres_dict[index] = '1' if present else '0'
+
+        for i in range(MAX_S5232F_COMPONENT):
+            component = Component(i)
+            self._component_list.append(component)
     
     # Provide the functions/variables below for which implementation is to be overwritten
     def get_sfp(self, index):
@@ -131,3 +137,41 @@ class Chassis(PddfChassis):
             A string containing the hardware revision for this chassis.
         """
         return self._eeprom.revision_str().encode('utf-8').hex()
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether Chassis is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+    def get_eeprom(self):
+        """
+        Retrieves the Sys Eeprom instance for the chassis.
+        Returns :
+            The instance of the Sys Eeprom
+        """
+        return self._eeprom
+
+    def get_watchdog(self):
+        """
+        Retreives hardware watchdog device on this chassis
+        Returns:
+            An object derived from WatchdogBase representing the hardware
+            watchdog device
+        """
+        if self._watchdog is None:
+            from sonic_platform.watchdog import Watchdog
+            self._watchdog = Watchdog()
+
+        return self._watchdog

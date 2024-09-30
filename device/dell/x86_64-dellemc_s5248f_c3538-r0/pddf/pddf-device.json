@@ -514,7 +514,7 @@
 
 	"LOC_LED" : 
     { 
-        "dev_info": { "device_type":"LED", "device_name":"SYS_LED" },
+        "dev_info": { "device_type":"LED", "device_name":"LOC_LED" },
         "dev_attr": { "index":"0", "flag":"rw" },
         "bmc": 
         {
@@ -556,7 +556,7 @@
             {
                 "attr_list":
                 [
-    		    { "attr_name":"Off", "bmc_cmd":"ipmitool raw 0x3A 0x0B 5 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Off", "value":"0x00" },
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3A 0x0B 5 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Off", "value":"0x00" },
                     { "attr_name":"amber", "bmc_cmd":"ipmitool raw 0x3A 0x0B 5 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Solid Amber", "value":"0x01" },
                     { "attr_name":"green", "bmc_cmd":"ipmitool raw 0x3A 0x0B 5 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Solid Green", "value":"0x02" },
                     { "attr_name":"amber_blink", "bmc_cmd":"ipmitool raw 0x3A 0x0B 5 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Blinking Amber", "value":"0x03" }
@@ -574,7 +574,7 @@
             {
                 "attr_list":
                 [
-    		    { "attr_name":"Off", "bmc_cmd":"ipmitool raw 0x3A 0x0B 1 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Off", "value":"0x00" },
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3A 0x0B 1 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Off", "value":"0x00" },
                     { "attr_name":"amber", "bmc_cmd":"ipmitool raw 0x3A 0x0B 1 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Solid Amber", "value":"0x01" },
                     { "attr_name":"green", "bmc_cmd":"ipmitool raw 0x3A 0x0B 1 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Solid Green", "value":"0x02" },
                     { "attr_name":"amber_blink", "bmc_cmd":"ipmitool raw 0x3A 0x0B 1 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Blinking Amber", "value":"0x03" }
@@ -592,7 +592,7 @@
             {
                 "attr_list":
                 [
-    		    { "attr_name":"Off", "bmc_cmd":"ipmitool raw 0x3A 0x0B 2 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Off", "value":"0x00" },
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3A 0x0B 2 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Off", "value":"0x00" },
                     { "attr_name":"amber", "bmc_cmd":"ipmitool raw 0x3A 0x0B 2 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Solid Amber", "value":"0x01" },
                     { "attr_name":"green", "bmc_cmd":"ipmitool raw 0x3A 0x0B 2 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Solid Green", "value":"0x02" },
                     { "attr_name":"amber_blink", "bmc_cmd":"ipmitool raw 0x3A 0x0B 2 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Blinking Amber", "value":"0x03" }
@@ -610,7 +610,7 @@
             {
                 "attr_list":
                 [
-    		    { "attr_name":"Off", "bmc_cmd":"ipmitool raw 0x3A 0x0B 3 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Off", "value":"0x00" },
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3A 0x0B 3 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Off", "value":"0x00" },
                     { "attr_name":"amber", "bmc_cmd":"ipmitool raw 0x3A 0x0B 3 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Solid Amber", "value":"0x01" },
                     { "attr_name":"green", "bmc_cmd":"ipmitool raw 0x3A 0x0B 3 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Solid Green", "value":"0x02" },
                     { "attr_name":"amber_blink", "bmc_cmd":"ipmitool raw 0x3A 0x0B 3 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Blinking Amber", "value":"0x03" }
@@ -628,7 +628,7 @@
             {
                 "attr_list":
                 [
-    		    { "attr_name":"Off", "bmc_cmd":"ipmitool raw 0x3A 0x0B 4 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Off", "value":"0x00" },
+                    { "attr_name":"off", "bmc_cmd":"ipmitool raw 0x3A 0x0B 4 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Off", "value":"0x00" },
                     { "attr_name":"amber", "bmc_cmd":"ipmitool raw 0x3A 0x0B 4 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Solid Amber", "value":"0x01" },
                     { "attr_name":"green", "bmc_cmd":"ipmitool raw 0x3A 0x0B 4 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Solid Green", "value":"0x02" },
                     { "attr_name":"amber_blink", "bmc_cmd":"ipmitool raw 0x3A 0x0B 4 | awk '{print substr($0,3,1)}'", "raw":"1", "type":"mask", "mask":"0x3", "descr":"Blinking Amber", "value":"0x03" }

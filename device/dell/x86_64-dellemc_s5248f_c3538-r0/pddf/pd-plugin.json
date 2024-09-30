@@ -29,11 +29,11 @@
         {
             "i2c":
             {
-                "valmap": { "F2B":"Intake", "B2F":"Exhaust" }
+                "valmap": { "F2B":"intake", "B2F":"exhaust" }
             },
             "bmc":
             {
-                "valmap": { "0":"Exhaust", "1":"Intake" }
+                "valmap": { "0":"exhaust", "1":"intake" }
             }
         },
 
@@ -46,7 +46,7 @@
 	    {
 	        "bmc":
 	        {
-                "valmap": {"0":"Exhaust", "1":"Intake"}
+                "valmap": {"0":"exhaust", "1":"intake"}
             }
         },
         "present":

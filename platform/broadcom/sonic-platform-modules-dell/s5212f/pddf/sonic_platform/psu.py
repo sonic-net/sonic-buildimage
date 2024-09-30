@@ -57,5 +57,25 @@ class Psu(PddfPsu):
 
         return ptype
 
+    def get_revision(self):
+        """
+        Retrives thehardware revision of the device
+        Returns:
+            String: revision value of device
+        """
+        revision = "NA"
+        try:
+            command = "ipmitool fru"
+            status, output = subprocess.getstatusoutput(command)
+            if not status:
+                board_info = re.search(r"%s\s*:(.*)" % "Board Serial", output)
+                result = board_info.group(1).strip()
+                if result is not None and len(result) == 23:
+                     revision = result[-3:]
+
+        except:
+            pass
+
+        return revision
 
 

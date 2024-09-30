@@ -15,3 +15,31 @@ class Thermal(PddfThermal):
         PddfThermal.__init__(self, index, pddf_data, pddf_plugin_data, is_psu_thermal, psu_index)
 
     # Provide the functions/variables below for which implementation is to be overwritten
+
+    def get_status(self):
+        """
+        Retrieves the operational status of the thermal
+
+        Returns:
+            A boolean value, True if thermal is operating properly,
+            False if not
+        """
+        return True
+
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the Thermal
+
+        Returns:
+            string: Model/part number of Thermal
+        """
+        return 'NA'
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the Thermal
+
+        Returns:
+            string: Serial number of Thermal
+        """
+        return 'NA'

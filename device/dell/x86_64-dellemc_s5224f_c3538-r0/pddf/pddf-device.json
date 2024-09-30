@@ -5,7 +5,7 @@
         "num_fantrays":4,
         "num_fans_pertray":2,
         "num_ports":28,
-        "num_temps":6,
+        "num_temps":8,
 	    "pddf_dev_types":
         {
             "description":"Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
@@ -441,7 +441,7 @@
 
     "LOC_LED" : 
     { 
-        "dev_info": { "device_type":"LED", "device_name":"SYS_LED" },
+        "dev_info": { "device_type":"LED", "device_name":"LOC_LED" },
         "dev_attr": { "index":"0", "flag":"rw" },
         "bmc": 
         {

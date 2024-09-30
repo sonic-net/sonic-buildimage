@@ -31,4 +31,18 @@ class Fan(PddfFan):
         print("Setting fan speed is not allowed")
         return False
 
+    def get_model(self):
+        """
+        Retrieves the part number of the FAN
+        Returns:
+            String: Part number of FAN
+        """
+        return 'NA'
 
+    def get_serial(self):
+        """
+        Retrieves the serial number of the FAN
+        Returns:
+            String: Serial number of FAN
+        """
+        return 'NA'

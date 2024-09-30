@@ -1678,7 +1678,7 @@
       "ipmitool": {
         "attr_list": [
           {
-            "attr_name": "Off",
+            "attr_name": "off",
             "bmc_cmd": "ipmitool raw 0x3A 0x0B 7 | awk '{print substr($0,3,1)}'",
             "raw": "1",
             "type": "mask",
@@ -1764,7 +1764,7 @@
       "ipmitool": {
         "attr_list": [
           {
-            "attr_name": "Off",
+            "attr_name": "off",
             "bmc_cmd": "ipmitool raw 0x3A 0x0B 5 | awk '{print substr($0,3,1)}'",
             "raw": "1",
             "type": "mask",
@@ -1816,7 +1816,7 @@
       "ipmitool": {
         "attr_list": [
           {
-            "attr_name": "Off",
+            "attr_name": "off",
             "bmc_cmd": "ipmitool raw 0x3A 0x0B 1 | awk '{print substr($0,3,1)}'",
             "raw": "1",
             "type": "mask",
@@ -1868,7 +1868,7 @@
       "ipmitool": {
         "attr_list": [
           {
-            "attr_name": "Off",
+            "attr_name": "off",
             "bmc_cmd": "ipmitool raw 0x3A 0x0B 2 | awk '{print substr($0,3,1)}'",
             "raw": "1",
             "type": "mask",
@@ -1920,7 +1920,7 @@
       "ipmitool": {
         "attr_list": [
           {
-            "attr_name": "Off",
+            "attr_name": "off",
             "bmc_cmd": "ipmitool raw 0x3A 0x0B 3 | awk '{print substr($0,3,1)}'",
             "raw": "1",
             "type": "mask",
@@ -1972,7 +1972,7 @@
       "ipmitool": {
         "attr_list": [
           {
-            "attr_name": "Off",
+            "attr_name": "off",
             "bmc_cmd": "ipmitool raw 0x3A 0x0B 4 | awk '{print substr($0,3,1)}'",
             "raw": "1",
             "type": "mask",

@@ -15,3 +15,16 @@ class Sfp(PddfSfp):
         PddfSfp.__init__(self, index, pddf_data, pddf_plugin_data)
 
     # Provide the functions/variables below for which implementation is to be overwritten
+
+    def get_error_description(self):
+        """
+        Retrives the error descriptions of the SFP module
+        Returns:
+            String that represents the current error descriptions of vendor specific errors
+            In case there are multiple errors, they should be joined by '|',
+            like: "Bad EEPROM|Unsupported cable"
+        """
+        if not self.get_presence():
+            return self.SFP_STATUS_UNPLUGGED
+        else:
+            return self.SFP_STATUS_OK
