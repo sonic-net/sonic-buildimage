@@ -1430,29 +1430,107 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export sonic_asic_platform="$(patsubst %-$(CONFIGURED_ARCH),%,$(CONFIGURED_PLATFORM))"
 	export enable_organization_extensions="$(ENABLE_ORGANIZATION_EXTENSIONS)"
 	export enable_ztp="$(ENABLE_ZTP)"
+	
+	# teamd docker exports for j2
 	export include_teamd="$(INCLUDE_TEAMD)"
+	export enable_teamd="$(ENABLE_TEAMD)"
+	export delay_teamd="$(DELAY_TEAMD)"
+	export autorestart_teamd="$(AUTORESTART_TEAMD)"
+	
+	# router advertiser docker exports for j2
 	export include_router_advertiser="$(INCLUDE_ROUTER_ADVERTISER)"
+	export enable_router_advertiser="$(ENABLE_ROUTER_ADVERTISER)"
+	export delay_router_advertiser="$(DELAY_ROUTER_ADVERTISER)"
+	export autorestart_router_advertiser="$(AUTORESTART_ROUTER_ADVERTISER)"
+	
+	# system telemetry docker exports for j2
+	export include_system_telemetry="$(INCLUDE_SYSTEM_TELEMETRY)"
+	export enable_system_telemetry="$(ENABLE_SYSTEM_TELEMETRY)"
+	export delay_system_telemetry="$(DELAY_SYSTEM_TELEMETRY)"
+	export autorestart_system_telemetry="$(AUTORESTART_SYSTEM_TELEMETRY)"
+	
+	# system gnmi docker exports for j2
+	export include_system_gnmi="$(INCLUDE_SYSTEM_GNMI)"
+	export enable_system_gnmi="$(ENABLE_SYSTEM_GNMI)"
+	export delay_system_gnmi="$(DELAY_SYSTEM_GNMI)"
+	export autorestart_system_gnmi="$(AUTORESTART_SYSTEM_GNMI)"
+
+	# system eventd docker exports for j2
+	export include_system_eventd="$(INCLUDE_SYSTEM_EVENTD)"
+	export enable_system_eventd="$(ENABLE_SYSTEM_EVENTD)"
+	export delay_system_eventd="$(DELAY_SYSTEM_EVENTD)"
+	export autorestart_system_eventd="$(AUTORESTART_SYSTEM_EVENTD)"
+
+	# restapi docker exports for j2
+	export include_restapi="$(INCLUDE_RESTAPI)"
+	export enable_restapi="$(ENABLE_RESTAPI)"
+	export delay_restapi="$(DELAY_RESTAPI)"
+	export autorestart_restapi="$(AUTORESTART_RESTAPI)"
+
+	# nat docker exports for j2 
+	export include_nat="$(INCLUDE_NAT)"
+	export enable_nat="$(ENABLE_NAT)"
+	export delay_nat="$(DELAY_NAT)"
+	export autorestart_nat="$(AUTORESTART_NAT)"
+
+	# p4rt docker exports for j2
+	export include_p4rt="$(INCLUDE_P4RT)"
+	export enable_p4rt="$(ENABLE_P4RT)"
+	export delay_p4rt="$(DELAY_P4RT)"
+	export autorestart_p4rt="$(AUTORESTART_P4RT)"
+
+	# sflow docker exports for j2
+	export include_sflow="$(INCLUDE_SFLOW)"
+	export enable_sflow="$(ENABLE_SFLOW)"
+	export delay_sflow="$(DELAY_SFLOW)"
+	export autorestart_sflow="$(AUTORESTART_SFLOW)"
+
+	# macsec docker exports for j2
+	export include_macsec="$(INCLUDE_MACSEC)"
+	export enable_macsec="$(ENABLE_MACSEC)"
+	export delay_macsec="$(DELAY_MACSEC)"
+	export autorestart_macsec="$(AUTORESTART_MACSEC)""
+
+	# dhcp server docker exports for j2
+	export include_dhcp_server="$(INCLUDE_DHCP_SERVER)"
+	export enable_dhcp_server="$(ENABLE_DHCP_SERVER)"
+	export delay_dhcp_server="$(DELAY_DHCP_SERVER)"
+	export autorestart_dhcp_server="$(AUTORESTART_DHCP_SERVER)"
+
+	# mgmt framework docker exports for j2
+	export include_mgmt_framework="$(INCLUDE_MGMT_FRAMEWORK)"
+	export enable_mgmt_framework="$(ENABLE_MGMT_FRAMEWORK)"
+	export delay_mgmt_framework="$(DELAY_MGMT_FRAMEWORK)"
+	export autorestart_mgmt_framework="$(AUTORESTART_MGMT_FRAMEWORK)"
+
+	# iccpd docker exports for j2
+	export include_iccpd="$(INCLUDE_ICCPD)"
+	export enable_iccpd="$(ENABLE_ICCPD)"
+	export delay_iccpd="$(DELAY_ICCPD)"
+	export autorestart_iccpd="$(AUTORESTART_ICCPD)"
+
+	# pde docker exports for j2
+	export include_pde="$(INCLUDE_PDE)"
+	export enable_pde="$(ENABLE_PDE)"
+	export delay_pde="$(DELAY_PDE)"
+	export autorestart_pde="$(AUTORESTART_PDE)"
+
+	# mux docker exports for j2
+	export include_mux="$(INCLUDE_MUX)"
+	export enable_mux="$(ENABLE_MUX)"
+	export delay_mux="$(DELAY_MUX)"
+	export autorestart_mux="$(AUTORESTART_MUX)"
+
+	export include_system_bmp="$(INCLUDE_SYSTEM_BMP)"
+	
 	export sonic_su_dev_signing_key="$(SECURE_UPGRADE_DEV_SIGNING_KEY)"
 	export sonic_su_signing_cert="$(SECURE_UPGRADE_SIGNING_CERT)"
 	export sonic_su_mode="$(SECURE_UPGRADE_MODE)"
 	export sonic_su_prod_signing_tool="/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL))"
-	export include_system_telemetry="$(INCLUDE_SYSTEM_TELEMETRY)"
-	export include_system_gnmi="$(INCLUDE_SYSTEM_GNMI)"
-	export include_system_bmp="$(INCLUDE_SYSTEM_BMP)"
-	export include_system_eventd="$(INCLUDE_SYSTEM_EVENTD)"
 	export build_reduce_image_size="$(BUILD_REDUCE_IMAGE_SIZE)"
-	export include_restapi="$(INCLUDE_RESTAPI)"
-	export include_nat="$(INCLUDE_NAT)"
-	export include_p4rt="$(INCLUDE_P4RT)"
-	export include_sflow="$(INCLUDE_SFLOW)"
 	export enable_auto_tech_support="$(ENABLE_AUTO_TECH_SUPPORT)"
 	export enable_asan="$(ENABLE_ASAN)"
-	export include_macsec="$(INCLUDE_MACSEC)"
-	export include_dhcp_server="$(INCLUDE_DHCP_SERVER)"
-	export include_mgmt_framework="$(INCLUDE_MGMT_FRAMEWORK)"
-	export include_iccpd="$(INCLUDE_ICCPD)"
 	export pddf_support="$(PDDF_SUPPORT)"
-	export include_pde="$(INCLUDE_PDE)"
 	export shutdown_bgp_on_start="$(SHUTDOWN_BGP_ON_START)"
 	export default_buffer_model="$(SONIC_BUFFER_MODEL)"
 	export include_kubernetes="$(INCLUDE_KUBERNETES)"
@@ -1495,7 +1573,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export components="$(foreach component,$(notdir $^),\
 		$(shell [[ ! -z '$($(component)_VERSION)' && ! -z '$($(component)_NAME)' ]] && \
 			echo $($(component)_NAME)==$($(component)_VERSION)))"
-	export include_mux="$(INCLUDE_MUX)"
 	export include_bootchart="$(INCLUDE_BOOTCHART)"
 	export enable_bootchart="$(ENABLE_BOOTCHART)"
 	export enable_multidb="$(ENABLE_MULTIDB)"
