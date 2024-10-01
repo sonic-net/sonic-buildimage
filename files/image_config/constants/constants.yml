@@ -19,8 +19,8 @@ constants:
       enabled: true
     maximum_paths:
       enabled: true
-      ipv4: 64
-      ipv6: 64
+      ipv4: 512
+      ipv6: 512
     allow_list:
       enabled: true
       default_action: "permit"   # or "deny"
