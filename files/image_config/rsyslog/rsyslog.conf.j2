@@ -110,7 +110,7 @@ $RepeatedMsgReduction on
 
 {% set fmodifier = '!' if filter == 'exclude' else '' %}
 {% set device = vrf if vrf != '' and vrf != 'default' -%}
-{% set template = 'WelfRemoteFormat' if format == 'welf' else 'SONiCFileFormat' -%}
+{% set template = 'WelfRemoteFormat' if format == 'welf' else 'SONiCForwardFormat' -%}
 
 {# Server extra options -#}
 {% set options = '' -%}
