@@ -341,14 +341,13 @@ def parse_chassis_deviceinfo_intf_metadata(device_info, chassis_linecards_info, 
             if linecard_name is not None:
                 key = "%s|%s" % (linecard_name, key)
             system_ports[key] = {
-                "system_port_id": system_port_id,
+                "system_port_id": 0,
                 "switch_id": switch_id,
                 "core_index": core_id,
                 "core_port_index": core_port_id,
                 "speed": intf_speed,
                 "num_voq": num_voq
             }
-            system_port_id += 1
 
         chassis_port_alias.setdefault(slot_index, {}).update(
             {(intf_sonic_name, intf_speed): intf_name})
@@ -362,8 +361,14 @@ def parse_chassis_deviceinfo_intf_metadata(device_info, chassis_linecards_info, 
             port_default_speed.setdefault(slot_index, {}).update(
                 {intf_sonic_name: intf_speed})
 
-    return system_ports, chassis_port_alias, port_default_speed
+    # The above loop with findall("DeviceInterfaceMetadata") was not giving interfaces from minigraph
+    # in document order. So doing an explict sort so that system_port_ids remain same across LCs
+    sorted_system_ports = { key:system_ports[key] for key in sorted(system_ports.keys()) }
+    for k,v in sorted_system_ports.items():
+        v["system_port_id"] = system_port_id
+        system_port_id += 1
 
+    return sorted_system_ports, chassis_port_alias, port_default_speed
 
 
 def parse_chassis_deviceinfo_voq_int_intfs(device_info):
