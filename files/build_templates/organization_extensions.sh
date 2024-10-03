@@ -46,7 +46,9 @@ done
 echo "Executing SONIC Organization Extensions"
 
 ## Place your Organization specific code / scipts here ... 
-
+# TH5 BER estimation script
+sudo cp files/scripts/th5_ber.sh $FILESYSEM_ROOT/usr/local/bin/th5_ber.sh
+sudo chmod +x $FILESYSEM_ROOT/usr/local/bin/th5_ber.sh
 
 echo "SONIC Organization Extensions - Done"
 
