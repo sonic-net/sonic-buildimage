@@ -1,5 +1,4 @@
 #include "rebootbe.h"
-
 #include <google/protobuf/util/json_util.h>
 #include <unistd.h>
 
@@ -15,7 +14,6 @@
 #include "reboot_interfaces.h"
 #include "select.h"
 #include "status_code_util.h"
-#include "warm_restart.h"
 
 namespace rebootbackend {
 
@@ -23,31 +21,22 @@ namespace gpu = ::google::protobuf::util;
 
 bool sigterm_requested = false;
 
-RebootBE::RebootBE(DbusInterface &dbus_interface,
-//                   CriticalStateInterface &critical_interface,
-                   TelemetryInterface &telemetry_interface)
+RebootBE::RebootBE(DbusInterface &dbus_interface)
     : m_db("STATE_DB", 0),
       m_rebootResponse(&m_db, REBOOT_RESPONSE_NOTIFICATION_CHANNEL),
       m_notificationConsumer(&m_db, REBOOT_REQUEST_NOTIFICATION_CHANNEL),
       m_dbus(dbus_interface),
-      //m_critical(critical_interface),
-      m_telemetry(telemetry_interface),
-      m_init_thread(
-          //std::make_unique<InitThread>(critical_interface, telemetry_interface,
-          std::make_unique<InitThread>(telemetry_interface,
-                                       m_init_thread_done, m_stack_unfrozen)),
-      //m_reboot_thread(dbus_interface, critical_interface, telemetry_interface,
-      m_reboot_thread(dbus_interface, telemetry_interface,
+      m_reboot_thread(dbus_interface, 
                       m_reboot_thread_finished) {
   swss::Logger::linkToDbNative("rebootbackend");
 }
 
-RebootBE::NsfManagerStatus RebootBE::GetCurrentStatus() {
+RebootBE::RebManagerStatus RebootBE::GetCurrentStatus() {
   const std::lock_guard<std::mutex> lock(m_status_mutex);
   return m_current_status;
 }
 
-void RebootBE::SetCurrentStatus(NsfManagerStatus new_status) {
+void RebootBE::SetCurrentStatus(RebManagerStatus new_status) {
   const std::lock_guard<std::mutex> lock(m_status_mutex);
   m_current_status = new_status;
 }
@@ -64,21 +53,7 @@ void RebootBE::Start() {
   s.addSelectable(&m_notificationConsumer);
   s.addSelectable(&m_done);
   s.addSelectable(&m_init_thread_done);
-  s.addSelectable(&m_stack_unfrozen);
   s.addSelectable(&m_reboot_thread_finished);
-
-  if (swss::WarmStart::isWarmStart()) {
-    SWSS_LOG_NOTICE("Launching init thread for warm start");
-    SetCurrentStatus(NsfManagerStatus::NSF_INIT_WAIT);
-    swss::StatusCode result = m_init_thread->Start();
-    if (result != swss::StatusCode::SWSS_RC_SUCCESS) {
-      SetCurrentStatus(NsfManagerStatus::IDLE);
-      SWSS_LOG_ERROR("Error launching init thread: %s",
-                     swss::statusCodeToStr(result).c_str());
-    }
-  } else {
-    SWSS_LOG_NOTICE("Warm restart not enabled, not starting init thread");
-  }
 
   SWSS_LOG_NOTICE("RebootBE entering operational loop");
   while (true) {
@@ -91,8 +66,6 @@ void RebootBE::Start() {
     } else if (ret == swss::Select::OBJECT) {
       if (sel == &m_notificationConsumer) {
         do_task(m_notificationConsumer);
-      } else if (sel == &m_stack_unfrozen) {
-        handle_unfreeze();
       } else if (sel == &m_init_thread_done) {
         handle_init_finish();
       } else if (sel == &m_reboot_thread_finished) {
@@ -178,7 +151,7 @@ NotificationResponse RebootBE::handle_reboot_request(
     response.status = swss::StatusCode::SWSS_RC_IN_USE;
     response.json_string =
         "Reboot not allowed at this time. Reboot or "
-        "post-warmboot NSF in progress";
+        "post-warmboot in progress";
     SWSS_LOG_WARN("%s", response.json_string.c_str());
     return response;
   }
@@ -188,25 +161,25 @@ NotificationResponse RebootBE::handle_reboot_request(
   response = m_reboot_thread.Start(request);
   if (response.status == swss::StatusCode::SWSS_RC_SUCCESS) {
     if (request.method() == gnoi::system::RebootMethod::COLD) {
-      SetCurrentStatus(NsfManagerStatus::COLD_REBOOT_IN_PROGRESS);
-    } else if (request.method() == gnoi::system::RebootMethod::NSF) {
-      SetCurrentStatus(NsfManagerStatus::NSF_REBOOT_IN_PROGRESS);
+      SetCurrentStatus(RebManagerStatus::COLD_REBOOT_IN_PROGRESS);
+    } else if (request.method() == gnoi::system::RebootMethod::WARM) {
+      SetCurrentStatus(RebManagerStatus::WARM_REBOOT_IN_PROGRESS);
     }
   }
   return response;
 }
 
 bool RebootBE::reboot_allowed(const gnoi::system::RebootMethod reboot_method) {
-  NsfManagerStatus current_status = GetCurrentStatus();
+  RebManagerStatus current_status = GetCurrentStatus();
   switch (current_status) {
-    case NsfManagerStatus::COLD_REBOOT_IN_PROGRESS:
-    case NsfManagerStatus::NSF_REBOOT_IN_PROGRESS: {
+    case RebManagerStatus::COLD_REBOOT_IN_PROGRESS:
+    case RebManagerStatus::WARM_REBOOT_IN_PROGRESS: {
       return false;
     }
-    case NsfManagerStatus::NSF_INIT_WAIT: {
+    case RebManagerStatus::WARM_INIT_WAIT: {
       return reboot_method == gnoi::system::RebootMethod::COLD;
     }
-    case NsfManagerStatus::IDLE: {
+    case RebManagerStatus::IDLE: {
       return true;
     }
     default: {
@@ -220,9 +193,8 @@ NotificationResponse RebootBE::handle_status_request(
   SWSS_LOG_ENTER();
 
   gnoi::system::RebootStatusResponse reboot_response =
-      m_reboot_thread.HasRun() ? m_reboot_thread.GetResponse()
-                               : m_init_thread->GetResponse();
-
+       			m_reboot_thread.GetResponse();
+                          
   std::string json_reboot_response_string;
   google::protobuf::util::Status status =
       gpu::MessageToJsonString(reboot_response, &json_reboot_response_string);
@@ -286,23 +258,12 @@ void RebootBE::do_task(swss::NotificationConsumer &consumer) {
   send_notification_response(request.op, response.status, response.json_string);
 }
 
-void RebootBE::handle_unfreeze() {
-  SWSS_LOG_ENTER();
-  SWSS_LOG_NOTICE("Receieved notification that UNFREEZE signal has been sent");
-}
-
 void RebootBE::handle_init_finish() {
   SWSS_LOG_ENTER();
   SWSS_LOG_NOTICE("Receieved notification that InitThread is done");
-  NsfManagerStatus current_status = GetCurrentStatus();
-  if (current_status == NsfManagerStatus::NSF_INIT_WAIT) {
-    SetCurrentStatus(NsfManagerStatus::IDLE);
-  }
-  if (m_init_thread->GetResponse().active()) {
-    bool result = m_init_thread->Join();
-    if (!result) {
-      SWSS_LOG_ERROR("Encountered error trying to join init thread");
-    }
+  RebManagerStatus current_status = GetCurrentStatus();
+  if (current_status == RebManagerStatus::WARM_INIT_WAIT) {
+    SetCurrentStatus(RebManagerStatus::IDLE);
   }
 }
 
@@ -312,17 +273,12 @@ void RebootBE::handle_reboot_finish() {
       "Receieved notification that reboot has finished. This probably means "
       "something is wrong");
   m_reboot_thread.Join();
-  SetCurrentStatus(m_init_thread->GetResponse().active()
-                       ? NsfManagerStatus::NSF_INIT_WAIT
-                       : NsfManagerStatus::IDLE);
+  SetCurrentStatus(RebManagerStatus::IDLE);
 }
 
 void RebootBE::handle_done() {
   SWSS_LOG_INFO("RebootBE received signal to stop");
-  if (m_init_thread->GetResponse().active()) {
-    m_init_thread->Stop();
-    m_init_thread->Join();
-  }
+
   if (m_reboot_thread.GetResponse().active()) {
     m_reboot_thread.Stop();
     m_reboot_thread.Join();

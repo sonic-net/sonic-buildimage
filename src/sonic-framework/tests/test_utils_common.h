@@ -15,13 +15,13 @@ namespace rebootbackend {
 class TestUtils {
  public:
   static void wait_for_finish(swss::Select &s, swss::SelectableEvent &finished,
-                              uint32_t timeout_seconds);
+                              long timeout_seconds);
 
   static std::string wait_for_state_verification_trigger(
-      swss::NotificationConsumer &nc, uint32_t timeout_seconds, bool freeze);
+      swss::NotificationConsumer &nc, long timeout_seconds, bool freeze);
 
   static void confirm_no_state_verification_trigger(
-      swss::NotificationConsumer &nc, uint32_t timeout_seconds);
+      swss::NotificationConsumer &nc, long timeout_seconds);
 
   static void populate_registration_table(
       swss::DBConnector &db, const std::string &key, const bool &stop_on_freeze,
@@ -38,11 +38,7 @@ class TestUtils {
 
   static void clear_tables(swss::DBConnector &db);
 
-  static void check_warmboot_enabled(swss::DBConnector &db,
-                                     bool expected_state);
 
-  static void set_state_verification_enable(swss::DBConnector &db, bool bootup,
-                                            bool enabled);
 };
 
 }  // namespace rebootbackend

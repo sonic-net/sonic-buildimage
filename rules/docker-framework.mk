@@ -24,8 +24,8 @@ SONIC_DOCKER_DBG_IMAGES += $(DOCKER_FRAMEWORK_DBG)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_FRAMEWORK_DBG)
 
 $(DOCKER_FRAMEWORK)_CONTAINER_NAME = framework
-$(DOCKER_FRAMEWORK)_RUN_OPT += --privileged -t
-$(DOCKER_FRAMEWORK)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
+$(DOCKER_FRAMEWORK)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw  
+$(DOCKER_FRAMEWORK)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro  
 $(DOCKER_FRAMEWORK)_GIT_REPOSITORIES += "sonic-swss"
 $(DOCKER_FRAMEWORK)_GIT_REPOSITORIES += "sonic-swss-common"
 

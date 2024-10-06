@@ -15,6 +15,6 @@ extern timespec milliseconds_to_timespec(uint64_t time_ms);
 struct NotificationResponse {
   swss::StatusCode status;
   std::string json_string;
-};
+}; 
 
 }  // namespace rebootbackend
