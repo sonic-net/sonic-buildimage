@@ -8,7 +8,7 @@ Standards-Version: 1.0.0
 Package: framework
 Architecture: any
 Depends: ${shlibs:Depends}
-Description: This package contains framework service for GPINs project.
+Description: This package contains framework service.
 
 Package: framework-dbg
 Architecture: any

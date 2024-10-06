@@ -1,6 +1,0 @@
-lint:
-  rules:
-    remove:
-      - ENUM_FIELD_NAMES_PREFIX
-      - ENUM_FIELD_NAMES_ZERO_VALUE_END_WITH
-      - REPEATED_FIELD_NAMES_PLURALIZED
