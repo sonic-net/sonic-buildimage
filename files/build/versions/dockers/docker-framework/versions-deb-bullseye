@@ -1,4 +1,4 @@
-adduser==3.118+deb11u1
+adduser==4.118+deb11u1
 apt==2.2.4
 apt-utils==2.2.4
 base-files==11.1+deb11u9
@@ -226,4 +226,4 @@ vim-common==2:8.2.2434-3+deb11u1
 vim-runtime==2:8.2.2434-3+deb11u1
 vim-tiny==2:8.2.2434-3+deb11u1
 xxd==2:8.2.2434-3+deb11u1
-zlib1g==1:1.2.11.dfsg-2+deb11u2
+zlib1g==1:1.2.11.dfsg-2+deb11u2 

@@ -14,7 +14,7 @@ AC_CHECK_LIB([hiredis], [redisConnect],,
     AC_MSG_ERROR([libhiredis is not installed.]))
 
 PKG_CHECK_MODULES([JANSSON], [jansson])
-
+ 
 AC_ARG_ENABLE(debug,
 [  --enable-debug      Compile with debugging flags],
 [case "${enableval}" in

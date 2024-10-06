@@ -19,7 +19,7 @@ class gnoi_reboot_proxy
 public:
 
     gnoi_reboot_proxy()
-    : ::DBus::InterfaceProxy("org.SONiC.HostService.gnoi_reboot")
+    : ::DBus::InterfaceProxy("org.SONiC.HostService.gnoi_reboot") 
     {
     }
 

@@ -33,6 +33,6 @@ override_dh_auto_configure:
 override_dh_auto_install:
 	dh_auto_install --destdir=debian/framework
 
-override_dh_strip:
+override_dh_strip: 
 	dh_strip -pframework --dbg-package=framework-dbg
 

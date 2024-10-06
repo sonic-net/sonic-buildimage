@@ -25,25 +25,23 @@ class RebootBE {
     std::string ret_string;
   };
 
-  enum class NsfManagerStatus {
-    NSF_INIT_WAIT,
+  enum class RebManagerStatus {
+    WARM_INIT_WAIT,
     IDLE,
     COLD_REBOOT_IN_PROGRESS,
-    NSF_REBOOT_IN_PROGRESS
+    WARM_REBOOT_IN_PROGRESS
   };
 
-  RebootBE(DbusInterface &interface,
-  //         CriticalStateInterface &critical_interface,
-           TelemetryInterface &telemetry_interface);
+  RebootBE(DbusInterface &interface);
 
-  NsfManagerStatus GetCurrentStatus();
+  RebManagerStatus GetCurrentStatus();
 
   void Start();
   void Stop();
 
  private:
   std::mutex m_status_mutex;
-  NsfManagerStatus m_current_status = NsfManagerStatus::IDLE;
+  RebManagerStatus m_current_status = RebManagerStatus::IDLE;
   swss::SelectableEvent m_done;
 
   swss::DBConnector m_db;
@@ -51,19 +49,16 @@ class RebootBE {
   swss::NotificationConsumer m_notificationConsumer;
 
   DbusInterface &m_dbus;
-  //CriticalStateInterface &m_critical;
-  TelemetryInterface &m_telemetry;
 
   // Signals for init thread.
   swss::SelectableEvent m_init_thread_done;
   swss::SelectableEvent m_stack_unfrozen;
-  std::unique_ptr<InitThread> m_init_thread;
 
   // Signalled by reboot thread when thread completes.
   swss::SelectableEvent m_reboot_thread_finished;
   RebootThread m_reboot_thread;
 
-  void SetCurrentStatus(NsfManagerStatus new_status);
+  void SetCurrentStatus(RebManagerStatus new_status);
 
   // Reboot_Request_Channel notifications should all contain {"MESSAGE" : Data}
   // in the notification Data field.
@@ -84,8 +79,8 @@ class RebootBE {
                                   const swss::StatusCode code,
                                   const std::string message);
 
-  // Returns true if a reboot is allowed at this time given the current NSF
-  // manager state and reboot type, and false otherwise.
+  // Returns true if a reboot is allowed at this time given the current 
+  // warm manager state and reboot type, and false otherwise.
   bool reboot_allowed(const gnoi::system::RebootMethod reboot_method);
 
   void do_task(swss::NotificationConsumer &consumer);
