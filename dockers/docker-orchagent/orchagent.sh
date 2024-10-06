@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+HWSKU_DIR=/usr/share/sonic/hwsku
 SWSS_VARS_FILE=/usr/share/sonic/templates/swss_vars.j2
 
 # Retrieve SWSS vars from sonic-cfggen
@@ -64,6 +65,12 @@ elif [ "$platform" == "mellanox" ]; then
     ORCHAGENT_ARGS+=""
 elif [ "$platform" == "innovium" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
+elif [ "$platform" == "marvell-armhf" ]; then
+    ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
+    CREATE_SWITCH_TIMEOUT=`cat $HWSKU_DIR/sai.profile | grep "createSwitchTimeout" | cut -d'=' -f 2`
+    if [[ ! -z $CREATE_SWITCH_TIMEOUT ]]; then
+        ORCHAGENT_ARGS+=" -t $CREATE_SWITCH_TIMEOUT"
+    fi
 else
     # Should we use the fallback MAC in case it is not found in Device.Metadata
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
