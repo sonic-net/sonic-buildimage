@@ -95,10 +95,8 @@ stages:
               mv target/sonic-aboot-broadcom.swi target/sonic-aboot-broadcom-slim.swi
               rm rules/config.user
               rm target/docker-sonic-gnmi.gz
+              rm -rf target/*.squashfs
               echo "==== Finished building slim images"
-              ls fsroot-broadcom || true
-              ls target/*.squashfs || true
-              rm -rf target/*.squashfs || true
               echo "==== Building swi images"
               echo "INCLUDE_DHCP_SERVER = y" >> rules/config.user
               make $OPTIONS target/sonic-aboot-broadcom.swi
