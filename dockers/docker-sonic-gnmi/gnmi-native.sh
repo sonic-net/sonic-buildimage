@@ -74,8 +74,13 @@ fi
 
 # Enable ZMQ for SmartSwitch
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
+PLATFORM=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "platform"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     TELEMETRY_ARGS+=" -zmq_port=8100"
+
+    if [[ $PLATFORM =~ .*nvidia.* ]]; then
+        TELEMETRY_ARGS+=" -zmq_dpu_proxy_address_base=127.0.10.10"
+    fi
 fi
 
 # Add VRF parameter when mgmt-vrf enabled
