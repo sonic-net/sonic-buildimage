@@ -510,8 +510,6 @@ class Sysmonitor(ProcessTaskBase):
     def task_stop(self):
         # Signal the process to stop
         self.task_stopping_event.set()
-        #Clear the resources of mpmgr- Queue
-        self.mpmgr.shutdown()
 
         # Wait for the process to exit
         self._task_process.join(self._stop_timeout_secs)
