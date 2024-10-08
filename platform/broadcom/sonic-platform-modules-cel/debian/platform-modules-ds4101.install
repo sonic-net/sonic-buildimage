@@ -1,0 +1,10 @@
+ds4101/systemd/pddf-platform-init.service etc/systemd/system
+ds4101/service/ds4101-pddf-platform-monitor.service lib/systemd/system
+ds4101/scripts/pddf_pre_driver_install.sh usr/local/bin
+ds4101/scripts/pddf_post_device_create.sh usr/local/bin
+ds4101/scripts/pre_pddf_init.py usr/local/bin
+ds4101/scripts/ds4101_platform_shutdown.sh usr/local/bin
+ds4101/utils/pddf_fan_control_sensor_refresh.py usr/local/bin
+ds4101/utils/FanControl usr/local/bin
+ds4101/pddf/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cel_ds4101-r0/pddf
+services/platform_api/platform_api_mgnt.sh usr/local/bin

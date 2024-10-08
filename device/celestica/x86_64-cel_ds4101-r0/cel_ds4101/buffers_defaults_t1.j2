@@ -1,0 +1,214 @@
+{%- set default_cable = '300m' %}
+
+{%- macro generate_port_lists(PORT_ALL) %}
+    {# Generate list of ports #}
+    {% for port_idx in range(0,32) %}
+        {% if PORT_ALL.append("Ethernet%d" % (port_idx * 4)) %}{% endif %}
+    {% endfor %}
+{%- endmacro %}
+
+{%- macro generate_buffer_pool_and_profiles() %}
+    "BUFFER_POOL": {
+        "egress_lossless_pool": {
+            "mode": "static",
+            "size": "41068498",
+            "type": "egress"
+        },
+        "ingress_lossless_pool": {
+            "mode": "dynamic",
+            "size": "28405074",
+            "type": "ingress",
+            "xoff": "12663424"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "egress_lossless_profile": {
+            "pool": "egress_lossless_pool",
+            "size": "0",
+            "static_th": "28405074"
+        },
+        "egress_lossy_cpu_profile": {
+            "dynamic_th": "-5",
+            "pool": "egress_lossless_pool",
+            "size": "0"
+        },
+        "egress_lossy_profile": {
+            "dynamic_th": "2",
+            "pool": "egress_lossless_pool",
+            "size": "0"
+        },
+        "ingress_lossy_profile": {
+            "pool": "ingress_lossless_pool",
+            "size": "0",
+            "static_th": "41068498"
+        },
+        "pg_lossless_10000_5m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "75438",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_10000_40m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "78740",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_10000_300m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "103378",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_25000_5m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "75438",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_25000_40m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "78740",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_25000_300m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "103378",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_40000_5m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "91694",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_40000_40m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "98298",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_40000_300m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "147574",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_50000_5m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "91694",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_50000_40m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "98298",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_50000_300m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "147574",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_100000_5m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "129032",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_100000_40m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "142240",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_100000_300m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "240538",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_200000_5m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "214122",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_200000_40m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "240792",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_200000_300m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "437134",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_400000_5m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "371348",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_400000_40m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "424434",
+            "xon": "9144",
+            "xon_offset": "9144"
+        },
+        "pg_lossless_400000_300m_profile": {
+            "dynamic_th": "0",
+            "pool": "ingress_lossless_pool",
+            "size": "9144",
+            "xoff": "817372",
+            "xon": "9144",
+            "xon_offset": "9144"
+        }
+    },
+{%- endmacro %}
