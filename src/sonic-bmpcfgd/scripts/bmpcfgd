@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+'''
+bmpcfgd
+Daemon which monitors bmp relevant table enablement from CONFIG_DB, and reset BMP states
+'''
+
+import os
+import sys
+import subprocess
+import syslog
+import signal
+from shutil import copy2
+from datetime import datetime
+from sonic_py_common import device_info
+from sonic_py_common.general import check_output_pipe
+from swsscommon.swsscommon import ConfigDBConnector, DBConnector, Table
+from swsscommon import swsscommon
+from sonic_py_common.daemon_base import DaemonBase
+
+CFG_DB = "CONFIG_DB"
+BMP_STATE_DB = "BMP_STATE_DB"
+REDIS_HOSTIP = "127.0.0.1"
+BMP_TABLE = "BMP"
+
+def is_true(val):
+    return str(val).lower() == 'true'
+
+class BMPCfg(DaemonBase):
+    def __init__(self, state_db_conn):
+        DaemonBase.__init__(self, SYSLOG_IDENTIFIER)
+        self.bgp_neighbor_table  = False
+        self.bgp_rib_in_table  = False
+        self.bgp_rib_out_table  = False
+        self.state_db_conn = state_db_conn
+
+
+    def load(self, data={}):
+        common_config = data.get('table', {})
+
+        self.bgp_neighbor_table = is_true(common_config.get('bgp_neighbor_table', 'false'))
+        self.bgp_rib_in_table = is_true(common_config.get('bgp_rib_in_table', 'false'))
+        self.bgp_rib_out_table = is_true(common_config.get('bgp_rib_out_table', 'false'))
+        self.log_info(f'BMPCfg: update : {self.bgp_neighbor_table}, {self.bgp_rib_in_table}, {self.bgp_rib_out_table}')
+
+        # reset bmp table state once config is changed.
+        self.stop_bmp()
+        self.reset_bmp_table()
+        self.start_bmp()
+
+
+    def cfg_handler(self, data):
+        self.load(data)
+
+
+    def stop_bmp(self):
+        self.log_info('BMPCfg: stop bmp daemon')
+        subprocess.call(["service", "openbmpd", "stop"])
+
+
+    def reset_bmp_table(self):
+        self.log_info('BMPCfg: Reset bmp table from state_db')
+        self.state_db_conn.delete_all_by_pattern(BMP_STATE_DB, 'BGP_NEIGHBOR*')
+        self.state_db_conn.delete_all_by_pattern(BMP_STATE_DB, 'BGP_RIB_IN_TABLE*')
+        self.state_db_conn.delete_all_by_pattern(BMP_STATE_DB, 'BGP_RIB_OUT_TABLE*')
+
+
+    def start_bmp(self):
+        self.log_info('BMPCfg: start bmp daemon')
+        subprocess.call(["service", "openbmpd", "start"])
+
+
+class BMPCfgDaemon:
+    def __init__(self):
+        self.state_db_conn = swsscommon.SonicV2Connector(host=REDIS_HOSTIP)
+        self.state_db_conn.connect(BMP_STATE_DB)
+        self.config_db = ConfigDBConnector()
+        self.config_db.connect(wait_for_init=True, retry_on=True)
+        self.bmpcfg = BMPCfg(self.state_db_conn)
+
+    def bmp_handler(self, key, op, data):
+        data = self.config_db.get_table(BMP_TABLE)
+        self.bmpcfg.cfg_handler(data)
+
+    def register_callbacks(self):
+        self.config_db.subscribe(BMP_TABLE,
+                                 lambda table, key, data:
+                                     self.bmp_handler(key, op, data))
+
+def signal_handler(sig, frame):
+    if sig == signal.SIGHUP:
+        self.log_info("bmpcfgd: signal 'SIGHUP' is caught and ignoring..")
+    elif sig == signal.SIGINT:
+        self.log_info("bmpcfgd: signal 'SIGINT' is caught and exiting...")
+        sys.exit(128 + sig)
+    elif sig == signal.SIGTERM:
+        self.log_info("bmpcfgd: signal 'SIGTERM' is caught and exiting...")
+        sys.exit(128 + sig)
+    else:
+        self.log_info("bmpcfgd: invalid signal - ignoring..")
+
+
+def main():
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGHUP, signal_handler)
+    daemon = BMPCfgDaemon()
+    daemon.register_callbacks()
+
+
+if __name__ == "__main__":
+    main()

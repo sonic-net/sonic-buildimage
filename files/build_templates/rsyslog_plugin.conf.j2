@@ -1,7 +1,6 @@
 ## rsyslog-plugin for streaming telemetry via gnmi
 
-
-
+{% if ENVIRONMENT['EVENTD_STATE'] == "enabled" %}
 template(name="prog_msg" type="list") {
     property(name="msg")
     constant(value="\n")
@@ -16,3 +15,4 @@ if re_match($programname, "{{ proc.name }}") then {
         template="prog_msg")
 }
 {% endfor %}
+{% endif %}

@@ -377,7 +377,8 @@
                 "timezone": "Europe/Kiev",
                 "bgp_router_id": "8.8.8.8",
                 "chassis_hostname": "str-sonic-chassis-1",
-                "slice_type": "AZNG_Production"
+                "slice_type": "AZNG_Production",
+                "nexthop_group": "disabled"
             }
         },
         "VLAN": {
@@ -1446,6 +1447,10 @@
             "TUNNEL": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
+            },
+            "ENI": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
             }
         },
         "FLOW_COUNTER_ROUTE_PATTERN": {
@@ -2448,7 +2453,16 @@
             "POLICIES":{
                 "authentication_retries": "6",
                 "login_timeout": "120",
-                "ports": "22"
+                "ports": "22",
+                "inactivity_timeout": "15",
+                "max_sessions": "0"
+            }
+        },
+
+        "SERIAL_CONSOLE": {
+            "POLICIES":{
+                "inactivity_timeout": "15",
+                "sysrq_capabilities": "disabled"
             }
         },
 
@@ -2677,7 +2691,7 @@
         },
         "MID_PLANE_BRIDGE": {
             "GLOBAL" : {
-                "bridge": "bridge_midplane",
+                "bridge": "bridge-midplane",
                 "ip_prefix": "169.254.200.254/24"
             }
         },
