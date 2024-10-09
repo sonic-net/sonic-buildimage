@@ -1,0 +1,62 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          setup-board
+# Required-Start:    $portmap
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Setup questone2 board.
+### END INIT INFO
+
+
+case "$1" in
+start)
+        echo -n "Setting up board... "
+
+        # Loads kernel modules
+        modprobe questone2_baseboard_cpld
+        modprobe questone2_switchboard
+        modprobe mc24lc64t
+        modprobe optoe
+        modprobe sff_8436_eeprom
+
+        # Add driver to support TLV - EEPROM
+        echo 24lc64t 0x56 > /sys/bus/i2c/devices/i2c-0/new_device
+
+        sleep 2
+        # One platform support two hwskus, auto select the correct hwsku
+        # If label is not either Questone-II or Questone-IIA, then Questone-IIA is used by default 
+        hwsku_file="/usr/share/sonic/device/x86_64-cel_questone_2-r0/default_sku"
+        hwsku=$(decode-syseeprom | grep "Label" | awk '{print $5}')
+        platform_path="/usr/share/sonic/device/x86_64-cel_questone_2-r0/"
+        if [ x$hwsku = x"Questone-II" ];then
+            echo "Questone_2 t1" > $hwsku_file
+            cp ${platform_path}/Questone_2/platform_components.json $platform_path
+            cp ${platform_path}/Questone_2/custom_led.bin $platform_path
+        else
+            echo "Questone_2A t1" > $hwsku_file
+            cp ${platform_path}/Questone_2A/platform_components.json $platform_path
+            cp ${platform_path}/Questone_2A/custom_led.bin $platform_path
+        fi
+
+        echo "done."
+        ;;
+
+stop)
+        echo "done."
+        ;;
+
+force-reload|restart)
+        echo "Not supported"
+        ;;
+
+*)
+        echo "Usage: /etc/init.d/platform-modules-questone2 {start|stop}"
+        exit 1
+        ;;
+esac
+
+exit 0
