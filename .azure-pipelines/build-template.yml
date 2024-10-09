@@ -128,9 +128,9 @@ jobs:
       fi
     displayName: 'Build sonic image'
   - template: cleanup.yml
-  - publish: $(System.DefaultWorkingDirectory)/
+  - publish: $(System.DefaultWorkingDirectory)/sonic-${{ parameters.platform }}.bin
     artifact: sonic-buildimage.${{ parameters.platform }}
-    displayName: "Archive sonic image"
+    displayName: "Archive sonic image bin"
   - script: |
       set -x
       find target -name "*.log" | xargs -I{} cp {} $(Build.ArtifactStagingDirectory)/
