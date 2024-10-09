@@ -109,8 +109,15 @@ def get_expected_running_containers():
             else:
                 always_running_containers.add(container_name)
 
-    if device_info.is_supervisor():
+    if device_info.is_supervisor() or device_info.is_smartswitch():
         always_running_containers.add("database-chassis")
+
+    if device_info.is_smartswitch():
+        raw_dpustable = config_db.get_table("DPUS")
+        for dpu_name in raw_dpustable:
+            container_name = f"databasedpu{dpu_name.replace('dpu', '')}"
+            always_running_containers.add(container_name)
+
     return expected_running_containers, always_running_containers
 
 def get_current_running_from_DB(always_running_containers):

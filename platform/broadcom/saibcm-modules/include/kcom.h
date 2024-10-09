@@ -1,5 +1,6 @@
 /*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+ * $Id: kcom.h,v 1.9 Broadcom SDK $
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,12 +23,9 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/*
- * $Id: kcom.h,v 1.9 Broadcom SDK $
- * $Copyright: (c) 2005 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
+ * 
  *
  * File:    kcom.h
  * Purpose: User/Kernel message definitions
@@ -74,7 +72,7 @@
 #define KCOM_M_CLOCK_CMD        52 /* Clock Commands */
 #define KCOM_M_PCIE_LINK_STATUS 53 /* PCIe link status */
 
-#define KCOM_VERSION            13 /* Protocol version */
+#define KCOM_VERSION            16 /* Protocol version */
 
 /*
  * Message status codes
@@ -137,18 +135,17 @@ typedef struct kcom_msg_hdr_s {
 
 /*
  * Max size of Sand System Headers
- * For DNX, Module Header(20B) + PTCH(2B) + ITMH(5B)
+ * For DNX, Module Header(16B) + PTCH(2B/3B) + ITMH(5B)
  * For DPP, PTCH(2B) + ITMH(4B)
  */
-#define KCOM_NETIF_SYSTEM_HEADERS_SIZE_MAX     27
+#define KCOM_NETIF_SYSTEM_HEADERS_SIZE_MAX     64
 
 typedef struct kcom_netif_s {
     uint16 id;
     uint8 type;
     uint8 flags;
     uint32 cb_user_data;
-    uint8 port;
-    uint8 reserved;
+    uint16 port;
     uint16 vlan;
     uint16 qnum;
     uint8 macaddr[6];
@@ -357,6 +354,7 @@ typedef struct kcom_msg_version_s {
     uint32 version;
     uint32 netif_max;
     uint32 filter_max;
+    uint32 module_reload;
 } kcom_msg_version_t;
 
 /*
@@ -423,20 +421,6 @@ typedef struct kcom_msg_hw_init_s {
     uint8 pkt_hdr_size;
     uint32 dma_hi;
     uint32 cdma_channels;
-    /*
-     * Information to parse Dune system headers
-     */
-    uint32 ftmh_lb_key_ext_size;
-    uint32 ftmh_stacking_ext_size;
-    uint32 pph_base_size;
-    uint32 pph_lif_ext_size[8];
-    uint32 udh_length_type[4];
-    uint32 udh_size;
-    uint32 oamp_punted;
-    uint8 no_skip_udh_check;
-    uint8 oam_dm_tod_exist;
-    uint8 system_headers_mode;
-    uint8 udh_enable;
     /*
      * Bitmap of DMA channels reserved for the user mode network driver.
      * These channels cannot be used by the kernel network driver (KNET).
@@ -593,6 +577,20 @@ typedef struct kcom_msg_dma_info_s {
 typedef struct kcom_msg_hw_info_s {
     kcom_msg_hdr_t hdr;
     kcom_oamp_info_t oamp_info;
+    /*
+     * Information to parse Dune system headers
+     */
+    uint32 ftmh_lb_key_ext_size;
+    uint32 ftmh_stacking_ext_size;
+    uint32 pph_base_size;
+    uint32 pph_lif_ext_size[8];
+    uint32 udh_length_type[4];
+    uint32 udh_size;
+    uint32 oamp_punted;
+    uint8 no_skip_udh_check;
+    uint8 oam_dm_tod_exist;
+    uint8 system_headers_mode;
+    uint8 udh_enable;
 } kcom_msg_hw_info_t;
 
 /*

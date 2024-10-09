@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <lkm/ngbde_ioctl.h>
@@ -35,6 +35,7 @@ ngbde_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     unsigned int num_swdev;
     unsigned int rsrc_type, rsrc_idx;
     unsigned int irq_num, intr_cmd;
+    int rv;
     uint32_t mreg, mval;
 
     if (copy_from_user(&ioc, (void *)arg, sizeof(ioc))) {
@@ -46,6 +47,7 @@ ngbde_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     switch (cmd) {
     case NGBDE_IOC_MOD_INFO:
         ioc.op.mod_info.version = NGBDE_IOC_VERSION;
+        ioc.op.mod_info.compat = NGBDE_COMPAT_IRQ_INIT;
         break;
     case NGBDE_IOC_PROBE_INFO:
         ngbde_swdev_get_all(NULL, &num_swdev);
@@ -61,9 +63,6 @@ ngbde_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         ioc.op.dev_info.device_id = swdev->device_id;
         ioc.op.dev_info.revision = swdev->revision;
         ioc.op.dev_info.model = swdev->model;
-        if (swdev->use_msi) {
-            ioc.op.dev_info.flags |= NGBDE_DEV_F_MSI;
-        }
         break;
     case NGBDE_IOC_PHYS_ADDR:
         swdev = ngbde_swdev_get(ioc.devid);
@@ -156,17 +155,29 @@ ngbde_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         irq_num = ioc.op.irq_reg_add.irq_num;
         ireg.status_reg = ioc.op.irq_reg_add.status_reg;
         ireg.mask_reg = ioc.op.irq_reg_add.mask_reg;
+        ireg.umask = 0;
         ireg.kmask = 0;
         ireg.kmask_valid = false;
-        if (ioc.op.irq_reg_add.flags & NGBDE_DEV_IRQ_REG_F_KMASK) {
+        if (ioc.op.irq_reg_add.flags & NGBDE_IRQ_REG_F_KMASK) {
             ireg.kmask = ioc.op.irq_reg_add.kmask;
             ireg.kmask_valid = true;
         }
-        if (ioc.op.irq_reg_add.flags & NGBDE_DEV_IRQ_REG_F_MASKED) {
+        if (ioc.op.irq_reg_add.flags & NGBDE_IRQ_REG_F_UMASK) {
+            ireg.umask = ioc.op.irq_reg_add.umask;
+        } else {
+            /*
+             * Assign non-kernel bits to user mode driver. Note that
+             * this functionality is intended to provide backward
+             * compatibility.
+             */
+            ireg.umask = ~ioc.op.irq_reg_add.kmask;
+        }
+        ireg.status_is_masked = false;
+        if (ioc.op.irq_reg_add.flags & NGBDE_IRQ_REG_F_MASKED) {
             ireg.status_is_masked = true;
         }
         ireg.mask_w1tc = false;
-        if (ioc.op.irq_reg_add.flags & NGBDE_DEV_IRQ_REG_F_W1TC) {
+        if (ioc.op.irq_reg_add.flags & NGBDE_IRQ_REG_F_W1TC) {
             ireg.mask_w1tc = true;
         }
         if (ngbde_intr_reg_add(ioc.devid, irq_num, &ireg) < 0) {
@@ -176,11 +187,15 @@ ngbde_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             ioc.rc = NGBDE_IOC_FAIL;
         }
         break;
-    case NGBDE_IOC_INTR_ACK_REG_ADD:
-        irq_num = ioc.op.intr_ack_reg_add.irq_num;
-        ackreg.ack_reg = ioc.op.intr_ack_reg_add.ack_reg;
-        ackreg.ack_val = ioc.op.intr_ack_reg_add.ack_val;
-        ackreg.flags = ioc.op.intr_ack_reg_add.flags;
+    case NGBDE_IOC_IACK_REG_ADD:
+        irq_num = ioc.op.iack_reg_add.irq_num;
+        ackreg.ack_valid = true;
+        ackreg.ack_domain = NGBDE_INTR_ACK_IO_DEV;
+        if (ioc.op.iack_reg_add.flags & NGBDE_IACK_REG_F_PAXB) {
+            ackreg.ack_domain = NGBDE_INTR_ACK_IO_PAXB;
+        }
+        ackreg.ack_reg = ioc.op.iack_reg_add.ack_reg;
+        ackreg.ack_val = ioc.op.iack_reg_add.ack_val;
         if (ngbde_intr_ack_reg_add(ioc.devid, irq_num, &ackreg) < 0) {
             printk(KERN_WARNING
                    "%s: Unable to add interrupt ack register\n",
@@ -197,6 +212,14 @@ ngbde_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
                    "%s: Unable to write shared register\n",
                    MOD_NAME);
             ioc.rc = NGBDE_IOC_FAIL;
+        }
+        break;
+    case NGBDE_IOC_IRQ_INIT:
+        rv = ngbde_intr_alloc(ioc.devid, ioc.op.irq_init.irq_max);
+        if (rv < 0) {
+            ioc.rc = NGBDE_IOC_FAIL;
+        } else {
+            ioc.op.irq_init.irq_max = rv;
         }
         break;
     case NGBDE_IOC_PIO_WIN_MAP:

@@ -45,13 +45,13 @@ class DHCPv6_Counter(object):
         self.db = SonicV2Connector(use_unix_socket_path=False)
         self.db.connect(self.db.STATE_DB)
         self.table_name = DHCPv6_COUNTER_TABLE + self.db.get_db_separator(self.db.STATE_DB)
+        self.table_prefix_len = len(self.table_name)
 
     def get_interface(self):
         """ Get all names of all interfaces in DHCPv6_COUNTER_TABLE """
         vlans = []
-        for key in self.db.keys(self.db.STATE_DB):
-            if DHCPv6_COUNTER_TABLE in key:
-                vlans.append(key[21:])
+        for key in self.db.keys(self.db.STATE_DB, self.table_name + "*"):
+            vlans.append(key[self.table_prefix_len:])
         return vlans
 
     def get_dhcp6relay_msg_count(self, interface, msg):

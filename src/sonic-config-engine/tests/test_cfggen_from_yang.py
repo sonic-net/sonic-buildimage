@@ -272,7 +272,9 @@ class TestCfgGen(object):
                 "monErrThreshCrcCells": "1",
                 "monErrThreshRxCells": "61035156",
                 "monPollThreshIsolation": "1",
-                "monPollThreshRecovery": "8"
+                "monPollThreshRecovery": "8",
+                "monCapacityThreshWarn": "10",
+                "monState": "enable"
             }
         })
 
@@ -283,6 +285,7 @@ class TestCfgGen(object):
             "Fabric0": {
                 "alias": "Fabric0",
                 "isolateStatus": "False",
-                "lanes": "0"
+                "lanes": "0",
+                "forceUnisolateStatus": "0"
             }
         })

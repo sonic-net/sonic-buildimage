@@ -1197,7 +1197,9 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
         "monErrThreshCrcCells": "1",
         "monErrThreshRxCells": "61035156",
         "monPollThreshIsolation": "1",
-        "monPollThreshRecovery": "8"
+        "monPollThreshRecovery": "8",
+        "monCapacityThreshWarn": "10",
+        "monState": "enable"
     }
   }
 }
@@ -1211,12 +1213,14 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
     "Fabric0": {
         "alias": "Fabric0",
         "isolateStatus": "False",
-        "lanes": "0"
+        "lanes": "0",
+        "forceUnisolateStatus": "0"
     },
     "Fabric1": {
         "alias": "Fabric1",
         "isolateStatus": "False",
-        "lanes": "1"
+        "lanes": "1",
+        "forceUnisolateStatus": "0"
     }
   }
 }
@@ -2690,20 +2694,41 @@ There are 4 classes
 }
 ```
 
+### SERIAL_CONSOLE
+
+In this table collected configuration of the next serial-console attributes:
+-   inactivity_timeout - Inactivity timeout for serial-console session, allowed values: 0-35000 (minutes), default value: 15
+-   sysrq_capabilities - Enabling or disabling SysRq functionality for serial-console session, allowed values: enabled/disabled, default value disabled
+
+```
+{
+    SERIAL_CONSOLE:{
+        "POLICIES":{
+            "inactivity_timeout": 15
+            "sysrq_capabilities": "disabled"
+        }
+    }
+}
+```
+
 ### SSH_SERVER
 
-In this table, we allow configuring ssh server global settings. This will feature includes 3 configurations:
+In this table, we allow configuring ssh server global settings. This will feature includes 5 configurations:
 
 -   authentication_retries - number of login attepmts 1-100
 -   login_timeout - Timeout in seconds for login session for user to connect 1-600
 -   ports - Ssh port numbers - string of port numbers seperated by ','
+-   inactivity_timeout - Inactivity timeout for SSH session, allowed values: 0-35000 (min), default value: 15 (min)
+-   max_sessions - Max number of concurrent logins, allowed values: 0-100 (where 0 means no limit), default value: 0
 ```
 {
     "SSH_SERVER": {
         "POLICIES":{
             "authentication_retries": "6",
             "login_timeout": "120",
-            "ports": "22"
+            "ports": "22",
+            "inactivity_timeout": "15",
+            "max_sessions": "0"
         }
     }
 }
@@ -2846,7 +2871,7 @@ The MID_PLANE_BRIDGE" table introduces the configuration for the midplane bridge
 {
     "MID_PLANE_BRIDGE": {
         "GLOBAL" : {
-            "bridge": "bridge_midplane",
+            "bridge": "bridge-midplane",
             "ip_prefix": "169.254.200.254/24"
         }
     }

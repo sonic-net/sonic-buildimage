@@ -70,7 +70,7 @@ dbus==1.12.28-0+deb11u1
 dbus-user-session==1.12.28-0+deb11u1
 dconf-gsettings-backend==0.38.0-2
 dconf-service==0.38.0-2
-dctrl-tools==2.24-3+b1
+dctrl-tools==2.24-3
 debhelper==13.3.4
 debian-keyring==2021.07.26
 debootstrap==1.0.123+deb11u2
@@ -106,7 +106,7 @@ docbook-xsl==1.79.2+dfsg-1
 docker-buildx-plugin==0.10.5-1~debian.11~bullseye
 docker-ce==5:24.0.2-1~debian.11~bullseye
 docker-ce-cli==5:24.0.2-1~debian.11~bullseye
-docker-ce-rootless-extras==5:27.1.2-1~debian.11~bullseye
+docker-ce-rootless-extras==5:27.2.0-1~debian.11~bullseye
 docker-compose-plugin==2.18.1-1~debian.11~bullseye
 docutils-common==0.16+dfsg-4
 dosfstools==4.2-1
@@ -114,7 +114,7 @@ doxygen==1.9.1-1
 dpatch==2.0.41
 dpkg-dev==1.20.13
 dput==1.1.0
-dvipng==1.15-1.1+b1
+dvipng==1.15-1.1
 dvisvgm==2.11.1-1
 dwarves==1.20-1
 dwz==0.13+20210201-1
@@ -1295,7 +1295,7 @@ libucx0==1.10.1~rc1+really.1.10.0-1
 libudev-dev==247.3-7+deb11u5
 libudfread0==1.1.1-1
 libunbound8==1.13.1-1+deb11u2
-libunicode-linebreak-perl==0.0.20190101-1+b3
+libunicode-linebreak-perl==0.0.20190101-1+b2
 libunicode-utf8-perl==0.62-1+b2
 libunivocity-parsers-java==2.8.3-2
 libunwind-dev==1.3.2-2

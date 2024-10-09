@@ -5,7 +5,7 @@ bcrypt==3.2.2
 bitarray==2.8.1
 blessed==1.20.0
 blkinfo==0.2.0
-certifi==2024.7.4
+certifi==2024.8.30
 cffi==1.15.1
 charset-normalizer==3.3.2
 click==7.0
@@ -19,13 +19,13 @@ enlighten==1.12.4
 filelock==3.15.4
 grpcio==1.51.1
 grpcio-tools==1.51.1
-idna==3.7
+idna==3.8
 ijson==3.2.3
 ipaddr==2.2.0
 ipaddress==1.0.23
 j2cli==0.3.12b0
 jinja2==3.1.2
-jsondiff==2.2.0
+jsondiff==2.2.1
 jsonpatch==1.33
 jsonpointer==3.0.0
 jsonschema==2.6.0

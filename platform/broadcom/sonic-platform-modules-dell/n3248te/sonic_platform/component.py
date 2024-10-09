@@ -16,7 +16,7 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 def get_bios_version():
-    return subprocess.check_output(['dmidecode', '-s', 'system-version']).strip().decode()
+    return subprocess.check_output(['cat', '/sys/class/dmi/id/bios_version']).strip().decode()
 
 def get_cpld_version(cpld):
     mjr_ver_path = '/sys/devices/platform/dell-n3248te-cpld.0/' + cpld + '_mjr_ver'

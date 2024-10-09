@@ -23,9 +23,10 @@
  *            compilation
  *         d) Make sure the compilation include path includes
  *            'bcmdrd_custom_config.h'
+ *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -38,7 +39,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMDRD_CONFIG_H
@@ -63,7 +64,22 @@
 
 /*! Maximum number of ports per chip supported. */
 #ifndef BCMDRD_CONFIG_MAX_PORTS
-#define BCMDRD_CONFIG_MAX_PORTS                    848
+#define BCMDRD_CONFIG_MAX_PORTS                    1088
+#endif
+
+/*! Maximum number of pipes per chip supported. */
+#ifndef BCMDRD_CONFIG_MAX_PIPES
+#define BCMDRD_CONFIG_MAX_PIPES                    96
+#endif
+
+/*! Maximum size of physical table entries (in bytes). */
+#ifndef BCMDRD_CONFIG_MAX_PT_ENTRY_SIZE
+#define BCMDRD_CONFIG_MAX_PT_ENTRY_SIZE            128
+#endif
+
+/*! Maximum number of interrupt lines per chip supported. */
+#ifndef BCMDRD_CONFIG_MAX_IRQ_LINES
+#define BCMDRD_CONFIG_MAX_IRQ_LINES                16
 #endif
 
 /*! Direct access to memory-mapped registers. */
@@ -144,6 +160,15 @@ CONFIG_OPTION(BCMDRD_CONFIG_MAX_UNITS)
 #endif
 #ifdef BCMDRD_CONFIG_MAX_PORTS
 CONFIG_OPTION(BCMDRD_CONFIG_MAX_PORTS)
+#endif
+#ifdef BCMDRD_CONFIG_MAX_PIPES
+CONFIG_OPTION(BCMDRD_CONFIG_MAX_PIPES)
+#endif
+#ifdef BCMDRD_CONFIG_MAX_PT_ENTRY_SIZE
+CONFIG_OPTION(BCMDRD_CONFIG_MAX_PT_ENTRY_SIZE)
+#endif
+#ifdef BCMDRD_CONFIG_MAX_IRQ_LINES
+CONFIG_OPTION(BCMDRD_CONFIG_MAX_IRQ_LINES)
 #endif
 #ifdef BCMDRD_CONFIG_MEMMAP_DIRECT
 CONFIG_OPTION(BCMDRD_CONFIG_MEMMAP_DIRECT)

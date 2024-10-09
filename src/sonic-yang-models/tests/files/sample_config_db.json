@@ -377,7 +377,8 @@
                 "timezone": "Europe/Kiev",
                 "bgp_router_id": "8.8.8.8",
                 "chassis_hostname": "str-sonic-chassis-1",
-                "slice_type": "AZNG_Production"
+                "slice_type": "AZNG_Production",
+                "nexthop_group": "disabled"
             }
         },
         "VLAN": {
@@ -1386,19 +1387,23 @@
                 "monErrThreshCrcCells": "1",
                 "monErrThreshRxCells": "61035156",
                 "monPollThreshIsolation": "1",
-                "monPollThreshRecovery": "8"
+                "monPollThreshRecovery": "8",
+                "monCapacityThreshWarn": "10",
+                "monState": "enable"
             }
         },
         "FABRIC_PORT": {
             "Fabric0": {
                 "alias": "Fabric0",
                 "isolateStatus": "False",
-                "lanes": "0"
+                "lanes": "0",
+                "forceUnisolateStatus": "0"
             },
             "Fabric1": {
                 "alias": "Fabric1",
                 "isolateStatus": "False",
-                "lanes": "1"
+                "lanes": "1",
+                "forceUnisolateStatus": "0"
             }
         },
         "FLEX_COUNTER_TABLE": {
@@ -1440,6 +1445,10 @@
                 "POLL_INTERVAL": "10000"
             },
             "TUNNEL": {
+                "FLEX_COUNTER_STATUS": "enable",
+                "POLL_INTERVAL": "10000"
+            },
+            "ENI": {
                 "FLEX_COUNTER_STATUS": "enable",
                 "POLL_INTERVAL": "10000"
             }
@@ -2444,7 +2453,16 @@
             "POLICIES":{
                 "authentication_retries": "6",
                 "login_timeout": "120",
-                "ports": "22"
+                "ports": "22",
+                "inactivity_timeout": "15",
+                "max_sessions": "0"
+            }
+        },
+
+        "SERIAL_CONSOLE": {
+            "POLICIES":{
+                "inactivity_timeout": "15",
+                "sysrq_capabilities": "disabled"
             }
         },
 
@@ -2673,7 +2691,7 @@
         },
         "MID_PLANE_BRIDGE": {
             "GLOBAL" : {
-                "bridge": "bridge_midplane",
+                "bridge": "bridge-midplane",
                 "ip_prefix": "169.254.200.254/24"
             }
         },
