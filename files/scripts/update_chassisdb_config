@@ -7,7 +7,7 @@ import syslog
 
 database_config_file = "/var/run/redis/sonic-db/database_config.json"
 redis_chassis = 'redis_chassis'
-chassis_db_list = ['CHASSIS_APP_DB', 'CHASSIS_STATE_DB']
+chassis_db_list = ['CHASSIS_APP_DB', 'CHASSIS_STATE_DB', "CHASSIS_COUNTERS_DB"]
 
 
 def main():
