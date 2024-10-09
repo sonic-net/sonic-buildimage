@@ -72,6 +72,7 @@ function PrintHelp() {
     echo "  -u, --upgrade  Upgrade ASIC firmware using next boot image (useful after SONiC-To-SONiC update)"
     echo "  -s, --syslog   Use syslog logger (enabled when -u|--upgrade)"
     echo "  -v, --verbose  Verbose mode (enabled when -u|--upgrade)"
+    echo "  -c, --clear-semaphore   Clear hw resources before updating firmware"
     echo "  -h, --help     Print help"
     echo
     echo "Examples:"
@@ -94,6 +95,9 @@ function ParseArguments() {
             ;;
             -s|--syslog)
                 SYSLOG_LOGGER="${YES_PARAM}"
+            ;;
+            -c|--clear-semaphore)
+                CLEAR_SEMAPHORE="${YES_PARAM}"
             ;;
             -h|--help)
                 PrintHelp
@@ -182,16 +186,20 @@ function UnlockStateChange() {
 function WaitForDevice() {
     local -i QUERY_RETRY_COUNT_MAX="10"
     local -i QUERY_RETRY_COUNT="0"
+    local SPC_MST_DEV
+    local QUERY_RC=""
 
-    local SPC_MST_DEV=$(GetSPCMstDevice)
-
-    while [[ ("${QUERY_RETRY_COUNT}" -lt "${QUERY_RETRY_COUNT_MAX}") && ("${SPC_MST_DEV}" == "${UNKN_MST}") ]]; do
+    while : ; do
+        SPC_MST_DEV=$(GetSPCMstDevice)
+        ${QUERY_XML} -d ${SPC_MST_DEV} -o ${QUERY_FILE}
+        QUERY_RC="$?"
+        [[ ("${QUERY_RETRY_COUNT}" -lt "${QUERY_RETRY_COUNT_MAX}") && ("${QUERY_RC}" != "${EXIT_SUCCESS}") ]] || break
         sleep 1s
         ((QUERY_RETRY_COUNT++))
-        SPC_MST_DEV=$(GetSPCMstDevice)
+        LogInfo "Retrying MST device query ${QUERY_RETRY_COUNT}"
     done
 
-    if [[ "${SPC_MST_DEV}" == "${UNKN_MST}" ]]; then
+    if [[ "${QUERY_RC}" != "${EXIT_SUCCESS}" ]]; then
         # Couldn't Detect the Spectrum ASIC. Exit failure and print the detailed information
         output=$(${QUERY_CMD})
         failure_msg="${output#*Fail : }"
@@ -232,7 +240,7 @@ function GetSPCMstDevice() {
 
     if [[ ! -c "${_MST_DEVICE}" ]]; then
         echo "${UNKN_MST}"
-    else 
+    else
         echo "${_MST_DEVICE}"
     fi
 
@@ -394,6 +402,15 @@ function Cleanup() {
     fi
 }
 
+function ClearSemaphore() {
+    if [[ "${CLEAR_SEMAPHORE}" == "${YES_PARAM}" ]]; then
+        local -r _MST_DEVICE="$(GetSPCMstDevice)"
+        if [[ "${_MST_DEVICE}" != "${UNKN_MST}" ]]; then
+            /usr/bin/flint -d $_MST_DEVICE --clear_semaphore
+        fi
+    fi
+}
+
 trap Cleanup EXIT
 
 ParseArguments "$@"
@@ -403,6 +420,8 @@ ExitIfQEMU
 LockStateChange
 
 WaitForDevice
+
+ClearSemaphore
 
 if [ "${IMAGE_UPGRADE}" != "${YES_PARAM}" ]; then
     UpgradeFW
