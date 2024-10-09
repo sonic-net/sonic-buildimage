@@ -1,0 +1,105 @@
+{% macro postrotate_action() -%}
+    if [ -f /var/run/rsyslogd.pid ]; then
+        /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+    fi
+{%- endmacro -%}
+
+{% macro postrotate() -%}
+    postrotate
+        {{ postrotate_action() }}
+    endscript
+{%- endmacro -%}
+
+{% macro disk_percentage_treshold_rotation() -%}
+    firstaction
+        # Add threshold
+        THRESHOLD_KB={{ max_logs_size_kb }}
+
+        # First, delete any *.1.gz files that might be left around from a prior incomplete
+        # logrotate execution, otherwise logrotate will fail to do its job
+        find /var/log/ -name '*.1.gz' -type f -exec rm -f {} +
+
+        while true; do
+            USED_KB=$(du -s /var/log | awk '{ print $1; }')
+
+            if [ $USED_KB -lt $THRESHOLD_KB ]; then
+                break
+            else
+                OLDEST_ARCHIVE_FILE=$(find /var/log -type f -printf '%T+ %p\n' | grep -E '.+\.[0-9]+(\.gz)?$' | sort  | awk 'NR == 1 {print $2}')
+
+                if [ -z "$OLDEST_ARCHIVE_FILE" ]; then
+                    logger -p syslog.err -t "logrotate" "No archive file to delete -- potential for filling up /var/log partition!"
+                    break
+                fi
+
+                logger -p syslog.info -t "logrotate" "Deleting archive file $OLDEST_ARCHIVE_FILE to free up space"
+                rm -rf "$OLDEST_ARCHIVE_FILE"
+            fi
+        done
+    endscript
+{%- endmacro -%}
+
+# These logs should no longer get created. However, in case they do get created,
+# we should keep them to a small size and rotate them also.
+/var/log/mail.info
+/var/log/mail.warn
+/var/log/mail.err
+/var/log/mail.log
+/var/log/daemon.log
+/var/log/kern.log
+/var/log/user.log
+/var/log/lpr.log
+/var/log/messages
+{
+    size 10k
+    rotate 1
+    missingok
+    notifempty
+    compress
+    delaycompress
+    sharedscripts
+    {{ postrotate() }}
+}
+
+/var/log/auth.log
+/var/log/cron.log
+/var/log/teamd.log
+/var/log/telemetry.log
+/var/log/gnmi.log
+/var/log/frr/bgpd.log
+/var/log/frr/zebra.log
+/var/log/swss/sairedis*.rec
+/var/log/swss/swss*.rec
+/var/log/swss/responsepublisher.rec
+{
+    size {{ ((common_file_size_mb | float) * 1024 * 1024) | int }}
+    rotate 5000
+    missingok
+    notifempty
+    compress
+    delaycompress
+    nosharedscripts
+    {{ disk_percentage_treshold_rotation() }}
+    postrotate
+        if [ $(echo $1 | grep -c "/var/log/swss/") -gt 0 ]; then
+            # for multi asic platforms, there are multiple orchagents
+            # send the SIGHUP only to the orchagent the which needs log file rotation
+            PLATFORM=`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`
+            ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
+            if [ -f "$ASIC_CONF" ]; then
+                . $ASIC_CONF
+            fi
+            if [ $NUM_ASIC -gt 1 ]; then
+                log_file=$1
+                log_file_name=${log_file#/var/log/swss/}
+                logger -p syslog.info -t "logrotate" "Sending SIGHUP to OA log_file_name: $log_file_name"
+                pgrep -xa orchagent | grep $log_file_name | awk '{ print $1; }' | xargs /bin/kill -HUP 2>/dev/null || true
+            else
+                logger -p syslog.info -t "logrotate" "Sending SIGHUP to OA log_file_name: $1"
+                pgrep -x orchagent | xargs /bin/kill -HUP 2>/dev/null || true
+            fi
+        else
+            {{ postrotate_action() }}
+        fi
+    endscript
+}
