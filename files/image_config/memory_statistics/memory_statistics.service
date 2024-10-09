@@ -1,0 +1,12 @@
+[Unit]
+Description=Memory Statistics Daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/memorystatsd
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=-/etc/memorystats.conf
+
+[Install]
+WantedBy=multi-user.target
