@@ -1,0 +1,14 @@
+[Unit]
+Description=Enable Receive Packet Steering (RPS) in kernel
+After=swss.service
+BindsTo=sonic.target
+After=sonic.target
+
+[Service]
+User=root
+Type=oneshot
+ExecStart=/usr/bin/rps.py
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sonic.target
