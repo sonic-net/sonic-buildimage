@@ -1,0 +1,10 @@
+{
+    "AUDITD_TEST": {
+        "desc": "Configure AUDITD table."
+    },
+    "AUDITD_INVALID_TEST": {
+        "desc": "Configure AUDITD table with invalid state.",
+        "eStrKey" : "Pattern",
+        "eStr": ["enabled|disabled"]
+    }
+}
