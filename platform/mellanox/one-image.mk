@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2017-2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2017-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,5 +28,5 @@ $(SONIC_ONE_IMAGE)_DOCKERS += $(filter-out $(patsubst %-$(DBG_IMAGE_MARK).gz,%.g
 else
 $(SONIC_ONE_IMAGE)_DOCKERS = $(SONIC_INSTALL_DOCKER_IMAGES)
 endif
-$(SONIC_ONE_IMAGE)_FILES += $(MLNX_FILES)
+$(SONIC_ONE_IMAGE)_FILES += $(MLNX_FILES) $(MLNX_CPLD_ARCHIVES)
 SONIC_INSTALLERS += $(SONIC_ONE_IMAGE)
