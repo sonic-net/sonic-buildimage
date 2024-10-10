@@ -30,6 +30,24 @@ COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor/"]
 
+# Install make and git for compiling librdb
+RUN apt-get -y install build-essential git
+
+# Obtain librdb source codes
+RUN git clone https://github.com/redis/librdb.git
+
+# Build librdb
+RUN cd ./librdb/;git checkout b401df1e7025501c24f0c852aa32f6900fd888f7;git submodule update --init --recursive;make;cd ..
+
+# Install rdb-cli
+RUN install -p -D -m 0775 ./librdb/bin/rdb-cli /usr/bin/rdb-cli
+
+# Clear librdb source codes
+RUN rm -rf ./librdb
+
+# Uninstall make and git for compiling librdb
+RUN apt-get -y purge build-essential git
+
 ## Clean up
 RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
 RUN rm -rf /debs
