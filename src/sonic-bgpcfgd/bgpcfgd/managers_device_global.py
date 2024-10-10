@@ -1,11 +1,17 @@
+import re
+import jinja2
+
 from .manager import Manager
 from .log import log_err, log_debug, log_notice
-import re
 from swsscommon import swsscommon
 from sonic_py_common import device_info
 
 class DeviceGlobalCfgMgr(Manager):
     """This class responds to change in device-specific state"""
+
+    TSA_DEFAULTS = "false"
+    WCMP_DEFAULTS = "false"
+    IDF_DEFAULTS = "unisolated"
 
     def __init__(self, common_objs, db, table):
         """
@@ -21,6 +27,7 @@ class DeviceGlobalCfgMgr(Manager):
         self.constants = common_objs['constants']
         self.tsa_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.isolate.conf.j2")
         self.tsb_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.unisolate.conf.j2")
+        self.wcmp_template = common_objs['tf'].from_file("bgpd/wcmp/bgpd.wcmp.conf.j2")
         self.idf_isolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_isolate.conf.j2")
         self.idf_unisolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_unisolate.conf.j2")
         self.directory.subscribe([("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/switch_type"),], self.on_switch_type_change)
@@ -31,6 +38,16 @@ class DeviceGlobalCfgMgr(Manager):
             table,
         )
 
+        # By default TSA feature is disabled
+        if not self.directory.path_exist(self.db_name, self.table_name, "tsa_enabled"):
+            self.directory.put(self.db_name, self.table_name, "tsa_enabled", self.TSA_DEFAULTS)
+        # By default W-ECMP feature is disabled
+        if not self.directory.path_exist(self.db_name, self.table_name, "wcmp_enabled"):
+            self.directory.put(self.db_name, self.table_name, "wcmp_enabled", self.WCMP_DEFAULTS)
+        # By default IDF feature is unisolated
+        if not self.directory.path_exist(self.db_name, self.table_name, "idf_isolation_state"):
+            self.directory.put(self.db_name, self.table_name, "idf_isolation_state", self.IDF_DEFAULTS)
+
     def on_switch_type_change(self):
         log_debug("DeviceGlobalCfgMgr:: Switch type update handler")
         if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/switch_type"):
@@ -38,43 +55,115 @@ class DeviceGlobalCfgMgr(Manager):
         log_debug("DeviceGlobalCfgMgr:: Switch type: %s" % self.switch_type)
 
     def set_handler(self, key, data):
+        """ Handle device TSA/W-ECMP state change """
         log_debug("DeviceGlobalCfgMgr:: set handler")
+
         if self.switch_type:
             log_debug("DeviceGlobalCfgMgr:: Switch type: %s" % self.switch_type)
-        """ Handle device tsa_enabled state change """
         if not data:
             log_err("DeviceGlobalCfgMgr:: data is None")
             return False
 
-        tsa_status = "false"
-        idf_isolation_state = "unisolated"
+        # TSA configuration
+        self.configure_tsa(data)
+        # W-ECMP configuration
+        self.configure_wcmp(data)
+        # IDF configuration
+        self.configure_idf(data)
 
-        if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "tsa_enabled"):
-            tsa_status = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME)["tsa_enabled"]
-        if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "idf_isolation_state"):
-            idf_isolation_state = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME)["idf_isolation_state"]
-
-        if "tsa_enabled" in data:
-            self.directory.put(self.db_name, self.table_name, "tsa_enabled", data["tsa_enabled"])
-
-            self.chassis_tsa = self.get_chassis_tsa_status()
-            if self.chassis_tsa == "false" and tsa_status != data["tsa_enabled"]:
-                self.cfg_mgr.commit()
-                self.cfg_mgr.update()
-                self.isolate_unisolate_device(data["tsa_enabled"])
-
-        if "idf_isolation_state" in data:
-            self.directory.put(self.db_name, self.table_name, "idf_isolation_state", data["idf_isolation_state"])
-            if idf_isolation_state != data["idf_isolation_state"]:
-                if self.switch_type and self.switch_type != "SpineRouter":
-                    log_debug("DeviceGlobalCfgMgr:: Skipping IDF isolation configuration on Switch type: %s" % self.switch_type)
-                    return True
-                self.downstream_isolate_unisolate(data["idf_isolation_state"])
-            
         return True
 
     def del_handler(self, key):
         log_debug("DeviceGlobalCfgMgr:: del handler")
+
+        # TSA configuration
+        self.configure_tsa()
+        # W-ECMP configuration
+        self.configure_wcmp()
+        # IDF configuration
+        self.configure_idf()
+
+        return True
+
+    def is_update_required(self, key, value):
+        if self.directory.path_exist(self.db_name, self.table_name, key):
+            return value != self.directory.get(self.db_name, self.table_name, key)
+        return True
+
+    def configure_tsa(self, data=None):
+        """ Configure TSA feature"""
+
+        state = self.TSA_DEFAULTS
+
+        if data is not None:
+            if "tsa_enabled" in data:
+                state = data["tsa_enabled"]
+
+        self.chassis_tsa = self.get_chassis_tsa_status()
+
+        if self.chassis_tsa == "false" and self.is_update_required("tsa_enabled", state):
+            self.cfg_mgr.commit()
+            self.cfg_mgr.update()
+            if self.isolate_unisolate_device(state):
+                self.directory.put(self.db_name, self.table_name, "tsa_enabled", state)
+        else:
+            log_notice("DeviceGlobalCfgMgr:: TSA configuration is up-to-date")
+
+    def configure_wcmp(self, data=None):
+        """ Configure W-ECMP feature"""
+
+        state = self.WCMP_DEFAULTS
+
+        if data is not None:
+            if "wcmp_enabled" in data:
+                state = data["wcmp_enabled"]
+
+        if self.is_update_required("wcmp_enabled", state):
+            if self.set_wcmp(state):
+                self.directory.put(self.db_name, self.table_name, "wcmp_enabled", state)
+        else:
+            log_notice("DeviceGlobalCfgMgr:: W-ECMP configuration is up-to-date")
+
+    def configure_idf(self, data=None):
+        """ Configure IDF feature"""
+
+        state = self.IDF_DEFAULTS
+
+        if data is not None:
+            if "idf_isolation_state" in data:
+                state = data["idf_isolation_state"]
+
+        if self.is_update_required("idf_isolation_state", state):
+            if self.downstream_isolate_unisolate(state):
+                self.directory.put(self.db_name, self.table_name, "idf_isolation_state", state)
+        else:
+            log_notice("DeviceGlobalCfgMgr:: IDF configuration is up-to-date")
+
+    def set_wcmp(self, status):
+        """ API to set/unset W-ECMP """
+
+        if status not in ["true", "false"]:
+            log_err("W-ECMP: invalid value({}) is provided".format(status))
+            return False
+
+        if status == "true":
+            log_notice("DeviceGlobalCfgMgr:: Enabling W-ECMP...")
+        else:
+            log_notice("DeviceGlobalCfgMgr:: Disabling W-ECMP...")
+
+        cmd = "\n"
+
+        try:
+            cmd += self.wcmp_template.render(wcmp_enabled=status)
+        except jinja2.TemplateError as e:
+            msg = "W-ECMP: error in template rendering"
+            log_err("%s: %s" % (msg, str(e)))
+            return False
+
+        self.cfg_mgr.push(cmd)
+
+        log_debug("DeviceGlobalCfgMgr::Done")
+
         return True
 
     def check_state_and_get_tsa_routemaps(self, cfg):
@@ -92,6 +181,11 @@ class DeviceGlobalCfgMgr(Manager):
 
     def isolate_unisolate_device(self, tsa_status):
         """ API to get TSA/TSB route-maps and apply configuration"""
+
+        if tsa_status not in ["true", "false"]:
+            log_err("TSA: invalid value({}) is provided".format(tsa_status))
+            return False
+
         cmd = "\n"
         if tsa_status == "true":
             log_notice("DeviceGlobalCfgMgr:: Device isolated. Executing TSA")
@@ -102,6 +196,8 @@ class DeviceGlobalCfgMgr(Manager):
 
         self.cfg_mgr.push(cmd)
         log_debug("DeviceGlobalCfgMgr::Done")
+
+        return True
 
     def get_ts_routemaps(self, cmds, ts_template):
         if not cmds:
@@ -154,6 +250,16 @@ class DeviceGlobalCfgMgr(Manager):
         return chassis_tsa_status
 
     def downstream_isolate_unisolate(self, idf_isolation_state):
+        """ API to apply IDF configuration """
+
+        if idf_isolation_state not in ["unisolated", "isolated_withdraw_all", "isolated_no_export"]:
+            log_err("IDF: invalid value({}) is provided".format(idf_isolation_state))
+            return False
+
+        if self.switch_type and self.switch_type != "SpineRouter":
+            log_debug("DeviceGlobalCfgMgr:: Skipping IDF isolation configuration on Switch type: %s" % self.switch_type)
+            return True
+
         cmd = "\n"
         if idf_isolation_state == "unisolated":
             cmd += self.idf_unisolate_template.render(constants=self.constants)
@@ -165,12 +271,17 @@ class DeviceGlobalCfgMgr(Manager):
         self.cfg_mgr.push(cmd)
         log_debug("DeviceGlobalCfgMgr::Done")
 
+        return True
+
     def check_state_and_get_idf_isolation_routemaps(self):
         """ API to get TSA route-maps if device is isolated"""
+
         cmd = ""
+
         if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "idf_isolation_state"):
             idf_isolation_state = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME)["idf_isolation_state"]
-            if idf_isolation_state != "unisolated":                
+            if idf_isolation_state != "unisolated":
                 log_notice("DeviceGlobalCfgMgr:: IDF is isolated. Applying required route-maps")
-                cmd = self.idf_isolate_template.render(isolation_status=idf_isolation_state, constants=self.constants)           
+                cmd = self.idf_isolate_template.render(isolation_status=idf_isolation_state, constants=self.constants)
+
         return cmd

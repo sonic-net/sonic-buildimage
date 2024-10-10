@@ -12,22 +12,39 @@ module sonic-bgp-device-global {
     description
         "SONIC Device-specific BGP global data";
 
+    revision 2024-01-28 {
+        description "Add Weighted ECMP using BGP link bandwidth";
+    }
+
     revision 2022-06-26 {
-        description
-            "Initial revision";
+        description "Initial revision";
     }
 
     container sonic-bgp-device-global {
+
         container BGP_DEVICE_GLOBAL {
+
+            description "BGP_DEVICE_GLOBAL part of config_db.json";
+
             container STATE {
+
                 description "BGP device-specific global data";
+
                 leaf tsa_enabled {
                     type boolean;
                     default "false";
                     description
                     "When set to true, Traffic is shifted away (TSA), i.e, BGP routes are not advertised to neighboring routers";
                 }
+
+                leaf wcmp_enabled {
+                    description "Enables/Disables Weighted-Equal Cost-Multipath using BGP link bandwidth";
+                    type boolean;
+                    default "false";
+                }
+
                 leaf idf_isolation_state {
+                    description "Configures device IDF isolation state";
                     type enumeration {
                         enum isolated_no_export {
                             description "IDF isolated using no-export community tag";
@@ -39,12 +56,14 @@ module sonic-bgp-device-global {
                             description "IDF un-isolated";
                         }
                     }
-                    default unisolated;
+                    default "unisolated";
                 }
-            } /* end of STATE container */
-        } /* end of BGP_DEVICE_GLOBAL container */
 
-    } /* end of top level container */
-
-} /* end of module sonic-bgp-device-global */
-
+            }
+            /* end of STATE container */
+        }
+        /* end of BGP_DEVICE_GLOBAL container */
+    }
+    /* end of container sonic-bgp-device-global */
+}
+/* end of module sonic-bgp-device-global */

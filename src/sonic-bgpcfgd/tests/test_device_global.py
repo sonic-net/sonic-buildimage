@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import MagicMock, patch
 
 import os
@@ -9,15 +10,24 @@ import bgpcfgd.managers_device_global
 from swsscommon import swsscommon
 from copy import deepcopy
 
+#
+# Constants -----------------------------------------------------------------------------------------------------------
+#
+
 TEMPLATE_PATH = os.path.abspath('../../dockers/docker-fpm-frr/frr')
 BASE_PATH = os.path.abspath('../sonic-bgpcfgd/tests/data/general/peer-group.conf/')
 INTERNAL_BASE_PATH = os.path.abspath('../sonic-bgpcfgd/tests/data/internal/peer-group.conf/')
+WCMP_BASE_PATH = os.path.abspath('../sonic-bgpcfgd/tests/data/wcmp/')
 global_constants = {
     "bgp":  {
         "traffic_shift_community" :"12345:12345",
         "internal_community_match_tag" : "1001"
     }
 }
+
+#
+# Helpers -------------------------------------------------------------------------------------------------------------
+#
 
 def constructor(check_internal=False):
     cfg_mgr = MagicMock()
@@ -54,6 +64,9 @@ def constructor(check_internal=False):
     cfg_mgr.update()
     return mgr
 
+#
+# TSA -----------------------------------------------------------------------------------------------------------------
+#
 
 @patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.get_chassis_tsa_status')
 @patch('bgpcfgd.managers_device_global.log_debug')
@@ -72,32 +85,6 @@ def test_isolate_device(mocked_log_info, mock_get_chassis_tsa_status):
     assert res, "Expect True return value for set_handler"
     assert m.cfg_mgr.get_config() == curr_cfg
 
-
-@patch('bgpcfgd.managers_device_global.log_debug')
-def test_idf_isolation_no_export(mocked_log_info): 
-    m = constructor()
-    res = m.set_handler("STATE", {"idf_isolation_state": "isolated_no_export"})
-    assert res, "Expect True return value for set_handler"
-    mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
-    assert m.cfg_mgr.get_config() == get_string_from_file("/result_all_idf_isolated_no_export.conf")
-
-@patch('bgpcfgd.managers_device_global.log_debug')
-def test_idf_isolation_withdraw_all(mocked_log_info): 
-    m = constructor()
-    res = m.set_handler("STATE", {"idf_isolation_state": "isolated_withdraw_all"})
-    assert res, "Expect True return value for set_handler"
-    mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
-    assert m.cfg_mgr.get_config() == get_string_from_file("/result_all_idf_isolated_withdraw_all.conf")
-
-@patch('bgpcfgd.managers_device_global.log_debug')
-def test_idf_unisolation(mocked_log_info): 
-    m = constructor()
-    m.directory.put(m.db_name, m.table_name, "idf_isolation_state", "isolated_no_export")
-    res = m.set_handler("STATE", {"idf_isolation_state": "unisolated"})
-    assert res, "Expect True return value for set_handler"
-    mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
-    assert m.cfg_mgr.get_config() == get_string_from_file("/result_all_idf_unisolated.conf")
-
 @patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.get_chassis_tsa_status')
 @patch('bgpcfgd.managers_device_global.log_debug')
 def test_isolate_device_internal_session(mocked_log_info, mock_get_chassis_tsa_status):
@@ -115,13 +102,13 @@ def test_isolate_device_internal_session(mocked_log_info, mock_get_chassis_tsa_s
     assert res, "Expect True return value for set_handler"
     assert m.cfg_mgr.get_config() == curr_cfg
 
-
 @patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.get_chassis_tsa_status')
 @patch('bgpcfgd.managers_device_global.log_debug')
 def test_unisolate_device(mocked_log_info, mock_get_chassis_tsa_status):
     m = constructor()
 
     mock_get_chassis_tsa_status.return_value = "false"
+    # By default feature is disabled. Simulate enabled state
     m.directory.put(m.db_name, m.table_name, "tsa_enabled", "true")
 
     res = m.set_handler("STATE", {"tsa_enabled": "false"})
@@ -135,14 +122,14 @@ def test_unisolate_device(mocked_log_info, mock_get_chassis_tsa_status):
     assert res, "Expect True return value for set_handler"
     assert m.cfg_mgr.get_config() == curr_cfg
 
-
 @patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.get_chassis_tsa_status')
 @patch('bgpcfgd.managers_device_global.log_debug')
 def test_unisolate_device_internal_session(mocked_log_info, mock_get_chassis_tsa_status):
     m = constructor(check_internal=True)
 
     mock_get_chassis_tsa_status.return_value = "false"
-    m.directory.put(m.db_name, m.table_name, "tsa_enabled", "true")    
+    # By default feature is disabled. Simulate enabled state
+    m.directory.put(m.db_name, m.table_name, "tsa_enabled", "true")
 
     res = m.set_handler("STATE", {"tsa_enabled": "false"})
     assert res, "Expect True return value for set_handler"
@@ -154,7 +141,6 @@ def test_unisolate_device_internal_session(mocked_log_info, mock_get_chassis_tsa
     res = m.set_handler("STATE", {"tsa_enabled": "false"})
     assert res, "Expect True return value for set_handler"
     assert m.cfg_mgr.get_config() == curr_cfg
-
 
 @patch('bgpcfgd.managers_device_global.DeviceGlobalCfgMgr.get_chassis_tsa_status')
 def test_check_state_and_get_tsa_routemaps(mock_get_chassis_tsa_status):
@@ -179,17 +165,6 @@ def test_check_state_and_get_tsa_routemaps(mock_get_chassis_tsa_status):
     m.set_handler("STATE", {"tsa_enabled": "false"})
     res = m.check_state_and_get_tsa_routemaps(m.cfg_mgr.get_config())
     assert res == get_string_from_file("/result_isolate.conf")
-
-
-def test_check_state_and_get_idf_isolation_routemaps():
-    m = constructor()
-    m.set_handler("STATE", {"idf_isolation_state": "isolated_no_export"})
-    res = m.check_state_and_get_idf_isolation_routemaps()
-    assert res == get_string_from_file("/result_idf_isolated.conf")
-
-    m.set_handler("STATE", {"idf_isolation_state": "unisolated"})
-    res = m.check_state_and_get_idf_isolation_routemaps()
-    assert res == ""
 
 def test_get_tsa_routemaps():
     m = constructor()
@@ -226,3 +201,105 @@ def test_del_handler():
     res = m.del_handler("STATE")
     assert res, "Expect True return value for del_handler"
 
+@pytest.mark.parametrize(
+    "value", [ "invalid_value" ]
+)
+@patch('bgpcfgd.managers_device_global.log_err')
+def test_tsa_neg(mocked_log_err, value):
+    m = constructor()
+    m.cfg_mgr.changes = ""
+    res = m.set_handler("STATE", {"tsa_enabled": value})
+    assert res, "Expect True return value for set_handler"
+    mocked_log_err.assert_called_with("TSA: invalid value({}) is provided".format(value))
+
+#
+# W-ECMP --------------------------------------------------------------------------------------------------------------
+#
+
+@pytest.mark.parametrize(
+    "value,result", [
+        pytest.param(
+            "true",
+            get_string_from_file("/wcmp.set.conf", WCMP_BASE_PATH),
+            id="enabled"
+        ),
+        pytest.param(
+            "false",
+            get_string_from_file("/wcmp.unset.conf", WCMP_BASE_PATH),
+            id="disabled"
+        )
+    ]
+)
+@patch('bgpcfgd.managers_device_global.log_debug')
+def test_wcmp(mocked_log_info, value, result):
+    m = constructor()
+    m.cfg_mgr.changes = ""
+    if value == "false":
+        # By default feature is disabled. Simulate enabled state
+        m.directory.put(m.db_name, m.table_name, "wcmp_enabled", "true")
+    res = m.set_handler("STATE", {"wcmp_enabled": value})
+    assert res, "Expect True return value for set_handler"
+    mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
+    assert m.cfg_mgr.get_config() == result
+
+@pytest.mark.parametrize(
+    "value", [ "invalid_value" ]
+)
+@patch('bgpcfgd.managers_device_global.log_err')
+def test_wcmp_neg(mocked_log_err, value):
+    m = constructor()
+    m.cfg_mgr.changes = ""
+    res = m.set_handler("STATE", {"wcmp_enabled": value})
+    assert res, "Expect True return value for set_handler"
+    mocked_log_err.assert_called_with("W-ECMP: invalid value({}) is provided".format(value))
+
+#
+# IDF -----------------------------------------------------------------------------------------------------------------
+#
+
+@patch('bgpcfgd.managers_device_global.log_debug')
+def test_idf_isolation_no_export(mocked_log_info):
+    m = constructor()
+    res = m.set_handler("STATE", {"idf_isolation_state": "isolated_no_export"})
+    assert res, "Expect True return value for set_handler"
+    mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
+    assert m.cfg_mgr.get_config() == get_string_from_file("/result_all_idf_isolated_no_export.conf")
+
+@patch('bgpcfgd.managers_device_global.log_debug')
+def test_idf_isolation_withdraw_all(mocked_log_info):
+    m = constructor()
+    res = m.set_handler("STATE", {"idf_isolation_state": "isolated_withdraw_all"})
+    assert res, "Expect True return value for set_handler"
+    mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
+    assert m.cfg_mgr.get_config() == get_string_from_file("/result_all_idf_isolated_withdraw_all.conf")
+
+@patch('bgpcfgd.managers_device_global.log_debug')
+def test_idf_unisolation(mocked_log_info):
+    m = constructor()
+    # By default feature is unisolated. Simulate a different state
+    m.directory.put(m.db_name, m.table_name, "idf_isolation_state", "isolated_no_export")
+    res = m.set_handler("STATE", {"idf_isolation_state": "unisolated"})
+    assert res, "Expect True return value for set_handler"
+    mocked_log_info.assert_called_with("DeviceGlobalCfgMgr::Done")
+    assert m.cfg_mgr.get_config() == get_string_from_file("/result_all_idf_unisolated.conf")
+
+def test_check_state_and_get_idf_isolation_routemaps():
+    m = constructor()
+    m.set_handler("STATE", {"idf_isolation_state": "isolated_no_export"})
+    res = m.check_state_and_get_idf_isolation_routemaps()
+    assert res == get_string_from_file("/result_idf_isolated.conf")
+
+    m.set_handler("STATE", {"idf_isolation_state": "unisolated"})
+    res = m.check_state_and_get_idf_isolation_routemaps()
+    assert res == ""
+
+@pytest.mark.parametrize(
+    "value", [ "invalid_value" ]
+)
+@patch('bgpcfgd.managers_device_global.log_err')
+def test_idf_neg(mocked_log_err, value):
+    m = constructor()
+    m.cfg_mgr.changes = ""
+    res = m.set_handler("STATE", {"idf_isolation_state": value})
+    assert res, "Expect True return value for set_handler"
+    mocked_log_err.assert_called_with("IDF: invalid value({}) is provided".format(value))

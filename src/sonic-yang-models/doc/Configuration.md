@@ -384,6 +384,7 @@ The **BGP_BBR** table contains device-level BBR state.
         }
 }
 ```
+
 ### ASIC SDK health event
 
 ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HEALTH_EVENT** table.
@@ -407,21 +408,43 @@ ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HE
 
 ### BGP Device Global
 
-The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state. 
-It has a STATE object containing device state like **tsa_enabled** 
-which is set to true if device is currently isolated using 
-traffic-shift-away (TSA) route-maps in BGP. It also holds IDF isolation state
-which could be one of isolated_no_export, isolated_withdraw_all or unisolated
+The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.  
+It has a STATE object containing device state like **tsa_enabled**, **wcmp_enabled** and **idf_isolation_state**.
 
-```
+When **tsa_enabled** is set to true, the device is isolated using traffic-shift-away (TSA) route-maps in BGP.
+
+```json
 {
 "BGP_DEVICE_GLOBAL": {
     "STATE": {
-        "tsa_enabled": "true",
+        "tsa_enabled": "true"
+    }
+}
+```
+
+When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.  
+Weighted ECMP load balances traffic between the equal cost paths in proportion to the capacity of the local links.
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
+        "wcmp_enabled": "true"
+    }
+}
+```
+
+The IDF isolation state **idf_isolation_state** could be one of isolated_no_export, isolated_withdraw_all or unisolated.
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
         "idf_isolation_state": "isolated_no_export"
     }
 }
 ```
+
 ### BGP Sessions
 
 BGP session configuration is defined in **BGP_NEIGHBOR** table. BGP
