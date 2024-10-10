@@ -1,7 +1,10 @@
-From df1d28fcc12d4f5541c9335115887d31e6197b80 Mon Sep 17 00:00:00 2001
-From: Rajasekar Raja <rajasekarr@nvidia.com>
-Date: Mon, 22 Jul 2024 10:13:19 -0700
-Subject: [PATCH] bgpd: backpressure - Avoid use after free
+From b1e6d39d38f42c21870fa4f027e4e63f4ddf898e Mon Sep 17 00:00:00 2001
+From: sudhanshukumar22 <sudhanshu.kumar@broadcom.com>
+Date: Tue, 17 Sep 2024 04:13:38 -0700
+Subject: [PATCH] From df1d28fcc12d4f5541c9335115887d31e6197b80 Mon Sep 17
+ 00:00:00 2001 From: Rajasekar Raja <rajasekarr@nvidia.com> Date: Mon, 22 Jul
+ 2024 10:13:19 -0700 Subject: [PATCH] bgpd: backpressure - Avoid use after
+ free
 
 Coverity complains there is a use after free (1598495 and 1598496)
 At this point, most likely dest->refcount cannot go 1 and free up
@@ -12,12 +15,16 @@ Fixing this with a simple order change (no harm fix).
 Ticket :#4001204
 
 Signed-off-by: Rajasekar Raja <rajasekarr@nvidia.com>
+---
+ bgpd/bgp_evpn.c | 2 +-
+ bgpd/bgpd.c     | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/bgpd/bgp_evpn.c b/bgpd/bgp_evpn.c
-index b1f8f19594..bb3cd62950 100644
+index c517a67f5..63e2e1c05 100644
 --- a/bgpd/bgp_evpn.c
 +++ b/bgpd/bgp_evpn.c
-@@ -6080,9 +6080,9 @@ void bgp_evpn_free(struct bgp *bgp, struct bgpevpn *vpn)
+@@ -6307,9 +6307,9 @@ void bgp_evpn_free(struct bgp *bgp, struct bgpevpn *vpn)
  	     dest = dest_next) {
  		dest_next = zebra_announce_next(&bm->zebra_announce_head, dest);
  		if (dest->za_vpn == vpn) {
@@ -27,12 +34,12 @@ index b1f8f19594..bb3cd62950 100644
 -			zebra_announce_del(&bm->zebra_announce_head, dest);
  		}
  	}
- 
+ 	bgp_evpn_remote_ip_hash_destroy(vpn);
 diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
-index 2e1c5e555b..342982069b 100644
+index 8132d0515..8ebfde10c 100644
 --- a/bgpd/bgpd.c
 +++ b/bgpd/bgpd.c
-@@ -3706,9 +3706,9 @@ int bgp_delete(struct bgp *bgp)
+@@ -3885,9 +3885,9 @@ int bgp_delete(struct bgp *bgp)
  		dest_next = zebra_announce_next(&bm->zebra_announce_head, dest);
  		dest_table = bgp_dest_table(dest);
  		if (dest_table->bgp == bgp) {
@@ -42,7 +49,7 @@ index 2e1c5e555b..342982069b 100644
 -			zebra_announce_del(&bm->zebra_announce_head, dest);
  		}
  	}
- 
--- 
-2.43.2
+
+--
+2.39.4
 
