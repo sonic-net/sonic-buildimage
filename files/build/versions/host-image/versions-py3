@@ -48,7 +48,7 @@ psutil==5.9.5
 ptyprocess==0.7.0
 pyang==2.5.3
 pyangbind==0.8.1
-pycairo==1.24.0
+pycairo==1.26.1
 pycparser==2.21
 pycurl==7.43.0.6
 pygments==2.16.1
