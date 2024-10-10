@@ -621,8 +621,9 @@ RUN add-apt-repository \
            $(lsb_release -cs) \
            stable"
 RUN apt-get update
-RUN eatmydata apt-get install -y docker-ce=5:24.0.2-1~debian.12~bookworm docker-ce-cli=5:24.0.2-1~debian.12~bookworm containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.12~bookworm docker-compose-plugin=2.18.1-1~debian.12~bookworm
-RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
+RUN eatmydata apt-get install -y docker-ce=5:27.2.1-1~debian.12~bookworm docker-ce-cli=5:27.2.1-1~debian.12~bookworm containerd.io=1.7.21-1 docker-buildx-plugin=0.16.2-1~debian.12~bookworm docker-compose-plugin=2.29.2-1~debian.12~bookworm
+RUN echo '{ "features": { "containerd-snapshotter": true } }' > /etc/docker/daemon.json
+RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=native {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 
 # Install m2crypto package, needed by SWI tools
