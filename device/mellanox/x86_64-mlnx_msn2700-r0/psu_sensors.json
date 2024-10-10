@@ -376,8 +376,21 @@
                 "curr2 PSU 12V Rail Curr (out)"
             ]
         },
-        "MTEF-AC-I": {
+        "MTEF-AC-G-DELTA":{
 
+        },
+        "MTEF-AC-I": {
+            "label": [
+                "in1 PSU 220V Rail (in)",
+                "in2 PSU 12V Rail (out)",
+                "fan1 PSU Fan 1",
+                "temp1 PSU Temp 1",
+                "temp2 PSU Temp 2",
+                "power1 PSU 220V Rail Pwr (in)",
+                "power2 PSU 12V Rail Pwr (out)",
+                "curr1 PSU 220V Rail Curr (in)",
+                "curr2 PSU 12V Rail Curr (out)"
+            ]
         },
         "MTEF-AC-M": {
             "label": [
