@@ -3,8 +3,7 @@
         "sonic-fips:sonic-fips": {
             "sonic-fips:FIPS": {
                 "sonic-fips:global": {
-                    "enable": "true",
-                    "enforce": "false"
+                    "enable": "true"
                 }
             }
         }
