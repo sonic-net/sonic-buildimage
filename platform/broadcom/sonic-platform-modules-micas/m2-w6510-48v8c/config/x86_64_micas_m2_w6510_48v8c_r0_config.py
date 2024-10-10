@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# -*- coding: UTF-8 -*-
+#
 from platform_common import *
 
 STARTMODULE = {
