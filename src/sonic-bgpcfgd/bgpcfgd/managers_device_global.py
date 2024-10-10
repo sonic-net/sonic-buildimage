@@ -13,8 +13,8 @@ class DeviceGlobalCfgMgr(Manager):
         :param common_objs: common object dictionary
         :param db: name of the db
         :param table: name of the table in the db
-        """
-        self.switch_type = ""
+        """        
+        self.switch_role = ""
         self.chassis_tsa = ""
         self.directory = common_objs['directory']
         self.cfg_mgr = common_objs['cfg_mgr']
@@ -22,8 +22,8 @@ class DeviceGlobalCfgMgr(Manager):
         self.tsa_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.isolate.conf.j2")
         self.tsb_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.unisolate.conf.j2")
         self.idf_isolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_isolate.conf.j2")
-        self.idf_unisolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_unisolate.conf.j2")
-        self.directory.subscribe([("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/switch_type"),], self.on_switch_type_change)
+        self.idf_unisolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_unisolate.conf.j2")        
+        self.directory.subscribe([("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/type"),], self.handle_type_update)
         super(DeviceGlobalCfgMgr, self).__init__(
             common_objs,
             [],
@@ -31,17 +31,14 @@ class DeviceGlobalCfgMgr(Manager):
             table,
         )
 
-    def on_switch_type_change(self):
-        log_debug("DeviceGlobalCfgMgr:: Switch type update handler")
-        if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/switch_type"):
-            self.switch_type = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["switch_type"]
-        log_debug("DeviceGlobalCfgMgr:: Switch type: %s" % self.switch_type)
+    def handle_type_update(self):
+        log_debug("DeviceGlobalCfgMgr:: Switch role update handler")
+        if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/type"):
+            self.switch_role = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["type"]
+        log_debug("DeviceGlobalCfgMgr:: Switch role: %s" % self.switch_role)
 
     def set_handler(self, key, data):
         log_debug("DeviceGlobalCfgMgr:: set handler")
-        if self.switch_type:
-            log_debug("DeviceGlobalCfgMgr:: Switch type: %s" % self.switch_type)
-        """ Handle device tsa_enabled state change """
         if not data:
             log_err("DeviceGlobalCfgMgr:: data is None")
             return False
@@ -66,8 +63,8 @@ class DeviceGlobalCfgMgr(Manager):
         if "idf_isolation_state" in data:
             self.directory.put(self.db_name, self.table_name, "idf_isolation_state", data["idf_isolation_state"])
             if idf_isolation_state != data["idf_isolation_state"]:
-                if self.switch_type and self.switch_type != "SpineRouter":
-                    log_debug("DeviceGlobalCfgMgr:: Skipping IDF isolation configuration on Switch type: %s" % self.switch_type)
+                if self.switch_role and self.switch_role != "SpineRouter":
+                    log_debug("DeviceGlobalCfgMgr:: Skipping IDF isolation configuration on Switch type: %s" % self.switch_role)
                     return True
                 self.downstream_isolate_unisolate(data["idf_isolation_state"])
             
@@ -154,6 +151,16 @@ class DeviceGlobalCfgMgr(Manager):
         return chassis_tsa_status
 
     def downstream_isolate_unisolate(self, idf_isolation_state):
+        """ API to apply IDF configuration """
+
+        if idf_isolation_state not in ["unisolated", "isolated_withdraw_all", "isolated_no_export"]:
+            log_err("IDF: invalid value({}) is provided".format(idf_isolation_state))
+            return False
+
+        if self.switch_role and self.switch_role != "SpineRouter":
+            log_debug("DeviceGlobalCfgMgr:: Skipping IDF isolation configuration on %s" % self.switch_role)
+            return True
+
         cmd = "\n"
         if idf_isolation_state == "unisolated":
             cmd += self.idf_unisolate_template.render(constants=self.constants)
