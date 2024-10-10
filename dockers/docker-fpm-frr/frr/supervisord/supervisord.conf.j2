@@ -89,6 +89,18 @@ dependent_startup=true
 dependent_startup_wait_for=zsocket:exited
 
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+[program:isisd]
+command=/usr/lib/frr/isisd -A 127.0.0.1 -M snmp
+priority=5
+stopsignal=KILL
+autostart=false
+autorestart=false
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=zsocket:exited
+
 [program:ospfd]
 command=/usr/lib/frr/ospfd -A 127.0.0.1 -M snmp
 priority=5
