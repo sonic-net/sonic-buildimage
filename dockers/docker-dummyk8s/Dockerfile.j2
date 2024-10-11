@@ -16,4 +16,4 @@ COPY ["readiness-probe.sh", "/usr/bin"]
 
 RUN chmod +x /usr/bin/readiness-probe.sh
 
-ENTRYPOINT ["tail", "-f", "/dev/null"]
+ENTRYPOINT ["sleep", "900"]
