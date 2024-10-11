@@ -275,6 +275,16 @@ class Chassis(ChassisBase):
     # Component methods
     ##############################################
 
+    def get_all_components(self):
+        try:
+            if self._api_helper.is_host():
+                if len(self._component_list) == 0:
+                    self.__initialize_components()
+                return self._component_list
+        except IndexError:
+            sys.stderr.write("Failed to initialize components\n")
+        return []
+
     def get_component(self, index):
         """
         Retrieves component represented by (0-based) index <index>
@@ -287,7 +297,7 @@ class Chassis(ChassisBase):
 
         try:
             if self._api_helper.is_host():
-                if not hasattr(self, "_component_list"):
+                if len(self._component_list) == 0:
                     self.__initialize_components()
                 component = self._component_list[index]
         except IndexError:

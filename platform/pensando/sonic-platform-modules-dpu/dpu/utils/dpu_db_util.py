@@ -758,10 +758,6 @@ class DPUHealthMonitor(ProcessTaskBase):
             self.system_health_db_updater.delete_table_entries()
         except Exception as e:
             log_err(f"Failed to init system health db updater due to {e}")
-        try:
-            self.event_handler = EventHandler(chassis, db)
-        except Exception as e:
-            log_err(f"Failed to init event handler due to {e}")
 
     def main(self):
         begin = time.time()
@@ -852,8 +848,8 @@ class DpuDBUtilDaemon(daemon_base.DaemonBase):
         self.reboot_cause_updater.update()
         self.version_updater = VersionUpdater(self.chassis, self.db)
         self.version_updater.update()
-        self.dpu_health_monitor = DPUHealthMonitor(self.chassis, self.db)
-        self.dpu_health_monitor.task_run()
+        # self.dpu_health_monitor = DPUHealthMonitor(self.chassis, self.db)
+        # self.dpu_health_monitor.task_run()
         self.event_handler = EventHandler(self.chassis, self.db)
         self.event_handler.start()
 
@@ -863,7 +859,7 @@ class DpuDBUtilDaemon(daemon_base.DaemonBase):
         """
         if self.db == None:
             return
-        self.dpu_health_monitor.task_stop()
+        # self.dpu_health_monitor.task_stop()
         self.event_handler.stop()
 
     # Override signal handler from DaemonBase
@@ -883,7 +879,7 @@ class DpuDBUtilDaemon(daemon_base.DaemonBase):
             log_info("Caught signal '{}' - exiting...".format(SIGNALS_TO_NAMES_DICT[sig]))
             exit_code = 128 + sig  # Make sure we exit with a non-zero code so that supervisor will try to restart us
             if self.db != None:
-                self.dpu_health_monitor.task_stop()
+                # self.dpu_health_monitor.task_stop()
                 self.event_handler.stop()
             self.stop_event.set()
         elif sig in NONFATAL_SIGNALS:
