@@ -289,6 +289,67 @@ regress:t2:chassis19:
     variables:
       - $REGRESS_T2_CHASSIS19
 
+regress:tb3:
+  extends: .regress
+  tags:
+    - regress_tb3
+  needs:
+    - build:sonic:armhf
+  variables:
+    REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
+    RUN_IMAGE: target/sonic-marvell-armhf.bin
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS:
+  only:
+    variables:
+      - $REGRESS_TB3
+
+regress:tb7:
+  extends: .regress
+  tags:
+    - regress_tb7
+  needs:
+    - build:sonic:armhf
+  variables:
+    REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
+    RUN_IMAGE: target/sonic-marvell-armhf.bin
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS:
+  only:
+    variables:
+      - $REGRESS_TB7
+
+regress:tb13:
+  extends: .regress
+  tags:
+    - regress_tb13
+  needs:
+    - build:sonic:aarch64
+
+  variables:
+    REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
+    RUN_IMAGE: target/sonic-marvell-arm64.bin
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS:
+  only:
+    variables:
+      - $REGRESS_TB13
+
+regress:tb20:
+  extends: .regress
+  tags:
+    - regress_tb20
+  needs:
+    - build:sonic:aarch64
+  variables:
+    REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
+    RUN_IMAGE: target/sonic-marvell-arm64.bin
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS:
+  only:
+    variables:
+      - $REGRESS_TB20
+
 regress:tb21:
   extends: .regress
   tags:
@@ -303,6 +364,36 @@ regress:tb21:
   only:
     variables:
       - $REGRESS_TB21
+
+regress:tb23:
+  extends: .regress
+  tags:
+    - regress_tb23
+  needs:
+    - build:sonic:armhf
+  variables:
+    REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
+    RUN_IMAGE: target/sonic-marvell-armhf.bin
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS:
+  only:
+    variables:
+      - $REGRESS_TB23
+
+regress:tb24:
+  extends: .regress
+  tags:
+    - regress_tb24
+  needs:
+    - build:sonic:x86_64
+  variables:
+    REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
+    RUN_IMAGE: target/sonic-broadcom.bin
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS:
+  only:
+    variables:
+      - $REGRESS_TB24
 
 regress:tb25:
   extends: .regress
@@ -348,6 +439,21 @@ regress:tb28:
   only:
     variables:
       - $REGRESS_TB28
+
+regress:tb44:
+  extends: .regress
+  tags:
+    - regress_tb44
+  needs:
+    - build:sonic:x86_64
+  variables:
+    REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
+    RUN_IMAGE: target/sonic-broadcom.bin
+    DELAY_START: 0
+    EXTRA_RUN_TEST_ARGS:
+  only:
+    variables:
+      - $REGRESS_TB44
 
 regress:t2:chassis20:
   extends: .regress
