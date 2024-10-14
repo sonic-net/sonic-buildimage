@@ -122,6 +122,8 @@ function run_add_topo()
     fi
     if [[ "$topology" == "m0" || "$topology" == "mx" ]]; then
 	    remove_topo $target_box $testbed_file $inv_file $vm_type ${conf_name:0:-2}m0 $topo_builder_dir/results/log/remove-topo.log
+	  elif [[ "$topology" == "m0-2vlan"  ]]; then
+	    remove_topo $target_box $testbed_file $inv_file $vm_type ${conf_name:0:-8}m0 $topo_builder_dir/results/log/remove-topo.log
     fi
     add_topo $target_box $testbed_file $inv_file $vm_type $conf_name $topo_builder_dir/results/log/add-topo.log
 
@@ -441,7 +443,7 @@ if [[ "$test" == "1" ]]; then
     elif [[ "$dev_type" == "T2-vs" ]]; then
        echo "Executing kvmtest.sh with 'docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box /data/tests/kvmtest.sh -T t2 -p /output_files -d /data vms-kvm-t2 vlab-t2-01,vlab-t2-02,vlab-t2-sup"
        docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box /data/tests/kvmtest.sh -T t2 -p /output_files -d /data vms-kvm-t2 vlab-t2-01,vlab-t2-02,vlab-t2-sup
-    elif [[ "$topology" == "m0" || "$topology" == "mx" ]]; then
+    elif [[ "$topology" == "m0" || "$topology" == "mx" || "$topology" == "m0-2vlan" ]]; then
       echo "Executing docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box ./run_tests.sh -a False -d $target_box -i $lab_file,$inv_file -k debug -l info -m individual -n $conf_name -t $topology,any -p /output_files/ -r -x"
       docker exec --user="$uid:$gid" -t -w /data/tests sonic_mgmt_$target_box ./run_tests.sh -a False -d $target_box -i $lab_file,$inv_file -k debug -l info -m individual -n $conf_name -t $topology,any -p /output_files/ -r -x
     else
