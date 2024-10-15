@@ -44,12 +44,8 @@ except Exception as e:
     log_err(f'failed to load modules due to {e}')
 
 DPU_HEALTH_INFO_TABLE_NAME = 'DPU_STATE'
-SYSTEM_HEALTH_INFO_TABLE_NAME = 'SYSTEM_HEALTH_INFO'
 REBOOT_CAUSE_INFO_TABLE_NAME = 'REBOOT_CAUSE'
 VERSION_UPDATE_TABLE_NAME = 'PLATFORM|VERSION|CURRENT'
-TEMPERATURE_INFO_TABLE_NAME = 'TEMPERATURE_INFO'
-VOLTAGE_INFO_TABLE_NAME = 'VOLTAGE_INFO'
-CURRENT_INFO_TABLE_NAME = 'CURRENT_INFO'
 REDIS_CHASSIS_SERVER_PORT = 6380
 REDIS_CHASSIS_SERVER_IP = '169.254.200.254'
 CHASSIS_STATE_DB = 13
@@ -84,140 +80,6 @@ def get_slot_id(chassis):
         return slot_id
 
 exit_code = ERR_UNKNOWN
-
-#
-# SensorDBUpdater  ======================================================================
-#
-
-class SensorDBUpdater(logger.Logger):
-
-    def __init__(self, chassis, db, task_stopping_event):
-        """
-        Initializer of SensorDBUpdater
-        :param chassis: Object representing a platform chassis
-        """
-        super(SensorDBUpdater, self).__init__(SYSLOG_IDENTIFIER)
-
-        self.task_stopping_event = task_stopping_event
-        self.db = db
-        self.chassis = chassis
-        self.slot_id = get_slot_id(self.chassis)
-        self.tempeature_table = f'{TEMPERATURE_INFO_TABLE_NAME}|DPU{self.slot_id}_LTC3888_'
-        self.voltage_table = f'{VOLTAGE_INFO_TABLE_NAME}|DPU{self.slot_id}_LTC3888_'
-        self.current_table = f'{CURRENT_INFO_TABLE_NAME}|DPU{self.slot_id}_LTC3888_'
-        self.delete_table_entries()
-
-    def delete_table_entries(self):
-        try:
-            if self.db:
-                self.db.delete(self.tempeature_table+'*')
-                self.db.delete(self.voltage_table+'*')
-                self.db.delete(self.current_table+'*')
-        except Exception as e:
-            log_err(f'failed to delete dpu sensor table entries due to {e}')
-
-    def __del__(self):
-        self.delete_table_entries()
-
-    def deinit(self):
-        """
-        Deinitializer of SensorDBUpdater
-        :return:
-        """
-        self.delete_table_entries()
-
-    def update(self):
-        """
-        Update all sensor information to database
-        :return:
-        """
-        if self.task_stopping_event.is_set():
-            return
-
-        try:
-            channel_addr = "{}:{}".format(LOCALHOST,str(PDS_PORT))
-            channel = grpc.insecure_channel(channel_addr)
-            stub = system_pb2_grpc.SystemSvcStub(channel)
-            resp = stub.SystemGet(Empty())
-            sensor_stats = resp.PMBusSensorStatus
-            self._refresh_system_sensor_db_status(sensor_stats)
-        except Exception as e:
-            log_err(f'failed to fetch sensor data due to {e}')
-
-    def _refresh_current_db_status(self, sensor_id, value, max_value, min_value):
-        try:
-            if self.db == None:
-                return
-            fvslist = [
-                ("critical_high_threshold", NOT_AVAILABLE),
-                ("critical_low_threshold", NOT_AVAILABLE),
-                ("current", value),
-                ("high_threshold", NOT_AVAILABLE),
-                ("is_replaceable", "False"),
-                ("low_threshold", NOT_AVAILABLE),
-                ("maximum_current", max_value),
-                ("minimum_current", min_value),
-                ("timestamp", datetime.now().strftime('%Y%m%d %H:%M:%S')),
-                ("unit", "mA"),
-                ("warning_status", NOT_AVAILABLE)
-            ]
-            for name, value in fvslist:
-                self.db.hset(self.current_table + str(sensor_id), name, value)
-        except Exception as e:
-            log_err(f'failed to update current info due to {e}')
-
-    def _refresh_temperature_db_status(self, sensor_id, value, max_value, min_value):
-        try:
-            if self.db == None:
-                return
-            fvslist = [
-                ("critical_high_threshold", NOT_AVAILABLE),
-                ("critical_low_threshold", NOT_AVAILABLE),
-                ("high_threshold", NOT_AVAILABLE),
-                ("is_replaceable", "False"),
-                ("low_threshold", NOT_AVAILABLE),
-                ("maximum_temperature", max_value),
-                ("minimum_temperature", min_value),
-                ("temperature", value),
-                ("timestamp", datetime.now().strftime('%Y%m%d %H:%M:%S')),
-                ("warning_status", NOT_AVAILABLE)
-            ]
-            for name, value in fvslist:
-                self.db.hset(self.tempeature_table + str(sensor_id), name, value)
-        except Exception as e:
-            log_err(f'failed to update temperature info due to {e}')
-
-    def _refresh_voltage_db_status(self, sensor_id, value, max_value, min_value):
-        try:
-            if self.db == None:
-                return
-            fvslist = [
-                ("critical_high_threshold", NOT_AVAILABLE),
-                ("critical_low_threshold", NOT_AVAILABLE),
-                ("high_threshold", NOT_AVAILABLE),
-                ("is_replaceable", "False"),
-                ("low_threshold", NOT_AVAILABLE),
-                ("maximum_voltage", max_value),
-                ("minimum_voltage", min_value),
-                ("timestamp", datetime.now().strftime('%Y%m%d %H:%M:%S')),
-                ("unit", "mV"),
-                ("voltage", value),
-                ("warning_status", NOT_AVAILABLE)
-            ]
-            for name, value in fvslist:
-                self.db.hset(self.voltage_table + str(sensor_id), name, value)
-        except Exception as e:
-            log_err(f'failed to update voltage info due to {e}')
-
-    def _refresh_system_sensor_db_status(self, stat):
-        try:
-            self.delete_table_entries()
-            for sensor_id, sensor in enumerate(stat):
-                self._refresh_current_db_status(sensor_id+1, sensor.Current, sensor.MaxCurrent, sensor.MinCurrent)
-                self._refresh_voltage_db_status(sensor_id+1, sensor.Voltage, sensor.MaxVoltage, sensor.MinVoltage)
-                self._refresh_temperature_db_status(sensor_id+1, sensor.Temperature, sensor.MaxTemperature, sensor.MinTemperature)
-        except Exception as e:
-            log_err('Failed to update system health values for {} - {}'.format(name, repr(e)))
 
 class EventHandler(logger.Logger):
 
@@ -466,96 +328,6 @@ class EventHandler(logger.Logger):
             self.event_thread.join()
             self.event_thread = None
 
-class SystemHealthDBUpdater(logger.Logger):
-
-    def __init__(self, chassis, db, task_stopping_event):
-        """
-        Initializer of SystemHealthDBUpdater
-        :param chassis: Object representing a platform chassis
-        """
-        super(SystemHealthDBUpdater, self).__init__(SYSLOG_IDENTIFIER)
-
-        self.task_stopping_event = task_stopping_event
-        self.db = db
-        self.chassis = chassis
-        self.slot_id = get_slot_id(self.chassis)
-        self.table = f'{SYSTEM_HEALTH_INFO_TABLE_NAME}|DPU{self.slot_id}'
-
-    def _fetch_monitor_list(self):
-        try:
-            if self.chassis == None:
-                self.chassis = Chassis()
-            manager = HealthCheckerManager()
-            manager.config.load_config()
-            stats = manager.check(self.chassis)
-            ignore_stats = {}
-            if manager.config.ignore_services:
-                for element in manager.config.ignore_services:
-                    ignore_stat = {}
-                    ignore_stat["type"] = "Service"
-                    ignore_stat["message"] = ""
-                    ignore_stat["status"] = "Ignored"
-                    ignore_stats[element] = ignore_stat
-            if manager.config.ignore_devices:
-                for element in manager.config.ignore_devices:
-                    ignore_stat = {}
-                    ignore_stat["type"] = "Device"
-                    ignore_stat["message"] = ""
-                    ignore_stat["status"] = "Ignored"
-                    ignore_stats[element] = ignore_stat
-            return stats, ignore_stats
-        except:
-            log_err('failed to fetch sonic host health check status')
-            return None
-
-    def delete_table_entries(self):
-        try:
-            if self.db:
-                self.db.delete(self.table)
-        except Exception as e:
-            log_err(f'failed to delete dpu health table entries due to {e}')
-
-    def __del__(self):
-        self.delete_table_entries()
-
-    def deinit(self):
-        """
-        Deinitializer of SystemHealthDBUpdater
-        :return:
-        """
-        self.delete_table_entries()
-
-    def update(self):
-        """
-        Update all system health information to database
-        :return:
-        """
-        if self.task_stopping_event.is_set():
-            return
-
-        try:
-            if self.db == None:
-                return
-            stat, ignore_stats = self._fetch_monitor_list()
-            if stat == None:
-                raise Exception("Failed to fetch monitor list")
-            self._refresh_system_health_db_status(stat, ignore_stats)
-        except Exception as e:
-            log_err(f'failed to fetch health data due to {e}')
-
-    def _refresh_system_health_db_status(self, stat, ignore_stats):
-        name = NOT_AVAILABLE
-        fvslist = []
-        try:
-            if self.db == None:
-                return
-            self.delete_table_entries()
-            self.db.hset(self.table, "stat", json.dumps(stat))
-            self.db.hset(self.table, 'system_status_LED', self.chassis.get_status_led())
-            self.db.hset(self.table, "ignore_stat", json.dumps(ignore_stats))
-        except Exception as e:
-            log_err('Failed to update system health values for {} - {}'.format(name, repr(e)))
-
 class RebootCauseUpdater():
     def __init__(self, chassis, db):
         self.db = db
@@ -720,94 +492,6 @@ class VersionUpdater():
             self.db.set(self.table, inventory_value)
         except Exception as e:
             log_err('Failed to update sonic version values - {}'.format(repr(e)))
-
-class DPUHealthMonitor(ProcessTaskBase):
-    # Initial update interval
-    INITIAL_INTERVAL = 5
-
-    # Update interval value
-    UPDATE_INTERVAL = 60
-
-    # Update elapse threshold. If update used time is larger than the value, generate a warning log.
-    UPDATE_ELAPSED_SENSOR_UPDATE_THRESHOLD = 15
-    UPDATE_ELAPSED_SYSTEM_HEALTH_UPDATE_THRESHOLD = 40
-
-    def __init__(self, chassis, db):
-        """
-        Initializer for DPUHealthMonitor
-        :param chassis: Object representing a platform chassis
-        """
-        super(DPUHealthMonitor, self).__init__()
-
-        self.wait_time = self.INITIAL_INTERVAL
-
-        # TODO: Refactor to eliminate the need for this Logger instance
-        self.logger = logger.Logger(SYSLOG_IDENTIFIER)
-
-        # Set minimum logging level to INFO
-        self.logger.set_min_log_priority_info()
-        self.sensor_db_updater = None
-        self.system_health_db_updater = None
-        self.event_handler = None
-        try:
-            self.sensor_db_updater = SensorDBUpdater(chassis, db, self.task_stopping_event)
-        except Exception as e:
-            log_err(f"Failed to init sensor db updater due to {e}")
-        try:
-            self.system_health_db_updater = SystemHealthDBUpdater(chassis, db, self.task_stopping_event)
-            self.system_health_db_updater.delete_table_entries()
-        except Exception as e:
-            log_err(f"Failed to init system health db updater due to {e}")
-
-    def main(self):
-        begin = time.time()
-        try:
-            if self.sensor_db_updater != None:
-                self.sensor_db_updater.update()
-        except Exception as e:
-            log_err(f"failed to call update for sensor_db_updater due to {e}")
-        elapsed = time.time() - begin
-        if elapsed < self.UPDATE_INTERVAL:
-            self.wait_time = self.UPDATE_INTERVAL - elapsed
-        else:
-            self.wait_time = self.INITIAL_INTERVAL
-
-        if elapsed > self.UPDATE_ELAPSED_SENSOR_UPDATE_THRESHOLD:
-            log_err('Update sensor status took {} seconds, '
-                    'there might be performance risk'.format(elapsed))
-
-        # begin = time.time()
-        # try:
-        #     if self.system_health_db_updater != None:
-        #         self.system_health_db_updater.update()
-        # except Exception as e:
-        #     log_err(f"failed to call update for system_health_db_updater due to {e}")
-
-        # elapsed = time.time() - begin
-        # if elapsed < self.UPDATE_INTERVAL:
-        #     self.wait_time = self.UPDATE_INTERVAL - elapsed
-        # else:
-        #     self.wait_time = self.INITIAL_INTERVAL
-
-        # if elapsed > self.UPDATE_ELAPSED_SYSTEM_HEALTH_UPDATE_THRESHOLD:
-        #     log_err('Update system health status took {} seconds, '
-        #             'there might be performance risk'.format(elapsed))
-
-    def task_worker(self):
-        """
-        Thread function to handle sensor status update
-        :return:
-        """
-        log_info("Start dpu health monitoring loop")
-
-        # Start loop to update sensor info in DB periodically
-        while not self.task_stopping_event.wait(self.wait_time):
-            self.main()
-
-        self.sensor_db_updater.deinit()
-        self.system_health_db_updater.deinit()
-        log_info("Stop dpu health monitoring loop")
-
 #
 # Daemon =======================================================================
 #
@@ -848,8 +532,6 @@ class DpuDBUtilDaemon(daemon_base.DaemonBase):
         self.reboot_cause_updater.update()
         self.version_updater = VersionUpdater(self.chassis, self.db)
         self.version_updater.update()
-        # self.dpu_health_monitor = DPUHealthMonitor(self.chassis, self.db)
-        # self.dpu_health_monitor.task_run()
         self.event_handler = EventHandler(self.chassis, self.db)
         self.event_handler.start()
 
@@ -859,7 +541,6 @@ class DpuDBUtilDaemon(daemon_base.DaemonBase):
         """
         if self.db == None:
             return
-        # self.dpu_health_monitor.task_stop()
         self.event_handler.stop()
 
     # Override signal handler from DaemonBase
@@ -879,7 +560,6 @@ class DpuDBUtilDaemon(daemon_base.DaemonBase):
             log_info("Caught signal '{}' - exiting...".format(SIGNALS_TO_NAMES_DICT[sig]))
             exit_code = 128 + sig  # Make sure we exit with a non-zero code so that supervisor will try to restart us
             if self.db != None:
-                # self.dpu_health_monitor.task_stop()
                 self.event_handler.stop()
             self.stop_event.set()
         elif sig in NONFATAL_SIGNALS:
