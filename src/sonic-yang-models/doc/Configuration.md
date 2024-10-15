@@ -736,8 +736,9 @@ This kind of profiles will be handled by buffer manager and won't be applied to 
 
 ### Chassis Module
 
-CHASSIS_MODULE table holds the list and configuration of linecard and fabric modules in a SONiC chassis.
-It currently allows user to administratively bring down a line-card or fabric-card
+CHASSIS_MODULE table holds the list and configuration of linecard, DPU modules and fabric modules in a SONiC chassis.
+It currently allows user to administratively bring down a line-card or DPU or fabric-card
+A smartswitch chassis will not have LINE-CARD and FABRIC-CARD.  It will only have DPUs as shown
 
 ```
 {
@@ -751,6 +752,17 @@ It currently allows user to administratively bring down a line-card or fabric-ca
     }
 }
 
+SmartSwitch Chassis Example:
+{
+    "CHASSIS_MODULE": {
+        "DPU0": {
+            "admin_status": "down"
+        },
+        "DPU1": {
+            "admin_status": "down"
+        }
+    }
+}
 ```
 
 ### COPP_TABLE
