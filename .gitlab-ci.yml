@@ -83,7 +83,9 @@ configure:sonic:aarch64:
     if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
       # skip build and use the latest
       mkdir -p target
-      curl -o target/${TARGET_BIN} http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/${TARGET_BIN}
+      for f in ${TARGET_BIN}; do
+        curl -o target/$f http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/$f
+      done
       exit 0
     fi
     ./build.sh
@@ -99,7 +101,7 @@ build:sonic:x86_64:
     - configure:sonic:x86_64
   variables: 
     BUILD_ARCH: x86_64
-    TARGET_BIN: sonic-broadcom-dnx.bin
+    TARGET_BIN: sonic-broadcom.bin sonic-broadcom-dnx.bin
 
 build:sonic:armhf:
   extends: .build:sonic
@@ -325,7 +327,6 @@ regress:tb13:
     - regress_tb13
   needs:
     - build:sonic:aarch64
-
   variables:
     REGRESS_SONIC_MGMT_BRANCH: nokia-master-M0
     RUN_IMAGE: target/sonic-marvell-arm64.bin
