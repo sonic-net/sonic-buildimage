@@ -1,6 +1,6 @@
 /* 
  * $Id:$
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -25,12 +25,14 @@
  * This software is governed by the Broadcom Open Network Switch APIs license:
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
  * 
+ * 
  *
  * File:        test.c
  * Purpose:     DCB Library Example
  *
  */
 
+#include <appl/dcb/dcb_int.h>
 #include <appl/dcb/dcb_handler.h>
 
 int dcb_example()

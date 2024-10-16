@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 /*
@@ -366,6 +366,9 @@ ngknet_rx_frame_process(struct net_device *ndev, struct sk_buff **oskb)
     struct ngknet_rcpu_hdr *rch = (struct ngknet_rcpu_hdr *)skb->data;
     struct pkt_hdr *pkh = (struct pkt_hdr *)skb->data;
     uint8_t meta_len = pkh->meta_len;
+#if SAI_FIXUP && KNET_SVTAG_HOTFIX
+    int offset;
+#endif
 
     /* Remove FCS from packet length */
     skb_trim(skb, skb->len - ETH_FCS_LEN);
@@ -400,14 +403,24 @@ ngknet_rx_frame_process(struct net_device *ndev, struct sk_buff **oskb)
         ngknet_ptp_rx_hwts_set(ndev, skb);
     }
 
-      /* Check to ensure ngknet_callback_desc struct fits in sk_buff->cb */
+         /* Check to ensure ngknet_callback_desc struct fits in sk_buff->cb */
     BUILD_BUG_ON(sizeof(struct ngknet_callback_desc) > sizeof(skb->cb));
 #if SAI_FIXUP && KNET_SVTAG_HOTFIX /* SONIC-76482 */
     /* Strip SVTAG from the packets injected by the MACSEC block */
     if (priv->netif.flags & NGKNET_NETIF_F_DEL_SVTAG) {
         /* Strip SVTAG (4 bytes) */
-        memmove(skb->data + 4, skb->data, 12);
-        skb_pull(skb, 4);
+        if (priv->netif.flags & NGKNET_NETIF_F_RCPU_ENCAP) {
+            offset = PKT_HDR_SIZE + meta_len + 2*ETH_ALEN;
+            memmove(skb->data + offset, skb->data + offset + 4, skb->len - offset - 4);
+            skb_trim(skb, skb->len - 4);
+            pkh->data_len -= 4;
+            rch->data_len = htons(pkh->data_len);
+        } else {
+            offset = 2*ETH_ALEN;
+            memmove(skb->data + offset, skb->data + offset + 4, skb->len - offset - 4);
+            skb_trim(skb, skb->len - 4);
+            pkh->data_len -= 4;
+        }
     }
 #endif
 
@@ -816,7 +829,6 @@ ngknet_tx_frame_process(struct net_device *ndev, struct sk_buff **oskb)
         pkh->data_len += VLAN_HLEN;
         tag_len = VLAN_HLEN;
     }
-
 #if SAI_FIXUP && KNET_SVTAG_HOTFIX /* SONIC-76482 */
     /* XGS MACSEC: Add SVTAG (Secure Vlan TAG) */
     if (priv->netif.flags & NGKNET_NETIF_F_ADD_SVTAG) {
@@ -855,7 +867,6 @@ ngknet_tx_frame_process(struct net_device *ndev, struct sk_buff **oskb)
         printk(KERN_DEBUG "ether_type: %04x, pktype %d, subport %d\n", ether_type, (data[14] >> 2) & 0xf, data[15]);
     }
 #endif
-
     /* Optional callback handle */
     if (dev->cbc->tx_cb) {
         struct ngknet_callback_desc *cbd = NGKNET_SKB_CB(skb);
@@ -1803,7 +1814,9 @@ ngknet_ndev_init(ngknet_netif_t *netif, struct net_device **nd)
     ndev->hw_features = NETIF_F_RXCSUM |
                         NETIF_F_HW_VLAN_CTAG_RX |
                         NETIF_F_HW_VLAN_CTAG_TX;
-    ndev->features = ndev->hw_features | NETIF_F_HIGHDMA;
+    ndev->features = NETIF_F_RXCSUM |
+                     NETIF_F_HIGHDMA |
+                     NETIF_F_HW_VLAN_CTAG_RX;
 
     /* Register the kernel network device */
     rv = register_netdev(ndev);
@@ -2474,6 +2487,8 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         return 0;
     }
 
+    memset(&iod, 0, sizeof(iod));
+
     switch (cmd) {
     case NGKNET_VERSION_GET:
         DBG_CMD(("NGKNET_VERSION_GET\n"));
@@ -2535,6 +2550,7 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             ioc.rc = SHR_E_PARAM;
             break;
         }
+        dev->dev_info.dev_id = pdev->dev_id;
         pdev->ctrl.bm_grp = dev_cfg->bm_grp;
         for (gi = 0; gi < NUM_GRP_MAX; gi++) {
             if (1 << gi & dev_cfg->bm_grp) {
@@ -2619,6 +2635,7 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         if (chan_cfg->chan_ctrl & NGKNET_HDR_BYTE_SWAP) {
             pdev->ctrl.grp[gi].que_ctrl[qi] |= PDMA_HDR_BYTE_SWAP;
         }
+        pdev->ctrl.grp[gi].pipe[qi] = chan_cfg->pipe;
         break;
     case NGKNET_QUEUE_QUERY:
         DBG_CMD(("NGKNET_QUEUE_QUERY\n"));
@@ -2643,6 +2660,7 @@ ngknet_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         } else {
             chan_cfg->rx_buf_size = 0;
         }
+        chan_cfg->pipe = pdev->ctrl.grp[gi].pipe[qi];
         if (kal_copy_to_user((void *)(unsigned long)ioc.op.data.buf, chan_cfg,
                              ioc.op.data.len, sizeof(*chan_cfg))) {
             return -EFAULT;

@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMGENL_H
@@ -32,11 +32,26 @@
 
 /*! Module information */
 #define BCMGENL_MODULE_NAME     "linux_bcmgenl"
-
 /*! Use similar path to SDK6 genl psample path */
 #define BCM_PROCFS_NAME        "bcm"
 #define BCMGENL_PROCFS_NAME    "genl"
 #define BCMGENL_PROCFS_PATH    (BCM_PROCFS_NAME "/" BCMGENL_PROCFS_NAME)
+
+/*! set GENL_DEBUG for debug info */
+#define GENL_DEBUG
+#define GENL_DBG_LVL_VERB       0x0001
+#define GENL_DBG_LVL_PDMP       0x0002
+#define GENL_DBG_LVL_WARN       0x0004
+
+#ifdef GENL_DEBUG
+#define GENL_DBG_VERB(...) if (debug & GENL_DBG_LVL_VERB) printk (__VA_ARGS__);
+#define GENL_DBG_PDMP(...) if (debug & GENL_DBG_LVL_PDMP) printk (__VA_ARGS__);
+#define GENL_DBG_WARN(...) if (debug & GENL_DBG_LVL_WARN) printk (__VA_ARGS__);
+#else
+#define GENL_DBG_VERB(...)
+#define GENL_DBG_PDMP(...)
+#define GENL_DBG_WARN(...)
+#endif /* GENL_DEBUG */
 
 typedef struct {
     uint8_t cmic_type;
@@ -51,7 +66,7 @@ typedef struct {
     struct list_head list;
     struct net_device *dev;
     uint16_t id;
-    uint8_t  port;
+    uint32_t port;
     uint16_t vlan;
     uint16_t qnum;
     uint32_t sample_rate; /* sFlow sample rate */
@@ -67,16 +82,22 @@ typedef struct {
     spinlock_t lock;
 } bcmgenl_info_t;
 
+/*! Destination port type */
 #define DSTPORT_TYPE_NONE    0
 #define DSTPORT_TYPE_DISCARD 1
 #define DSTPORT_TYPE_MC      2
+
+/*! Sampling type */
+#define SAMPLE_TYPE_NONE     0
+#define SAMPLE_TYPE_INGRESS  1
+#define SAMPLE_TYPE_EGRESS   2
 
 /*! generic netlink packet metadata */
 typedef struct bcmgenl_packet_meta_s {
     int ing_pp_port;
     int src_port;
     int dst_port;
-    int dst_port_type;
+    int dst_port_type; /* Destination port type */
     uint32_t trunk_id;
     uint64_t timestamp;
     /*
@@ -89,19 +110,13 @@ typedef struct bcmgenl_packet_meta_s {
     int tag_status;
     uint16_t proto;
     uint16_t vlan;
+    int sample_type; /* Sampling type */
 } bcmgenl_packet_meta_t;
-
-/*! generic netlink packet sampling metadata */
-typedef struct bcmgenl_psample_meta_s {
-    int sample_rate; /* Sampling rate */
-    int sample_size; /* Truncated size of sampled packet */
-} bcmgenl_psample_meta_t;
 
 /*! generic netlink packet info */
 typedef struct bcmgenl_pkt_s {
     struct net *netns; /* net namespace */
     bcmgenl_packet_meta_t meta;
-    bcmgenl_psample_meta_t psamp_meta;
 } bcmgenl_pkt_t;
 
 /*!
@@ -160,6 +175,6 @@ bcmgenl_pkt_package(
     last = ts.tv_sec; \
   } \
 }
-
 #endif /* KERNEL_VERSION(3,17,0) */
+
 #endif /* BCMGENL_H */
