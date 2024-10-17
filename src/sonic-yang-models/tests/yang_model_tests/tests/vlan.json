@@ -11,6 +11,10 @@
         "eStrKey" : "Pattern",
         "eStr": ["Vlan"]
     },
+    "INVALID_LONG_VLAN_NAME": {
+        "desc": "INVALID VLAN_NAME FIELD IN VLAN TABLE.",
+        "eStrKey" : "Pattern"
+    },
     "WRONG_FAMILY_WITH_IP_PREFIX": {
         "desc": "Configure Wrong family with ip-prefix for VLAN_Interface Table",
         "eStrKey" : "Must"
@@ -93,7 +97,7 @@
     },
     "VLAN_CREATE_VLAN_WITH_MISSMATCHING_NAME": {
         "desc": "Create Vlan so that name doesn't match id",
-        "eStr": "The vlanid must correspond to the VLAN name"        
+        "eStr": "The vlanid must correspond to the VLAN name"
     },
     "IP_PREFIX_WITHOUT_CREATNG_VLAN": {
         "desc": "Create IP on not created Vlan",
