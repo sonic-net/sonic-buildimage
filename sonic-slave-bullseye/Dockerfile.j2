@@ -87,6 +87,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D386FA1D9
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131
 {%- endif %}
 
+
 RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install -y \
         apt-utils \
         default-jre-headless \
@@ -420,13 +421,13 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For audisp-tacplus
         libauparse-dev \
         auditd \
-# For protobuf
+# For framework container build 
+        libdbus-c++-dev \
         dh-elpa \
         xmlto \
         rake-compiler \
         default-jdk \
         libgoogle-gson-java
-
 {%- if CONFIGURED_ARCH != "arm64" and CONFIGURED_ARCH != "armhf" %}
 # For DASH BMv2
 RUN eatmydata apt install -y \
