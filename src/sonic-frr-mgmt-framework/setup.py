@@ -46,6 +46,9 @@ setuptools.setup(
                                      'templates/staticd/staticd.conf.j2',
                                      'templates/staticd/staticd.db.conf.j2',
                                      'templates/staticd/staticd.db.default_route.conf.j2',
-                                     'templates/frr/frr.conf.j2'])
+                                     'templates/frr/frr.conf.j2',
+                                     'templates/isisd/isisd.conf.j2',
+                                     'templates/isisd/isisd.conf.db.j2',
+                                     'templates/isisd/isis_copp_trap_config.j2'])
     ]
 )
