@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMPKT_RXPMD_H
@@ -27,7 +27,8 @@
 #include <shr/shr_bitop.h>
 #include <bcmpkt/bcmpkt_rxpmd_defs.h>
 #include <bcmdrd/bcmdrd_types.h>
-#include <bcmlrd/bcmlrd_local_types.h>
+#include <bcmlrd/bcmlrd_conf.h>
+#include <bcmlrd/bcmlrd_match_id_db.h>
 #include <bcmpkt/bcmpkt_rxpmd_field.h>
 #include <bcmpkt/bcmpkt_rxpmd_match_id.h>
 #include <bcmpkt/bcmpkt_rxpmd_fid.h>

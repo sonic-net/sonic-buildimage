@@ -16,6 +16,16 @@ start)
     echo -n "Setting up board... "
 
     # Add driver to support HW
+    modprobe i2c-ismt
+    modprobe i2c-i801
+    modprobe i2c-isch
+    modprobe i2c-mux
+    modprobe i2c-smbus
+    modprobe i2c-mux-gpio
+    modprobe i2c-mux-pca954x
+    modprobe ipmi_devintf
+    modprobe ipmi_si
+
     modprobe i2c-dev
     modprobe ipmi_devintf
     modprobe ipmi_si
@@ -28,14 +38,27 @@ start)
         devname=`cat /sys/bus/i2c/devices/i2c-${devnum}/name`
         if [[ $devname == 'SMBus iSMT adapter at '* ]]; then
             echo 24lc64t 0x56 > /sys/bus/i2c/devices/i2c-${devnum}/new_device
-        break
+            echo -n "/sys/bus/i2c/devices/i2c-${devnum}" > /tmp/eeprom_path.txt
+            break
         fi
     done
+
     sleep 1
+    # SONiC LED control policy
+    ipmitool raw 0x3a 0x0f 0x02 0x00
+    # Set status led to green blinking 1Hz to indicate NOS take control
+    ipmitool raw 0x3a 0x0a 0x00 0x06
+    # Set Alarm LED off
+    ipmitool raw 0x3a 0x0c 0x00 0x03 0x63 0x00
+    # PSU is in default controlled by CPLD
+
     echo "done."
     ;;
 
 stop)
+    if [ -f /tmp/eeprom_path.txt ]; then
+        echo 0x56 > `cat /tmp/eeprom_path.txt`/delete_device
+    fi
     echo "done."
     ;;
 

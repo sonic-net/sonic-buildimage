@@ -17,6 +17,7 @@
 
 
 try:
+    import os
     import binascii
     import redis
     import struct
@@ -304,7 +305,7 @@ class EepromS6000(EepromDecoder):
         super(EepromS6000, self).__init__(self.eeprom_path, None, 0, '', True)
 
         if not is_plugin:
-            self.eeprom_data = self.read_eeprom()
+            self.eeprom_data = "N/A"  if os.geteuid() != 0 else self.read_eeprom()
 
     def _is_valid_block_checksum(self, e):
         crc = self.compute_dell_crc(e[:-2])

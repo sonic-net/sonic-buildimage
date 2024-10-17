@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <lkm/lkm.h>
@@ -29,7 +29,7 @@
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
 #include <linux/sched.h>
-
+#if 0
 /*! \cond */
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("BCMGENL Module");
@@ -42,20 +42,9 @@ MODULE_LICENSE("GPL");
 
 #define BCMGENL_PACKET_NAME GENL_PACKET_NAME
 
-/* set BCMGENL_PACKET_CB_DBG for debug info */
-#define BCMGENL_PACKET_CB_DBG
-#ifdef BCMGENL_PACKET_CB_DBG
+#ifdef GENL_DEBUG
 static int debug;
-
-#define DBG_LVL_VERB    0x1
-#define DBG_LVL_PDMP    0x2
-#define BCMGENL_PACKET_DBG_VERB(...) \
-    if (debug & DBG_LVL_VERB) {      \
-        printk(__VA_ARGS__);         \
-    }
-#else
-#define BCMGENL_PACKET_DBG_VERB(...)
-#endif
+#endif /* GENL_DEBUG */
 
 #define BCMGENL_PACKET_QLEN_DFLT 1024
 static int bcmgenl_packet_qlen = BCMGENL_PACKET_QLEN_DFLT;
@@ -71,6 +60,7 @@ typedef struct bcmgenl_packet_stats_s {
     unsigned long pkts_f_packet_cb;
     unsigned long pkts_f_packet_mod;
     unsigned long pkts_f_handled;
+    unsigned long pkts_f_pass_through;
     unsigned long pkts_f_tag_checked;
     unsigned long pkts_f_tag_stripped;
     unsigned long pkts_f_dst_mc;
@@ -163,7 +153,7 @@ bcmgenl_packet_generic_meta_get(bcmgenl_pkt_t *bcmgenl_pkt, genl_packet_meta_t *
     bcmgenl_netif_t *bcmgenl_netif = NULL;
 
     if (!bcmgenl_pkt || !genl_packet_meta) {
-        printk("%s: bcmgenl_pkt or genl_packet_meta is NULL\n", __func__);
+        GENL_DBG_WARN("%s: bcmgenl_pkt or genl_packet_meta is NULL\n", __func__);
         return (-1);
     }
 
@@ -171,9 +161,8 @@ bcmgenl_packet_generic_meta_get(bcmgenl_pkt_t *bcmgenl_pkt, genl_packet_meta_t *
     srcport = bcmgenl_pkt->meta.src_port;
     dstport = bcmgenl_pkt->meta.dst_port;
     dstport_type = bcmgenl_pkt->meta.dst_port_type;
-    /* SDKLT-43751: Skip check of dstport on TD4/TH4 */
-    if (srcport == -1) {
-        printk("%s: invalid srcport %d\n", __func__, srcport);
+    if ((srcport == -1) || (dstport == -1)) {
+        GENL_DBG_WARN("%s: invalid srcport %d or dstport %d\n", __func__, srcport, dstport);
         return (-1);
     }
 
@@ -184,7 +173,7 @@ bcmgenl_packet_generic_meta_get(bcmgenl_pkt_t *bcmgenl_pkt, genl_packet_meta_t *
         } else {
             src_ifindex = -1;
             g_bcmgenl_packet_stats.pkts_d_meta_srcport++;
-            BCMGENL_PACKET_DBG_VERB("%s: could not find srcport(%d)\n", __func__, srcport);
+            GENL_DBG_VERB("%s: could not find srcport(%d)\n", __func__, srcport);
         }
     } else {
         g_bcmgenl_packet_stats.pkts_f_src_cpu++;
@@ -200,13 +189,13 @@ bcmgenl_packet_generic_meta_get(bcmgenl_pkt_t *bcmgenl_pkt, genl_packet_meta_t *
         } else {
             dst_ifindex = -1;
             g_bcmgenl_packet_stats.pkts_d_meta_dstport++;
-            BCMGENL_PACKET_DBG_VERB("%s: could not find dstport(%d)\n", __func__, dstport);
+            GENL_DBG_VERB("%s: could not find dstport(%d)\n", __func__, dstport);
         }
     } else if (dstport == 0) {
         g_bcmgenl_packet_stats.pkts_f_dst_cpu++;
     }
 
-    BCMGENL_PACKET_DBG_VERB
+    GENL_DBG_VERB
         ("%s: srcport %d, dstport %d, src_ifindex %d, dst_ifindex %d\n",
          __func__, srcport, dstport, src_ifindex, dst_ifindex);
 
@@ -222,28 +211,25 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     int rv = 0, dev_no, pkt_len;
     const struct ngknet_callback_desc *cbd = NULL;
     ngknet_filter_t *match_filt = NULL;
-    uint8_t *pkt_ptr = NULL;
     unsigned long flags;
     bcmgenl_pkt_t bcmgenl_pkt;
     genl_pkt_t *generic_pkt;
     bool strip_tag = false;
     struct sk_buff *skb_generic_pkt;
     static uint32_t last_drop, last_alloc, last_skb;
+    uint8_t *pkt;
 
     if (!skb) {
-        printk("%s: skb is NULL\n", __func__);
+        GENL_DBG_WARN("%s: skb is NULL\n", __func__);
         g_bcmgenl_packet_stats.pkts_d_skb++;
         return (NULL);
     }
     cbd = NGKNET_SKB_CB(skb);
     match_filt = cbd->filt;
-    /* SDKLT-43751: Get ptr offset to pkt payload to send to genetlink */
-    pkt_ptr = cbd->pmd + cbd->pmd_len;
-    pkt_len = skb->len - cbd->pmd_len;
 
     if (!cbd || !match_filt) {
-        printk("%s: cbd(0x%p) or match_filt(0x%p) is NULL\n",
-            __func__, cbd, match_filt);
+        GENL_DBG_WARN("%s: cbd(0x%p) or match_filt(0x%p) is NULL\n",
+                      __func__, cbd, match_filt);
         g_bcmgenl_packet_stats.pkts_d_skb_cbd++;
         return (skb);
     }
@@ -255,13 +241,15 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
         return (skb);
     }
     dev_no = cbd->dinfo->dev_no;
+    pkt = cbd->pmd + cbd->pmd_len;
+    pkt_len = cbd->pkt_len;
 
-    BCMGENL_PACKET_DBG_VERB
+    GENL_DBG_VERB
         ("pkt size %d, match_filt->dest_id %d\n",
-         cbd->pkt_len, match_filt->dest_id);
-    BCMGENL_PACKET_DBG_VERB
+         pkt_len, match_filt->dest_id);
+    GENL_DBG_VERB
         ("filter user data: 0x%08x\n", *(uint32_t *)match_filt->user_data);
-    BCMGENL_PACKET_DBG_VERB
+    GENL_DBG_VERB
         ("filter_cb for dev %d: %s\n", dev_no, cbd->dinfo->type_str);
     g_bcmgenl_packet_stats.pkts_f_packet_cb++;
 
@@ -296,12 +284,12 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
                              &g_bcmgenl_packet_info,
                              &bcmgenl_pkt);
     if (rv < 0) {
-        printk("%s: Could not parse pkt metadata\n", __func__);
+        GENL_DBG_WARN("%s: Could not parse pkt metadata\n", __func__);
         g_bcmgenl_packet_stats.pkts_d_metadata++;
         goto FILTER_CB_PKT_HANDLED;
     }
 
-    BCMGENL_PACKET_DBG_VERB
+    GENL_DBG_VERB
         ("%s: netns 0x%p, src_port %d, dst_port %d, dst_port_type %x\n",
          __func__,
          bcmgenl_pkt.netns,
@@ -315,7 +303,7 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     /* get generic_pkt generic metadata */
     rv = bcmgenl_packet_generic_meta_get(&bcmgenl_pkt, &generic_pkt->meta);
     if (rv < 0) {
-        printk("%s: Could not parse pkt metadata\n", __func__);
+        GENL_DBG_WARN("%s: Could not parse pkt metadata\n", __func__);
         g_bcmgenl_packet_stats.pkts_d_metadata++;
         goto FILTER_CB_PKT_HANDLED;
     }
@@ -330,7 +318,7 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
         if (strip_tag) {
             pkt_len -= 4;
         }
-         g_bcmgenl_packet_stats.pkts_f_tag_checked++;
+        g_bcmgenl_packet_stats.pkts_f_tag_checked++;
     }
 
     if ((skb_generic_pkt = dev_alloc_skb(pkt_len)) == NULL)
@@ -343,18 +331,20 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
         goto FILTER_CB_PKT_HANDLED;
     }
 
-    /* SDKLT-43751: Use ptr offset to pkt payload to send to genetlink */
     /* setup skb by copying packet content */
     if (strip_tag) {
-        memcpy(skb_generic_pkt->data, pkt_ptr, 12);
-        memcpy(skb_generic_pkt->data + 12, pkt_ptr + 16, pkt_len - 12);
+        memcpy(skb_generic_pkt->data, pkt, 12);
+        memcpy(skb_generic_pkt->data + 12, pkt + 16, pkt_len - 12);
         g_bcmgenl_packet_stats.pkts_f_tag_stripped++;
     } else {
-        memcpy(skb_generic_pkt->data, pkt_ptr, pkt_len);
+        memcpy(skb_generic_pkt->data, pkt, pkt_len);
     }
     skb_put(skb_generic_pkt, pkt_len);
     skb_generic_pkt->len = pkt_len;
     generic_pkt->skb = skb_generic_pkt;
+    if (debug & GENL_DBG_LVL_PDMP) {
+        dump_skb(skb_generic_pkt);
+    }
     /* generic_pkt end */
 
     spin_lock_irqsave(&g_bcmgenl_packet_work.lock, flags);
@@ -382,7 +372,14 @@ bcmgenl_packet_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     rv = 1;
 
 FILTER_CB_PKT_HANDLED:
-    g_bcmgenl_packet_stats.pkts_f_handled++;
+    if (rv == 1) {
+        g_bcmgenl_packet_stats.pkts_f_handled++;
+        /* Not sending to network protocol stack */
+        dev_kfree_skb_any(skb);
+        skb = NULL;
+    } else {
+        g_bcmgenl_packet_stats.pkts_f_pass_through++;
+    }
     return skb;
 }
 
@@ -405,7 +402,7 @@ bcmgenl_packet_task(struct work_struct *work)
 
         /* send generic_pkt to generic netlink */
         if (pkt) {
-            BCMGENL_PACKET_DBG_VERB
+            GENL_DBG_VERB
                 ("%s: netns 0x%p, in_ifindex %d, out_ifindex %d, context 0x%08x\n",
                  __func__,
                  pkt->netns,
@@ -436,32 +433,31 @@ bcmgenl_packet_netif_create_cb(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif)
     unsigned long flags;
 
     if (!dinfo) {
-        printk("%s: dinfo is NULL\n", __func__);
+        GENL_DBG_WARN("%s: dinfo is NULL\n", __func__);
         return (-1);
     }
     if (netif->id == 0) {
-        printk("%s: netif->id == 0 is not a valid interface ID\n", __func__);
+        GENL_DBG_WARN("%s: netif->id == 0 is not a valid interface ID\n", __func__);
         return (-1);
     }
     if ((new_netif = kmalloc(sizeof(bcmgenl_netif_t), GFP_ATOMIC)) == NULL) {
-        printk("%s: failed to alloc psample mem for netif '%s'\n",
-               __func__, netif->name);
+        GENL_DBG_WARN("%s: failed to alloc psample mem for netif '%s'\n",
+                      __func__, netif->name);
         return (-1);
     }
 
     spin_lock_irqsave(&g_bcmgenl_packet_info.lock, flags);
-    
     new_netif->dev = dinfo->vdev[netif->id];
     new_netif->id = netif->id;
-    new_netif->vlan = netif->vlan;
     new_netif->port = netif->port;
+    new_netif->vlan = netif->vlan;
+
     /* insert netif sorted by ID similar to ngknet_netif_create() */
     found = false;
     list_for_each(list, &g_bcmgenl_packet_info.netif_list) {
         lbcmgenl_netif = (bcmgenl_netif_t *)list;
         if (netif->id < lbcmgenl_netif->id) {
             found = true;
-            g_bcmgenl_packet_info.netif_count++;
             break;
         }
     }
@@ -473,10 +469,11 @@ bcmgenl_packet_netif_create_cb(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif)
         /* No holes - add to end of list */
         list_add_tail(&new_netif->list, &g_bcmgenl_packet_info.netif_list);
     }
-
+    g_bcmgenl_packet_info.netif_count++;
     spin_unlock_irqrestore(&g_bcmgenl_packet_info.lock, flags);
 
-    BCMGENL_PACKET_DBG_VERB("%s: added netlink packet netif '%s'\n", __func__, netif->name);
+    GENL_DBG_VERB
+        ("%s: added netlink packet netif '%s'\n", __func__, netif->name);
     return (0);
 }
 
@@ -489,10 +486,14 @@ bcmgenl_packet_netif_destroy_cb(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif)
     unsigned long flags;
 
     if (!dinfo || !netif) {
-        printk("%s: dinfo or netif is NULL\n", __func__);
+        GENL_DBG_WARN("%s: dinfo or netif is NULL\n", __func__);
         return (-1);
     }
 
+    if (g_bcmgenl_packet_info.netif_count == 0) {
+        GENL_DBG_WARN("%s: no netif is created\n", __func__);
+        return (0);
+    }
     spin_lock_irqsave(&g_bcmgenl_packet_info.lock, flags);
 
     list_for_each(list, &g_bcmgenl_packet_info.netif_list) {
@@ -500,7 +501,8 @@ bcmgenl_packet_netif_destroy_cb(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif)
         if (netif->id == lbcmgenl_netif->id) {
             found = true;
             list_del(&lbcmgenl_netif->list);
-            BCMGENL_PACKET_DBG_VERB("%s: removing psample netif '%s'\n", __func__, netif->name);
+            GENL_DBG_VERB
+                ("%s: removing generic netif '%s'\n", __func__, netif->name);
             kfree(lbcmgenl_netif);
             g_bcmgenl_packet_info.netif_count--;
             break;
@@ -510,7 +512,7 @@ bcmgenl_packet_netif_destroy_cb(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif)
     spin_unlock_irqrestore(&g_bcmgenl_packet_info.lock, flags);
 
     if (!found) {
-        printk("%s: netif ID %d not found!\n", __func__, netif->id);
+        GENL_DBG_WARN("%s: netif ID %d not found!\n", __func__, netif->id);
         return (-1);
     }
     return (0);
@@ -565,6 +567,7 @@ bcmgenl_packet_proc_stats_show(struct seq_file *m, void *v)
     seq_printf(m, "  pkts filter generic cb         %10lu\n", g_bcmgenl_packet_stats.pkts_f_packet_cb);
     seq_printf(m, "  pkts sent to generic module    %10lu\n", g_bcmgenl_packet_stats.pkts_f_packet_mod);
     seq_printf(m, "  pkts handled by generic cb     %10lu\n", g_bcmgenl_packet_stats.pkts_f_handled);
+    seq_printf(m, "  pkts pass through              %10lu\n", g_bcmgenl_packet_stats.pkts_f_pass_through);
     seq_printf(m, "  pkts with vlan tag checked     %10lu\n", g_bcmgenl_packet_stats.pkts_f_tag_checked);
     seq_printf(m, "  pkts with vlan tag stripped    %10lu\n", g_bcmgenl_packet_stats.pkts_f_tag_stripped);
     seq_printf(m, "  pkts with mc destination       %10lu\n", g_bcmgenl_packet_stats.pkts_f_dst_mc);
@@ -678,7 +681,7 @@ bcmgenl_packet_proc_debug_write(
         ptr += 6;
         debug = simple_strtol(ptr, NULL, 0);
     } else {
-        printk("Warning: unknown configuration setting\n");
+        GENL_DBG_WARN("Warning: unknown configuration setting\n");
     }
 
     return count;
@@ -782,11 +785,11 @@ genl_cb_init(void)
     /* get net namespace */
     g_bcmgenl_packet_info.netns = get_net_ns_by_pid(current->pid);
     if (!g_bcmgenl_packet_info.netns) {
-        printk("%s: Could not get network namespace for pid %d\n",
-               __func__, current->pid);
+        GENL_DBG_WARN("%s: Could not get network namespace for pid %d\n",
+                      __func__, current->pid);
         return (-1);
     }
-    BCMGENL_PACKET_DBG_VERB
+    GENL_DBG_VERB
         ("%s: current->pid %d, netns 0x%p\n",
          __func__, current->pid, g_bcmgenl_packet_info.netns);
     return 0;
@@ -815,3 +818,4 @@ int bcmgenl_packet_init(void)
 
 EXPORT_SYMBOL(bcmgenl_packet_cleanup);
 EXPORT_SYMBOL(bcmgenl_packet_init);
+#endif

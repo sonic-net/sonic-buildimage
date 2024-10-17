@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMPKT_FLEXHDR_H
@@ -25,7 +25,7 @@
 
 #include <shr/shr_bitop.h>
 #include <sal/sal_types.h>
-#include <bcmlrd/bcmlrd_local_types.h>
+#include <bcmlrd/bcmlrd_conf.h>
 #include <bcmdrd/bcmdrd_types.h>
 #include <bcmpkt/bcmpkt_pmd.h>
 #include <bcmpkt/bcmpkt_pmd_internal.h>
@@ -73,6 +73,12 @@
  */
 #define BCMPKT_RXPMD_FLEX_REASON_SET_ALL(_reasons, _count) \
         SHR_BITSET_RANGE(((_reasons).pbits), 0, _count)
+
+/*!
+ * Macro to clear all reasons.
+ */
+#define BCMPKT_RXPMD_FLEX_REASON_CLEAR_ALL(_reasons, _count) \
+        SHR_BITCLR_RANGE(((_reasons).pbits), 0, _count)
 
 /*!
  * Macro to check for no reason.
@@ -167,6 +173,34 @@ typedef struct bcmpkt_rxpmd_func_s {
 #include <bcmdrd/bcmdrd_devlist.h>
 
 /*!
+ * \brief Get Header name for a given header ID.
+ *
+ * \param [in] variant Variant type.
+ * \param [in] hid flexhdr ID.
+ * \param [out] name flexhdr name string.
+ *
+ * \retval SHR_E_NONE success.
+ * \retval SHR_E_PARAM Check parameters failed.
+ */
+extern int
+bcmpkt_flexhdr_header_name_get(bcmlrd_variant_t variant,
+                               uint32_t hid, char **name);
+
+/*!
+ * \brief Get Header encapsulation length for a given header ID.
+ *
+ * \param [in] variant Variant type.
+ * \param [in] hid flexhdr ID.
+ * \param [out] len header length.
+ *
+ * \retval SHR_E_NONE success.
+ * \retval SHR_E_PARAM Check parameters failed.
+ */
+extern int
+bcmpkt_flexhdr_len_get(bcmlrd_variant_t variant, uint32_t hid,
+                       uint32_t *len);
+
+/*!
  * \brief Get Header ID for a given flexhdr name.
  *
  * \param [in] variant Variant type.
@@ -180,7 +214,6 @@ typedef struct bcmpkt_rxpmd_func_s {
 extern int
 bcmpkt_flexhdr_header_id_get(bcmlrd_variant_t variant,
                              char* name, uint32_t *hid);
-
 
 /*!
  * \brief Check if flexhdr is supported.

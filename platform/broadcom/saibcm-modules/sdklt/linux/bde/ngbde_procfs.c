@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <ngbde.h>
@@ -26,7 +26,7 @@ static int
 proc_show(struct seq_file *m, void *v)
 {
     struct ngbde_dev_s *swdev;
-    unsigned int num_swdev, idx;
+    unsigned int num_swdev, idx, irq;
     struct ngbde_dmamem_s *dmamem;
     unsigned int pool;
     unsigned int dma_pools;
@@ -44,9 +44,14 @@ proc_show(struct seq_file *m, void *v)
             seq_printf(m, "%d:removed\n", idx);
             continue;
         }
-        seq_printf(m, "%d:%04x:%04x:%02x,%s(%d)\n", idx,
+        seq_printf(m, "%d:%04x:%04x:%02x,%s(%d", idx,
                    swdev->vendor_id, swdev->device_id, swdev->revision,
-                   swdev->use_msi ? "MSI" : "IRQ", swdev->irq_line);
+                   swdev->use_msi ? "MSI" : "IRQ",
+                   swdev->intr_ctrl[0].irq_vect);
+        for (irq = 1; irq < swdev->irq_max; irq++) {
+            seq_printf(m, ",%d", swdev->intr_ctrl[irq].irq_vect);
+        }
+        seq_printf(m, ")\n");
     }
 
     seq_printf(m, "DMA pools:\n");
