@@ -1,13 +1,10 @@
-FROM docker-syncd-brcm-dnx-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+ARG BASE=docker-syncd-brcm-dnx-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
-
-COPY \
-{% for deb in docker_syncd_brcm_dnx_rpc_debs.split(' ') -%}
-debs/{{ deb }}{{' '}}
-{%- endfor -%}
-debs/
 
 RUN apt-get purge -y syncd
 
@@ -22,15 +19,15 @@ RUN apt-get update \
     libffi-dev          \
     python-dev          \
     wget                \
-    cmake               \
-    libqt5core5a        \
-    libqt5network5      \
-    libboost-atomic1.74.0
+    cmake
 
-RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
-{% for deb in docker_syncd_brcm_dnx_rpc_debs.split(' ') -%}
-dpkg_apt debs/{{ deb }}{{'; '}}
-{%- endfor %}
+{% if docker_syncd_brcm_dnx_rpc_debs.strip() -%}
+# Copy built Debian packages
+{{ copy_files("debs/", docker_syncd_brcm_dnx_rpc_debs.split(' '), "/debs/") }}
+
+# Install built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_syncd_brcm_dnx_rpc_debs.split(' ')) }}
+{%- endif %}
 
 RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
  && tar xvfz 1.0.0.tar.gz \
@@ -55,4 +52,9 @@ RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
 
 COPY ["ptf_nn_agent.conf", "/etc/supervisor/conf.d/"]
 
+FROM $BASE
+
+COPY --from=base / /
+
+ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]
