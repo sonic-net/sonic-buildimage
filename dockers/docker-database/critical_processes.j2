@@ -1,5 +1,6 @@
 {% if INSTANCES %}
 {%     for redis_inst, redis_items in INSTANCES.items() %}
+
 program:{{ redis_inst }}
 {%-     endfor %}
 {%- endif %}
