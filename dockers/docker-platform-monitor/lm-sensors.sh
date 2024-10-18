@@ -20,4 +20,4 @@ fi
 
 # Currently, there is no way to run sensord in the foreground, so we
 # can't use supervisord. Instead, we just start the service for now.
-service sensord start
+exec /usr/sbin/sensord -f
