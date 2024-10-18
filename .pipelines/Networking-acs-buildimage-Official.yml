@@ -50,6 +50,8 @@ parameters:
   - broadcom
   - mellanox
   - marvell-armhf
+  - cisco-8000
+  - cisco-8000-smartswitch
 extends:
   template: v2/OneBranch.Official.CBWorkflow.yml@templates # https://aka.ms/obpipelines/templates
   parameters:

@@ -33,6 +33,8 @@ parameters:
   - broadcom
   - mellanox
   - marvell-armhf
+  - cisco-8000
+  - cisco-8000-smartswitch
 variables:
   - name: DOCKER_BUILD_TIMEOUT
     value: 5400
