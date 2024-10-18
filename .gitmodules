@@ -9,7 +9,8 @@
 	url = https://github.com/sonic-net/sonic-sairedis
 [submodule "sonic-swss"]
 	path = src/sonic-swss
-	url = https://github.com/sonic-net/sonic-swss
+	url = https://github.com/divyachandralekha/sonic-swss
+	branch = pvst_co_pr
 [submodule "src/p4c-bm/p4c-bm"]
 	path = platform/p4/p4c-bm/p4c-bm
 	url = https://github.com/krambn/p4c-bm
@@ -21,6 +22,7 @@
 	url = https://github.com/sonic-net/sonic-dbsyncd
 [submodule "src/sonic-py-swsssdk"]
 	path = src/sonic-py-swsssdk
+
 	url = https://github.com/sonic-net/sonic-py-swsssdk.git
 [submodule "src/sonic-snmpagent"]
 	path = src/sonic-snmpagent
@@ -30,7 +32,8 @@
 	url = https://github.com/p4lang/ptf.git
 [submodule "src/sonic-utilities"]
 	path = src/sonic-utilities
-	url = https://github.com/sonic-net/sonic-utilities
+	url = https://github.com/divyachandralekha/sonic-utilities
+	branch = pvst_co_pr
 [submodule "platform/broadcom/sonic-platform-modules-arista"]
 	path = platform/broadcom/sonic-platform-modules-arista
 	url = https://github.com/aristanetworks/sonic
@@ -95,7 +98,7 @@
 	path = src/sonic-p4rt/sonic-pins
 	url = https://github.com/sonic-net/sonic-pins.git
 [submodule "src/ptf-py3"]
-	path = src/ptf-py3
+	path = src/ptf-py3branch
 	url = https://github.com/p4lang/ptf.git
 [submodule "src/dhcprelay"]
 	path = src/dhcprelay
@@ -123,4 +126,8 @@
 	url = https://github.com/Marvell-switching/sonic-platform-arm64.git
 [submodule "platform/innovium/sonic-platform-marvell"]
 	path = platform/innovium/sonic-platform-marvell
-	url = https://github.com/Marvell-switching/sonic-platform-marvell
+        url = https://github.com/Marvell-switching/sonic-platform-marvell
+[submodule "src/sonic-stp"]
+	path = src/sonic-stp
+	url = https://github.com/divyachandralekha/sonic-stp
+	branch = pvst_co_pr
