@@ -25,6 +25,7 @@ route-map FROM_BGP_INTERNAL_PEER_V6 permit 2
  {% endif %}
 {% elif CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
 bgp community-list standard DEVICE_INTERNAL_COMMUNITY permit {{ constants.bgp.internal_community }}
+bgp community-list standard DEVICE_INTERNAL_FALLBACK_COMMUNITY permit {{ constants.bgp.internal_fallback_community }}
 bgp community-list standard NO_EXPORT permit no-export
 !
 route-map FROM_BGP_INTERNAL_PEER_V4 permit 1
@@ -32,7 +33,10 @@ route-map FROM_BGP_INTERNAL_PEER_V4 permit 1
   set comm-list DEVICE_INTERNAL_COMMUNITY delete
   set tag {{ constants.bgp.internal_community_match_tag }}
 !
-route-map FROM_BGP_INTERNAL_PEER_V4 permit 2
+route-map FROM_BGP_INTERNAL_PEER_V4 deny 2
+  match community DEVICE_INTERNAL_FALLBACK_COMMUNITY
+!
+route-map FROM_BGP_INTERNAL_PEER_V4 permit 3
   match community NO_EXPORT
   set local-preference 80
 !
@@ -45,7 +49,10 @@ route-map FROM_BGP_INTERNAL_PEER_V6 permit 2
   set comm-list DEVICE_INTERNAL_COMMUNITY delete
   set tag {{ constants.bgp.internal_community_match_tag }}
 !
-route-map FROM_BGP_INTERNAL_PEER_V6 permit 3
+route-map FROM_BGP_INTERNAL_PEER_V6 deny 3
+  match community DEVICE_INTERNAL_FALLBACK_COMMUNITY
+!
+route-map FROM_BGP_INTERNAL_PEER_V6 permit 4
   match community NO_EXPORT
   set local-preference 80
 !
