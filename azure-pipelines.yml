@@ -38,7 +38,7 @@ resources:
 
 variables:
 - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
-- template: .azure-pipelines/template-variables.yml@buildimage
+- template: .azure-pipelines/template-variables.yml
 - name: CACHE_MODE
   value: rcache
 - name: ENABLE_FIPS
