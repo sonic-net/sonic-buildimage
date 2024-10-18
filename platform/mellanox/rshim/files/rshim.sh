@@ -24,8 +24,8 @@ fi
 dpu_id=$1
 
 declare -A dpu2pcie
-dpu2pcie[0]="06:00.0"
-dpu2pcie[1]="05:00.0"
+dpu2pcie[0]="08:00.0"
+dpu2pcie[1]="07:00.0"
 dpu2pcie[2]="01:00.0"
 dpu2pcie[3]="02:00.0"
 

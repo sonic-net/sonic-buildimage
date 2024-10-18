@@ -107,7 +107,7 @@ class DhcpServCfgGenerator(object):
         Returns:
             Parsed obj, sample:
                 mid_plane = {
-                    "bridge": "bridge_midplane",
+                    "bridge": "bridge-midplane",
                     "address": "169.254.200.254/24"
                 }
                 dpus = {

@@ -1,0 +1,17 @@
+[Unit]
+Description=Ds1000 Fan Control service
+After=pddf-platform-init.service
+Requires=pddf-platform-init.service
+BindsTo=pddf-platform-init.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ds1000_fanctld.py
+KillSignal=SIGTERM
+SuccessExitStatus=0
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target

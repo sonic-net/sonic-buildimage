@@ -7,7 +7,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef SAL_LINUX_H
@@ -36,9 +36,20 @@
 
 #else
 
+
 /*!
  * \cond SAL_LINUX
  */
+
+#include <linux/version.h>
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0))
+/* Use built-in version */
+#include <linux/stdarg.h>
+#else
+/* Borrow from compiler */
+#include <stdarg.h>
+#endif
 
 #include <linux/types.h>
 #define SAL_CONFIG_DEFINE_SIZE_T        0

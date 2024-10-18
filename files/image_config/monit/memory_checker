@@ -219,6 +219,7 @@ def check_memory_usage(container_name, threshold_value):
     if total_memory_usage > threshold_value:
         print("[{}]: Memory usage ({} Bytes) is larger than the threshold ({} Bytes)!"
               .format(container_name, total_memory_usage, threshold_value))
+        publish_events(container_name, "{:.2f}".format(total_memory_usage), str(threshold_value))
         sys.exit(EXCEED_THRESHOLD)
 
 def is_service_active(service_name):

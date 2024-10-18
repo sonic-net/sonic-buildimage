@@ -1,5 +1,5 @@
 #
-# $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+# Copyright 2018-2024 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -12,7 +12,7 @@
 # GNU General Public License for more details.
 # 
 # A copy of the GNU General Public License version 2 (GPLv2) can
-# be found in the LICENSES folder.$
+# be found in the LICENSES folder.
 #
 # Makefile for building Linux GPL kernel modules for SDKLT.
 #
@@ -60,7 +60,7 @@ GENL_PACKET_BLDDIR := $(OUTPUT_DIR)/genl-packet
 LKM_CFLAGS += -UNGKNET_NETIF_MAX -DNGKNET_NETIF_MAX=1056 -UNGKNET_FILTER_MAX -DNGKNET_FILTER_MAX=1025
 export LKM_CFLAGS
 
-kmod: bde knet knetcb genl-packet bcmgenl 
+kmod: bde knet knetcb genl-packet bcmgenl
 
 bde:
 	$(MAKE) -C $(SDK)/linux/bde SDK=$(SDK) \

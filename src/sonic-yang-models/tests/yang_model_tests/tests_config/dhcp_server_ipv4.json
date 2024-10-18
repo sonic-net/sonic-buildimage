@@ -3,7 +3,7 @@
         "sonic-smart-switch:sonic-smart-switch": {
             "sonic-smart-switch:MID_PLANE_BRIDGE": {
                 "GLOBAL": {
-                    "bridge": "bridge_midplane",
+                    "bridge": "bridge-midplane",
                     "ip_prefix": "169.254.200.254/24"
                 }
             }
@@ -49,7 +49,7 @@
                         "state": "enabled"
                     },
                     {
-                        "name": "bridge_midplane",
+                        "name": "bridge-midplane",
                         "gateway": "169.254.200.254",
                         "lease_time": 3600,
                         "mode": "PORT",
@@ -185,7 +185,7 @@
         "sonic-smart-switch:sonic-smart-switch": {
             "sonic-smart-switch:MID_PLANE_BRIDGE": {
                 "GLOBAL": {
-                    "bridge": "bridge_midplane",
+                    "bridge": "bridge-midplane",
                     "ip_prefix": "169.254.200.254/24"
                 }
             }
@@ -194,7 +194,7 @@
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
                 "DHCP_SERVER_IPV4_LIST": [
                     {
-                        "name": "non_exist_bridge_midplane",
+                        "name": "non_exist_bridge-midplane",
                         "gateway": "192.168.0.1",
                         "lease_time": 3600,
                         "mode": "PORT",
@@ -294,7 +294,7 @@
         "sonic-smart-switch:sonic-smart-switch": {
             "sonic-smart-switch:MID_PLANE_BRIDGE": {
                 "GLOBAL": {
-                    "bridge": "bridge_midplane",
+                    "bridge": "bridge-midplane",
                     "ip_prefix": "169.254.200.254/24"
                 }
             }
@@ -303,7 +303,7 @@
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
                 "DHCP_SERVER_IPV4_LIST": [
                     {
-                        "name": "bridge_midplane",
+                        "name": "bridge-midplane",
                         "gateway": "169.254.200.254",
                         "lease_time": 3600,
                         "mode": "PORT",
@@ -315,7 +315,7 @@
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_PORT": {
                 "DHCP_SERVER_IPV4_PORT_LIST": [
                     {
-                        "name": "bridge_midplane",
+                        "name": "bridge-midplane",
                         "port": "non_exit_dpu",
                         "ips": [
                             "169.254.200.1"
