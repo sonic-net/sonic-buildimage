@@ -1,0 +1,26 @@
+From 40d1062ec3c2b5bf4720f072510a0ef7473ff07b Mon Sep 17 00:00:00 2001
+From: sudhanshukumar22 <sudhanshu.kumar@broadcom.com>
+Date: Thu, 3 Oct 2024 06:08:01 -0700
+Subject: [PATCH] Added file to header for compilation errors
+
+---
+ zebra/zebra_evpn.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/zebra/zebra_evpn.h b/zebra/zebra_evpn.h
+index c946425dd..cd2ed648a 100644
+--- a/zebra/zebra_evpn.h
++++ b/zebra/zebra_evpn.h
+@@ -122,7 +122,8 @@ struct zebra_from_svi_param {
+ };
+ 
+ struct interface *zvni_map_to_svi(vlanid_t vid, struct interface *br_if);
+-
++extern struct zebra_vxlan_vni *
++zebra_vxlan_if_vni_find(const struct zebra_if *zif, vni_t vni);
+ static inline struct interface *zevpn_map_to_svi(struct zebra_evpn *zevpn)
+ {
+ 	struct interface *ifp;
+-- 
+2.39.4
+
