@@ -1,0 +1,45 @@
+module sonic-auditd {
+
+    yang-version 1.1;
+
+    namespace  "http://github.com/sonic-net/sonic-auditd";
+
+    prefix sonic-auditd;
+
+    description "AUDITD YANG module for SONiC OS";
+
+    revision 2024-09-26 {
+        description "Initial version";
+    }
+
+    container sonic-auditd {
+
+        container AUDITD {
+
+            description "AUDITD part of config_db";
+
+            list AUDITD_LIST {
+                key "name";
+                description "List of audit rules";
+
+                leaf name {
+                    type string {
+                        length "1..255";
+                    }
+                    description "Name of the audit rule group";
+                }
+
+                leaf state {
+                    type string {
+                        pattern "enabled|disabled";
+                    }
+                    description "Status of the audit rule group (enabled or disabled).";
+                }
+            }
+            /* end of AUDITD_LIST */
+        }
+        /* end of container AUDITD */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-auditd */
