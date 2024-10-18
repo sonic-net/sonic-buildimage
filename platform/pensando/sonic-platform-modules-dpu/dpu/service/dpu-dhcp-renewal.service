@@ -1,0 +1,14 @@
+[Unit]
+Description=dpu dhcp ip renewal
+After=dpu.service
+Requires=dpu.service
+
+[Service]
+User=root
+ExecStartPre=/bin/sleep 60
+ExecStart=/usr/local/bin/dhcp_reset.sh
+StandardOutput=syslog
+StandardError=syslog
+
+[Install]
+WantedBy=multi-user.target
