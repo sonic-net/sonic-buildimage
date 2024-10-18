@@ -1,0 +1,42 @@
+name: Protect minigraph.py File to avoid further change
+
+on:
+  push:
+    branches:
+      - 'master'
+      - '202[2-9][0-9][0-9]'
+  pull_request_target:
+    branches:
+      - 'master'
+      - '202[2-9][0-9][0-9]'
+
+jobs:
+  check-file:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Print GitHub context
+        run: |
+          echo "GitHub context: ${{ toJson(github) }}"
+      
+      - name: Get base branch reference
+        run: |
+          base_ref=$(echo "${{ toJson(github) }}" | jq -r ".base_ref")
+          echo "Base branch reference: $base_ref"
+
+      - name: Check protected file
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          base_ref=$(echo $GITHUB_CONTEXT | jq -r ".base_ref")
+          echo "base_ref ${base_ref}"
+          protected_file="src/sonic-config-engine/minigraph.py"
+          base_branch=$(git rev-parse origin/${base_ref})
+          echo "base_br ${base_branch}"
+          if git diff --name-only $base_branch | grep -q "^$protected_file\$"; then
+              echo "Error: You are trying to modify $protected_file, which is protected."
+              exit 1
+          fi
+
