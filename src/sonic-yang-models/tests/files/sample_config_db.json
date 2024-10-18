@@ -1775,7 +1775,8 @@
             "STATE": {
                 "tsa_enabled": "false",
                 "wcmp_enabled": "false",
-                "idf_isolation_state": "unisolated"
+                "idf_isolation_state": "unisolated",
+                "received_bandwidth": "ignore"
             }
         },
         "BGP_PEER_RANGE": {
