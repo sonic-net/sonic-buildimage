@@ -78,6 +78,8 @@ stages:
               OPTIONS: ${{ parameters.OPTIONS }}
           - script: |
               set -ex
+
+              failures=''
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/broadcom"
               echo "==== Building slim images"
               echo "INCLUDE_ACMS = y" >> rules/config.user
@@ -93,6 +95,7 @@ stages:
               make $OPTIONS target/sonic-broadcom.bin target/sonic-aboot-broadcom.swi
               mv target/sonic-broadcom.bin target/sonic-broadcom-slim.bin
               mv target/sonic-aboot-broadcom.swi target/sonic-aboot-broadcom-slim.swi
+              rm -rf target/*.squashfs
               rm rules/config.user
               rm target/docker-sonic-gnmi.gz
               rm -rf target/*.squashfs
@@ -101,20 +104,24 @@ stages:
               echo "INCLUDE_DHCP_SERVER = y" >> rules/config.user
               make $OPTIONS target/sonic-aboot-broadcom.swi
               mv target/sonic-aboot-broadcom.swi target/release/
+              rm -rf target/*.squashfs
               rm rules/config.user
               echo "==== Finished building swi images"
               echo "==== Building regular images"
               make $OPTIONS target/sonic-broadcom.bin
+              rm -rf target/*.squashfs
               mv target/sonic-broadcom.bin target/release/
               echo "==== Finished building regular images"
               echo "==== Building syncd-rpc docker"
-              make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-rpc.gz
+              # brcm-rpc failed. it will be fixed on github. TODO
+              make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-brcm-rpc.gz || failures+=docker-syncd-brcm-rpc.gz
               echo "==== Finished building syncd-rpc docker"
               echo "==== Building one debug image"
               make $OPTIONS INSTALL_DEBUG_TOOLS=y target/sonic-broadcom.bin
               mv target/sonic-broadcom.bin target/sonic-broadcom-dbg.bin
               echo "==== Finished building one debug image"
               mv target/release/* target/
+              [[ "$failures" != '' ]] && echo "Build failures: $failures" && exit 1
             displayName: Build SONiC image
           - template: /.pipelines/template-poststeps.yml@self
             parameters:
@@ -174,91 +181,16 @@ stages:
               PLATFORM_NAME: marvell-armhf
               BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
     - ${{ if containsValue(parameters.JOBS, 'cisco-8000') }}:
-      - job: cisco_8000
-        ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-          timeoutInMinutes: 840
-        pool:
-          type: linux
-          isCustom: true
-          name: sonic-image-builder-1ES
-        variables:
-          TERM: ''
-          SONIC_ENABLE_SECUREBOOT_SIGNATURE: y
-          SIGNING_KEY: /etc/certificates/sonic-secure-boot-private.pem
-          SIGNING_CERT: $(Build.SourcesDirectory)/target/sonic-secure-boot-public.pem
-          ob_artifactBaseName: sonic-buildimage.cisco-8000
-        steps:
-        - template: /.pipelines/template-presteps.yml@self
-          parameters:
-            PLATFORM_NAME: cisco-8000
-            PLATFORM_ARCH: amd64
-            OPTIONS: ${{ parameters.OPTIONS }}
-        - template: /.azure-pipelines/azure-pipelines-download-certificate.yml@self
-          parameters:
-            connectionName: sonic2sub
-            kevaultName: sonic-kv
-        - script: |
-            echo $(DEV_SIGNING_KEY) | base64 -d | sudo tee "$(SIGNING_KEY)" 1>/dev/null 2>&1
-            echo $(DEV_SIGNING_CERT) | base64 -d > "$(SIGNING_CERT)"
-            echo "SECURE_UPGRADE_MODE := dev" >> rules/config.user
-            echo "SECURE_UPGRADE_DEV_SIGNING_KEY := $SIGNING_KEY" >> rules/config.user
-            echo "SECURE_UPGRADE_SIGNING_CERT := $SIGNING_CERT" >> rules/config.user
-          displayName: "Enable secure boot signature"
-        - script: |
-            cisco_ref=$(cat platform/checkout/cisco-8000.ini | grep '^ref=' | cut -d= -f2)
-            echo "The cisco 8000 release version is $cisco_ref"
-            echo "##vso[task.setvariable variable=cisco.ref]$cisco_ref"
-          displayName: 'Export cisco release version'
-        - task: DownloadGitHubRelease@0
-          inputs:
-            connection: cisco-connection
-            userRepository: Cisco-8000-sonic/platform-cisco-8000
-            defaultVersionType: specificTag
-            version: $(cisco.ref)
-            itemPattern: 'artifactory-*.tar.gz'
-            downloadPath: '$(System.ArtifactsDirectory)'
-        - script: |
-            tar xvfz $(System.ArtifactsDirectory)/artifactory-*.tar.gz -C platform/cisco-8000
-          displayName: 'Setup cisco artifacts'
-        - script: |
-            if [ ! -e platform/cisco-8000/device/x86_64-8102_64h_o-r0/Cisco-8102-C64 ]; then
-              echo "hwsku Cisco-8102-C64 doesn't exist, copy from 64x100Gb"
-              cp -r platform/cisco-8000/device/x86_64-8102_64h_o-r0/64x100Gb platform/cisco-8000/device/x86_64-8102_64h_o-r0/Cisco-8102-C64
-            else
-              echo "hwsku Cisco-8102-C64 exist"
-            fi
-          displayName: 'Setup cisco hwsku Cisco-8102-C64'
-        - script: |
-            set -ex
-            filename=$(find platform/cisco-8000/artifactory/sonic -name cisco-* -type f | head -n 1)
-            if [ -z "$filename" ]; then
-              echo "Cisco sai package not found" 1>&2
-              exit 1
-            fi
-            cd $(dirname $filename)
-            echo "PWD=$(pwd)"
-            ls -l cisco-*.deb
-            while read -r package; do
-              # Cisco version format: <VERSION>-sai-<sai-ver>-<distribution>-<COMMIT HASH>
-              # The <sai-ver> may contain several values in one build, the part is skipped when publishing to storage
-              # See https://github.com/Cisco-8000-sonic/sdk/blob/master/azure-pipelines.yml
-              # The $PACKAGE_URL is only accessible for AZP
-              PACKAGE_URL=https://sonicstorage.blob.core.windows.net/packages
-              version=$(echo $package | awk -F_ '{print $(NF-1)}' | cut -d- -f1,2,4,5)
-              package_url="$PACKAGE_URL/sai/ciscosai/master/$version/$package"
-              echo "Override package $package from $package_url"
-              wget "$package_url" -O "$package"
-            done < <(ls cisco-*.deb)
-          continueOnError: true
-          displayName: "Override cisco sai packages"
-        - script: |
-            set -ex
-            OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/cisco-8000 ENABLE_NAT=n INCLUDE_VNET_MONITOR=y"
-            make $OPTIONS target/sonic-cisco-8000.bin
-            make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-cisco-rpc.gz || true
-          displayName: Build SONiC image
-        - template: /.pipelines/template-poststeps.yml@self
-          parameters:
-            PLATFORM_NAME: cisco-8000
-            BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
-
+      - template: template-cisco.yml
+        parameters:
+          NAME: cisco-8000
+          OPTIONS: ${{ parameters.OPTIONS }}
+          CACHE: ${{ parameters.CACHE }}
+          BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
+    - ${{ if containsValue(parameters.JOBS, 'cisco-8000-smartswitch') }}:
+      - template: template-cisco.yml
+        parameters:
+          NAME: cisco-8000-smartswitch
+          OPTIONS: '${{ parameters.OPTIONS }} SMARTSWITCH=1'
+          CACHE: ${{ parameters.CACHE }}
+          BRANCH_FOLDER: ${{ parameters.BRANCH_FOLDER }}
