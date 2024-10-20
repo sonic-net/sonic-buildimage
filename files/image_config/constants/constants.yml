@@ -5,8 +5,11 @@ constants:
   bgp:
     traffic_shift_community: 12345:12345
     internal_community: 11111:11111
-    internal_community_match_tag: 1002
+    internal_fallback_community: 22222:22222
     sentinel_community: 12345:12346
+    internal_community_match_tag: 201
+    route_do_not_send_appdb_tag: 202
+    route_eligible_for_fallback_to_default_tag: 203
     families:
       - ipv4
       - ipv6
