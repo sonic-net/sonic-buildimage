@@ -1,0 +1,26 @@
+{
+    "AUDITD_TEST": {
+        "sonic-auditd:sonic-auditd": {
+            "sonic-auditd:AUDITD": {
+                "AUDITD_LIST": [
+                    {
+                        "name": "file_deletion",
+                        "state": "enabled"
+                    }
+                ]
+            }
+        }
+    },
+    "AUDITD_INVALID_TEST": {
+        "sonic-auditd:sonic-auditd": {
+            "sonic-auditd:AUDITD": {
+                "AUDITD_LIST": [
+                    {
+                        "name": "file_deletion",
+                        "state": "abc"
+                    }
+                ]
+            }
+        }
+    }
+}
