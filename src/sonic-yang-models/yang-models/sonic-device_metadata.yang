@@ -250,6 +250,13 @@ module sonic-device_metadata {
                                  created, regardless of the CONFIG_DB buffers configuration.";
                 }
 
+                leaf supporting_bulk_counter_groups {
+                    type string;
+                    description "This field contains a list of counter groups that support bulk operation.
+                                 It does not check whether bulk operations are supported for counter groups in the list
+                                 during system initialization, which reduces boot time.";
+                }
+
                 leaf bgp_router_id {
                     type inet:ipv4-address;
                     description "BGP Router identifier";

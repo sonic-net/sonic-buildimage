@@ -435,6 +435,10 @@ start() {
         if [ -f "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON" ]; then
             $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
         fi
+        SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
+        if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
+        fi
     fi
     {%- endif %}
 
