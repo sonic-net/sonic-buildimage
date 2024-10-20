@@ -38,10 +38,6 @@ PSU_CPLD_I2C_MAPPING = {
     },
 }
 
-
-FAN_NAME_LIST = ["FAN-1F", "FAN-1R", "FAN-2F", "FAN-2R",
-                 "FAN-3F", "FAN-3R"]
-
 class Fan(FanBase):
     """Platform-specific Fan class"""
 
@@ -63,7 +59,7 @@ class Fan(FanBase):
             self.psu_cpld_path = I2C_PATH.format(
                 self.psu_i2c_num, self.psu_i2c_addr)
 
-        FanBase.__init__(self)  
+        FanBase.__init__(self)
 
 
     def get_direction(self):
@@ -73,16 +69,14 @@ class Fan(FanBase):
             A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
             depending on fan direction
         """
-
-
         if not self.is_psu_fan:
             dir_str = "{}{}{}".format(CPLD_FAN_I2C_PATH, 'direction_', self.fan_tray_index+1)
             val=self._api_helper.read_txt_file(dir_str)
             if val is not None:
                 if int(val, 10)==0:#F2B
-                    direction=self.FAN_DIRECTION_EXHAUST
-                else:
                     direction=self.FAN_DIRECTION_INTAKE
+                else:
+                    direction=self.FAN_DIRECTION_EXHAUST
             else:
                 direction=self.FAN_DIRECTION_EXHAUST
 
@@ -105,7 +99,7 @@ class Fan(FanBase):
         Returns:
             An integer, the percentage of full fan speed, in the range 0 (off)
                  to 100 (full speed)
-                         
+
         """
         speed = 0
         if self.is_psu_fan:
@@ -117,7 +111,7 @@ class Fan(FanBase):
                     speed=100
             else:
                 return 0
-        elif self.get_presence():            
+        elif self.get_presence():
             speed_path = "{}{}".format(CPLD_FAN_I2C_PATH, 'duty_cycle_percentage')
             speed=self._api_helper.read_txt_file(speed_path)
             if speed is None:
@@ -156,7 +150,7 @@ class Fan(FanBase):
             A boolean, True if speed is set successfully, False if not
         """
 
-        if not self.is_psu_fan and self.get_presence():            
+        if not self.is_psu_fan and self.get_presence():
             speed_path = "{}{}".format(CPLD_FAN_I2C_PATH, 'duty_cycle_percentage')
             return self._api_helper.write_txt_file(speed_path, int(speed))
 
@@ -179,14 +173,13 @@ class Fan(FanBase):
         Returns:
             A string, one of the predefined STATUS_LED_COLOR_* strings above
         """
-        status=self.get_presence()
-        if status is None:
-            return  self.STATUS_LED_COLOR_OFF
+        if self.is_psu_fan:
+            return None
 
         return {
-            1: self.STATUS_LED_COLOR_GREEN,
-            0: self.STATUS_LED_COLOR_RED
-        }.get(status, self.STATUS_LED_COLOR_OFF)
+            True: self.STATUS_LED_COLOR_GREEN,
+            False: self.STATUS_LED_COLOR_OFF
+        }.get(self.get_status(), self.STATUS_LED_COLOR_OFF)
 
     def get_name(self):
         """
@@ -194,11 +187,10 @@ class Fan(FanBase):
             Returns:
             string: The name of the device
         """
-        fan_name = FAN_NAME_LIST[self.fan_tray_index*2 + self.fan_index] \
-            if not self.is_psu_fan \
-            else "PSU-{} FAN-{}".format(self.psu_index+1, self.fan_index+1)
+        if self.is_psu_fan:
+            return "PSU-{} FAN-{}".format(self.psu_index+1, self.fan_index+1)
 
-        return fan_name
+        return "FAN-{}".format(self.fan_tray_index+1)
 
     def get_presence(self):
         """
@@ -206,8 +198,6 @@ class Fan(FanBase):
         Returns:
             bool: True if FAN is present, False if not
         """
-
-
         if self.is_psu_fan:
             present_path="{}{}".format(self.psu_cpld_path, 'psu_present')
         else:
@@ -226,6 +216,11 @@ class Fan(FanBase):
             A boolean value, True if device is operating properly, False if not
         """
         if self.is_psu_fan:
+            psu_fan_path = "{}{}".format(self.psu_cpld_path, 'psu_power_good')
+            val = self._api_helper.read_txt_file(psu_fan_path)
+            if val is None or int(val, 10)==0:
+                return False
+
             psu_fan_path= "{}{}".format(self.psu_hwmon_path, 'psu_fan1_fault')
             val=self._api_helper.read_txt_file(psu_fan_path)
             if val is not None:
@@ -268,7 +263,7 @@ class Fan(FanBase):
             integer: The 1-based relative physical position in parent device
             or -1 if cannot determine the position
         """
-        return (self.fan_tray_index+1) \
+        return (self.fan_index+1) \
             if not self.is_psu_fan else (self.psu_index+1)
 
     def is_replaceable(self):
