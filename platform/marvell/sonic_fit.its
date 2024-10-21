@@ -117,6 +117,40 @@
                 algo = "sha1";
             };
         };
+	kernel_es1227 {
+            description = "Linux Kernel";
+            data = /incbin/("/boot/vmlinuz-6.1.0-22-2-arm64");
+            type = "kernel";
+            arch = "arm64";
+            os = "linux";
+            compression = "none";
+            load = <0x6000000>;
+            entry = <0x6000000>;
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        ramdisk_es1227 {
+            description = "ramdisk";
+            data = /incbin/("/boot/initrd.img-6.1.0-22-2-arm64");
+            type = "ramdisk";
+            arch = "arm64";
+            os = "linux";
+            compression = "gzip";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+        fdt_es1227 {
+            description = "Flattened Device Tree blob for Wistron ES1227";
+            data = /incbin/("/usr/lib/linux-image-6.1.0-22-2-arm64/marvell/es1227-54ts.dtb");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
     };
     configurations {
         default = "conf_ac5x";
@@ -143,6 +177,15 @@
             kernel = "kernel_1";
             fdt = "fdt_cn9131";
             ramdisk = "ramdisk_1";
+            hash@1 {
+                algo = "sha1";
+            };
+        };
+	conf_es1227 {
+            description = "Boot Linux kernel with FDT blob + ramdisk for Wistron ES1227-54TS";
+            kernel = "kernel_es1227";
+            fdt = "fdt_es1227";
+            ramdisk = "ramdisk_es1227";
             hash@1 {
                 algo = "sha1";
             };
