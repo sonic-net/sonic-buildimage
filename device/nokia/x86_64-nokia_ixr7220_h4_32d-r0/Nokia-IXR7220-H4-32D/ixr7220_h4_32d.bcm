@@ -1,5 +1,4 @@
 # $Copyright: Broadcom Ltd.$
-# $Copyright: Nokia
 #
 # BCM56993 32x400g port configuration.
 # Support pipe numbers: 0, 1, 2, 3, 12, 13, 14, 15
@@ -35,36 +34,17 @@ bcm_device:
             sai_feat_tail_timestamp : 1
             sai_field_group_auto_prioritize: 1
             #l3_intf_vlan_split_egress for MTU at L3IF
-            l3_intf_vlan_split_egress : 1
-
-            # vxlan
-            l3_alpm_template: 1
-            riot_overlay_l3_egress_mem_size: 16384
-            riot_overlay_l3_intf_mem_size: 4096
-            l3_ecmp_member_first_lkup_mem_size: 12288
+            l3_intf_vlan_split_egress: 1
+            pfc_deadlock_seq_control: 1
+            sai_tunnel_support: 2
+            sai_port_phy_time_sync_en: 1
             bcm_tunnel_term_compatible_mode: 1
-            shared_l2_tunnel: 1
-            sai_tunnel_support: 10
-            sai_tunnel_underlay_route_mode: 2
-            sai_tunnel_ecmp_sharing_mode: 0 # change to 2 if SAI_NEXT_HOP_GROUP_ATTR_LEVEL_1 used
-
-            # bfd
-            #bfd_enable: 1
-            #bfd_sha1_keys: 5
-            #bfd_num_sessions: 2048
-            #bfd_simple_password_keys: 5
-            #num_queues_pci: 47
-            #num_queues_uc0: 1
-            #bfd_feature_enable: 1
-            #bfd_use_endpoint_id_as_discriminator: 1
-            #bfd_tx_raw_ingress_enable: 1
-            #sai_eapp_config_file: "/usr/share/sonic/device/x86_64-broadcom_common/eapps/eapp_config.json"
+            l3_ecmp_member_first_lkup_mem_size: 12288
+            fpem_mem_entries: 64000
+            default_cpu_tx_queue: 7
 ---
 device:
     0:
-        PC_SERDES_CONFIG:
-            PKG_SWAP_BYPASS: 1
-
         PC_PM_CORE:
             ?
                 PC_PM_ID: 1
@@ -76,8 +56,8 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x72306451
                 TX_LANE_MAP: 0x14670235
-                RX_POLARITY_FLIP: 0xff
-                TX_POLARITY_FLIP: 0xab
+                RX_POLARITY_FLIP: 0xFF
+                TX_POLARITY_FLIP: 0xAB
             ?
                 PC_PM_ID: 2
                 CORE_INDEX: 0
@@ -89,7 +69,7 @@ device:
                 RX_LANE_MAP: 0x20635471
                 TX_LANE_MAP: 0x26134705
                 RX_POLARITY_FLIP: 0x00
-                TX_POLARITY_FLIP: 0xfc
+                TX_POLARITY_FLIP: 0xFC
             ?
                 PC_PM_ID: 3
                 CORE_INDEX: 0
@@ -100,7 +80,7 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x46217035
                 TX_LANE_MAP: 0x40536172
-                RX_POLARITY_FLIP: 0xf3
+                RX_POLARITY_FLIP: 0xF3
                 TX_POLARITY_FLIP: 0x80
             ?
                 PC_PM_ID: 4
@@ -112,7 +92,7 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x25643170
                 TX_LANE_MAP: 0x20751364
-                RX_POLARITY_FLIP: 0xfb
+                RX_POLARITY_FLIP: 0xFB
                 TX_POLARITY_FLIP: 0x66
             ?
                 PC_PM_ID: 5
@@ -124,7 +104,7 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x07623415
                 TX_LANE_MAP: 0x02746153
-                RX_POLARITY_FLIP: 0xeb
+                RX_POLARITY_FLIP: 0xEB
                 TX_POLARITY_FLIP: 0x68
             ?
                 PC_PM_ID: 6
@@ -160,7 +140,7 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x30716245
                 TX_LANE_MAP: 0x64107523
-                RX_POLARITY_FLIP: 0x7e
+                RX_POLARITY_FLIP: 0x7E
                 TX_POLARITY_FLIP: 0x14
             ?
                 PC_PM_ID: 9
@@ -172,7 +152,7 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x46712350
                 TX_LANE_MAP: 0x74031526
-                RX_POLARITY_FLIP: 0x9d
+                RX_POLARITY_FLIP: 0x9D
                 TX_POLARITY_FLIP: 0x08
             ?
                 PC_PM_ID: 10
@@ -185,7 +165,7 @@ device:
                 RX_LANE_MAP: 0x76125340
                 TX_LANE_MAP: 0x13645072
                 RX_POLARITY_FLIP: 0x40
-                TX_POLARITY_FLIP: 0xd9
+                TX_POLARITY_FLIP: 0xD9
             ?
                 PC_PM_ID: 11
                 CORE_INDEX: 0
@@ -196,7 +176,7 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x43601275
                 TX_LANE_MAP: 0x36251407
-                RX_POLARITY_FLIP: 0xdF
+                RX_POLARITY_FLIP: 0xDF
                 TX_POLARITY_FLIP: 0x29
             ?
                 PC_PM_ID: 12
@@ -208,7 +188,7 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x65423170
                 TX_LANE_MAP: 0x23170465
-                RX_POLARITY_FLIP: 0xfe
+                RX_POLARITY_FLIP: 0xFE
                 TX_POLARITY_FLIP: 0x54
             ?
                 PC_PM_ID: 13
@@ -221,7 +201,7 @@ device:
                 RX_LANE_MAP: 0x71306245
                 TX_LANE_MAP: 0x45721630
                 RX_POLARITY_FLIP: 0x00
-                TX_POLARITY_FLIP: 0xec
+                TX_POLARITY_FLIP: 0xEC
             ?
                 PC_PM_ID: 14
                 CORE_INDEX: 0
@@ -256,7 +236,7 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x07561423
                 TX_LANE_MAP: 0x56137402
-                RX_POLARITY_FLIP: 0xfb
+                RX_POLARITY_FLIP: 0xFB
                 TX_POLARITY_FLIP: 0x33
             ?
                 PC_PM_ID: 49
@@ -268,7 +248,7 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x13240576
                 TX_LANE_MAP: 0x31524706
-                RX_POLARITY_FLIP: 0xaa
+                RX_POLARITY_FLIP: 0xAA
                 TX_POLARITY_FLIP: 0x95
             ?
                 PC_PM_ID: 50
@@ -281,7 +261,7 @@ device:
                 RX_LANE_MAP: 0x32450716
                 TX_LANE_MAP: 0x42610573
                 RX_POLARITY_FLIP: 0x05
-                TX_POLARITY_FLIP: 0xcc
+                TX_POLARITY_FLIP: 0xCC
             ?
                 PC_PM_ID: 51
                 CORE_INDEX: 0
@@ -292,8 +272,8 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x74632150
                 TX_LANE_MAP: 0x12704365
-                RX_POLARITY_FLIP: 0x3a
-                TX_POLARITY_FLIP: 0xd8
+                RX_POLARITY_FLIP: 0x3A
+                TX_POLARITY_FLIP: 0xD8
             ?
                 PC_PM_ID: 52
                 CORE_INDEX: 0
@@ -304,8 +284,8 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x23564107
                 TX_LANE_MAP: 0x76023514
-                RX_POLARITY_FLIP: 0xcc
-                TX_POLARITY_FLIP: 0x7e
+                RX_POLARITY_FLIP: 0xCC
+                TX_POLARITY_FLIP: 0x7E
             ?
                 PC_PM_ID: 53
                 CORE_INDEX: 0
@@ -317,7 +297,7 @@ device:
                 RX_LANE_MAP: 0x35726041
                 TX_LANE_MAP: 0x40156273
                 RX_POLARITY_FLIP: 0x28
-                TX_POLARITY_FLIP: 0x7e
+                TX_POLARITY_FLIP: 0x7E
             ?
                 PC_PM_ID: 54
                 CORE_INDEX: 0
@@ -353,7 +333,7 @@ device:
                 RX_LANE_MAP: 0x64037152
                 TX_LANE_MAP: 0x64732150
                 RX_POLARITY_FLIP: 0x77
-                TX_POLARITY_FLIP: 0x6a
+                TX_POLARITY_FLIP: 0x6A
             ?
                 PC_PM_ID: 57
                 CORE_INDEX: 0
@@ -365,7 +345,7 @@ device:
                 RX_LANE_MAP: 0x42537061
                 TX_LANE_MAP: 0x50246173
                 RX_POLARITY_FLIP: 0x32
-                TX_POLARITY_FLIP: 0x5e
+                TX_POLARITY_FLIP: 0x5E
             ?
                 PC_PM_ID: 58
                 CORE_INDEX: 0
@@ -386,7 +366,7 @@ device:
                 TX_LANE_MAP_AUTO: 0
                 RX_POLARITY_FLIP_AUTO: 0
                 TX_POLARITY_FLIP_AUTO: 0
-                RX_LANE_MAP: 0x51473062
+                RX_LANE_MAP: 0x26304715
                 TX_LANE_MAP: 0x62705341
                 RX_POLARITY_FLIP: 0x00
                 TX_POLARITY_FLIP: 0x63
@@ -400,7 +380,7 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x62471305
                 TX_LANE_MAP: 0x43506172
-                RX_POLARITY_FLIP: 0x7f
+                RX_POLARITY_FLIP: 0x7F
                 TX_POLARITY_FLIP: 0x07
             ?
                 PC_PM_ID: 61
@@ -412,8 +392,8 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x53024617
                 TX_LANE_MAP: 0x50627143
-                RX_POLARITY_FLIP: 0x8f
-                TX_POLARITY_FLIP: 0x6b
+                RX_POLARITY_FLIP: 0x8F
+                TX_POLARITY_FLIP: 0x6B
             ?
                 PC_PM_ID: 62
                 CORE_INDEX: 0
@@ -424,8 +404,8 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x62537041
                 TX_LANE_MAP: 0x02761345
-                RX_POLARITY_FLIP: 0x7c
-                TX_POLARITY_FLIP: 0xa2
+                RX_POLARITY_FLIP: 0x7C
+                TX_POLARITY_FLIP: 0xA2
             ?
                 PC_PM_ID: 63
                 CORE_INDEX: 0
@@ -448,8 +428,15 @@ device:
                 TX_POLARITY_FLIP_AUTO: 0
                 RX_LANE_MAP: 0x74516320
                 TX_LANE_MAP: 0x53170426
-                RX_POLARITY_FLIP: 0xef
-                TX_POLARITY_FLIP: 0xef
+                RX_POLARITY_FLIP: 0xEF
+                TX_POLARITY_FLIP: 0xEF
+...
+---
+device:
+    0:
+        PC_SERDES_CONFIG:
+            ?
+                PKG_SWAP_BYPASS: 1
 ...
 ---
 device:
@@ -463,67 +450,67 @@ device:
             ?
                 PORT_ID: 1
             :
-                PC_PHYS_PORT_ID: 1
+                PC_PHYS_PORT_ID: 9
             ?
                 PORT_ID: 2
             :
-                PC_PHYS_PORT_ID: 5
+                PC_PHYS_PORT_ID: 13
             ?
                 PORT_ID: 3
             :
-                PC_PHYS_PORT_ID: 9
+                PC_PHYS_PORT_ID: 1
             ?
                 PORT_ID: 4
             :
-                PC_PHYS_PORT_ID: 13
+                PC_PHYS_PORT_ID: 5
             ?
                 PORT_ID: 17
             :
-                PC_PHYS_PORT_ID: 17
+                PC_PHYS_PORT_ID: 25
             ?
                 PORT_ID: 18
             :
-                PC_PHYS_PORT_ID: 21
+                PC_PHYS_PORT_ID: 29
             ?
                 PORT_ID: 19
             :
-                PC_PHYS_PORT_ID: 25
+                PC_PHYS_PORT_ID: 17
             ?
                 PORT_ID: 20
             :
-                PC_PHYS_PORT_ID: 29
+                PC_PHYS_PORT_ID: 21
             ?
                 PORT_ID: 34
             :
-                PC_PHYS_PORT_ID: 33
+                PC_PHYS_PORT_ID: 41
             ?
                 PORT_ID: 35
             :
-                PC_PHYS_PORT_ID: 37
+                PC_PHYS_PORT_ID: 45
             ?
                 PORT_ID: 36
             :
-                PC_PHYS_PORT_ID: 41
+                PC_PHYS_PORT_ID: 33
             ?
                 PORT_ID: 37
             :
-                PC_PHYS_PORT_ID: 45
+                PC_PHYS_PORT_ID: 37
             ?
                 PORT_ID: 51
             :
-                PC_PHYS_PORT_ID: 49
+                PC_PHYS_PORT_ID: 57
             ?
                 PORT_ID: 52
             :
-                PC_PHYS_PORT_ID: 53
+                PC_PHYS_PORT_ID: 61
             ?
                 PORT_ID: 53
             :
-                PC_PHYS_PORT_ID: 57
+                PC_PHYS_PORT_ID: 49
             ?
                 PORT_ID: 54
             :
-                PC_PHYS_PORT_ID: 61
+                PC_PHYS_PORT_ID: 53
             ?
                 PORT_ID: 204
             :
@@ -588,6 +575,31 @@ device:
                 PORT_ID: 258
             :
                 PC_PHYS_PORT_ID: 253
+...
+---
+device:
+    0:
+        PC_PORT:
+            ?
+                PORT_ID: [[1, 4],
+                          [17, 20],
+                          [34, 37],
+                          [51, 54],
+                          [204, 207],
+                          [221, 224],
+                          [238, 241],
+                          [255, 258]]
+            :
+                ENABLE: 0
+                SPEED: 400000
+                NUM_LANES: 8
+                FEC_MODE: PC_FEC_RS544_2XN
+                MAX_FRAME_SIZE: 9416
+...
+---
+device:
+    0:
+        PC_PORT_PHYS_MAP:
             ?
                 PORT_ID: 50
             :
@@ -598,33 +610,11 @@ device:
     0:
         PC_PORT:
             ?
-                PORT_ID: 0
-            :
-                &port_mode_10g
-                ENABLE: 1
-                SPEED: 10000
-                NUM_LANES: 1
-            ?
-                PORT_ID: [[50, 50]]
+                PORT_ID: 50
             :
                 ENABLE: 0
-                MAX_FRAME_SIZE: 9416
                 SPEED: 10000
                 NUM_LANES: 1
-            ?
-               PORT_ID: [[1, 4],
-                         [17, 20],
-                         [34, 37],
-                         [51, 54],
-                         [204, 207],
-                         [221, 224],
-                         [238, 241],
-                         [255, 258]]
-            :
-                ENABLE: 0
-                SPEED: 400000
-                NUM_LANES: 8
-                FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
 ...
 ---
@@ -640,10 +630,6 @@ device:
         #    FLEX_STATE_ING_OPERMODE_PIPEUNIQUE: 0
         #    FLEX_STATE_EGR_OPERMODE_PIPEUNIQUE: 1
 
-        # Lossy vs Lossless mode
-        TM_THD_CONFIG:
-            THRESHOLD_MODE: LOSSLESS
-
         # IFP mode
         FP_CONFIG:
             FP_ING_OPERMODE: GLOBAL_PIPE_AWARE
@@ -652,994 +638,24 @@ device:
 device:
     0:
         TM_THD_CONFIG:
-            SKIP_BUFFER_RESERVATION: 1
             THRESHOLD_MODE: LOSSY_AND_LOSSLESS
-
-        TM_SCHEDULER_CONFIG:
-            NUM_MC_Q: NUM_MC_Q_2
 ...
 ---
 device:
     0:
-        TM_ING_THD_PORT_PRI_GRP:
-            ?
-                PORT_ID: [[0,67], [204,219], [221,253],[255,271]]
-                TM_PRI_GRP_ID: [[0,7]]
-            :
-                MIN_GUARANTEE_CELLS: 0
-                DYNAMIC_SHARED_LIMITS: 0
-                SHARED_LIMIT_CELLS_STATIC: 0
-                HEADROOM_LIMIT_CELLS: 0
-
-        TM_ING_THD_PORT_SERVICE_POOL:
-            ?
-                PORT_ID: [[0,67], [204,219], [221,253],[255,271]]
-                TM_ING_SERVICE_POOL_ID: [[0,3]]
-            :
-                MIN_GUARANTEE_CELLS: 0
-                SHARED_LIMIT_CELLS: 0
-
-        TM_ING_THD_HEADROOM_POOL:
-            ?
-                BUFFER_POOL: 0
-                TM_HEADROOM_POOL_ID: [[0,3]]
-            :
-                LIMIT_CELLS: 0
-
-        TM_THD_UC_Q:
-            ?
-                PORT_ID: [[1,67], [204,219], [221,253],[255,271]]
-                TM_UC_Q_ID: [[0,11]]
-            :
-                MIN_GUARANTEE_CELLS: 0
-                SHARED_LIMITS: 1
-                DYNAMIC_SHARED_LIMITS: 0
-                SHARED_LIMIT_CELLS_STATIC: 0
-
-        TM_THD_MC_Q:
-            ?
-                PORT_ID: 0
-                TM_MC_Q_ID: [[0,47]]
-            :
-                MIN_GUARANTEE_CELLS: 0
-            ?
-                PORT_ID: [[1,67], [204,219], [221,253],[255,271]]
-                TM_MC_Q_ID: [[0,5]]
-            :
-                MIN_GUARANTEE_CELLS: 0
-                SHARED_LIMITS: 1
-                DYNAMIC_SHARED_LIMITS: 0
-                SHARED_LIMIT_CELLS_STATIC: 0
-
-        TM_THD_Q_GRP:
-            ?
-                PORT_ID: [[0,67], [204,219], [221,253],[255,271]]
-            :
-                UC_Q_GRP_MIN_GUARANTEE_CELLS: 0
-                MC_Q_GRP_MIN_GUARANTEE_CELLS: 0
-...
----
-device:
-    0:
-        TM_ING_PORT:
-            ?
-                PORT_ID: [[0,67], [204,219], [221,253],[255,271]]
-            :
-                PAUSE: 0
-
         TM_ING_PORT_PRI_GRP:
             ?
-                PORT_ID: [[0,67], [204,219], [221,253],[255,271]]
-                TM_PRI_GRP_ID: [[0,7]]
-            :
-                PFC: 0
-                LOSSLESS: 0
-                ING_MIN_MODE: USE_PRI_GRP_MIN
-
-        TM_PORT_UC_Q_TO_SERVICE_POOL:
-            ?
-                PORT_ID: [[1,67], [204,219], [221,253],[255,271]]
-                TM_UC_Q_ID: [[0,11]]
-            :
-                USE_QGROUP_MIN: 0
-
-        TM_PORT_MC_Q_TO_SERVICE_POOL:
-            ?
-                PORT_ID: 0
-                TM_MC_Q_ID: [[0,47]]
-            :
-                USE_QGROUP_MIN: 0
-            ?
-                PORT_ID: [[1,67], [204,219], [221,253],[255,271]]
-                TM_MC_Q_ID: [[0,5]]
-            :
-                USE_QGROUP_MIN: 0
-...
----
-device:
-    0:
-        TM_ING_THD_HEADROOM_POOL:
-            ?
-                BUFFER_POOL: 0
-                TM_HEADROOM_POOL_ID: [[0,3]]
-            :
-                LIMIT_CELLS: 0
-
-        TM_ING_THD_SERVICE_POOL:
-            ?
-                BUFFER_POOL: 0
-                TM_ING_SERVICE_POOL_ID: [[0,3]]
-            :
-                SHARED_LIMIT_CELLS: 0
-                SHARED_RESUME_OFFSET_CELLS: 0
-                COLOR_SPECIFIC_LIMITS: 0
-
-        TM_EGR_THD_SERVICE_POOL:
-            ?
-                BUFFER_POOL: 0
-                TM_EGR_SERVICE_POOL_ID: [[0,3]]
-            :
-                SHARED_LIMIT_CELLS: 0
-                SHARED_RESUME_LIMIT_CELLS: 0
-                COLOR_SPECIFIC_LIMITS: 0
-                YELLOW_SHARED_LIMIT_CELLS: 0
-                YELLOW_SHARED_RESUME_LIMIT_CELLS: 0
-                RED_SHARED_LIMIT_CELLS: 0
-                RED_SHARED_RESUME_LIMIT_CELLS: 0
-
-        TM_THD_MC_EGR_SERVICE_POOL:
-            ?
-                BUFFER_POOL: 0
-                TM_EGR_SERVICE_POOL_ID: [[0,3]]
-            :
-                SHARED_LIMIT_CELLS: 0
-                SHARED_RESUME_LIMIT_CELLS: 0
-                COLOR_SPECIFIC_LIMITS: 0
-                YELLOW_SHARED_LIMIT_CELLS: 0
-                YELLOW_SHARED_RESUME_LIMIT_CELLS: 0
-                RED_SHARED_LIMIT_CELLS: 0
-                RED_SHARED_RESUME_LIMIT_CELLS: 0
-...
-
-### Mapping
----
-device:
-    0:
-        TM_ING_UC_ING_PRI_MAP:
-            ?
-                # Profile 1
-                TM_ING_UC_ING_PRI_MAP_ID: 1
-                ING_PRI: [0, 1, 2, 5, 6, [8,15]]
-            :
-                TM_PRI_GRP_ID: 0
-            ?
-                TM_ING_UC_ING_PRI_MAP_ID: 1
-                ING_PRI: 3
-            :
-                TM_PRI_GRP_ID: 3
-            ?
-                TM_ING_UC_ING_PRI_MAP_ID: 1
-                ING_PRI: 4
-            :
-                TM_PRI_GRP_ID: 4
-            ?
-                TM_ING_UC_ING_PRI_MAP_ID: 1
-                ING_PRI: 7
-            :
-                TM_PRI_GRP_ID: 7
-            ?
-                # Profile 2
-                TM_ING_UC_ING_PRI_MAP_ID: 1
-                ING_PRI: [0, 1, 5, [8,15]]
-            :
-                TM_PRI_GRP_ID: 0
-            ?
-                TM_ING_UC_ING_PRI_MAP_ID: 2
-                ING_PRI: 2
-            :
-                TM_PRI_GRP_ID: 2
-            ?
-                TM_ING_UC_ING_PRI_MAP_ID: 2
-                ING_PRI: 3
-            :
-                TM_PRI_GRP_ID: 3
-            ?
-                TM_ING_UC_ING_PRI_MAP_ID: 2
-                ING_PRI: 4
-            :
-                TM_PRI_GRP_ID: 4
-            ?
-                TM_ING_UC_ING_PRI_MAP_ID: 2
-                ING_PRI: 6
-            :
-                TM_PRI_GRP_ID: 6
-            ?
-                TM_ING_UC_ING_PRI_MAP_ID: 2
-                ING_PRI: 7
-            :
-                TM_PRI_GRP_ID: 7
-            ?
-                # Profile 3
-                TM_ING_UC_ING_PRI_MAP_ID: 3
-                ING_PRI: [[0,15]]
-            :
-                TM_PRI_GRP_ID: 7
-
-        TM_ING_NONUC_ING_PRI_MAP:
-            ?
-                # Profile 1
-                TM_ING_NONUC_ING_PRI_MAP_ID: 1
-                ING_PRI: [0, 1, 2, 5, 6, [8,15]]
-            :
-                TM_PRI_GRP_ID: 0
-            ?
-                TM_ING_NONUC_ING_PRI_MAP_ID: 1
-                ING_PRI: 3
-            :
-                TM_PRI_GRP_ID: 3
-            ?
-                TM_ING_NONUC_ING_PRI_MAP_ID: 1
-                ING_PRI: 4
-            :
-                TM_PRI_GRP_ID: 4
-            ?
-                TM_ING_NONUC_ING_PRI_MAP_ID: 1
-                ING_PRI: 7
-            :
-                TM_PRI_GRP_ID: 7
-            ?
-                # Profile 2
-                TM_ING_NONUC_ING_PRI_MAP_ID: 1
-                ING_PRI: [0, 1, 5, [8,15]]
-            :
-                TM_PRI_GRP_ID: 0
-            ?
-                TM_ING_NONUC_ING_PRI_MAP_ID: 2
-                ING_PRI: 2
-            :
-                TM_PRI_GRP_ID: 2
-            ?
-                TM_ING_NONUC_ING_PRI_MAP_ID: 2
-                ING_PRI: 3
-            :
-                TM_PRI_GRP_ID: 3
-            ?
-                TM_ING_NONUC_ING_PRI_MAP_ID: 2
-                ING_PRI: 4
-            :
-                TM_PRI_GRP_ID: 4
-            ?
-                TM_ING_NONUC_ING_PRI_MAP_ID: 2
-                ING_PRI: 6
-            :
-                TM_PRI_GRP_ID: 6
-            ?
-                TM_ING_NONUC_ING_PRI_MAP_ID: 2
-                ING_PRI: 7
-            :
-                TM_PRI_GRP_ID: 7
-            ?
-                # Profile 3
-                TM_ING_NONUC_ING_PRI_MAP_ID: 3
-                ING_PRI: [[0,15]]
-            :
-                TM_PRI_GRP_ID: 7
-
-        TM_PRI_GRP_POOL_MAP:
-            ?
-                TM_PRI_GRP_POOL_MAP_ID: 1
-                TM_PRI_GRP_ID: [[0,6]]
-            :
-                TM_ING_SERVICE_POOL_ID: 0
-                TM_HEADROOM_POOL_ID: 0
-            ?
-                TM_PRI_GRP_POOL_MAP_ID: 1
-                TM_PRI_GRP_ID: 7
-            :
-                TM_ING_SERVICE_POOL_ID: 1
-                TM_HEADROOM_POOL_ID: 1
-
-        TM_ING_PORT:
-            ?
-                PORT_ID: [0]
-            :
-                ING_PRI_MAP_ID: 3
-                PRI_GRP_MAP_ID: 1
-            ?
-                PORT_ID: [[1,4], [204,207]]
-            :
-                ING_PRI_MAP_ID: 1
-                PRI_GRP_MAP_ID: 1
-            ?
-                PORT_ID: [[17,20], [34,37], [51,54], [221,224], [238,241], [255,258]]
-            :
-                ING_PRI_MAP_ID: 2
-                PRI_GRP_MAP_ID: 1
-            ?
-                PORT_ID: [50]
-            :
-                ING_PRI_MAP_ID: 1
-                PRI_GRP_MAP_ID: 1
-            ?
-                PORT_ID: [33, 67, 237, 271]
-            :
-                ING_PRI_MAP_ID: 1
-                PRI_GRP_MAP_ID: 1
-
-        TM_PORT_UC_Q_TO_SERVICE_POOL:
-            ?
-                PORT_ID: [[1,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-                TM_UC_Q_ID: [[0,6], [8,9]]
-            :
-                TM_EGR_SERVICE_POOL_ID: 0
-            ?
-                PORT_ID: [[1,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-                TM_UC_Q_ID: 7
-            :
-                TM_EGR_SERVICE_POOL_ID: 1
-
-        TM_PORT_MC_Q_TO_SERVICE_POOL:
-            ?
-                PORT_ID: [0]
-                TM_MC_Q_ID: [[0,47]]
-            :
-                TM_EGR_SERVICE_POOL_ID: 1
-            ?
-                PORT_ID: [[1,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-                TM_MC_Q_ID: [[0,1]]
-            :
-                TM_EGR_SERVICE_POOL_ID: 0
-...
-
-### Scheduler
----
-device:
-    0:
-        TM_SCHEDULER_PROFILE:
-            ?
-                TM_SCHEDULER_PROFILE_ID: 1
-                TM_SCHEDULER_NODE_ID: [0, 1]
-            :
-                NUM_UC_Q: 1
-                NUM_MC_Q: 1
-                FLOW_CTRL_UC: 0
-            ?
-                TM_SCHEDULER_PROFILE_ID: 1
-                TM_SCHEDULER_NODE_ID: [2, 5, 6, 7, 8, 9]
-            :
-                NUM_UC_Q: 1
-                NUM_MC_Q: 0
-                FLOW_CTRL_UC: 0
-            ?
-                TM_SCHEDULER_PROFILE_ID: 1
-                TM_SCHEDULER_NODE_ID: [3, 4]
-            :
-                NUM_UC_Q: 1
-                NUM_MC_Q: 0
-                FLOW_CTRL_UC: 1
-            ?
-                TM_SCHEDULER_PROFILE_ID: 1
-                TM_SCHEDULER_NODE_ID: [10, 11]
-            :
-                NUM_UC_Q: 0
-                NUM_MC_Q: 0
-                FLOW_CTRL_UC: 0
-
-        TM_SCHEDULER_PROFILE:
-            ?
-                TM_SCHEDULER_PROFILE_ID: 2
-                TM_SCHEDULER_NODE_ID: [0, 1]
-            :
-                NUM_UC_Q: 1
-                NUM_MC_Q: 1
-                FLOW_CTRL_UC: 0
-            ?
-                TM_SCHEDULER_PROFILE_ID: 2
-                TM_SCHEDULER_NODE_ID: [5, 7, 8, 9]
-            :
-                NUM_UC_Q: 1
-                NUM_MC_Q: 0
-                FLOW_CTRL_UC: 0
-            ?
-                TM_SCHEDULER_PROFILE_ID: 2
-                TM_SCHEDULER_NODE_ID: [2, 3, 4, 6]
-            :
-                NUM_UC_Q: 1
-                NUM_MC_Q: 0
-                FLOW_CTRL_UC: 1
-            ?
-                TM_SCHEDULER_PROFILE_ID: 2
-                TM_SCHEDULER_NODE_ID: [10, 11]
-            :
-                NUM_UC_Q: 0
-                NUM_MC_Q: 0
-                FLOW_CTRL_UC: 0
-...
----
-device:
-    0:
-        TM_SCHEDULER_PORT_PROFILE:
-            ?
-                PORT_ID: [[1,4], [204,207]]
-            :
-                TM_SCHEDULER_PROFILE_ID: 1
-                WRR: 0
-        TM_SCHEDULER_PORT_PROFILE:
-            ?
-                PORT_ID: [[17,20], [34,37], [51,54], [221,224], [238,241], [255,258]]
-            :
-                TM_SCHEDULER_PROFILE_ID: 2
-                WRR: 0
-...
-
-### Pools
-### hard code service pool size for TH4 per architecture requirement.
----
-device:
-    0:
-        TM_ING_THD_HEADROOM_POOL:
-            ?
-                BUFFER_POOL: 0
-                TM_HEADROOM_POOL_ID: 0
-            :
-                LIMIT_CELLS: 45696
-
-        TM_ING_THD_SERVICE_POOL:
-            ?
-                BUFFER_POOL: 0
-                TM_ING_SERVICE_POOL_ID: 0
-            :
-                SHARED_LIMIT_CELLS: 173222
-                SHARED_RESUME_OFFSET_CELLS: 74
-                COLOR_SPECIFIC_LIMITS: 0
-            ?
-                BUFFER_POOL: 0
-                TM_ING_SERVICE_POOL_ID: 1
-            :
-                SHARED_LIMIT_CELLS: 605
-                SHARED_RESUME_OFFSET_CELLS: 74
-                COLOR_SPECIFIC_LIMITS: 0
-
-        TM_EGR_THD_SERVICE_POOL:
-            ?
-                BUFFER_POOL: 0
-                TM_EGR_SERVICE_POOL_ID: 0
-            :
-                SHARED_LIMIT_CELLS: 173222
-                SHARED_RESUME_LIMIT_CELLS: 21643
-                COLOR_SPECIFIC_LIMITS: 1
-                YELLOW_SHARED_LIMIT_CELLS: 16240
-                YELLOW_SHARED_RESUME_LIMIT_CELLS: 16230
-                RED_SHARED_LIMIT_CELLS: 13533
-                RED_SHARED_RESUME_LIMIT_CELLS: 13523
-            ?
-                BUFFER_POOL: 0
-                TM_EGR_SERVICE_POOL_ID: 1
-            :
-                SHARED_LIMIT_CELLS: 605
-                SHARED_RESUME_LIMIT_CELLS: 73
-                COLOR_SPECIFIC_LIMITS: 1
-                YELLOW_SHARED_LIMIT_CELLS: 57
-                YELLOW_SHARED_RESUME_LIMIT_CELLS: 55
-                RED_SHARED_LIMIT_CELLS: 48
-                RED_SHARED_RESUME_LIMIT_CELLS: 46
-
-        TM_THD_MC_EGR_SERVICE_POOL:
-            ?
-                BUFFER_POOL: 0
-                TM_EGR_SERVICE_POOL_ID: 0
-            :
-                SHARED_LIMIT_CELLS: 15779
-                SHARED_RESUME_LIMIT_CELLS: 1962
-                COLOR_SPECIFIC_LIMITS: 1
-                YELLOW_SHARED_LIMIT_CELLS: 1480
-                YELLOW_SHARED_RESUME_LIMIT_CELLS: 1470
-                RED_SHARED_LIMIT_CELLS: 1233
-                RED_SHARED_RESUME_LIMIT_CELLS: 1223
-            ?
-                BUFFER_POOL: 0
-                TM_EGR_SERVICE_POOL_ID: 1
-            :
-                SHARED_LIMIT_CELLS: 605
-                SHARED_RESUME_LIMIT_CELLS: 73
-                COLOR_SPECIFIC_LIMITS: 1
-                YELLOW_SHARED_LIMIT_CELLS: 57
-                YELLOW_SHARED_RESUME_LIMIT_CELLS: 55
-                RED_SHARED_LIMIT_CELLS: 46
-                RED_SHARED_RESUME_LIMIT_CELLS: 46
-...
-
-### Thresholds
-######################################
----
-device:
-    0:
-        TM_ING_THD_PORT_PRI_GRP:
-            ?
-                PORT_ID: [[0,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-                TM_PRI_GRP_ID: [0, 1, 5, 7]
-            :
-                SHARED_LIMIT_CELLS_STATIC: 227317
-                MIN_GUARANTEE_CELLS: 0
-                DYNAMIC_SHARED_LIMITS: 0
-                RESUME_OFFSET_CELLS: 0
-                RESUME_FLOOR_CELLS: 0
-                HEADROOM_LIMIT_AUTO: 0
-                HEADROOM_LIMIT_CELLS: 0
-            ?
-                PORT_ID: [[1,4], [204,207]]
-                TM_PRI_GRP_ID: [2, 3, 4, 6]
-            :
-                MIN_GUARANTEE_CELLS: 18
-                DYNAMIC_SHARED_LIMITS: 1
-                SHARED_LIMIT_DYNAMIC: ALPHA_1_4
-                RESUME_OFFSET_CELLS: 18
-                RESUME_FLOOR_CELLS: 0
-                HEADROOM_LIMIT_AUTO: 0
-                HEADROOM_LIMIT_CELLS: 2874
-            ?
-                PORT_ID: [[17,20], [34,37], [51,54], [221,224], [238,241], [255,258]]
-                TM_PRI_GRP_ID: [2, 3, 4, 6]
-            :
-                MIN_GUARANTEE_CELLS: 18
-                DYNAMIC_SHARED_LIMITS: 1
-                SHARED_LIMIT_DYNAMIC: ALPHA_1_4
-                RESUME_OFFSET_CELLS: 18
-                RESUME_FLOOR_CELLS: 0
-                HEADROOM_LIMIT_AUTO: 0
-                HEADROOM_LIMIT_CELLS: 675
-            ?
-                PORT_ID: [50]
-                TM_PRI_GRP_ID: [2, 3, 4, 6]
-            :
-                MIN_GUARANTEE_CELLS: 0
-                DYNAMIC_SHARED_LIMITS: 1
-                SHARED_LIMIT_DYNAMIC: ALPHA_1_4
-                RESUME_OFFSET_CELLS: 0
-                RESUME_FLOOR_CELLS: 0
-                HEADROOM_LIMIT_AUTO: 0
-            ?
-                PORT_ID: [33, 67, 237, 271]
-                TM_PRI_GRP_ID: [2, 3, 4, 6]
-            :
-                MIN_GUARANTEE_CELLS: 0
-                DYNAMIC_SHARED_LIMITS: 1
-                SHARED_LIMIT_DYNAMIC: ALPHA_1_4
-                RESUME_OFFSET_CELLS: 0
-                RESUME_FLOOR_CELLS: 0
-                HEADROOM_LIMIT_AUTO: 0
-            ?
-                PORT_ID: [0]
-                TM_PRI_GRP_ID: [2, 3, 4, 6]
-            :
-                MIN_GUARANTEE_CELLS: 0
-                DYNAMIC_SHARED_LIMITS: 1
-                SHARED_LIMIT_DYNAMIC: ALPHA_1_4
-                RESUME_OFFSET_CELLS: 0
-                RESUME_FLOOR_CELLS: 0
-                HEADROOM_LIMIT_AUTO: 0
-
-        TM_ING_THD_PORT_SERVICE_POOL:
-            ?
-                PORT_ID: [[0,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-                TM_ING_SERVICE_POOL_ID: [0, 1]
-            :
-                MIN_GUARANTEE_CELLS: 0
-                SHARED_LIMIT_CELLS: 227317
-                RESUME_LIMIT_CELLS: 227317
-
-        TM_THD_UC_Q:
-            ?
-                PORT_ID: [[1,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-                TM_UC_Q_ID: [0, 1, 5, 7, 8, 9]
-            :
-                SHARED_LIMITS: 1
-                COLOR_SPECIFIC_LIMITS: 1
-                RED_LIMIT_DYNAMIC: PERCENTAGE_675
-                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
-                COLOR_SPECIFIC_DYNAMIC_LIMITS: 1
-                MIN_GUARANTEE_CELLS: 7
-                DYNAMIC_SHARED_LIMITS: 1
-                SHARED_LIMIT_DYNAMIC: ALPHA_1
-                RESUME_OFFSET_CELLS: 2
-            ?
-                PORT_ID: [[1,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-                TM_UC_Q_ID: [2, 3, 4, 6]
-            :
-                SHARED_LIMITS: 0
-                COLOR_SPECIFIC_LIMITS: 0
-                COLOR_SPECIFIC_DYNAMIC_LIMITS: 0
-                MIN_GUARANTEE_CELLS: 0
-                DYNAMIC_SHARED_LIMITS: 0
-                SHARED_LIMIT_CELLS_STATIC: 227317
-                RESUME_OFFSET_CELLS: 2
-
-        TM_THD_MC_Q:
-            ?
-                PORT_ID: [0]
-                TM_MC_Q_ID: [0, 1, 2, 3]
-            :
-                MIN_GUARANTEE_CELLS: 37
-                DYNAMIC_SHARED_LIMITS: 1
-                SHARED_LIMIT_DYNAMIC: ALPHA_2
-                COLOR_SPECIFIC_LIMITS: 1
-                COLOR_SPECIFIC_DYNAMIC_LIMITS: 1
-                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
-                RED_LIMIT_DYNAMIC: PERCENTAGE_675
-                RESUME_OFFSET_CELLS: 2
-            ?
-                PORT_ID: [0]
-                TM_MC_Q_ID: [4, 5, 6, 7, 8, 9]
-            :
-                MIN_GUARANTEE_CELLS: 7
-                SHARED_LIMITS: 1
-                DYNAMIC_SHARED_LIMITS: 1
-                SHARED_LIMIT_DYNAMIC: ALPHA_1_4
-                COLOR_SPECIFIC_LIMITS: 1
-                COLOR_SPECIFIC_DYNAMIC_LIMITS: 1
-                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
-                RED_LIMIT_DYNAMIC: PERCENTAGE_675
-                RESUME_OFFSET_CELLS: 2
-            ?
-                PORT_ID: [[1,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-                TM_MC_Q_ID: [0, 1]
-            :
-                SHARED_LIMITS: 1
-                DYNAMIC_SHARED_LIMITS: 1
-                SHARED_LIMIT_DYNAMIC: ALPHA_1
-                COLOR_SPECIFIC_LIMITS: 1
-                COLOR_SPECIFIC_DYNAMIC_LIMITS: 1
-                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
-                RED_LIMIT_DYNAMIC: PERCENTAGE_675
-                RESUME_OFFSET_CELLS: 2
-
-        TM_EGR_THD_UC_PORT_SERVICE_POOL:
-            ?
-                PORT_ID: [[1,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-                TM_EGR_SERVICE_POOL_ID: 0
-            :
-                SHARED_LIMIT_CELLS: 173222
-                SHARED_RESUME_LIMIT_CELLS: 21651
-                COLOR_SPECIFIC_LIMITS: 1
-                YELLOW_SHARED_LIMIT_CELLS: 16239
-                YELLOW_SHARED_RESUME_LIMIT_CELLS: 16237
-                RED_SHARED_LIMIT_CELLS: 13532
-                RED_SHARED_RESUME_LIMIT_CELLS: 13530
-            ?
-                PORT_ID: [[1,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-                TM_EGR_SERVICE_POOL_ID: 1
-            :
-                SHARED_LIMIT_CELLS: 605
-                SHARED_RESUME_LIMIT_CELLS: 73
-                COLOR_SPECIFIC_LIMITS: 1
-                YELLOW_SHARED_LIMIT_CELLS: 56
-                YELLOW_SHARED_RESUME_LIMIT_CELLS: 54
-                RED_SHARED_LIMIT_CELLS: 47
-                RED_SHARED_RESUME_LIMIT_CELLS: 45
-
-        TM_EGR_THD_MC_PORT_SERVICE_POOL:
-            ?
-                PORT_ID: [[0,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-                TM_EGR_SERVICE_POOL_ID: 0
-            :
-                COLOR_SPECIFIC_LIMITS: 1
-                RED_SHARED_LIMIT_CELLS: 1232
-                YELLOW_SHARED_LIMIT_CELLS: 1479
-                SHARED_LIMIT_CELLS: 15779
-                RED_SHARED_RESUME_LIMIT_CELLS: 1230
-                YELLOW_SHARED_RESUME_LIMIT_CELLS: 1477
-                SHARED_RESUME_LIMIT_CELLS: 1970
-            ?
-                PORT_ID: [[0,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-                TM_EGR_SERVICE_POOL_ID: 1
-            :
-                COLOR_SPECIFIC_LIMITS: 1
-                RED_SHARED_LIMIT_CELLS: 47
-                YELLOW_SHARED_LIMIT_CELLS: 56
-                SHARED_LIMIT_CELLS: 605
-                RED_SHARED_RESUME_LIMIT_CELLS: 45
-                YELLOW_SHARED_RESUME_LIMIT_CELLS: 54
-                SHARED_RESUME_LIMIT_CELLS: 73
-
-
-...
-### THDR Limits
----
-device:
-    0:
-        TM_THD_REPL_SERVICE_POOL:
-                COLOR_SPECIFIC_LIMITS: 1
-                SHARED_LIMIT_CELLS: 2961
-                SHARED_RESUME_LIMIT_CELLS: 2947
-                YELLOW_SHARED_LIMIT_CELLS: 2220
-                YELLOW_SHARED_RESUME_LIMIT_CELLS: 2206
-                RED_SHARED_LIMIT_CELLS: 1850
-                RED_SHARED_RESUME_LIMIT_CELLS: 1836
-
-        TM_THD_REPL_Q:
-            ?
-                REPL_Q_NUM: [0,8]
-            :
-                COLOR_SPECIFIC_LIMITS: 1
-                COLOR_SPECIFIC_DYNAMIC_LIMITS: 1
-                SHARED_LIMITS: 1
-                DYNAMIC_SHARED_LIMITS: 1
-                RESUME_OFFSET_CELLS: 14
-                SHARED_LIMIT_DYNAMIC: ALPHA_1
-                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
-                RED_LIMIT_DYNAMIC: PERCENTAGE_675
-                RESUME_OFFSET_YELLOW_CELLS: 14
-                RESUME_OFFSET_RED_CELLS: 14
-
-        TM_THD_REPL_Q:
-            ?
-                REPL_Q_NUM: [0,5]
-            :
-                MIN_GUARANTEE_CELLS: 0
-            ?
-                REPL_Q_NUM: [6,8]
-            :
-                MIN_GUARANTEE_CELLS: 37
-
-...
-### Mirror-on-drop
----
-device:
-    0:
-        TM_MIRROR_ON_DROP_CONTROL:
-            RESERVED_LIMIT_CELLS: 2580
-
-        TM_MIRROR_ON_DROP_PROFILE:
-            ?
-                TM_MIRROR_ON_DROP_PROFILE_ID: 0
-            :
-                PERCENTAGE_0_25: 65535
-                PERCENTAGE_25_50: 65535
-                PERCENTAGE_50_75: 65535
-                PERCENTAGE_75_100: 65535
-
-        TM_MIRROR_ON_DROP_DESTINATION:
-            ?
-                TM_MIRROR_ON_DROP_DESTINATION_ID: 0
-            :
-                TM_MC_Q_ID: 1
-                PORT_ID: 1
-...
-
-### OBM
----
-device:
-    0:
-        TM_OBM_PORT_PKT_PARSE:
-            ?
-                PORT_ID: [[1,4], [204,207]]
-            :
-                DSCP_MAP: 1
-                HEADER_TYPE: OBM_HEADER_TYPE_ETHERNET
-                DEFAULT_PKT_PRI: 0
-
-        TM_OBM_PORT_PKT_PARSE:
-            ?
-                PORT_ID: [[17,20], [34,37], [51,54], [221,224], [238,241], [255,258]]
-            :
-                DSCP_MAP: 1
-                HEADER_TYPE: OBM_HEADER_TYPE_ETHERNET
-                DEFAULT_PKT_PRI: 0
-
-        TM_OBM_PORT_PKT_PRI_TC_MAP:
-            ?
-                PORT_ID: [[1,4], [204,207]]
-                PKT_PRI_TYPE: PKT_PRI_TYPE_DSCP
-                PKT_PRI: [3, 4]
-            :
-                TRAFFIC_CLASS: OBM_TC_LOSSLESS0
-
-        TM_OBM_PORT_PKT_PRI_TC_MAP:
-            ?
-                PORT_ID: [[17,20], [34,37], [51,54], [221,224], [238,241], [255,258]]
-                PKT_PRI_TYPE: PKT_PRI_TYPE_DSCP
-                PKT_PRI: [2, 3, 4, 6]
-            :
-                TRAFFIC_CLASS: OBM_TC_LOSSLESS0
-
-        TM_OBM_THD_PORT:
-            ?
-                PORT_ID: [[1,4], [204,207]]
-            :
-                THD_AUTO: 0
-                LOSSY_LOW_MAX_BYTES: 37376
-                LOSSLESS0_MAX_BYTES: 235264
-                MAX_BYTES: 235264
-
-        TM_OBM_THD_PORT:
-            ?
-                PORT_ID: [[17,20], [34,37], [51,54], [221,224], [238,241], [255,258]]
-            :
-                THD_AUTO: 0
-                LOSSY_LOW_MAX_BYTES: 37376
-                LOSSLESS0_MAX_BYTES: 235264
-                MAX_BYTES: 235264
-
-        TM_OBM_THD_PORT_FLOW_CTRL:
-            ?
-                PORT_ID: [[1,4], [204,207]]
-            :
-                THD_AUTO: 0
-                LOSSLESS0_XOFF_BYTES: 5184
-                LOSSLESS0_XON_BYTES: 4672
-                XOFF_BYTES: 5184
-                XON_BYTES: 4672
-
-        TM_OBM_THD_PORT_FLOW_CTRL:
-            ?
-                PORT_ID: [[17,20], [34,37], [51,54], [221,224], [238,241], [255,258]]
-            :
-                THD_AUTO: 0
-                LOSSLESS0_XOFF_BYTES: 5184
-                LOSSLESS0_XON_BYTES: 4672
-                XOFF_BYTES: 5184
-                XON_BYTES: 4672
-
-        TM_OBM_PORT_FLOW_CTRL:
-            ?
-                PORT_ID: [[1,4], [204,207]]
-            :
-                FLOW_CTRL: 1
-                FLOW_CTRL_TYPE: PFC
-                LOSSLESS0_FLOW_CTRL: 1
-
-        TM_OBM_PORT_FLOW_CTRL:
-            ?
-                PORT_ID: [[17,20], [34,37], [51,54], [221,224], [238,241], [255,258]]
-            :
-                FLOW_CTRL: 1
-                FLOW_CTRL_TYPE: PFC
-                LOSSLESS0_FLOW_CTRL: 1
-...
-
-### PFC
----
-device:
-    0:
-        PC_MAC_CONTROL:
-            ?
-                PORT_ID: [[1,4], [17,20], [33,37], [50,54], 67, [204,207], [221,224], [237,241], [255,258], 271]
-            :
-                PAUSE_TX: 0
-                PAUSE_RX: 0
-
-        TM_PFC_EGR:
-            ?
-                PORT_ID: [[1,4], [204,207]]
-            :
-                TM_PFC_PRI_PROFILE_ID: 1
-
-        TM_PFC_EGR:
-            ?
-                PORT_ID: [[17,20], [34,37], [51,54], [221,224], [238,241], [255,258]]
-            :
-                TM_PFC_PRI_PROFILE_ID: 2
-...
----
-device:
-    0:
-        TM_PFC_PRI_TO_PRI_GRP_MAP:
-            ?
-                TM_PFC_PRI_TO_PRI_GRP_MAP_ID: 1
-                PFC_PRI: 3
-            :
-                TM_PRI_GRP_ID: 3
-
-        TM_PFC_PRI_TO_PRI_GRP_MAP:
-            ?
-                TM_PFC_PRI_TO_PRI_GRP_MAP_ID: 1
-                PFC_PRI: 4
-            :
-                TM_PRI_GRP_ID: 4
-
-        TM_PFC_PRI_TO_PRI_GRP_MAP:
-            ?
-                TM_PFC_PRI_TO_PRI_GRP_MAP_ID: 2
-                PFC_PRI: 2
-            :
-                TM_PRI_GRP_ID: 2
-
-        TM_PFC_PRI_TO_PRI_GRP_MAP:
-            ?
-                TM_PFC_PRI_TO_PRI_GRP_MAP_ID: 2
-                PFC_PRI: 3
-            :
-                TM_PRI_GRP_ID: 3
-
-        TM_PFC_PRI_TO_PRI_GRP_MAP:
-            ?
-                TM_PFC_PRI_TO_PRI_GRP_MAP_ID: 2
-                PFC_PRI: 4
-            :
-                TM_PRI_GRP_ID: 4
-
-        TM_PFC_PRI_TO_PRI_GRP_MAP:
-            ?
-                TM_PFC_PRI_TO_PRI_GRP_MAP_ID: 2
-                PFC_PRI: 6
-            :
-                TM_PRI_GRP_ID: 6
-
-        TM_PFC_PRI_PROFILE:
-            ?
-                TM_PFC_PRI_PROFILE_ID: 1
-                PFC_PRI: 3
-            :
-                PFC: 1
-                COS_LIST: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
-
-        TM_PFC_PRI_PROFILE:
-            ?
-                TM_PFC_PRI_PROFILE_ID: 1
-                PFC_PRI: 4
-            :
-                PFC: 1
-                COS_LIST: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
-
-        TM_PFC_PRI_PROFILE:
-            ?
-                TM_PFC_PRI_PROFILE_ID: 2
-                PFC_PRI: 2
-            :
-                PFC: 1
-                COS_LIST: [0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
-
-        TM_PFC_PRI_PROFILE:
-            ?
-                TM_PFC_PRI_PROFILE_ID: 2
-                PFC_PRI: 3
-            :
-                PFC: 1
-                COS_LIST: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
-
-        TM_PFC_PRI_PROFILE:
-            ?
-                TM_PFC_PRI_PROFILE_ID: 2
-                PFC_PRI: 4
-            :
-                PFC: 1
-                COS_LIST: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
-
-        TM_PFC_PRI_PROFILE:
-            ?
-                TM_PFC_PRI_PROFILE_ID: 2
-                PFC_PRI: 6
-            :
-                PFC: 1
-                COS_LIST: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
-
-        TM_ING_PORT_PRI_GRP:
-            ?
-                PORT_ID: [[1,4], [204,207]]
-                TM_PRI_GRP_ID: [3, 4]
+                PORT_ID: [[1, 4],
+                          [17, 20],
+                          [34, 37],
+                          50,
+                          [51, 54],
+                          [204, 207],
+                          [221, 224],
+                          [238, 241],
+                          [255, 258]]
+                TM_PRI_GRP_ID: [3,4]
             :
                 PFC: 1
                 LOSSLESS: 1
-
-        TM_ING_PORT_PRI_GRP:
-            ?
-                PORT_ID: [[17,20], [34,37], [51,54], [221,224], [238,241], [255,258]]
-                TM_PRI_GRP_ID: [2, 3, 4, 6]
-            :
-                PFC: 1
-                LOSSLESS: 1
-
-        PC_PFC:
-            ?
-                PORT_ID: [[1,4], [204,207]]
-            :
-                ENABLE_RX: 1
-                ENABLE_TX: 1
-
-        PC_PFC:
-            ?
-                PORT_ID: [[17,20], [34,37], [51,54], [221,224], [238,241], [255,258]]
-            :
-                ENABLE_RX: 1
-                ENABLE_TX: 1
 ...
