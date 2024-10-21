@@ -1,8 +1,10 @@
-From 05d2c5b3ba6f83cd42a4dd5f9e40959fc438b0a6 Mon Sep 17 00:00:00 2001
-From: Rajasekar Raja <rajasekarr@nvidia.com>
-Date: Wed, 10 Jul 2024 16:46:29 -0700
-Subject: [PATCH 1/2] bgpd: backpressure - fix to properly remove dest for bgp
- under deletion
+From 9139ebe729804de71b13510d61bd0e273f6f2918 Mon Sep 17 00:00:00 2001
+From: sudhanshukumar22 <sudhanshu.kumar@broadcom.com>
+Date: Tue, 17 Sep 2024 03:45:43 -0700
+Subject: [PATCH] From 05d2c5b3ba6f83cd42a4dd5f9e40959fc438b0a6 Mon Sep 17
+ 00:00:00 2001 From: Rajasekar Raja <rajasekarr@nvidia.com> Date: Wed, 10 Jul
+ 2024 16:46:29 -0700 Subject: [PATCH 1/2] bgpd: backpressure - fix to properly
+ remove dest for bgp  under deletion
 
 In case of imported routes (L3vni/vrf leaks), when a bgp instance is
 being deleted, the peer->bgp comparision with the incoming bgp to remove
@@ -20,18 +22,22 @@ Ticket :#3980988
 
 Signed-off-by: Chirag Shah <chirag @nvidia.com>
 Signed-off-by: Rajasekar Raja <rajasekarr@nvidia.com>
+---
+ bgpd/bgp_evpn.c | 12 ++++++------
+ bgpd/bgpd.c     | 20 +++++++++++++-------
+ 2 files changed, 19 insertions(+), 13 deletions(-)
 
 diff --git a/bgpd/bgp_evpn.c b/bgpd/bgp_evpn.c
-index 2243ffdc77..b1f8f19594 100644
+index 5e62854ed..c517a67f5 100644
 --- a/bgpd/bgp_evpn.c
 +++ b/bgpd/bgp_evpn.c
-@@ -6074,16 +6074,16 @@ struct bgpevpn *bgp_evpn_new(struct bgp *bgp, vni_t vni,
+@@ -6301,16 +6301,16 @@ struct bgpevpn *bgp_evpn_new(struct bgp *bgp, vni_t vni,
  void bgp_evpn_free(struct bgp *bgp, struct bgpevpn *vpn)
  {
  	struct bgp_dest *dest = NULL;
 -	uint32_t ann_count = zebra_announce_count(&bm->zebra_announce_head);
 +	struct bgp_dest *dest_next = NULL;
- 
+
 -	while (ann_count) {
 -		dest = zebra_announce_pop(&bm->zebra_announce_head);
 -		ann_count--;
@@ -46,13 +52,13 @@ index 2243ffdc77..b1f8f19594 100644
 +			zebra_announce_del(&bm->zebra_announce_head, dest);
 +		}
  	}
- 
  	bgp_evpn_remote_ip_hash_destroy(vpn);
+ 	bgp_evpn_vni_es_cleanup(vpn);
 diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
-index 492566f8c8..e16a58b443 100644
+index 4348a60c5..24577768f 100644
 --- a/bgpd/bgpd.c
 +++ b/bgpd/bgpd.c
-@@ -3689,19 +3689,25 @@ int bgp_delete(struct bgp *bgp)
+@@ -3868,19 +3868,25 @@ int bgp_delete(struct bgp *bgp)
  	safi_t safi;
  	int i;
  	struct bgp_dest *dest = NULL;
@@ -60,9 +66,9 @@ index 492566f8c8..e16a58b443 100644
 +	struct bgp_table *dest_table = NULL;
  	struct graceful_restart_info *gr_info;
 -	uint32_t ann_count = zebra_announce_count(&bm->zebra_announce_head);
- 
+
  	assert(bgp);
- 
+
 -	while (ann_count) {
 -		dest = zebra_announce_pop(&bm->zebra_announce_head);
 -		ann_count--;
@@ -83,8 +89,8 @@ index 492566f8c8..e16a58b443 100644
 +			zebra_announce_del(&bm->zebra_announce_head, dest);
 +		}
  	}
- 
+
  	bgp_soft_reconfig_table_task_cancel(bgp, NULL, NULL);
--- 
-2.43.2
+--
+2.39.4
 
