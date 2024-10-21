@@ -1,4 +1,19 @@
 #!/usr/bin/python3
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
 import os
@@ -69,6 +84,8 @@ class CodeVisitor(ast.NodeVisitor):
             value = node.n
         elif isinstance(node, ast.Str):      # node is Str Constant
             value = node.s
+        elif isinstance(node, ast.List):     # node is List Constant
+            value = [element.value for element in node.elts]
         else:
             raise NotImplementedError("Unsupport operand type: %s" % type(node))
         return value
@@ -117,7 +134,7 @@ class CodeVisitor(ast.NodeVisitor):
         int support one or two parameters, eg: int(xxx) or int(xxx, 16)
         xxx can be ast.Call/ast.Constant(ast.Num/ast.Str)/ast.BinOp
         '''
-        calc_tuple = ("float", "int", "str")
+        calc_tuple = ("float", "int", "str", "max", "min")
 
         if node.func.id not in calc_tuple:
             raise NotImplementedError("Unsupport function call type: %s" % node.func.id)
@@ -125,7 +142,10 @@ class CodeVisitor(ast.NodeVisitor):
         args_val_list = []
         for item in node.args:
             ret = self.get_op_value(item)
-            args_val_list.append(ret)
+            if isinstance(ret, list):
+                args_val_list.extend(ret)
+            else:
+                args_val_list.append(ret)
 
         if node.func.id == "str":
             if len(args_val_list) != 1:
@@ -138,6 +158,16 @@ class CodeVisitor(ast.NodeVisitor):
             if len(args_val_list) != 1:
                 raise TypeError("float() takes 1 positional argument but %s were given" % len(args_val_list))
             value = float(args_val_list[0])
+            self.value = value
+            return value
+
+        if node.func.id == "max":
+            value = max(args_val_list)
+            self.value = value
+            return value
+
+        if node.func.id == "min":
+            value = min(args_val_list)
             self.value = value
             return value
         # int
@@ -375,12 +405,18 @@ def dev_file_write(path, offset, buf_list):
     msg = ""
     fd = -1
 
-    if not isinstance(buf_list, list) or len(buf_list) == 0:
-        msg = "buf:%s is not list type or is NONE !" % buf_list
-        return False, msg
-
     if not os.path.exists(path):
         msg = path + " not found !"
+        return False, msg
+
+    if isinstance(buf_list, list):
+        if len(buf_list) == 0:
+            msg = "buf_list:%s is NONE !" % buf_list
+            return False, msg
+    elif isinstance(buf_list, int):
+        buf_list = [buf_list]
+    else:
+        msg = "buf_list:%s is not list type or not int type !" % buf_list
         return False, msg
 
     try:
@@ -565,6 +601,9 @@ def get_value_once(config):
             read_len = config.get("read_len")
             ret, val_list = dev_file_read(path, offset, read_len)
             if ret is True:
+                if read_len == 1:
+                    val = val_list[0]
+                    return True, val
                 return True, val_list
             return False, ("devfile read failed. path:%s, offset:0x%x, read_len:%d" % (path, offset, read_len))
         if way == 'cmd':
@@ -578,7 +617,16 @@ def get_value_once(config):
             if os.path.exists(judge_file):
                 return True, True
             return True, False
-        return False, "not support read type"
+        if way == 'pci':
+            pcibus = config.get("pcibus")
+            slot = config.get("slot")
+            fn = config.get("fn")
+            bar = config.get("bar")
+            offset = config.get("offset")
+            data = config.get("data")
+            return wbpcird(pcibus, slot, fn, bar, offset, data)
+
+        return False, ("%s is not support read type" % way)
     except Exception as e:
         return False, ("get_value_once exception:%s happen" % str(e))
 
@@ -668,7 +716,7 @@ def set_value_once(config):
             ret, log = dev_file_write(path, offset, buf_list)
             if ret is True:
                 return True, ("devfile write path:%s, offset:0x%x, buf_list:%s success." % (path, offset, buf_list))
-            return False, ("devfile read  path:%s, offset:0x%x, buf_list:%s failed.log:%s" %
+            return False, ("devfile write  path:%s, offset:0x%x, buf_list:%s failed.log:%s" %
                            (path, offset, buf_list, log))
         if way == 'cmd':
             cmd = config.get("cmd")
@@ -703,7 +751,16 @@ def set_value_once(config):
                 return False, ("remove file %s failed, log: %s" % (file_name, log))
             exec_os_cmd("sync")
             return True, ("remove file %s success" % file_name)
-        return False, "not support write type"
+        if way == 'pci':
+            pcibus = config.get("pcibus")
+            slot = config.get("slot")
+            fn = config.get("fn")
+            bar = config.get("bar")
+            offset = config.get("offset")
+            data = config.get("data")
+            return wbpciwr(pcibus, slot, fn, bar, offset, data)
+
+        return False, ("%s not support write type" % way)
     except Exception as e:
         return False, ("set_value_once exception:%s happen" % str(e))
 
