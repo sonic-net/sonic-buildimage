@@ -17,9 +17,6 @@ def enable_counter_group(db, name):
         info = {}
         info['FLEX_COUNTER_STATUS'] = 'enable'
         db.mod_entry("FLEX_COUNTER_TABLE", name, info)
-    else:
-        entry_info.update({"FLEX_COUNTER_DELAY_STATUS":"false"})
-        db.mod_entry("FLEX_COUNTER_TABLE", name, entry_info)
 
 def enable_rates():
     # set the default interval for rates
@@ -38,18 +35,13 @@ def enable_rates():
 def enable_counters():
     db = swsscommon.ConfigDBConnector()
     db.connect()
-    default_enabled_counters = ['PORT', 'RIF', 'QUEUE', 'PFCWD', 'PG_WATERMARK', 'PG_DROP', 
+    default_enabled_counters = ['PORT', 'RIF', 'QUEUE', 'PFCWD', 'PG_WATERMARK', 'PG_DROP',
                                 'QUEUE_WATERMARK', 'BUFFER_POOL_WATERMARK', 'PORT_BUFFER_DROP', 'ACL']
-    
+
     # Enable those default counters
     for key in default_enabled_counters:
         enable_counter_group(db, key)
 
-    # Set FLEX_COUNTER_DELAY_STATUS to false for those non-default counters
-    keys = db.get_keys('FLEX_COUNTER_TABLE')
-    for key in keys:
-        if key not in default_enabled_counters:
-            enable_counter_group(db, key)
     enable_rates()
 
 
