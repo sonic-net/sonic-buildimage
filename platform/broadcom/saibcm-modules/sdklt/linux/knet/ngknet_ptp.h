@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_PTP_H
@@ -106,6 +106,22 @@ ngknet_ptp_phc_index_get(struct net_device *ndev, int *index);
  */
 extern int
 ngknet_ptp_dev_ctrl(struct ngknet_dev *dev, int cmd, char *data, int len);
+
+/*!
+ * \brief PTP Rx pre-process to get custom header length.
+ *
+ * If the RX PTP packet is timestamped by the HW and requires
+ * timestamp processing then, this function can be used
+ * to get the custom/system header length encapsulated by the FW.
+ *
+ * \param [in] dev NGKNET device structure point.
+ * \param [in] skb Rx packet SKB.
+ * \param [out] Custom header length.
+ *
+ * \retval SHR_E_NONE No errors.
+ */
+extern int
+ngknet_ptp_rx_pre_process(struct net_device *ndev, struct sk_buff *skb, uint32_t *cust_hdr_len);
 
 #endif /* NGKNET_PTP_H */
 

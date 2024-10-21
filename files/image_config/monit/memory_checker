@@ -20,6 +20,7 @@ check program container_memory_<container_name> with path "/usr/bin/memory_check
 """
 
 import argparse
+import os
 import subprocess
 import sys
 import syslog
@@ -32,6 +33,29 @@ from swsscommon import swsscommon
 
 EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
 EVENTS_PUBLISHER_TAG = "mem-threshold-exceeded"
+
+CGROUP_DOCKER_MEMORY_DIR = "/sys/fs/cgroup/memory/docker/"
+
+# Define common error codes
+ERROR_CONTAINER_ID_NOT_FOUND = "[memory_checker] Failed to get container ID of '{}'! Exiting ..."
+ERROR_CGROUP_MEMORY_USAGE_NOT_FOUND = "[memory_checker] cgroup memory usage file '{}' of container '{}' does not exist on device! Exiting ..."
+ERROR_CONTAINER_MEMORY_USAGE_NOT_FOUND = "[memory_checker] Failed to get the memory usage of container '{}'! Exiting ..."
+ERROR_CONTAINER_CACHE_USAGE_NOT_FOUND = "[memory_checker] Failed to get the cache usage of container '{}'! Exiting ..."
+ERROR_CGROUP_MEMORY_STATS_NOT_FOUND = "[memory_checker] cgroup memory statistics file '{}' of container '{}' does not exist on device! Exiting ..."
+ERROR_CGROUP_MEMORY_STATS_LINE_FORMAT = "[memory_checker] cgroup memory statistics file '{}' of container '{}' has invalid line format! Exiting ..."
+
+# Define common exit codes
+CONTAINER_NOT_RUNNING = 0
+INTERNAL_ERROR = 1
+INVALID_VALUE = 2
+EXCEED_THRESHOLD = 3
+
+def validate_container_id(container_id):
+    pattern = r'^[a-zA-Z0-9]+$'
+
+    if not re.match(pattern, container_id):
+        syslog.syslog(syslog.LOG_ERR, "Invalid container_id: {}".format(container_id))
+        sys.exit(INTERNAL_ERROR)
 
 def get_command_result(command):
     """Executes the command and return the resulting output.
@@ -50,15 +74,99 @@ def get_command_result(command):
         command_stdout, command_stderr = proc_instance.communicate()
         if proc_instance.returncode != 0:
             syslog.syslog(syslog.LOG_ERR, "[memory_checker] Failed to execute the command '{}'. Return code: '{}'"
-                          .format(command, proc_instance.returncode))
-            sys.exit(1)
+                          .format(' '.join(command), proc_instance.returncode))
+            sys.exit(INTERNAL_ERROR)
     except (OSError, ValueError) as err:
         syslog.syslog(syslog.LOG_ERR, "[memory_checker] Failed to execute the command '{}'. Error: '{}'"
-                      .format(command, err))
-        sys.exit(2)
+                      .format(' '.join(command), err))
+        sys.exit(INTERNAL_ERROR)
 
     return command_stdout.strip()
 
+def get_container_id(container_name):
+    """Gets full container ID of the specified container
+    Args:
+        container_name: A string indicates the name of specified container.
+    Returns:
+        container_id: A string indicates the full ID of specified container.
+    """
+    container_id = ""
+
+    get_container_info_cmd = ["docker", "ps", "--no-trunc", "--filter", "name={}".format(container_name)]
+
+    command_stdout = get_command_result(get_container_info_cmd)
+
+    for line in command_stdout.splitlines():
+        if container_name in line:
+            container_id = line.split()[0].strip()
+            break
+
+    if not container_id:
+        syslog.syslog(syslog.LOG_ERR, ERROR_CONTAINER_ID_NOT_FOUND.format(container_name))
+
+        sys.exit(INTERNAL_ERROR)
+
+    return container_id
+
+def get_memory_usage(container_id):
+    """Reads the container's memory usage from the control group subsystem's file
+    '/sys/fs/cgroup/memory/docker/<container_id>/memory.usage_in_bytes'.
+    Args:
+        container_id: A string indicates the full ID of a container.
+    Returns:
+        memory_usage_in_bytes: A string indicates memory usage (Bytes) of a container.
+    """
+    memory_usage_in_bytes = ""
+
+    validate_container_id(container_id)
+
+    docker_memory_usage_file_path = CGROUP_DOCKER_MEMORY_DIR + container_id + "/memory.usage_in_bytes"
+    if not os.path.exists(docker_memory_usage_file_path):
+        syslog.syslog(syslog.LOG_ERR, ERROR_CGROUP_MEMORY_USAGE_NOT_FOUND.format(docker_memory_usage_file_path, container_id))
+        sys.exit(INTERNAL_ERROR)
+
+    try:
+        with open(docker_memory_usage_file_path, 'r') as file:
+            memory_usage_in_bytes = file.read().strip()
+    except IOError as err:
+        syslog.syslog(syslog.LOG_ERR, ERROR_CONTAINER_MEMORY_USAGE_NOT_FOUND.format(container_id))
+        sys.exit(INTERNAL_ERROR)
+
+    return memory_usage_in_bytes
+
+def get_inactive_cache_usage(container_id):
+    """Reads the container's cache usage from the field 'total_inactive_file' in control
+    group subsystem's file '/sys/fs/cgroup/memory/docker/<container_id>/memory.stat'.
+    Args:
+        container_id: A string indicates the full ID of a container.
+    Returns:
+        cache_usage_in_bytes: A string indicates the cache usage (Bytes) of a container.
+    """
+    cache_usage_in_bytes = ""
+
+    validate_container_id(container_id)
+
+    docker_memory_stat_file_path = CGROUP_DOCKER_MEMORY_DIR + container_id + "/memory.stat"
+    if not os.path.exists(docker_memory_stat_file_path):
+        syslog.syslog(syslog.LOG_ERR, ERROR_CGROUP_MEMORY_STATS_NOT_FOUND.format(docker_memory_stat_file_path, container_id))
+        sys.exit(INTERNAL_ERROR)
+
+    try:
+        with open(docker_memory_stat_file_path, 'r') as file:
+            for line in file:
+                if "total_inactive_file" in line:
+                    split_line = line.split()
+                    if len(split_line) >= 2:
+                        cache_usage_in_bytes = split_line[1].strip()
+                    else:
+                        syslog.syslog(syslog.LOG_ERR, ERROR_CGROUP_MEMORY_STATS_LINE_FORMAT.format(docker_memory_stat_file_path, container_id))
+                        sys.exit(INTERNAL_ERROR)
+                    break
+    except IOError as err:
+        syslog.syslog(syslog.LOG_ERR, ERROR_CONTAINER_CACHE_USAGE_NOT_FOUND.format(container_id))
+        sys.exit(INTERNAL_ERROR)
+
+    return cache_usage_in_bytes
 
 def publish_events(container_name, mem_usage_bytes, threshold_value):
     events_handle = swsscommon.events_init_publisher(EVENTS_PUBLISHER_SOURCE)
@@ -71,8 +179,8 @@ def publish_events(container_name, mem_usage_bytes, threshold_value):
 
 
 def check_memory_usage(container_name, threshold_value):
-    """Checks the memory usage of a container and writes an alerting messages into
-    the syslog if the memory usage is larger than the threshold value.
+    """Checks the memory usage of a container from its cgroup subsystem and writes an alerting
+    messages into the syslog if the memory usage is larger than the threshold value.
 
     Args:
         container_name: A string represtents name of a container
@@ -81,37 +189,38 @@ def check_memory_usage(container_name, threshold_value):
     Returns:
         None.
     """
-    command = ["docker", "stats", "--no-stream", "--format", "{{.MemUsage}}", container_name]
-    command_stdout = get_command_result(command)
-    mem_usage = command_stdout.split("/")[0].strip()
-    match_obj = re.match(r"\d+\.?\d*", mem_usage)
-    if match_obj:
-        mem_usage_value = float(mem_usage[match_obj.start():match_obj.end()])
-        mem_usage_unit = mem_usage[match_obj.end():]
+    if not isinstance(threshold_value, int) or threshold_value <= 0:
+        syslog.syslog(syslog.LOG_ERR, "[memory_checker] Invalid threshold value! Threshold value should be a positive integer.")
+        sys.exit(INVALID_VALUE)
 
-        mem_usage_bytes = 0.0
-        if mem_usage_unit == "B":
-            mem_usage_bytes = mem_usage_value
-        elif mem_usage_unit == "KiB":
-            mem_usage_bytes = mem_usage_value * 1024
-        elif mem_usage_unit == "MiB":
-            mem_usage_bytes = mem_usage_value * 1024 ** 2
-        elif mem_usage_unit == "GiB":
-            mem_usage_bytes = mem_usage_value * 1024 ** 3
+    container_id = get_container_id(container_name)
+    syslog.syslog(syslog.LOG_INFO, "[memory_checker] Container ID of '{}' is: '{}'."
+                  .format(container_name, container_id))
 
-        if mem_usage_bytes > threshold_value:
-            print("[{}]: Memory usage ({} Bytes) is larger than the threshold ({} Bytes)!"
-                  .format(container_name, mem_usage_bytes, threshold_value))
-            syslog.syslog(syslog.LOG_INFO, "[{}]: Memory usage ({} Bytes) is larger than the threshold ({} Bytes)!"
-                          .format(container_name, mem_usage_bytes, threshold_value))
-            # publish event
-            publish_events(container_name, "{:.2f}".format(mem_usage_bytes), str(threshold_value))
-            sys.exit(3)
-    else:
-        syslog.syslog(syslog.LOG_ERR, "[memory_checker] Failed to retrieve memory value from '{}'"
-                      .format(mem_usage))
-        sys.exit(4)
+    memory_usage_in_bytes = get_memory_usage(container_id)
+    syslog.syslog(syslog.LOG_INFO, "[memory_checker] The memory usage of container '{}' is '{}' Bytes!"
+                  .format(container_name, memory_usage_in_bytes))
 
+    cache_usage_in_bytes = get_inactive_cache_usage(container_id)
+    syslog.syslog(syslog.LOG_INFO, "[memory_checker] The cache usage of container '{}' is '{}' Bytes!"
+                  .format(container_name, cache_usage_in_bytes))
+
+    try:
+        memory_usage = int(memory_usage_in_bytes)
+        cache_usage = int(cache_usage_in_bytes)
+    except ValueError as err:
+        syslog.syslog(syslog.LOG_ERR, "[memory_checker] Failed to convert the memory or cache usage in string to integer! Exiting ...")
+        sys.exit(INVALID_VALUE)
+
+    total_memory_usage = memory_usage - cache_usage
+    syslog.syslog(syslog.LOG_INFO, "[memory_checker] Total memory usage of container '{}' is '{}' Bytes!"
+                  .format(container_name, total_memory_usage))
+
+    if total_memory_usage > threshold_value:
+        print("[{}]: Memory usage ({} Bytes) is larger than the threshold ({} Bytes)!"
+              .format(container_name, total_memory_usage, threshold_value))
+        publish_events(container_name, "{:.2f}".format(total_memory_usage), str(threshold_value))
+        sys.exit(EXCEED_THRESHOLD)
 
 def is_service_active(service_name):
     """Test if service is running.
@@ -148,7 +257,7 @@ def get_running_container_names():
         syslog.syslog(syslog.LOG_ERR,
                       "Failed to retrieve the running container list from docker daemon! Error message is: '{}'"
                       .format(err))
-        sys.exit(5)
+        sys.exit(INTERNAL_ERROR)
 
     return running_container_names
 
@@ -167,7 +276,7 @@ def main():
         syslog.syslog(syslog.LOG_INFO,
                       "[memory_checker] Exits without checking memory usage of container '{}' since docker daemon is not running!"
                       .format(args.container_name))
-        sys.exit(0)
+        sys.exit(CONTAINER_NOT_RUNNING)
 
     running_container_names = get_running_container_names()
     if args.container_name in running_container_names:

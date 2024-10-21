@@ -83,7 +83,8 @@ class TestChangeEvent:
         _, change_event = c.get_change_event(timeout)
         assert 'sfp' in change_event and sfp_index in change_event['sfp'] and change_event['sfp'][sfp_index] == '2'
         assert 'sfp_error' in change_event and sfp_index in change_event['sfp_error'] and change_event['sfp_error'][sfp_index] == 'some error'
-        
+    
+    @mock.patch('sonic_platform.wait_sfp_ready_task.WaitSfpReadyTask.get_ready_set')    
     @mock.patch('sonic_platform.sfp.SFP.get_fd')
     @mock.patch('select.poll')
     @mock.patch('time.time')
@@ -91,7 +92,7 @@ class TestChangeEvent:
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=1))
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
     @mock.patch('sonic_platform.module_host_mgmt_initializer.ModuleHostMgmtInitializer.initialize', mock.MagicMock())
-    def test_get_change_event_for_module_host_management_mode(self, mock_time, mock_create_poll, mock_get_fd):
+    def test_get_change_event_for_module_host_management_mode(self, mock_time, mock_create_poll, mock_get_fd, mock_ready):
         """Test steps:
             1. Simulate polling with no event
             2. Simulate polling the first dummy event. (SDK always return a event when first polling the fd even if there is no change)
@@ -163,6 +164,7 @@ class TestChangeEvent:
         s.determine_control_type = mock.MagicMock(return_value=sfp.SFP_FW_CONTROL)
         s.set_control_type = mock.MagicMock()
         mock_time.side_effect = [0, timeout]
+        mock_ready.return_value = set([0])
         mock_hw_present_file.read.return_value = sfp.SFP_STATUS_INSERTED
         _, change_event = c.get_change_event(timeout)
         assert 'sfp' in change_event and sfp_index in change_event['sfp'] and change_event['sfp'][sfp_index] == sfp.SFP_STATUS_INSERTED
@@ -173,6 +175,7 @@ class TestChangeEvent:
         print(c.registered_fds)
         
         # error event, expect returning error
+        mock_ready.return_value = []
         mock_time.side_effect = [0, timeout]
         mock_poll.poll.return_value = [(3, 10)]
         mock_present_file.read.return_value = sfp.SFP_STATUS_ERROR
@@ -193,6 +196,7 @@ class TestChangeEvent:
         
         # plug in a software control cable, expect returning insert event
         mock_time.side_effect = [0, timeout]
+        mock_ready.return_value = set([0])
         mock_poll.poll.return_value = [(1, 10)]
         mock_hw_present_file.read.return_value = sfp.SFP_STATUS_INSERTED
         s.determine_control_type.return_value = sfp.SFP_SW_CONTROL

@@ -1,5 +1,6 @@
 /*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+ * $Id: linux_dma.c,v 1.414 Broadcom SDK $
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,12 +23,9 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/*
- * $Id: linux_dma.c,v 1.414 Broadcom SDK $
- * $Copyright: (c) 2016 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
+ * 
  *
  * Linux Kernel BDE DMA memory allocation
  *
@@ -70,6 +68,8 @@
  * The module parameter dmasize=0M enables this allocation mode, however if
  * DMA memory is requested from a user mode application, a private memory
  * pool will be created and used irrespectively.
+ * dmasize=sram may be used with some device, with no direct PCIe connection
+ * between the CPU and device, for using iproc SRAM for DMA.
  */
 
 #include <gmodule.h>
@@ -93,11 +93,9 @@
 
 #if _SIMPLE_MEMORY_ALLOCATION_
 #include <linux/dma-mapping.h>
-#if defined(CONFIG_CMA) && defined(CONFIG_CMA_SIZE_MBYTES)
-#define DMA_MAX_ALLOC_SIZE (CONFIG_CMA_SIZE_MBYTES * 1024 * 1024)
-#else
+#ifndef CONFIG_CMA
 #define DMA_MAX_ALLOC_SIZE (1 << (MAX_ORDER - 1 + PAGE_SHIFT)) /* Maximum size the kernel can allocate in one allocation */
-#endif
+#endif /* !CONFIG_CMA */
 #endif /* _SIMPLE_MEMORY_ALLOCATION_ */
 
 #if _SIMPLE_MEMORY_ALLOCATION_ == 1
@@ -289,6 +287,13 @@ static phys_addr_t _cpu_pbase = 0;
  * physical address or another address(IOVA) translated by IOMMU.
  */
 static phys_addr_t _dma_pbase = 0;
+
+#ifdef INCLUDE_SRAM_DMA
+/* If the value is none-zero, device types that support it will use SRAM for DMA.
+ * This is for systems where the CPU has no PCIe connection to the device,
+ * and where customers implement some proxy the connects to the device */
+int use_sram_for_dma = 0;
+#endif /* INCLUDE_SRAM_DMA */
 
 /* states of the DMA pool: */
 
@@ -787,7 +792,7 @@ _mpool_free(void)
     }
 
     /* unmap bus address for all devices */
-    /* TODO SDK-235729 skip removed devices */
+
     if (_use_dma_mapping) {
         int i, ndevices;
         ndevices = BDE_NUM_DEVICES(BDE_SWITCH_DEVICES);
@@ -883,12 +888,14 @@ _mpool_alloc(size_t size)
         switch (dmaalloc) {
 #if _SIMPLE_MEMORY_ALLOCATION_
           case ALLOC_TYPE_API: {
+#ifndef CONFIG_CMA
             /* The allocation will be performed together with the mapping to the first device */
             if (size > DMA_MAX_ALLOC_SIZE) {
                 gprintk("Will allocate 0x%lx bytes instead of 0x%lx bytes.\n",
                         (unsigned long)DMA_MAX_ALLOC_SIZE, (unsigned long)size);
                 _dma_mem_size = DMA_MAX_ALLOC_SIZE;
             }
+#endif /* !CONFIG_CMA */
             if (nodevices == 1) {
                  /* With no devices, allocate immediately mapping to the null device */
                 _dma_pool_alloc_state = DMA_POOL_INITIALIZED;
@@ -1072,15 +1079,34 @@ void _dma_init(void)
 
     /* dmasize, himem and himemaddr kernel module argument parsing */
     if (dmasize) {
-        if ((dmasize[strlen(dmasize)-1] & ~0x20) == 'M') {
-            _dma_mem_size = simple_strtoul(dmasize, NULL, 0);
-            _dma_mem_size *= ONE_MB;
-        } else {
-            gprintk("DMA memory size must be specified as e.g. dmasize=8M\n");
-        }
-        if (_dma_mem_size & (_dma_mem_size-1)) {
-            gprintk("dmasize must be a power of 2 (1M, 2M, 4M, 8M etc.)\n");
-            _dma_mem_size = 0;
+#ifdef INCLUDE_SRAM_DMA
+        if (!strncasecmp(dmasize, "sram", 4) && (dmasize[4] == '\0' || dmasize[4] == ',')) {
+            use_sram_for_dma = 1; /* set SRAM DMA mode */
+            if (dma_debug >= 1) {
+                gprintk("SRAM DMA mode\n");
+            }
+#ifdef SRAM_DMA_NEEDS_KERNEL_APIS
+            _update_apis_for_sram_dma();
+#endif
+            if (dmasize[4] == '\0') {
+                dmasize +=4;
+            } else {
+                dmasize +=5;
+            }
+
+        } 
+#endif /* INCLUDE_SRAM_DMA */
+        if (*dmasize != '\0') {
+            if ((dmasize[strlen(dmasize)-1] & ~0x20) == 'M') {
+                _dma_mem_size = simple_strtoul(dmasize, NULL, 0);
+                _dma_mem_size *= ONE_MB;
+            } else {
+                gprintk("DMA memory size must be specified as e.g. dmasize=8M\n");
+            }
+            if (_dma_mem_size & (_dma_mem_size-1)) {
+                gprintk("dmasize must be a power of 2 (1M, 2M, 4M, 8M etc.)\n");
+                _dma_mem_size = 0;
+            }
         }
     }
 
@@ -1190,7 +1216,7 @@ _l2p(int d, void *vaddr)
         }
         return 0;
     }
-    /* TODO will not work with IOMMU */
+
     return ((sal_paddr_t)virt_to_bus(vaddr));
 }
 
@@ -1206,7 +1232,7 @@ _p2l(int d, sal_paddr_t paddr)
         }
         return (void *)(vaddr + (sal_vaddr_t)(paddr - _dma_pbase));
     }
-    /* TODO will not work with IOMMU */
+
     return bus_to_virt(paddr);
 }
 
@@ -1264,7 +1290,7 @@ _sinval(int d, void *ptr, int length)
 #if defined(dma_cache_wback_inv)
      dma_cache_wback_inv((unsigned long)ptr, length);
 #else
-    /* FIXME: need proper function to replace dma_cache_sync */
+
     dma_sync_single_for_cpu(NULL, (unsigned long)ptr, length, DMA_BIDIRECTIONAL);
 #endif
     return 0;
@@ -1276,7 +1302,7 @@ _sflush(int d, void *ptr, int length)
 #if defined(dma_cache_wback_inv)
     dma_cache_wback_inv((unsigned long)ptr, length);
 #else
-    /* FIXME: need proper function to replace dma_cache_sync */
+
     dma_sync_single_for_cpu(NULL, (unsigned long)ptr, length, DMA_BIDIRECTIONAL);
 #endif
 
@@ -1304,7 +1330,7 @@ _dma_pprint(struct seq_file *m)
     pprintf(m, "\thimem=%s\n", himem);
     pprintf(m, "\thimemaddr=%s\n", himemaddr);
     pprintf(m, "DMA Memory (%s): %d bytes, %d used, %d free%s\n",
-            (_use_himem) ? "high" : "kernel",
+            (_use_himem) ? "high" : dmaalloc ? "kernel-api" : "kernel-chunk",
             (_dma_vbase) ? _dma_mem_size : 0,
             (_dma_vbase) ? mpool_usage(_dma_pool) : 0,
             (_dma_vbase) ? _dma_mem_size - mpool_usage(_dma_pool) : 0,

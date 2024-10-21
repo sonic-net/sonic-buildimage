@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <ngbde.h>
@@ -31,7 +31,7 @@ MODULE_PARM_DESC(dma_debug,
 
 /*! Default size of of DMA memory pools (in MB). */
 #ifndef DMAPOOL_SIZE_DEFAULT
-#define DMAPOOL_SIZE_DEFAULT    16
+#define DMAPOOL_SIZE_DEFAULT    32
 #endif
 
 /*! Default number of DMA memory pools per device. */
@@ -41,7 +41,7 @@ MODULE_PARM_DESC(dma_debug,
 static int dma_size = DMAPOOL_SIZE_DEFAULT;
 module_param(dma_size, int, S_IRUSR);
 MODULE_PARM_DESC(dma_size,
-"Size of of DMA memory pools in MB (default 16 MB).");
+"Size of of DMA memory pools in MB (default 32 MB).");
 /*! \endcond */
 
 /*! \cond */
@@ -244,7 +244,7 @@ ngbde_dmamem_free(ngbde_dmamem_t *dmamem)
                              dmamem->size, DMA_BIDIRECTIONAL);
         }
         ngbde_pgmem_free(dmamem->vaddr);
-        memset(dmamem, 0, sizeof(*dmamem)); // nosemgrep
+        memset(dmamem, 0, sizeof(*dmamem));
         break;
     case NGBDE_DMA_T_NONE:
         /* Nothing to free */

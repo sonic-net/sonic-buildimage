@@ -52,6 +52,7 @@ backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter']
 console_device_types = ['MgmtTsToR']
 dhcp_server_enabled_device_types = ['BmcMgmtToRRouter']
 mgmt_device_types = ['BmcMgmtToRRouter', 'MgmtToRRouter', 'MgmtTsToR']
+leafrouter_device_types = ['LeafRouter']
 
 # Counters disabled on management devices
 mgmt_disabled_counters = ["BUFFER_POOL_WATERMARK", "PFCWD", "PG_DROP", "PG_WATERMARK", "PORT_BUFFER_DROP", "QUEUE", "QUEUE_WATERMARK"]
@@ -341,14 +342,13 @@ def parse_chassis_deviceinfo_intf_metadata(device_info, chassis_linecards_info, 
             if linecard_name is not None:
                 key = "%s|%s" % (linecard_name, key)
             system_ports[key] = {
-                "system_port_id": system_port_id,
+                "system_port_id": 0,
                 "switch_id": switch_id,
                 "core_index": core_id,
                 "core_port_index": core_port_id,
                 "speed": intf_speed,
                 "num_voq": num_voq
             }
-            system_port_id += 1
 
         chassis_port_alias.setdefault(slot_index, {}).update(
             {(intf_sonic_name, intf_speed): intf_name})
@@ -362,8 +362,14 @@ def parse_chassis_deviceinfo_intf_metadata(device_info, chassis_linecards_info, 
             port_default_speed.setdefault(slot_index, {}).update(
                 {intf_sonic_name: intf_speed})
 
-    return system_ports, chassis_port_alias, port_default_speed
+    # The above loop with findall("DeviceInterfaceMetadata") was not giving interfaces from minigraph
+    # in document order. So doing an explict sort so that system_port_ids remain same across LCs
+    sorted_system_ports = { key:system_ports[key] for key in sorted(system_ports.keys()) }
+    for k,v in sorted_system_ports.items():
+        v["system_port_id"] = system_port_id
+        system_port_id += 1
 
+    return sorted_system_ports, chassis_port_alias, port_default_speed
 
 
 def parse_chassis_deviceinfo_voq_int_intfs(device_info):
@@ -2706,6 +2712,10 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     # Disable unsupported counters on management devices
     if current_device and current_device['type'] in mgmt_device_types:
         results["FLEX_COUNTER_TABLE"] = {counter: {"FLEX_COUNTER_STATUS": "disable"} for counter in mgmt_disabled_counters}
+
+    # Enable bgp-suppress-fib by default for leafrouter
+    if current_device and current_device['type'] in leafrouter_device_types:
+        results['DEVICE_METADATA']['localhost']['suppress-fib-pending'] = 'enabled'
 
     return results
 

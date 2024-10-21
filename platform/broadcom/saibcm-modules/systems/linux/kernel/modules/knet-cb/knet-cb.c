@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2019 Broadcom
+ * Copyright 2017-2024 Broadcom
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
@@ -44,11 +44,6 @@
 #include <kcom.h>
 #include <bcm-knet.h>
 #include <linux/if_vlan.h>
-
-/* Enable sflow sampling using psample */
-#ifdef PSAMPLE_SUPPORT
-#include "psample-cb.h"
-#endif
 
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("Broadcom Linux KNET Call-Back Driver");
@@ -343,7 +338,8 @@ knet_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
 }
 
 static int
-knet_netif_create_cb(int unit, kcom_netif_t *netif, struct net_device *dev)
+/*knet_netif_create_cb(int unit, kcom_netif_t *netif, struct net_device *dev)*/
+knet_netif_create_cb(struct net_device *dev, int unit, kcom_netif_t *netif)
 {
     int retv = 0;
 #ifdef PSAMPLE_SUPPORT
@@ -353,40 +349,8 @@ knet_netif_create_cb(int unit, kcom_netif_t *netif, struct net_device *dev)
 }
 
 static int
-knet_netif_destroy_cb(int unit, kcom_netif_t *netif, struct net_device *dev)
-{
-    int retv = 0;
-#ifdef PSAMPLE_SUPPORT
-    retv = psample_netif_destroy_cb(unit, netif, dev);
-#endif
-    return retv;
-}
-#else
-static int
-knet_filter_cb(uint8_t * pkt, int size, int dev_no, void *meta,
-                     int chan, kcom_filter_t *kf)
-{
-    /* check for filter callback handler */
-#ifdef PSAMPLE_SUPPORT
-    if (strncmp(kf->desc, PSAMPLE_CB_NAME, KCOM_FILTER_DESC_MAX) == 0) {
-        return psample_filter_cb (pkt, size, dev_no, meta, chan, kf);
-    }
-#endif
-    return strip_tag_filter_cb (pkt, size, dev_no, meta, chan, kf);
-}
-
-static int
-knet_netif_create_cb(int unit, kcom_netif_t *netif, struct net_device *dev)
-{
-    int retv = 0;
-#ifdef PSAMPLE_SUPPORT
-    retv = psample_netif_create_cb(unit, netif, dev);
-#endif
-    return retv;
-}
-
-static int
-knet_netif_destroy_cb(int unit, kcom_netif_t *netif, struct net_device *dev)
+/*knet_netif_destroy_cb(int unit, kcom_netif_t *netif, struct net_device *dev)*/
+knet_netif_destroy_cb(struct net_device *dev, int unit, kcom_netif_t *netif)
 {
     int retv = 0;
 #ifdef PSAMPLE_SUPPORT
@@ -395,7 +359,6 @@ knet_netif_destroy_cb(int unit, kcom_netif_t *netif, struct net_device *dev)
     return retv;
 }
 #endif
-
 /*
  * Get statistics.
  * % cat /proc/linux-knet-cb
@@ -423,13 +386,6 @@ _cleanup(void)
         bkn_tx_skb_cb_unregister(strip_tag_tx_cb);
     }
 
-    bkn_filter_cb_unregister(knet_filter_cb);
-    bkn_netif_create_cb_unregister(knet_netif_create_cb);
-    bkn_netif_destroy_cb_unregister(knet_netif_destroy_cb);
-
-#ifdef PSAMPLE_SUPPORT
-    psample_cleanup();
-#endif
     return 0;
 }
 
@@ -444,13 +400,6 @@ _init(void)
     {
         bkn_tx_skb_cb_register(strip_tag_tx_cb);
     }
-
-#ifdef PSAMPLE_SUPPORT
-    psample_init();
-#endif
-    bkn_filter_cb_register(knet_filter_cb);
-    bkn_netif_create_cb_register(knet_netif_create_cb);
-    bkn_netif_destroy_cb_register(knet_netif_destroy_cb);
 
     return 0;
 }

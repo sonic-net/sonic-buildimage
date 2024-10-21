@@ -56,5 +56,23 @@
                 }
             }
         }
+    },
+    "SSH_SERVER_INVALID_INACTIVITY_TIMEOUT": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "inactivity_timeout": 500000
+                }
+            }
+        }
+    },
+    "SSH_SERVER_INVALID_MAX_SESSIONS": {
+        "sonic-ssh-server:sonic-ssh-server": {
+            "sonic-ssh-server:SSH_SERVER": {
+                "POLICIES":{
+                    "max_sessions": 222
+                }
+            }
+        }
     }
 }
