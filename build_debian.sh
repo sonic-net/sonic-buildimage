@@ -750,13 +750,6 @@ if [[ $TARGET_BOOTLOADER == uboot ]]; then
             sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH}/pensando/elba-asic-psci.dtb $FILESYSTEM_ROOT/boot/
             sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH}/pensando/elba-asic-psci-lipari.dtb $FILESYSTEM_ROOT/boot/
             sudo cp -v $FILESYSTEM_ROOT/usr/lib/linux-image-${LINUX_KERNEL_VERSION}-${CONFIGURED_ARCH}/pensando/elba-asic-psci-mtfuji.dtb $FILESYSTEM_ROOT/boot/
-            sudo cp -v $PLATFORM_DIR/pensando/install_file $FILESYSTEM_ROOT/boot/
-            if [ -e $PLATFORM_DIR/pensando/uboota.img ]; then
-                sudo cp -v $PLATFORM_DIR/pensando/uboota.img $FILESYSTEM_ROOT/boot/
-            fi
-            if [ -e $PLATFORM_DIR/pensando/boot0.img ]; then
-                sudo cp -v $PLATFORM_DIR/pensando/boot0.img $FILESYSTEM_ROOT/boot/
-            fi
             ## make kernel as gzip file
             sudo LANG=C chroot $FILESYSTEM_ROOT gzip /boot/${KERNEL_FILE}
             sudo LANG=C chroot $FILESYSTEM_ROOT mv /boot/${KERNEL_FILE}.gz /boot/${KERNEL_FILE}
