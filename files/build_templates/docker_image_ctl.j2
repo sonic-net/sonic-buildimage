@@ -433,7 +433,7 @@ start() {
     if [ -d "$HWSKU_FOLDER" ]; then
         CREATE_ONLY_CONFIG_DB_BUFFERS_JSON="$HWSKU_FOLDER/create_only_config_db_buffers.json"
         if [ -f "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON" ]; then
-            $SONIC_CFGGEN -j $CREATE_ONLY_CONFIG_DB_BUFFERS_JSON --write-to-db
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
         fi
     fi
     {%- endif %}

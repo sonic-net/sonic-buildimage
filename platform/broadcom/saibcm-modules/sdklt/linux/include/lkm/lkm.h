@@ -1,10 +1,10 @@
 /*! \file lkm.h
  *
- * <description>
+ * Linux compatibility macros.
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef LKM_H
@@ -135,6 +135,38 @@ static inline void page_ref_inc(struct page *page)
 static inline void page_ref_dec(struct page *page)
 {
     atomic_dec(&page->_count);
+}
+#endif
+
+#ifndef PCI_IRQ_LEGACY
+/* Emulate new IRQ API if not available */
+#define PCI_IRQ_LEGACY          (1 << 0)
+#define PCI_IRQ_MSI             (1 << 1)
+#define PCI_IRQ_MSIX            (1 << 2)
+static inline int
+pci_alloc_irq_vectors(struct pci_dev *dev, unsigned int min_vecs,
+                      unsigned int max_vecs, unsigned int flags)
+{
+    /* We do not attempt to support MSI-X via old API */
+    if (flags & PCI_IRQ_MSI) {
+        if (pci_enable_msi(dev) == 0) {
+            return 1;
+        }
+    }
+    if (flags & PCI_IRQ_LEGACY) {
+        return 1;
+    }
+    return 0;
+}
+static inline void
+pci_free_irq_vectors(struct pci_dev *dev)
+{
+    pci_disable_msi(dev);
+}
+static inline int
+pci_irq_vector(struct pci_dev *dev, unsigned int nr)
+{
+    return dev->irq;
 }
 #endif
 
