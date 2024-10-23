@@ -26,7 +26,7 @@ module sonic-memory-statistics {
 
                 leaf sampling_interval {
                     type uint8 {
-                        range "3..30";
+                        range "3..15";
                     }
                     units "minutes";
                     default 5;
