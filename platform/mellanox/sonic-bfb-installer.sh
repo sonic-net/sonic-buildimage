@@ -26,12 +26,12 @@ usage(){
     echo "-c			Config file"
     echo "-h		        Help"
 }
+WORK_DIR=`mktemp -d -p "$DIR"`
 
 bfb_install_call(){
     #Example:sudo bfb-install -b <full path to image> -r rshim<id>
-    local result_file=$(mktemp "/tmp/result_file.XXXXX")
-    trap "rm -f $result_file" EXIT
-    local cmd="timeout 300s bfb-install -b $2 -r $1 $appendix"
+    local result_file=$(mktemp "${WORK_DIR}/result_file.XXXXX")
+    local cmd="timeout 600s bfb-install -b $2 -r $1 $appendix"
     echo "Installing bfb image on DPU connected to $1 using $cmd"
     local indicator="$1:"
     eval "$cmd" > "$result_file" 2>&1 > >(while IFS= read -r line; do echo "$indicator $line"; done > "$result_file")
@@ -44,7 +44,26 @@ bfb_install_call(){
     if [ $exit_status -ne 0 ] ||[ $verbose = true ]; then
         cat "$result_file"
     fi
-    rm -f $result_file
+}
+
+file_cleanup(){
+    rm -rf "$WORK_DIR"
+}
+
+is_url() {
+    local link=$1
+    if [[ $link =~ https?:// ]]; then 
+        echo "Detected URL. Downloading file"
+        filename="${WORK_DIR}/sonic-nvidia-bluefield.bfb"
+        curl -L -o "$filename" "$link"
+        res=$?
+        if test "$res" != "0"; then
+            echo "the curl command failed with: $res"
+            exit 1
+        fi
+        bfb="$filename"
+        echo "bfb path changed to $bfb"
+    fi
 }
 
 validate_rshim(){
@@ -70,8 +89,6 @@ check_for_root(){
         exit
     fi
 }
-
-
 
 main(){
     check_for_root
@@ -104,13 +121,16 @@ main(){
         echo "Error : bfb image is not provided."
         usage
         exit 1
+    else
+        is_url $bfb
     fi
+    trap "file_cleanup" EXIT
     if [[ -f ${config} ]]; then
         echo "Using ${config} file"
         appendix="-c ${config}"
     fi
     dev_names_det+=($(
-        ls /dev/rshim* | awk -F'/' '/^\/dev\/rshim/ {gsub(/:/,"",$NF); print $NF}'
+        ls -d /dev/rshim? | awk -F'/' '{print $NF}'
     ))
     if [ "${#dev_names_det[@]}" -eq 0 ]; then
         echo "No rshim interfaces detected! Make sure to run the $command_name script from the host device/ switch!"
@@ -127,7 +147,7 @@ main(){
             echo "${dev_names_det[@]}"
         else
             IFS=',' read -ra dev_names <<< "$rshim_dev"
-            validate_rshim $dev_names
+            validate_rshim ${dev_names[@]}
         fi
     fi
     trap 'kill_ch_procs' SIGINT SIGTERM SIGHUP
@@ -148,7 +168,7 @@ kill_all_descendant_procs() {
         done
     fi
     if [[ "$self_kill" == true ]]; then
-        kill -15 "$pid" > /dev/null 2>&1
+        kill -9 "$pid" > /dev/null 2>&1
     fi
 }
 

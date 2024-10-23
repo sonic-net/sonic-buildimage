@@ -4,6 +4,7 @@ azure-storage==0.36.0
 bcrypt==3.2.2
 bitarray==2.8.1
 blessed==1.20.0
+blkinfo==0.2.0
 certifi==2024.2.2
 cffi==1.15.1
 charset-normalizer==3.3.2
@@ -63,6 +64,7 @@ redis==3.5.3
 regex==2024.5.15
 requests==2.31.0
 scapy==2.4.4
+scp==0.14.5
 semantic-version==2.10.0
 setuptools==66.1.1
 six==1.16.0

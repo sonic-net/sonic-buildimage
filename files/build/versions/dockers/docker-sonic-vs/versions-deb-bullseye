@@ -52,8 +52,8 @@ libfreetype6==2.10.4+dfsg-1+deb11u1
 libfreetype6-dev==2.10.4+dfsg-1+deb11u1
 libfuse2==2.9.9-5
 libgirepository-1.0-1==1.66.1-1+b1
-libglib2.0-0==2.66.8-1+deb11u3
-libglib2.0-data==2.66.8-1+deb11u3
+libglib2.0-0==2.66.8-1+deb11u4
+libglib2.0-data==2.66.8-1+deb11u4
 libgssapi-krb5-2==1.18.3-6+deb11u4+fips
 libgssrpc4==1.18.3-6+deb11u4+fips
 libicu-dev==67.1-7
@@ -67,7 +67,7 @@ libjudydebian1==1.0.5-5+b2
 libk5crypto3==1.18.3-6+deb11u4
 libkadm5clnt-mit12==1.18.3-6+deb11u4+fips
 libkadm5srv-mit12==1.18.3-6+deb11u4+fips
-libkdb5-10==1.18.3-6+deb11u4
+libkdb5-10==1.18.3-6+deb11u5
 libkrb5-3==1.18.3-6+deb11u4+fips
 libkrb5-dev==1.18.3-6+deb11u4+fips
 libkrb5support0==1.18.3-6+deb11u4+fips
@@ -89,9 +89,9 @@ libpopt0==1.18-2
 libpython2-stdlib==2.7.18-3
 libpython2.7-minimal==2.7.18-8+deb11u1
 libpython2.7-stdlib==2.7.18-8+deb11u1
-libqt5core5a==5.15.2+dfsg-9
-libqt5dbus5==5.15.2+dfsg-9
-libqt5network5==5.15.2+dfsg-9
+libqt5core5a==5.15.2+dfsg-9+deb11u1
+libqt5dbus5==5.15.2+dfsg-9+deb11u1
+libqt5network5==5.15.2+dfsg-9+deb11u1
 libsaivs==1.0.0
 libsodium-dev==1.0.18-1
 libssl1.1==1.1.1w-0+deb11u1
@@ -104,7 +104,7 @@ libxml2==2.9.10+dfsg-6.7+deb11u4
 libxml2-dev==2.9.10+dfsg-6.7+deb11u4
 libyang2==2.0.112-6
 libzmq3-dev==4.3.4-1+deb11u1
-linux-libc-dev==5.10.216-1
+linux-libc-dev==5.10.221-1
 logrotate==3.18.0-2+deb11u2
 lsof==4.93.2+dfsg-1.1
 mailcap==3.69

@@ -39,5 +39,23 @@
     "BUFFER_POOL_WRONG_SIZE_VALUE": {
         "desc": "BUFFER_POOL_WRONG_SIZE_VALUE pattern failure.",
         "eStr": "wrong"
+    },
+    "BUFFER_POOL_CORRECT_PERCENTAGE_VALUE": {
+        "desc": "BUFFER_POOL_CORRECT_PERCENTAGE_VALUE no failure."
+    },
+    "BUFFER_POOL_CORRECT_LARGE_PERCENTAGE_VALUE": {
+        "desc": "BUFFER_POOL_CORRECT_PERCENTAGE_VALUE no failure."
+    },
+    "BUFFER_POOL_WRONG_PERCENTAGE_NEGATIVE_VALUE": {
+        "desc": "BUFFER_POOL_WRONG_PERCENTAGE_NEGATIVE_VALUE pattern failure.",
+        "eStr": "Invalid value"
+    },
+    "BUFFER_POOL_WRONG_PERCENTAGE_NOT_A_NUMBER_VALUE": {
+        "desc": "BUFFER_POOL_WRONG_PERCENTAGE_NOT_A_NUMBER_VALUE pattern failure.",
+        "eStr": "Invalid value"
+    },
+    "BUFFER_POOL_WRONG_PERCENTAGE_VALUE_WITH_SIZE": {
+        "desc": "BUFFER_POOL_WRONG_PERCENTAGE_VALUE_WITH_SIZE pattern failure.",
+        "eStr": "Percentage should not be configured along with size"
     }
 }

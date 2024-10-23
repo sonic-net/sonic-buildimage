@@ -45,7 +45,7 @@
         "egress_lossy_profile": {
             "pool":"ingress_lossless_pool",
             "size":"0",
-            "dynamic_th":"-1"
+            "dynamic_th":"-4"
         }
     },
 

@@ -8,6 +8,7 @@ backcall==0.2.0
 bcrypt==3.1.7
 beautifulsoup4==4.9.3
 bitarray==2.9.2
+blkinfo==0.2.0
 certifi==2020.6.20
 chardet==4.0.0
 click==7.1.2
@@ -69,7 +70,7 @@ parso==0.8.1
 pexpect==4.8.0
 pickleshare==0.7.5
 pillow==9.4.0
-pip==24.0
+pip==24.2
 pluggy==0.13.0
 ply==3.11
 prompt-toolkit==3.0.14
