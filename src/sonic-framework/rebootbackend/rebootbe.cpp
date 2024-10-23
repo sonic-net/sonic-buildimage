@@ -14,6 +14,7 @@
 #include "reboot_interfaces.h"
 #include "select.h"
 #include "status_code_util.h"
+#include "warm_restart.h"
 
 namespace rebootbackend {
 
@@ -29,7 +30,6 @@ RebootBE::RebootBE(DbusInterface &dbus_interface)
 }
 
 RebootBE::RebManagerStatus RebootBE::GetCurrentStatus() {
-  const std::lock_guard<std::mutex> lock(m_StatusMutex);
   return m_CurrentStatus;
 }
 
@@ -41,11 +41,20 @@ void RebootBE::SetCurrentStatus(RebManagerStatus newStatus) {
 void RebootBE::Start() {
   SWSS_LOG_ENTER();
   SWSS_LOG_NOTICE("--- Starting rebootbackend ---");
+  swss::WarmStart::initialize("rebootbackend", "sonic-framework");
+  swss::WarmStart::checkWarmStart("rebootbackend", "sonic-framework",
+                                  /*incr_restore_cnt=*/false);
 
   swss::Select s;
   s.addSelectable(&m_NotificationConsumer);
   s.addSelectable(&m_Done);
   s.addSelectable(&m_RebootThreadFinished);
+
+  if (swss::WarmStart::isWarmStart()) {
+    SetCurrentStatus(RebManagerStatus::WARM_INIT_WAIT);
+  } else {
+    SWSS_LOG_NOTICE("Warm restart not enabled");
+  }
 
   SWSS_LOG_NOTICE("RebootBE entering operational loop");
   while (true) {
