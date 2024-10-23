@@ -1,7 +1,9 @@
 mod wol;
+mod socket;
 
 extern crate clap;
 extern crate pnet;
+extern crate libc;
 
 fn main() {
     if let Err(e) = wol::build_and_send() {
