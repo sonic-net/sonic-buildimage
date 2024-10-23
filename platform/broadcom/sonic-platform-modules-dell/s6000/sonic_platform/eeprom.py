@@ -429,7 +429,7 @@ class EepromS6000(EepromDecoder):
                     data = ":".join(["{:02x}".format(T) for T in e[offset:offset+f[1]]]).upper()
                 else:
                     data = e[offset:offset+f[1]].decode('ascii')
-                client.hset('EEPROM_INFO|{}'.format(f[0]), 'Value', data)
+                client.hset('EEPROM_INFO|{}'.format(f[0]), 'Value', data.strip('\x00'))
                 offset += f[1]
 
             if not self._is_valid_block_checksum(e[blk_start:blk_end]):
