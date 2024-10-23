@@ -60,7 +60,7 @@ if ($.PLATFORM == "x86_64-mlnx_msn2700-r0" or $.PLATFORM == "x86_64-mlnx_msn2700
 # Set remote syslog server
 template (name="ForwardFormatInContainer" type="string" string="<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %$.CONTAINER_NAME%#%syslogtag%%msg:::sp-if-no-1st-sp%%msg%")
 module(load="omrelp")
-*.* action(type="omrelp" target=`echo $SYSLOG_TARGET_IP` port="2514" action.resumeRetryCount="-1" queue.type="LinkedList" Template="ForwardFormatInContainer")
+*.* action(type="omrelp" target=`echo $SYSLOG_TARGET_IP` port="2514" action.resumeRetryCount="-1" queue.type="LinkedList" queue.size="20000" Template="ForwardFormatInContainer")
 
 #
 # Set the default permissions for all log files.
