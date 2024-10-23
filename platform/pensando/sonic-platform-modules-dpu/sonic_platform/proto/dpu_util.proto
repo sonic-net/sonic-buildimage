@@ -1,0 +1,22 @@
+syntax = "proto3";
+package DpuService;
+
+service DpuUtilSvc {
+    rpc GetRebootCause(RebootCauseRequest) returns (RebootCauseResponse);
+}
+
+message RebootCause {
+    string name = 1;
+    string cause = 2;
+    string user = 3;
+    string comment = 4;
+    string time = 5;
+}
+
+message RebootCauseResponse {
+    string slot_id = 1;
+    RebootCause reboot_cause = 2;
+    bool success = 3;
+}
+
+message RebootCauseRequest {}

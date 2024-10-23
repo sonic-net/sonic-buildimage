@@ -94,6 +94,16 @@ class APIHelper():
             sys.exit(2)
         return ret
 
+    def get_board_id(self):
+        try:
+            board_id_hex = self.runCMD("cpldapp -r 0x80")
+            if board_id_hex:
+                board_id = int(board_id_hex, 16)
+                return board_id
+        except Exception as e:
+            print(f"Failed to get board id due to {e}")
+            return 0
+
     def readline_txt_file(self, path):
         try:
             with open(path, 'r') as f:
@@ -114,7 +124,7 @@ class APIHelper():
         return eeprom_byte_array
 
     def read_eeprom_qsfp_file(self, i2c_num, reg):
-        eeprom_file = f"usr/share/sonic/platform/qsfp-eeprom-{i2c_num}.bin"
+        eeprom_file = f"/usr/share/sonic/platform/qsfp-eeprom-{i2c_num}.bin"
         if self.is_host():
             platform = self.get_platform()
             eeprom_file = f"/usr/share/sonic/device/{platform}/qsfp-eeprom-{i2c_num}.bin"
