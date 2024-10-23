@@ -100,7 +100,7 @@ class Component(ComponentBase):
                 transceiver_info = sfp.get_transceiver_info()
                 portinfo = {}
                 portinfo["name"] = sfp.get_name()
-                portinfo["description"] = f"{sfp.sfp_type} port - {index}"
+                portinfo["description"] = f"QSFP port - {index}"
                 portinfo["firmware version"] = "N/A"
                 portinfo["serial number"] = transceiver_info['serial']
                 portinfo["vendor name"] = transceiver_info['manufacturer']
