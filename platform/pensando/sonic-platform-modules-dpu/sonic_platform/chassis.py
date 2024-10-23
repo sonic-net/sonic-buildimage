@@ -198,6 +198,10 @@ class Chassis(ChassisBase):
 
     def __initialize_thermals(self):
         from sonic_platform.thermal import Thermal
+        global NUM_THERMAL
+        board_id = self._api_helper.get_board_id()
+        if board_id == 130:
+            NUM_THERMAL = 3
         if Thermal._thermals_available():
             for index in range(0, NUM_THERMAL):
                 thermal = Thermal(index)
@@ -441,6 +445,8 @@ class Chassis(ChassisBase):
 
             reboot_cause_path = (HOST_REBOOT_CAUSE_PATH + REBOOT_CAUSE_FILE)
             sw_reboot_cause = self._api_helper.readline_txt_file(reboot_cause_path) or "Unknown"
+            if "Unknown" in sw_reboot_cause:
+                return (self.REBOOT_CAUSE_HARDWARE_OTHER, "NPU side powercycle")
             return (self.REBOOT_CAUSE_NON_HARDWARE, sw_reboot_cause)
         except:
             return (self.REBOOT_CAUSE_NON_HARDWARE, "Unknown")

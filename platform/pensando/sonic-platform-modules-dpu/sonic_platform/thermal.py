@@ -13,8 +13,11 @@ try:
     from sonic_platform_base.thermal_base import ThermalBase
     import os
     import syslog
+    from .helper import APIHelper
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
+
+g_board_id = None
 
 class Thermal(ThermalBase):
     """Pensando-specific Thermal class"""
@@ -25,20 +28,35 @@ class Thermal(ThermalBase):
         'Die Temperature'
     ]
 
+    SENSOR_MAPPING_MTFUJI = [
+        ["Thermal sensor 1", "/sys/class/hwmon/hwmon0/temp1_input"],
+        ["Thermal sensor 2", "/sys/class/hwmon/hwmon1/temp1_input"],
+        ["Thermal sensor 3", "/sys/class/hwmon/hwmon2/temp1_input"]
+    ]
+
     @classmethod
     def _thermals_available(cls):
+        global g_board_id
+        from sonic_platform.helper import APIHelper
+        apiHelper = APIHelper()
+        g_board_id = apiHelper.get_board_id()
         temp_hwmon = '/sys/bus/i2c/devices/i2c-0/0-004c/hwmon'
+        if g_board_id == 130:
+            temp_hwmon = '/sys/class/hwmon/hwmon0/temp1_input'
         if os.path.exists(temp_hwmon):
             return True
         return False
 
     def __init__(self, thermal_index, sfp = None):
+        global g_board_id
         ThermalBase.__init__(self)
         self.index = thermal_index + 1
-        temp_hwmon = '/sys/bus/i2c/devices/i2c-0/0-004c/hwmon'
-        self.temp_dir = None
-        if os.path.exists(temp_hwmon):
-            self.temp_dir = temp_hwmon + '/' + os.listdir(temp_hwmon)[0]
+        self.board_id = g_board_id
+        if self.board_id != 130:
+            temp_hwmon = '/sys/bus/i2c/devices/i2c-0/0-004c/hwmon'
+            self.temp_dir = None
+            if os.path.exists(temp_hwmon):
+                self.temp_dir = temp_hwmon + '/' + os.listdir(temp_hwmon)[0]
 
     def get_name(self):
         """
@@ -46,6 +64,8 @@ class Thermal(ThermalBase):
         Returns:
             string: The name of the thermal
         """
+        if self.board_id == 130:
+            return self.SENSOR_MAPPING_MTFUJI[self.index - 1][0]
         return self.SENSOR_MAPPING[self.index - 1]
 
     def get_presence(self):
@@ -91,7 +111,11 @@ class Thermal(ThermalBase):
         temperature = 0.0
         if(self.get_presence()):
             try :
-                temp_file = self.temp_dir +'/temp{0}_input'.format(str(self.index))
+                temp_file = None
+                if self.board_id == 130:
+                    temp_file = self.SENSOR_MAPPING_MTFUJI[self.index - 1][1]
+                else:
+                    temp_file = self.temp_dir +'/temp{0}_input'.format(str(self.index))
                 temperature = float(open(temp_file).read()) / 1000.0
             except Exception:
                 pass

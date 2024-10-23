@@ -103,7 +103,7 @@ function start_dpu()
 
     docker ps -a --format "{{.ID}}\t{{.Image}}" | grep "$IMAGE_NAME:$TAG" | awk '{print $1}' | xargs -I {} docker rm {}
 
-    docker run -v $HOST_DIR/update:/update -v $HOST_DIR/sysconfig/config0:/sysconfig/config0 -v $HOST_DIR/sysconfig/config1:/sysconfig/config1 -v $HOST_DIR/obfl:/obfl  -v $HOST_DIR/data:/data -v $HOST_DIR/tmpfsshare:/tmp -v $HOST_DIR/runfs:/run -v $HOST_DIR/logfs:/var/log -v /sys:/sys $NIC_MOUNT --net=host --name=$CONTAINER_NAME --privileged $IMAGE_NAME:$TAG
+    docker run -v $HOST_DIR/update:/update -v $HOST_DIR/sysconfig/config0:/sysconfig/config0 -v $HOST_DIR/sysconfig/config1:/sysconfig/config1 -v $HOST_DIR/obfl:/obfl  -v $HOST_DIR/data:/data -v $HOST_DIR/tmpfsshare:/tmp -v $HOST_DIR/runfs:/run -v $HOST_DIR/logfs:/var/log -v /sys:/sys $NIC_MOUNT --net=host --name=$CONTAINER_NAME --privileged $IMAGE_NAME:$TAG &
 }
 
 case "$1" in
