@@ -1,6 +1,6 @@
 [Unit]
 Description=Dummy k8s docker to test k8s deployment
-Requires=updategraph.service
+Requires=config-setup.service
 After=updategraph.service
 BindsTo=sonic.target
 After=sonic.target
