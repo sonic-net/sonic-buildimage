@@ -92,6 +92,104 @@ class SyslogLogger:
         Closes the syslog connection.
         """
         syslog.closelog()
+        
+class Dict2Obj(object):
+    def __init__(self, d):
+        for key, value in d.items():
+            if isinstance(value, (list, tuple)):
+                setattr(self, key, [Dict2Obj(x) if isinstance(x, dict) else x for x in value])
+            else:
+                setattr(self, key, Dict2Obj(value) if isinstance(value, dict) else value)
+
+    def to_dict(self):
+        result = {}
+        for key in self.__dict__:
+            value = getattr(self, key)
+            if isinstance(value, Dict2Obj):
+                result[key] = value.to_dict()
+            elif isinstance(value, list):
+                result[key] = [v.to_dict() if isinstance(v, Dict2Obj) else v for v in value]
+            else:
+                result[key] = value
+        return result
+
+class Utility:
+    """
+    A utility class offering methods for date handling, time delta formatting, and memory size formatting.
+    This class also includes enhanced logging and error handling.
+    """
+    @staticmethod
+    def fetch_current_date(request=None, time_key='current_time', date_format="%Y-%m-%d %H:%M:%S"):
+        """
+        Fetches or parses the current date or a user-specified date.
+        :param request: contain none.
+        :param time_key: The key to extract the date from the request (default: 'current_time').
+        :param date_format: The format in which the date should be returned.
+        :return: The formatted date string.
+        """
+        if request is not None and time_key in request and request[time_key] is not None:
+            try:
+                parsed_date = dateparser.parse(request[time_key])
+                if parsed_date is None:
+                    raise ValueError(f"Could not parse date: {request[time_key]}")
+                formatted_date = parsed_date.strftime(date_format)
+            except Exception as e:
+                raise Exception(f"Date format error, input: {request[time_key]}, error: {str(e)}")
+        else:
+            formatted_date = datetime.now().strftime(date_format)
+        
+        return formatted_date
+    
+    @staticmethod
+    def _format_timedelta_as_dict(time_delta: timedelta) -> Dict[str, int]:
+        """
+        Converts a timedelta object into a dictionary containing days, hours, minutes, and seconds.
+        :param time_delta: A timedelta object.
+        :return: A dictionary representation of the timedelta.
+        """
+        days = time_delta.days
+        total_seconds = time_delta.seconds
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        
+        return {"days": days, "hours": hours, "minutes": minutes, "seconds": seconds}
+
+    @classmethod
+    def format_timedelta_as_dict(cls, time_delta: timedelta) -> Dict[str, int]:
+        """
+        Class method to format a timedelta object as a dictionary.
+        :param time_delta: A timedelta object.
+        :return: A dictionary representation of the timedelta.
+        """
+        return cls._format_timedelta_as_dict(time_delta)
+
+    @classmethod
+    def convert_timedelta_to_obj(cls, time_delta: timedelta) -> 'Dict2Obj':
+        """
+        Converts a timedelta object into a Dict2Obj instance.
+        :param time_delta: A timedelta object.
+        :return: A Dict2Obj instance representing the timedelta.
+        """
+        return Dict2Obj(cls._format_timedelta_as_dict(time_delta))
+    
+    @staticmethod
+    def format_memory_size(size):
+        """
+        Formats a memory size in bytes into a human-readable string with appropriate units.
+        :param size: Memory size in bytes.
+        :return: A formatted string representing the memory size.
+        """
+        units = ('KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB')
+        unit_prefix = {unit: 1 << (i + 1) * 10 for i, unit in enumerate(units)}
+        abs_size = abs(size)
+        
+        for unit in reversed(units):
+            if abs_size >= unit_prefix[unit]:
+                value = float(abs_size) / unit_prefix[unit]
+                return f"-{value:.2f}{unit}" if size < 0 else f"{value:.2f}{unit}"
+        
+        return f"{size}B" if size >= 0 else f"-{size}B"
 
 class MemoryStatisticsDaemon:
     """
