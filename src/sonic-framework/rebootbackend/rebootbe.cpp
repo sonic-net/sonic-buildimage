@@ -1,5 +1,4 @@
 #include "rebootbe.h"
-
 #include <google/protobuf/util/json_util.h>
 #include <unistd.h>
 
