@@ -39,17 +39,20 @@ prt_alloc(const int n)
     pciehw_shmem_t *pshmem = pciesvc_shmem_get();
     pciehw_sprt_t *sprt;
     int prti = -1;
+    u_int32_t allocprt_l, freeprt_slab_l;
 
-    if (n == PRT_SLAB_SIZE && pshmem->freeprt_slab != PRT_INVALID) {
+    allocprt_l = PSHMEM_DATA_FIELD(pshmem, allocprt);
+    freeprt_slab_l = PSHMEM_DATA_FIELD(pshmem, freeprt_slab);
+    if (n == PRT_SLAB_SIZE && freeprt_slab_l != PRT_INVALID) {
         /* alloc slab entry from slab list */
-        prti = pshmem->freeprt_slab;
+        prti = freeprt_slab_l;
         sprt = pciesvc_sprt_get(prti);
-        pshmem->freeprt_slab = sprt->next;
+        PSHMEM_ASGN_FIELD(pshmem, freeprt_slab, sprt->next);
         sprt->next = PRT_INVALID;
         pciesvc_sprt_put(sprt, DIRTY);
-    } else if (pshmem->allocprt + n < prt_count()) {
-        prti = pshmem->allocprt;
-        pshmem->allocprt += n;
+    } else if (allocprt_l + n < prt_count()) {
+        prti = allocprt_l;
+        PSHMEM_ASGN_FIELD(pshmem, allocprt, allocprt_l + n);
     }
     return prti;
 }
@@ -57,18 +60,25 @@ prt_alloc(const int n)
 void
 prt_free(const int prtb, const int prtc)
 {
+    pciehw_shmem_t *pshmem = pciesvc_shmem_get();
+    u_int32_t allocprt_l;
+
     assert_prts_in_range(prtb, prtc);
 
-    if (prtc == PRT_SLAB_SIZE) {
+    allocprt_l = PSHMEM_DATA_FIELD(pshmem, allocprt);
+    if ((prtb + prtc) ==  allocprt_l) {
+        PSHMEM_ASGN_FIELD(pshmem, allocprt, allocprt_l - prtc);
+    } else if (prtc == PRT_SLAB_SIZE) {
         pciehw_shmem_t *pshmem = pciesvc_shmem_get();
         pciehw_sprt_t *sprt;
 
         sprt = pciesvc_sprt_get(prtb);
-        sprt->next = pshmem->freeprt_slab;
+        sprt->next = PSHMEM_DATA_FIELD(pshmem, freeprt_slab);
         pciesvc_sprt_put(sprt, DIRTY);
-        pshmem->freeprt_slab = prtb;
+        PSHMEM_ASGN_FIELD(pshmem, freeprt_slab, prtb);
     } else {
-        /* XXX */
+        pciesvc_logerror("prt_free: leak prt %d (%d), allocprt %d\n",
+                          prtb, prtc, allocprt_l);
     }
 }
 
