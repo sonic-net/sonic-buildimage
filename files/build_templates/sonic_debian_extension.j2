@@ -343,6 +343,8 @@ if [ "$TARGET_BOOTLOADER" != uboot ]; then
 sudo DEBIAN_FRONTEND=noninteractive dpkg --root=$FILESYSTEM_ROOT -i $debs_path/kdump-tools_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true chroot $FILESYSTEM_ROOT apt-get -q --no-install-suggests --no-install-recommends install
     cat $IMAGE_CONFIGS/kdump/kdump-tools | sudo tee -a $FILESYSTEM_ROOT/etc/default/kdump-tools > /dev/null
+    # Keep kdump in disabled mode and let SONiC configuration enable it
+    sudo sed -i 's/USE_KDUMP=1/USE_KDUMP=0/g' $FILESYSTEM_ROOT/etc/default/kdump-tools
 
 for kernel_release in $(ls $FILESYSTEM_ROOT/lib/modules/); do
 	sudo LANG=C chroot $FILESYSTEM_ROOT /etc/kernel/postinst.d/kdump-tools $kernel_release > /dev/null 2>&1
