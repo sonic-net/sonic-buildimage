@@ -2751,6 +2751,14 @@
                 "motd": "Some message of the day",
                 "logout": "Some logout message"
             }
+        },
+        "AUDITD": {
+            "file_deletion": {
+                "state": "enabled"
+            },
+            "custom_audit": {
+                "state": "disabled"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {

@@ -12,6 +12,7 @@ Table of Contents
    * [<strong>Redis and Json Schema</strong>](#redis-and-json-schema)
 
          * [ACL and Mirroring](#acl-and-mirroring)
+         * [AUDITD](#auditd)
          * [BGP BBR](#bgp-bbr)
          * [ASIC SDK health event](#asic-sdk-health-event)
          * [BGP Device Global](#bgp-device-global)
@@ -372,6 +373,64 @@ and migration plan
     }
 }
 ```
+
+### AUDITD
+The AUDITD table introduces AUDITD configuration.
+```json
+{
+    "AUDITD": {
+        "critical_files": {
+            "state": "enabled"
+        },
+        "dns_changes": {
+            "state": "enabled"
+        },
+        "time_changes": {
+            "state": "enabled"
+        },
+        "shutdown_reboot": {
+            "state": "enabled"
+        },
+        "cron_changes": {
+            "state": "enabled"
+        },
+        "modules_changes": {
+            "state": "enabled"
+        },
+        "auth_logs": {
+            "state": "enabled"
+        },
+        "bin_changes": {
+            "state": "enabled"
+        },
+        "user_group_management": {
+            "state": "enabled"
+        },
+        "file_deletion": {
+            "state": "enabled"
+        },
+        "log_changes": {
+            "state": "enabled"
+        },
+        "docker_changes": {
+            "state": "enabled"
+        },
+        "process_audit": {
+            "state": "enabled"
+        },
+        "network_activity": {
+            "state": "enabled"
+        },
+        "socket_activity": {
+            "state": "enabled"
+        },
+        "custom_audit": {
+            "state": "disabled"
+        }
+    }
+}
+```
+
 ### BGP BBR
 
 The **BGP_BBR** table contains device-level BBR state.
