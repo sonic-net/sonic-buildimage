@@ -1,21 +1,45 @@
 {
     "chassis": {
-        "name": "7220 IXR-H4-32D",
+        "name": "7220 IXR-H4",
         "components": [
             {
                 "name": "BIOS"
             },
             {
-                "name": "CPUPLD"
+                "name": "SMB_FPGA"
             },
             {
-                "name": "SysFPGA"
+                "name": "UDB_FPGA"
             },
             {
-                "name": "SWPLD2"
+                "name": "LDB_FPGA"
             },
             {
-                "name": "SWPLD3"
+                "name": "SMB_CPLD"
+            },
+            {
+                "name": "UDB_CPLD1"
+            },
+            {
+                "name": "UDB_CPLD2"
+            },
+            {
+                "name": "LDB_CPLD1"
+            },
+            {
+                "name": "LDB_CPLD2"
+            },
+            {
+                "name": "FAN_CPLD"
+            },
+            {
+                "name": "PDBL_CPLD"
+            },
+            {
+                "name": "PDBR_CPLD"
+            },
+            {
+                "name": "SCM_CPLD"
             }
         ],
         "fans": [
@@ -63,42 +87,6 @@
             },
             {
                 "name": "Fan8",
-                "status_led": {
-                    "controllable": false
-                }
-            },
-            {
-                "name": "Fan9",
-                "status_led": {
-                    "controllable": false
-                }
-            },
-            {
-                "name": "Fan10",
-                "status_led": {
-                    "controllable": false
-                }
-            },
-            {
-                "name": "Fan11",
-                "status_led": {
-                    "controllable": false
-                }
-            },
-            {
-                "name": "Fan12",
-                "status_led": {
-                    "controllable": false
-                }
-            },
-            {
-                "name": "Fan13",
-                "status_led": {
-                    "controllable": false
-                }
-            },
-            {
-                "name": "Fan14",
                 "status_led": {
                     "controllable": false
                 }
@@ -188,69 +176,6 @@
                         }
                     }
                 ]
-            },
-            {
-                "name": "drawer5",
-                "status_led": {
-                    "controllable": false
-                },
-                "max_consumed_power": false,
-                "fans": [
-                    {
-                        "name": "Fan9",
-                        "status_led": {
-                            "controllable": false
-                        }
-                    },
-                    {
-                        "name": "Fan10",
-                        "status_led": {
-                            "controllable": false
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "drawer6",
-                "status_led": {
-                    "controllable": false
-                },
-                "max_consumed_power": false,
-                "fans": [
-                    {
-                        "name": "Fan11",
-                        "status_led": {
-                            "controllable": false
-                        }
-                    },
-                    {
-                        "name": "Fan12",
-                        "status_led": {
-                            "controllable": false
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "drawer7",
-                "status_led": {
-                    "controllable": false
-                },
-                "max_consumed_power": false,
-                "fans": [
-                    {
-                        "name": "Fan13",
-                        "status_led": {
-                            "controllable": false
-                        }
-                    },
-                    {
-                        "name": "Fan14",
-                        "status_led": {
-                            "controllable": false
-                        }
-                    }
-                ]
             }
         ],
         "psus": [
@@ -281,7 +206,7 @@
         ],
         "thermals": [
             {
-                "name": "CPU Board",
+                "name": "MAC Rear",
                 "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
@@ -289,7 +214,7 @@
                 "high-crit-threshold": true
             },
             {
-                "name": "Fan Board",
+                "name": "MAC Under",
                 "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
@@ -297,7 +222,7 @@
                 "high-crit-threshold": true
             },
             {
-                "name": "MAC Right",
+                "name": "UDB Front",
                 "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
@@ -305,7 +230,7 @@
                 "high-crit-threshold": true
             },
             {
-                "name": "MAC Left1",
+                "name": "UDB Rear",
                 "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
@@ -313,7 +238,7 @@
                 "high-crit-threshold": true
             },
             {
-                "name": "MAC Left2",
+                "name": "LDB Front",
                 "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
@@ -321,7 +246,7 @@
                 "high-crit-threshold": true
             },
             {
-                "name": "MAC Front",
+                "name": "LDB Rear",
                 "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
@@ -329,7 +254,7 @@
                 "high-crit-threshold": true
             },
             {
-                "name": "CPU",
+                "name": "PSU Left",
                 "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
@@ -337,7 +262,31 @@
                 "high-crit-threshold": true
             },
             {
-                "name": "ASIC TH4",
+                "name": "PSU Right",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": true
+            },
+            {
+                "name": "FAN Left",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": true
+            },
+            {
+                "name": "FAN Right",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": true
+            },
+            {
+                "name": "MAC TH4",
                 "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
@@ -441,6 +390,105 @@
             },
             {
                 "name": "QSFPDD_32"
+            },
+            {
+                "name": "QSFPDD_33"
+            },
+            {
+                "name": "QSFPDD_34"
+            },
+            {
+                "name": "QSFPDD_35"
+            },
+            {
+                "name": "QSFPDD_36"
+            },
+            {
+                "name": "QSFPDD_37"
+            },
+            {
+                "name": "QSFPDD_38"
+            },
+            {
+                "name": "QSFPDD_39"
+            },
+            {
+                "name": "QSFPDD_40"
+            },
+            {
+                "name": "QSFPDD_41"
+            },
+            {
+                "name": "QSFPDD_42"
+            },
+            {
+                "name": "QSFPDD_43"
+            },
+            {
+                "name": "QSFPDD_44"
+            },
+            {
+                "name": "QSFPDD_45"
+            },
+            {
+                "name": "QSFPDD_46"
+            },
+            {
+                "name": "QSFPDD_47"
+            },
+            {
+                "name": "QSFPDD_48"
+            },
+            {
+                "name": "QSFPDD_49"
+            },
+            {
+                "name": "QSFPDD_50"
+            },
+            {
+                "name": "QSFPDD_51"
+            },
+            {
+                "name": "QSFPDD_52"
+            },
+            {
+                "name": "QSFPDD_53"
+            },
+            {
+                "name": "QSFPDD_54"
+            },
+            {
+                "name": "QSFPDD_55"
+            },
+            {
+                "name": "QSFPDD_56"
+            },
+            {
+                "name": "QSFPDD_57"
+            },
+            {
+                "name": "QSFPDD_58"
+            },
+            {
+                "name": "QSFPDD_59"
+            },
+            {
+                "name": "QSFPDD_60"
+            },
+            {
+                "name": "QSFPDD_61"
+            },
+            {
+                "name": "QSFPDD_62"
+            },
+            {
+                "name": "QSFPDD_63"
+            },
+            {
+                "name": "QSFPDD_64"
+            },
+            {
+                "name": "SFP+_0"
             },
             {
                 "name": "SFP+_1"
