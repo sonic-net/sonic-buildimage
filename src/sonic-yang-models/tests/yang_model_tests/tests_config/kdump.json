@@ -7,8 +7,8 @@
                     "num_dumps": "3",
                     "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M",
                     "remote": "true",
-                    "ssh_string" : "username@ipadress",
-                    "ssh_path":  "a/b/c" 
+                    "ssh_string" : "ali@192.168.0.188",
+                    "ssh_path":  "home/ali/.ssh/id_rsa" 
                 }
             }
         }
@@ -21,8 +21,8 @@
                     "num_dumps": "9",
                     "memory": "512M",
                     "remote": "true",
-                    "ssh_string" : "username@ipadress",
-                    "ssh_path":  "a/b/c" 
+                    "ssh_string" : "ali@192.168.0.188",
+                    "ssh_path":  "home/ali/.ssh/id_rsa" 
                 }
             }
         }
@@ -35,8 +35,8 @@
                     "num_dumps": "1",
                     "memory": "512M",
                     "remote": "true",
-                    "ssh_string" : "username@ipadress",
-                    "ssh_path":  "a/b/c" 
+                    "ssh_string" : "ali@192.168.0.188",
+                    "ssh_path":  "home/ali/.ssh/id_rsa" 
                 }
             }
         }
@@ -49,8 +49,8 @@
                     "num_dumps": "100",
                     "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M",
                     "remote": "true",
-                    "ssh_string" : "username@ipadress",
-                    "ssh_path":  "a/b/c" 
+                     "ssh_string" : "ali@192.168.0.188",
+                    "ssh_path":  "home/ali/.ssh/id_rsa"  
                 }
             }
         }
@@ -63,8 +63,8 @@
                     "num_dumps": "3",
                     "memory": "666",
                     "remote": "true",
-                    "ssh_string" : "username@ipadress",
-                    "ssh_path":  "a/b/c" 
+                    "ssh_string" : "ali@192.168.0.188",
+                    "ssh_path":  "home/ali/.ssh/id_rsa" 
                 }
             }
         }
@@ -78,8 +78,8 @@
                     "num_dumps": "3",
                     "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M",
                     "remote": "true",
-                    "ssh_string" : "username@ipadress",
-                    "ssh_path":  "a/b/c" 
+                    "ssh_string" : "ali@192.168.0.188",
+                    "ssh_path":  "home/ali/.ssh/id_rsa" 
                 }
             }
         }
