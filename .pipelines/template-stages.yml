@@ -121,8 +121,15 @@ stages:
               mv target/sonic-broadcom.bin target/sonic-broadcom-dbg.bin
               echo "==== Finished building one debug image"
               mv target/release/* target/
-              [[ "$failures" != '' ]] && echo "Build failures: $failures" && exit 1
+              [[ "$failures" != '' ]] && echo "Build failures: $failures"
+              set +x
+              echo "##vso[task.setvariable variable=build_result]$failures"
             displayName: Build SONiC image
+          - script: |
+              echo $(build_result)
+              [[ "$(build_result)" == '' ]] || exit 1
+            continueOnError: true
+            displayName: Check Result
           - template: /.pipelines/template-poststeps.yml@self
             parameters:
               PLATFORM_NAME: broadcom
