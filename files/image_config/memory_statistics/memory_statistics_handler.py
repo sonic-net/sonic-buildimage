@@ -94,14 +94,32 @@ class SyslogLogger:
         syslog.closelog()
         
 class Dict2Obj(object):
-    def __init__(self, d):
+    """
+    A utility class that converts dictionaries into objects, allowing access to dictionary keys as object attributes.
+    It also supports nested dictionaries and lists of dictionaries, converting them recursively into objects.
+    This class includes a method to revert the object back to its original dictionary form.
+    """
+
+    def __init__(self, d: dict):
+        """
+        Initializes the Dict2Obj object by converting the input dictionary into an object where each key can be accessed 
+        as an attribute. Recursively handles nested dictionaries and lists.
+        
+        :param d: A dictionary to be converted into an object.
+        """
         for key, value in d.items():
             if isinstance(value, (list, tuple)):
                 setattr(self, key, [Dict2Obj(x) if isinstance(x, dict) else x for x in value])
             else:
                 setattr(self, key, Dict2Obj(value) if isinstance(value, dict) else value)
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
+        """
+        Converts the Dict2Obj object back into its original dictionary format. Handles recursive conversion of nested 
+        Dict2Obj instances and lists of objects.
+        
+        :return: A dictionary representation of the Dict2Obj object.
+        """
         result = {}
         for key in self.__dict__:
             value = getattr(self, key)
@@ -190,6 +208,200 @@ class Utility:
                 return f"-{value:.2f}{unit}" if size < 0 else f"{value:.2f}{unit}"
         
         return f"{size}B" if size >= 0 else f"-{size}B"
+    
+class TimeProcessor:
+    """
+    The TimeProcessor class manages time validation and calculations for data collection within 
+    defined sampling intervals and retention periods. It ensures valid time ranges, corrects date 
+    formats, and calculates differences in days and hours, total duration in minutes/hours, and 
+    remaining days since specified times. Additionally, it processes request data to ensure 
+    compliance with retention limits and sampling requirements.
+    """
+    def __init__(self, sampling_interval: int, retention_period: int):
+        """
+        Initializes TimeProcessor with the provided collection interval and retention period.
+
+        :param sampling_interval: Interval between data collections, in minutes (3 to 15).
+        :param retention_period: Period for data retention, in days (1 to 30).
+        """
+        self.date_time_format = "%Y-%m-%d %H:%M:%S"
+        self.short_date_format = "%Y-%m-%d"
+        
+        if not (3 <= sampling_interval <= 15):
+            raise ValueError("Data collection interval must be between 3 and 15 minutes.")
+        if not (1 <= retention_period <= 30):
+            raise ValueError("Retention period must be between 1 and 30 days.")
+
+        self.sampling_interval = sampling_interval
+        self.retention_period = retention_period
+
+    def ensure_valid_time_range(self, request_data: Dict[str, Any]) -> None:
+        """
+        Ensures that the 'from' and 'to' time values in the request data are valid.
+        If 'to' time is earlier than 'from', they are swapped.
+
+        :param request_data: Dictionary containing request parameters including 'from' and 'to' dates.
+        """
+        try:
+            from_time_str = Utility.fetch_current_date(request_data, 'from', self.date_time_format)
+            to_time_str = Utility.fetch_current_date(request_data, 'to', self.date_time_format)
+
+            from_time = datetime.fromisoformat(from_time_str)
+            to_time = datetime.fromisoformat(to_time_str)
+
+            if to_time < from_time:
+                request_data['from'], request_data['to'] = request_data['to'], request_data['from']
+                logging.info(f"Swapped 'from' and 'to': {request_data['from']} <-> {request_data['to']}")
+            else:
+                logging.info("No need to swap times.")
+
+        except (ValueError, TypeError) as error:
+            logging.error(f"Error in ensuring valid time range: {error}")
+            raise ValueError("Invalid 'from' or 'to' date format.") from error
+
+    def _parse_and_validate_dates(self, request_data: Dict[str, Any]) -> None:
+        """
+        Parses and validates 'from' and 'to' dates in the request data.
+        If absent, defaults 'to' to the current time and 'from' to the retention period ago.
+
+        :param request_data: Dictionary containing request parameters with potential date values.
+        """
+        if not request_data.get('to'):
+            request_data['to'] = "now"
+        if not request_data.get('from'):
+            request_data['from'] = f"-{self.retention_period} days"  
+
+        self.ensure_valid_time_range(request_data)
+
+    def _fetch_time_values(self, request_data: Dict[str, Any]) -> Dict[str, datetime]:
+        """
+        Fetches and converts 'from', 'to', and current time values from request data.
+
+        :param request_data: Dictionary containing request parameters including time values.
+        :return: Dictionary with start_time, end_time, and current_time as datetime objects.
+        """
+        return {
+            'start_time': datetime.fromisoformat(Utility.fetch_current_date(request_data, 'from', self.date_time_format)),
+            'end_time': datetime.fromisoformat(Utility.fetch_current_date(request_data, 'to', self.date_time_format)),
+            'current_time': datetime.fromisoformat(Utility.fetch_current_date({}, 'current_time', self.date_time_format))
+        }
+
+    def _validate_time_ranges(self, start_time: datetime, end_time: datetime, current_time: datetime, time_difference: timedelta) -> None:
+        """
+        Validates the provided time ranges to ensure they adhere to defined constraints.
+
+        :param start_time: The start time of the data collection period.
+        :param end_time: The end time of the data collection period.
+        :param current_time: The current time for comparison.
+        :param time_difference: The difference between end_time and start_time.
+        """
+        time_difference_obj = Utility.convert_timedelta_to_obj(time_difference)
+        
+        if end_time > current_time:
+            raise ValueError("Datetime format error: 'to' time should not be greater than current time.")
+        elif time_difference_obj.days > self.retention_period:
+            raise ValueError(f"Datetime format error: time range should not exceed {self.retention_period} days.")
+        elif time_difference_obj.days == 0 and time_difference_obj.hours == 0 and time_difference_obj.minutes < self.sampling_interval:
+            raise ValueError(f"Datetime format error: time difference should be at least {self.sampling_interval} minutes.")
+
+    def _calculate_day_and_hour_differences(self, start_time: datetime, end_time: datetime, request_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Calculates the number of days and hour differences between start and end times.
+
+        :param start_time: The starting point of the data collection period.
+        :param end_time: The ending point of the data collection period.
+        :param request_data: Dictionary containing request parameters for fetching dates.
+        :return: Dictionary containing the number of days and hour differences.
+        """
+        start_date_str = Utility.fetch_current_date(request_data, 'from', self.short_date_format)
+        end_date_str = Utility.fetch_current_date(request_data, 'to', self.short_date_format)
+        
+        start_date = datetime.fromisoformat(start_date_str)
+        end_date = datetime.fromisoformat(end_date_str)
+        
+        day_diff = end_date - start_date
+        day_diff_obj = Utility.convert_timedelta_to_obj(day_diff)
+        
+        start_hour_diff = Utility.convert_timedelta_to_obj(start_time - start_date)
+        end_hour_diff = Utility.convert_timedelta_to_obj(end_time - end_date)
+        
+        return {
+            'num_days': day_diff_obj.days,
+            'start_hour': start_hour_diff.hours,
+            'end_hour': end_hour_diff.hours
+        }
+
+    def _calculate_total_hours_and_minutes(self, time_diff: timedelta) -> Dict[str, int]:
+        """
+        Calculates the total hours and minutes from a given time difference.
+
+        :param time_diff: The time difference as a timedelta object.
+        :return: Dictionary containing total hours and total minutes.
+        """
+        time_diff_obj = Utility.convert_timedelta_to_obj(time_diff)
+        total_hours = (time_diff_obj.days * 24) + time_diff_obj.hours
+        total_minutes = (time_diff_obj.days * 24 * 60) + (time_diff_obj.hours * 60) + time_diff_obj.minutes
+        return {
+            'total_hours': total_hours,
+            'total_minutes': total_minutes
+        }
+
+    def _calculate_remaining_days_since_end(self, end_time: datetime, current_time: datetime) -> Dict[str, int]:
+        """
+        Calculates the remaining days since the end time and prepares related data.
+
+        :param end_time: The ending time of the data collection period.
+        :param current_time: The current time for calculation.
+        :return: Dictionary containing remaining days since end and the next day.
+        """
+        time_since_end = current_time - end_time
+        time_since_end_obj = Utility.convert_timedelta_to_obj(time_since_end)
+        
+        return {
+            'start_day': time_since_end_obj.days,
+            'end_day': time_since_end_obj.days + 1
+        }
+
+    def process_time_information(self, request_data: Dict[str, Any]) -> None:
+        """
+        Main method to process time information from request data.
+        It validates dates, fetches time values, validates time ranges, and calculates various time metrics.
+
+        :param request_data: Dictionary containing request parameters to be processed.
+        """
+        self._parse_and_validate_dates(request_data)
+
+        time_values = self._fetch_time_values(request_data)
+        start_time = time_values['start_time']
+        end_time = time_values['end_time']
+        current_time = time_values['current_time']
+
+        time_difference = end_time - start_time
+        self._validate_time_ranges(start_time, end_time, current_time, time_difference)
+
+        day_and_hour_diffs = self._calculate_day_and_hour_differences(start_time, end_time, request_data)
+        total_time = self._calculate_total_hours_and_minutes(time_difference)
+
+        retention_period_days = self.retention_period
+
+        remaining_days_start = (current_time - start_time).days
+        remaining_days_end = (current_time - end_time).days
+
+        request_data["time_data"] = {
+            "start_time_obj": start_time,
+            "end_time_obj": end_time,
+            "retention_period_days": retention_period_days,  # Added retention period in days
+            "num_days": day_and_hour_diffs['num_days'],
+            "total_hours": total_time['total_hours'],
+            "total_minutes": total_time['total_minutes'],
+            "start_hour": day_and_hour_diffs['start_hour'],
+            "end_hour": day_and_hour_diffs['end_hour'],
+            "days": time_difference.days,
+            "hours": time_difference.seconds // 3600,
+            "minutes": (time_difference.seconds % 3600) // 60,
+            "start_day": remaining_days_start,
+            "end_day": remaining_days_end
+        }    
 
 class MemoryStatisticsDaemon:
     """
