@@ -2744,6 +2744,11 @@
                 "midplane_interface": "dpu1"
             }
         },
+        "LOCAL_USERS_PASSWORDS_RESET": {
+            "global": {
+                "state": "disabled"
+            }
+        },
         "BANNER_MESSAGE": {
             "global": {
                 "state": "enabled",
@@ -2751,6 +2756,11 @@
                 "motd": "Some message of the day",
                 "logout": "Some logout message"
             }
+        }
+    },
+    "LOCAL_USERS_PASSWORDS_RESET": {
+        "global": {
+            "state": "disabled"
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
