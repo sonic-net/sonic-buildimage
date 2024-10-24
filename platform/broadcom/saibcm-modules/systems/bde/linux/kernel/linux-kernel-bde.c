@@ -1,5 +1,5 @@
 /*
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -23,6 +23,7 @@
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  * 
  */
 
@@ -65,6 +66,14 @@
                          | (((_x) & 0x00ff0000) >>  8) \
                          | (((_x) & 0x0000ff00) <<  8) \
                          | (((_x) & 0x000000ff) << 24))
+#define CMIC_SWAP64(_x)   ((((_x) & 0xff000000) >> 24) \
+                         | (((_x) & 0x00ff0000) >>  8) \
+                         | (((_x) & 0x0000ff00) <<  8) \
+                         | (((_x) & 0x000000ff) << 24) \
+                         | (((_x) & 0xff00000000000000UL) >> 24) \
+                         | (((_x) & 0x00ff000000000000UL) >>  8) \
+                         | (((_x) & 0x0000ff0000000000UL) <<  8) \
+                         | (((_x) & 0x000000ff00000000UL) << 24))
 #endif /* defined(CMIC_SOFT_BYTE_SWAP) */
 
 #define PCI_USE_INT_NONE    (-1)
@@ -193,6 +202,12 @@ static int dma_lock = 0;
 LKM_MOD_PARAM(dma_lock, "i", int, (S_IRUGO | S_IWUSR));
 MODULE_PARM_DESC(dma_lock,
 "Simulation of stuck interrupts.");
+
+/* Additional configurations for PCI bridges */
+static int pci_bridge_setup = 1;
+LKM_MOD_PARAM(pci_bridge_setup, "i", int, (S_IRUGO | S_IWUSR));
+MODULE_PARM_DESC(pci_bridge_setup,
+"Additional PCI bridge configurations in initialization (default yes).");
 
 /* Compatibility */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30))
@@ -371,6 +386,10 @@ typedef struct bde_ctrl_s {
     uint32 stuck_interrupts;      /* Number of stuck interrupts detected */
     uint32 no_intr_isr_ticks;     /* Number of ISR ticks without interrupt occurred */
     struct timer_list isr_tick;   /* Timer tick to prevent stuck interrupt */
+#ifdef INCLUDE_SRAM_DMA
+    uint32 dev_sram_dma_start;    /* start address of device SRAM used for DMA */
+    uint32 dev_sram_dma_size;     /* size in bytes of device SRAM used for DMA */
+#endif /* INCLUDE_SRAM_DMA */
 } bde_ctrl_t;
 
 static bde_ctrl_t _devices[LINUX_BDE_MAX_DEVICES];
@@ -588,7 +607,12 @@ _bde_add_device(void)
             _devices[i] = tmp_dev;
         }
 
-        _dma_per_device_init(_switch_ndevices-1);
+#ifdef INCLUDE_SRAM_DMA
+        if (!use_sram_for_dma || (_devices[_switch_ndevices-1].dev_type & BDE_USER_DEV_TYPE) == 0)
+#endif /* INCLUDE_SRAM_DMA */
+        {
+            _dma_per_device_init(_switch_ndevices-1);
+        }
     }
 
     /* Initialize device locks */
@@ -1644,6 +1668,22 @@ static const struct pci_device_id _id_table[] = {
     { BROADCOM_VENDOR_ID, BCM8884D_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM8884E_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM8884F_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM88810_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM88811_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM88812_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM88813_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM88814_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM88815_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM88816_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM88817_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM88818_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM88819_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM8881A_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM8881B_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM8881C_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM8881D_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM8881E_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
+    { BROADCOM_VENDOR_ID, BCM8881F_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM88830_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM88831_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
     { BROADCOM_VENDOR_ID, BCM88832_DEVICE_ID, PCI_ANY_ID, PCI_ANY_ID },
@@ -2570,7 +2610,7 @@ _pci_probe(struct pci_dev *dev, const struct pci_device_id *ent)
                     dev->vendor, dev->device);
         }
 
-        /* FIXME: "workarounds" previously called "total h_acks" */
+
         /*
          * These are workarounds to get around some existing
          * kernel problems :(
@@ -2869,7 +2909,6 @@ _pci_probe(struct pci_dev *dev, const struct pci_device_id *ent)
         if (debug >= 1) gprintk("PCI resource len 8MB\n");
     }
 
-
 #ifdef LINUX_BDE_DMA_DEVICE_SUPPORT
     ctrl->dma_dev = &dev->dev;
 #endif
@@ -2880,7 +2919,39 @@ _pci_probe(struct pci_dev *dev, const struct pci_device_id *ent)
           (unsigned long)ctrl->bde_dev.base_address, (unsigned long)ctrl->bde_dev.base_address1);
     }
 
-    if (rescan) { /* map IOMMU for re-probed devices */
+#ifdef INCLUDE_SRAM_DMA
+        /* Check if the device should use SRAM for DMA, if so configure the SRAM to be used */
+        if (use_sram_for_dma) {
+#ifdef BCM_DNXF3_SUPPORT
+            switch (dev->device & DNXC_DEVID_FAMILY_MASK) {
+              case RAMON2_DEVICE_ID: /* Mark the device as user type if SRAM mode RM2/3 */
+              case RAMON3_DEVICE_ID:
+                /* Check if we can use RTS using ICFG_RTS_STRAPS, has to be done after PCIe is enabled. */
+                if ((shbde_iproc_pci_read(&ctrl->shbde, (void *)ctrl->bde_dev.base_address1, 0x2920034) & 2) != 0) {
+                    ctrl->dev_sram_dma_start = 0x38100000;
+                    ctrl->dev_sram_dma_size = 0x400000; /* 4MB */
+                } else { /* Use free M0SSQ SRAM */
+                    ctrl->dev_sram_dma_start = 0x2070000;
+                    ctrl->dev_sram_dma_size = 0x10000; /* 64KB */
+                }
+                ctrl->dev_type |= BDE_USER_DEV_TYPE; /* Mark as user defined access for BDE handling access to BARs */
+                if (debug >= 4) {
+                    gprintk("PCI device 0x%x:0x%x using SRAM DMA at 0x%x size 0x%x dev_type=0x%x dev=%u\n", dev->vendor, dev->device,
+                            ctrl->dev_sram_dma_start, ctrl->dev_sram_dma_size, ctrl->dev_type, (unsigned)(ctrl - _devices));
+                }
+                    break;
+                default:
+                    break;
+            }
+#endif /* BCM_DNXF3_SUPPORT */
+        }
+#endif /* INCLUDE_SRAM_DMA */
+
+    if (rescan /* map IOMMU for re-probed devices */
+#ifdef INCLUDE_SRAM_DMA
+        && (!use_sram_for_dma || (_devices[rescan_idx].dev_type & BDE_USER_DEV_TYPE) == 0)
+#endif /* INCLUDE_SRAM_DMA */
+       ) {
         _dma_per_device_init(rescan_idx);
     }
 
@@ -3212,8 +3283,10 @@ _init(void)
     }
 
 #ifdef CONFIG_PCI
-    /* Note: PCI-PCI bridge  uses results from pci_register_driver */
-    p2p_bridge();
+    /* Note: PCI-PCI bridge uses results from pci_register_driver */
+    if (pci_bridge_setup) {
+        p2p_bridge();
+    }
 #endif
 
 #ifdef BCM_METROCORE_LOCAL_BUS
@@ -3339,6 +3412,7 @@ _pprint(struct seq_file *m)
     pprintf(m, "\tmaxpayload=%d\n", maxpayload);
     pprintf(m, "\tusemsi=%d\n", usemsi);
     pprintf(m, "\tisrtickms=%d\n", isrtickms);
+    pprintf(m, "\tpci_bridge_setup=%d\n", pci_bridge_setup);
 
     _dma_pprint(m);
 
@@ -3424,6 +3498,7 @@ _pprint(struct seq_file *m)
     }
     return 0;
 }
+
 /*
  * Some kernels are configured to prevent mapping of kernel RAM memory
  * into user space via the /dev/mem device.
@@ -3431,6 +3506,16 @@ _pprint(struct seq_file *m)
  * The function below provides a backdoor to map IO and DMA memory to
  * user space via the BDE device file.
  */
+static
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))
+const
+#endif
+struct vm_operations_struct bde_vma_ops = {
+#ifdef CONFIG_HAVE_IOREMAP_PROT
+	.access = generic_access_phys,
+#endif
+};
+
 static int
 _bde_mmap(struct file *filp, struct vm_area_struct *vma)
 {
@@ -3454,6 +3539,9 @@ _bde_mmap(struct file *filp, struct vm_area_struct *vma)
             }
         }
     }
+
+    /* Support debug access to the mapping */
+    vma->vm_ops = &bde_vma_ops;
 
     if (pio_range_valid) {
         vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
@@ -3693,6 +3781,45 @@ _write(int d, uint32_t addr, uint32_t data)
     }
     return 0;
 
+}
+
+static uint64
+_read64(int d, uint32_t addr)
+{
+    uint64_t  data;
+    if (!VALID_DEVICE(d)) {
+        data =  (uint64_t)-1;
+        return *(uint64 *)&data;
+    }
+
+    if (!(BDE_DEV_MEM_MAPPED(_devices[d].dev_type))) {
+        data =  (uint64_t)-1;
+        return *(uint64 *)&data;
+    }
+
+    data = ((VOL uint64_t *)_devices[d].bde_dev.base_address)[addr / 8];
+#if defined(CMIC_SOFT_BYTE_SWAP)
+    data = CMIC_SWAP64(data);
+#endif
+    return *(uint64 *)&data;
+}
+
+static void
+_write64(int d, uint32_t addr, uint64 data)
+{
+    if (!VALID_DEVICE(d) || !(BDE_DEV_MEM_MAPPED(_devices[d].dev_type))) {
+        return;
+    }
+
+#if defined(CMIC_SOFT_BYTE_SWAP)
+    data = CMIC_SWAP64(data);
+#endif
+
+    ((VOL uint64 *)_devices[d].bde_dev.base_address)[addr / 8] = data;
+#ifdef KEYSTONE
+    /* Enforce PCIe transaction ordering. Commit the write transaction */
+    __asm__ __volatile__("sync");
+#endif
 }
 
 static void
@@ -4066,7 +4193,7 @@ _iproc_read(int d, uint32_t addr)
         return -1;
     }
 
-    if (!(BDE_DEV_MEM_MAPPED(_devices[d].dev_type))) {
+    if (!(BDE_DEV_MEM_MAPPED(_devices[d].dev_type)) && (_devices[d].dev_type & BDE_USER_DEV_TYPE) == 0) {
         return -1;
     }
 
@@ -4089,7 +4216,7 @@ _iproc_write(int d, uint32_t addr, uint32_t data)
         return -1;
     }
 
-    if (!(BDE_DEV_MEM_MAPPED(_devices[d].dev_type))) {
+    if (!(BDE_DEV_MEM_MAPPED(_devices[d].dev_type)) && (_devices[d].dev_type & BDE_USER_DEV_TYPE) == 0) {
         return -1;
     }
 
@@ -4297,7 +4424,7 @@ lkbde_cpu_pci_register(int d)
     case BCM88562_DEVICE_ID:
     case BCM88661_DEVICE_ID:
     case BCM88664_DEVICE_ID:
-        /* Fix bar 0 address */ /* FIXME: write full phy address */
+        /* Fix bar 0 address */ 
         pci_write_config_byte(ctrl->pci_device, 0x12, 0x10);
         pci_write_config_byte(ctrl->pci_device, 0x13, 0x60);
 
@@ -4426,6 +4553,8 @@ static ibde_t _ibde = {
     .iproc_read = _iproc_read,
     .iproc_write = _iproc_write,
     .get_cmic_ver = _get_cmic_ver,
+    .read64 = _read64,
+    .write64 = _write64,
 };
 
 /*
@@ -4667,6 +4796,39 @@ lkbde_dev_instid_get(int d, uint32 *instid)
 }
 
 /*
+ * Function: lkbde_get_dev_pci_info
+ *
+ * Purpose:
+ *     Get the PCI bus number, bus slot, and function for a PCI device.
+ * Returns:
+ *    0 on success, -1 on error.
+ */
+int
+lkbde_get_dev_pci_info(int d, uint32_t *bus, uint32_t *slot, uint32_t *func)
+{
+    bde_ctrl_t *ctrl;
+
+    if (!VALID_DEVICE(d)) {
+        return -1;
+    }
+
+    ctrl = _devices + d;
+
+    if (ctrl->dev_type & BDE_PCI_DEV_TYPE) {
+        struct pci_dev *device = ctrl->pci_device;
+        if (bus)
+            *bus = device->bus->number;
+        if (slot)
+            *slot = PCI_SLOT(device->devfn);
+        if (func)
+            *func = PCI_FUNC(device->devfn);
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+/*
  * When a secondary interrupt handler is installed this function
  * is used for synchronizing hardware access to the IRQ mask
  * register. The secondary driver will supply a non-zero fmask
@@ -4835,6 +4997,72 @@ lkbde_intr_cb_register(int d,
     return 0;
 }
 
+#ifdef INCLUDE_SRAM_DMA
+
+#ifdef SRAM_DMA_NEEDS_KERNEL_APIS
+/* implementation of BDE APIs for DMA SRAM mode */
+
+static int
+_sinval_sram(int d, void *ptr, int length)
+{
+    return 0;
+}
+
+static int
+_sflush_sram(int d, void *ptr, int length)
+{
+    return 0;
+}
+
+/* In SRAM DMA there are no virtual addresses.
+ * We assume the CPU cannot access the SRAM directly, even if it is mapped to a BAR window.
+ * Therfore p2l and l2p should not be called.
+ * If they are called, we will return the input value,
+ * possibly except if it is not in the SRAM address range used for DMA.
+ */
+
+static void *
+_p2l_sram(int d, sal_paddr_t paddr)
+{
+    uint32 dev_sram_dma_start = _devices[d].dev_sram_dma_start;
+    uint32 dev_sram_dma_size  = _devices[d].dev_sram_dma_size;
+    if (paddr < dev_sram_dma_start || paddr >= dev_sram_dma_start + dev_sram_dma_size) {
+        gprintk("Error: SRAM address translation called for %p which is outside SRAM range %u-%u\n",
+                (void*)paddr, dev_sram_dma_start, dev_sram_dma_start +dev_sram_dma_size - 1);
+        return 0;
+    }
+    return (void *)paddr;
+}
+
+static sal_paddr_t
+_l2p_sram(int d, void *vaddr)
+{
+    return (sal_paddr_t)_p2l_sram(d, (sal_paddr_t)vaddr);
+}
+
+/* upate BDE API handles for SRAM DMA */
+void _update_apis_for_sram_dma()
+{
+    _ibde.sinval = _sinval_sram;
+    _ibde.sflush = _sflush_sram;
+    _ibde.l2p = _l2p_sram;
+    _ibde.p2l = _p2l_sram;
+};
+#endif /* SRAM_DMA_NEEDS_KERNEL_APIS */
+
+/* return the (currently single) DMA buffer pool size for SRAM DMA mode, must only be called in this mode */
+void
+lkbde_get_sram_dma_info(unsigned d, uint32 *sram_start, uint32 *sram_size)
+{
+    if (d < _ndevices) {
+        *sram_start = _devices[d].dev_sram_dma_start;
+        *sram_size  = _devices[d].dev_sram_dma_size;
+    } else {
+        *sram_start = *sram_size = 0;
+    }
+}
+#endif /* INCLUDE_SRAM_DMA */
+
 /*
  * Export functions
  */
@@ -4861,3 +5089,7 @@ LKM_EXPORT_SYM(lkbde_cpu_pci_register);
 LKM_EXPORT_SYM(lkbde_is_dev_managed_by_instance);
 LKM_EXPORT_SYM(lkbde_get_inst_devs);
 LKM_EXPORT_SYM(lkbde_intr_cb_register);
+LKM_EXPORT_SYM(lkbde_get_dev_pci_info);
+#ifdef INCLUDE_SRAM_DMA
+LKM_EXPORT_SYM(lkbde_get_sram_dma_info);
+#endif /* INCLUDE_SRAM_DMA */

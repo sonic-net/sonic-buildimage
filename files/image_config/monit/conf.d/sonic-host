@@ -56,3 +56,7 @@ check program vnetRouteCheck with path "/usr/local/bin/vnet_route_check.py"
 # memory_check tool that verifies that memory usage does not cross the threshold or invokes techsupport.
 check program memory_check with path "/usr/local/bin/memory_threshold_check.py"
     if status == 2 for 10 times within 20 cycles then exec "/usr/local/bin/memory_threshold_check_handler.py"
+
+# arp_update_checker tool that verifies that arp_update script is not stuck on ping command every 10 minutes
+check program arp_update_checker with path "/usr/bin/arp_update_checker" every 10 cycles
+    if status != 0 for 3 times within 3 cycles then alert repeat every 1 cycles

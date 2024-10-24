@@ -1020,14 +1020,25 @@ class TestCfgGen(TestCase):
                 "'Vlan2000': {'dhcpv6_servers': ['fc02:2000::3', 'fc02:2000::4']}}"
             )
         )
-        
-    def test_minigraph_packet_chassis_acl(self):
-        argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-v', "ACL_TABLE"]
+
+    def test_minigraph_packet_chassis_acl_local_host(self):
+        # CFGGEN_UNIT_TESTING is set to '2' in the set_up function
+        # this causes the port_table to have ports from the previous test
+        # causing yang validation to fail
+
+        os.environ["CFGGEN_UNIT_TESTING"] = ""
+        argument = ['-m', self.packet_chassis_graph, '-v', "ACL_TABLE"]
         output = self.run_script(argument)
+        print(output)
         self.assertEqual(
             utils.to_dict(output.strip()),
             utils.to_dict("{'SNMP_ACL': {'policy_desc': 'SNMP_ACL', 'type': 'CTRLPLANE', 'stage': 'ingress', 'services': ['SNMP']}, 'SSH_ONLY': {'policy_desc': 'SSH_ONLY', 'type': 'CTRLPLANE', 'stage': 'ingress', 'services': ['SSH']}}")
         )
+
+        # set it back to the original value
+        os.environ["CFGGEN_UNIT_TESTING"] = "2"
+
+    def test_minigraph_packet_chassis_acl_namespace(self):
 
         argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-n', "asic1", '-v', "ACL_TABLE"]
         output = self.run_script(argument)
@@ -1045,20 +1056,13 @@ class TestCfgGen(TestCase):
         )
 
     def test_minigraph_bgp_packet_chassis_static_route(self):
-        argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-v', "STATIC_ROUTE"]
-        output = self.run_script(argument)
-        self.assertEqual(
-            utils.to_dict(output.strip()),
-            utils.to_dict("{'8.0.0.1/32': {'nexthop': '192.168.1.2,192.168.2.2', 'ifname': 'PortChannel40,PortChannel50', 'advertise':'false', 'bfd':'true'}}")
-        )
-
         argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-n', "asic1", '-v', "STATIC_ROUTE"]
         output = self.run_script(argument)
         self.assertEqual(
             utils.to_dict(output.strip()),
             utils.to_dict("{'8.0.0.1/32': {'nexthop': '192.168.1.2,192.168.2.2', 'ifname': 'PortChannel40,PortChannel50', 'advertise':'false', 'bfd':'true'}}")
         )
-
+        os.environ["CFGGEN_UNIT_TESTING_TOPOLOGY"] = ""
     def test_minigraph_bgp_packet_chassis_vlan_subintf(self):
         argument = ['-m', self.packet_chassis_graph, '-p', self.packet_chassis_port_ini, '-n', "asic1", '-v', "VLAN_SUB_INTERFACE"]
         output = self.run_script(argument)

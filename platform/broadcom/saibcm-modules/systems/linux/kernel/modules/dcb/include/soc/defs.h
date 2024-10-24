@@ -1,6 +1,6 @@
 /*
  * $Id: defs.h,v 1.271 Broadcom SDK $
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -24,6 +24,7 @@
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  * 
  *
  * File:        defs.h
@@ -862,7 +863,7 @@
 #define BCM_HURRICANE4_SUPPORT
 #define BCM_FIREBOLT6_SUPPORT
 #define BCM_TOMAHAWK_SUPPORT
-#define BCM_MPLS_SUPPORT  /* TODO: FB6 */
+#define BCM_MPLS_SUPPORT  
 #define BCM_EXTND_SBUS_SUPPORT
 #define BCM_SBUSDMA_SUPPORT
 #define BCM_TIMESYNC_SUPPORT
@@ -922,7 +923,7 @@
 #define BCM_HELIX5_SUPPORT
 #define BCM_HURRICANE4_SUPPORT
 #define BCM_TOMAHAWK_SUPPORT
-#define BCM_MPLS_SUPPORT  /* TODO: HR4 */
+#define BCM_MPLS_SUPPORT  
 #define BCM_EXTND_SBUS_SUPPORT
 #define BCM_SBUSDMA_SUPPORT
 #define BCM_TIMESYNC_SUPPORT
@@ -1754,7 +1755,8 @@
     defined(BCM_88480_A0) || defined(BCM_88480_B0) || \
     defined(BCM_88800_A0) || defined(BCM_88800_A1) || defined(BCM_88800_B0) || \
     defined(BCM_88850_A0) || defined(BCM_88850_A1) || defined(BCM_88850_A2) || defined(BCM_88830_A0) || \
-    defined(BCM_56370_A0) || defined(BCM_56370_A2) || defined(BCM_56375_A0) || defined(BCM_56375_A2)
+    defined(BCM_56370_A0) || defined(BCM_56370_A2) || defined(BCM_56375_A0) || defined(BCM_56375_A2) || \
+    defined(BCM_DNX3_SUPPORT) || defined(BCM_88920_A0)
 #define BCM_TIMESYNC_TIME_CAPTURE_SUPPORT
 #endif
 
@@ -2129,6 +2131,7 @@ typedef enum soc_chip_types_e {
     SOC_CHIP_BCM88800_A1,
     SOC_CHIP_BCM88850_A0,
     SOC_CHIP_BCM88830_A0,
+    SOC_CHIP_BCM8216_A0,
 #ifdef BCM_DNX3_SUPPORT
     SOC_CHIP_BCM88860_A0,
     SOC_CHIP_BCM88870_A0,
@@ -2279,6 +2282,7 @@ typedef enum soc_chip_types_e {
     /* SOC_CHIP_BCM88800_A1 */ SOC_CHIP_BCM8880X, \
     /* SOC_CHIP_BCM88850_A0 */ SOC_CHIP_BCM8885X, \
     /* SOC_CHIP_BCM88830_A0 */ SOC_CHIP_BCM8883X, \
+    /* SOC_CHIP_BCM8216_A0 */ SOC_CHIP_BCM8216, \
     SOC_CHIP_TYPE_MAP_INIT_ADDITIONAL \
     SOC_CHIP_DNX_TYPE_MAP_INIT_ADDITIONAL \
     /* SOC_CHIP_BCM88480_A0 */ SOC_CHIP_BCM8848X, \
@@ -2422,6 +2426,7 @@ typedef enum soc_chip_types_e {
     "BCM88800_A1", \
     "BCM88850_A0", \
     "BCM88830_A0", \
+    "BCM8216_A0", \
     SOC_CHIP_TYPE_NAMES_INIT_ADDITIONAL \
     SOC_CHIP_DNX_TYPE_NAMES_INIT_ADDITIONAL \
     "BCM88480_A0", \
@@ -2532,6 +2537,7 @@ typedef enum soc_chip_groups_e {
     SOC_CHIP_BCM8880X,
     SOC_CHIP_BCM8885X,
     SOC_CHIP_BCM8883X,
+    SOC_CHIP_BCM8216,
 #ifdef BCM_DNX3_SUPPORT
     SOC_CHIP_BCM8886X,
     SOC_CHIP_BCM8887X,
@@ -2639,6 +2645,7 @@ typedef enum soc_chip_groups_e {
     "BCM8880X", \
     "BCM8885X", \
     "BCM8883X", \
+    "BCM8216", \
     SOC_CHIP_GROUP_NAMES_INIT_ADDITIONAL \
     SOC_CHIP_DNX_GROUP_NAMES_INIT_ADDITIONAL \
     "BCM8848X", \
