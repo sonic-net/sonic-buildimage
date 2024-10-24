@@ -137,8 +137,8 @@ stderr_logfile=syslog
 dependent_startup=true
 dependent_startup_wait_for=bgpd:running
 
-[program:macvlanmgrd]
-command=macvlanmgrd
+[program:vrrpmgrd]
+command=vrrpmgrd
 priority=6
 autostart=false
 autorestart=false
