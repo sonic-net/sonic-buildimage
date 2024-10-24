@@ -1,5 +1,4 @@
 import subprocess
-import os
 import time
 from sonic_py_common import device_info
 
@@ -27,19 +26,26 @@ class rst_button_monitor(object):
 
     def restore_default(self):
         version_info = device_info.get_sonic_version_info()
-        os.system('rm /etc/sonic/config_db.json')
+        subprocess.run(["rm", "/etc/sonic/config_db.json"])
         time.sleep(0.5)
         image_ver=version_info['build_version']
         path="/host/image-{}/platform/firsttime".format(image_ver)
         cmd="touch {}".format(path)
-        os.system(cmd)
+        subprocess.run(cmd.split())
         time.sleep(0.5)
-        os.system('sync')
+        subprocess.run(["sync"])
         time.sleep(0.5)
-        os.system('sync')
+        subprocess.run(["sync"])
         time.sleep(0.5)
-        cmd = "bash -c \"echo -e 'YourPaSsWoRd\\nYourPaSsWoRd' | passwd admin\""
-        subprocess.check_call(cmd, shell=True)
+        cmd = ["passwd", "admin"]
+        try:
+            p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            p.stdin.write("YourPaSsWoRd\n".encode('utf-8'))
+            p.stdin.flush()
+            p.stdin.write("YourPaSsWoRd\n".encode('utf-8'))
+            p.stdin.flush()
+        except Exception as e:
+            print("restore_default failed: {}".format(e))
 
 def main():
     monitor = rst_button_monitor()
@@ -53,7 +59,7 @@ def main():
     monitor.restore_default()
     time.sleep(2)
 
-    os.system('reboot')
+    subprocess.run(["reboot"])
 
 
 if __name__ == '__main__':

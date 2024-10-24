@@ -24,7 +24,7 @@ except ImportError as e:
 
 NUM_FANTRAY = 2
 NUM_PSU = 2
-NUM_THERMAL = 15
+NUM_THERMAL = 14
 COPPER_PORT_START = 1
 COPPER_PORT_END = 48
 SFP_BASE = 49
@@ -250,8 +250,6 @@ class Chassis(ChassisBase):
                     change_event = True
                     if cur_presence[port] == 1:
                         port_dict[port + 1] = '1'
-                        sfp = self._sfp_list[port]
-                        sfp.apply_ea_value()
                     else:
                         port_dict[port + 1] = '0'
 

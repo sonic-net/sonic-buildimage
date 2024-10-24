@@ -95,8 +95,7 @@ def run_lldpcli_config_port_command(interface, pri, req, alloc):
         interface, pri, req, alloc)
     # print(cmd)
     try:
-        result = subprocess.check_output(
-            cmd, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
+        result = subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT, universal_newlines=True)
         # print(result.strip())
         return result.strip()
     except subprocess.CalledProcessError as e:
@@ -106,8 +105,7 @@ def run_lldpcli_config_port_command(interface, pri, req, alloc):
 
 def run_command(command):
     try:
-        output = subprocess.check_output(
-            command, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
+        output = subprocess.check_output(command.split(), stderr=subprocess.STDOUT, universal_newlines=True)
     except subprocess.CalledProcessError as e:
         print("Command failed:")
         print(e.output)

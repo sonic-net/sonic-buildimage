@@ -9,7 +9,6 @@
 
 import os
 import os.path
-import telnetlib
 
 try:
     from sonic_platform.sfp import Sfp
@@ -32,10 +31,8 @@ class Thermal(ThermalBase):
 
     def __init__(self, thermal_index):
         self.index = thermal_index
-        self.tn = None
-        self.is_connected = False
-        if thermal_index >= 10:
-            self.sfp_module = Sfp(49 + (thermal_index - 10), 'SFP')
+        if thermal_index >= 9:
+            self.sfp_module = Sfp(49 + (thermal_index - 9), 'SFP')
 
         # Add thermal name
         self.THERMAL_NAME_LIST.append("XFMR Ambient")
@@ -47,7 +44,6 @@ class Thermal(ThermalBase):
         self.THERMAL_NAME_LIST.append("Dimm Temp")
         self.THERMAL_NAME_LIST.append("PoE Temp")
         self.THERMAL_NAME_LIST.append("MAC Temp")
-        self.THERMAL_NAME_LIST.append("PHY Temp")
 
         self.THERMAL_NAME_LIST.append("XCVR 1 Temp")
         self.THERMAL_NAME_LIST.append("XCVR 2 Temp")
@@ -58,18 +54,6 @@ class Thermal(ThermalBase):
         ThermalBase.__init__(self)
         self.minimum_thermal = 150.0
         self.maximum_thermal = 0.0
-
-    def connect(self):
-        try:
-            if self.tn is not None:
-                return
-            print("Connecting...")
-            self.tn = telnetlib.Telnet('localhost', '12345', 5)
-            print("Connection Establised")
-            self.is_connected  = True
-        except Exception:
-            print("Connection Failed")
-            self.is_connected  = False
 
     def __read_txt_file(self, file_path):
         try:
@@ -119,33 +103,14 @@ class Thermal(ThermalBase):
             temp = float(raw_temp)
             return float("{:.3f}".format(temp))
         elif self.index == 8:
+            from swsscommon.swsscommon import DBConnector
+            temp = 0
             try:
-                self.connect()
-                if self.is_connected:
-                    self.tn.write("do cpss-api call cpssDxChDiagDeviceTemperatureGet devNum 0".encode('ascii') + b"\r\n")
-                    _ = self.tn.read_until(b"temperature=", 3)
-                    rawtemp = self.tn.read_lazy()
-                    temp = float(rawtemp.decode().split("\r")[0])
-                else:
-                    temp = 0
-                return float("{:.3f}".format(temp))
-            except:
-                return float("{:.3f}".format(0))
-
-        elif self.index == 9:
-            try:
-                self.connect()
-                if self.is_connected:
-                    self.tn.write(" ".encode('ascii') + b"\r\n")
-                    self.tn.write("dbg xsmi register read device 0 portgroup 0 interface 1 address 0x8 register 0x8042 phydev 0x3".encode('ascii') + b"\r\n")
-                    _ = self.tn.read_until(b"Value:", 3)
-                    rawtemp = self.tn.read_lazy()
-                    temp = int(rawtemp.decode().rstrip().split("\t")[1],16) % 256 - 75
-                else:
-                    temp = 0
-                return float("{:.3f}".format(temp))
-            except:
-                return float("{:.3f}".format(0))
+                stateDB = DBConnector('STATE_DB', 0, True, '')
+                temp = int(stateDB.hget('ASIC_TEMPERATURE_INFO', 'temperature_0'))
+            except Exception as E:
+                print("get_temperature (MAC) failed, cause by {}".format(E))
+            return float("{:.3f}".format(temp))
         else:
             if self.get_presence():
                 return float("{:.3f}".format(self.sfp_module.get_temperature()))
@@ -168,8 +133,6 @@ class Thermal(ThermalBase):
             return float("{:.3f}".format(110))
         elif self.index == 8:
             return float("{:.3f}".format(100))
-        elif self.index == 9:
-            return float("{:.3f}".format(105))
         else:
             return float("{:.3f}".format(68))
 
@@ -191,8 +154,6 @@ class Thermal(ThermalBase):
             return float("{:.3f}".format(115))
         elif self.index == 8:
             return float("{:.3f}".format(105))
-        elif self.index == 9:
-            return float("{:.3f}".format(108))
         else:
             return float("{:.3f}".format(69))
 
@@ -217,8 +178,6 @@ class Thermal(ThermalBase):
             return float("{:.3f}".format(120))
         elif self.index == 8:
             return float("{:.3f}".format(108))
-        elif self.index == 9:
-            return float("{:.3f}".format(110))
         else:
             return float("{:.3f}".format(70))
 
@@ -245,7 +204,7 @@ class Thermal(ThermalBase):
             temp_file = "temp"
             temp_file_path = os.path.join(self.SYSFS_THERMAL_DIR[self.index], temp_file)
             return os.path.isfile(temp_file_path)
-        elif self.index > 9:
+        elif self.index > 8:
             return self.sfp_module.get_presence()
 
         return True
@@ -256,7 +215,7 @@ class Thermal(ThermalBase):
         Returns:
             A boolean value, True if device is operating properly, False if not
         """
-        if self.index > 6 and self.index < 10:
+        if self.index > 6 and self.index < 9:
             return True
         if not self.get_presence():
             return False

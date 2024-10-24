@@ -20,6 +20,7 @@ set -e
 
 case "$1" in
     configure)
+	depmod -a
 	sh /usr/local/bin/es1227_54ts_plt_setup.sh
 	chmod a+x /usr/local/bin/es1227_54ts-init.sh
 	systemctl enable es1227_54ts-init.service

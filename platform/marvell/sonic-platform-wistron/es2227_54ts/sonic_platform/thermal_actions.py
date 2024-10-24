@@ -12,7 +12,7 @@ from sonic_py_common import daemon_base, logger
 
 sonic_logger = logger.Logger('thermal_actions')
 
-SENSORS_NUM = 6
+SENSORS_NUM = 5
 
 TEMP_INFO = []
 
@@ -21,8 +21,7 @@ SENSOR_INDEX = {
     1: 1,
     2: 2,
     3: 5,
-    4: 7,
-    5: 8
+    4: 7
 }
 
 COFF_KA = {
@@ -31,16 +30,14 @@ COFF_KA = {
         1: 2.15,
         2: 2.23,
         3: 2.51,
-        4: 1.6,
-        5: 2.74
+        4: 1.6
     },
     'intake': {
         0: 2.5,
         1: 1.8,
         2: 1.9,
         3: 1.5,
-        4: 1.1,
-        5: 1.1
+        4: 1.1
     }
 }
 
@@ -50,16 +47,14 @@ COFF_KB = {
         1: 72,
         2: 78,
         3: 126,
-        4: 60,
-        5: 188
+        4: 60
     },
     'intake': {
         0: 100,
         1: 44,
         2: 52,
         3: 35,
-        4: 10,
-        5: 16
+        4: 10
     }
 }
 

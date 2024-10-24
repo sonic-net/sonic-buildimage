@@ -44,8 +44,7 @@ def parse_keyword(keyword, string):  # James
 
 def run_command(command):  # James
     try:
-        output = subprocess.check_output(
-            command, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
+        output = subprocess.check_output(command.split(), stderr=subprocess.STDOUT, universal_newlines=True)
         # command, shell=True, stderr=subprocess.DEVNULL, universal_newlines=True)
         # return output.strip()
     except subprocess.CalledProcessError as e:
@@ -77,8 +76,7 @@ def run_lldpcli_config_port_command(interface, enabled):
         interface, enabled)
     # print(cmd)
     try:
-        result = subprocess.check_output(
-            cmd, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
+        result = subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT, universal_newlines=True)
         # print(result.strip())
         return result.strip()
     except subprocess.CalledProcessError as e:
@@ -92,8 +90,7 @@ def run_lldpcli_show_port_command(interface):
     cmd = "lldpcli show in port %s de" % (interface)
     # print(cmd)
     try:
-        result = subprocess.check_output(
-            cmd, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
+        result = subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT, universal_newlines=True)
         # print(result.strip())
         return result.strip()
     except subprocess.CalledProcessError as e:
@@ -233,8 +230,7 @@ def main():
 
     cmd = "sudo echo  %s >> %s" % (value, FILE_PATH)
     try:
-        result = subprocess.check_output(
-            cmd, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
+        result = subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT, universal_newlines=True)
         # print(result.strip())
     except subprocess.CalledProcessError as e:
         log.log_error("Error running run_power_redundant_cmd command:" + e)
