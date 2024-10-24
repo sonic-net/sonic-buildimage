@@ -132,7 +132,17 @@ maxupdateskew 100.0
 
 # This directive enables kernel synchronisation (every 11 minutes) of the
 # real-time clock. Note that it can’t be used along with the 'rtcfile' directive.
-rtcsync
+#rtcsync
+
+# Instead of having the kernel manage the real-time clock, have chrony do this
+# instead. The reason for this is that if the system time and the real-time clock
+# are signficantly different from the actual time, then the system time must be
+# slewed, while the real-time clock can be stepped to the actual time. That way,
+# when the device next reboots (whether it be cold, warm, or fast), it will come
+# up with the actual time from the real-time clock.
+rtcfile /var/lib/chrony/rtc
+hwclockfile /etc/adjtime
+rtcautotrim 15
 
 # Step the system clock instead of slewing it if the adjustment is larger than
 # one second, but only in the first three clock updates.
