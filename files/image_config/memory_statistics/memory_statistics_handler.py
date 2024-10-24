@@ -403,6 +403,100 @@ class TimeProcessor:
             "end_day": remaining_days_end
         }    
 
+class MemoryReportGenerator:
+    def __init__(self, request, step):
+        """Initialize the report generator with request data and step size.
+        
+        Args:
+            request (dict): The request data containing time and duration information.
+            step (int): The step size for the report intervals (e.g., 1 for 1 minute).
+        """
+        self.request = request
+        self.step = step
+        self.start = request['time_data']['start_time_obj']
+        self.end = request['time_data']['end_time_obj']
+        self.period = request['duration']  # 'minutes', 'hours', or 'days'
+        self.step_timedelta = timedelta(**{self.period: self.step})
+
+    def get_interval_column_label(self, slot):
+        """Create a formatted label for time intervals based on the specified duration unit.
+        
+        Args:
+            slot (datetime): The current time slot for which the label is being generated.
+        
+        Returns:
+            tuple: A tuple containing the interval label and a time label.
+        """
+        if self.period == "days":
+            return "D{:02d}-D{:02d}".format(slot.day, (slot + self.step_timedelta).day), slot.strftime('%d%b%y')
+        elif self.period == "hours":
+            return "H{:02d}-H{:02d}".format(slot.hour, (slot + self.step_timedelta).hour), slot.strftime('%H:%M')
+        else:  # For minutes
+            return "M{:02d}-M{:02d}".format(slot.minute, (slot + self.step_timedelta).minute), slot.strftime('%H:%M')
+
+    def get_memmory_statistics_report_header(self):
+        """Generate a well-aligned, formatted header for the memory report.
+        
+        Returns:
+            str: The formatted header for the memory statistics report.
+        """
+        # Codes explanation section
+        fmt = "\nCodes:\tM - minutes, H - hours, D - days\n"
+        fmt += "-" * 80 + "\n"
+
+        # Main report details
+        fmt += "Report Generated:    {}\n".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        fmt += "Analysis Period:     From {} to {}\n".format(self.start.strftime("%Y-%m-%d %H:%M:%S"),
+                                                             self.end.strftime("%Y-%m-%d %H:%M:%S"))
+        fmt += "Interval:            {} {}\n".format(self.step, self.period.capitalize())
+
+        # Initialize for dynamic columns
+        slot = self.start
+        num_intervals = 0
+        interval_labels = []
+        time_labels = []
+
+        # Generate interval labels and time labels
+        while slot <= self.end:
+            interval_label, time_label = self.get_interval_column_label(slot)
+            interval_labels.append(interval_label)
+            time_labels.append(time_label)
+            num_intervals += 1
+            slot += self.step_timedelta
+
+        METRIC_WIDTH = 18
+        VALUE_WIDTH = 10
+        INTERVAL_WIDTH = 11
+
+        total_width = (METRIC_WIDTH + 3 * (VALUE_WIDTH + 1) +
+                       (INTERVAL_WIDTH + 1) * num_intervals - 1)  # last interval no space
+
+        # Create the separator line
+        separator = "-" * total_width + "\n"
+
+        # Build the header with the metric titles and dashes
+        header = separator
+        # Header row
+        header += "{:<{}} {:<{}} {:<{}} {:<{}}".format(
+            "Metric", METRIC_WIDTH, "Current", VALUE_WIDTH, "High", VALUE_WIDTH, "Low", VALUE_WIDTH
+        )
+        for label in interval_labels:
+            header += " {:<{}}".format(label, INTERVAL_WIDTH)
+        header += "\n"
+
+        # Subheader row
+        header += "{:<{}} {:<{}} {:<{}} {:<{}}".format(
+            " ", METRIC_WIDTH, "Value", VALUE_WIDTH, "Value", VALUE_WIDTH, "Value", VALUE_WIDTH
+        )
+        for label in time_labels:
+            header += " {:<{}}".format(label, INTERVAL_WIDTH)
+        header += "\n"
+
+        # Add another separator
+        header += separator
+
+        return fmt + header
+
 class MemoryStatisticsDaemon:
     """
     Memory Statistics Daemon
