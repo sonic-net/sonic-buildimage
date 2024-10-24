@@ -97,4 +97,7 @@ if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     fi
 fi
 
+# Enable ring buffer mode
+ORCHAGENT_ARGS+=" -R"
+
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}
