@@ -181,6 +181,7 @@ setup(
                          './yang-models/sonic-vlan-sub-interface.yang',
                          './yang-models/sonic-warm-restart.yang',
                          './yang-models/sonic-lldp.yang',
+                         './yang-models/sonic-static-anycast-gateway.yang',						 
                          './yang-models/sonic-scheduler.yang',
                          './yang-models/sonic-wred-profile.yang',
                          './yang-models/sonic-queue.yang',
