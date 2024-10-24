@@ -54,6 +54,24 @@ module sonic-kdump {
                     description
                         "Maximum number of Kernel Core files Stored";
                 }
+                leaf remote {
+                    type boolean;
+                    description
+                        "Enable or Disable the Kdump remote ssh mechanism";
+                }
+
+                leaf ssh_string {
+                    description  "Remote ssh connection string";
+                    type string;
+                          pattern "[a-zA-Z0-9._%+-]+@[0-9]{1,3}(\\.[0-9]{1,3}){3}";
+                }
+
+                leaf ssh_path {
+                    description  "Remote ssh private key path";
+                    type string;
+                     pattern "([a-zA-Z0-9._-]+(/)?)+";
+                }
+
             }
         }
     }
