@@ -20,7 +20,6 @@
 
 namespace rebootbackend {
 
-
 namespace gpu = ::google::protobuf::util;
 using Progress = ::rebootbackend::RebootThread::Progress;
 using RebootThread = ::rebootbackend::RebootThread;
