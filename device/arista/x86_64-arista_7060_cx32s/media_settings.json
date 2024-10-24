@@ -1,0 +1,36 @@
+{
+    "GLOBAL_MEDIA_PATTERN_SETTINGS": {
+        "1-6": {
+            "^QSFP+\\.*40G.*LR4.*": {
+                   "interface_type": "lr4"
+                
+            },
+            "^QSFP\\+.*40G.*SR4": {
+                   "interface_type": "sr4"
+
+            }
+                
+        },
+        "11-22": {
+            "^QSFP+\\.*40G.*LR4.*": {
+                   "interface_type": "lr4"
+                
+            },
+            "^QSFP\\+.*40G.*SR4": {
+                   "interface_type": "sr4"
+
+            }
+                
+        },
+        "27-30": {
+            "^QSFP+\\.*40G.*LR4.*": {
+                   "interface_type": "lr4"
+                
+            },
+            "^QSFP\\+.*40G.*SR4": {
+                   "interface_type": "sr4"
+
+            }
+        }
+    }
+}
