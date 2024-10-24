@@ -490,5 +490,14 @@
                 }
             }
         }
+    },
+    "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "nexthop_group": "disabled"
+                }
+            }
+        }
     }
 }

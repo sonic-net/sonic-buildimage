@@ -1,0 +1,6 @@
+depmod -a
+/usr/local/bin/platform_api_mgnt.sh install
+systemctl enable silverstone-v2-pddf-platform-monitor.service
+systemctl start silverstone-v2-pddf-platform-monitor.service
+systemctl enable pddf-platform-init.service
+systemctl start pddf-platform-init.service

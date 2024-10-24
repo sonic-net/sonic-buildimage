@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMDRD_TYPES_H
@@ -107,11 +107,8 @@
 
 #endif
 
-/*! Max size of register/memory in words */
-#define BCMDRD_MAX_PT_WSIZE       32
-
 /*! Words in port bit maps */
-#define BCMDRD_PBMP_WORD_MAX       (((BCMDRD_CONFIG_MAX_PORTS - 1) >> 5) + 1)
+#define BCMDRD_PBMP_WORD_MAX    (((BCMDRD_CONFIG_MAX_PORTS - 1) >> 5) + 1)
 
 /*!
  * Bitmap of ports of a particular type or properties.
@@ -324,6 +321,9 @@ bcmdrd_pbmp_parse(const char *str, bcmdrd_pbmp_t *pbmp);
 /*! Align a size to a specific number of bytes. */
 #define BCMDRD_ALIGN(_s, _a)    (((_s) + ((_a) - 1)) & ~((_a) - 1))
 
+/*! Maximum size of physical table entry (in words). */
+#define BCMDRD_MAX_PT_WSIZE \
+    BCMDRD_BYTES2WORDS(BCMDRD_CONFIG_MAX_PT_ENTRY_SIZE)
 
 /*! Create enumeration values from list of supported devices. */
 #define BCMDRD_DEVLIST_ENTRY(_nm,_vn,_dv,_rv,_md,_pi,_bd,_bc,_fn,_cn,_pf,_pd,_r0,_r1) \

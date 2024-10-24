@@ -1,14 +1,25 @@
 use clap::builder::ArgPredicate;
 use clap::Parser;
-use pnet::datalink::Channel::Ethernet;
-use pnet::datalink::{self, DataLinkSender, MacAddr, NetworkInterface};
+use pnet::datalink;
 use std::fs::read_to_string;
+use std::net::IpAddr;
 use std::result::Result;
 use std::str::FromStr;
+use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
+use crate::socket::{WolSocket, RawSocket, UdpSocket};
+
 const BROADCAST_MAC: [u8; 6] = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+
+pub static VERBOSE_OUTPUT: Mutex<bool> = Mutex::new(false);
+
+pub fn vprintln(msg: String) {
+    if *VERBOSE_OUTPUT.lock().unwrap() {
+        println!("{}", msg);
+    }
+}
 
 #[derive(Parser, Debug)]
 #[command(
@@ -20,7 +31,13 @@ Examples:
     wol Ethernet10 00:11:22:33:44:55
     wol Ethernet10 00:11:22:33:44:55 -b
     wol Vlan1000 00:11:22:33:44:55,11:33:55:77:99:bb -p 00:22:44:66:88:aa
-    wol Vlan1000 00:11:22:33:44:55,11:33:55:77:99:bb -p 192.168.1.1 -c 3 -i 2000"
+    wol Vlan1000 00:11:22:33:44:55,11:33:55:77:99:bb -p 192.168.1.1 -c 3 -i 2000
+    wol Ethernet10 00:11:22:33:44:55,11:33:55:77:99:bb -u
+    wol Vlan1000 00:11:22:33:44:55,11:33:55:77:99:bb -u -c 3 -i 2000
+    wol Vlan1000 00:11:22:33:44:55,11:33:55:77:99:bb -u -a 192.168.255.255
+    wol Vlan1000 00:11:22:33:44:55,11:33:55:77:99:bb -u -a ffff::ffff
+    wol Vlan1000 00:11:22:33:44:55,11:33:55:77:99:bb -u -a
+"
 )]
 struct WolArgs {
     /// The name of the network interface to send the magic packet through
@@ -30,29 +47,31 @@ struct WolArgs {
     target_mac: String,
 
     /// The flag to indicate if use broadcast MAC address instead of target device's MAC address as Destination MAC Address in Ethernet Frame Header [default: false]
-    #[arg(short, long, default_value_t = false)]
+    #[arg(short, long, default_value_t = false, conflicts_with("udp"))]
     broadcast: bool,
+
+    /// The flag to indicate if send udp packet [default: false]
+    #[arg(short, long, default_value_t = false, conflicts_with("broadcast"))]
+    udp: bool,
+
+    /// The destination ip address, both IPv4 address and IPv6 address are supported 
+    #[arg(short = 'a', long, default_value_t = String::from("255.255.255.255"), requires_if(ArgPredicate::IsPresent, "udp"))]
+    ip_address: String,
+
+    /// The destination udp port.
+    #[arg(short = 't', long, default_value_t = 9, requires_if(ArgPredicate::IsPresent, "udp"))]
+    udp_port: u16,
 
     /// An optional 4 or 6 byte password, in ethernet hex format or quad-dotted decimal (e.g. "127.0.0.1" or "00:11:22:33:44:55")
     #[arg(short, long, value_parser = parse_password)]
     password: Option<Password>,
 
-    /// For each target MAC address, the count of magic packets to send. count must between 1 and 5. This param must use with -i. [default: 1]
-    #[arg(
-        short,
-        long,
-        default_value_t = 1,
-        requires_if(ArgPredicate::IsPresent, "interval")
-    )]
+    /// For each target MAC address, the count of magic packets to send. count must between 1 and 5. This param must use with -i.
+    #[arg(short, long, default_value_t = 1, requires_if(ArgPredicate::IsPresent, "interval"))]
     count: u8,
 
-    /// Wait interval milliseconds between sending each magic packet. interval must between 0 and 2000. This param must use with -c. [default: 0]
-    #[arg(
-        short,
-        long,
-        default_value_t = 0,
-        requires_if(ArgPredicate::IsPresent, "count")
-    )]
+    /// Wait interval milliseconds between sending each magic packet. interval must between 0 and 2000. This param must use with -c.
+    #[arg(short, long, default_value_t = 0, requires_if(ArgPredicate::IsPresent, "count"))]
     interval: u64,
 
     /// The flag to indicate if we should print verbose output
@@ -83,42 +102,31 @@ impl std::fmt::Display for WolErr {
     }
 }
 
-enum WolErrCode {
+pub enum WolErrCode {
     SocketError = 1,
     InvalidArguments = 2,
-    UnknownError = 999,
+    InternalError = 255,
 }
 
 pub fn build_and_send() -> Result<(), WolErr> {
     let args = WolArgs::parse();
     let target_macs = parse_target_macs(&args)?;
     valide_arguments(&args)?;
+    *VERBOSE_OUTPUT.lock().unwrap() = args.verbose;
     let src_mac = get_interface_mac(&args.interface)?;
-    let mut tx = open_tx_channel(&args.interface)?;
+    let socket = create_wol_socket(&args)?;
     for target_mac in target_macs {
-        if args.verbose {
-            println!(
+        vprintln(format!(
                 "Building and sending packet to target mac address {}",
                 target_mac
                     .iter()
                     .map(|b| format!("{:02X}", b))
                     .collect::<Vec<String>>()
                     .join(":")
-            );
-        }
-        let dst_mac = if args.broadcast {
-            BROADCAST_MAC
-        } else {
-            target_mac
-        };
-        let magic_bytes = build_magic_packet(&src_mac, &dst_mac, &target_mac, &args.password)?;
-        send_magic_packet(
-            &mut tx,
-            magic_bytes,
-            &args.count,
-            &args.interval,
-            &args.verbose,
-        )?;
+            )
+        );
+        let magic_bytes = build_magic_bytes(&args, &src_mac, &target_mac, &args.password)?;
+        send_magic_packet(socket.as_ref(), magic_bytes, &args.count, &args.interval)?;
     }
 
     Ok(())
@@ -149,11 +157,18 @@ fn valide_arguments(args: &WolArgs) -> Result<(), WolErr> {
         });
     }
 
+    if IpAddr::from_str(&args.ip_address).is_err() {
+        return Err(WolErr {
+            msg: String::from("Invalid ip address"),
+            code: WolErrCode::InvalidArguments as i32,
+        });
+    }
+
     Ok(())
 }
 
 fn parse_mac_addr(mac_str: &str) -> Result<[u8; 6], WolErr> {
-    MacAddr::from_str(mac_str)
+    datalink::MacAddr::from_str(mac_str)
         .map(|mac| mac.octets())
         .map_err(|_| WolErr {
             msg: String::from("Invalid MAC address"),
@@ -230,14 +245,14 @@ fn is_ipv4_address_valid(ipv4_str: &str) -> bool {
 fn get_interface_mac(interface_name: &String) -> Result<[u8; 6], WolErr> {
     if let Some(interface) = datalink::interfaces()
         .into_iter()
-        .find(|iface: &NetworkInterface| iface.name == *interface_name)
+        .find(|iface: &datalink::NetworkInterface| iface.name == *interface_name)
     {
         if let Some(mac) = interface.mac {
             Ok(mac.octets())
         } else {
             Err(WolErr {
                 msg: String::from("Could not get MAC address of target interface"),
-                code: WolErrCode::UnknownError as i32,
+                code: WolErrCode::InternalError as i32,
             })
         }
     } else {
@@ -248,91 +263,76 @@ fn get_interface_mac(interface_name: &String) -> Result<[u8; 6], WolErr> {
     }
 }
 
-fn build_magic_packet(
+fn build_magic_bytes(
+    args: &WolArgs,
     src_mac: &[u8; 6],
-    dst_mac: &[u8; 6],
     target_mac: &[u8; 6],
     password: &Option<Password>,
 ) -> Result<Vec<u8>, WolErr> {
     let password_len = password.as_ref().map_or(0, |p| p.ref_bytes().len());
-    let mut pkt = vec![0u8; 116 + password_len];
-    pkt[0..6].copy_from_slice(dst_mac);
-    pkt[6..12].copy_from_slice(src_mac);
-    pkt[12..14].copy_from_slice(&[0x08, 0x42]);
-    pkt[14..20].copy_from_slice(&[0xff; 6]);
-    pkt[20..116].copy_from_slice(&target_mac.repeat(16));
+    let mut mbs = vec![0u8; 102 + password_len];
+    mbs[0..6].copy_from_slice(&[0xff; 6]);
+    mbs[6..102].copy_from_slice(&target_mac.repeat(16));
     if let Some(p) = password {
-        pkt[116..116 + password_len].copy_from_slice(p.ref_bytes());
+        mbs[102..102 + password_len].copy_from_slice(p.ref_bytes());
     }
-    Ok(pkt)
+    if !args.udp {
+        let mut _ether_header = vec![0u8; 14];
+        _ether_header[0..6].copy_from_slice( if args.broadcast { &BROADCAST_MAC } else { target_mac });
+        _ether_header[6..12].copy_from_slice(src_mac);
+        _ether_header[12..14].copy_from_slice(&[0x08, 0x42]); // EtherType for WOL
+        mbs.splice(0..0, _ether_header);
+    }
+    Ok(mbs)
 }
 
 fn send_magic_packet(
-    tx: &mut Box<dyn DataLinkSender>,
-    packet: Vec<u8>,
+    socket: &dyn WolSocket,
+    payload: Vec<u8>,
     count: &u8,
-    interval: &u64,
-    verbose: &bool,
-) -> Result<(), WolErr> {
+    interval: &u64
+) -> Result<(), WolErr>
+{
     for nth in 0..*count {
-        match tx.send_to(&packet, None) {
-            Some(Ok(_)) => {}
-            Some(Err(e)) => {
+        match socket.send_magic_packet(&payload) {
+            Ok(_) => {}
+            Err(e) => {
                 return Err(WolErr {
                     msg: format!("Network is down: {}", e),
                     code: WolErrCode::SocketError as i32,
                 });
             }
-            None => {
-                return Err(WolErr {
-                    msg: String::from("Network is down"),
-                    code: WolErrCode::SocketError as i32,
-                });
-            }
         }
-        if *verbose {
-            println!(
+        
+        vprintln(
+            format!(
                 "  | -> Sent the {}th packet and sleep for {} seconds",
                 &nth + 1,
                 &interval
-            );
-            println!(
-                "    | -> Packet bytes in hex {}",
-                &packet
+            )
+        );
+        vprintln(
+            format!(
+                "    | -> paylod bytes in hex {}",
+                &payload
                     .iter()
                     .fold(String::new(), |acc, b| acc + &format!("{:02X}", b))
             )
-        }
+        );
         thread::sleep(Duration::from_millis(*interval));
     }
     Ok(())
 }
 
-fn open_tx_channel(interface: &str) -> Result<Box<dyn DataLinkSender>, WolErr> {
-    if let Some(interface) = datalink::interfaces()
-        .into_iter()
-        .find(|iface: &NetworkInterface| iface.name == interface)
-    {
-        match datalink::channel(&interface, Default::default()) {
-            Ok(Ethernet(tx, _)) => Ok(tx),
-            Ok(_) => Err(WolErr {
-                msg: String::from("Network is down"),
-                code: WolErrCode::SocketError as i32,
-            }),
-            Err(e) => Err(WolErr {
-                msg: format!("Network is down: {}", e),
-                code: WolErrCode::SocketError as i32,
-            }),
-        }
+
+fn create_wol_socket(args: &WolArgs) -> Result<Box<dyn WolSocket>, WolErr> {
+    let _socket: Box<dyn WolSocket> = if args.udp {
+        Box::new(UdpSocket::new(&args.interface, args.udp_port, &args.ip_address)?)
     } else {
-        Err(WolErr {
-            msg: format!(
-                "Invalid value for \"INTERFACE\": interface {} is not up",
-                interface
-            ),
-            code: WolErrCode::InvalidArguments as i32,
-        })
-    }
+        Box::new(RawSocket::new(&args.interface)?)
+    };
+
+    Ok(_socket)
 }
 
 #[cfg(test)]
@@ -460,6 +460,9 @@ mod tests {
             interface: "Ethernet10".to_string(),
             target_mac: "00:11:22:33:44:55".to_string(),
             broadcast: false,
+            udp: false,
+            ip_address: String::from(""),
+            udp_port: 9,
             password: None,
             count: 1,
             interval: 0,
@@ -509,12 +512,13 @@ mod tests {
     }
 
     #[test]
-    fn test_build_magic_packet() {
+    fn test_build_magic_bytes() {
+        let args = WolArgs::try_parse_from(&["wol", "dontcare", "dontcare"]).unwrap();
         let src_mac = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55];
         let target_mac = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
         let four_bytes_password = Some(Password(vec![0x00, 0x11, 0x22, 0x33]));
         let magic_packet =
-            build_magic_packet(&src_mac, &target_mac, &target_mac, &four_bytes_password).unwrap();
+            build_magic_bytes(&args, &src_mac,  &target_mac, &four_bytes_password).unwrap();
         assert_eq!(magic_packet.len(), 120);
         assert_eq!(&magic_packet[0..6], &target_mac);
         assert_eq!(&magic_packet[6..12], &src_mac);
@@ -524,7 +528,7 @@ mod tests {
         assert_eq!(&magic_packet[116..120], &[0x00, 0x11, 0x22, 0x33]);
         let six_bytes_password = Some(Password(vec![0x00, 0x11, 0x22, 0x33, 0x44, 0x55]));
         let magic_packet =
-            build_magic_packet(&src_mac, &target_mac, &target_mac, &six_bytes_password).unwrap();
+            build_magic_bytes(&args, &src_mac, &target_mac, &six_bytes_password).unwrap();
         assert_eq!(magic_packet.len(), 122);
         assert_eq!(&magic_packet[0..6], &target_mac);
         assert_eq!(&magic_packet[6..12], &src_mac);
@@ -538,13 +542,23 @@ mod tests {
     }
 
     #[test]
-    fn test_build_magic_packet_without_password() {
+    fn test_build_magic_bytes_without_password() {
+        let args = WolArgs::try_parse_from(&["wol", "dontcare", "dontcare"]).unwrap();
         let src_mac = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55];
-        let dst_mac = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
         let target_mac = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
-        let magic_packet = build_magic_packet(&src_mac, &dst_mac, &target_mac, &None).unwrap();
+        let magic_packet = build_magic_bytes(&args, &src_mac, &target_mac, &None).unwrap();
         assert_eq!(magic_packet.len(), 116);
-        assert_eq!(&magic_packet[0..6], &dst_mac);
+        assert_eq!(&magic_packet[0..6], &target_mac);
+        assert_eq!(&magic_packet[6..12], &src_mac);
+        assert_eq!(&magic_packet[12..14], &[0x08, 0x42]);
+        assert_eq!(&magic_packet[14..20], &[0xff; 6]);
+        assert_eq!(&magic_packet[20..116], target_mac.repeat(16));
+        let args = WolArgs::try_parse_from(&["wol", "dontcare", "dontcare", "-b"]).unwrap();
+        let src_mac = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55];
+        let target_mac = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
+        let magic_packet = build_magic_bytes(&args, &src_mac, &target_mac, &None).unwrap();
+        assert_eq!(magic_packet.len(), 116);
+        assert_eq!(&magic_packet[0..6], BROADCAST_MAC);
         assert_eq!(&magic_packet[6..12], &src_mac);
         assert_eq!(&magic_packet[12..14], &[0x08, 0x42]);
         assert_eq!(&magic_packet[14..20], &[0xff; 6]);
@@ -679,9 +693,59 @@ mod tests {
             "error: the following required arguments were not provided:\n  --interval <INTERVAL>\n\nUsage: wol --count <COUNT> --interval <INTERVAL> <INTERFACE> <TARGET_MAC>\n\nFor more information, try '--help'.\n"
         );
         // Verbose can be set
-        let args =
-            WolArgs::try_parse_from(&["wol", "eth0", "00:01:02:03:04:05", "-b", "--verbose"])
-                .unwrap();
+        let args = WolArgs::try_parse_from(&["wol", "eth0", "00:01:02:03:04:05", "-b", "--verbose"]).unwrap();
         assert_eq!(args.verbose, true);
+        // Ip address should be valid
+        let args = WolArgs::try_parse_from(&["wol", "eth0", "00:01:02:03:04:05", "-b", "-a", "xxx"]);
+        let result = valide_arguments(&args.unwrap());
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Error: Invalid ip address"
+        );
+        // Udp port should be in 0-65535
+        let args = WolArgs::try_parse_from(&["wol", "eth0", "00:01:02:03:04:05", "-u", "-t", "65535"])
+            .unwrap();
+        assert_eq!(args.udp_port, 65535);
+        let result = WolArgs::try_parse_from(&["wol", "eth0", "00:01:02:03:04:05", "-u", "-t", "65536"]);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "error: invalid value '65536' for '--udp-port <UDP_PORT>': 65536 is not in 0..=65535\n\nFor more information, try '--help'.\n"
+        );
+        // Udp port should be specified with udp flag
+        let result = WolArgs::try_parse_from(&["wol", "eth0", "00:01:02:03:04:05", "-t", "9"]);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "error: the following required arguments were not provided:\n  --udp\n\nUsage: wol --udp --udp-port <UDP_PORT> <INTERFACE> <TARGET_MAC>\n\nFor more information, try '--help'.\n"
+        );
+        // Ip address should be specified with udp flag
+        let result = WolArgs::try_parse_from(&["wol", "eth0", "00:01:02:03:04:05", "-a", "192.168.1.1"]);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "error: the following required arguments were not provided:\n  --udp\n\nUsage: wol --udp --ip-address <IP_ADDRESS> <INTERFACE> <TARGET_MAC>\n\nFor more information, try '--help'.\n"
+        );
+        // Broadcast and udp flags are mutually exclusive
+        let result = WolArgs::try_parse_from(&["wol", "eth0", "00:01:02:03:04:05", "-b", "-u"]);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "error: the argument '--broadcast' cannot be used with '--udp'\n\nUsage: wol --broadcast <INTERFACE> <TARGET_MAC>\n\nFor more information, try '--help'.\n"
+        );
+    }
+
+    #[test]
+    fn verify_args_default_value(){
+        let args = WolArgs::try_parse_from(&["wol", "eth0", "00:01:02:03:04:05"]).unwrap();
+        assert_eq!(args.broadcast, false);
+        assert_eq!(args.udp, false);
+        assert_eq!(args.ip_address, "255.255.255.255");
+        assert_eq!(args.udp_port, 9);
+        assert_eq!(args.password.is_none(), true);
+        assert_eq!(args.count, 1);
+        assert_eq!(args.interval, 0);
+        assert_eq!(args.verbose, false);
     }
 }
