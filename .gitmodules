@@ -130,3 +130,6 @@
 [submodule "src/sonic-stp"]
 	path = src/sonic-stp
 	url = https://github.com/sonic-net/sonic-stp
+[submodule "src/sonic-framework/gnoi"]
+	path = src/sonic-framework/gnoi
+	url = https://github.com/openconfig/gnoi
