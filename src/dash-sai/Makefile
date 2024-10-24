@@ -15,7 +15,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 # Remove any stale files
 	rm -rf DASH
 
-	git clone https://github.com/sonic-net/DASH.git DASH
+	git clone https://github.com/jimmyzhai/DASH.git DASH
 
 	pushd DASH/dash-pipeline
 	git checkout $(DASH_SAI_COMMIT)
@@ -29,6 +29,8 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	p4c-bm2-ss -DTARGET_BMV2_V1MODEL $(P4_MAIN) -o $(P4_OUTDIR)/dash_pipeline.json --p4runtime-files $(P4_OUTDIR)/dash_pipeline_p4rt.json,$(P4_OUTDIR)/dash_pipeline_p4rt.txt --toJSON $(P4_OUTDIR)/dash_pipeline_ir.json
 
 # Generate SAI files
+	sudo pip3 install pyyaml-include
+	sudo ln -sf $(PIPELINE_DIR)/SAI /SAI
 	pushd SAI
 	make
 	popd
