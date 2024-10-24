@@ -1,5 +1,7 @@
-FROM p4lang/behavioral-model@sha256:ce45720e28a96a50f275c1b511cd84c2558b62f2cf7a7e506765183bc3fb2e32
-## FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=p4lang/behavioral-model@sha256:ce45720e28a96a50f275c1b511cd84c2558b62f2cf7a7e506765183bc3fb2e32
+## ARG BASE=docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -15,9 +17,9 @@ COPY ["start.sh", "/usr/bin/"]
 ## COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 ## COPY ["critical_processes", "/etc/supervisor/"]
 
-## Clean up
-RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
-RUN rm -rf /debs
+FROM $BASE
+
+COPY --from=base / /
 
 ## ENTRYPOINT ["/usr/bin/supervisord"]
 ENTRYPOINT ["/usr/bin/start.sh"]

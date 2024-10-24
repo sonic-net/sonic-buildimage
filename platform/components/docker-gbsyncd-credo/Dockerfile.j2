@@ -1,4 +1,6 @@
-FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+ARG BASE=docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+FROM $BASE as base
 
 ARG docker_container_name
 
@@ -33,8 +35,8 @@ COPY ["supervisord.conf.j2", "/usr/share/sonic/templates"]
 
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 
-## Clean up
-RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
-RUN rm -rf /debs
+FROM $BASE
+
+COPY --from=base / /
 
 ENTRYPOINT ["/usr/bin/docker-init.sh"]
