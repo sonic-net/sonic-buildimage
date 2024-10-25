@@ -8,7 +8,7 @@
                     "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M",
                     "remote": "true",
                     "ssh_string" : "ali@192.168.0.188",
-                    "ssh_path":  "home/ali/.ssh/id_rsa" 
+                    "ssh_path":  "/home/ali/.ssh/id_rsa" 
                 }
             }
         }
@@ -22,7 +22,7 @@
                     "memory": "512M",
                     "remote": "true",
                     "ssh_string" : "ali@192.168.0.188",
-                    "ssh_path":  "home/ali/.ssh/id_rsa" 
+                    "ssh_path":  "/home/ali/.ssh/id_rsa" 
                 }
             }
         }
@@ -36,7 +36,7 @@
                     "memory": "512M",
                     "remote": "true",
                     "ssh_string" : "ali@192.168.0.188",
-                    "ssh_path":  "home/ali/.ssh/id_rsa" 
+                    "ssh_path":  "/home/ali/.ssh/id_rsa" 
                 }
             }
         }
@@ -50,7 +50,7 @@
                     "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M",
                     "remote": "true",
                      "ssh_string" : "ali@192.168.0.188",
-                    "ssh_path":  "home/ali/.ssh/id_rsa"  
+                    "ssh_path":  "/home/ali/.ssh/id_rsa"  
                 }
             }
         }
@@ -64,7 +64,7 @@
                     "memory": "666",
                     "remote": "true",
                     "ssh_string" : "ali@192.168.0.188",
-                    "ssh_path":  "home/ali/.ssh/id_rsa" 
+                    "ssh_path":  "/home/ali/.ssh/id_rsa" 
                 }
             }
         }
@@ -79,7 +79,7 @@
                     "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M",
                     "remote": "true",
                     "ssh_string" : "ali@192.168.0.188",
-                    "ssh_path":  "home/ali/.ssh/id_rsa" 
+                    "ssh_path":  "/home/ali/.ssh/id_rsa" 
                 }
             }
         }

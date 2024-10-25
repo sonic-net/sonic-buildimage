@@ -61,15 +61,19 @@ module sonic-kdump {
                 }
 
                 leaf ssh_string {
+                    type string {
+                        pattern "([a-zA-Z0-9._%+-]+@([a-zA-Z0-9.-]+|[0-9]{1,3}(\\.[0-9]{1,3}){3}))";
+                    }
                     description  "Remote ssh connection string";
-                    type string;
-                          pattern "[a-zA-Z0-9._%+-]+@[0-9]{1,3}(\\.[0-9]{1,3}){3}";
+
                 }
 
                 leaf ssh_path {
+                    type string {
+                        pattern "(/([a-zA-Z0-9._-]+|\\.)+)+";
+                    }
                     description  "Remote ssh private key path";
-                    type string;
-                     pattern "([a-zA-Z0-9._-]+(/)?)+";
+
                 }
 
             }
