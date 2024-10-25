@@ -178,6 +178,8 @@ supervisorctl start tunnelmgrd
 
 supervisorctl start fabricmgrd
 
+supervisorctl start rebootbackend
+
 # Start arp_update when VLAN exists
 VLAN=`sonic-cfggen -d -v 'VLAN.keys() | join(" ") if VLAN'`
 if [ "$VLAN" != "" ]; then

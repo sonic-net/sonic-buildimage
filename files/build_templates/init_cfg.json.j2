@@ -64,6 +64,7 @@
     },
 {%- set features = [("bgp", "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}disabled{% else %}enabled{% endif %}", false, "enabled"),
                    ("database", "always_enabled", false, "always_enabled"),
+                   ("framework", "enabled", false, "enabled"),
                    ("lldp", "enabled", true, "enabled"),
                    ("pmon", "enabled", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}", "enabled"),
                    ("snmp", "enabled", true, "enabled"),
@@ -93,7 +94,7 @@
 {%- elif include_system_eventd == "y" %}
     {% do features.append(("eventd", "enabled", false, "enabled")) %}
 {%- endif %}
-    "FEATURE": {
+    "FEATURE": { 
 {# delayed field if set, will start the feature systemd .timer unit instead of .service unit #}
 {%- for feature, state, delayed, autorestart in features %}
         "{{feature}}": {
