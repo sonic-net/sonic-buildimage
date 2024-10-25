@@ -33,6 +33,10 @@ $ModLoad imklog   # provides kernel logging support
 $ModLoad imudp
 $UDPServerAddress {{udp_server_ip}}  #bind to localhost before udp server run
 $UDPServerRun 514
+{% if docker0_ip and docker0_ip != "" %}
+$UDPServerAddress {{docker0_ip}}
+$UDPServerRun 514
+{% endif%}
 
 # provides TCP syslog reception
 #$ModLoad imtcp
@@ -51,7 +55,7 @@ $UDPServerRun 514
 #$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
 
 # Define a custom template
-$template SONiCFileFormat,"%timegenerated%.%timegenerated:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCFileFormat,"%timegenerated:::date-year% %timegenerated%.%timegenerated:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 $ActionFileDefaultTemplate SONiCFileFormat
 $template SONiCForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 $ActionForwardDefaultTemplate SONiCForwardFormat

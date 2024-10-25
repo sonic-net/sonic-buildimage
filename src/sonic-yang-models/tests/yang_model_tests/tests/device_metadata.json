@@ -45,6 +45,9 @@
     "DEVICE_METADATA_TYPE_BMC_MGMT_TOR_PATTERN": {
         "desc": "DEVICE_METADATA value as BmcMgmtToRRouter for Type field"
     },
+    "DEVICE_METADATA_TYPE_SONIC_HOST_PATTERN": {
+        "desc": "DEVICE_METADATA value as SonicHost for Type field"
+    },
     "DEVICE_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
         "desc": "DEVICE_METADATA value as not-provisioned for Type field"
     },
@@ -169,5 +172,14 @@
     "DEVICE_METADATA_INVALID_BGP_ROUTER_ID": {
         "desc": "Verifying invalid bgp_router_id configuration.",
         "eStrKey": "Pattern"
-    }
+    },
+    "DEVICE_METADATA_VALID_CHASSIS_HOSTNAME": {
+        "desc": "Verifying valid chassis hostname configuration."
+    },
+    "DEVICE_METADATA_VALID_SLICE_TYPE": {
+        "desc": "Verifying valid slice_type configuration."
+    },
+    "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
+        "desc": "Verifying nexthop_group configuration."
+     }
 }

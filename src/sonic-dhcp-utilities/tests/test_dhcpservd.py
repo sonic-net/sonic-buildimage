@@ -4,7 +4,7 @@ import psutil
 import signal
 import sys
 import time
-from common_utils import MockProc
+from common_utils import MockProc, mock_get_config_db_table
 from dhcp_utilities.common.utils import DhcpDbConnector
 from dhcp_utilities.common.dhcp_db_monitor import DhcpServdDbMonitor
 from dhcp_utilities.dhcpservd.dhcp_cfggen import DhcpServCfgGenerator
@@ -66,6 +66,7 @@ def test_dump_dhcp4_config(mock_swsscommon_dbconnector_init, enabled_checker):
 def test_notify_kea_dhcp4_proc(process_list, mock_swsscommon_dbconnector_init, mock_get_render_template,
                                mock_parse_port_map_alias):
     proc_list = [MockProc(process_name) for process_name in process_list]
+    proc_list.append(MockProc("exited_proc", exited=True))
     with patch.object(psutil, "process_iter", return_value=proc_list), \
          patch.object(MockProc, "send_signal", MagicMock()) as mock_send_signal:
         dhcp_db_connector = DhcpDbConnector()
@@ -110,7 +111,8 @@ def test_update_dhcp_server_ip(mock_swsscommon_dbconnector_init, mock_parse_port
 def test_start(mock_swsscommon_dbconnector_init, mock_parse_port_map_alias, mock_get_render_template):
     with patch.object(DhcpServd, "dump_dhcp4_config") as mock_dump, \
          patch.object(DhcpServd, "_update_dhcp_server_ip") as mock_update_dhcp_server_ip, \
-         patch.object(DhcpServdDbMonitor, "enable_checkers"):
+         patch.object(DhcpServdDbMonitor, "enable_checkers"), \
+         patch.object(DhcpDbConnector, "get_config_db_table", side_effect=mock_get_config_db_table):
         dhcp_db_connector = DhcpDbConnector()
         dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so")
         dhcpservd = DhcpServd(dhcp_cfg_generator, dhcp_db_connector, MagicMock())

@@ -92,6 +92,18 @@ platform_sample_bf3 = """
 }
 """
 
+smartctl_output = """
+{
+    "smartctl_0004_u": "=== START OF INFORMATION SECTION ===",
+    "smartctl_0023_u": "Maximum Data Transfer Size:         512 Pages",
+    "smartctl_0024_u": "Warning  Comp. Temp. Threshold:     90 Celsius",
+    "smartctl_0025_u": "Critical Comp. Temp. Threshold:     100 Celsius",
+    "temperature": {
+        "current": 42
+    }
+}
+"""
+
 # Utilities for throttling tests
 class LogRecorderMock(object):
     def __init__(self):

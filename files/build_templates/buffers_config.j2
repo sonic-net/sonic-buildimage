@@ -113,6 +113,7 @@ def
 
 {%- set PORT_ALL  = [] %}
 {%- set PORT_BP  = [] %}
+{%- set PORT_DPC  = [] %}
 {%- set SYSTEM_PORT_ALL = [] %}
 
 {%- if voq_chassis %}
@@ -135,6 +136,9 @@ def
     {%- for port in PORT %}
         {%- if not port.startswith('Ethernet-Rec') and not port.startswith('Ethernet-IB') %}
             {%- if PORT_ALL.append(port) %}{%- endif %}
+            {%- if 'role' in PORT[port] and PORT[port]['role'] == 'Dpc' %}
+                {%- if PORT_DPC.append(port) %}{%- endif %}
+            {%- endif %}
         {%- endif %}
     {%- endfor %}
     {%- if defs.generate_bp_port_list is defined %}
@@ -153,8 +157,11 @@ def
     {%- for port in PORT_BP %}
         {%- if PORT_ACTIVE.append(port) %}{%- endif %}
     {%- endfor %}
+    {%- for port in PORT_DPC %}
+        {%- if PORT_ACTIVE.append(port) %}{%- endif %}
+    {%- endfor %}
     {%- for port in PORT_ALL %}
-        {%- if port not in DEVICE_NEIGHBOR.keys() %}
+        {%- if port not in DEVICE_NEIGHBOR.keys() and port not in PORT_DPC %}
             {%- if PORT_INACTIVE.append(port) %}{%- endif %}
         {%- endif %}
     {%- endfor %}

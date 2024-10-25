@@ -8,7 +8,7 @@ resources:
   - repository: buildimage
     type: github
     name: sonic-net/sonic-buildimage
-    ref: bookworm
+    ref: master
     endpoint: sonic-net
 
 schedules:
@@ -64,7 +64,7 @@ stages:
       - ${{ each arch in parameters.arches }}:
         - template: .azure-pipelines/docker-sonic-slave-template.yml@buildimage
           parameters:
-            pool: sonicbld
+            pool: sonicbld-1es
             arch: ${{ arch }}
             dist: ${{ dist }}
             ${{ if ne(arch, 'amd64') }}:

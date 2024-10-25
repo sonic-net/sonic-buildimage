@@ -1486,7 +1486,7 @@ class ExtConfigDBConnector(ConfigDBConnector):
         """Start listen Redis keyspace events and will trigger corresponding handlers when content of a table changes.
         """
         self.pubsub = self.get_redis_client(self.db_name).pubsub()
-        self.sub_thread = threading.Thread(target=self.listen_thread, args=(0.01,))
+        self.sub_thread = threading.Thread(target=self.listen_thread, args=(10,))
         self.sub_thread.start()
 
     def stop_listen(self):
@@ -1718,6 +1718,7 @@ class BGPConfigDaemon:
     DEFAULT_VRF = 'default'
 
     global_key_map = [('router_id',                                     '{no:no-prefix}bgp router-id {}'),
+                      ('srv6_locator',                                  '{no:no-prefix}srv6-locator {}'),
                       (['load_balance_mp_relax', '+as_path_mp_as_set'], '{no:no-prefix}bgp bestpath as-path multipath-relax {:mp-as-set}', ['true', 'false']),
                       ('always_compare_med',                            '{no:no-prefix}bgp always-compare-med', ['true', 'false']),
                       ('external_compare_router_id',                    '{no:no-prefix}bgp bestpath compare-routerid', ['true', 'false']),
@@ -1759,6 +1760,16 @@ class BGPConfigDaemon:
     global_af_key_map = [(['ebgp_route_distance',
                            'ibgp_route_distance',
                            'local_route_distance'],                     '{no:no-prefix}distance bgp {} {} {}'),
+                         ('rd_vpn_export',                              '{no:no-prefix}rd vpn export {}'),
+                         ('rt_vpn_export',                              '{no:no-prefix}rt vpn export {}'),
+                         ('rt_vpn_import',                              '{no:no-prefix}rt vpn import {}'),
+                         ('rt_vpn_both',                                '{no:no-prefix}rt vpn both {}'),
+                         ('export_vpn',                                 '{no:no-prefix}export vpn', ['true','false']),
+                         ('import_vpn',                                 '{no:no-prefix}import vpn', ['true','false']),
+                         ('redistribute_connected',                     '{no:no-prefix}redistribute connected', ['true','false']),
+                         ('redistribute_static_rmap',                   '{no:no-prefix}redistribute static route-map {}'),
+                         ('rmap_vpn_export',                            '{no:no-prefix}route-map vpn export {}'),
+                         ('rmap_vpn_import',                            '{no:no-prefix}route-map vpn import {}'),
                          ('max_ebgp_paths',                             '{no:no-prefix}maximum-paths {}'),
                          (['max_ibgp_paths',
                            '+ibgp_equal_cluster_length'],               '{no:no-prefix}maximum-paths ibgp {} {:match-clust-len}', hdl_ibgp_maxpath),

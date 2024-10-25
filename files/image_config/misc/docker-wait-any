@@ -49,8 +49,16 @@ def wait_for_container(docker_client, container_name):
     log.log_info("Waiting on container '{}'".format(container_name))
 
     while True:
-        docker_client.wait(container_name)
-
+        try:
+            docker_client.wait(container_name)
+        except TypeError as e:
+            if g_thread_exit_event.is_set():
+                # When other thread exist, main thread will exit and docker_client will be destoryed
+                log.log_info("Container {} wait thread get exception: {}".format(container_name, e))
+                return
+            else:
+                raise e
+        
         log.log_info("No longer waiting on container '{}'".format(container_name))
 
         # If this is a dependent service and warm restart is enabled for the system/container,

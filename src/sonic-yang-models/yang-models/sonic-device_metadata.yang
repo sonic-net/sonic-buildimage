@@ -100,7 +100,7 @@ module sonic-device_metadata {
                 leaf type {
                     type string {
                         length 1..255;
-                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|not-provisioned";
+                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|not-provisioned";
                     }
                 }
 
@@ -254,6 +254,26 @@ module sonic-device_metadata {
                     type inet:ipv4-address;
                     description "BGP Router identifier";
                 }
+
+                leaf chassis_hostname {
+                    description "hostname of the chassis to which this linecard or supervisor belongs to";
+                    type stypes:hostname;
+                }
+
+                leaf slice_type {
+                    description "Metadata tag for the device.";
+                    type string;
+                }
+
+                leaf nexthop_group {
+                    description "Enable or disable Nexthop Group feature. This value only takes effect during boot time.";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default disabled;
+                }
+
             }
             /* end of container localhost */
         }

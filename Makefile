@@ -37,6 +37,9 @@ endif
 PLATFORM_PATH := platform/$(if $(PLATFORM),$(PLATFORM),$(CONFIGURED_PLATFORM))
 PLATFORM_CHECKOUT := platform/checkout
 PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM).ini
+ifeq ($(SMARTSWITCH),1)
+PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM)-smartswitch.ini
+endif
 PLATFORM_CHECKOUT_CMD := $(shell if [ -f $(PLATFORM_CHECKOUT_FILE) ]; then PLATFORM_PATH=$(PLATFORM_PATH) j2 $(PLATFORM_CHECKOUT)/template.j2 $(PLATFORM_CHECKOUT_FILE); fi)
 MAKE_WITH_RETRY := ./scripts/run_with_retry $(MAKE)
 
@@ -83,7 +86,7 @@ ifeq ($(NOBUSTER), 0)
 	$(MAKE) -f Makefile.work bullseye
 endif
 
-init:
+init reset:
 	@echo "+++ Making $@ +++"
 	$(MAKE) -f Makefile.work $@
 
@@ -108,7 +111,7 @@ $(PLATFORM_PATH):
 configure : $(PLATFORM_PATH)
 	$(call make_work, $@)
 
-clean reset showtag docker-cleanup sonic-slave-build sonic-slave-bash :
+clean showtag docker-cleanup sonic-slave-build sonic-slave-bash :
 	$(call make_work, $@)
 
 # Freeze the versions, see more detail options: scripts/versions_manager.py freeze -h

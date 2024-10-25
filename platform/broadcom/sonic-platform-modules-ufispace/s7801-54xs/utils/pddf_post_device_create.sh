@@ -6,7 +6,7 @@ timeout 3 ipmitool mc watchdog off
 
 pddf_ledutil setstatusled SYNC_LED off
 pddf_ledutil setstatusled SYS_LED off
-pddf_ledutil setstatusled ID_LED off
+pddf_ledutil setstatusled LOC_LED off
 
 #set status led to green to indicate platform init done
 curr_led=$(pddf_ledutil getstatusled SYS_LED)

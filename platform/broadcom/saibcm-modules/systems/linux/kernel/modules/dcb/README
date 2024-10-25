@@ -1,0 +1,114 @@
+$Id:$
+$Copyright: 2007-2024 Broadcom Inc. All rights reserved.
+
+Permission is granted to use, copy, modify and/or distribute this
+software under either one of the licenses below.
+
+License Option 1: GPL
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License, version 2, as
+published by the Free Software Foundation (the "GPL").
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License version 2 (GPLv2) for more details.
+
+You should have received a copy of the GNU General Public License
+version 2 (GPLv2) along with this source code.
+
+
+License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+
+This software is governed by the Broadcom Open Network Switch APIs license:
+https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+
+
+DCB Library
+
+The DCB Library is a stand-alone library that allows access to 
+DCB fields easily without bringing all the complexity of the 
+SDK source tree.
+
+
+DCB Initialization
+
+The following routine initializes a DCB handle.  A unique DCB handle
+needs to be initialized for a given device ID and revision ID.
+
+This initialization function needs to be called before accessing
+any DCB field.
+
+Function:
+#include <appl/dcb/dcb.h>
+
+  int dcb_handle_init(dcb_handle_t *handle, uint16 dev_id, uint8 rev_id);
+
+Parameters:
+  handle    - (IN/OUT) Pointer to DCB library handle
+  device_id - (IN)     Device ID
+  rev_id    - (IN)     Revision ID
+
+Returns:
+  DCB_OK    Success
+  DCB_ERROR Failure
+
+
+DCB Field GET
+
+Set of macros that return the value from a DCB field.
+
+The correct DCB structure needs to be allocated and
+initialized prior to calling any of the get/set macros.
+
+Macro:
+  DCB_<field>_GET(handle, dcb)
+
+Parameters:
+  handle - (IN) Pointer to the handle for a given device;
+           type is dcb_handle_t *
+  dcb    - (IN) Pointer to the DCB structure to get the field value from;
+           type is dcb_t *
+Returns:
+  Value of DCB field
+
+
+DCB Field SET
+
+Set of macros to set the value for a DCB field.
+
+The correct DCB structure needs to be allocated and
+initialized prior to calling any of the get/set macros.
+
+Macro:
+  DCB_<field>_SET(handle, dcb, value)
+
+Parameters:
+  handle - (IN) Pointer to the handle for a given device;
+           type is dcb_handle_t *
+  dcb    - (IN/OUT) Pointer to the DCB structure to set the field value to;
+           type is dcb_t *
+  value  - (IN) Value to set for the DCB field;
+           type varies
+
+Returns:
+  None
+
+
+Compiling the DCB Library
+
+To compile the DCB library, the DCBDIR environment variable needs
+to be set to point to the location where the DCB library resides
+and run make. If DCBDIR is not set, the default value of DCBDIR is the parent
+directory of this README file.
+
+The DCB library output will be generated in $DCBDIR/build/ by default.
+The output directory can be specified by setting the BLDDIR environment
+variable.
+
+Example:
+  cd <dcb_dir>
+  export DCBDIR=`pwd`
+  cd make
+  make

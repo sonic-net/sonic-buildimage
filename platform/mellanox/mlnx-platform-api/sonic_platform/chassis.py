@@ -41,22 +41,8 @@ except ImportError as e:
 
 RJ45_TYPE = "RJ45"
 
-DMI_FILE = '/sys/firmware/dmi/entries/2-0/raw'
-DMI_HEADER_LEN = 15
-DMI_PRODUCT_NAME = "Product Name"
-DMI_MANUFACTURER = "Manufacturer"
-DMI_VERSION = "Version"
-DMI_SERIAL = "Serial Number"
-DMI_ASSET_TAG = "Asset Tag"
-DMI_LOC = "Location In Chassis"
-DMI_TABLE_MAP = {
-                    DMI_PRODUCT_NAME: 0,
-                    DMI_MANUFACTURER: 1,
-                    DMI_VERSION: 2,
-                    DMI_SERIAL: 3,
-                    DMI_ASSET_TAG: 4,
-                    DMI_LOC: 5
-                }
+VPD_DATA_FILE = "/var/run/hw-management/eeprom/vpd_data"
+REVISION = "REV"
 
 HWMGMT_SYSTEM_ROOT = '/var/run/hw-management/system/'
 
@@ -87,8 +73,8 @@ class Chassis(ChassisBase):
     def __init__(self):
         super(Chassis, self).__init__()
 
-        # Initialize DMI data
-        self.dmi_data = None
+        # Initialize vpd data
+        self.vpd_data = None
 
         # move the initialization of each components to their dedicated initializer
         # which will be called from platform
@@ -141,10 +127,6 @@ class Chassis(ChassisBase):
     def __del__(self):
         if self.sfp_event:
             self.sfp_event.deinitialize()
-
-        if self._sfp_list:
-            if self.sfp_module.SFP.shared_sdk_handle:
-                self.sfp_module.deinitialize_sdk_handle(self.sfp_module.SFP.shared_sdk_handle)
 
     @property
     def RJ45_port_list(self):
@@ -489,6 +471,8 @@ class Chassis(ChassisBase):
                 if fd_type == 'hw_present':
                     # event could be EVENT_NOT_PRESENT or EVENT_PRESENT
                     event = sfp.EVENT_NOT_PRESENT if fd_value == 0 else sfp.EVENT_PRESENT
+                    if fd_value == 1:
+                        s.processing_insert_event = True
                     s.on_event(event)
                 elif fd_type == 'present':
                     if str(fd_value) == sfp.SFP_STATUS_ERROR:
@@ -513,16 +497,18 @@ class Chassis(ChassisBase):
                     s.on_event(event)
                     
                 if s.in_stable_state():
+                    self.sfp_module.SFP.wait_sfp_eeprom_ready([s], 2)
                     s.fill_change_event(port_dict)
                     s.refresh_poll_obj(self.poll_obj, self.registered_fds)
                 else:
                     logger.log_debug(f'SFP {sfp_index} does not reach stable state, state={s.state}')
-                                        
+                    
             ready_sfp_set = wait_ready_task.get_ready_set()
             for sfp_index in ready_sfp_set:
                 s = self._sfp_list[sfp_index]
                 s.on_event(sfp.EVENT_RESET_DONE)
                 if s.in_stable_state():
+                    self.sfp_module.SFP.wait_sfp_eeprom_ready([s], 2)
                     s.fill_change_event(port_dict)
                     s.refresh_poll_obj(self.poll_obj, self.registered_fds)
                 else:
@@ -933,14 +919,14 @@ class Chassis(ChassisBase):
         Returns:
             string: Revision value of device
         """
-        if self.dmi_data is None:
-            self.dmi_data = self._parse_dmi(DMI_FILE)
+        if not self.vpd_data:
+            self.vpd_data = self._parse_vpd_data(VPD_DATA_FILE)
 
-        return self.dmi_data.get(DMI_VERSION, "N/A")
+        return self.vpd_data.get(REVISION, "N/A")
 
-    def _parse_dmi(self, filename):
+    def _parse_vpd_data(self, filename):
         """
-        Read DMI data chassis data and returns a dictionary of values
+        Read vpd_data and returns a dictionary of values
 
         Returns:
             A dictionary containing the dmi table of the switch chassis info
@@ -950,17 +936,10 @@ class Chassis(ChassisBase):
             if not os.access(filename, os.R_OK):
                 return result
 
-            with open(filename, "rb") as fileobj:
-                data = fileobj.read()
-
-            body = data[DMI_HEADER_LEN:]
-            records = body.split(b'\x00')
-
-            for k, v in DMI_TABLE_MAP.items():
-                result[k] = records[v].decode("utf-8")
-
+            result = utils.read_key_value_file(filename, delimeter=": ")
+                
         except Exception as e:
-            logger.log_error("Fail to decode DMI {} due to {}".format(filename, repr(e)))
+            logger.log_error("Fail to decode vpd_data {} due to {}".format(filename, repr(e)))
 
         return result
 

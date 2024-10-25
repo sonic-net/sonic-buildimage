@@ -27,6 +27,9 @@
 #include <linux/jiffies.h>
 #include <linux/i2c.h>
 #include <linux/mutex.h>
+#include <linux/version.h>
+
+#define _memset(s, c, n) memset(s, c, n)
 
 /* Addresses to scan */
 static const unsigned short normal_i2c[] = { /*0x50, 0x51, 0x52, 0x53, 0x54,
@@ -220,7 +223,7 @@ static int sys_eeprom_probe(struct i2c_client *client,
 #ifdef __STDC_LIB_EXT1__
     memset_s(data->data, EEPROM_SIZE, 0xff, EEPROM_SIZE);
 #else
-    memset(data->data, 0xff, EEPROM_SIZE);
+    _memset(data->data, 0xff, EEPROM_SIZE);
 #endif
 
     i2c_set_clientdata(client, data);
@@ -240,12 +243,19 @@ exit:
     return err;
 }
 
-static int sys_eeprom_remove(struct i2c_client *client)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
+static int
+#else
+static void
+#endif
+sys_eeprom_remove(struct i2c_client *client)
 {
     sysfs_remove_bin_file(&client->dev.kobj, &sys_eeprom_attr);
     kfree(i2c_get_clientdata(client));
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
     return 0;
+#endif
 }
 
 static const struct i2c_device_id sys_eeprom_id[] = {

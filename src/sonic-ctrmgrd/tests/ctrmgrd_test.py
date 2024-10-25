@@ -355,6 +355,38 @@ feature_test_data = {
                 }
             }
         }
+    },
+    5: {
+        common_test.DESCR: "No restart for current_owner == none in config reload",
+        common_test.ARGS: "ctrmgrd",
+        common_test.PRE: {
+            common_test.CONFIG_DB_NO: {
+                common_test.FEATURE_TABLE: {
+                    "swss": {
+                        "set_owner": "local",
+                        "state": "enabled",
+                        "auto_restart": "enabled"
+                    }
+                }
+            }
+        },
+        common_test.UPD: {
+            common_test.STATE_DB_NO: {
+                common_test.FEATURE_TABLE: {
+                    "swss": {
+                        "system_state": "down",
+                        "remote_state": "none",
+                        "current_owner": "none",
+                        "container_id": "",
+                        "state": "enabled"
+                    }
+                }
+            }
+        },
+        common_test.POST: {
+            common_test.STATE_DB_NO: {
+            }
+        }
     }
 }
 

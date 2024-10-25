@@ -17,6 +17,7 @@
 
 import os
 import sys
+import json
 
 from unittest.mock import patch
 from unittest.mock import mock_open
@@ -27,7 +28,7 @@ modules_path = os.path.dirname(test_path)
 sys.path.insert(0, modules_path)
 
 from sonic_platform.chassis import Chassis
-from .utils import platform_sample_bf3
+from .utils import platform_sample_bf3, smartctl_output
 
 
 @patch('sonic_py_common.device_info.get_platform', MagicMock(return_value=""))
@@ -38,54 +39,53 @@ from .utils import platform_sample_bf3
 class TestThermal:
 
     def test_chassis_thermal(self, *args):
-        from sonic_platform.thermal_bf3 import SENSORS
         chassis = Chassis()
         thermal_list = chassis.get_all_thermals()
         assert thermal_list
 
-        for s in SENSORS:
-            assert 'name' in s
-            assert 'mlxbf_sensor_name' in s or 'hwmon_path' in s
-
-        sensor_names = list(map(lambda x: x.get('name'), SENSORS))
-        thermal_names = list(map(lambda x: x.get_name(), thermal_list))
-        for sn in sensor_names:
-            assert sn in thermal_names
-
 
     def test_hwmon_read(self, *args):
         from sonic_platform import thermal_bf3 as thermal
-        from sonic_platform.thermal_bf3 import Thermal
+        from sonic_platform.thermal_bf3 import Thermal, ThermalType
 
         thermal.read_fs = MagicMock(return_value=83123)
-        sensor = {'name': 'test', 'hwmon_path': '/tmp/', 'ht': 95, 'cht': 100}
-        t = Thermal(**sensor)
+        t = Thermal(name='test', thermal_type=ThermalType.SFP, hwmon_path='/tmp/', ht=95, cht=100)
         assert t.get_temperature() == 83.123
         assert t.get_high_critical_threshold() == 83.123
 
 
+    def test_ssd(self, *args):
+        from sonic_platform import thermal_bf3 as thermal
+        from sonic_platform.thermal_bf3 import initialize_ssd_thermals
+        thermal.read_smartctl = MagicMock(return_value=json.loads(smartctl_output))
+        t = initialize_ssd_thermals()
+        assert len(t) == 1
+        assert t[0].get_temperature() == 42
+        assert t[0].get_high_threshold() == 90
+        assert t[0].get_high_critical_threshold() == 100
+
+
     def test_thermal_get(self, *args):
         from sonic_platform import thermal_bf3 as thermal
-        from sonic_platform.thermal_bf3 import Thermal
+        from sonic_platform.thermal_bf3 import Thermal, ThermalType
 
         temp_test_mocked_vals = [123, 10.5, -1, None]
 
         for tv in temp_test_mocked_vals:
             thermal.read_temp_mlxbf = MagicMock(return_value=tv)
-            sensor = {'name': 'test', 'mlxbf_sensor_name': 'test', 'ht': 95, 'cht': 100}
-            t = Thermal(**sensor)
+            t = Thermal(name='test', thermal_type=ThermalType.MLXBF, mlxbf_sensor_name='test', ht=95, cht=100)
             assert t.get_temperature() == tv
-            assert t.get_high_threshold() == sensor['ht']
-            assert t.get_high_critical_threshold() == sensor['cht']
+            assert t.get_high_threshold() == 95
+
+            assert t.get_high_critical_threshold() == 100
             assert t.get_low_threshold() == 'N/A'
             assert t.get_low_critical_threshold() == 'N/A'
 
         for tv in temp_test_mocked_vals:
             thermal.read_temp_hwmon = MagicMock(return_value=tv)
-            sensor = {'name': 'test', 'hwmon_path': '/tmp/', 'ht': 95, 'cht': 100}
-            t = Thermal(**sensor)
+            t = Thermal(name='test', thermal_type=ThermalType.SFP, hwmon_path='/tmp/', ht=95)
             assert t.get_temperature() == tv
-            assert t.get_high_threshold() == sensor['ht']
+            assert t.get_high_threshold() == 95
             assert t.get_high_critical_threshold() == tv
             assert t.get_low_threshold() == 'N/A'
             assert t.get_low_critical_threshold() == 'N/A'

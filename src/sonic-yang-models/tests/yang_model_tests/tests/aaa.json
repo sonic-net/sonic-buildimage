@@ -15,12 +15,12 @@
         "eStrKey": "Pattern",
         "eStr": ["false|true|False|True"]
     },
-    "AAA_AUTHORIZATION_TEST": {
-        "desc": "Configure an authorization type in AAA table."
+    "AAA_AUTHENTICATION_TEST": {
+        "desc": "Configure an authentication type in AAA table."
     },
-    "AAA_AUTHORIZATION_TEST_TACACS_WITHOUT_TACPLUS": {
-        "desc": "Configure tacacs in authorization type in AAA table without TACPLUS table.",
-        "eStr": ["Authorization with 'tacacs+' is not allowed when passkey not exists."]
+    "AAA_AUTHENTICATION_TEST_TACACS_WITHOUT_TACPLUS": {
+        "desc": "Configure tacacs in authentication type in AAA table without TACPLUS table.",
+        "eStr": ["Authentication with 'tacacs+' is not allowed when passkey not exists."]
     },
     "AAA_ACCOUNTING_TEST": {
         "desc": "Configure an accounting type in AAA table."

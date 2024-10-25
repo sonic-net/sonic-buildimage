@@ -121,6 +121,11 @@ jobs:
           variables:
             PLATFORM_ARCH: arm64
 
+        - name: nvidia-bluefield
+          pool: sonicbld-arm64
+          variables:
+            PLATFORM_ARCH: arm64
+
     buildSteps:
       - template: .azure-pipelines/template-skipvstest.yml@buildimage
       - template: .azure-pipelines/template-daemon.yml@buildimage
@@ -170,7 +175,7 @@ jobs:
                 make $BUILD_OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-$(platform_rpc)-dnx-rpc.gz
                 pushd ./src/sonic-sairedis/SAI
                 git stash
-                popd 
+                popd
               fi
             fi
             if [ $(syncd_rpc_image) == yes ]; then
@@ -181,3 +186,13 @@ jobs:
           fi
         displayName: "Build sonic image"
       - template: .azure-pipelines/check-dirty-version.yml@buildimage
+      - task: ManifestGeneratorTask@0
+        condition: ne(variables.SKIP_MG, 'y')
+        timeoutInMinutes: 60
+        continueOnError: true
+        displayName: "Manifest Generator"
+        inputs:
+          BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
+          ManifestDirPath: 'target/'
+          BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
+

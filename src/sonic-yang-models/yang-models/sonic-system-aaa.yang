@@ -43,8 +43,8 @@ module sonic-system-aaa {
                     default "local";
                 }
 
-                must 'not(./type = "authorization" and contains(./login, "tacacs+") and not(/tacacs:sonic-system-tacacs/tacacs:TACPLUS/tacacs:global/tacacs:passkey))' {
-                    error-message "Authorization with 'tacacs+' is not allowed when passkey not exists.";
+                must 'not(./type = "authentication" and contains(./login, "tacacs+") and not(/tacacs:sonic-system-tacacs/tacacs:TACPLUS/tacacs:global/tacacs:passkey))' {
+                    error-message "Authentication with 'tacacs+' is not allowed when passkey not exists.";
                 }
 
                 leaf failthrough {

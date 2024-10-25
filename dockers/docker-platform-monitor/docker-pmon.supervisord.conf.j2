@@ -28,7 +28,7 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
 
-{% if not skip_chassisd and IS_MODULAR_CHASSIS == 1 %}
+{% if not skip_chassisd and (IS_MODULAR_CHASSIS == 1 or is_smartswitch) %}
 [program:chassisd]
 command=/usr/local/bin/chassisd
 priority=3
@@ -197,6 +197,19 @@ dependent_startup_wait_for=rsyslogd:running
 {% if include_sensormond %}
 [program:sensormond]
 command=/usr/local/bin/sensormond
+priority=10
+autostart=false
+autorestart=unexpected
+stdout_logfile=syslog
+stderr_logfile=syslog
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% endif %}
+
+{% if not skip_stormond %}
+[program:stormond]
+command=/usr/local/bin/stormond
 priority=10
 autostart=false
 autorestart=unexpected

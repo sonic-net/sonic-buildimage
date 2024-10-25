@@ -11,7 +11,7 @@ ARP_UPDATE_VARS_FILE="/usr/share/sonic/templates/arp_update_vars.j2"
 
 # Overload `logger` command to include arp_update tag
 logger () {
-    command logger -t "arp_update" "$@"
+    command logger -i "$$" -t "arp_update" "$@"
 }
 
 while /bin/true; do
@@ -178,8 +178,8 @@ while /bin/true; do
   # resolve neighbor entries from CONFIG_DB in case of mismatch with kernel
   DBNEIGH="$DBNEIGH $(sonic-db-cli CONFIG_DB keys NEIGH* | sed -e 's/|/:/g')"
 
-  KERNEIGH4=$(ip -4 neigh show | grep Vlan | grep -v 'FAILED\|INCOMPLETE' | cut -d ' ' -f 1,3  --output-delimiter=',')
-  KERNEIGH6=$(ip -6 neigh show | grep -v fe80 | grep Vlan | grep -v 'FAILED\|INCOMPLETE' | cut -d ' ' -f 1,3  --output-delimiter=',')
+  KERNEIGH4=$(ip -4 neigh show | grep Vlan | cut -d ' ' -f 1,3  --output-delimiter=',')
+  KERNEIGH6=$(ip -6 neigh show | grep -v fe80 | grep Vlan | cut -d ' ' -f 1,3  --output-delimiter=',')
   for neigh in $DBNEIGH; do
       intf="$( cut -d ':' -f 2 <<< "$neigh" )"
       ip="$( cut -d ':' -f 3- <<< "$neigh" )"

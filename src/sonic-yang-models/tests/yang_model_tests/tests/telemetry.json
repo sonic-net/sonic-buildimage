@@ -11,6 +11,10 @@
         "desc": "TABLE_WITH_INCORRECT_PORT failure.",
         "eStrKey": "InvalidValue"
     },
+    "TELEMETRY_TABLE_WITH_INCORRECT_SAVE_ON_SET": {
+        "desc": "TABLE_WITH_INCORRECT_SAVE_ON_SET failure",
+        "eStrKey": "InvalidValue"
+    },
     "TELEMETRY_TABLE_WITH_VALID_CONFIG": {
         "desc": "TABLE WITH VALID CONFIG."
     }

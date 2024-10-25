@@ -1074,6 +1074,14 @@ device:
                 PORT_ID: 342
             :
                 PC_PHYS_PORT_ID: 505
+            ?
+                PORT_ID: 76
+            :
+                PC_PHYS_PORT_ID: 513
+            ?
+                PORT_ID: 274
+            :
+                PC_PHYS_PORT_ID: 515
 ...
 ---
 device:
@@ -1118,6 +1126,13 @@ device:
                 NUM_LANES: 8
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
+            ?
+                PORT_ID: [[76, 76], [274, 274]]
+            :
+                ENABLE: 0
+                MAX_FRAME_SIZE: 9416
+                SPEED: 10000
+                NUM_LANES: 1
 ...
 ---
 bcm_device:

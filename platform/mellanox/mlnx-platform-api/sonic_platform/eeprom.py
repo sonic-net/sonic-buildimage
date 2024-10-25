@@ -52,7 +52,7 @@ if platform_name and 'simx' in platform_name and not platform_name in platform_s
             os.makedirs(os.path.dirname(EEPROM_SYMLINK))
         subprocess.check_call(['/usr/bin/xxd', '-r', '-p', 'syseeprom.hex', EEPROM_SYMLINK], cwd=platform_path)
 
-WAIT_EEPROM_READY_SEC = 20
+WAIT_EEPROM_READY_SEC = 60
 
 
 class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):

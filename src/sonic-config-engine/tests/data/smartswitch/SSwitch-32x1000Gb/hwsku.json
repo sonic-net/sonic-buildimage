@@ -111,19 +111,5 @@
         "Ethernet144": {
             "default_brkout_mode": "1x100000[50G,40000,25G,10000]"
         }
-    },
-    "DPUS": {
-        "dpu0": {
-            "midplane_interface":  "dpu0"
-        },
-        "dpu1": {
-            "midplane_interface":  "dpu1"
-        },
-        "dpu2": {
-            "midplane_interface":  "dpu2"
-        },
-        "dpu3": {
-            "midplane_interface":  "dpu3"
-        }
     }
 }

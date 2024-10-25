@@ -43,6 +43,10 @@ jobs:
         condition: and(succeeded(), eq(variables.SKIP_CHECKOUT, ''))
         displayName: 'Checkout code'
       - script: |
+          set -x
+          sudo setfacl -R -b $(Agent.BuildDirectory)
+        displayName: 'setfacl'
+      - script: |
           BRANCH_NAME=$(Build.SourceBranchName)
           [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTID" ] && BRANCH_NAME="$SYSTEM_PULLREQUEST_TARGETBRANCH-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
           git checkout -b $BRANCH_NAME

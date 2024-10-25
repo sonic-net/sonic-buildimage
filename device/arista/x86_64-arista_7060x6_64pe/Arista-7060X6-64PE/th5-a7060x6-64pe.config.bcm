@@ -1074,6 +1074,14 @@ device:
                 PORT_ID: 342
             :
                 PC_PHYS_PORT_ID: 505
+            ?
+                PORT_ID: 76
+            :
+                PC_PHYS_PORT_ID: 513
+            ?
+                PORT_ID: 274
+            :
+                PC_PHYS_PORT_ID: 515
 ...
 ---
 device:
@@ -1118,20 +1126,38 @@ device:
                 NUM_LANES: 8
                 FEC_MODE: PC_FEC_RS544_2XN
                 MAX_FRAME_SIZE: 9416
+            ?
+                PORT_ID: [[76, 76], [274, 274]]
+            :
+                ENABLE: 0
+                MAX_FRAME_SIZE: 9416
+                SPEED: 10000
+                NUM_LANES: 1
 ...
 ---
 bcm_device:
     0:
         global:
             ftem_mem_entries: 65536
+            sai_stats_support_mask: 0
+            global_flexctr_ing_action_num_reserved: 20
+            global_flexctr_ing_pool_num_reserved: 8
+            global_flexctr_ing_op_profile_num_reserved: 20
+            global_flexctr_ing_group_num_reserved: 2
+            global_flexctr_egr_action_num_reserved: 8
+            global_flexctr_egr_pool_num_reserved: 5
+            global_flexctr_egr_op_profile_num_reserved: 10
+            global_flexctr_egr_group_num_reserved: 1
 ...
 ---
 device:
     0:
         # Per pipe flex counter configuration
         CTR_EFLEX_CONFIG:
-            CTR_ING_EFLEX_OPERMODE_PIPEUNIQUE: 0
-            CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 0
+            CTR_ING_EFLEX_OPERMODE_PIPEUNIQUE: 1
+            CTR_ING_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
+            CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 1
+            CTR_EGR_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
 
         # IFP mode
         FP_CONFIG:

@@ -34,6 +34,9 @@ if [ -n "$CERTS" ]; then
     if [ ! -z $CA_CRT ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
+
+    # Reuse GNMI_CLIENT_CERT for telemetry service
+    TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
 elif [ -n "$X509" ]; then
     SERVER_CRT=$(echo $X509 | jq -r '.server_crt')
     SERVER_KEY=$(echo $X509 | jq -r '.server_key')
@@ -69,6 +72,14 @@ if [[ $LOG_LEVEL =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" -v=$LOG_LEVEL"
 else
     TELEMETRY_ARGS+=" -v=2"
+fi
+
+# gNMI save-on-set behavior is disabled by default.
+# Save-on-set can be turned on by setting the "TELEMETRY|gnmi|save_on_set"
+# to "true".
+readonly SAVE_ON_SET=$(echo $GNMI | jq -r '.save_on_set // empty')
+if [ ! -z "$SAVE_ON_SET" ]; then
+    TELEMETRY_ARGS+=" --with-save-on-set=$SAVE_ON_SET"
 fi
 
 # Server will handle threshold connections consecutively

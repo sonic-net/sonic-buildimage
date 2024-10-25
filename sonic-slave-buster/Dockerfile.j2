@@ -90,7 +90,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         curl \
         wget \
         unzip \
-        {{ GZ_COMPRESS_PROGRAM }} \
+        gzip \
+        pigz \
         git \
         build-essential \
         remake \
@@ -560,6 +561,10 @@ RUN pip3 install "lxml==4.9.1"
 # For sonic-platform-common testing
 RUN pip2 install redis
 RUN pip3 install redis
+RUN pip2 install psutil
+RUN pip3 install psutil
+RUN pip2 install blkinfo
+RUN pip3 install blkinfo
 
 # For vs image build
 RUN pip2 install pexpect==4.6.0

@@ -245,7 +245,10 @@ class LldpManager(daemon_base.DaemonBase):
         if not op in ["SET", "DEL"]:
             return
         self.log_info("Device Config Opcode: {} Dict {} Key {}".format(op, device_dict, key))
-        hostname = device_dict.get("hostname")
+        try:
+            hostname = device_dict["chassis_hostname"]
+        except:
+            hostname = device_dict.get("hostname")
         if not self.hostname == hostname:
             self.log_info("Hostname changed old {0}, new {1}".format(self.hostname, hostname))
             self.update_hostname(hostname)

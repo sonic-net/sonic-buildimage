@@ -388,6 +388,39 @@ check_apt_install()
     done
 }
 
+# Check if we need to use apt_installation_lock for this dpkg command
+check_dpkg_need_lock()
+{
+    for para in "$@"
+    do
+        if [ "$para" == "-i" ] || [ "$para" == "--install" ]; then
+            echo y
+            break
+        fi
+
+        if [ "$para" == "-P"  ] || [ "$para" == "--purge" ]; then
+            echo y
+            break
+        fi
+
+        if [ "$para" == "-r"  ] || [ "$para" == "--remove" ]; then
+            echo y
+            break
+        fi
+
+        if [ "$para" == "--unpack"  ] || [ "$para" == "--configure" ]; then
+            echo y
+            break
+        fi
+
+        if [ "$para" == "--update-avail"  ] || [ "$para" == "--merge-avail" ] || [ "$para" == "--clear-avail" ]; then
+            echo y
+            break
+        fi
+
+    done
+}
+
 # Print warning message if a debian package version not specified when debian version control enabled.
 check_apt_version()
 {

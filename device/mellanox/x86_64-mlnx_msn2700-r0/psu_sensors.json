@@ -1,0 +1,421 @@
+{
+    "platform": {
+        "MSN2410": {
+            "default": {
+                "bus": [
+                    "i2c-10",
+                    "i2c-1-mux (chan_id 10)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2", "R"],
+                    "dps460-i2c-*-59": ["1", "L"]
+                }
+            }
+        },
+        "MSN2700": {
+            "default": {
+                "bus": [
+                    "i2c-10",
+                    "i2c-1-mux (chan_id 10)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2", "R"],
+                    "dps460-i2c-*-59": ["1", "L"]
+                }
+            }
+        },
+        "MSN2700-A1": {
+            "default": {
+                "bus": [
+                    "i2c-10",
+                    "i2c-1-mux (chan_id 10)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2", "R"],
+                    "dps460-i2c-*-59": ["1", "L"]
+                }
+            }
+        },
+        "MSN2740": {
+            "default": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2", "R"],
+                    "dps460-i2c-*-59": ["1", "L"]
+                }
+            }
+        },
+        "MSN3420": {
+            "default": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2"],
+                    "dps460-i2c-*-59": ["1"]
+                }
+            }
+        },
+        "MSN3700": {
+            "default": {
+                "bus": [
+                    "i2c-4", 
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2"],
+                    "dps460-i2c-*-59": ["1"]
+                }
+            },
+            "respin": {
+                "bus": [
+                    "i2c-4", 
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["1"],
+                    "dps460-i2c-*-59": ["2"]
+                }
+            },
+            "swb_respin": {
+                "bus": [
+                    "i2c-4", 
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["1"],
+                    "dps460-i2c-*-59": ["2"]
+                }
+            }
+        },
+        "MSN3700C": {
+            "default": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2"],
+                    "dps460-i2c-*-59": ["1"]
+                }
+            },
+            "respin": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["1"],
+                    "dps460-i2c-*-59": ["2"]
+                }
+            },
+            "swb_respin": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["1"],
+                    "dps460-i2c-*-59": ["2"]
+                }
+            }
+        },
+        "MSN3800": {
+            "default": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2"],
+                    "dps460-i2c-*-59": ["1"]
+                }
+            }
+        },
+        "MSN4410": {
+            "default": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["1", "L"],
+                    "dps460-i2c-*-59": ["2", "R"]
+                }
+            },
+            "a1": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["1", "L"],
+                    "dps460-i2c-*-59": ["2", "R"]
+                }                
+            }
+        },
+        "MSN4600": {
+            "default": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2", "R"],
+                    "dps460-i2c-*-59": ["1", "L"]
+                }
+            }
+        },
+        "MSN4600C": {
+            "default": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2", "R"],
+                    "dps460-i2c-*-59": ["1", "L"]
+                }
+            },
+            "a1": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["1", "L"],
+                    "dps460-i2c-*-59": ["2", "R"]
+                }
+            },
+            "respin": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["2", "R"],
+                    "dps460-i2c-*-59": ["1", "L"]
+                }                
+            },
+            "respin_a1": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["1", "L"],
+                    "dps460-i2c-*-59": ["2", "R"]
+                }  
+            }
+        },
+        "MSN4700": {
+            "default": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["1", "L"],
+                    "dps460-i2c-*-59": ["2", "R"]
+                }
+            },
+            "a1": {
+                "bus": [
+                    "i2c-4",
+                    "i2c-1-mux (chan_id 3)"
+                ],
+                "chip": {
+                    "dps460-i2c-*-58": ["1", "L"],
+                    "dps460-i2c-*-59": ["2", "R"]
+                }                
+            }
+        },
+        "SN2201": {
+            "default": {
+                "bus": [
+                    "i2c-3",
+                    "i2c-1-mux (chan_id 1)"
+                ],
+                "chip": {
+                    "pmbus-i2c-3-58": ["1"],
+                    "pmbus-i2c-4-58": ["2"]
+                }
+            }
+        },
+        "SN5400": {
+            "default": {
+                "bus": [
+
+                ],
+                "chip": {
+                    "dps460-i2c-*-59": ["1", "L"],
+                    "dps460-i2c-*-5a": ["2", "R"]
+                }
+            }
+        },
+        "SN5600": {
+            "default": {
+                "bus": [
+
+                ],
+                "chip": {
+                    "dps460-i2c-*-59": ["1", "L"],
+                    "dps460-i2c-*-5a": ["2", "R"]
+                }
+            }
+        }
+    },
+
+    "psu": {
+        "MTEF-AC-A": {
+            "label": [
+                "in1 PSU 220V Rail (in)",
+                "in2 PSU 12V Rail (out)",
+                "fan1 PSU Fan 1",
+                "temp1 PSU Temp 1",
+                "temp2 PSU Temp 2",
+                "power1 PSU 220V Rail Pwr (in)",
+                "power2 PSU 12V Rail Pwr (out)",
+                "curr1 PSU 220V Rail Curr (in)",
+                "curr2 PSU 12V Rail Curr (out)"
+            ]
+        }, 
+        "MTEF-AC-C": {
+            "label": [
+                "in1 PSU 220V Rail (in)",
+                "in3 PSU 12V Rail (out)",
+                "fan1 PSU Fan 1",
+                "temp1 PSU Temp 1",
+                "temp2 PSU Temp 2",
+                "temp3 PSU Temp 3",
+                "power1 PSU 220V Rail Pwr (in)",
+                "power2 PSU 12V Rail Pwr (out)",
+                "curr1 PSU 220V Rail Curr (in)",
+                "curr2 PSU 12V Rail Curr (out)"
+            ],
+            "ignore": [
+                "in2",
+                "fan2",
+                "fan3"
+            ],
+            "set": [
+                "in3_lcrit in3_crit * 0.662",
+                "in3_min in3_crit * 0.745",
+                "in3_max in3_crit * 0.952"
+            ]
+        },
+        "MTEF-AC-C-SS1": {
+            "label": [
+                "in1 PSU 220V Rail (in)",
+                "in3 PSU 12V Rail (out)",
+                "fan1 PSU Fan 1",
+                "temp1 PSU Temp 1",
+                "temp2 PSU Temp 2",
+                "temp3 PSU Temp 3",
+                "power1 PSU 220V Rail Pwr (in)",
+                "power2 PSU 12V Rail Pwr (out)",
+                "curr1 PSU 220V Rail Curr (in)",
+                "curr2 PSU 12V Rail Curr (out)"
+            ],
+            "ignore": [
+                "in2",
+                "fan2",
+                "fan3"
+            ],
+            "set": [
+                "in3_lcrit in3_crit * 0.662",
+                "in3_min in3_crit * 0.745",
+                "in3_max in3_crit * 0.952"
+            ]
+        },
+        "MTEF-AC-E": {
+            "label": [
+                "in1 PSU 220V Rail (in)",
+                "in3 PSU 12V Rail (out)",
+                "fan1 PSU Fan 1",
+                "temp1 PSU Temp 1",
+                "temp2 PSU Temp 2",
+                "temp3 PSU Temp 3",
+                "power1 PSU 220V Rail Pwr (in)",
+                "power2 PSU 12V Rail Pwr (out)",
+                "curr1 PSU 220V Rail Curr (in)",
+                "curr2 PSU 12V Rail Curr (out)"
+            ]
+        },
+        "MTEF-AC-F": {
+            "label": [
+                "in1 PSU 220V Rail (in)",
+                "in3 PSU 12V Rail (out)",
+                "fan1 PSU Fan 1",
+                "temp1 PSU Temp 1",
+                "temp2 PSU Temp 2",
+                "temp3 PSU Temp 3",
+                "power1 PSU 220V Rail Pwr (in)",
+                "power2 PSU 12V Rail Pwr (out)",
+                "curr1 PSU 220V Rail Curr (in)",
+                "curr2 PSU 12V Rail Curr (out)"                    
+            ],
+            "ignore": [
+                "in2"
+            ]
+        },
+        "MTEF-AC-G-ACBEL": {
+            "label": [
+                "in1 PSU 220V Rail (in)",
+                "in2 PSU 12V Rail (out)",
+                "fan1 PSU Fan 1",
+                "temp1 PSU Temp 1",
+                "temp2 PSU Temp 2",
+                "power1 PSU 220V Rail Pwr (in)",
+                "power2 PSU 12V Rail Pwr (out)",
+                "curr1 PSU 220V Rail Curr (in)",
+                "curr2 PSU 12V Rail Curr (out)"
+            ]
+        },
+        "MTEF-AC-I": {
+
+        },
+        "MTEF-AC-M": {
+            "label": [
+                "in1  PSU 220V Rail(in)",
+                "in2  PSU 12V Rail(out)",
+                "fan1  PSU Fan1",
+                "temp1  PSU Temp1",
+                "temp2  PSU Temp2",
+                "temp3  PSU Temp3",
+                "curr1  PSU 220V Rail Curr(in)",
+                "curr2  PSU 12V Rail Curr(out)",
+                "power1  PSU 220V Rail Pwr(in)",
+                "power2  PSU 12V Rail Pwr(out)"
+            ],
+            "ignore": [
+                "in3", 
+                "curr3",
+                "power3"
+            ]
+        },
+        "930-9SPSU-00RA-00B" :{
+            "label": [
+                "in1 PSU 220V Rail (in)",
+                "in3 PSU 12V Rail (out)",
+                "fan1 PSU Fan 1",
+                "temp1 PSU Temp 1",
+                "temp2 PSU Temp 2",
+                "power1 PSU 220V Rail Pwr (in)",
+                "power2 PSU 12V Rail Pwr (out)",
+                "curr1 PSU 220V Rail Curr (in)",
+                "curr2 PSU 12V Rail Curr (out)"
+            ],
+            "ignore": [
+                "in2"
+            ],
+            "set": [
+                "power2_cap 0"
+            ]
+        }
+    }
+}

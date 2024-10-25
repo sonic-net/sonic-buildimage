@@ -1,0 +1,10 @@
+{
+   "FABRIC_MONITOR_DATA": {
+      "monErrThreshCrcCells": 1,
+      "monErrThreshRxCells": 61035156,
+      "monPollThreshRecovery": 8,
+      "monPollThreshIsolation": 1,
+      "monCapacityThreshWarn": 85,
+      "monState": "enable"
+   }
+}

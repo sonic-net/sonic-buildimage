@@ -42,6 +42,7 @@ expected_dhcp_config = {
         },
         "subnet4": [
             {
+                "id": 1000,
                 "subnet": "192.168.0.0/21",
                 "pools": [
                     {
@@ -314,7 +315,7 @@ def test_parse_port(test_config_db, mock_swsscommon_dbconnector_init, mock_get_r
     parsed_port, used_ranges = dhcp_cfg_generator._parse_port(ipv4_port, tested_vlan_interfaces, vlan_members,
                                                               tested_ranges)
     assert parsed_port == (expected_parsed_port if test_config_db == "mock_config_db.json" else {})
-    assert used_ranges == ({"range1", "range0", "range3"}
+    assert used_ranges == ({"range1", "range0", "range3", "range2", "range6"}
                            if test_config_db == "mock_config_db.json" else set())
 
 
@@ -366,7 +367,7 @@ def test_construct_obj_for_template(mock_swsscommon_dbconnector_init, mock_parse
                                                        port_ips, tested_hostname, customized_options)
     assert render_obj == expected_render_obj
     assert enabled_dhcp_interfaces == {"Vlan1000", "Vlan4000", "Vlan3000", "Vlan6000"}
-    assert used_options == set(["option223"])
+    assert used_options == set(["option223", "option60"])
     assert subscribe_table == set(PORT_MODE_CHECKER)
 
 
@@ -415,7 +416,7 @@ def test_parse_dpus(mock_swsscommon_dbconnector_init, mock_get_render_template, 
     dhcp_db_connector = DhcpDbConnector()
     dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so")
     dpus_table = {"dpu0": {"midplane_interface": "dpu0"}}
-    mid_plane_table = {"GLOBAL": {"bridge": "bridge_midplane", "ip_prefix": "169.254.200.254/24"}}
+    mid_plane_table = {"GLOBAL": {"bridge": "bridge-midplane", "ip_prefix": "169.254.200.254/24"}}
     mid_plane, dpus = dhcp_cfg_generator._parse_dpu(dpus_table, mid_plane_table)
-    assert mid_plane == {"bridge": "bridge_midplane", "ip_prefix": "169.254.200.254/24"}
+    assert mid_plane == {"bridge": "bridge-midplane", "ip_prefix": "169.254.200.254/24"}
     assert dpus == set(["dpu0"])

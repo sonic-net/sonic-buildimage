@@ -9,6 +9,8 @@ systemctl restart kmod
 systemctl enable nokia-7215init.service
 systemctl start nokia-7215init.service
 
+systemctl mask --now watchdog-control.service
+
 systemctl enable cpu_wdt.service
 systemctl start cpu_wdt.service
 

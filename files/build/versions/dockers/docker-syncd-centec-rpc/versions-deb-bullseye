@@ -26,7 +26,7 @@ libdpkg-perl==1.20.13
 libexpat1-dev==2.2.10-2+deb11u5
 libffi-dev==3.3-6
 libgcc-10-dev==10.2.1-6
-libglib2.0-0==2.66.8-1+deb11u3
+libglib2.0-0==2.66.8-1+deb11u4
 libgomp1==10.2.1-6
 libicu67==67.1-7
 libisl23==0.23-1
@@ -43,9 +43,9 @@ libpython2.7==2.7.18-8+deb11u1
 libpython2.7-dev==2.7.18-8+deb11u1
 libpython2.7-minimal==2.7.18-8+deb11u1
 libpython2.7-stdlib==2.7.18-8+deb11u1
-libqt5core5a==5.15.2+dfsg-9
-libqt5dbus5==5.15.2+dfsg-9
-libqt5network5==5.15.2+dfsg-9
+libqt5core5a==5.15.2+dfsg-9+deb11u1
+libqt5dbus5==5.15.2+dfsg-9+deb11u1
+libqt5network5==5.15.2+dfsg-9+deb11u1
 libquadmath0==10.2.1-6
 librhash0==1.4.1-2
 libssl-dev==1.1.1w-0+deb11u1
@@ -57,7 +57,7 @@ libtsan0==10.2.1-6
 libubsan1==10.2.1-6
 libuv1==1.40.0-2+deb11u1
 libxml2==2.9.10+dfsg-6.7+deb11u4
-linux-libc-dev==5.10.216-1
+linux-libc-dev==5.10.221-1
 mailcap==3.69
 make==4.3-4.1
 mime-support==3.66
