@@ -417,7 +417,7 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
 
     for intf in port_dict[INTF_KEY]:
         if intf not in hwsku_dict[INTF_KEY]:
-            raise Exception("{} is not available in hwsku_dict".format(intf))
+            continue
 
         # take default_brkout_mode from hwsku.json
         brkout_mode = hwsku_dict[INTF_KEY][intf][BRKOUT_MODE]
