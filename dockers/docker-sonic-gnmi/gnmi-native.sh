@@ -104,4 +104,10 @@ else
     fi
 fi
 
+# Add VRF parameter when mgmt-vrf enabled
+MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled"`
+if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
+    TELEMETRY_ARGS+=" -vrf=mgmt"
+fi
+
 exec /usr/sbin/telemetry ${TELEMETRY_ARGS}
