@@ -86,6 +86,7 @@ Table of Contents
          * [Virtual router](#virtual-router)
          * [LOGGER](#logger)
          * [WRED_PROFILE](#wred_profile)
+         * [XCVRD_LOG](#xcvrd_log)
          * [PASSWORD_HARDENING](#password_hardening)
          * [SSH_SERVER](#ssh_server)
          * [SYSTEM_DEFAULTS table](#systemdefaults-table)
