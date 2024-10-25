@@ -10,7 +10,6 @@
 #include <thread>
 #include <vector>
 
-#include "absl/time/time.h"
 #include "mock_reboot_interfaces.h"
 #include "reboot_common.h"
 #include "select.h"
