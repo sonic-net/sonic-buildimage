@@ -98,6 +98,7 @@ stages:
               rm -rf target/*.squashfs
               rm rules/config.user
               rm target/docker-sonic-gnmi.gz
+              rm -rf target/*.squashfs
               echo "==== Finished building slim images"
               echo "==== Building swi images"
               echo "INCLUDE_DHCP_SERVER = y" >> rules/config.user
