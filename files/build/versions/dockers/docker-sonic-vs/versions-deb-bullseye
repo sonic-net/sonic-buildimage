@@ -13,6 +13,7 @@ fontconfig-config==2.13.1-4.2
 fonts-dejavu-core==2.37-2
 fonts-font-awesome==5.0.10+really4.7.0~dfsg-4.1
 fonts-lato==2.0-2.1
+framework==1.0.0
 frr==8.5.4-sonic-0
 gettext-base==0.21-4
 gir1.2-glib-2.0==1.66.1-1+b1
