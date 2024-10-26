@@ -75,7 +75,7 @@ pluggy==0.13.0
 ply==3.11
 prompt-toolkit==3.0.14
 protobuf==4.25.4
-psutil==5.8.0
+psutil==6.0.0
 ptyprocess==0.7.0
 py==1.10.0
 pyang==2.4.0

@@ -1,5 +1,6 @@
 /*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+ * $Id: bcm-knet.h,v 1.4 Broadcom SDK $
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,12 +23,9 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/*
- * $Id: bcm-knet.h,v 1.4 Broadcom SDK $
- * $Copyright: (c) 2005 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
+ * 
  */
 #ifndef __LINUX_BCM_KNET_H__
 #define __LINUX_BCM_KNET_H__
@@ -50,8 +48,6 @@ typedef struct  {
  * Call-back interfaces for other Linux kernel drivers.
  */
 #include <linux/skbuff.h>
-#include <linux/netdevice.h>
-#include <kcom.h>
 
 typedef struct {
     uint32 netif_user_data;
@@ -66,6 +62,9 @@ typedef struct {
 
 typedef struct sk_buff *
 (*knet_skb_cb_f)(struct sk_buff *skb, int dev_no, void *meta);
+
+typedef int
+(*knet_netif_cb_f)(struct net_device *dev, int dev_no, kcom_netif_t *netif);
 
 typedef int
 (*knet_filter_cb_f)(uint8_t *pkt, int size, int dev_no, void *meta,
@@ -92,6 +91,9 @@ typedef int
 typedef int
 (*knet_hw_tstamp_ioctl_cmd_cb_f)(kcom_msg_clock_cmd_t *kmsg, int len, int dcb_type);
 
+typedef int
+(*knet_hw_tstamp_ptp_transport_get_cb_f)(uint8_t *pkt);
+
 extern int
 bkn_rx_skb_cb_register(knet_skb_cb_f rx_cb);
 
@@ -105,7 +107,22 @@ extern int
 bkn_tx_skb_cb_unregister(knet_skb_cb_f tx_cb);
 
 extern int
+bkn_netif_create_cb_register(knet_netif_cb_f netif_cb);
+
+extern int
+bkn_netif_create_cb_unregister(knet_netif_cb_f netif_cb);
+
+extern int
+bkn_netif_destroy_cb_register(knet_netif_cb_f netif_cb);
+
+extern int
+bkn_netif_destroy_cb_unregister(knet_netif_cb_f netif_cb);
+
+extern int
 bkn_filter_cb_register(knet_filter_cb_f filter_cb);
+
+extern int
+bkn_filter_cb_register_by_name(knet_filter_cb_f filter_cb, char *filter_name);
 
 extern int
 bkn_filter_cb_unregister(knet_filter_cb_f filter_cb);
@@ -157,31 +174,16 @@ bkn_hw_tstamp_ioctl_cmd_cb_register(knet_hw_tstamp_ioctl_cmd_cb_f hw_tstamp_ioct
 
 extern int
 bkn_hw_tstamp_ioctl_cmd_cb_unregister(knet_hw_tstamp_ioctl_cmd_cb_f hw_tstamp_ioctl_cmd_cb);
-typedef struct {
-    uint8 cmic_type;
-    uint8 dcb_type;
-    uint8 dcb_size;
-    uint8 pkt_hdr_size;
-    uint32 cdma_channels;
-} knet_hw_info_t;
 
 extern int
-bkn_hw_info_get(int unit, knet_hw_info_t *hw_info);
-
-typedef int
-(*knet_netif_cb_f)(int unit, kcom_netif_t *netif, struct net_device *dev);
+bkn_hw_tstamp_ptp_transport_get_cb_register(knet_hw_tstamp_ptp_transport_get_cb_f hw_tstamp_ptp_transport_get_cb);
 
 extern int
-bkn_netif_create_cb_register(knet_netif_cb_f netif_cb);
+bkn_hw_tstamp_ptp_transport_get_cb_unregister(knet_hw_tstamp_ptp_transport_get_cb_f hw_tstamp_ptp_transport_get_cb);
 
 extern int
-bkn_netif_create_cb_unregister(knet_netif_cb_f netif_cb);
+bkn_hw_device_get(int dev_no, uint16_t *dev_id, uint8_t *rev_id);
 
-extern int
-bkn_netif_destroy_cb_register(knet_netif_cb_f netif_cb);
-
-extern int
-bkn_netif_destroy_cb_unregister(knet_netif_cb_f netif_cb);
 #endif
 
 #endif /* __LINUX_BCM_KNET_H__ */

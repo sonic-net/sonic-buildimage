@@ -2,7 +2,6 @@ MAKEFILE_FILE_PATH = $(abspath $(lastword $(MAKEFILE_LIST)))
 MODULES_DIR = $(abspath $(MAKEFILE_FILE_PATH)/../../../../common/modules)
 
 EXTRA_CFLAGS+= -I$(MODULES_DIR)
-EXTRA_CFLAGS+= -I$(MODULES_DIR)/linux
 
 obj-m :=  wb_pcie_dev_device.o
 obj-m += wb_i2c_mux_pca954x_device.o

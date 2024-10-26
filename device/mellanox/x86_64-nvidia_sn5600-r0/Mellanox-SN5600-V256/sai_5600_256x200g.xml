@@ -27,6 +27,9 @@
         <!-- Number of ports in the following port list -->
         <number-of-physical-ports>65</number-of-physical-ports>
 
+        <!-- Global port late create -->
+        <late-create-all-ports>1</late-create-all-ports>
+
         <!-- List of ports in the device -->
         <ports-list>
             <port-info>
