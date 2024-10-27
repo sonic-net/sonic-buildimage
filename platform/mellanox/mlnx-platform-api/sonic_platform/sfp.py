@@ -1314,7 +1314,10 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if the api object supports software control
         """
-        return self.is_cmis_api(xcvr_api) and not xcvr_api.is_flat_memory()
+        if xcvr_api.is_flat_memory():
+            return self.is_cmis_api(xcvr_api) or self.is_sff_api(xcvr_api)
+        else:
+            return self.is_cmis_api(xcvr_api)
 
     def check_power_capability(self):
         """Check module max power with cage power limit
