@@ -225,10 +225,6 @@ case $1 in
                     shift;
                     arg_port_list=$1
                 ;;
-                --ports)
-                    shift;
-                    arg_port_list=$1
-                ;;
                 --nofwctrl)
                     fw_change="disable"
                 ;;
