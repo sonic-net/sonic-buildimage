@@ -253,6 +253,17 @@ elif [ "$IMAGE_TYPE" = "dsc" ]; then
 
     generate_onie_installer_image
 
+elif [ "$IMAGE_TYPE" = "bfb" ]; then
+    echo "Build BFB installer"
+
+    if [[ $SECURE_UPGRADE_MODE != "no_sign" ]]; then
+         secure_upgrade_keys="--signing-key "$SECURE_UPGRADE_DEV_SIGNING_KEY" --signing-cert "$SECURE_UPGRADE_SIGNING_CERT""
+    fi
+
+    sudo -E ./platform/${CONFIGURED_PLATFORM}/installer/create_sonic_image --kernel $KVERSION "$secure_upgrade_keys"
+
+    sudo chown $USER $OUTPUT_BFB_IMAGE
+
 else
     echo "Error: Non supported image type $IMAGE_TYPE"
     exit 1

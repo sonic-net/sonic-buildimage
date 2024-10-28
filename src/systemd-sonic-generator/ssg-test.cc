@@ -53,7 +53,8 @@ const std::string TEST_ASIC_CONF = TEST_PLATFORM_DIR + "asic.conf";
 const std::string TEST_PLATFORM_CONF = TEST_PLATFORM_DIR + "platform.json";
 
 const std::string TEST_OUTPUT_DIR = TEST_ROOT_DIR + "generator/";
-const std::string TEST_ETC_NETWORK = TEST_OUTPUT_DIR + "network/"; 
+const std::string TEST_ETC_NETWORK = TEST_OUTPUT_DIR + "network/";
+const std::string TEST_ETC_SYSTEM = TEST_OUTPUT_DIR + "system/";
 
 const std::string TEST_CONFIG_FILE = TEST_ROOT_DIR + "generated_services.conf";
 
@@ -167,6 +168,8 @@ class SsgFunctionTest : public SystemdSonicGeneratorFixture {
         fs::create_directories(path);
         path = fs::path(TEST_ETC_NETWORK.c_str());
         fs::create_directories(path);
+        path = fs::path(TEST_ETC_SYSTEM.c_str());
+        fs::create_directories(path);
         fp = fopen(TEST_MACHINE_CONF.c_str(), "w");
         ASSERT_NE(fp, nullptr);
         fputs("onie_platform=test_platform", fp);
@@ -266,7 +269,8 @@ class SsgMainTest : public SsgFunctionTest {
     void validate_output_unit_files(std::vector<std::string> strs,
                               std::string target,
                               bool expected_result,
-                              int num_instances) {
+                              int num_instances,
+                              bool dev_null_as_inexistent = true) {
         for (std::string str : strs) {
             bool finished = false;
             for (int i = 0 ; i < num_instances && !finished; ++i) {
@@ -279,9 +283,14 @@ class SsgMainTest : public SsgFunctionTest {
                     finished = true;
                 }
                 fs::path path{TEST_OUTPUT_DIR + target + "/" + str_t};
-                char resolved_path[PATH_MAX];
-                realpath(path.c_str(), resolved_path);
-                bool exist = fs::exists(path) && strcmp(resolved_path, "/dev/null") != 0;
+                bool exist = fs::exists(path);
+                if (exist) {
+                    char resolved_path[PATH_MAX] = { 0 };
+                    realpath(path.c_str(), resolved_path);
+                    if (strcmp(resolved_path, "/dev/null") == 0) {
+                        exist = !dev_null_as_inexistent;
+                    }
+                }
                 EXPECT_EQ(exist, expected_result)
                     << "Failed validation: " << path;
             }
@@ -351,6 +360,8 @@ class SsgMainTest : public SsgFunctionTest {
             test_target, cfg.is_smart_switch_dpu, cfg.num_dpus);
         validate_output_unit_files(dpu_network_service_list,
             "network", cfg.is_smart_switch_dpu, cfg.num_dpus);
+        validate_output_unit_files(non_smart_switch_service_list,
+            "system", !cfg.is_smart_switch_npu && !cfg.is_smart_switch_dpu, cfg.num_dpus, false);
     }
 
     /* ssg_main test routine.
@@ -432,6 +443,7 @@ class SsgMainTest : public SsgFunctionTest {
         for (const auto &service : disabled_service) {
             fs::create_symlink("/dev/null", TEST_ETC_NETWORK + service);
         }
+        fs::create_symlink("/dev/null", TEST_ETC_SYSTEM + "systemd-networkd.service");
     }
 
     /* Restore global vars */
@@ -444,6 +456,7 @@ class SsgMainTest : public SsgFunctionTest {
     static const std::vector<std::string> single_asic_service_list;
     static const std::vector<std::string> multi_asic_service_list;
     static const std::vector<std::string> common_service_list;
+    static const std::vector<std::string> non_smart_switch_service_list;
     static const std::vector<std::string> npu_service_list;
     static const std::vector<std::string> npu_network_service_list;
     static const std::vector<std::string> dpu_service_list;
@@ -486,6 +499,13 @@ SsgMainTest::common_service_list = {
     "test.service",
     "database.service",
 };
+
+/* Systemd service list for non Smart Switch */
+const std::vector<std::string>
+SsgMainTest::non_smart_switch_service_list = {
+    "systemd-networkd.service"
+};
+
 
 /* Systemd service Unit file list for Smart Switch NPU. */
 const std::vector<std::string>

@@ -30,7 +30,6 @@ class SfpData:
         self.name = name
         self.thermals = thermals
 
-
 class DeviceDataManager:
 
     def __init__(self):

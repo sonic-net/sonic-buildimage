@@ -13,7 +13,7 @@ libprotobuf-dev==3.21.12-3
 libprotobuf-lite32==3.21.12-3
 libprotobuf32==3.21.12-3
 libprotoc32==3.21.12-3
-libsai==1.13.0-1
+libsai==1.10.1-0
 libsai-dev==1.13.0-1
 libsaimetadata==1.0.0
 libsaimetadata-dev==1.0.0

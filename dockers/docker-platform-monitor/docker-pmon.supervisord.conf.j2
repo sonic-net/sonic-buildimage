@@ -28,7 +28,7 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
 
-{% if not skip_chassisd and IS_MODULAR_CHASSIS == 1 %}
+{% if not skip_chassisd and (IS_MODULAR_CHASSIS == 1 or is_smartswitch) %}
 [program:chassisd]
 command=/usr/local/bin/chassisd
 priority=3

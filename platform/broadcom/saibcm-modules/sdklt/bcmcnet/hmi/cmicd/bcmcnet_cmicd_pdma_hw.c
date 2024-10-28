@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <bcmcnet/bcmcnet_core.h>
@@ -100,16 +100,16 @@ cmicd_pdma_hw_init(struct pdma_hw *hw)
         hw->dev->mode = DEV_MODE_UNET;
     }
 
-    /*
-     * FIXME: SDKLT-27954 SDKLT-27956
-     *
-     * credit release is invoked by cmic_edb_credit_refresh() in
-     * bcmtm_internal_port_up().
-     *
-     * But, bcmtm_internal_port_up() is missed in bcm56960_a0.
-     *
-     * Need to remove credit release once all CMICd chipsets are fixed.
-     */
+
+
+
+
+
+
+
+
+
+
 
     /* Release credits to EP. Only do this once when HW is initialized. */
     hw->hdls.reg_rd32(hw, CMICD_EPINTF_RELEASE_CREDITS, &val);

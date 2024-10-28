@@ -1,5 +1,6 @@
 /*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+ * $Id: linux-user-bde.h,v 1.23 Broadcom SDK $
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,12 +23,9 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/*
- * $Id: linux-user-bde.h,v 1.23 Broadcom SDK $
- * $Copyright: (c) 2005 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
+ * 
  */
 
 #ifndef __LINUX_USER_BDE_H__
@@ -80,6 +78,9 @@ typedef struct  {
 #define LUBDE_GET_DEVICE_TYPE           _IO(LUBDE_MAGIC, 12)
 #define LUBDE_SPI_READ_REG              _IO(LUBDE_MAGIC, 13)
 #define LUBDE_SPI_WRITE_REG             _IO(LUBDE_MAGIC, 14)
+#ifdef INCLUDE_SRAM_DMA
+#define LUBDE_GET_DEV_DMA_INFO          _IO(LUBDE_MAGIC, 18)
+#endif
 #define LUBDE_READ_REG_16BIT_BUS        _IO(LUBDE_MAGIC, 19)
 #define LUBDE_WRITE_REG_16BIT_BUS       _IO(LUBDE_MAGIC, 20)
 #define LUBDE_GET_BUS_FEATURES          _IO(LUBDE_MAGIC, 21)
@@ -99,11 +100,16 @@ typedef struct  {
 #define LUBDE_WAIT_FOR_EDK_INTERRUPT    _IO(LUBDE_MAGIC, 35)
 #define LUBDE_ATTACH_EDK_INSTANCE       _IO(LUBDE_MAGIC, 36)
 #define LUBDE_GET_EDK_DMA_INFO          _IO(LUBDE_MAGIC, 37)
+#define LUBDE_GET_DEVICE_PCI_INFO       _IO(LUBDE_MAGIC, 38)
+#define LUBDE_BAR2_READ32               _IO(LUBDE_MAGIC, 39)
+#define LUBDE_BAR2_WRITE32              _IO(LUBDE_MAGIC, 40)
+#define LUBDE_BAR2_READ64               _IO(LUBDE_MAGIC, 41)
+#define LUBDE_BAR2_WRITE64              _IO(LUBDE_MAGIC, 42)
 
 
 #define LUBDE_SEM_OP_CREATE       1
 #define LUBDE_SEM_OP_DESTROY      2
-#define LUBDE_SEM_OP_TAKE         3
+ #define LUBDE_SEM_OP_TAKE         3
 #define LUBDE_SEM_OP_GIVE         4
 
 #define LUBDE_SUCCESS 0

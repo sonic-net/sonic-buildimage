@@ -62,8 +62,8 @@ class WaitSfpReadyTask(threading.Thread):
         """
         logger.log_debug(f'SFP {sfp_index} is scheduled for waiting reset done')
         with self.lock:
-            if len(self._wait_dict) == 0:
-                is_empty = True
+            is_empty = len(self._wait_dict) == 0
+  
             # The item will be expired in 3 seconds
             self._wait_dict[sfp_index] = time.time() + self.WAIT_TIME
 

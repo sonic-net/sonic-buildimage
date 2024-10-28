@@ -22,5 +22,5 @@ SHELL = /bin/bash
 MAIN_TARGET = component-versions
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
-	./create_component_versions.sh $(MLNX_SDK_VERSION) $(MLNX_SPC_FW_VERSION) $(MLNX_SAI_VERSION) $(MLNX_HW_MANAGEMENT_VERSION) $(MFT_VERSION) $(MFT_REVISION) $(KVERSION_SHORT)
+	./create_component_versions.sh $(MLNX_SDK_VERSION) $(MLNX_SPC_FW_VERSION) $(MLNX_SAI_VERSION) $(MLNX_HW_MANAGEMENT_VERSION) $(MFT_VERSION) $(MFT_REVISION) $(KVERSION_SHORT) $(SIMX_VERSION)
 	mv temp_versions_file $(DEST)/$(MAIN_TARGET)

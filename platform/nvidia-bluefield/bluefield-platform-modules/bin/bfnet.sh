@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+pci_iface=eth0-midplane
 cp_iface=Ethernet0
 pidfile=/run/dhcl-internal.$cp_iface.pid
 leasefile=/var/lib/dhcp/dhcl-internal.$cp_iface.leases
@@ -55,12 +56,23 @@ stop()
     rmmod mlx5_ib mlx5_core
 }
 
+configure_pci_iface()
+{
+    mgmt_mac=$(cat /sys/devices/platform/MLNXBF17:00/net/*/address)
+
+    # Set PCI interface MAC address to the MAC address of the mgmt interface
+    ip link set dev $pci_iface address $mgmt_mac
+}
+
 case "$1" in
     start|stop)
         $1
         ;;
+    configure-pci-iface)
+        configure_pci_iface
+        ;;
     *)
-        echo "Usage: $0 {start|stop}"
+        echo "Usage: $0 {start|stop|configure-pci-iface}"
         exit 1
         ;;
 esac

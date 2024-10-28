@@ -42,6 +42,9 @@ DEFAULT_BUILD_LOG_TIMESTAMP = none
 # CHANGE_DEFAULT_PASSWORD - enforce default user/users to change password on 1st login
 CHANGE_DEFAULT_PASSWORD ?= n
 
+# Default value for SMARTSWITCH
+SMARTSWITCH ?= 0
+
 # DEFAULT_USERNAME - default username for installer build
 DEFAULT_USERNAME = admin
 
@@ -151,6 +154,11 @@ INCLUDE_DHCP_RELAY = y
 
 # INCLUDE_DHCP_SERVER - build and install dhcp-server package
 INCLUDE_DHCP_SERVER ?= n
+
+# Conditionally enable DHCP_SERVER when SMARTSWITCH is set to 1
+ifeq ($(SMARTSWITCH), 1)
+    INCLUDE_DHCP_SERVER = y
+endif
 
 # INCLUDE_P4RT - build docker-p4rt for P4RT support
 INCLUDE_P4RT = n
@@ -320,3 +328,6 @@ BUILD_REDUCE_IMAGE_SIZE = n
 # SONIC_PTF_ENV_PY_VER - SONiC PTF test Python version. Set to 'mixed' to build the 
 # image with both Python 2 and 3. Set to 'py3' to build a Python 3 only image
 SONIC_PTF_ENV_PY_VER = mixed
+
+# Add timeout on some process which may hangs
+BUILD_PROCESS_TIMEOUT ?= 0

@@ -19,7 +19,9 @@
     delaycompress
     sharedscripts
     postrotate
-        /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+        if [ -f /var/run/rsyslogd.pid ]; then
+            /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+        fi
     endscript
 }
 
@@ -85,7 +87,7 @@
             if [ $USED_KB -lt $THRESHOLD_KB ]; then
                 break
             else
-                OLDEST_ARCHIVE_FILE=$(find /var/log -type f -printf '%T+ %p\n' | grep -E '.+\.[0-9]+(\.gz)?$' | sort | head -n 1 | awk '{ print $2; }')
+                OLDEST_ARCHIVE_FILE=$(find /var/log -type f -printf '%T+ %p\n' | grep -E '.+\.[0-9]+(\.gz)?$' | sort  | awk 'NR == 1 {print $2}')
 
                 if [ -z "$OLDEST_ARCHIVE_FILE" ]; then
                     logger -p syslog.err -t "logrotate" "No archive file to delete -- potential for filling up /var/log partition!"
@@ -116,7 +118,9 @@
                 pgrep -x orchagent | xargs /bin/kill -HUP 2>/dev/null || true
             fi
         else
-            /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+            if [ -f /var/run/rsyslogd.pid ]; then
+                /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+            fi
         fi
     endscript
 }

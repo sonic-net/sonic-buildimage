@@ -128,10 +128,6 @@ class Chassis(ChassisBase):
         if self.sfp_event:
             self.sfp_event.deinitialize()
 
-        if self._sfp_list:
-            if self.sfp_module.SFP.shared_sdk_handle:
-                self.sfp_module.deinitialize_sdk_handle(self.sfp_module.SFP.shared_sdk_handle)
-
     @property
     def RJ45_port_list(self):
         if not self._RJ45_port_inited:
@@ -475,6 +471,8 @@ class Chassis(ChassisBase):
                 if fd_type == 'hw_present':
                     # event could be EVENT_NOT_PRESENT or EVENT_PRESENT
                     event = sfp.EVENT_NOT_PRESENT if fd_value == 0 else sfp.EVENT_PRESENT
+                    if fd_value == 1:
+                        s.processing_insert_event = True
                     s.on_event(event)
                 elif fd_type == 'present':
                     if str(fd_value) == sfp.SFP_STATUS_ERROR:
@@ -499,16 +497,18 @@ class Chassis(ChassisBase):
                     s.on_event(event)
                     
                 if s.in_stable_state():
+                    self.sfp_module.SFP.wait_sfp_eeprom_ready([s], 2)
                     s.fill_change_event(port_dict)
                     s.refresh_poll_obj(self.poll_obj, self.registered_fds)
                 else:
                     logger.log_debug(f'SFP {sfp_index} does not reach stable state, state={s.state}')
-                                        
+                    
             ready_sfp_set = wait_ready_task.get_ready_set()
             for sfp_index in ready_sfp_set:
                 s = self._sfp_list[sfp_index]
                 s.on_event(sfp.EVENT_RESET_DONE)
                 if s.in_stable_state():
+                    self.sfp_module.SFP.wait_sfp_eeprom_ready([s], 2)
                     s.fill_change_event(port_dict)
                     s.refresh_poll_obj(self.poll_obj, self.registered_fds)
                 else:

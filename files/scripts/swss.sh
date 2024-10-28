@@ -242,6 +242,17 @@ function clean_up_chassis_db_tables()
 
 }
 
+is_feature_enabled()
+{
+    s=$1
+    service=${s%@*}
+    state=$(sonic-db-cli CONFIG_DB hget "FEATURE|${service}" "state")
+    if [[ $state == "enabled" ]]; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
 start_peer_and_dependent_services() {
     check_warm_boot
 
@@ -254,7 +265,14 @@ start_peer_and_dependent_services() {
             fi
         done
         for dep in ${DEPENDENT}; do
-            /bin/systemctl start ${dep}
+            if [[ $dep == "dhcp_relay" ]]; then
+                state=$(is_feature_enabled $dep)
+                if [[ $state == "true" ]]; then
+                    /bin/systemctl start ${dep}
+                fi
+            else
+                /bin/systemctl start ${dep}
+            fi
         done
         for dep in ${MULTI_INST_DEPENDENT}; do
             if [[ ! -z $DEV ]]; then
@@ -310,7 +328,7 @@ start() {
         $SONIC_DB_CLI GB_ASIC_DB FLUSHDB
         $SONIC_DB_CLI GB_COUNTERS_DB FLUSHDB
         $SONIC_DB_CLI RESTAPI_DB FLUSHDB
-        clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*', 'SYSTEM_NEIGH_TABLE*', 'FABRIC_PORT_TABLE*'"
+        clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*', 'SYSTEM_NEIGH_TABLE*', 'FABRIC_PORT_TABLE*', 'TUNNEL_DECAP_TABLE*', 'TUNNEL_DECAP_TERM_TABLE*'"
         $SONIC_DB_CLI APPL_STATE_DB FLUSHDB
         clean_up_chassis_db_tables
         rm -rf /tmp/cache

@@ -104,7 +104,7 @@ class TestVoqChassisSingleAsic(TestChassis):
         argument = ['-m', self.sample_graph, '-p',
                     self.sample_port_config, '--var-json', 'NTP_SERVER']
         output = json.loads(self.run_script(argument))
-        self.assertDictEqual(output, {'17.39.1.130': {}, '17.39.1.129': {}})
+        self.assertDictEqual(output, {'17.39.1.130': {'iburst': 'on'}, '17.39.1.129': {'iburst': 'on'}})
         # NTP data is present only in the host config
         argument = ['-m', self.sample_graph, '--var-json', 'NTP_SERVER']
 
@@ -182,7 +182,7 @@ class TestVoqChassisSingleAsic(TestChassis):
         expected_output_file = os.path.join(
             self.test_data_dir, 'system_ports.json')
         self.run_script(argument, output_file=self.output_file)
-        self.assertTrue(self.run_diff(expected_output_file, self.output_file))
+        self.assertFalse(self.run_diff(expected_output_file, self.output_file))
         if os.path.exists(self.output_file):
             os.remove(self.output_file)
 
@@ -416,7 +416,7 @@ class TestVoqChassisMultiAsic(TestChassis):
         argument = ['-m', self.sample_graph, '-p',
                     self.sample_port_config, '--var-json', 'NTP_SERVER']
         output = json.loads(self.run_script(argument))
-        self.assertDictEqual(output, {'17.39.1.130': {}, '17.39.1.129': {}})
+        self.assertDictEqual(output, {'17.39.1.130': {'iburst': 'on'}, '17.39.1.129': {'iburst': 'on'}})
         # NTP data is present only in the host config
         argument = ['-m', self.sample_graph, '--var-json', 'NTP_SERVER']
 
@@ -433,7 +433,6 @@ class TestVoqChassisMultiAsic(TestChassis):
         output = json.loads(self.run_script(argument))
         print(output['localhost'])
         self.assertDictEqual(output['localhost'], {
-            'bgp_asn': None,
             'region': 'test',
             'cloudtype': 'Public',
             'docker_routing_config_mode': 'separated',
@@ -480,11 +479,11 @@ class TestVoqChassisMultiAsic(TestChassis):
         argument = ['-m', self.sample_graph,
                     '-p', self.sample_port_config,
                     '-n', 'asic0',
-                    '--var-json', 'DEVICE_METADATA']
+                    '--var-json', 'SYSTEM_PORT']
         expected_output_file = os.path.join(
             self.test_data_dir, 'system_ports.json')
         self.run_script(argument, output_file=self.output_file)
-        self.assertTrue(self.run_diff(expected_output_file, self.output_file))
+        self.assertFalse(self.run_diff(expected_output_file, self.output_file))
         if os.path.exists(self.output_file):
             os.remove(self.output_file)
 
@@ -885,7 +884,7 @@ class TestVoqChassisSup(TestChassis):
             '--var-json', 'NTP_SERVER'
         ]
         output = json.loads(self.run_script(argument))
-        self.assertDictEqual(output, {'17.39.1.130': {}, '17.39.1.129': {}})
+        self.assertDictEqual(output, {'17.39.1.130': {'iburst': 'on'}, '17.39.1.129': {'iburst': 'on'}})
 
 
     def test_mgmt_port(self):
@@ -910,7 +909,6 @@ class TestVoqChassisSup(TestChassis):
         print(output['localhost'])
         self.assertDictEqual(output['localhost'], 
             {
-                "bgp_asn": None,
                 "region": "test",
                 "cloudtype": "Public",
                 "docker_routing_config_mode": "separated",
@@ -938,7 +936,6 @@ class TestVoqChassisSup(TestChassis):
         print(output['localhost'])
         self.assertDictEqual(output['localhost'], 
             {
-                "bgp_asn": None,
                 "region": "test",
                 "cloudtype": None,
                 "docker_routing_config_mode": "separated",
@@ -1022,7 +1019,7 @@ class TestPacketChassisSup(TestChassis):
             '--var-json', 'NTP_SERVER'
         ]
         output = json.loads(self.run_script(argument))
-        self.assertDictEqual(output, {'17.39.1.130': {}, '17.39.1.129': {}})
+        self.assertDictEqual(output, {'17.39.1.130': {'iburst': 'on'}, '17.39.1.129': {'iburst': 'on'}})
         # NTP data is present only in the host config
         argument = ['-m', self.sample_graph, '--var-json', 'NTP_SERVER']
 
@@ -1046,7 +1043,6 @@ class TestPacketChassisSup(TestChassis):
         print(output['localhost'])
         self.assertDictEqual(output['localhost'], 
             {
-                "bgp_asn": None,
                 "region": "test",
                 "cloudtype": "Public",
                 "docker_routing_config_mode": "separated",
@@ -1074,7 +1070,6 @@ class TestPacketChassisSup(TestChassis):
         print(output['localhost'])
         self.assertDictEqual(output['localhost'], 
             {
-                "bgp_asn": None,
                 "region": "test",
                 "cloudtype": None,
                 "docker_routing_config_mode": "separated",
