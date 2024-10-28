@@ -104,6 +104,10 @@ sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/sonic-nettools_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
 sudo setcap 'cap_net_raw=+ep' $FILESYSTEM_ROOT/usr/bin/wol
 
+# This is needed for moving monit logs, state and logrotate status to tmpfs
+sudo mkdir -p $FILESYSTEM_ROOT/dev/shm/monit/
+sudo mkdir -p $FILESYSTEM_ROOT/dev/shm/logrotate/
+
 # Install a patched version of ifupdown2  (and its dependencies via 'apt-get -y install -f')
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/ifupdown2_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
