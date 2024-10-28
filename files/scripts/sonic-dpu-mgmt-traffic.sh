@@ -166,7 +166,7 @@ ctrl_dpu_ib_forwarding(){
     local dest_port=22
     control_forwarding $op
     add_rem_valid_iptable $op filter FORWARD -i ${midplane_iface} -o ${mgmt_iface} -p tcp -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-    add_rem_valid_iptable $op filter FORWARD -i ${mgmt_iface} -o ${midplane_iface} -p tcp --dport $dest_port -m conntrack --ctstate NEW,RELATED,ESTABLISHED -j ACCEPT
+    add_rem_valid_iptable $op filter FORWARD -i ${mgmt_iface} -o ${midplane_iface} -p tcp --dport $dest_port -j ACCEPT
     for index in ${!sel_dpu_names[@]}; do
         dpu_name="${sel_dpu_names[$index]}"
         dpu_midplane_ip="${midplane_ip_dict[$dpu_name]}"
