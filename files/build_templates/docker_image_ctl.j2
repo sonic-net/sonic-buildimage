@@ -644,6 +644,7 @@ start() {
         -v /var/run/hw-management:/var/run/hw-management:rw \
         -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/:/tmp \
+        -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket \
         -v /dev/shm:/dev/shm:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
         -v /dev/shm:/dev/shm:rw \
