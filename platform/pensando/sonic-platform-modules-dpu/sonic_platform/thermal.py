@@ -29,6 +29,8 @@ class Thermal(ThermalBase):
     ]
 
     SENSOR_MAPPING_MTFUJI = [
+        ["Die temperature", "/sys/class/hwmon/hwmon0/temp2_input"],
+        ["Board temperature", "/sys/class/hwmon/hwmon0/temp1_input"],
         ["Thermal sensor 1", "/sys/class/hwmon/hwmon0/temp1_input"],
         ["Thermal sensor 2", "/sys/class/hwmon/hwmon1/temp1_input"],
         ["Thermal sensor 3", "/sys/class/hwmon/hwmon2/temp1_input"]
