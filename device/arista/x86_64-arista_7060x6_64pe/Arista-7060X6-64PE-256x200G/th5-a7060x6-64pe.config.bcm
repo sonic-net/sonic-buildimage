@@ -1907,14 +1907,25 @@ bcm_device:
     0:
         global:
             ftem_mem_entries: 65536
+            sai_stats_support_mask: 0
+            global_flexctr_ing_action_num_reserved: 20
+            global_flexctr_ing_pool_num_reserved: 8
+            global_flexctr_ing_op_profile_num_reserved: 20
+            global_flexctr_ing_group_num_reserved: 2
+            global_flexctr_egr_action_num_reserved: 8
+            global_flexctr_egr_pool_num_reserved: 5
+            global_flexctr_egr_op_profile_num_reserved: 10
+            global_flexctr_egr_group_num_reserved: 1
 ...
 ---
 device:
     0:
         # Per pipe flex counter configuration
         CTR_EFLEX_CONFIG:
-            CTR_ING_EFLEX_OPERMODE_PIPEUNIQUE: 0
-            CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 0
+            CTR_ING_EFLEX_OPERMODE_PIPEUNIQUE: 1
+            CTR_ING_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
+            CTR_EGR_EFLEX_OPERMODE_PIPEUNIQUE: 1
+            CTR_EGR_EFLEX_OPERMODE_PIPE_INSTANCE_UNIQUE: 1
 
         # IFP mode
         FP_CONFIG:
@@ -2667,6 +2678,23 @@ device:
                 RED_LIMIT_DYNAMIC: PERCENTAGE_625
             ?
                 PORT_ID: [[1,8], [11,18], [22,29], [33,40], [44,51], [55,62], [66,73], [77,84], [88,95], [99,106], [110,117], [121,128], [132,139], [143,150], [154,161], [165,172]]
+                TM_UC_Q_ID: [8,9]
+            :
+                MIN_GUARANTEE_CELLS: 0
+                SHARED_LIMITS: 1
+                DYNAMIC_SHARED_LIMITS: 1
+                SHARED_LIMIT_CELLS_STATIC: 0
+                SHARED_LIMIT_DYNAMIC: ALPHA_1
+                DYNAMIC_GROUP: MID_PRI_GROUP
+                RESUME_OFFSET_CELLS: 2
+                COLOR_SPECIFIC_LIMITS: 0
+                COLOR_SPECIFIC_DYNAMIC_LIMITS: 0
+                YELLOW_LIMIT_CELLS_STATIC: 0
+                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
+                RED_LIMIT_CELLS_STATIC: 0
+                RED_LIMIT_DYNAMIC: PERCENTAGE_625
+            ?
+                PORT_ID: [[1,8], [11,18], [22,29], [33,40], [44,51], [55,62], [66,73], [77,84], [88,95], [99,106], [110,117], [121,128], [132,139], [143,150], [154,161], [165,172]]
                 TM_UC_Q_ID: [3,4]
             :
                 MIN_GUARANTEE_CELLS: 0
@@ -2684,6 +2712,23 @@ device:
                 TM_UC_Q_ID: [0, 1, 2, 5, 6, 7]
             :
                 MIN_GUARANTEE_CELLS: 7
+                SHARED_LIMITS: 1
+                DYNAMIC_SHARED_LIMITS: 1
+                SHARED_LIMIT_CELLS_STATIC: 0
+                SHARED_LIMIT_DYNAMIC: ALPHA_1
+                DYNAMIC_GROUP: MID_PRI_GROUP
+                RESUME_OFFSET_CELLS: 2
+                COLOR_SPECIFIC_LIMITS: 0
+                COLOR_SPECIFIC_DYNAMIC_LIMITS: 0
+                YELLOW_LIMIT_CELLS_STATIC: 0
+                YELLOW_LIMIT_DYNAMIC: PERCENTAGE_750
+                RED_LIMIT_CELLS_STATIC: 0
+                RED_LIMIT_DYNAMIC: PERCENTAGE_625
+            ?
+                PORT_ID: [[176,183], [187,194], [198,205], [209,216], [220,227], [231,238], [242,249], [253,260], [264,271], [275,282], [286,293], [297,304], [308,315], [319,326], [330,337], [341,348]]
+                TM_UC_Q_ID: [8,9]
+            :
+                MIN_GUARANTEE_CELLS: 0
                 SHARED_LIMITS: 1
                 DYNAMIC_SHARED_LIMITS: 1
                 SHARED_LIMIT_CELLS_STATIC: 0
@@ -3074,4 +3119,3 @@ device:
                 TRAFFIC_CLASS: OBM_TC_LOSSLESS0
         
 ...
-
