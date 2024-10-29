@@ -1,4 +1,3 @@
-cancun_dir=/usr/share/sonic/platform/cancun/sdk_6.5.16/
 l2_mem_entries=32768
 l3_mem_entries=16384
 l3_alpm_enable=2
