@@ -77,6 +77,7 @@ class DpuCtlPlat():
     def __init__(self, dpu_name):
         self.dpu_name = dpu_name
         self._name = self.get_hwmgmt_name()
+        self.dpu_id = int(self.dpu_name[3:])
         self.rst_path = os.path.join(SYSTEM_BASE,
                                      f"{self._name}_rst")
         self.pwr_path = os.path.join(SYSTEM_BASE,
@@ -111,6 +112,8 @@ class DpuCtlPlat():
         self.shtdn_state = None
         self.dpu_ready_state = None
         self.setup_logger()
+        # Use systemd dbus to execute start and stop rshim service
+        os.environ['DBUS_SESSION_BUS_ADDRESS'] = 'unix:path=/run/dbus/system_bus_socket'
         self.verbosity = False
 
     def setup_logger(self, use_print=False):
@@ -134,12 +137,14 @@ class DpuCtlPlat():
     def log_error(self, msg=None):
         self.logger_error(f"{self.dpu_name}: {msg}")
 
-    def run_cmd_output(self, cmd):
+    def run_cmd_output(self, cmd, raise_exception = True):
         try:
-            subprocess.check_output(cmd)
+            return subprocess.check_output(cmd).decode().strip()
         except Exception as err:
-            self.log_error(f"Failed to run cmd {' '.join(cmd)}")
-            raise err
+            if raise_exception:
+                raise err
+            else:
+                self.log_debug(f"Failed to run cmd {' '.join(cmd)}")
 
     def dpu_pre_shutdown(self):
         """Method to execute shutdown activities for the DPU"""
@@ -149,18 +154,22 @@ class DpuCtlPlat():
     def dpu_post_startup(self):
         """Method to execute all post startup activities for the DPU"""
         self.dpu_pci_scan()
-        self.wait_for_pci()
-        self.dpu_rshim_service_control("start")
-
-    def dpu_rshim_service_control(self, set_state):
+        if self.wait_for_pci():
+            self.dpu_rshim_service_control("start")
+ 
+    def dpu_rshim_service_control(self, op):
         """Start/Stop the RSHIM service for the current DPU"""
         try:
-            cmd = ['systemctl', set_state, dpu_map[self.get_hwmgmt_name()]['rshim'] + ".service"]
-            self.run_cmd_output(cmd)
-            self.log_debug(f"Executed rshim service command: {' '.join(cmd)}")
-        except Exception:
-            self.log_error(f"Failed to start rshim!")
-
+            rshim_cmd = ["dbus-send", "--dest=org.freedesktop.systemd1", "--type=method_call", 
+                         "--print-reply", "--reply-timeout=2000",
+                         "/org/freedesktop/systemd1",
+                         f"org.freedesktop.systemd1.Manager.{op.capitalize()}Unit",
+                         f"string:{dpu_map[self.get_hwmgmt_name()]['rshim']}.service",
+                         "string:replace"]
+            self.run_cmd_output(rshim_cmd)
+        except Exception as e:
+            self.log_error(f"Failed to {op} rshim!: {e}")
+        
     @contextmanager
     def get_open_fd(self, path, flag):
         fd = os.open(path, flag)
@@ -229,12 +238,15 @@ class DpuCtlPlat():
         self.log_info(f"Force Power Off complete")
         return True
 
-    def _power_on_force(self, count=4):
+    def _power_on_force(self, count=4, no_wait=False):
         """Per DPU Power on with force private function"""
         if count < 4:
             self.log_error(f"Failed Force Power on! Retry {4-count}..")
         self.write_file(self.pwr_f_path, OperationType.SET.value)
         self.write_file(self.rst_path, OperationType.SET.value)
+        if no_wait:
+            self.log_info("Exiting without checking result of reboot command")
+            return True
         get_rdy_inotify = InotifyHelper(self.dpu_rdy_path)
         with self.time_check_context("power on force"):
             dpu_rdy = get_rdy_inotify.wait_watch(WAIT_FOR_DPU_READY, 1)
@@ -278,7 +290,10 @@ class DpuCtlPlat():
         """Per DPU Power on API"""
         with self.boot_prog_context():
             self.log_info(f"Power on with force = {forced}")
-            if forced:
+            if  self.read_boot_prog() == BootProgEnum.OS_RUN.value:
+                self.log_info(f"Skipping DPU power on as DPU is already powered on")
+                return_value = True
+            elif forced:
                 return_value = self._power_on_force()
             else:
                 return_value = self._power_on()
@@ -290,18 +305,24 @@ class DpuCtlPlat():
         with self.boot_prog_context():
             self.dpu_pre_shutdown()
             self.log_info(f"Power off with force = {forced}")
-            if forced:
+            if  self.read_boot_prog() == BootProgEnum.RST.value:
+                self.log_info(f"Skipping DPU power off as DPU is already powered off")
+                return True
+            elif forced:
                 return self._power_off_force()
             elif self.read_boot_prog() != BootProgEnum.OS_RUN.value:
                 self.log_info(f"Power off with force = True since since OS is not in running state on DPU")
                 return self._power_off_force()
             return self._power_off()
 
-    def _reboot(self):
+    def _reboot(self, no_wait):
         """Per DPU Reboot Private function API"""
         if not self.dpu_go_down():
             self._power_off_force()
         self.write_file(self.rst_path, OperationType.SET.value)
+        if no_wait:
+            self.log_info("Exiting without checking result of reboot command")
+            return True
         get_rdy_inotify = InotifyHelper(self.dpu_rdy_path)
         with self.time_check_context("power on"):
             dpu_rdy = get_rdy_inotify.wait_watch(WAIT_FOR_DPU_READY, 1)
@@ -311,25 +332,27 @@ class DpuCtlPlat():
             return_value = self._power_on_force()
         return return_value
 
-    def _reboot_force(self):
+    def _reboot_force(self, no_wait):
         """Per DPU Force Reboot Private function API"""
         self._power_off_force()
-        return_value = self._power_on_force()
+        return_value = self._power_on_force(no_wait=no_wait)
         return return_value
 
-    def dpu_reboot(self, forced=False):
+    def dpu_reboot(self, forced=False, no_wait=False):
         """Per DPU Power on API"""
         with self.boot_prog_context():
             self.dpu_pre_shutdown()
             self.log_info(f"Reboot with force = {forced}")
             if forced:
-                return_value = self._reboot_force()
+                return_value = self._reboot_force(no_wait)
             elif self.read_boot_prog() != BootProgEnum.OS_RUN.value:
                 self.log_info(f"Reboot with force = True since OS is not in running state on DPU")
-                return_value = self._reboot_force()
+                return_value = self._reboot_force(no_wait)
             else:
-                return_value = self._reboot()
-            self.dpu_post_startup()
+                return_value = self._reboot(no_wait)
+            # No Post startup as well for no_wait call
+            if not no_wait:
+                self.dpu_post_startup()
             if return_value:
                 self.log_info("Reboot Complete")
             return return_value
