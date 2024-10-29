@@ -78,9 +78,6 @@ class Chassis(ChassisBase):
         if not self._api_helper.is_host():
             self._api_helper.setup_cpldapp()
 
-        self.interrupt_handler = None
-        self.event_handler = None
-
         log_info("System chassis is ready")
 
     ##############################################
@@ -201,7 +198,7 @@ class Chassis(ChassisBase):
         global NUM_THERMAL
         board_id = self._api_helper.get_board_id()
         if board_id == 130:
-            NUM_THERMAL = 3
+            NUM_THERMAL = 5
         if Thermal._thermals_available():
             for index in range(0, NUM_THERMAL):
                 thermal = Thermal(index)
@@ -468,12 +465,3 @@ class Chassis(ChassisBase):
         """
         return False
 
-    def get_interrupt_handler(self):
-        from sonic_platform.interrupt import InterruptHandler
-        self.interrupt_handler = InterruptHandler()
-        return self.interrupt_handler
-
-    def get_event_handler(self):
-        from sonic_platform.interrupt import EventHandler
-        self.event_handler = EventHandler()
-        return self.event_handler
