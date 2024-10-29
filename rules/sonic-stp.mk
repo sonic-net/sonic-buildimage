@@ -10,7 +10,7 @@ $(STP)_DEPENDS += $(LIBSWSSCOMMON_DEV)
 $(STP)_RDEPENDS += $(LIBSWSSCOMMON)
 SONIC_DPKG_DEBS += $(STP)
 
-STP_DBG = stp-dbg_$(STP_VERSION)_amd64.deb
+STP_DBG = stp-dbg_$(STP_VERSION)_$(CONFIGURED_ARCH).deb
 $(STP_DBG)_DEPENDS += $(STP)
 $(STP_DBG)_RDEPENDS += $(STP)
 $(eval $(call add_derived_package,$(STP),$(STP_DBG)))
