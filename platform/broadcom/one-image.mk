@@ -98,7 +98,8 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(UFISPACE_S9301_32D_PLATFORM_MODULE) \
                                $(UFISPACE_S9301_32DB_PLATFORM_MODULE) \
                                $(MICAS_M2_W6510_48V8C_PLATFORM_MODULE) \
-			       $(MICAS_M2_W6510_48GT4V_PLATFORM_MODULE)
+			       $(MICAS_M2_W6510_48GT4V_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6520_24DC8QC_PLATFORM_MODULE)
 
 # seperate internal module and public module to avoid code conflict
 $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(CISCO_N3132_PLATFORM_MODULE)

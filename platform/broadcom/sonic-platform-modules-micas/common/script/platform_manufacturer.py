@@ -1,4 +1,19 @@
 #!/usr/bin/env python3
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
 import mmap
@@ -11,6 +26,7 @@ import time
 import sys
 from platform_config import MANUINFO_CONF
 from monitor import status
+from platform_util import *
 
 
 INDENT = 4
@@ -171,16 +187,9 @@ def removedriver(name):
 
 def deal_itmes(item_list):
     for item in item_list:
-        dealtype = item.get("dealtype")
-        if dealtype == "shell":
-            cmd = item.get("cmd")
-            timeout = item.get("timeout", 10)
-            exec_os_cmd(cmd, timeout)
-        elif dealtype == "io_wr":
-            io_addr = item.get("io_addr")
-            wr_value = item.get("value")
-            io_wr(io_addr, wr_value)
-
+        ret, log = set_value(item)
+        if not ret:
+            print("deal items error:%s" % log)
 
 def get_func_value(funcname, params):
     func = getattr(ExtraFunc, funcname)
@@ -228,7 +237,7 @@ def devfileread(path, offset, length, bit_width):
             for j in range(0, bit_width):
                 val_str += "%02x" % val_list[i + bit_width - j - 1]
     except Exception as e:
-        return str(e)
+        return "%s-%s" % (path, str(e))
     finally:
         if fd > 0:
             os.close(fd)
@@ -495,7 +504,10 @@ class VersionHunter:
                 if self.decode is not None:
                     tmp_version = self.decode.get(version)
                     if tmp_version is None:
-                        version = "ERR decode %s failed" % version
+                        if self.decode.get("default") is not None:
+                            version = self.decode.get("default")
+                        else:
+                            version = "ERR decode %s failed" % version
                     else:
                         version = tmp_version
             format_str = "{}{:<{}}{}".format(indent, self.key + ':',
