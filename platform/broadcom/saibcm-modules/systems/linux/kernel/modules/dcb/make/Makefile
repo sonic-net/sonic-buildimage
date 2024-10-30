@@ -1,5 +1,5 @@
 # $Id: Makefile,v 1.2 Broadcom SDK $
-# $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -23,6 +23,7 @@
 # 
 # This software is governed by the Broadcom Open Network Switch APIs license:
 # https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
 # 
 #
 # Makefile for DCB Library
@@ -86,11 +87,9 @@ DFLAGS += -DBCM_56370_A0    # HELIX5
 DFLAGS += -DBCM_56960_A0    # TOMAHAWK
 DFLAGS += -DBCM_56970_A0    # TOMAHAWK2
 DFLAGS += -DBCM_56980_A0    # TOMAHAWK3
-# SONIC-79319 Start
 DFLAGS += -DBCM_56470_A0    # FIREBOLT6
 DFLAGS += -DBCM_56275_A0    # HURRICANE4
 DFLAGS += -DBCM_56175_A0    # TRIDENT3-X1
-# SONIC-79319 End
 
 #
 # Compiler Related Options
