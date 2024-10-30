@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +18,12 @@
 import glob
 import os
 import time
+import re
 
 from . import utils
+from sonic_py_common.general import check_output_pipe
+
+DEFAULT_WD_PERIOD = 65535
 
 DEVICE_DATA = {
     'x86_64-mlnx_msn2700-r0': {
@@ -54,6 +58,9 @@ DEVICE_DATA = {
                 "cpu_pack": False,
                 "comex_amb": False
             }
+        },
+        'watchdog': {
+            "max_period": 32
         }
     },
     'x86_64-mlnx_msn2410-r0': {
@@ -69,6 +76,9 @@ DEVICE_DATA = {
                 "cpu_pack": False,
                 "comex_amb": False
             }
+        },
+        'watchdog': {
+            "max_period": 32
         }
     },
     'x86_64-mlnx_msn4700_simx-r0': {
@@ -94,6 +104,13 @@ DEVICE_DATA = {
     },
     'x86_64-mlnx_msn4600-r0': {
     },
+    'x86_64-nvidia_sn4280-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False
+            }
+        }
+    },
     'x86_64-nvidia_sn4800-r0': {
         'thermal': {
             "capability": {
@@ -112,11 +129,33 @@ DEVICE_DATA = {
             }
         }
     },
+    'x86_64-nvidia_sn5400-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False,
+                "pch_temp": True
+            }
+        },
+        'sfp': {
+            'fw_control_ports': [64, 65]  # 0 based sfp index list
+        }
+    },
     'x86_64-nvidia_sn5600-r0': {
         'thermal': {
             "capability": {
                 "comex_amb": False,
                 "pch_temp": True
+            }
+        },
+        'sfp': {
+            'fw_control_ports': [64]  # 0 based sfp index list
+        }
+    },
+    'x86_64-nvidia_sn4280_simx-r0': {
+        'thermal': {
+            "capability": {
+                "cpu_pack": False,
+                "comex_amb": False
             }
         }
     }
@@ -135,6 +174,13 @@ class DeviceDataManager:
     def is_simx_platform(cls):
         platform_name = cls.get_platform_name()
         return platform_name and 'simx' in platform_name
+
+    @classmethod
+    @utils.read_only_cache()
+    def get_simx_version(cls):
+        version = check_output_pipe(["lspci", "-vv"], ["grep", "SimX"])
+        parsed_version = re.search("([0-9]+\\.[0-9]+-[0-9]+)", version)
+        return parsed_version.group(1) if parsed_version else "N/A"
 
     @classmethod
     @utils.read_only_cache()
@@ -223,6 +269,20 @@ class DeviceDataManager:
         return sfp_data.get('max_port_per_line_card', 0)
 
     @classmethod
+    @utils.read_only_cache()
+    def get_platform_dpus_data(cls):
+        json_data = cls.get_platform_json_data()
+        return json_data.get('DPUS', None)
+
+    @classmethod
+    @utils.read_only_cache()
+    def get_platform_json_data(cls):
+        from sonic_py_common import device_info
+        platform_path = device_info.get_path_to_platform_dir()
+        platform_json_path = os.path.join(platform_path, 'platform.json')
+        return utils.load_json_file(platform_json_path)
+
+    @classmethod
     def get_bios_component(cls):
         from .component import ComponentBIOS, ComponentBIOSSN2201
         if cls.get_platform_name() in ['x86_64-nvidia_sn2201-r0']:
@@ -233,22 +293,26 @@ class DeviceDataManager:
 
     @classmethod
     def get_cpld_component_list(cls):
-        from .component import ComponentCPLD, ComponentCPLDSN2201
+        from .component import ComponentCPLD, ComponentCPLDSN2201, ComponentCPLDSN4280, ComponenetFPGADPU
         if cls.get_platform_name() in ['x86_64-nvidia_sn2201-r0']:
             # For SN2201, special chass is required for handle BIOS
             # Currently, only fetching BIOS version is supported
             return ComponentCPLDSN2201.get_component_list()
+        if cls.get_platform_name() in ['x86_64-nvidia_sn4280-r0']:
+            return ComponentCPLDSN4280.get_component_list() + ComponenetFPGADPU.get_component_list()
         return ComponentCPLD.get_component_list()
 
     @classmethod
     @utils.read_only_cache()
-    def is_independent_mode(cls):
-        from sonic_py_common import device_info
-        _, hwsku_dir = device_info.get_paths_to_platform_and_hwsku_dirs()
-        sai_profile_file = os.path.join(hwsku_dir, 'sai.profile')
+    def is_module_host_management_mode(cls):
+        sai_profile_file = '/tmp/sai.profile'
+        if not os.path.exists(sai_profile_file):
+            from sonic_py_common import device_info
+            _, hwsku_dir = device_info.get_paths_to_platform_and_hwsku_dirs()
+            sai_profile_file = os.path.join(hwsku_dir, 'sai.profile')
         data = utils.read_key_value_file(sai_profile_file, delimeter='=')
         return data.get('SAI_INDEPENDENT_MODULE_MODE') == '1'
-    
+
     @classmethod
     def wait_platform_ready(cls):
         """
@@ -258,7 +322,7 @@ class DeviceDataManager:
         """
         conditions = []
         sysfs_nodes = ['power_mode', 'power_mode_policy', 'present', 'reset', 'status', 'statuserror']
-        if cls.is_independent_mode():
+        if cls.is_module_host_management_mode():
             sysfs_nodes.extend(['control', 'frequency', 'frequency_support', 'hw_present', 'hw_reset',
                                 'power_good', 'power_limit', 'power_on', 'temperature/input'])
         else:
@@ -268,3 +332,29 @@ class DeviceDataManager:
             for sysfs_node in sysfs_nodes:
                 conditions.append(lambda: os.path.exists(f'/sys/module/sx_core/asic0/module{sfp_index}/{sysfs_node}'))
         return utils.wait_until_conditions(conditions, 300, 1)
+
+    @classmethod
+    @utils.read_only_cache()
+    def get_watchdog_max_period(cls):
+        platform_data = DEVICE_DATA.get(cls.get_platform_name(), None)
+        if not platform_data:
+            return DEFAULT_WD_PERIOD
+
+        watchdog_data = platform_data.get('watchdog', None)
+        if not watchdog_data:
+            return DEFAULT_WD_PERIOD
+
+        return watchdog_data.get('max_period', None)
+    
+    @classmethod
+    @utils.read_only_cache()
+    def get_always_fw_control_ports(cls):
+        platform_data = DEVICE_DATA.get(cls.get_platform_name())
+        if not platform_data:
+            return None
+        
+        sfp_data = platform_data.get('sfp')
+        if not sfp_data:
+            return None
+        
+        return sfp_data.get('fw_control_ports')

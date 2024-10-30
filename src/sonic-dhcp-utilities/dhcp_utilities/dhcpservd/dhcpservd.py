@@ -39,9 +39,12 @@ class DhcpServd(object):
         Send SIGHUP signal to kea-dhcp4 process
         """
         for proc in psutil.process_iter():
-            if KEA_DHCP4_PROC_NAME in proc.name():
-                proc.send_signal(signal.SIGHUP)
-                break
+            try:
+                if KEA_DHCP4_PROC_NAME in proc.name():
+                    proc.send_signal(signal.SIGHUP)
+                    break
+            except psutil.NoSuchProcess:
+                continue
 
     def dump_dhcp4_config(self):
         """
@@ -59,8 +62,8 @@ class DhcpServd(object):
         self.used_options = used_options
         with open(self.kea_dhcp4_config_path, "w") as write_file:
             write_file.write(kea_dhcp4_config)
-            # After refresh kea-config, we need to SIGHUP kea-dhcp4 process to read new config
-            self._notify_kea_dhcp4_proc()
+        # After refresh kea-config, we need to SIGHUP kea-dhcp4 process to read new config
+        self._notify_kea_dhcp4_proc()
 
     def _update_dhcp_server_ip(self):
         """

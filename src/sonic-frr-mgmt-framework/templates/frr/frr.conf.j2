@@ -10,6 +10,9 @@
 !
 agentx
 !
+！Add fpm address for zebra
+fpm address 127.0.0.1
+！
 {% include "zebra/zebra.interfaces.conf.j2" %}
 !
 {% if MGMT_VRF_CONFIG %}

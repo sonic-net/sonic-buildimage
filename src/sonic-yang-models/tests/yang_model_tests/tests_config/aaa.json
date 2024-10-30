@@ -4,7 +4,7 @@
             "sonic-system-aaa:AAA": {
                 "AAA_LIST": [{
                         "type": "authentication",
-                        "login": "tacacs+,local",
+                        "login": "local",
                         "failthrough": "True",
                         "fallback": "True",
                         "trace": "True",
@@ -45,11 +45,11 @@
         }
     },
 
-    "AAA_AUTHORIZATION_TEST": {
+    "AAA_AUTHENTICATION_TEST": {
         "sonic-system-aaa:sonic-system-aaa": {
             "sonic-system-aaa:AAA": {
                 "AAA_LIST": [{
-                        "type": "authorization",
+                        "type": "authentication",
                         "login": "tacacs+"
                 }]
             }
@@ -64,11 +64,11 @@
         }
     },
 
-    "AAA_AUTHORIZATION_TEST_TACACS_WITHOUT_TACPLUS": {
+    "AAA_AUTHENTICATION_TEST_TACACS_WITHOUT_TACPLUS": {
         "sonic-system-aaa:sonic-system-aaa": {
             "sonic-system-aaa:AAA": {
                 "AAA_LIST": [{
-                        "type": "authorization",
+                        "type": "authentication",
                         "login": "tacacs+"
                 }]
             }

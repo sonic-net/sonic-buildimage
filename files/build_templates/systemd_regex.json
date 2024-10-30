@@ -6,7 +6,7 @@
     },
     {
         "tag": "watchdog-timeout",
-        "regex": "(?:watchdog|Watchdog) timeout .limit.([0-9])min.",
+        "regex": ".*(?:watchdog|Watchdog) timeout .limit.([0-9])min.",
         "params": [ "limit" ]
     }
 ]

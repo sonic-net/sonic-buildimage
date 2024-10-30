@@ -34,19 +34,12 @@ module sonic-system-port {
                 }
 
                 leaf asic_name {
-                    type string {
-                        pattern "[Aa]sic[0-4]";
-                    }
+                    type stypes:asic_name;
                 }
 
                 leaf ifname {
-                    type union {
-                        type leafref {
-                            path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
-                        }
-                        type string {
-                            pattern "Cpu0";
-                        }
+                    type string {
+                        length 1..128;
                     }
                 }
 

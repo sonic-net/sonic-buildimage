@@ -37,7 +37,7 @@ PORT_STR = "Ethernet"
 BRKOUT_MODE = "default_brkout_mode"
 CUR_BRKOUT_MODE = "brkout_mode"
 INTF_KEY = "interfaces"
-OPTIONAL_HWSKU_ATTRIBUTES = ["fec", "autoneg", "subport", "role"]
+OPTIONAL_HWSKU_ATTRIBUTES = ["fec", "autoneg", "role"]
 
 BRKOUT_PATTERN = r'(\d{1,6})x(\d{1,6}G?)(\[(\d{1,6}G?,?)*\])?(\((\d{1,6})\))?'
 BRKOUT_PATTERN_GROUPS = 6
@@ -353,8 +353,10 @@ class BreakoutCfg(object):
     def get_config(self):
         # Ensure that we have corret number of configured lanes
         lanes_used = 0
+        total_num_ports = 0
         for entry in self._breakout_mode_entry:
             lanes_used += entry.num_assigned_lanes
+            total_num_ports += entry.num_ports
 
         if lanes_used > len(self._lanes):
             raise RuntimeError("Assigned lines count is more that available!")
@@ -376,7 +378,8 @@ class BreakoutCfg(object):
                     'alias': self._breakout_capabilities[alias_id],
                     'lanes': ','.join(lanes),
                     'speed': str(entry.default_speed),
-                    'index': self._indexes[lane_id]
+                    'index': self._indexes[lane_id],
+                    'subport': "0" if total_num_ports == 1 else str(alias_id + 1)
                 }
 
                 lane_id += lanes_per_port
@@ -422,10 +425,12 @@ def parse_platform_json_file(hwsku_json_file, platform_json_file):
         child_ports = get_child_ports(intf, brkout_mode, platform_json_file)
 
         # take optional fields from hwsku.json
+        hwsku_entry = hwsku_dict[INTF_KEY]
         for child_port in child_ports:
-            for key, item in hwsku_dict[INTF_KEY][child_port].items():
-                if key in OPTIONAL_HWSKU_ATTRIBUTES:
-                    child_ports.get(child_port)[key] = item
+            if child_port in hwsku_entry:
+                for key, item in hwsku_entry[child_port].items():
+                    if key in OPTIONAL_HWSKU_ATTRIBUTES:
+                        child_ports.get(child_port)[key] = item
 
         ports.update(child_ports)
 

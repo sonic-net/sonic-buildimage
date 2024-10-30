@@ -719,5 +719,248 @@
                 ]
             }
         }
+    },
+
+    "VLAN_MEMBERS_WITHOUT_CREATING_VLAN": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "name": "Ethernet0"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "Ethernet0",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_CREATE_VLAN_WITH_MISSMATCHING_NAME": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan10",
+                        "vlanid":11
+                    }
+                ]
+            }
+        }
+    },
+    "IP_PREFIX_WITHOUT_CREATNG_VLAN": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "description": "server_vlan",
+                        "name": "Vlan10"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_INTERFACE": {
+                "VLAN_INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "20.0.0.1/24",
+                        "scope": "global",
+                        "name": "Vlan100"
+                    }
+                ],
+                "VLAN_INTERFACE_LIST": [
+                    {
+                        "name": "Vlan100"
+                    }
+                ]
+            }
+        }
+    },
+    "MIRROR_SESSION_ON_VLAN_MEMBER_PORT": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "name": "Ethernet1",
+                        "speed": 25000,
+                        "lanes": "1"
+                    },
+                    {
+                        "admin_status": "up",
+                        "name": "Ethernet2",
+                        "speed": 25000,
+                        "lanes": "1"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan10"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "Ethernet2",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan10"
+                    }
+                ]
+            }
+        },
+        "sonic-mirror-session:sonic-mirror-session": {
+            "sonic-mirror-session:MIRROR_SESSION": {
+                "MIRROR_SESSION_LIST": [ {
+                    "name":"mirror_session_dscp",
+                    "type": "SPAN",
+                    "src_port": "Ethernet1",
+                    "dst_port": "Ethernet2"
+                }]   
+            }
+        }
+    },
+    "VLAN_ADD_PORT_CHANNEL_MEMBER": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [{
+                    "admin_status": "up",
+                    "name": "Ethernet1",
+                    "speed": 25000,
+                    "lanes": "1"
+                }]
+            }
+        },
+        "sonic-portchannel:sonic-portchannel": {
+            "sonic-portchannel:PORTCHANNEL": {
+                "PORTCHANNEL_LIST": [
+                    {
+                        "admin_status": "up",
+                        "min_links": "1",
+                        "mtu": "9100",
+                        "tpid": "0x8100",
+                        "lacp_key": "auto",
+                        "name": "PortChannel0001",
+                        "fast_rate": "false",
+                        "fallback" : "false",
+                        "mode" :  "routed"
+                    }
+                ]
+            },
+            "sonic-portchannel:PORTCHANNEL_MEMBER": {
+                "PORTCHANNEL_MEMBER_LIST": [
+                    {
+                        "name": "PortChannel0001",
+                        "port": "Ethernet1"
+                    }
+                ]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan10"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "Ethernet1",
+                        "tagging_mode": "tagged",
+                        "name": "Vlan10"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_ADD_PORT_THAT_IS_UNTAGGED": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [{
+                    "admin_status": "up",
+                    "name": "Ethernet1",
+                    "speed": 25000,
+                    "lanes": "1"
+                }]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan10"
+                    },
+                    {
+                        "name": "Vlan11"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "Ethernet1",
+                        "tagging_mode": "untagged",
+                        "name": "Vlan10"
+                    },
+                    {
+                        "port": "Ethernet1",
+                        "tagging_mode": "untagged",
+                        "name": "Vlan11"
+                    }
+                ]
+            }
+        }
+    },
+    "VLAN_ADD_PORT_THAT_IS_ROUTER_INTERFACE": {
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet1"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [{
+                    "admin_status": "up",
+                    "name": "Ethernet1",
+                    "speed": 25000,
+                    "lanes": "1"
+                }]
+            }
+        },
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "name": "Vlan10"
+                    }
+                ]
+            },
+            "sonic-vlan:VLAN_MEMBER": {
+                "VLAN_MEMBER_LIST": [
+                    {
+                        "port": "Ethernet1",
+                        "tagging_mode": "untagged",
+                        "name": "Vlan10"
+                    }
+                ]
+            }
+        }
     }
 }

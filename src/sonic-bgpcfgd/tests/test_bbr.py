@@ -5,9 +5,10 @@ from bgpcfgd.template import TemplateFabric
 from copy import deepcopy
 from . import swsscommon_test
 
+import sys
+sys.modules["swsscommon"] = swsscommon_test
 
-with patch.dict("sys.modules", swsscommon=swsscommon_test):
-    from bgpcfgd.managers_bbr import BBRMgr
+from bgpcfgd.managers_bbr import BBRMgr
 
 global_constants = {
     "bgp": {
@@ -111,6 +112,7 @@ def __init_common(constants,
         'tf':        TemplateFabric(),
         'constants': constants,
     }
+
     m = BBRMgr(common_objs, "CONFIG_DB", "BGP_BBR")
     m._BBRMgr__init()
     assert m.bbr_enabled_pgs == expected_bbr_enabled_pgs
@@ -156,7 +158,7 @@ def test___init_6():
             "bbr": expected_bbr_entries,
         }
     }
-    __init_common(constants, "BBRMgr::Initialized and enabled. Default state: 'disabled'", None, expected_bbr_entries, "disabled")
+    __init_common(constants, "BBRMgr::Initialized and enabled from constants. Default state: 'disabled'", None, expected_bbr_entries, "disabled")
 
 def test___init_7():
     expected_bbr_entries = {
@@ -170,7 +172,7 @@ def test___init_7():
             "bbr": expected_bbr_entries,
         }
     }
-    __init_common(constants, "BBRMgr::Initialized and enabled. Default state: 'disabled'", None, expected_bbr_entries, "disabled")
+    __init_common(constants, "BBRMgr::Initialized and enabled from constants. Default state: 'disabled'", None, expected_bbr_entries, "disabled")
 
 def test___init_8():
     expected_bbr_entries = {
@@ -184,7 +186,32 @@ def test___init_8():
             "bbr": expected_bbr_entries,
         }
     }
-    __init_common(constants, "BBRMgr::Initialized and enabled. Default state: 'enabled'", None, expected_bbr_entries, "enabled")
+    __init_common(constants, "BBRMgr::Initialized and enabled from constants. Default state: 'enabled'", None, expected_bbr_entries, "enabled")
+
+@patch('bgpcfgd.managers_bbr.BBRMgr.get_bbr_status_from_config_db', return_value='disabled')
+def test___init_with_config_db_overwirte_constants(mocked_get_bbr_status_from_config_db):
+    expected_bbr_entries = {
+        "PEER_V4": ["ipv4"],
+        "PEER_V6": ["ipv6"],
+    }
+    constants = deepcopy(global_constants)
+    constants["bgp"]["bbr"] = {"enabled": True, "default_state": "enabled"}
+    constants["bgp"]["peers"] = {
+        "general": {
+            "bbr": expected_bbr_entries,
+        }
+    }
+
+    # BBR status from config_db should be prioritized over constants
+    __init_common(constants, "BBRMgr::Initialized and enabled from config_db. Default state: 'disabled'", None, expected_bbr_entries, "disabled")
+
+@patch('bgpcfgd.managers_bbr.BBRMgr.get_bbr_status_from_config_db', return_value='enabled')
+def test___init_with_config_db_no_peers(mocked_get_bbr_status_from_config_db):
+
+    constants = deepcopy(global_constants)
+    constants["bgp"]["bbr"] = {"enabled": True}
+
+    __init_common(constants, "BBRMgr::Disabled: no BBR enabled peers", None, {}, "disabled")
 
 @patch('bgpcfgd.managers_bbr.log_info')
 def read_pgs_common(constants, expected_log_info, expected_bbr_enabled_pgs, mocked_log_info):

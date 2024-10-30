@@ -76,8 +76,10 @@ module sonic-types {
             enum IPV4;
             enum IPV6;
             enum IPv4ANY;
+            enum IPV4ANY;
             enum NON_IP4;
             enum IPv6ANY;
+            enum IPV6ANY;
             enum NON_IPv6;
             enum ARP;
         }
@@ -381,6 +383,12 @@ module sonic-types {
         type enumeration {
             enum on;
             enum off;
+        }
+    }
+
+    typedef asic_name {
+        type string {
+            pattern '[Aa][Ss][Ii][Cc][0-9]{1,2}';
         }
     }
 

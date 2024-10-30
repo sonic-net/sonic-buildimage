@@ -1,9 +1,9 @@
 # linux kernel package
 
-KVERSION_SHORT = 6.1.0-11-2
+KVERSION_SHORT = 6.1.0-22-2
 KVERSION = $(KVERSION_SHORT)-$(CONFIGURED_ARCH)
-KERNEL_VERSION = 6.1.38
-KERNEL_SUBVERSION = 4
+KERNEL_VERSION = 6.1.94
+KERNEL_SUBVERSION = 1
 ifeq ($(CONFIGURED_ARCH), armhf)
 # Override kernel version for ARMHF as it uses arm MP (multi-platform) for short version
 KVERSION = $(KVERSION_SHORT)-armmp

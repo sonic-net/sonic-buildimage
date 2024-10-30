@@ -44,20 +44,23 @@ const std::string TEST_ROOT_DIR = "tests/ssg-test/";
 const std::string TEST_UNIT_FILE_PREFIX = TEST_ROOT_DIR + "systemd/";
 const std::string TEST_LIB_NETWORK = TEST_UNIT_FILE_PREFIX + "network/";
 const std::string TEST_ASIC_CONF_FORMAT = TEST_ROOT_DIR + "%s/asic.conf";
-const std::string TEST_PLATFORM_CONF_FORMAT = TEST_ROOT_DIR + "%s/platform.json";
+const std::string TEST_PLATFORM_FILE_FORMAT = TEST_ROOT_DIR + "%s/platform.json";
 const std::string TEST_MACHINE_CONF = TEST_ROOT_DIR + "machine.conf";
+const std::string TEST_PLATFORM_CONF_FORMAT = TEST_ROOT_DIR + "%s/services.conf";
 
 const std::string TEST_PLATFORM_DIR = TEST_ROOT_DIR + "test_platform/";
 const std::string TEST_ASIC_CONF = TEST_PLATFORM_DIR + "asic.conf";
 const std::string TEST_PLATFORM_CONF = TEST_PLATFORM_DIR + "platform.json";
 
 const std::string TEST_OUTPUT_DIR = TEST_ROOT_DIR + "generator/";
-const std::string TEST_ETC_NETWORK = TEST_OUTPUT_DIR + "network/"; 
+const std::string TEST_ETC_NETWORK = TEST_OUTPUT_DIR + "network/";
+const std::string TEST_ETC_SYSTEM = TEST_OUTPUT_DIR + "system/";
 
 const std::string TEST_CONFIG_FILE = TEST_ROOT_DIR + "generated_services.conf";
 
 const std::string TEST_UNIT_FILES = "tests/testfiles/";
 
+const std::string TEST_PLATFORM_CONFIG = TEST_PLATFORM_DIR + "services.conf";
 
 /* Input data for generated_services.conf */
 const std::vector<std::string> generated_services = {
@@ -87,6 +90,7 @@ class SystemdSonicGeneratorFixture : public testing::Test {
         config_file_ = g_config_file;
         machine_config_file_ = g_machine_config_file;
         asic_conf_format_ = g_asic_conf_format;
+        platform_conf_format_ = g_platform_conf_format;
     }
 
     /* Restore global vars */
@@ -95,6 +99,7 @@ class SystemdSonicGeneratorFixture : public testing::Test {
         g_config_file = config_file_;
         g_machine_config_file = machine_config_file_;
         g_asic_conf_format = asic_conf_format_;
+        g_platform_conf_format = platform_conf_format_;
 
         g_ssg_test_mutex.unlock();
     }
@@ -104,6 +109,7 @@ class SystemdSonicGeneratorFixture : public testing::Test {
     const char* config_file_;
     const char* machine_config_file_;
     const char* asic_conf_format_;
+    const char* platform_conf_format_;
 };
 
 /*
@@ -162,9 +168,16 @@ class SsgFunctionTest : public SystemdSonicGeneratorFixture {
         fs::create_directories(path);
         path = fs::path(TEST_ETC_NETWORK.c_str());
         fs::create_directories(path);
+        path = fs::path(TEST_ETC_SYSTEM.c_str());
+        fs::create_directories(path);
         fp = fopen(TEST_MACHINE_CONF.c_str(), "w");
         ASSERT_NE(fp, nullptr);
         fputs("onie_platform=test_platform", fp);
+        fclose(fp);
+
+        fp = fopen(TEST_PLATFORM_CONFIG.c_str(), "w");
+        ASSERT_NE(fp, nullptr);
+        fputs("platform_specific.service\n", fp);
         fclose(fp);
         generate_generated_services_conf();
         copyfiles(TEST_UNIT_FILES.c_str(), TEST_UNIT_FILE_PREFIX.c_str());
@@ -256,7 +269,8 @@ class SsgMainTest : public SsgFunctionTest {
     void validate_output_unit_files(std::vector<std::string> strs,
                               std::string target,
                               bool expected_result,
-                              int num_instances) {
+                              int num_instances,
+                              bool dev_null_as_inexistent = true) {
         for (std::string str : strs) {
             bool finished = false;
             for (int i = 0 ; i < num_instances && !finished; ++i) {
@@ -269,9 +283,14 @@ class SsgMainTest : public SsgFunctionTest {
                     finished = true;
                 }
                 fs::path path{TEST_OUTPUT_DIR + target + "/" + str_t};
-                char resolved_path[PATH_MAX];
-                realpath(path.c_str(), resolved_path);
-                bool exist = fs::exists(path) && strcmp(resolved_path, "/dev/null") != 0;
+                bool exist = fs::exists(path);
+                if (exist) {
+                    char resolved_path[PATH_MAX] = { 0 };
+                    realpath(path.c_str(), resolved_path);
+                    if (strcmp(resolved_path, "/dev/null") == 0) {
+                        exist = !dev_null_as_inexistent;
+                    }
+                }
                 EXPECT_EQ(exist, expected_result)
                     << "Failed validation: " << path;
             }
@@ -341,6 +360,8 @@ class SsgMainTest : public SsgFunctionTest {
             test_target, cfg.is_smart_switch_dpu, cfg.num_dpus);
         validate_output_unit_files(dpu_network_service_list,
             "network", cfg.is_smart_switch_dpu, cfg.num_dpus);
+        validate_output_unit_files(non_smart_switch_service_list,
+            "system", !cfg.is_smart_switch_npu && !cfg.is_smart_switch_dpu, cfg.num_dpus, false);
     }
 
     /* ssg_main test routine.
@@ -360,7 +381,7 @@ class SsgMainTest : public SsgFunctionTest {
         g_config_file = TEST_CONFIG_FILE.c_str();
         g_machine_config_file = TEST_MACHINE_CONF.c_str();
         g_asic_conf_format = TEST_ASIC_CONF_FORMAT.c_str();
-        g_platform_file_format = TEST_PLATFORM_CONF_FORMAT.c_str();
+        g_platform_file_format = TEST_PLATFORM_FILE_FORMAT.c_str();
         std::string lib_systemd = fs::current_path().string() + "/" + TEST_UNIT_FILE_PREFIX;
         g_lib_systemd = lib_systemd.c_str();
         std::string etc_systemd = fs::current_path().string() + "/" + TEST_OUTPUT_DIR;
@@ -422,6 +443,7 @@ class SsgMainTest : public SsgFunctionTest {
         for (const auto &service : disabled_service) {
             fs::create_symlink("/dev/null", TEST_ETC_NETWORK + service);
         }
+        fs::create_symlink("/dev/null", TEST_ETC_SYSTEM + "systemd-networkd.service");
     }
 
     /* Restore global vars */
@@ -434,6 +456,7 @@ class SsgMainTest : public SsgFunctionTest {
     static const std::vector<std::string> single_asic_service_list;
     static const std::vector<std::string> multi_asic_service_list;
     static const std::vector<std::string> common_service_list;
+    static const std::vector<std::string> non_smart_switch_service_list;
     static const std::vector<std::string> npu_service_list;
     static const std::vector<std::string> npu_network_service_list;
     static const std::vector<std::string> dpu_service_list;
@@ -476,6 +499,13 @@ SsgMainTest::common_service_list = {
     "test.service",
     "database.service",
 };
+
+/* Systemd service list for non Smart Switch */
+const std::vector<std::string>
+SsgMainTest::non_smart_switch_service_list = {
+    "systemd-networkd.service"
+};
+
 
 /* Systemd service Unit file list for Smart Switch NPU. */
 const std::vector<std::string>
@@ -573,6 +603,11 @@ TEST_F(SystemdSonicGeneratorFixture, get_global_vars) {
     EXPECT_STREQ(get_asic_conf_format(), ASIC_CONF_FORMAT);
     g_asic_conf_format = TEST_ASIC_CONF_FORMAT.c_str();
     EXPECT_STREQ(get_asic_conf_format(), TEST_ASIC_CONF_FORMAT.c_str());
+
+    EXPECT_EQ(g_platform_conf_format, nullptr);
+    EXPECT_STREQ(get_platform_conf_format(), PLATFORM_CONF_FORMAT);
+    g_platform_conf_format = TEST_PLATFORM_CONF_FORMAT.c_str();
+    EXPECT_STREQ(get_platform_conf_format(), TEST_PLATFORM_CONF_FORMAT.c_str());
 }
 
 TEST_F(SystemdSonicGeneratorFixture, global_vars) {
@@ -592,6 +627,7 @@ TEST_F(SsgFunctionTest, missing_file) {
     EXPECT_TRUE(fs::exists(TEST_UNIT_FILE_PREFIX.c_str()));
     EXPECT_TRUE(fs::exists(TEST_OUTPUT_DIR.c_str()));
     EXPECT_TRUE(fs::exists(TEST_PLATFORM_DIR.c_str()));
+    EXPECT_TRUE(fs::exists(TEST_PLATFORM_CONFIG.c_str()));
 }
 
 /* TEST insert_instance_number() */
@@ -637,7 +673,7 @@ TEST_F(SsgFunctionTest, get_unit_files) {
     g_etc_systemd = TEST_OUTPUT_DIR.c_str();
     g_config_file = TEST_CONFIG_FILE.c_str();
     char* unit_files[NUM_UNIT_FILES] = { NULL };
-    int num_unit_files = get_unit_files(unit_files);
+    int num_unit_files = get_unit_files(g_config_file, unit_files, NUM_UNIT_FILES);
     // Exclude the midplane-network-{npu/dpu}.service which is only used for smart switch
     auto non_smart_switch_generated_services = generated_services;
     non_smart_switch_generated_services.erase(
@@ -664,6 +700,17 @@ TEST_F(SsgFunctionTest, get_unit_files) {
         }
         EXPECT_TRUE(found) << "unit file not found: " << service;
     }
+}
+
+/* TEST get_platform_unit_files()*/
+TEST_F(SsgFunctionTest, get_platform_unit_files) {
+    g_unit_file_prefix = TEST_UNIT_FILE_PREFIX.c_str();
+    g_config_file = TEST_CONFIG_FILE.c_str();
+    g_platform_conf_format = TEST_PLATFORM_CONF_FORMAT.c_str();
+    char* unit_files[NUM_UNIT_FILES];
+    int num_unit_files = get_platform_unit_files(unit_files, NUM_UNIT_FILES);
+    EXPECT_EQ(num_unit_files, 1);
+    EXPECT_EQ(std::string(unit_files[0]), "platform_specific.service");
 }
 
 /* TEST ssg_main() argv error */

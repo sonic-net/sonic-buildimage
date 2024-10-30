@@ -1,6 +1,0 @@
-7215/scripts/nokia-7215-init.sh usr/local/bin
-7215/scripts/cpu_wdt.py  usr/local/bin
-7215/service/nokia-7215init.service  etc/systemd/system
-7215/service/cpu_wdt.service  etc/systemd/system
-7215/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-nokia_ixs7215_52xb-r0
-../mrvl-prestera/platform/arm64/ac5x/* /

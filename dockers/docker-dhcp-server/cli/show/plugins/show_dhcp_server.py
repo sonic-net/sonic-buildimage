@@ -65,7 +65,7 @@ def range(db, range_name):
     for key in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|" + range_name):
         name = key.split("|")[1]
         entry = dbconn.get_all("CONFIG_DB", key)
-        range_ = entry["range"].split(",")
+        range_ = entry["range@"].split(",")
         if len(range_) == 1:
             start, end = range_[0], range_[0]
         elif len(range_) == 2:
@@ -106,7 +106,7 @@ def info(db, dhcp_interface, with_customized_options):
         interface = key.split("|")[1]
         table.append([interface, entry["mode"], entry["gateway"], entry["netmask"], entry["lease_time"], entry["state"]])
         if with_customized_options:
-            table[-1].append(entry["customized_options"])
+            table[-1].append(entry["customized_options@"])
     click.echo(tabulate(table, headers=headers, tablefmt="grid"))
 
 
@@ -135,10 +135,10 @@ def port(db, interface):
         intf = key[len("DHCP_SERVER_IPV4_PORT|"):]
         if dhcp_interface_is_match(interface, intf):
             entry = dbconn.get_all("CONFIG_DB", key)
-            if "ranges" in entry:
-                table.append([intf, entry["ranges"].replace(",", "\n")])
-            if "ips" in entry:
-                table.append([intf, entry["ips"].replace(",", "\n")])
+            if "ranges@" in entry:
+                table.append([intf, entry["ranges@"].replace(",", "\n")])
+            if "ips@" in entry:
+                table.append([intf, entry["ips@"].replace(",", "\n")])
     click.echo(tabulate(table, headers=headers, tablefmt="grid"))
 
 

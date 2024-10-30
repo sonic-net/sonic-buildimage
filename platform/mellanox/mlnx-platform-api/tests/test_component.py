@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +35,8 @@ from sonic_platform.component import ComponentONIE,       \
                                      ComponentBIOSSN2201, \
                                      ComponentCPLD,       \
                                      ComponentCPLDSN2201, \
+                                     ComponentCPLDSN4280, \
+                                     ComponenetFPGADPU,   \
                                      MPFAManager,         \
                                      ONIEUpdater,         \
                                      Component
@@ -284,6 +286,13 @@ class TestComponent:
         for index, item in enumerate(component_list):
             assert item.name == 'CPLD{}'.format(index + 1)
 
+    @mock.patch('sonic_platform.component.ComponenetFPGADPU._read_generic_file', mock.MagicMock(return_value='4'))
+    def test_cpld_get_component_list_dpu(self):
+        component_list = ComponenetFPGADPU.get_component_list()
+        assert len(component_list) == 4
+        for index, item in enumerate(component_list):
+            assert item.name == 'DPU{}_FPGA'.format(index + 1)
+
     def test_cpld_get_mst_device(self):
         ComponentCPLD.MST_DEVICE_PATH = '/tmp/mst'
         os.system('rm -rf /tmp/mst')
@@ -298,6 +307,20 @@ class TestComponent:
     @mock.patch('sonic_platform.component.subprocess.check_call')
     def test_cpld_2201_component(self, mock_check_call):
         c = ComponentCPLDSN2201(1)
+        assert c._install_firmware('')
+        mock_check_call.side_effect = subprocess.CalledProcessError(1, None)
+        assert not c._install_firmware('')
+
+    @mock.patch('sonic_platform.component.subprocess.check_call')
+    def test_cpld_4280_component(self, mock_check_call):
+        c = ComponentCPLDSN4280(1)
+        assert c._install_firmware('')
+        mock_check_call.side_effect = subprocess.CalledProcessError(1, None)
+        assert not c._install_firmware('')
+
+    @mock.patch('sonic_platform.component.subprocess.check_call')
+    def test_cpld_dpu_component(self, mock_check_call):
+        c = ComponenetFPGADPU(1)
         assert c._install_firmware('')
         mock_check_call.side_effect = subprocess.CalledProcessError(1, None)
         assert not c._install_firmware('')
@@ -353,6 +376,26 @@ class TestComponent:
         assert onie_minor == '3'
         assert onie_release == '0010'
         assert onie_baudrate == '9600'
+
+        # Verify presence of release candidate (rc) string doesn't throw an exception
+        onie_year, onie_month, onie_major, onie_minor, onie_release, onie_baudrate = \
+            o.parse_onie_version('2023.11-5.3.0012-rc2-9600')
+        assert onie_year == '2023'
+        assert onie_month == '11'
+        assert onie_major == '5'
+        assert onie_minor == '3'
+        assert onie_release == '0012'
+        assert onie_baudrate == '9600'
+
+        onie_year, onie_month, onie_major, onie_minor, onie_release, onie_baudrate = \
+            o.parse_onie_version('2023.11-5.3.0012-rc24-dev-115200')
+        assert onie_year == '2023'
+        assert onie_month == '11'
+        assert onie_major == '5'
+        assert onie_minor == '3'
+        assert onie_release == '0012'
+        assert onie_baudrate == '115200'
+
         with pytest.raises(RuntimeError):
             o.parse_onie_version('invalid', is_base=True)
         with pytest.raises(RuntimeError):
@@ -367,6 +410,10 @@ class TestComponent:
         assert onie_baudrate is None
 
         assert o.get_onie_required_version() == o.ONIE_VERSION_REQUIRED
+
+    def test_parse_onie_version_extra_prefix(self):
+        o = ONIEUpdater()
+        
 
     @mock.patch('sonic_platform.component.ONIEUpdater.get_onie_version')
     @mock.patch('sonic_platform.component.device_info.get_platform')

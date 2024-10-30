@@ -24,7 +24,7 @@ pr: none
 
 stages:
 - stage: Build
-  pool: sonicbld
+  pool: sonicbld-1es
   variables:
   - name: CACHE_MODE
     value: cache
@@ -49,4 +49,5 @@ stages:
           pool: sonicbld-armhf
           timeoutInMinutes: 1200
           variables:
+            PLATFORM_NAME: marvell
             PLATFORM_ARCH: armhf

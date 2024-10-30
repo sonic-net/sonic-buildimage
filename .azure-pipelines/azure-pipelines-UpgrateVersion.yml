@@ -26,7 +26,7 @@ resources:
     ref: master
     endpoint: sonic-net
 
-pool: sonicbld
+pool: sonicbld-1es
 
 parameters:
 - name: 'jobFilters'
@@ -41,6 +41,7 @@ parameters:
   - marvell-arm64
   - mellanox
   - pensando
+  - nvidia-bluefield
 
 stages:
 - stage: Prepare
@@ -117,7 +118,7 @@ stages:
         echo "artifacts$artifacts"
         cp -r $(Pipeline.Workspace)/sonic-buildimage.${default_platform}/target/versions target/
         make freeze FREEZE_VERSION_OPTIONS=-r
-        find files/build/versions 
+        find files/build/versions
         ordered_artifacts=$(echo "$artifacts" | grep -v -E "arm64|armhf" && echo "$artifacts" | grep -E "arm64|armhf")
         for artifact in $ordered_artifacts
         do
@@ -179,4 +180,4 @@ stages:
     - publish: $(System.DefaultWorkingDirectory)/files/build/versions
       artifact: 'sonic-buildimage.versions'
       displayName: 'Archive SONiC versions'
-    
+

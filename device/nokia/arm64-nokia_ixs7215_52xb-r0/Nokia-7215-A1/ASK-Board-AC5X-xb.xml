@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2023-11-20-1.05" profile="Askboard" sid="20929980-c61f-4f1d-b08a-4e64f6d717c2">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-06-05-1.08" profile="Askboard" sid="9396a3c9-f447-4460-bd9f-7d0c21ca4d16">
   <askboardplt:ASK-Board xmlns:askboardplt="urn:marvell:askboard:yang">
     <askboardplt:typedefs>
       <askboardplt:typedef>
@@ -52,7 +52,7 @@
       <askboardplt:typedef>
         <askboardplt:name>board-pp-interface-channel-type</askboardplt:name>
         <askboardplt:type>enumeration</askboardplt:type>
-        <askboardplt:description>Specifies interface tunnel.</askboardplt:description>
+        <askboardplt:description>Specifies channel interface type.</askboardplt:description>
         <askboardplt:enum>
           <askboardplt:name>pci</askboardplt:name>
           <askboardplt:description>PCI</askboardplt:description>
@@ -64,19 +64,29 @@
           <askboardplt:value>1</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
-          <askboardplt:name>pex</askboardplt:name>
-          <askboardplt:description>PEX</askboardplt:description>
-          <askboardplt:value>3</askboardplt:value>
+          <askboardplt:name>twsi</askboardplt:name>
+          <askboardplt:description>TWSI</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+      </askboardplt:typedef>
+      <askboardplt:typedef>
+        <askboardplt:name>board-pp-as-type</askboardplt:name>
+        <askboardplt:type>enumeration</askboardplt:type>
+        <askboardplt:description>Specifies Address space type.</askboardplt:description>
+        <askboardplt:enum>
+          <askboardplt:name>4_regions</askboardplt:name>
+          <askboardplt:description>address-space 4 regions</askboardplt:description>
+          <askboardplt:value>0</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
-          <askboardplt:name>pex_eagle</askboardplt:name>
-          <askboardplt:description>PEX EAGLE</askboardplt:description>
-          <askboardplt:value>5</askboardplt:value>
+          <askboardplt:name>8_regions</askboardplt:name>
+          <askboardplt:description>address-space 8 regions</askboardplt:description>
+          <askboardplt:value>1</askboardplt:value>
         </askboardplt:enum>
         <askboardplt:enum>
-          <askboardplt:name>pex_falcon_z</askboardplt:name>
-          <askboardplt:description>PEX FALCON Z</askboardplt:description>
-          <askboardplt:value>6</askboardplt:value>
+          <askboardplt:name>atu</askboardplt:name>
+          <askboardplt:description>address translation unit</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
         </askboardplt:enum>
       </askboardplt:typedef>
       <askboardplt:typedef>
@@ -683,6 +693,11 @@ lowercase characters.</askboardplt:description>
           <askboardplt:description>AC5X</askboardplt:description>
           <askboardplt:value>1</askboardplt:value>
         </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>ASIC_Falcon</askboardplt:name>
+          <askboardplt:description>FALCON</askboardplt:description>
+          <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
       </askboardplt:typedef>
     </askboardplt:typedefs>
     <askboardplt:ASIC_Type askboardplt:type="asic-type">ASIC_AC5X</askboardplt:ASIC_Type>
@@ -691,7 +706,8 @@ lowercase characters.</askboardplt:description>
     <askboardplt:extDrvCallType askboardplt:type="board-callback-type">linux-static</askboardplt:extDrvCallType>
     <askboardplt:mapType askboardplt:type="board-pp-map-type">autoscan</askboardplt:mapType>
     <askboardplt:cpuType askboardplt:type="cpu-type">external</askboardplt:cpuType>
-    <askboardplt:mngInterfaceType askboardplt:type="board-pp-interface-channel-type">pex_eagle</askboardplt:mngInterfaceType>
+    <askboardplt:mngInterfaceType askboardplt:type="board-pp-interface-channel-type">pci</askboardplt:mngInterfaceType>
+    <askboardplt:adressSpaceType askboardplt:type="board-pp-as-type">atu</askboardplt:adressSpaceType>
     <askboardplt:device-list>
       <askboardplt:devNum askboardplt:type="device-id-type">0</askboardplt:devNum>
       <askboardplt:deviceId askboardplt:type="device-id-type">0</askboardplt:deviceId>
@@ -711,7 +727,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">0</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -730,7 +745,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">1</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -749,7 +763,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">2</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -768,7 +781,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">3</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -787,7 +799,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">4</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -806,7 +817,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">5</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -825,7 +835,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">6</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -844,7 +853,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">7</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -863,7 +871,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">8</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -882,7 +889,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">9</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -901,7 +907,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">10</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -920,7 +925,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">11</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -939,7 +943,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">12</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -958,7 +961,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">13</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -977,7 +979,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">14</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -996,7 +997,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">15</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1015,7 +1015,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">16</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1034,7 +1033,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">17</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1053,7 +1051,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">18</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1072,7 +1069,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">19</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1091,7 +1087,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">20</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1110,7 +1105,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">21</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1129,7 +1123,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">22</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1148,7 +1141,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">23</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">0</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1167,7 +1159,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">0</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1186,7 +1177,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">1</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1205,7 +1195,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">2</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1224,7 +1213,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">3</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1243,7 +1231,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">4</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1262,7 +1249,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">5</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1281,7 +1267,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">6</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1300,7 +1285,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">7</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1319,7 +1303,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">8</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1338,7 +1321,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">23</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1357,7 +1339,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">22</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1376,7 +1357,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">21</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1395,7 +1375,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">20</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1414,7 +1393,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">19</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1433,7 +1411,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">18</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1452,7 +1429,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">17</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1471,7 +1447,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">16</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1490,7 +1465,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">15</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1509,7 +1483,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">14</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1528,7 +1501,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">13</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1547,7 +1519,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">12</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1566,7 +1537,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">11</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1585,7 +1555,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">10</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1604,7 +1573,6 @@ lowercase characters.</askboardplt:description>
           <askboardplt:phyAddr askboardplt:type="uint32">9</askboardplt:phyAddr>
           <askboardplt:smiItf askboardplt:type="phy-smi-interface-type">1</askboardplt:smiItf>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">63</askboardplt:ledPosition>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
@@ -1620,12 +1588,11 @@ lowercase characters.</askboardplt:description>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">0</askboardplt:ledPosition>
           <askboardplt:polarityInvertList-list>
             <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
-            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           </askboardplt:polarityInvertList-list>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
         </askboardplt:ledstream-port>
@@ -1640,12 +1607,11 @@ lowercase characters.</askboardplt:description>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">1</askboardplt:ledPosition>
           <askboardplt:polarityInvertList-list>
             <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
-            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           </askboardplt:polarityInvertList-list>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
         </askboardplt:ledstream-port>
@@ -1660,12 +1626,11 @@ lowercase characters.</askboardplt:description>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">0</askboardplt:ledPosition>
           <askboardplt:polarityInvertList-list>
             <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
-            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           </askboardplt:polarityInvertList-list>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
         </askboardplt:ledstream-port>
@@ -1680,12 +1645,11 @@ lowercase characters.</askboardplt:description>
         <askboardplt:phy>
           <askboardplt:phyType askboardplt:type="phy-type">NA</askboardplt:phyType>
         </askboardplt:phy>
-        <askboardplt:serdesMuxScheme askboardplt:type="string"/>
         <askboardplt:ledstream-port>
           <askboardplt:ledPosition askboardplt:type="led-position-type">1</askboardplt:ledPosition>
           <askboardplt:polarityInvertList-list>
             <askboardplt:polarityClassNum askboardplt:type="led-class-num-type">2</askboardplt:polarityClassNum>
-            <askboardplt:invertEnable askboardplt:type="boolean-type">true</askboardplt:invertEnable>
+            <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           </askboardplt:polarityInvertList-list>
           <askboardplt:portForceDataSupported askboardplt:type="boolean-type">false</askboardplt:portForceDataSupported>
         </askboardplt:ledstream-port>
@@ -1771,9 +1735,9 @@ lowercase characters.</askboardplt:description>
         <askboardplt:ledstream-configSet>
           <askboardplt:ledOrganize askboardplt:type="led-stream-order-mode-type">ORDER_MODE_BY_PORT</askboardplt:ledOrganize>
           <askboardplt:blink0DutyCycle askboardplt:type="led-stream-blink-duty-cycle-type">BLINK_DUTY_CYCLE_1</askboardplt:blink0DutyCycle>
-          <askboardplt:blink0Duration askboardplt:type="led-stream-blink-duration-type">BLINK_DURATION_2</askboardplt:blink0Duration>
+          <askboardplt:blink0Duration askboardplt:type="led-stream-blink-duration-type">BLINK_DURATION_0</askboardplt:blink0Duration>
           <askboardplt:blink1DutyCycle askboardplt:type="led-stream-blink-duty-cycle-type">BLINK_DUTY_CYCLE_1</askboardplt:blink1DutyCycle>
-          <askboardplt:blink1Duration askboardplt:type="led-stream-blink-duration-type">BLINK_DURATION_2</askboardplt:blink1Duration>
+          <askboardplt:blink1Duration askboardplt:type="led-stream-blink-duration-type">BLINK_DURATION_0</askboardplt:blink1Duration>
           <askboardplt:pulseStretch askboardplt:type="led-stream-pulse-stretch-type">PULSE_STRETCH_1</askboardplt:pulseStretch>
           <askboardplt:invertEnable askboardplt:type="boolean-type">false</askboardplt:invertEnable>
           <askboardplt:SIP6ledClockFrequency askboardplt:type="led-stream-clock-frequency-type">1627</askboardplt:SIP6ledClockFrequency>
@@ -1858,6 +1822,23 @@ lowercase characters.</askboardplt:description>
         </askboardplt:ledstream-class-manipulation-list>
       </askboardplt:Ledstream-interface-list>
     </askboardplt:device-list>
+    <askboardplt:phyLedControl>
+      <askboardplt:phy-type-list>
+        <askboardplt:phyType askboardplt:type="phy-type">alaska-88E1780</askboardplt:phyType>
+        <askboardplt:phy-led-regs-list>
+          <askboardplt:reg-addr askboardplt:type="uint16">16</askboardplt:reg-addr>
+          <askboardplt:page-num askboardplt:type="uint16">3</askboardplt:page-num>
+          <askboardplt:reg-value askboardplt:type="uint16">64</askboardplt:reg-value>
+          <askboardplt:reg-value-mask askboardplt:type="uint16">65280</askboardplt:reg-value-mask>
+        </askboardplt:phy-led-regs-list>
+        <askboardplt:phy-led-regs-list>
+          <askboardplt:reg-addr askboardplt:type="uint16">1</askboardplt:reg-addr>
+          <askboardplt:page-num askboardplt:type="uint16">28</askboardplt:page-num>
+          <askboardplt:reg-value askboardplt:type="uint16">1024</askboardplt:reg-value>
+          <askboardplt:reg-value-mask askboardplt:type="uint16">64511</askboardplt:reg-value-mask>
+        </askboardplt:phy-led-regs-list>
+      </askboardplt:phy-type-list>
+    </askboardplt:phyLedControl>
     <askboardplt:UDSFilePath askboardplt:type="std-string">.</askboardplt:UDSFilePath>
     <askboardplt:serdesMux>
       <askboardplt:serdesMuxSchemePortMod askboardplt:type="uint32">1</askboardplt:serdesMuxSchemePortMod>

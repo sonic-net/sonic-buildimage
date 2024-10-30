@@ -11,8 +11,7 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
                               $(LIBYANG_CPP) \
                               $(LIBYANG_PY3) \
                               $(SONIC_UTILITIES_DATA) \
-                              $(SONIC_HOST_SERVICES_DATA) \
-                              $(IPROUTE2)
+                              $(SONIC_HOST_SERVICES_DATA)
 
 $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_PLATFORM_COMMON_PY3) \

@@ -9,6 +9,7 @@ import jinja2
 import subprocess
 from collections import defaultdict
 
+
 from lxml import etree as ET
 from lxml.etree import QName
 
@@ -16,13 +17,21 @@ from natsort import natsorted, ns as natsortns
 
 from portconfig import get_port_config, get_fabric_port_config, get_fabric_monitor_config
 from sonic_py_common.interface import backplane_prefix
-from sonic_py_common.multi_asic import is_multi_asic
+from sonic_py_common.multi_asic import is_multi_asic, get_asic_id_from_name
 
 # TODO: Remove this once we no longer support Python 2
 if sys.version_info.major == 3:
     UNICODE_TYPE = str
 else:
     UNICODE_TYPE = unicode
+
+try:
+    if os.environ["CFGGEN_UNIT_TESTING_TOPOLOGY"] == "multi_asic":
+        import mock
+        is_multi_asic = mock.MagicMock(return_value=True)
+except KeyError:
+    pass
+
 
 """minigraph.py
 version_added: "1.9"
@@ -53,7 +62,7 @@ VLAN_SUB_INTERFACE_VLAN_ID = '10'
 
 FRONTEND_ASIC_SUB_ROLE = 'FrontEnd'
 BACKEND_ASIC_SUB_ROLE = 'BackEnd'
-
+FABRIC_ASIC_SUB_ROLE = 'Fabric'
 dualtor_cable_types = ["active-active", "active-standby"]
 
 # Default Virtual Network Index (VNI)
@@ -72,12 +81,356 @@ acl_table_type_defination = {
         "MATCHES": ["SRC_IPV6", "DST_IPV6", "ETHER_TYPE", "IP_TYPE", "IP_PROTOCOL", "IN_PORTS", "L4_SRC_PORT", "L4_DST_PORT", "L4_SRC_PORT_RANGE", "L4_DST_PORT_RANGE", "ICMPV6_TYPE", "ICMPV6_CODE", "TCP_FLAGS"]
     }
 }
+# Chassis card type
+CHASSIS_CARD_VOQ = 'VoQ'
+CHASSIS_CARD_PACKET = 'chassis-packet'
+CHASSIS_CARD_FABRIC = 'Fabric'
+voq_internal_intfs =  ['cpu', 'recirc', 'inband']
+
+def get_asic_switch_id(slot_index, asic_name):
+    asic_id = 0
+    if slot_index is None:
+        return None
+    if asic_name is not None:
+        asic_id = int(asic_name[len('ASIC'):])
+    switch_id = 2*(2*(int(slot_index)-1) + asic_id)
+    return switch_id
+
+def get_asic_hostname_from_asic_name(chassis_type, asic_name, hostname):
+    if is_multi_asic() == True and  asic_name is None:
+        return asic_name
+
+    if is_minigraph_for_chassis(chassis_type):
+        # for chassis in the minigraph the asic hostname is <asic_name>-<hostname>
+        if is_multi_asic():
+            asic_id = get_asic_id_from_name(asic_name)
+        else:
+            asic_id = '0'
+        asic_hostname = "{}-ASIC{:02d}".format(hostname, int(asic_id ))
+    else:
+        # for multi_asic pizza boxes the asic_hostname is same as asic_name
+        asic_hostname = asic_name
+
+    return asic_hostname
+
+def get_linecard_slot_index(hostname, chassis_linecard_info):
+    for lc_slot, lc_name in chassis_linecard_info.items():
+        if hostname.lower() == lc_name['hostname'].lower():
+            return lc_slot
+    return None
+
+def get_voq_intf_attributes(ports):
+    voq_intf_attributes = {}
+    for port in ports:
+        role = ports.get(port, {}).get('role', None)
+        if role.lower() == 'inb' or role.lower() == 'rec':
+            core_id = None
+            core_port_index = None
+            speed = None
+            for k,v in ports.get(port, {}).items():
+                if k.lower() == 'core_id':
+                    core_id = v
+                if k.lower() == 'core_port_id':
+                    core_port_index = v
+                if k.lower() == 'speed':
+                    speed = v
+            voq_intf_attributes.setdefault(role.lower(), {}).update({'core_id': core_id, 'core_port_index': core_port_index, 'speed' : speed})
+
+    return voq_intf_attributes
+
+def get_chassis_type_and_hostname(root, hname):
+    chassis_type = None
+    chassis_hostname = None
+    for child in root:
+        if child.tag == str(QName(ns, "MetadataDeclaration")):
+            devices = child.find(str(QName(ns, "Devices")))
+            for device_meta in devices.findall(str(QName(ns1, "DeviceMetadata"))):
+                device_name = device_meta.find(str(QName(ns1, "Name"))).text
+                if device_name != hname:
+                    continue
+                properties = device_meta.find(str(QName(ns1, "Properties")))
+                for device_property in properties.findall(str(QName(ns1, "DeviceProperty"))):
+                    name = device_property.find(str(QName(ns1, "Name"))).text
+                    value = device_property.find(str(QName(ns1, "Value"))).text
+                    if name == "ForwardingMethod":
+                        chassis_type = value
+                    if name == "ParentRouter":
+                        chassis_hostname = value
+    return chassis_type, chassis_hostname
+
+def is_minigraph_for_chassis(chassis_type):
+    if chassis_type in [CHASSIS_CARD_VOQ, CHASSIS_CARD_PACKET]:
+        return True
+    return False
+
+
+def normailize_port_map_for_chassis(asic_name, port_map):
+    if asic_name is None:
+        return port_map
+
+    new_port_map = {}
+    for k,v in port_map.items():
+        if asic_name.lower() in v.lower():
+            v = v.split('-')[0]
+        if asic_name.lower() in k.lower():
+            k = k.split('-')[0]
+        new_port_map.update({k:v})
+    
+    return new_port_map
 
 ###############################################################################
 #
 # Minigraph parsing functions
 #
 ###############################################################################
+
+def parse_chassis_metadata(root,hname, lcname):
+    """
+    Parses the chassis metadata from the XML root.
+
+    This function iterates over the XML root to find the metadata declaration. It then extracts the device metadata,
+    specifically the name, properties, and slot index. If the device name matches the provided hostname or linecard name,
+    it extracts the total count of VoQ and the max count of cores. The function also updates a dictionary with slot indices
+    and corresponding hostnames.
+
+    Args:
+        root: The root of the minigraph.xml.
+        hname (str): chassis hostname.
+        lcname (str): The linecard name or supervisor hostname.
+
+    Returns:
+        max_num_core (int): The maximum number of cores, only appliable for voq chassis
+        num_voq (int): The total count of VoQ per port, only appliable for voq chassis
+        chassis_linecards (dict): A dictionary of slot indices and corresponding LC hostnames.
+    """
+    chassis_linecards = {}
+    max_num_core = None
+    num_voq = None
+    for child in root:
+        if child.tag == str(QName(ns, "MetadataDeclaration")):
+            devices = child.find(str(QName(ns, "Devices")))
+            for device_meta in devices.findall(str(QName(ns1, "DeviceMetadata"))):
+                slot_index = None
+                device_name = device_meta.find(str(QName(ns1, "Name"))).text
+
+                properties = device_meta.find(str(QName(ns1, "Properties")))
+                for device_property in properties.findall(str(QName(ns1, "DeviceProperty"))):
+                    name = device_property.find(str(QName(ns1, "Name"))).text
+                    value = device_property.find(str(QName(ns1, "Value"))).text
+                    if device_name == hname or device_name == lcname:
+                        if name == "TotalCountOfVoQ":
+                            num_voq = value
+                        if name == "MaxCountOfCores":
+                            max_num_core = 64
+                    if name == "SlotIndex":
+                        slot_index = value
+                if slot_index is not None:
+                    chassis_linecards.update({slot_index:{'hostname':device_name}})
+
+    return max_num_core, num_voq, chassis_linecards
+
+
+def parse_chassis_deviceinfo_intf_metadata(device_info, chassis_linecards_info, chassis_hwsku, num_voq, chassis_type, chassis_intf_map, voq_intf_attributes):
+    """
+    This function iterates InterfaceMetadata for every port in the chassis and genetate the configuration for 
+    systemport, chassis port alias and port default speeds.d.
+
+    Args:
+        device_info: The XML element containing device info.
+        chassis_linecards_info (dict): A dictionary mapping slot indices to hostnames.
+        chassis_hwsku (str): The hardware SKU of the chassis.
+        num_voq (str): The number of VoQ.
+        chassis_type (str): The type of the chassis.
+        chassis_intf_map (dict): A dictionary mapping interface names to their properties.
+        voq_intf_attributes (dict): A dictionary mapping VoQ interface names to their properties.
+
+    Returns:
+        system_ports (dict): A dictionary of system ports, only for voq chassis
+        chassis_port_alias (dict): A dictionary of chassis port aliases.
+        port_default_speed (dict): A dictionary of port default speeds.
+    """
+    system_ports = {}
+    chassis_port_alias = {}
+    port_default_speed = {}
+    system_port_id = 1
+
+    interface_metadata = device_info.find(str(QName(ns, "InterfaceMetadata")))
+    for interface in interface_metadata.findall(str(QName(ns1, "DeviceInterfaceMetadata"))):
+        linecard_name = None
+        asic_name = None
+        core_port_id = None
+        core_id = None
+        switch_id = None
+        slot_index = None
+        intf_name = interface.find(str(QName(ns1, "InterfaceName"))).text
+        # ignore the managment interfaces
+        if any(mgmt_intf in intf_name for mgmt_intf in ['Management', 'console']) == True:
+            continue
+
+        if intf_name not in chassis_intf_map:
+            print('Warning cannot find metadata for interface {}'.format(
+                intf_name), file=sys.stderr)
+            continue
+
+        intf_sonic_name = chassis_intf_map[intf_name].get('sonic_name', None)
+        if intf_sonic_name is None:
+            print('Warning cannot find sonic name  for interface {}'.format(
+                intf_name), file=sys.stderr)
+            continue
+
+        intf_speed = chassis_intf_map[intf_name].get('speed', None)
+        if intf_speed is None:
+            print('Warning cannot find speed  for interface' %
+                  (intf_name), file=sys.stderr)
+            continue
+
+        intf_properties = interface.find(str(QName(ns1, "Properties")))
+        if intf_properties is None:
+            print('Warning cannot find interface porperties  for interface' %
+                  (intf_name), file=sys.stderr)
+            continue
+
+        for intf_property in intf_properties.findall(str(QName(ns1, "InterfaceProperty"))):
+
+            name = intf_property.find(str(QName(ns1, "Name"))).text
+            value = intf_property.find(str(QName(ns1, "Value"))).text
+            if name == "CoreId":
+                core_id = value
+            if name == "SlotIndex":
+                slot_index = value
+            if name == "ProviderChipName":
+                asic_name = value
+            if name == "LineCardSku":
+                lc_sku = value
+            if name == "AsicInterfaceIndex":
+                core_port_id = value
+            if name == "AsicSwitchId":
+                switch_id = value
+
+        if intf_sonic_name.startswith('cpu'):
+            core_id = 0
+            core_port_id = 0
+            speed = 10000
+            asic_id = intf_name.split('/')[1]
+            asic_name = 'ASIC{}'.format(asic_id)
+        if intf_sonic_name.startswith('Ethernet-IB'):
+            core_id = voq_intf_attributes.get('inb', {}).get('core_id', None)
+            core_port_id = voq_intf_attributes.get(
+                'inb', {}).get('core_port_index', None)
+            intf_speed = voq_intf_attributes.get('inb', {}).get('speed', None)
+            asic_id = intf_name.split('/')[1]
+            asic_name = 'ASIC{}'.format(asic_id)
+        if intf_sonic_name.startswith('Ethernet-Rec'):
+            #    continue
+            core_id = voq_intf_attributes.get('rec', {}).get('core_id', None)
+            core_port_id = voq_intf_attributes.get(
+                'rec', {}).get('core_port_index', None)
+            intf_speed = voq_intf_attributes.get('rec', {}).get('speed', None)
+            asic_id = intf_name.split('/')[1]
+            asic_name = 'ASIC{}'.format(asic_id)
+
+        switch_id = get_asic_switch_id(slot_index, asic_name)
+        linecard_name = chassis_linecards_info.get(
+            slot_index, {}).get('hostname', None)
+        if linecard_name is None:
+            continue
+
+        if chassis_type == CHASSIS_CARD_VOQ:
+            key = intf_sonic_name
+            if asic_name is not None:
+                key = "%s|%s" % (asic_name, key)
+            if linecard_name is not None:
+                key = "%s|%s" % (linecard_name, key)
+            system_ports[key] = {
+                "system_port_id": 0,
+                "switch_id": switch_id,
+                "core_index": core_id,
+                "core_port_index": core_port_id,
+                "speed": intf_speed,
+                "num_voq": num_voq
+            }
+
+        chassis_port_alias.setdefault(slot_index, {}).update(
+            {(intf_sonic_name, intf_speed): intf_name})
+        # For Some Vendor we can have multiple speed define for same port with different alias.
+        # Example Port serving 400G alias will be FoutHundredGig0/0/0/0 and same port as 100G will be HundredGig0/0/0/0
+        # So to get port default speed get the max speed possible.
+        try:
+            if int(intf_speed) > int(port_default_speed[slot_index][intf_sonic_name]):
+               port_default_speed[slot_index][intf_sonic_name] = intf_speed
+        except:
+            port_default_speed.setdefault(slot_index, {}).update(
+                {intf_sonic_name: intf_speed})
+
+    # The above loop with findall("DeviceInterfaceMetadata") was not giving interfaces from minigraph
+    # in document order. So doing an explict sort so that system_port_ids remain same across LCs
+    sorted_system_ports = { key:system_ports[key] for key in sorted(system_ports.keys()) }
+    for k,v in sorted_system_ports.items():
+        v["system_port_id"] = system_port_id
+        system_port_id += 1
+
+    return sorted_system_ports, chassis_port_alias, port_default_speed
+
+
+def parse_chassis_deviceinfo_voq_int_intfs(device_info):
+    backend_intf_map = {}
+    backend_interfaces = device_info.find(str(QName(ns, "BackendFabricInterfaces"))).findall(
+        str(QName(ns1, "BackendFabricInterface")))
+    voq_internal_intf_attr = {}
+    for backend_interface in backend_interfaces:
+        intf_name = backend_interface.find(str(QName(ns, "InterfaceName"))).text
+        if any(voq_intf in intf_name.lower() for voq_intf in voq_internal_intfs) == True:
+            sonic_name = backend_interface.find(str(QName(ns, "SonicName"))).text
+            speed = backend_interface.find(str(QName(ns, "Speed"))).text
+            backend_intf_map[intf_name] = {'sonic_name': sonic_name, 'speed': speed}
+    return backend_intf_map
+
+
+def parse_chassis_deviceinfo_intfs(device_info):
+    interface_map = {}
+
+    interfaces = device_info.find(str(QName(ns, "EthernetInterfaces"))).findall(
+        str(QName(ns1, "EthernetInterface")))
+
+    for interface in interfaces:
+        # the interface name is at the chassis level, so the interface name will have
+        # the slot information. It will be of format
+        # Ethernet<slot_index>/port
+        intf_name = interface.find(str(QName(ns, "InterfaceName"))).text
+        sonic_name = interface.find(str(QName(ns, "SonicName"))).text
+        speed = interface.find(str(QName(ns, "Speed"))).text
+        interface_map[intf_name] = {'sonic_name': sonic_name, 'speed': speed}
+    return interface_map
+
+
+def parse_chassis_deviceinfo(deviceinfos, chassis_linecards_info, chassis_hwsku, num_voq, chassis_type, voq_intf_attributes):
+    system_ports = {}
+    chassis_port_alias = {}
+    chassis_name = None
+    port_default_speed = {}
+
+    for device_info in deviceinfos.findall(str(QName(ns, "DeviceInfo"))):
+        dev_sku = device_info.find(str(QName(ns, "HwSku"))).text
+        if dev_sku == chassis_hwsku:
+            # The chassis device_info for sonic chassiss will 3 sections
+            # level information
+            # 1. EthernetInterfaces, which contains all the front panel ports present in the chassis
+            # 2. BackendFabricInterfaces, which contains all the internal/fabric ports present in the chassis
+            #    this includes, cpu, Inband and recirc ports for all linecards
+            # 3. InterfaceMetadata which contains Metadata for the ports.
+            #    In case of Voq chassis, the system port  properties are presnent in this section
+
+            chassis_intf_map = parse_chassis_deviceinfo_intfs(device_info)
+
+            if chassis_type == CHASSIS_CARD_VOQ:
+                chassis_internal_intf_map = parse_chassis_deviceinfo_voq_int_intfs(
+                        device_info)
+                chassis_intf_map.update(chassis_internal_intf_map)
+
+            system_ports, chassis_port_alias, port_default_speed  = parse_chassis_deviceinfo_intf_metadata(
+                    device_info, chassis_linecards_info, chassis_hwsku, num_voq, chassis_type, chassis_intf_map, voq_intf_attributes)
+    return system_ports, chassis_port_alias, port_default_speed
+
 
 class minigraph_encoder(json.JSONEncoder):
     def default(self, obj):
@@ -122,6 +475,7 @@ def parse_device(device):
     deployment_id = None
     cluster = None
     d_subtype = None
+    slice_type = None
 
     for node in device:
         if node.tag == str(QName(ns, "Address")):
@@ -144,11 +498,13 @@ def parse_device(device):
             cluster = node.text
         elif node.tag == str(QName(ns, "SubType")):
             d_subtype = node.text
+        elif node.tag == str(QName(ns, "AssociatedSliceStr")) and node.text and "AZNG_Production" in node.text:
+            slice_type = "AZNG_Production"
 
     if d_type is None and str(QName(ns3, "type")) in device.attrib:
         d_type = device.attrib[str(QName(ns3, "type"))]
 
-    return (lo_prefix, lo_prefix_v6, mgmt_prefix, mgmt_prefix_v6, name, hwsku, d_type, deployment_id, cluster, d_subtype)
+    return (lo_prefix, lo_prefix_v6, mgmt_prefix, mgmt_prefix_v6, name, hwsku, d_type, deployment_id, cluster, d_subtype, slice_type)
 
 
 def calculate_lcm_for_ecmp (nhdevices_bank_map, nhip_bank_map):
@@ -286,7 +642,8 @@ def parse_png(png, hname, dpg_ecmp_content = None):
 
         if child.tag == str(QName(ns, "Devices")):
             for device in child.findall(str(QName(ns, "Device"))):
-                (lo_prefix, lo_prefix_v6, mgmt_prefix, mgmt_prefix_v6, name, hwsku, d_type, deployment_id, cluster, d_subtype) = parse_device(device)
+                (lo_prefix, lo_prefix_v6, mgmt_prefix, mgmt_prefix_v6, name, hwsku, d_type, deployment_id, cluster, d_subtype, slice_type) = \
+                                        parse_device(device)
                 device_data = {}
                 if hwsku != None:
                     device_data['hwsku'] = hwsku
@@ -306,6 +663,8 @@ def parse_png(png, hname, dpg_ecmp_content = None):
                     device_data['type'] = d_type
                 if d_subtype != None:
                     device_data['subtype'] = d_subtype
+                if slice_type != None:
+                    device_data['slice_type'] = slice_type
                 devices[name] = device_data
 
         if child.tag == str(QName(ns, "DeviceInterfaceLinks")):
@@ -427,7 +786,7 @@ def parse_asic_png(png, asic_name, hostname):
 
         if child.tag == str(QName(ns, "Devices")):
             for device in child.findall(str(QName(ns, "Device"))):
-                (lo_prefix, lo_prefix_v6, mgmt_prefix, mgmt_prefix_v6, name, hwsku, d_type, deployment_id, cluster, _) = parse_device(device)
+                (lo_prefix, lo_prefix_v6, mgmt_prefix, mgmt_prefix_v6, name, hwsku, d_type, deployment_id, cluster, _, slice_type) = parse_device(device)
                 device_data = {}
                 if hwsku != None:
                     device_data['hwsku'] = hwsku
@@ -445,6 +804,8 @@ def parse_asic_png(png, asic_name, hostname):
                     device_data['mgmt_addr_v6'] = mgmt_prefix_v6
                 if d_type != None:
                     device_data['type'] = d_type
+                if slice_type != None:
+                    device_data['slice_type'] = slice_type
                 devices[name] = device_data
 
     return (neighbors, devices, port_speeds)
@@ -513,9 +874,26 @@ def parse_dpg(dpg, hname):
         intfs = {}
         ip_intfs_map = {}
         for ipintf in ipintfs.findall(str(QName(ns, "IPInterface"))):
-            intfalias = ipintf.find(str(QName(ns, "AttachTo"))).text
-            intfname = port_alias_map.get(intfalias, intfalias)
             ipprefix = ipintf.find(str(QName(ns, "Prefix"))).text
+            ipintf_name  = ipintf.find(str(QName(ns, "Name"))).text
+            intfalias = ipintf.find(str(QName(ns, "AttachTo"))).text
+            """
+                VoqInband interfaces are special ip interfaces needed on inter linecard
+                control plane communications on Voq Chassis
+            """
+            if ipintf_name in ["v6VoqInband", "VoqInband"]:
+                if intfalias.startswith("Ethernet"):
+                    voq_intf_type = "Port"
+                # Vlan interface is not used, adding to be future proof
+                elif intfalias.startswith("Vlan"):
+                    voq_intf_type = "Vlan"
+                if intfalias not in voq_inband_intfs:
+                    voq_inband_intfs[intfalias] = {'inband_type': voq_intf_type}
+
+                voq_inband_intfs["%s|%s" % (intfalias, ipprefix)] = {}
+
+                continue
+            intfname = port_alias_map.get(intfalias, intfalias)
             intfs[(intfname, ipprefix)] = {}
             ip_intfs_map[ipprefix] = intfalias
         lo_intfs = parse_loopback_intf(child)
@@ -547,7 +925,6 @@ def parse_dpg(dpg, hname):
             mgmt_intf[(intfname, ipprefix)] = {'gwaddr': gwaddr}
 
         voqinbandintfs = child.find(str(QName(ns, "VoqInbandInterfaces")))
-        voq_inband_intfs = {}
         if voqinbandintfs:
             for voqintf in voqinbandintfs.findall(str(QName(ns1, "VoqInbandInterface"))):
                 intfname = voqintf.find(str(QName(ns, "Name"))).text
@@ -927,11 +1304,31 @@ def parse_cpg(cpg, hname, local_devices=[]):
                 nhopself = 1 if session.find(str(QName(ns, "NextHopSelf"))) is not None else 0
 
                 # choose the right table and admin_status for the peer
-                chassis_internal_ibgp = session.find(str(QName(ns, "ChassisInternal")))
-                if chassis_internal_ibgp is not None and chassis_internal_ibgp.text == "voq":
+                chassis_internal_ibgp = None
+                if session.find(str(QName(ns, "ChassisInternal")))is not None:
+
+                    chassis_internal_ibgp = session.find(str(QName(ns, "ChassisInternal"))).text
+                else:
+                    if session.find(str(QName(ns, "BgpGroup"))) is not None:
+                        chassis_internal_ibgp_group = session.find(str(QName(ns, "BgpGroup")))
+                        start_group_peer = None
+                        end_group_peer = None
+
+                        if chassis_internal_ibgp_group.find(str(QName(ns, "Start"))) is not None:
+                            start_group_peer = chassis_internal_ibgp_group.find(str(QName(ns, "Start"))).text
+                        if chassis_internal_ibgp_group.find(str(QName(ns, "End"))) is not None:
+                            end_group_peer = chassis_internal_ibgp_group.find(str(QName(ns, "End"))).text
+
+                        if start_group_peer == CHASSIS_CARD_VOQ  and end_group_peer == CHASSIS_CARD_VOQ:
+                            chassis_internal_ibgp = "voq"
+                        elif start_group_peer == CHASSIS_CARD_PACKET  and end_group_peer == CHASSIS_CARD_PACKET:
+                            chassis_internal_ibgp = "chassis-packet"
+
+
+                if chassis_internal_ibgp == "voq":
                     table = bgp_voq_chassis_sessions
                     admin_status = 'up'
-                elif chassis_internal_ibgp is not None and chassis_internal_ibgp.text == "chassis-packet":
+                elif chassis_internal_ibgp == "chassis-packet":
                     table = bgp_internal_sessions
                     admin_status = 'up'
                 elif end_router.lower() in local_devices and start_router.lower() in local_devices:
@@ -1015,6 +1412,46 @@ def parse_cpg(cpg, hname, local_devices=[]):
 
     return bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, myasn, bgp_peers_with_range, bgp_monitors, bgp_sentinel_sessions
 
+def parse_chassis_meta(meta, hname):
+    syslog_servers = []
+    ntp_servers = []
+    tacacs_servers = []
+    mgmt_routes = []
+    erspan_dst = []
+    deployment_id = None
+    region = None
+    macsec_profile = {}
+    qos_profile = None
+
+    device_metas = meta.find(str(QName(ns, "Devices")))
+    for device in device_metas.findall(str(QName(ns1, "DeviceMetadata"))):
+        if device.find(str(QName(ns1, "Name"))).text.lower() == hname.lower():
+            properties = device.find(str(QName(ns1, "Properties")))
+            for device_property in properties.findall(str(QName(ns1, "DeviceProperty"))):
+                name = device_property.find(str(QName(ns1, "Name"))).text
+                value = device_property.find(str(QName(ns1, "Value"))).text
+                value_group = value.strip().split(';') if value and value != "" else []
+                if name == "NtpResources":
+                    ntp_servers = value_group
+                elif name == "SyslogResources":
+                    syslog_servers = value_group
+                elif name == "TacacsServer":
+                    tacacs_servers = value_group
+                    mgmt_routes.extend(value_group)
+                elif name == "ForcedMgmtRoutes":
+                    mgmt_routes.extend(value_group)
+                elif name == "ErspanDestinationIpv4":
+                    erspan_dst = value_group
+                elif name == "DeploymentId":
+                    deployment_id = value
+                elif name == "Region":
+                    region = value
+                elif name == 'MacSecProfile':
+                    macsec_profile = parse_macsec_profile(value)
+                elif name == "SonicQosProfile":
+                    qos_profile = value
+
+    return syslog_servers, ntp_servers, tacacs_servers, mgmt_routes, erspan_dst, deployment_id, region, macsec_profile
 
 def parse_meta(meta, hname):
     syslog_servers = []
@@ -1170,6 +1607,25 @@ def parse_macsec_profile(val_string):
 
     return macsec_profile
 
+def parse_global_info(root):
+
+    hwsku = hostname = None
+    docker_routing_config_mode = "separated"
+
+    hwsku_qn = QName(ns, "HwSku")
+    hostname_qn = QName(ns, "Hostname")
+    docker_routing_config_mode_qn = QName(ns, "DockerRoutingConfigMode")
+    for child in root:
+        if child.tag == str(hwsku_qn):
+            hwsku = child.text
+        if child.tag == str(hostname_qn):
+            hostname = child.text
+        if child.tag == str(docker_routing_config_mode_qn):
+            docker_routing_config_mode = child.text
+            
+    chassis_type, chassis_hostname  =  get_chassis_type_and_hostname(root, hostname)
+    return hwsku, hostname, docker_routing_config_mode, chassis_type, chassis_hostname 
+
 def parse_asic_meta(meta, hname):
     sub_role = None
     switch_id = None
@@ -1186,7 +1642,7 @@ def parse_asic_meta(meta, hname):
                 value = device_property.find(str(QName(ns1, "Value"))).text
                 if name == "SubRole":
                     sub_role = value
-                elif name == "SwitchId":
+                elif name == "SwitchId" or name == "AsicSwitchId":
                     switch_id = value
                 elif name == "SwitchType":
                     switch_type = value
@@ -1566,6 +2022,12 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     redundancy_type = None
     qos_profile = None
     rack_mgmt_map = None
+    chassis_linecards_info = {}
+    chassis_hwsku = None
+    chassis_port_alias = {}
+    slot_index = None
+    max_num_cores = None
+    card_type = None
 
     hwsku_qn = QName(ns, "HwSku")
     hostname_qn = QName(ns, "Hostname")
@@ -1578,17 +2040,29 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         if child.tag == str(docker_routing_config_mode_qn):
             docker_routing_config_mode = child.text
 
+    hwsku, hostname, docker_routing_config_mode, chassis_type, chassis_hostname = parse_global_info(root)
+
     (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
+
+    asic_hostname = get_asic_hostname_from_asic_name(chassis_type, asic_name, hostname)
+
+    if is_minigraph_for_chassis(chassis_type):
+        alias_map = normailize_port_map_for_chassis(asic_name, alias_map)
+        alias_asic_map = normailize_port_map_for_chassis(asic_name, alias_asic_map)
+        (max_num_cores, num_voq, chassis_linecards_info) = parse_chassis_metadata(root, chassis_hostname, hostname)
+        chassis_hwsku = parse_chassis_hwsku(root, chassis_hostname)
+        voq_intf_attributes = get_voq_intf_attributes(ports)
 
     port_names_map.update(ports)
     port_alias_map.update(alias_map)
     port_alias_asic_map.update(alias_asic_map)
 
+    slot_index = get_linecard_slot_index(hostname, chassis_linecards_info)
     # Get the local device node from DeviceMetadata
     local_devices = parse_asic_meta_get_devices(root)
 
     for child in root:
-        if asic_name is None:
+        if asic_hostname is None:
             if child.tag == str(QName(ns, "DpgDec")):
                 (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, hostname)
             elif child.tag == str(QName(ns, "CpgDec")):
@@ -1605,34 +2079,52 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
                 (port_speeds_default, port_descriptions, sys_ports) = parse_deviceinfo(child, hwsku)
         else:
             if child.tag == str(QName(ns, "DpgDec")):
-                (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, asic_name)
+                (intfs, lo_intfs, mvrf, mgmt_intf, voq_inband_intfs, vlans, vlan_members, dhcp_relay_table, pcs, pc_members, acls, acl_table_types, vni, tunnel_intfs, dpg_ecmp_content, static_routes, tunnel_intfs_qos_remap_config) = parse_dpg(child, asic_hostname)
                 host_lo_intfs = parse_host_loopback(child, hostname)
             elif child.tag == str(QName(ns, "CpgDec")):
-                (bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, bgp_asn, bgp_peers_with_range, bgp_monitors, bgp_sentinel_sessions) = parse_cpg(child, asic_name, local_devices)
+                (bgp_sessions, bgp_internal_sessions, bgp_voq_chassis_sessions, bgp_asn, bgp_peers_with_range, bgp_monitors, bgp_sentinel_sessions) = parse_cpg(child, asic_hostname, local_devices)
             elif child.tag == str(QName(ns, "PngDec")):
-                (neighbors, devices, port_speed_png) = parse_asic_png(child, asic_name, hostname)
+                (neighbors, devices, port_speed_png) = parse_asic_png(child, asic_hostname, hostname)
             elif child.tag == str(QName(ns, "MetadataDeclaration")):
-                (sub_role, switch_id, switch_type, max_cores, deployment_id, macsec_profile) = parse_asic_meta(child, asic_name)
+                (sub_role, switch_id, switch_type, max_cores, deployment_id, macsec_profile) = parse_asic_meta(child, asic_hostname)
             elif child.tag == str(QName(ns, "LinkMetadataDeclaration")):
                 linkmetas = parse_linkmeta(child, hostname)
             elif child.tag == str(QName(ns, "DeviceInfos")):
                 (port_speeds_default, port_descriptions, sys_ports) = parse_deviceinfo(child, hwsku)
 
+        if chassis_hostname:
+            if child.tag == str(QName(ns, "DeviceInfos")):
+                if asic_hostname is not None:
+                    (sys_ports, chassis_port_alias, port_speeds_default) = parse_chassis_deviceinfo(child, chassis_linecards_info, chassis_hwsku, num_voq, chassis_type, voq_intf_attributes)
+            elif child.tag == str(QName(ns, "MetadataDeclaration")):
+                (syslog_servers, ntp_servers, tacacs_servers, mgmt_routes, erspan_dst, deployment_id, region, macsec_profile) = parse_chassis_meta(child, chassis_hostname)
+            elif child.tag == str(QName(ns, "LinkMetadataDeclaration")):
+                linkmetas = parse_linkmeta(child, chassis_hostname)
+
     select_mmu_profiles(qos_profile, platform, hwsku)
-    # set the host device type in asic metadata also
-    device_type = [devices[key]['type'] for key in devices if key.lower() == hostname.lower()][0]
-    if asic_name is None:
+    
+    # for chassis get the device type from chassis metadata not the asic or linecard type
+    if chassis_hostname:
+        device_type = devices.get(chassis_hostname, {}).get('type', None)
+        card_type = [devices[key]['type'] for key in devices if key.lower() == hostname.lower()][0]
+    else:
+        device_type = [devices[key]['type'] for key in devices if key.lower() == hostname.lower()][0]
+        
+    if asic_hostname is None:
         current_device = [devices[key] for key in devices if key.lower() == hostname.lower()][0]
     else:
         try:
-            current_device = [devices[key] for key in devices if key.lower() == asic_name.lower()][0]
+            current_device = [devices[key] for key in devices if key.lower() == asic_hostname.lower()][0]
         except:
-            print("Warning: no asic configuration found for {} in minigraph".format(asic_name), file=sys.stderr)
             current_device = {}
 
+    # on single asic linecards, parse_dpg() will not get the mmanagement interface information
+    # check here and get the linecard managment interface information 
+    if chassis_hostname and not mgmt_intf:
+        mgmt_intf = parse_linecard_mgmt_ip(root, hostname)
+        
     results = {}
     results['DEVICE_METADATA'] = {'localhost': {
-        'bgp_asn': bgp_asn,
         'region': region,
         'cloudtype': cloudtype,
         'docker_routing_config_mode': docker_routing_config_mode,
@@ -1644,6 +2136,12 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         }
     }
 
+    if bgp_asn:
+        results['DEVICE_METADATA']['localhost']['bgp_asn'] = bgp_asn
+
+    if chassis_hostname:
+        results['DEVICE_METADATA']['localhost']['chassis_hostname'] = chassis_hostname
+        
     if deployment_id is not None:
         results['DEVICE_METADATA']['localhost']['deployment_id'] = deployment_id
 
@@ -1653,6 +2151,10 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     cluster = [devices[key] for key in devices if key.lower() == hostname.lower()][0].get('cluster', "")
     if cluster:
         results['DEVICE_METADATA']['localhost']['cluster'] = cluster
+
+    # Update Slice Type for T2/Chassis Role
+    if current_device and 'slice_type' in current_device and current_device['slice_type'] and chassis_hostname:
+        results['DEVICE_METADATA']['localhost']['slice_type'] = current_device['slice_type']
 
     if kube_data:
         results['KUBERNETES_MASTER'] = {
@@ -1685,26 +2187,48 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
     if len(system_defaults) > 0:
         results['SYSTEM_DEFAULTS'] = system_defaults
-
-    # for this hostname, if sub_role is defined, add sub_role in
-    # device_metadata
-    if sub_role is not None:
-        current_device['sub_role'] = sub_role
-        results['DEVICE_METADATA']['localhost']['sub_role'] =  sub_role
+   
+    if asic_name is not None:
         results['DEVICE_METADATA']['localhost']['asic_name'] =  asic_name
-    elif switch_type == "voq":
-       # On Voq switches asic_name is mandatory even on single-asic devices
-       results['DEVICE_METADATA']['localhost']['asic_name'] = 'Asic0'
+    
+    # for single asic Voq Linecards the asic_name needs to populated to "Asic0"
+    if switch_type == "voq" or chassis_type in [CHASSIS_CARD_VOQ]:
+        if not is_multi_asic():
+            results['DEVICE_METADATA']['localhost']['asic_name'] =  "Asic0"
 
-    # on Voq system each asic has a switch_id
-    if switch_id is not None:
-        results['DEVICE_METADATA']['localhost']['switch_id'] = switch_id
+    if sub_role is not None:
+        results['DEVICE_METADATA']['localhost']['sub_role'] =  sub_role
+    elif switch_type == "voq" or chassis_type in [CHASSIS_CARD_VOQ] and card_type == "Supervisor":
+        results['DEVICE_METADATA']['localhost']['sub_role'] = 'fabric'
+    elif chassis_type == "chassis-packet":
+        results['DEVICE_METADATA']['localhost']['sub_role'] =  BACKEND_ASIC_SUB_ROLE
+
+    if chassis_type == CHASSIS_CARD_VOQ and 'sub_role' in results['DEVICE_METADATA']['localhost'] and FABRIC_ASIC_SUB_ROLE.lower() == results['DEVICE_METADATA']['localhost']['sub_role'].lower():
+        results['DEVICE_METADATA']['localhost']['switch_type'] = 'fabric'
+    else:
+        # on Voq system each asic has a switch_type
+        if chassis_type is not None:
+            results['DEVICE_METADATA']['localhost']['switch_type'] = chassis_type.lower()
+
     # on Voq system each asic has a switch_type
     if switch_type is not None:
         results['DEVICE_METADATA']['localhost']['switch_type'] = switch_type
+    # #voq switch_id for asic
+    # switch_id = chassis_metadata.get(asic_hostname, {}).get('asic_switch_id', None)
+    # on Voq system each asic has a switch_id
+    if switch_id is not None:
+        if sub_role is not None and  FRONTEND_ASIC_SUB_ROLE == sub_role:
+            if slot_index is not None:
+                switch_id = get_asic_switch_id(slot_index, asic_name)
+
+        results['DEVICE_METADATA']['localhost']['switch_id'] = switch_id
     # on Voq system each asic has a max_cores
     if max_cores is not None:
         results['DEVICE_METADATA']['localhost']['max_cores'] = max_cores
+
+    # on Voq system each asic has a max_cores
+    if max_num_cores is not None:
+        results['DEVICE_METADATA']['localhost']['max_cores'] = max_num_cores
 
     # Voq systems have an inband interface
     if voq_inband_intfs is not None:
@@ -1762,12 +2286,13 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     if not is_multi_asic() and asic_name is None:
         results['SNMP_AGENT_ADDRESS_CONFIG'] = {}
         port = '161'
-        for mgmt_intf in mgmt_intf.keys():
-            snmp_key = mgmt_intf[1].split('/')[0] + '|' + port + '|'
-            results['SNMP_AGENT_ADDRESS_CONFIG'][snmp_key] = {}
-        # Add Loopback IP as agent address for single asic
-        for loip in lo_intfs.keys():
-            snmp_key = loip[1].split('/')[0] + '|' + port + '|'
+        for intf in list(mgmt_intf.keys()) + list(lo_intfs.keys()):
+            ip_addr = ipaddress.ip_address(UNICODE_TYPE(intf[1].split('/')[0]))
+            if ip_addr.version == 6 and ip_addr.is_link_local:
+                agent_addr = str(ip_addr) + '%' + intf[0]
+            else:
+                agent_addr = str(ip_addr)
+            snmp_key = agent_addr + '|' + port + '|'
             results['SNMP_AGENT_ADDRESS_CONFIG'][snmp_key] = {}
     else:
         results['SNMP_AGENT_ADDRESS_CONFIG'] = {}
@@ -1821,6 +2346,15 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     if sys_ports:
        results['SYSTEM_PORT'] = sys_ports
 
+    if chassis_port_alias:
+        slot_index = get_linecard_slot_index(hostname, chassis_linecards_info) 
+        for port in ports.keys():
+            # Try first to get Chassis port alias based on port bandwidth/configured speed and if exception use port default speed. 
+            try:
+                ports[port]['alias'] = chassis_port_alias.get(slot_index, {})[(port, port_speed_png[port])]
+            except KeyError:
+                ports[port]['alias'] = chassis_port_alias.get(slot_index, {}).get((port, ports[port]['speed']), ports[port]['alias'])
+
     for port_name in port_speeds_default:
         # ignore port not in port_config.ini
         if port_name not in ports:
@@ -1840,7 +2374,12 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
         if port_name in mgmt_alias_reverse_mapping.keys():
             continue
 
-        port_default_speed =  port_speeds_default.get(port_name, None)
+        # Get the port_default_speed based on chassis_type/switch_type is non None
+        if chassis_type:
+            slot_index = get_linecard_slot_index(hostname, chassis_linecards_info)
+            port_default_speed =  port_speeds_default.get(slot_index, {}).get(port_name, None)
+        else:
+            port_default_speed =  port_speeds_default.get(port_name, None)
         port_png_speed = port_speed_png[port_name]
 
         # set Port Speed before lane update
@@ -2070,36 +2609,37 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
                 print("Warning: ignore interface '%s' in DEVICE_NEIGHBOR as it is not in the port_config.ini" % nghbr, file=sys.stderr)
             del neighbors[nghbr]
     results['DEVICE_NEIGHBOR'] = neighbors
-    if asic_name is None:
+    if is_multi_asic() == False or asic_name is None:
         results['DEVICE_NEIGHBOR_METADATA'] = { key:devices[key] for key in devices if key.lower() != hostname.lower() }
     else:
         results['DEVICE_NEIGHBOR_METADATA'] = { key:devices[key] for key in devices if key in {device['name'] for device in neighbors.values()} }
-    results['SYSLOG_SERVER'] = dict((item, {}) for item in syslog_servers)
-    results['DHCP_SERVER'] = dict((item, {}) for item in dhcp_servers)
-    results['DHCP_RELAY'] = dhcp_relay_table
-    results['NTP_SERVER'] = dict((item, {}) for item in ntp_servers)
-    # Set default DNS nameserver from dns.j2
-    results['DNS_NAMESERVER'] = {}
-    if os.environ.get("CFGGEN_UNIT_TESTING", "0") == "2":
-        dns_conf = os.path.join(os.path.dirname(__file__), "tests/", "dns.j2")
-    else:
-        dns_conf = "/usr/share/sonic/templates/dns.j2"
-    if os.path.isfile(dns_conf):
-        text = ""
-        with open(dns_conf) as template_file:
-            # Semgrep does not allow to use jinja2 directly, but we do need jinja2 for SONiC
-            environment = jinja2.Environment(trim_blocks=True) # nosemgrep
-            dns_template = environment.from_string(template_file.read())
-            text = dns_template.render(results)
-        try:
-            dns_res = json.loads(text)
-        except ValueError as e:
-            sys.exit("Error: fail to load dns configuration, %s" % str(e))
+    if is_multi_asic() == False or asic_name is None:
+        results['SYSLOG_SERVER'] = dict((item, {}) for item in syslog_servers)
+        results['DHCP_SERVER'] = dict((item, {}) for item in dhcp_servers)
+        results['DHCP_RELAY'] = dhcp_relay_table
+        results['NTP_SERVER'] = dict((item, {'iburst': 'on'}) for item in ntp_servers)
+        # Set default DNS nameserver from dns.j2
+        results['DNS_NAMESERVER'] = {}
+        if os.environ.get("CFGGEN_UNIT_TESTING", "0") == "2":
+            dns_conf = os.path.join(os.path.dirname(__file__), "tests/", "dns.j2")
         else:
-            dns_nameservers = dns_res.get('DNS_NAMESERVER', {})
-            for k in dns_nameservers.keys():
-                results['DNS_NAMESERVER'][str(k)] = {}
-    results['TACPLUS_SERVER'] = dict((item, {'priority': '1', 'tcp_port': '49'}) for item in tacacs_servers)
+            dns_conf = "/usr/share/sonic/templates/dns.j2"
+        if os.path.isfile(dns_conf):
+            text = ""
+            with open(dns_conf) as template_file:
+                # Semgrep does not allow to use jinja2 directly, but we do need jinja2 for SONiC
+                environment = jinja2.Environment(trim_blocks=True) # nosemgrep
+                dns_template = environment.from_string(template_file.read())
+                text = dns_template.render(results)
+            try:
+                dns_res = json.loads(text)
+            except ValueError as e:
+                sys.exit("Error: fail to load dns configuration, %s" % str(e))
+            else:
+                dns_nameservers = dns_res.get('DNS_NAMESERVER', {})
+                for k in dns_nameservers.keys():
+                    results['DNS_NAMESERVER'][str(k)] = {}
+        results['TACPLUS_SERVER'] = dict((item, {'priority': '1', 'tcp_port': '49'}) for item in tacacs_servers)
     if len(acl_table_types) > 0:
         results['ACL_TABLE_TYPE'] = acl_table_types
     results['ACL_TABLE'] = filter_acl_table_bindings(acls, neighbors, pcs, pc_members, sub_role, current_device['type'] if current_device else None, is_storage_device, vlan_members)
@@ -2288,7 +2828,7 @@ def get_mux_cable_entries(ports, mux_cable_ports, active_active_ports, neighbors
 
 def parse_device_desc_xml(filename):
     root = ET.parse(filename).getroot()
-    (lo_prefix, lo_prefix_v6, mgmt_prefix, mgmt_prefix_v6, hostname, hwsku, d_type, _, _, _) = parse_device(root)
+    (lo_prefix, lo_prefix_v6, mgmt_prefix, mgmt_prefix_v6, hostname, hwsku, d_type, _, _, _, _) = parse_device(root)
 
     results = {}
     results['DEVICE_METADATA'] = {'localhost': {
@@ -2296,9 +2836,9 @@ def parse_device_desc_xml(filename):
         'hwsku': hwsku,
         }}
 
-    results['LOOPBACK_INTERFACE'] = {('lo', lo_prefix): {}}
+    results['LOOPBACK_INTERFACE'] = {'lo': {}, ('lo', lo_prefix): {}}
     if lo_prefix_v6:
-        results['LOOPBACK_INTERFACE'] = {('lo_v6', lo_prefix_v6): {}}
+        results['LOOPBACK_INTERFACE'] = {'lo_v6': {}, ('lo_v6', lo_prefix_v6): {}}
 
     results['MGMT_INTERFACE'] = {}
     if mgmt_prefix:
@@ -2314,6 +2854,19 @@ def parse_device_desc_xml(filename):
             results['MGMT_INTERFACE'].update({('eth0', mgmt_prefix_v6): {'gwaddr': gwaddr_v6}})
 
     return results
+
+def parse_hostname(filename):
+    hostName = None
+    if not os.path.isfile(filename):
+        return None
+    root = ET.parse(filename).getroot()
+    hostname_qn = QName(ns, "Hostname")
+    for child in root:
+        if child.tag == str(hostname_qn):
+            hostName = child.text
+            break
+
+    return hostName
 
 def parse_asic_sub_role(filename, asic_name):
     if not os.path.isfile(filename):
@@ -2344,6 +2897,36 @@ def parse_asic_meta_get_devices(root):
                 local_devices.append(name)
 
     return local_devices
+
+def parse_chassis_hwsku(root,chassis_hostname):
+    for child in root:
+        if child.tag == str(QName(ns, "PngDec")):
+            devices = child.find(str(QName(ns, "Devices")))
+            for device in devices.findall(str(QName(ns, "Device"))):
+                if chassis_hostname.lower() ==  device.find(str(QName(ns, "Hostname"))).text.lower():
+                    hwsku =  device.find(str(QName(ns, "HwSku"))).text
+                    return hwsku
+    return None
+
+def parse_mgmt_intf(child):
+    mgmt_intf = {}
+    for mgmtintf in child.find(str(QName(ns, "ManagementIPInterfaces"))).findall(str(QName(ns1, "ManagementIPInterface"))):
+        intfname = mgmtintf.find(str(QName(ns, "AttachTo"))).text
+        ipprefix = mgmtintf.find(str(QName(ns1, "PrefixStr"))).text
+        mgmtipn = ipaddress.ip_network(UNICODE_TYPE(ipprefix), False)
+        gwaddr = ipaddress.ip_address(next(mgmtipn.hosts()))
+        mgmt_intf[(intfname, ipprefix)] = {'gwaddr': gwaddr}
+    return mgmt_intf
+
+def parse_linecard_mgmt_ip(root, hname):
+    linecard_mgmt_intfs = {}
+    dpg = root.find(str(QName(ns, "DpgDec")))
+    for child in dpg:
+        hostname = child.find(str(QName(ns, "Hostname")))
+        if hostname.text.lower() != hname.lower():
+            continue
+        linecard_mgmt_intfs = parse_mgmt_intf(child)
+    return linecard_mgmt_intfs
 
 port_names_map = {}
 port_alias_map = {}

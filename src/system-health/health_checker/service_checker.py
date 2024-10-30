@@ -15,6 +15,19 @@ logger = Logger(log_identifier=SYSLOG_IDENTIFIER)
 EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
 EVENTS_PUBLISHER_TAG = "process-not-running"
 
+def check_docker_image(image_name):
+    """
+    @summary: This function will check if docker image exists.
+    @return:  True if the image exists, otherwise False.
+    """
+    try:
+        DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
+        DOCKER_CLIENT.images.get(image_name)
+        return True
+    except (docker.errors.ImageNotFound, docker.errors.APIError) as err:
+        logger.log_warning("Failed to get image '{}'. Error: '{}'".format(image_name, err))
+        return False
+
 class ServiceChecker(HealthChecker):
     """
     Checker that checks critical system service status via monit service.
@@ -84,21 +97,39 @@ class ServiceChecker(HealthChecker):
         # it will be removed from exception list.
         run_all_instance_list = ['database', 'bgp']
 
-        for feature_name, feature_entry in feature_table.items():
+        container_list = []
+        for container_name in feature_table.keys():
+            # slim image does not have telemetry container and corresponding docker image
+            if container_name == "telemetry":
+                ret = check_docker_image("docker-sonic-telemetry")
+                if not ret:
+                    # If telemetry container image is not present, check gnmi container image
+                    # If gnmi container image is not present, ignore telemetry container check
+                    # if gnmi container image is present, check gnmi container instead of telemetry
+                    ret = check_docker_image("docker-sonic-gnmi")
+                    if not ret:
+                        logger.log_debug("Ignoring telemetry container check on image which has no corresponding docker image")
+                    else:
+                        container_list.append("gnmi")
+                    continue
+            container_list.append(container_name)
+
+        for container_name in container_list:
+            feature_entry = feature_table[container_name]
             if feature_entry["state"] not in ["disabled", "always_disabled"]:
                 if multi_asic.is_multi_asic():
                     if feature_entry.get("has_global_scope", "True") == "True":
-                        expected_running_containers.add(feature_name)
-                        container_feature_dict[feature_name] = feature_name
+                        expected_running_containers.add(container_name)
+                        container_feature_dict[container_name] = container_name
                     if feature_entry.get("has_per_asic_scope", "False") == "True":
                         num_asics = multi_asic.get_num_asics()
                         for asic_id in range(num_asics):
-                            if asic_id in asics_id_presence or feature_name in run_all_instance_list:
-                                expected_running_containers.add(feature_name + str(asic_id))
-                                container_feature_dict[feature_name + str(asic_id)] = feature_name
+                            if asic_id in asics_id_presence or container_name in run_all_instance_list:
+                                expected_running_containers.add(container_name + str(asic_id))
+                                container_feature_dict[container_name + str(asic_id)] = container_name
                 else:
-                    expected_running_containers.add(feature_name)
-                    container_feature_dict[feature_name] = feature_name
+                    expected_running_containers.add(container_name)
+                    container_feature_dict[container_name] = container_name
                     
         if device_info.is_supervisor():
             expected_running_containers.add("database-chassis")

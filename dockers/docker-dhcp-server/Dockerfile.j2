@@ -3,7 +3,6 @@ FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG image_version
-RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -21,8 +20,6 @@ RUN apt-get update &&       \
 RUN mkdir -p /var/run/kea
 
 RUN pip3 install psutil
-# TODO issue on remote rsyslog server in non-host container
-RUN rm -f /etc/supervisor/conf.d/containercfgd.conf
 
 {% if docker_dhcp_server_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -52,11 +49,10 @@ RUN apt-get clean -y        && \
 COPY ["docker_init.sh", "start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
-COPY ["rsyslog/rsyslog.conf.j2", "kea-dhcp4.conf.j2", "/usr/share/sonic/templates/"]
+COPY ["kea-dhcp4.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["lease_update.sh", "/etc/kea/"]
 COPY ["kea-dhcp4-init.conf", "/etc/kea/kea-dhcp4.conf"]
 COPY ["cli", "/cli/"]
-COPY ["rsyslog/default.conf", "/etc/rsyslog.d"]
 
 ENTRYPOINT ["/usr/bin/docker_init.sh"]

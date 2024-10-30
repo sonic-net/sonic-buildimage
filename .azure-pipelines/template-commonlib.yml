@@ -11,7 +11,7 @@ jobs:
   - job: Build_${{ arch }}
     timeoutInMinutes: 120
     ${{ if eq(arch,'amd64') }}:
-      pool: sonicbld
+      pool: sonicbld-1es
     ${{ else }}:
       pool: sonicbld-${{ arch }}
     variables:

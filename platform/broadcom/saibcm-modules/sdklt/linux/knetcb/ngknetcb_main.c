@@ -3,13 +3,12 @@
  * NGKNET Callback module entry.
  */
 /*
- * $Copyright: (c) 2022 Broadcom.
+ * $Copyright: (c) 2024 Broadcom.
  * Broadcom Proprietary and Confidential. All rights reserved.$
  */
 
 #include <lkm/lkm.h>
 #include <ngknet_callback.h>
-#include "psample-cb.h"
 #include "bcmcnet/bcmcnet_core.h"
 /*! \cond */
 MODULE_AUTHOR("Broadcom Corporation");
@@ -97,6 +96,18 @@ dev_id_get(char* dev_type)
     {
         dev_id = 0xb993;
     }
+    else if (0== strcmp(dev_type, "bcm78900_b0"))
+    {
+        dev_id = 0xf900;
+    }
+    else if (0== strcmp(dev_type, "bcm78905_a0"))
+    {
+        dev_id = 0xf905;
+    }
+    else if (0== strcmp(dev_type, "bcm78800_a0"))
+    {
+        dev_id = 0xf800;
+    }
     return dev_id;
 }
 
@@ -126,7 +137,7 @@ get_tag_status(char* dev_type, char* dev_var, void *meta)
     }
 #endif
 
-    if ((0xb880 == dev_id ) || (0xb780 == dev_id))
+    if ((0xb880 == dev_id ) || (0xb780 == dev_id) || (0xf800 == dev_id))
     {
         /* Field BCM_PKTIO_RXPMD_MATCH_ID_LO has tag status in RX PMD */
         fd_index = 2;
@@ -134,7 +145,8 @@ get_tag_status(char* dev_type, char* dev_var, void *meta)
         match_id_minbit = (dev_id == 0xb780) ? 2 : 1;        
         outer_l2_hdr = (valptr[fd_index] >> match_id_minbit & 0xFF);
         outer_tag_match = (((dev_id == 0xb780) &&
-                           ((strncmp(dev_var, "DNA_", 4)) == 0)) ? 0x8 : 0x10);
+                           (((strncmp(dev_var, "DNA_", 4)) == 0)||
+                            ((strncmp(dev_var, "HNA_", 4)) == 0))) ? 0x8 : 0x10);
         if (outer_l2_hdr & 0x1) {
 #ifdef KNET_CB_DEBUG
             if (debug & 0x1) {
@@ -177,7 +189,8 @@ get_tag_status(char* dev_type, char* dev_var, void *meta)
         }
     }
     else if ((dev_id == 0xb990)|| (dev_id == 0xb996) || 
-             (dev_id == 0xb999)|| (dev_id == 0xb993))
+             (dev_id == 0xb999)|| (dev_id == 0xb993) ||
+             (dev_id == 0xf900)|| (dev_id == 0xf905))
     {
         fd_index = 9;
         valptr = (uint32_t *)meta;
@@ -186,8 +199,14 @@ get_tag_status(char* dev_type, char* dev_var, void *meta)
          * says there's a tag, then we don't want to strip.
          * Otherwise, we do.
          */
-        outer_l2_hdr = (valptr[fd_index] >> 13) & 3;
-
+        if ((dev_id == 0xf900) || (dev_id == 0xf905))
+        {
+            outer_l2_hdr = (valptr[fd_index]) & 1;
+        }
+        else 
+        {
+            outer_l2_hdr = (valptr[fd_index] >> 13) & 3;
+        }
         if (outer_l2_hdr)
         {
             tag_status = 2;
@@ -351,12 +370,9 @@ strip_tag_tx_cb(struct sk_buff *skb)
 }
 
 static struct sk_buff *
-ngknet_rx_cb(struct net_device *dev, struct sk_buff *skb)
+ngknet_rx_cb(struct sk_buff *skb)
 {
     skb = strip_tag_rx_cb(skb);
-#ifdef PSAMPLE_SUPPORT
-    skb = psample_rx_cb(dev, skb); 
-#endif
     return skb;
 }
 
@@ -365,26 +381,6 @@ ngknet_tx_cb(struct sk_buff *skb)
 {
     skb = strip_tag_tx_cb(skb);
     return skb;
-}
-
-static int
-ngknet_netif_create_cb(struct net_device *dev)
-{
-    int retv = 0;
-#ifdef PSAMPLE_SUPPORT
-    retv = psample_netif_create_cb(dev); 
-#endif
-    return retv;
-}
-
-static int
-ngknet_netif_destroy_cb(struct net_device *dev)
-{
-    int retv = 0;
-#ifdef PSAMPLE_SUPPORT
-    retv = psample_netif_destroy_cb(dev); 
-#endif
-    return retv;
 }
 
 /*!
@@ -480,25 +476,12 @@ ngknetcb_init_module(void)
     ngknet_rx_cb_register(ngknet_rx_cb);
     ngknet_tx_cb_register(ngknet_tx_cb);
 
-#ifdef PSAMPLE_SUPPORT
-    psample_init();
-#endif
-
-    ngknet_netif_create_cb_register(ngknet_netif_create_cb);
-    ngknet_netif_destroy_cb_register(ngknet_netif_destroy_cb);
     return 0;
 }
 
 static void __exit
 ngknetcb_exit_module(void)
 {
-    ngknet_netif_create_cb_unregister(ngknet_netif_create_cb);
-    ngknet_netif_destroy_cb_unregister(ngknet_netif_destroy_cb);
-
-#ifdef PSAMPLE_SUPPORT
-    psample_cleanup();
-#endif
-
     ngknet_rx_cb_unregister(ngknet_rx_cb);
     ngknet_tx_cb_unregister(ngknet_tx_cb);
 

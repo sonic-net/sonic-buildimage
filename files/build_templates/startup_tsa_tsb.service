@@ -1,0 +1,15 @@
+[Unit]
+Description= STARTUP TSA-TSB SERVICE
+Requires=config-setup.service database.service
+After=config-setup.service database.service
+Before=bgp.service
+ConditionPathExists=!/etc/sonic/chassisdb.conf
+
+[Service]
+Environment="STARTED_BY_TSA_TSB_SERVICE=1"
+ExecStart=/usr/bin/python3 -u /usr/local/bin/startup_tsa_tsb.py  start
+ExecStop=/usr/bin/python3 -u /usr/local/bin/startup_tsa_tsb.py stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

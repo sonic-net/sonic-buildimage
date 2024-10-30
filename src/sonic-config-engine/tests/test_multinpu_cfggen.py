@@ -3,12 +3,19 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import unittest
 import yaml
 import tests.common_utils as utils
+from unittest import mock
 
 from unittest import TestCase
 from sonic_py_common.general import getstatusoutput_noshell
+
+if sys.version_info.major == 3:
+    from unittest import mock
+else:
+    import mock
 
 
 SKU = 'multi-npu-01'
@@ -27,12 +34,14 @@ class TestMultiNpuCfgGen(TestCase):
         self.sample_graph = os.path.join(self.test_data_dir, 'sample-minigraph.xml')
         self.sample_graph1 = os.path.join(self.test_data_dir, 'sample-minigraph-noportchannel.xml')
         self.sample_port_config = os.path.join(self.test_data_dir, 'sample_port_config.ini')
+        self.sample_port_config_0 = os.path.join(self.test_data_dir, 'sample_port_config-0.ini')
         self.port_config = []
         for asic in range(NUM_ASIC):
             self.port_config.append(os.path.join(self.test_data_dir, "sample_port_config-{}.ini".format(asic)))
         self.sample_no_asic_port_config = os.path.join(self.test_data_dir, 'sample_port_config-4.ini')
         self.output_file = os.path.join(self.test_dir, 'output')
         os.environ["CFGGEN_UNIT_TESTING"] = "2"
+        os.environ["CFGGEN_UNIT_TESTING_TOPOLOGY"] = "multi_asic"
 
     def run_script(self, argument, check_stderr=True, output_file=None, validateYang=True):
         print('\n    Running sonic-cfggen ' + ' '.join(argument))
@@ -136,19 +145,19 @@ class TestMultiNpuCfgGen(TestCase):
         #TACPLUS_SERVER not present in the asic configuration.
         argument = ['-m', self.sample_graph, '--var-json', "TACPLUS_SERVER"]
         for asic in range(NUM_ASIC):
-            output = json.loads(self.run_script_for_asic(argument, asic, self.port_config[asic]))
-            self.assertDictEqual(output, {})
+            output = self.run_script_for_asic(argument, asic, self.port_config[asic])
+            self.assertEqual(output.strip(), '')
 
     def test_metadata_ntp(self):
         argument = ['-m', self.sample_graph, '-p', self.sample_port_config, '--var-json', "NTP_SERVER"]
         output = json.loads(self.run_script(argument))
-        self.assertDictEqual(output, {'17.39.1.130': {}, '17.39.1.129': {}})
+        self.assertDictEqual(output, {'17.39.1.130': {'iburst': 'on'}, '17.39.1.129': {'iburst': 'on'}})
         #NTP data is present only in the host config
         argument = ['-m', self.sample_graph, '--var-json', "NTP_SERVER"]
         for asic in range(NUM_ASIC):
-            output = json.loads(self.run_script_for_asic(argument, asic, self.port_config[asic]))
-            print("Log:asic{} sku {}".format(asic,output))
-            self.assertDictEqual(output, {})
+            output = self.run_script_for_asic(argument, asic, self.port_config[asic])
+            self.assertEqual(output.strip(), '')
+
 
     def test_mgmt_port(self):
         argument = ['-m', self.sample_graph, '-p', self.sample_port_config, '--var-json', "MGMT_PORT"]
@@ -168,12 +177,14 @@ class TestMultiNpuCfgGen(TestCase):
                  'PortChannel4002': {'admin_status': 'up', 'min_links': '2', 'mtu': '9100', 'tpid': '0x8100', 'lacp_key': 'auto'}})
 
     def test_backend_asic_portchannels(self):
+
         argument = ["-m", self.sample_graph, "-p", self.port_config[3], "-n", "asic3", "--var-json", "PORTCHANNEL"]
         output = json.loads(self.run_script(argument))
         self.assertDictEqual(output, \
                 {'PortChannel4013': {'admin_status': 'up', 'min_links': '2', 'mtu': '9100', 'tpid': '0x8100', 'lacp_key': 'auto'},
-                 'PortChannel4014': {'admin_status': 'up', 'min_links': '2', 'mtu': '9100', 'tpid': '0x8100', 'lacp_key': 'auto'}})
+                'PortChannel4014': {'admin_status': 'up', 'min_links': '2', 'mtu': '9100', 'tpid': '0x8100', 'lacp_key': 'auto'}})
 
+        
     def test_frontend_asic_portchannel_mem(self):
         argument = ["-m", self.sample_graph, "-p", self.port_config[0], "-n", "asic0", "-v", "PORTCHANNEL_MEMBER.keys()|list"]
         output = self.run_script(argument)
@@ -227,6 +238,24 @@ class TestMultiNpuCfgGen(TestCase):
              "Ethernet-BP8": { "admin_status": "up",  "alias": "Eth6-ASIC0",  "asic_port_name": "Eth6-ASIC0",  "description": "ASIC3:Eth0-ASIC3",  "index": "2",  "lanes": "21,22,23,24",  "mtu": "9100", "tpid": "0x8100", "pfc_asym": "off",  "role": "Int",  "speed": "40000" },
              "Ethernet-BP12": { "admin_status": "up",  "alias": "Eth7-ASIC0",  "asic_port_name": "Eth7-ASIC0",  "description": "ASIC3:Eth1-ASIC3",  "index": "3",  "lanes": "25,26,27,28",  "mtu": "9100", "tpid": "0x8100", "pfc_asym": "off",  "role": "Int",  "speed": "40000" }})
 
+    def test_hwsku_option_port_list_port_config_ini(self):
+        mock.patch('device_info.get_path_to_port_config_file', mock.MagicMock(return_value=self.sample_port_config_0))
+        argument = ["-k", ASIC_SKU, "-n", "asic0", "-v", "PORT.keys()|list"]
+        output = self.run_script(argument)
+        self.assertEqual(
+            utils.liststr_to_dict(output.strip()),
+            utils.liststr_to_dict("['Ethernet0','Ethernet4','Ethernet8','Ethernet12','Ethernet-BP0','Ethernet-BP4','Ethernet-BP8','Ethernet-BP12']")
+        )
+
+    def test_hwsku_option_port_list_configdb(self):
+        mock.patch('device_info.get_path_to_port_config_file', mock.MagicMock(return_value=None))
+        argument = ["-k", ASIC_SKU, "-n", "asic0", "-v", "PORT.keys()|list"]
+        output = self.run_script(argument)
+        self.assertEqual(
+            utils.liststr_to_dict(output.strip()),
+            utils.liststr_to_dict("['Ethernet0','Ethernet4','Ethernet8','Ethernet12','Ethernet-BP0','Ethernet-BP4','Ethernet-BP8','Ethernet-BP12']")
+        )
+
     def test_frontend_asic_ports_config_db(self):
         argument = ["-m", self.sample_graph, "-p", self.port_config[0], "-n", "asic0", "--var-json", "PORT"]
         output = json.loads(self.run_script(argument))
@@ -269,6 +298,8 @@ class TestMultiNpuCfgGen(TestCase):
             'Ethernet-BP392': {'name': 'ASIC1', 'port': 'Eth6-ASIC1'},
             'Ethernet-BP388': {'name': 'ASIC0', 'port': 'Eth7-ASIC0'}})
 
+
+    #@mock.patch("sonic_py_common.multi_asic.is_multi_asic", mock.MagicMock(return_value=True))
     def test_backend_device_neigh_metadata(self):
         argument = ["-m", self.sample_graph, "-p", self.port_config[3], "-n", "asic3", "--var-json", "DEVICE_NEIGHBOR_METADATA"]
         output = json.loads(self.run_script(argument))
@@ -551,3 +582,4 @@ class TestMultiNpuCfgGen(TestCase):
 
     def tearDown(self):
         os.environ["CFGGEN_UNIT_TESTING"] = ""
+        os.environ["CFGGEN_UNIT_TESTING_TOPOLOGY"] = ""

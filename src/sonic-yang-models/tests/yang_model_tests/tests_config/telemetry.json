@@ -47,6 +47,23 @@
             }
         }
     },
+    "TELEMETRY_TABLE_WITH_INCORRECT_SAVE_ON_SET": {
+        "sonic-telemetry:sonic-telemetry": {
+            "sonic-telemetry:TELEMETRY": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/telemetry/dsmsroot.cer",
+                    "server_crt": "/etc/sonic/telemetry/streamingtelemetryserver.cer",
+                    "server_key": "/etc/sonic/telemetry/streamingtelemetryserver.key"
+                },
+                "gnmi": {
+                    "client_auth": "true",
+                    "log_level": "2",
+                    "port": "50051",
+                    "save_on_set": "wrong"
+                }
+            }
+        }
+    },
     "TELEMETRY_TABLE_WITH_VALID_CONFIG": {
         "sonic-telemetry:sonic-telemetry": {
             "sonic-telemetry:TELEMETRY": {
@@ -58,7 +75,8 @@
                 "gnmi": {
                     "client_auth": "true",
                     "log_level": "2",
-                    "port": "50051"
+                    "port": "50051",
+                    "save_on_set": "false"
                 }
             }
         }

@@ -54,11 +54,11 @@ class TestDeviceData:
 
     @mock.patch('sonic_py_common.device_info.get_paths_to_platform_and_hwsku_dirs', mock.MagicMock(return_value=('', '/tmp')))
     @mock.patch('sonic_platform.device_data.utils.read_key_value_file')
-    def test_is_independent_mode(self, mock_read):
+    def test_is_module_host_management_mode(self, mock_read):
         mock_read.return_value = {}
-        assert not DeviceDataManager.is_independent_mode()
+        assert not DeviceDataManager.is_module_host_management_mode()
         mock_read.return_value = {'SAI_INDEPENDENT_MODULE_MODE': '1'}
-        assert DeviceDataManager.is_independent_mode()
+        assert DeviceDataManager.is_module_host_management_mode()
 
     @mock.patch('sonic_py_common.device_info.get_path_to_platform_dir', mock.MagicMock(return_value='/tmp'))
     @mock.patch('sonic_platform.device_data.utils.load_json_file')
@@ -74,7 +74,7 @@ class TestDeviceData:
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', mock.MagicMock(return_value=3))
     @mock.patch('sonic_platform.device_data.utils.read_int_from_file', mock.MagicMock(return_value=1))
     @mock.patch('sonic_platform.device_data.os.path.exists')
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_independent_mode')
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode')
     def test_wait_platform_ready(self, mock_is_indep, mock_exists):
         mock_exists.return_value = True
         mock_is_indep.return_value = True
