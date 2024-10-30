@@ -83,7 +83,8 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
             "tunnel_type":"IPINIP",
-            "dscp_mode":"uniform",
+            "dscp_mode":"pipe",
+            "decap_dscp_to_tc_map":"AZURE",
 {% if "mlnx" in DEVICE_METADATA.localhost.platform %}
             "ecn_mode":"standard",
 {% else %}
@@ -136,7 +137,8 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {
             "tunnel_type":"IPINIP",
-            "dscp_mode":"uniform",
+            "dscp_mode":"pipe",
+            "decap_dscp_to_tc_map":"AZURE",
 {% if "mlnx" in DEVICE_METADATA.localhost.platform %}
             "ecn_mode":"standard",
 {% else %}
