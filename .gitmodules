@@ -124,3 +124,7 @@
 [submodule "platform/innovium/sonic-platform-marvell"]
 	path = platform/innovium/sonic-platform-marvell
 	url = https://github.com/Marvell-switching/sonic-platform-marvell
+[submodule "platform/marvell/sonic-platform-wistron"]
+	path = platform/marvell/sonic-platform-wistron
+	url = https://github.com/Wistron-EWD/sonic-platform-arm64
+	branch = main
