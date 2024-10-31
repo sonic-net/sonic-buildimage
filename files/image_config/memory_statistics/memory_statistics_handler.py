@@ -39,7 +39,6 @@ class SyslogLogger:
         self.syslog_identifier = identifier
         self.log_to_console = log_to_console
 
-        # Open the syslog connection with the given identifier
         syslog.openlog(ident=self.syslog_identifier, logoption=syslog.LOG_PID, facility=syslog.LOG_DAEMON)
 
     def log(self, level, message):
@@ -48,10 +47,7 @@ class SyslogLogger:
         :param level: The severity level (e.g., syslog.LOG_ERR, syslog.LOG_INFO, etc.).
         :param message: The log message to be recorded.
         """
-        # Log to syslog
         syslog.syslog(level, message)
-
-        # If console logging is enabled, print the message
         if self.log_to_console:
             print(message)
 
@@ -390,7 +386,7 @@ class TimeProcessor:
         request_data["time_data"] = {
             "start_time_obj": start_time,
             "end_time_obj": end_time,
-            "retention_period_days": retention_period_days,  # Added retention period in days
+            "retention_period_days": retention_period_days,  
             "num_days": day_and_hour_diffs['num_days'],
             "total_hours": total_time['total_hours'],
             "total_minutes": total_time['total_minutes'],
@@ -431,7 +427,7 @@ class MemoryReportGenerator:
             return "D{:02d}-D{:02d}".format(slot.day, (slot + self.step_timedelta).day), slot.strftime('%d%b%y')
         elif self.period == "hours":
             return "H{:02d}-H{:02d}".format(slot.hour, (slot + self.step_timedelta).hour), slot.strftime('%H:%M')
-        else:  # For minutes
+        else: 
             return "M{:02d}-M{:02d}".format(slot.minute, (slot + self.step_timedelta).minute), slot.strftime('%H:%M')
 
     def get_memmory_statistics_report_header(self):
@@ -440,23 +436,19 @@ class MemoryReportGenerator:
         Returns:
             str: The formatted header for the memory statistics report.
         """
-        # Codes explanation section
+
         fmt = "\nCodes:\tM - minutes, H - hours, D - days\n"
         fmt += "-" * 80 + "\n"
-
-        # Main report details
         fmt += "Report Generated:    {}\n".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         fmt += "Analysis Period:     From {} to {}\n".format(self.start.strftime("%Y-%m-%d %H:%M:%S"),
                                                              self.end.strftime("%Y-%m-%d %H:%M:%S"))
         fmt += "Interval:            {} {}\n".format(self.step, self.period.capitalize())
 
-        # Initialize for dynamic columns
         slot = self.start
         num_intervals = 0
         interval_labels = []
         time_labels = []
 
-        # Generate interval labels and time labels
         while slot <= self.end:
             interval_label, time_label = self.get_interval_column_label(slot)
             interval_labels.append(interval_label)
@@ -469,33 +461,164 @@ class MemoryReportGenerator:
         INTERVAL_WIDTH = 11
 
         total_width = (METRIC_WIDTH + 3 * (VALUE_WIDTH + 1) +
-                       (INTERVAL_WIDTH + 1) * num_intervals - 1)  # last interval no space
+                       (INTERVAL_WIDTH + 1) * num_intervals - 1) 
 
-        # Create the separator line
         separator = "-" * total_width + "\n"
 
-        # Build the header with the metric titles and dashes
         header = separator
-        # Header row
         header += "{:<{}} {:<{}} {:<{}} {:<{}}".format(
             "Metric", METRIC_WIDTH, "Current", VALUE_WIDTH, "High", VALUE_WIDTH, "Low", VALUE_WIDTH
         )
         for label in interval_labels:
             header += " {:<{}}".format(label, INTERVAL_WIDTH)
         header += "\n"
-
-        # Subheader row
         header += "{:<{}} {:<{}} {:<{}} {:<{}}".format(
             " ", METRIC_WIDTH, "Value", VALUE_WIDTH, "Value", VALUE_WIDTH, "Value", VALUE_WIDTH
         )
         for label in time_labels:
             header += " {:<{}}".format(label, INTERVAL_WIDTH)
         header += "\n"
-
-        # Add another separator
         header += separator
 
         return fmt + header
+
+class MemoryEntryManager:
+    def add_memory_entry(self, request, total_entries_all, global_entries, local_entries, new_entry, item, category, entry_list):
+        """Add memory entry to global and local entries.
+        Args:
+            request (dict): The request object containing parameters for filtering.
+            total_entries_all (dict): Dictionary to hold total entries across all items.
+            global_entries (dict): Dictionary to hold global memory entries.
+            local_entries (dict): Dictionary to hold local memory entries.
+            new_entry (dict): The new memory entry to be added.
+            item (str): The item being processed (e.g., 'system_memory').
+            category (str): The category of the memory entry.
+            entry_list (str): The entry list name for aggregation.
+        """
+        if item not in global_entries:
+            global_entries[item] = {}
+
+        for metric_name in new_entry[item][category].keys():
+            if 'metric_name' in request and request['metric_name'] is not None and not re.match(f".*{request['metric_name']}.*", metric_name):
+                continue
+            current_rss = int(new_entry[item][category][metric_name]['prss']) / int(new_entry[item][category][metric_name]['count'])
+
+            if metric_name in global_entries[item][category]:
+                global_entries[item][category][metric_name]['prss'] += int(new_entry[item][category][metric_name]['prss'])
+                global_entries[item][category][metric_name]['count'] += int(new_entry[item][category][metric_name]['count'])
+            else:
+                global_entries[item][category][metric_name] = new_entry[item][category][metric_name].copy()
+            local_entries[item][category][metric_name] = {'prss': current_rss}
+
+            if metric_name in total_entries_all[entry_list]:
+                total_entries_all[entry_list][metric_name] += int(global_entries[item][category][metric_name]['prss'])
+            else:
+                total_entries_all[entry_list][metric_name] = int(global_entries[item][category][metric_name]['prss'])
+
+    def add_entry_total(self, total_entry, item, category):
+        """Calculate and add average values for memory entries.
+        Args:
+            total_entry (dict): The dictionary containing total memory entries.
+            item (str): The item to calculate averages for.
+            category (str): The category of the memory entry.
+        """
+        for metric_name in total_entry[item][category].keys():
+            total_entry[item][category][metric_name]['avg_value'] = int(total_entry[item][category][metric_name]['prss']) / int(total_entry[item][category][metric_name]['count'])
+
+    def get_global_entry_data(self, request, total_entry_all, local_entry, entries):
+        """Aggregate global entry data from local entries.
+        Args:
+            request (dict): The request object containing parameters for filtering.
+            total_entry_all (dict): Dictionary to hold total entries across all items.
+            local_entry (dict): Dictionary holding local memory entries.
+            entries (dict): Dictionary containing memory entry time list.
+        Returns:
+            dict: Aggregated global memory entry data.
+        """
+        gentry = {"system_memory": {"system": {}, "count": 0}, "count": 0}
+
+        for day in range(0, int(entries['count']), 1):
+            if entries["time_list"][day]['count'] == 0:
+                continue
+            self.add_memory_entry(request, total_entry_all, gentry, local_entry, entries["time_list"][day], 'system_memory', 'system', "system_list")
+        self.add_entry_total(gentry, 'system_memory', 'system')
+
+        return gentry
+
+    def get_current_memory(self, request, current_memory, memory_type, metric_name):
+        """Retrieve current memory value for a specified type and metric name.
+        Args:
+            request (dict): The request object containing parameters for filtering.
+            current_memory (dict): Current memory data structure.
+            memory_type (str): Type of memory to retrieve (e.g., 'system_memory').
+            metric_name (str): Name of the metric to retrieve.
+        Returns:
+            int: Current memory value or "0" if not found.
+        """
+        if memory_type in current_memory and metric_name in current_memory[memory_type][request['type']]:
+            return current_memory[memory_type][request['type']][metric_name]['prss']
+        else:
+            return "0"
+
+    def get_memory_entry_data(self, request, total_entry_all, time_range):
+        """Retrieve formatted memory entry data based on request parameters.
+        Args:
+            request (dict): The request object containing parameters for filtering.
+            total_entry_all (dict): Dictionary to hold total entries across all items.
+            time_range (str): Time range for fetching entries.
+        Returns:
+            str: Formatted memory entry data.
+        """
+        Memory_formatter = Utility()
+
+        max_record_count = int(request.get('rcount', 200))
+        count = 0
+        formatted_output = ""
+        selected_field = request.get('field', 'avg_value')
+        memory_type = "system_memory"
+        current_memory = request['current_memory']
+        total_high_value, total_low_value = {}, {}
+
+        METRIC_WIDTH = 18
+        VALUE_WIDTH = 10
+        INTERVAL_WIDTH = 11
+
+        for metric_name in current_memory[memory_type].get(request['type'], {}):
+            if request.get('metric_name') and not re.match(f".*{request['metric_name']}.*", metric_name):
+                continue
+            count += 1
+            if count > max_record_count:
+                formatted_output += "<< more records truncated, use filter query to optimize the search >>\n"
+                break
+
+            total_high_value[metric_name] = 0
+            total_low_value[metric_name] = 0
+
+            history_values = []
+
+            for time_entry in total_entry_all.get("time_group_list", []):
+                memory_data = time_entry.get(memory_type, {}).get(request['type'], {}).get(metric_name, {})
+                if memory_data:
+                    mem_value = int(memory_data.get(selected_field, 0)) 
+                    history_values.append(Memory_formatter.format_memory_size(mem_value))
+                    total_high_value[metric_name] = max(total_high_value[metric_name], mem_value)
+                    total_low_value[metric_name] = min(total_low_value[metric_name] or mem_value, mem_value)
+                else:
+                    history_values.append('-')
+
+            current_mem = Memory_formatter.format_memory_size(self.get_current_memory(request, current_memory, memory_type, metric_name))
+            high_mem = Memory_formatter.format_memory_size(total_high_value[metric_name])
+            low_mem = Memory_formatter.format_memory_size(total_low_value[metric_name])
+
+            formatted_output += (
+                f"{metric_name:<{METRIC_WIDTH}} "
+                f"{current_mem:<{VALUE_WIDTH}} "
+                f"{high_mem:<{VALUE_WIDTH}} "
+                f"{low_mem:<{VALUE_WIDTH}} "
+                + ' '.join(f"{v:<{INTERVAL_WIDTH}}" for v in history_values) + "\n"
+            )
+
+        return formatted_output
 
 class MemoryStatisticsDaemon:
     """
