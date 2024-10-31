@@ -445,9 +445,10 @@ class TestVoqChassisMultiAsic(TestChassis):
             'chassis_hostname': 'str-sonic',
             'deployment_id': '3',
             'cluster': 'TestbedForstr-sonic',
+            'subtype': 'DownstreamLC',
             'switch_type': 'voq',
             'max_cores': 64,
-            'subtype': 'DownstreamLC'})
+            })
 
     def test_device_metadata_for_namespace(self):
         argument = [
@@ -475,7 +476,8 @@ class TestVoqChassisMultiAsic(TestChassis):
             'asic_name': 'asic0',
             'switch_type': 'voq',
             'switch_id': 8,
-            'max_cores': 64})
+            'max_cores': 64,
+            'subtype': 'DownstreamLC'})
 
     def test_system_port(self):
         argument = ['-m', self.sample_graph,
@@ -922,10 +924,10 @@ class TestVoqChassisSup(TestChassis):
                 "chassis_hostname": "str-sonic",
                 "deployment_id": "3",
                 "cluster": "TestbedForstr-sonic",
+                "subtype": "Supervisor",
                 "switch_type": "fabric",
                 "sub_role": "fabric",
-                "max_cores": 64,
-                "subtype": "Supervisor"
+                "max_cores": 64
             }
         )
 
@@ -953,7 +955,8 @@ class TestVoqChassisSup(TestChassis):
                 "sub_role": "Fabric",
                 "asic_name": "asic0",
                 "switch_type": "fabric",
-                "max_cores": 64
+                "max_cores": 64,
+                "subtype": "Supervisor",
             }
         )
 
@@ -1057,6 +1060,7 @@ class TestPacketChassisSup(TestChassis):
                 "chassis_hostname": "str-sonic",
                 "deployment_id": "3",
                 "cluster": "TestbedForstr-sonic",
+                "subtype": "Supervisor",
                 "switch_type": "chassis-packet",
                 "sub_role": "BackEnd",
                 "max_cores": 64
@@ -1085,6 +1089,7 @@ class TestPacketChassisSup(TestChassis):
                 "deployment_id": "3",
                 "cluster": "TestbedForstr-sonic",
                 "sub_role": "BackEnd",
+                "subtype": "Supervisor",
                 "asic_name": "asic0",
                 "switch_type": "chassis-packet",
                 "max_cores": 64
