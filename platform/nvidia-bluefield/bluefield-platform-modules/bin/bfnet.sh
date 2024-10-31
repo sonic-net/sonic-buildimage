@@ -42,6 +42,11 @@ start()
     modprobe mlx5_core
     /usr/bin/mst start
 
+    /usr/bin/mlnx-fw-upgrade.sh --dry-run -v
+    if [[ $? != "0" ]]; then
+        exit 1
+    fi
+
     hwsku=$(sonic-cfggen -d -v 'DEVICE_METADATA["localhost"]["hwsku"]')
     if [[ $hwsku == *"-C1" ]]; then
         start_cp_dhclient

@@ -72,6 +72,10 @@ function startplatform() {
 
     if [[ x"$sonic_asic_platform" == x"nvidia-bluefield" ]]; then
         /usr/bin/bfnet.sh start
+        if [[ $? != "0" ]]; then
+            debug "Failed to start Nvidia Bluefield"
+            exit 1
+        fi
     fi
 }
 

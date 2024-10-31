@@ -1,3 +1,4 @@
 0001-Fix-version-string-generation-when-scapy-is-a-submod.patch
 0002-Check-if-the-network-interface-still-exists.patch
 0003-Do-not-resolve-the-interface-name-globally.patch
+0004-Fix-fd-leak-in-worker-thread.patch
