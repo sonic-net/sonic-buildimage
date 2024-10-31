@@ -2,6 +2,6 @@
     "skip_ledd": true,
     "skip_psud": true,
     "skip_fancontrol": true,
-    "skip_chassisd": true,
+    "skip_chassisd": false,
     "skip_ycabled": true
 }
