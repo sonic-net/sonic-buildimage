@@ -1,6 +1,6 @@
-From 004320661a0d6c0a8705b0114b8093856f50084d Mon Sep 17 00:00:00 2001
+From c76295e0490883455e9ad73bc0a2614194ffcdd0 Mon Sep 17 00:00:00 2001
 From: philo <philo@micasnetworks.com>
-Date: Mon, 8 Apr 2024 03:53:58 -0500
+Date: Thu, 31 Oct 2024 03:40:37 -0500
 Subject: [PATCH] support vrrp6 commands and tracking interface
 
 Signed-off-by: philo <philo@micasnetworks.com>
@@ -9,14 +9,14 @@ Signed-off-by: philo <philo@micasnetworks.com>
  vrrpd/subdir.am         |   3 +
  vrrpd/vrrp.c            | 602 +++++++++++++++++++++++++-----------
  vrrpd/vrrp.h            |  94 +++++-
- vrrpd/vrrp6_vty.c       | 657 ++++++++++++++++++++++++++++++++++++++++
+ vrrpd/vrrp6_vty.c       | 655 ++++++++++++++++++++++++++++++++++++++++
  vrrpd/vrrp6_vty.h       |  28 ++
  vrrpd/vrrp_main.c       |   2 +
  vrrpd/vrrp_northbound.c | 296 ++++++++++++++----
- vrrpd/vrrp_vty.c        | 246 +++++++--------
+ vrrpd/vrrp_vty.c        | 244 +++++++--------
  vrrpd/vrrp_vty.h        |   4 +-
  yang/frr-vrrpd.yang     |  60 +++-
- 11 files changed, 1603 insertions(+), 390 deletions(-)
+ 11 files changed, 1599 insertions(+), 390 deletions(-)
  create mode 100644 vrrpd/vrrp6_vty.c
  create mode 100644 vrrpd/vrrp6_vty.h
 
@@ -1146,10 +1146,10 @@ index b3141ef31..0711de3f3 100644
  #endif /* __VRRP_H__ */
 diff --git a/vrrpd/vrrp6_vty.c b/vrrpd/vrrp6_vty.c
 new file mode 100644
-index 000000000..2511876c2
+index 000000000..1bada3d92
 --- /dev/null
 +++ b/vrrpd/vrrp6_vty.c
-@@ -0,0 +1,657 @@
+@@ -0,0 +1,655 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +/*
 + * VRRP6 CLI commands.
@@ -1407,9 +1407,7 @@ index 000000000..2511876c2
 +      VRRP6_STR
 +      VRRP6_VRID_STR
 +      "Add tracking interface\n"
-+      VRRP6_TRACK_INTF_STR
-+      VRRP6_PRIORITY_DECREMENT_STR
-+      "Priority decrement value\n")
++      VRRP6_TRACK_INTF_STR)
 +{
 +	char xpath[XPATH_MAXLEN];
 +
@@ -2511,7 +2509,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  				.get_elem = lib_interface_vrrp_vrrp_group_v6_counter_rx_advertisement_get_elem,
  			}
 diff --git a/vrrpd/vrrp_vty.c b/vrrpd/vrrp_vty.c
-index 1e1edb821..54d97b9cf 100644
+index 1e1edb821..ac4de6a1c 100644
 --- a/vrrpd/vrrp_vty.c
 +++ b/vrrpd/vrrp_vty.c
 @@ -42,8 +42,11 @@
@@ -2590,7 +2588,7 @@ index 1e1edb821..54d97b9cf 100644
  }
  
  void cli_show_ip(struct vty *vty, const struct lyd_node *dnode, bool show_defaults)
-@@ -229,30 +232,62 @@ void cli_show_ip(struct vty *vty, const struct lyd_node *dnode, bool show_defaul
+@@ -229,30 +232,60 @@ void cli_show_ip(struct vty *vty, const struct lyd_node *dnode, bool show_defaul
  
  /*
   * XPath:
@@ -2634,9 +2632,7 @@ index 1e1edb821..54d97b9cf 100644
 -      "Add IPv6 address\n"
 -      VRRP_IP_STR)
 +      "Add tracking interface\n"
-+      VRRP_TRACK_INTF_STR
-+	  VRRP_PRIORITY_DECREMENT_STR
-+	  "Priority decrement value\n")
++      VRRP_TRACK_INTF_STR)
  {
 -	int op = no ? NB_OP_DESTROY : NB_OP_CREATE;
 -	nb_cli_enqueue_change(vty, "./v6/virtual-address", op, ipv6_str);
@@ -2667,7 +2663,7 @@ index 1e1edb821..54d97b9cf 100644
  }
  
  /*
-@@ -269,7 +304,7 @@ DEFPY_YANG(vrrp_preempt,
+@@ -269,7 +302,7 @@ DEFPY_YANG(vrrp_preempt,
  	nb_cli_enqueue_change(vty, "./preempt", NB_OP_MODIFY,
  			      no ? "false" : "true");
  
@@ -2676,7 +2672,7 @@ index 1e1edb821..54d97b9cf 100644
  }
  
  void cli_show_preempt(struct vty *vty, const struct lyd_node *dnode,
-@@ -296,7 +331,7 @@ DEFPY_YANG(vrrp_checksum_with_ipv4_pseudoheader,
+@@ -296,7 +329,7 @@ DEFPY_YANG(vrrp_checksum_with_ipv4_pseudoheader,
  	nb_cli_enqueue_change(vty, "./checksum-with-ipv4-pseudoheader",
  			      NB_OP_MODIFY, no ? "false" : "true");
  
@@ -2685,7 +2681,7 @@ index 1e1edb821..54d97b9cf 100644
  }
  
  void cli_show_checksum_with_ipv4_pseudoheader(struct vty *vty,
-@@ -381,24 +416,17 @@ DEFPY_YANG(vrrp_default,
+@@ -381,24 +414,17 @@ DEFPY_YANG(vrrp_default,
  static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
  {
  	char ethstr4[ETHER_ADDR_STRLEN];
@@ -2712,7 +2708,7 @@ index 1e1edb821..54d97b9cf 100644
  
  	json_object_int_add(j, "vrid", vr->vrid);
  	json_object_int_add(j, "version", vr->version);
-@@ -413,27 +441,27 @@ static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
+@@ -413,27 +439,27 @@ static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
  			    vr->advertisement_interval * CS2MS);
  	/* v4 */
  	json_object_string_add(v4, "interface",
@@ -2753,7 +2749,7 @@ index 1e1edb821..54d97b9cf 100644
  				  sizeof(ipstr));
  			json_object_array_add(v4_addrs,
  					      json_object_new_string(ipstr));
-@@ -442,40 +470,6 @@ static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
+@@ -442,40 +468,6 @@ static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
  	json_object_object_add(v4, "addresses", v4_addrs);
  	json_object_object_add(j, "v4", v4);
  
@@ -2794,7 +2790,7 @@ index 1e1edb821..54d97b9cf 100644
  	return j;
  }
  
-@@ -491,14 +485,12 @@ static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
+@@ -491,14 +483,12 @@ static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
  static void vrrp_show(struct vty *vty, struct vrrp_vrouter *vr)
  {
  	char ethstr4[ETHER_ADDR_STRLEN];
@@ -2811,7 +2807,7 @@ index 1e1edb821..54d97b9cf 100644
  
  	struct ttable *tt = ttable_new(&ttable_styles[TTSTYLE_BLANK]);
  
-@@ -508,27 +500,16 @@ static void vrrp_show(struct vty *vty, struct vrrp_vrouter *vr)
+@@ -508,27 +498,16 @@ static void vrrp_show(struct vty *vty, struct vrrp_vrouter *vr)
  		       vr->autoconf ? "Yes" : "No");
  	ttable_add_row(tt, "%s|%s", "Shutdown", vr->shutdown ? "Yes" : "No");
  	ttable_add_row(tt, "%s|%s", "Interface", vr->ifp->name);
@@ -2843,7 +2839,7 @@ index 1e1edb821..54d97b9cf 100644
  	ttable_add_row(tt, "%s|%s", "Preempt Mode",
  		       vr->preempt_mode ? "Yes" : "No");
  	ttable_add_row(tt, "%s|%s", "Accept Mode",
-@@ -539,53 +520,36 @@ static void vrrp_show(struct vty *vty, struct vrrp_vrouter *vr)
+@@ -539,53 +518,36 @@ static void vrrp_show(struct vty *vty, struct vrrp_vrouter *vr)
  		       vr->advertisement_interval * CS2MS);
  	ttable_add_row(tt, "%s|%d ms (stale)",
  		       "Master Advertisement Interval (v4) Rx",
@@ -2913,7 +2909,7 @@ index 1e1edb821..54d97b9cf 100644
  				  sizeof(ipstr));
  			ttable_add_row(tt, "%s|%s", fill, ipstr);
  		}
-@@ -639,6 +603,8 @@ DEFPY_YANG(vrrp_vrid_show,
+@@ -639,6 +601,8 @@ DEFPY_YANG(vrrp_vrid_show,
  			continue;
  		if (vrid && ((uint8_t) vrid) != vr->vrid)
  			continue;
@@ -2922,7 +2918,7 @@ index 1e1edb821..54d97b9cf 100644
  
  		if (!json)
  			vrrp_show(vty, vr);
-@@ -677,7 +643,7 @@ DEFPY_YANG(vrrp_vrid_show_summary,
+@@ -677,7 +641,7 @@ DEFPY_YANG(vrrp_vrid_show_summary,
  	struct ttable *tt = ttable_new(&ttable_styles[TTSTYLE_BLANK]);
  
  	ttable_add_row(
@@ -2931,7 +2927,7 @@ index 1e1edb821..54d97b9cf 100644
  	ttable_rowseps(tt, 0, BOTTOM, true, '-');
  
  	for (ALL_LIST_ELEMENTS_RO(ll, ln, vr)) {
-@@ -685,15 +651,14 @@ DEFPY_YANG(vrrp_vrid_show_summary,
+@@ -685,15 +649,14 @@ DEFPY_YANG(vrrp_vrid_show_summary,
  			continue;
  		if (vrid && ((uint8_t)vrid) != vr->vrid)
  			continue;
@@ -2952,7 +2948,7 @@ index 1e1edb821..54d97b9cf 100644
  	}
  
  	char *table = ttable_dump(tt, "\n");
-@@ -786,8 +751,9 @@ void vrrp_vty_init(void)
+@@ -786,8 +749,9 @@ void vrrp_vty_init(void)
  	install_element(INTERFACE_NODE, &vrrp_advertisement_interval_cmd);
  	install_element(INTERFACE_NODE, &no_vrrp_advertisement_interval_cmd);
  	install_element(INTERFACE_NODE, &vrrp_ip_cmd);

@@ -2421,7 +2421,7 @@ class BGPConfigDaemon:
                     if param in cached_data and data[param].data == cached_data[param]:
                         continue
                     else:
-                        command = command + " -c '{} advertisement-interval {}'".format(cmd, data[param].data)
+                        command = command + " -c '{} advertisement-interval {}'".format(cmd, int(data[param].data) * 1000)
                 elif param == 'version':
                     if param in cached_data and data[param].data == cached_data[param]:
                         continue
@@ -2519,7 +2519,7 @@ class BGPConfigDaemon:
                     if param in cached_data and data[param].data == cached_data[param]:
                         continue
                     else:
-                        command = command + " -c '{} advertisement-interval {}'".format(cmd, data[param].data)
+                        command = command + " -c '{} advertisement-interval {}'".format(cmd, int(data[param].data) * 1000)
                 elif param == 'version':
                     if param in cached_data and data[param].data == cached_data[param]:
                         continue

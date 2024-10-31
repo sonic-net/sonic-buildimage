@@ -52,4 +52,5 @@
 0052-bgpd-backpressure-log-error-for-evpn-when-route-inst.patch
 0053-bgpd-Set-md5-TCP-socket-option-for-outgoing-connections-on-listener.patch
 0054-support-vrrp6-commands-and-tracking-interface.patch
+0055-zebra-Prevent-protodown_rc-from-going-Bzonkas.patch
 build-dplane-fpm-sonic-module.patch
