@@ -28,6 +28,7 @@ try:
     from .inotify_helper import InotifyHelper
     from sonic_py_common.syslogger import SysLogger
     from . import utils
+    from .device_data import DeviceDataManager, DpuInterfaceEnum
 except ImportError as e:
     raise ImportError(str(e)) from e
 
@@ -48,6 +49,7 @@ class OperationType(Enum):
     CLR = "0"
     SET = "1"
 
+
 class BootProgEnum(Enum):
     RST = 0
     BL2 = 1
@@ -62,14 +64,6 @@ class BootProgEnum(Enum):
     FW_FAULT_PROG = 10
     FW_FAULT_DONE = 11
     SW_INACTIVE = 15
-
-# The rshim services are in a different order as compared to the DPU names
-dpu_map = {
-    "dpu1": {"pci_id": "0000:08:00.0", "rshim": "rshim@0"},
-    "dpu2": {"pci_id": "0000:07:00.0", "rshim": "rshim@1"},
-    "dpu3": {"pci_id": "0000:01:00.0", "rshim": "rshim@2"},
-    "dpu4": {"pci_id": "0000:02:00.0", "rshim": "rshim@3"},
-}
 
 
 class DpuCtlPlat():
@@ -90,9 +84,6 @@ class DpuCtlPlat():
                                              f"{self._name}_shtdn_ready")
         self.boot_prog_path = os.path.join(HW_BASE,
                                            f"{self._name}/system/boot_progress")
-        self.pci_dev_path = os.path.join(PCI_DEV_BASE,
-                                         dpu_map[self._name]["pci_id"],
-                                         "remove")
         self.boot_prog_map = {
             BootProgEnum.RST.value: "Reset/Boot-ROM",
             BootProgEnum.BL2.value: "BL2 (from ATF image on eMMC partition)",
@@ -128,8 +119,7 @@ class DpuCtlPlat():
 
     def log_debug(self, msg=None):
         # Print only in verbose mode
-        if self.verbosity:
-            self.logger_debug(f"{self.dpu_name}: {msg}")
+        self.logger_debug(f"{self.dpu_name}: {msg}")
 
     def log_info(self, msg=None):
         self.logger_info(f"{self.dpu_name}: {msg}")
@@ -137,7 +127,7 @@ class DpuCtlPlat():
     def log_error(self, msg=None):
         self.logger_error(f"{self.dpu_name}: {msg}")
 
-    def run_cmd_output(self, cmd, raise_exception = True):
+    def run_cmd_output(self, cmd, raise_exception=True):
         try:
             return subprocess.check_output(cmd).decode().strip()
         except Exception as err:
@@ -156,20 +146,26 @@ class DpuCtlPlat():
         self.dpu_pci_scan()
         if self.wait_for_pci():
             self.dpu_rshim_service_control("start")
- 
+
     def dpu_rshim_service_control(self, op):
         """Start/Stop the RSHIM service for the current DPU"""
         try:
-            rshim_cmd = ["dbus-send", "--dest=org.freedesktop.systemd1", "--type=method_call", 
+            if not self.rshim_interface:
+                interface_name = DeviceDataManager.get_dpu_interface(self.dpu_name, DpuInterfaceEnum.RSHIM_INT.value)
+                if not interface_name:
+                    raise RuntimeError(f"Unable to Parse rshim information for {self.dpu_name} from Platform.json")
+                # rshim1 -> rshim@1
+                self.rshim_interface = interface_name[:5] + "@" + interface_name[5:]
+            rshim_cmd = ["dbus-send", "--dest=org.freedesktop.systemd1", "--type=method_call",
                          "--print-reply", "--reply-timeout=2000",
                          "/org/freedesktop/systemd1",
                          f"org.freedesktop.systemd1.Manager.{op.capitalize()}Unit",
-                         f"string:{dpu_map[self.get_hwmgmt_name()]['rshim']}.service",
+                         f"string:{self.rshim_interface}.service",
                          "string:replace"]
             self.run_cmd_output(rshim_cmd)
         except Exception as e:
             self.log_error(f"Failed to {op} rshim!: {e}")
-        
+
     @contextmanager
     def get_open_fd(self, path, flag):
         fd = os.open(path, flag)
@@ -178,11 +174,20 @@ class DpuCtlPlat():
         finally:
             os.close(fd)
 
+    def get_pci_dev_path(self):
+        """Parse the PCIE device ID from platform.json, raise Runtime error if the device id is not available"""
+        if not self.pci_dev_path:
+            pci_dev_id = DeviceDataManager.get_dpu_interface(self.dpu_name, DpuInterfaceEnum.PCIE_INT.value)
+            if not pci_dev_id:
+                raise RuntimeError(f"Unable to obtain pci device id for {self.dpu_name} from platform.json")
+            self.pci_dev_path = os.path.join(PCI_DEV_BASE, pci_dev_id, "remove")
+        return self.pci_dev_path
+
     def wait_for_pci(self):
         """Wait for the PCI device folder in the PCI Path, required before starting rshim"""
         try:
             with self.get_open_fd(PCI_DEV_BASE, os.O_RDONLY) as dir_fd:
-                if os.path.exists(os.path.dirname(self.pci_dev_path)):
+                if os.path.exists(os.path.dirname(self.get_pci_dev_path())):
                     return True
                 poll_obj = poll()
                 poll_obj.register(dir_fd, POLLIN)
@@ -190,11 +195,11 @@ class DpuCtlPlat():
                 while (time.time() - start) < WAIT_FOR_PCI_DEV:
                     events = poll_obj.poll(WAIT_FOR_PCI_DEV * 1000)
                     if events:
-                        if os.path.exists(os.path.dirname(self.pci_dev_path)):
+                        if os.path.exists(os.path.dirname(self.get_pci_dev_path())):
                             return True
-                return os.path.exists(os.path.dirname(self.pci_dev_path))
-        except Exception:
-            self.log_error("Unable to wait for PCI device")
+                return os.path.exists(os.path.dirname(self.get_pci_dev_path()))
+        except Exception as e:
+            self.log_error(f"Unable to wait for PCI device:{e}")
 
     def write_file(self, file_name, content_towrite):
         """Write given value to file only if file exists"""
@@ -245,7 +250,7 @@ class DpuCtlPlat():
         self.write_file(self.pwr_f_path, OperationType.SET.value)
         self.write_file(self.rst_path, OperationType.SET.value)
         if no_wait:
-            self.log_info("Exiting without checking result of reboot command")
+            self.log_debug("Exiting without checking result of reboot command")
             return True
         get_rdy_inotify = InotifyHelper(self.dpu_rdy_path)
         with self.time_check_context("power on force"):
@@ -277,7 +282,7 @@ class DpuCtlPlat():
     def dpu_pci_remove(self):
         """Per DPU PCI remove API"""
         try:
-            self.write_file(self.pci_dev_path, OperationType.SET.value)
+            self.write_file(self.get_pci_dev_path(), OperationType.SET.value)
         except Exception:
             self.log_info(f"Failed PCI Removal!")
 
@@ -290,7 +295,7 @@ class DpuCtlPlat():
         """Per DPU Power on API"""
         with self.boot_prog_context():
             self.log_info(f"Power on with force = {forced}")
-            if  self.read_boot_prog() == BootProgEnum.OS_RUN.value:
+            if self.read_boot_prog() == BootProgEnum.OS_RUN.value:
                 self.log_info(f"Skipping DPU power on as DPU is already powered on")
                 return_value = True
             elif forced:
@@ -305,7 +310,7 @@ class DpuCtlPlat():
         with self.boot_prog_context():
             self.dpu_pre_shutdown()
             self.log_info(f"Power off with force = {forced}")
-            if  self.read_boot_prog() == BootProgEnum.RST.value:
+            if self.read_boot_prog() == BootProgEnum.RST.value:
                 self.log_info(f"Skipping DPU power off as DPU is already powered off")
                 return True
             elif forced:
@@ -321,7 +326,7 @@ class DpuCtlPlat():
             self._power_off_force()
         self.write_file(self.rst_path, OperationType.SET.value)
         if no_wait:
-            self.log_info("Exiting without checking result of reboot command")
+            self.log_debug("Exiting without checking result of reboot command")
             return True
         get_rdy_inotify = InotifyHelper(self.dpu_rdy_path)
         with self.time_check_context("power on"):
