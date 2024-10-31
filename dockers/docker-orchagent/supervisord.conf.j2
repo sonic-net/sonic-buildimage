@@ -156,7 +156,7 @@ stderr_logfile=syslog
 dependent_startup=true
 dependent_startup_wait_for=swssconfig:exited
 {% if ENABLE_ASAN == "y" %}
-environment=ASAN_OPTIONS="log_path=/var/log/asan/neighsyncd-asan.log{{ asan_extra_options }}"
+environment=ASAN_OPTIONS="log_path=/var/log/asan/vrrpsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
 {%- endif %}
 
