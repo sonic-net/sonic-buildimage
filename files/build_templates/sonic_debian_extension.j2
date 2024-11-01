@@ -1115,6 +1115,8 @@ sudo install -m 755 platform/mellanox/smartswitch/dpuctl/dpu.conf $FILESYSTEM_RO
 # Install dpuctl services
 sudo cp platform/mellanox/smartswitch/dpuctl/dpuctl.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
 
+# Install dpumap script
+sudo install -m 755 platform/mellanox/smartswitch/dpumap.sh $FILESYSTEM_ROOT/usr/bin/dpumap.sh
 {% endif %}
 
 {% if sonic_asic_platform == "nvidia-bluefield" %}
