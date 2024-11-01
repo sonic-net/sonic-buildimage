@@ -138,14 +138,21 @@ class DpuCtlPlat():
 
     def dpu_pre_shutdown(self):
         """Method to execute shutdown activities for the DPU"""
-        self.dpu_rshim_service_control("stop")
-        self.dpu_pci_remove()
+        rshim_op = self.dpu_rshim_service_control("stop")
+        pci_rem_op = self.dpu_pci_remove()
+        if rshim_op and pci_rem_op:
+            return True
+        return False
 
     def dpu_post_startup(self):
         """Method to execute all post startup activities for the DPU"""
-        self.dpu_pci_scan()
+        pci_scan_op = self.dpu_pci_scan()
+        rshim_op = None
         if self.wait_for_pci():
-            self.dpu_rshim_service_control("start")
+            rshim_op = self.dpu_rshim_service_control("start")
+        if rshim_op and pci_scan_op:
+            return True
+        return False
 
     def dpu_rshim_service_control(self, op):
         """Start/Stop the RSHIM service for the current DPU"""
@@ -163,8 +170,11 @@ class DpuCtlPlat():
                          f"string:{self.rshim_interface}.service",
                          "string:replace"]
             self.run_cmd_output(rshim_cmd)
+            # If command fails execution exception is raised , return true if control is still in try block
+            return True
         except Exception as e:
             self.log_error(f"Failed to {op} rshim!: {e}")
+        return False
 
     @contextmanager
     def get_open_fd(self, path, flag):
@@ -283,13 +293,20 @@ class DpuCtlPlat():
         """Per DPU PCI remove API"""
         try:
             self.write_file(self.get_pci_dev_path(), OperationType.SET.value)
+            return True
         except Exception:
             self.log_info(f"Failed PCI Removal!")
+        return False
 
     def dpu_pci_scan(self):
         """PCI Scan API"""
-        pci_scan_path = "/sys/bus/pci/rescan"
-        self.write_file(pci_scan_path, OperationType.SET.value)
+        try:
+            pci_scan_path = "/sys/bus/pci/rescan"
+            self.write_file(pci_scan_path, OperationType.SET.value)
+            return True
+        except Exception:
+            self.log_info(f"Failed to rescan")
+        return False
 
     def dpu_power_on(self, forced=False):
         """Per DPU Power on API"""
@@ -343,10 +360,11 @@ class DpuCtlPlat():
         return_value = self._power_on_force(no_wait=no_wait)
         return return_value
 
-    def dpu_reboot(self, forced=False, no_wait=False):
+    def dpu_reboot(self, forced=False, no_wait=False, skip_pre_post=False):
         """Per DPU Power on API"""
         with self.boot_prog_context():
-            self.dpu_pre_shutdown()
+            if not skip_pre_post:
+                self.dpu_pre_shutdown()
             self.log_info(f"Reboot with force = {forced}")
             if forced:
                 return_value = self._reboot_force(no_wait)
@@ -356,7 +374,7 @@ class DpuCtlPlat():
             else:
                 return_value = self._reboot(no_wait)
             # No Post startup as well for no_wait call
-            if not no_wait:
+            if (not no_wait) and (not skip_pre_post):
                 self.dpu_post_startup()
             if return_value:
                 self.log_info("Reboot Complete")
