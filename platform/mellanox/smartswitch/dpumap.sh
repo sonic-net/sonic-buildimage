@@ -18,13 +18,8 @@
 #
 
 
-PLAT_FILE=/etc/mlnx/platform.json
-if [[ ! -f $PLAT_FILE ]]; then
-	PLATFORM=$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
-	PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
-	ln -s $PLATFORM_JSON $PLAT_FILE
-fi
-
+PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
+PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
 
 usage(){
     echo "Usage: $0 {dpu2pcie|dpu2rshim|rshim2dpu|pcie2dpu} name"
@@ -32,7 +27,7 @@ usage(){
 declare -A dpu2pcie
 
 validate_platform(){
-    if [[ ! -f $PLAT_FILE ]]; then
+    if [[ ! -f $PLATFORM_JSON ]]; then
         echo "platform.json file not found. Exiting script"
         exit 1
     fi
@@ -73,7 +68,7 @@ esac
 
 IFS=',' read -r -a identifier_array <<< "$2"
 for identifier in "${identifier_array[@]}"; do
-	op=$(jq -r --arg "$var" "$identifier" "$jq_query" "$PLAT_FILE")
+	op=$(jq -r --arg "$var" "$identifier" "$jq_query" "$PLATFORM_JSON")
 	if [[ "$op" != "null" ]]; then
 		echo "$op"
 	else
