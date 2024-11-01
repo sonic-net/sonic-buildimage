@@ -14,6 +14,11 @@
         "lease_end": "1677641481",
         "ip": "192.168.0.3"
     },
+    "DHCP_SERVER_IPV4_LEASE|bridge-midplane|10:70:fd:b6:13:03": {
+        "lease_start": "1677640581",
+        "lease_end": "1677641481",
+        "ip": "192.168.0.4"
+    },
     "DHCP_SERVER_IPV4_SERVER_IP|eth0": {
         "ip": "240.127.1.2"
     },
