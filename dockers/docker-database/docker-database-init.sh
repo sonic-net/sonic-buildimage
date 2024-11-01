@@ -41,6 +41,8 @@ then
     fi
 fi
 
+export BMP_DB_PORT=6400
+
 REDIS_DIR=/var/run/redis$NAMESPACE_ID
 mkdir -p $REDIS_DIR/sonic-db
 mkdir -p /etc/supervisor/conf.d/
@@ -48,11 +50,15 @@ mkdir -p /etc/supervisor/conf.d/
 if [ -f /etc/sonic/database_config$NAMESPACE_ID.json ]; then
     cp /etc/sonic/database_config$NAMESPACE_ID.json $REDIS_DIR/sonic-db/database_config.json
 else
+<<<<<<< HEAD
     if [ -f /etc/sonic/enable_multidb ]; then
         HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE j2 /usr/share/sonic/templates/multi_database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
     else
         HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE j2 /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
     fi
+=======
+    HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT j2 /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+>>>>>>> 8a9ff73c9339cabc9413b796157afae563df114f
 fi
 
 # on VoQ system, we only publish redis_chassis instance and CHASSIS_APP_DB when
@@ -136,5 +142,7 @@ rm -rf /etc/localtime
 ln -sf /usr/share/zoneinfo/$TZ /etc/localtime
 
 chown -R redis:redis $REDIS_DIR
+REDIS_BMP_DIR="/var/lib/redis_bmp"
+chown -R redis:redis $REDIS_BMP_DIR
 
 exec /usr/local/bin/supervisord
