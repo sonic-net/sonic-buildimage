@@ -39,7 +39,7 @@ jobs:
       syncd_rpc_image: no
       platform_rpc: no
       ${{ if parameters.qemuOrCrossBuild }}:
-        SONIC_SLAVE_DOCKER_DRIVER: 'vfs'
+        SONIC_SLAVE_DOCKER_DRIVER: 'native'
         CACHE_MODE: 'none'
     ${{ if ne(parameters.jobGroups, '') }}:
       jobGroups: ${{ parameters.jobGroups }}
