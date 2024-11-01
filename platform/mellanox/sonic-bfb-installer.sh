@@ -120,7 +120,7 @@ get_mapping(){
 
     for item1 in "${provided_list[@]}"; do
         var=$(dpumap.sh rshim2dpu $item1)
-        if [[ -z "$var" ]]; then
+        if [ $? -ne 0 ]; then
             echo "$item1 does not have a valid dpu mapping!"
             exit 1
         fi
@@ -132,7 +132,7 @@ validate_dpus(){
     local provided_list=("$@")
     for item1 in "${provided_list[@]}"; do
         var=$(dpumap.sh dpu2rshim $item1)
-        if [[ -z "$var" ]]; then
+        if [ $? -ne 0 ]; then
             echo "$item1 does not have a valid rshim mapping!"
             exit 1
         fi

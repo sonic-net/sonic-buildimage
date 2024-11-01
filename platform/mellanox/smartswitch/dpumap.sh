@@ -20,9 +20,9 @@
 
 PLAT_FILE=/etc/mlnx/platform.json
 if [[ ! -f $PLAT_FILE ]]; then
-PLATFORM=$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
-PLATFORM_JSON=/usr/share/sonic/device/x86_64-nvidia_sn4280-r0/platform.json
-ln -s $PLATFORM_JSON $PLAT_FILE
+	PLATFORM=$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+	PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
+	ln -s $PLATFORM_JSON $PLAT_FILE
 fi
 
 
@@ -76,6 +76,9 @@ for identifier in "${identifier_array[@]}"; do
 	op=$(jq -r --arg "$var" "$identifier" "$jq_query" "$PLAT_FILE")
 	if [[ "$op" != "null" ]]; then
 		echo "$op"
+	else
+		echo "Invald entry! $identifier"
+		exit 1
 	fi
 done
 

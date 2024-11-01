@@ -24,7 +24,7 @@ fi
 rshim_name="rshim$1"
 pcie=$(dpumap.sh rshim2pcie $rshim_name)
 
-if [ -z "$pcie" ]; then
+if [ $? -ne 0 ]; then
     echo "Error: Invalid rshim index $1"
     exit 1
 fi
