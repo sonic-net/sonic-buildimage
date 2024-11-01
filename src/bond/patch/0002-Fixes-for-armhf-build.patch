@@ -13,63 +13,27 @@ Also, Fix a compile error that was seen on armhf
 
 Signed-off-by: Saikrishna Arcot <sarcot@microsoft.com>
 ---
- compiler/stack.yaml                        | 7 +++++--
- cpp/inc/bond/protocol/simple_json_writer.h | 8 ++++----
- 2 files changed, 9 insertions(+), 6 deletions(-)
+ compiler/stack.yaml                        | 2 +-
+ 1 file changed, 2 insertion(+), 1 deletion(-)
 
 diff --git a/compiler/stack.yaml b/compiler/stack.yaml
-index 766fd159..68ba90f2 100644
+index 94b73fe5..fc7b3d81 100644
 --- a/compiler/stack.yaml
 +++ b/compiler/stack.yaml
-@@ -5,7 +5,8 @@
- # Resolver to choose a 'specific' stackage snapshot or a compiler version.
+@@ -6,6 +6,7 @@
  # A snapshot resolver dictates the compiler version and the set of packages
  # to be used for project dependencies. For example:
--resolver: lts-7.24
-+resolver: lts-11.22
-+compiler: ghc-8.2.1
+ resolver: lts-14.4
++compiler: ghc-8.6.3
  
  # User packages to be built.
  # Various formats can be used as shown in the example below.
-@@ -30,16 +31,18 @@ packages:
+@@ -37,4 +38,4 @@ system-ghc: true
  
  flags:
    bond:
 -    warningsAsErrors: true
+\ No newline at end of file
 +    warningsAsErrors: false
- 
- # Dependency packages to be pulled from upstream that are not in the resolver
- # (e.g., acme-missiles-0.3)
- extra-deps:
-+- aeson-0.11.3.0
- - aeson-pretty-0.7.2
- - cpphs-1.20.8
- - integer-logarithms-1.0.2
- - megaparsec-6.2.0
- - parser-combinators-0.2.0
- - primitive-0.6.2.0
-+- process-1.4.3.0
- - scientific-0.3.5.2
- - vector-0.12.0.1
-diff --git a/cpp/inc/bond/protocol/simple_json_writer.h b/cpp/inc/bond/protocol/simple_json_writer.h
-index 8f2c23a8..e638af51 100644
---- a/cpp/inc/bond/protocol/simple_json_writer.h
-+++ b/cpp/inc/bond/protocol/simple_json_writer.h
-@@ -195,10 +195,10 @@ private:
-     void WriteUnicode(wchar_t c)
-     {
-         char u[6] = "\\u";
--        u[2] = detail::HexDigit(c >> 12);
--        u[3] = detail::HexDigit(c >> 8);
--        u[4] = detail::HexDigit(c >> 4);
--        u[5] = detail::HexDigit(c >> 0);
-+        u[2] = detail::HexDigit((int)c >> 12);
-+        u[3] = detail::HexDigit((int)c >> 8);
-+        u[4] = detail::HexDigit((int)c >> 4);
-+        u[5] = detail::HexDigit((int)c >> 0);
-         _output.Write(u, sizeof(u));
-     }
- 
 -- 
 2.25.1
-

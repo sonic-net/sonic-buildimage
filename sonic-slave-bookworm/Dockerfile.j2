@@ -452,7 +452,12 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         meson \
         python3-pyelftools \
         hwdata \
-        libzip-dev
+        libzip-dev \
+# For bond
+        llvm \
+        libtinfo5 \
+        haskell-stack \
+        rapidjson-dev
 
 {%- if CONFIGURED_ARCH != "arm64" and CONFIGURED_ARCH != "armhf" %}
 RUN eatmydata apt-get install -y \

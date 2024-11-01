@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -53,16 +53,9 @@ RUN mkdir -p /acms
 COPY ["acms_secrets.ini", "/acms"]
 COPY ["acms.ini", "/acms"]
 
-# Copy public key for downloading ACMS from Ubuntu repo
-COPY ["msftPackagesKey.pgp", "/acms"]
-
 # Placeholder for credentials
 RUN mkdir -p /etc/sonic/credentials
 RUN chmod 600 /etc/sonic/credentials
-
-# Install ACMS
-COPY ["install_acms.sh", "/acms"]
-RUN cd /acms && sh install_acms.sh {{CONFIGURED_ARCH}}
 
 RUN mkdir -p /etc/supervisor /var/log/supervisor
 

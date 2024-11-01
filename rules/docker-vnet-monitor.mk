@@ -36,3 +36,4 @@ $(DOCKER_VNET_MONITOR)_RUN_OPT += -v /etc/network/interfaces:/etc/network/interf
 $(DOCKER_VNET_MONITOR)_RUN_OPT += -v /etc/network/interfaces.d/:/etc/network/interfaces.d/:ro
 $(DOCKER_VNET_MONITOR)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
 
+SONIC_BULLSEYE_DOCKERS += $(DOCKER_VNET_MONITOR)

@@ -60,7 +60,7 @@ index 00000000..7a84dc34
 --- /dev/null
 +++ b/debian/changelog
 @@ -0,0 +1,5 @@
-+bond (8.0.1-1) unstable; urgency=medium
++bond (9.0.5-1) unstable; urgency=medium
 +
 +  * Initial release
 +
