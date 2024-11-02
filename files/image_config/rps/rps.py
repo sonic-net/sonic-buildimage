@@ -7,7 +7,7 @@
 import os
 import sys
 import syslog
-
+import argparse
 
 def write_syslog(message, *args):
     """
@@ -58,7 +58,7 @@ def get_cpumask(ncpus):
     return cpu_mask
 
 
-def configure_rps():
+def configure_rps(intf):
     """
     Configure Receive Packet Steering (RPS)
 
@@ -78,18 +78,13 @@ def configure_rps():
         # Nothing to do
         return rv
 
-    write_syslog("configure_rps: cpu mask {}".format(cpumask))
-
-    # Loop through Ethernet interfaces in /sys/class/net and set rps_cpus
-    for intf in os.listdir(NET_DIR_PATH):
-        if "Ethernet" in intf:
-            queues_path = os.path.join(NET_DIR_PATH, intf, "queues")
-            queues = os.listdir(queues_path)
-            num_rx_queues = len([q for q in queues if q.startswith("rx")])
-            for q in range(num_rx_queues):
-                rps_cpus_path = os.path.join(queues_path, "rx-{}", "rps_cpus").format(q)
-                with open(rps_cpus_path, 'w') as file:
-                    file.write(cpumask)
+    queues_path = os.path.join(NET_DIR_PATH, intf, "queues")
+    queues = os.listdir(queues_path)
+    num_rx_queues = len([q for q in queues if q.startswith("rx")])
+    for q in range(num_rx_queues):
+        rps_cpus_path = os.path.join(queues_path, "rx-{}", "rps_cpus").format(q)
+        with open(rps_cpus_path, 'w') as file:
+            file.write(cpumask)
 
     return rv
 
@@ -97,8 +92,12 @@ def configure_rps():
 def main():
     rv = -1
     try:
-        rv = configure_rps()
-        write_syslog("configure_rps {}".format("failed" if rv else "successful"))
+        parser = argparse.ArgumentParser(description='Configure RPS.')
+        parser.add_argument('interface', type=str, help='Network interface')
+        args = parser.parse_args()
+        rv = configure_rps(args.interface)
+        write_syslog("configure_rps {} for interface {}".format
+                    ("failed" if rv else "successful", args.interface))
     except Exception as e:
         write_syslog("configure_rps exception: {}".format(str(e)))
 
