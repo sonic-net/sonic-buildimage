@@ -41,7 +41,8 @@ def get_softnet_dropped_count():
         for line in f:
             if line.strip():  # Ensure the line is not empty
                 stat = line.split()
-                # Drop count is in the second column for each CPU
+                # Drop count is in the second column for each CPU. Ref:
+                # https://github.com/torvalds/linux/blob/v5.10/net/core/net-procfs.c#L153
                 if len(stat) > 1:
                     drop_count += int(stat[1], 16)
 
@@ -75,7 +76,7 @@ def check_packet_drops():
         f.write(str(current_drop_count))
 
     if current_drop_count > last_drop_count:
-        write_syslog("control_plane_drop_check: Kernel packet drops detected")
+        write_syslog("control_plane_drop_check: packet drops detected, current drop count: {}".format(current_drop_count))
         return True
     else:
         return False
