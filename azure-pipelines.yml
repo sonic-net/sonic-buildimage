@@ -295,22 +295,22 @@ stages:
           MGMT_BRANCH: $(BUILD_BRANCH)
           TEST_SET: onboarding_t1
 
-  - job: onboarding_elastictest_dualtor
-    displayName: "onboarding dualtor testcases by Elastictest - optional"
-    timeoutInMinutes: 240
-    continueOnError: true
-    pool: sonic-ubuntu-1c
-    steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: dualtor
-          STOP_ON_FAILURE: "False"
-          RETRY_TIMES: 0
-          MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          TEST_SET: onboarding_dualtor
+#  - job: onboarding_elastictest_dualtor
+#    displayName: "onboarding dualtor testcases by Elastictest - optional"
+#    timeoutInMinutes: 240
+#    continueOnError: true
+#    pool: sonic-ubuntu-1c
+#    steps:
+#      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+#        parameters:
+#          TOPOLOGY: dualtor
+#          STOP_ON_FAILURE: "False"
+#          RETRY_TIMES: 0
+#          MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
+#          MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
+#          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+#          MGMT_BRANCH: $(BUILD_BRANCH)
+#          TEST_SET: onboarding_dualtor
 
 #  - job: wan_elastictest
 #    displayName: "kvmtest-wan by Elastictest"

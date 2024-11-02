@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
-#######################################################
 #
-# devicebase.py
-# Python implementation of the Class devicebase
+# Copyright (C) 2024 Micas Networks Inc.
 #
-#######################################################
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import subprocess
 import shlex
 import ast
@@ -30,6 +40,8 @@ class CodeVisitor(ast.NodeVisitor):
             value = node.n
         elif isinstance(node, ast.Str):      # node is Str Constant
             value = node.s
+        elif isinstance(node, ast.List):     # node is List Constant
+            value = [element.value for element in node.elts]
         else:
             raise NotImplementedError("Unsupport operand type: %s" % type(node))
         return value
@@ -78,7 +90,7 @@ class CodeVisitor(ast.NodeVisitor):
         int support one or two parameters, eg: int(xxx) or int(xxx, 16)
         xxx can be ast.Call/ast.Constant(ast.Num/ast.Str)/ast.BinOp
         '''
-        calc_tuple = ("float", "int", "str")
+        calc_tuple = ("float", "int", "str", "max", "min")
 
         if node.func.id not in calc_tuple:
             raise NotImplementedError("Unsupport function call type: %s" % node.func.id)
@@ -86,7 +98,10 @@ class CodeVisitor(ast.NodeVisitor):
         args_val_list = []
         for item in node.args:
             ret = self.get_op_value(item)
-            args_val_list.append(ret)
+            if isinstance(ret, list):
+                args_val_list.extend(ret)
+            else:
+                args_val_list.append(ret)
 
         if node.func.id == "str":
             if len(args_val_list) != 1:
@@ -99,6 +114,16 @@ class CodeVisitor(ast.NodeVisitor):
             if len(args_val_list) != 1:
                 raise TypeError("float() takes 1 positional argument but %s were given" % len(args_val_list))
             value = float(args_val_list[0])
+            self.value = value
+            return value
+
+        if node.func.id == "max":
+            value = max(args_val_list)
+            self.value = value
+            return value
+
+        if node.func.id == "min":
+            value = min(args_val_list)
             self.value = value
             return value
         # int
