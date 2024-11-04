@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
-#######################################################
 #
-# rotor.py
-# Python implementation of the Class rotor
+# Copyright (C) 2024 Micas Networks Inc.
 #
-#######################################################
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from plat_hal.devicebase import devicebase
 from plat_hal.sensor import sensor
 
@@ -32,7 +42,7 @@ class rotor(devicebase):
 
     def getRunning(self):
         ret, val = self.get_value(self.rotor_run_conf)
-        if ret is False or val is None or val == "no_support":
+        if ret is False or val is None or val == "no_support" or val == "NA" or val == "ACCESS FAILED":
             return False
         if isinstance(val, str):
             value = int(val, 16)
@@ -120,7 +130,7 @@ class rotor(devicebase):
         ret, val = self.get_value(self.rotor_HwAlarm_conf)
         mask = self.rotor_HwAlarm_conf.get("mask")
         no_alarm_value = self.rotor_HwAlarm_conf.get("no_alarm")
-        if ret is False or val is None:
+        if ret is False or val is None or val == "no_support" or val == "NA" or val == "ACCESS FAILED":
             return False
         if isinstance(val, str):
             value = int(val, 16)

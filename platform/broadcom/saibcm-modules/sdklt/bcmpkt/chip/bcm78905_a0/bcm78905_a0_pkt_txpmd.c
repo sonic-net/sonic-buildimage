@@ -5,7 +5,7 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/regs/xgs/generate-pmd.pl
  *
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -18,7 +18,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  *
  * This file provides TXPMD access functions for BCM78905_A0.
  *
@@ -746,6 +746,13 @@ const bcmpkt_txpmd_fget_t bcm78905_a0_txpmd_fget = {
         NULL,
         NULL,
         NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         NULL
     }
 };
@@ -835,6 +842,13 @@ const bcmpkt_txpmd_fset_t bcm78905_a0_txpmd_fset = {
         NULL,
         NULL,
         NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         NULL
     }
 };
@@ -859,7 +873,7 @@ static int bcm78905_a0_txpmd_view_infos[BCMPKT_TXPMD_FID_COUNT] = {
       1,  1,  1,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2, -2,
      -2,  2,  2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
      -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-     -2, -2, -2,
+     -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
 };
 
 
