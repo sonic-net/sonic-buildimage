@@ -1289,7 +1289,7 @@ class SocketHandler:
             self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.listener_socket.settimeout(1.0)  
             self.listener_socket.bind(self.address)
-            os.chmod(self.address, stat.S_IRWXU | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH)
+            os.chmod(self.address, 0o644)
             self.listener_socket.listen(5) 
             logger.log_info(f"UNIX socket created and listening at {self.address}")
         except Exception as e:
