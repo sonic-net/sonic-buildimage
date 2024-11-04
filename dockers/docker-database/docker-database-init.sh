@@ -131,8 +131,6 @@ do
     fi
 
     chown -R redis:redis /var/lib/$inst
-    sock_file="/var/run/redis/$inst.sock"
-    chgrp -f redis $sock_file && chmod -f 0760 $sock_file
 done
 
 TZ=$(cat /etc/timezone)
