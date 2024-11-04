@@ -620,6 +620,140 @@ class MemoryEntryManager:
 
         return formatted_output
 
+class SocketHandler:
+    """Handles the creation and management of a UNIX socket for communication.
+    
+    This class is responsible for setting up a UNIX socket, accepting incoming
+    connections, processing requests, and sending responses. It provides methods
+    for managing socket file cleanup and error handling during communication.
+    """
+
+    def __init__(self, address, command_handler, stop_event):
+        """
+        Initializes the SocketHandler with the specified parameters.
+        
+        :param address: The file system path where the UNIX socket will be created.
+        :param command_handler: A callable that processes commands received from clients.
+        :param stop_event: An event flag used to signal when to stop the socket listener.
+        """
+        self.address = address
+        self.command_handler = command_handler
+        self.listener_socket = None
+        self.stop_event = stop_event
+
+    def safe_remove_file(self, filepath):
+        """Removes a file if it exists to prevent socket binding errors.
+        
+        This method checks for the existence of the specified file and removes
+        it if found. It logs the action taken or any errors encountered.
+        
+        :param filepath: The path of the socket file to be removed.
+        """
+        try:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                logger.log_info(f"Removed existing socket file: {filepath}")
+        except Exception as e:
+            logger.log_error(f"Failed to remove file {filepath}: {e}")
+
+    def create_unix_socket(self):
+        """Creates and configures a UNIX socket for listening for incoming connections.
+        
+        This method sets up the socket with appropriate permissions and starts
+        listening for client connections. It raises an exception if socket creation fails.
+        """
+        try:
+            self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.listener_socket.settimeout(1.0)  
+            self.listener_socket.bind(self.address)
+            os.chmod(self.address, stat.S_IRWXU | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH)
+            self.listener_socket.listen(5) 
+            logger.log_info(f"UNIX socket created and listening at {self.address}")
+        except Exception as e:
+            logger.log_error(f"Failed to create UNIX socket at {self.address}: {e}")
+            raise
+
+    def send_response(self, connection, response_data):
+        """Sends a JSON response back to the client.
+        
+        This method encodes the response data as JSON and sends it through
+        the established socket connection. It logs any errors encountered during the process.
+        
+        :param connection: The socket connection to the client.
+        :param response_data: The data to be sent as a JSON response.
+        """
+        try:
+            response_json = json.dumps(response_data)
+            connection.sendall(response_json.encode('utf-8'))
+            logger.log_debug(f"Sent response: {response_json}")
+        except Exception as e:
+            logger.log_error(f"Failed to send response: {e}")
+
+    def handle_connection(self, connection):
+        """Processes a single incoming socket connection.
+        
+        This method reads the request data from the client, decodes it from JSON,
+        and processes it using the command handler. It handles any exceptions,
+        sending an error response if needed, and closes the connection afterward.
+        
+        :param connection: The socket connection established with the client.
+        """
+        error_response = {"status": False, "msg": None}
+        try:
+            request_data = connection.recv(4096)
+            if not request_data:
+                logger.log_warning("Received empty request")
+                return
+
+            request_json = json.loads(request_data.decode('utf-8'))
+            logger.log_debug(f"Received request: {request_json}")
+            command_name = request_json['command']
+            command_data = request_json.get('data', {})
+
+            response = self.command_handler(command_name, command_data)
+
+            self.send_response(connection, response)
+        except Exception as error:
+            logger.log_error(f"Error handling request: {traceback.format_exc()}")
+            error_response['msg'] = str(error)
+            self.send_response(connection, error_response)
+        finally:
+            try:
+                connection.close()
+                logger.log_debug("Connection closed")
+            except Exception as e:
+                logger.log_error(f"Error closing connection: {e}")
+
+    def start_listening(self):
+        """Starts listening for incoming socket connections.
+        
+        This method initializes the socket, removes any existing socket files,
+        and enters a loop to accept and handle incoming connections. The loop
+        continues until the stop_event is set. Upon shutdown, it cleans up the
+        socket file and closes the listener socket.
+        """
+        self.safe_remove_file(self.address)
+        self.create_unix_socket()
+
+        while not self.stop_event.is_set():
+            try:
+                connection, client_address = self.listener_socket.accept()
+                logger.log_info("Accepted new connection")
+                self.handle_connection(connection)
+            except socket.timeout:
+                continue  
+            except Exception as error:
+                logger.log_error(f"Socket error: {error}")
+                time.sleep(1)  
+
+        self.safe_remove_file(self.address)
+        if self.listener_socket:
+            try:
+                self.listener_socket.close()
+                logger.log_info("Listener socket closed.")
+            except Exception as e:
+                logger.log_error(f"Error closing listener socket: {e}")
+
 class MemoryStatisticsDaemon:
     """
     Memory Statistics Daemon
