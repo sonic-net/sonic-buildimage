@@ -1,3 +1,23 @@
+/*
+ * An dfd_cfg_info driver for cfg information function
+ *
+ * Copyright (C) 2024 Micas Networks Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 #include <linux/string.h>
 #include <linux/types.h>
 #include <linux/slab.h>
@@ -551,6 +571,22 @@ static int dfd_info_reg2data_mac_th5(int data, int *temp_value)
     return DFD_RV_OK;
 }
 
+static int dfd_info_reg2data_mac_th4(int data, int *temp_value)
+{
+    int tmp_val;
+    int val;
+
+    DBG_DEBUG(DBG_VERBOSE, "reg2data_mac_th4, data=%d\n", data);
+
+    tmp_val = data >> 4;
+    val = 356070 - (((tmp_val - 2) * 237340) / 2000);
+
+    DBG_DEBUG(DBG_VERBOSE, "reg2data_mac_th4, val=%d\n", val);
+    *temp_value = val;
+
+    return DFD_RV_OK;
+}
+
 static int dfd_info_reg2data_mac_td3(int data, int *temp_value)
 {
     int val;
@@ -657,6 +693,9 @@ static int dfd_info_get_cpld_temperature(int key, int *value)
         break;
     case MAC_TD3:
         rv = dfd_info_reg2data_mac_td3(temp_reg, &temp_value);
+        break;
+    case MAC_TH4:
+        rv = dfd_info_reg2data_mac_th4(temp_reg, &temp_value);
         break;
     default:
         temp_value = temp_reg;

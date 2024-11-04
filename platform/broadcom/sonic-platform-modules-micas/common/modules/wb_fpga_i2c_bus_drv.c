@@ -1,7 +1,23 @@
 /*
- * fpga_i2c_bus_drv.c
- * ko to create fpga i2c adapter
+ * An wb_fpga_i2c_bus_drv driver for create fpga i2c adapter function
+ *
+ * Copyright (C) 2024 Micas Networks Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
@@ -34,6 +50,8 @@ extern int io_device_func_write(const char *path, uint32_t pos, uint8_t *val, si
 extern int io_device_func_read(const char *path, uint32_t pos, uint8_t *val, size_t size);
 extern int spi_device_func_read(const char *path, uint32_t offset, uint8_t *buf, size_t count);
 extern int spi_device_func_write(const char *path, uint32_t offset, uint8_t *buf, size_t count);
+extern int indirect_device_func_write(const char *path, uint32_t pos, uint8_t *val, size_t size);
+extern int indirect_device_func_read(const char *path, uint32_t pos, uint8_t *val, size_t size);
 
 #define FPGA_I2C_STRETCH_TIMEOUT  (0x01)
 #define FPGA_I2C_DEADLOCK_FAILED  (0x02)
@@ -53,6 +71,7 @@ extern int spi_device_func_write(const char *path, uint32_t offset, uint8_t *buf
 #define SYMBOL_PCIE_DEV_MODE      (3)
 #define SYMBOL_IO_DEV_MODE        (4)
 #define SYMBOL_SPI_DEV_MODE       (5)
+#define SYMBOL_INDIRECT_DEV_MODE  (6)
 
 int g_wb_fpga_i2c_debug = 0;
 int g_wb_fpga_i2c_error = 0;
@@ -170,6 +189,9 @@ static int fpga_device_write(fpga_i2c_dev_t *fpga_i2c, uint32_t pos, uint8_t *va
     case SYMBOL_SPI_DEV_MODE:
         ret = spi_device_func_write(fpga_i2c->dev_name, pos, val, size);
         break;
+    case SYMBOL_INDIRECT_DEV_MODE:
+        ret = indirect_device_func_write(fpga_i2c->dev_name, pos, val, size);
+        break;
     default:
         FPGA_I2C_ERROR("err func_mode %d, write failed.\n", fpga_i2c->i2c_func_mode);
         return -EINVAL;
@@ -197,6 +219,9 @@ static int fpga_device_read(fpga_i2c_dev_t *fpga_i2c, uint32_t pos, uint8_t *val
         break;
     case SYMBOL_SPI_DEV_MODE:
         ret = spi_device_func_read(fpga_i2c->dev_name, pos, val, size);
+        break;
+    case SYMBOL_INDIRECT_DEV_MODE:
+        ret = indirect_device_func_read(fpga_i2c->dev_name, pos, val, size);
         break;
     default:
         FPGA_I2C_ERROR("err func_mode %d, read failed.\n", fpga_i2c->i2c_func_mode);
