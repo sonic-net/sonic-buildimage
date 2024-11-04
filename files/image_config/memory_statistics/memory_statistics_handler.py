@@ -4,7 +4,6 @@ import os
 import signal
 import sys
 import time
-import pickle
 import logging
 import gzip
 import json
@@ -20,12 +19,32 @@ import copy
 from typing import Dict, Any
 from collections import Counter
 from datetime import datetime, timedelta
-from utilities_common.dict2obj import Dict2Obj
 from swsscommon.swsscommon import ConfigDBConnector
 import argparse
 import dateparser
 import traceback
 
+
+
+class Dict2Obj(object):
+    def __init__(self, d):
+        for key, value in d.items():
+            if isinstance(value, (list, tuple)):
+                setattr(self, key, [Dict2Obj(x) if isinstance(x, dict) else x for x in value])
+            else:
+                setattr(self, key, Dict2Obj(value) if isinstance(value, dict) else value)
+
+    def to_dict(self):
+        result = {}
+        for key in self.__dict__:
+            value = getattr(self, key)
+            if isinstance(value, Dict2Obj):
+                result[key] = value.to_dict()
+            elif isinstance(value, list):
+                result[key] = [v.to_dict() if isinstance(v, Dict2Obj) else v for v in value]
+            else:
+                result[key] = value
+        return result
     
 class SyslogLogger:
     """
@@ -509,17 +528,17 @@ class MemoryStatisticsCollector:
         if not os.path.exists(filepath):
             return tentry
 
-        if os.path.getsize(filepath) <= 0:
-            return tentry
+        # if os.path.getsize(filepath) <= 0:
+        #     return tentry
 
-        try:
-            with gzip.open(filepath, 'rb') as bfile:
-                loaded_entry = pickle.load(bfile)
-        except Exception as e:
-            logging.error(f"Failed to load memory entries from {filepath}: {e}")
-            return tentry  # Return default if loading fails
+        # try:
+        #     with gzip.open(filepath, 'rb') as bfile:
+        #         loaded_entry = pickle.load(bfile)
+        # except Exception as e:
+        #     logging.error(f"Failed to load memory entries from {filepath}: {e}")
+        #     return tentry  # Return default if loading fails
 
-        return loaded_entry
+        # return loaded_entry
 
     def update_memory_statistics(self, total_dict, mem_dict, time_list, item, category):
         """
@@ -603,18 +622,18 @@ class MemoryStatisticsCollector:
             return mem_dict
 
         # Dump total system memory statistics into the log file
-        try:
-            with gzip.open(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'], "wb") as bfile:
-                pickle.dump(total_dict, bfile)
-        except Exception as e:
-            logging.error(f"Failed to dump total memory statistics: {e}")
-            return
+        # try:
+        #     with gzip.open(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'], "wb") as bfile:
+        #         pickle.dump(total_dict, bfile)
+        # except Exception as e:
+        #     logging.error(f"Failed to dump total memory statistics: {e}")
+        #     return
 
-        try:
-            with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], "ab") as bfile:
-                pickle.dump(mem_dict, bfile)
-        except Exception as e:
-            logging.error(f"Failed to dump memory statistics log: {e}")
+        # try:
+        #     with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], "ab") as bfile:
+        #         pickle.dump(mem_dict, bfile)
+        # except Exception as e:
+        #     logging.error(f"Failed to dump memory statistics log: {e}")
 
 
     def enforce_retention_policy(self, total_dict):
@@ -1033,15 +1052,15 @@ class MemoryStatisticsProcessor:
         - first_interval_rate (int): The rate for the first interval.
         - second_interval_unit (str): The second time interval unit.
         """
-        if os.path.exists(file_name) and os.path.getsize(file_name) > 0:
-            with gzip.open(file_name, "rb") as bfile:
-                try:
-                    while True:
-                        memory_entry = pickle.load(bfile)
-                        self.process_memory_entry(memory_entry, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
-                                                 first_interval_unit, first_interval_rate, second_interval_unit)
-                except (EOFError, pickle.UnpicklingError):
-                    pass
+        # if os.path.exists(file_name) and os.path.getsize(file_name) > 0:
+        #     with gzip.open(file_name, "rb") as bfile:
+        #         try:
+        #             while True:
+        #                 memory_entry = pickle.load(bfile)
+        #                 self.process_memory_entry(memory_entry, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
+        #                                          first_interval_unit, first_interval_rate, second_interval_unit)
+        #         except (EOFError, pickle.UnpicklingError):
+        #             pass
 
     def process_memory_entry(self, memory_entry, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
                              first_interval_unit, first_interval_rate, second_interval_unit):
@@ -1225,45 +1244,83 @@ class MemoryStatisticsProcessor:
         return self.generate_memory_statistics(memory_statistics_request)
 
 class SocketHandler:
-    """Handles the creation, listening, and processing of UNIX socket connections."""
+    """Handles the creation and management of a UNIX socket for communication.
+    
+    This class is responsible for setting up a UNIX socket, accepting incoming
+    connections, processing requests, and sending responses. It provides methods
+    for managing socket file cleanup and error handling during communication.
+    """
 
-    def __init__(self, address, command_handler):
+    def __init__(self, address, command_handler, stop_event):
         """
-        Initializes the SocketHandler with a socket address and a command handler.
-
-        :param address: The file system path for the UNIX socket.
-        :param command_handler: A callable to process commands received through the socket.
+        Initializes the SocketHandler with the specified parameters.
+        
+        :param address: The file system path where the UNIX socket will be created.
+        :param command_handler: A callable that processes commands received from clients.
+        :param stop_event: An event flag used to signal when to stop the socket listener.
         """
         self.address = address
         self.command_handler = command_handler
         self.listener_socket = None
-        self.listener_thread = None  
+        self.stop_event = stop_event
 
     def safe_remove_file(self, filepath):
-        """Remove a file if it exists to avoid socket binding issues."""
+        """Removes a file if it exists to prevent socket binding errors.
+        
+        This method checks for the existence of the specified file and removes
+        it if found. It logs the action taken or any errors encountered.
+        
+        :param filepath: The path of the socket file to be removed.
+        """
         try:
             if os.path.exists(filepath):
                 os.remove(filepath)
-                logger.log_debug(f"Removed existing socket file: {filepath}")
+                logger.log_info(f"Removed existing socket file: {filepath}")
         except Exception as e:
             logger.log_error(f"Failed to remove file {filepath}: {e}")
 
     def create_unix_socket(self):
-        """Create and bind a UNIX socket, setting the appropriate permissions."""
-        self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.listener_socket.bind(self.address)
-        os.chmod(self.address, stat.S_IRWXU | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH)
-        self.listener_socket.listen(1)
-        logger.log_info(f"UNIX socket created and listening at {self.address}")
+        """Creates and configures a UNIX socket for listening for incoming connections.
+        
+        This method sets up the socket with appropriate permissions and starts
+        listening for client connections. It raises an exception if socket creation fails.
+        """
+        try:
+            self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.listener_socket.settimeout(1.0)  
+            self.listener_socket.bind(self.address)
+            os.chmod(self.address, stat.S_IRWXU | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH | stat.S_IWOTH)
+            self.listener_socket.listen(5) 
+            logger.log_info(f"UNIX socket created and listening at {self.address}")
+        except Exception as e:
+            logger.log_error(f"Failed to create UNIX socket at {self.address}: {e}")
+            raise
 
     def send_response(self, connection, response_data):
-        """Send a JSON-encoded response to the connected client."""
-        response_json = json.dumps(response_data)
-        connection.sendall(response_json.encode('utf-8'))
-        logger.log_debug(f"Sent response: {response_json}")
+        """Sends a JSON response back to the client.
+        
+        This method encodes the response data as JSON and sends it through
+        the established socket connection. It logs any errors encountered during the process.
+        
+        :param connection: The socket connection to the client.
+        :param response_data: The data to be sent as a JSON response.
+        """
+        try:
+            response_json = json.dumps(response_data)
+            connection.sendall(response_json.encode('utf-8'))
+            logger.log_debug(f"Sent response: {response_json}")
+        except Exception as e:
+            logger.log_error(f"Failed to send response: {e}")
 
     def handle_connection(self, connection):
-        """Process a single incoming connection, handling requests and sending responses."""
+        """Processes a single incoming socket connection.
+        
+        This method reads the request data from the client, decodes it from JSON,
+        and processes it using the command handler. It handles any exceptions,
+        sending an error response if needed, and closes the connection afterward.
+        
+        :param connection: The socket connection established with the client.
+        """
         error_response = {"status": False, "msg": None}
         try:
             request_data = connection.recv(4096)
@@ -1274,146 +1331,203 @@ class SocketHandler:
             request_json = json.loads(request_data.decode('utf-8'))
             logger.log_debug(f"Received request: {request_json}")
             command_name = request_json['command']
-            command_data = request_json['data']
+            command_data = request_json.get('data', {})
 
             response = self.command_handler(command_name, command_data)
 
             self.send_response(connection, response)
-
         except Exception as error:
             logger.log_error(f"Error handling request: {traceback.format_exc()}")
             error_response['msg'] = str(error)
-            error_response['data'] = traceback.format_exc()
             self.send_response(connection, error_response)
-
         finally:
-            connection.close()
-            logger.log_debug("Connection closed")
+            try:
+                connection.close()
+                logger.log_debug("Connection closed")
+            except Exception as e:
+                logger.log_error(f"Error closing connection: {e}")
 
     def start_listening(self):
-        """Begin listening for incoming socket connections and process them."""
+        """Starts listening for incoming socket connections.
+        
+        This method initializes the socket, removes any existing socket files,
+        and enters a loop to accept and handle incoming connections. The loop
+        continues until the stop_event is set. Upon shutdown, it cleans up the
+        socket file and closes the listener socket.
+        """
         self.safe_remove_file(self.address)
         self.create_unix_socket()
 
-        while True:
+        while not self.stop_event.is_set():
             try:
                 connection, client_address = self.listener_socket.accept()
                 logger.log_info("Accepted new connection")
                 self.handle_connection(connection)
+            except socket.timeout:
+                continue  
             except Exception as error:
                 logger.log_error(f"Socket error: {error}")
-                self.safe_remove_file(self.address)
                 time.sleep(1)  
 
-    def close_socket(self):
-        """Close the listener socket gracefully."""
-        if self.listener_socket:
-            self.listener_socket.close()
-            logger.log_info("Listener socket closed.")
-
-    def shutdown(self):
-        """Shut down the socket listener and clean up the socket file."""
-        if self.listener_socket:
-            self.listener_socket.close()
-            logger.log_info("Socket listener shut down.")
         self.safe_remove_file(self.address)
+        if self.listener_socket:
+            try:
+                self.listener_socket.close()
+                logger.log_info("Listener socket closed.")
+            except Exception as e:
+                logger.log_error(f"Error closing listener socket: {e}")
+
 
 class Daemonizer:
-    """Facilitates the daemonization of the process, allowing it to run in the background."""
+    """Facilitates the daemonization of the current process.
+    
+    This class provides methods to fork the process into the background,
+    manage the process ID (PID), and redirect standard file descriptors
+    to /dev/null, ensuring that the daemon operates independently from
+    the terminal.
+    """
 
     def __init__(self, pid_file):
         """
-        Initializes the Daemonizer with a specified PID file path.
-
-        :param pid_file: The file path where the daemon's process ID (PID) will be stored.
+        Initializes the Daemonizer with the specified PID file location.
+        
+        :param pid_file: The file path where the daemon's PID will be stored.
         """
         self.pid_file = pid_file
 
     def daemonize(self):
-        """Fork the current process to run as a background daemon.
-
-        This method performs double-forking to create a daemon process. It:
-        1. Forks the process and exits the parent.
-        2. Creates a new session and forks again to ensure the daemon is not a session leader.
-        3. Writes the daemon's PID to the specified file and redirects standard file descriptors.
+        """Forks the process to run as a background daemon.
+        
+        This method performs the necessary steps to create a daemon process,
+        including forking twice and creating a new session. It logs the
+        success of the daemonization and writes the PID to a file.
         """
         try:
             pid = os.fork()
             if pid > 0:
-                sys.exit(0)  # Exit the parent process
+                sys.exit(0) 
         except OSError as e:
             logger.log_error(f"First fork failed: {e}")
             sys.exit(1)
 
-        os.setsid()  # Start a new session
+        os.setsid()
 
         try:
             pid = os.fork()
             if pid > 0:
-                sys.exit(0)  # Exit the first child
+                sys.exit(0)
         except OSError as e:
             logger.log_error(f"Second fork failed: {e}")
             sys.exit(1)
 
-        # Now in the daemon process
         logger.log_info(f"Daemonization successful with PID: {os.getpid()}")
         self.write_pid_to_file()
         self.redirect_standard_file_descriptors()
 
     def write_pid_to_file(self):
-        """Write the daemon's PID to the specified file for management purposes.
-
-        This method creates or overwrites the PID file with the current process ID
-        to facilitate later management, such as stopping the daemon.
+        """Writes the daemon's PID to the specified file for management purposes.
+        
+        This method ensures that the PID of the running daemon is stored in a
+        file, which can be used later to manage the daemon process (e.g., for
+        stopping it). It logs the action taken and handles any errors.
         """
-        with open(self.pid_file, 'w') as f:
-            f.write(f"{os.getpid()}\n")
-        logger.log_debug(f"Daemon PID written to {self.pid_file}")
+        try:
+            with open(self.pid_file, 'w') as f:
+                f.write(f"{os.getpid()}\n")
+            logger.log_debug(f"Daemon PID written to {self.pid_file}")
+        except Exception as e:
+            logger.log_error(f"Failed to write PID file {self.pid_file}: {e}")
+            sys.exit(1)
 
     def redirect_standard_file_descriptors(self):
-        """Redirect standard input, output, and error streams to /dev/null.
-
-        This method ensures that the daemon does not retain control of the terminal
-        by redirecting all standard file descriptors to /dev/null, effectively silencing
-        any output or input.
+        """Redirects standard file descriptors to /dev/null.
+        
+        This method ensures that the daemon does not receive any terminal input/output
+        by redirecting stdin, stdout, and stderr to /dev/null. It logs the action
+        taken and any errors encountered during the process.
         """
-        sys.stdout.flush()  
-        sys.stderr.flush()  
-        with open(os.devnull, 'r') as devnull:
-            os.dup2(devnull.fileno(), sys.stdin.fileno())  
-        with open(os.devnull, 'a+') as devnull:
-            os.dup2(devnull.fileno(), sys.stdout.fileno())  
-            os.dup2(devnull.fileno(), sys.stderr.fileno())  
-        logger.log_debug("Standard file descriptors redirected to /dev/null")
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            with open(os.devnull, 'r') as devnull:
+                os.dup2(devnull.fileno(), sys.stdin.fileno())
+            with open(os.devnull, 'a+') as devnull:
+                os.dup2(devnull.fileno(), sys.stdout.fileno())
+                os.dup2(devnull.fileno(), sys.stderr.fileno())
+            logger.log_debug("Standard file descriptors redirected to /dev/null")
+        except Exception as e:
+            logger.log_error(f"Failed to redirect standard file descriptors: {e}")
+            sys.exit(1)
+
 
 class MemoryStatisticsService:
-    """Orchestrates the Memory Statistics Service, managing memory data collection, dynamic configuration, and signal handling."""
+    """
+    Manages the Memory Statistics Service, responsible for collecting,
+    processing, and serving memory usage statistics in a daemonized manner.
 
-    def __init__(self, config):
+    This service utilizes a socket for communication and handles
+    commands for memory statistics retrieval, while also managing
+    configuration reloading and graceful shutdown procedures.
+    """ 
+    def __init__(self, memory_statistics_config, config_file_path='memorystats.conf'):
         """
-        Initializes the MemoryStatisticsService with the provided configuration.
+        Initializes the MemoryStatisticsService instance.
 
-        :param config: A dictionary containing configuration parameters for the service, such as socket address and log directory.
+        Parameters:
+        - memory_statistics_config (dict): Initial configuration settings for the service.
+        - config_file_path (str): Path to the configuration file to load overrides.
         """
-        self.config = config
+        self.config_file_path = config_file_path
         self.memory_statistics_lock = threading.Lock()
+        self.stop_event = threading.Event() 
+
+        self.socket_listener_thread = None
+        self.memory_collection_thread = None
+
+        self.config = memory_statistics_config.copy()
+        self.config.update(self.load_config_from_file())
+
+        self.sampling_interval = int(self.config.get('sampling_interval', 3)) * 60 
+        self.retention_period = int(self.config.get('retention_period', 15))
+
         self.socket_handler = SocketHandler(
             address=self.config['DBUS_SOCKET_ADDRESS'],
-            command_handler=self.handle_command
+            command_handler=self.handle_command,
+            stop_event=self.stop_event
         )
         self.daemonizer = Daemonizer('/var/run/memory_statistics_daemon.pid')
-        self.processor = MemoryStatisticsProcessor(config)
-        self.shutdown_event = threading.Event()
-        self.reload_event = threading.Event()
+
+        signal.signal(signal.SIGHUP, self.handle_sighup)
+        signal.signal(signal.SIGTERM, self.handle_sigterm)
+    
+    def load_config_from_file(self):
+        """
+        Loads specific configuration values from the configuration file.
+
+        Returns:
+        - dict: A dictionary containing configuration overrides from the file.
+        """
+        config = {}
+        parser = configparser.ConfigParser()
+        try:
+            parser.read(self.config_file_path)
+            config['sampling_interval'] = parser.get('default', 'sampling_interval', fallback='3')
+            config['retention_period'] = parser.get('default', 'retention_period', fallback='15')
+            logger.log_info(f"Configuration loaded from file (overrides only): {config}")
+        except Exception as e:
+            logger.log_error(f"Failed to load configuration from file: {e}")
+        return config
 
     def handle_command(self, command_name, command_data):
-        """Handles incoming commands received through the socket.
+        """
+        Processes incoming commands received via the socket.
 
-        Executes the command if it is recognized, otherwise logs a warning and returns an error response.
+        Parameters:
+        - command_name (str): The name of the command to handle.
+        - command_data (dict): Data associated with the command.
 
-        :param command_name: The name of the command to execute.
-        :param command_data: The data associated with the command.
-        :return: A response indicating success or failure.
+        Returns:
+        - dict: Response indicating the success or failure of command execution.
         """
         if hasattr(self, command_name):
             command_method = getattr(self, command_name)
@@ -1422,29 +1536,174 @@ class MemoryStatisticsService:
             logger.log_warning(f"Unknown command received: {command_name}")
             return {"status": False, "msg": "Unknown command"}
 
+    def handle_sighup(self, signum, frame):
+        """
+        Responds to the SIGHUP signal to reload the service configuration.
+
+        This method performs cleanup of old log files and updates the service's
+        runtime configuration from the ConfigDB.
+        """
+        logger.log_info("Received SIGHUP, reloading configuration.")
+        try:
+            self.cleanup_old_files()
+            self.load_config_from_db() 
+        except Exception as e:
+            logger.log_error(f"Error handling SIGHUP: {e}")
+
+    def handle_sigterm(self, signum, frame):
+        """
+        Handles the SIGTERM signal for graceful shutdown of the service.
+
+        This method attempts to terminate child processes, stop running threads,
+        and perform necessary cleanup operations before exiting.
+        """
+        logger.log_info("Received SIGTERM, initiating graceful shutdown...")
+
+        def terminate_child_processes():
+            """
+            Gracefully terminates all child processes associated with the service.
+            """
+            current_pid = os.getpid()
+            try:
+                children = [
+                    proc for proc in psutil.process_iter(['pid', 'ppid', 'name'])
+                    if proc.info['ppid'] == current_pid
+                ]
+
+                for child in children:
+                    try:
+                        logger.log_info(f"Sending SIGTERM to child process {child.info['pid']}")
+                        os.kill(child.info['pid'], signal.SIGTERM)
+                    except ProcessLookupError:
+                        continue
+
+                timeout = 5
+                start_time = time.time()
+                while any(os.kill(child.info['pid'], 0) == 0 for child in children if child.is_running()) \
+                        and time.time() - start_time < timeout:
+                    time.sleep(0.1)
+
+                for child in children:
+                    if child.is_running():
+                        logger.log_warning(f"Force killing child process {child.info['pid']}")
+                        os.kill(child.info['pid'], signal.SIGKILL)
+
+            except Exception as e:
+                logger.log_error(f"Error while terminating child processes: {e}")
+                raise
+
+        try:
+            if hasattr(self.socket_handler, 'stop_accepting'):
+                self.socket_handler.stop_accepting()
+
+            terminate_child_processes()
+
+            self.stop_threads()
+
+            self.cleanup()
+
+            logger.log_info("Shutdown complete. Exiting...")
+            sys.exit(0)
+
+        except Exception as e:
+            logger.log_error(f"Error during graceful shutdown: {e}")
+
+            try:
+                os.killpg(os.getpgid(0), signal.SIGKILL)
+            except Exception as kill_error:
+                logger.log_error(f"Error during force kill: {kill_error}")
+            sys.exit(1)
+
+    def load_config_from_db(self):
+        """
+        Retrieves runtime configuration values from the ConfigDB.
+
+        This method updates the service's sampling interval and retention period
+        based on the values retrieved from the database.
+
+        Raises:
+        - Exception: If an error occurs while accessing the ConfigDB.
+        """
+        # Placeholder for ConfigDBConnector
+        # Replace with actual implementation
+        class ConfigDBConnector:
+            def connect(self):
+                pass
+
+            def get_table(self, table_name):
+                # Dummy implementation
+                return {
+                    'retention-period': '20',
+                    'sampling-interval': '5'  # Assume this is in minutes
+                }
+
+            def disconnect(self):
+                pass
+
+        config_db = ConfigDBConnector()
+        config_db.connect()
+
+        try:
+            config = config_db.get_table('MEMORY_STATISTICS')
+            self.retention_period = int(config.get('retention-period', self.retention_period))
+            self.sampling_interval = int(config.get('sampling-interval', self.sampling_interval)) * 60
+            
+            logger.log_info(f"Configuration reloaded from ConfigDB: sampling_interval={self.sampling_interval // 60 } minutes, retention_period={self.retention_period} days")
+        except Exception as e:
+            logger.log_error(f"Error loading configuration from ConfigDB: {e}, using current settings")
+        finally:
+            config_db.disconnect()
+
+    def cleanup_old_files(self):
+        """
+        Deletes old log files from the log directory.
+
+        This method removes any log files with a .gz extension from the specified
+        log directory to manage disk space and maintain organization.
+        """
+        try:
+            log_directory = self.config.get('LOG_DIRECTORY', '/var/log/histogram')
+            for file in os.listdir(log_directory):
+                if file.endswith('.gz'):
+                    file_path = os.path.join(log_directory, file)
+                    os.remove(file_path)
+                    logger.log_info(f"Deleted old log file: {file_path}")
+        except Exception as e:
+            logger.log_error(f"Error during log file cleanup: {e}")
+
     def memory_statistics_command_request_handler(self, request):
-        """Handles requests for memory statistics.
+        """
+        Processes requests for memory statistics.
 
-        Collects current memory usage, updates time information, and calculates memory statistics.
+        Parameters:
+        - request (dict): Contains information about the statistics request.
 
-        :param request: A dictionary containing request data, including any time-related information.
-        :return: A response containing the calculated memory statistics or an error message.
+        Returns:
+        - dict: A response indicating the success or failure of the request,
+                along with the collected memory statistics data if successful.
         """
         try:
             logger.log_info(f"Received memory statistics request: {request}")
             with self.memory_statistics_lock:
-                logger.log_info("Memory_Statistics lock acquired.")
-                memory_collector = MemoryStatisticsCollector(sampling_interval=3, retention_period=30)
+                memory_collector = MemoryStatisticsCollector(
+                    sampling_interval=self.sampling_interval // 60,
+                    retention_period=self.retention_period
+                )
                 current_memory = memory_collector.dump_memory_usage(collect_only=True)
                 request['current_memory'] = current_memory
-                logging.info(f"Current memory usage collected: {current_memory}")
+                logger.log_info(f"Current memory usage collected: {current_memory}")
 
-                time_processor = TimeProcessor(sampling_interval=5, retention_period=15)
+                time_processor = TimeProcessor(
+                    sampling_interval=self.sampling_interval // 60,
+                    retention_period=self.retention_period
+                )
                 time_processor.process_time_information(request)
-                logging.info(f"Time information updated in request: {request.get('time_data')}")
 
-                report = self.processor.calculate_memory_statistics_period(request)
-                logging.info(f"Memory statistics processing completed. Result: {report}")
+                processor = MemoryStatisticsProcessor(self.config,
+                                                    sampling_interval=self.sampling_interval // 60,
+                                                    retention_period=self.retention_period)
+                report = processor.calculate_memory_statistics_period(request)
+                logger.log_info(f"Memory statistics processed: {report}")
 
                 return {"status": True, "data": report}
 
@@ -1453,151 +1712,168 @@ class MemoryStatisticsService:
             return {"status": False, "error": str(error)}
 
     def start_socket_listener(self):
-        """Starts the socket listener in a separate thread.
-
-        This method initiates the socket handler's listener thread, enabling the service to process incoming commands.
         """
-        self.socket_handler.listener_thread = threading.Thread(target=self.socket_handler.start_listening, name='SocketListener', daemon=True)
-        self.socket_handler.listener_thread.start()
+        Starts the socket listener in a separate thread.
+
+        This method initializes and starts the socket listener, allowing the 
+        service to accept incoming commands. The listener operates in a daemon 
+        thread, ensuring that it runs in the background and does not block 
+        the main program from exiting.
+
+        Logs the start of the socket listener thread.
+        """
+        self.socket_listener_thread = threading.Thread(
+            target=self.socket_handler.start_listening,
+            name='SocketListener',
+            daemon=True
+        )
+        self.socket_listener_thread.start()
         logger.log_info("Socket listener thread started.")
 
-    def collect_memory_statistics(self):
-        """Continuously collects memory statistics at specified intervals.
-
-        The method runs in a loop, collecting memory statistics and checking for configuration reloads or shutdown signals.
+    def start_memory_collection(self):
         """
-        logger.log_info("Starting Memory Statistics Collection")
-        while not self.shutdown_event.is_set():
-            if self.reload_event.is_set():
-                self.reload_event.clear()
-                self.load_config_from_db()
+        Starts memory statistics collection in a separate thread.
 
+        This method initializes and starts a separate thread dedicated to 
+        collecting memory statistics at defined intervals. The collection 
+        process runs in a loop until signaled to stop, capturing memory usage 
+        data and logging any errors that may occur during the process.
+
+        The collection interval is determined by the `sampling_interval` 
+        configuration. Logs the start and stop of the memory collection thread.
+        """    
+        def memory_collection():
+            logger.log_info("Memory statistics collection thread started.")
+            while not self.stop_event.is_set():
+                start_time = datetime.now()
+                try:
+                    with self.memory_statistics_lock:
+                        memory_collector = MemoryStatisticsCollector(
+                            sampling_interval=self.sampling_interval // 60,
+                            retention_period=self.retention_period
+                        )
+                        memory_collector.dump_memory_usage(collect_only=False)
+                except Exception as error:
+                    logger.log_error(f"Error during memory statistics collection: {error}")
+
+                elapsed_time = (datetime.now() - start_time).total_seconds()
+                sleep_time = max(0, self.sampling_interval - elapsed_time)
+                if self.stop_event.wait(timeout=sleep_time):
+                    break  
+
+            logger.log_info("Memory statistics collection thread stopped.")
+
+        self.memory_collection_thread = threading.Thread(
+            target=memory_collection,
+            name='MemoryCollection',
+            daemon=True
+        )
+        self.memory_collection_thread.start()
+        logger.log_info("Memory collection thread started.")
+
+    def stop_threads(self):
+        """
+        Signals threads to stop and waits for them to exit gracefully.
+
+        This method sets the stop event to signal all running threads to 
+        terminate. It also closes the listener socket to unblock the accept 
+        method and waits for both the socket listener and memory collection 
+        threads to finish their execution within a specified timeout.
+
+        Logs any issues encountered during the stopping process of the threads.
+        """
+        logger.log_info("Signaling threads to stop.")
+        self.stop_event.set() 
+
+        if self.socket_handler.listener_socket:
             try:
-                memory_collector = MemoryStatisticsCollector(sampling_interval=5, retention_period=15)
-                memory_collector.dump_memory_usage(collect_only=False)
-                logging.info("Memory statistics collected and stored.")
-            except Exception as error:
-                logger.log_error(f"Error during memory statistics collection: {error}")
+                self.socket_handler.listener_socket.close()
+                logger.log_info("Listener socket closed to unblock accept().")
+            except Exception as e:
+                logger.log_error(f"Error closing listener socket: {e}")
 
-            self.shutdown_event.wait(self.processor.sampling_interval * 60)  # Wait for the configured interval in seconds
+        if self.socket_listener_thread:
+            logger.log_info("Stopping socket listener thread...")
+            self.socket_listener_thread.join(timeout=5)
+            if self.socket_listener_thread.is_alive():
+                logger.log_warning("Socket listener thread did not stop gracefully")
 
-    def cleanup_old_files(self):
-        """Cleans up old log files from the log directory.
+        if self.memory_collection_thread:
+            logger.log_info("Stopping memory collection thread...")
+            self.memory_collection_thread.join(timeout=5)
+            if self.memory_collection_thread.is_alive():
+                logger.log_warning("Memory collection thread did not stop gracefully")
 
-        This method removes all .gz log files to prevent excessive disk usage and maintain log management.
+    def cleanup(self):
         """
-        try:
-            log_directory = self.config['LOG_DIRECTORY']
-            for file in os.listdir(log_directory):
-                if file.endswith('.gz'):
-                    file_path = os.path.join(log_directory, file)
-                    try:
-                        os.remove(file_path)  # Remove the .gz log file
-                        logger.log_info(f"Deleted old log file: {file_path}")
-                    except Exception as e:
-                        logger.log_error(f"Error deleting old log file: {file_path}, {e}")
-        except Exception as e:
-            logger.log_error(f"Error during log file cleanup process: {e}")
+        Performs additional cleanup tasks before service shutdown.
 
-    def load_default_settings(self):
-        """Loads default settings for sampling interval and retention period from the configuration file.
+        This method handles the cleanup of old log files, removes the socket 
+        and PID files, and flushes all log handlers to ensure that all logs 
+        are properly written out. This is typically called during service 
+        termination to free up resources and maintain a clean state.
 
-        This method reads the configuration file and updates the processor's settings with default values,
-        falling back if the settings are not found.
+        Logs the completion of the cleanup tasks and any errors encountered 
+        during the process.
         """
-        logger.log_info("Loading default settings from memory_statistics.conf.")
-        
-        config = configparser.ConfigParser()
-        config.read('/etc/memorystats.conf')  # Change the file name to match your config file
-        
-        try:
-            # Load the sampling interval and retention period from the config file
-            self.processor.sampling_interval = config.getint('DEFAULT', 'sampling_interval', fallback=3)  # Default to 3 minutes if not set
-            self.processor.retention_period = config.getint('DEFAULT', 'retention_period', fallback=30)   # Default to 30 days if not set
-
-            logger.log_info(f"Default settings loaded: sampling_interval={self.processor.sampling_interval}, retention_period={self.processor.retention_period}")
-        except Exception as e:
-            logger.log_error(f"Failed to load default settings: {e}")
-            self.processor.sampling_interval = 5  # Fallback to defaults
-            self.processor.retention_period = 15
-
-    def load_config_from_db(self):
-        """Loads configuration settings from a configuration database.
-
-        This method retrieves the memory statistics configuration from the database and updates
-        the sampling interval and retention period with the retrieved values.
-        """
-        self.config_db = ConfigDBConnector()
-        self.config_db.connect()  # Connect to ConfigDB
-
-        try:
-            config_db = self.config_db.get_table('MEMORY_STATISTICS')  # Get memory statistics config table
-
-            # Update retention period and sampling interval with values from the database
-            new_retention_period = int(config_db.get('retention-period', self.processor.retention_period))
-            new_sampling_interval = int(config_db.get('sampling-interval', self.processor.sampling_interval))
-            
-            self.processor.sampling_interval = new_sampling_interval
-            self.processor.retention_period = new_retention_period
-
-            logger.log_info(f"Config reloaded from DB: sampling_interval={new_sampling_interval}, retention_period={new_retention_period}")
-        except Exception as e:
-            logger.log_error(f"Failed to reload config from DB: {e}")
-
-    def reload_signal_handler(self, signum, frame):
-        """Handles SIGHUP signal for configuration reload.
-
-        Sets the reload event to trigger a configuration reload in the main collection loop.
-        """
-        logger.log_info("Received SIGHUP signal, reloading configuration.")
         self.cleanup_old_files()
-        self.reload_event.set()
 
-    def shutdown_signal_handler(self, signum, frame):
-        """Handles SIGTERM signal for graceful shutdown.
+        try:
+            if os.path.exists(self.config['DBUS_SOCKET_ADDRESS']):
+                os.unlink(self.config['DBUS_SOCKET_ADDRESS'])
+                logger.log_info(f"Removed socket file: {self.config['DBUS_SOCKET_ADDRESS']}")
+        except Exception as e:
+            logger.log_error(f"Error removing socket file: {e}")
 
-        Sets the shutdown event to signal the collection loop to terminate and perform cleanup.
-        """
-        logger.log_info("Received SIGTERM signal, shutting down.")
-        self.shutdown_event.set()
+        pid_file = '/var/run/memory_statistics_daemon.pid'
+        try:
+            if os.path.exists(pid_file):
+                os.unlink(pid_file)
+                logger.log_info(f"Removed PID file: {pid_file}")
+        except Exception as e:
+            logger.log_error(f"Error removing PID file: {e}")
+
+        try:
+            for handler in logging.getLogger().handlers:
+                handler.flush()
+        except Exception as e:
+            logger.log_error(f"Error flushing log handlers: {e}")
+
+        logger.log_info("Cleanup complete.")
 
     def run(self):
-        """Runs the Memory Statistics Daemon.
-
-        Initiates the daemon process, starts the socket listener, sets up signal handlers,
-        and begins collecting memory statistics until a shutdown signal is received.
         """
-        logger.log_info("Starting Memory Statistics Daemon.")
+        Runs the Memory Statistics Service.
+
+        This method starts the service by daemonizing the process and 
+        initializing the threads necessary for socket listening and memory 
+        statistics collection. The service will continue to run until 
+        signaled to stop, during which it sleeps to reduce CPU usage.
+
+        Logs the initialization and starting of the service.
+        """
+        logger.log_info("Memory Statistics Service is starting...")
         self.daemonizer.daemonize()
+
         self.start_socket_listener()
-
-        signal.signal(signal.SIGHUP, self.reload_signal_handler)
-        signal.signal(signal.SIGTERM, self.shutdown_signal_handler)
-
-        self.collect_memory_statistics()  # Start collecting memory statistics
-        logger.log_info("Memory Statistics Daemon stopped.")
-
-        self.cleanup_old_files()  # Clean up files during shutdown
-        self.socket_handler.shutdown()  # Shut down the socket handler
+        self.start_memory_collection()
+    
+        while not self.stop_event.is_set():
+            time.sleep(1) 
 
 if __name__ == '__main__':
-    """
-    Main execution block for the Memory Statistics Daemon.
-    This block initializes the configuration settings for logging and memory statistics,
-    sets up the logger, and starts the memory statistics service daemon.
-    """
+
     memory_statistics_config = {
         'LOG_DIRECTORY': "/var/log/memory_statistics",
         'MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/memory-stats.log.gz",
         'TOTAL_MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/total-memory-stats.log.gz",
-        'DBUS_SOCKET_ADDRESS': '/var/run/dbus/memstats.socket',
-        'SYSLOG_ID': "memstats#log",
-        'SYSLOG_CONSOLE': True,
+        'DBUS_SOCKET_ADDRESS': '/var/run/dbus/memstats.socket'
     }
+    
     logger = SyslogLogger(
-        identifier=memory_statistics_config['SYSLOG_ID'],
-        log_to_console=memory_statistics_config['SYSLOG_CONSOLE']
+        identifier="memstats#log",
+        log_to_console=True
     )
-
-    daemon = MemoryStatisticsService(memory_statistics_config)
-    daemon.run()
+        
+    service = MemoryStatisticsService(memory_statistics_config)
+    service.run()
