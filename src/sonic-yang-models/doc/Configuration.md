@@ -7,9 +7,13 @@ Table of Contents
    * [Introduction](#introduction)
    * [Configuration](#configuration)
    * [<strong>Config Load and Save</strong>](#config-load-and-save)
+
          * [Incremental Configuration](#incremental-configuration)
    * [<strong>Redis and Json Schema</strong>](#redis-and-json-schema)
+
          * [ACL and Mirroring](#acl-and-mirroring)
+         * [BGP BBR](#bgp-bbr)
+         * [ASIC SDK health event](#asic-sdk-health-event)
          * [BGP Device Global](#bgp-device-global)
          * [BGP Sessions](#bgp-sessions)
          * [BUFFER_PG](#buffer_pg)
@@ -30,6 +34,7 @@ Table of Contents
          * [Device neighbor metada](#device-neighbor-metada)
          * [DHCP_RELAY](#dhcp_relay)
          * [DHCP Server IPV4](#dhcp_server_ipv4)
+         * [BMP](#bmp)
          * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
          * [FG_NHG](#fg_nhg)
          * [FG_NHG_MEMBER](#fg_nhg_member)
@@ -70,6 +75,7 @@ Table of Contents
          * [TC to Priority group map](#tc-to-priority-group-map)
          * [TC to Queue map](#tc-to-queue-map)
          * [Telemetry](#telemetry)
+         * [Telemetry client](#telemetry-client)
          * [Tunnel](#tunnel)
          * [Versions](#versions)
          * [VLAN](#vlan)
@@ -80,8 +86,9 @@ Table of Contents
          * [Virtual router](#virtual-router)
          * [LOGGER](#logger)
          * [WRED_PROFILE](#wred_profile)
+         * [XCVRD_LOG](#xcvrd_log)
          * [PASSWORD_HARDENING](#password_hardening)
-         * [SSH_SERVER](#ssh_server)  
+         * [SSH_SERVER](#ssh_server)
          * [SYSTEM_DEFAULTS table](#systemdefaults-table)
          * [RADIUS](#radius)
          * [Static DNS](#static-dns)
@@ -366,14 +373,48 @@ and migration plan
     }
 }
 ```
-### BGP Device Global
+### BGP BBR
 
-The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.
-It has a STATE object containing device state like **tsa_enabled**
-which is set to true if device is currently isolated using
-traffic-shift-away (TSA) route-maps in BGP
+The **BGP_BBR** table contains device-level BBR state.
+```
+{
+        "BGP_BBR": {
+            "all": {
+                "status": "enabled"/"disabled"
+            }
+        }
+}
+```
+
+### ASIC SDK health event
+
+ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HEALTH_EVENT** table.
 
 ```
+"SUPPRESS_ASIC_SDK_HEALTH_EVENT": {
+    "notice": {
+        "categories": [
+            "asic_hw"
+        ],
+        "max_events": "1000"
+    },
+    "warning": {
+        "categories": [
+            "software",
+            "cpu_hw"
+        ]
+    }
+}
+```
+
+### BGP Device Global
+
+The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.  
+It has a STATE object containing device state like **tsa_enabled**, **wcmp_enabled** and **idf_isolation_state**.
+
+When **tsa_enabled** is set to true, the device is isolated using traffic-shift-away (TSA) route-maps in BGP.
+
+```json
 {
 "BGP_DEVICE_GLOBAL": {
     "STATE": {
@@ -381,6 +422,30 @@ traffic-shift-away (TSA) route-maps in BGP
     }
 }
 ```
+
+When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.  
+Weighted ECMP load balances traffic between the equal cost paths in proportion to the capacity of the local links.
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
+        "wcmp_enabled": "true"
+    }
+}
+```
+
+The IDF isolation state **idf_isolation_state** could be one of isolated_no_export, isolated_withdraw_all or unisolated.
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
+        "idf_isolation_state": "isolated_no_export"
+    }
+}
+```
+
 ### BGP Sessions
 
 BGP session configuration is defined in **BGP_NEIGHBOR** table. BGP
@@ -509,6 +574,7 @@ When the system is running in traditional buffer model, the size of all of the b
 ```
 
 When the system is running in dynamic buffer model, the size of some of the buffer pools can be omitted and will be dynamically calculated.
+In this case, A percentage can be configured on a pool, representing how many the available buffer can be allloced to the pool.
 
 ```
 {
@@ -520,11 +586,12 @@ When the system is running in dynamic buffer model, the size of some of the buff
     },
     "egress_lossy_pool": {
         "type": "egress",
-        "mode": "dynamic",
+        "mode": "dynamic"
     },
     "ingress_lossless_pool": {
         "type": "ingress",
         "mode": "dynamic",
+        "percentage": "80"
     }
   }
 }
@@ -926,6 +993,8 @@ instance is supported in SONiC.
 {
 "DEVICE_METADATA": {
         "localhost": {
+        "asic_id": "06:00.0",
+        "asic_name": "asic0",
         "hwsku": "Force10-S6100",
         "default_bgp_status": "up",
         "docker_routing_config_mode": "unified",
@@ -940,7 +1009,8 @@ instance is supported in SONiC.
         "buffer_model": "traditional",
         "yang_config_validation": "disable",
         "rack_mgmt_map": "dummy_value",
-        "timezome": "Europe/Kiev"
+        "timezome": "Europe/Kiev",
+        "bgp_router_id": "8.8.8.8"
     }
   }
 }
@@ -989,6 +1059,21 @@ instance is supported in SONiC.
 
 ```
 
+### BMP
+BMP related configuration are defined in **bgp_neighbor_table**,**bgp_rib_in_table**, **bgp_rib_out_table** tables.
+
+```
+{
+    "BMP": {
+        "table": {
+            "bgp_neighbor_table": "true",
+            "bgp_rib_in_table": "false",
+            "bgp_rib_out_table": "false"
+        }
+    }
+}
+```
+
 ### DHCP_SERVER_IPV4
 IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS**, **DHCP_SERVER_IPV4_RANGE**, **DHCP_SERVER_IPV4_PORT** tables.
 ```
@@ -1008,7 +1093,7 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
         "option60": {
             "id": 60,
-            "type": "text",
+            "type": "string",
             "value": "dummy_value"
         }
     },
@@ -1113,7 +1198,9 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
         "monErrThreshCrcCells": "1",
         "monErrThreshRxCells": "61035156",
         "monPollThreshIsolation": "1",
-        "monPollThreshRecovery": "8"
+        "monPollThreshRecovery": "8",
+        "monCapacityThreshWarn": "10",
+        "monState": "enable"
     }
   }
 }
@@ -1127,12 +1214,14 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
     "Fabric0": {
         "alias": "Fabric0",
         "isolateStatus": "False",
-        "lanes": "0"
+        "lanes": "0",
+        "forceUnisolateStatus": "0"
     },
     "Fabric1": {
         "alias": "Fabric1",
         "isolateStatus": "False",
-        "lanes": "1"
+        "lanes": "1",
+        "forceUnisolateStatus": "0"
     }
   }
 }
@@ -1194,7 +1283,7 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 
 ### Hash
 
-Generic hash allows user to configure various aspects of hashing algorithm.  
+Generic hash allows user to configure various aspects of hashing algorithm.
 The configuration is applied globally for each ECMP and LAG on a switch.
 
 ***ECMP/LAG HASH***
@@ -1538,6 +1627,35 @@ These configuration options are used to modify the way that
 ntp binds to the ports on the switch and which port it uses to
 make ntp update requests from.
 
+***NTP Admin state***
+
+If this option is set to `enabled` then ntp client will try to sync system time with configured NTP servers.
+Otherwise, NTP client feature will be disabled.
+```
+{
+    "NTP": {
+        "global": {
+            "admin_state": "enabled"
+        }
+    }
+}
+```
+
+***NTP Server role***
+
+This option is used to control NTP server state on the switch.
+If this option is set to `enabled` switch will act as NTP server.
+By default `server_role` is `disabled`.
+```
+{
+    "NTP": {
+        "global": {
+            "server_role": "enabled"
+        }
+    }
+}
+```
+
 ***NTP VRF***
 
 If this option is set to `default` then ntp will run within the default vrf
@@ -1575,6 +1693,36 @@ for that address.
 }
 ```
 
+***NTP Authentication***
+
+If this option is set to `enabled` then ntp will try to verify NTP servers it connects to.
+This option **has no effect** if key is not set for NTP server.
+By default it is `disabled`
+```
+{
+    "NTP": {
+        "global": {
+            "authentication": "enabled"
+        }
+    }
+}
+```
+
+***NTP DHCP leases***
+
+If this option is set to `enabled` then ntp client will try to use NTP servers provided by DHCP server.
+If this option is set to `disabled` you will be able to use the user-configured NTP servers.
+By default it is `enabled`
+```
+{
+    "NTP": {
+        "global": {
+            "dhcp": "enabled"
+        }
+    }
+}
+```
+
 ### NTP servers
 
 These information are configured in individual tables. Domain name or IP
@@ -1585,18 +1733,77 @@ attributes in those objects.
 ```
 {
     "NTP_SERVER": {
-        "2.debian.pool.ntp.org": {},
-        "1.debian.pool.ntp.org": {},
-        "3.debian.pool.ntp.org": {},
-        "0.debian.pool.ntp.org": {}
+        "2.debian.pool.ntp.org": {
+            "association_type": "pool",
+            "iburst": "on",
+            "admin_state": "enabled",
+            "version": 4
+        },
+        "1.debian.pool.ntp.org": {
+            "association_type": "pool",
+            "iburst": "off",
+            "admin_state": "enabled",
+            "version": 3
+        },
+        "3.debian.pool.ntp.org": {
+            "association_type": "pool",
+            "iburst": "on",
+            "admin_state": "disabled",
+            "version": 4
+        },
+        "0.debian.pool.ntp.org": {
+            "association_type": "pool",
+            "iburst": "off",
+            "admin_state": "disabled",
+            "version": 3
+        }
     },
 
     "NTP_SERVER": {
-        "23.92.29.245": {},
-        "204.2.134.164": {}
+        "23.92.29.245": {
+            "association_type": "server",
+            "iburst": "on",
+            "admin_state": "enabled",
+            "version": 4,
+            "key": 3,
+            "trusted": "yes"
+        },
+        "204.2.134.164": {
+            "association_type": "server",
+            "iburst": "on",
+            "admin_state": "enabled",
+            "version": 3
+        }
     }
 }
 ```
+* `association_type` - is used to control the type of the server. It can be `server` or `pool`.
+* `iburst` - agressive server polling `{on, off}`.
+* `version` - NTP protool version to use `[3..4]`.
+* `key` - authentication key id `[1..65535]` to use to auth the server.
+* `admin_state` - enable or disable specific server.
+* `trusted` - trust this server when auth is enabled.
+
+***NTP keys***
+```
+{
+    "NTP_KEY": {
+        "1": {
+            "type": "md5",
+            "value": "bXlwYXNzd29yZA==",
+            "trusted": "yes"
+        },
+        "42": {
+            "type": "sha1",
+            "value": "dGhlYW5zd2Vy",
+            "trusted": "no"
+        }
+    }
+}
+```
+* `type` - key type to use `{md5, sha1, sha256, sha384, sha512}`.
+* `value` - base64 encoded key value.
+* `trusted` - trust this NTP key `{yes, no}`.
 
 ### Peer Switch
 
@@ -1673,7 +1880,11 @@ optional attributes.
             "speed": "40000",
             "link_training": "off",
             "laser_freq": "191300",
-            "tx_power": "-27.3"
+            "tx_power": "-27.3",
+            "dom_polling": "enabled",
+            "core_id": "1",
+            "core_port_id": "1",
+            "num_voq": "8"
         },
         "Ethernet1": {
             "index": "1",
@@ -1685,7 +1896,11 @@ optional attributes.
             "speed": "40000",
             "link_training": "on",
             "laser_freq": "191300",
-            "tx_power": "-27.3"
+            "tx_power": "-27.3",
+            "dom_polling": "enabled",
+            "core_id": "0",
+            "core_port_id": "14",
+            "num_voq": "8"
         },
         "Ethernet63": {
             "index": "63",
@@ -1695,7 +1910,11 @@ optional attributes.
             "alias": "fortyGigE1/4/16",
             "speed": "40000",
             "laser_freq": "191300",
-            "tx_power": "-27.3"
+            "tx_power": "-27.3",
+            "dom_polling": "disabled",
+            "core_id": "0",
+            "core_port_id": "15",
+            "num_voq": "8"
         }
     }
 }
@@ -1711,7 +1930,8 @@ optional attributes.
             "mtu": "9100",
             "alias": "etp1a",
             "speed": "100000",
-            "subport": 1
+            "subport": 1,
+            "dom_polling": "enabled"
         },
         "Ethernet4": {
             "admin_status": "up",
@@ -1721,7 +1941,8 @@ optional attributes.
             "mtu": "9100",
             "alias": "etp1b",
             "speed": "100000",
-            "subport": 2
+            "subport": 2,
+            "dom_polling": "enabled"
         },
     }
 }
@@ -1882,6 +2103,27 @@ key - name
 | collector_ip   | IPv4/IPv6 address of the Sflow collector                                                | true        |           |             |
 | collector_port | Destination L4 port of the Sflow collector                                              |             | 6343      |             |
 | collector_vrf  | Specify the Collector VRF. In this revision, it is either default VRF or Management VRF.|             |           |             |
+
+### Storage Monitoring Daemon Interval Configuration
+
+These options are used to configure the daemon polling and sync-to-disk interval
+of the Storage Monitoring Daemon (stormond)
+
+**Config Sample**
+```
+{
+    "STORMOND_CONFIG": {
+        "INTERVALS": {
+            "daemon_polling_interval" : "60",
+            "fsstats_sync_interval"   : "360"
+        }
+    }
+}
+```
+
+*   `daemon_polling_interval` - Determines how often stormond queries the disk for relevant information and posts to STATE_DB
+*   `fsstats_sync_interval`   - Determines how often key information from the STATE_DB is synced to a file on disk
+
 
 ### Syslog Global Configuration
 
@@ -2097,7 +2339,33 @@ and is listed in this table.
         "gnmi": {
             "client_auth": "true",
             "log_level": "2",
-            "port": "50051"
+            "port": "50051",
+            "save_on_set": "false"
+        }
+    }
+}
+```
+
+### Telemetry client
+
+```
+{
+    "TELEMETRY_CLIENT": {
+        "Global": {
+            "encoding": "JSON_IETF",
+            "retry_interval": "30",
+            "src_ip": "30.57.185.38",
+            "unidirectional": "true"
+        },
+        "DestinationGroup|HS": {
+            "dst_addr": "30.57.186.214:8081,30.57.185.39:8081"
+        },
+        "Subscription|HS_RDMA": {
+            "dst_group": "HS",
+            "path_target": "COUNTERS_DB",
+            "paths": "COUNTERS/Ethernet*,COUNTERS_PORT_NAME_MAP",
+            "report_interval": "5000",
+            "report_type": "periodic"
         }
     }
 }
@@ -2273,7 +2541,8 @@ VXLAN_EVPN_NVO holds the VXLAN_TUNNEL object to be used for BGP-EVPN discovered 
 {
 "VXLAN_TUNNEL": {
         "vtep1": {
-            "src_ip": "10.10.10.10"
+            "src_ip": "10.10.10.10",
+            "dst_ip": "12.12.12.12"
         }
   }
 "VXLAN_TUNNEL_MAP" : {
@@ -2426,20 +2695,41 @@ There are 4 classes
 }
 ```
 
+### SERIAL_CONSOLE
+
+In this table collected configuration of the next serial-console attributes:
+-   inactivity_timeout - Inactivity timeout for serial-console session, allowed values: 0-35000 (minutes), default value: 15
+-   sysrq_capabilities - Enabling or disabling SysRq functionality for serial-console session, allowed values: enabled/disabled, default value disabled
+
+```
+{
+    SERIAL_CONSOLE:{
+        "POLICIES":{
+            "inactivity_timeout": 15
+            "sysrq_capabilities": "disabled"
+        }
+    }
+}
+```
+
 ### SSH_SERVER
 
-In this table, we allow configuring ssh server global settings. This will feature includes 3 configurations:
+In this table, we allow configuring ssh server global settings. This will feature includes 5 configurations:
 
 -   authentication_retries - number of login attepmts 1-100
 -   login_timeout - Timeout in seconds for login session for user to connect 1-600
 -   ports - Ssh port numbers - string of port numbers seperated by ','
+-   inactivity_timeout - Inactivity timeout for SSH session, allowed values: 0-35000 (min), default value: 15 (min)
+-   max_sessions - Max number of concurrent logins, allowed values: 0-100 (where 0 means no limit), default value: 0
 ```
 {
     "SSH_SERVER": {
         "POLICIES":{
             "authentication_retries": "6",
             "login_timeout": "120",
-            "ports": "22"
+            "ports": "22",
+            "inactivity_timeout": "15",
+            "max_sessions": "0"
         }
     }
 }
@@ -2570,6 +2860,37 @@ The FIPS table introduces FIPS  configuration.
         "global" : {
             "enable": "true",
             "enforce": "false"
+        }
+    }
+}
+```
+### MID_PLANE_BRIDGE"
+
+The MID_PLANE_BRIDGE" table introduces the configuration for the midplane bridge interface for Smart Switch.
+
+```json
+{
+    "MID_PLANE_BRIDGE": {
+        "GLOBAL" : {
+            "bridge": "bridge-midplane",
+            "ip_prefix": "169.254.200.254/24"
+        }
+    }
+}
+```
+
+### DPUS
+
+The DPUS table introduces the information on the DPUs (Data Processing Unit) available on the platform.
+
+```json
+{
+    "DPUS": {
+        "dpu0": {
+            "midplane_interface": "dpu0"
+        },
+        "dpu1": {
+            "midplane_interface": "dpu1"
         }
     }
 }

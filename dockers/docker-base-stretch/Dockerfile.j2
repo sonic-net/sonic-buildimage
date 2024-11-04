@@ -64,15 +64,15 @@ RUN apt-get -y -t stretch-backports install rsyslog
 # Install redis-tools
 
 {% if CONFIGURED_ARCH == "armhf" %}
-    RUN curl -o  redis-tools_6.0.6-1~bpo10+1_armhf.deb "https://sonicstorage.blob.core.windows.net/packages/redis/redis-tools_6.0.6-1_bpo10+1_armhf.deb?sv=2015-04-05&sr=b&sig=67vHAMxsl%2BS3X1KsqhdYhakJkGdg5FKSPgU8kUiw4as%3D&se=2030-10-24T04%3A22%3A40Z&sp=r"
+    RUN curl -o  redis-tools_6.0.6-1~bpo10+1_armhf.deb "https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1_bpo10+1_armhf.deb"
     RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_armhf.deb || apt-get install -f -y
     RUN rm redis-tools_6.0.6-1~bpo10+1_armhf.deb
 {% elif CONFIGURED_ARCH == "arm64" %}
-    RUN curl -o  redis-tools_6.0.6-1~bpo10+1_arm64.deb  "https://sonicstorage.blob.core.windows.net/packages/redis/redis-tools_6.0.6-1_bpo10+1_arm64.deb?sv=2015-04-05&sr=b&sig=GbkJV2wWln3hoz27zKi5erdk3NDKrAFrQriA97bcRCY%3D&se=2030-10-24T04%3A22%3A21Z&sp=r"
+    RUN curl -o  redis-tools_6.0.6-1~bpo10+1_arm64.deb  "https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1_bpo10+1_arm64.deb"
     RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_arm64.deb || apt-get install -f -y
     RUN rm redis-tools_6.0.6-1~bpo10+1_arm64.deb
 {% else %}
-    RUN curl -o redis-tools_6.0.6-1~bpo10+1_amd64.deb "https://sonicstorage.blob.core.windows.net/packages/redis/redis-tools_6.0.6-1~bpo10+1_amd64.deb?sv=2015-04-05&sr=b&sig=73zbmjkf3pi%2Bn0R8Hy7CWT2EUvOAyzM5aLYJWCLySGM%3D&se=2030-09-06T19%3A44%3A59Z&sp=r"
+    RUN curl -o redis-tools_6.0.6-1~bpo10+1_amd64.deb "https://sonicstorage.blob.core.windows.net/public/redis/redis-tools_6.0.6-1~bpo10+1_amd64.deb"
     RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_amd64.deb || apt-get install -f -y
     RUN rm redis-tools_6.0.6-1~bpo10+1_amd64.deb
 {% endif %}
@@ -114,10 +114,10 @@ RUN apt-get clean -y                     && \
     apt-get autoremove -y                && \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
+COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
 COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]
 COPY ["root/.vimrc", "/root/.vimrc"]
 
 RUN ln /usr/bin/vim.tiny /usr/bin/vim
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
-COPY ["etc/supervisor/containercfgd.conf", "/etc/supervisor/conf.d/"]

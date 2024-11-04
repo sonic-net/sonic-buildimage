@@ -34,27 +34,16 @@ function updateSyslogConf()
     # Also update the container name
     if [[ ($NUM_ASIC -gt 1) ]]; then
         TARGET_IP=$(docker network inspect bridge --format={{ "'{{(index .IPAM.Config 0).Gateway}}'" }})
-    else
-        if [ "$CONTAINER_EXISTS" = "yes" ]; then
-            # database configuration has been synced to /etc/rsyslog.conf
-            # no need generate it to save boot time
-            return
-        fi
-        TARGET_IP="127.0.0.1"
+        CONTAINER_NAME="$DOCKERNAME"
+        TMP_FILE="/tmp/rsyslog.$CONTAINER_NAME.conf"
+        {%- if docker_container_name == "database" %}
+        python -c "import jinja2, os; paths=['/usr/share/sonic/templates']; loader = jinja2.FileSystemLoader(paths); env = jinja2.Environment(loader=loader, trim_blocks=True); template_file='/usr/share/sonic/templates/rsyslog-container.conf.j2'; template = env.get_template(os.path.basename(template_file)); data=template.render({\"target_ip\":\"$TARGET_IP\",\"container_name\":\"$CONTAINER_NAME\"}); print(data)" > $TMP_FILE
+        {%- else %}
+        sonic-cfggen -t /usr/share/sonic/templates/rsyslog-container.conf.j2 -a "{\"target_ip\": \"$TARGET_IP\", \"container_name\": \"$CONTAINER_NAME\" }"  > $TMP_FILE
+        {%- endif %}
+        docker cp $TMP_FILE ${DOCKERNAME}:/etc/rsyslog.conf
+        rm -rf $TMP_FILE
     fi
-    CONTAINER_NAME="$DOCKERNAME"
-    TMP_FILE="/tmp/rsyslog.$CONTAINER_NAME.conf"
-    {%- if docker_container_name == "database" %}
-    python -c "import jinja2, os; paths=['/usr/share/sonic/templates']; loader = jinja2.FileSystemLoader(paths); env = jinja2.Environment(loader=loader, trim_blocks=True); template_file='/usr/share/sonic/templates/rsyslog-container.conf.j2'; template = env.get_template(os.path.basename(template_file)); data=template.render({\"target_ip\":\"$TARGET_IP\",\"container_name\":\"$CONTAINER_NAME\"}); print(data)" > $TMP_FILE
-    {%- else %}
-    sonic-cfggen -d -t /usr/share/sonic/templates/rsyslog-container.conf.j2 -a "{\"target_ip\": \"$TARGET_IP\", \"container_name\": \"$CONTAINER_NAME\", \"platform\": \"$PLATFORM\" }"  > $TMP_FILE
-    if [ $? -ne 0 ]; then
-      echo "Error: Execute sonic-cfggen -d failed. Execute without '-d'."
-      sonic-cfggen -t /usr/share/sonic/templates/rsyslog-container.conf.j2 -a "{\"target_ip\": \"$TARGET_IP\", \"container_name\": \"$CONTAINER_NAME\", \"platform\": \"$PLATFORM\" }"  > $TMP_FILE
-    fi
-    {%- endif %}
-    docker cp $TMP_FILE ${DOCKERNAME}:/etc/rsyslog.conf
-    rm -rf $TMP_FILE
 }
 function ebtables_config()
 {
@@ -108,6 +97,7 @@ function preStartAction()
             # Create an emtpy file and overwrite any RDB if already there
             echo -n > /tmp/dump.rdb
             docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
+            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
         fi
     fi
 {%- elif docker_container_name == "pde" %}
@@ -257,6 +247,9 @@ function postStartAction()
             fi
 
             if [[ "$BOOT_TYPE" == "fast" ]]; then
+                # Flush ASIC DB. On fast-boot there should be nothing in there.
+                # In the older versions there has been an issue where a queued FDB event might get into ASIC_DB causing syncd crash at boot.
+                $SONIC_DB_CLI ASIC_DB FLUSHDB
                 # this is the case when base OS version does not support fast-reboot with reconciliation logic (dump.rdb is absent)
                 # In this case, we need to set the flag to indicate fast-reboot is in progress. Set the key to expire in 3 minutes
                 $SONIC_DB_CLI STATE_DB SET "FAST_REBOOT|system" "1" "EX" "180"
@@ -283,6 +276,18 @@ function postStartAction()
             $SONIC_DB_CLI CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
         fi
 
+        # In SUP, enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
+        if [[ -z "$DEV" ]] && [[ -f /etc/sonic/chassisdb.conf ]]; then
+           tsa_cfg="$($SONIC_DB_CLI CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
+           if [[ -n "$tsa_cfg" ]]; then
+              docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
+              OP_CODE=$?
+              if [ $OP_CODE -ne 0 ]; then
+                echo "Err: Cmd failed (exit code $OP_CODE). CHASSIS_APP_DB and CONFIG_DB may be incosistent wrt tsa_enabled"
+              fi
+           fi
+        fi
+
         # Add redis UDS to the redis group and give read/write access to the group
         REDIS_SOCK="/var/run/redis${DEV}/redis.sock"
     else
@@ -295,8 +300,16 @@ function postStartAction()
         fi
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
+    REDIS_BMP_SOCK="/var/run/redis/redis_bmp.sock"
     chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
+    chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
 {%- elif docker_container_name == "swss" %}
+    # Wait until swss container state is Running
+    until [[ ($(docker inspect -f {{"'{{.State.Running}}'"}} swss$DEV) == "true") ]]; do
+        sleep 0.1
+    done
+    echo "swss container is up and running"
+
     docker exec swss$DEV rm -f /ready   # remove cruft
     if [[ "$BOOT_TYPE" == "fast" ]] && [[ -d /host/fast-reboot ]]; then
         test -e /host/fast-reboot/fdb.json && docker cp /host/fast-reboot/fdb.json swss$DEV:/
@@ -306,6 +319,9 @@ function postStartAction()
         rm -fr /host/fast-reboot
     fi
     docker exec swss$DEV touch /ready # signal swssconfig.sh to go
+    # Re-confirm that file is indeed created and log an error if not
+    docker exec swss$DEV test -f /ready && echo "File swss:/ready created" || echo "Error: File swss:/ready doesn't exist"
+
 {%- elif docker_container_name == "pmon" %}
 
     DEVPATH="/usr/share/sonic/device"
@@ -317,6 +333,11 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
+{%- elif docker_container_name == "eventd" %}
+    export EVENTD_STATE=$(sonic-db-cli -s CONFIG_DB HGET 'FEATURE|eventd' 'state')
+    j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/events_info.json  > /etc/rsyslog.d/host_events.conf
+    j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/syncd_events_info.json  > /etc/rsyslog.d/syncd_events.conf
+    systemctl restart rsyslog
 {%- else %}
     : # nothing
 {%- endif %}
@@ -329,16 +350,37 @@ start() {
     # Obtain our platform as we will mount directories with these names in each docker
     PLATFORM=${PLATFORM:-`$SONIC_CFGGEN -H -v DEVICE_METADATA.localhost.platform`}
 
-
     # Parse the device specific asic conf file, if it exists
     ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
     if [ -f "$ASIC_CONF" ]; then
         source $ASIC_CONF
     fi
 
+    # Default rsyslog target IP for single ASIC platform
+{%- if docker_container_name == "dhcp_server" %}
+    SYSLOG_TARGET_IP=$(docker network inspect bridge --format={{ "'{{(index .IPAM.Config 0).Gateway}}'" }})
+{%- else %}
+    SYSLOG_TARGET_IP=127.0.0.1
+{%- endif %}
+    if [[ ($NUM_ASIC -gt 1) ]]; then
+        SYSLOG_TARGET_IP=$(docker network inspect bridge --format={{ "'{{(index .IPAM.Config 0).Gateway}}'" }})
+    fi
+
     PLATFORM_ENV_CONF=/usr/share/sonic/device/$PLATFORM/platform_env.conf
     if [ -f "$PLATFORM_ENV_CONF" ]; then
         source $PLATFORM_ENV_CONF
+    fi
+
+    # Parse the platform.json file to get the platform specific information
+    PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
+    if [ -f "$PLATFORM_JSON" ]; then
+        NUM_DPU=$(jq -r '.DPUS | length' $PLATFORM_JSON 2>/dev/null)
+        jq -e '.DPU' $PLATFORM_JSON >/dev/null
+        if [[ $? -eq 0 ]]; then
+            IS_DPU_DEVICE="true"
+        else
+            IS_DPU_DEVICE="false"
+        fi
     fi
 
     {%- if sonic_asic_platform == "broadcom" %}
@@ -397,35 +439,40 @@ start() {
     if [ -d "$HWSKU_FOLDER" ]; then
         CREATE_ONLY_CONFIG_DB_BUFFERS_JSON="$HWSKU_FOLDER/create_only_config_db_buffers.json"
         if [ -f "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON" ]; then
-            $SONIC_CFGGEN -j $CREATE_ONLY_CONFIG_DB_BUFFERS_JSON --write-to-db
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
         fi
     fi
     {%- endif %}
 
     DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
     if [ "$?" -eq "0" ]; then
-        {%- if docker_container_name == "database" %}
-        DOCKERMOUNT=""
-        {%- else %}
-        DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
-        {%- endif %}
-        if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
-            CONTAINER_EXISTS="yes"
-            preStartAction
-            {%- if docker_container_name == "database" %}
-            echo "Starting existing ${DOCKERNAME} container"
-            docker start ${DOCKERNAME}
-            {%- else %}
-            echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
-            /usr/local/bin/container start ${DOCKERNAME}
-            {%- endif %}
-            postStartAction
-            exit $?
-        fi
-
-        # docker created with a different HWSKU, remove and recreate
-        echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
+        {%- if docker_container_name == "database" and sonic_asic_platform == "vs" %}
+        echo "Removing existing ${DOCKERNAME} container"
         docker rm -f ${DOCKERNAME}
+        {%- else %}
+            {%- if docker_container_name == "database" %}
+            DOCKERMOUNT=""
+            {%- else %}
+            DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
+            {%- endif %}
+            if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
+                CONTAINER_EXISTS="yes"
+                preStartAction
+                {%- if docker_container_name == "database" %}
+                echo "Starting existing ${DOCKERNAME} container"
+                docker start ${DOCKERNAME}
+                {%- else %}
+                echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
+                /usr/local/bin/container start ${DOCKERNAME}
+                {%- endif %}
+                postStartAction
+                exit $?
+            fi
+
+            # docker created with a different HWSKU, remove and recreate
+            echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
+            docker rm -f ${DOCKERNAME}
+        {%- endif %}
     fi
 
     {%- if docker_container_name == "database" %}
@@ -490,7 +537,7 @@ start() {
         redis_dir_list=`/usr/bin/python -c "import sys; import os; import json; f=open(sys.argv[1]); \
                         global_db_dir = os.path.dirname(sys.argv[1]); data=json.load(f); \
                         print(\" \".join([os.path.normpath(global_db_dir+'/'+elem['include']).partition('sonic-db')[0]\
-                        for elem in data['INCLUDES'] if 'namespace' in elem])); f.close()" $SONIC_DB_GLOBAL_JSON`
+                        for elem in data['INCLUDES'] if 'namespace' in elem or 'container_name' in elem ])); f.close()" $SONIC_DB_GLOBAL_JSON`
     fi
 
     {%- if docker_container_name == "database" %}
@@ -533,6 +580,7 @@ start() {
             DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis:rw "
             DB_OPT=$DB_OPT" --env DATABASE_TYPE=$DATABASE_TYPE "
             DB_OPT=$DB_OPT" --env NUM_DPU=$NUM_DPU "
+            DB_OPT=$DB_OPT" --env IS_DPU_DEVICE=$IS_DPU_DEVICE "
             if [[ "$DEV" ]]; then
                 DB_OPT=$DB_OPT" -v /var/run/redis$DEV:/var/run/redis$DEV:rw "
             fi
@@ -589,6 +637,7 @@ start() {
 {%- if sonic_asic_platform == "mellanox" %}
 {%- if docker_container_name == "syncd" %}
         -v /var/log/mellanox:/var/log/mellanox:rw \
+	-v /var/log/sdk_dbg:/var/log/sdk_dbg:rw \
         -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/:/tmp \
         -v /dev/shm:/dev/shm:rw \
@@ -649,6 +698,8 @@ start() {
         --env "NAMESPACE_COUNT"="$NUM_ASIC" \
         --env "DEV"="$DEV" \
         --env "CONTAINER_NAME"=$DOCKERNAME \
+        --env "SYSLOG_TARGET_IP"=$SYSLOG_TARGET_IP \
+        --env "PLATFORM"=$PLATFORM \
         --name=$DOCKERNAME \
 {%- if docker_container_name == "gbsyncd" %}
         -v /var/run/docker-syncd$DEV:/var/run/sswsyncd \

@@ -13,6 +13,8 @@ VLAN = "VLAN"
 VLAN_MEMBER = "VLAN_MEMBER"
 VLAN_INTERFACE = "VLAN_INTERFACE"
 FEATURE = "FEATURE"
+MID_PLANE_BRIDGE = "MID_PLANE_BRIDGE"
+DPUS = "DPUS"
 
 
 class ConfigDbEventChecker(object):
@@ -342,6 +344,45 @@ class VlanMemberTableEventChecker(ConfigDbEventChecker):
             self.clear_event()
             return True
         return False
+
+
+class MidPlaneTableEventChecker(ConfigDbEventChecker):
+    """
+    This event checker interested in changes in MID_PLANE_BRIDGE table
+    """
+    table_name = MID_PLANE_BRIDGE
+
+    def __init__(self, sel, db):
+        self.table_name = MID_PLANE_BRIDGE
+        ConfigDbEventChecker.__init__(self, sel, db)
+
+    def _get_parameter(self, db_snapshot):
+        return ConfigDbEventChecker.get_parameter_by_name(db_snapshot, "enabled_dhcp_interfaces")
+
+    def _process_check(self, key, op, entry, enabled_dhcp_interfaces):
+        if op == "DEL":
+            return True
+        for field, value in entry:
+            if field == "bridge" and value in enabled_dhcp_interfaces:
+                return True
+        return False
+
+
+class DpusTableEventChecker(ConfigDbEventChecker):
+    """
+    This event checker interested in changes in DPUS table
+    """
+    table_name = DPUS
+
+    def __init__(self, sel, db):
+        self.table_name = DPUS
+        ConfigDbEventChecker.__init__(self, sel, db)
+
+    def _get_parameter(self, db_snapshot):
+        return True, None
+
+    def _process_check(self, key, op, entry, param):
+        return True
 
 
 class DhcpServerFeatureStateChecker(ConfigDbEventChecker):

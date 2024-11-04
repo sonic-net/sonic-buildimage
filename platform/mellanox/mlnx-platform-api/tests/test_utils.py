@@ -191,3 +191,33 @@ class TestUtils:
         mock_os_open = mock.mock_open(read_data='a:b')
         with mock.patch('sonic_platform.utils.open', mock_os_open):
             assert utils.read_key_value_file('some_file') == {'a':'b'}
+
+        mock_os_open = mock.mock_open(read_data='a=b')
+        with mock.patch('sonic_platform.utils.open', mock_os_open):
+            assert utils.read_key_value_file('some_file', delimeter='=') == {'a':'b'}
+            
+    @mock.patch('sonic_platform.utils.time.sleep', mock.MagicMock())
+    def test_wait_until_conditions(self):
+        conditions = [lambda: True]
+        assert utils.wait_until_conditions(conditions, 1)
+        conditions = [lambda: False]
+        assert not utils.wait_until_conditions(conditions, 1)
+
+    def test_timer(self):
+        timer = utils.Timer()
+        timer.start()
+        mock_cb_1000_run_now = mock.MagicMock()
+        mock_cb_1000_run_future = mock.MagicMock()
+        mock_cb_1_run_future_once = mock.MagicMock()
+        mock_cb_1_run_future_repeat = mock.MagicMock()
+        timer.schedule(1000, cb=mock_cb_1000_run_now, repeat=False, run_now=True)
+        timer.schedule(1000, cb=mock_cb_1000_run_future, repeat=False, run_now=False)
+        timer.schedule(1, cb=mock_cb_1_run_future_once, repeat=False, run_now=False)
+        timer.schedule(1, cb=mock_cb_1_run_future_repeat, repeat=True, run_now=False)
+        time.sleep(3)
+        timer.stop()
+
+        mock_cb_1000_run_now.assert_called_once()
+        mock_cb_1000_run_future.assert_not_called()
+        mock_cb_1_run_future_once.assert_called_once()
+        assert mock_cb_1_run_future_repeat.call_count > 1

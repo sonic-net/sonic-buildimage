@@ -1,68 +1,32 @@
-#!/bin/bash
+#!/usr/bin/python3
 
-declare -r SYSLOG_LOGGER="/usr/bin/logger"
-declare -r SYSLOG_IDENTIFIER="platform_wait"
-declare -r SYSLOG_ERROR="error"
-declare -r SYSLOG_NOTICE="notice"
-declare -r SYSLOG_INFO="info"
+#
+# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-declare -r HW_MGMT_CONFIG="/var/run/hw-management/config"
+import sys
+from sonic_platform.device_data import DeviceDataManager
+from sonic_py_common.logger import Logger
 
-declare -r ASIC_INIT_DONE="${HW_MGMT_CONFIG}/asics_init_done"
-declare -r NUM_ASICS="${HW_MGMT_CONFIG}/asic_num"
-declare -r ASIC_CHIPUP_COMPLETED="${HW_MGMT_CONFIG}/asic_chipup_completed"
 
-declare -r EXIT_SUCCESS="0"
-declare -r EXIT_TIMEOUT="1"
-
-function log_error() {
-    eval "${SYSLOG_LOGGER} -t ${SYSLOG_IDENTIFIER} -p ${SYSLOG_ERROR} $@"
-}
-
-function log_notice() {
-    eval "${SYSLOG_LOGGER} -t ${SYSLOG_IDENTIFIER} -p ${SYSLOG_NOTICE} $@"
-}
-
-function log_info() {
-    eval "${SYSLOG_LOGGER} -t ${SYSLOG_IDENTIFIER} -p ${SYSLOG_INFO} $@"
-}
-
-function wait_for_asic_chipup() {
-
-    local _ASIC_INIT="0"
-    local _ASIC_COUNT="0"
-    local _ASICS_CHIPUP="0"
-
-    local -i _WDOG_CNT="1"
-    local -ir _WDOG_MAX="300"
-
-    local -r _TIMEOUT="1s"
-
-    while [[ "${_WDOG_CNT}" -le "${_WDOG_MAX}" ]]; do
-        _ASIC_INIT="$(cat ${ASIC_INIT_DONE} 2>&1)"
-        _ASIC_COUNT="$(cat ${NUM_ASICS} 2>&1)"
-        _ASICS_CHIPUP="$(cat ${ASIC_CHIPUP_COMPLETED} 2>&1)"
-
-        if [[ "${_ASIC_INIT}" -eq 1 && "${_ASIC_COUNT}" -eq "${_ASICS_CHIPUP}" ]]; then
-            return "${EXIT_SUCCESS}"
-        fi
-
-        let "_WDOG_CNT++"
-        sleep "${_TIMEOUT}"
-    done
-
-    log_error "Mellanox ASIC is not ready: INIT: ${_ASIC_INIT}, NUM_ASIC: ${_ASIC_COUNT}, CHIPUP: ${_ASICS_CHIPUP} timeout...."
-    return "${EXIT_TIMEOUT}"
-}
-
-log_info "Wait for Mellanox ASIC to be ready"
-
-wait_for_asic_chipup
-EXIT_CODE="$?"
-if [[ "${EXIT_CODE}" != "${EXIT_SUCCESS}" ]]; then
-    exit "${EXIT_CODE}"
-fi
-
-log_notice "Mellanox ASIC is ready"
-
-exit "${EXIT_SUCCESS}"
+logger = Logger(log_identifier='platform_wait')
+logger.log_notice('Nvidia: Wait for PMON dependencies to be ready')
+if DeviceDataManager.wait_platform_ready():
+    logger.log_notice('Nvidia: PMON dependencies are ready')
+    sys.exit(0)
+else:
+    logger.log_error('Nvidia: PMON dependencies are not ready: timeout')
+    sys.exit(-1)

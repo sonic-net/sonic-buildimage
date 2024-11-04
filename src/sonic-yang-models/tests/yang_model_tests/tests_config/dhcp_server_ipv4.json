@@ -1,5 +1,13 @@
 {
     "DHCP_SERVER_IPV4_VALID_FORMAT": {
+        "sonic-smart-switch:sonic-smart-switch": {
+            "sonic-smart-switch:MID_PLANE_BRIDGE": {
+                "GLOBAL": {
+                    "bridge": "bridge-midplane",
+                    "ip_prefix": "169.254.200.254/24"
+                }
+            }
+        },
         "sonic-portchannel:sonic-portchannel": {
             "sonic-portchannel:PORTCHANNEL": {
                 "PORTCHANNEL_LIST": [
@@ -20,7 +28,8 @@
                         "mtu": 9000,
                         "lanes": "1",
                         "name": "Ethernet0",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode" : "trunk"
                     }
                 ]
             }
@@ -38,6 +47,14 @@
                             "option60"
                         ],
                         "state": "enabled"
+                    },
+                    {
+                        "name": "bridge-midplane",
+                        "gateway": "169.254.200.254",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "state": "enabled"
                     }
                 ]
             },
@@ -46,7 +63,7 @@
                     {
                         "name": "option60",
                         "id": 60,
-                        "type": "text",
+                        "type": "string",
                         "value": "dummy_value"
                     }
                 ]
@@ -164,6 +181,30 @@
             }
         }
     },
+    "DHCP_SERVER_IPV4_WITH_NON_EXIST_BRIDGE": {
+        "sonic-smart-switch:sonic-smart-switch": {
+            "sonic-smart-switch:MID_PLANE_BRIDGE": {
+                "GLOBAL": {
+                    "bridge": "bridge-midplane",
+                    "ip_prefix": "169.254.200.254/24"
+                }
+            }
+        },
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "non_exist_bridge-midplane",
+                        "gateway": "192.168.0.1",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "state": "enabled"
+                    }
+                ]
+            }
+        }
+    },
     "DHCP_SREVER_IPV4_NON_EXIST_OPTION": {
         "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
@@ -171,7 +212,7 @@
                     {
                         "name": "option60",
                         "id": 60,
-                        "type": "text",
+                        "type": "string",
                         "value": "dummy_value"
                     }
                 ]
@@ -204,7 +245,8 @@
                         "mtu": 9000,
                         "lanes": "1",
                         "name": "Ethernet0",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode" : "trunk"
                     }
                 ]
             }
@@ -230,7 +272,7 @@
                     {
                         "name": "option60",
                         "id": 60,
-                        "type": "text",
+                        "type": "string",
                         "value": "dummy_value"
                     }
                 ]
@@ -248,14 +290,49 @@
             }
         }
     },
-    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_TEXT": {
+    "DHCP_SERVER_IPV4_PORT_WITH_NO_EXIST_PORT": {
+        "sonic-smart-switch:sonic-smart-switch": {
+            "sonic-smart-switch:MID_PLANE_BRIDGE": {
+                "GLOBAL": {
+                    "bridge": "bridge-midplane",
+                    "ip_prefix": "169.254.200.254/24"
+                }
+            }
+        },
+        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
+                "DHCP_SERVER_IPV4_LIST": [
+                    {
+                        "name": "bridge-midplane",
+                        "gateway": "169.254.200.254",
+                        "lease_time": 3600,
+                        "mode": "PORT",
+                        "netmask": "255.255.255.0",
+                        "state": "enabled"
+                    }
+                ]
+            },
+            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_PORT": {
+                "DHCP_SERVER_IPV4_PORT_LIST": [
+                    {
+                        "name": "bridge-midplane",
+                        "port": "non_exit_dpu",
+                        "ips": [
+                            "169.254.200.1"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_STRING": {
         "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
                 "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
                     {
                         "name": "option60",
                         "id": 60,
-                        "type": "text",
+                        "type": "string",
                         "value": "dummy_value"
                     }
                 ]
@@ -325,7 +402,7 @@
                     {
                         "name": "option60",
                         "id": 60,
-                        "type": "texts",
+                        "type": "text",
                         "value": "dummy_value"
                     }
                 ]
@@ -358,7 +435,8 @@
                         "mtu": 9000,
                         "lanes": "1",
                         "name": "Ethernet0",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode" : "trunk"
                     }
                 ]
             }
@@ -423,7 +501,8 @@
                         "mtu": 9000,
                         "lanes": "1",
                         "name": "Ethernet0",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode" : "trunk"
                     }
                 ]
             }
@@ -448,7 +527,7 @@
                     {
                         "name": "option60",
                         "id": 60,
-                        "type": "text",
+                        "type": "string",
                         "value": "dummy_value"
                     }
                 ]
@@ -504,7 +583,8 @@
                         "mtu": 9000,
                         "lanes": "1",
                         "name": "Ethernet0",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode" : "trunk"
                     }
                 ]
             }
@@ -529,7 +609,7 @@
                     {
                         "name": "option60",
                         "id": 60,
-                        "type": "text",
+                        "type": "string",
                         "value": "dummy_value"
                     }
                 ]
@@ -585,7 +665,8 @@
                         "mtu": 9000,
                         "lanes": "1",
                         "name": "Ethernet0",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode" : "trunk"
                     }
                 ]
             }
@@ -610,7 +691,7 @@
                     {
                         "name": "option60",
                         "id": 60,
-                        "type": "text",
+                        "type": "string",
                         "value": "dummy_value"
                     }
                 ]
@@ -666,7 +747,8 @@
                         "mtu": 9000,
                         "lanes": "1",
                         "name": "Ethernet0",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode" : "trunk"
                     }
                 ]
             }
@@ -691,7 +773,7 @@
                     {
                         "name": "option60",
                         "id": 60,
-                        "type": "text",
+                        "type": "string",
                         "value": "dummy_value"
                     }
                 ]
@@ -747,7 +829,8 @@
                         "mtu": 9000,
                         "lanes": "1",
                         "name": "Ethernet0",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode" : "trunk"
                     }
                 ]
             }
@@ -772,7 +855,7 @@
                     {
                         "name": "option60",
                         "id": 60,
-                        "type": "text",
+                        "type": "string",
                         "value": "dummy_value"
                     }
                 ]
@@ -814,7 +897,7 @@
                 "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
                     {
                         "name": "option60",
-                        "type": "text",
+                        "type": "string",
                         "value": "dummy_value"
                     }
                 ]
@@ -828,7 +911,7 @@
                     {
                         "name": "option60",
                         "id": 60,
-                        "type": "text"
+                        "type": "string"
                     }
                 ]
             }

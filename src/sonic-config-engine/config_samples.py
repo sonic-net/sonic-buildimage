@@ -4,6 +4,8 @@ from collections import defaultdict
 from ipaddress import ip_interface
 from natsort import natsorted
 
+import smartswitch_config
+
 #TODO: Remove once Python 2 support is removed
 if sys.version_info.major == 3:
     UNICODE_TYPE = str
@@ -74,6 +76,101 @@ def generate_t1_sample_config(data):
                 }
         port_count += 1
     return data
+
+def generate_t1_smartswitch_switch_sample_config(data, ss_config):
+    data = generate_t1_sample_config(data)
+    data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
+
+    mpbr_prefix = '169.254.200'
+    mpbr_address = '{}.254'.format(mpbr_prefix)
+
+    bridge_name = 'bridge-midplane'
+
+    dhcp_server_ports = {}
+
+    for dpu_name in natsorted(ss_config.get('DPUS', {})):
+        midplane_interface = ss_config['DPUS'][dpu_name]['midplane_interface']
+        dpu_id = int(midplane_interface.replace('dpu', ''))
+        dhcp_server_ports['{}|{}'.format(bridge_name, midplane_interface)] = {'ips': ['{}.{}'.format(mpbr_prefix, dpu_id + 1)]}
+
+    if dhcp_server_ports:
+        data['DPUS'] = ss_config['DPUS']
+
+        data['FEATURE'] = {
+            "dhcp_relay": {
+                "auto_restart": "enabled",
+                "check_up_status": "False",
+                "delayed": "False",
+                "has_global_scope": "True",
+                "has_per_asic_scope": "False",
+                "high_mem_alert": "disabled",
+                "set_owner": "local",
+                "state": "enabled",
+                "support_syslog_rate_limit": "True"
+            },
+            "dhcp_server": {
+                "auto_restart": "enabled",
+                "check_up_status": "False",
+                "delayed": "False",
+                "has_global_scope": "True",
+                "has_per_asic_scope": "False",
+                "high_mem_alert": "disabled",
+                "set_owner": "local",
+                "state": "enabled",
+                "support_syslog_rate_limit": "False"
+            }
+        }
+
+        data['DHCP_SERVER_IPV4'] = {
+            bridge_name: {
+                'customized_options': [
+                    'option60',
+                    'option223'
+                ],
+                'gateway': mpbr_address,
+                'lease_time': '3600',
+                'mode': 'PORT',
+                'netmask': '255.255.255.0',
+                "state": "enabled"
+            }
+        }
+
+        data['DHCP_SERVER_IPV4_PORT'] = dhcp_server_ports
+
+    return data
+
+def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
+    data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
+    data['DEVICE_METADATA']['localhost']['switch_type'] = 'dpu'
+    data['DEVICE_METADATA']['localhost']['type'] = 'SonicDpu'
+    data['DEVICE_METADATA']['localhost']['subtype'] = 'SmartSwitch'
+    data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
+
+    for port in natsorted(data['PORT']):
+        data['PORT'][port]['admin_status'] = 'up'
+        data['PORT'][port]['mtu'] = '9100'
+
+    dash_crm_resources = ["vnet", "eni", "eni_ether_address_map", "ipv4_inbound_routing", "ipv6_inbound_routing", "ipv4_outbound_routing",
+                          "ipv6_outbound_routing", "ipv4_pa_validation", "ipv6_pa_validation", "ipv4_outbound_ca_to_pa", "ipv6_outbound_ca_to_pa",
+                          "ipv4_acl_group", "ipv6_acl_group", "ipv4_acl_rule", "ipv6_acl_rule"]
+    dash_crm_thresholds = dict([thresholds for res in dash_crm_resources for thresholds in (
+            (f"dash_{res}_threshold_type", "percentage"),
+            (f"dash_{res}_low_threshold", "70"),
+            (f"dash_{res}_high_threshold", "85")
+        )])
+
+    crmconfig = data.setdefault('CRM', {}).setdefault('Config', {})
+    crmconfig.update(dash_crm_thresholds)
+
+    return data
+
+def generate_t1_smartswitch_sample_config(data):
+    ss_config = smartswitch_config.get_smartswitch_config(data['DEVICE_METADATA']['localhost']['hwsku'])
+
+    if smartswitch_config.DPU_TABLE in ss_config:
+        return generate_t1_smartswitch_dpu_sample_config(data, ss_config)
+
+    return generate_t1_smartswitch_switch_sample_config(data, ss_config)
 
 def generate_empty_config(data):
     new_data = {'DEVICE_METADATA': data['DEVICE_METADATA']}
@@ -161,6 +258,7 @@ def generate_l2_config(data):
 _sample_generators = {
         't1': generate_t1_sample_config,
         'l2': generate_l2_config,
+        't1-smartswitch': generate_t1_smartswitch_sample_config,
         'empty': generate_empty_config,
         'l1': generate_l1_config,
         'l3': generate_l3_config

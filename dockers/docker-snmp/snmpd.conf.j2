@@ -17,7 +17,7 @@
 # Listen on managment and loopback0 ips for single asic platform
 #
 {% macro protocol(ip_addr) %}
-{%- if ip_addr|ipv6 -%}
+{%- if ip_addr.split('%')[0]|ipv6 -%}
 {{ 'udp6' }}
 {%- else -%}
 {{ 'udp' }}
@@ -28,32 +28,6 @@
 {% for (agentip, port, vrf) in SNMP_AGENT_ADDRESS_CONFIG %}
 agentAddress {{ protocol(agentip) }}:[{{ agentip }}]{% if port %}:{{ port }}{% endif %}{% if vrf %}%{{ vrf }}{% endif %}{{ "" }}
 {% endfor %}
-{% elif NAMESPACE_COUNT is not defined or NAMESPACE_COUNT|int <= 1 %}
-{% if MGMT_INTERFACE is defined %}
-{% for intf, ip in MGMT_INTERFACE %}
-{% set agentip = ip.split('/')[0]|lower %}
-{% set zoneid = '' %}
-# Use interface as zoneid for link local ipv6
-{% if agentip.startswith('fe80') %}
-{% set zoneid = '%' + intf %}
-{% endif %}
-agentAddress {{ protocol(agentip) }}:[{{ agentip }}{{ zoneid }}]:161
-{% endfor %}
-{% endif %}
-{% if LOOPBACK_INTERFACE is defined %}
-{% for lo in LOOPBACK_INTERFACE %}
-{% if lo | length == 2 %}
-{% set intf = lo[0] %}
-{% set agentip = lo[1].split('/')[0]|lower %}
-{% set zoneid = '' %}
-# Use interface as zoneid for link local ipv6
-{% if agentip.startswith('fe80') %}
-{% set zoneid = '%' + intf %}
-{% endif %}
-agentAddress {{ protocol(agentip) }}:[{{ agentip }}{{ zoneid }}]:161
-{% endif %}
-{% endfor %}
-{% endif %}
 {% else %}
 agentAddress udp:161
 agentAddress udp6:161

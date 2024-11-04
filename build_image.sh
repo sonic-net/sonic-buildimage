@@ -9,7 +9,11 @@ set -x -e
 CONFIGURED_ARCH=$([ -f .arch ] && cat .arch || echo amd64)
 
 if [[ $CONFIGURED_ARCH == armhf || $CONFIGURED_ARCH == arm64 ]]; then
-    . ./onie-image-${CONFIGURED_ARCH}.conf
+    if [ -r ./platform/${CONFIGURED_PLATFORM}/onie-image-${CONFIGURED_ARCH}.conf ]; then
+        . ./platform/${CONFIGURED_PLATFORM}/onie-image-${CONFIGURED_ARCH}.conf
+    else
+        . ./onie-image-${CONFIGURED_ARCH}.conf
+    fi
 else
     . ./onie-image.conf
 fi
@@ -18,8 +22,8 @@ fi
     echo "Error: Invalid ONIE_IMAGE_PART_SIZE in onie image config file"
     exit 1
 }
-[ -n "$ONIE_INSTALLER_PAYLOAD" ] || {
-    echo "Error: Invalid ONIE_INSTALLER_PAYLOAD in onie image config file"
+[ -n "$INSTALLER_PAYLOAD" ] || {
+    echo "Error: Invalid INSTALLER_PAYLOAD in onie image config file"
     exit 1
 }
 
@@ -56,10 +60,10 @@ generate_kvm_image()
         exit 1
     }
 
-    $GZ_COMPRESS_PROGRAM $KVM_IMAGE_DISK
+    pigz $KVM_IMAGE_DISK
 
     [ -r $KVM_IMAGE_DISK.gz ] || {
-        echo "Error : $GZ_COMPRESS_PROGRAM $KVM_IMAGE_DISK failed!"
+        echo "Error : pigz $KVM_IMAGE_DISK failed!"
         exit 1
     }
 
@@ -82,11 +86,15 @@ generate_onie_installer_image()
         done
     done
 
+    platform_conf_file="platform/$TARGET_MACHINE/platform_${CONFIGURED_ARCH}.conf"
+    if [ ! -f $platform_conf_file ]; then
+        platform_conf_file="platform/$TARGET_MACHINE/platform.conf"
+    fi
     ## Generate an ONIE installer image
     ## Note: Don't leave blank between lines. It is single line command.
     ./onie-mk-demo.sh $CONFIGURED_ARCH $TARGET_MACHINE $TARGET_PLATFORM-$TARGET_MACHINE-$ONIEIMAGE_VERSION \
-          installer platform/$TARGET_MACHINE/platform.conf $output_file OS $IMAGE_VERSION $ONIE_IMAGE_PART_SIZE \
-          $ONIE_INSTALLER_PAYLOAD $SECURE_UPGRADE_SIGNING_CERT $SECURE_UPGRADE_DEV_SIGNING_KEY
+          installer $platform_conf_file $output_file OS $IMAGE_VERSION $ONIE_IMAGE_PART_SIZE \
+          $INSTALLER_PAYLOAD $SECURE_UPGRADE_SIGNING_CERT $SECURE_UPGRADE_DEV_SIGNING_KEY
 }
 
 # Generate asic-specific device list
@@ -175,7 +183,7 @@ elif [ "$IMAGE_TYPE" = "aboot" ]; then
     sudo rm -f $OUTPUT_ABOOT_IMAGE
     sudo rm -f $ABOOT_BOOT_IMAGE
     ## Add main payload
-    cp $ONIE_INSTALLER_PAYLOAD $OUTPUT_ABOOT_IMAGE
+    cp $INSTALLER_PAYLOAD $OUTPUT_ABOOT_IMAGE
     ## Add Aboot boot0 file
     j2 -f env files/Aboot/boot0.j2 ./onie-image.conf > files/Aboot/boot0
     sed -i -e "s/%%IMAGE_VERSION%%/$IMAGE_VERSION/g" files/Aboot/boot0
@@ -213,6 +221,49 @@ elif [ "$IMAGE_TYPE" = "aboot" ]; then
         [ -f "$CA_CERT" ] && cp "$CA_CERT" "$TARGET_CA_CERT"
         ./scripts/sign_image.sh -i "$OUTPUT_ABOOT_IMAGE" -k "$SIGNING_KEY" -c "$SIGNING_CERT" -a "$TARGET_CA_CERT"
     fi
+
+elif [ "$IMAGE_TYPE" = "dsc" ]; then
+    echo "Build DSC installer"
+
+    dsc_installer_dir=files/dsc
+    dsc_installer=$dsc_installer_dir/install_debian
+    dsc_installer_manifest=$dsc_installer_dir/MANIFEST
+
+    mkdir -p `dirname $OUTPUT_DSC_IMAGE`
+    sudo rm -f $OUTPUT_DSC_IMAGE
+
+    source ./onie-image.conf
+
+    j2 $dsc_installer.j2 > $dsc_installer
+    export installer_sha=$(sha512sum "$dsc_installer" | awk '{print $1}')
+
+    export build_date=$(date -u)
+    export build_user=$(id -un)
+    export installer_payload_sha=$(sha512sum "$INSTALLER_PAYLOAD" | awk '{print $1}')
+    j2 $dsc_installer_manifest.j2 > $dsc_installer_manifest
+
+    cp $INSTALLER_PAYLOAD $dsc_installer_dir
+    tar cf $OUTPUT_DSC_IMAGE -C files/dsc $(basename $dsc_installer_manifest) $INSTALLER_PAYLOAD $(basename $dsc_installer)
+
+    echo "Build ONIE installer"
+    mkdir -p `dirname $OUTPUT_ONIE_IMAGE`
+    sudo rm -f $OUTPUT_ONIE_IMAGE
+
+    generate_device_list "./installer/platforms_asic"
+
+    generate_onie_installer_image
+
+elif [ "$IMAGE_TYPE" = "bfb" ]; then
+    echo "Build BFB installer"
+
+    if [[ $SECURE_UPGRADE_MODE != "no_sign" ]]; then
+         secure_upgrade_keys="--signing-key "$SECURE_UPGRADE_DEV_SIGNING_KEY" --signing-cert "$SECURE_UPGRADE_SIGNING_CERT""
+    fi
+
+    sudo -E ./platform/${CONFIGURED_PLATFORM}/installer/create_sonic_image --kernel $KVERSION "$secure_upgrade_keys"
+
+    sudo chown $USER $OUTPUT_BFB_IMAGE
+
 else
     echo "Error: Non supported image type $IMAGE_TYPE"
     exit 1

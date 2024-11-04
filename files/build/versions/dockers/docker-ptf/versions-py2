@@ -11,7 +11,7 @@ enum34==1.1.6
 exabgp==3.4.17
 flask==1.0
 flask-httpauth==2.5.0
-future==0.18.3
+future==1.0.0
 futures==3.2.0
 grpcio==1.41.1
 grpcio-tools==1.41.1
@@ -22,13 +22,13 @@ ipython-genutils==0.2.0
 itsdangerous==1.1.0
 jinja2==2.11.3
 markupsafe==1.1.1
-netaddr==0.9.0
+netaddr==0.10.1
 nnpy==1.4.2
 oslo.config==2.1.0
 paramiko==2.12.0
 pathlib2==2.3.7.post1
 pbr==2.0.0
-pexpect==4.8.0
+pexpect==4.9.0
 pickleshare==0.7.5
 pip==20.3.4
 plumbum==1.7.2
@@ -65,7 +65,7 @@ twisted==16.0.0
 typing==3.10.0.0
 unittest-xml-reporting==2.5.2
 unknown==0.0.0
-wcwidth==0.2.6
+wcwidth==0.2.13
 werkzeug==1.0.1
 wheel==0.37.1
 yabgp==0.8.2

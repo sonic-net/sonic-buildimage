@@ -1,0 +1,16 @@
+{# Get sai.profile based on vxlan_profile. Vxlan's config.bcm file is the default one #}
+{%- set sai_profile_contents = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/td3-as13-48f8h-vxlan.config.bcm' -%}
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined -%}
+{%-     if DEVICE_METADATA['localhost']['vxlan_profile'] is defined -%}
+{%-         set vxlan_profile = DEVICE_METADATA['localhost']['vxlan_profile'] -%}
+{%-         if 'enable' in vxlan_profile.lower() %}
+{%              set sai_profile_contents = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/td3-as13-48f8h-vxlan.config.bcm' -%}
+{%-         else %}
+{%-             set sai_profile_contents = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/td3-as13-48f8h.config.bcm' -%}
+{%-         endif %}
+{%-     else %}
+{%-         set sai_profile_contents = 'SAI_INIT_CONFIG_FILE=/usr/share/sonic/hwsku/td3-as13-48f8h-vxlan.config.bcm' -%}
+{%-     endif %}
+{%- endif %}
+{# Write the contents of sai_profile_filename to sai.profile file #}
+{{ sai_profile_contents }}

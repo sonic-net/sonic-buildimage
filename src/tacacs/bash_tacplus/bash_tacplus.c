@@ -471,8 +471,9 @@ int on_shell_execve (char *user, int shell_level, char *cmd, char **argv)
                 fprintf(stdout, "%s not authorized by TACACS+ with given arguments, not executing\n", cmd);
             break;
             default:
+                // when command reject by server, authorization will failed immediately
                 fprintf(stdout, "%s authorize failed by TACACS+ with given arguments, not executing\n", cmd);
-            break;
+                return ret;
         }
 
         if ((tacacs_ctrl & AUTHORIZATION_FLAG_LOCAL) == 0) {

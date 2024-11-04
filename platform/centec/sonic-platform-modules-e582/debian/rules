@@ -6,21 +6,23 @@ KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
 MODULE_DIRS:= 48x6q 48x2q4z
-PCA954X_DIR := pca954x
+KDAL_DIR := centec-dal/
+PCA954X_DIR := pca954x/
 
 %:
 	dh $@
 
 override_dh_auto_build:
-	(for mod in $(MODULE_DIRS); do \
-		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+	cp ../../centec/centec-dal/ $(MOD_SRC_DIR)/$(KDAL_DIR) -rf
+	(for mod in $(KDAL_DIR); do \
+		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/; \
 	done)
 	(for mod in $(PCA954X_DIR); do \
 		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/; \
 	done)
-	rm $(MOD_SRC_DIR)/centec-dal -rf
-	cp $(MOD_SRC_DIR)/../centec-dal $(MOD_SRC_DIR)/centec-dal -rf
-	make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/centec-dal
+	(for mod in $(MODULE_DIRS); do \
+		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+	done)
 
 override_dh_auto_install:
 	(for mod in $(MODULE_DIRS); do \
@@ -41,7 +43,6 @@ override_dh_clean:
 		rm -rf $(MOD_SRC_DIR)/$${mod}/modules/*.ko; \
 		rm -rf debian/platform-modules-e582-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR)/*.ko; \
 	done)
-	make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/centec-dal clean; \
 		rm -rf $(MOD_SRC_DIR)/centec-dal/*.ko; \
 		rm $(MOD_SRC_DIR)/centec-dal -rf
 

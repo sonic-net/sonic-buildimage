@@ -49,6 +49,7 @@ class BgpStateGet:
         self.db.connect(self.db.STATE_DB, False)
         self.pipe = swsscommon.RedisPipeline(self.db.get_redis_client(self.db.STATE_DB))
         self.db.delete_all_by_pattern(self.db.STATE_DB, "NEIGH_STATE_TABLE|*" )
+        self.MAX_RETRY_ATTEMPTS = 3
 
     # A quick way to check if there are anything happening within BGP is to
     # check its log file has any activities. This is by checking its modified
@@ -77,18 +78,44 @@ class BgpStateGet:
     # Get a new snapshot of BGP neighbors and store them in the "new" location
     def get_all_neigh_states(self):
         cmd = ["vtysh", "-c", 'show bgp summary json']
-        rc, output = getstatusoutput_noshell(cmd)
-        if rc:
-            syslog.syslog(syslog.LOG_ERR, "*ERROR* Failed with rc:{} when execute: {}".format(rc, cmd))
-            return
+        retry_attempt = 0
 
-        peer_info = json.loads(output)
-        # cmd ran successfully, safe to Clean the "new" set/dict for new snapshot
-        self.new_peer_l.clear()
-        self.new_peer_state.clear()
-        for key, value in peer_info.items():
-            if key == "ipv4Unicast" or key == "ipv6Unicast":
-                self.update_new_peer_states(value)
+        while retry_attempt < self.MAX_RETRY_ATTEMPTS:
+            try:
+                rc, output = getstatusoutput_noshell(cmd)
+                if rc:
+                    syslog.syslog(syslog.LOG_ERR, "*ERROR* Failed with rc:{} when execute: {}".format(rc, cmd))
+                    return
+                if len(output) == 0:
+                    syslog.syslog(syslog.LOG_WARNING, "*WARNING* output none when execute: {}".format(cmd))
+                    return
+
+                peer_info = json.loads(output)
+                # cmd ran successfully, safe to Clean the "new" set/dict for new snapshot
+                self.new_peer_l.clear()
+                self.new_peer_state.clear()
+                for key, value in peer_info.items():
+                    if key == "ipv4Unicast" or key == "ipv6Unicast":
+                        self.update_new_peer_states(value)
+                return
+
+            except json.JSONDecodeError as decode_error:
+                # Log the exception and retry if within the maximum attempts
+                retry_attempt += 1
+                syslog.syslog(syslog.LOG_WARNING, "*WARNING* JSONDecodeError: {} when execute: {} Retry attempt: {}".format(decode_error, cmd, retry_attempt))
+                time.sleep(1)
+                continue
+            except Exception as e:
+                # Log other exceptions and return failure
+                retry_attempt += 1
+                syslog.syslog(syslog.LOG_WARNING, "*WARNING* An unexpected error occurred: {} when execute: {} Retry attempt: {}".format(e, cmd, retry_attempt))
+                time.sleep(1)
+                continue
+
+        # Log an error if the maximum retry attempts are reached
+        syslog.syslog(syslog.LOG_ERR, "*ERROR* Maximum retry attempts reached. Failed to execute: {} Output: {}".format(cmd, output))
+        sys.exit(1)
+
 
     # This method will take the caller's dictionary which contains the peer state operation
     # That need to be updated in StateDB using Redis pipeline.

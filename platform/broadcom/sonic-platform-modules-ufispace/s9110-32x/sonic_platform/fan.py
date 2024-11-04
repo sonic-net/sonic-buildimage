@@ -108,7 +108,6 @@ class Fan(PddfFan):
         if not output:
             return False
 
-
         mode = output['mode']
         presence = output['status'].rstrip()
         vmap = self.plugin_data['FAN']['present'][mode]['valmap']

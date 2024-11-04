@@ -1,5 +1,6 @@
 {%- set PORT_ALL = [] %}
 {%- set PORT_BP = [] %}
+{%- set PORT_DPC  = [] %}
 {%- set SYSTEM_PORT_ALL = [] %}
 
 {%- set voq_chassis = false %}
@@ -22,6 +23,9 @@
 {%- for port in PORT %}
     {%- if not port.startswith('Ethernet-Rec') and not port.startswith('Ethernet-IB') %}
         {%- if PORT_ALL.append(port) %}{% endif %}
+        {%- if 'role' in PORT[port] and PORT[port]['role'] == 'Dpc' %}
+            {%- if PORT_DPC.append(port) %}{%- endif %}
+        {%- endif %}
     {%- endif %}
 {%- endfor %}
 {%- if generate_bp_port_list is defined %}
@@ -45,6 +49,9 @@
         {%- if PORT_ACTIVE.append(port) %}{%- endif %}
     {%- endfor %}
     {%- for port in PORT_BP %}
+        {%- if PORT_ACTIVE.append(port) %}{%- endif %}
+    {%- endfor %}
+    {%- for port in PORT_DPC %}
         {%- if PORT_ACTIVE.append(port) %}{%- endif %}
     {%- endfor %}
 {%- endif %}
@@ -83,7 +90,7 @@
         ('type' in DEVICE_METADATA['localhost'] and
           DEVICE_METADATA['localhost']['type'] in backend_device_types) and
         ('resource_type' in DEVICE_METADATA['localhost'] and
-          DEVICE_METADATA['localhost']['resource_type'] == 'Compute-AI') %}
+          DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     {{- generate_tc_to_pg_map() }}
 {% else %}
     "TC_TO_PRIORITY_GROUP_MAP": {
@@ -147,7 +154,7 @@
          ('type' in DEVICE_METADATA['localhost'] and
            DEVICE_METADATA['localhost']['type'] in backend_device_types) and
          ('resource_type' in DEVICE_METADATA['localhost'] and
-           DEVICE_METADATA['localhost']['resource_type'] == 'Compute-AI') %}
+           DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     {{- generate_dscp_to_tc_map() }}
 {% else %}
     "DSCP_TO_TC_MAP": {
@@ -241,7 +248,7 @@
         ('type' in DEVICE_METADATA['localhost'] and
           DEVICE_METADATA['localhost']['type'] in backend_device_types) and
         ('resource_type' in DEVICE_METADATA['localhost'] and
-          DEVICE_METADATA['localhost']['resource_type'] == 'Compute-AI') %}
+          DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     "SCHEDULER": {
         "scheduler.0": {
             "type"  : "DWRR",
@@ -321,8 +328,6 @@
 {% else %}
             "tc_to_queue_map" : "AZURE",
 {% endif %}
-            "tc_to_pg_map"    : "AZURE",
-            "pfc_to_queue_map": "AZURE",
 {% if asic_type in pfc_to_pg_map_supported_asics %}
 {% if port in port_names_list_extra_queues %}
             "pfc_to_pg_map"   : "AZURE_DUALTOR",
@@ -330,12 +335,16 @@
             "pfc_to_pg_map"   : "AZURE",
 {% endif %}
 {% endif %}
+{% if port not in PORT_DPC %}
 {% if port in port_names_list_extra_queues %}
             "pfc_enable"      : "2,3,4,6",
 {% else %}
             "pfc_enable"      : "3,4",
 {% endif %}
-            "pfcwd_sw_enable" : "3,4"
+            "pfcwd_sw_enable" : "3,4",
+{% endif %}
+            "tc_to_pg_map"    : "AZURE",
+            "pfc_to_queue_map": "AZURE"
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
@@ -406,7 +415,7 @@
 {% if 'type' in DEVICE_METADATA['localhost'] and
        DEVICE_METADATA['localhost']['type'] in backend_device_types and
       'resource_type' in DEVICE_METADATA['localhost'] and
-       DEVICE_METADATA['localhost']['resource_type'] == 'Compute-AI' %}
+       DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI' %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|0": {
             "scheduler": "scheduler.0"
@@ -426,8 +435,12 @@
 {% else %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|3": {
+{% if port not in PORT_DPC %}
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
+{% else %}
+            "scheduler": "scheduler.0"
+{% endif %}
         },
 {% endfor %}
 {% if 'resource_type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['resource_type'] in apollo_resource_types %}
@@ -440,8 +453,12 @@
 {% else %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|4": {
+{% if port not in PORT_DPC %}
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
+{% else %}
+            "scheduler": "scheduler.0"
+{% endif %}
         },
 {% endfor %}
 {% endif %}
@@ -457,7 +474,7 @@
 {% endfor %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|2": {
-{% if port in port_names_list_extra_queues %}
+{% if port in port_names_list_extra_queues and port not in PORT_DPC %}
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
 {% else %}
@@ -478,7 +495,7 @@
 {% endfor %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|6": {
-{% if port in port_names_list_extra_queues %}
+{% if port in port_names_list_extra_queues and port not in PORT_DPC %}
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
 {% else %}

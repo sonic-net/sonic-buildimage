@@ -34,8 +34,13 @@
 		    "queue": "4",
 		    "meter_type":"packets",
 		    "mode":"sr_tcm",
+{% if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and 'Mgmt' in DEVICE_METADATA['localhost']['type'] %}
+		    "cir":"300",
+		    "cbs":"300",
+{% else %}
 		    "cir":"100",
 		    "cbs":"100",
+{% endif %}
 		    "red_action":"drop"
 	    },
 	    "queue1_group1": {

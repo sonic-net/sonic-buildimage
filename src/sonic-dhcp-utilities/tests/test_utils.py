@@ -141,6 +141,7 @@ def test_validate_ttr_type(test_data):
     assert res == test_data[2]
 
 
-def test_get_target_process_cmds():
-    with patch.object(psutil, "process_iter", return_value=[MockProc("dhcrelay", 1), MockProc("dhcpmon", 2)], new_callable=PropertyMock):
-        res = utils.get_target_process_cmds("dhcrelay")
+@pytest.mark.parametrize("is_smart_switch", [True, False])
+def test_is_smart_switch(is_smart_switch):
+    device_metadata = {"localhost": {"subtype": "SmartSwitch"}} if is_smart_switch else {"localhost": {}}
+    assert utils.is_smart_switch(device_metadata) == is_smart_switch

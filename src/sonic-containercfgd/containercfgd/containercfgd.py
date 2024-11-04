@@ -1,3 +1,6 @@
+from swsscommon.swsscommon import RestartWaiter
+RestartWaiter.waitAdvancedBootDone()
+
 import os
 import re
 import signal
@@ -5,7 +8,7 @@ import subprocess
 import sys
 
 from sonic_py_common import daemon_base, logger
-from swsscommon.swsscommon import ConfigDBConnector, RestartWaiter
+from swsscommon.swsscommon import ConfigDBConnector
 
 SYSLOG_IDENTIFIER = "containercfgd"
 logger = logger.Logger(SYSLOG_IDENTIFIER)
@@ -20,6 +23,7 @@ SYSLOG_RATE_LIMIT_BURST = 'rate_limit_burst'
 
 # Container name
 container_name = None
+service_name = None
 
 
 def run_command(command):
@@ -101,10 +105,9 @@ class SyslogHandler:
     # Regular expressions to extract value from rsyslog.conf
     INTERVAL_PATTERN = '.*SystemLogRateLimitInterval\s+(\d+).*'
     BURST_PATTERN = '.*SystemLogRateLimitBurst\s+(\d+).*'
-    TARGET_IP_PATTERN = '.*target="(.*?)".*'
 
     def __init__(self):
-        self.current_interval, self.current_burst, self.target_ip = self.parse_syslog_conf()
+        self.current_interval, self.current_burst = self.parse_syslog_conf()
 
     def handle_config(self, table, key, data):
         """Handle CONFIG DB change. Callback by ConfigDBConnector.
@@ -115,7 +118,7 @@ class SyslogHandler:
             data (dict): Data of the entry: {<field_name>: <field_value>}
         """
         try:
-            if key != container_name:
+            if key != service_name:
                 return
             self.update_syslog_config(data)
         except Exception as e:
@@ -128,8 +131,8 @@ class SyslogHandler:
             init_data (dict): Initial data when first time connecting to CONFIG DB. {<table_name>: {<field_name>: <field_value>}}
         """
         if SYSLOG_CONFIG_FEATURE_TABLE in init_data:
-            if container_name in init_data[SYSLOG_CONFIG_FEATURE_TABLE]:
-                self.update_syslog_config(init_data[SYSLOG_CONFIG_FEATURE_TABLE][container_name])
+            if service_name in init_data[SYSLOG_CONFIG_FEATURE_TABLE]:
+                self.update_syslog_config(init_data[SYSLOG_CONFIG_FEATURE_TABLE][service_name])
 
     def update_syslog_config(self, data):
         """Parse existing syslog conf and apply new syslog conf.
@@ -149,7 +152,7 @@ class SyslogHandler:
         if os.path.exists(self.TMP_SYSLOG_CONF_PATH):
             os.remove(self.TMP_SYSLOG_CONF_PATH)
         with open(self.TMP_SYSLOG_CONF_PATH, 'w+') as f:
-            json_args = f'{{"target_ip": "{self.target_ip}", "container_name": "{container_name}" }}'
+            json_args = f'{{"container_name": "{service_name}" }}'
             output = run_command(['sonic-cfggen', '-d', '-t', '/usr/share/sonic/templates/rsyslog-container.conf.j2', '-a', json_args])
             f.write(output)
         run_command(['cp', self.TMP_SYSLOG_CONF_PATH, self.SYSLOG_CONF_PATH])
@@ -161,11 +164,10 @@ class SyslogHandler:
         """Passe existing syslog conf and extract config values
 
         Returns:
-            tuple: interval,burst,target_ip
+            tuple: interval,burst
         """
         interval = '0'
         burst = '0'
-        target_ip = None
 
         with open(self.SYSLOG_CONF_PATH, 'r') as f:
             content = f.read()
@@ -179,17 +181,18 @@ class SyslogHandler:
                 burst = match.group(1)
                 break
 
-            pattern = re.compile(self.TARGET_IP_PATTERN)
-            for match in pattern.finditer(content):
-                target_ip = match.group(1)
-                break
-        return interval, burst, target_ip
+        return interval, burst
 
 
 def main():
-    RestartWaiter.waitAdvancedBootDone()
     global container_name
+    global service_name
+    namespace_id = os.environ['NAMESPACE_ID']
     container_name = os.environ['CONTAINER_NAME']
+    if not namespace_id:
+        service_name = container_name
+    else:
+        service_name = container_name.rstrip(namespace_id)
     daemon = ContainerConfigDaemon()
     daemon.run()
 

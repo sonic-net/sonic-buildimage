@@ -1,0 +1,11 @@
+--- a/debian/rules
++++ b/debian/rules
+@@ -19,7 +19,7 @@ XPMEM_OPT = $(shell echo ${DEB_BUILD_PROFILES} | grep -qw xpmem \
+ 	dh $@ 
+ 
+ override_dh_auto_configure:
+-	./contrib/configure-release-mt --prefix=/usr \
++	./contrib/configure-release-mt --prefix=/usr --with-go=no \
+ 		--enable-examples --with-java=no \
+ 		$(CUDA_OPT) $(XPMEM_OPT)
+ 	chmod +x debian/rules

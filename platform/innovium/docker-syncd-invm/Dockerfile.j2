@@ -1,4 +1,5 @@
-FROM docker-config-engine-buster-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -17,6 +18,9 @@ debs/
 RUN apt-get install -y net-tools
 RUN apt-get install -y libjansson4
 RUN apt-get install -y libyaml-dev
+RUN apt-get install -y binutils
+RUN pip3 install numpy
+RUN pip3 install yamlordereddictloader
 
 RUN dpkg -i \
 {% for deb in docker_syncd_invm_debs.split(' ') -%}

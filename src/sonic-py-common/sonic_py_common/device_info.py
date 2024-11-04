@@ -1,13 +1,15 @@
 import glob
+import hashlib
 import json
 import os
+import random
 import re
 import subprocess
-
 import yaml
 from natsort import natsorted
 from sonic_py_common.general import getstatusoutput_noshell_pipe
 from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
+
 
 USR_SHARE_SONIC_PATH = "/usr/share/sonic"
 HOST_DEVICE_PATH = USR_SHARE_SONIC_PATH + "/device"
@@ -37,6 +39,7 @@ ASIC_CONF_FILENAME = "asic.conf"
 PLATFORM_ENV_CONF_FILENAME = "platform_env.conf"
 FRONTEND_ASIC_SUB_ROLE = "FrontEnd"
 BACKEND_ASIC_SUB_ROLE = "BackEnd"
+VS_PLATFORM = "x86_64-kvm_x86_64-r0"
 
 # Chassis STATE_DB keys
 CHASSIS_INFO_TABLE = 'CHASSIS_INFO|chassis {}'
@@ -573,6 +576,22 @@ def is_chassis():
     return is_voq_chassis() or is_packet_chassis()
 
 
+def is_smartswitch():
+    # Get platform
+    platform = get_platform()
+    if not platform:
+        return False
+
+    # get platform.json file path
+    platform_json = os.path.join(HOST_DEVICE_PATH, platform, "platform.json")
+    try:
+        with open(platform_json, 'r') as f:
+            platform_cfg = json.loads(f.read())
+            return "DPUS" in platform_cfg
+    except IOError:
+        return False
+
+
 def is_supervisor():
     platform_env_conf_file_path = get_platform_env_conf_file_path()
     if platform_env_conf_file_path is None:
@@ -687,16 +706,45 @@ def run_command_pipe(cmd0, cmd1, cmd2):
         err = out
     return (out, err)
 
+def _modify_mac_for_asic(mac, namespace=None):
+    if namespace is None:
+        return mac
+    if namespace in get_namespaces():
+        asic_id = namespace[-1]
+        mac = mac[:-1] + asic_id
+    return mac
 
-def get_system_mac(namespace=None):
+def generate_mac_for_vs(hostname, namespace):
+    mac = None
+    if hostname is None:
+        # return random mac address randomize each byte of mac address b/w 0-255
+        mac = "22:%02x:%02x:%02x:%02x:%02x" % (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    else:
+        # Calculate the SHA-256 hash of the UTF-8 encoded hostname
+        hash_value = hashlib.sha256(hostname.encode('utf-8')).digest()
+
+        # Extract the last 6 bytes (48 bits) from the hash value
+        mac_bytes = hash_value[-6:]
+        # Set the first octet to 02 to indicate a locally administered MAC address
+        mac_bytes = bytearray([0x22, mac_bytes[1], mac_bytes[2], mac_bytes[3], mac_bytes[4], mac_bytes[5]])
+        # Format the MAC address with colons
+        mac = ':'.join('{:02x}'.format(byte) for byte in mac_bytes)
+
+    return _modify_mac_for_asic(mac, namespace)
+
+def get_system_mac(namespace=None, hostname=None):
     hw_mac_entry_outputs = []
     syseeprom_cmd = ["sudo", "decode-syseeprom", "-m"]
     iplink_cmd0 = ["ip", 'link', 'show', 'eth0']
     iplink_cmd1 = ['grep', 'ether']
     iplink_cmd2 = ['awk', '{print $2}']
     version_info = get_sonic_version_info()
+    platform = get_platform()
 
-    if (version_info['asic_type'] == 'mellanox'):
+    if platform == VS_PLATFORM:
+        return generate_mac_for_vs(hostname, namespace)
+
+    if (version_info['asic_type'] in ['mellanox', 'nvidia-bluefield']):
         # With Mellanox ONIE release(2019.05-5.2.0012) and above
         # "onie_base_mac" was added to /host/machine.conf:
         # onie_base_mac=e4:1d:2d:44:5e:80
@@ -714,7 +762,6 @@ def get_system_mac(namespace=None):
         hw_mac_entry_outputs.append((mac, err))
     elif (version_info['asic_type'] == 'marvell'):
         # Try valid mac in eeprom, else fetch it from eth0
-        platform = get_platform()
         machine_key = "onie_machine"
         machine_vars = get_machine_info()
         (mac, err) = run_command(syseeprom_cmd)
@@ -736,7 +783,6 @@ def get_system_mac(namespace=None):
         hw_mac_entry_outputs.append((mac, err))
     elif (version_info['asic_type'] == 'cisco-8000'):
         # Try to get valid MAC from profile.ini first, else fetch it from syseeprom or eth0
-        platform = get_platform()
         if namespace is not None:
             profile_cmd0 = ['cat', HOST_DEVICE_PATH + '/' + platform + '/profile.ini']
             profile_cmd1 = ['grep', str(namespace)+'switchMacAddress']
@@ -847,23 +893,36 @@ def is_frontend_port_present_in_host():
 
 
 def get_num_dpus():
-    # Todo: we should use platform api to get the dpu number
-    # instead of rely on the platform env config.
-    num_dpus = 0
-    platform_env_conf_file_path = get_platform_env_conf_file_path()
+    """
+    Retrieves the number of DPUs from platform.json file.
 
-    # platform_env.conf file not present for platform
-    if platform_env_conf_file_path is None:
-        return num_dpus
+    Args:
 
-    # Else open the file check for keyword - num_dpu -
-    with open(platform_env_conf_file_path) as platform_env_conf_file:
-        for line in platform_env_conf_file:
-            tokens = line.split('=')
-            if len(tokens) < 2:
-               continue
-            if tokens[0].lower() == 'num_dpu':
-                num_dpus = tokens[1].strip()
-                break
-    return int(num_dpus)
+    Returns:
+        A integer to indicate the number of DPUs.
+    """
 
+    platform = get_platform()
+    if not platform:
+        return 0
+
+    # Get Platform path.
+    platform_path = get_path_to_platform_dir()
+
+    if os.path.isfile(os.path.join(platform_path, PLATFORM_JSON_FILE)):
+        json_file = os.path.join(platform_path, PLATFORM_JSON_FILE)
+
+        try:
+            with open(json_file, 'r') as file:
+                platform_data = json.load(file)
+        except (json.JSONDecodeError, IOError, TypeError, ValueError):
+            # Handle any file reading and JSON parsing errors
+            return 0
+
+        # Convert to lower case avoid case sensitive.
+        data = {k.lower(): v for k, v in platform_data.items()}
+        DPUs = data.get('dpus', None)
+        if DPUs is not None and len(DPUs) > 0:
+            return len(DPUs)
+
+    return 0

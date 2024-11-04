@@ -4,7 +4,7 @@
     },
     "DHCP_SERVER_IPV4_WITH_INVALID_VLAN": {
         "desc": "Configure vlan-id in DHCP_SERVER_IPV4 table which is invalid.",
-        "eStrKey" : "Pattern"
+        "eStrKey" : "InvalidValue"
     },
     "DHCP_SERVER_IPV4_INCORRECT_GATEWAY": {
         "desc": "Add gateway which is not in correct ip-prefix format.",
@@ -22,6 +22,10 @@
         "desc": "Configure wrong value for mode.",
         "eStrKey": "InvalidValue"
     },
+    "DHCP_SERVER_IPV4_WITH_NON_EXIST_BRIDGE": {
+        "desc": "Configure bridge in DHCP_SERVER_IPV4 table which does not exist in MID_PLANE_BRIDGE table.",
+        "eStrKey": "InvalidValue"
+    },
     "DHCP_SREVER_IPV4_NON_EXIST_OPTION": {
         "desc": "Configure option in DHCP_SERVER_IPV4 table which does not exist in DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS table.",
         "eStrKey": "LeafRef"
@@ -35,8 +39,12 @@
         "eStrKey": "InvalidValue",
         "eStr": ["type"]
     },
-    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_TEXT": {
-        "desc": "Add text type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."
+    "DHCP_SERVER_IPV4_PORT_WITH_NO_EXIST_PORT": {
+        "desc": "Configure DHCP port in DHCP_SERVER_IPV4_PORT table which is no exist.",
+        "eStrKey": "InvalidValue"
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_STRING": {
+        "desc": "Add string type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."
     },
     "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_TYPE_VALID_VALUE_IPV4_ADDRESS": {
         "desc": "Add ipv4-address type of DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS."

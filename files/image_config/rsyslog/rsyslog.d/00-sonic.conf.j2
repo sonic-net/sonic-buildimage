@@ -1,0 +1,54 @@
+## Quagga rules
+
+template(name="prog_msg" type="list") {
+    property(name="msg")
+    constant(value="\n")
+}
+
+{% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
+
+$ModLoad omprog
+
+{% endif %}
+
+if re_match($programname, "bgp[0-9]*#(frr|zebra|staticd|watchfrr)") then {
+    /var/log/frr/zebra.log
+    {% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
+    action(type="omprog"
+        binary="/usr/bin/rsyslog_plugin -r /etc/rsyslog.d/zebra_regex.json -m sonic-events-bgp"
+        output="/var/log/rsyslog_plugin.log"
+        template="prog_msg")
+    {% endif %}
+    stop
+}
+
+if re_match($programname, "bgp[0-9]*#bgpd") then {
+    /var/log/frr/bgpd.log
+    {% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
+    action(type="omprog"
+        binary="/usr/bin/rsyslog_plugin -r /etc/rsyslog.d/bgpd_regex.json -m sonic-events-bgp"
+        output="/var/log/rsyslog_plugin.log"
+        template="prog_msg")
+    {% endif %}
+    stop
+}
+
+
+## Teamd rules
+
+if $programname contains "teamd_" then {
+    /var/log/teamd.log
+    stop
+}
+
+## gnmi rules
+if $msg startswith " gnmi-native" then {
+    /var/log/gnmi.log
+    stop
+}
+
+## telemetry rules
+if $msg startswith  " telemetry" or ($msg startswith  " dialout" )then {
+    /var/log/telemetry.log
+    stop
+}

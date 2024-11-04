@@ -39,7 +39,7 @@ class Chassis(PddfChassis):
         Returns:
             string: The name of the chassis
         """
-        return device_info.get_platform()
+        return self._eeprom.platform_name_str()
 
     def initizalize_system_led(self):
         return True
@@ -175,26 +175,7 @@ class Chassis(PddfChassis):
         except IndexError:
             sys.stderr.write("SFP index {} out of range (1-{})\n".format(
                              index, len(self._sfp_list)))
-        return sfp
-
-    def set_system_led(self, led_device_name, color):
-        """
-        Sets the color of an System LED device
-        Args:
-           led_device_name: a pre-defined LED device name list used in pddf-device.json.
-           color: A string representing the color with which to set a LED
-        Returns:
-           bool: True if the LED state is set successfully, False if not
-        """
-
-        if led_device_name in self.plugin_data['LED']['capability']['rw']:
-            result, msg  = self.pddf_obj.set_system_led_color(led_device_name, color)
-            if not result and msg:
-                print(msg)
-            return (result)
-        else:
-            print("Not Support")
-            return False            
+        return sfp        
 
     def get_reboot_cause(self):
         """
@@ -218,3 +199,14 @@ class Chassis(PddfChassis):
             sw_reboot_cause = "Unknown"
 
         return ('REBOOT_CAUSE_NON_HARDWARE', sw_reboot_cause)
+
+    def get_serial_number(self):
+        """
+        Retrieves the hardware serial number for the chassis
+
+        Returns:
+            A string containing the hardware serial number for this
+            chassis.
+        """
+
+        return self.get_serial()

@@ -8,12 +8,14 @@
 DAEMON=/usr/sbin/ntpd
 PIDFILE=/run/ntpd.pid
 LOCKFILE=/run/lock/ntpsec-ntpdate
+NTPLOGDIR=/var/log/ntpsec
 
 if [ -r /etc/default/ntpsec ]; then
         . /etc/default/ntpsec
 fi
 
-if [ "$IGNORE_DHCP" != "yes" ] && [ -e /run/ntpsec/ntp.conf.dhcp ]; then
+dhcp=$(/usr/local/bin/sonic-cfggen -d -v 'NTP["global"]["dhcp"]' 2> /dev/null)
+if [ "$IGNORE_DHCP" != "yes" ] && [ -e /run/ntpsec/ntp.conf.dhcp ] && [ "$dhcp" = "enabled" ]; then
         NTPD_OPTS="$NTPD_OPTS -c /run/ntpsec/ntp.conf.dhcp"
 else
 	# List the default -c first, so if the admin has specified -c in
@@ -23,9 +25,22 @@ fi
 
 NTPD_OPTS="$NTPD_OPTS -u ntpsec:ntpsec"
 
+if [ ! -e $NTPLOGDIR ]; then
+    mkdir $NTPLOGDIR
+    chmod 777 $NTPLOGDIR
+fi
+
 # Protect the service startup against concurrent ntpdate ifup hooks
 (
         if flock -w 180 9; then
+                ntpEnabled=$(/usr/local/bin/sonic-cfggen -d -v 'NTP["global"]["admin_state"]' 2> /dev/null)
+                if [ "$ntpEnabled" = "disabled" ]
+                then
+                        echo "Stopping NTP daemon"
+                        kill -9 $(cat $PIDFILE)
+                        exit 0
+                fi
+
                 # when mgmt vrf is configured, ntp starts in mgmt vrf by default unless user configures otherwise
                 vrfEnabled=$(/usr/local/bin/sonic-cfggen -d -v 'MGMT_VRF_CONFIG["vrf_global"]["mgmtVrfEnabled"]' 2> /dev/null)
                 vrfConfigured=$(/usr/local/bin/sonic-cfggen -d -v 'NTP["global"]["vrf"]' 2> /dev/null)

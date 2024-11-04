@@ -2,11 +2,16 @@
 ! template: bgpd/templates/voq_chassis/policies.conf.j2
 !
 bgp community-list standard DEVICE_INTERNAL_COMMUNITY permit {{ constants.bgp.internal_community }}
+bgp community-list standard NO_EXPORT permit no-export
 !
 route-map FROM_VOQ_CHASSIS_V4_PEER permit 1
   match community DEVICE_INTERNAL_COMMUNITY
   set comm-list DEVICE_INTERNAL_COMMUNITY delete
   set tag {{ constants.bgp.internal_community_match_tag }}
+!
+route-map FROM_VOQ_CHASSIS_V4_PEER permit 2
+  match community NO_EXPORT
+  set local-preference 80
 !
 route-map FROM_VOQ_CHASSIS_V4_PEER permit 100
 !
@@ -25,6 +30,10 @@ route-map FROM_VOQ_CHASSIS_V6_PEER permit 2
   match community DEVICE_INTERNAL_COMMUNITY
   set comm-list DEVICE_INTERNAL_COMMUNITY delete
   set tag {{ constants.bgp.internal_community_match_tag }}
+!
+route-map FROM_VOQ_CHASSIS_V6_PEER permit 3
+  match community NO_EXPORT
+  set local-preference 80
 !
 route-map FROM_VOQ_CHASSIS_V6_PEER permit 100
 !

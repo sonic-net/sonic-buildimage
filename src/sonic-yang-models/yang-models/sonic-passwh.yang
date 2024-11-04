@@ -28,14 +28,14 @@ module sonic-passwh {
                 }
                 leaf expiration {
                     description "expiration time (days unit)";
-                    type uint16 {
-                        range 1..365;
+                    type int16 {
+                        range -1..365;
                     }
                 }
                 leaf expiration_warning {
                     description "expiration warning time (days unit)";
-                    type uint8 {
-                        range 1..30;
+                    type int8 {
+                        range -1..30;
                     }
                 }
                 leaf history_cnt {

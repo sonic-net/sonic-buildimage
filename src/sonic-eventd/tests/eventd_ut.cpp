@@ -150,7 +150,6 @@ static const test_data_t ldata[] = {
     },
 };
 
-
 void run_cap(void *zctx, bool &term, string &read_source,
         int &cnt)
 {
@@ -159,19 +158,16 @@ void run_cap(void *zctx, bool &term, string &read_source,
     internal_event_t ev_int;
     int block_ms = 200;
     int i=0;
-    static int proxy_finished_init = false;
 
     EXPECT_TRUE(NULL != mock_cap);
     EXPECT_EQ(0, zmq_connect(mock_cap, get_config(CAPTURE_END_KEY).c_str()));
     EXPECT_EQ(0, zmq_setsockopt(mock_cap, ZMQ_SUBSCRIBE, "", 0));
     EXPECT_EQ(0, zmq_setsockopt(mock_cap, ZMQ_RCVTIMEO, &block_ms, sizeof (block_ms)));
 
-    if(!proxy_finished_init) {
-        zmq_msg_t msg;
-        zmq_msg_init(&msg);
-        EXPECT_EQ(1, zmq_msg_recv(&msg, mock_cap, 0)); // Subscription message
-        proxy_finished_init = true;
-    }
+    zmq_msg_t msg;
+    zmq_msg_init(&msg);
+    int rc = zmq_msg_recv(&msg, mock_cap, 0);
+    EXPECT_EQ(1, rc); // read control character
 
     while(!term) {
         string source;
@@ -227,7 +223,6 @@ void run_pub(void *mock_pub, const string wr_source, internal_events_lst_t &lst)
     }
 }
 
-
 TEST(eventd, proxy)
 {
     printf("Proxy TEST started\n");
@@ -247,11 +242,11 @@ TEST(eventd, proxy)
     /* Starting proxy */
     EXPECT_EQ(0, pxy->init());
 
-    /* subscriber in a thread */
-    thread thr(&run_sub, zctx, ref(term_sub), ref(rd_source), ref(rd_evts), ref(rd_evts_sz));
-
     /* capture in a thread */
     thread thrc(&run_cap, zctx, ref(term_cap), ref(rd_csource), ref(rd_cevts_sz));
+
+    /* subscriber in a thread */
+    thread thr(&run_sub, zctx, ref(term_sub), ref(rd_source), ref(rd_evts), ref(rd_evts_sz));
 
     /* Init pub connection */
     void *mock_pub = init_pub(zctx);
@@ -275,9 +270,6 @@ TEST(eventd, proxy)
     }
     this_thread::sleep_for(chrono::milliseconds(1000));
 
-    delete pxy;
-    pxy = NULL;
-
     term_sub = true;
     term_cap = true;
 
@@ -287,6 +279,10 @@ TEST(eventd, proxy)
     EXPECT_EQ(rd_cevts_sz,  wr_evts.size());
 
     zmq_close(mock_pub);
+
+    delete pxy;
+    pxy = NULL;
+
     zmq_ctx_term(zctx);
 
     /* Provide time for async proxy removal to complete */
@@ -294,7 +290,6 @@ TEST(eventd, proxy)
 
     printf("eventd_proxy is tested GOOD\n");
 }
-
 
 TEST(eventd, capture)
 {
@@ -329,9 +324,6 @@ TEST(eventd, capture)
     /* Starting proxy */
     EXPECT_EQ(0, pxy->init());
 
-    /* Run subscriber; Else publisher will drop events on floor, with no subscriber. */
-    thread thr_sub(&run_sub, zctx, ref(term_sub), ref(sub_source), ref(sub_evts), ref(sub_evts_sz));
-
     /* Create capture service */
     capture_service *pcap = new capture_service(zctx, cache_max, &stats_instance);
 
@@ -340,6 +332,9 @@ TEST(eventd, capture)
 
     /* Initialize the capture */
     EXPECT_EQ(0, pcap->set_control(INIT_CAPTURE));
+
+    /* Run subscriber; Else publisher will drop events on floor, with no subscriber. */
+    thread thr_sub(&run_sub, zctx, ref(term_sub), ref(sub_source), ref(sub_evts), ref(sub_evts_sz));
 
     EXPECT_TRUE(init_cache > 1);
     EXPECT_TRUE((cache_max+3) < (int)ARRAY_SIZE(ldata));
@@ -473,9 +468,6 @@ TEST(eventd, captureCacheMax)
     /* Starting proxy */
     EXPECT_EQ(0, pxy->init());
 
-    /* Run subscriber; Else publisher will drop events on floor, with no subscriber. */
-    thread thr_sub(&run_sub, zctx, ref(term_sub), ref(sub_source), ref(sub_evts), ref(sub_evts_sz));
-
     /* Create capture service */
     capture_service *pcap = new capture_service(zctx, cache_max, &stats_instance);
 
@@ -483,6 +475,9 @@ TEST(eventd, captureCacheMax)
     EXPECT_EQ(-1, pcap->set_control(STOP_CAPTURE));
 
     EXPECT_TRUE(init_cache > 1);
+
+    /* Run subscriber; Else publisher will drop events on floor, with no subscriber. */
+    thread thr_sub(&run_sub, zctx, ref(term_sub), ref(sub_source), ref(sub_evts), ref(sub_evts_sz));
 
     /* Collect few serailized strings of events for startup cache */
     for(int i=0; i < init_cache; ++i) {
@@ -595,6 +590,7 @@ TEST(eventd, service)
     }
 
     thread thread_service(&run_eventd_service);
+    this_thread::sleep_for(chrono::milliseconds(CAPTURE_SERVICE_POLLING_DURATION * CAPTURE_SERVICE_POLLING_RETRIES));
 
     /* Need client side service to interact with server side */
     EXPECT_EQ(0, service.init_client(zctx));
@@ -610,7 +606,7 @@ TEST(eventd, service)
         string wr_source("hello");
 
         /* Test service startup caching */
-        event_serialized_lst_t evts_start, evts_read;
+        event_serialized_lst_t evts_start, evts_read, polled_events;
 
         for(int i=0; i<wr_sz; ++i) {
             string evt_str;
@@ -624,15 +620,32 @@ TEST(eventd, service)
         /* Publish events. */
         run_pub(mock_pub, wr_source, wr_evts);
 
-        /* Published events must have been captured. Give a pause, to ensure sent. */
-        this_thread::sleep_for(chrono::milliseconds(200));
+        int max_polling_duration = 2000;
+        int polling_interval = 100;
+        auto poll_start_ts = chrono::steady_clock::now();
+
+        while(true) {
+            auto current_ts = chrono::steady_clock::now();
+            if(chrono::duration_cast<chrono::milliseconds>(current_ts - poll_start_ts).count() >= max_polling_duration) {
+                break;
+            }
+            event_serialized_lst_t read_events;
+            service.cache_read(read_events);
+            polled_events.insert(polled_events.end(), read_events.begin(), read_events.end());
+            if (!read_events.empty()) {
+                break;
+            }
+            this_thread::sleep_for(chrono::milliseconds(polling_interval));	    
+        }
 
         EXPECT_EQ(0, service.cache_stop());
 
-        /* Read the cache; expect wr_sz events */
+        /* Read remaining events in cache, if any */
         EXPECT_EQ(0, service.cache_read(evts_read));
 
-        EXPECT_EQ(evts_read, evts_start);
+        polled_events.insert(polled_events.end(), evts_read.begin(), evts_read.end());
+
+        EXPECT_EQ(polled_events, evts_start);
 
         zmq_close(mock_pub);
     }

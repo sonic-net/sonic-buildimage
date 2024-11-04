@@ -5,8 +5,6 @@
 #
 #  * PLATFORM: Specific platform we wish to build images for.
 #  * BUILD_NUMBER: Desired version-number to pass to the building-system.
-#  * ENABLE_DHCP_GRAPH_SERVICE: Enables get-graph service to fetch minigraph files
-#    through http.
 #  * ENABLE_ZTP: Enables zero touch provisioning.
 #  * SHUTDOWN_BGP_ON_START: Sets admin-down state for all bgp peerings after restart.
 #  * INCLUDE_KUBERNETES: Allows including Kubernetes
@@ -40,6 +38,9 @@
 #  * ENABLE_NATIVE_WRITE: Enable native write/config operations via the gNMI interface.
 #  *                 Default: unset
 #  *                 Values: y
+#  * ENABLE_DIALOUT: Enable dialout client in telemetry.
+#  *                 Default: unset
+#  *                 Values: y
 #  * SONIC_DPKG_CACHE_METHOD: Specifying method of obtaining the Debian packages from cache: none or cache
 #  * SONIC_DPKG_CACHE_SOURCE: Debian package cache location when cache enabled for debian packages
 #  * BUILD_LOG_TIMESTAMP: Set timestamp in the build log (simple/none)
@@ -53,14 +54,13 @@
 #  * ENABLE_BOOTCHART: Enable SONiC bootchart
 #  *                 Default: n
 #  *                 Values: y,n
-#  * GZ_COMPRESS_PROGRAM: Select pigz to reduce build time
-#  *                 Default: gzip
-#  *                 Values: pigz,gzip
 #  * UNATTENDED: Don't wait for interactive input from terminal, setting this
 #  *             value to anything will enable it
 #  *             Default: unset
 #  *             Value: y
-#
+#  * SONIC_PTF_ENV_PY_VER: Python version for PTF image
+#  *                       Default: mixed
+#  *                       Values: mixed,py3
 ###############################################################################
 
 SHELL = /bin/bash
@@ -68,7 +68,11 @@ SHELL = /bin/bash
 USER := $(shell id -un)
 PWD := $(shell pwd)
 USER_LC := $(shell echo $(USER) | tr A-Z a-z)
+ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
+DOCKER_MACHINE := $(shell docker run --rm $(DEFAULT_CONTAINER_REGISTRY)/debian:buster uname -m)
+else
 DOCKER_MACHINE := $(shell docker run --rm debian:buster uname -m)
+endif
 HOST_DOCKERD_GID := $(shell getent group docker | cut -d : -f3)
 
 comma := ,
@@ -141,6 +145,7 @@ rules/config.user:
 
 include rules/config
 -include rules/config.user
+include rules/sonic-fips.mk
 
 ifneq ($(DEFAULT_CONTAINER_REGISTRY),)
 override DEFAULT_CONTAINER_REGISTRY := $(DEFAULT_CONTAINER_REGISTRY)/
@@ -152,10 +157,6 @@ endif
 
 ifeq ($(LEGACY_SONIC_MGMT_DOCKER),)
 	override LEGACY_SONIC_MGMT_DOCKER = y
-endif
-
-ifneq ($(GZ_COMPRESS_PROGRAM), pigz)
-override GZ_COMPRESS_PROGRAM = gzip
 endif
 
 ifeq ($(CONFIGURED_ARCH),amd64)
@@ -180,18 +181,6 @@ endif
 endif
 SLAVE_IMAGE = $(SLAVE_BASE_IMAGE)-$(USER_LC)
 DOCKER_ROOT = $(PWD)/fsroot.docker.$(BLDENV)
-
-# Support FIPS feature, armhf not supported yet
-ifeq ($(PLATFORM_ARCH),armhf)
-INCLUDE_FIPS := n
-ENABLE_FIPS := n
-endif
-
-# FIPS not yet available on Bookworm
-ifeq ($(BLDENV),bookworm)
-$(warning FIPS support not yet available on Bookworm)
-INCLUDE_FIPS := n
-endif
 
 ifeq ($(INCLUDE_FIPS), n)
 ifeq ($(ENABLE_FIPS), y)
@@ -226,7 +215,8 @@ $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
 	INCLUDE_FIPS=$(INCLUDE_FIPS) \
 	DOCKER_EXTRA_OPTS=$(DOCKER_EXTRA_OPTS) \
 	DEFAULT_CONTAINER_REGISTRY=$(DEFAULT_CONTAINER_REGISTRY) \
-	GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
+	FIPS_VERSION=$(FIPS_VERSION) \
+	FIPS_GOLANG_VERSION=$(FIPS_GOLANG_VERSION) \
 	j2 $(SLAVE_DIR)/Dockerfile.j2 > $(SLAVE_DIR)/Dockerfile)
 
 $(shell CONFIGURED_ARCH=$(CONFIGURED_ARCH) \
@@ -351,17 +341,6 @@ endif
 
 ifneq ($(SONIC_VERSION_CACHE_SOURCE),)
 	DOCKER_RUN += -v "$(SONIC_VERSION_CACHE_SOURCE):/vcache:rw"
-endif
-
-ifeq ($(SONIC_ENABLE_SECUREBOOT_SIGNATURE), y)
-ifneq ($(SIGNING_KEY),)
-	DOCKER_SIGNING_SOURCE := $(shell dirname $(SIGNING_KEY))
-	DOCKER_RUN += -v "$(DOCKER_SIGNING_SOURCE):$(DOCKER_SIGNING_SOURCE):ro"
-endif
-ifneq ($(SIGNING_CERT),)
-	DOCKER_SIGNING_SOURCE := $(shell dirname $(SIGNING_CERT))
-	DOCKER_RUN += -v "$(DOCKER_SIGNING_SOURCE):$(DOCKER_SIGNING_SOURCE):ro"
-endif
 endif
 
 # User name and tag for "docker-*" images created by native dockerd mode.
@@ -520,13 +499,13 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            BUILD_TIMESTAMP=$(BUILD_TIMESTAMP) \
                            SONIC_IMAGE_VERSION=$(SONIC_IMAGE_VERSION) \
                            SLAVE_TAG=$(SLAVE_TAG) \
-                           ENABLE_DHCP_GRAPH_SERVICE=$(ENABLE_DHCP_GRAPH_SERVICE) \
                            ENABLE_ZTP=$(ENABLE_ZTP) \
                            INCLUDE_PDE=$(INCLUDE_PDE) \
                            SHUTDOWN_BGP_ON_START=$(SHUTDOWN_BGP_ON_START) \
                            INCLUDE_KUBERNETES=$(INCLUDE_KUBERNETES) \
                            KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
                            KUBERNETES_CNI_VERSION=$(KUBERNETES_CNI_VERSION) \
+                           KUBERNETES_CRI_TOOLS_VERSION=$(KUBERNETES_CRI_TOOLS_VERSION) \
                            K8s_GCR_IO_PAUSE_VERSION=$(K8s_GCR_IO_PAUSE_VERSION) \
                            INCLUDE_KUBERNETES_MASTER=$(INCLUDE_KUBERNETES_MASTER) \
                            SONIC_ENABLE_PFCWD_ON_START=$(ENABLE_PFCWD_ON_START) \
@@ -553,6 +532,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD=$(SONIC_CONFIG_USE_NATIVE_DOCKERD_FOR_BUILD) \
                            SONIC_INCLUDE_SYSTEM_TELEMETRY=$(INCLUDE_SYSTEM_TELEMETRY) \
                            SONIC_INCLUDE_SYSTEM_GNMI=$(INCLUDE_SYSTEM_GNMI) \
+                           SONIC_INCLUDE_SYSTEM_EVENTD=$(INCLUDE_SYSTEM_EVENTD) \
                            INCLUDE_DHCP_RELAY=$(INCLUDE_DHCP_RELAY) \
                            INCLUDE_DHCP_SERVER=$(INCLUDE_DHCP_SERVER) \
                            INCLUDE_MACSEC=$(INCLUDE_MACSEC) \
@@ -560,10 +540,10 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_INCLUDE_MUX=$(INCLUDE_MUX) \
                            ENABLE_TRANSLIB_WRITE=$(ENABLE_TRANSLIB_WRITE) \
                            ENABLE_NATIVE_WRITE=$(ENABLE_NATIVE_WRITE) \
+			   ENABLE_DIALOUT=$(ENABLE_DIALOUT) \
                            EXTRA_DOCKER_TARGETS=$(EXTRA_DOCKER_TARGETS) \
                            BUILD_LOG_TIMESTAMP=$(BUILD_LOG_TIMESTAMP) \
                            SONIC_ENABLE_IMAGE_SIGNATURE=$(ENABLE_IMAGE_SIGNATURE) \
-                           SONIC_ENABLE_SECUREBOOT_SIGNATURE=$(SONIC_ENABLE_SECUREBOOT_SIGNATURE) \
                            SECURE_UPGRADE_MODE=$(SECURE_UPGRADE_MODE) \
                            SECURE_UPGRADE_DEV_SIGNING_KEY=$(SECURE_UPGRADE_DEV_SIGNING_KEY) \
                            SECURE_UPGRADE_SIGNING_CERT=$(SECURE_UPGRADE_SIGNING_CERT) \
@@ -582,13 +562,14 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            SONIC_SLAVE_DOCKER_DRIVER=$(SONIC_SLAVE_DOCKER_DRIVER) \
                            MIRROR_URLS=$(MIRROR_URLS) \
                            MIRROR_SECURITY_URLS=$(MIRROR_SECURITY_URLS) \
-                           GZ_COMPRESS_PROGRAM=$(GZ_COMPRESS_PROGRAM) \
                            MIRROR_SNAPSHOT=$(MIRROR_SNAPSHOT) \
                            SONIC_VERSION_CONTROL_COMPONENTS=$(SONIC_VERSION_CONTROL_COMPONENTS) \
                            ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
+                           BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
                            LEGACY_SONIC_MGMT_DOCKER=$(LEGACY_SONIC_MGMT_DOCKER) \
+                           SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
                            $(SONIC_OVERRIDE_BUILD_VARS)
 
 .PHONY: sonic-slave-build sonic-slave-bash init reset

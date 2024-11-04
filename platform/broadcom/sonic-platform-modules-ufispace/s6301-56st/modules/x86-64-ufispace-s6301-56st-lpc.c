@@ -26,7 +26,7 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
-#include <stdbool.h>
+#include <linux/types.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/gpio.h>
 
@@ -44,6 +44,7 @@
 
 #define REG_BASE_CPU                      0x600
 #define REG_BASE_MB                       0x700
+#define REG_BASE_EC                       0xe000
 
 //MB CPLD
 #define REG_MB_BRD_ID_0                   (REG_BASE_MB + 0x00)
@@ -59,6 +60,10 @@
 #define REG_MB_SYS_LED_STATUS_1           (REG_BASE_MB + 0x82)
 #define REG_MB_SYS_LED_STATUS_2           (REG_BASE_MB + 0x83)
 #define REG_MB_SYS_LED_STATUS_3           (REG_BASE_MB + 0x84)
+#define REG_MB_POWER_EN                   (REG_BASE_MB + 0x95)
+//EC
+#define REG_EC_SEL                        (REG_BASE_EC + 0x394)
+#define REG_EC_PSU_RST                    (REG_BASE_EC + 0x392)
 
 #define MASK_ALL                          (0xFF)
 
@@ -94,6 +99,9 @@ enum lpc_sysfs_attributes {
     ATT_MB_LED_LNK,
     ATT_MB_LED_PWR0,
     ATT_MB_LED_PWR1,
+    ATT_MB_POWER_EN,
+    //EC
+    ATT_EC_PSU_RESET,
     //BSP
     ATT_BSP_VERSION,
     ATT_BSP_DEBUG,
@@ -477,6 +485,10 @@ static ssize_t read_lpc_callback(struct device *dev,
             mask = 0xF;
             base = BASE_HEX;
             break;
+        case ATT_MB_POWER_EN:
+            reg = REG_MB_POWER_EN;
+            base = BASE_HEX;
+            break;
         //BSP
         case ATT_BSP_REG_VALUE:
             if (kstrtou16(bsp_reg, 0, &reg) < 0)
@@ -510,6 +522,9 @@ static ssize_t write_lpc_callback(struct device *dev,
         case ATT_MB_LED_ID:
             reg = REG_MB_SYS_LED_CTRL_1;
             mask = 0xF;
+            break;
+        case ATT_MB_POWER_EN:
+            reg = REG_MB_POWER_EN;
             break;
         default:
             return -EINVAL;
@@ -557,18 +572,18 @@ static ssize_t write_bsp_callback(struct device *dev,
     switch (attr->index) {
         case ATT_BSP_VERSION:
             str = bsp_version;
-            str_len = sizeof(str);
+            str_len = sizeof(bsp_version);
             break;
         case ATT_BSP_DEBUG:
             str = bsp_debug;
-            str_len = sizeof(str);
+            str_len = sizeof(bsp_debug);
             break;
         case ATT_BSP_REG:
             if(kstrtou16(buf, 0, &reg) < 0)
                 return -EINVAL;
 
             str = bsp_reg;
-            str_len = sizeof(str);
+            str_len = sizeof(bsp_reg);
             break;
         default:
             return -EINVAL;
@@ -621,6 +636,41 @@ static ssize_t read_gpio_max_callback(struct device *dev,
     return -1;
 }
 
+/* set psu_reset register value */
+static ssize_t write_ec_psu_reset(struct device *dev,
+        struct device_attribute *da, const char *buf, size_t count)
+{
+    u8 val = 0;
+    u8 reg_val = 0;
+    static int psu_reset_flag = 0;
+
+    if (kstrtou8(buf, 0, &val) < 0)
+        return -EINVAL;
+
+    if (psu_reset_flag == 0) {
+        if (val == 0) {
+            mutex_lock(&lpc_data->access_lock);
+            psu_reset_flag = 1;
+            reg_val = 0x1;
+            outb(reg_val, REG_EC_SEL);
+            BSP_LOG_W("reg=0x%04x, reg_val=0x%02x", REG_EC_SEL, reg_val);
+            reg_val = 0x21;
+            outb(reg_val, REG_EC_PSU_RST);
+            BSP_LOG_W("reg=0x%04x, reg_val=0x%02x", REG_EC_PSU_RST, reg_val);
+            psu_reset_flag = 0;
+            mutex_unlock(&lpc_data->access_lock);
+        } else {
+            return -EINVAL;
+        }
+    } else {
+        printk(KERN_INFO "PSU is resetting... (ignore)\n");
+        mutex_lock(&lpc_data->access_lock);
+        mutex_unlock(&lpc_data->access_lock);
+    }
+
+    return count;
+}
+
 //SENSOR_DEVICE_ATTR - MB
 static SENSOR_DEVICE_ATTR(board_id_0,        S_IRUGO, read_lpc_callback, NULL, ATT_MB_BRD_ID_0);
 static SENSOR_DEVICE_ATTR(board_id_1,        S_IRUGO, read_lpc_callback, NULL, ATT_MB_BRD_ID_1);
@@ -644,7 +694,9 @@ static SENSOR_DEVICE_ATTR(led_fan,           S_IRUGO, read_lpc_callback, NULL, A
 static SENSOR_DEVICE_ATTR(led_lnk,           S_IRUGO, read_lpc_callback, NULL, ATT_MB_LED_LNK);
 static SENSOR_DEVICE_ATTR(led_pwr1,          S_IRUGO, read_lpc_callback, NULL, ATT_MB_LED_PWR1);
 static SENSOR_DEVICE_ATTR(led_pwr0,          S_IRUGO, read_lpc_callback, NULL, ATT_MB_LED_PWR0);
-
+static SENSOR_DEVICE_ATTR(power_en,          S_IRUGO | S_IWUSR, read_lpc_callback, write_lpc_callback, ATT_MB_POWER_EN);
+//SENSOR_DEVICE_ATTR - EC
+static SENSOR_DEVICE_ATTR(psu_reset,         S_IRUGO | S_IWUSR, NULL, write_ec_psu_reset, ATT_EC_PSU_RESET);
 //SENSOR_DEVICE_ATTR - BSP
 static SENSOR_DEVICE_ATTR(bsp_version , S_IRUGO | S_IWUSR, read_bsp_callback, write_bsp_callback,       ATT_BSP_VERSION);
 static SENSOR_DEVICE_ATTR(bsp_debug   , S_IRUGO | S_IWUSR, read_bsp_callback, write_bsp_callback,       ATT_BSP_DEBUG);
@@ -659,25 +711,31 @@ static struct attribute *mb_cpld_attrs[] = {
     &sensor_dev_attr_board_id_0.dev_attr.attr,
     &sensor_dev_attr_board_id_1.dev_attr.attr,
     &sensor_dev_attr_mb_cpld_1_version.dev_attr.attr,
-	&sensor_dev_attr_mb_cpld_1_version_h.dev_attr.attr,
-	&sensor_dev_attr_board_sku_id.dev_attr.attr,
-	&sensor_dev_attr_board_hw_id.dev_attr.attr,
-	&sensor_dev_attr_board_id_type.dev_attr.attr,
-	&sensor_dev_attr_board_build_id.dev_attr.attr,
-	&sensor_dev_attr_board_deph_id.dev_attr.attr,
-	&sensor_dev_attr_board_ext_id.dev_attr.attr,
-	&sensor_dev_attr_mux_reset.dev_attr.attr,
-	&sensor_dev_attr_fan_status.dev_attr.attr,
-	&sensor_dev_attr_psu_status.dev_attr.attr,
-	&sensor_dev_attr_port_led_clear.dev_attr.attr,
-	&sensor_dev_attr_led_sys.dev_attr.attr,
-	&sensor_dev_attr_led_id.dev_attr.attr,
-	&sensor_dev_attr_led_poe.dev_attr.attr,
-	&sensor_dev_attr_led_spd.dev_attr.attr,
-	&sensor_dev_attr_led_fan.dev_attr.attr,
-	&sensor_dev_attr_led_lnk.dev_attr.attr,
-	&sensor_dev_attr_led_pwr0.dev_attr.attr,
-	&sensor_dev_attr_led_pwr1.dev_attr.attr,
+    &sensor_dev_attr_mb_cpld_1_version_h.dev_attr.attr,
+    &sensor_dev_attr_board_sku_id.dev_attr.attr,
+    &sensor_dev_attr_board_hw_id.dev_attr.attr,
+    &sensor_dev_attr_board_id_type.dev_attr.attr,
+    &sensor_dev_attr_board_build_id.dev_attr.attr,
+    &sensor_dev_attr_board_deph_id.dev_attr.attr,
+    &sensor_dev_attr_board_ext_id.dev_attr.attr,
+    &sensor_dev_attr_mux_reset.dev_attr.attr,
+    &sensor_dev_attr_fan_status.dev_attr.attr,
+    &sensor_dev_attr_psu_status.dev_attr.attr,
+    &sensor_dev_attr_port_led_clear.dev_attr.attr,
+    &sensor_dev_attr_led_sys.dev_attr.attr,
+    &sensor_dev_attr_led_id.dev_attr.attr,
+    &sensor_dev_attr_led_poe.dev_attr.attr,
+    &sensor_dev_attr_led_spd.dev_attr.attr,
+    &sensor_dev_attr_led_fan.dev_attr.attr,
+    &sensor_dev_attr_led_lnk.dev_attr.attr,
+    &sensor_dev_attr_led_pwr0.dev_attr.attr,
+    &sensor_dev_attr_led_pwr1.dev_attr.attr,
+    &sensor_dev_attr_power_en.dev_attr.attr,
+    NULL,
+};
+
+static struct attribute *ec_attrs[] = {
+    &sensor_dev_attr_psu_reset.dev_attr.attr,
     NULL,
 };
 
@@ -695,6 +753,11 @@ static struct attribute *bsp_attrs[] = {
 static struct attribute_group mb_cpld_attr_grp = {
     .name = "mb_cpld",
     .attrs = mb_cpld_attrs,
+};
+
+static struct attribute_group ec_attr_grp = {
+    .name = "ec",
+    .attrs = ec_attrs,
 };
 
 static struct attribute_group bsp_attr_grp = {
@@ -717,7 +780,7 @@ static struct platform_device lpc_dev = {
 
 static int lpc_drv_probe(struct platform_device *pdev)
 {
-    int i = 0, grp_num = 2;
+    int i = 0, grp_num = 3;
     int err[5] = {0};
     struct attribute_group *grp;
 
@@ -734,6 +797,9 @@ static int lpc_drv_probe(struct platform_device *pdev)
                 grp = &mb_cpld_attr_grp;
                 break;
             case 1:
+                grp = &ec_attr_grp;
+                break;
+            case 2:
                 grp = &bsp_attr_grp;
                 break;
             default:
@@ -758,6 +824,9 @@ exit:
                 grp = &mb_cpld_attr_grp;
                 break;
             case 1:
+                grp = &ec_attr_grp;
+                break;
+            case 2:
                 grp = &bsp_attr_grp;
                 break;
             default:
@@ -779,6 +848,7 @@ exit:
 static int lpc_drv_remove(struct platform_device *pdev)
 {
     sysfs_remove_group(&pdev->dev.kobj, &mb_cpld_attr_grp);
+    sysfs_remove_group(&pdev->dev.kobj, &ec_attr_grp);
     sysfs_remove_group(&pdev->dev.kobj, &bsp_attr_grp);
 
     return 0;
@@ -798,18 +868,18 @@ int lpc_init(void)
 
     err = platform_driver_register(&lpc_drv);
     if(err) {
-    	printk(KERN_ERR "%s(#%d): platform_driver_register failed(%d)\n",
+        printk(KERN_ERR "%s(#%d): platform_driver_register failed(%d)\n",
                 __func__, __LINE__, err);
 
-    	return err;
+        return err;
     }
 
     err = platform_device_register(&lpc_dev);
     if(err) {
-    	printk(KERN_ERR "%s(#%d): platform_device_register failed(%d)\n",
+        printk(KERN_ERR "%s(#%d): platform_device_register failed(%d)\n",
                 __func__, __LINE__, err);
-    	platform_driver_unregister(&lpc_drv);
-    	return err;
+        platform_driver_unregister(&lpc_drv);
+        return err;
     }
 
     return err;

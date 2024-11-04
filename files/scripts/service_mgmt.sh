@@ -3,7 +3,6 @@
 function debug()
 {
     /usr/bin/logger $1
-    /bin/echo `date` "- $1" >> ${DEBUGLOG}
 }
 
 function check_warm_boot()
@@ -87,9 +86,8 @@ DEV=$2
 
 SCRIPT_NAME=$(basename -- "$0")
 SERVICE="${SCRIPT_NAME%.*}"
-DEBUGLOG="/tmp/$SERVICE-debug$DEV.log"
 NAMESPACE_PREFIX="asic"
-if [ "$DEV" ]; then
+if [[ "$DEV" && "$DEV" != *"dpu"* ]]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
     SONIC_DB_CLI="sonic-db-cli -n $NET_NS"
 else

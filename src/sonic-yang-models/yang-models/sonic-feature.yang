@@ -29,6 +29,11 @@ module sonic-feature{
         type string;
     }
 
+    typedef feature-delay-status {
+        description "configuration to set the feature has delay scope as True/False";
+        type string;
+    }
+
     container sonic-feature {
 
         container FEATURE {
@@ -60,20 +65,27 @@ module sonic-feature{
                 leaf delayed {
                     description "This configuration identicates if the feature needs to be delayed until
                                  system initialization";
-                    type stypes:boolean_type;
+                    type feature-delay-status;
                     default "false";
                 }
 
                 leaf has_global_scope {
                     description "This configuration identicates there will only one service
                                 spawned for the device";
-                    type stypes:boolean_type;
+                    type feature-scope-status;
                     default "false";
                 }
 
                 leaf has_per_asic_scope {
                     description "This configuration identicates there will only one service
                                 spawned per asic";
+                    type feature-scope-status;
+                    default "false";
+                }
+
+                leaf has_per_dpu_scope {
+                    description "This configuration identicates there will only one service
+                                spawned per DPU";
                     type feature-scope-status;
                     default "false";
                 }

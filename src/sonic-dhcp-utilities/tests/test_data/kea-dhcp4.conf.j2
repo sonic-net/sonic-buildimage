@@ -14,7 +14,7 @@
 {%- endif %}
         "hooks-libraries": [
             {
-                "library": "/usr/local/lib/kea/hooks/libdhcp_run_script.so",
+                "library": "{{ hook_lib_path }}",
                 "parameters": {
                     "name": "{{ lease_update_script_path }}",
                     "sync": false
@@ -42,6 +42,7 @@
     {%- if add_subnet_preceding_comma.flag -%},{%- endif -%}
     {%- set _dummy = add_subnet_preceding_comma.update({'flag': True}) %}
             {
+                "id": {{ subnet_info["id"] }},
                 "subnet": "{{ subnet_info["subnet"] }}",
                 "pools": [
     {%- set add_pool_preceding_comma = { 'flag': False } %}

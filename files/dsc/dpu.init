@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# {C} Copyright 2023 AMD Systems Inc. All rights reserved
+
+# This script starts/stops dpu sw
+
+
+### BEGIN INIT INFO
+# Provides:          load-dpu
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: Load dpu sw
+### END INIT INFO
+ACTIVE_FILE="/boot/active.txt"
+NIC_MOUNT=""
+LOG_FILE="/tmp/active_nic"
+TAG="latest"
+HOST_DIR=/host/dpu
+
+function start_dpu()
+{
+    modprobe ionic_mnic
+    modprobe mnet_uio_pdrv_genirq
+    modprobe mdev
+
+    mkdir -p $HOST_DIR/update
+    mkdir -p $HOST_DIR/sysconfig/config0
+    mkdir -p $HOST_DIR/sysconfig/config1
+    mkdir -p $HOST_DIR/obfl
+    mkdir -p $HOST_DIR/data
+    mkdir -p $HOST_DIR/tmpfsshare
+    mkdir -p $HOST_DIR/runfs
+    mkdir -p $HOST_DIR/logfs
+    mount -t tmpfs -o size=20M,mode=1777  tmpfs $HOST_DIR/tmpfsshare
+    mount -t tmpfs -o size=20M,mode=0755  runs $HOST_DIR/runfs
+    mount -t tmpfs -o size=20M,mode=0755  logfs $HOST_DIR/logfs
+
+    if [ -f "$ACTIVE_FILE" ]; then
+        ACTIVE_CONTENTS=$(cat "$ACTIVE_FILE")
+        ACTIVE_NIC=$(echo "$ACTIVE_CONTENTS" | cut -d " " -f 8-)
+        if [ "$ACTIVE_NIC" = "/boot/nicA" ]; then
+            NIC_MOUNT="-v /dev/shm:/dev/shm -v /boot/nicA/nic_core:/nic -v /boot/nicA/shared/conf/gen:/nic/conf/gen"
+        elif [ "$ACTIVE_NIC" = "/boot/nicB" ]; then
+            NIC_MOUNT="-v /dev/shm:/dev/shm -v /boot/nicB/nic_core:/nic -v /boot/nicB/shared/conf/gen:/nic/conf/gen"
+        fi
+    else
+        echo "/boot/active.txt not present" > $LOG_FILE
+    fi
+    echo "Active Nic: $ACTIVE_NIC" >> $LOG_FILE
+    echo "NIC_MOUNT: $NIC_MOUNT" >> $LOG_FILE
+
+    docker ps -a --format "{{.ID}}\t{{.Image}}" | grep "docker-dpu:latest" | awk '{print $1}' | xargs -I {} docker rm {}
+
+    docker run -v $HOST_DIR/update:/update -v $HOST_DIR/sysconfig/config0:/sysconfig/config0 -v $HOST_DIR/sysconfig/config1:/sysconfig/config1 -v $HOST_DIR/obfl:/obfl  -v $HOST_DIR/data:/data -v $HOST_DIR/tmpfsshare:/tmp -v $HOST_DIR/runfs:/run -v $HOST_DIR/logfs:/var/log -v /sys:/sys $NIC_MOUNT --net=host --name=dpu --privileged docker-dpu:$TAG
+}
+
+case "$1" in
+start)
+    echo -n "Start dpu... "
+
+    start_dpu
+
+    echo "done."
+    ;;
+
+stop)
+    echo "Not supported"
+    ;;
+
+force-reload|restart)
+    echo "Not supported"
+    ;;
+
+*)
+    echo "Usage: /etc/init.d/dpu.init {start}"
+    exit 1
+    ;;
+esac
+
+exit 0
+

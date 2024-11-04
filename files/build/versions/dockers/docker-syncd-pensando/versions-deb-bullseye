@@ -1,0 +1,17 @@
+kmod==28-1
+libabsl20200923==0~20200923.3-2
+libc-ares2==1.17.1-1+deb11u3
+libgrpc++-dev==1.30.2-3
+libgrpc++1==1.30.2-3
+libgrpc-dev==1.30.2-3
+libgrpc10==1.30.2-3
+libkmod2==28-1
+libprotobuf-dev==3.12.4-1+deb11u1
+libprotobuf-lite23==3.12.4-1+deb11u1
+libprotobuf23==3.12.4-1+deb11u1
+libprotoc23==3.12.4-1+deb11u1
+libsai==1.10.1-0
+libsaimetadata==1.0.0
+libsairedis==1.0.0
+protobuf-compiler==3.12.4-1+deb11u1
+syncd==1.0.0

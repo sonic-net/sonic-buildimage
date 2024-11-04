@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,9 +28,12 @@ try:
     import os
     from functools import reduce
     from .utils import extract_RJ45_ports_index
+    from . import module_host_mgmt_initializer
     from . import utils
     from .device_data import DeviceDataManager
     import re
+    import select
+    import threading
     import time
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
@@ -38,22 +41,8 @@ except ImportError as e:
 
 RJ45_TYPE = "RJ45"
 
-DMI_FILE = '/sys/firmware/dmi/entries/2-0/raw'
-DMI_HEADER_LEN = 15
-DMI_PRODUCT_NAME = "Product Name"
-DMI_MANUFACTURER = "Manufacturer"
-DMI_VERSION = "Version"
-DMI_SERIAL = "Serial Number"
-DMI_ASSET_TAG = "Asset Tag"
-DMI_LOC = "Location In Chassis"
-DMI_TABLE_MAP = {
-                    DMI_PRODUCT_NAME: 0,
-                    DMI_MANUFACTURER: 1,
-                    DMI_VERSION: 2,
-                    DMI_SERIAL: 3,
-                    DMI_ASSET_TAG: 4,
-                    DMI_LOC: 5
-                }
+VPD_DATA_FILE = "/var/run/hw-management/eeprom/vpd_data"
+REVISION = "REV"
 
 HWMGMT_SYSTEM_ROOT = '/var/run/hw-management/system/'
 
@@ -79,11 +68,13 @@ class Chassis(ChassisBase):
     # System UID LED
     _led_uid = None
 
+    chassis_instance = None
+
     def __init__(self):
         super(Chassis, self).__init__()
 
-        # Initialize DMI data
-        self.dmi_data = None
+        # Initialize vpd data
+        self.vpd_data = None
 
         # move the initialization of each components to their dedicated initializer
         # which will be called from platform
@@ -119,20 +110,23 @@ class Chassis(ChassisBase):
         self.reboot_cause_initialized = False
 
         self.sfp_module = None
+        self.sfp_lock = threading.Lock()
 
         # Build the RJ45 port list from platform.json and hwsku.json
         self._RJ45_port_inited = False
         self._RJ45_port_list = None
+
+        Chassis.chassis_instance = self
+
+        self.module_host_mgmt_initializer = module_host_mgmt_initializer.ModuleHostMgmtInitializer()
+        self.poll_obj = None
+        self.registered_fds = None
 
         logger.log_info("Chassis loaded successfully")
 
     def __del__(self):
         if self.sfp_event:
             self.sfp_event.deinitialize()
-
-        if self._sfp_list:
-            if self.sfp_module.SFP.shared_sdk_handle:
-                self.sfp_module.deinitialize_sdk_handle(self.sfp_module.SFP.shared_sdk_handle)
 
     @property
     def RJ45_port_list(self):
@@ -266,38 +260,49 @@ class Chassis(ChassisBase):
 
     def initialize_single_sfp(self, index):
         sfp_count = self.get_num_sfps()
+        # Use double checked locking mechanism for:
+        #     1. protect shared resource self._sfp_list
+        #     2. performance (avoid locking every time)
         if index < sfp_count:
-            if not self._sfp_list:
-                self._sfp_list = [None] * sfp_count
+            if not self._sfp_list or not self._sfp_list[index]:
+                with self.sfp_lock:
+                    if not self._sfp_list:
+                        self._sfp_list = [None] * sfp_count
 
-            if not self._sfp_list[index]:
-                sfp_module = self._import_sfp_module()
-                if self.RJ45_port_list and index in self.RJ45_port_list:
-                    self._sfp_list[index] = sfp_module.RJ45Port(index)
-                else:
-                    self._sfp_list[index] = sfp_module.SFP(index)
-                self.sfp_initialized_count += 1
+                    if not self._sfp_list[index]:
+                        sfp_module = self._import_sfp_module()
+                        if self.RJ45_port_list and index in self.RJ45_port_list:
+                            self._sfp_list[index] = sfp_module.RJ45Port(index)
+                        else:
+                            self._sfp_list[index] = sfp_module.SFP(index)
+                        self.sfp_initialized_count += 1
 
     def initialize_sfp(self):
-        if not self._sfp_list:
-            sfp_module = self._import_sfp_module()
-            sfp_count = self.get_num_sfps()
-            for index in range(sfp_count):
-                if self.RJ45_port_list and index in self.RJ45_port_list:
-                    sfp_object = sfp_module.RJ45Port(index)
-                else:
-                    sfp_object = sfp_module.SFP(index)
-                self._sfp_list.append(sfp_object)
-            self.sfp_initialized_count = sfp_count
-        elif self.sfp_initialized_count != len(self._sfp_list):
-            sfp_module = self._import_sfp_module()
-            for index in range(len(self._sfp_list)):
-                if self._sfp_list[index] is None:
-                    if self.RJ45_port_list and index in self.RJ45_port_list:
-                        self._sfp_list[index] = sfp_module.RJ45Port(index)
-                    else:
-                        self._sfp_list[index] = sfp_module.SFP(index)
-            self.sfp_initialized_count = len(self._sfp_list)
+        sfp_count = self.get_num_sfps()
+        # Use double checked locking mechanism for:
+        #     1. protect shared resource self._sfp_list
+        #     2. performance (avoid locking every time)
+        if sfp_count != self.sfp_initialized_count:
+            with self.sfp_lock:
+                if sfp_count != self.sfp_initialized_count:
+                    if not self._sfp_list:
+                        sfp_module = self._import_sfp_module()
+                        for index in range(sfp_count):
+                            if self.RJ45_port_list and index in self.RJ45_port_list:
+                                sfp_object = sfp_module.RJ45Port(index)
+                            else:
+                                sfp_object = sfp_module.SFP(index)
+                            self._sfp_list.append(sfp_object)
+                        self.sfp_initialized_count = sfp_count
+                    elif self.sfp_initialized_count != len(self._sfp_list):
+                        sfp_module = self._import_sfp_module()
+                        for index in range(len(self._sfp_list)):
+                            if self._sfp_list[index] is None:
+                                if self.RJ45_port_list and index in self.RJ45_port_list:
+                                    self._sfp_list[index] = sfp_module.RJ45Port(index)
+                                else:
+                                    self._sfp_list[index] = sfp_module.SFP(index)
+                        self.sfp_initialized_count = len(self._sfp_list)
 
     def get_num_sfps(self):
         """
@@ -306,7 +311,13 @@ class Chassis(ChassisBase):
         Returns:
             An integer, the number of sfps available on this chassis
         """
-        return DeviceDataManager.get_sfp_count()
+        if not self._RJ45_port_inited:
+            self._RJ45_port_list = extract_RJ45_ports_index()
+            self._RJ45_port_inited = True
+        if self._RJ45_port_list is not None:
+            return DeviceDataManager.get_sfp_count() + len(self._RJ45_port_list)
+        else:
+            return DeviceDataManager.get_sfp_count()
 
     def get_all_sfps(self):
         """
@@ -315,8 +326,11 @@ class Chassis(ChassisBase):
         Returns:
             A list of objects derived from SfpBase representing all sfps
             available on this chassis
-        """
-        self.initialize_sfp()
+        """    
+        if DeviceDataManager.is_module_host_management_mode():
+            self.module_host_mgmt_initializer.initialize(self)
+        else:
+            self.initialize_sfp()
         return self._sfp_list
 
     def get_sfp(self, index):
@@ -333,7 +347,10 @@ class Chassis(ChassisBase):
             An object dervied from SfpBase representing the specified sfp
         """
         index = index - 1
-        self.initialize_single_sfp(index)
+        if DeviceDataManager.is_module_host_management_mode():
+            self.module_host_mgmt_initializer.initialize(self)
+        else:
+            self.initialize_single_sfp(index)
         return super(Chassis, self).get_sfp(index)
 
     def get_port_or_cage_type(self, index):
@@ -371,7 +388,7 @@ class Chassis(ChassisBase):
 
         Returns:
             (bool, dict):
-                - True if call successful, False if not;
+                - True if call successful, False if not; - Deprecated, will always return True
                 - A nested dictionary where key is a device type,
                   value is a dictionary with key:value pairs in the format of
                   {'device_id':'device_event'},
@@ -383,38 +400,227 @@ class Chassis(ChassisBase):
                       indicates that fan 0 has been removed, fan 2
                       has been inserted and sfp 11 has been removed.
         """
-        self.initialize_sfp()
-        # Initialize SFP event first
-        if not self.sfp_event:
-            from .sfp_event import sfp_event
-            self.sfp_event = sfp_event(self.RJ45_port_list)
-            self.sfp_event.initialize()
+        if DeviceDataManager.is_module_host_management_mode():
+            self.module_host_mgmt_initializer.initialize(self)
+            return self.get_change_event_for_module_host_management_mode(timeout)
+        else:
+            self.initialize_sfp()
+            return self.get_change_event_legacy(timeout)
+            
+    def get_change_event_for_module_host_management_mode(self, timeout):
+        """Get SFP change event when module host management mode is enabled.
 
-        wait_for_ever = (timeout == 0)
-        # select timeout should be no more than 1000ms to ensure fast shutdown flow
-        select_timeout = 1000.0 if timeout >= 1000 else float(timeout)
+        Args:
+            timeout: Timeout in milliseconds (optional). If timeout == 0,
+                this method will block until a change is detected.
+
+        Returns:
+            (bool, dict):
+                - True if call successful, False if not; - Deprecated, will always return True
+                - A nested dictionary where key is a device type,
+                  value is a dictionary with key:value pairs in the format of
+                  {'device_id':'device_event'},
+                  where device_id is the device ID for this device and
+                        device_event,
+                             status='1' represents device inserted,
+                             status='0' represents device removed.
+                  Ex. {'fan':{'0':'0', '2':'1'}, 'sfp':{'11':'0'}}
+                      indicates that fan 0 has been removed, fan 2
+                      has been inserted and sfp 11 has been removed.
+        """
+        if not self.poll_obj:
+            self.poll_obj = select.poll()
+            self.registered_fds = {}
+            for s in self._sfp_list:
+                fds = s.get_fds_for_poling()
+                for fd_type, fd in fds.items():
+                    self.poll_obj.register(fd, select.POLLERR | select.POLLPRI)
+                    self.registered_fds[fd.fileno()] = (s.sdk_index, fd, fd_type)
+
+            logger.log_debug(f'Registered SFP file descriptors for polling: {self.registered_fds}')
+                    
+        from . import sfp
+        
+        wait_forever = (timeout == 0)
+        # poll timeout should be no more than 1000ms to ensure fast shutdown flow
+        timeout = 1000.0 if timeout >= 1000 else float(timeout)
         port_dict = {}
         error_dict = {}
         begin = time.time()
-        while True:
-            status = self.sfp_event.check_sfp_status(port_dict, error_dict, select_timeout)
-            if bool(port_dict):
-                break
+        wait_ready_task = sfp.SFP.get_wait_ready_task()
+        
+        while True:        
+            fds_events = self.poll_obj.poll(timeout)
+            for fileno, _ in fds_events:
+                if fileno not in self.registered_fds:
+                    logger.log_error(f'Unknown file no {fileno} from poll event, registered files are {self.registered_fds}')
+                    continue
+                
+                sfp_index, fd, fd_type = self.registered_fds[fileno]
+                s = self._sfp_list[sfp_index]
+                fd.seek(0)
+                fd_value = int(fd.read().strip())
 
-            if not wait_for_ever:
-                elapse = time.time() - begin
-                if elapse * 1000 > timeout:
-                    break
+                # Detecting dummy event
+                if s.is_dummy_event(fd_type, fd_value):
+                    # Ignore dummy event for the first poll, assume SDK only provide 1 dummy event
+                    logger.log_debug(f'Ignore dummy event {fd_type}:{fd_value} for SFP {sfp_index}')
+                    continue
 
-        if status:
+                logger.log_notice(f'Got SFP event: index={sfp_index}, type={fd_type}, value={fd_value}')
+                if fd_type == 'hw_present':
+                    # event could be EVENT_NOT_PRESENT or EVENT_PRESENT
+                    event = sfp.EVENT_NOT_PRESENT if fd_value == 0 else sfp.EVENT_PRESENT
+                    if fd_value == 1:
+                        s.processing_insert_event = True
+                    s.on_event(event)
+                elif fd_type == 'present':
+                    if str(fd_value) == sfp.SFP_STATUS_ERROR:
+                        # FW control cable got an error, no need trigger state machine
+                        sfp_status, error_desc = s.get_error_info_from_sdk_error_type()
+                        port_dict[sfp_index + 1] = sfp_status
+                        if error_desc: 
+                            error_dict[sfp_index + 1] = error_desc
+                        continue
+                    elif str(fd_value) == sfp.SFP_STATUS_INSERTED:
+                        # FW control cable got present, only case is that the cable is recovering
+                        # from an error. FW control cable has no transition from "Not Present" to "Present"
+                        # because "Not Present" cable is always "software control" and should always poll
+                        # hw_present sysfs instead of present sysfs.
+                        port_dict[sfp_index + 1] = sfp.SFP_STATUS_INSERTED
+                        continue
+                    else:
+                        s.on_event(sfp.EVENT_NOT_PRESENT)
+                else:
+                    # event could be EVENT_POWER_GOOD or EVENT_POWER_BAD
+                    event = sfp.EVENT_POWER_BAD if fd_value == 0 else sfp.EVENT_POWER_GOOD
+                    s.on_event(event)
+                    
+                if s.in_stable_state():
+                    self.sfp_module.SFP.wait_sfp_eeprom_ready([s], 2)
+                    s.fill_change_event(port_dict)
+                    s.refresh_poll_obj(self.poll_obj, self.registered_fds)
+                else:
+                    logger.log_debug(f'SFP {sfp_index} does not reach stable state, state={s.state}')
+                    
+            ready_sfp_set = wait_ready_task.get_ready_set()
+            for sfp_index in ready_sfp_set:
+                s = self._sfp_list[sfp_index]
+                s.on_event(sfp.EVENT_RESET_DONE)
+                if s.in_stable_state():
+                    self.sfp_module.SFP.wait_sfp_eeprom_ready([s], 2)
+                    s.fill_change_event(port_dict)
+                    s.refresh_poll_obj(self.poll_obj, self.registered_fds)
+                else:
+                    logger.log_error(f'SFP {sfp_index} failed to reach stable state, state={s.state}')
+                    
             if port_dict:
+                logger.log_notice(f'Sending SFP change event: {port_dict}, error event: {error_dict}')
                 self.reinit_sfps(port_dict)
-            result_dict = {'sfp': port_dict}
-            if error_dict:
-                result_dict['sfp_error'] = error_dict
-            return True, result_dict
-        else:
-            return True, {'sfp': {}}
+                return True, {
+                    'sfp': port_dict,
+                    'sfp_error': error_dict
+                }
+            else:
+                if not wait_forever:
+                    elapse = time.time() - begin
+                    if elapse * 1000 >= timeout:
+                        return True, {'sfp': {}}
+
+    def get_change_event_legacy(self, timeout):
+        """Get SFP change event when module host management is disabled.
+
+        Args:
+            timeout (int): polling timeout in ms
+
+        Returns:
+            (bool, dict):
+                - True if call successful, False if not; - Deprecated, will always return True
+                - A nested dictionary where key is a device type,
+                  value is a dictionary with key:value pairs in the format of
+                  {'device_id':'device_event'},
+                  where device_id is the device ID for this device and
+                        device_event,
+                             status='1' represents device inserted,
+                             status='0' represents device removed.
+                  Ex. {'fan':{'0':'0', '2':'1'}, 'sfp':{'11':'0'}}
+                      indicates that fan 0 has been removed, fan 2
+                      has been inserted and sfp 11 has been removed.
+        """
+        if not self.poll_obj:
+            self.poll_obj = select.poll()
+            self.registered_fds = {}
+            # SDK always sent event for the first time polling. Such event should not be sent to xcvrd.
+            # Store SFP state before first time polling so that we can detect dummy event.
+            self.sfp_states_before_first_poll = {}
+            for s in self._sfp_list:
+                fd = s.get_fd_for_polling_legacy()
+                self.poll_obj.register(fd, select.POLLERR | select.POLLPRI)
+                self.registered_fds[fd.fileno()] = (s.sdk_index, fd)
+                self.sfp_states_before_first_poll[s.sdk_index] = s.get_module_status()
+
+            logger.log_debug(f'Registered SFP file descriptors for polling: {self.registered_fds}')
+            
+        from . import sfp
+        
+        wait_forever = (timeout == 0)
+        # poll timeout should be no more than 1000ms to ensure fast shutdown flow
+        timeout = 1000.0 if timeout >= 1000 else float(timeout)
+        port_dict = {}
+        error_dict = {}
+        begin = time.time()
+        
+        while True:
+            fds_events = self.poll_obj.poll(timeout)
+            for fileno, _ in fds_events:
+                if fileno not in self.registered_fds:
+                    logger.log_error(f'Unknown file no {fileno} from poll event, registered files are {self.registered_fds}')
+                    continue
+                
+                sfp_index, fd = self.registered_fds[fileno]
+                fd.seek(0)
+                fd.read()
+                s = self._sfp_list[sfp_index]
+                sfp_status = s.get_module_status()
+
+                if sfp_index in self.sfp_states_before_first_poll:
+                    # Detecting dummy event
+                    sfp_state_before_poll = self.sfp_states_before_first_poll[sfp_index]
+                    self.sfp_states_before_first_poll.pop(sfp_index)
+                    if sfp_state_before_poll == sfp_status:
+                        # Ignore dummy event for the first poll, assume SDK only provide 1 dummy event
+                        logger.log_debug(f'Ignore dummy event {sfp_status} for SFP {sfp_index}')
+                        continue
+
+                logger.log_notice(f'Got SFP event: index={sfp_index}, value={sfp_status}')
+                if sfp_status == sfp.SFP_STATUS_UNKNOWN:
+                    # in the following sequence, STATUS_UNKNOWN can be returned.
+                    # so we shouldn't raise exception here.
+                    # 1. some sfp module is inserted
+                    # 2. sfp_event gets stuck and fails to fetch the change event instantaneously
+                    # 3. and then the sfp module is removed
+                    # 4. sfp_event starts to try fetching the change event
+                    logger.log_notice("unknown module state, maybe the port suffers two adjacent insertion/removal")
+                    continue
+
+                if sfp_status == sfp.SFP_STATUS_ERROR:
+                    sfp_status, error_desc = s.get_error_info_from_sdk_error_type()
+                    if error_desc:
+                        error_dict[sfp_index + 1] = error_desc
+                port_dict[sfp_index + 1] = sfp_status
+
+            if port_dict:
+                logger.log_notice(f'Sending SFP change event: {port_dict}, error event: {error_dict}')
+                self.reinit_sfps(port_dict)
+                return True, {
+                    'sfp': port_dict,
+                    'sfp_error': error_dict
+                }
+            else:
+                if not wait_forever:
+                    elapse = time.time() - begin
+                    if elapse * 1000 >= timeout:
+                        return True, {'sfp': {}}
 
     def reinit_sfps(self, port_dict):
         """
@@ -424,9 +630,9 @@ class Chassis(ChassisBase):
         """
         from . import sfp
         for index, status in port_dict.items():
-            if status == sfp.SFP_STATUS_INSERTED:
+            if status == sfp.SFP_STATUS_REMOVED:
                 try:
-                    self._sfp_list[index - 1].reinit()
+                    self._sfp_list[int(index) - 1].reinit()
                 except Exception as e:
                     logger.log_error("Fail to re-initialize SFP {} - {}".format(index, repr(e)))
 
@@ -713,14 +919,14 @@ class Chassis(ChassisBase):
         Returns:
             string: Revision value of device
         """
-        if self.dmi_data is None:
-            self.dmi_data = self._parse_dmi(DMI_FILE)
+        if not self.vpd_data:
+            self.vpd_data = self._parse_vpd_data(VPD_DATA_FILE)
 
-        return self.dmi_data.get(DMI_VERSION, "N/A")
+        return self.vpd_data.get(REVISION, "N/A")
 
-    def _parse_dmi(self, filename):
+    def _parse_vpd_data(self, filename):
         """
-        Read DMI data chassis data and returns a dictionary of values
+        Read vpd_data and returns a dictionary of values
 
         Returns:
             A dictionary containing the dmi table of the switch chassis info
@@ -730,17 +936,10 @@ class Chassis(ChassisBase):
             if not os.access(filename, os.R_OK):
                 return result
 
-            with open(filename, "rb") as fileobj:
-                data = fileobj.read()
-
-            body = data[DMI_HEADER_LEN:]
-            records = body.split(b'\x00')
-
-            for k, v in DMI_TABLE_MAP.items():
-                result[k] = records[v].decode("utf-8")
-
+            result = utils.read_key_value_file(filename, delimeter=": ")
+                
         except Exception as e:
-            logger.log_error("Fail to decode DMI {} due to {}".format(filename, repr(e)))
+            logger.log_error("Fail to decode vpd_data {} due to {}".format(filename, repr(e)))
 
         return result
 

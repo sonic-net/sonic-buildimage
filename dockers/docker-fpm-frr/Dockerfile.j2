@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-swss-layer-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG frr_user_uid
@@ -54,15 +54,16 @@ COPY ["TSC", "/usr/bin/TSC"]
 COPY ["TS", "/usr/bin/TS"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["zsocket.sh", "/usr/bin/"]
-COPY ["*.json", "/etc/rsyslog.d/"]
-COPY ["files/rsyslog_plugin.conf.j2", "/etc/rsyslog.d/"]
 RUN chmod a+x /usr/bin/TSA && \
     chmod a+x /usr/bin/TSB && \
     chmod a+x /usr/bin/TSC && \
     chmod a+x /usr/bin/zsocket.sh
 
-RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin.conf.j2 /etc/rsyslog.d/events_info.json  > /etc/rsyslog.d/bgp_events.conf
-RUN rm -f /etc/rsyslog.d/rsyslog_plugin.conf.j2
-RUN rm -f /etc/rsyslog.d/events_info.json
+RUN mkdir -p /usr/share/sonic/templates/rsyslog_plugin
+
+# Copy rsyslog plugin configuration file and regexes to docker
+COPY ["bgp_regex.json", "/etc/rsyslog.d/"]
+COPY ["events_info.json", "/usr/share/sonic/templates/rsyslog_plugin/"]
+COPY ["files/rsyslog_plugin.conf.j2", "/usr/share/sonic/templates/rsyslog_plugin/"]
 
 ENTRYPOINT ["/usr/bin/docker_init.sh"]

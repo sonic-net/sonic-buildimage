@@ -1,0 +1,34 @@
+From 079ff1bb570dae96c4ca513e210c9856e9cc75b0 Mon Sep 17 00:00:00 2001
+From: Saikrishna Arcot <sarcot@microsoft.com>
+Date: Wed, 10 Jan 2024 23:30:17 -0800
+Subject: [PATCH] Don't look up the ifindex for fallback
+
+If sending a packet on the "fallback" interface, then don't try to get the
+ifindex for that interface. There will never be an actual interface named
+"fallback" in SONiC (at least, not one that we will want to use).
+
+This might save 0.009-0.012 seconds per upstream server, and when there
+are as many as 48 upstream servers, it can save about 0.4-0.5 seconds of
+time. This then allows dhcrelay to process more packets.
+
+Signed-off-by: Saikrishna Arcot <sarcot@microsoft.com>
+
+diff --git a/common/socket.c b/common/socket.c
+index da9f501..e707a7f 100644
+--- a/common/socket.c
++++ b/common/socket.c
+@@ -767,7 +767,10 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
+ 	memcpy(&dst, to, sizeof(dst));
+ 	m.msg_name = &dst;
+ 	m.msg_namelen = sizeof(dst);
+-	ifindex = if_nametoindex(interface->name);
++	if (strcmp(interface->name, "fallback") != 0)
++		ifindex = if_nametoindex(interface->name);
++	else
++		ifindex = 0;
+ 
+ 	/*
+ 	 * Set the data buffer we're sending. (Using this wacky
+-- 
+2.34.1
+

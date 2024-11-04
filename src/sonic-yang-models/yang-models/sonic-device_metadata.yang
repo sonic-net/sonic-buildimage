@@ -40,6 +40,13 @@ module sonic-device_metadata {
                     type stypes:hwsku;
                 }
 
+                leaf asic_id {
+                    type string {
+                        length 1..16;
+                    }
+                    description "asic_id is unique identifier of the asic used by SAI for initialization.";
+                }
+
                 leaf default_bgp_status {
                     type enumeration {
                         enum up;
@@ -93,7 +100,7 @@ module sonic-device_metadata {
                 leaf type {
                     type string {
                         length 1..255;
-                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|not-provisioned";
+                        pattern "ToRRouter|LeafRouter|SpineChassisFrontendRouter|ChassisBackendRouter|ASIC|MgmtToRRouter|SpineRouter|BackEndToRRouter|BackEndLeafRouter|EPMS|MgmtTsToR|BmcMgmtToRRouter|SonicHost|not-provisioned";
                     }
                 }
 
@@ -157,7 +164,7 @@ module sonic-device_metadata {
 
                 leaf subtype {
                     type string {
-                        pattern "DualToR";
+                        pattern "DualToR|SmartSwitch";
                     }
                 }
 
@@ -242,6 +249,31 @@ module sonic-device_metadata {
                                  otherwise the maximum available buffers (which are read from SAI) will be
                                  created, regardless of the CONFIG_DB buffers configuration.";
                 }
+
+                leaf bgp_router_id {
+                    type inet:ipv4-address;
+                    description "BGP Router identifier";
+                }
+
+                leaf chassis_hostname {
+                    description "hostname of the chassis to which this linecard or supervisor belongs to";
+                    type stypes:hostname;
+                }
+
+                leaf slice_type {
+                    description "Metadata tag for the device.";
+                    type string;
+                }
+
+                leaf nexthop_group {
+                    description "Enable or disable Nexthop Group feature. This value only takes effect during boot time.";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default disabled;
+                }
+
             }
             /* end of container localhost */
         }

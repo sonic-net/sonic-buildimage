@@ -1,5 +1,7 @@
 #!/bin/bash
 
+grep "^# SKIP_HOOK" $2 && exit 0
+
 [[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x
 
 BUILDINFO_BASE=/usr/local/share/buildinfo

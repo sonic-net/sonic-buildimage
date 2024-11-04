@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2016-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 include $(PLATFORM_PATH)/sdk.mk
+include $(PLATFORM_PATH)/cpld.mk
 include $(PLATFORM_PATH)/fw.mk
 include $(PLATFORM_PATH)/mft.mk
 include $(PLATFORM_PATH)/mft-fwtrace-cfg.mk
@@ -33,6 +34,9 @@ include $(PLATFORM_PATH)/mlnx-ssd-fw-update.mk
 include $(PLATFORM_PATH)/iproute2.mk
 include $(PLATFORM_PATH)/install-pending-fw.mk
 include $(PLATFORM_PATH)/integration-scripts.mk
+include $(PLATFORM_PATH)/component-versions.mk
+include $(PLATFORM_PATH)/rshim.mk
+include $(PLATFORM_PATH)/mlnx-sonic-bfb-installer.mk
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) \
              $(DOCKER_FPM)
@@ -42,6 +46,8 @@ $(SYNCD)_DEPENDS += $(MLNX_SAI)
 $(SYNCD)_UNINSTALLS += $(MLNX_SAI)
 
 ifeq ($(ENABLE_SYNCD_RPC),y)
+# Remove the libthrift_0.11.0 dependency injected by rules/syncd.mk
+$(SYNCD)_DEPENDS := $(filter-out $(LIBTHRIFT_DEV),$($(SYNCD)_DEPENDS))
 $(SYNCD)_DEPENDS += $(LIBSAITHRIFT_DEV)
 endif
 

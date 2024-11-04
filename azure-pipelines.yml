@@ -42,11 +42,16 @@ variables:
 - name: CACHE_MODE
   value: rcache
 - name: ENABLE_FIPS
-  value: n
+  value: y
+- name: BUILD_BRANCH
+  ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+    value: $(System.PullRequest.TargetBranch)
+  ${{ else }}:
+    value: $(Build.SourceBranchName)
 
 stages:
 - stage: BuildVS
-  pool: sonicbld
+  pool: sonicbld-1es
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
@@ -55,7 +60,7 @@ stages:
       - name: vs
 
 - stage: Build
-  pool: sonicbld
+  pool: sonicbld-1es
   dependsOn: []
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
@@ -65,6 +70,7 @@ stages:
       - name: broadcom
         variables:
           swi_image: yes
+          INCLUDE_RESTAPI: y
       - name: mellanox
         variables:
           dbg_image: yes
@@ -73,12 +79,15 @@ stages:
       - name: marvell-arm64
         pool: sonicbld-arm64
         variables:
+           PLATFORM_NAME: marvell
            PLATFORM_ARCH: arm64
       - name: marvell-armhf
         pool: sonicbld-armhf
         timeoutInMinutes: 1200
         variables:
+          PLATFORM_NAME: marvell
           PLATFORM_ARCH: armhf
+          INCLUDE_RESTAPI: y
 
 - stage: Test
   dependsOn: BuildVS
@@ -154,7 +163,7 @@ stages:
         testRunTitle: vstest
 
   - job: t0_elastictest
-    pool: ubuntu-20.04
+    pool: sonic-ubuntu-1c
     displayName: "kvmtest-t0 by Elastictest"
     timeoutInMinutes: 240
     continueOnError: false
@@ -164,10 +173,10 @@ stages:
         TOPOLOGY: t0
         MIN_WORKER: $(T0_INSTANCE_NUM)
         MAX_WORKER: $(T0_INSTANCE_NUM)
-        MGMT_BRANCH: "master"
+        MGMT_BRANCH: $(BUILD_BRANCH)
 
   - job: t0_2vlans_elastictest
-    pool: ubuntu-20.04
+    pool: sonic-ubuntu-1c
     displayName: "kvmtest-t0-2vlans by Elastictest"
     timeoutInMinutes: 240
     continueOnError: false
@@ -178,11 +187,11 @@ stages:
         TEST_SET: t0-2vlans
         MIN_WORKER: $(T0_2VLANS_INSTANCE_NUM)
         MAX_WORKER: $(T0_2VLANS_INSTANCE_NUM)
-        MGMT_BRANCH: "master"
+        MGMT_BRANCH: $(BUILD_BRANCH)
         DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
 
   - job: t1_lag_elastictest
-    pool: ubuntu-20.04
+    pool: sonic-ubuntu-1c
     displayName: "kvmtest-t1-lag by Elastictest"
     timeoutInMinutes: 240
     continueOnError: false
@@ -192,11 +201,11 @@ stages:
         TOPOLOGY: t1-lag
         MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
         MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
-        MGMT_BRANCH: "master"
+        MGMT_BRANCH: $(BUILD_BRANCH)
 
   - job: multi_asic_elastictest
     displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
-    pool: ubuntu-20.04
+    pool: sonic-ubuntu-1c
     timeoutInMinutes: 240
     continueOnError: false
     steps:
@@ -207,10 +216,10 @@ stages:
           MIN_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
           MAX_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
           NUM_ASIC: 4
-          MGMT_BRANCH: "master"
+          MGMT_BRANCH: $(BUILD_BRANCH)
 
   - job: dualtor_elastictest
-    pool: ubuntu-20.04
+    pool: sonic-ubuntu-1c
     displayName: "kvmtest-dualtor-t0 by Elastictest"
     timeoutInMinutes: 240
     continueOnError: false
@@ -220,12 +229,12 @@ stages:
           TOPOLOGY: dualtor
           MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
           MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          MGMT_BRANCH: "master"
+          MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
 
   - job: sonic_t0_elastictest
     displayName: "kvmtest-t0-sonic by Elastictest"
-    pool: ubuntu-20.04
+    pool: sonic-ubuntu-1c
     timeoutInMinutes: 240
     continueOnError: false
     steps:
@@ -235,7 +244,7 @@ stages:
           MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
           MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
           TEST_SET: t0-sonic
-          MGMT_BRANCH: "master"
+          MGMT_BRANCH: $(BUILD_BRANCH)
           COMMON_EXTRA_PARAMS: "--neighbor_type=sonic "
           VM_TYPE: vsonic
 
@@ -243,20 +252,69 @@ stages:
     displayName: "kvmtest-dpu by Elastictest"
     timeoutInMinutes: 240
     continueOnError: false
-    pool: ubuntu-20.04
+    pool: sonic-ubuntu-1c
     steps:
       - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
         parameters:
           TOPOLOGY: dpu
           MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
           MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
-          KVM_IMAGE_BRANCH: "master"
-          MGMT_BRANCH: "master"
+          MGMT_BRANCH: $(BUILD_BRANCH)
 
+  - job: onboarding_elastictest_t0
+    displayName: "onboarding t0 testcases by Elastictest - optional"
+    timeoutInMinutes: 240
+    continueOnError: true
+    pool: sonic-ubuntu-1c
+    steps:
+      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: t0
+          STOP_ON_FAILURE: "False"
+          RETRY_TIMES: 0
+          MIN_WORKER: $(T0_ONBOARDING_SONIC_INSTANCE_NUM)
+          MAX_WORKER: $(T0_ONBOARDING_SONIC_INSTANCE_NUM)
+          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+          MGMT_BRANCH: $(BUILD_BRANCH)
+          TEST_SET: onboarding_t0
+
+  - job: onboarding_elastictest_t1
+    displayName: "onboarding t1 testcases by Elastictest - optional"
+    timeoutInMinutes: 240
+    continueOnError: true
+    pool: sonic-ubuntu-1c
+    steps:
+      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: t1-lag
+          STOP_ON_FAILURE: "False"
+          RETRY_TIMES: 0
+          MIN_WORKER: $(T1_LAG_ONBOARDING_INSTANCE_NUM)
+          MAX_WORKER: $(T1_LAG_ONBOARDING_INSTANCE_NUM)
+          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+          MGMT_BRANCH: $(BUILD_BRANCH)
+          TEST_SET: onboarding_t1
+
+#  - job: onboarding_elastictest_dualtor
+#    displayName: "onboarding dualtor testcases by Elastictest - optional"
+#    timeoutInMinutes: 240
+#    continueOnError: true
+#    pool: sonic-ubuntu-1c
+#    steps:
+#      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+#        parameters:
+#          TOPOLOGY: dualtor
+#          STOP_ON_FAILURE: "False"
+#          RETRY_TIMES: 0
+#          MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
+#          MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
+#          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+#          MGMT_BRANCH: $(BUILD_BRANCH)
+#          TEST_SET: onboarding_dualtor
 
 #  - job: wan_elastictest
 #    displayName: "kvmtest-wan by Elastictest"
-#    pool: ubuntu-20.04
+#    pool: sonic-ubuntu-1c
 #    timeoutInMinutes: 240
 #    continueOnError: false
 #    steps:

@@ -10,7 +10,7 @@ PartOf=syncd.service
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=rm -rf /tmp/nv-syncd-shared/
-ExecStart=mkdir -p /tmp/nv-syncd-shared/
+ExecStart=mkdir -m 777 -p /tmp/nv-syncd-shared/
 
 [Install]
 WantedBy=sonic.target

@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include "dbconnector.h"
 #include <iostream>
+#include <stdexcept>
 
 using namespace std;
 using namespace swss;
@@ -20,57 +21,34 @@ public:
     // Override this to define how to set up the environment
     void SetUp() override {
         // by default , init should be false
-        cout<<"Default : isInit = "<<SonicDBConfig::isInit()<<endl;
+        cout << "Default : isInit = " << SonicDBConfig::isInit() << endl;
         EXPECT_FALSE(SonicDBConfig::isInit());
 
-        // load nonexisting file, should throw exception with NO file existing
-        try
-        {
-            cout<<"INIT: loading nonexisting db config file"<<endl;
-            SonicDBConfig::initialize(nonexisting_file);
-        }
-        catch (exception &e)
-        {
-            EXPECT_TRUE(strstr(e.what(), "Sonic database config file doesn't exist"));
-        }
+        EXPECT_THROW(SonicDBConfig::initialize(nonexisting_file), runtime_error);
+
         EXPECT_FALSE(SonicDBConfig::isInit());
 
         // load local config file, init should be true
         SonicDBConfig::initialize(existing_file);
-        cout<<"INIT: load local db config file, isInit = "<<SonicDBConfig::isInit()<<endl;
+        cout << "INIT: load local db config file, isInit = " << SonicDBConfig::isInit() << endl;
         EXPECT_TRUE(SonicDBConfig::isInit());
 
         // Test the database_global.json file
         // by default , global_init should be false
-        cout<<"Default : isGlobalInit = "<<SonicDBConfig::isGlobalInit()<<endl;
+        cout << "Default : isGlobalInit = " << SonicDBConfig::isGlobalInit() << endl;
         EXPECT_FALSE(SonicDBConfig::isGlobalInit());
 
         // Call an API which actually needs the data populated by SonicDBConfig::initializeGlobalConfig
-        try
-        {
-            cout<<"INIT: Invoking SonicDBConfig::getDbId(APPL_DB, asic0)"<<endl;
-            SonicDBConfig::getDbId(TEST_DB, TEST_NAMESPACE);
-        }
-        catch (exception &e)
-        {
-            EXPECT_TRUE(strstr(e.what(), "Initialize global DB config using API SonicDBConfig::initializeGlobalConfig"));
-        }
+        EXPECT_THROW(SonicDBConfig::getDbId(TEST_DB, TEST_NAMESPACE), runtime_error);
 
         // load local global file, init should be true
         SonicDBConfig::initializeGlobalConfig(global_existing_file);
-        cout<<"INIT: load global db config file, isInit = "<<SonicDBConfig::isGlobalInit()<<endl;
+        cout << "INIT: load global db config file, isInit = " << SonicDBConfig::isGlobalInit() << endl;
         EXPECT_TRUE(SonicDBConfig::isGlobalInit());
 
         // Call an API with wrong namespace passed
-        try
-        {
-            cout<<"INIT: Invoking SonicDBConfig::getDbId(APPL_DB, invalid)"<<endl;
-            SonicDBConfig::getDbId(TEST_DB, INVALID_NAMESPACE);
-        }
-        catch (exception &e)
-        {
-            EXPECT_TRUE(strstr(e.what(), "Namespace invalid is not a valid namespace name in config file"));
-        }
+        cout << "INIT: Invoking SonicDBConfig::getDbId(APPL_DB, invalid)" << endl;
+        EXPECT_THROW(SonicDBConfig::getDbId(TEST_DB, INVALID_NAMESPACE), out_of_range);
 
         // Get this info handy
         try

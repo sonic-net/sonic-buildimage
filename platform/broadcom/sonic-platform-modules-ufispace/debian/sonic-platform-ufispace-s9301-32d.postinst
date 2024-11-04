@@ -1,0 +1,3 @@
+depmod -a
+systemctl enable pddf-platform-init.service
+systemctl start pddf-platform-init.service

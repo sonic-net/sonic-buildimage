@@ -667,7 +667,7 @@ index 955ef0c..782fc05 100644
  	teamd_log_info("%s: Changed port state: \"%s\" -> \"%s\"",
  		       lacp_port->tdport->ifname,
  		       lacp_port_state_name[lacp_port->state],
-@@ -1097,34 +1402,23 @@ static int lacpdu_send(struct lacp_port *lacp_port)
+@@ -1097,32 +1402,21 @@ static int lacpdu_send(struct lacp_port *lacp_port)
  	return err;
  }
  
@@ -691,11 +691,9 @@ index 955ef0c..782fc05 100644
 -	if (!teamd_port_present(lacp_port->ctx, lacp_port->tdport))
 -		return 0;
  
--	if (!lacpdu_check(&lacpdu)) {
-+	if (!lacpdu_check(lacpdu)) {
- 		teamd_log_warn("malformed LACP PDU came.");
+-	if (!lacpdu_check(&lacpdu))
++	if (!lacpdu_check(lacpdu))
  		return 0;
- 	}
  
 +	/* save received lacp pdu frame */
 +	(void)memcpy(&lacp_port->last_pdu, lacpdu, sizeof(struct lacpdu));

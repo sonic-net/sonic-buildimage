@@ -68,11 +68,11 @@
 		"controllable": false
 	    },
 	    {
-	        "name": "ASIC0_dram-0x0",
+	        "name": "ASIC0_9--DRAM0",
 		"controllable": false
 	    },
 	    {
-	        "name": "ASIC0_dram-0x1",
+	        "name": "ASIC0_10--DRAM1",
 		"controllable": false
 	    },
 	    {
@@ -112,11 +112,11 @@
 		"controllable": false
 	    },
 	    {
-	        "name": "ASIC1_dram-0x0",
+	        "name": "ASIC1_9--DRAM0",
 		"controllable": false
 	    },
 	    {
-	        "name": "ASIC1_dram-0x1",
+	        "name": "ASIC1_10--DRAM1",
 		"controllable": false
 	    },
             {

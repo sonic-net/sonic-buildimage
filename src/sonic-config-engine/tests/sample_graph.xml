@@ -63,6 +63,14 @@
           </a:Prefix>
           <a:PrefixStr>100.0.0.6/32</a:PrefixStr>
         </a:LoopbackIPInterface>
+        <a:LoopbackIPInterface>
+          <Name>HostIP</Name>
+          <AttachTo>Loopback1</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.NetMux">
+            <b:IPPrefix>100.0.0.7/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>100.0.0.7/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
       </LoopbackIPInterfaces>
       <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
         <a:ManagementIPInterface>
@@ -72,6 +80,14 @@
             <b:IPPrefix>192.168.200.15/24</b:IPPrefix>
           </a:Prefix>
           <a:PrefixStr>192.168.200.15/24</a:PrefixStr>
+        </a:ManagementIPInterface>
+        <a:ManagementIPInterface>
+          <Name>ManagementIPv6</Name>
+          <AttachTo>Management0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.NetMux">
+            <b:IPPrefix>fe80::1/64</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>fe80::1/64</a:PrefixStr>
         </a:ManagementIPInterface>
       </ManagementIPInterfaces>
       <MplsInterfaces/>

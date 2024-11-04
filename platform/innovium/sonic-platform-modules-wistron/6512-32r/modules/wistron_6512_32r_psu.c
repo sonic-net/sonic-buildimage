@@ -317,7 +317,7 @@ static int wistron_psu_probe(struct i2c_client *client,
 	if (status)
 		goto exit_free;
 
-	data->hwmon_dev = hwmon_device_register_with_info(&client->dev, "wistron_psu", NULL, NULL, NULL);
+	data->hwmon_dev = hwmon_device_register_with_groups(&client->dev, "wistron_psu", NULL, NULL);
 	if (IS_ERR(data->hwmon_dev)) {
 		status = PTR_ERR(data->hwmon_dev);
 		goto exit_remove;
@@ -335,15 +335,13 @@ exit_free:
 	return status;
 }
 
-static int wistron_psu_remove(struct i2c_client *client)
+static void wistron_psu_remove(struct i2c_client *client)
 {
 	struct wistron_psu_data *data = i2c_get_clientdata(client);
 
 	hwmon_device_unregister(data->hwmon_dev);
 	sysfs_remove_group(&client->dev.kobj, &wistron_psu_group);
 	kfree(data);
-
-	return 0;
 }
 
 static const struct i2c_device_id wistron_psu_id[] = {

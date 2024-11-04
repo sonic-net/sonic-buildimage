@@ -27,6 +27,10 @@ module sonic-dhcp-server-ipv4 {
         prefix lag;
     }
 
+    import sonic-smart-switch {
+        prefix smartswitch;
+    }
+
     description "DHCP_SERVER_IPV4 YANG module for SONiC OS";
 
     revision 2023-07-19 {
@@ -46,12 +50,17 @@ module sonic-dhcp-server-ipv4 {
 
                 leaf name {
                     description "Interface name for DHCP server";
-                    // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
-                    // type leafref {
-                    //     path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
-                    // }
-                    type string {
-                        pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                    type union {
+                        // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
+                        // type leafref {
+                        //     path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
+                        // }
+                        type string {
+                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        }
+                        type leafref {
+                            path "/smartswitch:sonic-smart-switch/smartswitch:MID_PLANE_BRIDGE/smartswitch:GLOBAL/smartswitch:bridge";
+                        }
                     }
                 }
 
@@ -130,7 +139,7 @@ module sonic-dhcp-server-ipv4 {
                 leaf type {
                     description "Type of customized option, for standard DHCP option, this field is invalid";
                     type enumeration {
-                        enum text;
+                        enum string;
                         enum ipv4-address;
                         enum uint8;
                         enum uint16;
@@ -204,13 +213,16 @@ module sonic-dhcp-server-ipv4 {
                 }
 
                 leaf port {
-                    description "Interface under vlan";
+                    description "Interface under DHCP interface";
                     type union {
                         type leafref {
                             path "/port:sonic-port/port:PORT/port:PORT_LIST/port:name";
                         }
                         type leafref {
                             path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                        type leafref {
+                            path "/smartswitch:sonic-smart-switch/smartswitch:DPUS/smartswitch:DPUS_LIST/smartswitch:midplane_interface";
                         }
                     }
                 }

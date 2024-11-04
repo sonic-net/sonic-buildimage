@@ -11,8 +11,7 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
                               $(LIBYANG_CPP) \
                               $(LIBYANG_PY3) \
                               $(SONIC_UTILITIES_DATA) \
-                              $(SONIC_HOST_SERVICES_DATA) \
-                              $(IPROUTE2)
+                              $(SONIC_HOST_SERVICES_DATA)
 
 $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_PLATFORM_COMMON_PY3) \
@@ -32,6 +31,10 @@ ifeq ($(SONIC_ROUTING_STACK), frr)
 $(DOCKER_SONIC_VS)_DEPENDS += $(FRR)
 else
 $(DOCKER_SONIC_VS)_DEPENDS += $(GOBGP)
+endif
+
+ifeq ($(INCLUDE_FIPS), y)
+$(DOCKER_SONIC_VS)_DEPENDS += $(FIPS_KRB5_ALL)
 endif
 
 $(DOCKER_SONIC_VS)_FILES += $(CONFIGDB_LOAD_SCRIPT) \

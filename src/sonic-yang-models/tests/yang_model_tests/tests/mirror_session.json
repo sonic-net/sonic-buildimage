@@ -60,7 +60,7 @@
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_TTL": {
         "desc": "Configuring ERSPAN entry with invalid ttl",
-        "eStr": "Invalid TTL value"
+        "eStr": "Invalid ttl value"
     },
     "MIRROR_ERSPAN_ENTRY_WRONG_TTL_TYPE": {
         "desc": "Configuring ERSPAN entry with invalid ttl",

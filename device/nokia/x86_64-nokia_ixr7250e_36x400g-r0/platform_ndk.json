@@ -14,7 +14,7 @@
     },
     {
         "key": "monitor_action",
-        "stringval": "warn"
+        "stringval": "reboot"
     },
     {
         "key": "grpc_thermal_monitor",
@@ -28,10 +28,6 @@
         "key": "sonic_bdb_mode",
         "intval": 0
     },
-    { 
-      "key": "update_asic_pvt",
-      "intval": 10
-    },
     {
       "key": "amd_pcon",
       "intval": 4
@@ -43,6 +39,26 @@
     {
       "key": "sonic_log_level",
       "stringval": "debug"
+    },
+    {
+      "key": "thermal_low_margin_threshold",
+      "intval": 10
+    },
+    {
+      "key": "thermal_log_current_threshold",
+      "intval": 5
+    },
+    {
+      "key": "thermal_log_margin_threshold",
+      "intval": 5
+    },
+    {
+      "key": "thermal_log_min_threshold",
+      "intval": 2
+    },
+    {
+      "key": "thermal_log_max_threshold",
+      "intval": 1
     }
     ]
 }

@@ -58,8 +58,8 @@ index 3e8a0f6..b6a8647 100644
  	int err;
 +	struct timespec monotonic_time = {0};
  
- 	if (!lacpdu_check(lacpdu)) {
- 		teamd_log_warn("malformed LACP PDU came.");
+ 	if (!lacpdu_check(lacpdu))
+ 		return 0;
 @@ -1523,14 +1529,38 @@ static int lacpdu_process(struct lacp_port *lacp_port, struct lacpdu* lacpdu)
  					lacp_port->partner_retry_count,
  					lacpdu->v2.actor_retry_count);

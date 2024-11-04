@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +36,7 @@ from sonic_platform.watchdog import get_watchdog,    \
 
 
 class TestWatchdog:
+    @mock.patch('sonic_platform.utils.wait_until', mock.MagicMock())
     @mock.patch('sonic_platform.watchdog.is_mlnx_wd_main')
     @mock.patch('sonic_platform.watchdog.os.listdir')
     def test_get_watchdog_no_device(self, mock_listdir, mock_is_main):
@@ -50,6 +51,7 @@ class TestWatchdog:
         mock_is_main.return_value = False
         assert get_watchdog() is None
 
+    @mock.patch('sonic_platform.utils.wait_until', mock.MagicMock())
     @mock.patch('sonic_platform.watchdog.is_mlnx_wd_main')
     @mock.patch('sonic_platform.watchdog.is_wd_type2')
     @mock.patch('sonic_platform.watchdog.os.listdir', mock.MagicMock(return_value=['watchdog1', 'watchdog2']))
@@ -95,9 +97,11 @@ class TestWatchdog:
     @mock.patch('sonic_platform.watchdog.WatchdogImplBase.open_handle', mock.MagicMock())
     @mock.patch('sonic_platform.watchdog.fcntl.ioctl', mock.MagicMock())
     @mock.patch('sonic_platform.watchdog.WatchdogImplBase.is_armed')
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_watchdog_max_period', mock.MagicMock(return_value=32))
     def test_arm_disarm_watchdog2(self, mock_is_armed):
         watchdog = WatchdogType2('watchdog2')
         assert watchdog.arm(-1) == -1
+        assert watchdog.arm(33) == -1
         mock_is_armed.return_value = False
         watchdog.arm(10)
         mock_is_armed.return_value = True

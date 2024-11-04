@@ -2,6 +2,9 @@ import os
 import sys
 from unittest import mock
 
+from swsscommon import swsscommon
+swsscommon.RestartWaiter = mock.MagicMock()
+
 test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
 sys.path.insert(0, modules_path)
@@ -9,6 +12,7 @@ sys.path.insert(0, modules_path)
 from containercfgd import containercfgd
 
 containercfgd.container_name = 'swss'
+containercfgd.service_name = 'swss'
 
 
 def test_handle_config():
@@ -49,7 +53,7 @@ def test_handle_init_data():
 
 
 @mock.patch('containercfgd.containercfgd.run_command')
-@mock.patch('containercfgd.containercfgd.SyslogHandler.parse_syslog_conf', mock.MagicMock(return_value=('100', '200', '127.0.0.1')))
+@mock.patch('containercfgd.containercfgd.SyslogHandler.parse_syslog_conf', mock.MagicMock(return_value=('100', '200')))
 def test_update_syslog_config(mock_run_cmd):
     mock_run_cmd.return_value = ""
     handler = containercfgd.SyslogHandler()
@@ -69,13 +73,11 @@ def test_update_syslog_config(mock_run_cmd):
 def test_parse_syslog_conf():
     handler = containercfgd.SyslogHandler()
     handler.SYSLOG_CONF_PATH = os.path.join(test_path, 'mock_rsyslog.conf')
-    interval, burst, target_ip = handler.parse_syslog_conf()
+    interval, burst = handler.parse_syslog_conf()
     assert interval == '50'
     assert burst == '10002'
-    assert target_ip == '127.0.0.1'
 
     handler.SYSLOG_CONF_PATH = os.path.join(test_path, 'mock_empty_rsyslog.conf')
-    interval, burst, target_ip = handler.parse_syslog_conf()
+    interval, burst = handler.parse_syslog_conf()
     assert interval == '0'
     assert burst == '0'
-    assert target_ip is None

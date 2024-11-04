@@ -189,3 +189,14 @@ class Chassis(PddfChassis):
             sw_reboot_cause = "Unknown"
 
         return ('REBOOT_CAUSE_NON_HARDWARE', sw_reboot_cause)
+
+    def get_serial_number(self):
+        """
+        Retrieves the hardware serial number for the chassis
+
+        Returns:
+            A string containing the hardware serial number for this
+            chassis.
+        """
+
+        return self.get_serial()

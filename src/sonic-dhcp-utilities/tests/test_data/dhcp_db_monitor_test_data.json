@@ -289,5 +289,51 @@
                 "pre_disabled": false
             }
         }
+    ],
+    "test_mid_plane_update": [
+        {
+            "table": [
+                ["GLOBAL", "SET", [["bridge", "bridge-midplane"], ["ip_prefix", "169.254.200.254/24"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["GLOBAL", "SET", [["bridge", "bridge-midplane2"], ["ip_prefix", "169.254.200.254/24"]]]
+            ],
+            "exp_res": false
+        },
+        {
+            "table": [
+                ["GLOBAL", "DEL", []]
+            ],
+            "exp_res": true
+        }
+    ],
+    "test_dpus_update": [
+        {
+            "table": [
+                ["dpu0", "SET", [["midplane_interface", "dpu0"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["dpu1", "SET", [["midplane_interface", "dpu1"]]]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["dpu0", "DEL", []]
+            ],
+            "exp_res": true
+        },
+        {
+            "table": [
+                ["dpu1", "DEL", []]
+            ],
+            "exp_res": true
+        }
     ]
 }

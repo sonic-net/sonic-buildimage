@@ -1,0 +1,5 @@
+[Match]
+Name=dpu*
+
+[Network]
+Bridge=bridge-midplane

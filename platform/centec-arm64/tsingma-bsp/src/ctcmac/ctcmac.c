@@ -267,7 +267,7 @@ static int ctcmac_of_init(struct platform_device *ofdev,
 {
 	u32 val;
 	int err = 0, index, int_coalesce;
-	const void *mac_addr;
+	u8 mac_addr[ETH_ALEN];
 	const char *ctype, *automode, *dfe, *int_type, *tx_inv, *rx_inv;
 	struct net_device *dev = NULL;
 	struct ctcmac_private *priv = NULL;
@@ -313,10 +313,10 @@ static int ctcmac_of_init(struct platform_device *ofdev,
 	else
 		priv->index = 0;
 
-	mac_addr = of_get_mac_address(np);
-
-	if (!IS_ERR(mac_addr))
+	err = of_get_mac_address(np, mac_addr);
+	if (!err) {
 		memcpy(dev->dev_addr, mac_addr, ETH_ALEN);
+	}
 
 	err = of_property_read_string(np, "int-type", &int_type);
 	if ((err == 0) && !strncmp(int_type, "desc", 4)) {
@@ -977,7 +977,7 @@ static int ctc_mac_serdes_init(struct ctcmac_private *priv)
 
 static void ctcmac_mac_filter_init(struct ctcmac_private *priv)
 {
-	unsigned char *dev_addr;
+	const unsigned char *dev_addr;
 	u32 val, addr_h = 0, addr_l = 0;
 
 	if (priv->version == 0)
@@ -3147,7 +3147,9 @@ static void ctcmac_get_regs(struct net_device *dev, struct ethtool_regs *regs,
  * rx, rx_mini, and rx_jumbo rings are the same size, as mini and
  * jumbo are ignored by the driver */
 static void ctcmac_gringparam(struct net_device *dev,
-			      struct ethtool_ringparam *rvals)
+			      struct ethtool_ringparam *rvals,
+			      struct kernel_ethtool_ringparam *kernel_ring,
+			      struct netlink_ext_ack *extack)
 {
 	struct ctcmac_private *priv = netdev_priv(dev);
 	struct ctcmac_priv_tx_q *tx_queue = NULL;
@@ -3174,7 +3176,9 @@ static void ctcmac_gringparam(struct net_device *dev,
  * necessary so that we don't mess things up while we're in motion.
  */
 static int ctcmac_sringparam(struct net_device *dev,
-			     struct ethtool_ringparam *rvals)
+			     struct ethtool_ringparam *rvals,
+			     struct kernel_ethtool_ringparam *kernel_ring,
+			     struct netlink_ext_ack *extack)
 {
 	struct ctcmac_private *priv = netdev_priv(dev);
 	int err = 0, i;
@@ -3492,16 +3496,16 @@ static int ctcmac_probe(struct platform_device *ofdev)
 	dev->ethtool_ops = &ctcmac_ethtool_ops;
 
 	if (priv->version == 0) {
-		netif_napi_add(dev, &priv->napi_rx, ctcmac_poll_rx_sq,
+		netif_napi_add_weight(dev, &priv->napi_rx, ctcmac_poll_rx_sq,
 			       CTCMAC_NAIP_RX_WEIGHT);
-		netif_napi_add(dev, &priv->napi_tx, ctcmac_poll_tx_sq,
+		netif_napi_add_weight(dev, &priv->napi_tx, ctcmac_poll_tx_sq,
 			       CTCMAC_NAIP_TX_WEIGHT);
 	} else {
-		netif_napi_add(dev, &priv->napi_rx, ctcmac_poll_rx0_sq,
+		netif_napi_add_weight(dev, &priv->napi_rx, ctcmac_poll_rx0_sq,
 			       CTCMAC_NAIP_RX_WEIGHT);
-		netif_napi_add(dev, &priv->napi_rx1, ctcmac_poll_rx1_sq,
+		netif_napi_add_weight(dev, &priv->napi_rx1, ctcmac_poll_rx1_sq,
 			       CTCMAC_NAIP_RX_WEIGHT);
-		netif_napi_add(dev, &priv->napi_tx, ctcmac_poll_tx_sq,
+		netif_napi_add_weight(dev, &priv->napi_tx, ctcmac_poll_tx_sq,
 			       CTCMAC_NAIP_TX_WEIGHT);
 	}
 
