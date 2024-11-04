@@ -198,6 +198,14 @@ stderr_logfile=syslog
 environment=ASAN_OPTIONS="log_path=/var/log/asan/fpmsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
 
+[program:pathd]
+command=/usr/lib/frr/pathd -A 127.0.0.1
+priority=14
+autostart=false
+autorestart=false
+stdout_logfile=syslog
+stderr_logfile=syslog
+
 [program:arp_update]
 command=/usr/bin/arp_update
 priority=16
