@@ -1,40 +1,52 @@
-####################################################################################################################################################################
 import psutil
 import os
 import signal
 import sys
 import time
-import logging
+import json
+import traceback
 import gzip
+import dateparser
 import json
 import threading
 import configparser
+import socket
 import syslog
-import shutil
+import logging
 import re
 import math
-import socket
-import stat
-import copy
-from typing import Dict, Any
-from collections import Counter
 from datetime import datetime, timedelta
+from typing import Dict, Any
 from swsscommon.swsscommon import ConfigDBConnector
-import argparse
-import dateparser
-import traceback
-
 
 
 class Dict2Obj(object):
-    def __init__(self, d):
+    """
+    A utility class that converts dictionaries into objects, allowing access to dictionary keys as object attributes.
+    It also supports nested dictionaries and lists of dictionaries, converting them recursively into objects.
+    This class includes a method to revert the object back to its original dictionary form.
+    """
+
+    def __init__(self, d: dict):
+        """
+        Initializes the Dict2Obj object by converting the input dictionary into an object where each key can be accessed 
+        as an attribute. Recursively handles nested dictionaries and lists.
+        
+        :param d: A dictionary to be converted into an object.
+        """
         for key, value in d.items():
             if isinstance(value, (list, tuple)):
                 setattr(self, key, [Dict2Obj(x) if isinstance(x, dict) else x for x in value])
             else:
                 setattr(self, key, Dict2Obj(value) if isinstance(value, dict) else value)
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
+        """
+        Converts the Dict2Obj object back into its original dictionary format. Handles recursive conversion of nested 
+        Dict2Obj instances and lists of objects.
+        
+        :return: A dictionary representation of the Dict2Obj object.
+        """
         result = {}
         for key in self.__dict__:
             value = getattr(self, key)
@@ -45,7 +57,8 @@ class Dict2Obj(object):
             else:
                 result[key] = value
         return result
-    
+
+
 class SyslogLogger:
     """
     A general-purpose logger class for logging messages using syslog.
@@ -62,7 +75,6 @@ class SyslogLogger:
         self.syslog_identifier = identifier
         self.log_to_console = log_to_console
 
-        # Open the syslog connection with the given identifier
         syslog.openlog(ident=self.syslog_identifier, logoption=syslog.LOG_PID, facility=syslog.LOG_DAEMON)
 
     def log(self, level, message):
@@ -71,10 +83,8 @@ class SyslogLogger:
         :param level: The severity level (e.g., syslog.LOG_ERR, syslog.LOG_INFO, etc.).
         :param message: The log message to be recorded.
         """
-        # Log to syslog
         syslog.syslog(level, message)
 
-        # If console logging is enabled, print the message
         if self.log_to_console:
             print(message)
 
@@ -116,13 +126,14 @@ class SyslogLogger:
         """
         syslog.closelog()    
 
+
 class Utility:
     """
     A utility class offering methods for date handling, time delta formatting, and memory size formatting.
     This class also includes enhanced logging and error handling.
     """
     @staticmethod
-    def fetch_current_date(request=None, time_key='current_time', date_format="%Y-%m-%d %H:%M:%S"):
+    def fetch_current_date(request=None, time_key='ctime', date_format="%Y-%m-%d %H:%M:%S"):
         """
         Fetches or parses the current date or a user-specified date.
         :param request: contain none.
@@ -194,6 +205,7 @@ class Utility:
         
         return f"{size}B" if size >= 0 else f"-{size}B"
 
+
 class TimeProcessor:
     """
     The TimeProcessor class manages time validation and calculations for data collection within 
@@ -211,7 +223,7 @@ class TimeProcessor:
         """
         self.date_time_format = "%Y-%m-%d %H:%M:%S"
         self.short_date_format = "%Y-%m-%d"
-        
+            
         if not (3 <= sampling_interval <= 15):
             raise ValueError("Data collection interval must be between 3 and 15 minutes.")
         if not (1 <= retention_period <= 30):
@@ -236,12 +248,12 @@ class TimeProcessor:
 
             if to_time < from_time:
                 request_data['from'], request_data['to'] = request_data['to'], request_data['from']
-                logging.info(f"Swapped 'from' and 'to': {request_data['from']} <-> {request_data['to']}")
+                logger.log_info(f"Swapped 'from' and 'to': {request_data['from']} <-> {request_data['to']}")
             else:
-                logging.info("No need to swap times.")
+                logger.log_info("No need to swap times.")
 
         except (ValueError, TypeError) as error:
-            logging.error(f"Error in ensuring valid time range: {error}")
+            logger.log_error(f"Error in ensuring valid time range: {error}")
             raise ValueError("Invalid 'from' or 'to' date format.") from error
 
     def _parse_and_validate_dates(self, request_data: Dict[str, Any]) -> None:
@@ -254,8 +266,8 @@ class TimeProcessor:
         if not request_data.get('to'):
             request_data['to'] = "now"
         if not request_data.get('from'):
-            request_data['from'] = f"-{self.retention_period} days"  
-
+            request_data['from'] = f"-{self.retention_period} days"
+        
         self.ensure_valid_time_range(request_data)
 
     def _fetch_time_values(self, request_data: Dict[str, Any]) -> Dict[str, datetime]:
@@ -268,10 +280,10 @@ class TimeProcessor:
         return {
             'start_time': datetime.fromisoformat(Utility.fetch_current_date(request_data, 'from', self.date_time_format)),
             'end_time': datetime.fromisoformat(Utility.fetch_current_date(request_data, 'to', self.date_time_format)),
-            'current_time': datetime.fromisoformat(Utility.fetch_current_date({}, 'current_time', self.date_time_format))
+            'current_time': datetime.fromisoformat(Utility.fetch_current_date({}, 'ctime', self.date_time_format))
         }
 
-    def _validate_time_ranges(self, start_time: datetime, end_time: datetime, current_time: datetime, time_difference: timedelta) -> None:
+    def _validate_time_ranges(self, start_time: datetime, end_time: datetime, current_time: datetime, time_diff: timedelta) -> None:
         """
         Validates the provided time ranges to ensure they adhere to defined constraints.
 
@@ -280,14 +292,14 @@ class TimeProcessor:
         :param current_time: The current time for comparison.
         :param time_difference: The difference between end_time and start_time.
         """
-        time_difference_obj = Utility.convert_timedelta_to_obj(time_difference)
+        time_diff_obj = Utility.convert_timedelta_to_obj(time_diff)
         
         if end_time > current_time:
-            raise ValueError("Datetime format error: 'to' time should not be greater than current time.")
-        elif time_difference_obj.days > self.retention_period:
-            raise ValueError(f"Datetime format error: time range should not exceed {self.retention_period} days.")
-        elif time_difference_obj.days == 0 and time_difference_obj.hours == 0 and time_difference_obj.minutes < self.sampling_interval:
-            raise ValueError(f"Datetime format error: time difference should be at least {self.sampling_interval} minutes.")
+            raise Exception("Datetime format error, 'to' time should not be greater than current time.")
+        elif time_diff_obj.days > self.retention_period:
+            raise Exception(f"Datetime format error, time range should not exceed {self.retention_period} days.")
+        elif time_diff_obj.days == 0 and time_diff_obj.hours == 0 and time_diff_obj.minutes < self.sampling_interval:
+            raise Exception(f"Datetime format error, time difference should be at least {self.sampling_interval} minutes.")
 
     def _calculate_day_and_hour_differences(self, start_time: datetime, end_time: datetime, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -366,16 +378,12 @@ class TimeProcessor:
 
         day_and_hour_diffs = self._calculate_day_and_hour_differences(start_time, end_time, request_data)
         total_time = self._calculate_total_hours_and_minutes(time_difference)
-
-        retention_period_days = self.retention_period
-
-        remaining_days_start = (current_time - start_time).days
-        remaining_days_end = (current_time - end_time).days
+        remaining_days = self._calculate_remaining_days_since_end(end_time, current_time)
 
         request_data["time_data"] = {
             "start_time_obj": start_time,
             "end_time_obj": end_time,
-            "retention_period_days": retention_period_days,  # Added retention period in days
+            "retention_period_days": self.retention_period, 
             "num_days": day_and_hour_diffs['num_days'],
             "total_hours": total_time['total_hours'],
             "total_minutes": total_time['total_minutes'],
@@ -384,9 +392,10 @@ class TimeProcessor:
             "days": time_difference.days,
             "hours": time_difference.seconds // 3600,
             "minutes": (time_difference.seconds % 3600) // 60,
-            "start_day": remaining_days_start,
-            "end_day": remaining_days_end
+            "start_day": remaining_days['start_day'],
+            "end_day": remaining_days['end_day']
         }
+
 
 class MemoryReportGenerator:
     def __init__(self, request, step):
@@ -400,7 +409,7 @@ class MemoryReportGenerator:
         self.step = step
         self.start = request['time_data']['start_time_obj']
         self.end = request['time_data']['end_time_obj']
-        self.period = request['duration']  # 'minutes', 'hours', or 'days'
+        self.period = request['duration']  
         self.step_timedelta = timedelta(**{self.period: self.step})
 
     def get_interval_column_label(self, slot):
@@ -425,23 +434,19 @@ class MemoryReportGenerator:
         Returns:
             str: The formatted header for the memory statistics report.
         """
-        # Codes explanation section
         fmt = "\nCodes:\tM - minutes, H - hours, D - days\n"
         fmt += "-" * 80 + "\n"
 
-        # Main report details
         fmt += "Report Generated:    {}\n".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         fmt += "Analysis Period:     From {} to {}\n".format(self.start.strftime("%Y-%m-%d %H:%M:%S"),
                                                              self.end.strftime("%Y-%m-%d %H:%M:%S"))
         fmt += "Interval:            {} {}\n".format(self.step, self.period.capitalize())
 
-        # Initialize for dynamic columns
         slot = self.start
         num_intervals = 0
         interval_labels = []
         time_labels = []
 
-        # Generate interval labels and time labels
         while slot <= self.end:
             interval_label, time_label = self.get_interval_column_label(slot)
             interval_labels.append(interval_label)
@@ -454,14 +459,11 @@ class MemoryReportGenerator:
         INTERVAL_WIDTH = 11
 
         total_width = (METRIC_WIDTH + 3 * (VALUE_WIDTH + 1) +
-                       (INTERVAL_WIDTH + 1) * num_intervals - 1)  # last interval no space
+                       (INTERVAL_WIDTH + 1) * num_intervals - 1) 
 
-        # Create the separator line
         separator = "-" * total_width + "\n"
 
-        # Build the header with the metric titles and dashes
         header = separator
-        # Header row
         header += "{:<{}} {:<{}} {:<{}} {:<{}}".format(
             "Metric", METRIC_WIDTH, "Current", VALUE_WIDTH, "High", VALUE_WIDTH, "Low", VALUE_WIDTH
         )
@@ -469,7 +471,6 @@ class MemoryReportGenerator:
             header += " {:<{}}".format(label, INTERVAL_WIDTH)
         header += "\n"
 
-        # Subheader row
         header += "{:<{}} {:<{}} {:<{}} {:<{}}".format(
             " ", METRIC_WIDTH, "Value", VALUE_WIDTH, "Value", VALUE_WIDTH, "Value", VALUE_WIDTH
         )
@@ -477,12 +478,13 @@ class MemoryReportGenerator:
             header += " {:<{}}".format(label, INTERVAL_WIDTH)
         header += "\n"
 
-        # Add another separator
         header += separator
 
         return fmt + header
 
+
 class MemoryStatisticsCollector:
+
     def __init__(self, sampling_interval: int, retention_period: int):
         """
         Initializes MemoryStatisticsCollector with data collection interval and retention period.
@@ -491,8 +493,8 @@ class MemoryStatisticsCollector:
         :param retention_period: Data retention period in days (1 to 30).
         """
         self.sampling_interval = sampling_interval
-        self.retention_period = retention_period    
-
+        self.retention_period = retention_period 
+    
     def fetch_memory_statistics(self):
         """
         Collect memory statistics using psutil.
@@ -514,6 +516,7 @@ class MemoryStatisticsCollector:
         del memory_data
         return memory_stats
 
+   
     def fetch_memory_entries(self, filepath):
         """
         Fetch memory entries from a compressed file.
@@ -528,18 +531,18 @@ class MemoryStatisticsCollector:
         if not os.path.exists(filepath):
             return tentry
 
-        # if os.path.getsize(filepath) <= 0:
-        #     return tentry
+        if os.path.getsize(filepath) <= 0:
+            return tentry
 
-        # try:
-        #     with gzip.open(filepath, 'rb') as bfile:
-        #         loaded_entry = pickle.load(bfile)
-        # except Exception as e:
-        #     logging.error(f"Failed to load memory entries from {filepath}: {e}")
-        #     return tentry  # Return default if loading fails
+        try:
+            with gzip.open(filepath, 'rb') as bfile:
+                loaded_entry = json.load(bfile)
+        except Exception as e:
+            logger.log_error(f"Failed to load memory entries from {filepath}: {e}")
+            return tentry 
 
-        # return loaded_entry
-
+        return loaded_entry
+ 
     def update_memory_statistics(self, total_dict, mem_dict, time_list, item, category):
         """
         Update memory statistics for the specified item and category.
@@ -582,9 +585,39 @@ class MemoryStatisticsCollector:
                         "high_value": prss, "low_value": prss
                     }
             except Exception as e:
-                print(e)  # Consider replacing with proper logging
+                logger.log_error(f"Error updating memory statistics for item '{item}', category '{category}', "
+                          f"metric '{memory_metric}': {e}")
 
         total_dict[item]['count'] = int(total_dict[item]['count']) + 1
+
+
+    def enforce_retention_policy(self, total_dict):
+        """This function enforces a retention policy for memory statistics by identifying and removing entries in total_dict
+           that are older than the configured retention period. 
+           total_dict (dict): A dictionary containing memory statistics, where each entry is expected to include a 'current_time' field.
+        """
+        current_time = datetime.now()
+        retention_threshold = timedelta(days=self.retention_period)
+
+        if 'system_memory' in total_dict:
+            for memory_type in total_dict['system_memory']:
+                entries_to_remove = []
+                
+                if isinstance(total_dict['system_memory'][memory_type], dict):
+                    for entry_timestamp, memory_data in total_dict['system_memory'][memory_type].items():
+                        try:
+                            entry_time = datetime.fromisoformat(entry_timestamp)
+                        except ValueError:
+                            continue 
+
+                        if current_time - entry_time > retention_threshold:
+                            entries_to_remove.append(entry_timestamp)
+
+                    for old_entry in entries_to_remove:
+                        logger.log_info(f"Removing outdated entry: {old_entry}")
+                        del total_dict['system_memory'][memory_type][old_entry]
+
+        total_dict['system_memory']['count'] = len(total_dict['system_memory'].get('system', {}))
 
     def dump_memory_usage(self, collect_only):
         """
@@ -599,80 +632,44 @@ class MemoryStatisticsCollector:
         sm = self.fetch_memory_statistics()
         sysmem_dict = {"system": {}, "count": 1}
 
-        # Ensure 'system_memory' and 'system' keys exist
         if 'system_memory' not in total_dict:
             total_dict['system_memory'] = {'system': {}, "count": 0}
         if 'system' not in total_dict['system_memory']:
             total_dict['system_memory']['system'] = {}
             total_dict['system_memory']['count'] = 0
 
-        # Update total dictionary with the collected system memory statistics
         self.update_memory_statistics(total_dict, sysmem_dict, sm, 'system_memory', 'system')
 
-        # Total Count
         total_dict['count'] = int(total_dict['count']) + 1
 
-        # Update the current time and record
-        current_time = Utility.fetch_current_date()
+        self.enforce_retention_policy(total_dict)
 
-        total_dict['current_time'] = current_time
-        mem_dict = {"current_time": current_time, "system_memory": sysmem_dict, "count": 1}
+        ctime = Utility.fetch_current_date()
+
+        total_dict['ctime'] = ctime
+        mem_dict = {"ctime": ctime, "system_memory": sysmem_dict, "count": 1}
 
         if collect_only is True:
             return mem_dict
 
-        # Dump total system memory statistics into the log file
-        # try:
-        #     with gzip.open(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'], "wb") as bfile:
-        #         pickle.dump(total_dict, bfile)
-        # except Exception as e:
-        #     logging.error(f"Failed to dump total memory statistics: {e}")
-        #     return
+        try:
+            with gzip.open(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'], "wb") as bfile:
+                json.dump(total_dict, bfile)
+        except Exception as e:
+            logger.log_error(f"Failed to dump total memory statistics: {e}")
+            return
 
-        # try:
-        #     with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], "ab") as bfile:
-        #         pickle.dump(mem_dict, bfile)
-        # except Exception as e:
-        #     logging.error(f"Failed to dump memory statistics log: {e}")
+        try:
+            with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], "ab") as bfile:
+                json.dump(mem_dict, bfile)
+        except Exception as e:
+            logger.log_error(f"Failed to dump memory statistics log: {e}")
 
-
-    def enforce_retention_policy(self, total_dict):
-        """This function enforces a retention policy for memory statistics by identifying and removing entries in total_dict
-           that are older than the configured retention period. 
-           total_dict (dict): A dictionary containing memory statistics, where each entry is expected to include a 'current_time' field.
-        """
-        retention_delta = timedelta(days=self.retention_period)
-        current_time = datetime.now()  # Use current time directly
-
-        # Log the total_dict before processing
-        logging.info(f"Total dictionary before retention policy enforcement: {total_dict}")
-
-        # Identify and remove entries older than the retention period
-        for key in list(total_dict.keys()):
-            if key == 'current_time':
-                continue  # Skip the current time key
-
-            # Ensure the entry has a 'current_time' key
-            if 'current_time' not in total_dict[key]:
-                logging.warning(f"Key '{key}' does not have 'current_time'; skipping.")
-                continue
-            
-            try:
-                entry_time = datetime.fromisoformat(total_dict[key]['current_time'])
-                if current_time - entry_time > retention_delta:
-                    logging.info(f"Removing old memory entry: {key} (age: {current_time - entry_time})")
-                    del total_dict[key]
-                else:
-                    logging.info(f"Keeping entry: {key} (age: {current_time - entry_time})")
-            except ValueError as ve:
-                logging.error(f"Invalid date format for entry '{key}': {ve}. Skipping entry.")
-            except Exception as e:
-                logging.error(f"Error processing entry '{key}': {e}. Skipping entry.")
 
 class MemoryEntryManager:
+
     def add_memory_entry(self, request, total_entries_all, global_entries, local_entries, new_entry, item, category, entry_list):
         """Add memory entry to global and local entries.
-
         Args:
             request (dict): The request object containing parameters for filtering.
             total_entries_all (dict): Dictionary to hold total entries across all items.
@@ -707,7 +704,6 @@ class MemoryEntryManager:
 
     def add_entry_total(self, total_entry, item, category):
         """Calculate and add average values for memory entries.
-
         Args:
             total_entry (dict): The dictionary containing total memory entries.
             item (str): The item to calculate averages for.
@@ -718,13 +714,11 @@ class MemoryEntryManager:
 
     def get_global_entry_data(self, request, total_entry_all, local_entry, entries):
         """Aggregate global entry data from local entries.
-
         Args:
             request (dict): The request object containing parameters for filtering.
             total_entry_all (dict): Dictionary to hold total entries across all items.
             local_entry (dict): Dictionary holding local memory entries.
             entries (dict): Dictionary containing memory entry time list.
-
         Returns:
             dict: Aggregated global memory entry data.
         """
@@ -742,13 +736,11 @@ class MemoryEntryManager:
 
     def get_current_memory(self, request, current_memory, memory_type, metric_name):
         """Retrieve current memory value for a specified type and metric name.
-
         Args:
             request (dict): The request object containing parameters for filtering.
             current_memory (dict): Current memory data structure.
             memory_type (str): Type of memory to retrieve (e.g., 'system_memory').
             metric_name (str): Name of the metric to retrieve.
-
         Returns:
             int: Current memory value or "0" if not found.
         """
@@ -759,74 +751,59 @@ class MemoryEntryManager:
 
     def get_memory_entry_data(self, request, total_entry_all, time_range):
         """Retrieve formatted memory entry data based on request parameters.
-
         Args:
             request (dict): The request object containing parameters for filtering.
             total_entry_all (dict): Dictionary to hold total entries across all items.
             time_range (str): Time range for fetching entries.
-
         Returns:
             str: Formatted memory entry data.
         """
         Memory_formatter = Utility()
   
-        # Get max records count from the request, default to 200 if not provided
         max_record_count = int(request.get('rcount', 200))
         count = 0
         formatted_output = ""
 
-        # Set default field for metrics if not provided
-        selected_field = request.get('field', 'avg_value')  # Default to 'avg_value'
+        selected_field = request.get('field', 'avg_value')
 
-        # System memory only
         memory_type = "system_memory"
         current_memory = request['current_memory']
 
         total_high_value, total_low_value = {}, {}
 
-        # Define fixed widths for each column to ensure alignment
         METRIC_WIDTH = 18
         VALUE_WIDTH = 10
         INTERVAL_WIDTH = 11
 
-        # Process system memory entries
         for metric_name in current_memory[memory_type].get(request['type'], {}):
-            # Filter by metric_name if provided in the request
             if request.get('metric_name') and not re.match(f".*{request['metric_name']}.*", metric_name):
                 continue
 
-            # Count and truncate if necessary
             count += 1
             if count > max_record_count:
                 formatted_output += "<< more records truncated, use filter query to optimize the search >>\n"
                 break
 
-            # Initialize total high and low values for the metric
             total_high_value[metric_name] = 0
             total_low_value[metric_name] = 0
 
-            # Prepare a list to hold history values
             history_values = []
 
-            # Iterate over time entries in time_group_list
             for time_entry in total_entry_all.get("time_group_list", []):
                 memory_data = time_entry.get(memory_type, {}).get(request['type'], {}).get(metric_name, {})
                 if memory_data:
-                    mem_value = int(memory_data.get(selected_field, 0))  # Use the value of selected_field
+                    mem_value = int(memory_data.get(selected_field, 0))
                     history_values.append(Memory_formatter.format_memory_size(mem_value))
 
-                    # Update high and low values
                     total_high_value[metric_name] = max(total_high_value[metric_name], mem_value)
                     total_low_value[metric_name] = min(total_low_value[metric_name] or mem_value, mem_value)
                 else:
                     history_values.append('-')
 
-            # Display current, high, low, and history values
             current_mem = Memory_formatter.format_memory_size(self.get_current_memory(request, current_memory, memory_type, metric_name))
             high_mem = Memory_formatter.format_memory_size(total_high_value[metric_name])
             low_mem = Memory_formatter.format_memory_size(total_low_value[metric_name])
 
-            # Construct the data row with proper alignment
             formatted_output += (
                 f"{metric_name:<{METRIC_WIDTH}} "
                 f"{current_mem:<{VALUE_WIDTH}} "
@@ -837,6 +814,7 @@ class MemoryEntryManager:
 
         return formatted_output
 
+
 class MemoryStatisticsProcessor:
     """
     Class for processing and aggregating memory statistics over specified time slices.
@@ -845,7 +823,7 @@ class MemoryStatisticsProcessor:
     configurable sampling intervals and retention periods. It processes data from files and organizes 
     it into time slices for analysis.
     """
-    def __init__(self, memory_statistics_config):
+    def __init__(self, memory_statistics_config, sampling_interval: int, retention_period: int):
         """
         Initializes the MemoryStatisticsProcessor with configuration settings.
 
@@ -854,30 +832,10 @@ class MemoryStatisticsProcessor:
           memory statistics processing such as sampling interval and retention period.
         """
         self.memory_statistics_config = memory_statistics_config
-        self.sampling_interval = self.memory_statistics_config.get('sampling_interval', 3) * 60  # Default in seconds
-        self.retention_period = self.memory_statistics_config.get('retention_period', 30)  # Default in days
         self.entry_manager = MemoryEntryManager()
         self.memory_formatter = Utility()
-
-    def update_sampling_interval(self, new_sampling_interval):
-        """
-        Updates the sampling interval for memory statistics collection.
-
-        Parameters:
-        - new_sampling_interval (int): New sampling interval in minutes.
-        """
-        self.sampling_interval = new_sampling_interval * 60  # Convert minutes to seconds
-        print(f"Updated sampling interval to {self.sampling_interval} seconds.")
-
-    def update_retention_period(self, new_retention_period):
-        """
-        Updates the retention period for storing memory statistics.
-
-        Parameters:
-        - new_retention_period (int): New retention period in days.
-        """
-        self.retention_period = new_retention_period
-        print(f"Updated retention period to {self.retention_period} days.")
+        self.sampling_interval = sampling_interval
+        self.retention_period = retention_period  
 
     def process_memory_statistics_timeslice(self, request_data, memory_data_filename, first_interval_unit, first_interval_rate, 
                                             second_interval_unit, second_interval_rate, third_interval_unit, 
@@ -901,10 +859,10 @@ class MemoryStatisticsProcessor:
         """
         time_entry_summary = self.initialize_time_entry_summary()
         total_hours, num_columns, step = self.calculate_time_parameters(request_data, first_interval_unit, first_interval_rate, second_interval_unit)
+                
         interval_minutes = self.sampling_interval / 60
         self.validate_sampling_interval(interval_minutes)
 
-        
         start_time_obj, end_time_obj = request_data['time_data']['start_time_obj'], request_data['time_data']['end_time_obj']
         
         self.initialize_time_slices(time_entry_summary, num_columns)
@@ -975,7 +933,7 @@ class MemoryStatisticsProcessor:
         if total_hours % step == 0:
             num_columns += 1
         return num_columns
-    
+
     def validate_sampling_interval(self, interval_minutes):
         """
         Validates the specified sampling interval to ensure it meets the defined criteria.
@@ -986,18 +944,9 @@ class MemoryStatisticsProcessor:
         Raises:
         - ValueError: If the sampling interval is not within the accepted range.
         """
-        interval_minutes = int(interval_minutes)  # Ensure interval_minutes is an integer
-        if interval_minutes < 3 or interval_minutes > 15:
-            raise ValueError("Sampling interval must be greater than or equal to 3 and less than or equal to 15 minutes.")
-        
-        hourly_rate = 60 / interval_minutes
-        # Set maximum hourly rate to 20, which means mnimun 3 minutes interval
-        if hourly_rate > 20:  
+        hourly_rate = 60 / int(interval_minutes)
+        if hourly_rate > 20:
             raise ValueError(f"Invalid sampling interval, rate per hour: {hourly_rate}")
-
-        # New condition to ensure hourly rate doesn't exceed 4 15 minutes
-        if hourly_rate < 4:
-            raise ValueError(f"Hourly rate exceeds the limit, rate per hour: {hourly_rate}")    
 
     def initialize_time_slices(self, time_entry_summary, num_columns):
         """
@@ -1052,15 +1001,15 @@ class MemoryStatisticsProcessor:
         - first_interval_rate (int): The rate for the first interval.
         - second_interval_unit (str): The second time interval unit.
         """
-        # if os.path.exists(file_name) and os.path.getsize(file_name) > 0:
-        #     with gzip.open(file_name, "rb") as bfile:
-        #         try:
-        #             while True:
-        #                 memory_entry = pickle.load(bfile)
-        #                 self.process_memory_entry(memory_entry, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
-        #                                          first_interval_unit, first_interval_rate, second_interval_unit)
-        #         except (EOFError, pickle.UnpicklingError):
-        #             pass
+        if os.path.exists(file_name) and os.path.getsize(file_name) > 0:
+            with gzip.open(file_name, "rb") as bfile:
+                try:
+                    while True:
+                        memory_entry = json.load(bfile)
+                        self.process_memory_entry(memory_entry, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
+                                                 first_interval_unit, first_interval_rate, second_interval_unit)
+                except (EOFError, json.UnpicklingError):
+                    pass
 
     def process_memory_entry(self, memory_entry, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
                              first_interval_unit, first_interval_rate, second_interval_unit):
@@ -1081,7 +1030,7 @@ class MemoryStatisticsProcessor:
         This method checks if the memory entry's creation time falls within the specified time range 
         and adds it to the appropriate time group in the summary.
         """
-        rtime = datetime.fromisoformat(memory_entry['current_time'])
+        rtime = datetime.fromisoformat(memory_entry['ctime'])
         if start_time_obj <= rtime <= end_time_obj:
             slot = self.get_time_slot_index(rtime, start_time_obj, step, first_interval_unit, second_interval_unit, first_interval_rate, request_data['duration'])
             if slot < num_columns:
@@ -1220,11 +1169,10 @@ class MemoryStatisticsProcessor:
         """
         Determines the duration of memory statistics collection based on the provided time range. 
         Updates the request with the appropriate duration unit (days, hours, or minutes).
-
         :param memory_statistics_request: Dictionary containing 'from', 'to', and 'time_data' 
                                         with calculated time metrics.
         :raises ValueError: If the time interval is zero.
-        :return: Updated memory_statistics_request with the calculated 'duration'.
+        :return: Updated memory_statistics_request with the calculated 'duration
         """
         time_info = memory_statistics_request['time_data']
         from_time = memory_statistics_request['from']
@@ -1242,6 +1190,7 @@ class MemoryStatisticsProcessor:
             memory_statistics_request['duration'] = "minutes"
 
         return self.generate_memory_statistics(memory_statistics_request)
+
 
 class SocketHandler:
     """Handles the creation and management of a UNIX socket for communication.
@@ -1262,7 +1211,7 @@ class SocketHandler:
         self.address = address
         self.command_handler = command_handler
         self.listener_socket = None
-        self.stop_event = stop_event
+        self.stop_event = stop_event 
 
     def safe_remove_file(self, filepath):
         """Removes a file if it exists to prevent socket binding errors.
@@ -1287,10 +1236,10 @@ class SocketHandler:
         """
         try:
             self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.listener_socket.settimeout(1.0)  
+            self.listener_socket.settimeout(1.0) 
             self.listener_socket.bind(self.address)
             os.chmod(self.address, 0o644)
-            self.listener_socket.listen(5) 
+            self.listener_socket.listen(5)  
             logger.log_info(f"UNIX socket created and listening at {self.address}")
         except Exception as e:
             logger.log_error(f"Failed to create UNIX socket at {self.address}: {e}")
@@ -1347,6 +1296,17 @@ class SocketHandler:
             except Exception as e:
                 logger.log_error(f"Error closing connection: {e}")
 
+    def stop_listening(self):
+        """Stops the socket listener loop by setting stop_event."""
+        logger.log_info("Stopping listener loop.")
+        self.stop_event.set() 
+        if self.listener_socket:
+            try:
+                self.listener_socket.close() 
+            except Exception as e:
+                logger.log_error(f"Error while closing listener socket: {e}")
+                           
+
     def start_listening(self):
         """Starts listening for incoming socket connections.
         
@@ -1365,17 +1325,19 @@ class SocketHandler:
                 self.handle_connection(connection)
             except socket.timeout:
                 continue  
+            except OSError as e:
+                if self.stop_event.is_set():
+                    logger.log_info("Socket listener stopped as requested.")
+                    break
+                else:
+                    logger.log_error(f"Socket error: {e}")
+                    time.sleep(1) 
             except Exception as error:
-                logger.log_error(f"Socket error: {error}")
-                time.sleep(1)  
+                logger.log_error(f"Unexpected error: {error}")
+                time.sleep(1)
 
         self.safe_remove_file(self.address)
-        if self.listener_socket:
-            try:
-                self.listener_socket.close()
-                logger.log_info("Listener socket closed.")
-            except Exception as e:
-                logger.log_error(f"Error closing listener socket: {e}")
+        logger.log_info("Socket listener stopped.")
 
 
 class Daemonizer:
@@ -1386,7 +1348,6 @@ class Daemonizer:
     to /dev/null, ensuring that the daemon operates independently from
     the terminal.
     """
-
     def __init__(self, pid_file):
         """
         Initializes the Daemonizer with the specified PID file location.
@@ -1405,12 +1366,12 @@ class Daemonizer:
         try:
             pid = os.fork()
             if pid > 0:
-                sys.exit(0) 
+                sys.exit(0)
         except OSError as e:
             logger.log_error(f"First fork failed: {e}")
             sys.exit(1)
 
-        os.setsid()
+        os.setsid() 
 
         try:
             pid = os.fork()
@@ -1464,31 +1425,30 @@ class MemoryStatisticsService:
     """
     Manages the Memory Statistics Service, responsible for collecting,
     processing, and serving memory usage statistics in a daemonized manner.
-
     This service utilizes a socket for communication and handles
     commands for memory statistics retrieval, while also managing
     configuration reloading and graceful shutdown procedures.
     """ 
+
     def __init__(self, memory_statistics_config, config_file_path='memorystats.conf'):
         """
         Initializes the MemoryStatisticsService instance.
-
         Parameters:
         - memory_statistics_config (dict): Initial configuration settings for the service.
         - config_file_path (str): Path to the configuration file to load overrides.
         """
         self.config_file_path = config_file_path
         self.memory_statistics_lock = threading.Lock()
-        self.stop_event = threading.Event() 
-
+        self.stop_event = threading.Event()  
+    
         self.socket_listener_thread = None
         self.memory_collection_thread = None
 
         self.config = memory_statistics_config.copy()
         self.config.update(self.load_config_from_file())
 
-        self.sampling_interval = int(self.config.get('sampling_interval', 3)) * 60 
-        self.retention_period = int(self.config.get('retention_period', 15))
+        self.sampling_interval = int(self.config.get('sampling_interval', 3)) * 60  
+        self.retention_period = int(self.config.get('retention_period', 15)) 
 
         self.socket_handler = SocketHandler(
             address=self.config['DBUS_SOCKET_ADDRESS'],
@@ -1503,7 +1463,6 @@ class MemoryStatisticsService:
     def load_config_from_file(self):
         """
         Loads specific configuration values from the configuration file.
-
         Returns:
         - dict: A dictionary containing configuration overrides from the file.
         """
@@ -1521,11 +1480,9 @@ class MemoryStatisticsService:
     def handle_command(self, command_name, command_data):
         """
         Processes incoming commands received via the socket.
-
         Parameters:
         - command_name (str): The name of the command to handle.
         - command_data (dict): Data associated with the command.
-
         Returns:
         - dict: Response indicating the success or failure of command execution.
         """
@@ -1539,21 +1496,19 @@ class MemoryStatisticsService:
     def handle_sighup(self, signum, frame):
         """
         Responds to the SIGHUP signal to reload the service configuration.
-
         This method performs cleanup of old log files and updates the service's
         runtime configuration from the ConfigDB.
         """
         logger.log_info("Received SIGHUP, reloading configuration.")
         try:
             self.cleanup_old_files()
-            self.load_config_from_db() 
+            self.load_config_from_db()
         except Exception as e:
             logger.log_error(f"Error handling SIGHUP: {e}")
 
     def handle_sigterm(self, signum, frame):
         """
         Handles the SIGTERM signal for graceful shutdown of the service.
-
         This method attempts to terminate child processes, stop running threads,
         and perform necessary cleanup operations before exiting.
         """
@@ -1617,10 +1572,8 @@ class MemoryStatisticsService:
     def load_config_from_db(self):
         """
         Retrieves runtime configuration values from the ConfigDB.
-
         This method updates the service's sampling interval and retention period
         based on the values retrieved from the database.
-
         Raises:
         - Exception: If an error occurs while accessing the ConfigDB.
         """
@@ -1634,7 +1587,7 @@ class MemoryStatisticsService:
                 # Dummy implementation
                 return {
                     'retention-period': '20',
-                    'sampling-interval': '5'  # Assume this is in minutes
+                    'sampling-interval': '5' 
                 }
 
             def disconnect(self):
@@ -1645,10 +1598,11 @@ class MemoryStatisticsService:
 
         try:
             config = config_db.get_table('MEMORY_STATISTICS')
+
             self.retention_period = int(config.get('retention-period', self.retention_period))
             self.sampling_interval = int(config.get('sampling-interval', self.sampling_interval)) * 60
             
-            logger.log_info(f"Configuration reloaded from ConfigDB: sampling_interval={self.sampling_interval // 60 } minutes, retention_period={self.retention_period} days")
+            logger.log_info(f"Configuration reloaded from ConfigDB: sampling_interval={self.sampling_interval} seconds, retention_period={self.retention_period} days")
         except Exception as e:
             logger.log_error(f"Error loading configuration from ConfigDB: {e}, using current settings")
         finally:
@@ -1657,7 +1611,6 @@ class MemoryStatisticsService:
     def cleanup_old_files(self):
         """
         Deletes old log files from the log directory.
-
         This method removes any log files with a .gz extension from the specified
         log directory to manage disk space and maintain organization.
         """
@@ -1674,10 +1627,8 @@ class MemoryStatisticsService:
     def memory_statistics_command_request_handler(self, request):
         """
         Processes requests for memory statistics.
-
         Parameters:
         - request (dict): Contains information about the statistics request.
-
         Returns:
         - dict: A response indicating the success or failure of the request,
                 along with the collected memory statistics data if successful.
@@ -1699,8 +1650,8 @@ class MemoryStatisticsService:
                 )
                 time_processor.process_time_information(request)
 
-                processor = MemoryStatisticsProcessor(self.config,
-                                                    sampling_interval=self.sampling_interval // 60,
+                processor = MemoryStatisticsProcessor(self.config,                            
+                                                    sampling_interval=self.sampling_interval,
                                                     retention_period=self.retention_period)
                 report = processor.calculate_memory_statistics_period(request)
                 logger.log_info(f"Memory statistics processed: {report}")
@@ -1714,12 +1665,10 @@ class MemoryStatisticsService:
     def start_socket_listener(self):
         """
         Starts the socket listener in a separate thread.
-
         This method initializes and starts the socket listener, allowing the 
         service to accept incoming commands. The listener operates in a daemon 
         thread, ensuring that it runs in the background and does not block 
         the main program from exiting.
-
         Logs the start of the socket listener thread.
         """
         self.socket_listener_thread = threading.Thread(
@@ -1733,15 +1682,13 @@ class MemoryStatisticsService:
     def start_memory_collection(self):
         """
         Starts memory statistics collection in a separate thread.
-
         This method initializes and starts a separate thread dedicated to 
         collecting memory statistics at defined intervals. The collection 
         process runs in a loop until signaled to stop, capturing memory usage 
         data and logging any errors that may occur during the process.
-
         The collection interval is determined by the `sampling_interval` 
         configuration. Logs the start and stop of the memory collection thread.
-        """    
+        """ 
         def memory_collection():
             logger.log_info("Memory statistics collection thread started.")
             while not self.stop_event.is_set():
@@ -1759,7 +1706,7 @@ class MemoryStatisticsService:
                 elapsed_time = (datetime.now() - start_time).total_seconds()
                 sleep_time = max(0, self.sampling_interval - elapsed_time)
                 if self.stop_event.wait(timeout=sleep_time):
-                    break  
+                    break 
 
             logger.log_info("Memory statistics collection thread stopped.")
 
@@ -1774,23 +1721,16 @@ class MemoryStatisticsService:
     def stop_threads(self):
         """
         Signals threads to stop and waits for them to exit gracefully.
-
         This method sets the stop event to signal all running threads to 
         terminate. It also closes the listener socket to unblock the accept 
         method and waits for both the socket listener and memory collection 
         threads to finish their execution within a specified timeout.
-
         Logs any issues encountered during the stopping process of the threads.
         """
         logger.log_info("Signaling threads to stop.")
         self.stop_event.set() 
 
-        if self.socket_handler.listener_socket:
-            try:
-                self.socket_handler.listener_socket.close()
-                logger.log_info("Listener socket closed to unblock accept().")
-            except Exception as e:
-                logger.log_error(f"Error closing listener socket: {e}")
+        self.socket_handler.stop_listening()
 
         if self.socket_listener_thread:
             logger.log_info("Stopping socket listener thread...")
@@ -1802,17 +1742,15 @@ class MemoryStatisticsService:
             logger.log_info("Stopping memory collection thread...")
             self.memory_collection_thread.join(timeout=5)
             if self.memory_collection_thread.is_alive():
-                logger.log_warning("Memory collection thread did not stop gracefully")
+                logger.log_warning("Memory collection thread did not stop gracefully")    
 
     def cleanup(self):
         """
         Performs additional cleanup tasks before service shutdown.
-
         This method handles the cleanup of old log files, removes the socket 
         and PID files, and flushes all log handlers to ensure that all logs 
         are properly written out. This is typically called during service 
         termination to free up resources and maintain a clean state.
-
         Logs the completion of the cleanup tasks and any errors encountered 
         during the process.
         """
@@ -1844,12 +1782,10 @@ class MemoryStatisticsService:
     def run(self):
         """
         Runs the Memory Statistics Service.
-
         This method starts the service by daemonizing the process and 
         initializing the threads necessary for socket listening and memory 
         statistics collection. The service will continue to run until 
         signaled to stop, during which it sleeps to reduce CPU usage.
-
         Logs the initialization and starting of the service.
         """
         logger.log_info("Memory Statistics Service is starting...")
