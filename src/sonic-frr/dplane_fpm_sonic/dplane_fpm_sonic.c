@@ -1022,53 +1022,51 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 			(cmd == RTM_NEWSRV6LOCALSID) ? "RTM_NEWSRV6LOCALSID" : "RTM_DELSRV6LOCALSID", p, dplane_ctx_get_vrf(ctx),
 			table_id);
 
+	seg6local_ctx = &nexthop->nh_srv6->seg6local_ctx;
+
+	nest =
+		nl_attr_nest(&req->n, datalen, 
+					FPM_SRV6_LOCALSID_FORMAT);
+
+	if (nexthop->nh_srv6->seg6local_ctx.block_len)
+		if (!nl_attr_put8(
+				&req->n, datalen, 
+				FPM_SRV6_LOCALSID_FORMAT_BLOCK_LEN,
+				nexthop->nh_srv6->seg6local_ctx.block_len))
+			return -1;
+
+	if (nexthop->nh_srv6->seg6local_ctx.node_len)
+		if (!nl_attr_put8(
+				&req->n, datalen, 
+				FPM_SRV6_LOCALSID_FORMAT_NODE_LEN,
+				nexthop->nh_srv6->seg6local_ctx.node_len))
+			return -1;
+
+	if (nexthop->nh_srv6->seg6local_ctx.function_len)
+		if (!nl_attr_put8(
+				&req->n, datalen, 
+				FPM_SRV6_LOCALSID_FORMAT_FUNC_LEN,
+				nexthop->nh_srv6->seg6local_ctx.function_len))
+			return -1;
+
+	if (nexthop->nh_srv6->seg6local_ctx.argument_len)
+		if (!nl_attr_put8(
+				&req->n, datalen, 
+				FPM_SRV6_LOCALSID_FORMAT_ARG_LEN,
+				nexthop->nh_srv6->seg6local_ctx.argument_len))
+			return -1;
+
+	nl_attr_nest_end(&req->n, nest);
+
+	if (cmd == RTM_DELSRV6LOCALSID)
+		return NLMSG_ALIGN(req->n.nlmsg_len);
+
 	for (ALL_LIST_ELEMENTS_RO(srv6->locators, node, l)) {
 		if (prefix_match(&l->prefix, p)) {
 			locator = l;
 			break;
 		}
 	}
-
-	if (locator) {
-		nest =
-			nl_attr_nest(&req->n, datalen, 
-						FPM_SRV6_LOCALSID_FORMAT);
-
-		if (locator->block_bits_length)
-			if (!nl_attr_put8(
-					&req->n, datalen, 
-					FPM_SRV6_LOCALSID_FORMAT_BLOCK_LEN,
-					locator->block_bits_length))
-				return -1;
-
-		if (locator->node_bits_length)
-			if (!nl_attr_put8(
-					&req->n, datalen, 
-					FPM_SRV6_LOCALSID_FORMAT_NODE_LEN,
-					locator->node_bits_length))
-				return -1;
-
-		if (locator->function_bits_length)
-			if (!nl_attr_put8(
-					&req->n, datalen, 
-					FPM_SRV6_LOCALSID_FORMAT_FUNC_LEN,
-					locator->function_bits_length))
-				return -1;
-
-		if (locator->argument_bits_length)
-			if (!nl_attr_put8(
-					&req->n, datalen, 
-					FPM_SRV6_LOCALSID_FORMAT_ARG_LEN,
-					locator->argument_bits_length))
-				return -1;
-
-		nl_attr_nest_end(&req->n, nest);
-	}
-
-	if (cmd == RTM_DELSRV6LOCALSID)
-		return NLMSG_ALIGN(req->n.nlmsg_len);
-
-	seg6local_ctx = &nexthop->nh_srv6->seg6local_ctx;
 
 	switch (nexthop->nh_srv6->seg6local_action) {
 	case ZEBRA_SEG6_LOCAL_ACTION_END:
