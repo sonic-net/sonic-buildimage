@@ -135,7 +135,8 @@ environment=ASAN_OPTIONS="log_path=/var/log/asan/coppmgrd-asan.log{{ asan_extra_
 command=/usr/bin/neighsyncd
 priority=7
 autostart=false
-autorestart=false
+autorestart=unexpected
+exitcodes=0
 stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
