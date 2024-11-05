@@ -494,6 +494,9 @@ class SFP(NvidiaSFPCommon):
                     else:
                         result += content
                     read_length = len(content)
+                    if read_length == 0:
+                        logger.log_error(f'SFP {self.sdk_index}: EEPROM page {page} is empty, no data retrieved')
+                        return None
                     num_bytes -= read_length
                     if num_bytes > 0:
                         page_size = f.seek(0, os.SEEK_END)
@@ -1050,7 +1053,10 @@ class SFP(NvidiaSFPCommon):
         Returns:
             bool: True if the api object supports software control
         """
-        return self.is_cmis_api(xcvr_api) and not xcvr_api.is_flat_memory()
+        if xcvr_api.is_flat_memory():
+            return self.is_cmis_api(xcvr_api) or self.is_sff_api(xcvr_api)
+        else:
+            return self.is_cmis_api(xcvr_api)
 
     def check_power_capability(self):
         """Check module max power with cage power limit
