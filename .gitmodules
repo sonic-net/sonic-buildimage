@@ -127,6 +127,3 @@
 [submodule "src/sonic-framework/gnoi"]
 	path = src/sonic-framework/gnoi
 	url = https://github.com/openconfig/gnoi
-[submodule "gnoi"]
-	path = gnoi
-	url = https://github.com/openconfig/gnoi

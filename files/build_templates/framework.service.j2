@@ -8,6 +8,7 @@ Before=ntp-config.service
 StartLimitIntervalSec=1200
 StartLimitBurst=3
 
+
 [Service]
 User={{ sonicadmin_user }}
 ExecStartPre=/usr/bin/{{docker_container_name}}.sh start
@@ -15,6 +16,7 @@ ExecStart=/usr/bin/{{docker_container_name}}.sh wait
 ExecStop=/usr/bin/{{docker_container_name}}.sh stop
 Restart=always
 RestartSec=30
+
 
 [Install]
 WantedBy=sonic.target

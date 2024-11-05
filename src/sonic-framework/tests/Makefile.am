@@ -1,4 +1,5 @@
-INCLUDES = -I $(top_srcdir) -I $(top_srcdir)/rebootbackend -I $(top_srcdir)/rebootbackend/system
+AUTOMAKE_OPTIONS = subdir-objects
+INCLUDES = -I $(top_srcdir) -I $(top_srcdir)/rebootbackend -I $(top_srcdir)/rebootbackend/system -I ../../sonic-swss-common/common
 
 TESTS = tests tests_asan tests_tsan tests_usan
 
@@ -18,23 +19,20 @@ CFLAGS_ASAN = -fsanitize=address
 CFLAGS_TSAN = -fsanitize=thread
 CFLAGS_USAN = -fsanitize=undefined
 
+testsdir = /usr/include
+
+tests_HEADERS = /usr/include/gmock/gmock.h
+
 tests_SOURCES = test_utils_common.cpp \
-                $(top_srcdir)/rebootbackend/telemetry_helper.cpp \
-                telemetry_helper_test.cpp \
-                rebootbe_test.cpp \
+		rebootbe_test.cpp \
                 $(top_srcdir)/rebootbackend/rebootbe.cpp \
                 reboot_thread_test.cpp \
                 $(top_srcdir)/rebootbackend/reboot_thread.cpp \
-                init_thread_test.cpp \
-                $(top_srcdir)/rebootbackend/init_thread.cpp \
                 $(top_srcdir)/rebootbackend/system/system.pb.cc \
                 $(top_srcdir)/rebootbackend/types/types.pb.cc \
                 $(top_srcdir)/rebootbackend/common/common.pb.cc \
-                $(top_srcdir)/rebootbackend/container_stop.pb.cc \
                 redis_utils_test.cpp \
                 $(top_srcdir)/rebootbackend/redis_utils.cpp \
-                reboot_common_test.cpp \
-                $(top_srcdir)/rebootbackend/reboot_common.cpp \
                 test_main.cpp
 
 tests_CFLAGS = $(DBGFLAGS) $(AM_CFLAGS) $(CFLAGS_COMMON) $(CFLAGS_GTEST) $(CFLAGS_COVERAGE) $(CFLAGS_SAI)

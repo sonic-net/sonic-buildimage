@@ -30,4 +30,5 @@ COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 # COPY ["git_commits", "/usr"]
 
+
 ENTRYPOINT ["/usr/local/bin/supervisord"]

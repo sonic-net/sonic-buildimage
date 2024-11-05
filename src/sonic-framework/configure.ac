@@ -14,7 +14,7 @@ AC_CHECK_LIB([hiredis], [redisConnect],,
     AC_MSG_ERROR([libhiredis is not installed.]))
 
 PKG_CHECK_MODULES([JANSSON], [jansson])
-
+ 
 AC_ARG_ENABLE(debug,
 [  --enable-debug      Compile with debugging flags],
 [case "${enableval}" in
@@ -78,7 +78,6 @@ AC_SUBST(CFLAGS_COMMON)
 AC_CONFIG_FILES([
     Makefile
     rebootbackend/Makefile
-    tests/Makefile
 ])
 
 AC_OUTPUT
