@@ -97,4 +97,10 @@ if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     fi
 fi
 
+# Add VRF parameter when mgmt-vrf enabled
+MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled"`
+if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
+    ORCHAGENT_ARGS+=" -v mgmt"
+fi
+
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}
