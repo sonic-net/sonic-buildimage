@@ -1431,7 +1431,7 @@ class MemoryStatisticsService:
     configuration reloading and graceful shutdown procedures.
     """ 
 
-    def __init__(self, memory_statistics_config, config_file_path='memorystats.conf'):
+    def __init__(self, memory_statistics_config, config_file_path='/etc/memory_statistics.conf'):
         """
         Initializes the MemoryStatisticsService instance.
         Parameters:
