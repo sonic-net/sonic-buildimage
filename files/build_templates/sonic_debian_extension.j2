@@ -727,6 +727,7 @@ echo "backend-acl.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 # Copy RPS script file
 sudo cp $IMAGE_CONFIGS/rps/rps.py $FILESYSTEM_ROOT/usr/bin/rps.py
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/rps.py
 
 # Copy SNMP configuration files
 sudo cp $IMAGE_CONFIGS/snmp/snmp.yml $FILESYSTEM_ROOT/etc/sonic/
