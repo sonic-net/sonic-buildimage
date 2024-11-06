@@ -203,6 +203,7 @@ setup(
                          './yang-models/sonic-macsec.yang',
                          './yang-models/sonic-bgp-sentinel.yang',
                          './yang-models/sonic-bmp.yang',
+                         './yang-models/sonic-xcvrd-log.yang',
                          './yang-models/sonic-serial-console.yang',
                          './yang-models/sonic-smart-switch.yang',]),
         ('cvlyang-models', ['./cvlyang-models/sonic-acl.yang',
