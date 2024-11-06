@@ -1,7 +1,5 @@
 [Unit]
 Description=Memory Statistics Daemon
-Requires=config-setup.service
-After=config-setup.service
 BindsTo=sonic.target
 After=network.target
 
@@ -11,7 +9,6 @@ ExecStart=/usr/bin/memory_statistics_service.py
 Restart=always
 RestartSec=5
 StandardOutput=syslog+console
-PIDFile=/var/run/memory_statistics_daemon.pid
 EnvironmentFile=-/etc/memory_statistics.conf
 
 [Install]
