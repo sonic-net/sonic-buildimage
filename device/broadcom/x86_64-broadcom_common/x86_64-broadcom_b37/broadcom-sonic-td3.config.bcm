@@ -15,7 +15,6 @@ vlan_xlate_1_mem_entries=16384
 vlan_xlate_2_mem_entries=2048
 sai_fast_convergence_support=1
 bcm_num_cos=8
-default_cpu_tx_queue=7
 sai_brcm_sonic_trap_group=1
 host_as_route_disable=1
 multi_hash_recurse_depth_l3=6

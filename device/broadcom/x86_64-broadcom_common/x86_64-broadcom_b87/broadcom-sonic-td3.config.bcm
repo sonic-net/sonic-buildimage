@@ -5,7 +5,6 @@ ipv6_lpm_128b_enable=0x1
 l3_max_ecmp_mode=1
 lpm_scaling_enable=0
 bcm_num_cos=10
-default_cpu_tx_queue=9
 mmu_lossless=0
 mpls_mem_entries=16384
 vlan_xlate_1_mem_entries=65536

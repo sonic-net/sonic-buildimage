@@ -15,7 +15,6 @@ miim_intr_enable=0
 module_64ports=1
 oversubscribe_mode=1
 bcm_num_cos=10
-default_cpu_tx_queue=9
 # Drop monitor configuration
 flowtracker_enable=2
 flowtracker_max_flows=48000

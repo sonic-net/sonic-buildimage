@@ -5,7 +5,6 @@ ipv6_lpm_128b_enable=0x1
 l3_max_ecmp_mode=1
 lpm_scaling_enable=0
 bcm_num_cos=10
-default_cpu_tx_queue=9
 mmu_lossless=0
 host_as_route_disable=1
 sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
