@@ -14,9 +14,9 @@ def state_db_table(table_name):
     vnet_monitor_table = swsscommon.Table(state_db, table_name)
     return vnet_monitor_table
 
-g_task_runner = None
 g_db_monitor = None
 g_reply_monitor = None
+g_ping_task = None
 
 
 def signal_handler(signal, frame):
@@ -26,12 +26,14 @@ def signal_handler(signal, frame):
     logger_helper.log_notice("Vnet monitor going to quit")
     # Ignore any exception during quit
     try:
-        if g_task_runner:
-            g_task_runner.stop()
+        if g_ping_task:
+            g_ping_task.teardown()
         if g_reply_monitor:
             g_reply_monitor.stop()
         if g_db_monitor:
             g_db_monitor.stop()
+        if g_ping_stats:
+            g_ping_stats.teardown()
     except:
         pass
 
@@ -44,33 +46,34 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
     
-    global g_ping_stats, g_db_monitor, g_task_runner, g_reply_monitor
+    global g_ping_stats, g_db_monitor, g_reply_monitor, g_ping_task_list, g_ping_task
     state_db_tbl = state_db_table(STATE_DB_VNET_MONITOR_TABLE_NAME)
     g_ping_stats.set_state_db_table(state_db_tbl)
-    g_task_runner = TaskRunner(g_ping_stats)
     t1_mac = configutil.get_localhost_mac()
     t1_loopback_v4 = configutil.get_loopback_ip(af=4)
     t1_loopback_v6 = configutil.get_loopback_ip(af=6)
     # Initialize the ping task
-    TaskPing.init(t1_loopback_v4)
+    g_ping_task = TaskPing(task_queue=g_ping_task_list,
+                         t1_mac=t1_mac,
+                         t1_loopback_v4=t1_loopback_v4,
+                         t1_loopback_v6=t1_loopback_v6)
+
     g_db_monitor = DBMonitor(table_name=APP_DB_VNET_MONITOR_TABLE_NAME,
                             t1_mac=t1_mac,
                             t1_loopback={4: t1_loopback_v4, 6: t1_loopback_v6},
                             vni=DEFAULT_VNI,
-                            task_runner=g_task_runner,
-                            cached_stats=g_ping_stats)
+                            cached_stats=g_ping_stats,
+                            task_list=g_ping_task_list)
     
     g_reply_monitor = ReplyMonitor({4:t1_loopback_v4, 6:t1_loopback_v6}, DEFAULT_UDP_PORT)
     
-    # Start task runner
-    g_task_runner.start()
     # Start watching reply
+    g_ping_task.init()
     g_reply_monitor.start()
     logger_helper.log_notice("Vnet monitor started")
     # Start watching DB (Blocked)
     g_db_monitor.start()
-    # Destroy the shared fd in ping task
-    TaskPing.teardown()
+
     logger_helper.log_notice("Vnet monitor quited")
 
 

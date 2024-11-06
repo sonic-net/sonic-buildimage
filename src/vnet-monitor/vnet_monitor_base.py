@@ -4,14 +4,13 @@ from scapy.all import *
 import socket
 from threading import Thread
 from sonic_py_common import daemon_base, logger
-from queue import PriorityQueue, Empty
 import time
-import random
 from swsscommon import swsscommon
 import netifaces
 from ipaddress import ip_interface, ip_network
 from pyroute2 import IPRoute
 from pyroute2.netlink.exceptions import NetlinkError
+from datetime import datetime
 
 
 SYSLOG_IDENTIFIER = "vnet-monitor"
@@ -25,11 +24,36 @@ DEFAULT_UDP_PORT = 10000 # The default inner packet UDP port
 DEFAULT_DSCP = 48 # The default DSCP value in IP header of vnet ping
 TRUSTED_VNI = 256 # The trusted VNI by Pensando card
 TRUSTED_SPORT = 64128 # The trusted source port by Pensando card
+TIMEOUT_CHECK_INTERVAL = 1000 # The interval (in ms) to check the timeout event
 
 # The state for current ping
 PING_INITIAL = 0 # Initial state, ping request sent, no reply yet and not timeout
 PING_TIMEOUT = 1 # The current ping is timeout
 PING_REPLIED = 2 # The current gets reply
+
+# Dict key name
+KEY_INTERVAL = "interval"
+KEY_MULTIPLIER = "multiplier"
+KEY_T0_LO = "t0_lo"
+KEY_CARD_VIP = "card_vip"
+KEY_SEQ_NUM = "seq_num"
+KEY_STATE = "state"
+KEY_OVERLAY_MAC = "overlay_mac"
+KEY_PACKET_TMPL = "packet_tmpl"
+KEY_VNI = "vni"
+KEY_TIMEOUT_COUNT = "timeout_count"
+KEY_LAST_TIMEOUT_CHECK = "last_timeout_check"
+KEY_LAST_RESPONSE = "last_response"
+KEY_LAST_PING = "last_ping"
+KEY_PING_STATE = "ping_state"
+
+# Table and key name in LAG_TABLE
+LAG_TABLE = 'LAG_TABLE'
+OPER_STATUS_KEY = 'oper_status'
+
+# Ping task list
+g_ping_task_list = []
+
 
 def ip_addr(ip_network_addr):
     """
@@ -41,6 +65,14 @@ def ip_addr(ip_network_addr):
 def monotonic_ms():
     return time.monotonic_ns()/1000000
 
+
+class TaskQueue:
+    """
+    A class to hold all the tasks and the status of tasks
+    """
+    def __init__(self):
+        pass
+        
 class PingStatusCache:
     """
     A class to cache the ping result
@@ -50,6 +82,18 @@ class PingStatusCache:
         self.stats = {}
         self.vnet_monitor_table = None
         self.lock = threading.Lock()
+        self.working = True
+        self.worker_thread = Thread(target=self.timeout_check_thread)
+        self.worker_thread.start()
+    
+    def teardown(self):
+        """
+        Stop the timeout check thread
+        """
+        self.working = False
+        if self.worker_thread is not None:
+            self.worker_thread.join(timeout=30)
+        self.stats.clear()
     
     def make_key(self, t0_loopback, card_vip):
         """
@@ -76,32 +120,39 @@ class PingStatusCache:
         """
         # The key in cache is without prefix length
         key = self.make_key(t0_loopback, card_vip)
-        if key in self.stats:
-            # Update the existing cache
-            self.stats[key]["interval"] = interval
-            self.stats[key]["multiplier"] = multiplier
-            self.stats[key]["overlay_mac"] = overlay_mac
-        else:
-            self.stats[key] = {
-                "t0_lo": t0_loopback,
-                "card_vip": card_vip,
-                "seq_num": 0,
-                "timeout_count": 0,
-                "state": "down",
-                "ping_state": PING_INITIAL,
-                "interval": interval,
-                "multiplier": multiplier,
-                "overlay_mac": overlay_mac
-            }
-            if self.vnet_monitor_table is not None:
-                # Also create entry in STATE_DB if not found
-                table_key = t0_loopback + "|" + card_vip
-                ret, state = self.vnet_monitor_table.hget(table_key, "state")
-                if not ret:
-                    kvs = [("state", "down")]
-                    self.vnet_monitor_table.set(table_key, kvs)
-                else:
-                    self.stats[key]['state'] = state
+        with self.lock:
+            if key in self.stats:
+                # Update the existing cache
+                self.stats[key][KEY_INTERVAL] = interval
+                self.stats[key][KEY_MULTIPLIER] = multiplier
+                self.stats[key][KEY_OVERLAY_MAC] = overlay_mac
+            else:
+                self.stats[key] = {
+                    KEY_T0_LO: t0_loopback,
+                    KEY_CARD_VIP: card_vip,
+                    KEY_SEQ_NUM: 0,
+                    KEY_TIMEOUT_COUNT: 0,
+                    KEY_STATE: "down",
+                    KEY_PING_STATE: PING_INITIAL,
+                    KEY_INTERVAL: interval,
+                    KEY_MULTIPLIER: multiplier,
+                    KEY_OVERLAY_MAC: overlay_mac,
+                    KEY_LAST_RESPONSE: 0,
+                    KEY_LAST_TIMEOUT_CHECK: 0
+                }
+                if self.vnet_monitor_table is not None:
+                    # Also create entry in STATE_DB if not found
+                    table_key = t0_loopback + "|" + card_vip
+                    ret, state = self.vnet_monitor_table.hget(table_key, "state")
+                    if not ret:
+                        kvs = [("state", "down")]
+                        try:
+                            self.vnet_monitor_table.set(table_key, kvs)
+                        except RuntimeError as e:
+                            logger_helper.log_notice("Exception caught {}".format(e))
+                            pass
+                    else:
+                        self.stats[key]['state'] = state
     
     def remove_entry(self, t0_loopback, card_vip):
         """
@@ -115,14 +166,15 @@ class PingStatusCache:
             None
         """
         key = self.make_key(t0_loopback, card_vip)
-        if key in self.stats:
-            # Remove entry from STATE_DB as well
-            table_key = self.stats[key]['t0_lo'] + "|" + self.stats[key]['card_vip']
-            if self.vnet_monitor_table is not None:
-                self.vnet_monitor_table.delete(table_key)
-                logger_helper.log_notice("Removed state_db entry for loopback {} VIP {}".format(t0_loopback, card_vip))
-            # Remove entry from cache
-            self.stats.pop(key)
+        with self.lock:
+            if key in self.stats:
+                # Remove entry from STATE_DB as well
+                table_key = self.stats[key]['t0_lo'] + "|" + self.stats[key]['card_vip']
+                if self.vnet_monitor_table is not None:
+                    self.vnet_monitor_table.delete(table_key)
+                    logger_helper.log_notice("Removed state_db entry for loopback {} VIP {}".format(t0_loopback, card_vip))
+                # Remove entry from cache
+                self.stats.pop(key)
 
     def has_entry(self, t0_loopback, card_vip):
         """
@@ -171,15 +223,16 @@ class PingStatusCache:
         Raises:
             None 
         """
-        if not self.has_entry(t0_loopback, card_vip):
-            return -1
-        key = self.make_key(t0_loopback, card_vip)
-        if seq_num is not None:
-            self.stats[key]['seq_num'] = seq_num
-        else:
-            self.stats[key]['seq_num'] += 1
-        # Since the sequence number increased, we need to reset the ping state
-        self.stats[key]['ping_state'] = PING_INITIAL
+        with self.lock:
+            if not self.has_entry(t0_loopback, card_vip):
+                return -1
+            key = self.make_key(t0_loopback, card_vip)
+            if seq_num is not None:
+                self.stats[key][KEY_SEQ_NUM] = seq_num
+            else:
+                self.stats[key][KEY_SEQ_NUM] += 1
+            # Since the sequence number increased, we need to reset the ping state
+            self.stats[key][KEY_PING_STATE] = PING_INITIAL
 
     def vnet_state_update(self, t0_loopback, card_vip, state):
         """
@@ -204,38 +257,36 @@ class PingStatusCache:
             table_key = self.stats[key]['t0_lo'] + "|" + self.stats[key]['card_vip']
             kvs = [("state", state)]
             if self.vnet_monitor_table is not None:
-                logger_helper.log_notice("VNET t0 {} VIP {} state transit from {} to {}".format(t0_loopback, card_vip, current_state, state))
-                self.vnet_monitor_table.set(table_key, kvs)
+                logger_helper.log_notice("VNET t0 {} VIP {} state transit from {} to {}".format(t0_loopback, ip_addr(card_vip), current_state, state))
+                try:
+                    self.vnet_monitor_table.set(table_key, kvs)
+                except RuntimeError as e:
+                    logger_helper.log_notice("Exception caught {}".format(e))
+                    pass
     
-    def set_timeout_state(self, t0_loopback, card_vip, seq_num, multiplier):
+    def set_timeout_state(self, t0_loopback, card_vip):
         """
         Increase the timeout count of given entry. Do nothing if the entry is not found
         Args:
             t0_loopback: The loopback address (IPv4) of target T0
             card_vip: The virtual IP address (IPv4) of the card
-            seq_num: The sequence number of the timeout event
-            multiplier: Set state to down if multiplier timeout event received
         Returns:
             Return the timeout_count after adding 1.
         Raises:
             None 
         """
-        if not self.has_entry(t0_loopback, card_vip):
-            return 0
-        key = self.make_key(t0_loopback, card_vip)
-        if seq_num < self.stats[key]['seq_num'] or self.stats[key]['ping_state'] != PING_INITIAL:
-            return 0
         with self.lock:
+            if not self.has_entry(t0_loopback, card_vip):
+                return 0
+            key = self.make_key(t0_loopback, card_vip)
             # Set the ping state
-            self.stats[key]['ping_state'] = PING_TIMEOUT
+            self.stats[key][KEY_PING_STATE] = PING_TIMEOUT
             # Increase the timeout count
-            self.stats[key]['timeout_count'] += 1
-            # Increase the sequence number in cache
-            self.update_sequence_number(t0_loopback, card_vip, seq_num+1)
-            if self.stats[key]['timeout_count'] >= multiplier:
+            self.stats[key][KEY_TIMEOUT_COUNT] += 1
+            if self.stats[key][KEY_TIMEOUT_COUNT] >= self.stats[key][KEY_MULTIPLIER]:
                 self.vnet_state_update(t0_loopback, card_vip, "down")
-                self.stats[key]['timeout_count'] = 0
-            return self.stats[key]['timeout_count']
+                self.stats[key][KEY_TIMEOUT_COUNT] = 0
+            return self.stats[key][KEY_TIMEOUT_COUNT]
     
     def set_up_state(self, t0_loopback, card_vip, seq_num):
         """
@@ -249,119 +300,92 @@ class PingStatusCache:
         Raises:
             None 
         """
-        if not self.has_entry(t0_loopback, card_vip):
-            return
-        key = self.make_key(t0_loopback, card_vip)
-        # Got an old reply
-        if seq_num < self.stats[key]['seq_num'] or self.stats[key]['ping_state'] != PING_INITIAL:
-            return
         with self.lock:
+            if not self.has_entry(t0_loopback, card_vip):
+                return
+            key = self.make_key(t0_loopback, card_vip)
+            # Got an old reply
+            if seq_num + self.stats[key][KEY_MULTIPLIER] < self.stats[key][KEY_SEQ_NUM]:
+                return
             # Update the ping state
-            self.stats[key]['ping_state'] = PING_REPLIED
+            self.stats[key][KEY_PING_STATE] = PING_REPLIED
             # Update the sequence number in cache
-            self.update_sequence_number(t0_loopback, card_vip, seq_num+1)
+            self.stats[key][KEY_SEQ_NUM] = seq_num + 1
             # Clear the timeout count
-            self.stats[key]['timeout_count'] = 0
+            self.stats[key][KEY_TIMEOUT_COUNT] = 0
+            # Update the last response time
+            self.stats[key][KEY_LAST_RESPONSE] = monotonic_ms()
             self.vnet_state_update(t0_loopback, card_vip, "up")
 
-
-class TaskBase:
-
-    def __init__(self, expected_running_timestamp_ms):
-        """
-        Constructor of TaskBase
-        
-            Args:
-                expected_running_timestamp_ms: The timestamp when the task is going to be started
-
-            Returns:
-                None
-
-            Raises:
-                None
-        """
-        self.expected_running_timestamp_ms = expected_running_timestamp_ms
-    
-    def do_task(self):
-        """An abstract method to do the real task"""
-        pass
-    
-
-    def __lt__(self, other):
-        """Override the __lt__ method inorder to put the tasks into
-        a PriorityQueue"""
-        return self.expected_running_timestamp_ms <= other.expected_running_timestamp_ms
+    def timeout_check_thread(self):
+        timeout_check_interval = TIMEOUT_CHECK_INTERVAL
+        while self.working:
+            cur_time = monotonic_ms()
+            for stat in list(self.stats.values()):
+                if cur_time - stat[KEY_LAST_TIMEOUT_CHECK] >= stat[KEY_INTERVAL]:
+                    stat[KEY_LAST_TIMEOUT_CHECK] = cur_time
+                    if cur_time - stat[KEY_LAST_RESPONSE] > stat[KEY_INTERVAL]:
+                        self.set_timeout_state(stat[KEY_T0_LO], stat[KEY_CARD_VIP])
+                # Use the minimum interval to check the timeout
+                timeout_check_interval = min(timeout_check_interval, stat[KEY_INTERVAL])
+            time.sleep(timeout_check_interval/1000)
 
 
-class TaskPing(TaskBase):
+class TaskPing():
     
     # We create only 1 fd for all ping tasks
     # The fd is shared among all ping tasks. It's safe because all ping tasks
     # are running sequentially
     socket_ping = None
 
-    def __init__(self, expected_running_timestamp_ms, t1_mac, t1_loopback, t0_loopback, overlay_mac, card_vip, vni, interval_ms, multiplier, seq_num):
+    def __init__(self, task_queue, t1_mac, t1_loopback_v4, t1_loopback_v6):
         """
         Constructor of TaskPing
         Args:
-            expected_running_timestamp_ms: An integer, the timestamp when the task is going to be started
+            task_queue: A queue holding all the ping tasks and status
             t1_mac: MAC address of this T1
-            t1_loopback: The loopback address (IPv4 or IPv6) of this T1. 
-            t0_loopback: The loopback address (IPV4) of the target T0
-            overlay_mac: The special MAC for matching the Vnet ping
-            card_vip: The virtual IP address of card. The VIP of card can be IPv4 or IPv6
-            vni: The vni in vxlan header
-            interval_ms: The interval for ping request (in ms)
-            multiplier: An integer. Will mark `down` in sate_db if consecutive timeout event happened
-            seq_num: An integer, the sequence number of ping request
+            t1_loopback_v4: The loopback address (IPv4) of this T1. 
+            t1_loopback_v6: The loopback address (IPv6) of this T1.
         Returns:
             None
         Raises:
             None
         """
-        super().__init__(expected_running_timestamp_ms)
+        self.task_queue = task_queue
         self.t1_mac = t1_mac
-        self.t1_loopback = t1_loopback
-        self.t0_loopback = t0_loopback
-        self.overlay_mac = overlay_mac
-        self.card_vip = card_vip
-        self.vni = vni
-        self.interval_ms = interval_ms
-        self.multiplier = multiplier
-        self.seq_num = seq_num
-        # Save the loopback address without prefix len, so that we don't
-        # need to calculate it upon each send
-        self.t0_lo_addr = ip_addr(self.t0_loopback)
-        self.load_t0_loopback = socket.inet_aton(self.t0_lo_addr)
-        self.packet_tmpl = self.build_vent_ping_template_packet(t1_mac, ip_addr(t1_loopback), overlay_mac, ip_addr(card_vip), vni)
+        self.t1_loopback_v4 = t1_loopback_v4
+        self.t1_loopback_v6 = t1_loopback_v6
+        self.socket_ping = None
+        self.running = False
+        self.worker_thread = None
     
-    @staticmethod
-    def init(t1_loopback_v4):
+    def init(self):
         """
         Create the shared socket
         Args:
-            t1_loopback_v4: The loopback address (IPv4 only)
+            None
         Returns:
             None
         Raises:
             None
         """
-        if TaskPing.socket_ping is None:
-            TaskPing.socket_ping = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            TaskPing.socket_ping.setsockopt(socket.SOL_IP, socket.IP_TOS, (DEFAULT_DSCP << 2))
+        if self.socket_ping is None:
+            self.socket_ping = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.socket_ping.setsockopt(socket.SOL_IP, socket.IP_TOS, (DEFAULT_DSCP << 2))
             TIMEOUT = 30
             while TIMEOUT > 0:
                 try:
-                    TaskPing.socket_ping.bind((t1_loopback_v4, 0))
+                    self.socket_ping.bind((self.t1_loopback_v4, 0))
                     break
                 except OSError:
                     # The loopback address is not configured yet
                     TIMEOUT -= 1
                     time.sleep(1)
+        self.running = True
+        self.worker_thread = Thread(target=self.ping_thread)
+        self.worker_thread.start()
 
-
-    @staticmethod
-    def teardown():
+    def teardown(self):
         """
         Close the shared socket
         Args:
@@ -371,9 +395,12 @@ class TaskPing(TaskBase):
         Raises:
             None
         """
-        if TaskPing.socket_ping is not None:
-            TaskPing.socket_ping.close()
-            TaskPing.socket_ping = None
+        self.running = False
+        if self.worker_thread is not None:
+            self.worker_thread.join(timeout=30)
+        if self.socket_ping is not None:
+            self.socket_ping.close()
+            self.socket_ping = None
 
     
     def build_vent_ping_template_packet(self, t1_mac, t1_loopback, overlay_mac, card_vip, vni):
@@ -413,7 +440,7 @@ class TaskPing(TaskBase):
 
         return vxlan1_pkt
 
-    def build_vnet_ping_packet(self):
+    def build_vnet_ping_packet(self, task):
         """
         Build a double vxlan encapsulated packet
            +------+------+------+-------------------+------+-------+------+-------+------------+--------+-----+-------+-------+---------+
@@ -424,150 +451,54 @@ class TaskPing(TaskBase):
         Raises:
             None
         """
+        if task.get(KEY_PACKET_TMPL, None) is None:
+            task[KEY_PACKET_TMPL] = self.build_vent_ping_template_packet(self.t1_mac,
+                                        self.t1_loopback_v4 if ip_interface(task[KEY_CARD_VIP]).version == 4 else self.t1_loopback_v6,
+                                        task[KEY_OVERLAY_MAC],
+                                        ip_addr(task[KEY_CARD_VIP]),
+                                        task[KEY_VNI])
         pkt = None
         # The sequence number is 8 bytes in big endian.
         # If a ping packet is sent out every 1 millisecond, it will take 584942417355 years to wrap around
-        load_seq_num = self.seq_num.to_bytes(8, 'big')
-        load = b''.join([self.load_t0_loopback, load_seq_num])
-        pkt = self.packet_tmpl/Raw(load)
+        load_seq_num = task[KEY_SEQ_NUM].to_bytes(8, 'big')
+        load_t0_loopback = socket.inet_aton(task[KEY_T0_LO])
+        load = b''.join([load_t0_loopback, load_seq_num])
+        pkt = task[KEY_PACKET_TMPL]/Raw(load)
         return pkt
     
-    def do_task(self):
+    def do_task(self, task):
         """
         Build a double vxlan encapsulated packet, and send out with scapy
-        Args:
-            None
         Returns:
             None
         Raises:
             None
         """
-        pkt = self.build_vnet_ping_packet()
-        if TaskPing.socket_ping is not None:
-            TaskPing.socket_ping.sendto(bytes(pkt), (self.t0_lo_addr, DEFAULT_VXLAN_UDP_PORT))
+        pkt = self.build_vnet_ping_packet(task)
+        if self.socket_ping is not None:
+            self.socket_ping.sendto(bytes(pkt), (task[KEY_T0_LO], DEFAULT_VXLAN_UDP_PORT))
     
-    def next_ping_task(self, seq_num=None):
+    def ping_thread(self):
         """
-        Generate the next ping task
+        The thread function to send out the ping packet
         """
-        if seq_num is not None:
-            self.seq_num = seq_num
-        else:
-            self.seq_num += 1
-        self.expected_running_timestamp_ms = monotonic_ms() + self.interval_ms
-        return self
-
-
-class TaskTimeout(TaskBase):
-
-    def __init__(self, expected_running_timestamp_ms, t0_loopback, card_vip, seq_num, multiplier):
-        """
-        Constructor of TaskTimeout
-        Args:
-            expected_running_timestamp_ms: An integer, the timestamp when the task is going to be started
-            t0_loopback: The loopback address (IPV4) of the target T0
-            card_vip: The virtual IP address of card
-            seq_num: The sequence number for the timeout event
-            multiplier: An integer. Will mark `down` in sate_db if consecutive timeout event happened
-        Returns:
-            None
-        Raises:
-            None
-        """
-        super().__init__(expected_running_timestamp_ms)
-        self.t0_loopback = t0_loopback
-        self.card_vip = card_vip
-        self.seq_num = seq_num
-        self.multiplier = multiplier
-
-    def do_task(self):
-        """
-        Set the timeout status of given entry
-        """
-        logger_helper.log_debug("Vnet ping timeout on t0_loopback {} vip {}".format(self.t0_loopback, self.card_vip))
-
-
-class TaskDummy(TaskBase):
-    """
-    A dummy task to unblock the queue.get
-    """
-    def __init__(self,expected_running_timestamp_ms):
-        super().__init__(expected_running_timestamp_ms)
-
-    def do_task(self):
-        pass
-
-
-class TaskRunner():
-    """
-    Run tasks in a PriorityQueue
-    """
-
-    def __init__(self, cached_stats):
-        self.task_queue = PriorityQueue()
-        self.running = False
-        self.cached_stats = cached_stats
-        self.worker_thread = None
-
-    def add_task(self, task):
-        """
-        Add a task to the task_queue.
-        The tasks are ordered by timestamp
-        """
-        self.task_queue.put(item=task, block=False)
-    
-    def task_runner(self):
-        """
-        The thread function to run each task
-        """
-        DIVIDEND = 1000
-        while True:
-            try:
-                task = self.task_queue.get()
-                if not self.running:
-                    break
+        ping_wait_time = DEFAULT_INTERVAL
+        while self.running:
+            for task in self.task_queue:
                 cur_time = monotonic_ms()
-                expected_time = task.expected_running_timestamp_ms
-                if cur_time < expected_time:
-                    time.sleep((expected_time - cur_time)/DIVIDEND)
-                # Run task
-                task.do_task()
-                # After task running
-                if isinstance(task, TaskPing):
-                    # Schedule the next Timeout task
-                    next_timeout_task = TaskTimeout(monotonic_ms() + task.multiplier*task.interval_ms, task.t0_loopback, task.card_vip, task.seq_num, task.multiplier)
-                    self.add_task(next_timeout_task)
-                    # Schedule the next ping task if cached entry is not removed
-                    if self.cached_stats.compare_entry(task.t0_loopback, task.card_vip, task.interval_ms, task.multiplier, task.overlay_mac):
-                        next_ping_task = task.next_ping_task()
-                        self.add_task(next_ping_task)
-                elif isinstance(task, TaskTimeout):
-                    self.cached_stats.set_timeout_state(task.t0_loopback, task.card_vip, task.seq_num, task.multiplier)
-            except Empty:
-                pass
-    
-    def start(self):
-        """
-        Run the worker function in a new thread
-        """
-        self.worker_thread = Thread(target=self.task_runner)
-        self.running = True
-        self.worker_thread.start()
-
-    def stop(self):
-        """
-        Stop the work thread
-        """
-        self.running = False
-        self.add_task(TaskDummy(0))
-        self.worker_thread.join()
-        
+                if cur_time - task[KEY_LAST_PING] >= task[KEY_INTERVAL]:
+                    self.do_task(task)
+                    task[KEY_SEQ_NUM] += 1
+                    task[KEY_LAST_PING] = cur_time
+                    g_ping_stats.update_sequence_number(task[KEY_T0_LO], task[KEY_CARD_VIP], task[KEY_SEQ_NUM])
+                ping_wait_time = min(ping_wait_time, task[KEY_INTERVAL] - (cur_time - task[KEY_LAST_PING]))
+            time.sleep(ping_wait_time/1000)
 
 class DBMonitor():
     """
     A class to monitor the db (APP_DB)
     """
-    def __init__(self, table_name, t1_mac, t1_loopback, vni, task_runner, cached_stats):
+    def __init__(self, table_name, t1_mac, t1_loopback, vni, cached_stats, task_list):
         self.working = False
         self.appl_db = daemon_base.db_connect("APPL_DB")
         self.sel = swsscommon.Select()
@@ -576,8 +507,8 @@ class DBMonitor():
         self.t1_mac = t1_mac
         self.t1_loopback = t1_loopback
         self.vni = vni
-        self.task_runner = task_runner
         self.cached_stats = cached_stats
+        self.task_list = task_list
 
     def process_new_entry(self, key, op, fvp):
         if not op in ['SET', 'DEL']:
@@ -610,21 +541,36 @@ class DBMonitor():
 
             logger_helper.log_notice("Got new vnet ping task T0 Loopback: {} VIP: {}".format(t0_loopback, card_vip))
             self.cached_stats.add_entry(t0_loopback, card_vip, interval, multiplier, overlay_mac)
-            ping_task = TaskPing(
-                                expected_running_timestamp_ms=monotonic_ms() + random.randint(0, interval), # A random delay is added to avoid burst request
-                                t1_mac=self.t1_mac,
-                                t1_loopback=self.t1_loopback[af],
-                                t0_loopback=t0_loopback,
-                                overlay_mac=overlay_mac,
-                                card_vip=card_vip,
-                                vni=self.vni,
-                                interval_ms=interval,
-                                multiplier=multiplier,
-                                seq_num=0)
-            self.task_runner.add_task(ping_task)
+            for task in self.task_list:
+                # Update existing task
+                if task[KEY_T0_LO] == t0_loopback and task[KEY_CARD_VIP] == card_vip:
+                    task[KEY_INTERVAL] = interval
+                    task[KEY_MULTIPLIER] = multiplier
+                    task[KEY_OVERLAY_MAC] = overlay_mac
+                    task[KEY_LAST_PING] = 0
+                    break
+            else:
+                # Create new task
+                self.task_list.append(
+                    {
+                        KEY_T0_LO: t0_loopback,
+                        KEY_CARD_VIP: card_vip,
+                        KEY_OVERLAY_MAC: overlay_mac,
+                        KEY_VNI: self.vni,
+                        KEY_INTERVAL: interval,
+                        KEY_MULTIPLIER: multiplier,
+                        KEY_SEQ_NUM: 0,
+                        KEY_LAST_PING: 0
+                    }
+                )
         else:
             logger_helper.log_notice("Removed vnet ping task T0 Loopback: {} VIP: {}".format(t0_loopback, card_vip))
             self.cached_stats.remove_entry(t0_loopback, card_vip)
+            for task in self.task_list:
+                if task[KEY_T0_LO] == t0_loopback and task[KEY_CARD_VIP] == card_vip:
+                    self.task_list.remove(task)
+                    break
+
 
     def start(self):
         """
@@ -678,6 +624,7 @@ class ReplyMonitor():
         self.sniffer = None
         self.working = False
         self.sniffing_iface = []
+        self.netlink_api = IPRoute()
 
 
     def _get_bgp_local_address(self):
@@ -722,32 +669,40 @@ class ReplyMonitor():
         Get an list of operation up interfaces.
         """
         ifaces = self._get_iface_list()
-        netlink_api = IPRoute()
         up_ifaces = []
         for iface in ifaces:
             try:
-                status = netlink_api.link("get", ifname=iface)
+                status = self.netlink_api.link("get", ifname=iface)
             except NetlinkError:
                 continue
         
             if status[0]['state'] == 'up':
                 up_ifaces.append(iface)
-        netlink_api.close()
         return up_ifaces
 
 
-    def _wait_intf_up_msg(self):
+    def sniffer_restart_required(self, lag, fvs):
         """
-        Wait for RTM_NEWLINK message from IPRoute. 
+        Determines if the packet sniffer needs to be restarted
+
+        The sniffer needs to be restarted when a portchannel interface transitions
+        from down to up. When a portchannel interface goes down, the sniffer is
+        able to continue sniffing on other portchannels. 
         """
-        msgs = []
-        with IPRoute() as ipr:
-            ipr.bind()
-            for msg in ipr.get():
-                if msg['event'] == "RTM_NEWLINK" and msg.get('state', '') == 'up':
-                    msgs.append(msg)
-        
-        return msgs
+        oper_status = dict(fvs).get(OPER_STATUS_KEY)
+        if lag not in self.sniffing_iface and oper_status == 'up':
+            logger_helper.log_info('{} came back up, sniffer restart required'
+                            .format(lag))
+            # Don't need to modify self.sniffing_iface here since it is repopulated
+            # by self.get_up_portchannels()
+            return True
+        elif lag in self.sniffing_iface and oper_status == 'down':
+            # A portchannel interface went down, remove it from the list of
+            # sniffed interfaces so we can detect when it comes back up
+            self.sniffing_iface.remove(lag)
+            return False
+        else:
+            return False
 
 
     def _get_intf_name(self, msg):
@@ -766,13 +721,38 @@ class ReplyMonitor():
         """
         A thread to watch the link up message. Restart the sniffer if the msg is seen
         """
-        while True:
-            msgs = self._wait_intf_up_msg()
-            if self.sniffer == None or not self.working:
-                # Stop working
-                break
-            # At least one interface is up now, need to restart the sniffer to add the interface into iface list
-            self.restart_sniff()
+        app_db = swsscommon.DBConnector("APPL_DB", 0)
+        lag_table = swsscommon.SubscriberStateTable(app_db, LAG_TABLE)
+        sel = swsscommon.Select()
+        sel.addSelectable(lag_table)
+        SELECT_TIMEOUT_MSECS = 1000
+        logger_helper.log_info('Starting LAG state watching thread')
+        while self.working:
+            rc, _ = sel.select(SELECT_TIMEOUT_MSECS)
+            if rc == swsscommon.Select.TIMEOUT:
+                continue
+            elif rc == swsscommon.Select.ERROR:
+                raise Exception("Select() error")
+            else:
+                lag, _, fvs = lag_table.pop()
+                if self.sniffer_restart_required(lag, fvs):
+                    TIMEOUT = 10
+                    up_count = 0
+                    THRESHOLD = 5
+                    # Restart sniff only when the newly up LAG keeps up for over 5 seconds
+                    start = datetime.now()
+                    while (datetime.now() - start).seconds < TIMEOUT:
+                        if lag in self._get_oper_up_iface_list():
+                            up_count += 1
+                            if up_count >= THRESHOLD:
+                                break
+                        else:
+                            up_count = 0
+                        time.sleep(1)
+                        
+                    # Restart the sniffer if there is no interface flap
+                    if up_count >= THRESHOLD:
+                        self.restart_sniff()
 
 
     def start(self):
@@ -792,8 +772,23 @@ class ReplyMonitor():
             # Wait for at least one interface is up, oterwise the sniffer will not work
             time.sleep(1)
             self.sniffing_iface = self._get_oper_up_iface_list()
-        self.sniffer = AsyncSniffer(iface=self.sniffing_iface, filter=self.sniffstring, prn=process_packet, store=False)
-        self.sniffer.start()
+        while True:
+            self.sniffer = AsyncSniffer(iface=self.sniffing_iface, filter=self.sniffstring, prn=process_packet, store=False)
+            self.sniffer.start()
+            # Allow 3 seconds for the sniffer to be fully initialized
+            # If the sniffer is not fully initialized, then it could because some exception happened
+            # Then we need to restart the sniffer
+            RETRY = 30
+            while RETRY >= 0 and not hasattr(self.sniffer, 'stop_cb'):
+                time.sleep(0.1)
+                RETRY -= 1
+            if RETRY < 0:
+                logger_helper.log_warning("Failed to start sniffer, retrying")
+                time.sleep(1)
+                self.sniffing_iface = self._get_oper_up_iface_list()
+            else:
+                break
+
         logger_helper.log_notice("Started vnet ping monitor at interfaces {}".format(self.sniffing_iface))
         self.working = True
         
