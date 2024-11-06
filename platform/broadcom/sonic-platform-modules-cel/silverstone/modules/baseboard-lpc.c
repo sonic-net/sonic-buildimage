@@ -98,7 +98,7 @@ static ssize_t version_show(struct device *dev, struct device_attribute *attr, c
     mutex_lock(&cpld_data->cpld_lock);
     version = inb(VERSION_ADDR);
     mutex_unlock(&cpld_data->cpld_lock);
-    return sprintf(buf, "%d.%d\n", version >> 4, version & 0x0F);
+    return sprintf(buf, "%x.%x\n", version >> 4, version & 0x0F);
 }
 static DEVICE_ATTR_RO(version);
 

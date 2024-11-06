@@ -1,6 +1,6 @@
 /*
  * $Id$
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -24,6 +24,7 @@
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  * 
  *
  * File:        dcb.c
@@ -1309,7 +1310,7 @@ dcb23_rx_untagged_get(dcb_t *dcb, int dt_mode, int ingport_is_hg)
     uint32 hgh[4];
     soc_higig2_hdr_t *h = (soc_higig2_hdr_t *)&hgh[0];
     COMPILER_REFERENCE(dt_mode);
-    
+
     hgh[0] = soc_htonl(d->mh0);
     hgh[1] = soc_htonl(d->mh1);
     hgh[2] = soc_htonl(d->mh2);
@@ -3453,7 +3454,7 @@ static uint32 ep_to_cpu_hdr36_rx_crc_get(void *hdr) {
 static uint32
 ep_to_cpu_hdr36_rx_untagged_get(void *hdr, int dt_mode, int ingport_is_hg)
 {
-/*FIXME: tag_status (itag_status) field is removed*/
+
     return 0;
 }
 
@@ -3561,7 +3562,7 @@ GETHDRFUNCNULL(36, rx_switch_drop)
 GETHDRFUNCNULL(36, olp_encap_oam_pkt)
 
 #if 0
-/* FIXME: Keep it for now, maybe useful later */
+
 static void
 ep_to_cpu_hdr_funcerr(int dt, char *name)
 {
