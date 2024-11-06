@@ -12,7 +12,7 @@
         },
         "redis1": {
            "hostname" : "{{HOST_IP}}",
-            "port" : 6380,
+            "port" : 6378,
             "unix_socket_path" : "/var/run/redis{{DEV}}/redis1.sock",
             "persistence_for_warm_boot" : "yes"
             {% if DATABASE_TYPE is defined and DATABASE_TYPE != "" %}
@@ -21,7 +21,7 @@
         },
         "redis2": {
             "hostname" : "{{HOST_IP}}",
-            "port" : 6381,
+            "port" : 6377,
             "unix_socket_path" : "/var/run/redis{{DEV}}/redis2.sock",
             "persistence_for_warm_boot" : "yes"
             {% if DATABASE_TYPE is defined and DATABASE_TYPE != "" %}
@@ -30,7 +30,7 @@
         },
         "redis3": {
            "hostname" : "{{HOST_IP}}",
-            "port" : 6382,
+            "port" : 6376,
             "unix_socket_path" : "/var/run/redis{{DEV}}/redis3.sock",
             "persistence_for_warm_boot" : "yes"
             {% if DATABASE_TYPE is defined and DATABASE_TYPE != "" %}
@@ -39,7 +39,7 @@
         },
         "redis4": {
             "hostname" : "{{HOST_IP}}",
-            "port" : 6383,
+            "port" : 6375,
             "unix_socket_path" : "/var/run/redis{{DEV}}/redis4.sock",
             "persistence_for_warm_boot" : "yes"
             {% if DATABASE_TYPE is defined and DATABASE_TYPE != "" %}
