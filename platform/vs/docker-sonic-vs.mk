@@ -10,6 +10,8 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
                               $(LIBYANG) \
                               $(LIBYANG_CPP) \
                               $(LIBYANG_PY3) \
+                              $(LIBNL3_DEV) \
+                              $(LIBNL3) \
                               $(SONIC_UTILITIES_DATA) \
                               $(SONIC_HOST_SERVICES_DATA)
 
