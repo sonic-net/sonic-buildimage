@@ -1,6 +1,6 @@
 /*
  * $Id: devids.h,v 1.309 Broadcom SDK $
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -24,6 +24,7 @@
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  * 
  * 
  */
@@ -1187,7 +1188,7 @@
 #define BCM53394_A0_REV_ID      1
 
 /* Greyhound , Ranger 2 */
-#define BCM53400_DEVICE_ID      0x8400 /* FIXME */
+#define BCM53400_DEVICE_ID      0x8400 
 #define BCM53400_A0_REV_ID      1
 #define BCM56060_DEVICE_ID      0xb060
 #define BCM56060_A0_REV_ID      1
@@ -1995,6 +1996,23 @@
 #define BCM8884E_DEVICE_ID      0x884E
 #define BCM8884F_DEVICE_ID      0x884F
 
+#define BCM88810_DEVICE_ID      0x8810
+#define BCM88811_DEVICE_ID      0x8811
+#define BCM88812_DEVICE_ID      0x8812
+#define BCM88813_DEVICE_ID      0x8813
+#define BCM88814_DEVICE_ID      0x8814
+#define BCM88815_DEVICE_ID      0x8815
+#define BCM88816_DEVICE_ID      0x8816
+#define BCM88817_DEVICE_ID      0x8817
+#define BCM88818_DEVICE_ID      0x8818
+#define BCM88819_DEVICE_ID      0x8819
+#define BCM8881A_DEVICE_ID      0x881A
+#define BCM8881B_DEVICE_ID      0x881B
+#define BCM8881C_DEVICE_ID      0x881C
+#define BCM8881D_DEVICE_ID      0x881D
+#define BCM8881E_DEVICE_ID      0x881E
+#define BCM8881F_DEVICE_ID      0x881F
+
 #define J2X_DEVICE_ID                 0x8830
 #define J2X_A0_REV_ID           DNXC_A0_REV_ID
 #define BCM88830_DEVICE_ID      J2X_DEVICE_ID
@@ -2014,6 +2032,11 @@
 #define BCM8883D_DEVICE_ID      0x883D
 #define BCM8883E_DEVICE_ID      0x883E
 #define BCM8883F_DEVICE_ID      0x883F
+
+#define J2Z_DEVICE_ID           0x216
+#define J2Z_A0_REV_ID           DNXC_A0_REV_ID
+#define BCM8216_DEVICE_ID       J2Z_DEVICE_ID
+#define BCM8216_A0_REV_ID       J2Z_A0_REV_ID
 
 #ifdef BCM_DNX3_SUPPORT
 #define JERICHO3_DEVICE_ID      0x8860
@@ -2179,6 +2202,10 @@
 #define BCM56692_DEVICE_ID 0xb692
 #define BCM56692_A0_REV_ID 0x0001
 
+/* Trident5 X12*/
+#define BCM78800_DEVICE_ID 0xf800
+#define BCM78800_A0_REV_ID 0x0001
+
 /* Trident4 */
 #define BCM56880_DEVICE_ID 0xb880
 #define BCM56880_A0_REV_ID 0x0001
@@ -2211,6 +2238,10 @@
 #define BCM56788_A1_REV_ID 0x0002
 #define BCM56789_DEVICE_ID 0xb789
 #define BCM56789_A0_REV_ID 0x0001
+/* Firelight3 */
+#define BCM56089_DEVICE_ID 0xb089
+#define BCM56089_A0_REV_ID 0x0001
+#define BCM56089_A1_REV_ID 0x0002
 
 /* Tomahawk4 */
 #define BCM56990_DEVICE_ID 0xb990

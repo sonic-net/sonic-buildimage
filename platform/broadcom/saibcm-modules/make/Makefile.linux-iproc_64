@@ -1,5 +1,5 @@
 # $Id: Makefile.linux-iproc Exp $
-# $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -23,6 +23,7 @@
 # 
 # This software is governed by the Broadcom Open Network Switch APIs license:
 # https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
 # 
 # Makefile for iproc-CMICd
 
@@ -59,12 +60,13 @@ endif
 
 # A72 tools
 # JIRA SONIC-69062
-TOOLCHAIN_BIN_DIR ?= $(TOOLCHAIN_BASE_DIR)/buildroot/host/usr/bin
+TOOLCHAIN_BIN_DIR?=$(TOOLCHAIN_BASE_DIR)/buildroot/host/usr/bin
 override PATH:=$(TOOLCHAIN_BASE_DIR)/buildroot/host/usr/$(TARGET_ARCHITECTURE)/bin:$(TOOLCHAIN_BIN_DIR):$(PATH)
-LD_LIBRARY_PATH=$(TOOLCHAIN_BASE_DIR)/buildroot/host/usr/lib
+LD_LIBRARY_PATH?=$(TOOLCHAIN_BASE_DIR)/buildroot/host/usr/lib
 export TOOLCHAIN_BIN_DIR LD_LIBRARY_PATH
 
 CROSS_GCC_VER ?= $(shell $(TOOLCHAIN_BIN_DIR)/$(CROSS_COMPILE)gcc -dumpversion)
+CROSS_GCC_VER_MAJOR := $(shell echo $(CROSS_GCC_VER) | cut -f1 -d.)
 
 # Default Linux include directory
 ifeq (,$(LINUX_INCLUDE))
@@ -87,22 +89,25 @@ CFLAGS += -Wno-error=unused-function
 CFLAGS += -Wno-error=array-bounds
 CFLAGS += -Wno-error=format-overflow
 CFLAGS += -fgnu89-inline
-ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f1 -d.` \>= 8)" "1"
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 8)" "1"
     CFLAGS += -Wno-stringop-overflow
     CFLAGS += -Wno-stringop-truncation
     CFLAGS += -Wno-error=restrict
 endif
-ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f1 -d.` \>= 9)" "1"
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 9)" "1"
 	CFLAGS += -Wno-address-of-packed-member
 endif
-ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f1 -d.` \== 10)" "1"
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 10)" "1"
 	CFLAGS += -Wno-error=uninitialized
 	CFLAGS += -Wno-error=format-overflow
 	CFLAGS += -fcommon
 endif
-ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f1 -d.` \== 12)" "1"
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 12)" "1"
 	CFLAGS += -flarge-source-files
 	CFLAGS += -Wno-error=address
+endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 13)" "1"
+	CFLAGS += -Wno-error=enum-int-mismatch
 endif
 
 CFGFLAGS += -D$(ENDIAN) -DIPROC_CMICD
@@ -126,7 +131,7 @@ basename_flags = -D"KBUILD_BASENAME=KBUILD_STR($(call name-fix,$(basetarget)))"
 modname_flags  = $(if $(filter 1,$(words $(modname))),\
                  -D"KBUILD_MODNAME=KBUILD_STR($(call name-fix,$(modname)))")
 
-KFLAG_INCLD ?= $(LD_LIBRARY_PATH)/gcc/$(TARGET_ARCHITECTURE)/$(CROSS_GCC_VER)/include
+KFLAG_INCLD ?= $(LD_LIBRARY_PATH)/../gcc/$(TARGET_ARCHITECTURE)/$(CROSS_GCC_VER)/include
 
 ifeq (,$(KFLAGS))
 KFLAGS := -D__LINUX_ARM_ARCH__=8 -D__KERNEL__ -DPTRS_ARE_64BITS -DLONGS_ARE_64BITS -nostdinc -isystem $(KFLAG_INCLD) -I$(LINUX_INCLUDE) -include $(LINUX_INCLUDE)/generated/autoconf.h -I$(KERNDIR)/arch/arm64/include -I$(KERNDIR)/arch/arm64/include/generated -I$(KERNDIR)/arch/arm64/include/generated/uapi -I$(KERNDIR)/arch/arm64/include/generated/asm -I$(KERNDIR)/include/uapi -I$(KERNDIR)/include/generated/uapi -I$(KERNDIR)/arch/arm64/include/uapi  -Wall -Wstrict-prototypes -Wno-trigraphs -O2 -fno-strict-aliasing -fno-common -fno-pic -pipe -ffreestanding -fomit-frame-pointer -g -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -mcmodel=large

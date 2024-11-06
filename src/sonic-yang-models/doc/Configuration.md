@@ -86,6 +86,7 @@ Table of Contents
          * [Virtual router](#virtual-router)
          * [LOGGER](#logger)
          * [WRED_PROFILE](#wred_profile)
+         * [XCVRD_LOG](#xcvrd_log)
          * [PASSWORD_HARDENING](#password_hardening)
          * [SSH_SERVER](#ssh_server)
          * [SYSTEM_DEFAULTS table](#systemdefaults-table)
@@ -2871,7 +2872,7 @@ The MID_PLANE_BRIDGE" table introduces the configuration for the midplane bridge
 {
     "MID_PLANE_BRIDGE": {
         "GLOBAL" : {
-            "bridge": "bridge_midplane",
+            "bridge": "bridge-midplane",
             "ip_prefix": "169.254.200.254/24"
         }
     }

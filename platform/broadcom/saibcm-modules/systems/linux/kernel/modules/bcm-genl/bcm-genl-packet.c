@@ -1,5 +1,5 @@
 /*
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -23,6 +23,7 @@
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  * 
  */
 
@@ -395,11 +396,6 @@ genl_filter_cb(uint8_t * pkt, int size, int dev_no, void *pkt_meta,
     }
 
     /* setup skb by copying packet content */
-    /*
-     * Strip reserved vlan tag
-     * FIXME: enhance GENL interface to support FILTER_TAG_STRIP,
-     * FILTER_TAG_KEEP and FILTER_TAG_ORIGINAL
-     */
     if(strip_tag) {
         memcpy(skb->data, pkt, 12);
         memcpy(skb->data + 12, pkt + 16, size - 12);

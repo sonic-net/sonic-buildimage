@@ -3,7 +3,7 @@
  * NGKNET Callback module entry.
  */
 /*
- * $Copyright: (c) 2022 Broadcom.
+ * $Copyright: (c) 2024 Broadcom.
  * Broadcom Proprietary and Confidential. All rights reserved.$
  */
 
@@ -104,6 +104,10 @@ dev_id_get(char* dev_type)
     {
         dev_id = 0xf905;
     }
+    else if (0== strcmp(dev_type, "bcm78800_a0"))
+    {
+        dev_id = 0xf800;
+    }
     return dev_id;
 }
 
@@ -133,7 +137,7 @@ get_tag_status(char* dev_type, char* dev_var, void *meta)
     }
 #endif
 
-    if ((0xb880 == dev_id ) || (0xb780 == dev_id))
+    if ((0xb880 == dev_id ) || (0xb780 == dev_id) || (0xf800 == dev_id))
     {
         /* Field BCM_PKTIO_RXPMD_MATCH_ID_LO has tag status in RX PMD */
         fd_index = 2;
