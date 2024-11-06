@@ -1,14 +1,9 @@
+[Low Inheritance Precedence]
 mem_cache_enable=1
-sai_create_dflt_trap=1
-sai_default_tc_to_pg_map=1
-qos_map_dot1p_nonsharable_mode=1
 l3_mem_entries=16384
 lpm_scaling_enable=0
 l3_alpm_enable=0
 riot_enable=0
 ipv6_lpm_128b_enable=0x1
-sai_l3_neighbor_discard_flag_capable=0
-sai_l3_route_discard_flag_capable=0
-sai_svi_my_station_optimization=1
 l2xmsg_mode=1
 l2_mem_entries=32768

@@ -1,3 +1,4 @@
+[Low Inheritance Precedence]
 phy_null=1
 pll_bypass=1
 core_clock_frequency=1325
@@ -5,7 +6,6 @@ dpr_clock_frequency=1000
 device_clock_frequency=1325
 port_flex_enable=1
 l2xmsg_mode.0=1
-l2xmsg_shadow_hit_bits=0
 mmu_port_num_mc_queue.0=1
 module_64ports.0=1
 multicast_l2_range.0=511
@@ -24,27 +24,11 @@ flow_init_mode=1
 num_queues_pci=46
 num_queues_uc0=1
 num_queues_uc1=1
-ptp_cosq=30
 sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
 sai_fast_convergence_support=1
 sai_nbr_bcast_ifp_optimized=1
 # Reduced Trap Group QSET for BRCM Sonic
 sai_brcm_sonic_trap_group=1
-sai_sonic_use_route_max=1
-sai_create_dflt_trap=1
-sai_svi_my_station_optimization=1
-sai_disable_internal_port_serdes=1
-sai_l3_neighbor_discard_flag_capable=0
-sai_l3_route_discard_flag_capable=0
-sai_disable_ports_when_sw_shutdown=1
-sai_l3_max_ecmp_paths=128
-sai_retry_fdb_delete=1
 
 # MMU Lossless configurations
 sai_optimized_mmu=1
-sai_mmu_tc_to_pg_config=1
-sai_port_pg_lossless_config=0x18
-# Modify RX Drops scope . Removes RDROP, PDISC, VLANDR, RIPD4,RIPD6
-sai_adjust_port_if_in_discards=1
-sai_default_tc_to_pg_map=1
-qos_map_dot1p_nonsharable_mode=1

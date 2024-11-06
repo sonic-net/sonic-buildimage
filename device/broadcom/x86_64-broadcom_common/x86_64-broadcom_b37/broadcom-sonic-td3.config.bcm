@@ -1,7 +1,6 @@
+[Low Inheritance Precedence]
 sai_load_hw_config=/usr/lib/cancun/
 l2_entry_used_as_my_station=1
-sai_switch_mac_tnl_term_enable=1
-config_2111=1
 core_clock_frequency=893
 sai_tunnel_support=1
 use_all_splithorizon_groups=1
@@ -17,31 +16,11 @@ vlan_xlate_2_mem_entries=2048
 sai_fast_convergence_support=1
 bcm_num_cos=8
 default_cpu_tx_queue=7
-sai_sonic_use_route_max=1
-ing_share_flex_counter_pool=split(l3intf,vxlan)
 sai_brcm_sonic_trap_group=1
 host_as_route_disable=1
-multi_hash_recurse_depth_l3=3
-sai_create_dflt_trap=1
+multi_hash_recurse_depth_l3=6
 sai_stats_support_mask=0x1
-sai_disable_internal_port_serdes=1
-sai_l3_neighbor_discard_flag_capable=0
-sai_l3_route_discard_flag_capable=0
-sai_disable_ports_when_sw_shutdown=1
-sai_vlan_counter_alloc_disable=1
-ipmc_age_mode=1
-sai_l3_max_ecmp_paths=128
-sai_retry_fdb_delete=1
 mem_cache_enable=1
-# Modify RX Drops scope . Removes RDROP, PDISC, VLANDR, RIPD4,RIPD6
-sai_adjust_port_if_in_discards=1
 
 # CPU Tx HW replication
 sai_hostif_netif_iff_up_set=1
-sai_rcy_enable_on_cpu_tx=1
-sai_default_tc_to_pg_map=1
-qos_map_dot1p_nonsharable_mode=1
-
-# Vlan Stacking
-sai_swap_transport_tag_support=1
-

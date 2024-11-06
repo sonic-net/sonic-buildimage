@@ -1,3 +1,4 @@
+[Low Inheritance Precedence]
 schan_intr_enable=0
 l2xmsg_mode=1
 mmu_lossless=0
@@ -15,7 +16,6 @@ module_64ports=1
 oversubscribe_mode=1
 bcm_num_cos=10
 default_cpu_tx_queue=9
-ipmc_age_mode=1
 # Drop monitor configuration
 flowtracker_enable=2
 flowtracker_max_flows=48000
@@ -32,17 +32,4 @@ sai_fast_convergence_support=1
 sai_nbr_bcast_ifp_optimized=1
 # Reduced Trap Group QSET for BRCM Sonic
 sai_brcm_sonic_trap_group=1
-sai_sonic_use_route_max=1
-sai_create_dflt_trap=1
 sai_stats_support_mask=0x1
-sai_svi_my_station_optimization=1
-sai_disable_internal_port_serdes=1
-sai_l3_neighbor_discard_flag_capable=0
-sai_l3_route_discard_flag_capable=0
-sai_disable_ports_when_sw_shutdown=1
-sai_l3_max_ecmp_paths=128
-sai_retry_fdb_delete=1
-# Modify RX Drops scope . Removes RDROP, PDISC, VLANDR, RIPD4,RIPD6
-sai_adjust_port_if_in_discards=1
-sai_default_tc_to_pg_map=1
-qos_map_dot1p_nonsharable_mode=1
