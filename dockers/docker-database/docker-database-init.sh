@@ -129,7 +129,7 @@ do
     else
         echo -n > /var/lib/$inst/dump.rdb
     fi
-
+    # the Redis process is operating under the 'redis' user in supervisord and make redis user own /var/lib/$inst inside db container.
     chown -R redis:redis /var/lib/$inst
 done
 
