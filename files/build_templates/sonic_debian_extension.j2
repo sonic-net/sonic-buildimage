@@ -400,6 +400,7 @@ sudo cp $IMAGE_CONFIGS/chrony/chrony-config.sh $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/chrony/chrony.conf.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 sudo cp $IMAGE_CONFIGS/chrony/chrony.keys.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
 sudo cp $IMAGE_CONFIGS/chrony/chronyd-starter.sh $FILESYSTEM_ROOT/usr/local/sbin/
+sudo cp $IMAGE_CONFIGS/chrony/check_ntp_status.sh $FILESYSTEM_ROOT/usr/local/bin/
 sudo mkdir $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/chrony.service.d
 # Don't start chrony with multi-user.target, add our override, and start it with sonic.target
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable chrony.service

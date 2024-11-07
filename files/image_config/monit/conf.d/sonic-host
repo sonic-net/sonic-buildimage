@@ -60,3 +60,7 @@ check program memory_check with path "/usr/local/bin/memory_threshold_check.py"
 # arp_update_checker tool that verifies that arp_update script is not stuck on ping command every 10 minutes
 check program arp_update_checker with path "/usr/bin/arp_update_checker" every 10 cycles
     if status != 0 for 3 times within 3 cycles then alert repeat every 1 cycles
+
+# check if NTP is synchronized
+check program ntp with path "/usr/local/bin/check_ntp_status.sh"
+    if status != 0 for 3 cycle then alert repeat every 5 cycles
