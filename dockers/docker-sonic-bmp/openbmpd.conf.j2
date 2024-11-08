@@ -1,0 +1,20 @@
+base:  
+  admin_id: hostname  
+  listen_port: 5000  
+  listen_mode: v4  
+  buffers:  
+    router: 15  
+  heartbeat:  
+    interval: 5  
+  startup:  
+    max_concurrent_routers: 2  
+    initial_router_time: 60  
+    calculate_baseline: true  
+    pat_enabled: false  
+debug:  
+  general: false  
+  bmp: false  
+  bgp: false  
+  msgbus: false  
+redis:  
+  multiAsic: {{ENABLE_MULTI_ASIC}}

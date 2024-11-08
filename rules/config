@@ -124,6 +124,9 @@ DEFAULT_VS_PREPARE_MEM = yes
 # INCLUDE_SYSTEM_GNMI - build docker-sonic-gnmi for system gnmi support
 INCLUDE_SYSTEM_GNMI = y
 
+# INCLUDE_SYSTEM_BMP - build docker-sonic-bmp for system bmp support
+INCLUDE_SYSTEM_BMP = y
+
 # INCLUDE_SYSTEM_EVENTD - build docker-eventd for system eventd support
 INCLUDE_SYSTEM_EVENTD = y
 
@@ -159,9 +162,6 @@ INCLUDE_DHCP_SERVER ?= n
 ifeq ($(SMARTSWITCH), 1)
     INCLUDE_DHCP_SERVER = y
 endif
-
-# INCLUDE_BMP - build and install sonic-bmp package
-INCLUDE_BMP = y
 
 # INCLUDE_P4RT - build docker-p4rt for P4RT support
 INCLUDE_P4RT = n
