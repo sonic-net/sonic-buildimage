@@ -1,0 +1,34 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+ARG image_version
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+RUN apt-get update
+
+
+RUN apt-get clean -y      && \
+    apt-get autoclean -   && \
+    apt-get autoremove -y && \
+    rm -rf /debs
+
+COPY ["bmp.sh", "bmpcfgd", "openbmpd", "/usr/bin/"]
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["openbmpd.conf.j2", "/usr/share/sonic/templates/"]
+
+RUN chmod +x /usr/bin/bmp.sh
+RUN chmod +x /usr/bin/bmpcfgd
+RUN chmod +x /usr/bin/openbmpd
+
+RUN apt-get clean -y      && \
+    apt-get autoclean -y  && \
+    apt-get autoremove -y && \
+    rm -rf /debs
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]
