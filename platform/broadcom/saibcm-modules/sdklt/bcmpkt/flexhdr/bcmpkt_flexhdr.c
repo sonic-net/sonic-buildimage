@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <shr/shr_error.h>
@@ -68,6 +68,38 @@ int *bcmpkt_flexhdr_variant_support_map[] = {
     NULL
 };
 
+int
+bcmpkt_flexhdr_header_name_get(bcmlrd_variant_t variant,
+                               uint32_t hid, char **name)
+{
+    shr_enum_map_t *id_map = NULL;
+
+    if (name == NULL) {
+        return SHR_E_PARAM;
+    }
+
+    if (variant <= BCMLRD_VARIANT_T_NONE || variant >= BCMLRD_VARIANT_T_COUNT) {
+        return SHR_E_PARAM;
+    }
+
+    if (flex_pmd_info_get[variant] == NULL) {
+        return SHR_E_UNAVAIL;
+    }
+
+    id_map = flexhdr_map_get[variant]();
+    if (id_map == NULL) {
+        return SHR_E_UNAVAIL;
+    }
+    while (sal_strcasecmp(id_map->name, "flexhdr count") != 0) {
+        if (id_map->val == (int)hid) {
+            *name = id_map->name;
+            return SHR_E_NONE;
+        }
+        id_map++;
+    }
+
+    return SHR_E_UNAVAIL;
+}
 
 int
 bcmpkt_flexhdr_header_id_get(bcmlrd_variant_t variant,
@@ -91,15 +123,55 @@ bcmpkt_flexhdr_header_id_get(bcmlrd_variant_t variant,
     if (id_map == NULL) {
         return SHR_E_UNAVAIL;
     }
-    while (sal_strcasecmp(id_map->name, "flexhdr count") != 0 ) {
+
+    while (1) {
         if (sal_strcasecmp(id_map->name, name) == 0) {
             *hid = id_map->val;
             return SHR_E_NONE;
+        }
+        if (sal_strcasecmp(id_map->name, "flexhdr count") == 0) {
+            break;
         }
         id_map++;
     }
 
     return SHR_E_UNAVAIL;
+}
+
+/*
+ * SDKLT-43974: This is a simple workaround. Normal fix will be ready in the
+ * JIRA.
+ */
+int
+bcmpkt_flexhdr_len_get(bcmlrd_variant_t variant, uint32_t hid,
+                       uint32_t *len)
+{
+    int rv;
+    char *name = NULL;
+
+    if (len == NULL) {
+        return SHR_E_PARAM;
+    }
+    if (variant <= BCMLRD_VARIANT_T_NONE || variant >= BCMLRD_VARIANT_T_COUNT) {
+        return SHR_E_PARAM;
+    }
+
+    rv = bcmpkt_flexhdr_header_name_get(variant, hid, &name);
+    if (SHR_FAILURE(rv)) {
+        return rv;
+    }
+
+    if (sal_strcasecmp(name, "generic_loopback_t") == 0) {
+        *len = 16;
+    } else if (sal_strcasecmp(name, "hg3_base_t") == 0 ||
+               sal_strcasecmp(name, "hg3_extension_0_t") == 0) {
+        *len = 8;
+    } else {
+        /* no support*/
+        *len = 0;
+    }
+
+    return SHR_E_NONE;
 }
 
 int

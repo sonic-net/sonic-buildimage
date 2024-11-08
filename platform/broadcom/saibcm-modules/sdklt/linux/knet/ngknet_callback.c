@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include "ngknet_main.h"
@@ -281,7 +281,7 @@ ngknet_filter_cb_register_by_name(ngknet_filter_cb_f filter_cb, const char *desc
         return -1;
     }
     fcb->cb = filter_cb;
-    strcpy(fcb->desc, desc); // nosemgrep
+    strcpy(fcb->desc, desc);
     list_add_tail(&fcb->list, &callback_ctrl.filter_cb_list);
 
     /* Check if any existing filter matches the registered name */
