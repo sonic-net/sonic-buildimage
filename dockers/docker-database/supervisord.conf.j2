@@ -62,3 +62,23 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
+
+{% if INSTANCES %}
+{%     for redis_inst, redis_items in INSTANCES.items() %}
+{%-        if redis_inst == 'redis_chassis' %}
+[program: http-server]
+; http-server should run only on database-chassis which hosts redis_chassis server.
+; Using 2 sec sleep in command to give the process enough run time to reach
+; RUNNING state when the process needs to exit with status 0 when start_http_server
+; config is not set.
+command=/bin/bash -c "sleep 2 && python3 /usr/local/bin/http-server"
+priority=3
+autostart=true
+autorestart=unexpected
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{%-        endif %}
+{%-    endfor %}
+{% endif %}
