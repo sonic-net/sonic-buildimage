@@ -3,7 +3,6 @@ FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG image_version
-RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,47 +10,25 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version
 
-RUN apt-get update &&       \
-    apt-get install -f -y   \
-        python3-dev         \
-        build-essential
+RUN apt-get update
 
-RUN mkdir -p /var/run
 
-RUN pip3 install psutil
-# TODO issue on remote rsyslog server in non-host container
-RUN rm -f /etc/supervisor/conf.d/containercfgd.conf
-
-{% if docker_bmp_debs.strip() -%}
-# Copy locally-built Debian package dependencies
-{{ copy_files("debs/", docker_bmp_debs.split(' '), "/debs/") }}
-
-# Install locally-built Debian packages and implicitly install their dependencies
-{{ install_debian_packages(docker_bmp_debs.split(' ')) }}
-{%- endif %}
-
-{% if docker_bmp_whls.strip() %}
-# Copy locally-built Python wheel dependencies
-{{ copy_files("python-wheels/", docker_bmp_whls.split(' '), "/python-wheels/") }}
-
-# Install locally-built Python wheel dependencies
-{{ install_python_wheels(docker_bmp_whls.split(' ')) }}
-{% endif %}
-
-# Remove build stuff we don't need
-RUN apt-get remove -y build-essential     \
-                      python3-dev
-
-RUN apt-get clean -y        && \
-    apt-get autoclean -y    && \
-    apt-get autoremove -y   && \
+RUN apt-get clean -y      && \
+    apt-get autoclean -   && \
+    apt-get autoremove -y && \
     rm -rf /debs
 
-COPY ["docker_init.sh", "start.sh", "/usr/bin/"]
+COPY ["bmp.sh", "bmpcfgd", "openbmpd", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
-COPY ["rsyslog/rsyslog.conf.j2", "openbmpd.conf.j2", "/usr/share/sonic/templates/"]
-COPY ["critical_processes", "/etc/supervisor/"]
-COPY ["rsyslog/default.conf", "/etc/rsyslog.d"]
+COPY ["openbmpd.conf.j2", "/usr/share/sonic/templates/"]
 
-ENTRYPOINT ["/usr/bin/docker_init.sh"]
+RUN chmod +x /usr/bin/bmp.sh
+RUN chmod +x /usr/bin/bmpcfgd
+RUN chmod +x /usr/bin/openbmpd
+
+RUN apt-get clean -y      && \
+    apt-get autoclean -y  && \
+    apt-get autoremove -y && \
+    rm -rf /debs
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

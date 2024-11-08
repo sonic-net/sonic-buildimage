@@ -1,4 +1,3 @@
-
 DPATH       := $($(DOCKER_BMP)_PATH)
 DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-bmp.mk rules/docker-bmp.dep   
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
