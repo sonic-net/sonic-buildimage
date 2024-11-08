@@ -1,12 +1,40 @@
 case $reason in
     BOUND|RENEW|REBIND|REBOOT)
-        current_host_name=`hostname -s`
-        if [ "$current_host_name" != "$new_host_name" ] && [ -n "$new_host_name" ]
-        then
-            echo $new_host_name > /etc/hostname
-            hostname -F /etc/hostname
-            sed -i "/\s$current_host_name$/d" /etc/hosts
-            echo "127.0.0.1 $new_host_name" >> /etc/hosts
+        if [ -n "${new_host_name:-}" ]; then
+            # Check hostname for dots. Fall back to adding
+            # new_domain_name or $(hostname -d).
+            if [ "${new_host_name%.*}" != "$new_host_name" ]; then
+                # It has dots. Assume FQDN.
+                my_hostname=${new_host_name%%.*}
+                my_domain=${new_host_name#*.}
+                my_fqdn=${my_hostname}.${my_domain}
+            elif [ -n "${new_domain_name:-}" ]; then
+                # No dots in new_host_name, and
+                # new_domain_name exists. Add it.
+                my_hostname=$new_host_name
+                my_domain=$new_domain_name
+                my_fqdn=${my_hostname}.${my_domain}
+            else
+                # No domain supplied. Take pre-existing domain.
+                my_hostname=$new_host_name
+                my_domain=$(hostname -d 2>/dev/null || true)
+                if [ -n "$my_domain" ]; then
+                    my_fqdn=${my_hostname}.${my_domain}
+                else
+                    my_fqdn=$my_hostname  # alas, no domain at all
+                fi
+            fi
+
+            current_fqdn=$(hostname -f)  # might be short if no domain was set
+            if [ "$current_fqdn" != "$my_fqdn" ]; then
+                # Set the host name as received from DHCP; might be FQDN.
+                echo $new_host_name > /etc/hostname
+                hostname -F /etc/hostname
+                # Store both the determined FQDN and the short hostname in
+                # /etc/hosts.
+                echo "127.0.0.1 $my_fqdn $my_hostname" >> /etc/hosts
+                sed -i "/\s$current_fqdn\s\+${current_fqdn%%.*}$/d" /etc/hosts
+            fi
         fi
         ;;
 esac
