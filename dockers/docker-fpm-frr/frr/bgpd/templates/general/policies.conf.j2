@@ -37,6 +37,7 @@ route-map FROM_BGP_PEER_V4 permit 10
 !
 route-map FROM_BGP_PEER_V4 permit 11
   match community allow_list_default_community
+{% if CONFIG_DB__DEVICE_METADATA and 'localhost' in CONFIG_DB__DEVICE_METADATA and 'type' in CONFIG_DB__DEVICE_METADATA['localhost'] and 'subtype' in CONFIG_DB__DEVICE_METADATA['localhost'] %}
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and CONFIG_DB__DEVICE_METADATA['localhost']['subtype'] == 'UpstreamLC' %}
   on-match next
 !
@@ -49,8 +50,9 @@ route-map FROM_BGP_PEER_V4 permit 13
 {% else %}
   set tag {{ constants.bgp.route_eligible_for_fallback_to_default_tag }}
 {% endif %}
-  set community {{ constants.bgp.internal_fallback_community }} additive                                                                                                                                         
-{% endif %}                                                                                                                                                                                                      !                                 
+  set community {{ constants.bgp.internal_fallback_community }} additive
+{% endif %}
+{% endif %}
 !
 route-map FROM_BGP_PEER_V6 permit 10
   call ALLOW_LIST_DEPLOYMENT_ID_0_V6
@@ -58,6 +60,7 @@ route-map FROM_BGP_PEER_V6 permit 10
 !
 route-map FROM_BGP_PEER_V6 permit 11
   match community allow_list_default_community
+{% if CONFIG_DB__DEVICE_METADATA and 'localhost' in CONFIG_DB__DEVICE_METADATA and 'type' in CONFIG_DB__DEVICE_METADATA['localhost'] and 'subtype' in CONFIG_DB__DEVICE_METADATA['localhost'] %}
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and CONFIG_DB__DEVICE_METADATA['localhost']['subtype'] == 'UpstreamLC' %}
   on-match next
 !
@@ -70,8 +73,8 @@ route-map FROM_BGP_PEER_V6 permit 13
 {% else %}
   set tag {{ constants.bgp.route_eligible_for_fallback_to_default_tag }}
 {% endif %}
-  set community {{ constants.bgp.internal_fallback_community }} additive                                                                                                                                         
-{% endif %}                   
+  set community {{ constants.bgp.internal_fallback_community }} additive                                                                                                                                         {% endif %}
+{% endif %}
 !
 {% endif %}
 !
