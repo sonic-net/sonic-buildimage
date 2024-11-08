@@ -37,4 +37,4 @@ $(DOCKER_BMP)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro
 $(DOCKER_BMP)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
 
 $(DOCKER_BMP)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
-$(DOCKER_BMP)_BASE_IMAGE_FILES += redis-cli:/usr/bin/redis-cli:monit_bmp:/etc/monit/conf.d
+$(DOCKER_BMP)_BASE_IMAGE_FILES += monit_bmp:/etc/monit/conf.d

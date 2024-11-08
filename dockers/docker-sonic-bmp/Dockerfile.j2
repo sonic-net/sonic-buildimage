@@ -16,11 +16,12 @@ RUN apt-get update
 RUN apt-get clean -y      && \
     apt-get autoclean -   && \
     apt-get autoremove -y && \
-    rm -rf /debs
+    rm -rf /debs && \
+    mkdir -p /etc/bmp
 
 COPY ["bmp.sh", "bmpcfgd", "openbmpd", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["openbmpd.conf.j2", "/usr/share/sonic/templates/"]
+COPY ["openbmpd.conf", "/etc/bmp/"]
 
 RUN chmod +x /usr/bin/bmp.sh
 RUN chmod +x /usr/bin/bmpcfgd
