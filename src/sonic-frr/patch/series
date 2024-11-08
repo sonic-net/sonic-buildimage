@@ -53,4 +53,3 @@
 0053-bgpd-Set-md5-TCP-socket-option-for-outgoing-connections-on-listener.patch
 build-dplane-fpm-sonic-module.patch
 bgpd-lib-Include-SID-structure-in-seg6local-nexthop.patch
-0054-Added-Change-in-Zebra-FPM-library-to-send-tag-value-.patch
