@@ -91,8 +91,17 @@
     "DEVICE_METADATA_VALID_CLUSTER": {
         "desc": "Verifying valid cluster configuration."
     },
-    "DEVICE_METADATA_VALID_SUBTYPE": {
-        "desc": "Verifying valid subtype value"
+    "DEVICE_METADATA_VALID_SUBTYPE0": {
+        "desc": "Verifying valid subtype value dualtor"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE1": {
+        "desc": "Verifying valid subtype value supervisor"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE2": {
+        "desc": "Verifying valid subtype value upstreamLC"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE3": {
+        "desc": "Verifying valid subtype value downstreamLC"
     },
     "DEVICE_METADATA_INVALID_SUBTYPE": {
         "desc": "Verifying invalid subtype value",
