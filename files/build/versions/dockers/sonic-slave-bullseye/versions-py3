@@ -8,6 +8,7 @@ backcall==0.2.0
 bcrypt==3.1.7
 beautifulsoup4==4.9.3
 bitarray==2.9.2
+blkinfo==0.2.0
 certifi==2020.6.20
 chardet==4.0.0
 click==7.1.2
@@ -69,12 +70,12 @@ parso==0.8.1
 pexpect==4.8.0
 pickleshare==0.7.5
 pillow==9.4.0
-pip==24.0
+pip==24.2
 pluggy==0.13.0
 ply==3.11
 prompt-toolkit==3.0.14
-protobuf==4.25.3
-psutil==5.8.0
+protobuf==4.25.4
+psutil==6.0.0
 ptyprocess==0.7.0
 py==1.10.0
 pyang==2.4.0
@@ -82,7 +83,7 @@ pyangbind==0.8.1
 pyasn1==0.4.8
 pyasn1-modules==0.2.1
 pycurl==7.43.0.6
-pyfakefs==5.5.0
+pyfakefs==5.6.0
 pygments==2.7.1
 pygobject==3.38.0
 pyhamcrest==1.9.0
@@ -101,8 +102,8 @@ python-magic==0.4.20
 pytz==2021.1
 pyxdg==0.27
 pyyaml==5.4.1
-redis==5.0.4
-regex==2024.5.15
+redis==5.0.8
+regex==2024.7.24
 requests==2.25.1
 roman==2.0.0
 scapy==2.4.4

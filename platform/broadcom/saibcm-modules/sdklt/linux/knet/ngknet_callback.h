@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,13 +17,31 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_CALLBACK_H
 #define NGKNET_CALLBACK_H
 
 #include <lkm/ngknet_kapi.h>
+
+typedef struct netif_cb_s {
+    /*! List head */
+    struct list_head list;
+
+    /*! Handle Netif creation or destruction */
+    ngknet_netif_cb_f cb;
+} netif_cb_t;
+
+typedef struct filter_cb_s {
+    /*! List head */
+    struct list_head list;
+
+    char desc[NGKNET_FILTER_DESC_MAX];
+
+    /*! Handle Filter callback */
+    ngknet_filter_cb_f cb;
+} filter_cb_t;
 
 /*!
  * \brief NGKNET callback control.
@@ -38,11 +56,14 @@ struct ngknet_callback_ctrl {
     /*! Handle Tx packet */
     ngknet_tx_cb_f tx_cb;
 
-    /*! Handle Netif creation */
-    ngknet_netif_cb_f netif_create_cb;
+    /*! Netif creation list */
+    struct list_head netif_create_cb_list;
 
-    /*! Handle Netif destruction */
-    ngknet_netif_cb_f netif_destroy_cb;
+    /*! Netif destruction list */
+    struct list_head netif_destroy_cb_list;
+
+    /*! Filter callback list */
+    struct list_head filter_cb_list;
 
     /*! Handle filter callback */
     ngknet_filter_cb_f filter_cb;
@@ -67,7 +88,28 @@ struct ngknet_callback_ctrl {
 
     /*! PTP device control */
     ngknet_ptp_dev_ctrl_cb_f ptp_dev_ctrl_cb;
+
+    /*! PTP Rx pre processing */
+    ngknet_ptp_rx_pre_process_cb_f ptp_rx_pre_process_cb;
+
+    /*! Devices */
+    struct ngknet_dev *devs;
 };
+
+/*!
+ * \brief Initialize callback control.
+ *
+ * \param [in] devs Devices array.
+ */
+extern void
+ngknet_callback_init(struct ngknet_dev *devs);
+
+/*!
+ * \brief Cleanup callback control.
+ *
+ */
+extern void
+ngknet_callback_cleanup(void);
 
 /*!
  * \brief Get callback control.
@@ -80,4 +122,3 @@ extern int
 ngknet_callback_control_get(struct ngknet_callback_ctrl **cbc);
 
 #endif /* NGKNET_CALLBACK_H */
-

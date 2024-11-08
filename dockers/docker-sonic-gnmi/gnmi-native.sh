@@ -33,6 +33,8 @@ if [ -n "$CERTS" ]; then
     if [ ! -z $CA_CRT ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
+
+    TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
 elif [ -n "$X509" ]; then
     SERVER_CRT=$(echo $X509 | jq -r '.server_crt')
     SERVER_KEY=$(echo $X509 | jq -r '.server_key')
@@ -74,6 +76,12 @@ fi
 LOCALHOST_SUBTYPE=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "subtype"`
 if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     TELEMETRY_ARGS+=" -zmq_port=8100"
+fi
+
+# Add VRF parameter when mgmt-vrf enabled
+MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled"`
+if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
+    TELEMETRY_ARGS+=" --vrf mgmt"
 fi
 
 # Server will handle threshold connections consecutively

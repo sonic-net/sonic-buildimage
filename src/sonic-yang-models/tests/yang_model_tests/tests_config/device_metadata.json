@@ -256,11 +256,38 @@
             }
         }
     },
-    "DEVICE_METADATA_VALID_SUBTYPE": {
+    "DEVICE_METADATA_VALID_SUBTYPE0": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "subtype": "DualToR"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE1": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "subtype": "Supervisor"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE2": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "subtype": "UpstreamLC"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE3": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "subtype": "DownstreamLC"
                 }
             }
         }
@@ -371,6 +398,36 @@
             }
         }
     },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_ENABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "synchronous_mode": "enable",
+                    "suppress-fib-pending": "enabled"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_DISABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "synchronous_mode": "disable",
+                    "suppress-fib-pending": "disabled"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_SUPPRESS_PENDING_FIB_ENABLED_SYNCHRONOUS_MODE_DISABLED": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "synchronous_mode": "disable",
+                    "suppress-fib-pending": "enabled"
+                }
+            }
+        }
+    },
     "DEVICE_METADATA_VALID_RACK_MGMT_MAP": {
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
@@ -457,6 +514,15 @@
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
                     "slice_type": "AZNG_Production"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "nexthop_group": "disabled"
                 }
             }
         }

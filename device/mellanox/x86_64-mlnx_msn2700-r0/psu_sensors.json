@@ -26,7 +26,10 @@
         },
         "MSN2700-A1": {
             "default": {
-                "bus": [],
+                "bus": [
+                    "i2c-10",
+                    "i2c-1-mux (chan_id 10)"
+                ],
                 "chip": {
                     "dps460-i2c-*-58": ["2", "R"],
                     "dps460-i2c-*-59": ["1", "L"]
@@ -216,8 +219,8 @@
                     "i2c-1-mux (chan_id 3)"
                 ],
                 "chip": {
-                    "dps460-i2c-*-58": ["1", "L"],
-                    "dps460-i2c-*-59": ["2", "R"]
+                    "dps460-i2c-*-58": ["2", "R"],
+                    "dps460-i2c-*-59": ["1", "L"]
                 }
             },
             "a1": {
@@ -226,8 +229,8 @@
                     "i2c-1-mux (chan_id 3)"
                 ],
                 "chip": {
-                    "dps460-i2c-*-58": ["1", "L"],
-                    "dps460-i2c-*-59": ["2", "R"]
+                    "dps460-i2c-*-58": ["2", "R"],
+                    "dps460-i2c-*-59": ["1", "L"]
                 }                
             }
         },
@@ -363,7 +366,7 @@
         "MTEF-AC-G-ACBEL": {
             "label": [
                 "in1 PSU 220V Rail (in)",
-                "in3 PSU 12V Rail (out)",
+                "in2 PSU 12V Rail (out)",
                 "fan1 PSU Fan 1",
                 "temp1 PSU Temp 1",
                 "temp2 PSU Temp 2",
@@ -373,8 +376,21 @@
                 "curr2 PSU 12V Rail Curr (out)"
             ]
         },
-        "MTEF-AC-I": {
+        "MTEF-AC-G-DELTA":{
 
+        },
+        "MTEF-AC-I": {
+            "label": [
+                "in1 PSU 220V Rail (in)",
+                "in2 PSU 12V Rail (out)",
+                "fan1 PSU Fan 1",
+                "temp1 PSU Temp 1",
+                "temp2 PSU Temp 2",
+                "power1 PSU 220V Rail Pwr (in)",
+                "power2 PSU 12V Rail Pwr (out)",
+                "curr1 PSU 220V Rail Curr (in)",
+                "curr2 PSU 12V Rail Curr (out)"
+            ]
         },
         "MTEF-AC-M": {
             "label": [

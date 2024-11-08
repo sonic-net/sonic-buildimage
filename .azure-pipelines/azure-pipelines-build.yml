@@ -186,3 +186,13 @@ jobs:
           fi
         displayName: "Build sonic image"
       - template: .azure-pipelines/check-dirty-version.yml@buildimage
+      - task: ManifestGeneratorTask@0
+        condition: ne(variables.SKIP_MG, 'y')
+        timeoutInMinutes: 60
+        continueOnError: true
+        displayName: "Manifest Generator"
+        inputs:
+          BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
+          ManifestDirPath: 'target/'
+          BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
+

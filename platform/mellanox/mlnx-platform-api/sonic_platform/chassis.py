@@ -128,10 +128,6 @@ class Chassis(ChassisBase):
         if self.sfp_event:
             self.sfp_event.deinitialize()
 
-        if self._sfp_list:
-            if self.sfp_module.SFP.shared_sdk_handle:
-                self.sfp_module.deinitialize_sdk_handle(self.sfp_module.SFP.shared_sdk_handle)
-
     @property
     def RJ45_port_list(self):
         if not self._RJ45_port_inited:
@@ -475,6 +471,8 @@ class Chassis(ChassisBase):
                 if fd_type == 'hw_present':
                     # event could be EVENT_NOT_PRESENT or EVENT_PRESENT
                     event = sfp.EVENT_NOT_PRESENT if fd_value == 0 else sfp.EVENT_PRESENT
+                    if fd_value == 1:
+                        s.processing_insert_event = True
                     s.on_event(event)
                 elif fd_type == 'present':
                     if str(fd_value) == sfp.SFP_STATUS_ERROR:

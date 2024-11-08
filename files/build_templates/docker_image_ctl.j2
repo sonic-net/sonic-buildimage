@@ -94,6 +94,7 @@ function preStartAction()
             # Create an emtpy file and overwrite any RDB if already there
             echo -n > /tmp/dump.rdb
             docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
+            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
         fi
     fi
 {%- elif docker_container_name == "pde" %}
@@ -296,7 +297,9 @@ function postStartAction()
         fi
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
+    REDIS_BMP_SOCK="/var/run/redis/redis_bmp.sock"
     chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
+    chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
 {%- elif docker_container_name == "swss" %}
     # Wait until swss container state is Running
     until [[ ($(docker inspect -f {{"'{{.State.Running}}'"}} swss$DEV) == "true") ]]; do
@@ -327,6 +330,11 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
+{%- elif docker_container_name == "eventd" %}
+    export EVENTD_STATE=$(sonic-db-cli -s CONFIG_DB HGET 'FEATURE|eventd' 'state')
+    j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/events_info.json  > /etc/rsyslog.d/host_events.conf
+    j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/syncd_events_info.json  > /etc/rsyslog.d/syncd_events.conf
+    systemctl restart rsyslog
 {%- else %}
     : # nothing
 {%- endif %}
@@ -428,7 +436,7 @@ start() {
     if [ -d "$HWSKU_FOLDER" ]; then
         CREATE_ONLY_CONFIG_DB_BUFFERS_JSON="$HWSKU_FOLDER/create_only_config_db_buffers.json"
         if [ -f "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON" ]; then
-            $SONIC_CFGGEN -j $CREATE_ONLY_CONFIG_DB_BUFFERS_JSON --write-to-db
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
         fi
     fi
     {%- endif %}

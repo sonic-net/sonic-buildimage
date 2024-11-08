@@ -1076,6 +1076,15 @@ static int install_network_service_for_smart_switch() {
         network_units++;
     }
 
+    // If the systemd-networkd is masked, unmask it
+    std::string systemd_networkd = get_etc_systemd() + std::string("/system/systemd-networkd.service");
+    if (is_devnull(systemd_networkd.c_str())) {
+        if (remove(systemd_networkd.c_str()) != 0) {
+            fprintf(stderr, "Unable to remove existing symlink %s\n", systemd_networkd.c_str());
+            return -1;
+        }
+    }
+
     return 0;
 }
 

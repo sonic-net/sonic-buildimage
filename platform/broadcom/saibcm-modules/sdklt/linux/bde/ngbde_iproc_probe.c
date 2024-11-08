@@ -8,7 +8,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -21,7 +21,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <ngbde.h>
@@ -50,7 +50,7 @@ iproc_cmicd_probe(struct platform_device *pldev)
     uint32_t size;
     void *base_address;
     uint32_t dev_rev_id;
-    struct ngbde_dev_s ngbde_dev, *nd = &ngbde_dev;
+    struct ngbde_dev_s *nd = NULL;
     struct resource *memres, *irqres;
 
     memres = platform_get_resource(pldev, IORESOURCE_MEM, 0);
@@ -71,6 +71,10 @@ iproc_cmicd_probe(struct platform_device *pldev)
         return -1;
     }
 
+    nd = kmalloc(sizeof(*nd), GFP_KERNEL);
+    if (nd == NULL) {
+        return -ENOMEM;
+    }
     memset(nd, 0, sizeof(*nd));
     nd->pci_dev = NULL; /* No PCI bus */
     nd->dma_dev = &pldev->dev;
@@ -98,6 +102,8 @@ iproc_cmicd_probe(struct platform_device *pldev)
         iounmap(base_address);
     }
     rv = ngbde_swdev_add(nd);
+
+    kfree(nd);
 
     return rv;
 }

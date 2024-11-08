@@ -568,6 +568,7 @@ SONIC_BUILD_INSTRUCTION :=  $(MAKE) \
                            ONIE_IMAGE_PART_SIZE=$(ONIE_IMAGE_PART_SIZE) \
                            SONIC_OS_VERSION=$(SONIC_OS_VERSION) \
                            PIP_HTTP_TIMEOUT=$(PIP_HTTP_TIMEOUT) \
+                           BUILD_PROCESS_TIMEOUT=$(BUILD_PROCESS_TIMEOUT) \
                            LEGACY_SONIC_MGMT_DOCKER=$(LEGACY_SONIC_MGMT_DOCKER) \
                            SONIC_PTF_ENV_PY_VER=$(SONIC_PTF_ENV_PY_VER) \
                            $(SONIC_OVERRIDE_BUILD_VARS)

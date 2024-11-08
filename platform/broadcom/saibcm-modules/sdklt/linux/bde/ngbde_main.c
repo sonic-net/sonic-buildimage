@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <ngbde.h>
@@ -180,6 +180,12 @@ ngbde_pio_base_match(unsigned long paddr)
  * The function below provides a backdoor to mapping the DMA pool to
  * user space via the BDE device file.
  */
+static const struct vm_operations_struct ngbde_vma_ops = {
+#ifdef CONFIG_HAVE_IOREMAP_PROT
+    .access = generic_access_phys,
+#endif
+};
+
 static int
 ngbde_mmap(struct file *filp, struct vm_area_struct *vma)
 {
@@ -211,6 +217,9 @@ ngbde_mmap(struct file *filp, struct vm_area_struct *vma)
         printk("BDE: Invalid mmap range 0x%08lx/0x%lx\n", paddr, size);
         return -EINVAL;
     }
+
+    /* Support debug access to the mapping (works for PGMEM DMA only) */
+    vma->vm_ops = &ngbde_vma_ops;
 
     if (map_noncached) {
         vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);

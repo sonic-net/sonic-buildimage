@@ -416,7 +416,7 @@ def test_parse_dpus(mock_swsscommon_dbconnector_init, mock_get_render_template, 
     dhcp_db_connector = DhcpDbConnector()
     dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, "/usr/local/lib/kea/hooks/libdhcp_run_script.so")
     dpus_table = {"dpu0": {"midplane_interface": "dpu0"}}
-    mid_plane_table = {"GLOBAL": {"bridge": "bridge_midplane", "ip_prefix": "169.254.200.254/24"}}
+    mid_plane_table = {"GLOBAL": {"bridge": "bridge-midplane", "ip_prefix": "169.254.200.254/24"}}
     mid_plane, dpus = dhcp_cfg_generator._parse_dpu(dpus_table, mid_plane_table)
-    assert mid_plane == {"bridge": "bridge_midplane", "ip_prefix": "169.254.200.254/24"}
+    assert mid_plane == {"bridge": "bridge-midplane", "ip_prefix": "169.254.200.254/24"}
     assert dpus == set(["dpu0"])

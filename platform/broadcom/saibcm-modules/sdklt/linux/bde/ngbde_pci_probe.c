@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,16 +17,16 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <ngbde.h>
 
 /*! \cond */
-static int use_msi = 1;
+static int use_msi = NGBDE_MSI_T_MSI;
 module_param(use_msi, int, S_IRUSR);
 MODULE_PARM_DESC(use_msi,
-"Use MSI interrupts if supported by the kernel (default 1).");
+"Use MSI (1) or MSI-X (2) interrupts if supported by the kernel (default 1).");
 /*! \endcond */
 
 /*! \cond */
@@ -61,7 +61,7 @@ pci_probe(struct pci_dev *pci_dev, const struct pci_device_id *ent)
     int bdx;
     int cmic_bar = 0;
     uint8_t rev;
-    struct ngbde_dev_s ngbde_dev, *nd = &ngbde_dev;
+    struct ngbde_dev_s *nd = NULL;
     int bus_no = pci_dev->bus ? pci_dev->bus->number : 0;
     int slot_no = PCI_SLOT(pci_dev->devfn);
 
@@ -75,6 +75,10 @@ pci_probe(struct pci_dev *pci_dev, const struct pci_device_id *ent)
                pci_dev->vendor, pci_dev->device);
     }
 
+    nd = kmalloc(sizeof(*nd), GFP_KERNEL);
+    if (nd == NULL) {
+        return -ENOMEM;
+    }
     memset(nd, 0, sizeof(*nd));
     nd->pci_dev = pci_dev;
     nd->dma_dev = &pci_dev->dev;
@@ -128,15 +132,8 @@ pci_probe(struct pci_dev *pci_dev, const struct pci_device_id *ent)
 
     spin_lock_init(&nd->lock);
 
-    /* Determine MSI configuration by enabling MSI on the device */
+    /* Get MSI configuration preference from module parameter */
     nd->use_msi = use_msi;
-    if (nd->use_msi) {
-        if (pci_enable_msi(nd->pci_dev) == 0) {
-            pci_disable_msi(nd->pci_dev);
-        } else {
-            nd->use_msi = 0;
-        }
-    }
 
     rv = ngbde_swdev_add(nd);
 
@@ -150,6 +147,8 @@ pci_probe(struct pci_dev *pci_dev, const struct pci_device_id *ent)
             nd->inactive = 1;
         }
     }
+
+    kfree(nd);
 
     return rv;
 }
