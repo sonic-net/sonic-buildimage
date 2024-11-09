@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +17,12 @@
 # limitations under the License.
 #
 
+declare -A rshim2dpu
+rshim2dpu["rshim0"]="dpu0"
+rshim2dpu["rshim1"]="dpu1"
+rshim2dpu["rshim2"]="dpu2"
+rshim2dpu["rshim3"]="dpu3"
+
 command_name="sonic-bfb-installer.sh"
 usage(){
     echo "Syntax: $command_name -b|--bfb <BFB_Image_Path> --rshim|-r <rshim1,..rshimN> --verbose|-v --config|-c <Options> --help|h"
@@ -30,20 +37,50 @@ WORK_DIR=`mktemp -d -p "$DIR"`
 
 bfb_install_call(){
     #Example:sudo bfb-install -b <full path to image> -r rshim<id>
+    local appendix=$3
+    local -r rshim=$1
     local result_file=$(mktemp "${WORK_DIR}/result_file.XXXXX")
-    local cmd="timeout 600s bfb-install -b $2 -r $1 $appendix"
+    if [ -z "$appendix" ]; then
+        local cmd="timeout 600s bfb-install -b $2 -r $1"
+    else
+        local cmd="timeout 600s bfb-install -b $2 -r $1 -c $appendix"
+    fi
     echo "Installing bfb image on DPU connected to $1 using $cmd"
-    local indicator="$1:"
-    eval "$cmd" > "$result_file" 2>&1 > >(while IFS= read -r line; do echo "$indicator $line"; done > "$result_file")
+    local indicator="$rshim:"
+    trap 'kill_ch_procs' SIGINT SIGTERM SIGHUP
+    eval "$cmd"  > >(while IFS= read -r line; do echo "$indicator $line"; done >> "$result_file") 2>&1 &
+    cmd_pid=$!
+    local total_time=600
+    local elapsed=0
+    # Interval is selected at random so all the processes can print to same line
+    local interval=$(($RANDOM%(10-3+1)+3))
+    while kill -0 $cmd_pid 2>/dev/null; do
+        sleep $interval
+        elapsed=$((elapsed + interval))
+        echo -ne "\r$indicator Installing... $elapsed/$total_time seconds elapsed"
+        if [ $elapsed -ge $total_time ]; then
+            break
+        fi
+    done
+    wait $cmd_pid
     local exit_status=$?
     if [ $exit_status  -ne 0 ]; then
-        echo "$1: Error: Installation failed on connected DPU!"
+        echo "$rshim: Error: Installation failed on connected DPU!"
     else
-        echo "$1: Installation Successful"
+        echo "$rshim: Installation Successful"
     fi
     if [ $exit_status -ne 0 ] ||[ $verbose = true ]; then
         cat "$result_file"
     fi
+
+    dpu=${rshim2dpu[$rshim]}
+    echo "$rshim: Resetting DPU $dpu"
+    cmd="dpuctl dpu-reset --force $dpu"
+    if [[ $verbose == true ]]; then
+        cmd="$cmd -v"
+    fi
+
+    eval $cmd
 }
 
 file_cleanup(){
@@ -125,10 +162,6 @@ main(){
         is_url $bfb
     fi
     trap "file_cleanup" EXIT
-    if [[ -f ${config} ]]; then
-        echo "Using ${config} file"
-        appendix="-c ${config}"
-    fi
     dev_names_det+=($(
         ls -d /dev/rshim? | awk -F'/' '{print $NF}'
     ))
@@ -150,11 +183,35 @@ main(){
             validate_rshim ${dev_names[@]}
         fi
     fi
+    # Sort list of rshim interfaces so that config is applied in a known order
+    sorted_devs=($(for i in "${dev_names[@]}"; do echo $i; done | sort))
+    if [ ! -z ${config} ]; then
+        echo "Using ${config} file/s"
+        if [[ "$config" == *","* ]]; then
+            IFS=',' read -r -a arr <<< "$config"
+        else
+            arr=()
+            for ((i=0; i<${#dev_names[@]}; i++)); do
+                arr+=("$config")
+            done
+        fi
+        if [ ${#arr[@]} -ne ${#sorted_devs[@]} ]; then
+            echo "Length of config file list does not match the devices selected: ${sorted_devs[@]} and ${arr[@]}"
+            exit 1
+        fi
+        for i in "${!arr[@]}"
+        do
+            if [ ! -f ${arr[$i]} ]; then
+                echo "Config provided ${arr[$i]} is not a file! Please check"
+                exit 1
+            fi
+        done
+    fi
     trap 'kill_ch_procs' SIGINT SIGTERM SIGHUP
-    for i in "${dev_names[@]}"
+    for i in "${!sorted_devs[@]}"
     do
         :
-        bfb_install_call $i $bfb &
+        bfb_install_call ${sorted_devs[$i]} $bfb ${arr[$i]} &
     done
     wait
 }
