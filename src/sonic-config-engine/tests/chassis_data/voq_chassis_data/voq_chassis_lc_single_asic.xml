@@ -43525,7 +43525,7 @@
           <a:DeviceProperty>
             <a:Name>MacSecEnabled</a:Name>
             <a:Reference i:nil="true"/>
-            <a:Value>False</a:Value>
+            <a:Value>True</a:Value>
           </a:DeviceProperty>
           <a:DeviceProperty>
             <a:Name>OsVersion</a:Name>
