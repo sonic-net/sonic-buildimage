@@ -189,6 +189,7 @@ def
 {%- endfor %}
 {%- set port_names_inactive  = port_names_list_inactive  | join(',') %}
 {
+{%- if DEVICE_METADATA is defined and ((DEVICE_METADATA['localhost']['not_lossless'] is not defined) or (DEVICE_METADATA['localhost']['not_lossless'] == 'false')) %}
     "CABLE_LENGTH": {
         "AZURE": {
     {% for port in PORT_ALL %}
@@ -198,6 +199,7 @@ def
     {% endfor %}
     }
     },
+{%- endif %}
 
 {% if defs.generate_buffer_pool_and_profiles is defined %}
 {{ defs.generate_buffer_pool_and_profiles() }}
