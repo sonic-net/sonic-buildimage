@@ -30,3 +30,8 @@ Package: platform-modules-belgite
 Architecture: amd64
 Depends: linux-image-6.1.0-11-2-amd64-unsigned
 Description: kernel modules for platform devices such as led, sfp
+
+Package: platform-modules-ds5000
+Architecture: amd64
+Depends: linux-image-6.1.0-11-2-amd64-unsigned
+Description: kernel modules for platform devices such as led, sfp

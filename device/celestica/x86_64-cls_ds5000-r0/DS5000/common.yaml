@@ -1,0 +1,480 @@
+---
+bcm_device:
+    0:
+        port:
+            1:
+                dport_map_port: 1
+            11:
+                dport_map_port: 5
+            16:
+                dport_map_port: 9
+            6:
+                dport_map_port: 13
+            22:
+                dport_map_port: 17
+            33:
+                dport_map_port: 21
+            38:
+                dport_map_port: 25
+            27:
+                dport_map_port: 29
+            44:
+                dport_map_port: 33
+            55:
+                dport_map_port: 37
+            60:
+                dport_map_port: 41
+            49:
+                dport_map_port: 45
+            66:
+                dport_map_port: 49
+            77:
+                dport_map_port: 53
+            82:
+                dport_map_port: 57
+            71:
+                dport_map_port: 61
+            88:
+                dport_map_port: 65
+            99:
+                dport_map_port: 69
+            104:
+                dport_map_port: 73
+            93:
+                dport_map_port: 77
+            110:
+                dport_map_port: 81
+            121:
+                dport_map_port: 85
+            126:
+                dport_map_port: 89
+            115:
+                dport_map_port: 93
+            132:
+                dport_map_port: 97
+            143:
+                dport_map_port: 101
+            148:
+                dport_map_port: 105
+            137:
+                dport_map_port: 109
+            154:
+                dport_map_port: 113
+            165:
+                dport_map_port: 117
+            170:
+                dport_map_port: 121
+            159:
+                dport_map_port: 125
+            176:
+                dport_map_port: 129
+            187:
+                dport_map_port: 133
+            192:
+                dport_map_port: 137
+            181:
+                dport_map_port: 141
+            198:
+                dport_map_port: 145
+            209:
+                dport_map_port: 149
+            214:
+                dport_map_port: 153
+            203:
+                dport_map_port: 157
+            220:
+                dport_map_port: 161
+            231:
+                dport_map_port: 165
+            236:
+                dport_map_port: 169
+            225:
+                dport_map_port: 173
+            242:
+                dport_map_port: 177
+            253:
+                dport_map_port: 181
+            258:
+                dport_map_port: 185
+            247:
+                dport_map_port: 189
+            264:
+                dport_map_port: 193
+            275:
+                dport_map_port: 197
+            280:
+                dport_map_port: 201
+            269:
+                dport_map_port: 205
+            286:
+                dport_map_port: 209
+            297:
+                dport_map_port: 213
+            302:
+                dport_map_port: 217
+            291:
+                dport_map_port: 221
+            308:
+                dport_map_port: 225
+            319:
+                dport_map_port: 229
+            324:
+                dport_map_port: 233
+            313:
+                dport_map_port: 237
+            330:
+                dport_map_port: 241
+            341:
+                dport_map_port: 245
+            346:
+                dport_map_port: 249
+            335:
+                dport_map_port: 253
+            186:
+                dport_map_port: 257
+            274:
+                dport_map_port: 258
+            "*":
+                encap_mode: IEEE
+...
+---
+device:
+    0:
+        PC_PORT_PHYS_MAP:
+            ?
+                PORT_ID: 0
+            :
+                PC_PHYS_PORT_ID: 0
+            ?
+                PORT_ID: 186
+            :
+                PC_PHYS_PORT_ID: 516
+            ?
+                PORT_ID: 274
+            :
+                PC_PHYS_PORT_ID: 515
+            ?
+                PORT_ID: 1              # front panel 0
+            :
+                PC_PHYS_PORT_ID: 1
+            ?
+                PORT_ID: 11              # front panel 1
+            :
+                PC_PHYS_PORT_ID: 17
+            ?
+                PORT_ID: 16              # front panel 2
+            :
+                PC_PHYS_PORT_ID: 25
+            ?
+                PORT_ID: 6              # front panel 3
+            :
+                PC_PHYS_PORT_ID: 9
+            ?
+                PORT_ID: 22              # front panel 4
+            :
+                PC_PHYS_PORT_ID: 33
+            ?
+                PORT_ID: 33              # front panel 5
+            :
+                PC_PHYS_PORT_ID: 49
+            ?
+                PORT_ID: 38              # front panel 6
+            :
+                PC_PHYS_PORT_ID: 57
+            ?
+                PORT_ID: 27              # front panel 7
+            :
+                PC_PHYS_PORT_ID: 41
+            ?
+                PORT_ID: 44              # front panel 8
+            :
+                PC_PHYS_PORT_ID: 65
+            ?
+                PORT_ID: 55              # front panel 9
+            :
+                PC_PHYS_PORT_ID: 81
+            ?
+                PORT_ID: 60              # front panel 10
+            :
+                PC_PHYS_PORT_ID: 89
+            ?
+                PORT_ID: 49              # front panel 11
+            :
+                PC_PHYS_PORT_ID: 73
+            ?
+                PORT_ID: 66              # front panel 12
+            :
+                PC_PHYS_PORT_ID: 97
+            ?
+                PORT_ID: 77              # front panel 13
+            :
+                PC_PHYS_PORT_ID: 113
+            ?
+                PORT_ID: 82              # front panel 14
+            :
+                PC_PHYS_PORT_ID: 121
+            ?
+                PORT_ID: 71              # front panel 15
+            :
+                PC_PHYS_PORT_ID: 105
+            ?
+                PORT_ID: 88              # front panel 16
+            :
+                PC_PHYS_PORT_ID: 129
+            ?
+                PORT_ID: 99              # front panel 17
+            :
+                PC_PHYS_PORT_ID: 145
+            ?
+                PORT_ID: 104              # front panel 18
+            :
+                PC_PHYS_PORT_ID: 153
+            ?
+                PORT_ID: 93              # front panel 19
+            :
+                PC_PHYS_PORT_ID: 137
+            ?
+                PORT_ID: 110              # front panel 20
+            :
+                PC_PHYS_PORT_ID: 161
+            ?
+                PORT_ID: 121              # front panel 21
+            :
+                PC_PHYS_PORT_ID: 177
+            ?
+                PORT_ID: 126              # front panel 22
+            :
+                PC_PHYS_PORT_ID: 185
+            ?
+                PORT_ID: 115              # front panel 23
+            :
+                PC_PHYS_PORT_ID: 169
+            ?
+                PORT_ID: 132              # front panel 24
+            :
+                PC_PHYS_PORT_ID: 193
+            ?
+                PORT_ID: 143              # front panel 25
+            :
+                PC_PHYS_PORT_ID: 209
+            ?
+                PORT_ID: 148              # front panel 26
+            :
+                PC_PHYS_PORT_ID: 217
+            ?
+                PORT_ID: 137              # front panel 27
+            :
+                PC_PHYS_PORT_ID: 201
+            ?
+                PORT_ID: 154              # front panel 28
+            :
+                PC_PHYS_PORT_ID: 225
+            ?
+                PORT_ID: 165              # front panel 29
+            :
+                PC_PHYS_PORT_ID: 241
+            ?
+                PORT_ID: 170              # front panel 30
+            :
+                PC_PHYS_PORT_ID: 249
+            ?
+                PORT_ID: 159              # front panel 31
+            :
+                PC_PHYS_PORT_ID: 233
+            ?
+                PORT_ID: 176              # front panel 32
+            :
+                PC_PHYS_PORT_ID: 257
+            ?
+                PORT_ID: 187              # front panel 33
+            :
+                PC_PHYS_PORT_ID: 273
+            ?
+                PORT_ID: 192              # front panel 34
+            :
+                PC_PHYS_PORT_ID: 281
+            ?
+                PORT_ID: 181              # front panel 35
+            :
+                PC_PHYS_PORT_ID: 265
+            ?
+                PORT_ID: 198              # front panel 36
+            :
+                PC_PHYS_PORT_ID: 289
+            ?
+                PORT_ID: 209              # front panel 37
+            :
+                PC_PHYS_PORT_ID: 305
+            ?
+                PORT_ID: 214              # front panel 38
+            :
+                PC_PHYS_PORT_ID: 313
+            ?
+                PORT_ID: 203              # front panel 39
+            :
+                PC_PHYS_PORT_ID: 297
+            ?
+                PORT_ID: 220              # front panel 40
+            :
+                PC_PHYS_PORT_ID: 321
+            ?
+                PORT_ID: 231              # front panel 41
+            :
+                PC_PHYS_PORT_ID: 337
+            ?
+                PORT_ID: 236              # front panel 42
+            :
+                PC_PHYS_PORT_ID: 345
+            ?
+                PORT_ID: 225              # front panel 43
+            :
+                PC_PHYS_PORT_ID: 329
+            ?
+                PORT_ID: 242              # front panel 44
+            :
+                PC_PHYS_PORT_ID: 353
+            ?
+                PORT_ID: 253              # front panel 45
+            :
+                PC_PHYS_PORT_ID: 369
+            ?
+                PORT_ID: 258              # front panel 46
+            :
+                PC_PHYS_PORT_ID: 377
+            ?
+                PORT_ID: 247              # front panel 47
+            :
+                PC_PHYS_PORT_ID: 361
+            ?
+                PORT_ID: 264              # front panel 48
+            :
+                PC_PHYS_PORT_ID: 385
+            ?
+                PORT_ID: 275              # front panel 49
+            :
+                PC_PHYS_PORT_ID: 401
+            ?
+                PORT_ID: 280              # front panel 50
+            :
+                PC_PHYS_PORT_ID: 409
+            ?
+                PORT_ID: 269              # front panel 51
+            :
+                PC_PHYS_PORT_ID: 393
+            ?
+                PORT_ID: 286              # front panel 52
+            :
+                PC_PHYS_PORT_ID: 417
+            ?
+                PORT_ID: 297              # front panel 53
+            :
+                PC_PHYS_PORT_ID: 433
+            ?
+                PORT_ID: 302              # front panel 54
+            :
+                PC_PHYS_PORT_ID: 441
+            ?
+                PORT_ID: 291              # front panel 55
+            :
+                PC_PHYS_PORT_ID: 425
+            ?
+                PORT_ID: 308              # front panel 56
+            :
+                PC_PHYS_PORT_ID: 449
+            ?
+                PORT_ID: 319              # front panel 57
+            :
+                PC_PHYS_PORT_ID: 465
+            ?
+                PORT_ID: 324              # front panel 58
+            :
+                PC_PHYS_PORT_ID: 473
+            ?
+                PORT_ID: 313              # front panel 59
+            :
+                PC_PHYS_PORT_ID: 457
+            ?
+                PORT_ID: 330              # front panel 60
+            :
+                PC_PHYS_PORT_ID: 481
+            ?
+                PORT_ID: 341              # front panel 61
+            :
+                PC_PHYS_PORT_ID: 497
+            ?
+                PORT_ID: 346              # front panel 62
+            :
+                PC_PHYS_PORT_ID: 505
+            ?
+                PORT_ID: 335              # front panel 63
+            :
+                PC_PHYS_PORT_ID: 489
+...
+---
+device:
+    0:
+        PC_PORT:
+            ?
+                PORT_ID: 0
+            :
+                &port_mode_10g
+                ENABLE: 1
+                SPEED: 10000
+                NUM_LANES: 1
+            ?
+                PORT_ID: [186, 274]
+            :
+                ENABLE: 1
+                SPEED: 25000
+                NUM_LANES: 1
+                MAX_FRAME_SIZE: 9416
+            ?
+                PORT_ID: [1,11,16,6,22,33,38,27,44,55,60,49,66,77,82,71,88,99,104,93,110,121,126,115,132,143,148,137,154,165,170,159,176,187,192,181,198,209,214,203,220,231,236,225,242,253,258,247,264,275,280,269,286,297,302,291,308,319,324,313,330,341,346,335]
+            :
+                ENABLE: 1
+                SPEED: 800000
+                NUM_LANES: 8
+                MAX_FRAME_SIZE: 9416
+                FEC_MODE: PC_FEC_RS544_2XN
+...
+---
+device:
+    0:
+        PC_PMD_FIRMWARE:
+            ?
+                PORT_ID: [1,11,16,6,22,33,38,27,44,55,60,49,66,77,82,71,88,99,104,93,110,121,126,115,132,143,148,137,154,165,170,159,176,187,192,181,198,209,214,203,220,231,236,225,242,253,258,247,264,275,280,269,286,297,302,291,308,319,324,313,330,341,346,335]
+            :
+                MEDIUM_TYPE_AUTO: 1
+                CL72_RESTART_TIMEOUT_EN_AUTO: 0
+                CL72_RESTART_TIMEOUT_EN: 1
+...
+---
+device:
+    0:
+        PC_TX_TAPS:
+            ?
+                PORT_ID: [1,11,16,6,22,33,38,27,44,55,60,49,66,77,82,71,88,99,104,93,110,121,126,115,132,143,148,137,154,165,170,159,176,187,192,181,198,209,214,203,220,231,236,225,242,253,258,247,264,275,280,269,286,297,302,291,308,319,324,313,330,341,346,335]
+                LANE_INDEX: [[0,7]]
+            :
+                TX_SIG_MODE: PC_SIG_MODE_PAM4
+                TXFIR_TAP_MODE: PC_TXFIR_PAM4_TAPS_6
+                TXFIR_TAP_MODE_AUTO: 0
+                TX_PRE3_SIGN: 0
+                TX_PRE3_AUTO: 0
+                TX_PRE3: 0
+                TX_PRE2_SIGN: 0
+                TX_PRE2_AUTO: 0
+                TX_PRE2: 8
+                TX_PRE_SIGN: 1
+                TX_PRE_AUTO: 0
+                TX_PRE: 30                
+                TX_MAIN_SIGN: 0
+                TX_MAIN_AUTO: 0
+                TX_MAIN: 130
+                TX_POST_SIGN: 0
+                TX_POST_AUTO: 0
+                TX_POST: 0
+                TX_POST2_AUTO: 0
+                TX_POST2_SIGN: 0
+                TX_POST2: 0
+...

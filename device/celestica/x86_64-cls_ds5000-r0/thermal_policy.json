@@ -1,0 +1,110 @@
+{
+    "interval": 2,
+    "thermal_control_algorithm": {
+        "run_at_boot_up": "True",
+        "fan_speed_when_suspend": "50"
+    },
+    "info_types": [
+        {
+            "type": "fan_info"
+        },
+        {
+            "type": "thermal_info"
+        },
+        {
+            "type": "chassis_info"
+        }
+    ],
+    "policies": [
+        {
+            "name": "Tail inlet temp over high critical threshold",
+            "conditions": [
+                {
+                    "type": "thermal.inlet.over.high_critical_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "system.shutdown"
+                }
+            ]
+        },
+        {
+            "name": "Component temp over high critical threshold",
+            "conditions": [
+                {
+                    "type": "thermal.over.high_critical_threshold"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "system.shutdown"
+                }
+            ]
+        },
+        {
+            "name": "more then one fantray absence",
+            "conditions": [
+                {
+                    "type": "fantray.more.then.one.absence"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "system.shutdown"
+                }
+            ]
+        },
+        {
+            "name": "any fantray failure",
+            "conditions": [
+                {
+                    "type": "fantray.any.failure"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "system.shutdown"
+                }
+            ]
+        },
+        {
+            "name": "fan any rotor failure",
+            "conditions": [
+                {
+                    "type": "fan.rotor.any.failure"
+                }
+            ],
+            "actions": [
+                {
+                    "type": "fan.all.set_speed",
+                    "speed": "100"
+                }
+            ]
+        },
+        {
+            "name": "thermal control algorithm",
+            "conditions": [
+                {
+                    "type": "thermal.inlet.below.high_critical_threshold"
+                },
+                {
+                    "type": "fantray.no.failure"
+                },
+                {
+                    "type": "fantray.all.presence"
+                },
+                {
+                    "type": "fan.rotor.no.failure"
+                }
+            ],
+            "actions": [
+                {
+                    "thermal_log_level": 5,
+                    "type": "thermal.temp_check_and_fsc_algo_control",
+                    "fan_pwm_step": 2
+                }
+            ]
+        }
+    ]
+}

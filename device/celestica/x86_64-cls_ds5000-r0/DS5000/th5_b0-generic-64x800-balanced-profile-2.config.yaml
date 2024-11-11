@@ -1,0 +1,32 @@
+#mode: 1-64:backplane_1x800G
+---
+bcm_device:
+    0:
+        global:
+            uft_mode: 1
+            l3_alpm_template: 1
+            l2_mem_entries: 0x10000      # 64K L2 MAC table entries
+            l3_mem_entries: 0x50000      # 320K L3 v4 host table entries, 191K L3 v4 route entries
+            l3_alpm2_default_route_data_mode: 1
+            bcm_tunnel_term_compatible_mode: 1
+            l3_alpm_hit_mode: 1
+            l2_learn_enable: 1
+            sai_acl_qset_optimization : 0
+            sai_field_group_auto_prioritize: 1
+            pktio_mode: 1
+...
+---
+device:
+    0:
+        FP_CONFIG:
+            FP_ING_OPERMODE: GLOBAL_PIPE_AWARE
+
+        TM_SCHEDULER_CONFIG:
+            DYNAMIC_VOQ: 0
+...
+---
+device:
+    0:
+        DEVICE_CONFIG:
+            AUTOLOAD_BOARD_SETTINGS: 0
+...
