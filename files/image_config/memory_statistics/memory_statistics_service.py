@@ -134,7 +134,7 @@ class Utility:
     This class also includes enhanced logging and error handling.
     """
     @staticmethod
-    def fetch_current_date(request=None, time_key='ctime', date_format="%Y-%m-%d %H:%M:%S"):
+    def fetch_current_date(request=None, time_key='current_time', date_format="%Y-%m-%d %H:%M:%S"):
         """
         Fetches or parses the current date or a user-specified date.
         :param request: contain none.
@@ -249,12 +249,12 @@ class TimeProcessor:
 
             if to_time < from_time:
                 request_data['from'], request_data['to'] = request_data['to'], request_data['from']
-                logger.log_info(f"Swapped 'from' and 'to': {request_data['from']} <-> {request_data['to']}")
+                logging.info(f"Swapped 'from' and 'to': {request_data['from']} <-> {request_data['to']}")
             else:
-                logger.log_info("No need to swap times.")
+                logging.info("No need to swap times.")
 
         except (ValueError, TypeError) as error:
-            logger.log_error(f"Error in ensuring valid time range: {error}")
+            logging.error(f"Error in ensuring valid time range: {error}")
             raise ValueError("Invalid 'from' or 'to' date format.") from error
 
     def _parse_and_validate_dates(self, request_data: Dict[str, Any]) -> None:
@@ -281,7 +281,7 @@ class TimeProcessor:
         return {
             'start_time': datetime.fromisoformat(Utility.fetch_current_date(request_data, 'from', self.date_time_format)),
             'end_time': datetime.fromisoformat(Utility.fetch_current_date(request_data, 'to', self.date_time_format)),
-            'current_time': datetime.fromisoformat(Utility.fetch_current_date({}, 'ctime', self.date_time_format))
+            'current_time': datetime.fromisoformat(Utility.fetch_current_date({}, 'current_time', self.date_time_format))
         }
 
     def _validate_time_ranges(self, start_time: datetime, end_time: datetime, current_time: datetime, time_diff: timedelta) -> None:
@@ -505,13 +505,13 @@ class MemoryStatisticsCollector:
         """
         memory_data = psutil.virtual_memory()
         memory_stats = {
-            'total': {"prss": memory_data.total, "count": 1},
-            'used': {"prss": memory_data.used, "count": 1},
-            'free': {"prss": memory_data.free, "count": 1},
-            'available': {"prss": memory_data.available, "count": 1},
-            'cached': {"prss": memory_data.cached, "count": 1},
-            'buffers': {"prss": memory_data.buffers, "count": 1},
-            'shared': {"prss": memory_data.shared, "count": 1}        
+            'total_memory': {"prss": memory_data.total, "count": 1},
+            'used_memory': {"prss": memory_data.used, "count": 1},
+            'free_memory': {"prss": memory_data.free, "count": 1},
+            'available_memory': {"prss": memory_data.available, "count": 1},
+            'cached_memory': {"prss": memory_data.cached, "count": 1},
+            'buffers_memory': {"prss": memory_data.buffers, "count": 1},
+            'shared_memory': {"prss": memory_data.shared, "count": 1}        
    
         }
         del memory_data
@@ -539,7 +539,7 @@ class MemoryStatisticsCollector:
             with gzip.open(filepath, 'rb') as bfile:
                 loaded_entry = json.load(bfile)
         except Exception as e:
-            logger.log_error(f"Failed to load memory entries from {filepath}: {e}")
+            logging.error(f"Failed to load memory entries from {filepath}: {e}")
             return tentry 
 
         return loaded_entry
@@ -615,12 +615,12 @@ class MemoryStatisticsCollector:
                             entries_to_remove.append(entry_timestamp)
 
                     for old_entry in entries_to_remove:
-                        logger.log_info(f"Removing outdated entry: {old_entry}")
+                        logging.info(f"Removing outdated entry: {old_entry}")
                         del total_dict['system_memory'][memory_type][old_entry]
 
         total_dict['system_memory']['count'] = len(total_dict['system_memory'].get('system', {}))
 
-    def dump_memory_usage(self, collect_only):
+    def collect_and_store_memory_usage(self, collect_only):
         """
         Dump memory usage statistics into log files.
         
@@ -645,10 +645,10 @@ class MemoryStatisticsCollector:
 
         self.enforce_retention_policy(total_dict)
 
-        ctime = Utility.fetch_current_date()
+        current_time = Utility.fetch_current_date()
 
-        total_dict['ctime'] = ctime
-        mem_dict = {"ctime": ctime, "system_memory": sysmem_dict, "count": 1}
+        total_dict['current_time'] = current_time
+        mem_dict = {"current_time": current_time, "system_memory": sysmem_dict, "count": 1}
 
         if collect_only is True:
             return mem_dict
@@ -657,14 +657,14 @@ class MemoryStatisticsCollector:
             with gzip.open(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'], "wb") as bfile:
                 json.dump(total_dict, bfile)
         except Exception as e:
-            logger.log_error(f"Failed to dump total memory statistics: {e}")
+            logging.error(f"Failed to dump total memory statistics: {e}")
             return
 
         try:
             with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], "ab") as bfile:
                 json.dump(mem_dict, bfile)
         except Exception as e:
-            logger.log_error(f"Failed to dump memory statistics log: {e}")
+            logging.error(f"Failed to dump memory statistics log: {e}")
 
 
 class MemoryEntryManager:
@@ -1031,7 +1031,7 @@ class MemoryStatisticsProcessor:
         This method checks if the memory entry's creation time falls within the specified time range 
         and adds it to the appropriate time group in the summary.
         """
-        rtime = datetime.fromisoformat(memory_entry['ctime'])
+        rtime = datetime.fromisoformat(memory_entry['current_time'])
         if start_time_obj <= rtime <= end_time_obj:
             slot = self.get_time_slot_index(rtime, start_time_obj, step, first_interval_unit, second_interval_unit, first_interval_rate, request_data['duration'])
             if slot < num_columns:
@@ -1225,9 +1225,9 @@ class SocketHandler:
         try:
             if os.path.exists(filepath):
                 os.remove(filepath)
-                logger.log_info(f"Removed existing socket file: {filepath}")
+                logging.info(f"Removed existing socket file: {filepath}")
         except Exception as e:
-            logger.log_error(f"Failed to remove file {filepath}: {e}")
+            logging.error(f"Failed to remove file {filepath}: {e}")
 
     def create_unix_socket(self):
         """Creates and configures a UNIX socket for listening for incoming connections.
@@ -1241,9 +1241,9 @@ class SocketHandler:
             self.listener_socket.bind(self.address)
             os.chmod(self.address, 0o644)
             self.listener_socket.listen(5)  
-            logger.log_info(f"UNIX socket created and listening at {self.address}")
+            logging.info(f"UNIX socket created and listening at {self.address}")
         except Exception as e:
-            logger.log_error(f"Failed to create UNIX socket at {self.address}: {e}")
+            logging.error(f"Failed to create UNIX socket at {self.address}: {e}")
             raise
 
     def send_response(self, connection, response_data):
@@ -1258,9 +1258,9 @@ class SocketHandler:
         try:
             response_json = json.dumps(response_data)
             connection.sendall(response_json.encode('utf-8'))
-            logger.log_debug(f"Sent response: {response_json}")
+            logging.debug(f"Sent response: {response_json}")
         except Exception as e:
-            logger.log_error(f"Failed to send response: {e}")
+            logging.error(f"Failed to send response: {e}")
 
     def handle_connection(self, connection):
         """Processes a single incoming socket connection.
@@ -1275,11 +1275,11 @@ class SocketHandler:
         try:
             request_data = connection.recv(4096)
             if not request_data:
-                logger.log_warning("Received empty request")
+                logging.warning("Received empty request")
                 return
 
             request_json = json.loads(request_data.decode('utf-8'))
-            logger.log_debug(f"Received request: {request_json}")
+            logging.debug(f"Received request: {request_json}")
             command_name = request_json['command']
             command_data = request_json.get('data', {})
 
@@ -1287,25 +1287,25 @@ class SocketHandler:
 
             self.send_response(connection, response)
         except Exception as error:
-            logger.log_error(f"Error handling request: {traceback.format_exc()}")
+            logging.error(f"Error handling request: {traceback.format_exc()}")
             error_response['msg'] = str(error)
             self.send_response(connection, error_response)
         finally:
             try:
                 connection.close()
-                logger.log_debug("Connection closed")
+                logging.debug("Connection closed")
             except Exception as e:
-                logger.log_error(f"Error closing connection: {e}")
+                logging.error(f"Error closing connection: {e}")
 
     def stop_listening(self):
         """Stops the socket listener loop by setting stop_event."""
-        logger.log_info("Stopping listener loop.")
+        logging.info("Stopping listener loop.")
         self.stop_event.set() 
         if self.listener_socket:
             try:
                 self.listener_socket.close() 
             except Exception as e:
-                logger.log_error(f"Error while closing listener socket: {e}")
+                logging.error(f"Error while closing listener socket: {e}")
                            
 
     def start_listening(self):
@@ -1322,23 +1322,23 @@ class SocketHandler:
         while not self.stop_event.is_set():
             try:
                 connection, client_address = self.listener_socket.accept()
-                logger.log_info("Accepted new connection")
+                logging.info("Accepted new connection")
                 self.handle_connection(connection)
             except socket.timeout:
                 continue  
             except OSError as e:
                 if self.stop_event.is_set():
-                    logger.log_info("Socket listener stopped as requested.")
+                    logging.info("Socket listener stopped as requested.")
                     break
                 else:
-                    logger.log_error(f"Socket error: {e}")
+                    logging.error(f"Socket error: {e}")
                     time.sleep(1) 
             except Exception as error:
-                logger.log_error(f"Unexpected error: {error}")
+                logging.error(f"Unexpected error: {error}")
                 time.sleep(1)
 
         self.safe_remove_file(self.address)
-        logger.log_info("Socket listener stopped.")
+        logging.info("Socket listener stopped.")
 
 
 class Daemonizer:
@@ -1369,7 +1369,7 @@ class Daemonizer:
             if pid > 0:
                 sys.exit(0)
         except OSError as e:
-            logger.log_error(f"First fork failed: {e}")
+            logging.error(f"First fork failed: {e}")
             sys.exit(1)
 
         os.setsid() 
@@ -1379,10 +1379,10 @@ class Daemonizer:
             if pid > 0:
                 sys.exit(0)
         except OSError as e:
-            logger.log_error(f"Second fork failed: {e}")
+            logging.error(f"Second fork failed: {e}")
             sys.exit(1)
 
-        logger.log_info(f"Daemonization successful with PID: {os.getpid()}")
+        logging.info(f"Daemonization successful with PID: {os.getpid()}")
         self.write_pid_to_file()
         self.redirect_standard_file_descriptors()
 
@@ -1396,9 +1396,9 @@ class Daemonizer:
         try:
             with open(self.pid_file, 'w') as f:
                 f.write(f"{os.getpid()}\n")
-            logger.log_debug(f"Daemon PID written to {self.pid_file}")
+            logging.debug(f"Daemon PID written to {self.pid_file}")
         except Exception as e:
-            logger.log_error(f"Failed to write PID file {self.pid_file}: {e}")
+            logging.error(f"Failed to write PID file {self.pid_file}: {e}")
             sys.exit(1)
 
     def redirect_standard_file_descriptors(self):
@@ -1416,9 +1416,9 @@ class Daemonizer:
             with open(os.devnull, 'a+') as devnull:
                 os.dup2(devnull.fileno(), sys.stdout.fileno())
                 os.dup2(devnull.fileno(), sys.stderr.fileno())
-            logger.log_debug("Standard file descriptors redirected to /dev/null")
+            logging.debug("Standard file descriptors redirected to /dev/null")
         except Exception as e:
-            logger.log_error(f"Failed to redirect standard file descriptors: {e}")
+            logging.error(f"Failed to redirect standard file descriptors: {e}")
             sys.exit(1)
 
 
@@ -1431,7 +1431,7 @@ class MemoryStatisticsService:
     configuration reloading and graceful shutdown procedures.
     """ 
 
-    def __init__(self, memory_statistics_config, config_file_path='/etc/memory_statistics.conf'):
+    def __init__(self, memory_statistics_config, config_file_path='memorystats.conf'):
         """
         Initializes the MemoryStatisticsService instance.
         Parameters:
@@ -1473,9 +1473,9 @@ class MemoryStatisticsService:
             parser.read(self.config_file_path)
             config['sampling_interval'] = parser.get('default', 'sampling_interval', fallback='3')
             config['retention_period'] = parser.get('default', 'retention_period', fallback='15')
-            logger.log_info(f"Configuration loaded from file (overrides only): {config}")
+            logging.info(f"Configuration loaded from file (overrides only): {config}")
         except Exception as e:
-            logger.log_error(f"Failed to load configuration from file: {e}")
+            logging.error(f"Failed to load configuration from file: {e}")
         return config
 
     def handle_command(self, command_name, command_data):
@@ -1491,7 +1491,7 @@ class MemoryStatisticsService:
             command_method = getattr(self, command_name)
             return command_method(command_data)
         else:
-            logger.log_warning(f"Unknown command received: {command_name}")
+            logging.warning(f"Unknown command received: {command_name}")
             return {"status": False, "msg": "Unknown command"}
 
     def handle_sighup(self, signum, frame):
@@ -1500,12 +1500,12 @@ class MemoryStatisticsService:
         This method performs cleanup of old log files and updates the service's
         runtime configuration from the ConfigDB.
         """
-        logger.log_info("Received SIGHUP, reloading configuration.")
+        logging.info("Received SIGHUP, reloading configuration.")
         try:
             self.cleanup_old_files()
             self.load_config_from_db()
         except Exception as e:
-            logger.log_error(f"Error handling SIGHUP: {e}")
+            logging.error(f"Error handling SIGHUP: {e}")
 
     def handle_sigterm(self, signum, frame):
         """
@@ -1513,7 +1513,7 @@ class MemoryStatisticsService:
         This method attempts to terminate child processes, stop running threads,
         and perform necessary cleanup operations before exiting.
         """
-        logger.log_info("Received SIGTERM, initiating graceful shutdown...")
+        logging.info("Received SIGTERM, initiating graceful shutdown...")
 
         def terminate_child_processes():
             """
@@ -1528,7 +1528,7 @@ class MemoryStatisticsService:
 
                 for child in children:
                     try:
-                        logger.log_info(f"Sending SIGTERM to child process {child.info['pid']}")
+                        logging.info(f"Sending SIGTERM to child process {child.info['pid']}")
                         os.kill(child.info['pid'], signal.SIGTERM)
                     except ProcessLookupError:
                         continue
@@ -1541,11 +1541,11 @@ class MemoryStatisticsService:
 
                 for child in children:
                     if child.is_running():
-                        logger.log_warning(f"Force killing child process {child.info['pid']}")
+                        logging.warning(f"Force killing child process {child.info['pid']}")
                         os.kill(child.info['pid'], signal.SIGKILL)
 
             except Exception as e:
-                logger.log_error(f"Error while terminating child processes: {e}")
+                logging.error(f"Error while terminating child processes: {e}")
                 raise
 
         try:
@@ -1558,16 +1558,16 @@ class MemoryStatisticsService:
 
             self.cleanup()
 
-            logger.log_info("Shutdown complete. Exiting...")
+            logging.info("Shutdown complete. Exiting...")
             sys.exit(0)
 
         except Exception as e:
-            logger.log_error(f"Error during graceful shutdown: {e}")
+            logging.error(f"Error during graceful shutdown: {e}")
 
             try:
                 os.killpg(os.getpgid(0), signal.SIGKILL)
             except Exception as kill_error:
-                logger.log_error(f"Error during force kill: {kill_error}")
+                logging.error(f"Error during force kill: {kill_error}")
             sys.exit(1)
 
     def load_config_from_db(self):
@@ -1603,9 +1603,9 @@ class MemoryStatisticsService:
             self.retention_period = int(config.get('retention-period', self.retention_period))
             self.sampling_interval = int(config.get('sampling-interval', self.sampling_interval)) * 60
             
-            logger.log_info(f"Configuration reloaded from ConfigDB: sampling_interval={self.sampling_interval} seconds, retention_period={self.retention_period} days")
+            logging.info(f"Configuration reloaded from ConfigDB: sampling_interval={self.sampling_interval} seconds, retention_period={self.retention_period} days")
         except Exception as e:
-            logger.log_error(f"Error loading configuration from ConfigDB: {e}, using current settings")
+            logging.error(f"Error loading configuration from ConfigDB: {e}, using current settings")
         finally:
             config_db.disconnect()
 
@@ -1621,9 +1621,9 @@ class MemoryStatisticsService:
                 if file.endswith('.gz'):
                     file_path = os.path.join(log_directory, file)
                     os.remove(file_path)
-                    logger.log_info(f"Deleted old log file: {file_path}")
+                    logging.info(f"Deleted old log file: {file_path}")
         except Exception as e:
-            logger.log_error(f"Error during log file cleanup: {e}")
+            logging.error(f"Error during log file cleanup: {e}")
 
     def memory_statistics_command_request_handler(self, request):
         """
@@ -1635,15 +1635,15 @@ class MemoryStatisticsService:
                 along with the collected memory statistics data if successful.
         """
         try:
-            logger.log_info(f"Received memory statistics request: {request}")
+            logging.info(f"Received memory statistics request: {request}")
             with self.memory_statistics_lock:
                 memory_collector = MemoryStatisticsCollector(
                     sampling_interval=self.sampling_interval // 60,
                     retention_period=self.retention_period
                 )
-                current_memory = memory_collector.dump_memory_usage(collect_only=True)
+                current_memory = memory_collector.collect_and_store_memory_usage(collect_only=True)
                 request['current_memory'] = current_memory
-                logger.log_info(f"Current memory usage collected: {current_memory}")
+                logging.info(f"Current memory usage collected: {current_memory}")
 
                 time_processor = TimeProcessor(
                     sampling_interval=self.sampling_interval // 60,
@@ -1655,12 +1655,12 @@ class MemoryStatisticsService:
                                                     sampling_interval=self.sampling_interval,
                                                     retention_period=self.retention_period)
                 report = processor.calculate_memory_statistics_period(request)
-                logger.log_info(f"Memory statistics processed: {report}")
+                logging.info(f"Memory statistics processed: {report}")
 
                 return {"status": True, "data": report}
 
         except Exception as error:
-            logger.log_error(f"Error handling memory statistics request: {error}")
+            logging.error(f"Error handling memory statistics request: {error}")
             return {"status": False, "error": str(error)}
 
     def start_socket_listener(self):
@@ -1678,7 +1678,7 @@ class MemoryStatisticsService:
             daemon=True
         )
         self.socket_listener_thread.start()
-        logger.log_info("Socket listener thread started.")
+        logging.info("Socket listener thread started.")
 
     def start_memory_collection(self):
         """
@@ -1691,7 +1691,7 @@ class MemoryStatisticsService:
         configuration. Logs the start and stop of the memory collection thread.
         """ 
         def memory_collection():
-            logger.log_info("Memory statistics collection thread started.")
+            logging.info("Memory statistics collection thread started.")
             while not self.stop_event.is_set():
                 start_time = datetime.now()
                 try:
@@ -1700,16 +1700,16 @@ class MemoryStatisticsService:
                             sampling_interval=self.sampling_interval // 60,
                             retention_period=self.retention_period
                         )
-                        memory_collector.dump_memory_usage(collect_only=False)
+                        memory_collector.collect_and_store_memory_usage(collect_only=False)
                 except Exception as error:
-                    logger.log_error(f"Error during memory statistics collection: {error}")
+                    logging.error(f"Error during memory statistics collection: {error}")
 
                 elapsed_time = (datetime.now() - start_time).total_seconds()
                 sleep_time = max(0, self.sampling_interval - elapsed_time)
                 if self.stop_event.wait(timeout=sleep_time):
                     break 
 
-            logger.log_info("Memory statistics collection thread stopped.")
+            logging.info("Memory statistics collection thread stopped.")
 
         self.memory_collection_thread = threading.Thread(
             target=memory_collection,
@@ -1717,7 +1717,7 @@ class MemoryStatisticsService:
             daemon=True
         )
         self.memory_collection_thread.start()
-        logger.log_info("Memory collection thread started.")
+        logging.info("Memory collection thread started.")
 
     def stop_threads(self):
         """
@@ -1728,22 +1728,22 @@ class MemoryStatisticsService:
         threads to finish their execution within a specified timeout.
         Logs any issues encountered during the stopping process of the threads.
         """
-        logger.log_info("Signaling threads to stop.")
+        logging.info("Signaling threads to stop.")
         self.stop_event.set() 
 
         self.socket_handler.stop_listening()
 
         if self.socket_listener_thread:
-            logger.log_info("Stopping socket listener thread...")
+            logging.info("Stopping socket listener thread...")
             self.socket_listener_thread.join(timeout=5)
             if self.socket_listener_thread.is_alive():
-                logger.log_warning("Socket listener thread did not stop gracefully")
+                logging.warning("Socket listener thread did not stop gracefully")
 
         if self.memory_collection_thread:
-            logger.log_info("Stopping memory collection thread...")
+            logging.info("Stopping memory collection thread...")
             self.memory_collection_thread.join(timeout=5)
             if self.memory_collection_thread.is_alive():
-                logger.log_warning("Memory collection thread did not stop gracefully")    
+                logging.warning("Memory collection thread did not stop gracefully")    
 
     def cleanup(self):
         """
@@ -1760,25 +1760,25 @@ class MemoryStatisticsService:
         try:
             if os.path.exists(self.config['DBUS_SOCKET_ADDRESS']):
                 os.unlink(self.config['DBUS_SOCKET_ADDRESS'])
-                logger.log_info(f"Removed socket file: {self.config['DBUS_SOCKET_ADDRESS']}")
+                logging.info(f"Removed socket file: {self.config['DBUS_SOCKET_ADDRESS']}")
         except Exception as e:
-            logger.log_error(f"Error removing socket file: {e}")
+            logging.error(f"Error removing socket file: {e}")
 
         pid_file = '/var/run/memory_statistics_daemon.pid'
         try:
             if os.path.exists(pid_file):
                 os.unlink(pid_file)
-                logger.log_info(f"Removed PID file: {pid_file}")
+                logging.info(f"Removed PID file: {pid_file}")
         except Exception as e:
-            logger.log_error(f"Error removing PID file: {e}")
+            logging.error(f"Error removing PID file: {e}")
 
         try:
             for handler in logging.getLogger().handlers:
                 handler.flush()
         except Exception as e:
-            logger.log_error(f"Error flushing log handlers: {e}")
+            logging.error(f"Error flushing log handlers: {e}")
 
-        logger.log_info("Cleanup complete.")
+        logging.info("Cleanup complete.")
 
     def run(self):
         """
@@ -1789,7 +1789,7 @@ class MemoryStatisticsService:
         signaled to stop, during which it sleeps to reduce CPU usage.
         Logs the initialization and starting of the service.
         """
-        logger.log_info("Memory Statistics Service is starting...")
+        logging.info("Memory Statistics Service is starting...")
         self.daemonizer.daemonize()
 
         self.start_socket_listener()
@@ -1799,7 +1799,8 @@ class MemoryStatisticsService:
             time.sleep(1) 
 
 if __name__ == '__main__':
-
+    logging.basicConfig(filename='mem_stats_debug.log', level=logging.DEBUG, 
+                        format='%(asctime)s - %(levelname)s - %(message)s') 
     memory_statistics_config = {
         'LOG_DIRECTORY': "/var/log/memory_statistics",
         'MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/memory-stats.log.gz",

@@ -500,6 +500,8 @@ sudo cp $IMAGE_CONFIGS/resolv-config/update-containers $FILESYSTEM_ROOT/etc/reso
 sudo cp $IMAGE_CONFIGS/memory_statistics/memory_statistics.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 # Copy the daemon executable
 sudo cp $IMAGE_CONFIGS/memory_statistics/memory_statistics_service.py $FILESYSTEM_ROOT/usr/bin/
+# Copy the environment configuration file
+sudo cp $IMAGE_CONFIGS/memory_statistics/memory_statistics.conf $FILESYSTEM_ROOT/etc/
 # Register the service in the generated service file list
 echo "memory_statistics.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
