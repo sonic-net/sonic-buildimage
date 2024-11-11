@@ -111,7 +111,7 @@ RUN apt-get autoclean -y
 RUN apt-get autoremove -y
 RUN rm -rf /debs ~/.cache
 
-RUN sed -ri 's/^(save .*$)/# \1/g;                                                      \
+RUN sed -ri 's/^# save ""$/save ""/g;                    \
              s/^daemonize yes$/daemonize no/;            \
              s/^logfile .*$/logfile ""/;                 \
              s/^# syslog-enabled no$/syslog-enabled no/; \
