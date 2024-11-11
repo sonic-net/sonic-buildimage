@@ -815,6 +815,11 @@ class SFP(NvidiaSFPCommon):
             list: [False] * channels
         """
         api = self.get_xcvr_api()
+        try:
+            if self.is_sw_control():
+                return api.get_rx_los() if api else None
+        except Exception as e:
+            print(e)
         return [False] * api.NUM_CHANNELS if api else None
 
     def get_tx_fault(self):
