@@ -1489,7 +1489,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_macsec="$(INCLUDE_MACSEC)"
 	export enable_macsec="$(ENABLE_MACSEC)"
 	export delay_macsec="$(DELAY_MACSEC)"
-	export autorestart_macsec="$(AUTORESTART_MACSEC)""
+	export autorestart_macsec="$(AUTORESTART_MACSEC)"
 
 	# dhcp server docker exports for j2
 	export include_dhcp_server="$(INCLUDE_DHCP_SERVER)"

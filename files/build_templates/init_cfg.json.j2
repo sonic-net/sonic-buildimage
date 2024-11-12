@@ -70,8 +70,8 @@
                    ("swss", "enabled", false, "enabled"),
                    ("syncd", "enabled", false, "enabled")] %}
 {%- if include_router_advertiser == "y" %}
-    {% do features.append(("
-        radv",
+    {% do features.append((
+        "radv",
         "enabled" if enable_router_advertiser == "y" else "disabled",
         true if delay_router_advertiser == "y" else false,
         "enabled" if autorestart_router_advertiser == "y" else "disabled"
@@ -80,14 +80,14 @@
 {%- if include_teamd == "y" %}
     {% do features.append((
         "teamd",
-        {% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}"disabled"{% else %}"enabled"{% endif %} if enable_teamd == "y" else "disabled",
+        "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}disabled{% else %}enabled{% endif %}",
         true if delay_teamd == "y" else false,
         "enabled" if autorestart_teamd == "y" else "disabled"
     )) %}
 {% endif %}
 {% do features.append((
     "dhcp_relay",
-    {% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}"enabled"{% else %}"disabled"{% endif %},
+    "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}enabled{% else %}disabled{% endif %}",
     false,
     "enabled"
 )) %}
@@ -99,7 +99,7 @@
         "enabled" if autorestart_dhcp_server == "y" else "disabled"
     )) %}
 {% endif %}
-{%- if sonic_asic_platform == "vs" and include_gbsyncd == "y" %}
+{%- if sonic_asic_platform == "vs" %}
     {% do features.append((
         "gbsyncd",
         "enabled",
@@ -126,7 +126,7 @@
 {%- if include_mux == "y" %}
     {% do features.append((
         "mux",
-        {% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}"enabled"{% else %}"always_disabled"{% endif %},
+        "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}",
         false,
         "enabled"
     )) %}
@@ -150,7 +150,7 @@
 {%- if include_restapi == "y" and build_reduce_image_size == "y" and sonic_asic_platform == "broadcom" %}
     {% do features.append((
         "restapi",
-        {% if (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['LeafRouter', 'BackEndLeafRouter']) %}"enabled"{% else %}"disabled"{% endif %},
+        "{% if (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['LeafRouter', 'BackEndLeafRouter']) %}enabled{% else %}disabled{% endif %}",
         false,
         "enabled"
     )) %}
@@ -173,7 +173,7 @@
 {%- if include_macsec == "y" %}
     {% do features.append((
         "macsec",
-        {% if enable_macsec == "y" and 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}"enabled"{% else %}"disabled"{% endif %},
+        "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}",
         true if delay_macsec == "y" else false,
         "enabled" if autorestart_macsec == "y" else "disabled"
     )) %}
