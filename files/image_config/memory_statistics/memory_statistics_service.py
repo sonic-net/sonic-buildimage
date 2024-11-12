@@ -1,24 +1,69 @@
 #!/usr/bin/env python3
+
 import psutil
 import os
 import signal
+import subprocess
 import sys
 import time
-import json
+# import pickle
 import traceback
+import logging
 import gzip
 import dateparser
 import json
+import getopt
+import argparse
 import threading
 import configparser
+import signal
 import socket
+import time
 import syslog
-import logging
 import re
 import math
+import copy
+from collections import Counter
+from datetime import datetime
+from datetime import timedelta
 from datetime import datetime, timedelta
+import fcntl
+import sys, traceback
+import stat
+import os
+import sys
+import time
+import threading
+import socket
+import os
+import stat
+import json
+import time
+import traceback
+import argparse
+from datetime import timedelta, datetime
 from typing import Dict, Any
+import dateparser
+import re
+from datetime import datetime
 from swsscommon.swsscommon import ConfigDBConnector
+import os
+import sys
+import signal
+import time
+import threading
+import socket
+import json
+import configparser
+import stat
+import traceback
+from datetime import datetime
+import threading
+import os
+import signal
+import time
+import configparser
+from datetime import datetime
 
 
 class Dict2Obj(object):
@@ -1193,610 +1238,632 @@ class MemoryStatisticsProcessor:
         return self.generate_memory_statistics(memory_statistics_request)
 
 
-class SocketHandler:
-    """Handles the creation and management of a UNIX socket for communication.
+# class SocketHandler:
+#     """Handles the creation and management of a UNIX socket for communication.
     
-    This class is responsible for setting up a UNIX socket, accepting incoming
-    connections, processing requests, and sending responses. It provides methods
-    for managing socket file cleanup and error handling during communication.
-    """
+#     This class is responsible for setting up a UNIX socket, accepting incoming
+#     connections, processing requests, and sending responses. It provides methods
+#     for managing socket file cleanup and error handling during communication.
+#     """
 
-    def __init__(self, address, command_handler, stop_event):
-        """
-        Initializes the SocketHandler with the specified parameters.
+#     def __init__(self, address, command_handler, stop_event):
+#         """
+#         Initializes the SocketHandler with the specified parameters.
         
-        :param address: The file system path where the UNIX socket will be created.
-        :param command_handler: A callable that processes commands received from clients.
-        :param stop_event: An event flag used to signal when to stop the socket listener.
-        """
-        self.address = address
-        self.command_handler = command_handler
-        self.listener_socket = None
-        self.stop_event = stop_event 
+#         :param address: The file system path where the UNIX socket will be created.
+#         :param command_handler: A callable that processes commands received from clients.
+#         :param stop_event: An event flag used to signal when to stop the socket listener.
+#         """
+#         self.address = address
+#         self.command_handler = command_handler
+#         self.listener_socket = None
+#         self.stop_event = stop_event 
 
-    def safe_remove_file(self, filepath):
-        """Removes a file if it exists to prevent socket binding errors.
+#     def safe_remove_file(self, filepath):
+#         """Removes a file if it exists to prevent socket binding errors.
         
-        This method checks for the existence of the specified file and removes
-        it if found. It logs the action taken or any errors encountered.
+#         This method checks for the existence of the specified file and removes
+#         it if found. It logs the action taken or any errors encountered.
         
-        :param filepath: The path of the socket file to be removed.
-        """
-        try:
-            if os.path.exists(filepath):
-                os.remove(filepath)
-                logging.info(f"Removed existing socket file: {filepath}")
-        except Exception as e:
-            logging.error(f"Failed to remove file {filepath}: {e}")
+#         :param filepath: The path of the socket file to be removed.
+#         """
+#         try:
+#             if os.path.exists(filepath):
+#                 os.remove(filepath)
+#                 logging.info(f"Removed existing socket file: {filepath}")
+#         except Exception as e:
+#             logging.error(f"Failed to remove file {filepath}: {e}")
 
-    def create_unix_socket(self):
-        """Creates and configures a UNIX socket for listening for incoming connections.
+#     def create_unix_socket(self):
+#         """Creates and configures a UNIX socket for listening for incoming connections.
         
-        This method sets up the socket with appropriate permissions and starts
-        listening for client connections. It raises an exception if socket creation fails.
-        """
-        try:
-            self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.listener_socket.settimeout(1.0) 
-            self.listener_socket.bind(self.address)
-            os.chmod(self.address, 0o644)
-            self.listener_socket.listen(5)  
-            logging.info(f"UNIX socket created and listening at {self.address}")
-        except Exception as e:
-            logging.error(f"Failed to create UNIX socket at {self.address}: {e}")
-            raise
+#         This method sets up the socket with appropriate permissions and starts
+#         listening for client connections. It raises an exception if socket creation fails.
+#         """
+#         try:
+#             self.listener_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+#             self.listener_socket.settimeout(1.0) 
+#             self.listener_socket.bind(self.address)
+#             os.chmod(self.address, 0o644)
+#             self.listener_socket.listen(5)  
+#             logging.info(f"UNIX socket created and listening at {self.address}")
+#         except Exception as e:
+#             logging.error(f"Failed to create UNIX socket at {self.address}: {e}")
+#             raise
 
-    def send_response(self, connection, response_data):
-        """Sends a JSON response back to the client.
+#     def send_response(self, connection, response_data):
+#         """Sends a JSON response back to the client.
         
-        This method encodes the response data as JSON and sends it through
-        the established socket connection. It logs any errors encountered during the process.
+#         This method encodes the response data as JSON and sends it through
+#         the established socket connection. It logs any errors encountered during the process.
         
-        :param connection: The socket connection to the client.
-        :param response_data: The data to be sent as a JSON response.
-        """
-        try:
-            response_json = json.dumps(response_data)
-            connection.sendall(response_json.encode('utf-8'))
-            logging.debug(f"Sent response: {response_json}")
-        except Exception as e:
-            logging.error(f"Failed to send response: {e}")
+#         :param connection: The socket connection to the client.
+#         :param response_data: The data to be sent as a JSON response.
+#         """
+#         try:
+#             response_json = json.dumps(response_data)
+#             connection.sendall(response_json.encode('utf-8'))
+#             logging.debug(f"Sent response: {response_json}")
+#         except Exception as e:
+#             logging.error(f"Failed to send response: {e}")
 
-    def handle_connection(self, connection):
-        """Processes a single incoming socket connection.
+#     def handle_connection(self, connection):
+#         """Processes a single incoming socket connection.
         
-        This method reads the request data from the client, decodes it from JSON,
-        and processes it using the command handler. It handles any exceptions,
-        sending an error response if needed, and closes the connection afterward.
+#         This method reads the request data from the client, decodes it from JSON,
+#         and processes it using the command handler. It handles any exceptions,
+#         sending an error response if needed, and closes the connection afterward.
         
-        :param connection: The socket connection established with the client.
-        """
-        error_response = {"status": False, "msg": None}
-        try:
-            request_data = connection.recv(4096)
-            if not request_data:
-                logging.warning("Received empty request")
-                return
+#         :param connection: The socket connection established with the client.
+#         """
+#         error_response = {"status": False, "msg": None}
+#         try:
+#             request_data = connection.recv(4096)
+#             if not request_data:
+#                 logging.warning("Received empty request")
+#                 return
 
-            request_json = json.loads(request_data.decode('utf-8'))
-            logging.debug(f"Received request: {request_json}")
-            command_name = request_json['command']
-            command_data = request_json.get('data', {})
+#             request_json = json.loads(request_data.decode('utf-8'))
+#             logging.debug(f"Received request: {request_json}")
+#             command_name = request_json['command']
+#             command_data = request_json.get('data', {})
 
-            response = self.command_handler(command_name, command_data)
+#             response = self.command_handler(command_name, command_data)
 
-            self.send_response(connection, response)
-        except Exception as error:
-            logging.error(f"Error handling request: {traceback.format_exc()}")
-            error_response['msg'] = str(error)
-            self.send_response(connection, error_response)
-        finally:
-            try:
-                connection.close()
-                logging.debug("Connection closed")
-            except Exception as e:
-                logging.error(f"Error closing connection: {e}")
+#             self.send_response(connection, response)
+#         except Exception as error:
+#             logging.error(f"Error handling request: {traceback.format_exc()}")
+#             error_response['msg'] = str(error)
+#             self.send_response(connection, error_response)
+#         finally:
+#             try:
+#                 connection.close()
+#                 logging.debug("Connection closed")
+#             except Exception as e:
+#                 logging.error(f"Error closing connection: {e}")
 
-    def stop_listening(self):
-        """Stops the socket listener loop by setting stop_event."""
-        logging.info("Stopping listener loop.")
-        self.stop_event.set() 
-        if self.listener_socket:
-            try:
-                self.listener_socket.close() 
-            except Exception as e:
-                logging.error(f"Error while closing listener socket: {e}")
+#     def stop_listening(self):
+#         """Stops the socket listener loop by setting stop_event."""
+#         logging.info("Stopping listener loop.")
+#         self.stop_event.set() 
+#         if self.listener_socket:
+#             try:
+#                 self.listener_socket.close() 
+#             except Exception as e:
+#                 logging.error(f"Error while closing listener socket: {e}")
                            
 
-    def start_listening(self):
-        """Starts listening for incoming socket connections.
+#     def start_listening(self):
+#         """Starts listening for incoming socket connections.
         
-        This method initializes the socket, removes any existing socket files,
-        and enters a loop to accept and handle incoming connections. The loop
-        continues until the stop_event is set. Upon shutdown, it cleans up the
-        socket file and closes the listener socket.
-        """
-        self.safe_remove_file(self.address)
-        self.create_unix_socket()
+#         This method initializes the socket, removes any existing socket files,
+#         and enters a loop to accept and handle incoming connections. The loop
+#         continues until the stop_event is set. Upon shutdown, it cleans up the
+#         socket file and closes the listener socket.
+#         """
+#         self.safe_remove_file(self.address)
+#         self.create_unix_socket()
 
-        while not self.stop_event.is_set():
-            try:
-                connection, client_address = self.listener_socket.accept()
-                logging.info("Accepted new connection")
-                self.handle_connection(connection)
-            except socket.timeout:
-                continue  
-            except OSError as e:
-                if self.stop_event.is_set():
-                    logging.info("Socket listener stopped as requested.")
-                    break
-                else:
-                    logging.error(f"Socket error: {e}")
-                    time.sleep(1) 
-            except Exception as error:
-                logging.error(f"Unexpected error: {error}")
-                time.sleep(1)
+#         while not self.stop_event.is_set():
+#             try:
+#                 connection, client_address = self.listener_socket.accept()
+#                 logging.info("Accepted new connection")
+#                 self.handle_connection(connection)
+#             except socket.timeout:
+#                 continue  
+#             except OSError as e:
+#                 if self.stop_event.is_set():
+#                     logging.info("Socket listener stopped as requested.")
+#                     break
+#                 else:
+#                     logging.error(f"Socket error: {e}")
+#                     time.sleep(1) 
+#             except Exception as error:
+#                 logging.error(f"Unexpected error: {error}")
+#                 time.sleep(1)
 
-        self.safe_remove_file(self.address)
-        logging.info("Socket listener stopped.")
+#         self.safe_remove_file(self.address)
+#         logging.info("Socket listener stopped.")
 
 
-class Daemonizer:
-    """Facilitates the daemonization of the current process.
+# class Daemonizer:
+#     """Facilitates the daemonization of the current process.
     
-    This class provides methods to fork the process into the background,
-    manage the process ID (PID), and redirect standard file descriptors
-    to /dev/null, ensuring that the daemon operates independently from
-    the terminal.
-    """
-    def __init__(self, pid_file):
-        """
-        Initializes the Daemonizer with the specified PID file location.
+#     This class provides methods to fork the process into the background,
+#     manage the process ID (PID), and redirect standard file descriptors
+#     to /dev/null, ensuring that the daemon operates independently from
+#     the terminal.
+#     """
+#     def __init__(self, pid_file):
+#         """
+#         Initializes the Daemonizer with the specified PID file location.
         
-        :param pid_file: The file path where the daemon's PID will be stored.
-        """
-        self.pid_file = pid_file
+#         :param pid_file: The file path where the daemon's PID will be stored.
+#         """
+#         self.pid_file = pid_file
 
-    def daemonize(self):
-        """Forks the process to run as a background daemon.
+#     def daemonize(self):
+#         """Forks the process to run as a background daemon.
         
-        This method performs the necessary steps to create a daemon process,
-        including forking twice and creating a new session. It logs the
-        success of the daemonization and writes the PID to a file.
-        """
-        try:
-            pid = os.fork()
-            if pid > 0:
-                sys.exit(0)
-        except OSError as e:
-            logging.error(f"First fork failed: {e}")
-            sys.exit(1)
+#         This method performs the necessary steps to create a daemon process,
+#         including forking twice and creating a new session. It logs the
+#         success of the daemonization and writes the PID to a file.
+#         """
+#         try:
+#             pid = os.fork()
+#             if pid > 0:
+#                 sys.exit(0)
+#         except OSError as e:
+#             logging.error(f"First fork failed: {e}")
+#             sys.exit(1)
 
-        os.setsid() 
+#         os.setsid() 
 
-        try:
-            pid = os.fork()
-            if pid > 0:
-                sys.exit(0)
-        except OSError as e:
-            logging.error(f"Second fork failed: {e}")
-            sys.exit(1)
+#         try:
+#             pid = os.fork()
+#             if pid > 0:
+#                 sys.exit(0)
+#         except OSError as e:
+#             logging.error(f"Second fork failed: {e}")
+#             sys.exit(1)
 
-        logging.info(f"Daemonization successful with PID: {os.getpid()}")
-        self.write_pid_to_file()
-        self.redirect_standard_file_descriptors()
+#         logging.info(f"Daemonization successful with PID: {os.getpid()}")
+#         self.write_pid_to_file()
+#         self.redirect_standard_file_descriptors()
 
-    def write_pid_to_file(self):
-        """Writes the daemon's PID to the specified file for management purposes.
+#     def write_pid_to_file(self):
+#         """Writes the daemon's PID to the specified file for management purposes.
         
-        This method ensures that the PID of the running daemon is stored in a
-        file, which can be used later to manage the daemon process (e.g., for
-        stopping it). It logs the action taken and handles any errors.
-        """
-        try:
-            with open(self.pid_file, 'w') as f:
-                f.write(f"{os.getpid()}\n")
-            logging.debug(f"Daemon PID written to {self.pid_file}")
-        except Exception as e:
-            logging.error(f"Failed to write PID file {self.pid_file}: {e}")
-            sys.exit(1)
+#         This method ensures that the PID of the running daemon is stored in a
+#         file, which can be used later to manage the daemon process (e.g., for
+#         stopping it). It logs the action taken and handles any errors.
+#         """
+#         try:
+#             with open(self.pid_file, 'w') as f:
+#                 f.write(f"{os.getpid()}\n")
+#             logging.debug(f"Daemon PID written to {self.pid_file}")
+#         except Exception as e:
+#             logging.error(f"Failed to write PID file {self.pid_file}: {e}")
+#             sys.exit(1)
 
-    def redirect_standard_file_descriptors(self):
-        """Redirects standard file descriptors to /dev/null.
+#     def redirect_standard_file_descriptors(self):
+#         """Redirects standard file descriptors to /dev/null.
         
-        This method ensures that the daemon does not receive any terminal input/output
-        by redirecting stdin, stdout, and stderr to /dev/null. It logs the action
-        taken and any errors encountered during the process.
-        """
-        try:
-            sys.stdout.flush()
-            sys.stderr.flush()
-            with open(os.devnull, 'r') as devnull:
-                os.dup2(devnull.fileno(), sys.stdin.fileno())
-            with open(os.devnull, 'a+') as devnull:
-                os.dup2(devnull.fileno(), sys.stdout.fileno())
-                os.dup2(devnull.fileno(), sys.stderr.fileno())
-            logging.debug("Standard file descriptors redirected to /dev/null")
-        except Exception as e:
-            logging.error(f"Failed to redirect standard file descriptors: {e}")
-            sys.exit(1)
+#         This method ensures that the daemon does not receive any terminal input/output
+#         by redirecting stdin, stdout, and stderr to /dev/null. It logs the action
+#         taken and any errors encountered during the process.
+#         """
+#         try:
+#             sys.stdout.flush()
+#             sys.stderr.flush()
+#             with open(os.devnull, 'r') as devnull:
+#                 os.dup2(devnull.fileno(), sys.stdin.fileno())
+#             with open(os.devnull, 'a+') as devnull:
+#                 os.dup2(devnull.fileno(), sys.stdout.fileno())
+#                 os.dup2(devnull.fileno(), sys.stderr.fileno())
+#             logging.debug("Standard file descriptors redirected to /dev/null")
+#         except Exception as e:
+#             logging.error(f"Failed to redirect standard file descriptors: {e}")
+#             sys.exit(1)
 
 
-class MemoryStatisticsService:
-    """
-    Manages the Memory Statistics Service, responsible for collecting,
-    processing, and serving memory usage statistics in a daemonized manner.
-    This service utilizes a socket for communication and handles
-    commands for memory statistics retrieval, while also managing
-    configuration reloading and graceful shutdown procedures.
-    """ 
+# class MemoryStatisticsService:
+#     """
+#     Manages the Memory Statistics Service, responsible for collecting,
+#     processing, and serving memory usage statistics in a daemonized manner.
+#     This service utilizes a socket for communication and handles
+#     commands for memory statistics retrieval, while also managing
+#     configuration reloading and graceful shutdown procedures.
+#     """ 
 
-    def __init__(self, memory_statistics_config, config_file_path='memorystats.conf'):
-        """
-        Initializes the MemoryStatisticsService instance.
-        Parameters:
-        - memory_statistics_config (dict): Initial configuration settings for the service.
-        - config_file_path (str): Path to the configuration file to load overrides.
-        """
-        self.config_file_path = config_file_path
-        self.memory_statistics_lock = threading.Lock()
-        self.stop_event = threading.Event()  
+#     def __init__(self, memory_statistics_config, config_file_path='memorystats.conf', name="MemoryStatisticsService"):
+#         """
+#         Initializes the MemoryStatisticsService instance.
+#         Parameters:
+#         - memory_statistics_config (dict): Initial configuration settings for the service.
+#         - config_file_path (str): Path to the configuration file to load overrides.
+#         """
+
+#         self.name = name  # Set the service name
+#         logging.info(f"Service initialized with name: {self.name}")  # Log the name
+
+#         self.config_file_path = config_file_path
+#         self.memory_statistics_lock = threading.Lock()
+#         self.stop_event = threading.Event()  
     
-        self.socket_listener_thread = None
-        self.memory_collection_thread = None
+#         self.socket_listener_thread = None
+#         self.memory_collection_thread = None
 
-        self.config = memory_statistics_config.copy()
-        self.config.update(self.load_config_from_file())
+#         self.config = memory_statistics_config.copy()
+#         self.config.update(self.load_config_from_file())
 
-        self.sampling_interval = int(self.config.get('sampling_interval', 3)) * 60  
-        self.retention_period = int(self.config.get('retention_period', 15)) 
+#         self.sampling_interval = int(self.config.get('sampling_interval', 3)) * 60  
+#         self.retention_period = int(self.config.get('retention_period', 15)) 
 
-        self.socket_handler = SocketHandler(
-            address=self.config['DBUS_SOCKET_ADDRESS'],
-            command_handler=self.handle_command,
-            stop_event=self.stop_event
-        )
-        self.daemonizer = Daemonizer('/var/run/memory_statistics_daemon.pid')
+#         self.socket_handler = SocketHandler(
+#             address=self.config['DBUS_SOCKET_ADDRESS'],
+#             command_handler=self.handle_command,
+#             stop_event=self.stop_event
+#         )
+#         self.daemonizer = Daemonizer('/var/run/memory_statistics_daemon.pid')
 
-        signal.signal(signal.SIGHUP, self.handle_sighup)
-        signal.signal(signal.SIGTERM, self.handle_sigterm)
+#         signal.signal(signal.SIGHUP, self.handle_sighup)
+#         signal.signal(signal.SIGTERM, self.handle_sigterm)
     
-    def load_config_from_file(self):
-        """
-        Loads specific configuration values from the configuration file.
-        Returns:
-        - dict: A dictionary containing configuration overrides from the file.
-        """
-        config = {}
-        parser = configparser.ConfigParser()
-        try:
-            parser.read(self.config_file_path)
-            config['sampling_interval'] = parser.get('default', 'sampling_interval', fallback='3')
-            config['retention_period'] = parser.get('default', 'retention_period', fallback='15')
-            logging.info(f"Configuration loaded from file (overrides only): {config}")
-        except Exception as e:
-            logging.error(f"Failed to load configuration from file: {e}")
-        return config
+#     def load_config_from_file(self):
+#         """
+#         Loads specific configuration values from the configuration file.
+#         Returns:
+#         - dict: A dictionary containing configuration overrides from the file.
+#         """
+#         config = {}
+#         parser = configparser.ConfigParser()
+#         try:
+#             parser.read(self.config_file_path)
+#             config['sampling_interval'] = parser.get('default', 'sampling_interval', fallback='3')
+#             config['retention_period'] = parser.get('default', 'retention_period', fallback='15')
+#             logging.info(f"Configuration loaded from file (overrides only): {config}")
+#         except Exception as e:
+#             logging.error(f"Failed to load configuration from file: {e}")
+#         return config
 
-    def handle_command(self, command_name, command_data):
-        """
-        Processes incoming commands received via the socket.
-        Parameters:
-        - command_name (str): The name of the command to handle.
-        - command_data (dict): Data associated with the command.
-        Returns:
-        - dict: Response indicating the success or failure of command execution.
-        """
-        if hasattr(self, command_name):
-            command_method = getattr(self, command_name)
-            return command_method(command_data)
-        else:
-            logging.warning(f"Unknown command received: {command_name}")
-            return {"status": False, "msg": "Unknown command"}
+#     def handle_command(self, command_name, command_data):
+#         """
+#         Processes incoming commands received via the socket.
+#         Parameters:
+#         - command_name (str): The name of the command to handle.
+#         - command_data (dict): Data associated with the command.
+#         Returns:
+#         - dict: Response indicating the success or failure of command execution.
+#         """
+#         if hasattr(self, command_name):
+#             command_method = getattr(self, command_name)
+#             return command_method(command_data)
+#         else:
+#             logging.warning(f"Unknown command received: {command_name}")
+#             return {"status": False, "msg": "Unknown command"}
 
-    def handle_sighup(self, signum, frame):
-        """
-        Responds to the SIGHUP signal to reload the service configuration.
-        This method performs cleanup of old log files and updates the service's
-        runtime configuration from the ConfigDB.
-        """
-        logging.info("Received SIGHUP, reloading configuration.")
-        try:
-            self.cleanup_old_files()
-            self.load_config_from_db()
-        except Exception as e:
-            logging.error(f"Error handling SIGHUP: {e}")
+#     def handle_sighup(self, signum, frame):
+#         """
+#         Responds to the SIGHUP signal to reload the service configuration.
+#         This method performs cleanup of old log files and updates the service's
+#         runtime configuration from the ConfigDB.
+#         """
+#         logging.info("Received SIGHUP, reloading configuration.")
+#         try:
+#             self.cleanup_old_files()
+#             self.load_config_from_db()
+#         except Exception as e:
+#             logging.error(f"Error handling SIGHUP: {e}")
 
-    def handle_sigterm(self, signum, frame):
-        """
-        Handles the SIGTERM signal for graceful shutdown of the service.
-        This method attempts to terminate child processes, stop running threads,
-        and perform necessary cleanup operations before exiting.
-        """
-        logging.info("Received SIGTERM, initiating graceful shutdown...")
+#     def handle_sigterm(self, signum, frame):
+#         """
+#         Handles the SIGTERM signal for graceful shutdown of the service.
+#         This method attempts to terminate child processes, stop running threads,
+#         and perform necessary cleanup operations before exiting.
+#         """
+#         logging.info("Received SIGTERM, initiating graceful shutdown...")
 
-        def terminate_child_processes():
-            """
-            Gracefully terminates all child processes associated with the service.
-            """
-            current_pid = os.getpid()
-            try:
-                children = [
-                    proc for proc in psutil.process_iter(['pid', 'ppid', 'name'])
-                    if proc.info['ppid'] == current_pid
-                ]
+#         def terminate_child_processes():
+#             """
+#             Gracefully terminates all child processes associated with the service.
+#             """
+#             current_pid = os.getpid()
+#             try:
+#                 children = [
+#                     proc for proc in psutil.process_iter(['pid', 'ppid', 'name'])
+#                     if proc.info['ppid'] == current_pid
+#                 ]
 
-                for child in children:
-                    try:
-                        logging.info(f"Sending SIGTERM to child process {child.info['pid']}")
-                        os.kill(child.info['pid'], signal.SIGTERM)
-                    except ProcessLookupError:
-                        continue
+#                 for child in children:
+#                     try:
+#                         logging.info(f"Sending SIGTERM to child process {child.info['pid']}")
+#                         os.kill(child.info['pid'], signal.SIGTERM)
+#                     except ProcessLookupError:
+#                         continue
 
-                timeout = 5
-                start_time = time.time()
-                while any(os.kill(child.info['pid'], 0) == 0 for child in children if child.is_running()) \
-                        and time.time() - start_time < timeout:
-                    time.sleep(0.1)
+#                 timeout = 5
+#                 start_time = time.time()
+#                 while any(os.kill(child.info['pid'], 0) == 0 for child in children if child.is_running()) \
+#                         and time.time() - start_time < timeout:
+#                     time.sleep(0.1)
 
-                for child in children:
-                    if child.is_running():
-                        logging.warning(f"Force killing child process {child.info['pid']}")
-                        os.kill(child.info['pid'], signal.SIGKILL)
+#                 for child in children:
+#                     if child.is_running():
+#                         logging.warning(f"Force killing child process {child.info['pid']}")
+#                         os.kill(child.info['pid'], signal.SIGKILL)
 
-            except Exception as e:
-                logging.error(f"Error while terminating child processes: {e}")
-                raise
+#             except Exception as e:
+#                 logging.error(f"Error while terminating child processes: {e}")
+#                 raise
 
-        try:
-            if hasattr(self.socket_handler, 'stop_accepting'):
-                self.socket_handler.stop_accepting()
+#         try:
+#             if hasattr(self.socket_handler, 'stop_accepting'):
+#                 self.socket_handler.stop_accepting()
 
-            terminate_child_processes()
+#             terminate_child_processes()
 
-            self.stop_threads()
+#             self.stop_threads()
 
-            self.cleanup()
+#             self.cleanup()
 
-            logging.info("Shutdown complete. Exiting...")
-            sys.exit(0)
+#             logging.info("Shutdown complete. Exiting...")
+#             sys.exit(0)
 
-        except Exception as e:
-            logging.error(f"Error during graceful shutdown: {e}")
+#         except Exception as e:
+#             logging.error(f"Error during graceful shutdown: {e}")
 
-            try:
-                os.killpg(os.getpgid(0), signal.SIGKILL)
-            except Exception as kill_error:
-                logging.error(f"Error during force kill: {kill_error}")
-            sys.exit(1)
+#             try:
+#                 os.killpg(os.getpgid(0), signal.SIGKILL)
+#             except Exception as kill_error:
+#                 logging.error(f"Error during force kill: {kill_error}")
+#             sys.exit(1)
 
-    def load_config_from_db(self):
-        """
-        Retrieves runtime configuration values from the ConfigDB.
-        This method updates the service's sampling interval and retention period
-        based on the values retrieved from the database.
-        Raises:
-        - Exception: If an error occurs while accessing the ConfigDB.
-        """
-        # Placeholder for ConfigDBConnector
-        # Replace with actual implementation
-        class ConfigDBConnector:
-            def connect(self):
-                pass
+#     def load_config_from_db(self):
+#         """
+#         Retrieves runtime configuration values from the ConfigDB.
+#         This method updates the service's sampling interval and retention period
+#         based on the values retrieved from the database.
+#         Raises:
+#         - Exception: If an error occurs while accessing the ConfigDB.
+#         """
+#         # Placeholder for ConfigDBConnector
+#         # Replace with actual implementation
+#         class ConfigDBConnector:
+#             def connect(self):
+#                 pass
 
-            def get_table(self, table_name):
-                # Dummy implementation
-                return {
-                    'retention-period': '20',
-                    'sampling-interval': '5' 
-                }
+#             def get_table(self, table_name):
+#                 # Dummy implementation
+#                 return {
+#                     'retention-period': '20',
+#                     'sampling-interval': '5' 
+#                 }
 
-            def disconnect(self):
-                pass
+#             def disconnect(self):
+#                 pass
 
-        config_db = ConfigDBConnector()
-        config_db.connect()
+#         config_db = ConfigDBConnector()
+#         config_db.connect()
 
-        try:
-            config = config_db.get_table('MEMORY_STATISTICS')
+#         try:
+#             config = config_db.get_table('MEMORY_STATISTICS')
 
-            self.retention_period = int(config.get('retention-period', self.retention_period))
-            self.sampling_interval = int(config.get('sampling-interval', self.sampling_interval)) * 60
+#             self.retention_period = int(config.get('retention-period', self.retention_period))
+#             self.sampling_interval = int(config.get('sampling-interval', self.sampling_interval)) * 60
             
-            logging.info(f"Configuration reloaded from ConfigDB: sampling_interval={self.sampling_interval} seconds, retention_period={self.retention_period} days")
-        except Exception as e:
-            logging.error(f"Error loading configuration from ConfigDB: {e}, using current settings")
-        finally:
-            config_db.disconnect()
+#             logging.info(f"Configuration reloaded from ConfigDB: sampling_interval={self.sampling_interval} seconds, retention_period={self.retention_period} days")
+#         except Exception as e:
+#             logging.error(f"Error loading configuration from ConfigDB: {e}, using current settings")
+#         finally:
+#             config_db.disconnect()
 
-    def cleanup_old_files(self):
-        """
-        Deletes old log files from the log directory.
-        This method removes any log files with a .gz extension from the specified
-        log directory to manage disk space and maintain organization.
-        """
-        try:
-            log_directory = self.config.get('LOG_DIRECTORY', '/var/log/histogram')
-            for file in os.listdir(log_directory):
-                if file.endswith('.gz'):
-                    file_path = os.path.join(log_directory, file)
-                    os.remove(file_path)
-                    logging.info(f"Deleted old log file: {file_path}")
-        except Exception as e:
-            logging.error(f"Error during log file cleanup: {e}")
+#     def cleanup_old_files(self):
+#         """
+#         Deletes old log files from the log directory.
+#         This method removes any log files with a .gz extension from the specified
+#         log directory to manage disk space and maintain organization.
+#         """
+#         try:
+#             log_directory = self.config.get('LOG_DIRECTORY', '/var/log/histogram')
+#             for file in os.listdir(log_directory):
+#                 if file.endswith('.gz'):
+#                     file_path = os.path.join(log_directory, file)
+#                     os.remove(file_path)
+#                     logging.info(f"Deleted old log file: {file_path}")
+#         except Exception as e:
+#             logging.error(f"Error during log file cleanup: {e}")
 
-    def memory_statistics_command_request_handler(self, request):
-        """
-        Processes requests for memory statistics.
-        Parameters:
-        - request (dict): Contains information about the statistics request.
-        Returns:
-        - dict: A response indicating the success or failure of the request,
-                along with the collected memory statistics data if successful.
-        """
-        try:
-            logging.info(f"Received memory statistics request: {request}")
-            with self.memory_statistics_lock:
-                memory_collector = MemoryStatisticsCollector(
-                    sampling_interval=self.sampling_interval // 60,
-                    retention_period=self.retention_period
-                )
-                current_memory = memory_collector.collect_and_store_memory_usage(collect_only=True)
-                request['current_memory'] = current_memory
-                logging.info(f"Current memory usage collected: {current_memory}")
+#     def memory_statistics_command_request_handler(self, request):
+#         """
+#         Processes requests for memory statistics.
+#         Parameters:
+#         - request (dict): Contains information about the statistics request.
+#         Returns:
+#         - dict: A response indicating the success or failure of the request,
+#                 along with the collected memory statistics data if successful.
+#         """
+#         try:
+#             logging.info(f"Received memory statistics request: {request}")
+#             with self.memory_statistics_lock:
+#                 memory_collector = MemoryStatisticsCollector(
+#                     sampling_interval=self.sampling_interval // 60,
+#                     retention_period=self.retention_period
+#                 )
+#                 current_memory = memory_collector.collect_and_store_memory_usage(collect_only=True)
+#                 request['current_memory'] = current_memory
+#                 logging.info(f"Current memory usage collected: {current_memory}")
 
-                time_processor = TimeProcessor(
-                    sampling_interval=self.sampling_interval // 60,
-                    retention_period=self.retention_period
-                )
-                time_processor.process_time_information(request)
+#                 time_processor = TimeProcessor(
+#                     sampling_interval=self.sampling_interval // 60,
+#                     retention_period=self.retention_period
+#                 )
+#                 time_processor.process_time_information(request)
 
-                processor = MemoryStatisticsProcessor(self.config,                            
-                                                    sampling_interval=self.sampling_interval,
-                                                    retention_period=self.retention_period)
-                report = processor.calculate_memory_statistics_period(request)
-                logging.info(f"Memory statistics processed: {report}")
+#                 processor = MemoryStatisticsProcessor(self.config,                            
+#                                                     sampling_interval=self.sampling_interval,
+#                                                     retention_period=self.retention_period)
+#                 report = processor.calculate_memory_statistics_period(request)
+#                 logging.info(f"Memory statistics processed: {report}")
 
-                return {"status": True, "data": report}
+#                 return {"status": True, "data": report}
 
-        except Exception as error:
-            logging.error(f"Error handling memory statistics request: {error}")
-            return {"status": False, "error": str(error)}
+#         except Exception as error:
+#             logging.error(f"Error handling memory statistics request: {error}")
+#             return {"status": False, "error": str(error)}
 
-    def start_socket_listener(self):
-        """
-        Starts the socket listener in a separate thread.
-        This method initializes and starts the socket listener, allowing the 
-        service to accept incoming commands. The listener operates in a daemon 
-        thread, ensuring that it runs in the background and does not block 
-        the main program from exiting.
-        Logs the start of the socket listener thread.
-        """
-        self.socket_listener_thread = threading.Thread(
-            target=self.socket_handler.start_listening,
-            name='SocketListener',
-            daemon=True
-        )
-        self.socket_listener_thread.start()
-        logging.info("Socket listener thread started.")
+#     def start_socket_listener(self):
+#         """
+#         Starts the socket listener in a separate thread.
+#         This method initializes and starts the socket listener, allowing the 
+#         service to accept incoming commands. The listener operates in a daemon 
+#         thread, ensuring that it runs in the background and does not block 
+#         the main program from exiting.
+#         Logs the start of the socket listener thread.
+#         """
+#         self.socket_listener_thread = threading.Thread(
+#             target=self.socket_handler.start_listening,
+#             name='SocketListener',
+#             daemon=True
+#         )
+#         self.socket_listener_thread.start()
+#         logging.info("Socket listener thread started.")
 
-    def start_memory_collection(self):
-        """
-        Starts memory statistics collection in a separate thread.
-        This method initializes and starts a separate thread dedicated to 
-        collecting memory statistics at defined intervals. The collection 
-        process runs in a loop until signaled to stop, capturing memory usage 
-        data and logging any errors that may occur during the process.
-        The collection interval is determined by the `sampling_interval` 
-        configuration. Logs the start and stop of the memory collection thread.
-        """ 
-        def memory_collection():
-            logging.info("Memory statistics collection thread started.")
-            while not self.stop_event.is_set():
-                start_time = datetime.now()
-                try:
-                    with self.memory_statistics_lock:
-                        memory_collector = MemoryStatisticsCollector(
-                            sampling_interval=self.sampling_interval // 60,
-                            retention_period=self.retention_period
-                        )
-                        memory_collector.collect_and_store_memory_usage(collect_only=False)
-                except Exception as error:
-                    logging.error(f"Error during memory statistics collection: {error}")
+#     def start_memory_collection(self):
+#         """
+#         Starts memory statistics collection in a separate thread.
+#         This method initializes and starts a separate thread dedicated to 
+#         collecting memory statistics at defined intervals. The collection 
+#         process runs in a loop until signaled to stop, capturing memory usage 
+#         data and logging any errors that may occur during the process.
+#         The collection interval is determined by the `sampling_interval` 
+#         configuration. Logs the start and stop of the memory collection thread.
+#         """ 
+#         def memory_collection():
+#             logging.info("Memory statistics collection thread started.")
+#             while not self.stop_event.is_set():
+#                 start_time = datetime.now()
+#                 try:
+#                     with self.memory_statistics_lock:
+#                         memory_collector = MemoryStatisticsCollector(
+#                             sampling_interval=self.sampling_interval // 60,
+#                             retention_period=self.retention_period
+#                         )
+#                         memory_collector.collect_and_store_memory_usage(collect_only=False)
+#                 except Exception as error:
+#                     logging.error(f"Error during memory statistics collection: {error}")
 
-                elapsed_time = (datetime.now() - start_time).total_seconds()
-                sleep_time = max(0, self.sampling_interval - elapsed_time)
-                if self.stop_event.wait(timeout=sleep_time):
-                    break 
+#                 elapsed_time = (datetime.now() - start_time).total_seconds()
+#                 sleep_time = max(0, self.sampling_interval - elapsed_time)
+#                 if self.stop_event.wait(timeout=sleep_time):
+#                     break 
 
-            logging.info("Memory statistics collection thread stopped.")
+#             logging.info("Memory statistics collection thread stopped.")
 
-        self.memory_collection_thread = threading.Thread(
-            target=memory_collection,
-            name='MemoryCollection',
-            daemon=True
-        )
-        self.memory_collection_thread.start()
-        logging.info("Memory collection thread started.")
+#         self.memory_collection_thread = threading.Thread(
+#             target=memory_collection,
+#             name='MemoryCollection',
+#             daemon=True
+#         )
+#         self.memory_collection_thread.start()
+#         logging.info("Memory collection thread started.")
 
-    def stop_threads(self):
-        """
-        Signals threads to stop and waits for them to exit gracefully.
-        This method sets the stop event to signal all running threads to 
-        terminate. It also closes the listener socket to unblock the accept 
-        method and waits for both the socket listener and memory collection 
-        threads to finish their execution within a specified timeout.
-        Logs any issues encountered during the stopping process of the threads.
-        """
-        logging.info("Signaling threads to stop.")
-        self.stop_event.set() 
+#     def stop_threads(self):
+#         """
+#         Signals threads to stop and waits for them to exit gracefully.
+#         This method sets the stop event to signal all running threads to 
+#         terminate. It also closes the listener socket to unblock the accept 
+#         method and waits for both the socket listener and memory collection 
+#         threads to finish their execution within a specified timeout.
+#         Logs any issues encountered during the stopping process of the threads.
+#         """
+#         logging.info("Signaling threads to stop.")
+#         self.stop_event.set() 
 
-        self.socket_handler.stop_listening()
+#         self.socket_handler.stop_listening()
 
-        if self.socket_listener_thread:
-            logging.info("Stopping socket listener thread...")
-            self.socket_listener_thread.join(timeout=5)
-            if self.socket_listener_thread.is_alive():
-                logging.warning("Socket listener thread did not stop gracefully")
+#         if self.socket_listener_thread:
+#             logging.info("Stopping socket listener thread...")
+#             self.socket_listener_thread.join(timeout=5)
+#             if self.socket_listener_thread.is_alive():
+#                 logging.warning("Socket listener thread did not stop gracefully")
 
-        if self.memory_collection_thread:
-            logging.info("Stopping memory collection thread...")
-            self.memory_collection_thread.join(timeout=5)
-            if self.memory_collection_thread.is_alive():
-                logging.warning("Memory collection thread did not stop gracefully")    
+#         if self.memory_collection_thread:
+#             logging.info("Stopping memory collection thread...")
+#             self.memory_collection_thread.join(timeout=5)
+#             if self.memory_collection_thread.is_alive():
+#                 logging.warning("Memory collection thread did not stop gracefully")    
 
-    def cleanup(self):
-        """
-        Performs additional cleanup tasks before service shutdown.
-        This method handles the cleanup of old log files, removes the socket 
-        and PID files, and flushes all log handlers to ensure that all logs 
-        are properly written out. This is typically called during service 
-        termination to free up resources and maintain a clean state.
-        Logs the completion of the cleanup tasks and any errors encountered 
-        during the process.
-        """
-        self.cleanup_old_files()
+#     def cleanup(self):
+#         """
+#         Performs additional cleanup tasks before service shutdown.
+#         This method handles the cleanup of old log files, removes the socket 
+#         and PID files, and flushes all log handlers to ensure that all logs 
+#         are properly written out. This is typically called during service 
+#         termination to free up resources and maintain a clean state.
+#         Logs the completion of the cleanup tasks and any errors encountered 
+#         during the process.
+#         """
+#         self.cleanup_old_files()
 
-        try:
-            if os.path.exists(self.config['DBUS_SOCKET_ADDRESS']):
-                os.unlink(self.config['DBUS_SOCKET_ADDRESS'])
-                logging.info(f"Removed socket file: {self.config['DBUS_SOCKET_ADDRESS']}")
-        except Exception as e:
-            logging.error(f"Error removing socket file: {e}")
+#         try:
+#             if os.path.exists(self.config['DBUS_SOCKET_ADDRESS']):
+#                 os.unlink(self.config['DBUS_SOCKET_ADDRESS'])
+#                 logging.info(f"Removed socket file: {self.config['DBUS_SOCKET_ADDRESS']}")
+#         except Exception as e:
+#             logging.error(f"Error removing socket file: {e}")
 
-        pid_file = '/var/run/memory_statistics_daemon.pid'
-        try:
-            if os.path.exists(pid_file):
-                os.unlink(pid_file)
-                logging.info(f"Removed PID file: {pid_file}")
-        except Exception as e:
-            logging.error(f"Error removing PID file: {e}")
+#         pid_file = '/var/run/memory_statistics_daemon.pid'
+#         try:
+#             if os.path.exists(pid_file):
+#                 os.unlink(pid_file)
+#                 logging.info(f"Removed PID file: {pid_file}")
+#         except Exception as e:
+#             logging.error(f"Error removing PID file: {e}")
 
-        try:
-            for handler in logging.getLogger().handlers:
-                handler.flush()
-        except Exception as e:
-            logging.error(f"Error flushing log handlers: {e}")
+#         try:
+#             for handler in logging.getLogger().handlers:
+#                 handler.flush()
+#         except Exception as e:
+#             logging.error(f"Error flushing log handlers: {e}")
 
-        logging.info("Cleanup complete.")
+#         logging.info("Cleanup complete.")
 
-    def run(self):
-        """
-        Runs the Memory Statistics Service.
-        This method starts the service by daemonizing the process and 
-        initializing the threads necessary for socket listening and memory 
-        statistics collection. The service will continue to run until 
-        signaled to stop, during which it sleeps to reduce CPU usage.
-        Logs the initialization and starting of the service.
-        """
-        logging.info("Memory Statistics Service is starting...")
-        self.daemonizer.daemonize()
+#     def run(self):
+#         """
+#         Runs the Memory Statistics Service.
+#         This method starts the service by daemonizing the process and 
+#         initializing the threads necessary for socket listening and memory 
+#         statistics collection. The service will continue to run until 
+#         signaled to stop, during which it sleeps to reduce CPU usage.
+#         Logs the initialization and starting of the service.
+#         """
+#         logging.info(f"{self.name} is starting...")  # Log the service name at start
+#         self.daemonizer.daemonize()
 
-        self.start_socket_listener()
-        self.start_memory_collection()
+#         self.start_socket_listener()
+#         self.start_memory_collection()
     
-        while not self.stop_event.is_set():
-            time.sleep(1) 
+#         while not self.stop_event.is_set():
+#             time.sleep(1) 
+
+# if __name__ == '__main__':
+#     logging.basicConfig(filename='mem_stats_debug.log', level=logging.DEBUG, 
+#                         format='%(asctime)s - %(levelname)s - %(message)s') 
+#     memory_statistics_config = {
+#         'LOG_DIRECTORY': "/var/log/memory_statistics",
+#         'MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/memory-stats.log.gz",
+#         'TOTAL_MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/total-memory-stats.log.gz",
+#         'DBUS_SOCKET_ADDRESS': '/var/run/dbus/memstats.socket'
+#     }
+    
+#     logger = SyslogLogger(
+#         identifier="memstats#log",
+#         log_to_console=True
+#     )
+        
+#     service = MemoryStatisticsService(memory_statistics_config)
+#     service.run()
 
 if __name__ == '__main__':
     logging.basicConfig(filename='mem_stats_debug.log', level=logging.DEBUG, 
@@ -1812,6 +1879,7 @@ if __name__ == '__main__':
         identifier="memstats#log",
         log_to_console=True
     )
-        
-    service = MemoryStatisticsService(memory_statistics_config)
-    service.run()
+    
+    service_name = "MemoryStatisticsService"  # You can set this dynamically or pass as an argument
+    # service = MemoryStatisticsService(memory_statistics_config, name=service_name)
+    # service.run()
