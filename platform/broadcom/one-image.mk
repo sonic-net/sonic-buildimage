@@ -86,6 +86,7 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(NOKIA_IXR7250_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H3_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H4_32D_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7220H4_64D_PLATFORM_MODULE) \
                                $(NOKIA_IXR7220H5_64D_PLATFORM_MODULE) \
                                $(TENCENT_TCS8400_PLATFORM_MODULE) \
                                $(TENCENT_TCS9400_PLATFORM_MODULE) \
@@ -96,7 +97,10 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(UFISPACE_S9300_32D_PLATFORM_MODULE) \
                                $(UFISPACE_S9301_32D_PLATFORM_MODULE) \
                                $(UFISPACE_S9301_32DB_PLATFORM_MODULE) \
-                               $(MICAS_M2_W6510_48V8C_PLATFORM_MODULE)
+                               $(MICAS_M2_W6510_48V8C_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6510_48GT4V_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6520_24DC8QC_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6510_32C_PLATFORM_MODULE)
 
 $(SONIC_ONE_IMAGE)_LAZY_BUILD_INSTALLS = $(BRCM_OPENNSL_KERNEL) $(BRCM_DNX_OPENNSL_KERNEL)
 ifeq ($(INSTALL_DEBUG_TOOLS),y)

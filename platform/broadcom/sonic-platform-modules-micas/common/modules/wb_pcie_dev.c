@@ -1,7 +1,23 @@
 /*
- * wb_pcie_dev.c
- * ko to read/write pcie iomem and ioports through /dev/XXX device
+ * An wb_pcie_dev driver for pcie device function
+ *
+ * Copyright (C) 2024 Micas Networks Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
@@ -25,8 +41,14 @@
 #define PCIE_BUS_WIDTH_2         (2)
 #define PCIE_BUS_WIDTH_4         (4)
 
-#define KERNEL_SPASE         (0)
-#define USER_SPASE           (1)
+#define KERNEL_SPACE         (0)
+#define USER_SPACE           (1)
+
+#define SEARCH_DEV_DEFAULT       (0)
+#define SEARCH_DEV_BY_BRIDGE     (1)
+
+#define SECBUS                   (0x19)
+#define SUBBUS                   (0x1a)
 
 static int g_pcie_dev_debug = 0;
 static int g_pcie_dev_error = 0;
@@ -65,6 +87,10 @@ typedef struct wb_pci_dev_s {
     uint32_t bus_width;
     uint32_t check_pci_id;
     uint32_t pci_id;
+    uint32_t search_mode;
+    uint32_t bridge_bus;
+    uint32_t bridge_slot;
+    uint32_t bridge_fn;
     struct miscdevice misc;
     void (*setreg)(struct wb_pci_dev_s *wb_pci_dev, int reg, u32 value);
     u32 (*getreg)(struct wb_pci_dev_s *wb_pci_dev, int reg);
@@ -250,7 +276,7 @@ static ssize_t pci_dev_read(struct file *file, char __user *buf, size_t count, l
         return read_len;
     }
     /* check flag is user spase or kernel spase */
-    if (flag == USER_SPASE) {
+    if (flag == USER_SPACE) {
         PCIE_DEV_DEBUG_VERBOSE("user space read, buf: %p, offset: %lld, read count %lu.\n",
             buf, *offset, count);
         if (copy_to_user(buf, buf_tmp, read_len)) {
@@ -273,7 +299,7 @@ static ssize_t pci_dev_read_user(struct file *file, char __user *buf, size_t cou
 
     PCIE_DEV_DEBUG_VERBOSE("pci_dev_read_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
-    ret = pci_dev_read(file, buf, count, offset, USER_SPASE);
+    ret = pci_dev_read(file, buf, count, offset, USER_SPACE);
     return ret;
 }
 
@@ -283,7 +309,7 @@ static ssize_t pci_dev_read_iter(struct kiocb *iocb, struct iov_iter *to)
 
     PCIE_DEV_DEBUG_VERBOSE("pci_dev_read_iter, file: %p, count: %lu, offset: %lld\n",
         iocb->ki_filp, to->count, iocb->ki_pos);
-    ret = pci_dev_read(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, KERNEL_SPASE);
+    ret = pci_dev_read(iocb->ki_filp, to->kvec->iov_base, to->count, &iocb->ki_pos, KERNEL_SPACE);
     return ret;
 }
 
@@ -347,7 +373,7 @@ static ssize_t pci_dev_write(struct file *file, const char __user *buf, size_t c
 
     mem_clear(buf_tmp, sizeof(buf_tmp));
     /* check flag is user spase or kernel spase */
-    if (flag == USER_SPASE) {
+    if (flag == USER_SPACE) {
         PCIE_DEV_DEBUG_VERBOSE("user space write, buf: %p, offset: %lld, write count %lu.\n",
             buf, *offset, count);
         if (copy_from_user(buf_tmp, buf, count)) {
@@ -376,7 +402,7 @@ static ssize_t pci_dev_write_user(struct file *file, const char __user *buf, siz
 
     PCIE_DEV_DEBUG_VERBOSE("pci_dev_write_user, file: %p, count: %lu, offset: %lld\n",
         file, count, *offset);
-    ret = pci_dev_write(file, buf, count, offset, USER_SPASE);
+    ret = pci_dev_write(file, buf, count, offset, USER_SPACE);
     return ret;
 }
 
@@ -386,7 +412,7 @@ static ssize_t pci_dev_write_iter(struct kiocb *iocb, struct iov_iter *from)
 
     PCIE_DEV_DEBUG_VERBOSE("pci_dev_write_iter, file: %p, count: %lu, offset: %lld\n",
         iocb->ki_filp, from->count, iocb->ki_pos);
-    ret = pci_dev_write(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, KERNEL_SPASE);
+    ret = pci_dev_write(iocb->ki_filp, from->kvec->iov_base, from->count, &iocb->ki_pos, KERNEL_SPACE);
     return ret;
 }
 
@@ -618,10 +644,11 @@ static int pci_dev_probe(struct platform_device *pdev)
     int ret, devfn;
     uint32_t pci_id;
     wb_pci_dev_t *wb_pci_dev;
-    struct pci_dev *pci_dev;
+    struct pci_dev *pci_dev, *pci_bridge_dev;
     struct miscdevice *misc;
     firmware_upg_t *firmware_upg;
     pci_dev_device_t *pci_dev_device;
+    u8 secbus_val, subbus_val;
 
     wb_pci_dev = devm_kzalloc(&pdev->dev, sizeof(wb_pci_dev_t), GFP_KERNEL);
     if (!wb_pci_dev) {
@@ -636,7 +663,6 @@ static int pci_dev_probe(struct platform_device *pdev)
         ret = 0;
         ret += of_property_read_string(pdev->dev.of_node, "pci_dev_name", &wb_pci_dev->name);
         ret += of_property_read_u32(pdev->dev.of_node, "pci_domain", &wb_pci_dev->domain);
-        ret += of_property_read_u32(pdev->dev.of_node, "pci_bus", &wb_pci_dev->bus);
         ret += of_property_read_u32(pdev->dev.of_node, "pci_slot", &wb_pci_dev->slot);
         ret += of_property_read_u32(pdev->dev.of_node, "pci_fn", &wb_pci_dev->fn);
         ret += of_property_read_u32(pdev->dev.of_node, "pci_bar", &wb_pci_dev->bar);
@@ -645,6 +671,30 @@ static int pci_dev_probe(struct platform_device *pdev)
         if (ret != 0) {
             dev_err(&pdev->dev, "Failed to get dts config, ret:%d.\n", ret);
             return -ENXIO;
+        }
+
+        wb_pci_dev->search_mode = SEARCH_DEV_DEFAULT;
+        of_property_read_u32(pdev->dev.of_node, "search_mode", &wb_pci_dev->search_mode);
+        ret = 0;
+        if (wb_pci_dev->search_mode == SEARCH_DEV_BY_BRIDGE) {
+            ret += of_property_read_u32(pdev->dev.of_node, "bridge_bus", &wb_pci_dev->bridge_bus);
+            ret += of_property_read_u32(pdev->dev.of_node, "bridge_slot", &wb_pci_dev->bridge_slot);
+            ret += of_property_read_u32(pdev->dev.of_node, "bridge_fn", &wb_pci_dev->bridge_fn);
+            if (ret != 0) {
+                PCIE_DEV_DEBUG_VERBOSE("get pci bridge config fail, ret:%d.\n", ret);
+                return -ENXIO;
+            } else {
+                PCIE_DEV_DEBUG_VERBOSE("bridge_bus:0x%02x, bridge_slot:0x%02x, bridge_fn:0x%02x.\n",
+                    wb_pci_dev->bridge_bus, wb_pci_dev->bridge_slot, wb_pci_dev->bridge_fn);
+            }
+        } else {
+            ret += of_property_read_u32(pdev->dev.of_node, "pci_bus", &wb_pci_dev->bus);
+            if (ret != 0) {
+                PCIE_DEV_DEBUG_VERBOSE("get pci bus config fail, ret:%d.\n", ret);
+                return -ENXIO;
+            } else {
+                PCIE_DEV_DEBUG_VERBOSE("get pci_bus:0x%02x.\n", wb_pci_dev->bus);
+            }
         }
 
         ret = 0;
@@ -674,31 +724,79 @@ static int pci_dev_probe(struct platform_device *pdev)
         pci_dev_device = pdev->dev.platform_data;
         wb_pci_dev->name = pci_dev_device->pci_dev_name;
         wb_pci_dev->domain = pci_dev_device->pci_domain;
-        wb_pci_dev->bus = pci_dev_device->pci_bus;
         wb_pci_dev->slot = pci_dev_device->pci_slot;
         wb_pci_dev->fn = pci_dev_device->pci_fn;
         wb_pci_dev->bar = pci_dev_device->pci_bar;
         wb_pci_dev->bus_width = pci_dev_device->bus_width;
         wb_pci_dev->check_pci_id = pci_dev_device->check_pci_id;
-        wb_pci_dev->pci_id = pci_dev_device->pci_id;
+        wb_pci_dev->search_mode = pci_dev_device->search_mode;
         firmware_upg->upg_ctrl_base = pci_dev_device->upg_ctrl_base;
         firmware_upg->upg_flash_base = pci_dev_device->upg_flash_base;
+        if (wb_pci_dev->search_mode == SEARCH_DEV_BY_BRIDGE) {
+            PCIE_DEV_DEBUG_VERBOSE("bridge_bus:0x%02x, bridge_slot:0x%02x, bridge_fn:0x%02x.\n",
+                    wb_pci_dev->bridge_bus, wb_pci_dev->bridge_slot, wb_pci_dev->bridge_fn);
+        }
         PCIE_DEV_DEBUG_VERBOSE("upg_ctrl_base:0x%04x, upg_flash_base:0x%02x.\n",
             firmware_upg->upg_ctrl_base, firmware_upg->upg_flash_base);
     }
 
-    PCIE_DEV_DEBUG_VERBOSE("name:%s, domain:0x%04x, bus:0x%02x, slot:0x%02x, fn:%u, bar:%u, bus_width:%d.\n",
+    PCIE_DEV_DEBUG_VERBOSE("name:%s, domain:0x%04x, bus:0x%02x, slot:0x%02x, fn:%u, bar:%u, bus_width:%d, search_mode:%d \n",
         wb_pci_dev->name, wb_pci_dev->domain, wb_pci_dev->bus, wb_pci_dev->slot, wb_pci_dev->fn,
-        wb_pci_dev->bar, wb_pci_dev->bus_width);
+        wb_pci_dev->bar, wb_pci_dev->bus_width, wb_pci_dev->search_mode);
 
-    devfn = PCI_DEVFN(wb_pci_dev->slot, wb_pci_dev->fn);
-    pci_dev = pci_get_domain_bus_and_slot(wb_pci_dev->domain, wb_pci_dev->bus, devfn);
-    if (pci_dev == NULL) {
-        dev_err(&pdev->dev, "Failed to find pci_dev, domain:0x%04x, bus:0x%02x, devfn:0x%x\n",
-            wb_pci_dev->domain, wb_pci_dev->bus, devfn);
-        return -ENXIO;
+    if (wb_pci_dev->search_mode != SEARCH_DEV_DEFAULT && wb_pci_dev->search_mode != SEARCH_DEV_BY_BRIDGE) {
+        dev_err(&pdev->dev, "Error: unsupported search_mode (%d).\n", wb_pci_dev->search_mode);
+        return -EINVAL;
     }
+
+    if (wb_pci_dev->search_mode == SEARCH_DEV_DEFAULT) {
+        wb_pci_dev->bus = pci_dev_device->pci_bus;
+        devfn = PCI_DEVFN(wb_pci_dev->slot, wb_pci_dev->fn);
+        pci_dev = pci_get_domain_bus_and_slot(wb_pci_dev->domain, wb_pci_dev->bus, devfn);
+        if (pci_dev == NULL) {
+            dev_err(&pdev->dev, "Failed to find pci_dev, domain:0x%04x, bus:0x%02x, devfn:0x%x\n",
+                wb_pci_dev->domain, wb_pci_dev->bus, devfn);
+            return -ENXIO;
+        }
+    } else { /* search_mode = SEARCH_DEV_BY_BRIDGE */
+        wb_pci_dev->bridge_bus = pci_dev_device->bridge_bus;
+        wb_pci_dev->bridge_slot = pci_dev_device->bridge_slot;
+        wb_pci_dev->bridge_fn = pci_dev_device->bridge_fn;
+        devfn = PCI_DEVFN(wb_pci_dev->bridge_slot, wb_pci_dev->bridge_fn);
+        pci_bridge_dev = pci_get_domain_bus_and_slot(wb_pci_dev->domain, wb_pci_dev->bridge_bus, devfn);
+        if (pci_bridge_dev == NULL) {
+            dev_err(&pdev->dev, "Failed to find pci_bridge_dev, domain:0x%04x, bus:0x%02x, devfn:0x%x\n",
+                wb_pci_dev->domain, wb_pci_dev->bridge_bus, devfn);
+            return -ENXIO;
+        }
+
+        ret = pci_read_config_byte(pci_bridge_dev, SECBUS, &secbus_val);
+        if (ret) {
+            PCIE_DEV_DEBUG_ERROR("pci_read_config_dword failed reg:%02x ret %d.\n", SECBUS, ret);
+            return -EIO;
+        }
+        ret = pci_read_config_byte(pci_bridge_dev, SUBBUS, &subbus_val);
+        if (ret) {
+            PCIE_DEV_DEBUG_ERROR("pci_read_config_dword failed reg:%02x ret %d.\n", SUBBUS, ret);
+            return -EIO;
+        }
+        if (secbus_val != subbus_val) {
+            /* If the SECBUS register value is different from the SUBBUS register value, a multistage PCIE bridge is available*/
+            PCIE_DEV_DEBUG_ERROR("not support ,secbus_val not equal subbus_val  secbus_val:%02x secbus_val:%02x.\n", secbus_val, subbus_val);
+            return -EIO;
+        }
+        wb_pci_dev->bus = secbus_val;
+        devfn = PCI_DEVFN(wb_pci_dev->slot, wb_pci_dev->fn);
+        pci_dev = pci_get_domain_bus_and_slot(wb_pci_dev->domain, wb_pci_dev->bus, devfn);
+        if (pci_dev == NULL) {
+            dev_err(&pdev->dev, "Failed to find pci_dev, domain:0x%04x, bus:0x%02x, devfn:0x%x\n",
+                wb_pci_dev->domain, wb_pci_dev->bus, devfn);
+            return -ENXIO;
+        }
+    }
+
     if (wb_pci_dev->check_pci_id == 1) {
+        wb_pci_dev->pci_id = pci_dev_device->pci_id;
         pci_id = (pci_dev->vendor << 16) | pci_dev->device;
         if (wb_pci_dev->pci_id != pci_id) {
             dev_err(&pdev->dev, "Failed to check pci id, except: 0x%x, really: 0x%x\n",
