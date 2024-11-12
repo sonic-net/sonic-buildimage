@@ -2,11 +2,11 @@
 
 BRANCH = 202405
 ifeq ($(CONFIGURED_ARCH),arm64)
-MRVL_SAI_VERSION = 1.14.0-2
+MRVL_SAI_VERSION = 1.14.0-3
 else ifeq ($(CONFIGURED_ARCH),armhf)
-MRVL_SAI_VERSION = 1.14.0-1
+MRVL_SAI_VERSION = 1.14.0-2
 else
-MRVL_SAI_VERSION = 1.14.0-1
+MRVL_SAI_VERSION = 1.14.0-2
 endif
 
 MRVL_SAI_URL_PREFIX = https://github.com/Marvell-switching/sonic-marvell-binaries/raw/master/$(CONFIGURED_ARCH)/sai-plugin/$(BRANCH)/
