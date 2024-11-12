@@ -440,7 +440,7 @@ start() {
         fi
         SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
         if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
-            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
         fi
     fi
     {%- endif %}
