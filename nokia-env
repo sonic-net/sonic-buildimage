@@ -5,3 +5,10 @@ export NOJESSIE=1
 export NOSTRETCH=1
 export SONIC_BUILD_JOBS=2
 export SONIC_VERSION_CONTROL_COMPONENTS=py3
+
+mach=$(uname -m)
+case $mach in
+  armhf | aarch64)
+    export INCLUDE_DHCP_SERVER=y
+    ;;
+esac
