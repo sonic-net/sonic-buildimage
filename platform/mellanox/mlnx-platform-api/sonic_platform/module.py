@@ -278,7 +278,7 @@ class DpuModule(ModuleBase):
             f'{self.reboot_base_path}reset_comex_pwr_fail':
                 (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'Power failed to comex module'),
             f'{self.reboot_base_path}reset_from_main_board':
-                (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'Reset from Main board'),
+                (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, 'Reset from Main board'),
             f'{self.reboot_base_path}reset_dpu_thermal':
                 (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
         }
