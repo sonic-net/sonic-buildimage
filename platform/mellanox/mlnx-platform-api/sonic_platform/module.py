@@ -271,7 +271,7 @@ class DpuModule(ModuleBase):
         self.midplane_ip = None
         self.midplane_interface = None
         self.bus_info = None
-        self.reboot_base_path = f"/run/hw-management/system/{self.dpuctl_obj._name}/system/"
+        self.reboot_base_path = f"/var/run/hw-management/{self.dpuctl_obj._name}/system/"
         self.reboot_cause_map = {
             f'{self.reboot_base_path}reset_aux_pwr_or_reload':
                 (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload'),
@@ -280,15 +280,7 @@ class DpuModule(ModuleBase):
             f'{self.reboot_base_path}reset_from_main_board':
                 (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'Reset from Main board'),
             f'{self.reboot_base_path}reset_dpu_thermal':
-                (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'Thermal shutdown of the DPU'),
-            f'{self.reboot_base_path}tpm_rst':
-                (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'Reset by the TPM module'),
-            f'{self.reboot_base_path}perst_rst':
-                (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'PERST# signal to ASIC'),
-            f'{self.reboot_base_path}phy_rst':
-                (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'Phy reset'),
-            f'{self.reboot_base_path}usbphy_rst':
-                (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'USB Phy reset'),
+                (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
         }
 
     def get_base_mac(self):
@@ -493,13 +485,13 @@ class DpuModule(ModuleBase):
         """
         if not self.bus_info:
             # Cache the data to prevent multiple platform.json parsing
-            self.bus_info = DeviceDataManager.get_dpu_interface(self.get_name().lower(), DpuInterfaceEnum.MIDPLANE_INT.value)
+            self.bus_info = DeviceDataManager.get_dpu_interface(self.get_name().lower(), DpuInterfaceEnum.PCIE_INT.value)
             # If we are unable to parse platform.json for midplane interface raise RunTimeError
             if not self.bus_info:
                 raise RuntimeError(f"Unable to obtain bus info from platform.json for {self.get_name()}")
         return self.bus_info
 
-    def pci_detach(self, module_name):
+    def pci_detach(self):
         """
         Detaches the DPU PCI device specified by "module_name" on a SmartSwitch.
 
@@ -507,7 +499,7 @@ class DpuModule(ModuleBase):
         """
         return self.dpuctl_obj.dpu_pre_shutdown()
 
-    def pci_reattach(self, module_name):
+    def pci_reattach(self):
         """
         Rescans and reconnects the DPU PCI device specified by "module_name" on a SmartSwitch.
 

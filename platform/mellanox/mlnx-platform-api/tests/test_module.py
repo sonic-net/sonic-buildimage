@@ -343,22 +343,17 @@ class TestModule:
                 return 1
             else:
                 return 0
-        file_name_list = ['reset_aux_pwr_or_reload', 'reset_comex_pwr_fail', 'reset_from_main_board', 'reset_dpu_thermal', 'tpm_rst', 'perst_rst', 'phy_rst', 'usbphy_rst', 'None']
+        file_name_list = ['reset_aux_pwr_or_reload', 'reset_comex_pwr_fail', 'reset_from_main_board', 'reset_dpu_thermal', 'None']
         reboot_cause_list = [
             (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'power auxiliary outage or reload'),
             (ChassisBase.REBOOT_CAUSE_POWER_LOSS, 'Power failed to comex module'),
             (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'Reset from Main board'),
-            (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'Thermal shutdown of the DPU'),
-            (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'Reset by the TPM module'),
-            (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'PERST# signal to ASIC'),
-            (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'Phy reset'),
-            (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, 'USB Phy reset'),
+            (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
             (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, ''),
         ]
         with patch("sonic_platform.utils.read_int_from_file", wraps=mock_read_int_from_file):
             for index, file_name in enumerate(file_name_list):
                 test_file_path = file_name
-                print(index)
                 assert m.get_reboot_cause() == reboot_cause_list[index]
         m1 = DpuModule(0)
         m2 = DpuModule(1)
