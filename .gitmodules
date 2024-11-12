@@ -124,3 +124,6 @@
 [submodule "platform/innovium/sonic-platform-marvell"]
 	path = platform/innovium/sonic-platform-marvell
 	url = https://github.com/Marvell-switching/sonic-platform-marvell
+[submodule "src/sonic-framework/gnoi"]
+	path = src/sonic-framework/gnoi
+	url = https://github.com/openconfig/gnoi

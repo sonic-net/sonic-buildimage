@@ -87,6 +87,9 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D386FA1D9
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131
 {%- endif %}
 
+RUN echo "==========  BEGIN:  CHECK IF PROTOBUF COMPILER EXISTS ALREADY AND UNINSTALL IT ==========="
+RUN dpkg -r protobuf-compiler protobuf-compiler-grpc
+RUN echo "==========  END:  CHECK IF PROTOBUF COMPILER EXISTS ALREADY AND UNINSTALL IT ============"
 
 RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install -y \
         apt-utils \
@@ -128,6 +131,12 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         cron \
 # For sonic-swss-common
         nlohmann-json3-dev \
+# For protobuf and gRPC 
+        libprotobuf-dev \ 
+        libgrpc++-dev \ 
+        protobuf-compiler \ 
+        protobuf-compiler-grpc \
+# For protobuf
 # For quagga build
         libreadline-dev \
         texlive-latex-base \
