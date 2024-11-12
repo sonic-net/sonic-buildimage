@@ -486,7 +486,7 @@
         "sonic-device_metadata:sonic-device_metadata": {
             "sonic-device_metadata:DEVICE_METADATA": {
                 "sonic-device_metadata:localhost": {
-                    "supporting_bulk_counter_groups": "QUEUE_WATERMARK_STAT_COUNTER,PG_WATERMARK_STAT_COUNTER"
+                    "supporting_bulk_counter_groups": ["QUEUE_WATERMARK_STAT_COUNTER","PG_WATERMARK_STAT_COUNTER"]
                 }
             }
         }
