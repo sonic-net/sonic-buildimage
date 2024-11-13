@@ -15,15 +15,19 @@ route-map FROM_TIER1_V6 permit 100
 route-map FROM_TIER1_V6 permit 200
 !
 route-map TO_TIER1_V6 permit 100
+  call CHECK_IDF_ISOLATION
   match ipv6 address prefix-list DEFAULT_IPV6
 !
 route-map TO_TIER1_V6 permit 200
+  call CHECK_IDF_ISOLATION
   match community LEAK_COMMUNITY
 !
 route-map TO_TIER1_V6 permit 300
+  call CHECK_IDF_ISOLATION
   match community INREGION_LEAK_COMMUNITY
 !
 route-map TO_TIER1_V6 permit 400
+  call CHECK_IDF_ISOLATION
   match as-path T2_LOOPBACK
 !
 route-map TO_TIER1_V6 deny 1000
