@@ -1,41 +1,56 @@
-sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_premium_issu/b870.6.4.1/
 os=unix
-
 dpp_clock_ratio=2:3
 oversubscribe_mode=1
 core_clock_frequency=1525
-l2xmsg_mode=1
-pbmp_oversubscribe=0x7f878787f878787f9fe1e1e1fe1e1e1fe
-pbmp_xport_xe=0x7f878787f878787f9fe1e1e1fe1e1e1fe
-ifp_inports_support_enable=1
-port_flex_enable=1
-phy_an_c73=3
-l2xmsg_hostbuf_size=8192
-module_64ports=0
-tdma_intr_enable=1
-ipv6_lpm_128b_enable=1
-stat_if_parity_enable=1
-bcm_tunnel_term_compatible_mode=1
-table_dma_enable=1
-schan_intr_enable=0
-parity_enable=1
-parity_correction=1
-miim_intr_enable=1
-max_vp_lags=0
-tdma_intr_enable=1
-tdma_timeout_usec=5000000
-mmu_lossless=0
-pdma_descriptor_prefetch_enable=1
-pktdma_poll_mode_channel_bitmap=1
 
+l2xmsg_mode=1
+# need for mac learn scale
+l2xmsg_hostbuf_size=16384
+module_64ports=0
+
+#Interrupts and Parity
+max_vp_lags=0
+
+schan_intr_enable=0
+tdma_timeout_usec=5000000
+
+#Default L3 profile
 l3_alpm_enable=2
 l3_alpm_ipv6_128b_bkt_rsvd=1
 l2_mem_entries=40960
 l3_mem_entries=40960
-l3_max_ecmp_mode=1
+
+#Tunnels
+bcm_tunnel_term_compatible_mode=1
+use_all_splithorizon_groups=1
+sai_tunnel_support=1
+
+sai_interface_type_auto_detect=0
+
+#RIOT Enable
+riot_enable=1
+riot_overlay_l3_intf_mem_size=8192
+riot_overlay_l3_egress_mem_size=32768
+l3_ecmp_levels=2
+riot_overlay_ecmp_resilient_hash_size=16384
 
 
-stable_size=0x5500000
+stable_size=0x6400000
+
+
+#New Additions
+pfc_deadlock_seq_control=1
+
+#Common configs from broadcom/x86_64-broadcom_common/x86_64-broadcom_b87/broadcom-sonic-td3.config.bcm 
+
+#Port and Phy Configs
+
+pbmp_oversubscribe=0x7f878787f878787f9fe1e1e1fe1e1e1fe
+pbmp_xport_xe=0x7f878787f878787f9fe1e1e1fe1e1e1fe
+oversubscribe_mixed_sister_25_50_enable=1
+ifp_inports_support_enable=1
+port_flex_enable=1
+phy_an_c73=3
 
 portmap_1.0=1:100
 portmap_5.0=5:100
@@ -342,15 +357,40 @@ dport_map_port_115=45
 dport_map_port_116=46
 dport_map_port_117=47
 dport_map_port_118=48
+#100G
 dport_map_port_123=49
-dport_map_port_127=50
-dport_map_port_71=51
-dport_map_port_67=52
-dport_map_port_1=53
-dport_map_port_33=54
-dport_map_port_5=55
-dport_map_port_41=56
+dport_map_port_124=50
+dport_map_port_125=51
+dport_map_port_126=52
+dport_map_port_127=53
+dport_map_port_128=54
+dport_map_port_129=55
+dport_map_port_130=56
+dport_map_port_71=57
+dport_map_port_72=58
+dport_map_port_73=59
+dport_map_port_74=60
+dport_map_port_67=61
+dport_map_port_68=62
+dport_map_port_69=63
+dport_map_port_70=64
+dport_map_port_1=65
+dport_map_port_2=66
+dport_map_port_3=67
+dport_map_port_4=68
+dport_map_port_33=69
+dport_map_port_34=70
+dport_map_port_35=71
+dport_map_port_36=72
+dport_map_port_5=73
+dport_map_port_6=74
+dport_map_port_7=75
+dport_map_port_8=76
+dport_map_port_41=77
+dport_map_port_42=78
+dport_map_port_43=79
+dport_map_port_44=80
 
-mmu_init_config="TD3-DELL-lossless"
 sai_preinit_cmd_file=/usr/share/sonic/hwsku/sai_preinit_cmd.soc
 
+fpem_mem_entries=32768

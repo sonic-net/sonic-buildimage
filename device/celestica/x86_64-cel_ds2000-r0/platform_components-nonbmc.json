@@ -1,0 +1,15 @@
+{
+    "chassis": {
+        "Questone2a_v2": {
+            "component": {
+                "ONIE": {},
+                "ASIC_PCIe": {},
+                "SSD": {},
+                "BIOS": {},
+                "CPLD BASE": {},
+                "CPLD SW1": {},
+                "CPLD SW2": {}
+            }
+        }
+    }
+}

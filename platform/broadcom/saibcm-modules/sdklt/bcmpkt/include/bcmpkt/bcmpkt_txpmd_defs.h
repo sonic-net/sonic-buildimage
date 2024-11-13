@@ -7,7 +7,7 @@
  * Edits to this file will be lost when it is regenerated.
  * Tool: INTERNAL/regs/xgs/generate-pmd.pl
  *
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  *
  * This file provides field macros for the TX Packet MetaData (TXPMD, called
  * SOBMH in hardware.) access.
@@ -187,7 +187,7 @@
 #define BCMPKT_TXPMD_OAM_DOWNMEP_TX_UNICAST      70
 /*! Indicates a copy should be sent to the the CPU port mapped to R5. */
 #define BCMPKT_TXPMD_COPY_TO_DEBUG               71
-/*! FIXME */
+
 #define BCMPKT_TXPMD_COPY_TO_CPU                 72
 /*! Used to set PBI.WRED_RESPONSIVE */
 #define BCMPKT_TXPMD_WRED_RESPONSIVE             73
@@ -209,8 +209,22 @@
 #define BCMPKT_TXPMD_DST_CHIP_PORT_NUM           81
 /*! Source chip port number. */
 #define BCMPKT_TXPMD_SRC_CHIP_PORT_NUM           82
+/*! Unicast packet type. */
+#define BCMPKT_TXPMD_UNICAST_PKT_TYPE            83
+/*! Unicast packet. */
+#define BCMPKT_TXPMD_UNICAST_PKT_VALID           84
+/*! vpp_port to send a SOBMH packet out. */
+#define BCMPKT_TXPMD_TX_VPP_PORT                 85
+/*! Destination chip_port number. */
+#define BCMPKT_TXPMD_TX_CHIP_PORT                86
+/*! RX chip port. */
+#define BCMPKT_TXPMD_RX_CHIP_PORT                87
+/*! Ingress vpp port. */
+#define BCMPKT_TXPMD_RX_VPP_PORT                 88
+/*! SVP */
+#define BCMPKT_TXPMD_CPU_TX_SVP                  89
 /*! TXPMD FIELD ID NUMBER */
-#define BCMPKT_TXPMD_FID_COUNT                   83
+#define BCMPKT_TXPMD_FID_COUNT                   90
 /*! \} */
 
 /*! TXPMD field name strings for debugging. */
@@ -298,6 +312,13 @@
     {"IEEE1588_TX_TS", BCMPKT_TXPMD_IEEE1588_TX_TS},\
     {"DST_CHIP_PORT_NUM", BCMPKT_TXPMD_DST_CHIP_PORT_NUM},\
     {"SRC_CHIP_PORT_NUM", BCMPKT_TXPMD_SRC_CHIP_PORT_NUM},\
+    {"UNICAST_PKT_TYPE", BCMPKT_TXPMD_UNICAST_PKT_TYPE},\
+    {"UNICAST_PKT_VALID", BCMPKT_TXPMD_UNICAST_PKT_VALID},\
+    {"TX_VPP_PORT", BCMPKT_TXPMD_TX_VPP_PORT},\
+    {"TX_CHIP_PORT", BCMPKT_TXPMD_TX_CHIP_PORT},\
+    {"RX_CHIP_PORT", BCMPKT_TXPMD_RX_CHIP_PORT},\
+    {"RX_VPP_PORT", BCMPKT_TXPMD_RX_VPP_PORT},\
+    {"CPU_TX::SVP", BCMPKT_TXPMD_CPU_TX_SVP},\
     {"fid count", BCMPKT_TXPMD_FID_COUNT}
 
 /*!

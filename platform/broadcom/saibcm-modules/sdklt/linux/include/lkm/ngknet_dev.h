@@ -9,7 +9,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_DEV_H
@@ -303,11 +303,15 @@ typedef struct ngknet_dev_info_s {
     /*! Device number (from BDE) */
     int dev_no;
 
+    /*! Device ID */
+    uint32_t dev_id;
+
     /*! Device type string */
     char type_str[NGKNET_DEV_NAME_MAX];
 
     /*! Device variant string */
     char var_str[NGKNET_DEV_NAME_MAX];
+
     /*! Virtual network devices, pointer to ngknet_dev.vdev[] */
     struct net_device **vdev;
 } ngknet_dev_info_t;
@@ -380,6 +384,9 @@ typedef struct ngknet_chan_cfg_s {
 #define NGKNET_RX_CHAN          0
     /*! Tx channel */
 #define NGKNET_TX_CHAN          1
+
+    /*! Pipe specified for Rx/Tx */
+    int pipe;
 } ngknet_chan_cfg_t;
 
 /*!
