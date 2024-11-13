@@ -148,10 +148,8 @@ steps:
       set -ex
       # To download file from repo, see AzDevOps Rest API @https://learn.microsoft.com/zh-cn/rest/api/azure/devops/git/items/get?view=azure-devops-rest-7.1&tabs=HTTP
       
-      echo "Download test_plan.py from Networking-acs-buildimage repo chunangli/add_elastictest_pr_test_template branch"
-      curl -u :$(System.AccessToken) "https://dev.azure.com/msazure/one/_apis/git/repositories/Networking-acs-buildimage/items?path=.pipelines/elastictest_template/test_plan.py&versionDescriptor.version=chunangli/add_elastictest_pr_test_template&api-version=7.1-preview.1" -o ./.pipelines/test_plan.py
-      
-      cat ./.pipelines/test_plan.py
+      echo "Download test_plan.py from Networking-acs-buildimage repo internal branch"
+      curl -u :$(System.AccessToken) "https://dev.azure.com/msazure/one/_apis/git/repositories/Networking-acs-buildimage/items?path=.pipelines/elastictest_template/test_plan.py&versionDescriptor.version=internal&api-version=7.1-preview.1" -o ./.pipelines/test_plan.py
     displayName: "Download test plan script"
   - script: |
       set -ex
@@ -159,8 +157,6 @@ steps:
       
       echo "Download pr_test_scripts.yaml from sonic-mgmt-int repo ${{ parameters.MGMT_BRANCH }} branch"
       curl -u :$(MSSONIC-TOKEN) "https://dev.azure.com/mssonic/internal/_apis/git/repositories/sonic-mgmt-int/items?path=.azure-pipelines/pr_test_scripts.yaml&versionDescriptor.version=internal&api-version=7.1-preview.1" -o ./.pipelines/pr_test_scripts.yaml
-      
-      cat ./.pipelines/pr_test_scripts.yaml
     displayName: "Download pr scripts"
 
   - script: |

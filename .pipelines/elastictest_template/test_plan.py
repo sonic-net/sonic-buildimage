@@ -262,11 +262,10 @@ class TestPlanManager(object):
             sonic_mgmt_pull_request_id = pr_id
 
         # If triggered by buildimage repo, use image built from the buildId
-        # todo: remove debug code
-        # kvm_image_build_id = kvm_build_id
+        kvm_image_build_id = kvm_build_id
         kvm_image_branch = kwargs.get("kvm_image_branch", "")
         if BUILDIMAGE_REPO_FLAG in kwargs.get("source_repo"):
-            # kvm_image_build_id = build_id
+            kvm_image_build_id = build_id
             kvm_image_branch = ""
         affinity = json.loads(kwargs.get("affinity", "[]"))
         payload = {
@@ -296,7 +295,7 @@ class TestPlanManager(object):
                     "url": image_url,
                     "upgrade_image_param": kwargs.get("upgrade_image_param", None),
                     "release": "",
-                    "kvm_image_build_id": 108017695,
+                    "kvm_image_build_id": kvm_image_build_id,
                     "kvm_image_branch": kvm_image_branch
                 },
                 "sonic_mgmt": {
@@ -904,8 +903,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     try:
-        # todo: remove debug code
-        print("chunangli 888 =========================================================================================")
         tp = TestPlanManager(
             env["ELASTICTEST_SCHEDULER_BACKEND_URL"],
             env["FRONTEND_URL"],
