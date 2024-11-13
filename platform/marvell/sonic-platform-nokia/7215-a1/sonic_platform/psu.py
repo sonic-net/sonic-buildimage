@@ -25,12 +25,12 @@ PSU_GPIO_DIR = ["/sys/class/gpio/gpio61/value", "/sys/class/gpio/gpio62/value"]
 class Psu(PsuBase):
     """Nokia platform-specific PSU class for 7215 """
 
-    def __init__(self, psu_index):
+    def __init__(self, psu_index, chassis_model):
         PsuBase.__init__(self)
         # PSU is 1-based in Nokia platforms
         self.index = psu_index + 1
         self._fan_list = []
-        
+        self.chassis_model = chassis_model
 
         # PSU eeprom
         self.eeprom = Eeprom(is_psu=True, psu_index=self.index)
@@ -90,7 +90,16 @@ class Psu(PsuBase):
         active_psus = int(psu1_good) + int(psu2_good)
         
         return active_psus
+    
+    def get_chassis_model(self):
+        """
+        Retrieves the model number of the Fan
 
+        Returns:
+            string: Model number of Fan. Use part number for this.
+        """
+        return self.chassis_model
+    
     def get_name(self):
         """
         Retrieves the name of the device
@@ -118,7 +127,14 @@ class Psu(PsuBase):
         Returns:
             string: Part number of PSU
         """
-        return self.eeprom.modelstr()
+        ch_model=self.get_chassis_model()
+        #compare first 8 characters of chassis molel string
+        if(ch_model[:8]=='3HE18723' or ch_model[:8]=='3HE18724' ):
+            model = 'AC-PSU'
+        else:
+            model = 'DC-PSU'
+
+        return model
 
     def get_serial(self):
         """

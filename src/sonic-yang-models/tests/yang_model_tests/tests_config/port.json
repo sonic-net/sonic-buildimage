@@ -952,5 +952,72 @@
                 ]
             }
         }
+    },
+    "PORT_FABRIC_WITH_NO_LANES": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "switch_type": "fabric"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "speed": 100000,
+                        "role": "Int"
+                        
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hwsku": "msft_multi_asic_vs"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "speed": 100000,
+                        "role": "Int"
+                        
+                    }
+                ]
+            }
+        }
+    },
+    "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS_2": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "hwsku": "msft_four_asic_vs"
+                }
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "name": "Ethernet0",
+                        "alias": "etp1a",
+                        "speed": 100000,
+                        "role": "Int"
+                        
+                    }
+                ]
+            }
+        }
     }
+
 }
