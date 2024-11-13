@@ -104,6 +104,8 @@ class DpuCtlPlat():
         self.shtdn_state = None
         self.dpu_ready_state = None
         self.setup_logger()
+        self.pci_dev_path = None
+        self.rshim_interface = None
         # Use systemd dbus to execute start and stop rshim service
         os.environ['DBUS_SESSION_BUS_ADDRESS'] = 'unix:path=/run/dbus/system_bus_socket'
         self.verbosity = False
