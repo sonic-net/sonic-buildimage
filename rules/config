@@ -196,7 +196,7 @@ INCLUDE_ROUTER_ADVERTISER ?= y
 INCLUDE_KUBERNETES ?= n
 
 # INCLUDE_DUMMYK8S - if set to y dummy docker to be deployed using Kubernetes is built into SONiC buildimage
-INCLUDE_DUMMYK8S ?= n
+INCLUDE_DUMMYK8S ?= y
 
 KUBE_DOCKER_PROXY = http://172.16.1.1:3128/
 
