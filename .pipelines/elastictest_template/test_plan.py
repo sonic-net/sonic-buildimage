@@ -262,6 +262,7 @@ class TestPlanManager(object):
             sonic_mgmt_pull_request_id = pr_id
 
         # If triggered by buildimage repo, use image built from the buildId
+        # todo: remove debug code
         # kvm_image_build_id = kvm_build_id
         kvm_image_branch = kwargs.get("kvm_image_branch", "")
         if BUILDIMAGE_REPO_FLAG in kwargs.get("source_repo"):
