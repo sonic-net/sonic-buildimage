@@ -61,7 +61,6 @@ class RebootBETestWithoutStop : public ::testing::Test {
         m_rebootbeReponseChannel(&m_db, REBOOT_RESPONSE_NOTIFICATION_CHANNEL),
         m_rebootbe(m_dbus_interface) {
     sigterm_requested = false;
-    //    TestUtils::clear_tables(m_db);
 
     m_s.addSelectable(&m_rebootbeReponseChannel);
 
@@ -257,7 +256,6 @@ class RebootBEAutoStartTest : public RebootBETest,
   RebootBEAutoStartTest() {
     start_rebootbe();
 
-    // std::this_thread::sleep_for(std::chrono::milliseconds(50));
     std::this_thread::sleep_for(std::chrono::milliseconds(ONE_SECOND_MS));
     EXPECT_EQ(m_rebootbe.GetCurrentStatus(), RebootBE::RebManagerStatus::IDLE);
   }
