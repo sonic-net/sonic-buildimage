@@ -74,7 +74,6 @@ class RebootBETestWithoutStop : public ::testing::Test {
   }
   virtual ~RebootBETestWithoutStop() = default;
 
-
   void start_rebootbe() {
     m_rebootbe_thread =
         std::make_unique<std::thread>(&RebootBE::Start, &m_rebootbe);
