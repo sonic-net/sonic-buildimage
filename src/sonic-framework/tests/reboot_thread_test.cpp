@@ -22,7 +22,6 @@ namespace rebootbackend {
 
 #define TENTH_SECOND_MS (100)
 
-//using namespace gnoi::system;
 namespace gpu = ::google::protobuf::util;
 using Progress = ::rebootbackend::RebootThread::Progress;
 using RebootThread = ::rebootbackend::RebootThread;
