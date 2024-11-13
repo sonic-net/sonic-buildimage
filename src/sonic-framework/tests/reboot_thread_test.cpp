@@ -91,6 +91,38 @@ TEST_F(RebootStatusTest, TestGetStatus) {
   EXPECT_EQ(0, response.when());
 }
 
+TEST_F(RebootStatusTest, TestHaltGetStatus) {
+  std::chrono::nanoseconds curr_ns =
+      std::chrono::high_resolution_clock::now().time_since_epoch();
+
+  m_status.set_start_status(gnoi::system::RebootMethod::HALT, "reboot because");
+
+  gnoi::system::RebootStatusResponse response = m_status.get_response();
+  EXPECT_EQ(
+      response.status().status(),
+      gnoi::system::RebootStatus_Status::RebootStatus_Status_STATUS_UNKNOWN);
+
+  m_status.set_completed_status(
+      gnoi::system::RebootStatus_Status::RebootStatus_Status_STATUS_SUCCESS,
+      "anything");
+
+  response = m_status.get_response();
+
+  // message should be empty while reboot is active
+  EXPECT_THAT(response.status().message(), StrEq(""));
+
+  uint64_t reboot_ns = response.when();
+  EXPECT_TRUE(reboot_ns > (uint64_t)curr_ns.count());
+
+  m_status.set_inactive();
+  response = m_status.get_response();
+  EXPECT_THAT(response.status().message(), StrEq("anything"));
+  EXPECT_EQ(
+      response.status().status(),
+      gnoi::system::RebootStatus_Status::RebootStatus_Status_STATUS_SUCCESS);
+  EXPECT_EQ(0, response.when());
+}
+
 TEST_F(RebootStatusTest, TestGetWarmStatus) {
   std::chrono::nanoseconds curr_ns =
       std::chrono::high_resolution_clock::now().time_since_epoch();
