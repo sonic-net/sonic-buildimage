@@ -1848,6 +1848,9 @@
             },
             "FABRIC-CARD1": {
                 "admin_status": "down"
+            },
+            "DPU2": {
+                "admin_status": "down"
             }
         },
         "COPP_GROUP": {
