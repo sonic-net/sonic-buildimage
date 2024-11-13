@@ -4,11 +4,9 @@ BindsTo=sonic.target
 After=network.target
 
 [Service]
-Type=forking
 ExecStart=/usr/bin/memory_statistics_service.py
 Restart=always
 RestartSec=5
-StandardOutput=syslog+console
 EnvironmentFile=-/etc/memory_statistics.conf
 
 [Install]
