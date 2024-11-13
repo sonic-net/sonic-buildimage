@@ -77,4 +77,17 @@ bool get_docker_app_from_key(const std::string &key,
   return true;
 }
 
+void set_warm_restart_counter(swss::DBConnector &db, int count) {
+  swss::Table table(&db, "BOOT_INFO");
+  table.hset("system", "warmboot-count", std::to_string(count));
+}
+
+std::string get_warm_restart_counter(swss::DBConnector &db) {
+  swss::Table warmRestartTable(&db, "BOOT_INFO");
+  std::string counter;
+  warmRestartTable.hget("system", "warmboot-count", counter);
+  return counter;
+}
+
+
 }  // namespace rebootbackend

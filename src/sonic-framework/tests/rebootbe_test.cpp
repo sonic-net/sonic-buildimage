@@ -63,7 +63,6 @@ class RebootBETestWithoutStop : public ::testing::Test {
         m_rebootbeReponseChannel(&m_db, REBOOT_RESPONSE_NOTIFICATION_CHANNEL),
         m_rebootbe(m_dbus_interface) {
     sigterm_requested = false;
-//    TestUtils::clear_tables(m_db);
 
 
     m_s.addSelectable(&m_rebootbeReponseChannel);
@@ -74,21 +73,6 @@ class RebootBETestWithoutStop : public ::testing::Test {
     swss::Logger::restartLogger();
   }
   virtual ~RebootBETestWithoutStop() = default;
-
-  gnoi::system::RebootStatusResponse default_not_started_status() {
-    InitThreadStatus status;
-    return status.get_response();
-  }
-
-  gnoi::system::RebootStatusResponse default_done_status() {
-    InitThreadStatus status;
-    // We can't edit the status without it being active.
-    status.set_start_status();
-    status.set_success();
-    status.set_inactive();
-    return status.get_response();
-  }
-
 
   void start_rebootbe() {
     m_rebootbe_thread =
@@ -227,25 +211,7 @@ class RebootBEAutoStartTest : public RebootBETest,
   RebootBEAutoStartTest() {
     //force_warm_start_state(GetParam());
 
- /*    if (GetParam()) {
-      EXPECT_CALL(*m_init_thread, Start())
-          .WillOnce(Return(swss::StatusCode::SWSS_RC_SUCCESS));
-      EXPECT_CALL(*m_init_thread, Join()).WillOnce(Return(true));
-      EXPECT_CALL(*m_init_thread, GetResponse())
-          .WillOnce(Return(default_running_status()))
-          .WillRepeatedly(Return(default_done_status()));
-    } else {
-      EXPECT_CALL(*m_init_thread, GetResponse())
-          .WillRepeatedly(Return(default_not_started_status()));
-    } */
-
     start_rebootbe();
-
-/*     if (GetParam()) {
-      get_stack_unfrozen_select().notify();
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
-      get_init_done_select().notify();
-    } */
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     EXPECT_EQ(m_rebootbe.GetCurrentStatus(), RebootBE::RebManagerStatus::IDLE);

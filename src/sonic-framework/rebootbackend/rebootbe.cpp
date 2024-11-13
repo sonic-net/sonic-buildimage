@@ -53,6 +53,14 @@ void RebootBE::Start() {
   s.addSelectable(&m_done);
   s.addSelectable(&m_reboot_thread_finished);
 
+
+  if (swss::WarmStart::isWarmStart()) {
+    SWSS_LOG_NOTICE("Launching init thread for warm start");
+    SetCurrentStatus(RebManagerStatus::WARM_INIT_WAIT);
+  } else {
+    SWSS_LOG_NOTICE("Warm restart not enabled");
+  }   
+
   SWSS_LOG_NOTICE("RebootBE entering operational loop");
   while (true) {
     swss::Selectable *sel;

@@ -36,5 +36,14 @@ bool is_valid_key(const std::string &key, const std::string &separator);
 bool get_docker_app_from_key(const std::string &key,
                              const std::string &separator, std::string &docker,
                              std::string &app);
+// Sets the warm restart count in the database.
+void set_warm_restart_counter(swss::DBConnector &db, int count);
+
+// Returns the current warm restart count from the database. Returns an empty
+// string if the warm restart count is not set, and a string representation
+// of an integer otherwise.
+std::string get_warm_restart_counter(swss::DBConnector &db);
+
+
 
 }  // namespace rebootbackend

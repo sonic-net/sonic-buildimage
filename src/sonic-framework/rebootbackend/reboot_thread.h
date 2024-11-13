@@ -165,6 +165,7 @@ class RebootThread {
   void do_reboot(void);
   Progress send_dbus_reboot_request();
   void do_cold_reboot(swss::Select &s);
+  void do_warm_reboot(swss::Select &s);
 
   // Inner loop select handler to wait for platform reboot.
   //   wait for timeout

@@ -115,6 +115,8 @@ void RebootThread::do_reboot(void) {
 
   if (m_request.method() == RebootMethod::COLD) {
     do_cold_reboot(s);
+  } else if (m_request.method() == RebootMethod::WARM) {
+    do_warm_reboot(s);
   } else {
     // This shouldn't be possible. Reference check_start_preconditions()
     SWSS_LOG_ERROR("Received unrecognized method type = %s",
@@ -161,10 +163,27 @@ void RebootThread::do_cold_reboot(swss::Select &s) {
   // We shouldn't be here. Platform reboot should've killed us.
   log_error_and_set_non_retry_failure("platform failed to reboot");
 
-  // Set critical state
-  //m_critical_interface.report_critical_state("platform failed to reboot");
   return;
 }
+
+void RebootThread::do_warm_reboot(swss::Select &s) {
+  SWSS_LOG_ENTER();
+  SWSS_LOG_NOTICE("Sending warm reboot request to platform");
+  if (send_dbus_reboot_request() == Progress::EXIT_EARLY) {
+    return;
+  }
+
+  // Wait for warm reboot. If we return, reboot failed.
+  if (wait_for_platform_reboot(s) == Progress::EXIT_EARLY) {
+    return;
+  }
+
+  // We shouldn't be here. Platform reboot should've killed us.
+  log_error_and_set_non_retry_failure("failed to warm reboot");
+
+  return;
+}
+
 
 void RebootThread::reboot_thread(void) {
   SWSS_LOG_ENTER();
@@ -188,6 +207,15 @@ bool RebootThread::check_start_preconditions(const RebootRequest &request,
              request.method() != RebootMethod::WARM) {
     response.json_string = "RebootThread: Start rx'd unsupported method";
     response.status = swss::StatusCode::SWSS_RC_INVALID_PARAM;
+  } else if (request.method() == RebootMethod::WARM) {
+    if (m_status.get_last_reboot_status() ==
+        RebootStatus_Status::RebootStatus_Status_STATUS_FAILURE) {
+      // If the last reboot failed with a non-retriable failure, don't retry.
+      // But, we will allow a cold boot to recover.
+      response.json_string =
+          "RebootThread: last WARM reboot failed with non-retriable failure";
+      response.status = swss::StatusCode::SWSS_RC_FAILED_PRECONDITION;
+    }
   } else if (request.delay() != 0) {
     response.json_string = "RebootThread: delayed start not supported";
     response.status = swss::StatusCode::SWSS_RC_INVALID_PARAM;
