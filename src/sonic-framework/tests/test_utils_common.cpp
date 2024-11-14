@@ -27,4 +27,21 @@ void TestUtils::wait_for_finish(swss::Select &s,
   EXPECT_EQ(sel, &finished);
 }
 
+void TestUtils::clear_tables(swss::DBConnector &db) {
+  const std::vector<std::string> kTablesToClear = {
+      "BOOT_INFO",
+      STATE_WARM_RESTART_TABLE_NAME,
+      STATE_WARM_RESTART_ENABLE_TABLE_NAME };
+
+  for (const auto &table_name : kTablesToClear) {
+    swss::Table table(&db, table_name);
+    std::vector<std::string> keys;
+    table.getKeys(keys);
+    for (const auto &key : keys) {
+      table.del(key);
+    }
+  }
+}
+
+
 }  // namespace rebootbackend
