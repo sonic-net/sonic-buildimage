@@ -86,6 +86,34 @@ TEST_F(RebootStatusTest, TestGetStatus) {
   EXPECT_EQ(0, response.when());
 }
 
+TEST_F(RebootStatusTest, TestGetWarmStatus) {
+  std::chrono::nanoseconds curr_ns = std::chrono::high_resolution_clock::now().time_since_epoch();
+
+  m_status.set_start_status(gnoi::system::RebootMethod::WARM, "reboot because");
+
+  gnoi::system::RebootStatusResponse response = m_status.get_response();
+  EXPECT_EQ(response.status().status(),
+            gnoi::system::RebootStatus_Status::RebootStatus_Status_STATUS_UNKNOWN);
+
+  m_status.set_completed_status(
+      gnoi::system::RebootStatus_Status::RebootStatus_Status_STATUS_SUCCESS, "anything");
+
+  response = m_status.get_response();
+
+  // message should be empty while reboot is active
+  EXPECT_THAT(response.status().message(), StrEq(""));
+
+  uint64_t reboot_ns = response.when();
+  EXPECT_TRUE(reboot_ns > (uint64_t)curr_ns.count());
+
+  m_status.set_inactive();
+  response = m_status.get_response();
+  EXPECT_THAT(response.status().message(), StrEq("anything"));
+  EXPECT_EQ(response.status().status(),
+            gnoi::system::RebootStatus_Status::RebootStatus_Status_STATUS_SUCCESS);
+  EXPECT_EQ(0, response.when());
+}
+
 class RebootThreadTest : public ::testing::Test {
  protected:
   RebootThreadTest()
@@ -277,5 +305,42 @@ TEST_F(RebootThreadTest, TestInvalidMethodfDoReboot) {
       response,
       IsStatus(gnoi::system::RebootStatus_Status::RebootStatus_Status_STATUS_UNKNOWN, ""));
 }
+
+TEST_F(RebootThreadTest, TestNoWarmIfNonRetriableFailure) {
+  set_start_status(gnoi::system::RebootMethod::WARM, "time to reboot");
+  set_completed_status(gnoi::system::RebootStatus_Status::RebootStatus_Status_STATUS_FAILURE,
+                       "failed to warm reboot");
+  force_inactive();
+
+  gnoi::system::RebootRequest request;
+  request.set_method(gnoi::system::RebootMethod::WARM);
+
+  NotificationResponse response = m_reboot_thread.Start(request);
+  EXPECT_EQ(response.status, swss::StatusCode::SWSS_RC_FAILED_PRECONDITION);
+  EXPECT_EQ(response.json_string,
+            "RebootThread: last WARM reboot failed with non-retriable failure");
+}
+
+TEST_F(RebootThreadTest, TestSigTermStartofDoReboot) {
+  sigterm_requested = true;
+  set_start_status(gnoi::system::RebootMethod::WARM, "time to reboot");
+  do_reboot();
+  force_inactive();
+  gnoi::system::RebootStatusResponse response = m_reboot_thread.GetResponse();
+  EXPECT_THAT(
+      response,
+      IsStatus(gnoi::system::RebootStatus_Status::RebootStatus_Status_STATUS_UNKNOWN, ""));
+}
+
+TEST_F(RebootThreadTest, TestWaitForRebootPositive) {
+  overwrite_reboot_timeout(1);
+  set_start_status(gnoi::system::RebootMethod::WARM, "time to reboot");
+  swss::Select s;
+  swss::SelectableEvent m_stop;
+  s.addSelectable(&m_stop);
+  RebootThread::Progress progress = wait_for_platform_reboot(s);
+  EXPECT_EQ(progress, RebootThread::Progress::PROCEED);
+}
+
 
 }  // namespace rebootbackend
