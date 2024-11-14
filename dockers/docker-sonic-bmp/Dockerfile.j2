@@ -12,6 +12,13 @@ ENV IMAGE_VERSION=$image_version
 
 RUN apt-get update
 
+{% if docker_sonic_bmp_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_sonic_bmp_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_sonic_bmp_debs.split(' ')) }}
+{%- endif %}
 
 RUN apt-get clean -y      && \
     apt-get autoclean -   && \
