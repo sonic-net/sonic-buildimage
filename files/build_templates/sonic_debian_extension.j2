@@ -485,6 +485,8 @@ echo "logrotate-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
 sudo cp -f $IMAGE_CONFIGS/systemd/journald.conf $FILESYSTEM_ROOT/etc/systemd/
 
 # Copy interfaces configuration files and templates
+sudo cp $IMAGE_CONFIGS/interfaces/flush-ndisc $FILESYSTEM_ROOT/etc/network/if-up.d/flush-ndisc
+sudo cp $IMAGE_CONFIGS/interfaces/flush-ndisc $FILESYSTEM_ROOT/etc/network/if-down.d/flush-ndisc
 sudo cp $IMAGE_CONFIGS/interfaces/interfaces-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo cp $IMAGE_CONFIGS/interfaces/interfaces-config.sh $FILESYSTEM_ROOT/usr/bin/
 sudo cp $IMAGE_CONFIGS/interfaces/*.j2 $FILESYSTEM_ROOT_USR_SHARE_SONIC_TEMPLATES/
