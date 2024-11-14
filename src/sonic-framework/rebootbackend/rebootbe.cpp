@@ -31,7 +31,6 @@ RebootBE::RebootBE(DbusInterface &dbus_interface)
 }
 
 RebootBE::RebManagerStatus RebootBE::GetCurrentStatus() {
-  const std::lock_guard<std::mutex> lock(m_StatusMutex);
   return m_CurrentStatus;
 }
 
@@ -43,6 +42,9 @@ void RebootBE::SetCurrentStatus(RebManagerStatus newStatus) {
 void RebootBE::Start() {
   SWSS_LOG_ENTER();
   SWSS_LOG_NOTICE("--- Starting rebootbackend ---");
+  swss::WarmStart::initialize("rebootbackend", "sonic-framework");
+  swss::WarmStart::checkWarmStart("rebootbackend", "sonic-framework",
+                                  /*incr_restore_cnt=*/false);
 
   swss::Select s;
   s.addSelectable(&m_NotificationConsumer);
@@ -51,7 +53,6 @@ void RebootBE::Start() {
 
 
   if (swss::WarmStart::isWarmStart()) {
-    SWSS_LOG_NOTICE("Launching init thread for warm start");
     SetCurrentStatus(RebManagerStatus::WARM_INIT_WAIT);
   } else {
     SWSS_LOG_NOTICE("Warm restart not enabled");
@@ -176,9 +177,9 @@ bool RebootBE::RebootAllowed(const gnoi::system::RebootMethod rebMethod) {
     case RebManagerStatus::WARM_REBOOT_IN_PROGRESS: {
       return false;
     }
-    case RebManagerStatus::WARM_INIT_WAIT: {
+     case RebManagerStatus::WARM_INIT_WAIT: {
       return rebMethod == gnoi::system::RebootMethod::COLD;
-    }
+    } 
     case RebManagerStatus::IDLE: {
       return true;
     }
