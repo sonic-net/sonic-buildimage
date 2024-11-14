@@ -124,3 +124,6 @@
 [submodule "platform/innovium/sonic-platform-marvell"]
 	path = platform/innovium/sonic-platform-marvell
 	url = https://github.com/Marvell-switching/sonic-platform-marvell
+[submodule "platform/vpp"]
+	path = platform/vpp
+	url = https://github.com/sonic-net/sonic-platform-vpp.git
