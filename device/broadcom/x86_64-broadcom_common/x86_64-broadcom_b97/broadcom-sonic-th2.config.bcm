@@ -1,3 +1,4 @@
+[Low Inheritance Precedence]
 schan_intr_enable=0
 l2xmsg_mode=1
 mmu_lossless=0
@@ -14,7 +15,6 @@ miim_intr_enable=0
 module_64ports=1
 oversubscribe_mode=1
 bcm_num_cos=10
-default_cpu_tx_queue=9
 # Drop monitor configuration
 flowtracker_enable=2
 flowtracker_max_flows=48000
@@ -28,4 +28,7 @@ num_queues_uc0=1
 num_queues_uc1=1
 sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
 sai_fast_convergence_support=1
-
+sai_nbr_bcast_ifp_optimized=1
+# Reduced Trap Group QSET for BRCM Sonic
+sai_brcm_sonic_trap_group=1
+sai_stats_support_mask=0x1
