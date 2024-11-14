@@ -23,6 +23,8 @@ namespace rebootbackend {
 #define TWO_SECONDS (2)
 #define TENTH_SECOND_MS (100)
 #define SELECT_TIMEOUT_250_MS (250)
+#define ONE_SECOND_MS (1000)
+#define TWO_SECONDS_MS (2000)
 
 namespace gpu = ::google::protobuf::util;
 using namespace gnoi::system;
@@ -59,6 +61,7 @@ class RebootBETestWithoutStop : public ::testing::Test {
         m_rebootbeReponseChannel(&m_db, REBOOT_RESPONSE_NOTIFICATION_CHANNEL),
         m_rebootbe(m_dbus_interface) {
     sigterm_requested = false;
+    //    TestUtils::clear_tables(m_db);
 
     m_s.addSelectable(&m_rebootbeReponseChannel);
 
@@ -68,6 +71,15 @@ class RebootBETestWithoutStop : public ::testing::Test {
     swss::Logger::restartLogger();
   }
   virtual ~RebootBETestWithoutStop() = default;
+
+  void force_warm_start_state(bool enabled) {
+    swss::Table enable_table(&m_db, STATE_WARM_RESTART_ENABLE_TABLE_NAME);
+    enable_table.hset("system", "enable", enabled ? "true" : "false");
+    enable_table.hset("sonic-framework", "enable", enabled ? "true" : "false");
+
+    swss::Table restart_table(&m_db, STATE_WARM_RESTART_TABLE_NAME);
+    restart_table.hset("rebootbackend", "restore_count", enabled ? "0" : "");
+  }
 
   void start_rebootbe() {
     m_rebootbe_thread =
@@ -194,6 +206,48 @@ class RebootBETest : public RebootBETestWithoutStop {
   }
 };
 
+TEST_F(RebootBETest, WarmbootInProgressBlocksNewWarmboot) {
+  force_warm_start_state(true);
+
+  start_rebootbe();
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
+            RebootBE::RebManagerStatus::WARM_INIT_WAIT);
+
+  // Send a warmboot request, confirm it fails.
+  RebootRequest request;
+  request.set_method(RebootMethod::WARM);
+  start_reboot_via_rpc(request, swss::StatusCode::SWSS_RC_IN_USE);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(TENTH_SECOND_MS));
+  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
+            RebootBE::RebManagerStatus::WARM_INIT_WAIT);
+  force_warm_start_state(false);
+}
+
+TEST_F(RebootBETest, ColdbootWhileWarmbootInProgress) {
+  force_warm_start_state(true);
+  set_mock_defaults();
+
+  start_rebootbe();
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
+            RebootBE::RebManagerStatus::WARM_INIT_WAIT);
+
+  // Send a coldboot request, confirm it starts.
+  RebootRequest request;
+  request.set_method(RebootMethod::COLD);
+  start_reboot_via_rpc(request);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(TENTH_SECOND_MS));
+  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
+            RebootBE::RebManagerStatus::COLD_REBOOT_IN_PROGRESS);
+
+  // Cleanup without going through the whole reboot.
+  send_stop_reboot_thread();
+  force_warm_start_state(false);
+}
+
 // Test fixture to skip through the startup sequence into the main loop.
 // Param indicates if RebootBE should be initialized into a state where the
 // system came up in warmboot.
@@ -203,7 +257,8 @@ class RebootBEAutoStartTest : public RebootBETest,
   RebootBEAutoStartTest() {
     start_rebootbe();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    // std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(ONE_SECOND_MS));
     EXPECT_EQ(m_rebootbe.GetCurrentStatus(), RebootBE::RebManagerStatus::IDLE);
   }
 };
@@ -300,6 +355,30 @@ TEST_P(RebootBEAutoStartTest, TestColdRebootDbusToCompletion) {
                        "platform failed to reboot"));
 }
 
+TEST_P(RebootBEAutoStartTest, TestWarmRebootDbusToCompletion) {
+  DbusInterface::DbusResponse dbus_response{
+      DbusInterface::DbusStatus::DBUS_SUCCESS, ""};
+  EXPECT_CALL(m_dbus_interface, Reboot(_))
+      .Times(1)
+      .WillRepeatedly(Return(dbus_response));
+
+  overwrite_reboot_timeout(1);
+  RebootRequest request;
+  request.set_method(RebootMethod::WARM);
+  start_reboot_via_rpc(request);
+  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
+            RebootBE::RebManagerStatus::WARM_REBOOT_IN_PROGRESS);
+
+  sleep(TWO_SECONDS);
+
+  EXPECT_EQ(m_rebootbe.GetCurrentStatus(), RebootBE::RebManagerStatus::IDLE);
+  gnoi::system::RebootStatusResponse response = do_reboot_status_rpc();
+  EXPECT_THAT(response, ActiveCountMethod(false, 1, RebootMethod::WARM));
+  EXPECT_THAT(response,
+              IsStatus(RebootStatus_Status::RebootStatus_Status_STATUS_FAILURE,
+                       "failed to warm reboot"));
+}
+
 TEST_P(RebootBEAutoStartTest, TestColdBootSigterm) {
   sigterm_requested = true;
   set_mock_defaults();
@@ -314,6 +393,25 @@ TEST_P(RebootBEAutoStartTest, TestColdBootSigterm) {
   EXPECT_EQ(m_rebootbe.GetCurrentStatus(), RebootBE::RebManagerStatus::IDLE);
   gnoi::system::RebootStatusResponse second_resp = do_reboot_status_rpc();
   EXPECT_THAT(second_resp, ActiveCountMethod(false, 1, RebootMethod::COLD));
+  EXPECT_THAT(
+      second_resp,
+      IsStatus(RebootStatus_Status::RebootStatus_Status_STATUS_UNKNOWN, ""));
+}
+
+TEST_P(RebootBEAutoStartTest, TestWarmBootSigterm) {
+  sigterm_requested = true;
+  set_mock_defaults();
+  overwrite_reboot_timeout(1);
+
+  RebootRequest request;
+  request.set_method(RebootMethod::WARM);
+  start_reboot_via_rpc(request);
+
+  sleep(ONE_SECOND);
+
+  EXPECT_EQ(m_rebootbe.GetCurrentStatus(), RebootBE::RebManagerStatus::IDLE);
+  gnoi::system::RebootStatusResponse second_resp = do_reboot_status_rpc();
+  EXPECT_THAT(second_resp, ActiveCountMethod(false, 1, RebootMethod::WARM));
   EXPECT_THAT(
       second_resp,
       IsStatus(RebootStatus_Status::RebootStatus_Status_STATUS_UNKNOWN, ""));
@@ -341,6 +439,28 @@ TEST_P(RebootBEAutoStartTest, TestColdBootDbusError) {
                        "dbus reboot failed"));
 }
 
+TEST_P(RebootBEAutoStartTest, TestWarmBootDbusError) {
+  // Return FAIL from dbus reboot call.
+  DbusInterface::DbusResponse dbus_response{
+      DbusInterface::DbusStatus::DBUS_FAIL, "dbus reboot failed"};
+  EXPECT_CALL(m_dbus_interface, Reboot(_))
+      .Times(1)
+      .WillOnce(Return(dbus_response));
+
+  RebootRequest request;
+  request.set_method(RebootMethod::WARM);
+  start_reboot_via_rpc(request);
+
+  sleep(TWO_SECONDS);
+
+  EXPECT_EQ(m_rebootbe.GetCurrentStatus(), RebootBE::RebManagerStatus::IDLE);
+  gnoi::system::RebootStatusResponse second_resp = do_reboot_status_rpc();
+  EXPECT_THAT(second_resp, ActiveCountMethod(false, 1, RebootMethod::WARM));
+  EXPECT_THAT(second_resp,
+              IsStatus(RebootStatus_Status::RebootStatus_Status_STATUS_FAILURE,
+                       "dbus reboot failed"));
+}
+
 TEST_P(RebootBEAutoStartTest, TestStopDuringColdBoot) {
   set_mock_defaults();
 
@@ -362,10 +482,62 @@ TEST_P(RebootBEAutoStartTest, TestStopDuringColdBoot) {
       IsStatus(RebootStatus_Status::RebootStatus_Status_STATUS_UNKNOWN, ""));
 }
 
+TEST_P(RebootBEAutoStartTest, TestStopDuringWarmBoot) {
+  set_mock_defaults();
+
+  RebootRequest request;
+  request.set_method(RebootMethod::WARM);
+  start_reboot_via_rpc(request);
+  //  std::this_thread::sleep_for(std::chrono::milliseconds(TENTH_SECOND_MS));
+  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
+            RebootBE::RebManagerStatus::WARM_REBOOT_IN_PROGRESS);
+
+  send_stop_reboot_thread();
+  std::this_thread::sleep_for(std::chrono::milliseconds(TENTH_SECOND_MS));
+  EXPECT_EQ(m_rebootbe.GetCurrentStatus(), RebootBE::RebManagerStatus::IDLE);
+
+  gnoi::system::RebootStatusResponse response = do_reboot_status_rpc();
+  EXPECT_THAT(response, ActiveCountMethod(false, 1, RebootMethod::WARM));
+  EXPECT_THAT(
+      response,
+      IsStatus(RebootStatus_Status::RebootStatus_Status_STATUS_UNKNOWN, ""));
+}
+
 TEST_P(RebootBEAutoStartTest, TestInvalidJsonRebootRequest) {
   std::string json_request = "abcd";
   NotificationResponse response = handle_reboot_request(json_request);
   EXPECT_EQ(swss::StatusCode::SWSS_RC_INTERNAL, response.status);
+}
+
+TEST_P(RebootBEAutoStartTest, TestWarmFailureFollowedByColdBoot) {
+  DbusInterface::DbusResponse dbus_response{
+      DbusInterface::DbusStatus::DBUS_SUCCESS, ""};
+  overwrite_reboot_timeout(1);
+
+  RebootRequest request;
+  request.set_method(RebootMethod::WARM);
+  start_reboot_via_rpc(request);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(TENTH_SECOND_MS));
+  EXPECT_EQ(m_rebootbe.GetCurrentStatus(),
+            RebootBE::RebManagerStatus::WARM_REBOOT_IN_PROGRESS);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(TWO_SECONDS_MS));
+  gnoi::system::RebootStatusResponse response = do_reboot_status_rpc();
+  EXPECT_THAT(response, ActiveCountMethod(false, 1, RebootMethod::WARM));
+
+  request.set_method(RebootMethod::COLD);
+  start_reboot_via_rpc(request);
+
+  // We have to wait for the 1 second reboot Timeout
+  std::this_thread::sleep_for(std::chrono::milliseconds(TWO_SECONDS_MS));
+
+  EXPECT_EQ(m_rebootbe.GetCurrentStatus(), RebootBE::RebManagerStatus::IDLE);
+  response = do_reboot_status_rpc();
+  EXPECT_THAT(response, ActiveCountMethod(false, 2, RebootMethod::COLD));
+  EXPECT_THAT(response,
+              IsStatus(RebootStatus_Status::RebootStatus_Status_STATUS_FAILURE,
+                       "platform failed to reboot"));
 }
 
 INSTANTIATE_TEST_SUITE_P(TestWithStartupWarmbootEnabledState,

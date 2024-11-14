@@ -186,25 +186,6 @@ void RebootThread::do_warm_reboot(swss::Select &s) {
   return;
 }
 
-void RebootThread::do_warm_reboot(swss::Select &s) {
-  SWSS_LOG_ENTER();
-  SWSS_LOG_NOTICE("Sending warm reboot request to platform");
-  if (send_dbus_reboot_request() == Progress::EXIT_EARLY) {
-    return;
-  }
-
-  // Wait for warm reboot. If we return, reboot failed.
-  if (wait_for_platform_reboot(s) == Progress::EXIT_EARLY) {
-    return;
-  }
-
-  // We shouldn't be here. Platform reboot should've killed us.
-  log_error_and_set_non_retry_failure("failed to warm reboot");
-
-  return;
-}
-
-
 void RebootThread::reboot_thread(void) {
   SWSS_LOG_ENTER();
 
