@@ -1,3 +1,4 @@
+[Low Inheritance Precedence]
 phy_null=1
 pll_bypass=1
 core_clock_frequency=1325
@@ -25,4 +26,9 @@ num_queues_uc0=1
 num_queues_uc1=1
 sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
 sai_fast_convergence_support=1
+sai_nbr_bcast_ifp_optimized=1
+# Reduced Trap Group QSET for BRCM Sonic
+sai_brcm_sonic_trap_group=1
 
+# MMU Lossless configurations
+sai_optimized_mmu=1
