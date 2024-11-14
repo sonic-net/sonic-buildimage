@@ -72,10 +72,6 @@ switch_board_qsfp_sfp_mux() {
 switch_board_sfp() {
         case $1 in
         "new_device")
-                        #Load optic driver based on the SFP type inserted.
-                        #In S5448, I2C device bus number for SFP-DD ports are
-                        #from 10 to 57 and 'optoe3' is the native driver
-                        /usr/bin/python3 /usr/local/bin/load_optics_driver.py "10:57" "optoe3"
                         for ((i=58;i<=59;i++));
                         do
                             echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-$i/$1
@@ -186,10 +182,6 @@ switch_board_sfp() {
 switch_board_qsfp() {
         case $1 in
         "new_device")
-                        #Load optic driver based on the SFP type inserted.
-                        #In S5448, I2C device bus number for QSFP ports are
-                        #from 2 to 9 and 'optoe3' is the native driver
-                        /usr/bin/python3 /usr/local/bin/load_optics_driver.py "2:9" "optoe3"
                         ;;
  
         "delete_device")
@@ -327,8 +319,6 @@ init_devnum
 PLATFORM_READY_CHECK=/var/run/platform_ready
 
 if [ "$1" == "init" ]; then
-    #update Intel cpu Microcode
-    /usr/local/bin/microcode-updater.sh
     sleep 1
     modprobe i2c-dev
     modprobe i2c-mux-pca954x
@@ -344,37 +334,16 @@ if [ "$1" == "init" ]; then
     switch_board_qsfp_sfp_mux "new_device"
     switch_board_qsfp "new_device"
     switch_board_sfp "new_device"
-    WARM_BOOT='no'
-    case "$(cat /proc/cmdline)" in
-    *SONIC_BOOT_TYPE=warm*)
-        WARM_BOOT='yes'
-        ;;
-    *)
-        WARM_BOOT='no'
-        ;;
-    esac
-    if [[ ( x"$WARM_BOOT" == x"no") ]]; then
-	    switch_board_sfp "media_down"
-	    switch_board_modsel
-    fi
+    switch_board_sfp "media_down"
+    switch_board_modsel
     switch_board_led_default
     install_python_api_package
     #python /usr/bin/qsfp_irq_enable.py
     platform_firmware_versions
     get_reboot_cause
     echo 3000 > /sys/module/ipmi_si/parameters/kipmid_max_busy_us
-    echo -2 > /sys/bus/i2c/drivers/pca954x/603-0070/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/604-0070/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/605-0070/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/606-0070/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/607-0070/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/608-0070/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/609-0070/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/611-0070/idle_state
 elif [ "$1" == "deinit" ]; then
-    if [ ! -f "/tmp/warm-reboot-progress" ]; then
-        switch_board_sfp "media_down"
-    fi
+    switch_board_sfp "media_down"
     # Remove the flag file to denote the platform is no more ready
     rm -f $PLATFORM_READY_CHECK
 elif [ "$1" == "media_down" ]; then
@@ -382,4 +351,3 @@ elif [ "$1" == "media_down" ]; then
 else
      echo "s5448f_platform : Invalid option !"
 fi
-

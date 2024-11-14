@@ -8,11 +8,5 @@ s5448f/cfg/s5448f-params.conf etc/modprobe.d
 s5448f/systemd/platform-modules-s5448f.service etc/systemd/system
 s5448f/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-dellemc_s5448f-r0
 common/platform_reboot usr/share/sonic/device/x86_64-dellemc_s5448f-r0
-common/system_health_monitoring_config.json usr/share/sonic/device/x86_64-dellemc_s5448f-r0
-common/load_optics_driver.py usr/local/bin
 common/fw-updater usr/local/bin
 common/onie_mode_set usr/local/bin
-common/watchdog etc/logrotate.d
-intel-ucode/06-5f-01 /lib/firmware/intel-ucode/
-intel-ucode/microcode-updater.sh /usr/local/bin/
-s5448f/scripts/platform-modules-s5448f.sh usr/bin/ext/service/
