@@ -1386,85 +1386,85 @@ class SocketHandler:
         logging.info("Socket listener stopped.")
 
 
-# class Daemonizer:
-#     """Facilitates the daemonization of the current process.
+class Daemonizer:
+    """Facilitates the daemonization of the current process.
     
-#     This class provides methods to fork the process into the background,
-#     manage the process ID (PID), and redirect standard file descriptors
-#     to /dev/null, ensuring that the daemon operates independently from
-#     the terminal.
-#     """
-#     def __init__(self, pid_file):
-#         """
-#         Initializes the Daemonizer with the specified PID file location.
+    This class provides methods to fork the process into the background,
+    manage the process ID (PID), and redirect standard file descriptors
+    to /dev/null, ensuring that the daemon operates independently from
+    the terminal.
+    """
+    def __init__(self, pid_file):
+        """
+        Initializes the Daemonizer with the specified PID file location.
         
-#         :param pid_file: The file path where the daemon's PID will be stored.
-#         """
-#         self.pid_file = pid_file
+        :param pid_file: The file path where the daemon's PID will be stored.
+        """
+        self.pid_file = pid_file
 
-#     def daemonize(self):
-#         """Forks the process to run as a background daemon.
+    def daemonize(self):
+        """Forks the process to run as a background daemon.
         
-#         This method performs the necessary steps to create a daemon process,
-#         including forking twice and creating a new session. It logs the
-#         success of the daemonization and writes the PID to a file.
-#         """
-#         try:
-#             pid = os.fork()
-#             if pid > 0:
-#                 sys.exit(0)
-#         except OSError as e:
-#             logging.error(f"First fork failed: {e}")
-#             sys.exit(1)
+        This method performs the necessary steps to create a daemon process,
+        including forking twice and creating a new session. It logs the
+        success of the daemonization and writes the PID to a file.
+        """
+        try:
+            pid = os.fork()
+            if pid > 0:
+                sys.exit(0)
+        except OSError as e:
+            logging.error(f"First fork failed: {e}")
+            sys.exit(1)
 
-#         os.setsid() 
+        os.setsid() 
 
-#         try:
-#             pid = os.fork()
-#             if pid > 0:
-#                 sys.exit(0)
-#         except OSError as e:
-#             logging.error(f"Second fork failed: {e}")
-#             sys.exit(1)
+        try:
+            pid = os.fork()
+            if pid > 0:
+                sys.exit(0)
+        except OSError as e:
+            logging.error(f"Second fork failed: {e}")
+            sys.exit(1)
 
-#         logging.info(f"Daemonization successful with PID: {os.getpid()}")
-#         self.write_pid_to_file()
-#         self.redirect_standard_file_descriptors()
+        logging.info(f"Daemonization successful with PID: {os.getpid()}")
+        self.write_pid_to_file()
+        self.redirect_standard_file_descriptors()
 
-#     def write_pid_to_file(self):
-#         """Writes the daemon's PID to the specified file for management purposes.
+    def write_pid_to_file(self):
+        """Writes the daemon's PID to the specified file for management purposes.
         
-#         This method ensures that the PID of the running daemon is stored in a
-#         file, which can be used later to manage the daemon process (e.g., for
-#         stopping it). It logs the action taken and handles any errors.
-#         """
-#         try:
-#             with open(self.pid_file, 'w') as f:
-#                 f.write(f"{os.getpid()}\n")
-#             logging.debug(f"Daemon PID written to {self.pid_file}")
-#         except Exception as e:
-#             logging.error(f"Failed to write PID file {self.pid_file}: {e}")
-#             sys.exit(1)
+        This method ensures that the PID of the running daemon is stored in a
+        file, which can be used later to manage the daemon process (e.g., for
+        stopping it). It logs the action taken and handles any errors.
+        """
+        try:
+            with open(self.pid_file, 'w') as f:
+                f.write(f"{os.getpid()}\n")
+            logging.debug(f"Daemon PID written to {self.pid_file}")
+        except Exception as e:
+            logging.error(f"Failed to write PID file {self.pid_file}: {e}")
+            sys.exit(1)
 
-#     def redirect_standard_file_descriptors(self):
-#         """Redirects standard file descriptors to /dev/null.
+    def redirect_standard_file_descriptors(self):
+        """Redirects standard file descriptors to /dev/null.
         
-#         This method ensures that the daemon does not receive any terminal input/output
-#         by redirecting stdin, stdout, and stderr to /dev/null. It logs the action
-#         taken and any errors encountered during the process.
-#         """
-#         try:
-#             sys.stdout.flush()
-#             sys.stderr.flush()
-#             with open(os.devnull, 'r') as devnull:
-#                 os.dup2(devnull.fileno(), sys.stdin.fileno())
-#             with open(os.devnull, 'a+') as devnull:
-#                 os.dup2(devnull.fileno(), sys.stdout.fileno())
-#                 os.dup2(devnull.fileno(), sys.stderr.fileno())
-#             logging.debug("Standard file descriptors redirected to /dev/null")
-#         except Exception as e:
-#             logging.error(f"Failed to redirect standard file descriptors: {e}")
-#             sys.exit(1)
+        This method ensures that the daemon does not receive any terminal input/output
+        by redirecting stdin, stdout, and stderr to /dev/null. It logs the action
+        taken and any errors encountered during the process.
+        """
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            with open(os.devnull, 'r') as devnull:
+                os.dup2(devnull.fileno(), sys.stdin.fileno())
+            with open(os.devnull, 'a+') as devnull:
+                os.dup2(devnull.fileno(), sys.stdout.fileno())
+                os.dup2(devnull.fileno(), sys.stderr.fileno())
+            logging.debug("Standard file descriptors redirected to /dev/null")
+        except Exception as e:
+            logging.error(f"Failed to redirect standard file descriptors: {e}")
+            sys.exit(1)
 
 
 # class MemoryStatisticsService:
