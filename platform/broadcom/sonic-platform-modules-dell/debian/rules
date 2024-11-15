@@ -62,6 +62,7 @@ override_dh_auto_build:
 			cd $(MOD_SRC_DIR); \
 		elif [ $$mod = "s5448f" ]; then \
 			cp $(COMMON_DIR)/dell_fpga_ocores.c $(MOD_SRC_DIR)/$${mod}/modules/dell_s5448f_fpga_ocores.c; \
+			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
 			cd $(MOD_SRC_DIR)/$${mod}; \
 			python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
 			cd $(MOD_SRC_DIR); \
@@ -174,6 +175,7 @@ override_dh_clean:
 			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
 		elif [ $$mod = "s5448f" ]; then \
 			rm -f $(MOD_SRC_DIR)/$${mod}/modules/dell_s5448f_fpga_ocores.c; \
+			rm -f $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
 			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
 			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
 			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \

@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 #############################################################################
-# DELLEMC S5448F
+# DELLEMC Z9432F
 #
 # Module contains an implementation of SONiC Platform Base API and
 # provides the platform information
@@ -10,68 +10,254 @@
 """
 
 try:
-    import sys
+    import os
     import time
-    import syslog
-    from sonic_platform_base.sfp_standard import SfpStandard
-    from .sfp_helper import SfphelperStandard
-    from sonic_platform_base.sonic_sfp.qsfp_dd import qsfp_dd_InterfaceId
-    from sonic_platform_base.sonic_sfp.qsfp_dd import qsfp_dd_Dom
+    import mmap
+    from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
 
 except ImportError as err:
     raise ImportError(str(err) + "- required module not found")
 
-BASE_OFFSET = 16388
-RESET_BASE_OFFSET = 16384
-INDEX_1 = 1
-INDEX_2 = 3
-INDEX_3 = 47
-HEX_10 = 16
-HEX_20 = 32
-PORT_START = 1
-PORT_6 = 6
-PORT_54 = 54
-PORT_END = 58
-QSFP_DD_DOM_CAPABILITY_OFFSET = 2
-QSFP_DD_DOM_CAPABILITY_WIDTH = 1
-SFP_PORT_START = 5
-SFP_PORT_END = 52
-QSFP_QSA28_OUI_OFFSET = 64
-QSFP_QSA28_OUI_WIDTH = 3
+QSFP_INFO_OFFSET = 128
+SFP_INFO_OFFSET = 0
+QSFP_DD_PAGE0 = 0
 
-class Sfp(SfphelperStandard):
-    """ DELLEMC Platform-specific Sfp class """
+SFP_TYPE_LIST = [
+    '0x3' # SFP/SFP+/SFP28 and later
+]
+QSFP_TYPE_LIST = [
+    '0x0c', # QSFP
+    '0x0d', # QSFP+ or later
+    '0x11'  # QSFP28 or later
+]
+QSFP_DD_TYPE_LIST = [
+    '0x18' #QSFP_DD Type
+]
+
+OSFP_TYPE_LIST = [
+    '0x19' # OSFP 8X Type
+]
+
+class Sfp(SfpOptoeBase):
+    """
+    DELLEMC Platform-specific Sfp class
+    """
     BASE_RES_PATH = "/sys/bus/pci/devices/0000:04:00.0/resource0"
 
     def __init__(self, index, sfp_type, eeprom_path):
-        SfphelperStandard.__init__(self, index, sfp_type, eeprom_path)
-        self.qsfp_dd_info = qsfp_dd_InterfaceId()
-        self.qsfp_dd_dom_info = qsfp_dd_Dom()
-        self.qsfp_dd_app2_list = False
+        """
+        SFP Dunder init
+        """
+        SfpOptoeBase.__init__(self)
+        self.index = index
+        self.eeprom_path = eeprom_path
+        self.sfp_eeprom_path = eeprom_path
+        #port_type is the native port type and sfp_type is the transceiver type
+        #sfp_type will be detected in get_transceiver_info
+        self.port_type = sfp_type
+        self.sfp_type = self.port_type
+        self._initialize_media(delay=False)
 
-    @property
-    def port_type(self):
-        """ Returns native port type """
-        if self.index >= SFP_PORT_START and self.index <= SFP_PORT_END:
-            port_type = SfpStandard.PORT_TYPE_SFPDD
-        else:
-            port_type = SfpStandard.PORT_TYPE_QSFPDD
-        return port_type
+    def get_eeprom_path(self):
+        """
+        Returns SFP eeprom path
+        """
+        return self.eeprom_path
 
-    def get_intl_state(self):
-        """ Sets the intL (interrupt; active low) pin of this SFP """
-        intl_state = True
+    def get_name(self):
+        """
+        Returns native transceiver type
+        """
+        return "QSFP-DD Double Density 8X Pluggable Transceiver" if self.index < 33 else "SFP/SFP+/SFP28"
+
+    @staticmethod
+    def pci_mem_read(mem, offset):
+        """
+        Returns the desired byte in PCI memory space
+        """
+        mem.seek(offset)
+        return mem.read_byte()
+
+    @staticmethod
+    def pci_mem_write(mem, offset, data):
+        """
+        Writes the desired byte in PCI memory space
+        """
+        mem.seek(offset)
+        # print "data to write:%x"%data
+        mem.write_byte(data)
+
+    def pci_set_value(self, resource, val, offset):
+        """
+        Sets the value in PCI memory space
+        """
+        filed = os.open(resource, os.O_RDWR)
+        mem = mmap.mmap(filed, 0)
+        self.pci_mem_write(mem, offset, val)
+        mem.close()
+        os.close(filed)
+        return val
+
+    def pci_get_value(self, resource, offset):
+        """
+        Retrieves the value from PCI memory space
+        """
+        filed = os.open(resource, os.O_RDWR)
+        mem = mmap.mmap(filed, 0)
+        val = self.pci_mem_read(mem, offset)
+        mem.close()
+        os.close(filed)
+        return val
+
+    def _initialize_media(self, delay=False):
+        """
+        Initialize the media type and eeprom driver for SFP
+        """
+        if delay:
+            time.sleep(1)
+            self._xcvr_api = None
+            self.get_xcvr_api()
+
+        self.set_media_type()
+        self.reinit_sfp_driver()
+
+    def get_presence(self):
+        """
+        Retrieves the presence of the sfp
+        Returns : True if sfp is present and false if it is absent
+        """
+        # Check for invalid port_num
+        mask = {'QSFP_DD' : (1 << 4), 'SFP' : (1 << 0)}
+        # Port offset starts with 0x4004
+        port_offset = 16388 + ((self.index-1) * 16)
+
+        try:
+            status = self.pci_get_value(self.BASE_RES_PATH, port_offset)
+            reg_value = int(status)
+            # ModPrsL is active low
+            if reg_value & mask[self.port_type] == 0:
+                return True
+        except ValueError:
+            pass
+
+        return False
+
+    def get_reset_status(self):
+        """
+        Retrives the reset status of SFP
+        """
+        reset_status = False
+        try:
+            if self.port_type == 'QSFP_DD':
+                # Port offset starts with 0x4000
+                port_offset = 16384 + ((self.index-1) * 16)
+
+                status = self.pci_get_value(self.BASE_RES_PATH, port_offset)
+                reg_value = int(status)
+
+                # Mask off 4th bit for reset status
+                mask = (1 << 4)
+                reset_status = not (reg_value & mask)
+        except ValueError:
+            pass
+
+        return reset_status
+
+    def get_lpmode(self):
+        """
+        Retrieves the lpmode(low power mode) of this SFP
+        """
+        lpmode_state = False
         try:
             if self.sfp_type == 'QSFP_DD':
-                # Port offset starts with 0x4004
-                if self.index in range(PORT_START,PORT_6):
-                    port_offset = BASE_OFFSET + ((self.index-INDEX_1) * HEX_10)
-                elif self.index in range(PORT_6,PORT_54):
-                    port_offset = BASE_OFFSET + ((self.index-INDEX_2) * HEX_20)
-                elif self.index in range(PORT_54,PORT_END+1):
-                    port_offset = BASE_OFFSET + ((self.index+INDEX_3) * HEX_10)
+                return SfpOptoeBase.get_lpmode(self)
+            else:
+                # Port offset starts with 0x4000
+                port_offset = 16384 + ((self.index-1) * 16)
+
+                status = self.pci_get_value(self.BASE_RES_PATH, port_offset)
+                reg_value = int(status)
+
+                # Mask off 6th bit for lpmode
+                mask = (1 << 6)
+
+                lpmode_state = (reg_value & mask)
+        except ValueError:
+            pass
+        return bool(lpmode_state)
+
+    def reset(self):
+        """
+        Reset the SFP and returns all user settings to their default state
+        """
+        try:
+            if self.port_type == 'QSFP_DD':
+                # Port offset starts with 0x4000
+                port_offset = 16384 + ((self.index-1) * 16)
+
+                status = self.pci_get_value(self.BASE_RES_PATH, port_offset)
+                reg_value = int(status)
+
+                # Mask off 4th bit for reset
+                mask = (1 << 4)
+
+                # ResetL is active low
+                reg_value = reg_value & ~mask
+
+                # Convert our register value back to a hex string and write back
+                self.pci_set_value(self.BASE_RES_PATH, reg_value, port_offset)
+
+                # Sleep 1 second to allow it to settle
+                time.sleep(1)
+
+                reg_value = reg_value | mask
+
+                # Convert our register value back to a hex string and write back
+                self.pci_set_value(self.BASE_RES_PATH, reg_value, port_offset)
+            else:
+                return False
+        except ValueError:
+            return False
+        return True
+
+    def set_lpmode(self, lpmode):
+        """
+        Sets the lpmode(low power mode) of this SFP
+        """
+        try:
+            if self.sfp_type == 'QSFP_DD':
+                return SfpOptoeBase.set_lpmode(self, lpmode)
+            else:
+                # Port offset starts with 0x4000
+                port_offset = 16384 + ((self.index-1) * 16)
+
+                status = self.pci_get_value(self.BASE_RES_PATH, port_offset)
+                reg_value = int(status)
+
+                # Mask off 6th bit for lowpower mode
+                mask = (1 << 6)
+
+                # LPMode is active high; set or clear the bit accordingly
+                if lpmode is True:
+                    reg_value = reg_value | mask
                 else:
-                    sys.stderr.write("Port index {} out of range (1-{})\n".format(self.index,PORT_END))
+                    reg_value = reg_value & ~mask
+
+                # Convert our register value back to a hex string and write back
+                self.pci_set_value(self.BASE_RES_PATH, reg_value, port_offset)
+        except ValueError:
+            return  False
+        return True
+
+    def get_intl_state(self):
+        """
+        Sets the intL (interrupt; active low) pin of this SFP
+        """
+        intl_state = True
+        try:
+            if self.port_type == 'QSFP_DD':
+                # Port offset starts with 0x4004
+                port_offset = 16388 + ((self.index-1) * 16)
 
                 status = self.pci_get_value(self.BASE_RES_PATH, port_offset)
                 reg_value = int(status)
@@ -80,228 +266,126 @@ class Sfp(SfphelperStandard):
                 mask = (1 << 4)
 
                 intl_state = (reg_value & mask)
-        except  ValueError:
+        except ValueError:
             pass
         return intl_state
 
-    def _get_presence(self):
-        # Check for invalid self.index
-        mask = {'QSFP' : (1 << 4), 'SFP' : (1 << 0), 'QSFP_DD' : (1 << 4)}
-        # Port offset starts with 0x4004
-        if self.index in range(PORT_START,PORT_6):
-            port_offset = BASE_OFFSET + ((self.index-INDEX_1) * HEX_10)
-        elif self.index in range(PORT_6,PORT_54):
-            port_offset = BASE_OFFSET + ((self.index-INDEX_2) * HEX_20)
-        elif self.index in range(PORT_54,PORT_END+1):
-            port_offset = BASE_OFFSET + ((self.index+INDEX_3) * HEX_10)
+    def set_media_type(self):
+        """
+        Reads optic eeprom byte to determine media type inserted
+        """
+        eeprom_raw = []
+        eeprom_raw = self._xcvr_api_factory._get_id()
+        if eeprom_raw is not None:
+            eeprom_raw = hex(eeprom_raw)
+            if eeprom_raw in SFP_TYPE_LIST:
+                self.sfp_type = 'SFP'
+            elif eeprom_raw in QSFP_TYPE_LIST:
+                self.sfp_type = 'QSFP'
+            elif eeprom_raw in QSFP_DD_TYPE_LIST:
+                self.sfp_type = 'QSFP_DD'
+            else:
+                #Set native port type if EEPROM type is not recognized/readable
+                self.sfp_type = self.port_type
         else:
-            sys.stderr.write("Port index {} out of range (1-{})\n".format(self.index,PORT_END))
+            self.sfp_type = self.port_type
 
-        status = self.pci_get_value(self.BASE_RES_PATH, port_offset)
-        reg_value = int(status)
-        # ModPrsL is active low
-        if (self.sfp_type in mask) and (reg_value & mask[self.sfp_type] == 0):
-            return True
-        return False
+        return self.sfp_type
 
-    def set_lpmode(self, lpmode):
+    def reinit_sfp_driver(self):
         """
-        Sets the lpmode(low power mode) of this SFP
+        Changes the driver based on media type detected
         """
+
+        i2c_bus = self.sfp_eeprom_path[27:].split('/')[0]
+        del_sfp_path = "/sys/class/i2c-adapter/i2c-{0}/delete_device".format(i2c_bus)
+        new_sfp_path = "/sys/class/i2c-adapter/i2c-{0}/new_device".format(i2c_bus)
+        driver_path = "/sys/class/i2c-adapter/i2c-{0}/{0}-0050/name".format(i2c_bus)
+
+        if not os.path.isfile(driver_path):
+            print(driver_path, "does not exist")
+            return False
+
         try:
-            if self.index in range(PORT_START,PORT_6):
-                port_offset = RESET_BASE_OFFSET + ((self.index-INDEX_1) * HEX_10)
-            elif self.index in range(PORT_6,PORT_54):
-                port_offset = RESET_BASE_OFFSET + ((self.index-INDEX_2) * HEX_20)
-            elif self.index in range(PORT_54,PORT_END+1):
-                port_offset = RESET_BASE_OFFSET + ((self.index+INDEX_3) * HEX_10)
-            else:
-                syslog.syslog(syslog.LOG_ERR,"Port index {} out of range (1-{})\n".format(self.index,PORT_END))
-                return False
+            with os.fdopen(os.open(driver_path, os.O_RDONLY)) as filed:
+                driver_name = filed.read()
+                driver_name = driver_name.rstrip('\r\n')
+                driver_name = driver_name.lstrip(" ")
 
-            status = self.pci_get_value(self.BASE_RES_PATH, port_offset)
-            reg_value = int(status)
-            # Mask off 6th bit for lowpower mode
-            mask = 1 << 6
-            # LPMode is active high; set or clear the bit accordingly
-            if lpmode is True:
-                reg_value = reg_value | mask
-            else:
-                reg_value = reg_value & ~mask
+            #Avoid re-initialization of the QSFP/SFP optic on QSFP/SFP port.
+            if self.sfp_type == 'SFP' and driver_name in ['optoe1', 'optoe3']:
+                with open(del_sfp_path, 'w') as f:
+                    f.write('0x50\n')
+                time.sleep(0.2)
+                with open(new_sfp_path, 'w') as f:
+                    f.write('optoe2 0x50\n')
+                time.sleep(2)
+            elif self.sfp_type == 'QSFP' and driver_name in ['optoe2', 'optoe3']:
+                with open(del_sfp_path, 'w') as f:
+                    f.write('0x50\n')
+                time.sleep(0.2)
+                with open(new_sfp_path, 'w') as f:
+                    f.write('optoe1 0x50\n')
+                time.sleep(2)
+            elif self.sfp_type == 'QSFP_DD' and driver_name in ['optoe1', 'optoe2']:
+                with open(del_sfp_path, 'w') as f:
+                    f.write('0x50\n')
+                time.sleep(0.2)
+                with open(new_sfp_path, 'w') as f:
+                    f.write('optoe3 0x50\n')
+                time.sleep(2)
 
-            # Convert our register value back to a hex string and write back
-            status = self.pci_set_value(self.BASE_RES_PATH, reg_value, port_offset)
-        except ValueError as error:
-            syslog.syslog(syslog.LOG_ERR, "Error: SFP lpmode set failed: %s" % str(error))
+        except IOError as err:
+            print("Error: Unable to open file: %s" %str(err))
             return False
 
         return True
 
-    def get_max_port_power(self):
-        """ Retrieves the maximum power allowed on the port in watts ***
-        This method of fetching power values is not ideal.
-        TODO: enhance by placing power limits in config file
-        ***
+    def get_position_in_parent(self):
         """
-        return self.max_port_power
-
-
-    def get_qsa_adapter_type(self):
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
         """
-        Reset the SFP and read the EEPROM of adaptor to identify
-        the type of the QSA adapter.
+        return self.index
+
+    @staticmethod
+    def is_replaceable():
         """
-        type = 'N/A'
-        try:
-            if self.sfp_type == 'QSFP' or self.sfp_type == 'QSFP_DD':
-                # Port offset starts with 0x4000
-                if self.index in range(PORT_START,PORT_6):
-                    port_offset = RESET_BASE_OFFSET + ((self.index-INDEX_1) * HEX_10)
-                elif self.index in range(PORT_6,PORT_54):
-                    port_offset = RESET_BASE_OFFSET + ((self.index-INDEX_2) * HEX_20)
-                elif self.index in range(PORT_54,PORT_END+1):
-                    port_offset = RESET_BASE_OFFSET + ((self.index+INDEX_3) * HEX_10)
-                else:
-                    sys.stderr.write("Port index {} out of range (1-{})\n".format(self.index,PORT_END))
-
-                status = self.pci_get_value(self.BASE_RES_PATH, port_offset)
-                reg_value = int(status)
-
-                # Mask off 4th bit for reset
-                mask = 1 << 4
-
-                # ResetL is active low
-                reg_value = reg_value & ~mask
-
-                # Convert our register value back to a hex string and write back
-                status = self.pci_set_value(self.BASE_RES_PATH, reg_value,
-                port_offset)
-
-                # Sleep 1 millisecond to allow it to settle
-                time.sleep(1/1000)
-
-                eeprom_raw = self._read_eeprom_bytes(self.sfp_eeprom_path,QSFP_QSA28_OUI_OFFSET,QSFP_QSA28_OUI_WIDTH)
-                if eeprom_raw is not None:
-                    QSFP_QSA28_OUI_VAL = ['00', '02', 'c9']
-                    if(eeprom_raw == QSFP_QSA28_OUI_VAL):
-                        type = 'QSA28'
-                    else:
-                        type = 'QSA'
-                reg_value = reg_value | mask
-
-                # Convert our register value back to a hex string and write back
-                status = self.pci_set_value(self.BASE_RES_PATH, reg_value, port_offset)
-
-                # Sleep 1 millisecond to allow it to settle
-                time.sleep(1/1000)
-        except ValueError as error:
-            syslog.syslog(syslog.LOG_ERR, "Error: Get QSA adapter type failed: %s" % str(error))
-            return type
-        return type
-
-    def hard_tx_disable(self, tx_disable):
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
         """
-        Disable SFP TX for all channels by pulling up hard TX_DISABLE pin
+        return True
 
-        Args:
-        tx_disable : A Boolean, True to enable tx_disable mode, False to disable
-        tx_disable mode.
+    def get_error_description(self):
+        """
+        Retrives the error descriptions of the SFP module
 
         Returns:
-        A boolean, True if tx_disable is set successfully, False if not
+            String that represents the current error descriptions of vendor specific errors
+            In case there are multiple errors, they should be joined by '|',
+            like: "Bad EEPROM|Unsupported cable"
         """
-        ret = False
-        if self.sfp_type == 'SFP':
+        if not self.get_presence():
+            return self.SFP_STATUS_UNPLUGGED
+        else:
+            if not os.path.isfile(self.eeprom_path):
+                return "EEPROM driver is not attached"
+
+            if self.sfp_type == 'SFP':
+                offset = SFP_INFO_OFFSET
+            elif self.sfp_type == 'QSFP':
+                offset = QSFP_INFO_OFFSET
+            elif self.sfp_type == 'QSFP_DD':
+                offset = QSFP_DD_PAGE0
+
             try:
-                if self.index in range(PORT_START,PORT_6):
-                    port_offset = RESET_BASE_OFFSET + ((self.index-INDEX_1) * HEX_10)
-                elif self.index in range(PORT_6,PORT_54):
-                    port_offset = RESET_BASE_OFFSET + ((self.index-INDEX_2) * HEX_20)
-                elif self.index in range(PORT_54,PORT_END+1):
-                    port_offset = RESET_BASE_OFFSET + ((self.index+INDEX_3) * HEX_10)
-                else:
-                    return False
+                with open(self.eeprom_path, mode="rb", buffering=0) as eeprom:
+                    eeprom.seek(offset)
+                    eeprom.read(1)
+            except OSError as e:
+                return "EEPROM read failed ({})".format(e.strerror)
 
-                status = self.pci_get_value(self.BASE_RES_PATH, port_offset)
-                reg_value = int(status)
-                mask = 1
-                reg_value = (reg_value | mask) if tx_disable else (reg_value & ~mask)
-                self.pci_set_value(self.BASE_RES_PATH, reg_value, port_offset)
-                syslog.syslog(syslog.LOG_INFO, "Port%d TX Disable :%d %x" % (self.index, tx_disable, port_offset))
-                ret = True
-            except ValueError:
-                ret = False
-        return ret
-
-    def set_max_port_power(self, max_port_power):
-        """
-        Sets the max port power limit
-        Args:
-            max_port_power : Power value in watts
-        Returns:
-            None
-        """
-        self.max_port_power = max_port_power
-
-    def set_port_warn_thresh_power(self, warn_thresh_power):
-        """
-        Sets port power warning threshold value
-        Args:
-            warn_thresh_power : Power value in watts
-        Returns:
-            None
-        """
-        self.warn_thresh_power = warn_thresh_power
-
-    def set_port_alarm_thresh_power(self, alarm_thresh_power):
-        """
-        Sets port power alarm threshold value
-        Args:
-            alarm_thresh_power : Power value in watts
-        Returns:
-            None
-        """
-        self.alarm_thresh_power = alarm_thresh_power
-
-    def get_port_warn_thresh_power(self):
-        """
-        Gets per port warning threshold value mentioned in the platform specific
-        policy file
-        Args:
-            None
-        Returns:
-            Power threshold value in watts
-        """
-        return self.warn_thresh_power
-
-    def get_port_alarm_thresh_power(self):
-        """
-        Gets per port alarm threshold value mentioned in the platform specific
-        policy file
-        Args:
-            None
-        Returns:
-            Power threshold value in watts
-        """
-        return self.alarm_thresh_power
-
-    def get_media_power_enable(self):
-        """
-        Gets the High Power optics status
-        Args:
-            None
-        Returns:
-            A boolean, True if high power optics is enabled, False if not
-        """
-        return self.media_power_enable
-
-    def set_media_power_enable(self, enable):
-        """
-        Enable/Disable High Power optics feature for a port
-        Args:
-            enablee : A boolean, True to enable or disable high power optics on
-                      a port
-        Returns:
-            None
-        """
-        self.media_power_enable = enable
+        return self.SFP_STATUS_OK

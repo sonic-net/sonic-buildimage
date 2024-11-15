@@ -5,5 +5,5 @@ fan.py and watchdog.py
 """
 from sonic_platform import *
 __all__ = ["platform", "chassis", "sfp", "eeprom", "component", "thermal", "psu", "fan", "fan_drawer", "watchdog",
-           "hwaccess", "ext_media_override"]
+           "hwaccess"]
 

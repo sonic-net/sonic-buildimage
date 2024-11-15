@@ -21,7 +21,6 @@ try:
     from sonic_platform.watchdog import Watchdog
     from sonic_platform.fan_drawer import FanDrawer
     from sonic_platform.hwaccess import pci_get_value, pci_set_value
-    from sonic_platform.ext_media_override import ext_media_override
 except ImportError as err:
     raise ImportError(str(err) + "- required module not found")
 
@@ -223,7 +222,6 @@ class Chassis(ChassisBase):
         self.LOCATOR_LED_ON = self.STATUS_LED_COLOR_BLUE_BLINK
         self.LOCATOR_LED_OFF = self.STATUS_LED_COLOR_OFF
         self.locator_led = 'none'
-        ext_media_override()
 
 # check for this event change for sfp / do we need to handle timeout/sleep
 
