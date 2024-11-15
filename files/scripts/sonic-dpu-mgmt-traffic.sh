@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #Script to control the DPU management traffic forwarding through the SmartSwitch
 
 command_name=$0
