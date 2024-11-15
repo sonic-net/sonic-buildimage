@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 #############################################################################
-# DELLEMC Z9432F
+# DELLEMC S5448
 #
 # Module contains an implementation of SONiC Platform Base API and
 # provides the platform information
