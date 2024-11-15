@@ -55,4 +55,4 @@ class LedControl(LedControlBase):
     
     def _initSystemLed(self):
         # Write sys led
-        status = self._write_sysfs_file(SYS_LED_PATH, "8")
+        status = self._write_sysfs_file(SYS_LED_PATH, "4")
