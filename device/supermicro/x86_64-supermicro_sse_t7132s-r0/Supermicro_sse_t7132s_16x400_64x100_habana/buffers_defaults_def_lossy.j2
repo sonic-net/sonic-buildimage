@@ -1,0 +1,45 @@
+{% set mgmt_port_name = ['Ethernet256','Ethernet257'] %}
+{% set port_names_list = [] %}
+{% for port in PORT %}
+    {% if port not in mgmt_port_name %}
+        {%- if port_names_list.append(port) %}{% endif %}
+    {% endif %}
+{% endfor %}
+{% set port_names = port_names_list | join(',') -%}
+
+{
+    "BUFFER_POOL": {
+        "lossy_pool": {
+            "size": "61458432",
+            "type": "egress",
+            "mode": "dynamic",
+            "xoff": "0"
+        }
+    },
+    "BUFFER_PROFILE": {
+        "ingress_lossy_profile": {
+            "pool":"lossy_pool",
+            "size":"0",
+            "static_th":"10243072"
+        },
+        "egress_lossy_profile": {
+            "pool":"lossy_pool",
+            "size":"1518",
+            "dynamic_th":"2"
+        }
+    },
+    "BUFFER_PG": {
+{% for port in port_names_list %}
+        "{{ port }}|0-7": {
+            "profile" : "ingress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
+    },
+    "BUFFER_QUEUE": {
+{% for port in port_names_list %}
+        "{{ port }}|0-7": {
+            "profile" : "egress_lossy_profile"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
+    }
+}

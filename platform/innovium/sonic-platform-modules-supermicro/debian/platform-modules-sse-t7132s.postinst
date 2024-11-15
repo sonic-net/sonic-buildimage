@@ -8,6 +8,9 @@ modprobe t7132s
 systemctl enable platform-modules-sse-t7132s.service
 systemctl start platform-modules-sse-t7132s.service
 systemctl enable sysled.service
+systemctl enable reset-to-factory-default.service
+systemctl start reset-to-factory-default.service
+systemctl enable sfp-max-temp-updater.service	# delay start
 
 
 #DEBHELPER#

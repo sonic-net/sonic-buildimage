@@ -1,0 +1,140 @@
+#!/usr/bin/bash
+
+# This script is used to reset the current host file system and docker containers
+# to the initial state of the firmware.
+
+LOGGER_OPT='-t reset-to-factory-default'
+
+# Command usage and help
+usage()
+{
+    cat << EOF
+ Usage:  reset-to-factory-default < only-bmc >
+        This command will reset settings to factory defaults.
+        After resetting to factory defaults, switch will be reloaded immediately.
+
+        Default          - Both switch and BMC reset to factory default.
+        only-bmc         - Only BMC reset factory default. Switch will keep all settings and files and no reboot.
+EOF
+}
+
+bmc_reset()
+{
+    # BMC reset factory default
+    echo "* BMC reset factory default and wait for nonresponding." | logger $LOGGER_OPT
+    ipmitool raw 0x30 0x42 2>&1 | logger $LOGGER_OPT
+    sleep 20
+    # BMC is expected to be non-responsive
+    OUTPUT=`ipmitool raw 0x30 0x68 0xf9 2>&1`
+    BMCST=$?
+    echo $OUTPUT | logger $LOGGER_OPT
+    if [ "$BMCST" != "1" ]; then
+      echo "* BMC reset factory default command fail." | logger $LOGGER_OPT
+    else
+      echo "* BMC reset factory default command OK. Wait for reboot done." | logger $LOGGER_OPT
+      # BMC is expected to output "07 00 00 00"
+      WAIT_TIME=0
+      while true; do
+        OUTPUT=`ipmitool raw 0x30 0x68 0xf9 2>&1`
+        echo $OUTPUT | logger $LOGGER_OPT
+        ST=`echo $OUTPUT | cut -d' ' -f1`
+        if [ "$ST" == "07" ]; then
+          echo "* BMC reset factory default and reboot OK." | logger $LOGGER_OPT
+          break
+        fi
+        sleep 5
+        WAIT_TIME=$(( NEXT_WAIT_TIME+5 ))
+        if [ $WAIT_TIME -ge 200 ]; then
+            echo "* BMC reset factory default reboot fail. Timeout." | logger $LOGGER_OPT
+            break
+        fi
+      done
+    fi
+}
+
+
+# if called by the monitor script then no ask confirm
+PARENT_COMMAND=$(ps -o args= $PPID)
+if [[ "$PARENT_COMMAND" != *"reset_button_monitor.py"* ]]; then
+  cat << EOF
+This command will reset settings to factory defaults.
+After resetting to factory defaults, switch will be reloaded immediately.
+Do you really want to execute this command and reload the switch? [y/n]
+EOF
+
+  read var_yn
+  if [ "$var_yn" != "y" ]; then
+    exit 1
+  fi
+  # for user mode only, to prevent double log when long press
+  LOGGER_OPT+=' -s'
+fi
+
+if [ "$EUID" -ne 0 ]
+  then echo "Root privileges are required for this operation"
+  exit 2
+fi
+
+CMD=$1
+FACTORY_TYPE=
+if [ "$CMD" = "only-bmc" ] || [ -z "$CMD" ]; then
+    FACTORY_TYPE=$CMD
+else
+    usage
+    exit 1
+fi
+
+# only-bmc
+if [ "$FACTORY_TYPE" == "only-bmc" ]; then
+    bmc_reset
+    exit
+fi
+
+# both switch and bmc
+echo "* Begin reset-to-factory-default." | logger $LOGGER_OPT
+
+# stop SONiC services to prevent docker restart
+echo "* Stop SONiC services to prevent docker restart" | logger $LOGGER_OPT
+monit unmonitor container_checker
+systemctl stop sonic.target --job-mode replace-irreversibly
+# keep syslog for debugging
+#grep -v @ /etc/sonic/generated_services.conf | grep -v rsyslog-config.service | xargs systemctl disable 2>&1 | logger $LOGGER_OPT
+#grep -v @ /etc/sonic/generated_services.conf | grep -v rsyslog-config.service | xargs systemctl stop 2>&1 | logger $LOGGER_OPT
+
+# rm docker containers
+echo "* remove docker containers" | logger $LOGGER_OPT
+docker ps -aq | xargs docker rm -f 2>&1 | logger $LOGGER_OPT
+
+# rm overlay upper dir, ex: /host/image-3.0.0.5/rw
+echo "* remove overlay dir" | logger $LOGGER_OPT
+UPPER=`mount | grep "root-overlay on /" | sed 's/.*upperdir=\/root\([^,]*\),.*/\1/'`
+echo "UPPER=${UPPER}" | logger $LOGGER_OPT
+rm -rf $UPPER 2>&1 | logger $LOGGER_OPT
+WORK=`mount | grep "root-overlay on /" | sed 's/.*workdir=\/root\([^)]*\)).*/\1/'`
+echo "WORK=${WORK}" | logger $LOGGER_OPT
+rm -rf $WORK 2>&1 | logger $LOGGER_OPT
+sync;sync
+echo 3 > /proc/sys/vm/drop_caches
+
+# rm ztp data
+echo "* remove ztp dir" | logger $LOGGER_OPT
+rm -rf /host/ztp 2>&1 | logger $LOGGER_OPT
+
+# rm other files in /host/
+
+# create "image-xxx/platform/firsttime"
+echo "* create a new first time file" | logger $LOGGER_OPT
+IMGPATH=`dirname $UPPER`
+touch "$IMGPATH/platform/firsttime" 2>&1 | logger $LOGGER_OPT
+sync;sync
+
+# BMC reset factory default
+bmc_reset
+
+echo "* done reset to factory default" | logger $LOGGER_OPT
+
+# force reboot if called by user
+if [ "$var_yn" == "y" ]; then
+  echo "* reboot now" | logger $LOGGER_OPT
+  shutdown -r now
+fi
