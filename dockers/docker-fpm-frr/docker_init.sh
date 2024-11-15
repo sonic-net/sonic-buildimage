@@ -15,6 +15,9 @@ CFGGEN_PARAMS=" \
 
 FRR_VARS=$(sonic-cfggen $CFGGEN_PARAMS)
 CONFIG_TYPE=$(echo $FRR_VARS | jq -r '.docker_routing_config_mode')
+CONFIG_DB_JSON=/etc/sonic/config_db.json
+TMP_ISIS_COPP_CONFIG_DB_JSON=/tmp/isis_copp_config_db.json
+ISIS_COPP_CONFIG_TEMPLATE=/usr/local/sonic/frrcfgd/isis_copp_trap_config.j2
 
 update_default_gw()
 {
@@ -41,6 +44,26 @@ update_default_gw()
    fi
 }
 
+# Create and load requested configuration profile
+load_config()
+{
+    if [ "$1" = "isis" ]; then
+        DEST_FILE=${TMP_ISIS_COPP_CONFIG_DB_JSON}
+        rm -f ${TMP_ISIS_COPP_CONFIG_DB_JSON}
+        sonic-cfggen -d -t ${ISIS_COPP_CONFIG_TEMPLATE} > ${DEST_FILE}
+    fi
+
+    if [ -e ${DEST_FILE} ]; then
+        sonic-cfggen -j ${DEST_FILE} -w
+        config reload ${CONFIG_DB_JSON} -y -f
+        rm -f ${DEST_FILE}
+        return 0
+    else
+        echo "Failed to generate and apply ${1} configuration profile."
+    fi
+    return 1
+}
+
 write_default_zebra_config()
 {
     FILE_NAME=${1}
@@ -56,6 +79,8 @@ if [[ ! -z "$NAMESPACE_ID" ]]; then
    update_default_gw 6
 fi
 
+load_config isis
+
 if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
     CFGGEN_PARAMS=" \
         -d \
@@ -69,9 +94,10 @@ if [ -z "$CONFIG_TYPE" ] || [ "$CONFIG_TYPE" == "separated" ]; then
         CFGGEN_PARAMS="$CFGGEN_PARAMS \
             -t /usr/local/sonic/frrcfgd/bfdd.conf.j2,/etc/frr/bfdd.conf \
             -t /usr/local/sonic/frrcfgd/ospfd.conf.j2,/etc/frr/ospfd.conf \
+            -t /usr/local/sonic/frrcfgd/isisd.conf.j2,/etc/frr/isisd.conf \
         "
     else
-        rm -f /etc/frr/bfdd.conf /etc/frr/ospfd.conf
+        rm -f /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/isisd.conf
     fi
     sonic-cfggen $CFGGEN_PARAMS
     echo "no service integrated-vtysh-config" > /etc/frr/vtysh.conf
@@ -94,7 +120,7 @@ elif [ "$CONFIG_TYPE" == "unified" ]; then
     sonic-cfggen $CFGGEN_PARAMS
     echo "service integrated-vtysh-config" > /etc/frr/vtysh.conf
     rm -f /etc/frr/bgpd.conf /etc/frr/zebra.conf /etc/frr/staticd.conf \
-          /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf
+          /etc/frr/bfdd.conf /etc/frr/ospfd.conf /etc/frr/pimd.conf /etc/frr/isisd.conf
 fi
 
 chown -R frr:frr /etc/frr/

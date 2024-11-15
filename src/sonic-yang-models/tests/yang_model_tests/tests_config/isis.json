@@ -1,0 +1,697 @@
+{
+    "ISIS_GLOBAL_TABLE": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "net": "49.0001.1040.4400.0249.00",
+                    "level_capability": "LEVEL_2",
+                    "dynamic_hostname": "true",
+                    "attach_send": "true",
+                    "attach_receive_ignore": "true",
+                    "set_overload_bit": "false",
+                    "lsp_mtu_size": "1500",
+                    "spf_init_delay": "15",
+                    "spf_short_delay": "15",
+                    "spf_long_delay": "5",
+                    "spf_hold_down": "15",
+                    "spf_time_to_learn": "5",
+                    "log_adjacency_changes": "true"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_GLOBAL_INSTANCE_MUST": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "instance":"2",
+                        "net": "49.0001.1040.4400.0249.00"
+                    }
+                ]
+            },
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "level_number": "2",
+                    "spf_minimum_interval": "5"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_GLOBAL_VRF_MUST": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                        "name": "Vrf_blue"
+                }]
+            }
+        },
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                    {
+                        "vrf_name": "Vrf_blue",
+                        "instance":"1",
+                        "net": "49.0001.1040.4400.0249.00"
+                    }
+                ]
+            },
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "level_number": "2",
+                    "spf_minimum_interval": "5"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_GLOBAL_NET_INCORRECT_PATTERN": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "instance": "1",
+                        "net": "1.1.1.1"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_GLOBAL_INCORRECT_VALUE_MTU_SIZE": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "instance": "1",
+                        "level_capability": "LEVEL_2",
+                        "lsp_mtu_size": "mtu"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_GLOBAL_INCORRECT_VALUE_HOSTNAME": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "instance": "1",
+                        "level_capability": "LEVEL_2",
+                        "dynamic_hostname": "string"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_GLOBAL_MISSING_KEY_VRF": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                    {
+                        "instance": "1",
+                        "net": "49.0001.1040.4400.0249.00"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_GLOBAL_MISSING_KEY_INSTANCE": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "net": "49.0001.1040.4400.0249.00"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_GLOBAL_SPF_MUST": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "instance":"1",
+                        "net": "49.0001.1040.4400.0249.00",
+                        "level_capability": "LEVEL_2",
+                        "dynamic_hostname": "true",
+                        "attach_send": "true",
+                        "attach_receive_ignore": "true",
+                        "set_overload_bit": "false",
+                        "lsp_mtu_size": "1500",
+                        "spf_init_delay": "15",
+                        "spf_short_delay": "15"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_LEVELS_TABLE": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "level_number": "2",
+                    "lsp_refresh_interval": "600",
+                    "lsp_maximum_lifetime": "900",
+                    "lsp_generation_interval": "30",
+                    "spf_minimum_interval": "5"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_LEVELS_INSTANCE_MUST": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "level_number": "2",
+                    "spf_minimum_interval": "5"
+                }
+                ]
+            },
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "instance":"2",
+                        "net": "49.0001.1040.4400.0249.00"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_LEVELS_VRF_MUST": {
+        "sonic-vrf:sonic-vrf": {
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [{
+                        "name": "Vrf_blue"
+                }]
+            }
+        },
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "Vrf_blue",
+                    "instance":"1",
+                    "level_number": "2",
+                    "spf_minimum_interval": "5"
+                }
+                ]
+            },
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                    {
+                        "vrf_name": "default",
+                        "instance":"1",
+                        "net": "49.0001.1040.4400.0249.00"
+                    }
+                ]
+            }
+        }
+    },
+    "ISIS_LEVELS_INCORRECT_VALUE_LEVEL_NUMBER": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "level_number": "level-2",
+                    "lsp_refresh_interval": "string"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_LEVELS_INCORRECT_VALUE_LSP_REFRESH_INTERVAL": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "level_number": "2",
+                    "lsp_refresh_interval": "string"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_LEVELS_INCORRECT_VALUE_SPF_REFRESH_INTERVAL": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "level_number": "2",
+                    "spf_minimum_interval": "500"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_LEVELS_MISSING_KEY_LEVEL": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "lsp_refresh_interval": "600",
+                    "spf_minimum_interval": "5"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_LEVELS_INCORRECT_MUST_MAX_REFRESH": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "level_number": "2",
+                    "lsp_refresh_interval": "600",
+                    "lsp_maximum_lifetime": "700",
+                    "lsp_generation_interval": "30",
+                    "spf_minimum_interval": "5"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_LEVELS_INCORRECT_MUST_GEN_REFRESH": {
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "level_number": "2",
+                    "lsp_refresh_interval": "50",
+                    "lsp_maximum_lifetime": "900",
+                    "lsp_generation_interval": "100",
+                    "spf_minimum_interval": "5"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_INTERFACE_TABLE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet2",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet2",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },             
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "net": "49.0001.1040.4400.0249.00"
+                }
+                ]
+            },
+            "sonic-isis:ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                {
+                    "instance":"1",
+                    "ifname": "Ethernet2",
+                    "ipv4_routing_instance": "1",
+                    "ipv6_routing_instance": "1",
+                    "passive": "false",
+                    "hello_padding": "true",
+                    "network_type": "POINT_TO_POINT",
+                    "authentication_type": "TEXT",
+                    "authentication_key": "password",
+                    "enable_bfd":  "true",
+                    "bfd_profile": "PROFILE",
+                    "metric": "5000",
+                    "csnp_interval": "15",
+                    "psnp_interval": "2",
+                    "hello_interval": "5",
+                    "hello_multiplier": "10"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_INTERFACE_INCORRECT_VALUE_PASSIVE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet2",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet2",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "net": "49.0001.1040.4400.0249.00"
+                }
+                ]
+            },
+            "sonic-isis:ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                {
+                    "instance":"1",
+                    "ifname": "Ethernet2",
+                    "ipv4_routing_instance": "1",
+                    "ipv6_routing_instance": "1",
+                    "passive": "1"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_INTERFACE_INCORRECT_VALUE_NETWORK_TYPE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth2",
+                        "description": "Ethernet2",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet2",
+                        "speed": 25000
+                    }
+                ]
+            }
+        }, 
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "net": "49.0001.1040.4400.0249.00"
+                }
+                ]
+            },
+            "sonic-isis:ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                {
+                    "instance":"1",
+                    "ifname": "Ethernet2",
+                    "ipv4_routing_instance": "1",
+                    "ipv6_routing_instance": "1",
+                    "network_type": "NETWORK"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_INTERFACE_INCORRECT_VALUE_AUTHENTICATION_TYPE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth2",
+                        "description": "Ethernet2",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet2",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "net": "49.0001.1040.4400.0249.00"
+                }
+                ]
+            },
+            "sonic-isis:ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                {
+                    "instance":"1",
+                    "ifname": "Ethernet2",
+                    "ipv4_routing_instance": "1",
+                    "ipv6_routing_instance": "1",
+                    "authentication_type": "sha1"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_INTERFACE_INVALID_MUST_AUTHENTICATION_TYPE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth2",
+                        "description": "Ethernet2",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet2",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_GLOBAL": {
+                "ISIS_GLOBAL_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "net": "49.0001.1040.4400.0249.00"
+                }
+                ]
+            },
+            "sonic-isis:ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                {
+                    "instance":"1",
+                    "ifname": "Ethernet2",
+                    "ipv4_routing_instance": "1",
+                    "ipv6_routing_instance": "1",
+                    "authentication_type": "TEXT"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_INTERFACE_INCORRECT_VALUE_METRIC": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth2",
+                        "description": "Ethernet2",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet2",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "level_number": "2",
+                    "spf_minimum_interval": "5"
+                }
+                ]
+            },
+            "sonic-isis:ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                {
+                    "instance":"1",
+                    "ifname": "Ethernet2",
+                    "ipv6_routing_instance": "1",
+                    "metric": "str"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_INTERFACE_INCORRECT_VALUE_HELLO_INTERVAL": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth2",
+                        "description": "Ethernet2",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet2",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "level_number": "2",
+                    "spf_minimum_interval": "5"
+                }
+                ]
+            },
+            "sonic-isis:ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                {
+                    "instance":"1",
+                    "ifname": "Ethernet2",
+                    "ipv4_routing_instance": "1",
+                    "hello_interval": "800"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_INTERFACE_MISSING_KEY": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth2",
+                        "description": "Ethernet2",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet2",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_LEVELS": {
+                "ISIS_LEVELS_LIST": [
+                {
+                    "vrf_name": "default",
+                    "instance":"1",
+                    "level_number": "2",
+                    "spf_minimum_interval": "5"
+                }
+                ]
+            },
+            "sonic-isis:ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                {
+                    "instance":"1",
+                    "ipv4_routing_instance": "1",
+                    "ipv6_routing_instance": "1",
+                    "passive": "false",
+                    "hello_padding": "true",
+                    "network_type": "POINT_TO_POINT",
+                    "enable_bfd":  "true",
+                    "bfd_profile": "PROFILE",
+                    "metric": "5000",
+                    "csnp_interval": "15",
+                    "psnp_interval": "2",
+                    "hello_interval": "5",
+                    "hello_multiplier": "10"
+                }
+                ]
+            }
+        }
+    },
+    "ISIS_INTERFACE_INSTANCE_MUST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth2",
+                        "description": "Ethernet2",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet2",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-isis:sonic-isis": {
+            "sonic-isis:ISIS_INTERFACE": {
+                "ISIS_INTERFACE_LIST": [
+                {
+                    "instance":"1",
+                    "ifname": "Ethernet2",
+                    "ipv4_routing_instance": "1",
+                    "ipv6_routing_instance": "1",
+                    "passive": "false",
+                    "hello_padding": "true",
+                    "network_type": "POINT_TO_POINT",
+                    "enable_bfd":  "true",
+                    "bfd_profile": "PROFILE",
+                    "metric": "5000",
+                    "csnp_interval": "15",
+                    "psnp_interval": "2",
+                    "hello_interval": "5",
+                    "hello_multiplier": "10"
+                }
+                ]
+            }
+        }
+    }
+}

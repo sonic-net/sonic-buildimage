@@ -75,7 +75,7 @@ def extract_cmd_daemons(cmd_str):
 class BgpdClientMgr(threading.Thread):
     VTYSH_MARK = 'vtysh '
     PROXY_SERVER_ADDR = '/etc/frr/bgpd_client_sock'
-    ALL_DAEMONS = ['bgpd', 'zebra', 'staticd', 'bfdd', 'ospfd', 'pimd']
+    ALL_DAEMONS = ['bgpd', 'zebra', 'staticd', 'bfdd', 'ospfd', 'pimd', 'isisd']
     TABLE_DAEMON = {
             'DEVICE_METADATA': ['bgpd'],
             'BGP_GLOBALS': ['bgpd'],
@@ -118,6 +118,9 @@ class BgpdClientMgr(threading.Thread):
             'PIM_INTERFACE': ['pimd'],
             'IGMP_INTERFACE': ['pimd'],
             'IGMP_INTERFACE_QUERY': ['pimd'],
+            'ISIS_GLOBAL': ['isisd'],
+            'ISIS_LEVELS': ['isisd'],
+            'ISIS_INTERFACE': ['isisd'],
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
                         (r'show ip mroute($|\s+\S+)', ['pimd']),
@@ -1441,6 +1444,70 @@ def hdl_static_route(daemon, cmd_str, op, st_idx, args, data):
     daemon.upd_nh_set = ip_nh_set
     return cmd_list
 
+def handle_isis_if_nwtype(daemon, cmd_str, op, st_idx, args, data):
+    cmd_list = []
+
+    no_op = ''
+    if op == CachedDataWithOp.OP_DELETE or args[0] == 'BROADCAST':
+        no_op = 'no '
+
+    nwtype = ''
+    if args[0] == 'POINT_TO_POINT':
+        nwtype = 'point-to-point'
+    else :
+        syslog.syslog(syslog.LOG_ERR, 'handle_isis_if_nwtype invalid nw type args {}'.format(args))
+
+    syslog.syslog(syslog.LOG_INFO, 'handle_isis_if_nwtype cmd_str {} op {} st_idx {} args {} data {}'.format(
+                                    cmd_str, op, st_idx, args, data))
+
+    cmd_list.append(cmd_str.format(CommandArgument(daemon, True, no_op),
+                                   CommandArgument(daemon, True, nwtype)))
+    return cmd_list
+
+def handle_isis_if_auth(daemon, cmd_str, op, st_idx, args, data):
+    cmd_list = []
+    no_op = 'no ' if op == CachedDataWithOp.OP_DELETE else ''
+
+    authtype = ''
+    if args[0] == 'TEXT':
+        authtype = 'clear'
+    elif args[0] == 'MD5':
+        authtype = 'md5'
+    else :
+        syslog.syslog(syslog.LOG_ERR, 'handle_isis_if_auth invalid nw type args {}'.format(args))
+    
+    authkey = args[1]
+
+    syslog.syslog(syslog.LOG_INFO, 'handle_isis_if_auth cmd_str {} op {} st_idx {} args {} data {}'.format(
+                                    cmd_str, op, st_idx, args, data))
+
+    cmd_list.append(cmd_str.format(CommandArgument(daemon, True, no_op),
+                                   CommandArgument(daemon, True, authtype),
+                                   CommandArgument(daemon, True, authkey)))
+    return cmd_list
+
+def handle_isis_level_capability(daemon, cmd_str, op, st_idx, args, data):
+    cmd_list = []
+    no_op = 'no ' if op == CachedDataWithOp.OP_DELETE else ''
+
+    level = ''
+    if args[0] == 'LEVEL_1':
+        level = 'level-1'
+    elif args[0] == 'LEVEL_2':
+        level = 'level-2'
+    elif args[0] == 'LEVEL_1_2':
+        level = 'level-1-2'
+    else :
+        syslog.syslog(syslog.LOG_ERR, 'handle_isis_level_capability invalid level type args {}'.format(args))
+
+    syslog.syslog(syslog.LOG_INFO, 'handle_isis_level_capability cmd_str {} op {} st_idx {} args {} data {}'.format(
+                                    cmd_str, op, st_idx, args, data))
+
+    cmd_list.append(cmd_str.format(CommandArgument(daemon, True, no_op),
+                                   CommandArgument(daemon, True, level)))
+    return cmd_list
+
+
 class ExtConfigDBConnector(ConfigDBConnector):
     def __init__(self, ns_attrs = None):
         super(ExtConfigDBConnector, self).__init__()
@@ -2037,6 +2104,45 @@ class BGPConfigDaemon:
                              ('icmp_tos', 'tos {}', handle_ip_sla_common),
                            ]
 
+    isis_global_key_map = [
+                            ('net',                         '{no:no-prefix}net {}'),
+                            ('level_capability',            '{}is-type {}',  handle_isis_level_capability),
+                            ('dynamic_hostname',            '{no:no-prefix}hostname dynamic', ['true', 'false', True]),
+                            ('attach_send',                 '{no:no-prefix}attached-bit send', ['true', 'false', True]),
+                            ('attach_receive_ignore',       '{no:no-prefix}attached-bit receive ignore', ['true', 'false', False]),
+                            ('set_overload_bit',            '{no:no-prefix}set-overload-bit', ['true', 'false']),
+                            ('lsp_mtu_size',                '{no:no-prefix}lsp-mtu {}'),
+                            (['spf_init_delay',
+                              '+spf_short_delay',
+                              '+spf_long_delay',
+                              '+spf_hold_down',
+                              '+spf_time_to_learn'],        '{no:no-prefix}spf-delay-ietf init-delay {} short-delay {} long-delay {} holddown {} time-to-learn {}'),
+                            ('log_adjacency_changes',       '{no:no-prefix}log-adjacency-changes', ['true', 'false', False])
+                          ]
+
+    isis_levels_key_map = [
+                            ('lsp_maximum_lifetime',        '{no:no-prefix}max-lsp-lifetime {} {}'),
+                            ('lsp_refresh_interval',        '{no:no-prefix}lsp-refresh-interval {} {}'),
+                            ('lsp_generation_interval',     '{no:no-prefix}lsp-gen-interval {} {}'),
+                            ('spf_minimum_interval',        '{no:no-prefix}spf-interval {} {}')
+                         ]
+
+    isis_interface_key_map = [
+                            ('ipv4_routing_instance',       '{no:no-prefix}ip router isis {}'),
+                            ('ipv6_routing_instance',       '{no:no-prefix}ipv6 router isis {}'),
+                            ('passive',                     '{no:no-prefix}isis passive',['true', 'false', False]),
+                            ('hello_padding',               '{no:no-prefix}isis hello padding', ['true', 'false', True]),
+                            ('network_type',                '{}isis network {}', handle_isis_if_nwtype),
+                            (['authentication_type',
+                              '+authentication_key'],       '{}isis password {} {}', handle_isis_if_auth),
+                            ('enable_bfd',                  '{no:no-prefix}isis bfd',['true', 'false', False]),
+                            ('bfd_profile',                 '{no:no-prefix}isis bfd profile {}'),
+                            ('metric',                      '{no:no-prefix}isis metric {}'),
+                            ('csnp_interval',               '{no:no-prefix}isis csnp-interval {}'),
+                            ('psnp_interval',               '{no:no-prefix}isis psnp-interval {}'),
+                            ('hello_interval',              '{no:no-prefix}isis hello-interval {}'),
+                            ('hello_multiplier',            '{no:no-prefix}isis hello-multiplier {}')
+                             ]
 
     tbl_to_key_map = {'BGP_GLOBALS':                    global_key_map,
                       'BGP_GLOBALS_AF':                 global_af_key_map,
@@ -2065,7 +2171,10 @@ class BGPConfigDaemon:
                       'PIM_GLOBALS':                    pim_global_key_map,
                       'PIM_INTERFACE':                  pim_interface_key_map,
                       'IGMP_INTERFACE':                 igmp_mcast_grp_key_map,
-                      'IGMP_INTERFACE_QUERY':           igmp_interface_config_key_map
+                      'IGMP_INTERFACE_QUERY':           igmp_interface_config_key_map,
+                      'ISIS_GLOBAL':                    isis_global_key_map,
+                      'ISIS_LEVELS':                    isis_levels_key_map,
+                      'ISIS_INTERFACE':                 isis_interface_key_map
     }
 
     vrf_tables = {'BGP_GLOBALS', 'BGP_GLOBALS_AF',
@@ -2262,7 +2371,10 @@ class BGPConfigDaemon:
             ('PIM_GLOBALS', self.bgp_table_handler_common),
             ('PIM_INTERFACE', self.bgp_table_handler_common),
             ('IGMP_INTERFACE', self.bgp_table_handler_common),
-            ('IGMP_INTERFACE_QUERY', self.bgp_table_handler_common)
+            ('IGMP_INTERFACE_QUERY', self.bgp_table_handler_common),
+            ('ISIS_GLOBAL', self.bgp_table_handler_common),
+            ('ISIS_LEVELS', self.bgp_table_handler_common),
+            ('ISIS_INTERFACE', self.bgp_table_handler_common)
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
@@ -3698,22 +3810,195 @@ class BGPConfigDaemon:
                 if not key_map.run_command(self, table, data, cmd_prefix):
                     syslog.syslog(syslog.LOG_ERR, 'failed running ip igmp interface config command')
                     continue
+            
+            elif table == 'ISIS_GLOBAL':
+                vrf = prefix
+                instance = key
 
+                if not del_table:
+                    syslog.syslog(syslog.LOG_INFO, 'Create router isis {} vrf {}'.format(instance, vrf))
+                
+                    cmd_prefix = ['configure terminal',
+                                  'router isis {} vrf {}'.format(instance, vrf)]
+
+                    if not key_map.run_command(self, table, data, cmd_prefix):
+                        syslog.syslog(syslog.LOG_ERR, 'failed running isis config command')
+                        continue
+                else:
+                    syslog.syslog(syslog.LOG_INFO, 'Delete ISIS_GLOBAL {} vrf {} data {}'.format(instance, vrf, data))
+
+                    cmd_data = {}
+                    cache_tbl_key = 'ISIS_GLOBAL&&{}|{}'.format(vrf, instance)
+                    cache_tbl_l1 = 'ISIS_LEVELS&&{}|{}|{}'.format(vrf, instance, '1')
+                    cache_tbl_l2 = 'ISIS_LEVELS&&{}|{}|{}'.format(vrf, instance, '2')
+
+                    del_isis_instance = True
+                    if (cache_tbl_l1 in self.table_data_cache.keys() or cache_tbl_l2 in self.table_data_cache.keys()):
+                        del_isis_instance = False
+
+                    if cache_tbl_key in self.table_data_cache.keys():
+                        cache_tbl_data = self.table_data_cache[cache_tbl_key]
+
+                        for key, data in cache_tbl_data.items() :
+                            cached_op_data = CachedDataWithOp(data, CachedDataWithOp.OP_DELETE)
+                            cmd_data.update({key : cached_op_data})
+
+                        if len(cmd_data) :
+                            cmd_prefix = ['configure terminal',
+                                          'router isis {} vrf {}'.format(instance, vrf)]
+
+                            syslog.syslog(syslog.LOG_INFO, 'Row delete cmd data {}'.format(cmd_data))
+                            if not key_map.run_command(self, table, cmd_data, cmd_prefix):
+                                syslog.syslog(syslog.LOG_ERR, 'failed running isis {} vrf {} global config command'.format(instance, vrf))
+                                continue
+
+                        # force delete all ISIS_GLOBAL instance attributes in cache
+                        syslog.syslog(syslog.LOG_INFO, 'Row delete key {}'.format(cache_tbl_key))
+                        syslog.syslog(syslog.LOG_INFO, 'Row delete cached data {}'.format(cache_tbl_data))
+
+                        del(self.table_data_cache[cache_tbl_key])
+                        self.upd_data_list = [(table, '{}|{}'.format(vrf, instance), {})]
+
+                    if del_isis_instance:
+                        command = "vtysh -c 'configure terminal' -c 'no router isis {} vrf {}'".format(instance, vrf)
+                        if not self.__run_command(table, command):
+                            syslog.syslog(syslog.LOG_ERR, 'failed to delete isis local_asn {} vrf ()'.format(instance, vrf))
+
+            elif table == 'ISIS_LEVELS':
+                vrf = prefix
+
+                keyvals = key.split('|')
+                instance = keyvals[0]
+                level_number = keyvals[1]
+                level = 'level-{}'.format(level_number)
+
+                if not del_table:
+                    syslog.syslog(syslog.LOG_INFO, 'Create router isis {} vrf {}, Level: {}, Command: {}'.format(instance, vrf, level, data))
+
+                    cmd_prefix = ['configure terminal',
+                                  'router isis {} vrf {}'.format(instance, vrf)]
+
+                    if not key_map.run_command(self, table, data, cmd_prefix, level):
+                        syslog.syslog(syslog.LOG_ERR, 'failed running isis {} vrf {} level config command for Level: {}, Command: {}'.format(instance, vrf, level, data))
+                        continue
+
+                else:
+                    syslog.syslog(syslog.LOG_INFO, 'Delete ISIS_LEVELS {} vrf {} {} data {}'.format(instance, vrf, level, data))
+                    
+                    cmd_data = {}
+                    cache_tbl_key = 'ISIS_LEVELS&&{}|{}|{}'.format(vrf, instance, level_number)
+                    cache_tbl_global = 'ISIS_GLOBAL&&{}|{}'.format(vrf, instance)
+
+                    del_isis_instance = True
+                    if  cache_tbl_global in self.table_data_cache.keys():
+                        del_isis_instance = False
+
+                    if cache_tbl_key in self.table_data_cache.keys():
+                        cache_tbl_data = self.table_data_cache[cache_tbl_key]
+
+                        for k, data in cache_tbl_data.items() :
+                            cached_op_data = CachedDataWithOp(data, CachedDataWithOp.OP_DELETE)
+                            cmd_data.update({k : cached_op_data})
+
+                        if len(cmd_data) :
+                            cmd_prefix = ['configure terminal',
+                                          'router isis {} vrf {}'.format(instance, vrf)]
+
+                            syslog.syslog(syslog.LOG_INFO, 'Row delete cmd data {} '.format(cmd_data))            
+                            if not key_map.run_command(self, table, cmd_data, cmd_prefix, level):
+                                syslog.syslog(syslog.LOG_ERR, 'failed running isis {} vrf {} level config command for Level: {}, Command: {}'.format(instance, vrf, level, cmd_data))
+                                continue   
+                        
+                        # force delete all ISIS_LEVELS level attributes in cache
+                        syslog.syslog(syslog.LOG_INFO, 'Row delete key {}'.format(cache_tbl_key))
+                        syslog.syslog(syslog.LOG_INFO, 'Row delete cached data {}'.format(cache_tbl_data))
+  
+                        del(self.table_data_cache[cache_tbl_key])
+                        self.upd_data_list = [(table, '{}|{}|{}'.format(vrf, instance, level_number), {})]
+
+                    if del_isis_instance:
+                        command = "vtysh -c 'configure terminal' -c 'no router isis {} vrf {}'".format(instance, vrf)
+                        if not self.__run_command(table, command):
+                            syslog.syslog(syslog.LOG_ERR, 'failed to delete isis local_asn {} vrf {}'.format(instance, vrf))
+
+            elif table == 'ISIS_INTERFACE':
+                instance = prefix
+                ifname = key
+
+                # In FRR, if ipv4 or ipv6 is not enabled, all isis related interface configs are removed
+                if 'ipv4_routing_instance' in data.keys() and 'ipv6_routing_instance' in data.keys():
+                    if data['ipv4_routing_instance'].op == CachedDataWithOp.OP_DELETE and \
+                       data['ipv6_routing_instance'].op == CachedDataWithOp.OP_DELETE:
+                       del_table = True
+                elif 'ipv4_routing_instance' in data.keys() and \
+                     ('ipv6_routing_instance' not in data.keys() ):
+                    if data['ipv4_routing_instance'].op == CachedDataWithOp.OP_DELETE:
+                       del_table = True
+                elif 'ipv6_routing_instance' in data.keys() and \
+                     ('ipv4_routing_instance' not in data.keys() ):
+                    if data['ipv6_routing_instance'].op == CachedDataWithOp.OP_DELETE:
+                       del_table = True
+
+                if not del_table:
+                    syslog.syslog(syslog.LOG_INFO, 'Create router isis {}, Interface: {}, Command: {}'.format(instance, ifname, data))
+
+                    cmd_prefix = ['configure terminal',
+                                  'interface {}'.format(ifname)]
+
+                    if not key_map.run_command(self, table, data, cmd_prefix):
+                        syslog.syslog(syslog.LOG_ERR, 'failed running isis {} interface config command for interface: {}, Command: {}'.format(instance, ifname, data))
+                        continue
+                else:
+                    syslog.syslog(syslog.LOG_INFO, 'Delete ISIS_INTERFACE {} {} data {}'.format(instance, ifname, data))
+                    
+                    cmd_data = {}
+                    cache_tbl_key = 'ISIS_INTERFACE&&{}|{}'.format(instance, ifname)
+
+                    if cache_tbl_key in self.table_data_cache.keys():
+                        cache_tbl_data = self.table_data_cache[cache_tbl_key]
+
+                        for key, data in cache_tbl_data.items() :
+                            cached_op_data = CachedDataWithOp(data, CachedDataWithOp.OP_DELETE)
+                            cmd_data.update({key : cached_op_data})
+                        
+                        if len(cmd_data) :
+                            cmd_prefix = ['configure terminal',
+                                          'interface {}'.format(ifname)]
+
+                            syslog.syslog(syslog.LOG_INFO, 'Row delete cmd data {}'.format(cmd_data))
+                            if not key_map.run_command(self, table, cmd_data, cmd_prefix):
+                                syslog.syslog(syslog.LOG_ERR, 'failed running isis {} interface config command for Interface: {}, Command: {}'.format(instance, ifname, cmd_data))
+                                continue
+
+                        # force delete all ISIS_INTERFACE level attributes in cache
+                        syslog.syslog(syslog.LOG_INFO, 'Row delete key {}'.format(cache_tbl_key))
+                        syslog.syslog(syslog.LOG_INFO, 'Row delete cached data {}'.format(cache_tbl_data))
+
+                        del(self.table_data_cache[cache_tbl_key])
+                        self.upd_data_list = [(table, '{}|{}'.format(instance, ifname), {})]  
 
     def __add_op_to_data(self, table_key, data, comb_attr_list):
         cached_data = self.table_data_cache.setdefault(table_key, {})
         for key in cached_data:
             if key in data:
+                # if the value is null, delete
+                if data[key] == 'None':
+                    data[key] = CachedDataWithOp(cached_data[key], CachedDataWithOp.OP_DELETE)
                 # both in cache and data, update/none
-                data[key] = (CachedDataWithOp(data[key], CachedDataWithOp.OP_NONE) if data[key] == cached_data[key] else
-                             CachedDataWithOp(data[key], CachedDataWithOp.OP_UPDATE))
+                else:
+                    data[key] = (CachedDataWithOp(data[key], CachedDataWithOp.OP_NONE) if data[key] == cached_data[key] else
+                                CachedDataWithOp(data[key], CachedDataWithOp.OP_UPDATE))
             else:
                 # in cache but not in data, delete
                 data[key] = CachedDataWithOp(cached_data[key], CachedDataWithOp.OP_DELETE)
         for key in data:
             if not isinstance(data[key], CachedDataWithOp):
+                # if the value is null, none
+                if data[key] == 'None':
+                    data[key] = CachedDataWithOp(data[key], CachedDataWithOp.OP_NONE)
                 # in data but not in cache, add
-                data[key] = CachedDataWithOp(data[key], CachedDataWithOp.OP_ADD)
+                else:
+                     data[key] = CachedDataWithOp(data[key], CachedDataWithOp.OP_ADD)
         # combo attributes handling
         op_list = [CachedDataWithOp.OP_DELETE, CachedDataWithOp.OP_ADD, CachedDataWithOp.OP_UPDATE, CachedDataWithOp.OP_NONE]
         for key_set in comb_attr_list:
@@ -3773,9 +4058,9 @@ class BGPConfigDaemon:
         table_key = ExtConfigDBConnector.get_table_key(table, key)
         self.__add_op_to_data(table_key, data, comb_attr_list)
         self.bgp_message.put((key, del_table, table, data))
-        upd_data_list = []
-        self.__update_bgp(upd_data_list)
-        for table, key, data in upd_data_list:
+        self.upd_data_list = []
+        self.__update_bgp(self.upd_data_list)
+        for table, key, data in self.upd_data_list:
             table_key = ExtConfigDBConnector.get_table_key(table, key)
             self.__update_cache_data(table_key, data)
 

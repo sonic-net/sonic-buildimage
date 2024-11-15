@@ -3,6 +3,7 @@ program:staticd
 program:bgpd
 program:fpmsyncd
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+program:isisd
 program:bfdd
 program:ospfd
 program:pimd

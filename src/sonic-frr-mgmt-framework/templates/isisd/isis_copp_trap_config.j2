@@ -1,0 +1,12 @@
+{
+    "COPP_TRAP": {
+        "bgp": {
+{% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
+
+		    "trap_ids": "bgp,bgpv6,isis"
+{% else %}
+		    "trap_ids": "bgp,bgpv6"
+{% endif %}
+        }
+    }
+}

@@ -2673,6 +2673,49 @@
                 "nexthop-vrf": "default"
             }
         },
+        "ISIS_GLOBAL": {
+            "default|100": {
+                "net": "49.0001.1040.4400.0249.00",
+                "level_capability": "LEVEL_2",
+                "dynamic_hostname": "true",
+                "attach_send": "true",
+                "attach_receive_ignore": "true",
+                "set_overload_bit": "false",
+                "lsp_mtu_size": "1500",
+                "spf_init_delay": "15",
+                "spf_short_delay": "15",
+                "spf_long_delay": "15",
+                "spf_hold_down": "15",
+                "spf_time_to_learn": "15",
+                "log_adjacency_changes": "true"
+            }
+        },
+        "ISIS_LEVELS": {
+            "default|100|2": {
+                "lsp_refresh_interval": "600",
+                "lsp_maximum_lifetime": "900",
+                "lsp_generation_interval": "30",
+                "spf_minimum_interval": "5"
+            }
+        },
+        "ISIS_INTERFACE": {
+            "100|Ethernet2": {
+                "ipv4_routing_instance": "100",
+                "ipv6_routing_instance": "100",
+                "passive": "false",
+                "hello_padding": "true",
+                "network_type": "POINT_TO_POINT",
+                "authentication_type": "TEXT",
+                "authentication_key": "password",
+                "enable_bfd":  "true",
+                "bfd_profile": "PROFILE",
+                "metric": "5000",
+                "csnp_interval": "15",
+                "psnp_interval": "2",
+                "hello_interval": "5",
+                "hello_multiplier": "10"
+            }
+        },
         "KUBERNETES_MASTER": {
             "SERVER": {
                 "disable": "True",

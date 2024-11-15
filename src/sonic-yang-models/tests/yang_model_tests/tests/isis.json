@@ -1,0 +1,121 @@
+{
+    "ISIS_GLOBAL_TABLE": {
+        "desc": "ISIS_GLOBAL_TABLE correct config pattern."
+    },
+    "ISIS_GLOBAL_INSTANCE_MUST": {
+        "desc": "ISIS_GLOBAL and ISIS_LEVELS invalidated instance must statement",
+        "eStr": ["The value of ISIS_GLOBAL 'instance' must be the same as 'instance' in ISIS_LEVELS."]
+    },
+    "ISIS_GLOBAL_VRF_MUST": {
+        "desc": "ISIS_GLOBAL and ISIS_LEVELS invalidated vrf must statement",
+        "eStr": ["The value of ISIS_GLOBAL 'vrf_name' must be the same as 'vrf_name' in ISIS_LEVELS."]
+    },
+    "ISIS_GLOBAL_NET_INCORRECT_PATTERN": {
+        "desc": "ISIS_GLOBAL_NET_INCORRECT_PATTERN pattern failure.",
+        "eStrKey" : "Pattern",
+        "eStr" : ["1.1.1.1"]
+    },
+    "ISIS_GLOBAL_INCORRECT_VALUE_MTU_SIZE": {
+        "desc": "ISIS_GLOBAL incorrect value for lsp_mtu_size field",
+        "eStrKey" : "InvalidValue",
+        "eStr" : ["mtu"]
+    },
+    "ISIS_GLOBAL_INCORRECT_VALUE_HOSTNAME": {
+        "desc": "ISIS_GLOBAL incorrect value for dynamic_hostname field",
+        "eStrKey" : "InvalidValue",
+        "eStr" : ["string"]
+    },
+    "ISIS_GLOBAL_MISSING_KEY_VRF": {
+        "desc": "ISIS_GLOBAL missing mandatory key value vrf_name",
+        "eStrKey" : "Mandatory",
+        "eStr" : ["vrf_name"]
+    },
+    "ISIS_GLOBAL_MISSING_KEY_INSTANCE": {
+        "desc": "ISIS_GLOBAL missing mandatory key value instance",
+        "eStrKey" : "Mandatory",
+        "eStr" : ["instance"]
+    },
+     "ISIS_GLOBAL_SPF_MUST": {
+        "desc": "ISIS_GLOBAL invalidated SPF must statement",
+        "eStr": ["must only be specified if all other SPF parameters are specified"]
+    },
+    "ISIS_LEVELS_TABLE": {
+        "desc": "ISIS_LEVELS correct config pattern."
+    },
+    	"ISIS_LEVELS_INSTANCE_MUST": {
+        "desc": "ISIS_LEVELS and ISIS_GLOBAL invalidated instance must statement",
+        "eStr": ["The value of ISIS_LEVELS 'instance' must be the same as 'instance' in ISIS_GLOBAL."]
+    },
+    	"ISIS_LEVELS_VRF_MUST": {
+        "desc": "ISIS_LEVELS and ISIS_GLOBAL invalidated vrf must statement",
+        "eStr": ["The value of ISIS_LEVELS 'vrf_name' must be the same as 'vrf_name' in ISIS_GLOBAL."]
+    },
+    "ISIS_LEVELS_INCORRECT_VALUE_LEVEL_NUMBER": {
+        "desc": "ISIS_LEVELS incorrect value for level_number field",
+        "eStrKey" : "InvalidValue",
+        "eStr" : ["level-2"]
+    },
+    "ISIS_LEVELS_INCORRECT_VALUE_LSP_REFRESH_INTERVAL": {
+        "desc": "ISIS_LEVELS incorrect value for lsp_refresh_interval field",
+        "eStrKey" : "InvalidValue",
+        "eStr" : ["string"]
+    },
+    "ISIS_LEVELS_INCORRECT_VALUE_SPF_REFRESH_INTERVAL": {
+        "desc": "ISIS_LEVELS incorrect value for spf_minimum_interval field",
+        "eStrKey" : "Range",
+        "eStr" : ["500"]
+    },
+    "ISIS_LEVELS_MISSING_KEY_LEVEL": {
+        "desc": "ISIS_LEVELS missing mandatory key value",
+        "eStrKey" : "Mandatory",
+        "eStr" : ["level_number"]
+    },
+    "ISIS_LEVELS_INCORRECT_MUST_MAX_REFRESH": {
+        "desc": "ISIS_LEVELS must statement unsatisfied for lsp_refresh_interval",
+        "eStr" : ["lsp_maximum_lifetime must be at least 300 seconds greater than lsp_refresh_interval"]
+    },
+    "ISIS_LEVELS_INCORRECT_MUST_GEN_REFRESH": {
+        "desc": "ISIS_LEVELS must statement unsatisfied for lsp_generation_interval",
+        "eStr" : ["lsp_generation_interval must be greater than lsp_refresh_interval"]
+    },
+    "ISIS_INTERFACE_TABLE": {
+        "desc": "ISIS_INTERFACE correct config pattern."
+    },
+    "ISIS_INTERFACE_INCORRECT_VALUE_PASSIVE": {
+        "desc": "ISIS_INTEFACE incorrect value for passive field",
+        "eStrKey" : "InvalidValue",
+        "eStr" : ["passive"]
+    },
+    "ISIS_INTERFACE_INCORRECT_VALUE_NETWORK_TYPE": {
+        "desc": "ISIS_INTERFACE incorrect value for network_type field",
+        "eStrKey" : "InvalidValue",
+        "eStr" : ["network_type"]
+    },
+    "ISIS_INTERFACE_INCORRECT_VALUE_AUTHENTICATION_TYPE": {
+        "desc": "ISIS_INTERFACE incorrect value for authentication_type field",
+        "eStr" : ["Failed to resolve identityref"]
+    },
+    "ISIS_INTERFACE_INVALID_MUST_AUTHENTICATION_TYPE": {
+        "desc": "ISIS_INTERFACE must statement unsatisfied for authentication_type field",
+        "eStr" : ["If authentication_type is specified, then authentication_key must also be specified."]
+    },
+    "ISIS_INTERFACE_INCORRECT_VALUE_METRIC": {
+        "desc": "ISIS_INTERFACE incorrect value for metric field",
+        "eStrKey" : "InvalidValue",
+        "eStr" : ["metric"]
+    },
+    "ISIS_INTERFACE_INCORRECT_VALUE_HELLO_INTERVAL": {
+        "desc": "ISIS_INTERFACE incorrect value for hello_interval field",
+        "eStrKey" : "Range",
+        "eStr" : ["800"]
+    },
+    "ISIS_INTERFACE_MISSING_KEY": {
+        "desc": "ISIS_INTERFACE missing mandatory key value",
+        "eStrKey" : "Mandatory",
+        "eStr" : ["ifname"]
+    },
+    "ISIS_INTERFACE_INSTANCE_MUST": {
+        "desc": "ISIS_INTERFACE instance validation",
+        "eStr" : ["non-existing leaf"]
+    }
+}
