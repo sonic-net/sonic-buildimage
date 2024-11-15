@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #Script to control the DPU management traffic forwarding through the SmartSwitch
 
 command_name=$0
@@ -86,6 +86,22 @@ general_validation(){
     fi
 }
 
+port_use_validation(){
+	local port_l=("$@")
+	for port in "${port_l[@]}"; do
+		if (( port >= 0 && port <= 1023 )); then
+			echo "Provided port $port in range 0-1023, Please execute with a different port"
+			exit 1
+		fi
+		if netstat -tuln | awk '{print $4}' | grep -q ":$port\$"; then
+			echo "Provided port $port is in use by another process, Please execute with a different port"
+			exit 1
+		fi
+	done
+}
+
+
+
 
 inbound_validation(){
     #DPU Validation
@@ -124,6 +140,7 @@ inbound_validation(){
         usage
         exit 1
     fi
+    port_use_validation ${provided_ports[@]}
     for dpu in "${sel_dpu_names[@]}"; do
         midplane_int_name=$(redis-cli -n 4 hget "DPUS|$dpu" "midplane_interface")
         if [ -z "$midplane_int_name" ]; then
@@ -131,10 +148,6 @@ inbound_validation(){
             exit 1
         fi
         midplane_dict["$dpu"]="$midplane_int_name"
-    done
-
-    for key in "${!midplane_dict[@]}"; do
-        echo "\"$key\":\"${midplane_dict[$key]}\""
     done
 
     for dpu in "${!midplane_dict[@]}"; do
