@@ -112,7 +112,7 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         if not is_valid:
             return "N/A"
 
-        return results[2]
+        return results[2].decode('ascii')
 
     def serial_str(self):
         """
@@ -134,7 +134,7 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         if not is_valid:
             return "N/A"
 
-        return results[2]
+        return results[2].decode('ascii')
 
     def system_eeprom_info(self):
         """
@@ -143,5 +143,3 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         found in the system EEPROM.
         """
         return self.eeprom_tlv_dict
-
-

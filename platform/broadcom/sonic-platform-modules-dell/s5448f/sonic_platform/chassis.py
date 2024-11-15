@@ -171,9 +171,6 @@ class Chassis(ChassisBase):
         for psu in self._psu_list:
             if psu._fan_list[0].get_direction() == "intake":
                 self.psu_fan_direction_reverse = True
-        filepath = "/".join([PLATFORM_ROOT, PORT_POWER_THRESHOLD_JSON])
-        self.port_power_threshold = self.load_port_power_threshold_config(filepath, \
-                                                                     self.psu_fan_direction_reverse)
         for index in range(PORT_START, PORTS_IN_BLOCK):
             eeprom_path = ""
             if index%8 == 1:  # 8 buses per i2c mux
@@ -186,17 +183,6 @@ class Chassis(ChassisBase):
             else:
                  port_type = 'QSFP_DD'
             sfp_node = Sfp(index, port_type, eeprom_path)
-            if self.port_power_threshold is not None:
-                warn_threshold = float(self.port_power_threshold[str(index)]["max_power_warn"])
-                alarm_threshold = float(self.port_power_threshold[str(index)]["max_power_alarm"])
-
-                if self.high_power_media_thresh == 0 or \
-                    self.high_power_media_thresh > warn_threshold:
-                    self.high_power_media_thresh = warn_threshold
-
-                sfp_node.set_port_warn_thresh_power(warn_threshold)
-                sfp_node.set_port_alarm_thresh_power(alarm_threshold)
-                sfp_node.set_max_port_power(alarm_threshold)
             self._sfp_list.append(sfp_node)
 
         self._eeprom = Eeprom()
@@ -218,10 +204,6 @@ class Chassis(ChassisBase):
         watchdog_spec['i2c_addr'] = 0x31
         watchdog_spec['wd_reg'] = 0x07
         self._watchdog = Watchdog(watchdog_spec)
-
-        self.LOCATOR_LED_ON = self.STATUS_LED_COLOR_BLUE_BLINK
-        self.LOCATOR_LED_OFF = self.STATUS_LED_COLOR_OFF
-        self.locator_led = 'none'
 
 # check for this event change for sfp / do we need to handle timeout/sleep
 
@@ -337,6 +319,14 @@ class Chassis(ChassisBase):
         """
         return self._eeprom.modelstr()
 
+    def get_presence(self):
+        """
+        Retrieves the presence of the chassis
+        Returns:
+            bool: True if chassis is present, False if not
+        """
+        return True
+
     def get_model(self):
         """
         Retrieves the model number (or part number) of the chassis
@@ -352,6 +342,15 @@ class Chassis(ChassisBase):
             string: Serial number of chassis
         """
         return self._eeprom.serial_str()
+
+    def get_status(self):
+        """
+        Retrieves the operational status of the chassis
+        Returns:
+            bool: A boolean value, True if chassis is operating properly
+            False if not
+        """
+        return True
 
     def get_base_mac(self):
         """
@@ -369,6 +368,15 @@ class Chassis(ChassisBase):
             A string containing the hardware serial number for this chassis.
         """
         return self._eeprom.serial_number_str()
+
+    def get_revision(self):
+        """
+        Retrieves the hardware revision of the device
+
+        Returns:
+            string: Revision value of device
+        """
+        return self._eeprom.revision_str()
 
     def get_system_eeprom_info(self):
         """
