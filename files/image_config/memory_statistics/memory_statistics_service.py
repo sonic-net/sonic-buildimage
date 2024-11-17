@@ -1627,22 +1627,6 @@ class MemoryStatisticsService:
         Raises:
         - Exception: If an error occurs while accessing the ConfigDB.
         """
-        # Placeholder for ConfigDBConnector
-        # Replace with actual implementation
-        # class ConfigDBConnector:
-        #     def connect(self):
-        #         pass
-
-        #     def get_table(self, table_name):
-        #         # Dummy implementation
-        #         return {
-        #             'retention-period': '20',
-        #             'sampling-interval': '5' 
-        #         }
-
-        #     def disconnect(self):
-        #         pass
-
         config_db = ConfigDBConnector()
         config_db.connect()
 
