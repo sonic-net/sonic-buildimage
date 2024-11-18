@@ -10,6 +10,8 @@ After=interfaces-config.service
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/bin/rsyslog-config.sh
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=sonic.target
