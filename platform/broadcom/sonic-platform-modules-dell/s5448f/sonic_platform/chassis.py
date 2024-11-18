@@ -36,7 +36,6 @@ CPU_CONTROL_BIT_MASK = 0x100
 BASE_RES_PATH = "/sys/bus/pci/devices/0000:04:00.0/resource0"
 
 PLATFORM_ROOT = '/usr/share/sonic/platform'
-PORT_POWER_THRESHOLD_JSON = 'port_power_threshold.json'
 
 MEDIA_PART_NUM_LIST = set([ \
 "8T47V", "XTY28", "MHVPK", "GF76J", "J6FGD", "F1KMV", "9DN5J", "H4DHD", "6MCNV", "0WRX0", "X7F70",
