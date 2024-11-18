@@ -5,7 +5,6 @@ bcm_num_cos.0=9
 bcm_stat_flags=1
 bcm_stat_jumbo.0=9236
 cdma_timeout_usec.0=15000000
-disable_pcie_firmware_check.0=1
 dma_desc_timeout_usec.0=15000000
 fpem_mem_entries.0=0
 higig2_hdr_mode.0=1
