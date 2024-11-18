@@ -18,7 +18,7 @@ fi
 /usr/bin/TS TSC
 [[ $1 != "no-stats" ]] && portstat -p 5
 
-if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr [:upper:] [:lower:])" == *"dualtor"* ]]
+if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr '[:upper:]' '[:lower:]')" == *"dualtor"* ]]
 then
   echo
   show mux status
