@@ -107,6 +107,9 @@
 	path = src/sonic-gnmi
 	url = https://github.com/liuh-80/sonic-gnmi.git
 	branch =  dev/liuh/disable-crl-cert-access
+[submodule "src/sonic-bmp"]
+	path = src/sonic-bmp
+	url = https://github.com/sonic-net/sonic-bmp.git
 [submodule "src/sonic-genl-packet"]
 	path = src/sonic-genl-packet
 	url = https://github.com/sonic-net/sonic-genl-packet

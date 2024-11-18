@@ -90,6 +90,12 @@ if [[ x"${LOCALHOST_SUBTYPE}" == x"SmartSwitch" ]]; then
     TELEMETRY_ARGS+=" -zmq_port=8100"
 fi
 
+# Add VRF parameter when mgmt-vrf enabled
+MGMT_VRF_ENABLED=`sonic-db-cli CONFIG_DB hget  "MGMT_VRF_CONFIG|vrf_global" "mgmtVrfEnabled"`
+if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
+    TELEMETRY_ARGS+=" --vrf mgmt"
+fi
+
 # Server will handle threshold connections consecutively
 THRESHOLD_CONNECTIONS=$(echo $GNMI | jq -r '.threshold')
 if [[ $THRESHOLD_CONNECTIONS =~ ^[0-9]+$ ]]; then

@@ -94,6 +94,7 @@ function preStartAction()
             # Create an emtpy file and overwrite any RDB if already there
             echo -n > /tmp/dump.rdb
             docker cp /tmp/dump.rdb database$DEV:/var/lib/redis/
+            docker cp /tmp/dump.rdb database$DEV:/var/lib/redis_bmp/
         fi
     fi
 {%- elif docker_container_name == "pde" %}
@@ -296,7 +297,9 @@ function postStartAction()
         fi
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
+    REDIS_BMP_SOCK="/var/run/redis/redis_bmp.sock"
     chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
+    chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
 {%- elif docker_container_name == "swss" %}
     # Wait until swss container state is Running
     until [[ ($(docker inspect -f {{"'{{.State.Running}}'"}} swss$DEV) == "true") ]]; do
@@ -433,7 +436,7 @@ start() {
     if [ -d "$HWSKU_FOLDER" ]; then
         CREATE_ONLY_CONFIG_DB_BUFFERS_JSON="$HWSKU_FOLDER/create_only_config_db_buffers.json"
         if [ -f "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON" ]; then
-            $SONIC_CFGGEN -j $CREATE_ONLY_CONFIG_DB_BUFFERS_JSON --write-to-db
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
         fi
     fi
     {%- endif %}
@@ -731,13 +734,20 @@ stop() {
     if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
         ip netns delete "$NET_NS"
     fi
-    {%- elif docker_container_name == "teamd" %}
-    # Longer timeout of 60 sec to wait for Portchannels to be cleaned.
-    /usr/local/bin/container stop -t 60 $DOCKERNAME
-    {%- elif docker_container_name in ["swss", "syncd"] and enable_asan == "y" %}
-    /usr/local/bin/container stop -t 60 $DOCKERNAME
     {%- else %}
-    /usr/local/bin/container stop $DOCKERNAME
+    container_id=$(docker ps --filter "name=$DOCKERNAME" --quiet)
+    if [ -z "$container_id" ]; then
+        echo "container stop $DOCKERNAME - No such container: $DOCKERNAME"
+    else
+    {%- if docker_container_name == "teamd" %}
+        # Longer timeout of 60 sec to wait for Portchannels to be cleaned.
+        /usr/local/bin/container stop -t 60 $DOCKERNAME
+    {%- elif docker_container_name in ["swss", "syncd"] and enable_asan == "y" %}
+        /usr/local/bin/container stop -t 60 $DOCKERNAME
+    {%- else %}
+        /usr/local/bin/container stop $DOCKERNAME
+    {%- endif %}
+    fi
     {%- endif %}
 }
 

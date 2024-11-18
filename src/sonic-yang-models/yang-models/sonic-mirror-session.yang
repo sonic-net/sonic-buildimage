@@ -125,7 +125,7 @@ module sonic-mirror-session {
                 leaf ttl {
                     when "current()/../type = 'ERSPAN'";
                     type uint8 {
-                        range "0..63" {
+                        range "0..255" {
                             error-message "Invalid TTL value";
                             error-app-tag ttl-invalid;
                         }

@@ -3,6 +3,9 @@
         "name": "7220 IXR-H4-32D",
         "components": [
             {
+                "name": "BIOS"
+            },
+            {
                 "name": "CPUPLD"
             },
             {
@@ -318,7 +321,15 @@
                 "high-crit-threshold": true
             },
             {
-                "name": "Mac Front",
+                "name": "MAC Front",
+                "controllable": false,
+                "low-threshold": false,
+                "high-threshold": true,
+                "low-crit-threshold": false,
+                "high-crit-threshold": true
+            },
+            {
+                "name": "CPU",
                 "controllable": false,
                 "low-threshold": false,
                 "high-threshold": true,
