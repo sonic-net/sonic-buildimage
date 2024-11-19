@@ -1309,7 +1309,7 @@ device:
                 RX_POLARITY_FLIP_AUTO: 0
                 TX_LANE_MAP: 0x46237015
                 TX_POLARITY_FLIP: 0xad
-                RX_LANE_MAP: 0x17634250
+                RX_LANE_MAP: 0x71634250
                 RX_POLARITY_FLIP: 0x37
 
             ?
