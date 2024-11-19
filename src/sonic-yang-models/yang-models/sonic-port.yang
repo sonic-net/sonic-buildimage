@@ -13,6 +13,10 @@ module sonic-port{
 		prefix ext;
 	}
 
+	import sonic-device_metadata {
+		prefix sdm;
+	}
+
 	import sonic-macsec {
 		prefix macsec;
 	}
@@ -67,6 +71,14 @@ module sonic-port{
 				}
 
 				leaf lanes {
+					when "not(not(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:asic_name) and
+					((/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='voq') or 
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='chassis-packet') or
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='fabric') or
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:hwsku='msft_four_asic_vs') or 
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:hwsku='msft_multi_asic_vs')))";
+
+					description "Number of hardware lanes for the port. This is mandatory for all devices except for chassis devices";
 					mandatory true;
 					type string {
 						length 1..128;
@@ -89,6 +101,12 @@ module sonic-port{
 					type uint32 {
 						range 1..800000;
 					}
+				}
+
+				leaf dhcp_rate_limit {
+					description "DHCP DOS Mitigation Rate with default value 300";
+					type uint32; 
+					default 300;
 				}
 
 				leaf link_training {

@@ -9,8 +9,6 @@ phy_enable=0
 phy_null=1
 pll_bypass=1
 
-init_all_modules=0
-
 sai_tunnel_global_sip_mask_enable=1
 
 portmap_20=33:100:2

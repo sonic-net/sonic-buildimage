@@ -1,6 +1,6 @@
 # -*- Makefile -*-
 # $Id: Makefile,v 1.18 Broadcom SDK $
-# $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
 # 
 # Permission is granted to use, copy, modify and/or distribute this
 # software under either one of the licenses below.
@@ -24,6 +24,7 @@
 # 
 # This software is governed by the Broadcom Open Network Switch APIs license:
 # https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
 # 
 #
 # Makefile for Linux kernel BDE
@@ -85,6 +86,7 @@ module: $(KMODULE)
 # is not created and all action is done in systems/bde/linux/kernel
 #
 $(KMODULE): $(SRCS_COMPOSING)
+	mkdir -p $(BLDDIR)
 	rm -fr $(BLDDIR)/$(KERNEL_MODULE_DIR)
 	rm -f $(BLDDIR)/*.c
 	rm -f $(BLDDIR)/*.o
@@ -124,13 +126,13 @@ $(KMODULE): $(MODULE)
 	mkdir $(BLDDIR)/$(KERNEL_MODULE_DIR)
 	cp ${SDK}/make/Makefile.linux-kmodule $(BLDDIR)/$(KERNEL_MODULE_DIR)/Makefile
 	MOD_NAME=$(THIS_MOD_NAME) $(MAKE) -C $(BLDDIR)/$(KERNEL_MODULE_DIR) $(THIS_MOD_NAME).ko
+
+include $(SDK)/make/Make.depend
 # }
 endif
 
 kernel_libs:
 	$(MAKE) -C $(SDK)/systems/linux/kernel/modules/shared
-
-include $(SDK)/make/Make.depend
 
 # Make.depend is before clean:: so that Make.depend's clean:: runs first.
 
