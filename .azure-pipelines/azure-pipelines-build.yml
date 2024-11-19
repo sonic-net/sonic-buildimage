@@ -182,6 +182,9 @@ jobs:
               make $BUILD_OPTIONS ENABLE_SYNCD_RPC=y target/sonic-$(GROUP_NAME).bin
               mv target/sonic-mellanox.bin target/sonic-$(GROUP_NAME)-rpc.bin
             fi
+            if [ $(GROUP_NAME) == nvidia-bluefield ]; then
+              make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bfb
+            fi
             make $BUILD_OPTIONS target/sonic-$(GROUP_NAME).bin
           fi
         displayName: "Build sonic image"
