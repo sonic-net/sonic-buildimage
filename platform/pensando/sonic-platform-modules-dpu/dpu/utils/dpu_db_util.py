@@ -17,7 +17,9 @@ import syslog
 from sonic_py_common import daemon_base, logger, syslogger
 from swsscommon.swsscommon import SonicV2Connector
 from sonic_py_common.task_base import ProcessTaskBase
+import multiprocessing
 import grpc
+from concurrent import futures
 from google.protobuf.empty_pb2 import Empty
 
 SYSLOG_IDENTIFIER = 'dpu-db-utild'
@@ -39,7 +41,7 @@ try:
     grpc_files_path = (str(Path(sonic_platform.__file__).parent.absolute()))
     if grpc_files_path not in sys.path:
         sys.path.append(grpc_files_path)
-    from sonic_platform import oper_pb2, oper_pb2_grpc, system_pb2, system_pb2_grpc
+    from sonic_platform import oper_pb2, oper_pb2_grpc, system_pb2, system_pb2_grpc, dpu_util_pb2, dpu_util_pb2_grpc
 except Exception as e:
     log_err(f'failed to load modules due to {e}')
 
@@ -54,6 +56,8 @@ EVENT_PORT = 11360
 PDS_PORT = 11357
 NOT_AVAILABLE = 'N/A'
 ERR_UNKNOWN = 1
+IP = "0.0.0.0"
+PORT = 12000
 SIGNALS_TO_NAMES_DICT = dict((getattr(signal, n), n) for n in dir(signal) if n.startswith('SIG') and '_' not in n)
 
 # operd event functions
@@ -328,82 +332,54 @@ class EventHandler(logger.Logger):
             self.event_thread.join()
             self.event_thread = None
 
-class RebootCauseUpdater():
-    def __init__(self, chassis, db):
-        self.db = db
-        self.chassis = chassis
-        self.slot_id = get_slot_id(self.chassis)
-        self.table_pattern = f'{REBOOT_CAUSE_INFO_TABLE_NAME}|DPU{self.slot_id}|'
+class DpuUtilSvcServicer(dpu_util_pb2_grpc.DpuUtilSvcServicer):
 
-    def delete_table_entries(self):
+    def GetRebootCause(self, request, context):
         try:
-            if self.db:
-                reboot_cause_tables = self.db.keys(REBOOT_CAUSE_INFO_TABLE_NAME+'*')
-                reboot_cause_tables = [key for key in reboot_cause_tables if f"DPU{self.slot_id}" in key]
-                for table in reboot_cause_tables:
-                    self.db.delete(table)
-        except Exception as e:
-            log_err(f'failed to delete reboot cause table entries due to {e}')
-
-    def _fetch_reboot_cause_list(self):
-        try:
-            REBOOT_CAUSE_TABLE_NAME = "REBOOT_CAUSE"
-            TABLE_NAME_SEPARATOR = '|'
-            db = SonicV2Connector(host='127.0.0.1')
-            db.connect(db.STATE_DB, False)
-            prefix = REBOOT_CAUSE_TABLE_NAME + TABLE_NAME_SEPARATOR
-            _hash = '{}{}'.format(prefix, '*')
-            table_keys = db.keys(db.STATE_DB, _hash)
-            reboot_causes = []
-            if table_keys is not None:
-                table_keys.sort(reverse=True)
-                table = []
-                for tk in table_keys:
-                    entry = db.get_all(db.STATE_DB, tk)
-                    name = tk.replace(prefix, "")
-                    cause = entry['cause'] if 'cause' in entry else ""
-                    time = entry['time'] if 'time' in entry else ""
-                    user = entry['user'] if 'user' in entry else ""
-                    comment = entry['comment'] if 'comment' in entry else ""
-                    reboot_causes.append(
-                        [name, cause, comment, time, user]
+            slot_id = get_slot_id(None)
+            file_name = "/host/reboot-cause/previous-reboot-cause.json"
+            file = open(file_name, "r")
+            data = file.read()
+            if data != '':
+                json_data = json.loads(data)
+                name = json_data['gen_time']
+                cause = json_data['cause']
+                time = json_data['time']
+                user = json_data['user']
+                comment = json_data['comment']
+                reboot_cause = dpu_util_pb2.RebootCause(
+                    name=name, cause=cause, time=time, user=user, comment=comment
                     )
-                return reboot_causes
+                return dpu_util_pb2.RebootCauseResponse(slot_id=slot_id, reboot_cause=reboot_cause, success=True)
             else:
-                log_info("Reboot-cause history is not yet available in StateDB")
-                return []
+                log_err("Reboot-cause history is not available in reboot-causes")
+                return dpu_util_pb2.RebootCauseResponse(slot_id=slot_id, reboot_cause=Empty, success=False)
         except Exception as e:
-            log_err(f"Failed to fetch reboot cause list due to {e}")
-            return []
+            log_err(f"Failed to sent reboot cause response due to {e}")
+            return dpu_util_pb2.RebootCauseResponse(slot_id=slot_id, reboot_cause=Empty, success=False)
 
-    def update(self):
-        log_info("Start reboot cause list updating")
-        try:
-            stat = self._fetch_reboot_cause_list()
-            if stat == None:
-                raise Exception("Failed to fetch reboot cause list")
-            self._refresh_reboot_cause_db(stat)
-        except Exception as e:
-            log_err(f'failed to fetch reboot cause data due to {e}')
-        log_info("End reboot cause list updating")
+class RebootCauseGRPCUpdater():
 
-    def _refresh_reboot_cause_db(self, stat):
-        name = NOT_AVAILABLE
-        try:
-            if self.db == None:
-                return
-            self.delete_table_entries()
-            if len(stat) > 10:
-                stat = stat[:10]
-            for entry in stat:
-                table_name = f"{self.table_pattern}{entry[0]}"
-                self.db.hset(table_name, 'cause', entry[1])
-                self.db.hset(table_name, 'comment', entry[2])
-                self.db.hset(table_name, 'device', f"DPU{self.slot_id}")
-                self.db.hset(table_name, 'time', entry[3])
-                self.db.hset(table_name, 'user', entry[4])
-        except Exception as e:
-            log_err('Failed to update system health values for {} - {}'.format(name, repr(e)))
+    def __init__(self):
+        self.process = multiprocessing.Process(target=self.serve)
+
+    def serve(self):
+        channel_addr = "{}:{}".format(IP, str(PORT))
+        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        dpu_util_pb2_grpc.add_DpuUtilSvcServicer_to_server(DpuUtilSvcServicer(), server)
+        server.add_insecure_port(channel_addr)
+        server.start()
+        log_info(f"Server started. Listening on port {PORT}")
+        server.wait_for_termination()
+
+    def start(self):
+        self.process.start()
+
+    def stop(self):
+        if self.process.is_alive():
+            self.process.terminate()
+            self.process.join()
+            log_info("gRPC server process terminated.")
 
 class VersionUpdater():
     def __init__(self, chassis, db):
@@ -528,8 +504,8 @@ class DpuDBUtilDaemon(daemon_base.DaemonBase):
             pass
         if self.db == None:
             return
-        self.reboot_cause_updater = RebootCauseUpdater(self.chassis, self.db)
-        self.reboot_cause_updater.update()
+        self.reboot_cause_updater = RebootCauseGRPCUpdater()
+        self.reboot_cause_updater.start()
         self.version_updater = VersionUpdater(self.chassis, self.db)
         self.version_updater.update()
         self.event_handler = EventHandler(self.chassis, self.db)
@@ -542,6 +518,7 @@ class DpuDBUtilDaemon(daemon_base.DaemonBase):
         if self.db == None:
             return
         self.event_handler.stop()
+        self.reboot_cause_updater.stop()
 
     # Override signal handler from DaemonBase
     def signal_handler(self, sig, frame):
@@ -561,6 +538,7 @@ class DpuDBUtilDaemon(daemon_base.DaemonBase):
             exit_code = 128 + sig  # Make sure we exit with a non-zero code so that supervisor will try to restart us
             if self.db != None:
                 self.event_handler.stop()
+                self.reboot_cause_updater.stop()
             self.stop_event.set()
         elif sig in NONFATAL_SIGNALS:
             log_info("Caught signal '{}' - ignoring...".format(SIGNALS_TO_NAMES_DICT[sig]))
