@@ -43,7 +43,7 @@ module sonic-bgp-allowed-prefix {
 
          The string format is an inet:ipv4-prefix (defined in RFC 6991) value
          appended with an optional suffix.
-         
+
          The optional suffix consists of a string 'le' or 'ge' followed by a
          number which is less than or equal to 32.";
     }
@@ -67,7 +67,7 @@ module sonic-bgp-allowed-prefix {
 
          The string format is an inet:ipv6-prefix (defined in RFC 6991) value
          appended with an optional suffix.
-         
+
          The optional suffix consists of a string 'le' or 'ge' followed by a
          number which is less than or equal to 128.";
     }
