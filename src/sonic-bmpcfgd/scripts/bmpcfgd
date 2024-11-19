@@ -21,6 +21,7 @@ CFG_DB = "CONFIG_DB"
 BMP_STATE_DB = "BMP_STATE_DB"
 REDIS_HOSTIP = "127.0.0.1"
 BMP_TABLE = "BMP"
+SYSLOG_IDENTIFIER = "bmpcfgd"
 
 def is_true(val):
     return str(val).lower() == 'true'
@@ -88,15 +89,15 @@ class BMPCfgDaemon:
 
 def signal_handler(sig, frame):
     if sig == signal.SIGHUP:
-        self.log_info("bmpcfgd: signal 'SIGHUP' is caught and ignoring..")
+        log_info("bmpcfgd: signal 'SIGHUP' is caught and ignoring..")
     elif sig == signal.SIGINT:
-        self.log_info("bmpcfgd: signal 'SIGINT' is caught and exiting...")
+        log_info("bmpcfgd: signal 'SIGINT' is caught and exiting...")
         sys.exit(128 + sig)
     elif sig == signal.SIGTERM:
-        self.log_info("bmpcfgd: signal 'SIGTERM' is caught and exiting...")
+        log_info("bmpcfgd: signal 'SIGTERM' is caught and exiting...")
         sys.exit(128 + sig)
     else:
-        self.log_info("bmpcfgd: invalid signal - ignoring..")
+        log_info("bmpcfgd: invalid signal - ignoring..")
 
 
 def main():

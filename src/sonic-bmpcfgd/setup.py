@@ -4,21 +4,6 @@ from setuptools import setup
 import pkg_resources
 from packaging import version
 
-# sonic_dependencies, version requirement only supports '>='
-sonic_dependencies = ['sonic-py-common', 'sonic-utilities']
-for package in sonic_dependencies:
-    try:
-        package_dist = pkg_resources.get_distribution(package.split(">=")[0])
-    except pkg_resources.DistributionNotFound:
-        print(package + " is not found!", file=sys.stderr)
-        print("Please build and install SONiC python wheels dependencies from sonic-buildimage", file=sys.stderr)
-        exit(1)
-    if ">=" in package:
-        if version.parse(package_dist.version) >= version.parse(package.split(">=")[1]):
-            continue
-        print(package + " version not match!", file=sys.stderr)
-        exit(1)
-
 setup(
     name = 'sonic-bmpcfgd-services',
     version = '1.0',
@@ -29,7 +14,6 @@ setup(
     url = 'https://github.com/Azure/sonic-buildimage',
     maintainer = 'Feng Pan',
     maintainer_email = 'fenpan@microsoft.com',
-    packages = setuptools.find_packages(),
     scripts = [
         'scripts/bmpcfgd'
     ],
@@ -38,7 +22,7 @@ setup(
         'netaddr==0.8.0',
         'pyyaml==6.0.1',
         'ipaddress==1.0.23'
-    ] + sonic_dependencies,
+    ],
     setup_requires = [
         'pytest-runner',
         'wheel'
