@@ -1,13 +1,12 @@
 [Unit]
 Description=Memory Statistics Daemon
-BindsTo=sonic.target
 After=network.target
 
 [Service]
 ExecStart=/usr/bin/memory_statistics_service.py
-Restart=always
+Restart=on-failure
 RestartSec=5
-EnvironmentFile=-/etc/memory_statistics.conf
+EnvironmentFile=-/etc/memorystats.conf
 
 [Install]
-WantedBy=sonic.target
+WantedBy=multi-user.target
