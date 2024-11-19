@@ -3,7 +3,7 @@ Description=Memory Statistics Daemon
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/memorystatsd
+ExecStart=/usr/bin/memory_statistics_handler.py
 Restart=on-failure
 RestartSec=5
 EnvironmentFile=-/etc/memorystats.conf

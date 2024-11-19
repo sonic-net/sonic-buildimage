@@ -1,22 +1,23 @@
+#!/usr/bin/env python3
 import psutil
 import os
-import signal
-import sys
-import time
 import pickle
-import traceback
+import logging
 import gzip
-import dateparser
-import json
-import threading
 import configparser
+import signal
 import socket
 import syslog
-import logging
 import re
 import math
 from datetime import datetime, timedelta
+import sys
+import traceback
+import threading
+import json
+import time
 from typing import Dict, Any
+import dateparser
 from swsscommon.swsscommon import ConfigDBConnector
 
 
@@ -132,9 +133,8 @@ class Utility:
     A utility class offering methods for date handling, time delta formatting, and memory size formatting.
     This class also includes enhanced logging and error handling.
     """
-
     @staticmethod
-    def fetch_current_date(request=None, time_key='ctime', date_format="%Y-%m-%d %H:%M:%S"):
+    def fetch_current_date(request=None, time_key='current_time', date_format="%Y-%m-%d %H:%M:%S"):
         """
         Fetches or parses the current date or a user-specified date.
         :param request: contain none.
@@ -215,7 +215,6 @@ class TimeProcessor:
     remaining days since specified times. Additionally, it processes request data to ensure 
     compliance with retention limits and sampling requirements.
     """
-
     def __init__(self, sampling_interval: int, retention_period: int):
         """
         Initializes TimeProcessor with the provided collection interval and retention period.
@@ -282,7 +281,7 @@ class TimeProcessor:
         return {
             'start_time': datetime.fromisoformat(Utility.fetch_current_date(request_data, 'from', self.date_time_format)),
             'end_time': datetime.fromisoformat(Utility.fetch_current_date(request_data, 'to', self.date_time_format)),
-            'current_time': datetime.fromisoformat(Utility.fetch_current_date({}, 'ctime', self.date_time_format))
+            'current_time': datetime.fromisoformat(Utility.fetch_current_date({}, 'current_time', self.date_time_format))
         }
 
     def _validate_time_ranges(self, start_time: datetime, end_time: datetime, current_time: datetime, time_diff: timedelta) -> None:
@@ -400,13 +399,6 @@ class TimeProcessor:
 
 
 class MemoryReportGenerator:
-    """
-    This class generates a formatted memory statistics report based on specified time intervals and duration.
-    It is initialized with request data for start and end times, and a step size for report granularity.
-    The class includes methods to create interval labels and generate a structured report header, 
-    detailing metrics and their corresponding values for easy analysis of memory statistics over the defined time frame.
-    """
-
     def __init__(self, request, step):
         """Initialize the report generator with request data and step size.
         
@@ -493,14 +485,6 @@ class MemoryReportGenerator:
 
 
 class MemoryStatisticsCollector:
-    """
-    This class handles system memory statistics collection, management, and retention. It initializes with a specified
-    sampling interval (in minutes) and retention period (in days) to determine how frequently data is collected and how long 
-    it is retained. Methods in this class include `fetch_memory_statistics()` to gather memory data using `psutil`, 
-    `fetch_memory_entries()` to load saved memory entries from a file, and `update_memory_statistics()` to add new statistics 
-    to the cumulative dataset. Additionally, `enforce_retention_policy()` removes old entries based on the retention period, 
-    and `dump_memory_usage()` logs collected data to files or returns it directly if logging is not needed.
-    """
 
     def __init__(self, sampling_interval: int, retention_period: int):
         """
@@ -521,17 +505,18 @@ class MemoryStatisticsCollector:
         """
         memory_data = psutil.virtual_memory()
         memory_stats = {
-            'total': {"prss": memory_data.total, "count": 1},
-            'used': {"prss": memory_data.used, "count": 1},
-            'free': {"prss": memory_data.free, "count": 1},
-            'available': {"prss": memory_data.available, "count": 1},
-            'cached': {"prss": memory_data.cached, "count": 1},
-            'buffers': {"prss": memory_data.buffers, "count": 1},
-            'shared': {"prss": memory_data.shared, "count": 1}        
+            'total_memory': {"prss": memory_data.total, "count": 1},
+            'used_memory': {"prss": memory_data.used, "count": 1},
+            'free_memory': {"prss": memory_data.free, "count": 1},
+            'available_memory': {"prss": memory_data.available, "count": 1},
+            'cached_memory': {"prss": memory_data.cached, "count": 1},
+            'buffers_memory': {"prss": memory_data.buffers, "count": 1},
+            'shared_memory': {"prss": memory_data.shared, "count": 1}        
    
         }
         del memory_data
         return memory_stats
+
    
     def fetch_memory_entries(self, filepath):
         """
@@ -606,6 +591,7 @@ class MemoryStatisticsCollector:
 
         total_dict[item]['count'] = int(total_dict[item]['count']) + 1
 
+
     def enforce_retention_policy(self, total_dict):
         """This function enforces a retention policy for memory statistics by identifying and removing entries in total_dict
            that are older than the configured retention period. 
@@ -634,7 +620,7 @@ class MemoryStatisticsCollector:
 
         total_dict['system_memory']['count'] = len(total_dict['system_memory'].get('system', {}))
 
-    def dump_memory_usage(self, collect_only):
+    def collect_and_store_memory_usage(self, collect_only):
         """
         Dump memory usage statistics into log files.
         
@@ -659,10 +645,10 @@ class MemoryStatisticsCollector:
 
         self.enforce_retention_policy(total_dict)
 
-        ctime = Utility.fetch_current_date()
+        current_time = Utility.fetch_current_date()
 
-        total_dict['ctime'] = ctime
-        mem_dict = {"ctime": ctime, "system_memory": sysmem_dict, "count": 1}
+        total_dict['current_time'] = current_time
+        mem_dict = {"current_time": current_time, "system_memory": sysmem_dict, "count": 1}
 
         if collect_only is True:
             return mem_dict
@@ -682,11 +668,6 @@ class MemoryStatisticsCollector:
 
 
 class MemoryEntryManager:
-    """
-    Manages memory entries by handling additions, aggregations, and retrieval of memory data entries across 
-    different categories and types. This class is designed to support memory tracking and reporting in a 
-    structured way for various items like 'system_memory'.
-    """
 
     def add_memory_entry(self, request, total_entries_all, global_entries, local_entries, new_entry, item, category, entry_list):
         """Add memory entry to global and local entries.
@@ -843,7 +824,6 @@ class MemoryStatisticsProcessor:
     configurable sampling intervals and retention periods. It processes data from files and organizes 
     it into time slices for analysis.
     """
-
     def __init__(self, memory_statistics_config, sampling_interval: int, retention_period: int):
         """
         Initializes the MemoryStatisticsProcessor with configuration settings.
@@ -1051,7 +1031,7 @@ class MemoryStatisticsProcessor:
         This method checks if the memory entry's creation time falls within the specified time range 
         and adds it to the appropriate time group in the summary.
         """
-        rtime = datetime.fromisoformat(memory_entry['ctime'])
+        rtime = datetime.fromisoformat(memory_entry['current_time'])
         if start_time_obj <= rtime <= end_time_obj:
             slot = self.get_time_slot_index(rtime, start_time_obj, step, first_interval_unit, second_interval_unit, first_interval_rate, request_data['duration'])
             if slot < num_columns:
@@ -1369,7 +1349,6 @@ class Daemonizer:
     to /dev/null, ensuring that the daemon operates independently from
     the terminal.
     """
-    
     def __init__(self, pid_file):
         """
         Initializes the Daemonizer with the specified PID file location.
@@ -1452,13 +1431,17 @@ class MemoryStatisticsService:
     configuration reloading and graceful shutdown procedures.
     """ 
 
-    def __init__(self, memory_statistics_config, config_file_path='memorystats.conf'):
+    def __init__(self, memory_statistics_config, config_file_path='memorystats.conf', name="MemoryStatisticsService"):
         """
         Initializes the MemoryStatisticsService instance.
         Parameters:
         - memory_statistics_config (dict): Initial configuration settings for the service.
         - config_file_path (str): Path to the configuration file to load overrides.
         """
+
+        self.name = name  
+        logger.log_info(f"Service initialized with name: {self.name}") 
+
         self.config_file_path = config_file_path
         self.memory_statistics_lock = threading.Lock()
         self.stop_event = threading.Event()  
@@ -1469,7 +1452,7 @@ class MemoryStatisticsService:
         self.config = memory_statistics_config.copy()
         self.config.update(self.load_config_from_file())
 
-        self.sampling_interval = int(self.config.get('sampling_interval', 3)) * 60  
+        self.sampling_interval = int(self.config.get('sampling_interval', 5)) * 60  
         self.retention_period = int(self.config.get('retention_period', 15)) 
 
         self.socket_handler = SocketHandler(
@@ -1492,7 +1475,7 @@ class MemoryStatisticsService:
         parser = configparser.ConfigParser()
         try:
             parser.read(self.config_file_path)
-            config['sampling_interval'] = parser.get('default', 'sampling_interval', fallback='3')
+            config['sampling_interval'] = parser.get('default', 'sampling_interval', fallback='5')
             config['retention_period'] = parser.get('default', 'retention_period', fallback='15')
             logger.log_info(f"Configuration loaded from file (overrides only): {config}")
         except Exception as e:
@@ -1621,7 +1604,7 @@ class MemoryStatisticsService:
         log directory to manage disk space and maintain organization.
         """
         try:
-            log_directory = self.config.get('LOG_DIRECTORY', '/var/log/histogram')
+            log_directory = self.config.get('LOG_DIRECTORY', '/var/log/memory_statistics')
             for file in os.listdir(log_directory):
                 if file.endswith('.gz'):
                     file_path = os.path.join(log_directory, file)
@@ -1646,7 +1629,7 @@ class MemoryStatisticsService:
                     sampling_interval=self.sampling_interval // 60,
                     retention_period=self.retention_period
                 )
-                current_memory = memory_collector.dump_memory_usage(collect_only=True)
+                current_memory = memory_collector.collect_and_store_memory_usage(collect_only=True)
                 request['current_memory'] = current_memory
                 logger.log_info(f"Current memory usage collected: {current_memory}")
 
@@ -1705,7 +1688,7 @@ class MemoryStatisticsService:
                             sampling_interval=self.sampling_interval // 60,
                             retention_period=self.retention_period
                         )
-                        memory_collector.dump_memory_usage(collect_only=False)
+                        memory_collector.collect_and_store_memory_usage(collect_only=False)
                 except Exception as error:
                     logger.log_error(f"Error during memory statistics collection: {error}")
 
@@ -1794,7 +1777,7 @@ class MemoryStatisticsService:
         signaled to stop, during which it sleeps to reduce CPU usage.
         Logs the initialization and starting of the service.
         """
-        logger.log_info("Memory Statistics Service is starting...")
+        logger.log_info(f"{self.name} is starting...") 
         self.daemonizer.daemonize()
 
         self.start_socket_listener()
@@ -1804,7 +1787,8 @@ class MemoryStatisticsService:
             time.sleep(1) 
 
 if __name__ == '__main__':
-
+    logging.basicConfig(filename='mem_stats_debug.log', level=logging.DEBUG, 
+                        format='%(asctime)s - %(levelname)s - %(message)s') 
     memory_statistics_config = {
         'LOG_DIRECTORY': "/var/log/memory_statistics",
         'MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/memory-stats.log.gz",
@@ -1816,6 +1800,7 @@ if __name__ == '__main__':
         identifier="memstats#log",
         log_to_console=True
     )
-        
-    service = MemoryStatisticsService(memory_statistics_config)
+    
+    service_name = "MemoryStatisticsService" 
+    service = MemoryStatisticsService(memory_statistics_config, name=service_name)
     service.run()
