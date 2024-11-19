@@ -25,17 +25,15 @@ name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd
 
 resources:
   repositories:
-  - repository: sonic-mgmt
-    type: github
-    name: sonic-net/sonic-mgmt
-    ref: master
-    endpoint: sonic-net
   - repository: buildimage
     type: github
     name: sonic-net/sonic-buildimage
     endpoint: sonic-net
     ref: master
-
+  - repository: acs-buildimage
+    type: git
+    name: One/Networking-acs-buildimage
+    ref: internal
 variables:
 - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
 - template: .azure-pipelines/template-variables.yml@buildimage
@@ -168,7 +166,7 @@ stages:
     timeoutInMinutes: 240
     continueOnError: false
     steps:
-    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+    - template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage
       parameters:
         TOPOLOGY: t0
         MIN_WORKER: $(T0_INSTANCE_NUM)
@@ -181,7 +179,7 @@ stages:
     timeoutInMinutes: 240
     continueOnError: false
     steps:
-    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+    - template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage
       parameters:
         TOPOLOGY: t0
         TEST_SET: t0-2vlans
@@ -196,7 +194,7 @@ stages:
     timeoutInMinutes: 240
     continueOnError: false
     steps:
-    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+    - template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage
       parameters:
         TOPOLOGY: t1-lag
         MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
@@ -209,7 +207,7 @@ stages:
     timeoutInMinutes: 240
     continueOnError: false
     steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      - template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage
         parameters:
           TOPOLOGY: t1-8-lag
           TEST_SET: multi-asic-t1-lag
@@ -224,7 +222,7 @@ stages:
     timeoutInMinutes: 240
     continueOnError: false
     steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      - template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage
         parameters:
           TOPOLOGY: dualtor
           MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
@@ -238,7 +236,7 @@ stages:
     timeoutInMinutes: 240
     continueOnError: false
     steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      - template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage
         parameters:
           TOPOLOGY: t0-64-32
           MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
@@ -254,7 +252,7 @@ stages:
     continueOnError: false
     pool: sonic-ubuntu-1c
     steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      - template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage
         parameters:
           TOPOLOGY: dpu
           MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
@@ -267,7 +265,7 @@ stages:
     continueOnError: true
     pool: sonic-ubuntu-1c
     steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      - template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage
         parameters:
           TOPOLOGY: t0
           STOP_ON_FAILURE: "False"
@@ -284,7 +282,7 @@ stages:
     continueOnError: true
     pool: sonic-ubuntu-1c
     steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+      - template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage
         parameters:
           TOPOLOGY: t1-lag
           STOP_ON_FAILURE: "False"
@@ -301,7 +299,7 @@ stages:
 #    continueOnError: true
 #    pool: sonic-ubuntu-1c
 #    steps:
-#      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+#      - template: .pipelines/elastictest_template/run-test-elastictest-template.yaml@acs-buildimage
 #        parameters:
 #          TOPOLOGY: dualtor
 #          STOP_ON_FAILURE: "False"
