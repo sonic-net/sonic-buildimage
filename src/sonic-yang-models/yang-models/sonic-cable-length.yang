@@ -13,7 +13,7 @@ module sonic-cable-length {
     description "CABLE_LENGTH YANG module for SONiC OS";
 
     revision 2021-11-11 {
-        description "Initial version";
+        description "Initial version.";
     }
 
     container sonic-cable-length {
