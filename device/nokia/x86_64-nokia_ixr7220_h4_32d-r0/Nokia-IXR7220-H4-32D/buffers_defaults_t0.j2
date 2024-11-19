@@ -2,7 +2,7 @@
 
 {%- macro generate_port_lists(PORT_ALL) %}
     {# Generate list of ports #}
-    {%- for port_idx in range(0,256,4) %}
+    {%- for port_idx in range(0,128,4) %}
         {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
     {%- endfor %}
 {%- endmacro %}
@@ -10,13 +10,13 @@
 {%- macro generate_buffer_pool_and_profiles() %}
   "BUFFER_POOL": {
         "ingress_lossless_pool": {
-            "size": "113143792",
+            "size": "57482232",
             "type": "ingress",
             "mode": "dynamic",
-            "xoff": "48404780"
+            "xoff": "25326848"
         },
         "egress_lossless_pool": {
-            "size": "56571896",
+            "size": "57482232",
             "type": "egress",
             "mode": "dynamic"
         }
