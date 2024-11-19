@@ -20,19 +20,24 @@ RUN apt-get update
 {{ install_debian_packages(docker_sonic_bmp_debs.split(' ')) }}
 {%- endif %}
 
+{% if docker_sonic_bmp_whls.strip() %}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_sonic_bmp_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_sonic_bmp_whls.split(' ')) }}
+{% endif %}
+
 RUN apt-get clean -y      && \
     apt-get autoclean -   && \
     apt-get autoremove -y && \
     rm -rf /debs && \
     mkdir -p /etc/bmp
 
-COPY ["bmp.sh", "bmpcfgd", "openbmpd", "/usr/bin/"]
+COPY ["bmp.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["openbmpd.conf", "/etc/bmp/"]
 
 RUN chmod +x /usr/bin/bmp.sh
-RUN chmod +x /usr/bin/bmpcfgd
-RUN chmod +x /usr/bin/openbmpd
 
 RUN apt-get clean -y      && \
     apt-get autoclean -y  && \

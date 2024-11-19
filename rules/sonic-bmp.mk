@@ -1,5 +1,4 @@
 # sonic-bmp package
-
 SONIC_BMPD = sonic-bmp_0.1_$(CONFIGURED_ARCH).deb
 $(SONIC_BMPD)_SRC_PATH = $(SRC_PATH)/sonic-bmp
 $(SONIC_BMPD)_DEPENDS  =  $(LIBSWSSCOMMON_DEV) $(LIBSWSSCOMMON)
