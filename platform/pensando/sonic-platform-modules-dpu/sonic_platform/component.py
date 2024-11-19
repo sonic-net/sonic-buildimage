@@ -89,25 +89,6 @@ class Component(ComponentBase):
             cpldinfo["firmware version"] = "N/A"
         CHASSIS_COMPONENT_MAPPING[component_index] = cpldinfo
 
-        if apiHelper.check_xcvrs_present():
-            from sonic_platform.sfp import Sfp
-            from sonic_platform.chassis import PORT_START, PORT_END
-
-            sfp_name_map = apiHelper.read_port_config()
-
-            for index in range(PORT_START, PORT_END+1):
-                sfp = Sfp(index-1, sfp_name_map[index-1])
-                transceiver_info = sfp.get_transceiver_info()
-                portinfo = {}
-                portinfo["name"] = sfp.get_name()
-                portinfo["description"] = f"QSFP port - {index}"
-                portinfo["firmware version"] = "N/A"
-                portinfo["serial number"] = transceiver_info['serial']
-                portinfo["vendor name"] = transceiver_info['manufacturer']
-                portinfo["vendor part number"] = transceiver_info['model']
-                portinfo["vendor revision"] = transceiver_info['vendor_rev']
-                CHASSIS_COMPONENT_MAPPING[component_index + index] = portinfo
-
         return CHASSIS_COMPONENT_MAPPING
 
 

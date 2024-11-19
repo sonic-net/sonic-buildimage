@@ -13,38 +13,4 @@ function StopDpuDocker() {
     sync ; sync
 }
 
-function SetUboota() {
-    # Extract the "Next" image name
-    dirnext=$(sonic-installer list | grep "^Next:" | awk '{print $2}' | sed 's/SONiC-OS-/image-/')
-
-    # Extract the "Current" image name
-    dircurrent=$(sonic-installer list | grep "^Current:" | awk '{print $2}' | sed 's/SONiC-OS-/image-/' | sed 's/\///')
-
-    idx=$(fw_printenv boot_once | awk '{print $2}' | awk -F'_' '{print $3}')
-    if [ ! -z "$idx" ]; then
-        echo "boot_once is set so using that image as next"
-        dirnext=$(eval fw_printenv sonic_dir_$idx | awk -F'=' '{print $2}')
-    fi
-
-    echo "Current image : $dircurrent"
-    echo "Next image : $dirnext"
-    # Check if the "Next" and "Current" image names are the same
-    if [ "$dirnext" != "$dircurrent" ]; then
-        # Define the command
-        command="/host/$dirnext/boot/install_file uboota /host/$dirnext/boot/uboota.img"
-        # Echo the command to be run
-        echo "Running command: $command"
-        # Execute the command with exception handling
-        if $command; then
-            echo "Command executed successfully."
-        else
-            echo "Error: Command execution failed." >&2
-            exit 1
-        fi
-    else
-        echo "Next and Current images are the same. No action taken."
-    fi
-}
-
-SetUboota
 StopDpuDocker

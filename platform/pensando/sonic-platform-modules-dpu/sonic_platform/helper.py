@@ -113,28 +113,6 @@ class APIHelper():
             pass
         return ''
 
-    def read_eeprom_qsfp(self, i2c_num, reg):
-        cmd = f"i2cdump -y {i2c_num} {reg} b"
-        output = self.runCMD(cmd)
-        eeprom_dump = [line.split(" ")[1:17] for line in output.split("\n")[1:]]
-        eeprom_raw = []
-        for line in eeprom_dump:
-            eeprom_raw.extend([int(byte,16) for byte in line])
-        eeprom_byte_array = bytearray(eeprom_raw)
-        return eeprom_byte_array
-
-    def read_eeprom_qsfp_file(self, i2c_num, reg):
-        eeprom_file = f"/usr/share/sonic/platform/qsfp-eeprom-{i2c_num}.bin"
-        if self.is_host():
-            platform = self.get_platform()
-            eeprom_file = f"/usr/share/sonic/device/{platform}/qsfp-eeprom-{i2c_num}.bin"
-        try:
-            with open(eeprom_file, "rb") as file:
-                read_data = bytearray(file.read())
-                return read_data
-        except:
-            return self.read_eeprom_qsfp(i2c_num, reg)
-
     def setup_cpldapp(self):
         cmd = "cp /usr/share/sonic/platform/cpldapp /usr/local/bin"
         self.runCMD(cmd)
@@ -143,33 +121,3 @@ class APIHelper():
         cmd = "cp /usr/share/sonic/platform/liblogger.so /lib/liblogger.so"
         self.runCMD(cmd)
 
-    def check_xcvrs_present(self):
-        cmd = "cpldapp -r {}".format(QSFP_STAT_CTRL_CPLD_ADDR)
-        try:
-            output = APIHelper().runCMD(cmd)
-            reg_val = int(output, 16)
-            if ((reg_val >> 4) & 3) > 0:
-                return True
-            else:
-                return False
-        except:
-            return False
-
-    def read_port_config(self):
-        """
-            Reads port_config.ini file and fetches name for sfp port
-        """
-        sfp_name_map = []
-        host_platform_root_path = '/usr/share/sonic/device'
-        docker_hwsku_path = '/usr/share/sonic/hwsku'
-        host_platform_path = "/".join([host_platform_root_path, self.get_platform()])
-        hwsku_path = "/".join([host_platform_path, self.get_hwsku()]) if self.is_host() else docker_hwsku_path
-        port_config_path =  "/".join([hwsku_path, "port_config.ini"])
-        with open(port_config_path) as f:
-            lines = f.read().splitlines()
-            for line in lines:
-                if line.startswith("#"):
-                    continue
-                l = line.split()
-                sfp_name_map.append(l[2])
-        return sfp_name_map
