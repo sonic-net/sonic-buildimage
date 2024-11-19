@@ -16,14 +16,17 @@
             {
                 "name": "BMC"
             },
-            {
-                "name": "Baseboard CPLD"
+	    {
+                "name": "System CPLD"
+            },
+	    {
+                "name": "Secondary CPLD 1"
             },
             {
-                "name": "Switch CPLD 1"
+                "name": "Secondary CPLD 2"
             },
             {
-                "name": "Switch CPLD 2"
+                "name": "Secondary CPLD 3"
             }
         ],
         "fans": [
@@ -128,24 +131,6 @@
             },
             {
                 "name": "FanTray6-Fan2",
-                "speed": {
-                    "controllable": false
-                },
-                "status_led": {
-                    "available": false
-                }
-            },
-            {
-                "name": "FanTray7-Fan1",
-                "speed": {
-                    "controllable": false
-                },
-                "status_led": {
-                    "available": false
-                }
-            },
-            {
-                "name": "FanTray7-Fan2",
                 "speed": {
                     "controllable": false
                 },
@@ -302,32 +287,6 @@
                     },
                     {
                         "name": "FanTray6-Fan2",
-                        "speed": {
-                            "controllable": false
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    }
-                ]
-            },
-            {
-                "name": "FanTray7",
-                "status_led": {
-                    "controllable": false
-                },
-                "fans": [
-                    {
-                        "name": "FanTray7-Fan1",
-                        "speed": {
-                            "controllable": false
-                        },
-                        "status_led": {
-                            "available": false
-                        }
-                    },
-                    {
-                        "name": "FanTray7-Fan2",
                         "speed": {
                             "controllable": false
                         },
