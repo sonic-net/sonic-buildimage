@@ -21,8 +21,6 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
-PORT_START = 1
-PORT_END = 2
 NUM_THERMAL = 2
 NUM_VOLTAGE_SENSORS = 3
 NUM_CURRENT_SENSORS = 3
@@ -60,12 +58,11 @@ REBOOT_CAUSE_MAP = {
     1 : "Kernel Panic",
     15 : "Hardware watchdog reset",
 }
-
+REBOOT_CAUSE_NON_HARDWARE_LIST = [16, 20, 0, 1, 8, 2, 24, 25, 12]
 
 class Chassis(ChassisBase):
     """Platform-specific Chassis class"""
     __shared_state = dict()
-    _sfp_module_initialized = False
     _thermals_initialized = False
     _voltage_sensor_initialized = False
     _current_sensor_initialized = False
@@ -105,59 +102,6 @@ class Chassis(ChassisBase):
     def set_status_led(self, color):
         '''handled by sysmond in dpu container'''
         return False
-
-
-    ##############################################
-    # SFP methods
-    ##############################################
-
-    def get_num_sfps(self):
-        if not self._sfp_module_initialized:
-            self.__initialize_sfp()
-        return len(self._sfp_list)
-
-    def get_all_sfps(self):
-        if not self._sfp_module_initialized:
-            self.__initialize_sfp()
-        return self._sfp_list
-
-    def get_sfp(self, index):
-        """
-        Retrieves sfp represented by (1-based) index <index>
-        Args:
-            index: An integer, the index (1-based) of the sfp to retrieve.
-            The index should be the sequence of a physical port in a chassis,
-            starting from 1.
-            For example, 1 for Ethernet0, 2 for Ethernet4 and so on.
-        Returns:
-            An object dervied from SfpBase representing the specified sfp
-        """
-        sfp = None
-        if not self._sfp_module_initialized:
-            self.__initialize_sfp()
-
-        try:
-            # The index will start from 1
-            if index <= PORT_END:
-                sfp = self._sfp_list[index-1]
-            else:
-                from sonic_platform.sfp import NullSfp
-                sfp = NullSfp()
-        except IndexError:
-            sys.stderr.write("SFP index {} out of range (1-{})\n".format(
-                             index, len(self._sfp_list)))
-        return sfp
-
-    def __initialize_sfp(self):
-        from sonic_platform.sfp import Sfp
-        if self._api_helper.check_xcvrs_present():
-            _sfp_name_map = self._api_helper.read_port_config()
-            for index in range(PORT_START, PORT_END+1):
-                sfp = Sfp(index-1, _sfp_name_map[index-1])
-                self._sfp_list.append(sfp)
-            self._sfp_module_initialized = True
-            log_info("System sfps are initialized")
-
 
     ##############################################
     # THERMAL methods
@@ -435,15 +379,15 @@ class Chassis(ChassisBase):
             reset_cause = int(self._api_helper.readline_txt_file(RESET_CAUSE_PATH),16)
             for bit in bits:
                 if((reset_cause >> bit) & 1):
-                    if bit <= 15:
-                        return (REBOOT_CAUSE_SOFTWARE, REBOOT_CAUSE_MAP[bit])
+                    if bit in REBOOT_CAUSE_NON_HARDWARE_LIST:
+                        return (self.REBOOT_CAUSE_NON_HARDWARE, REBOOT_CAUSE_MAP[bit])
                     else:
-                        return (REBOOT_CAUSE_EXTERNAL, REBOOT_CAUSE_MAP[bit])
+                        return (self.REBOOT_CAUSE_HARDWARE_OTHER, REBOOT_CAUSE_MAP[bit])
 
             reboot_cause_path = (HOST_REBOOT_CAUSE_PATH + REBOOT_CAUSE_FILE)
             sw_reboot_cause = self._api_helper.readline_txt_file(reboot_cause_path) or "Unknown"
             if "Unknown" in sw_reboot_cause:
-                return (self.REBOOT_CAUSE_HARDWARE_OTHER, "NPU side powercycle")
+                return (self.REBOOT_CAUSE_NON_HARDWARE, "Unknown")
             return (self.REBOOT_CAUSE_NON_HARDWARE, sw_reboot_cause)
         except:
             return (self.REBOOT_CAUSE_NON_HARDWARE, "Unknown")

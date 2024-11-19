@@ -259,6 +259,13 @@ def sync_system_date():
     except:
         pass
 
+def configure_iptable_rules():
+    try:
+        iptable_cfg_cmd = "sudo iptables-legacy -D tcp_inbound -p tcp --dport 11357:11360 -j DROP"
+        run_cmd(iptable_cfg_cmd)
+    except:
+        pass
+
 def pcie_tx_setup():
     dpu_slot_id = int(run_cmd("cpldapp -r 0xA").strip(), 16)
     if dpu_slot_id == 6 or dpu_slot_id == 7:
@@ -283,6 +290,7 @@ def main():
     start_ssh_keygen()
     time.sleep(10)
     sync_system_date()
+    configure_iptable_rules()
     cp_sonic_platform_helper()
     fetch_dpu_files()
     time.sleep(5)
