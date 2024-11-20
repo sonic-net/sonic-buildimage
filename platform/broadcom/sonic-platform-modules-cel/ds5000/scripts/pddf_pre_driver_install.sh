@@ -1,7 +1,5 @@
 #!/bin/bash
 
-touch /usr/local/sdr_dump
-
 # Has customized those drivers,so rename them to lose effect
 ker_name=$(uname -r)
 
