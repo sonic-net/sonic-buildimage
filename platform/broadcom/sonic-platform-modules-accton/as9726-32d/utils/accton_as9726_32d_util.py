@@ -54,6 +54,8 @@ DEVICE_NO = {
     'psu': 2,
     'sfp': 34}
 
+BASE_CPLD_PATH = "/sys/bus/i2c/devices/1-0065/"
+
 fan_prefix = '/sys/devices/platform/as9726_32d_'
 hwmon_types = {'fan1': ['fan'],
                'fan2': ['fan'],
@@ -462,6 +464,11 @@ def do_install():
 #                return status
 
     do_sonic_platform_install()
+
+    status, output = log_os_system("echo 1 > "  + BASE_CPLD_PATH + "reset_mac_before_reboot", 1)
+    if status:
+        if FORCE == 0:
+            return status
 
     return
 

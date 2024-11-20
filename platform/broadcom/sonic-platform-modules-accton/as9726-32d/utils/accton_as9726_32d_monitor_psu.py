@@ -27,6 +27,7 @@ try:
     import logging
     import logging.config
     import logging.handlers
+    import signal
     import time  # this is only being used as part of the example
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
@@ -37,6 +38,9 @@ FUNCTION_NAME = '/usr/local/bin/accton_as9726_32d_monitor_psu'
 
 psu_state=[2, 2]
 psu_status_state=[2, 2]
+
+exit_by_sigterm=0
+
 # Make a class we can use to capture stdout and sterr in the log
 class device_monitor(object):
 
@@ -132,9 +136,19 @@ class device_monitor(object):
       
         return True
 
+def signal_handler(sig, frame):
+    global exit_by_sigterm
+    if sig == signal.SIGTERM:
+        print("Caught SIGTERM - exiting...")
+        exit_by_sigterm = 1
+    else:
+        pass
+
 def main(argv):
     log_file = '%s.log' % FUNCTION_NAME
     log_level = logging.INFO
+    global exit_by_sigterm
+    signal.signal(signal.SIGTERM, signal_handler)
     if len(sys.argv) != 1:
         try:
             opts, args = getopt.getopt(argv,'hdl:',['lfile='])
@@ -154,6 +168,8 @@ def main(argv):
     while True:
         monitor.manage_psu()
         time.sleep(3)
+        if exit_by_sigterm == 1:
+            break
 
 if __name__ == '__main__':
     main(sys.argv[1:])

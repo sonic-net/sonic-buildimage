@@ -1,0 +1,17 @@
+[Unit]
+Description=Accton AS9726-32D Platform initialization service
+Before=pmon.service determine-reboot-cause.service system-health.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/accton_as9726_32d_util.py install
+ExecStop=/usr/local/bin/accton_as9726_32d_util.py clean
+
+# Resource Limitations
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
