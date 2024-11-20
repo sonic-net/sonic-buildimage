@@ -12,14 +12,6 @@ if [ ${BMC_PRESENCE} == "1" ]; then
 	# attach ucdxxxx devices, bus 100, address 0x33 and 0x35
 	echo ucd90320 0x33 > /sys/bus/i2c/devices/i2c-100/new_device
 	echo ucd90160 0x35 > /sys/bus/i2c/devices/i2c-100/new_device
-
-	# attach isl68137 devices, bus 103
-	echo raa228228 0x20 > /sys/bus/i2c/devices/i2c-103/new_device
-	echo isl68225 0x60  > /sys/bus/i2c/devices/i2c-103/new_device
-	echo isl68225 0x61  > /sys/bus/i2c/devices/i2c-103/new_device
-	echo isl68222 0x62  > /sys/bus/i2c/devices/i2c-103/new_device
-	echo isl68222 0x63  > /sys/bus/i2c/devices/i2c-103/new_device
-	echo isl68225 0x67  > /sys/bus/i2c/devices/i2c-103/new_device
 	
 	# attach icp201xx devices, bus 77,78, address 0x63
 	echo icp201xx 0x63 > /sys/bus/i2c/devices/i2c-77/new_device

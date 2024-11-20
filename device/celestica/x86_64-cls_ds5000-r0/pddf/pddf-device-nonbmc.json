@@ -9,7 +9,7 @@
         "bmc_present" : "False",
         "pddf_dev_types":
         {
-            "description":"DS5000 pddf platform without BMC, ver v1.3",
+            "description":"DS5000 pddf platform without BMC, ver v1.4",
             "FPGAPCIE":
             [
                 "fpgapci"
@@ -40,8 +40,7 @@
             "at24",
             "optoe",
             "ucd9000",
-            "lm75",
-            "isl68137"
+            "lm75"
         ],
         "pddf_kos":
         [
@@ -55,12 +54,13 @@
             "pddf_cpld_driver",
             "pddf_custom_xcvr",
             "pddf_xcvr_driver_module",
-            "pddf_custom_psu_driver_module"
+            "pddf_psu_driver_module"
         ],
         "custom_kos":
         [
             "pddf_custom_fpga_algo",
             "pddf_custom_xcvr_api",
+            "pddf_custom_psu_api",
             "pddf_custom_wdt",
             "icp201xx"
         ]

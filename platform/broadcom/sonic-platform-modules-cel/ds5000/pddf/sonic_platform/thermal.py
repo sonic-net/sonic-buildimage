@@ -134,23 +134,23 @@ NONPDDF_THERMAL_SENSORS = {
     "TH5_CORE_TEMP":  { "label": "coretemp-th5", "high_threshold": 103, "high_crit_threshold": 110,
                         "temp_cmd": "awk '{printf $1/1000}' /sys/devices/platform/cls_sw_fpga/FPGA/TH5_max_temp"},
     "XP0R8V_TEMP":    { "label": "raa228228-i2c-103-20", "high_threshold": 90,
-                        "temp_cmd": "awk '{printf $1/1000}' /sys/bus/i2c/devices/i2c-103/103-0020/hwmon/hwmon*/temp1_input"},
+                        "temp_cmd": "i2cget -f -y 103 0x20 0x8d | awk '{printf $1/1.0}'"},
     "XP3R3V_E_TEMP":  { "label": "isl68225-i2c-103-60", "high_threshold": 90,
-                        "temp_cmd": "awk '{printf $1/1000}' /sys/bus/i2c/devices/i2c-103/103-0060/hwmon/hwmon*/temp1_input"},
+                        "temp_cmd": "i2cget -f -y 103 0x60 0x8d | awk '{printf $1/1.0}'"},
     "XP3R3V_W_TEMP":  { "label": "isl68225-i2c-103-61", "high_threshold": 90,
-                        "temp_cmd": "awk '{printf $1/1000}' /sys/bus/i2c/devices/i2c-103/103-0061/hwmon/hwmon*/temp1_input"},
+                        "temp_cmd": "i2cget -f -y 103 0x61 0x8d | awk '{printf $1/1.0}'"},
     "XP0R9V_0_TEMP":  { "label": "isl68222-i2c-103-62", "high_threshold": 90,
-                        "temp_cmd": "awk '{printf $1/1000}' /sys/bus/i2c/devices/i2c-103/103-0062/hwmon/hwmon*/temp1_input"},
+                        "temp_cmd": "i2cget -f -y 103 0x62 0x8d | awk '{printf $1/1.0}'"},
     "XP1R2V_0_TEMP":  { "label": "isl68222-i2c-103-62", "high_threshold": 90,
-                        "temp_cmd": "awk '{printf $1/1000}' /sys/bus/i2c/devices/i2c-103/103-0062/hwmon/hwmon*/temp2_input"},
+                        "temp_cmd": "i2cget -f -y 103 0x62 0x8e | awk '{printf $1/1.0}'"},
     "XP0R9V_1_TEMP":  { "label": "isl68222-i2c-103-63", "high_threshold": 90,
-                        "temp_cmd": "awk '{printf $1/1000}' /sys/bus/i2c/devices/i2c-103/103-0063/hwmon/hwmon*/temp1_input"},
+                        "temp_cmd": "i2cget -f -y 103 0x63 0x8d | awk '{printf $1/1.0}'"},
     "XP1R2V_1_TEMP":  { "label": "isl68222-i2c-103-63", "high_threshold": 90,
-                        "temp_cmd": "awk '{printf $1/1000}' /sys/bus/i2c/devices/i2c-103/103-0063/hwmon/hwmon*/temp2_input"},
+                        "temp_cmd": "i2cget -f -y 103 0x63 0x8e | awk '{printf $1/1.0}'"},
     "XP0R75V_0_TEMP": { "label": "isl68225-i2c-103-67", "high_threshold": 90,
-                        "temp_cmd": "awk '{printf $1/1000}' /sys/bus/i2c/devices/i2c-103/103-0067/hwmon/hwmon*/temp1_input"},
+                        "temp_cmd": "i2cget -f -y 103 0x67 0x8d | awk '{printf $1/1.0}'"},
     "XP0R75V_1_TEMP": { "label": "isl68225-i2c-103-67", "high_threshold": 90,
-                        "temp_cmd": "awk '{printf $1/1000}' /sys/bus/i2c/devices/i2c-103/103-0067/hwmon/hwmon*/temp2_input"}}
+                        "temp_cmd": "i2cget -f -y 103 0x67 0x8e | awk '{printf $1/1.0}'"}}
 
 class NonPddfThermal(ThermalBase):
     def __init__(self, index, name):
