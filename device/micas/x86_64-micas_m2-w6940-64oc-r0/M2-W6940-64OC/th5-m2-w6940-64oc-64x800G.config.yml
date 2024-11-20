@@ -7,6 +7,12 @@ device:
 ---
 device:
     0:
+        DEVICE_CONFIG:
+            AUTOLOAD_BOARD_SETTINGS: 0
+...
+---
+device:
+    0:
         PC_PM_CORE:
             ?
                 PC_PM_ID: 1
