@@ -98,7 +98,7 @@ class Chassis(ChassisBase):
                 self._fan_list.append(fan)
 
         for i in range(MAX_7215_PSU):
-            psu = Psu(i)
+            psu = Psu(i, self.get_model())
             self._psu_list.append(psu)
 
         for i in range(MAX_7215_THERMAL):
