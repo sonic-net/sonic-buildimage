@@ -27,8 +27,6 @@ bmpcfgd_path = os.path.join(scripts_path, 'bmpcfgd')
 bmpcfgd = load_module_from_source('bmpcfgd', bmpcfgd_path)
 
 
-from bmpcfgd import signal_handler
-
 original_syslog = bmpcfgd.syslog
 
 # Mock swsscommon classes
@@ -46,52 +44,42 @@ class TestBMPCfgDaemon(TestCase):
         self.test_data['BMP'] = {}
         self.test_data['BMP']['table'] = {'bgp_neighbor_table': 'false', 'bgp_rib_in_table': 'false', 'bgp_rib_out_table': 'false'}
 
-    @mock.patch('sonic_installer.bootloader.get_bootloader', side_effect=[MockBootloader()])
-    @mock.patch('syslog.syslog')
     @mock.patch('subprocess.call')
-    def test_bmpcfgd_neighbor_enable(self, mock_check_call, mock_syslog, mock_get_bootloader):
+    @mock.patch('bmpcfgd.BMPCfg.log_info')
+    def test_bmpcfgd_neighbor_enable(self, mock_call, mock_log_info):
         self.test_data['BMP']['table']['bgp_neighbor_table'] = 'true'
         MockConfigDb.set_config_db(self.test_data)
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
         bmp_config_daemon.register_callbacks()
         bmp_config_daemon.bmp_handler("BMP", '', self.test_data)
         expected_calls = [
-            mock.call(original_syslog.LOG_INFO, 'BMPCfg: update : True, False, False'),
-            mock.call(original_syslog.LOG_INFO, 'BMPCfg: stop bmp daemon'),
-            mock.call(original_syslog.LOG_INFO, 'BMPCfg: Reset bmp table from state_db'),
-            mock.call(original_syslog.LOG_INFO, 'BMPCfg: start bmp daemon'),
+            mock.call(["supervisorctl", "stop", "openbmpd"]),
+            mock.call(["supervisorctl", "start", "openbmpd"])
         ]
-        #mock_syslog.assert_has_calls(expected_calls)
+        mock_log_info.assert_has_calls(expected_calls)
 
-    @mock.patch('sonic_installer.bootloader.get_bootloader', side_effect=[MockBootloader()])
-    @mock.patch('syslog.syslog')
-    @mock.patch('subprocess.check_call')
-    def test_bmpcfgd_bgp_rib_in_enable(self, mock_check_call, mock_syslog, mock_get_bootloader):
+    @mock.patch('subprocess.call')
+    @mock.patch('bmpcfgd.BMPCfg.log_info')
+    def test_bmpcfgd_bgp_rib_in_enable(self, mock_call, mock_log_info):
         self.test_data['BMP']['table']['bgp_rib_in_table'] = 'true'
         MockConfigDb.set_config_db(self.test_data)
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
         bmp_config_daemon.bmp_handler("BMP", '', self.test_data)
         expected_calls = [
-            mock.call(original_syslog.LOG_INFO, 'BMPCfg: update : False, True, False'),
-            mock.call(original_syslog.LOG_INFO, 'BMPCfg: stop bmp daemon'),
-            mock.call(original_syslog.LOG_INFO, 'BMPCfg: Reset bmp table from state_db'),
-            mock.call(original_syslog.LOG_INFO, 'BMPCfg: start bmp daemon'),
+            mock.call(["supervisorctl", "stop", "openbmpd"]),
+            mock.call(["supervisorctl", "start", "openbmpd"])
         ]
-        #mock_syslog.assert_has_calls(expected_calls)
+        mock_log_info.assert_has_calls(expected_calls)
 
-    @mock.patch('sonic_installer.bootloader.get_bootloader', side_effect=[MockBootloader()])
-    @mock.patch('syslog.syslog')
-    @mock.patch('subprocess.check_call')
-    def test_bmpcfgd_bgp_rib_out_enable(self, mock_check_call, mock_syslog, mock_get_bootloader):
+    @mock.patch('subprocess.call')
+    @mock.patch('bmpcfgd.BMPCfg.log_info')
+    def test_bmpcfgd_bgp_rib_out_enable(self, mock_call, mock_log_info):
         self.test_data['BMP']['table']['bgp_rib_out_table'] = 'true'
         MockConfigDb.set_config_db(self.test_data)
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
         bmp_config_daemon.bmp_handler("BMP", '', self.test_data)
         expected_calls = [
-            mock.call(original_syslog.LOG_INFO, 'BMPCfg: update : False, False, True'),
-            mock.call(original_syslog.LOG_INFO, 'BMPCfg: stop bmp daemon'),
-            mock.call(original_syslog.LOG_INFO, 'BMPCfg: Reset bmp table from state_db'),
-            mock.call(original_syslog.LOG_INFO, 'BMPCfg: start bmp daemon'),
+            mock.call(["supervisorctl", "stop", "openbmpd"]),
+            mock.call(["supervisorctl", "start", "openbmpd"])
         ]
-        #mock_syslog.assert_has_calls(expected_calls)
-
+        mock_log_info.assert_has_calls(expected_calls)

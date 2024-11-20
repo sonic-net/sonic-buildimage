@@ -37,7 +37,6 @@ class BMPCfg(DaemonBase):
 
     def load(self, data={}):
         common_config = data.get('table', {})
-
         self.bgp_neighbor_table = is_true(common_config.get('bgp_neighbor_table', 'false'))
         self.bgp_rib_in_table = is_true(common_config.get('bgp_rib_in_table', 'false'))
         self.bgp_rib_out_table = is_true(common_config.get('bgp_rib_out_table', 'false'))
@@ -87,23 +86,7 @@ class BMPCfgDaemon:
                                  lambda table, key, data:
                                      self.bmp_handler(key, op, data))
 
-def signal_handler(sig, frame):
-    if sig == signal.SIGHUP:
-        log_info("bmpcfgd: signal 'SIGHUP' is caught and ignoring..")
-    elif sig == signal.SIGINT:
-        log_info("bmpcfgd: signal 'SIGINT' is caught and exiting...")
-        sys.exit(128 + sig)
-    elif sig == signal.SIGTERM:
-        log_info("bmpcfgd: signal 'SIGTERM' is caught and exiting...")
-        sys.exit(128 + sig)
-    else:
-        log_info("bmpcfgd: invalid signal - ignoring..")
-
-
 def main():
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGHUP, signal_handler)
     daemon = BMPCfgDaemon()
     daemon.register_callbacks()
 
