@@ -118,6 +118,7 @@ class BgpdClientMgr(threading.Thread):
             'PIM_INTERFACE': ['pimd'],
             'IGMP_INTERFACE': ['pimd'],
             'IGMP_INTERFACE_QUERY': ['pimd'],
+            'SRV6_LOCATOR': ['zebra']
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
                         (r'show ip mroute($|\s+\S+)', ['pimd']),
@@ -400,6 +401,47 @@ def get_command_cmn(daemon, cmd_str, op, st_idx, vals, bool_values):
             continue
         cmd_args.append(CommandArgument(daemon, cmd_enable, vals[idx]))
     return [cmd_str.format(*cmd_args, no = CommandArgument(daemon, cmd_enable))]
+
+def hdl_srv6_locator(daemon, cmd_str, op, st_idx, vals, bool_values):
+    chk_val = None
+    if op == CachedDataWithOp.OP_DELETE:
+        if bool_values is not None and len(bool_values) >= 3:
+            # set to default if given
+            cmd_enable = bool_values[2]
+        else:
+            cmd_enable = False
+    else:
+        cmd_enable = True
+        if bool_values is not None:
+            if len(vals) <= st_idx:
+                return None
+            chk_val = vals[st_idx]
+            if type(chk_val) is dict:
+                cmd_enable = False
+                for _, v in chk_val.items():
+                    if not v[1]:
+                        continue
+                    if v[0] == bool_values[0]:
+                        cmd_enable = True
+                        break
+            else:
+                if chk_val == bool_values[0]:
+                    cmd_enable = True
+                elif chk_val == bool_values[1]:
+                    cmd_enable = False
+                else:
+                    return None
+        else:
+            cmd_enable = True
+    cmd_list = []
+    for num in range(len(vals[0])):
+        cmd_args = []
+        for idx in range(len(vals)):
+            if bool_values is not None and idx == st_idx:
+                continue
+            cmd_args.append(CommandArgument(daemon, cmd_enable, vals[idx][num]))
+        cmd_list.append(cmd_str.format(*cmd_args, no = CommandArgument(daemon, cmd_enable)))
+    return cmd_list
 
 def hdl_set_extcomm(daemon, cmd_str, op, st_idx, args, is_inline):
     if is_inline:
@@ -2036,6 +2078,7 @@ class BGPConfigDaemon:
                              ('icmo_ttl', 'ttl {}', handle_ip_sla_common),
                              ('icmp_tos', 'tos {}', handle_ip_sla_common),
                            ]
+    srv6_locator_key_map = [(['opcode_prefix', 'opcode_act', 'opcode_vrf'], '{no:no-prefix}opcode {} {} vrf {}', hdl_srv6_locator)]
 
 
     tbl_to_key_map = {'BGP_GLOBALS':                    global_key_map,
@@ -2065,7 +2108,8 @@ class BGPConfigDaemon:
                       'PIM_GLOBALS':                    pim_global_key_map,
                       'PIM_INTERFACE':                  pim_interface_key_map,
                       'IGMP_INTERFACE':                 igmp_mcast_grp_key_map,
-                      'IGMP_INTERFACE_QUERY':           igmp_interface_config_key_map
+                      'IGMP_INTERFACE_QUERY':           igmp_interface_config_key_map,
+                      'SRV6_LOCATOR':                   srv6_locator_key_map,
     }
 
     vrf_tables = {'BGP_GLOBALS', 'BGP_GLOBALS_AF',
@@ -2262,7 +2306,8 @@ class BGPConfigDaemon:
             ('PIM_GLOBALS', self.bgp_table_handler_common),
             ('PIM_INTERFACE', self.bgp_table_handler_common),
             ('IGMP_INTERFACE', self.bgp_table_handler_common),
-            ('IGMP_INTERFACE_QUERY', self.bgp_table_handler_common)
+            ('IGMP_INTERFACE_QUERY', self.bgp_table_handler_common),
+            ('SRV6_LOCATOR', self.bgp_table_handler_common),
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
@@ -2650,6 +2695,17 @@ class BGPConfigDaemon:
                         self.bgp_confed_peers[vrf] = copy.copy(self.upd_confed_peers)
                 else:
                     self.__delete_vrf_asn(vrf, table, data)
+            elif table == 'SRV6_LOCATOR':
+                key = prefix
+                prefix = data['prefix']
+                cmd_prefix = ['configure terminal', 'segment-routing', 'srv6', 'locators', 
+                              'locator {}'.format(key), 
+                              'prefix {} block-len {} node-len {} func-bits {}'.format(prefix.data, data['block_len'].data, data['node_len'].data, data['func_len'].data)]
+                
+                if not key_map.run_command(self, table, data, cmd_prefix):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 LOCATOR config command')
+                    continue
+            
             elif table == 'BGP_GLOBALS_AF':
                 af, ip_type = key.lower().split('_')
                 #this is to temporarily make table cache key accessible to key_map handler function
