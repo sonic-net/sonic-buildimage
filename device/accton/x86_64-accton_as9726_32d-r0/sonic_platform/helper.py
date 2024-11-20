@@ -44,13 +44,6 @@ class APIHelper():
             status = False
         return status, result
 
-    def run_interactive_command(self, cmd):
-        try:
-            os.system(cmd)
-        except Exception:
-            return False
-        return True
-
     def read_txt_file(self, file_path):
         try:
             with open(file_path, encoding='unicode_escape', errors='replace') as fd:
