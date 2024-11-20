@@ -44,19 +44,25 @@ route-map FROM_AH_V6 permit 400
 !
 route-map FROM_AH_V6 permit 500
   match community FABRIC_INFRA_COMMUNITY
-  set tag {{ constants.bgp.route_do_not_send_appdb_tag }} 
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'voq' %}
+  set tag {{ constants.bgp.route_do_not_send_appdb_tag }}
+{% endif %}
   set community {{ constants.bgp.internal_fallback_community }} additive
 !
 route-map FROM_AH_V6 permit 600
   match community NO_EXPORT
   set local-preference 80
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'voq' %}
   set tag {{ constants.bgp.route_do_not_send_appdb_tag }}
+{% endif %}
   set community {{ constants.bgp.internal_fallback_community }} additive
 !
 route-map FROM_AH_V6 permit 1000
   set local-preference 80
   set community no-export additive
+{% if CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'voq' %}
   set tag {{ constants.bgp.route_do_not_send_appdb_tag }}
+{% endif %}
   on-match next
 !
 route-map FROM_AH_V6 permit 1100
