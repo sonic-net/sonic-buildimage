@@ -39,24 +39,13 @@ def enable_rates():
 def enable_counters():
     db = swsscommon.ConfigDBConnector()
     db.connect()
-    default_enabled_counters = ['PORT', 'RIF', 'QUEUE', 'PFCWD', 'PG_WATERMARK', 'PG_DROP', 
-                                'QUEUE_WATERMARK', 'BUFFER_POOL_WATERMARK', 'PORT_BUFFER_DROP', 'ACL']
     dpu_counters = ["ENI"]
-
-    # Enable those default counters
-    for key in default_enabled_counters:
-        enable_counter_group(db, key)
 
     platform_info = device_info.get_platform_info(db)
     if platform_info.get('switch_type') == 'dpu':
         for key in dpu_counters:
             enable_counter_group(db, key)
 
-    # Set FLEX_COUNTER_DELAY_STATUS to false for those non-default counters
-    keys = db.get_keys('FLEX_COUNTER_TABLE')
-    for key in keys:
-        if key not in default_enabled_counters:
-            enable_counter_group(db, key)
     enable_rates()
 
 
