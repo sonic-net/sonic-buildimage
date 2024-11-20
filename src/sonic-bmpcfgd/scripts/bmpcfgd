@@ -55,7 +55,7 @@ class BMPCfg(DaemonBase):
 
     def stop_bmp(self):
         self.log_info('BMPCfg: stop bmp daemon')
-        subprocess.call(["service", "openbmpd", "stop"])
+        subprocess.call(["supervisorctl", "stop", "openbmpd"])
 
 
     def reset_bmp_table(self):
@@ -67,7 +67,7 @@ class BMPCfg(DaemonBase):
 
     def start_bmp(self):
         self.log_info('BMPCfg: start bmp daemon')
-        subprocess.call(["service", "openbmpd", "start"])
+        subprocess.call(["supervisorctl", "start", "openbmpd"])
 
 
 class BMPCfgDaemon:
