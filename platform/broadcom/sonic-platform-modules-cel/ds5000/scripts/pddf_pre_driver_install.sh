@@ -11,10 +11,4 @@ if [ -e ${i2c_mux_pca954x_driver} ]; then
 fi
 echo "${i2c_mux_pca954x_driver} driver module has rename now"
 
-pddf_psu_driver="/usr/lib/modules/${ker_name}/extra/pddf_psu_driver_module.ko"
-if [ -e ${pddf_psu_driver} ]; then
-    mv ${pddf_psu_driver} ${pddf_psu_driver}-bk
-fi
-echo "${pddf_psu_driver} driver module has rename now"
-
 sync
