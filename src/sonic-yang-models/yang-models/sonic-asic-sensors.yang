@@ -24,7 +24,7 @@ module sonic-asic-sensors {
                                        enum disable;
                               }
                       }
-  
+
 		      container ASIC_SENSORS_POLLER_INTERVAL {
                               leaf interval {
 					description "ASIC SENSORS polling interval";
@@ -36,13 +36,13 @@ module sonic-asic-sensors {
 			      }
 
                       }
-                         
+
                       container ASIC_SENSORS_POLLER_STATUS {
 			      leaf admin_status {
                                         type poller_status;
                                         default "enable";
 			      }
-                      }    
+                      }
 	      } /* end of ASIC_SENSORS */
        } /* end of container sonic-asic-sensors */
 } /* end of module sonic-asic-sensors */
