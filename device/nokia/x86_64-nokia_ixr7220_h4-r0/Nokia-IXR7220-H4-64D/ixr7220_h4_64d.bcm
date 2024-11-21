@@ -1129,11 +1129,23 @@ device:
         #    FLEX_STATE_ING_OPERMODE_PIPEUNIQUE: 0
         #    FLEX_STATE_EGR_OPERMODE_PIPEUNIQUE: 1
 
-        # Lossy vs Lossless mode
-        TM_THD_CONFIG:
-            THRESHOLD_MODE: LOSSLESS
-
         # IFP mode
         FP_CONFIG:
             FP_ING_OPERMODE: GLOBAL_PIPE_AWARE
 ...
+---
+device:
+    0:
+        TM_THD_CONFIG:
+            THRESHOLD_MODE: LOSSY_AND_LOSSLESS
+...
+---
+device:
+    0:
+        TM_ING_PORT_PRI_GRP:
+            ?
+                PORT_ID: [1, 5, 9, 13, 17, 21, 25, 29, 34, 38, 42, 46, 50, 51, 55, 59, 63, 68, 72, 76, 80, 85, 89, 93, 97, 102, 106, 110, 114, 119, 123, 127, 131, 136, 140, 144, 148, 150, 153, 157, 161, 165, 170, 174, 178, 182, 187, 191, 195, 199, 204, 208, 212, 216, 221, 225, 229, 233, 238, 242, 246, 250, 255, 259, 263, 267]
+                TM_PRI_GRP_ID: [3,4]
+            :
+                PFC: 1
+                LOSSLESS: 1
