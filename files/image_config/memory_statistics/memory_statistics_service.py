@@ -399,6 +399,13 @@ class TimeProcessor:
 
 
 class MemoryReportGenerator:
+    """
+    This class generates a formatted memory statistics report based on specified time intervals and duration.
+    It is initialized with request data for start and end times, and a step size for report granularity.
+    The class includes methods to create interval labels and generate a structured report header, 
+    detailing metrics and their corresponding values for easy analysis of memory statistics over the defined time frame.
+    """
+
     def __init__(self, request, step):
         """Initialize the report generator with request data and step size.
         
@@ -485,6 +492,14 @@ class MemoryReportGenerator:
 
 
 class MemoryStatisticsCollector:
+    """
+    This class handles system memory statistics collection, management, and retention. It initializes with a specified
+    sampling interval (in minutes) and retention period (in days) to determine how frequently data is collected and how long 
+    it is retained. Methods in this class include `fetch_memory_statistics()` to gather memory data using `psutil`, 
+    `fetch_memory_entries()` to load saved memory entries from a file, and `update_memory_statistics()` to add new statistics 
+    to the cumulative dataset. Additionally, `enforce_retention_policy()` removes old entries based on the retention period, 
+    and `dump_memory_usage()` logs collected data to files or returns it directly if logging is not needed.
+    """
 
     def __init__(self, sampling_interval: int, retention_period: int):
         """
@@ -668,7 +683,12 @@ class MemoryStatisticsCollector:
 
 
 class MemoryEntryManager:
-
+    """
+    Manages memory entries by handling additions, aggregations, and retrieval of memory data entries across 
+    different categories and types. This class is designed to support memory tracking and reporting in a 
+    structured way for various items like 'system_memory'.
+    """
+    
     def add_memory_entry(self, request, total_entries_all, global_entries, local_entries, new_entry, item, category, entry_list):
         """Add memory entry to global and local entries.
         Args:
