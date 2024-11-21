@@ -27,7 +27,7 @@ from . import utils
 from .device_data import DeviceDataManager, DpuInterfaceEnum
 from .vpd_parser import VpdParser
 from .dpu_vpd_parser import DpuVpdParser
-from swsscommon.swsscommon import ConfigDBConnector
+from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector
 
 # Global logger class instance
 logger = SysLogger()
@@ -282,6 +282,8 @@ class DpuModule(ModuleBase):
             f'{self.reboot_base_path}reset_dpu_thermal':
                 (ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_OTHER, 'Thermal shutdown of the DPU'),
         }
+        self.chassis_state_db = SonicV2Connector(host="127.0.0.1")
+        self.chassis_state_db.connect(self.chassis_state_db.CHASSIS_STATE_DB)
 
     def get_base_mac(self):
         """
@@ -506,3 +508,30 @@ class DpuModule(ModuleBase):
         Returns: True once the PCI is successfully reconnected.
         """
         return self.dpuctl_obj.dpu_post_startup()
+
+    def get_hw_mgmt_id(self):
+        """
+        Obtains the id used by hw-mgmt API, so that we can use different APIs and access sysfs files provided
+        """
+        return self.dpu_id + 1
+
+    def get_temperature_dict(self):
+        """
+        This function is used to obtain the TEMPERATURE INFO TABLE from CHASSIS_STATE_DB
+        """
+        chassis_state_db_name = "CHASSIS_STATE_DB"
+        ddr = "DDR"
+        nvme = "NVME"
+        cpu = "CPU"
+        dpu_ddr_temperature_info_table = f"TEMPERATURE_INFO_{self.dpu_id}|{ddr}"
+        dpu_cpu_temperature_info_table = f"TEMPERATURE_INFO_{self.dpu_id}|{cpu}"
+        dpu_drive_temperature_info_table = f"TEMPERATURE_INFO_{self.dpu_id}|{nvme}"
+        return_dict = {}
+        try:
+            return_dict[ddr] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_ddr_temperature_info_table)
+            return_dict[cpu] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_cpu_temperature_info_table)
+            return_dict[nvme] = self.chassis_state_db.get_all(chassis_state_db_name, dpu_drive_temperature_info_table)
+        except Exception as e:
+            logger.log_error(f"Failed to check obtain DPU temperature informatoin for {self.get_name()}! {e}")
+            return {}
+        return return_dict

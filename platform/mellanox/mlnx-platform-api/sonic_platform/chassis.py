@@ -1218,7 +1218,7 @@ class SmartSwitchChassis(Chassis):
             fixed-platforms, as they are treated like a modular chassis as the
             DPU cards are treated like line-cards of a modular-chassis.
         """
-        return True
+        return False
 
     ##############################################
     # Module methods
