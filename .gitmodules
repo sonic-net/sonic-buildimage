@@ -129,4 +129,4 @@
 	url = https://github.com/Marvell-switching/sonic-platform-marvell
 [submodule "src/sonic-stp"]
 	path = src/sonic-stp
-	url = https://github.com/Azure/sonic-stp
+	url = https://github.com/sonic-net/sonic-stp

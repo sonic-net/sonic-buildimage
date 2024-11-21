@@ -540,17 +540,17 @@
         </askppplt:enum>
       </askppplt:typedef>
     </askppplt:typedefs>
-    <askppplt:ASIC_Type askppplt:type="asic-type">ASIC_AC5X</askppplt:ASIC_Type>
+    <askppplt:ASIC_Type askppplt:type="asic-type">ASIC_Falcon</askppplt:ASIC_Type>
     <askppplt:PPInit>
-      <askppplt:PP-name askppplt:type="std-string">AC5X-RD</askppplt:PP-name>
+      <askppplt:PP-name askppplt:type="std-string">Falcon-3.2</askppplt:PP-name>
       <askppplt:Phase1>
         <askppplt:coreClock askppplt:type="uint32">4294967295</askppplt:coreClock>
         <askppplt:serdesRefClock askppplt:type="serdes-ref-clock-type">external_25_single_ended</askppplt:serdesRefClock>
         <askppplt:isrAddrCompletionRegionsBmp askppplt:type="uint32">2</askppplt:isrAddrCompletionRegionsBmp>
         <askppplt:appAddrCompletionRegionsBmp askppplt:type="uint32">60</askppplt:appAddrCompletionRegionsBmp>
-        <askppplt:maxNumOfPhyPortsToUse askppplt:type="number-physical-port-type">128-ports</askppplt:maxNumOfPhyPortsToUse>
+        <askppplt:maxNumOfPhyPortsToUse askppplt:type="number-physical-port-type">256-ports</askppplt:maxNumOfPhyPortsToUse>
         <askppplt:tcamParityCalcEnable askppplt:type="boolean-type">false</askppplt:tcamParityCalcEnable>
-        <askppplt:apEnable askppplt:type="boolean-type">false</askppplt:apEnable>
+        <askppplt:apEnable askppplt:type="boolean-type">true</askppplt:apEnable>
         <askppplt:numOfDataIntegrityElements askppplt:type="uint32">0</askppplt:numOfDataIntegrityElements>
       </askppplt:Phase1>
       <askppplt:Phase2>
@@ -572,7 +572,7 @@
             <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
           </askppplt:rxSdmaQueuesConfig-list>
           <askppplt:rxSdmaQueuesConfig-list>
-            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">1</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:rx_sdma_cpu_port>
             <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">7</askppplt:rx_sdma_cpu_queue>
             <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
             <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
@@ -581,7 +581,7 @@
             <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
           </askppplt:rxSdmaQueuesConfig-list>
           <askppplt:rxSdmaQueuesConfig-list>
-            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">1</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:rx_sdma_cpu_port>
             <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">6</askppplt:rx_sdma_cpu_queue>
             <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
             <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
@@ -599,7 +599,7 @@
             <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
           </askppplt:rxSdmaQueuesConfig-list>
           <askppplt:rxSdmaQueuesConfig-list>
-            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">1</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:rx_sdma_cpu_port>
             <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">4</askppplt:rx_sdma_cpu_queue>
             <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
             <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
@@ -608,7 +608,7 @@
             <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
           </askppplt:rxSdmaQueuesConfig-list>
           <askppplt:rxSdmaQueuesConfig-list>
-            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">1</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:rx_sdma_cpu_port>
             <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">3</askppplt:rx_sdma_cpu_queue>
             <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
             <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
@@ -626,7 +626,151 @@
             <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
           </askppplt:rxSdmaQueuesConfig-list>
           <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">1</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">0</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
             <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">1</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">7</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">6</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">5</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">1</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">4</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">3</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">2</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">1</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">1</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">0</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">7</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">1</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">6</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">5</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">4</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">1</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">3</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:rx_sdma_cpu_port>
+            <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">2</askppplt:rx_sdma_cpu_queue>
+            <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
+            <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
+            <askppplt:numOfRxBuff askppplt:type="uint32">20</askppplt:numOfRxBuff>
+            <askppplt:buffSize askppplt:type="rx-buffer-size-type">2048</askppplt:buffSize>
+            <askppplt:buffHeaderOffset askppplt:type="uint32">0</askppplt:buffHeaderOffset>
+          </askppplt:rxSdmaQueuesConfig-list>
+          <askppplt:rxSdmaQueuesConfig-list>
+            <askppplt:rx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:rx_sdma_cpu_port>
             <askppplt:rx_sdma_cpu_queue askppplt:type="queue-id-type">1</askppplt:rx_sdma_cpu_queue>
             <askppplt:buffAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAllocMethod>
             <askppplt:numOfRxDesc askppplt:type="uint32">20</askppplt:numOfRxDesc>
@@ -850,6 +994,150 @@
             <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
             <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
           </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">0</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">1</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">2</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">3</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">4</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">5</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">6</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">2</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">7</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">0</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">1</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">2</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">3</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">4</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">5</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Normal</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">20</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">0</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">128</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">6</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Packet_Generator</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">256</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">256</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">144</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
+          <askppplt:txSdmaQueuesConfig-list>
+            <askppplt:tx_sdma_cpu_port askppplt:type="cpu-port-id-type">3</askppplt:tx_sdma_cpu_port>
+            <askppplt:tx_sdma_cpu_queue askppplt:type="queue-id-type">7</askppplt:tx_sdma_cpu_queue>
+            <askppplt:buffAndDescAllocMethod askppplt:type="alloc-method-type">Static_Alloc</askppplt:buffAndDescAllocMethod>
+            <askppplt:queueMode askppplt:type="tx-sdma-queue-mode-type">Packet_Generator</askppplt:queueMode>
+            <askppplt:numOfTxDesc askppplt:type="uint32">1</askppplt:numOfTxDesc>
+            <askppplt:numOfTxBuff askppplt:type="uint32">1</askppplt:numOfTxBuff>
+            <askppplt:TxBuffSize askppplt:type="rx-buffer-size-type">3032</askppplt:TxBuffSize>
+          </askppplt:txSdmaQueuesConfig-list>
         </askppplt:multiNetIfCfg>
         <askppplt:internal>
           <askppplt:fuqUseSeparate askppplt:type="boolean-type">false</askppplt:fuqUseSeparate>
@@ -863,7 +1151,8 @@
       <askppplt:LogicalInit>
         <askppplt:routingMode askppplt:type="routing-mode-type">TCAM_ROUTER_BASED</askppplt:routingMode>
         <askppplt:maxNumOfPbrEntries askppplt:type="uint32">0</askppplt:maxNumOfPbrEntries>
-        <askppplt:ingressDropEnable askppplt:type="boolean-type">true</askppplt:ingressDropEnable>
+        <askppplt:sharedTableMode askppplt:type="shared-table-mode-type">MID_L3_MID_L2_NO_EM</askppplt:sharedTableMode>
+        <askppplt:ingressDropEnable askppplt:type="boolean-type">false</askppplt:ingressDropEnable>
       </askppplt:LogicalInit>
       <askppplt:LibInit>
         <askppplt:initBridge askppplt:type="boolean-type">true</askppplt:initBridge>
@@ -873,7 +1162,7 @@
         <askppplt:initPort askppplt:type="boolean-type">true</askppplt:initPort>
         <askppplt:initTrunk askppplt:type="boolean-type">true</askppplt:initTrunk>
         <askppplt:Trunk-params>
-          <askppplt:maxNumberOfTrunks askppplt:type="uint32">511</askppplt:maxNumberOfTrunks>
+          <askppplt:maxNumberOfTrunks askppplt:type="uint32">1023</askppplt:maxNumberOfTrunks>
           <askppplt:trunkMembersMode askppplt:type="trunk-member-mode-type">FLEX</askppplt:trunkMembersMode>
         </askppplt:Trunk-params>
         <askppplt:initPcl askppplt:type="boolean-type">true</askppplt:initPcl>
@@ -882,7 +1171,7 @@
         <askppplt:initPha askppplt:type="boolean-type">true</askppplt:initPha>
         <askppplt:Pha-params>
           <askppplt:packetOrderChangeEnable askppplt:type="boolean-type">false</askppplt:packetOrderChangeEnable>
-          <askppplt:phaFwImageId askppplt:type="pha-firmware-image-id-type">01</askppplt:phaFwImageId>
+          <askppplt:phaFwImageId askppplt:type="pha-firmware-image-id-type">02</askppplt:phaFwImageId>
           <askppplt:phaFwImageIdVersion askppplt:type="uint32">0</askppplt:phaFwImageIdVersion>
         </askppplt:Pha-params>
       </askppplt:LibInit>
