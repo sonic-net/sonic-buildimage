@@ -45,6 +45,7 @@ stages:
           displayName: set githubPR
         - script: |
             set -ex
+
             OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs INCLUDE_KUBERNETES_MASTER=n BUILD_MULTIASIC_KVM=y"
             make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
             gzip -kd target/sonic-vs.img.gz
