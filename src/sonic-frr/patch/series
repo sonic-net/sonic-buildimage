@@ -48,3 +48,4 @@
 0066-lib-fix-srv6-locator-flags-propagated-to-isis.patch
 0067-Add-support-for-SRv6-SID-Manager.patch
 0068-bgpd-Extend-BGP-to-communicate-with-the-SRv6-SID-Manager-to-allocate-release-SRv6-SIDs.patch
+0069-SRv6-vpn-route-and-sidlist-install.patch
