@@ -23,6 +23,11 @@ setup(
         'pyyaml==6.0.1',
         'ipaddress==1.0.23'
     ],
+    entry_points={
+        'console_scripts': [
+            'bmpcfgd = scripts.bmpcfgd:main',
+        ]
+    },
     setup_requires = [
         'pytest-runner',
         'wheel'
@@ -54,6 +59,6 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Topic :: System',
     ],
-    keywords = 'sonic SONiC bmp services',
+    keywords = 'SONiC bmp config daemon',
     test_suite = 'setup.get_test_suite'
 )
