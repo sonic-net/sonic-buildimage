@@ -21,6 +21,7 @@ from .device_data import DeviceDataManager
 
 class ThermalManager(ThermalManagerBase):
     thermal_updater_task = None
+    thermal_updaer_req = None
 
     @classmethod
     def run_policy(cls, chassis):
@@ -33,11 +34,23 @@ class ThermalManager(ThermalManagerBase):
         and any other vendor specific initialization.
         :return:
         """
+        cls.thermal_updater_req = False
+        sfps = []
+        dpus = []
+        host_mgmt_mode = False
         if DeviceDataManager.is_module_host_management_mode():
             from .chassis import Chassis
-            cls.thermal_updater_task = thermal_updater.ThermalUpdater(Chassis.chassis_instance.get_all_sfps())
+            sfps = Chassis.chassis_instance.get_all_sfps()
+            cls.thermal_updater_req = True
+            host_mgmt_mode = True
+        if DeviceDataManager.get_platform_dpus_data():
+            # If DPUs are present then this if condition is reached
+            from .chassis import Chassis
+            dpus = Chassis.chassis_instance.get_all_modules()
+            cls.thermal_updater_req = True
+        if cls.thermal_updater_req:
+            cls.thermal_updater_task = thermal_updater.ThermalUpdater(sfps, dpus, host_mgmt_mode)
             cls.thermal_updater_task.start()
-
 
     @classmethod
     def deinitialize(cls):
@@ -46,5 +59,5 @@ class ThermalManager(ThermalManagerBase):
         is a no-op.
         :return:
         """
-        if DeviceDataManager.is_module_host_management_mode() and cls.thermal_updater_task:
+        if cls.thermal_updater_req and cls.thermal_updater_task:
             cls.thermal_updater_task.stop()
