@@ -34,7 +34,7 @@
                 }
             }
         }
-    },   
+    },
     "ASIC_SENSORS_POLLER_INTERVAL_BAD_LEN_MAX": {
         "sonic-asic-sensors:sonic-asic-sensors": {
             "sonic-asic-sensors:ASIC_SENSORS": {
@@ -46,7 +46,6 @@
                 }
             }
         }
-        
     },
     "ASIC_SENSORS_POLLER_INTERVAL_EMPTY_VALUE": {
         "sonic-asic-sensors:sonic-asic-sensors": {
@@ -59,7 +58,6 @@
                 }
             }
         }
-        
     },
     "ASIC_SENSORS_POLLER_ADMIN_STATUS_EMPTY_VALUE": {
         "sonic-asic-sensors:sonic-asic-sensors": {
@@ -71,6 +69,6 @@
                     "admin_status": ""
                 }
             }
-        }  
+        }
     }
 }
