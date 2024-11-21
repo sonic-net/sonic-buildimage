@@ -2818,5 +2818,13 @@
             "daemon_polling_interval" : "3600",
             "fsstats_sync_interval"   : "86400"
         }
+    },
+    "ASIC_SENSORS": {
+        "ASIC_SENSORS_POLLER_INTERVAL": {
+            "interval": "10"
+        },
+        "ASIC_SENSORS_POLLER_STATUS": {
+            "admin_status": "enable"
+        }
     }
 }

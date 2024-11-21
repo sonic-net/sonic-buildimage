@@ -1,6 +1,8 @@
 # SONiC Configuration Database Manual
-
 **Table of Contents**
+=======
+Table of Contents
+=================
 
 * [Introduction](#introduction)
 * [Configuration](#configuration)
