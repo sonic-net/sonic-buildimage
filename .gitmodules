@@ -106,6 +106,9 @@
 [submodule "src/sonic-gnmi"]
 	path = src/sonic-gnmi
 	url = https://github.com/sonic-net/sonic-gnmi.git
+[submodule "src/sonic-bmp"]
+	path = src/sonic-bmp
+	url = https://github.com/sonic-net/sonic-bmp.git
 [submodule "src/sonic-genl-packet"]
 	path = src/sonic-genl-packet
 	url = https://github.com/sonic-net/sonic-genl-packet
@@ -124,3 +127,6 @@
 [submodule "platform/innovium/sonic-platform-marvell"]
 	path = platform/innovium/sonic-platform-marvell
 	url = https://github.com/Marvell-switching/sonic-platform-marvell
+[submodule "src/sonic-stp"]
+	path = src/sonic-stp
+	url = https://github.com/Azure/sonic-stp
