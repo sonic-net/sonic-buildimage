@@ -54,7 +54,7 @@ DEFAULT_PASSWORD = YourPaSsWoRd
 # ENABLE_ZTP - installs Zero Touch Provisioning support.
 # ENABLE_ZTP = y
 
-# INCLUDE_PDE - Enable platform development enviroment
+# INCLUDE_PDE - Enable platform development environment
 # INCLUDE_PDE = y
 # SHUTDOWN_BGP_ON_START - if set to y all bgp sessions will be in admin down state when
 # bgp service starts.
