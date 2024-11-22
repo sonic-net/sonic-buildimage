@@ -1,0 +1,459 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+      ### type  1 result/1000
+          type  2 result/100
+          type  3 read bit
+     ### property need check must add int front
+-->
+<catalog>
+    <fans>
+        <fan id="fan1" >
+            <property name="present" location="/sys/wb_plat/fan/fan1/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/wb_plat/fan/fan1/motor0/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/wb_plat/fan/fan1/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/52-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/wb_plat/fan/fan1/motor0/speed"/>
+            <property name="rotor2_speed" location="/sys/wb_plat/fan/fan1/motor1/speed"/>
+        </fan>
+        <fan id="fan2" >
+            <property name="present" location="/sys/wb_plat/fan/fan2/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/wb_plat/fan/fan2/motor0/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/wb_plat/fan/fan2/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/51-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/wb_plat/fan/fan2/motor0/speed"/>
+            <property name="rotor2_speed" location="/sys/wb_plat/fan/fan2/motor1/speed"/>
+        </fan>
+        <fan id="fan3" >
+            <property name="present" location="/sys/wb_plat/fan/fan3/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/wb_plat/fan/fan3/motor0/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/wb_plat/fan/fan3/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/50-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/wb_plat/fan/fan3/motor0/speed"/>
+            <property name="rotor2_speed" location="/sys/wb_plat/fan/fan3/motor1/speed"/>
+        </fan>
+        <fan id="fan4" >
+            <property name="present" location="/sys/wb_plat/fan/fan4/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/wb_plat/fan/fan4/motor0/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/wb_plat/fan/fan4/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/49-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/wb_plat/fan/fan4/motor0/speed"/>
+            <property name="rotor2_speed" location="/sys/wb_plat/fan/fan4/motor1/speed"/>
+        </fan>
+        <fan id="fan5" >
+            <property name="present" location="/sys/wb_plat/fan/fan5/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/wb_plat/fan/fan5/motor0/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/wb_plat/fan/fan5/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/48-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/wb_plat/fan/fan5/motor0/speed"/>
+            <property name="rotor2_speed" location="/sys/wb_plat/fan/fan5/motor1/speed"/>
+        </fan>
+        <fan id="fan6" >
+            <property name="present" location="/sys/wb_plat/fan/fan6/present"       type="4" decode="fanpresent" default="1"/>
+            <property name="status"  location="/sys/wb_plat/fan/fan6/motor0/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="status2" location="/sys/wb_plat/fan/fan6/motor1/status" type="4" decode="fanstatus"  default="1"/>
+            <property name="fru" e2type="fru"  location="/sys/bus/i2c/devices/47-0050/eeprom"/>
+            <property name="rotor1_speed" location="/sys/wb_plat/fan/fan6/motor0/speed"/>
+            <property name="rotor2_speed" location="/sys/wb_plat/fan/fan6/motor1/speed"/>
+        </fan>
+    </fans>
+    <temps>
+        <temp id="INLET_TEMP" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/56-004b/hwmon/*/temp1_input" type="1" addend="-3"/>
+            <property name="temp1_max"   location="/sys/bus/i2c/devices/56-004b/hwmon/*/temp1_max" type="1" />
+            <property name="temp1_max_hyst"    location="/sys/bus/i2c/devices/56-004b/hwmon/*/temp1_max_hyst" type="1" />
+        </temp>
+        <temp id="OUTLET_TEMP1" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/53-0048/hwmon/*/temp1_input" type="1"/>
+            <property name="temp1_max"   location="/sys/bus/i2c/devices/53-0048/hwmon/*/temp1_max" type="1" />
+            <property name="temp1_max_hyst"    location="/sys/bus/i2c/devices/53-0048/hwmon/*/temp1_max_hyst" type="1" />
+        </temp>
+        <temp id="OUTLET_TEMP2" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/53-0049/hwmon/*/temp1_input" type="1"/>
+            <property name="temp1_max"   location="/sys/bus/i2c/devices/53-0049/hwmon/*/temp1_max" type="1" />
+            <property name="temp1_max_hyst"    location="/sys/bus/i2c/devices/53-0049/hwmon/*/temp1_max_hyst" type="1" />
+        </temp>
+        <temp id="MAC_TEMP1" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/56-004c/hwmon/*/temp2_input" type="1"/>
+            <property name="temp1_max"   location="/sys/bus/i2c/devices/56-004c/hwmon/*/temp2_max" type="1" />
+            <property name="temp1_max_hyst"    location="/sys/bus/i2c/devices/56-004c/hwmon/*/temp2_crit_hyst" type="1" />
+        </temp>
+        <temp id="MAC_TEMP2" >
+            <property name="temp1_input" location="/sys/bus/i2c/devices/57-004c/hwmon/*/temp2_input" type="1"/>
+            <property name="temp1_max"   location="/sys/bus/i2c/devices/57-004c/hwmon/*/temp2_max" type="1" />
+            <property name="temp1_max_hyst"    location="/sys/bus/i2c/devices/57-004c/hwmon/*/temp2_crit_hyst" type="1" />
+        </temp>
+    </temps>
+    <psus>
+        <psu id="psu1" >
+            <property name="present" location="/sys/wb_plat/psu/psu1/present" type="4" decode="psucheck"  default="1"/>
+            <property name="status"  location="/sys/wb_plat/psu/psu1/output"  type="4" decode="psustatus" default="1"/>
+            <property name="psu" e2type="fru"  location="/sys/bus/i2c/devices/59-0050/eeprom"/>
+            <property name="in_current"    location="/sys/bus/i2c/devices/59-0058/hwmon/*/curr1_input" type="1" />
+            <property name="in_voltage"    location="/sys/bus/i2c/devices/59-0058/hwmon/*/in1_input"  type="1"/>
+            <property name="out_voltage"    location="/sys/bus/i2c/devices/59-0058/hwmon/*/in2_input" type="1" />
+            <property name="out_current"    location="/sys/bus/i2c/devices/59-0058/hwmon/*/curr2_input" type="1" />
+            <property name="temp"    location="/sys/bus/i2c/devices/59-0058/hwmon/*/temp1_input" type="1"/>
+            <property name="fan_speed"     location="/sys/bus/i2c/devices/59-0058/hwmon/*/fan1_input" />
+            <property name="in_power"      location="/sys/bus/i2c/devices/59-0058/hwmon/*/power1_input"  type="5"/>
+            <property name="out_power"     location="/sys/bus/i2c/devices/59-0058/hwmon/*/power2_input"  type="5"/>
+        </psu>
+        <psu id="psu2" >
+            <property name="present" location="/sys/wb_plat/psu/psu2/present" type="4" decode="psucheck"  default="1"/>
+            <property name="status"  location="/sys/wb_plat/psu/psu2/output"  type="4" decode="psustatus" default="1"/>
+            <property name="psu" e2type="fru"  location="/sys/bus/i2c/devices/58-0050/eeprom"/>
+            <property name="in_current"    location="/sys/bus/i2c/devices/58-0058/hwmon/*/curr1_input" type="1" />
+            <property name="in_voltage"    location="/sys/bus/i2c/devices/58-0058/hwmon/*/in1_input"  type="1"/>
+            <property name="out_voltage"    location="/sys/bus/i2c/devices/58-0058/hwmon/*/in2_input" type="1" />
+            <property name="out_current"    location="/sys/bus/i2c/devices/58-0058/hwmon/*/curr2_input" type="1" />
+            <property name="temp"    location="/sys/bus/i2c/devices/58-0058/hwmon/*/temp1_input" type="1"/>
+            <property name="fan_speed"     location="/sys/bus/i2c/devices/58-0058/hwmon/*/fan1_input" />
+            <property name="in_power"      location="/sys/bus/i2c/devices/58-0058/hwmon/*/power1_input"  type="5"/>
+            <property name="out_power"     location="/sys/bus/i2c/devices/58-0058/hwmon/*/power2_input"  type="5"/>
+        </psu>
+    </psus>
+    <dcdcs>
+        <dcdc id="MAC_VCC12V_CON" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in1_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="12.600" />
+            <property name="dcdc_min"   gettype="config" value="11.400" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD1.0V_FPGA" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in2_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="1.050" />
+            <property name="dcdc_min"   gettype="config" value="0.950" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD1.8V_FPGA" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in3_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="1.890" />
+            <property name="dcdc_min"   gettype="config" value="1.710" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD1.2V_FPGA" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in4_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="1.280" />
+            <property name="dcdc_min"   gettype="config" value="1.130" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD3.3V" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in5_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="3.465" />
+            <property name="dcdc_min"   gettype="config" value="3.135" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_DVDD3.3V_1.8V" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in6_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="3.465" />
+            <property name="dcdc_min"   gettype="config" value="3.135" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_AVDD1.8V" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in7_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="1.890" />
+            <property name="dcdc_min"   gettype="config" value="1.710" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_DVDD1.2V" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in8_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="1.280" />
+            <property name="dcdc_min"   gettype="config" value="1.130" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_AVDD1.2V" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in9_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="1.280" />
+            <property name="dcdc_min"   gettype="config" value="1.130" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD3.3V_SFP+" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in10_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="3.465" />
+            <property name="dcdc_min"   gettype="config" value="3.135" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD3.3V_CLK" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in11_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="3.465" />
+            <property name="dcdc_min"   gettype="config" value="3.135" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD5V_VR" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in13_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="5.500" />
+            <property name="dcdc_min"   gettype="config" value="4.500" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD_CORE" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in14_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="0.980" />
+            <property name="dcdc_min"   gettype="config" value="0.700" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD_ANALOG" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in15_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="0.920" />
+            <property name="dcdc_min"   gettype="config" value="0.760" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD_ANALOG1" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/60-005b/hwmon/hwmon*/in16_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="0.920" />
+            <property name="dcdc_min"   gettype="config" value="0.760" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="BASE_VDD3.3V" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/41-005b/hwmon/hwmon*/in1_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="3.465" />
+            <property name="dcdc_min"   gettype="config" value="3.135" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="BASE_VDD12V" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/41-005b/hwmon/hwmon*/in3_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="12.600" />
+            <property name="dcdc_min"   gettype="config" value="11.400" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="BASE_VDD3.3_STBY" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/41-005b/hwmon/hwmon*/in4_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="3.465" />
+            <property name="dcdc_min"   gettype="config" value="3.135" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="BASE_SSD1_VDD3.3V" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/41-005b/hwmon/hwmon*/in5_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="3.465" />
+            <property name="dcdc_min"   gettype="config" value="3.135" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="BASE_PHY_VDD1V0" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/41-005b/hwmon/hwmon*/in6_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="1.100" />
+            <property name="dcdc_min"   gettype="config" value="0.950" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="BASE_OVDD_PHY_M" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/41-005b/hwmon/hwmon*/in7_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="3.465" />
+            <property name="dcdc_min"   gettype="config" value="3.135" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="CPU_VCCP" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/42-0068/hwmon/hwmon*/in2_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="1.364" />
+            <property name="dcdc_min"   gettype="config" value="0.468" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="CPU_VNN" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/42-0068/hwmon/hwmon*/in3_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="1.364" />
+            <property name="dcdc_min"   gettype="config" value="0.585" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="CPU_P1V05" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/42-006e/hwmon/hwmon*/in2_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="1.155" />
+            <property name="dcdc_min"   gettype="config" value="0.945" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="CPU_VCCRAM" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/42-006e/hwmon/hwmon*/in3_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="1.320" />
+            <property name="dcdc_min"   gettype="config" value="0.675" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="CPU_P1V2_VDDQ" >
+            <property name="dcdc_input" location="/sys/bus/i2c/devices/42-005e/hwmon/hwmon*/in3_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="1.320" />
+            <property name="dcdc_min"   gettype="config" value="1.080" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD3.3_MON" >
+            <property name="dcdc_input" location="/sys/wb_plat/sensor/in3/in_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="3.560" />
+            <property name="dcdc_min"   gettype="config" value="3.040" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_QSFPDD_VDD3.3V_A" >
+            <property name="dcdc_input" location="/sys/wb_plat/sensor/in1/in_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="3.560" />
+            <property name="dcdc_min"   gettype="config" value="3.040" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_QSFPDD_VDD3.3V_B" >
+            <property name="dcdc_input" location="/sys/wb_plat/sensor/in2/in_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="3.560" />
+            <property name="dcdc_min"   gettype="config" value="3.040" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD3.7V_CLK" >
+            <property name="dcdc_input" location="/sys/wb_plat/sensor/in4/in_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="4.000" />
+            <property name="dcdc_min"   gettype="config" value="3.500" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="MAC_VDD5V_USB" >
+            <property name="dcdc_input" location="/sys/wb_plat/sensor/in5/in_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="5.500" />
+            <property name="dcdc_min"   gettype="config" value="4.500" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="FAN6_VDD12V" >
+            <property name="dcdc_input" location="/sys/wb_plat/sensor/in11/in_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="12.600" />
+            <property name="dcdc_min"   gettype="config" value="11.400" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="FAN5_VDD12V" >
+            <property name="dcdc_input" location="/sys/wb_plat/sensor/in10/in_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="12.600" />
+            <property name="dcdc_min"   gettype="config" value="11.400" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="FAN4_VDD12V" >
+            <property name="dcdc_input" location="/sys/wb_plat/sensor/in9/in_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="12.600" />
+            <property name="dcdc_min"   gettype="config" value="11.400" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="FAN3_VDD12V" >
+            <property name="dcdc_input" location="/sys/wb_plat/sensor/in8/in_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="12.600" />
+            <property name="dcdc_min"   gettype="config" value="11.400" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="FAN2_VDD12V" >
+            <property name="dcdc_input" location="/sys/wb_plat/sensor/in7/in_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="12.600" />
+            <property name="dcdc_min"   gettype="config" value="11.400" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="FAN1_VDD12V" >
+            <property name="dcdc_input" location="/sys/wb_plat/sensor/in6/in_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="12.600" />
+            <property name="dcdc_min"   gettype="config" value="11.400" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+
+        <dcdc id="FAN_VDD3.3V" >
+            <property name="dcdc_input" location="/sys/wb_plat/sensor/in12/in_input" type="6" />
+            <property name="dcdc_max"   gettype="config" value="3.560" />
+            <property name="dcdc_min"   gettype="config" value="3.040" />
+            <property name="dcdc_unit"   gettype="config" value="V" />
+        </dcdc>
+    </dcdcs>
+    <mactemps>
+        <mactemp id="MAC_DIE_0" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp1_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_1" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp2_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_2" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp3_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_3" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp4_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_4" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp5_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_5" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp6_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_6" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp7_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_7" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp8_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_8" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp9_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_9" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp10_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_10" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp11_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_11" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp12_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_12" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp13_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_13" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp14_input"  type="1"/>
+        </mactemp>
+        <mactemp id="MAC_DIE_14" >
+            <property name="temp_input" location="/sys/bus/i2c/devices/62-0044/hwmon/hwmon*/temp15_input"  type="1"/>
+        </mactemp>
+    </mactemps>
+    <cpus location="/sys/bus/platform/devices/coretemp.0/hwmon/hwmon*"/>
+    <decode>
+    <fanpresent>
+        <code key="1" value="PRESENT"/>
+        <code key="0" value="ABSENT"/>
+    </fanpresent>
+    <fanstatus>
+        <code key="1" value="OK"/>
+        <code key="0" value="NOT OK"/>
+    </fanstatus>
+    <psucheck>
+        <code key="1" value="PRESENT"/>
+        <code key="0" value="ABSENT"/>
+    </psucheck>
+    <psustatus>
+        <code key="1" value="OK"/>
+        <code key="0" value="NOT OK"/>
+    </psustatus>
+    <psutype>
+        <code key="GW-CRPS1300D" value="PA1300I-F"/>
+        <code key="DPS-1300AB-6 F" value="PA1300I-F"/>
+        <code key="DPS-1300AB-6 S" value="PA1300I-F"/>
+        <code key="CRPS1300D3R" value="PA1300I-R"/>
+        <code key="DPS-1300AB-11 C" value="PA1300I-R"/>
+    </psutype>
+    <fan_display_name>
+        <code key="M1HFAN IV-F" value="M1HFAN IV-F"/>
+        <code key="M1HFAN IV-R" value="M1HFAN IV-R"/>
+    </fan_display_name>
+    </decode>
+</catalog>
+
