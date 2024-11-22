@@ -44,7 +44,6 @@ bfb_install_call(){
     fi
     echo "Installing bfb image on DPU connected to $rshim using $cmd"
     local indicator="$rshim:"
-	exit 0
     trap 'kill_ch_procs' SIGINT SIGTERM SIGHUP
     eval "$cmd"  > >(while IFS= read -r line; do echo "$indicator $line"; done >> "$result_file") 2>&1 &
     cmd_pid=$!

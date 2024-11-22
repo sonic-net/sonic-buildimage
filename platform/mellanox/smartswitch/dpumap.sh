@@ -23,9 +23,8 @@ PLATFORM=${PLATFORM:-`sonic-db-cli CONFIG_DB HGET 'DEVICE_METADATA|localhost' pl
 PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
 
 usage(){
-    echo "Usage: $0 {dpu2pcie|dpu2rshim|rshim2dpu|pcie2dpu} name"
+    echo "Usage: $0 {dpu2pcie|dpu2rshim|rshim2dpu|pcie2dpu|rshim2pcie|pcie2rshim} name"
 }
-declare -A dpu2pcie
 
 validate_platform(){
     if [[ ! -f $PLATFORM_JSON ]]; then
