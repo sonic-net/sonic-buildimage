@@ -399,8 +399,9 @@ class DpuModule(ModuleBase):
 
     def get_oper_status(self):
         boot_prog = self.dpuctl_obj.read_boot_prog()
-        return ModuleBase.MODULE_STATUS_ONLINE if boot_prog in [BootProgEnum.OS_RUN.value, BootProgEnum.OS_START.value] \
-            else ModuleBase.MODULE_STATUS_OFFLINE
+        if boot_prog == BootProgEnum.OS_RUN.value:
+            return ModuleBase.MODULE_STATUS_ONLINE
+        return ModuleBase.MODULE_STATUS_OFFLINE
 
     ##############################################
     # SmartSwitch methods

@@ -390,7 +390,7 @@ class TestModule:
             mock_obj.return_value = 2
             m1.get_oper_status() == ModuleBase.MODULE_STATUS_OFFLINE
             mock_obj.return_value = 4
-            m1.get_oper_status() == ModuleBase.MODULE_STATUS_ONLINE
+            m1.get_oper_status() == ModuleBase.MODULE_STATUS_OFFLINE
 
         temp_data = {
             f"TEMPERATURE_INFO_{m.get_dpu_id()}|DDR": {"temperature": "45.0", "high_threshold":"90", "critical_high_threshold": "100"},
@@ -399,7 +399,7 @@ class TestModule:
         }
         def new_get_all(db_name, table_name):
             return temp_data[table_name]
-
+        
         with patch.object(m.chassis_state_db, 'get_all', wraps=new_get_all):
             output_dict = m.get_temperature_dict()
             assert output_dict['DDR'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|DDR"]
@@ -411,5 +411,4 @@ class TestModule:
             assert output_dict['CPU'] == {}
             assert output_dict['NVME'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|NVME"]
             del temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU"]
-            assert m.get_temperature_dict() == {}
-
+            assert m.get_temperature_dict() == {} 
