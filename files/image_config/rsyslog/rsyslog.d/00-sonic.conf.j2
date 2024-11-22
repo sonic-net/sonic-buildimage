@@ -47,12 +47,6 @@ if $msg startswith " gnmi-native" then {
     stop
 }
 
-## bmp rules
-if $msg startswith " bmp" then {
-    /var/log/bmp.log
-    stop
-}
-
 ## telemetry rules
 if $msg startswith  " telemetry" or ($msg startswith  " dialout" )then {
     /var/log/telemetry.log
