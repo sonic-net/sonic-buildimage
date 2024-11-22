@@ -120,6 +120,12 @@ function setPlatformLagIdBoundaries()
 {
     docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB SET "SYSTEM_LAG_ID_START" "$lag_id_start"
     docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB SET "SYSTEM_LAG_ID_END" "$lag_id_end"
+    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local start_id = tonumber(ARGV[1])
+    local end_id = tonumber(ARGV[2])
+    for id = start_id,end_id do
+        redis.call('rpush','SYSTEM_LAG_IDS_FREE_LIST', tostring(id))
+    end" 0 $lag_id_start $lag_id_end
 }
 function waitForAllInstanceDatabaseConfigJsonFilesReady()
 {
