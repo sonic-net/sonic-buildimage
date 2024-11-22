@@ -57,8 +57,8 @@ class TestModule:
         chassis = ModularChassis()
         assert len(chassis.get_all_sfps()) == 4
 
-    @patch('swsscommon.swsscommon.ConfigDBConnector.connect', mock.MagicMock())
-    @patch('swsscommon.swsscommon.ConfigDBConnector.__init__', mock.MagicMock(return_value = None))
+    @patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
+    @patch('sonic_platform.module.ConfigDBConnector', mock.MagicMock())
     def test_chassis_get_num_modules(self):
         chassis = SmartSwitchChassis()
         assert chassis.get_num_modules() == 4
@@ -181,8 +181,8 @@ class TestModule:
         assert len(m._sfp_list) == 0
         assert len(m._thermal_list) == 0
 
-    @patch('swsscommon.swsscommon.ConfigDBConnector.connect', mock.MagicMock())
-    @patch('swsscommon.swsscommon.ConfigDBConnector.__init__', mock.MagicMock(return_value=None))
+    @patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
+    @patch('sonic_platform.module.ConfigDBConnector', mock.MagicMock())
     def test_module_vpd(self):
         m = Module(1)
         m.vpd_parser.vpd_file = os.path.join(test_path, 'mock_psu_vpd')
@@ -235,8 +235,8 @@ class TestModule:
         assert dm.get_serial() == "N/A"
         assert dm.get_revision() == "N/A"
 
+    @patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
     @patch('swsscommon.swsscommon.ConfigDBConnector.connect', mock.MagicMock())
-    @patch('swsscommon.swsscommon.ConfigDBConnector.__init__', mock.MagicMock(return_value=None))
     @mock.patch('swsscommon.swsscommon.ConfigDBConnector.get')
     @mock.patch('subprocess.call')
     def test_dpu_module(self, mock_call, mock_get):
@@ -270,7 +270,6 @@ class TestModule:
             "dpu2": "169.254.200.3",
             "dpu3": "169.254.200.4"
         }
-
         def get_midplane_ip(DB_NAME, _hash, key):
             dpu_name = _hash.split("|")[-1]
             return midplane_ips.get(dpu_name)
@@ -359,6 +358,11 @@ class TestModule:
         m2 = DpuModule(1)
         m3 = DpuModule(2)
         m4 = DpuModule(3)
+        # DPU0 in PMON = dpu1 in hw-mgmt
+        m1.get_hw_mgmt_id() == 1
+        m2.get_hw_mgmt_id() == 2
+        m3.get_hw_mgmt_id() == 3
+        m4.get_hw_mgmt_id() == 4
         assert not m1.midplane_interface
         with patch("sonic_platform.utils.read_int_from_file", wraps=mock.MagicMock(return_value=1)):
             assert m1._is_midplane_up()
@@ -387,3 +391,25 @@ class TestModule:
             m1.get_oper_status() == ModuleBase.MODULE_STATUS_OFFLINE
             mock_obj.return_value = 4
             m1.get_oper_status() == ModuleBase.MODULE_STATUS_ONLINE
+
+        temp_data = {
+            f"TEMPERATURE_INFO_{m.get_dpu_id()}|DDR": {"temperature": "45.0", "high_threshold":"90", "critical_high_threshold": "100"},
+            f"TEMPERATURE_INFO_{m.get_dpu_id()}|NVME": {"temperature": "100.0", "high_threshold":"85", "critical_high_threshold": "110"},
+            f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU": {"temperature": "75.0", "high_threshold":"80", "critical_high_threshold": "95"}
+        }
+        def new_get_all(db_name, table_name):
+            return temp_data[table_name]
+
+        with patch.object(m.chassis_state_db, 'get_all', wraps=new_get_all):
+            output_dict = m.get_temperature_dict()
+            assert output_dict['DDR'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|DDR"]
+            assert output_dict['CPU'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU"]
+            assert output_dict['NVME'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|NVME"]
+            temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU"] = {}
+            output_dict = m.get_temperature_dict()
+            assert output_dict['DDR'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|DDR"]
+            assert output_dict['CPU'] == {}
+            assert output_dict['NVME'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|NVME"]
+            del temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU"]
+            assert m.get_temperature_dict() == {}
+

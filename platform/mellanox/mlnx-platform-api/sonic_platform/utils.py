@@ -105,7 +105,7 @@ def read_float_from_file(file_path, default=0.0, raise_exception=False, log_func
 def _key_value_converter(content, delimeter):
     ret = {}
     for line in content.splitlines():
-        k,v = line.split(delimeter)
+        k,v = line.split(delimeter, 1)
         ret[k.strip()] = v.strip()
     return ret
 

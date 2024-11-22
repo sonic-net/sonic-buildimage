@@ -344,14 +344,14 @@ class TestChassis:
         content = chassis._parse_vpd_data(os.path.join(test_path, 'vpd_data_file'))
         assert content.get('REV') == 'A7'
 
-    @mock.patch('swsscommon.swsscommon.SonicV2Connector.__init__', mock.MagicMock(return_value=None))
-    @mock.patch('swsscommon.swsscommon.SonicV2Connector.connect', mock.MagicMock(return_value=None))
+    @mock.patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
+    @mock.patch('sonic_platform.module.ConfigDBConnector', mock.MagicMock())
     def test_smartswitch(self):
         orig_dpu_count = DeviceDataManager.get_dpu_count
         DeviceDataManager.get_dpu_count = mock.MagicMock(return_value=4)
         chassis = SmartSwitchChassis()
 
-        assert chassis.is_modular_chassis()
+        assert not chassis.is_modular_chassis()
         assert chassis.is_smartswitch()
         assert chassis.init_midplane_switch()
 
