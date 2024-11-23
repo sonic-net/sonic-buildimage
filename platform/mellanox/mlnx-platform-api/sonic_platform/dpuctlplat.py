@@ -157,20 +157,24 @@ class DpuCtlPlat():
             return True
         return False
 
-    def dpu_rshim_service_control(self, op):
-        """Start/Stop the RSHIM service for the current DPU"""
-        try:
-            if not self.rshim_interface:
+    def get_rshim_interface(self):
+        """Parse the rshim interface from platform.json, raise Runtime error if the device id is not available"""
+        if not self.rshim_interface:
                 interface_name = DeviceDataManager.get_dpu_interface(self.dpu_name, DpuInterfaceEnum.RSHIM_INT.value)
                 if not interface_name:
                     raise RuntimeError(f"Unable to Parse rshim information for {self.dpu_name} from Platform.json")
                 # rshim1 -> rshim@1
                 self.rshim_interface = interface_name[:5] + "@" + interface_name[5:]
+        return self.rshim_interface
+
+    def dpu_rshim_service_control(self, op):
+        """Start/Stop the RSHIM service for the current DPU"""
+        try:
             rshim_cmd = ["dbus-send", "--dest=org.freedesktop.systemd1", "--type=method_call",
                          "--print-reply", "--reply-timeout=2000",
                          "/org/freedesktop/systemd1",
                          f"org.freedesktop.systemd1.Manager.{op.capitalize()}Unit",
-                         f"string:{self.rshim_interface}.service",
+                         f"string:{self.get_rshim_interface()}.service",
                          "string:replace"]
             self.run_cmd_output(rshim_cmd)
             # If command fails execution exception is raised , return true if control is still in try block
