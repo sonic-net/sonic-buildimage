@@ -282,6 +282,11 @@ module sonic-acl {
 						pattern '0[xX][0-9a-fA-F]{1,2}/0[xX][0-9a-fA-F]{1,2}';
 					}
 				}
+
+				leaf TUNNEL_TERM {
+					description "Tunnel Termination Flag";
+					type boolean;
+				}
 			}
 			/* end of ACL_RULE_LIST */
 		}
