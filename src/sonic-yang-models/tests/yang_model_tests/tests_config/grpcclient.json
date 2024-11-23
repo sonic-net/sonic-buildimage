@@ -2,7 +2,7 @@
     "GRPCCLIENT_CONFIG_CHANGE_VERBOSITY_LEVEL": {
         "sonic-grpcclient:sonic-grpcclient": {
             "sonic-grpcclient:GRPCCLIENT": {
-                "sonic-grpccleint:CONFIG": 
+                "sonic-grpcclient:CONFIG": 
                     {
                         "log_level": "info"
                     }
