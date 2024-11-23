@@ -2752,6 +2752,19 @@
 		"log_verbosity": "notice"
 	    }
 	},
+	"GRPCCLIENT": {
+            "config": {
+                "type": "secure",
+                "auth_level": "server",
+                "log_level": "info"
+            },
+            "certs": {
+                "client_crt": "grpcclient.crt",
+                "client_key": "grpcclient.key",
+                "ca_crt": "root.pem",
+                "grpc_ssl_credential": "azureclient.ms"
+            } 
+	},
         "BANNER_MESSAGE": {
             "global": {
                 "state": "enabled",
