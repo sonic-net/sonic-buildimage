@@ -22,7 +22,6 @@ from .device_data import DeviceDataManager
 
 class ThermalManager(ThermalManagerBase):
     thermal_updater_task = None
-    thermal_updaer_req = None
 
     @classmethod
     def run_policy(cls, chassis):
@@ -35,7 +34,6 @@ class ThermalManager(ThermalManagerBase):
         and any other vendor specific initialization.
         :return:
         """
-        cls.thermal_updater_req = False
         dpus = []
         dpus_present = DeviceDataManager.get_platform_dpus_data()
         host_mgmt_mode = DeviceDataManager.is_module_host_management_mode()
