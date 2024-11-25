@@ -188,4 +188,3 @@ class ThermalUpdater:
                 0,
                 ERROR_READ_THERMAL_DATA
             )
-

@@ -109,4 +109,3 @@ class TestThermalUpdater:
         mock_sfp.get_presence = mock.MagicMock(return_value=False)
         updater.update_module()
         hw_management_independent_mode_update.thermal_data_clean_module.assert_called_once_with(0, 11)
-
