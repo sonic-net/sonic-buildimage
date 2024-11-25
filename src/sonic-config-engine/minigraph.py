@@ -2474,7 +2474,10 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
     # asymmetric PFC is disabled by default
     for port in ports.values():
-        port['pfc_asym'] = 'off'
+        if 'pfc_asym' not in port:
+            port['pfc_asym'] = 'off'
+        elif port['pfc_asym'] == 'N/A':
+            del port['pfc_asym']
 
     # set physical port default admin status up
     for port in phyport_intfs:
