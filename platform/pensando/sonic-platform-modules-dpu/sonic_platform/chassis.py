@@ -312,6 +312,8 @@ class Chassis(ChassisBase):
         Returns:
             string: Model/part number of chassis
         """
+        if not hasattr(self, "_eeprom") or self._eeprom is None:
+            self.__initialize_eeprom()
         return self._eeprom.get_part_number()
 
     def get_serial(self):

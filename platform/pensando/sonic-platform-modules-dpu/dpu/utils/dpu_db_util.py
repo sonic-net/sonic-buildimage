@@ -47,7 +47,6 @@ except Exception as e:
 
 DPU_HEALTH_INFO_TABLE_NAME = 'DPU_STATE'
 REBOOT_CAUSE_INFO_TABLE_NAME = 'REBOOT_CAUSE'
-VERSION_UPDATE_TABLE_NAME = 'PLATFORM|VERSION|CURRENT'
 REDIS_CHASSIS_SERVER_PORT = 6380
 REDIS_CHASSIS_SERVER_IP = '169.254.200.254'
 CHASSIS_STATE_DB = 13
@@ -124,9 +123,9 @@ class EventHandler(logger.Logger):
 
     def bool_to_link_status(self, status):
         if status:
-            return "UP"
+            return "up"
         else:
-            return "DOWN"
+            return "down"
 
     def _is_dpu_container_running(self):
         try:
@@ -177,11 +176,11 @@ class EventHandler(logger.Logger):
 
     def _update_dpu_date_plane_db(self):
         try:
-            dpu_status = 'DOWN'
+            dpu_status = 'down'
             pdsagent_name, pdsagent_status = self._fetch_pdsagent_status()
             pciemgrd_status = self._fetch_pciemgrd_status()
             if pdsagent_status and pciemgrd_status:
-                dpu_status = 'UP'
+                dpu_status = 'up'
             dpu_docker_status = self._is_dpu_container_running()
             reason = f"DPU container named {self.dpu_docker_name} is{'' if dpu_docker_status else ' not'} running,"
             reason += f" {pdsagent_name} running : {self._bool_to_healthd_status(pdsagent_status)},"
@@ -223,7 +222,7 @@ class EventHandler(logger.Logger):
         try:
             control_plane_status = self.db.hget(self.table, 'dpu_control_plane_state')
             control_plane_reason = self.db.hget(self.table, 'dpu_control_plane_reason')
-            if (control_plane_status == None) or (control_plane_status == 'UP'):
+            if (control_plane_status == None) or (control_plane_status == 'up'):
                 control_plane_status = True
             else:
                 control_plane_status = False
@@ -381,93 +380,6 @@ class RebootCauseGRPCUpdater():
             self.process.join()
             log_info("gRPC server process terminated.")
 
-class VersionUpdater():
-    def __init__(self, chassis, db):
-        self.db = db
-        self.chassis = chassis
-        self.slot_id = get_slot_id(self.chassis)
-        self.table = f'{VERSION_UPDATE_TABLE_NAME}|DPU{self.slot_id}|1'
-        try:
-            self.apiHelper = APIHelper()
-            self.dpu_docker_name = self.apiHelper.get_dpu_docker_container_name()
-        except:
-            log_err('Failed to get dpu docker name')
-
-    def delete_table_version_entries(self):
-        try:
-            if self.db:
-                sonic_version_info_table = self.db.keys(self.table)
-                if len(sonic_version_info_table) == 1:
-                    table = sonic_version_info_table[0]
-                    self.db.delete(table)
-        except Exception as e:
-            log_err(f'failed to delete fetch sonic version entries due to {e}')
-
-    def _fetch_version_info(self):
-        try:
-            from sonic_installer.bootloader import get_bootloader
-            bootloader = get_bootloader()
-            curimage = bootloader.get_current_image()
-            curimage = curimage.split('-')[-1]
-            fwupdate_version_list = []
-            try:
-                cmd = "/nic/tools/fwupdate -l | grep -v 'FATAL' "
-                cmd += "| grep -v 'sh: /dev/mapper: unknown operand'| "
-                cmd += "grep -v 'standard metadata magic not found'"
-                output = self.apiHelper.run_docker_cmd(cmd)
-                fw_version_data = json.loads(output)
-                try:
-                    fwupdate_version_list.append(fw_version_data['mainfwa']['system_image']['software_version'])
-                except:
-                    fwupdate_version_list.append(NOT_AVAILABLE)
-                try:
-                    fwupdate_version_list.append(fw_version_data['mainfwa']['uboot']['software_version'])
-                except:
-                    fwupdate_version_list.append(NOT_AVAILABLE)
-                try:
-                    fwupdate_version_list.append(fw_version_data['goldfw']['kernel_fit']['software_version'])
-                except:
-                    fwupdate_version_list.append(NOT_AVAILABLE)
-                try:
-                    fwupdate_version_list.append(fw_version_data['goldfw']['uboot']['software_version'])
-                except:
-                    fwupdate_version_list.append(NOT_AVAILABLE)
-            except Exception as e:
-                log_err(f"Failed to fetch mainfwa/goldfw version info due to {e}")
-                fwupdate_version_list = [NOT_AVAILABLE]*4
-            version_info_list = [curimage]
-            version_info_list.extend(fwupdate_version_list)
-            return version_info_list
-        except Exception as e:
-            log_err(f"Failed to fetch sonic version info due to {e}")
-            return [NOT_AVAILABLE]*6
-
-    def update(self):
-        log_info("Start sonic version info updating")
-        try:
-            stat = self._fetch_version_info()
-            if stat == None:
-                raise Exception("Failed to fetch sonic version info")
-            self._refresh_sonic_version_db(stat)
-        except Exception as e:
-            log_err(f'failed to fetch sonic version data due to {e}')
-        log_info("End sonic version info updating")
-
-    def _refresh_sonic_version_db(self, stat):
-        try:
-            if self.db == None:
-                return
-            self.delete_table_version_entries()
-            [current, mainfwa_sw, mainfwa_uboot, goldfw_sw, goldfw_uboot] = stat
-            inventory_value = ""
-            inventory_value += f"dpu_sonic_version_current: {current}"
-            inventory_value += f"\nmainfwa_sw_version: {mainfwa_sw}"
-            inventory_value += f"\ngoldfw_sw_version: {goldfw_sw}"
-            inventory_value += f"\nmainfwa_uboot_version: {mainfwa_uboot}"
-            inventory_value += f"\ngoldfw_uboot_version: {goldfw_uboot}"
-            self.db.set(self.table, inventory_value)
-        except Exception as e:
-            log_err('Failed to update sonic version values - {}'.format(repr(e)))
 #
 # Daemon =======================================================================
 #
@@ -506,8 +418,6 @@ class DpuDBUtilDaemon(daemon_base.DaemonBase):
             return
         self.reboot_cause_updater = RebootCauseGRPCUpdater()
         self.reboot_cause_updater.start()
-        self.version_updater = VersionUpdater(self.chassis, self.db)
-        self.version_updater.update()
         self.event_handler = EventHandler(self.chassis, self.db)
         self.event_handler.start()
 
