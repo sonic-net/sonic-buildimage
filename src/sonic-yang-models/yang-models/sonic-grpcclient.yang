@@ -21,16 +21,14 @@ module sonic-grpcclient {
 
         container GRPCCLIENT {
 
-            container CONFIG {
+            container config {
 
                 leaf type {
                     type enumeration {
                         enum secure;
                         enum insecure;
                     }
-
                     description "grpc client security level. ";
-
                 }
 
                 leaf auth_level {
@@ -38,9 +36,7 @@ module sonic-grpcclient {
                         enum server;
                         enum client;
                     }
-
                     description "grpc client auth level. ";
-
                 }
 
                 leaf log_level {
@@ -51,18 +47,14 @@ module sonic-grpcclient {
                         enum warning;
                         enum critical;
                     }
-
                     description "grpc client log level. ";
-
-
                 }
             }
 
-            container CERTS {
+            container certs {
 
                 leaf client_crt {
                     type string;
-
                     description "grpc client certificate file name ";
 
                 }
@@ -70,27 +62,18 @@ module sonic-grpcclient {
                 leaf client_key {
                     type string;
                     description "grpc client key file name ";
-
                 }
 
                 leaf ca_crt {
-
                     type string;
                     description "grpc client root cert";
-
-
                 }
 
                 leaf grpc_ssl_credential {
                     type string;
                     description "grpc client ssl credential";
-
-
                 }
             }
-
-
-
         }
     }
 }
