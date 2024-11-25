@@ -476,6 +476,7 @@ class DpuModule(ModuleBase):
             # If we are unable to parse platform.json for midplane interface raise RunTimeError
             if not self.midplane_interface:
                 raise RuntimeError(f"Unable to obtain midplane interface information from platform.json for {self.get_name()}")
+        return self.midplane_interface
 
     def _is_midplane_up(self):
         # If rshim is not activated then the interface does not exist, do not log the error
