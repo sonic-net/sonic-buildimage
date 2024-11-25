@@ -2,6 +2,9 @@
     "BGP_GLOBAL_VALID": {
         "desc": "Configure BGP global table."
     },
+    "BGP_GLOBAL_ROUTE_MAP_VALID": {
+        "desc": "Configure BGP global table with route map."
+    },
     "BGP_NEIGHBOR_ALL_VALID": {
         "desc": "Configure BGP neighbor table."
     },

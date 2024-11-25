@@ -82,6 +82,36 @@
         }
     },
 
+    "BGP_GLOBAL_ROUTE_MAP_VALID": {
+        "sonic-vrf:sonic-vrf":{
+            "sonic-vrf:VRF": {
+                "VRF_LIST": [
+                {
+                    "name":"Vrf1"
+                }
+                ]
+            }
+        },
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS": {
+                "BGP_GLOBALS_LIST": [
+                {
+                    "vrf_name":"default",
+                    "local_asn": 65001,
+                    "route_map": "RM_SET_SRC",
+                    "route_map_ipv6": "RM_SET_SRC6"
+                },
+                {
+                    "vrf_name":"Vrf1",
+                    "local_asn": 65001,
+                    "route_map": "RM_SET_SRC",
+                    "route_map_ipv6": "RM_SET_SRC6"
+                }
+                ]
+            }
+        }
+    },
+
     "BGP_NEIGHBOR_ALL_VALID": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
