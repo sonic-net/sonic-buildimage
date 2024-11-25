@@ -469,15 +469,17 @@ class DpuModule(ModuleBase):
             logger.log_error(f"Failed to check midplane reachability for {self.get_name()}! {e}")
             return False
 
-    def _is_midplane_up(self):
+    def get_midplane_interface(self):
         if not self.midplane_interface:
             # Cache the data to prevent multiple platform.json parsing
             self.midplane_interface = DeviceDataManager.get_dpu_interface(self.get_name().lower(), DpuInterfaceEnum.MIDPLANE_INT.value)
             # If we are unable to parse platform.json for midplane interface raise RunTimeError
             if not self.midplane_interface:
                 raise RuntimeError(f"Unable to obtain midplane interface information from platform.json for {self.get_name()}")
+
+    def _is_midplane_up(self):
         # If rshim is not activated then the interface does not exist, do not log the error
-        return utils.read_int_from_file(f'/sys/class/net/{self.midplane_interface}/carrier', log_func=None) == 1
+        return utils.read_int_from_file(f'/sys/class/net/{self.get_midplane_interface()}/carrier', log_func=None) == 1
 
     def get_bus_info(self, module_name=None):
         """
