@@ -27,6 +27,8 @@ else
     echo "/boot/first_boot not found. No action taken."
 fi
 
+mkdir -p /host/images
+
 INTERFACE="eth0-midplane"
 if ip link show "$INTERFACE" &> /dev/null; then
     echo "dhclient $INTERFACE"
