@@ -69,7 +69,7 @@ steps:
         readyTimeout: '20000'
         inline: |
           echo "Make link for pipelines/Networking-acs-buildimage-Official/$(Build.SourceBranchName)"
-          mv $(FOLDER_PATH)/latest_build $(FOLDER_PATH)/prev_build
+          mv $(FOLDER_PATH)/latest_build $(FOLDER_PATH)/prev_build || true
           echo $(Build.BuildId) > $(FOLDER_PATH)/latest_build
           LINK_FOLDERNAMES=.
           [[ "$(SONIC_VERSION)" == "$(LATEST_TAG)" ]] && LINK_FOLDERNAMES=". tagged"
