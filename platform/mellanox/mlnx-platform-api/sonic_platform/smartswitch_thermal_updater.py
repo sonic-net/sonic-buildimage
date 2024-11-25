@@ -37,10 +37,6 @@ except ImportError:
     hw_management_dpu_thermal_update.thermal_data_dpu_ddr_clear = mock.MagicMock()
     hw_management_dpu_thermal_update.thermal_data_dpu_drive_clear = mock.MagicMock()
 
-SFP_TEMPERATURE_SCALE = 1000
-ASIC_TEMPERATURE_SCALE = 125
-ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD = 105000
-ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD = 120000
 CRIT_THRESH = "critical_high_threshold"
 HIGH_THRESH = "high_threshold"
 TEMPERATURE_DATA = "temperature"
@@ -64,24 +60,9 @@ logger = logger.Logger('smart-switch-thermal-updater')
 class SmartswitchThermalUpdater(ThermalUpdater):
     def __init__(self, sfp_list, dpu_list=[], is_host_mgmt_mode=True):
         super().__init__(sfp_list=sfp_list)
-        self._sfp_list = sfp_list
-        self._sfp_status = {}
-        # Use single timer attribute
-        self._timer = utils.Timer()
         self._dpu_list = dpu_list
-        self.configure_functions(is_host_mgmt_mode)
         self._dpu_status = {}
-
-    def configure_functions(self, independent_mode):
-        self.start = self.start_no_independent_mode
-        self.stop = self.stop_no_independent_mode
-        self.load_tc_config = self.load_tc_config_dpu
-        self.clean_thermal_data = self.clean_thermal_data_dpu
-        if independent_mode:
-            self.clean_thermal_data = self.clean_all
-            self.load_tc_config = self.load_tc_config_all
-            self.start = self.start_independent_mode
-            self.stop = self.stop_independent_mode
+        self.host_mgmt_mode = is_host_mgmt_mode
 
     def load_tc_config_dpu(self):
         dpu_poll_interval = 3
@@ -96,31 +77,19 @@ class SmartswitchThermalUpdater(ThermalUpdater):
         logger.log_notice(f'DPU polling interval: {dpu_poll_interval}')
         self._timer.schedule(dpu_poll_interval, self.update_dpu)
 
-    def load_tc_config_all(self):
-        super().load_tc_config()
+    def start(self):
+        self.thermal_data_dpu_clear()
         self.load_tc_config_dpu()
+        if self.host_mgmt_mode:
+            super().start()
+        else:
+            self._timer.start()
 
-    def start_independent_mode(self):
-        self.clean_thermal_data()
-        super().control_tc(False)
-        self.load_tc_config()
-        self._timer.start()
-
-    def start_no_independent_mode(self):
-        self.clean_thermal_data()
-        self.load_tc_config()
-        self._timer.start()
-
-    def stop_independent_mode(self):
-        self._timer.stop()
-        super().control_tc(True)
-
-    def stop_no_independent_mode(self):
-        self._timer.stop()
-
-    def clean_all(self):
-        super().clean_thermal_data()
-        self.clean_thermal_data_dpu()
+    def stop(self):
+        if self.host_mgmt_mode:
+            super().stop()
+        else:
+            self._timer.stop()
 
     def clean_thermal_data_dpu(self):
         for dpu in self._dpu_list:
