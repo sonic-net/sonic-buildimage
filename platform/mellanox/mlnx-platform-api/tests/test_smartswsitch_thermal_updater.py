@@ -75,7 +75,7 @@ class TestSmartSwitchThermalUpdater:
         mock_write.assert_called_once_with('/run/hw-management/config/suspend', 0)
         assert updater._timer.schedule.call_count == 3
         # Called for DPU with time 24/2 = 12
-        assert updater._timer.schedule.call_args_list[-1][0][0] == 12
+        assert updater._timer.schedule.call_args_list[0][0][0] == 12
         # Expectation on stop - timer stop and suspend = 1
         mock_write.reset_mock()
         updater.stop()

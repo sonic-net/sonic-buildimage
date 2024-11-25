@@ -78,7 +78,7 @@ class SmartswitchThermalUpdater(ThermalUpdater):
         self._timer.schedule(dpu_poll_interval, self.update_dpu)
 
     def start(self):
-        self.thermal_data_dpu_clear()
+        self.clean_thermal_data_dpu()
         self.load_tc_config_dpu()
         if self.host_mgmt_mode:
             super().start()
