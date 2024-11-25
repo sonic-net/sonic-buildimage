@@ -15,7 +15,8 @@
 # limitations under the License.
 #
 from sonic_platform_base.sonic_thermal_control.thermal_manager_base import ThermalManagerBase
-from . import thermal_updater
+from . import thermal_updater 
+from . import smartswitch_thermal_updater 
 from .device_data import DeviceDataManager
 
 
@@ -35,21 +36,20 @@ class ThermalManager(ThermalManagerBase):
         :return:
         """
         cls.thermal_updater_req = False
-        sfps = []
         dpus = []
-        host_mgmt_mode = False
-        if DeviceDataManager.is_module_host_management_mode():
+        dpus_present = DeviceDataManager.get_platform_dpus_data()
+        host_mgmt_mode = DeviceDataManager.is_module_host_management_mode()
+        if not dpus_present and host_mgmt_mode:
+            # Non smart switch behaviour has highest priority
             from .chassis import Chassis
-            sfps = Chassis.chassis_instance.get_all_sfps()
-            cls.thermal_updater_req = True
-            host_mgmt_mode = True
-        if DeviceDataManager.get_platform_dpus_data():
-            # If DPUs are present then this if condition is reached
+            cls.thermal_updater_task = thermal_updater.ThermalUpdater(sfp_list=Chassis.chassis_instance.get_all_sfps())
+        elif dpus_present:
             from .chassis import Chassis
             dpus = Chassis.chassis_instance.get_all_modules()
-            cls.thermal_updater_req = True
-        if cls.thermal_updater_req:
-            cls.thermal_updater_task = thermal_updater.ThermalUpdater(sfps, dpus, host_mgmt_mode)
+            cls.thermal_updater_task = smartswitch_thermal_updater.SmartswitchThermalUpdater(sfp_list=Chassis.chassis_instance.get_all_sfps(),
+                                                                                             dpu_list=dpus,
+                                                                                             is_host_mgmt_mode=host_mgmt_mode)
+        if cls.thermal_updater_task:
             cls.thermal_updater_task.start()
 
     @classmethod
@@ -59,5 +59,5 @@ class ThermalManager(ThermalManagerBase):
         is a no-op.
         :return:
         """
-        if cls.thermal_updater_req and cls.thermal_updater_task:
+        if cls.thermal_updater_task:
             cls.thermal_updater_task.stop()

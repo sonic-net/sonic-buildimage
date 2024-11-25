@@ -24,7 +24,7 @@ class TestThermalManager:
 
     @mock.patch('sonic_platform.chassis.Chassis.chassis_instance', new_callable=mock.MagicMock)
     @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode')
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_platform_json_data')
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_platform_dpus_data')
     def test_updater_init(self, mock_dpus_data, mock_management_mode, mock_chassis_instance):
         mock_dpus_data.return_value = {}
         mock_management_mode.return_value = True
@@ -35,11 +35,12 @@ class TestThermalManager:
         sfp_mock.return_value = ['sfp1', 'sfp2']
         mod_mock.return_value = ['dpu1', 'dpu2']
 
-        with mock.patch('sonic_platform.thermal_updater.ThermalUpdater') as mock_thermal:
+        with mock.patch('sonic_platform.thermal_updater.ThermalUpdater') as mock_thermal, \
+          mock.patch('sonic_platform.smartswitch_thermal_updater.SmartswitchThermalUpdater') as mock_sm_thermal:
             # Host mgmt mode, no DPUs are used for init
             mgr = ThermalManager()
             mgr.initialize()
-            mock_thermal.assert_called_once_with(['sfp1', 'sfp2'], [], True)
+            mock_thermal.assert_called_once_with(sfp_list=['sfp1', 'sfp2'])
             mgr.deinitialize()
             mgr.thermal_updater_task.stop.assert_called_once()
             # Not initialized if no DPUs and not in host mgmt mode
@@ -48,18 +49,19 @@ class TestThermalManager:
             mgr.initialize()
             mock_thermal.assert_not_called()
             mgr.deinitialize()
-            mgr.thermal_updater_task.stop.assert_not_called()
+            mgr.thermal_updater_task.stop.assert_called_once()
             # Initialized with DPUs if DPUs are present
             mock_dpus_data.return_value = {'DPUS': 'dpu1'}
             mock_thermal.reset_mock()
             mgr.initialize()
-            mock_thermal.assert_called_once_with([], ['dpu1', 'dpu2'], False)
+            mock_sm_thermal.assert_called_once_with(sfp_list=['sfp1', 'sfp2'], dpu_list=['dpu1', 'dpu2'], is_host_mgmt_mode=False)
             mgr.deinitialize()
             mgr.thermal_updater_task.stop.assert_called_once()
             # Host mgmt mode, with DPUS
             mock_thermal.reset_mock()
+            mock_sm_thermal.reset_mock()
             mock_management_mode.return_value = True
             mgr.initialize()
-            mock_thermal.assert_called_once_with(['sfp1', 'sfp2'], ['dpu1', 'dpu2'], True)
+            mock_sm_thermal.assert_called_once_with(sfp_list=['sfp1', 'sfp2'], dpu_list=['dpu1', 'dpu2'], is_host_mgmt_mode=True)
             mgr.deinitialize()
             mgr.thermal_updater_task.stop.assert_called_once()
