@@ -63,9 +63,9 @@ def bool_to_healthd_status(status):
 
 def bool_to_link_status(status):
     if status:
-        return "UP"
+        return "up"
     else:
-        return "DOWN"
+        return "down"
 
 class DPUHealthUpdater():
 
@@ -225,7 +225,7 @@ class DPUHealthUpdater():
         if self.pdsagent_status != True:
             print('dpu-pcie_link:DOWN')
             pcielink_stat = {}
-            pcielink_stat['state'] = 'DOWN'
+            pcielink_stat['state'] = 'down'
             pcielink_stat['reason'] = 'pdsagent is not running on dpu container'
             pcielink_stat['timestamp'] = datetime.now().strftime('%Y%m%d %H:%M:%S')
             return pcielink_stat
@@ -261,10 +261,10 @@ class DPUHealthUpdater():
             reason += f'HOST-MGMT : admin state - {admin_status}, oper_state - {oper_status},'
             reason += f' status - {bool_to_healthd_status(host_mgmt_status)}'
 
-            state = "DOWN"
+            state = "down"
             if host_mgmt_status and int_mgmt_status:
                 print('dpu-pcie_link:OK')
-                state = "UP"
+                state = "up"
             else:
                 print('dpu-pcie_link:Not OK')
 
