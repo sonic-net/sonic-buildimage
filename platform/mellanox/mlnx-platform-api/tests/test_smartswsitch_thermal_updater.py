@@ -19,11 +19,9 @@
 from unittest import mock
 import copy
 
-from sonic_platform import utils
-from sonic_platform.thermal_updater import ThermalUpdater, hw_management_independent_mode_update
+from sonic_platform.thermal_updater import hw_management_independent_mode_update
 from sonic_platform.smartswitch_thermal_updater import SmartswitchThermalUpdater, hw_management_dpu_thermal_update
-from sonic_platform.thermal_updater import ASIC_DEFAULT_TEMP_WARNNING_THRESHOLD, \
-                                           ASIC_DEFAULT_TEMP_CRITICAL_THRESHOLD, ERROR_READ_THERMAL_DATA
+from sonic_platform.thermal_updater import ERROR_READ_THERMAL_DATA
 
 
 mock_tc_config = """
