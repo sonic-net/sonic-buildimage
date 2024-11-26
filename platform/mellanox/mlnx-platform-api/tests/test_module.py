@@ -368,12 +368,12 @@ class TestModule:
             assert m1._is_midplane_up()
             assert m2._is_midplane_up()
             assert m3._is_midplane_up()
-            assert m1.get_bus_info() == pl_data["dpu0"]['bus_info']
-            assert m2.get_bus_info() == pl_data["dpu1"]['bus_info']
-            assert m3.get_bus_info() == pl_data["dpu2"]['bus_info']
+            assert m1.get_pci_bus_info() == pl_data["dpu0"]['bus_info']
+            assert m2.get_pci_bus_info() == pl_data["dpu1"]['bus_info']
+            assert m3.get_pci_bus_info() == pl_data["dpu2"]['bus_info']
             with pytest.raises(RuntimeError):
                 m4._is_midplane_up()
-                m4.get_bus_info()
+                m4.get_pci_bus_info()
             assert m1.midplane_interface == "dpu0_mid"
             assert m2.midplane_interface == "dpu1_mid"
             assert m3.midplane_interface == "dpu2_mid"
@@ -412,4 +412,3 @@ class TestModule:
             assert output_dict['NVME'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|NVME"]
             del temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU"]
             assert m.get_temperature_dict() == {} 
-
