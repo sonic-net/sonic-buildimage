@@ -1,7 +1,6 @@
 [Unit]
 Description=dpu config db provisioning
 Requires=docker.service
-ConditionPathExists=/boot/first_boot
 After=docker.service
 After=dpu.service
 Requires=dpu.service

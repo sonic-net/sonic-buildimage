@@ -66,7 +66,7 @@ binary-indep:
 		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.network debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/network/; \
 		cp $(MOD_SRC_DIR)/dist/sonic_platform-1.0-py3-none-any.whl debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/arm64-elba-asic-r0/; \
 		cp $(MOD_SRC_DIR)/dist/sonic_platform-1.0-py3-none-any.whl debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/arm64-elba-asic-flash128-r0/; \
-		$(PYTHON) setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
+		$(PYTHON) setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb --prefix=/usr/local; \
 	done)
 	# Resuming debhelper scripts
 	dh_testroot
