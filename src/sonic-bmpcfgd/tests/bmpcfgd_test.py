@@ -19,11 +19,11 @@ from mock import patch
 
 test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
-scripts_path = os.path.join(modules_path, "scripts")
+scripts_path = os.path.join(modules_path, "bmpcfgd")
 sys.path.insert(0, modules_path)
 
 # Load the file under test
-bmpcfgd_path = os.path.join(scripts_path, 'bmpcfgd')
+bmpcfgd_path = os.path.join(scripts_path, 'bmpcfgd.py')
 bmpcfgd = load_module_from_source('bmpcfgd', bmpcfgd_path)
 
 
@@ -53,8 +53,8 @@ class TestBMPCfgDaemon(TestCase):
         bmp_config_daemon.register_callbacks()
         bmp_config_daemon.bmp_handler("BMP", '', self.test_data)
         expected_calls = [
-            mock.call(["supervisorctl", "stop", "openbmpd"]),
-            mock.call(["supervisorctl", "start", "openbmpd"])
+            mock.call(["supervisorctl", "stop", "sonic-bmp:openbmpd"]),
+            mock.call(["supervisorctl", "start", "sonic-bmp:openbmpd"])
         ]
         mock_log_info.assert_has_calls(expected_calls)
 
@@ -66,8 +66,8 @@ class TestBMPCfgDaemon(TestCase):
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
         bmp_config_daemon.bmp_handler("BMP", '', self.test_data)
         expected_calls = [
-            mock.call(["supervisorctl", "stop", "openbmpd"]),
-            mock.call(["supervisorctl", "start", "openbmpd"])
+            mock.call(["supervisorctl", "stop", "sonic-bmp:openbmpd"]),
+            mock.call(["supervisorctl", "start", "sonic-bmp:openbmpd"])
         ]
         mock_log_info.assert_has_calls(expected_calls)
 
@@ -79,7 +79,7 @@ class TestBMPCfgDaemon(TestCase):
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
         bmp_config_daemon.bmp_handler("BMP", '', self.test_data)
         expected_calls = [
-            mock.call(["supervisorctl", "stop", "openbmpd"]),
-            mock.call(["supervisorctl", "start", "openbmpd"])
+            mock.call(["supervisorctl", "stop", "sonic-bmp:openbmpd"]),
+            mock.call(["supervisorctl", "start", "sonic-bmp:openbmpd"])
         ]
         mock_log_info.assert_has_calls(expected_calls)

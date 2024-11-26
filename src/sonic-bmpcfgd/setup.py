@@ -15,7 +15,10 @@ setuptools.setup(
     url = 'https://github.com/Azure/sonic-buildimage',
     maintainer = 'Feng Pan',
     maintainer_email = 'fenpan@microsoft.com',
-    packages = setuptools.find_packages(),
+    packages=[
+        'bmpcfgd',
+        'tests'
+    ],
     install_requires = [
         'jinja2>=2.10',
         'netaddr==0.8.0',
@@ -24,7 +27,7 @@ setuptools.setup(
     ],
     entry_points={
         'console_scripts': [
-            'bmpcfgd = scripts.bmpcfgd:main',
+            'bmpcfgd = bmpcfgd.bmpcfgd:main',
         ]
     },
     setup_requires = [

@@ -54,7 +54,7 @@ class BMPCfg(DaemonBase):
 
     def stop_bmp(self):
         self.log_info('BMPCfg: stop bmp daemon')
-        subprocess.call(["supervisorctl", "stop", "openbmpd"])
+        subprocess.call(["supervisorctl", "stop", "sonic-bmp:openbmpd"])
 
 
     def reset_bmp_table(self):
@@ -66,7 +66,7 @@ class BMPCfg(DaemonBase):
 
     def start_bmp(self):
         self.log_info('BMPCfg: start bmp daemon')
-        subprocess.call(["supervisorctl", "start", "openbmpd"])
+        subprocess.call(["supervisorctl", "start", "sonic-bmp:openbmpd"])
 
 
 class BMPCfgDaemon:
@@ -77,14 +77,15 @@ class BMPCfgDaemon:
         self.config_db.connect(wait_for_init=True, retry_on=True)
         self.bmpcfg = BMPCfg(self.state_db_conn)
 
-    def bmp_handler(self, key, op, data):
+    def bmp_handler(self, key, data):
         data = self.config_db.get_table(BMP_TABLE)
         self.bmpcfg.cfg_handler(data)
 
     def register_callbacks(self):
         self.config_db.subscribe(BMP_TABLE,
                                  lambda table, key, data:
-                                     self.bmp_handler(key, op, data))
+                                     self.bmp_handler(key, data))
+        self.config_db.listen(init_data_handler=self.bmpcfg.load)
 
 def main():
     daemon = BMPCfgDaemon()
