@@ -1,4 +1,4 @@
-{%- set default_cable = '5m' %}
+9{%- set default_cable = '5m' %}
 
 {%- macro generate_buffer_pool_and_profiles() %}
     "BUFFER_POOL": {
@@ -63,10 +63,10 @@
             "profile" : "ingress_lossy_profile"
         },
         "{{ port_names_active }}|3": {
-            "profile" : "ingress_lossy_profile"
+            "profile" : "ingress_lossless_profile"
         },
         "{{ port_names_active }}|4": {
-            "profile" : "ingress_lossy_profile"
+            "profile" : "ingress_lossless_profile"
         },
         "{{ port_names_active }}|5": {
             "profile" : "ingress_lossy_profile"
@@ -92,10 +92,10 @@
             "profile" : "egress_lossy_profile"
         },
         "{{ port_names_active }}|3": {
-            "profile" : "egress_lossy_profile"
+            "profile" : "egress_lossless_profile"
         },
         "{{ port_names_active }}|4": {
-            "profile" : "egress_lossy_profile"
+            "profile" : "egress_lossless_profile"
         },
         "{{ port_names_active }}|5": {
             "profile" : "egress_lossy_profile"
