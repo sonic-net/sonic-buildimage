@@ -143,9 +143,7 @@ class DpuCtlPlat():
         """Method to execute shutdown activities for the DPU"""
         rshim_op = self.dpu_rshim_service_control("stop")
         pci_rem_op = self.dpu_pci_remove()
-        if rshim_op and pci_rem_op:
-            return True
-        return False
+        return rshim_op and pci_rem_op
 
     def dpu_post_startup(self):
         """Method to execute all post startup activities for the DPU"""
