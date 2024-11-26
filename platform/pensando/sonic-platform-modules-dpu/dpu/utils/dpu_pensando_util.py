@@ -8,30 +8,31 @@ import time
 import re
 import json
 from sonic_platform.helper import APIHelper
+from sonic_py_common import syslogger
 
 QSFP_STAT_CTRL_CPLD_ADDR = "0x2"
 apiHelper = APIHelper()
+
+SYSLOG_IDENTIFIER = 'dpu_pensando_util'
+logger_instance = syslogger.SysLogger(SYSLOG_IDENTIFIER)
+
+def log_info(msg, also_print_to_console=False):
+    logger_instance.log_info(msg, also_print_to_console)
+
+def log_err(msg, also_print_to_console=True):
+    logger_instance.log_error(msg, also_print_to_console)
 
 def run_cmd(cmd):
     status, output = subprocess.getstatusoutput(cmd)
     if status != 0:
         try:
-            logger = open("/var/log/dpu_pensando_util.log", "a")
-            logger.write(cmd + " failed with err " + str(status) + "\n")
-            logger.close()
+            log_err(cmd + " failed with err " + str(status) + "\n")
         except:
-            print("platform_init: Failed file ops while logging")
+            log_err("platform_init: Failed file ops while logging")
+    else:
+        log_info(f"command executed : {cmd}")
+        log_info(output)
     return output
-
-def get_python_lib_dir():
-    try:
-        cmd = "python3 -V"
-        output = run_cmd(cmd)
-        pattern = "Python\s[0-9].[0-9]*"
-        python_version = re.findall(pattern, output)[0].split()[1]
-        return f'python{python_version}'
-    except:
-        return 'python3.9'
 
 def fetch_dpu_files():
     docker_id = apiHelper.get_dpu_docker_imageID()
@@ -95,16 +96,6 @@ def set_cpldapp():
     cmd = "sudo cp /home/admin/liblogger.so /lib/liblogger.so"
     run_cmd(cmd)
 
-def cp_sonic_platform_helper():
-    python_dir = get_python_lib_dir()
-    lib_path = f"/usr/local/lib/{python_dir}/dist-packages/"
-    sonic_platform_path = lib_path + "sonic_platform/"
-    sonic_platform_helper_path = sonic_platform_path  + "helper.py"
-    if not os.path.exists(sonic_platform_helper_path):
-        sonic_platform_old_path = "/usr/lib/python3/dist-packages/sonic_platform"
-        cmd = "cp -r " + sonic_platform_old_path + " " + lib_path
-        run_cmd(cmd)
-
 def set_ubootenv_config():
     cmd = "cat /proc/mtd | grep -e 'ubootenv' | awk '{print $1}' | tr -dc '0-9'"
     mtd_ubootenv = run_cmd(cmd)
@@ -138,127 +129,6 @@ def start_pmon():
         except:
             pass
 
-def write_platform_component_json():
-    try:
-        fru_path = "/home/admin/fru.json"
-        fru_data = json.load(open(fru_path))
-        model = fru_data.get("part-number","")
-        chassis_name = apiHelper.get_hwsku()
-        if model != "":
-            chassis_name = chassis_name + " " + model
-
-        api_helper_platform = apiHelper.get_platform()
-        platform = api_helper_platform if api_helper_platform != None else "arm64-elba-asic-r0"
-        component_file = f"/usr/share/sonic/device/{platform}/platform_components.json"
-        component = {
-            "component" : {
-                "eMMC" : {},
-                "cpld" : {}
-            }
-        }
-        if os.path.exists(component_file):
-            data = json.load(open(component_file))
-            component = data["chassis"][list(data["chassis"].keys())[0]]
-        data_dict = {}
-        data_dict["chassis"] = {}
-        data_dict["chassis"][chassis_name] = component
-        with open(component_file, "w") as json_file:
-            json.dump(data_dict, json_file, indent=4)
-    except:
-        pass
-
-def read_qsfp_eeprom_helper(i2c_num,reg):
-    eeprom_byte_array = APIHelper().read_eeprom_qsfp(i2c_num,reg)
-    api_helper_platform = apiHelper.get_platform()
-    platform = api_helper_platform if api_helper_platform != None else "arm64-elba-asic-r0"
-    eeprom_file = f"/usr/share/sonic/device/{platform}/qsfp-eeprom-{i2c_num}.bin"
-    with open(eeprom_file, "wb") as file:
-        file.write(eeprom_byte_array)
-
-def read_qsfp_eeprom():
-    cmd = "cpldapp -r {}".format(QSFP_STAT_CTRL_CPLD_ADDR)
-    try:
-        output = APIHelper().runCMD(cmd)
-        reg_val = int(output, 16)
-        if ((reg_val >> 4) & 1) > 0:
-            read_qsfp_eeprom_helper(1, "0x50")
-        if ((reg_val >> 4) & 2) > 0:
-            read_qsfp_eeprom_helper(2, "0x50")
-    except:
-        pass
-
-def stop_disable_telemetry_service():
-    cmd = "systemctl stop telemetry.service"
-    run_cmd(cmd)
-
-    cmd = "systemctl disable telemetry.service"
-    run_cmd(cmd)
-
-def stop_disable_mgmt_framework_service():
-    cmd = "systemctl stop mgmt-framework.service"
-    run_cmd(cmd)
-
-    cmd = "systemctl disable mgmt-framework.service"
-    run_cmd(cmd)
-
-def stop_disable_featured_service():
-    cmd = "systemctl stop featured.service"
-    run_cmd(cmd)
-
-    cmd = "systemctl disable featured.service"
-    run_cmd(cmd)
-
-def rename_oob_mnic0_to_eth0():
-    cmd = "dhclient oob_mnic0"
-    run_cmd(cmd)
-
-    cmd = "ip link property add dev oob_mnic0 altname eth0"
-    run_cmd(cmd)
-
-    cmd = "dhclient -r oob_mnic0"
-    run_cmd(cmd)
-
-    cmd = "dhclient eth0 &"
-    run_cmd(cmd)
-
-def add_dpu_to_package_json():
-    api_helper_platform = apiHelper.get_platform()
-    platform = api_helper_platform if api_helper_platform != None else "arm64-elba-asic-r0"
-    version_path = "/usr/share/sonic/device/{}/VERSION.json".format(platform)
-    package_path = "/var/lib/sonic-package-manager/packages.json"
-    try:
-        version_data = json.load(open(version_path))
-        package_data = json.load(open(package_path))
-        dpu_version = version_data["sw"]["version"]
-        dpu_sha = version_data["sw"]["sha"]
-        dpu_package_data = {}
-        dpu_package_data["repository"] = "docker-dpu-pensando"
-        dpu_package_data["description"] = "Pensando dpu container"
-        dpu_package_data["default-reference"] = dpu_version
-        dpu_package_data["installed-version"] = dpu_version
-        dpu_package_data["installed"] = True
-        dpu_package_data["built-in"] = True
-        dpu_package_data["image-id"] = f"sha:{dpu_sha}"
-        package_data["dpu"] = dpu_package_data
-        with open(package_path, "w") as json_file:
-            json.dump(package_data, json_file, indent=4)
-    except:
-        pass
-
-def start_ssh_keygen():
-    try:
-        ssh_keygen_cmd = "sudo ssh-keygen -A"
-        run_cmd(ssh_keygen_cmd)
-    except:
-        pass
-
-def sync_system_date():
-    try:
-        hwclock_cmd = "sudo hwclock -s"
-        run_cmd(hwclock_cmd)
-    except:
-        pass
-
 def configure_iptable_rules():
     try:
         iptable_cfg_cmd = "sudo iptables-legacy -D tcp_inbound -p tcp --dport 11357:11360 -j DROP"
@@ -287,25 +157,16 @@ def main():
         set_ubootenv_config()
     except:
         pass
-    start_ssh_keygen()
     time.sleep(10)
-    sync_system_date()
     configure_iptable_rules()
-    cp_sonic_platform_helper()
     fetch_dpu_files()
     time.sleep(5)
     set_onie_version()
     cp_to_shared_mem()
     set_cpldapp()
-    read_qsfp_eeprom()
-    rename_oob_mnic0_to_eth0()
     start_pmon()
-    add_dpu_to_package_json()
-    write_platform_component_json()
-    stop_disable_telemetry_service()
-    stop_disable_mgmt_framework_service()
-    stop_disable_featured_service()
     pcie_tx_setup()
 
 if __name__ == "__main__":
     main()
+

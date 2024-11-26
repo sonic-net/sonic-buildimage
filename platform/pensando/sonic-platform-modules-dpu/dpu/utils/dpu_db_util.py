@@ -281,7 +281,7 @@ class EventHandler(logger.Logger):
                 # update dpu state db for data plane
                 if self.db == None:
                     return
-                dpu_data_plane_status = 'DOWN'
+                dpu_data_plane_status = 'down'
                 dpu_data_plane_reason = event_description
                 fvs_data_plane_data = [
                     ('dpu_data_plane_state', dpu_data_plane_status),

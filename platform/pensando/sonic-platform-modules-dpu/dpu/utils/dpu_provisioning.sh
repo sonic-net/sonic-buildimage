@@ -1,4 +1,6 @@
 #!/bin/bash
+
+device="/usr/share/sonic/device"
 platform=$(grep 'onie_platform=' /host/machine.conf | cut -d '=' -f 2)
 pipeline=`cat /usr/share/sonic/device/$platform/default_pipeline`
 docker_name=$pipeline
@@ -7,10 +9,13 @@ if [ "$pipeline" == "rudra" ]; then
 fi
 hex_val=$(docker exec -i $docker_name cpldapp -r 0xA | tr -d '\r')
 val=$((hex_val))
+
 echo "dpu provisioning for dpu $val"
 
 if [ -f /boot/first_boot ]; then
     if [ "$platform" == "arm64-elba-asic-flash128-r0" ]; then
+        echo "python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl"
+        python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl
         echo "cp /usr/share/sonic/device/$platform/config_db.json /etc/sonic/config_db.json"
         cp /usr/share/sonic/device/$platform/config_db.json /etc/sonic/config_db.json
         echo 'sed -i "s/18.0.202.1/18.$val.202.1/g" /etc/sonic/config_db.json'
