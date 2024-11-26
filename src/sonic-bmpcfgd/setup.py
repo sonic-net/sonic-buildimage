@@ -1,8 +1,8 @@
-from __future__ import print_function
-import sys
 from setuptools import setup
-import pkg_resources
-from packaging import version
+
+dependencies = [
+    'sonic_py_common',
+]
 
 setup(
     name = 'sonic-bmpcfgd-services',
@@ -16,6 +16,10 @@ setup(
     maintainer_email = 'fenpan@microsoft.com',
     scripts = [
         'scripts/bmpcfgd'
+    ],
+    packages=[
+        'scripts',
+        'tests'
     ],
     install_requires = [
         'jinja2>=2.10',
