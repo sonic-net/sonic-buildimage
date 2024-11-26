@@ -2566,6 +2566,15 @@
                 "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M"
              }
          },
+
+        "MEMORY_STATISTICS": {
+            "memory_statistics": {
+                "enabled": "false",
+                "sampling_interval": "5",
+                "retention_period": "15"
+            }
+        },
+
          "ACL_TABLE_TYPE": {
              "CUSTOM_L3": {
                  "MATCHES": [
