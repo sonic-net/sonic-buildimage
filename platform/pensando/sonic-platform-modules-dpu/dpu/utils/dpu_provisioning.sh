@@ -18,12 +18,26 @@ if [ -f /boot/first_boot ]; then
         python3 -m pip install $device/$platform/sonic_platform-1.0-py3-none-any.whl
         echo "cp /usr/share/sonic/device/$platform/config_db.json /etc/sonic/config_db.json"
         cp /usr/share/sonic/device/$platform/config_db.json /etc/sonic/config_db.json
-        echo 'sed -i "s/18.0.202.1/18.$val.202.1/g" /etc/sonic/config_db.json'
-        sed -i "s/18.0.202.1/18.$val.202.1/g" /etc/sonic/config_db.json
+
+        jq_command=$(cat <<EOF
+        jq --arg val "$val" '
+        .INTERFACE |= with_entries(
+            if .key | test("Ethernet0\\\\|18\\\\.\\\\d+\\\\.202\\\\.1/31") then
+                .key = (.key | gsub("18\\\\.\\\\d+\\\\.202\\\\.1"; "18.\($val).202.1"))
+            else
+                .
+            end
+        )' /etc/sonic/config_db.json > /etc/sonic/config_db.json.tmp && mv /etc/sonic/config_db.json.tmp /etc/sonic/config_db.json
+EOF
+        )
+
+        echo "$jq_command"
+        eval "$jq_command"
     else
         echo "cp /usr/share/sonic/device/$platform/config_db_$pipeline.json /etc/sonic/config_db.json"
         cp /usr/share/sonic/device/$platform/config_db_$pipeline.json /etc/sonic/config_db.json
     fi
+
     echo "cp /etc/sonic/config_db.json /etc/sonic/init_cfg.json"
     cp /etc/sonic/config_db.json /etc/sonic/init_cfg.json
     echo "File copied successfully."
@@ -33,7 +47,9 @@ else
 fi
 
 mkdir -p /host/images
+chmod +x /boot/install_file
 
+sleep 5
 INTERFACE="eth0-midplane"
 if ip link show "$INTERFACE" &> /dev/null; then
     echo "dhclient $INTERFACE"

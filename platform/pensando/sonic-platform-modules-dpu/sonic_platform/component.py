@@ -363,15 +363,25 @@ class Component(ComponentBase):
                     print(cmd)
                     ret = self._api_helper.runCMD(cmd)
                     print(ret)
+                    return True
                 except Exception as e:
                     print(f"installation failed due to {e}")
                     return False
             if "GOLDFW" in name:
-                version_from_file = self._get_goldfw_version(os.path.dirname(image_path), os.path.basename(image_path))
-                print(f"installing {image_path} with version {version_from_file} for component {name}")
-                print("goldfw installtion is not yet supported")
-                return False
-            return True
+                try:
+                    version_from_file = self._get_goldfw_version(os.path.dirname(image_path), os.path.basename(image_path))
+                    container_name = self._api_helper.get_dpu_docker_container_name()
+                    print(f"installing {image_path} with version {version_from_file} for component {name}")
+                    cmd = f"docker cp {image_path} {container_name}:/data/"
+                    print(cmd)
+                    ret = self._api_helper.runCMD(cmd)
+                    cmd = ["docker", "exec", container_name, "/nic/tools/fwupdate", "-i", "goldfw", "-p", f"/data/{file_name}"]
+                    print(cmd)
+                    status, result = self._api_helper.run_command(cmd)
+                    return status
+                except Exception as e:
+                    print(f"installation failed due to {e}")
+                    return False
         return False
 
     ###################### Device methods ########################

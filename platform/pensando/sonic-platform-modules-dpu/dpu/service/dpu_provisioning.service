@@ -8,7 +8,6 @@ Before=database.service
 
 [Service]
 User=root
-ExecStartPre=/bin/sleep 20
 ExecStart=/usr/local/bin/dpu_provisioning.sh
 StandardOutput=syslog
 StandardError=syslog

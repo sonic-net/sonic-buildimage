@@ -37,16 +37,38 @@ class APIHelper():
 
     def run_command(self, cmd):
         status = True
-        result = ""
+        result = []
         try:
             p = subprocess.Popen(
-                cmd, shell=False, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-        except:
+                cmd,
+                shell=False,
+                universal_newlines=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=os.environ
+            )
+
+            for line in iter(p.stdout.readline, ''):
+                print(line.strip())
+                result.append(line.strip())
+
+            for line in iter(p.stderr.readline, ''):
+                print(line.strip())
+                result.append(line.strip())
+
+            p.wait()
+
+            if p.returncode != 0:
+                status = False  # Non-zero return code indicates failure
+
+        except FileNotFoundError as e:
             status = False
-        return status, result
+            print(f"Command not found: {e}")
+        except Exception as e:
+            status = False
+            print(f"Error running command: {e}")
+
+        return status, "\n".join(result)
 
     def get_dpu_docker_container_name(self):
         docker_container_name = None
