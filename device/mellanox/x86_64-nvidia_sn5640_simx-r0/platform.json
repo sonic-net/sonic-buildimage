@@ -634,6 +634,22 @@
                         "name": "xSFP module 64 Temp"
                     }
                 ]
+            },
+            {
+                "name": "sfp65",
+                "thermals": [
+                    {
+                        "name": "xSFP module 65 Temp"
+                    }
+                ]
+            },
+            {
+                "name": "sfp66",
+                "thermals": [
+                    {
+                        "name": "xSFP module 66 Temp"
+                    }
+                ]
             }
         ]
     },
