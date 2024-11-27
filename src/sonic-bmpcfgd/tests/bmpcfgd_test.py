@@ -51,7 +51,7 @@ class TestBMPCfgDaemon(TestCase):
         MockConfigDb.set_config_db(self.test_data)
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
         bmp_config_daemon.register_callbacks()
-        bmp_config_daemon.bmp_handler("BMP", '', self.test_data)
+        bmp_config_daemon.bmp_handler("BMP", self.test_data)
         expected_calls = [
             mock.call(["supervisorctl", "stop", "sonic-bmp:openbmpd"]),
             mock.call(["supervisorctl", "start", "sonic-bmp:openbmpd"])
@@ -64,7 +64,7 @@ class TestBMPCfgDaemon(TestCase):
         self.test_data['BMP']['table']['bgp_rib_in_table'] = 'true'
         MockConfigDb.set_config_db(self.test_data)
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
-        bmp_config_daemon.bmp_handler("BMP", '', self.test_data)
+        bmp_config_daemon.bmp_handler("BMP", self.test_data)
         expected_calls = [
             mock.call(["supervisorctl", "stop", "sonic-bmp:openbmpd"]),
             mock.call(["supervisorctl", "start", "sonic-bmp:openbmpd"])
@@ -77,7 +77,7 @@ class TestBMPCfgDaemon(TestCase):
         self.test_data['BMP']['table']['bgp_rib_out_table'] = 'true'
         MockConfigDb.set_config_db(self.test_data)
         bmp_config_daemon = bmpcfgd.BMPCfgDaemon()
-        bmp_config_daemon.bmp_handler("BMP", '', self.test_data)
+        bmp_config_daemon.bmp_handler("BMP", self.test_data)
         expected_calls = [
             mock.call(["supervisorctl", "stop", "sonic-bmp:openbmpd"]),
             mock.call(["supervisorctl", "start", "sonic-bmp:openbmpd"])
