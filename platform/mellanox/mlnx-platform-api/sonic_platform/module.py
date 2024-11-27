@@ -482,9 +482,9 @@ class DpuModule(ModuleBase):
         # If rshim is not activated then the interface does not exist, do not log the error
         return utils.read_int_from_file(f'/sys/class/net/{self.get_midplane_interface()}/carrier', log_func=None) == 1
 
-    def get_pci_bus_info(self, module_name=None):
+    def get_pci_bus_info(self):
         """
-        Retrieves the bus information for the specified by "module_name" on a SmartSwitch.
+        Retrieves the bus information.
 
         Returns:
             Returns the PCI bus information in BDF format like "[DDDD:]BB:SS:F"

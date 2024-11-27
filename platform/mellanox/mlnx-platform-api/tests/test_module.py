@@ -411,4 +411,5 @@ class TestModule:
             assert output_dict['CPU'] == {}
             assert output_dict['NVME'] == temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|NVME"]
             del temp_data[f"TEMPERATURE_INFO_{m.get_dpu_id()}|CPU"]
-            assert m.get_temperature_dict() == {} 
+            assert m.get_temperature_dict() == {}
+
