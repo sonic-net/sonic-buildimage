@@ -3,7 +3,7 @@ Description=Pensando DPU health status provider and chassis state db util servic
 After=dpu-platform-init.service
 
 [Service]
-ExecStart= python3 /usr/local/bin/dpu_db_util.py
+ExecStart=/usr/bin/python3 /usr/local/bin/dpu_db_util.py
 Restart=always
 StandardOutput=syslog+console
 StandardError=syslog+console

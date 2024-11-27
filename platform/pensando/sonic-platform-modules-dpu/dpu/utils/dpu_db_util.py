@@ -41,7 +41,7 @@ try:
     grpc_files_path = (str(Path(sonic_platform.__file__).parent.absolute()))
     if grpc_files_path not in sys.path:
         sys.path.append(grpc_files_path)
-    from sonic_platform import oper_pb2, oper_pb2_grpc, system_pb2, system_pb2_grpc, dpu_util_pb2, dpu_util_pb2_grpc
+    from sonic_platform import oper_pb2, oper_pb2_grpc, dpu_util_pb2, dpu_util_pb2_grpc
 except Exception as e:
     log_err(f'failed to load modules due to {e}')
 
