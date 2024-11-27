@@ -158,6 +158,23 @@ def get_chassis_type_and_hostname(root, hname):
                         chassis_hostname = value
     return chassis_type, chassis_hostname
 
+def is_chassis_lc_macsec_enabled(root, hname):
+    macsec_enble = None
+    for child in root:
+        if child.tag == str(QName(ns, "MetadataDeclaration")):
+            devices = child.find(str(QName(ns, "Devices")))
+            for device_meta in devices.findall(str(QName(ns1, "DeviceMetadata"))):
+                device_name = device_meta.find(str(QName(ns1, "Name"))).text
+                if device_name != hname:
+                    continue
+                properties = device_meta.find(str(QName(ns1, "Properties")))
+                for device_property in properties.findall(str(QName(ns1, "DeviceProperty"))):
+                    name = device_property.find(str(QName(ns1, "Name"))).text
+                    value = device_property.find(str(QName(ns1, "Value"))).text
+                    if name == "MacSecEnabled":
+                        macsec_enble = value
+    return macsec_enble
+
 def is_minigraph_for_chassis(chassis_type):
     if chassis_type in [CHASSIS_CARD_VOQ, CHASSIS_CARD_PACKET]:
         return True
@@ -342,14 +359,13 @@ def parse_chassis_deviceinfo_intf_metadata(device_info, chassis_linecards_info, 
             if linecard_name is not None:
                 key = "%s|%s" % (linecard_name, key)
             system_ports[key] = {
-                "system_port_id": system_port_id,
+                "system_port_id": 0,
                 "switch_id": switch_id,
                 "core_index": core_id,
                 "core_port_index": core_port_id,
                 "speed": intf_speed,
                 "num_voq": num_voq
             }
-            system_port_id += 1
 
         chassis_port_alias.setdefault(slot_index, {}).update(
             {(intf_sonic_name, intf_speed): intf_name})
@@ -363,8 +379,14 @@ def parse_chassis_deviceinfo_intf_metadata(device_info, chassis_linecards_info, 
             port_default_speed.setdefault(slot_index, {}).update(
                 {intf_sonic_name: intf_speed})
 
-    return system_ports, chassis_port_alias, port_default_speed
+    # The above loop with findall("DeviceInterfaceMetadata") was not giving interfaces from minigraph
+    # in document order. So doing an explict sort so that system_port_ids remain same across LCs
+    sorted_system_ports = { key:system_ports[key] for key in sorted(system_ports.keys()) }
+    for k,v in sorted_system_ports.items():
+        v["system_port_id"] = system_port_id
+        system_port_id += 1
 
+    return sorted_system_ports, chassis_port_alias, port_default_speed
 
 
 def parse_chassis_deviceinfo_voq_int_intfs(device_info):
@@ -2023,6 +2045,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
     slot_index = None
     max_num_cores = None
     card_type = None
+    macsec_enabled = None
 
     hwsku_qn = QName(ns, "HwSku")
     hostname_qn = QName(ns, "Hostname")
@@ -2036,6 +2059,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             docker_routing_config_mode = child.text
 
     hwsku, hostname, docker_routing_config_mode, chassis_type, chassis_hostname = parse_global_info(root)
+    macsec_enabled = is_chassis_lc_macsec_enabled(root, hostname)
 
     (ports, alias_map, alias_asic_map) = get_port_config(hwsku=hwsku, platform=platform, port_config_file=port_config_file, asic_name=asic_name, hwsku_config_file=hwsku_config_file)
 
@@ -2167,6 +2191,13 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
             print("Warning: more than one peer switch was found. Only the first will be parsed: {}".format(results['PEER_SWITCH'].keys()[0]))
 
         results['DEVICE_METADATA']['localhost']['peer_switch'] = list(results['PEER_SWITCH'].keys())[0]
+    elif results['DEVICE_METADATA']['localhost']['type'] == 'SpineRouter':
+        if macsec_enabled == 'True':
+            results['DEVICE_METADATA']['localhost']['subtype'] = 'UpstreamLC'
+        elif macsec_enabled == 'False':
+            results['DEVICE_METADATA']['localhost']['subtype'] = 'DownstreamLC'
+        else:
+            results['DEVICE_METADATA']['localhost']['subtype'] = 'Supervisor'
 
     # Enable tunnel_qos_remap if downstream_redundancy_types(T1) or redundancy_type(T0) = Gemini/Libra
     enable_tunnel_qos_map = False

@@ -181,7 +181,7 @@ class Fan(FanBase):
         """
         ch_model=self.get_chassis_model()
         #compare first 8 characters of chassis molel string
-        if(ch_model[:8]=='3HE18723'):
+        if(ch_model[:8]=='3HE18723' or ch_model[:8]=='3HE20994' ):
             direction = 'intake'
         else:
             direction = 'exhaust'

@@ -2,6 +2,7 @@
 
 import time
 from swsscommon import swsscommon
+from sonic_py_common import device_info
 
 # ALPHA defines the size of the window over which we calculate the average value. ALPHA is 2/(N+1) where N is the interval(window size)
 # In this case we configure the window to be 10s. This way if we have a huge 1s spike in traffic,
@@ -38,18 +39,13 @@ def enable_rates():
 def enable_counters():
     db = swsscommon.ConfigDBConnector()
     db.connect()
-    default_enabled_counters = ['PORT', 'RIF', 'QUEUE', 'PFCWD', 'PG_WATERMARK', 'PG_DROP', 
-                                'QUEUE_WATERMARK', 'BUFFER_POOL_WATERMARK', 'PORT_BUFFER_DROP', 'ACL']
-    
-    # Enable those default counters
-    for key in default_enabled_counters:
-        enable_counter_group(db, key)
+    dpu_counters = ["ENI"]
 
-    # Set FLEX_COUNTER_DELAY_STATUS to false for those non-default counters
-    keys = db.get_keys('FLEX_COUNTER_TABLE')
-    for key in keys:
-        if key not in default_enabled_counters:
+    platform_info = device_info.get_platform_info(db)
+    if platform_info.get('switch_type') == 'dpu':
+        for key in dpu_counters:
             enable_counter_group(db, key)
+
     enable_rates()
 
 

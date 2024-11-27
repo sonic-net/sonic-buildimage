@@ -1,4 +1,20 @@
 #!/usr/bin/python3
+#
+# Copyright (C) 2024 Micas Networks Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import binascii
 
 
@@ -12,7 +28,7 @@ class OnietlvException(Exception):
 
 class onie_tlv(object):
     TLV_INFO_ID_STRING = "TlvInfo\x00"
-    TLV_INFO_INIA_ID = "\x00\x00\x13\x11"
+    TLV_INFO_IANA_HEADER = "\x00"
     TLV_INFO_VERSION = 0x01
     TLV_INFO_LENGTH = 0x00
     TLV_INFO_LENGTH_VALUE = 0xba
@@ -186,7 +202,7 @@ class onie_tlv(object):
         ret = chr(0x01) + chr(len(ret)) + ret
         return ret
 
-    def generate_value(self, _t):
+    def generate_value(self, _t, size=256):
         ret = []
         for i in self.TLV_INFO_ID_STRING:
             ret.append(i)
@@ -195,7 +211,8 @@ class onie_tlv(object):
         ret.append(chr(self.TLV_INFO_LENGTH_VALUE))
 
         total_len = 0
-        for key in _t:
+        key_list = sorted(_t.keys())
+        for key in key_list:
             x = self.getTLV_BODY(key, _t[key])
             ret += x
             total_len += len(x)
@@ -207,8 +224,11 @@ class onie_tlv(object):
         for t in range(0, 4):
             ret.append(chr(int(s[2 * t + 2:2 * t + 4], 16)))
         totallen = len(ret)
-        if totallen < 256:
-            for left_t in range(0, 256 - totallen):
+        if totallen > size:
+            raise OnietlvException("Generate ONIE tlv value failed, totallen: %d more than e2_size: %d" % (totallen, size), -1)
+
+        if totallen < size:
+            for left_t in range(0, size - totallen):
                 ret.append(chr(0x00))
         return (ret, True)
 
@@ -236,7 +256,7 @@ class onie_tlv(object):
         ret = self.decode_tlv(e[tlv_index:tlv_end])
         for item in ret:
             if item['code'] == self.TLV_CODE_VENDOR_EXT:
-                if item["value"][0:4] == self.TLV_INFO_INIA_ID:
+                if item["value"][0] == self.TLV_INFO_IANA_HEADER:
                     rt = self.decode_tlv(item["value"][4:])
                 else:
                     rt = self.decode_tlv(item["value"][0:])

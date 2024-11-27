@@ -50,14 +50,11 @@ COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["cli", "/cli/"]
 
-{% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
-# Copy regex json and rsyslog_plugin.conf file into rsyslog.d
-COPY ["*.json", "/etc/rsyslog.d/"]
-COPY ["files/rsyslog_plugin.conf.j2", "/etc/rsyslog.d/"]
-# Create dhcp_relay_regex.conf
-RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin.conf.j2 /etc/rsyslog.d/events_info.json  > /etc/rsyslog.d/dhcp_relay_events.conf
-RUN rm -f /etc/rsyslog.d/rsyslog_plugin.conf.j2
-RUN rm -f /etc/rsyslog.d/events_info.json
-{% endif %}
+RUN mkdir -p /usr/share/sonic/templates/rsyslog_plugin
+
+# Copy rsyslog plugin configuration file and regexes to docker
+COPY ["dhcp_relay_regex.json", "/etc/rsyslog.d/"]
+COPY ["events_info.json", "/usr/share/sonic/templates/rsyslog_plugin/"]
+COPY ["files/rsyslog_plugin.conf.j2", "/usr/share/sonic/templates/rsyslog_plugin/"]
 
 ENTRYPOINT ["/usr/bin/docker_init.sh"]
