@@ -7,8 +7,7 @@ After=sonic.target
 
 [Service]
 Type=oneshot
-ExecStartPre=/bin/sleep 15
-ExecStart=python /usr/local/bin/dpu_pensando_util.py
+ExecStart=/usr/bin/python3 /usr/local/bin/dpu_pensando_util.py
 RemainAfterExit=yes
 StandardOutput=syslog+console
 StandardError=syslog+console
