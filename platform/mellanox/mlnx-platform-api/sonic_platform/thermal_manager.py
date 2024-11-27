@@ -34,7 +34,6 @@ class ThermalManager(ThermalManagerBase):
         and any other vendor specific initialization.
         :return:
         """
-        dpus = []
         dpus_present = DeviceDataManager.get_platform_dpus_data()
         host_mgmt_mode = DeviceDataManager.is_module_host_management_mode()
         if not dpus_present and host_mgmt_mode:

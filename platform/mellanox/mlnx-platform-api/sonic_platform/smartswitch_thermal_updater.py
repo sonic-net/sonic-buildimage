@@ -58,7 +58,7 @@ logger = logger.Logger('smart-switch-thermal-updater')
 
 
 class SmartswitchThermalUpdater(ThermalUpdater):
-    def __init__(self, sfp_list, dpu_list=[], is_host_mgmt_mode=True):
+    def __init__(self, sfp_list, dpu_list, is_host_mgmt_mode=True):
         super().__init__(sfp_list=sfp_list)
         self._dpu_list = dpu_list
         self._dpu_status = {}
@@ -125,7 +125,6 @@ class SmartswitchThermalUpdater(ThermalUpdater):
 
     def update_dpu_temperature(self, dpu, fault_state=False):
         dpu_temperature_data = dpu.get_temperature_dict() if not fault_state else {}
-        print(f"{dpu_temperature_data} is the data and {fault_state}")
         for key, func in dpu_func_dict.items():
             temp_data, temp_thresh, temp_crit_thresh, fault_val = self.get_dpu_component_temperature_data(dpu_temperature_data, key)
             return_val = func(dpu.get_hw_mgmt_id(), temp_data, temp_thresh, temp_crit_thresh, fault_val)
@@ -133,19 +132,20 @@ class SmartswitchThermalUpdater(ThermalUpdater):
                 logger.log_error(f"Unable to update Temperature data to hw-mgmt for {key} for {dpu.get_name()}")
 
     def update_single_dpu(self, dpu):
-            try:
-                dpu_oper_status = dpu.get_oper_status()
-                pre_oper_status = self._dpu_status.get(dpu.get_name())
-                if dpu_oper_status == DPU_STATUS_ONLINE:
-                    self.update_dpu_temperature(dpu)
-                else:
-                    if pre_oper_status != dpu_oper_status:
-                        self.thermal_data_dpu_clear(dpu.get_hw_mgmt_id())
-                if pre_oper_status != dpu_oper_status:
-                    self._dpu_status[dpu.get_name()] = dpu_oper_status
-            except Exception as e:
-                logger.log_error(f'Failed to update DPU {dpu.get_hw_mgmt_id()} thermal data - {e}')
-                self.update_dpu_temperature(dpu, fault_state=True)
+        try:
+            dpu_oper_status = dpu.get_oper_status()
+            pre_oper_status = self._dpu_status.get(dpu.get_name())
+            if dpu_oper_status == DPU_STATUS_ONLINE:
+                self.update_dpu_temperature(dpu)
+            elif pre_oper_status != dpu_oper_status:
+                # If dpu is shutdown from previous execution
+                self.thermal_data_dpu_clear(dpu.get_hw_mgmt_id())
+            if pre_oper_status != dpu_oper_status:
+                # If there is a change in oper_status (irrespective of type of change)
+                self._dpu_status[dpu.get_name()] = dpu_oper_status
+        except Exception as e:
+            logger.log_error(f'Failed to update DPU {dpu.get_hw_mgmt_id()} thermal data - {e}')
+            self.update_dpu_temperature(dpu, fault_state=True)
 
     def update_dpu(self):
         for dpu in self._dpu_list:
