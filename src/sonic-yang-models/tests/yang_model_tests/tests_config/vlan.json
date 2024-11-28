@@ -45,6 +45,23 @@
             }
         }
     },
+    "INVALID_LONG_VLAN_NAME": {
+        "sonic-vlan:sonic-vlan": {
+            "sonic-vlan:VLAN": {
+                "VLAN_LIST": [
+                    {
+                        "admin_status": "up",
+                        "description": "server_vlan",
+                        "dhcp_servers": [
+                            "10.186.72.56"
+                        ],
+                        "mtu": "9100",
+                        "name": "Vlan123456789012"
+                    }
+                ]
+            }
+        }
+    },
     "DHCP_SERVER_INCORRECT_FORMAT": {
         "sonic-vlan:sonic-vlan": {
             "sonic-vlan:VLAN": {
@@ -827,7 +844,7 @@
                     "type": "SPAN",
                     "src_port": "Ethernet1",
                     "dst_port": "Ethernet2"
-                }]   
+                }]
             }
         }
     },
