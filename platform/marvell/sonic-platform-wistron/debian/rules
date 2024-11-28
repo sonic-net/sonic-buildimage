@@ -1,0 +1,87 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+#export DH_VERBOSE = 1
+
+include /usr/share/dpkg/pkg-info.mk
+#--------------------------------------------------------
+
+ifneq ($(CROSS_BUILD_ENVIRON), y)
+KVERSION   ?= $(shell uname -r)
+endif
+KERNEL_SRC :=  /lib/modules/$(KVERSION)
+INSTALL_MOD_DIR := kernel/extra/
+MOD_SRC_DIR:= $(shell pwd)
+MODULE_DIRS:= es1227_54ts es2227_54ts es2227_54ts_p
+MODULE_DIR := modules
+UTILS_DIR := utils
+SERVICE_DIR := service
+PRESTERA_MODULE_SRC := mrvl-prestera/drivers/generic/cpssEnabler/linuxNoKernelModule/drivers
+
+%:
+	dh $@ --with systemd,python3 --buildsystem=pybuild
+
+clean:
+	dh_testdir
+	dh_testroot
+	dh_clean
+
+build:
+	(for mod in $(MODULE_DIRS); do \
+		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
+		cd $(MOD_SRC_DIR)/../$(PRESTERA_MODULE_SRC)/; \
+		make clean; \
+		make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+                cp *.ko $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/; \
+        cd $(MOD_SRC_DIR)/$${mod}; \
+		python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+        echo "Finished making whl package for $$mod"; \
+		cd $(MOD_SRC_DIR); \
+	done)
+
+binary: binary-arch binary-indep
+	# Nothing to do
+
+binary-arch:
+	# Nothing to do
+
+binary-indep:
+	dh_testdir
+	dh_installdirs
+
+	# Custom package commands
+	(for mod in $(MODULE_DIRS); do \
+		if [ $$mod = "es1227_54ts" ]; then \
+			pkg="es1227-54ts"; \
+		elif [ $$mod = "es2227_54ts" ]; then \
+			pkg="es2227-54ts"; \
+		else \
+			pkg="es2227-54ts-p"; \
+		fi; \
+		dh_installdirs -psonic-platform-$${pkg} /$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		dh_installdirs -psonic-platform-$${pkg} /usr/local/bin; \
+		dh_installdirs -psonic-platform-$${pkg} lib/systemd/system; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/sonic-platform-$${pkg}/usr/local/bin/; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/sonic-platform-$${pkg}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/sonic-platform-$${pkg}/lib/systemd/system/; \
+		#python3 $${mod}/setup.py install --root=$(MOD_SRC_DIR)/debian/sonic-platform-$${pkg} --install-layout=deb; \
+	done)
+
+	# Resuming debhelper scripts
+	dh_testroot
+	dh_install
+	dh_installchangelogs
+	dh_installdocs
+	dh_systemd_enable
+	dh_installinit
+	dh_systemd_start
+	dh_link
+	dh_fixperms
+	dh_compress
+	dh_strip
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+.PHONY: build binary binary-arch binary-indep clean

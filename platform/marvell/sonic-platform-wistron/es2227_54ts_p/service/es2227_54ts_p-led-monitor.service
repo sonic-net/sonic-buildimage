@@ -1,0 +1,14 @@
+[Unit]
+Description=Platform es2227_54ts_p PoE LED Service
+Before=pmon.service
+After=es2227_54ts_p-init.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/local/bin/es2227_54ts_p_led.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+#StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=Platform es2227_54ts_p Reset Button Service
+After=pmon.service es2227_54ts_p-init.service
+DefaultDependencies=no
+
+[Service]
+ExecStartPre=/usr/bin/sleep 20
+ExecStart=/usr/bin/python3 /usr/local/bin/rst_button.py
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+Restart=on-failure
+RestartSec=5s
+#StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target

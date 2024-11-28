@@ -1,0 +1,15 @@
+[Unit]
+Description=Platform es2227_54ts_p system LED Service
+After=pmon.service es2227_54ts_p-init.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/poe_cfg_lldp.py
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+#StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target
