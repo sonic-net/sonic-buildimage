@@ -12,20 +12,21 @@
                         "admin_status": "up"
                     },
                     {
-                        "name": "DPU0",
-                        "admin_status": "down"
-                    },
-                    {
-                        "name": "DPU1",
-                        "admin_status": "down"
-                    },
-                    {
                         "name": "FABRIC-CARD0",
                         "admin_status": "up"
                     },
                     {
                         "name": "FABRIC-CARD1",
                         "admin_status": "up"
+                    },
+                    {
+                        "name": "DPU0",
+                        "admin_status": "down"
+                    },
+                    {
+                        "name": "DPU1",
+                        "admin_status": "down"
+                     
                     }
                 ]
             }
