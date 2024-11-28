@@ -21,6 +21,7 @@ CFG_DB = "CONFIG_DB"
 BMP_STATE_DB = "BMP_STATE_DB"
 REDIS_HOSTIP = "127.0.0.1"
 BMP_TABLE = "BMP"
+SYSLOG_IDENTIFIER = "bmpcfgd"
 
 def is_true(val):
     return str(val).lower() == 'true'
@@ -36,7 +37,6 @@ class BMPCfg(DaemonBase):
 
     def load(self, data={}):
         common_config = data.get('table', {})
-
         self.bgp_neighbor_table = is_true(common_config.get('bgp_neighbor_table', 'false'))
         self.bgp_rib_in_table = is_true(common_config.get('bgp_rib_in_table', 'false'))
         self.bgp_rib_out_table = is_true(common_config.get('bgp_rib_out_table', 'false'))
@@ -54,7 +54,7 @@ class BMPCfg(DaemonBase):
 
     def stop_bmp(self):
         self.log_info('BMPCfg: stop bmp daemon')
-        subprocess.call(["service", "openbmpd", "stop"])
+        subprocess.call(["supervisorctl", "stop", "openbmpd"])
 
 
     def reset_bmp_table(self):
@@ -66,7 +66,7 @@ class BMPCfg(DaemonBase):
 
     def start_bmp(self):
         self.log_info('BMPCfg: start bmp daemon')
-        subprocess.call(["service", "openbmpd", "start"])
+        subprocess.call(["supervisorctl", "start", "openbmpd"])
 
 
 class BMPCfgDaemon:
@@ -86,23 +86,7 @@ class BMPCfgDaemon:
                                  lambda table, key, data:
                                      self.bmp_handler(key, op, data))
 
-def signal_handler(sig, frame):
-    if sig == signal.SIGHUP:
-        self.log_info("bmpcfgd: signal 'SIGHUP' is caught and ignoring..")
-    elif sig == signal.SIGINT:
-        self.log_info("bmpcfgd: signal 'SIGINT' is caught and exiting...")
-        sys.exit(128 + sig)
-    elif sig == signal.SIGTERM:
-        self.log_info("bmpcfgd: signal 'SIGTERM' is caught and exiting...")
-        sys.exit(128 + sig)
-    else:
-        self.log_info("bmpcfgd: invalid signal - ignoring..")
-
-
 def main():
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGHUP, signal_handler)
     daemon = BMPCfgDaemon()
     daemon.register_callbacks()
 

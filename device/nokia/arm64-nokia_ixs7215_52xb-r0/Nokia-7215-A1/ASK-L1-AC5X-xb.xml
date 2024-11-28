@@ -1,7 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-06-05-1.08" profile="Askl1" sid="d7694ab8-0eab-47cd-82ce-10074030f449">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-09-24-1.09" profile="Askl1" sid="46b72b06-f2b0-4910-a4a3-b77166e84219">
   <ASKL1plt:ASK-L1 xmlns:ASKL1plt="urn:marvell:ASKL1:yang">
     <ASKL1plt:typedefs>
+      <ASKL1plt:typedef>
+        <ASKL1plt:name>asic-type</ASKL1plt:name>
+        <ASKL1plt:type>enumeration</ASKL1plt:type>
+        <ASKL1plt:description>ASIC Type</ASKL1plt:description>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>ASIC_AC3X</ASKL1plt:name>
+          <ASKL1plt:description>AC3X</ASKL1plt:description>
+          <ASKL1plt:value>0</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>ASIC_AC5X</ASKL1plt:name>
+          <ASKL1plt:description>AC5X</ASKL1plt:description>
+          <ASKL1plt:value>1</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>ASIC_Falcon</ASKL1plt:name>
+          <ASKL1plt:description>FALCON</ASKL1plt:description>
+          <ASKL1plt:value>2</ASKL1plt:value>
+        </ASKL1plt:enum>
+      </ASKL1plt:typedef>
       <ASKL1plt:typedef>
         <ASKL1plt:name>interface-mode-type</ASKL1plt:name>
         <ASKL1plt:type>enumeration</ASKL1plt:type>
@@ -480,6 +500,26 @@
         </ASKL1plt:enum>
       </ASKL1plt:typedef>
       <ASKL1plt:typedef>
+        <ASKL1plt:name>phy-serdes-type</ASKL1plt:name>
+        <ASKL1plt:type>enumeration</ASKL1plt:type>
+        <ASKL1plt:description>Phy Serdes Type</ASKL1plt:description>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>NA</ASKL1plt:name>
+          <ASKL1plt:description>No serdes</ASKL1plt:description>
+          <ASKL1plt:value>0</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>COMPHY</ASKL1plt:name>
+          <ASKL1plt:description>COMPHY</ASKL1plt:description>
+          <ASKL1plt:value>1</ASKL1plt:value>
+        </ASKL1plt:enum>
+        <ASKL1plt:enum>
+          <ASKL1plt:name>COMPHY_C28G</ASKL1plt:name>
+          <ASKL1plt:description>COMPHY_C28G</ASKL1plt:description>
+          <ASKL1plt:value>2</ASKL1plt:value>
+        </ASKL1plt:enum>
+      </ASKL1plt:typedef>
+      <ASKL1plt:typedef>
         <ASKL1plt:name>port-interconnect-profile-type</ASKL1plt:name>
         <ASKL1plt:type>enumeration</ASKL1plt:type>
         <ASKL1plt:description>Enumerator of interconnect profile.</ASKL1plt:description>
@@ -500,6 +540,7 @@
         </ASKL1plt:enum>
       </ASKL1plt:typedef>
     </ASKL1plt:typedefs>
+    <ASKL1plt:ASIC_Type ASKL1plt:type="asic-type">ASIC_AC5X</ASKL1plt:ASIC_Type>
     <ASKL1plt:IfModeName>
       <ASKL1plt:ifModeNameList>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
@@ -549,6 +590,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">0</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">COMPHY</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -566,11 +608,18 @@
             <ASKL1plt:tx-param ASKL1plt:type="tx-param-type">peak</ASKL1plt:tx-param>
             <ASKL1plt:tx-param-uint32-value ASKL1plt:type="uint32">1</ASKL1plt:tx-param-uint32-value>
           </ASKL1plt:txParams-list>
+          <ASKL1plt:phySysSideTxParams-comphy>
+            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
+            <ASKL1plt:pre ASKL1plt:type="uint8">0</ASKL1plt:pre>
+            <ASKL1plt:main ASKL1plt:type="uint8">25</ASKL1plt:main>
+            <ASKL1plt:post ASKL1plt:type="uint8">0</ASKL1plt:post>
+          </ASKL1plt:phySysSideTxParams-comphy>
         </ASKL1plt:laneList-list>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">1</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -578,6 +627,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">2</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -585,6 +635,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">3</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -592,6 +643,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">4</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -599,6 +651,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">5</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -606,6 +659,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">6</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -613,6 +667,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">7</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -620,6 +675,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">8</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">COMPHY</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -637,11 +693,18 @@
             <ASKL1plt:tx-param ASKL1plt:type="tx-param-type">peak</ASKL1plt:tx-param>
             <ASKL1plt:tx-param-uint32-value ASKL1plt:type="uint32">5</ASKL1plt:tx-param-uint32-value>
           </ASKL1plt:txParams-list>
+          <ASKL1plt:phySysSideTxParams-comphy>
+            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
+            <ASKL1plt:pre ASKL1plt:type="uint8">0</ASKL1plt:pre>
+            <ASKL1plt:main ASKL1plt:type="uint8">24</ASKL1plt:main>
+            <ASKL1plt:post ASKL1plt:type="uint8">0</ASKL1plt:post>
+          </ASKL1plt:phySysSideTxParams-comphy>
         </ASKL1plt:laneList-list>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">9</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -649,6 +712,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">10</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -656,6 +720,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">11</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -663,6 +728,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">12</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -670,6 +736,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">13</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -677,6 +744,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">14</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -684,6 +752,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">15</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -691,6 +760,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">16</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">COMPHY</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -708,11 +778,18 @@
             <ASKL1plt:tx-param ASKL1plt:type="tx-param-type">peak</ASKL1plt:tx-param>
             <ASKL1plt:tx-param-uint32-value ASKL1plt:type="uint32">9</ASKL1plt:tx-param-uint32-value>
           </ASKL1plt:txParams-list>
+          <ASKL1plt:phySysSideTxParams-comphy>
+            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
+            <ASKL1plt:pre ASKL1plt:type="uint8">0</ASKL1plt:pre>
+            <ASKL1plt:main ASKL1plt:type="uint8">24</ASKL1plt:main>
+            <ASKL1plt:post ASKL1plt:type="uint8">0</ASKL1plt:post>
+          </ASKL1plt:phySysSideTxParams-comphy>
         </ASKL1plt:laneList-list>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">17</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -720,6 +797,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">18</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -727,6 +805,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">19</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -734,6 +813,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">20</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -741,6 +821,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">21</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -748,6 +829,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">22</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -755,6 +837,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">23</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -762,6 +845,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">24</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">COMPHY</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -779,11 +863,18 @@
             <ASKL1plt:tx-param ASKL1plt:type="tx-param-type">peak</ASKL1plt:tx-param>
             <ASKL1plt:tx-param-uint32-value ASKL1plt:type="uint32">10</ASKL1plt:tx-param-uint32-value>
           </ASKL1plt:txParams-list>
+          <ASKL1plt:phySysSideTxParams-comphy>
+            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
+            <ASKL1plt:pre ASKL1plt:type="uint8">0</ASKL1plt:pre>
+            <ASKL1plt:main ASKL1plt:type="uint8">24</ASKL1plt:main>
+            <ASKL1plt:post ASKL1plt:type="uint8">0</ASKL1plt:post>
+          </ASKL1plt:phySysSideTxParams-comphy>
         </ASKL1plt:laneList-list>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">25</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -791,6 +882,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">26</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -798,6 +890,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">27</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -805,6 +898,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">28</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -812,6 +906,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">29</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -819,6 +914,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">30</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -826,6 +922,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">31</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -833,6 +930,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">32</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">COMPHY</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -850,11 +948,18 @@
             <ASKL1plt:tx-param ASKL1plt:type="tx-param-type">peak</ASKL1plt:tx-param>
             <ASKL1plt:tx-param-uint32-value ASKL1plt:type="uint32">14</ASKL1plt:tx-param-uint32-value>
           </ASKL1plt:txParams-list>
+          <ASKL1plt:phySysSideTxParams-comphy>
+            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
+            <ASKL1plt:pre ASKL1plt:type="uint8">0</ASKL1plt:pre>
+            <ASKL1plt:main ASKL1plt:type="uint8">23</ASKL1plt:main>
+            <ASKL1plt:post ASKL1plt:type="uint8">0</ASKL1plt:post>
+          </ASKL1plt:phySysSideTxParams-comphy>
         </ASKL1plt:laneList-list>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">33</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -862,6 +967,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">34</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -869,6 +975,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">35</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -876,6 +983,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">36</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -883,6 +991,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">37</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -890,6 +999,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">38</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -897,6 +1007,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">39</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -904,6 +1015,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">40</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">COMPHY</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -921,11 +1033,18 @@
             <ASKL1plt:tx-param ASKL1plt:type="tx-param-type">peak</ASKL1plt:tx-param>
             <ASKL1plt:tx-param-uint32-value ASKL1plt:type="uint32">11</ASKL1plt:tx-param-uint32-value>
           </ASKL1plt:txParams-list>
+          <ASKL1plt:phySysSideTxParams-comphy>
+            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
+            <ASKL1plt:pre ASKL1plt:type="uint8">0</ASKL1plt:pre>
+            <ASKL1plt:main ASKL1plt:type="uint8">23</ASKL1plt:main>
+            <ASKL1plt:post ASKL1plt:type="uint8">0</ASKL1plt:post>
+          </ASKL1plt:phySysSideTxParams-comphy>
         </ASKL1plt:laneList-list>
       </ASKL1plt:port-list>
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">41</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -933,6 +1052,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">42</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -940,6 +1060,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">43</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -947,6 +1068,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">44</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -954,6 +1076,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">45</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -961,6 +1084,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">46</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -968,6 +1092,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">47</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">1000MR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -975,6 +1100,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">48</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -997,6 +1123,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">49</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -1019,6 +1146,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">50</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>
@@ -1041,6 +1169,7 @@
       <ASKL1plt:port-list>
         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">51</ASKL1plt:portNumber>
         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">COMPHY_C28G</ASKL1plt:Serdes>
+        <ASKL1plt:phySysSideSerdes ASKL1plt:type="phy-serdes-type">NA</ASKL1plt:phySysSideSerdes>
         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
         <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
         <ASKL1plt:supportDynamicPortBrkout ASKL1plt:type="boolean-type">false</ASKL1plt:supportDynamicPortBrkout>

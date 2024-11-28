@@ -233,6 +233,7 @@ function clean_up_chassis_db_tables()
             local lagid = redis.call('HGET', 'SYSTEM_LAG_ID_TABLE', lagname)
             redis.call('SREM', 'SYSTEM_LAG_ID_SET', lagid)
             redis.call('HDEL', 'SYSTEM_LAG_ID_TABLE', lagname)
+            redis.call('rpush', 'SYSTEM_LAG_IDS_FREE_LIST', lagid)
             nsl = nsl + 1
         end
     end
