@@ -26,15 +26,6 @@
                     {
                         "name": "FABRIC-CARD1",
                         "admin_status": "up"
-                    },
-                    {
-                        "name": "DPU0",
-                        "admin_status": "up"
-                    },
-                    {
-                        "name": "DPU1",
-                        "admin_status": "up"
-                     
                     }
                 ]
             }
