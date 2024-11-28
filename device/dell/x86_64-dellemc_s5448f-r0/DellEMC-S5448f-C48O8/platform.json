@@ -16,10 +16,10 @@
             {
                 "name": "BMC"
             },
-	    {
+	        {
                 "name": "System CPLD"
             },
-	    {
+	        {
                 "name": "Secondary CPLD 1"
             },
             {
