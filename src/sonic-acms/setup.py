@@ -41,6 +41,7 @@ setup(
     py_modules = py_modules,
     scripts = [
         'acms_monitor.py',
+        'bootstrap_monitor.py',
         'CA_cert_downloader.py',
         'cert_converter.py',
         'start.py',
