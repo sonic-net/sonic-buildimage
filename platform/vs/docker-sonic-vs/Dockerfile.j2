@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-swss-layer-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -18,7 +18,7 @@ RUN apt-get install -y net-tools \
                        tcpdump \
                        ifupdown \
                        bridge-utils \
-                       python-ply \
+                       python3-ply \
                        libqt5core5a \
                        libqt5network5 \
                        libgmp10 \
@@ -69,7 +69,7 @@ RUN apt-get install -y net-tools \
                        libgssrpc4 \
                        libkdb5-10
 
-RUN apt-get install -y -t bullseye-backports iproute2
+RUN apt-get install -y -t bookworm-backports iproute2
 
 # For sonic-config-engine Python 3 package
 # Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
