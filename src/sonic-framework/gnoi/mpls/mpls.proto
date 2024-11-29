@@ -1,0 +1,159 @@
+//
+// Copyright 2017 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package gnoi.mpls;
+
+import "github.com/openconfig/gnoi/types/types.proto";
+
+option go_package = "github.com/openconfig/gnoi/mpls";
+
+option (types.gnoi_version) = "0.1.0";
+
+service MPLS {
+  // ClearLSP clears a single tunnel (requests for it's route to be
+  // recalculated).
+  rpc ClearLSP(ClearLSPRequest) returns (ClearLSPResponse) {}
+
+  // ClearLSPCounters will clear the MPLS counters for the provided LSP.
+  rpc ClearLSPCounters(ClearLSPCountersRequest)
+    returns (ClearLSPCountersResponse) {}
+
+  // An MPLS ping, specified as per RFC4379.
+  rpc MPLSPing(MPLSPingRequest) returns (stream MPLSPingResponse) {}
+
+}
+
+// Request to clear a single tunnel on a target device.
+message ClearLSPRequest {
+  string name = 2;    // Name of the tunnel to clear.
+  Mode mode = 3;      // Tunnel clearing mode.
+
+  enum Mode {
+    option allow_alias = true;
+    DEFAULT = 0; // Same as NONAGGRESSIVE.
+    // Reoptimize the LSP using the current bandwidth.
+    NONAGGRESSIVE = 0;
+    // Reoptimize the LSP using the current bandwidth. Only use IGP metric in
+    // calcuation.
+    AGGRESSIVE = 1;
+    // Reset and restart all LSPs that originated from this routing device.
+    RESET = 2;
+    // Apply the highest bandwidth collected on a tunnel without waiting for
+    // the current application period to end. Only use IGP metric in
+    // calcuation.
+    AUTOBW_AGGRESSIVE = 3;
+    // Apply the highest bandwidth collected on a tunnel without waiting for
+    // the current application period to end.
+    AUTOBW_NONAGGRESSIVE = 4;
+  }
+}
+
+message ClearLSPResponse {
+}
+
+// Request to clear a single tunnel counters on a target device.
+message ClearLSPCountersRequest {
+  string name = 2;    // Name of the tunnel to clear.
+}
+
+message ClearLSPCountersResponse {
+}
+
+
+message MPLSPingPWEDestination {
+  // The address of the egress LER that the MPLS ping should be sent on when
+  // destined to a PWE service.
+  string eler = 1;
+  // The virtual circuit ID for the PWE via which the ping should be sent.
+  uint32 vcid = 2;
+}
+
+// MPLSPingRSVPTEDestination specifies the destination for an MPLS Ping in
+// terms of an absolute specification of an RSVP-TE LSP. It can be used to
+// identify an individual RSVP-TE session via which a ping should be sent.
+message MPLSPingRSVPTEDestination {
+  // The IPv4 or IPv6 address used by the system initiating (acting as the
+  // head-end) of the RSVP-TE LSP.
+  string src = 1;
+  // The IPv4 or IPv6 address used by the system terminating (acting as the
+  // tail-end) of the RSVP-TE LSP.
+  string dst = 2;
+  // The extended tunnel ID of the RSVP-TE LSP, expressed as an unsigned, 32b
+  // integer.
+  uint32 extended_tunnel_id = 3;
+}
+
+// MPLSPingRequest specifies the parameters that should be used as input from
+// the client, to a system that is initiating an RFC4379 MPLS ping request.
+message MPLSPingRequest {
+  // One field within the destination field should be specified to determine
+  // the destination of the LSP ping.
+  oneof destination {
+    // The LDP forwarding equivalence class that the ping should be sent to
+    // expressed as an IPv4 or IPv6 prefix.
+    string ldp_fec = 1;
+    // The FEC129 PWE to which the LSP ping should be sent.
+    MPLSPingPWEDestination fec129_pwe = 2;
+    // The name of an RSVP-TE LSP via which the ping should be sent. The system
+    // should locally resolve the name to a particular RSVP-TE session.
+    string rsvpte_lsp_name = 4;
+    // An exact specification of an RSVP-TE LSP to which the system should send
+    // an MPLS ping message.
+    MPLSPingRSVPTEDestination rsvpte_lsp = 5;
+    // TODO(robjs): L3VPN, BGP-LU destination types. See RFC4379.
+  }
+  enum ReplyMode {
+    // Reply via an IPv4 packet to this system.
+    IPV4 = 0;
+    // Reply with a labeled packet with the router alert bit set.          
+    ROUTER_ALERT = 1;  
+  }
+  // How the target LER should respond to the LSP ping.
+  ReplyMode reply_mode = 6;  
+  // The number of MPLS echo request packets to send.
+  uint32 count = 7; // default=3
+  // The size (in bytes) of each MPLS echo request packet.
+  uint32 size = 8; // default=64
+  // The source IPv4 address that should be used in the request packet.
+  string source_address = 9;
+  // The MPLS TTL that should be set in the packets sent.
+  uint32 mpls_ttl = 10;
+  // The value of the traffic class (TC, formerly known as EXP) bits that
+  // should be set in the MPLS ping packets.
+  uint32 traffic_class = 11;
+}
+
+// MPLSPingResponse (MPLSPong?) is sent from the target to the client based on
+// each MPLS Echo Response packet it receives associated with an input MPLSPing
+// RPC.
+message MPLSPingResponse {
+  uint32 seq = 1;  // The sequence number of the MPLS Echo Reply.
+  enum EchoResponseCode {
+    // A successful echo response was received.
+    SUCCESS = 0;
+    // The MPLS ping packet was not sent, for an unknown reason.
+    NOT_SENT = 1;
+    // The local system timed out waiting for an LSP ping response.
+    TIMEOUT = 2;
+    // TODO(robjs): Add additional error codes.
+  }
+  // The response that was received from the egress LER.
+  EchoResponseCode response = 2;
+  // The time (in nanoseconds) between transmission of the Echo Response,
+  // and the echo reply.
+  uint64 response_time = 3;
+}
