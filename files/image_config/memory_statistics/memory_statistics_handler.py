@@ -399,6 +399,13 @@ class TimeProcessor:
 
 
 class MemoryReportGenerator:
+    """
+    This class generates a formatted memory statistics report based on specified time intervals and duration.
+    It is initialized with request data for start and end times, and a step size for report granularity.
+    The class includes methods to create interval labels and generate a structured report header, 
+    detailing metrics and their corresponding values for easy analysis of memory statistics over the defined time frame.
+    """
+
     def __init__(self, request, step):
         """Initialize the report generator with request data and step size.
         
@@ -485,6 +492,14 @@ class MemoryReportGenerator:
 
 
 class MemoryStatisticsCollector:
+    """
+    This class handles system memory statistics collection, management, and retention. It initializes with a specified
+    sampling interval (in minutes) and retention period (in days) to determine how frequently data is collected and how long 
+    it is retained. Methods in this class include `fetch_memory_statistics()` to gather memory data using `psutil`, 
+    `fetch_memory_entries()` to load saved memory entries from a file, and `update_memory_statistics()` to add new statistics 
+    to the cumulative dataset. Additionally, `enforce_retention_policy()` removes old entries based on the retention period, 
+    and `dump_memory_usage()` logs collected data to files or returns it directly if logging is not needed.
+    """
 
     def __init__(self, sampling_interval: int, retention_period: int):
         """
@@ -668,6 +683,11 @@ class MemoryStatisticsCollector:
 
 
 class MemoryEntryManager:
+    """
+    Manages memory entries by handling additions, aggregations, and retrieval of memory data entries across 
+    different categories and types. This class is designed to support memory tracking and reporting in a 
+    structured way for various items like 'system_memory'.
+    """
 
     def add_memory_entry(self, request, total_entries_all, global_entries, local_entries, new_entry, item, category, entry_list):
         """Add memory entry to global and local entries.
@@ -824,6 +844,7 @@ class MemoryStatisticsProcessor:
     configurable sampling intervals and retention periods. It processes data from files and organizes 
     it into time slices for analysis.
     """
+
     def __init__(self, memory_statistics_config, sampling_interval: int, retention_period: int):
         """
         Initializes the MemoryStatisticsProcessor with configuration settings.
@@ -1431,7 +1452,7 @@ class MemoryStatisticsService:
     configuration reloading and graceful shutdown procedures.
     """ 
 
-    def __init__(self, memory_statistics_config, config_file_path='memorystats.conf', name="MemoryStatisticsService"):
+    def __init__(self, memory_statistics_config, config_file_path='memory_statistics.conf', name="MemoryStatisticsService"):
         """
         Initializes the MemoryStatisticsService instance.
         Parameters:
@@ -1439,21 +1460,21 @@ class MemoryStatisticsService:
         - config_file_path (str): Path to the configuration file to load overrides.
         """
 
-        self.name = name  
-        logger.log_info(f"Service initialized with name: {self.name}") 
+        self.name = name
+        logger.log_info(f"Service initialized with name: {self.name}")
 
         self.config_file_path = config_file_path
         self.memory_statistics_lock = threading.Lock()
-        self.stop_event = threading.Event()  
+        self.stop_event = threading.Event()
     
         self.socket_listener_thread = None
         self.memory_collection_thread = None
 
         self.config = memory_statistics_config.copy()
-        self.config.update(self.load_config_from_file())
+        self.load_config_from_file()
 
-        self.sampling_interval = int(self.config.get('sampling_interval', 5)) * 60  
-        self.retention_period = int(self.config.get('retention_period', 15)) 
+        self.sampling_interval = int(self.config.get('sampling_interval', 5)) * 60
+        self.retention_period = int(self.config.get('retention_period', 15))
 
         self.socket_handler = SocketHandler(
             address=self.config['DBUS_SOCKET_ADDRESS'],
@@ -1467,20 +1488,23 @@ class MemoryStatisticsService:
     
     def load_config_from_file(self):
         """
-        Loads specific configuration values from the configuration file.
-        Returns:
-        - dict: A dictionary containing configuration overrides from the file.
+        Loads and applies configuration values from the configuration file.
         """
-        config = {}
         parser = configparser.ConfigParser()
         try:
-            parser.read(self.config_file_path)
-            config['sampling_interval'] = parser.get('default', 'sampling_interval', fallback='5')
-            config['retention_period'] = parser.get('default', 'retention_period', fallback='15')
-            logger.log_info(f"Configuration loaded from file (overrides only): {config}")
+            if os.path.exists(self.config_file_path):
+                parser.read(self.config_file_path)
+                self.config.update({
+                    'sampling_interval': parser.getint('default', 'sampling_interval', fallback=self.config['sampling_interval']),
+                    'retention_period': parser.getint('default', 'retention_period', fallback=self.config['retention_period']),
+                })
+                logger.log_info(f"Configuration loaded from file: sampling_interval={self.config['sampling_interval']}, retention_period={self.config['retention_period']}")
+            else:
+                logger.log_warning(f"Configuration file not found at {self.config_file_path}, using defaults.")
+        except configparser.Error as e:
+            logger.log_error(f"ConfigParser error: {e}")
         except Exception as e:
             logger.log_error(f"Failed to load configuration from file: {e}")
-        return config
 
     def handle_command(self, command_name, command_data):
         """
@@ -1576,26 +1600,72 @@ class MemoryStatisticsService:
 
     def load_config_from_db(self):
         """
-        Retrieves runtime configuration values from the ConfigDB.
-        This method updates the service's sampling interval and retention period
+        Retrieves runtime configuration values from ConfigDB.
+        Validates and updates the service's sampling interval and retention period
         based on the values retrieved from the database.
-        Raises:
-        - Exception: If an error occurs while accessing the ConfigDB.
+        Defaults are applied if the database is not found or validation fails.
         """
+        logger.log_info("Starting configuration retrieval from ConfigDB")
         config_db = ConfigDBConnector()
-        config_db.connect()
-
+        
         try:
-            config = config_db.get_table('MEMORY_STATISTICS')
-
-            self.retention_period = int(config.get('retention-period', self.retention_period))
-            self.sampling_interval = int(config.get('sampling-interval', self.sampling_interval)) * 60
+            logger.log_debug("Attempting to connect to ConfigDB")
+            config_db.connect()
             
-            logger.log_info(f"Configuration reloaded from ConfigDB: sampling_interval={self.sampling_interval} seconds, retention_period={self.retention_period} days")
-        except Exception as e:
-            logger.log_error(f"Error loading configuration from ConfigDB: {e}, using current settings")
+            logger.log_debug("Retrieving MEMORY_STATISTICS table")
+            config = config_db.get_table('MEMORY_STATISTICS')
+            logger.log_debug(f"Retrieved configuration: {config}")
+
+            sampling_interval = config.get('sampling_interval', 5)
+            try:
+                sampling_interval = int(sampling_interval)
+                if 3 <= sampling_interval <= 15:
+                    self.sampling_interval = sampling_interval * 60
+                    logger.log_info(f"Sampling interval set to {sampling_interval} minutes")
+                else:
+                    raise ValueError(f"Sampling interval {sampling_interval} is out of valid range (3-15 minutes)")
+            except (ValueError, TypeError) as interval_error:
+                logger.log_warning(f"Invalid sampling interval: {interval_error}. Falling back to default.")
+                self.sampling_interval = 5 * 60 
+                logger.log_info("Using default sampling interval of 5 minutes")
+
+            retention_period = config.get('retention_period', 15) 
+            try:
+                retention_period = int(retention_period)
+                if 1 <= retention_period <= 30:
+                    self.retention_period = retention_period
+                    logger.log_info(f"Retention period set to {retention_period} days")
+                else:
+                    raise ValueError(f"Retention period {retention_period} is out of valid range (1-30 days)")
+            except (ValueError, TypeError) as retention_error:
+                logger.log_warning(f"Invalid retention period: {retention_error}. Falling back to default.")
+                self.retention_period = 15
+                logger.log_info("Using default retention period of 15 days")
+
+            logger.log_info(f"Successfully loaded configuration: "
+                        f"sampling_interval={self.sampling_interval // 60} minutes, "
+                        f"retention_period={self.retention_period} days")
+
+        except AttributeError as attr_error:
+            logger.log_error(f"Configuration retrieval failed - attribute error: {attr_error}")
+            logger.log_warning("Unable to retrieve configuration from database. Using default settings.")
+            self.sampling_interval = 5 * 60
+            self.retention_period = 15
+
+        except Exception as general_error:
+            logger.log_error(f"Unexpected error during configuration retrieval: {general_error}")
+            logger.log_warning("Critical error in database configuration. Using default settings.")
+            self.sampling_interval = 5 * 60
+            self.retention_period = 15
+            
+            logger.log_exception("Full error traceback:")
+
         finally:
-            config_db.disconnect()
+            try:
+                config_db.disconnect()
+                logger.log_debug("ConfigDB connection closed successfully")
+            except Exception as disconnect_error:
+                logger.log_error(f"Error closing ConfigDB connection: {disconnect_error}")
 
     def cleanup_old_files(self):
         """
@@ -1631,7 +1701,7 @@ class MemoryStatisticsService:
                 )
                 current_memory = memory_collector.collect_and_store_memory_usage(collect_only=True)
                 request['current_memory'] = current_memory
-                logger.log_info(f"Current memory usage collected: {current_memory}")
+                # logger.log_info(f"Current memory usage collected: {current_memory}")
 
                 time_processor = TimeProcessor(
                     sampling_interval=self.sampling_interval // 60,
@@ -1643,7 +1713,7 @@ class MemoryStatisticsService:
                                                     sampling_interval=self.sampling_interval,
                                                     retention_period=self.retention_period)
                 report = processor.calculate_memory_statistics_period(request)
-                logger.log_info(f"Memory statistics processed: {report}")
+                # logger.log_info(f"Memory statistics processed: {report}")
 
                 return {"status": True, "data": report}
 
@@ -1787,9 +1857,10 @@ class MemoryStatisticsService:
             time.sleep(1) 
 
 if __name__ == '__main__':
-    logging.basicConfig(filename='mem_stats_debug.log', level=logging.DEBUG, 
-                        format='%(asctime)s - %(levelname)s - %(message)s') 
+
     memory_statistics_config = {
+        'sampling_interval': 5, 
+        'retention_period': 15,
         'LOG_DIRECTORY': "/var/log/memory_statistics",
         'MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/memory-stats.log.gz",
         'TOTAL_MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/total-memory-stats.log.gz",
