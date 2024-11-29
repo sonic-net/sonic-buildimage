@@ -1,0 +1,302 @@
+From 6c769b2571776660bcaabab18b52a99939b0aeb4 Mon Sep 17 00:00:00 2001
+From: Kishore Kunal <kishore.kunal@broadcom.com>
+Date: Tue, 12 Nov 2024 10:41:31 -0800
+Subject: [PATCH] Add bridge fdb nhid and activity notification attributes
+
+---
+ include/linux-private/linux/neighbour.h |  27 ++++++
+ include/netlink-private/types.h         |   3 +
+ include/netlink/route/neighbour.h       |   7 ++
+ lib/route/neigh.c                       | 119 +++++++++++++++++++++++-
+ libnl-route-3.sym                       |   6 ++
+ 5 files changed, 160 insertions(+), 2 deletions(-)
+
+diff --git a/include/linux-private/linux/neighbour.h b/include/linux-private/linux/neighbour.h
+index 904db614..9e41d944 100644
+--- a/include/linux-private/linux/neighbour.h
++++ b/include/linux-private/linux/neighbour.h
+@@ -28,6 +28,9 @@ enum {
+ 	NDA_MASTER,
+ 	NDA_LINK_NETNSID,
+ 	NDA_SRC_VNI,
++	NDA_PROTOCOL,  /* Originator of entry */
++	NDA_NH_ID,
++	NDA_FDB_EXT_ATTRS,
+ 	__NDA_MAX
+ };
+ 
+@@ -43,6 +46,7 @@ enum {
+ #define NTF_PROXY	0x08	/* == ATF_PUBL */
+ #define NTF_EXT_LEARNED	0x10
+ #define NTF_OFFLOADED   0x20
++#define NTF_STICKY	0x40
+ #define NTF_ROUTER	0x80
+ 
+ /*
+@@ -169,4 +173,27 @@ enum {
+ };
+ #define NDTA_MAX (__NDTA_MAX - 1)
+ 
++/* FDB activity notification bits used in NFEA_ACTIVITY_NOTIFY:
++ * - FDB_NOTIFY_BIT - notify on activity/expire for any entry
++ * - FDB_NOTIFY_INACTIVE_BIT - mark as inactive to avoid multiple notifications
++ */
++enum {
++	FDB_NOTIFY_BIT		= (1 << 0),
++	FDB_NOTIFY_INACTIVE_BIT	= (1 << 1)
++};
++
++/* embedded into NDA_FDB_EXT_ATTRS:
++ * [NDA_FDB_EXT_ATTRS] = {
++ *     [NFEA_ACTIVITY_NOTIFY]
++ *     ...
++ * }
++ */
++enum {
++	NFEA_UNSPEC,
++	NFEA_ACTIVITY_NOTIFY,
++	NFEA_DONT_REFRESH,
++	__NFEA_MAX
++};
++#define NFEA_MAX (__NFEA_MAX - 1)
++
+ #endif
+diff --git a/include/netlink-private/types.h b/include/netlink-private/types.h
+index 51e58b19..3b976e33 100644
+--- a/include/netlink-private/types.h
++++ b/include/netlink-private/types.h
+@@ -263,6 +263,9 @@ struct rtnl_neigh
+ 	uint32_t                n_flag_mask;
+ 	uint32_t		n_master;
+ 	uint16_t	n_vlan;
++    uint32_t	n_nhid;
++	uint8_t     n_nfy_flags;
++	uint8_t     n_dont_refresh;
+ };
+ 
+ 
+diff --git a/include/netlink/route/neighbour.h b/include/netlink/route/neighbour.h
+index 0f17b66e..3db6a2f3 100644
+--- a/include/netlink/route/neighbour.h
++++ b/include/netlink/route/neighbour.h
+@@ -85,6 +85,13 @@ extern int			rtnl_neigh_get_vlan(struct rtnl_neigh *);
+ extern void			rtnl_neigh_set_master(struct rtnl_neigh *, int);
+ extern int			rtnl_neigh_get_master(struct rtnl_neigh *);
+ 
++extern void			rtnl_neigh_set_nh_id(struct rtnl_neigh *neigh, int nhid);
++extern int			rtnl_neigh_get_nh_id(struct rtnl_neigh *neigh);
++extern void			rtnl_neigh_set_nfy_flags(struct rtnl_neigh *neigh, uint8_t nfy_flags);
++extern int			rtnl_neigh_get_nfy_flags(struct rtnl_neigh *neigh);
++extern void			rtnl_neigh_set_dont_refresh(struct rtnl_neigh *neigh);
++extern int			rtnl_neigh_get_dont_refresh(struct rtnl_neigh *neigh);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/lib/route/neigh.c b/lib/route/neigh.c
+index ca4f2b66..84dbefda 100644
+--- a/lib/route/neigh.c
++++ b/lib/route/neigh.c
+@@ -171,6 +171,9 @@
+ #define NEIGH_ATTR_PROBES       0x100
+ #define NEIGH_ATTR_MASTER       0x200
+ #define NEIGH_ATTR_VLAN         0x400
++#define NEIGH_ATTR_NH_ID        0x1000
++#define NEIGH_ATTR_NFY_FLAGS    0x2000
++#define NEIGH_ATTR_SET_DONT_REFRESH 0x4000
+ 
+ static struct nl_cache_ops rtnl_neigh_ops;
+ static struct nl_object_ops neigh_obj_ops;
+@@ -306,6 +309,7 @@ static const struct trans_tbl neigh_attrs[] = {
+ 	__ADD(NEIGH_ATTR_PROBES, probes),
+ 	__ADD(NEIGH_ATTR_MASTER, master),
+ 	__ADD(NEIGH_ATTR_VLAN, vlan),
++    __ADD(NEIGH_ATTR_NH_ID, nhid),
+ };
+ 
+ static char *neigh_attrs2str(int attrs, char *buf, size_t len)
+@@ -322,9 +326,11 @@ static uint32_t neigh_id_attrs_get(struct nl_object *obj)
+ 		if (neigh->n_flags & NTF_SELF)
+ 			return (NEIGH_ATTR_LLADDR | NEIGH_ATTR_FAMILY | NEIGH_ATTR_IFINDEX |
+ 				       ((neigh->ce_mask & NEIGH_ATTR_DST) ? NEIGH_ATTR_DST: 0) |
+-				       ((neigh->ce_mask & NEIGH_ATTR_VLAN) ? NEIGH_ATTR_VLAN : 0));
++                       ((neigh->ce_mask & NEIGH_ATTR_VLAN) ? NEIGH_ATTR_VLAN : 0) |
++                       ((neigh->ce_mask & NEIGH_ATTR_NH_ID) ? NEIGH_ATTR_NH_ID : 0));
+ 		else
+-			return (NEIGH_ATTR_LLADDR | NEIGH_ATTR_FAMILY | NEIGH_ATTR_MASTER | NEIGH_ATTR_VLAN);
++			return (NEIGH_ATTR_LLADDR | NEIGH_ATTR_FAMILY | NEIGH_ATTR_MASTER |
++					NEIGH_ATTR_VLAN | NEIGH_ATTR_NH_ID);
+ 	} else
+ 		return neigh_obj_ops.oo_id_attrs;
+ }
+@@ -349,6 +355,35 @@ static int neigh_msg_parser(struct nl_cache_ops *ops, struct sockaddr_nl *who,
+ 	return err;
+ }
+ 
++static const struct nla_policy br_nda_fdb_pol[NFEA_MAX + 1] = {
++	[NFEA_ACTIVITY_NOTIFY]	= { .type = NLA_U8   },
++	[NFEA_DONT_REFRESH]	    = { .type = NLA_FLAG },
++};
++
++static int rtnl_neigh_parse_nfea_attr(struct rtnl_neigh *neigh, struct nlattr *attr)
++{
++	struct nlattr *tb[NFEA_MAX + 1];
++	int err;
++
++	err = nla_parse_nested(tb, NFEA_MAX, attr, br_nda_fdb_pol);
++	if (err < 0)
++		goto errout;
++
++	if (tb[NFEA_ACTIVITY_NOTIFY]) {
++		neigh->n_nfy_flags = nla_get_u8(tb[NFEA_ACTIVITY_NOTIFY]);
++		neigh->ce_mask |= NEIGH_ATTR_NFY_FLAGS;
++	}
++
++	if (tb[NFEA_DONT_REFRESH]) {
++		neigh->n_dont_refresh = 1;
++		neigh->ce_mask |= NEIGH_ATTR_SET_DONT_REFRESH;
++	}
++
++	return 0;
++
++errout:
++	return err;
++}
+ 
+ int rtnl_neigh_parse(struct nlmsghdr *n, struct rtnl_neigh **result)
+ {
+@@ -423,6 +458,17 @@ int rtnl_neigh_parse(struct nlmsghdr *n, struct rtnl_neigh **result)
+ 		neigh->ce_mask |= NEIGH_ATTR_VLAN;
+ 	}
+ 
++	if (tb[NDA_NH_ID]) {
++		neigh->n_nhid = nla_get_u32(tb[NDA_NH_ID]);
++		neigh->ce_mask |= NEIGH_ATTR_NH_ID;
++	}
++
++	if (tb[NDA_FDB_EXT_ATTRS]) {
++		err = rtnl_neigh_parse_nfea_attr(neigh, tb[NDA_FDB_EXT_ATTRS]);
++		if (err < 0)
++			goto errout;
++	}
++
+ 	/*
+ 	 * Get the bridge index for AF_BRIDGE family entries
+ 	 */
+@@ -515,6 +561,15 @@ static void neigh_dump_line(struct nl_object *a, struct nl_dump_params *p)
+ 	if (n->ce_mask & NEIGH_ATTR_VLAN)
+ 		nl_dump(p, "vlan %d ", n->n_vlan);
+ 
++	if (n->ce_mask & NEIGH_ATTR_NH_ID)
++		nl_dump(p, "nhid %d ", n->n_nhid);
++
++	if (n->ce_mask & NEIGH_ATTR_NFY_FLAGS)
++		nl_dump(p, "nfy %d ", n->n_nfy_flags);
++
++	if (n->ce_mask & NEIGH_ATTR_SET_DONT_REFRESH)
++		nl_dump(p, "dont-refresh ");
++
+ 	if (n->ce_mask & NEIGH_ATTR_MASTER) {
+ 		if (link_cache)
+ 			nl_dump(p, "%s ", rtnl_link_i2name(link_cache, n->n_master,
+@@ -690,6 +745,7 @@ static int build_neigh_msg(struct rtnl_neigh *tmpl, int cmd, int flags,
+ 			   struct nl_msg **result)
+ {
+ 	struct nl_msg *msg;
++	struct nlattr *nfea;
+ 	struct ndmsg nhdr = {
+ 		.ndm_ifindex = tmpl->n_ifindex,
+ 		.ndm_state = NUD_PERMANENT,
+@@ -725,6 +781,23 @@ static int build_neigh_msg(struct rtnl_neigh *tmpl, int cmd, int flags,
+ 	if (tmpl->ce_mask & NEIGH_ATTR_VLAN)
+ 		NLA_PUT_U16(msg, NDA_VLAN, tmpl->n_vlan);
+ 
++	if (tmpl->ce_mask & NEIGH_ATTR_NH_ID)
++		NLA_PUT_U32(msg, NDA_NH_ID, tmpl->n_nhid);
++
++	if (tmpl->ce_mask & (NEIGH_ATTR_NFY_FLAGS | NEIGH_ATTR_SET_DONT_REFRESH)) {
++		nfea = nla_nest_start(msg, NDA_FDB_EXT_ATTRS);
++		if (nfea == NULL)
++			goto nla_put_failure;
++
++		if (tmpl->ce_mask & NEIGH_ATTR_NFY_FLAGS)
++			NLA_PUT_U8(msg, NFEA_ACTIVITY_NOTIFY, tmpl->n_nfy_flags);
++
++		if (tmpl->ce_mask & NEIGH_ATTR_SET_DONT_REFRESH)
++			NLA_PUT_FLAG(msg, NFEA_DONT_REFRESH);
++
++		nla_nest_end(msg, nfea);
++	}
++
+ 	*result = msg;
+ 	return 0;
+ 
+@@ -1060,6 +1133,48 @@ int rtnl_neigh_get_vlan(struct rtnl_neigh *neigh)
+ 		return -1;
+ }
+ 
++void rtnl_neigh_set_nh_id(struct rtnl_neigh *neigh, int nhid)
++{
++	neigh->n_nhid = nhid;
++	neigh->ce_mask |= NEIGH_ATTR_NH_ID;
++}
++
++int rtnl_neigh_get_nh_id(struct rtnl_neigh *neigh)
++{
++	if (neigh->ce_mask & NEIGH_ATTR_NH_ID)
++		return neigh->n_nhid;
++	else
++		return -1;
++}
++
++void rtnl_neigh_set_nfy_flags(struct rtnl_neigh *neigh, uint8_t nfy_flags)
++{
++	neigh->n_nfy_flags = nfy_flags;
++	neigh->ce_mask |= NEIGH_ATTR_NFY_FLAGS;
++}
++
++int rtnl_neigh_get_nfy_flags(struct rtnl_neigh *neigh)
++{
++	if (neigh->ce_mask & NEIGH_ATTR_NFY_FLAGS)
++		return neigh->n_nfy_flags;
++	else
++		return -1;
++}
++
++void rtnl_neigh_set_dont_refresh(struct rtnl_neigh *neigh)
++{
++	neigh->n_dont_refresh = 1;
++	neigh->ce_mask |= NEIGH_ATTR_SET_DONT_REFRESH;
++}
++
++int rtnl_neigh_get_dont_refresh(struct rtnl_neigh *neigh)
++{
++	if (neigh->ce_mask & NEIGH_ATTR_SET_DONT_REFRESH)
++		return neigh->n_dont_refresh;
++	else
++		return -1;
++}
++
+ void rtnl_neigh_set_master(struct rtnl_neigh *neigh, int ifindex)
+ {
+ 	neigh->n_master = ifindex;
+diff --git a/libnl-route-3.sym b/libnl-route-3.sym
+index fb81b7f5..d5e1f426 100644
+--- a/libnl-route-3.sym
++++ b/libnl-route-3.sym
+@@ -1112,6 +1112,12 @@ global:
+ 	rtnl_neigh_get_by_vlan;
+ 	rtnl_neigh_get_master;
+ 	rtnl_neigh_set_master;
++    rtnl_neigh_get_nh_id;
++    rtnl_neigh_set_nh_id;
++    rtnl_neigh_get_nfy_flags;
++    rtnl_neigh_set_nfy_flags;
++    rtnl_neigh_get_dont_refresh;
++    rtnl_neigh_set_dont_refresh;
+ 	rtnl_netem_set_delay_distribution_data;
+ 	rtnl_qdisc_mqprio_get_hw_offload;
+ 	rtnl_qdisc_mqprio_get_max_rate;
+-- 
+2.39.4
+

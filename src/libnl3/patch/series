@@ -1,3 +1,5 @@
 0001-mpls-encap-accessors.patch
 0002-mpls-remove-nl_addr_valid.patch
 0003-Adding-support-for-RTA_NH_ID-attribute.patch
+0004-Sync-rtnetlink-header-file-with-6.1.94-kernel.patch
+0005-Add-bridge-fdb-nhid-and-activity-notification-attrib.patch
