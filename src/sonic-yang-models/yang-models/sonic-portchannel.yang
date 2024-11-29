@@ -9,6 +9,10 @@ module sonic-portchannel {
         prefix stypes;
     }
 
+    import ietf-yang-types {
+        prefix yang;
+    }
+
     import sonic-extension {
         prefix ext;
     }
@@ -192,6 +196,11 @@ module sonic-portchannel {
 			type stypes:mode-status;
 			default disable;
 		}
+
+                leaf mac_addr {
+                    description "Assign administrator-provided MAC address to Interface";
+                    type yang:mac-address;
+                }
 
             } /* end of list PORTCHANNEL_INTERFACE_LIST */
 
