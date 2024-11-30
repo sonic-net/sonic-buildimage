@@ -366,16 +366,35 @@ clean_cpld_4_rst_all(struct mux_obj_s *self){
     return 0;
 }
 
+static int gpiochip_match_name(struct gpio_chip *chip, void *data)
+{
+    const char *name = data;
+    return !strcmp(chip->label, name);
+}
+
+static struct gpio_chip *find_chip_by_name(const char *name)
+{
+    return gpiochip_find((void *)name, gpiochip_match_name);
+}
 
 static int
 _setup_muxctl_cb(struct mux_obj_s *self,
-                 unsigned gpio){
+                 unsigned int gpio){
 
     char mod_dsc[32] = "ERR";
 
+    int gpio_base = 0;
+    struct gpio_chip *chip = NULL;
+    
+    if (NULL == (chip = find_chip_by_name("gpio_ich"))) {
+        SWPS_ERR("find gpio name fail\n");
+        return -1;
+    }
+    gpio_base = chip->base;
+    self->gpio_num = gpio + gpio_base;
+
     switch (gpio) {
         case MUX_RST_GPIO_FORCE_RANGELEY:
-            self->gpio_num   = gpio;
             self->_pull_low  = rangeley_force_pull_low;
             self->_pull_high = rangeley_force_pull_high;
             self->_init      = init_gpio_4_force;
@@ -386,7 +405,6 @@ _setup_muxctl_cb(struct mux_obj_s *self,
             goto ok_setup_muxctl_cb;
 
         case MUX_RST_GPIO_FORCE_HEDERA:
-            self->gpio_num   = gpio;
             self->_pull_low  = hedera_force_pull_low;
             self->_pull_high = hedera_force_pull_high;
             self->_init      = init_gpio_4_force;
@@ -401,7 +419,6 @@ _setup_muxctl_cb(struct mux_obj_s *self,
         case MUX_RST_GPIO_249_PCA9548:
         case MUX_RST_GPIO_500_PCA9548:
         case MUX_RST_GPIO_505_PCA9548:
-            self->gpio_num   = gpio;
             self->_pull_low  = normal_gpio_pull_low;
             self->_pull_high = normal_gpio_pull_high;
             self->_init      = init_gpio_4_normal;
@@ -412,7 +429,6 @@ _setup_muxctl_cb(struct mux_obj_s *self,
             goto ok_setup_muxctl_cb;
 
         case MUX_RST_CPLD_C0_A77_70_74_RST_ALL:
-            self->gpio_num   = gpio;
             self->_pull_low  = cpld_rst_all_4_pull_low;
             self->_pull_high = cpld_rst_all_4_pull_high;
             self->_init      = init_cpld_4_rst_all;
