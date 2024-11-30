@@ -4,6 +4,9 @@ Requires=database.service config-setup.service
 After=database.service config-setup.service
 {% if sonic_asic_platform == 'mellanox' %}
 After=syncd.service
+{% elif sonic_asic_platform == 'broadcom' %}
+Requires=syncd.service
+After=syncd.service
 {% endif %}
 BindsTo=sonic.target
 After=sonic.target
