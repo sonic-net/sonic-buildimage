@@ -91,7 +91,6 @@ static ssize_t show_status(struct device *dev, struct device_attribute *da,
     struct as4630_54te_psu_data *data = as4630_54te_psu_update_device(dev);
     u8 status = 0;
 
-    //printk("data->status=0x%x, attr->index=%d,data->index=%d \n", data->status, attr->index, data->index);
     if (attr->index == PSU_PRESENT) {
         if(data->index==0)
             status = !( (data->status >> 5) & 0x1);
@@ -260,13 +259,14 @@ static struct as4630_54te_psu_data *as4630_54te_psu_update_device(struct device 
     if (time_after(jiffies, data->last_updated + HZ + HZ / 2)
             || !data->valid) {
         int status;
+        u8 serial_offset;
         int power_good = 0;
 
         dev_dbg(&client->dev, "Starting as4630_54te update\n");
 
         /* Read psu status */
         status = as4630_54te_cpld_read(0x60, 0x22);
-        //printk("status=0x%x in %s\n", status, __FUNCTION__);
+        
         if (status < 0) {
             dev_dbg(&client->dev, "cpld reg 0x60 err %d\n", status);
         }
@@ -277,29 +277,49 @@ static struct as4630_54te_psu_data *as4630_54te_psu_update_device(struct device 
         /* Read model name */
         memset(data->model_name, 0, sizeof(data->model_name));
         memset(data->serial_number, 0, sizeof(data->serial_number));
-        power_good = (data->status >> (3-data->index) & 0x1);
-       
+        if(data->index==0)
+           power_good = ( (data->status >> 6) & 0x1);
+        else
+           power_good = ( (data->status >> 2) & 0x1);
+        
         if (power_good) {
             status = as4630_54te_psu_read_block(client, 0x20, data->model_name,
-                                               ARRAY_SIZE(data->model_name)-1);                                               
+                                               ARRAY_SIZE(data->model_name)-1);
+
             if (status < 0) {
                 data->model_name[0] = '\0';
                 dev_dbg(&client->dev, "unable to read model name from (0x%x)\n", client->addr);
-                printk("unable to read model name from (0x%x)\n", client->addr);
             }
             else {
+                data->model_name[8] = '-';
                 data->model_name[ARRAY_SIZE(data->model_name)-1] = '\0';
-                
             }
-             /* Read from offset 0x2e ~ 0x3d (16 bytes) */
-            status = as4630_54te_psu_read_block(client, 0x35,data->serial_number, MAX_SERIAL_NUMBER);
+            if(!strncmp(data->model_name, "YM-1151D", strlen("YM-1151D")))
+            {
+                if (!strncmp(data->model_name, "YM-1151D-A03R", strlen("YM-1151D-A03R")))
+                {
+                    data->model_name[strlen("YM-1151D-A03R")] = '\0';
+                    serial_offset = 0x2E; /* YM-1151D-A03R, F2B dir */
+                }
+                else
+                {
+                    data->model_name[strlen("YM-1151D-A02R")] = '\0';
+                    serial_offset = 0x35; /* YM-1151D-A02R, B2F dir */
+                }
+            }
+            else
+                serial_offset = 0x2E;
+            
+            /* Read from offset 0x2e ~ 0x3f (16 bytes) */
+            status = as4630_54te_psu_read_block(client, serial_offset, data->serial_number, MAX_SERIAL_NUMBER);
             if (status < 0)
             {
                 data->serial_number[0] = '\0';
                 dev_dbg(&client->dev, "unable to read model name from (0x%x) offset(0x2e)\n", client->addr);
-                printk("unable to read model name from (0x%x) offset(0x2e)\n", client->addr);
             }
+            
             data->serial_number[MAX_SERIAL_NUMBER-1]='\0';
+           
         }
 
         data->last_updated = jiffies;
