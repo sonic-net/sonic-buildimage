@@ -1,0 +1,11 @@
+sse-g3748/scripts/show-techsupport usr/local/bin
+sse-g3748/scripts/techfile_v2.py usr/local/bin
+sse-g3748/scripts/sse-g3748_plt_setup.sh usr/local/bin
+sse-g3748/scripts/entropy.py etc/
+sse-g3748/scripts/sse-g3748-init.sh usr/local/bin
+sse-g3748/scripts/reset-to-factory-default usr/local/bin
+sse-g3748/service/sse-g3748-init.service etc/systemd/system
+sse-g3748/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/arm64-supermicro_sse_g3748-r0
+sse-g3748/scripts/add_port_range usr/local/bin
+sse-g3748/modules_cfg/sse-g3748-modules.conf etc/modules-load.d
+../mrvl-prestera/platform/arm64/ac5x/* /

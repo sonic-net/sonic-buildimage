@@ -1,0 +1,11 @@
+{
+    "chassis": {
+        "SSE-G3748": {
+            "component": {
+                "U-Boot": { },
+		"ONIE-VERSION": { },
+                "System-CPLD": { }
+            }
+        }
+    }
+}
