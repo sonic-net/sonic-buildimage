@@ -33,6 +33,7 @@ ExecStop=/usr/local/bin/syncd.sh stop{% if multi_instance == 'true' %} %i{% endi
 {% if sonic_asic_platform == 'mellanox' %}
 TimeoutStartSec=480
 {% endif %}
+RestartSec=30
 
 [Install]
 WantedBy=sonic.target
