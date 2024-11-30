@@ -20,7 +20,9 @@ RUN apt-get update   && \
         python3-dev     \
         gcc             \
         make            \
-        ipmitool
+        ipmitool        \
+        snmp            \
+        snmpd
 
 {% if docker_snmp_debs.strip() -%}
 # Copy locally-built Debian package dependencies
