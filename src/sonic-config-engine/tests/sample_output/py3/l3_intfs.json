@@ -1,5 +1,10 @@
 {
-    "DEVICE_METADATA": {"localhost": {"hwsku": "32x1000Gb"}},
+    "DEVICE_METADATA": {
+	"localhost": {
+	    "hostname": "sonic",
+	    "hwsku": "32x1000Gb"
+	}
+    },
     "PORT": {
         "Ethernet0": {
             "admin_status": "up",

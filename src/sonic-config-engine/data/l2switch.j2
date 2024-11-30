@@ -1,5 +1,10 @@
 {
-    "DEVICE_METADATA": {{ DEVICE_METADATA | tojson }},
+    "DEVICE_METADATA": {
+        "localhost" : {
+            "hostname": "sonic",
+            "hwsku" : "{{ DEVICE_METADATA.localhost.hwsku }}"
+        }
+    },
     "FLEX_COUNTER_TABLE": {
         "ACL": {
             "FLEX_COUNTER_STATUS": "disable",

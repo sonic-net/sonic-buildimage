@@ -1,6 +1,7 @@
 {
     "DEVICE_METADATA": {
         "localhost": {
+	    "hostname": "sonic",
             "hwsku": "Arista-7050CX3-32S-D48C8",
             "subtype": "DualToR",
             "peer_switch": "peer_switch_hostname"
