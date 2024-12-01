@@ -171,6 +171,17 @@ dependent_startup_wait_for=bgpd:running
 
 {% endif %}
 
+{% if DEVICE_METADATA.localhost.switch_type is defined and DEVICE_METADATA.localhost.switch_type == "dpu" %}
+[program:bfdmon]
+command=/usr/local/bin/bfdmon
+priority=6
+autostart=true
+autorestart=true
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+{% endif %}
+
 {% if DEVICE_METADATA.localhost.docker_routing_config_mode is defined and (DEVICE_METADATA.localhost.docker_routing_config_mode == "unified" or DEVICE_METADATA.localhost.docker_routing_config_mode == "split-unified") %}
 [program:vtysh_b]
 command=/usr/bin/vtysh -b
