@@ -1,10 +1,11 @@
-from __future__ import print_function
-import sys
-from setuptools import setup
-import pkg_resources
-from packaging import version
+import setuptools
 
-setup(
+
+dependencies = [
+    'sonic_py_common',
+]
+
+setuptools.setup(
     name = 'sonic-bmpcfgd-services',
     version = '1.0',
     description = 'Python services which run in the bmp container',
@@ -14,8 +15,9 @@ setup(
     url = 'https://github.com/Azure/sonic-buildimage',
     maintainer = 'Feng Pan',
     maintainer_email = 'fenpan@microsoft.com',
-    scripts = [
-        'scripts/bmpcfgd'
+    packages=[
+        'bmpcfgd',
+        'tests'
     ],
     install_requires = [
         'jinja2>=2.10',
@@ -25,7 +27,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'bmpcfgd = scripts.bmpcfgd:main',
+            'bmpcfgd = bmpcfgd.bmpcfgd:main',
         ]
     },
     setup_requires = [
@@ -39,26 +41,4 @@ setup(
         'sonic-py-common',
         'pytest-cov'
     ],
-    extras_require = {
-        "testing": [
-            'parameterized',
-            'pytest',
-            'pyfakefs',
-            'sonic-py-common'
-        ]
-    },
-    classifiers = [
-        'Development Status :: 3 - Alpha',
-        'Environment :: Console',
-        'Intended Audience :: Developers',
-        'Intended Audience :: Information Technology',
-        'Intended Audience :: System Administrators',
-        'License :: OSI Approved :: Apache Software License',
-        'Natural Language :: English',
-        'Operating System :: POSIX :: Linux',
-        'Programming Language :: Python :: 3.7',
-        'Topic :: System',
-    ],
-    keywords = 'SONiC bmp config daemon',
-    test_suite = 'setup.get_test_suite'
 )
