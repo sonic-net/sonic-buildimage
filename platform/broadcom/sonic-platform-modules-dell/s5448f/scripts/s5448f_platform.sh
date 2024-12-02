@@ -351,7 +351,11 @@ if [ "$1" == "init" ]; then
     get_reboot_cause
     echo 3000 > /sys/module/ipmi_si/parameters/kipmid_max_busy_us
 elif [ "$1" == "deinit" ]; then
-    switch_board_sfp "media_down"
+    sys_eeprom "delete_device"
+    switch_board_qsfp_sfp_mux "delete_device"
+    switch_board_qsfp "delete_device"
+    switch_board_sfp "delete_device"
+    remove_python_api_package
     # Remove the flag file to denote the platform is no more ready
     rm -f $PLATFORM_READY_CHECK
 elif [ "$1" == "media_down" ]; then
