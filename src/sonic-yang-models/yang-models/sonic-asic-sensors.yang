@@ -1,48 +1,41 @@
 module sonic-asic-sensors {
+  yang-version 1.1;
+  namespace "http://github.com/sonic-net/sonic-asic-sensors";
+  prefix asic-sensors;
 
-       yang-version 1.1;
+  import sonic-types {
+    prefix stypes;
+  }
 
-       namespace "http://github.com/sonic-net/sonic-asic-sensors";
+  description "ASIC SENSORs config yang Module for SONiC OS";
 
-       prefix asic-sensors;
+  revision 2024-11-19 {
+    description "First Revision";
+  }
 
-       description "ASIC SENSORs config yang Module for SONiC OS";
+  container sonic-asic-sensors{
+    container ASIC_SENSORS {
+      description "ASIC_SENSORS part of config_db.json";
 
-       revision 2024-11-19 {
-              description "First Revision";
-       }
+      container ASIC_SENSORS_POLLER_INTERVAL {
+        leaf interval {
+	  description "ASIC SENSORS polling interval";
+          type uint32 {
+            range "1..999";
+          }
+          units seconds;
+          default "10 ";
+        }
+      } /* ASIC_SENSORS_POLLER_INTERVAL */
 
-       container sonic-asic-sensors{
+      container ASIC_SENSORS_POLLER_STATUS {
+        leaf admin_status {
+          description "ASIC SENSORS polling administrative status";
+          type stypes:mode-status;
+          default "enable";
+        } /* admin_status */
+      } /* ASIC_SENSORS_POLLER_STATUS */
 
-              container ASIC_SENSORS {
-
-                      description "ASIC_SENSORS part of config_db.json";
-
-                      typedef poller_status {
-                              type enumeration {
-                                       enum enable;
-                                       enum disable;
-                              }
-                      }
-
-		      container ASIC_SENSORS_POLLER_INTERVAL {
-                              leaf interval {
-					description "ASIC SENSORS polling interval";
-                                        type uint32 {
-                                              range "1..999";
-                                         }
-                                         units seconds;
-                                         default "10 ";
-			      }
-
-                      }
-
-                      container ASIC_SENSORS_POLLER_STATUS {
-			      leaf admin_status {
-                                        type poller_status;
-                                        default "enable";
-			      }
-                      }
-	      } /* end of ASIC_SENSORS */
-       } /* end of container sonic-asic-sensors */
+    } /* end of ASIC_SENSORS */
+  } /* end of container sonic-asic-sensors */
 } /* end of module sonic-asic-sensors */
