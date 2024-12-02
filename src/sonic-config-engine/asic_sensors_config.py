@@ -28,10 +28,9 @@ def get_asic_sensors_config():
     platform_json = portconfig.readJson(json_file)
     if not platform_json:
         return config
-    
+
     if ASIC_SENSORS_KEY in platform_json:
         config["ASIC_SENSORS"] = {"ASIC_SENSORS_POLLER_INTERVAL": {"interval": platform_json[ASIC_SENSORS_KEY]["poll_interval"]},
                                   "ASIC_SENSORS_POLLER_STATUS":  {"admin_status": platform_json[ASIC_SENSORS_KEY]["poll_admin_status"]}
                                   }
-        
     return config

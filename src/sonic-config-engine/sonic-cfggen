@@ -459,7 +459,12 @@ def main():
 
         deep_update(data, hardware_data)
 
-        asic_sensors = asic_sensors_config.get_asic_sensors_config()
+        asic_sensors = {}
+        if is_multi_asic():
+            if asic_name is not None:
+                asic_sensors = asic_sensors_config.get_asic_sensors_config()
+        else:
+            asic_sensors = asic_sensors_config.get_asic_sensors_config()
         if asic_sensors:
             deep_update(data, asic_sensors) 
 
