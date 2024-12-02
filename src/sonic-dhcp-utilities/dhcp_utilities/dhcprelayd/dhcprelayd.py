@@ -8,7 +8,7 @@ import sys
 import syslog
 import time
 from swsscommon import swsscommon
-from dhcp_utilities.common.utils import DhcpDbConnector, terminate_proc, get_target_process_cmds, is_smart_switch
+from dhcp_utilities.common.utils import DhcpDbConnector, terminate_proc, is_smart_switch
 from dhcp_utilities.common.dhcp_db_monitor import DhcpRelaydDbMonitor, DhcpServerTableIntfEnablementEventChecker, \
      VlanTableEventChecker, VlanIntfTableEventChecker, DhcpServerFeatureStateChecker, MidPlaneTableEventChecker
 
@@ -226,7 +226,23 @@ class DhcpRelayd(object):
         """
         Check whether dhcrelay running as expected, if not, dhcprelayd will exit with code 1
         """
-        running_cmds = get_target_process_cmds("dhcrelay")
+        procs = {}
+        for proc in psutil.process_iter():
+            try:
+                if proc.name() != "dhcrelay":
+                    continue
+                procs[proc.pid] = [proc.ppid(), proc.cmdline()]
+            except psutil.NoSuchProcess:
+                continue
+
+        # When there is network io, dhcrelay would create child process to proceed them, psutil has chance to get
+        # duplicated cmdline. Hence ignore chlid process in here
+        running_cmds = []
+        for _, (parent_pid, cmdline) in procs.items():
+            if parent_pid in procs:
+                continue
+            running_cmds.append(cmdline)
+
         running_cmds.sort()
         expected_cmds = [value for key, value in self.dhcp_relay_supervisor_config.items() if "isc-dhcpv4-relay" in key]
         expected_cmds.sort()

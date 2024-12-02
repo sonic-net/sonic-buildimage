@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <linux/kconfig.h>
@@ -84,6 +84,11 @@ ngknet_filter_create(struct ngknet_dev *dev, ngknet_filter_t *filter)
         return SHR_E_UNAVAIL;
     }
 
+    fc = kzalloc(sizeof(*fc), GFP_KERNEL);
+    if (!fc) {
+        return SHR_E_MEMORY;
+    }
+
     spin_lock_irqsave(&dev->lock, flags);
 
     num = (long)dev->fc[0];
@@ -94,13 +99,8 @@ ngknet_filter_create(struct ngknet_dev *dev, ngknet_filter_t *filter)
     }
     if (id > NUM_FILTER_MAX) {
         spin_unlock_irqrestore(&dev->lock, flags);
+        kfree(fc);
         return SHR_E_RESOURCE;
-    }
-
-    fc = kzalloc(sizeof(*fc), GFP_KERNEL);
-    if (!fc) {
-        spin_unlock_irqrestore(&dev->lock, flags);
-        return SHR_E_MEMORY;
     }
 
     dev->fc[id] = fc;

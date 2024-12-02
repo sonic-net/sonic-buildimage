@@ -49,9 +49,8 @@ module sonic-vxlan {
                 max-elements 1;
 
                 leaf name {
-                    type string;
+                    type stypes:interface_name;
                 }
-                must "string-length(name) != 0";
 
                 leaf src_ip {
                     type inet:ip-address;

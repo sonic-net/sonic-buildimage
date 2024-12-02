@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # Source the platform_utils script
-source "$(dirname "$0")/platform_utils"
+source "$(dirname "$0")/platform_utils" > /dev/null 2>&1
+
+${SMARTSWITCH:=false}
 
 # Restrict command to sudo users
 if [ "$EUID" -ne 0 ] ; then
@@ -21,7 +23,7 @@ fi
 /usr/bin/TS TSC
 [[ $1 != "no-stats" ]] && portstat -p 5
 
-if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr [:upper:] [:lower:])" == *"dualtor"* ]]
+if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr '[:upper:]' '[:lower:]')" == *"dualtor"* ]]
 then
   echo
   show mux status
