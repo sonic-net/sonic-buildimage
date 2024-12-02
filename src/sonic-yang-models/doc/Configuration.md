@@ -992,34 +992,34 @@ deployment envionment id and deployment type are specified. BGP local AS
 number is also specified in this table as current only single BGP
 instance is supported in SONiC.
 
-```
+```json
 {
-"DEVICE_METADATA": {
+    "DEVICE_METADATA": {
         "localhost": {
-        "asic_id": "06:00.0",
-        "asic_name": "asic0",
-        "hwsku": "Force10-S6100",
-        "default_bgp_status": "up",
-        "docker_routing_config_mode": "unified",
-        "hostname": "sonic-s6100-01",
-        "platform": "x86_64-dell_s6100_c2538-r0",
-        "mac": "4c:76:25:f4:70:82",
-        "default_pfcwd_status": "disable",
-        "bgp_asn": "65100",
-        "deployment_id": "1",
-        "type": "ToRRouter",
-        "bgp_adv_lo_prefix_as_128" : "true",
-        "buffer_model": "traditional",
-        "yang_config_validation": "disable",
-        "rack_mgmt_map": "dummy_value",
-        "timezome": "Europe/Kiev",
-        "bgp_router_id": "8.8.8.8"
+            "asic_id": "06:00.0",
+            "asic_name": "asic0",
+            "hwsku": "Force10-S6100",
+            "default_bgp_status": "up",
+            "docker_routing_config_mode": "unified",
+            "hostname": "sonic-s6100-01",
+            "platform": "x86_64-dell_s6100_c2538-r0",
+            "mac": "4c:76:25:f4:70:82",
+            "default_pfcwd_status": "disable",
+            "bgp_asn": "65100",
+            "deployment_id": "1",
+            "type": "ToRRouter",
+            "bgp_adv_lo_prefix_as_128" : "true",
+            "buffer_model": "traditional",
+            "yang_config_validation": "disable",
+            "rack_mgmt_map": "dummy_value",
+            "timezome": "Europe/Kiev",
+            "bgp_router_id": "8.8.8.8"
+            "sysready_state": "enabled"
+        }
     }
-  }
 }
-
 ```
-
+* `sysready_state` - System-ready feature configuration: `{enabled,disabled}`
 
 ### Device neighbor metada
 

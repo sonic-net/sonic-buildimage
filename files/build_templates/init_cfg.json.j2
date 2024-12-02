@@ -109,10 +109,16 @@
             "auto_restart": "{{autorestart}}",
             "support_syslog_rate_limit" : "true",
 {# Set check_up_status to true here when app readiness will be marked in state db  #}
+{%- if feature in ["swss", "syncd", "pmon"] %}
+            "check_up_status" : "true",
+{%- endif %}
 {# For now, to support the infrastrucure, setting the check_up_status to false for bgp,swss,pmon  #}
 {# Once apps like bgp,synd supports app readiness, then bgp,syncd can set check_up_status to true #}
-{%- if feature in ["bgp", "swss", "pmon"] %}
+{%- if feature in ["bgp"] %}
             "check_up_status" : "false",
+{%- endif %}
+{%- if feature in ["snmp"] %}
+            "irrel_for_sysready" : "true",
 {%- endif %}
 {%- if include_kubernetes == "y" %}
 {%- if feature in ["lldp", "pmon", "radv", "eventd", "snmp", "telemetry", "gnmi"] %}

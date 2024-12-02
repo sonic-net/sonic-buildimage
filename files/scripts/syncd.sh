@@ -27,6 +27,8 @@ function startplatform() {
         /usr/bin/mlnx-fw-upgrade.sh -c -v
         if [[ "$?" -ne "${EXIT_SUCCESS}" ]]; then
             debug "Failed to upgrade fw. " "$?" "Restart syncd"
+            sonic-db-cli STATE_DB HSET "FEATURE|$DEV_SRV" fail_reason \
+                "ASIC FW update failed" up_status false
             exit 1
         fi
         /etc/init.d/sxdkernel restart
@@ -77,6 +79,9 @@ function startplatform() {
             exit 1
         fi
     fi
+
+    sonic-db-cli STATE_DB HDEL "FEATURE|$DEV_SRV" fail_reason
+    sonic-db-cli STATE_DB HSET "FEATURE|$DEV_SRV" up_status true
 }
 
 function waitplatform() {
@@ -159,9 +164,11 @@ LOCKFILE="/tmp/swss-syncd-lock$DEV"
 NAMESPACE_PREFIX="asic"
 if [ "$DEV" ]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
+    DEV_SRV="$SERVICE@$DEV"
     SONIC_DB_CLI="sonic-db-cli -n $NET_NS"
 else
     NET_NS=""
+    DEV_SRV="$SERVICE"
     SONIC_DB_CLI="sonic-db-cli"
 fi
 

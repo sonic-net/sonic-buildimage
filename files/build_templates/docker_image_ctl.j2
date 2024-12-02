@@ -109,6 +109,37 @@ function preStartAction()
     fi
 {%- elif docker_container_name == "snmp" %}
     $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+
+    # Wait for system ready. Continue after timeout if we won't hear anything
+    # from DB. Read timeout from config file and add two extra minutes on top of
+    # it.
+    CONFFILE=system_health_monitoring_config.json
+    PLATFORM=${PLATFORM:-`sonic-cfggen -d -v DEVICE_METADATA.localhost.platform`}
+    TIMEOUT=$(cat /usr/share/sonic/device/$PLATFORM/$CONFFILE | jq ".timeout")
+    SYSTEM_READY_EVENT="SYSTEM_READY|SYSTEM_STATE"
+    CHECK_SR_EVENT="sonic-db-dump -n STATE_DB -k $SYSTEM_READY_EVENT"
+
+    # Set default if not found
+    if [[ -z $TIMEOUT ]]; then
+        MESSAGE="Failed to read timeout from config file, assuming default is \
+                10 minutes"
+        echo $MESSAGE
+        TIMEOUT=10
+    fi
+
+    # Add one extra minute and convert to seconds
+    TIMEOUT=$(((TIMEOUT + 1) * 60))
+
+    # Waiting for event
+    echo "Waiting for $SYSTEM_READY_EVENT event"
+    while [[ -z "$($CHECK_SR_EVENT | jq '.[]["value"]["Status"]')" ]]; do
+        UPTIME=$(awk -F. '{print $1}' /proc/uptime)
+        if [[ $UPTIME -gt $TIMEOUT ]]; then
+            echo "Got uptime timeout - starting snmp..."
+            break
+        fi
+        sleep 15
+    done
 {%- else %}
     : # nothing
 {%- endif %}

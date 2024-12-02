@@ -193,5 +193,12 @@
     },
     "DEVICE_METADATA_VALID_NEXTHOP_GROUP": {
         "desc": "Verifying nexthop_group configuration."
-     }
+     },
+    "DEVICE_METADATA_VALID_SYSREADY": {
+        "desc": "Verifying valid system-ready state"
+    },
+    "DEVICE_METADATA_INVALID_SYSREADY": {
+        "desc": "Verifying invalid system-ready state",
+        "eStrKey": "InvalidValue"
+    }
 }

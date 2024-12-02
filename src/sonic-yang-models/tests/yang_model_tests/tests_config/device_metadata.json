@@ -535,5 +535,23 @@
                 }
             }
         }
+    },
+    "DEVICE_METADATA_VALID_SYSREADY": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "sysready_state": "disabled"
+                }
+            }
+        }
+    },
+    "DEVICE_METADATA_INVALID_SYSREADY": {
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "sonic-device_metadata:localhost": {
+                    "sysready_state": "enable"
+                }
+            }
+        }
     }
 }

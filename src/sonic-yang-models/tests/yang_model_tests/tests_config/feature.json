@@ -57,6 +57,7 @@
                         "has_per_asic_scope": "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}",
                         "set_owner": "kube",
                         "check_up_status": "false",
+                        "irrel_for_sysready": "true",
                         "support_syslog_rate_limit": "true"
                     },
                     {
@@ -68,6 +69,7 @@
                         "has_per_asic_scope": "true",
                         "set_owner": "kube",
                         "check_up_status": "false",
+                        "irrel_for_sysready": "false",
                         "support_syslog_rate_limit": "true"
                     }
                 ]
@@ -125,6 +127,18 @@
                         "has_per_asic_scope": "TRUE",
                         "check_up_status": "FALSE",
                         "support_syslog_rate_limit": "TRUE"
+                    }
+                ]
+            }
+        }
+    },
+    "FEATURE_INVALID_IRRELEVANT_FOR_SYSTEM_READY": {
+        "sonic-feature:sonic-feature": {
+            "sonic-feature:FEATURE": {
+                "FEATURE_LIST": [
+                    {
+                        "name": "swss",
+                        "irrel_for_sysready": "tr"
                     }
                 ]
             }

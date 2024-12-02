@@ -19,6 +19,10 @@ module sonic-device_metadata {
 
     description "DEVICE_METADATA YANG Module for SONiC OS";
 
+    revision 2023-05-10 {
+        description "Add system-ready feature configuration";
+    }
+
     revision 2021-02-27 {
         description "Added frr_mgmt_framework_config field to handle BGP
             config DB schema events to configure FRR protocols.";
@@ -277,6 +281,12 @@ module sonic-device_metadata {
                         enum disabled;
                     }
                     default disabled;
+                }
+
+                leaf sysready_state {
+                    description "System-ready feature state";
+                    type stypes:admin_mode;
+                    default enabled;
                 }
 
             }

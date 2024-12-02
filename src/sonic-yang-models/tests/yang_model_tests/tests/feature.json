@@ -14,5 +14,10 @@
     },
     "FEATURE_WITH_NO_OWNER" : {
         "desc": "Config feature table without set_owner"
+    },
+    "FEATURE_INVALID_IRRELEVANT_FOR_SYSTEM_READY" : {
+        "desc": "Invalid value for 'irrelevant for system-ready' parameter",
+        "eStrKey": "Pattern",
+        "eStr": ["false|true|False|True"]
     }
 }
