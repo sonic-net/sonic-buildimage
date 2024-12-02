@@ -1294,7 +1294,7 @@ class SmartSwitchChassis(Chassis):
         Returns:
             An integer, the index of the ModuleBase object in the module_list
         """
-        return self.module_name_index_map[module_name]
+        return self.module_name_index_map[module_name.upper()]
 
     ##############################################
     # SmartSwitch methods
