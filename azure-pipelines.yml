@@ -132,6 +132,7 @@ stages:
       displayName: "Install kernel modules"
 
     - script: |
+        set -ex
         sudo apt-get update
         sudo apt-get install -y make libtool m4 autoconf dh-exec debhelper cmake pkg-config \
                          libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev swig \
@@ -146,6 +147,7 @@ stages:
       displayName: "Compile sonic swss common"
 
     - script: |
+        set -ex
         sudo docker load -i ../target/docker-sonic-vs.gz
         docker tag docker-sonic-vs:latest docker-sonic-vs:$(Build.BuildNumber)
         username=$(id -un)
@@ -158,6 +160,8 @@ stages:
         pushd platform/vs/tests
         sudo py.test -v --junitxml=tr.xml --imgname=docker-sonic-vs:$(Build.BuildNumber)
       displayName: "Run vs tests"
+    - script: sleep 7200
+      condition: always()
 
     - task: PublishTestResults@2
       inputs:
