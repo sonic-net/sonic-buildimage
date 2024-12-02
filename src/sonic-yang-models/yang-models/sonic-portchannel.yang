@@ -53,7 +53,6 @@ module sonic-portchannel {
 
                 leaf name {
                     type string {
-                        length 1..128;
                         pattern 'PortChannel[0-9]{1,4}';
                     }
                 }
@@ -63,7 +62,7 @@ module sonic-portchannel {
                         range 1..1024;
                     }
                 }
-               
+
                leaf mode {
                    description "PortChannel SwitchPort Mode possible values are routed|access|trunk. Default value for mode is routed.";
                    type stypes:switchport_mode;

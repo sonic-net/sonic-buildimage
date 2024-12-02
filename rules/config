@@ -124,6 +124,9 @@ DEFAULT_VS_PREPARE_MEM = yes
 # INCLUDE_SYSTEM_GNMI - build docker-sonic-gnmi for system gnmi support
 INCLUDE_SYSTEM_GNMI = y
 
+# INCLUDE_SYSTEM_BMP - build docker-sonic-bmp for system bmp support
+INCLUDE_SYSTEM_BMP = y
+
 # INCLUDE_SYSTEM_EVENTD - build docker-eventd for system eventd support
 INCLUDE_SYSTEM_EVENTD = y
 

@@ -10,7 +10,9 @@
                 "gnmi": {
                     "client_auth": "true",
                     "log_level": "2",
-                    "port": "50051"
+                    "port": "50051",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400"
                 }
             }
         }
@@ -26,7 +28,9 @@
                 "gnmi": {
                     "client_auth": "up",
                     "log_level": "2",
-                    "port": "50051"
+                    "port": "50051",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400"
                 }
             }
         }
@@ -42,7 +46,9 @@
                 "gnmi": {
                     "client_auth": "true",
                     "log_level": "2",
-                    "port": "abc"
+                    "port": "abc",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400"
                 }
             }
         }
@@ -59,7 +65,9 @@
                     "client_auth": "true",
                     "log_level": "2",
                     "port": "50051",
-                    "save_on_set": "wrong"
+                    "save_on_set": "wrong",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400"
                 }
             }
         }
@@ -76,7 +84,9 @@
                     "client_auth": "true",
                     "log_level": "2",
                     "port": "50051",
-                    "save_on_set": "false"
+                    "save_on_set": "false",
+                    "enable_crl": "true",
+                    "crl_expire_duration": "86400"
                 }
             }
         }

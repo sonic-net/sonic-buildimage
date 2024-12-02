@@ -31,6 +31,6 @@ steps:
     exit 0
   env:
     PUBLISH_URL_PREFIX: ${{ parameters.storageUrlPrefix }}
-  condition: always()
+  condition: false #always()
   continueOnError: true
   displayName: "Collect build logs"
