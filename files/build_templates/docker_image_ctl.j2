@@ -120,6 +120,12 @@ function setPlatformLagIdBoundaries()
 {
     docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB SET "SYSTEM_LAG_ID_START" "$lag_id_start"
     docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB SET "SYSTEM_LAG_ID_END" "$lag_id_end"
+    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local start_id = tonumber(ARGV[1])
+    local end_id = tonumber(ARGV[2])
+    for id = start_id,end_id do
+        redis.call('rpush','SYSTEM_LAG_IDS_FREE_LIST', tostring(id))
+    end" 0 $lag_id_start $lag_id_end
 }
 function waitForAllInstanceDatabaseConfigJsonFilesReady()
 {
@@ -327,11 +333,6 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
-{%- elif docker_container_name == "eventd" %}
-    export EVENTD_STATE=$(sonic-db-cli -s CONFIG_DB HGET 'FEATURE|eventd' 'state')
-    j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/events_info.json  > /etc/rsyslog.d/host_events.conf
-    j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/syncd_events_info.json  > /etc/rsyslog.d/syncd_events.conf
-    systemctl restart rsyslog
 {%- else %}
     : # nothing
 {%- endif %}
