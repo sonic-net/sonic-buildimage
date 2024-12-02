@@ -42,6 +42,7 @@ Table of Contents
          * [FABRIC_MONITOR](#fabric-monitor)
          * [FABRIC_PORT](#fabric-port)
          * [FLEX_COUNTER_TABLE](#flex_counter_table)
+         * [GRPCCLIENT](#grpcclient)
          * [Hash](#hash)
          * [IPv6 Link-local] (#ipv6-link-local)
          * [KDUMP](#kdump)
@@ -342,7 +343,8 @@ and migration plan
             "MATCHES": [
                 "IN_PORTS",
                 "OUT_PORTS",
-                "SRC_IP"
+                "SRC_IP",
+                "TUNNEL_TERM"
             ],
             "ACTIONS": [
                 "PACKET_ACTION",
@@ -369,6 +371,7 @@ and migration plan
             "PRIORITY": "999",
             "PACKET_ACTION": "DROP",
             "SRC_IP": "1.1.1.1/32",
+            "TUNNEL_TERM": "true"
         }
     }
 }
