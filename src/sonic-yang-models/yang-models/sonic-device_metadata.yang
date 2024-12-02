@@ -1,5 +1,6 @@
 module sonic-device_metadata {
 
+
     yang-version 1.1;
 
     namespace "http://github.com/sonic-net/sonic-device_metadata";
