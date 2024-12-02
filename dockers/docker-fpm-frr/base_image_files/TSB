@@ -30,7 +30,7 @@ if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] ; then
 fi
 
 # toggle the mux to auto if dualtor
-if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr [:upper:] [:lower:])" == *"dualtor"* ]];
+if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr '[:upper:]' '[:lower:]')" == *"dualtor"* ]];
 then
   logger -t TSB -p user.info "Toggle all mux mode to auto"
   sudo config mux mode auto all

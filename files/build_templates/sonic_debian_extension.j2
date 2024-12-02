@@ -108,10 +108,6 @@ sudo setcap 'cap_net_raw=+ep' $FILESYSTEM_ROOT/usr/bin/wol
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/ifupdown2_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
 
-# Install a patched version of ipmitool  (and its dependencies via 'apt-get -y install -f')
-sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/ipmitool_*.deb || \
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
-
 # Install a patched version of ntp  (and its dependencies via 'apt-get -y install -f')
 sudo dpkg --root=$FILESYSTEM_ROOT --force-confdef --force-confold -i $debs_path/ntp_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y \
@@ -398,6 +394,8 @@ sudo cp $IMAGE_CONFIGS/monit/restart_service $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/restart_service
 sudo cp $IMAGE_CONFIGS/monit/arp_update_checker $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/arp_update_checker
+sudo cp $IMAGE_CONFIGS/monit/control_plane_drop_check $FILESYSTEM_ROOT/usr/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/control_plane_drop_check
 
 # Installed smartmontools version should match installed smartmontools in docker-platform-monitor Dockerfile
 # TODO: are mismatching versions fine for bookworm?
@@ -513,8 +511,10 @@ sudo cp $IMAGE_CONFIGS/resolv-config/update-containers $FILESYSTEM_ROOT/etc/reso
 sudo cp $IMAGE_CONFIGS/interfaces/init_interfaces $FILESYSTEM_ROOT/etc/network/interfaces
 sudo mkdir -p $FILESYSTEM_ROOT/etc/network/interfaces.d
 
-# System'd network udev rules
+# Systemd network udev rules
 sudo cp $IMAGE_CONFIGS/systemd/network/* $FILESYSTEM_ROOT_ETC/systemd/network/
+sudo mkdir -p $FILESYSTEM_ROOT_ETC/udev/rules.d
+sudo cp $IMAGE_CONFIGS/udev/rules.d/* $FILESYSTEM_ROOT_ETC/udev/rules.d/
 
 # copy core file uploader files
 sudo cp $IMAGE_CONFIGS/corefile_uploader/core_uploader.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
@@ -722,6 +722,10 @@ sudo LANG=C chroot $FILESYSTEM_ROOT systemctl disable systemd-networkd-wait-onli
 sudo cp $IMAGE_CONFIGS/backend_acl/backend-acl.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/backend-acl.service
 sudo cp $IMAGE_CONFIGS/backend_acl/backend_acl.py $FILESYSTEM_ROOT/usr/bin/backend_acl.py
 echo "backend-acl.service" | sudo tee -a $GENERATED_SERVICE_FILE
+
+# Copy RPS script file
+sudo cp $IMAGE_CONFIGS/rps/rps.py $FILESYSTEM_ROOT/usr/bin/rps.py
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/rps.py
 
 # Copy SNMP configuration files
 sudo cp $IMAGE_CONFIGS/snmp/snmp.yml $FILESYSTEM_ROOT/etc/sonic/
@@ -1015,6 +1019,7 @@ sudo LANG=C cp $SCRIPTS_DIR/database.sh $FILESYSTEM_ROOT/usr/local/bin/database.
 sudo LANG=C cp $SCRIPTS_DIR/snmp.sh $FILESYSTEM_ROOT/usr/local/bin/snmp.sh
 sudo LANG=C cp $SCRIPTS_DIR/telemetry.sh $FILESYSTEM_ROOT/usr/local/bin/telemetry.sh
 sudo LANG=C cp $SCRIPTS_DIR/gnmi.sh $FILESYSTEM_ROOT/usr/local/bin/gnmi.sh
+sudo LANG=C cp $SCRIPTS_DIR/bmp.sh $FILESYSTEM_ROOT/usr/local/bin/bmp.sh
 sudo LANG=C cp $SCRIPTS_DIR/mgmt-framework.sh $FILESYSTEM_ROOT/usr/local/bin/mgmt-framework.sh
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.sh $FILESYSTEM_ROOT/usr/local/bin/asic_status.sh
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.py $FILESYSTEM_ROOT/usr/local/bin/asic_status.py
@@ -1031,7 +1036,6 @@ sudo LANG=C cp $SCRIPTS_DIR/write_standby.py $FILESYSTEM_ROOT/usr/local/bin/writ
 sudo LANG=C cp $SCRIPTS_DIR/mark_dhcp_packet.py $FILESYSTEM_ROOT/usr/local/bin/mark_dhcp_packet.py
 
 sudo cp files/build_templates/startup_tsa_tsb.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
-echo "startup_tsa_tsb.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 sudo cp $BUILD_TEMPLATES/sonic.target $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sonic.target
@@ -1133,7 +1137,12 @@ sudo cp {{platform_api_py3_wheel_path}} $FILESYSTEM_ROOT/$SONIC_PLATFORM_PY3_WHE
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install $SONIC_PLATFORM_PY3_WHEEL_NAME
 sudo rm -rf $FILESYSTEM_ROOT/$SONIC_PLATFORM_PY3_WHEEL_NAME
 
+
+sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/libdashapi_*.deb || \
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
+
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install xmlstarlet
+
 {% endif %}
 
 {%- if SONIC_ROUTING_STACK == "frr" %}
@@ -1153,3 +1162,8 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
+
+## Enable MULTIDB
+{% if ENABLE_MULTIDB == "y" %}
+sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
+{% endif %}
