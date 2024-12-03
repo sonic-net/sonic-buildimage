@@ -620,7 +620,7 @@ start() {
     # TODO: Mellanox will remove the --tmpfs exception after SDK socket path changed in new SDK version
 {%- if docker_container_name == "pmon" %}
     if [[ $NUM_DPU -gt 0 ]]; then
-        MLNX_SMARTSWITCH_MNT= " -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket"
+        SMARTSWITCH_MNT= " -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket"
     fi
 {%- endif %}
 {%- endif %}
@@ -649,7 +649,7 @@ start() {
         -v /var/run/hw-management:/var/run/hw-management:rw \
         -v mlnx_sdk_socket:/var/run/sx_sdk \
         -v /tmp/nv-syncd-shared/:/tmp \
-        $MLNX_SMARTSWITCH_MNT \
+        $SMARTSWITCH_MNT \
         -v /dev/shm:/dev/shm:rw \
         -e SX_API_SOCKET_FILE=/var/run/sx_sdk/sx_api.sock \
         -v /dev/shm:/dev/shm:rw \
