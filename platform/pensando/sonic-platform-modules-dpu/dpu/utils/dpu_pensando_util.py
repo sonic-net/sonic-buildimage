@@ -103,32 +103,6 @@ def set_ubootenv_config():
     with open("/etc/fw_env.config","w") as f:
         f.write(fw_env_config)
 
-def start_pmon():
-    cmd = "systemctl is-enabled pmon.timer"
-    output = run_cmd(cmd)
-    if output == "disabled":
-        try:
-            cmd = "systemctl enable pmon.timer"
-            run_cmd(cmd)
-        except:
-            pass
-    elif output == "static":
-        try:
-            cmd = "systemctl enable pmon.timer"
-            run_cmd(cmd)
-        except:
-            pass
-    else:
-        pass
-    cmd = "systemctl is-enabled pmon"
-    output = run_cmd(cmd)
-    if output == "static":
-        try:
-            cmd = "systemctl start pmon"
-            run_cmd(cmd)
-        except:
-            pass
-
 def configure_iptable_rules():
     try:
         iptable_cfg_cmd = "sudo iptables-legacy -D tcp_inbound -p tcp --dport 11357:11360 -j DROP"
@@ -164,7 +138,6 @@ def main():
     set_onie_version()
     cp_to_shared_mem()
     set_cpldapp()
-    start_pmon()
     pcie_tx_setup()
 
 if __name__ == "__main__":

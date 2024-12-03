@@ -224,11 +224,6 @@ class DPUHealthUpdater():
 
         if self.pdsagent_status != True:
             print('dpu-pcie_link:DOWN')
-            pcielink_stat = {}
-            pcielink_stat['state'] = 'down'
-            pcielink_stat['reason'] = 'pdsagent is not running on dpu container'
-            pcielink_stat['timestamp'] = datetime.now().strftime('%Y%m%d %H:%M:%S')
-            return pcielink_stat
 
         reason = ''
         try:
@@ -246,8 +241,6 @@ class DPUHealthUpdater():
                 int_mgmt_status = True
             else:
                 int_mgmt_status = False
-            reason += f'INTERNAL-MGMT : admin state - {admin_status}, oper_state - {oper_status},'
-            reason += f' status - {bool_to_healthd_status(int_mgmt_status)}, '
 
             cmd = "/nic/bin/pdsctl show lif | grep HOST-MGMT"
             output = apiHelper.run_docker_cmd(cmd)
@@ -258,37 +251,22 @@ class DPUHealthUpdater():
                 host_mgmt_status = True
             else:
                 host_mgmt_status = False
-            reason += f'HOST-MGMT : admin state - {admin_status}, oper_state - {oper_status},'
-            reason += f' status - {bool_to_healthd_status(host_mgmt_status)}'
-
-            state = "down"
             if host_mgmt_status and int_mgmt_status:
                 print('dpu-pcie_link:OK')
-                state = "up"
             else:
                 print('dpu-pcie_link:Not OK')
-
-            pcielink_stat = {}
-            pcielink_stat['state'] = state
-            pcielink_stat['reason'] = reason
-            pcielink_stat['timestamp'] = datetime.now().strftime('%Y%m%d %H:%M:%S')
-            return pcielink_stat
         except:
             print('dpu-pcie_link:Not OK')
-            return {}
 
     def _refresh_dpu_health_status(self):
         try:
             pdsagent_name = self._fetch_pdsagent_status()
             self._fetch_pciemgrd_status()
             eth_link_stats = self._fetch_eth_link_status()
-            pcie_link_stats = self._fetch_pcie_link_status()
+            self._fetch_pcie_link_status()
 
             fvs_data = [
-                ('id', self.slot_id),
-                ('dpu_midplane_link_state', pcie_link_stats.get('state', NOT_AVAILABLE)),
-                ('dpu_midplane_link_time', pcie_link_stats.get('timestamp', NOT_AVAILABLE)),
-                ('dpu_midplane_link_reason', pcie_link_stats.get('reason', NOT_AVAILABLE)),
+                ('id', self.slot_id)
             ]
 
             all_container_status, reason = self._are_containers_running()
@@ -308,7 +286,7 @@ class DPUHealthUpdater():
 
             fvs_control_plane_data = [
                 ('dpu_control_plane_state', bool_to_link_status(dpu_control_plane_state)),
-                ('dpu_control_plane_time', datetime.now().strftime('%Y%m%d %H:%M:%S')),
+                ('dpu_control_plane_time', datetime.now().strftime("%a %b %d %I:%M:%S %p UTC %Y")),
                 ('dpu_control_plane_reason', dpu_control_plane_reason)
             ]
             fvs_data.extend(fvs_control_plane_data)
