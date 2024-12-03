@@ -1,10 +1,12 @@
+[Low Inheritance Precedence]
+l2xmsg_mode.0=1
+flow_init_mode=1
 phy_null=1
 pll_bypass=1
 core_clock_frequency=1325
 dpr_clock_frequency=1000
 device_clock_frequency=1325
 port_flex_enable=1
-l2xmsg_mode.0=1
 mmu_port_num_mc_queue.0=1
 module_64ports.0=1
 multicast_l2_range.0=511
@@ -19,10 +21,14 @@ flowtracker_drop_monitor_enable=1
 flowtracker_export_interval_usecs=1000000
 flowtracker_max_export_pkt_length=9000
 flowtracker_fsp_reinject_max_length=128
-flow_init_mode=1
 num_queues_pci=46
 num_queues_uc0=1
 num_queues_uc1=1
 sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
 sai_fast_convergence_support=1
+sai_nbr_bcast_ifp_optimized=1
+# Reduced Trap Group QSET for BRCM Sonic
+sai_brcm_sonic_trap_group=1
 
+# MMU Lossless configurations
+sai_optimized_mmu=1

@@ -1,12 +1,32 @@
-mem_cache_enable=0
+[Low Inheritance Precedence]
+mem_cache_enable=1
+flow_init_mode=1
+mpls_mem_entries=16384
+vlan_xlate_1_mem_entries=65536
+vlan_xlate_2_mem_entries=16384
+riot_enable=1
 ifp_inports_support_enable=1
 ipv6_lpm_128b_enable=0x1
 l3_max_ecmp_mode=1
 lpm_scaling_enable=0
 bcm_num_cos=10
-default_cpu_tx_queue=9
 mmu_lossless=0
 host_as_route_disable=1
 sai_eapp_config_file=/etc/broadcom/eapps_cfg.json
 sai_fast_convergence_support=1
-flow_init_mode=1
+sai_load_hw_config=/usr/lib/cancun/
+sai_nbr_bcast_ifp_optimized=1
+sai_brcm_sonic_acl_enhancements=1
+# Reduced Trap Group QSET for BRCM Sonic
+sai_brcm_sonic_trap_group=1
+l2_entry_used_as_my_station=1
+multi_hash_recurse_depth_l3=3
+sai_stats_support_mask=0x1
+
+#l3 common setting
+riot_overlay_ecmp_resilient_hash_size=16384
+riot_overlay_l3_egress_mem_size=32768
+riot_overlay_l3_intf_mem_size=8192
+
+l3_alpm_ipv6_128b_bkt_rsvd=1
+l3_ecmp_levels=2
