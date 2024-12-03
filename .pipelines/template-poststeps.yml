@@ -62,9 +62,9 @@ steps:
         readyTimeout: '20000'
     - task: SSH@0
       displayName: "Make soft links for trusty8"
-      continueOnError: true
       inputs:
         sshEndpoint: 'acs-trusty8'
+        failOnStdErr: false
         runOptions: 'inline'
         readyTimeout: '20000'
         inline: |
