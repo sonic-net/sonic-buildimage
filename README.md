@@ -3,7 +3,7 @@
 [![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=master&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=master)
 [![Centec](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec?branchName=master&label=Centec)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=143&branchName=master)
 [![Centec(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec-arm64?branchName=master&label=Centec-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=140&branchName=master)
-[![Innovium](https://dev.azure.com/mssonic/build/_apis/build/status/innovium/Azure.sonic-buildimage.official.innovium?branchName=master&label=Innovium)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=148&branchName=master)
+[![Marvell-Teralynx](https://dev.azure.com/mssonic/build/_apis/build/status/marvell-teralynx/Azure.sonic-buildimage.official.marvell-teralynx?branchName=master&label=Marvell-Teralynx)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=148&branchName=master)
 [![Mellanox](https://dev.azure.com/mssonic/build/_apis/build/status/mellanox/Azure.sonic-buildimage.official.mellanox?branchName=master&label=Mellanox)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=139&branchName=master)
 [![Marvell(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-armhf?branchName=master&label=Marvell-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=master)
 [![Marvell(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-arm64?branchName=master&label=Marvell-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=master)
@@ -215,7 +215,7 @@ The supported ASIC vendors are:
 * PLATFORM=centec
 * PLATFORM=nephos
 * PLATFORM=nvidia-bluefield
-* PLATFORM=innovium
+* PLATFORM=marvell-teralynx
 * PLATFORM=vs
 
 ## Usage for ARM Architecture
@@ -373,8 +373,8 @@ on the SAI version for each SONiC release.
     and Mellanox switch ASIC (gzip tar archive)
   * docker-syncd-nephos.gz: docker image for the daemon to sync database
     and Nephos switch ASIC (gzip tar archive)
-  * docker-syncd-invm.gz: docker image for the daemon to sync database
-    and Innovium switch ASIC (gzip tar archive)
+  * docker-syncd-mrvl-teralynx.gz: docker image for the daemon to sync database
+    and Marvell-Teralynx switch ASIC (gzip tar archive)
   * docker-sonic-p4.gz: docker image for all-in-one for p4 software switch
     (gzip tar archive)
   * docker-sonic-vs.gz: docker image for all-in-one for software virtual switch

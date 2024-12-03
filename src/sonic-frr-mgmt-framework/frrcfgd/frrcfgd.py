@@ -2078,7 +2078,7 @@ class BGPConfigDaemon:
                              ('icmo_ttl', 'ttl {}', handle_ip_sla_common),
                              ('icmp_tos', 'tos {}', handle_ip_sla_common),
                            ]
-    srv6_locator_key_map = [(['opcode_prefix', 'opcode_act', 'opcode_vrf'], '{no:no-prefix}opcode {} {} vrf {}', hdl_srv6_locator)]
+    srv6_locator_key_map = [(['opcode_prefix', 'opcode_act', 'opcode_data'], '{no:no-prefix}opcode {} {} {}', hdl_srv6_locator)]
 
 
     tbl_to_key_map = {'BGP_GLOBALS':                    global_key_map,
