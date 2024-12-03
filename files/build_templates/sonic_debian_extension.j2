@@ -108,10 +108,6 @@ sudo setcap 'cap_net_raw=+ep' $FILESYSTEM_ROOT/usr/bin/wol
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/ifupdown2_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
 
-# Install a patched version of ipmitool  (and its dependencies via 'apt-get -y install -f')
-sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/ipmitool_*.deb || \
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
-
 # Install a patched version of ntp  (and its dependencies via 'apt-get -y install -f')
 sudo dpkg --root=$FILESYSTEM_ROOT --force-confdef --force-confold -i $debs_path/ntp_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y \
@@ -1023,6 +1019,7 @@ sudo LANG=C cp $SCRIPTS_DIR/database.sh $FILESYSTEM_ROOT/usr/local/bin/database.
 sudo LANG=C cp $SCRIPTS_DIR/snmp.sh $FILESYSTEM_ROOT/usr/local/bin/snmp.sh
 sudo LANG=C cp $SCRIPTS_DIR/telemetry.sh $FILESYSTEM_ROOT/usr/local/bin/telemetry.sh
 sudo LANG=C cp $SCRIPTS_DIR/gnmi.sh $FILESYSTEM_ROOT/usr/local/bin/gnmi.sh
+sudo LANG=C cp $SCRIPTS_DIR/bmp.sh $FILESYSTEM_ROOT/usr/local/bin/bmp.sh
 sudo LANG=C cp $SCRIPTS_DIR/mgmt-framework.sh $FILESYSTEM_ROOT/usr/local/bin/mgmt-framework.sh
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.sh $FILESYSTEM_ROOT/usr/local/bin/asic_status.sh
 sudo LANG=C cp $SCRIPTS_DIR/asic_status.py $FILESYSTEM_ROOT/usr/local/bin/asic_status.py
@@ -1039,7 +1036,6 @@ sudo LANG=C cp $SCRIPTS_DIR/write_standby.py $FILESYSTEM_ROOT/usr/local/bin/writ
 sudo LANG=C cp $SCRIPTS_DIR/mark_dhcp_packet.py $FILESYSTEM_ROOT/usr/local/bin/mark_dhcp_packet.py
 
 sudo cp files/build_templates/startup_tsa_tsb.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM/
-echo "startup_tsa_tsb.service" | sudo tee -a $GENERATED_SERVICE_FILE
 
 sudo cp $BUILD_TEMPLATES/sonic.target $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sonic.target
@@ -1141,7 +1137,12 @@ sudo cp {{platform_api_py3_wheel_path}} $FILESYSTEM_ROOT/$SONIC_PLATFORM_PY3_WHE
 sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install $SONIC_PLATFORM_PY3_WHEEL_NAME
 sudo rm -rf $FILESYSTEM_ROOT/$SONIC_PLATFORM_PY3_WHEEL_NAME
 
+
+sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/libdashapi_*.deb || \
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
+
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install xmlstarlet
+
 {% endif %}
 
 {%- if SONIC_ROUTING_STACK == "frr" %}
@@ -1161,3 +1162,8 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
+
+## Enable MULTIDB
+{% if ENABLE_MULTIDB == "y" %}
+sudo touch $FILESYSTEM_ROOT_ETC_SONIC/enable_multidb
+{% endif %}

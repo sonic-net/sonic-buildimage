@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+      ### type  1 result/1000
+          type  2 result/100
+          type  3 read bit
+     ### property need check must add int front
+-->
+<catalog>
+    <cpus location="/sys/bus/platform/devices/coretemp.0/hwmon/hwmon*"/>
+</catalog>
+
