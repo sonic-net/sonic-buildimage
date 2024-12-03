@@ -105,6 +105,7 @@ setup(
                          './yang-models/sonic-buffer-profile.yang',
                          './yang-models/sonic-buffer-queue.yang',
                          './yang-models/sonic-cable-length.yang',
+                         './yang-models/sonic-auditd.yang',
                          './yang-models/sonic-chassis-module.yang',
                          './yang-models/sonic-copp.yang',
                          './yang-models/sonic-console.yang',
