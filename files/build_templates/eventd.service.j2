@@ -1,7 +1,8 @@
 [Unit]
 Description=EVENTD container
-Requires=config-setup.service
-After=config-setup.service
+Requires=database.service config-setup.service
+After=database.service config-setup.service swss.service syncd.service rsyslog-config.service
+Before=telemetry.service
 BindsTo=sonic.target
 After=sonic.target
 StartLimitIntervalSec=1200
