@@ -60,7 +60,9 @@ RUN apt-get install -y net-tools \
                        # For libkrb5-dev
                        comerr-dev \
                        libgssrpc4 \
-                       libkdb5-10
+                       libkdb5-10 \
+                       libprotobuf-c-dev \
+                       protobuf-c-compiler
 
 # For sonic-config-engine Python 3 package
 # Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
