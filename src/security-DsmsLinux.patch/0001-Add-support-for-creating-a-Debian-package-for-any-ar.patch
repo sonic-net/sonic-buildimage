@@ -315,10 +315,10 @@ diff --git a/src/acms/tests/secretsPayloadTests/src/secretsPayloadTests.cpp b/sr
 index fea04ed..8d08387 100644
 --- a/src/acms/tests/secretsPayloadTests/src/secretsPayloadTests.cpp
 +++ b/src/acms/tests/secretsPayloadTests/src/secretsPayloadTests.cpp
-@@ -20,6 +20,7 @@
- #include "CACertUtils.h"
+@@ -23,6 +23,7 @@
  
  #include "gtest/gtest.h"
+ #include "gmock/gmock.h"
 +#pragma GCC diagnostic ignored "-Wconversion"
  
  namespace
