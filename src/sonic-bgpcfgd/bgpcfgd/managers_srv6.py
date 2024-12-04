@@ -1,8 +1,5 @@
-import traceback
-from .log import log_crit, log_err, log_debug, log_warn
+from .log import log_err, log_debug, log_warn
 from .manager import Manager
-from .template import TemplateFabric
-import socket
 from swsscommon import swsscommon
 from ipaddress import IPv6Network, IPv6Address
 
@@ -33,7 +30,7 @@ class SRv6Mgr(Manager):
             table,
         )
 
-        self.sids = {} # locators -> SIDs
+        self.sids = {} # locators -> opcode -> SIDs
         self.config_db = swsscommon.SonicV2Connector()
         self.config_db.connect(self.config_db.CONFIG_DB)
 
