@@ -16,7 +16,7 @@ from datetime import datetime
 SYSLOG_IDENTIFIER = "vnet-monitor"
 logger_helper = logger.Logger(SYSLOG_IDENTIFIER)
 
-DEFAULT_INTERVAL = 1000 # The default ping interval is set to 1000 ms
+DEFAULT_INTERVAL = 5000 # The default ping interval is set to 5000 ms
 DEFAULT_MULTIPLIER = 3  # The default multipler is set to 3
 DEFAULT_VNI = 8000        # The default vni
 DEFAULT_VXLAN_UDP_PORT = 65330   # The default Vxlan port
@@ -318,8 +318,8 @@ class PingStatusCache:
             self.vnet_state_update(t0_loopback, card_vip, "up")
 
     def timeout_check_thread(self):
-        timeout_check_interval = TIMEOUT_CHECK_INTERVAL
         while self.working:
+            timeout_check_interval = TIMEOUT_CHECK_INTERVAL
             cur_time = monotonic_ms()
             for stat in list(self.stats.values()):
                 if cur_time - stat[KEY_LAST_TIMEOUT_CHECK] >= stat[KEY_INTERVAL]:
@@ -482,8 +482,8 @@ class TaskPing():
         """
         The thread function to send out the ping packet
         """
-        ping_wait_time = DEFAULT_INTERVAL
         while self.running:
+            ping_wait_time = DEFAULT_INTERVAL
             for task in self.task_queue:
                 cur_time = monotonic_ms()
                 if cur_time - task[KEY_LAST_PING] >= task[KEY_INTERVAL]:
