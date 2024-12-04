@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bullseye
+FROM docker-config-engine-bookworm
 
 ARG docker_container_name
 RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
@@ -18,8 +18,8 @@ RUN apt-get update &&     \
 RUN pip3 install --upgrade pip
 RUN apt-get purge -y python3-pip
 RUN pip3 install \
-         pyroute2==0.5.14 \
-         netifaces==0.10.9
+         pyroute2==0.7.2 \
+         netifaces==0.11.0
 
 {% if docker_vnet_monitor_debs.strip() -%}
 # Copy locally-built Debian package dependencies

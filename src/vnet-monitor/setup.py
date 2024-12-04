@@ -26,8 +26,8 @@ setup(
         'vnet_monitor.py'
     ],
     install_requires = [
-        'pyroute2==0.5.14',
-        'netifaces==0.10.9',
+        'pyroute2==0.7.2',
+        'netifaces==0.11.0',
         'sonic-py-common'
     ],
     tests_require = [
@@ -35,6 +35,13 @@ setup(
         'xmltodict==0.12.0',
         'ijson==2.6.1'
     ],
+    extras_require = {
+        'testing': [
+            'pytest>3',
+            'xmltodict==0.12.0',
+            'ijson==2.6.1'
+        ],
+    },
     setup_requires = [
         'pytest-runner',
         'wheel'
