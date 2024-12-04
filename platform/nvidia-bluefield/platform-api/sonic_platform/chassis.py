@@ -22,6 +22,9 @@ try:
     import os
     from functools import reduce
     from time import sleep
+    import psutil
+    import ipaddress
+    import socket
 
     from . import utils
     from .device_data import DeviceDataManager
@@ -53,7 +56,24 @@ class Chassis(ChassisBase):
         self.sfp_event = None
         self._eeprom = Eeprom()
         self._watchdog = Watchdog()
+
         logger.log_info("Chassis loaded successfully")
+
+    def _get_dpu_id(self):
+        ip = None
+        midplane_inft = psutil.net_if_addrs().get('eth0-midplane', [])
+
+        for address in midplane_inft:
+            if address.family == socket.AF_INET:
+                ip = ipaddress.IPv4Address(address.address)
+                break
+
+        if not ip:
+            raise RuntimeError("Midplane interface IP address is not available")
+
+        last_byte = int(str(ip).split('.')[-1])
+
+        return last_byte - 1
 
     def _initialize_sfp(self):
         self._sfp_list = []
@@ -272,3 +292,36 @@ class Chassis(ChassisBase):
             to pass a description of the reboot cause.
         """
         return "N/A", "N/A"
+
+    ##############################################
+    # SmartSwitch methods
+    ##############################################
+
+    def get_dpu_id(self, **kwargs):
+        """
+        For the smart switch DPU retrieves the ID of the DPU.
+        Returns None for non-smartswitch chassis.
+
+        Returns:
+            An integer, indicating the DPU ID Ex: name:DPU0 return value 0,
+            name:DPU1 return value 1, name:DPUX return value X
+        """
+        return self._get_dpu_id()
+
+    def is_smartswitch(self):
+        """
+        Retrieves whether the sonic instance is part of smartswitch
+
+        Returns:
+            Returns:True for SmartSwitch and False for other platforms
+        """
+        return True
+
+    def is_dpu(self):
+        """
+        Retrieves whether the SONiC instance runs on the DPU
+
+        Returns:
+            True if the SONiC instance runs on the DPU else False
+        """
+        return True

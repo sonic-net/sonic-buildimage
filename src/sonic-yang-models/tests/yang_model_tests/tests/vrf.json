@@ -6,6 +6,10 @@
         "desc": "Configure wrong value for vrf name.",
         "eStr" : ["Invalid", "VRF name"]
     },
+    "VRF_TEST_INVALID_LONG__NAME": {
+        "desc": "Configure invalid length value for vrf name.",
+        "eStr" : "Invalid interface name length, it must not exceed 16 characters."
+    },
     "VRF_TEST_WITH_FALLBACK": {
         "desc": "Configure VRF with fallback in VRF table."
     },

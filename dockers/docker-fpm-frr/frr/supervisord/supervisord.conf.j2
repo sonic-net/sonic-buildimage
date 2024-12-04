@@ -29,8 +29,19 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
 
+[program:mgmtd]
+command=/usr/lib/frr/mgmtd -A 127.0.0.1
+priority=4
+autostart=false
+autorestart=true
+startsecs=0
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+
 [program:zebra]
-command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_nl -M snmp --asic-offload=notify_on_offload
+command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic -M snmp --asic-offload=notify_on_offload
 priority=4
 autostart=false
 autorestart=false
@@ -77,7 +88,11 @@ dependent_startup_wait_for=zebra:running
 {% endif %}
 
 [program:bgpd]
+{% if FEATURE is defined and FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled" %}
+command=/usr/lib/frr/bgpd -A 127.0.0.1 -M snmp -M bmp
+{% else %}
 command=/usr/lib/frr/bgpd -A 127.0.0.1 -M snmp
+{% endif %}
 priority=5
 stopsignal=KILL
 autostart=false

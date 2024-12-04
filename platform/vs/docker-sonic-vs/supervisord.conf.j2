@@ -163,8 +163,16 @@ stderr_logfile=syslog
 environment=ASAN_OPTIONS="log_path=/var/log/asan/teammgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
 
+[program:mgmtd]
+command=/usr/lib/frr/mgmtd -A 127.0.0.1
+priority=13
+autostart=false
+autorestart=false
+stdout_logfile=syslog
+stderr_logfile=syslog
+
 [program:zebra]
-command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_nl --asic-offload=notify_on_offload
+command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic --asic-offload=notify_on_offload
 priority=13
 autostart=false
 autorestart=false
