@@ -1,0 +1,263 @@
+From 051dc6f003bf57fd41f75317281ab3bab776e6f1 Mon Sep 17 00:00:00 2001
+From: Saikrishna Arcot <sarcot@microsoft.com>
+Date: Wed, 30 Oct 2024 09:16:47 -0700
+Subject: [PATCH] Switch to debhelper build infra
+
+This makes it easier to have it use the latest compat level when
+building.
+
+Also remove the udeb packages, as SONiC doesn't need udeb packages here.
+---
+ debian/compat                        |  2 +-
+ debian/control                       | 40 +-------------------------
+ debian/libnl-3-200-udeb.install      |  1 -
+ debian/libnl-3-200.install           |  1 -
+ debian/libnl-3-dev.install           |  3 +-
+ debian/libnl-cli-3-200.install       |  1 -
+ debian/libnl-cli-3-dev.install       |  8 ++++--
+ debian/libnl-genl-3-200-udeb.install |  2 --
+ debian/libnl-genl-3-200.install      |  1 -
+ debian/libnl-genl-3-dev.install      |  3 +-
+ debian/libnl-route-3-dev.install     |  6 ++--
+ debian/libnl-xfrm-3-dev.install      |  6 ++--
+ debian/not-installed                 |  3 ++
+ debian/rules                         | 43 ++--------------------------
+ 14 files changed, 20 insertions(+), 100 deletions(-)
+ delete mode 100644 debian/libnl-3-200-udeb.install
+ mode change 100755 => 100644 debian/libnl-3-200.install
+ mode change 100755 => 100644 debian/libnl-3-dev.install
+ mode change 100755 => 100644 debian/libnl-cli-3-200.install
+ delete mode 100755 debian/libnl-genl-3-200-udeb.install
+ mode change 100755 => 100644 debian/libnl-genl-3-200.install
+ mode change 100755 => 100644 debian/libnl-genl-3-dev.install
+ create mode 100644 debian/not-installed
+
+diff --git a/debian/compat b/debian/compat
+index ec63514..b1bd38b 100644
+--- a/debian/compat
++++ b/debian/compat
+@@ -1 +1 @@
+-9
++13
+diff --git a/debian/control b/debian/control
+index 7b22e69..c954b03 100644
+--- a/debian/control
++++ b/debian/control
+@@ -2,7 +2,7 @@ Source: libnl3
+ Section: net
+ Priority: optional
+ Maintainer: Heiko Stuebner <mmind@debian.org>
+-Build-Depends: debhelper (>= 9), dh-exec (>= 0.3), cdbs (>= 0.4.93~), bison, flex,
++Build-Depends: debhelper (>= 13), bison, flex,
+  automake, autoconf, dh-autoreconf, linux-libc-dev (>= 3.2.41), pkg-config
+ Standards-Version: 4.1.4
+ Homepage: http://www.infradead.org/~tgr/libnl/
+@@ -204,41 +204,3 @@ Description: development library and headers for libnl-xfrm-3
+  .
+  This package contains the files that are needed to build applications using
+  libnl-xfrm-3.
+-
+-Package: libnl-3-200-dbg
+-Architecture: linux-any
+-Section: debug
+-Depends: libnl-3-200 (= ${binary:Version}), ${misc:Depends}
+-Description: debug symbols for libnl3
+- This is a library for applications dealing with netlink sockets.
+- The library provides an interface for raw netlink messaging and various
+- netlink family specific interfaces.
+- .
+- This package contains unstripped shared libraries. It is provided primarily
+- to provide a backtrace with names in a debugger, this makes it somewhat easier
+- to interpret core dumps. The libraries are installed in /usr/lib/debug and
+- are automatically used by gdb.
+-
+-Package: libnl-3-200-udeb
+-Architecture: linux-any
+-XC-Package-Type: udeb
+-Section: debian-installer
+-Depends: ${misc:Depends}, ${shlibs:Depends}
+-Description: library for dealing with netlink sockets 
+- This is a library for applications dealing with netlink sockets.
+- The library provides an interface for raw netlink messaging and various
+- netlink family specific interfaces.
+- .
+- This package is a udeb. It's only useful inside of debian-installer.
+-
+-Package: libnl-genl-3-200-udeb
+-Architecture: linux-any
+-XC-Package-Type: udeb
+-Section: debian-installer
+-Depends: libnl-3-200-udeb (= ${binary:Version}), ${misc:Depends}, ${shlibs:Depends}
+-Description: library for dealing with netlink sockets - generic netlink
+- This is a library for applications dealing with netlink sockets.
+- The library provides an interface for raw netlink messaging and various
+- netlink family specific interfaces.
+- .
+- This package is a udeb. It's only useful inside of debian-installer.
+diff --git a/debian/libnl-3-200-udeb.install b/debian/libnl-3-200-udeb.install
+deleted file mode 100644
+index 4b3a77c..0000000
+--- a/debian/libnl-3-200-udeb.install
++++ /dev/null
+@@ -1 +0,0 @@
+-usr/lib/*/libnl-3.so.* lib
+diff --git a/debian/libnl-3-200.install b/debian/libnl-3-200.install
+old mode 100755
+new mode 100644
+index dab89da..4685c79
+--- a/debian/libnl-3-200.install
++++ b/debian/libnl-3-200.install
+@@ -1,3 +1,2 @@
+-#!/usr/bin/dh-exec
+ debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-3*.so.* lib/${DEB_HOST_MULTIARCH}/
+ debian/tmp/etc/libnl-3/* etc/libnl-3
+diff --git a/debian/libnl-3-dev.install b/debian/libnl-3-dev.install
+old mode 100755
+new mode 100644
+index 3715b8b..5f56b4a
+--- a/debian/libnl-3-dev.install
++++ b/debian/libnl-3-dev.install
+@@ -1,5 +1,4 @@
+-#!/usr/bin/dh-exec
+ debian/tmp/usr/include/*
+-debian/tmp/usr/lib/*/pkgconfig/libnl-3*
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/libnl-3*
+ debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-3.so lib/${DEB_HOST_MULTIARCH}/
+ debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-3.a lib/${DEB_HOST_MULTIARCH}/
+diff --git a/debian/libnl-cli-3-200.install b/debian/libnl-cli-3-200.install
+old mode 100755
+new mode 100644
+index 6735ec9..4e21828
+--- a/debian/libnl-cli-3-200.install
++++ b/debian/libnl-cli-3-200.install
+@@ -1,4 +1,3 @@
+-#!/usr/bin/dh-exec
+ debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-cli-3*.so.*
+ debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl/cli/cls/*.so usr/lib/${DEB_HOST_MULTIARCH}/libnl-3/cli/cls
+ debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl/cli/qdisc/*.so usr/lib/${DEB_HOST_MULTIARCH}/libnl-3/cli/qdisc
+diff --git a/debian/libnl-cli-3-dev.install b/debian/libnl-cli-3-dev.install
+index 66aa3b3..cfa7abe 100644
+--- a/debian/libnl-cli-3-dev.install
++++ b/debian/libnl-cli-3-dev.install
+@@ -1,3 +1,5 @@
+-debian/tmp/usr/lib/*/pkgconfig/libnl-cli-3*
+-debian/tmp/usr/lib/*/libnl-cli-3*.so
+-debian/tmp/usr/lib/*/libnl-cli-3*.a
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/libnl-cli-3*
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-cli-3*.so
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-cli-3*.a
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl/cli/cls/*.a
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl/cli/qdisc/*.a
+diff --git a/debian/libnl-genl-3-200-udeb.install b/debian/libnl-genl-3-200-udeb.install
+deleted file mode 100755
+index cb5597b..0000000
+--- a/debian/libnl-genl-3-200-udeb.install
++++ /dev/null
+@@ -1,2 +0,0 @@
+-#!/usr/bin/dh-exec
+-usr/lib/${DEB_HOST_MULTIARCH}/libnl-genl-3.so.* lib/${DEB_HOST_MULTIARCH}/
+diff --git a/debian/libnl-genl-3-200.install b/debian/libnl-genl-3-200.install
+old mode 100755
+new mode 100644
+index d9d6fae..e79fbf1
+--- a/debian/libnl-genl-3-200.install
++++ b/debian/libnl-genl-3-200.install
+@@ -1,2 +1 @@
+-#!/usr/bin/dh-exec
+ debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-genl-3*.so.* lib/${DEB_HOST_MULTIARCH}/
+diff --git a/debian/libnl-genl-3-dev.install b/debian/libnl-genl-3-dev.install
+old mode 100755
+new mode 100644
+index cbc6b51..68148a0
+--- a/debian/libnl-genl-3-dev.install
++++ b/debian/libnl-genl-3-dev.install
+@@ -1,4 +1,3 @@
+-#!/usr/bin/dh-exec
+-debian/tmp/usr/lib/*/pkgconfig/libnl-genl-3*
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/libnl-genl-3*
+ debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-genl-3*.so lib/${DEB_HOST_MULTIARCH}/
+ debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-genl-3*.a lib/${DEB_HOST_MULTIARCH}/
+diff --git a/debian/libnl-route-3-dev.install b/debian/libnl-route-3-dev.install
+index 37e248c..c3f0e4e 100644
+--- a/debian/libnl-route-3-dev.install
++++ b/debian/libnl-route-3-dev.install
+@@ -1,3 +1,3 @@
+-debian/tmp/usr/lib/*/pkgconfig/libnl-route-3*
+-debian/tmp/usr/lib/*/libnl-route-3*.so
+-debian/tmp/usr/lib/*/libnl-route-3*.a
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/libnl-route-3*
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-route-3*.so
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-route-3*.a
+diff --git a/debian/libnl-xfrm-3-dev.install b/debian/libnl-xfrm-3-dev.install
+index f57e152..51d78d1 100644
+--- a/debian/libnl-xfrm-3-dev.install
++++ b/debian/libnl-xfrm-3-dev.install
+@@ -1,3 +1,3 @@
+-debian/tmp/usr/lib/*/pkgconfig/libnl-xfrm-3*
+-debian/tmp/usr/lib/*/libnl-xfrm-3*.so
+-debian/tmp/usr/lib/*/libnl-xfrm-3*.a
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/libnl-xfrm-3*
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-xfrm-3*.so
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-xfrm-3*.a
+diff --git a/debian/not-installed b/debian/not-installed
+new file mode 100644
+index 0000000..079a795
+--- /dev/null
++++ b/debian/not-installed
+@@ -0,0 +1,3 @@
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl-*.la
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl/cli/cls/*.la
++debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libnl/cli/qdisc/*.la
+diff --git a/debian/rules b/debian/rules
+index aafca20..2d33f6a 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -1,43 +1,4 @@
+ #!/usr/bin/make -f
+ 
+-DEB_BUILDDIR = debian/build
+-DEB_MAKE_FLAVORS = main udeb
+-
+-udeb_libnl=libnl-3-200-udeb
+-udeb_libnl_genl=libnl-genl-3-200-udeb
+-
+-TG_BRANCHES := debian/etc-libnl-3,debian/out-of-tree,debian/no-symvers
+-
+--include /usr/share/topgit/tg2quilt.mk
+-
+-# to export the patch series use
+-#	debian/rules tg-clean
+-#	debian/rules tg-export
+-
+-
+-include /usr/share/cdbs/1/rules/debhelper.mk
+-include /usr/share/cdbs/1/rules/autoreconf.mk
+-include /usr/share/cdbs/1/class/autotools.mk
+-
+-# FIXME: not honoured
+-#CFLAGS_udeb += $(CFLAGS) -Os
+-CFLAGS += $(if $(findstring udeb,$(cdbs_make_curflavor)),-Os)
+-
+-DEB_DH_STRIP_ARGS := --dbg-package=libnl-3-200-dbg
+-DEB_DH_MAKESHLIBS_ARGS_libnl-3-200 := --add-udeb=$(udeb_libnl)
+-DEB_DH_MAKESHLIBS_ARGS_libnl-genl-3-200 := --add-udeb=$(udeb_libnl_genl)
+-
+-DEB_MAKE_DESTDIRSKEL = $(CURDIR)/debian/tmp
+-DEB_MAKE_DESTDIRSKEL_udeb = $(CURDIR)/debian/tmp/udeb
+-
+-DEB_DH_INSTALL_ARGS_$(udeb) += --sourcedir=debian/tmp/udeb
+-
+-DEB_CONFIGURE_EXTRA_FLAGS += --libdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH)
+-
+-# Dodge debhelper's #1015263, pulling sgml-base for udebs:
+-DEB_DH_GENCONTROL_ARGS_$(udeb_libnl) = -- -Vmisc:Depends=
+-DEB_DH_GENCONTROL_ARGS_$(udeb_libnl_genl) = -- -Vmisc:Depends=
+-
+-clean::
+-	# from some unknown reason CDBS does not remove the builddir
+-	rm -rf $(DEB_BUILDDIR)
++%:
++	dh $@
+-- 
+2.34.1
+
