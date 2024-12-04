@@ -22,16 +22,16 @@ Signed-off-by: Chirag Shah <chirag @nvidia.com>
 Signed-off-by: Rajasekar Raja <rajasekarr@nvidia.com>
 
 diff --git a/bgpd/bgp_evpn.c b/bgpd/bgp_evpn.c
-index 2243ffdc77..b1f8f19594 100644
+index 5e62854ed..c517a67f5 100644
 --- a/bgpd/bgp_evpn.c
 +++ b/bgpd/bgp_evpn.c
-@@ -6074,16 +6074,16 @@ struct bgpevpn *bgp_evpn_new(struct bgp *bgp, vni_t vni,
+@@ -6301,16 +6301,16 @@ struct bgpevpn *bgp_evpn_new(struct bgp *bgp, vni_t vni,
  void bgp_evpn_free(struct bgp *bgp, struct bgpevpn *vpn)
  {
  	struct bgp_dest *dest = NULL;
 -	uint32_t ann_count = zebra_announce_count(&bm->zebra_announce_head);
 +	struct bgp_dest *dest_next = NULL;
- 
+
 -	while (ann_count) {
 -		dest = zebra_announce_pop(&bm->zebra_announce_head);
 -		ann_count--;
@@ -46,13 +46,13 @@ index 2243ffdc77..b1f8f19594 100644
 +			zebra_announce_del(&bm->zebra_announce_head, dest);
 +		}
  	}
- 
  	bgp_evpn_remote_ip_hash_destroy(vpn);
+ 	bgp_evpn_vni_es_cleanup(vpn);
 diff --git a/bgpd/bgpd.c b/bgpd/bgpd.c
-index 492566f8c8..e16a58b443 100644
+index 4348a60c5..24577768f 100644
 --- a/bgpd/bgpd.c
 +++ b/bgpd/bgpd.c
-@@ -3689,19 +3689,25 @@ int bgp_delete(struct bgp *bgp)
+@@ -3868,19 +3868,25 @@ int bgp_delete(struct bgp *bgp)
  	safi_t safi;
  	int i;
  	struct bgp_dest *dest = NULL;
@@ -60,9 +60,9 @@ index 492566f8c8..e16a58b443 100644
 +	struct bgp_table *dest_table = NULL;
  	struct graceful_restart_info *gr_info;
 -	uint32_t ann_count = zebra_announce_count(&bm->zebra_announce_head);
- 
+
  	assert(bgp);
- 
+
 -	while (ann_count) {
 -		dest = zebra_announce_pop(&bm->zebra_announce_head);
 -		ann_count--;
@@ -83,8 +83,8 @@ index 492566f8c8..e16a58b443 100644
 +			zebra_announce_del(&bm->zebra_announce_head, dest);
 +		}
  	}
- 
+
  	bgp_soft_reconfig_table_task_cancel(bgp, NULL, NULL);
--- 
-2.43.2
+--
+2.39.4
 

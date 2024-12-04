@@ -145,6 +145,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libjson-c-dev \
         libsystemd-dev \
         libcmocka-dev \
+        libprotobuf-c-dev \
+        protobuf-c-compiler \
 #{%- if CROSS_BUILD_ENVIRON != "y" %}
         python3-all-dev \
         python3-all-dbg \

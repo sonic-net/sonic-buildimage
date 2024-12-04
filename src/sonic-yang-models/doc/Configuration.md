@@ -50,6 +50,7 @@ Table of Contents
          * [L2 Neighbors](#l2-neighbors)
          * [Loopback Interface](#loopback-interface)
          * [LOSSLESS_TRAFFIC_PATTERN](#LOSSLESS_TRAFFIC_PATTERN)
+         * [Memory Statistics](#memory-statistics)
          * [Management Interface](#management-interface)
          * [Management port](#management-port)
          * [Management VRF](#management-vrf)
@@ -1481,6 +1482,25 @@ lossless traffic for dynamic buffer calculation
     }
 }
 ```
+
+### Memory Statistics
+The memory statistics configuration is stored in the **MEMORY_STATISTICS** table. This table is used by the memory statistics daemon to manage memory monitoring settings. The configuration allows enabling or disabling memory collection, specifying how frequently memory statistics are sampled, and defining how long the memory data is retained. 
+
+```
+{
+    "MEMORY_STATISTICS": {
+        "memory_statistics": {
+            "enabled": "false",
+            "sampling_interval": "5",
+            "retention_period":  "15"
+        }
+    }
+}
+
+```
+- **enabled**: Defines whether the memory statistics collection is active (true or false).
+- **sampling_interval**: Interval between data collection.
+- **retention_period**: Time to retain collected data.
 
 ### Management Interface
 
