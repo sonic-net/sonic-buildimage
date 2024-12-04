@@ -1698,5 +1698,55 @@
                 ]
             }
         }
+    },
+    "ACL_RULE_WITH_TUNNEL_TERMINATION_WRONG_TYPE": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "TUNNEL_TERM_TABLE",
+                        "PRIORITY": 9981,
+                        "TUNNEL_TERM": "whatever",
+                        "RULE_NAME": "Rule_1"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "TUNNEL_TERM_TABLE",
+                        "policy_desc": "TUNNEL_TERM_TABLE",
+                        "ports": [ "" ],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
+    },
+    "ACL_RULE_WITH_TUNNEL_TERMINATION": {
+        "sonic-acl:sonic-acl": {
+            "sonic-acl:ACL_RULE": {
+                "ACL_RULE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "TUNNEL_TERM_TABLE",
+                        "PRIORITY": 9981,
+                        "TUNNEL_TERM": "true",
+                        "RULE_NAME": "Rule_1"
+                    }
+                ]
+            },
+            "sonic-acl:ACL_TABLE": {
+                "ACL_TABLE_LIST": [
+                    {
+                        "ACL_TABLE_NAME": "TUNNEL_TERM_TABLE",
+                        "policy_desc": "TUNNEL_TERM_TABLE",
+                        "ports": [ "" ],
+                        "stage": "INGRESS",
+                        "type": "L3"
+                    }
+                ]
+            }
+        }
     }
 }
