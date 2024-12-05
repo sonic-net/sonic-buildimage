@@ -267,8 +267,7 @@
             "weight": "5"
         }
     },
-{% elif (generate_tc_to_pg_map is defined) and
-        (generate_qos_cai_config is defined) and
+{% elif generate_qos_cai_config and (generate_tc_to_pg_map is defined) and
         ('type' in DEVICE_METADATA['localhost'] and
           DEVICE_METADATA['localhost']['type'] in backend_device_types) and
         ('resource_type' in DEVICE_METADATA['localhost']) %}
