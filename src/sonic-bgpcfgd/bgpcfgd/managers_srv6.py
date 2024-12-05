@@ -38,17 +38,17 @@ class SRv6Mgr(Manager):
         ip_addr = key
         if 'action' not in data:
             log_err("Found a SRv6 config entry that does not specify action: {} | {}".format(ip_addr, data))
-            return
+            return False
         
         if data['action'] not in supported_SRv6_behaviors:
             log_err("Found a SRv6 config entry associated with unsupported action: {} | {}".format(ip_addr, data))
-            return
+            return False
         
         if 'vrf' in data:
             # verify that vrf name exists in the VRF_TABLE of CONFIG_DB
             if not self.config_db.exists(self.config_db.CONFIG_DB, "VRF_TABLE|{}".format(data['vrf'])):
                 log_err("Found a SRv6 config entry that maps to an undefined VRF: {} | {}".format(ip_addr, data))
-                return
+                return False
         
         sid = SID(ip_addr, data)
         locator = sid.get_locator()
@@ -68,6 +68,7 @@ class SRv6Mgr(Manager):
         log_debug("{} SRv6 static configuration {} is scheduled for updates. {}".format(self.db_name, key, str(cmd_list)))
 
         self.sids.setdefault(locator, {})[opcode] = sid
+        return True
 
     def del_handler(self, key, data):
         ip_addr = key
@@ -104,7 +105,7 @@ class SRv6Mgr(Manager):
 
 class SID:
     def __init__(self, ip_addr, data):
-        self.bits = int(IPv6Network(ip_addr).network_address)
+        self.bits = int(IPv6Address(ip_addr))
         self.block_len = data['block_len'] if 'block_len' in data else 32
         self.node_len = data['node_len'] if 'node_len' in data else 16
         self.func_len = data['func_len'] if 'func_len' in data else 16
