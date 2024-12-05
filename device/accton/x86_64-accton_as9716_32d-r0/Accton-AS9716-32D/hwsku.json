@@ -126,6 +126,14 @@
 
         "Ethernet248": {
             "default_brkout_mode": "1x400G"
+        },
+
+        "Ethernet256": {
+            "default_brkout_mode": "1x10G[1G]"
+        },
+
+        "Ethernet257": {
+            "default_brkout_mode": "1x10G[1G]"
         }
     }
 }

@@ -274,6 +274,12 @@
             },
             {
                 "name": "Ethernet248"
+            },
+            {
+                "name": "Ethernet256"
+            },
+            {
+                "name": "Ethernet257"
             }
         ]
     },
@@ -691,6 +697,22 @@
                 "1x100G[40G](4)": ["Eth32(Port32)"],
                 "2x50G(4)": ["Eth32/1(Port32)", "Eth32/2(Port32)"],
                 "4x25G[10G](4)": ["Eth32/1(Port32)", "Eth32/2(Port32)", "Eth32/3(Port32)", "Eth32/4(Port32)"]
+            }
+        },
+
+        "Ethernet256": {
+            "index": "33",
+            "lanes": "257",
+            "breakout_modes": {
+                "1x10G[1G]": ["Eth33(Port33)"]
+            }
+        },
+
+        "Ethernet257": {
+            "index": "34",
+            "lanes": "258",
+            "breakout_modes": {
+                "1x10G[1G]": ["Eth34(Port34)"]
             }
         }
     }
