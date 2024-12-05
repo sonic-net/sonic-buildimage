@@ -293,7 +293,7 @@ static ssize_t set_duty_cycle(struct device *dev, struct device_attribute *da,
     if (value < 0 || value > FAN_MAX_DUTY_CYCLE)
         return -EINVAL;
 
-    //as7726_32x_fan_write_value(client, 0x33, 0); /* Disable fan speed watch dog */
+    as7726_32x_fan_write_value(client, 0x33, 0); /* Disable fan speed watch dog */
     as7726_32x_fan_write_value(client, fan_reg[FAN_DUTY_CYCLE_PERCENTAGE], duty_cycle_to_reg_val(value));
     return count;
 }
