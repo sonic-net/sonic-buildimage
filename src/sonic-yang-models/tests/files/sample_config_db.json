@@ -2791,6 +2791,7 @@
                 "enabled": "false",
                 "sampling_interval": "5",
                 "retention_period": "15"
+            }
         },
         "ASIC_SENSORS": {
             "ASIC_SENSORS_POLLER_INTERVAL": {
