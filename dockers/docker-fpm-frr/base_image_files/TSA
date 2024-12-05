@@ -25,7 +25,7 @@ if [ -f /etc/sonic/chassisdb.conf ]; then
 fi
 # toggle the mux to standby if dualtor and any mux active
 if
-[[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr [:upper:] [:lower:])" == *"dualtor"* ]] &&
+[[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr '[:upper:]' '[:lower:]')" == *"dualtor"* ]] &&
 [[ $(show mux status | grep active | wc -l) > 0 ]];
 then
   logger -t TSA -p user.info "Toggle all mux mode to standby"

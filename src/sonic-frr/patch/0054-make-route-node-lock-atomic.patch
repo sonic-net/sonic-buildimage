@@ -1,0 +1,95 @@
+From 402665769dc5563c246003720e75c3d6244a88eb Mon Sep 17 00:00:00 2001
+From: "Barry Friedman (friedman)" <friedman@cisco.com>
+Date: Wed, 9 Oct 2024 18:01:00 +0000
+Subject: [PATCH 1/2] lib: make route_node lock atomic
+
+Multiple threads walking a route table perform read-modify-write
+operations on the lock variable. This can result in a wrong lock count
+which wrongly triggers a route_node_delete(). Making the access to the
+lock variable atomic should ensure the lock is correct.
+
+Signed-off-by: Barry Friedman (friedman) <friedman@cisco.com>
+---
+ lib/table.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/lib/table.h b/lib/table.h
+index 5dec69ee7e..89993dd279 100644
+--- a/lib/table.h
++++ b/lib/table.h
+@@ -129,7 +129,7 @@ struct route_table {
+ 	struct route_node *table_rdonly(link[2]);                              \
+                                                                                \
+ 	/* Lock of this radix */                                               \
+-	unsigned int table_rdonly(lock);                                       \
++	_Atomic unsigned int table_rdonly(lock);			       \
+                                                                                \
+ 	struct rn_hash_node_item nodehash;                                     \
+ 	/* Each node of route. */                                              \
+@@ -244,7 +244,7 @@ extern void route_table_iter_cleanup(route_table_iter_t *iter);
+ /* Lock node. */
+ static inline struct route_node *route_lock_node(struct route_node *node)
+ {
+-	(*(unsigned *)&node->lock)++;
++	atomic_fetch_add_explicit(&node->lock, 1, memory_order_relaxed);
+ 	return node;
+ }
+ 
+@@ -252,7 +252,7 @@ static inline struct route_node *route_lock_node(struct route_node *node)
+ static inline void route_unlock_node(struct route_node *node)
+ {
+ 	assert(node->lock > 0);
+-	(*(unsigned *)&node->lock)--;
++	atomic_fetch_sub_explicit(&node->lock, 1, memory_order_relaxed);
+ 
+ 	if (node->lock == 0)
+ 		route_node_delete(node);
+-- 
+2.43.2
+
+
+From bf96a5a334ea1e953bf98a92f6a942335f49700b Mon Sep 17 00:00:00 2001
+From: "Barry Friedman (friedman)" <friedman@cisco.com>
+Date: Fri, 11 Oct 2024 22:02:51 +0000
+Subject: [PATCH 2/2] lib: Fix atomic node lock warnings with enable-dev-build
+
+The route_node lock variable type adds a const qualifier when
+--enable-dev-build is configured. This is to generate warnings
+in case client code tries to modify this variable. As a result
+the functions route_lock_node() and route_unlock_node() need to
+cast away the const qualifier to prevent the compile warnings.
+When they _Atomic qualifier was added I wrongly removed the
+cast. This change adds it back to prevent the warnings.
+
+Signed-off-by: Barry Friedman (friedman) <friedman@cisco.com>
+---
+ lib/table.h | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/lib/table.h b/lib/table.h
+index 89993dd279..8023f8aa30 100644
+--- a/lib/table.h
++++ b/lib/table.h
+@@ -244,7 +244,8 @@ extern void route_table_iter_cleanup(route_table_iter_t *iter);
+ /* Lock node. */
+ static inline struct route_node *route_lock_node(struct route_node *node)
+ {
+-	atomic_fetch_add_explicit(&node->lock, 1, memory_order_relaxed);
++	atomic_fetch_add_explicit((_Atomic unsigned *)&node->lock, 1,
++				  memory_order_relaxed);
+ 	return node;
+ }
+ 
+@@ -252,7 +253,8 @@ static inline struct route_node *route_lock_node(struct route_node *node)
+ static inline void route_unlock_node(struct route_node *node)
+ {
+ 	assert(node->lock > 0);
+-	atomic_fetch_sub_explicit(&node->lock, 1, memory_order_relaxed);
++	atomic_fetch_sub_explicit((_Atomic unsigned *)&node->lock, 1,
++				  memory_order_relaxed);
+ 
+ 	if (node->lock == 0)
+ 		route_node_delete(node);
+-- 
+2.43.2
+
