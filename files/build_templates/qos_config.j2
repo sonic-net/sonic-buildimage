@@ -2,6 +2,7 @@
 {%- set PORT_BP = [] %}
 {%- set PORT_DPC  = [] %}
 {%- set SYSTEM_PORT_ALL = [] %}
+{%- set PORT_PIE = [] %}
 
 {%- set voq_chassis = false %}
 {%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost']['switch_type'] is defined and  DEVICE_METADATA['localhost']['switch_type']  == 'voq' %}
@@ -31,6 +32,9 @@
 {%- if generate_bp_port_list is defined %}
     {%- if generate_bp_port_list(PORT,PORT_BP) %} {% endif %}
 {%- endif %}
+{%- if generate_pie_port_list is defined %}
+    {%- if generate_pie_port_list(PORT_PIE) %} {% endif %}
+{%- endif %}
 
 {%- if PORT_ALL | sort_by_port_index %}{% endif %}
 
@@ -55,6 +59,7 @@
         {%- if PORT_ACTIVE.append(port) %}{%- endif %}
     {%- endfor %}
 {%- endif %}
+{%- set PORT_ACTIVE = PORT_ACTIVE | reject('in', PORT_PIE) | list %}
 {%- if PORT_ACTIVE | sort_by_port_index %}{% endif %}
 
 {%- set port_names_list_active = [] %}
