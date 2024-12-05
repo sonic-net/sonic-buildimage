@@ -5,6 +5,9 @@
     System health monitor daemon for SONiC
 """
 
+from swsscommon.swsscommon import RestartWaiter
+RestartWaiter.waitAdvancedBootDone()
+
 import signal
 import threading
 import time

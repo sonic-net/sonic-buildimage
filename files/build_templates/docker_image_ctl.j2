@@ -336,11 +336,6 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
-{%- elif docker_container_name == "eventd" %}
-    export EVENTD_STATE=$(sonic-db-cli -s CONFIG_DB HGET 'FEATURE|eventd' 'state')
-    j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/events_info.json  > /etc/rsyslog.d/host_events.conf
-    j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/syncd_events_info.json  > /etc/rsyslog.d/syncd_events.conf
-    systemctl restart rsyslog
 {%- else %}
     : # nothing
 {%- endif %}
@@ -443,6 +438,10 @@ start() {
         CREATE_ONLY_CONFIG_DB_BUFFERS_JSON="$HWSKU_FOLDER/create_only_config_db_buffers.json"
         if [ -f "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON" ]; then
             $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
+        fi
+        SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
+        if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
         fi
     fi
     {%- endif %}
