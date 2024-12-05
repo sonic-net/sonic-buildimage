@@ -34,3 +34,4 @@ cross-compile-changes.patch
 0035-fpm-ignore-route-from-default-table.patch
 0036-Add-support-of-bgp-l3vni-evpn.patch
 0037-bgp-community-memory-leak-fix.patch
+0038-bfdd-Fix-malformed-session-with-vrf.patch
