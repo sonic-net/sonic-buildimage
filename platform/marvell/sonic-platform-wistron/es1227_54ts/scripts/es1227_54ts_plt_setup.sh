@@ -23,18 +23,11 @@ update_modulelist()
     echo "psample" >> $MODULE_FILE
 }
 
-haveged_service_cfg()
-{
-    # Workaround for failing haveged.service
-    sed -i 's/^DAEMON_ARGS=.*/DAEMON_ARGS="-w 1024 -d 16"/' /etc/default/haveged
-}
-
 main()
 {
     fw_uboot_env_cfg
     es1227_54ts_profile
     update_modulelist
-    haveged_service_cfg
 }
 
 main $@
