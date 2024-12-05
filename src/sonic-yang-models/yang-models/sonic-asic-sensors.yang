@@ -13,13 +13,13 @@ module sonic-asic-sensors {
     description "First Revision";
   }
 
-  container sonic-asic-sensors{
+  container sonic-asic-sensors {
     container ASIC_SENSORS {
       description "ASIC_SENSORS part of config_db.json";
 
       container ASIC_SENSORS_POLLER_INTERVAL {
         leaf interval {
-	  description "ASIC SENSORS polling interval";
+          description "ASIC SENSORS polling interval";
           type uint32 {
             range "1..999";
           }
