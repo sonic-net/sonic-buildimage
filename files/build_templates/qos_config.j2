@@ -267,7 +267,7 @@
             "weight": "5"
         }
     },
-{% elif use_qos_cai_config and (generate_tc_to_pg_map is defined) and
+{% elif use_qos_cai_config and
         ('type' in DEVICE_METADATA['localhost'] and
           DEVICE_METADATA['localhost']['type'] in backend_device_types) %}
     "SCHEDULER": {
@@ -449,9 +449,8 @@
             "wred_profile": "AZURE_LOSSLESS"
         }{% if not loop.last %},{% endif %}
 {% endfor %}
-{% elif 'type' in DEVICE_METADATA['localhost'] and
-       DEVICE_METADATA['localhost']['type'] in backend_device_types and
-      'resource_type' in DEVICE_METADATA['localhost'] %}
+{% elif use_qos_cai_config and 'type' in DEVICE_METADATA['localhost'] and
+       DEVICE_METADATA['localhost']['type'] in backend_device_types %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|0": {
             "scheduler": "scheduler.0"
