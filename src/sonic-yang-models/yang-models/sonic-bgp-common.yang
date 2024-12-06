@@ -382,22 +382,6 @@ module sonic-bgp-common {
             description "Interval after which connection will get re-established";
         }
 
-        leaf-list route_map_in {
-            type leafref {
-                path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
-            }
-            description "Route-map filter for incoming routes";
-            max-elements 1;
-        }
-
-        leaf-list route_map_out {
-            type leafref {
-                path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
-            }
-            description "Route-map filter for outgoing routes";
-            max-elements 1;
-        }
-
         leaf soft_reconfiguration_in {
             type boolean;
             description "Inbound soft reconfiguration";
