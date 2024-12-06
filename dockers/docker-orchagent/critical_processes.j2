@@ -4,6 +4,14 @@
 {% set is_fabric_asic = 1 %}
 {% endif %}
 {% endif %}
+{% set dash_offload_enabled = 0 %}
+{% if DEVICE_METADATA.localhost.subtype %}
+{% if DEVICE_METADATA.localhost.subtype == "SmartSwitch" %}
+{% if "nvidia" in DEVICE_METADATA.localhost.platform %}
+{% set dash_offload_enabled = 1 %}
+{%- endif %}
+{%- endif %}
+{%- endif %}
 program:orchagent
 {% if is_fabric_asic == 0 %}
 program:portsyncd
@@ -19,4 +27,7 @@ program:nbrmgrd
 program:vxlanmgrd
 program:coppmgrd
 program:tunnelmgrd
+{% if dash_offload_enabled == 1 %}
+program:dashoffloadmanager
+{%- endif %}
 {%- endif %}
