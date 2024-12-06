@@ -269,8 +269,7 @@
     },
 {% elif generate_qos_cai_config and (generate_tc_to_pg_map is defined) and
         ('type' in DEVICE_METADATA['localhost'] and
-          DEVICE_METADATA['localhost']['type'] in backend_device_types) and
-        ('resource_type' in DEVICE_METADATA['localhost']) %}
+          DEVICE_METADATA['localhost']['type'] in backend_device_types) %}
     "SCHEDULER": {
         "scheduler.0": {
             "type"  : "DWRR",
