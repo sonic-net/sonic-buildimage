@@ -231,7 +231,8 @@ def parse_port_config_file(port_config_file):
             for i, item in enumerate(tokens):
                 if i == name_index:
                     continue
-                data[titles[i]] = item
+                if item != '-':
+                    data[titles[i]] = item
             data.setdefault('alias', name)
             ports[name] = data
             port_alias_map[data['alias']] = name
