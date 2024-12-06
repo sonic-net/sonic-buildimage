@@ -193,6 +193,11 @@ module sonic-portchannel {
 			default disable;
 		}
 
+                leaf mac_addr {
+                    description "Assign administrator-provided MAC address to Interface";
+                    type yang:mac-address;
+                }
+
             } /* end of list PORTCHANNEL_INTERFACE_LIST */
 
             list PORTCHANNEL_INTERFACE_IPPREFIX_LIST {
