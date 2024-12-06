@@ -1,0 +1,12 @@
+sonic-netberg-platform-modules (1.0.1) unstable; urgency=low
+
+  * Add support for Netberg Aurora 621
+
+ -- Netberg <support@netbergtw.com>  Mon, 04 Jun 2024 18:29:45 +0800
+
+sonic-netberg-platform-modules (1.0.0) unstable; urgency=low
+
+  * Add support for Netberg Aurora 221
+
+ -- Netberg <support@netbergtw.com>  Mon, 26 Feb 2024 18:29:45 +0800
+
