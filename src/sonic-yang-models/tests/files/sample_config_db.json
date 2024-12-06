@@ -146,7 +146,7 @@
                 "nat_zone": "0",
                 "loopback_action": "forward",
                 "ipv6_use_link_local_only": "disable",
-                "mac_addr": "02:AB:CD:EF:12:34"
+                "mac_addr": "02:ab:cd:ef:12:34"
             },
             "Vlan777": {},
             "Vlan111|2a04:5555:45:6709::1/64": {
@@ -1197,7 +1197,7 @@
                 "nat_zone": "1",
                 "loopback_action": "forward",
                 "ipv6_use_link_local_only": "enable",
-                "mac_addr": "12:34:56:78:90:AB"
+                "mac_addr": "12:34:56:78:90:ab"
             },
             "Ethernet112|2a04:5555:40:a709::2/126": {
                 "scope": "global",
