@@ -304,6 +304,35 @@
             }
         }
     },
+    "INTERFACE_UPPER_MAC_ADDR": {
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8",
+                        "mac_addr": "02:AB:CD:EF:12:34"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000,
+                        "mode":"trunk"
+                    }
+                ]
+            }
+        }
+    },
     "INTERFACE_INVALID_MAC_ADDR": {
         "sonic-interface:sonic-interface": {
             "sonic-interface:INTERFACE": {
