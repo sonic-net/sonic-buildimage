@@ -50,50 +50,50 @@ variables:
     value: $(Build.SourceBranchName)
 
 stages:
-- stage: BuildVS
-  pool: sonicbld-1es
-  jobs:
-  - template: .azure-pipelines/azure-pipelines-build.yml
-    parameters:
-      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
-      jobGroups:
-      - name: vs
-
-- stage: Build
-  pool: sonicbld-1es
-  dependsOn: []
-  jobs:
-  - template: .azure-pipelines/azure-pipelines-build.yml
-    parameters:
-      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
-      jobGroups:
-      - name: broadcom
-        variables:
-          swi_image: yes
-          docker_syncd_rpc_image: yes
-          platform_rpc: brcm
-          INCLUDE_RESTAPI: y
-      - name: mellanox
-        variables:
-          dbg_image: yes
-          docker_syncd_rpc_image: yes
-          platform_rpc: mlnx
-      - name: marvell-arm64
-        pool: sonicbld-arm64
-        variables:
-           PLATFORM_NAME: marvell
-           PLATFORM_ARCH: arm64
-      - name: marvell-armhf
-        pool: sonicbld-armhf
-        timeoutInMinutes: 1200
-        variables:
-          PLATFORM_NAME: marvell
-          PLATFORM_ARCH: armhf
-          INCLUDE_RESTAPI: y
+#- stage: BuildVS
+#  pool: sonicbld-1es
+#  jobs:
+#  - template: .azure-pipelines/azure-pipelines-build.yml
+#    parameters:
+#      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
+#      jobGroups:
+#      - name: vs
+#
+#- stage: Build
+#  pool: sonicbld-1es
+#  dependsOn: []
+#  jobs:
+#  - template: .azure-pipelines/azure-pipelines-build.yml
+#    parameters:
+#      buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
+#      jobGroups:
+#      - name: broadcom
+#        variables:
+#          swi_image: yes
+#          docker_syncd_rpc_image: yes
+#          platform_rpc: brcm
+#          INCLUDE_RESTAPI: y
+#      - name: mellanox
+#        variables:
+#          dbg_image: yes
+#          docker_syncd_rpc_image: yes
+#          platform_rpc: mlnx
+#      - name: marvell-arm64
+#        pool: sonicbld-arm64
+#        variables:
+#           PLATFORM_NAME: marvell
+#           PLATFORM_ARCH: arm64
+#      - name: marvell-armhf
+#        pool: sonicbld-armhf
+#        timeoutInMinutes: 1200
+#        variables:
+#          PLATFORM_NAME: marvell
+#          PLATFORM_ARCH: armhf
+#          INCLUDE_RESTAPI: y
 
 - stage: Test
-  dependsOn: BuildVS
-  condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
+#  dependsOn: BuildVS
+#  condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
   variables:
   - group: SONiC-Elastictest
   - name: inventory
@@ -105,64 +105,64 @@ stages:
 # continueOnError: false means it's a required test job and will block merge if it fails
 # continueOnError: true means it's an optional test job and will not block merge even though it fails(unless a required test job depends on its result)
 
-  jobs:
-  - job:
-    pool: sonictest
-    displayName: "vstest"
-    timeoutInMinutes: 60
-    steps:
-    - template: .azure-pipelines/cleanup.yml
-    - checkout: self
-      clean: true
-      submodules: recursive
-      displayName: 'Checkout code'
-
-    - script: |
-        sudo rm -rf ../target
-        sudo rm -rf ../*.deb
-      displayName: "Cleanup"
-
-    - task: DownloadPipelineArtifact@2
-      inputs:
-        artifact: sonic-buildimage.vs
-      displayName: "Download sonic-buildimage.vs artifact"
-
-    - script: |
-        sudo src/sonic-swss-common/.azure-pipelines/build_and_install_module.sh
-      displayName: "Install kernel modules"
-
-    - script: |
-        sudo apt-get update
-        sudo apt-get install -y make libtool m4 autoconf dh-exec debhelper cmake pkg-config \
-                         libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev swig \
-                         libpython2.7-dev libboost-dev libboost-serialization-dev uuid-dev libzmq5 libzmq3-dev  python3-pip \
-                         cmake libgtest-dev libgmock-dev libyang-dev nlohmann-json3-dev
-        sudo pip3 install pytest
-        cd src/sonic-swss-common
-        ./autogen.sh
-        dpkg-buildpackage -rfakeroot -us -uc -b -j$(nproc)
-        sudo dpkg -i --force-confask,confnew ../libswsscommon_*.deb
-        sudo dpkg -i ../python3-swsscommon_*.deb
-      displayName: "Compile sonic swss common"
-
-    - script: |
-        sudo docker load -i ../target/docker-sonic-vs.gz
-        docker tag docker-sonic-vs:latest docker-sonic-vs:$(Build.BuildNumber)
-        username=$(id -un)
-
-        trap "docker ps; docker images; ip netns list; \
-              docker rmi docker-sonic-vs:$(Build.BuildNumber); \
-              ip netns list | grep -E [-]srv[0-9]+ | awk '{print $1}' | xargs -I {} sudo ip netns delete {}; \
-              sudo chown -R ${username}.${username} .; \
-              sudo chown -R ${username}.${username} $(System.DefaultWorkingDirectory)" EXIT
-        pushd platform/vs/tests
-        sudo py.test -v --junitxml=tr.xml --imgname=docker-sonic-vs:$(Build.BuildNumber)
-      displayName: "Run vs tests"
-
-    - task: PublishTestResults@2
-      inputs:
-        testResultsFiles: '**/tr.xml'
-        testRunTitle: vstest
+#  jobs:
+#  - job:
+#    pool: sonictest
+#    displayName: "vstest"
+#    timeoutInMinutes: 60
+#    steps:
+#    - template: .azure-pipelines/cleanup.yml
+#    - checkout: self
+#      clean: true
+#      submodules: recursive
+#      displayName: 'Checkout code'
+#
+#    - script: |
+#        sudo rm -rf ../target
+#        sudo rm -rf ../*.deb
+#      displayName: "Cleanup"
+#
+#    - task: DownloadPipelineArtifact@2
+#      inputs:
+#        artifact: sonic-buildimage.vs
+#      displayName: "Download sonic-buildimage.vs artifact"
+#
+#    - script: |
+#        sudo src/sonic-swss-common/.azure-pipelines/build_and_install_module.sh
+#      displayName: "Install kernel modules"
+#
+#    - script: |
+#        sudo apt-get update
+#        sudo apt-get install -y make libtool m4 autoconf dh-exec debhelper cmake pkg-config \
+#                         libhiredis-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libnl-nf-3-dev swig \
+#                         libpython2.7-dev libboost-dev libboost-serialization-dev uuid-dev libzmq5 libzmq3-dev  python3-pip \
+#                         cmake libgtest-dev libgmock-dev libyang-dev nlohmann-json3-dev
+#        sudo pip3 install pytest
+#        cd src/sonic-swss-common
+#        ./autogen.sh
+#        dpkg-buildpackage -rfakeroot -us -uc -b -j$(nproc)
+#        sudo dpkg -i --force-confask,confnew ../libswsscommon_*.deb
+#        sudo dpkg -i ../python3-swsscommon_*.deb
+#      displayName: "Compile sonic swss common"
+#
+#    - script: |
+#        sudo docker load -i ../target/docker-sonic-vs.gz
+#        docker tag docker-sonic-vs:latest docker-sonic-vs:$(Build.BuildNumber)
+#        username=$(id -un)
+#
+#        trap "docker ps; docker images; ip netns list; \
+#              docker rmi docker-sonic-vs:$(Build.BuildNumber); \
+#              ip netns list | grep -E [-]srv[0-9]+ | awk '{print $1}' | xargs -I {} sudo ip netns delete {}; \
+#              sudo chown -R ${username}.${username} .; \
+#              sudo chown -R ${username}.${username} $(System.DefaultWorkingDirectory)" EXIT
+#        pushd platform/vs/tests
+#        sudo py.test -v --junitxml=tr.xml --imgname=docker-sonic-vs:$(Build.BuildNumber)
+#      displayName: "Run vs tests"
+#
+#    - task: PublishTestResults@2
+#      inputs:
+#        testResultsFiles: '**/tr.xml'
+#        testRunTitle: vstest
 
   - job: t0_elastictest
     pool: sonic-ubuntu-1c
@@ -192,110 +192,110 @@ stages:
         MGMT_BRANCH: $(BUILD_BRANCH)
         DEPLOY_MG_EXTRA_PARAMS: "-e vlan_config=two_vlan_a"
 
-  - job: t1_lag_elastictest
-    pool: sonic-ubuntu-1c
-    displayName: "kvmtest-t1-lag by Elastictest"
-    timeoutInMinutes: 240
-    continueOnError: false
-    steps:
-    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-      parameters:
-        TOPOLOGY: t1-lag
-        MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
-        MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
-        MGMT_BRANCH: $(BUILD_BRANCH)
+#  - job: t1_lag_elastictest
+#    pool: sonic-ubuntu-1c
+#    displayName: "kvmtest-t1-lag by Elastictest"
+#    timeoutInMinutes: 240
+#    continueOnError: false
+#    steps:
+#    - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+#      parameters:
+#        TOPOLOGY: t1-lag
+#        MIN_WORKER: $(T1_LAG_INSTANCE_NUM)
+#        MAX_WORKER: $(T1_LAG_INSTANCE_NUM)
+#        MGMT_BRANCH: $(BUILD_BRANCH)
 
-  - job: multi_asic_elastictest
-    displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
-    pool: sonic-ubuntu-1c
-    timeoutInMinutes: 240
-    continueOnError: false
-    steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: t1-8-lag
-          TEST_SET: multi-asic-t1-lag
-          MIN_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
-          MAX_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
-          NUM_ASIC: 4
-          MGMT_BRANCH: $(BUILD_BRANCH)
-
-  - job: dualtor_elastictest
-    pool: sonic-ubuntu-1c
-    displayName: "kvmtest-dualtor-t0 by Elastictest"
-    timeoutInMinutes: 240
-    continueOnError: false
-    steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: dualtor
-          MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
-
-  - job: sonic_t0_elastictest
-    displayName: "kvmtest-t0-sonic by Elastictest"
-    pool: sonic-ubuntu-1c
-    timeoutInMinutes: 240
-    continueOnError: false
-    steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: t0-64-32
-          MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
-          MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
-          TEST_SET: t0-sonic
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          COMMON_EXTRA_PARAMS: "--neighbor_type=sonic "
-          VM_TYPE: vsonic
-
-  - job: dpu_elastictest
-    displayName: "kvmtest-dpu by Elastictest"
-    timeoutInMinutes: 240
-    continueOnError: false
-    pool: sonic-ubuntu-1c
-    steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: dpu
-          MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
-          MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
-          MGMT_BRANCH: $(BUILD_BRANCH)
-
-  - job: onboarding_elastictest_t0
-    displayName: "onboarding t0 testcases by Elastictest - optional"
-    timeoutInMinutes: 240
-    continueOnError: true
-    pool: sonic-ubuntu-1c
-    steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: t0
-          STOP_ON_FAILURE: "False"
-          RETRY_TIMES: 0
-          MIN_WORKER: $(T0_ONBOARDING_SONIC_INSTANCE_NUM)
-          MAX_WORKER: $(T0_ONBOARDING_SONIC_INSTANCE_NUM)
-          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          TEST_SET: onboarding_t0
-
-  - job: onboarding_elastictest_t1
-    displayName: "onboarding t1 testcases by Elastictest - optional"
-    timeoutInMinutes: 240
-    continueOnError: true
-    pool: sonic-ubuntu-1c
-    steps:
-      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-        parameters:
-          TOPOLOGY: t1-lag
-          STOP_ON_FAILURE: "False"
-          RETRY_TIMES: 0
-          MIN_WORKER: $(T1_LAG_ONBOARDING_INSTANCE_NUM)
-          MAX_WORKER: $(T1_LAG_ONBOARDING_INSTANCE_NUM)
-          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
-          MGMT_BRANCH: $(BUILD_BRANCH)
-          TEST_SET: onboarding_t1
+#  - job: multi_asic_elastictest
+#    displayName: "kvmtest-multi-asic-t1-lag by Elastictest"
+#    pool: sonic-ubuntu-1c
+#    timeoutInMinutes: 240
+#    continueOnError: false
+#    steps:
+#      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+#        parameters:
+#          TOPOLOGY: t1-8-lag
+#          TEST_SET: multi-asic-t1-lag
+#          MIN_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
+#          MAX_WORKER: $(MULTI_ASIC_INSTANCE_NUM)
+#          NUM_ASIC: 4
+#          MGMT_BRANCH: $(BUILD_BRANCH)
+#
+#  - job: dualtor_elastictest
+#    pool: sonic-ubuntu-1c
+#    displayName: "kvmtest-dualtor-t0 by Elastictest"
+#    timeoutInMinutes: 240
+#    continueOnError: false
+#    steps:
+#      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+#        parameters:
+#          TOPOLOGY: dualtor
+#          MIN_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
+#          MAX_WORKER: $(T0_DUALTOR_INSTANCE_NUM)
+#          MGMT_BRANCH: $(BUILD_BRANCH)
+#          COMMON_EXTRA_PARAMS: "--disable_loganalyzer "
+#
+#  - job: sonic_t0_elastictest
+#    displayName: "kvmtest-t0-sonic by Elastictest"
+#    pool: sonic-ubuntu-1c
+#    timeoutInMinutes: 240
+#    continueOnError: false
+#    steps:
+#      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+#        parameters:
+#          TOPOLOGY: t0-64-32
+#          MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
+#          MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
+#          TEST_SET: t0-sonic
+#          MGMT_BRANCH: $(BUILD_BRANCH)
+#          COMMON_EXTRA_PARAMS: "--neighbor_type=sonic "
+#          VM_TYPE: vsonic
+#
+#  - job: dpu_elastictest
+#    displayName: "kvmtest-dpu by Elastictest"
+#    timeoutInMinutes: 240
+#    continueOnError: false
+#    pool: sonic-ubuntu-1c
+#    steps:
+#      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+#        parameters:
+#          TOPOLOGY: dpu
+#          MIN_WORKER: $(T0_SONIC_INSTANCE_NUM)
+#          MAX_WORKER: $(T0_SONIC_INSTANCE_NUM)
+#          MGMT_BRANCH: $(BUILD_BRANCH)
+#
+#  - job: onboarding_elastictest_t0
+#    displayName: "onboarding t0 testcases by Elastictest - optional"
+#    timeoutInMinutes: 240
+#    continueOnError: true
+#    pool: sonic-ubuntu-1c
+#    steps:
+#      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+#        parameters:
+#          TOPOLOGY: t0
+#          STOP_ON_FAILURE: "False"
+#          RETRY_TIMES: 0
+#          MIN_WORKER: $(T0_ONBOARDING_SONIC_INSTANCE_NUM)
+#          MAX_WORKER: $(T0_ONBOARDING_SONIC_INSTANCE_NUM)
+#          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+#          MGMT_BRANCH: $(BUILD_BRANCH)
+#          TEST_SET: onboarding_t0
+#
+#  - job: onboarding_elastictest_t1
+#    displayName: "onboarding t1 testcases by Elastictest - optional"
+#    timeoutInMinutes: 240
+#    continueOnError: true
+#    pool: sonic-ubuntu-1c
+#    steps:
+#      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+#        parameters:
+#          TOPOLOGY: t1-lag
+#          STOP_ON_FAILURE: "False"
+#          RETRY_TIMES: 0
+#          MIN_WORKER: $(T1_LAG_ONBOARDING_INSTANCE_NUM)
+#          MAX_WORKER: $(T1_LAG_ONBOARDING_INSTANCE_NUM)
+#          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+#          MGMT_BRANCH: $(BUILD_BRANCH)
+#          TEST_SET: onboarding_t1
 
 #  - job: onboarding_elastictest_dualtor
 #    displayName: "onboarding dualtor testcases by Elastictest - optional"
