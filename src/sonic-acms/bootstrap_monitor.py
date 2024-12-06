@@ -12,6 +12,7 @@ from sonic_py_common import logger
 
 sonic_logger = logger.Logger()
 
+# Check the bootstrap certificate every 24 hours
 MONITOR_INTERVAL = 3600 * 24
 DSMS_CONF = "/var/opt/msft/client/dsms.conf"
 ACMS_SEC_CONF = "/var/opt/msft/client/acms_secrets.ini"
@@ -38,6 +39,8 @@ def check_bootstrap_status():
         dsms_conf_file.close()
         if "HasBootstrapped=yes" in text:
             return
+        else:
+            sonic_logger.log_info("check_bootstrap_status: no ready " + text)
     else:
         sonic_logger.log_info("check_bootstrap_status: "+DSMS_CONF+" file not found!")
     raise BootstrapMonitorError("Bootstrap not ready")
