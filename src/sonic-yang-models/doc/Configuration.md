@@ -94,6 +94,8 @@ Table of Contents
          * [SYSTEM_DEFAULTS table](#systemdefaults-table)
          * [RADIUS](#radius)
          * [Static DNS](#static-dns)
+         * [ASIC_SENSORS](#asic_sensors)
+         
    * [For Developers](#for-developers)
       * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
       * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -2914,6 +2916,23 @@ The DPUS table introduces the information on the DPUs (Data Processing Unit) ava
         },
         "dpu1": {
             "midplane_interface": "dpu1"
+        }
+    }
+}
+```
+
+### ASIC_SENSORS
+
+The ASIC_SENSORS table introduces the asic sensors polling configuration when they are available on the platform.
+
+```json
+{
+    "ASIC_SENSORS": {
+        "ASIC_SENSORS_POLLER_INTERVAL": {
+            "interval": "10"
+        },
+        "ASIC_SENSORS_POLLER_STATUS": {
+            "admin_status": "enable"
         }
     }
 }
