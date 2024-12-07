@@ -29,7 +29,7 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 
 [program:redis-chassis]
-command=/bin/bash -c "{ [[ -s /var/lib/redis_chassis/dump.rdb ]] || rm -f /var/lib/redis_chassis/dump.rdb; } && mkdir -p /var/lib/redis_chassis && exec /usr/bin/redis-server /etc/redis/redis.conf --bind redis_chassis.server --port 6380 --unixsocket /var/run/redis/redis_chassis.sock --pidfile /var/run/redis/redis_chassis.pid --dir /var/lib/redis_chassis"
+command=/bin/bash -c "{ [[ -s /var/lib/redis_chassis/dump.rdb ]] || rm -f /var/lib/redis_chassis/dump.rdb; } && mkdir -p /var/lib/redis_chassis && exec /usr/bin/redis-server /etc/redis/redis.conf --bind redis_chassis.server --port 6380 --protected-mode no --unixsocket /var/run/redis/redis_chassis.sock --pidfile /var/run/redis/redis_chassis.pid --dir /var/lib/redis_chassis"
 priority=3
 autostart=false
 autorestart=false
