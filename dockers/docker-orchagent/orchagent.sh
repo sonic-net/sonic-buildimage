@@ -30,7 +30,10 @@ fi
 
 # Set synchronous mode if it is enabled in CONFIG_DB
 SYNC_MODE=$(echo $SWSS_VARS | jq -r '.synchronous_mode')
-if [ "$SYNC_MODE" == "enable" ]; then
+DEVICE_TYPE=$(echo $SWSS_VARS | jq -r '.type')
+if [ "$DEVICE_TYPE" == "SonicDpu" ]; then
+    ORCHAGENT_ARGS+="-z zmq_sync "
+elif [ "$SYNC_MODE" == "enable" ]; then
     ORCHAGENT_ARGS+="-s "
 fi
 
