@@ -41,6 +41,12 @@ module sonic-flex_counter {
                 }
             }
 
+            typedef bulk_chunk_size {
+                type uint32 {
+                    range 1..4294967295;
+                }
+            }
+
             description "FLEX_COUNTER_TABLE part of config_db.json";
 
             /* below are in alphabetical order */
@@ -102,6 +108,9 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
             }
 
             container PG_WATERMARK {
@@ -115,6 +124,9 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
             }
 
             container PORT {
@@ -127,6 +139,9 @@ module sonic-flex_counter {
                 }
                 leaf POLL_INTERVAL {
                     type poll_interval;
+                }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
                 }
             }
 
@@ -151,6 +166,9 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
             }
 
             container QUEUE {
@@ -164,6 +182,9 @@ module sonic-flex_counter {
                 leaf POLL_INTERVAL {
                     type poll_interval;
                 }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
+                }
             }
 
             container QUEUE_WATERMARK {
@@ -176,6 +197,9 @@ module sonic-flex_counter {
                 }
                 leaf POLL_INTERVAL {
                     type poll_interval;
+                }
+                leaf BULK_CHUNK_SIZE {
+                    type bulk_chunk_size;
                 }
             }
 
