@@ -65,6 +65,7 @@ Table of Contents
          * [Port](#port)
          * [Port Channel](#port-channel)
          * [Portchannel member](#portchannel-member)
+         * [PoE Port](#poe-port)
          * [Scheduler](#scheduler)
          * [Port QoS Map](#port-qos-map)
          * [Queue](#queue)
@@ -2017,6 +2018,24 @@ name as object key and member list as attribute.
 }
 
 ```
+
+### PoE Port
+
+This table stores PoE port configuration. The interface name
+is used as the key.
+
+```
+{
+  "POE_PORT": {
+    "Ethernet0": {
+      "enabled": "enable",
+      "pwr_limit": "50.0",
+      "priority": "high"
+    }
+  }
+}
+```
+
 ### Scheduler
 
 ```
