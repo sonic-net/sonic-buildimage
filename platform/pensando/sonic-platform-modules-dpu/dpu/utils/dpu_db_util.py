@@ -1,0 +1,926 @@
+#!/usr/bin/env python3
+# {C} Copyright 2023 AMD Systems Inc. All rights reserved
+#############################################################################
+# Pensando
+#############################################################################
+
+import sys
+import signal
+import subprocess
+import threading
+import time
+from datetime import datetime
+import json
+import docker
+import redis
+import syslog
+from sonic_py_common import daemon_base, logger, syslogger
+from swsscommon.swsscommon import SonicV2Connector
+from sonic_py_common.task_base import ProcessTaskBase
+import grpc
+from google.protobuf.empty_pb2 import Empty
+
+SYSLOG_IDENTIFIER = 'dpu-db-utild'
+logger_instance = syslogger.SysLogger(SYSLOG_IDENTIFIER)
+
+def log_info(msg, also_print_to_console=False):
+    logger_instance.log_info(msg, also_print_to_console)
+
+def log_err(msg, also_print_to_console=False):
+    logger_instance.log_error(msg, also_print_to_console)
+
+try:
+    from health_checker.manager import HealthCheckerManager
+    from sonic_py_common import daemon_base
+    import sonic_platform
+    from sonic_platform.chassis import Chassis
+    from sonic_platform.helper import APIHelper
+    from pathlib import Path
+    grpc_files_path = (str(Path(sonic_platform.__file__).parent.absolute()))
+    if grpc_files_path not in sys.path:
+        sys.path.append(grpc_files_path)
+    from sonic_platform import oper_pb2, oper_pb2_grpc, system_pb2, system_pb2_grpc
+except Exception as e:
+    log_err(f'failed to load modules due to {e}')
+
+DPU_HEALTH_INFO_TABLE_NAME = 'DPU_STATE'
+SYSTEM_HEALTH_INFO_TABLE_NAME = 'SYSTEM_HEALTH_INFO'
+REBOOT_CAUSE_INFO_TABLE_NAME = 'REBOOT_CAUSE'
+VERSION_UPDATE_TABLE_NAME = 'PLATFORM|VERSION|CURRENT'
+TEMPERATURE_INFO_TABLE_NAME = 'TEMPERATURE_INFO'
+VOLTAGE_INFO_TABLE_NAME = 'VOLTAGE_INFO'
+CURRENT_INFO_TABLE_NAME = 'CURRENT_INFO'
+REDIS_CHASSIS_SERVER_PORT = 6380
+REDIS_CHASSIS_SERVER_IP = '169.254.200.254'
+CHASSIS_STATE_DB = 13
+LOCALHOST = "127.0.0.1"
+EVENT_PORT = 11360
+PDS_PORT = 11357
+NOT_AVAILABLE = 'N/A'
+ERR_UNKNOWN = 1
+SIGNALS_TO_NAMES_DICT = dict((getattr(signal, n), n) for n in dir(signal) if n.startswith('SIG') and '_' not in n)
+
+# operd event functions
+g_count = 0
+CRITICAL_EVENTS = [
+    2, 4, 6, 7, 11, 12, 15, 16, 17, 18, 19, 20, 4001, 4002
+]
+NETWORK_EVENTS = [
+    1001,   # "Port link is up"
+    1002    # "Port link is down"
+]
+
+# process handler
+
+def get_slot_id(chassis):
+        try:
+            if chassis == None:
+                chassis = Chassis()
+            slot = chassis.get_my_slot()
+        except Exception as e:
+            log_err("failed to fetch chassis slot id due to {e}")
+            slot = -1
+        slot_id = str(slot) if slot != -1 else 'UNDEFINED'
+        return slot_id
+
+exit_code = ERR_UNKNOWN
+
+#
+# SensorDBUpdater  ======================================================================
+#
+
+class SensorDBUpdater(logger.Logger):
+
+    def __init__(self, chassis, db, task_stopping_event):
+        """
+        Initializer of SensorDBUpdater
+        :param chassis: Object representing a platform chassis
+        """
+        super(SensorDBUpdater, self).__init__(SYSLOG_IDENTIFIER)
+
+        self.task_stopping_event = task_stopping_event
+        self.db = db
+        self.chassis = chassis
+        self.slot_id = get_slot_id(self.chassis)
+        self.tempeature_table = f'{TEMPERATURE_INFO_TABLE_NAME}|DPU{self.slot_id}_LTC3888_'
+        self.voltage_table = f'{VOLTAGE_INFO_TABLE_NAME}|DPU{self.slot_id}_LTC3888_'
+        self.current_table = f'{CURRENT_INFO_TABLE_NAME}|DPU{self.slot_id}_LTC3888_'
+        self.delete_table_entries()
+
+    def delete_table_entries(self):
+        try:
+            if self.db:
+                self.db.delete(self.tempeature_table+'*')
+                self.db.delete(self.voltage_table+'*')
+                self.db.delete(self.current_table+'*')
+        except Exception as e:
+            log_err(f'failed to delete dpu sensor table entries due to {e}')
+
+    def __del__(self):
+        self.delete_table_entries()
+
+    def deinit(self):
+        """
+        Deinitializer of SensorDBUpdater
+        :return:
+        """
+        self.delete_table_entries()
+
+    def update(self):
+        """
+        Update all sensor information to database
+        :return:
+        """
+        if self.task_stopping_event.is_set():
+            return
+
+        try:
+            channel_addr = "{}:{}".format(LOCALHOST,str(PDS_PORT))
+            channel = grpc.insecure_channel(channel_addr)
+            stub = system_pb2_grpc.SystemSvcStub(channel)
+            resp = stub.SystemGet(Empty())
+            sensor_stats = resp.PMBusSensorStatus
+            self._refresh_system_sensor_db_status(sensor_stats)
+        except Exception as e:
+            log_err(f'failed to fetch sensor data due to {e}')
+
+    def _refresh_current_db_status(self, sensor_id, value, max_value, min_value):
+        try:
+            if self.db == None:
+                return
+            fvslist = [
+                ("critical_high_threshold", NOT_AVAILABLE),
+                ("critical_low_threshold", NOT_AVAILABLE),
+                ("current", value),
+                ("high_threshold", NOT_AVAILABLE),
+                ("is_replaceable", "False"),
+                ("low_threshold", NOT_AVAILABLE),
+                ("maximum_current", max_value),
+                ("minimum_current", min_value),
+                ("timestamp", datetime.now().strftime('%Y%m%d %H:%M:%S')),
+                ("unit", "mA"),
+                ("warning_status", NOT_AVAILABLE)
+            ]
+            for name, value in fvslist:
+                self.db.hset(self.current_table + str(sensor_id), name, value)
+        except Exception as e:
+            log_err(f'failed to update current info due to {e}')
+
+    def _refresh_temperature_db_status(self, sensor_id, value, max_value, min_value):
+        try:
+            if self.db == None:
+                return
+            fvslist = [
+                ("critical_high_threshold", NOT_AVAILABLE),
+                ("critical_low_threshold", NOT_AVAILABLE),
+                ("high_threshold", NOT_AVAILABLE),
+                ("is_replaceable", "False"),
+                ("low_threshold", NOT_AVAILABLE),
+                ("maximum_temperature", max_value),
+                ("minimum_temperature", min_value),
+                ("temperature", value),
+                ("timestamp", datetime.now().strftime('%Y%m%d %H:%M:%S')),
+                ("warning_status", NOT_AVAILABLE)
+            ]
+            for name, value in fvslist:
+                self.db.hset(self.tempeature_table + str(sensor_id), name, value)
+        except Exception as e:
+            log_err(f'failed to update temperature info due to {e}')
+
+    def _refresh_voltage_db_status(self, sensor_id, value, max_value, min_value):
+        try:
+            if self.db == None:
+                return
+            fvslist = [
+                ("critical_high_threshold", NOT_AVAILABLE),
+                ("critical_low_threshold", NOT_AVAILABLE),
+                ("high_threshold", NOT_AVAILABLE),
+                ("is_replaceable", "False"),
+                ("low_threshold", NOT_AVAILABLE),
+                ("maximum_voltage", max_value),
+                ("minimum_voltage", min_value),
+                ("timestamp", datetime.now().strftime('%Y%m%d %H:%M:%S')),
+                ("unit", "mV"),
+                ("voltage", value),
+                ("warning_status", NOT_AVAILABLE)
+            ]
+            for name, value in fvslist:
+                self.db.hset(self.voltage_table + str(sensor_id), name, value)
+        except Exception as e:
+            log_err(f'failed to update voltage info due to {e}')
+
+    def _refresh_system_sensor_db_status(self, stat):
+        try:
+            self.delete_table_entries()
+            for sensor_id, sensor in enumerate(stat):
+                self._refresh_current_db_status(sensor_id+1, sensor.Current, sensor.MaxCurrent, sensor.MinCurrent)
+                self._refresh_voltage_db_status(sensor_id+1, sensor.Voltage, sensor.MaxVoltage, sensor.MinVoltage)
+                self._refresh_temperature_db_status(sensor_id+1, sensor.Temperature, sensor.MaxTemperature, sensor.MinTemperature)
+        except Exception as e:
+            log_err('Failed to update system health values for {} - {}'.format(name, repr(e)))
+
+class EventHandler(logger.Logger):
+
+    def __init__(self, chassis, db):
+        super(EventHandler, self).__init__(SYSLOG_IDENTIFIER)
+
+        # operd attributes
+        self.events = []
+        self.events.extend(CRITICAL_EVENTS)
+        self.events.extend(NETWORK_EVENTS)
+        self.event_thread = None
+        self.event_stop = False
+
+        # dpu state db update related attributes
+        try:
+            self.apiHelper = APIHelper()
+            self.dpu_docker_name = self.apiHelper.get_dpu_docker_container_name()
+        except:
+            log_err('Failed to get dpu docker name')
+        self.db = db
+        self.chassis = chassis
+        slot = get_slot_id(self.chassis)
+        self.slot_id = str(slot) if slot != -1 else 'UNDEFINED'
+        self.table = f'{DPU_HEALTH_INFO_TABLE_NAME}|DPU{self.slot_id}'
+        self._update_dpu_date_plane_db()
+
+    def _log_emerg(self, msg):
+        # syslogger.SysLogger doesn't have LOG_EMERG, hence creating one
+        syslog.openlog(SYSLOG_IDENTIFIER)
+        syslog.syslog(syslog.LOG_EMERG,msg)
+        syslog.closelog()
+
+    def _bool_to_healthd_status(self, status):
+        if status:
+            return "OK"
+        else:
+            return "Not OK"
+
+    def bool_to_link_status(self, status):
+        if status:
+            return "UP"
+        else:
+            return "DOWN"
+
+    def _is_dpu_container_running(self):
+        try:
+            client = docker.from_env()
+            containers = client.containers.list(all=True)
+            dpu_docker_status = False
+            for container in containers:
+                container_name = container.name
+                container_status = container.status
+                if container_name == self.dpu_docker_name:
+                    dpu_docker_status = True if container_status == 'running' else False
+            return dpu_docker_status
+        except Exception as e:
+            log_err(f"failed to fetch dpu docker running status due to {e}")
+            return False
+
+    def _fetch_pdsagent_status(self):
+        try:
+            cmd = "ps -ef | grep 'pdsagent\|pds_dp_app'"
+            output = self.apiHelper.run_docker_cmd(cmd)
+            name = 'pdsagent'
+            pdsagent_status = False
+            if "pdsagent" in output:
+                pdsagent_status = True
+            elif "pds_dp_app" in output:
+                pdsagent_status = True
+                name = 'pds_dp_app'
+            else:
+                pdsagent_status = False
+            return name, pdsagent_status
+        except Exception as e:
+            log_err(f'failed to fetch pdsagent status due to {e}')
+            return 'pdsagent', False
+
+    def _fetch_pciemgrd_status(self):
+        try:
+            cmd = "ps -ef | grep 'pciemgrd'"
+            output = self.apiHelper.run_docker_cmd(cmd)
+            pciemgrd_status = False
+            if "pciemgrd" in output:
+                pciemgrd_status = True
+            else:
+                pciemgrd_status = False
+            return pciemgrd_status
+        except Exception as e:
+            log_err(f'failed to fetch pciemgrd status due to {e}')
+            return False
+
+    def _update_dpu_date_plane_db(self):
+        try:
+            dpu_status = 'DOWN'
+            pdsagent_name, pdsagent_status = self._fetch_pdsagent_status()
+            pciemgrd_status = self._fetch_pciemgrd_status()
+            if pdsagent_status and pciemgrd_status:
+                dpu_status = 'UP'
+            dpu_docker_status = self._is_dpu_container_running()
+            reason = f"DPU container named {self.dpu_docker_name} is{'' if dpu_docker_status else ' not'} running,"
+            reason += f" {pdsagent_name} running : {self._bool_to_healthd_status(pdsagent_status)},"
+            reason += f" pciemgrd running : {self._bool_to_healthd_status(pciemgrd_status)}"
+            fvs_data_plane_data = [
+                ('dpu_data_plane_state', dpu_status),
+                ('dpu_data_plane_time', datetime.now().strftime('%Y%m%d %H:%M:%S')),
+                ('dpu_data_plane_reason', reason)
+            ]
+            for name, value in fvs_data_plane_data:
+                self.db.hset(self.table, name, value)
+        except Exception as e:
+            log_err(f'Failed to init dpu date plane entries due to {e}')
+
+    def _fetch_eth_link_status(self):
+        try:
+            cmd = "/nic/bin/pdsctl show interface --type uplink | grep -i uplink"
+            output = self.apiHelper.run_docker_cmd(cmd)
+            uplinks_info = output.split('\n')
+            num_uplink = int(uplinks_info[-1].split(':')[-1].replace(' ',''))
+            eth_link_reason = []
+            state = True
+            for i in range(num_uplink):
+                uplink_info = uplinks_info[i].split()
+                name = uplink_info[2]
+                admin_status = uplink_info[3]
+                oper_status = uplink_info[4]
+                eth_state = False
+                if admin_status == 'UP' and oper_status == 'UP':
+                    eth_state = True
+                state &= eth_state
+                eth_link_reason.append(f"{name} is {self.bool_to_link_status(eth_state)}")
+            return state, "host-ethlink-status: " + ', '.join(eth_link_reason)
+        except Exception as e:
+            log_err(f'failed to fetch eth uplink status due to {e}')
+            return False, "Failed to fetch host eth link status"
+
+    def _update_dpu_control_plane_db(self):
+        try:
+            control_plane_status = self.db.hget(self.table, 'dpu_control_plane_state')
+            control_plane_reason = self.db.hget(self.table, 'dpu_control_plane_reason')
+            if (control_plane_status == None) or (control_plane_status == 'UP'):
+                control_plane_status = True
+            else:
+                control_plane_status = False
+            all_container_reason = control_plane_reason.replace(', host-ethlink-status:', 'host-ethlink-status:').split('host-ethlink-status:')[0]
+            eth_link_status, eth_link_reason = self._fetch_eth_link_status()
+            if control_plane_status:
+                control_plane_status &= eth_link_status
+            else:
+                if ('All containers are up and running' in control_plane_reason):
+                    control_plane_status = eth_link_status
+
+            control_plane_reason = []
+            if all_container_reason != '':
+                control_plane_reason.append(all_container_reason)
+            control_plane_reason.append(eth_link_reason)
+            fvs_control_plane_data = [
+                ('dpu_control_plane_state', self.bool_to_link_status(control_plane_status)),
+                ('dpu_control_plane_time', datetime.now().strftime('%Y%m%d %H:%M:%S')),
+                ('dpu_control_plane_reason', ', '.join(control_plane_reason))
+            ]
+            for name, value in fvs_control_plane_data:
+                self.db.hset(self.table, name, value)
+        except Exception as e:
+            log_err(f'Failed to populate dpu control plane entries due to {e}')
+
+    def _getGrpcEventMessage(self):
+        while True:
+            if self.event_stop:
+                return
+            grpcmsg = oper_pb2.OperInfoRequest()
+            spec = grpcmsg.Request.add()
+            spec.InfoType = oper_pb2.OPER_INFO_TYPE_EVENT
+            spec.Action = oper_pb2.OPER_INFO_OP_SUBSCRIBE
+            for event in self.events:
+                spec.EventFilter.Types.append(event)
+            yield grpcmsg
+
+    def _process_event(self, event):
+        global g_count
+
+        try:
+            event_type = event.EventInfo.Type
+            event_description = event.EventInfo.Description
+            event_message = event.EventInfo.Message
+        except Exception as e:
+            log_err(f"Failed to process event due to {e}")
+            return
+
+        try:
+            if event_type in CRITICAL_EVENTS:
+                # log event
+                g_count += 1
+                self._log_emerg(f"Event # {g_count} Time -> {time.asctime()}")
+                self._log_emerg(f"Received event {event}")
+
+                # update dpu state db for data plane
+                if self.db == None:
+                    return
+                dpu_data_plane_status = 'DOWN'
+                dpu_data_plane_reason = event_description
+                fvs_data_plane_data = [
+                    ('dpu_data_plane_state', dpu_data_plane_status),
+                    ('dpu_data_plane_time', datetime.now().strftime('%Y%m%d %H:%M:%S')),
+                    ('dpu_data_plane_reason', dpu_data_plane_reason)
+                ]
+                for name, value in fvs_data_plane_data:
+                    self.db.hset(self.table, name, value)
+        except Exception as e:
+            log_err(f"Failed to update dpu state db data plane fields due to {e}")
+
+        try:
+            if event_type in NETWORK_EVENTS:
+                # log event
+                g_count += 1
+                log_info(f"Event # {g_count} Time -> {time.asctime()}")
+                log_info(f"Received event {event}")
+
+                # update dpu state db for control plane
+                if self.db == None:
+                    return
+                self._update_dpu_control_plane_db()
+        except Exception as e:
+            log_err(f"Failed to update dpu state db control plane fields due to {e}")
+
+    def _event_listener(self):
+        channel_addr = "{}:{}".format(LOCALHOST,str(EVENT_PORT))
+        channel = grpc.insecure_channel(channel_addr)
+        stub = oper_pb2_grpc.OperSvcStub(channel)
+        resp = stub.OperInfoSubscribe(self._getGrpcEventMessage())
+        time.sleep(1)
+        for event in resp:
+            self._process_event(event)
+
+    def start(self):
+        # spawn operd listener thread
+        self.event_stop = False
+        if (self.event_thread == None) or (not self.event_thread.is_alive()):
+            self.event_thread = threading.Thread(target=self._event_listener)
+            self.event_thread.daemon = True
+            self.event_thread.start()
+
+    def stop(self):
+        self.log_warning("Stopping event listener thread")
+        self.event_stop = True
+        if self.event_thread is not None:
+            self.event_thread.join()
+            self.event_thread = None
+
+class SystemHealthDBUpdater(logger.Logger):
+
+    def __init__(self, chassis, db, task_stopping_event):
+        """
+        Initializer of SystemHealthDBUpdater
+        :param chassis: Object representing a platform chassis
+        """
+        super(SystemHealthDBUpdater, self).__init__(SYSLOG_IDENTIFIER)
+
+        self.task_stopping_event = task_stopping_event
+        self.db = db
+        self.chassis = chassis
+        self.slot_id = get_slot_id(self.chassis)
+        self.table = f'{SYSTEM_HEALTH_INFO_TABLE_NAME}|DPU{self.slot_id}'
+
+    def _fetch_monitor_list(self):
+        try:
+            if self.chassis == None:
+                self.chassis = Chassis()
+            manager = HealthCheckerManager()
+            manager.config.load_config()
+            stats = manager.check(self.chassis)
+            ignore_stats = {}
+            if manager.config.ignore_services:
+                for element in manager.config.ignore_services:
+                    ignore_stat = {}
+                    ignore_stat["type"] = "Service"
+                    ignore_stat["message"] = ""
+                    ignore_stat["status"] = "Ignored"
+                    ignore_stats[element] = ignore_stat
+            if manager.config.ignore_devices:
+                for element in manager.config.ignore_devices:
+                    ignore_stat = {}
+                    ignore_stat["type"] = "Device"
+                    ignore_stat["message"] = ""
+                    ignore_stat["status"] = "Ignored"
+                    ignore_stats[element] = ignore_stat
+            return stats, ignore_stats
+        except:
+            log_err('failed to fetch sonic host health check status')
+            return None
+
+    def delete_table_entries(self):
+        try:
+            if self.db:
+                self.db.delete(self.table)
+        except Exception as e:
+            log_err(f'failed to delete dpu health table entries due to {e}')
+
+    def __del__(self):
+        self.delete_table_entries()
+
+    def deinit(self):
+        """
+        Deinitializer of SystemHealthDBUpdater
+        :return:
+        """
+        self.delete_table_entries()
+
+    def update(self):
+        """
+        Update all system health information to database
+        :return:
+        """
+        if self.task_stopping_event.is_set():
+            return
+
+        try:
+            if self.db == None:
+                return
+            stat, ignore_stats = self._fetch_monitor_list()
+            if stat == None:
+                raise Exception("Failed to fetch monitor list")
+            self._refresh_system_health_db_status(stat, ignore_stats)
+        except Exception as e:
+            log_err(f'failed to fetch health data due to {e}')
+
+    def _refresh_system_health_db_status(self, stat, ignore_stats):
+        name = NOT_AVAILABLE
+        fvslist = []
+        try:
+            if self.db == None:
+                return
+            self.delete_table_entries()
+            self.db.hset(self.table, "stat", json.dumps(stat))
+            self.db.hset(self.table, 'system_status_LED', self.chassis.get_status_led())
+            self.db.hset(self.table, "ignore_stat", json.dumps(ignore_stats))
+        except Exception as e:
+            log_err('Failed to update system health values for {} - {}'.format(name, repr(e)))
+
+class RebootCauseUpdater():
+    def __init__(self, chassis, db):
+        self.db = db
+        self.chassis = chassis
+        self.slot_id = get_slot_id(self.chassis)
+        self.table_pattern = f'{REBOOT_CAUSE_INFO_TABLE_NAME}|DPU{self.slot_id}|'
+
+    def delete_table_entries(self):
+        try:
+            if self.db:
+                reboot_cause_tables = self.db.keys(REBOOT_CAUSE_INFO_TABLE_NAME+'*')
+                reboot_cause_tables = [key for key in reboot_cause_tables if f"DPU{self.slot_id}" in key]
+                for table in reboot_cause_tables:
+                    self.db.delete(table)
+        except Exception as e:
+            log_err(f'failed to delete reboot cause table entries due to {e}')
+
+    def _fetch_reboot_cause_list(self):
+        try:
+            REBOOT_CAUSE_TABLE_NAME = "REBOOT_CAUSE"
+            TABLE_NAME_SEPARATOR = '|'
+            db = SonicV2Connector(host='127.0.0.1')
+            db.connect(db.STATE_DB, False)
+            prefix = REBOOT_CAUSE_TABLE_NAME + TABLE_NAME_SEPARATOR
+            _hash = '{}{}'.format(prefix, '*')
+            table_keys = db.keys(db.STATE_DB, _hash)
+            reboot_causes = []
+            if table_keys is not None:
+                table_keys.sort(reverse=True)
+                table = []
+                for tk in table_keys:
+                    entry = db.get_all(db.STATE_DB, tk)
+                    name = tk.replace(prefix, "")
+                    cause = entry['cause'] if 'cause' in entry else ""
+                    time = entry['time'] if 'time' in entry else ""
+                    user = entry['user'] if 'user' in entry else ""
+                    comment = entry['comment'] if 'comment' in entry else ""
+                    reboot_causes.append(
+                        [name, cause, comment, time, user]
+                    )
+                return reboot_causes
+            else:
+                log_info("Reboot-cause history is not yet available in StateDB")
+                return []
+        except Exception as e:
+            log_err(f"Failed to fetch reboot cause list due to {e}")
+            return []
+
+    def update(self):
+        log_info("Start reboot cause list updating")
+        try:
+            stat = self._fetch_reboot_cause_list()
+            if stat == None:
+                raise Exception("Failed to fetch reboot cause list")
+            self._refresh_reboot_cause_db(stat)
+        except Exception as e:
+            log_err(f'failed to fetch reboot cause data due to {e}')
+        log_info("End reboot cause list updating")
+
+    def _refresh_reboot_cause_db(self, stat):
+        name = NOT_AVAILABLE
+        try:
+            if self.db == None:
+                return
+            self.delete_table_entries()
+            if len(stat) > 10:
+                stat = stat[:10]
+            for entry in stat:
+                table_name = f"{self.table_pattern}{entry[0]}"
+                self.db.hset(table_name, 'cause', entry[1])
+                self.db.hset(table_name, 'comment', entry[2])
+                self.db.hset(table_name, 'device', f"DPU{self.slot_id}")
+                self.db.hset(table_name, 'time', entry[3])
+                self.db.hset(table_name, 'user', entry[4])
+        except Exception as e:
+            log_err('Failed to update system health values for {} - {}'.format(name, repr(e)))
+
+class VersionUpdater():
+    def __init__(self, chassis, db):
+        self.db = db
+        self.chassis = chassis
+        self.slot_id = get_slot_id(self.chassis)
+        self.table = f'{VERSION_UPDATE_TABLE_NAME}|DPU{self.slot_id}|1'
+        try:
+            self.apiHelper = APIHelper()
+            self.dpu_docker_name = self.apiHelper.get_dpu_docker_container_name()
+        except:
+            log_err('Failed to get dpu docker name')
+
+    def delete_table_version_entries(self):
+        try:
+            if self.db:
+                sonic_version_info_table = self.db.keys(self.table)
+                if len(sonic_version_info_table) == 1:
+                    table = sonic_version_info_table[0]
+                    self.db.delete(table)
+        except Exception as e:
+            log_err(f'failed to delete fetch sonic version entries due to {e}')
+
+    def _fetch_version_info(self):
+        try:
+            from sonic_installer.bootloader import get_bootloader
+            bootloader = get_bootloader()
+            curimage = bootloader.get_current_image()
+            curimage = curimage.split('-')[-1]
+            fwupdate_version_list = []
+            try:
+                cmd = "/nic/tools/fwupdate -l | grep -v 'FATAL' "
+                cmd += "| grep -v 'sh: /dev/mapper: unknown operand'| "
+                cmd += "grep -v 'standard metadata magic not found'"
+                output = self.apiHelper.run_docker_cmd(cmd)
+                fw_version_data = json.loads(output)
+                try:
+                    fwupdate_version_list.append(fw_version_data['mainfwa']['system_image']['software_version'])
+                except:
+                    fwupdate_version_list.append(NOT_AVAILABLE)
+                try:
+                    fwupdate_version_list.append(fw_version_data['mainfwa']['uboot']['software_version'])
+                except:
+                    fwupdate_version_list.append(NOT_AVAILABLE)
+                try:
+                    fwupdate_version_list.append(fw_version_data['goldfw']['kernel_fit']['software_version'])
+                except:
+                    fwupdate_version_list.append(NOT_AVAILABLE)
+                try:
+                    fwupdate_version_list.append(fw_version_data['goldfw']['uboot']['software_version'])
+                except:
+                    fwupdate_version_list.append(NOT_AVAILABLE)
+            except Exception as e:
+                log_err(f"Failed to fetch mainfwa/goldfw version info due to {e}")
+                fwupdate_version_list = [NOT_AVAILABLE]*4
+            version_info_list = [curimage]
+            version_info_list.extend(fwupdate_version_list)
+            return version_info_list
+        except Exception as e:
+            log_err(f"Failed to fetch sonic version info due to {e}")
+            return [NOT_AVAILABLE]*6
+
+    def update(self):
+        log_info("Start sonic version info updating")
+        try:
+            stat = self._fetch_version_info()
+            if stat == None:
+                raise Exception("Failed to fetch sonic version info")
+            self._refresh_sonic_version_db(stat)
+        except Exception as e:
+            log_err(f'failed to fetch sonic version data due to {e}')
+        log_info("End sonic version info updating")
+
+    def _refresh_sonic_version_db(self, stat):
+        try:
+            if self.db == None:
+                return
+            self.delete_table_version_entries()
+            [current, mainfwa_sw, mainfwa_uboot, goldfw_sw, goldfw_uboot] = stat
+            inventory_value = ""
+            inventory_value += f"dpu_sonic_version_current: {current}"
+            inventory_value += f"\nmainfwa_sw_version: {mainfwa_sw}"
+            inventory_value += f"\ngoldfw_sw_version: {goldfw_sw}"
+            inventory_value += f"\nmainfwa_uboot_version: {mainfwa_uboot}"
+            inventory_value += f"\ngoldfw_uboot_version: {goldfw_uboot}"
+            self.db.set(self.table, inventory_value)
+        except Exception as e:
+            log_err('Failed to update sonic version values - {}'.format(repr(e)))
+
+class DPUHealthMonitor(ProcessTaskBase):
+    # Initial update interval
+    INITIAL_INTERVAL = 5
+
+    # Update interval value
+    UPDATE_INTERVAL = 60
+
+    # Update elapse threshold. If update used time is larger than the value, generate a warning log.
+    UPDATE_ELAPSED_SENSOR_UPDATE_THRESHOLD = 15
+    UPDATE_ELAPSED_SYSTEM_HEALTH_UPDATE_THRESHOLD = 40
+
+    def __init__(self, chassis, db):
+        """
+        Initializer for DPUHealthMonitor
+        :param chassis: Object representing a platform chassis
+        """
+        super(DPUHealthMonitor, self).__init__()
+
+        self.wait_time = self.INITIAL_INTERVAL
+
+        # TODO: Refactor to eliminate the need for this Logger instance
+        self.logger = logger.Logger(SYSLOG_IDENTIFIER)
+
+        # Set minimum logging level to INFO
+        self.logger.set_min_log_priority_info()
+        self.sensor_db_updater = None
+        self.system_health_db_updater = None
+        self.event_handler = None
+        try:
+            self.sensor_db_updater = SensorDBUpdater(chassis, db, self.task_stopping_event)
+        except Exception as e:
+            log_err(f"Failed to init sensor db updater due to {e}")
+        try:
+            self.system_health_db_updater = SystemHealthDBUpdater(chassis, db, self.task_stopping_event)
+            self.system_health_db_updater.delete_table_entries()
+        except Exception as e:
+            log_err(f"Failed to init system health db updater due to {e}")
+        try:
+            self.event_handler = EventHandler(chassis, db)
+        except Exception as e:
+            log_err(f"Failed to init event handler due to {e}")
+
+    def main(self):
+        begin = time.time()
+        try:
+            if self.sensor_db_updater != None:
+                self.sensor_db_updater.update()
+        except Exception as e:
+            log_err(f"failed to call update for sensor_db_updater due to {e}")
+        elapsed = time.time() - begin
+        if elapsed < self.UPDATE_INTERVAL:
+            self.wait_time = self.UPDATE_INTERVAL - elapsed
+        else:
+            self.wait_time = self.INITIAL_INTERVAL
+
+        if elapsed > self.UPDATE_ELAPSED_SENSOR_UPDATE_THRESHOLD:
+            log_err('Update sensor status took {} seconds, '
+                    'there might be performance risk'.format(elapsed))
+
+        # begin = time.time()
+        # try:
+        #     if self.system_health_db_updater != None:
+        #         self.system_health_db_updater.update()
+        # except Exception as e:
+        #     log_err(f"failed to call update for system_health_db_updater due to {e}")
+
+        # elapsed = time.time() - begin
+        # if elapsed < self.UPDATE_INTERVAL:
+        #     self.wait_time = self.UPDATE_INTERVAL - elapsed
+        # else:
+        #     self.wait_time = self.INITIAL_INTERVAL
+
+        # if elapsed > self.UPDATE_ELAPSED_SYSTEM_HEALTH_UPDATE_THRESHOLD:
+        #     log_err('Update system health status took {} seconds, '
+        #             'there might be performance risk'.format(elapsed))
+
+    def task_worker(self):
+        """
+        Thread function to handle sensor status update
+        :return:
+        """
+        log_info("Start dpu health monitoring loop")
+
+        # Start loop to update sensor info in DB periodically
+        while not self.task_stopping_event.wait(self.wait_time):
+            self.main()
+
+        self.sensor_db_updater.deinit()
+        self.system_health_db_updater.deinit()
+        log_info("Stop dpu health monitoring loop")
+
+#
+# Daemon =======================================================================
+#
+class DpuDBUtilDaemon(daemon_base.DaemonBase):
+    # Interval to update CHASSIS_STATE_DB
+    INTERVAL = 60
+
+    def __init__(self):
+        """
+        Initializer of DpuDBUtilDaemon
+        """
+        super(DpuDBUtilDaemon, self).__init__(SYSLOG_IDENTIFIER)
+
+        # Set minimum logging level to INFO
+        self.set_min_log_priority_info()
+
+        self.stop_event = threading.Event()
+
+        self.wait_time = self.INTERVAL
+
+        self.chassis = Chassis()
+        self.db = None
+        try:
+            self.db = redis.Redis(
+                host=REDIS_CHASSIS_SERVER_IP,
+                port=REDIS_CHASSIS_SERVER_PORT,
+                decode_responses=True,
+                db=CHASSIS_STATE_DB)
+            # checking if server is accessible
+            self.db.ping()
+        except Exception as e:
+            self.db = None
+            log_err(f'Failed to connect to db due to {e}')
+            pass
+        if self.db == None:
+            return
+        self.reboot_cause_updater = RebootCauseUpdater(self.chassis, self.db)
+        self.reboot_cause_updater.update()
+        self.version_updater = VersionUpdater(self.chassis, self.db)
+        self.version_updater.update()
+        self.dpu_health_monitor = DPUHealthMonitor(self.chassis, self.db)
+        self.dpu_health_monitor.task_run()
+        self.event_handler = EventHandler(self.chassis, self.db)
+        self.event_handler.start()
+
+    def deinit(self):
+        """
+        Deinitializer of DpuDBUtilDaemon
+        """
+        if self.db == None:
+            return
+        self.dpu_health_monitor.task_stop()
+        self.event_handler.stop()
+
+    # Override signal handler from DaemonBase
+    def signal_handler(self, sig, frame):
+        """
+        Signal handler
+        :param sig: Signal number
+        :param frame: not used
+        :return:
+        """
+        FATAL_SIGNALS = [signal.SIGINT, signal.SIGTERM]
+        NONFATAL_SIGNALS = [signal.SIGHUP]
+
+        global exit_code
+
+        if sig in FATAL_SIGNALS:
+            log_info("Caught signal '{}' - exiting...".format(SIGNALS_TO_NAMES_DICT[sig]))
+            exit_code = 128 + sig  # Make sure we exit with a non-zero code so that supervisor will try to restart us
+            if self.db != None:
+                self.dpu_health_monitor.task_stop()
+                self.event_handler.stop()
+            self.stop_event.set()
+        elif sig in NONFATAL_SIGNALS:
+            log_info("Caught signal '{}' - ignoring...".format(SIGNALS_TO_NAMES_DICT[sig]))
+        else:
+            log_err("Caught unhandled signal '{}' - ignoring...".format(SIGNALS_TO_NAMES_DICT[sig]))
+
+    # Main daemon logic
+    def run(self):
+        """
+        Run main logical of this daemon
+        :return:
+        """
+        if self.db == None:
+            return False
+        if self.stop_event.wait(self.wait_time):
+            # We received a fatal signal
+            return False
+        return True
+
+
+#
+# Main =========================================================================
+#
+def main():
+    dpudbd = DpuDBUtilDaemon()
+
+    dpudbd.log_info("Starting up...")
+
+    while dpudbd.run():
+        pass
+
+    dpudbd.log_info("Shutting down DpuDBUtilDaemon with exit code {}...".format(exit_code))
+
+    dpudbd.deinit()
+    return exit_code
+
+
+if __name__ == '__main__':
+    sys.exit(main())
