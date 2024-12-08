@@ -1,0 +1,10 @@
+
+MPATH       := $($(CLS_DX010_PLATFORM_MODULE)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/platform-modules-cls.mk platform/broadcom/platform-modules-cls.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(MPATH))
+
+$(CLS_DX010_PLATFORM_MODULE)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(CLS_DX010_PLATFORM_MODULE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(CLS_DX010_PLATFORM_MODULE)_DEP_FILES   := $(DEP_FILES)
+
