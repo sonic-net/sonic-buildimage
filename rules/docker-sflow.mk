@@ -19,13 +19,13 @@ $(DOCKER_SFLOW)_PACKAGE_NAME = sflow
 $(DOCKER_SFLOW)_WARM_SHUTDOWN_BEFORE = swss
 $(DOCKER_SFLOW)_FAST_SHUTDOWN_BEFORE = swss
 
+ifeq ($(INCLUDE_SFLOW), y)
+# build and install sflow docker image
 SONIC_DOCKER_IMAGES += $(DOCKER_SFLOW)
-ifeq ($(INCLUDE_SFLOW), y)
 SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_SFLOW)
-endif
 
+# build and install sflow debug docker image
 SONIC_DOCKER_DBG_IMAGES += $(DOCKER_SFLOW_DBG)
-ifeq ($(INCLUDE_SFLOW), y)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_SFLOW_DBG)
 endif
 
