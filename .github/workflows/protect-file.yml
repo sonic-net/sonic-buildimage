@@ -1,0 +1,37 @@
+name: Protect certain files to avoid further changes
+
+on:
+  push:
+    branches:
+      - 'master'
+      - '202[2-9][0-9][0-9]'
+  pull_request:
+    branches:
+      - 'master'
+      - '202[2-9][0-9][0-9]'
+
+jobs:
+  check-file:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Fetch base branch
+        run: |
+          git fetch origin ${GITHUB_BASE_REF}
+
+      - name: Check protected files
+        run: |
+          echo "Starting file check step"
+          protected_files=('src/sonic-config-engine/minigraph.py' 'files/build_templates/init_cfg.json.j2')
+          base_branch=$(git rev-parse origin/${GITHUB_BASE_REF})
+          
+          for protected_file in "${protected_files[@]}"; do
+            echo "Checking ${protected_file}"
+            if git diff --name-only $base_branch | grep -q "^${protected_file}\$"; then
+              echo "Error: You are trying to modify ${protected_file}, which is protected."
+              exit 1
+            fi
+          done
+          echo "No changes detected in protected files"
