@@ -1,7 +1,7 @@
-From 5a7bf8934772b94a2414f54cb3e343d0d1d81efd Mon Sep 17 00:00:00 2001
-From: keboliu <kebol@mellanox.com>
-Date: Fri, 15 Jan 2021 14:41:16 +0800
-Subject: [PATCH 1/3] Make SONiC determine-reboot-cause service start after
+From e588b87a2e80de284ea6e63563e27684acb2f56e Mon Sep 17 00:00:00 2001
+From: davidza <davidza@nvidia.com>
+Date: Tue, 15 Oct 2024 09:44:05 +0300
+Subject: [PATCH 1/3] Make SONiC determine-reboot-cause service start after 
  hw-mgmt service
 
 Signed-off-by: Kebo Liu <kebol@nvidia.com>
@@ -10,17 +10,17 @@ Signed-off-by: Kebo Liu <kebol@nvidia.com>
  1 file changed, 1 insertion(+)
 
 diff --git a/debian/hw-management.hw-management.service b/debian/hw-management.hw-management.service
-index 8bdcaef5..1c25ffb2 100755
+index 4bc1780e..1a50dc3c 100755
 --- a/debian/hw-management.hw-management.service
 +++ b/debian/hw-management.hw-management.service
-@@ -1,6 +1,7 @@
- [Unit]
+@@ -2,6 +2,7 @@
  Description=Chassis HW management service of Mellanox systems
  Documentation=man:hw-management.service(8)
+ Wants=hw-management-sync.service
 +Before=determine-reboot-cause.service
  
  [Service]
  Type=oneshot
 -- 
-2.30.2
+2.34.1
 

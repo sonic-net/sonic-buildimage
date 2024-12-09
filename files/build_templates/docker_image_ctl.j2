@@ -73,6 +73,9 @@ function getBootType()
     *SONIC_BOOT_TYPE=fastfast*)
         TYPE='fastfast'
         ;;
+    *SONIC_BOOT_TYPE=express*)
+        TYPE='express'
+        ;;
     *SONIC_BOOT_TYPE=fast*|*fast-reboot*)
         TYPE='fast'
         ;;
@@ -87,7 +90,7 @@ function preStartAction()
 {%- if docker_container_name == "database" %}
     WARM_DIR=/host/warmboot
     if [ "$DATABASE_TYPE" != "chassisdb" ]; then
-        if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "fast")  && -f $WARM_DIR/dump.rdb ]]; then
+        if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "express" || "$BOOT_TYPE" == "fast")  && -f $WARM_DIR/dump.rdb ]]; then
             # Load redis content from /host/warmboot/dump.rdb
             docker cp $WARM_DIR/dump.rdb database$DEV:/var/lib/redis/dump.rdb
         else
@@ -121,6 +124,12 @@ function setPlatformLagIdBoundaries()
 {
     docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB SET "SYSTEM_LAG_ID_START" "$lag_id_start"
     docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB SET "SYSTEM_LAG_ID_END" "$lag_id_end"
+    docker exec -i ${DOCKERNAME} $SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local start_id = tonumber(ARGV[1])
+    local end_id = tonumber(ARGV[2])
+    for id = start_id,end_id do
+        redis.call('rpush','SYSTEM_LAG_IDS_FREE_LIST', tostring(id))
+    end" 0 $lag_id_start $lag_id_end
 }
 function waitForAllInstanceDatabaseConfigJsonFilesReady()
 {
@@ -229,7 +238,7 @@ function postStartAction()
           sleep 1;
         done
 
-        if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "fast") && -f $WARM_DIR/dump.rdb ]]; then
+        if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "express" || "$BOOT_TYPE" == "fast") && -f $WARM_DIR/dump.rdb ]]; then
             # retain the dump file from last boot for debugging purposes
             mv $WARM_DIR/dump.rdb $WARM_DIR/dump.rdb.old
         else
@@ -286,6 +295,8 @@ function postStartAction()
         fi
 
         # Add redis UDS to the redis group and give read/write access to the group
+        REDIS_BMP_SOCK="/var/run/redis/redis_bmp.sock"
+        chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
         REDIS_SOCK="/var/run/redis${DEV}/redis.sock"
     else
         until [[ ($(docker exec -i ${DOCKERNAME} pgrep -x -c supervisord) -gt 0) &&
@@ -297,9 +308,7 @@ function postStartAction()
         fi
         REDIS_SOCK="/var/run/redis-chassis/redis_chassis.sock"
     fi
-    REDIS_BMP_SOCK="/var/run/redis/redis_bmp.sock"
     chgrp -f redis $REDIS_SOCK && chmod -f 0760 $REDIS_SOCK
-    chgrp -f redis $REDIS_BMP_SOCK && chmod -f 0760 $REDIS_BMP_SOCK
 {%- elif docker_container_name == "swss" %}
     # Wait until swss container state is Running
     until [[ ($(docker inspect -f {{"'{{.State.Running}}'"}} swss$DEV) == "true") ]]; do
@@ -330,11 +339,6 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
-{%- elif docker_container_name == "eventd" %}
-    export EVENTD_STATE=$(sonic-db-cli -s CONFIG_DB HGET 'FEATURE|eventd' 'state')
-    j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/events_info.json  > /etc/rsyslog.d/host_events.conf
-    j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/syncd_events_info.json  > /etc/rsyslog.d/syncd_events.conf
-    systemctl restart rsyslog
 {%- else %}
     : # nothing
 {%- endif %}
@@ -437,6 +441,10 @@ start() {
         CREATE_ONLY_CONFIG_DB_BUFFERS_JSON="$HWSKU_FOLDER/create_only_config_db_buffers.json"
         if [ -f "$CREATE_ONLY_CONFIG_DB_BUFFERS_JSON" ]; then
             $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' create_only_config_db_buffers true
+        fi
+        SUPPORTING_BULK_COUNTER_GROUPS="$HWSKU_FOLDER/supporting_bulk_counter_groups"
+        if [ -f "$SUPPORTING_BULK_COUNTER_GROUPS" ]; then
+            $SONIC_DB_CLI CONFIG_DB HSET 'DEVICE_METADATA|localhost' supporting_bulk_counter_groups@ $(cat $SUPPORTING_BULK_COUNTER_GROUPS)
         fi
     fi
     {%- endif %}
@@ -625,6 +633,7 @@ start() {
 {%- endif %}
         -e RUNTIME_OWNER=local \
         --uts=host \{# W/A: this should be set per-docker, for those dockers which really need host's UTS namespace #}
+	--tmpfs /var/log/supervisor:rw \
 {%- if install_debug_image == "y" %}
         -v /src:/src:ro -v /debug:/debug:rw \
 {%- endif %}

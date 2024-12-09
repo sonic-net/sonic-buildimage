@@ -145,6 +145,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libjson-c-dev \
         libsystemd-dev \
         libcmocka-dev \
+        libprotobuf-c-dev \
+        protobuf-c-compiler \
 #{%- if CROSS_BUILD_ENVIRON != "y" %}
         python3-all-dev \
         python3-all-dbg \
@@ -281,6 +283,10 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libbsd-dev \
         pkg-config \
         check \
+# For bmp
+        librdkafka-dev \
+        libyaml-cpp-dev \
+        libsasl2-dev \
 # For mpdecimal
         docutils-common \
         libjs-sphinxdoc \
@@ -481,6 +487,14 @@ RUN eatmydata apt-get install -y \
         python3-ply \
         python3-scapy \
         python3-thrift
+{%- endif %}
+
+{%- if CONFIGURED_ARCH == "amd64" %}
+# Upgrade CMAKE version
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh
+RUN chmod +x cmake-3.27.6-linux-x86_64.sh
+RUN sudo ./cmake-3.27.6-linux-x86_64.sh --skip-license --prefix=/usr
+RUN sudo apt-get update -y
 {%- endif %}
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
