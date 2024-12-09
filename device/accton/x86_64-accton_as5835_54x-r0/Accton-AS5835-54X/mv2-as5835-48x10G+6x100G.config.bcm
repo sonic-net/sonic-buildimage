@@ -241,6 +241,9 @@ phy_chain_tx_polarity_flip_physical{36.0}=0x0
 
 #FC9
 dport_map_port_27=49
+dport_map_port_28=52
+dport_map_port_29=53
+dport_map_port_30=54
 portmap_27=37:100:4
 phy_chain_rx_lane_map_physical{37.0}=0x2130
 phy_chain_rx_lane_map_physical{38.0}=0x2130
