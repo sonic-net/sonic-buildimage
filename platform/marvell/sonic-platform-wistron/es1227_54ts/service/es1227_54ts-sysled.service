@@ -1,0 +1,15 @@
+[Unit]
+Description=Platform es1227_54ts system LED Service
+After=pmon.service es1227_54ts-init.service
+DefaultDependencies=no
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/sysled_health.py
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGKILL
+SuccessExitStatus=SIGKILL
+#StandardOutput=tty
+
+[Install]
+WantedBy=multi-user.target
