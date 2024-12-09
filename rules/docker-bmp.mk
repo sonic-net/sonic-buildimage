@@ -9,8 +9,7 @@ $(DOCKER_BMP)_PATH = $(DOCKERS_PATH)/$(DOCKER_BMP_STEM)
 $(DOCKER_BMP)_DEPENDS += $(LIBSWSSCOMMON) \
                          $(SONIC_BMPD)
 
-$(DOCKER_BMP)_INSTALL_PYTHON_WHEELS = $(SONIC_BMPCFGD) \
-                                      $(SONIC_UTILITIES_PY3)
+$(DOCKER_BMP)_PYTHON_WHEELS = $(SONIC_BMPCFGD)
 $(DOCKER_BMP)_INSTALL_DEBS = $(LIBSWSSCOMMON) \
                              $(SONIC_BMPD) \
                              $(PYTHON3_SWSSCOMMON) \

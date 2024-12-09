@@ -2782,6 +2782,13 @@
                 "motd": "Some message of the day",
                 "logout": "Some logout message"
             }
+        },
+        "MEMORY_STATISTICS": {
+            "memory_statistics": {
+                "enabled": "false",
+                "sampling_interval": "5",
+                "retention_period": "15"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
