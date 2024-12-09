@@ -141,29 +141,17 @@
                 "name": "ASIC"
             },
             {
-                "name": "Ambient COMEX Temp"
-            },
-            {
                 "name": "Ambient Fan Side Temp"
             },
             {
                 "name": "Ambient Port Side Temp"
             },
             {
-                "name": "CPU Core 0 Temp"
-            },
-            {
-                "name": "CPU Core 1 Temp"
-            },
-            {
-                "name": "CPU Core 2 Temp"
-            },
-            {
-                "name": "CPU Core 3 Temp"
-            },
-            {
                 "name": "CPU Pack Temp"
-            }
+            },
+	    {
+		"name": "SODIMM 1 Temp"
+	    }
         ],
         "sfps": [
             {
