@@ -48,10 +48,15 @@ stages:
 
             OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/vs INCLUDE_KUBERNETES_MASTER=n BUILD_MULTIASIC_KVM=y"
             make $OPTIONS target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
+          displayName: Build SONiC image
+        - script: |
+            set -ex
             gzip -kd target/sonic-vs.img.gz
             SONIC_RUN_CMDS="qemu-img convert target/sonic-vs.img -O vhdx -o subformat=dynamic target/sonic-vs.vhdx" make BLDENV=bookworm -f Makefile.work $OPTIONS sonic-slave-run
+            rm target/sonic-vs.img target/*.bin target/*.gz
             gzip target/sonic-vs.vhdx
-          displayName: Build SONiC image
+          displayName: generate vhdx image
+          condition: and(succeeded(), eq(variables.VHDX, true))
         - template: /.pipelines/template-poststeps.yml@self
           parameters:
             PLATFORM_NAME: vs
