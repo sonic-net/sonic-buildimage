@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-06-05-1.08" profile="SAI" dsig="md5" sid="daa51f10-6b7d-424f-ab07-3c51ae064e20">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-09-24-1.09" profile="SAI" sid="b48431f8-351b-4524-babb-1ce99b72cd68">
   <SAIplt:SAI xmlns:SAIplt="urn:marvell:SAI:yang">
     <SAIplt:typedefs>
       <SAIplt:typedef>
@@ -444,6 +444,10 @@
     <SAIplt:Counters>
       <SAIplt:counter-base SAIplt:type="uint32">0</SAIplt:counter-base>
       <SAIplt:router-in-drop-counter SAIplt:type="InDropCounter-type">ROUTE_BLACKHOLE</SAIplt:router-in-drop-counter>
+      <SAIplt:Queue-counter>
+        <SAIplt:queue-pass-drop-counter SAIplt:type="Feature-enable">Disabled</SAIplt:queue-pass-drop-counter>
+        <SAIplt:queue-watermark-counter SAIplt:type="Feature-enable">Disabled</SAIplt:queue-watermark-counter>
+      </SAIplt:Queue-counter>
     </SAIplt:Counters>
     <SAIplt:Logging>
       <SAIplt:log_dest SAIplt:type="logDest-type">SAI_LOG_SYSLOG</SAIplt:log_dest>
