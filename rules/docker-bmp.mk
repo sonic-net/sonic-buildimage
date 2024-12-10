@@ -39,7 +39,7 @@ endif
 $(DOCKER_BMP)_CONTAINER_NAME = bmp
 $(DOCKER_BMP)_RUN_OPT += -t
 $(DOCKER_BMP)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_BMP)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro
+$(DOCKER_BMP)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 $(DOCKER_BMP)_RUN_OPT += -v /var/run/dbus:/var/run/dbus:rw
 
 $(DOCKER_BMP)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
