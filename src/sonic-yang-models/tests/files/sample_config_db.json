@@ -2775,6 +2775,14 @@
                 "grpc_ssl_credential": "azureclient.ms"
             } 
 	},
+        "LOGGING": {
+            "debug": {
+                "disk_percentage": "46.0",
+                "frequency": "daily",
+                "max_number": "100",
+                "size": "20.0"
+            }
+        },
         "BANNER_MESSAGE": {
             "global": {
                 "state": "enabled",
