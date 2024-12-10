@@ -6,20 +6,20 @@ steps:
       # It will breaks init step and breaks build.
       sudo sed -i 's/1/0/' /etc/apt/apt.conf.d/20auto-upgrades
 
-      # # Install Azure cli
-      # curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-      # az login --service-principal --use-cert-sn-issuer -u 08fd13c1-63ab-4b08-9007-f4ff86b61248 -p /usr/local/CloudTest/ProvisioningScript/client_ssl.pem --tenant 72f988bf-86f1-41af-91ab-2d7cd011db47
-      # # Install Azcopy
-      # if [[ $PLATFORM_ARCH == arm* ]]; then
-      #   wget -O- "https://aka.ms/downloadazcopy-v10-linux-arm64" | tar -zxf - --strip-components=1
-      # else
-      #   wget -O- "https://aka.ms/downloadazcopy-v10-linux" | tar -zxf - --strip-components=1
-      # fi
-      # sudo chmod a+x azcopy
-      # sudo mv -f azcopy /usr/local/bin/
-      # azcopy  --version
-      # export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
-      # azcopy list https://sonicstorageinternal.blob.core.windows.net/agent
+      # Install Azure cli
+      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+      az login --service-principal --use-cert-sn-issuer -u 08fd13c1-63ab-4b08-9007-f4ff86b61248 --certificate /usr/local/CloudTest/ProvisioningScript/client_ssl.pem --tenant 72f988bf-86f1-41af-91ab-2d7cd011db47
+      # Install Azcopy
+      if [[ $PLATFORM_ARCH == arm* ]]; then
+        wget -O- "https://aka.ms/downloadazcopy-v10-linux-arm64" | tar -zxf - --strip-components=1
+      else
+        wget -O- "https://aka.ms/downloadazcopy-v10-linux" | tar -zxf - --strip-components=1
+      fi
+      sudo chmod a+x azcopy
+      sudo mv -f azcopy /usr/local/bin/
+      azcopy  --version
+      export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
+      azcopy list https://sonicstorageinternal.blob.core.windows.net/agent
 
       if [[ $PLATFORM_ARCH != arm* ]];then
         sudo pip3 install jinja2==3.0.0

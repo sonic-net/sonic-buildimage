@@ -39,7 +39,7 @@ steps:
         for image in `ls target | grep -E "\.(swi|bin|raw|deb)$"`; do
           version_image=$(echo $image | sed -E "s/(-dbg\.\w+|\.\w+)$/-$SONIC_VERSION\1/")
           echo "$image,$version_image" >> target/sonic-installers
-          cp -f target/$image target/$version_image
+          ln -sf $image target/$version_image
         done
       displayName: "Copy installers"
     - task: ManifestGeneratorTask@0
@@ -51,15 +51,15 @@ steps:
         BuildDropPath: '$(System.DefaultWorkingDirectory)/target/'
         ManifestDirPath: 'target/'
         BuildComponentPath: $(System.DefaultWorkingDirectory)/src/
-    - task: CopyFilesOverSSH@0
-      inputs:
-        sshEndpoint: 'acs-trusty8'
-        sourceFolder: 'target'
-        contents: '**'
-        targetFolder: '$(FOLDER_PATH)/$(Build.BuildId)/target'
-        cleanTargetFolder: true
-        cleanHiddenFilesInTarget: true
-        readyTimeout: '20000'
+    - script: |
+        set -ex
+
+        export AZCOPY_LOG_LOCATION=$(pwd)/azcopy
+        export AZCOPY_AUTO_LOGIN_TYPE=AZCLI
+        PUBLISH_PLATFORM_URL="https://sonicstorageinternal.blob.core.windows.net/images/pipelines/Networking-acs-buildimage-Official/$(BRANCH)/${{ parameters.PLATFORM_NAME }}"
+        PUBLISH_URL="$PUBLISH_PLATFORM_URL/$(Build.BuildId)"
+        azcopy copy target $PUBLISH_URL --recursive=true --put-md5
+      displayName: "Publish to Azure Storage"
     - task: SSH@0
       displayName: "Make soft links for trusty8"
       inputs:
