@@ -2691,6 +2691,13 @@
                 "midplane_interface": "dpu1"
             }
         },
+        "SUBNET_DECAP": {
+            "AZURE": {
+                "status": "enable",
+                "src_ip": "10.10.10.0/24",
+                "src_ip_v6": "20c1:ba8::/64"
+            }
+        },
         "BANNER_MESSAGE": {
             "global": {
                 "state": "enabled",
