@@ -1,7 +1,7 @@
 [
     {
         "tag": "dhcp-relay-discard",
-        "regex": "Discarding packet received on ([a-zA-Z0-9-_]*) interface that has no IPv4 address assigned.",
+        "regex": ".*Discarding packet received on ([a-zA-Z0-9-_]*) interface that has no IPv4 address assigned.",
         "params": [ "ifname" ]
     },
     {
