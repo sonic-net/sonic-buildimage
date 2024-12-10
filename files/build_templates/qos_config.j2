@@ -267,9 +267,7 @@
             "weight": "5"
         }
     },
-{% elif use_qos_cai_config and
-        ('type' in DEVICE_METADATA['localhost'] and
-          DEVICE_METADATA['localhost']['type'] in backend_device_types) %}
+{% elif use_qos_backend_config %}
     "SCHEDULER": {
         "scheduler.0": {
             "type"  : "DWRR",
@@ -449,8 +447,7 @@
             "wred_profile": "AZURE_LOSSLESS"
         }{% if not loop.last %},{% endif %}
 {% endfor %}
-{% elif use_qos_cai_config and 'type' in DEVICE_METADATA['localhost'] and
-       DEVICE_METADATA['localhost']['type'] in backend_device_types %}
+{% elif use_qos_backend_config %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|0": {
             "scheduler": "scheduler.0"
