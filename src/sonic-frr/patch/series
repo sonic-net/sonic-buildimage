@@ -41,3 +41,4 @@
 0059-Fix-BGP-reset-on-suppress-fib-pending-configuration.patch
 0060-bgpd-Validate-both-nexthop-information-NEXTHOP-and-N.patch
 0061-Set-multipath-to-514-and-disable-bgp-vnc-for-optimiz.patch
+0062-zebra-lib-use-internal-rbtree-per-ns.patch
