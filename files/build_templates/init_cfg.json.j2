@@ -91,7 +91,6 @@
     {% do features.append(("eventd","disabled", false, "enabled")) %}
 {%- elif include_system_eventd == "y" %}
     {% do features.append(("eventd", "enabled", false, "enabled")) %}
-{%- if include_stp == "y" %}{% do features.append(("stp", "enabled", false, "enabled")) %}{% endif %}
 {%- endif %}
     "FEATURE": {
 {# delayed field if set, will start the feature systemd .timer unit instead of .service unit #}
