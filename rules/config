@@ -124,6 +124,9 @@ DEFAULT_VS_PREPARE_MEM = yes
 # INCLUDE_SYSTEM_GNMI - build docker-sonic-gnmi for system gnmi support
 INCLUDE_SYSTEM_GNMI = y
 
+# INCLUDE_SYSTEM_BMP - build docker-sonic-bmp for system bmp support
+INCLUDE_SYSTEM_BMP = y
+
 # INCLUDE_SYSTEM_EVENTD - build docker-eventd for system eventd support
 INCLUDE_SYSTEM_EVENTD = y
 
@@ -261,7 +264,7 @@ TRUSTED_GPG_URLS = https://packages.trafficmanager.net/debian/public_key.gpg,htt
 #   web   : web packages, downloaded by wget, curl
 #   git   : git repositories, donloaded by git clone
 #   docker: docker base images
-SONIC_VERSION_CONTROL_COMPONENTS ?= none
+SONIC_VERSION_CONTROL_COMPONENTS ?= deb,py2,py3,web,git,docker
 
 ifeq ($(SONIC_VERSION_CONTROL_COMPONENTS),all)
 override MIRROR_SNAPSHOT = y
@@ -300,7 +303,7 @@ INCLUDE_MUX = y
 ENABLE_ASAN ?= n
 
 # reset default container registry from dockerhub to other
-DEFAULT_CONTAINER_REGISTRY ?=
+DEFAULT_CONTAINER_REGISTRY ?= publicmirror.azurecr.io
 
 # INCLUDE_BOOTCHART - install systemd-bootchart
 INCLUDE_BOOTCHART = y

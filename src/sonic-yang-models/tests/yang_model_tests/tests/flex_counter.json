@@ -7,6 +7,14 @@
         "eStrKey": "Range",
         "eStr": "100..4294967295"
     },
+    "FLEX_COUNTER_TABLE_WITH_VALID_BULK_CHUNK_SIZE": {
+        "desc": "FLEX_COUNTER_TABLE_WITH_VALID_BULK_CHUNK_SIZE no failure."
+    },
+    "FLEX_COUNTER_TABLE_WITH_INVALID_BULK_CHUNK_SIZE": {
+        "desc": "Out of range bulk chunk size.",
+        "eStrKey": "Range",
+        "eStr": "1..4294967295"
+    },
     "FLOW_COUNTER_ROUTE_PATTERN_TABLE_WITH_VRF": {
         "desc": "FLOW_COUNTER_ROUTE_PATTERN_TABLE_WITH_VRF no failure."
     },
