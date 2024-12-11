@@ -33,6 +33,24 @@ EOF
 
         echo "$jq_command"
         eval "$jq_command"
+
+        # Update platform_components.json dynamically
+        platform_components="/usr/share/sonic/device/$platform/platform_components.json"
+        if [ -f "$platform_components" ]; then
+            jq --arg val "$val" '
+            .chassis |= with_entries(
+                .value.component |= with_entries(
+                    if .key | test("^DPU.*-0$") then
+                        .key = (.key | gsub("-0$"; "-\($val)"))
+                    else
+                        .
+                    end
+                )
+            )' "$platform_components" > "${platform_components}.tmp" && mv "${platform_components}.tmp" "$platform_components"
+            echo "Updated platform_components.json with value: $val"
+        else
+            echo "platform_components.json not found, skipping update."
+        fi
     else
         echo "cp /usr/share/sonic/device/$platform/config_db_$pipeline.json /etc/sonic/config_db.json"
         cp /usr/share/sonic/device/$platform/config_db_$pipeline.json /etc/sonic/config_db.json
