@@ -10,7 +10,7 @@
     },
     "SUBNET_DECAP_INVALID_STATUS_TEST": {
         "desc": "Configure SUBNET_DECAP table with invalid status.",
-        "eStrKey": "Pattern"
+        "eStrKey": "InvalidValue"
     },
     "SUBNET_DECAP_INVALID_IPV4": {
         "desc": "Configure SUBNET_DECAP table with invalid src ipv4 prefix.",
@@ -19,5 +19,13 @@
     "SUBNET_DECAP_INVALID_IPV6": {
         "desc": "Configure SUBNET_DECAP table with invalid src ipv6 prefix.",
         "eStrKey": "Pattern"
+    },
+    "SUBNET_DECAP_NO_IPV4": {
+        "desc": "Configure SUBNET_DECAP table without src ipv4 prefix.",
+        "eStrKey": "Mandatory"
+    },
+    "SUBNET_DECAP_NO_IPV6": {
+        "desc": "Configure SUBNET_DECAP table without src ipv6 prefix.",
+        "eStrKey": "Mandatory"
     }
 }

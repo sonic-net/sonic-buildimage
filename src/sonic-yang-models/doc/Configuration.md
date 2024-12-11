@@ -84,6 +84,7 @@
   * [WRED_PROFILE](#wred_profile)
   * [PASSWORD_HARDENING](#password_hardening)
   * [SSH_SERVER](#ssh_server)
+  * [SUBNET_DECAP](#subnet_decap)
   * [SYSTEM_DEFAULTS table](#systemdefaults-table)
   * [RADIUS](#radius)
   * [Static DNS](#static-dns)
@@ -2738,6 +2739,20 @@ The method could be:
     },
     "accounting": {
        "login": "local"
+    }
+}
+```
+
+### SUBNET_DECAP
+
+The **SUBNET_DECAP** table is used for subnet decap configuration.
+
+```
+"SUBNET_DECAP": {
+    "AZURE": {
+        "status": "enable",
+        "src_ip": "10.10.10.0/24",
+        "src_ip_v6": "20c1:ba8::/64"
     }
 }
 ```
