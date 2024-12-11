@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <lkm/lkm.h>
@@ -38,35 +38,25 @@ MODULE_LICENSE("GPL");
 
 #include <bcmgenl.h>
 #include <bcmgenl_psample.h>
-
 #if BCMGENL_PSAMPLE_SUPPORT
+
 #include <net/psample.h>
 #define BCMGENL_PSAMPLE_NAME PSAMPLE_GENL_NAME
 
-/* set BCMGENL_PSAMPLE_CB_DBG for debug info */
-#define BCMGENL_PSAMPLE_CB_DBG
-#ifdef BCMGENL_PSAMPLE_CB_DBG
+#ifdef GENL_DEBUG
 static int debug;
-
-#define DBG_LVL_VERB    0x1
-#define DBG_LVL_PDMP    0x2
-#define BCMGENL_PSAMPLE_DBG_VERB(...) \
-    if (debug & DBG_LVL_VERB) {       \
-        printk(__VA_ARGS__);          \
-    }
-#else
-#define BCMGENL_PSAMPLE_DBG_VERB(...)
-#endif
-
-
+#endif /* GENL_DEBUG */
 
 #define FCS_SZ 4
 
-#define PSAMPLE_NLA_PADDING 4
 #define PSAMPLE_PKT_HANDLED (1)
-
+/* These below need to match incoming enum values */
+#define PSAMPLE_FILTER_TAG_STRIP 0
+#define PSAMPLE_FILTER_TAG_KEEP  1
+#define PSAMPLE_FILTER_TAG_ORIGINAL 2
 #define PSAMPLE_RATE_DFLT 1
 #define PSAMPLE_SIZE_DFLT 128
+
 static int psample_size = PSAMPLE_SIZE_DFLT;
 MODULE_PARAM(psample_size, int, 0);
 MODULE_PARM_DESC(psample_size,
@@ -77,6 +67,23 @@ static int bcmgenl_psample_qlen = BCMGENL_PSAMPLE_QLEN_DFLT;
 MODULE_PARAM(bcmgenl_psample_qlen, int, 0);
 MODULE_PARM_DESC(bcmgenl_psample_qlen, "psample queue length (default 1024 buffers)");
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0))
+static inline void
+bcmgenl_sample_packet(struct psample_group *group, struct sk_buff *skb,
+                      u32 trunc_size, int in_ifindex, int out_ifindex,
+                      u32 sample_rate)
+{
+    struct psample_metadata md = {};
+
+    md.trunc_size = trunc_size;
+    md.in_ifindex = in_ifindex;
+    md.out_ifindex = out_ifindex;
+    psample_sample_packet(group, skb, sample_rate, &md);
+}
+#else
+#define bcmgenl_sample_packet psample_sample_packet
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) */
+
 static bcmgenl_info_t g_bcmgenl_psample_info = {{0}};
 
 /* Maintain sampled pkt statistics */
@@ -85,6 +92,8 @@ typedef struct psample_stats_s {
     unsigned long pkts_f_psample_mod;
     unsigned long pkts_f_handled;
     unsigned long pkts_f_pass_through;
+    unsigned long pkts_f_tag_checked;
+    unsigned long pkts_f_tag_stripped;
     unsigned long pkts_f_dst_mc;
     unsigned long pkts_f_dst_cpu;
     unsigned long pkts_c_qlen_cur;
@@ -100,6 +109,7 @@ typedef struct psample_stats_s {
     unsigned long pkts_d_meta_srcport;
     unsigned long pkts_d_meta_dstport;
     unsigned long pkts_d_invalid_size;
+    unsigned long pkts_d_psample_only;
 } bcmgenl_psample_stats_t;
 static bcmgenl_psample_stats_t g_bcmgenl_psample_stats = {0};
 
@@ -108,15 +118,14 @@ typedef struct psample_meta_s {
     int src_ifindex;
     int dst_ifindex;
     int sample_rate;
+    int sample_type;
 } psample_meta_t;
 
 typedef struct psample_pkt_s {
     struct list_head list;
     psample_meta_t meta;
     struct sk_buff *skb;
-#if IS_ENABLED(CONFIG_PSAMPLE)
     struct psample_group *group;
-#endif /* CONFIG_PSAMPLE */
 } psample_pkt_t;
 
 typedef struct bcmgenl_psample_work_s {
@@ -138,7 +147,7 @@ psample_netif_lookup_by_ifindex(int ifindex)
     bcmgenl_netif_t *bcmgenl_netif = NULL;
     unsigned long flags;
 
-    /* look for port from list of available net_devices */
+    /* look for ifindex from list of available net_devices */
     spin_lock_irqsave(&g_bcmgenl_psample_info.lock, flags);
     list_for_each(list, &g_bcmgenl_psample_info.netif_list) {
         bcmgenl_netif = (bcmgenl_netif_t*)list;
@@ -186,13 +195,13 @@ bcmgenl_psample_meta_get(struct sk_buff *skb, bcmgenl_pkt_t *bcmgenl_pkt, psampl
         return (-1);
     }
     cbd = NGKNET_SKB_CB(skb);
+
     /* get src and dst ports */
     srcport = bcmgenl_pkt->meta.src_port;
     dstport = bcmgenl_pkt->meta.dst_port;
     dstport_type = bcmgenl_pkt->meta.dst_port_type;
-    /* SDKLT-43751: Skip check of dstport on TD4/TH4 */
-    if (srcport == -1) {
-        printk("%s: invalid srcport %d\n", __func__, srcport);
+    if ((srcport == -1) || (dstport == -1)) {
+        GENL_DBG_WARN("%s: invalid srcport %d or dstport %d\n", __func__, srcport, dstport);
         return (-1);
     }
 
@@ -203,27 +212,40 @@ bcmgenl_psample_meta_get(struct sk_buff *skb, bcmgenl_pkt_t *bcmgenl_pkt, psampl
         sample_size = psample_netif->sample_size;
     } else {
         g_bcmgenl_psample_stats.pkts_d_meta_srcport++;
-        BCMGENL_PSAMPLE_DBG_VERB("%s: could not find psample netif for src dev %s (ifidx %d)\n",
-                                 __func__, cbd->net_dev->name, src_ifindex);
+        GENL_DBG_VERB("%s: could not find psample netif for src dev %s (ifidx %d)\n",
+                      __func__, cbd->net_dev->name, src_ifindex);
     }
+
+    /*
+     * Identify these packets uniquely.
+     * 1) Packet forwarded over front panel port   = dst_ifindex
+     * 2) Packet dropped in forwarding and sampled = 0xffff
+     * 3) else CPU destination                     = 0
+     */
 
     /* set generic dst type for MC pkts */
     if (dstport_type == DSTPORT_TYPE_MC) {
         g_bcmgenl_psample_stats.pkts_f_dst_mc++;
-    } else if (dstport != 0) {
+    } else if ((dstport != 0) &&
+               (psample_netif = psample_netif_lookup_by_port(dstport))) {
         /* find dst port netif for UC pkts (no need to lookup CPU port) */
-        if ((psample_netif = psample_netif_lookup_by_port(dstport))) {
-            dst_ifindex = psample_netif->dev->ifindex;
-        } else {
-            dst_ifindex = -1;
-            g_bcmgenl_psample_stats.pkts_d_meta_dstport++;
-            BCMGENL_PSAMPLE_DBG_VERB("%s: could not find dstport(%d)\n", __func__, dstport);
-        }
+        dst_ifindex = psample_netif->dev->ifindex;
+    } else if (bcmgenl_pkt->meta.sample_type != SAMPLE_TYPE_NONE) {
+        dst_ifindex = 0xffff;
+        g_bcmgenl_psample_stats.pkts_d_psample_only++;
     } else if (dstport == 0) {
+        dst_ifindex = 0;
         g_bcmgenl_psample_stats.pkts_f_dst_cpu++;
+    } else {
+        g_bcmgenl_psample_stats.pkts_d_meta_dstport++;
+        GENL_DBG_VERB("%s: could not find dstport(%d)\n", __func__, dstport);
     }
-
-    BCMGENL_PSAMPLE_DBG_VERB
+    GENL_DBG_VERB
+        ("Sample type %s",
+         (bcmgenl_pkt->meta.sample_type == SAMPLE_TYPE_NONE ? "Not sampled" :
+          bcmgenl_pkt->meta.sample_type == SAMPLE_TYPE_INGRESS ?
+          "Ingress sampled" : "Egress sampled"));
+    GENL_DBG_VERB
         ("%s: srcport %d, dstport %d, src_ifindex %d, dst_ifindex %d\n",
          __func__, srcport, dstport, src_ifindex, dst_ifindex);
 
@@ -232,6 +254,7 @@ bcmgenl_psample_meta_get(struct sk_buff *skb, bcmgenl_pkt_t *bcmgenl_pkt, psampl
     sflow_meta->dst_ifindex = dst_ifindex;
     sflow_meta->trunc_size  = sample_size;
     sflow_meta->sample_rate = sample_rate;
+    sflow_meta->sample_type = bcmgenl_pkt->meta.sample_type;
     return (0);
 }
 
@@ -242,27 +265,23 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     const struct ngknet_callback_desc *cbd = NULL;
     ngknet_filter_t *match_filt = NULL;
     psample_meta_t meta;
-    uint8_t *pkt_ptr = NULL;
     bcmgenl_pkt_t bcmgenl_pkt;
+    bool strip_tag = false;
     static uint32_t last_drop, last_alloc, last_skb;
-#if IS_ENABLED(CONFIG_PSAMPLE)
+    uint8_t *pkt;
     struct psample_group *group;
-#endif /* CONFIG_PSAMPLE */
 
     if (!skb) {
-        printk("%s: skb is NULL\n", __func__);
+        GENL_DBG_WARN("%s: skb is NULL\n", __func__);
         g_bcmgenl_psample_stats.pkts_d_skb++;
         return (NULL);
     }
     cbd = NGKNET_SKB_CB(skb);
     match_filt = cbd->filt;
-    /* SDKLT-43751: Get ptr offset to pkt payload to send to genetlink */
-    pkt_ptr = cbd->pmd + cbd->pmd_len;
-    pkt_len = skb->len - cbd->pmd_len;
 
     if (!cbd || !match_filt) {
-        printk("%s: cbd(0x%p) or match_filt(0x%p) is NULL\n",
-            __func__, cbd, match_filt);
+        GENL_DBG_WARN("%s: cbd(0x%p) or match_filt(0x%p) is NULL\n",
+                      __func__, cbd, match_filt);
         g_bcmgenl_psample_stats.pkts_d_skb_cbd++;
         return (skb);
     }
@@ -274,16 +293,26 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
         return (skb);
     }
     dev_no = cbd->dinfo->dev_no;
+    pkt = cbd->pmd + cbd->pmd_len;
+    pkt_len = cbd->pkt_len;
 
-    BCMGENL_PSAMPLE_DBG_VERB
-        ("pkt size %d, match_filt->dest_id %d\n", cbd->pkt_len, match_filt->dest_id);
-    BCMGENL_PSAMPLE_DBG_VERB
+    GENL_DBG_VERB
+        ("pkt size %d, match_filt->dest_id %d\n",
+         pkt_len, match_filt->dest_id);
+    GENL_DBG_VERB
         ("filter user data: 0x%08x\n", *(uint32_t *)match_filt->user_data);
-    BCMGENL_PSAMPLE_DBG_VERB
+    GENL_DBG_VERB
         ("filter_cb for dev %d: %s\n", dev_no, cbd->dinfo->type_str);
     g_bcmgenl_psample_stats.pkts_f_psample_cb++;
 
-#if IS_ENABLED(CONFIG_PSAMPLE)
+    /* Adjust original pkt_len to remove 4B FCS */
+    if (pkt_len < FCS_SZ) {
+        g_bcmgenl_psample_stats.pkts_d_invalid_size++;
+        goto PSAMPLE_FILTER_CB_PKT_HANDLED;
+    } else {
+       pkt_len -= FCS_SZ;
+    }
+
     /* get psample group info. psample genetlink group ID passed in match_filt->dest_id */
     group = psample_group_get(g_bcmgenl_psample_info.netns, match_filt->dest_id);
     if (!group) {
@@ -291,18 +320,17 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
         g_bcmgenl_psample_stats.pkts_d_no_group++;
         goto PSAMPLE_FILTER_CB_PKT_HANDLED;
     }
-#endif /* CONFIG_PSAMPLE */
     /* get packet metadata */
     rv = bcmgenl_pkt_package(dev_no, skb,
                              &g_bcmgenl_psample_info,
                              &bcmgenl_pkt);
     if (rv < 0) {
-        printk("%s: Could not parse pkt metadata\n", __func__);
+        GENL_DBG_WARN("%s: Could not parse pkt metadata\n", __func__);
         g_bcmgenl_psample_stats.pkts_d_metadata++;
         goto PSAMPLE_FILTER_CB_PKT_HANDLED;
     }
 
-    BCMGENL_PSAMPLE_DBG_VERB
+    GENL_DBG_VERB
         ("%s: netns 0x%p, src_port %d, dst_port %d, dst_port_type %x\n",
          __func__,
          bcmgenl_pkt.netns,
@@ -313,32 +341,46 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     /* get psample metadata */
     rv = bcmgenl_psample_meta_get(skb, &bcmgenl_pkt, &meta);
     if (rv < 0) {
-        printk("%s: Could not parse pkt metadata\n", __func__);
+        GENL_DBG_WARN("%s: Could not parse pkt metadata\n", __func__);
         g_bcmgenl_psample_stats.pkts_d_metadata++;
         goto PSAMPLE_FILTER_CB_PKT_HANDLED;
     }
 
-    /* Adjust original pkt pkt_len to remove 4B FCS */
-    if (pkt_len < FCS_SZ) {
-        g_bcmgenl_psample_stats.pkts_d_invalid_size++;
-        goto PSAMPLE_FILTER_CB_PKT_HANDLED;
-    } else {
-       pkt_len -= FCS_SZ;
+    if (pkt_len >= 16) {
+        uint16_t proto = bcmgenl_pkt.meta.proto;
+        uint16_t vlan = bcmgenl_pkt.meta.vlan;
+        strip_tag = (vlan == 0xFFF) &&
+                    ((proto == 0x8100) || (proto == 0x88a8) ||
+                     (proto == 0x9100));
+        if (SAMPLE_TYPE_NONE != bcmgenl_pkt.meta.sample_type &&
+           ((proto == 0x8100) || (proto == 0x88a8) || (proto == 0x9100))) {
+            if (PSAMPLE_FILTER_TAG_ORIGINAL == cbd->filt->user_data[0]) {
+                if (bcmgenl_pkt.meta.tag_status < 0) {
+                    g_bcmgenl_psample_stats.pkts_f_tag_checked++;
+                } else if (bcmgenl_pkt.meta.tag_status < 2){
+                    strip_tag = 1;
+                }
+            } else if (PSAMPLE_FILTER_TAG_STRIP == cbd->filt->user_data[0]) {
+                strip_tag = 1;
+            }
+        }
+        if (strip_tag) {
+            pkt_len -= 4;
+        }
+        g_bcmgenl_psample_stats.pkts_f_tag_checked++;
     }
 
     /* Account for padding in libnl used by psample */
     if (meta.trunc_size >= pkt_len) {
-        meta.trunc_size = pkt_len - PSAMPLE_NLA_PADDING;
+        meta.trunc_size = pkt_len;
     }
-    BCMGENL_PSAMPLE_DBG_VERB
+    GENL_DBG_VERB
         ("%s: trunc_size %d, sample_rate %d "
          "src_ifindex %d, dst_ifindex %d\n",
          __func__, meta.trunc_size, meta.sample_rate,
          meta.src_ifindex, meta.dst_ifindex);
-#if IS_ENABLED(CONFIG_PSAMPLE)
-    BCMGENL_PSAMPLE_DBG_VERB
+    GENL_DBG_VERB
         ("%s: group 0x%x\n", __func__, group->group_num);
-#endif /* CONFIG_PSAMPLE */
 
     /* drop if configured sample rate is 0 */
     if (meta.sample_rate > 0) {
@@ -364,10 +406,10 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
                  __func__, g_bcmgenl_psample_stats.pkts_d_no_mem);
             goto PSAMPLE_FILTER_CB_PKT_HANDLED;
         }
+
+        /* psample_pkt start */
         memcpy(&psample_pkt->meta, &meta, sizeof(psample_meta_t));
-#if IS_ENABLED(CONFIG_PSAMPLE)
         psample_pkt->group = group;
-#endif /* CONFIG_PSAMPLE */
         if ((skb_psample = dev_alloc_skb(meta.trunc_size)) == NULL) {
             g_bcmgenl_psample_stats.pkts_d_no_mem++;
             last_skb = 0;
@@ -377,12 +419,21 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
             goto PSAMPLE_FILTER_CB_PKT_HANDLED;
         }
 
-        /* SDKLT-43751: Use ptr offset to pkt payload to send to genetlink */
         /* setup skb to point to pkt */
-        memcpy(skb_psample->data, pkt_ptr, meta.trunc_size);
+        if (strip_tag) {
+            memcpy(skb_psample->data, pkt, 12);
+            memcpy(skb_psample->data + 12, pkt + 16, meta.trunc_size - 12);
+            g_bcmgenl_psample_stats.pkts_f_tag_stripped++;
+        } else {
+            memcpy(skb_psample->data, pkt, meta.trunc_size);
+        }
         skb_put(skb_psample, meta.trunc_size);
         skb_psample->len = pkt_len;
         psample_pkt->skb = skb_psample;
+        if (debug & GENL_DBG_LVL_PDMP) {
+            dump_skb(skb_psample);
+        }
+        /* psample_pkt end */
 
         spin_lock_irqsave(&g_bcmgenl_psample_work.lock, flags);
         list_add_tail(&psample_pkt->list, &g_bcmgenl_psample_work.pkt_list);
@@ -399,14 +450,22 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     }
 
 PSAMPLE_FILTER_CB_PKT_HANDLED:
-    g_bcmgenl_psample_stats.pkts_f_pass_through++;
+    if (bcmgenl_pkt.meta.sample_type != SAMPLE_TYPE_NONE) {
+        g_bcmgenl_psample_stats.pkts_f_handled++;
+        /* Not sending to network protocol stack */
+        dev_kfree_skb_any(skb);
+        skb = NULL;
+    } else {
+        g_bcmgenl_psample_stats.pkts_f_pass_through++;
+    }
     return skb;
 }
 
 static void
 bcmgenl_psample_task(struct work_struct *work)
 {
-    bcmgenl_psample_work_t *psample_work = container_of(work, bcmgenl_psample_work_t, wq);
+    bcmgenl_psample_work_t *psample_work =
+        container_of(work, bcmgenl_psample_work_t, wq);
     unsigned long flags;
     struct list_head *list_ptr, *list_next;
     psample_pkt_t *pkt;
@@ -421,32 +480,19 @@ bcmgenl_psample_task(struct work_struct *work)
 
         /* send generic_pkt to generic netlink */
         if (pkt) {
-#if ((IS_ENABLED(CONFIG_PSAMPLE) && LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) || \
-     (defined PSAMPLE_MD_EXTENDED_ATTR && PSAMPLE_MD_EXTENDED_ATTR))
-            struct psample_metadata md = {0};
-            md.trunc_size = pkt->meta.trunc_size;
-            md.in_ifindex = pkt->meta.src_ifindex;
-            md.out_ifindex = pkt->meta.dst_ifindex;
-#endif
-            BCMGENL_PSAMPLE_DBG_VERB
+            GENL_DBG_VERB
                 ("%s: trunc_size %d, sample_rate %d,"
-                 "src_ifindex %d, dst_ifindex %d group 0x%x\n",
+                 "src_ifindex %d, dst_ifindex %d\n",
                  __func__, pkt->meta.trunc_size, pkt->meta.sample_rate,
-                 pkt->meta.src_ifindex, pkt->meta.dst_ifindex, pkt->group->group_num);
-#if ((IS_ENABLED(CONFIG_PSAMPLE) && LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)) || \
-     (defined PSAMPLE_MD_EXTENDED_ATTR && PSAMPLE_MD_EXTENDED_ATTR))
-            psample_sample_packet(pkt->group, 
-                                  pkt->skb,
-                                  pkt->meta.sample_rate,
-                                  &md);
-#else
-            psample_sample_packet(pkt->group,
+                 pkt->meta.src_ifindex, pkt->meta.dst_ifindex);
+            GENL_DBG_VERB
+                ("%s: group 0x%x\n", __func__, pkt->group->group_num);
+            bcmgenl_sample_packet(pkt->group,
                                   pkt->skb,
                                   pkt->meta.trunc_size,
                                   pkt->meta.src_ifindex,
                                   pkt->meta.dst_ifindex,
                                   pkt->meta.sample_rate);
-#endif /* CONFIG_PSAMPLE */
             g_bcmgenl_psample_stats.pkts_f_psample_mod++;
 
             dev_kfree_skb_any(pkt->skb);
@@ -466,16 +512,16 @@ bcmgenl_psample_netif_create_cb(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif)
     unsigned long flags;
 
     if (!dinfo) {
-        printk("%s: dinfo is NULL\n", __func__);
+        GENL_DBG_WARN("%s: dinfo is NULL\n", __func__);
         return (-1);
     }
     if (netif->id == 0) {
-        printk("%s: netif->id == 0 is not a valid interface ID\n", __func__);
+        GENL_DBG_WARN("%s: netif->id == 0 is not a valid interface ID\n", __func__);
         return (-1);
     }
     if ((new_netif = kmalloc(sizeof(bcmgenl_netif_t), GFP_ATOMIC)) == NULL) {
-        printk("%s: failed to alloc psample mem for netif '%s'\n",
-               __func__, netif->name);
+        GENL_DBG_WARN("%s: failed to alloc psample mem for netif '%s'\n",
+                      __func__, netif->name);
         return (-1);
     }
 
@@ -493,7 +539,6 @@ bcmgenl_psample_netif_create_cb(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif)
         lbcmgenl_netif = (bcmgenl_netif_t*)list;
         if (netif->id < lbcmgenl_netif->id) {
             found = true;
-            g_bcmgenl_psample_info.netif_count++;
             break;
         }
     }
@@ -505,10 +550,10 @@ bcmgenl_psample_netif_create_cb(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif)
         /* No holes - add to end of list */
         list_add_tail(&new_netif->list, &g_bcmgenl_psample_info.netif_list);
     }
-
+    g_bcmgenl_psample_info.netif_count++;
     spin_unlock_irqrestore(&g_bcmgenl_psample_info.lock, flags);
 
-    BCMGENL_PSAMPLE_DBG_VERB
+    GENL_DBG_VERB
         ("%s: added netlink psample netif '%s'\n", __func__, netif->name);
     return (0);
 }
@@ -522,10 +567,13 @@ bcmgenl_psample_netif_destroy_cb(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif
     unsigned long flags;
 
     if (!dinfo || !netif) {
-        printk("%s: dinfo or netif is NULL\n", __func__);
+        GENL_DBG_WARN("%s: dinfo or netif is NULL\n", __func__);
         return (-1);
     }
-
+    if (g_bcmgenl_psample_info.netif_count == 0) {
+        GENL_DBG_WARN("%s: no netif is created\n", __func__);
+        return (0);
+    }
     spin_lock_irqsave(&g_bcmgenl_psample_info.lock, flags);
 
     list_for_each(list, &g_bcmgenl_psample_info.netif_list) {
@@ -533,7 +581,7 @@ bcmgenl_psample_netif_destroy_cb(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif
         if (netif->id == lbcmgenl_netif->id) {
             found = true;
             list_del(&lbcmgenl_netif->list);
-            BCMGENL_PSAMPLE_DBG_VERB
+            GENL_DBG_VERB
                 ("%s: removing psample netif '%s'\n", __func__, netif->name);
             kfree(lbcmgenl_netif);
             g_bcmgenl_psample_info.netif_count--;
@@ -544,7 +592,7 @@ bcmgenl_psample_netif_destroy_cb(ngknet_dev_info_t *dinfo, ngknet_netif_t *netif
     spin_unlock_irqrestore(&g_bcmgenl_psample_info.lock, flags);
 
     if (!found) {
-        printk("%s: netif ID %d not found!\n", __func__, netif->id);
+        GENL_DBG_WARN("%s: netif ID %d not found!\n", __func__, netif->id);
         return (-1);
     }
     return (0);
@@ -844,7 +892,7 @@ bcmgenl_psample_proc_debug_write(
         ptr += 6;
         debug = simple_strtol(ptr, NULL, 0);
     } else {
-        printk("Warning: unknown configuration setting\n");
+        GENL_DBG_WARN("Warning: unknown configuration setting\n");
     }
 
     return count;
@@ -867,6 +915,8 @@ bcmgenl_psample_proc_stats_show(struct seq_file *m, void *v)
     seq_printf(m, "  pkts sent to psample module    %10lu\n", g_bcmgenl_psample_stats.pkts_f_psample_mod);
     seq_printf(m, "  pkts handled by psample        %10lu\n", g_bcmgenl_psample_stats.pkts_f_handled);
     seq_printf(m, "  pkts pass through              %10lu\n", g_bcmgenl_psample_stats.pkts_f_pass_through);
+    seq_printf(m, "  pkts with vlan tag checked     %10lu\n", g_bcmgenl_psample_stats.pkts_f_tag_checked);
+    seq_printf(m, "  pkts with vlan tag stripped    %10lu\n", g_bcmgenl_psample_stats.pkts_f_tag_stripped);
     seq_printf(m, "  pkts with mc destination       %10lu\n", g_bcmgenl_psample_stats.pkts_f_dst_mc);
     seq_printf(m, "  pkts current queue length      %10lu\n", g_bcmgenl_psample_stats.pkts_c_qlen_cur);
     seq_printf(m, "  pkts high queue length         %10lu\n", g_bcmgenl_psample_stats.pkts_c_qlen_hi);
@@ -881,6 +931,7 @@ bcmgenl_psample_proc_stats_show(struct seq_file *m, void *v)
     seq_printf(m, "  pkts with invalid src port     %10lu\n", g_bcmgenl_psample_stats.pkts_d_meta_srcport);
     seq_printf(m, "  pkts with invalid dst port     %10lu\n", g_bcmgenl_psample_stats.pkts_d_meta_dstport);
     seq_printf(m, "  pkts with invalid orig pkt sz  %10lu\n", g_bcmgenl_psample_stats.pkts_d_invalid_size);
+    seq_printf(m, "  pkts with psample only reason  %10lu\n", g_bcmgenl_psample_stats.pkts_d_psample_only);
     return 0;
 }
 
@@ -1029,11 +1080,11 @@ psample_cb_init(void)
     /* get net namespace */
     g_bcmgenl_psample_info.netns = get_net_ns_by_pid(current->pid);
     if (!g_bcmgenl_psample_info.netns) {
-        printk("%s: Could not get network namespace for pid %d\n",
-               __func__, current->pid);
+        GENL_DBG_WARN("%s: Could not get network namespace for pid %d\n",
+                      __func__, current->pid);
         return (-1);
     }
-    BCMGENL_PSAMPLE_DBG_VERB
+    GENL_DBG_VERB
         ("%s: current->pid %d, netns 0x%p, sample_size %d\n",
          __func__, current->pid, g_bcmgenl_psample_info.netns, psample_size);
     return 0;
@@ -1056,11 +1107,9 @@ int bcmgenl_psample_init(void)
     ngknet_netif_destroy_cb_register(bcmgenl_psample_netif_destroy_cb);
     ngknet_filter_cb_register_by_name
         (bcmgenl_psample_filter_cb, BCMGENL_PSAMPLE_NAME);
-
     psample_cb_proc_init();
     return psample_cb_init();
 }
-
 #else
 int bcmgenl_psample_cleanup(void)
 {

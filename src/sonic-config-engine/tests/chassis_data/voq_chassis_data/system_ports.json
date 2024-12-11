@@ -1,110 +1,30 @@
 {
-    "str-sonic-lc03|ASIC0|Ethernet0": {
+    "str-sonic-lc03|ASIC0|Ethernet-IB0": {
         "system_port_id": 1,
+        "switch_id": 8,
+        "core_index": "1",
+        "core_port_index": "50",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet-Rec0": {
+        "system_port_id": 2,
+        "switch_id": 8,
+        "core_index": "0",
+        "core_port_index": "49",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet0": {
+        "system_port_id": 3,
         "switch_id": 8,
         "core_index": "1",
         "core_port_index": "1",
         "speed": "400000",
         "num_voq": "8"
     },
-    "str-sonic-lc03|ASIC0|Ethernet8": {
-        "system_port_id": 2,
-        "switch_id": 8,
-        "core_index": "1",
-        "core_port_index": "2",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet16": {
-        "system_port_id": 3,
-        "switch_id": 8,
-        "core_index": "1",
-        "core_port_index": "3",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet24": {
-        "system_port_id": 4,
-        "switch_id": 8,
-        "core_index": "1",
-        "core_port_index": "4",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet32": {
-        "system_port_id": 5,
-        "switch_id": 8,
-        "core_index": "1",
-        "core_port_index": "5",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet40": {
-        "system_port_id": 6,
-        "switch_id": 8,
-        "core_index": "1",
-        "core_port_index": "6",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet48": {
-        "system_port_id": 7,
-        "switch_id": 8,
-        "core_index": "1",
-        "core_port_index": "7",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet56": {
-        "system_port_id": 8,
-        "switch_id": 8,
-        "core_index": "1",
-        "core_port_index": "8",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet64": {
-        "system_port_id": 9,
-        "switch_id": 8,
-        "core_index": "1",
-        "core_port_index": "9",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet72": {
-        "system_port_id": 10,
-        "switch_id": 8,
-        "core_index": "0",
-        "core_port_index": "10",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet80": {
-        "system_port_id": 11,
-        "switch_id": 8,
-        "core_index": "0",
-        "core_port_index": "11",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet88": {
-        "system_port_id": 12,
-        "switch_id": 8,
-        "core_index": "0",
-        "core_port_index": "12",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet96": {
-        "system_port_id": 13,
-        "switch_id": 8,
-        "core_index": "0",
-        "core_port_index": "13",
-        "speed": "400000",
-        "num_voq": "8"
-    },
     "str-sonic-lc03|ASIC0|Ethernet104": {
-        "system_port_id": 14,
+        "system_port_id": 4,
         "switch_id": 8,
         "core_index": "0",
         "core_port_index": "14",
@@ -112,7 +32,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC0|Ethernet112": {
-        "system_port_id": 15,
+        "system_port_id": 5,
         "switch_id": 8,
         "core_index": "0",
         "core_port_index": "15",
@@ -120,7 +40,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC0|Ethernet120": {
-        "system_port_id": 16,
+        "system_port_id": 6,
         "switch_id": 8,
         "core_index": "0",
         "core_port_index": "16",
@@ -128,7 +48,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC0|Ethernet128": {
-        "system_port_id": 17,
+        "system_port_id": 7,
         "switch_id": 8,
         "core_index": "0",
         "core_port_index": "17",
@@ -136,15 +56,135 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC0|Ethernet136": {
-        "system_port_id": 18,
+        "system_port_id": 8,
         "switch_id": 8,
         "core_index": "0",
         "core_port_index": "18",
         "speed": "400000",
         "num_voq": "8"
     },
-    "str-sonic-lc03|ASIC1|Ethernet144": {
+    "str-sonic-lc03|ASIC0|Ethernet16": {
+        "system_port_id": 9,
+        "switch_id": 8,
+        "core_index": "1",
+        "core_port_index": "3",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet24": {
+        "system_port_id": 10,
+        "switch_id": 8,
+        "core_index": "1",
+        "core_port_index": "4",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet32": {
+        "system_port_id": 11,
+        "switch_id": 8,
+        "core_index": "1",
+        "core_port_index": "5",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet40": {
+        "system_port_id": 12,
+        "switch_id": 8,
+        "core_index": "1",
+        "core_port_index": "6",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet48": {
+        "system_port_id": 13,
+        "switch_id": 8,
+        "core_index": "1",
+        "core_port_index": "7",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet56": {
+        "system_port_id": 14,
+        "switch_id": 8,
+        "core_index": "1",
+        "core_port_index": "8",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet64": {
+        "system_port_id": 15,
+        "switch_id": 8,
+        "core_index": "1",
+        "core_port_index": "9",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet72": {
+        "system_port_id": 16,
+        "switch_id": 8,
+        "core_index": "0",
+        "core_port_index": "10",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet8": {
+        "system_port_id": 17,
+        "switch_id": 8,
+        "core_index": "1",
+        "core_port_index": "2",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet80": {
+        "system_port_id": 18,
+        "switch_id": 8,
+        "core_index": "0",
+        "core_port_index": "11",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet88": {
         "system_port_id": 19,
+        "switch_id": 8,
+        "core_index": "0",
+        "core_port_index": "12",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|Ethernet96": {
+        "system_port_id": 20,
+        "switch_id": 8,
+        "core_index": "0",
+        "core_port_index": "13",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC0|cpu0": {
+        "system_port_id": 21,
+        "switch_id": 8,
+        "core_index": 0,
+        "core_port_index": 0,
+        "speed": "10000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC1|Ethernet-IB1": {
+        "system_port_id": 22,
+        "switch_id": 10,
+        "core_index": "1",
+        "core_port_index": "50",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC1|Ethernet-Rec1": {
+        "system_port_id": 23,
+        "switch_id": 10,
+        "core_index": "0",
+        "core_port_index": "49",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc03|ASIC1|Ethernet144": {
+        "system_port_id": 24,
         "switch_id": 10,
         "core_index": "1",
         "core_port_index": "1",
@@ -152,7 +192,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet152": {
-        "system_port_id": 20,
+        "system_port_id": 25,
         "switch_id": 10,
         "core_index": "1",
         "core_port_index": "2",
@@ -160,7 +200,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet160": {
-        "system_port_id": 21,
+        "system_port_id": 26,
         "switch_id": 10,
         "core_index": "1",
         "core_port_index": "3",
@@ -168,7 +208,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet168": {
-        "system_port_id": 22,
+        "system_port_id": 27,
         "switch_id": 10,
         "core_index": "1",
         "core_port_index": "4",
@@ -176,7 +216,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet176": {
-        "system_port_id": 23,
+        "system_port_id": 28,
         "switch_id": 10,
         "core_index": "1",
         "core_port_index": "5",
@@ -184,7 +224,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet184": {
-        "system_port_id": 24,
+        "system_port_id": 29,
         "switch_id": 10,
         "core_index": "1",
         "core_port_index": "6",
@@ -192,7 +232,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet192": {
-        "system_port_id": 25,
+        "system_port_id": 30,
         "switch_id": 10,
         "core_index": "1",
         "core_port_index": "7",
@@ -200,7 +240,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet200": {
-        "system_port_id": 26,
+        "system_port_id": 31,
         "switch_id": 10,
         "core_index": "1",
         "core_port_index": "8",
@@ -208,7 +248,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet208": {
-        "system_port_id": 27,
+        "system_port_id": 32,
         "switch_id": 10,
         "core_index": "1",
         "core_port_index": "9",
@@ -216,7 +256,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet216": {
-        "system_port_id": 28,
+        "system_port_id": 33,
         "switch_id": 10,
         "core_index": "0",
         "core_port_index": "10",
@@ -224,7 +264,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet224": {
-        "system_port_id": 29,
+        "system_port_id": 34,
         "switch_id": 10,
         "core_index": "0",
         "core_port_index": "11",
@@ -232,7 +272,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet232": {
-        "system_port_id": 30,
+        "system_port_id": 35,
         "switch_id": 10,
         "core_index": "0",
         "core_port_index": "12",
@@ -240,7 +280,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet240": {
-        "system_port_id": 31,
+        "system_port_id": 36,
         "switch_id": 10,
         "core_index": "0",
         "core_port_index": "13",
@@ -248,7 +288,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet248": {
-        "system_port_id": 32,
+        "system_port_id": 37,
         "switch_id": 10,
         "core_index": "0",
         "core_port_index": "14",
@@ -256,7 +296,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet256": {
-        "system_port_id": 33,
+        "system_port_id": 38,
         "switch_id": 10,
         "core_index": "0",
         "core_port_index": "15",
@@ -264,7 +304,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet264": {
-        "system_port_id": 34,
+        "system_port_id": 39,
         "switch_id": 10,
         "core_index": "0",
         "core_port_index": "16",
@@ -272,7 +312,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet272": {
-        "system_port_id": 35,
+        "system_port_id": 40,
         "switch_id": 10,
         "core_index": "0",
         "core_port_index": "17",
@@ -280,263 +320,47 @@
         "num_voq": "8"
     },
     "str-sonic-lc03|ASIC1|Ethernet280": {
-        "system_port_id": 36,
+        "system_port_id": 41,
         "switch_id": 10,
         "core_index": "0",
         "core_port_index": "18",
         "speed": "400000",
         "num_voq": "8"
     },
-    "str-sonic-lc03|ASIC0|cpu0": {
-        "system_port_id": 37,
-        "switch_id": 8,
-        "core_index": 0,
-        "core_port_index": 0,
-        "speed": "10000",
-        "num_voq": "8"
-    },
     "str-sonic-lc03|ASIC1|cpu1": {
-        "system_port_id": 38,
-        "switch_id": 10,
-        "core_index": 0,
-        "core_port_index": 0,
-        "speed": "10000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet-Rec0": {
-        "system_port_id": 39,
-        "switch_id": 8,
-        "core_index": "0",
-        "core_port_index": "49",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC1|Ethernet-Rec1": {
-        "system_port_id": 40,
-        "switch_id": 10,
-        "core_index": "0",
-        "core_port_index": "49",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC0|Ethernet-IB0": {
-        "system_port_id": 41,
-        "switch_id": 8,
-        "core_index": "1",
-        "core_port_index": "50",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc03|ASIC1|Ethernet-IB1": {
         "system_port_id": 42,
         "switch_id": 10,
+        "core_index": 0,
+        "core_port_index": 0,
+        "speed": "10000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet-IB0": {
+        "system_port_id": 43,
+        "switch_id": 12,
         "core_index": "1",
         "core_port_index": "50",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet-Rec0": {
+        "system_port_id": 44,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "49",
         "speed": "400000",
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet0": {
-        "system_port_id": 43,
+        "system_port_id": 45,
         "switch_id": 12,
         "core_index": "0",
         "core_port_index": "1",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc04|ASIC0|Ethernet4": {
-        "system_port_id": 44,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "2",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet8": {
-        "system_port_id": 45,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "3",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet12": {
-        "system_port_id": 46,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "4",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet16": {
-        "system_port_id": 47,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "5",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet20": {
-        "system_port_id": 48,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "6",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet24": {
-        "system_port_id": 49,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "7",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet28": {
-        "system_port_id": 50,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "8",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet32": {
-        "system_port_id": 51,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "9",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet36": {
-        "system_port_id": 52,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "10",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet40": {
-        "system_port_id": 53,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "11",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet44": {
-        "system_port_id": 54,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "12",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet48": {
-        "system_port_id": 55,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "13",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet52": {
-        "system_port_id": 56,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "14",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet56": {
-        "system_port_id": 57,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "15",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet60": {
-        "system_port_id": 58,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "16",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet64": {
-        "system_port_id": 59,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "17",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet68": {
-        "system_port_id": 60,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "18",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet72": {
-        "system_port_id": 61,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "19",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet76": {
-        "system_port_id": 62,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "20",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet80": {
-        "system_port_id": 63,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "21",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet84": {
-        "system_port_id": 64,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "22",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet88": {
-        "system_port_id": 65,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "23",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet92": {
-        "system_port_id": 66,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "24",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet96": {
-        "system_port_id": 67,
-        "switch_id": 12,
-        "core_index": "1",
-        "core_port_index": "25",
-        "speed": "100000",
-        "num_voq": "8"
-    },
     "str-sonic-lc04|ASIC0|Ethernet100": {
-        "system_port_id": 68,
+        "system_port_id": 46,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "26",
@@ -544,7 +368,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet104": {
-        "system_port_id": 69,
+        "system_port_id": 47,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "27",
@@ -552,7 +376,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet108": {
-        "system_port_id": 70,
+        "system_port_id": 48,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "28",
@@ -560,7 +384,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet112": {
-        "system_port_id": 71,
+        "system_port_id": 49,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "29",
@@ -568,15 +392,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet116": {
-        "system_port_id": 72,
+        "system_port_id": 50,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "30",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc04|ASIC0|Ethernet12": {
+        "system_port_id": 51,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "4",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc04|ASIC0|Ethernet120": {
-        "system_port_id": 73,
+        "system_port_id": 52,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "31",
@@ -584,7 +416,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet124": {
-        "system_port_id": 74,
+        "system_port_id": 53,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "32",
@@ -592,7 +424,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet128": {
-        "system_port_id": 75,
+        "system_port_id": 54,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "33",
@@ -600,7 +432,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet132": {
-        "system_port_id": 76,
+        "system_port_id": 55,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "34",
@@ -608,7 +440,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet136": {
-        "system_port_id": 77,
+        "system_port_id": 56,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "35",
@@ -616,7 +448,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet140": {
-        "system_port_id": 78,
+        "system_port_id": 57,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "36",
@@ -624,7 +456,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet144": {
-        "system_port_id": 79,
+        "system_port_id": 58,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "37",
@@ -632,7 +464,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet148": {
-        "system_port_id": 80,
+        "system_port_id": 59,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "38",
@@ -640,7 +472,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet152": {
-        "system_port_id": 81,
+        "system_port_id": 60,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "39",
@@ -648,15 +480,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet156": {
-        "system_port_id": 82,
+        "system_port_id": 61,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "40",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc04|ASIC0|Ethernet16": {
+        "system_port_id": 62,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "5",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc04|ASIC0|Ethernet160": {
-        "system_port_id": 83,
+        "system_port_id": 63,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "41",
@@ -664,7 +504,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet164": {
-        "system_port_id": 84,
+        "system_port_id": 64,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "42",
@@ -672,7 +512,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet168": {
-        "system_port_id": 85,
+        "system_port_id": 65,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "43",
@@ -680,7 +520,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet172": {
-        "system_port_id": 86,
+        "system_port_id": 66,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "44",
@@ -688,7 +528,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet176": {
-        "system_port_id": 87,
+        "system_port_id": 67,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "45",
@@ -696,7 +536,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet180": {
-        "system_port_id": 88,
+        "system_port_id": 68,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "46",
@@ -704,7 +544,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet184": {
-        "system_port_id": 89,
+        "system_port_id": 69,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "47",
@@ -712,239 +552,223 @@
         "num_voq": "8"
     },
     "str-sonic-lc04|ASIC0|Ethernet188": {
-        "system_port_id": 90,
+        "system_port_id": 70,
         "switch_id": 12,
         "core_index": "1",
         "core_port_index": "48",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc04|ASIC0|cpu0": {
+    "str-sonic-lc04|ASIC0|Ethernet20": {
+        "system_port_id": 71,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "6",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet24": {
+        "system_port_id": 72,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "7",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet28": {
+        "system_port_id": 73,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "8",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet32": {
+        "system_port_id": 74,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "9",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet36": {
+        "system_port_id": 75,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "10",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet4": {
+        "system_port_id": 76,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "2",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet40": {
+        "system_port_id": 77,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "11",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet44": {
+        "system_port_id": 78,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "12",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet48": {
+        "system_port_id": 79,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "13",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet52": {
+        "system_port_id": 80,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "14",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet56": {
+        "system_port_id": 81,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "15",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet60": {
+        "system_port_id": 82,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "16",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet64": {
+        "system_port_id": 83,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "17",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet68": {
+        "system_port_id": 84,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "18",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet72": {
+        "system_port_id": 85,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "19",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet76": {
+        "system_port_id": 86,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "20",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet8": {
+        "system_port_id": 87,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "3",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet80": {
+        "system_port_id": 88,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "21",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet84": {
+        "system_port_id": 89,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "22",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet88": {
+        "system_port_id": 90,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "23",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet92": {
         "system_port_id": 91,
+        "switch_id": 12,
+        "core_index": "0",
+        "core_port_index": "24",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|Ethernet96": {
+        "system_port_id": 92,
+        "switch_id": 12,
+        "core_index": "1",
+        "core_port_index": "25",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc04|ASIC0|cpu0": {
+        "system_port_id": 93,
         "switch_id": 12,
         "core_index": 0,
         "core_port_index": 0,
         "speed": "10000",
         "num_voq": "8"
     },
-    "str-sonic-lc04|ASIC0|Ethernet-Rec0": {
-        "system_port_id": 92,
-        "switch_id": 12,
-        "core_index": "0",
-        "core_port_index": "49",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc04|ASIC0|Ethernet-IB0": {
-        "system_port_id": 93,
-        "switch_id": 12,
+    "str-sonic-lc05|ASIC0|Ethernet-IB0": {
+        "system_port_id": 94,
+        "switch_id": 16,
         "core_index": "1",
         "core_port_index": "50",
         "speed": "400000",
         "num_voq": "8"
     },
+    "str-sonic-lc05|ASIC0|Ethernet-Rec0": {
+        "system_port_id": 95,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "49",
+        "speed": "400000",
+        "num_voq": "8"
+    },
     "str-sonic-lc05|ASIC0|Ethernet0": {
-        "system_port_id": 94,
+        "system_port_id": 96,
         "switch_id": 16,
         "core_index": "0",
         "core_port_index": "1",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc05|ASIC0|Ethernet4": {
-        "system_port_id": 95,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "2",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet8": {
-        "system_port_id": 96,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "3",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet12": {
-        "system_port_id": 97,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "4",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet16": {
-        "system_port_id": 98,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "5",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet20": {
-        "system_port_id": 99,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "6",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet24": {
-        "system_port_id": 100,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "7",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet28": {
-        "system_port_id": 101,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "8",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet32": {
-        "system_port_id": 102,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "9",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet36": {
-        "system_port_id": 103,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "10",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet40": {
-        "system_port_id": 104,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "11",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet44": {
-        "system_port_id": 105,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "12",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet48": {
-        "system_port_id": 106,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "13",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet52": {
-        "system_port_id": 107,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "14",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet56": {
-        "system_port_id": 108,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "15",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet60": {
-        "system_port_id": 109,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "16",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet64": {
-        "system_port_id": 110,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "17",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet68": {
-        "system_port_id": 111,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "18",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet72": {
-        "system_port_id": 112,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "19",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet76": {
-        "system_port_id": 113,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "20",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet80": {
-        "system_port_id": 114,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "21",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet84": {
-        "system_port_id": 115,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "22",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet88": {
-        "system_port_id": 116,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "23",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet92": {
-        "system_port_id": 117,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "24",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet96": {
-        "system_port_id": 118,
-        "switch_id": 16,
-        "core_index": "1",
-        "core_port_index": "25",
-        "speed": "100000",
-        "num_voq": "8"
-    },
     "str-sonic-lc05|ASIC0|Ethernet100": {
-        "system_port_id": 119,
+        "system_port_id": 97,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "26",
@@ -952,7 +776,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet104": {
-        "system_port_id": 120,
+        "system_port_id": 98,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "27",
@@ -960,7 +784,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet108": {
-        "system_port_id": 121,
+        "system_port_id": 99,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "28",
@@ -968,7 +792,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet112": {
-        "system_port_id": 122,
+        "system_port_id": 100,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "29",
@@ -976,15 +800,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet116": {
-        "system_port_id": 123,
+        "system_port_id": 101,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "30",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc05|ASIC0|Ethernet12": {
+        "system_port_id": 102,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "4",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc05|ASIC0|Ethernet120": {
-        "system_port_id": 124,
+        "system_port_id": 103,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "31",
@@ -992,7 +824,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet124": {
-        "system_port_id": 125,
+        "system_port_id": 104,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "32",
@@ -1000,7 +832,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet128": {
-        "system_port_id": 126,
+        "system_port_id": 105,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "33",
@@ -1008,7 +840,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet132": {
-        "system_port_id": 127,
+        "system_port_id": 106,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "34",
@@ -1016,7 +848,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet136": {
-        "system_port_id": 128,
+        "system_port_id": 107,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "35",
@@ -1024,7 +856,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet140": {
-        "system_port_id": 129,
+        "system_port_id": 108,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "36",
@@ -1032,7 +864,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet144": {
-        "system_port_id": 130,
+        "system_port_id": 109,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "37",
@@ -1040,7 +872,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet148": {
-        "system_port_id": 131,
+        "system_port_id": 110,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "38",
@@ -1048,7 +880,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet152": {
-        "system_port_id": 132,
+        "system_port_id": 111,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "39",
@@ -1056,15 +888,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet156": {
-        "system_port_id": 133,
+        "system_port_id": 112,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "40",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc05|ASIC0|Ethernet16": {
+        "system_port_id": 113,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "5",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc05|ASIC0|Ethernet160": {
-        "system_port_id": 134,
+        "system_port_id": 114,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "41",
@@ -1072,7 +912,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet164": {
-        "system_port_id": 135,
+        "system_port_id": 115,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "42",
@@ -1080,7 +920,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet168": {
-        "system_port_id": 136,
+        "system_port_id": 116,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "43",
@@ -1088,7 +928,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet172": {
-        "system_port_id": 137,
+        "system_port_id": 117,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "44",
@@ -1096,7 +936,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet176": {
-        "system_port_id": 138,
+        "system_port_id": 118,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "45",
@@ -1104,7 +944,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet180": {
-        "system_port_id": 139,
+        "system_port_id": 119,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "46",
@@ -1112,7 +952,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet184": {
-        "system_port_id": 140,
+        "system_port_id": 120,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "47",
@@ -1120,239 +960,223 @@
         "num_voq": "8"
     },
     "str-sonic-lc05|ASIC0|Ethernet188": {
-        "system_port_id": 141,
+        "system_port_id": 121,
         "switch_id": 16,
         "core_index": "1",
         "core_port_index": "48",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc05|ASIC0|cpu0": {
+    "str-sonic-lc05|ASIC0|Ethernet20": {
+        "system_port_id": 122,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "6",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet24": {
+        "system_port_id": 123,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "7",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet28": {
+        "system_port_id": 124,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "8",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet32": {
+        "system_port_id": 125,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "9",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet36": {
+        "system_port_id": 126,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "10",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet4": {
+        "system_port_id": 127,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "2",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet40": {
+        "system_port_id": 128,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "11",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet44": {
+        "system_port_id": 129,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "12",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet48": {
+        "system_port_id": 130,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "13",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet52": {
+        "system_port_id": 131,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "14",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet56": {
+        "system_port_id": 132,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "15",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet60": {
+        "system_port_id": 133,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "16",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet64": {
+        "system_port_id": 134,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "17",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet68": {
+        "system_port_id": 135,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "18",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet72": {
+        "system_port_id": 136,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "19",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet76": {
+        "system_port_id": 137,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "20",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet8": {
+        "system_port_id": 138,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "3",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet80": {
+        "system_port_id": 139,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "21",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet84": {
+        "system_port_id": 140,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "22",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet88": {
+        "system_port_id": 141,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "23",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet92": {
         "system_port_id": 142,
+        "switch_id": 16,
+        "core_index": "0",
+        "core_port_index": "24",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|Ethernet96": {
+        "system_port_id": 143,
+        "switch_id": 16,
+        "core_index": "1",
+        "core_port_index": "25",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc05|ASIC0|cpu0": {
+        "system_port_id": 144,
         "switch_id": 16,
         "core_index": 0,
         "core_port_index": 0,
         "speed": "10000",
         "num_voq": "8"
     },
-    "str-sonic-lc05|ASIC0|Ethernet-Rec0": {
-        "system_port_id": 143,
-        "switch_id": 16,
-        "core_index": "0",
-        "core_port_index": "49",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc05|ASIC0|Ethernet-IB0": {
-        "system_port_id": 144,
-        "switch_id": 16,
+    "str-sonic-lc06|ASIC0|Ethernet-IB0": {
+        "system_port_id": 145,
+        "switch_id": 20,
         "core_index": "1",
         "core_port_index": "50",
         "speed": "400000",
         "num_voq": "8"
     },
+    "str-sonic-lc06|ASIC0|Ethernet-Rec0": {
+        "system_port_id": 146,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "49",
+        "speed": "400000",
+        "num_voq": "8"
+    },
     "str-sonic-lc06|ASIC0|Ethernet0": {
-        "system_port_id": 145,
+        "system_port_id": 147,
         "switch_id": 20,
         "core_index": "0",
         "core_port_index": "1",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc06|ASIC0|Ethernet4": {
-        "system_port_id": 146,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "2",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet8": {
-        "system_port_id": 147,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "3",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet12": {
-        "system_port_id": 148,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "4",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet16": {
-        "system_port_id": 149,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "5",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet20": {
-        "system_port_id": 150,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "6",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet24": {
-        "system_port_id": 151,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "7",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet28": {
-        "system_port_id": 152,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "8",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet32": {
-        "system_port_id": 153,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "9",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet36": {
-        "system_port_id": 154,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "10",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet40": {
-        "system_port_id": 155,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "11",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet44": {
-        "system_port_id": 156,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "12",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet48": {
-        "system_port_id": 157,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "13",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet52": {
-        "system_port_id": 158,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "14",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet56": {
-        "system_port_id": 159,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "15",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet60": {
-        "system_port_id": 160,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "16",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet64": {
-        "system_port_id": 161,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "17",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet68": {
-        "system_port_id": 162,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "18",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet72": {
-        "system_port_id": 163,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "19",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet76": {
-        "system_port_id": 164,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "20",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet80": {
-        "system_port_id": 165,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "21",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet84": {
-        "system_port_id": 166,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "22",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet88": {
-        "system_port_id": 167,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "23",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet92": {
-        "system_port_id": 168,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "24",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet96": {
-        "system_port_id": 169,
-        "switch_id": 20,
-        "core_index": "1",
-        "core_port_index": "25",
-        "speed": "100000",
-        "num_voq": "8"
-    },
     "str-sonic-lc06|ASIC0|Ethernet100": {
-        "system_port_id": 170,
+        "system_port_id": 148,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "26",
@@ -1360,7 +1184,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet104": {
-        "system_port_id": 171,
+        "system_port_id": 149,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "27",
@@ -1368,7 +1192,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet108": {
-        "system_port_id": 172,
+        "system_port_id": 150,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "28",
@@ -1376,7 +1200,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet112": {
-        "system_port_id": 173,
+        "system_port_id": 151,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "29",
@@ -1384,15 +1208,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet116": {
-        "system_port_id": 174,
+        "system_port_id": 152,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "30",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc06|ASIC0|Ethernet12": {
+        "system_port_id": 153,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "4",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc06|ASIC0|Ethernet120": {
-        "system_port_id": 175,
+        "system_port_id": 154,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "31",
@@ -1400,7 +1232,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet124": {
-        "system_port_id": 176,
+        "system_port_id": 155,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "32",
@@ -1408,7 +1240,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet128": {
-        "system_port_id": 177,
+        "system_port_id": 156,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "33",
@@ -1416,7 +1248,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet132": {
-        "system_port_id": 178,
+        "system_port_id": 157,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "34",
@@ -1424,7 +1256,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet136": {
-        "system_port_id": 179,
+        "system_port_id": 158,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "35",
@@ -1432,7 +1264,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet140": {
-        "system_port_id": 180,
+        "system_port_id": 159,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "36",
@@ -1440,7 +1272,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet144": {
-        "system_port_id": 181,
+        "system_port_id": 160,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "37",
@@ -1448,7 +1280,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet148": {
-        "system_port_id": 182,
+        "system_port_id": 161,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "38",
@@ -1456,7 +1288,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet152": {
-        "system_port_id": 183,
+        "system_port_id": 162,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "39",
@@ -1464,15 +1296,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet156": {
-        "system_port_id": 184,
+        "system_port_id": 163,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "40",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc06|ASIC0|Ethernet16": {
+        "system_port_id": 164,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "5",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc06|ASIC0|Ethernet160": {
-        "system_port_id": 185,
+        "system_port_id": 165,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "41",
@@ -1480,7 +1320,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet164": {
-        "system_port_id": 186,
+        "system_port_id": 166,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "42",
@@ -1488,7 +1328,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet168": {
-        "system_port_id": 187,
+        "system_port_id": 167,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "43",
@@ -1496,7 +1336,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet172": {
-        "system_port_id": 188,
+        "system_port_id": 168,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "44",
@@ -1504,7 +1344,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet176": {
-        "system_port_id": 189,
+        "system_port_id": 169,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "45",
@@ -1512,7 +1352,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet180": {
-        "system_port_id": 190,
+        "system_port_id": 170,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "46",
@@ -1520,7 +1360,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet184": {
-        "system_port_id": 191,
+        "system_port_id": 171,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "47",
@@ -1528,239 +1368,223 @@
         "num_voq": "8"
     },
     "str-sonic-lc06|ASIC0|Ethernet188": {
-        "system_port_id": 192,
+        "system_port_id": 172,
         "switch_id": 20,
         "core_index": "1",
         "core_port_index": "48",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc06|ASIC0|cpu0": {
+    "str-sonic-lc06|ASIC0|Ethernet20": {
+        "system_port_id": 173,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "6",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet24": {
+        "system_port_id": 174,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "7",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet28": {
+        "system_port_id": 175,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "8",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet32": {
+        "system_port_id": 176,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "9",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet36": {
+        "system_port_id": 177,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "10",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet4": {
+        "system_port_id": 178,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "2",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet40": {
+        "system_port_id": 179,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "11",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet44": {
+        "system_port_id": 180,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "12",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet48": {
+        "system_port_id": 181,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "13",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet52": {
+        "system_port_id": 182,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "14",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet56": {
+        "system_port_id": 183,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "15",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet60": {
+        "system_port_id": 184,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "16",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet64": {
+        "system_port_id": 185,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "17",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet68": {
+        "system_port_id": 186,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "18",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet72": {
+        "system_port_id": 187,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "19",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet76": {
+        "system_port_id": 188,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "20",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet8": {
+        "system_port_id": 189,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "3",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet80": {
+        "system_port_id": 190,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "21",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet84": {
+        "system_port_id": 191,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "22",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet88": {
+        "system_port_id": 192,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "23",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet92": {
         "system_port_id": 193,
+        "switch_id": 20,
+        "core_index": "0",
+        "core_port_index": "24",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|Ethernet96": {
+        "system_port_id": 194,
+        "switch_id": 20,
+        "core_index": "1",
+        "core_port_index": "25",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc06|ASIC0|cpu0": {
+        "system_port_id": 195,
         "switch_id": 20,
         "core_index": 0,
         "core_port_index": 0,
         "speed": "10000",
         "num_voq": "8"
     },
-    "str-sonic-lc06|ASIC0|Ethernet-Rec0": {
-        "system_port_id": 194,
-        "switch_id": 20,
-        "core_index": "0",
-        "core_port_index": "49",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc06|ASIC0|Ethernet-IB0": {
-        "system_port_id": 195,
-        "switch_id": 20,
+    "str-sonic-lc07|ASIC0|Ethernet-IB0": {
+        "system_port_id": 196,
+        "switch_id": 24,
         "core_index": "1",
         "core_port_index": "50",
         "speed": "400000",
         "num_voq": "8"
     },
+    "str-sonic-lc07|ASIC0|Ethernet-Rec0": {
+        "system_port_id": 197,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "49",
+        "speed": "400000",
+        "num_voq": "8"
+    },
     "str-sonic-lc07|ASIC0|Ethernet0": {
-        "system_port_id": 196,
+        "system_port_id": 198,
         "switch_id": 24,
         "core_index": "0",
         "core_port_index": "1",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc07|ASIC0|Ethernet4": {
-        "system_port_id": 197,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "2",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet8": {
-        "system_port_id": 198,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "3",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet12": {
-        "system_port_id": 199,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "4",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet16": {
-        "system_port_id": 200,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "5",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet20": {
-        "system_port_id": 201,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "6",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet24": {
-        "system_port_id": 202,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "7",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet28": {
-        "system_port_id": 203,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "8",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet32": {
-        "system_port_id": 204,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "9",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet36": {
-        "system_port_id": 205,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "10",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet40": {
-        "system_port_id": 206,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "11",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet44": {
-        "system_port_id": 207,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "12",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet48": {
-        "system_port_id": 208,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "13",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet52": {
-        "system_port_id": 209,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "14",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet56": {
-        "system_port_id": 210,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "15",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet60": {
-        "system_port_id": 211,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "16",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet64": {
-        "system_port_id": 212,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "17",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet68": {
-        "system_port_id": 213,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "18",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet72": {
-        "system_port_id": 214,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "19",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet76": {
-        "system_port_id": 215,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "20",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet80": {
-        "system_port_id": 216,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "21",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet84": {
-        "system_port_id": 217,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "22",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet88": {
-        "system_port_id": 218,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "23",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet92": {
-        "system_port_id": 219,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "24",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet96": {
-        "system_port_id": 220,
-        "switch_id": 24,
-        "core_index": "1",
-        "core_port_index": "25",
-        "speed": "100000",
-        "num_voq": "8"
-    },
     "str-sonic-lc07|ASIC0|Ethernet100": {
-        "system_port_id": 221,
+        "system_port_id": 199,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "26",
@@ -1768,7 +1592,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet104": {
-        "system_port_id": 222,
+        "system_port_id": 200,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "27",
@@ -1776,7 +1600,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet108": {
-        "system_port_id": 223,
+        "system_port_id": 201,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "28",
@@ -1784,7 +1608,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet112": {
-        "system_port_id": 224,
+        "system_port_id": 202,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "29",
@@ -1792,15 +1616,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet116": {
-        "system_port_id": 225,
+        "system_port_id": 203,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "30",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc07|ASIC0|Ethernet12": {
+        "system_port_id": 204,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "4",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc07|ASIC0|Ethernet120": {
-        "system_port_id": 226,
+        "system_port_id": 205,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "31",
@@ -1808,7 +1640,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet124": {
-        "system_port_id": 227,
+        "system_port_id": 206,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "32",
@@ -1816,7 +1648,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet128": {
-        "system_port_id": 228,
+        "system_port_id": 207,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "33",
@@ -1824,7 +1656,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet132": {
-        "system_port_id": 229,
+        "system_port_id": 208,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "34",
@@ -1832,7 +1664,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet136": {
-        "system_port_id": 230,
+        "system_port_id": 209,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "35",
@@ -1840,7 +1672,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet140": {
-        "system_port_id": 231,
+        "system_port_id": 210,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "36",
@@ -1848,7 +1680,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet144": {
-        "system_port_id": 232,
+        "system_port_id": 211,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "37",
@@ -1856,7 +1688,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet148": {
-        "system_port_id": 233,
+        "system_port_id": 212,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "38",
@@ -1864,7 +1696,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet152": {
-        "system_port_id": 234,
+        "system_port_id": 213,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "39",
@@ -1872,15 +1704,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet156": {
-        "system_port_id": 235,
+        "system_port_id": 214,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "40",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc07|ASIC0|Ethernet16": {
+        "system_port_id": 215,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "5",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc07|ASIC0|Ethernet160": {
-        "system_port_id": 236,
+        "system_port_id": 216,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "41",
@@ -1888,7 +1728,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet164": {
-        "system_port_id": 237,
+        "system_port_id": 217,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "42",
@@ -1896,7 +1736,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet168": {
-        "system_port_id": 238,
+        "system_port_id": 218,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "43",
@@ -1904,7 +1744,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet172": {
-        "system_port_id": 239,
+        "system_port_id": 219,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "44",
@@ -1912,7 +1752,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet176": {
-        "system_port_id": 240,
+        "system_port_id": 220,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "45",
@@ -1920,7 +1760,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet180": {
-        "system_port_id": 241,
+        "system_port_id": 221,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "46",
@@ -1928,7 +1768,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet184": {
-        "system_port_id": 242,
+        "system_port_id": 222,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "47",
@@ -1936,239 +1776,223 @@
         "num_voq": "8"
     },
     "str-sonic-lc07|ASIC0|Ethernet188": {
-        "system_port_id": 243,
+        "system_port_id": 223,
         "switch_id": 24,
         "core_index": "1",
         "core_port_index": "48",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc07|ASIC0|cpu0": {
+    "str-sonic-lc07|ASIC0|Ethernet20": {
+        "system_port_id": 224,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "6",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet24": {
+        "system_port_id": 225,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "7",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet28": {
+        "system_port_id": 226,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "8",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet32": {
+        "system_port_id": 227,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "9",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet36": {
+        "system_port_id": 228,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "10",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet4": {
+        "system_port_id": 229,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "2",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet40": {
+        "system_port_id": 230,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "11",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet44": {
+        "system_port_id": 231,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "12",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet48": {
+        "system_port_id": 232,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "13",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet52": {
+        "system_port_id": 233,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "14",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet56": {
+        "system_port_id": 234,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "15",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet60": {
+        "system_port_id": 235,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "16",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet64": {
+        "system_port_id": 236,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "17",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet68": {
+        "system_port_id": 237,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "18",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet72": {
+        "system_port_id": 238,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "19",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet76": {
+        "system_port_id": 239,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "20",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet8": {
+        "system_port_id": 240,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "3",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet80": {
+        "system_port_id": 241,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "21",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet84": {
+        "system_port_id": 242,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "22",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet88": {
+        "system_port_id": 243,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "23",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet92": {
         "system_port_id": 244,
+        "switch_id": 24,
+        "core_index": "0",
+        "core_port_index": "24",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|Ethernet96": {
+        "system_port_id": 245,
+        "switch_id": 24,
+        "core_index": "1",
+        "core_port_index": "25",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc07|ASIC0|cpu0": {
+        "system_port_id": 246,
         "switch_id": 24,
         "core_index": 0,
         "core_port_index": 0,
         "speed": "10000",
         "num_voq": "8"
     },
-    "str-sonic-lc07|ASIC0|Ethernet-Rec0": {
-        "system_port_id": 245,
-        "switch_id": 24,
-        "core_index": "0",
-        "core_port_index": "49",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc07|ASIC0|Ethernet-IB0": {
-        "system_port_id": 246,
-        "switch_id": 24,
+    "str-sonic-lc08|ASIC0|Ethernet-IB0": {
+        "system_port_id": 247,
+        "switch_id": 28,
         "core_index": "1",
         "core_port_index": "50",
         "speed": "400000",
         "num_voq": "8"
     },
+    "str-sonic-lc08|ASIC0|Ethernet-Rec0": {
+        "system_port_id": 248,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "49",
+        "speed": "400000",
+        "num_voq": "8"
+    },
     "str-sonic-lc08|ASIC0|Ethernet0": {
-        "system_port_id": 247,
+        "system_port_id": 249,
         "switch_id": 28,
         "core_index": "0",
         "core_port_index": "1",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc08|ASIC0|Ethernet4": {
-        "system_port_id": 248,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "2",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet8": {
-        "system_port_id": 249,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "3",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet12": {
-        "system_port_id": 250,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "4",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet16": {
-        "system_port_id": 251,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "5",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet20": {
-        "system_port_id": 252,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "6",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet24": {
-        "system_port_id": 253,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "7",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet28": {
-        "system_port_id": 254,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "8",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet32": {
-        "system_port_id": 255,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "9",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet36": {
-        "system_port_id": 256,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "10",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet40": {
-        "system_port_id": 257,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "11",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet44": {
-        "system_port_id": 258,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "12",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet48": {
-        "system_port_id": 259,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "13",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet52": {
-        "system_port_id": 260,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "14",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet56": {
-        "system_port_id": 261,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "15",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet60": {
-        "system_port_id": 262,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "16",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet64": {
-        "system_port_id": 263,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "17",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet68": {
-        "system_port_id": 264,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "18",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet72": {
-        "system_port_id": 265,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "19",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet76": {
-        "system_port_id": 266,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "20",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet80": {
-        "system_port_id": 267,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "21",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet84": {
-        "system_port_id": 268,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "22",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet88": {
-        "system_port_id": 269,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "23",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet92": {
-        "system_port_id": 270,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "24",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet96": {
-        "system_port_id": 271,
-        "switch_id": 28,
-        "core_index": "1",
-        "core_port_index": "25",
-        "speed": "100000",
-        "num_voq": "8"
-    },
     "str-sonic-lc08|ASIC0|Ethernet100": {
-        "system_port_id": 272,
+        "system_port_id": 250,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "26",
@@ -2176,7 +2000,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet104": {
-        "system_port_id": 273,
+        "system_port_id": 251,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "27",
@@ -2184,7 +2008,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet108": {
-        "system_port_id": 274,
+        "system_port_id": 252,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "28",
@@ -2192,7 +2016,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet112": {
-        "system_port_id": 275,
+        "system_port_id": 253,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "29",
@@ -2200,15 +2024,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet116": {
-        "system_port_id": 276,
+        "system_port_id": 254,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "30",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc08|ASIC0|Ethernet12": {
+        "system_port_id": 255,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "4",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc08|ASIC0|Ethernet120": {
-        "system_port_id": 277,
+        "system_port_id": 256,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "31",
@@ -2216,7 +2048,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet124": {
-        "system_port_id": 278,
+        "system_port_id": 257,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "32",
@@ -2224,7 +2056,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet128": {
-        "system_port_id": 279,
+        "system_port_id": 258,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "33",
@@ -2232,7 +2064,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet132": {
-        "system_port_id": 280,
+        "system_port_id": 259,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "34",
@@ -2240,7 +2072,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet136": {
-        "system_port_id": 281,
+        "system_port_id": 260,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "35",
@@ -2248,7 +2080,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet140": {
-        "system_port_id": 282,
+        "system_port_id": 261,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "36",
@@ -2256,7 +2088,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet144": {
-        "system_port_id": 283,
+        "system_port_id": 262,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "37",
@@ -2264,7 +2096,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet148": {
-        "system_port_id": 284,
+        "system_port_id": 263,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "38",
@@ -2272,7 +2104,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet152": {
-        "system_port_id": 285,
+        "system_port_id": 264,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "39",
@@ -2280,15 +2112,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet156": {
-        "system_port_id": 286,
+        "system_port_id": 265,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "40",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc08|ASIC0|Ethernet16": {
+        "system_port_id": 266,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "5",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc08|ASIC0|Ethernet160": {
-        "system_port_id": 287,
+        "system_port_id": 267,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "41",
@@ -2296,7 +2136,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet164": {
-        "system_port_id": 288,
+        "system_port_id": 268,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "42",
@@ -2304,7 +2144,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet168": {
-        "system_port_id": 289,
+        "system_port_id": 269,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "43",
@@ -2312,7 +2152,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet172": {
-        "system_port_id": 290,
+        "system_port_id": 270,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "44",
@@ -2320,7 +2160,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet176": {
-        "system_port_id": 291,
+        "system_port_id": 271,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "45",
@@ -2328,7 +2168,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet180": {
-        "system_port_id": 292,
+        "system_port_id": 272,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "46",
@@ -2336,7 +2176,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet184": {
-        "system_port_id": 293,
+        "system_port_id": 273,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "47",
@@ -2344,35 +2184,195 @@
         "num_voq": "8"
     },
     "str-sonic-lc08|ASIC0|Ethernet188": {
-        "system_port_id": 294,
+        "system_port_id": 274,
         "switch_id": 28,
         "core_index": "1",
         "core_port_index": "48",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc08|ASIC0|cpu0": {
+    "str-sonic-lc08|ASIC0|Ethernet20": {
+        "system_port_id": 275,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "6",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet24": {
+        "system_port_id": 276,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "7",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet28": {
+        "system_port_id": 277,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "8",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet32": {
+        "system_port_id": 278,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "9",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet36": {
+        "system_port_id": 279,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "10",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet4": {
+        "system_port_id": 280,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "2",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet40": {
+        "system_port_id": 281,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "11",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet44": {
+        "system_port_id": 282,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "12",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet48": {
+        "system_port_id": 283,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "13",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet52": {
+        "system_port_id": 284,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "14",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet56": {
+        "system_port_id": 285,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "15",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet60": {
+        "system_port_id": 286,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "16",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet64": {
+        "system_port_id": 287,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "17",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet68": {
+        "system_port_id": 288,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "18",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet72": {
+        "system_port_id": 289,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "19",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet76": {
+        "system_port_id": 290,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "20",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet8": {
+        "system_port_id": 291,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "3",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet80": {
+        "system_port_id": 292,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "21",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet84": {
+        "system_port_id": 293,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "22",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet88": {
+        "system_port_id": 294,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "23",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet92": {
         "system_port_id": 295,
+        "switch_id": 28,
+        "core_index": "0",
+        "core_port_index": "24",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|Ethernet96": {
+        "system_port_id": 296,
+        "switch_id": 28,
+        "core_index": "1",
+        "core_port_index": "25",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc08|ASIC0|cpu0": {
+        "system_port_id": 297,
         "switch_id": 28,
         "core_index": 0,
         "core_port_index": 0,
         "speed": "10000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet-Rec0": {
-        "system_port_id": 296,
-        "switch_id": 28,
-        "core_index": "0",
-        "core_port_index": "49",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc08|ASIC0|Ethernet-IB0": {
-        "system_port_id": 297,
-        "switch_id": 28,
-        "core_index": "1",
-        "core_port_index": "50",
-        "speed": "400000",
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet0": {
@@ -2383,200 +2383,8 @@
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc09|ASIC0|Ethernet4": {
-        "system_port_id": 299,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "2",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet8": {
-        "system_port_id": 300,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "3",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet12": {
-        "system_port_id": 301,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "4",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet16": {
-        "system_port_id": 302,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "5",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet20": {
-        "system_port_id": 303,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "6",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet24": {
-        "system_port_id": 304,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "7",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet28": {
-        "system_port_id": 305,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "8",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet32": {
-        "system_port_id": 306,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "9",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet36": {
-        "system_port_id": 307,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "10",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet40": {
-        "system_port_id": 308,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "11",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet44": {
-        "system_port_id": 309,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "12",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet48": {
-        "system_port_id": 310,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "13",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet52": {
-        "system_port_id": 311,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "14",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet56": {
-        "system_port_id": 312,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "15",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet60": {
-        "system_port_id": 313,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "16",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet64": {
-        "system_port_id": 314,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "17",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet68": {
-        "system_port_id": 315,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "18",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet72": {
-        "system_port_id": 316,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "19",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet76": {
-        "system_port_id": 317,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "20",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet80": {
-        "system_port_id": 318,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "21",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet84": {
-        "system_port_id": 319,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "22",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet88": {
-        "system_port_id": 320,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "23",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet92": {
-        "system_port_id": 321,
-        "switch_id": 32,
-        "core_index": "0",
-        "core_port_index": "24",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc09|ASIC0|Ethernet96": {
-        "system_port_id": 322,
-        "switch_id": 32,
-        "core_index": "1",
-        "core_port_index": "25",
-        "speed": "100000",
-        "num_voq": "8"
-    },
     "str-sonic-lc09|ASIC0|Ethernet100": {
-        "system_port_id": 323,
+        "system_port_id": 299,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "26",
@@ -2584,7 +2392,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet104": {
-        "system_port_id": 324,
+        "system_port_id": 300,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "27",
@@ -2592,7 +2400,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet108": {
-        "system_port_id": 325,
+        "system_port_id": 301,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "28",
@@ -2600,7 +2408,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet112": {
-        "system_port_id": 326,
+        "system_port_id": 302,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "29",
@@ -2608,15 +2416,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet116": {
-        "system_port_id": 327,
+        "system_port_id": 303,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "30",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc09|ASIC0|Ethernet12": {
+        "system_port_id": 304,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "4",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc09|ASIC0|Ethernet120": {
-        "system_port_id": 328,
+        "system_port_id": 305,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "31",
@@ -2624,7 +2440,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet124": {
-        "system_port_id": 329,
+        "system_port_id": 306,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "32",
@@ -2632,7 +2448,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet128": {
-        "system_port_id": 330,
+        "system_port_id": 307,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "33",
@@ -2640,7 +2456,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet132": {
-        "system_port_id": 331,
+        "system_port_id": 308,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "34",
@@ -2648,7 +2464,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet136": {
-        "system_port_id": 332,
+        "system_port_id": 309,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "35",
@@ -2656,7 +2472,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet140": {
-        "system_port_id": 333,
+        "system_port_id": 310,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "36",
@@ -2664,7 +2480,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet144": {
-        "system_port_id": 334,
+        "system_port_id": 311,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "37",
@@ -2672,7 +2488,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet148": {
-        "system_port_id": 335,
+        "system_port_id": 312,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "38",
@@ -2680,7 +2496,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet152": {
-        "system_port_id": 336,
+        "system_port_id": 313,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "39",
@@ -2688,15 +2504,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet156": {
-        "system_port_id": 337,
+        "system_port_id": 314,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "40",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc09|ASIC0|Ethernet16": {
+        "system_port_id": 315,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "5",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc09|ASIC0|Ethernet160": {
-        "system_port_id": 338,
+        "system_port_id": 316,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "41",
@@ -2704,7 +2528,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet164": {
-        "system_port_id": 339,
+        "system_port_id": 317,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "42",
@@ -2712,7 +2536,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet168": {
-        "system_port_id": 340,
+        "system_port_id": 318,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "43",
@@ -2720,7 +2544,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet172": {
-        "system_port_id": 341,
+        "system_port_id": 319,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "44",
@@ -2728,7 +2552,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet176": {
-        "system_port_id": 342,
+        "system_port_id": 320,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "45",
@@ -2736,7 +2560,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet180": {
-        "system_port_id": 343,
+        "system_port_id": 321,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "46",
@@ -2744,7 +2568,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet184": {
-        "system_port_id": 344,
+        "system_port_id": 322,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "47",
@@ -2752,215 +2576,215 @@
         "num_voq": "8"
     },
     "str-sonic-lc09|ASIC0|Ethernet188": {
-        "system_port_id": 345,
+        "system_port_id": 323,
         "switch_id": 32,
         "core_index": "1",
         "core_port_index": "48",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc10|ASIC0|Ethernet0": {
+    "str-sonic-lc09|ASIC0|Ethernet20": {
+        "system_port_id": 324,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "6",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet24": {
+        "system_port_id": 325,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "7",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet28": {
+        "system_port_id": 326,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "8",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet32": {
+        "system_port_id": 327,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "9",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet36": {
+        "system_port_id": 328,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "10",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet4": {
+        "system_port_id": 329,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "2",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet40": {
+        "system_port_id": 330,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "11",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet44": {
+        "system_port_id": 331,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "12",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet48": {
+        "system_port_id": 332,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "13",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet52": {
+        "system_port_id": 333,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "14",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet56": {
+        "system_port_id": 334,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "15",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet60": {
+        "system_port_id": 335,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "16",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet64": {
+        "system_port_id": 336,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "17",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet68": {
+        "system_port_id": 337,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "18",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet72": {
+        "system_port_id": 338,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "19",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet76": {
+        "system_port_id": 339,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "20",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet8": {
+        "system_port_id": 340,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "3",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet80": {
+        "system_port_id": 341,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "21",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet84": {
+        "system_port_id": 342,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "22",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet88": {
+        "system_port_id": 343,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "23",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet92": {
+        "system_port_id": 344,
+        "switch_id": 32,
+        "core_index": "0",
+        "core_port_index": "24",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc09|ASIC0|Ethernet96": {
+        "system_port_id": 345,
+        "switch_id": 32,
+        "core_index": "1",
+        "core_port_index": "25",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet-IB0": {
         "system_port_id": 346,
+        "switch_id": 36,
+        "core_index": "1",
+        "core_port_index": "50",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet-Rec0": {
+        "system_port_id": 347,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "49",
+        "speed": "400000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet0": {
+        "system_port_id": 348,
         "switch_id": 36,
         "core_index": "0",
         "core_port_index": "1",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc10|ASIC0|Ethernet4": {
-        "system_port_id": 347,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "2",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet8": {
-        "system_port_id": 348,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "3",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet12": {
-        "system_port_id": 349,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "4",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet16": {
-        "system_port_id": 350,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "5",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet20": {
-        "system_port_id": 351,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "6",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet24": {
-        "system_port_id": 352,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "7",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet28": {
-        "system_port_id": 353,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "8",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet32": {
-        "system_port_id": 354,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "9",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet36": {
-        "system_port_id": 355,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "10",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet40": {
-        "system_port_id": 356,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "11",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet44": {
-        "system_port_id": 357,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "12",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet48": {
-        "system_port_id": 358,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "13",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet52": {
-        "system_port_id": 359,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "14",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet56": {
-        "system_port_id": 360,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "15",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet60": {
-        "system_port_id": 361,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "16",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet64": {
-        "system_port_id": 362,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "17",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet68": {
-        "system_port_id": 363,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "18",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet72": {
-        "system_port_id": 364,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "19",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet76": {
-        "system_port_id": 365,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "20",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet80": {
-        "system_port_id": 366,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "21",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet84": {
-        "system_port_id": 367,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "22",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet88": {
-        "system_port_id": 368,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "23",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet92": {
-        "system_port_id": 369,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "24",
-        "speed": "100000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet96": {
-        "system_port_id": 370,
-        "switch_id": 36,
-        "core_index": "1",
-        "core_port_index": "25",
-        "speed": "100000",
-        "num_voq": "8"
-    },
     "str-sonic-lc10|ASIC0|Ethernet100": {
-        "system_port_id": 371,
+        "system_port_id": 349,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "26",
@@ -2968,7 +2792,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet104": {
-        "system_port_id": 372,
+        "system_port_id": 350,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "27",
@@ -2976,7 +2800,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet108": {
-        "system_port_id": 373,
+        "system_port_id": 351,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "28",
@@ -2984,7 +2808,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet112": {
-        "system_port_id": 374,
+        "system_port_id": 352,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "29",
@@ -2992,15 +2816,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet116": {
-        "system_port_id": 375,
+        "system_port_id": 353,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "30",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc10|ASIC0|Ethernet12": {
+        "system_port_id": 354,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "4",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc10|ASIC0|Ethernet120": {
-        "system_port_id": 376,
+        "system_port_id": 355,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "31",
@@ -3008,7 +2840,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet124": {
-        "system_port_id": 377,
+        "system_port_id": 356,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "32",
@@ -3016,7 +2848,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet128": {
-        "system_port_id": 378,
+        "system_port_id": 357,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "33",
@@ -3024,7 +2856,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet132": {
-        "system_port_id": 379,
+        "system_port_id": 358,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "34",
@@ -3032,7 +2864,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet136": {
-        "system_port_id": 380,
+        "system_port_id": 359,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "35",
@@ -3040,7 +2872,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet140": {
-        "system_port_id": 381,
+        "system_port_id": 360,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "36",
@@ -3048,7 +2880,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet144": {
-        "system_port_id": 382,
+        "system_port_id": 361,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "37",
@@ -3056,7 +2888,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet148": {
-        "system_port_id": 383,
+        "system_port_id": 362,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "38",
@@ -3064,7 +2896,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet152": {
-        "system_port_id": 384,
+        "system_port_id": 363,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "39",
@@ -3072,15 +2904,23 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet156": {
-        "system_port_id": 385,
+        "system_port_id": 364,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "40",
         "speed": "100000",
         "num_voq": "8"
     },
+    "str-sonic-lc10|ASIC0|Ethernet16": {
+        "system_port_id": 365,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "5",
+        "speed": "100000",
+        "num_voq": "8"
+    },
     "str-sonic-lc10|ASIC0|Ethernet160": {
-        "system_port_id": 386,
+        "system_port_id": 366,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "41",
@@ -3088,7 +2928,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet164": {
-        "system_port_id": 387,
+        "system_port_id": 367,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "42",
@@ -3096,7 +2936,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet168": {
-        "system_port_id": 388,
+        "system_port_id": 368,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "43",
@@ -3104,7 +2944,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet172": {
-        "system_port_id": 389,
+        "system_port_id": 369,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "44",
@@ -3112,7 +2952,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet176": {
-        "system_port_id": 390,
+        "system_port_id": 370,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "45",
@@ -3120,7 +2960,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet180": {
-        "system_port_id": 391,
+        "system_port_id": 371,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "46",
@@ -3128,7 +2968,7 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet184": {
-        "system_port_id": 392,
+        "system_port_id": 372,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "47",
@@ -3136,35 +2976,195 @@
         "num_voq": "8"
     },
     "str-sonic-lc10|ASIC0|Ethernet188": {
-        "system_port_id": 393,
+        "system_port_id": 373,
         "switch_id": 36,
         "core_index": "1",
         "core_port_index": "48",
         "speed": "100000",
         "num_voq": "8"
     },
-    "str-sonic-lc10|ASIC0|cpu0": {
+    "str-sonic-lc10|ASIC0|Ethernet20": {
+        "system_port_id": 374,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "6",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet24": {
+        "system_port_id": 375,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "7",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet28": {
+        "system_port_id": 376,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "8",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet32": {
+        "system_port_id": 377,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "9",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet36": {
+        "system_port_id": 378,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "10",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet4": {
+        "system_port_id": 379,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "2",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet40": {
+        "system_port_id": 380,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "11",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet44": {
+        "system_port_id": 381,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "12",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet48": {
+        "system_port_id": 382,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "13",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet52": {
+        "system_port_id": 383,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "14",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet56": {
+        "system_port_id": 384,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "15",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet60": {
+        "system_port_id": 385,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "16",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet64": {
+        "system_port_id": 386,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "17",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet68": {
+        "system_port_id": 387,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "18",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet72": {
+        "system_port_id": 388,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "19",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet76": {
+        "system_port_id": 389,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "20",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet8": {
+        "system_port_id": 390,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "3",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet80": {
+        "system_port_id": 391,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "21",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet84": {
+        "system_port_id": 392,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "22",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet88": {
+        "system_port_id": 393,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "23",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet92": {
         "system_port_id": 394,
+        "switch_id": 36,
+        "core_index": "0",
+        "core_port_index": "24",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|Ethernet96": {
+        "system_port_id": 395,
+        "switch_id": 36,
+        "core_index": "1",
+        "core_port_index": "25",
+        "speed": "100000",
+        "num_voq": "8"
+    },
+    "str-sonic-lc10|ASIC0|cpu0": {
+        "system_port_id": 396,
         "switch_id": 36,
         "core_index": 0,
         "core_port_index": 0,
         "speed": "10000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet-Rec0": {
-        "system_port_id": 395,
-        "switch_id": 36,
-        "core_index": "0",
-        "core_port_index": "49",
-        "speed": "400000",
-        "num_voq": "8"
-    },
-    "str-sonic-lc10|ASIC0|Ethernet-IB0": {
-        "system_port_id": 396,
-        "switch_id": 36,
-        "core_index": "1",
-        "core_port_index": "50",
-        "speed": "400000",
         "num_voq": "8"
     }
 }

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PLATFORM=`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`
+PLATFORM=$(sonic-db-cli CONFIG_DB HGET 'DEVICE_METADATA|localhost' platform)
 
 # Parse the device specific asic conf file, if it exists
 ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf

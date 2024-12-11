@@ -28,7 +28,17 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 dependent_startup=true
 
-{% if not skip_chassisd and IS_MODULAR_CHASSIS == 1 %}
+
+{% if delay_non_critical_daemon %}
+[program:delay]
+command=python3 /usr/bin/delay.py
+autostart=false
+autorestart=false
+startsecs=0
+dependent_startup=true
+{% endif %}
+
+{% if not skip_chassisd and (IS_MODULAR_CHASSIS == 1 or is_smartswitch) %}
 [program:chassisd]
 command=/usr/local/bin/chassisd
 priority=3
@@ -64,7 +74,7 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 startsecs=0
 dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
 {% endif %}
 
 {% if not skip_fancontrol and HAVE_FANCONTROL_CONF == 1 %}
@@ -151,7 +161,7 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 startsecs=10
 dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
 {% endif %}
 
 {% if not skip_syseepromd %}
@@ -164,7 +174,7 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 startsecs=10
 dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
 {% endif %}
 
 {% if not skip_thermalctld %}
@@ -178,7 +188,7 @@ stderr_logfile=syslog
 startsecs=10
 startretries=50
 dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
 {% endif %}
 
 {% if not skip_pcied %}
@@ -191,7 +201,7 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 startsecs=10
 dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
 {% endif %}
 
 {% if include_sensormond %}
@@ -204,7 +214,7 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 startsecs=10
 dependent_startup=true
-dependent_startup_wait_for=rsyslogd:running
+dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}delay:exited{% endif %}
 {% endif %}
 
 {% if not skip_stormond %}
