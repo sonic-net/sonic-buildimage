@@ -25,7 +25,8 @@ def main():
         for port in mgmt_ports:
             port_operstate_path = '/sys/class/net/{}/operstate'.format(port)
             oper_status = subprocess.run(['cat', port_operstate_path], capture_output=True, text=True)
-            #print(oper_status.stdout.strip())
+            state_db_key = "MGMT_PORT_TABLE|{}".format(port)
+            db.set(db.STATE_DB, state_db_key, 'oper_status', oper_status.stdout.strip())
             syslog.syslog(syslog.LOG_ERR, "mgmt_oper_status_check: {}".format(oper_status.stdout.strip()))
 
 
