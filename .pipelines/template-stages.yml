@@ -35,8 +35,8 @@ stages:
             OPTIONS: ${{ parameters.OPTIONS }}
         - script: |
             # skip because internal branch 3 kvmtest cases keeps failing.
-            echo "$(System.PullRequest.targetBranchName)"
-            if echo "$(System.PullRequest.targetBranchName)" | grep sonicbld/precheck/base/; then
+            echo "$(System.PullRequest.SourceBranch)"
+            if echo "$(System.PullRequest.SourceBranch)" | grep -e sonicbld/precheck/head/ -e sonicbld/code-sync/internal; then
               echo "##vso[task.setvariable variable=githubPR;isOutput=true]true"
             else
               echo "##vso[task.setvariable variable=githubPR;isOutput=true]false"
