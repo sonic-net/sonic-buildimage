@@ -36,6 +36,7 @@ endif
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	git reset --hard
 endif
+	git branch -f master origin/$(FRR_BRANCH)
 	git checkout master
 	git branch -D $(FRR_BRANCH)
 	popd

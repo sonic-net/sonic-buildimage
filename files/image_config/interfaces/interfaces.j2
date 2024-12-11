@@ -131,6 +131,7 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
 {# TODO: COPP policy type rules #}
 {% endfor %}
 {% else %}
+{% if not (DEVICE_METADATA['localhost']['subtype'] == 'SmartSwitch' and DEVICE_METADATA['localhost']['switch_type'] == 'dpu') %}
 auto eth0
 iface eth0 inet dhcp
     metric 202
@@ -140,6 +141,7 @@ iface eth0 inet dhcp
 iface eth0 inet6 dhcp
     up sysctl net.ipv6.conf.eth0.accept_ra=1
     down sysctl net.ipv6.conf.eth0.accept_ra=0
+{% endif %}
 {% endif %}
 {% endif %}
 #

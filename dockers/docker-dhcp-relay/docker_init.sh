@@ -21,7 +21,4 @@ chmod +x /usr/bin/wait_for_intf.sh
 # The docker container should start this script as PID 1, so now that supervisord is
 # properly configured, we exec /usr/local/bin/supervisord so that it runs as PID 1 for the
 # duration of the container's lifetime
-export EVENTD_STATE=$(sonic-db-cli -s CONFIG_DB HGET 'FEATURE|eventd' 'state')
-j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/events_info.json  > /etc/rsyslog.d/dhcp_relay_events.conf
-
 exec /usr/local/bin/supervisord
