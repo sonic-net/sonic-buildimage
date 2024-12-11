@@ -77,6 +77,13 @@
 {% endif %}
 {%- endfor %}
 
+{%- set LOSSLESS_TC = [] %}
+{%- if generate_lossless_tc_list is defined %}
+    {{- generate_lossless_tc_list(LOSSLESS_TC) }}
+{%- else %}
+    {%- set LOSSLESS_TC = ['3','4'] %}
+{%- endif %}
+
 {%- set pfc_to_pg_map_supported_asics = ['mellanox', 'barefoot'] -%}
 {%- set backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter'] -%}
 {%- set apollo_resource_types = ['DL-NPU-Apollo'] -%}
@@ -106,6 +113,9 @@
         }
     },
 {% endif %}
+{% if (generate_pfc_to_queue_map is defined) %}
+    {{- generate_pfc_to_queue_map() }}
+{% else %}
     "MAP_PFC_PRIORITY_TO_QUEUE": {
         "AZURE": {
             "0": "0",
@@ -118,6 +128,7 @@
             "7": "7"
         }
     },
+{% endif %}
 {% if (generate_tc_to_queue_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_queue_map() }}
 {% else %}
@@ -229,6 +240,9 @@
 {% if (generate_tc_to_dscp_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_dscp_map() }}
 {% endif %}
+{% if (generate_scheduler is defined) %}
+    {{- generate_scheduler() }}
+{% else %}
 {% if 'resource_type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['resource_type'] in apollo_resource_types %}
     "SCHEDULER": {
         "scheduler.0": {
@@ -278,6 +292,7 @@
             "weight": "15"
         }
     },
+{% endif %}
 {% endif %}
 {% if asic_type in pfc_to_pg_map_supported_asics  %}
     "PFC_PRIORITY_TO_PRIORITY_GROUP_MAP": {
@@ -339,9 +354,9 @@
 {% if port in port_names_list_extra_queues %}
             "pfc_enable"      : "2,3,4,6",
 {% else %}
-            "pfc_enable"      : "3,4",
+            "pfc_enable"      : "{{ LOSSLESS_TC|join(',') }}",
 {% endif %}
-            "pfcwd_sw_enable" : "3,4",
+            "pfcwd_sw_enable" : "{{ LOSSLESS_TC|join(',') }}",
 {% endif %}
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE"
@@ -370,7 +385,9 @@
         }
     },
 {% endif %}
-{% if voq_chassis %}
+{% if generate_queue is defined %}
+    {{- generate_queue(PORT_ACTIVE) }}
+{% elif voq_chassis %}
     "QUEUE": {
 {% for system_port in SYSTEM_PORT_ALL %}
         "{{ system_port }}|3": {
