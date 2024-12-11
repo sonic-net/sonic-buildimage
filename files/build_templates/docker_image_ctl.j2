@@ -339,6 +339,19 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
+
+{%- elif docker_container_name == "eventd" %}
+    max_timeout=100
+    elapsed_time=0
+    while [[ ! -f "/etc/rsyslog.d/00-rsyslog_plugin.conf" && $elapsed_time -lt $max_timeout ]]; do
+        sleep 1
+        elapsed_time=$((elapsed_time + 1))
+    done
+
+    if [[ -f "/etc/rsyslog.d/00-rsyslog_plugin.conf" ]]; then
+        # Restart rsyslog service
+        systemctl restart rsyslog
+    fi
 {%- else %}
     : # nothing
 {%- endif %}

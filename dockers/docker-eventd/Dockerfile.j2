@@ -33,4 +33,11 @@ COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 
+
+RUN mkdir -p /etc/rsyslog_plugin
+
+# Copy rsyslog plugin configuration file and regexes to docker
+COPY ["00-rsyslog_plugin.conf", "/etc/rsyslog_plugin/"]
+COPY ["*.json", "/etc/rsyslog_plugin/"]
+
 ENTRYPOINT ["/usr/local/bin/supervisord"]

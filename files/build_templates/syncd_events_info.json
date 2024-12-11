@@ -1,9 +1,0 @@
-{
-    "yang_module": "sonic-events-syncd",
-    "proclist": [
-        {
-            "name": "syncd",
-            "parse_json": "syncd_regex.json"
-        }
-    ]
-}
