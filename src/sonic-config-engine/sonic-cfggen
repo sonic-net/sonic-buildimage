@@ -364,6 +364,15 @@ def main():
         if ports is None:
             print('Failed to get port config', file=sys.stderr)
             sys.exit(1)
+        for port in ports.values():
+            null_value_attrs = []
+            for attr in port:
+                if port[attr] == '-':
+                    null_value_attrs.append(attr)
+            if not null_value_attrs:
+                continue
+            for null_value_attr in null_value_attrs:
+                del port[null_value_attr]
         deep_update(data, {'PORT': ports})
 
         brkout_table = get_breakout_mode(hwsku, platform, args.port_config)
