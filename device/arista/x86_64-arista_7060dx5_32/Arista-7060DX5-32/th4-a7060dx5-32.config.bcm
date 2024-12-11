@@ -1381,30 +1381,6 @@ device:
                 MIN_GUARANTEE_CELLS: 37
 
 ...
-### Mirror-on-drop
----
-device:
-    0:
-        TM_MIRROR_ON_DROP_CONTROL:
-            RESERVED_LIMIT_CELLS: 2580
-
-        TM_MIRROR_ON_DROP_PROFILE:
-            ?
-                TM_MIRROR_ON_DROP_PROFILE_ID: 0
-            :
-                PERCENTAGE_0_25: 65535
-                PERCENTAGE_25_50: 65535
-                PERCENTAGE_50_75: 65535
-                PERCENTAGE_75_100: 65535
-
-        TM_MIRROR_ON_DROP_DESTINATION:
-            ?
-                TM_MIRROR_ON_DROP_DESTINATION_ID: 0
-            :
-                TM_MC_Q_ID: 1
-                PORT_ID: 1
-...
-
 ### OBM
 ---
 device:
