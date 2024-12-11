@@ -104,6 +104,11 @@ class MonitorSystemBusTask(ProcessTaskBase):
         logger.log_info("Start Listening to systemd bus (pid {0})".format(os.getpid()))
         self.subscribe_sysbus()
 
+    def task_stop(self):
+        # FIXME: Gracefully stop `loop.run()`.
+        self._task_process.kill()
+        return True
+
     def task_notify(self, msg):
         if self.task_stopping_event.is_set():
             return
@@ -481,9 +486,11 @@ class Sysmonitor(ProcessTaskBase):
 
         from queue import Empty
         # Queue to receive the STATEDB and Systemd state change event
-        while not self.task_stopping_event.is_set():
+        while True:
             try:
                 msg = self.myQ.get(timeout=QUEUE_TIMEOUT)
+                if msg == "stop":
+                    break
                 event = msg["unit"]
                 event_src = msg["evt_src"]
                 event_time = msg["time"]
@@ -503,15 +510,10 @@ class Sysmonitor(ProcessTaskBase):
         monitor_statedb_table.task_stop()
 
     def task_worker(self):
-        if self.task_stopping_event.is_set():
-            return
         self.system_service()
 
     def task_stop(self):
-        # Signal the process to stop
-        self.task_stopping_event.set()
-        #Clear the resources of mpmgr- Queue
-        self.mpmgr.shutdown()
+        self.myQ.put("stop")
 
         # Wait for the process to exit
         self._task_process.join(self._stop_timeout_secs)
@@ -519,12 +521,8 @@ class Sysmonitor(ProcessTaskBase):
         # If the process didn't exit, attempt to kill it
         if self._task_process.is_alive():
             logger.log_notice("Attempting to kill sysmon main process with pid {}".format(self._task_process.pid))
-            os.kill(self._task_process.pid, signal.SIGKILL)
-
-        if self._task_process.is_alive():
-            logger.log_error("Sysmon main process with pid {} could not be killed".format(self._task_process.pid))
+            self._task_process.kill()
+            self._task_process.join()
             return False
 
         return True
-
-

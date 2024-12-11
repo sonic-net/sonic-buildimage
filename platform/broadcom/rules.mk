@@ -56,5 +56,7 @@ $(SYNCD)_DEPENDS += $(BRCM_XGS_SAI) $(BRCM_XGS_SAI_DEV)
 $(SYNCD)_UNINSTALLS += $(BRCM_XGS_SAI_DEV) $(BRCM_XGS_SAI)
 
 ifeq ($(ENABLE_SYNCD_RPC),y)
+# Remove the libthrift_0.11.0 dependency injected by rules/syncd.mk
+$(SYNCD)_DEPENDS := $(filter-out $(LIBTHRIFT_DEV),$($(SYNCD)_DEPENDS))
 $(SYNCD)_DEPENDS += $(LIBSAITHRIFT_DEV)
 endif

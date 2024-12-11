@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +21,7 @@ import random
 import sys
 import subprocess
 import threading
+import pytest
 
 from mock import MagicMock
 if sys.version_info.major == 3:
@@ -33,7 +35,7 @@ sys.path.insert(0, modules_path)
 
 import sonic_platform.chassis
 from sonic_platform_base.sfp_base import SfpBase
-from sonic_platform.chassis import Chassis
+from sonic_platform.chassis import Chassis, SmartSwitchChassis
 from sonic_platform.device_data import DeviceDataManager
 
 sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
@@ -342,3 +344,77 @@ class TestChassis:
         chassis = Chassis()
         content = chassis._parse_vpd_data(os.path.join(test_path, 'vpd_data_file'))
         assert content.get('REV') == 'A7'
+
+    @mock.patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
+    @mock.patch('sonic_platform.module.ConfigDBConnector', mock.MagicMock())
+    def test_smartswitch(self):
+        orig_dpu_count = DeviceDataManager.get_dpu_count
+        DeviceDataManager.get_dpu_count = mock.MagicMock(return_value=4)
+        chassis = SmartSwitchChassis()
+
+        assert not chassis.is_modular_chassis()
+        assert chassis.is_smartswitch()
+        assert chassis.init_midplane_switch()
+
+        chassis._module_list = None
+        chassis.module_initialized_count = 0
+        chassis.module_name_index_map = {}
+        with pytest.raises(RuntimeError, match="Invalid index = -1 for module"
+                           " initialization with total module count = 4"):
+            chassis.initialize_single_module(-1)
+            chassis.get_module(-1)
+        with pytest.raises(KeyError):
+            chassis.get_module_index('DPU1')
+            chassis.get_module_index('DPU2')
+            chassis.get_dpu_id("DPU1")
+            chassis.get_dpu_id("DPU2")
+            chassis.get_dpu_id("DPU3")
+
+        DeviceDataManager.get_dpu_count = mock.MagicMock(return_value=0)
+        assert chassis.get_num_modules() == 0
+        with pytest.raises(TypeError):
+            chassis.get_module(0)
+        chassis.initialize_modules()
+        assert chassis.get_all_modules() is None
+
+        DeviceDataManager.get_dpu_count = mock.MagicMock(return_value=4)
+        from sonic_platform.module import DpuModule
+        assert isinstance(chassis.get_module(0), DpuModule)
+        assert chassis.get_module(4) is None
+
+        chassis.initialize_modules()
+        assert chassis.get_module_index('DPU0') == 0
+        assert chassis.get_module_index('DPU3') == 3
+        with pytest.raises(KeyError):
+            chassis.get_module_index('DPU10')
+            chassis.get_module_index('ABC')
+
+        assert chassis.get_num_modules() == 4
+        module_list = chassis.get_all_modules()
+        assert len(module_list) == 4
+        pl_data = {
+            "dpu0": {
+                "interface": {"Ethernet224": "Ethernet0"}
+            },
+            "dpu1": {
+                "interface": {"Ethernet232": "Ethernet0"}
+            },
+            "dpu2": {
+                "interface": {"EthernetX": "EthernetY"}
+            }
+        }
+        orig_dpus_data = DeviceDataManager.get_platform_dpus_data
+        DeviceDataManager.get_platform_dpus_data = mock.MagicMock(return_value=pl_data)
+        chassis.get_module_dpu_data_port(0) == str({"Ethernet232": "Ethernet0"})
+        with pytest.raises(IndexError):
+            assert chassis.get_module_dpu_data_port(5)
+            assert chassis.get_module_dpu_data_port(-1)
+
+        assert chassis.get_dpu_id("DPU1") == 1
+        assert chassis.get_dpu_id("DPU3") == 3
+        assert chassis.get_dpu_id("DPU2") == 2
+        with pytest.raises(KeyError):
+            chassis.get_dpu_id('DPU15')
+            chassis.get_dpu_id('ABC')
+        DeviceDataManager.get_platform_dpus_data = orig_dpus_data
+        DeviceDataManager.get_dpu_count = orig_dpu_count
