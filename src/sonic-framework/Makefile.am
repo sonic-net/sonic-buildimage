@@ -1,9 +1,10 @@
-.PHONY: compile_protobufs
 AUTOMAKE_OPTIONS = subdir-objects
 INCLUDES = -I ../sonic-swss-common/common -Ibuild/gen -Ibuild/gen/github.com/openconfig/gnoi
 BUILT_SOURCES = rebootbackend_protobuf_compilation rebootbackend_dbus_compilation
 
 compile_protobufs: rebootbackend_protobuf_compilation rebootbackend_dbus_compilation
+
+.NOTPARALLEL: compile_protobufs
 
 rebootbackend_protobuf_compilation: 
 	mkdir -p build/gen

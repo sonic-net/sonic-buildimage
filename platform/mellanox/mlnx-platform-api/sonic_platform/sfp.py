@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -675,7 +676,8 @@ class SFP(NvidiaSFPCommon):
         """
         try:
             if self.is_sw_control():
-                return 'Not supported'
+                api = self.get_xcvr_api()
+                return api.get_error_description() if api else None
         except:
             return self.SFP_STATUS_INITIALIZING
 

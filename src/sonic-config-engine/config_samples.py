@@ -16,7 +16,6 @@ def generate_common_config(data):
     data['FLEX_COUNTER_TABLE'] = {
         'ACL': {
             'FLEX_COUNTER_STATUS': 'disable',
-            'FLEX_COUNTER_DELAY_STATUS': 'true',
             'POLL_INTERVAL': '10000'
         }
     }
@@ -270,4 +269,3 @@ def get_available_config():
 def generate_sample_config(data, setting_name):
     data = generate_common_config(data)
     return _sample_generators[setting_name.lower()](data)
-

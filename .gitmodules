@@ -46,7 +46,7 @@
 [submodule "src/sonic-frr/frr"]
 	path = src/sonic-frr/frr
 	url = https://github.com/sonic-net/sonic-frr.git
-	branch = frr/8.5
+	branch = frr-10.0.1
 [submodule "platform/p4/p4-hlir/p4-hlir-v1.1"]
 	path = platform/p4/p4-hlir/p4-hlir-v1.1
 	url = https://github.com/p4lang/p4-hlir.git
@@ -124,12 +124,12 @@
 [submodule "platform/marvell/sonic-platform-marvell"]
 	path = platform/marvell/sonic-platform-marvell
 	url = https://github.com/Marvell-switching/sonic-platform-arm64.git
-[submodule "platform/innovium/sonic-platform-marvell"]
-	path = platform/innovium/sonic-platform-marvell
-	url = https://github.com/Marvell-switching/sonic-platform-marvell
 [submodule "src/sonic-stp"]
 	path = src/sonic-stp
 	url = https://github.com/sonic-net/sonic-stp
+[submodule "platform/marvell-teralynx/sonic-platform-marvell-teralynx"]
+	path = platform/marvell-teralynx/sonic-platform-marvell-teralynx
+	url = https://github.com/Marvell-switching/sonic-platform-marvell.git
 [submodule "src/sonic-framework/gnoi"]
 	path = src/sonic-framework/gnoi
 	url = https://github.com/openconfig/gnoi
