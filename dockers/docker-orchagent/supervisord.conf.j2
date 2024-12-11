@@ -38,6 +38,15 @@ dependent_startup=true
 {%- endif %}
 {% set asan_extra_options = ':print_suppressions=0' %}
 
+{% set dash_offload_enabled = 0 %}
+{% if DEVICE_METADATA.localhost.subtype %}
+{% if DEVICE_METADATA.localhost.subtype == "SmartSwitch" %}
+{% if "nvidia" in DEVICE_METADATA.localhost.platform %}
+{% set dash_offload_enabled = 1 %}
+{%- endif %}
+{%- endif %}
+{%- endif %}
+
 {% if is_fabric_asic == 0 %}
 [program:gearsyncd]
 command=/usr/bin/gearsyncd -p /usr/share/sonic/hwsku/gearbox_config.json
@@ -301,4 +310,21 @@ dependent_startup_wait_for=swssconfig:exited
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/fdbsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
+{%- endif %}
+
+{% if is_fabric_asic == 0 %}
+{% if dash_offload_enabled == 1 %}
+[program:dashoffloadmanager]
+command=/usr/bin/dashoffloadmanager --zmq_server_base_addr 127.0.10.10
+priority=17
+autostart=false
+autorestart=false
+stdout_logfile=syslog
+stderr_logfile=syslog
+dependent_startup=true
+dependent_startup_wait_for=swssconfig:exited
+{% if ENABLE_ASAN == "y" %}
+environment=ASAN_OPTIONS="log_path=/var/log/asan/dashoffloadmanager-asan.log{{ asan_extra_options }}"
+{% endif %}
+{%- endif %}
 {%- endif %}
