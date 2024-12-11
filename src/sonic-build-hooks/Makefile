@@ -28,7 +28,7 @@ DEPENDS := $(shell find scripts hooks debian -type f)
 $(SONIC_BUILD_HOOKS_TARGET): $(DEPENDS)
 	@rm -rf $(BUILDINFO_DIR)/$(SONIC_BUILD_HOOKS) $(TMP_DIR)
 	@mkdir -p $(DEBIAN_DIR) $(SCRIPTS_PATH) $(HOOKS_PATH) $(SYMBOL_LINK_PATH) $(TRUSTED_GPG_PATH) $(BUILDINFO_DIR)
-	@chmod 00775 $(DEBIAN_DIR)
+	@chmod 0775 $(DEBIAN_DIR)
 	@cp debian/* $(DEBIAN_DIR)/
 	@cp scripts/* $(SCRIPTS_PATH)/
 	@cp hooks/* $(HOOKS_PATH)/
