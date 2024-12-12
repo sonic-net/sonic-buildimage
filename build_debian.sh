@@ -389,7 +389,8 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     wireless-regdb          \
     ethtool                 \
     zstd                    \
-    nvme-cli
+    nvme-cli                \
+    firmware-realtek
 
 # Have systemd create the auditd log directory
 sudo mkdir -p ${FILESYSTEM_ROOT}/etc/systemd/system/auditd.service.d
