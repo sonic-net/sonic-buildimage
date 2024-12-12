@@ -112,15 +112,6 @@ generate_device_list()
             fi;
         fi;
     done
-
-    # Inject KVM platform info for Mellanox build
-    if [ "$MLNX_KVM_IMAGE" = "yes" ]; then
-        for d in `find -L ./device/virtual -maxdepth 1 -mindepth 1 -type d`; do
-            if [ -f "$d/platform_asic" ]; then
-                echo "${d##*/}" >> "$platforms_asic";
-            fi
-        done
-    fi
 }
 
 if [ "$IMAGE_TYPE" = "onie" ]; then
@@ -172,6 +163,7 @@ elif [ "$IMAGE_TYPE" = "raw" ]; then
 
 elif [ "$IMAGE_TYPE" = "kvm" ]; then
     if [ "$TARGET_MACHINE" = "mellanox" ]; then
+        echo "Enable Mellanox KVM build"
         export MLNX_KVM_IMAGE="yes"
     fi
 
