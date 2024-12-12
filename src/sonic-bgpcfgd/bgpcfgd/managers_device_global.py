@@ -12,6 +12,7 @@ class DeviceGlobalCfgMgr(Manager):
     TSA_DEFAULTS = "false"
     WCMP_DEFAULTS = "false"
     IDF_DEFAULTS = "unisolated"
+    RECEIVED_DEFAULTS = "ignore"
 
     def __init__(self, common_objs, db, table):
         """
@@ -47,6 +48,9 @@ class DeviceGlobalCfgMgr(Manager):
         # By default IDF feature is unisolated
         if not self.directory.path_exist(self.db_name, self.table_name, "idf_isolation_state"):
             self.directory.put(self.db_name, self.table_name, "idf_isolation_state", self.IDF_DEFAULTS)
+        # By default received bandwidth for W-ECMP feature is ignore
+        if not self.directory.path_exist(self.db_name, self.table_name, "received_bandwidth"):
+            self.directory.put(self.db_name, self.table_name, "received_bandwidth", self.RECEIVED_DEFAULTS)
 
     def handle_type_update(self):
         log_debug("DeviceGlobalCfgMgr:: Switch role update handler")
@@ -68,6 +72,8 @@ class DeviceGlobalCfgMgr(Manager):
         self.configure_wcmp(data)
         # IDF configuration
         self.configure_idf(data)
+        # Received Bandwidth configuration
+        self.configure_received_bandwidth(data)
 
         return True
 
@@ -80,6 +86,8 @@ class DeviceGlobalCfgMgr(Manager):
         self.configure_wcmp()
         # IDF configuration
         self.configure_idf()
+        # Received Bandwidth configuration
+        self.configure_received_bandwidth()
 
         return True
 
@@ -140,6 +148,54 @@ class DeviceGlobalCfgMgr(Manager):
         else:
             log_notice("DeviceGlobalCfgMgr:: IDF configuration is up-to-date")
 
+    def configure_received_bandwidth(self, data=None):
+        """Configure received bandwidth for W-ECMP feature"""
+        
+        state = self.RECEIVED_DEFAULTS
+        
+        if data is not None:
+            if "received_bandwidth" in data:
+                state = data["received_bandwidth"]
+        
+        if self.is_update_required("received_bandwidth", state):
+            if self.set_received_bandwidth(state):
+                self.directory.put(self.db_name, self.table_name, "received_bandwidth", state)
+        else:
+            log_notice("DeviceGlobalCfgMgr:: received bandwidth for W-ECMP configuration is up-to-date")
+     
+    def set_received_bandwidth(self, status):
+        """API to configure received bandwidth for W-ECMP"""
+        
+        bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
+        cmd_list = []
+        
+        if status not in ["ignore", "allow", "skip_missing", "default_weight_for_missing"]:
+            log_err("Received Bandwidth for W-ECMP: invalid value({}) is provided".format(status))
+            return False
+        
+        cmd_list.append("router bgp %s" % bgp_asn)
+        
+        if status == "ignore":
+            log_notice("DeviceGlobalCfgMgr:: Ignoring W-ECMP received_bandwdith...")
+            cmd_list.append(" bgp bestpath bandwidth ignore")
+        elif status == "allow":
+            log_notice("DeviceGlobalCfgMgr:: Enabling W-ECMP received_bandwdith with allow...")
+            cmd_list.append(" no bgp bestpath bandwidth")
+        elif status == "skip_missing":
+            log_notice("DeviceGlobalCfgMgr:: Enabling W-ECMP received_bandwdith with skip_missing...")
+            cmd_list.append(" bgp bestpath bandwidth skip-missing")
+        elif status == "default_weight_for_missing":
+            log_notice("DeviceGlobalCfgMgr:: Enabling W-ECMP received_bandwdith with default_weight_for_missing...")
+            cmd_list.append(" bgp bestpath bandwidth default-weight-for-missing")
+        else:
+            return False
+        
+        self.cfg_mgr.push_list(cmd_list)
+        
+        log_debug("DeviceGlobalCfgMgr::Done")
+        
+        return True 
+    
     def set_wcmp(self, status):
         """ API to set/unset W-ECMP """
 
