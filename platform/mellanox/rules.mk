@@ -28,6 +28,8 @@ include $(PLATFORM_PATH)/docker-syncd-mlnx.mk
 include $(PLATFORM_PATH)/docker-syncd-mlnx-rpc.mk
 include $(PLATFORM_PATH)/docker-saiserver-mlnx.mk
 include $(PLATFORM_PATH)/one-image.mk
+include $(PLATFORM_PATH)/onie.mk
+include $(PLATFORM_PATH)/kvm-image.mk
 include $(PLATFORM_PATH)/libsaithrift-dev.mk
 include $(PLATFORM_PATH)/mlnx-ffb.mk
 include $(PLATFORM_PATH)/issu-version.mk
@@ -42,6 +44,7 @@ include $(PLATFORM_PATH)/mlnx-sonic-bfb-installer.mk
 include $(PLATFORM_PATH)/platform-utils/platform-utils.mk
 
 SONIC_ALL += $(SONIC_ONE_IMAGE) \
+             $(SONIC_KVM_IMAGE) \
              $(DOCKER_FPM)
 
 # Inject mlnx sai into syncd
