@@ -123,24 +123,42 @@ DEFAULT_VS_PREPARE_MEM = yes
 
 # INCLUDE_SYSTEM_GNMI - build docker-sonic-gnmi for system gnmi support
 INCLUDE_SYSTEM_GNMI = y
+ENABLE_SYSTEM_GNMI = y
+DELAY_SYSTEM_GNMI = y
+AUTORESTART_SYSTEM_GNMI = y
 
 # INCLUDE_SYSTEM_BMP - build docker-sonic-bmp for system bmp support
 INCLUDE_SYSTEM_BMP = y
 
 # INCLUDE_SYSTEM_EVENTD - build docker-eventd for system eventd support
 INCLUDE_SYSTEM_EVENTD = y
+ENABLE_SYSTEM_EVENTD = y
+DELAY_SYSTEM_EVENTD = n
+AUTORESTART_SYSTEM_EVENTD = y
 
 # INCLUDE_SYSTEM_TELEMETRY - build docker-sonic-telemetry for system telemetry support
-INCLUDE_SYSTEM_TELEMETRY = n
+INCLUDE_SYSTEM_TELEMETRY = y
+ENABLE_SYSTEM_TELEMETRY = y
+DELAY_SYSTEM_TELEMETRY = y
+AUTORESTART_SYSTEM_TELEMETRY = y
 
 # INCLUDE_ICCPD - build docker-iccpd for mclag support
 INCLUDE_ICCPD = n
+ENABLE_ICCPD = n
+DELAY_ICCPD = n
+AUTORESTART_ICCPD = y
 
 # INCLUDE_SFLOW - build docker-sflow for sFlow support
 INCLUDE_SFLOW = y
+ENABLE_SFLOW = n
+DELAY_SFLOW = y
+AUTORESTART_SFLOW = y
 
 # INCLUDE_MGMT_FRAMEWORK - build docker-sonic-mgmt-framework for CLI and REST server support
 INCLUDE_MGMT_FRAMEWORK = y
+ENABLE_MGMT_FRAMEWORK = y
+DELAY_MGMT_FRAMEWORK = y
+AUTORESTART_MGMT_FRAMEWORK = y
 
 # ENABLE_HOST_SERVICE_ON_START - enable sonic-host-server for mgmt-framework and/or
 # gnmi containers to access host functionality by default
@@ -148,15 +166,29 @@ ENABLE_HOST_SERVICE_ON_START = y
 
 # INCLUDE_RESTAPI - build docker-sonic-restapi for configuring the switch using REST APIs
 INCLUDE_RESTAPI ?= n
+ENABLE_RESTAPI = y
+DELAY_RESTAPI = n
+AUTORESTART_RESTAPI = y
 
 # INCLUDE_NAT - build docker-nat for nat support
 INCLUDE_NAT = y
+ENABLE_NAT = n
+DELAY_NAT = n
+AUTORESTART_NAT = y
 
 # INCLUDE_DHCP_RELAY - build and install dhcp-relay package
+# TODO: In init_cfg.json.j2,this docker is not surrounded by an if 
 INCLUDE_DHCP_RELAY = y
+ENABLE_DHCP_RELAY = y
+DELAY_DHCP_RELAY = y
+AUTORESTART_DHCP_RELAY = y
 
 # INCLUDE_DHCP_SERVER - build and install dhcp-server package
+# TODO: Not added to SONIC_INSTALL_DOCKER_IMAGES in makefile
 INCLUDE_DHCP_SERVER ?= n
+ENABLE_DHCP_SERVER = n
+DELAY_DHCP_SERVER = n
+AUTORESTART_DHCP_SERVER = y
 
 # Conditionally enable DHCP_SERVER when SMARTSWITCH is set to 1
 ifeq ($(SMARTSWITCH), 1)
@@ -165,6 +197,9 @@ endif
 
 # INCLUDE_P4RT - build docker-p4rt for P4RT support
 INCLUDE_P4RT = n
+ENABLE_P4RT = n
+DELAY_P4RT = n
+AUTORESTART_P4RT = y
 
 # ENABLE_AUTO_TECH_SUPPORT - Enable the configuration for event-driven techsupport & coredump mgmt feature
 ENABLE_AUTO_TECH_SUPPORT = y
@@ -177,16 +212,30 @@ ENABLE_AUTO_TECH_SUPPORT = y
 ENABLE_NATIVE_WRITE = y
 
 # INCLUDE_MACSEC - build docker-macsec for macsec support
+# TODO: no SONIC_INSTALL_DOCKER_IMAGES in makefile
 INCLUDE_MACSEC = y
+ENABLE_MACSEC = y
+DELAY_MACSEC = y
+AUTORESTART_MACSEC = y
 
 # INCLUDE_GBSYNCD - build docker-gbsyncd-* for gearbox support
+# TODO: only built for VS, no makefile?
 INCLUDE_GBSYNCD ?= y
+ENABLE_GBSYNCD = y
+DELAY_GBSYNCD = y
+AUTORESTART_GBSYNCD = y
 
 # INCLUDE_TEAMD - build docker-teamd for LAG protocol support
 INCLUDE_TEAMD ?= y
+ENABLE_TEAMD = y
+DELAY_TEAMD = n
+AUTORESTART_TEAMD = y
 
 # INCLUDE_ROUTER_ADVERTISER - build docker-router-advertiser for router advertisements support
 INCLUDE_ROUTER_ADVERTISER ?= y
+ENABLE_ROUTER_ADVERTISER = y
+DELAY_ROUTER_ADVERTISER = n
+AUTORESTART_ROUTER_ADVERTISER = y
 
 # INCLUDE_KUBERNETES - if set to y kubernetes packages are installed to be able to
 # run as worker node in kubernetes cluster.
@@ -298,6 +347,9 @@ BUILD_MULTIASIC_KVM = n
 
 # INCLUDE_MUX - build docker-mux for dual ToR (Gemini)
 INCLUDE_MUX = y
+ENABLE_SYSTEM_GNMI = y
+DELAY_SYSTEM_GNMI = y
+AUTORESTART_SYSTEM_GNMI = y
 
 # ENABLE_ASAN - enable address sanitizer
 ENABLE_ASAN ?= n
