@@ -1321,7 +1321,7 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 			&encap_src_addr, IPV6_MAX_BYTELEN))
 		return false;
 	if (!nl_attr_put(&req->n, datalen, FPM_ROUTE_ENCAP_SRV6_VPN_SID,
-				&nexthop->nh_srv6->seg6_segs,
+				&nexthop->nh_srv6->seg6_segs->seg[0],
 				IPV6_MAX_BYTELEN))
 		return false;
 	nl_attr_nest_end(&req->n, nest);
