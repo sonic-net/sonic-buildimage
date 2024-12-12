@@ -7,6 +7,11 @@
 {% endblock banner %}
 !
 {% block fpm %}
+{% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('subtype' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['subtype'].lower() == 'dualtor') %}
+! Disable next hop group support for DualTor
+no zebra nexthop kernel enable
+!
+{% endif %}
 ! Uses the old known FPM behavior of including next hop information in the route (e.g. RTM_NEWROUTE) messages
 no fpm use-next-hop-groups
 !
