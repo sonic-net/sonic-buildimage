@@ -81,7 +81,69 @@
             }
         }
     },
-
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_TRUE": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS_AF": {
+                "BGP_GLOBALS_AF_LIST": [
+                {
+                    "vrf_name":"default",
+                    "local_asn": 65001
+                }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS_AF": {
+                "BGP_GLOBALS_AF_LIST": [
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "l2vpn_evpn",
+                    "advertise-all-vni": "true"
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_FALSE": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS_AF": {
+                "BGP_GLOBALS_AF_LIST": [
+                {
+                    "vrf_name":"default",
+                    "local_asn": 65001
+                }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS_AF": {
+                "BGP_GLOBALS_AF_LIST": [
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "l2vpn_evpn",
+                    "advertise-all-vni": "false"
+                }
+                ]
+            }
+        }
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_INVALID": {
+        "sonic-bgp-global:sonic-bgp-global": {
+            "sonic-bgp-global:BGP_GLOBALS_AF": {
+                "BGP_GLOBALS_AF_LIST": [
+                {
+                    "vrf_name":"default",
+                    "local_asn": 65001
+                }
+                ]
+            },
+            "sonic-bgp-global:BGP_GLOBALS_AF": {
+                "BGP_GLOBALS_AF_LIST": [
+                {
+                    "vrf_name": "default",
+                    "afi_safi": "l2vpn_evpn",
+                    "advertise-all-vni": "invalid value"
+                }
+                ]
+            }
+        }
+    },
     "BGP_NEIGHBOR_ALL_VALID": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {

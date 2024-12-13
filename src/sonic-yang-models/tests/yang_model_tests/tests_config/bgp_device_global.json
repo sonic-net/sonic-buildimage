@@ -112,32 +112,5 @@
                 }
             }
         }
-    },
-    "BGP_DEVICE_GLOBAL_AF_ADVERTISE_ALL_VNI_TRUE": {
-        "sonic-bgp-device-global:sonic-bgp-device-global": {
-            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL_AF": {
-                "default|l2vpn_evpn":{
-                    "advertise-all-vni": "true"
-                }
-            }
-        }
-    },
-    "BGP_DEVICE_GLOBAL_AF_ADVERTISE_ALL_VNI_FALSE": {
-        "sonic-bgp-device-global:sonic-bgp-device-global": {
-            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL_AF": {
-                "default|l2vpn_evpn":{
-                    "advertise-all-vni": "false"
-                }
-            }
-        }
-    },
-    "BGP_DEVICE_GLOBAL_AF_ADVERTISE_ALL_VNI_INVALID": {
-        "sonic-bgp-device-global:sonic-bgp-device-global": {
-            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL_AF": {
-                "default|l2vpn_evpn":{
-                    "advertise-all-vni": "invalid-value"
-                }
-            }
-        }
     }
 }
