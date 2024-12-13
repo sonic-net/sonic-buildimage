@@ -40,7 +40,7 @@ def check_bootstrap_status():
         if "HasBootstrapped=yes" in text:
             return
         else:
-            sonic_logger.log_info("check_bootstrap_status: no ready " + text)
+            sonic_logger.log_info("check_bootstrap_status: not ready " + text)
     else:
         sonic_logger.log_info("check_bootstrap_status: "+DSMS_CONF+" file not found!")
     raise BootstrapMonitorError("Bootstrap not ready")
