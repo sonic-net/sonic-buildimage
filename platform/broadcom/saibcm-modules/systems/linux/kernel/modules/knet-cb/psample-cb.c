@@ -1011,13 +1011,13 @@ int psample_cleanup(void)
 int psample_init(void)
 {
     #define PROCFS_MAX_PATH 1024
-    #define PSAMPLE_PROCFS_PATH "bcm/knet-cb"
     char psample_procfs_path[PROCFS_MAX_PATH];
     struct proc_dir_entry *entry;
 
     /* create procfs for psample */
-    proc_mkdir(PSAMPLE_PROCFS_PATH, NULL);
-    snprintf(psample_procfs_path, sizeof(psample_procfs_path), "%s/%s", PSAMPLE_PROCFS_PATH, PSAMPLE_CB_NAME);
+    snprintf(psample_procfs_path, PROCFS_MAX_PATH, "bcm/knet-cb");
+    knet_cb_proc_root = proc_mkdir(psample_procfs_path, NULL);
+    snprintf(psample_procfs_path, PROCFS_MAX_PATH, "%s/%s", psample_procfs_path, PSAMPLE_CB_NAME);
     psample_proc_root = proc_mkdir(psample_procfs_path, NULL);
 
     /* create procfs for psample stats */

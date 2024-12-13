@@ -322,3 +322,10 @@ sai_mdio_access_clause22
 cmic_dma_abort_in_cold_boot
 hybrid_pfc_deadlock_enable
 sai_pfc_dlr_init_capability
+svi_my_station_optimization
+sai_stats_support_mask
+oversubscribe_mixed_sister_25_50_enable
+warmboot_knet_shutdown_mode
+sai_fdb_entry_l2_discard_src_enable
+sai_pfc_defaults_disable
+
