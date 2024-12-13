@@ -1486,6 +1486,7 @@ class SocketHandler:
         self.safe_remove_file(self.address)
         logger.log_info("Socket listener stopped.")
 
+
 class Daemonizer:
     """Facilitates the daemonization of the current process.
     
@@ -1508,6 +1509,8 @@ class Daemonizer:
         This method performs the necessary steps to create a daemon process,
         including forking twice and creating a new session. It logs the
         success of the daemonization and writes the PID to a file.
+        
+        :raises RuntimeError: If the daemonization process fails at any stage.
         """
         try:
             pid = os.fork()
@@ -1515,9 +1518,11 @@ class Daemonizer:
                 sys.exit(0)
         except OSError as e:
             logger.log_error(f"First fork failed: {e}")
-            sys.exit(1)
+            raise RuntimeError(f"First fork failed: {e}")
 
-        os.setsid() 
+        os.chdir("/")  
+        os.umask(0)   
+        os.setsid()   
 
         try:
             pid = os.fork()
@@ -1525,11 +1530,39 @@ class Daemonizer:
                 sys.exit(0)
         except OSError as e:
             logger.log_error(f"Second fork failed: {e}")
-            sys.exit(1)
+            raise RuntimeError(f"Second fork failed: {e}")
 
-        logger.log_info(f"Daemonization successful with PID: {os.getpid()}")
+        self._validate_daemonization()
+
         self.write_pid_to_file()
         self.redirect_standard_file_descriptors()
+
+    def _validate_daemonization(self):
+        """
+        Performs additional validation to confirm successful daemonization.
+        
+        Checks:
+        - Process is not a process group leader
+        - Working directory has been changed
+        - Session ID is different from parent
+        
+        :raises RuntimeError: If validation checks fail
+        """
+        try:
+            if os.getpid() == os.getpgrp():
+                raise RuntimeError("Failed to become session leader")
+
+            if os.getcwd() != '/':
+                raise RuntimeError("Working directory not changed to root")
+
+            current_sid = os.getsid(0)
+            if current_sid == -1:
+                raise RuntimeError("Could not get session ID")
+
+            logger.log_info(f"Daemonization validation successful. New PID: {os.getpid()}, Session ID: {current_sid}")
+        except Exception as e:
+            logger.log_error(f"Daemonization validation failed: {e}")
+            raise RuntimeError(f"Daemonization validation failed: {e}")
 
     def write_pid_to_file(self):
         """Writes the daemon's PID to the specified file for management purposes.
@@ -1539,12 +1572,20 @@ class Daemonizer:
         stopping it). It logs the action taken and handles any errors.
         """
         try:
+            pid_dir = os.path.dirname(self.pid_file)
+            os.makedirs(pid_dir, exist_ok=True)
+
             with open(self.pid_file, 'w') as f:
                 f.write(f"{os.getpid()}\n")
             logger.log_debug(f"Daemon PID written to {self.pid_file}")
+
+            with open(self.pid_file, 'r') as f:
+                pid_from_file = int(f.read().strip())
+                if pid_from_file != os.getpid():
+                    raise RuntimeError("PID mismatch in PID file")
         except Exception as e:
             logger.log_error(f"Failed to write PID file {self.pid_file}: {e}")
-            sys.exit(1)
+            raise RuntimeError(f"Failed to write PID file: {e}")
 
     def redirect_standard_file_descriptors(self):
         """Redirects standard file descriptors to /dev/null.
@@ -1556,15 +1597,39 @@ class Daemonizer:
         try:
             sys.stdout.flush()
             sys.stderr.flush()
-            with open(os.devnull, 'r') as devnull:
-                os.dup2(devnull.fileno(), sys.stdin.fileno())
-            with open(os.devnull, 'a+') as devnull:
-                os.dup2(devnull.fileno(), sys.stdout.fileno())
-                os.dup2(devnull.fileno(), sys.stderr.fileno())
+
+            with open(os.devnull, 'r') as stdin_null, \
+                 open(os.devnull, 'a+') as stdout_stderr_null:
+                os.dup2(stdin_null.fileno(), sys.stdin.fileno())
+                os.dup2(stdout_stderr_null.fileno(), sys.stdout.fileno())
+                os.dup2(stdout_stderr_null.fileno(), sys.stderr.fileno())
+
+            self._validate_file_descriptors()
+
             logger.log_debug("Standard file descriptors redirected to /dev/null")
         except Exception as e:
             logger.log_error(f"Failed to redirect standard file descriptors: {e}")
-            sys.exit(1)
+            raise RuntimeError(f"Failed to redirect file descriptors: {e}")
+
+    def _validate_file_descriptors(self):
+        """
+        Validates that file descriptors have been correctly redirected.
+        
+        :raises RuntimeError: If file descriptors are not correctly redirected
+        """
+        try:
+            stdin_stat = os.fstat(sys.stdin.fileno())
+            stdout_stat = os.fstat(sys.stdout.fileno())
+            stderr_stat = os.fstat(sys.stderr.fileno())
+            
+            devnull_stat = os.stat(os.devnull)
+
+            if not (stdin_stat.st_ino == stdout_stat.st_ino == stderr_stat.st_ino == devnull_stat.st_ino and
+                    stdin_stat.st_dev == stdout_stat.st_dev == stderr_stat.st_dev == devnull_stat.st_dev):
+                raise RuntimeError("File descriptors not correctly redirected")
+        except Exception as e:
+            logger.log_error(f"File descriptor validation failed: {e}")
+            raise RuntimeError(f"File descriptor validation failed: {e}")
 
 
 class ThreadSafeConfig:
@@ -1852,7 +1917,7 @@ class MemoryStatisticsService:
                 )
                 current_memory = memory_collector.collect_and_store_memory_usage(collect_only=True)
                 request['current_memory'] = current_memory
-
+                # logger.log_info(f"Current memory usage collected: {current_memory}")
                 time_processor = TimeProcessor(
                     sampling_interval=sampling_interval // 60,
                     retention_period=retention_period
@@ -1865,6 +1930,7 @@ class MemoryStatisticsService:
                     retention_period=retention_period
                 )
                 report = processor.calculate_memory_statistics_period(request)
+                # logger.log_info(f"Memory statistics processed: {report}")
 
             return {"status": True, "data": report}
 
