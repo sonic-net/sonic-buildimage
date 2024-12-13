@@ -964,11 +964,7 @@ static int ym2651y_update_device(struct i2c_client *client,
     fan_ptr = get_fan_dir_by_model_name(client, data->mfr_model, fan_dir, command);
     if( fan_ptr != NULL )
     {
-        #ifdef __STDC_LIB_EXT1__
-            strcpy_s(data->fan_dir, ARRAY_SIZE(data->fan_dir)-1, fan_dir);
-        #else
-            strncpy(data->fan_dir, fan_dir, ARRAY_SIZE(data->fan_dir)-1);
-        #endif
+        snprintf(data->fan_dir, ARRAY_SIZE(data->fan_dir), "%s", fan_dir);
         data->fan_dir[ARRAY_SIZE(data->fan_dir)-1] = '\0';
     }
     else
@@ -976,11 +972,7 @@ static int ym2651y_update_device(struct i2c_client *client,
         VALIDATE_POWERGOOD_AND_INTERVAL(client, &driver_data->access_interval);
         status = ym2651y_read_block(client, command, fan_dir, ARRAY_SIZE(fan_dir)-1);
         if (status == 0) {
-            #ifdef __STDC_LIB_EXT1__
-                strcpy_s(data->fan_dir, ARRAY_SIZE(data->fan_dir)-1, fan_dir+1);
-            #else
-                strncpy(data->fan_dir, fan_dir+1, ARRAY_SIZE(data->fan_dir)-1);
-            #endif
+            snprintf(data->fan_dir, ARRAY_SIZE(data->fan_dir), "%s", fan_dir);
             data->fan_dir[ARRAY_SIZE(data->fan_dir)-1] = '\0';
         }
     }
