@@ -10,8 +10,7 @@
     },
     "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_INVALID": {
         "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni set to an invalid value",
-        "eStrKey": "InvalidValue",
-        "eStr": ["advertise-all-vni"]
+        "eStr": "Invalid value \"invalid value\" in \"advertise-all-vni\" element."
     },
     "BGP_NEIGHBOR_ALL_VALID": {
         "desc": "Configure BGP neighbor table."
