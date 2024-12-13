@@ -73,5 +73,16 @@
         "desc": "Load bgp device global table with idf_isolation_state set to invalid value",
         "eStrKey": "InvalidValue",
         "eStr": ["idf_isolation_state"]
+    },
+    "BGP_DEVICE_GLOBAL_AF_ADVERTISE_ALL_VNI_TRUE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni set to true"
+    },
+    "BGP_DEVICE_GLOBAL_AF_ADVERTISE_ALL_VNI_FALSE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni set to false"
+    },
+    "BGP_DEVICE_GLOBAL_AF_ADVERTISE_ALL_VNI_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni set to an invalid value",
+        "eStrKey": "InvalidValue",
+        "eStr": ["advertise-all-vni"]
     }
 }
