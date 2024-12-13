@@ -2762,12 +2762,32 @@
 		"log_verbosity": "notice"
 	    }
 	},
+	"GRPCCLIENT": {
+            "config": {
+                "type": "secure",
+                "auth_level": "server",
+                "log_level": "info"
+            },
+            "certs": {
+                "client_crt": "grpcclient.crt",
+                "client_key": "grpcclient.key",
+                "ca_crt": "root.pem",
+                "grpc_ssl_credential": "azureclient.ms"
+            } 
+	},
         "BANNER_MESSAGE": {
             "global": {
                 "state": "enabled",
                 "login": "Some login message",
                 "motd": "Some message of the day",
                 "logout": "Some logout message"
+            }
+        },
+        "MEMORY_STATISTICS": {
+            "memory_statistics": {
+                "enabled": "false",
+                "sampling_interval": "5",
+                "retention_period": "15"
             }
         }
     },

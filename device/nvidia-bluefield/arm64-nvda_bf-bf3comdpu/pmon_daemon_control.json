@@ -3,5 +3,6 @@
     "skip_psud": true,
     "skip_fancontrol": true,
     "skip_chassisd": false,
-    "skip_ycabled": true
+    "skip_ycabled": true,
+    "skip_xcvrd": true
 }

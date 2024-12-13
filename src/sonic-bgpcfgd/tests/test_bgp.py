@@ -32,7 +32,7 @@ def constructor(constants_path, bgp_router_id="", peer_type="general", with_lo0_
     }
 
     return_value_map = {
-        "['vtysh', '-c', 'show bgp vrfs json']": (0, "{\"vrfs\": {\"default\": {}}}", ""),
+        "['vtysh', '-H', '/dev/null', '-c', 'show bgp vrfs json']": (0, "{\"vrfs\": {\"default\": {}}}", ""),
         "['vtysh', '-c', 'show bgp vrf default neighbors json']": (0, "{\"10.10.10.1\": {}, \"20.20.20.1\": {}, \"fc00:10::1\": {}}", "")
     }
 
