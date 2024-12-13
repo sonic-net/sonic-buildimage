@@ -1198,3 +1198,155 @@ class ModularChassis(Chassis):
             return None
 
         return module.get_sfp(sfp_index - 1)
+
+class SmartSwitchChassis(Chassis):
+    def __init__(self):
+        super(SmartSwitchChassis, self).__init__()
+        self.module_initialized_count = 0
+        self.module_name_index_map = {}
+        self.initialize_modules()
+
+    def is_modular_chassis(self):
+        """
+        Retrieves whether the sonic instance is part of modular chassis
+
+        Returns:
+            A bool value, should return False by default or for fixed-platforms.
+            Should return True for supervisor-cards, line-cards etc running as part
+            of modular-chassis.
+            For SmartSwitch platforms this should return True even if they are
+            fixed-platforms, as they are treated like a modular chassis as the
+            DPU cards are treated like line-cards of a modular-chassis.
+        """
+        return False
+
+    ##############################################
+    # Module methods
+    ##############################################
+    def initialize_single_module(self, index):
+        count = self.get_num_modules()
+        if index < 0:
+            raise RuntimeError(f"Invalid index = {index} for module initialization with total module count = {count}")
+        if index >= count:
+            return
+        if not self._module_list:
+            self._module_list = [None] * count
+        if not self._module_list[index]:
+            from .module import DpuModule
+            module = DpuModule(index)
+            self._module_list[index] = module
+            self.module_name_index_map[module.get_name()] = index
+            self.module_initialized_count += 1
+
+    def initialize_modules(self):
+        count = self.get_num_modules()
+        for index in range(count):
+            self.initialize_single_module(index=index)
+
+    def get_num_modules(self):
+        """
+        Retrieves the number of modules available on this chassis
+        On a SmarSwitch chassis this includes the number of DPUs.
+
+        Returns:
+            An integer, the number of modules available on this chassis
+        """
+        return DeviceDataManager.get_dpu_count()
+
+    def get_all_modules(self):
+        """
+        Retrieves all modules available on this chassis. On a SmarSwitch
+        chassis this includes the number of DPUs.
+
+        Returns:
+            A list of objects derived from ModuleBase representing all
+            modules available on this chassis
+        """
+        self.initialize_modules()
+        return self._module_list
+
+    def get_module(self, index):
+        """
+        Retrieves module represented by (0-based) index <index>
+        On a SmartSwitch index:0 will fetch switch, index:1 will fetch
+        DPU0 and so on
+
+        Args:
+            index: An integer, the index (0-based) of the module to
+            retrieve
+
+        Returns:
+            An object dervied from ModuleBase representing the specified
+            module
+        """
+        self.initialize_single_module(index)
+        return super(SmartSwitchChassis, self).get_module(index)
+
+    def get_module_index(self, module_name):
+        """
+        Retrieves module index from the module name
+
+        Args:
+            module_name: A string, prefixed by SUPERVISOR, LINE-CARD or FABRIC-CARD
+            Ex. SUPERVISOR0, LINE-CARD1, FABRIC-CARD5
+            SmartSwitch Example: SWITCH, DPU1, DPU2 ... DPUX
+
+        Returns:
+            An integer, the index of the ModuleBase object in the module_list
+        """
+        return self.module_name_index_map[module_name.upper()]
+
+    ##############################################
+    # SmartSwitch methods
+    ##############################################
+
+    def get_dpu_id(self, name):
+        """
+        Retrieves the DPU ID for the given dpu-module name.
+        Returns None for non-smartswitch chassis.
+        Returns:
+            An integer, indicating the DPU ID Ex: name:DPU0 return value 1,
+            name:DPU1 return value 2, name:DPUX return value X+1
+        """
+        module = self.get_module(self.get_module_index(name))
+        return module.get_dpu_id()
+
+    def is_smartswitch(self):
+        """
+        Retrieves whether the sonic instance is part of smartswitch
+        Returns:
+            Returns:True for SmartSwitch and False for other platforms
+        """
+        return True
+
+    def init_midplane_switch(self):
+        """
+        Initializes the midplane functionality of the modular chassis. For
+        example, any validation of midplane, populating any lookup tables etc
+        can be done here. The expectation is that the required kernel modules,
+        ip-address assignment etc are done before the pmon, database dockers
+        are up.
+
+        Returns:
+            A bool value, should return True if the midplane initialized
+            successfully.
+        """
+        return True
+
+    def get_module_dpu_data_port(self, index):
+        """
+        Retrieves the DPU data port NPU-DPU association represented for
+        the DPU index. Platforms that need to overwrite the platform.json
+        file will use this API. This is valid only on the Switch and not on DPUs
+        Args:
+        index: An integer, the index of the module to retrieve
+        Returns:
+            A string giving the NPU-DPU port association:
+            Ex: For index: 1 will return the dup0 port association which is
+            "Ethernet-BP0: Ethernet0" where the string left of ":" (Ethernet-BP0)
+            is the NPU port and the string right of ":" (Ethernet0) is the DPU port
+        """
+        platform_dpus_data = DeviceDataManager.get_platform_dpus_data()
+        module = self._module_list[index]
+        module_name = module.get_name()
+        return platform_dpus_data[module_name.lower()]["interface"]

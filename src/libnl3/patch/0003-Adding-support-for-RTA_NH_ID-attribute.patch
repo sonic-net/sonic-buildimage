@@ -98,7 +98,7 @@ index bacabe8..5d9d4ce 100644
  
  static int parse_multipath(struct rtnl_route *route, struct nlattr *attr)
 @@ -1201,6 +1218,9 @@ int rtnl_route_parse(struct nlmsghdr *nlh, struct rtnl_route **result)
- 		nl_addr_put(addr);
+ 		rtnl_route_set_pref_src(route, addr);
  	}
  
 +	if (tb[RTA_NH_ID])
