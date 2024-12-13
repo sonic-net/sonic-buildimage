@@ -112,8 +112,8 @@ dependent_startup_wait_for=rsyslogd:running
     {%- set options = options + " --skip_cmis_mgr" %}
 {% endif -%}
 
-{% if enable_xcvrd_sff_mgr %}
-    {%- set options = options + " --enable_sff_mgr" %}
+{% if enable_xcvrd_sff_mgr_controlled_tx %}
+    {%- set options = options + " --enable_sff_mgr_controlled_tx" %}
 {% endif -%}
 
 {% if delay_xcvrd %}
