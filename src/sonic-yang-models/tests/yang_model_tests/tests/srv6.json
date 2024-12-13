@@ -1,0 +1,25 @@
+{
+    "SRV6_MY_SID_VALID": {
+        "desc": "Valid config"
+    },
+    "SRV6_MY_SID_INVALID_IP_ADDR": {
+        "desc": "SID configured with invalid IPv6 address",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["ip_address"]
+    },
+    "SRV6_MY_SID_INVALID_ACTION": {
+        "desc": "SID configured with invalid action",
+        "eStrKey" : "InvalidValue",
+        "eStr": ["action"]
+    },
+    "SRV6_MY_SID_DSCP_MODE_WITH_UN": {
+        "desc": "SID configured with dscp_mode and uN action",
+        "eStrKey" : "When",
+        "eStr": ["action"]
+    },
+    "SRV6_MY_SID_INVALID_FUNC_LEN": {
+        "desc": "SID configured with invalid func_len",
+        "eStrKey" : "Must",
+        "eStr": ["func_len"]
+    }
+}

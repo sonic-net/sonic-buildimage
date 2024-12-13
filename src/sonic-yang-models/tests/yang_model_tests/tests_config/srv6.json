@@ -1,0 +1,89 @@
+{
+    "SRV6_MY_SID_VALID": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_SID_TABLE": {
+                "SRV6_MY_SID_TABLE_LIST": [
+                    {
+                        "ip_address": "FCBB:BBBB:20::",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_address": "FCBB:BBBB:20:F1:",
+                        "action": "uDT46"
+                    },
+                    {
+                        "ip_address": "FCBB:BBBB:20:F2:",
+                        "action": "uDT6",
+                        "dscp_mode": "pipe"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_MY_SID_INVALID_IP_ADDR": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_SID_TABLE": {
+                "SRV6_MY_SID_TABLE_LIST": [
+                    {
+                        "ip_address": "FCBB:BBBB:200001::",
+                        "action": "uN"
+                    },
+                    {
+                        "ip_address": "FCBB:BBBB:20:F1:",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_MY_SID_INVALID_ACTION": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_SID_TABLE": {
+                "SRV6_MY_SID_TABLE_LIST": [
+                    {
+                        "ip_address": "FCBB:BBBB:20::",
+                        "action": "End.A"
+                    },
+                    {
+                        "ip_address": "FCBB:BBBB:20:F1:",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_MY_SID_DSCP_MODE_WITH_UN": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_SID_TABLE": {
+                "SRV6_MY_SID_TABLE_LIST": [
+                    {
+                        "ip_address": "FCBB:BBBB:20::",
+                        "action": "uN",
+                        "dscp_mode": "uniform"
+                    },
+                    {
+                        "ip_address": "FCBB:BBBB:20:F1:",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        }
+    },
+    "SRV6_MY_SID_INVALID_FUNC_LEN": {
+        "sonic-srv6:sonic-srv6": {
+            "sonic-srv6:SRV6_MY_SID_TABLE": {
+                "SRV6_MY_SID_TABLE_LIST": [
+                    {
+                        "ip_address": "FCBB:BBBB:20::",
+                        "func_len": 127,
+                        "action": "uN"
+                    },
+                    {
+                        "ip_address": "FCBB:BBBB:20:F1:",
+                        "action": "uDT46"
+                    }
+                ]
+            }
+        }
+    }
+}

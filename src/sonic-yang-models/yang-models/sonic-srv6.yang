@@ -1,0 +1,89 @@
+module sonic-srv6 {
+    revision 2024-12-05 {
+		description
+			"Initial revision.";
+	}
+    namespace "http://github.com/sonic-net/sonic-srv6";
+    yang-version 1.1;
+
+    import ietf-yang-types {
+		prefix yang;
+	}
+
+	import ietf-inet-types {
+		prefix inet;
+	}
+
+	import sonic-common {
+		prefix scommon;
+	}
+
+    container sonic-srv6 {
+        scommon:db-name "CONFIG_DB";
+
+        container SRV6_MY_SID_TABLE {
+            list SRV6_MY_SID_TABLE_LIST {
+                key "ip_address";
+                scommon:key-delim "|";
+                scommon:key-pattern "SRV6_MY_SID_TABLE|{ip_address}";
+
+                leaf ip_address {
+                    type inet:ipv6-address;
+                }
+
+                leaf block_len {
+                    type uint8 {
+                        range "1..128";
+                    }
+                    
+                    default 32;
+                }
+
+                leaf node_len {
+                    type uint8 {
+                        range "1..128";
+                    }
+
+                    default 16;
+                }
+
+                leaf func_len {
+                    type uint8 {
+                        range "1..128";
+                    }
+
+                    default 16;
+                }
+
+                leaf arg_len {
+                    type uint8 {
+                        range "1..128";
+                    }
+
+                    default 0;
+                }
+
+                leaf action {
+                    type enumeration {
+                        enum uN;
+                        enum uDT6;
+                        enum uDT46;
+                    }
+                }
+
+                leaf dscp_mode {
+                    type enumeration {
+                        enum uniform;
+                        enum pipe;
+                    }
+                    when "../action = uDT6 or ../action = uDT46";
+                }
+
+                must 'block_len + node_len + func_len + arg_len <= 128' {
+                    error-message "The sum of all fields' length must be less than or equal to 128";
+                }
+            }
+        }
+        
+    }
+}
