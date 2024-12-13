@@ -159,6 +159,8 @@ stages:
           - script: |
               set -ex
               OPTIONS="${{ parameters.OPTIONS }} ${{ parameters.CACHE }} SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/mellanox"
+              make $OPTIONS INCLUDE_VNET_MONITOR=y SMARTSWITCH=1 INCLUDE_DHCP_SERVER=y target/sonic-mellanox.bin
+              mv target/sonic-mellanox.bin target/sonic-mellanox-smartswitch.bin
               make $OPTIONS INCLUDE_VNET_MONITOR=y target/sonic-mellanox.bin
               make $OPTIONS ENABLE_SYNCD_RPC=y target/docker-syncd-mlnx-rpc.gz
               cp target/debs/bookworm/python-saithrift*.deb target/ || true
