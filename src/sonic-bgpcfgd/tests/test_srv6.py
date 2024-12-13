@@ -49,33 +49,16 @@ def op_test(mgr: SRv6Mgr, op, args, expected_ret, expected_cmds):
 def test_uN_add():
     mgr = constructor()
 
-    op_test(mgr, 'SET', ("FCBB:BBBB:20::", {
+    op_test(mgr, 'SET', ("FCBB:BBBB:20:F1::", {
         'action': 'uN'
     }), expected_ret=True, expected_cmds=[
         'segment-routing',
         'srv6',
         'locators',
-        'locator FCBB:BBBB:20:: block-len 32 node-len 16',
-        'prefix FCBB:BBBB:20::/48'
-    ])
-
-def test_uDT46_add_Vrf1():
-    mgr = constructor()
-
-    _old_exists = swsscommon.SonicV2Connector().exists
-    swsscommon.SonicV2Connector().exists = lambda x: True
-    op_test(mgr, 'SET', ("FCBB:BBBB:20:F1::", {
-        'action': 'uDT46',
-        'vrf': 'Vrf1'
-    }), expected_ret=True, expected_cmds=[
-        'segment-routing',
-        'srv6',
-        'locators',
-        'locator FCBB:BBBB:20:: block-len 32 node-len 16',
+        'locator FCBB:BBBB:20:: block-len 32 node-len 16 func-bits 16',
         'prefix FCBB:BBBB:20::/48',
-        'opcode ::F1 uDT46 vrf Vrf1'
+        'opcode ::F1 uN'
     ])
-    swsscommon.SonicV2Connector().exists = _old_exists
 
 def test_uDT46_add_default_vrf():
     mgr = constructor()
@@ -88,98 +71,53 @@ def test_uDT46_add_default_vrf():
         'segment-routing',
         'srv6',
         'locators',
-        'locator FCBB:BBBB:20:: block-len 32 node-len 16',
+        'locator FCBB:BBBB:20:: block-len 32 node-len 16 func-bits 16',
         'prefix FCBB:BBBB:20::/48',
         'opcode ::F2 uDT46'
     ])
     swsscommon.SonicV2Connector().exists = _old_exists
 
-def test_uA_add():
-    mgr = constructor()
-
-    op_test(mgr, 'SET', ("FCBB:BBBB:20:F3::", {
-        'action': 'uA',
-        'adj': ["FCBB:BBBB:10::1",  "FCBB:BBBB:10::2"]
-    }), expected_ret=True, expected_cmds=[
-        'segment-routing',
-        'srv6',
-        'locators',
-        'locator FCBB:BBBB:20:: block-len 32 node-len 16',
-        'prefix FCBB:BBBB:20::/48',
-        'opcode ::F3 uA FCBB:BBBB:10::1 FCBB:BBBB:10::2'
-    ])
-
 def test_uN_del():
     mgr = constructor()
 
     # add uN function first
-    mgr.set_handler("FCBB:BBBB:20::", {
+    mgr.set_handler("FCBB:BBBB:20:F1::", {
         'action': 'uN'
     })
 
     # test the deletion
-    op_test(mgr, 'DEL', ("FCBB:BBBB:20::", {
+    op_test(mgr, 'DEL', ("FCBB:BBBB:20:F1::", {
         'action': 'uN'
     }), expected_ret=True, expected_cmds=[
         'segment-routing',
         'srv6',
         'locators',
-        'no locator FCBB:BBBB:20:: block-len 32 node-len 16'
+        'no locator FCBB:BBBB:20:: block-len 32 node-len 16 func-bits 16'
     ])
 
 def test_uDT46_del():
     mgr = constructor()
 
     # add a uN action first to make the uDT46 action not the last function
-    mgr.set_handler("FCBB:BBBB:20::", {
+    mgr.set_handler("FCBB:BBBB:20:F1::", {
         'action': 'uN'
     })
 
     # add the uDT46 action
-    mgr.set_handler("FCBB:BBBB:20:F1::", {
-        'action': 'uDT46',
-        'vrf': 'Vrf1'
+    mgr.set_handler("FCBB:BBBB:20:F2::", {
+        'action': 'uDT46'
     })
 
     # test the deletion of uDT46
     _old_exists = swsscommon.SonicV2Connector().exists
     swsscommon.SonicV2Connector().exists = lambda x: True
-    op_test(mgr, 'DEL', ("FCBB:BBBB:20:F1::", {
-        'action': 'uDT46',
-        'vrf': 'Vrf1'
+    op_test(mgr, 'DEL', ("FCBB:BBBB:20:F2::", {
+        'action': 'uDT46'
     }), expected_ret=True, expected_cmds=[
         'segment-routing',
         'srv6',
         'locators',
-        'locator FCBB:BBBB:20:: block-len 32 node-len 16',
-        'prefix FCBB:BBBB:20::/48',
-        'opcode ::F1 uDT46 vrf Vrf1'
+        'locator FCBB:BBBB:20:: block-len 32 node-len 16 func-bits 16',
+        'no opcode ::F2 uDT46'
     ])
     swsscommon.SonicV2Connector().exists = _old_exists
-
-def test_uA_del():
-    mgr = constructor()
-
-    # add a uN action first to make the uA action not the last function
-    mgr.set_handler("FCBB:BBBB:20::", {
-        'action': 'uN'
-    })
-
-    # add the uA action
-    mgr.set_handler("FCBB:BBBB:20:F3::", {
-        'action': 'uA',
-        'adj': ["FCBB:BBBB:10::1",  "FCBB:BBBB:10::2"]
-    })
-
-    # test the deletion of uA
-    op_test(mgr, 'DEL', ("FCBB:BBBB:20:F3::", {
-        'action': 'uA',
-        'adj': ["FCBB:BBBB:10::1",  "FCBB:BBBB:10::2"]
-    }), expected_ret=True, expected_cmds=[
-        'segment-routing',
-        'srv6',
-        'locators',
-        'locator FCBB:BBBB:20:: block-len 32 node-len 16',
-        'prefix FCBB:BBBB:20::/48',
-        'no opcode ::F3 uA FCBB:BBBB:10::1 FCBB:BBBB:10::2'
-    ])

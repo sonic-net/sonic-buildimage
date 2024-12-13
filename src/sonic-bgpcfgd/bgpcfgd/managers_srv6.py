@@ -1,17 +1,12 @@
 from .log import log_err, log_debug, log_warn
 from .manager import Manager
 from swsscommon import swsscommon
-from ipaddress import IPv6Network, IPv6Address
+from ipaddress import IPv6Address
 
 supported_SRv6_behaviors = {
-    'end',
-    'end.dt6',
-    'end.dt46',
-    'end.x',
     'uN',
     'uDT6',
     'uDT46',
-    'uA'
 }
 
 class SRv6Mgr(Manager):
@@ -44,24 +39,16 @@ class SRv6Mgr(Manager):
             log_err("Found a SRv6 config entry associated with unsupported action: {} | {}".format(ip_addr, data))
             return False
         
-        if 'vrf' in data:
-            # verify that vrf name exists in the VRF_TABLE of CONFIG_DB
-            if not self.config_db.exists(self.config_db.CONFIG_DB, "VRF_TABLE|{}".format(data['vrf'])):
-                log_err("Found a SRv6 config entry that maps to an undefined VRF: {} | {}".format(ip_addr, data))
-                return False
-        
-        sid = SID(ip_addr, data)
+        sid = SID(ip_addr, data) # the information in data will be parsed into SID's attributes
         locator = sid.get_locator()
         opcode = sid.get_opcode()
 
         cmd_list = ['segment-routing', 'srv6']
         cmd_list += ['locators', 'locator {}'.format(locator)]
         if locator not in self.sids:
-            cmd_list += ['prefix {}/{} block-len {} node-len {}'.format(locator, sid.block_len + sid.node_len, sid.block_len, sid.node_len)]
+            cmd_list += ['prefix {}/{} block-len {} node-len {} func-bits {}'.format(locator, sid.block_len + sid.node_len, sid.block_len, sid.node_len, sid.func_len)]
 
         opcode_cmd = 'opcode ::{} {}'.format(opcode, sid.action)
-        if sid.vrf != 'default':
-            opcode_cmd += "vrf " + sid.vrf
         cmd_list.append(opcode_cmd)
 
         self.cfg_mgr.push_list(cmd_list)
@@ -90,9 +77,8 @@ class SRv6Mgr(Manager):
                 self.sids.pop(locator)
             else:
                 # delete this opcode only
+                cmd_list.append('locator {}'.format(locator))
                 opcode_cmd = 'no opcode ::{} {}'.format(opcode, sid.action)
-                if sid.vrf != 'default':
-                    opcode_cmd += "vrf " + sid.vrf
                 cmd_list.append(opcode_cmd)
 
                 self.sids[locator].pop(opcode)
