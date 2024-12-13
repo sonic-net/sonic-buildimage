@@ -175,6 +175,9 @@
         "desc": "Verifying invalid create_only_config_db_buffers value",
         "eStrKey": "InvalidValue"
     },
+    "DEVICE_METADATA_VALID_SUPPORTING_BULK_COUNTER_GROUPS": {
+        "desc": "Verifying the supporting_bulk_counter_groups value"
+    },
     "DEVICE_METADATA_VALID_BGP_ROUTER_ID": {
         "desc": "Verifying bgp_router_id configuration."
     },

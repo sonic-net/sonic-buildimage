@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,6 +60,7 @@ class TestSfp:
     @mock.patch('sonic_platform.sfp.SFP._get_module_info')
     @mock.patch('sonic_platform.chassis.Chassis.get_num_sfps', mock.MagicMock(return_value=2))
     @mock.patch('sonic_platform.chassis.extract_RJ45_ports_index', mock.MagicMock(return_value=[]))
+    @mock.patch('sonic_platform.sfp.SFP.get_xcvr_api', mock.MagicMock(return_value=None))
     def test_sfp_get_error_status(self, mock_get_error_code, mock_control):
         sfp = SFP(1)
         mock_control.return_value = False
@@ -87,7 +89,7 @@ class TestSfp:
 
         mock_control.return_value = True
         description = sfp.get_error_description()
-        assert description == 'Not supported'
+        assert description == None
 
         mock_control.side_effect = RuntimeError('')
         description = sfp.get_error_description()

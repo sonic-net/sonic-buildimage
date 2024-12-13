@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-swss-layer-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -12,24 +12,18 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y gnupg
 
 RUN apt-get install -y net-tools \
+                       iproute2 \
                        arping \
                        ndisc6 \
                        ethtool \
                        tcpdump \
                        ifupdown \
                        bridge-utils \
-                       python-ply \
-                       libqt5core5a \
-                       libqt5network5 \
-                       libgmp10 \
                        libjudydebian1 \
                        openssh-client \
                        openssh-server \
                        libc-ares2 \
-                       grub2-common \
                        bash-completion \
-                       libelf1 \
-                       libmnl0 \
                        logrotate \
                        apt-utils \
                        psmisc \
@@ -37,7 +31,6 @@ RUN apt-get install -y net-tools \
                        conntrack \
                        iptables \
                        jq \
-                       libzmq5 \
                        uuid-dev \
                        # For installing Python m2crypto package
                        # (these can be uninstalled after installation)
@@ -67,9 +60,9 @@ RUN apt-get install -y net-tools \
                        # For libkrb5-dev
                        comerr-dev \
                        libgssrpc4 \
-                       libkdb5-10
-
-RUN apt-get install -y -t bullseye-backports iproute2
+                       libkdb5-10 \
+                       libprotobuf-c-dev \
+                       protobuf-c-compiler
 
 # For sonic-config-engine Python 3 package
 # Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
@@ -81,9 +74,8 @@ RUN pip3 uninstall -y enum34
 
 # Dependencies of restore_neighbors.py
 RUN pip3 install \
-         scapy==2.4.4 \
-         pyroute2==0.5.14 \
-         netifaces==0.10.9
+         pyroute2==0.7.2 \
+         netifaces==0.11.0
 
 {% if docker_sonic_vs_debs.strip() -%}
 # Copy built Debian packages
@@ -120,14 +112,15 @@ RUN apt-get autoclean -y
 RUN apt-get autoremove -y
 RUN rm -rf /debs ~/.cache
 
-RUN sed -ri 's/^(save .*$)/# \1/g;                                                      \
-             s/^daemonize yes$/daemonize no/;                                           \
-             s/^logfile .*$/logfile ""/;                                                \
-             s/^# syslog-enabled no$/syslog-enabled no/;                                \
-             s/^# unixsocket/unixsocket/;                                               \
-             s/notify-keyspace-events ""/notify-keyspace-events AKE/;                   \
-             s/redis-server.sock/redis.sock/g;                                          \
-             s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/ \
+RUN sed -ri 's/^# save ""$/save ""/g;                    \
+             s/^daemonize yes$/daemonize no/;            \
+             s/^logfile .*$/logfile ""/;                 \
+             s/^# syslog-enabled no$/syslog-enabled no/; \
+             s/^# unixsocket/unixsocket/;                \
+             s/redis-server.sock/redis.sock/g;           \
+             s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
+             s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
+             s/^databases [0-9]+$/databases 100/ \
             ' /etc/redis/redis.conf
 
 COPY ["50-default.conf", "/etc/rsyslog.d/"]
