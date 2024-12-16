@@ -50,14 +50,14 @@ stages:
       env:
         REGISTRY_SERVER: ${{ parameters.registry_url }}
       displayName: Build docker-sonic-mgmt.gz
-    - task: Docker@2
-      displayName: Upload image
-      inputs:
-        containerRegistry: ${{ parameters.registry_conn }}
-        repository: docker-sonic-mgmt
-        command: push
-        tags: latest
-    - publish:  $(Build.ArtifactStagingDirectory)
-      artifact: 'docker-sonic-mgmt'
-      displayName: "Archive docker image sonic-mgmt"
+#    - task: Docker@2
+#      displayName: Upload image
+#      inputs:
+#        containerRegistry: ${{ parameters.registry_conn }}
+#        repository: docker-sonic-mgmt
+#        command: push
+#        tags: latest
+#    - publish:  $(Build.ArtifactStagingDirectory)
+#      artifact: 'docker-sonic-mgmt'
+#      displayName: "Archive docker image sonic-mgmt"
 
