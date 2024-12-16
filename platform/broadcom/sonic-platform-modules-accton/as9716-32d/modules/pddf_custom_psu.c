@@ -324,22 +324,22 @@ ssize_t pddf_get_custom_psu_fan_dir(struct device *dev, struct device_attribute 
                /*YESM1300AM-2A01P10(F2B) or YESM1300AM-2R01P10(B2F)*/
                if(strstr(buffer, "2A01P10"))
                {
-                   strncpy(data.fan_dir, "F2B", MAX_FAN_DIR_LEN);
+                   snprintf(data.fan_dir, ARRAY_SIZE(data.fan_dir), "%s", "F2B");
                }
                else if(strstr(buffer, "2R01P10"))
                {
-                   strncpy(data.fan_dir, "B2F", MAX_FAN_DIR_LEN);
+                   snprintf(data.fan_dir, ARRAY_SIZE(data.fan_dir), "%s", "B2F");
                }
 
             }
             else if ((models[i].type == PSU_TYPE_AC_ACBEL_FSH082_F2B) ||
                      (models[i].type == PSU_TYPE_AC_ACBEL_FSF019_F2B))
             {
-                strncpy(data.fan_dir, "F2B", MAX_FAN_DIR_LEN);
+                snprintf(data.fan_dir, ARRAY_SIZE(data.fan_dir), "%s", "F2B");
             }
             else if ((models[i].type == PSU_TYPE_AC_ACBEL_FSH095_B2F))
             {
-                strncpy(data.fan_dir, "B2F", MAX_FAN_DIR_LEN);
+                snprintf(data.fan_dir, ARRAY_SIZE(data.fan_dir), "%s", "B2F");
             }
 
             data.fan_dir[MAX_FAN_DIR_LEN] = '\0';
