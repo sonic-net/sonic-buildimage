@@ -1,0 +1,174 @@
+//
+// Copyright 2019 Google LLC. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package gnoi.optical;
+
+import "github.com/openconfig/gnoi/types/types.proto";
+
+option go_package = "github.com/openconfig/gnoi/otdr";
+
+option (types.gnoi_version) = "0.1.0";
+
+service OTDR {
+  // Initiate triggers an optical time domain reflectometer (OTDR) trace to
+  // be run on a specified port. The results of the trace may be sent back in
+  // the response or saved on the device to be retrieved later. If the
+  // information is saved on the device a path to the file must be returned
+  // which can later be used by File.Get or File.TransferToRemote. The RPC
+  // should initiate the OTDR trace and wait until the OTDR trace has completed
+  // and the device has processed the results before returning. If the RPC is
+  // cancelled while in operation, the running OTDR trace should stop.
+  rpc Initiate(InitiateRequest) returns (stream InitiateResponse) {}
+}
+
+message InitiateRequest {
+  // Absolute path to the /components/component list member in the OpenConfig
+  // model corresponding to the port to perform the OTDR trace from.
+  // (e.g., /components/component[name=otdr-1-1])
+  types.Path component = 1;
+
+  enum ResultsMethod {
+    RESULTS_UNKNOWN = 0;
+    RESULTS_TO_LOCAL_DISK = 1;  // Results saved to a file on the device.
+    RESULTS_IN_RESPONSE = 2;    // Results sent back in the response.
+  }
+  // Describes how the results of the OTDR trace should be made available. More
+  // than one option may be specified if desired.
+  repeated ResultsMethod results_method = 2;
+
+  // Describes the configuration used to perform an OTDR trace.
+  OTDRConfiguration configuration = 3;
+
+  // If specified, the device will label the OTDR trace so it can be recalled
+  // later. For example, the initial OTDR trace measured during span
+  // commissioning might be labeled "baseline".
+  string label = 4;
+}
+
+// OTDR configuration options which can be set on the device. It is not required
+// that every field be set as some fields may not apply for a given
+// implementation.
+message OTDRConfiguration {
+  // The time in seconds in which the OTDR trace will run continuously to
+  // collect data.
+  uint32 acquisition_time_s = 1;
+
+  // The pulse width in nanoseconds which defines how long pulses sent by the
+  // OTDR will be during the test.
+  float pulse_width_ns = 2;
+
+  // The wavelength in MHz that will be sent by the OTDR. This may be left blank
+  // if the OTDR only supports one wavelength.
+  uint64 wavelength_mhz = 3;
+
+  // The maximum fiber distance range in meters that the OTDR trace will
+  // support.
+  float range_m = 4;
+
+  // The type of fiber that is being measured.
+  FiberTypeProfile fiber_type = 5;
+
+  // The sampling resolution in meters.
+  float sampling_resolution_m = 6;
+}
+
+// Type definition for different profiles of fiber types. These match what is
+// already defined in OpenConfig under the FIBER_TYPE_PROFILE identityref in
+// openconfig-optical-amplifier.yang model.
+enum FiberTypeProfile {
+  FTP_UNKNOWN = 0;
+  FTP_DSF = 1;        // Dispersion shifted fiber.
+  FTP_LEAF = 2;       // Large effective area fiber.
+  FTP_SSMF = 3;       // Standard single mode fiber.
+  FTP_TWC = 4;        // True wave classic fiber.
+  FTP_TWRS = 5;       // True wave reduced slope fiber.
+  FTP_LS = 6;         // LEAF Submarine fiber.
+  FTP_TERAWAVE = 7;   // TeraWave fiber.
+  FTP_TERALIGHT = 8;  // TeraLight fiber.
+}
+
+message InitiateProgress {
+  // The State enum defines possible states that the OTDR trace may be in
+  // while running the operation.
+  enum State {
+    UNKNOWN = 0;
+    RUNNING = 1;   // The OTDR is currently performing an OTDR trace.
+    PENDING = 2;   // The OTDR is pending underlying resources being available.
+    COMPLETE = 3;  // The OTDR trace was completed.
+  }
+  // The state of the OTDR trace requested. Note that this does not include
+  // error states as these should be returned as a gRPC error.
+  State state = 1;
+}
+
+message InitiateResults {
+  // The local path in which the OTDR file is saved on the device.
+  string local_path = 1;
+  // The OTDR trace details in a structured format.
+  OTDRTrace otdr_trace = 2;
+}
+
+message InitiateError {
+  enum Type {
+    // An unspecified error. Must use the detail value to describe the issue.
+    UNSPECIFIED = 0;
+    // An existing OTDR trace is already in progress.
+    ALREADY_IN_PROGRESS = 1;
+    // The OTDR hardware has failed and cannot complete an OTDR trace.
+    HARDWARE_FAILURE = 2;
+  }
+  Type type = 1;
+  string detail = 2;
+}
+
+// IntitiateResponse describes the possible response messages that will be
+// streamed after the RPC is initiated. While the OTDR is running, "progress"
+// messages should be sent at a regular interval. When the OTDR trace is
+// completed, a final "results" or "error" message should be streamed before
+// the RPC is terminated.
+message InitiateResponse {
+  oneof response {
+    InitiateProgress progress = 1;
+    InitiateResults results = 2;
+    InitiateError error = 3;
+  }
+}
+
+message OTDRTrace {
+  // Total measured loss of the fiber.
+  float total_loss_db = 1;
+  // Total measured length of the fiber in meters.
+  float total_length_m = 2;
+  // Optical return loss of the fiber in dB.
+  float optical_return_loss_db = 3;
+  // Average fiber loss (dB/km)
+  float average_loss_db_km = 4;
+  // Discovered fiber type, if the OTDR can infer this information.
+  FiberTypeProfile discovered_fiber_type = 5;
+
+  repeated Event events = 6;
+}
+
+message Event {
+  // Distance at which the event occurred in meters.
+  float distance_m = 1;
+  // The fiber loss that occurred at the event in dB.
+  float loss_db = 2;
+  // The reflection that occurred at the event in dB.
+  float reflection_db = 3;
+}
+
