@@ -1771,6 +1771,9 @@
             "default|ipv6_unicast": {
                 "max_ebgp_paths": "2",
                 "max_ibgp_paths": "2"
+            },
+            "default|l2vpn_evpn": {
+                "advertise-all-vni": "true"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {

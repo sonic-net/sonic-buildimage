@@ -2,6 +2,16 @@
     "BGP_GLOBAL_VALID": {
         "desc": "Configure BGP global table."
     },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_TRUE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni set to true"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_FALSE": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni set to false"
+    },
+    "BGP_GLOBALS_AF_ADVERTISE_ALL_VNI_INVALID": {
+        "desc": "BGP Address Family l2vpn_evpn with advertise-all-vni set to an invalid value",
+        "eStr": "Invalid value \"invalid value\" in \"advertise-all-vni\" element."
+    },
     "BGP_NEIGHBOR_ALL_VALID": {
         "desc": "Configure BGP neighbor table."
     },
