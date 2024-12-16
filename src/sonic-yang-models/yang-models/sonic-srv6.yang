@@ -1,9 +1,6 @@
 module sonic-srv6 {
-    revision 2024-12-05 {
-		description
-			"Initial revision.";
-	}
     namespace "http://github.com/sonic-net/sonic-srv6";
+    prefix srv6;
     yang-version 1.1;
 
     import ietf-yang-types {
@@ -14,18 +11,20 @@ module sonic-srv6 {
 		prefix inet;
 	}
 
-	import sonic-common {
-		prefix scommon;
+    import sonic-vrf {
+		prefix vrf;
+	}
+
+    revision 2024-12-05 {
+		description
+			"Initial revision.";
 	}
 
     container sonic-srv6 {
-        scommon:db-name "CONFIG_DB";
 
         container SRV6_MY_SID_TABLE {
             list SRV6_MY_SID_TABLE_LIST {
                 key "ip_address";
-                scommon:key-delim "|";
-                scommon:key-pattern "SRV6_MY_SID_TABLE|{ip_address}";
 
                 leaf ip_address {
                     type inet:ipv6-address;
@@ -57,7 +56,7 @@ module sonic-srv6 {
 
                 leaf arg_len {
                     type uint8 {
-                        range "1..128";
+                        range "0..128";
                     }
 
                     default 0;
@@ -66,9 +65,17 @@ module sonic-srv6 {
                 leaf action {
                     type enumeration {
                         enum uN;
-                        enum uDT6;
                         enum uDT46;
                     }
+                }
+
+                leaf vrf {
+                    type leafref {
+                        path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                    }
+                    description "VRF name";
+
+                    default "default";
                 }
 
                 leaf dscp_mode {
@@ -76,7 +83,7 @@ module sonic-srv6 {
                         enum uniform;
                         enum pipe;
                     }
-                    when "../action = uDT6 or ../action = uDT46";
+                    when "../action = 'uDT46'";
                 }
 
                 must 'block_len + node_len + func_len + arg_len <= 128' {
