@@ -89,7 +89,7 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
         "GLOBAL": {
             "bridge": bridge_name,
             "ip_prefix": "169.254.200.254/24"
-            }
+        }
     }
     dhcp_server_ports = {}
 
