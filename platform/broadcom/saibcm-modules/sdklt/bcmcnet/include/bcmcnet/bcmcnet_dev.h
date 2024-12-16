@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMCNET_DEV_H
@@ -173,6 +173,16 @@ typedef int (*chan_goto_f)(struct pdma_hw *hw, int chan, uint64_t addr);
 typedef int (*chan_clear_f)(struct pdma_hw *hw, int chan);
 
 /*!
+ * \brief Check channel.
+ *
+ * \param [in] hw Pointer to hardware structure.
+ * \param [in] chan Channel number.
+ *
+ * \retval SHR_E_NONE No errors.
+ */
+typedef int (*chan_check_f)(struct pdma_hw *hw, int chan);
+
+/*!
  * \brief Get interrupt number.
  *
  * \param [in] hw Pointer to hardware structure.
@@ -280,6 +290,9 @@ struct hw_handlers {
 
     /*! Channel clear */
     chan_clear_f chan_clear;
+
+    /*! Channel check */
+    chan_check_f chan_check;
 
     /*! Channel interrupt number get */
     chan_intr_num_get_f chan_intr_num_get;

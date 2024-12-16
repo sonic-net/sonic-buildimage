@@ -6,7 +6,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -19,7 +19,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGBDE_KAPI_H
@@ -261,34 +261,6 @@ ngbde_kapi_intr_connect(int kdev, unsigned int irq_num,
  */
 extern int
 ngbde_kapi_intr_disconnect(int kdev, unsigned int irq_num);
-
-/*!
- * \brief Install secondary interrupt handler.
- *
- * Optionally allow a different process to handle one or more user
- * mode interrupts.
- *
- * \param [in] kdev Device number.
- * \param [in] irq_num Interrupt number (MSI vector).
- * \param [in] isr_func Interrupt handler function.
- * \param [in] isr_data Interrupt handler context.
- *
- * \retval 0 No errors
- */
-extern int
-ngbde_kapi_intr2_connect(int kdev, unsigned int irq_num,
-                         int (*isr_func)(void *), void *isr_data);
-
-/*!
- * \brief Uninstall secondary interrupt handler.
- *
- * \param [in] kdev Device number.
- * \param [in] irq_num Interrupt number (MSI vector).
- *
- * \retval 0 No errors
- */
-extern int
-ngbde_kapi_intr2_disconnect(int kdev, unsigned int irq_num);
 
 /*!
  * \brief Write shared interrupt mask register.

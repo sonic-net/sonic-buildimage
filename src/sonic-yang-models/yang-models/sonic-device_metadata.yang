@@ -164,7 +164,7 @@ module sonic-device_metadata {
 
                 leaf subtype {
                     type string {
-                        pattern "DualToR|SmartSwitch";
+                        pattern "DualToR|SmartSwitch|Supervisor|UpstreamLC|DownstreamLC";
                     }
                 }
 
@@ -212,6 +212,18 @@ module sonic-device_metadata {
                                  By default SONiC advertises /128 subnet prefix in Loopback0 as /64 subnet route";
                 }
 
+                leaf suppress-fib-pending {
+                    description "Enable BGP suppress FIB pending feature. BGP will wait for route FIB installation before announcing routes";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default disabled;
+
+                    must "((current() = 'disabled') or (current() = 'enabled' and ../synchronous_mode = 'enable'))" {
+                        error-message "ASIC synchronous mode must be enabled in order to enable suppress FIB pending feature";
+                    }
+                }
                 leaf rack_mgmt_map {
                     type string {
                         length 0..128 {
@@ -238,6 +250,11 @@ module sonic-device_metadata {
                                  created, regardless of the CONFIG_DB buffers configuration.";
                 }
 
+                leaf-list supporting_bulk_counter_groups {
+                    type string;
+                    description "This field contains a list of counter groups that support bulk operation.";
+                }
+
                 leaf bgp_router_id {
                     type inet:ipv4-address;
                     description "BGP Router identifier";
@@ -251,6 +268,15 @@ module sonic-device_metadata {
                 leaf slice_type {
                     description "Metadata tag for the device.";
                     type string;
+                }
+
+                leaf nexthop_group {
+                    description "Enable or disable Nexthop Group feature. This value only takes effect during boot time.";
+                    type enumeration {
+                        enum enabled;
+                        enum disabled;
+                    }
+                    default disabled;
                 }
 
             }

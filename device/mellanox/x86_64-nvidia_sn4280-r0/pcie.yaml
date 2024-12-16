@@ -1,5 +1,6 @@
 ##
-## Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+## SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+## Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 ## Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,6 +49,18 @@
 - bus: '00'
   dev: '01'
   fn: '4'
+  id: '1453'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    PCIe GPP Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '5'
+  id: '1453'
+  name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
+    PCIe GPP Bridge'
+- bus: '00'
+  dev: '01'
+  fn: '6'
   id: '1453'
   name: 'PCI bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
     PCIe GPP Bridge'
@@ -217,71 +230,48 @@
   id: '1467'
   name: 'Host bridge: Advanced Micro Devices, Inc. [AMD] Family 17h (Models 00h-0fh)
     Data Fabric: Device 18h; Function 7'
-- bus: '01'
-  dev: '00'
-  fn: '0'
-  id: c2d5
-  name: 'DMA controller: Mellanox Technologies MT43244 BlueField-3 SoC Management
-    Interface (rev 01)'
-- bus: '02'
-  dev: '00'
-  fn: '0'
-  id: c2d5
-  name: 'DMA controller: Mellanox Technologies MT43244 BlueField-3 SoC Management
-    Interface (rev 01)'
 - bus: '03'
   dev: '00'
   fn: '0'
   id: '5765'
-  name: 'Non-Volatile memory controller: Device 1f9f:5765 (rev 01)'
-- bus: '04'
+  name: 'Non-Volatile memory controller: Realtek Semiconductor Co., Ltd. RTS5765DL
+    NVMe SSD Controller (DRAM-less) (rev 01)'
+- bus: '06'
   dev: '00'
   fn: '0'
   id: cf70
   name: 'Ethernet controller: Mellanox Technologies Spectrum-3'
-- bus: '05'
-  dev: '00'
-  fn: '0'
-  id: c2d5
-  name: 'DMA controller: Mellanox Technologies MT43244 BlueField-3 SoC Management
-    Interface (rev 01)'
-- bus: '06'
-  dev: '00'
-  fn: '0'
-  id: c2d5
-  name: 'DMA controller: Mellanox Technologies MT43244 BlueField-3 SoC Management
-    Interface (rev 01)'
-- bus: '07'
+- bus: 09
   dev: '00'
   fn: '0'
   id: 145a
   name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
     Zeppelin/Raven/Raven2 PCIe Dummy Function'
-- bus: '07'
+- bus: 09
   dev: '00'
   fn: '2'
   id: '1456'
   name: 'Encryption controller: Advanced Micro Devices, Inc. [AMD] Family 17h (Models
     00h-0fh) Platform Security Processor (PSP) 3.0 Device'
-- bus: '07'
+- bus: 09
   dev: '00'
   fn: '3'
   id: 145f
   name: 'USB controller: Advanced Micro Devices, Inc. [AMD] Zeppelin USB 3.0 xHCI
     Compliant Host Controller'
-- bus: 08
+- bus: 0a
   dev: '00'
   fn: '0'
   id: '1455'
   name: 'Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD]
     Zeppelin/Renoir PCIe Dummy Function'
-- bus: 08
+- bus: 0a
   dev: '00'
   fn: '1'
   id: '1468'
   name: 'Encryption controller: Advanced Micro Devices, Inc. [AMD] Zeppelin Cryptographic
     Coprocessor NTBCCP'
-- bus: 08
+- bus: 0a
   dev: '00'
   fn: '4'
   id: '1458'

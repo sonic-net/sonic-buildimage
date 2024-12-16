@@ -16,7 +16,6 @@ def generate_common_config(data):
     data['FLEX_COUNTER_TABLE'] = {
         'ACL': {
             'FLEX_COUNTER_STATUS': 'disable',
-            'FLEX_COUNTER_DELAY_STATUS': 'true',
             'POLL_INTERVAL': '10000'
         }
     }
@@ -150,6 +149,18 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
         data['PORT'][port]['admin_status'] = 'up'
         data['PORT'][port]['mtu'] = '9100'
 
+    dash_crm_resources = ["vnet", "eni", "eni_ether_address_map", "ipv4_inbound_routing", "ipv6_inbound_routing", "ipv4_outbound_routing",
+                          "ipv6_outbound_routing", "ipv4_pa_validation", "ipv6_pa_validation", "ipv4_outbound_ca_to_pa", "ipv6_outbound_ca_to_pa",
+                          "ipv4_acl_group", "ipv6_acl_group", "ipv4_acl_rule", "ipv6_acl_rule"]
+    dash_crm_thresholds = dict([thresholds for res in dash_crm_resources for thresholds in (
+            (f"dash_{res}_threshold_type", "percentage"),
+            (f"dash_{res}_low_threshold", "70"),
+            (f"dash_{res}_high_threshold", "85")
+        )])
+
+    crmconfig = data.setdefault('CRM', {}).setdefault('Config', {})
+    crmconfig.update(dash_crm_thresholds)
+
     return data
 
 def generate_t1_smartswitch_sample_config(data):
@@ -258,4 +269,3 @@ def get_available_config():
 def generate_sample_config(data, setting_name):
     data = generate_common_config(data)
     return _sample_generators[setting_name.lower()](data)
-

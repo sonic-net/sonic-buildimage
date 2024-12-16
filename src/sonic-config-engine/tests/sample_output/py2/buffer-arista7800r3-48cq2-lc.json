@@ -57,7 +57,7 @@
             "size": "6441610000",
             "type": "both",
             "mode": "dynamic",
-            "xoff": "20761804"
+            "xoff": "1056256819"
         }
     },
     "BUFFER_PROFILE": {
@@ -75,7 +75,7 @@
         "egress_lossy_profile": {
             "pool":"ingress_lossless_pool",
             "size":"0",
-            "dynamic_th":"-1"
+            "dynamic_th":"-4"
         }
     },
     "BUFFER_PG": {

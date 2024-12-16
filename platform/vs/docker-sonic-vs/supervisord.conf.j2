@@ -29,7 +29,7 @@ stdout_logfile=syslog
 stderr_logfile=syslog
 
 [program:redis-chassis]
-command=/bin/bash -c "{ [[ -s /var/lib/redis_chassis/dump.rdb ]] || rm -f /var/lib/redis_chassis/dump.rdb; } && mkdir -p /var/lib/redis_chassis && exec /usr/bin/redis-server /etc/redis/redis.conf --bind redis_chassis.server --port 6380 --unixsocket /var/run/redis/redis_chassis.sock --pidfile /var/run/redis/redis_chassis.pid --dir /var/lib/redis_chassis"
+command=/bin/bash -c "{ [[ -s /var/lib/redis_chassis/dump.rdb ]] || rm -f /var/lib/redis_chassis/dump.rdb; } && mkdir -p /var/lib/redis_chassis && exec /usr/bin/redis-server /etc/redis/redis.conf --bind redis_chassis.server --port 6380 --protected-mode no --unixsocket /var/run/redis/redis_chassis.sock --pidfile /var/run/redis/redis_chassis.pid --dir /var/lib/redis_chassis"
 priority=3
 autostart=false
 autorestart=false
@@ -163,8 +163,16 @@ stderr_logfile=syslog
 environment=ASAN_OPTIONS="log_path=/var/log/asan/teammgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
 
+[program:mgmtd]
+command=/usr/lib/frr/mgmtd -A 127.0.0.1
+priority=13
+autostart=false
+autorestart=false
+stdout_logfile=syslog
+stderr_logfile=syslog
+
 [program:zebra]
-command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_nl
+command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic --asic-offload=notify_on_offload
 priority=13
 autostart=false
 autorestart=false
@@ -197,6 +205,14 @@ stderr_logfile=syslog
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/fpmsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
+
+[program:pathd]
+command=/usr/lib/frr/pathd -A 127.0.0.1
+priority=14
+autostart=false
+autorestart=false
+stdout_logfile=syslog
+stderr_logfile=syslog
 
 [program:arp_update]
 command=/usr/bin/arp_update

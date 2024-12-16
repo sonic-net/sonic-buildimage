@@ -170,6 +170,10 @@ ifeq ($(SONIC_INCLUDE_SYSTEM_GNMI),y)
 INCLUDE_SYSTEM_GNMI = y
 endif
 
+ifeq ($(SONIC_INCLUDE_SYSTEM_BMP),y)
+INCLUDE_SYSTEM_BMP = y
+endif
+
 ifeq ($(SONIC_INCLUDE_SYSTEM_EVENTD),y)
 INCLUDE_SYSTEM_EVENTD = y
 endif
@@ -362,6 +366,15 @@ CROSS_COMPILE_FLAGS := CGO_ENABLED=1 GOOS=linux GOARCH=$(GOARCH) CROSS_COMPILE=$
 
 endif
 
+ifeq ($(CROSS_BUILD_ENVIRON),y)
+ifeq ($(CONFIGURED_ARCH),armhf)
+RUST_CROSS_COMPILE_TARGET = armv7-unknown-linux-gnueabihf
+else ifeq ($(CONFIGURED_ARCH),arm64)
+RUST_CROSS_COMPILE_TARGET = aarch64-unknown-linux-gnu
+endif
+export RUST_CROSS_COMPILE_TARGET
+endif
+
 ###############################################################################
 ## Routing stack related exports
 ###############################################################################
@@ -410,60 +423,62 @@ ifeq ($(SONIC_ROUTING_STACK),frr)
 $(info "FRR_USER_UID"                       : "$(FRR_USER_UID)")
 $(info "FRR_USER_GID"                       : "$(FRR_USER_GID)")
 endif
-$(info "ENABLE_SYNCD_RPC"                   : "$(ENABLE_SYNCD_RPC)")
-$(info "SAITHRIFT_V2"                       : "$(SAITHRIFT_V2)")
-$(info "ENABLE_ORGANIZATION_EXTENSIONS"     : "$(ENABLE_ORGANIZATION_EXTENSIONS)")
-$(info "HTTP_PROXY"                         : "$(HTTP_PROXY)")
-$(info "HTTPS_PROXY"                        : "$(HTTPS_PROXY)")
-$(info "NO_PROXY"                           : "$(NO_PROXY)")
-$(info "ENABLE_ZTP"                         : "$(ENABLE_ZTP)")
+$(info "ENABLE_SYNCD_RPC"                : "$(ENABLE_SYNCD_RPC)")
+$(info "SAITHRIFT_V2"                    : "$(SAITHRIFT_V2)")
+$(info "ENABLE_ORGANIZATION_EXTENSIONS"  : "$(ENABLE_ORGANIZATION_EXTENSIONS)")
+$(info "HTTP_PROXY"                      : "$(HTTP_PROXY)")
+$(info "HTTPS_PROXY"                     : "$(HTTPS_PROXY)")
+$(info "NO_PROXY"                        : "$(NO_PROXY)")
 $(info "ENABLE_LOCAL_USERS_PASSWORDS_RESET" : "$(ENABLE_LOCAL_USERS_PASSWORDS_RESET)")
-$(info "INCLUDE_PDE"                        : "$(INCLUDE_PDE)")
-$(info "SONIC_DEBUGGING_ON"                 : "$(SONIC_DEBUGGING_ON)")
-$(info "SONIC_PROFILING_ON"                 : "$(SONIC_PROFILING_ON)")
-$(info "KERNEL_PROCURE_METHOD"              : "$(KERNEL_PROCURE_METHOD)")
-$(info "BUILD_TIMESTAMP"                    : "$(BUILD_TIMESTAMP)")
-$(info "BUILD_LOG_TIMESTAMP"                : "$(BUILD_LOG_TIMESTAMP)")
-$(info "SONIC_IMAGE_VERSION"                : "$(SONIC_IMAGE_VERSION)")
-$(info "BLDENV"                             : "$(BLDENV)")
-$(info "VS_PREPARE_MEM"                     : "$(VS_PREPARE_MEM)")
-$(info "INCLUDE_MGMT_FRAMEWORK"             : "$(INCLUDE_MGMT_FRAMEWORK)")
-$(info "INCLUDE_ICCPD"                      : "$(INCLUDE_ICCPD)")
-$(info "INCLUDE_SYSTEM_TELEMETRY"           : "$(INCLUDE_SYSTEM_TELEMETRY)")
-$(info "INCLUDE_SYSTEM_GNMI"                : "$(INCLUDE_SYSTEM_GNMI)")
-$(info "INCLUDE_SYSTEM_EVENTD"              : "$(INCLUDE_SYSTEM_EVENTD)")
-$(info "ENABLE_HOST_SERVICE_ON_START"       : "$(ENABLE_HOST_SERVICE_ON_START)")
-$(info "INCLUDE_RESTAPI"                    : "$(INCLUDE_RESTAPI)")
-$(info "INCLUDE_SFLOW"                      : "$(INCLUDE_SFLOW)")
-$(info "INCLUDE_NAT"                        : "$(INCLUDE_NAT)")
-$(info "INCLUDE_DHCP_RELAY"                 : "$(INCLUDE_DHCP_RELAY)")
-$(info "INCLUDE_DHCP_SERVER"                : "$(INCLUDE_DHCP_SERVER)")
-$(info "INCLUDE_P4RT"                       : "$(INCLUDE_P4RT)")
-$(info "INCLUDE_KUBERNETES"                 : "$(INCLUDE_KUBERNETES)")
-$(info "INCLUDE_KUBERNETES_MASTER"          : "$(INCLUDE_KUBERNETES_MASTER)")
-$(info "INCLUDE_MACSEC"                     : "$(INCLUDE_MACSEC)")
-$(info "INCLUDE_MUX"                        : "$(INCLUDE_MUX)")
-$(info "INCLUDE_TEAMD"                      : "$(INCLUDE_TEAMD)")
-$(info "INCLUDE_ROUTER_ADVERTISER"          : "$(INCLUDE_ROUTER_ADVERTISER)")
-$(info "INCLUDE_BOOTCHART                   : "$(INCLUDE_BOOTCHART)")
-$(info "ENABLE_BOOTCHART                    : "$(ENABLE_BOOTCHART)")
-$(info "INCLUDE_FIPS"                       : "$(INCLUDE_FIPS)")
-$(info "ENABLE_TRANSLIB_WRITE"              : "$(ENABLE_TRANSLIB_WRITE)")
-$(info "ENABLE_NATIVE_WRITE"                : "$(ENABLE_NATIVE_WRITE)")
-$(info "ENABLE_DIALOUT"                     : "$(ENABLE_DIALOUT)")
-$(info "ENABLE_AUTO_TECH_SUPPORT"           : "$(ENABLE_AUTO_TECH_SUPPORT)")
-$(info "PDDF_SUPPORT"                       : "$(PDDF_SUPPORT)")
-$(info "MULTIARCH_QEMU_ENVIRON"             : "$(MULTIARCH_QEMU_ENVIRON)")
-$(info "SONIC_VERSION_CONTROL_COMPONENTS"   : "$(SONIC_VERSION_CONTROL_COMPONENTS)")
-$(info "ENABLE_ASAN"                        : "$(ENABLE_ASAN)")
-$(info "DEFAULT_CONTAINER_REGISTRY"         : "$(SONIC_DEFAULT_CONTAINER_REGISTRY)")
+$(info "ENABLE_ZTP"                      : "$(ENABLE_ZTP)")
+$(info "INCLUDE_PDE"                     : "$(INCLUDE_PDE)")
+$(info "SONIC_DEBUGGING_ON"              : "$(SONIC_DEBUGGING_ON)")
+$(info "SONIC_PROFILING_ON"              : "$(SONIC_PROFILING_ON)")
+$(info "KERNEL_PROCURE_METHOD"           : "$(KERNEL_PROCURE_METHOD)")
+$(info "BUILD_TIMESTAMP"                 : "$(BUILD_TIMESTAMP)")
+$(info "BUILD_LOG_TIMESTAMP"             : "$(BUILD_LOG_TIMESTAMP)")
+$(info "SONIC_IMAGE_VERSION"             : "$(SONIC_IMAGE_VERSION)")
+$(info "BLDENV"                          : "$(BLDENV)")
+$(info "VS_PREPARE_MEM"                  : "$(VS_PREPARE_MEM)")
+$(info "INCLUDE_MGMT_FRAMEWORK"          : "$(INCLUDE_MGMT_FRAMEWORK)")
+$(info "INCLUDE_ICCPD"                   : "$(INCLUDE_ICCPD)")
+$(info "INCLUDE_SYSTEM_TELEMETRY"        : "$(INCLUDE_SYSTEM_TELEMETRY)")
+$(info "INCLUDE_SYSTEM_GNMI"             : "$(INCLUDE_SYSTEM_GNMI)")
+$(info "INCLUDE_SYSTEM_BMP"              : "$(INCLUDE_SYSTEM_BMP)")
+$(info "INCLUDE_SYSTEM_EVENTD"           : "$(INCLUDE_SYSTEM_EVENTD)")
+$(info "ENABLE_HOST_SERVICE_ON_START"    : "$(ENABLE_HOST_SERVICE_ON_START)")
+$(info "INCLUDE_RESTAPI"                 : "$(INCLUDE_RESTAPI)")
+$(info "INCLUDE_SFLOW"                   : "$(INCLUDE_SFLOW)")
+$(info "INCLUDE_NAT"                     : "$(INCLUDE_NAT)")
+$(info "INCLUDE_DHCP_RELAY"              : "$(INCLUDE_DHCP_RELAY)")
+$(info "INCLUDE_DHCP_SERVER"             : "$(INCLUDE_DHCP_SERVER)")
+$(info "INCLUDE_P4RT"                    : "$(INCLUDE_P4RT)")
+$(info "INCLUDE_KUBERNETES"              : "$(INCLUDE_KUBERNETES)")
+$(info "INCLUDE_KUBERNETES_MASTER"       : "$(INCLUDE_KUBERNETES_MASTER)")
+$(info "INCLUDE_MACSEC"                  : "$(INCLUDE_MACSEC)")
+$(info "INCLUDE_MUX"                     : "$(INCLUDE_MUX)")
+$(info "INCLUDE_TEAMD"                   : "$(INCLUDE_TEAMD)")
+$(info "INCLUDE_ROUTER_ADVERTISER"       : "$(INCLUDE_ROUTER_ADVERTISER)")
+$(info "INCLUDE_BOOTCHART                : "$(INCLUDE_BOOTCHART)")
+$(info "ENABLE_BOOTCHART                 : "$(ENABLE_BOOTCHART)")
+$(info "INCLUDE_FIPS"                    : "$(INCLUDE_FIPS)")
+$(info "ENABLE_TRANSLIB_WRITE"           : "$(ENABLE_TRANSLIB_WRITE)")
+$(info "ENABLE_NATIVE_WRITE"             : "$(ENABLE_NATIVE_WRITE)")
+$(info "ENABLE_DIALOUT"                  : "$(ENABLE_DIALOUT)")
+$(info "ENABLE_AUTO_TECH_SUPPORT"        : "$(ENABLE_AUTO_TECH_SUPPORT)")
+$(info "PDDF_SUPPORT"                    : "$(PDDF_SUPPORT)")
+$(info "MULTIARCH_QEMU_ENVIRON"          : "$(MULTIARCH_QEMU_ENVIRON)")
+$(info "SONIC_VERSION_CONTROL_COMPONENTS": "$(SONIC_VERSION_CONTROL_COMPONENTS)")
+$(info "ENABLE_ASAN"                     : "$(ENABLE_ASAN)")
+$(info "DEFAULT_CONTAINER_REGISTRY"      : "$(SONIC_DEFAULT_CONTAINER_REGISTRY)")
 ifeq ($(CONFIGURED_PLATFORM),vs)
 $(info "BUILD_MULTIASIC_KVM"                : "$(BUILD_MULTIASIC_KVM)")
 endif
-$(info "CROSS_BUILD_ENVIRON"                : "$(CROSS_BUILD_ENVIRON)")
-$(info "LEGACY_SONIC_MGMT_DOCKER"           : "$(LEGACY_SONIC_MGMT_DOCKER)")
-$(info "INCLUDE_EXTERNAL_PATCHES"           : "$(INCLUDE_EXTERNAL_PATCHES)")
-$(info "PTF_ENV_PY_VER"                     : "$(PTF_ENV_PY_VER)")
+$(info "CROSS_BUILD_ENVIRON"             : "$(CROSS_BUILD_ENVIRON)")
+$(info "LEGACY_SONIC_MGMT_DOCKER"        : "$(LEGACY_SONIC_MGMT_DOCKER)")
+$(info "INCLUDE_EXTERNAL_PATCHES"        : "$(INCLUDE_EXTERNAL_PATCHES)")
+$(info "PTF_ENV_PY_VER"                  : "$(PTF_ENV_PY_VER)")
+$(info "ENABLE_MULTIDB"                  : "$(ENABLE_MULTIDB)")
 $(info )
 else
 $(info SONiC Build System for $(CONFIGURED_PLATFORM):$(CONFIGURED_ARCH))
@@ -790,8 +805,8 @@ $(addprefix $(DEBS_PATH)/, $(SONIC_DPKG_DEBS)) : $(DEBS_PATH)/% : .platform $$(a
 		if [ -f ./autogen.sh ]; then ./autogen.sh $(LOG); fi
 		$(SETUP_OVERLAYFS_FOR_DPKG_ADMINDIR)
 		$(if $($*_DPKG_TARGET),
-			${$*_BUILD_ENV} DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --as-root -T$($*_DPKG_TARGET) --admindir $$mergedir $(LOG),
-			${$*_BUILD_ENV} DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $$mergedir $(LOG)
+			${$*_BUILD_ENV} DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --as-root -T$($*_DPKG_TARGET) --admindir $$mergedir $(LOG),
+			${$*_BUILD_ENV} DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS_GENERIC} ${$*_DEB_BUILD_OPTIONS}" DEB_BUILD_PROFILES="${$*_DEB_BUILD_PROFILES}" $(ANT_DEB_CONFIG) $(CROSS_COMPILE_FLAGS) timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) dpkg-buildpackage -rfakeroot -b $(ANT_DEB_CROSS_OPT) -us -uc -tc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $$mergedir $(LOG)
 		)
 		popd $(LOG_SIMPLE)
 		# Clean up
@@ -941,19 +956,19 @@ $(addprefix $(PYTHON_WHEELS_PATH)/, $(SONIC_PYTHON_WHEELS)) : $(PYTHON_WHEELS_PA
 		if [ -f ../$(notdir $($*_SRC_PATH)).patch/series ]; then ( quilt pop -a -f 1>/dev/null 2>&1 || true ) && QUILT_PATCHES=../$(notdir $($*_SRC_PATH)).patch quilt push -a; fi $(LOG)
 ifneq ($(CROSS_BUILD_ENVIRON),y)
 		# Use pip instead of later setup.py to install dependencies into user home, but uninstall self
-		pip$($*_PYTHON_VERSION) install . && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name`
+		{ pip$($*_PYTHON_VERSION) install . && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name`; } $(LOG)
 ifeq ($(BLDENV),bookworm)
-		if [ ! "$($*_TEST)" = "n" ]; then pip$($*_PYTHON_VERSION) install ".[testing]" && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && python$($*_PYTHON_VERSION) -m pytest $(LOG); fi
+		if [ ! "$($*_TEST)" = "n" ]; then pip$($*_PYTHON_VERSION) install ".[testing]" && pip$($*_PYTHON_VERSION) uninstall --yes `python$($*_PYTHON_VERSION) setup.py --name` && timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) -m pytest; fi $(LOG)
 		python$($*_PYTHON_VERSION) -m build -n $(LOG)
 else
-		if [ ! "$($*_TEST)" = "n" ]; then python$($*_PYTHON_VERSION) setup.py test $(LOG); fi
+		if [ ! "$($*_TEST)" = "n" ]; then timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) setup.py test $(LOG); fi
 		python$($*_PYTHON_VERSION) setup.py bdist_wheel $(LOG)
 endif
 else
 		{
 			export PATH=$(VIRTENV_BIN_CROSS_PYTHON$($*_PYTHON_VERSION)):${PATH}
 			python$($*_PYTHON_VERSION) setup.py build $(LOG)
-			if [ ! "$($*_TEST)" = "n" ]; then python$($*_PYTHON_VERSION) setup.py test $(LOG); fi
+			if [ ! "$($*_TEST)" = "n" ]; then timeout --preserve-status -s 9 -k 10 $(BUILD_PROCESS_TIMEOUT) python$($*_PYTHON_VERSION) setup.py test $(LOG); fi
 			python$($*_PYTHON_VERSION) setup.py bdist_wheel $(LOG)
 		}
 endif
@@ -1358,7 +1373,6 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(LINUX_KERNEL) \
                 $(SONIC_DEVICE_DATA) \
                 $(IFUPDOWN2) \
-                $(IPMITOOL) \
                 $(KDUMP_TOOLS) \
                 $(LIBPAM_RADIUS) \
                 $(LIBNSS_RADIUS) \
@@ -1369,6 +1383,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
                 $(PYTHON_SWSSCOMMON) \
                 $(PYTHON3_SWSSCOMMON) \
                 $(SONIC_DB_CLI) \
+                $(SONIC_NETTOOLS) \
                 $(SONIC_RSYSLOG_PLUGIN) \
                 $(SONIC_UTILITIES_DATA) \
                 $(SONIC_HOST_SERVICES_DATA) \
@@ -1425,6 +1440,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export sonic_su_prod_signing_tool="/sonic/scripts/$(shell basename -- $(SECURE_UPGRADE_PROD_SIGNING_TOOL))"
 	export include_system_telemetry="$(INCLUDE_SYSTEM_TELEMETRY)"
 	export include_system_gnmi="$(INCLUDE_SYSTEM_GNMI)"
+	export include_system_bmp="$(INCLUDE_SYSTEM_BMP)"
 	export include_system_eventd="$(INCLUDE_SYSTEM_EVENTD)"
 	export build_reduce_image_size="$(BUILD_REDUCE_IMAGE_SIZE)"
 	export include_restapi="$(INCLUDE_RESTAPI)"
@@ -1484,6 +1500,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_mux="$(INCLUDE_MUX)"
 	export include_bootchart="$(INCLUDE_BOOTCHART)"
 	export enable_bootchart="$(ENABLE_BOOTCHART)"
+	export enable_multidb="$(ENABLE_MULTIDB)"
 	$(foreach docker, $($*_DOCKERS),\
 		export docker_image="$(docker)"
 		export docker_image_name="$(basename $(docker))"

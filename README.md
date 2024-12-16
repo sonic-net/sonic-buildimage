@@ -3,7 +3,7 @@
 [![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=master&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=master)
 [![Centec](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec?branchName=master&label=Centec)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=143&branchName=master)
 [![Centec(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec-arm64?branchName=master&label=Centec-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=140&branchName=master)
-[![Innovium](https://dev.azure.com/mssonic/build/_apis/build/status/innovium/Azure.sonic-buildimage.official.innovium?branchName=master&label=Innovium)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=148&branchName=master)
+[![Marvell-Teralynx](https://dev.azure.com/mssonic/build/_apis/build/status/marvell-teralynx/Azure.sonic-buildimage.official.marvell-teralynx?branchName=master&label=Marvell-Teralynx)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=148&branchName=master)
 [![Mellanox](https://dev.azure.com/mssonic/build/_apis/build/status/mellanox/Azure.sonic-buildimage.official.mellanox?branchName=master&label=Mellanox)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=139&branchName=master)
 [![Marvell(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-armhf?branchName=master&label=Marvell-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=master)
 [![Marvell(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-arm64?branchName=master&label=Marvell-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=master)
@@ -12,6 +12,20 @@
 [![Pensando](https://dev.azure.com/mssonic/build/_apis/build/status/pensando/Azure.sonic-buildimage.official.pensando?branchName=master&label=Pensando)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1366&branchName=master)
 
 [![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=master&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=master)
+
+*202405 builds*:
+
+[![Broadcom](https://dev.azure.com/mssonic/build/_apis/build/status/broadcom/Azure.sonic-buildimage.official.broadcom?branchName=202405&label=Broadcom)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=138&branchName=202405)
+[![Centec](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec?branchName=202405&label=Centec)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=143&branchName=202405)
+[![Centec(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/centec/Azure.sonic-buildimage.official.centec-arm64?branchName=202405&label=Centec-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=140&branchName=202405)
+[![Innovium](https://dev.azure.com/mssonic/build/_apis/build/status/innovium/Azure.sonic-buildimage.official.innovium?branchName=202405&label=Innovium)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=148&branchName=202405)
+[![Mellanox](https://dev.azure.com/mssonic/build/_apis/build/status/mellanox/Azure.sonic-buildimage.official.mellanox?branchName=202405&label=Mellanox)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=139&branchName=202405)
+[![Marvell(armhf)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-armhf?branchName=202405&label=Marvell-armhf)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=141&branchName=202405)
+[![Marvell(arm64)](https://dev.azure.com/mssonic/build/_apis/build/status/marvell/Azure.sonic-buildimage.official.marvell-arm64?branchName=202405&label=Marvell-arm64)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=999&branchName=202405)
+[![Nephos](https://dev.azure.com/mssonic/build/_apis/build/status/nephos/Azure.sonic-buildimage.official.nephos?branchName=202405&label=Nephos)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=149&branchName=202405)
+[![Nvidia-Bluefield](https://dev.azure.com/mssonic/build/_apis/build/status/nvidia/Azure.sonic-buildimage.official.nvidia-bluefield?branchName=202405&label=Nvidia-Bluefield)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1665&branchName=202405)
+[![Pensando](https://dev.azure.com/mssonic/build/_apis/build/status/pensando/Azure.sonic-buildimage.official.pensando?branchName=202405&label=Pensando)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=1366&branchName=202405)
+[![VS](https://dev.azure.com/mssonic/build/_apis/build/status/vs/Azure.sonic-buildimage.official.vs?branchName=202405&label=VS)](https://dev.azure.com/mssonic/build/_build/latest?definitionId=142&branchName=202405)
 
 *202311 builds*:
 
@@ -201,7 +215,7 @@ The supported ASIC vendors are:
 * PLATFORM=centec
 * PLATFORM=nephos
 * PLATFORM=nvidia-bluefield
-* PLATFORM=innovium
+* PLATFORM=marvell-teralynx
 * PLATFORM=vs
 
 ## Usage for ARM Architecture
@@ -359,8 +373,8 @@ on the SAI version for each SONiC release.
     and Mellanox switch ASIC (gzip tar archive)
   * docker-syncd-nephos.gz: docker image for the daemon to sync database
     and Nephos switch ASIC (gzip tar archive)
-  * docker-syncd-invm.gz: docker image for the daemon to sync database
-    and Innovium switch ASIC (gzip tar archive)
+  * docker-syncd-mrvl-teralynx.gz: docker image for the daemon to sync database
+    and Marvell-Teralynx switch ASIC (gzip tar archive)
   * docker-sonic-p4.gz: docker image for all-in-one for p4 software switch
     (gzip tar archive)
   * docker-sonic-vs.gz: docker image for all-in-one for software virtual switch

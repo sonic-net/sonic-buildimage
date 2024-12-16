@@ -13,6 +13,10 @@
         "eStrKey" : "Pattern",
         "eStr": ["rc"]
     },
+     "PORT_VALID_DHCP_RATE_LIMIT": {
+         "desc": "PORT_VALID_DHCP_RATE_LIMIT no failure."
+     },
+    
     "PORT_VALID_MTU_TEST_1": {
         "desc": "PORT_VALID_MTU_TEST_1 no failure."
     },
@@ -151,7 +155,33 @@
         "eStrKey" : "InvalidValue",
         "eStr": ["dom_polling"]
     },
-     "PORT_AUTO_FEC_TEST": {
-         "desc": "PORT_AUTO_FEC_TEST validate auto mode in fec."
-     }
+    "PORT_AUTO_FEC_TEST": {
+        "desc": "PORT_AUTO_FEC_TEST validate auto mode in fec."
+    },
+    "PORT_NO_LANES_NEGATIVE_TEST": {
+        "desc": "PORT_NO_LANES_NEGATIVE_TEST no lanes.",
+        "eStrKey": "Mandatory",
+        "eStr": ["Missing"]
+    },
+    "PORT_VOQ_CHASSIS_WITH_NO_LANES": {
+        "desc": "PORT_VOQ_CHASSIS_WITH_NO_LANES no failure."
+    },
+    "PORT_PACKET_CHASSIS_WITH_NO_LANES": {
+        "desc": "PORT_PACKET_CHASSIS_WITH_NO_LANES no failure."
+    },
+    "PORT_FABRIC_WITH_NO_LANES": {
+        "desc": "PORT_FABRIC_WITH_NO_LANES no failure."
+    },
+    "PORT_VOQ_CHASSIS_WITH_LANES": {
+        "desc": "PORT_VOQ_CHASSIS_WITH_LANES no failure."
+    },
+    "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS": {
+        "desc": "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS no failure."
+    },
+    "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS_2": {
+        "desc": "PORT_WITH_NO_LANES_ON_MULT_ASIC_VS_2 no failure."
+    }
+
+
+
 }

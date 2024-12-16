@@ -18,6 +18,7 @@ LABEL maintainer="Pavel Shirshov"
 
 COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
+COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -28,6 +29,7 @@ RUN apt-get update          \
     && apt-get upgrade -y   \
     && apt-get dist-upgrade -y  \
     && apt-get install -y   \
+        autoconf            \
         openssh-server      \
         vim                 \
         telnet              \
@@ -50,6 +52,11 @@ RUN apt-get update          \
         libboost-atomic1.71.0 \
 {% else %}
         libboost-atomic1.74.0 \
+        flex                  \
+        bison                 \
+        tcpd                  \
+        libwrap0              \
+        libwrap0-dev          \
 {% endif %}
         less                \
         git                 \
@@ -71,8 +78,6 @@ RUN apt-get update          \
         python3-scapy       \
         python3-six         \
         libpcap-dev         \
-# TODO check if tacacs+ is required by tests
-# tacacs+ has been dropped from bullseye
 {% if PTF_ENV_PY_VER == "mixed" %}
         tacacs+             \
 {% endif %}
@@ -96,22 +101,6 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
     && update-alternatives --install /usr/bin/pygettext pygettext /usr/bin/pygettext3 1
 {% endif %}
 
-# sflow requires autoconf 2.71; This step builds autoconf from source
-RUN apt-get update \
-    && apt-get install -y \
-        m4 \
-        texinfo \
-        help2man
-# get autoconf, build and install
-RUN git clone http://git.sv.gnu.org/r/autoconf.git \
-    && cd autoconf \
-    && ./bootstrap \
-    && ./configure \
-    && make \
-    && make install \
-    && cd .. \
-    && rm -rf autoconf
-
 # Install all python modules from pypi. python-scapy is exception, ptf debian package requires python-scapy
 # TODO: Clean up this step
 RUN rm -rf /debs \
@@ -132,11 +121,12 @@ RUN rm -rf /debs \
     && rm -fr scapy-vxlan \
 {% else %}
     && wget --https-only https://bootstrap.pypa.io/pip/get-pip.py \
-    && python get-pip.py \
+    && python3 get-pip.py \
     && rm -f get-pip.py \
 {% endif %}
     && git clone https://github.com/sflow/sflowtool \
     && cd sflowtool \
+    && git checkout v6.04 \
     && ./boot.sh \
     && ./configure \
     && make \
@@ -181,6 +171,16 @@ RUN rm -rf /debs \
     && cd /opt             \
     && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py
 
+{% if PTF_ENV_PY_VER == "py3" %}
+RUN git clone https://github.com/facebook/tac_plus \
+    && cd tac_plus \
+    && cd tacacs-F4.0.4.28 \
+    && ./configure \
+    && make install \
+    && ln -s /usr/local/sbin/tac_plus /usr/sbin/tac_plus \
+    && ln -s /usr/local/bin/tac_pwd /usr/sbin/tac_pwd
+{% endif %}
+
 {% if PTF_ENV_PY_VER == "mixed" %}
 RUN python3 -m venv --system-site-packages env-python3
 # Activating a virtualenv. The virtualenv automatically works for RUN, ENV and CMD.
@@ -210,7 +210,7 @@ RUN pip3 install setuptools \
     && pip3 install Flask   \
     && pip3 install exabgp \
     && pip3 install pyaml   \
-    && pip3 install pybrctl pyro4 rpyc yabgp \
+    && pip3 install pybrctl pyro4 rpyc \
     && pip3 install unittest-xml-reporting \
     && pip3 install pyrasite \
     && pip3 install python-libpcap \
@@ -279,6 +279,18 @@ RUN dpkg -i \
 {% for deb in docker_ptf_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor %}
+
+{% if PTF_ENV_PY_VER == "py3" %}
+# Create symlink so that test scripts and ptf_runner invocation path
+# is same across python 2 and python 3 envs. Note that for virtual-env 
+# ptf is under /root/env-python3/bin. 
+# TODO - cleanup when the supported PTF image is py3only across all branches
+RUN mkdir -p /root/env-python3/bin \
+    && ln -s /usr/local/bin/ptf /usr/bin/ptf \
+    && ln -s /usr/bin/python /root/env-python3/bin/python3 \
+    && ln -s /usr/bin/python /root/env-python3/bin/python \
+    && ln -s /usr/local/bin/ptf /root/env-python3/bin/ptf
+{% endif %}
 
 COPY ["*.ini", "/etc/ptf/"]
 EXPOSE 22 8009

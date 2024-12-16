@@ -1,0 +1,110 @@
+From debe69ebc8df454f0fa7a8c6f3a7c9622ceaf3c2 Mon Sep 17 00:00:00 2001
+From: yaqiangz <zyq1512099831@gmail.com>
+Date: Mon, 26 Aug 2024 02:18:52 +0000
+Subject: [PATCH] Register IO obj before create fd watch
+
+---
+ omapip/dispatch.c | 44 +++++++++++++++++++++++++++-----------------
+ 1 file changed, 27 insertions(+), 17 deletions(-)
+
+diff --git a/omapip/dispatch.c b/omapip/dispatch.c
+index 644ab43..d9b9a57 100644
+--- a/omapip/dispatch.c
++++ b/omapip/dispatch.c
+@@ -123,6 +123,7 @@ omapi_iscsock_cb(isc_task_t   *task,
+ 		 int           flags)
+ {
+ 	omapi_io_object_t *obj;
++	omapi_io_object_t *temp_obj;
+ 	isc_result_t status;
+ 
+ 	/* Get the current time... */
+@@ -140,6 +141,9 @@ omapi_iscsock_cb(isc_task_t   *task,
+ 	}
+ 
+ 	if (obj == NULL) {
++		temp_obj = (omapi_io_object_t *) cbarg;
++		log_error ("Isc socket callback of fd %d return 0 because obj is NULL",
++		           temp_obj->fd->methods->getfd(temp_obj->fd));
+ 		return(0);
+ 	}
+ #else
+@@ -157,6 +161,8 @@ omapi_iscsock_cb(isc_task_t   *task,
+ 	 * close the socket.
+ 	 */
+ 	if (obj->closed == ISC_TRUE) {
++		log_error ("Isc socket callback of fd %d return 0 because fd closed",
++		           obj->fd->methods->getfd(obj->fd));
+ 		return(0);
+ 	}
+ #endif
+@@ -170,8 +176,11 @@ omapi_iscsock_cb(isc_task_t   *task,
+ 		 * read and got no bytes) we don't need to try
+ 		 * again.
+ 		 */
+-		if (status == ISC_R_SHUTTINGDOWN)
++		if (status == ISC_R_SHUTTINGDOWN) {
++			log_error ("Isc socket callback of fd %d return 0 because reader shutdown",
++			           obj->fd->methods->getfd(obj->fd));
+ 			return (0);
++		}
+ 		/* Otherwise We always ask for more when reading */
+ 		return (1);
+ 	} else if ((flags == ISC_SOCKFDWATCH_WRITE) &&
+@@ -190,6 +199,8 @@ omapi_iscsock_cb(isc_task_t   *task,
+ 	 * structures etc) or no more to write, tell the socket
+ 	 * lib we don't have more to do right now.
+ 	 */
++	log_error ("Isc socket callback of fd %d return 0 because unknown issue",
++			   obj->fd->methods->getfd(obj->fd));
+ 	return (0);
+ }
+ 
+@@ -255,6 +266,21 @@ isc_result_t omapi_register_io_object (omapi_object_t *h,
+ 		fd = writefd(h);
+ 	}
+ 
++	/* Find the last I/O state, if there are any. */
++	for (p = omapi_io_states.next;
++	     p && p -> next; p = p -> next)
++		;
++	if (p)
++		omapi_io_reference (&p -> next, obj, MDL);
++	else
++		omapi_io_reference (&omapi_io_states.next, obj, MDL);
++
++	obj -> readfd = readfd;
++	obj -> writefd = writefd;
++	obj -> reader = reader;
++	obj -> writer = writer;
++	obj -> reaper = reaper;
++
+ 	if (fd_flags != 0) {
+ 		status = isc_socket_fdwatchcreate(dhcp_gbl_ctx.socketmgr,
+ 						  fd, fd_flags,
+@@ -274,22 +300,6 @@ isc_result_t omapi_register_io_object (omapi_object_t *h,
+ 		}
+ 	}
+ 
+-
+-	/* Find the last I/O state, if there are any. */
+-	for (p = omapi_io_states.next;
+-	     p && p -> next; p = p -> next)
+-		;
+-	if (p)
+-		omapi_io_reference (&p -> next, obj, MDL);
+-	else
+-		omapi_io_reference (&omapi_io_states.next, obj, MDL);
+-
+-	obj -> readfd = readfd;
+-	obj -> writefd = writefd;
+-	obj -> reader = reader;
+-	obj -> writer = writer;
+-	obj -> reaper = reaper;
+-
+ 	omapi_io_dereference(&obj, MDL);
+ 	return ISC_R_SUCCESS;
+ }
+-- 
+2.25.1
+

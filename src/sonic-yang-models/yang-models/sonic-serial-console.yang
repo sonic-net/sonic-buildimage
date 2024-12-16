@@ -1,0 +1,37 @@
+//filename:  sonic-serial-console.yang
+module sonic-serial-console {
+    yang-version 1.1;
+    namespace "http://github.com/Azure/sonic-serial-console";
+    prefix cli-sessions;
+    import sonic-types {
+        prefix stypes;
+    }
+    description "SERIAL_CONSOLE YANG Module for SONiC-based OS";
+    revision 2023-06-07 {
+        description "First Revision";
+    }
+    container sonic-serial-console {
+        container SERIAL_CONSOLE {
+            description "SERIAL_CONSOLE part of config_db.json";
+            container POLICIES {
+                leaf inactivity_timeout {
+                    description "serial-console inactivity-timeout timer value in minutes";
+                    type int32 {
+                        range "0..35000";
+                    }
+                    default 15;
+                }
+
+                leaf sysrq_capabilities {
+                    type stypes:admin_mode;
+                    description "managing SysRq capabilities";
+                    default disabled;
+                }
+        }
+        /* end of container POLICIES */
+        }
+        /* end of container SERIAL_CONSOLE */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-serial-console */
