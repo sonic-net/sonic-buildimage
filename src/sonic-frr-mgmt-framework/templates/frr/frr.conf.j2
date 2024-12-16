@@ -19,9 +19,9 @@ fpm use-next-hop-groups
 no fpm use-next-hop-groups
 {% endif %}
 !
-！Add fpm address for zebra
+! Add fpm address for zebra
 fpm address 127.0.0.1
-！
+!
 {% include "zebra/zebra.interfaces.conf.j2" %}
 !
 {% if MGMT_VRF_CONFIG %}
