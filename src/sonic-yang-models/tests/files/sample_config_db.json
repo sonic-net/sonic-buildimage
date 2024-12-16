@@ -2760,6 +2760,11 @@
                 "midplane_interface": "dpu1"
             }
         },
+        "LOCAL_USERS_PASSWORDS_RESET": {
+            "global": {
+                "state": "disabled"
+            }
+        },
 	"XCVRD_LOG": {
 	    "Y_CABLE": {
 		"log_verbosity": "notice"
@@ -2792,6 +2797,11 @@
                 "sampling_interval": "5",
                 "retention_period": "15"
             }
+        }
+    },
+    "LOCAL_USERS_PASSWORDS_RESET": {
+        "global": {
+            "state": "disabled"
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
