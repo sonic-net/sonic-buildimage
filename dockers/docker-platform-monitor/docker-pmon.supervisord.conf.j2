@@ -115,6 +115,19 @@ dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running
 {% endif %}
 
+{% if ENABLE_XCVR_EMU == 1 %}
+[program:xcvr-emud]
+command=/usr/local/bin/xcvr-emud -c {{XCVR_EMU_CONF_FILE}}
+priority=5
+autostart=false
+autorestart=unexpected
+stdout_logfile=syslog
+stderr_logfile=syslog
+startsecs=10
+dependent_startup=true
+dependent_startup_wait_for=rsyslogd:running
+{% endif %}
+
 {% if not skip_xcvrd %}
 [program:xcvrd]
 {% set base_command = "python3 /usr/local/bin/xcvrd" %}
