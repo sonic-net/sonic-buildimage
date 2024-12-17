@@ -28,3 +28,10 @@
         }
     },
 {%- endmacro %}
+{%- macro generate_queue_buffers(port_names) %}
+    "BUFFER_QUEUE": {
+        "{{ port_names }}|0-6": {
+            "profile" : "egress_lossy_profile"
+        }
+    }
+{%- endmacro %}
