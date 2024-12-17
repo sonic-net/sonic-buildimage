@@ -25,6 +25,14 @@
 
 #include <lkm/ngknet_kapi.h>
 
+typedef struct dev_cb_s {
+    /*! List head */
+    struct list_head list;
+
+    /*! Device callback */
+    ngknet_dev_init_cb_f cb;
+} dev_cb_t;
+
 typedef struct netif_cb_s {
     /*! List head */
     struct list_head list;
@@ -47,8 +55,8 @@ typedef struct filter_cb_s {
  * \brief NGKNET callback control.
  */
 struct ngknet_callback_ctrl {
-    /*! Handle TX/RX callback initialization. */
-    ngknet_dev_init_cb_f dev_init_cb;
+    /*! Device initialization callback list */
+    struct list_head dev_init_cb_list;
 
     /*! Handle Rx packet */
     ngknet_rx_cb_f rx_cb;
