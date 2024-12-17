@@ -1135,6 +1135,7 @@ _intr_regs_init(bde_ctrl_t *ctrl, int flag)
                 case BCM53651_DEVICE_ID:
                 case BCM53652_DEVICE_ID:
                 case BCM53653_DEVICE_ID:
+                case BCM53654_DEVICE_ID:
                     ihost_sw_prog_intr_num = P19_SW_PROG_INTR_IRQ;
                     break;
                 default:
@@ -1292,6 +1293,7 @@ _devices_init(int d)
         case BCM53651_DEVICE_ID:
         case BCM53652_DEVICE_ID:
         case BCM53653_DEVICE_ID:
+        case BCM53654_DEVICE_ID:
             ctrl->isr = (isr_f)_cmicx_interrupt;
             if (ctrl->dev_type & BDE_AXI_DEV_TYPE) {
                 if (!ihost_intr_enable_base) {
@@ -1359,6 +1361,10 @@ _devices_init(int d)
           case J3AI_DEVICE_ID:
 
           case Q3D_DEVICE_ID:
+#ifdef BCM_Q3A_SUPPORT
+          case Q3A_DEVICE_ID:
+          case Q3U_DEVICE_ID:
+#endif
 #endif
 #ifdef BCM_DNXF3_SUPPORT
           case  RAMON2_DEVICE_ID:
@@ -1582,6 +1588,15 @@ _dma_resource_get(unsigned inst_id, phys_addr_t *cpu_pbase, phys_addr_t *dma_pba
         return -1;
     }
     res = &_bde_inst_resource[inst_id];
+
+    if (res->is_active == 0) {
+        *cpu_pbase = 0;
+        *dma_pbase = 0;
+        *size = 0;
+        spin_unlock(&bde_resource_lock);
+        return -2;
+    }
+
     dma_size = res->dma_size;
     dma_offset = res->dma_offset;
     spin_unlock(&bde_resource_lock);
@@ -1770,8 +1785,9 @@ _ioctl(unsigned int cmd, unsigned long arg)
     lubde_ioctl_t io;
     phys_addr_t cpu_pbase, dma_pbase;
     ssize_t size;
+    ssize_t total_size;
     const ibde_dev_t *bde_dev;
-    int inst_id, idx;
+    int inst_id, idx, inst_i;
     bde_inst_resource_t *res;
     uint32_t *mapaddr;
 
@@ -1838,9 +1854,22 @@ _ioctl(unsigned int cmd, unsigned long arg)
         break;
     case LUBDE_GET_DMA_INFO:
         inst_id = io.dev;
-        if (_bde_multi_inst) {
-            if (_dma_resource_get(inst_id, &cpu_pbase, &dma_pbase, &size)) {
-                io.rc = LUBDE_FAIL;
+        if (_bde_multi_inst && (inst_id != BDE_DEV_INST_ID_INVALID)) {
+            if (inst_id == BDE_DEV_INST_ID_GET_FREE) {
+                /* Get the total DMA size */
+                lkbde_get_dma_info(&cpu_pbase, &dma_pbase, &total_size);
+                /* Decrease the total size for each allocated SDK instance */
+                for (inst_i = 0; inst_i < LINUX_BDE_MAX_DEVICES; inst_i++)
+                {
+                    if (_bde_inst_resource[inst_i].is_active && (_dma_resource_get(inst_i, &cpu_pbase, &dma_pbase, &size) == 0)) {
+                        total_size -= size;
+                    }
+                }
+                size = total_size;
+            } else {
+                if (_dma_resource_get(inst_id, &cpu_pbase, &dma_pbase, &size)) {
+                    io.rc = LUBDE_FAIL;
+                }
             }
         } else {
             lkbde_get_dma_info(&cpu_pbase, &dma_pbase, &size);

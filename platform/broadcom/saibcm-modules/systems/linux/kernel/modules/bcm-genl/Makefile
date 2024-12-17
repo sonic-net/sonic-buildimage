@@ -34,8 +34,7 @@ include ${SDK}/make/Make.config
 LIBS = $(LIBDIR)/libkern.a
 
 ifndef DCBDIR
-DCBDIR = $(SDK)/systems/linux/kernel/modules/dcb
-# $(error 'The $$DCBDIR variable is not set')
+$(error 'The $$DCBDIR variable is not set')
 endif
 ifeq (1,$(NO_PRECOMPILED_MODULE))
 $(error 'DCB_LIB build is not supported if NO_PRECOMPILED_MODULE=1')

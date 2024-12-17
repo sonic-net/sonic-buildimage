@@ -165,6 +165,11 @@ typedef struct linux_bde_bus_s {
  * BDE_DEV_INST_ID_INVALID : The invalid instance identifier.
  */
 #define BDE_DEV_INST_ID_INVALID    ((uint32)-1)
+#define BDE_DEV_INST_ID_CURRENT    ((uint32)-2)
+#define BDE_DEV_INST_ID_GET_FREE   ((uint32)-3)
+
+extern int get_instance_dma_size(unsigned int instance_num, unsigned int *size);
+extern int dma_get_usage(void);
 
 extern int linux_bde_create(linux_bde_bus_t* bus, ibde_t** bde);
 extern int linux_bde_destroy(ibde_t* bde);
@@ -198,6 +203,7 @@ extern uint32 lkbde_get_dev_phys_hi(int d);
 #ifdef BDE_EDK_SUPPORT
 extern int lkbde_edk_get_dma_info(int dev_id, phys_addr_t* cpu_pbase,
                                   phys_addr_t* dma_pbase, ssize_t* size);
+extern void * lkbde_edk_dmamem_map_p2v(phys_addr_t paddr);
 #endif
 
 /*
