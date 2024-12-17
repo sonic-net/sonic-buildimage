@@ -452,8 +452,12 @@ start() {
     DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
     if [ "$?" -eq "0" ]; then
         {%- if sonic_asic_platform == "vs" %}
-        echo "Removing existing ${DOCKERNAME} container"
-        docker rm -f ${DOCKERNAME}
+        # Get the uptime in minutes
+        uptime_minutes=$(uptime -p | grep -oP '\d+(?= minutes?)')
+        if [ "$uptime_minutes" -le 5 ]; then
+            echo "Removing existing ${DOCKERNAME} container"
+            docker rm -f ${DOCKERNAME}
+        fi
         {%- else %}
             {%- if docker_container_name == "database" %}
             DOCKERMOUNT=""
