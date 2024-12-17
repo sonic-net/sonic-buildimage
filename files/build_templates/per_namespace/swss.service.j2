@@ -9,9 +9,8 @@ After=topology.service
 {% if sonic_asic_platform == 'broadcom' %}
 Requires=opennsl-modules.service
 {% endif %}
-Requires=updategraph.service
-After=updategraph.service
-After=interfaces-config.service
+Requires=config-setup.service
+After=config-setup.service
 BindsTo=sonic.target
 After=sonic.target
 Before=ntp-config.service

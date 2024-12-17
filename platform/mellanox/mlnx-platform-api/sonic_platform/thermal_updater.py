@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -81,10 +81,6 @@ class ThermalUpdater:
 
     def start(self):
         self.clean_thermal_data()
-        if not self.wait_all_sfp_ready():
-            logger.log_error('Failed to wait for all SFP ready, will put hw-management-tc to suspend')
-            self.control_tc(True)
-            return
         self.control_tc(False)
         self.load_tc_config()
         self._timer.start()
@@ -105,25 +101,6 @@ class ThermalUpdater:
                 0,
                 sfp.sdk_index + 1
             )
-
-    def wait_all_sfp_ready(self):
-        logger.log_notice('Waiting for all SFP modules ready...')
-        max_wait_time = 300
-        ready_set = set()
-        while len(ready_set) != len(self._sfp_list):
-            for sfp in self._sfp_list:
-                try:
-                    sfp.is_sw_control()
-                    ready_set.add(sfp)
-                except:
-                    continue
-            max_wait_time -= 1
-            if max_wait_time == 0:
-                return False
-            time.sleep(1)
-
-        logger.log_notice('All SFP modules are ready')
-        return True
 
     def get_asic_temp(self):
         temperature = utils.read_int_from_file('/sys/module/sx_core/asic0/temperature/input', default=None)

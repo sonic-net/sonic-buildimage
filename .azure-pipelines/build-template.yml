@@ -35,9 +35,9 @@ parameters:
 - name: pool
   type: string
   values:
-  - sonicbld
+  - sonicbld-1es
   - sonicbld_8c
-  default: sonicbld
+  default: sonicbld-1es
 
 - name: dbg_image
   type: boolean

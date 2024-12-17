@@ -25,7 +25,6 @@
 ###########################################################################
 
 # Initialize constants
-UPDATEGRAPH_CONF=/etc/sonic/updategraph.conf
 INIT_CFG_JSON=/etc/sonic/init_cfg.json
 CONFIG_DB_JSON=/etc/sonic/config_db.json
 CONFIG_DB_PATH=/etc/sonic/
@@ -180,24 +179,6 @@ check_system_warm_boot()
     fi
 }
 
-# Check if updategraph service is administratively enabled
-updategraph_is_enabled()
-{
-    rv=1
-    if [ -e ${UPDATEGRAPH_CONF} ]; then
-        updategraph_mode=$(grep enabled ${UPDATEGRAPH_CONF} | head -n 1 | cut -f2 -d=)
-        [ "${updategraph_mode}" = "true" ] && rv=0
-    fi
-    return $rv
-}
-
-# Disable updategraph admininistratively
-disable_updategraph()
-{
-    sed -i "/enabled=/d" ${UPDATEGRAPH_CONF}
-    echo "enabled=false" >> ${UPDATEGRAPH_CONF}
-}
-
 # Check if Zero Touch Provisioning is available and is administratively enabled
 ztp_is_enabled()
 {
@@ -273,18 +254,14 @@ generate_config()
 
 # Create SONiC configuration for first time bootup
 #  - If ZTP is enabled, ZTP configuraion is created
-#  - If ZTP is disabled and updategraph is disabled, factory default configuration
+#  - If ZTP is disabled, factory default configuration
 #    is created
-#  - If updategraph is enabled and ZTP is disabled, updategraph initializes
-#    configuration
 do_config_initialization()
 {
-    if  ! updategraph_is_enabled ; then
-        if ! ztp_is_enabled ; then
-            echo "No configuration detected, generating factory default configuration..."
-            generate_config factory ${CONFIG_DB_JSON}
-            reload_configdb ${CONFIG_DB_JSON}
-        fi
+    if ! ztp_is_enabled ; then
+        echo "No configuration detected, generating factory default configuration..."
+        generate_config factory ${CONFIG_DB_JSON}
+        reload_configdb ${CONFIG_DB_JSON}
     fi
 
     if  ztp_is_enabled ; then
@@ -353,6 +330,19 @@ do_db_migration()
         /usr/local/bin/db_migrator.py -o migrate
     fi
     sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+
+    #Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
+    if [[ -f /etc/sonic/chassisdb.conf ]]; then
+       tsa_cfg="$(sonic-db-cli CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
+       sonic-db-cli CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
+       OP_CODE=$?
+
+       if [ $OP_CODE -ne 0 ]; then
+         err_msg="Cmd failed (exit code $OP_CODE). CHASSIS_APP_DB and CONFIG_DB may be incosistent wrt tsa_enabled."
+         echo "$err_msg"
+         logger -t CHASSIS_APP_DB -p user.info "$err_msg"
+       fi
+    fi
 }
 
 # Perform configuration migration from backup copy.
@@ -376,7 +366,6 @@ do_config_migration()
 
     if [ x"${WARM_BOOT}" == x"true" ]; then
         echo "Warm reboot detected..."
-        disable_updategraph
         do_db_migration
         rm -f /tmp/pending_config_migration
         exit 0
@@ -384,14 +373,10 @@ do_config_migration()
         echo "Use config_db.json from old system..."
         reload_configdb
         do_db_migration
-        # Disable updategraph
-        disable_updategraph
     elif [ -r ${MINGRAPH_FILE} ]; then
         echo "Use minigraph.xml from old system..."
         reload_minigraph
         do_db_migration
-        # Disable updategraph
-        disable_updategraph
     else
         echo "Didn't found neither config_db.json nor minigraph.xml ..."
     fi

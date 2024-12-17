@@ -3,7 +3,7 @@
 mkdir -p /etc/swss/config.d/
 mkdir -p /etc/supervisor/
 mkdir -p /etc/supervisor/conf.d/
-
+mkdir -p /dev/shm/supervisor/
 
 CFGGEN_PARAMS=" \
     -d \
@@ -23,8 +23,8 @@ CFGGEN_PARAMS=" \
     -t /usr/share/sonic/templates/wait_for_link.sh.j2,/usr/bin/wait_for_link.sh \
 "
 VLAN=$(sonic-cfggen $CFGGEN_PARAMS)
-SUBTYPE=$(sonic-cfggen -d -v "DEVICE_METADATA['localhost']['subtype']")
-SWITCH_TYPE=${SWITCH_TYPE:-`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['switch_type']"`}
+SUBTYPE=$(sonic-db-cli -s CONFIG_DB HGET 'DEVICE_METADATA|localhost' 'subtype')
+SWITCH_TYPE=${SWITCH_TYPE:-`sonic-db-cli -s CONFIG_DB HGET 'DEVICE_METADATA|localhost' 'switch_type'`}
 chmod +x /usr/bin/wait_for_link.sh
 
 # Executed platform specific initialization tasks.
@@ -69,9 +69,5 @@ if [ -f "$IS_SUPERVISOR" ]; then
         done
     fi
 fi
-
-TZ=$(cat /etc/timezone)
-rm -rf /etc/localtime
-ln -sf /usr/share/zoneinfo/$TZ /etc/localtime
 
 exec /usr/local/bin/supervisord

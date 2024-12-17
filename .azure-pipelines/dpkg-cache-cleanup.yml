@@ -16,7 +16,7 @@ pr: none
 
 jobs:
 - job: Amd
-  pool: sonicbld
+  pool: sonicbld-1es
   timeoutInMinutes: 5
   steps:
   - checkout: none

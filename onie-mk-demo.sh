@@ -97,6 +97,7 @@ output_raw_image=$(eval echo $output_raw_image)
 
 # Tailor the demo installer for OS mode or DIAG mode
 sed -i -e "s/%%DEMO_TYPE%%/$demo_type/g" \
+       -e "s/%%ARCH%%/$arch/g" \
        -e "s/%%IMAGE_VERSION%%/$image_version/g" \
        -e "s/%%ONIE_IMAGE_PART_SIZE%%/$onie_image_part_size/" \
        -e "s/%%EXTRA_CMDLINE_LINUX%%/$EXTRA_CMDLINE_LINUX/" \
@@ -106,7 +107,7 @@ echo -n "."
 cp -r $onie_installer_payload $tmp_installdir || clean_up 1
 echo -n "."
 [ -r "$platform_conf" ] && {
-    cp $platform_conf $tmp_installdir || clean_up 1
+    cp $platform_conf $tmp_installdir/platform.conf || clean_up 1
 }
 echo "machine=$machine" > $tmp_installdir/machine.conf
 echo "platform=$platform" >> $tmp_installdir/machine.conf
@@ -173,7 +174,7 @@ if [ "$SECURE_UPGRADE_MODE" = "dev" -o "$SECURE_UPGRADE_MODE" = "prod" ]; then
     # append signature to binary
     cat ${CMS_SIG} >> ${output_file}
     sudo rm -rf ${CMS_SIG}
-elif [ "$SECURE_UPGRADE_MODE" -ne "no_sign" ]; then
+elif [ "$SECURE_UPGRADE_MODE" != "no_sign" ]; then
     echo "SECURE_UPGRADE_MODE not defined or defined as $SECURE_UPGRADE_MODE - build without signing"
 fi
 

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,6 +46,7 @@ class FixedPsu(PsuBase):
         super(FixedPsu, self).__init__()
         self.index = psu_index + 1
         self._name = "PSU {}".format(self.index)
+        self.model = 'N/A'
         self.psu_oper_status = os.path.join(PSU_PATH, "thermal/psu{}_pwr_status".format(self.index))
         self._led = None
 
@@ -256,6 +257,9 @@ class Psu(FixedPsu):
         from .thermal import initialize_psu_thermal
         self._thermal_list = initialize_psu_thermal(psu_index, self.get_power_available_status)
 
+        # initialize psu model
+        self.model = self.vpd_parser.get_model()
+
     @property
     def psu_voltage(self):
         if not self._psu_voltage:
@@ -304,7 +308,14 @@ class Psu(FixedPsu):
         Returns:
             string: Model/part number of device
         """
-        return self.vpd_parser.get_model()
+        current_model = self.vpd_parser.get_model()
+        if current_model != self.model and os.path.exists('/usr/share/sonic/platform/psu_sensors_conf_updater'):
+            utils.run_command(['cp', '-f', '/etc/sensors.d/sensors.conf', '/tmp/sensors.conf.orig'])
+            utils.run_command(['bash', '-c','source /usr/share/sonic/platform/psu_sensors_conf_updater && update_psu_sensors_configuration /tmp/sensors.conf.orig'])
+            utils.run_command(['cp', '-f', '/tmp/sensors.conf', '/etc/sensors.d/'])
+            utils.run_command(['service', 'sensord', 'restart'])
+        self.model = current_model
+        return current_model
 
     def get_serial(self):
         """
@@ -440,7 +451,8 @@ class Psu(FixedPsu):
             The thresholds of voltage are not supported on all platforms.
             So we have to check capability first.
         """
-        if self.psu_voltage_capability and self.psu_voltage_max and self.get_powergood_status():
+        if self.psu_voltage_capability and os.path.exists(self.psu_voltage_capability) and \
+           self.psu_voltage_max and os.path.exists(self.psu_voltage_max) and self.get_powergood_status():
             capability = utils.read_str_from_file(self.psu_voltage_capability)
             if 'max' in capability:
                 max_voltage = utils.read_int_from_file(self.psu_voltage_max, log_func=logger.log_info)
@@ -463,7 +475,8 @@ class Psu(FixedPsu):
             The thresholds of voltage are not supported on all platforms.
             So we have to check capability first.
         """
-        if self.psu_voltage_capability and self.psu_voltage_min and self.get_powergood_status():
+        if self.psu_voltage_capability and os.path.exists(self.psu_voltage_capability) and \
+           self.psu_voltage_min and os.path.exists(self.psu_voltage_min) and self.get_powergood_status():
             capability = utils.read_str_from_file(self.psu_voltage_capability)
             if 'min' in capability:
                 min_voltage = utils.read_int_from_file(self.psu_voltage_min, log_func=logger.log_info)

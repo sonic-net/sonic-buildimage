@@ -37,7 +37,7 @@ ARG gcc_arch=aarch64-linux-gnu
 ARG PYTHON_CROSS_PLATFORM=linux_aarch64
 {%- endif %}
 
-RUN echo "deb http://ftp.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+RUN echo "deb http://archive.debian.org/debian/ buster-backports main" >> /etc/apt/sources.list
 
 RUN dpkg --add-architecture $arch
 RUN apt-get update && apt-get install -y eatmydata
@@ -90,9 +90,11 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         curl \
         wget \
         unzip \
-        {{ GZ_COMPRESS_PROGRAM }} \
+        gzip \
+        pigz \
         git \
         build-essential \
+        remake \
         libtool \
         lintian \
         sudo \
@@ -142,6 +144,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libsystemd-dev \
         python-ipaddr \
         libcmocka-dev \
+        libprotobuf-c-dev \
+        protobuf-c-compiler \
 {%- if CROSS_BUILD_ENVIRON != "y" %}
         python3-all-dev \
         python3-all-dbg \
@@ -559,6 +563,10 @@ RUN pip3 install "lxml==4.9.1"
 # For sonic-platform-common testing
 RUN pip2 install redis
 RUN pip3 install redis
+RUN pip2 install psutil
+RUN pip3 install psutil
+RUN pip2 install blkinfo
+RUN pip3 install blkinfo
 
 # For vs image build
 RUN pip2 install pexpect==4.6.0

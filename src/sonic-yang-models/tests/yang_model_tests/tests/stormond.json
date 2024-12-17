@@ -1,0 +1,29 @@
+{
+    "STORMOND_CONFIG_TABLE": {
+        "desc": "Config DB interval parameters for Storage Monitoring Daemon"
+    },
+    "STORMOND_INVALID_POLLING_INTERVAL": {
+        "desc": "Configure an invalid daemon polling interval",
+        "eStrKey" : "InvalidValue"
+    },
+    "STORMOND_INVALID_SYNC_INTERVAL": {
+        "desc": "Configure an invalid fsstats file sync interval",
+        "eStrKey" : "InvalidValue"
+    },
+    "STORMOND_POLLING_INTVL_BAD_LEN_MAX": {
+        "desc": "Configure an invalid daemon polling interval: out of range value",
+        "eStrKey" : "InvalidValue"
+    },
+    "STORMOND_SYNC_INTVL_BAD_LEN_MAX": {
+        "desc": "Configure an invalid fsstats file sync interval: out of range value",
+        "eStrKey" : "InvalidValue"
+    },
+    "STORMOND_SYNC_INTVL_EMPTY_VALUE": {
+        "desc": "Configure an empty file sync interval",
+        "eStrKey" : "InvalidValue"
+    },
+    "STORMOND_POLLING_INTVL_EMPTY_VALUE": {
+        "desc": "Configure an empty file sync interval",
+        "eStrKey" : "InvalidValue"
+    }
+}

@@ -2,6 +2,7 @@
 import psutil
 import signal
 import time
+import subprocess
 import sys
 import syslog
 from .dhcp_cfggen import DhcpServCfgGenerator
@@ -9,7 +10,7 @@ from .dhcp_lease import LeaseManager
 from dhcp_utilities.common.utils import DhcpDbConnector
 from dhcp_utilities.common.dhcp_db_monitor import DhcpServdDbMonitor, DhcpServerTableCfgChangeEventChecker, \
     DhcpOptionTableEventChecker, DhcpRangeTableEventChecker, DhcpPortTableEventChecker, VlanIntfTableEventChecker, \
-    VlanMemberTableEventChecker, VlanTableEventChecker
+    VlanMemberTableEventChecker, VlanTableEventChecker, MidPlaneTableEventChecker, DpusTableEventChecker
 from swsscommon import swsscommon
 
 KEA_DHCP4_CONFIG = "/etc/kea/kea-dhcp4.conf"
@@ -38,9 +39,12 @@ class DhcpServd(object):
         Send SIGHUP signal to kea-dhcp4 process
         """
         for proc in psutil.process_iter():
-            if KEA_DHCP4_PROC_NAME in proc.name():
-                proc.send_signal(signal.SIGHUP)
-                break
+            try:
+                if KEA_DHCP4_PROC_NAME in proc.name():
+                    proc.send_signal(signal.SIGHUP)
+                    break
+            except psutil.NoSuchProcess:
+                continue
 
     def dump_dhcp4_config(self):
         """
@@ -58,8 +62,8 @@ class DhcpServd(object):
         self.used_options = used_options
         with open(self.kea_dhcp4_config_path, "w") as write_file:
             write_file.write(kea_dhcp4_config)
-            # After refresh kea-config, we need to SIGHUP kea-dhcp4 process to read new config
-            self._notify_kea_dhcp4_proc()
+        # After refresh kea-config, we need to SIGHUP kea-dhcp4 process to read new config
+        self._notify_kea_dhcp4_proc()
 
     def _update_dhcp_server_ip(self):
         """
@@ -100,7 +104,12 @@ class DhcpServd(object):
 
 def main():
     dhcp_db_connector = DhcpDbConnector(redis_sock=REDIS_SOCK_PATH)
-    dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector)
+    hook_lib_path_res = subprocess.run(["find", "/", "-name", "libdhcp_run_script.so"],
+                                       capture_output=True).stdout.decode().strip()
+    if len(hook_lib_path_res) == 0:
+        syslog.syslog(syslog.LOG_ERR, "Cannot find hook lib for kea-dhcp-server")
+        sys.exit(1)
+    dhcp_cfg_generator = DhcpServCfgGenerator(dhcp_db_connector, hook_lib_path_res.split("\n")[0])
     sel = swsscommon.Select()
     checkers = []
     checkers.append(DhcpServerTableCfgChangeEventChecker(sel, dhcp_db_connector.config_db))
@@ -110,6 +119,8 @@ def main():
     checkers.append(VlanTableEventChecker(sel, dhcp_db_connector.config_db))
     checkers.append(VlanIntfTableEventChecker(sel, dhcp_db_connector.config_db))
     checkers.append(VlanMemberTableEventChecker(sel, dhcp_db_connector.config_db))
+    checkers.append(DpusTableEventChecker(sel, dhcp_db_connector.config_db))
+    checkers.append(MidPlaneTableEventChecker(sel, dhcp_db_connector.config_db))
     dhcp_servd_monitor = DhcpServdDbMonitor(dhcp_db_connector, sel, checkers, DEFAULT_SELECT_TIMEOUT)
     dhcpservd = DhcpServd(dhcp_cfg_generator, dhcp_db_connector, dhcp_servd_monitor)
     dhcpservd.start()

@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -11,6 +11,9 @@ RUN apt-get update
 
 # Install redis-server
 RUN apt-get install -y redis-tools redis-server
+
+# Install click for CLI
+RUN pip3 install click
 
 {% if docker_database_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -25,7 +28,7 @@ RUN apt-get clean -y                                  && \
     apt-get autoclean -y                              && \
     apt-get autoremove -y                             && \
     rm -rf /debs ~/.cache                             && \
-    sed -ri 's/^(save .*$)/# \1/g;                       \
+    sed -ri 's/^# save ""$/save ""/g;                    \
              s/^daemonize yes$/daemonize no/;            \
              s/^logfile .*$/logfile ""/;                 \
              s/^# syslog-enabled no$/syslog-enabled no/; \
@@ -45,5 +48,6 @@ COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["files/sysctl-net.conf", "/etc/sysctl.d/"]
 COPY ["files/update_chassisdb_config", "/usr/local/bin/"]
 COPY ["flush_unused_database", "/usr/local/bin/"]
+COPY ["multi_database_config.json.j2", "/usr/share/sonic/templates/"]
 
 ENTRYPOINT ["/usr/local/bin/docker-database-init.sh"]

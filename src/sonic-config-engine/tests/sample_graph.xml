@@ -81,6 +81,14 @@
           </a:Prefix>
           <a:PrefixStr>192.168.200.15/24</a:PrefixStr>
         </a:ManagementIPInterface>
+        <a:ManagementIPInterface>
+          <Name>ManagementIPv6</Name>
+          <AttachTo>Management0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.NetMux">
+            <b:IPPrefix>fe80::1/64</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>fe80::1/64</a:PrefixStr>
+        </a:ManagementIPInterface>
       </ManagementIPInterfaces>
       <MplsInterfaces/>
       <MplsTeInterfaces/>

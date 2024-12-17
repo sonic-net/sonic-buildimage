@@ -150,16 +150,12 @@ def _parse_table_to_dict(table):
     return ret
 
 
-def get_target_process_cmds(process_name):
+def is_smart_switch(device_metadata):
     """
-    Get running process cmds
+    Check in device metadata whether subtype is smartswitch
     Args:
-        process_name: name of process
+        device_metadata: DEVICE_METADATA table
     Returns:
-        List of cmds list
+        If subtype is "SmartSwitch", return True. Else, return False
     """
-    res = []
-    for proc in psutil.process_iter():
-        if proc.name() == process_name:
-            res.append(proc.cmdline())
-    return res
+    return device_metadata.get("localhost", {}).get("subtype", "") == "SmartSwitch"

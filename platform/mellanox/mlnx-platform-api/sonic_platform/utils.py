@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -105,7 +106,7 @@ def read_float_from_file(file_path, default=0.0, raise_exception=False, log_func
 def _key_value_converter(content, delimeter):
     ret = {}
     for line in content.splitlines():
-        k,v = line.split(delimeter)
+        k,v = line.split(delimeter, 1)
         ret[k.strip()] = v.strip()
     return ret
 
@@ -282,11 +283,13 @@ def wait_until(predict, timeout, interval=1, *args, **kwargs):
     Returns:
         _type_: _description_
     """
+    if predict(*args, **kwargs):
+        return True
     while timeout > 0:
-        if predict(*args, **kwargs):
-            return True
         time.sleep(interval)
         timeout -= interval
+        if predict(*args, **kwargs):
+            return True
     return False
 
 

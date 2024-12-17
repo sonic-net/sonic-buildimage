@@ -1,0 +1,60 @@
+{
+    "version": "1.0.0",
+    "package": {
+        "version": "1.0.0",
+        "name": "default_manifest",
+        "description": "",
+        "base-os": {},
+        "depends": [],
+        "breaks": [],
+        "init-cfg": {},
+        "changelog": {},
+        "debug-dump": ""
+    },
+    "service": {
+        "name": "default_manifest",
+        "requires": [],
+        "requisite": [],
+        "wanted-by": [],
+        "after": [],
+        "before": [],
+        "dependent": [],
+        "dependent-of": [],
+        "post-start-action": "",
+        "pre-shutdown-action": "",
+        "asic-service": false,
+        "host-service": true,
+        "delayed": false,
+        "check_up_status": false,
+        "warm-shutdown": {
+            "after": [],
+            "before": []
+        },
+        "fast-shutdown": {
+            "after": [],
+            "before": []
+        },
+        "syslog": {
+            "support-rate-limit": false
+        }
+    },
+    "container": {
+        "privileged": false,
+        "entrypoint": "",
+        "volumes": [],
+        "mounts": [],
+        "environment": {},
+        "tmpfs": []
+    },
+    "processes": [],
+    "cli": {
+        "mandatory": false,
+        "show": [],
+        "config": [],
+        "clear": [],
+        "auto-generate-show": false,
+        "auto-generate-config": false,
+        "auto-generate-show-source-yang-modules": [],
+        "auto-generate-config-source-yang-modules": []
+    }
+}

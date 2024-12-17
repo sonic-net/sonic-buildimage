@@ -24,6 +24,10 @@ ifeq ($(BLDENV),bullseye)
     $(PROTOC32)_RDEPENDS = $(PROTOBUF) $(PROTOBUF_LITE)
     $(eval $(call add_derived_package,$(PROTOBUF),$(PROTOC32)))
 
+    PROTOC_DEV = libprotoc-dev_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+    $(PROTOC_DEV)_DEPENDS = $(PROTOBUF) $(PROTOBUF_LITE) $(PROTOC32)
+    $(eval $(call add_derived_package,$(PROTOBUF),$(PROTOC_DEV)))
+
     PROTOBUF_COMPILER = protobuf-compiler_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
     $(PROTOBUF_COMPILER)_DEPENDS = $(PROTOC32)
     $(PROTOBUF_COMPILER)_RDEPENDS = $(PROTOC32)
@@ -33,5 +37,10 @@ ifeq ($(BLDENV),bullseye)
     $(PYTHON3_PROTOBUF)_DEPENDS = $(PROTOBUF_DEV) $(PROTOBUF)
     $(PYTHON3_PROTOBUF)_RDEPENDS = $(PROTOBUF)
     $(eval $(call add_derived_package,$(PROTOBUF),$(PYTHON3_PROTOBUF)))
+
+    RUBY_PROTOBUF = ruby-google-protobuf_$(PROTOBUF_VERSION_FULL)_$(CONFIGURED_ARCH).deb
+    $(RUBY_PROTOBUF)_DEPENDS = $(PROTOBUF_DEV) $(PROTOBUF)
+    $(RUBY_PROTOBUF)_RDEPENDS = $(PROTOBUF)
+    $(eval $(call add_derived_package,$(PROTOBUF),$(RUBY_PROTOBUF)))
 
 endif

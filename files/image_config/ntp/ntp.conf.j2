@@ -18,14 +18,15 @@ leapfile /usr/share/zoneinfo/leap-seconds.list
 {# Adding NTP servers. We need to know if we have some pools, to set proper
 config -#}
 {% set ns = namespace(is_pools=false) %}
-{% for server in NTP_SERVER if NTP_SERVER[server].admin_state != 'disabled' and
-                               NTP_SERVER[server].resolve_as and
-                               NTP_SERVER[server].association_type -%}
+{% set ip_ver_ns = namespace(ipv4_server=false, ipv6_server=false) %}
+{% for server in NTP_SERVER if NTP_SERVER[server].admin_state != 'disabled' -%}
     {% set config = NTP_SERVER[server] -%}
     {# Server options -#}
     {% set soptions = '' -%}
-    {# Server access control options -#}
-    {% set aoptions = '' -%}
+
+    {# Define defaults if not defined -#}
+    {% set association_type = config.association_type | d('server') -%}
+    {% set resolve_as = config.resolve_as | d(server) -%}
 
     {# Authentication key -#}
     {% if global.authentication == 'enabled' -%}
@@ -47,18 +48,21 @@ config -#}
     {# Check if there are any pool configured. BTW it doesn't matter what was
     configured as "resolve_as" for pools. If they were configured with FQDN they
     must remain like that -#}
-    {% set config_as = config.resolve_as -%}
-    {% if config.association_type == 'pool' -%}
-        {% set ns.is_pools = true -%}
-        {% set config_as = server -%}
-    {% else -%}
-        {% set aoptions = aoptions ~ ' nopeer' -%}
+    {% if association_type == 'pool' -%}
+        {% set resolve_as = server -%}
     {% endif -%}
 
-{{ config.association_type }} {{ config_as }}{{ soptions }}
+{{ association_type }} {{ resolve_as }}{{ soptions }}
 {% if global.server_role == 'disabled' %}
-restrict {{ config_as }} kod limited nomodify notrap noquery{{ aoptions }}
+restrict {{ resolve_as }} kod limited nomodify noquery
 {% endif %}
+
+{% if resolve_as | ipv4 -%}
+    {% set ip_ver_ns.ipv4_server = true %}
+{% elif resolve_as | ipv6 %}
+    {% set ip_ver_ns.ipv6_server = true %}
+{% endif -%}
+
 
 {% endfor -%}
 
@@ -106,7 +110,7 @@ interface ignore wildcard
     {%- set ns.source_intf = global.src_intf %}
     {%- if ns.source_intf != "" %}
         {%- if ns.source_intf == "eth0" %}
-            {%- set ns.source_intf_ip = 'true' %}
+            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, MGMT_INTERFACE) %}
         {%- elif ns.source_intf.startswith('Vlan') %}
             {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, VLAN_INTERFACE) %}
         {%- elif ns.source_intf.startswith('Ethernet') %}
@@ -129,8 +133,10 @@ interface listen {{ mgmt_prefix | ip }}
 {% endfor %}
 {% elif LOOPBACK_INTERFACE %}
 {% for (name, prefix) in LOOPBACK_INTERFACE|pfx_filter %}
-{% if prefix | ipv4 and name == 'Loopback0' %}
+{% if name == 'Loopback0' %}
+{% if prefix | ipv4 and ip_ver_ns.ipv4_server or prefix | ipv6 and ip_ver_ns.ipv6_server %}
 interface listen {{ prefix | ip }}
+{% endif %}
 {% endif %}
 {% endfor %}
 {% else %}

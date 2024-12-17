@@ -1,5 +1,5 @@
 {#
-    Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES.
+    Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES.
     Apache-2.0
 
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,109 +20,20 @@
 {% set egress_lossless_pool_size =  '158229504' %}
 {% set egress_lossy_pool_size =  '52161690' %}
 
-{%- macro generate_port_lists(PORT_ALL) %}
-    {# Generate list of ports #}
-    {%- for port_idx in range(0, 32) %}
-        {%- if PORT_ALL.append("Ethernet%d" % (port_idx)) %}{%- endif %}
-    {%- endfor %}
+{% import 'buffers_defaults_objects.j2' as defs with context %}
+
+{%- macro generate_buffer_pool_and_profiles_with_inactive_ports(port_names_inactive) %}
+{{ defs.generate_buffer_pool_and_profiles_with_inactive_ports(port_names_inactive) }}
 {%- endmacro %}
 
-{%- macro generate_buffer_pool_and_profiles() %}
-    "BUFFER_POOL": {
-        "ingress_lossless_pool": {
-            {%- if dynamic_mode is not defined %}
-            "size": "{{ ingress_lossless_pool_size }}",
-            {%- endif %}
-            "type": "ingress",
-            "mode": "dynamic"
-        },
-        "ingress_lossy_pool": {
-            {%- if dynamic_mode is not defined %}
-            "size": "{{ ingress_lossy_pool_size }}",
-            {%- endif %}
-            "type": "ingress",
-            "mode": "dynamic"
-        },
-        "egress_lossless_pool": {
-            "size": "{{ egress_lossless_pool_size }}",
-            "type": "egress",
-            "mode": "dynamic"
-        },
-        "egress_lossy_pool": {
-            {%- if dynamic_mode is not defined %}
-            "size": "{{ egress_lossy_pool_size }}",
-            {%- endif %}
-            "type": "egress",
-            "mode": "dynamic"
-        }
-    },
-    "BUFFER_PROFILE": {
-        "ingress_lossless_profile": {
-            "pool":"ingress_lossless_pool",
-            "size":"0",
-            "dynamic_th":"7"
-        },
-        "ingress_lossy_profile": {
-            "pool":"ingress_lossy_pool",
-            "size":"0",
-            "dynamic_th":"3"
-        },
-        "egress_lossless_profile": {
-            "pool":"egress_lossless_pool",
-            "size":"0",
-            "dynamic_th":"7"
-        },
-        "egress_lossy_profile": {
-            "pool":"egress_lossy_pool",
-            "size":"9216",
-            "dynamic_th":"7"
-        },
-        "q_lossy_profile": {
-            "pool":"egress_lossy_pool",
-            "size":"0",
-            "dynamic_th":"3"
-        }
-    },
+{%- macro generate_profile_lists_with_inactive_ports(port_names_active, port_names_inactive) %}
+{{ defs.generate_profile_lists(port_names_active, port_names_inactive) }}
 {%- endmacro %}
 
-{%- macro generate_profile_lists(port_names) %}
-    "BUFFER_PORT_INGRESS_PROFILE_LIST": {
-{% for port in port_names.split(',') %}
-        "{{ port }}": {
-            "profile_list" : "ingress_lossless_profile,ingress_lossy_profile"
-        }{% if not loop.last %},{% endif %}
-
-{% endfor %}
-    },
-    "BUFFER_PORT_EGRESS_PROFILE_LIST": {
-{% for port in port_names.split(',') %}
-        "{{ port }}": {
-            "profile_list" : "egress_lossless_profile,egress_lossy_profile"
-        }{% if not loop.last %},{% endif %}
-
-{% endfor %}
-    }
+{%- macro generate_queue_buffers_with_inactive_ports(port_names_active, port_names_inactive) %}
+{{ defs.generate_queue_buffers(port_names_active, port_names_inactive) }}
 {%- endmacro %}
 
-{%- macro generate_queue_buffers(port_names) %}
-    "BUFFER_QUEUE": {
-{% for port in port_names.split(',') %}
-        "{{ port }}|3-4": {
-            "profile" : "egress_lossless_profile"
-        },
-{% endfor %}
-{% for port in port_names.split(',') %}
-        "{{ port }}|0-2": {
-            "profile" : "q_lossy_profile"
-        },
-{% endfor %}
-{% for port in port_names.split(',') %}
-        "{{ port }}|5-6": {
-            "profile" : "q_lossy_profile"
-        }{% if not loop.last %},{% endif %}
-
-{% endfor %}
-    }
+{%- macro generate_pg_profiles_with_inactive_ports(port_names_active, port_names_inactive) %}
+{{ defs.generate_pg_profiles(port_names_active, port_names_inactive) }}
 {%- endmacro %}
-
-

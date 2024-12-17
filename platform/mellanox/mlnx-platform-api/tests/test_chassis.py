@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +21,7 @@ import random
 import sys
 import subprocess
 import threading
+import pytest
 
 from mock import MagicMock
 if sys.version_info.major == 3:
@@ -33,7 +35,7 @@ sys.path.insert(0, modules_path)
 
 import sonic_platform.chassis
 from sonic_platform_base.sfp_base import SfpBase
-from sonic_platform.chassis import Chassis
+from sonic_platform.chassis import Chassis, SmartSwitchChassis
 from sonic_platform.device_data import DeviceDataManager
 
 sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
@@ -124,6 +126,7 @@ class TestChassis:
         chassis._fan_drawer_list = []
         assert chassis.get_num_fan_drawers() == 2
 
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
     def test_sfp(self):
         # Test get_num_sfps, it should not create any SFP objects
         DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
@@ -169,6 +172,14 @@ class TestChassis:
         assert len(sfp_list) == 3
         assert chassis.sfp_initialized_count == 3
 
+        # Get all SFPs, with RJ45 ports
+        sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[0,1,2])
+        DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
+        chassis = Chassis()
+        assert chassis.get_num_sfps() == 6
+        sonic_platform.chassis.extract_RJ45_ports_index = mock.MagicMock(return_value=[])
+
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.is_module_host_management_mode', mock.MagicMock(return_value=False))
     def test_create_sfp_in_multi_thread(self):
         DeviceDataManager.get_sfp_count = mock.MagicMock(return_value=3)
 
@@ -191,25 +202,6 @@ class TestChassis:
             for index, s in enumerate(chassis.get_all_sfps()):
                 assert s.sdk_index == index
             iteration_num -= 1
-
-
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sfp_count', MagicMock(return_value=3))
-    def test_change_event(self):
-        chassis = Chassis()
-        chassis.modules_mgmt_thread.is_alive = MagicMock(return_value=True)
-        chassis.modules_changes_queue.get = MagicMock(return_value={1: '1'})
-
-        # Call get_change_event with timeout=0, wait until an event is detected
-        status, event_dict = chassis.get_change_event()
-        assert status is True
-        assert 'sfp' in event_dict and event_dict['sfp'][1] == '1'
-        assert len(chassis._sfp_list) == 3
-
-        # Call get_change_event with timeout=1.0
-        chassis.modules_changes_queue.get.return_value = {}
-        status, event_dict = chassis.get_change_event(timeout=1.0)
-        assert status is True
-        assert 'sfp' in event_dict and not event_dict['sfp']
 
     @mock.patch('sonic_platform.chassis.Chassis._wait_reboot_cause_ready', MagicMock(return_value=True))
     def test_reboot_cause(self):
@@ -334,19 +326,6 @@ class TestChassis:
         assert len(module_list) == 3
         assert chassis.module_initialized_count == 3
 
-    def test_revision_permission(self):
-        old_dmi_file =  sonic_platform.chassis.DMI_FILE
-        #Override the dmi file
-        sonic_platform.chassis.DMI_FILE = "/tmp/dmi_file"
-        new_dmi_file = sonic_platform.chassis.DMI_FILE
-        subprocess.call(["touch", new_dmi_file])
-        subprocess.call(["chmod", "-r", new_dmi_file])
-        chassis = Chassis()
-        rev = chassis.get_revision()
-        sonic_platform.chassis.DMI_FILE = old_dmi_file
-        subprocess.call(["rm", "-f", new_dmi_file])
-        assert rev == "N/A"
-
     def test_get_port_or_cage_type(self):
         chassis = Chassis()
         chassis._RJ45_port_inited = True
@@ -361,7 +340,81 @@ class TestChassis:
 
         assert exceptionRaised
 
-    def test_parse_dmi(self):
+    def test_parse_vpd(self):
         chassis = Chassis()
-        content = chassis._parse_dmi(os.path.join(test_path, 'dmi_file'))
-        assert content.get('Version') == 'A4'
+        content = chassis._parse_vpd_data(os.path.join(test_path, 'vpd_data_file'))
+        assert content.get('REV') == 'A7'
+
+    @mock.patch('sonic_platform.module.SonicV2Connector', mock.MagicMock())
+    @mock.patch('sonic_platform.module.ConfigDBConnector', mock.MagicMock())
+    def test_smartswitch(self):
+        orig_dpu_count = DeviceDataManager.get_dpu_count
+        DeviceDataManager.get_dpu_count = mock.MagicMock(return_value=4)
+        chassis = SmartSwitchChassis()
+
+        assert not chassis.is_modular_chassis()
+        assert chassis.is_smartswitch()
+        assert chassis.init_midplane_switch()
+
+        chassis._module_list = None
+        chassis.module_initialized_count = 0
+        chassis.module_name_index_map = {}
+        with pytest.raises(RuntimeError, match="Invalid index = -1 for module"
+                           " initialization with total module count = 4"):
+            chassis.initialize_single_module(-1)
+            chassis.get_module(-1)
+        with pytest.raises(KeyError):
+            chassis.get_module_index('DPU1')
+            chassis.get_module_index('DPU2')
+            chassis.get_dpu_id("DPU1")
+            chassis.get_dpu_id("DPU2")
+            chassis.get_dpu_id("DPU3")
+
+        DeviceDataManager.get_dpu_count = mock.MagicMock(return_value=0)
+        assert chassis.get_num_modules() == 0
+        with pytest.raises(TypeError):
+            chassis.get_module(0)
+        chassis.initialize_modules()
+        assert chassis.get_all_modules() is None
+
+        DeviceDataManager.get_dpu_count = mock.MagicMock(return_value=4)
+        from sonic_platform.module import DpuModule
+        assert isinstance(chassis.get_module(0), DpuModule)
+        assert chassis.get_module(4) is None
+
+        chassis.initialize_modules()
+        assert chassis.get_module_index('DPU0') == 0
+        assert chassis.get_module_index('DPU3') == 3
+        with pytest.raises(KeyError):
+            chassis.get_module_index('DPU10')
+            chassis.get_module_index('ABC')
+
+        assert chassis.get_num_modules() == 4
+        module_list = chassis.get_all_modules()
+        assert len(module_list) == 4
+        pl_data = {
+            "dpu0": {
+                "interface": {"Ethernet224": "Ethernet0"}
+            },
+            "dpu1": {
+                "interface": {"Ethernet232": "Ethernet0"}
+            },
+            "dpu2": {
+                "interface": {"EthernetX": "EthernetY"}
+            }
+        }
+        orig_dpus_data = DeviceDataManager.get_platform_dpus_data
+        DeviceDataManager.get_platform_dpus_data = mock.MagicMock(return_value=pl_data)
+        chassis.get_module_dpu_data_port(0) == str({"Ethernet232": "Ethernet0"})
+        with pytest.raises(IndexError):
+            assert chassis.get_module_dpu_data_port(5)
+            assert chassis.get_module_dpu_data_port(-1)
+
+        assert chassis.get_dpu_id("DPU1") == 1
+        assert chassis.get_dpu_id("DPU3") == 3
+        assert chassis.get_dpu_id("DPU2") == 2
+        with pytest.raises(KeyError):
+            chassis.get_dpu_id('DPU15')
+            chassis.get_dpu_id('ABC')
+        DeviceDataManager.get_platform_dpus_data = orig_dpus_data
+        DeviceDataManager.get_dpu_count = orig_dpu_count

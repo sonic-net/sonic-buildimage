@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_MAIN_H
@@ -58,6 +58,11 @@
 #define DBG_RATE(_s)        do { if (debug & DBG_LVL_RATE) printk _s; } while (0)
 #define DBG_LINK(_s)        do { if (debug & DBG_LVL_LINK) printk _s; } while (0)
 
+
+/* FIXME: SAI_FIXUP */
+#define SAI_FIXUP           1
+#define KNET_SVTAG_HOTFIX   1
+
 /*!
  * Device description
  */
@@ -80,7 +85,7 @@ struct ngknet_dev {
     /*! PDMA device */
     struct pdma_dev pdma_dev;
 
-    /*! Virtual network devices, 0 is reserved for valid number of devices. */
+    /*! Virtual network devices, 0 is used for max ID number. */
     struct net_device *vdev[NUM_VDEV_MAX + 1];
 
     /*! Virtual network devices bound to queue */
@@ -166,8 +171,10 @@ struct ngknet_private {
     /* Link settings */
     struct ethtool_link_settings link_settings;
 #endif
-        /*! Matched callback filter */
-    struct ngknet_filter_s *filt_cb;
+#if SAI_FIXUP && KNET_SVTAG_HOTFIX  /* SONIC-76482 */
+    /* ! MACSEC SVTAG */
+    uint8_t svtag[4];
+#endif
 };
 
 /*!

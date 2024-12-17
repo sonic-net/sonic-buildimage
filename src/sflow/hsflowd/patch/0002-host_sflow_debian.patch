@@ -12,11 +12,11 @@ diff -ruN a/DEBIAN_build/compat b/DEBIAN_build/compat
 --- a/DEBIAN_build/compat	1969-12-31 19:00:00.000000000 -0500
 +++ b/DEBIAN_build/compat	2019-08-16 23:28:58.020938096 -0400
 @@ -0,0 +1 @@
-+9
++13
 diff -ruN a/DEBIAN_build/control b/DEBIAN_build/control
 --- a/DEBIAN_build/control	2019-08-16 05:11:33.974949327 -0400
 +++ b/DEBIAN_build/control	2019-08-19 21:28:07.155722725 -0400
-@@ -1,9 +1,22 @@
+@@ -1,9 +1,15 @@
 -Package: _PACKAGE_
 -Version: _VERSION_
 -Section: admin 
@@ -37,17 +37,10 @@ diff -ruN a/DEBIAN_build/control b/DEBIAN_build/control
 -Maintainer: Neil McKee [neil.mckee@inmon.com]
  Description: sFlow(R) monitoring agent
  Homepage: sflow.net
-+
-+Package: hsflowd-dbg
-+Architecture: any
-+Section: debug
-+Priority: extra
-+Depends: hsflowd
-+Description: debugging symbols for hsflowd
 diff -ruN a/DEBIAN_build/rules b/DEBIAN_build/rules
 --- a/DEBIAN_build/rules	1969-12-31 19:00:00.000000000 -0500
 +++ b/DEBIAN_build/rules	2019-08-19 22:20:42.998569601 -0400
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,18 @@
 +#!/usr/bin/make -f
 +
 +# See debhelper(7) (uncomment to enable)
@@ -59,50 +52,10 @@ diff -ruN a/DEBIAN_build/rules b/DEBIAN_build/rules
 +include /usr/share/dpkg/default.mk
 +
 +%:
-+	dh $@
-+
-+binary:
-+	dh_gencontrol
-+	dh_strip -phsflowd --dbg-package=hsflowd-dbg
-+	dpkg-deb --build debian/hsflowd-dbg hsflowd-dbg_$(HSFLOWD_VERSION)-$(HSFLOWD_SUBVERSION)_$(CONFIGURED_ARCH).deb
-+	dpkg-deb --build debian/hsflowd hsflowd_$(HSFLOWD_VERSION)-$(HSFLOWD_SUBVERSION)_$(CONFIGURED_ARCH).deb
++	dh $@ --no-parallel
 +
 +override_dh_auto_build:
-+	make sonic-deb FEATURES="SONIC" CC=$(CC) CXX=$(CXX) LD=$(CC)
-+
-+override_dh_auto_configure:
++	dh_auto_build -- hsflowd MYARCH=$(shell uname -m | sed 's/x86_64/amd64/') FEATURES="SONIC"
 +
 +override_dh_auto_install:
-+
-+override_dh_auto_test:
-+
-+override_dh_auto_clean:
-+
-+override_dh_clean:
-diff -ruN a/Makefile b/Makefile
---- a/Makefile	2019-08-16 21:34:25.167679297 -0400
-+++ b/Makefile	2019-08-19 22:20:23.758479002 -0400
-@@ -146,6 +146,23 @@
- 	cd ..; \
- 	dpkg-deb --build debian hsflowd_$${MYVER}-$${MYREL}_$$MYARCH.deb
- 
-+sonic-deb: $(PROG)
-+	MYARCH=`uname -m|sed 's/x86_64/amd64/'`; \
-+	MYVER=`./getVersion`; \
-+	MYREL=`./getRelease`; \
-+	PLATFORM=`uname`; \
-+	mkdir -p debian/usr/sbin; \
-+	mkdir -p debian/etc/init.d; \
-+	mkdir -p debian/etc/hsflowd/modules; \
-+	mkdir -p debian/lib/systemd/system; \
-+	mkdir -p debian/etc/dbus-1/system.d; \
-+	cd src/$$PLATFORM; $(MAKE) VERSION=$$MYVER RELEASE=$$MYREL INSTROOT="../../debian/hsflowd" install; cd ../..; \
-+	pwd; \
-+	cd debian/hsflowd; \
-+	find . -type d | xargs chmod 755; \
-+	md5sum `find usr etc -type f` > md5sums; \
-+	cd ../..;
-+
- xenserver: xenrpm
- 	cd xenserver-ddk; $(MAKE) clean; $(MAKE)
- 
++	dh_auto_install -- INSTROOT="$(PWD)/debian/hsflowd/" FEATURES="SONIC"

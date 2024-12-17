@@ -117,7 +117,12 @@ int set_peer_link(int mid, const char* ifname)
                        csm->mlag_id, ifname);
     }
 
-    memset(csm->peer_itf_name, 0, MAX_L_PORT_NAME);
+    memset(csm->peer_itf_name, 0, IFNAMSIZ);
+    if (len > IFNAMSIZ)
+    {
+        ICCPD_LOG_ERR(__FUNCTION__, "len=%d greater than IFNAMESIZ=%d", len, IFNAMSIZ);
+        return MCLAG_ERROR;
+    }
     memcpy(csm->peer_itf_name, ifname, len);
 
     /* update peer-link link handler*/
@@ -208,8 +213,18 @@ int set_local_address(int mid, const char* addr)
 
     len = strlen(addr);
     memset(csm->sender_ip, 0, INET_ADDRSTRLEN);
+    if (len > INET_ADDRSTRLEN)
+    {
+        ICCPD_LOG_ERR(__FUNCTION__, "len=%d greater than INET_ADDRSTRLEN=%d ", len, INET_ADDRSTRLEN);
+        return MCLAG_ERROR;
+    }
     memcpy(csm->sender_ip, addr, len);
     memset(csm->iccp_info.sender_name, 0, INET_ADDRSTRLEN);
+    if (len > INET_ADDRSTRLEN)
+    {
+        ICCPD_LOG_ERR(__FUNCTION__, "len=%d greater than INET_ADDRSTRLEN=%d ", len, INET_ADDRSTRLEN);
+        return MCLAG_ERROR;
+    }
     memcpy(csm->iccp_info.sender_name, addr, len);
 
     return 0;
@@ -268,6 +283,11 @@ int set_peer_address(int mid, const char* addr)
     }
 
     memset(csm->peer_ip, 0, INET_ADDRSTRLEN);
+    if (len > INET_ADDRSTRLEN)
+    {
+        ICCPD_LOG_ERR(__FUNCTION__, "len=%d greater than INET_ADDRSTRLEN=%d ", len, INET_ADDRSTRLEN);
+        return MCLAG_ERROR;
+    }
     memcpy(csm->peer_ip, addr, len);
 
     return 0;

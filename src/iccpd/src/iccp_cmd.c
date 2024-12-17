@@ -135,6 +135,10 @@ int iccp_config_from_command(char * line)
                 cp++;
 
             slen = cp - start;
+            if (slen > strlen(token))
+            {
+                return MCLAG_ERROR;
+            }
             strncpy(token, start, slen);
             *(token + slen) = '\0';
             iccp_cli_attach_mclag_domain_to_port_channel(mid, token);

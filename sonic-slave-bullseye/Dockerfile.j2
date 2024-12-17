@@ -94,9 +94,11 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         curl \
         wget \
         unzip \
-        {{ GZ_COMPRESS_PROGRAM }} \
+        gzip \
+        pigz \
         git \
         build-essential \
+        remake \
         libtool \
         lintian \
         sudo \
@@ -146,6 +148,8 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         libsystemd-dev \
         python3-ipaddr \
         libcmocka-dev \
+        libprotobuf-c-dev \
+        protobuf-c-compiler \
 #{%- if CROSS_BUILD_ENVIRON != "y" %}
         python3-all-dev \
         python3-all-dbg \
@@ -357,7 +361,6 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
 # For DHCP Monitor tool
         libexplain-dev \
         libevent-dev \
-        libjsoncpp-dev \
 # For libyang
         swig \
 # For build dtb
@@ -426,6 +429,45 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install 
         default-jdk \
         libgoogle-gson-java
 
+{%- if CONFIGURED_ARCH != "arm64" and CONFIGURED_ARCH != "armhf" %}
+# For DASH BMv2
+RUN eatmydata apt install -y \
+# For grpc
+        libgflags-dev                       \
+        libgoogle-perftools-dev             \
+        ruby-googleauth                     \
+        ruby-googleapis-common-protos-types \
+        ruby-simplecov                      \
+        cython3                             \
+# For p4 libraries
+        valgrind \
+        thrift-compiler \
+        gfortran \
+        libopenmpi-dev \
+        libthrift-0.13.0 \
+        libthrift-dev \
+        libboost-all-dev \
+        libboost-graph-dev \
+        libboost-iostreams-dev \
+        libgc-dev \
+        tcpdump \
+        llvm \
+        net-tools \
+        python3-pyroute2 \
+        python3-ply \
+        python3-scapy \
+        python3-thrift \
+        libabsl20200923 libc-ares2 python3-six libboost-thread1.74.0 libboost-dev libboost-system-dev libboost-thread-dev libboost-filesystem1.74.0 libboost-program-options1.74.0 libboost-thread1.74.0 libnanomsg5 libpcap0.8 libthrift-0.13.0 libboost-dev libboost-filesystem-dev libboost-program-options-dev libgmp-dev libnanomsg-dev libpcap-dev libtool pkg-config libthrift-dev python3-thrift thrift-compiler libboost-iostreams1.74.0 libgc1 cpp libboost-dev libboost-all-dev libboost-graph-dev libboost-iostreams-dev libfl-dev libgc-dev libgmp-dev libbpf-dev tcpdump libelf-dev llvm clang python3-pyroute2 python3-ply python3-scapy python3-setuptools python3-thrift libthrift-0.13.0
+{%- endif %}
+
+{%- if CONFIGURED_ARCH == "amd64" %}
+# Upgrade CMAKE version
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh
+RUN chmod +x cmake-3.27.6-linux-x86_64.sh
+RUN sudo ./cmake-3.27.6-linux-x86_64.sh --skip-license --prefix=/usr
+RUN sudo apt-get update -y
+{%- endif %}
+
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages
 RUN apt-get remove -y libnl-3-200
@@ -481,14 +523,14 @@ RUN eatmydata apt-get install -y kernel-wedge
 # For gobgp and telemetry build
 RUN eatmydata apt-get install -y golang-1.15 && ln -s /usr/lib/go-1.15 /usr/local/go
 {%- if INCLUDE_FIPS == "y" %}
-RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.1/{{ CONFIGURED_ARCH }}/golang-1.15-go_1.15.15-1~deb11u4%2Bfips_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bullseye/0.1/{{ CONFIGURED_ARCH }}/golang-1.15-src_1.15.15-1~deb11u4%2Bfips_{{ CONFIGURED_ARCH }}.deb' \
+RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bullseye/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.15-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bullseye/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.15-src_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
  && eatmydata dpkg -i golang-go.deb golang-src.deb \
  && ln -sf /usr/lib/go-1.15 /usr/local/go \
  && rm golang-go.deb golang-src.deb
 {%- endif %}
 
-RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade pip==24.2
 RUN apt-get purge -y python3-pip python3-yaml
 
 # For building Python packages
@@ -555,6 +597,8 @@ RUN pip3 install "lxml==4.9.1"
 
 # For sonic-platform-common testing
 RUN pip3 install redis
+RUN pip3 install psutil
+RUN pip3 install blkinfo
 
 # For vs image build
 RUN pip3 install pexpect==4.8.0
@@ -569,6 +613,9 @@ RUN pip3 install pyang==2.4.0
 RUN pip3 install mmh3==2.5.1
 
 RUN pip3 install parameterized==0.8.1
+
+# For DASH BMv2
+RUN pip3 install jsonpath_ng
 
 RUN eatmydata apt-get install -y xsltproc
 

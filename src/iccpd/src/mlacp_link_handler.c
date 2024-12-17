@@ -258,39 +258,6 @@ done:
  * Port-Channel Status Handler
  *
  ****************************************/
-static void set_route_by_linux_route(struct CSM* csm,
-                                     struct LocalInterface *local_if,
-                                     int is_add)
-{
-    /* TODO Need to remove this function
-         when set static route with zebra works fine*/
-
-    char ipv4_dest_str[INET_ADDRSTRLEN];
-    char syscmd[128];
-    char *ptr;
-    int ret = 0;
-
-    /* enable kernel forwarding support*/
-    system("echo 1 > /proc/sys/net/ipv4/ip_forward");
-
-    if (!csm || !local_if)
-        return;
-
-    sprintf(ipv4_dest_str, "%s", show_ip_str(htonl(local_if->ipv4_addr)));
-    ptr = strrchr(ipv4_dest_str, '.');
-    strcpy(ptr, ".0\0");
-
-    /* set gw route */
-    /* sprintf(syscmd, "ip route %s %s/%d proto static metric 200 nexthop via %s > /dev/null 2>&1", */
-    sprintf(syscmd, "ip route %s %s/%d metric 200 nexthop via %s > /dev/null 2>&1",
-            (is_add) ? "add" : "del", ipv4_dest_str, local_if->prefixlen, csm->peer_ip);
-
-    ret = system(syscmd);
-    ICCPD_LOG_DEBUG(__FUNCTION__, "%s  ret = %d", syscmd, ret);
-
-    return;
-}
-
 static void update_vlan_if_info(struct CSM *csm,
                                 struct LocalInterface *local_if,
                                 struct LocalInterface *vlan_if,
@@ -354,7 +321,6 @@ static void set_l3_itf_state(struct CSM *csm,
         /* set static route*/
         if (route_type == ROUTE_ADD)
         {
-            /*set_route_by_linux_route(csm, set_l3_local_if, 1);*/   /*add static route by linux route tool*/
             /*If the L3 intf is not Vlan, del ARP; else wait ARP age*/
             if (strncmp(set_l3_local_if->name, VLAN_PREFIX, 4) != 0)
             {
@@ -364,7 +330,6 @@ static void set_l3_itf_state(struct CSM *csm,
         }
         else if (route_type == ROUTE_DEL)
         {
-            /*set_route_by_linux_route(csm, set_l3_local_if, 0);*/    /*del static route by linux route tool*/
             arp_set_handler(csm, set_l3_local_if, 1);     /* add arp*/
             ndisc_set_handler(csm, set_l3_local_if, 1); /* add nd */
         }
@@ -1085,7 +1050,7 @@ void update_peerlink_isolate_from_all_csm_lif(
     char *msg_buf = g_iccp_mlagsyncd_send_buf;
     struct System *sys;
 
-    char mlag_po_buf[512];
+    char mlag_po_buf[MCLAG_MEMBER_NAME_STR_LEN];
     int src_len = 0, dst_len = 0;
     ssize_t rc;
 
@@ -1100,7 +1065,7 @@ void update_peerlink_isolate_from_all_csm_lif(
         return;
 
     memset(msg_buf, 0, ICCP_MLAGSYNCD_SEND_MSG_BUFFER_SIZE);
-    memset(mlag_po_buf, 0, 511);
+    memset(mlag_po_buf, 0, MCLAG_MEMBER_NAME_STR_LEN);
 
     msg_hdr = (struct IccpSyncdHDr *)msg_buf;
     msg_hdr->ver = ICCPD_TO_MCLAGSYNCD_HDR_VERSION;
@@ -1165,12 +1130,24 @@ void update_peerlink_isolate_from_all_csm_lif(
         /* check pif port state and lif pochannel state */
         if (lif->isolate_to_peer_link == 1)
         {
-            /* need to isolate port,  get it's member name */
-            if (strlen(mlag_po_buf) != 0)
-                dst_len += snprintf(mlag_po_buf + dst_len, sizeof(mlag_po_buf) - dst_len, "%s", ",");
+            //The return value of the snprintf function is the length of the source string.
+            if ((sizeof(mlag_po_buf) - dst_len) > 
+                (strlen(lif->name) + strlen(lif->portchannel_member_buf) + 2))
+            {
+                /* need to isolate port,  get it's member name */
+                if (strlen(mlag_po_buf) != 0)
+                {
+                    dst_len += snprintf(mlag_po_buf + dst_len, sizeof(mlag_po_buf) - dst_len, "%s", ",");
+                }
 
-            dst_len += snprintf(mlag_po_buf + dst_len, sizeof(mlag_po_buf) - dst_len, "%s%s%s",
-                                lif->name, lif->portchannel_member_buf[0] == 0 ? "" : ",", lif->portchannel_member_buf);
+                dst_len += snprintf(mlag_po_buf + dst_len, sizeof(mlag_po_buf) - dst_len, "%s%s%s",
+                                    lif->name, lif->portchannel_member_buf[0] == 0 ? "" : ",", lif->portchannel_member_buf);
+            }
+            else
+            {
+                ICCPD_LOG_WARN(__FUNCTION__, "the remaining length %d is not enough to store:%s%s%s", 
+                    sizeof(mlag_po_buf) - dst_len, lif->name, lif->portchannel_member_buf[0] == 0 ? "" : ",", lif->portchannel_member_buf);
+            }
         }
     }
 

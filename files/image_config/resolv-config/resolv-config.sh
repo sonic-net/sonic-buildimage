@@ -14,13 +14,24 @@ start()
 {
     update_symlink
 
-    redis-dump -d 4 -k "DNS_NAMESERVER*" -y > /tmp/dns.json
-    if [[ $? -eq 0 && "$(cat /tmp/dns.json)" != "{}" ]]; then
+    has_static_mgmt_ip=false
+    mgmt_ip_cfg=$(redis-dump -d 4 -k "MGMT_INTERFACE|eth0|*" -y)
+    if [[ $? -eq 0 && ${mgmt_ip_cfg} != "{}" ]]; then
+        has_static_mgmt_ip=true
+    fi
+
+    has_static_dns=false
+    dns_cfg=$(redis-dump -d 4 -k "DNS_NAMESERVER*" -y)
+    if [[ $? -eq 0 && ${dns_cfg} != "{}" ]]; then
+        has_static_dns=true
+    fi
+
+    if [[ ${has_static_mgmt_ip} == true || ${has_static_dns} == true ]]; then
         # Apply static DNS configuration and disable updates
         /sbin/resolvconf --disable-updates
         pushd ${CONFIG_DIR}
         # Backup dynamic configuration to restore it when the static configuration is removed
-        mv ${DYNAMIC_CONFIG_FILE_TEMPLATE} ${WD} || true
+        mv ${DYNAMIC_CONFIG_FILE_TEMPLATE} ${WD} 2>/dev/null || true
 
         sonic-cfggen -d -t /usr/share/sonic/templates/resolv.conf.j2,${STATIC_CONFIG_FILE}
 
@@ -34,7 +45,7 @@ start()
         pushd ${CONFIG_DIR}
         rm -f ${STATIC_CONFIG_FILE}
         # Restore dynamic configuration if it exists
-        mv ${WD}/${DYNAMIC_CONFIG_FILE_TEMPLATE} ${CONFIG_DIR} || true
+        mv ${WD}/${DYNAMIC_CONFIG_FILE_TEMPLATE} ${CONFIG_DIR} 2>/dev/null || true
 
         /sbin/resolvconf --enable-updates
         /sbin/resolvconf -u

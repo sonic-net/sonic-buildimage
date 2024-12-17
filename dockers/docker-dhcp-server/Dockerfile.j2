@@ -1,9 +1,8 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG image_version
-RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -15,43 +14,12 @@ RUN apt-get update &&       \
     apt-get install -f -y   \
         tcpdump             \
         python3-dev         \
-# For kea build environment
-        automake            \
-        libtool             \
-        pkg-config          \
         build-essential     \
-        ccache              \
-# For kea dependancies
-        libboost-dev        \
-        libboost-system-dev \
-        liblog4cplus-dev    \
-        libssl-dev
+        kea-dhcp4-server
 
-# Install kea from source
-RUN apt-get install -f -y devscripts
-RUN mkdir kea && cd kea && dget -u http://deb.debian.org/debian/pool/main/i/isc-kea/isc-kea_2.2.0-6.dsc
-RUN cd /kea/isc-kea-2.2.0 && autoreconf --install && ./configure --disable-FEATURE \
-    --enable-static=no --disable-install-configurations --enable-pgsql-ssl=no --with-PACKAGE=no \
-    && make -j$(nproc) && make install
-# Create run folder for kea
-RUN mkdir -p /run/kea
-# Create config folder for kea
-RUN mkdir -p /etc/kea
-# Remove stuff we don't need to reduce image size
-RUN cd /usr/local/lib && rm -v *.la && rm -v kea/hooks/*.la
-# Strip debug symbols to reduce file size of binaries
-Run find /usr/local/sbin/ /usr/local/lib/ -type f -exec strip --strip-unneeded {} \;
-# Remove source code
-RUN rm -rf /kea
-RUN echo "/usr/local/lib/kea/hooks" > /etc/ld.so.conf.d/kea.conf && \
-    ldconfig
-# Remove sbin we don't need
-RUN cd /usr/local/sbin && rm -f kea-admin kea-ctrl-agent kea-dhcp-ddns kea-dhcp6 keactrl
-# Remove hook lib we don't need
-RUN cd /usr/local/lib/kea/hooks && rm -f libdhcp_bootp.so libdhcp_flex_option.so libdhcp_stat_cmds.so
+RUN mkdir -p /var/run/kea
+
 RUN pip3 install psutil
-# TODO issue on remote rsyslog server in non-host container
-RUN rm -f /etc/supervisor/conf.d/containercfgd.conf
 
 {% if docker_dhcp_server_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -70,13 +38,8 @@ RUN rm -f /etc/supervisor/conf.d/containercfgd.conf
 {% endif %}
 
 # Remove build stuff we don't need
-RUN apt-get remove -y devscripts    \
-                automake            \
-                libtool             \
-                pkg-config          \
-                build-essential     \
-                python3-dev         \
-                ccache
+RUN apt-get remove -y build-essential     \
+                      python3-dev
 
 RUN apt-get clean -y        && \
     apt-get autoclean -y    && \
@@ -86,11 +49,10 @@ RUN apt-get clean -y        && \
 COPY ["docker_init.sh", "start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
-COPY ["port-name-alias-map.txt.j2", "rsyslog/rsyslog.conf.j2", "kea-dhcp4.conf.j2", "/usr/share/sonic/templates/"]
+COPY ["kea-dhcp4.conf.j2", "/usr/share/sonic/templates/"]
 COPY ["critical_processes", "/etc/supervisor/"]
 COPY ["lease_update.sh", "/etc/kea/"]
 COPY ["kea-dhcp4-init.conf", "/etc/kea/kea-dhcp4.conf"]
 COPY ["cli", "/cli/"]
-COPY ["rsyslog/default.conf", "/etc/rsyslog.d"]
 
 ENTRYPOINT ["/usr/bin/docker_init.sh"]

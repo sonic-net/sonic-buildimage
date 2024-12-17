@@ -45,12 +45,12 @@
         },
         "psu_support_list":
         [
-            {"Manufacturer": "FSPGROUP","Name": "YNEE0750EM", "MaxSpd": "PSU_AC_FAN_MAX_SPEED"},
-            {"Manufacturer": "FSPGROUP","Name": "YNEE0750BM", "MaxSpd": "PSU_AC_FAN_MAX_SPEED"},
-            {"Manufacturer": "FSPGROUP","Name": "YNEE0750AM", "MaxSpd": "PSU_DC_FAN_MAX_SPEED"}
+            {"Manufacturer": "FSPGROUP","Name": "YNEE0750EM", "MaxSpd": "PSU_AC_FAN_MAX_SPEED", "Type":"AC"},
+            {"Manufacturer": "FSPGROUP","Name": "YNEE0750BM", "MaxSpd": "PSU_AC_FAN_MAX_SPEED", "Type":"AC"},
+            {"Manufacturer": "FSPGROUP","Name": "YNEE0750AM", "MaxSpd": "PSU_DC_FAN_MAX_SPEED", "Type":"DC"}
         ],
 
-        "valmap": {"PSU_AC_FAN_MAX_SPEED": "26500", "PSU_DC_FAN_MAX_SPEED":"29000"}
+        "valmap": {"PSU_AC_FAN_MAX_SPEED": "26500", "PSU_DC_FAN_MAX_SPEED":"29000", "DEFAULT_TYPE": "AC"}
     },
 
     "FAN":

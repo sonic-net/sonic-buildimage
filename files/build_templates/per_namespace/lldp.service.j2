@@ -4,8 +4,8 @@ Requires=database{% if multi_instance == 'true' %}@%i{% endif %}.service
 After=database{% if multi_instance == 'true' %}@%i{% endif %}.service
 After=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
 After=syncd{% if multi_instance == 'true' %}@%i{% endif %}.service
-Requires=updategraph.service
-After=updategraph.service
+Requires=config-setup.service
+After=config-setup.service
 BindsTo=sonic.target
 After=sonic.target
 BindsTo=sonic.target

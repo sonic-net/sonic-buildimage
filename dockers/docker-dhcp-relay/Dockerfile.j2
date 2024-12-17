@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG image_version
@@ -18,8 +18,6 @@ RUN apt-get install -y libjsoncpp-dev \
                        build-essential
 
 RUN pip3 install psutil
-
-RUN apt-get install -y libjsoncpp-dev
 
 {% if docker_dhcp_relay_debs.strip() -%}
 # Copy built Debian packages
@@ -51,13 +49,15 @@ COPY ["dhcp-relay.programs.j2", "dhcpv4-relay.agents.j2", "dhcpv6-relay.agents.j
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["cli", "/cli/"]
+
+{% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
 # Copy regex json and rsyslog_plugin.conf file into rsyslog.d
 COPY ["*.json", "/etc/rsyslog.d/"]
 COPY ["files/rsyslog_plugin.conf.j2", "/etc/rsyslog.d/"]
-
 # Create dhcp_relay_regex.conf
 RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin.conf.j2 /etc/rsyslog.d/events_info.json  > /etc/rsyslog.d/dhcp_relay_events.conf
 RUN rm -f /etc/rsyslog.d/rsyslog_plugin.conf.j2
 RUN rm -f /etc/rsyslog.d/events_info.json
+{% endif %}
 
 ENTRYPOINT ["/usr/bin/docker_init.sh"]

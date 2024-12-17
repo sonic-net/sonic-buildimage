@@ -10,8 +10,10 @@ from swsscommon import swsscommon
 from sonic_py_common.logger import Logger
 from . import utils
 from sonic_py_common.task_base import ProcessTaskBase
+from sonic_py_common import device_info
 from .config import Config
 import signal
+import jinja2
 
 SYSLOG_IDENTIFIER = "system#monitor"
 REDIS_TIMEOUT_MS = 0
@@ -21,7 +23,7 @@ SELECT_TIMEOUT_MSECS = 1000
 QUEUE_TIMEOUT = 15
 TASK_STOP_TIMEOUT = 10
 logger = Logger(log_identifier=SYSLOG_IDENTIFIER)
-
+exclude_srv_list = ['ztp.service']
 
 #Subprocess which subscribes to STATE_DB FEATURE table for any update
 #and push service events to main process via queue
@@ -102,6 +104,11 @@ class MonitorSystemBusTask(ProcessTaskBase):
         logger.log_info("Start Listening to systemd bus (pid {0})".format(os.getpid()))
         self.subscribe_sysbus()
 
+    def task_stop(self):
+        # FIXME: Gracefully stop `loop.run()`.
+        self._task_process.kill()
+        return True
+
     def task_notify(self, msg):
         if self.task_stopping_event.is_set():
             return
@@ -156,8 +163,33 @@ class Sysmonitor(ProcessTaskBase):
                 if srv in dir_list:
                     dir_list.remove(srv)
 
+	#Remove services from exclude list Eg.ztp.service
+        for srv in exclude_srv_list:
+            if srv in dir_list:
+                dir_list.remove(srv)
+
         dir_list.sort()
         return dir_list
+
+    def get_render_value_for_field(self, configuration, device_config, expected_values):
+        """ Returns the target value by rendering the configuration as J2 template.
+
+        Args:
+            configuration (str): Table value from CONFIG_DB for given field
+            device_config (dict): DEVICE_METADATA section of CONFIG_DB and populated Device Running Metadata which is needed for rendering
+            expected_values (list): Expected set of values for given field
+        Returns:
+            (str): Target value for given key
+        """
+
+        if configuration is None:
+            return None
+
+        template = jinja2.Template(configuration)
+        target_value = template.render(device_config) # nosemgrep: python.flask.security.xss.audit.direct-use-of-jinja2.direct-use-of-jinja2
+        if target_value not in expected_values:
+            raise ValueError('Invalid value rendered for configuration {}: {}'.format(configuration, target_value))
+        return target_value
 
     def get_service_from_feature_table(self, dir_list):
         """Get service from CONFIG DB FEATURE table. During "config reload" command, filling FEATURE table
@@ -177,16 +209,23 @@ class Sysmonitor(ProcessTaskBase):
 
         while max_retry > 0:
             success = True
-            feature_table = self.config_db.get_table("FEATURE")
-            for srv, fields in feature_table.items():
-                if 'state' not in fields:
-                    success = False
-                    logger.log_warning("FEATURE table is not fully ready: {}, retrying".format(feature_table))
-                    break
-                if fields["state"] not in ["disabled", "always_disabled"]:
-                    srvext = srv + ".service"
-                    if srvext not in dir_list:
-                        dir_list.append(srvext)
+            try:
+                feature_table = self.config_db.get_table("FEATURE")
+                device_config = {}
+                device_config['DEVICE_METADATA'] = self.config_db.get_table('DEVICE_METADATA')
+                device_config.update(device_info.get_device_runtime_metadata())
+                for srv, fields in feature_table.items():
+                    if 'state' not in fields:
+                        success = False
+                        logger.log_warning("FEATURE table is not fully ready: {}, retrying".format(feature_table))
+                        break
+                    state = self.get_render_value_for_field(fields["state"], device_config, ['enabled', 'disabled', 'always_enabled', 'always_disabled'])
+                    if state not in ["disabled", "always_disabled"]:
+                        srvext = srv + ".service"
+                        if srvext not in dir_list:
+                            dir_list.append(srvext)
+            except:
+                success = False
             if not success:
                 max_retry -= 1
                 time.sleep(retry_delay)
@@ -447,16 +486,18 @@ class Sysmonitor(ProcessTaskBase):
 
         from queue import Empty
         # Queue to receive the STATEDB and Systemd state change event
-        while not self.task_stopping_event.is_set():
+        while True:
             try:
                 msg = self.myQ.get(timeout=QUEUE_TIMEOUT)
+                if msg == "stop":
+                    break
                 event = msg["unit"]
                 event_src = msg["evt_src"]
                 event_time = msg["time"]
                 logger.log_debug("Main process- received event:{} from source:{} time:{}".format(event,event_src,event_time))
                 logger.log_info("check_unit_status for [ "+event+" ] ")
                 self.check_unit_status(event)
-            except Empty:
+            except (Empty, EOFError):
                 pass
             except Exception as e:
                 logger.log_error("system_service"+str(e))
@@ -469,15 +510,10 @@ class Sysmonitor(ProcessTaskBase):
         monitor_statedb_table.task_stop()
 
     def task_worker(self):
-        if self.task_stopping_event.is_set():
-            return
         self.system_service()
 
     def task_stop(self):
-        # Signal the process to stop
-        self.task_stopping_event.set()
-        #Clear the resources of mpmgr- Queue
-        self.mpmgr.shutdown()
+        self.myQ.put("stop")
 
         # Wait for the process to exit
         self._task_process.join(self._stop_timeout_secs)
@@ -485,12 +521,8 @@ class Sysmonitor(ProcessTaskBase):
         # If the process didn't exit, attempt to kill it
         if self._task_process.is_alive():
             logger.log_notice("Attempting to kill sysmon main process with pid {}".format(self._task_process.pid))
-            os.kill(self._task_process.pid, signal.SIGKILL)
-
-        if self._task_process.is_alive():
-            logger.log_error("Sysmon main process with pid {} could not be killed".format(self._task_process.pid))
+            self._task_process.kill()
+            self._task_process.join()
             return False
 
         return True
-
-

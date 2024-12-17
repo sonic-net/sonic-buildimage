@@ -6,6 +6,10 @@ module sonic-vrf {
         prefix sonic-ext;
     }
 
+    import sonic-types {
+        prefix stypes;
+    }
+
     organization
         "SONiC";
 
@@ -28,7 +32,7 @@ module sonic-vrf {
                 key "name";
 
                 leaf name {
-                    type string {
+                    type stypes:interface_name {
                         pattern "Vrf[a-zA-Z0-9_-]+" {
                             error-message "Invalid VRF name";
                             error-app-tag vrf-name-invalid;

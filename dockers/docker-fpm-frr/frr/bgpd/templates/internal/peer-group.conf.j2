@@ -5,6 +5,7 @@
   neighbor INTERNAL_PEER_V6 peer-group
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
   neighbor INTERNAL_PEER_V4 update-source Loopback4096
+  neighbor INTERNAL_PEER_V4 ttl-security hops 1
 {% endif %}
   address-family ipv4
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' %}
@@ -15,10 +16,10 @@
     neighbor INTERNAL_PEER_V4 route-map FROM_BGP_INTERNAL_PEER_V4 in
     neighbor INTERNAL_PEER_V4 route-map TO_BGP_INTERNAL_PEER_V4 out
     neighbor INTERNAL_PEER_V4 send-community
-    neighbor INTERNAL_PEER_V4 ttl-security hops 1
   exit-address-family
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
   neighbor INTERNAL_PEER_V6 update-source Loopback4096
+  neighbor INTERNAL_PEER_V6 ttl-security hops 1
 {% endif %}
   address-family ipv6
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' %}
@@ -29,7 +30,6 @@
     neighbor INTERNAL_PEER_V6 route-map FROM_BGP_INTERNAL_PEER_V6 in
     neighbor INTERNAL_PEER_V6 route-map TO_BGP_INTERNAL_PEER_V6 out
     neighbor INTERNAL_PEER_V6 send-community
-    neighbor INTERNAL_PEER_V6 ttl-security hops 1
   exit-address-family
 !
 ! end of template: bgpd/templates/internal/peer-group.conf.j2

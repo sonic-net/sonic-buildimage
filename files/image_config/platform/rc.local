@@ -254,7 +254,7 @@ if [ -f $FIRST_BOOT_FILE ]; then
     fi
 
     # Try to take old configuration saved during installation
-    # and create a flag in /tmp/ to let updategraph service know
+    # and create a flag in /tmp/
     if [ -d /host/old_config ]; then
         mv -f /host/old_config /etc/sonic/
         rm -rf /etc/sonic/old_config/old_config
@@ -275,7 +275,6 @@ if [ -f $FIRST_BOOT_FILE ]; then
         [ -f /host/migration/snmp.yml ] && mv /host/migration/snmp.yml /etc/sonic/old_config/
         [ -f /host/migration/golden_config_db.json ] && mv /host/migration/golden_config_db.json /etc/sonic/old_config/
         touch /tmp/pending_config_migration
-        [ -f /etc/sonic/updategraph.conf ] && sed -i -e "s/enabled=false/enabled=true/g" /etc/sonic/updategraph.conf
     else
         touch /tmp/pending_config_initialization
     fi

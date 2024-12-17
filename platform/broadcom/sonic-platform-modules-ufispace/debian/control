@@ -6,8 +6,16 @@ Build-Depends: debhelper (>= 9), bzip2
 Standards-Version: 1.0.0
 
 Package: sonic-platform-ufispace-s9300-32d
-Architecture: amd64 
+Architecture: amd64
 Description: This package contains s9300-32d platform driver utility for SONiC project.
+
+Package: sonic-platform-ufispace-s9301-32d
+Architecture: amd64
+Description: This package contains s9301-32d platform driver utility for SONiC project.
+
+Package: sonic-platform-ufispace-s9301-32db
+Architecture: amd64
+Description: This package contains s9301-32db platform driver utility for SONiC project.
 
 Package: sonic-platform-ufispace-s9110-32x
 Architecture: amd64

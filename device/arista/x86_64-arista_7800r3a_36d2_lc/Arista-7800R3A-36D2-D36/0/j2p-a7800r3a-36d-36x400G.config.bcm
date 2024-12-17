@@ -2,6 +2,7 @@ soc_family=BCM8885X
 system_ref_core_clock_khz=1600000
 
 dpp_db_path=/usr/share/bcm/db
+programmability_ucode_relative_path.BCM8885X=pemla/ucode/standard_1/jer2pemla/u_code_db2pem.txt
 
 ####################################################
 ##Reference applications related properties - Start

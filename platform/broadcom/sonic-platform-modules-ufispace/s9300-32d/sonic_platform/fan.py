@@ -135,7 +135,11 @@ class Fan(PddfFan):
 
         mode = output['mode']
         val = output['status'].strip()
-        vmap = self.plugin_data['FAN']['present'][mode]['valmap']
+        
+        if self.is_psu_fan:
+            vmap = self.plugin_data['PSU']['psu_present'][mode]['valmap']
+        else:
+            vmap = self.plugin_data['FAN']['present'][mode]['valmap']
 
         if val in vmap:
             presence = vmap[val]

@@ -27,7 +27,8 @@
                         "lanes": "65",
                         "mtu": 9000,
                         "name": "Ethernet8",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     },
                     {
                         "admin_status": "up",
@@ -36,7 +37,8 @@
                         "lanes": "71",
                         "mtu": 9000,
                         "name": "Ethernet9",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     }
                 ]
             }
@@ -71,7 +73,8 @@
                         "lanes": "65",
                         "mtu": 9000,
                         "name": "Ethernet8",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     }
                 ]
             }
@@ -104,7 +107,8 @@
                         "description": "Ethernet8",
                         "mtu": 9000,
                         "name": "Ethernet8",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     }
                 ]
             }
@@ -140,7 +144,8 @@
                         "lanes": "65",
                         "mtu": 9000,
                         "name": "Ethernet8",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     }
                 ]
             }
@@ -176,7 +181,8 @@
                         "lanes": "65",
                         "mtu": 9000,
                         "name": "Ethernet8",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     }
                 ]
             }
@@ -204,7 +210,8 @@
                         "lanes": "65",
                         "mtu": 9000,
                         "name": "Ethernet8",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     }
                 ]
             }
@@ -232,7 +239,8 @@
                         "lanes": "65",
                         "mtu": 9000,
                         "name": "Ethernet8",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     }
                 ]
             }
@@ -260,7 +268,8 @@
                         "lanes": "65",
                         "mtu": 9000,
                         "name": "Ethernet8",
-                        "speed": 25000
+                        "speed": 25000,
+                        "mode":"trunk"
                     }
                 ]
             }

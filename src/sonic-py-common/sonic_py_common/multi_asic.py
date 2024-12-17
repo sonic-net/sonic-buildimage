@@ -7,6 +7,7 @@ from swsscommon import swsscommon
 
 from .device_info import get_asic_conf_file_path
 from .device_info import is_supervisor, is_chassis
+from .interface import inband_prefix, backplane_prefix, recirc_prefix, front_panel_prefix
 
 ASIC_NAME_PREFIX = 'asic'
 NAMESPACE_PATH_GLOB = '/run/netns/*'
@@ -17,7 +18,8 @@ FABRIC_ASIC_SUB_ROLE = 'Fabric'
 EXTERNAL_PORT = 'Ext'
 INTERNAL_PORT = 'Int'
 INBAND_PORT = 'Inb'
-RECIRC_PORT ='Rec'
+RECIRC_PORT = 'Rec'
+DPU_CONNECT_PORT = 'Dpc'
 PORT_CHANNEL_MEMBER_CFG_DB_TABLE = 'PORTCHANNEL_MEMBER'
 PORT_CFG_DB_TABLE = 'PORT'
 BGP_NEIGH_CFG_DB_TABLE = 'BGP_NEIGHBOR'
@@ -271,27 +273,60 @@ def get_port_table(namespace=None):
     Returns:
         a dict of all the ports
     """
-    all_ports = {}
+    return get_table(PORT_CFG_DB_TABLE, namespace)
+
+
+def get_table(table, namespace=None):
+    """
+    Retrieves a merged table containing all entries across specified namespaces
+
+    Returns:
+        a dict of all entries of table across namespaces
+    """
+    merged_table = {}
     ns_list = get_namespace_list(namespace)
 
     for ns in ns_list:
-        ports = get_port_table_for_asic(ns)
-        all_ports.update(ports)
+        ns_table = get_table_for_asic(table, ns)
+        merged_table.update(ns_table)
 
-    return all_ports
+    return merged_table
+
 
 def get_port_entry_for_asic(port, namespace):
 
-    config_db = connect_config_db_for_ns(namespace)
-    ports = config_db.get_entry(PORT_CFG_DB_TABLE, port)
-    return ports
+    return get_table_entry_for_asic(PORT_CFG_DB_TABLE, port, namespace)
 
+
+def get_table_entry_for_asic(table, entry, namespace):
+
+    config_db = connect_config_db_for_ns(namespace)
+    return config_db.get_entry(table, entry)
 
 def get_port_table_for_asic(namespace):
 
+    return get_table_for_asic(PORT_CFG_DB_TABLE, namespace)
+
+
+def get_table_for_asic(table, namespace):
+
     config_db = connect_config_db_for_ns(namespace)
-    ports = config_db.get_table(PORT_CFG_DB_TABLE)
-    return ports
+    return config_db.get_table(table)
+
+
+def mod_entry(table, key, value, namespace=None, modIfExists=False):
+    """
+    Modifies an entry in a table with a value in a specified namespace.
+    If no namespace is specified all namespaces are modified.
+    If modIfExists is true, the entry will be modified only if the key
+    already exists in the table.
+    """
+    ns_list = get_namespace_list(namespace)
+
+    for ns in ns_list:
+        if not modIfExists or get_table_entry_for_asic(table, key, ns):
+            config_db = connect_config_db_for_ns(ns)
+            config_db.mod_entry(table, key, value)
 
 
 def get_namespace_for_port(port_name):
@@ -323,15 +358,18 @@ def get_port_role(port_name, namespace=None):
     role = ports_config[PORT_ROLE]
     return role
 
+def is_role_internal(role=None):
+    """
+    Check if the role belongs to one of the internal variants
+    """
+    if role and role in [INTERNAL_PORT, INBAND_PORT, RECIRC_PORT, DPU_CONNECT_PORT]:
+        return True
+    return False
+
 
 def is_port_internal(port_name, namespace=None):
-
     role = get_port_role(port_name, namespace)
-
-    if role in [INTERNAL_PORT, INBAND_PORT, RECIRC_PORT]:
-        return True
-
-    return False
+    return is_role_internal(role)
 
 
 def get_external_ports(port_names, namespace=None):
@@ -487,3 +525,34 @@ def get_asic_presence_list():
         # This is not multi-asic, all asics should be present.
         asics_list = list(range(0, get_num_asics()))
     return asics_list
+
+
+def get_container_name_from_asic_id(service_name, asic_id):
+    """Get the container name for a service according to the ASIC ID
+
+    Args:
+        service_name (str): feature/service name
+        asic_id (int): ASIC ID
+
+    Returns:
+        str: container name of the service in the given ASIC namespace
+    """
+    return '{}{}'.format(service_name, asic_id)
+
+  
+def is_front_panel_port(port, role=None):
+    """
+    @summary: This function will check if the interface is a front-panel port
+    @return:  Boolean
+    """
+    if not port.startswith(front_panel_prefix()):
+        return False
+
+    if port.startswith((backplane_prefix(), inband_prefix(), recirc_prefix())):
+        return False
+
+    # subinterfaces
+    if '.' in port:
+        return False
+
+    return not is_role_internal(role)

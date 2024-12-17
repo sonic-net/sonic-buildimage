@@ -12,6 +12,8 @@ TEST_DATA_PATH = os.path.dirname(os.path.abspath(__file__))
 @pytest.fixture()
 def mock_db():
     db = mock.Mock()
+    redis_client_config_db = mock.Mock()
+    redis_client_state_db = mock.Mock()
 
     with open(os.path.join(TEST_DATA_PATH, "mock_config_db.json")) as f:
         s = f.read()
@@ -55,6 +57,12 @@ def mock_db():
         if table == "STATE_DB":
             mock_state_db[key] = value
 
+    def config_db_hdel(key, field):
+        del mock_config_db[key][field]
+
+    def state_db_hdel(key, field):
+        del mock_state_db[key][field]
+
     def exists(table, key):
         assert table == "CONFIG_DB" or table == "STATE_DB"
         if table == "CONFIG_DB":
@@ -76,6 +84,13 @@ def mock_db():
         if table == "STATE_DB":
             mock_state_db[key][k] = v
 
+    def get_redis_client(table):
+        assert table == "CONFIG_DB" or table == "STATE_DB"
+        if table == "CONFIG_DB":
+            return redis_client_config_db
+        if table == "STATE_DB":
+            return redis_client_state_db
+
     db.keys = mock.Mock(side_effect=keys)
     db.get_all = mock.Mock(side_effect=get_all)
     db.get = mock.Mock(side_effect=get)
@@ -83,5 +98,8 @@ def mock_db():
     db.exists = mock.Mock(side_effect=exists)
     db.delete = mock.Mock(side_effect=delete)
     db.set = mock.Mock(side_effect=set_)
+    db.get_redis_client = mock.Mock(side_effect=get_redis_client)
+    redis_client_config_db.hdel = mock.Mock(side_effect=config_db_hdel)
+    redis_client_state_db.hdel = mock.Mock(side_effect=state_db_hdel)
 
     yield db

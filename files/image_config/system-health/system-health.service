@@ -1,7 +1,7 @@
 [Unit]
 Description=SONiC system health monitor
-Requires=database.service updategraph.service
-After=database.service updategraph.service
+Requires=database.service config-setup.service
+After=database.service config-setup.service
 
 [Service]
 ExecStart=/usr/local/bin/healthd

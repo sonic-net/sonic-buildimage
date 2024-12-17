@@ -9,7 +9,7 @@ DEP_FILES   += $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files |grep -
 FRR_SPATH   := $(SPATH)/frr
 SMDEP_FILES := $(addprefix $(FRR_SPATH)/,$(shell cd $(FRR_SPATH) && git ls-files \
 			| grep -Ev -e 'debian/changelog$$$$' \
-			-e "$(find -L tests/ -xtype l)" \
+			-e "$$(find -L tests/ -xtype l)" \
 			))
 
 $(FRR)_CACHE_MODE  := GIT_CONTENT_SHA 

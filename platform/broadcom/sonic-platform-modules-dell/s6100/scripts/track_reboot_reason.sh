@@ -5,7 +5,6 @@ reboot_file_found=false
 smf_dir_missing=0
 nvram_missing=0
 
-REBOOT_CAUSE_FILE=/host/reboot-cause/reboot-cause.txt
 REBOOT_REASON_FILE=/host/reboot-cause/platform/reboot_reason
 BIOS_VERSION_FILE=/host/reboot-cause/platform/bios_minor_version
 SMF_MSS_VERSION_FILE=/sys/devices/platform/SMF.512/hwmon/*/smf_firmware_ver
@@ -134,20 +133,6 @@ _is_watchdog_reset(){
     return
 }
 
-_is_unknown_reset(){
-    if [[ -f $REBOOT_CAUSE_FILE ]]; then
-        if [[ $1 = 0 ]]; then
-            echo "Unknown software reboot" > $REBOOT_CAUSE_FILE
-            return
-        fi
-        curr_poweron_reason=$(cat $SMF_POWERON_REASON)
-        curr_reset_reason=$SMF_RESET
-        mb_poweron_reason=$(cat $MAILBOX_POWERON_REASON)
-        echo "Unknown POR: $curr_poweron_reason RST: $curr_reset_reason MBR: $mb_poweron_reason" > $REBOOT_CAUSE_FILE
-    fi
-
-}
-
 _is_software_reboot(){
     SMF_STATUS=`io_rd_wr.py --set --val 06 --offset 210; io_rd_wr.py --set --val 0B --offset 211; io_rd_wr.py --get --offset 212`
     SMF_STATUS=$(echo "$SMF_STATUS" | awk '{print $NF}')
@@ -206,7 +191,6 @@ update_mailbox_register(){
             elif [[ $SMF_RESET = "33" ]]; then
                 echo 0xdd > $MAILBOX_POWERON_REASON
             else
-                echo "Unknown software reboot" > $REBOOT_CAUSE_FILE
                 echo 0x99 > $MAILBOX_POWERON_REASON
             fi
 
@@ -227,7 +211,6 @@ update_mailbox_register(){
             elif [[ $reason = "cc" ]]; then
                 _is_software_reboot
             else
-                _is_unknown_reset $is_thermal_reboot
                 echo 0x99 > $MAILBOX_POWERON_REASON
             fi
         fi

@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <ngbde.h>
@@ -29,6 +29,21 @@ MODULE_PARM_DESC(intr_debug,
 "Interrupt debug output enable (default 0).");
 /*! \endcond */
 
+/*!
+ * \brief Shared register write.
+ *
+ * This function is used for writing to registers where the calling
+ * context only owns a subset of bits within the register.
+ *
+ * \param [in] sd Software device information.
+ * \param [in] ic Interrupt control information.
+ * \param [in] reg_offs Shared register address offset.
+ * \param [in] reg_val Shared register value.
+ * \param [in] shr_mask Register bits owned by this context.
+ *
+ * \retval 0 No errors.
+ * \retval -1 Unknown shared register.
+ */
 static int
 ngbde_intr_shared_write32(struct ngbde_dev_s *sd, struct ngbde_intr_ctrl_s *ic,
                           uint32_t reg_offs, uint32_t reg_val, uint32_t shr_mask)
@@ -86,59 +101,65 @@ ngbde_user_isr(ngbde_intr_ctrl_t *ic)
     int idx;
     int active_interrupts = 0;
     uint32_t stat = 0, mask = 0;
-    uint32_t kmask;
 
-    /* Check if any enabled interrupts are active */
-    for (idx = 0; idx < ic->num_regs; idx++) {
-        ngbde_irq_reg_t *ir = &ic->regs[idx];
+    if (intr_debug >= 2) {
+        printk("INTR: Run user ISR (%d)\n", ic->irq_vect);
+    }
 
-        /* Get mask of all kernel interrupt sources for this register address */
-        kmask = ir->kmask;
+    /*
+     * If this interrupt vector is shared between user mode and kernel
+     * mode, then we want to avoid invoking the user mode handler if
+     * only kernel mode interrupts are active.
+     */
+    if (ic->run_kernel_isr) {
+        /* Check if any enabled user mode interrupts are active */
+        for (idx = 0; idx < ic->num_regs; idx++) {
+            ngbde_irq_reg_t *ir = &ic->regs[idx];
 
-        stat = NGBDE_IOREAD32(&ic->iomem[ir->status_reg]);
-        if (!ir->status_is_masked) {
-            /* Get enabled interrupts by applying mask register */
-            mask = NGBDE_IOREAD32(&ic->iomem[ir->mask_reg]);
-            stat &= mask;
+            stat = NGBDE_IOREAD32(&ic->iomem[ir->status_reg]);
+            if (!ir->status_is_masked) {
+                /* Get enabled interrupts by applying mask register */
+                mask = NGBDE_IOREAD32(&ic->iomem[ir->mask_reg]);
+                stat &= mask;
+            }
+            if (stat & ir->umask) {
+                active_interrupts = 1;
+                break;
+            }
         }
-        if (stat & ~kmask) {
-            active_interrupts = 1;
-            break;
+
+        /* No active user mode interrupts to service */
+        if (!active_interrupts) {
+            return 0;
         }
     }
 
-    /* No active interrupts to service */
-    if (!active_interrupts) {
-        return 0;
-    }
-
-    /* Disable (mask off) all interrupts */
+    /* Disable (mask off) all user mode interrupts */
     for (idx = 0; idx < ic->num_regs; idx++) {
         ngbde_irq_reg_t *ir = &ic->regs[idx];
+        struct ngbde_dev_s *sd;
 
-        /* Get mask of all kernel interrupt sources for this register address */
-        kmask = ir->kmask;
-
-        if (kmask == 0xffffffff) {
+        if (ir->umask == 0) {
             /* Kernel driver owns all interrupts in this register */
             continue;
         }
         if (ir->mask_w1tc) {
-            /* Clear all interrupt bits which are not in kmask */
-            NGBDE_IOWRITE32(~kmask, &ic->iomem[ir->mask_reg]);
+            /* Clear all interrupt mask bits owned by this user mode ISR */
+            NGBDE_IOWRITE32(ir->umask, &ic->iomem[ir->mask_reg]);
             continue;
         }
-        if (kmask) {
-            /* Synchronized write */
-            struct ngbde_dev_s *sd = ngbde_swdev_get(ic->kdev);
-            if (ngbde_intr_shared_write32(sd, ic, ir->mask_reg, 0, ~kmask) < 0) {
-                printk(KERN_WARNING
-                       "%s: Failed to write shared register for device %d\n",
-                       MOD_NAME, ic->kdev);
-                /* Fall back to normal write to ensure interrupts are masked */
-                NGBDE_IOWRITE32(0, &ic->iomem[ir->mask_reg]);
-            }
-        } else {
+        if (ir->umask == 0xffffffff) {
+            /* Direct write when all bits are owned by this user mode ISR */
+            NGBDE_IOWRITE32(0, &ic->iomem[ir->mask_reg]);
+            continue;
+        }
+        /* Synchronized write when some bits are owned by another ISR */
+        sd = ngbde_swdev_get(ic->kdev);
+        if (ngbde_intr_shared_write32(sd, ic, ir->mask_reg, 0, ir->umask) < 0) {
+            printk(KERN_WARNING
+                   "%s: Failed to write shared register for device %d\n",
+                   MOD_NAME, ic->kdev);
+            /* Fall back to normal write to ensure interrupts are masked */
             NGBDE_IOWRITE32(0, &ic->iomem[ir->mask_reg]);
         }
     }
@@ -162,6 +183,10 @@ ngbde_user_isr(ngbde_intr_ctrl_t *ic)
 static int
 ngbde_kernel_isr(ngbde_intr_ctrl_t *ic)
 {
+    if (intr_debug >= 2) {
+        printk("INTR: Run kernel ISR (%d)\n", ic->irq_vect);
+    }
+
     if (ic->isr_func) {
         return ic->isr_func(ic->isr_data);
     }
@@ -169,28 +194,39 @@ ngbde_kernel_isr(ngbde_intr_ctrl_t *ic)
 }
 
 /*!
- * \brief Interrupt handler for kernel driver.
+ * \brief Update interrupt dispatcher.
  *
- * Typically used by the EDK driver.
+ * Check which interrupts handlers (kernel/user) should be invoked for
+ * this interrupt line.
  *
  * \param [in] ic Interrupt control information.
  *
- * \retval 1 One or more kernel mode interrupts occurred.
- * \retval 0 No kernel mode interrupts occurred.
+ * \retval 0
  */
 static int
-ngbde_kernel_isr2(ngbde_intr_ctrl_t *ic)
+ngbde_intr_dispatch_update(ngbde_intr_ctrl_t *ic)
 {
-    if (ic->isr2_func) {
-        return ic->isr2_func(ic->isr2_data);
+    struct ngbde_irq_reg_s *ir;
+    unsigned int idx;
+    uint32_t umask = 0;
+    uint32_t kmask = 0;
+
+    for (idx = 0; idx < ic->num_regs; idx++) {
+        ir = &ic->regs[idx];
+        umask |= ir->umask;
+        kmask |= ir->kmask;
     }
+
+    ic->run_user_isr = (umask != 0);
+    ic->run_kernel_isr = (kmask != 0);
+
     return 0;
 }
 
 /*!
- * \brief Acknowledge interrupt
+ * \brief Acknowledge interrupt.
  *
- * \param [in] data Interrupt control information
+ * \param [in] ic Interrupt control information.
  *
  * \retval 0
  */
@@ -200,8 +236,11 @@ ngbde_intr_ack(ngbde_intr_ctrl_t *ic)
     struct ngbde_dev_s *sd = ngbde_swdev_get(ic->kdev);
     struct ngbde_intr_ack_reg_s *ar = &ic->intr_ack;
 
-    if (sd->use_msi) {
-        if (ar->flags & NGBDE_INTR_ACK_F_PAXB) {
+    if (sd->use_msi && ar->ack_valid) {
+        if (intr_debug >= 2) {
+            printk("INTR: ACK interrupt vector %d\n", ic->irq_vect);
+        }
+        if (ar->ack_domain == NGBDE_INTR_ACK_IO_PAXB) {
             ngbde_paxb_write32(sd, ar->ack_reg, ar->ack_val);
         } else {
             ngbde_pio_write32(sd, ar->ack_reg, ar->ack_val);
@@ -229,18 +268,118 @@ ngbde_isr(int irq_num, void *data)
     struct ngbde_intr_ctrl_s *ic = (struct ngbde_intr_ctrl_s *)data;
     irqreturn_t rv = IRQ_NONE;
 
+    if (intr_debug >= 2) {
+        printk("INTR: Process interrupt vector %d\n", ic->irq_vect);
+    }
+
+    if (ic->run_user_isr) {
+        if (ngbde_user_isr(ic)) {
+            rv = IRQ_HANDLED;
+        }
+    }
+
+    if (ic->run_kernel_isr) {
+        if (ngbde_kernel_isr(ic)) {
+            rv = IRQ_HANDLED;
+        }
+    }
+
     ngbde_intr_ack(ic);
 
-    if (ngbde_kernel_isr2(ic)) {
-        rv = IRQ_HANDLED;
-    }
-    if (ngbde_user_isr(ic)) {
-        rv = IRQ_HANDLED;
-    }
-    if (ngbde_kernel_isr(ic)) {
-        rv = IRQ_HANDLED;
-    }
     return rv;
+}
+
+int
+ngbde_intr_alloc(int kdev, unsigned int num_irq)
+{
+    struct ngbde_dev_s *sd;
+    unsigned long irq_types;
+    int irq, vect;
+
+    if (intr_debug) {
+        printk("INTR: Request %d interrupts\n", num_irq);
+    }
+
+    sd = ngbde_swdev_get(kdev);
+    if (!sd) {
+        return -1;
+    }
+
+    if (num_irq == 0) {
+        return -1;
+    }
+
+    if (sd->active_irqs) {
+        if (intr_debug) {
+            printk("INTR: Skip reallocating active interrupts\n");
+        }
+        return sd->irq_max;
+    }
+
+    if (sd->irq_max > 0) {
+        if (intr_debug) {
+            printk("INTR: Interrupts already allocated\n");
+        }
+        return sd->irq_max;
+    }
+
+    /* Use new API if available (Linux 4.8 and newer) */
+    irq_types = PCI_IRQ_LEGACY;
+    if (sd->use_msi) {
+        irq_types |= PCI_IRQ_MSI;
+        if (sd->use_msi == NGBDE_MSI_T_MSIX) {
+            irq_types |= PCI_IRQ_MSIX;
+        } else {
+            /* Only allow one IRQ line if not MSI-X */
+            num_irq = 1;
+        }
+    }
+    sd->irq_max = pci_alloc_irq_vectors(sd->pci_dev, 1, num_irq, irq_types);
+    if (sd->irq_max < 1) {
+        printk(KERN_WARNING "%s: Failed to allocate IRQs for device %d\n",
+               MOD_NAME, kdev);
+        return -1;
+    }
+    if (intr_debug) {
+        printk("INTR: Allocated %d interrupt vector(s)\n", sd->irq_max);
+    }
+    for (irq = 0; irq < sd->irq_max; irq++) {
+        vect = pci_irq_vector(sd->pci_dev, irq);
+        if (intr_debug) {
+            printk("INTR: Interrupt vector %d = %d\n", irq, vect);
+        }
+        sd->intr_ctrl[irq].irq_vect = vect;
+    }
+
+    return sd->irq_max;
+}
+
+int
+ngbde_intr_free(int kdev)
+{
+    struct ngbde_dev_s *sd;
+
+    if (intr_debug) {
+        printk("INTR: Free interrupts\n");
+    }
+
+    sd = ngbde_swdev_get(kdev);
+    if (!sd) {
+        return -1;
+    }
+
+    if (sd->active_irqs) {
+        if (intr_debug) {
+            printk("INTR: Skip freeing active interrupts\n");
+        }
+        return 0;
+    }
+
+    pci_free_irq_vectors(sd->pci_dev);
+
+    sd->irq_max = 0;
+
+    return 0;
 }
 
 int
@@ -249,6 +388,10 @@ ngbde_intr_connect(int kdev, unsigned int irq_num)
     struct ngbde_dev_s *sd;
     struct ngbde_intr_ctrl_s *ic;
     unsigned long irq_flags;
+
+    if (intr_debug) {
+        printk("INTR: Interrupt connect (%d)\n", irq_num);
+    }
 
     sd = ngbde_swdev_get(kdev);
     if (!sd) {
@@ -262,56 +405,63 @@ ngbde_intr_connect(int kdev, unsigned int irq_num)
     ic = &sd->intr_ctrl[irq_num];
 
     if (ic->irq_active) {
+        if (intr_debug) {
+            printk("INTR: Interrupt already connected (%d)\n", irq_num);
+        }
         return 0;
     }
 
-    if (sd->irq_line >= 0) {
-        if (sd->pio_mem == NULL) {
-            printk(KERN_WARNING "%s: No memory-mapped I/O for device %d\n",
-                   MOD_NAME, kdev);
-            return -1;
-        }
-        ic->kdev = kdev;
-        ic->iomem = sd->pio_mem;
-        if (sd->iio_mem) {
-            if (intr_debug) {
-                printk("INTR: Using dedicated interrupt controller\n");
-            }
-            ic->iomem = sd->iio_mem;
-        }
-        init_waitqueue_head(&ic->user_thread_wq);
-        atomic_set(&ic->run_user_thread, 0);
-        irq_flags = IRQF_SHARED;
-        ic->irq_vect = sd->irq_line;
-
-        /*
-         * The pci_enable_msi function must be called after enabling
-         * BAR0_PAXB_OARR_FUNC0_MSI_PAGE, otherwise, MSI interrupts
-         * cannot be triggered!
-         */
-        if (sd->use_msi) {
-            if (pci_enable_msi(sd->pci_dev) == 0) {
-                irq_flags = 0;
-                ic->irq_vect = sd->pci_dev->irq;
-                if (intr_debug) {
-                    printk("INTR: Enabled MSI interrupts\n");
-                }
-            } else {
-                printk(KERN_WARNING "%s: Failed to enable MSI for device %d\n",
-                       MOD_NAME, kdev);
-                sd->use_msi = 0;
-            }
-        }
-        if (intr_debug) {
-            printk("INTR: Request IRQ %d\n", ic->irq_vect);
-        }
-        if (request_irq(ic->irq_vect, ngbde_isr, irq_flags, MOD_NAME, ic) < 0) {
-            printk(KERN_WARNING "%s: Could not get IRQ %d for device %d\n",
-                   MOD_NAME, ic->irq_vect, kdev);
-            return -1;
-        }
-        ic->irq_active = 1;
+    if (sd->irq_line < 0) {
+        printk(KERN_WARNING "%s: No IRQ line for device %d\n",
+               MOD_NAME, kdev);
+        return -1;
     }
+
+    if (sd->pio_mem == NULL) {
+        printk(KERN_WARNING "%s: No memory-mapped I/O for device %d\n",
+               MOD_NAME, kdev);
+        return -1;
+    }
+
+    /*
+     * Check for old application that does not support interrupt line
+     * allocation.
+     */
+    if (sd->irq_max == 0) {
+        ngbde_intr_alloc(kdev, 1);
+        if (sd->irq_max == 0) {
+            return -1;
+        }
+    }
+
+    if (sd->active_irqs >= sd->irq_max) {
+        printk(KERN_WARNING "%s: Too many IRQs for device %d\n",
+               MOD_NAME, kdev);
+        return -1;
+    }
+
+    ic->kdev = kdev;
+    ic->iomem = sd->pio_mem;
+    if (sd->iio_mem) {
+        if (intr_debug) {
+            printk("INTR: Using dedicated interrupt controller\n");
+        }
+        ic->iomem = sd->iio_mem;
+    }
+    init_waitqueue_head(&ic->user_thread_wq);
+    atomic_set(&ic->run_user_thread, 0);
+    irq_flags = IRQF_SHARED;
+
+    if (intr_debug) {
+        printk("INTR: Request IRQ %d\n", ic->irq_vect);
+    }
+    if (request_irq(ic->irq_vect, ngbde_isr, irq_flags, MOD_NAME, ic) < 0) {
+        printk(KERN_WARNING "%s: Could not get IRQ %d for device %d\n",
+               MOD_NAME, ic->irq_vect, kdev);
+        return -1;
+    }
+    ic->irq_active = 1;
+    sd->active_irqs++;
 
     return 0;
 }
@@ -322,12 +472,20 @@ ngbde_intr_disconnect(int kdev, unsigned int irq_num)
     struct ngbde_dev_s *sd;
     struct ngbde_intr_ctrl_s *ic;
 
+    if (intr_debug) {
+        printk("INTR: Interrupt disconnect (%d)\n", irq_num);
+    }
+
     sd = ngbde_swdev_get(kdev);
     if (!sd) {
         return -1;
     }
 
     if (irq_num >= NGBDE_NUM_IRQS_MAX) {
+        return -1;
+    }
+
+    if (sd->active_irqs == 0) {
         return -1;
     }
 
@@ -345,10 +503,13 @@ ngbde_intr_disconnect(int kdev, unsigned int irq_num)
 
     if (ic->irq_vect >= 0) {
         free_irq(ic->irq_vect, ic);
-        if (sd->use_msi) {
-            pci_disable_msi(sd->pci_dev);
-        }
-        ic->irq_active = 0;
+    }
+
+    ic->irq_active = 0;
+    sd->active_irqs--;
+
+    if (sd->active_irqs == 0 && sd->irq_max == 1) {
+        ngbde_intr_free(kdev);
     }
 
     return 0;
@@ -366,6 +527,7 @@ ngbde_intr_cleanup(void)
         for (irq_num = 0; irq_num < NGBDE_NUM_IRQS_MAX; irq_num++) {
             ngbde_intr_disconnect(idx, irq_num);
         }
+        ngbde_intr_free(idx);
     }
 }
 
@@ -390,9 +552,15 @@ ngbde_intr_wait(int kdev, unsigned int irq_num)
         return 0;
     }
 
+    if (intr_debug >= 2) {
+        printk("INTR: User wait for interrupt (%d)\n", ic->irq_vect);
+    }
     wait_event_interruptible(ic->user_thread_wq,
                              atomic_read(&ic->run_user_thread) != 0);
     atomic_set(&ic->run_user_thread, 0);
+    if (intr_debug >= 2) {
+        printk("INTR: User process interrupt (%d)\n", ic->irq_vect);
+    }
 
     return 0;
 }
@@ -485,11 +653,14 @@ ngbde_intr_reg_add(int kdev, unsigned int irq_num,
                 ir->mask_reg == ireg->mask_reg) {
                 if (ir->kmask != ireg->kmask && ireg->kmask_valid) {
                     ir->kmask = ireg->kmask;
+                    ir->umask = ireg->umask;
                     if (intr_debug) {
-                        printk("INTR: Updating interrupt register "
-                               "0x%08x/0x%08x (0x%08x)\n",
-                               ir->status_reg, ir->mask_reg, ir->kmask);
+                        printk("INTR: Updated interrupt register "
+                               "0x%08x/0x%08x [u:0x%08x,k:0x%08x] (%d)\n",
+                               ir->status_reg, ir->mask_reg,
+                               ir->umask, ir->kmask, irq_num);
                     }
+                    ngbde_intr_dispatch_update(ic);
                 }
                 return 0;
             }
@@ -502,13 +673,14 @@ ngbde_intr_reg_add(int kdev, unsigned int irq_num,
     }
 
     ir = &ic->regs[ic->num_regs++];
-
     memcpy(ir, ireg, sizeof (*ir));
-
     if (intr_debug) {
-        printk("INTR: Adding interrupt register 0x%08x/0x%08x (0x%08x)\n",
-               ir->status_reg, ir->mask_reg, ir->kmask);
+        printk("INTR: Added interrupt register "
+               "0x%08x/0x%08x [u:0x%08x,k:0x%08x] (%d)\n",
+               ir->status_reg, ir->mask_reg,
+               ir->umask, ir->kmask, irq_num);
     }
+    ngbde_intr_dispatch_update(ic);
 
     return ic->num_regs;
 }
@@ -542,8 +714,8 @@ ngbde_intr_ack_reg_add(int kdev, unsigned int irq_num,
     memcpy(ar, ackreg, sizeof (*ar));
 
     if (intr_debug) {
-        printk("INTR: Adding interrupt ACK register 0x%08x/0x%08x (0x%08x)\n",
-               ar->ack_reg, ar->ack_val, ar->flags);
+        printk("INTR: Adding interrupt ACK register 0x%08x/0x%08x[%d] (%d)\n",
+               ar->ack_reg, ar->ack_val, ar->ack_domain, irq_num);
     }
 
     return 0;

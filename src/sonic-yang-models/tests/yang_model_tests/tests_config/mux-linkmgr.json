@@ -23,6 +23,16 @@
             }
         }
     },
+    "MUX_LINKMGR_TIMED_OSCILLATION_DISABLE_OSCILLATION": {
+        "sonic-mux-linkmgr:sonic-mux-linkmgr": {
+            "sonic-mux-linkmgr:MUX_LINKMGR": {
+                "sonic-mux-linkmgr:TIMED_OSCILLATION":
+                    {
+                        "oscillation_enabled": "false"
+                    }
+            }
+        }
+    },
     "MUX_LINKMGR_MUXLOGGER_CHANGE_VERBOSITY_LEVEL": {
         "sonic-mux-linkmgr:sonic-mux-linkmgr": {
             "sonic-mux-linkmgr:MUX_LINKMGR": {

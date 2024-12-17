@@ -265,7 +265,7 @@
         </VlanInterface>
         <VlanInterface>
           <Name>Vlan2000</Name>
-          <AttachTo>fortyGigE0/112;fortyGigE0/116;fortyGigE0/120</AttachTo>
+          <AttachTo>PortChannel01;PortChannel02;PortChannel03</AttachTo>
           <NoDhcpRelay>False</NoDhcpRelay>
           <StaticDHCPRelay>0.0.0.0/0</StaticDHCPRelay>
           <FhrpProtoType i:nil="true"/>

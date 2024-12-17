@@ -369,7 +369,7 @@ def test_feature_table_checker(mock_swsscommon_dbconnector_init, tested_data, te
             assert expected_res == check_res
 
 
-@pytest.mark.parametrize("tested_db_snapshot", [{"enabled_dhcp_interfaces": {"bridge_midplane": ["dpu0"]}}, {}])
+@pytest.mark.parametrize("tested_db_snapshot", [{"enabled_dhcp_interfaces": {"bridge-midplane"}}, {}])
 @pytest.mark.parametrize("tested_data", get_subscribe_table_tested_data("test_mid_plane_update"))
 def test_mid_plane_table_checker(mock_swsscommon_dbconnector_init, tested_data, tested_db_snapshot):
     with patch.object(ConfigDbEventChecker, "enable"), \
@@ -386,9 +386,8 @@ def test_mid_plane_table_checker(mock_swsscommon_dbconnector_init, tested_data, 
             assert expected_res == check_res
 
 
-@pytest.mark.parametrize("tested_db_snapshot", [{"enabled_dhcp_interfaces": {"bridge_midplane": ["dpu0"]}}, {}])
 @pytest.mark.parametrize("tested_data", get_subscribe_table_tested_data("test_dpus_update"))
-def test_dpus_table_checker(mock_swsscommon_dbconnector_init, tested_data, tested_db_snapshot):
+def test_dpus_table_checker(mock_swsscommon_dbconnector_init, tested_data):
     with patch.object(ConfigDbEventChecker, "enable"), \
          patch.object(ConfigDbEventChecker, "subscriber_state_table",
                       return_value=MockSubscribeTable(tested_data["table"]), new_callable=PropertyMock), \
@@ -396,8 +395,5 @@ def test_dpus_table_checker(mock_swsscommon_dbconnector_init, tested_data, teste
         sel = swsscommon.Select()
         db_event_checker = DpusTableEventChecker(sel, MagicMock())
         expected_res = tested_data["exp_res"]
-        check_res = db_event_checker.check_update_event(tested_db_snapshot)
-        if "enabled_dhcp_interfaces" not in tested_db_snapshot:
-            assert check_res
-        else:
-            assert expected_res == check_res
+        check_res = db_event_checker.check_update_event({})
+        assert expected_res == check_res

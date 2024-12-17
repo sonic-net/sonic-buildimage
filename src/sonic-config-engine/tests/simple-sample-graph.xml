@@ -72,7 +72,7 @@
     </PeeringSessions>
     <Routers xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
       <a:BGPRouterDeclaration>
-          <a:ASN>1</a:ASN>
+          <a:ASN>0</a:ASN>
           <a:BgpGroups/>
           <a:Hostname>BGPMonitor</a:Hostname>
           <a:Peers>

@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "MSN4700",
+        "name": "MSN4700_SIMX",
         "components": [
             {
                 "name": "ONIE"

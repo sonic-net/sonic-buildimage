@@ -8,7 +8,8 @@ on:
 
 jobs:
   post_cherry_pick:
-    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'automerge') && github.event.pull_request.head.user.login == 'mssonicbld' && startsWith(github.event.pull_request.title, '[action]')
+    # Use azpw instead to have stable performance
+    if: false && github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'automerge') && github.event.pull_request.head.user.login == 'mssonicbld' && startsWith(github.event.pull_request.title, '[action]')
     runs-on: ubuntu-latest
     steps:
     - name: Debug

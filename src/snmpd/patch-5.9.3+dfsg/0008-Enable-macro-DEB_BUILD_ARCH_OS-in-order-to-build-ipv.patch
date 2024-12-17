@@ -1,0 +1,25 @@
+From bd7d6d79217da6b5a2eb3a3ee1d409c175a61e41 Mon Sep 17 00:00:00 2001
+From: Qi Luo <qiluo-msft@users.noreply.github.com>
+Date: Fri, 20 Sep 2019 00:42:19 +0000
+Subject: [PATCH] Enable macro DEB_BUILD_ARCH_OS in order to build ipv6 feature
+
+---
+ debian/rules | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/debian/rules b/debian/rules
+index 34d8509..496be59 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -4,6 +4,8 @@
+ export DEB_BUILD_MAINT_OPTIONS := hardening=+all
+ include /usr/share/dpkg/architecture.mk
+ include /usr/share/dpkg/buildtools.mk
++DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
++DEB_BUILD_ARCH_OS  ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH_OS)
+ 
+ LIB_VERSION = 40
+ 
+-- 
+2.18.0
+
