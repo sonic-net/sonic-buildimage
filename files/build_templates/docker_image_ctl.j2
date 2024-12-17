@@ -372,18 +372,6 @@ start() {
         source $PLATFORM_ENV_CONF
     fi
 
-    # Parse the platform.json file to get the platform specific information
-    PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
-    if [ -f "$PLATFORM_JSON" ]; then
-        NUM_DPU=$(jq -r '.DPUS | length' $PLATFORM_JSON 2>/dev/null)
-        jq -e '.DPU' $PLATFORM_JSON >/dev/null
-        if [[ $? -eq 0 ]]; then
-            IS_DPU_DEVICE="true"
-        else
-            IS_DPU_DEVICE="false"
-        fi
-    fi
-
     {%- if sonic_asic_platform == "broadcom" %}
     {%- if docker_container_name == "syncd" %}
     # Set the SYNCD_SHM_SIZE if this variable not defined
