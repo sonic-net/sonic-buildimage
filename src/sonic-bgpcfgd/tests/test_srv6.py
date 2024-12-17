@@ -57,23 +57,25 @@ def test_uN_add():
         'locators',
         'locator FCBB:BBBB:20:: block-len 32 node-len 16 func-bits 16',
         'prefix FCBB:BBBB:20::/48',
-        'opcode ::F1 uN'
+        'sid FCBB:BBBB:20:F1::/64 uN'
     ])
 
-def test_uDT46_add_default_vrf():
+def test_uDT46_add_vrf1():
     mgr = constructor()
 
     _old_exists = swsscommon.SonicV2Connector().exists
     swsscommon.SonicV2Connector().exists = lambda x: True
+
     op_test(mgr, 'SET', ("FCBB:BBBB:20:F2::", {
-        'action': 'uDT46'
+        'action': 'uDT46',
+        'vrf': 'vrf1'
     }), expected_ret=True, expected_cmds=[
         'segment-routing',
         'srv6',
         'locators',
         'locator FCBB:BBBB:20:: block-len 32 node-len 16 func-bits 16',
         'prefix FCBB:BBBB:20::/48',
-        'opcode ::F2 uDT46'
+        'sid FCBB:BBBB:20:F2::/64 uDT46 vrf vrf1'
     ])
     swsscommon.SonicV2Connector().exists = _old_exists
 
@@ -95,7 +97,7 @@ def test_uN_del():
         'no locator FCBB:BBBB:20:: block-len 32 node-len 16 func-bits 16'
     ])
 
-def test_uDT46_del():
+def test_uDT46_del_vrf1():
     mgr = constructor()
 
     # add a uN action first to make the uDT46 action not the last function
@@ -112,12 +114,13 @@ def test_uDT46_del():
     _old_exists = swsscommon.SonicV2Connector().exists
     swsscommon.SonicV2Connector().exists = lambda x: True
     op_test(mgr, 'DEL', ("FCBB:BBBB:20:F2::", {
-        'action': 'uDT46'
+        'action': 'uDT46',
+        "vrf": "vrf1"
     }), expected_ret=True, expected_cmds=[
         'segment-routing',
         'srv6',
         'locators',
         'locator FCBB:BBBB:20:: block-len 32 node-len 16 func-bits 16',
-        'no opcode ::F2 uDT46'
+        'no sid FCBB:BBBB:20:F2/64 uDT46 vrf vrf1'
     ])
     swsscommon.SonicV2Connector().exists = _old_exists
