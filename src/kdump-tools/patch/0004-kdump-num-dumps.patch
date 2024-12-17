@@ -1,0 +1,13 @@
+diff --git a/debian/kdump-tools.conf.in b/debian/kdump-tools.conf.in
+index fc51d67..c88d7c4 100644
+--- a/debian/kdump-tools.conf.in
++++ b/debian/kdump-tools.conf.in
+@@ -37,7 +37,7 @@ KDUMP_INITRD=/var/lib/kdump/initrd.img
+ KDUMP_COREDIR="/var/crash"
+ #KDUMP_FAIL_CMD="reboot -f"
+ #KDUMP_DUMP_DMESG=
+-#KDUMP_NUM_DUMPS=
++KDUMP_NUM_DUMPS=3
+ #KDUMP_COMPRESSION=
+ 
+ 
