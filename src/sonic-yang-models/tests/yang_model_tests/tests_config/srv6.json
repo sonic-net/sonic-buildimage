@@ -10,11 +10,6 @@
                     {
                         "ip_address": "FCBB:BBBB:20:F1::",
                         "action": "uDT46"
-                    },
-                    {
-                        "ip_address": "FCBB:BBBB:20:F2::",
-                        "action": "uDT6",
-                        "dscp_mode": "pipe"
                     }
                 ]
             }
