@@ -1,0 +1,302 @@
+{
+    "MSTP_TEST": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_GLOBAL": {
+                "mode": "mst",
+                "forward_delay": 15,
+                "hello_time": 2,
+                "max_age": 20,
+                "rootguard_timeout": 30,
+                "priority": 32768
+            }
+        }
+    },
+    "MSTP_TEST_WRONG_MODE": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_GLOBAL": {
+                "mode": "unknown_mode"
+            }
+        }
+    },
+    "MSTP_TEST_WRONG_INSTANCE": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_MST_INST": {
+                "STP_MST_INST_LIST": [
+                    {
+                        "instance": 5000,
+                        "vlan": ["10", "20", "30"]
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_WRONG_PRIORITY": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_GLOBAL": {
+                "priority": 1000
+            }
+        }
+    },
+    "MSTP_TEST_WITHOUT_NAME": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_MST": {
+                "name": "",
+                "revision": 1,
+                "max_hops": 20,
+                "hello_time": 2,
+                "max_age": 20,
+                "forward_delay": 15
+            }
+        }
+    },
+    "MSTP_TEST_MISSING_VLAN": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_MST_INST": {
+                "STP_MST_INST_LIST": [
+                    {
+                        "instance": 1,
+                        "vlan": []
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_INVALID_VLAN_LIST": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_MST_INST": {
+                "STP_MST_INST_LIST": [
+                    {
+                        "instance": 1,
+                        "vlan": ["vlan1", "vlan2", "vlan3"]
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_MAX_HOPS_EXCEEDED": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_MST": {
+                "max_hops": 300
+            }
+        }
+    },
+    "MSTP_TEST_WRONG_HELLO_TIME": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_MST": {
+                "hello_time": 15
+            }
+        }
+    },
+    "MSTP_TEST_INVALID_FORWARD_DELAY": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_MST": {
+                "forward_delay": 2
+            }
+        }
+    },
+    "MSTP_TEST_DUPLICATE_INSTANCE": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_MST_INST": {
+                "STP_MST_INST_LIST": [
+                    {
+                        "instance": 1,
+                        "vlan": ["10", "20"]
+                    },
+                    {
+                        "instance": 1,
+                        "vlan": ["30", "40"]
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_GLOBAL_WITH_INVALID_MODE": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_GLOBAL": {
+                "mode": "invalid_mode"
+            }
+        }
+    },
+    "PVST_TEST": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_GLOBAL": {
+                "mode": "pvst",
+                "forward_delay": 15,
+                "hello_time": 2,
+                "max_age": 20,
+                "rootguard_timeout": 30,
+                "priority": 32768
+            }
+        }
+    },
+    "PVST_TEST_WRONG_MODE": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_GLOBAL": {
+                "mode": "unknown_mode"
+            }
+        }
+    },
+    "PVST_TEST_WRONG_PRIORITY": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_GLOBAL": {
+                "priority": 1000
+            }
+        }
+    },
+    "PVST_TEST_INVALID_VLAN_ID": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_VLAN": {
+                "STP_VLAN_LIST": [
+                    {
+                        "vlanid": 5000,
+                        "vlan": 5000
+                    }
+                ]
+            }
+        }
+    },
+    "PVST_TEST_MISSING_VLAN": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_VLAN": {
+                "STP_VLAN_LIST": [
+                    {
+                        "vlanid": [],
+                        "vlan": []
+                    }
+                ]
+            }
+        }
+    },
+    "PVST_TEST_DUPLICATE_VLAN": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_VLAN": {
+                "STP_VLAN_LIST": [
+                    {
+                        "vlanid": 10
+                    },
+                    {
+                        "vlanid": 10,
+                        "vlan": 10
+                    },
+                    {
+                        "vlan": 10,
+                        "vlanid": 10
+                    },
+                    {
+                        "vlanid": 10
+                    }
+                ]
+            }
+        }
+    },
+    "PVST_TEST_VLAN_WITHOUT_PRIORITY": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_VLAN": {
+                "STP_VLAN_LIST": [
+                    {
+                        "vlanid": 10,
+                        "vlan": 10
+                    }
+                ]
+            }
+        }
+    },
+    "PVST_TEST_INVALID_PRIORITY": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_VLAN": {
+                "STP_VLAN_LIST": [
+                    {
+                        "vlanid": 10,
+                        "vlan": 10,
+                        "priority": 1000
+                    }
+                ]
+            }
+        }
+    },
+    "PVST_TEST_INVALID_PATH_COST": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_PORT": {
+                "STP_PORT_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "path_cost": -1
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_VALID_INTERFACE_CONFIG": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_PORT": {
+                "STP_PORT_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "enabled": true,
+                        "root_guard": false,
+                        "bpdu_guard": false,
+                        "bpdu_guard_do_disable": false,
+                        "path_cost": 20000,
+                        "priority": 128,
+                        "portfast": false,
+                        "uplink_fast": false,
+                        "edge_port": true,
+                        "link_type": "auto"
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_INVALID_INTERFACE_PRIORITY": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_PORT": {
+                "STP_PORT_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "priority": 300
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_DUPLICATE_INTERFACE_CONFIG": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_PORT": {
+                "STP_PORT_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "path_cost": 20000
+                    },
+                    {
+                        "ifname": "Ethernet0",
+                        "path_cost": 20000
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_INVALID_EDGE_PORT": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_PORT": {
+                "STP_PORT_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "edge_port": true
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_INVALID_LINK_TYPE": {
+        "sonic-stp:sonic-stp": {
+            "sonic-stp:STP_PORT": {
+                "STP_PORT_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "link_type": "invalid_type"
+                    }
+                ]
+            }
+        }
+    }
+}
