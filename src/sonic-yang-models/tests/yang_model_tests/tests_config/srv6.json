@@ -8,11 +8,11 @@
                         "action": "uN"
                     },
                     {
-                        "ip_address": "FCBB:BBBB:20:F1:",
+                        "ip_address": "FCBB:BBBB:20:F1::",
                         "action": "uDT46"
                     },
                     {
-                        "ip_address": "FCBB:BBBB:20:F2:",
+                        "ip_address": "FCBB:BBBB:20:F2::",
                         "action": "uDT6",
                         "dscp_mode": "pipe"
                     }
@@ -29,7 +29,7 @@
                         "action": "uN"
                     },
                     {
-                        "ip_address": "FCBB:BBBB:20:F1:",
+                        "ip_address": "FCBB:BBBB:20:F1::",
                         "action": "uDT46"
                     }
                 ]
@@ -45,7 +45,7 @@
                         "action": "End.A"
                     },
                     {
-                        "ip_address": "FCBB:BBBB:20:F1:",
+                        "ip_address": "FCBB:BBBB:20:F1::",
                         "action": "uDT46"
                     }
                 ]
@@ -62,7 +62,7 @@
                         "dscp_mode": "uniform"
                     },
                     {
-                        "ip_address": "FCBB:BBBB:20:F1:",
+                        "ip_address": "FCBB:BBBB:20:F1::",
                         "action": "uDT46"
                     }
                 ]
@@ -79,7 +79,7 @@
                         "action": "uN"
                     },
                     {
-                        "ip_address": "FCBB:BBBB:20:F1:",
+                        "ip_address": "FCBB:BBBB:20:F1::",
                         "action": "uDT46"
                     }
                 ]
