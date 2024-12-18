@@ -62,7 +62,7 @@ PTP_BLDDIR := $(OUTPUT_DIR)/ptpclock
 LKM_CFLAGS += -UNGKNET_NETIF_MAX -DNGKNET_NETIF_MAX=1056 -UNGKNET_FILTER_MAX -DNGKNET_FILTER_MAX=1025
 export LKM_CFLAGS
 
-kmod: bde knet knetcb bcmgenl edk ptpclock
+kmod: bde knet knetcb genl-packet bcmgenl edk ptpclock
 
 bde:
 	$(MAKE) -C $(SDK)/linux/bde SDK=$(SDK) \
@@ -81,7 +81,7 @@ knetcb: knet
 		LKM_BLDDIR=$(KNETCB_BLDDIR) $(TARGET)
 	ln -sf $(KNETCB_BLDDIR)/*.ko $(OUTPUT_DIR)
 
-bcmgenl: knet
+bcmgenl: knet genl-packet
 	$(MAKE) -C $(SDK)/linux/bcmgenl SDK=$(SDK) \
 		KBUILD_EXTRA_SYMBOLS=$(KNET_BLDDIR)/Module.symvers \
 		LKM_BLDDIR=$(BCMGENL_BLDDIR) $(TARGET)
@@ -113,4 +113,4 @@ distclean:
 	$(MAKE) kmod TARGET=$@
 	rm -rf $(OUTPUT_DIR)
 
-.PHONY: help kmod bde knet knetcb bcmgenl edk ptpclock clean distclean
+.PHONY: help kmod bde knet knetcb genl-packet bcmgenl edk ptpclock clean distclean
