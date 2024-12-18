@@ -5,11 +5,11 @@
 # Build and push sonic-mgmt image
 
 schedules:
-- cron: "0 8 * * *"
-  branches:
-    include:
-    - master
-  always: true
+#- cron: "0 8 * * *"
+#  branches:
+#    include:
+#    - master
+#  always: true
 
 trigger: none
 pr:
