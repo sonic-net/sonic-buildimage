@@ -57,7 +57,7 @@ stages:
 #        repository: docker-sonic-mgmt
 #        command: push
 #        tags: latest
-#    - publish:  $(Build.ArtifactStagingDirectory)
-#      artifact: 'docker-sonic-mgmt'
-#      displayName: "Archive docker image sonic-mgmt"
+    - publish:  $(Build.ArtifactStagingDirectory)
+      artifact: 'docker-sonic-mgmt'
+      displayName: "Archive docker image sonic-mgmt"
 
