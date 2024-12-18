@@ -1,0 +1,47 @@
+module sonic-memory-statistics {
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-memory-statistics";
+    prefix memstats;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "YANG module for configuring memory statistics in SONiC-based OS.";
+
+    revision 2024-07-22 {
+        description "First Revision";
+    }
+
+    container sonic-memory-statistics {
+        container MEMORY_STATISTICS {
+            description "Memory statistics configuration parameters.";
+            container memory_statistics{
+                leaf enabled {
+                    type boolean;
+                    default false;
+                    description "Flag to enable or disable memory statistics collection. If set to false, the memory statistics collection will stop.";
+                }
+
+                leaf sampling_interval {
+                    type uint8 {
+                        range "3..15";
+                    }
+                    units "minutes";
+                    default 5;
+                    description "Time interval in minutes for sampling memory statistics. Valid range, is between 3 minutes to 30 minutes.";
+                }
+
+                leaf retention_period {
+                    type uint8 {
+                        range "1..30";
+                    }
+                    units "days";
+                    default 15;
+                    description "Retention period for memory statistics data, defined in days. Valid range is from 1 day to 30 days.";
+                }
+            }    
+        }
+    }
+}

@@ -50,10 +50,10 @@ Signed-off-by: Donald Sharp <sharpd@nvidia.com>
 Signed-off-by: Rajasekar Raja <rajasekarr@nvidia.com>
 
 diff --git a/zebra/zserv.c b/zebra/zserv.c
-index 2024f34534..de6e404fc4 100644
+index 6a64176d9..488712397 100644
 --- a/zebra/zserv.c
 +++ b/zebra/zserv.c
-@@ -318,6 +318,14 @@ zwrite_fail:
+@@ -306,6 +306,14 @@ zwrite_fail:
   * this task reschedules itself.
   *
   * Any failure in any of these actions is handled by terminating the client.
@@ -66,9 +66,9 @@ index 2024f34534..de6e404fc4 100644
 + * The main thread processes the items in ibuf_fifo and always signals the
 + * client IO thread.
   */
- static void zserv_read(struct thread *thread)
+ static void zserv_read(struct event *thread)
  {
-@@ -325,15 +333,25 @@ static void zserv_read(struct thread *thread)
+@@ -313,16 +321,26 @@ static void zserv_read(struct event *thread)
  	int sock;
  	size_t already;
  	struct stream_fifo *cache;
@@ -80,7 +80,7 @@ index 2024f34534..de6e404fc4 100644
 +	int p2p_avail;	    /* How much space is available for p2p */
  	struct zmsghdr hdr;
 +	size_t client_ibuf_fifo_cnt = stream_fifo_count_safe(client->ibuf_fifo);
- 
+
  	p2p_orig = atomic_load_explicit(&zrouter.packets_to_process,
  					memory_order_relaxed);
 +	p2p_avail = p2p_orig - client_ibuf_fifo_cnt;
@@ -95,19 +95,21 @@ index 2024f34534..de6e404fc4 100644
 +	p2p = p2p_avail;
  	cache = stream_fifo_new();
 -	p2p = p2p_orig;
- 	sock = THREAD_FD(thread);
- 
+-	sock = EVENT_FD(thread);
++	sock = EVENT_FD(thread);
+
  	while (p2p) {
-@@ -433,7 +451,7 @@ static void zserv_read(struct thread *thread)
+ 		ssize_t nb;
+@@ -421,7 +439,7 @@ static void zserv_read(struct event *thread)
  		p2p--;
  	}
- 
+
 -	if (p2p < p2p_orig) {
 +	if (p2p < (uint32_t)p2p_avail) {
  		uint64_t time_now = monotime(NULL);
- 
+
  		/* update session statistics */
-@@ -447,19 +465,23 @@ static void zserv_read(struct thread *thread)
+@@ -435,19 +453,23 @@ static void zserv_read(struct event *thread)
  			while (cache->head)
  				stream_fifo_push(client->ibuf_fifo,
  						 stream_fifo_pop(cache));
@@ -115,28 +117,28 @@ index 2024f34534..de6e404fc4 100644
 +			client_ibuf_fifo_cnt =
 +				stream_fifo_count_safe(client->ibuf_fifo);
  		}
- 
+
  		/* Schedule job to process those packets */
  		zserv_event(client, ZSERV_PROCESS_MESSAGES);
 -
  	}
- 
+
  	if (IS_ZEBRA_DEBUG_PACKET)
 -		zlog_debug("Read %d packets from client: %s", p2p_orig - p2p,
 -			   zebra_route_string(client->proto));
 +		zlog_debug("Read %d packets from client: %s. Current ibuf fifo count: %zu. Conf P2p %d",
 +			   p2p_avail - p2p, zebra_route_string(client->proto),
 +			   client_ibuf_fifo_cnt, p2p_orig);
- 
+
 -	/* Reschedule ourselves */
 -	zserv_client_event(client, ZSERV_CLIENT_READ);
 +	/* Reschedule ourselves since we have space in ibuf_fifo */
 +	if (client_ibuf_fifo_cnt < p2p_orig)
 +		zserv_client_event(client, ZSERV_CLIENT_READ);
- 
+
  	stream_fifo_free(cache);
- 
-@@ -495,14 +517,20 @@ static void zserv_client_event(struct zserv *client,
+
+@@ -483,14 +505,20 @@ static void zserv_client_event(struct zserv *client,
   * as the task argument.
   *
   * Each message is popped off the client's input queue and the action associated
@@ -157,9 +159,9 @@ index 2024f34534..de6e404fc4 100644
 + *    items to the ibuf_fifo (until max limit)
 + *  - the hidden config change (zebra zapi-packets <>) is taken into account.
   */
- static void zserv_process_messages(struct thread *thread)
+ static void zserv_process_messages(struct event *thread)
  {
-@@ -538,6 +566,9 @@ static void zserv_process_messages(struct thread *thread)
+@@ -524,6 +552,9 @@ static void zserv_process_messages(struct event *thread)
  	/* Reschedule ourselves if necessary */
  	if (need_resched)
  		zserv_event(client, ZSERV_PROCESS_MESSAGES);
@@ -167,8 +169,5 @@ index 2024f34534..de6e404fc4 100644
 +	/* Ensure to include the read socket in the select/poll/etc.. */
 +	zserv_client_event(client, ZSERV_CLIENT_READ);
  }
- 
- int zserv_send_message(struct zserv *client, struct stream *msg)
--- 
-2.17.1
 
+ int zserv_send_message(struct zserv *client, struct stream *msg)

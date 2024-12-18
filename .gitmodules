@@ -46,7 +46,7 @@
 [submodule "src/sonic-frr/frr"]
 	path = src/sonic-frr/frr
 	url = https://github.com/sonic-net/sonic-frr.git
-	branch = frr/8.5
+	branch = frr-10.0.1
 [submodule "platform/p4/p4-hlir/p4-hlir-v1.1"]
 	path = platform/p4/p4-hlir/p4-hlir-v1.1
 	url = https://github.com/p4lang/p4-hlir.git
@@ -130,3 +130,6 @@
 [submodule "platform/marvell-teralynx/sonic-platform-marvell-teralynx"]
 	path = platform/marvell-teralynx/sonic-platform-marvell-teralynx
 	url = https://github.com/Marvell-switching/sonic-platform-marvell.git
+[submodule "platform/vpp"]
+	path = platform/vpp
+	url = https://github.com/sonic-net/sonic-platform-vpp.git
