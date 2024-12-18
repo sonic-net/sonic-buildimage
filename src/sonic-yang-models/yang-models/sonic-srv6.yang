@@ -93,9 +93,7 @@ module sonic-srv6 {
                     default "uniform";
                 }
 
-                must 'block_len + node_len + func_len + arg_len <= 128' {
-                    error-message "The sum of all fields' length must be less than or equal to 128";
-                }
+                must 'block_len + node_len + func_len + arg_len <= 128';
             }
         }
         
