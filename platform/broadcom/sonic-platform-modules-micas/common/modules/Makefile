@@ -9,7 +9,6 @@ export module_out_put_dir
 
 PLAT_SYSFS_DIR = $(PWD)/plat_sysfs
 S3IP_SYSFS_DIR = $(PWD)/s3ip_sysfs
-PINCTRL = $(PWD)/pinctrl
 
 export PLAT_SYSFS_DIR
 export S3IP_SYSFS_DIR
@@ -49,7 +48,6 @@ obj-m += wb_indirect_dev.o
 all :
 	$(MAKE) -C $(PLAT_SYSFS_DIR)
 	$(MAKE) -C $(S3IP_SYSFS_DIR)
-	$(MAKE) -C $(PINCTRL)
 	$(MAKE) -C $(KERNEL_SRC)/build M=$(PWD) modules
 	@if [ ! -d $(module_out_put_dir) ]; then mkdir -p $(module_out_put_dir) ;fi
 	cp -p  $(PWD)/*.ko $(module_out_put_dir)
