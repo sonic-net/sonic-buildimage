@@ -2792,6 +2792,14 @@
                 "sampling_interval": "5",
                 "retention_period": "15"
             }
+        },
+        "ASIC_SENSORS": {
+            "ASIC_SENSORS_POLLER_INTERVAL": {
+                "interval": "10"
+            },
+            "ASIC_SENSORS_POLLER_STATUS": {
+                "admin_status": "enable"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
