@@ -40,3 +40,4 @@
 0058-When-the-file-is-config-replayed-we-cannot-handle-th.patch
 0059-Fix-BGP-reset-on-suppress-fib-pending-configuration.patch
 0060-bgpd-Validate-both-nexthop-information-NEXTHOP-and-N.patch
+0061-dont-print-warning-if-not-a-daemon.patch
