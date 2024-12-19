@@ -256,6 +256,12 @@ RUN echo "Host *\n\tStrictHostKeyChecking no\n" > /var/$user/.ssh/config
 RUN chown $user /var/$user/.ssh -R
 RUN chmod go= /var/$user/.ssh -R
 
+# Fix ownership and permissions
+RUN chown root:root /run/sshd && chmod 755 /run/sshd
+
+# Fix permissions for the host keys
+RUN chmod 600 /etc/ssh/ssh_host_* && chown root:root /etc/ssh/ssh_host_*
+
 # Add user to sudoers
 RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >>/etc/sudoers
 
