@@ -257,7 +257,7 @@ RUN chown $user /var/$user/.ssh -R
 RUN chmod go= /var/$user/.ssh -R
 
 # Fix permissions for the host keys
-RUN chmod 600 /etc/ssh/ssh_host_*
+RUN chmod 600 /etc/ssh/ssh_host_* && chown root:root /etc/ssh/ssh_host_*
 
 # Add user to sudoers
 RUN echo "$user ALL=(ALL) NOPASSWD:ALL" >>/etc/sudoers
