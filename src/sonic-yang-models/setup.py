@@ -208,7 +208,7 @@ setup(
                          './yang-models/sonic-xcvrd-log.yang',
                          './yang-models/sonic-grpcclient.yang',
                          './yang-models/sonic-serial-console.yang',
-                         './yang-models/sonic-smart-switch.yang']),
+                         './yang-models/sonic-smart-switch.yang',]),
         ('cvlyang-models', ['./cvlyang-models/sonic-acl.yang',
                          './cvlyang-models/sonic-banner.yang',
                          './cvlyang-models/sonic-bgp-common.yang',
