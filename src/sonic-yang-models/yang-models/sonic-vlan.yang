@@ -123,6 +123,10 @@ module sonic-vlan {
 					default disable;
 				}
 
+				leaf mac_addr {
+					description "Assign administrator-provided MAC address to Interface";
+					type yang:mac-address;
+				}
 
 				leaf loopback_action {
 					description "Packet action when a packet ingress and gets routed on the same IP interface";
