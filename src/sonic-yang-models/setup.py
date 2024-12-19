@@ -202,6 +202,7 @@ setup(
                          './yang-models/sonic-system-port.yang',
                          './yang-models/sonic-macsec.yang',
                          './yang-models/sonic-bgp-sentinel.yang',
+                         './yang-models/sonic-asic-sensors.yang',
                          './yang-models/sonic-bmp.yang',
                          './yang-models/sonic-smart-switch.yang',]),
         ('cvlyang-models', ['./cvlyang-models/sonic-acl.yang',
