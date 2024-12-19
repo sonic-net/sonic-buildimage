@@ -20,11 +20,11 @@ $(DOCKER_MUX)_WARM_SHUTDOWN_BEFORE = swss
 $(DOCKER_MUX)_FAST_SHUTDOWN_BEFORE = swss
 
 ifeq ($(INCLUDE_MUX), y)
+# Build and install MUX docker image
 SONIC_DOCKER_IMAGES += $(DOCKER_MUX)
 SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_MUX)
-endif
 
-ifeq ($(INCLUDE_MUX), y)
+# Build and install MUX debug docker image
 SONIC_DOCKER_DBG_IMAGES += $(DOCKER_MUX_DBG)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_MUX_DBG)
 endif
