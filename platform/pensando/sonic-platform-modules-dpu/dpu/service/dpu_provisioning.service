@@ -1,0 +1,18 @@
+[Unit]
+Description=dpu config db provisioning
+Requires=docker.service
+ConditionPathExists=/boot/first_boot
+After=docker.service
+After=dpu.service
+Requires=dpu.service
+Before=database.service
+
+[Service]
+User=root
+ExecStartPre=/bin/sleep 20
+ExecStart=/usr/local/bin/dpu_provisioning.sh
+StandardOutput=syslog
+StandardError=syslog
+
+[Install]
+WantedBy=multi-user.target
