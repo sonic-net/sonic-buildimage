@@ -277,7 +277,9 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
         return (NULL);
     }
     cbd = NGKNET_SKB_CB(skb);
-    match_filt = cbd->filt;
+    if (cbd) {
+        match_filt = cbd->filt;
+    }
 
     if (!cbd || !match_filt) {
         GENL_DBG_WARN("%s: cbd(0x%p) or match_filt(0x%p) is NULL\n",
@@ -287,9 +289,8 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
     }
 
     /* check if this packet is sampled packet (from sample filter) */
-    if (!match_filt ||
-        (match_filt->dest_type != NGKNET_FILTER_DEST_T_CB) ||
-        (strncmp(match_filt->desc, BCMGENL_PSAMPLE_NAME, NGKNET_FILTER_DESC_MAX) != 0)) {
+    if  (match_filt->dest_type != NGKNET_FILTER_DEST_T_CB ||
+        strncmp(match_filt->desc, BCMGENL_PSAMPLE_NAME, NGKNET_FILTER_DESC_MAX) != 0) {
         return (skb);
     }
     dev_no = cbd->dinfo->dev_no;
@@ -428,6 +429,7 @@ bcmgenl_psample_filter_cb(struct sk_buff *skb, ngknet_filter_t **filt)
             memcpy(skb_psample->data, pkt, meta.trunc_size);
         }
         skb_put(skb_psample, meta.trunc_size);
+        /* save original size for PSAMPLE_ATTR_ORIGSIZE in skb->len */
         skb_psample->len = pkt_len;
         psample_pkt->skb = skb_psample;
         if (debug & GENL_DBG_LVL_PDMP) {
@@ -453,7 +455,6 @@ PSAMPLE_FILTER_CB_PKT_HANDLED:
     if (bcmgenl_pkt.meta.sample_type != SAMPLE_TYPE_NONE) {
         g_bcmgenl_psample_stats.pkts_f_handled++;
         /* Not sending to network protocol stack */
-        dev_kfree_skb_any(skb);
         skb = NULL;
     } else {
         g_bcmgenl_psample_stats.pkts_f_pass_through++;
@@ -880,13 +881,13 @@ bcmgenl_psample_proc_debug_write(
     char debug_str[40];
     char *ptr;
 
-    if (count > sizeof(debug_str)) {
+    if (count >= sizeof(debug_str)) {
         count = sizeof(debug_str) - 1;
-        debug_str[count] = '\0';
     }
     if (copy_from_user(debug_str, buf, count)) {
         return -EFAULT;
     }
+    debug_str[count] = '\0';
 
     if ((ptr = strstr(debug_str, "debug=")) != NULL) {
         ptr += 6;

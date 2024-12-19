@@ -51,7 +51,7 @@ typedef struct bcmpkt_rx_reasons_s {
 } bcmpkt_rx_reasons_t;
 
 /*!
- * \name RXPMD Dumping flags.
+ * \name RXPMD Dump flags. (deprecated by BCMPKT_DUMP_F_XXX)
  * \anchor BCMPKT_RXPMD_DUMP_F_XXX
  */
 /*! \{ */
@@ -60,7 +60,7 @@ typedef struct bcmpkt_rx_reasons_s {
  */
 #define BCMPKT_RXPMD_DUMP_F_ALL         0
 /*!
- * Dump none zero field content only.
+ * Dump non-zero field content only.
  */
 #define BCMPKT_RXPMD_DUMP_F_NONE_ZERO   1
 /*! \} */
