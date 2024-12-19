@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/default.mk
+
+%:
+	dh $@  --with autotools-dev
+
+override_dh_auto_configure:
+	dh_auto_configure -- --disable-samples --disable-libevent-regress
+
+override_dh_auto_install:
+	dh_auto_install --destdir=debian/libevent
+
+override_dh_strip:
+	dh_strip --dbg-package=libevent-dbg
