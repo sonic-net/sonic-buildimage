@@ -2698,6 +2698,14 @@
                 "motd": "Some message of the day",
                 "logout": "Some logout message"
             }
+        },
+        "ASIC_SENSORS": {
+            "ASIC_SENSORS_POLLER_INTERVAL": {
+                "interval": "10"
+            },
+            "ASIC_SENSORS_POLLER_STATUS": {
+                "admin_status": "enable"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
