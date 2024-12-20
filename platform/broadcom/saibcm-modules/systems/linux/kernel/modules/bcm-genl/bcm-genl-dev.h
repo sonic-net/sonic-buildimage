@@ -42,7 +42,10 @@ extern int
 bcmgenl_dev_pktmeta_rx_reason_get(int dev_no, void *pkt_meta, uint64_t *reason);
 
 extern int
-bcmgenl_dev_rx_reason_sample_source_get(int dev_no, uint64_t *val);
+bcmgenl_dev_rx_reason_sample_source_get(int dev_no, uint64_t *val, uint64_t *mask);
+
+extern int
+bcmgenl_dev_rx_reason_sample_dest_get(int dev_no, uint64_t *val, uint64_t *mask);
 
 extern int
 bcmgenl_dev_dcb_info_get(int dev_no, int *dcb_type, int *dcb_size);
