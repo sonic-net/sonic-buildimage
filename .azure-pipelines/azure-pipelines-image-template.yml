@@ -76,13 +76,13 @@ jobs:
           REGISTRY_PASSWD: $(REGISTRY_PASSWD)
         displayName: Publish to Docker Registry and Copy Artifacts
         condition: always()
-      - publish:  $(Build.ArtifactStagingDirectory)
+      - publish:  $(Build.ArtifactStagingDirectory)/target/sonic-broadcom.bin
         artifact: 'sonic-buildimage.$(GROUP_NAME)$(GROUP_EXTNAME)'
-        displayName: "Archive sonic image"
+        displayName: "Archive sonic image bin"
       - publish:  $(Build.ArtifactStagingDirectory)
         condition: or(failed(), canceled())
         artifact: 'sonic-buildimage.$(GROUP_NAME)$(GROUP_EXTNAME)$(System.JobAttempt)'
-        displayName: "Archive failed sonic image"
+        displayName: "Archive failed sonic image bin"
       - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
         - template: trigger-publish-artifacts-build.yml
           parameters:
