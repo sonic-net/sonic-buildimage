@@ -263,7 +263,9 @@ RUN git clone https://github.com/lguohan/gnxi.git \
     && git checkout 3adf8b9 \
     && cd gnmi_cli_py \
 {% if PTF_ENV_PY_VER == "mixed" %}
-    && pip install -r requirements.txt
+    && pip install -r requirements.txt \
+    && cat requirements.txt | grep -v futures > /tmp/requirements.txt \
+    && pip3 install -r /tmp/requirements.txt
 {% else %}
     && cat requirements.txt | grep -v futures > /tmp/requirements.txt \
     && pip3 install -r /tmp/requirements.txt
