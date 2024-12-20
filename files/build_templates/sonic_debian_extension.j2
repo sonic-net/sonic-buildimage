@@ -397,6 +397,8 @@ sudo cp $IMAGE_CONFIGS/monit/arp_update_checker $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/arp_update_checker
 sudo cp $IMAGE_CONFIGS/monit/control_plane_drop_check $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/control_plane_drop_check
+sudo cp $IMAGE_CONFIGS/monit/mgmt_oper_status $FILESYSTEM_ROOT/usr/bin/
+sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/mgmt_oper_status
 
 # Installed smartmontools version should match installed smartmontools in docker-platform-monitor Dockerfile
 # TODO: are mismatching versions fine for bookworm?

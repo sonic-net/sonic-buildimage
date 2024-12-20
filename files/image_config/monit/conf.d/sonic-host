@@ -66,10 +66,7 @@ check program controlPlaneDropCheck with path "/usr/bin/control_plane_drop_check
     every 5 cycles
     if status != 0 for 3 cycle then alert repeat every 1 cycles
 
-check program mgmtOperStatusCheck with path "/usr/local/bin/mgmt_oper_status_check.py"
-    every 5 cycles
-    if status != 0 for 3 cycle then alert repeat every 1 cycles
-
-check program mgmt_oper_status with path "/usr/local/bin/mgmt_oper_status_check.py"
-    every 5 cycles
+# Periodically update oper status of mgmt interface in STATE_DB 
+check program mgmtOperStatus with path "/usr/bin/mgmt_oper_status"
+    every 1 cycles
     if status != 0 for 3 cycle then alert repeat every 1 cycles
