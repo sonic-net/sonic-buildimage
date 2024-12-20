@@ -5,6 +5,13 @@
                     "vni" : "100"
                 }
         },
+        "SUBNET_DECAP": {
+            "AZURE": {
+                "status": "enable",
+                "src_ip": "10.10.10.0/24",
+                "src_ip_v6": "20c1:ba8::/64"
+            }
+        },
         "DHCP_SERVER": {
             "192.0.0.8": {},
             "192.0.0.8": {},

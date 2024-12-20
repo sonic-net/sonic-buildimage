@@ -45,6 +45,17 @@ ifneq (,$(shell ls $(LINUX_UAPI) 2>/dev/null))
 KFLAGS += -I$(LINUX_INCLUDE)/uapi -I$(LINUX_INCLUDE)/generated/uapi -I$(KERNDIR)/arch/x86/include/generated -I$(KERNDIR)/arch/x86/include/uapi -I$(KERNDIR)/arch/x86/include/generated/uapi
 endif
 
+GCC_MAJOR_VER  = $(shell GCCVER=$(GCCVER) $(CC) -dumpversion | cut -d'.' -f1)
+
+ifeq (${GCC_MAJOR_VER}, 11)
+	CFGFLAGS += -Wno-error=sizeof-array-div
+	CFGFLAGS += -Wno-error=stringop-overread
+endif
+CFGFLAGS += -Wno-error=stringop-truncation
+CFGFLAGS += -Wno-error=maybe-uninitialized
+CFGFLAGS += -Wno-error=format-overflow
+CFGFLAGS += -Wno-error=array-bounds
+
 ifdef LTSW_CHIPS
 # Ensure we do not use an out-of-date libelf.so
 ELFUTILS_MIN = 158
