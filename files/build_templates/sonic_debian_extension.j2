@@ -1151,6 +1151,14 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
 
 {% endif %}
 
+{% if sonic_asic_platform == "vs" %}
+# Install xcvr-emu Python 3 package
+XCVR_EMU_PY3_WHEEL_NAME=$(basename {{xcvr_emu_py3_wheel_path}})
+sudo cp {{xcvr_emu_py3_wheel_path}} $FILESYSTEM_ROOT/$XCVR_EMU_PY3_WHEEL_NAME
+sudo https_proxy=$https_proxy LANG=C chroot $FILESYSTEM_ROOT pip3 install $XCVR_EMU_PY3_WHEEL_NAME
+sudo rm -rf $FILESYSTEM_ROOT/$XCVR_EMU_PY3_WHEEL_NAME
+{% endif %}
+
 {%- if SONIC_ROUTING_STACK == "frr" %}
 sudo mkdir $FILESYSTEM_ROOT/etc/sonic/frr
 sudo touch $FILESYSTEM_ROOT/etc/sonic/frr/frr.conf
