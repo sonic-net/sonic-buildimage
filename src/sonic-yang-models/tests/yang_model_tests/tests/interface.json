@@ -29,5 +29,15 @@
     "INTERFACE_INVALID_ENABLE_IPV6_LINK_LOCAL": {
         "desc": "Enable the ipv6 link-local as true.",
         "eStr": "Invalid value \"true\" in \"ipv6_use_link_local_only\" element."
+    },
+    "INTERFACE_MAC_ADDR": {
+        "desc": "Set administrator-provided interface mac address."
+    },
+    "INTERFACE_UPPER_MAC_ADDR": {
+        "desc": "Set UPPERCASE administrator-provided interface mac address."
+    },
+    "INTERFACE_INVALID_MAC_ADDR": {
+        "desc": "Set invalid interface mac address.",
+        "eStr": "Value \"badaddr\" does not satisfy the constraint \"[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}\" (range, length, or pattern)."
     }
 }
