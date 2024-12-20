@@ -34,11 +34,14 @@ endif
 
 # Default architecture
 ifeq (,$(ARCH))
-ARCH = $(shell uname -p)
+ARCH = $(shell uname -m)
 ifneq (x86_64,$(ARCH))
 ARCH = i386
 endif
 endif
+
+# Target machine for EDK-Host defconfig
+TARGET_MACHINE ?= x86_64
 
 # Noisy kernel build
 KBUILD_VERBOSE = 1

@@ -100,7 +100,6 @@ USER_BDE := $(DEST_DIR)/$(USER_BDE_LOCAL)
 
 KNET_CB_LOCAL := linux-knet-cb.$(KOBJ)
 KNET_CB := $(DEST_DIR)/$(KNET_CB_LOCAL)
-
 export BUILD_BCM_GENL=1
 export BUILD_GENL_PACKET=0
 GENL_PACKET_LOCAL := genl-packet.$(KOBJ)
@@ -114,6 +113,9 @@ BCM_GENL := $(DEST_DIR)/$(BCM_GENL_LOCAL)
 
 BCM_KNET_LOCAL := linux-bcm-knet.$(KOBJ)
 BCM_KNET := $(DEST_DIR)/$(BCM_KNET_LOCAL)
+
+BCM_PTP_LOCAL := linux-bcm-ptp-clock.$(KOBJ)
+BCM_PTP := $(DEST_DIR)/$(BCM_PTP_LOCAL)
 
 ifeq (,$(findstring DELIVER,$(MAKECMDGOALS)))
 .DEFAULT_GOAL := all
@@ -132,6 +134,10 @@ ifndef BUILD_KNET
 BUILD_KNET = 1
 endif
 
+ifndef BUILD_PTP
+BUILD_PTP = 1
+endif
+
 ifeq ($(BUILD_KNET),1)
 # Kernel network support
 all_targets += $(BCM_KNET)
@@ -145,6 +151,11 @@ endif
 ifdef BUILD_KNET_CB
 all_targets += $(KNET_CB)
 knet_subdirs += knet-cb
+
+ifdef BUILD_PTP
+all_targets += $(BCM_PTP)
+knet_subdirs += bcm-ptp-clock
+endif
 
 ifeq ($(NO_LOCAL_TARGETS),)
 LOCAL_TARGETS +=$(patsubst %,../$(platform)/%,$(KNET_CB_LOCAL))
@@ -212,6 +223,10 @@ ifneq (,$(filter knet-cb,$(knet_subdirs)))
 	$(MAKE) -C $(SDK)/systems/linux/kernel/modules/knet-cb $(OPT_KERNEL_TOOLCHAIN) kernel_version=$(kernel_version) \
 		OPT_CFLAGS="$(ADD_TO_KCFLAGS)" override-target=linux-$(platform)
 endif
+ifneq (,$(filter bcm-ptp-clock,$(knet_subdirs)))
+	$(MAKE) -C $(SDK)/systems/linux/kernel/modules/bcm-ptp-clock $(OPT_KERNEL_TOOLCHAIN) kernel_version=$(kernel_version) \
+		OPT_CFLAGS="$(ADD_TO_KCFLAGS)" override-target=linux-$(platform)
+endif
 ifneq (,$(filter bcm-genl,$(knet_subdirs)))
 ifneq (,$(filter genl-packet,$(knet_subdirs)))
 	$(MAKE) -C $(SDK)/systems/linux/kernel/modules/genl-packet $(OPT_KERNEL_TOOLCHAIN) kernel_version=$(kernel_version) \
@@ -233,6 +248,9 @@ $(BCM_KNET): $(KERN_BLDROOT)/$(BCM_KNET_LOCAL)
 	$(OBJCOPY) --strip-debug $< $@
 
 $(KNET_CB): $(KERN_BLDROOT)/$(KNET_CB_LOCAL)
+	$(OBJCOPY) --strip-debug $< $@
+
+$(BCM_PTP): $(KERN_BLDROOT)/$(BCM_PTP_LOCAL)
 	$(OBJCOPY) --strip-debug $< $@
 
 $(GENL_PACKET): $(KERN_BLDROOT)/$(GENL_PACKET_LOCAL)
@@ -262,6 +280,7 @@ clean::
 	$(RM) $(KERN_BLDROOT)/$(KNET_CB_LOCAL)
 	$(RM) $(KERN_BLDROOT)/$(GENL_PACKET_LOCAL)
 	$(RM) $(KERN_BLDROOT)/$(BCM_GENL_LOCAL)
+	$(RM) $(KERN_BLDROOT)/$(BCM_PTP_LOCAL)
 	$(RM) $(LOCAL_TARGETS)
 
 distclean:: clean
