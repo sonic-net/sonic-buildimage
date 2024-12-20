@@ -23,10 +23,13 @@ module sonic-bgp-neighbor {
         prefix lag;
     }
 
-    // Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
-    //import sonic-vlan {
-    //    prefix vlan;
-    //}
+    import sonic-vlan-sub-interface {
+        prefix vlan-sub-interface;
+    }
+
+    import sonic-vlan {
+        prefix vlan;
+    }
 
     import sonic-bgp-global {
         prefix bgpg;
@@ -91,12 +94,11 @@ module sonic-bgp-neighbor {
                         type leafref {
                             path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
                         }
-                       // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
-                       // type leafref {
-                       //     path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
-                       // }
-                        type string {
-                            pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                        type leafref {
+                            path "/vlan-sub-interface:sonic-vlan-sub-interface/vlan-sub-interface:VLAN_SUB_INTERFACE/vlan-sub-interface:VLAN_SUB_INTERFACE_LIST/vlan-sub-interface:name";
+                        }
+                        type leafref {
+                            path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
                         }
                     }
                     description "BGP Neighbor, it will be neighbor address or interface name";
