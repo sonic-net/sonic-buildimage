@@ -89,8 +89,7 @@
             "topo_info": {"dev_addr": "0x0"},
             "DEVICES":
             [
-                {"dev": "EEPROM1"},
-                {"dev": "EEPROM2"}
+                {"dev": "EEPROM1"}
             ]
         }
     },
@@ -107,20 +106,6 @@
             ]
         }
     },
-
-    "EEPROM2":
-    {
-        "dev_info": {"device_type": "EEPROM", "device_name": "EEPROM2", "device_parent": "SMBUS0"},
-        "i2c":
-        {
-            "topo_info": {"parent_bus": "0x0", "dev_addr": "0x51", "dev_type": "24c02"},
-            "dev_attr": {"access_mode": "BLOCK"},
-            "attr_list": [
-                {"attr_name": "eeprom"}
-            ]
-        }
-    },
-
 
         "PCIE0":
         {
