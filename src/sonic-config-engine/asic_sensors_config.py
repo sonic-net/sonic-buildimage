@@ -25,6 +25,10 @@ def get_asic_sensors_config():
     else:
         platform_path = device_info.get_path_to_platform_dir()
         json_file = os.path.join(platform_path, device_info.PLATFORM_JSON_FILE)
+        
+    if not os.path.exists(json_file):
+        return config
+    
     platform_json = portconfig.readJson(json_file)
     if not platform_json:
         return config
