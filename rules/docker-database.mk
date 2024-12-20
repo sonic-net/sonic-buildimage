@@ -30,7 +30,7 @@ SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_DATABASE_DBG)
 $(DOCKER_DATABASE)_CONTAINER_NAME = database
 $(DOCKER_DATABASE)_RUN_OPT += -t --security-opt apparmor=unconfined --security-opt="systempaths=unconfined"
 $(DOCKER_DATABASE)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_DATABASE)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro
+$(DOCKER_DATABASE)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro
 
 $(DOCKER_DATABASE)_BASE_IMAGE_FILES += redis-cli:/usr/bin/redis-cli
 $(DOCKER_DATABASE)_FILES += $(SYSCTL_NET_CONFIG) $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)

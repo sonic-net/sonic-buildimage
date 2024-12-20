@@ -85,6 +85,12 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
     bridge_name = 'bridge-midplane'
 
+    data['MID_PLANE_BRIDGE'] = {
+        "GLOBAL": {
+            "bridge": bridge_name,
+            "ip_prefix": "169.254.200.254/24"
+        }
+    }
     dhcp_server_ports = {}
 
     for dpu_name in natsorted(ss_config.get('DPUS', {})):
@@ -122,10 +128,6 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
         data['DHCP_SERVER_IPV4'] = {
             bridge_name: {
-                'customized_options': [
-                    'option60',
-                    'option223'
-                ],
                 'gateway': mpbr_address,
                 'lease_time': '3600',
                 'mode': 'PORT',
