@@ -748,6 +748,17 @@ lkbde_edk_get_dma_info(int dev_id, phys_addr_t* cpu_pbase, phys_addr_t* dma_pbas
     return 0;
 }
 
+void *
+lkbde_edk_dmamem_map_p2v(dma_addr_t paddr)
+{
+    if ((paddr >= _edk_dma_pool[0].dma_pbase) &&
+            (paddr < (_edk_dma_pool[0].dma_pbase + _edk_dma_pool[0].size))) {
+        return (_edk_dma_pool[0].dma_vbase + (paddr - _edk_dma_pool[0].dma_pbase));
+    } else {
+        return NULL;
+    }
+}
+
 /*
  * The below function validates the memory to the EDK allocated DMA pool,
  * required to user space via the BDE device file.
@@ -759,12 +770,14 @@ _edk_vm_is_valid(struct file *filp, struct vm_area_struct *vma)
     unsigned long size = vma->vm_end - vma->vm_start;
     int i, ndevices;
 
-    ndevices = BDE_NUM_DEVICES(BDE_SWITCH_DEVICES);
+    ndevices = LINUX_BDE_MAX_DEVICES;
     for (i = 0; i < ndevices; i++) {
-        if (phys_addr < (unsigned long )_edk_dma_pool[i].cpu_pbase ||
-            (phys_addr + size) > ((unsigned long )_edk_dma_pool[i].cpu_pbase +
+        if (_edk_dma_pool[i].dma_vbase) {
+            if (phys_addr < (unsigned long )_edk_dma_pool[i].cpu_pbase ||
+                (phys_addr + size) > ((unsigned long )_edk_dma_pool[i].cpu_pbase +
                                    _edk_dma_pool[i].size)) {
-            continue;
+                continue;
+            }
         }
         return 1;
     }
@@ -812,7 +825,7 @@ _mpool_free(void)
         if (_dma_vbase) {
             if (dma_debug >= 1) gprintk("freeing v=0x%lx p=0x%lx size=0x%lx\n", (unsigned long)_dma_vbase,(unsigned long) _dma_pbase, (unsigned long)_dma_mem_size);
             if (_dma_alloc_coherent_device != NULL) {
-                dma_free_coherent(_dma_alloc_coherent_device, _dma_mem_size, _dma_vbase, _dma_pbase);
+                dma_free_attrs(_dma_alloc_coherent_device, _dma_mem_size, _dma_vbase, _dma_pbase, DMA_FORCE_CONTIGUOUS);
                 _dma_alloc_coherent_device = NULL;
             }
         }
@@ -983,7 +996,7 @@ void _dma_per_device_init(int dev_index)
 #if _SIMPLE_MEMORY_ALLOCATION_
     if (_dma_pool_alloc_state == DMA_POOL_INITIALIZED && dmaalloc == ALLOC_TYPE_API) {
         /* allocate the DMA buffer pool and map it to the device, uses CMA */
-        _dma_vbase = dma_alloc_coherent(dev, _dma_mem_size, &dma_addr, GFP_KERNEL);
+        _dma_vbase = dma_alloc_attrs(dev, _dma_mem_size, &dma_addr, GFP_KERNEL, DMA_FORCE_CONTIGUOUS);
         if (!_dma_vbase) {
             _dma_pool_alloc_state = DMA_POOL_FAILED;
             gprintk("Failed to allocate coherent memory pool of size 0x%x\n", _dma_mem_size);
@@ -1094,7 +1107,7 @@ void _dma_init(void)
                 dmasize +=5;
             }
 
-        } 
+        }
 #endif /* INCLUDE_SRAM_DMA */
         if (*dmasize != '\0') {
             if ((dmasize[strlen(dmasize)-1] & ~0x20) == 'M') {
@@ -1102,10 +1115,6 @@ void _dma_init(void)
                 _dma_mem_size *= ONE_MB;
             } else {
                 gprintk("DMA memory size must be specified as e.g. dmasize=8M\n");
-            }
-            if (_dma_mem_size & (_dma_mem_size-1)) {
-                gprintk("dmasize must be a power of 2 (1M, 2M, 4M, 8M etc.)\n");
-                _dma_mem_size = 0;
             }
         }
     }
@@ -1290,7 +1299,6 @@ _sinval(int d, void *ptr, int length)
 #if defined(dma_cache_wback_inv)
      dma_cache_wback_inv((unsigned long)ptr, length);
 #else
-
     dma_sync_single_for_cpu(NULL, (unsigned long)ptr, length, DMA_BIDIRECTIONAL);
 #endif
     return 0;
@@ -1302,7 +1310,6 @@ _sflush(int d, void *ptr, int length)
 #if defined(dma_cache_wback_inv)
     dma_cache_wback_inv((unsigned long)ptr, length);
 #else
-
     dma_sync_single_for_cpu(NULL, (unsigned long)ptr, length, DMA_BIDIRECTIONAL);
 #endif
 
@@ -1329,11 +1336,9 @@ _dma_pprint(struct seq_file *m)
     pprintf(m, "\tdmasize=%s\n", dmasize);
     pprintf(m, "\thimem=%s\n", himem);
     pprintf(m, "\thimemaddr=%s\n", himemaddr);
-    pprintf(m, "DMA Memory (%s): %d bytes, %d used, %d free%s\n",
+    pprintf(m, "DMA Memory (%s): %d bytes allocated%s\n",
             (_use_himem) ? "high" : dmaalloc ? "kernel-api" : "kernel-chunk",
             (_dma_vbase) ? _dma_mem_size : 0,
-            (_dma_vbase) ? mpool_usage(_dma_pool) : 0,
-            (_dma_vbase) ? _dma_mem_size - mpool_usage(_dma_pool) : 0,
             USE_LINUX_BDE_MMAP ? ", local mmap" : "");
 }
 
@@ -1343,6 +1348,7 @@ _dma_pprint(struct seq_file *m)
 
 #ifdef BDE_EDK_SUPPORT
 LKM_EXPORT_SYM(lkbde_edk_get_dma_info);
+LKM_EXPORT_SYM(lkbde_edk_dmamem_map_p2v);
 #endif
 LKM_EXPORT_SYM(kmalloc_giant);
 LKM_EXPORT_SYM(kfree_giant);

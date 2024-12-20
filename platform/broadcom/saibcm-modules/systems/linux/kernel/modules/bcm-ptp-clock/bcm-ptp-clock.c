@@ -36,7 +36,11 @@ MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("PTP Clock Driver for Broadcom XGS/DNX Switch");
 MODULE_LICENSE("GPL");
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3,17,0)
+#if ((LINUX_VERSION_CODE > KERNEL_VERSION(3,17,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)))
+#define PTPCLOCK_SUPPORTED
+#endif
+
+#ifdef PTPCLOCK_SUPPORTED
 #include <linux-bde.h>
 #include <kcom.h>
 #include <bcm-knet.h>
@@ -45,7 +49,7 @@ MODULE_LICENSE("GPL");
 #include <linux/etherdevice.h>
 #include <linux/netdevice.h>
 #include <linux/sysfs.h>
-
+#include <linux-bde.h>
 
 #include <linux/random.h>
 #include <linux/seq_file.h>
@@ -190,6 +194,7 @@ u32 hostcmd_regs[5] = { 0 };
 
 /* Service request commands to Firmware. */
 enum {
+#ifdef BDE_EDK_SUPPORT
     BKSYNC_DONE                     = (0x0),
     BKSYNC_INIT                     = (0x1),
     BKSYNC_DEINIT                   = (0x2),
@@ -207,9 +212,29 @@ enum {
     BKSYNC_GPIO                     = (0xe),
     BKSYNC_EVLOG                    = (0xf),
     BKSYNC_EXTTSLOG                 = (0x10),
-    BKSYNC_GPIO_PHASEOFFSET         = (0x11),
+    BKSYNC_GET_EXTTS_BUFF           = (0x11),
+    BKSYNC_GPIO_PHASEOFFSET         = (0x12),
+#else
+    BKSYNC_DONE                     = (0x1),
+    BKSYNC_INIT                     = (0x2),
+    BKSYNC_DEINIT                   = (0x3),
+    BKSYNC_GETTIME                  = (0x4),
+    BKSYNC_SETTIME                  = (0x5),
+    BKSYNC_FREQCOR                  = (0x6),
+    BKSYNC_PBM_UPDATE               = (0x7),
+    BKSYNC_ADJTIME                  = (0x8),
+    BKSYNC_GET_TSTIME               = (0x9),
+    BKSYNC_MTP_TS_UPDATE_ENABLE     = (0xa),
+    BKSYNC_MTP_TS_UPDATE_DISABLE    = (0xb),
+    BKSYNC_ACK_TSTIME               = (0xc),
+    BKSYNC_SYSINFO                  = (0xd),
+    BKSYNC_BROADSYNC                = (0xe),
+    BKSYNC_GPIO                     = (0xf),
+    BKSYNC_EVLOG                    = (0x10),
+    BKSYNC_EXTTSLOG                 = (0x11),
+    BKSYNC_GPIO_PHASEOFFSET         = (0x12),
+#endif
 };
-
 
 enum {
     KSYNC_SYSINFO_UC_PORT_NUM       = (0x1),
@@ -437,16 +462,24 @@ typedef struct bksync_evlog_s {
 #define NUM_EXT_TS          6       /* gpio0 = event0 ..... gpio5 = event5 */
 #define NUM_EVENT_TS        128     /* Directly mapped to PTP_MAX_TIMESTAMPS from ptp_private.h */
 typedef struct bksync_fw_extts_event_s {
-    u32         ts_event_id;
+    u32 ts_event_id;
     fw_tstamp_t tstamp;
 } __ATTRIBUTE_PACKED__ bksync_fw_extts_event_t;
 
 typedef struct bksync_extts_log_s {
-    u32                     head;   /* Read pointer - Updated by HOST */
-    u32                     tail;   /* Write pointer - Updated by FW */
+    u32 head;   /* Read pointer - Updated by HOST */
+    u32 tail;   /* Write pointer - Updated by FW */
     bksync_fw_extts_event_t event_ts[NUM_EVENT_TS];
-    u32                     overflow;
+    u32 overflow;
 } __ATTRIBUTE_PACKED__ bksync_fw_extts_log_t;
+
+typedef struct bksync_fw_comm_s {
+    u32 cmd;
+    u32 dw1[2];
+    u32 dw2[2];
+    u32 head;   /* Read pointer - Updated by HOST */
+    u32 tail;   /* Write pointer - Updated by FW */
+} __ATTRIBUTE_PACKED__ bksync_fw_comm_t;
 
 struct bksync_extts_event {
     int enable[NUM_EXT_TS];
@@ -475,6 +508,7 @@ typedef struct bksync_init_info_s {
     u32 host_cpu_port;
     u32 host_cpu_sysport;
     u32 udh_len;
+    u8  application_v2;
 } bksync_init_info_t;
 
 typedef struct bksync_bs_info_s {
@@ -785,19 +819,23 @@ struct bksync_ptp_priv {
     bksync_gpio_info_t      bksync_gpio_info[6];
     bksync_evlog_info_t     bksync_evlog_info[NUM_TS_EVENTS];
     bksync_dnx_jr2_devices_system_info_t bksync_jr2devs_sys_info;
-    volatile bksync_fw_extts_log_t      *extts_log; /* dma-able address for fw updates */
-    int                                 extts_dma_mem_size;
-    dma_addr_t                          extts_dma_mem_addr;
+    volatile bksync_fw_extts_log_t      *extts_log; /* dma-able/virtual address for fw updates */
     struct bksync_extts_event           extts_event;
     struct delayed_work                 extts_logging;
 
-    struct kobject          *kobj;
+    struct kobject                      *kobj;
+#ifdef BDE_EDK_SUPPORT
+    volatile bksync_fw_comm_t           *fw_comm;
+#else
+    int                                 extts_dma_mem_size;
+    dma_addr_t                          extts_dma_mem_addr;
+#endif
 };
 
 static struct bksync_ptp_priv *ptp_priv;
 volatile bksync_info_t *linuxPTPMemory = (bksync_info_t*)(0);
 static volatile int module_initialized;
-static int num_retries = 10;   /* Retry count */
+static int num_retries = 5;   /* Retry count */
 
 static void bksync_ptp_time_keep_init(void);
 static void bksync_ptp_time_keep_deinit(void);
@@ -860,7 +898,46 @@ ptp_sleep(int jiffies)
 
 }
 
+#ifdef BDE_EDK_SUPPORT
+static void bksync_hostcmd_data_op(int setget, u64 *d1, u64 *d2)
+{
+    u32 w0, w1;
+    u64 data;
 
+    if (!d1) {
+        return;
+    }
+
+    if (setget) {
+        if (d1) {
+            data = *d1;
+            ptp_priv->fw_comm->dw1[0] = (data & 0xFFFFFFFF);
+            ptp_priv->fw_comm->dw1[1] = (data >> 32);
+        }
+
+        if (d2) {
+            data = *d2;
+            ptp_priv->fw_comm->dw2[0] = (data & 0xFFFFFFFF);
+            ptp_priv->fw_comm->dw2[1] = (data >> 32);
+        }
+
+    } else {
+        if (d1) {
+            w0 = ptp_priv->fw_comm->dw1[0];
+            w1 = ptp_priv->fw_comm->dw1[1];
+            data = (((u64)w1 << 32) | (w0));
+            *d1 = data;
+        }
+
+        if (d2) {
+            w0 = ptp_priv->fw_comm->dw2[0];
+            w1 = ptp_priv->fw_comm->dw2[1];
+            data = (((u64)w1 << 32) | (w0));
+            *d2 = data;
+        }
+    }
+}
+#else
 static void bksync_hostcmd_data_op(int setget, u64 *d1, u64 *d2)
 {
     u32 w0, w1;
@@ -903,7 +980,7 @@ static void bksync_hostcmd_data_op(int setget, u64 *d1, u64 *d2)
         }
     }
 }
-
+#endif
 
 static int bksync_cmd_go(u32 cmd, void *data0, void *data1)
 {
@@ -931,10 +1008,17 @@ static int bksync_cmd_go(u32 cmd, void *data0, void *data1)
     ptp_priv->shared_addr->ksyncinit = cmd;
 
     /* init data */
+#ifdef BDE_EDK_SUPPORT
+    ptp_priv->fw_comm->dw1[0] = 0;
+    ptp_priv->fw_comm->dw1[1] = 0;
+    ptp_priv->fw_comm->dw2[0] = 0;
+    ptp_priv->fw_comm->dw2[1] = 0;
+#else
     DEV_WRITE32(ptp_priv, hostcmd_regs[1], 0x0);
     DEV_WRITE32(ptp_priv, hostcmd_regs[2], 0x0);
     DEV_WRITE32(ptp_priv, hostcmd_regs[3], 0x0);
     DEV_WRITE32(ptp_priv, hostcmd_regs[4], 0x0);
+#endif
 
     switch (cmd) {
         case BKSYNC_INIT:
@@ -958,7 +1042,6 @@ static int bksync_cmd_go(u32 cmd, void *data0, void *data1)
             snprintf(cmd_str, sizeof(cmd_str), "KSYNC_GETTIME");
             break;
         case BKSYNC_GET_TSTIME:
-            retry_cnt = (retry_cnt * 2);
             snprintf(cmd_str, sizeof(cmd_str), "KSYNC_GET_TSTIME");
             bksync_hostcmd_data_op(1, data0, data1);
             break;
@@ -1008,6 +1091,12 @@ static int bksync_cmd_go(u32 cmd, void *data0, void *data1)
             snprintf(cmd_str, sizeof(cmd_str), "KSYNC_EXTTSLOG");
             bksync_hostcmd_data_op(1, (u64 *)data0, (u64 *)data1);
             break;
+#ifdef BDE_EDK_SUPPORT
+        case BKSYNC_GET_EXTTS_BUFF:
+            snprintf(cmd_str, sizeof(cmd_str), "BKSYNC_GET_EXTTS_BUFF");
+            bksync_hostcmd_data_op(1, (u64 *)data0, (u64 *)data1);
+            break;
+#endif
         case BKSYNC_GPIO_PHASEOFFSET:
             snprintf(cmd_str, sizeof(cmd_str), "BKSYNC_GPIO_PHASEOFFSET");
             bksync_hostcmd_data_op(1, (u64 *)data0, (u64 *)data1);
@@ -1017,16 +1106,47 @@ static int bksync_cmd_go(u32 cmd, void *data0, void *data1)
             break;
     }
 
+#ifdef BDE_EDK_SUPPORT
+    ptp_priv->fw_comm->cmd = cmd;
+#else
     DEV_WRITE32(ptp_priv, hostcmd_regs[0], ptp_priv->shared_addr->ksyncinit);
+#endif
 
     do {
+#ifdef BDE_EDK_SUPPORT
+        cmd_status = ptp_priv->fw_comm->cmd;
+#else
         DEV_READ32(ptp_priv, hostcmd_regs[0], &cmd_status);
         ptp_priv->shared_addr->ksyncinit = cmd_status;
+#endif
 
         if (cmd_status == BKSYNC_DONE) {
             ret = 0;
             switch (cmd) {
                 case BKSYNC_GET_TSTIME:
+#ifndef BDE_EDK_SUPPORT
+                    {
+                        u64 d0 = 0ULL;
+                        u64 d1 = 0ULL;
+                        int retry2_cnt = 3;
+                        *(u64 *)data0 = 0ULL;
+                        *(u64 *)data1 = 0ULL;
+                        do {
+                            bksync_hostcmd_data_op(0, &d0, &d1);
+                            *(u64 *)data0 |= d0;
+                            *(u64 *)data1 |= d1;
+                            if (((*(u64 *)data0) & 0xFFFFFFFF) && ((*(u64 *)data0)>>32) &&
+                                ((*(u64 *)data1) & 0xFFFFFFFF) && ((*(u64 *)data1)>>32)) {
+                                break;
+                            }
+                            retry2_cnt--;
+                            ptp_usleep(1);
+                        } while (retry2_cnt);
+                        if (retry2_cnt == 0)
+                            ret = -1;
+                    }
+                    break;
+#endif
                 case BKSYNC_GETTIME:
                     bksync_hostcmd_data_op(0, (u64 *)data0, (u64 *)data1);
                     break;
@@ -1036,6 +1156,12 @@ static int bksync_cmd_go(u32 cmd, void *data0, void *data1)
                         bksync_hostcmd_data_op(0, (u64 *)data0, (u64 *)data1);
                     }
                     break;
+#ifdef BDE_EDK_SUPPORT
+                    /* Get the host ram address from fw.*/
+                case BKSYNC_GET_EXTTS_BUFF:
+                    bksync_hostcmd_data_op(0, (u64 *)data0, (u64 *)data1);
+                    break;
+#endif
                 default:
                     break;
             }
@@ -1064,7 +1190,6 @@ static int bksync_cmd_go(u32 cmd, void *data0, void *data1)
 
     return ret;
 }
-
 
 /**
  * bksync_ptp_adjfreq
@@ -1176,10 +1301,26 @@ static int bksync_exttslog_cmd(int event, int enable)
     int ret;
     u64 subcmd = 0, subcmd_data = 0;
 
+#ifdef BDE_EDK_SUPPORT
+    if (NULL == ptp_priv->extts_log) {
+        ret = bksync_cmd_go(BKSYNC_GET_EXTTS_BUFF,
+                &subcmd, &subcmd_data);
+        DBG_VERB(("bksync_exttslog_cmd: Get EXTTS buff: \
+                    subcmd_data:0x%llx\n", subcmd_data));
+
+        ptp_priv->extts_log =
+            (bksync_fw_extts_log_t *)lkbde_edk_dmamem_map_p2v(subcmd_data);
+        if (NULL == ptp_priv->extts_log) {
+            DBG_ERR(("EXTTS failed to get virtual addr for the physical address\n"));
+        }
+    }
+#else
+    subcmd_data = ptp_priv->extts_dma_mem_addr;
+#endif
+
     /* upper 32b -> event
      * lower 32b -> enable/disable */
     subcmd = (u64)event << 32 | enable;
-    subcmd_data = ptp_priv->extts_dma_mem_addr;
 
     ret = bksync_cmd_go(BKSYNC_EXTTSLOG, &subcmd, &subcmd_data);
     DBG_VERB(("bksync_evlog_cmd: subcmd: 0x%llx subcmd_data: 0x%llx rv:%d\n", subcmd, subcmd_data, ret));
@@ -1439,35 +1580,43 @@ static int
 bksync_txpkt_tsts_tsamp_get(int port, uint32_t pkt_seq_id, uint32_t *ts_valid, uint32_t *seq_id, uint64_t *timestamp)
 {
     int ret = 0;
-    uint64_t data;
+    uint64_t data=0ULL;
     u32 fifo_rxctr = 0;
 
     *ts_valid = 0;
-    *timestamp = 0;
+    *timestamp = 0ULL;
     *seq_id = 0;
 
     data = (port & 0xFFFF) | ((pkt_seq_id & 0xFFFF) << 16);
 
     ret = bksync_cmd_go(BKSYNC_GET_TSTIME, &data, timestamp);
     if (ret >= 0) {
-        fifo_rxctr = (data >> 32) & 0xFFFFFFFF;
+        *ts_valid = data & 0x1ULL;
         *seq_id = (data >> 16) & 0xFFFF;
-        *ts_valid = data & 0x1;
+        fifo_rxctr = (data >> 32) & 0xFFFFFFFF;
         if (*ts_valid) {
-            data = (port & 0xFFFF) | (pkt_seq_id << 16);
-            bksync_cmd_go(BKSYNC_ACK_TSTIME, &data, 0);
-            if (fifo_rxctr != 0) {
-                if (fifo_rxctr != (ptp_priv->port_stats[port].fifo_rxctr + 1)) {
-                    DBG_ERR(("FW reset or lost timestamp FIFO_RxCtr:"
-                                "(Prev %u : Current %u) on port:%d\n",
-                                ptp_priv->port_stats[port].fifo_rxctr,
-                                fifo_rxctr, port));
+            data = (port & 0xFFFF) | ((pkt_seq_id & 0xFFFF) << 16);
+            ret = bksync_cmd_go(BKSYNC_ACK_TSTIME, &data, 0ULL);
+            if (ret >= 0) {
+                if (fifo_rxctr != 0) {
+                    if (fifo_rxctr != (ptp_priv->port_stats[port].fifo_rxctr + 1)) {
+                        DBG_ERR(("FW reset or lost timestamp FIFO_RxCtr:"
+                                    "(Prev %u : Current %u) port:%d pkt_sn:%u hw_sn:%u \n",
+                                    ptp_priv->port_stats[port].fifo_rxctr,
+                                    fifo_rxctr, port, pkt_seq_id, *seq_id));
+                    }
+                    ptp_priv->port_stats[port].fifo_rxctr = fifo_rxctr;
                 }
-                ptp_priv->port_stats[port].fifo_rxctr = fifo_rxctr;
+            } else {
+                DBG_ERR(("BKSYNC_ACK_TSTIME failed on port:%d sn:%d\n", port, pkt_seq_id));
             }
+        } else {
+            DBG_ERR(("BKSYNC_GET_TSTIME invalid on port:%d pkt_sn:%d fw_sn:%d fifo:%d prev_fifo:%d\n",
+                    port, pkt_seq_id, *seq_id, fifo_rxctr,
+                    ptp_priv->port_stats[port].fifo_rxctr));
         }
     } else {
-        DBG_ERR(("BKSYNC_GET_TSTIME failed on port:%d\n", port));
+        DBG_ERR(("BKSYNC_GET_TSTIME failed on port:%d sn:%d\n", port, pkt_seq_id));
     }
     return ret;
 }
@@ -1573,8 +1722,9 @@ int bksync_ptp_hw_tstamp_tx_time_get(int dev_no, int port, uint8_t *pkt, uint64_
                 ptp_priv->port_stats[port].tsts_match += 1;
 
                 delta = ktime_us_delta(ktime_get(), start);
-                DBG_TXTS(("Port: %d Skb_SeqID %d FW_SeqId %d and TS:%llx FetchTime %lld\n",
-                          port, pktseq_id, seq_id, timestamp, delta));
+                DBG_TXTS(("Port: %d Skb_SeqID %d FW_SeqId %d and TS:%llx FetchTime %lld retries:%d\n",
+                          port, pktseq_id, seq_id, timestamp, delta,
+                          (num_retries-retry_cnt)));
 
                 if (delta < ptp_priv->port_stats[port].tsts_best_fetch_time || ptp_priv->port_stats[port].tsts_best_fetch_time == 0) {
                     ptp_priv->port_stats[port].tsts_best_fetch_time = delta;
@@ -1593,7 +1743,7 @@ int bksync_ptp_hw_tstamp_tx_time_get(int dev_no, int port, uint8_t *pkt, uint64_
                 continue;
             }
         }
-        ptp_sleep(1);
+        ptp_usleep(1000);
         retry_cnt--;
     } while(retry_cnt);
 
@@ -2138,7 +2288,14 @@ bksync_dnx_ase1588_tsh_hdr_update_ipv6(struct sk_buff *skb, int hwts, int encap_
 {
     /* Module Hdr [16] + PTCH [2] + ITMH [5] + ASE1588 [6] + TSH [4] + Internal Hdr [12] + UDH base [1] */
 
-    ptp_hdr_offset = 0x1d;
+    /* For JR3 for CF update 1588v2_Offset should also have system_header length of
+     * PTCH [2] + ITMH [5] + ASE1588 [6] + TSH [4] + Internal Hdr [12] + UDH base [1] = 30. */
+    if ((ptp_priv->bksync_init_info).application_v2) {
+        ptp_hdr_offset = 30;
+    } else {
+        ptp_hdr_offset = 29;
+    }
+
     switch(encap_type)
     {
         case 2: /* IEEE 802.3 */
@@ -2148,13 +2305,12 @@ bksync_dnx_ase1588_tsh_hdr_update_ipv6(struct sk_buff *skb, int hwts, int encap_
             ptp_hdr_offset += 46;
             break;
         case 6: /* UDP IPv6   */
-            ptp_hdr_offset += 0x42;
+            ptp_hdr_offset += 66;
             break;
         default:
             ptp_hdr_offset += 46;
             break;
     }
-
 
     /* ITMH */
     /* App Specific Ext Present  ASE 1588*/
@@ -2203,6 +2359,12 @@ static void
 bksync_dnx_ase1588_tsh_hdr_update(struct sk_buff *skb, int hwts, int encap_type, int ptp_hdr_offset)
 {
     /* Module Hdr [16] + PTCH [2] + ITMH [5] + ASE1588 [6] + TSH [4] */
+
+    /* For JR3 for CF update 1588v2_Offset should also have system_header length of
+     * PTCH [2] + ITMH [5] + ASE1588 [6] + TSH [4] = 17. */
+    if ((ptp_priv->bksync_init_info).application_v2) {
+        ptp_hdr_offset = ptp_hdr_offset + 17;
+    }
 
     /* ITMH */
     /* App Specific Ext Present */
@@ -2588,7 +2750,9 @@ static void bksync_ptp_extts_logging(struct work_struct *work)
     if (!module_initialized || ptp_priv->extts_log == NULL)
         goto exit;
 
-    DBG_VERB(("Queue overflow state:%u\n", ptp_priv->extts_log->overflow));
+    if (ptp_priv->extts_log->overflow) {
+        DBG_VERB(("EXTTS queue overflow\n"));
+    }
 
     tail = (int)ptp_priv->extts_log->tail;
     head = ptp_priv->extts_event.head;
@@ -3474,6 +3638,9 @@ static void bksync_ptp_fw_data_alloc(void)
                 ptp_priv->dma_mem_size, (long unsigned int)ptp_priv->dma_mem));
     }
 
+#ifdef BDE_EDK_SUPPORT
+    /* Do nothing */
+#else
     /* Allocate dma for timestmap logging for extts */
     dma_mem = 0;
     ptp_priv->extts_dma_mem_size = sizeof(bksync_fw_extts_log_t);
@@ -3497,6 +3664,7 @@ static void bksync_ptp_fw_data_alloc(void)
         DBG_ERR(("Shared memory allocation (%d bytes) for extts log successful at 0x%016lx.\n",
                 ptp_priv->extts_dma_mem_size, (long unsigned int)ptp_priv->extts_dma_mem_addr));
     }
+#endif
     return;
 }
 
@@ -3508,12 +3676,16 @@ static void bksync_ptp_fw_data_free(void)
         ptp_priv->evlog = NULL;
     }
 
+#ifdef BDE_EDK_SUPPORT
+    /* Do nothing */
+#else
     if (ptp_priv->extts_log != NULL) {
         DBG_ERR(("Free shared memory : extts log of %d bytes\n", ptp_priv->extts_dma_mem_size));
         DMA_FREE_COHERENT(ptp_priv->dma_dev, ptp_priv->extts_dma_mem_size,
                               (void *)ptp_priv->extts_log, ptp_priv->extts_dma_mem_addr);
         ptp_priv->extts_log = NULL;
     }
+#endif
     return;
 }
 
@@ -3543,11 +3715,16 @@ static void bksync_ptp_dma_init(int dcb_type)
 #else
         endianess = 1;
 #endif
+
+#ifdef BDE_EDK_SUPPORT
+        /* Do nothing */
+        (void)endianess;
+#else
         DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_14r(CMIC_CMC_BASE), ((pci_cos << 16) | endianess));
 
         DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_15r(CMIC_CMC_BASE), 1);
         DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_16r(CMIC_CMC_BASE), 1);
-
+#endif
     }
 
     bksync_ptp_fw_data_alloc();
@@ -3556,11 +3733,15 @@ static void bksync_ptp_dma_init(int dcb_type)
 
     ptp_priv->mirror_encap_bmp = 0x0;
 
+#ifdef BDE_EDK_SUPPORT
+    /* Do Nothing */
+#else
     hostcmd_regs[0] = CMIC_CMC_SCHAN_MESSAGE_21r(CMIC_CMC_BASE);
     hostcmd_regs[1] = CMIC_CMC_SCHAN_MESSAGE_20r(CMIC_CMC_BASE);
     hostcmd_regs[2] = CMIC_CMC_SCHAN_MESSAGE_19r(CMIC_CMC_BASE);
     hostcmd_regs[3] = CMIC_CMC_SCHAN_MESSAGE_18r(CMIC_CMC_BASE);
     hostcmd_regs[4] = CMIC_CMC_SCHAN_MESSAGE_17r(CMIC_CMC_BASE);
+#endif
 
     return;
 }
@@ -3578,7 +3759,9 @@ bksync_ioctl_cmd_handler(kcom_msg_clock_cmd_t *kmsg, int len, int dcb_type)
     u32 fw_status;
     bksync_dnx_jr2_devices_system_info_t *tmp_jr2devs_sys_info = NULL;
     int tmp = 0;
-
+#ifdef BDE_EDK_SUPPORT
+    uint64_t paddr;
+#endif
     kmsg->hdr.type = KCOM_MSG_TYPE_RSP;
 
     if (!module_initialized && kmsg->clock_info.cmd != KSYNC_M_HW_INIT) {
@@ -3598,9 +3781,25 @@ bksync_ioctl_cmd_handler(kcom_msg_clock_cmd_t *kmsg, int len, int dcb_type)
                 }
 
                 fw_core = kmsg->clock_info.data[1];
-                bksync_ptp_dma_init(dcb_type);
-                DEV_READ32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_21r(CMIC_CMC_BASE), &fw_status);
+#ifdef BDE_EDK_SUPPORT
+                paddr = kmsg->clock_info.data[7] << 32;
+                paddr |= kmsg->clock_info.data[8];
+                ptp_priv->fw_comm = (bksync_fw_comm_t *)lkbde_edk_dmamem_map_p2v(paddr);
+                if (ptp_priv->fw_comm == NULL) {
+                    DBG_ERR(("Hostram address conversion to get virtual address failed\n"));
+                    kmsg->hdr.status = KCOM_E_RESOURCE;
+                    return sizeof(kcom_msg_hdr_t);
+                }
+#endif
 
+                bksync_ptp_dma_init(dcb_type);
+
+#ifdef BDE_EDK_SUPPORT
+                /* Data from FW, hence don't memset fw_comm after address converstion */
+                fw_status = ptp_priv->fw_comm->cmd;
+#else
+                DEV_READ32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_21r(CMIC_CMC_BASE), &fw_status);
+#endif
                 /* Return error if the app is not ready yet. */
                 if (fw_status != 0xBADC0DE1) {
                     kmsg->hdr.status = KCOM_E_RESOURCE;
@@ -3612,16 +3811,18 @@ bksync_ioctl_cmd_handler(kcom_msg_clock_cmd_t *kmsg, int len, int dcb_type)
                 (ptp_priv->bksync_init_info).host_cpu_port = kmsg->clock_info.data[4];
                 (ptp_priv->bksync_init_info).host_cpu_sysport = kmsg->clock_info.data[5];
                 (ptp_priv->bksync_init_info).udh_len = kmsg->clock_info.data[6];
+                (ptp_priv->bksync_init_info).application_v2 = kmsg->clock_info.data[9];
 
-                DBG_VERB(("fw_core:%d uc_port:%d uc_sysport:%d pci_port:%d pci_sysport:%d\n",
+                DBG_VERB(("fw_core:%d uc_port:%d uc_sysport:%d pci_port:%d pci_sysport:%d application_v2:%d\n",
                         kmsg->clock_info.data[1], kmsg->clock_info.data[2], kmsg->clock_info.data[3],
-                        kmsg->clock_info.data[4], kmsg->clock_info.data[5]));
+                        kmsg->clock_info.data[4], kmsg->clock_info.data[5], kmsg->clock_info.data[9]));
 
-                DBG_VERB(("uc_port:%d uc_sysport:%d pci_port:%d pci_sysport:%d\n",
+                DBG_VERB(("uc_port:%d uc_sysport:%d pci_port:%d pci_sysport:%d application_v2:%d\n",
                         (ptp_priv->bksync_init_info).uc_port_num,
                         (ptp_priv->bksync_init_info).uc_port_sysport,
                         (ptp_priv->bksync_init_info).host_cpu_port,
-                        (ptp_priv->bksync_init_info).host_cpu_sysport));
+                        (ptp_priv->bksync_init_info).host_cpu_sysport,
+                        (ptp_priv->bksync_init_info).application_v2));
 
                 if (bksync_ptp_init(&(ptp_priv->ptp_caps)) >= 0) {
                     module_initialized = 1;
@@ -3630,8 +3831,12 @@ bksync_ioctl_cmd_handler(kcom_msg_clock_cmd_t *kmsg, int len, int dcb_type)
             }
             break;
         case KSYNC_M_HW_DEINIT:
+#ifdef BDE_EDK_SUPPORT
+            /* Do nothing */
+#else
             DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_15r(CMIC_CMC_BASE), 0);
             DEV_WRITE32(ptp_priv, CMIC_CMC_SCHAN_MESSAGE_16r(CMIC_CMC_BASE), 0);
+#endif
             bksync_ptp_deinit(&(ptp_priv->ptp_caps));
             module_initialized = 0;
             break;
@@ -3680,7 +3885,7 @@ bksync_ioctl_cmd_handler(kcom_msg_clock_cmd_t *kmsg, int len, int dcb_type)
                         tmp, tmp_jr2devs_sys_info->pph_lif_ext_size[tmp]));
             }
 
-            DBG_VERB(("\nsystem_headers_mode %u udh_enable %u\n",
+            DBG_VERB(("system_headers_mode %u udh_enable %u\n",
                     tmp_jr2devs_sys_info->system_headers_mode, tmp_jr2devs_sys_info->udh_enable));
 
             for (tmp = 0; tmp < BKSYNC_DNXJER2_UDH_DATA_TYPE_MAX; tmp++) {
@@ -3688,7 +3893,7 @@ bksync_ioctl_cmd_handler(kcom_msg_clock_cmd_t *kmsg, int len, int dcb_type)
                         tmp, tmp_jr2devs_sys_info->udh_data_lenght_per_type[tmp]));
             }
 
-            DBG_VERB(("\ncosq_port_cpu_channel :%u cosq_port_pp_port:%u\n",
+            DBG_VERB(("cosq_port_cpu_channel :%u cosq_port_pp_port:%u\n",
                     tmp_jr2devs_sys_info->cosq_port_cpu_channel, tmp_jr2devs_sys_info->cosq_port_cpu_channel));
 #endif
             break;
@@ -3852,7 +4057,7 @@ static int bksync_ptp_remove(void)
     static int
 _pprint(struct seq_file *m)
 {
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3,17,0)
+#ifdef PTPCLOCK_SUPPORTED
     /* put some goodies here */
     pprintf(m, "Broadcom BCM PTP Hardware Clock Module\n");
 #else
@@ -3875,7 +4080,7 @@ _pprint(struct seq_file *m)
     static int
 _init(void)
 {
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3,17,0)
+#ifdef PTPCLOCK_SUPPORTED
     bksync_ptp_register();
     return 0;
 #else
@@ -3896,7 +4101,7 @@ _init(void)
     static int
 _cleanup(void)
 {
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3,17,0)
+#ifdef PTPCLOCK_SUPPORTED
     bksync_ptp_remove();
     return 0;
 #else
