@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 import subprocess
 import syslog
 import sys
-import mgmt_oper_status_check
+import mgmt_oper_status
 
 class TestMgmtOperStatusCheck(unittest.TestCase):
 
@@ -15,7 +15,7 @@ class TestMgmtOperStatusCheck(unittest.TestCase):
         mock_SonicV2Connector.return_value = mock_db
         mock_db.keys.return_value = [] 
 
-        mgmt_oper_status_check.main()
+        mgmt_oper_status.main()
 
         mock_syslog.assert_called_with(syslog.LOG_DEBUG, 'No management interface found')
 
@@ -31,10 +31,10 @@ class TestMgmtOperStatusCheck(unittest.TestCase):
 
         mock_subprocess.return_value = subprocess.CompletedProcess(args=['cat', '/sys/class/net/eth0/operstate'], returncode=0, stdout='up', stderr='')
 
-        mgmt_oper_status_check.main()
+        mgmt_oper_status.main()
 
-        mock_syslog.assert_any_call(syslog.LOG_INFO, 'mgmt_oper_status_check: up')
-        mock_syslog.assert_any_call(syslog.LOG_INFO, 'mgmt_oper_status_check: up')
+        mock_syslog.assert_any_call(syslog.LOG_INFO, 'mgmt_oper_status: up')
+        mock_syslog.assert_any_call(syslog.LOG_INFO, 'mgmt_oper_status: up')
 
         mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth0', 'oper_status', 'up')
         mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'oper_status', 'up')
@@ -51,9 +51,9 @@ class TestMgmtOperStatusCheck(unittest.TestCase):
 
         mock_subprocess.side_effect = Exception("File not found")
 
-        mgmt_oper_status_check.main()
+        mgmt_oper_status.main()
 
-        mock_syslog.assert_called_with(syslog.LOG_ERR, "mgmt_oper_status_check exception : File not found")
+        mock_syslog.assert_called_with(syslog.LOG_ERR, "mgmt_oper_status exception : File not found")
         mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth0', 'oper_status', 'unknown')
 
 if __name__ == '__main__':
