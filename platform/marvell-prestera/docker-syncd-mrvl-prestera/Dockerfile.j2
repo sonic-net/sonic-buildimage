@@ -9,7 +9,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 
 COPY \
-{% for deb in docker_syncd_mrvl_debs.split(' ') -%}
+{% for deb in docker_syncd_mrvl_prestera_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
@@ -22,7 +22,7 @@ RUN apt-get update \
 RUN apt-get -y install libpcap-dev libxml2-dev python3-dev swig
 
 RUN dpkg -i \
-{% for deb in docker_syncd_mrvl_debs.split(' ') -%}
+{% for deb in docker_syncd_mrvl_prestera_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor %}
 
