@@ -23,13 +23,16 @@ def main():
         try:
             mgmt_ports = [key.split('MGMT_PORT|')[-1] for key in mgmt_ports_keys]
             for port in mgmt_ports:
+                state_db_mgmt_port = db.keys(db.STATE_DB, 'MGMT_PORT_TABLE|*' )
                 state_db_key = "MGMT_PORT_TABLE|{}".format(port)
-                # Reset status of mgmt port before updating with latest status
-                db.set(db.STATE_DB, state_db_key, 'oper_status', 'unknown')
+                prev_oper_status = 'unknown'
+                if state_db_key in state_db_mgmt_port:
+                    prev_oper_status = db.get(db.STATE_DB, state_db_key, 'oper_status')
                 port_operstate_path = '/sys/class/net/{}/operstate'.format(port)
-                oper_status = subprocess.run(['cat', port_operstate_path], capture_output=True, text=True)
-                db.set(db.STATE_DB, state_db_key, 'oper_status', oper_status.stdout.strip())
-                syslog.syslog(syslog.LOG_INFO, "mgmt_oper_status_check: {}".format(oper_status.stdout.strip()))
+                current_oper_status = subprocess.run(['cat', port_operstate_path], capture_output=True, text=True)
+                if current_oper_status.strip() != prev_oper_status:
+                    db.set(db.STATE_DB, state_db_key, 'oper_status', current_oper_status.stdout.strip())
+                    syslog.syslog(syslog.LOG_INFO, "mgmt_oper_status_check: {}".format(oper_status.stdout.strip()))
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, "mgmt_oper_status_check exception : {}".format(str(e)))
 
