@@ -1,6 +1,6 @@
 adduser==3.118+deb11u1
 apt==2.2.4
-base-files==11.1+deb11u10
+base-files==11.1+deb11u11
 base-passwd==3.5.51
 bash==5.1-2+deb11u1
 bsdutils==1:2.36.1-8+deb11u2
@@ -27,8 +27,8 @@ libaudit-common==1:3.0-2
 libaudit1==1:3.0-2
 libblkid1==2.36.1-8+deb11u2
 libbz2-1.0==1.0.8-4
-libc-bin==2.31-13+deb11u10
-libc6==2.31-13+deb11u10
+libc-bin==2.31-13+deb11u11
+libc6==2.31-13+deb11u11
 libcap-ng0==0.7.9-2.2+b1
 libcom-err2==1.46.2-2
 libcrypt1==1:4.4.18-4
@@ -41,13 +41,13 @@ libgcrypt20==1.8.7-6
 libgmp10==2:6.2.1+dfsg-1+deb11u1
 libgnutls30==3.7.1-5+deb11u5
 libgpg-error0==1.38-2
-libgssapi-krb5-2==1.18.3-6+deb11u4
+libgssapi-krb5-2==1.18.3-6+deb11u5
 libhogweed6==3.7.3-1
 libidn2-0==2.3.0-5
-libk5crypto3==1.18.3-6+deb11u4
+libk5crypto3==1.18.3-6+deb11u5
 libkeyutils1==1.6.1-2
-libkrb5-3==1.18.3-6+deb11u4
-libkrb5support0==1.18.3-6+deb11u4
+libkrb5-3==1.18.3-6+deb11u5
+libkrb5support0==1.18.3-6+deb11u5
 liblz4-1==1.9.3-2
 liblzma5==5.2.5-2.1~deb11u1
 libmount1==2.36.1-8+deb11u2
