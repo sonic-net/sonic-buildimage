@@ -1057,7 +1057,7 @@ class TestCfgGen(TestCase):
         )
 
     def test_minigraph_bgp_packet_chassis_static_route(self):
-        argument = ['-m', self.packet_chassis_graph0, '-p', self.packet_chassis_port_ini, '-v', "STATIC_ROUTE"]
+        argument = ['-m', self.packet_chassis_graph0, '-v', "STATIC_ROUTE"]
         output = self.run_script(argument)
         self.assertEqual(
             utils.to_dict(output.strip()),
