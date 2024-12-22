@@ -43,3 +43,16 @@
 0061-Set-multipath-to-514-and-disable-bgp-vnc-for-optimiz.patch
 0062-zebra-lib-use-internal-rbtree-per-ns.patch
 0063-Patch-to-send-tag-value-associated-with-route-via-ne.patch
+0064-SRv6-BGP-SID-reachability.patch
+0065-zebra-display-srv6-encapsulation-source-address-when-configured.patch
+0066-lib-fix-srv6-locator-flags-propagated-to-isis.patch
+0067-Add-support-for-SRv6-SID-Manager.patch
+0068-bgpd-Extend-BGP-to-communicate-with-the-SRv6-SID-Manager-to-allocate-release-SRv6-SIDs.patch
+0069-lib-nexthop-code-should-use-uint16_t-for-nexthop-cou.patch
+0070-Allow-16-bit-size-for-nexthops.patch
+0071-zebra-Only-notify-dplane-work-pthread-when-needed.patch
+0072-Fix-up-improper-handling-of-nexthops-for-nexthop-tra.patch
+0073-remove-in6addr-cmp.patch
+0074-bgp-best-port-reordering.patch
+0075-bgp-mp-info-changes.patch
+0076-Optimizations-and-problem-fixing-for-large-scale-ecmp-from-bgp.patch
