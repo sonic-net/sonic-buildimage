@@ -445,33 +445,28 @@ start() {
 
     DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
     if [ "$?" -eq "0" ]; then
-        {%- if docker_container_name == "database" and sonic_asic_platform == "vs" %}
-        echo "Removing existing ${DOCKERNAME} container"
-        docker rm -f ${DOCKERNAME}
+        {%- if docker_container_name == "database" %}
+        DOCKERMOUNT=""
         {%- else %}
-            {%- if docker_container_name == "database" %}
-            DOCKERMOUNT=""
-            {%- else %}
-            DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
-            {%- endif %}
-            if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
-                CONTAINER_EXISTS="yes"
-                preStartAction
-                {%- if docker_container_name == "database" %}
-                echo "Starting existing ${DOCKERNAME} container"
-                docker start ${DOCKERNAME}
-                {%- else %}
-                echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
-                /usr/local/bin/container start ${DOCKERNAME}
-                {%- endif %}
-                postStartAction
-                exit $?
-            fi
-
-            # docker created with a different HWSKU, remove and recreate
-            echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
-            docker rm -f ${DOCKERNAME}
+        DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
         {%- endif %}
+        if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
+            CONTAINER_EXISTS="yes"
+            preStartAction
+            {%- if docker_container_name == "database" %}
+            echo "Starting existing ${DOCKERNAME} container"
+            docker start ${DOCKERNAME}
+            {%- else %}
+            echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
+            /usr/local/bin/container start ${DOCKERNAME}
+            {%- endif %}
+            postStartAction
+            exit $?
+        fi
+
+        # docker created with a different HWSKU, remove and recreate
+        echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
+        docker rm -f ${DOCKERNAME}
     fi
 
     {%- if docker_container_name == "database" %}
