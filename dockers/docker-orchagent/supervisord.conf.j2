@@ -12,13 +12,6 @@ exitcodes=0,3
 events=PROCESS_STATE
 buffer_size=1024
 
-[eventlistener:supervisor-proc-exit-listener]
-command=/usr/bin/supervisor-proc-exit-listener --container-name swss
-events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING,PROCESS_COMMUNICATION_STDOUT
-autostart=true
-autorestart=unexpected
-buffer_size=1024
-
 [program:rsyslogd]
 command=/usr/sbin/rsyslogd -n -iNONE
 priority=1
@@ -81,7 +74,6 @@ command=/usr/bin/orchagent.sh
 priority=4
 autostart=false
 autorestart=false
-stdout_capture_maxbytes=1MB
 stdout_logfile=NONE
 stdout_syslog=true
 stderr_logfile=NONE
