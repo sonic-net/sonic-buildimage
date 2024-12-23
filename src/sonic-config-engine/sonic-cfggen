@@ -36,7 +36,7 @@ from portconfig import get_port_config, get_breakout_mode
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic
 from sonic_py_common import device_info
 from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector
-import asic_sensors_config
+from asic_sensors_config import get_asic_sensors_config
 
 PY3x = sys.version_info >= (3, 0)
 
@@ -462,9 +462,9 @@ def main():
         asic_sensors = {}
         if is_multi_asic():
             if asic_name is not None:
-                asic_sensors = asic_sensors_config.get_asic_sensors_config()
+                asic_sensors = get_asic_sensors_config()
         else:
-            asic_sensors = asic_sensors_config.get_asic_sensors_config()
+            asic_sensors = get_asic_sensors_config()
         if asic_sensors:
             deep_update(data, asic_sensors) 
 
