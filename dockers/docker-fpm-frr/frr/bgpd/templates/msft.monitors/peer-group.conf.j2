@@ -5,6 +5,8 @@
 ! FIXME: check that with frr. that was part of quagga
   neighbor BGPMON activate
 !
+  neighbor BGPMON_V6 peer-group
+  neighbor BGPMON_V6 passive
 {% if CONFIG_DB__DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}
   neighbor BGPMON_V6 update-source Loopback4096
 {% elif loopback0_ipv4 %}
@@ -14,8 +16,6 @@
   neighbor BGPMON route-map TO_BGPMON out
   neighbor BGPMON send-community
   neighbor BGPMON maximum-prefix 1
-  neighbor BGPMON_V6 peer-group
-  neighbor BGPMON_V6 passive
   address-family ipv4
     neighbor BGPMON_V6 activate
     neighbor BGPMON_V6 addpath-tx-all-paths
