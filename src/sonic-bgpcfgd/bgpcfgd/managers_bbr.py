@@ -5,6 +5,11 @@ from swsscommon import swsscommon
 from .log import log_err, log_info
 from .manager import Manager
 
+BGP_BBR_TABLE_NAME = "BGP_BBR"
+BGP_BBR_STATUS_KEY = "status"
+BGP_BBR_STATUS_ENABLED = "enabled"
+BGP_BBR_STATUS_DISABLED = "disabled"
+
 
 class BBRMgr(Manager):
     """ This class initialize "BBR" feature for  """
@@ -37,11 +42,13 @@ class BBRMgr(Manager):
         self.cfg_mgr.push_list(cmds)
         self.cfg_mgr.restart_peer_groups(peer_groups_to_restart)
         log_info("BBRMgr::Scheduled BBR update")
+        self.directory.put(self.db_name, self.table_name, BGP_BBR_STATUS_KEY, data[BGP_BBR_STATUS_KEY])
         return True
 
     def del_handler(self, key):
         """ Implementation of 'DEL' command for this class """
         log_err("The '%s' table shouldn't be removed from the db" % self.table_name)
+        self.directory.remove(self.db_name, self.table_name, BGP_BBR_STATUS_KEY)
 
     def __init(self):
         """ Initialize BBRMgr. Extracted from constructor """
