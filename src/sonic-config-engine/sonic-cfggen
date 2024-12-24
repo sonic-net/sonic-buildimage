@@ -433,7 +433,7 @@ def main():
         if asic_name is not None:
             if args.minigraph is not None:
                 asic_role = parse_asic_sub_role(args.minigraph, asic_name)
-                switch_type = parse_asic_switch_type(args.minigraph, asic_name)
+                switch_type = parse_asic_switch_type(args.minigraph, asic_name, hostname)
             if ((switch_type is not None and switch_type.lower() == "chassis-packet") or
                 (asic_role is not None and asic_role.lower() == "backend") or
                 (platform == device_info.VS_PLATFORM)) :

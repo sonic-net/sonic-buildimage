@@ -2623,7 +2623,7 @@ def parse_xml(filename, platform=None, port_config_file=None, asic_name=None, hw
 
     if static_routes:
         # Enable static Route BFD by default for static route in chassis-packet
-        if switch_type == "chassis-packet":
+        if switch_type == "chassis-packet" or chassis_type == "chassis-packet":
             for pfx, data in static_routes.items():
                 data.update({"bfd":"true"})
         results['STATIC_ROUTE'] = static_routes
@@ -2903,9 +2903,12 @@ def parse_asic_sub_role(filename, asic_name):
             sub_role, _, _, _, _, _= parse_asic_meta(child, asic_name)
             return sub_role
 
-def parse_asic_switch_type(filename, asic_name):
+def parse_asic_switch_type(filename, asic_name, hostname):
     if os.path.isfile(filename):
         root = ET.parse(filename).getroot()
+        switch_type, _ = get_chassis_type_and_hostname(root, hostname)
+        if switch_type:
+            return switch_type
         for child in root:
             if child.tag == str(QName(ns, "MetadataDeclaration")):
                 _, _, switch_type, _, _, _ = parse_asic_meta(child, asic_name)
