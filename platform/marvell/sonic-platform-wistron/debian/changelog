@@ -1,0 +1,5 @@
+sonic-platform-wistron (0.1) unstable; urgency=low
+
+  * Initial release with support for es1227-54ts, es2227-54ts, es2227-54ts-p.
+
+ -- Wistron <Roger_Chang@wistron.com>  Wed, 23 Nov 2021 09:57:58 +0800
