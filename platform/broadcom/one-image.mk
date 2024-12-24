@@ -51,14 +51,19 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(INVENTEC_D7264Q28B_PLATFORM_MODULE) \
                                $(INVENTEC_D6356_PLATFORM_MODULE) \
                                $(INVENTEC_D6332_PLATFORM_MODULE) \
-                               $(CEL_DX010_PLATFORM_MODULE) \
-                               $(CEL_HALIBURTON_PLATFORM_MODULE) \
-                               $(CEL_SEASTONE2_PLATFORM_MODULE) \
-                               $(CEL_DS3000_PLATFORM_MODULE) \
-                               $(CEL_DS1000_PLATFORM_MODULE) \
-                               $(CEL_QUESTONE2_PLATFORM_MODULE) \
-                               $(CEL_SILVERSTONE_V2_PLATFORM_MODULE) \
-                               $(CEL_DS2000_PLATFORM_MODULE) \
+                               $(CLS_DX010_PLATFORM_MODULE) \
+                               $(CLS_HALIBURTON_PLATFORM_MODULE) \
+                               $(CLS_QUESTONE2_PLATFORM_MODULE) \
+                               $(CLS_SEASTONE2_PLATFORM_MODULE) \
+                               $(CLS_SILVERSTONE_PLATFORM_MODULE) \
+                               $(CLS_PO_DS1000_PLATFORM_MODULE) \
+                               $(CLS_PO_DS2000_PLATFORM_MODULE) \
+                               $(CLS_PO_DS3000_PLATFORM_MODULE) \
+                               $(CLS_PO_SILVERSTONE_V2_PLATFORM_MODULE) \
+                               $(CLS_DS1000_PLATFORM_MODULE) \
+                               $(CLS_DS2000_PLATFORM_MODULE) \
+                               $(CLS_DS3000_PLATFORM_MODULE) \
+                               $(CLS_DS4000_PLATFORM_MODULE) \
                                $(DELTA_AG9032V1_PLATFORM_MODULE) \
                                $(DELTA_AG9064_PLATFORM_MODULE) \
                                $(DELTA_AG5648_PLATFORM_MODULE) \
@@ -78,7 +83,6 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(BRCM_XLR_GTS_PLATFORM_MODULE) \
                                $(DELTA_AG9032V2A_PLATFORM_MODULE) \
                                $(JUNIPER_QFX5210_PLATFORM_MODULE) \
-                               $(CEL_SILVERSTONE_PLATFORM_MODULE) \
                                $(JUNIPER_QFX5200_PLATFORM_MODULE) \
                                $(DELTA_AGC032_PLATFORM_MODULE) \
                                $(RUIJIE_B6510_48VS8CQ_PLATFORM_MODULE) \
