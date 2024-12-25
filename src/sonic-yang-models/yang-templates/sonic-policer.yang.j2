@@ -14,6 +14,10 @@ module sonic-policer {
 		prefix stypes;
 	}
 
+    import sonic-acl {
+        prefix acl;
+    }
+
 	description "Policer YANG Module for SONiC OS";
 
 	revision 2022-02-03 {
@@ -119,6 +123,11 @@ module sonic-policer {
 					default "forward";
 					description "Red action";
 				}
+
+				/* prevent deletion of polocer that referenced by ACL rule.
+				   Note that new policer won't be referenced by any ACL rules initially */
+				must "not(current()/../acl:sonic-acl/acl:ACL_RULE/acl:ACL_RULE_LIST[acl:POLICER_ACTION=current()/name])" {
+				    error-message "Policer cannot be deleted when referenced by an ACL rule.";
 			}
 			/* end of list POLICER_LIST */
 		}
