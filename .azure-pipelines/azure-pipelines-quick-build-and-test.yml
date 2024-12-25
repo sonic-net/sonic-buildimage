@@ -1,0 +1,108 @@
+pr:
+   branches:
+     include:
+       - master
+   paths:
+     exclude:
+       - .github
+       - docs
+       - LICENSE
+       - README.md
+       - SECURITY.md
+trigger: none
+
+
+name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
+resources:
+  repositories:
+  - repository: sonic-mgmt
+    type: github
+    name: sonic-net/sonic-mgmt
+    ref: master
+    endpoint: sonic-net
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    endpoint: sonic-net
+    ref: master
+
+
+parameters:
+  - name: github_conn
+    type: string
+    default: 'github.com_sonic-net'
+
+  - name: SUBMODULE_NAME
+    type: string
+    default: ''
+
+  - name: COMMIT_ID
+    type: string
+    default: ''
+
+  - name: BRANCH
+    type: string
+    default: 'master'
+
+  - name: TOPOLOGY
+    type: string
+    default: ''
+    values:
+      - t0
+      - t0-64-32
+      - t1-lag
+      - multi-asic-t1-lag
+      - dualtor
+      - dpu
+
+  - name: DEPLOY_MG_EXTRA_PARAMS
+    type: string
+    default: ''
+
+  - name: SCRIPTS
+    type: string
+    default: ''
+
+  - name: FEATURES
+    type: string
+    default: ''
+
+
+stages:
+  - stage: BuildVS
+    pool: sonicbld-1es
+    jobs:
+    - template: .azure-pipelines/azure-pipelines-build.yml@buildimage
+      parameters:
+        buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.VERSION_CONTROL_OPTIONS }}'
+        jobGroups:
+        - name: vs
+
+  - stage: Test
+    dependsOn: BuildVS
+    condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
+    variables:
+    - group: SONiC-Elastictest
+    - name: inventory
+      value: veos_vtb
+    - name: testbed_file
+      value: vtestbed.csv
+
+    jobs:
+    - job: KVMTEST
+      displayName: "kvmtest by Elastictest"
+      timeoutInMinutes: 240
+      continueOnError: false
+      pool: sonic-ubuntu-1c
+      steps:
+      - template: .azure-pipelines/run-test-elastictest-template.yml
+        parameters:
+          TOPOLOGY: ${{ parameters.TOPOLOGY }}
+          MIN_WORKER: $(T0_INSTANCE_NUM)
+          MAX_WORKER: $(T0_INSTANCE_NUM)
+          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+          MGMT_BRANCH: ${{ parameters.BRANCH }}
+          SCRIPTS: ${{ parameters.SCRIPTS }}
+          FEATURES: ${{ parameters.FEATURES }}
+          DEPLOY_MG_EXTRA_PARAMS: ${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}
