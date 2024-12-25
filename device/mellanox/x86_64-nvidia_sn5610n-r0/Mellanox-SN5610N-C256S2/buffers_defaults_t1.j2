@@ -15,19 +15,17 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 #}
-
-{% set default_cable = '250m' %}
-{% set ingress_lossless_pool_size =  '142644224' %}
-{% set ingress_lossless_pool_xoff =  '1024' %}
-{% set egress_lossless_pool_size =  '158229504' %}
-{% set egress_lossy_pool_size =  '142644224' %}
-
+{% set default_cable = '0m' %}
 {%-set ports2cable = {
-            'torrouter_server'       : '40m',
-            'leafrouter_torrouter'   : '250m',
-            'spinerouter_leafrouter' : '1000m'
+            'torrouter_server'       : '0m',
+            'leafrouter_torrouter'   : '0m',
+            'spinerouter_leafrouter' : '0m'
        }
 -%}
+{% set ingress_lossless_pool_size =  '142645248' %}
+{% set ingress_lossless_pool_xoff =  '0' %}
+{% set egress_lossless_pool_size =  '158229504' %}
+{% set egress_lossy_pool_size =  '142645248' %}
 
 {% import 'buffers_defaults_objects.j2' as defs with context %}
 
