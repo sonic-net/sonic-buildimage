@@ -15,6 +15,9 @@ try:
 except ImportError as err:
     raise ImportError(str(err) + "- required module not found")
 
+FAN1_MAX_SPEED_OFFSET = 71
+FAN2_MAX_SPEED_OFFSET = 73
+PSU_FAN_MAX_SPEED_OFFSET = 50
 FAN_DIRECTION_OFFSET = 69
 PSU_FAN_DIRECTION_OFFSET = 47
 FANS_PER_TRAY = 2
@@ -52,6 +55,10 @@ class Fan(FanBase):
             # starting from 1
             self.fantrayindex = fantray_index + 1
             self.fanindex = fan_index + 1
+            if (self.fanindex == 1):
+                self.max_speed_offset = FAN1_MAX_SPEED_OFFSET
+            else:
+                self.max_speed_offset = FAN2_MAX_SPEED_OFFSET
             self.fan_direction_offset = FAN_DIRECTION_OFFSET
             self.index = (self.fantrayindex - 1) * 2 + self.fanindex
             self.prsnt_sensor = IpmiSensor(self.FAN_SENSOR_MAPPING[self.index]["Prsnt"],
@@ -67,7 +74,9 @@ class Fan(FanBase):
                                            is_discrete=True)
             self.speed_sensor = IpmiSensor(self.PSU_FAN_SENSOR_MAPPING[self.fanindex]["Speed"])
             self.fru = IpmiFru(self.PSU_FRU_MAPPING[self.fanindex])
+            self.max_speed_offset = PSU_FAN_MAX_SPEED_OFFSET
             self.fan_direction_offset = PSU_FAN_DIRECTION_OFFSET
+        self.max_speed = 0
 
     def get_name(self):
         """
@@ -171,14 +180,25 @@ class Fan(FanBase):
 
     def get_speed(self):
         """
-        Retrieves the max speed of the fan
+        Retrieves the speed of the fan
         Returns:
             int: percentage of the max fan speed
         Note:
             BMC based platforms thermal control handled by BMC itself.
             To avoid FRU call CPU consumption, just returning None
         """
-        return None
+        if self.max_speed == 0:
+            is_valid, max_speed = self.fru.get_fru_data(self.max_speed_offset,2)
+            if not is_valid:
+                return 0
+            self.max_speed = max_speed[1]
+            self.max_speed = max_speed[1] << 8 | max_speed[0]
+        is_valid, fan_speed = self.speed_sensor.get_reading()
+        if not is_valid or self.max_speed == 0:
+            speed = 0
+        else:
+            speed = (100 * fan_speed)//self.max_speed
+        return speed
 
     def get_speed_rpm(self):
         """
