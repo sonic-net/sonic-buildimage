@@ -1,37 +1,36 @@
-From c76295e0490883455e9ad73bc0a2614194ffcdd0 Mon Sep 17 00:00:00 2001
+From e1f3151c78deea3c00dd29041c55b76cb6147f63 Mon Sep 17 00:00:00 2001
 From: philo <philo@micasnetworks.com>
-Date: Thu, 31 Oct 2024 03:40:37 -0500
-Subject: [PATCH] support vrrp6 commands and tracking interface
+Date: Thu, 12 Dec 2024 23:52:27 -0600
+Subject: [PATCH] support vrrp6 tgq
 
-Signed-off-by: philo <philo@micasnetworks.com>
 ---
  lib/command.h           |   1 +
  vrrpd/subdir.am         |   3 +
  vrrpd/vrrp.c            | 602 +++++++++++++++++++++++++-----------
  vrrpd/vrrp.h            |  94 +++++-
- vrrpd/vrrp6_vty.c       | 655 ++++++++++++++++++++++++++++++++++++++++
+ vrrpd/vrrp6_vty.c       | 657 ++++++++++++++++++++++++++++++++++++++++
  vrrpd/vrrp6_vty.h       |  28 ++
  vrrpd/vrrp_main.c       |   2 +
- vrrpd/vrrp_northbound.c | 296 ++++++++++++++----
- vrrpd/vrrp_vty.c        | 244 +++++++--------
+ vrrpd/vrrp_northbound.c | 297 ++++++++++++++----
+ vrrpd/vrrp_vty.c        | 245 +++++++--------
  vrrpd/vrrp_vty.h        |   4 +-
  yang/frr-vrrpd.yang     |  60 +++-
- 11 files changed, 1599 insertions(+), 390 deletions(-)
+ 11 files changed, 1601 insertions(+), 392 deletions(-)
  create mode 100644 vrrpd/vrrp6_vty.c
  create mode 100644 vrrpd/vrrp6_vty.h
 
 diff --git a/lib/command.h b/lib/command.h
-index 8f5d96053..18f89066a 100644
+index 04c66adb2..4b9054038 100644
 --- a/lib/command.h
 +++ b/lib/command.h
-@@ -183,6 +183,7 @@ enum node_type {
+@@ -174,6 +174,7 @@ enum node_type {
  	BFD_PROFILE_NODE,	 /* BFD profile configuration mode. */
  	OPENFABRIC_NODE,	/* OpenFabric router configuration node */
  	VRRP_NODE,		 /* VRRP node */
-+	VRRP6_NODE,		 /* VRRP6 node */
++	VRRP6_NODE,              /* VRRP6 node */
  	BMP_NODE,		/* BMP config under router bgp */
- 	NODE_TYPE_MAX, /* maximum */
- };
+ 	ISIS_SRV6_NODE,    /* ISIS SRv6 node */
+ 	ISIS_SRV6_NODE_MSD_NODE,    /* ISIS SRv6 Node MSDs node */
 diff --git a/vrrpd/subdir.am b/vrrpd/subdir.am
 index 03b404261..4cf6f3ba7 100644
 --- a/vrrpd/subdir.am
@@ -59,10 +58,10 @@ index 03b404261..4cf6f3ba7 100644
  
  vrrpd_vrrpd_LDADD = lib/libfrr.la @LIBCAP@
 diff --git a/vrrpd/vrrp.c b/vrrpd/vrrp.c
-index c3ab1abbd..0e689edc2 100644
+index 017387924..2607b6ecf 100644
 --- a/vrrpd/vrrp.c
 +++ b/vrrpd/vrrp.c
-@@ -42,11 +42,14 @@
+@@ -29,11 +29,14 @@
  
  DEFINE_MTYPE_STATIC(VRRPD, VRRP_IP, "VRRP IP address");
  DEFINE_MTYPE_STATIC(VRRPD, VRRP_RTR, "VRRP Router");
@@ -77,7 +76,7 @@ index c3ab1abbd..0e689edc2 100644
  
  struct vrrp_defaults vd;
  
-@@ -228,7 +231,9 @@ static struct vrrp_vrouter *vrrp_lookup_by_if_mvl(struct interface *mvl_ifp)
+@@ -215,7 +218,9 @@ static struct vrrp_vrouter *vrrp_lookup_by_if_mvl(struct interface *mvl_ifp)
  
  	uint8_t vrid = mvl_ifp->hw_addr[5];
  
@@ -88,7 +87,7 @@ index c3ab1abbd..0e689edc2 100644
  }
  
  /*
-@@ -300,91 +305,128 @@ void vrrp_check_start(struct vrrp_vrouter *vr)
+@@ -287,91 +292,128 @@ void vrrp_check_start(struct vrrp_vrouter *vr)
  	if (vr->shutdown || vr->ifp == NULL)
  		return;
  
@@ -293,7 +292,7 @@ index c3ab1abbd..0e689edc2 100644
  }
  
  void vrrp_set_advertisement_interval(struct vrrp_vrouter *vr,
-@@ -394,13 +436,12 @@ void vrrp_set_advertisement_interval(struct vrrp_vrouter *vr,
+@@ -381,13 +423,12 @@ void vrrp_set_advertisement_interval(struct vrrp_vrouter *vr,
  		return;
  
  	vr->advertisement_interval = advertisement_interval;
@@ -309,7 +308,7 @@ index c3ab1abbd..0e689edc2 100644
  	struct listnode *ln;
  	struct ipaddr *iter;
  
-@@ -411,9 +452,169 @@ static bool vrrp_has_ip(struct vrrp_vrouter *vr, struct ipaddr *ip)
+@@ -398,9 +439,169 @@ static bool vrrp_has_ip(struct vrrp_vrouter *vr, struct ipaddr *ip)
  	return false;
  }
  
@@ -373,7 +372,7 @@ index c3ab1abbd..0e689edc2 100644
 +	struct vrf *vrf;
 +	struct interface *ifp;
 +
-+	if (!name || strnlen(name, INTERFACE_NAMSIZ) == INTERFACE_NAMSIZ)
++	if (!name || strnlen(name, IFNAMSIZ) == IFNAMSIZ)
 +		return NULL;
 +
 +	RB_FOREACH (vrf, vrf_name_head, &vrfs_by_name) {
@@ -480,7 +479,7 @@ index c3ab1abbd..0e689edc2 100644
  	int af = r->family;
  
  	assert(r->family == af);
-@@ -478,7 +679,7 @@ int vrrp_del_ip(struct vrrp_vrouter *vr, struct ipaddr *ip)
+@@ -465,7 +666,7 @@ int vrrp_del_ip(struct vrrp_vrouter *vr, struct ipaddr *ip)
  	struct ipaddr *iter;
  	int ret = 0;
  
@@ -489,7 +488,7 @@ index c3ab1abbd..0e689edc2 100644
  
  	if (!vrrp_has_ip(r->vr, ip))
  		return 0;
-@@ -527,6 +728,14 @@ static void vrrp_router_addr_list_del_cb(void *val)
+@@ -514,6 +715,14 @@ static void vrrp_router_addr_list_del_cb(void *val)
  	XFREE(MTYPE_VRRP_IP, ip);
  }
  
@@ -504,7 +503,7 @@ index c3ab1abbd..0e689edc2 100644
  /*
   * Search for a suitable macvlan subinterface we can attach to, and if found,
   * attach to it.
-@@ -629,9 +838,9 @@ static void vrrp_router_destroy(struct vrrp_router *r)
+@@ -616,9 +825,9 @@ static void vrrp_router_destroy(struct vrrp_router *r)
  }
  
  struct vrrp_vrouter *vrrp_vrouter_create(struct interface *ifp, uint8_t vrid,
@@ -516,7 +515,7 @@ index c3ab1abbd..0e689edc2 100644
  
  	if (vr)
  		return vr;
-@@ -644,15 +853,21 @@ struct vrrp_vrouter *vrrp_vrouter_create(struct interface *ifp, uint8_t vrid,
+@@ -631,15 +840,21 @@ struct vrrp_vrouter *vrrp_vrouter_create(struct interface *ifp, uint8_t vrid,
  	vr->ifp = ifp;
  	vr->version = version;
  	vr->vrid = vrid;
@@ -540,7 +539,7 @@ index c3ab1abbd..0e689edc2 100644
  
  	vrrp_set_advertisement_interval(vr, vd.advertisement_interval);
  
-@@ -663,13 +878,13 @@ struct vrrp_vrouter *vrrp_vrouter_create(struct interface *ifp, uint8_t vrid,
+@@ -650,13 +865,13 @@ struct vrrp_vrouter *vrrp_vrouter_create(struct interface *ifp, uint8_t vrid,
  
  void vrrp_vrouter_destroy(struct vrrp_vrouter *vr)
  {
@@ -557,7 +556,7 @@ index c3ab1abbd..0e689edc2 100644
  {
  	if (!ifp)
  		return NULL;
-@@ -678,6 +893,7 @@ struct vrrp_vrouter *vrrp_lookup(const struct interface *ifp, uint8_t vrid)
+@@ -665,6 +880,7 @@ struct vrrp_vrouter *vrrp_lookup(const struct interface *ifp, uint8_t vrid)
  
  	vr.vrid = vrid;
  	vr.ifp = (struct interface *)ifp;
@@ -565,7 +564,7 @@ index c3ab1abbd..0e689edc2 100644
  
  	return hash_lookup(vrrp_vrouters_hash, &vr);
  }
-@@ -1766,7 +1982,18 @@ vrrp_autoconfig_autocreate(struct interface *mvl_ifp)
+@@ -1763,7 +1979,18 @@ vrrp_autoconfig_autocreate(struct interface *mvl_ifp)
  	       "Autoconfiguring VRRP on %s",
  	       vrid, family2str(fam), p->name);
  
@@ -585,7 +584,7 @@ index c3ab1abbd..0e689edc2 100644
  
  	if (!vr) {
  		zlog_warn(VRRP_LOGPFX VRRP_LOGPFX_VRID VRRP_LOGPFX_FAM
-@@ -1782,14 +2009,11 @@ vrrp_autoconfig_autocreate(struct interface *mvl_ifp)
+@@ -1779,14 +2006,11 @@ vrrp_autoconfig_autocreate(struct interface *mvl_ifp)
  	 * in order to get Zebra to send us their addresses so we can
  	 * autoconfigure them.
  	 */
@@ -603,7 +602,7 @@ index c3ab1abbd..0e689edc2 100644
  
  	return vr;
  }
-@@ -1813,7 +2037,7 @@ static int vrrp_autoconfig_if_add(struct interface *ifp)
+@@ -1810,7 +2034,7 @@ static int vrrp_autoconfig_if_add(struct interface *ifp)
  	bool created = false;
  	struct vrrp_vrouter *vr;
  
@@ -612,7 +611,7 @@ index c3ab1abbd..0e689edc2 100644
  		return 0;
  
  	if (!ifp || !ifp->link_ifindex || !vrrp_ifp_has_vrrp_mac(ifp))
-@@ -1823,7 +2047,10 @@ static int vrrp_autoconfig_if_add(struct interface *ifp)
+@@ -1820,7 +2044,10 @@ static int vrrp_autoconfig_if_add(struct interface *ifp)
  
  	if (!vr) {
  		vr = vrrp_autoconfig_autocreate(ifp);
@@ -624,7 +623,7 @@ index c3ab1abbd..0e689edc2 100644
  	}
  
  	if (!vr || !vr->autoconf)
-@@ -1834,30 +2061,17 @@ static int vrrp_autoconfig_if_add(struct interface *ifp)
+@@ -1831,30 +2058,17 @@ static int vrrp_autoconfig_if_add(struct interface *ifp)
  		 * We didn't create it, but it has already been autoconfigured.
  		 * Try to attach this interface to the existing instance.
  		 */
@@ -660,7 +659,7 @@ index c3ab1abbd..0e689edc2 100644
  			}
  		}
  	}
-@@ -1883,7 +2097,7 @@ static int vrrp_autoconfig_if_add(struct interface *ifp)
+@@ -1880,7 +2094,7 @@ static int vrrp_autoconfig_if_add(struct interface *ifp)
   */
  static int vrrp_autoconfig_if_del(struct interface *ifp)
  {
@@ -669,7 +668,7 @@ index c3ab1abbd..0e689edc2 100644
  		return 0;
  
  	struct vrrp_vrouter *vr;
-@@ -1894,7 +2108,7 @@ static int vrrp_autoconfig_if_del(struct interface *ifp)
+@@ -1891,7 +2105,7 @@ static int vrrp_autoconfig_if_del(struct interface *ifp)
  
  	for (ALL_LIST_ELEMENTS_RO(vrs, ln, vr))
  		if (vr->autoconf
@@ -678,7 +677,7 @@ index c3ab1abbd..0e689edc2 100644
  			DEBUGD(&vrrp_dbg_auto,
  			       VRRP_LOGPFX VRRP_LOGPFX_VRID
  			       "All VRRP interfaces for instance deleted; destroying autoconfigured VRRP router",
-@@ -1922,7 +2136,7 @@ static int vrrp_autoconfig_if_del(struct interface *ifp)
+@@ -1919,7 +2133,7 @@ static int vrrp_autoconfig_if_del(struct interface *ifp)
   */
  static int vrrp_autoconfig_if_up(struct interface *ifp)
  {
@@ -687,7 +686,7 @@ index c3ab1abbd..0e689edc2 100644
  		return 0;
  
  	struct vrrp_vrouter *vr = vrrp_lookup_by_if_mvl(ifp);
-@@ -1955,7 +2169,7 @@ static int vrrp_autoconfig_if_up(struct interface *ifp)
+@@ -1952,7 +2166,7 @@ static int vrrp_autoconfig_if_up(struct interface *ifp)
   */
  static int vrrp_autoconfig_if_down(struct interface *ifp)
  {
@@ -696,7 +695,7 @@ index c3ab1abbd..0e689edc2 100644
  		return 0;
  
  	return 0;
-@@ -1978,16 +2192,14 @@ static int vrrp_autoconfig_if_down(struct interface *ifp)
+@@ -1975,16 +2189,14 @@ static int vrrp_autoconfig_if_down(struct interface *ifp)
   */
  static int vrrp_autoconfig_if_address_add(struct interface *ifp)
  {
@@ -716,7 +715,7 @@ index c3ab1abbd..0e689edc2 100644
  	}
  
  	return 0;
-@@ -2010,16 +2222,14 @@ static int vrrp_autoconfig_if_address_add(struct interface *ifp)
+@@ -2007,16 +2219,14 @@ static int vrrp_autoconfig_if_address_add(struct interface *ifp)
   */
  static int vrrp_autoconfig_if_address_del(struct interface *ifp)
  {
@@ -736,7 +735,7 @@ index c3ab1abbd..0e689edc2 100644
  	}
  
  	return 0;
-@@ -2027,7 +2237,7 @@ static int vrrp_autoconfig_if_address_del(struct interface *ifp)
+@@ -2024,7 +2234,7 @@ static int vrrp_autoconfig_if_address_del(struct interface *ifp)
  
  int vrrp_autoconfig(void)
  {
@@ -745,7 +744,7 @@ index c3ab1abbd..0e689edc2 100644
  		return 0;
  
  	struct vrf *vrf;
-@@ -2049,6 +2259,13 @@ void vrrp_autoconfig_on(int version)
+@@ -2046,6 +2256,13 @@ void vrrp_autoconfig_on(int version)
  	vrrp_autoconfig();
  }
  
@@ -759,7 +758,7 @@ index c3ab1abbd..0e689edc2 100644
  void vrrp_autoconfig_off(void)
  {
  	vrrp_autoconfig_is_on = false;
-@@ -2059,12 +2276,28 @@ void vrrp_autoconfig_off(void)
+@@ -2056,12 +2273,28 @@ void vrrp_autoconfig_off(void)
  	struct vrrp_vrouter *vr;
  
  	for (ALL_LIST_ELEMENTS_RO(ll, ln, vr))
@@ -789,7 +788,7 @@ index c3ab1abbd..0e689edc2 100644
  /* Interface tracking ------------------------------------------------------ */
  
  /*
-@@ -2090,10 +2323,37 @@ static void vrrp_bind_pending(struct interface *mvl_ifp)
+@@ -2087,10 +2320,37 @@ static void vrrp_bind_pending(struct interface *mvl_ifp)
  		       "<-- This instance can probably use interface %s",
  		       vr->vrid, mvl_ifp->name);
  
@@ -831,7 +830,7 @@ index c3ab1abbd..0e689edc2 100644
  	}
  }
  
-@@ -2118,47 +2378,37 @@ void vrrp_if_up(struct interface *ifp)
+@@ -2115,47 +2375,37 @@ void vrrp_if_up(struct interface *ifp)
  		 * transition on this VRRP router but needed to wait for the
  		 * macvlan interface to come up to perform some actions
  		 */
@@ -894,7 +893,7 @@ index c3ab1abbd..0e689edc2 100644
  
  	list_delete(&vrs);
  
-@@ -2178,13 +2428,14 @@ void vrrp_if_down(struct interface *ifp)
+@@ -2175,13 +2425,14 @@ void vrrp_if_down(struct interface *ifp)
  	for (ALL_LIST_ELEMENTS_RO(vrs, ln, vr)) {
  		vrrp_check_start(vr);
  
@@ -911,7 +910,7 @@ index c3ab1abbd..0e689edc2 100644
  
  	list_delete(&vrs);
  
-@@ -2227,14 +2478,12 @@ void vrrp_if_del(struct interface *ifp)
+@@ -2224,14 +2475,12 @@ void vrrp_if_del(struct interface *ifp)
  
  	for (ALL_LIST_ELEMENTS_RO(vrs, ln, vr)) {
  		if (ifp == vr->ifp) {
@@ -928,7 +927,7 @@ index c3ab1abbd..0e689edc2 100644
  			/*
  			 * We shouldn't need to lose the reference if it's the
  			 * primary interface, because that was configured
-@@ -2242,22 +2491,14 @@ void vrrp_if_del(struct interface *ifp)
+@@ -2239,22 +2488,14 @@ void vrrp_if_del(struct interface *ifp)
  			 * stub; to avoid stupid bugs, double check that
  			 */
  			assert(ifp->configured);
@@ -954,7 +953,7 @@ index c3ab1abbd..0e689edc2 100644
  		}
  	}
  
-@@ -2373,7 +2614,7 @@ static unsigned int vrrp_hash_key(const void *arg)
+@@ -2370,7 +2611,7 @@ static unsigned int vrrp_hash_key(const void *arg)
  	const struct vrrp_vrouter *vr = arg;
  	char key[IFNAMSIZ + 64];
  
@@ -963,7 +962,7 @@ index c3ab1abbd..0e689edc2 100644
  
  	return string_hash_make(key);
  }
-@@ -2387,6 +2628,8 @@ static bool vrrp_hash_cmp(const void *arg1, const void *arg2)
+@@ -2384,6 +2625,8 @@ static bool vrrp_hash_cmp(const void *arg1, const void *arg2)
  		return false;
  	if (vr1->vrid != vr2->vrid)
  		return false;
@@ -972,7 +971,7 @@ index c3ab1abbd..0e689edc2 100644
  
  	return true;
  }
-@@ -2406,6 +2649,7 @@ void vrrp_init(void)
+@@ -2403,6 +2646,7 @@ void vrrp_init(void)
  	vd.shutdown = VRRP_DEFAULT_SHUTDOWN;
  
  	vrrp_autoconfig_version = 3;
@@ -981,10 +980,10 @@ index c3ab1abbd..0e689edc2 100644
  					 "VRRP virtual router hash");
  	vrf_init(NULL, NULL, NULL, NULL);
 diff --git a/vrrpd/vrrp.h b/vrrpd/vrrp.h
-index b3141ef31..0711de3f3 100644
+index 0ac9b1f49..0638689f6 100644
 --- a/vrrpd/vrrp.h
 +++ b/vrrpd/vrrp.h
-@@ -49,12 +49,14 @@
+@@ -36,12 +36,14 @@
  /* Default defaults */
  #define VRRP_XPATH_FULL "/frr-interface:lib/interface/frr-vrrpd:vrrp/vrrp-group"
  #define VRRP_XPATH "./frr-vrrpd:vrrp/vrrp-group"
@@ -999,7 +998,7 @@ index b3141ef31..0711de3f3 100644
  
  /* User compatibility constant */
  #define CS2MS 10
-@@ -245,9 +247,22 @@ struct vrrp_vrouter {
+@@ -232,9 +234,22 @@ struct vrrp_vrouter {
  	/* Virtual Router Identifier */
  	uint32_t vrid;
  
@@ -1022,7 +1021,7 @@ index b3141ef31..0711de3f3 100644
  	/*
  	 * Time interval between ADVERTISEMENTS (centiseconds). Default is 100
  	 * centiseconds (1 second).
-@@ -276,10 +291,31 @@ struct vrrp_vrouter {
+@@ -263,10 +278,31 @@ struct vrrp_vrouter {
  	 */
  	bool checksum_with_ipv4_pseudoheader;
  
@@ -1038,7 +1037,7 @@ index b3141ef31..0711de3f3 100644
 + */
 +struct track_intf {
 +	/* Interface name. */
-+	char name[INTERFACE_NAMSIZ];
++	char name[IFNAMSIZ];
 +
 +	/* interface status
 +	   0 means down
@@ -1056,7 +1055,7 @@ index b3141ef31..0711de3f3 100644
  /*
   * Initialize VRRP global datastructures.
   */
-@@ -306,7 +342,7 @@ void vrrp_fini(void);
+@@ -293,7 +329,7 @@ void vrrp_fini(void);
   *    Virtual Router Identifier
   */
  struct vrrp_vrouter *vrrp_vrouter_create(struct interface *ifp, uint8_t vrid,
@@ -1065,7 +1064,7 @@ index b3141ef31..0711de3f3 100644
  
  /*
   * Destroy a VRRP Virtual Router, freeing all its resources.
-@@ -474,6 +510,38 @@ int vrrp_del_ipv4(struct vrrp_vrouter *vr, struct in_addr v4);
+@@ -461,6 +497,38 @@ int vrrp_del_ipv4(struct vrrp_vrouter *vr, struct in_addr v4);
   */
  int vrrp_del_ipv6(struct vrrp_vrouter *vr, struct in6_addr v6);
  
@@ -1104,7 +1103,7 @@ index b3141ef31..0711de3f3 100644
  /* State machine ----------------------------------------------------------- */
  
  #define VRRP_STATE_INITIALIZE 0
-@@ -541,6 +609,17 @@ int vrrp_autoconfig(void);
+@@ -528,6 +596,17 @@ int vrrp_autoconfig(void);
   */
  void vrrp_autoconfig_on(int version);
  
@@ -1122,7 +1121,7 @@ index b3141ef31..0711de3f3 100644
  /*
   * Disable autoconfiguration.
   *
-@@ -548,6 +627,13 @@ void vrrp_autoconfig_on(int version);
+@@ -535,6 +614,13 @@ void vrrp_autoconfig_on(int version);
   */
  void vrrp_autoconfig_off(void);
  
@@ -1136,7 +1135,7 @@ index b3141ef31..0711de3f3 100644
  /* Interface Tracking ------------------------------------------------------ */
  
  void vrrp_if_add(struct interface *ifp);
-@@ -573,6 +659,6 @@ int vrrp_config_write_global(struct vty *vty);
+@@ -560,6 +646,6 @@ int vrrp_config_write_global(struct vty *vty);
  /*
   * Find VRRP Virtual Router by Virtual Router ID
   */
@@ -1146,10 +1145,10 @@ index b3141ef31..0711de3f3 100644
  #endif /* __VRRP_H__ */
 diff --git a/vrrpd/vrrp6_vty.c b/vrrpd/vrrp6_vty.c
 new file mode 100644
-index 000000000..1bada3d92
+index 000000000..2511876c2
 --- /dev/null
 +++ b/vrrpd/vrrp6_vty.c
-@@ -0,0 +1,655 @@
+@@ -0,0 +1,657 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +/*
 + * VRRP6 CLI commands.
@@ -1407,7 +1406,9 @@ index 000000000..1bada3d92
 +      VRRP6_STR
 +      VRRP6_VRID_STR
 +      "Add tracking interface\n"
-+      VRRP6_TRACK_INTF_STR)
++      VRRP6_TRACK_INTF_STR
++      VRRP6_PRIORITY_DECREMENT_STR
++      "Priority decrement value\n")
 +{
 +	char xpath[XPATH_MAXLEN];
 +
@@ -1840,10 +1841,10 @@ index 000000000..1668ba0f6
 +
 +#endif /* __VRRP6_VTY_H__ */
 diff --git a/vrrpd/vrrp_main.c b/vrrpd/vrrp_main.c
-index 59769788e..4d0918ed3 100644
+index e9af3d92f..884b1cdb9 100644
 --- a/vrrpd/vrrp_main.c
 +++ b/vrrpd/vrrp_main.c
-@@ -38,6 +38,7 @@
+@@ -26,6 +26,7 @@
  #include "vrrp.h"
  #include "vrrp_debug.h"
  #include "vrrp_vty.h"
@@ -1851,7 +1852,7 @@ index 59769788e..4d0918ed3 100644
  #include "vrrp_zebra.h"
  
  DEFINE_MGROUP(VRRPD, "vrrpd");
-@@ -157,6 +158,7 @@ int main(int argc, char **argv, char **envp)
+@@ -149,6 +150,7 @@ int main(int argc, char **argv, char **envp)
  	vrrp_debug_init();
  	vrrp_zebra_init();
  	vrrp_vty_init();
@@ -1860,10 +1861,10 @@ index 59769788e..4d0918ed3 100644
  
  	snprintf(backup_config_file, sizeof(backup_config_file),
 diff --git a/vrrpd/vrrp_northbound.c b/vrrpd/vrrp_northbound.c
-index 76d0ad3b1..e5cd38bf4 100644
+index 2947a416d..3b6c79b13 100644
 --- a/vrrpd/vrrp_northbound.c
 +++ b/vrrpd/vrrp_northbound.c
-@@ -29,25 +29,39 @@
+@@ -16,25 +16,39 @@
  #include "libfrr.h"
  #include "vrrp.h"
  #include "vrrp_vty.h"
@@ -1883,17 +1884,17 @@ index 76d0ad3b1..e5cd38bf4 100644
 +	int family;
  	struct vrrp_vrouter *vr;
  
- 	vrid = yang_dnode_get_uint8(args->dnode, "./virtual-router-id");
- 	version = yang_dnode_get_enum(args->dnode, "./version");
+ 	vrid = yang_dnode_get_uint8(args->dnode, "virtual-router-id");
+ 	version = yang_dnode_get_enum(args->dnode, "version");
 +	const char *family_s = yang_dnode_get_string(args->dnode, "./family");
 +
-+	char *ptr = strstr(family_s, VRRP6_FAMILY);
++        char *ptr = strstr(family_s, VRRP6_FAMILY);
 +
-+	if (ptr) {
-+		family = AF_INET6;
-+	} else {
-+		family = AF_INET;
-+	}
++        if (ptr) {
++                family = AF_INET6;
++        } else {
++                family = AF_INET;
++        }
  
  	switch (args->event) {
  	case NB_EV_VALIDATE:
@@ -1904,7 +1905,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  			if (vr && vr->autoconf) {
  				snprintf(
  					args->errmsg, args->errmsg_len,
-@@ -65,7 +79,7 @@ static int lib_interface_vrrp_vrrp_group_create(struct nb_cb_create_args *args)
+@@ -52,7 +66,7 @@ static int lib_interface_vrrp_vrrp_group_create(struct nb_cb_create_args *args)
  	}
  
  	ifp = nb_running_get_entry(args->dnode, NULL, true);
@@ -1913,7 +1914,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  	nb_running_set_entry(args->dnode, vr);
  
  	return NB_OK;
-@@ -121,9 +135,12 @@ lib_interface_vrrp_vrrp_group_get_keys(struct nb_cb_get_keys_args *args)
+@@ -108,9 +122,12 @@ lib_interface_vrrp_vrrp_group_get_keys(struct nb_cb_get_keys_args *args)
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -1927,7 +1928,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  
  	return NB_OK;
  }
-@@ -134,11 +151,21 @@ lib_interface_vrrp_vrrp_group_lookup_entry(struct nb_cb_lookup_entry_args *args)
+@@ -121,11 +138,21 @@ lib_interface_vrrp_vrrp_group_lookup_entry(struct nb_cb_lookup_entry_args *args)
  	uint32_t vrid = strtoul(args->keys->key[0], NULL, 10);
  	const struct interface *ifp = args->parent_list_entry;
  
@@ -1950,7 +1951,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static int
  lib_interface_vrrp_vrrp_group_version_modify(struct nb_cb_modify_args *args)
-@@ -150,8 +177,7 @@ lib_interface_vrrp_vrrp_group_version_modify(struct nb_cb_modify_args *args)
+@@ -137,8 +164,7 @@ lib_interface_vrrp_vrrp_group_version_modify(struct nb_cb_modify_args *args)
  	uint8_t version;
  
  	vr = nb_running_get_entry(args->dnode, NULL, true);
@@ -1960,7 +1961,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  	version = yang_dnode_get_enum(args->dnode, NULL);
  	vr->version = version;
  
-@@ -205,6 +231,75 @@ static int lib_interface_vrrp_vrrp_group_v4_virtual_address_destroy(
+@@ -192,6 +218,76 @@ static int lib_interface_vrrp_vrrp_group_v4_virtual_address_destroy(
  	return NB_OK;
  }
  
@@ -1975,7 +1976,7 @@ index 76d0ad3b1..e5cd38bf4 100644
 +	vr = nb_running_get_entry(dnode, NULL, true);
 +	const char *track_intf = yang_dnode_get_string(dnode, "./interface");
 +	if (add) {
-+		const priority_dec = yang_dnode_get_uint8(dnode, "./priority-decrement");
++		const uint8_t priority_dec = yang_dnode_get_uint8(dnode, "./priority-decrement");
 +		vrrp_add_track_interface(vr, track_intf, priority_dec);
 +	} else {
 +		vrrp_del_track_interface(vr, track_intf);
@@ -2031,12 +2032,13 @@ index 76d0ad3b1..e5cd38bf4 100644
 +	vrrp_add_track_interface(vr, track_intf, priority_dec);
 +
 +	vrrp_check_start(vr);
++  return NB_OK;
 +}
 +
  /*
   * XPath:
   * /frr-interface:lib/interface/frr-vrrpd:vrrp/vrrp-group/v4/current-priority
-@@ -215,7 +310,7 @@ lib_interface_vrrp_vrrp_group_v4_current_priority_get_elem(
+@@ -202,7 +298,7 @@ lib_interface_vrrp_vrrp_group_v4_current_priority_get_elem(
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -2045,7 +2047,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  }
  
  /*
-@@ -230,8 +325,8 @@ lib_interface_vrrp_vrrp_group_v4_vrrp_interface_get_elem(
+@@ -217,8 +313,8 @@ lib_interface_vrrp_vrrp_group_v4_vrrp_interface_get_elem(
  
  	struct yang_data *val = NULL;
  
@@ -2056,7 +2058,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  
  	return val;
  }
-@@ -247,8 +342,8 @@ lib_interface_vrrp_vrrp_group_v4_source_address_get_elem(
+@@ -234,8 +330,8 @@ lib_interface_vrrp_vrrp_group_v4_source_address_get_elem(
  	const struct vrrp_vrouter *vr = args->list_entry;
  	struct yang_data *val = NULL;
  
@@ -2067,7 +2069,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  
  	return val;
  }
-@@ -261,7 +356,7 @@ static struct yang_data *lib_interface_vrrp_vrrp_group_v4_state_get_elem(
+@@ -248,7 +344,7 @@ static struct yang_data *lib_interface_vrrp_vrrp_group_v4_state_get_elem(
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -2076,7 +2078,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  }
  
  /*
-@@ -274,7 +369,7 @@ lib_interface_vrrp_vrrp_group_v4_master_advertisement_interval_get_elem(
+@@ -261,7 +357,7 @@ lib_interface_vrrp_vrrp_group_v4_master_advertisement_interval_get_elem(
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -2085,7 +2087,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  }
  
  /*
-@@ -285,7 +380,7 @@ static struct yang_data *lib_interface_vrrp_vrrp_group_v4_skew_time_get_elem(
+@@ -272,7 +368,7 @@ static struct yang_data *lib_interface_vrrp_vrrp_group_v4_skew_time_get_elem(
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -2094,7 +2096,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  }
  
  /*
-@@ -298,7 +393,7 @@ lib_interface_vrrp_vrrp_group_v4_counter_state_transition_get_elem(
+@@ -285,7 +381,7 @@ lib_interface_vrrp_vrrp_group_v4_counter_state_transition_get_elem(
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -2103,7 +2105,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  }
  
  /*
-@@ -311,7 +406,7 @@ lib_interface_vrrp_vrrp_group_v4_counter_tx_advertisement_get_elem(
+@@ -298,7 +394,7 @@ lib_interface_vrrp_vrrp_group_v4_counter_tx_advertisement_get_elem(
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -2112,7 +2114,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  }
  
  /*
-@@ -324,7 +419,7 @@ lib_interface_vrrp_vrrp_group_v4_counter_tx_gratuitous_arp_get_elem(
+@@ -311,7 +407,7 @@ lib_interface_vrrp_vrrp_group_v4_counter_tx_gratuitous_arp_get_elem(
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -2121,7 +2123,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  }
  
  /*
-@@ -337,12 +432,12 @@ lib_interface_vrrp_vrrp_group_v4_counter_rx_advertisement_get_elem(
+@@ -324,12 +420,12 @@ lib_interface_vrrp_vrrp_group_v4_counter_rx_advertisement_get_elem(
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -2136,7 +2138,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static int lib_interface_vrrp_vrrp_group_v6_virtual_address_create(
  	struct nb_cb_create_args *args)
-@@ -368,7 +463,7 @@ static int lib_interface_vrrp_vrrp_group_v6_virtual_address_destroy(
+@@ -355,7 +451,7 @@ static int lib_interface_vrrp_vrrp_group_v6_virtual_address_destroy(
  
  /*
   * XPath:
@@ -2145,7 +2147,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static struct yang_data *
  lib_interface_vrrp_vrrp_group_v6_current_priority_get_elem(
-@@ -376,12 +471,12 @@ lib_interface_vrrp_vrrp_group_v6_current_priority_get_elem(
+@@ -363,12 +459,12 @@ lib_interface_vrrp_vrrp_group_v6_current_priority_get_elem(
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -2160,7 +2162,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static struct yang_data *
  lib_interface_vrrp_vrrp_group_v6_vrrp_interface_get_elem(
-@@ -390,15 +485,15 @@ lib_interface_vrrp_vrrp_group_v6_vrrp_interface_get_elem(
+@@ -377,15 +473,15 @@ lib_interface_vrrp_vrrp_group_v6_vrrp_interface_get_elem(
  	const struct vrrp_vrouter *vr = args->list_entry;
  	struct yang_data *val = NULL;
  
@@ -2179,7 +2181,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static struct yang_data *
  lib_interface_vrrp_vrrp_group_v6_source_address_get_elem(
-@@ -407,26 +502,26 @@ lib_interface_vrrp_vrrp_group_v6_source_address_get_elem(
+@@ -394,26 +490,26 @@ lib_interface_vrrp_vrrp_group_v6_source_address_get_elem(
  	const struct vrrp_vrouter *vr = args->list_entry;
  	struct yang_data *val = NULL;
  
@@ -2211,7 +2213,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static struct yang_data *
  lib_interface_vrrp_vrrp_group_v6_master_advertisement_interval_get_elem(
-@@ -434,23 +529,23 @@ lib_interface_vrrp_vrrp_group_v6_master_advertisement_interval_get_elem(
+@@ -421,23 +517,23 @@ lib_interface_vrrp_vrrp_group_v6_master_advertisement_interval_get_elem(
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -2239,7 +2241,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static struct yang_data *
  lib_interface_vrrp_vrrp_group_v6_counter_state_transition_get_elem(
-@@ -458,12 +553,12 @@ lib_interface_vrrp_vrrp_group_v6_counter_state_transition_get_elem(
+@@ -445,12 +541,12 @@ lib_interface_vrrp_vrrp_group_v6_counter_state_transition_get_elem(
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -2254,7 +2256,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static struct yang_data *
  lib_interface_vrrp_vrrp_group_v6_counter_tx_advertisement_get_elem(
-@@ -471,12 +566,12 @@ lib_interface_vrrp_vrrp_group_v6_counter_tx_advertisement_get_elem(
+@@ -458,12 +554,12 @@ lib_interface_vrrp_vrrp_group_v6_counter_tx_advertisement_get_elem(
  {
  	const struct vrrp_vrouter *vr = args->list_entry;
  
@@ -2269,7 +2271,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static struct yang_data *
  lib_interface_vrrp_vrrp_group_v6_counter_tx_neighbor_advertisement_get_elem(
-@@ -488,7 +583,7 @@ lib_interface_vrrp_vrrp_group_v6_counter_tx_neighbor_advertisement_get_elem(
+@@ -475,7 +571,7 @@ lib_interface_vrrp_vrrp_group_v6_counter_tx_neighbor_advertisement_get_elem(
  
  /*
   * XPath:
@@ -2278,7 +2280,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static struct yang_data *
  lib_interface_vrrp_vrrp_group_v6_counter_rx_advertisement_get_elem(
-@@ -499,7 +594,9 @@ lib_interface_vrrp_vrrp_group_v6_counter_rx_advertisement_get_elem(
+@@ -486,7 +582,9 @@ lib_interface_vrrp_vrrp_group_v6_counter_rx_advertisement_get_elem(
  }
  
  /*
@@ -2289,7 +2291,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static int
  lib_interface_vrrp_vrrp_group_priority_modify(struct nb_cb_modify_args *args)
-@@ -518,7 +615,9 @@ lib_interface_vrrp_vrrp_group_priority_modify(struct nb_cb_modify_args *args)
+@@ -505,7 +603,9 @@ lib_interface_vrrp_vrrp_group_priority_modify(struct nb_cb_modify_args *args)
  }
  
  /*
@@ -2300,7 +2302,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static int
  lib_interface_vrrp_vrrp_group_preempt_modify(struct nb_cb_modify_args *args)
-@@ -537,7 +636,9 @@ lib_interface_vrrp_vrrp_group_preempt_modify(struct nb_cb_modify_args *args)
+@@ -524,7 +624,9 @@ lib_interface_vrrp_vrrp_group_preempt_modify(struct nb_cb_modify_args *args)
  }
  
  /*
@@ -2311,7 +2313,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static int
  lib_interface_vrrp_vrrp_group_accept_mode_modify(struct nb_cb_modify_args *args)
-@@ -558,6 +659,7 @@ lib_interface_vrrp_vrrp_group_accept_mode_modify(struct nb_cb_modify_args *args)
+@@ -545,6 +647,7 @@ lib_interface_vrrp_vrrp_group_accept_mode_modify(struct nb_cb_modify_args *args)
  /*
   * XPath:
   * /frr-interface:lib/interface/frr-vrrpd:vrrp/vrrp-group/advertisement-interval
@@ -2319,7 +2321,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static int lib_interface_vrrp_vrrp_group_advertisement_interval_modify(
  	struct nb_cb_modify_args *args)
-@@ -576,7 +678,9 @@ static int lib_interface_vrrp_vrrp_group_advertisement_interval_modify(
+@@ -563,7 +666,9 @@ static int lib_interface_vrrp_vrrp_group_advertisement_interval_modify(
  }
  
  /*
@@ -2330,7 +2332,7 @@ index 76d0ad3b1..e5cd38bf4 100644
   */
  static int
  lib_interface_vrrp_vrrp_group_shutdown_modify(struct nb_cb_modify_args *args)
-@@ -593,8 +697,7 @@ lib_interface_vrrp_vrrp_group_shutdown_modify(struct nb_cb_modify_args *args)
+@@ -580,8 +685,7 @@ lib_interface_vrrp_vrrp_group_shutdown_modify(struct nb_cb_modify_args *args)
  	vr->shutdown = shutdown;
  
  	if (shutdown) {
@@ -2340,7 +2342,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  	} else {
  		vrrp_check_start(vr);
  	}
-@@ -684,6 +787,26 @@ const struct frr_yang_module_info frr_vrrpd_info = {
+@@ -671,6 +775,26 @@ const struct frr_yang_module_info frr_vrrpd_info = {
  				.cli_show = cli_show_shutdown,
  			}
  		},
@@ -2367,7 +2369,7 @@ index 76d0ad3b1..e5cd38bf4 100644
  		{
  			.xpath = "/frr-interface:lib/interface/frr-vrrpd:vrrp/vrrp-group/v4/virtual-address",
  			.cbs = {
-@@ -753,69 +876,128 @@ const struct frr_yang_module_info frr_vrrpd_info = {
+@@ -740,69 +864,128 @@ const struct frr_yang_module_info frr_vrrpd_info = {
  			}
  		},
  		{
@@ -2509,10 +2511,10 @@ index 76d0ad3b1..e5cd38bf4 100644
  				.get_elem = lib_interface_vrrp_vrrp_group_v6_counter_rx_advertisement_get_elem,
  			}
 diff --git a/vrrpd/vrrp_vty.c b/vrrpd/vrrp_vty.c
-index 1e1edb821..ac4de6a1c 100644
+index fd6cbc8b6..7bd40c78f 100644
 --- a/vrrpd/vrrp_vty.c
 +++ b/vrrpd/vrrp_vty.c
-@@ -42,8 +42,11 @@
+@@ -29,8 +29,11 @@
  #define VRRP_ADVINT_STR "Virtual Router Advertisement Interval\n"
  #define VRRP_IP_STR "Virtual Router IP address\n"
  #define VRRP_VERSION_STR "VRRP protocol version\n"
@@ -2525,7 +2527,7 @@ index 1e1edb821..ac4de6a1c 100644
  
  /* clang-format off */
  
-@@ -70,7 +73,7 @@ DEFPY_YANG(vrrp_vrid,
+@@ -57,7 +60,7 @@ DEFPY_YANG(vrrp_vrid,
  		nb_cli_enqueue_change(vty, "./version", NB_OP_MODIFY, valbuf);
  	}
  
@@ -2534,7 +2536,7 @@ index 1e1edb821..ac4de6a1c 100644
  }
  
  void cli_show_vrrp(struct vty *vty, const struct lyd_node *dnode, bool show_defaults)
-@@ -98,7 +101,7 @@ DEFPY_YANG(vrrp_shutdown,
+@@ -85,7 +88,7 @@ DEFPY_YANG(vrrp_shutdown,
  	nb_cli_enqueue_change(vty, "./shutdown", NB_OP_MODIFY,
  			      no ? "false" : "true");
  
@@ -2543,7 +2545,7 @@ index 1e1edb821..ac4de6a1c 100644
  }
  
  void cli_show_shutdown(struct vty *vty, const struct lyd_node *dnode,
-@@ -123,7 +126,7 @@ DEFPY_YANG(vrrp_priority,
+@@ -110,7 +113,7 @@ DEFPY_YANG(vrrp_priority,
  {
  	nb_cli_enqueue_change(vty, "./priority", NB_OP_MODIFY, priority_str);
  
@@ -2552,7 +2554,7 @@ index 1e1edb821..ac4de6a1c 100644
  }
  
  /*
-@@ -140,7 +143,7 @@ DEFPY_YANG(no_vrrp_priority,
+@@ -127,7 +130,7 @@ DEFPY_YANG(no_vrrp_priority,
  {
  	nb_cli_enqueue_change(vty, "./priority", NB_OP_MODIFY, NULL);
  
@@ -2561,7 +2563,7 @@ index 1e1edb821..ac4de6a1c 100644
  }
  
  void cli_show_priority(struct vty *vty, const struct lyd_node *dnode,
-@@ -170,7 +173,7 @@ DEFPY_YANG(vrrp_advertisement_interval,
+@@ -157,7 +160,7 @@ DEFPY_YANG(vrrp_advertisement_interval,
  	nb_cli_enqueue_change(vty, "./advertisement-interval", NB_OP_MODIFY,
  			      val);
  
@@ -2570,7 +2572,7 @@ index 1e1edb821..ac4de6a1c 100644
  }
  
  /*
-@@ -186,7 +189,7 @@ DEFPY_YANG(no_vrrp_advertisement_interval,
+@@ -173,7 +176,7 @@ DEFPY_YANG(no_vrrp_advertisement_interval,
  	nb_cli_enqueue_change(vty, "./advertisement-interval", NB_OP_MODIFY,
  			      NULL);
  
@@ -2579,16 +2581,16 @@ index 1e1edb821..ac4de6a1c 100644
  }
  
  void cli_show_advertisement_interval(struct vty *vty, const struct lyd_node *dnode,
-@@ -215,7 +218,7 @@ DEFPY_YANG(vrrp_ip,
- 	int op = no ? NB_OP_DESTROY : NB_OP_CREATE;
- 	nb_cli_enqueue_change(vty, "./v4/virtual-address", op, ip_str);
+@@ -206,7 +209,7 @@ DEFPY_YANG(vrrp_ip,
+ 
+ 	nb_cli_enqueue_change(vty, xpath, op, NULL);
  
 -	return nb_cli_apply_changes(vty, VRRP_XPATH_ENTRY, vrid);
 +	return nb_cli_apply_changes(vty, VRRP_XPATH_ENTRY, vrid, VRRP_FAMILY);
  }
  
  void cli_show_ip(struct vty *vty, const struct lyd_node *dnode, bool show_defaults)
-@@ -229,30 +232,60 @@ void cli_show_ip(struct vty *vty, const struct lyd_node *dnode, bool show_defaul
+@@ -220,34 +223,61 @@ void cli_show_ip(struct vty *vty, const struct lyd_node *dnode, bool show_defaul
  
  /*
   * XPath:
@@ -2598,24 +2600,30 @@ index 1e1edb821..ac4de6a1c 100644
 -DEFPY_YANG(vrrp_ip6,
 -      vrrp_ip6_cmd,
 -      "[no] vrrp (1-255)$vrid ipv6 X:X::X:X",
+-      NO_STR
 +DEFPY_YANG(vrrp_track_interface,
 +      vrrp_track_interface_cmd,
 +      "vrrp (1-255)$vrid track-interface IFNAME$intf_name priority-dec (10-50)",
-+      VRRP_STR
-+      VRRP_VRID_STR
+       VRRP_STR
+       VRRP_VRID_STR
+-      "Add IPv6 address\n"
+-      VRRP_IP_STR)
 +      "Add tracking interface\n"
 +      VRRP_TRACK_INTF_STR
 +      VRRP_PRIORITY_DECREMENT_STR
 +      "Priority decrement value\n")
-+{
-+	char xpath[XPATH_MAXLEN];
+ {
+-	int op = no ? NB_OP_DESTROY : NB_OP_CREATE;
+ 	char xpath[XPATH_MAXLEN];
 +	char xpath_track[XPATH_MAXLEN + 32];
-+
+ 
+-	snprintf(xpath, sizeof(xpath), "./v6/virtual-address[.='%s']", ipv6_str);
 +	snprintf(xpath, sizeof(xpath),
 +			"./track-interface[interface='%s']",
 +			intf_name);
 +	nb_cli_enqueue_change(vty, xpath, NB_OP_CREATE, NULL);
-+
+ 
+-	nb_cli_enqueue_change(vty, xpath, op, NULL);
 +	snprintf(xpath_track, sizeof(xpath_track),
 +			"%s/priority-decrement", xpath);
 +	nb_cli_enqueue_change(vty, xpath_track, NB_OP_MODIFY, priority_dec_str);
@@ -2626,24 +2634,21 @@ index 1e1edb821..ac4de6a1c 100644
 +DEFPY_YANG(no_vrrp_track_interface,
 +      no_vrrp_track_interface_cmd,
 +      "no vrrp (1-255)$vrid track-interface IFNAME$intf_name",
-       NO_STR
-       VRRP_STR
-       VRRP_VRID_STR
--      "Add IPv6 address\n"
--      VRRP_IP_STR)
++      NO_STR
++      VRRP_STR
++      VRRP_VRID_STR
 +      "Add tracking interface\n"
-+      VRRP_TRACK_INTF_STR)
- {
--	int op = no ? NB_OP_DESTROY : NB_OP_CREATE;
--	nb_cli_enqueue_change(vty, "./v6/virtual-address", op, ipv6_str);
++      VRRP_TRACK_INTF_STR
++      VRRP_PRIORITY_DECREMENT_STR
++      "Priority decrement value\n")
++{
 +	char xpath[XPATH_MAXLEN];
 +	snprintf(xpath, sizeof(xpath),
 +			"./track-interface[interface='%s']",
 +			intf_name);
-+
-+	nb_cli_enqueue_change(vty, xpath, NB_OP_DESTROY, NULL);
  
 -	return nb_cli_apply_changes(vty, VRRP_XPATH_ENTRY, vrid);
++	nb_cli_enqueue_change(vty, xpath, NB_OP_DESTROY, NULL);
 +	return nb_cli_apply_changes(vty, VRRP_XPATH_ENTRY, vrid, VRRP_FAMILY);
  }
  
@@ -2655,15 +2660,15 @@ index 1e1edb821..ac4de6a1c 100644
 -	const char *ipv6 = yang_dnode_get_string(dnode, NULL);
 +	const char *vrid = yang_dnode_get_string(dnode, "../virtual-router-id");
 +	const char *track_intf = yang_dnode_get_string(dnode, "./interface");
++
++	const char *priority_dec = yang_dnode_get_string(dnode, "./priority-decrement");
  
 -	vty_out(vty, " vrrp %s ipv6 %s\n", vrid, ipv6);
-+	const char *priority_dec = yang_dnode_get_string(dnode, "./priority-decrement");
-+
 +	vty_out(vty, " vrrp %s track-interface %s priority-dec %s\n", vrid, track_intf, priority_dec);
  }
  
  /*
-@@ -269,7 +302,7 @@ DEFPY_YANG(vrrp_preempt,
+@@ -264,7 +294,7 @@ DEFPY_YANG(vrrp_preempt,
  	nb_cli_enqueue_change(vty, "./preempt", NB_OP_MODIFY,
  			      no ? "false" : "true");
  
@@ -2672,7 +2677,7 @@ index 1e1edb821..ac4de6a1c 100644
  }
  
  void cli_show_preempt(struct vty *vty, const struct lyd_node *dnode,
-@@ -296,7 +329,7 @@ DEFPY_YANG(vrrp_checksum_with_ipv4_pseudoheader,
+@@ -291,7 +321,7 @@ DEFPY_YANG(vrrp_checksum_with_ipv4_pseudoheader,
  	nb_cli_enqueue_change(vty, "./checksum-with-ipv4-pseudoheader",
  			      NB_OP_MODIFY, no ? "false" : "true");
  
@@ -2681,7 +2686,7 @@ index 1e1edb821..ac4de6a1c 100644
  }
  
  void cli_show_checksum_with_ipv4_pseudoheader(struct vty *vty,
-@@ -381,24 +414,17 @@ DEFPY_YANG(vrrp_default,
+@@ -376,24 +406,17 @@ DEFPY_YANG(vrrp_default,
  static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
  {
  	char ethstr4[ETHER_ADDR_STRLEN];
@@ -2708,8 +2713,8 @@ index 1e1edb821..ac4de6a1c 100644
  
  	json_object_int_add(j, "vrid", vr->vrid);
  	json_object_int_add(j, "version", vr->version);
-@@ -413,27 +439,27 @@ static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
- 			    vr->advertisement_interval * CS2MS);
+@@ -409,27 +432,27 @@ static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
+ 	json_object_int_add(j, "priority", vr->priority);
  	/* v4 */
  	json_object_string_add(v4, "interface",
 -			       vr->v4->mvl_ifp ? vr->v4->mvl_ifp->name : "");
@@ -2749,7 +2754,7 @@ index 1e1edb821..ac4de6a1c 100644
  				  sizeof(ipstr));
  			json_object_array_add(v4_addrs,
  					      json_object_new_string(ipstr));
-@@ -442,40 +468,6 @@ static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
+@@ -438,40 +461,6 @@ static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
  	json_object_object_add(v4, "addresses", v4_addrs);
  	json_object_object_add(j, "v4", v4);
  
@@ -2790,7 +2795,7 @@ index 1e1edb821..ac4de6a1c 100644
  	return j;
  }
  
-@@ -491,14 +483,12 @@ static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
+@@ -487,14 +476,12 @@ static struct json_object *vrrp_build_json(struct vrrp_vrouter *vr)
  static void vrrp_show(struct vty *vty, struct vrrp_vrouter *vr)
  {
  	char ethstr4[ETHER_ADDR_STRLEN];
@@ -2807,7 +2812,7 @@ index 1e1edb821..ac4de6a1c 100644
  
  	struct ttable *tt = ttable_new(&ttable_styles[TTSTYLE_BLANK]);
  
-@@ -508,27 +498,16 @@ static void vrrp_show(struct vty *vty, struct vrrp_vrouter *vr)
+@@ -504,27 +491,16 @@ static void vrrp_show(struct vty *vty, struct vrrp_vrouter *vr)
  		       vr->autoconf ? "Yes" : "No");
  	ttable_add_row(tt, "%s|%s", "Shutdown", vr->shutdown ? "Yes" : "No");
  	ttable_add_row(tt, "%s|%s", "Interface", vr->ifp->name);
@@ -2839,7 +2844,7 @@ index 1e1edb821..ac4de6a1c 100644
  	ttable_add_row(tt, "%s|%s", "Preempt Mode",
  		       vr->preempt_mode ? "Yes" : "No");
  	ttable_add_row(tt, "%s|%s", "Accept Mode",
-@@ -539,53 +518,36 @@ static void vrrp_show(struct vty *vty, struct vrrp_vrouter *vr)
+@@ -535,53 +511,36 @@ static void vrrp_show(struct vty *vty, struct vrrp_vrouter *vr)
  		       vr->advertisement_interval * CS2MS);
  	ttable_add_row(tt, "%s|%d ms (stale)",
  		       "Master Advertisement Interval (v4) Rx",
@@ -2909,7 +2914,7 @@ index 1e1edb821..ac4de6a1c 100644
  				  sizeof(ipstr));
  			ttable_add_row(tt, "%s|%s", fill, ipstr);
  		}
-@@ -639,6 +601,8 @@ DEFPY_YANG(vrrp_vrid_show,
+@@ -635,6 +594,8 @@ DEFPY_YANG(vrrp_vrid_show,
  			continue;
  		if (vrid && ((uint8_t) vrid) != vr->vrid)
  			continue;
@@ -2918,7 +2923,7 @@ index 1e1edb821..ac4de6a1c 100644
  
  		if (!json)
  			vrrp_show(vty, vr);
-@@ -677,7 +641,7 @@ DEFPY_YANG(vrrp_vrid_show_summary,
+@@ -673,7 +634,7 @@ DEFPY_YANG(vrrp_vrid_show_summary,
  	struct ttable *tt = ttable_new(&ttable_styles[TTSTYLE_BLANK]);
  
  	ttable_add_row(
@@ -2927,7 +2932,7 @@ index 1e1edb821..ac4de6a1c 100644
  	ttable_rowseps(tt, 0, BOTTOM, true, '-');
  
  	for (ALL_LIST_ELEMENTS_RO(ll, ln, vr)) {
-@@ -685,15 +649,14 @@ DEFPY_YANG(vrrp_vrid_show_summary,
+@@ -681,15 +642,14 @@ DEFPY_YANG(vrrp_vrid_show_summary,
  			continue;
  		if (vrid && ((uint8_t)vrid) != vr->vrid)
  			continue;
@@ -2948,7 +2953,7 @@ index 1e1edb821..ac4de6a1c 100644
  	}
  
  	char *table = ttable_dump(tt, "\n");
-@@ -786,8 +749,9 @@ void vrrp_vty_init(void)
+@@ -782,8 +742,9 @@ void vrrp_vty_init(void)
  	install_element(INTERFACE_NODE, &vrrp_advertisement_interval_cmd);
  	install_element(INTERFACE_NODE, &no_vrrp_advertisement_interval_cmd);
  	install_element(INTERFACE_NODE, &vrrp_ip_cmd);
@@ -2960,10 +2965,10 @@ index 1e1edb821..ac4de6a1c 100644
 +	install_element(INTERFACE_NODE, &no_vrrp_track_interface_cmd);
  }
 diff --git a/vrrpd/vrrp_vty.h b/vrrpd/vrrp_vty.h
-index be88349e7..de71f40a7 100644
+index 6feb8e8ec..b09a211d0 100644
 --- a/vrrpd/vrrp_vty.h
 +++ b/vrrpd/vrrp_vty.h
-@@ -31,13 +31,13 @@ void cli_show_shutdown(struct vty *vty, const struct lyd_node *dnode,
+@@ -18,13 +18,13 @@ void cli_show_shutdown(struct vty *vty, const struct lyd_node *dnode,
  		       bool show_defaults);
  void cli_show_priority(struct vty *vty, const struct lyd_node *dnode,
  		       bool show_defaults);
@@ -2980,10 +2985,10 @@ index be88349e7..de71f40a7 100644
  		      bool show_defaults);
  void cli_show_checksum_with_ipv4_pseudoheader(struct vty *vty,
 diff --git a/yang/frr-vrrpd.yang b/yang/frr-vrrpd.yang
-index cd04df267..c54474597 100644
+index ad9f13935..ce82f5e9c 100644
 --- a/yang/frr-vrrpd.yang
 +++ b/yang/frr-vrrpd.yang
-@@ -66,6 +66,19 @@ module frr-vrrpd {
+@@ -67,6 +67,19 @@ module frr-vrrpd {
           generated for the VRRP group";
      }
  
@@ -3003,7 +3008,7 @@ index cd04df267..c54474597 100644
      leaf version {
        type enumeration {
          enum "2" {
-@@ -93,6 +106,30 @@ module frr-vrrpd {
+@@ -94,6 +107,30 @@ module frr-vrrpd {
           priority";
      }
  
@@ -3034,7 +3039,7 @@ index cd04df267..c54474597 100644
      leaf preempt {
        type boolean;
        default "true";
-@@ -110,13 +147,6 @@ module frr-vrrpd {
+@@ -111,13 +148,6 @@ module frr-vrrpd {
           address is not owned by the router interface";
      }
  
@@ -3048,7 +3053,7 @@ index cd04df267..c54474597 100644
      leaf advertisement-interval {
        type uint16 {
          range "1..4095";
-@@ -239,11 +269,18 @@ module frr-vrrpd {
+@@ -240,11 +270,18 @@ module frr-vrrpd {
          "RFC 5798 - Virtual Router Redundancy Protocol
           (VRRP) Version 3 for IPv4 and IPv6";
        list vrrp-group {
@@ -3068,7 +3073,7 @@ index cd04df267..c54474597 100644
          container v4 {
            leaf-list virtual-address {
              type inet:ipv4-address;
-@@ -262,6 +299,13 @@ module frr-vrrpd {
+@@ -263,6 +300,13 @@ module frr-vrrpd {
              }
            }
          }
