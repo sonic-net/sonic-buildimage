@@ -4,7 +4,7 @@
             "sonic-srv6:SRV6_MY_LOCATORS": {
                 "SRV6_MY_LOCATORS_LIST": [
                     {
-                        "name": "MAIN",
+                        "locator_name": "MAIN",
                         "prefix": "FCBB:BBBB:20::"
                     }
                 ]
@@ -30,7 +30,7 @@
             "sonic-srv6:SRV6_MY_LOCATORS": {
                 "SRV6_MY_LOCATORS_LIST": [
                     {
-                        "name": "MAIN",
+                        "locator_name": "MAIN",
                         "prefix": "FCBB:BBBB:20::",
                         "func_len": 127
                     }
@@ -57,7 +57,7 @@
             "sonic-srv6:SRV6_MY_LOCATORS": {
                 "SRV6_MY_LOCATORS_LIST": [
                     {
-                        "name": "MAIN",
+                        "locator_name": "MAIN",
                         "prefix": "FCBB:BBBB:20::",
                         "vrf": "Vrf1"
                     }
@@ -84,7 +84,7 @@
             "sonic-srv6:SRV6_MY_LOCATORS": {
                 "SRV6_MY_LOCATORS_LIST": [
                     {
-                        "name": "MAIN",
+                        "locator_name": "MAIN",
                         "prefix": "FCBB:BBBB:20::"
                     }
                 ]
@@ -110,7 +110,7 @@
             "sonic-srv6:SRV6_MY_LOCATORS": {
                 "SRV6_MY_LOCATORS_LIST": [
                     {
-                        "name": "MAIN",
+                        "locator_name": "MAIN",
                         "prefix": "FCBB:BBBB:20::"
                     }
                 ]
@@ -136,7 +136,7 @@
             "sonic-srv6:SRV6_MY_LOCATORS": {
                 "SRV6_MY_LOCATORS_LIST": [
                     {
-                        "name": "MAIN",
+                        "locator_name": "MAIN",
                         "prefix": "FCBB:BBBB:20::"
                     }
                 ]
@@ -162,7 +162,7 @@
             "sonic-srv6:SRV6_MY_LOCATORS": {
                 "SRV6_MY_LOCATORS_LIST": [
                     {
-                        "name": "MAIN",
+                        "locator_name": "MAIN",
                         "prefix": "FCBB:BBBB:20::"
                     }
                 ]
@@ -188,7 +188,7 @@
             "sonic-srv6:SRV6_MY_LOCATORS": {
                 "SRV6_MY_LOCATORS_LIST": [
                     {
-                        "name": "MAIN",
+                        "locator_name": "MAIN",
                         "prefix": "FCBB:BBBB:20::"
                     }
                 ]
