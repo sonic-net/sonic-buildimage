@@ -22,11 +22,15 @@ module sonic-srv6 {
 
     container sonic-srv6 {
 
-        container SRV6_MY_SID_TABLE {
-            list SRV6_MY_SID_TABLE_LIST {
-                key "ip_address";
+        container SRV6_MY_LOCATORS {
+            list SRV6_MY_LOCATORS_LIST {
+                key "locator_name";
 
-                leaf ip_address {
+                leaf locator_name {
+                    type string;
+                }
+
+                leaf prefix {
                     type inet:ipv6-address;
                 }
 
@@ -62,6 +66,38 @@ module sonic-srv6 {
                     default 0;
                 }
 
+                must 'block_len + node_len + func_len + arg_len <= 128';
+
+                leaf vrf {
+                    type union {
+                        type leafref {
+                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
+                        }
+                        type string {
+                            pattern 'default';
+                        }
+                    }
+                    description "VRF name";
+
+                    default "default";
+                }
+            }
+        }
+
+        container SRV6_MY_SIDS {
+            list SRV6_MY_SIDS_LIST {
+                key "ip_address";
+
+                leaf ip_address {
+                    type inet:ipv6-address;
+                }
+
+                leaf locator {
+                    type leafref {
+                        path "/srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST/srv6:locator_name";
+                    }
+                }
+
                 leaf action {
                     type enumeration {
                         enum uN;
@@ -93,7 +129,8 @@ module sonic-srv6 {
                     default "uniform";
                 }
 
-                must 'block_len + node_len + func_len + arg_len <= 128';
+                must "starts-with(./ip_address,
+                /srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST[./locator]/srv6:prefix)";
             }
         }
         
