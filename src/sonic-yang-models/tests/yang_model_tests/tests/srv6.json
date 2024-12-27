@@ -8,7 +8,8 @@
     },
     "SRV6_MY_LOCATOR_INVALID_VRF": {
         "desc": "A locator configured with an invalid VRF name",
-        "eStrKey" : "LeafRef"
+        "eStrKey" : "InvalidValue",
+        "eStr": ["vrf"]
     },
     "SRV6_MY_SID_INVALID_LOCATOR": {
         "desc": "A SID configured with invalid locator identifier",

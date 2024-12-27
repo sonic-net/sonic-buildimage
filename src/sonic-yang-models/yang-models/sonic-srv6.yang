@@ -130,7 +130,7 @@ module sonic-srv6 {
                 }
 
                 must "starts-with(./ip_address,
-                /srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST[./locator]/srv6:prefix)";
+                /srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST[current()/srv6:locator]/srv6:prefix)";
             }
         }
         
