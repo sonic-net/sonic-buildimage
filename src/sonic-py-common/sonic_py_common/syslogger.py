@@ -21,7 +21,7 @@ class SysLogger:
     """
 
     DEFAULT_LOG_FACILITY = SysLogHandler.LOG_USER
-    DEFAULT_LOG_LEVEL = logging.NOTICE
+    DEFAULT_LOG_LEVEL = logging.INFO
 
     def __init__(self, log_identifier=None, log_facility=DEFAULT_LOG_FACILITY, log_level=DEFAULT_LOG_LEVEL, enable_runtime_config=False):
         self.log_identifier = log_identifier if log_identifier else os.path.basename(sys.argv[0]) 
