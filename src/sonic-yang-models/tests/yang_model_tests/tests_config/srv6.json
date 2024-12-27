@@ -92,7 +92,7 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "ip_address": "FCBB:BBBB:21::",
+                        "ip_address": "FCBB:BBBB:20::",
                         "locator": "None",
                         "action": "uN"
                     },

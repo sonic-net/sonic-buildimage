@@ -88,6 +88,9 @@ module sonic-srv6 {
             list SRV6_MY_SIDS_LIST {
                 key "ip_address";
 
+                must "starts-with(./ip_address,
+                /srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST[current()/srv6:locator]/srv6:prefix)";
+
                 leaf ip_address {
                     type inet:ipv6-address;
                 }
@@ -129,8 +132,6 @@ module sonic-srv6 {
                     default "uniform";
                 }
 
-                must "starts-with(./ip_address,
-                /srv6:sonic-srv6/srv6:SRV6_MY_LOCATORS/srv6:SRV6_MY_LOCATORS_LIST[current()/srv6:locator]/srv6:prefix)";
             }
         }
         
