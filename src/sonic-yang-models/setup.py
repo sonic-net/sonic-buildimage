@@ -166,6 +166,7 @@ setup(
                          './yang-models/sonic-system-tacacs.yang',
                          './yang-models/sonic-system-radius.yang',
                          './yang-models/sonic-system-ldap.yang',
+                         './yang-models/sonic-subnet-decap.yang',
                          './yang-models/sonic-telemetry.yang',
                          './yang-models/sonic-telemetry_client.yang',
                          './yang-models/sonic-gnmi.yang',
