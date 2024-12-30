@@ -1,0 +1,29 @@
+From cabaf928f3944c18dcdac9630a2f72f114f2e753 Mon Sep 17 00:00:00 2001
+From: yawenni <yawenni@microsoft.com>
+Date: Wed, 11 Dec 2024 16:01:34 +1100
+Subject: [PATCH] commit for ports 2601 and 2620 access restriction
+
+---
+ scripts/caclmgrd | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/scripts/caclmgrd b/scripts/caclmgrd
+index 30b166e..7bd0349 100755
+--- a/scripts/caclmgrd
++++ b/scripts/caclmgrd
+@@ -812,6 +812,12 @@ class ControlPlaneAclManager(daemon_base.DaemonBase):
+             iptables_cmds.append(self.iptables_cmd_ns_prefix[namespace] + ['iptables', '-A', 'INPUT', '-j', 'DROP'])
+             iptables_cmds.append(self.iptables_cmd_ns_prefix[namespace] + ['ip6tables', '-A', 'INPUT', '-j', 'DROP'])
+ 
++        # Add restrict access to ports 2601 and 2620
++        iptables_cmds.append(self.iptables_cmd_ns_prefix[namespace] + ['iptables', '-A', 'OUTPUT', '-o', 'lo', '-p', 'tcp', '--dport', '2620', '-m', 'owner', '--uid-owner', '300', '-j', 'ACCEPT'])
++        iptables_cmds.append(self.iptables_cmd_ns_prefix[namespace] + ['iptables', '-A', 'OUTPUT', '-o', 'lo', '-p', 'tcp', '--dport', '2601', '-m', 'owner', '--uid-owner', '300', '-j', 'ACCEPT'])
++        iptables_cmds.append(self.iptables_cmd_ns_prefix[namespace] + ['iptables', '-A', 'OUTPUT', '-o', 'lo', '-p', 'tcp', '--dport', '2620', '-j', 'DROP'])
++        iptables_cmds.append(self.iptables_cmd_ns_prefix[namespace] + ['iptables', '-A', 'OUTPUT', '-o', 'lo', '-p', 'tcp', '--dport', '2601', '-j', 'DROP'])
++
+         return iptables_cmds, service_to_source_ip_map
+ 
+     def update_control_plane_acls(self, namespace, config_db_connector):
+-- 
+2.47.0.windows.2
+
