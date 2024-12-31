@@ -2,8 +2,6 @@
 
 """
 """
-
-import docker
 import sys
 import subprocess
 import syslog
@@ -32,9 +30,10 @@ def main():
                 current_oper_status = subprocess.run(['cat', port_operstate_path], capture_output=True, text=True)
                 if current_oper_status.stdout.strip() != prev_oper_status:
                     db.set(db.STATE_DB, state_db_key, 'oper_status', current_oper_status.stdout.strip())
-                    syslog.syslog(syslog.LOG_INFO, "mgmt_oper_status_check: {}".format(current_oper_status.stdout.strip()))
+                    syslog.syslog(syslog.LOG_INFO, "mgmt_oper_status: {}".format(current_oper_status.stdout.strip()))
         except Exception as e:
-            syslog.syslog(syslog.LOG_ERR, "mgmt_oper_status_check exception : {}".format(str(e)))
+            syslog.syslog(syslog.LOG_ERR, "mgmt_oper_status exception : {}".format(str(e)))
+            db.set(db.STATE_DB, state_db_key, 'oper_status', 'unknown')
 
 
 if __name__ == "__main__":

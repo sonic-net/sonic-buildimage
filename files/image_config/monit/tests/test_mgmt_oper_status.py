@@ -7,9 +7,9 @@ import mgmt_oper_status
 
 class TestMgmtOperStatusCheck(unittest.TestCase):
 
-    @patch('your_script_name.SonicV2Connector')
-    @patch('your_script_name.subprocess.run')
-    @patch('your_script_name.syslog.syslog')
+    @patch('mgmt_oper_status.SonicV2Connector')
+    @patch('mgmt_oper_status.subprocess.run')
+    @patch('mgmt_oper_status.syslog.syslog')
     def test_main_no_mgmt_ports(self, mock_syslog, mock_subprocess, mock_SonicV2Connector):
         mock_db = MagicMock()
         mock_SonicV2Connector.return_value = mock_db
@@ -19,9 +19,9 @@ class TestMgmtOperStatusCheck(unittest.TestCase):
 
         mock_syslog.assert_called_with(syslog.LOG_DEBUG, 'No management interface found')
 
-    @patch('your_script_name.SonicV2Connector')
-    @patch('your_script_name.subprocess.run')
-    @patch('your_script_name.syslog.syslog')
+    @patch('mgmt_oper_status.SonicV2Connector')
+    @patch('mgmt_oper_status.subprocess.run')
+    @patch('mgmt_oper_status.syslog.syslog')
     def test_main_with_mgmt_ports(self, mock_syslog, mock_subprocess, mock_SonicV2Connector):
         mock_db = MagicMock()
         mock_SonicV2Connector.return_value = mock_db
@@ -39,9 +39,9 @@ class TestMgmtOperStatusCheck(unittest.TestCase):
         mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth0', 'oper_status', 'up')
         mock_db.set.assert_any_call(mock_db.STATE_DB, 'MGMT_PORT_TABLE|eth1', 'oper_status', 'up')
 
-    @patch('your_script_name.SonicV2Connector')
-    @patch('your_script_name.subprocess.run')
-    @patch('your_script_name.syslog.syslog')
+    @patch('mgmt_oper_status.SonicV2Connector')
+    @patch('mgmt_oper_status.subprocess.run')
+    @patch('mgmt_oper_status.syslog.syslog')
     def test_main_exception_handling(self, mock_syslog, mock_subprocess, mock_SonicV2Connector):
         mock_db = MagicMock()
         mock_SonicV2Connector.return_value = mock_db
