@@ -27,10 +27,12 @@ def main():
                 if state_db_key in state_db_mgmt_port:
                     prev_oper_status = db.get(db.STATE_DB, state_db_key, 'oper_status')
                 port_operstate_path = '/sys/class/net/{}/operstate'.format(port)
-                current_oper_status = subprocess.run(['cat', port_operstate_path], capture_output=True, text=True)
-                if current_oper_status.stdout.strip() != prev_oper_status:
-                    db.set(db.STATE_DB, state_db_key, 'oper_status', current_oper_status.stdout.strip())
-                    syslog.syslog(syslog.LOG_INFO, "mgmt_oper_status: {}".format(current_oper_status.stdout.strip()))
+                oper_status = subprocess.run(['cat', port_operstate_path], capture_output=True, text=True)
+                current_oper_status = oper_status.stdout.strip()
+                if current_oper_status != prev_oper_status:
+                    db.set(db.STATE_DB, state_db_key, 'oper_status', current_oper_status)
+                    log_level = syslog.LOG_INFO if current_oper_status == 'up' else syslog.LOG_WARNING 
+                    syslog.syslog(log_level, "mgmt_oper_status: {}".format(current_oper_status))
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, "mgmt_oper_status exception : {}".format(str(e)))
             db.set(db.STATE_DB, state_db_key, 'oper_status', 'unknown')
