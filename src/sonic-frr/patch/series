@@ -41,3 +41,11 @@
 0059-Fix-BGP-reset-on-suppress-fib-pending-configuration.patch
 0060-bgpd-Validate-both-nexthop-information-NEXTHOP-and-N.patch
 0061-Set-multipath-to-514-and-disable-bgp-vnc-for-optimiz.patch
+0069-lib-nexthop-code-should-use-uint16_t-for-nexthop-cou.patch
+0070-Allow-16-bit-size-for-nexthops.patch
+0071-zebra-Only-notify-dplane-work-pthread-when-needed.patch
+0072-Fix-up-improper-handling-of-nexthops-for-nexthop-tra.patch
+0073-remove-in6addr-cmp.patch
+0074-bgp-best-port-reordering.patch
+0075-bgp-mp-info-changes.patch
+0076-Optimizations-and-problem-fixing-for-large-scale-ecmp-from-bgp.patch
