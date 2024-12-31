@@ -134,7 +134,7 @@
                       { "chn":"6", "dev":"MUX4" },
                       { "chn":"7", "dev":"MUX5" },
                       { "chn":"8", "dev":"MUX6" },
-                      { "chn":"9", "dev":"MUX7"},
+                      { "chn":"9", "dev":"MUX7" },
                       { "chn":"11", "dev":"MUX8"}
                 ]
              }
@@ -2115,7 +2115,7 @@
             "topo_info": { "parent_bus":"0x36", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3c0", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3c0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3c0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3c0", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2155,7 +2155,7 @@
             "topo_info": { "parent_bus":"0x38", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3e0", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3e0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3e0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x3e0", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2195,7 +2195,7 @@
             "topo_info": { "parent_bus":"0x37", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x400", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x400", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x400", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x400", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2235,7 +2235,7 @@
             "topo_info": { "parent_bus":"0x39", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x420", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x420", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x420", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x420", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2275,7 +2275,7 @@
             "topo_info": { "parent_bus":"0x2a", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x440", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x440", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x440", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x440", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2315,7 +2315,7 @@
             "topo_info": { "parent_bus":"0x2c", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x460", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x460", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x460", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x460", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2355,7 +2355,7 @@
             "topo_info": { "parent_bus":"0x2b", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x480", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x480", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x480", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x480", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2395,7 +2395,7 @@
             "topo_info": { "parent_bus":"0x2d", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4a0", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4a0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4a0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4a0", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2435,7 +2435,7 @@
             "topo_info": { "parent_bus":"0x2e", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4c0", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4c0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4c0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4c0", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2475,7 +2475,7 @@
             "topo_info": { "parent_bus":"0x30", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4e0", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4e0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4e0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x4e0", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2515,7 +2515,7 @@
             "topo_info": { "parent_bus":"0x2f", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x500", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x500", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x500", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x500", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2555,7 +2555,7 @@
             "topo_info": { "parent_bus":"0x31", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x520", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x520", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x520", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x520", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2595,7 +2595,7 @@
             "topo_info": { "parent_bus":"0x22", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x540", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x540", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x540", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x540", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2635,7 +2635,7 @@
             "topo_info": { "parent_bus":"0x24", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x560", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x560", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x560", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x560", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2675,7 +2675,7 @@
             "topo_info": { "parent_bus":"0x23", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x580", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x580", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x580", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x580", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2715,7 +2715,7 @@
             "topo_info": { "parent_bus":"0x25", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5a0", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5a0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5a0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5a0", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2755,7 +2755,7 @@
             "topo_info": { "parent_bus":"0x26", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5c0", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5c0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5c0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5c0", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2795,7 +2795,7 @@
             "topo_info": { "parent_bus":"0x28", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5e0", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5e0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5e0", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x5e0", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2835,7 +2835,7 @@
             "topo_info": { "parent_bus":"0x27", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x600", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x600", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x600", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x600", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2875,7 +2875,7 @@
             "topo_info": { "parent_bus":"0x29", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x620", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x620", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x620", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x620", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -2995,7 +2995,7 @@
             "topo_info": { "parent_bus":"0x2", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x660", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x660", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x660", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x660", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -3075,7 +3075,7 @@
             "topo_info": { "parent_bus":"0x3b", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x680", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x680", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x680", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x680", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
@@ -3115,7 +3115,7 @@
             "topo_info": { "parent_bus":"0x3a", "dev_addr":"0x53", "dev_type":"pddf_xcvr"},
             "attr_list":
             [
-                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x690", "attr_mask":"0x0", "attr_cmpval":"0x0", "attr_len":"1"},
+                { "attr_name":"xcvr_present", "attr_devaddr":"0x4004", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x690", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_reset", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x690", "attr_mask":"0x4", "attr_cmpval":"0x0", "attr_len":"1"},
                 { "attr_name":"xcvr_lpmode", "attr_devaddr":"0x4000", "attr_devtype":"fpgapci", "attr_devname":"FPGAPCIE0", "attr_offset":"0x690", "attr_mask":"0x6", "attr_cmpval":"0x40", "attr_len":"1"}
             ]
