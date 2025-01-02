@@ -1,5 +1,5 @@
 jobs:
-  - job: Checkout code
+  - job: CheckoutCode
     steps:
     - script: |
         set -ex
@@ -13,3 +13,4 @@ jobs:
             git checkout $COMMIT_ID
           fi
         fi
+    displayName: 'Checkout code'
