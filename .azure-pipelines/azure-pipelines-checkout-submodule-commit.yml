@@ -1,12 +1,15 @@
-script: |
-    set -ex
+jobs:
+  - job: Checkout code
+    steps:
+    - script: |
+        set -ex
 
-    if [ -n "$COMMIT_ID" ]; then
-      if [ -z "$SUBMODULE_NAME" ]; then
-        git checkout $COMMIT_ID
-      else
-        git submodule update --init --recursive
-        cd src/$SUBMODULE_NAME
-        git checkout $COMMIT_ID
-      fi
-    fi
+        if [ -n "$COMMIT_ID" ]; then
+          if [ -z "$SUBMODULE_NAME" ]; then
+            git checkout $COMMIT_ID
+          else
+            git submodule update --init --recursive
+            cd src/$SUBMODULE_NAME
+            git checkout $COMMIT_ID
+          fi
+        fi
