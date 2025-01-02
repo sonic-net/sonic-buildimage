@@ -125,7 +125,7 @@
                "i2c":
                {
                      "topo_info": { "parent_bus":"0x0"},
-                     "dev_attr": { "vendor_id":"0x10EE", "device_id": "0x7021", "virt_bus": "0x258", "data_base_offset":"0x0", "data_size":"0x6000", "i2c_ch_base_offset":"0x6000", "i2c_ch_size":"0x10",  "virt_i2c_ch":"8"},
+                     "dev_attr": { "vendor_id":"0x10EE", "device_id": "0x7021", "virt_bus": "0x258", "data_base_offset":"0x0", "data_size":"0x6000", "i2c_ch_base_offset":"0x6000", "i2c_ch_size":"0x10",  "virt_i2c_ch":"0x10"},
                 "channel":
                 [
                       { "chn":"3", "dev":"MUX1" },
@@ -293,7 +293,7 @@
         "i2c":
         {
             "topo_info": { "parent_bus":"0x263", "dev_addr":"0x70", "dev_type":"pca9548"},
-            "dev_attr": { "virt_bus":"0x3b"},
+            "dev_attr": { "virt_bus":"0x3a"},
             "channel":
             [
                         { "chn":"0", "dev":"PORT58" },
