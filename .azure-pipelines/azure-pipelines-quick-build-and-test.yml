@@ -43,10 +43,6 @@ variables:
 
 
 parameters:
-  - name: github_conn
-    type: string
-    default: 'github.com_sonic-net'
-
   - name: SUBMODULE_NAME
     type: string
     default: ''
@@ -96,8 +92,8 @@ stages:
     pool: sonicbld-1es
     jobs:
     - template: .azure-pipelines/azure-pipelines-checkout-submodule-commit.yml
+      dependsOn: and( ${{ parameters.COMMIT_ID }} )
       parameters:
-        github_conn: ${{ parameters.github_conn }}
         SUBMODULE_NAME: ${{ parameters.SUBMODULE_NAME }}
         COMMIT_ID: ${{ parameters.COMMIT_ID }}
 

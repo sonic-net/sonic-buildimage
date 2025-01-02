@@ -1,9 +1,11 @@
 steps:
 - script: |
-    if [ -z "$(SUBMODULE_NAME)" ]; then
-      git checkout $(COMMIT_ID)
+    set -ex
+
+    if [ -z "$SUBMODULE_NAME" ]; then
+      git checkout $COMMIT_ID
     else
       git submodule update --init --recursive
-      cd src/$(SUBMODULE_NAME)
-      git checkout $(COMMIT_ID)
+      cd src/$SUBMODULE_NAME
+      git checkout $COMMIT_ID
     fi
