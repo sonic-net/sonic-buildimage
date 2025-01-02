@@ -1,9 +1,0 @@
-INTERVAL=10
-DEVPATH=hwmon1=devices/platform/soc/soc:internal-regs/f1011000.i2c/i2c-0/0-002e
-DEVNAME=hwmon1=adt7473
-FCTEMPS=hwmon1/device/pwm1=hwmon1/device/temp1_input hwmon1/device/pwm2=hwmon1/device/temp2_input
-FCFANS=hwmon1/device/pwm1= hwmon1/device/pwm2=hwmon1/device/fan1_input
-MINTEMP=hwmon1/device/pwm1=20 hwmon1/device/pwm2=20
-MAXTEMP=hwmon1/device/pwm1=60 hwmon1/device/pwm2=60
-MINSTART=hwmon1/device/pwm1=150 hwmon1/device/pwm2=150
-MINSTOP=hwmon1/device/pwm1=0 hwmon1/device/pwm2=0
