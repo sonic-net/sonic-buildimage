@@ -47,7 +47,7 @@ endif
 $(DOCKER_DHCP_RELAY)_CONTAINER_NAME = dhcp_relay
 $(DOCKER_DHCP_RELAY)_CONTAINER_PRIVILEGED = false
 $(DOCKER_DHCP_RELAY)_CONTAINER_VOLUMES += /etc/sonic:/etc/sonic:ro
-$(DOCKER_DHCP_RELAY)_CONTAINER_VOLUMES += /etc/timezone:/etc/timezone:ro
+$(DOCKER_DHCP_RELAY)_CONTAINER_VOLUMES += /etc/localtime:/etc/localtime:ro
 $(DOCKER_DHCP_RELAY)_CONTAINER_TMPFS += /tmp/
 $(DOCKER_DHCP_RELAY)_CONTAINER_TMPFS += /var/tmp/
 

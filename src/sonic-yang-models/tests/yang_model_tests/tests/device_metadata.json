@@ -94,8 +94,17 @@
     "DEVICE_METADATA_VALID_CLUSTER": {
         "desc": "Verifying valid cluster configuration."
     },
-    "DEVICE_METADATA_VALID_SUBTYPE": {
-        "desc": "Verifying valid subtype value"
+    "DEVICE_METADATA_VALID_SUBTYPE0": {
+        "desc": "Verifying valid subtype value dualtor"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE1": {
+        "desc": "Verifying valid subtype value supervisor"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE2": {
+        "desc": "Verifying valid subtype value upstreamLC"
+    },
+    "DEVICE_METADATA_VALID_SUBTYPE3": {
+        "desc": "Verifying valid subtype value downstreamLC"
     },
     "DEVICE_METADATA_INVALID_SUBTYPE": {
         "desc": "Verifying invalid subtype value",
@@ -165,6 +174,9 @@
     "DEVICE_METADATA_INVALID_CREATE_ONLY_CONFIG_DB_BUFFERS": {
         "desc": "Verifying invalid create_only_config_db_buffers value",
         "eStrKey": "InvalidValue"
+    },
+    "DEVICE_METADATA_VALID_SUPPORTING_BULK_COUNTER_GROUPS": {
+        "desc": "Verifying the supporting_bulk_counter_groups value"
     },
     "DEVICE_METADATA_VALID_BGP_ROUTER_ID": {
         "desc": "Verifying bgp_router_id configuration."

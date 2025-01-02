@@ -74,7 +74,9 @@ module sonic-port{
 					when "not(not(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:asic_name) and
 					((/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='voq') or 
 					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='chassis-packet') or
-					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='fabric')))";
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='fabric') or
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:hwsku='msft_four_asic_vs') or 
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:hwsku='msft_multi_asic_vs')))";
 
 					description "Number of hardware lanes for the port. This is mandatory for all devices except for chassis devices";
 					mandatory true;

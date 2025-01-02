@@ -16,7 +16,6 @@ def generate_common_config(data):
     data['FLEX_COUNTER_TABLE'] = {
         'ACL': {
             'FLEX_COUNTER_STATUS': 'disable',
-            'FLEX_COUNTER_DELAY_STATUS': 'true',
             'POLL_INTERVAL': '10000'
         }
     }
@@ -86,6 +85,12 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
     bridge_name = 'bridge-midplane'
 
+    data['MID_PLANE_BRIDGE'] = {
+        "GLOBAL": {
+            "bridge": bridge_name,
+            "ip_prefix": "169.254.200.254/24"
+        }
+    }
     dhcp_server_ports = {}
 
     for dpu_name in natsorted(ss_config.get('DPUS', {})):
@@ -123,10 +128,6 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
         data['DHCP_SERVER_IPV4'] = {
             bridge_name: {
-                'customized_options': [
-                    'option60',
-                    'option223'
-                ],
                 'gateway': mpbr_address,
                 'lease_time': '3600',
                 'mode': 'PORT',
@@ -270,4 +271,3 @@ def get_available_config():
 def generate_sample_config(data, setting_name):
     data = generate_common_config(data)
     return _sample_generators[setting_name.lower()](data)
-
