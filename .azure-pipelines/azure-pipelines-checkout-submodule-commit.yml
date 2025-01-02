@@ -1,4 +1,4 @@
-- script: |
+script: |
     set -ex
 
     if [ -n "$COMMIT_ID" ]; then
