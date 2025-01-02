@@ -94,12 +94,12 @@ stages:
     - job: BuildVS
       pool: sonicbld-1es
       steps:
-      - template: .azure-pipelines/azure-pipelines-checkout-submodule-commit.yml
+      - template: azure-pipelines-checkout-submodule-commit.yml
         parameters:
           SUBMODULE_NAME: ${{ parameters.SUBMODULE_NAME }}
           COMMIT_ID: ${{ parameters.COMMIT_ID }}
 
-      - template: .azure-pipelines/azure-pipelines-build.yml
+      - template: azure-pipelines-build.yml
         parameters:
           buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.  VERSION_CONTROL_OPTIONS }}'
           jobGroups:
