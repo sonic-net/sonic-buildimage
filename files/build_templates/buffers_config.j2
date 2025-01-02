@@ -191,13 +191,13 @@ def
 {%- endfor %}
 {%- set port_names_inactive  = port_names_list_inactive  | join(',') %}
 
-{%- set port_names_list_all  = [] %}
-{%- for port in PORT_ALL %}
-    {%- if port_names_list_all.append(port) %}{%- endif %}
-{%- endfor %}
-{%- set port_names_all  = port_names_list_all  | join(',') %}
 {
 {% if (defs.generate_cable_length_config is defined) %}
+    {%- set port_names_list_all  = [] %}
+    {%- for port in PORT_ALL %}
+        {%- if port_names_list_all.append(port) %}{%- endif %}
+    {%- endfor %}
+    {%- set port_names_all  = port_names_list_all  | join(',') %}
     {{- defs.generate_cable_length_config(port_names_all) }}
 {% else %}
     "CABLE_LENGTH": {
