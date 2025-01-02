@@ -120,6 +120,8 @@
     },
 {% if (generate_tc_to_queue_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_queue_map() }}
+{% elif (generate_tc_to_queue_map_per_sku is defined) %}
+    {{ generate_tc_to_queue_map_per_sku() }}
 {% else %}
     "TC_TO_QUEUE_MAP": {
         "AZURE": {
@@ -156,6 +158,8 @@
          ('resource_type' in DEVICE_METADATA['localhost'] and
            DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     {{- generate_dscp_to_tc_map() }}
+{% elif (generate_dscp_to_tc_map_per_sku is defined) %}
+    {{ generate_dscp_to_tc_map_per_sku() }}
 {% else %}
     "DSCP_TO_TC_MAP": {
         "AZURE": {
@@ -267,6 +271,8 @@
             "weight": "5"
         }
     },
+{% elif generate_scheduler_per_sku is defined %}
+    {{ generate_scheduler_per_sku() }}
 {% else %}
     "SCHEDULER": {
         "scheduler.0": {
@@ -408,6 +414,13 @@
         "{{ system_port }}|6": {
             "scheduler": "scheduler.0"
         }{% if not loop.last %},{% endif %}
+{% endfor %}
+    }
+{% elif generate_single_queue_per_sku is defined %}
+    "QUEUE": {
+{% for port in PORT_ACTIVE %}
+        {{ generate_single_queue_per_sku(port) }}
+        {%- if not loop.last -%},{% endif %}
 {% endfor %}
     }
 {% else %}
