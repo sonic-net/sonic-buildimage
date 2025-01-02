@@ -12,3 +12,4 @@ ofpart
 mtdswap
 mtd_blkdevs
 adt7475
+i2c-dev
