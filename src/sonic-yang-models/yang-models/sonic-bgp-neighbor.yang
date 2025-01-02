@@ -28,6 +28,10 @@ module sonic-bgp-neighbor {
     //    prefix vlan;
     //}
 
+    import sonic-route-map {
+        prefix rmap;
+    }
+
     import sonic-bgp-global {
         prefix bgpg;
     }
@@ -130,7 +134,26 @@ module sonic-bgp-neighbor {
                     }
                     description "BGP Neighbor, it will be neighbor address or interface name";
                 }
+
                 uses bgpcmn:sonic-bgp-cmn-af;
+
+                // These should logically be in sonic-bgp-cmn-af, however due to a libyang2 bug when including
+                // a leaf-list entry, there are validation failures.
+                leaf-list route_map_in {
+                    type leafref {
+                        path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
+                    }
+                    description "Route-map filter for incoming routes";
+                    max-elements 1;
+                }
+
+                leaf-list route_map_out {
+                    type leafref {
+                        path "/rmap:sonic-route-map/rmap:ROUTE_MAP_SET/rmap:ROUTE_MAP_SET_LIST/rmap:name";
+                    }
+                    description "Route-map filter for outgoing routes";
+                    max-elements 1;
+                }
             }
         }
     }
