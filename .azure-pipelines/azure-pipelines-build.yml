@@ -19,6 +19,12 @@ parameters:
 - name: 'qemuOrCrossBuild'
   type: boolean
   default: false
+- name: SUBMODULE_NAME
+  type: string
+  default: ''
+- name: COMMIT_ID
+  type: string
+  default: ''
 
 jobs:
 - template: azure-pipelines-image-template.yml
@@ -26,6 +32,8 @@ jobs:
     jobFilters: ${{ parameters.jobFilters }}
     preSteps: ${{ parameters.preSteps }}
     postSteps: ${{ parameters.postSteps }}
+    SUBMODULE_NAME: ${{ parameters.SUBMODULE_NAME }}
+    COMMIT_ID: ${{ parameters.COMMIT_ID }}
     jobVariables:
       PLATFORM_AZP: $(GROUP_NAME)
       PLATFORM_ARCH: amd64
