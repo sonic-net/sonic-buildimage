@@ -19,6 +19,12 @@ parameters:
 - name: jobVariables
   type: object
   default: []
+- name: SUBMODULE_NAME
+  type: string
+  default: ''
+- name: COMMIT_ID
+  type: string
+  default: ''
 jobs:
 - template: azure-pipelines-job-groups.yml
   parameters:
@@ -48,8 +54,14 @@ jobs:
         displayName: 'setfacl'
       - script: |
           BRANCH_NAME=$(Build.SourceBranchName)
-          [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTID" ] && BRANCH_NAME="$SYSTEM_PULLREQUEST_TARGETBRANCH-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
-          git checkout -b $BRANCH_NAME
+          if [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTID" ]; then
+            BRANCH_NAME="$SYSTEM_PULLREQUEST_TARGETBRANCH-$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
+            git checkout -b $BRANCH_NAME
+          elif [ -n "${{ parameters.COMMIT_ID }}" and -n "${{ parameters.SUBMODULE_NAME }}"]; then
+            git submodule update --init --recursive
+            cd src/${{ parameters.SUBMODULE_NAME }}
+            git checkout ${{ parameters.COMMIT_ID }}
+          fi
           sudo modprobe overlay
           sudo apt-get install -y acl
           sudo bash -c "echo 1 > /proc/sys/vm/compact_memory"
