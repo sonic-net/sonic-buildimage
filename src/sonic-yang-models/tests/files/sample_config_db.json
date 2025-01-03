@@ -5,6 +5,13 @@
                     "vni" : "100"
                 }
         },
+        "SUBNET_DECAP": {
+            "AZURE": {
+                "status": "enable",
+                "src_ip": "10.10.10.0/24",
+                "src_ip_v6": "20c1:ba8::/64"
+            }
+        },
         "DHCP_SERVER": {
             "192.0.0.8": {},
             "192.0.0.8": {},
@@ -328,6 +335,12 @@
                 "SRC_IP": "1.1.1.1/32",
                 "BTH_OPCODE": "0x11/0xbf",
                 "AETH_SYNDROME": "0x60/0x60"
+            },
+            "DATAACL|RULE0": {
+                "PRIORITY": "999",
+                "PACKET_ACTION": "FORWARD",
+                "TUNNEL_TERM": "true",
+                "DST_IP": "1.1.1.1/32"
             }
         },
         "SWITCH_HASH": {
@@ -1331,7 +1344,9 @@
             "gnmi": {
                 "client_auth": "true",
                 "log_level": "2",
-                "port": "50051"
+                "port": "50051",
+                "enable_crl": "false",
+                "crl_expire_duration": "86400"
             }
         },
         "TELEMETRY_CLIENT": {
@@ -1368,7 +1383,9 @@
             "gnmi": {
                 "client_auth": "true",
                 "log_level": "2",
-                "port": "50052"
+                "port": "50052",
+                "enable_crl": "false",
+                "crl_expire_duration": "86400"
             }
         },
         "GNMI_CLIENT_CERT": {
@@ -1761,6 +1778,9 @@
             "default|ipv6_unicast": {
                 "max_ebgp_paths": "2",
                 "max_ibgp_paths": "2"
+            },
+            "default|l2vpn_evpn": {
+                "advertise-all-vni": "true"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
@@ -2752,12 +2772,40 @@
 		"log_verbosity": "notice"
 	    }
 	},
+	"GRPCCLIENT": {
+            "config": {
+                "type": "secure",
+                "auth_level": "server",
+                "log_level": "info"
+            },
+            "certs": {
+                "client_crt": "grpcclient.crt",
+                "client_key": "grpcclient.key",
+                "ca_crt": "root.pem",
+                "grpc_ssl_credential": "azureclient.ms"
+            } 
+	},
         "BANNER_MESSAGE": {
             "global": {
                 "state": "enabled",
                 "login": "Some login message",
                 "motd": "Some message of the day",
                 "logout": "Some logout message"
+            }
+        },
+        "MEMORY_STATISTICS": {
+            "memory_statistics": {
+                "enabled": "false",
+                "sampling_interval": "5",
+                "retention_period": "15"
+            }
+        },
+        "ASIC_SENSORS": {
+            "ASIC_SENSORS_POLLER_INTERVAL": {
+                "interval": "10"
+            },
+            "ASIC_SENSORS_POLLER_STATUS": {
+                "admin_status": "enable"
             }
         }
     },

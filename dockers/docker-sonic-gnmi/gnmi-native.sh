@@ -17,6 +17,10 @@ X509=$(echo $TELEMETRY_VARS | jq -r '.x509')
 GNMI=$(echo $TELEMETRY_VARS | jq -r '.gnmi')
 CERTS=$(echo $TELEMETRY_VARS | jq -r '.certs')
 
+# Enable GRPC GO LOG
+export GRPC_GO_LOG_VERBOSITY_LEVEL=99
+export GRPC_GO_LOG_SEVERITY_LEVEL=info
+
 TELEMETRY_ARGS=" -logtostderr"
 export CVL_SCHEMA_PATH=/usr/sbin/schema
 
@@ -70,6 +74,18 @@ if [[ $LOG_LEVEL =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" -v=$LOG_LEVEL"
 else
     TELEMETRY_ARGS+=" -v=2"
+fi
+
+if [ -nz "$GNMI" ]; then
+    ENABLE_CRL=$(echo $GNMI | jq -r '.enable_crl')
+    if [ $ENABLE_CRL == "true" ]; then
+        TELEMETRY_ARGS+=" --enable_crl"
+    fi
+
+    CRL_EXPIRE_DURATION=$(echo $GNMI | jq -r '.crl_expire_duration')
+    if [ -n $CRL_EXPIRE_DURATION ]; then
+        TELEMETRY_ARGS+=" --crl_expire_duration $CRL_EXPIRE_DURATION"
+    fi
 fi
 
 # Enable ZMQ for SmartSwitch

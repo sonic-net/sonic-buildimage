@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,11 +20,21 @@ import glob
 import os
 import time
 import re
+from enum import Enum
 
 from . import utils
 from sonic_py_common.general import check_output_pipe
 
 DEFAULT_WD_PERIOD = 65535
+
+
+class DpuInterfaceEnum(Enum):
+    MIDPLANE_INT = "midplane_interface"
+    RSHIM_INT = "rshim_info"
+    PCIE_INT = "bus_info"
+
+
+dpu_interface_values = [item.value for item in DpuInterfaceEnum]
 
 DEVICE_DATA = {
     'x86_64-mlnx_msn2700-r0': {
@@ -271,16 +282,26 @@ class DeviceDataManager:
     @classmethod
     @utils.read_only_cache()
     def get_platform_dpus_data(cls):
-        json_data = cls.get_platform_json_data()
-        return json_data.get('DPUS', None)
-
-    @classmethod
-    @utils.read_only_cache()
-    def get_platform_json_data(cls):
         from sonic_py_common import device_info
         platform_path = device_info.get_path_to_platform_dir()
         platform_json_path = os.path.join(platform_path, 'platform.json')
-        return utils.load_json_file(platform_json_path)
+        json_data = utils.load_json_file(platform_json_path)
+        return json_data.get('DPUS', None)
+
+    @classmethod
+    def get_dpu_interface(cls, dpu, interface):
+        dpu_data = cls.get_platform_dpus_data()
+        if (not dpu_data) or (interface not in dpu_interface_values):
+            return None
+        return dpu_data.get(dpu, {}).get(interface)
+
+    @classmethod
+    @utils.read_only_cache()
+    def get_dpu_count(cls):
+        dpu_data = cls.get_platform_dpus_data()
+        if not dpu_data:
+            return 0
+        return len(dpu_data)
 
     @classmethod
     def get_bios_component(cls):

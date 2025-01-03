@@ -93,21 +93,21 @@ CLANG_ADD_CFLAGS += --target=$(TARGET_ARCHITECTURE) --gcc-toolchain=$(TOOLCHAIN_
 export KERNEL_LLVM = 0
 OPT_KERNEL_TOOLCHAIN = CC=$(CROSS_COMPILE)gcc LD=$(CROSS_COMPILE)ld AR=$(CROSS_COMPILE)ar
 else
-CFLAGS += -Wno-unused-value -Wno-unused-but-set-variable -Wno-sizeof-pointer-memaccess -fno-aggressive-loop-optimizations
+OPT_CFLAGS += -Wno-unused-value -Wno-unused-but-set-variable -Wno-sizeof-pointer-memaccess -fno-aggressive-loop-optimizations
 endif
 
 ifdef DPP_CHIPS
-CFLAGS += -DDUNE_BCM -D__DUNE_LINUX_BCM_CPU_PCP_DMA__
+CFGFLAGS += -DDUNE_BCM -D__DUNE_LINUX_BCM_CPU_PCP_DMA__
 CFGFLAGS += -DSOC_CM_FUNCTION
 endif
 
 ifdef DFE_CHIPS
-CFLAGS += -DDUNE_BCM
+CFGFLAGS += -DDUNE_BCM
 CFGFLAGS += -DSOC_CM_FUNCTION
 endif
 
 ifdef SAND_CHIPS
-CFLAGS += -D__DUNE_SLK_BCM_CPU__ -D__DUNE_LINUX_BCM_CPU_PCIE__
+CFGFLAGS += -D__DUNE_SLK_BCM_CPU__ -D__DUNE_LINUX_BCM_CPU_PCIE__
 endif
 
 # Enable cached DMA memory by default
