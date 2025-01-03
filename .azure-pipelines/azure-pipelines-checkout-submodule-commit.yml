@@ -4,13 +4,13 @@ jobs:
     - script: |
         set -ex
 
-        if [ -n "$COMMIT_ID" ]; then
-          if [ -z "$SUBMODULE_NAME" ]; then
-            git checkout $COMMIT_ID
+        if [ -n "${{ parameters.COMMIT_ID }}" ]; then
+          if [ -z "${{ parameters.SUBMODULE_NAME }}" ]; then
+            git checkout ${{ parameters.COMMIT_ID }}
           else
             git submodule update --init --recursive
-            cd src/$SUBMODULE_NAME
-            git checkout $COMMIT_ID
+            cd src/${{ parameters.SUBMODULE_NAME }}
+            git checkout ${{ parameters.COMMIT_ID }}
           fi
         fi
     displayName: 'Checkout code'
