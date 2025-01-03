@@ -96,36 +96,36 @@ stages:
         SUBMODULE_NAME: ${{ parameters.SUBMODULE_NAME }}
         COMMIT_ID: ${{ parameters.COMMIT_ID }}
 
-  #   - template: azure-pipelines-build.yml
-  #     parameters:
-  #       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.  VERSION_CONTROL_OPTIONS }}'
-  #       jobGroups:
-  #       - name: vs
+    - template: azure-pipelines-build.yml
+      parameters:
+        buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.  VERSION_CONTROL_OPTIONS }}'
+        jobGroups:
+        - name: vs
 
-  # - stage: Test
-  #   dependsOn: BuildVS
-  #   condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
-  #   variables:
-  #   - group: SONiC-Elastictest
-  #   - name: inventory
-  #     value: veos_vtb
-  #   - name: testbed_file
-  #     value: vtestbed.csv
+  - stage: Test
+    dependsOn: BuildVS
+    condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
+    variables:
+    - group: SONiC-Elastictest
+    - name: inventory
+      value: veos_vtb
+    - name: testbed_file
+      value: vtestbed.csv
 
-  #   jobs:
-  #   - job: KVMTEST
-  #     displayName: "kvmtest by Elastictest"
-  #     timeoutInMinutes: 240
-  #     continueOnError: false
-  #     pool: sonic-ubuntu-1c
-  #     steps:
-  #     - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
-  #       parameters:
-  #         TOPOLOGY: ${{ parameters.TOPOLOGY }}
-  #         MIN_WORKER: ${{ parameters.MIN_WORKER }}
-  #         MAX_WORKER: ${{ parameters.MAX_WORKER }}
-  #         KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
-  #         MGMT_BRANCH: ${{ parameters.BRANCH }}
-  #         SCRIPTS: ${{ parameters.SCRIPTS }}
-  #         FEATURES: ${{ parameters.FEATURES }}
-  #         DEPLOY_MG_EXTRA_PARAMS: ${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}
+    jobs:
+    - job: KVMTEST
+      displayName: "kvmtest by Elastictest"
+      timeoutInMinutes: 240
+      continueOnError: false
+      pool: sonic-ubuntu-1c
+      steps:
+      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: ${{ parameters.TOPOLOGY }}
+          MIN_WORKER: ${{ parameters.MIN_WORKER }}
+          MAX_WORKER: ${{ parameters.MAX_WORKER }}
+          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+          MGMT_BRANCH: ${{ parameters.BRANCH }}
+          SCRIPTS: ${{ parameters.SCRIPTS }}
+          FEATURES: ${{ parameters.FEATURES }}
+          DEPLOY_MG_EXTRA_PARAMS: ${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}
