@@ -194,6 +194,9 @@ trapsink {{ v3SnmpTrapIp }}:{{ v3SnmpTrapPort }}{% if v3SnmpTrapVrf != 'None' %}
 #
                                            #  Run as an AgentX master agent
 master          agentx
+agentXTimeout   5
+agentXRetries   4
+
 # internal socket to allow extension to other docker containers
 # Currently the other container using this is docker-fpm-frr
 # make sure this line matches bgp:/etc/snmp/frr.conf 
