@@ -1,0 +1,58 @@
+{
+    "STP_GLOBAL_VALID_TEST": {
+        "desc": "Configure valid global STP settings in PVST mode with default parameters"
+    },
+    "STP_GLOBAL_INVALID_MODE_TEST": {
+        "desc": "Configure invalid STP mode value",
+        "eStrKey": "InvalidValue",
+        "eStr": ["Invalid STP mode - must be pvst or mst"]
+    },
+    "STP_GLOBAL_INVALID_PRIORITY_TEST": {
+        "desc": "Configure invalid bridge priority value",
+        "eStrKey": "InvalidValue",
+        "eStr": ["Invalid Bridge Priority value"]
+    },
+    "STP_VLAN_VALID_TEST": {
+        "desc": "Configure valid VLAN STP parameters with priority and timers"
+    },
+    "STP_PORT_VALID_PVST_TEST": {
+        "desc": "Configure valid port parameters in PVST mode including portfast and guards"
+    },
+    "STP_PORT_INVALID_COST_TEST": {
+        "desc": "Configure invalid path cost value",
+        "eStrKey": "InvalidValue",
+        "eStr": ["Invalid Port Path Cost value"]
+    },
+    "STP_PORT_INVALID_PRIORITY_TEST": {
+        "desc": "Configure invalid port priority",
+        "eStrKey": "InvalidValue",
+        "eStr": ["Invalid Port Priority value"]
+    },
+    "STP_MST_VALID_CONFIG_TEST": {
+        "desc": "Configure valid MST mode with region and revision"
+    },
+    "STP_MST_INVALID_IN_PVST_TEST": {
+        "desc": "Configure MST parameters while in PVST mode",
+        "eStrKey": "stp-invalid",
+        "eStr": ["Configuration allowed only in MST mode"]
+    },
+    "STP_MST_INSTANCE_VALID_TEST": {
+        "desc": "Configure valid MST instance with VLAN mapping"
+    },
+    "STP_MST_INSTANCE_INVALID_VLAN_TEST": {
+        "desc": "Configure invalid VLAN mapping for MST instance",
+        "eStrKey": "InvalidValue",
+        "eStr": ["Invalid VLAN mapping for MST instance"]
+    },
+    "STP_PORT_ROOTGUARD_MST_TEST": {
+        "desc": "Configure root guard in MST mode",
+        "eStrKey": "stp-invalid",
+        "eStr": ["Configuration not allowed in MST mode"]
+    },
+    "STP_PORT_BPDUGUARD_VALID_TEST": {
+        "desc": "Configure valid BPDU guard settings with port disable"
+    },
+    "STP_MST_PORT_VALID_TEST": {
+        "desc": "Configure valid MST port settings with edge port and link type"
+    }
+}

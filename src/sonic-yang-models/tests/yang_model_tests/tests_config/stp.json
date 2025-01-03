@@ -1,0 +1,177 @@
+{
+    "MSTP_TEST": {
+        "sonic-spanning-tree": {
+            "STP": {
+                "STP_LIST": [
+                    {
+                        "keyleaf": "GLOBAL",
+                        "mode": "mst",
+                        "forward_delay": 15,
+                        "hello_time": 2,
+                        "max_age": 20,
+                        "priority": 32768
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_WRONG_MODE": {
+        "sonic-spanning-tree": {
+            "STP": {
+                "STP_LIST": [
+                    {
+                        "keyleaf": "GLOBAL",
+                        "mode": "unknown_mode"
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_INVALID_PRIORITY": {
+        "sonic-spanning-tree": {
+            "STP": {
+                "STP_LIST": [
+                    {
+                        "keyleaf": "GLOBAL",
+                        "priority": 70000
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_WITHOUT_NAME": {
+        "sonic-spanning-tree": {
+            "STP_MST": {
+                "STP_MST_LIST": [
+                    {
+                        "keyleaf": "GLOBAL",
+                        "name": "",
+                        "revision": 1,
+                        "max_hops": 20,
+                        "hello_time": 2,
+                        "max_age": 20,
+                        "forward_delay": 15
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_MAX_HOPS_EXCEEDED": {
+        "sonic-spanning-tree": {
+            "STP_MST": {
+                "STP_MST_LIST": [
+                    {
+                        "keyleaf": "GLOBAL",
+                        "max_hops": 300
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_WRONG_HELLO_TIME": {
+        "sonic-spanning-tree": {
+            "STP_MST": {
+                "STP_MST_LIST": [
+                    {
+                        "keyleaf": "GLOBAL",
+                        "hello_time": 15
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_INVALID_FORWARD_DELAY": {
+        "sonic-spanning-tree": {
+            "STP_MST": {
+                "STP_MST_LIST": [
+                    {
+                        "keyleaf": "GLOBAL",
+                        "forward_delay": 2
+                    }
+                ]
+            }
+        }
+    },
+    "PVST_TEST": {
+        "sonic-spanning-tree": {
+            "STP": {
+                "STP_LIST": [
+                    {
+                        "keyleaf": "GLOBAL",
+                        "mode": "pvst",
+                        "forward_delay": 15,
+                        "hello_time": 2,
+                        "max_age": 20,
+                        "priority": 32768
+                    }
+                ]
+            }
+        }
+    },
+    "PVST_TEST_WRONG_PRIORITY": {
+        "sonic-spanning-tree": {
+            "STP": {
+                "STP_LIST": [
+                    {
+                        "keyleaf": "GLOBAL",
+                        "priority": 1000
+                    }
+                ]
+            }
+        }
+    },
+    "PVST_TEST_INVALID_VLAN_ID": {
+        "sonic-spanning-tree": {
+            "STP_VLAN": {
+                "STP_VLAN_LIST": [
+                    {
+                        "name": "VLAN5000",
+                        "vlanid": 5000,
+                        "enabled": true
+                    }
+                ]
+            }
+        }
+    },
+    "PVST_TEST_MISSING_VLAN": {
+        "sonic-spanning-tree": {
+            "STP_VLAN": {
+                "STP_VLAN_LIST": [
+                    {
+                        "name": "VLAN10",
+                        "vlanid": null,
+                        "enabled": true
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_DUPLICATE_INTERFACE_CONFIG": {
+        "sonic-spanning-tree": {
+            "STP_PORT": {
+                "STP_PORT_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "path_cost": 20000
+                    },
+                    {
+                        "ifname": "Ethernet0",
+                        "path_cost": 20000
+                    }
+                ]
+            }
+        }
+    },
+    "MSTP_TEST_INVALID_LINK_TYPE": {
+        "sonic-spanning-tree": {
+            "STP_PORT": {
+                "STP_PORT_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "link_type": "invalid_type"
+                    }
+                ]
+            }
+        }
+    }
+}
