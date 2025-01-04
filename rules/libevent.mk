@@ -1,0 +1,10 @@
+# libevent
+
+LIBEVENT_VERSION = 2.1.8
+
+export LIBEVENT_VERSION
+
+LIBEVENT = libevent_$(LIBEVENT_VERSION)_amd64.deb
+$(LIBEVENT)_DPKGFLAGS += --force-all
+$(LIBEVENT)_SRC_PATH = $(SRC_PATH)/libevent
+SONIC_MAKE_DEBS += $(LIBEVENT)
