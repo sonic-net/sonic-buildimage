@@ -12,13 +12,11 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20::",
                         "locator": "MAIN",
                         "action": "uN"
                     },
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20:F1::",
                         "locator": "MAIN",
                         "action": "uDT46"
@@ -41,13 +39,11 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20::",
                         "locator": "MAIN",
                         "action": "uN"
                     },
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20:F1::",
                         "locator": "MAIN",
                         "action": "uDT46"
@@ -70,13 +66,11 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20::",
                         "locator": "MAIN",
                         "action": "uN"
                     },
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20:F1::",
                         "locator": "MAIN",
                         "action": "uDT46"
@@ -98,13 +92,11 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20::",
                         "locator": "None",
                         "action": "uN"
                     },
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20:F1::",
                         "locator": "MAIN",
                         "action": "uDT46"
@@ -126,13 +118,11 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:200001::",
                         "locator": "MAIN",
                         "action": "uN"
                     },
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20:F1::",
                         "locator": "MAIN",
                         "action": "uDT46"
@@ -154,54 +144,15 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:21::",
                         "locator": "MAIN",
                         "action": "uN"
                     },
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20:F1::",
                         "locator": "MAIN",
                         "action": "uDT46"
                     }
-                ]
-            }
-        }
-    },
-    "SRV6_MY_SID_UNMATCHED_VRF": {
-        "sonic-srv6:sonic-srv6": {
-            "sonic-srv6:SRV6_MY_LOCATORS": {
-                "SRV6_MY_LOCATORS_LIST": [
-                    {
-                        "locator_name": "MAIN",
-                        "prefix": "FCBB:BBBB:20::"
-                    }
-                ]
-            },
-            "sonic-srv6:SRV6_MY_SIDS": {
-                "SRV6_MY_SIDS_LIST": [
-                    {
-                        "vrf": "Vrf1",
-                        "ip_address": "FCBB:BBBB:20::",
-                        "locator": "MAIN",
-                        "action": "uN"
-                    },
-                    {
-                        "vrf": "default",
-                        "ip_address": "FCBB:BBBB:20:F1::",
-                        "locator": "MAIN",
-                        "action": "uDT46"
-                    }
-                ]
-            }
-        },
-        "sonic-vrf:sonic-vrf":{
-            "sonic-vrf:VRF": {
-                "VRF_LIST": [
-                {
-                    "name":"Vrf1"
-                }
                 ]
             }
         }
@@ -219,13 +170,11 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20::",
                         "locator": "MAIN",
                         "action": "uA"
                     },
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20:F1::",
                         "locator": "MAIN",
                         "action": "uDT46"
@@ -247,14 +196,12 @@
             "sonic-srv6:SRV6_MY_SIDS": {
                 "SRV6_MY_SIDS_LIST": [
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20::",
                         "locator": "MAIN",
                         "action": "uN",
                         "dscp_mode": "uniform"
                     },
                     {
-                        "vrf": "default",
                         "ip_address": "FCBB:BBBB:20:F1::",
                         "locator": "MAIN",
                         "action": "uDT46"

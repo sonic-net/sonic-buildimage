@@ -86,19 +86,7 @@ module sonic-srv6 {
 
         container SRV6_MY_SIDS {
             list SRV6_MY_SIDS_LIST {
-                key "vrf ip_address";
-
-                leaf vrf {
-                    type union {
-                        type leafref {
-                            path "/vrf:sonic-vrf/vrf:VRF/vrf:VRF_LIST/vrf:name";
-                        }
-                        type string {
-                            pattern 'default';
-                        }
-                    }
-                    description "VRF name";
-                }
+                key "locator ip_address";
 
                 leaf ip_address {
                     type inet:ipv6-address;
@@ -143,7 +131,6 @@ module sonic-srv6 {
 
                 must 'starts-with(./ip_address,
                                   substring-before(/srv6:sonic-srv6/SRV6_MY_LOCATORS/SRV6_MY_LOCATORS_LIST[current()/locator]/prefix, "::"))';
-                must './vrf = /srv6:sonic-srv6/SRV6_MY_LOCATORS/SRV6_MY_LOCATORS_LIST[current()/locator]/vrf';
             }
         }
         
