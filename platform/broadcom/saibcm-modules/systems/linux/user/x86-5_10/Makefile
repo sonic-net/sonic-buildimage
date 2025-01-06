@@ -70,7 +70,6 @@ export SDK
 override kernel_version=5_10
 platform=x86-5_10
 
-LINUX_MAKE_USER=1
 export LINKER_RELAX = 1
 
 # SHARED_LIBRARY_SUPPORT will enable the shared library creation - add a PIC to the compilation flags.

@@ -74,9 +74,8 @@ RUN pip3 uninstall -y enum34
 
 # Dependencies of restore_neighbors.py
 RUN pip3 install \
-         scapy==2.4.4 \
-         pyroute2==0.5.14 \
-         netifaces==0.10.9
+         pyroute2==0.7.2 \
+         netifaces==0.11.0
 
 {% if docker_sonic_vs_debs.strip() -%}
 # Copy built Debian packages

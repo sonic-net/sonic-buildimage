@@ -50,5 +50,4 @@ export SDK
 override kernel_version=2_6
 platform=x86-smp_generic_64-$(kernel_version)
 
-LINUX_MAKE_USER=1
 include ${SDK}/make/Make.linux

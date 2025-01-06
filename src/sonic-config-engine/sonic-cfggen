@@ -36,7 +36,7 @@ from portconfig import get_port_config, get_breakout_mode
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic
 from sonic_py_common import device_info
 from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector
-
+from asic_sensors_config import get_asic_sensors_config
 
 PY3x = sys.version_info >= (3, 0)
 
@@ -433,7 +433,7 @@ def main():
         if asic_name is not None:
             if args.minigraph is not None:
                 asic_role = parse_asic_sub_role(args.minigraph, asic_name)
-                switch_type = parse_asic_switch_type(args.minigraph, asic_name)
+                switch_type = parse_asic_switch_type(args.minigraph, asic_name, hostname)
             if ((switch_type is not None and switch_type.lower() == "chassis-packet") or
                 (asic_role is not None and asic_role.lower() == "backend") or
                 (platform == device_info.VS_PLATFORM)) :
@@ -458,6 +458,15 @@ def main():
                 hardware_data['DEVICE_METADATA']['localhost'].update(asic_id=device_id)
 
         deep_update(data, hardware_data)
+
+        asic_sensors = {}
+        if is_multi_asic():
+            if asic_name is not None:
+                asic_sensors = get_asic_sensors_config()
+        else:
+            asic_sensors = get_asic_sensors_config()
+        if asic_sensors:
+            deep_update(data, asic_sensors) 
 
     paths = ['/', '/usr/share/sonic/templates']
     if args.template_dir:
