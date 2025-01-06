@@ -396,7 +396,19 @@
                      { "attr_name":"fan9_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN5_Front_rpm", "field_pos":"3", "mult":"1"},
                      { "attr_name":"fan10_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN5_Rear_rpm", "field_pos":"3", "mult":"1"},
                      { "attr_name":"fan11_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN6_Front_rpm", "field_pos":"3", "mult":"1"},
-                     { "attr_name":"fan12_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN6_Rear_rpm", "field_pos":"3", "mult":"1"}
+                     { "attr_name":"fan12_pwm", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "FAN6_Rear_rpm", "field_pos":"3", "mult":"1"},
+                     { "attr_name":"fan1_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 3 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan2_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 3 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan3_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 4 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan4_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 4 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan5_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 5 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan6_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 5 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan7_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 6 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan8_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 6 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan9_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 7 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan10_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 7 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan11_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 8 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"},
+                     { "attr_name":"fan12_direction", "bmc_cmd":"ipmitool raw 0x0A 0x11 8 0x45 0 1 | awk '{print substr($0,6,1)}'", "raw": "1", "type":"mask", "mask":"0x1"}
                  ]
              }
           }
