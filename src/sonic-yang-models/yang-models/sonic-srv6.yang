@@ -32,6 +32,7 @@ module sonic-srv6 {
 
                 leaf prefix {
                     type inet:ipv6-address;
+                    mandatory true;
                 }
 
                 leaf block_len {
@@ -119,7 +120,7 @@ module sonic-srv6 {
                     default "default";
                 }
 
-                leaf dscp_mode {
+                leaf decap_dscp_mode {
                     type enumeration {
                         enum uniform;
                         enum pipe;
