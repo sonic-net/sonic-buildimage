@@ -1,0 +1,5 @@
+sonic-supermicro-platform-modules (1.0) unstable; urgency=low
+
+  * Initial release with support for Supermicro SSE-G3748
+
+ -- Supermicro Team <support@supermicro.com>  Thu, 09 May 2024 09:00:00 +0800

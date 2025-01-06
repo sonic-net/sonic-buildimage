@@ -1,0 +1,84 @@
+#!/usr/bin/bash
+
+# This script is used to reset the current host file system and docker containers
+# to the initial state of the firmware.
+
+# Because this is a factory reset hook, execute the script only if the hook script is 
+# either executed directorly or called as "config-setup factory" command
+if [ -n $CMD ] && [ "$CMD" != "" ]; then
+    if [ "$CMD" != "factory" ]; then
+        exit 0
+    fi
+fi
+
+# if called from the sonic cli, then python click has already confirmed
+# this, so just set var_yn to y here.
+
+if [ ! -r /tmp/sonic_cli_factory_reset ]; then
+# if called by the monitor script then no ask confirm
+PARENT_COMMAND=$(ps -o args= $PPID)
+if [[ "$PARENT_COMMAND" != *"reset_button_monitor.py"* ]]; then
+  cat << EOF
+This command will reset settings to factory defaults.
+After resetting to factory defaults, switch will be reloaded immediately.
+Do you really want to execute this command and reload the switch? [y/n]
+EOF
+
+  read var_yn
+  if [ "$var_yn" != "y" ]; then
+      exit 1
+  fi
+fi
+else
+	var_yn="y"
+fi
+
+
+if [ "$EUID" -ne 0 ]
+  then echo "Root privileges are required for this operation"
+  exit 2
+fi
+
+# PB issue: 156474: Enable ZTP back.-start
+ztp enable -y
+ztp run -y
+# PB issue: 156474: Enable ZTP back.-end
+
+# if there is any backup config saved via the command "config-setup backup" 
+# then remove it during factory reset, else these configs will get applied
+# after factory reset.
+
+if [ -d /host/old_config ]; then
+    rm -rf /host/old_config
+fi
+
+# stop SONiC services to prevent docker restart
+# keep syslog for debugging
+grep -v @ /etc/sonic/generated_services.conf | grep -v rsyslog-config.service | xargs systemctl disable
+grep -v @ /etc/sonic/generated_services.conf | grep -v rsyslog-config.service | xargs systemctl stop
+
+# rm docker containers
+docker ps -aq | xargs docker rm -f
+
+# rm overlay upper dir, ex: /host/image-3.0.0.5/rw
+UPPER=`mount | grep "root-overlay on /" | sed 's/.*upperdir=\/root\([^,]*\),.*/\1/'`
+rm -rf $UPPER
+WORK=`mount | grep "root-overlay on /" | sed 's/.*workdir=\/root\([^)]*\)).*/\1/'`
+rm -rf $WORK
+sync;sync
+echo 3 > /proc/sys/vm/drop_caches
+
+# rm other files in /host/
+
+# create "image-xxx/platform/firsttime"
+IMGPATH=`dirname $UPPER`
+touch "$IMGPATH/platform/firsttime"
+sync;sync
+
+rm -f /etc/sonic/config_db.json
+
+# force reboot if called by user
+if [ "$var_yn" == "y" ]; then
+  shutdown -r now
+fi
+
