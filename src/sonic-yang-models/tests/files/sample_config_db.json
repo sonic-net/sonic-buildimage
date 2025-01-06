@@ -1780,7 +1780,8 @@
                 "max_ibgp_paths": "2"
             },
             "default|l2vpn_evpn": {
-                "advertise-all-vni": "true"
+                "advertise-all-vni": "true",
+                "advertise-svi-ip": "true"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
