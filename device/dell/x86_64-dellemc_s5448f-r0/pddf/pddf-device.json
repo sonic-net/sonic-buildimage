@@ -405,25 +405,7 @@
     "TEMP1":
     {
       "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"CPU On-board"},
-          "bmc": {
-              "ipmitool" : {
-                  "attr_list":
-                 [
-                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"CPU_temp", "field_pos":"18"},
-                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"CPU_temp", "field_pos":"16"},
-                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "CPU_temp", "field_pos":"3"},
-                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "CPU_temp", "field_pos":"12"}
-
-                 ]
-              }
-          }
-    },
-
-    "TEMP2":
-    {
-      "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"ASIC On-board"},
+      "dev_attr": { "display_name":"NPU Rear Temp"},
           "bmc": {
               "ipmitool" : {
                   "attr_list":
@@ -438,10 +420,10 @@
           }
     },
 
-    "TEMP3":
+    "TEMP2":
     {
       "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"System Front Left"},
+      "dev_attr": { "display_name":"PT Left Temp"},
           "bmc": {
               "ipmitool" : {
                   "attr_list":
@@ -456,29 +438,28 @@
           }
     },
 
-
-    "TEMP4":
+    "TEMP3":
     {
       "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"Asic Temperature"},
+      "dev_attr": { "display_name":"CPUCD Rear Temp"},
           "bmc": {
               "ipmitool" : {
                   "attr_list":
                  [
-                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"NPU_temp", "field_pos":"18"},
-                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"NPU_temp", "field_pos":"16"},
-                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "NPU_temp", "field_pos":"3"},
-                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "NPU_temp", "field_pos":"12"}
+                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"CPU_temp", "field_pos":"18"},
+                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"CPU_temp", "field_pos":"16"},
+                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "CPU_temp", "field_pos":"3"},
+                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "CPU_temp", "field_pos":"12"}
 
                  ]
               }
           }
     },
 
-    "TEMP5":
+    "TEMP4":
     {
       "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"System Front Right"},
+      "dev_attr": { "display_name":"PT Right Temp"},
           "bmc": {
               "ipmitool" : {
                   "attr_list":
@@ -493,134 +474,7 @@
           }
     },
 
-    "TEMP6":
-    {
-      "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"PSU1 Middle Sensor"},
-          "bmc": {
-              "ipmitool" : {
-                  "attr_list":
-                 [
-                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"ILET_AF_temp", "field_pos":"18"},
-                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"ILET_AF_temp", "field_pos":"16"},
-                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "ILET_AF_temp", "field_pos":"3"},
-                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "ILET_AF_temp", "field_pos":"12"}
-
-                 ]
-              }
-          }
-    },
-
-
-    "TEMP7":
-    {
-      "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"PSU1 Airflow Sensor"},
-          "bmc": {
-              "ipmitool" : {
-                  "attr_list":
-                 [
-                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_AF_temp", "field_pos":"18"},
-                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_AF_temp", "field_pos":"16"},
-                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU1_AF_temp", "field_pos":"3"},
-                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU1_AF_temp", "field_pos":"12"}
-
-                 ]
-              }
-          }
-    },
-
-    "TEMP8":
-    {
-      "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"PSU2 Airflow Sensor"},
-          "bmc": {
-              "ipmitool" : {
-                  "attr_list":
-                 [
-                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_AF_temp", "field_pos":"18"},
-                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_AF_temp", "field_pos":"16"},
-                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_AF_temp", "field_pos":"3"},
-                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_AF_temp", "field_pos":"12"}
-
-                 ]
-              }
-          }
-    },
-
-    "TEMP9":
-    {
-      "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"PSU1 Middle Sensor"},
-          "bmc": {
-              "ipmitool" : {
-                  "attr_list":
-                 [
-                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_Mid_temp", "field_pos":"18"},
-                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_Mid_temp", "field_pos":"16"},
-                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_Mid_temp", "field_pos":"3"},
-                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_Mid_temp", "field_pos":"12"}
-
-                 ]
-              }
-          }
-    },
-
-    "TEMP10":
-    {
-      "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"PSU2 Middle Sensor"},
-          "bmc": {
-              "ipmitool" : {
-                  "attr_list":
-                 [
-                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_Mid_temp", "field_pos":"18"},
-                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_Mid_temp", "field_pos":"16"},
-                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_Mid_temp", "field_pos":"3"},
-                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_Mid_temp", "field_pos":"12"}
-
-                 ]
-              }
-          }
-    },
-
-    "TEMP11":
-    {
-      "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"PSU1 Rear Sensor"},
-          "bmc": {
-              "ipmitool" : {
-                  "attr_list":
-                 [
-                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_Rear_temp", "field_pos":"18"},
-                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_Rear_temp", "field_pos":"16"},
-                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU1_Rear_temp", "field_pos":"3"},
-                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU1_Rear_temp", "field_pos":"12"}
-
-                 ]
-              }
-          }
-    },
-
-    "TEMP12":
-    {
-      "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"PSU2 Rear Sensor"},
-          "bmc": {
-              "ipmitool" : {
-                  "attr_list":
-                 [
-                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_Rear_temp", "field_pos":"18"},
-                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_Rear_temp", "field_pos":"16"},
-                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_Rear_temp", "field_pos":"3"},
-                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_Rear_temp", "field_pos":"12"}
-
-                 ]
-              }
-          }
-    },
-
-    "TEMP13":
+    "TEMP5":
     {
       "dev_info": { "device_type":"TEMP_SENSOR"},
       "dev_attr": { "display_name":"FAN Right Sensor"},
@@ -637,6 +491,153 @@
               }
           }
     },
+
+    "TEMP6":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"NPU Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"NPU_temp", "field_pos":"18"},
+                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"NPU_temp", "field_pos":"16"},
+                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "NPU_temp", "field_pos":"3"},
+                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "NPU_temp", "field_pos":"12"}
+
+                 ]
+              }
+          }
+    },
+
+    "TEMP7":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PSU2 AF Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_AF_temp", "field_pos":"18"},
+                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_AF_temp", "field_pos":"16"},
+                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_AF_temp", "field_pos":"3"},
+                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_AF_temp", "field_pos":"12"}
+
+                 ]
+              }
+          }
+    },
+
+    "TEMP8":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PSU2 Mid Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_Mid_temp", "field_pos":"18"},
+                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_Mid_temp", "field_pos":"16"},
+                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_Mid_temp", "field_pos":"3"},
+                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_Mid_temp", "field_pos":"12"}
+
+                 ]
+              }
+          }
+    },
+
+    "TEMP9":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PSU2 Rear Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_Rear_temp", "field_pos":"18"},
+                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_Rear_temp", "field_pos":"16"},
+                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_Rear_temp", "field_pos":"3"},
+                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU2_Rear_temp", "field_pos":"12"}
+
+                 ]
+              }
+          }
+    },
+
+    "TEMP10":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PSU1 AF Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_AF_temp", "field_pos":"18"},
+                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_AF_temp", "field_pos":"16"},
+                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU1_AF_temp", "field_pos":"3"},
+                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU1_AF_temp", "field_pos":"12"}
+
+                 ]
+              }
+          }
+    },
+
+    "TEMP11":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PSU1 Mid Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_Mid_temp", "field_pos":"18"},
+                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_Mid_temp", "field_pos":"16"},
+                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU1_Mid_temp", "field_pos":"3"},
+                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU1_Mid_temp", "field_pos":"12"}
+
+                 ]
+              }
+          }
+    },
+
+    "TEMP12":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"PSU1 Rear Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_Rear_temp", "field_pos":"18"},
+                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_Rear_temp", "field_pos":"16"},
+                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU1_Rear_temp", "field_pos":"3"},
+                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "PSU1_Rear_temp", "field_pos":"12"}
+
+                 ]
+              }
+          }
+    },
+
+    "TEMP13":
+    {
+      "dev_info": { "device_type":"TEMP_SENSOR"},
+      "dev_attr": { "display_name":"CPU Temp"},
+          "bmc": {
+              "ipmitool" : {
+                  "attr_list":
+                 [
+                     { "attr_name":"temp1_high_crit_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"CPU_temp", "field_pos":"18"},
+                     { "attr_name":"temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"CPU_temp", "field_pos":"16"},
+                     { "attr_name":"temp1_input", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "CPU_temp", "field_pos":"3"},
+                     { "attr_name":"temp1_low_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name" : "CPU_temp", "field_pos":"12"}
+
+                 ]
+              }
+          }
+    },
+
+
+
 	"LOC_LED" : 
     { 
         "dev_info": { "device_type":"LED", "device_name":"LOC_LED" },
