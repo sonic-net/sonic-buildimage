@@ -23,8 +23,8 @@
 #ifndef BCMCNET_CORE_H
 #define BCMCNET_CORE_H
 
-#include "bcmcnet_types.h"
-#include "bcmcnet_internal.h"
+#include <bcmcnet/bcmcnet_types.h>
+#include <bcmcnet/bcmcnet_internal.h>
 
 /*!
  * \brief Packet header structure.
@@ -923,6 +923,8 @@ struct pdma_dev {
 #define PDMA_VNET_DOCKED    (1 << 5)
     /*! Abort PDMA mode for suspend and resume */
 #define PDMA_ABORT          (1 << 6)
+    /*! No FCS for Rx/Tx packets */
+#define PDMA_NO_FCS         (1 << 7)
 
     /*! Extra poll time in microseconds */
     int extra_poll_time;

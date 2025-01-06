@@ -40,15 +40,6 @@
 /*! Bitmap array size. */
 #define BCMPKT_BITMAP_WORD_SIZE  16
 
-/*!
- * \name BCMPKT Dumping flags.
- * \anchor BCMPKT_DUMP_F_XXX
- */
-/*! Dump all fields contents. */
-#define BCMPKT_DUMP_F_ALL         0
-/*! Dump none zero field content only. */
-#define BCMPKT_DUMP_F_NONE_ZERO   1
-
 /*! PMD header field ID bit array. */
 typedef struct bcmpkt_bitmap_s {
     /*! Bit array */

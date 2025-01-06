@@ -26,17 +26,17 @@
  *
  *     (1) #define BCMDRD_CONFIG_INCLUDE_<CHIPNAME> [1|0]
  *             -- Include or exclude all revisions of the given device
- *             Example: #define BCMDRD_CONFIG_INCLUDE_BCM56780    1
+ *             Example: #define BCMDRD_CONFIG_INCLUDE_BCM56080    1
  *
  *     (2) #define BCMDRD_CONFIG_INCLUDE_<CHIPNAME>_<REV>X [1|0]
  *             -- Include or exclude all versions of the given revision
- *             Example: #define BCMDRD_CONFIG_INCLUDE_BCM56780_Ax 0
- *                      #define BCMDRD_CONFIG_INCLUde_BCM56780_Bx 1
+ *             Example: #define BCMDRD_CONFIG_INCLUDE_BCM56080_Ax 0
+ *                      #define BCMDRD_CONFIG_INCLUde_BCM56080_Bx 1
  *
  *     (3) #define BCMDRD_CONFIG_INCLUDE_<EXACT_CHIP> [1|0]
  *             -- Include or exclude an exact device
- *             Example: #define BCMDRD_CONFIG_INCLUDE_BCM56780_A0 1
- *                      #define BCMDRD_CONFIG_INCLUDE_BCM56780_A1 0
+ *             Example: #define BCMDRD_CONFIG_INCLUDE_BCM56080_A0 1
+ *                      #define BCMDRD_CONFIG_INCLUDE_BCM56080_A1 0
  *
  *
  * The value of BCMDRD_CONFIG_INCLUDE_CHIP_DEFAULT is used for any

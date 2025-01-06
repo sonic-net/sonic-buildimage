@@ -81,6 +81,9 @@ function getBootType()
     *SONIC_BOOT_TYPE=fastfast*)
         TYPE='fastfast'
         ;;
+    *SONIC_BOOT_TYPE=express*)
+        TYPE='express'
+        ;;
     *SONIC_BOOT_TYPE=fast*|*fast-reboot*)
         # check that the key exists
         SYSTEM_FAST_REBOOT=`sonic-db-cli STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`

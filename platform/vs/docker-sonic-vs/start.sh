@@ -160,6 +160,8 @@ supervisorctl start vlanmgrd
 
 supervisorctl start zebra
 
+supervisorctl start mgmtd
+
 supervisorctl start staticd
 
 supervisorctl start buffermgrd

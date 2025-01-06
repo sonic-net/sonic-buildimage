@@ -301,10 +301,6 @@
 	"DEVICE_NEIGHBOR": {},
 	"DHCP_SERVER_IPV4": {
 		"bridge-midplane": {
-			"customized_options": [
-				"option60",
-				"option223"
-			],
 			"gateway": "169.254.200.254",
 			"lease_time": "3600",
 			"mode": "PORT",
@@ -374,7 +370,6 @@
 	},
 	"FLEX_COUNTER_TABLE": {
 		"ACL": {
-			"FLEX_COUNTER_DELAY_STATUS": "true",
 			"FLEX_COUNTER_STATUS": "disable",
 			"POLL_INTERVAL": "10000"
 		}
@@ -415,6 +410,12 @@
 	},
 	"LOOPBACK_INTERFACE": {
 		"Loopback0|10.1.0.1/32": {}
+	},
+	"MID_PLANE_BRIDGE": {
+		"GLOBAL": {
+			"bridge": "bridge-midplane",
+			"ip_prefix": "169.254.200.254/24"
+		}
 	},
 	"PORT": {
 		"Ethernet0": {

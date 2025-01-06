@@ -5,6 +5,13 @@
                     "vni" : "100"
                 }
         },
+        "SUBNET_DECAP": {
+            "AZURE": {
+                "status": "enable",
+                "src_ip": "10.10.10.0/24",
+                "src_ip_v6": "20c1:ba8::/64"
+            }
+        },
         "DHCP_SERVER": {
             "192.0.0.8": {},
             "192.0.0.8": {},
@@ -1771,6 +1778,9 @@
             "default|ipv6_unicast": {
                 "max_ebgp_paths": "2",
                 "max_ibgp_paths": "2"
+            },
+            "default|l2vpn_evpn": {
+                "advertise-all-vni": "true"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
@@ -2781,6 +2791,21 @@
                 "login": "Some login message",
                 "motd": "Some message of the day",
                 "logout": "Some logout message"
+            }
+        },
+        "MEMORY_STATISTICS": {
+            "memory_statistics": {
+                "enabled": "false",
+                "sampling_interval": "5",
+                "retention_period": "15"
+            }
+        },
+        "ASIC_SENSORS": {
+            "ASIC_SENSORS_POLLER_INTERVAL": {
+                "interval": "10"
+            },
+            "ASIC_SENSORS_POLLER_STATUS": {
+                "admin_status": "enable"
             }
         }
     },
