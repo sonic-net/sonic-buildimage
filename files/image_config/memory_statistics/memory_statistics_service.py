@@ -645,82 +645,160 @@ class MemoryStatisticsCollector:
 
         return loaded_entry
  
-    def update_memory_statistics(self, total_dict, mem_dict, time_list, item, category):
-        """
-        Update memory statistics for the specified item and category.
+    # def update_memory_statistics(self, total_dict, mem_dict, time_list, item, category):
+    #     """
+    #     Update memory statistics for the specified item and category.
         
-        Args:
-            total_dict (dict): The total statistics dictionary.
-            mem_dict (dict): The memory statistics dictionary to update.
-            time_list (dict): The current memory statistics collected.
-            item (str): The item to update in total_dict.
-            category (str): The category under which to update the statistics.
-        """
+    #     Args:
+    #         total_dict (dict): The total statistics dictionary.
+    #         mem_dict (dict): The memory statistics dictionary to update.
+    #         time_list (dict): The current memory statistics collected.
+    #         item (str): The item to update in total_dict.
+    #         category (str): The category under which to update the statistics.
+    #     """
+    #     for memory_metric in time_list.keys():
+    #         try:
+    #             high_value = 0
+    #             low_value = 0
+    #             prss = int(time_list[memory_metric]['prss'])
+    #             mem_dict[category][memory_metric] = {
+    #                 "prss": prss, "count": 1,
+    #                 "high_value": prss, "low_value": prss
+    #             }
+                
+    #             mem = total_dict[item][category]
+    #             if memory_metric in mem:
+    #                 tprss = int(mem[memory_metric]["prss"]) + prss
+    #                 tcount = int(mem[memory_metric]["count"]) + 1
+    #                 if prss > int(mem[memory_metric]["high_value"]):
+    #                     high_value = prss
+    #                     low_value = int(mem[memory_metric]["low_value"])
+    #                 elif prss <= int(mem[memory_metric]["low_value"]):
+    #                     low_value = prss
+    #                     high_value = int(mem[memory_metric]["high_value"])
+    #                 mem[memory_metric] = {
+    #                     "prss": tprss, "count": tcount,
+    #                     "high_value": high_value,
+    #                     "low_value": low_value
+    #                 }
+    #             else:
+    #                 mem[memory_metric] = {
+    #                     "prss": prss, "count": 1,
+    #                     "high_value": prss, "low_value": prss
+    #                 }
+    #         except Exception as e:
+    #             logger.log_error(f"Error updating memory statistics for item '{item}', category '{category}', "
+    #                       f"metric '{memory_metric}': {e}")
+
+    #     total_dict[item]['count'] = int(total_dict[item]['count']) + 1
+
+
+    def update_memory_statistics(self, total_dict, mem_dict, time_list, item, category):
+        current_time = Utility.fetch_current_date()
         for memory_metric in time_list.keys():
             try:
-                high_value = 0
-                low_value = 0
                 prss = int(time_list[memory_metric]['prss'])
-                mem_dict[category][memory_metric] = {
-                    "prss": prss, "count": 1,
-                    "high_value": prss, "low_value": prss
+                
+                # Add timestamp to track entry age
+                entry_data = {
+                    "prss": prss, 
+                    "count": 1,
+                    "high_value": prss, 
+                    "low_value": prss,
+                    "timestamp": current_time
                 }
+                
+                mem_dict[category][memory_metric] = entry_data
                 
                 mem = total_dict[item][category]
                 if memory_metric in mem:
+                    # Calculate differential (similar to original implementation)
                     tprss = int(mem[memory_metric]["prss"]) + prss
                     tcount = int(mem[memory_metric]["count"]) + 1
-                    if prss > int(mem[memory_metric]["high_value"]):
-                        high_value = prss
-                        low_value = int(mem[memory_metric]["low_value"])
-                    elif prss <= int(mem[memory_metric]["low_value"]):
-                        low_value = prss
-                        high_value = int(mem[memory_metric]["high_value"])
+                    diff = prss - (tprss / tcount)
+                    
+                    # Track high and low values
+                    high_value = max(prss, int(mem[memory_metric].get("high_value", prss)))
+                    low_value = min(prss, int(mem[memory_metric].get("low_value", prss)))
+                    
                     mem[memory_metric] = {
-                        "prss": tprss, "count": tcount,
+                        "prss": tprss, 
+                        "count": tcount,
                         "high_value": high_value,
-                        "low_value": low_value
+                        "low_value": low_value,
+                        "timestamp": current_time
                     }
                 else:
-                    mem[memory_metric] = {
-                        "prss": prss, "count": 1,
-                        "high_value": prss, "low_value": prss
-                    }
+                    mem[memory_metric] = entry_data
+
             except Exception as e:
-                logger.log_error(f"Error updating memory statistics for item '{item}', category '{category}', "
-                          f"metric '{memory_metric}': {e}")
+                logger.log_error(f"Error updating memory statistics: {e}")
 
         total_dict[item]['count'] = int(total_dict[item]['count']) + 1
 
 
-    def enforce_retention_policy(self, total_dict):
+    # def enforce_retention_policy(self, total_dict):
+    #     """
+    #     This function enforces a retention policy for memory statistics by identifying and removing entries in total_dict
+    #     that are older than the configured retention period. 
+    #     total_dict (dict): A dictionary containing memory statistics.
+    #     """
+    #     current_time = datetime.now()
+    #     retention_threshold = timedelta(days=self.retention_period)
+
+    #     if SYSTEM_MEMORY_KEY in total_dict:
+    #         for category in total_dict[SYSTEM_MEMORY_KEY]:
+    #             if isinstance(total_dict[SYSTEM_MEMORY_KEY][category], dict):
+    #                 # Check if the category has a timestamp field
+    #                 if 'timestamp' in total_dict[SYSTEM_MEMORY_KEY][category]:
+    #                     try:
+    #                         entry_time = datetime.fromisoformat(total_dict[SYSTEM_MEMORY_KEY][category]['timestamp'])
+    #                         if current_time - entry_time > retention_threshold:
+    #                             logger.log_info(f"Removing outdated entry for category: {category}")
+    #                             # Reset or remove the category entry
+    #                             total_dict[SYSTEM_MEMORY_KEY][category] = {
+    #                                 "prss": 0,
+    #                                 "count": 0,
+    #                                 "timestamp": Utility.fetch_current_date()
+    #                             }
+    #                     except (ValueError, TypeError) as e:
+    #                         logger.log_error(f"Error processing timestamp for {category}: {e}")
+
+    #     # Update count based on existing entries
+    #     total_dict[SYSTEM_MEMORY_KEY]['count'] = len([
+    #         k for k in total_dict[SYSTEM_MEMORY_KEY].keys() 
+    #         if k not in ['count', 'timestamp']
+    #     ])
+
+
+    def enforce_retention_policy(self, statistics_dict):
         """
-        This function enforces a retention policy for memory statistics by identifying and removing entries in total_dict
-           that are older than the configured retention period. 
-           total_dict (dict): A dictionary containing memory statistics, where each entry is expected to include a 'current_time' field.
+        Enforce retention policy on memory statistics.
+        Remove entries older than retention_period days.
         """
+        if SYSTEM_MEMORY_KEY not in statistics_dict:
+            return
+
         current_time = datetime.now()
-        retention_threshold = timedelta(days=self.retention_period)
+        system_stats = statistics_dict[SYSTEM_MEMORY_KEY].get('system', {})
 
-        if SYSTEM_MEMORY_KEY in total_dict:
-            for memory_type in total_dict[SYSTEM_MEMORY_KEY]:
-                entries_to_remove = []
-                
-                if isinstance(total_dict[SYSTEM_MEMORY_KEY][memory_type], dict):
-                    for entry_timestamp, memory_data in total_dict[SYSTEM_MEMORY_KEY][memory_type].items():
-                        try:
-                            entry_time = datetime.fromisoformat(entry_timestamp)
-                        except ValueError:
-                            continue 
+        for metric_name, metric_data in list(system_stats.items()):
+            try:
+                # Convert timestamp string to datetime object
+                entry_time = datetime.fromisoformat(metric_data['timestamp'])
+                days_old = (current_time - entry_time).days
 
-                        if current_time - entry_time > retention_threshold:
-                            entries_to_remove.append(entry_timestamp)
+                # If entry is older than retention period, reset its values
+                if days_old > self.retention_period:
+                    system_stats[metric_name] = {
+                        **metric_data,  # Keep all original fields
+                        'prss': 0,      # Reset prss
+                        'count': 0      # Reset count
+                    }
 
-                    for old_entry in entries_to_remove:
-                        logger.log_info(f"Removing outdated entry: {old_entry}")
-                        del total_dict[SYSTEM_MEMORY_KEY][memory_type][old_entry]
-
-        total_dict[SYSTEM_MEMORY_KEY]['count'] = len(total_dict[SYSTEM_MEMORY_KEY].get('system', {}))
+            except (ValueError, KeyError):
+                # Skip invalid entries
+                continue    
 
     def collect_and_store_memory_usage(self, collect_only):
         """
@@ -1508,6 +1586,8 @@ class Daemonizer:
         This method performs the necessary steps to create a daemon process,
         including forking twice and creating a new session. It logs the
         success of the daemonization and writes the PID to a file.
+        
+        :raises RuntimeError: If the daemonization process fails at any stage.
         """
         try:
             pid = os.fork()
@@ -1515,9 +1595,11 @@ class Daemonizer:
                 sys.exit(0)
         except OSError as e:
             logger.log_error(f"First fork failed: {e}")
-            sys.exit(1)
+            raise RuntimeError(f"First fork failed: {e}")
 
-        os.setsid() 
+        os.chdir("/")  
+        os.umask(0)   
+        os.setsid()   
 
         try:
             pid = os.fork()
@@ -1525,11 +1607,39 @@ class Daemonizer:
                 sys.exit(0)
         except OSError as e:
             logger.log_error(f"Second fork failed: {e}")
-            sys.exit(1)
+            raise RuntimeError(f"Second fork failed: {e}")
 
-        logger.log_info(f"Daemonization successful with PID: {os.getpid()}")
+        self._validate_daemonization()
+
         self.write_pid_to_file()
         self.redirect_standard_file_descriptors()
+
+    def _validate_daemonization(self):
+        """
+        Performs additional validation to confirm successful daemonization.
+        
+        Checks:
+        - Process is not a process group leader
+        - Working directory has been changed
+        - Session ID is different from parent
+        
+        :raises RuntimeError: If validation checks fail
+        """
+        try:
+            if os.getpid() == os.getpgrp():
+                raise RuntimeError("Failed to become session leader")
+
+            if os.getcwd() != '/':
+                raise RuntimeError("Working directory not changed to root")
+
+            current_sid = os.getsid(0)
+            if current_sid == -1:
+                raise RuntimeError("Could not get session ID")
+
+            logger.log_info(f"Daemonization validation successful. New PID: {os.getpid()}, Session ID: {current_sid}")
+        except Exception as e:
+            logger.log_error(f"Daemonization validation failed: {e}")
+            raise RuntimeError(f"Daemonization validation failed: {e}")
 
     def write_pid_to_file(self):
         """Writes the daemon's PID to the specified file for management purposes.
@@ -1539,12 +1649,20 @@ class Daemonizer:
         stopping it). It logs the action taken and handles any errors.
         """
         try:
+            pid_dir = os.path.dirname(self.pid_file)
+            os.makedirs(pid_dir, exist_ok=True)
+
             with open(self.pid_file, 'w') as f:
                 f.write(f"{os.getpid()}\n")
             logger.log_debug(f"Daemon PID written to {self.pid_file}")
+
+            with open(self.pid_file, 'r') as f:
+                pid_from_file = int(f.read().strip())
+                if pid_from_file != os.getpid():
+                    raise RuntimeError("PID mismatch in PID file")
         except Exception as e:
             logger.log_error(f"Failed to write PID file {self.pid_file}: {e}")
-            sys.exit(1)
+            raise RuntimeError(f"Failed to write PID file: {e}")
 
     def redirect_standard_file_descriptors(self):
         """Redirects standard file descriptors to /dev/null.
@@ -1556,15 +1674,39 @@ class Daemonizer:
         try:
             sys.stdout.flush()
             sys.stderr.flush()
-            with open(os.devnull, 'r') as devnull:
-                os.dup2(devnull.fileno(), sys.stdin.fileno())
-            with open(os.devnull, 'a+') as devnull:
-                os.dup2(devnull.fileno(), sys.stdout.fileno())
-                os.dup2(devnull.fileno(), sys.stderr.fileno())
+
+            with open(os.devnull, 'r') as stdin_null, \
+                 open(os.devnull, 'a+') as stdout_stderr_null:
+                os.dup2(stdin_null.fileno(), sys.stdin.fileno())
+                os.dup2(stdout_stderr_null.fileno(), sys.stdout.fileno())
+                os.dup2(stdout_stderr_null.fileno(), sys.stderr.fileno())
+
+            self._validate_file_descriptors()
+
             logger.log_debug("Standard file descriptors redirected to /dev/null")
         except Exception as e:
             logger.log_error(f"Failed to redirect standard file descriptors: {e}")
-            sys.exit(1)
+            raise RuntimeError(f"Failed to redirect file descriptors: {e}")
+
+    def _validate_file_descriptors(self):
+        """
+        Validates that file descriptors have been correctly redirected.
+        
+        :raises RuntimeError: If file descriptors are not correctly redirected
+        """
+        try:
+            stdin_stat = os.fstat(sys.stdin.fileno())
+            stdout_stat = os.fstat(sys.stdout.fileno())
+            stderr_stat = os.fstat(sys.stderr.fileno())
+            
+            devnull_stat = os.stat(os.devnull)
+
+            if not (stdin_stat.st_ino == stdout_stat.st_ino == stderr_stat.st_ino == devnull_stat.st_ino and
+                    stdin_stat.st_dev == stdout_stat.st_dev == stderr_stat.st_dev == devnull_stat.st_dev):
+                raise RuntimeError("File descriptors not correctly redirected")
+        except Exception as e:
+            logger.log_error(f"File descriptor validation failed: {e}")
+            raise RuntimeError(f"File descriptor validation failed: {e}")
 
 
 class ThreadSafeConfig:
@@ -1853,7 +1995,7 @@ class MemoryStatisticsService:
                 )
                 current_memory = memory_collector.collect_and_store_memory_usage(collect_only=True)
                 request['current_memory'] = current_memory
-
+                logger.log_info(f"Current memory usage collected: {current_memory}")
                 time_processor = TimeProcessor(
                     sampling_interval=sampling_interval // 60,
                     retention_period=retention_period
@@ -1866,6 +2008,7 @@ class MemoryStatisticsService:
                     retention_period=retention_period
                 )
                 report = processor.calculate_memory_statistics_period(request)
+                logger.log_info(f"Memory statistics processed: {report}")
 
             return {"status": True, "data": report}
 
@@ -1891,6 +2034,329 @@ class MemoryStatisticsService:
         self.socket_listener_thread.start()
         logger.log_info("Socket listener thread started.")
 
+    # def memory_collection(self):
+    #     """
+    #     Memory statistics collection thread with daily log retention check.
+    #     """
+    #     logger.log_info("Memory statistics collection thread started.")
+    #     last_retention_check = datetime.now()
+    #     while not self.stop_event.is_set():
+    #         start_time = datetime.now()
+    #         try:
+    #             with self.memory_statistics_lock:
+    #                 memory_collector = MemoryStatisticsCollector(
+    #                     sampling_interval=self.sampling_interval // 60,
+    #                     retention_period=self.retention_period
+    #                 )
+    #                 memory_collector.collect_and_store_memory_usage(collect_only=False)
+                    
+    #                 # Check log retention daily
+    #                 current_time = datetime.now()
+    #                 if (current_time - last_retention_check).days >= 1:
+    #                     self.manage_log_retention()
+    #                     last_retention_check = current_time
+    #         except Exception as error:
+    #             logger.log_error(f"Error during memory statistics collection: {error}")
+    #         elapsed_time = (datetime.now() - start_time).total_seconds()
+    #         sleep_time = max(0, self.sampling_interval - elapsed_time)
+    #         if self.stop_event.wait(timeout=sleep_time):
+    #             break 
+    #     logger.log_info("Memory statistics collection thread stopped.")
+
+
+    # def manage_log_retention(self):
+    #     """
+    #     Manages log file retention based on the configured retention period.
+    #     Deletes files older than the specified retention days.
+    #     Ensures new log files are created immediately after deletion.
+    #     """
+    #     try:
+    #         log_directory = self.config.get('LOG_DIRECTORY', '/var/log/memory_statistics')
+    #         retention_days = self.retention_period  # Already validated to be between 1-30
+
+    #         if not os.path.exists(log_directory):
+    #             logger.log_warning(f"Log directory does not exist: {log_directory}")
+    #             return
+
+    #         current_time = datetime.now()
+    #         deleted_files_count = 0
+
+    #         for filename in os.listdir(log_directory):
+    #             file_path = os.path.join(log_directory, filename)
+                
+    #             if os.path.isfile(file_path):
+    #                 file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+    #                 file_age = (current_time - file_mod_time).days
+                    
+    #                 if file_age > retention_days:
+    #                     try:
+    #                         os.remove(file_path)
+    #                         deleted_files_count += 1
+    #                         logger.log_info(f"Deleted log file older than {retention_days} days: {file_path}")
+    #                     except Exception as e:
+    #                         logger.log_error(f"Error deleting old log file {file_path}: {e}")
+
+    #         # Log summary of retention check
+    #         logger.log_info(f"Log retention check completed. Deleted {deleted_files_count} files older than {retention_days} days.")
+
+    #         # Create new log files immediately after deletion
+    #         logger.log_info("Creating new log files after retention management.")
+    #         memory_collector = MemoryStatisticsCollector(
+    #             sampling_interval=self.sampling_interval // 60,
+    #             retention_period=self.retention_period
+    #         )
+    #         memory_collector.collect_and_store_memory_usage(collect_only=False)
+
+    #     except Exception as e:
+    #         logger.log_error(f"Error managing log file retention: {e}")
+
+
+
+
+
+
+
+
+
+    def memory_collection(self):
+        """
+        Memory statistics collection thread with log retention check.
+        """
+        logger.log_info("Memory statistics collection thread started.")
+        last_retention_check = datetime.now()
+
+        while not self.stop_event.is_set():
+            start_time = datetime.now()
+            try:
+                with self.memory_statistics_lock:
+                    memory_collector = MemoryStatisticsCollector(
+                        sampling_interval=self.sampling_interval // 60,
+                        retention_period=self.retention_period
+                    )
+                    memory_collector.collect_and_store_memory_usage(collect_only=False)
+
+                    # Check log retention every 60 seconds (simulate 1 minute = 1 day)
+                    current_time = datetime.now()
+                    if (current_time - last_retention_check).seconds >= 60:  # Simulate 1 minute = 1 day
+                        logger.log_info("Log retention check")
+                        self.manage_log_retention()
+                        last_retention_check = current_time
+
+            except Exception as error:
+                logger.log_error(f"Error during memory statistics collection: {error}")
+
+            elapsed_time = (datetime.now() - start_time).total_seconds()
+            sleep_time = max(0, self.sampling_interval - elapsed_time)
+            if self.stop_event.wait(timeout=sleep_time):
+                break
+
+        logger.log_info("Memory statistics collection thread stopped.")
+
+
+    def manage_log_retention(self):
+        try:
+            log_directory = self.config.get('LOG_DIRECTORY', '/var/log/memory_statistics')
+            retention_seconds = 15*60  # Treat 1 day as 60 seconds for testing purposes
+
+            if not os.path.exists(log_directory):
+                logger.log_warning(f"Log directory does not exist: {log_directory}")
+                return
+
+            current_time = datetime.now()
+            deleted_files_count = 0
+
+            for filename in os.listdir(log_directory):
+                file_path = os.path.join(log_directory, filename)
+
+                if os.path.isfile(file_path):
+                    file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+                    file_age_seconds = (current_time - file_mod_time).total_seconds()
+
+                    # Debug logging
+                    logger.log_info(f"Checking file: {filename}")
+                    logger.log_info(f"File modification time: {file_mod_time}")
+                    logger.log_info(f"Current time: {current_time}")
+                    logger.log_info(f"File age (seconds): {file_age_seconds}")
+                    logger.log_info(f"Retention seconds: {retention_seconds}")
+
+                    # Compare file age in seconds with the retention period in seconds
+                    if file_age_seconds > retention_seconds:
+                        try:
+                            os.remove(file_path)
+                            deleted_files_count += 1
+                            logger.log_info(f"Deleted log file older than {retention_seconds} seconds: {file_path}")
+                        except Exception as e:
+                            logger.log_error(f"Error deleting old log file {file_path}: {e}")
+
+            logger.log_info(f"Log retention check completed. Deleted {deleted_files_count} files older than {retention_seconds} seconds.")
+            
+            # Create new log files immediately after deletion
+            logger.log_info("Creating new log files after retention management.")
+            memory_collector = MemoryStatisticsCollector(
+                sampling_interval=self.sampling_interval // 60,
+                retention_period=self.retention_period
+            )
+            memory_collector.collect_and_store_memory_usage(collect_only=False)
+
+        except Exception as e:
+            logger.log_error(f"Error managing log file retention: {e}")
+
+
+
+
+
+
+    # def memory_collection(self):
+    #     """
+    #     Memory statistics collection thread with log retention check.
+    #     """
+    #     logger.log_info("Memory statistics collection thread started.")
+    #     last_retention_check = datetime.now()
+
+    #     while not self.stop_event.is_set():
+    #         start_time = datetime.now()
+    #         try:
+    #             with self.memory_statistics_lock:
+    #                 memory_collector = MemoryStatisticsCollector(
+    #                     sampling_interval=self.sampling_interval // 60,
+    #                     retention_period=self.retention_period
+    #                 )
+    #                 memory_collector.collect_and_store_memory_usage(collect_only=False)
+
+    #                 # Check log retention every minute (simulate daily check)
+    #                 current_time = datetime.now()
+    #                 if (current_time - last_retention_check).seconds >= 60:  # Simulate 1 minute = 1 day
+    #                     logger.log_info("log retention check")
+    #                     self.manage_log_retention()
+    #                     last_retention_check = current_time
+    #                 logger.log_info("log retention check")
+
+    #         except Exception as error:
+    #             logger.log_error(f"Error during memory statistics collection: {error}")
+
+    #         elapsed_time = (datetime.now() - start_time).total_seconds()
+    #         sleep_time = max(0, self.sampling_interval - elapsed_time)
+    #         if self.stop_event.wait(timeout=sleep_time):
+    #             break
+
+    #     logger.log_info("Memory statistics collection thread stopped.")
+
+
+
+
+
+
+
+
+
+
+    # def manage_log_retention(self):
+    #     """
+    #     Manages log file retention based on the configured retention period.
+    #     Deletes files older than the specified retention days.
+    #     """
+    #     try:
+    #         log_directory = self.config.get('LOG_DIRECTORY', '/var/log/memory_statistics')
+    #         retention_days = self.retention_period  # Already validated to be between 1-30
+
+    #         if not os.path.exists(log_directory):
+    #             logger.log_warning(f"Log directory does not exist: {log_directory}")
+    #             return
+
+    #         current_time = datetime.now()
+    #         deleted_files_count = 0
+
+    #         for filename in os.listdir(log_directory):
+    #             file_path = os.path.join(log_directory, filename)
+
+    #             if os.path.isfile(file_path):
+    #                 file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+    #                 file_age = (current_time - file_mod_time).days
+
+    #                 if file_age > retention_days:
+    #                     try:
+    #                         os.remove(file_path)
+    #                         deleted_files_count += 1
+    #                         logger.log_info(f"Deleted log file older than {retention_days} days: {file_path}")
+    #                     except Exception as e:
+    #                         logger.log_error(f"Error deleting old log file {file_path}: {e}")
+
+    #         # Log summary of retention check
+    #         logger.log_info(f"Log retention check completed. Deleted {deleted_files_count} files older than {retention_days} days.")
+
+    #         # Create new log files immediately after deletion
+    #         logger.log_info("Creating new log files after retention management.")
+    #         memory_collector = MemoryStatisticsCollector(
+    #             sampling_interval=self.sampling_interval // 60,
+    #             retention_period=self.retention_period
+    #         )
+    #         memory_collector.collect_and_store_memory_usage(collect_only=False)
+
+    #     except Exception as e:
+    #         logger.log_error(f"Error managing log file retention: {e}")
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    # def manage_log_retention(self):
+    #     """
+    #     Manages log file retention based on the configured retention period (in days).
+    #     Deletes files older than the retention period (converted to seconds).
+    #     """
+    #     try:
+    #         log_directory = self.config.get('LOG_DIRECTORY', '/var/log/memory_statistics')
+            
+    #         # Convert retention period from days to seconds
+    #         retention_seconds = self.retention_period * 60  # 1 day = 86400 seconds
+
+    #         if not os.path.exists(log_directory):
+    #             logger.log_warning(f"Log directory does not exist: {log_directory}")
+    #             return
+
+    #         current_time = datetime.now()
+    #         deleted_files_count = 0
+
+    #         for filename in os.listdir(log_directory):
+    #             file_path = os.path.join(log_directory, filename)
+
+    #             if os.path.isfile(file_path):
+    #                 file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+    #                 file_age_seconds = (current_time - file_mod_time).total_seconds()
+
+    #                 # Compare file age in seconds with the retention period in seconds
+    #                 if file_age_seconds > retention_seconds:
+    #                     try:
+    #                         os.remove(file_path)
+    #                         deleted_files_count += 1
+    #                         logger.log_info(f"Deleted log file older than {retention_seconds} seconds: {file_path}")
+    #                     except Exception as e:
+    #                         logger.log_error(f"Error deleting old log file {file_path}: {e}")
+
+    #         # Log summary of retention check
+    #         logger.log_info(f"Log retention check completed. Deleted {deleted_files_count} files older than {retention_seconds} seconds.")
+
+    #         # Create new log files immediately after deletion
+    #         logger.log_info("Creating new log files after retention management.")
+    #         memory_collector = MemoryStatisticsCollector(
+    #             sampling_interval=self.sampling_interval // 60,
+    #             retention_period=self.retention_period
+    #         )
+    #         memory_collector.collect_and_store_memory_usage(collect_only=False)
+
+    #     except Exception as e:
+    #         logger.log_error(f"Error managing log file retention: {e}")
+
+
+
+
     def start_memory_collection(self):
         """
         Starts memory statistics collection in a separate thread.
@@ -1901,34 +2367,45 @@ class MemoryStatisticsService:
         The collection interval is determined by the `sampling_interval` 
         configuration. Logs the start and stop of the memory collection thread.
         """ 
-        def memory_collection():
-            logger.log_info("Memory statistics collection thread started.")
-            while not self.stop_event.is_set():
-                start_time = datetime.now()
-                try:
-                    with self.memory_statistics_lock:
-                        memory_collector = MemoryStatisticsCollector(
-                            sampling_interval=self.sampling_interval // 60,
-                            retention_period=self.retention_period
-                        )
-                        memory_collector.collect_and_store_memory_usage(collect_only=False)
-                except Exception as error:
-                    logger.log_error(f"Error during memory statistics collection: {error}")
+        # def memory_collection():
+        #     logger.log_info("Memory statistics collection thread started.")
+        #     while not self.stop_event.is_set():
+        #         start_time = datetime.now()
+        #         try:
+        #             with self.memory_statistics_lock:
+        #                 memory_collector = MemoryStatisticsCollector(
+        #                     sampling_interval=self.sampling_interval // 60,
+        #                     retention_period=self.retention_period
+        #                 )
+        #                 memory_collector.collect_and_store_memory_usage(collect_only=False)
+        #         except Exception as error:
+        #             logger.log_error(f"Error during memory statistics collection: {error}")
 
-                elapsed_time = (datetime.now() - start_time).total_seconds()
-                sleep_time = max(0, self.sampling_interval - elapsed_time)
-                if self.stop_event.wait(timeout=sleep_time):
-                    break 
+        #         elapsed_time = (datetime.now() - start_time).total_seconds()
+        #         sleep_time = max(0, self.sampling_interval - elapsed_time)
+        #         if self.stop_event.wait(timeout=sleep_time):
+        #             break 
 
-            logger.log_info("Memory statistics collection thread stopped.")
+        #     logger.log_info("Memory statistics collection thread stopped.")
+
+
+        # self.memory_collection_thread = threading.Thread(
+        #     target=self.memory_collection,
+        #     name='MemoryCollection',
+        #     daemon=True
+        # )
+        # self.memory_collection_thread.start()
+        # logger.log_info("Memory collection thread started.")
 
         self.memory_collection_thread = threading.Thread(
-            target=memory_collection,
+            target=self.memory_collection,
             name='MemoryCollection',
             daemon=True
         )
         self.memory_collection_thread.start()
         logger.log_info("Memory collection thread started.")
+
+
 
     def stop_threads(self):
         """
@@ -1991,7 +2468,8 @@ class MemoryStatisticsService:
             logger.log_error(f"Error flushing log handlers: {e}")
 
         logger.log_info("Cleanup complete.")
-        
+
+
     def run(self):
         """
         Runs the Memory Statistics Service.
@@ -2006,7 +2484,7 @@ class MemoryStatisticsService:
 
         self.start_socket_listener()
         self.start_memory_collection()
-    
+
         while not self.stop_event.is_set():
             time.sleep(1) 
 
