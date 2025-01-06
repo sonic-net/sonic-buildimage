@@ -1,7 +1,5 @@
-import logging
 import signal
 import sys
-import syslog
 
 from . import device_info
 from .general import load_module_from_source
