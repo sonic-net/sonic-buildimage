@@ -1,6 +1,7 @@
 from .log import log_err, log_debug, log_warn
 from .manager import Manager
 from ipaddress import IPv6Address
+from swsscommon import swsscommon
 
 supported_SRv6_behaviors = {
     'uN',
