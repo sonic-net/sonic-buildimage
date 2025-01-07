@@ -1,6 +1,5 @@
 from .log import log_err, log_debug, log_warn
 from .manager import Manager
-from swsscommon import swsscommon
 from ipaddress import IPv6Address
 
 supported_SRv6_behaviors = {
@@ -33,13 +32,17 @@ class SRv6Mgr(Manager):
     def set_handler(self, key, data):
         locator = key.split("|")[0]
         ip_addr = key.split("|")[1]
+        if not self.directory.path_exist(self.config_db.CONFIG_DB, "SRV6_MY_LOCATORS", locator):
+            log_err("Found a SRv6 SID config entry with a locator that does not exist: {} | {}".format(key, data))
+            return False
+        
         locator_data = self.config_db.get_all(self.config_db.CONFIG_DB, "SRV6_MY_LOCATORS|" + locator)
         if 'action' not in data:
-            log_err("Found a SRv6 config entry that does not specify action: {} | {}".format(ip_addr, data))
+            log_err("Found a SRv6 SID config entry that does not specify action: {} | {}".format(key, data))
             return False
         
         if data['action'] not in supported_SRv6_behaviors:
-            log_err("Found a SRv6 config entry associated with unsupported action: {} | {}".format(ip_addr, data))
+            log_err("Found a SRv6 SID config entry associated with unsupported action: {} | {}".format(key, data))
             return False
         
         sid = SID(locator, ip_addr, locator_data=locator_data, sid_data=data) # the information in data will be parsed into SID's attributes
@@ -52,7 +55,7 @@ class SRv6Mgr(Manager):
 
         sid_cmd = 'sid {}/{} {}'.format(ip_addr, sid.block_len + sid.node_len + sid.func_len, sid.action)
         if sid.decap_vrf != DEFAULT_VRF:
-            sid_cmd += ' vrf {}'.format(sid.vrf)
+            sid_cmd += ' vrf {}'.format(sid.decap_vrf)
         cmd_list.append(sid_cmd)
 
         self.cfg_mgr.push_list(cmd_list)
@@ -64,13 +67,18 @@ class SRv6Mgr(Manager):
     def del_handler(self, key, data):
         locator = key.split("|")[0]
         ip_addr = key.split("|")[1]
+
+        if not self.directory.path_exist(self.config_db.CONFIG_DB, "SRV6_MY_LOCATORS", locator):
+            log_err("Encountered a config deletion with a locator that does not exist: {} | {}".format(key, data))
+            return False
         locator_data = self.config_db.get_all(self.config_db.CONFIG_DB, "SRV6_MY_LOCATORS|" + locator)
+
         sid = SID(locator, ip_addr, locator_data=locator_data, sid_data=data)
         func_bits = sid.get_func_bits()
 
         if locator in self.sids:
             if func_bits not in self.sids[locator]:
-                log_warn("Encountered a config deletion with an unexpected SRv6 action: {} | {}".format(ip_addr, data))
+                log_warn("Encountered a config deletion with an unexpected SRv6 action: {} | {}".format(key, data))
                 return
             
             cmd_list = ['segment-routing', 'srv6']
@@ -85,7 +93,7 @@ class SRv6Mgr(Manager):
                 cmd_list.append('locator {}'.format(locator))
                 no_sid_cmd = 'no sid {}/{} {}'.format(ip_addr,  sid.block_len + sid.node_len + sid.func_len, sid.action)
                 if sid.decap_vrf != DEFAULT_VRF:
-                    no_sid_cmd += ' vrf {}'.format(sid.vrf)
+                    no_sid_cmd += ' vrf {}'.format(sid.decap_vrf)
                 cmd_list.append(no_sid_cmd)
 
                 self.sids[locator].pop(func_bits)
@@ -93,14 +101,14 @@ class SRv6Mgr(Manager):
             self.cfg_mgr.push_list(cmd_list)
             log_debug("{} SRv6 static configuration {} is scheduled for updates. {}".format(self.db_name, key, str(cmd_list)))
         else:
-            log_warn("Encountered a config deletion with an unexpected SRv6 locator: {} | {}".format(ip_addr, data))
+            log_warn("Encountered a config deletion with an unexpected SRv6 locator: {} | {}".format(key, data))
             return
 
 class SID:
     def __init__(self, locator, ip_addr, locator_data, sid_data):
         self.locator_name = locator
         self.bits = int(IPv6Address(ip_addr))
-        self.block_len = locator_data['block_len'] if 'block_len' in data else 32
+        self.block_len = locator_data['block_len'] if 'block_len' in locator_data else 32
         self.node_len = locator_data['node_len'] if 'node_len' in locator_data else 16
         self.func_len = locator_data['func_len'] if 'func_len' in locator_data else 16
         self.arg_len = locator_data['arg_len'] if 'arg_len' in locator_data else 0
@@ -122,7 +130,7 @@ class SID:
         self.func_bits = IPv6Address(self.bits & func_mask)
         
         self.action = sid_data['action']
-        self.vrf = sid_data['decap_vrf'] if 'decap_vrf' in sid_data else DEFAULT_VRF
+        self.decap_vrf = sid_data['decap_vrf'] if 'decap_vrf' in sid_data else DEFAULT_VRF
         self.adj = sid_data['adj'].split(',') if 'adj' in sid_data else []
 
     def get_locator_name(self):

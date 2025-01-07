@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 from bgpcfgd.directory import Directory
 from bgpcfgd.template import TemplateFabric
 from bgpcfgd.managers_srv6 import SRv6Mgr
-from swsscommon import swsscommon
 
 def constructor():
     cfg_mgr = MagicMock()
@@ -17,6 +16,9 @@ def constructor():
 
     mgr = SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SID_TABLE")
     assert len(mgr.sids) == 0
+
+    # prepare the mock SRV6_MY_LOCATORS table
+    mgr.directory.put("CONFIG_DB", "SRV6_MY_LOCATORS", "loc1", { 'prefix': "FCBB:BBBB:20"})
 
     return mgr
 
@@ -41,7 +43,7 @@ def op_test(mgr: SRv6Mgr, op, args, expected_ret, expected_cmds):
         mgr.cfg_mgr.push_list = MagicMock()
         assert False, "Unexpected operation {}".format(op)
 
-    if expected_cmds:
+    if expected_ret and expected_cmds:
         assert op_test.push_list_called, "cfg_mgr.push_list wasn't called"
     else:
         assert not op_test.push_list_called, "cfg_mgr.push_list was called"
@@ -49,13 +51,13 @@ def op_test(mgr: SRv6Mgr, op, args, expected_ret, expected_cmds):
 def test_uN_add():
     mgr = constructor()
 
-    op_test(mgr, 'SET', ("FCBB:BBBB:20:F1::", {
+    op_test(mgr, 'SET', ("loc1|FCBB:BBBB:20:F1::", {
         'action': 'uN'
     }), expected_ret=True, expected_cmds=[
         'segment-routing',
         'srv6',
         'locators',
-        'locator FCBB:BBBB:20:: block-len 32 node-len 16 func-bits 16',
+        'locator loc1 block-len 32 node-len 16 func-bits 16',
         'prefix FCBB:BBBB:20::/48',
         'sid FCBB:BBBB:20:F1::/64 uN'
     ])
@@ -63,64 +65,66 @@ def test_uN_add():
 def test_uDT46_add_vrf1():
     mgr = constructor()
 
-    _old_exists = swsscommon.SonicV2Connector().exists
-    swsscommon.SonicV2Connector().exists = lambda x: True
-
-    op_test(mgr, 'SET', ("FCBB:BBBB:20:F2::", {
+    op_test(mgr, 'SET', ("loc1|FCBB:BBBB:20:F2::", {
         'action': 'uDT46',
-        'vrf': 'vrf1'
+        'decap_vrf': 'vrf1'
     }), expected_ret=True, expected_cmds=[
         'segment-routing',
         'srv6',
         'locators',
-        'locator FCBB:BBBB:20:: block-len 32 node-len 16 func-bits 16',
+        'locator loc1 block-len 32 node-len 16 func-bits 16',
         'prefix FCBB:BBBB:20::/48',
         'sid FCBB:BBBB:20:F2::/64 uDT46 vrf vrf1'
     ])
-    swsscommon.SonicV2Connector().exists = _old_exists
 
 def test_uN_del():
     mgr = constructor()
 
     # add uN function first
-    mgr.set_handler("FCBB:BBBB:20:F1::", {
+    mgr.set_handler("loc1|FCBB:BBBB:20:F1::", {
         'action': 'uN'
     })
 
     # test the deletion
-    op_test(mgr, 'DEL', ("FCBB:BBBB:20:F1::", {
+    op_test(mgr, 'DEL', ("loc1|FCBB:BBBB:20:F1::", {
         'action': 'uN'
     }), expected_ret=True, expected_cmds=[
         'segment-routing',
         'srv6',
         'locators',
-        'no locator FCBB:BBBB:20:: block-len 32 node-len 16 func-bits 16'
+        'no locator loc1 block-len 32 node-len 16 func-bits 16'
     ])
 
 def test_uDT46_del_vrf1():
     mgr = constructor()
 
     # add a uN action first to make the uDT46 action not the last function
-    mgr.set_handler("FCBB:BBBB:20:F1::", {
+    mgr.set_handler("loc1|FCBB:BBBB:20:F1::", {
         'action': 'uN'
     })
 
     # add the uDT46 action
-    mgr.set_handler("FCBB:BBBB:20:F2::", {
-        'action': 'uDT46'
+    mgr.set_handler("loc1|FCBB:BBBB:20:F2::", {
+        'action': 'uDT46',
+        "decap_vrf": "vrf1"
     })
 
     # test the deletion of uDT46
-    _old_exists = swsscommon.SonicV2Connector().exists
-    swsscommon.SonicV2Connector().exists = lambda x: True
-    op_test(mgr, 'DEL', ("FCBB:BBBB:20:F2::", {
+    op_test(mgr, 'DEL', ("loc1|FCBB:BBBB:20:F2::", {
         'action': 'uDT46',
-        "vrf": "vrf1"
+        "decap_vrf": "vrf1"
     }), expected_ret=True, expected_cmds=[
         'segment-routing',
         'srv6',
         'locators',
-        'locator FCBB:BBBB:20:: block-len 32 node-len 16 func-bits 16',
+        'locator loc1 block-len 32 node-len 16 func-bits 16',
         'no sid FCBB:BBBB:20:F2/64 uDT46 vrf vrf1'
     ])
-    swsscommon.SonicV2Connector().exists = _old_exists
+
+def test_invalid_add():
+    mgr = constructor()
+
+    # test the addition of a SID with a non-existent locator
+    op_test(mgr, 'SET', ("loc2|FCBB:BBBB:21:F1::", {
+        'action': 'uN'
+    }), expected_ret=False, expected_cmds=[])
