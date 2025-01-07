@@ -22,7 +22,9 @@ RUN apt-get update &&       \
         pciutils            \
         # Needed for installing netifaces Python package
         build-essential     \
-        python3-dev
+        python3-dev         \
+        libnftables1=0.9.8-3.1+deb11u2 \
+        nftables=0.9.8-3.1+deb11u2
 
 {% if ( CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" ) %}
 # Fix for gcc/python/iputils-ping not found in arm docker
