@@ -50,10 +50,10 @@ jobs:
         displayName: 'Checkout code'
       - script: |
           if [ -n "${{ parameters.COMMIT_ID }}" and -n "${{ parameters.SUBMODULE_NAME }}" ]; then
-            git submodule update --init --recursive
-            cd src/${{ parameters.SUBMODULE_NAME }}
+            if [ -n "${{ parameters.SUBMODULE_NAME }}" ]; then
+              git submodule update --init --recursive
+              cd src/${{ parameters.SUBMODULE_NAME }}
             git checkout ${{ parameters.COMMIT_ID }}
-            cd ../../
           fi
       - script: |
           set -x
