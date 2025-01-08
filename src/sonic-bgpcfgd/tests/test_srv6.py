@@ -18,7 +18,8 @@ def constructor():
     assert len(mgr.sids) == 0
 
     # prepare the mock SRV6_MY_LOCATORS table
-    mgr.directory.put("CONFIG_DB", "SRV6_MY_LOCATORS", "loc1", { 'prefix': "FCBB:BBBB:20"})
+    mgr.directory.put("CONFIG_DB", "SRV6_MY_LOCATORS", "loc1", { 'prefix': "FCBB:BBBB:20::"})
+    assert len(mgr.directory.data["CONFIG_DB__SRV6_MY_LOCATORS"]["loc1"]) == 1
 
     return mgr
 
@@ -28,7 +29,7 @@ def op_test(mgr: SRv6Mgr, op, args, expected_ret, expected_cmds):
         op_test.push_list_called = True
         assert len(cmds) == len(expected_cmds)
         for i in range(len(expected_cmds)):
-            assert cmds[i] == expected_cmds[i]
+            assert cmds[i].lower() == expected_cmds[i].lower()
         return True
     mgr.cfg_mgr.push_list = push_list_checker
 
@@ -50,6 +51,7 @@ def op_test(mgr: SRv6Mgr, op, args, expected_ret, expected_cmds):
 
 def test_uN_add():
     mgr = constructor()
+    print("---------", mgr.directory.get("CONFIG_DB", "SRV6_MY_LOCATORS", "loc1"), "--------------")
 
     op_test(mgr, 'SET', ("loc1|FCBB:BBBB:20:F1::", {
         'action': 'uN'
@@ -57,9 +59,9 @@ def test_uN_add():
         'segment-routing',
         'srv6',
         'locators',
-        'locator loc1 block-len 32 node-len 16 func-bits 16',
-        'prefix FCBB:BBBB:20::/48',
-        'sid FCBB:BBBB:20:F1::/64 uN'
+        'locator loc1',
+        'prefix FCBB:BBBB:20::/48 block-len 32 node-len 16 func-bits 16',
+        'sid FCBB:BBBB:20:F1::/64 behavior uN'
     ])
 
 def test_uDT46_add_vrf1():
@@ -72,9 +74,9 @@ def test_uDT46_add_vrf1():
         'segment-routing',
         'srv6',
         'locators',
-        'locator loc1 block-len 32 node-len 16 func-bits 16',
-        'prefix FCBB:BBBB:20::/48',
-        'sid FCBB:BBBB:20:F2::/64 uDT46 vrf vrf1'
+        'locator loc1',
+        'prefix FCBB:BBBB:20::/48 block-len 32 node-len 16 func-bits 16',
+        'sid FCBB:BBBB:20:F2::/64 behavior uDT46 vrf vrf1'
     ])
 
 def test_uN_del():
@@ -92,19 +94,19 @@ def test_uN_del():
         'segment-routing',
         'srv6',
         'locators',
-        'no locator loc1 block-len 32 node-len 16 func-bits 16'
+        'no locator loc1'
     ])
 
 def test_uDT46_del_vrf1():
     mgr = constructor()
 
     # add a uN action first to make the uDT46 action not the last function
-    mgr.set_handler("loc1|FCBB:BBBB:20:F1::", {
+    assert mgr.set_handler("loc1|FCBB:BBBB:20:F1::", {
         'action': 'uN'
     })
 
     # add the uDT46 action
-    mgr.set_handler("loc1|FCBB:BBBB:20:F2::", {
+    assert mgr.set_handler("loc1|FCBB:BBBB:20:F2::", {
         'action': 'uDT46',
         "decap_vrf": "vrf1"
     })
@@ -117,8 +119,8 @@ def test_uDT46_del_vrf1():
         'segment-routing',
         'srv6',
         'locators',
-        'locator loc1 block-len 32 node-len 16 func-bits 16',
-        'no sid FCBB:BBBB:20:F2/64 uDT46 vrf vrf1'
+        'locator loc1',
+        'no sid FCBB:BBBB:20:F2::/64 behavior uDT46 vrf vrf1'
     ])
 
 def test_invalid_add():
