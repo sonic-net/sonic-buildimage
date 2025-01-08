@@ -36,6 +36,7 @@ def main():
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, "mgmt_oper_status exception : {}".format(str(e)))
             db.set(db.STATE_DB, state_db_key, 'oper_status', 'unknown')
+            sys.exit(1)
 
 
 if __name__ == "__main__":
