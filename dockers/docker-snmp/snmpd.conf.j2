@@ -194,6 +194,8 @@ trapsink {{ v3SnmpTrapIp }}:{{ v3SnmpTrapPort }}{% if v3SnmpTrapVrf != 'None' %}
 #
                                            #  Run as an AgentX master agent
 master          agentx
+agentXTimeout   5
+agentXRetries   4
 
 #
 #  SysDescription pass-through
