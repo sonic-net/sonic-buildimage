@@ -1161,3 +1161,13 @@ class TestCfgGen(TestCase):
         self.assertEqual(
             utils.liststr_to_dict(output.strip()),
             utils.liststr_to_dict("['192.168.200.15|161|', '100.0.0.6|161|', '100.0.0.7|161|', 'fe80::1%Management0|161|']"))
+   
+    def test_platform_asic_sensors_config(self):
+        os.environ["PLATFORM"] = "x86_64-kvm_x86_64-r0"
+        argument = ["-H","--print-data"]
+        output = self.run_script(argument, check_stderr=False)
+        config_json = utils.to_dict(output.strip())
+        os.environ["PLATFORM"] = ""
+        self.assertEqual(config_json['ASIC_SENSORS'], utils.to_dict("{'ASIC_SENSORS_POLLER_INTERVAL': {'interval': '10'}, 'ASIC_SENSORS_POLLER_STATUS': {'admin_status': 'enable'}}"))
+
+

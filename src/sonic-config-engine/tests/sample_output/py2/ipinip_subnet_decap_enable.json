@@ -25,8 +25,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
             "tunnel_type":"IPINIP",
-            "dscp_mode":"pipe",
-            "decap_dscp_to_tc_map":"AZURE",
+            "dscp_mode":"uniform",
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
@@ -98,8 +97,7 @@
     {
         "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {
             "tunnel_type":"IPINIP",
-            "dscp_mode":"pipe",
-            "decap_dscp_to_tc_map":"AZURE",
+            "dscp_mode":"uniform",
             "ecn_mode":"copy_from_outer",
             "ttl_mode":"pipe"
         },
