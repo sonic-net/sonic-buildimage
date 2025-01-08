@@ -49,10 +49,11 @@ jobs:
         condition: and(succeeded(), eq(variables.SKIP_CHECKOUT, ''))
         displayName: 'Checkout code'
       - script: |
-          if [ -n "${{ parameters.COMMIT_ID }}" and -n "${{ parameters.SUBMODULE_NAME }}" ]; then
+          if [ -n "${{ parameters.COMMIT_ID }}" ]; then
             if [ -n "${{ parameters.SUBMODULE_NAME }}" ]; then
               git submodule update --init --recursive
               cd src/${{ parameters.SUBMODULE_NAME }}
+            fi
             git checkout ${{ parameters.COMMIT_ID }}
           fi
       - script: |
