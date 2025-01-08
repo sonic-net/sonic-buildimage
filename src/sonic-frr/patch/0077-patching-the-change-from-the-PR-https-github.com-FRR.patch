@@ -365,15 +365,7 @@ index 6ae302d75..175ad33c4 100644
  			case ZEBRA_SEG6_LOCAL_ACTION_UNSPEC:
  				zlog_err("%s: unsupport seg6local behaviour action=%u",
  					 __func__,
-@@ -2317,7 +2321,7 @@ ssize_t netlink_route_multipath_msg_encode(int cmd, struct zebra_dplane_ctx *ctx
- 	 * path(s)
- 	 * by the routing protocol and for communicating with protocol peers.
- 	 */
--	if (fpme)
-+	if (fpm)
- 	{
-             /* Patch to send tag value as route attribute using RTA_PRIORITY
- 	     * which can be used as metadata/attribute to take application specific
+
 diff --git a/zebra/zapi_msg.c b/zebra/zapi_msg.c
 index 6aabb2085..2d9e49556 100644
 --- a/zebra/zapi_msg.c
