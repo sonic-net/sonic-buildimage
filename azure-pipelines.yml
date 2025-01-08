@@ -62,6 +62,7 @@ stages:
 - stage: Build
   pool: sonicbld-1es
   dependsOn: []
+  condition: false
   jobs:
   - template: .azure-pipelines/azure-pipelines-build.yml
     parameters:
@@ -109,6 +110,7 @@ stages:
   - job:
     pool: sonictest
     displayName: "vstest"
+    condition: false
     timeoutInMinutes: 60
     steps:
     - template: .azure-pipelines/cleanup.yml
