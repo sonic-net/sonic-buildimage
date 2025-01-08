@@ -733,10 +733,10 @@ class MemoryStatisticsCollector:
 
     def collect_and_store_memory_usage(self, collect_only):
         """
-        Dump memory usage statistics into log files.
+        Dump memory usage statistics into log files
         
         Args:
-            collect_only (bool): If True, return memory data without dumping.
+            collect_only (bool): If True, return memory data without dumping
         """
         sysmem_dict = {}
         total_dict = self.fetch_memory_entries(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'])
