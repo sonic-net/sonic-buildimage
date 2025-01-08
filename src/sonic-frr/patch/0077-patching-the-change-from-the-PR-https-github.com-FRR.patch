@@ -1,0 +1,878 @@
+From caef5c8c9a90f7ea59156696761445a78a629a71 Mon Sep 17 00:00:00 2001
+From: Abhishek Dosi <abdosi@microsoft.com>
+Date: Wed, 8 Jan 2025 02:28:33 +0000
+Subject: [PATCH] patching the change from the PR:
+ https://github.com/FRRouting/frr/pull/16894
+
+Signed-off-by: Abhishek Dosi <abdosi@microsoft.com>
+---
+ lib/command.h          |   1 +
+ lib/srv6.c             |  57 ++++++++++
+ lib/srv6.h             |  22 ++++
+ lib/zclient.c          |  27 +++++
+ lib/zclient.h          |   5 +
+ vtysh/vtysh.c          |  39 ++++++-
+ zebra/rt_netlink.c     |   6 +-
+ zebra/zapi_msg.c       |  31 ++++++
+ zebra/zapi_msg.h       |   5 +
+ zebra/zebra_srv6.c     |  11 +-
+ zebra/zebra_srv6.h     |   1 +
+ zebra/zebra_srv6_vty.c | 248 ++++++++++++++++++++++++++++++++++++++---
+ 12 files changed, 431 insertions(+), 22 deletions(-)
+
+diff --git a/lib/command.h b/lib/command.h
+index 12c893b1b..86540380a 100644
+--- a/lib/command.h
++++ b/lib/command.h
+@@ -160,6 +160,7 @@ enum node_type {
+ 	SRV6_NODE,		 /* SRv6 node */
+ 	SRV6_LOCS_NODE,		 /* SRv6 locators node */
+ 	SRV6_LOC_NODE,		 /* SRv6 locator node */
++	SRV6_PREFIX_NODE,		 /* SRv6 locator prefix node */
+ 	SRV6_ENCAP_NODE,		 /* SRv6 encapsulation node */
+ 	SRV6_SID_FORMATS_NODE,		 /* SRv6 SID formats config node */
+ 	SRV6_SID_FORMAT_USID_F3216_NODE,		 /* SRv6 uSID f3216 format config node */
+diff --git a/lib/srv6.c b/lib/srv6.c
+index 4cb062256..33314aaac 100644
+--- a/lib/srv6.c
++++ b/lib/srv6.c
+@@ -49,6 +49,14 @@ const char *seg6local_action2str(uint32_t action)
+ 		return "End.AM";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_DT46:
+ 		return "End.DT46";
++	case ZEBRA_SEG6_LOCAL_ACTION_END_UN:
++		return "End.uN";
++	case ZEBRA_SEG6_LOCAL_ACTION_END_UDT4:
++		return "End.uDT4";
++	case ZEBRA_SEG6_LOCAL_ACTION_END_UDT6:
++		return "End.uDT6";
++	case ZEBRA_SEG6_LOCAL_ACTION_END_UDT46:
++		return "End.uDT46";
+ 	case ZEBRA_SEG6_LOCAL_ACTION_UNSPEC:
+ 		return "unspec";
+ 	default:
+@@ -127,6 +135,8 @@ struct srv6_locator *srv6_locator_alloc(const char *name)
+ 	locator->chunks = list_new();
+ 	locator->chunks->del = srv6_locator_chunk_list_free;
+ 
++	locator->sids = list_new();
++
+ 	QOBJ_REG(locator, srv6_locator);
+ 	return locator;
+ }
+@@ -165,6 +175,20 @@ void srv6_locator_free(struct srv6_locator *locator)
+ 	}
+ }
+ 
++struct seg6_sid *srv6_locator_sid_alloc(void)
++{
++	struct seg6_sid *sid = NULL;
++
++	sid = XCALLOC(MTYPE_SRV6_LOCATOR_CHUNK, sizeof(struct seg6_sid));
++	strlcpy(sid->vrfName, "Default", sizeof(sid->vrfName));
++	return sid;
++}
++
++void srv6_locator_sid_free(struct seg6_sid *sid)
++{
++	XFREE(MTYPE_SRV6_LOCATOR_CHUNK, sid);
++}
++
+ void srv6_locator_chunk_free(struct srv6_locator_chunk **chunk)
+ {
+ 	XFREE(MTYPE_SRV6_LOCATOR_CHUNK, *chunk);
+@@ -276,6 +300,27 @@ srv6_locator_chunk_detailed_json(const struct srv6_locator_chunk *chunk)
+ 	return jo_root;
+ }
+ 
++json_object *srv6_locator_sid_detailed_json(const struct srv6_locator *locator,
++					    const struct seg6_sid *sid)
++{
++	json_object *jo_root = NULL;
++	char buf[256];
++
++	jo_root = json_object_new_object();
++
++	/* set sid */
++	prefix2str(&sid->ipv6Addr, buf, sizeof(buf));
++	json_object_string_add(jo_root, "sid", buf);
++
++	/* set behavior */
++	json_object_string_add(jo_root, "behavior", seg6local_action2str(sid->sidaction));
++
++	/* set vrf */
++	json_object_string_add(jo_root, "vrf", sid->vrfName);
++
++	return jo_root;
++}
++
+ json_object *srv6_locator_json(const struct srv6_locator *loc)
+ {
+ 	struct listnode *node;
+@@ -352,10 +397,14 @@ json_object *srv6_locator_json(const struct srv6_locator *loc)
+ json_object *srv6_locator_detailed_json(const struct srv6_locator *loc)
+ {
+ 	struct listnode *node;
++	struct listnode *sidnode;
+ 	struct srv6_locator_chunk *chunk;
++	struct seg6_sid *sid = NULL;
+ 	json_object *jo_root = NULL;
+ 	json_object *jo_chunk = NULL;
+ 	json_object *jo_chunks = NULL;
++	json_object *jo_sid = NULL;
++	json_object *jo_sids = NULL;
+ 
+ 	jo_root = json_object_new_object();
+ 
+@@ -421,5 +470,13 @@ json_object *srv6_locator_detailed_json(const struct srv6_locator *loc)
+ 		json_object_array_add(jo_chunks, jo_chunk);
+ 	}
+ 
++	/* set sids */
++	jo_sids = json_object_new_array();
++	json_object_object_add(jo_root, "sids", jo_sids);
++	for (ALL_LIST_ELEMENTS_RO(loc->sids, sidnode, sid)) {
++		jo_sid = srv6_locator_sid_detailed_json(loc, sid);
++		json_object_array_add(jo_sids, jo_sid);
++	}
++
+ 	return jo_root;
+ }
+diff --git a/lib/srv6.h b/lib/srv6.h
+index 225bdf3ad..823c4536c 100644
+--- a/lib/srv6.h
++++ b/lib/srv6.h
+@@ -10,6 +10,7 @@
+ #include <zebra.h>
+ #include "prefix.h"
+ #include "json.h"
++#include "vrf.h"
+ 
+ #include <arpa/inet.h>
+ #include <netinet/in.h>
+@@ -63,6 +64,11 @@ enum seg6local_action_t {
+ 	ZEBRA_SEG6_LOCAL_ACTION_END_AM       = 14,
+ 	ZEBRA_SEG6_LOCAL_ACTION_END_BPF      = 15,
+ 	ZEBRA_SEG6_LOCAL_ACTION_END_DT46     = 16,
++
++	ZEBRA_SEG6_LOCAL_ACTION_END_UDT6     = 19,
++	ZEBRA_SEG6_LOCAL_ACTION_END_UDT4     = 20,
++	ZEBRA_SEG6_LOCAL_ACTION_END_UDT46    = 21,
++	ZEBRA_SEG6_LOCAL_ACTION_END_UN       = 22,
+ };
+ 
+ /* Flavor operations for SRv6 End* Behaviors */
+@@ -129,6 +135,7 @@ struct srv6_locator {
+ 	uint64_t current;
+ 	bool status_up;
+ 	struct list *chunks;
++	struct list *sids;
+ 
+ 	uint8_t flags;
+ #define SRV6_LOCATOR_USID (1 << 0) /* The SRv6 Locator is a uSID Locator */
+@@ -167,6 +174,13 @@ struct srv6_locator_chunk {
+ 	uint8_t flags;
+ };
+ 
++struct seg6_sid {
++	enum seg6local_action_t sidaction;
++	char vrfName[VRF_NAMSIZ + 1];
++	struct prefix_ipv6 ipv6Addr;
++	char sidstr[PREFIX_STRLEN];
++};
++
+ /*
+  * SRv6 Endpoint Behavior codepoints, as defined by IANA in
+  * https://www.iana.org/assignments/segment-routing/segment-routing.xhtml
+@@ -365,6 +379,10 @@ static inline const char *srv6_sid_ctx2str(char *str, size_t size,
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_AS:
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_AM:
+ 	case ZEBRA_SEG6_LOCAL_ACTION_END_BPF:
++	case ZEBRA_SEG6_LOCAL_ACTION_END_UN:
++	case ZEBRA_SEG6_LOCAL_ACTION_END_UDT4:
++	case ZEBRA_SEG6_LOCAL_ACTION_END_UDT6:
++	case ZEBRA_SEG6_LOCAL_ACTION_END_UDT46:
+ 	default:
+ 		len += snprintf(str + len, size - len, " unknown(%s)", __func__);
+ 	}
+@@ -377,6 +395,8 @@ int snprintf_seg6_segs(char *str,
+ 
+ extern struct srv6_locator *srv6_locator_alloc(const char *name);
+ extern struct srv6_locator_chunk *srv6_locator_chunk_alloc(void);
++extern struct seg6_sid *srv6_locator_sid_alloc(void);
++extern void srv6_locator_sid_free(struct seg6_sid *sid);
+ extern void srv6_locator_free(struct srv6_locator *locator);
+ extern void srv6_locator_chunk_list_free(void *data);
+ extern void srv6_locator_chunk_free(struct srv6_locator_chunk **chunk);
+@@ -387,6 +407,8 @@ json_object *srv6_locator_json(const struct srv6_locator *loc);
+ json_object *srv6_locator_detailed_json(const struct srv6_locator *loc);
+ json_object *
+ srv6_locator_chunk_detailed_json(const struct srv6_locator_chunk *chunk);
++json_object *srv6_locator_sid_detailed_json(const struct srv6_locator *locator,
++					    const struct seg6_sid *sid);
+ 
+ extern struct srv6_sid_format *srv6_sid_format_alloc(const char *name);
+ extern void srv6_sid_format_free(struct srv6_sid_format *format);
+diff --git a/lib/zclient.c b/lib/zclient.c
+index 075b473d4..d384ec65e 100644
+--- a/lib/zclient.c
++++ b/lib/zclient.c
+@@ -1156,6 +1156,33 @@ stream_failure:
+ 	return -1;
+ }
+ 
++int zapi_srv6_locator_sid_encode(struct stream *s, struct srv6_locator *loc)
++{
++	struct seg6_sid *sidtmp = NULL;
++	struct listnode *node = NULL;
++
++	stream_putw(s, strlen(loc->name));
++	stream_put(s, loc->name, strlen(loc->name));
++
++	stream_putw(s, loc->prefix.prefixlen);
++	stream_put(s, &loc->prefix.prefix, sizeof(loc->prefix.prefix));
++	stream_putc(s, loc->block_bits_length);
++	stream_putc(s, loc->node_bits_length);
++	stream_putc(s, loc->function_bits_length);
++	stream_putc(s, loc->argument_bits_length);
++
++	stream_putl(s, loc->sids->count);
++	for (ALL_LIST_ELEMENTS_RO(loc->sids, node, sidtmp)) {
++		stream_putw(s, sidtmp->ipv6Addr.prefixlen);
++		stream_put(s, &sidtmp->ipv6Addr.prefix, sizeof(sidtmp->ipv6Addr.prefix));
++		stream_putl(s, sidtmp->sidaction);
++		stream_putw(s, strlen(sidtmp->vrfName));
++		stream_put(s, sidtmp->vrfName, strlen(sidtmp->vrfName));
++	}
++
++	return 0;
++}
++
+ static int zapi_nhg_encode(struct stream *s, int cmd, struct zapi_nhg *api_nhg)
+ {
+ 	int i;
+diff --git a/lib/zclient.h b/lib/zclient.h
+index d2dba15a6..8f1fd9026 100644
+--- a/lib/zclient.h
++++ b/lib/zclient.h
+@@ -212,6 +212,9 @@ typedef enum {
+ 	ZEBRA_SRV6_MANAGER_GET_LOCATOR,
+ 	ZEBRA_SRV6_MANAGER_GET_SRV6_SID,
+ 	ZEBRA_SRV6_MANAGER_RELEASE_SRV6_SID,
++	ZEBRA_SRV6_MANAGER_GET_LOCATOR_SID,
++	ZEBRA_SRV6_MANAGER_RELEASE_LOCATOR_SID,
++	ZEBRA_SRV6_MANAGER_GET_LOCATOR_ALL,
+ 	ZEBRA_ERROR,
+ 	ZEBRA_CLIENT_CAPABILITIES,
+ 	ZEBRA_OPAQUE_MESSAGE,
+@@ -1088,6 +1091,8 @@ extern struct interface *zebra_interface_link_params_read(struct stream *s,
+ 							  bool *changed);
+ extern size_t zebra_interface_link_params_write(struct stream *,
+ 						struct interface *);
++
++extern int zapi_srv6_locator_sid_encode(struct stream *s, struct srv6_locator *loc);
+ extern enum zclient_send_status
+ zclient_send_get_label_chunk(struct zclient *zclient, uint8_t keep,
+ 			     uint32_t chunk_size, uint32_t base);
+diff --git a/vtysh/vtysh.c b/vtysh/vtysh.c
+index a6dcd7647..f8819318b 100644
+--- a/vtysh/vtysh.c
++++ b/vtysh/vtysh.c
+@@ -1338,6 +1338,13 @@ static struct cmd_node srv6_loc_node = {
+ 	.prompt = "%s(config-srv6-locator)# ",
+ };
+ 
++static struct cmd_node srv6_prefix_node = {
++	.name = "srv6-locator-prefix",
++	.node = SRV6_PREFIX_NODE,
++	.parent_node = SRV6_LOC_NODE,
++	.prompt = "%s(config-srv6-locator-prefix)# ",
++};
++
+ static struct cmd_node srv6_encap_node = {
+ 	.name = "srv6-encap",
+ 	.node = SRV6_ENCAP_NODE,
+@@ -1729,6 +1736,22 @@ DEFUNSH(VTYSH_ZEBRA, srv6_locator, srv6_locator_cmd,
+ 	return CMD_SUCCESS;
+ }
+ 
++DEFUNSH(VTYSH_ZEBRA, srv6_prefix, srv6_prefix_cmd,
++	"prefix X:X::X:X/M$prefix \
++         [block-len (16-64)$block_bit_len] [node-len (16-64)$node_bit_len] [func-bits (16-80)$func_bit_len]",
++	"Configure SRv6 locator prefix\n"
++	"Specify SRv6 locator prefix\n"
++	"Configure SRv6 locator block length in bits\n"
++	"Specify SRv6 locator block length in bits\n"
++	"Configure SRv6 locator node length in bits\n"
++	"Specify SRv6 locator node length in bits\n"
++	"Configure SRv6 locator function length in bits\n"
++	"Specify SRv6 locator function length in bits\n")
++{
++	vty->node = SRV6_PREFIX_NODE;
++	return CMD_SUCCESS;
++}
++
+ DEFUNSH(VTYSH_ZEBRA, srv6_encap, srv6_encap_cmd,
+ 	"encapsulation",
+ 	"Segment Routing SRv6 encapsulation\n")
+@@ -2554,6 +2577,14 @@ DEFUNSH(VTYSH_ZEBRA, exit_srv6_loc_config, exit_srv6_loc_config_cmd, "exit",
+ 	return CMD_SUCCESS;
+ }
+ 
++DEFUNSH(VTYSH_ZEBRA, exit_srv6_prefix_config, exit_srv6_prefix_config_cmd,
++	"exit", "Exit from SRv6-locators prefix configuration mode\n")
++{
++	if (vty->node == SRV6_PREFIX_NODE)
++		vty->node = SRV6_LOC_NODE;
++	return CMD_SUCCESS;
++}
++
+ DEFUNSH(VTYSH_ZEBRA, exit_srv6_encap, exit_srv6_encap_cmd, "exit",
+ 	"Exit from SRv6-encapsulation configuration mode\n")
+ {
+@@ -5189,12 +5220,18 @@ void vtysh_init_vty(void)
+ 	install_element(SRV6_LOCS_NODE, &srv6_locator_cmd);
+ 	install_element(SRV6_LOCS_NODE, &exit_srv6_locs_config_cmd);
+ 	install_element(SRV6_LOCS_NODE, &vtysh_end_all_cmd);
+-
++        
+ 	install_node(&srv6_loc_node);
++	install_element(SRV6_LOC_NODE, &srv6_prefix_cmd);
+ 	install_element(SRV6_LOC_NODE, &exit_srv6_loc_config_cmd);
+ 	install_element(SRV6_LOC_NODE, &vtysh_end_all_cmd);
+ 
+ 	install_node(&srv6_encap_node);
++
++	install_node(&srv6_prefix_node);
++	install_element(SRV6_PREFIX_NODE, &exit_srv6_prefix_config_cmd);
++	install_element(SRV6_PREFIX_NODE, &vtysh_end_all_cmd);
++
+ 	install_element(SRV6_ENCAP_NODE, &exit_srv6_encap_cmd);
+ 	install_element(SRV6_ENCAP_NODE, &vtysh_end_all_cmd);
+ 
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 6ae302d75..175ad33c4 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -1756,6 +1756,10 @@ static bool _netlink_route_build_singlepath(const struct prefix *p,
+ 			case ZEBRA_SEG6_LOCAL_ACTION_END_AS:
+ 			case ZEBRA_SEG6_LOCAL_ACTION_END_AM:
+ 			case ZEBRA_SEG6_LOCAL_ACTION_END_BPF:
++			case ZEBRA_SEG6_LOCAL_ACTION_END_UN:
++			case ZEBRA_SEG6_LOCAL_ACTION_END_UDT4:
++			case ZEBRA_SEG6_LOCAL_ACTION_END_UDT6:
++			case ZEBRA_SEG6_LOCAL_ACTION_END_UDT46:
+ 			case ZEBRA_SEG6_LOCAL_ACTION_UNSPEC:
+ 				zlog_err("%s: unsupport seg6local behaviour action=%u",
+ 					 __func__,
+@@ -2317,7 +2321,7 @@ ssize_t netlink_route_multipath_msg_encode(int cmd, struct zebra_dplane_ctx *ctx
+ 	 * path(s)
+ 	 * by the routing protocol and for communicating with protocol peers.
+ 	 */
+-	if (fpme)
++	if (fpm)
+ 	{
+             /* Patch to send tag value as route attribute using RTA_PRIORITY
+ 	     * which can be used as metadata/attribute to take application specific
+diff --git a/zebra/zapi_msg.c b/zebra/zapi_msg.c
+index 6aabb2085..2d9e49556 100644
+--- a/zebra/zapi_msg.c
++++ b/zebra/zapi_msg.c
+@@ -2780,6 +2780,37 @@ int zsend_client_close_notify(struct zserv *client, struct zserv *closed_client)
+ 	return zserv_send_message(client, s);
+ }
+ 
++int zsend_srv6_manager_get_locator_sid_response(struct zserv *client, vrf_id_t vrf_id,
++						struct srv6_locator *loc)
++{
++	struct stream *s = stream_new(ZEBRA_MAX_PACKET_SIZ);
++
++	zclient_create_header(s, ZEBRA_SRV6_MANAGER_GET_LOCATOR_SID, vrf_id);
++	zapi_srv6_locator_sid_encode(s, loc);
++	stream_putw_at(s, 0, stream_get_endp(s));
++	return zserv_send_message(client, s);
++}
++
++int zsend_srv6_manager_del_sid(struct zserv *client, vrf_id_t vrf_id, struct srv6_locator *loc,
++			       struct seg6_sid *sid)
++{
++	struct stream *s = stream_new(ZEBRA_MAX_PACKET_SIZ);
++
++	zclient_create_header(s, ZEBRA_SRV6_MANAGER_RELEASE_LOCATOR_SID, vrf_id);
++
++	stream_putw(s, strlen(loc->name));
++	stream_put(s, loc->name, strlen(loc->name));
++
++	stream_putl(s, 1);
++	stream_putw(s, sid->ipv6Addr.prefixlen);
++	stream_put(s, &sid->ipv6Addr.prefix, sizeof(sid->ipv6Addr.prefix));
++	stream_putl(s, sid->sidaction);
++	stream_putw(s, strlen(sid->vrfName));
++	stream_put(s, sid->vrfName, strlen(sid->vrfName));
++	stream_putw_at(s, 0, stream_get_endp(s));
++	return zserv_send_message(client, s);
++}
++
+ int zsend_srv6_manager_get_locator_chunk_response(struct zserv *client,
+ 						  vrf_id_t vrf_id,
+ 						  struct srv6_locator *loc)
+diff --git a/zebra/zapi_msg.h b/zebra/zapi_msg.h
+index 9e3ea6fb6..3ff381a69 100644
+--- a/zebra/zapi_msg.h
++++ b/zebra/zapi_msg.h
+@@ -118,6 +118,11 @@ extern int zsend_srv6_manager_get_locator_chunk_response(struct zserv *client,
+ extern int zsend_srv6_manager_get_locator_response(struct zserv *client,
+ 						   struct srv6_locator *locator);
+ 
++extern int zsend_srv6_manager_get_locator_sid_response(struct zserv *client, vrf_id_t vrf_id,
++						       struct srv6_locator *loc);
++extern int zsend_srv6_manager_del_sid(struct zserv *client, vrf_id_t vrf_id,
++				      struct srv6_locator *loc, struct seg6_sid *sid);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/zebra/zebra_srv6.c b/zebra/zebra_srv6.c
+index 0ca77a497..91a32ba91 100644
+--- a/zebra/zebra_srv6.c
++++ b/zebra/zebra_srv6.c
+@@ -633,10 +633,16 @@ void zebra_srv6_locator_add(struct srv6_locator *locator)
+ 
+ void zebra_srv6_locator_delete(struct srv6_locator *locator)
+ {
+-	struct listnode *n;
++	struct listnode *n, *nnode;
+ 	struct zebra_srv6 *srv6 = zebra_srv6_get_default();
++	struct seg6_sid *sid = NULL;
+ 	struct zserv *client;
++	struct listnode *client_node;
+ 
++	for (ALL_LIST_ELEMENTS(locator->sids, n, nnode, sid)) {
++		listnode_delete(locator->sids, sid);
++		srv6_locator_sid_free(sid);
++	}
+ 	/*
+ 	 * Notify deleted locator info to zclients if needed.
+ 	 *
+@@ -648,7 +654,8 @@ void zebra_srv6_locator_delete(struct srv6_locator *locator)
+ 	 * by ZEBRA_SRV6_LOCATOR_DELETE, and this notification is sent to the
+ 	 * owner of each chunk.
+ 	 */
+-	for (ALL_LIST_ELEMENTS_RO(zrouter.client_list, n, client))
++
++	for (ALL_LIST_ELEMENTS_RO(zrouter.client_list, client_node, client))
+ 		zsend_zebra_srv6_locator_delete(client, locator);
+ 
+ 	listnode_delete(srv6->locators, locator);
+diff --git a/zebra/zebra_srv6.h b/zebra/zebra_srv6.h
+index 1599fd7ad..3479bb2b8 100644
+--- a/zebra/zebra_srv6.h
++++ b/zebra/zebra_srv6.h
+@@ -245,6 +245,7 @@ DECLARE_HOOK(srv6_manager_get_locator,
+ 
+ extern void zebra_srv6_locator_add(struct srv6_locator *locator);
+ extern void zebra_srv6_locator_delete(struct srv6_locator *locator);
++extern void zebra_srv6_prefix_delete(struct srv6_locator *locator);
+ extern struct srv6_locator *zebra_srv6_locator_lookup(const char *name);
+ 
+ void zebra_notify_srv6_locator_add(struct srv6_locator *locator);
+diff --git a/zebra/zebra_srv6_vty.c b/zebra/zebra_srv6_vty.c
+index c664a9c69..b05eaa9d6 100644
+--- a/zebra/zebra_srv6_vty.c
++++ b/zebra/zebra_srv6_vty.c
+@@ -26,6 +26,7 @@
+ #include "zebra/redistribute.h"
+ #include "zebra/zebra_routemap.h"
+ #include "zebra/zebra_dplane.h"
++#include "zebra/zapi_msg.h"
+ 
+ #include "zebra/zebra_srv6_vty_clippy.c"
+ 
+@@ -61,6 +62,28 @@ static struct cmd_node srv6_loc_node = {
+ 	.prompt = "%s(config-srv6-locator)# "
+ };
+ 
++static struct cmd_node srv6_prefix_node = { .name = "srv6-locator-prefix",
++					    .node = SRV6_PREFIX_NODE,
++					    .parent_node = SRV6_LOC_NODE,
++					    .prompt = "%s(config-srv6-locator-prefix)# " };
++
++static struct seg6_sid *sid_lookup_by_vrf_action(struct srv6_locator *loc, const char *vrfname,
++						 enum seg6local_action_t sidaction)
++
++{
++	struct seg6_sid *sid = NULL;
++	struct listnode *node, *nnode;
++
++	if (!vrfname)
++		return NULL;
++
++	for (ALL_LIST_ELEMENTS(loc->sids, node, nnode, sid)) {
++		if (strcmp(sid->vrfName, vrfname) == 0 && (sid->sidaction == sidaction))
++			return sid;
++	}
++	return NULL;
++}
++
+ static struct cmd_node srv6_encap_node = {
+ 	.name = "srv6-encap",
+ 	.node = SRV6_ENCAP_NODE,
+@@ -195,7 +218,10 @@ DEFUN (show_srv6_locator_detail,
+ 	struct zebra_srv6 *srv6 = zebra_srv6_get_default();
+ 	struct srv6_locator *locator;
+ 	struct listnode *node;
++	struct listnode *sidnode;
++	struct seg6_sid *sid = NULL;
+ 	char str[256];
++	char buf[256];
+ 	const char *locator_name = argv[4]->arg;
+ 	json_object *json_locator = NULL;
+ 
+@@ -253,6 +279,13 @@ DEFUN (show_srv6_locator_detail,
+ 			vty_out(vty, "- prefix: %s, owner: %s\n", str,
+ 				zebra_route_string(chunk->proto));
+ 		}
++		vty_out(vty, "  sids:\n");
++		for (ALL_LIST_ELEMENTS_RO(locator->sids, sidnode, sid)) {
++			prefix2str(&sid->ipv6Addr, buf, sizeof(buf));
++			vty_out(vty, "   -sid %s\n", buf);
++			vty_out(vty, "    behavior %s\n", seg6local_action2str(sid->sidaction));
++			vty_out(vty, "    vrf %s\n", sid->vrfName);
++		}
+ 	}
+ 
+ 
+@@ -334,6 +367,7 @@ DEFUN_NOSH (srv6_locator,
+ 	if (locator) {
+ 		VTY_PUSH_CONTEXT(SRV6_LOC_NODE, locator);
+ 		locator->status_up = true;
++		vty->node = SRV6_LOC_NODE;
+ 		return CMD_SUCCESS;
+ 	}
+ 
+@@ -391,7 +425,7 @@ DEFUN (no_srv6_locator,
+ 	return CMD_SUCCESS;
+ }
+ 
+-DEFPY (locator_prefix,
++DEFUN_NOSH (locator_prefix,
+        locator_prefix_cmd,
+        "prefix X:X::X:X/M$prefix [block-len (16-64)$block_bit_len]  \
+ 	        [node-len (16-64)$node_bit_len] [func-bits (0-64)$func_bit_len]",
+@@ -409,11 +443,33 @@ DEFPY (locator_prefix,
+ 	struct listnode *node = NULL;
+ 	uint8_t expected_prefixlen;
+ 	struct srv6_sid_format *format;
++	char *prefixstr = NULL;
++	struct prefix_ipv6 prefix;
++	int ret = 0;
++	int idx = 0;
++	int block_bit_len = 0;
++	int node_bit_len = 0;
++	int func_bit_len = 0;
++
++	prefixstr = argv[1]->arg;
++	ret = str2prefix_ipv6(prefixstr, &prefix);
++	apply_mask_ipv6(&prefix);
++	if (!ret) {
++		vty_out(vty, "Malformed IPv6 prefix\n");
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++
++	if (argv_find(argv, argc, "block-len", &idx))
++		block_bit_len = strtoul(argv[idx + 1]->arg, NULL, 10);
++	if (argv_find(argv, argc, "node-len", &idx))
++		node_bit_len = strtoul(argv[idx + 1]->arg, NULL, 10);
++	if (argv_find(argv, argc, "func-bits", &idx))
++		func_bit_len = strtoul(argv[idx + 1]->arg, NULL, 10);
+ 
+-	locator->prefix = *prefix;
++	locator->prefix = prefix;
+ 	func_bit_len = func_bit_len ?: ZEBRA_SRV6_FUNCTION_LENGTH;
+ 
+-	expected_prefixlen = prefix->prefixlen;
++	expected_prefixlen = prefix.prefixlen;
+ 	format = locator->sid_format;
+ 	if (format) {
+ 		if (strmatch(format->name, SRV6_SID_FORMAT_USID_F3216_NAME))
+@@ -427,35 +483,34 @@ DEFPY (locator_prefix,
+ 				SRV6_SID_FORMAT_UNCOMPRESSED_F4024_NODE_LEN;
+ 	}
+ 
+-	if (prefix->prefixlen != expected_prefixlen) {
++	if (prefix.prefixlen != expected_prefixlen) {
+ 		vty_out(vty,
+ 			"%% Locator prefix length '%u' inconsistent with configured format '%s'. Please either use a prefix length that is consistent with the format or change the format.\n",
+-			prefix->prefixlen, format->name);
++			prefix.prefixlen, format->name);
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+ 
+ 	/* Resolve optional arguments */
+ 	if (block_bit_len == 0 && node_bit_len == 0) {
+-		block_bit_len = prefix->prefixlen -
+-				ZEBRA_SRV6_LOCATOR_NODE_LENGTH;
++		block_bit_len = prefix.prefixlen - ZEBRA_SRV6_LOCATOR_NODE_LENGTH;
+ 		node_bit_len = ZEBRA_SRV6_LOCATOR_NODE_LENGTH;
+ 	} else if (block_bit_len == 0) {
+-		block_bit_len = prefix->prefixlen - node_bit_len;
++		block_bit_len = prefix.prefixlen - node_bit_len;
+ 	} else if (node_bit_len == 0) {
+-		node_bit_len = prefix->prefixlen - block_bit_len;
++		node_bit_len = prefix.prefixlen - block_bit_len;
+ 	} else {
+-		if (block_bit_len + node_bit_len != prefix->prefixlen) {
++		if (block_bit_len + node_bit_len != prefix.prefixlen) {
+ 			vty_out(vty,
+ 				"%% block-len + node-len must be equal to the selected prefix length %d\n",
+-				prefix->prefixlen);
++				prefix.prefixlen);
+ 			return CMD_WARNING_CONFIG_FAILED;
+ 		}
+ 	}
+ 
+-	if (prefix->prefixlen + func_bit_len + 0 > 128) {
++	if (prefix.prefixlen + func_bit_len + 0 > 128) {
+ 		vty_out(vty,
+-			"%% prefix-len + function-len + arg-len (%ld) cannot be greater than 128\n",
+-			prefix->prefixlen + func_bit_len + 0);
++			"%% prefix-len + function-len + arg-len (%d) cannot be greater than 128\n",
++			prefix.prefixlen + func_bit_len + 0);
+ 		return CMD_WARNING_CONFIG_FAILED;
+ 	}
+ 
+@@ -479,7 +534,7 @@ DEFPY (locator_prefix,
+ 
+ 	if (list_isempty(locator->chunks)) {
+ 		chunk = srv6_locator_chunk_alloc();
+-		chunk->prefix = *prefix;
++		chunk->prefix = prefix;
+ 		chunk->proto = 0;
+ 		listnode_add(locator->chunks, chunk);
+ 	} else {
+@@ -490,7 +545,7 @@ DEFPY (locator_prefix,
+ 				struct zserv *client;
+ 				struct listnode *client_node;
+ 
+-				chunk->prefix = *prefix;
++				chunk->prefix = prefix;
+ 				for (ALL_LIST_ELEMENTS_RO(zrouter.client_list,
+ 							  client_node,
+ 							  client)) {
+@@ -510,6 +565,8 @@ DEFPY (locator_prefix,
+ 
+ 	zebra_srv6_locator_format_set(locator, locator->sid_format);
+ 
++	vty->node = SRV6_PREFIX_NODE;
++
+ 	return CMD_SUCCESS;
+ }
+ 
+@@ -945,11 +1002,142 @@ DEFPY(no_srv6_sid_format_explicit,
+ 	return CMD_SUCCESS;
+ }
+ 
++
++DEFPY(locator_sid, locator_sid_cmd,
++      "sid WORD behavior <uN | uDT4 vrf VIEWVRFNAME | uDT6 vrf VIEWVRFNAME | uDT46 vrf VIEWVRFNAME>",
++      "Configure static local sid\n"
++      "Specify SRv6 locator hex sid\n"
++      "Configure behavior\n"
++      "Apply the code to an End.uN SID\n"
++      "Apply the code to an End.uDT4 SID\n"
++      "vrf\n"
++      "vrf\n"
++      "Apply the code to an End.uDT6 SID\n"
++      "vrf\n"
++      "vrf\n"
++      "Apply the code to an End.uDT46 SID\n"
++      "vrf\n"
++      "vrf\n")
++{
++	VTY_DECLVAR_CONTEXT(srv6_locator, locator);
++	struct seg6_sid *srv6_sid = NULL;
++	struct listnode *node = NULL;
++	enum seg6local_action_t sidaction = ZEBRA_SEG6_LOCAL_ACTION_UNSPEC;
++	int idx = 0;
++	char *vrfName = NULL;
++	char *prefix = NULL;
++	int ret = 0;
++	struct prefix_ipv6 ipv6prefix = { 0 };
++	struct zserv *client;
++	struct listnode *client_node;
++
++	if (!locator->status_up) {
++		vty_out(vty, "Missing valid prefix.\n");
++		return CMD_WARNING;
++	}
++	if (argv_find(argv, argc, "uN", &idx))
++		sidaction = ZEBRA_SEG6_LOCAL_ACTION_END_UN;
++	else if (argv_find(argv, argc, "uDT4", &idx)) {
++		sidaction = ZEBRA_SEG6_LOCAL_ACTION_END_UDT4;
++		vrfName = argv[idx + 2]->arg;
++	} else if (argv_find(argv, argc, "uDT6", &idx)) {
++		sidaction = ZEBRA_SEG6_LOCAL_ACTION_END_UDT6;
++		vrfName = argv[idx + 2]->arg;
++	} else if (argv_find(argv, argc, "uDT46", &idx)) {
++		sidaction = ZEBRA_SEG6_LOCAL_ACTION_END_UDT46;
++		vrfName = argv[idx + 2]->arg;
++	}
++	prefix = argv[1]->arg;
++	ret = str2prefix_ipv6(prefix, &ipv6prefix);
++	if (!ret) {
++		vty_out(vty, "Malformed IPv6 prefix\n");
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++	if (!prefix_match((struct prefix *)&locator->prefix, (struct prefix *)&ipv6prefix)) {
++		vty_out(vty, "SID prefix must match locator prefix\n");
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++	for (ALL_LIST_ELEMENTS_RO(locator->sids, node, srv6_sid)) {
++		if (IPV6_ADDR_SAME(&srv6_sid->ipv6Addr.prefix, &ipv6prefix.prefix)) {
++			vty_out(vty, "Prefix %s is already exist, please delete it first.\n",
++				argv[1]->arg);
++			return CMD_WARNING;
++		}
++	}
++	srv6_sid = sid_lookup_by_vrf_action(locator, vrfName, sidaction);
++	if (srv6_sid) {
++		vty_out(vty, "VRF %s is already exist, please delete it first.\n", vrfName);
++		return CMD_WARNING;
++	}
++	srv6_sid = srv6_locator_sid_alloc();
++	srv6_sid->sidaction = sidaction;
++	if (vrfName != NULL)
++		strlcpy(srv6_sid->vrfName, vrfName, VRF_NAMSIZ);
++	else
++		strlcpy(srv6_sid->vrfName, VRF_DEFAULT_NAME, VRF_NAMSIZ);
++
++	srv6_sid->ipv6Addr = ipv6prefix;
++	strlcpy(srv6_sid->sidstr, prefix, PREFIX_STRLEN);
++
++	listnode_add(locator->sids, srv6_sid);
++
++	for (ALL_LIST_ELEMENTS_RO(zrouter.client_list, client_node, client))
++		zsend_srv6_manager_get_locator_sid_response(client, VRF_DEFAULT, locator);
++	return CMD_SUCCESS;
++}
++
++DEFPY(no_locator_sid,
++	  no_locator_sid_cmd,
++      "no sid WORD behavior <uN | uDT4 vrf VIEWVRFNAME | uDT6 vrf VIEWVRFNAME | uDT46 vrf VIEWVRFNAME>",
++      NO_STR
++      "Configure SRv6 locator sid\n"
++      "Specify SRv6 locator hex sid\n"
++      "Configure behavior\n"
++      "Apply the code to an End.uN SID\n"
++      "Apply the code to an End.uDT4 SID\n"
++      "vrf\n"
++      "vrf\n"
++      "Apply the code to an End.uDT6 SID\n"
++      "vrf\n"
++      "vrf\n"
++      "Apply the code to an End.uDT46 SID\n"
++      "vrf\n"
++      "vrf\n")
++{
++	VTY_DECLVAR_CONTEXT(srv6_locator, locator);
++	struct seg6_sid *srv6_sid = NULL;
++	struct listnode *node, *next;
++	char *prefix = NULL;
++	int ret = 0;
++	struct prefix_ipv6 ipv6prefix = { 0 };
++	struct zserv *client;
++	struct listnode *client_node;
++
++	prefix = argv[2]->arg;
++	ret = str2prefix_ipv6(prefix, &ipv6prefix);
++	if (!ret) {
++		vty_out(vty, "Malformed IPv6 prefix\n");
++		return CMD_WARNING_CONFIG_FAILED;
++	}
++
++	for (ALL_LIST_ELEMENTS(locator->sids, node, next, srv6_sid)) {
++		if (IPV6_ADDR_SAME(&srv6_sid->ipv6Addr.prefix, &ipv6prefix.prefix)) {
++			for (ALL_LIST_ELEMENTS_RO(zrouter.client_list, client_node, client))
++				zsend_srv6_manager_del_sid(client, VRF_DEFAULT, locator, srv6_sid);
++			listnode_delete(locator->sids, srv6_sid);
++			srv6_locator_sid_free(srv6_sid);
++			return CMD_SUCCESS;
++		}
++	}
++	return CMD_SUCCESS;
++}
++
+ static int zebra_sr_config(struct vty *vty)
+ {
+ 	struct zebra_srv6 *srv6 = zebra_srv6_get_default();
+-	struct listnode *node;
++	struct listnode *node, *sidnode;
+ 	struct srv6_locator *locator;
++	struct seg6_sid *srv6_sid;
+ 	struct srv6_sid_format *format;
+ 	char str[256];
+ 	bool display_source_srv6 = false;
+@@ -969,7 +1157,7 @@ static int zebra_sr_config(struct vty *vty)
+ 				&srv6->encap_src_addr);
+ 		}
+ 	}
+-	if (zebra_srv6_is_enable()) {
++	if (srv6 && zebra_srv6_is_enable()) {
+ 		vty_out(vty, "  locators\n");
+ 		for (ALL_LIST_ELEMENTS_RO(srv6->locators, node, locator)) {
+ 			inet_ntop(AF_INET6, &locator->prefix.prefix,
+@@ -992,6 +1180,26 @@ static int zebra_sr_config(struct vty *vty)
+ 			vty_out(vty, "\n");
+ 			if (CHECK_FLAG(locator->flags, SRV6_LOCATOR_USID))
+ 				vty_out(vty, "    behavior usid\n");
++			for (ALL_LIST_ELEMENTS_RO(locator->sids, sidnode, srv6_sid)) {
++				vty_out(vty, "    sid    %s", srv6_sid->sidstr);
++				vty_out(vty, " behavior");
++				if (srv6_sid->sidaction == ZEBRA_SEG6_LOCAL_ACTION_END_UN)
++					vty_out(vty, " uN");
++				else if (srv6_sid->sidaction == ZEBRA_SEG6_LOCAL_ACTION_END_UDT4) {
++					vty_out(vty, " uDT4");
++					vty_out(vty, " vrf %s", srv6_sid->vrfName);
++				} else if (srv6_sid->sidaction == ZEBRA_SEG6_LOCAL_ACTION_END_UDT6) {
++					vty_out(vty, " uDT6");
++					vty_out(vty, " vrf %s", srv6_sid->vrfName);
++				} else if (srv6_sid->sidaction == ZEBRA_SEG6_LOCAL_ACTION_END_UDT46) {
++					vty_out(vty, " uDT46");
++					vty_out(vty, " vrf %s", srv6_sid->vrfName);
++				}
++				vty_out(vty, "\n");
++			}
++			vty_out(vty, "\n");
++			vty_out(vty, "    exit\n");
++			vty_out(vty, "    !\n");
+ 			if (locator->sid_format) {
+ 				format = locator->sid_format;
+ 				vty_out(vty, "    format %s\n", format->name);
+@@ -1062,6 +1270,7 @@ void zebra_srv6_vty_init(void)
+ 	install_node(&srv6_node);
+ 	install_node(&srv6_locs_node);
+ 	install_node(&srv6_loc_node);
++	install_node(&srv6_prefix_node);
+ 	install_node(&srv6_encap_node);
+ 	install_node(&srv6_sid_formats_node);
+ 	install_node(&srv6_sid_format_usid_f3216_node);
+@@ -1070,6 +1279,7 @@ void zebra_srv6_vty_init(void)
+ 	install_default(SRV6_NODE);
+ 	install_default(SRV6_LOCS_NODE);
+ 	install_default(SRV6_LOC_NODE);
++	install_default(SRV6_PREFIX_NODE);
+ 	install_default(SRV6_ENCAP_NODE);
+ 	install_default(SRV6_SID_FORMATS_NODE);
+ 	install_default(SRV6_SID_FORMAT_USID_F3216_NODE);
+@@ -1094,6 +1304,8 @@ void zebra_srv6_vty_init(void)
+ 
+ 	/* Command for configuration */
+ 	install_element(SRV6_LOC_NODE, &locator_prefix_cmd);
++	install_element(SRV6_PREFIX_NODE, &locator_sid_cmd);
++	install_element(SRV6_PREFIX_NODE, &no_locator_sid_cmd);
+ 	install_element(SRV6_LOC_NODE, &locator_behavior_cmd);
+ 	install_element(SRV6_LOC_NODE, &locator_sid_format_cmd);
+ 	install_element(SRV6_LOC_NODE, &no_locator_sid_format_cmd);
+-- 
+2.25.1
+
