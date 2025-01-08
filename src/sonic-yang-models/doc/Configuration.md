@@ -2888,16 +2888,23 @@ The DNS_NAMESERVER table introduces static DNS nameservers configuration.
 
 ### SRv6
 
-The **SRV6_MY_SID_TABLE** introduces Segment Routing over IPv6 configuration.
+The **SRV6_MY_SIDS** and **SRV6_MY_LOCATORS** tables introduce Segment Routing over IPv6 configuration.
 An example is as follows:
 ```
 {
-    "SRV6_MY_SID_TABLE" : {
-        "FCBB:BBBB:20::" : {
+    "SRV6_MY_LOCATORS" : {
+        "loc1" : {
+            "prefix" : "FCBB:BBBB:20::"
+        }
+    }
+    "SRV6_MY_SIDS" : {
+        "loc1|FCBB:BBBB:20::" : {
            "action": "uN"
         },
-        "FCBB:BBBB:20:F1::" : {
-           "action": "uDT46"
+        "loc1|FCBB:BBBB:20:F1::" : {
+           "action": "uDT46",
+           "decap_vrf": "default",
+           "decap_dscp_mode": "pipe"
         }
     }
 }
