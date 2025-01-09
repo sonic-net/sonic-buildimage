@@ -42,6 +42,13 @@
 
     "FAN":
     {
+      	"direction":
+	    {
+	        "bmc":
+	        {
+                "valmap": {"0":"exhaust", "1":"intake"}
+            }
+        },
         "present":
         {
             "i2c":

@@ -229,3 +229,20 @@ class Fan(FanBase):
         """
         # Fan tray status LED controlled by BMC
         return self.STATUS_LED_COLOR_OFF
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.fanindex
+
+    def is_replaceable(self):
+        """
+        Indicate whether Fan is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
