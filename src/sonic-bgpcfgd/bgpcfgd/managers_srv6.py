@@ -50,9 +50,10 @@ class SRv6Mgr(Manager):
         sid = SID(locator, ip_addr, locator_data=locator_data, sid_data=data) # the information in data will be parsed into SID's attributes
 
         cmd_list = ['segment-routing', 'srv6']
-        cmd_list += ['locators', 'locator {}'.format(locator)]
-        if locator not in self.sids:
-            cmd_list += ['prefix {}/{} block-len {} node-len {} func-bits {}'.format(sid.get_locator_prefix(), sid.block_len + sid.node_len, sid.block_len, sid.node_len, sid.func_len)]
+        cmd_list += ['locators',
+                     'locator {}'.format(locator),
+                     'prefix {}/{} block-len {} node-len {} func-bits {}'.format(sid.get_locator_prefix(), sid.block_len + sid.node_len, sid.block_len, sid.node_len, sid.func_len)
+        ]
 
         sid_cmd = 'sid {}/{} behavior {}'.format(ip_addr, sid.block_len + sid.node_len + sid.func_len, sid.action)
         if sid.decap_vrf != DEFAULT_VRF:
@@ -89,6 +90,7 @@ class SRv6Mgr(Manager):
             else:
                 # delete this sid only
                 cmd_list.append('locator {}'.format(locator))
+                cmd_list.append('prefix {}/{} block-len {} node-len {} func-bits {}'.format(sid.get_locator_prefix(), sid.block_len + sid.node_len, sid.block_len, sid.node_len, sid.func_len))
                 no_sid_cmd = 'no sid {}/{} behavior {}'.format(ip_addr,  sid.block_len + sid.node_len + sid.func_len, sid.action)
                 if sid.decap_vrf != DEFAULT_VRF:
                     no_sid_cmd += ' vrf {}'.format(sid.decap_vrf)

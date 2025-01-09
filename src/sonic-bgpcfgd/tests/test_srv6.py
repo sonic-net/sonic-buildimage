@@ -69,14 +69,14 @@ def test_uDT46_add_vrf1():
 
     op_test(mgr, 'SET', ("loc1|FCBB:BBBB:20:F2::", {
         'action': 'uDT46',
-        'decap_vrf': 'vrf1'
+        'decap_vrf': 'Vrf1'
     }), expected_ret=True, expected_cmds=[
         'segment-routing',
         'srv6',
         'locators',
         'locator loc1',
         'prefix FCBB:BBBB:20::/48 block-len 32 node-len 16 func-bits 16',
-        'sid FCBB:BBBB:20:F2::/64 behavior uDT46 vrf vrf1'
+        'sid FCBB:BBBB:20:F2::/64 behavior uDT46 vrf Vrf1'
     ])
 
 def test_uN_del():
@@ -107,7 +107,7 @@ def test_uDT46_del_vrf1():
     # add the uDT46 action
     assert mgr.set_handler("loc1|FCBB:BBBB:20:F2::", {
         'action': 'uDT46',
-        "decap_vrf": "vrf1"
+        "decap_vrf": "Vrf1"
     })
 
     # test the deletion of uDT46
@@ -117,7 +117,8 @@ def test_uDT46_del_vrf1():
             'srv6',
             'locators',
             'locator loc1',
-            'no sid FCBB:BBBB:20:F2::/64 behavior uDT46 vrf vrf1'
+            'prefix FCBB:BBBB:20::/48 block-len 32 node-len 16 func-bits 16',
+            'no sid FCBB:BBBB:20:F2::/64 behavior uDT46 vrf Vrf1'
     ])
 
 def test_invalid_add():
