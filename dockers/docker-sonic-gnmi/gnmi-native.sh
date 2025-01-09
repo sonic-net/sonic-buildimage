@@ -69,7 +69,7 @@ fi
 
 USER_AUTH=$(echo $GNMI | jq -r '.user_auth')
 if [ ! -z $USER_AUTH ] then
-    TELEMETRY_ARGS+=" --user_auth $USER_AUTH"
+    TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
     TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
 fi
 
