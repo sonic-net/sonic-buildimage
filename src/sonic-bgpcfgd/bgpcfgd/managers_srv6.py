@@ -26,7 +26,7 @@ class SRv6Mgr(Manager):
             table,
         )
 
-        self.sids = {} # locators -> func_bits -> SIDs
+        self.sids = {} # locators -> sid_ip_addr -> sid_objs
         self.config_db = swsscommon.SonicV2Connector()
         self.config_db.connect(self.config_db.CONFIG_DB)
 
@@ -48,7 +48,6 @@ class SRv6Mgr(Manager):
             return False
         
         sid = SID(locator, ip_addr, locator_data=locator_data, sid_data=data) # the information in data will be parsed into SID's attributes
-        func_bits = sid.get_func_bits()
 
         cmd_list = ['segment-routing', 'srv6']
         cmd_list += ['locators', 'locator {}'.format(locator)]
@@ -63,26 +62,23 @@ class SRv6Mgr(Manager):
         self.cfg_mgr.push_list(cmd_list)
         log_debug("{} SRv6 static configuration {} is scheduled for updates. {}".format(self.db_name, key, str(cmd_list)))
 
-        self.sids.setdefault(locator, {})[func_bits] = sid
+        self.sids.setdefault(locator, {})[ip_addr] = sid
         return True
 
-    def del_handler(self, key, data):
+    def del_handler(self, key):
         locator = key.split("|")[0]
         ip_addr = key.split("|")[1]
 
         if not self.directory.path_exist("CONFIG_DB", "SRV6_MY_LOCATORS", locator):
-            log_err("Encountered a config deletion with a locator that does not exist: {} | {}".format(key, data))
+            log_err("Encountered a config deletion with a SRv6 locator that does not exist: {}".format(key))
             return
-        locator_data = self.config_db.get_all(self.config_db.CONFIG_DB, "SRV6_MY_LOCATORS|" + locator)
-
-        sid = SID(locator, ip_addr, locator_data=locator_data, sid_data=data)
-        func_bits = sid.get_func_bits()
 
         if locator in self.sids:
-            if func_bits not in self.sids[locator]:
-                log_warn("Encountered a config deletion with an unexpected SRv6 action: {} | {}".format(key, data))
+            if ip_addr not in self.sids[locator]:
+                log_warn("Encountered a config deletion with an unexpected SRv6 SID: {}".format(key))
                 return
-            
+
+            sid = self.sids[locator][ip_addr]
             cmd_list = ['segment-routing', 'srv6']
             cmd_list.append('locators')
             if len(self.sids[locator]) == 1:
@@ -98,12 +94,12 @@ class SRv6Mgr(Manager):
                     no_sid_cmd += ' vrf {}'.format(sid.decap_vrf)
                 cmd_list.append(no_sid_cmd)
 
-                self.sids[locator].pop(func_bits)
+                self.sids[locator].pop(ip_addr)
 
             self.cfg_mgr.push_list(cmd_list)
             log_debug("{} SRv6 static configuration {} is scheduled for updates. {}".format(self.db_name, key, str(cmd_list)))
         else:
-            log_warn("Encountered a config deletion with an unexpected SRv6 locator: {} | {}".format(key, data))
+            log_warn("Encountered a config deletion with an unexpected SRv6 locator: {}".format(key))
             return
 
 class SID:

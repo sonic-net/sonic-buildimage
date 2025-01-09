@@ -88,13 +88,12 @@ def test_uN_del():
     })
 
     # test the deletion
-    op_test(mgr, 'DEL', ("loc1|FCBB:BBBB:20:F1::", {
-        'action': 'uN'
-    }), expected_ret=True, expected_cmds=[
-        'segment-routing',
-        'srv6',
-        'locators',
-        'no locator loc1'
+    op_test(mgr, 'DEL', ("loc1|FCBB:BBBB:20:F1::",),
+            expected_ret=True, expected_cmds=[
+            'segment-routing',
+            'srv6',
+            'locators',
+            'no locator loc1'
     ])
 
 def test_uDT46_del_vrf1():
@@ -112,15 +111,13 @@ def test_uDT46_del_vrf1():
     })
 
     # test the deletion of uDT46
-    op_test(mgr, 'DEL', ("loc1|FCBB:BBBB:20:F2::", {
-        'action': 'uDT46',
-        "decap_vrf": "vrf1"
-    }), expected_ret=True, expected_cmds=[
-        'segment-routing',
-        'srv6',
-        'locators',
-        'locator loc1',
-        'no sid FCBB:BBBB:20:F2::/64 behavior uDT46 vrf vrf1'
+    op_test(mgr, 'DEL', ("loc1|FCBB:BBBB:20:F2::",),
+            expected_ret=True, expected_cmds=[
+            'segment-routing',
+            'srv6',
+            'locators',
+            'locator loc1',
+            'no sid FCBB:BBBB:20:F2::/64 behavior uDT46 vrf vrf1'
     ])
 
 def test_invalid_add():
