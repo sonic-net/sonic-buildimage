@@ -104,7 +104,7 @@ RUN chmod 755 /usr/bin/docker_init.sh
 
 FROM $BASE
 
-COPY --from=base / /
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=sys --exclude=resolv.conf /changes-to-image/ /
 
 # Pass the image_version to container
 ENV IMAGE_VERSION=$image_version

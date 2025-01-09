@@ -50,7 +50,7 @@ COPY ["multi_database_config.json.j2", "/usr/share/sonic/templates/"]
 
 FROM $BASE
 
-COPY --from=base / /
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=sys --exclude=resolv.conf /changes-to-image/ /
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/docker-database-init.sh"]

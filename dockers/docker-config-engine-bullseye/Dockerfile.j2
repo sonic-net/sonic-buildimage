@@ -65,4 +65,4 @@ RUN apt-get purge -y               \
 
 FROM $BASE
 
-COPY --from=base / /
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=sys --exclude=resolv.conf /changes-to-image/ /

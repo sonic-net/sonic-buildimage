@@ -83,7 +83,7 @@ COPY ["lib/port_utils.py", "/usr/lib"]
 
 FROM $BASE
 
-COPY --from=base / /
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=sys --exclude=resolv.conf /changes-to-image/ /
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENTRYPOINT ["/usr/local/bin/supervisord"]

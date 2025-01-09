@@ -37,6 +37,6 @@ COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 
 FROM $BASE
 
-COPY --from=base / /
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=sys --exclude=resolv.conf /changes-to-image/ /
 
 ENTRYPOINT ["/usr/bin/docker-init.sh"]

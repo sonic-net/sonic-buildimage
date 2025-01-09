@@ -35,6 +35,8 @@ RUN apt update &&            \
         python-is-python3    \
         vim-tiny             \
         rsyslog              \
+# Install rsync for copying over only changes between layers
+        rsync                \
 # Install redis-tools
         redis-tools          \
 # common dependencies
@@ -94,6 +96,6 @@ RUN ln /usr/bin/vim.tiny /usr/bin/vim
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]
 
-FROM $BASE
+FROM scratch
 
 COPY --from=base / /

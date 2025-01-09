@@ -169,7 +169,7 @@ RUN mkdir -p /var/warmboot/teamd
 
 FROM $BASE
 
-COPY --from=base / /
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=sys --exclude=resolv.conf /changes-to-image/ /
 
 # Set PLATFORM and HWSKU environment variables
 ENV PLATFORM=x86_64-kvm_x86_64-r0
