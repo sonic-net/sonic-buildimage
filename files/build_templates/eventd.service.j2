@@ -1,6 +1,6 @@
 [Unit]
 Description=EVENTD container
-Requires=rsyslog-config.service
+Requires=config-setup.service
 After=rsyslog-config.service
 BindsTo=sonic.target
 After=sonic.target
