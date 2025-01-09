@@ -43,7 +43,7 @@ variables:
 
 
 parameters:
-  - name: SUBMODULE_NAME
+  - name: SUBMODULE
     type: string
     default: ' '
 
@@ -51,7 +51,7 @@ parameters:
     type: string
     default: ' '
 
-  - name: BRANCH
+  - name: MGMT_BRANCH
     type: string
     default: 'master'
 
@@ -97,17 +97,12 @@ stages:
   - stage: BuildVS
     pool: sonicbld-1es
     jobs:
-    # - template: azure-pipelines-checkout-submodule-commit.yml
-    #   parameters:
-    #     SUBMODULE_NAME: ${{ parameters.SUBMODULE_NAME }}
-    #     COMMIT_ID: ${{ parameters.COMMIT_ID }}
-
     - template: azure-pipelines-build.yml
       parameters:
         buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.  VERSION_CONTROL_OPTIONS }}'
         jobGroups:
         - name: vs
-        SUBMODULE_NAME: ${{ parameters.SUBMODULE_NAME }}
+        SUBMODULE: ${{ parameters.SUBMODULE }}
         COMMIT_ID: ${{ parameters.COMMIT_ID }}
 
   - stage: Test
@@ -118,7 +113,7 @@ stages:
     - name: inventory
       value: veos_vtb
     - name: testbed_file
-      value: vtestbed.csv
+      value: vtestbed.yaml
 
     jobs:
     - job: KVMTEST
@@ -133,7 +128,7 @@ stages:
           MIN_WORKER: ${{ parameters.MIN_WORKER }}
           MAX_WORKER: ${{ parameters.MAX_WORKER }}
           KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
-          MGMT_BRANCH: ${{ parameters.BRANCH }}
+          MGMT_BRANCH: ${{ parameters.MGMT_BRANCH }}
           SCRIPTS: ${{ parameters.SCRIPTS }}
           FEATURES: ${{ parameters.FEATURES }}
           DEPLOY_MG_EXTRA_PARAMS: ${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}

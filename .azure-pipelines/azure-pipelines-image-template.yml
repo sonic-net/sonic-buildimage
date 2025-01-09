@@ -19,7 +19,7 @@ parameters:
 - name: jobVariables
   type: object
   default: []
-- name: SUBMODULE_NAME
+- name: SUBMODULE
   type: string
   default: ''
 - name: COMMIT_ID
@@ -50,9 +50,9 @@ jobs:
         displayName: 'Checkout code'
       - script: |
           if [ -n "${{ parameters.COMMIT_ID }}" ]; then
-            if [ -n "${{ parameters.SUBMODULE_NAME }}" ]; then
+            if [ -n "${{ parameters.SUBMODULE }}" ]; then
               git submodule update --init --recursive
-              cd src/${{ parameters.SUBMODULE_NAME }}
+              cd src/${{ parameters.SUBMODULE }}
             fi
             git checkout ${{ parameters.COMMIT_ID }}
           fi
