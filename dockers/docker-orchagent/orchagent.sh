@@ -103,4 +103,10 @@ if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
     ORCHAGENT_ARGS+=" -v mgmt"
 fi
 
+# Add heartbeat interval when enabled
+HEARTBEAT_INTERVAL=`sonic-db-cli CONFIG_DB hget  "HEARTBEAT|orchagent" "heartbeat_interval"`
+if [ -nz "$HEARTBEAT_INTERVAL" ]; then
+    ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
+fi
+
 exec /usr/bin/orchagent ${ORCHAGENT_ARGS}
