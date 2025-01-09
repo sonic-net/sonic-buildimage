@@ -45,11 +45,11 @@ variables:
 parameters:
   - name: SUBMODULE_NAME
     type: string
-    default: ''
+    default: ' '
 
   - name: COMMIT_ID
     type: string
-    default: ''
+    default: ' '
 
   - name: BRANCH
     type: string
@@ -68,15 +68,15 @@ parameters:
 
   - name: DEPLOY_MG_EXTRA_PARAMS
     type: string
-    default: ''
+    default: ' '
 
   - name: SCRIPTS
     type: string
-    default: ''
+    default: ' '
 
   - name: FEATURES
     type: string
-    default: ''
+    default: ' '
 
   - name: MIN_WORKER
     type: string
@@ -86,6 +86,12 @@ parameters:
     type: string
     default: ''
 
+  - name: STOP_ON_FAILURE
+    type: string
+    default: 'False'
+    values:
+      - 'True'
+      - 'False'
 
 stages:
   - stage: BuildVS
@@ -131,3 +137,4 @@ stages:
           SCRIPTS: ${{ parameters.SCRIPTS }}
           FEATURES: ${{ parameters.FEATURES }}
           DEPLOY_MG_EXTRA_PARAMS: ${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}
+          STOP_ON_FAILURE: ${{ parameters.STOP_ON_FAILURE }}
