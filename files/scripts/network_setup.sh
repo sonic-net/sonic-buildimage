@@ -7,7 +7,7 @@ else
     USE_KDUMP=0  # Default to 0 if the file doesn't exist
 fi
 
-# Check if USE_KDUMP is enabled
+# Check if USE_KDUMP is enabled or disabled. 
 if [ "$USE_KDUMP" -ne 1 ]; then
     echo "KDUMP is not enabled. Skipping network setup."
     exit 0
