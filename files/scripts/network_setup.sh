@@ -38,7 +38,6 @@ ip link set eth0 up
 dhclient eth0
 # Wait a few seconds to ensure the IP is assigned
 sleep 6
-
 ETH0_IP=$(get_eth0_ip)
 DEFAULT_GW=$(get_default_gateway)
 
