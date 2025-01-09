@@ -80,11 +80,11 @@ parameters:
 
   - name: MIN_WORKER
     type: string
-    default: ''
+    default: '1'
 
   - name: MAX_WORKER
     type: string
-    default: ''
+    default: '1'
 
   - name: STOP_ON_FAILURE
     type: string
