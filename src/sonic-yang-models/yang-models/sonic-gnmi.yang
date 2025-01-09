@@ -88,6 +88,7 @@ module sonic-gnmi {
 
                 leaf user_auth {
                     type string;
+                    pattern "password|jwt|cert";
                     description "GNMI service user authorization type.";
                 }
             }
