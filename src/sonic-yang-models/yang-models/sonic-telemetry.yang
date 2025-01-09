@@ -85,6 +85,11 @@ module sonic-telemetry {
                     type uint32;
                     description "Certificate revocation list cache expire duration.";
                 }
+
+                leaf user_auth {
+                    type string;
+                    description "GNMI service user authorization type.";
+                }
             }
 
         }
