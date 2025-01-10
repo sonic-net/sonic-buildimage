@@ -335,7 +335,28 @@
         ],
         "thermals": [
             {
-                "name": "CPU Temp",
+                "name": "NPU Rear Temp",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "PT Left Temp",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "CPUCD Rear Temp",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "PT Right Temp",
                 "controllable": false,
                 "low-crit-threshold": false,
                 "minimum-recorded": false,
@@ -349,44 +370,7 @@
                 "maximum-recorded": false
             },
             {
-                "name": "NPU Front Temp",
-                "controllable": false,
-                "low-crit-threshold": false,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "NPU Rear Temp",
-                "controllable": false,
-                "low-crit-threshold": false,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
                 "name": "NPU Temp",
-                "controllable": false,
-                "low-crit-threshold": false,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "PSU1 AF Temp",
-                "controllable": false,
-                "low-crit-threshold": false,
-                "high-threshold": false,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "PSU1 Mid Temp",
-                "controllable": false,
-                "low-crit-threshold": false,
-                "high-threshold": false,
-                "minimum-recorded": false,
-                "maximum-recorded": false
-            },
-            {
-                "name": "PSU1 Rear Temp",
                 "controllable": false,
                 "low-crit-threshold": false,
                 "high-threshold": false,
@@ -418,14 +402,30 @@
                 "maximum-recorded": false
             },
             {
-                "name": "PT Left Temp",
+                "name": "PSU1 AF Temp",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "high-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "PSU1 Mid Temp",
+                "controllable": false,
+                "low-crit-threshold": false,
+                "high-threshold": false,
+                "minimum-recorded": false,
+                "maximum-recorded": false
+            },
+            {
+                "name": "PSU1 Rear Temp",
                 "controllable": false,
                 "low-crit-threshold": false,
                 "minimum-recorded": false,
                 "maximum-recorded": false
             },
             {
-                "name": "PT Right Temp",
+                "name": "CPU Temp",
                 "controllable": false,
                 "low-crit-threshold": false,
                 "minimum-recorded": false,

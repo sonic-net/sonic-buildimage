@@ -489,7 +489,7 @@
     "TEMP5":
     {
       "dev_info": { "device_type":"TEMP_SENSOR"},
-      "dev_attr": { "display_name":"FAN Right Sensor"},
+      "dev_attr": { "display_name":"FAN Right Temp"},
           "bmc": {
               "ipmitool" : {
                   "attr_list":

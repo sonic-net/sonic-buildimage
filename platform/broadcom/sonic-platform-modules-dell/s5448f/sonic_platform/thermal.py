@@ -140,3 +140,58 @@ class Thermal(ThermalBase):
         del temperature
         # Thermal threshold values are pre-defined based on HW.
         return False
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.index
+
+    def is_replaceable(self):
+        """
+        Indicate whether this Thermal is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+    def get_presence(self):
+        """
+        Retrieves the presence of the thermal
+
+        Returns:
+            bool: True if thermal is present, False if not
+        """
+        return True
+
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the Thermal
+
+        Returns:
+            string: Model/part number of Thermal
+        """
+        return 'NA'
+
+    def get_serial(self):
+        """
+        Retrieves the serial number of the Thermal
+
+        Returns:
+            string: Serial number of Thermal
+        """
+        return 'NA'
+
+    def get_status(self):
+        """
+        Retrieves the operational status of the thermal
+
+        Returns:
+            A boolean value, True if thermal is operating properly,
+            False if not
+        """
+        return True
+
