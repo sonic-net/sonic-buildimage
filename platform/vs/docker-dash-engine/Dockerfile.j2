@@ -19,7 +19,7 @@ COPY ["start.sh", "/usr/bin/"]
 
 FROM $BASE
 
-## RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=sys --exclude=resolv.conf /changes-to-image/ /
+## RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=resolv.conf /changes-to-image/ /
 COPY --from=base / /
 
 ## ENTRYPOINT ["/usr/bin/supervisord"]

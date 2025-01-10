@@ -66,7 +66,7 @@ EXPOSE 161/udp 162/udp
 
 FROM $BASE
 
-RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=sys --exclude=resolv.conf /changes-to-image/ /
+RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=resolv.conf /changes-to-image/ /
 
 # Enable -O for all Python calls
 ENV PYTHONOPTIMIZE=1
