@@ -39,7 +39,7 @@ if [ -n "$CERTS" ]; then
     fi
 
     USER_AUTH=$(echo $GNMI | jq -r '.user_auth')
-    if [ ! -z $USER_AUTH ] then
+    if [ ! -z $USER_AUTH ]; then
         TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 
         # Reuse GNMI_CLIENT_CERT for telemetry service
