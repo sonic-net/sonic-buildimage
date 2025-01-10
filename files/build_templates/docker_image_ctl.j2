@@ -45,18 +45,6 @@ function updateSyslogConf()
         rm -rf $TMP_FILE
     fi
 }
-function ebtables_config()
-{
-    if [[ "$DEV" && $DATABASE_TYPE != "dpudb" ]]; then
-        # Install ebtables filter in namespaces on multi-asic.
-        ip netns exec $NET_NS ebtables-restore < /etc/ebtables.filter.cfg
-    else
-        if [[ ! ($NUM_ASIC -gt 1) ]]; then
-            # Install ebtables filter in host for single asic.
-            ebtables-restore < /etc/ebtables.filter.cfg
-        fi
-    fi
-}
 
 function getMountPoint()
 {
@@ -214,9 +202,9 @@ function postStartAction()
            fi
        fi
     fi
-    # Setup ebtables configuration
+    # Setup nftables configuration
 {%- if sonic_asic_platform != "vs" %}
-    ebtables_config
+    nft -f /etc/nftables.conf
 {%- endif %}
     # chassisdb starts before database starts, bypass the PING check since other
     # databases are not availbale until database container is ready.
