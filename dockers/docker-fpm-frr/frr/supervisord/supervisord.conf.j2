@@ -32,7 +32,7 @@ stderr_syslog=true
 dependent_startup=true
 
 [program:mgmtd]
-command=/usr/lib/frr/mgmtd -A 127.0.0.1
+command=/usr/lib/frr/mgmtd -A 127.0.0.1 -P 0
 priority=4
 autostart=false
 autorestart=true
@@ -69,7 +69,7 @@ dependent_startup=true
 dependent_startup_wait_for=zebra:running
 
 [program:staticd]
-command=/usr/lib/frr/staticd -A 127.0.0.1
+command=/usr/lib/frr/staticd -A 127.0.0.1 -P 0
 priority=4
 autostart=false
 autorestart=false
@@ -83,7 +83,7 @@ dependent_startup_wait_for=zsocket:exited
 
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
 [program:bfdd]
-command=/usr/lib/frr/bfdd -A 127.0.0.1
+command=/usr/lib/frr/bfdd -A 127.0.0.1 -P 0
 priority=4
 stopsignal=KILL
 autostart=false
@@ -99,9 +99,9 @@ dependent_startup_wait_for=zebra:running
 
 [program:bgpd]
 {% if FEATURE is defined and FEATURE.bmp is defined and FEATURE.bmp.state is defined and FEATURE.bmp.state == "enabled" %}
-command=/usr/lib/frr/bgpd -A 127.0.0.1 -M snmp -M bmp
+command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 -M snmp -M bmp
 {% else %}
-command=/usr/lib/frr/bgpd -A 127.0.0.1 -M snmp
+command=/usr/lib/frr/bgpd -A 127.0.0.1 -P 0 -M snmp
 {% endif %}
 priority=5
 stopsignal=KILL
@@ -117,7 +117,7 @@ dependent_startup_wait_for=zsocket:exited
 
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
 [program:ospfd]
-command=/usr/lib/frr/ospfd -A 127.0.0.1 -M snmp
+command=/usr/lib/frr/ospfd -A 127.0.0.1 -P 0 -M snmp
 priority=5
 stopsignal=KILL
 autostart=false
@@ -131,7 +131,7 @@ dependent_startup=true
 dependent_startup_wait_for=zebra:running
 
 [program:pimd]
-command=/usr/lib/frr/pimd -A 127.0.0.1
+command=/usr/lib/frr/pimd -A 127.0.0.1 -P 0
 priority=5
 stopsignal=KILL
 autostart=false
@@ -239,7 +239,7 @@ dependent_startup_wait_for=bgpd:running
 
 {% if DEVICE_METADATA.localhost.frr_mgmt_framework_config is defined and DEVICE_METADATA.localhost.frr_mgmt_framework_config == "true" %}
 [program:pathd]
-command=/usr/lib/frr/pathd -A 127.0.0.1
+command=/usr/lib/frr/pathd -A 127.0.0.1 -P 0
 priority=5
 stopsignal=KILL
 autostart=false

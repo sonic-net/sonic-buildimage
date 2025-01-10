@@ -87,9 +87,11 @@
   * [XCVRD_LOG](#xcvrd_log)
   * [PASSWORD_HARDENING](#password_hardening)
   * [SSH_SERVER](#ssh_server)
+  * [SUBNET_DECAP](#subnet_decap)
   * [SYSTEM_DEFAULTS table](#systemdefaults-table)
   * [RADIUS](#radius)
   * [Static DNS](#static-dns)
+  * [ASIC_SENSORS](#asic_sensors)  
 * [For Developers](#for-developers)
   * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
   * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -2809,6 +2811,20 @@ The method could be:
 }
 ```
 
+### SUBNET_DECAP
+
+The **SUBNET_DECAP** table is used for subnet decap configuration.
+
+```
+"SUBNET_DECAP": {
+    "AZURE": {
+        "status": "enable",
+        "src_ip": "10.10.10.0/24",
+        "src_ip_v6": "20c1:ba8::/64"
+    }
+}
+```
+
 ### SYSTEM_DEFAULTS table
 To have a better management of the features in SONiC, a new table `SYSTEM_DEFAULTS` is introduced.
 
@@ -2909,6 +2925,23 @@ The DPUS table introduces the information on the DPUs (Data Processing Unit) ava
         },
         "dpu1": {
             "midplane_interface": "dpu1"
+        }
+    }
+}
+```
+
+### ASIC_SENSORS
+
+The ASIC_SENSORS table introduces the asic sensors polling configuration when they are available on the platform.
+
+```json
+{
+    "ASIC_SENSORS": {
+        "ASIC_SENSORS_POLLER_INTERVAL": {
+            "interval": "10"
+        },
+        "ASIC_SENSORS_POLLER_STATUS": {
+            "admin_status": "enable"
         }
     }
 }

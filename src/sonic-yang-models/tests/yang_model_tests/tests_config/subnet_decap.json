@@ -1,0 +1,111 @@
+{
+    "SUBNET_DECAP_DEFAULT_TEST": {
+        "sonic-subnet-decap:sonic-subnet-decap": {
+            "sonic-subnet-decap:SUBNET_DECAP": {
+                "SUBNET_DECAP_LIST": [
+                    {
+                        "name": "AZURE",
+                        "src_ip": "10.10.10.0/24",
+                        "src_ip_v6": "20c1:ba8::/64"
+                    }
+                ]
+            }
+        }
+    },
+    "SUBNET_DECAP_ENABLE_TEST": {
+        "sonic-subnet-decap:sonic-subnet-decap": {
+            "sonic-subnet-decap:SUBNET_DECAP": {
+                "SUBNET_DECAP_LIST": [
+                    {
+                        "name": "AZURE",
+                        "status": "enable",
+                        "src_ip": "10.10.10.0/24",
+                        "src_ip_v6": "20c1:ba8::/64"
+                    }
+                ]
+            }
+        }
+    },
+    "SUBNET_DECAP_DISABLE_TEST": {
+        "sonic-subnet-decap:sonic-subnet-decap": {
+            "sonic-subnet-decap:SUBNET_DECAP": {
+                "SUBNET_DECAP_LIST": [
+                    {
+                        "name": "AZURE",
+                        "status": "disable",
+                        "src_ip": "10.10.10.0/24",
+                        "src_ip_v6": "20c1:ba8::/64"
+                    }
+                ]
+            }
+        }
+    },
+    "SUBNET_DECAP_INVALID_STATUS_TEST": {
+        "sonic-subnet-decap:sonic-subnet-decap": {
+            "sonic-subnet-decap:SUBNET_DECAP": {
+                "SUBNET_DECAP_LIST": [
+                    {
+                        "name": "AZURE",
+                        "status": "enabled",
+                        "src_ip": "10.10.10.0/24",
+                        "src_ip_v6": "20c1:ba8::/64"
+                    }
+                ]
+            }
+        }
+    },
+    "SUBNET_DECAP_INVALID_IPV4": {
+        "sonic-subnet-decap:sonic-subnet-decap": {
+            "sonic-subnet-decap:SUBNET_DECAP": {
+                "SUBNET_DECAP_LIST": [
+                    {
+                        "name": "AZURE",
+                        "status": "enable",
+                        "src_ip": "10.10.10.01111/24",
+                        "src_ip_v6": "20c1:ba8::/64"
+                    }
+                ]
+            }
+        }
+    },
+    "SUBNET_DECAP_INVALID_IPV6": {
+        "sonic-subnet-decap:sonic-subnet-decap": {
+            "sonic-subnet-decap:SUBNET_DECAP": {
+                "SUBNET_DECAP_LIST": [
+                    {
+                        "name": "AZURE",
+                        "status": "enable",
+                        "src_ip": "10.10.10.0/24",
+                        "src_ip_v6": "20c1:ba8::01111/64"
+                    }
+                ]
+            }
+        }
+    },
+    "SUBNET_DECAP_NO_IPV4": {
+        "sonic-subnet-decap:sonic-subnet-decap": {
+            "sonic-subnet-decap:SUBNET_DECAP": {
+                "SUBNET_DECAP_LIST": [
+                    {
+                        "name": "AZURE",
+                        "status": "enable",
+                        "src_ip_v6": "20c1:ba8::/64"
+                    }
+                ]
+            }
+        }
+    },
+    "SUBNET_DECAP_NO_IPV6": {
+        "sonic-subnet-decap:sonic-subnet-decap": {
+            "sonic-subnet-decap:SUBNET_DECAP": {
+                "SUBNET_DECAP_LIST": [
+                    {
+                        "name": "AZURE",
+                        "status": "enable",
+                        "src_ip": "10.10.10.0/24"
+                    }
+                ]
+            }
+        }
+    }
+}

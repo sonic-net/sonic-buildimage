@@ -35,7 +35,7 @@
 #define BCMPKT_TXPMD_SIZE_WORDS         4
 
 /*!
- * \name TXPMD Dumping flags.
+ * \name TXPMD Dump flags. (deprecated by BCMPKT_DUMP_F_XXX)
  * \anchor BCMPKT_TXPMD_DUMP_F_XXX
  */
 /*! \{ */
@@ -44,7 +44,7 @@
  */
 #define BCMPKT_TXPMD_DUMP_F_ALL         0
 /*!
- * Dump none zero field content only.
+ * Dump non-zero field content only.
  */
 #define BCMPKT_TXPMD_DUMP_F_NONE_ZERO   1
 /*! \} */
