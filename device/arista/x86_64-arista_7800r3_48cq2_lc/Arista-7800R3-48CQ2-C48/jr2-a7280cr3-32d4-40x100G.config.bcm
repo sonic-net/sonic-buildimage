@@ -9,6 +9,7 @@ l4_protocols_load_balancing_enable=1
 fabric_logical_port_base=512
 trunk_group_max_members=16
 num_olp_tm_ports.BCM8869X=1
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc
 
 # nif
 port_init_cl72=0
