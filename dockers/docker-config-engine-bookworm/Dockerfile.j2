@@ -52,13 +52,16 @@ COPY ["files/container_startup.py", "/usr/share/sonic/scripts/"]
 COPY ["00-load-omprog.conf", "/etc/rsyslog.d/"]
 
 ## Clean up
-RUN apt-get purge -y               \
-        python3-dev                \
-        build-essential         && \
-    apt-get clean -y            && \
-    apt-get autoclean -y        && \
-    apt-get autoremove -y       && \
-    rm -rf /debs /python-wheels ~/.cache
+
+{%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
+RUN apt-get purge -y        \
+        libxslt-dev         \
+        libz-dev
+{%- endif %}
+
+RUN apt-get purge -y        \
+        python3-dev         \
+        build-essential
 
 FROM $BASE
 

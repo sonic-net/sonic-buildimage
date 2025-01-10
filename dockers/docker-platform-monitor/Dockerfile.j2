@@ -17,7 +17,6 @@ RUN apt-get update &&   \
     apt-get install -y  \
         build-essential \
         python3-dev     \
-        libc6-dev       \
         librrd8         \
         librrd-dev      \
         rrdtool         \
@@ -90,7 +89,6 @@ RUN pip3 install blkinfo
 # Clean up
 RUN apt-get purge -y           \
         build-essential        \
-        libc6-dev              \
         python3-dev
 
 COPY ["lm-sensors.sh", "/usr/bin/"]
