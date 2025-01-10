@@ -14,8 +14,11 @@ trap 'die ${LINENO}' ERR
 
 git submodule deinit -f --all
 rm -fr .git/modules/src/sonic-utilities/
+rm -fr .git/modules/src/sonic-platform*
+rm -fr .git/modules/sonic-swss*
 rm -fr .git/modules/platform/broadcom/sonic-platform-modules-nokia/
 rm -fr .git/modules/platform/broadcom/saibcm-modules-dnx/
+
 # sync/update 1st level subs
 git submodule sync
 git submodule update --init
