@@ -2,8 +2,8 @@ module sonic-heartbeat {
 
     yang-version 1.1;
 
-    namespace "http://github.com/sonic-net/sonic-gnmi";
-    prefix gnmi;
+    namespace "http://github.com/sonic-net/sonic-heartbeat";
+    prefix heartbeat;
 
     import ietf-inet-types {
         prefix inet;
