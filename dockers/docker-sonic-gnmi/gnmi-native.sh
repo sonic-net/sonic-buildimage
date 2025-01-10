@@ -50,6 +50,12 @@ elif [ -n "$X509" ]; then
     if [ ! -z $CA_CRT ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
+
+    USER_AUTH=$(echo $GNMI | jq -r '.user_auth')
+    if [ ! -z $USER_AUTH ] then
+        TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
+        TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
+    fi
 else
     TELEMETRY_ARGS+=" --noTLS"
 fi
@@ -65,12 +71,6 @@ TELEMETRY_ARGS+=" --port $PORT"
 CLIENT_AUTH=$(echo $GNMI | jq -r '.client_auth')
 if [ -z $CLIENT_AUTH ] || [ $CLIENT_AUTH == "false" ]; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
-fi
-
-USER_AUTH=$(echo $GNMI | jq -r '.user_auth')
-if [ ! -z $USER_AUTH ] then
-    TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
-    TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
 fi
 
 LOG_LEVEL=$(echo $GNMI | jq -r '.log_level')
