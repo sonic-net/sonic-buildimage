@@ -272,6 +272,21 @@
             "weight": "5"
         }
     },
+{% elif use_qos_backend_config %}
+    "SCHEDULER": {
+        "scheduler.0": {
+            "type"  : "DWRR",
+            "weight": "10"
+        },
+        "scheduler.1": {
+            "type"  : "DWRR",
+            "weight": "70"
+        },
+        "scheduler.2": {
+            "type"  : "DWRR",
+            "weight": "20"
+        }
+    },
 {% else %}
     "SCHEDULER": {
         "scheduler.0": {
@@ -435,6 +450,32 @@
         "{{ port }}|4": {
             "scheduler"   : "scheduler.3",
             "wred_profile": "AZURE_LOSSLESS"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
+{% elif use_qos_backend_config %}
+{% for port in PORT_ACTIVE %}
+        "{{ port }}|0": {
+            "scheduler": "scheduler.0"
+        },
+        "{{ port }}|1": {
+            "scheduler": "scheduler.0"
+        },
+        "{{ port }}|2": {
+            "scheduler": "scheduler.0"
+        },
+        "{{ port }}|3": {
+            "scheduler"   : "scheduler.2",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "{{ port }}|4": {
+            "scheduler"   : "scheduler.0",
+            "wred_profile": "AZURE_LOSSLESS"
+        },
+        "{{ port }}|5": {
+            "scheduler"   : "scheduler.0"
+        },
+        "{{ port }}|6": {
+            "scheduler"   : "scheduler.1"
         }{% if not loop.last %},{% endif %}
 {% endfor %}
 {% else %}
