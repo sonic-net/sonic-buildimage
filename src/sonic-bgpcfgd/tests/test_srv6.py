@@ -14,14 +14,10 @@ def constructor():
         'constants': {},
     }
 
-    mgr = SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SID_TABLE")
-    assert len(mgr.sids) == 0
+    loc_mgr = SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS")
+    sid_mgr = SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS")
 
-    # prepare the mock SRV6_MY_LOCATORS table
-    mgr.directory.put("CONFIG_DB", "SRV6_MY_LOCATORS", "loc1", { 'prefix': "FCBB:BBBB:20::"})
-    assert len(mgr.directory.data["CONFIG_DB__SRV6_MY_LOCATORS"]["loc1"]) == 1
-
-    return mgr
+    return loc_mgr, sid_mgr
 
 def op_test(mgr: SRv6Mgr, op, args, expected_ret, expected_cmds):
     op_test.push_list_called = False
@@ -49,82 +45,119 @@ def op_test(mgr: SRv6Mgr, op, args, expected_ret, expected_cmds):
     else:
         assert not op_test.push_list_called, "cfg_mgr.push_list was called"
 
-def test_uN_add():
-    mgr = constructor()
-    print("---------", mgr.directory.get("CONFIG_DB", "SRV6_MY_LOCATORS", "loc1"), "--------------")
+def test_locator_add():
+    loc_mgr, _ = constructor()
 
-    op_test(mgr, 'SET', ("loc1|FCBB:BBBB:20:F1::", {
-        'action': 'uN'
+    op_test(loc_mgr, 'SET', ("loc1", {
+        'prefix': 'fcbb:bbbb:1::'
     }), expected_ret=True, expected_cmds=[
         'segment-routing',
         'srv6',
         'locators',
         'locator loc1',
-        'prefix FCBB:BBBB:20::/48 block-len 32 node-len 16 func-bits 16',
-        'sid FCBB:BBBB:20:F1::/64 behavior uN'
+        'prefix fcbb:bbbb:1::/48 block-len 32 node-len 16 func-bits 16',
+        'behavior usid'
     ])
 
-def test_uDT46_add_vrf1():
-    mgr = constructor()
+    assert loc_mgr.directory.path_exist(loc_mgr.db_name, loc_mgr.table_name, "loc1")
 
-    op_test(mgr, 'SET', ("loc1|FCBB:BBBB:20:F2::", {
+def test_locator_del():
+    loc_mgr, _ = constructor()
+    loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+
+    op_test(loc_mgr, 'DEL', ("loc1",), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'locators',
+        'no locator loc1'
+    ])
+
+    assert not loc_mgr.directory.path_exist(loc_mgr.db_name, loc_mgr.table_name, "loc1")
+
+def test_uN_add():
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:1:F1::", {
+        'action': 'uN'
+    }), expected_ret=True, expected_cmds=[
+        'segment-routing',
+        'srv6',
+        'static-sids',
+        'sid fcbb:bbbb:1:f1::/64 locator loc1 behavior uN'
+    ])
+
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f1::")
+
+def test_uDT46_add_vrf1():
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+
+    op_test(sid_mgr, 'SET', ("loc1|FCBB:BBBB:1:F2::", {
         'action': 'uDT46',
         'decap_vrf': 'Vrf1'
     }), expected_ret=True, expected_cmds=[
         'segment-routing',
         'srv6',
-        'locators',
-        'locator loc1',
-        'prefix FCBB:BBBB:20::/48 block-len 32 node-len 16 func-bits 16',
-        'sid FCBB:BBBB:20:F2::/64 behavior uDT46 vrf Vrf1'
+        'static-sids',
+        'sid fcbb:bbbb:1:f2::/64 locator loc1 behavior uDT46 vrf Vrf1'
     ])
 
-def test_uN_del():
-    mgr = constructor()
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::")
 
+def test_uN_del():
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+    
     # add uN function first
-    mgr.set_handler("loc1|FCBB:BBBB:20:F1::", {
+    assert sid_mgr.set_handler("loc1|FCBB:BBBB:1:F1::", {
         'action': 'uN'
     })
 
     # test the deletion
-    op_test(mgr, 'DEL', ("loc1|FCBB:BBBB:20:F1::",),
+    op_test(sid_mgr, 'DEL', ("loc1|FCBB:BBBB:1:F1::",),
             expected_ret=True, expected_cmds=[
             'segment-routing',
             'srv6',
-            'locators',
-            'no locator loc1'
+            'static-sids',
+            'no sid fcbb:bbbb:1:f1::/64 locator loc1 behavior uN'
     ])
 
-def test_uDT46_del_vrf1():
-    mgr = constructor()
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f1::")
 
+def test_uDT46_del_vrf1():
+    loc_mgr, sid_mgr = constructor()
+    assert loc_mgr.set_handler("loc1", {'prefix': 'fcbb:bbbb:1::'})
+    
     # add a uN action first to make the uDT46 action not the last function
-    assert mgr.set_handler("loc1|FCBB:BBBB:20:F1::", {
+    assert sid_mgr.set_handler("loc1|FCBB:BBBB:1:F1::", {
         'action': 'uN'
     })
 
     # add the uDT46 action
-    assert mgr.set_handler("loc1|FCBB:BBBB:20:F2::", {
+    assert sid_mgr.set_handler("loc1|FCBB:BBBB:1:F2::", {
         'action': 'uDT46',
         "decap_vrf": "Vrf1"
     })
 
     # test the deletion of uDT46
-    op_test(mgr, 'DEL', ("loc1|FCBB:BBBB:20:F2::",),
+    op_test(sid_mgr, 'DEL', ("loc1|FCBB:BBBB:1:F2::",),
             expected_ret=True, expected_cmds=[
             'segment-routing',
             'srv6',
-            'locators',
-            'locator loc1',
-            'prefix FCBB:BBBB:20::/48 block-len 32 node-len 16 func-bits 16',
-            'no sid FCBB:BBBB:20:F2::/64 behavior uDT46 vrf Vrf1'
+            'static-sids',
+            'no sid fcbb:bbbb:1:f2::/64 locator loc1 behavior uDT46 vrf Vrf1'
     ])
 
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f1::")
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::")
+
 def test_invalid_add():
-    mgr = constructor()
+    _, sid_mgr = constructor()
 
     # test the addition of a SID with a non-existent locator
-    op_test(mgr, 'SET', ("loc2|FCBB:BBBB:21:F1::", {
+    op_test(sid_mgr, 'SET', ("loc2|FCBB:BBBB:21:F1::", {
         'action': 'uN'
     }), expected_ret=False, expected_cmds=[])
+
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21:f1::")

@@ -48,7 +48,6 @@ def do_work():
         # Config DB managers
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME),
         BGPDataBaseMgr(common_objs, "CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME),
-        BGPDataBaseMgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS"),
         # Interface managers
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_INTF_TABLE_NAME),
         InterfaceMgr(common_objs, "CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME),
@@ -78,7 +77,8 @@ def do_work():
         # Device Global Manager
         DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME),
         # SRv6 Manager
-        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS")
+        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_SIDS"),
+        SRv6Mgr(common_objs, "CONFIG_DB", "SRV6_MY_LOCATORS")
     ]
 
     if device_info.is_chassis():
