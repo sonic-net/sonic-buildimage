@@ -53,14 +53,12 @@ class SRv6Mgr(Manager):
         return True
 
     def sids_set_handler(self, key, data):
-        print(self.directory.data)
         locator_name = key.split("|")[0]
         ip_addr = key.split("|")[1].lower()
         key = "{}|{}".format(locator_name, ip_addr)
 
         if not self.directory.path_exist(self.db_name, "SRV6_MY_LOCATORS", locator_name):
             log_err("Found a SRv6 SID config entry with a locator that does not exist: {} | {}".format(key, data))
-            print("Found a SRv6 SID config entry with a locator that does not exist: {} | {}".format(key, data))
             return False
         
         locator = self.directory.get(self.db_name, "SRV6_MY_LOCATORS", locator_name)
@@ -126,7 +124,7 @@ class Locator:
         self.node_len = int(data['node_len'] if 'node_len' in data else 16)
         self.func_len = int(data['func_len'] if 'func_len' in data else 16)
         self.arg_len = int(data['arg_len'] if 'arg_len' in data else 0)
-        self.prefix = data['prefix'] + "/{}".format(self.block_len + self.node_len)
+        self.prefix = data['prefix'].lower() + "/{}".format(self.block_len + self.node_len)
 
 class SID:
     def __init__(self, locator, ip_addr, data):
