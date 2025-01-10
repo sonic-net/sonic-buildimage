@@ -20,9 +20,7 @@ RUN apt-get update &&       \
         ndppd               \
         python3-protobuf    \
         pciutils            \
-        # Needed for installing netifaces Python package
-        build-essential     \
-        python3-dev
+        python3-netifaces
 
 {% if ( CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" ) %}
 # Fix for gcc/python/iputils-ping not found in arm docker
@@ -32,9 +30,7 @@ RUN apt-get install -y   \
 {% endif %}
 
 # Dependencies of restore_neighbors.py
-RUN pip3 install \
-         pyroute2==0.5.14 \
-         netifaces==0.10.9
+RUN pip3 install pyroute2==0.5.14
 
 {% if ( CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" ) %}
 # Remove installed gcc

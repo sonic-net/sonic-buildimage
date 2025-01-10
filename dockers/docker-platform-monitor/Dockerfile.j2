@@ -17,6 +17,7 @@ RUN apt-get update &&   \
     apt-get install -y  \
         build-essential \
         python3-dev     \
+        libc6-dev       \
         librrd8         \
         librrd-dev      \
         rrdtool         \
@@ -25,6 +26,7 @@ RUN apt-get update &&   \
         i2c-tools       \
         psmisc          \
         python3-jsonschema \
+        python3-netifaces \
         libpci3         \
         iputils-ping    \
         pciutils        \
@@ -44,8 +46,8 @@ RUN apt-get install -y -t bookworm-backports \
 RUN pip3 install grpcio==1.51.1 \
         grpcio-tools==1.51.1
 
-# Barefoot platform vendors' sonic_platform packages import these Python libraries
-RUN pip3 install thrift==0.13.0 netifaces
+# Barefoot platform vendors' sonic_platform packages import these Python libraries (and netifaces)
+RUN pip3 install thrift==0.13.0
 
 # Ragile platform vendors' sonic_platform packages import these Python libraries
 RUN pip3 install requests
@@ -88,6 +90,7 @@ RUN pip3 install blkinfo
 # Clean up
 RUN apt-get purge -y           \
         build-essential        \
+        libc6-dev              \
         python3-dev
 
 COPY ["lm-sensors.sh", "/usr/bin/"]
