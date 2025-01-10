@@ -99,7 +99,6 @@ module sonic-gnmi {
             description "GNMI client cert list";
 
             list GNMI_CLIENT_CERT_LIST {
-                max-elements 8;
                 key "cert_cname";
 
                 leaf cert_cname {
