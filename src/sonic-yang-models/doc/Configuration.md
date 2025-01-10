@@ -385,11 +385,11 @@ The **BGP_BBR** table contains device-level BBR state.
 ### BGP Device Global
 
 The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.
-It has a STATE object containing device state like **tsa_enabled**
-which is set to true if device is currently isolated using
-traffic-shift-away (TSA) route-maps in BGP
+It has a STATE object containing device state like **tsa_enabled** and **wcmp_enabled**.
 
-```
+When **tsa_enabled** is set to true, the device is isolated using traffic-shift-away (TSA) route-maps in BGP.
+
+```json
 {
 "BGP_DEVICE_GLOBAL": {
     "STATE": {
@@ -397,6 +397,19 @@ traffic-shift-away (TSA) route-maps in BGP
     }
 }
 ```
+
+When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.  
+Weighted ECMP load balances traffic between the equal cost paths in proportion to the capacity of the local links.
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
+        "wcmp_enabled": "true"
+    }
+}
+```
+
 ### BGP Sessions
 
 BGP session configuration is defined in **BGP_NEIGHBOR** table. BGP
