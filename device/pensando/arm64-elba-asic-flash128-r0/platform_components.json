@@ -1,0 +1,19 @@
+{
+    "chassis": {
+        "Pensando-elba DSS-MTFUJI": {
+            "component": {
+                "DPUFW-7" : {},
+                "DPUQSPI_GOLDFW-7" : {
+                    "firmware" : "/host/images"
+                },
+                "DPUQSPI_GOLDUBOOT-7" : {
+                    "firmware" : "/host/images"
+                },
+                "DPUQSPI_UBOOTA-7" : {
+                    "firmware" : "/host/images"
+                },
+                "eMMC" : {}
+            }
+        }
+    }
+}
