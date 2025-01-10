@@ -55,7 +55,10 @@ jobs:
               cd src/${{ parameters.SUBMODULE }}
             fi
             git checkout ${{ parameters.COMMIT_ID }}
+          else
+            echo "No specific commit id provided, checkout to latest commit"
           fi
+        displayName: 'Checkout commit'
       - script: |
           set -x
           sudo setfacl -R -b $(Agent.BuildDirectory)
