@@ -38,13 +38,8 @@ if [ -n "$CERTS" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 
-    USER_AUTH=$(echo $GNMI | jq -r '.user_auth')
-    if [ ! -z $USER_AUTH ]; then
-        TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
-
-        # Reuse GNMI_CLIENT_CERT for telemetry service
-        TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
-    fi
+    # Reuse GNMI_CLIENT_CERT for telemetry service
+    TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
 elif [ -n "$X509" ]; then
     SERVER_CRT=$(echo $X509 | jq -r '.server_crt')
     SERVER_KEY=$(echo $X509 | jq -r '.server_key')
@@ -128,5 +123,10 @@ else
     fi
 fi
 TELEMETRY_ARGS+=" -gnmi_native_write=false"
+
+USER_AUTH=$(echo $GNMI | jq -r '.user_auth')
+if [ ! -z $USER_AUTH ]; then
+    TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
+fi
 
 exec /usr/sbin/telemetry ${TELEMETRY_ARGS}

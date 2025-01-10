@@ -38,11 +38,7 @@ if [ -n "$CERTS" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 
-    USER_AUTH=$(echo $GNMI | jq -r '.user_auth')
-    if [ ! -z $USER_AUTH ]; then
-        TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
-        TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
-    fi
+    TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
 elif [ -n "$X509" ]; then
     SERVER_CRT=$(echo $X509 | jq -r '.server_crt')
     SERVER_KEY=$(echo $X509 | jq -r '.server_key')
@@ -128,6 +124,11 @@ else
         echo "Incorrect idle_conn_duration value, expecting positive integers" >&2
         exit $INCORRECT_TELEMETRY_VALUE
     fi
+fi
+
+USER_AUTH=$(echo $GNMI | jq -r '.user_auth')
+if [ ! -z $USER_AUTH ]; then
+    TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 fi
 
 exec /usr/sbin/telemetry ${TELEMETRY_ARGS}
