@@ -7,7 +7,7 @@ else
     USE_KDUMP=0  # Default to 0 if the file doesn't exist
 fi
 
-# Check if USE_KDUMP is enabled or disabled. 
+# Check if USE_KDUMP is enabled or disabled.
 if [ "$USE_KDUMP" -ne 1 ]; then
     echo "KDUMP is not enabled. Skipping network setup."
     exit 0
@@ -51,5 +51,6 @@ if [ -z "$ETH0_IP" ] || [ -z "$DEFAULT_GW" ]; then
     ip addr add $STATIC_IP/24 dev eth0
     ip route add default via $STATIC_GW
 else
+
     echo "DHCP succeeded. IP: $ETH0_IP, Gateway: $DEFAULT_GW"
 fi
