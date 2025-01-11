@@ -1164,7 +1164,7 @@ class MemoryStatisticsProcessor:
         Aggregates memory data using optimized batch processing for better performance.
 
         Args:
-            request_data (dict): Contains time range information for the request.
+            request_data (dict): Contains time range information for the request
             time_entry_summary (dict): Summary of aggregated memory statistics.
             num_columns (int): Number of columns (time slices) to process.
         """
