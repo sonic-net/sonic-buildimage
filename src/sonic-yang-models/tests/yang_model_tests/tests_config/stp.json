@@ -1,0 +1,18 @@
+{
+    "STP_GLOBAL_VALID_TEST": {
+        "sonic-stp:sonic-spanning-tree": {
+            "sonic-spanning-tree:STP": {
+                "STP_LIST": [
+                    {
+                        "keyleaf": "GLOBAL",
+                        "mode": "mst",
+                        "forward_delay": 15,
+                        "hello_time": 2,
+                        "max_age": 20,
+                        "priority": 32768
+                    }
+                ]
+            }
+        }
+    }
+}

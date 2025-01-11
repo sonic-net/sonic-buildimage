@@ -1,0 +1,5 @@
+{
+    "STP_GLOBAL_VALID_TEST": {
+        "desc": "Configure valid global STP settings in MST mode with default parameters for global attributes"
+    }
+}
