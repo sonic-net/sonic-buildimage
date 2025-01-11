@@ -126,4 +126,9 @@ else
     fi
 fi
 
+USER_AUTH=$(echo $GNMI | jq -r '.user_auth')
+if [ ! -z $USER_AUTH ]; then
+    TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
+fi
+
 exec /usr/sbin/telemetry ${TELEMETRY_ARGS}
