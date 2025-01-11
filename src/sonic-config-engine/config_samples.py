@@ -50,7 +50,8 @@ def generate_t1_sample_config(data):
     data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     data['DEVICE_METADATA']['localhost']['type'] = 'LeafRouter'
     data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
-    data['LOOPBACK_INTERFACE'] = {"Loopback0|10.1.0.1/32": {}}
+    data['LOOPBACK_INTERFACE'] = {"Loopback0": {},
+                                  "Loopback0|10.1.0.1/32": {}}
     data['BGP_NEIGHBOR'] = {}
     data['DEVICE_NEIGHBOR'] = {}
     data['INTERFACE'] = {}
@@ -59,10 +60,13 @@ def generate_t1_sample_config(data):
     for port in natsorted(data['PORT']):
         data['PORT'][port]['admin_status'] = 'up'
         data['PORT'][port]['mtu'] = '9100'
+        if 'speed' not in data['PORT'][port]:
+            data['PORT'][port]['speed'] = '100000' 
         local_addr = '10.0.{}.{}'.format(2 * port_count // 256, 2 * port_count % 256)
         peer_addr = '10.0.{}.{}'.format(2 * port_count // 256, 2 * port_count % 256 + 1)
         peer_name='ARISTA{0:02d}{1}'.format(1+port_count%(total_port_amount // 2), 'T2' if port_count < (total_port_amount // 2) else 'T0')
         peer_asn = 65200 if port_count < (total_port_amount // 2) else 64001 + port_count - (total_port_amount // 2)
+        data['INTERFACE']['{}'.format(port)] = {}
         data['INTERFACE']['{}|{}/31'.format(port, local_addr)] = {}
         data['BGP_NEIGHBOR'][peer_addr] = {
                 'rrclient': 0,
@@ -150,6 +154,8 @@ def generate_t1_smartswitch_dpu_sample_config(data, ss_config):
     for port in natsorted(data['PORT']):
         data['PORT'][port]['admin_status'] = 'up'
         data['PORT'][port]['mtu'] = '9100'
+        if 'speed' not in data['PORT'][port]:
+            data['PORT'][port]['speed'] = '100000'
 
     dash_crm_resources = ["vnet", "eni", "eni_ether_address_map", "ipv4_inbound_routing", "ipv6_inbound_routing", "ipv4_outbound_routing",
                           "ipv6_outbound_routing", "ipv4_pa_validation", "ipv6_pa_validation", "ipv4_outbound_ca_to_pa", "ipv6_outbound_ca_to_pa",
@@ -185,7 +191,7 @@ def generate_global_dualtor_tables():
     data = defaultdict(lambda: defaultdict(dict))
     data['LOOPBACK_INTERFACE'] = {
                                     'Loopback2': {},
-                                    'Loopback2|3.3.3.3': {}
+                                    'Loopback2|3.3.3.3/32': {}
                                     }
     data['MUX_CABLE'] = {}
     data['PEER_SWITCH'] = {
@@ -238,6 +244,7 @@ def generate_l2_config(data):
             # Ports in use should be admin up, unused ports default to admin down
             if port in downlinks or port in uplinks:
                 data['PORT'][port].setdefault('admin_status', 'up')
+                data['PORT'][port].setdefault('speed', '50000')
                 data['VLAN_MEMBER']['Vlan1000|{}'.format(port)] = {'tagging_mode': 'untagged'}
 
             # Downlinks (connected to mux cable) need a MUX_CABLE entry
@@ -253,6 +260,7 @@ def generate_l2_config(data):
                 data['PORT'][port]['mux_cable'] = 'true'
         else:
             data['PORT'][port].setdefault('admin_status', 'up')
+            data['PORT'][port].setdefault('speed', '50000')
             data['VLAN_MEMBER']['Vlan1000|{}'.format(port)] = {'tagging_mode': 'untagged'}
     return data
 
