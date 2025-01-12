@@ -19,11 +19,11 @@ $(DOCKER_NAT)_WARM_SHUTDOWN_BEFORE = swss
 $(DOCKER_NAT)_FAST_SHUTDOWN_BEFORE = swss
 
 ifeq ($(INCLUDE_NAT), y)
+# build and install nat docker image
 SONIC_DOCKER_IMAGES += $(DOCKER_NAT)
 SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_NAT)
-endif
 
-ifeq ($(INCLUDE_NAT), y)
+# build and install nat debug docker image
 SONIC_DOCKER_DBG_IMAGES += $(DOCKER_NAT_DBG)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_NAT_DBG)
 endif
