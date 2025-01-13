@@ -34,7 +34,7 @@ SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_SYNCD_BASE_DBG)
 endif
 
 $(DOCKER_SYNCD_BASE)_CONTAINER_NAME = syncd
-$(DOCKER_SYNCD_BASE)_RUN_OPT += --privileged -t
+$(DOCKER_SYNCD_BASE)_RUN_OPT += --cap-add=ALL --security-opt label=disable --security-opt apparmor=unconfined --security-opt="systempaths=unconfined" -t
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 
