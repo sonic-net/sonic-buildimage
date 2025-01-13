@@ -17,25 +17,6 @@
 #
 
 pci_iface=eth0-midplane
-cp_iface=Ethernet0
-pidfile=/run/dhcl-internal.$cp_iface.pid
-leasefile=/var/lib/dhcp/dhcl-internal.$cp_iface.leases
-
-stop_cp_dhclient()
-{
-    if [[ -f $pidfile ]]; then
-        kill $(cat $pidfile)
-	rm -f $pidfile
-    fi
-    rm -f $leasefile
-}
-
-start_cp_dhclient()
-{
-    stop_cp_dhclient
-
-    /sbin/dhclient -pf $pidfile -lf $leasefile $cp_iface -nw
-}
 
 start()
 {
@@ -46,17 +27,10 @@ start()
     if [[ $? != "0" ]]; then
         exit 1
     fi
-
-    hwsku=$(sonic-cfggen -d -v 'DEVICE_METADATA["localhost"]["hwsku"]')
-    if [[ $hwsku == *"-C1" ]]; then
-        start_cp_dhclient
-    fi
 }
 
 stop()
 {
-    stop_cp_dhclient
-
     /usr/bin/mst stop
     rmmod mlx5_ib mlx5_core
 }

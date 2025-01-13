@@ -146,7 +146,7 @@ stats_collector::start()
 
     if (!s_unit_testing) {
         try {
-            m_counters_db = make_shared<swss::DBConnector>("COUNTERS_DB", 0, true);
+            m_counters_db = make_shared<swss::DBConnector>("COUNTERS_DB", 0, false);
         }
         catch (exception &e)
         {

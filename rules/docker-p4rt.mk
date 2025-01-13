@@ -33,7 +33,7 @@ endif
 $(DOCKER_P4RT)_CONTAINER_NAME = p4rt
 $(DOCKER_P4RT)_RUN_OPT += -t
 $(DOCKER_P4RT)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
-$(DOCKER_P4RT)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro 
+$(DOCKER_P4RT)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
 $(DOCKER_P4RT)_GIT_COMMIT = $(shell cd "$($(SONIC_P4RT)_SRC_PATH)" && git log -n 1 --format=format:"%H %s" || echo "Unable to fetch git log for p4rt")
 
 $(DOCKER_P4RT)_FILES += $(SUPERVISOR_PROC_EXIT_LISTENER_SCRIPT)
