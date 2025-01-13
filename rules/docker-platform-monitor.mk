@@ -51,7 +51,7 @@ SONIC_DOCKER_DBG_IMAGES += $(DOCKER_PLATFORM_MONITOR_DBG)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_PLATFORM_MONITOR_DBG)
 
 $(DOCKER_PLATFORM_MONITOR)_CONTAINER_NAME = pmon
-$(DOCKER_PLATFORM_MONITOR)_RUN_OPT += --cap-add=ALL --security-opt label=disable --security-opt apparmor=unconfined --security-opt="systempaths=unconfined" -t
+$(DOCKER_PLATFORM_MONITOR)_RUN_OPT += --cap-add=ALL -t
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /etc/timezone:/etc/timezone:ro 
 $(DOCKER_PLATFORM_MONITOR)_RUN_OPT += -v /host/reboot-cause:/host/reboot-cause:rw
