@@ -129,4 +129,5 @@ if [ ! -z $USER_AUTH ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 fi
 
+echo "telemetry args: $TELEMETRY_ARGS"
 exec /usr/sbin/telemetry ${TELEMETRY_ARGS}
