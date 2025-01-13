@@ -77,7 +77,7 @@ else
     TELEMETRY_ARGS+=" -v=2"
 fi
 
-if [ -nz "$GNMI" ]; then
+if [ ! -z "$GNMI" ]; then
     ENABLE_CRL=$(echo $GNMI | jq -r '.enable_crl')
     if [ $ENABLE_CRL == "true" ]; then
         TELEMETRY_ARGS+=" --enable_crl"
@@ -125,7 +125,7 @@ fi
 TELEMETRY_ARGS+=" -gnmi_native_write=false"
 
 USER_AUTH=$(echo $GNMI | jq -r '.user_auth')
-if [ ! -z $USER_AUTH ]; then
+if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
 fi
 
