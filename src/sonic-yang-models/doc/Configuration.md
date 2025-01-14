@@ -1,102 +1,102 @@
-=======
 # SONiC Configuration Database Manual
 
-Table of Contents
-=================
 
-   * [Introduction](#introduction)
-   * [Configuration](#configuration)
-   * [<strong>Config Load and Save</strong>](#config-load-and-save)
+**Table of Contents**
 
-         * [Incremental Configuration](#incremental-configuration)
-   * [<strong>Redis and Json Schema</strong>](#redis-and-json-schema)
-
-         * [ACL and Mirroring](#acl-and-mirroring)
-         * [BGP BBR](#bgp-bbr)
-         * [ASIC SDK health event](#asic-sdk-health-event)
-         * [BGP Device Global](#bgp-device-global)
-         * [BGP Sessions](#bgp-sessions)
-         * [BUFFER_PG](#buffer_pg)
-         * [Buffer pool](#buffer-pool)
-         * [Buffer profile](#buffer-profile)
-         * [Buffer queue](#buffer-queue)
-         * [Buffer port ingress profile list](#buffer-port-ingress-profile-list)
-         * [Buffer port egress profile list](#buffer-port-egress-profile-list)
-         * [Cable length](#cable-length)
-         * [Chassis module](#chassis-module)
-         * [COPP_TABLE](#copp_table)
-         * [Console](#console)
-         * [CRM](#crm)
-         * [CRM DASH](#crm-dash)
-         * [Data Plane L3 Interfaces](#data-plane-l3-interfaces)
-         * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
-         * [Device Metadata](#device-metadata)
-         * [Device neighbor metada](#device-neighbor-metada)
-         * [DHCP_RELAY](#dhcp_relay)
-         * [DHCP Server IPV4](#dhcp_server_ipv4)
-         * [BMP](#bmp)
-         * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
-         * [FG_NHG](#fg_nhg)
-         * [FG_NHG_MEMBER](#fg_nhg_member)
-         * [FG_NHG_PREFIX](#fg_nhg_prefix)
-         * [FABRIC_MONITOR](#fabric-monitor)
-         * [FABRIC_PORT](#fabric-port)
-         * [FLEX_COUNTER_TABLE](#flex_counter_table)
-         * [GRPCCLIENT](#grpcclient)
-         * [Hash](#hash)
-         * [IPv6 Link-local] (#ipv6-link-local)
-         * [KDUMP](#kdump)
-         * [Kubernetes Master](#kubernetes-master)
-         * [L2 Neighbors](#l2-neighbors)
-         * [Loopback Interface](#loopback-interface)
-         * [LOSSLESS_TRAFFIC_PATTERN](#LOSSLESS_TRAFFIC_PATTERN)
-         * [Management Interface](#management-interface)
-         * [Management port](#management-port)
-         * [Management VRF](#management-vrf)
-         * [MAP_PFC_PRIORITY_TO_QUEUE](#map_pfc_priority_to_queue)
-         * [MUX_CABLE](#mux_cable)
-         * [MUX_LINKMGR](#mux_linkmgr)
-         * [NEIGH](#neigh)
-         * [NTP Global Configuration](#ntp-global-configuration)
-         * [NTP Servers](#ntp-servers)
-         * [Peer Switch](#peer-switch)
-         * [Policer](#policer)
-         * [Port](#port)
-         * [Port Channel](#port-channel)
-         * [Portchannel member](#portchannel-member)
-         * [Scheduler](#scheduler)
-         * [Port QoS Map](#port-qos-map)
-         * [Queue](#queue)
-         * [Syslog Global Configuration](#syslog-global-configuration)
-         * [Syslog Servers](#syslog-servers)
-         * [Sflow](#sflow)
-         * [Restapi](#restapi)
-         * [System Port](#system-port)
-         * [Tacplus Server](#tacplus-server)
-         * [TC to Priority group map](#tc-to-priority-group-map)
-         * [TC to Queue map](#tc-to-queue-map)
-         * [Telemetry](#telemetry)
-         * [Telemetry client](#telemetry-client)
-         * [Tunnel](#tunnel)
-         * [Versions](#versions)
-         * [VLAN](#vlan)
-         * [VLAN_MEMBER](#vlan_member)
-         * [VNET](#vnet)
-         * [VOQ Inband Interface](#voq-inband-interface)
-         * [VXLAN](#vxlan)
-         * [Virtual router](#virtual-router)
-         * [LOGGER](#logger)
-         * [WRED_PROFILE](#wred_profile)
-         * [XCVRD_LOG](#xcvrd_log)
-         * [PASSWORD_HARDENING](#password_hardening)
-         * [SSH_SERVER](#ssh_server)
-         * [SYSTEM_DEFAULTS table](#systemdefaults-table)
-         * [RADIUS](#radius)
-         * [Static DNS](#static-dns)
-   * [For Developers](#for-developers)
-      * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
-      * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
-
+* [Introduction](#introduction)
+* [Configuration](#configuration)
+* [<strong>Config Load and Save</strong>](#config-load-and-save)
+  * [Incremental Configuration](#incremental-configuration)
+* [<strong>Redis and Json Schema</strong>](#redis-and-json-schema)
+  * [ACL and Mirroring](#acl-and-mirroring)
+  * [BGP BBR](#bgp-bbr)
+  * [ASIC SDK health event](#asic-sdk-health-event)
+  * [BGP Device Global](#bgp-device-global)
+  * [BGP Sessions](#bgp-sessions)
+  * [BUFFER_PG](#buffer_pg)
+  * [Buffer pool](#buffer-pool)
+  * [Buffer profile](#buffer-profile)
+  * [Buffer queue](#buffer-queue)
+  * [Buffer port ingress profile list](#buffer-port-ingress-profile-list)
+  * [Buffer port egress profile list](#buffer-port-egress-profile-list)
+  * [Cable length](#cable-length)
+  * [Chassis module](#chassis-module)
+  * [COPP_TABLE](#copp_table)
+  * [Console](#console)
+  * [CRM](#crm)
+  * [CRM DASH](#crm-dash)
+  * [Data Plane L3 Interfaces](#data-plane-l3-interfaces)
+  * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
+  * [Device Metadata](#device-metadata)
+  * [Device neighbor metada](#device-neighbor-metada)
+  * [DHCP_RELAY](#dhcp_relay)
+  * [DHCP Server IPV4](#dhcp_server_ipv4)
+  * [BMP](#bmp)
+  * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
+  * [FG_NHG](#fg_nhg)
+  * [FG_NHG_MEMBER](#fg_nhg_member)
+  * [FG_NHG_PREFIX](#fg_nhg_prefix)
+  * [FABRIC_MONITOR](#fabric-monitor)
+  * [FABRIC_PORT](#fabric-port)
+  * [FLEX_COUNTER_TABLE](#flex_counter_table)
+  * [GRPCCLIENT](#grpcclient)
+  * [Hash](#hash)
+  * [IPv6 Link-local] (#ipv6-link-local)
+  * [KDUMP](#kdump)
+  * [Kubernetes Master](#kubernetes-master)
+  * [L2 Neighbors](#l2-neighbors)
+  * [Loopback Interface](#loopback-interface)
+  * [LOSSLESS_TRAFFIC_PATTERN](#LOSSLESS_TRAFFIC_PATTERN)
+  * [Memory Statistics](#memory-statistics)
+  * [Management Interface](#management-interface)
+  * [Management port](#management-port)
+  * [Management VRF](#management-vrf)
+  * [MAP_PFC_PRIORITY_TO_QUEUE](#map_pfc_priority_to_queue)
+  * [MUX_CABLE](#mux_cable)
+  * [MUX_LINKMGR](#mux_linkmgr)
+  * [NEIGH](#neigh)
+  * [NTP Global Configuration](#ntp-global-configuration)
+  * [NTP Servers](#ntp-servers)
+  * [Peer Switch](#peer-switch)
+  * [Policer](#policer)
+  * [Port](#port)
+  * [Port Channel](#port-channel)
+  * [Portchannel member](#portchannel-member)
+  * [Scheduler](#scheduler)
+  * [Port QoS Map](#port-qos-map)
+  * [Queue](#queue)
+  * [Syslog Global Configuration](#syslog-global-configuration)
+  * [Syslog Servers](#syslog-servers)
+  * [Sflow](#sflow)
+  * [Restapi](#restapi)
+  * [System Port](#system-port)
+  * [Tacplus Server](#tacplus-server)
+  * [TC to Priority group map](#tc-to-priority-group-map)
+  * [TC to Queue map](#tc-to-queue-map)
+  * [Telemetry](#telemetry)
+  * [Telemetry client](#telemetry-client)
+  * [Tunnel](#tunnel)
+  * [Versions](#versions)
+  * [VLAN](#vlan)
+  * [VLAN_MEMBER](#vlan_member)
+  * [VNET](#vnet)
+  * [VOQ Inband Interface](#voq-inband-interface)
+  * [VXLAN](#vxlan)
+  * [Virtual router](#virtual-router)
+  * [LOGGER](#logger)
+  * [WRED_PROFILE](#wred_profile)
+  * [XCVRD_LOG](#xcvrd_log)
+  * [PASSWORD_HARDENING](#password_hardening)
+  * [SSH_SERVER](#ssh_server)
+  * [SUBNET_DECAP](#subnet_decap)
+  * [SYSTEM_DEFAULTS table](#systemdefaults-table)
+  * [RADIUS](#radius)
+  * [Static DNS](#static-dns)
+  * [ASIC_SENSORS](#asic_sensors)  
+  * [SRv6](#srv6)
+* [For Developers](#for-developers)
+  * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
+  * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
 
 
 # Introduction
@@ -1482,6 +1482,25 @@ lossless traffic for dynamic buffer calculation
 }
 ```
 
+### Memory Statistics
+The memory statistics configuration is stored in the **MEMORY_STATISTICS** table. This table is used by the memory statistics daemon to manage memory monitoring settings. The configuration allows enabling or disabling memory collection, specifying how frequently memory statistics are sampled, and defining how long the memory data is retained. 
+
+```
+{
+    "MEMORY_STATISTICS": {
+        "memory_statistics": {
+            "enabled": "false",
+            "sampling_interval": "5",
+            "retention_period":  "15"
+        }
+    }
+}
+
+```
+- **enabled**: Defines whether the memory statistics collection is active (true or false).
+- **sampling_interval**: Interval between data collection.
+- **retention_period**: Time to retain collected data.
+
 ### Management Interface
 
 Management interfaces are defined in **MGMT_INTERFACE** table. Object
@@ -2794,6 +2813,20 @@ The method could be:
 }
 ```
 
+### SUBNET_DECAP
+
+The **SUBNET_DECAP** table is used for subnet decap configuration.
+
+```
+"SUBNET_DECAP": {
+    "AZURE": {
+        "status": "enable",
+        "src_ip": "10.10.10.0/24",
+        "src_ip_v6": "20c1:ba8::/64"
+    }
+}
+```
+
 ### SYSTEM_DEFAULTS table
 To have a better management of the features in SONiC, a new table `SYSTEM_DEFAULTS` is introduced.
 
@@ -2853,6 +2886,30 @@ The DNS_NAMESERVER table introduces static DNS nameservers configuration.
 }
 ```
 
+### SRv6
+
+The **SRV6_MY_SIDS** and **SRV6_MY_LOCATORS** tables introduce Segment Routing over IPv6 configuration.
+An example is as follows:
+```
+{
+    "SRV6_MY_LOCATORS" : {
+        "loc1" : {
+            "prefix" : "FCBB:BBBB:20::"
+        }
+    }
+    "SRV6_MY_SIDS" : {
+        "loc1|FCBB:BBBB:20::" : {
+           "action": "uN"
+        },
+        "loc1|FCBB:BBBB:20:F1::" : {
+           "action": "uDT46",
+           "decap_vrf": "default",
+           "decap_dscp_mode": "pipe"
+        }
+    }
+}
+```
+
 ### FIPS
 
 The FIPS table introduces FIPS  configuration.
@@ -2899,18 +2956,31 @@ The DPUS table introduces the information on the DPUs (Data Processing Unit) ava
 }
 ```
 
-#### 5.2.3 Update value directly in db memory
+### ASIC_SENSORS
 
-For Developers
-==============
+The ASIC_SENSORS table introduces the asic sensors polling configuration when they are available on the platform.
 
-Generating Application Config by Jinja2 Template
-------------------------------------------------
+```json
+{
+    "ASIC_SENSORS": {
+        "ASIC_SENSORS_POLLER_INTERVAL": {
+            "interval": "10"
+        },
+        "ASIC_SENSORS_POLLER_STATUS": {
+            "admin_status": "enable"
+        }
+    }
+}
+```
+
+
+# For Developers
+
+## Generating Application Config by Jinja2 Template
 
 To be added.
 
-Incremental Configuration by Subscribing to ConfigDB
-----------------------------------------------------
+## Incremental Configuration by Subscribing to ConfigDB
 
 Detail instruction to be added. A sample could be found in this
 [PR](https://github.com/Azure/sonic-buildimage/pull/861) that

@@ -790,20 +790,18 @@
 #define BCMPKT_RX_REASON_INVALID_GSH_NON_GSH     137
 /*! Copy to CPU triggered at egress pipeline. */
 #define BCMPKT_RX_REASON_EP_CTC                  138
-/*! Indicates SVTAG.ERROR !=0 or SVTAG.CPU = 1. */
-#define BCMPKT_RX_REASON_MACSEC                  139
 /*! APU Policy CTC. */
-#define BCMPKT_RX_REASON_APU_POLICY_CTC          140
+#define BCMPKT_RX_REASON_APU_POLICY_CTC          139
 /*! Delayed CTC. */
-#define BCMPKT_RX_REASON_DELAYED_CTC             141
+#define BCMPKT_RX_REASON_DELAYED_CTC             140
 /*! Indicates Copy to CPU is for PORT_DOWN event. */
-#define BCMPKT_RX_REASON_PORT_DOWN               142
+#define BCMPKT_RX_REASON_PORT_DOWN               141
 /*! SRV6 Control Packet */
-#define BCMPKT_RX_REASON_SRV6_CONTROL_PKT        143
+#define BCMPKT_RX_REASON_SRV6_CONTROL_PKT        142
 /*! OUI Compression miss */
-#define BCMPKT_RX_REASON_OUI_COMPRESSION_MISS    144
+#define BCMPKT_RX_REASON_OUI_COMPRESSION_MISS    143
 /*! BCMPKT_RX_REASON TYPE NUMBER */
-#define BCMPKT_RX_REASON_COUNT                   145
+#define BCMPKT_RX_REASON_COUNT                   144
 /*! \} */
 
 /*! RXPMD reason name strings for debugging. */
@@ -947,7 +945,6 @@
     {"RESERVED_REASON", 136},\
     {"INVALID_GSH_NON_GSH", BCMPKT_RX_REASON_INVALID_GSH_NON_GSH},\
     {"EP_CTC", BCMPKT_RX_REASON_EP_CTC},\
-    {"MACSEC", BCMPKT_RX_REASON_MACSEC},\
     {"APU_POLICY_CTC", BCMPKT_RX_REASON_APU_POLICY_CTC},\
     {"DELAYED_CTC", BCMPKT_RX_REASON_DELAYED_CTC},\
     {"PORT_DOWN", BCMPKT_RX_REASON_PORT_DOWN},\

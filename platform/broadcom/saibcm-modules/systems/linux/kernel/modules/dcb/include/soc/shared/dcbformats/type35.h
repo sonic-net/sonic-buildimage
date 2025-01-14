@@ -29,7 +29,7 @@
  *
  * File:        soc/shared/dcbformats/type35.h
  * Purpose:     Define dma control block (DCB) format for a type35 DCB
- *              used by the 56560 (APACHE)
+ *              used by the 56670 (MONTEREY)
  *
  *              This file is shared between the SDK and the embedded applications.
  */

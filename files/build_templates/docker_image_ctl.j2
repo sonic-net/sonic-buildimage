@@ -73,6 +73,9 @@ function getBootType()
     *SONIC_BOOT_TYPE=fastfast*)
         TYPE='fastfast'
         ;;
+    *SONIC_BOOT_TYPE=express*)
+        TYPE='express'
+        ;;
     *SONIC_BOOT_TYPE=fast*|*fast-reboot*)
         TYPE='fast'
         ;;
@@ -87,7 +90,7 @@ function preStartAction()
 {%- if docker_container_name == "database" %}
     WARM_DIR=/host/warmboot
     if [ "$DATABASE_TYPE" != "chassisdb" ]; then
-        if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "fast")  && -f $WARM_DIR/dump.rdb ]]; then
+        if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "express" || "$BOOT_TYPE" == "fast")  && -f $WARM_DIR/dump.rdb ]]; then
             # Load redis content from /host/warmboot/dump.rdb
             docker cp $WARM_DIR/dump.rdb database$DEV:/var/lib/redis/dump.rdb
         else
@@ -235,7 +238,7 @@ function postStartAction()
           sleep 1;
         done
 
-        if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "fast") && -f $WARM_DIR/dump.rdb ]]; then
+        if [[ ("$BOOT_TYPE" == "warm" || "$BOOT_TYPE" == "fastfast" || "$BOOT_TYPE" == "express" || "$BOOT_TYPE" == "fast") && -f $WARM_DIR/dump.rdb ]]; then
             # retain the dump file from last boot for debugging purposes
             mv $WARM_DIR/dump.rdb $WARM_DIR/dump.rdb.old
         else
@@ -336,11 +339,6 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
-{%- elif docker_container_name == "eventd" %}
-    export EVENTD_STATE=$(sonic-db-cli -s CONFIG_DB HGET 'FEATURE|eventd' 'state')
-    j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/events_info.json  > /etc/rsyslog.d/host_events.conf
-    j2 -f json --import-env=ENVIRONMENT /usr/share/sonic/templates/rsyslog_plugin/rsyslog_plugin.conf.j2 /usr/share/sonic/templates/rsyslog_plugin/syncd_events_info.json  > /etc/rsyslog.d/syncd_events.conf
-    systemctl restart rsyslog
 {%- else %}
     : # nothing
 {%- endif %}
@@ -453,33 +451,28 @@ start() {
 
     DOCKERCHECK=`docker inspect --type container ${DOCKERNAME} 2>/dev/null`
     if [ "$?" -eq "0" ]; then
-        {%- if docker_container_name == "database" and sonic_asic_platform == "vs" %}
-        echo "Removing existing ${DOCKERNAME} container"
-        docker rm -f ${DOCKERNAME}
+        {%- if docker_container_name == "database" %}
+        DOCKERMOUNT=""
         {%- else %}
-            {%- if docker_container_name == "database" %}
-            DOCKERMOUNT=""
-            {%- else %}
-            DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
-            {%- endif %}
-            if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
-                CONTAINER_EXISTS="yes"
-                preStartAction
-                {%- if docker_container_name == "database" %}
-                echo "Starting existing ${DOCKERNAME} container"
-                docker start ${DOCKERNAME}
-                {%- else %}
-                echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
-                /usr/local/bin/container start ${DOCKERNAME}
-                {%- endif %}
-                postStartAction
-                exit $?
-            fi
-
-            # docker created with a different HWSKU, remove and recreate
-            echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
-            docker rm -f ${DOCKERNAME}
+        DOCKERMOUNT=`getMountPoint "$DOCKERCHECK"`
         {%- endif %}
+        if [ x"$DOCKERMOUNT" == x"$MOUNTPATH" ]; then
+            CONTAINER_EXISTS="yes"
+            preStartAction
+            {%- if docker_container_name == "database" %}
+            echo "Starting existing ${DOCKERNAME} container"
+            docker start ${DOCKERNAME}
+            {%- else %}
+            echo "Starting existing ${DOCKERNAME} container with HWSKU $HWSKU"
+            /usr/local/bin/container start ${DOCKERNAME}
+            {%- endif %}
+            postStartAction
+            exit $?
+        fi
+
+        # docker created with a different HWSKU, remove and recreate
+        echo "Removing obsolete ${DOCKERNAME} container with HWSKU $DOCKERMOUNT"
+        docker rm -f ${DOCKERNAME}
     fi
 
     {%- if docker_container_name == "database" %}
@@ -635,6 +628,7 @@ start() {
 {%- endif %}
         -e RUNTIME_OWNER=local \
         --uts=host \{# W/A: this should be set per-docker, for those dockers which really need host's UTS namespace #}
+	--tmpfs /var/log/supervisor:rw \
 {%- if install_debug_image == "y" %}
         -v /src:/src:ro -v /debug:/debug:rw \
 {%- endif %}

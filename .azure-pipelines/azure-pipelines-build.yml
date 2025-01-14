@@ -82,7 +82,7 @@ jobs:
           variables:
             dbg_image: yes
 
-        - name: innovium
+        - name: marvell-teralynx
           variables:
             dbg_image: yes
 
