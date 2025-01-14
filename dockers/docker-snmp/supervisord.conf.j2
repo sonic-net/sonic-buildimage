@@ -50,7 +50,11 @@ dependent_startup=true
 dependent_startup_wait_for=start:exited
 
 [program:snmp-subagent]
+{% if DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
+command=/usr/bin/env python3 -m sonic_ax_impl --enable_dynamic_frequency
+{% else %}
 command=/usr/bin/env python3 -m sonic_ax_impl
+{% endif %}
 priority=4
 autostart=false
 autorestart=false
