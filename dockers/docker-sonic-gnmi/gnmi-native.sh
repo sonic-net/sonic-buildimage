@@ -38,7 +38,6 @@ if [ -n "$CERTS" ]; then
         TELEMETRY_ARGS+=" --ca_crt $CA_CRT"
     fi
 
-    TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
 elif [ -n "$X509" ]; then
     SERVER_CRT=$(echo $X509 | jq -r '.server_crt')
     SERVER_KEY=$(echo $X509 | jq -r '.server_key')
@@ -74,18 +73,6 @@ if [[ $LOG_LEVEL =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" -v=$LOG_LEVEL"
 else
     TELEMETRY_ARGS+=" -v=2"
-fi
-
-if [ ! -z "$GNMI" ]; then
-    ENABLE_CRL=$(echo $GNMI | jq -r '.enable_crl')
-    if [ $ENABLE_CRL == "true" ]; then
-        TELEMETRY_ARGS+=" --enable_crl"
-    fi
-
-    CRL_EXPIRE_DURATION=$(echo $GNMI | jq -r '.crl_expire_duration')
-    if [ -n $CRL_EXPIRE_DURATION ]; then
-        TELEMETRY_ARGS+=" --crl_expire_duration $CRL_EXPIRE_DURATION"
-    fi
 fi
 
 # Enable ZMQ for SmartSwitch
@@ -129,6 +116,20 @@ fi
 USER_AUTH=$(echo $GNMI | jq -r '.user_auth')
 if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
     TELEMETRY_ARGS+=" --client_auth $USER_AUTH"
+
+    if [ $USER_AUTH == "cert" ]; then
+        TELEMETRY_ARGS+=" --config_table_name GNMI_CLIENT_CERT"
+
+        ENABLE_CRL=$(echo $GNMI | jq -r '.enable_crl')
+        if [ $ENABLE_CRL == "true" ]; then
+            TELEMETRY_ARGS+=" --enable_crl"
+        fi
+
+        CRL_EXPIRE_DURATION=$(echo $GNMI | jq -r '.crl_expire_duration')
+        if [ ! -z "$CRL_EXPIRE_DURATI"ON ] && [ $CRL_EXPIRE_DURATION != "null" ]; then
+            TELEMETRY_ARGS+=" --crl_expire_duration $CRL_EXPIRE_DURATION"
+        fi
+    fi
 fi
 
 echo "gnmi args: $TELEMETRY_ARGS"
