@@ -37,7 +37,7 @@ def bfd_mgr(mocked_check_output, mocked_run_command):
 def test_constructor(bfd_mgr):
     assert len(bfd_mgr.bfd_sessions) == 0
 
-@patch('bgpcfgd.managers_bfd.run_command', return_value=(0, '', ''))
+@patch('subprocess.run', return_value=subprocess.CompletedProcess(args=[], returncode=0, stdout=''))
 @patch('bgpcfgd.managers_bfd.subprocess.check_output', side_effect=subprocess.CalledProcessError(1, 'pgrep'))
 @patch('bgpcfgd.managers_bfd.log_warn')
 def test_check_and_start_bfdd_stopped(mocked_log_warn, mocked_check_output, mocked_run_command, bfd_mgr):
@@ -48,7 +48,7 @@ def test_check_and_start_bfdd_stopped(mocked_log_warn, mocked_check_output, mock
     mocked_run_command.assert_called_once_with(cmd)
     mocked_log_warn.assert_called_with("bfdd process is not running, starting now...")
 
-@patch('bgpcfgd.managers_bfd.run_command', return_value=(1, '', 'Error'))
+@patch('subprocess.run', return_value=subprocess.CompletedProcess(args=[], returncode=1, stdout=''))
 @patch('bgpcfgd.managers_bfd.subprocess.check_output', side_effect=subprocess.CalledProcessError(1, 'pgrep'))
 @patch('bgpcfgd.managers_bfd.log_err')
 @patch('bgpcfgd.managers_bfd.log_warn')
@@ -59,7 +59,7 @@ def test_check_and_start_bfdd_error(mocked_log_warn, mocked_log_err, mocked_chec
     assert bfd_mgr.check_and_start_bfdd() == False
     mocked_run_command.assert_called_once_with(cmd)
     mocked_log_warn.assert_called_with("bfdd process is not running, starting now...")
-    mocked_log_err.assert_called_with("Can't start bfdd: Error")
+    mocked_log_err.assert_called_with("Can't start bfdd: 1")
 
 def test_get_def_res_fields(bfd_mgr):
     result = bfd_mgr.get_def_res_fields()
@@ -67,8 +67,8 @@ def test_get_def_res_fields(bfd_mgr):
         'multihop': False,
         'local': '',
         'detect-multiplier': 3,
-        'receive-interval': 200,
-        'transmit-interval': 200,
+        'receive-interval_ms': 200,
+        'transmit-interval_ms': 200,
         'passive-mode': True,
     }
     assert result == expected_result
@@ -87,8 +87,8 @@ def test_redis_to_local_res(bfd_mgr):
         'multihop': False,
         'local': '127.0.0.1',
         'detect-multiplier': 5,
-        'receive-interval': 300, 
-        'transmit-interval': 300, 
+        'receive-interval_ms': 300,
+        'transmit-interval_ms': 300,
         'passive-mode': False,
     }
     assert result == expected_result
@@ -106,8 +106,8 @@ def test_redis_to_local_res_no_mh(bfd_mgr):
         'multihop': False,
         'local': '127.0.0.1',
         'detect-multiplier': 5,
-        'receive-interval': 300, 
-        'transmit-interval': 300, 
+        'receive-interval_ms': 300,
+        'transmit-interval_ms': 300,
         'passive-mode': True,
     }
     assert result == expected_result
@@ -121,8 +121,8 @@ def test_redis_to_local_res_basic(bfd_mgr):
         'multihop': False,
         'local': '127.0.0.1',
         'detect-multiplier': 3,
-        'receive-interval': 200, 
-        'transmit-interval': 200, 
+        'receive-interval_ms': 200,
+        'transmit-interval_ms': 200,
         'passive-mode': True,
     }
     assert result == expected_result
@@ -156,7 +156,7 @@ def test_add_frr_session_failure(mocked_log_err, mocked_run_command, bfd_mgr):
         "type": "async_active",
     }
     assert bfd_mgr.add_frr_session(session_key, data) == False
-    mocked_log_err.assert_called_with("Can't add bfd session: Error")
+    mocked_log_err.assert_called_with("Can't add bfd session: {'vrf': 'default', 'interface': 'default', 'peer': '10.0.0.1'}, err: Error")
     assert len(bfd_mgr.bfd_sessions) == 0
 
 @patch('bgpcfgd.managers_bfd.run_command', return_value=(0, '', ''))
@@ -166,8 +166,8 @@ def test_del_frr_session_success(mocked_run_command, bfd_mgr):
         'multihop': True,
         'local': '127.0.0.1',
         'detect-multiplier': 3,
-        'receive-interval': 200, 
-        'transmit-interval': 200, 
+        'receive-interval_ms': 200,
+        'transmit-interval_ms': 200,
         'passive-mode': False,
     }
     bfd_mgr.bfd_sessions[bfd_mgr.dict_to_fs(session_key)] = local_res_data
@@ -188,8 +188,8 @@ def test_del_frr_session_failure(mocked_log_err, mocked_run_command, bfd_mgr):
         'multihop': True,
         'local': '127.0.0.1',
         'detect-multiplier': 3,
-        'receive-interval': 200, 
-        'transmit-interval': 200, 
+        'receive-interval_ms': 200,
+        'transmit-interval_ms': 200,
         'passive-mode': False,
     }
     bfd_mgr.bfd_sessions[bfd_mgr.dict_to_fs(session_key)] = local_res_data
@@ -207,8 +207,8 @@ def test_load_bfd_sessions(mocked_log_err, mocked_run_command, bfd_mgr):
             "local": "180.1.1.1",
             "vrf": "default",
             "detect-multiplier": 5,
-            "transmit-interval": 500, 
-            "receive-interval": 200, 
+            "transmit-interval_ms": 500,
+            "receive-interval_ms": 200,
             "passive-mode": true
         },
         {
@@ -220,9 +220,27 @@ def test_load_bfd_sessions(mocked_log_err, mocked_run_command, bfd_mgr):
             "local": "180.1.1.2",
             "vrf": "default",
             "detect-multiplier": 6,
-            "transmit-interval": 100, 
-            "receive-interval": 300, 
+            "transmit-interval_ms": 100,
+            "receive-interval_ms": 300,
             "passive-mode": false
+        },
+        {
+            "peer": "105::109",
+            "local": "180::220",
+            "vrf": "default",
+            "detect-multiplier": 4,
+            "transmit-interval_ms": 900,
+            "receive-interval_ms": 700,
+            "passive-mode": false
+        },
+        {
+            "peer": "110::101",
+            "local": "190::57",
+            "vrf": "default",
+            "detect-multiplier": 3,
+            "transmit-interval_ms": 100,
+            "receive-interval_ms": 100,
+            "passive-mode": true
         }
     ]
     '''
@@ -232,23 +250,39 @@ def test_load_bfd_sessions(mocked_log_err, mocked_run_command, bfd_mgr):
             'local': '180.1.1.1',
             'multihop': False,
             'passive-mode': True,
-            'receive-interval': 200,
-            'transmit-interval': 500
+            'receive-interval_ms': 200,
+            'transmit-interval_ms': 500
         },
         frozenset({('peer', '192.168.1.2'), ('vrf', 'default'), ('interface', 'default')}): {
             'detect-multiplier': 6,
             'local': '180.1.1.2',
             'multihop': False,
             'passive-mode': False,
-            'receive-interval': 300,
-            'transmit-interval': 100
+            'receive-interval_ms': 300,
+            'transmit-interval_ms': 100
+        },
+        frozenset({('peer', '105::109'), ('vrf', 'default'), ('interface', 'default')}): {
+            'detect-multiplier': 4,
+            'local': '180::220',
+            'multihop': False,
+            'passive-mode': False,
+            'receive-interval_ms': 700,
+            'transmit-interval_ms': 900
+        },
+        frozenset({('peer', '110::101'), ('vrf', 'default'), ('interface', 'default')}): {
+            'detect-multiplier': 3,
+            'local': '190::57',
+            'multihop': False,
+            'passive-mode': True,
+            'receive-interval_ms': 100,
+            'transmit-interval_ms': 100
         },
     }
     mocked_run_command.return_value = (0, bfd_frr_json, "")
     bfd_sessions = bfd_mgr.load_bfd_sessions()
     mocked_log_err.assert_called_with("Peer is not set in frr bfd session, skipping")
     mocked_run_command.assert_called_once_with(["vtysh", "-c", "show bfd peers json"])
-    assert len(bfd_sessions) == 2
+    assert len(bfd_sessions) == 4
     assert bfd_sessions == expected_sessions
 
 @patch('bgpcfgd.managers_bfd.run_command', return_value=(1, '', 'Error'))
@@ -265,8 +299,8 @@ def test_update_frr_session_success(mocked_run_command, bfd_mgr):
         'multihop': True,
         'local': '127.0.0.1',
         'detect-multiplier': 3,
-        'receive-interval': 200, 
-        'transmit-interval': 200, 
+        'receive-interval_ms': 200,
+        'transmit-interval_ms': 200,
         'passive-mode': False,
     }
     data = {
@@ -316,7 +350,7 @@ def test_update_frr_session_failure(mocked_log_warn, mocked_log_err, mocked_run_
     #Error while running command
     data["local_addr"] = "127.0.0.2"
     assert bfd_mgr.update_frr_session(session_key, data) == False
-    mocked_log_err.assert_called_with("Can't update bfd session: Error")
+    mocked_log_err.assert_called_with("Can't update bfd session: {'vrf': 'default', 'interface': 'default', 'peer': '10.0.0.1'}, err: Error")
 
 @patch('bgpcfgd.managers_bfd.run_command', return_value=(0, '', ''))
 @patch('bgpcfgd.managers_bfd.log_warn')
@@ -366,8 +400,8 @@ def test_set_handler_upd(mocked_log_warn, mocked_run_command, bfd_mgr):
         'multihop': True,
         'local': '127.0.0.1',
         'detect-multiplier': 3,
-        'receive-interval': 200, 
-        'transmit-interval': 200, 
+        'receive-interval_ms': 200,
+        'transmit-interval_ms': 200,
         'passive-mode': False,
     }
     data = {
@@ -399,8 +433,8 @@ def test_del_handler(mocked_log_warn, mocked_run_command, bfd_mgr):
         'multihop': True,
         'local': '127.0.0.1',
         'detect-multiplier': 3,
-        'receive-interval': 200, 
-        'transmit-interval': 200, 
+        'receive-interval_ms': 200,
+        'transmit-interval_ms': 200,
         'passive-mode': False,
     }
     data = {

@@ -28,8 +28,8 @@ class BfdMgr(Manager):
             table,
         )
 
-        self.check_and_start_bfdd()
-        self.bfd_sessions = self.load_bfd_sessions()
+        if(self.check_and_start_bfdd()):
+            self.bfd_sessions = self.load_bfd_sessions()
 
     def check_and_start_bfdd(self):
         """
@@ -44,9 +44,9 @@ class BfdMgr(Manager):
             # Start bfdd process
             log_warn("bfdd process is not running, starting now...")
             command = ["/usr/lib/frr/bfdd", "-A", "127.0.0.1", "-d"]
-            ret_code, out, err = run_command(command)
-            if ret_code != 0:
-                log_err("Can't start bfdd: %s" % err)
+            proc_out = subprocess.run(command)
+            if proc_out.returncode != 0:
+                log_err("Can't start bfdd: %s" % proc_out.returncode)
                 return False
 
             return True
@@ -67,8 +67,8 @@ class BfdMgr(Manager):
             'multihop': False,
             'local': '',
             'detect-multiplier': self.MULTIPLIER,
-            'receive-interval': self.RX_INTERVAL, 
-            'transmit-interval': self.TX_INTERVAL, 
+            'receive-interval_ms': self.RX_INTERVAL,
+            'transmit-interval_ms': self.TX_INTERVAL,
             'passive-mode': True,
         }
 
@@ -97,10 +97,10 @@ class BfdMgr(Manager):
             res_data["detect-multiplier"] = int(data["multiplier"])
 
         if "rx_interval" in data:
-            res_data["receive-interval"] = int(data["rx_interval"])
+            res_data["receive-interval_ms"] = int(data["rx_interval"])
 
         if "tx_interval" in data:
-            res_data["transmit-interval"] = int(data["tx_interval"])
+            res_data["transmit-interval_ms"] = int(data["tx_interval"])
 
         if "type" in data:
             if data["type"] == "async_active":
@@ -142,9 +142,9 @@ class BfdMgr(Manager):
         bfd_cmds.append("-c")
         bfd_cmds.append("detect-multiplier " + str(res_data["detect-multiplier"]))
         bfd_cmds.append("-c")
-        bfd_cmds.append("receive-interval " + str(res_data["receive-interval"]))
+        bfd_cmds.append("receive-interval " + str(res_data["receive-interval_ms"]))
         bfd_cmds.append("-c")
-        bfd_cmds.append("transmit-interval " + str(res_data["transmit-interval"]))
+        bfd_cmds.append("transmit-interval " + str(res_data["transmit-interval_ms"]))
 
         bfd_cmds.append("-c")
         if (res_data["passive-mode"] == True):
@@ -168,7 +168,7 @@ class BfdMgr(Manager):
 
         ret_code, out, err = run_command(command)
         if ret_code != 0:
-            log_err("Can't add bfd session: %s" % err)
+            log_err("Can't add bfd session: %s, err: %s" % (str(session_key), err))
             return False
 
         # Add the new session's key to local session DB
@@ -207,7 +207,7 @@ class BfdMgr(Manager):
         if command != "":
             ret_code, out, err = run_command(command)
             if ret_code != 0:
-                log_err("Can't update bfd session: %s" % err)
+                log_err("Can't update bfd session: %s, err: %s" % (str(session_key), err))
                 return False
 
         # update session in local session DB
