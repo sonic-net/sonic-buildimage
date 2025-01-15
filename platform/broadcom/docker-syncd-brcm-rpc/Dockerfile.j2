@@ -21,7 +21,8 @@ RUN apt-get update \
     libffi-dev          \
     wget                \
     cmake               \
-    libnanomsg-dev
+    libnanomsg-dev      \
+    libthrift-0.17.0
 
 {% if docker_syncd_brcm_rpc_debs.strip() -%}
 # Copy locally-built Debian package dependencies

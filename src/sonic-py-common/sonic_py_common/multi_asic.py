@@ -514,7 +514,7 @@ def get_asic_presence_list():
             # This is supervisor card. Some fabric cards may not be inserted.
             # Get asic list from CHASSIS_ASIC_TABLE which lists only the asics
             # present based on Fabric card detection by the platform.
-            db = swsscommon.DBConnector(CHASSIS_STATE_DB, 0, True)
+            db = swsscommon.DBConnector(CHASSIS_STATE_DB, 0, False)
             asic_table = swsscommon.Table(db, CHASSIS_FABRIC_ASIC_INFO_TABLE)
             if asic_table:
                 asics_presence_list = list(asic_table.getKeys())
