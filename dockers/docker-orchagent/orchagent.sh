@@ -105,7 +105,7 @@ fi
 
 # Add heartbeat interval when enabled
 HEARTBEAT_INTERVAL=`sonic-db-cli CONFIG_DB hget  "HEARTBEAT|orchagent" "heartbeat_interval"`
-if [ -nz "$HEARTBEAT_INTERVAL" ]; then
+if [ ! -z "$HEARTBEAT_INTERVAL" ] && [ $HEARTBEAT_INTERVAL != "null" ]; then
     ORCHAGENT_ARGS+=" -I $HEARTBEAT_INTERVAL"
 fi
 
