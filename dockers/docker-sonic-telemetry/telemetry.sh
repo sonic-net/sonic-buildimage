@@ -123,7 +123,7 @@ if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
         fi
 
         CRL_EXPIRE_DURATION=$(echo $GNMI | jq -r '.crl_expire_duration')
-        if [ ! -z "$CRL_EXPIRE_DURATI"ON ] && [ $CRL_EXPIRE_DURATION != "null" ]; then
+        if [ ! -z "$CRL_EXPIRE_DURATION" ] && [ $CRL_EXPIRE_DURATION != "null" ]; then
             TELEMETRY_ARGS+=" --crl_expire_duration $CRL_EXPIRE_DURATION"
         fi
     fi
