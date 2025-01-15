@@ -90,7 +90,7 @@ def do_work():
         log_notice("switch type is dpu, starting bfd manager")
         #TODO: use swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME onces definition is in master
         #managers.append(BfdMgr(common_objs, "STATE_DB", swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME))
-        managers.append(BfdMgr(common_objs, "STATE_DB", "SOFTWARE_BFD_SESSION_TABLE"))
+        managers.append(BfdMgr(common_objs, "STATE_DB", "BFD_SOFTWARE_SESSION_TABLE"))
 
     runner = Runner(common_objs['cfg_mgr'])
     for mgr in managers:

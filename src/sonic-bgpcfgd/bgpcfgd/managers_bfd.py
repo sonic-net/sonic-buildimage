@@ -11,8 +11,8 @@ class BfdMgr(Manager):
         is updated """
 
     MULTIPLIER = 3
-    RX_INTERVAL = 200
-    TX_INTERVAL = 200
+    RX_INTERVAL_MS = 200
+    TX_INTERVAL_MS = 200
 
     def __init__(self, common_objs, db, table):
         """
@@ -64,11 +64,12 @@ class BfdMgr(Manager):
 
     def get_def_res_fields(self):
         return {
+            # DSCP is 48 by default
             'multihop': False,
             'local': '',
             'detect-multiplier': self.MULTIPLIER,
-            'receive-interval_ms': self.RX_INTERVAL,
-            'transmit-interval_ms': self.TX_INTERVAL,
+            'receive-interval_ms': self.RX_INTERVAL_MS,
+            'transmit-interval_ms': self.TX_INTERVAL_MS,
             'passive-mode': True,
         }
 
