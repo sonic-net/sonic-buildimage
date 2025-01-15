@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -1475,14 +1475,14 @@ class SFP(NvidiaSFPCommon):
             # Resetting SFP requires a reloading of module firmware, it takes up to 3 seconds
             # according to standard
             max_wait_time = 3.5
-            begin = time.time()
+            begin = time.monotonic()
             while True:
                 ready_sfp_set = wait_ready_task.get_ready_set()
                 for sfp_index in ready_sfp_set:
                     s = sfp_list[sfp_index]
                     logger.log_debug(f'SFP {sfp_index} is recovered from resetting state')
                     s.on_event(EVENT_RESET_DONE)
-                elapse = time.time() - begin
+                elapse = time.monotonic() - begin
                 if elapse < max_wait_time:
                     time.sleep(0.5)
                 else:
