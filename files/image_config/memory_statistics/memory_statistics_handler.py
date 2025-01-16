@@ -655,6 +655,13 @@ class MemoryStatisticsCollector:
             item (str): The item to update in total_dict.
             category (str): The category under which to update the statistics.
         """
+        if category not in mem_dict:
+            mem_dict[category] = {}
+        if item not in total_dict:
+            total_dict[item] = {'count': 0}
+        if category not in total_dict[item]:
+            total_dict[item][category] = {}
+
         current_time = Utility.fetch_current_date()
         for memory_metric in time_list.keys():
             try:
@@ -689,7 +696,7 @@ class MemoryStatisticsCollector:
                     mem[memory_metric] = entry_data
 
             except Exception as e:
-                logger.log_error(f"Error updating memory statistics: {e}")
+                logger.log_error(f"Error updating memory statistics for metric {memory_metric}: {str(e)}")
 
         total_dict[item]['count'] = int(total_dict[item]['count']) + 1
 
@@ -707,7 +714,7 @@ class MemoryStatisticsCollector:
             }
             return
 
-        current_time = datetime.now()
+        current_time = Utility.fetch_current_date()
         retention_threshold = timedelta(days=self.retention_period)
         categories_to_remove = []
 
