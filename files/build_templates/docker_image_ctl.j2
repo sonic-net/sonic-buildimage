@@ -621,6 +621,8 @@ start() {
 {%- if docker_container_name == "pmon" %}
     if [[ $NUM_DPU -gt 0 ]]; then
         SMARTSWITCH_MNT= " -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket"
+    else
+        SMARTSWITCH_MNT= ""
     fi
 {%- endif %}
 {%- endif %}
