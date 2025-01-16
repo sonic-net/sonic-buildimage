@@ -1477,6 +1477,7 @@ $(addprefix $(TARGET_PATH)/, $(SONIC_INSTALLERS)) : $(TARGET_PATH)/% : \
 	export include_kubernetes="$(INCLUDE_KUBERNETES)"
 	export include_kubernetes_master="$(INCLUDE_KUBERNETES_MASTER)"
 	export include_dummyk8s="$(INCLUDE_DUMMYK8S)"
+	export include_auditd="$(INCLUDE_AUDITD)"
 	export kube_docker_proxy="$(KUBE_DOCKER_PROXY)"
 	export enable_pfcwd_on_start="$(ENABLE_PFCWD_ON_START)"
 	export installer_debs="$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$($*_INSTALLS) $(FIPS_BASEIMAGE_INSTALLERS))"
