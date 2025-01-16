@@ -1,0 +1,16 @@
+# Hamd allows mapping role(s) or privilege-level(s) to Linux groups. This is
+# particularly important for users that require access to the sudo command.
+#
+# This file contains a list of pairs, role:groups or priv-lvl:groups, telling
+# hamd how to map particular roles or privilege-levels to Linux groups.
+#
+# Examples:
+#
+#    ​sysadmin:sudo,adm,sys
+#    15:sudo,adm,sys
+#    secadmin:adm
+#    netoperator:operator
+#    0:operator​
+
+admin:sudo,docker
+operator:docker
