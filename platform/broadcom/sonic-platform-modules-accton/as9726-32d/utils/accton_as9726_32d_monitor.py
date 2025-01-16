@@ -29,6 +29,7 @@ try:
     import time  # this is only being used as part of the example
     from as9726_32d.fanutil import FanUtil
     from as9726_32d.thermalutil import ThermalUtil
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
@@ -204,8 +205,8 @@ class switch(object):
 #LM75-1(0X4B)>=77
 
 def power_off_dut():
-    cmd_str="i2cset -y -f 1 0x60 0x60 0x10"
-    status, output = subprocess.getstatusoutput(cmd_str)
+    cmd_str=['i2cset', '-y', '-f', '1', '0x60', '0x60', '0x10']
+    status, output = getstatusoutput_noshell(cmd_str)
     return status
 
 #If only one PSU insert(or one of PSU pwoer fail), and watt >800w. Must let DUT fan pwm >= 75% in AFO.
