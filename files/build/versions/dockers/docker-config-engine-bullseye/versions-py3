@@ -1,3 +1,4 @@
+async-timeout==5.0.1
 bitarray==2.8.1
 ijson==3.2.3
 ipaddress==1.0.23
