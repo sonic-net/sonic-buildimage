@@ -89,8 +89,8 @@ module sonic-srv6 {
             list SRV6_MY_SIDS_LIST {
                 key "locator ip_address";
 
-                leaf ip_address {
-                    type inet:ipv6-address;
+                leaf ip_prefix {
+                    type inet:ipv6-prefix;
                 }
 
                 leaf locator {
@@ -125,12 +125,9 @@ module sonic-srv6 {
                         enum uniform;
                         enum pipe;
                     }
-                    when "../action = 'uDT46'";
-
-                    default "uniform";
                 }
 
-                must 'starts-with(./ip_address,
+                must 'starts-with(substring-before(./ip_address, "::"),
                                   substring-before(/srv6:sonic-srv6/SRV6_MY_LOCATORS/SRV6_MY_LOCATORS_LIST[current()/locator]/prefix, "::"))';
             }
         }
