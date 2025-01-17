@@ -2268,6 +2268,17 @@
             }
         },
 
+        "TC_TO_DSCP_MAP": {
+           "tc_to_dscp_map1": {
+              "1": "1",
+              "2": "2"
+            },
+           "tc_to_dscp_map2": {
+              "3": "3",
+              "4": "4"
+            }
+        },
+
         "MAP_PFC_PRIORITY_TO_QUEUE": {
            "pfc_prio_to_q_map1": {
               "1": "1",

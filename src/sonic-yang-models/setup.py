@@ -195,6 +195,7 @@ setup(
                          './yang-models/sonic-tc-priority-group-map.yang',
                          './yang-models/sonic-tc-queue-map.yang',
                          './yang-models/sonic-peer-switch.yang',
+                         './yang-models/sonic-tc-dscp-map.yang',
                          './yang-models/sonic-pfc-priority-queue-map.yang',
                          './yang-models/sonic-pfc-priority-priority-group-map.yang',
                          './yang-models/sonic-logger.yang',
