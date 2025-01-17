@@ -518,7 +518,7 @@ class MemoryReportGenerator:
             return "D{:02d}-D{:02d}".format(slot.day, (slot + self.step_timedelta).day), slot.strftime('%d%b%y')
         elif self.period == "hours":
             return "H{:02d}-H{:02d}".format(slot.hour, (slot + self.step_timedelta).hour), slot.strftime('%H:%M')
-        else:  # For minutes
+        else:
             return "M{:02d}-M{:02d}".format(slot.minute, (slot + self.step_timedelta).minute), slot.strftime('%H:%M')
 
     def get_memmory_statistics_report_header(self):
@@ -618,7 +618,6 @@ class MemoryStatisticsCollector:
         del memory_data
         return memory_stats
 
-   
     def fetch_memory_entries(self, filepath):
         """
         Fetch memory entries from a compressed file.
@@ -656,78 +655,95 @@ class MemoryStatisticsCollector:
             item (str): The item to update in total_dict.
             category (str): The category under which to update the statistics.
         """
+        if category not in mem_dict:
+            mem_dict[category] = {}
+        if item not in total_dict:
+            total_dict[item] = {'count': 0}
+        if category not in total_dict[item]:
+            total_dict[item][category] = {}
+
+        current_time = Utility.fetch_current_date()
         for memory_metric in time_list.keys():
             try:
-                high_value = 0
-                low_value = 0
                 prss = int(time_list[memory_metric]['prss'])
-                mem_dict[category][memory_metric] = {
-                    "prss": prss, "count": 1,
-                    "high_value": prss, "low_value": prss
+
+                entry_data = {
+                    "prss": prss, 
+                    "count": 1,
+                    "high_value": prss, 
+                    "low_value": prss,
+                    "timestamp": current_time
                 }
-                
+
+                mem_dict[category][memory_metric] = entry_data
+
                 mem = total_dict[item][category]
                 if memory_metric in mem:
                     tprss = int(mem[memory_metric]["prss"]) + prss
                     tcount = int(mem[memory_metric]["count"]) + 1
-                    if prss > int(mem[memory_metric]["high_value"]):
-                        high_value = prss
-                        low_value = int(mem[memory_metric]["low_value"])
-                    elif prss <= int(mem[memory_metric]["low_value"]):
-                        low_value = prss
-                        high_value = int(mem[memory_metric]["high_value"])
+
+                    high_value = max(prss, int(mem[memory_metric].get("high_value", prss)))
+                    low_value = min(prss, int(mem[memory_metric].get("low_value", prss)))
+
                     mem[memory_metric] = {
-                        "prss": tprss, "count": tcount,
+                        "prss": tprss, 
+                        "count": tcount,
                         "high_value": high_value,
-                        "low_value": low_value
+                        "low_value": low_value,
+                        "timestamp": current_time
                     }
                 else:
-                    mem[memory_metric] = {
-                        "prss": prss, "count": 1,
-                        "high_value": prss, "low_value": prss
-                    }
+                    mem[memory_metric] = entry_data
+
             except Exception as e:
-                logger.log_error(f"Error updating memory statistics for item '{item}', category '{category}', "
-                          f"metric '{memory_metric}': {e}")
+                logger.log_error(f"Error updating memory statistics for metric {memory_metric}: {str(e)}")
 
         total_dict[item]['count'] = int(total_dict[item]['count']) + 1
-
 
     def enforce_retention_policy(self, total_dict):
         """
         This function enforces a retention policy for memory statistics by identifying and removing entries in total_dict
-           that are older than the configured retention period. 
-           total_dict (dict): A dictionary containing memory statistics, where each entry is expected to include a 'current_time' field.
+        that are older than the configured retention period. 
+        total_dict (dict): A dictionary containing memory statistics.
         """
-        current_time = datetime.now()
+        
+        if not total_dict or SYSTEM_MEMORY_KEY not in total_dict:
+            total_dict[SYSTEM_MEMORY_KEY] = {
+                'count': 0,
+                'timestamp': Utility.fetch_current_date()
+            }
+            return
+
+        current_time = Utility.fetch_current_date()
         retention_threshold = timedelta(days=self.retention_period)
+        categories_to_remove = []
 
-        if SYSTEM_MEMORY_KEY in total_dict:
-            for memory_type in total_dict[SYSTEM_MEMORY_KEY]:
-                entries_to_remove = []
-                
-                if isinstance(total_dict[SYSTEM_MEMORY_KEY][memory_type], dict):
-                    for entry_timestamp, memory_data in total_dict[SYSTEM_MEMORY_KEY][memory_type].items():
-                        try:
-                            entry_time = datetime.fromisoformat(entry_timestamp)
-                        except ValueError:
-                            continue 
-
+        for category in total_dict[SYSTEM_MEMORY_KEY]:
+            if category not in ['count', 'timestamp']:
+                category_data = total_dict[SYSTEM_MEMORY_KEY][category]
+                if isinstance(category_data, dict) and 'timestamp' in category_data:
+                    try:
+                        entry_time = datetime.fromisoformat(category_data['timestamp'])
                         if current_time - entry_time > retention_threshold:
-                            entries_to_remove.append(entry_timestamp)
+                            logger.log_info(f"Deleting outdated entry for category: {category}")
+                            categories_to_remove.append(category)
+                    except (ValueError, TypeError) as e:
+                        logger.log_error(f"Error processing timestamp for {category}: {e}")
 
-                    for old_entry in entries_to_remove:
-                        logger.log_info(f"Removing outdated entry: {old_entry}")
-                        del total_dict[SYSTEM_MEMORY_KEY][memory_type][old_entry]
+        for category in categories_to_remove:
+            del total_dict[SYSTEM_MEMORY_KEY][category]
 
-        total_dict[SYSTEM_MEMORY_KEY]['count'] = len(total_dict[SYSTEM_MEMORY_KEY].get('system', {}))
+        total_dict[SYSTEM_MEMORY_KEY]['count'] = len([
+            k for k in total_dict[SYSTEM_MEMORY_KEY].keys() 
+            if k not in ['count', 'timestamp']
+        ])   
 
     def collect_and_store_memory_usage(self, collect_only):
         """
-        Dump memory usage statistics into log files.
+        Dump memory usage statistics into log files
         
         Args:
-            collect_only (bool): If True, return memory data without dumping.
+            collect_only (bool): If True, return memory data without dumping
         """
         sysmem_dict = {}
         total_dict = self.fetch_memory_entries(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'])
@@ -1155,7 +1171,7 @@ class MemoryStatisticsProcessor:
         Aggregates memory data using optimized batch processing for better performance.
 
         Args:
-            request_data (dict): Contains time range information for the request.
+            request_data (dict): Contains time range information for the request
             time_entry_summary (dict): Summary of aggregated memory statistics.
             num_columns (int): Number of columns (time slices) to process.
         """
@@ -1195,7 +1211,6 @@ class MemoryStatisticsProcessor:
                 continue
         
         return time_group_list
-
 
     def generate_report(self, request_data, time_entry_summary, num_columns, step):
         """
@@ -1882,7 +1897,6 @@ class MemoryStatisticsService:
             except Exception as disconnect_error:
                 logger.log_error(f"Error closing ConfigDB connection: {disconnect_error}")
 
-
     def cleanup_old_files(self):
         """
         Deletes old log files from the log directory.
@@ -1917,7 +1931,7 @@ class MemoryStatisticsService:
                 )
                 current_memory = memory_collector.collect_and_store_memory_usage(collect_only=True)
                 request['current_memory'] = current_memory
-                # logger.log_info(f"Current memory usage collected: {current_memory}")
+                logger.log_info(f"Current memory usage collected: {current_memory}")
                 time_processor = TimeProcessor(
                     sampling_interval=sampling_interval // 60,
                     retention_period=retention_period
@@ -1930,14 +1944,13 @@ class MemoryStatisticsService:
                     retention_period=retention_period
                 )
                 report = processor.calculate_memory_statistics_period(request)
-                # logger.log_info(f"Memory statistics processed: {report}")
+                logger.log_info(f"Memory statistics processed: {report}")
 
             return {"status": True, "data": report}
 
         except Exception as error:
             logger.log_error(f"Error handling memory statistics request: {error}")
             return {"status": False, "error": str(error)}
-
 
     def start_socket_listener(self):
         """
@@ -1956,39 +1969,39 @@ class MemoryStatisticsService:
         self.socket_listener_thread.start()
         logger.log_info("Socket listener thread started.")
 
+    def memory_collection(self):
+        """
+        Collects memory statistics at intervals defined by `sampling_interval`. 
+        The collection process continues until the `stop_event` is set. Each cycle 
+        collects data, handles errors, and ensures the next collection happens 
+        after the remaining time in the sampling interval.
+        """
+        logger.log_info("Memory statistics collection thread started.")
+        while not self.stop_event.is_set():
+            start_time = datetime.now()
+            try:
+                with self.memory_statistics_lock:
+                    memory_collector = MemoryStatisticsCollector(
+                        sampling_interval=self.sampling_interval // 60,
+                        retention_period=self.retention_period
+                    )
+                    memory_collector.collect_and_store_memory_usage(collect_only=False)
+            except Exception as error:
+                logger.log_error(f"Error during memory statistics collection: {error}")
+            elapsed_time = (datetime.now() - start_time).total_seconds()
+            sleep_time = max(0, self.sampling_interval - elapsed_time)
+            if self.stop_event.wait(timeout=sleep_time):
+                break 
+        logger.log_info("Memory statistics collection thread stopped.")
+
     def start_memory_collection(self):
         """
         Starts memory statistics collection in a separate thread.
         This method initializes and starts a separate thread dedicated to 
-        collecting memory statistics at defined intervals. The collection 
-        process runs in a loop until signaled to stop, capturing memory usage 
-        data and logging any errors that may occur during the process.
-        The collection interval is determined by the `sampling_interval` 
-        configuration. Logs the start and stop of the memory collection thread.
+        collecting memory statistics at defined intervals.
         """ 
-        def memory_collection():
-            logger.log_info("Memory statistics collection thread started.")
-            while not self.stop_event.is_set():
-                start_time = datetime.now()
-                try:
-                    with self.memory_statistics_lock:
-                        memory_collector = MemoryStatisticsCollector(
-                            sampling_interval=self.sampling_interval // 60,
-                            retention_period=self.retention_period
-                        )
-                        memory_collector.collect_and_store_memory_usage(collect_only=False)
-                except Exception as error:
-                    logger.log_error(f"Error during memory statistics collection: {error}")
-
-                elapsed_time = (datetime.now() - start_time).total_seconds()
-                sleep_time = max(0, self.sampling_interval - elapsed_time)
-                if self.stop_event.wait(timeout=sleep_time):
-                    break 
-
-            logger.log_info("Memory statistics collection thread stopped.")
-
         self.memory_collection_thread = threading.Thread(
-            target=memory_collection,
+            target=self.memory_collection,
             name='MemoryCollection',
             daemon=True
         )
@@ -2056,7 +2069,7 @@ class MemoryStatisticsService:
             logger.log_error(f"Error flushing log handlers: {e}")
 
         logger.log_info("Cleanup complete.")
-        
+
     def run(self):
         """
         Runs the Memory Statistics Service.
@@ -2071,7 +2084,7 @@ class MemoryStatisticsService:
 
         self.start_socket_listener()
         self.start_memory_collection()
-    
+
         while not self.stop_event.is_set():
             time.sleep(1) 
 
