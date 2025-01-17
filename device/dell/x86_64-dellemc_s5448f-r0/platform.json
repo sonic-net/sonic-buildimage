@@ -373,7 +373,6 @@
                 "name": "NPU Temp",
                 "controllable": false,
                 "low-crit-threshold": false,
-                "high-threshold": false,
                 "minimum-recorded": false,
                 "maximum-recorded": false
             },
@@ -421,6 +420,7 @@
                 "name": "PSU1 Rear Temp",
                 "controllable": false,
                 "low-crit-threshold": false,
+                "high-threshold": false,
                 "minimum-recorded": false,
                 "maximum-recorded": false
             },
