@@ -27,10 +27,5 @@
         "desc": "A SID configured with invalid action",
         "eStrKey" : "InvalidValue",
         "eStr": ["action"]
-    },
-    "SRV6_MY_SID_DSCP_MODE_WITH_UN": {
-        "desc": "A SID configured with dscp_mode and uN action",
-        "eStrKey" : "When",
-        "eStr": ["action"]
     }
 }
