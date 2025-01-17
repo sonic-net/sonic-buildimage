@@ -1,14 +1,4 @@
-pr:
-   branches:
-     include:
-       - master
-   paths:
-     exclude:
-       - .github
-       - docs
-       - LICENSE
-       - README.md
-       - SECURITY.md
+pr: none
 trigger: none
 
 
