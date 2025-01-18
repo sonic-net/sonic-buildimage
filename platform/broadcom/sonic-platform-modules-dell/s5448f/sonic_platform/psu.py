@@ -11,7 +11,7 @@
 
 try:
     from sonic_platform_base.psu_base import PsuBase
-    from sonic_platform.ipmihelper import IpmiSensor, IpmiFru
+    from sonic_platform.ipmihelper import IpmiSensor, IpmiFru, get_ipmitool_raw_output
     from sonic_platform.fan import Fan
 except ImportError as err:
     raise ImportError(str(err) + "- required module not found")
@@ -152,7 +152,30 @@ class Psu(PsuBase):
         if not is_valid:
             return None
 
-        return "{:.1f}".format(voltage)
+        return float(voltage)
+
+    def get_voltage_low_threshold(self):
+        """
+        Returns PSU low threshold in Volts
+        """
+        is_valid, low_threshold = self.voltage_sensor.get_threshold("LowerCritical")
+        if not is_valid:
+            low_threshold = 11.4
+        low_threshold = "{:.2f}".format(low_threshold)
+
+        return float(low_threshold)
+
+
+    def get_voltage_high_threshold(self):
+        """
+        Returns PSU high threshold in Volts
+        """
+        is_valid, high_threshold = self.voltage_sensor.get_threshold("UpperCritical")
+        if not is_valid:
+            high_threshold = 12.6
+        high_threshold = "{:.2f}".format(high_threshold)
+
+        return float(high_threshold)
 
     def get_current(self):
         """
@@ -166,7 +189,7 @@ class Psu(PsuBase):
         if not is_valid:
             return None
 
-        return "{:.1f}".format(current)
+        return float(current)
 
     def get_power(self):
         """
@@ -180,7 +203,7 @@ class Psu(PsuBase):
         if not is_valid:
             return None
 
-        return "{:.1f}".format(power)
+        return float(power)
 
     def get_input_voltage(self):
         """
@@ -194,7 +217,7 @@ class Psu(PsuBase):
         if not is_valid:
             return None
 
-        return "{:.1f}".format(input_voltage)
+        return float(input_voltage)
 
     def get_input_current(self):
         """
@@ -208,7 +231,7 @@ class Psu(PsuBase):
         if not is_valid:
             return None
 
-        return "{:.1f}".format(input_current)
+        return float(input_current)
 
     def get_input_power(self):
         """
@@ -222,7 +245,7 @@ class Psu(PsuBase):
         if not is_valid:
             return None
 
-        return "{:.1f}".format(input_power)
+        return float(input_power)
 
     def get_maximum_supplied_power(self):
         """
