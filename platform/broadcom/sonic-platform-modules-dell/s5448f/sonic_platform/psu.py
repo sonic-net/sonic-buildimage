@@ -91,6 +91,18 @@ class Psu(PsuBase):
 
         return float(temperature)
 
+    def get_temperature_high_threshold(self):
+        """
+        Returns the high temperature threshold for PSU in Celsius
+        """
+        is_valid, high_threshold = self.temp_sensor.get_threshold("UpperCritical")
+        if not is_valid:
+            high_threshold = 113
+        high_threshold = "{:.2f}".format(high_threshold)
+
+        return float(high_threshold)
+
+
     def get_model(self):
         """
         Retrieves the part number of the PSU
@@ -212,6 +224,20 @@ class Psu(PsuBase):
 
         return "{:.1f}".format(input_power)
 
+    def get_maximum_supplied_power(self):
+        """
+        Retrieves the maximum supplied power by PSU
+
+        Returns:
+            A float number, the maximum power output in Watts.
+            e.g. 1200.1
+        """
+        is_valid, power = self.power_sensor.get_threshold("UpperCritical")
+        if not is_valid:
+            return None
+
+        return float(power)
+
     def get_powergood_status(self):
         """
         Retrieves the powergood status of PSU
@@ -266,3 +292,15 @@ class Psu(PsuBase):
             bool: True if it is replaceable.
         """
         return True
+
+    def get_revision(self):
+        """
+        Retrieves the hardware revision of the device
+        Returns:
+            string: Revision value of device
+        """
+        serial = self.fru.get_board_serial()
+        if serial != "NA" and len(serial) == 23:
+            return serial[-3:]
+        else:
+            return "NA"
