@@ -56,9 +56,15 @@ class SRv6Mgr(Manager):
         locator_name = key.split("|")[0]
         ip_prefix = key.split("|")[1].lower()
         key = "{}|{}".format(locator_name, ip_prefix)
+        prefix_len = int(ip_prefix.split("/")[1])
 
         if not self.directory.path_exist(self.db_name, "SRV6_MY_LOCATORS", locator_name):
             log_err("Found a SRv6 SID config entry with a locator that does not exist: {} | {}".format(key, data))
+            return False
+        
+        locator = self.directory.get(self.db_name, "SRV6_MY_LOCATORS", locator_name)
+        if locator.block_len + locator.node_len > prefix_len:
+            log_err("Found a SRv6 SID config entry with an invalid prefix length {} | {}".format(key, data))
             return False
 
         if 'action' not in data:
@@ -80,7 +86,7 @@ class SRv6Mgr(Manager):
         self.cfg_mgr.push_list(cmd_list)
         log_debug("{} SRv6 static configuration {}|{} is scheduled for updates. {}".format(self.db_name, self.table_name, key, str(cmd_list)))
 
-        self.directory.put(self.db_name, self.table_name, key, (sid, sid_cmd))
+        self.directory.put(self.db_name, self.table_name, key.replace("/", "\\"), (sid, sid_cmd))
         return True
 
     def del_handler(self, key):
@@ -102,18 +108,18 @@ class SRv6Mgr(Manager):
         ip_prefix = key.split("|")[1].lower()
         key = "{}|{}".format(locator_name, ip_prefix)
 
-        if not self.directory.path_exist(self.db_name, self.table_name, key):
+        if not self.directory.path_exist(self.db_name, self.table_name, key.replace("/", "\\")):
             log_warn("Encountered a config deletion with a SRv6 SID that does not exist: {}".format(key))
             return
 
-        _, sid_cmd = self.directory.get(self.db_name, self.table_name, key)
+        _, sid_cmd = self.directory.get(self.db_name, self.table_name, key.replace("/", "\\"))
         cmd_list = ['segment-routing', 'srv6', "static-sids"]
         no_sid_cmd = 'no ' + sid_cmd
         cmd_list.append(no_sid_cmd)
 
         self.cfg_mgr.push_list(cmd_list)
         log_debug("{} SRv6 static configuration {}|{} is scheduled for updates. {}".format(self.db_name, self.table_name, key, str(cmd_list)))
-        self.directory.remove(self.db_name, self.table_name, key)
+        self.directory.remove(self.db_name, self.table_name, key.replace("/", "\\"))
 
 class Locator:
     def __init__(self, name, data):

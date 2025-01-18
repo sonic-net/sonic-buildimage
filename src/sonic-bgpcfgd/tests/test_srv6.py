@@ -87,7 +87,8 @@ def test_uN_add():
         'sid fcbb:bbbb:1::/48 locator loc1 behavior uN'
     ])
 
-    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1::/48")
+    print(loc_mgr.directory.data)
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1::\\48")
 
 def test_uDT46_add_vrf1():
     loc_mgr, sid_mgr = constructor()
@@ -103,7 +104,8 @@ def test_uDT46_add_vrf1():
         'sid fcbb:bbbb:1:f2::/64 locator loc1 behavior uDT46 vrf Vrf1'
     ])
 
-    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::/64")
+    print(loc_mgr.directory.data)
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::\\64")
 
 def test_uN_del():
     loc_mgr, sid_mgr = constructor()
@@ -123,7 +125,7 @@ def test_uN_del():
             'no sid fcbb:bbbb:1::/48 locator loc1 behavior uN'
     ])
 
-    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1::/48")
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1::\\48")
 
 def test_uDT46_del_vrf1():
     loc_mgr, sid_mgr = constructor()
@@ -149,8 +151,8 @@ def test_uDT46_del_vrf1():
             'no sid fcbb:bbbb:1:f2::/64 locator loc1 behavior uDT46 vrf Vrf1'
     ])
 
-    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1::/48")
-    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::/64")
+    assert sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1::\\48")
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc1|fcbb:bbbb:1:f2::\\64")
 
 def test_invalid_add():
     _, sid_mgr = constructor()
@@ -160,4 +162,4 @@ def test_invalid_add():
         'action': 'uN'
     }), expected_ret=False, expected_cmds=[])
 
-    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21:f1::/64")
+    assert not sid_mgr.directory.path_exist(sid_mgr.db_name, sid_mgr.table_name, "loc2|fcbb:bbbb:21:f1::\\64")
