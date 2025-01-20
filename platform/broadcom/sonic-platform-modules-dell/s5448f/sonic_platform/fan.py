@@ -96,7 +96,7 @@ class Fan(FanBase):
             String: Part number of FAN
         """
         if self.is_psu_fan:
-            return None
+            return 'NA'
         else:
             return self.fru.get_board_part_number()
 
@@ -107,7 +107,7 @@ class Fan(FanBase):
             String: Serial number of FAN
         """
         if self.is_psu_fan:
-            return None
+            return 'NA'
         else:
             return self.fru.get_board_serial()
 
