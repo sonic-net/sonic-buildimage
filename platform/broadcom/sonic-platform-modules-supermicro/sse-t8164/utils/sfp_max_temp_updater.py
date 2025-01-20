@@ -6,6 +6,7 @@ This script is to update BMC sensor info with max of SFP temperatures.
 import time
 import syslog
 import subprocess
+import os
 import errno
 import natsort
 import sonic_platform.platform
@@ -15,6 +16,7 @@ from sonic_platform.sfp import Sfp
 from sonic_platform import platform
 from sonic_platform_base.sonic_sfp.sfputilhelper import SfpUtilHelper
 from sonic_py_common import device_info
+import re
 
 
 TEMPER_SFP_TABLE_NAME = 'TEMPERATURE_SFP_MAX'
@@ -36,6 +38,28 @@ class SfpMaxTempUpdater():
         sfputil_helper.read_porttab_mappings(self.get_path_to_port_config_file())
         self.logical_port_list = natsort.natsorted(sfputil_helper.logical)
 
+    # Get the shell output by executing the command
+    def get_shell_output(self, command):
+        # Run the shell command and capture the output
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"Command failed with error: {result.stderr}")
+        return result.stdout
+
+    # Parse the shell output into a dictionary
+    def parse_shell_output(self, output):
+        lines = output.strip().split("\n")
+        headers = lines[0].split()
+        data_lines = lines[2:]  # Skip the header and separator lines
+
+        result = {}
+        for line in data_lines:
+            match = re.match(r"^(\S+)\s+(.*)$", line)
+            if match:
+                port, presence = match.groups()
+                result[port] = presence.strip()
+
+        return result
 
     def run(self):
         time.sleep(120)
@@ -43,6 +67,7 @@ class SfpMaxTempUpdater():
         #syslog.syslog("Start updating.")
         print("Start updating.", flush=True)
         error_count = 0
+        shell_error_count = 0
         self.get_logical_port_list()
         while True:
             time.sleep(15)
@@ -71,33 +96,36 @@ class SfpMaxTempUpdater():
                     self.db = None
                     continue
 
+            # get presence with shell command
+            command = "show interfaces transceiver presence"
+            try:
+                shell_output = self.get_shell_output(command)
+                presence_dict = self.parse_shell_output(shell_output)
+                shell_error_count = 0
+            except Exception as e:
+                print(f"shell command is failed: {command}: {e}")
+                shell_error_count = shell_error_count + 1
+                if shell_error_count >= 3:
+                    print("shell command has failed too many times. Exit now.")
+                    exit(1)
+                continue
+
             max_temp = 0
             for s in self.sfp:
-                # check for presence and mgmtInit done
-                # check key existes to prevent error logs
-                key = "TRANSCEIVER_STATUS|{}".format(self.logical_port_list[s.port_index-1])
-                if not self.db.exists(self.db.STATE_DB, key):
-                    continue
-                status_table = self.db.get_all(self.db.STATE_DB, key)
-                if status_table.get('status') != '1':
+                presence = presence_dict.get(self.logical_port_list[s.port_index-1], 'Not present')
+                if 'not' in presence.lower():
                     continue
                 try:
                     temp = s.get_temperature()
-                except Except:
+                except:
                     temp = None
                 if (temp is not None) and (temp > max_temp):
                     max_temp = temp
 
             # update BMC sensor reading
-            command = ["/usr/bin/ipmitool", "raw", "0x30", "0x89", "0x09", "0x1", "0x0", hex(int(max_temp))]
-            
-            exit_code = subprocess.call(
-                command,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.STDOUT if error_count >= 3 else None
-            )
-
-            # if ipmitool failed too many times, then stop this daemon
+            exit_code = os.system("/usr/bin/ipmitool raw 0x30 0x89 0x09 0x1 0x0 {} > /dev/null {}"
+                                  .format(hex(int(max_temp)), '2>&1' if error_count >= 3 else ''))
+            # if ipmitool failed too many times, then pause error logs until no fail
             if exit_code != 0:
                 error_count = error_count + 1
                 if error_count <= 3:
