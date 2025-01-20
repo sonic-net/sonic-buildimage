@@ -1,7 +1,7 @@
 # flashrom package
 #
 
-FLASHROM_VERSION_FULL = v0.9.7
+FLASHROM_VERSION_FULL = 0.9.7
 
 export FLASHROM_VERSION_FULL
 
