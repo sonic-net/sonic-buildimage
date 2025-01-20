@@ -63,7 +63,7 @@ elif [ "$platform" == "vs" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "mellanox" ]; then
     ORCHAGENT_ARGS+=""
-elif [ "$platform" == "innovium" ]; then
+elif [ "$platform" == "marvell-teralynx" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"
 elif [ "$platform" == "nvidia-bluefield" ]; then
     ORCHAGENT_ARGS+="-m $MAC_ADDRESS"

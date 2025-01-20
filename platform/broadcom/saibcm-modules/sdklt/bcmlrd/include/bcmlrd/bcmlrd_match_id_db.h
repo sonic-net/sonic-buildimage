@@ -159,6 +159,9 @@ typedef struct bcmlrd_pdd_info_s {
 
     /*! If set, then PDD is aligned from LSB. */
     bool is_lsb;
+
+    /*! Absolute offset of container in the container list. */
+    uint16_t bit_offset;
 } bcmlrd_pdd_info_t;
 
 /*!
