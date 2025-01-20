@@ -1,0 +1,125 @@
+pr: none
+trigger: none
+
+
+name: $(TeamProject)_$(Build.DefinitionName)_$(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.r)
+
+resources:
+  repositories:
+  - repository: sonic-mgmt
+    type: github
+    name: sonic-net/sonic-mgmt
+    ref: master
+    endpoint: sonic-net
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    endpoint: sonic-net
+    ref: master
+
+
+variables:
+- template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
+- template: .azure-pipelines/template-variables.yml@buildimage
+- name: CACHE_MODE
+  value: rcache
+- name: ENABLE_FIPS
+  value: y
+- name: BUILD_BRANCH
+  ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+    value: $(System.PullRequest.TargetBranch)
+  ${{ else }}:
+    value: $(Build.SourceBranchName)
+
+
+parameters:
+  - name: SUBMODULE
+    type: string
+    default: ' '
+
+  - name: COMMIT_ID
+    type: string
+    default: ' '
+
+  - name: MGMT_BRANCH
+    type: string
+    default: 'master'
+
+  - name: TOPOLOGY
+    type: string
+    default: ''
+    values:
+      - t0
+      - t0-64-32
+      - t1-lag
+      - multi-asic-t1-lag
+      - dualtor
+      - dpu
+
+  - name: DEPLOY_MG_EXTRA_PARAMS
+    type: string
+    default: ' '
+
+  - name: SCRIPTS
+    type: string
+    default: ' '
+
+  - name: FEATURES
+    type: string
+    default: ' '
+
+  - name: MIN_WORKER
+    type: string
+    default: '1'
+
+  - name: MAX_WORKER
+    type: string
+    default: '1'
+
+  - name: STOP_ON_FAILURE
+    type: string
+    default: 'False'
+    values:
+      - 'True'
+      - 'False'
+
+stages:
+  - stage: BuildVS
+    pool: sonicbld-1es
+    jobs:
+    - template: azure-pipelines-build.yml
+      parameters:
+        buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) BUILD_MULTIASIC_KVM=y INCLUDE_DHCP_SERVER=y ${{ variables.  VERSION_CONTROL_OPTIONS }}'
+        jobGroups:
+        - name: vs
+        SUBMODULE: ${{ parameters.SUBMODULE }}
+        COMMIT_ID: ${{ parameters.COMMIT_ID }}
+
+  - stage: Test
+    dependsOn: BuildVS
+    condition: and(succeeded(), and(ne(stageDependencies.BuildVS.outputs['vs.SetVar.SKIP_VSTEST'], 'YES'), in(dependencies.BuildVS.result, 'Succeeded', 'SucceededWithIssues')))
+    variables:
+    - group: SONiC-Elastictest
+    - name: inventory
+      value: veos_vtb
+    - name: testbed_file
+      value: vtestbed.yaml
+
+    jobs:
+    - job: KVMTEST
+      displayName: "kvmtest by Elastictest"
+      timeoutInMinutes: 240
+      continueOnError: false
+      pool: sonic-ubuntu-1c
+      steps:
+      - template: .azure-pipelines/run-test-elastictest-template.yml@sonic-mgmt
+        parameters:
+          TOPOLOGY: ${{ parameters.TOPOLOGY }}
+          MIN_WORKER: ${{ parameters.MIN_WORKER }}
+          MAX_WORKER: ${{ parameters.MAX_WORKER }}
+          KVM_IMAGE_BRANCH: $(BUILD_BRANCH)
+          MGMT_BRANCH: ${{ parameters.MGMT_BRANCH }}
+          SCRIPTS: ${{ parameters.SCRIPTS }}
+          FEATURES: ${{ parameters.FEATURES }}
+          DEPLOY_MG_EXTRA_PARAMS: ${{ parameters.DEPLOY_MG_EXTRA_PARAMS }}
+          STOP_ON_FAILURE: ${{ parameters.STOP_ON_FAILURE }}
