@@ -180,8 +180,9 @@ RUN git clone https://github.com/facebook/tac_plus \
     && ln -s /usr/local/sbin/tac_plus /usr/sbin/tac_plus \
     && ln -s /usr/local/bin/tac_pwd /usr/sbin/tac_pwd \
     && mkdir /etc/tacacs+ \
-    && mkdir /etc/default/tacacs+ \
     && chmod 0755 /etc/tacacs+
+COPY ["tacacs_plus", "/etc/init.d"]
+COPY ["tacacs+", "/etc/default"]
 {% endif %}
 
 {% if PTF_ENV_PY_VER == "mixed" %}
