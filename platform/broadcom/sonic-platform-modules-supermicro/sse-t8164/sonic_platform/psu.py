@@ -3,6 +3,7 @@
 
 
 try:
+    import time
     from sonic_platform_pddf_base.pddf_psu import PddfPsu
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
@@ -20,3 +21,13 @@ class Psu(PddfPsu):
 
     def get_capacity(self):
         return self.get_maximum_supplied_power()
+    def get_status(self):
+        if super().get_status():
+            # Ensure get_model is ready for psud to update
+            for _ in range(10):
+                if self.get_model() != 'N/A':
+                    return True
+                time.sleep(0.5)
+            return super().get_status()
+        else:
+            return False
