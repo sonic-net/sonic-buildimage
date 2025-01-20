@@ -212,11 +212,17 @@ RUN pip3 install setuptools \
         && pip3 install grpcio-tools
 {% endif %}
 
-# Install all python modules from pypi. python3-scapy is exception, ptf debian package requires python3-scapy
+# Install all python modules from pypi. python3-scapy is exception, 
+# ptf debian package requires python3-scapy
+{% if PTF_ENV_PY_VER == "py3" %}
 # Werkzeug 3.1.3 has a bug and causes announce routes to fail
 # by returning 413 Request Entity Too Large though request buffers
 # have been increased.
-RUN pip3 install Werkzeug==3.1.2 \
+RUN pip3 install Flask==3.0.3   \
+    && pip3 install Werkzeug==3.1.2 \
+{% else %}
+RUN pip3 install Flask \
+{% endif %}
     && pip3 install Cython \
     && pip3 install cffi    \
     && pip3 install nnpy    \
@@ -224,7 +230,6 @@ RUN pip3 install Werkzeug==3.1.2 \
     && pip3 install ipaddress \
     && pip3 install pysubnettree \
     && pip3 install paramiko \
-    && pip3 install Flask==3.0.3   \
     && pip3 install pyaml   \
     && pip3 install pybrctl pyro4 rpyc \
     && pip3 install unittest-xml-reporting \
