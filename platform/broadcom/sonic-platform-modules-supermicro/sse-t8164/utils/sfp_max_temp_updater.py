@@ -6,14 +6,11 @@ This script is to update BMC sensor info with max of SFP temperatures.
 import time
 import syslog
 import subprocess
-import os
-import errno
+import shlex
 import natsort
 import sonic_platform.platform
 from swsscommon.swsscommon import SonicV2Connector
 from datetime import datetime
-from sonic_platform.sfp import Sfp
-from sonic_platform import platform
 from sonic_platform_base.sonic_sfp.sfputilhelper import SfpUtilHelper
 from sonic_py_common import device_info
 import re
@@ -41,10 +38,15 @@ class SfpMaxTempUpdater():
     # Get the shell output by executing the command
     def get_shell_output(self, command):
         # Run the shell command and capture the output
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        if result.returncode != 0:
-            raise RuntimeError(f"Command failed with error: {result.stderr}")
-        return result.stdout
+        if isinstance(command, str):
+            command = shlex.split(command)
+        try:
+            # Run the command with shell=False
+            result = subprocess.run(command, shell=False, capture_output=True, text=True, check=True)
+            return result.stdout  # Return the standard output
+        except subprocess.CalledProcessError as e:
+            # Raise an error if the command fails
+            raise RuntimeError("Command failed with error: {}".format(e.stderr))
 
     # Parse the shell output into a dictionary
     def parse_shell_output(self, output):
@@ -109,7 +111,6 @@ class SfpMaxTempUpdater():
                     print("shell command has failed too many times. Exit now.")
                     exit(1)
                 continue
-
             max_temp = 0
             for s in self.sfp:
                 presence = presence_dict.get(self.logical_port_list[s.port_index-1], 'Not present')
@@ -123,8 +124,26 @@ class SfpMaxTempUpdater():
                     max_temp = temp
 
             # update BMC sensor reading
-            exit_code = os.system("/usr/bin/ipmitool raw 0x30 0x89 0x09 0x1 0x0 {} > /dev/null {}"
-                                  .format(hex(int(max_temp)), '2>&1' if error_count >= 3 else ''))
+            max_temp_hex = hex(int(max_temp))
+            command = [
+                "/usr/bin/ipmitool", "raw", "0x30", "0x89", "0x09", "0x1", "0x0", max_temp_hex
+            ]
+
+            try:
+                with open('/dev/null', 'w') as devnull:
+                    if error_count >= 3:
+                        # Redirect both stdout and stderr to /dev/null
+                        result = subprocess.run(command, check=True, stdout=devnull, stderr=subprocess.STDOUT)
+                    else:
+                        # Redirect only stdout to /dev/null, keep stderr visible
+                        result = subprocess.run(command, check=True, stdout=devnull, stderr=subprocess.PIPE)
+                    
+                    exit_code = result.returncode
+            except subprocess.CalledProcessError as e:
+                # Handle command execution failure
+                print("Command failed with error: {}".format(e.stderr.decode() if e.stderr else 'Unknown error'))
+                exit_code = e.returncode
+
             # if ipmitool failed too many times, then pause error logs until no fail
             if exit_code != 0:
                 error_count = error_count + 1
