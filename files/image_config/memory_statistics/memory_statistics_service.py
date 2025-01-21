@@ -7,7 +7,6 @@ import gzip
 import logging
 import math
 import os
-import pickle
 import re
 import signal
 import socket
@@ -578,15 +577,6 @@ class MemoryReportGenerator:
 
 
 class MemoryStatisticsCollector:
-    """
-    This class handles system memory statistics collection, management, and retention. It initializes with a specified
-    sampling interval (in minutes) and retention period (in days) to determine how frequently data is collected and how long 
-    it is retained. Methods in this class include `fetch_memory_statistics()` to gather memory data using `psutil`, 
-    `fetch_memory_entries()` to load saved memory entries from a file, and `update_memory_statistics()` to add new statistics 
-    to the cumulative dataset. Additionally, `enforce_retention_policy()` removes old entries based on the retention period, 
-    and `dump_memory_usage()` logs collected data to files or returns it directly if logging is not needed.
-    """
-
     def __init__(self, sampling_interval: int, retention_period: int):
         """
         Initializes MemoryStatisticsCollector with data collection interval and retention period.
@@ -595,8 +585,8 @@ class MemoryStatisticsCollector:
         :param retention_period: Data retention period in days (1 to 30).
         """
         self.sampling_interval = sampling_interval
-        self.retention_period = retention_period 
-    
+        self.retention_period = retention_period
+
     def fetch_memory_statistics(self):
         """
         Collect memory statistics using psutil.
@@ -612,15 +602,14 @@ class MemoryStatisticsCollector:
             'available_memory': {"prss": memory_data.available, "count": 1},
             'cached_memory': {"prss": memory_data.cached, "count": 1},
             'buffers_memory': {"prss": memory_data.buffers, "count": 1},
-            'shared_memory': {"prss": memory_data.shared, "count": 1}        
-   
+            'shared_memory': {"prss": memory_data.shared, "count": 1}
         }
         del memory_data
         return memory_stats
 
     def fetch_memory_entries(self, filepath):
         """
-        Fetch memory entries from a compressed file.
+        Fetch memory entries from a compressed JSON file.
         
         Args:
             filepath (str): The path to the compressed file containing memory entries.
@@ -629,21 +618,17 @@ class MemoryStatisticsCollector:
             dict: A dictionary containing loaded memory entries or default structure.
         """
         tentry = {SYSTEM_MEMORY_KEY: {'system': {}, "count": 0}, "count": 0}
-        if not os.path.exists(filepath):
-            return tentry
-
-        if os.path.getsize(filepath) <= 0:
+        if not os.path.exists(filepath) or os.path.getsize(filepath) <= 0:
             return tentry
 
         try:
-            with gzip.open(filepath, 'rb') as bfile:
-                loaded_entry = pickle.load(bfile)
+            with gzip.open(filepath, 'rt', encoding='utf-8') as jfile:
+                loaded_entry = json.load(jfile)
+            return loaded_entry
         except Exception as e:
             logger.log_error(f"Failed to load memory entries from {filepath}: {e}")
-            return tentry 
+            return tentry
 
-        return loaded_entry
- 
     def update_memory_statistics(self, total_dict, mem_dict, time_list, item, category):
         """
         Update memory statistics for the specified item and category.
@@ -706,7 +691,6 @@ class MemoryStatisticsCollector:
         that are older than the configured retention period. 
         total_dict (dict): A dictionary containing memory statistics.
         """
-        
         if not total_dict or SYSTEM_MEMORY_KEY not in total_dict:
             total_dict[SYSTEM_MEMORY_KEY] = {
                 'count': 0,
@@ -736,11 +720,11 @@ class MemoryStatisticsCollector:
         total_dict[SYSTEM_MEMORY_KEY]['count'] = len([
             k for k in total_dict[SYSTEM_MEMORY_KEY].keys() 
             if k not in ['count', 'timestamp']
-        ])   
+        ])
 
     def collect_and_store_memory_usage(self, collect_only):
         """
-        Dump memory usage statistics into log files
+        Dump memory usage statistics into log files using JSON format
         
         Args:
             collect_only (bool): If True, return memory data without dumping
@@ -772,15 +756,26 @@ class MemoryStatisticsCollector:
             return mem_dict
 
         try:
-            with gzip.open(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'], "wb") as bfile:
-                pickle.dump(total_dict, bfile)
+            with gzip.open(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'], 'wt', encoding='utf-8') as jfile:
+                json.dump(total_dict, jfile)
         except Exception as e:
             logger.log_error(f"Failed to dump total memory statistics: {e}")
             return
 
         try:
-            with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], "ab") as bfile:
-                pickle.dump(mem_dict, bfile)
+            existing_data = []
+            try:
+                with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], 'rt', encoding='utf-8') as jfile:
+                    existing_data = json.load(jfile)
+                    if not isinstance(existing_data, list):
+                        existing_data = [existing_data]
+            except (FileNotFoundError, json.JSONDecodeError):
+                pass
+
+            existing_data.append(mem_dict)
+            
+            with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], 'wt', encoding='utf-8') as jfile:
+                json.dump(existing_data, jfile)
         except Exception as e:
             logger.log_error(f"Failed to dump memory statistics log: {e}")
 
@@ -1118,6 +1113,7 @@ class MemoryStatisticsProcessor:
                     first_interval_unit, first_interval_rate, second_interval_unit):
         """
         Processes a single memory statistics file to extract and aggregate data.
+        Now uses JSON instead of pickle for secure deserialization.
 
         Parameters:
         - file_name (str): The filename containing memory statistics data.
@@ -1131,15 +1127,35 @@ class MemoryStatisticsProcessor:
         - first_interval_rate (int): The rate for the first interval.
         - second_interval_unit (str): The second time interval unit.
         """
-        if os.path.exists(file_name) and os.path.getsize(file_name) > 0:
-            with gzip.open(file_name, "rb") as bfile:
+        if not os.path.exists(file_name) or os.path.getsize(file_name) <= 0:
+            return
+
+        try:
+            with gzip.open(file_name, 'rt', encoding='utf-8') as jfile:
                 try:
-                    while True:
-                        memory_entry = pickle.load(bfile)
-                        self.process_memory_entry(memory_entry, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
-                                                 first_interval_unit, first_interval_rate, second_interval_unit)
-                except (EOFError, pickle.UnpicklingError):
-                    pass
+                    # Load the entire JSON content
+                    content = json.load(jfile)
+                    
+                    # Handle both single entries and lists of entries
+                    entries = content if isinstance(content, list) else [content]
+                    
+                    for memory_entry in entries:
+                        self.process_memory_entry(
+                            memory_entry, 
+                            start_time_obj, 
+                            end_time_obj, 
+                            step, 
+                            num_columns, 
+                            time_entry_summary, 
+                            request_data,
+                            first_interval_unit, 
+                            first_interval_rate, 
+                            second_interval_unit
+                        )
+                except json.JSONDecodeError as e:
+                    logger.log_error(f"Error decoding JSON from {file_name}: {e}")
+        except Exception as e:
+            logger.log_error(f"Error processing file {file_name}: {e}")    
 
     def process_memory_entry(self, memory_entry, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
                              first_interval_unit, first_interval_rate, second_interval_unit):
@@ -1917,6 +1933,7 @@ class MemoryStatisticsService:
     def memory_statistics_command_request_handler(self, request):
         """
         Thread-safe handler for memory statistics requests.
+        Now uses JSON-based memory statistics collection.
         """
         try:
             logger.log_info(f"Received memory statistics request: {request}")
@@ -1933,6 +1950,7 @@ class MemoryStatisticsService:
                 current_memory = memory_collector.collect_and_store_memory_usage(collect_only=True)
                 request['current_memory'] = current_memory
                 logger.log_info(f"Current memory usage collected: {current_memory}")
+                
                 time_processor = TimeProcessor(
                     sampling_interval=sampling_interval // 60,
                     retention_period=retention_period
@@ -1949,6 +1967,9 @@ class MemoryStatisticsService:
 
             return {"status": True, "data": report}
 
+        except json.JSONDecodeError as je:
+            logger.log_error(f"JSON decoding error in memory statistics request: {je}")
+            return {"status": False, "error": f"Invalid JSON format: {str(je)}"}
         except Exception as error:
             logger.log_error(f"Error handling memory statistics request: {error}")
             return {"status": False, "error": str(error)}
@@ -1971,6 +1992,10 @@ class MemoryStatisticsService:
         logger.log_info("Socket listener thread started.")
 
     def memory_collection(self):
+        """
+        Memory collection thread function.
+        Now uses JSON-based storage format.
+        """
         logger.log_info("Memory statistics collection thread started.")
         while not self.stop_event.is_set():
             start_time = datetime.now()
@@ -1981,8 +2006,11 @@ class MemoryStatisticsService:
                         retention_period=self.retention_period
                     )
                     memory_collector.collect_and_store_memory_usage(collect_only=False)
+            except json.JSONDecodeError as je:
+                logger.log_error(f"JSON encoding/decoding error during collection: {je}")
             except Exception as error:
                 logger.log_error(f"Error during memory statistics collection: {error}")
+            
             elapsed_time = (datetime.now() - start_time).total_seconds()
             sleep_time = max(0, self.sampling_interval - elapsed_time)
             if self.stop_event.wait(timeout=sleep_time):
@@ -2093,8 +2121,8 @@ if __name__ == '__main__':
         'sampling_interval': 5, 
         'retention_period': 15,
         'LOG_DIRECTORY': "/var/log/memory_statistics",
-        'MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/memory-stats.log.gz",
-        'TOTAL_MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/total-memory-stats.log.gz",
+        'MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/memory-stats.json.gz",
+        'TOTAL_MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/total-memory-stats.json.gz",
         'DBUS_SOCKET_ADDRESS': '/var/run/dbus/memstats.socket'
     }
 
