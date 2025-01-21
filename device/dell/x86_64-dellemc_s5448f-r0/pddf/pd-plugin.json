@@ -61,7 +61,7 @@
             }
         },
 
-        "pwm_to_duty_cycle": "lambda pwm: ((pwm/14520) * 100)"
+        "pwm_to_duty_cycle": "lambda pwm: ((pwm/34000) * 100)"
 
     }
 
