@@ -196,13 +196,7 @@ class Chassis(ChassisBase):
         self._component_list = [Component(i) for i in range(MAX_S5448F_COMPONENT)]
 
         watchdog_spec = {}
-        watchdog_spec['timers'] = [15, 20, 30, 40, 50, 60, 65, 70, 80, 100, 120, 140, 160, 180, 210, 240]
-        watchdog_spec['check_cpld_version'] = False
-        watchdog_spec['mode'] = 'MODE_I2C'
-        watchdog_spec['i2c_bus'] = 601
-        watchdog_spec['i2c_addr'] = 0x31
-        watchdog_spec['wd_reg'] = 0x07
-        self._watchdog = Watchdog(watchdog_spec)
+        self._watchdog = Watchdog()
 
 # check for this event change for sfp / do we need to handle timeout/sleep
 
@@ -340,7 +334,7 @@ class Chassis(ChassisBase):
         Returns:
             string: Serial number of chassis
         """
-        return self._eeprom.serial_str()
+        return self._eeprom.serial_number_str()
 
     def get_status(self):
         """
