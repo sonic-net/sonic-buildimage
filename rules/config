@@ -202,7 +202,7 @@ INCLUDE_KUBERNETES ?= y
 INCLUDE_DUMMYK8S ?= n
 
 # INCLUDE_AUDITD - build docker-auditd for security auditing support
-INCLUDE_AUDITD ?= y
+INCLUDE_AUDITD ?= n
 
 KUBE_DOCKER_PROXY = http://172.16.1.1:3128/
 
