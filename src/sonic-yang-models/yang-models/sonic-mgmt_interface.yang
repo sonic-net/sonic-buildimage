@@ -2,7 +2,7 @@ module sonic-mgmt_interface {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-mgmt_interface";
+    namespace "http://github.com/sonic-net/sonic-mgmt_interface";
     prefix mgmtintf;
 
     import sonic-mgmt_port {
@@ -46,7 +46,7 @@ module sonic-mgmt_interface {
                 }
 
                 leaf gwaddr {
-                    must "(contains(current(), ':') and contains(../ip_prefix, ':')) or (contains(current(), '.') and contains(../ip_prefix, '.'))"; 
+                    must "(contains(current(), ':') and contains(../ip_prefix, ':')) or (contains(current(), '.') and contains(../ip_prefix, '.'))";
                     type inet:ip-address;
                 }
 
@@ -57,11 +57,11 @@ module sonic-mgmt_interface {
                     }
 
                     description
-                        "This configuration allows addtional routes to be added to default VRF table 
+                        "This configuration allows addtional routes to be added to default VRF table
                          or mgmt VRF table, based on if Management VRF is configured.
                          Details can be found in interfaces.j2.";
                 }
- 
+
             } /* end of list MGMT_INTERFACE_IPADDR_LIST */
 
         } /* end of container MGMT_INTERFACE */

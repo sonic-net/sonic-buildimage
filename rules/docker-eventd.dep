@@ -1,0 +1,11 @@
+
+DPATH       := $($(DOCKER_EVENTD)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/docker-eventd.mk rules/docker-eventd.dep   
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_EVENTD)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(DOCKER_EVENTD)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_EVENTD)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_EVENTD),$(DOCKER_EVENTD_DBG)))

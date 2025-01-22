@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +28,8 @@ import array
 import time
 
 from sonic_platform_base.watchdog_base import WatchdogBase
+from . import utils
+from .device_data import DeviceDataManager
 
 """ ioctl constants """
 IO_WRITE = 0x40000000
@@ -80,15 +83,17 @@ class WatchdogImplBase(WatchdogBase):
         super(WatchdogImplBase, self).__init__()
 
         self.watchdog_path = wd_device_path
-        self.watchdog = os.open(self.watchdog_path, os.O_WRONLY)
-
-        # Opening a watchdog descriptor starts
-        # watchdog timer;
-        # by default it should be stopped
-        self._disablecard()
-        self.armed = False
-
+        self._watchdog = None
         self.timeout = self._gettimeout()
+
+    @property
+    def watchdog(self):
+        if self._watchdog is None:
+            self._watchdog = self.open_handle()
+        return self._watchdog
+
+    def open_handle(self):
+        return os.open(self.watchdog_path, os.O_WRONLY)
 
     def _enablecard(self):
         """
@@ -131,10 +136,7 @@ class WatchdogImplBase(WatchdogBase):
         @return watchdog timeout
         """
 
-        req = array.array('I', [0])
-        fcntl.ioctl(self.watchdog, WDIOC_GETTIMEOUT, req, True)
-
-        return int(req[0])
+        return utils.read_int_from_file('/run/hw-management/watchdog/main/timeout')
 
     def _gettimeleft(self):
         """
@@ -142,10 +144,7 @@ class WatchdogImplBase(WatchdogBase):
         @return time left in seconds
         """
 
-        req = array.array('I', [0])
-        fcntl.ioctl(self.watchdog, WDIOC_GETTIMELEFT, req, True)
-
-        return int(req[0])
+        return utils.read_int_from_file('/run/hw-management/watchdog/main/timeleft')
 
     def arm(self, seconds):
         """
@@ -153,17 +152,16 @@ class WatchdogImplBase(WatchdogBase):
         """
 
         ret = WD_COMMON_ERROR
-        if seconds < 0:
+        if seconds < 0 or seconds > DeviceDataManager.get_watchdog_max_period():
             return ret
 
         try:
             if self.timeout != seconds:
                 self.timeout = self._settimeout(seconds)
-            if self.armed:
+            if self.is_armed():
                 self._keepalive()
             else:
                 self._enablecard()
-                self.armed = True
             ret = self.timeout
         except IOError:
             pass
@@ -176,10 +174,9 @@ class WatchdogImplBase(WatchdogBase):
         """
 
         disarmed = False
-        if self.armed:
+        if self.is_armed():
             try:
                 self._disablecard()
-                self.armed = False
                 disarmed = True
             except IOError:
                 pass
@@ -191,7 +188,7 @@ class WatchdogImplBase(WatchdogBase):
         Implements is_armed WatchdogBase API
         """
 
-        return self.armed
+        return utils.read_str_from_file('/run/hw-management/watchdog/main/state') == 'active'
 
     def get_remaining_time(self):
         """
@@ -200,7 +197,7 @@ class WatchdogImplBase(WatchdogBase):
 
         timeleft = WD_COMMON_ERROR
 
-        if self.armed:
+        if self.is_armed():
             try:
                 timeleft = self._gettimeleft()
             except IOError:
@@ -213,13 +210,15 @@ class WatchdogImplBase(WatchdogBase):
         Close watchdog
         """
 
-        os.close(self.watchdog)
+        if self._watchdog is not None:
+            os.close(self._watchdog)
 
 
 class WatchdogType1(WatchdogImplBase):
     """
     Watchdog type 1
     """
+    TIMESTAMP_FILE = '/tmp/nvidia/watchdog_timestamp'
 
     def arm(self, seconds):
         """
@@ -230,7 +229,8 @@ class WatchdogType1(WatchdogImplBase):
         ret = WatchdogImplBase.arm(self, seconds)
         # Save the watchdog arm timestamp
         # requiered for get_remaining_time()
-        self.arm_timestamp = time.time()
+        os.makedirs('/tmp/nvidia', exist_ok=True)
+        utils.write_file(self.TIMESTAMP_FILE, str(time.monotonic()))
 
         return ret
 
@@ -243,8 +243,9 @@ class WatchdogType1(WatchdogImplBase):
 
         timeleft = WD_COMMON_ERROR
 
-        if self.armed:
-            timeleft = int(self.timeout - (time.time() - self.arm_timestamp))
+        if self.is_armed():
+            arm_timestamp = utils.read_float_from_file(self.TIMESTAMP_FILE)
+            timeleft = int(self.timeout - (time.monotonic() - arm_timestamp))
 
         return timeleft
 
@@ -284,12 +285,14 @@ def get_watchdog():
     """
     Return WatchdogType1 or WatchdogType2 based on system
     """
-
+    
+    utils.wait_until(lambda: os.path.exists('/run/hw-management/watchdog/main/state'), timeout=10, interval=1)
     watchdog_main_device_name = None
 
     for device in os.listdir("/dev/"):
         if device.startswith("watchdog") and is_mlnx_wd_main(device):
             watchdog_main_device_name = device
+            break
 
     if watchdog_main_device_name is None:
         return None

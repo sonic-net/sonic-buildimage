@@ -327,7 +327,7 @@ static int sdhci_ctc5236_probe(struct platform_device *pdev)
 
 	version = (val == 0x1) ? CTC_REV_TM_1_1 : CTC_REV_TM_1_0;
 
-	mmc_of_parse_voltage(pdev->dev.of_node, &host->ocr_mask);
+	mmc_of_parse_voltage(host->mmc, &host->ocr_mask);
 
 	ret = mmc_of_parse(host->mmc);
 	if (ret)

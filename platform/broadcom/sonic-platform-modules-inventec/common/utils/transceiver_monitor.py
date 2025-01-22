@@ -28,6 +28,7 @@ try:
     import syslog
     from sfputil import SfpUtil
     from sonic_sfp.bcmshell import bcmshell
+    from sonic_py_common.general import getstatusoutput_noshell
     
 except ImportError as e:
     raise ImportError("%s - required module not found" % str(e))
@@ -127,7 +128,7 @@ class BCMUtil(bcmshell):
     
     def get_platform(self):
         if self.platform is None:
-            self.platform = os.popen("uname -n").read().strip()
+            _, self.platform = getstatusoutput_noshell(["uname", "-n"])
         return self.platform
     
     def get_port_to_bcm_mapping(self):  

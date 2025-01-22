@@ -1,0 +1,77 @@
+# This series applies on GIT commit 18c5597832fcf6988111b05a9a1607ae148723c
+# Note: Markers should start with "###->". 
+#       Header should end with .*-start eg: any_description-start
+#       Footer must end with .*-end eg: any_description-end
+#       Markers should not be nested
+
+# Backport from 5.15
+0001-x86-platform-Increase-maximum-GPIO-number-for-X86_64.patch
+
+# Backport from 5.16
+0001-net-arp-introduce-arp_evict_nocarrier-sysctl-paramet.patch
+
+# Backport from 5.19
+0001-net-ipv6-Introduce-accept_unsolicited_na-knob-to-imp.patch
+0002-net-ipv6-Expand-and-rename-accept_unsolicited_na-to-.patch
+
+#
+# This series applies on GIT commit 1451b36b2b0d62178e42f648d8a18131af18f7d8
+# Tkernel-sched-core-fix-cgroup-fork-race.patch
+# Tconfig-mlnx-sn2700.patch
+# Tdriver-at24-fix-odd-length-two-byte-access.patch
+# Tdriver-hwmon-lm75b-update.patch
+# Tdriver-hwmon-pmbus-add-dps460-support.patch
+# Tdriver-hwmon-pmbus-ucd9200-mlnx.patch
+# Trtnetlink-catch-EOPNOTSUPP-errors.patch
+# Tbridge-per-port-multicast-broadcast-flood-flags.patch
+#
+
+# Mellanox patches for 5.10
+###-> mellanox_sdk-start
+###-> mellanox_sdk-end
+
+###-> mellanox_hw_mgmt-start
+0001-i2c-mlxcpld-Update-module-license.patch
+0002-i2c-mlxcpld-Decrease-polling-time-for-performance-im.patch
+0003-i2c-mlxcpld-Add-support-for-I2C-bus-frequency-settin.patch
+0004-i2c-mux-mlxcpld-Update-module-license.patch
+0005-i2c-mux-mlxcpld-Move-header-file-out-of-x86-realm.patch
+0006-i2c-mux-mlxcpld-Convert-driver-to-platform-driver.patch
+0007-i2c-mux-mlxcpld-Prepare-mux-selection-infrastructure.patch
+0008-i2c-mux-mlxcpld-Get-rid-of-adapter-numbers-enforceme.patch
+0009-i2c-mux-mlxcpld-Extend-driver-to-support-word-addres.patch
+0010-i2c-mux-mlxcpld-Extend-supported-mux-number.patch
+0011-i2c-mux-mlxcpld-Add-callback-to-notify-mux-creation-.patch
+0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch
+0100-mlxsw-core_thermal-Rename-labels-according-to-naming.patch
+0101-mlxsw-core_thermal-Remove-obsolete-API-for-query-res.patch
+0102-mlxsw-reg-Add-mgpir_-prefix-to-MGPIR-fields-comments.patch
+0103-mlxsw-core-Remove-unnecessary-asserts.patch
+0104-mlxsw-reg-Extend-MTMP-register-with-new-slot-number-.patch
+0105-mlxsw-reg-Extend-MTBR-register-with-new-slot-number-.patch
+0106-mlxsw-reg-Extend-MCIA-register-with-new-slot-number-.patch
+0107-mlxsw-reg-Extend-MCION-register-with-new-slot-number.patch
+0188-i2c-mux-Add-register-map-based-mux-driver.patch
+###-> mellanox_hw_mgmt-end
+
+# Cisco patches for 5.10 kernel
+cisco-mtd-part.patch
+cisco-mdio-mux-support-acpi.patch
+cisco-x86-gpio-config.patch
+
+# sFlow + dropmon support
+0001-psample-Encapsulate-packet-metadata-in-a-struct.patch
+0002-psample-Add-additional-metadata-attributes.patch
+0003-psample-define-the-macro-PSAMPLE_MD_EXTENDED_ATTR.patch
+
+#
+# Marvell platform patches for 4.19
+armhf_secondary_boot_online.patch
+#
+#
+############################################################
+#
+# Internal patches will be added below (placeholder)
+# Do not add any public patch below this marker
+#
+############################################################

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +25,7 @@ modules_path = os.path.dirname(test_path)
 sys.path.insert(0, modules_path)
 
 from sonic_platform import utils
-from sonic_platform.fan import Fan, PsuFan
+from sonic_platform.fan import Fan, PsuFan, FAN_DIR_VALUE_INTAKE, FAN_DIR_VALUE_EXHAUST
 from sonic_platform.fan_drawer import RealDrawer, VirtualDrawer
 from sonic_platform.psu import Psu
 
@@ -107,11 +107,11 @@ class TestFan:
         fan.set_speed(60)
         mock_write_file.assert_called_with(fan.fan_speed_set_path, 153, raise_exception=True)
 
-    @patch('sonic_platform.thermal.Thermal.get_cooling_level')
+    @patch('sonic_platform.utils.read_int_from_file')
     @patch('sonic_platform.psu.Psu.get_presence')
     @patch('sonic_platform.psu.Psu.get_powergood_status')
     @patch('os.path.exists')
-    def test_psu_fan_basic(self, mock_path_exists, mock_powergood, mock_presence, mock_cooling_level):
+    def test_psu_fan_basic(self, mock_path_exists, mock_powergood, mock_presence, mock_read_int):
         mock_path_exists.return_value = False
         psu = Psu(0)
         fan = PsuFan(0, 1, psu)
@@ -124,8 +124,14 @@ class TestFan:
         assert fan.get_presence() is False
         mock_path_exists.return_value = True
         assert fan.get_presence() is True
-        mock_cooling_level.return_value = 7
-        assert fan.get_target_speed() == 70
+        mock_read_int.return_value = int(255 / 10 * 7)
+        assert fan.get_target_speed() == 60
+        mock_read_int.return_value = FAN_DIR_VALUE_INTAKE
+        assert fan.get_direction() == Fan.FAN_DIRECTION_INTAKE
+        mock_read_int.return_value = FAN_DIR_VALUE_EXHAUST
+        assert fan.get_direction() == Fan.FAN_DIRECTION_EXHAUST
+        mock_read_int.return_value = -1 # invalid value
+        assert fan.get_direction() == Fan.FAN_DIRECTION_NOT_APPLICABLE
 
     def test_psu_fan_set_speed(self):
         psu = Psu(0)
@@ -143,7 +149,7 @@ class TestFan:
         assert subprocess.check_call.call_count == 0
         fan.get_presence = MagicMock(return_value=True)
         assert fan.set_speed(60)
-        subprocess.check_call.assert_called_with("i2cset -f -y {0} {1} {2} {3} wp".format('bus', 'addr', 'command', hex(60)), shell=True, universal_newlines=True)
+        subprocess.check_call.assert_called_with(["i2cset", "-f", "-y", "bus", "addr", "command", hex(60), "wp"], universal_newlines=True)
         subprocess.check_call = MagicMock(side_effect=subprocess.CalledProcessError('', ''))
         assert not fan.set_speed(60)
         subprocess.check_call = MagicMock()

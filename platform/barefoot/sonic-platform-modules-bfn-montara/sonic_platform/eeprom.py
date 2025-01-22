@@ -1,12 +1,10 @@
 try:
     import os
     import sys
-    import errno
     import datetime
     import logging
     import logging.config
-    import yaml
-    import re
+    import thrift
 
     sys.path.append(os.path.dirname(__file__))
 
@@ -18,10 +16,13 @@ try:
     from sonic_platform_base.sonic_eeprom import eeprom_base
     from sonic_platform_base.sonic_eeprom import eeprom_tlvinfo
 
-    from platform_thrift_client import thrift_try
+    from sonic_py_common import device_info
+
+    from sonic_platform.platform_thrift_client import thrift_try
+    from sonic_platform.platform_utils import file_create
+
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
-
 
 _platform_eeprom_map = {
     "prod_name"         : ("Product Name",                "0x21", 12),
@@ -45,37 +46,57 @@ _EEPROM_STATUS = "/var/run/platform/eeprom/status"
 
 class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
     def __init__(self):
-        with open(os.path.dirname(__file__) + "/logging.conf", 'r') as f:
-            config_dict = yaml.load(f, yaml.SafeLoader)
-            logging.config.dictConfig(config_dict)
+        file_create(_EEPROM_SYMLINK, '646')
+        file_create(_EEPROM_STATUS, '646')
+        super(Eeprom, self).__init__(_EEPROM_SYMLINK, 0, _EEPROM_STATUS, True)
 
-        if not os.path.exists(os.path.dirname(_EEPROM_SYMLINK)):
-            try:
-                os.makedirs(os.path.dirname(_EEPROM_SYMLINK))
-            except OSError as e:
-                if e.errno != errno.EEXIST:
-                    raise
-
-        open(_EEPROM_SYMLINK, 'a').close()
-        with open(_EEPROM_STATUS, 'w') as f:
-            f.write("initializing..")
-
-        self.eeprom_path = _EEPROM_SYMLINK
-        super(Eeprom, self).__init__(self.eeprom_path, 0, _EEPROM_STATUS, True)
-
-        def sys_eeprom_get(client):
-            return client.pltfm_mgr.pltfm_mgr_sys_eeprom_get()
+        self._eeprom_bin = bytearray()
+        self.report_status("initializing..")
         try:
-            platform_eeprom = thrift_try(sys_eeprom_get)
-        except Exception:
-            raise RuntimeError("eeprom.py: Initialization failed")
+            try:
+                if device_info.get_platform() in ["x86_64-accton_as9516_32d-r0",
+                                                  "x86_64-accton_as9516bf_32d-r0"]:
+                    def tlv_eeprom_get(client):
+                        return client.pltfm_mgr.pltfm_mgr_tlv_eeprom_get()
+                    try:
+                        self._eeprom_bin = bytearray.fromhex(
+                            thrift_try(tlv_eeprom_get, 1).raw_content_hex)
+                    except thrift.Thrift.TApplicationException as e:
+                        raise RuntimeError("api is not supported")
+                    except Exception as e:
+                        self._eeprom_bin = bytearray.fromhex(
+                            thrift_try(tlv_eeprom_get).raw_content_hex)
+                else:
+                    raise RuntimeError("platform is not supported")
 
-        self.__eeprom_init(platform_eeprom)
+            except RuntimeError as e:
+                logging.warning("Tlv eeprom fetching failed: %s, using OpenBMC" % (str(e)))
 
-    def __eeprom_init(self, platform_eeprom):
-        with open(_EEPROM_STATUS, 'w') as f:
-            f.write("ok")
+                def sys_eeprom_get(client):
+                    return client.pltfm_mgr.pltfm_mgr_sys_eeprom_get()
 
+                eeprom_params = self.platfrom_eeprom_to_params(thrift_try(sys_eeprom_get))
+                stdout_stream = sys.stdout
+                sys.stdout = open(os.devnull, 'w')
+                self._eeprom_bin = self.set_eeprom(self._eeprom_bin, [eeprom_params])
+                sys.stdout.close()
+                sys.stdout = stdout_stream
+            try:
+                self.write_eeprom(self._eeprom_bin)
+                self.report_status("ok")
+            except IOError as e:
+                logging.error("Failed to write eeprom: %s" % (str(e)))
+
+        except Exception as e:
+            logging.error("eeprom.py: Initialization failed: %s" % (str(e)))
+            raise RuntimeError("eeprom.py: Initialization failed: %s" % (str(e)))
+
+        self._system_eeprom_info = dict()
+        visitor = EepromContentVisitor(self._system_eeprom_info)
+        self.visit_eeprom(self._eeprom_bin, visitor)
+
+    @staticmethod
+    def platfrom_eeprom_to_params(platform_eeprom):
         eeprom_params = ""
         for attr, val in platform_eeprom.__dict__.items():
             if val is None:
@@ -99,56 +120,41 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
             if len(eeprom_params) > 0:
                 eeprom_params += ","
             eeprom_params += "{0:s}={1:s}".format(elem[1], value)
+        return eeprom_params
 
-        orig_stdout = sys.stdout
-        sys.stdout = StringIO()
+    def get_data(self):
+        return self._system_eeprom_info
+
+    def get_raw_data(self):
+        return self._eeprom_bin
+
+    def report_status(self, status):
+        status_file = None
         try:
-            eeprom_data = eeprom_tlvinfo.TlvInfoDecoder.set_eeprom(self, "", [eeprom_params])
+            status_file = open(_EEPROM_STATUS, "w")
+            status_file.write(status)
+        except IOError as e:
+            logging.error("Failed to report state: %s" % (str(e)))
         finally:
-            decode_output = sys.stdout.getvalue()
-            sys.stdout = orig_stdout
+            if status_file is not None:
+                status_file.close()
 
-        eeprom_base.EepromDecoder.write_eeprom(self, eeprom_data)
-        self.__eeprom_tlv_dict = self.__parse_output(decode_output)
+class EepromContentVisitor(eeprom_tlvinfo.EepromDefaultVisitor):
+    def __init__(self, content_dict):
+        self.content_dict = content_dict
 
-    def __parse_output(self, decode_output):
-        EEPROM_DECODE_HEADLINES = 6
-        lines = decode_output.replace('\0', '').split('\n')
-        lines = lines[EEPROM_DECODE_HEADLINES:]
-        res = dict()
+    def visit_tlv(self, name, code, length, value):
+        if code != Eeprom._TLV_CODE_VENDOR_EXT:
+            self.content_dict["0x{:X}".format(code)] = value.rstrip('\0')
+        else:
+            if value:
+                value = value.rstrip('\0')
+                if value:
+                    code = "0x{:X}".format(code)
+                    if code not in self.content_dict:
+                        self.content_dict[code] = [value]
+                    else:
+                        self.content_dict[code].append(value)
 
-        for line in lines:
-            try:
-                # match whitespace-separated tag hex, length and value (value is mathced with its whitespaces)
-                match = re.search('(0x[0-9a-fA-F]{2})([\s]+[\S]+[\s]+)([\S]+[\s]*[\S]*)', line)
-                if match is not None:
-                    code = match.group(1)
-                    value = match.group(3).rstrip('\0')
-                    res[code] = value
-            except Exception:
-                pass
-        return res
-
-    def __tlv_get(self, code):
-        return self.__eeprom_tlv_dict.get("0x{:X}".format(code), 'N/A')
-
-    def system_eeprom_info(self):
-        return self.__eeprom_tlv_dict
-
-    def serial_number_str(self):
-        return self.__tlv_get(self._TLV_CODE_SERIAL_NUMBER)
-
-    def serial_str(self):
-        return self.serial_number_str()
-
-    def base_mac_addr(self):
-        return self.__tlv_get(self._TLV_CODE_MAC_BASE)
-
-    def part_number_str(self):
-        return self.__tlv_get(self._TLV_CODE_PART_NUMBER)
-
-    def modelstr(self):
-        return self.__tlv_get(self._TLV_CODE_PRODUCT_NAME)
-
-    def revision_str(self):
-        return self.__tlv_get(self._TLV_CODE_LABEL_REVISION)
+    def set_error(self, error):
+        logging.error("EepromContentVisitor error: %s" % (str(error)))

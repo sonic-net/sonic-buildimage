@@ -1,0 +1,53 @@
+parameters:
+- name: archs
+  type: object
+  default:
+    - amd64
+    - armhf
+    - arm64
+
+jobs:
+- ${{ each arch in parameters.archs }}:
+  - job: Build_${{ arch }}
+    timeoutInMinutes: 120
+    ${{ if eq(arch,'amd64') }}:
+      pool: sonicbld-1es
+    ${{ else }}:
+      pool: sonicbld-${{ arch }}
+    variables:
+      - template: template-variables.yml
+    steps:
+    - checkout: self
+      clean: true
+      submodules: recursive
+    - script: |
+        set -ex
+        branch=$(Build.SourceBranchName)
+        # replace all: '-' -> '_'
+        branch=${branch//-/_}
+        # replace all: 'a' -> 'A', DIST_MASTER is set in variable.
+        BRANCH=DIST_${branch^^}
+        # variable name is dynamic
+        bldenvs=${!BRANCH}
+        [ "$bldenvs" == "" ] && bldenvs="$(COMMON_LIB_BUILD_ENVS)"
+        for bldenv in $bldenvs
+        do
+          BLDENV=$bldenv make -f Makefile.work configure PLATFORM_ARCH=${{ arch }} PLATFORM=vs ENABLE_DOCKER_BASE_PULL=y
+        done
+        set +x
+        echo "##vso[task.setvariable variable=bldenvs;]$bldenvs"
+      displayName: Make configure
+    - script: |
+        set -ex
+        for bldenv in $(bldenvs)
+        do
+          SONIC_BUILD_JOBS=$(nproc) BLDENV=$bldenv make -f Makefile.work lib-packages ENABLE_DOCKER_BASE_PULL=y
+        done
+        mv target $(Build.ArtifactStagingDirectory)
+      displayName: Make common lib packages
+    - ${{ if eq(arch,'amd64') }}:
+      - publish: $(Build.ArtifactStagingDirectory)
+        artifact: common-lib
+    - ${{ else }}:
+      - publish: $(Build.ArtifactStagingDirectory)
+        artifact: common-lib.${{ arch }}

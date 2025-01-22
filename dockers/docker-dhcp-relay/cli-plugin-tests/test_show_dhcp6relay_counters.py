@@ -18,20 +18,23 @@ except KeyError:
     pass
 
 expected_counts = """\
-  Message Type     Vlan1000
---------------  -----------
-       Unknown
-       Solicit
-     Advertise
-       Request
-       Confirm
-         Renew
-        Rebind
-         Reply
-       Release
-       Decline
- Relay-Forward
-   Relay-Reply
+       Message Type     Vlan1000
+-------------------  -----------
+            Unknown
+            Solicit
+          Advertise
+            Request
+            Confirm
+              Renew
+             Rebind
+              Reply
+            Release
+            Decline
+        Reconfigure
+Information-Request
+      Relay-Forward
+        Relay-Reply
+          Malformed
 
 """
 

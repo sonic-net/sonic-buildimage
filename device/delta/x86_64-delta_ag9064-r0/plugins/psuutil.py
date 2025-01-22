@@ -3,7 +3,6 @@
 # provides the PSUs status which are available in the platform
 #
 
-import os.path
 import subprocess
 
 try:
@@ -17,8 +16,8 @@ class PsuUtil(PsuBase):
 
     def __init__(self):
         PsuBase.__init__(self)
-        self.psu_presence = "cat /sys/devices/platform/delta-ag9064-cpld.0/psu{}_scan"
-        self.psu_status = "cat /sys/devices/platform/delta-ag9064-swpld1.0/psu{}_pwr_ok"
+        self.psu_presence = "/sys/devices/platform/delta-ag9064-cpld.0/psu{}_scan"
+        self.psu_status = "/sys/devices/platform/delta-ag9064-swpld1.0/psu{}_pwr_ok"
 
     def get_num_psus(self):
         """
@@ -40,8 +39,9 @@ class PsuUtil(PsuBase):
             return False
 
         status = 0
+        self.psu_status = self.psu_status.format(index)
         try:
-            p = os.popen(self.psu_status.format(index))
+            p = open(self.psu_status, 'r')
             content = p.readline().rstrip()
             reg_value = int(content)
             if reg_value != 0:
@@ -63,8 +63,9 @@ class PsuUtil(PsuBase):
         if index is None:
             return False
         status = 0
+        self.psu_presence = self.psu_presence.format(index)
         try:
-            p = os.popen(self.psu_presence.format(index))
+            p = open(self.psu_presence, 'r')
             content = p.readline().rstrip()
             reg_value = int(content, 16)
             if reg_value != 0:

@@ -1,0 +1,220 @@
+{
+    "POLICER_TABLE": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "everflow_session1_policer",
+                    "meter_type":"packets",
+                    "mode":"tr_tcm",
+                    "color": "aware",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "pir":"15000",
+                    "pbs":"15000",
+                    "yellow_packet_action":"forward",
+                    "green_packet_action":"forward"
+                }]
+            }
+        }
+    },
+
+    "POLICER_MANDATORY_MODE": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "everflow_session1_policer",
+                    "meter_type":"packets",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "red_packet_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "POLICER_MANDATORY_METER_TYPE": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "everflow_session2_policer",
+                    "mode":"sr_tcm",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "red_packet_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "POLICER_UNKNOWN_METER_TYPE": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "everflow_session4_policer",
+                    "mode":"sr_tcm",
+                    "meter_type":"bits",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "red_packet_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "POLICER_UNKNOWN_MODE": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "everflow_session5_policer",
+                    "mode":"srtcm",
+                    "meter_type":"bytes",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "red_packet_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "POLICER_UNKNOWN_ACTION": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "everflow_session6_policer",
+                    "mode":"storm",
+                    "meter_type":"bytes",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "color":"aware",
+                    "red_packet_action":"act"
+                }]
+            }
+        }
+    },
+
+    "POLICER_UNKNOWN_COLOR": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "everflow_session7_policer",
+                    "mode":"sr_tcm",
+                    "meter_type":"bytes",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "red_packet_action":"drop",
+                    "color":"yes"
+                }]
+            }
+        }
+    },
+
+    "POLICER_CBS_WITHOUT_CIR": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "p5",
+                    "meter_type":"bytes",
+                    "mode":"tr_tcm",
+                    "cbs":"5000",
+                    "pir":"4000",
+                    "pbs":"4000",
+                    "red_packet_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "POLICER_CBS_LESS_THAN_CIR": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "policer5",
+                    "meter_type":"bytes",
+                    "mode":"sr_tcm",
+                    "cbs":"5000",
+                    "cir":"6000",
+                    "red_packet_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "POLICER_PIR_LESS_THAN_CIR": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "e3_policer",
+                    "meter_type":"bytes",
+                    "mode":"tr_tcm",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "pir":"4000",
+                    "pbs":"4000",
+                    "red_packet_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "POLICER_PBS_WITH_STORM": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "e1policer",
+                    "meter_type":"bytes",
+                    "mode":"storm",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "pbs":"6000",
+                    "red_packet_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "POLICER_PBS_LESS_THAN_CBS": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "e2policer",
+                    "meter_type":"bytes",
+                    "mode":"tr_tcm",
+                    "cir":"5000",
+                    "cbs":"5000",
+                    "pbs":"2000",
+                    "red_packet_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "POLICER_PIR_WITHOUT_CIR": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "e3policer",
+                    "meter_type":"bytes",
+                    "mode":"tr_tcm",
+                    "pir":"2000",
+                    "red_packet_action":"drop"
+                }]
+            }
+        }
+    },
+
+    "POLICER_WHEN_SRTCM_WITH_PIR": {
+        "sonic-policer:sonic-policer": {
+            "sonic-policer:POLICER": {
+                "POLICER_LIST": [{
+                    "name": "policer1",
+                    "meter_type":"packets",
+                    "mode":"sr_tcm",
+                    "cir":"6000",
+                    "cbs":"6000",
+                    "pir":"6000",
+                    "red_packet_action":"drop"
+                }]
+            }
+        }
+    }
+}

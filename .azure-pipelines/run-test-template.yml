@@ -7,6 +7,12 @@ parameters:
   type: string
 - name: ptf_name
   type: string
+- name: vmtype
+  type: string
+  default: 'ceos'
+- name: section
+  type: string
+  default: ''
 - name: image
   type: string
   default: sonic-vs.img.gz
@@ -16,9 +22,14 @@ parameters:
   - sonic-6asic-vs.img.gz
 
 steps:
+- template: cleanup.yml
 - checkout: self
   clean: true
   displayName: 'checkout sonic-mgmt repo'
+
+- script: |
+    sudo rm -rf ../target
+  displayName: "Cleanup"
 
 - task: DownloadPipelineArtifact@2
   inputs:
@@ -38,14 +49,13 @@ steps:
     git reset --hard origin/master
     sed -i s/use_own_value/${username}/ ansible/veos_vtb
     echo aaa > ansible/password.txt
-    docker exec sonic-mgmt bash -c "pushd /data/sonic-mgmt/ansible;./testbed-cli.sh -d /data/sonic-vm -m $(inventory) -t $(testbed_file) -k ceos refresh-dut ${{ parameters.tbname }} password.txt" && sleep 180
+    docker exec sonic-mgmt bash -c "pushd /data/sonic-mgmt/ansible;./testbed-cli.sh -d /data/sonic-vm -m $(inventory) -t $(testbed_file) -k ${{ parameters.vmtype }} refresh-dut ${{ parameters.tbname }} password.txt" && sleep 180
   displayName: "Setup testbed"
 
 - script: |
     rm -rf $(Build.ArtifactStagingDirectory)/*
-    docker exec sonic-mgmt bash -c "/data/sonic-mgmt/tests/kvmtest.sh -en -T ${{ parameters.tbtype }} ${{ parameters.tbname }} ${{ parameters.dut }}"
+    docker exec sonic-mgmt bash -c "/data/sonic-mgmt/tests/kvmtest.sh -en -T ${{ parameters.tbtype }} ${{ parameters.tbname }} ${{ parameters.dut }} ${{ parameters.section }}"
   displayName: "Run tests"
-
 - script: |
     # save dut state if test fails
     virsh_version=$(virsh --version)
@@ -75,17 +85,17 @@ steps:
   condition: succeededOrFailed()
 
 - publish: $(Build.ArtifactStagingDirectory)/kvmdump
-  artifact: sonic-buildimage.kvmtest.${{ parameters.tbtype}}.memdump@$(System.JobAttempt)
+  artifact: sonic-buildimage.kvmtest.${{ parameters.tbtype}}${{ parameters.section }}.memdump@$(System.JobAttempt)
   displayName: "Archive sonic kvm memdump"
   condition: failed()
 
 - publish: $(Build.ArtifactStagingDirectory)/logs
-  artifact: sonic-buildimage.kvmtest.${{ parameters.tbtype }}.log@$(System.JobAttempt)
+  artifact: sonic-buildimage.kvmtest.${{ parameters.tbtype }}${{ parameters.section }}.log@$(System.JobAttempt)
   displayName: "Archive sonic kvm logs"
   condition: succeededOrFailed()
 
 - task: PublishTestResults@2
   inputs:
     testResultsFiles: '$(Build.ArtifactStagingDirectory)/logs/**/*.xml'
-    testRunTitle: kvmtest.${{ parameters.tbtype }}
+    testRunTitle: kvmtest.${{ parameters.tbtype }}${{ parameters.section }}
   condition: succeededOrFailed()

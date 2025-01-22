@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import os
-import commands
+from sonic_py_common.general import getstatusoutput_noshell
 
 def fantype_detect():
 
@@ -15,9 +15,8 @@ def fantype_detect():
     for filename in os.listdir(refpgaTMC_path):
         if filename.endswith('_type'):
             fantype_path = os.path.join(refpgaTMC_path, filename)
-            cat_string = "cat "
-            fantype_string = cat_string + fantype_path
-            status,fan_type=commands.getstatusoutput(fantype_string)
+            fantype_string = ["cat", fantype_path]
+            status, fan_type = getstatusoutput_noshell(fantype_string)
             if ((fan_type == AFO) or (fan_type == AFI)):
                 return fan_type
             else:

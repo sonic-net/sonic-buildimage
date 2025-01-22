@@ -22,6 +22,18 @@ resources:
     name: Cisco-8000-sonic/platform-cisco-8000
     endpoint: cisco-connection
 
+
+variables:
+- group: SONIC-AKV-STROAGE-1
+- name: StorageSASKey
+  value: $(sonicstorage-SasToken)
+- name: SONIC_ENABLE_SECUREBOOT_SIGNATURE
+  value: y
+- name: SIGNING_KEY
+  value: /etc/certificates/sonic-secure-boot-private.pem
+- name: SIGNING_CERT
+  value: $(Build.StagingDirectory)/target/sonic-secure-boot-public.pem
+
 stages:
 - stage: Build
   pool: sonic
@@ -29,12 +41,14 @@ stages:
     CACHE_MODE: wcache
     SKIP_CHECKOUT: true
     TERM: ''
+    PACKAGE_URL: "https://sonicstorage.blob.core.windows.net/packages"
 
   jobs:
   - template: azure-pipelines-build.yml
     parameters:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
       preSteps:
+      - template: azure-pipelines-download-certificate.yml
       - checkout: self
         submodules: recursive
         path: s
@@ -60,5 +74,34 @@ stages:
           make PLATFORM=cisco-8000 platform/cisco-8000
           tar xfz $(System.ArtifactsDirectory)/artifactory-*.tar.gz -C platform/cisco-8000
         displayName: 'Setup cisco artifacts'
+      - script: |
+          set -ex
+          filename=$(find platform/cisco-8000/artifactory/sonic -name cisco-* -type f | head -n 1)
+          if [ -z "$filename" ]; then
+            echo "Cisco sai package not found" 1>&2
+            exit 1
+          fi
+          cd $(dirname $filename)
+          echo "PWD=$(pwd)"
+          ls -l cisco-*.deb
+          while read -r package; do
+            # Cisco version format: <VERSION>-sai-<sai-ver>-<distribution>-<COMMIT HASH>
+            # The <sai-ver> may contain several values in one build, the part is skipped when publishing to storage
+            # See https://github.com/Cisco-8000-sonic/sdk/blob/master/azure-pipelines.yml
+            # The $PACKAGE_URL is only accessible for AZP
+            version=$(echo $package | awk -F_ '{print $(NF-1)}' | cut -d- -f1,2,4,5)
+            package_url="$PACKAGE_URL/sai/ciscosai/master/$version/$package"
+            echo "Override package $package from $package_url"
+            wget "$package_url$StorageSASKey" -O "$package"
+          done < <(ls cisco-*.deb)
+        env:
+          StorageSASKey: $(StorageSASKey)
+        condition: ne(variables['Build.Reason'], 'PullRequest')
+        displayName: "Override cisco sai packages"
+      - script: |
+          echo "SONIC_ENABLE_SECUREBOOT_SIGNATURE := y" >> rules/config.user
+          echo "SIGNING_KEY := $(SIGNING_KEY)" >> rules/config.user
+          echo "SIGNING_CERT := $(SIGNING_CERT)" >> rules/config.user
+        displayName: "Enable secure boot signature"
       jobGroups:
       - name: cisco-8000

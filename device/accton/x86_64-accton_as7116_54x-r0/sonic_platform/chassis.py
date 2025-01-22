@@ -5,12 +5,7 @@
 #
 #############################################################################
 try:
-    import sys
-    import re
-    import os
     import subprocess
-    import json
-    import syslog
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_py_common.logger import Logger
     from sonic_platform.fan import Fan
@@ -36,7 +31,7 @@ PMON_REBOOT_CAUSE_PATH = "/usr/share/sonic/platform/api_files/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
 PREV_REBOOT_CAUSE_FILE = "previous-reboot-cause.txt"
 COMPONENT_NAME_LIST = ["BIOS"]
-HOST_CHK_CMD = "docker > /dev/null 2>&1"
+HOST_CHK_CMD = ["docker"]
 
 
 class Chassis(ChassisBase):
@@ -71,7 +66,7 @@ class Chassis(ChassisBase):
         logger.log_info("Chassis loaded successfully")
 
     def __is_host(self):
-        return os.system(HOST_CHK_CMD) == 0
+        return subprocess.call(HOST_CHK_CMD) == 0
 
     def __read_txt_file(self, file_path):
         try:

@@ -1,14 +1,47 @@
 #!/bin/bash
-
 TARGET_PATH=$1
+
+. /usr/local/share/buildinfo/scripts/buildinfo_base.sh
+
+[ -d ${TARGET_PATH} ] && rm -rf ${TARGET_PATH}
+[ -z "$TARGET_PATH" ] && TARGET_PATH=$POST_VERSION_PATH
 ARCH=$(dpkg --print-architecture)
 DIST=$(grep VERSION_CODENAME /etc/os-release | cut -d= -f2)
 ([ -z "$DIST" ] && grep -q jessie /etc/os-release) && DIST=jessie
 
 mkdir -p $TARGET_PATH
 chmod a+rw $TARGET_PATH
-dpkg-query -W -f '${Package}==${Version}\n' > "${TARGET_PATH}/versions-deb-${DIST}-${ARCH}"
-([ -x "/usr/local/bin/pip2" ] || [ -x "/usr/bin/pip2" ]) && pip2 freeze > "${TARGET_PATH}/versions-py2-${DIST}-${ARCH}"
-([ -x "/usr/local/bin/pip3" ] || [ -x "/usr/bin/pip3" ]) && pip3 freeze > "${TARGET_PATH}/versions-py3-${DIST}-${ARCH}"
+
+# Skip the package that does have a static build version.
+# SAI package versions are changed too frequently.
+SKIP_VERSION_PACKAGE="libsaibcm|libpaibcm|linuxptp|@ file://"
+dpkg-query -W -f '${Package}==${Version}\n' | grep -Ev "${SKIP_VERSION_PACKAGE}" > "${TARGET_PATH}/versions-deb-${DIST}-${ARCH}"
+([ -x "/usr/local/bin/pip2" ] || [ -x "/usr/bin/pip2" ]) && pip2 freeze --all| grep -Ev "${SKIP_VERSION_PACKAGE}" > "${TARGET_PATH}/versions-py2-${DIST}-${ARCH}"
+([ -x "/usr/local/bin/pip3" ] || [ -x "/usr/bin/pip3" ]) && pip3 freeze --all| grep -Ev "${SKIP_VERSION_PACKAGE}" > "${TARGET_PATH}/versions-py3-${DIST}-${ARCH}"
+
+[ -f "${BUILD_WEB_VERSION_FILE}" ] && cp ${BUILD_WEB_VERSION_FILE} ${TARGET_PATH}
+[ -f "${BUILD_GIT_VERSION_FILE}" ] && cp ${BUILD_GIT_VERSION_FILE} ${TARGET_PATH}
+
+## Add the the packages purged
+[ -f $POST_VERSION_PATH/purge-versions-deb ] && cat $POST_VERSION_PATH/purge-versions-deb >> "${TARGET_PATH}/versions-deb-${DIST}-${ARCH}"
+
+## Add mirror versions
+while read -r line; do
+    mirror=$(echo "$line" | sed "s/.*\///" | sed "s/_InRelease.*//")
+    date=$(date --date="$(echo "$line" | cut -d: -f3-)" +%Y-%m-%dT%H:%M:%SZ)
+    echo "$mirror==$date" >> ${TARGET_PATH}/versions-mirror
+done < <(grep Date: /var/lib/apt/lists/*_InRelease 2>/dev/null)
+
+## Print the unique and sorted result
+sort -u "${TARGET_PATH}/versions-deb-${DIST}-${ARCH}" -o "${TARGET_PATH}/versions-deb-${DIST}-${ARCH}"
+if [ -e "${TARGET_PATH}/versions-py2-${DIST}-${ARCH}" ]; then
+    sort -u "${TARGET_PATH}/versions-py2-${DIST}-${ARCH}" -o "${TARGET_PATH}/versions-py2-${DIST}-${ARCH}"
+fi
+if [ -e "${TARGET_PATH}/versions-py3-${DIST}-${ARCH}" ]; then
+    sort -u "${TARGET_PATH}/versions-py3-${DIST}-${ARCH}" -o "${TARGET_PATH}/versions-py3-${DIST}-${ARCH}"
+fi
+if [ -e "${TARGET_PATH}/versions-mirror" ]; then
+    sort -u "${TARGET_PATH}/versions-mirror" -o "${TARGET_PATH}/versions-mirror"
+fi
 
 exit 0

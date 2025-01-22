@@ -34,13 +34,9 @@
 
 import binascii
 import os
-import sys
+import subprocess
 from sonic_eeprom import eeprom_tlvinfo
-
-if sys.version_info[0] < 3:
-    import commands
-else:
-    import subprocess as commands
+from sonic_py_common.general import getstatusoutput_noshell
 
 
 def fantype_detect():
@@ -56,9 +52,7 @@ def fantype_detect():
     for filename in os.listdir(refpgaTMC_path):
         if filename.endswith('_type'):
             fantype_path = os.path.join(refpgaTMC_path, filename)
-            cat_string = "cat "
-            fantype_string = cat_string + fantype_path
-            status, fan_type = commands.getstatusoutput(fantype_string)
+            status, fan_type = getstatusoutput_noshell(['cat', fantype_path])
             if ((fan_type == AFO) or (fan_type == AFI)):
                 return fan_type
             else:
@@ -176,17 +170,21 @@ def main():
     eeprom_file.write("Main board eeprom (0x57)\r\n")
     eeprom_file.write("===============================\r\n")
 
-    MainEepromCreate = 'sudo echo 24c02 0x57 > /sys/bus/i2c/devices/i2c-0/new_device'
+    MainEepromCreate = '24c02 0x57'
+    out_file = '/sys/bus/i2c/devices/i2c-0/new_device'
     # Write the contents of Main Board EEPROM to file
     try:
-        os.system(MainEepromCreate)
+        with open(out_file, 'w') as file:
+            file.write(MainEepromCreate)
     except OSError:
         print('Error: Execution of "%s" failed', MainEepromCreate)
         return False
 
-    MainEepromFileCmd = 'cat /sys/bus/i2c/devices/i2c-0/0-0057/eeprom > /etc/init.d/MainEeprom_qfx5200_ascii'
+    MainEepromFileCmd = ['cat', '/sys/bus/i2c/devices/i2c-0/0-0057/eeprom']
+    out_file = '/etc/init.d/MainEeprom_qfx5200_ascii'
     try:
-        os.system(MainEepromFileCmd)
+        with open(out_file, 'w') as file:
+            subprocess.call(MainEepromFileCmd, universal_newlines=True, stdout=file)
     except OSError:
         print('Error: Execution of "%s" failed', MainEepromFileCmd)
         return False

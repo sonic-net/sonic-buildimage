@@ -1,7 +1,7 @@
 # docker image for syncd
 
 DOCKER_SYNCD_PLATFORM_CODE = bfn
-include $(PLATFORM_PATH)/../template/docker-syncd-base.mk
+include $(PLATFORM_PATH)/../template/docker-syncd-bullseye.mk
 
 $(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD)
 
@@ -16,4 +16,4 @@ $(DOCKER_SYNCD_BASE)_PACKAGE_NAME = syncd
 
 $(DOCKER_SYNCD_BASE)_RUN_OPT += -v /host/warmboot:/var/warmboot
 
-SONIC_BUSTER_DOCKERS += $(DOCKER_SYNCD_BASE)
+SONIC_BULLSEYE_DOCKERS += $(DOCKER_SYNCD_BASE)

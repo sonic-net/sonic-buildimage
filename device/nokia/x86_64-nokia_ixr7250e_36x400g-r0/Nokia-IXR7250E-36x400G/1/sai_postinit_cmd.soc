@@ -1,0 +1,44 @@
+phy set 3 reg=0xd134 data=-8     lane=4
+phy set 3 reg=0xd135 data=132    lane=4
+phy set 3 reg=0xd136 data=0      lane=4
+phy set 3 reg=0xd137 data=0      lane=4
+phy set 3 reg=0xd138 data=0      lane=4
+phy set 3 reg=0xd133 data=0x1800 lane=4
+
+
+phy set 8 reg=0xd134 data=-8     lane=1
+phy set 8 reg=0xd135 data=132    lane=1
+phy set 8 reg=0xd136 data=-8     lane=1
+phy set 8 reg=0xd137 data=0      lane=1
+phy set 8 reg=0xd138 data=0      lane=1
+phy set 8 reg=0xd133 data=0x1802 lane=1
+
+INTeRrupt ENAble id=2209
+INTeRrupt ENAble id=2210
+INTeRrupt ENAble id=2211
+INTeRrupt ENAble id=2212
+INTeRrupt ENAble id=2213
+INTeRrupt ENAble id=2214
+INTeRrupt ENAble id=2215
+INTeRrupt ENAble id=2216
+INTeRrupt ENAble id=2217
+INTeRrupt ENAble id=2218
+INTeRrupt ENAble id=2219
+INTeRrupt ENAble id=2220
+INTeRrupt ENAble id=2221
+INTeRrupt ENAble id=2222
+INTeRrupt ENAble id=2223
+INTeRrupt ENAble id=2224
+INTeRrupt ENAble id=2225
+INTeRrupt ENAble id=2226
+
+INTeRrupt ENAble id=482
+INTeRrupt ENAble id=483
+INTeRrupt ENAble id=484
+INTeRrupt ENAble id=485
+INTeRrupt ENAble id=486
+INTeRrupt ENAble id=487
+INTeRrupt ENAble id=488
+
+INTeRrupt ENAble id=1597
+debug intr error

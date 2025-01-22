@@ -1,0 +1,85 @@
+module sonic-restapi {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-restapi";
+    prefix restapi;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description "RESTAPI YANG Module for SONiC OS";
+
+    revision 2022-10-05 {
+        description "First Revision";
+    }
+
+    container sonic-restapi {
+
+        container RESTAPI {
+
+            description "RESTAPI TABLE part of config_db.json";
+
+            container certs {
+
+                leaf ca_crt {
+                    type string {
+                        pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).([a-z]+)';
+                    }
+                    description "Local path for ca_crt.";
+                }
+
+                leaf server_crt {
+                    type string {
+                        pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).crt';
+                    }
+                    description "Local path for server_crt.";
+                }
+
+                leaf client_crt_cname {
+                    type string {
+                        pattern '([a-zA-Z0-9_\-\.]+,)*([a-zA-Z0-9_\-\.]+)';
+                    }
+                    description "Client cert name.";
+                }
+
+                leaf server_key {
+                    type string {
+                        pattern '(/[a-zA-Z0-9_-]+)*/([a-zA-Z0-9_-]+).key';
+                    }
+                    description "Local path for server_key.";
+                }
+
+            }
+
+            container config {
+
+                leaf client_auth {
+                    type  boolean;
+                    default true;
+                    description "Enable client authentication";
+                }
+
+                leaf log_level {
+                    type string {
+                        pattern "trace|info";
+                    }
+                    description "container log level for restapi";
+                }
+
+                leaf allow_insecure {
+                    type  boolean;
+                    default false;
+                    description "Allow insecure connection";
+                }
+            }
+        }
+    }
+}

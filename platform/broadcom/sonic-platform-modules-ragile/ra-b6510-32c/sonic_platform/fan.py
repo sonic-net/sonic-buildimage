@@ -1,5 +1,6 @@
 try:
     from sonic_platform_pddf_base.pddf_fan import PddfFan
+    from . import api
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -10,6 +11,7 @@ class Fan(PddfFan):
     def __init__(self, tray_idx, fan_idx=0, pddf_data=None, pddf_plugin_data=None, is_psu_fan=False, psu_index=0):
         # idx is 0-based 
         PddfFan.__init__(self, tray_idx, fan_idx, pddf_data, pddf_plugin_data, is_psu_fan, psu_index)
+        self.pddf_obj = api.newapi()
 
     # Provide the functions/variables below for which implementation is to be overwritten
     # Since psu_fan airflow direction cant be read from sysfs, it is fixed as 'F2B' or 'intake'

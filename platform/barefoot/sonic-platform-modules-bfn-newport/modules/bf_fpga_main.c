@@ -120,7 +120,7 @@ static void bf_remove_listener(struct bf_pci_dev *bfdev,
 
   /* in case of certain error conditions, this function might be called after
    * bf_pci_remove()
-  */
+   */
   if (!bfdev || !listener) {
     return;
   }
@@ -294,7 +294,12 @@ static int bf_setup_bars(struct pci_dev *dev, struct bf_dev_info *info) {
   int i, iom, ret;
   unsigned long flags;
   static const char *bar_names[BF_MAX_BAR_MAPS] = {
-      "BAR0", "BAR1", "BAR2", "BAR3", "BAR4", "BAR5",
+      "BAR0",
+      "BAR1",
+      "BAR2",
+      "BAR3",
+      "BAR4",
+      "BAR5",
   };
 
   iom = 0;
@@ -849,7 +854,7 @@ static void fpga_print_build_date(u32 build_date) {
   month = (char)(build_date & 0x0f);
   build_date >>= 4;
   day = (char)(build_date & 0x1f);
-  printk(KERN_ALERT "fpga version %02d/%02d/%2d %02d:%02d:%02d",
+  printk(KERN_ALERT "fpga build %02d/%02d/%2d %02d:%02d:%02d",
          month,
          day,
          year,
@@ -991,6 +996,7 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
       }
 #endif /* LINUX_VERSION_CODE */
     /* ** intentional no-break */
+    /* FALLTHRU */
     case BF_INTR_MODE_MSI:
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
       num_irq = pci_enable_msi_block(pdev, BF_MSI_ENTRY_CNT);
@@ -1032,7 +1038,8 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
       }
 #endif /* LINUX_VERSION_CODE */
 #endif /* CONFIG_PCI_MSI */
-    /* fall back to Legacy Interrupt, intentional no-break */
+      /* fall back to Legacy Interrupt, intentional no-break */
+      /* FALLTHRU */
 
     case BF_INTR_MODE_LEGACY:
       if (pci_intx_mask_supported(pdev)) {
@@ -1044,6 +1051,7 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
       }
       printk(KERN_NOTICE "bf_fpga PCI INTx mask not supported\n");
     /* fall back to no Interrupt, intentional no-break */
+    /* FALLTHRU */
     case BF_INTR_MODE_NONE:
       bfdev->info.irq = 0;
       bfdev->info.num_irq = 0;
@@ -1084,7 +1092,7 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
   build_date =
       *((u32 *)(bfdev->info.mem[0].internal_addr) + (BF_FPGA_BUILD_DATE / 4));
   fpga_print_build_date(build_date);
-  printk(KERN_ALERT "bf_fpga version %hu:%hu probe ok\n",
+  printk(KERN_ALERT "bf_fpga version %hu.%hu probe ok\n",
          (u16)(build_ver >> 16),
          (u16)(build_ver));
   return 0;
@@ -1239,6 +1247,7 @@ static int bf_config_intr_mode(char *intr_str) {
 
 static const struct pci_device_id bf_pci_tbl[] = {
     {PCI_VDEVICE(BF, BF_FPGA_DEV_ID_JBAY_0), 0},
+    {PCI_VDEVICE(BF, BF_FPGA_DEV_ID_CB_0), 0},
     /* required last entry */
     {.device = 0}};
 

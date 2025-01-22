@@ -3,7 +3,6 @@
 # provides the PSUs status which are available in the platform
 #
 
-import os.path
 import subprocess
 
 try:
@@ -38,8 +37,9 @@ class PsuUtil(PsuBase):
             return False
         status = 0
         try:
-            p = os.popen("ipmitool raw 0x38 0x2 3 0x6a 0x3 1")
-            content = p.readline().rstrip()
+            cmd = ["ipmitool", "raw", "0x38", "0x2", "3", "0x6a", "0x3", "1"]
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
+            content = p.stdout.readline().rstrip()
             reg_value = int(content, 16)
             if index == 1:
                 mask = (1 << 6)
@@ -66,8 +66,9 @@ class PsuUtil(PsuBase):
 
         status = 0
         try:
-            p = os.popen("ipmitool raw 0x38 0x2 3 0x6a 0x3 1")
-            content = p.readline().rstrip()
+            cmd = ["ipmitool", "raw", "0x38", "0x2", "3", "0x6a", "0x3", "1"]
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
+            content = p.stdout.readline().rstrip()
             reg_value = int(content, 16)
             if index == 1:
                 mask = (1 << 7)

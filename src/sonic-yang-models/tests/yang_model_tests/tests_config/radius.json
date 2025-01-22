@@ -1,0 +1,139 @@
+{
+    "RADIUS_TEST": {
+        "sonic-system-radius:sonic-system-radius": {
+            "sonic-system-radius:RADIUS": {
+                "global": {
+                        "auth_type": "chap",
+                        "timeout": 5,
+                        "passkey": "brcm123"
+                }
+            }
+        }
+    },
+
+    "RADIUS_INVALID_SRC_IP_TEST": {
+        "sonic-system-radius:sonic-system-radius": {
+            "sonic-system-radius:RADIUS": {
+                "global": {
+                        "auth_type": "chap",
+                        "src_ip": "INVALID"
+                }
+            }
+        }
+    },
+
+    "RADIUS_INVALID_TIMEOUT_TEST": {
+        "sonic-system-radius:sonic-system-radius": {
+            "sonic-system-radius:RADIUS": {
+                "global": {
+                        "auth_type": "chap",
+                        "timeout": 70
+                }
+            }
+        }
+    },
+
+    "RADIUS_SERVER_TEST": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth8",
+                    "description": "Ethernet8",
+                    "lanes": "65",
+                    "mtu": 9000,
+                    "name": "Ethernet0",
+                    "speed": 25000
+                }
+                ]
+            }
+        },
+
+        "sonic-system-radius:sonic-system-radius": {
+            "sonic-system-radius:RADIUS_SERVER": {
+                "RADIUS_SERVER_LIST": [
+                {
+                        "ipaddress": "192.168.1.1",
+                        "priority": 5,
+                        "timeout": 6,
+                        "auth_type": "chap",
+                        "passkey": "brcm123",
+                        "src_intf": "Ethernet0",
+                        "vrf": "default"
+                },
+                {
+                        "ipaddress": "10.10.10.10",
+                        "priority": 2,
+                        "timeout": 15,
+                        "auth_type": "pap",
+                        "passkey": "sonic_123",
+                        "vrf": "mgmt"
+                }
+                ]
+            }
+        }
+    },
+
+    "RADIUS_SERVER_INVALID_PRIORITY_TEST": {
+        "sonic-system-radius:sonic-system-radius": {
+            "sonic-system-radius:RADIUS_SERVER": {
+                "RADIUS_SERVER_LIST": [
+                {
+                    "ipaddress": "192.168.1.1",
+                    "priority": 70
+                }
+                ]
+            }
+        }
+    },
+    "RADIUS_SERVER_INVALID_TIMEOUT_TEST": {
+        "sonic-system-radius:sonic-system-radius": {
+            "sonic-system-radius:RADIUS_SERVER": {
+                "RADIUS_SERVER_LIST": [
+                {
+                    "ipaddress": "192.168.1.1",
+                    "timeout": 70
+                }
+                ]
+            }
+        }
+    },
+    "RADIUS_SERVER_INVALID_RETRANSMIT_TEST": {
+        "sonic-system-radius:sonic-system-radius": {
+            "sonic-system-radius:RADIUS_SERVER": {
+                "RADIUS_SERVER_LIST": [
+                {
+                    "ipaddress": "192.168.1.1",
+                    "retransmit": 20
+                }
+                ]
+            }
+        }
+    },
+    "RADIUS_SERVER_INVALID_AUTH_TYPE_TEST": {
+        "sonic-system-radius:sonic-system-radius": {
+            "sonic-system-radius:RADIUS_SERVER": {
+                "RADIUS_SERVER_LIST": [
+                {
+                    "ipaddress": "192.168.1.1",
+                    "auth_type": "123"
+                }
+                ]
+            }
+        }
+    },
+    "RADIUS_SERVER_INVALID_VRF_TEST": {
+        "sonic-system-radius:sonic-system-radius": {
+            "sonic-system-radius:RADIUS_SERVER": {
+                "RADIUS_SERVER_LIST": [
+                {
+                    "ipaddress": "192.168.1.1",
+                    "vrf": "Vrf1"
+                }
+                ]
+            }
+        }
+    }
+
+}

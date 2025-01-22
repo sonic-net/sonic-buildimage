@@ -3,15 +3,15 @@ import json
 import os
 import shutil
 import subprocess
-
 from unittest import TestCase
 import tests.common_utils as utils
+from sonic_py_common.general import getstatusoutput_noshell
 
 
 class TestJ2FilesT2ChassisFe(TestCase):
     def setUp(self):
         self.test_dir = os.path.dirname(os.path.realpath(__file__))
-        self.script_file = utils.PYTHON_INTERPRETTER + ' ' + os.path.join(self.test_dir, '..', 'sonic-cfggen')
+        self.script_file = [utils.PYTHON_INTERPRETTER, os.path.join(self.test_dir, '..', 'sonic-cfggen')]
         self.t2_chassis_fe_minigraph = os.path.join(self.test_dir, 't2-chassis-fe-graph.xml')
         self.t2_chassis_fe_vni_minigraph = os.path.join(self.test_dir, 't2-chassis-fe-graph-vni.xml')
         self.t2_chassis_fe_pc_minigraph = os.path.join(self.test_dir, 't2-chassis-fe-graph-pc.xml')
@@ -24,25 +24,28 @@ class TestJ2FilesT2ChassisFe(TestCase):
         except OSError:
             pass
 
-    def run_script(self, argument):
-        print('CMD: sonic-cfggen ' + argument)
-        output = subprocess.check_output(self.script_file + ' ' + argument, shell=True)
+    def run_script(self, argument, output_file=None):
+        print('CMD: sonic-cfggen ' + ' '.join(argument))
+        output = subprocess.check_output(self.script_file + argument)
 
         if utils.PY3x:
             output = output.decode()
+        if output_file:
+            with open(output_file, 'w') as f:
+                f.write(output)
 
         return output
 
     def run_diff(self, file1, file2):
-        return subprocess.check_output('diff -u {} {} || true'.format(file1, file2), shell=True)
+        _, output = getstatusoutput_noshell(['diff', '-u', file1, file2])
+        return output
 
     def run_case(self, minigraph, template, target):
         template_dir = os.path.join(self.test_dir, '..', '..', '..', 'dockers', 'docker-fpm-frr', "frr")
         conf_template = os.path.join(template_dir, template)
         constants = os.path.join(self.test_dir, '..', '..', '..', 'files', 'image_config', 'constants', 'constants.yml')
-        cmd_args = minigraph, self.t2_chassis_fe_port_config, constants, conf_template, template_dir, self.output_file
-        cmd = "-m %s -p %s -y %s -t %s -T %s > %s" % cmd_args
-        self.run_script(cmd)
+        cmd = ["-m", minigraph, "-p", self.t2_chassis_fe_port_config, "-y", constants, "-t", conf_template, "-T", template_dir]
+        self.run_script(cmd, output_file=self.output_file)
 
         original_filename = os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, target)
         r = filecmp.cmp(original_filename, self.output_file)

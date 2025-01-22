@@ -42,7 +42,7 @@ class PsuUtil(PsuBase):
 
     MAX_PSU_FAN = 1
     MAX_NUM_PSU = 2
-    GET_HWSKU_CMD = "sonic-cfggen -d -v DEVICE_METADATA.localhost.hwsku"
+    GET_HWSKU_CMD = ["sonic-cfggen", "-d", "-v", "DEVICE_METADATA.localhost.hwsku"]
     # for spectrum1 switches with plugable PSUs, the output voltage file is psuX_volt
     # for spectrum2 switches the output voltage file is psuX_volt_out2
     sku_spectrum1_with_plugable_psu = ['ACS-MSN2410', 'ACS-MSN2700',
@@ -65,7 +65,7 @@ class PsuUtil(PsuBase):
         self.fan_speed = "thermal/psu{}_fan1_speed_get"
 
     def _get_sku_name(self):
-        p = subprocess.Popen(self.GET_HWSKU_CMD, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+        p = subprocess.Popen(self.GET_HWSKU_CMD, universal_newlines=True, stdout=subprocess.PIPE)
         out, err = p.communicate()
         return out.rstrip('\n')
 

@@ -23,7 +23,7 @@ def main():
     i = 0
     while True:
         try:
-            p = pexpect.spawn("telnet 127.0.0.1 {}".format(args.p), timeout=600, logfile=sys.stdout, encoding='utf-8')
+            p = pexpect.spawn("telnet 127.0.0.1 {}".format(args.p), timeout=1200, logfile=sys.stdout, encoding='utf-8')
             break
         except Exception as e:
             print(str(e))

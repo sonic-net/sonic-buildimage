@@ -1,0 +1,15 @@
+[Unit]
+Description=s3ip sysfs service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/s3ip_sysfs_tool.sh start
+ExecStop=/usr/bin/s3ip_sysfs_tool.sh stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target
+

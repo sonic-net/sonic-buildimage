@@ -4,7 +4,8 @@
             "buffer_model": {% if default_buffer_model == "dynamic" %}"dynamic"{% else %}"traditional"{% endif %},
             {%- if include_p4rt == "y" %}"synchronous_mode":"enable",{% endif %}
             "default_bgp_status": {% if shutdown_bgp_on_start == "y" %}"down"{% else %}"up"{% endif %},
-            "default_pfcwd_status": {% if enable_pfcwd_on_start == "y" %}"enable"{% else %}"disable"{% endif %}
+            "default_pfcwd_status": {% if enable_pfcwd_on_start == "y" %}"enable"{% else %}"disable"{% endif %},
+            "timezone": "UTC"
         }
     },
     "CRM": {
@@ -23,41 +24,97 @@
     "FLEX_COUNTER_TABLE": {
         "ACL": {
             "FLEX_COUNTER_STATUS": "enable",
-            "FLEX_COUNTER_DELAY_STATUS": "true",
             "POLL_INTERVAL": "10000"
+        },
+        "PORT": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "RIF": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "QUEUE": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PFCWD": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PG_WATERMARK": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PG_DROP": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "QUEUE_WATERMARK": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "BUFFER_POOL_WATERMARK": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PORT_BUFFER_DROP": {
+            "FLEX_COUNTER_STATUS": "enable"
         }
     },
-{%- set features = [("bgp", "enabled", false, "enabled"),
+    "BGP_DEVICE_GLOBAL": {
+        "STATE": {
+            "tsa_enabled": "false",
+            "wcmp_enabled": "false",
+            "idf_isolation_state": "unisolated"
+        }
+    },
+{%- set features = [("bgp", "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}disabled{% else %}enabled{% endif %}", false, "enabled"),
                    ("database", "always_enabled", false, "always_enabled"),
-                   ("lldp", "enabled", false, "enabled"),
-                   ("pmon", "enabled", false, "enabled"),
-                   ("radv", "enabled", false, "enabled"),
+                   ("lldp", "enabled", true, "enabled"),
+                   ("pmon", "enabled", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' %}False{% else %}True{% endif %}", "enabled"),
                    ("snmp", "enabled", true, "enabled"),
                    ("swss", "enabled", false, "enabled"),
-                   ("syncd", "enabled", false, "enabled"),
-                   ("teamd", "enabled", false, "enabled")] %}
-{% do features.append(("dhcp_relay", "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] != 'ToRRouter') %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}
+                   ("syncd", "enabled", false, "enabled")] %}
+{%- if include_router_advertiser == "y" %}{% do features.append(("radv", "enabled", false, "enabled")) %}{% endif %}
+{%- if include_teamd == "y" %}{% do features.append(("teamd", "{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] %}disabled{% else %}enabled{% endif %}", false, "enabled")) %}{% endif %}
+{% do features.append(("dhcp_relay", "{% if not (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['ToRRouter', 'EPMS', 'MgmtTsToR', 'MgmtToRRouter', 'BmcMgmtToRRouter']) %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}
+{%- if include_dhcp_server == "y" %}{% do features.append(("dhcp_server", "disabled", false, "enabled")) %}{% endif %}
 {%- if sonic_asic_platform == "vs" %}{% do features.append(("gbsyncd", "enabled", false, "enabled")) %}{% endif %}
 {%- if include_iccpd == "y" %}{% do features.append(("iccpd", "disabled", false, "enabled")) %}{% endif %}
 {%- if include_mgmt_framework == "y" %}{% do features.append(("mgmt-framework", "enabled", true, "enabled")) %}{% endif %}
 {%- if include_mux == "y" %}{% do features.append(("mux", "{% if 'subtype' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['subtype'] == 'DualToR' %}enabled{% else %}always_disabled{% endif %}", false, "enabled")) %}{% endif %}
 {%- if include_nat == "y" %}{% do features.append(("nat", "disabled", false, "enabled")) %}{% endif %}
-{%- if include_p4rt == "y" %}{% do features.append(("p4rt", "enabled", false, "enabled")) %}{% endif %}
-{%- if include_restapi == "y" %}{% do features.append(("restapi", "enabled", false, "enabled")) %}{% endif %}
-{%- if include_sflow == "y" %}{% do features.append(("sflow", "disabled", false, "enabled")) %}{% endif %}
-{%- if include_macsec == "y" %}{% do features.append(("macsec", "disabled", false, "enabled")) %}{% endif %}
+{%- if include_p4rt == "y" %}{% do features.append(("p4rt", "disabled", false, "enabled")) %}{% endif %}
+{%- if include_restapi == "y" and BUILD_REDUCE_IMAGE_SIZE == "y" and sonic_asic_platform == "broadcom" %}
+    {% do features.append(("restapi", "{% if (DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and DEVICE_METADATA['localhost']['type'] is not in ['LeafRouter', 'BackEndLeafRouter']) %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}
+{%- elif include_restapi == "y" %}
+    {% do features.append(("restapi", "enabled", false, "enabled")) %}
+{%- endif %}
+{%- if include_sflow == "y" %}{% do features.append(("sflow", "disabled", true, "enabled")) %}{% endif %}
+{%- if include_macsec == "y" %}{% do features.append(("macsec", "{% if 'type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['type'] == 'SpineRouter' and DEVICE_RUNTIME_METADATA['MACSEC_SUPPORTED'] %}enabled{% else %}disabled{% endif %}", false, "enabled")) %}{% endif %}
+{%- if include_system_gnmi == "y" %}{% do features.append(("gnmi", "enabled", true, "enabled")) %}{% endif %}
 {%- if include_system_telemetry == "y" %}{% do features.append(("telemetry", "enabled", true, "enabled")) %}{% endif %}
+{%- if include_system_eventd == "y" and BUILD_REDUCE_IMAGE_SIZE == "y" %}
+    {% do features.append(("eventd","disabled", false, "enabled")) %}
+{%- elif include_system_eventd == "y" %}
+    {% do features.append(("eventd", "enabled", false, "enabled")) %}
+{%- endif %}
     "FEATURE": {
-{# has_timer field if set, will start the feature systemd .timer unit instead of .service unit #}
-{%- for feature, state, has_timer, autorestart in features %}
+{# delayed field if set, will start the feature systemd .timer unit instead of .service unit #}
+{%- for feature, state, delayed, autorestart in features %}
         "{{feature}}": {
             "state": "{{state}}",
-            "has_timer" : {{has_timer | lower()}},
+            "delayed" : "{{delayed}}",
+{%- if feature in ["lldp"] %}
+            "has_global_scope": {% raw %}"{% if ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['linecard']) %}False{% else %}True{% endif %}"{% endraw %},
+            "has_per_asic_scope": {% raw %}"{% if not DEVICE_RUNTIME_METADATA['ETHERNET_PORTS_PRESENT'] or ('CHASSIS_METADATA' in DEVICE_RUNTIME_METADATA and DEVICE_RUNTIME_METADATA['CHASSIS_METADATA']['module_type'] in ['supervisor']) %}False{% else %}True{% endif %}"{% endraw %},
+{%- else %}
             "has_global_scope": {% if feature + '.service' in installer_services.split(' ') %}true{% else %}false{% endif %},
-            "has_per_asic_scope": {% if feature + '@.service' in installer_services.split(' ') %}true{% else %}false{% endif %},
+            "has_per_asic_scope": {% if feature + '@.service' in installer_services.split(' ') %}"True"{% else %}"False"{% endif %},
+{%- endif %}
             "auto_restart": "{{autorestart}}",
+            "support_syslog_rate_limit" : "true",
+{# Set check_up_status to true here when app readiness will be marked in state db  #}
+{# For now, to support the infrastrucure, setting the check_up_status to false for bgp,swss,pmon  #}
+{# Once apps like bgp,synd supports app readiness, then bgp,syncd can set check_up_status to true #}
+{%- if feature in ["bgp", "swss", "pmon"] %}
+            "check_up_status" : "false",
+{%- endif %}
 {%- if include_kubernetes == "y" %}
-{%- if feature in ["lldp", "pmon", "radv", "snmp", "telemetry"] %}
+{%- if feature in ["lldp", "pmon", "radv", "eventd", "snmp", "telemetry", "gnmi"] %}
             "set_owner": "kube", {% else %}
             "set_owner": "local", {% endif %} {% endif %}
             "high_mem_alert": "disabled"
@@ -72,6 +129,8 @@
             "rate_limit_interval" : "180",
             "max_techsupport_limit" : "10.0",
             "max_core_limit" : "5.0",
+            "available_mem_threshold": "10.0",
+            "min_available_mem": "200",
             "since" : "2 days ago"
         }
     },
@@ -81,8 +140,77 @@
 {%- if enable_auto_tech_support == "y" %}
             "state" : "enabled", {% else %}
             "state" : "disabled", {% endif %}
-            "rate_limit_interval" : "600"
+            "rate_limit_interval" : "600",
+            "available_mem_threshold": "10.0"
         }{%if not loop.last %},{% endif -%}
-{% endfor %} 
+{% endfor %}
+    },
+    "SYSLOG_CONFIG": {
+        "GLOBAL": {
+            "rate_limit_interval" : "0",
+            "rate_limit_burst" : "0"
+        }
+    },
+    "SYSLOG_CONFIG_FEATURE": {
+{%- for feature, _, _, _ in features %}
+        "{{feature}}": {
+            "rate_limit_interval" : "300",
+            "rate_limit_burst": "20000"
+        }{%if not loop.last %},{% endif -%}
+{% endfor %}
+    },
+    "PASSW_HARDENING": {
+        "POLICIES":{
+            "state": "disabled",
+            "expiration": "180",
+            "expiration_warning": "15",
+            "history_cnt": "10",
+            "len_min": "8",
+            "reject_user_passw_match": "true",
+            "lower_class": "true",
+            "upper_class": "true",
+            "digits_class": "true",
+            "special_class": "true"
+        }
+    },
+    "BANNER_MESSAGE": {
+        "global": {
+            "state": "disabled",
+            "login": "Debian GNU/Linux 11",
+            "motd": "You are on\n  ____   ___  _   _ _  ____\n / ___| / _ \\| \\ | (_)/ ___|\n \\___ \\| | | |  \\| | | |\n  ___) | |_| | |\\  | | |___\n |____/ \\___/|_| \\_|_|\\____|\n\n-- Software for Open Networking in the Cloud --\n\nUnauthorized access and/or use are prohibited.\nAll access and/or use are subject to monitoring.\n\nHelp:    https://sonic-net.github.io/SONiC/\n\n",
+            "logout": ""
+        }
+    },
+    "SYSTEM_DEFAULTS" : {
+{%- if include_mux == "y" %}
+        "mux_tunnel_egress_acl": {
+{%- if sonic_asic_platform == "mellanox" %}
+            "status": "enabled"
+{% else %}
+            "status": "disabled"
+{% endif %}
+        }
+{% endif %}
+    },
+    "KDUMP": {
+        "config": {
+{%- if sonic_asic_platform == "cisco-8000" %}
+            "enabled": "true",
+{% else %}
+            "enabled": "false",
+{% endif %}
+            "memory": "0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-:448M",
+            "num_dumps": "3"
+        }
+    },
+    "NTP": {
+        "global": {
+            "authentication": "disabled",
+            "dhcp": "enabled",
+            "server_role": "disabled",
+            "src_intf": "eth0",
+            "admin_state": "enabled",
+            "vrf": "default"
+        }
     }
 }

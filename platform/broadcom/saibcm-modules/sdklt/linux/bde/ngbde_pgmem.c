@@ -31,7 +31,7 @@
  * likely these requests are to succeed.
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -44,7 +44,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <ngbde.h>
@@ -62,14 +62,14 @@
 
 /*! \cond */
 static int pgmem_chunk_size = 0;
-module_param(pgmem_chunk_size, int, 0);
+module_param(pgmem_chunk_size, int, S_IRUSR);
 MODULE_PARM_DESC(pgmem_chunk_size,
 "Memory chunk size in KB used by page allocator (default auto).");
 /*! \endcond */
 
 /*! \cond */
 static int pgmem_debug = 0;
-module_param(pgmem_debug, int, 0);
+module_param(pgmem_debug, int, S_IRUSR | S_IWUSR);
 MODULE_PARM_DESC(pgmem_debug,
 "Enable page memory allocator debug output (default 0).");
 /*! \endcond */

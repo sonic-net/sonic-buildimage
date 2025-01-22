@@ -1,5 +1,15 @@
+{%- if internal_route_map == '1' -%}
+route-map {{ route_map_name }} permit 20
+  set community no-export additive
+{# #}
+{%- else -%}
 route-map {{ route_map_name }} permit 20
   match {{ ip_protocol }} address prefix-list PL_Loopback{{ ip_version }}
   set community {{ constants.bgp.traffic_shift_community }}
-route-map {{ route_map_name }} deny 30
+route-map {{ route_map_name }} permit 30
+  match tag {{ constants.bgp.internal_community_match_tag }}
+  set community {{ constants.bgp.traffic_shift_community }}
+route-map {{ route_map_name }} deny 40
+{# #}
+{%- endif -%}
 !

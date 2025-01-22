@@ -37,14 +37,14 @@ class PcieUtil(PcieBase):
         pciList = []
         p1 = "^(\w+):(\w+)\.(\w)\s(.*)\s*\(*.*\)*"
         p2 = "^.*:.*:.*:(\w+)\s*\(*.*\)*"
-        command1 = "sudo lspci"
-        command2 = "sudo lspci -n"
+        command1 = ["sudo", "lspci"]
+        command2 = ["sudo", "lspci", "-n"]
         # run command 1
-        proc1 = subprocess.Popen(command1, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+        proc1 = subprocess.Popen(command1, universal_newlines=True, stdout=subprocess.PIPE)
         output1 = proc1.stdout.readlines()
         proc1.communicate()
         # run command 2
-        proc2 = subprocess.Popen(command2, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+        proc2 = subprocess.Popen(command2, universal_newlines=True, stdout=subprocess.PIPE)
         output2 = proc2.stdout.readlines()
         proc2.communicate()
 

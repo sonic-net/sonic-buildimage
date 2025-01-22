@@ -2,6 +2,8 @@
 # Disable monitor, monitor-fan, monitor-psu (not enabling them would imply they will be disabled by default)
 # Enable pddf-platform-monitor
 depmod -a
+systemctl enable as7726-32x-platform-handle_mac.service
+systemctl start as7726-32x-platform-handle_mac.service
 systemctl enable pddf-platform-init.service
 systemctl start pddf-platform-init.service
 systemctl enable as7726-32x-pddf-platform-monitor.service

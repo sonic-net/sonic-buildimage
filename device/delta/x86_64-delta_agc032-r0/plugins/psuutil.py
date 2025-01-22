@@ -1,4 +1,4 @@
-import os.path
+import subprocess
 
 try:
     from sonic_psu.psu_base import PsuBase
@@ -15,7 +15,7 @@ class PsuUtil(PsuBase):
         self.psu_path = "/sys/bus/i2c/devices/{}-0058/"
         self.psu_oper_status = "in1_input"
         self.psu_oper_status2 = "in2_input"
-        self.psu_presence = "i2cget -y {} 0x50 0x00"
+        self.psu_presence = ["i2cget", "-y", "", "0x50", "0x00"]
 
     def get_num_psus(self):
         """
@@ -50,9 +50,10 @@ class PsuUtil(PsuBase):
             return False
         Base_bus_number = 0
         status = 0
+        self.psu_presence[2] = str(index + Base_bus_number)
         try:
-            p = os.popen(self.psu_presence.format(index + Base_bus_number) + "> /dev/null 2>&1")
-            if p.readline() != None:
+            p = subprocess.Popen(self.psu_presence, stdout=subprocess.PIPE, universal_newlines=True)
+            if p.stdout.readline() != None:
                 status = 1
             p.close()
         except IOError:

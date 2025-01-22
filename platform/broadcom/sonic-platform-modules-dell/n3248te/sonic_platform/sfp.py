@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #############################################################################
-# DELLEMC S5248F
+# DELLEMC N3248TE
 #
 # Module contains an implementation of SONiC Platform Base API and
 # provides the platform information
@@ -16,6 +16,25 @@ try:
 
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
+
+SFP_PORT_START = 49
+SFP_PORT_END = 54
+
+QSFP_INFO_OFFSET = 128
+SFP_INFO_OFFSET = 0
+QSFP_DD_PAGE0 = 0
+
+SFP_TYPE_LIST = [
+    '0x3' # SFP/SFP+/SFP28 and later
+]
+QSFP_TYPE_LIST = [
+    '0xc', # QSFP
+    '0xd', # QSFP+ or later
+    '0x11'  # QSFP28 or later
+]
+QSFP_DD_TYPE_LIST = [
+    '0x18' #QSFP_DD Type
+]
 
 class Sfp(SfpOptoeBase):
     """
@@ -32,7 +51,7 @@ class Sfp(SfpOptoeBase):
         return self.eeprom_path
 
     def get_name(self):
-        return "SFP/SFP+/SFP28"
+        return "SFP/SFP+/SFP28" if self.index < 53 else "QSFP+ or later"
 
     def pci_mem_read(self, mm, offset):
         mm.seek(offset)
@@ -67,7 +86,8 @@ class Sfp(SfpOptoeBase):
     def _get_cpld_register(self, reg):
         reg_file = '/sys/devices/platform/dell-n3248te-cpld.0/' + reg
         try:
-            rv = open(reg_file, 'r').read()
+            with open(reg_file, 'r') as fd:
+                rv = fd.read()
         except IOError : return 'ERR'
         return rv.strip('\r\n').lstrip(' ')
 
@@ -106,7 +126,7 @@ class Sfp(SfpOptoeBase):
         """
         Reset the SFP and returns all user settings to their default state
         """
-        return True
+        return False
 
     def set_lpmode(self, lpmode):
         """
@@ -125,4 +145,42 @@ class Sfp(SfpOptoeBase):
         """
         Retrieves the maximumum power allowed on the port in watts
         """
-        return 2.5
+        return 5.0 if self.sfp_type == 'QSFP' else 2.5
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True
+
+    def get_error_description(self):
+        """
+        Retrives the error descriptions of the SFP module
+        Returns:
+            String that represents the current error descriptions of vendor specific errors
+            In case there are multiple errors, they should be joined by '|',
+            like: "Bad EEPROM|Unsupported cable"
+        """
+        if not self.get_presence():
+            return self.SFP_STATUS_UNPLUGGED
+        else:
+            if not os.path.isfile(self.eeprom_path):
+                return "EEPROM driver is not attached"
+
+            if self.sfp_type == 'SFP':
+                offset = SFP_INFO_OFFSET
+            elif self.sfp_type == 'QSFP':
+                offset = QSFP_INFO_OFFSET
+            elif self.sfp_type == 'QSFP_DD':
+                offset = QSFP_DD_PAGE0
+
+            try:
+                with open(self.eeprom_path, mode="rb", buffering=0) as eeprom:
+                    eeprom.seek(offset)
+                    eeprom.read(1)
+            except OSError as e:
+                return "EEPROM read failed ({})".format(e.strerror)
+
+        return self.SFP_STATUS_OK

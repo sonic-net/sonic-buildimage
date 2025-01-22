@@ -1,6 +1,6 @@
 module sonic-dhcpv6-relay {
 
-	namespace "http://github.com/Azure/sonic-dhcpv6-relay";
+	namespace "http://github.com/sonic-net/sonic-dhcpv6-relay";
 
 	prefix sdhcpv6relay;
 
@@ -29,20 +29,29 @@ module sonic-dhcpv6-relay {
 			list DHCP_RELAY_LIST {
 
 				key "name";
-        
+
 				leaf name {
 					type string;
 				}
 
-                                leaf-list dhcpv6_servers {
-                                        description "Configure the dhcp v6 servers";
-                                        type inet:ipv6-address;
-                                }
+				leaf-list dhcpv6_servers {
+					description "Configure the dhcp v6 servers";
+					type inet:ipv6-address;
+				}
 
-                                leaf rfc6939_support {
-                                        description "Set rfc6939 for the relay";
-                                        type boolean;
-                                }
+				leaf rfc6939_support {
+					description "Set rfc6939 for the relay";
+					type string {
+						pattern "false|true";
+					}
+				}
+
+				leaf interface_id {
+					description "Enable interface ID insertion in relayed messages";
+					type string {
+						pattern "false|true";
+					}
+				}
 			}
 			/* end of VLAN_LIST */
 		}

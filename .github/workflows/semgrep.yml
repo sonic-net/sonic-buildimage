@@ -1,0 +1,26 @@
+name: Semgrep
+
+on:
+  pull_request: {}
+  push:
+    branches:
+      - master
+      - '201[7-9][0-1][0-9]'
+      - '202[0-9][0-1][0-9]'
+
+jobs:
+  semgrep:
+    if: github.repository_owner == 'sonic-net'
+    name: Semgrep
+    runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep
+    steps:
+      - uses: actions/checkout@v3
+      - run: semgrep ci
+        env:
+           SEMGREP_RULES: |
+             p/default
+             r/python.lang.security.audit.dangerous-system-call-audit.dangerous-system-call-audit
+             r/c.lang.security.insecure-use-strcat-fn.insecure-use-strcat-fn
+             r/c.lang.security.insecure-use-string-copy-fn.insecure-use-string-copy-fn

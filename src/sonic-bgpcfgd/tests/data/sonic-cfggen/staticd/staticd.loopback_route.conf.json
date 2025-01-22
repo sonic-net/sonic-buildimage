@@ -1,4 +1,8 @@
 {
+    "DEVICE_METADATA": {
+        "localhost": {
+        }
+    },
     "LOOPBACK_INTERFACE": {
         "Loopback0|FC00:1::32/128": {}
     }

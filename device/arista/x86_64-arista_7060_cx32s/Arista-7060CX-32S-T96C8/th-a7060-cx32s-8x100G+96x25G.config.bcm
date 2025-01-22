@@ -784,3 +784,4 @@ serdes_driver_current_126=0xa
 serdes_preemphasis_126=0x284008
 serdes_driver_current_127=0xa
 serdes_preemphasis_127=0x284008
+phy_an_lt_msft=1

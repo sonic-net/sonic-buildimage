@@ -27,12 +27,40 @@
 
 extern PDDF_CPLDMUX_DATA pddf_cpldmux_data;
 
-/* Users may overwrite these select and delsect functions as per their requirements 
- * by overwriting them in custom driver
+/* Users may overwrite these select and delsect functions as per their requirements
+ * by overwriting them in custom driver.
+ *
+ * Example driver skeleton:
+ *
+ * #include <linux/module.h>
+ * #include <linux/i2c.h>
+ * ..
+ * ..
+ * #include "pddf_cpldmux_defs.h"
+ *
+ * extern PDDF_CPLDMUX_OPS pddf_cpldmux_ops;
+ *
+ * int cpldmux_byte_write(struct i2c_client *client, u8 regaddr, u8 val)
+ * {
+ *     // Provide custom implementation here
+ * }
+ *
+ * int pddf_cpldmux_deselect(struct i2c_mux_core *muxc, uint32_t chan)
+ * {
+ *     // Provide the custom implementation here
+ * }
+ *
+ * static int __init pddf_custom_cpldmux_init(void)
+ * {
+ *     pddf_cpldmux_ops.deselect = pddf_cpldmux_deselect;
+ *     pddf_cpldmux_ops.byte_write = cpldmux_byte_write;
+ *     return 0;
+ * }
  */
+
 PDDF_CPLDMUX_OPS pddf_cpldmux_ops = {
     .select = pddf_cpldmux_select_default,
-    .deselect = NULL, /* pddf_cpldmux_deselct_default */
+    .deselect = pddf_cpldmux_deselect_default,
 };
 EXPORT_SYMBOL(pddf_cpldmux_ops);
 
@@ -69,7 +97,7 @@ int pddf_cpldmux_select_default(struct i2c_mux_core *muxc, uint32_t chan)
     if ( (pdata->chan_cache!=1) || (private->last_chan!=chan) )
     {
         sdata = &pdata->chan_data[chan];
-        pddf_dbg(CPLDMUX, KERN_ERR "%s: Writing 0x%x at 0x%x offset of cpld 0x%x to enable chan %d\n", __FUNCTION__, sdata->cpld_sel, sdata->cpld_offset, sdata->cpld_devaddr, chan);
+        pddf_dbg(CPLDMUX, KERN_INFO "%s: Writing 0x%x at 0x%x offset of cpld 0x%x to enable chan %d\n", __FUNCTION__, sdata->cpld_sel, sdata->cpld_offset, sdata->cpld_devaddr, chan);
         ret =  cpldmux_byte_write(pdata->cpld, sdata->cpld_offset,  (uint8_t)(sdata->cpld_sel & 0xff));
         private->last_chan = chan;
     }
@@ -93,7 +121,7 @@ int pddf_cpldmux_deselect_default(struct i2c_mux_core *muxc, uint32_t chan)
     }
     sdata = &pdata->chan_data[chan];
 
-    pddf_dbg(CPLDMUX, KERN_ERR "%s: Writing 0x%x at 0x%x offset of cpld 0x%x to disable chan %d", __FUNCTION__, sdata->cpld_desel, sdata->cpld_offset, sdata->cpld_devaddr, chan);
+    pddf_dbg(CPLDMUX, KERN_INFO "%s: Writing 0x%x at 0x%x offset of cpld 0x%x to disable chan %d", __FUNCTION__, sdata->cpld_desel, sdata->cpld_offset, sdata->cpld_devaddr, chan);
     ret = cpldmux_byte_write(pdata->cpld, sdata->cpld_offset,  (uint8_t)(sdata->cpld_desel));
     return ret;
 }

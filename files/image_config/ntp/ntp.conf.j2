@@ -1,6 +1,6 @@
 ###############################################################################
-# Managed by Ansible
-# file: ansible/roles/acs/templates/ntp.conf.j2
+# This file was AUTOMATICALLY GENERATED. DO NOT MODIFY.
+# Controlled by ntp-config.service
 ###############################################################################
 
 # /etc/ntp.conf, configuration for ntpd; see ntp.conf(5) for help
@@ -9,37 +9,89 @@
 # current system time is large.
 tinker panic 0
 
-driftfile /var/lib/ntp/ntp.drift
+driftfile /var/lib/ntpsec/ntp.drift
+leapfile /usr/share/zoneinfo/leap-seconds.list
+
+{# Getting NTP global configuration -#}
+{% set global = (NTP | d({})).get('global', {}) -%}
+
+{# Adding NTP servers. We need to know if we have some pools, to set proper
+config -#}
+{% set ns = namespace(is_pools=false) %}
+{% set ip_ver_ns = namespace(ipv4_server=false, ipv6_server=false) %}
+{% for server in NTP_SERVER if NTP_SERVER[server].admin_state != 'disabled' -%}
+    {% set config = NTP_SERVER[server] -%}
+    {# Server options -#}
+    {% set soptions = '' -%}
+
+    {# Define defaults if not defined -#}
+    {% set association_type = config.association_type | d('server') -%}
+    {% set resolve_as = config.resolve_as | d(server) -%}
+
+    {# Authentication key -#}
+    {% if global.authentication == 'enabled' -%}
+        {% if config.key -%}
+            {% set soptions = soptions ~ ' key ' ~ config.key -%}
+        {% endif -%}
+    {% endif -%}
+
+    {# Aggressive polling -#}
+    {% if config.iburst -%}
+        {% set soptions = soptions ~ ' iburst' -%}
+    {% endif -%}
+
+    {# Protocol version -#}
+    {% if config.version -%}
+        {% set soptions = soptions ~ ' version ' ~ config.version -%}
+    {% endif -%}
+
+    {# Check if there are any pool configured. BTW it doesn't matter what was
+    configured as "resolve_as" for pools. If they were configured with FQDN they
+    must remain like that -#}
+    {% if association_type == 'pool' -%}
+        {% set resolve_as = server -%}
+    {% endif -%}
+
+{{ association_type }} {{ resolve_as }}{{ soptions }}
+{% if global.server_role == 'disabled' %}
+restrict {{ resolve_as }} kod limited nomodify noquery
+{% endif %}
+
+{% if resolve_as | ipv4 -%}
+    {% set ip_ver_ns.ipv4_server = true %}
+{% elif resolve_as | ipv6 %}
+    {% set ip_ver_ns.ipv6_server = true %}
+{% endif -%}
 
 
-# Enable this if you want statistics to be logged.
-#statsdir /var/log/ntpstats/
+{% endfor -%}
 
-statistics loopstats peerstats clockstats
-filegen loopstats file loopstats type day enable
-filegen peerstats file peerstats type day enable
-filegen clockstats file clockstats type day enable
-
-
-# You do need to talk to an NTP server or two (or three).
-#server ntp.your-provider.example
-
-# pool.ntp.org maps to about 1000 low-stratum NTP servers.  Your server will
-# pick a different set every time it starts up.  Please consider joining the
-# pool: <http://www.pool.ntp.org/join.html>
-{% for ntp_server in NTP_SERVER %}
-server {{ ntp_server }} iburst
+{% set trusted_keys_arr = [] -%}
+{% for key in NTP_KEY -%}
+    {% set keydata = NTP_KEY[key] -%}
+    {% if keydata.trusted == 'yes' -%}
+        {% set trusted_keys_arr = trusted_keys_arr.append(key) -%}
+    {% endif -%}
 {% endfor %}
 
-#listen on source interface if configured, else 
-#only listen on MGMT_INTERFACE, LOOPBACK_INTERFACE ip when MGMT_INTERFACE is not defined, or eth0 
-# if we don't have both of them (default is to listen on all ip addresses)
+{% if global.authentication == 'enabled' %}
+keys /etc/ntpsec/ntp.keys
+{% if trusted_keys_arr != [] %}
+trustedkey {{ trusted_keys_arr|join(' ') }}
+{% endif %}
+{% endif %}
+
+{# listen on source interface if configured, else only listen on MGMT_INTERFACE,
+LOOPBACK_INTERFACE ip when MGMT_INTERFACE is not defined, or eth0 if we don't
+have both of them (default is to listen on all ip addresses) -#}
 interface ignore wildcard
 
-# set global variable for configured source interface name
-# set global boolean to indicate if the ip of the configured source interface is configured
-# if the source interface is configured but no ip on that interface, then listen on another
-# interface based on existing logic
+{# Set interface to listen on:
+     * Set global variable for configured source interface name.
+     * Set global boolean to indicate if the ip of the configured source
+       interface is configured.
+     * If the source interface is configured but no ip on that
+       interface, then listen on another interface based on existing logic. -#}
 {%- macro check_ip_on_interface(interface_name, table_name) %}
     {%- set ns = namespace(valid_intf = 'false') %}
     {%- if table_name %}
@@ -53,22 +105,22 @@ interface ignore wildcard
 {%- endmacro %}
 
 {% set ns = namespace(source_intf = "") %}
-{% set ns = namespace(source_intf_ip = 'false') %}
-{% if (NTP) and (NTP['global']['src_intf'])  %}
-    {% set ns.source_intf = (NTP['global']['src_intf']) %}
-    {% if ns.source_intf != "" %}
-        {% if ns.source_intf == "eth0" %}
-            {% set ns.source_intf_ip = 'true' %}
-        {% elif ns.source_intf.startswith('Vlan') %}
-            {% set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, VLAN_INTERFACE) %}
-        {% elif ns.source_intf.startswith('Ethernet') %}
-            {% set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, INTERFACE) %}
-        {% elif ns.source_intf.startswith('PortChannel') %}
-            {% set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, PORTCHANNEL_INTERFACE) %}
-        {% elif ns.source_intf.startswith('Loopback') %}
-            {% set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, LOOPBACK_INTERFACE) %}
-        {% endif %}
-    {% endif %}
+{%- set ns = namespace(source_intf_ip = 'false') %}
+{%- if global.src_intf  %}
+    {%- set ns.source_intf = global.src_intf %}
+    {%- if ns.source_intf != "" %}
+        {%- if ns.source_intf == "eth0" %}
+            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, MGMT_INTERFACE) %}
+        {%- elif ns.source_intf.startswith('Vlan') %}
+            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, VLAN_INTERFACE) %}
+        {%- elif ns.source_intf.startswith('Ethernet') %}
+            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, INTERFACE) %}
+        {%- elif ns.source_intf.startswith('PortChannel') %}
+            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, PORTCHANNEL_INTERFACE) %}
+        {%- elif ns.source_intf.startswith('Loopback') %}
+            {%- set ns.source_intf_ip = check_ip_on_interface(ns.source_intf, LOOPBACK_INTERFACE) %}
+        {%- endif %}
+    {%- endif %}
 {% endif %}
 
 {% if ns.source_intf_ip == 'true' %}
@@ -81,8 +133,10 @@ interface listen {{ mgmt_prefix | ip }}
 {% endfor %}
 {% elif LOOPBACK_INTERFACE %}
 {% for (name, prefix) in LOOPBACK_INTERFACE|pfx_filter %}
-{% if prefix | ipv4 and name == 'Loopback0' %}
+{% if name == 'Loopback0' %}
+{% if prefix | ipv4 and ip_ver_ns.ipv4_server or prefix | ipv6 and ip_ver_ns.ipv6_server %}
 interface listen {{ prefix | ip }}
+{% endif %}
 {% endif %}
 {% endfor %}
 {% else %}
@@ -90,32 +144,20 @@ interface listen eth0
 {% endif %}
 interface listen 127.0.0.1
 
-# Access control configuration; see /usr/share/doc/ntp-doc/html/accopt.html for
-# details.  The web page <http://support.ntp.org/bin/view/Support/AccessRestrictions>
-# might also be helpful.
-#
-# Note that "restrict" applies to both servers and clients, so a configuration
-# that might be intended to block requests from certain clients could also end
-# up blocking replies from your own upstream servers.
+{# Access control options -#}
+{% set options = '' -%}
 
+{# Disable NTP server functionality. Should stay on when dhcp is enabled -#}
+{# {% if global.server_role == 'disabled' and global.dhcp == 'disabled' -%}
+    {% set options = options ~ ' ignore' -%}
+{% endif -%} #}
+
+# Access control configuration
 # By default, exchange time with everybody, but don't allow configuration.
-restrict -4 default kod notrap nomodify nopeer noquery
-restrict -6 default kod notrap nomodify nopeer noquery
+# NTPsec doesn't establish peer associations, and so nopeer has no effect, and
+# has been removed from here
+restrict default kod nomodify noquery limited{{ options }}
 
 # Local users may interrogate the ntp server more closely.
 restrict 127.0.0.1
 restrict ::1
-
-# Clients from this (example!) subnet have unlimited access, but only if
-# cryptographically authenticated.
-#restrict 192.168.123.0 mask 255.255.255.0 notrust
-
-
-# If you want to provide time to your local subnet, change the next line.
-# (Again, the address is an example only.)
-#broadcast 192.168.123.255
-
-# If you want to listen to time broadcasts on your local subnet, de-comment the
-# next lines.  Please do this only if you trust everybody on the network!
-#disable auth
-#broadcastclient

@@ -1,0 +1,8 @@
+{
+    "bgp_asn": "555",
+    "bgp_session": {
+        "ip_range": "2603:10a0:321:82f9::/64,2603:10a1:30a:8000::/59",
+        "name": "BGPSentinelV6",
+        "src_address": "fc00:1::32"
+    }
+}

@@ -1,8 +1,0 @@
-{
-    "DEVICE_METADATA": {
-        "localhost": {
-            "chassis_db_address" : "127.100.1.1",
-            "connect_to_chassis_db" : "1"
-        }
-    }
-}

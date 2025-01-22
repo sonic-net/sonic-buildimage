@@ -10,3 +10,4 @@ tests/__pycache__/
 ctrmgr/__pycache__/
 venv
 tests/.coverage*
+.pytest_cache/

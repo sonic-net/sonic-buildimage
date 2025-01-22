@@ -1,10 +1,14 @@
 module sonic-system-aaa {
-    namespace "http://github.com/Azure/sonic-system-aaa";
+    namespace "http://github.com/sonic-net/sonic-system-aaa";
     prefix ssys;
     yang-version 1.1;
 
     import sonic-types {
         prefix stypes;
+    }
+
+    import sonic-system-tacacs{
+        prefix tacacs;
     }
 
     revision 2021-10-12 {
@@ -30,9 +34,17 @@ module sonic-system-aaa {
                 }
 
                 leaf login {
-                    type string;
-                    description "AAA authentication/authorization/accounting methods - local/tacacs+/disable";
+                    type string {
+                        pattern '((ldap|tacacs\+|local|radius|default),)*(ldap|tacacs\+|local|radius|default)' {
+                            error-message "Invalid login choice";
+                        }
+                    }
+                    description "AAA authentication/authorization/accounting methods - radius/tacacs+/ldap|local/default";
                     default "local";
+                }
+
+                must 'not(./type = "authentication" and contains(./login, "tacacs+") and not(/tacacs:sonic-system-tacacs/tacacs:TACPLUS/tacacs:global/tacacs:passkey))' {
+                    error-message "Authentication with 'tacacs+' is not allowed when passkey not exists.";
                 }
 
                 leaf failthrough {
@@ -46,7 +58,7 @@ module sonic-system-aaa {
                     description "Allow AAA fallback";
                     default False;
                 }
-                
+
                 leaf debug {
                     type stypes:boolean_type;
                     description "Enable/disable AAA debugging";

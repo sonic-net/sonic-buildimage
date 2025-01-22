@@ -11,7 +11,6 @@ $(DOCKER_SONIC_SDK_BUILDENV)_DEPENDS += $(LIBSAIVS) \
                                         $(LIBSAIREDIS_DEV) \
                                         $(LIBSAIMETADATA_DEV) \
                                         $(LIBSWSSCOMMON_DEV) \
-                                        $(LIBHIREDIS_DEV) \
                                         $(LIBNL3_DEV) \
                                         $(LIBNL_GENL3_DEV) \
                                         $(LIBNL_ROUTE3_DEV) \
@@ -28,5 +27,5 @@ $(DOCKER_SONIC_SDK_BUILDENV)_LOAD_DOCKERS += $(DOCKER_SONIC_SDK)
 SONIC_DOCKER_IMAGES += $(DOCKER_SONIC_SDK_BUILDENV)
 SONIC_DOCKER_DBG_IMAGES += $(DOCKER_SONIC_SDK_BUILDENV_DBG)
 
-SONIC_BUSTER_DOCKERS += $(DOCKER_SONIC_SDK_BUILDENV)
-SONIC_BUSTER_DBG_DOCKERS += $(DOCKER_SONIC_SDK_BUILDENV_DBG)
+SONIC_BULLSEYE_DOCKERS += $(DOCKER_SONIC_SDK_BUILDENV)
+SONIC_BULLSEYE_DBG_DOCKERS += $(DOCKER_SONIC_SDK_BUILDENV_DBG)

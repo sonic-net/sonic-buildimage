@@ -1,4 +1,4 @@
-FROM docker-base
+FROM docker-base-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -7,6 +7,9 @@ RUN apt-get update
 
 # Dependencies for sonic-cfggen
 RUN apt-get install -y build-essential python-dev
+
+# Install python-redis
+RUN pip install redis>=3.5.3
 
 {% if docker_config_engine_debs.strip() %}
 COPY \

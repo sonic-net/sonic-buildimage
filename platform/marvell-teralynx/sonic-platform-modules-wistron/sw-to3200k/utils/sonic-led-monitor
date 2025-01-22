@@ -1,0 +1,181 @@
+#!/bin/bash
+
+#0=off, 1=green, 2=amber, 3=blk_green
+led_state=0
+pre_loc_state=0
+
+#$1=led_no(1=loc, 2=diag, 3=fan, 4=psu1, 5=psu2)
+bmc_led_read()
+{
+    led_state=0
+    rtn_state=0
+    val=$(ipmitool raw 0x30 0x97 2>>/dev/null)
+    if [ $? -eq 0 ];then
+        if [ $1 -eq 1 ];then
+            rtn_state=$(echo $val | awk '{printf $1}')
+            rtn_state=$( printf "%d" 0x$rtn_state )
+            if [ $rtn_state -eq 0 ];then
+                led_state=0
+                return 1
+            fi
+
+            tmp=$(($rtn_state & 1))
+            if [ $tmp -eq 1 ];then
+                led_state=2
+                return 1
+            fi
+
+            tmp=$(($rtn_state & 2))
+            if [ $tmp -eq 2 ];then
+                led_state=3
+                return 1
+            fi
+
+            tmp=$(($rtn_state & 4))
+            if [ $tmp -eq 4 ];then
+                led_state=1
+                return 1
+            fi
+
+        elif [ $1 -eq 2 ];then
+            rtn_state=$(echo $val | awk '{printf $2}')
+            rtn_state=$( printf "%d" 0x$rtn_state )
+            if [ $rtn_state -eq 0 ];then
+                led_state=0
+                return 1
+            fi
+
+            tmp=$(($rtn_state & 1))
+            if [ $tmp -eq 1 ];then
+                led_state=2
+                return 1
+            fi
+
+            tmp=$(($rtn_state & 2))
+            if [ $tmp -eq 2 ];then
+                led_state=3
+                return 1
+            fi
+
+            tmp=$(($rtn_state & 4))
+            if [ $tmp -eq 4 ];then
+                led_state=1
+                return 1
+            fi
+
+        elif [ $1 -eq 3 ];then
+            rtn_state=$(echo $val | awk '{printf $3}')
+            rtn_state=$( printf "%d" 0x$rtn_state )
+            if [ $rtn_state -eq 0 ];then
+                led_state=0
+                return 1
+            fi
+
+            tmp=$(($rtn_state & 1))
+            if [ $tmp -eq 1 ];then
+                led_state=1
+                return 1
+            fi
+
+            tmp=$(($rtn_state & 2))
+            if [ $tmp -eq 2 ];then
+                led_state=2
+                return 1
+            fi
+
+        elif [ $1 -eq 4 ];then
+            rtn_state=$(echo $val | awk '{printf $4}')
+            rtn_state=$( printf "%d" 0x$rtn_state )
+            if [ $rtn_state -eq 0 ];then
+                led_state=0
+                return 1
+            fi
+
+            tmp=$(($rtn_state & 1))
+            if [ $tmp -eq 1 ];then
+                led_state=1
+                return 1
+            fi
+
+            tmp=$(($rtn_state & 2))
+            if [ $tmp -eq 2 ];then
+                led_state=2
+                return 1
+            fi
+
+        else
+            rtn_state=$(echo $val | awk '{printf $5}')
+            rtn_state=$( printf "%d" 0x$rtn_state )
+            if [ $rtn_state -eq 0 ];then
+                led_state=0
+                return 1
+            fi
+
+            tmp=$(($rtn_state & 1))
+            if [ $tmp -eq 1 ];then
+                led_state=1
+                return 1
+            fi
+
+            tmp=$(($rtn_state & 2))
+            if [ $tmp -eq 2 ];then
+                led_state=2
+                return 1
+            fi
+
+        fi
+    fi
+
+    return 0
+}
+
+#$1=led_val(0=off, 1=green, 2=amber, 3=blk_green)
+bmc_led_write()
+{
+    ipmitool raw 0x30 0x2b 0x2 0xc0 0x0 0x55 0x"$1"0 1>>/dev/null 2>>/dev/null
+}
+
+LED_monitor()
+{
+    local loc_state=0
+    #default set loc led to off
+    echo $loc_state > /sys/bus/i2c/devices/0-0060/sys_led_loc
+
+    while true
+    do
+        if [ -e /sys/bus/i2c/devices/0-0060/sys_led_diag ];then
+            loc_state=$(cat /sys/bus/i2c/devices/0-0060/sys_led_loc | awk '{printf $1}')
+			if [ $loc_state -gt 4 ]; then
+				loc_state=4
+			fi
+			if [ $loc_state != $pre_loc_state ]; then
+				bmc_led_write $loc_state
+				pre_loc_state=$loc_state
+			fi
+
+            bmc_led_read 2
+            if [ $? -eq 1 ];then
+                echo $led_state > /sys/bus/i2c/devices/0-0060/sys_led_diag
+            fi
+
+            bmc_led_read 3
+            if [ $? -eq 1 ];then
+                echo $led_state > /sys/bus/i2c/devices/0-0060/sys_led_fan
+            fi
+
+            bmc_led_read 4
+            if [ $? -eq 1 ];then
+                echo $led_state > /sys/bus/i2c/devices/0-0060/sys_led_psu1
+            fi
+
+            bmc_led_read 5
+            if [ $? -eq 1 ];then
+                echo $led_state > /sys/bus/i2c/devices/0-0060/sys_led_psu2
+            fi
+        fi
+
+        sleep 1
+    done
+}
+
+LED_monitor

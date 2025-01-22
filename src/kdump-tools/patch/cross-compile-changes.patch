@@ -1,0 +1,14 @@
+Index: kdump-tools-1.6.8.4/debian/rules
+===================================================================
+--- kdump-tools-1.6.8.4.orig/debian/rules
++++ kdump-tools-1.6.8.4/debian/rules
+@@ -20,6 +20,9 @@ endif
+ %:
+ 	dh $@
+ 
++override_dh_auto_build:
++	dh_auto_build TARGET=$(CONFIGURED_ARCH)
++
+ override_dh_gencontrol:
+ 	dh_gencontrol -- $(SUBSTVARS)
+ 

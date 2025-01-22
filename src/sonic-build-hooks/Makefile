@@ -5,7 +5,7 @@ SONIC_BUILD_HOOKS_PACKAGE = $(SONIC_BUILD_HOOKS)_$(SONIC_BUILD_HOOKS_VERSION)_al
 BUILDINFO_DIR = buildinfo
 TMP_DIR = tmp
 SYMBOL_LINKS_SRC_DIR = ../../usr/local/share/buildinfo/scripts
-SYMBOL_LINKS = symlink_build_hooks post_run_buildinfo pre_run_buildinfo collect_version_files
+SYMBOL_LINKS = symlink_build_hooks post_run_buildinfo pre_run_buildinfo collect_version_files post_run_cleanup
 SONIC_BUILD_HOOKS_TARGET = $(BUILDINFO_DIR)/$(SONIC_BUILD_HOOKS_PACKAGE)
 BUILD_ROOT_DIR = $(TMP_DIR)/$(SONIC_BUILD_HOOKS)
 DEBIAN_DIR = $(BUILD_ROOT_DIR)/DEBIAN
@@ -21,7 +21,7 @@ DPKGTOOL = $(shell which dpkg-deb)
 ifeq ($(shell which dpkg-deb),)
 BUILD_COMMAND=docker run --user $(shell id -u):$(shell id -g) --rm -v $(shell pwd):/build debian:buster bash -c 'cd /build; dpkg-deb --build $(TMP_DIR)/$(SONIC_BUILD_HOOKS) $(SONIC_BUILD_HOOKS_TARGET)'
 else
-BUILD_COMMAND=dpkg-deb --build $(TMP_DIR)/$(SONIC_BUILD_HOOKS) $(SONIC_BUILD_HOOKS_TARGET)
+BUILD_COMMAND=dpkg-deb -Zxz --build $(TMP_DIR)/$(SONIC_BUILD_HOOKS) $(SONIC_BUILD_HOOKS_TARGET)
 endif
 
 DEPENDS := $(shell find scripts hooks debian -type f)

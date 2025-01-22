@@ -4,8 +4,8 @@ Requires=database{% if multi_instance == 'true' %}@%i{% endif %}.service
 After=database{% if multi_instance == 'true' %}@%i{% endif %}.service
 After=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
 After=syncd{% if multi_instance == 'true' %}@%i{% endif %}.service
-Requires=updategraph.service
-After=updategraph.service
+Requires=config-setup.service
+After=config-setup.service
 BindsTo=sonic.target
 After=sonic.target
 BindsTo=sonic.target
@@ -20,6 +20,3 @@ ExecStartPre=/usr/local/bin/{{docker_container_name}}.sh start{% if multi_instan
 ExecStart=/usr/local/bin/{{docker_container_name}}.sh wait{% if multi_instance == 'true' %} %i{% endif %}
 ExecStop=/usr/local/bin/{{docker_container_name}}.sh stop{% if multi_instance == 'true' %} %i{% endif %}
 RestartSec=30
-
-[Install]
-WantedBy=sonic.target

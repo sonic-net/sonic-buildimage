@@ -1,5 +1,5 @@
 module sonic-buffer-port-ingress-profile-list {
-    namespace "http://github.com/Azure/sonic-buffer-port-ingress-profile-list";
+    namespace "http://github.com/sonic-net/sonic-buffer-port-ingress-profile-list";
     prefix bpg;
 
     import sonic-extension {

@@ -1,0 +1,122 @@
+From a0846dcf6f496bcfb51dd11c03d1a6c666d4020a Mon Sep 17 00:00:00 2001
+From: Stepan Blyschak <stepanb@nvidia.com>
+Date: Thu, 20 Oct 2022 13:19:31 +0000
+Subject: [PATCH] From f5f0018266c98ad96cdbe69ae60d501de21e5600 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH] From 369bbb4d62aa47d5a6d5157ca6ea819c4cb80f15
+ Mon Sep 17  00:00:00 2001 Subject: [PATCH 07/13] Added support of L3VNI EVPN
+
+This is temp patch till Prefix to ARP indirection is add in neighorch
+
+Signed-off-by: Kishore Kunal <kishore.kunal@broadcom.com>
+Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
+
+diff --git a/lib/nexthop.c b/lib/nexthop.c
+index c03d37487a..52679388fd 100644
+--- a/lib/nexthop.c
++++ b/lib/nexthop.c
+@@ -814,6 +814,7 @@ void nexthop_copy_no_recurse(struct nexthop *copy,
+ 	memcpy(&copy->rmap_src, &nexthop->rmap_src, sizeof(nexthop->rmap_src));
+ 	memcpy(&copy->rmac, &nexthop->rmac, sizeof(nexthop->rmac));
+ 	copy->rparent = rparent;
++	memcpy(&copy->nh_encap.encap_data.rmac, &nexthop->nh_encap.encap_data.rmac, ETH_ALEN);
+ 	if (nexthop->nh_label)
+ 		nexthop_add_labels(copy, nexthop->nh_label_type,
+ 				   nexthop->nh_label->num_labels,
+diff --git a/lib/nexthop.h b/lib/nexthop.h
+index f35cc5e4e2..f6fb6ec2b7 100644
+--- a/lib/nexthop.h
++++ b/lib/nexthop.h
+@@ -66,6 +66,11 @@ enum nh_encap_type {
+ /* Backup index value is limited */
+ #define NEXTHOP_BACKUP_IDX_MAX 255
+ 
++struct vxlan_nh_encap {
++	vni_t vni;
++	struct ethaddr rmac;
++};
++
+ /* Nexthop structure. */
+ struct nexthop {
+ 	struct nexthop *next;
+@@ -137,7 +142,7 @@ struct nexthop {
+ 	/* Encapsulation information. */
+ 	enum nh_encap_type nh_encap_type;
+ 	union {
+-		vni_t vni;
++		struct vxlan_nh_encap encap_data;
+ 	} nh_encap;
+ 
+ 	/* EVPN router's MAC.
+diff --git a/zebra/rt_netlink.c b/zebra/rt_netlink.c
+index 79d79d74be..325199eff9 100644
+--- a/zebra/rt_netlink.c
++++ b/zebra/rt_netlink.c
+@@ -1969,6 +1969,7 @@ static int netlink_route_nexthop_encap(struct nlmsghdr *n, size_t nlen,
+ 				       struct nexthop *nh)
+ {
+ 	struct rtattr *nest;
++	struct vxlan_nh_encap* encap_data;
+ 
+ 	switch (nh->nh_encap_type) {
+ 	case NET_VXLAN:
+@@ -1979,9 +1980,21 @@ static int netlink_route_nexthop_encap(struct nlmsghdr *n, size_t nlen,
+ 		if (!nest)
+ 			return false;
+ 
++		encap_data = &nh->nh_encap.encap_data;
++
+ 		if (!nl_attr_put32(n, nlen, 0 /* VXLAN_VNI */,
+-				   nh->nh_encap.vni))
++				   encap_data->vni))
++			return false;
++
++		if (ZEBRA_DEBUG_KERNEL)
++			zlog_debug(
++				"%s: VNI:%d RMAC:%pEA", __func__, encap_data->vni,
++				&encap_data->rmac);
++
++		if (!nl_attr_put(n, nlen, 1 /* VXLAN_RMAC */,
++					&encap_data->rmac, sizeof(encap_data->rmac)))
+ 			return false;
++
+ 		nl_attr_nest_end(n, nest);
+ 		break;
+ 	}
+diff --git a/zebra/zapi_msg.c b/zebra/zapi_msg.c
+index 68bb9783f8..c478f83795 100644
+--- a/zebra/zapi_msg.c
++++ b/zebra/zapi_msg.c
+@@ -1606,6 +1606,8 @@ static struct nexthop *nexthop_from_zapi(const struct zapi_nexthop *api_nh,
+ 		 * the nexthop and associated MAC need to be installed.
+ 		 */
+ 		if (CHECK_FLAG(api_nh->flags, ZAPI_NEXTHOP_FLAG_EVPN)) {
++			memcpy(&(nexthop->nh_encap.encap_data.rmac),
++				   &api_nh->rmac, ETH_ALEN);
+ 			SET_FLAG(nexthop->flags, NEXTHOP_FLAG_EVPN);
+ 			nexthop->rmac = api_nh->rmac;
+ 		}
+@@ -1635,6 +1637,8 @@ static struct nexthop *nexthop_from_zapi(const struct zapi_nexthop *api_nh,
+ 		 * the nexthop and associated MAC need to be installed.
+ 		 */
+ 		if (CHECK_FLAG(api_nh->flags, ZAPI_NEXTHOP_FLAG_EVPN)) {
++			memcpy(&(nexthop->nh_encap.encap_data.rmac),
++				   &api_nh->rmac, ETH_ALEN);
+ 			SET_FLAG(nexthop->flags, NEXTHOP_FLAG_EVPN);
+ 			nexthop->rmac = api_nh->rmac;
+ 		}
+diff --git a/zebra/zebra_dplane.c b/zebra/zebra_dplane.c
+index 639f3cd918..6f8d37e701 100644
+--- a/zebra/zebra_dplane.c
++++ b/zebra/zebra_dplane.c
+@@ -2934,7 +2934,7 @@ int dplane_ctx_route_init(struct zebra_dplane_ctx *ctx, enum dplane_op_e op,
+ 		zl3vni = zl3vni_from_vrf(nexthop->vrf_id);
+ 		if (zl3vni && is_l3vni_oper_up(zl3vni)) {
+ 			nexthop->nh_encap_type = NET_VXLAN;
+-			nexthop->nh_encap.vni = zl3vni->vni;
++			nexthop->nh_encap.encap_data.vni = zl3vni->vni;
+ 		}
+ 	}
+ 
+-- 
+2.17.1
+

@@ -7,8 +7,25 @@
             },
             {
                 "name": "FPGA1"
+            },
+            {
+                "name": "SFM-FPGA"
             }
         ],
+	"watchdog": {
+	    "disarm": false
+	},
+	"get_module_attributes": {
+	    "model": false,
+	    "serial": false,
+	    "base_mac": false,
+	    "system_eeprom_info": false,
+            "reboot_other_modules": false
+	},
+        "thermal_temperature": {
+	     "minimum": 0,
+	     "maximum": 110
+	},
         "fans": [],
         "fan_drawers": [
             {
@@ -16,7 +33,8 @@
                 "num_fans": 1,
                 "fans": [
                     {
-                        "name": "Fan0"
+                        "name": "Fan0",
+			"speed": { "controllable": false }
                     }
                 ]
             },
@@ -25,7 +43,8 @@
                 "num_fans": 1,
                 "fans": [
                     {
-                        "name": "Fan1"
+                        "name": "Fan1",
+			"speed": { "controllable": false }
                     }
                 ]
             },
@@ -34,7 +53,8 @@
                 "num_fans": 1,
                 "fans": [
                     {
-                        "name": "Fan2"
+                        "name": "Fan2",
+			"speed": { "controllable": false }
                     }
                 ]
             },
@@ -43,7 +63,8 @@
                 "num_fans": 1,
                 "fans": [
                     {
-                        "name": "Fan3"
+                        "name": "Fan3",
+			"speed": { "controllable": false }
                     }
                 ]
             }
@@ -113,136 +134,188 @@
         ],
         "thermals": [
             {
-                "name": "temp_1"
+                "name": "temp_1(fan)",
+		"controllable": false
             },
             {
-                "name": "temp_2"
+                "name": "temp_2",
+		"controllable": false
             },
             {
-                "name": "temp_3(fan)"
+                "name": "temp_3",
+		"controllable": false
             },
             {
-                "name": "temp_4(fan)"
+                "name": "temp_4(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm1_1(fan)"
+                "name": "temp_5(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm1_2"
+                "name": "temp_6(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm1_3"
+                "name": "sfm1_1(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm1_4"
+                "name": "sfm1_2",
+		"controllable": false
             },
             {
-                "name": "sfm1_5"
+                "name": "sfm1_3",
+		"controllable": false
             },
             {
-                "name": "sfm2_1(fan)"
+                "name": "sfm1_4(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm2_2"
+                "name": "sfm1_5(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm2_3"
+                "name": "sfm2_1(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm2_4"
+                "name": "sfm2_2",
+		"controllable": false
             },
             {
-                "name": "sfm2_5"
+                "name": "sfm2_3",
+		"controllable": false
             },
             {
-                "name": "sfm3_1(fan)"
+                "name": "sfm2_4(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm3_2"
+                "name": "sfm2_5(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm3_3"
+                "name": "sfm3_1(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm3_4"
+                "name": "sfm3_2",
+		"controllable": false
             },
             {
-                "name": "sfm3_5"
+                "name": "sfm3_3",
+		"controllable": false
             },
             {
-                "name": "sfm4_1(fan)"
+                "name": "sfm3_4(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm4_2"
+                "name": "sfm3_5(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm4_3"
+                "name": "sfm4_1(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm4_4"
+                "name": "sfm4_2",
+		"controllable": false
             },
             {
-                "name": "sfm4_5"
+                "name": "sfm4_3",
+		"controllable": false
             },
             {
-                "name": "sfm5_1(fan)"
+                "name": "sfm4_4(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm5_2"
+                "name": "sfm4_5(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm5_3"
+                "name": "sfm5_1(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm5_4"
+                "name": "sfm5_2",
+		"controllable": false
             },
             {
-                "name": "sfm5_5"
+                "name": "sfm5_3",
+		"controllable": false
             },
             {
-                "name": "sfm6_1(fan)"
+                "name": "sfm5_4(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm6_2"
+                "name": "sfm5_5(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm6_3"
+                "name": "sfm6_1(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm6_4"
+                "name": "sfm6_2",
+		"controllable": false
             },
             {
-                "name": "sfm6_5"
+                "name": "sfm6_3",
+		"controllable": false
             },
             {
-                "name": "sfm7_1(fan)"
+                "name": "sfm6_4(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm7_2"
+                "name": "sfm6_5(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm7_3"
+                "name": "sfm7_1(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm7_4"
+                "name": "sfm7_2",
+		"controllable": false
             },
             {
-                "name": "sfm7_5"
+                "name": "sfm7_3",
+		"controllable": false
             },
             {
-                "name": "sfm8_1(fan)"
+                "name": "sfm7_4(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm8_2"
+                "name": "sfm7_5(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm8_3"
+                "name": "sfm8_1(fan)",
+		"controllable": false
             },
             {
-                "name": "sfm8_4"
+                "name": "sfm8_2",
+		"controllable": false
+	    },
+            {
+                "name": "sfm8_3",
+		"controllable": false
             },
             {
-                "name": "sfm8_5"
+                "name": "sfm8_4(fan)",
+		"controllable": false
+            },
+            {
+                "name": "sfm8_5(fan)",
+		"controllable": false
             }
         ],
         "sfps": [

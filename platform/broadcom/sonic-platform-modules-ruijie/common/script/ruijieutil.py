@@ -11,7 +11,6 @@
 import sys
 import os
 import re
-import subprocess
 import syslog
 import time
 import binascii
@@ -20,6 +19,7 @@ import termios
 import threading
 import click
 import mmap
+from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_noshell_pipe
 from ruijieconfig import rg_eeprom, FRULISTS, MAC_DEFAULT_PARAM, MAC_AVS_PARAM, FANS_DEF, \
         FAN_PROTECT, E2_LOC, E2_PROTECT, RUIJIE_SERVICE_TAG, RUIJIE_DIAG_VERSION, \
         STARTMODULE, RUIJIE_CARDID, RUIJIE_PRODUCTNAME, RUIJIE_PART_NUMBER, \
@@ -538,8 +538,8 @@ class BMC():
 
 def getSdkReg(reg):
     try:
-        cmd = "bcmcmd -t 1 'getr %s ' < /dev/null" % reg
-        ret, result = rj_os_system(cmd)
+        cmd = ["bcmcmd", "-t", "1", "getr"+str(reg)]
+        ret, result = getstatusoutput_noshell(cmd)
         result_t = result.strip().replace("\r", "").replace("\n", "")
         if ret != 0 or "Error:" in result_t:
             return False, result
@@ -632,8 +632,8 @@ def getMacTemp():
     result = {}
     #waitForDocker()
     # exec twice, get the second result
-    rj_os_system("bcmcmd -t 1 \"show temp\" < /dev/null")
-    ret, log = rj_os_system("bcmcmd -t 1 \"show temp\" < /dev/null")
+    getstatusoutput_noshell(["bcmcmd", "-t", "1", "show temp"])
+    ret, log = getstatusoutput_noshell(["bcmcmd", "-t", "1", "show temp"])
     if ret:
         return False, result
     else:
@@ -689,21 +689,21 @@ def getMacTemp_sysfs(mactempconf):
 
 def restartDockerService(force=False):
     container_name = ["database","snmp","syncd","swss","dhcp_relay","radv","teamd","pmon"]
-    ret, status = rj_os_system("docker ps")
+    ret, status = getstatusoutput_noshell(["docker", "ps"])
     if ret == 0 :
         for tmpname in container_name:
             if (tmpname not in status):
                 if (force == True):
-                    rj_os_system("docker restart %s"%tmpname)
+                    getstatusoutput_noshell(["docker", "restart", tmpname])
                 else:
-                    rj_os_system("systemctl restart %s"%tmpname)
+                    getstatusoutput_noshell(["systemctl", "restart", tmpname])
 
 
 def waitForDhcp(timeout):
     time_cnt = 0
     while True:
         try:
-            ret, status = rj_os_system("systemctl status dhcp_relay.service")
+            ret, status = getstatusoutput_noshell(["systemctl", "status", "dhcp_relay.service"])
             if (ret == 0 and "running" in status)  or "SUCCESS" in status:
                 break
             else:
@@ -839,8 +839,10 @@ def util_setmac(eth, mac):
     rulefile = "/etc/udev/rules.d/70-persistent-net.rules"
     if isValidMac(mac) == False:
         return False, "MAC invaild"
-    cmd = "ethtool -e %s | grep 0x0010 | awk '{print \"0x\"$13$12$15$14}'" % eth
-    ret, log = rj_os_system(cmd)
+    cmd1 = ["ethtool", "-e", eth] 
+    cmd2 = ["grep", "0x0010"]
+    cmd3 = ["awk", '{print \"0x\"$13$12$15$14}']
+    ret, log = getstatusoutput_noshell_pipe(cmd1, cmd2, cmd3)
     log_debug(log)
     magic = ""
     if ret == 0 and len(log):
@@ -848,23 +850,22 @@ def util_setmac(eth, mac):
     macs = mac.upper().split(":")
 
     # chage ETH0 to value after setmac
-    ifconfigcmd = "ifconfig eth0 hw ether %s" % mac
-    log_debug(ifconfigcmd)
-    ret, status = rj_os_system(ifconfigcmd)
+    ifconfigcmd = ["ifconfig", "eth0", "hw", "ether", mac]
+    log_debug(' '.join(ifconfigcmd))
+    ret, status = getstatusoutput_noshell(ifconfigcmd)
     if ret:
         raise SETMACException("software set  Internet cardMAC error")
     index = 0
     for item in macs:
-        cmd = "ethtool -E %s magic %s offset %d value 0x%s" % (
-            eth, magic, index, item)
+        cmd = ["ethtool", "-E", eht, "magic", magic, "offset", str(index), "value", "0x"+item]
         log_debug(cmd)
         index += 1
-        ret, log = rj_os_system(cmd)
+        ret, log = getstatusoutput_noshell(cmd)
         if ret != 0:
             raise SETMACException(" set hardware Internet card MAC error")
     # get value after setting 
-    cmd_t = "ethtool -e eth0 offset 0 length 6"
-    ret, log = rj_os_system(cmd_t)
+    cmd_t = ["ethtool", "-e", "eth0", "offset", "0", "length", "6"]
+    ret, log = getstatusoutput_noshell(cmd_t)
     m = re.split(':', log)[-1].strip().upper()
     mac_result = m.upper().split(" ")
 
@@ -979,11 +980,11 @@ def generate_ext(cardid):
 
 
 def rji2cget(bus, devno, address):
-    command_line = "i2cget -f -y %d 0x%02x 0x%02x " % (bus, devno, address)
+    command_line = ["i2cget", "-f", "-y", str(bus), "0x%02x"%str(devno), "0x%02x"%str(address)]
     retrytime = 6
     ret_t = ""
     for i in range(retrytime):
-        ret, ret_t = rj_os_system(command_line)
+        ret, ret_t = getstatusoutput_noshell(command_line)
         if ret == 0:
             return True, ret_t
         time.sleep(0.1)
@@ -991,12 +992,11 @@ def rji2cget(bus, devno, address):
 
 
 def rji2cset(bus, devno, address, byte):
-    command_line = "i2cset -f -y %d 0x%02x 0x%02x 0x%02x" % (
-        bus, devno, address, byte)
+    command_line = ["i2cset", "-f", "-y", str(bus), "0x%02x"%str(devno), "0x%02x"%str(address), "0x%02x"%str(byte)]
     retrytime = 6
     ret_t = ""
     for i in range(retrytime):
-        ret, ret_t = rj_os_system(command_line)
+        ret, ret_t = getstatusoutput_noshell(command_line)
         if ret == 0:
             return True, ret_t
     return False, ret_t
@@ -1033,31 +1033,30 @@ def rjpciwr(pcibus , slot ,fn, bar, offset, data):
     data.close()
 
 def rjsysset(location, value):
-    command_line = "echo 0x%02x > %s" % (value, location)
     retrytime = 6
-    ret_t = ""
     for i in range(retrytime):
-        ret, ret_t = rj_os_system(command_line)
-        if ret == 0:
-            return True, ret_t
-    return False, ret_t
+        try:
+            with open(location, 'w') as f:
+                f.write('0x%02x\n'%value)
+        except (IOError, FileNotFoundError) as e:
+            return False, str(e)
+    return True, ''
 
 
 def rji2cgetWord(bus, devno, address):
-    command_line = "i2cget -f -y %d 0x%02x 0x%02x w" % (bus, devno, address)
+    command_line = ["i2cget", "-f", "-y", str(bus), "0x%02x"%str(devno), "0x%02x"%str(address), "w"]
     retrytime = 3
     ret_t = ""
     for i in range(retrytime):
-        ret, ret_t = rj_os_system(command_line)
+        ret, ret_t = getstatusoutput_noshell(command_line)
         if ret == 0:
             return True, ret_t
     return False, ret_t
 
 
 def rji2csetWord(bus, devno, address, byte):
-    command_line = "i2cset -f -y %d 0x%02x 0x%02x 0x%x w" % (
-        bus, devno, address, byte)
-    rj_os_system(command_line)
+    command_line = ["i2cset", "-f", "-y", str(bus), "0x%02x"%str(devno), "0x%02x"%str(address), "0x%x"%str(byte), "w"]
+    getstatusoutput_noshell(command_line)
 
 
 def fan_setmac():
@@ -1264,14 +1263,15 @@ def writeToEEprom(rst_arr):
     elif dealtype == "io":
         io_wr(E2_PROTECT["io_addr"], E2_PROTECT["close"])
     # deal last drivers
-    os.system("rmmod at24 ")
-    os.system("modprobe at24 ")
-    os.system("rm -f /var/cache/sonic/decode-syseeprom/syseeprom_cache")
+    getstatusoutput_noshell(["rmmod", "at24"])
+    getstatusoutput_noshell(["modprobe", "at24"])
+    getstatusoutput_noshell(["rm", "-f", "/var/cache/sonic/decode-syseeprom/syseeprom_cache"])
 
 
 def get_local_eth0_mac():
-    cmd = "ifconfig eth0 |grep HWaddr"
-    print(rj_os_system(cmd))
+    cmd1 = ["ifconfig", "eth0"]
+    cmd2 = ["grep", "HWaddr"]
+    print(getstatusoutput_noshell_pipe(cmd1, cmd2))
 
 def getonieversion():
     if not os.path.isfile('/host/machine.conf'):
@@ -1348,12 +1348,12 @@ def fac_board_setmac():
 
 def ipmi_set_mac(mac):
     macs = mac.split(":")
-    cmdinit = "ipmitool raw 0x0c 0x01 0x01 0xc2 0x00"
-    cmdset = "ipmitool raw 0x0c 0x01 0x01 0x05"
+    cmdinit = ["ipmitool", "raw", "0x0c", "0x01", "0x01", "0xc2", "0x00"]
+    cmdset = ["ipmitool", "raw", "0x0c", "0x01", "0x01", "0x05"]
     for ind in range(len(macs)):
-        cmdset += " 0x%02x" % int(macs[ind], 16)
-    rj_os_system(cmdinit)
-    ret, status = rj_os_system(cmdset)
+        cmdset.append("0x%02x" % int(macs[ind], 16))
+    getstatusoutput_noshell(cmdinit)
+    ret, status = getstatusoutput_noshell(cmdset)
     if ret:
         RJPRINTERR("\n\n%s\n\n" % status)
         return False
@@ -1393,11 +1393,11 @@ def closeProtocol():
     log_info("disable LLDP")
     sys.stdout.write(".")
     sys.stdout.flush()
-    rj_os_system("systemctl stop lldp.service")
+    getstatusoutput_noshell(["systemctl", "stop", "lldp.service"])
     log_info("disable lldp service")
     sys.stdout.write(".")
     sys.stdout.flush()
-    rj_os_system("systemctl stop bgp.service")
+    getstatusoutput_noshell(["systemctl", "stop", "bgp.service"])
     log_info("disable bgp service")
     sys.stdout.write(".")
     sys.stdout.flush()
@@ -1420,8 +1420,8 @@ def checkSdkMem():
     with open(file_name, "w") as f:
         f.write(file_data)
     print("change SDK memory to 256, reboot required")
-    rj_os_system("sync")
-    rj_os_system("reboot")
+    getstatusoutput_noshell(["sync"])
+    getstatusoutput_noshell(["reboot"])
 
 ##########################################################################
 # receives a character setting
@@ -1604,25 +1604,22 @@ def getCardId():
             return item.get('value',None)
     return None
 
-# ====================================
-# execute shell command
-# ====================================
-def rj_os_system(cmd):
-    status, output = subprocess.getstatusoutput(cmd)
-    return status, output
 
 ###########################################
 # get memory slot and number via DMI command
 ###########################################
 def getsysmeminfo():
-    ret, log = rj_os_system("which dmidecode ")
+    ret, log = getstatusoutput_noshell(["which", "dmidecode"])
     if ret != 0 or len(log) <= 0:
         error = "cmd find dmidecode"
         return False, error
-    cmd = log + "|grep -P -A5 \"Memory\s+Device\"|grep Size|grep -v Range"
+    cmd1 = [log[0].rstrip('\n')]
+    cmd2 = ["grep", "-P", "-A5", "Memory\s+Device"]
+    cmd3 = ["grep", "Size"]
+    cmd4 = ["grep", "-v", "Range"]
     # get total number first
     result = []
-    ret1, log1 = rj_os_system(cmd)
+    ret1, log1 = getstatusoutput_noshell_pipe(cmd1, cmd2, cmd3, cmd4)
     if ret1 == 0 and len(log1):
         log1 = log1.lstrip()
         arr = log1.split("\n")
@@ -1642,15 +1639,16 @@ def getsysmeminfo():
 # return various arrays
 ###########################################
 def getsysmeminfo_detail():
-    ret, log = rj_os_system("which dmidecode ")
+    ret, log = getstatusoutput_noshell(["which", "dmidecode"])
     if ret != 0 or len(log) <= 0:
         error = "cmd find dmidecode"
         return False, error
-    cmd = log + " -t 17 | grep  -A21 \"Memory Device\""  # 17
+    cmd1 = [log[0].rstrip('\n')] + ["-t", "17"]
+    cmd2 = ["grep", "-A21", "Memory Device"]  # 17
     # get total number
-    ret1, log1 = rj_os_system(cmd)
+    ret1, log1 = getstatusoutput_noshell_pipe(cmd1, cmd2)
     if ret1 != 0 or len(log1) <= 0:
-        return False, "command execution error[%s]" % cmd
+        return False, "command execution error[%s][%s]" % (cmd1, cmd2)
     result_t = log1.split("--")
     mem_rets = []
     for item in result_t:
@@ -1669,13 +1667,13 @@ def getsysmeminfo_detail():
 # get BIOS info via DMI command
 ###########################################
 def getDmiSysByType(type_t):
-    ret, log = rj_os_system("which dmidecode ")
+    ret, log = getstatusoutput_noshell(["which", "dmidecode"])
     if ret != 0 or len(log) <= 0:
         error = "cmd find dmidecode"
         return False, error
-    cmd = log + " -t %s" % type_t
+    cmd = [log[0].rstrip('\n')] + ["-t", str(type_t)]
     # get total number
-    ret1, log1 = rj_os_system(cmd)
+    ret1, log1 = getstatusoutput_noshell(cmd)
     if ret1 != 0 or len(log1) <= 0:
         return False, "command execution error[%s]" % cmd
     its = log1.replace("\t", "").strip().split("\n")
@@ -1742,11 +1740,12 @@ def getusbinfo():
         return False, "Err"
 
 def get_cpu_info():
-    cmd = "cat /proc/cpuinfo |grep processor -A18"  # 17
+    cmd1 = ["cat", "/proc/cpuinfo"]
+    cmd2 = ["grep", "processor", "-A18"]  # 17
 
-    ret, log1 = rj_os_system(cmd)
+    ret, log1 = getstatusoutput_noshell_pipe(cmd1, cmd2)
     if ret != 0 or len(log1) <= 0:
-        return False, "command execution error[%s]" % cmd
+        return False, "command execution error[%s][%s]" % (cmd1, cmd2)
     result_t = log1.split("--")
     mem_rets = []
     for item in result_t:

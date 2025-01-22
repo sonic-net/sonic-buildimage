@@ -5,7 +5,6 @@
 
 try:
     from sonic_led.led_control_base import LedControlBase
-    import swsssdk
     import threading
     import os
     import logging

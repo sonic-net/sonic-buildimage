@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# platform_utils
+
+# Determine platform and is smartswitch
+PLATFORM="$(sonic-cfggen -d -v DEVICE_METADATA.localhost.platform)"
+SMARTSWITCH=false
+PLATFORM_JSON=/usr/share/sonic/device/$PLATFORM/platform.json
+
+if [ -f "$PLATFORM_JSON" ]; then
+    NUM_DPU=$(jq -r '.DPUS | length' $PLATFORM_JSON 2>/dev/null)
+    if [[ $NUM_DPU -gt 0 ]]; then
+        SMARTSWITCH=true
+    fi
+fi
+
+# Export SMARTSWITCH for other scripts
+export SMARTSWITCH

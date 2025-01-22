@@ -9,4 +9,7 @@ Package: sonic-platform-pddf
 Architecture: amd64
 Description: kernel modules for platform devices such as psu, fan, sfp, led
 
+Package: sonic-platform-pddf-sym
+Architecture: amd64
+Description: PDDF kernel modules symbols which could be used for other platform modules build
 

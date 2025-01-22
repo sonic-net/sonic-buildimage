@@ -1,0 +1,12 @@
+DPATH       := $($(DOCKER_GBSYNCD_BRONCOS)_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST)
+DEP_FILES   += platform/components/docker-gbsyncd-broncos.mk
+DEP_FILES   += platform/components/docker-gbsyncd-broncos.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(DPATH))
+
+$(DOCKER_GBSYNCD_BRONCOS)_CACHE_MODE  := GIT_CONTENT_SHA
+$(DOCKER_GBSYNCD_BRONCOS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(DOCKER_GBSYNCD_BRONCOS)_DEP_FILES   := $(DEP_FILES)
+
+$(eval $(call add_dbg_docker,$(DOCKER_GBSYNCD_BRONCOS),$(DOCKER_GBSYNCD_BRONCOS_DBG)))

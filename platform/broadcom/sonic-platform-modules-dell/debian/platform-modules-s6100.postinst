@@ -1,11 +1,7 @@
 # postinst script for S6100
 
 # Enable Dell-S6100-platform-service
-depmod -a 
 systemctl enable platform-modules-s6100.service
-systemctl start platform-modules-s6100.service
-
-systemctl enable s6100-lpc-monitor.service
-systemctl start s6100-lpc-monitor.service
+systemctl start --no-block platform-modules-s6100.service
 
 #DEBHELPER#

@@ -2,11 +2,13 @@
 Description=BGP container
 Requires=database{% if multi_instance == 'true' %}@%i{% endif %}.service
 After=database{% if multi_instance == 'true' %}@%i{% endif %}.service
-Requires=updategraph.service
-After=updategraph.service
+Requires=config-setup.service
+After=config-setup.service
 BindsTo=sonic.target
 After=sonic.target
 Before=ntp-config.service
+After=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
+After=interfaces-config.service
 StartLimitIntervalSec=1200
 StartLimitBurst=3
 
@@ -15,7 +17,7 @@ User={{ sonicadmin_user }}
 ExecStartPre=/usr/local/bin/{{docker_container_name}}.sh start{% if multi_instance == 'true' %} %i{% endif %}
 ExecStart=/usr/local/bin/{{docker_container_name}}.sh wait{% if multi_instance == 'true' %} %i{% endif %}
 ExecStop=/usr/local/bin/{{docker_container_name}}.sh stop{% if multi_instance == 'true' %} %i{% endif %}
-ExecStopPost=/usr/local/bin/write_standby.py
+ExecStopPost=/usr/local/bin/write_standby.py --shutdown bgp
 
 RestartSec=30
 

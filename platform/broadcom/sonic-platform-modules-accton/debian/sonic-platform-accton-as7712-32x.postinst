@@ -1,0 +1,8 @@
+# Special arrangement to make PDDF mode default
+# Disable monitor, monitor-fan, monitor-psu (not enabling them would imply they will be disabled by default)
+# Enable pddf-platform-monitor
+depmod -a
+systemctl enable pddf-platform-init.service
+systemctl start pddf-platform-init.service
+systemctl enable as7712-pddf-platform-monitor.service
+systemctl start as7712-pddf-platform-monitor.service

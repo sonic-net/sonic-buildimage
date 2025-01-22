@@ -1,1 +1,50 @@
-../x86_64-mlnx_msn4700-r0/get_sensors_conf_path
+#!/bin/bash
+
+HW_VERSION="/var/run/hw-management/system/config1"
+HW_RESPIN_VERSION="/var/run/hw-management/system/config3"
+SENSORS_CONF_FILE="/usr/share/sonic/platform/sensors.conf"
+SENSORS_RESPIN_CONF_FILE="/usr/share/sonic/platform/sensors_respin.conf"
+SENSORS_CONF_FILE_A1="/usr/share/sonic/platform/sensors.conf.a1"
+SENSORS_RESPIN_CONF_FILE_A1="/usr/share/sonic/platform/sensors_respin.conf.a1"
+
+function get_sensor_conf_path() {
+    local _HW_VERSION="0"
+    local _HW_RESPIN_VERSION="0"
+    if [[ -e $HW_VERSION ]]; then
+        _HW_VERSION=$(cat $HW_VERSION 2>&1)
+        if [[ "$_HW_VERSION" == "1" ]]; then
+            if [[ -e $HW_RESPIN_VERSION ]]; then
+                _HW_RESPIN_VERSION=$(cat $HW_RESPIN_VERSION 2>&1)
+                if [[ "$_HW_RESPIN_VERSION" == "1" ]]; then
+                    if [[ -e $SENSORS_RESPIN_CONF_FILE_A1 ]]; then
+                        echo $SENSORS_RESPIN_CONF_FILE_A1
+                        return
+                    fi
+                else 
+                    if [[ -e $SENSORS_CONF_FILE_A1 ]]; then
+                        echo $SENSORS_CONF_FILE_A1
+                        return
+                    fi
+                fi
+            else
+                if [[ -e $SENSORS_CONF_FILE_A1 ]]; then
+                        echo $SENSORS_CONF_FILE_A1
+                        return
+                fi
+            fi
+        else
+            if [[ -e $HW_RESPIN_VERSION ]]; then
+                _HW_RESPIN_VERSION=$(cat $HW_RESPIN_VERSION 2>&1)
+                if [[ "$_HW_RESPIN_VERSION" == "1" ]]; then
+                    if [[ -e $SENSORS_RESPIN_CONF_FILE ]]; then
+                        echo $SENSORS_RESPIN_CONF_FILE
+                        return
+                    fi
+                fi
+            fi
+        fi
+    fi
+    echo $SENSORS_CONF_FILE
+}
+
+get_sensor_conf_path

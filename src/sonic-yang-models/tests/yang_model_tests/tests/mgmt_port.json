@@ -21,7 +21,7 @@
     "MGMT_PORT_INVALID_MTU": {
         "desc": "INVALID MTU",
         "eStrKey": "Range",
-        "eStr": "1500..9216" 
+        "eStr": "1500..9216"
     },
     "MGMT_PORT_DEFAULT_MTU": {
         "desc": "VALIDATE DEFAULT MTU",
@@ -35,5 +35,5 @@
     "MGMT_PORT_INVALID_AUTONEG": {
         "desc": "INVALID AUTONEG CONFIGURATION",
         "eStrKey": "Pattern"
-    } 
+    }
 }

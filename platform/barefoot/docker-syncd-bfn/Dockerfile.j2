@@ -1,4 +1,4 @@
-FROM docker-config-engine-buster
+FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -16,12 +16,11 @@ debs/
 RUN apt-get install -y \
         libxml2 \
         libpcap-dev \
-        libusb-1.0-0-dev \
-        libcurl4 \
-        libcurl4-gnutls-dev \
+        libusb-1.0-0 \
+        libcurl3-gnutls \
         libunwind8-dev \
-        libpython3.4 \
         libc-ares2 \
+        libedit2 \
         libgoogle-perftools4
 
 RUN dpkg -i \

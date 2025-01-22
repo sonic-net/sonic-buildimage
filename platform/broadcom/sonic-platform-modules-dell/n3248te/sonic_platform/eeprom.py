@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #############################################################################
-# DellEmc Z9332F
+# DellEmc N3248TE
 #
 # Platform and model specific eeprom subclass, inherits from the base class,
 # and provides the followings:
@@ -11,7 +11,6 @@
 try:
     import os.path
     from sonic_eeprom import eeprom_tlvinfo
-    import binascii
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -75,9 +74,9 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         (is_valid, t) = self.get_tlv_field(
                           self.eeprom_data, self._TLV_CODE_MAC_BASE)
         if not is_valid or t[1] != 6:
-            return super(eeprom_tlvinfo.TlvInfoDecoder, self).switchaddrstr(t)
+            return super(TlvInfoDecoder, self).switchaddrstr(e)
 
-        return ":".join([binascii.b2a_hex(T) for T in t[2]])
+        return ":".join(["{:02x}".format(T) for T in t[2]]).upper()
 
     def modelstr(self):
         """
@@ -88,7 +87,7 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         if not is_valid:
             return "N/A"
 
-        return results[2]
+        return results[2].decode('ascii')
 
     def part_number_str(self):
         """
@@ -99,7 +98,7 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         if not is_valid:
             return "N/A"
 
-        return results[2]
+        return results[2].decode('ascii')
 
     def serial_str(self):
         """
@@ -110,7 +109,7 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         if not is_valid:
             return "N/A"
 
-        return results[2]
+        return results[2].decode('ascii')
 
     def revision_str(self):
         """
@@ -121,7 +120,7 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         if not is_valid:
             return "N/A"
 
-        return results[2]
+        return results[2].decode('ascii')
 
     def system_eeprom_info(self):
         """
@@ -130,5 +129,3 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         found in the system EEPROM.
         """
         return self.eeprom_tlv_dict
-
-

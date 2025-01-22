@@ -40,6 +40,10 @@
 
 extern XCVR_SYSFS_ATTR_OPS xcvr_ops[];
 extern void *get_device_table(char *name);
+extern int (*ptr_fpgapci_read)(uint32_t);
+extern int (*ptr_fpgapci_write)(uint32_t, uint32_t);
+
+
 
 int get_xcvr_module_attr_data(struct i2c_client *client, struct device *dev,
                             struct device_attribute *da);
@@ -146,6 +150,148 @@ int xcvr_i2c_cpld_write(XCVR_ATTR *info, uint32_t val)
     return status;
 }
 
+int xcvr_i2c_fpga_read(XCVR_ATTR *info)
+{
+    int status = -1;
+    int retry = 10;
+
+    if (info!=NULL)
+    {
+        /* Get the I2C client for the CPLD */
+        struct i2c_client *client_ptr=NULL;
+        client_ptr = (struct i2c_client *)get_device_table(info->devname);
+        if (client_ptr)
+        {
+            if (info->len==1)
+            {
+                while(retry)
+                {
+                    status = i2c_smbus_read_byte_data(client_ptr , info->offset);
+                    if (unlikely(status < 0))
+                    {
+                        msleep(60);
+                        retry--;
+                        continue;
+                    }
+                    break;
+                }
+            }
+            else if (info->len==2)
+            {
+                retry = 10;
+                while(retry)
+                {
+                    status = i2c_smbus_read_word_swapped(client_ptr, info->offset);
+                    if (unlikely(status < 0))
+                    {
+                        msleep(60);
+                        retry--;
+                        continue;
+                    }
+                    break;
+                }
+            }
+            else
+                printk(KERN_ERR "PDDF_XCVR: Doesn't support block FPGAI2C read yet");
+        }
+        else
+            printk(KERN_ERR "Unable to get the client handle for %s\n", info->devname);
+    }
+
+    return status;
+}
+
+int xcvr_i2c_fpga_write(XCVR_ATTR *info, uint32_t val)
+{
+    int status = 0;
+    unsigned int val_mask = 0, dnd_value = 0;
+    uint32_t reg;
+    struct i2c_client *client_ptr = NULL;
+
+    val_mask = BIT_INDEX(info->mask);
+    /* Get the I2C client for the CPLD */
+    client_ptr = (struct i2c_client *)get_device_table(info->devname);
+
+    if (client_ptr)
+    {
+        if (info->len == 1)
+            status = i2c_smbus_read_byte_data(client_ptr, info->offset);
+        else if (info->len == 2)
+            status = i2c_smbus_read_word_swapped(client_ptr, info->offset);
+        else
+        {
+            printk(KERN_ERR "PDDF_XCVR: Doesn't support block FPGAI2C read yet");
+            status = -1;
+        }
+    }
+    else
+    {
+        printk(KERN_ERR "Unable to get the client handle for %s\n", info->devname);
+        status = -1;
+    }
+
+    if (status < 0)
+        return status;
+    else
+    {
+        msleep(60);
+        dnd_value = status & ~val_mask;
+        if (((val == 1) && (info->cmpval != 0)) || ((val == 0) && (info->cmpval == 0)))
+            reg = dnd_value | val_mask;
+        else
+            reg = dnd_value;
+        if (info->len == 1)
+            status = i2c_smbus_write_byte_data(client_ptr, info->offset, (uint8_t)reg);
+        else if (info->len == 2)
+            status = i2c_smbus_write_word_swapped(client_ptr, info->offset, (uint16_t)reg);
+        else
+        {
+            printk(KERN_ERR "PDDF_XCVR: Doesn't support block FPGAI2C write yet");
+            status = -1;
+        }
+    }
+    return status;
+}
+
+int xcvr_fpgapci_read(XCVR_ATTR *info)
+{
+    int reg_val= 0;
+    uint32_t offset = 0;
+
+    if (ptr_fpgapci_read == NULL) {
+        printk(KERN_ERR "PDDF_XCVR: Doesn't support FPGAPCI read yet");
+        return (-1);
+    }
+
+    offset = info->devaddr + info->offset;
+    reg_val = ptr_fpgapci_read(offset);
+    return reg_val;
+}
+
+int xcvr_fpgapci_write(XCVR_ATTR *info, uint32_t val)
+{
+    int status= 0;
+    uint32_t reg, val_mask = 0, dnd_value = 0, reg_val;
+    uint32_t offset = 0;
+
+    if (ptr_fpgapci_read == NULL || ptr_fpgapci_write == NULL) {
+        printk(KERN_ERR "PDDF_XCVR: Doesn't support FPGAPCI read or write yet");
+        return (-1);
+    }
+
+    offset = info->devaddr + info->offset;
+    val_mask = BIT_INDEX(info->mask);
+    reg_val = ptr_fpgapci_read(offset);
+    dnd_value =  reg_val & ~val_mask;
+
+    if (((val == 1) && (info->cmpval != 0)) || ((val == 0) && (info->cmpval == 0)))
+         reg = dnd_value | val_mask;
+    else
+         reg = dnd_value;
+
+    status = ptr_fpgapci_write(offset, reg);
+    return status;
+}
 
 int sonic_i2c_get_mod_pres(struct i2c_client *client, XCVR_ATTR *info, struct xcvr_data *data)
 {
@@ -164,6 +310,31 @@ int sonic_i2c_get_mod_pres(struct i2c_client *client, XCVR_ATTR *info, struct xc
             sfp_dbg(KERN_INFO "\nMod presence :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
         }
     }
+    else if ( strcmp(info->devtype, "fpgai2c") == 0)
+    {
+        status = xcvr_i2c_fpga_read(info);
+
+        if (status < 0)
+            return status;
+        else
+        {
+            modpres = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+            sfp_dbg(KERN_INFO "\nMod presence :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
+        }
+    }
+    else if ( strcmp(info->devtype, "fpgapci") == 0)
+    {
+        status = xcvr_fpgapci_read(info);
+
+        if (status < 0)
+            return status;
+        else
+        {
+            modpres = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+            sfp_dbg(KERN_INFO "\nMod presence :0x%x, status= 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
+        }
+    }
+
     else if(strcmp(info->devtype, "eeprom") == 0)
     {
         /* get client client for eeprom -  Not Applicable */
@@ -189,6 +360,30 @@ int sonic_i2c_get_mod_reset(struct i2c_client *client, XCVR_ATTR *info, struct x
             sfp_dbg(KERN_INFO "\nMod Reset :0x%x, reg_value = 0x%x\n", modreset, status);
         }
     } 
+    else if ( strcmp(info->devtype, "fpgai2c") == 0)
+    {
+        status = xcvr_i2c_fpga_read(info);
+
+        if (status < 0)
+            return status;
+        else
+        {
+            modreset = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+            sfp_dbg(KERN_INFO "\nMod reset :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
+        }
+    }
+    else if ( strcmp(info->devtype, "fpgapci") == 0)
+    {
+        status = xcvr_fpgapci_read(info);
+        sfp_dbg(KERN_INFO "\n[%s] status=%x\n", __FUNCTION__, status);
+        if (status < 0)
+            return status;
+        else
+        {
+            modreset = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+            sfp_dbg(KERN_INFO "\nMod reset :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modreset, status, info->devaddr, info->mask, info->offset);
+        }
+    }
     else if(strcmp(info->devtype, "eeprom") == 0)
     {
         /* get client client for eeprom -  Not Applicable */
@@ -214,6 +409,31 @@ int sonic_i2c_get_mod_intr_status(struct i2c_client *client, XCVR_ATTR *info, st
             sfp_dbg(KERN_INFO "\nModule Interrupt :0x%x, reg_value = 0x%x\n", mod_intr, status);
         }
     }
+    else if ( strcmp(info->devtype, "fpgai2c") == 0)
+    {
+        status = xcvr_i2c_fpga_read(info);
+
+        if (status < 0)
+            return status;
+        else
+        {
+            mod_intr = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+            sfp_dbg(KERN_INFO "\nModule Interrupt :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
+        }
+    }
+    else if ( strcmp(info->devtype, "fpgapci") == 0)
+    {
+        status = xcvr_fpgapci_read(info);
+        sfp_dbg(KERN_INFO "\n[%s] status=%x\n", __FUNCTION__, status);
+        if (status < 0)
+            return status;
+        else
+        {
+            mod_intr = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+            sfp_dbg(KERN_INFO "\nModule Interrupt :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", mod_intr, status, info->devaddr, info->mask, info->offset);
+        }
+    }
+
     else if(strcmp(info->devtype, "eeprom") == 0)
     {
         /* get client client for eeprom -  Not Applicable */
@@ -238,6 +458,30 @@ int sonic_i2c_get_mod_lpmode(struct i2c_client *client, XCVR_ATTR *info, struct 
         {
             lpmode = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
             sfp_dbg(KERN_INFO "\nModule LPmode :0x%x, reg_value = 0x%x\n", lpmode, status);
+        }
+    }
+    else if ( strcmp(info->devtype, "fpgai2c") == 0)
+    {
+        status = xcvr_i2c_fpga_read(info);
+
+        if (status < 0)
+            return status;
+        else
+        {
+            lpmode = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+            sfp_dbg(KERN_INFO "\nModule LPmode :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
+        }
+    }
+    else if ( strcmp(info->devtype, "fpgapci") == 0)
+    {
+        status = xcvr_fpgapci_read(info);
+        sfp_dbg(KERN_INFO "\n[%s] status=%x\n", __FUNCTION__, status);
+        if (status < 0)
+            return status;
+        else
+        {
+            lpmode = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+            sfp_dbg(KERN_INFO "\nlpmode :0x%x, reg_val = 0x%x, op=0x%x, mask=0x%x, offset=0x%x\n", lpmode, status, status & BIT_INDEX(info->mask), info->mask, info->offset);
         }
     }
     else if (strcmp(info->devtype, "eeprom") == 0)
@@ -266,6 +510,18 @@ int sonic_i2c_get_mod_rxlos(struct i2c_client *client, XCVR_ATTR *info, struct x
             sfp_dbg(KERN_INFO "\nModule RxLOS :0x%x, reg_value = 0x%x\n", rxlos, status);
         }
     } 
+    else if ( strcmp(info->devtype, "fpgai2c") == 0)
+    {
+        status = xcvr_i2c_fpga_read(info);
+
+        if (status < 0)
+            return status;
+        else
+        {
+            rxlos = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+            sfp_dbg(KERN_INFO "\nModule RxLOS :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
+        }
+    }
     data->rxlos = rxlos;
 
     return 0;
@@ -285,6 +541,18 @@ int sonic_i2c_get_mod_txdisable(struct i2c_client *client, XCVR_ATTR *info, stru
         {
             txdis = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
             sfp_dbg(KERN_INFO "\nModule TxDisable :0x%x, reg_value = 0x%x\n", txdis, status);
+        }
+    }
+    else if ( strcmp(info->devtype, "fpgai2c") == 0)
+    {
+        status = xcvr_i2c_fpga_read(info);
+
+        if (status < 0)
+            return status;
+        else
+        {
+            txdis = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+            sfp_dbg(KERN_INFO "\nModule TxDisable :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
         }
     }
     data->txdisable = txdis;
@@ -309,6 +577,18 @@ int sonic_i2c_get_mod_txfault(struct i2c_client *client, XCVR_ATTR *info, struct
         }
 
     } 
+    else if ( strcmp(info->devtype, "fpgai2c") == 0)
+    {
+        status = xcvr_i2c_fpga_read(info);
+
+        if (status < 0)
+            return status;
+        else
+        {
+            txflt = ((status & BIT_INDEX(info->mask)) == info->cmpval) ? 1 : 0;
+            sfp_dbg(KERN_INFO "\nModule Txfault :0x%x, reg_value = 0x%x, devaddr=0x%x, mask=0x%x, offset=0x%x\n", modpres, status, info->devaddr, info->mask, info->offset);
+        }
+    }
     data->txfault = txflt;
 
     return 0;
@@ -321,6 +601,14 @@ int sonic_i2c_set_mod_reset(struct i2c_client *client, XCVR_ATTR *info, struct x
     if (strcmp(info->devtype, "cpld") == 0)
     {
         status = xcvr_i2c_cpld_write(info, data->reset);
+    }
+    else if (strcmp(info->devtype, "fpgai2c") == 0)
+    {
+        status = xcvr_i2c_fpga_write(info, data->reset);
+    }
+    else if (strcmp(info->devtype, "fpgapci") == 0)
+    {
+        status = xcvr_fpgapci_write(info, data->reset);
     }
     else
     {
@@ -339,6 +627,14 @@ int sonic_i2c_set_mod_lpmode(struct i2c_client *client, XCVR_ATTR *info, struct 
     {
         status = xcvr_i2c_cpld_write(info, data->lpmode);
     }
+    else if (strcmp(info->devtype, "fpgai2c") == 0)
+    {
+        status = xcvr_i2c_fpga_write(info, data->lpmode);
+    }
+    else if (strcmp(info->devtype, "fpgapci") == 0)
+    {
+        status = xcvr_fpgapci_write(info, data->lpmode);
+    }
     else
     {
         printk(KERN_ERR "Error: Invalid device type (%s) to set xcvr lpmode\n", info->devtype);
@@ -355,6 +651,10 @@ int sonic_i2c_set_mod_txdisable(struct i2c_client *client, XCVR_ATTR *info, stru
     if (strcmp(info->devtype, "cpld") == 0)
     {
         status = xcvr_i2c_cpld_write(info, data->txdisable);
+    }
+    else if (strcmp(info->devtype, "fpgai2c") == 0)
+    {
+        status = xcvr_i2c_fpga_write(info, data->txdisable);
     }
     else
     {

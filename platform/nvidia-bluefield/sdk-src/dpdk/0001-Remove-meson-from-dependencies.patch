@@ -1,0 +1,24 @@
+From 178c90074d62fc6d8dfcef500cde1de8b4928eee Mon Sep 17 00:00:00 2001
+From: Oleksandr Ivantsiv <oivantsiv@nvidia.com>
+Date: Fri, 18 Nov 2022 20:09:52 +0200
+Subject: [PATCH] Remove meson from dependencies.
+
+---
+ debian/control | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/debian/control b/debian/control
+index a737765..b99b3e9 100644
+--- a/debian/control
++++ b/debian/control
+@@ -21,7 +21,6 @@ Build-Depends: debhelper (>= 10.3~),
+                linux-headers-arm64 [arm64] | linux-headers-generic [arm64],
+                linux-headers-armmp [armhf] | linux-headers-generic [armhf],
+                linux-headers-powerpc64le [ppc64el] | linux-headers-generic [ppc64el],
+-               meson (>= 0.41~),
+                pkg-config,
+                python3,
+                python3-sphinx <!nodoc>,
+-- 
+2.25.1
+

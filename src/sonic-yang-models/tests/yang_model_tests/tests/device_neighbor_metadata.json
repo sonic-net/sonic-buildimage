@@ -1,0 +1,11 @@
+{
+    "DEVICE_NEIGHBOR_METADATA_TABLE": {
+        "desc": "DEVICE_NEIGHBOR_METADATA_TABLE config pattern."
+    },
+    "DEVICE_NEIGHBOR_METADATA_TYPE_CORRECT_PATTERN_BMC": {
+        "desc": "DEVICE_NEIGHBOR_METADATA correct value for type field for Bmc"
+    },
+    "DEVICE_NEIGHBOR_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
+        "desc": "DEVICE_NEIGHBOR_METADATA value as not-provisioned for Type field"
+    }
+}

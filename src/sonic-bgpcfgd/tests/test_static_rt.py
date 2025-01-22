@@ -73,6 +73,167 @@ def test_set():
         ]
     )
 
+@patch('bgpcfgd.managers_static_rt.log_debug')
+def test_del_for_appl(mocked_log_debug):
+    class MockRedisConfigDbGet:
+        def __init__(self, cache=dict()):
+            self.cache = cache
+            self.CONFIG_DB = "CONFIG_DB"
+    
+        def get(self, db, key, field):
+            if key in self.cache:
+                if field in self.cache[key]["value"]:
+                    return self.cache[key]["value"][field]
+            return None  # return nil
+    
+    mgr = constructor()
+
+    set_del_test(
+        mgr,
+        "SET",
+        ("10.1.0.0/24", {
+            "nexthop": "PortChannel0001",
+        }),
+        True,
+        [
+            "ip route 10.1.0.0/24 PortChannel0001 tag 1",
+            "route-map STATIC_ROUTE_FILTER permit 10",
+            " match tag 1",
+            "router bgp 65100",
+            " address-family ipv4",
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " address-family ipv6",
+            "  redistribute static route-map STATIC_ROUTE_FILTER"
+        ]
+    )
+
+    #from "APPL_DB" instance, static route can not be uninstalled if the static route exists in config_db and "bfd"="false" (or no bfd field)
+    mgr.db_name = "APPL_DB"
+    cfg_db_cache = {
+        "STATIC_ROUTE|10.1.0.0/24": {
+            "value": {
+                "advertise": "false",
+                "nexthop": "PortChannel0001"
+            }
+        }
+    }
+    mgr.config_db = MockRedisConfigDbGet(cfg_db_cache)
+
+    set_del_test(
+        mgr,
+        "DEL",
+        ("10.1.0.0/24",),
+        True,
+        []
+    )
+    mocked_log_debug.assert_called_with("{} ignore appl_db static route deletion because of key {} exist in config_db and bfd is not true".format(mgr.db_name, "10.1.0.0/24"))
+
+    cfg_db_cache = {
+        "STATIC_ROUTE|10.1.0.0/24": {
+            "value": {
+                "advertise": "false",
+                "bfd": "false",
+                "nexthop": "PortChannel0001"
+            }
+        }
+    }
+    mgr.db_name = "APPL_DB"
+    mgr.config_db = MockRedisConfigDbGet(cfg_db_cache)
+
+    set_del_test(
+        mgr,
+        "DEL",
+        ("10.1.0.0/24",),
+        True,
+        []
+    )
+    mocked_log_debug.assert_called_with("{} ignore appl_db static route deletion because of key {} exist in config_db and bfd is not true".format(mgr.db_name, "10.1.0.0/24"))
+
+    #From "APPL_DB" instance, static route can be deleted if bfd field is true in config_db
+    set_del_test(
+        mgr,
+        "SET",
+        ("10.1.0.0/24", {
+            "nexthop": "PortChannel0001",
+        }),
+        True,
+        [
+            "ip route 10.1.0.0/24 PortChannel0001 tag 1",
+            "route-map STATIC_ROUTE_FILTER permit 10",
+            " match tag 1",
+            "router bgp 65100",
+            " address-family ipv4",
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " address-family ipv6",
+            "  redistribute static route-map STATIC_ROUTE_FILTER"
+        ]
+    )
+    cfg_db_cache = {
+        "STATIC_ROUTE|10.1.0.0/24": {
+            "value": {
+                "advertise": "false",
+                "bfd": "true",
+                "nexthop": "PortChannel0001"
+            }
+        }
+    }
+    mgr.db_name = "APPL_DB"
+    mgr.config_db = MockRedisConfigDbGet(cfg_db_cache)
+    set_del_test(
+        mgr,
+        "DEL",
+        ("10.1.0.0/24",),
+        True,
+        [
+            "no ip route 10.1.0.0/24 PortChannel0001 tag 1",
+            "router bgp 65100",
+            " address-family ipv4",
+            "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " address-family ipv6",
+            "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            "no route-map STATIC_ROUTE_FILTER"
+        ]
+    )
+
+    #From "APPL_DB" instance, static route can be deleted if the static route does not in config_db
+    set_del_test(
+        mgr,
+        "SET",
+        ("10.1.0.0/24", {
+            "nexthop": "PortChannel0001",
+        }),
+        True,
+        [
+            "ip route 10.1.0.0/24 PortChannel0001 tag 1",
+            "route-map STATIC_ROUTE_FILTER permit 10",
+            " match tag 1",
+            "router bgp 65100",
+            " address-family ipv4",
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " address-family ipv6",
+            "  redistribute static route-map STATIC_ROUTE_FILTER"
+        ]
+    )
+
+    cfg_db_cache = {}
+    mgr.db_name = "APPL_DB"
+    mgr.config_db = MockRedisConfigDbGet(cfg_db_cache)
+    set_del_test(
+        mgr,
+        "DEL",
+        ("10.1.0.0/24",),
+        True,
+        [
+            "no ip route 10.1.0.0/24 PortChannel0001 tag 1",
+            "router bgp 65100",
+            " address-family ipv4",
+            "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " address-family ipv6",
+            "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            "no route-map STATIC_ROUTE_FILTER"
+        ]
+    )
+
 def test_set_nhportchannel():
     mgr = constructor()
     set_del_test(
@@ -604,7 +765,7 @@ def test_set_no_action(mocked_log_debug):
         True,
         []
     )
-    mocked_log_debug.assert_called_with("Nothing to update for static route default|10.1.1.0/24")
+    mocked_log_debug.assert_called_with("CONFIG_DB Nothing to update for static route default|10.1.1.0/24")
 
 @patch('bgpcfgd.managers_static_rt.log_debug')
 def test_del_no_action(mocked_log_debug):
@@ -616,7 +777,7 @@ def test_del_no_action(mocked_log_debug):
         True,
         []
     )
-    mocked_log_debug.assert_called_with("Nothing to update for static route default|10.1.1.0/24")
+    mocked_log_debug.assert_called_with("CONFIG_DB Nothing to update for static route default|10.1.1.0/24")
 
 def test_set_invalid_arg():
     mgr = constructor()
@@ -821,3 +982,109 @@ def test_set_tag_change():
             "ip route 10.1.0.0/24 10.0.0.57 tag 2",
         ]
     )
+
+def test_set_bfd_false():
+    mgr = constructor()
+    set_del_test(
+        mgr,
+        "SET",
+        ("10.1.0.0/24", {
+            "bfd": "false",
+            "nexthop": "PortChannel0001",
+        }),
+        True,
+        [
+            "ip route 10.1.0.0/24 PortChannel0001 tag 1",
+            "route-map STATIC_ROUTE_FILTER permit 10",
+            " match tag 1",
+            "router bgp 65100",
+            " address-family ipv4",
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " address-family ipv6",
+            "  redistribute static route-map STATIC_ROUTE_FILTER"
+        ]
+    )
+
+    set_del_test(
+        mgr,
+        "DEL",
+        ("10.1.0.0/24",),
+        True,
+        [
+            "no ip route 10.1.0.0/24 PortChannel0001 tag 1",
+            "router bgp 65100",
+            " address-family ipv4",
+            "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            " address-family ipv6",
+            "  no redistribute static route-map STATIC_ROUTE_FILTER",
+            "no route-map STATIC_ROUTE_FILTER"
+        ]
+    )
+
+def test_set_bfd_true():
+    mgr = constructor()
+    set_del_test(
+        mgr,
+        "SET",
+        ("10.1.0.0/24", {
+            "bfd": "false",
+            "nexthop": "PortChannel0001",
+        }),
+        True,
+        [
+            "ip route 10.1.0.0/24 PortChannel0001 tag 1",
+            "route-map STATIC_ROUTE_FILTER permit 10",
+            " match tag 1",
+            "router bgp 65100",
+            " address-family ipv4",
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " address-family ipv6",
+            "  redistribute static route-map STATIC_ROUTE_FILTER"
+        ]
+    )
+    #do nothing for adding smae route second time
+    set_del_test(
+        mgr,
+        "SET",
+        ("10.1.0.0/24", {
+            "bfd": "false",
+            "nexthop": "PortChannel0001",
+        }),
+        True,
+        [
+        ]
+    )
+    #clear internal cache if bfd flag is true
+    set_del_test(
+        mgr,
+        "SET",
+        ("10.1.0.0/24", {
+            "bfd": "true",
+            "nexthop": "PortChannel0001",
+        }),
+        True,
+        [
+        ]
+    )
+
+    #install the route becasue that cache was cleared above
+    set_del_test(
+        mgr,
+        "SET",
+        ("10.1.0.0/24", {
+            "bfd": "false",
+            "nexthop": "PortChannel0001",
+        }),
+        True,
+        [
+            "ip route 10.1.0.0/24 PortChannel0001 tag 1",
+            "route-map STATIC_ROUTE_FILTER permit 10",
+            " match tag 1",
+            "router bgp 65100",
+            " address-family ipv4",
+            "  redistribute static route-map STATIC_ROUTE_FILTER",
+            " address-family ipv6",
+            "  redistribute static route-map STATIC_ROUTE_FILTER"
+        ]
+    )
+

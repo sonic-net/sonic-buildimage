@@ -8,6 +8,13 @@
 ln -sf /usr/share/sonic/device/$PLATFORM /usr/share/sonic/platform
 ln -sf /usr/share/sonic/device/$PLATFORM/$HWSKU /usr/share/sonic/hwsku
 
+SWITCH_TYPE=switch
+PLATFORM_CONF=platform.json
+if [[ $HWSKU == "DPU-2P" ]]; then
+    SWITCH_TYPE=dpu
+    PLATFORM_CONF=platform-dpu-2p.json
+fi
+
 pushd /usr/share/sonic/hwsku
 
 # filter available front panel ports in lanemap.ini
@@ -33,7 +40,7 @@ mkdir -p /var/run/redis/sonic-db
 cp /etc/default/sonic-db/database_config.json /var/run/redis/sonic-db/
 
 SYSTEM_MAC_ADDRESS=$(ip link show eth0 | grep ether | awk '{print $2}')
-sonic-cfggen -t /usr/share/sonic/templates/init_cfg.json.j2 -a "{\"system_mac\": \"$SYSTEM_MAC_ADDRESS\"}" > /etc/sonic/init_cfg.json
+sonic-cfggen -t /usr/share/sonic/templates/init_cfg.json.j2 -a "{\"system_mac\": \"$SYSTEM_MAC_ADDRESS\", \"switch_type\": \"$SWITCH_TYPE\"}" > /etc/sonic/init_cfg.json
 
 if [[ -f /usr/share/sonic/virtual_chassis/default_config.json ]]; then
     sonic-cfggen -j /etc/sonic/init_cfg.json -j /usr/share/sonic/virtual_chassis/default_config.json --print-data > /tmp/init_cfg.json
@@ -45,17 +52,27 @@ if [ -f /etc/sonic/config_db.json ]; then
     mv /tmp/config_db.json /etc/sonic/config_db.json
 else
     # generate and merge buffers configuration into config file
-    sonic-cfggen -k $HWSKU -p /usr/share/sonic/device/$PLATFORM/platform.json -t /usr/share/sonic/hwsku/buffers.json.j2 > /tmp/buffers.json
-    sonic-cfggen -j /etc/sonic/init_cfg.json -t /usr/share/sonic/hwsku/qos.json.j2 > /tmp/qos.json
-    sonic-cfggen -p /usr/share/sonic/device/$PLATFORM/platform.json -k $HWSKU --print-data > /tmp/ports.json
+    if [ -f /usr/share/sonic/hwsku/buffers.json.j2 ]; then
+        sonic-cfggen -k $HWSKU -p /usr/share/sonic/device/$PLATFORM/$PLATFORM_CONF -t /usr/share/sonic/hwsku/buffers.json.j2 > /tmp/buffers.json
+        buffers_cmd="-j /tmp/buffers.json"
+    fi
+    if [ -f /usr/share/sonic/hwsku/qos.json.j2 ]; then
+        sonic-cfggen -j /etc/sonic/init_cfg.json -t /usr/share/sonic/hwsku/qos.json.j2 > /tmp/qos.json
+        qos_cmd="-j /tmp/qos.json"
+    fi
+
+    sonic-cfggen -p /usr/share/sonic/device/$PLATFORM/$PLATFORM_CONF -k $HWSKU --print-data > /tmp/ports.json
     # change admin_status from up to down; Test cases dependent
     sed -i "s/up/down/g" /tmp/ports.json
-    sonic-cfggen -j /etc/sonic/init_cfg.json -j /tmp/buffers.json -j /tmp/qos.json -j /tmp/ports.json --print-data > /etc/sonic/config_db.json
+    sonic-cfggen -j /etc/sonic/init_cfg.json $buffers_cmd $qos_cmd -j /tmp/ports.json --print-data > /etc/sonic/config_db.json
 fi
+
 sonic-cfggen -t /usr/share/sonic/templates/copp_cfg.j2 > /etc/sonic/copp_cfg.json
 
 if [ "$HWSKU" == "Mellanox-SN2700" ]; then
     cp /usr/share/sonic/hwsku/sai_mlnx.profile /usr/share/sonic/hwsku/sai.profile
+elif [ "$HWSKU" == "DPU-2P" ]; then
+    cp /usr/share/sonic/hwsku/sai_dpu_2p.profile /usr/share/sonic/hwsku/sai.profile
 fi
 
 mkdir -p /etc/swss/config.d/
@@ -143,6 +160,8 @@ supervisorctl start vlanmgrd
 
 supervisorctl start zebra
 
+supervisorctl start mgmtd
+
 supervisorctl start staticd
 
 supervisorctl start buffermgrd
@@ -158,6 +177,8 @@ supervisorctl start natmgrd
 supervisorctl start natsyncd
 
 supervisorctl start tunnelmgrd
+
+supervisorctl start fabricmgrd
 
 # Start arp_update when VLAN exists
 VLAN=`sonic-cfggen -d -v 'VLAN.keys() | join(" ") if VLAN'`

@@ -2,7 +2,7 @@ module sonic-feature{
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-feature";
+    namespace "http://github.com/sonic-net/sonic-feature";
     prefix feature;
 
     import sonic-types {
@@ -22,6 +22,16 @@ module sonic-feature{
         type string {
             pattern "kube|local";
         }
+    }
+
+    typedef feature-scope-status {
+        description "configuration to set the feature has asic scope as true/false";
+        type string;
+    }
+
+    typedef feature-delay-status {
+        description "configuration to set the feature has delay scope as True/False";
+        type string;
     }
 
     container sonic-feature {
@@ -52,24 +62,31 @@ module sonic-feature{
                     default "enabled";
                 }
 
-                leaf has_timer {
-                    description "This configuration identicates if there is
-                                timer associated to this feature";
-                    type stypes:boolean_type;
+                leaf delayed {
+                    description "This configuration identicates if the feature needs to be delayed until
+                                 system initialization";
+                    type feature-delay-status;
                     default "false";
                 }
 
                 leaf has_global_scope {
                     description "This configuration identicates there will only one service
                                 spawned for the device";
-                    type stypes:boolean_type;
+                    type feature-scope-status;
                     default "false";
                 }
 
                 leaf has_per_asic_scope {
                     description "This configuration identicates there will only one service
                                 spawned per asic";
-                    type stypes:boolean_type;
+                    type feature-scope-status;
+                    default "false";
+                }
+
+                leaf has_per_dpu_scope {
+                    description "This configuration identicates there will only one service
+                                spawned per DPU";
+                    type feature-scope-status;
                     default "false";
                 }
 
@@ -85,6 +102,20 @@ module sonic-feature{
                                 kubernetes or local";
                     type feature-owner;
                     default "local";
+                }
+
+                leaf check_up_status {
+                    description "This configuration controls the system ready tool to check
+                        the app ready/up status";
+                    type stypes:boolean_type;
+                    default "false";
+                }
+
+                leaf support_syslog_rate_limit {
+                    description "This configuration indicates the feature support configuring
+                                 syslog rate limit";
+                    type stypes:boolean_type;
+                    default "false";
                 }
             }
         }

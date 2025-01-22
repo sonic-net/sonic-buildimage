@@ -1,16 +1,3 @@
-# Copyright (c) 2019 Edgecore Networks Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain
-# a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
-#
-# THIS CODE IS PROVIDED ON AN  *AS IS* BASIS, WITHOUT WARRANTIES OR
-# CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT
-# LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS
-# FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
-#
-# See the Apache Version 2.0 License for specific language governing
-# permissions and limitations under the License.
 
 #include <Python.h>
 #include <sys/types.h>
@@ -119,13 +106,6 @@ static char docstr[] = "\
      In reading operation: data which is read from FPGA\n\
      In writing operation: None\n";
 
-#if PY_MAJOR_VERSION < 3
-PyMODINIT_FUNC
-initfbfpgaio(void)
-{
-  (void) Py_InitModule3("fbfpgaio", FbfpgaMethods, docstr);
-}
-#else
 static struct PyModuleDef FbfpgaModule =
 {
     PyModuleDef_HEAD_INIT,
@@ -140,5 +120,5 @@ PyInit_fbfpgaio(void)
 {
   return PyModule_Create(&FbfpgaModule);
 }
-#endif
+
 

@@ -1,6 +1,5 @@
 {
     "skip_ledd": true,
-    "skip_pcied": true,
-    "skip_thermalctld": true
+    "skip_pcied": true
 }
 

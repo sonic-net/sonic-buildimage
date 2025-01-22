@@ -8,20 +8,17 @@
 #
 #############################################################################
 
-import os
 import time
-#import subprocess
-#import sonic_device_util
+import subprocess
 from ctypes import create_string_buffer
 
 try:
-     from sonic_platform_base.sfp_base import SfpBase
-#     from sonic_platform_base.sonic_eeprom import eeprom_dts
-     from sonic_platform_base.sonic_sfp.sff8472 import sff8472InterfaceId
-     from sonic_platform_base.sonic_sfp.sff8472 import sff8472Dom
-     from sonic_platform_base.sonic_sfp.sff8436 import sff8436InterfaceId
-     from sonic_platform_base.sonic_sfp.sff8436 import sff8436Dom
-     from sonic_platform_base.sonic_sfp.sfputilhelper import SfpUtilHelper
+    from sonic_platform_base.sfp_base import SfpBase
+    from sonic_platform_base.sonic_sfp.sff8472 import sff8472InterfaceId
+    from sonic_platform_base.sonic_sfp.sff8472 import sff8472Dom
+    from sonic_platform_base.sonic_sfp.sff8436 import sff8436InterfaceId
+    from sonic_platform_base.sonic_sfp.sff8436 import sff8436Dom
+    from sonic_platform_base.sonic_sfp.sfputilhelper import SfpUtilHelper
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -166,7 +163,7 @@ class Sfp(SfpBase):
     # Path to QSFP sysfs
     PLATFORM_ROOT_PATH = "/usr/share/sonic/device"
     PMON_HWSKU_PATH = "/usr/share/sonic/hwsku"
-    HOST_CHK_CMD = "docker > /dev/null 2>&1"
+    HOST_CHK_CMD = ["docker"]
 
     PLATFORM = "x86_64-quanta_ix8_rglbmc-r0"
     HWSKU  = "Quanta-IX8-56X"
@@ -175,7 +172,6 @@ class Sfp(SfpBase):
         # Init index
         self.index = sfp_index
         self.port_num = self.index
-        #self.dom_supported = False
         self.sfp_type = sfp_type
         # Init eeprom path
         eeprom_path = '/sys/bus/i2c/devices/i2c-{0}/{0}-0050/eeprom'
@@ -284,17 +280,8 @@ class Sfp(SfpBase):
         else:
             return 'N/A'
 
-    def __read_txt_file(self, file_path):
-        try:
-            with open(file_path, 'r') as fd:
-                data = fd.read()
-                return data.strip()
-        except IOError:
-            pass
-        return ""
-
     def __is_host(self):
-        return os.system(self.HOST_CHK_CMD) == 0
+        return subprocess.call(self.HOST_CHK_CMD) == 0
 
     def __get_path_to_port_config_file(self):
         platform_path = "/".join([self.PLATFORM_ROOT_PATH, self.PLATFORM])
@@ -354,26 +341,6 @@ class Sfp(SfpBase):
                 sysfsfile_eeprom.close()
 
         return eeprom_raw
-
-    def __convert_string_to_num(self, value_str):
-        if "-inf" in value_str:
-            return 'N/A'
-        elif "Unknown" in value_str:
-            return 'N/A'
-        elif 'dBm' in value_str:
-            t_str = value_str.rstrip('dBm')
-            return float(t_str)
-        elif 'mA' in value_str:
-            t_str = value_str.rstrip('mA')
-            return float(t_str)
-        elif 'C' in value_str:
-            t_str = value_str.rstrip('C')
-            return float(t_str)
-        elif 'Volts' in value_str:
-            t_str = value_str.rstrip('Volts')
-            return float(t_str)
-        else:
-            return 'N/A'
 
     def _dom_capability_detect(self):
         if not self.get_presence():
@@ -533,9 +500,7 @@ class Sfp(SfpBase):
             else:
                 if not self.get_presence():
                     return transceiver_info_dict
-                elif i == max_retry-1:
-                    pass
-                else:
+                elif i < max_retry-1:
                     time.sleep(0.5)
 
         if sfp_interface_bulk_raw is None:
@@ -590,7 +555,8 @@ class Sfp(SfpBase):
             ['data']['Extended Identifier']['value']
         transceiver_info_dict['ext_rateselect_compliance'] = sfp_interface_bulk_data \
             ['data']['RateIdentifier']['value']
-        transceiver_info_dict['type_abbrv_name'] = 'N/A'
+        transceiver_info_dict['type_abbrv_name'] = sfp_interface_bulk_data \
+            ['data']['type_abbrv_name']['value']
         if self.sfp_type == QSFP_TYPE:
             for key in qsfp_cable_length_tup:
                 if key in sfp_interface_bulk_data['data']:
@@ -860,7 +826,7 @@ class Sfp(SfpBase):
                 transceiver_dom_threshold_dict['txbiaslowwarning']   = channel_threshold_data['TxBiasLowWarning']['value']
 
             for key in transceiver_dom_threshold_dict:
-                transceiver_dom_threshold_dict[key] = self.__convert_string_to_num(transceiver_dom_threshold_dict[key])
+                transceiver_dom_threshold_dict[key] = self._convert_string_to_num(transceiver_dom_threshold_dict[key])
 
             return transceiver_dom_threshold_dict
 
@@ -908,7 +874,7 @@ class Sfp(SfpBase):
                 transceiver_dom_threshold_info_dict['rxpowerlowwarning']  = dom_module_threshold_data['data']['RXPowerLowWarning']['value']
 
             for key in transceiver_dom_threshold_info_dict:
-                transceiver_dom_threshold_info_dict[key] = self.__convert_string_to_num(transceiver_dom_threshold_info_dict[key])
+                transceiver_dom_threshold_info_dict[key] = self._convert_string_to_num(transceiver_dom_threshold_info_dict[key])
 
             return transceiver_dom_threshold_info_dict
 
@@ -1453,7 +1419,7 @@ class Sfp(SfpBase):
                         sysfsfile_eeprom = open(
                             sysfs_sfp_i2c_client_eeprom_path, mode="r+b", buffering=0)
                         buffer = create_string_buffer(1)
-                        buffer[0] = chr(tx_disable_ctl)
+                        buffer[0] = tx_disable_ctl
                         # Write to eeprom
                         sysfsfile_eeprom.seek(offset + SFP_STATUS_CONTROL_OFFSET)
                         sysfsfile_eeprom.write(buffer[0])
@@ -1506,7 +1472,7 @@ class Sfp(SfpBase):
                     else:
                         tx_disable_ctl = channel_state & (~channel)
                     buffer = create_string_buffer(1)
-                    buffer[0] = chr(tx_disable_ctl)
+                    buffer[0] = tx_disable_ctl
                     # Write to eeprom
                     sysfsfile_eeprom = open(
                         self.port_to_eeprom_mapping[self.port_num], "r+b")
@@ -1594,7 +1560,7 @@ class Sfp(SfpBase):
                     power_set_bit |= 1 << 1
 
                 buffer = create_string_buffer(1)
-                buffer[0] = chr(power_override_bit | power_set_bit)
+                buffer[0] = power_override_bit | power_set_bit
                 # Write to eeprom
                 sysfsfile_eeprom = open(self.port_to_eeprom_mapping[self.port_num], "r+b")
                 sysfsfile_eeprom.seek(QSFP_POWEROVERRIDE_OFFSET)

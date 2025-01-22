@@ -15,9 +15,10 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 PSU_FAN_MAX_RPM = 26688
-CPLD_I2C_PATH = "/sys/bus/i2c/devices/3-0063/fan"
-PSU_HWMON_I2C_PATH ="/sys/bus/i2c/devices/{}-00{}/"
-PSU_I2C_MAPPING = {
+SPEED_TOLERANCE = 15
+CPLD_FAN_I2C_PATH = "/sys/bus/i2c/devices/3-0063/fan"
+I2C_PATH ="/sys/bus/i2c/devices/{}-00{}/"
+PSU_HWMON_I2C_MAPPING = {
     0: {
         "num": 11,
         "addr": "58"
@@ -27,6 +28,20 @@ PSU_I2C_MAPPING = {
         "addr": "5b"
     },
 }
+
+
+PSU_CPLD_I2C_MAPPING = {
+    0: {
+        "num": 11,
+        "addr": "50"
+    },
+    1: {
+        "num": 12,
+        "addr": "53"
+    },
+}
+
+
 
 FAN_NAME_LIST = ["FAN-1F", "FAN-1R", "FAN-2F", "FAN-2R",
                  "FAN-3F", "FAN-3R", "FAN-4F", "FAN-4R", 
@@ -42,13 +57,18 @@ class Fan(FanBase):
         self.is_psu_fan = is_psu_fan
         if self.is_psu_fan:
             self.psu_index = psu_index
-            self.psu_i2c_num = PSU_I2C_MAPPING[self.psu_index]['num']
-            self.psu_i2c_addr = PSU_I2C_MAPPING[self.psu_index]['addr']
-            self.psu_hwmon_path = PSU_HWMON_I2C_PATH.format(
+            self.psu_i2c_num = PSU_HWMON_I2C_MAPPING[self.psu_index]['num']
+            self.psu_i2c_addr = PSU_HWMON_I2C_MAPPING[self.psu_index]['addr']
+            self.psu_hwmon_path = I2C_PATH.format(
                 self.psu_i2c_num, self.psu_i2c_addr)
         
+            self.psu_i2c_num = PSU_CPLD_I2C_MAPPING[self.psu_index]['num']
+            self.psu_i2c_addr = PSU_CPLD_I2C_MAPPING[self.psu_index]['addr']
+            self.psu_cpld_path = I2C_PATH.format(
+                self.psu_i2c_num, self.psu_i2c_addr)
+
         FanBase.__init__(self)
-        
+
 
     def get_direction(self):
         """
@@ -60,9 +80,9 @@ class Fan(FanBase):
         
 
         if not self.is_psu_fan:
-            dir_str = "{}{}{}".format(CPLD_I2C_PATH, self.fan_tray_index+1, '_direction')
+            dir_str = "{}{}{}".format(CPLD_FAN_I2C_PATH, self.fan_tray_index+1, '_direction')
             val=self._api_helper.read_txt_file(dir_str)
-            if val is not None:                
+            if val is not None:
                 if int(val, 10)==0:
                     direction=self.FAN_DIRECTION_EXHAUST
                 else:
@@ -90,26 +110,26 @@ class Fan(FanBase):
         Returns:
             An integer, the percentage of full fan speed, in the range 0 (off)
                  to 100 (full speed)
-                         
+
         """
         speed = 0
         if self.is_psu_fan:
             psu_fan_path= "{}{}".format(self.psu_hwmon_path, 'psu_fan1_speed_rpm')
             fan_speed_rpm = self._api_helper.read_txt_file(psu_fan_path)
             if fan_speed_rpm is not None:
-                speed = (int(fan_speed_rpm,10))*100/26688               
+                speed = (int(fan_speed_rpm,10))*100/26688
                 if speed > 100:
                     speed=100
             else:
                 return 0
         elif self.get_presence():            
-            speed_path = "{}{}".format(CPLD_I2C_PATH, '_duty_cycle_percentage')
+            speed_path = "{}{}".format(CPLD_FAN_I2C_PATH, '_duty_cycle_percentage')
             speed=self._api_helper.read_txt_file(speed_path)
             if speed is None:
                 return 0
             	
         return int(speed)
-            
+
     def get_target_speed(self):
         """
         Retrieves the target (expected) speed of the fan
@@ -123,7 +143,7 @@ class Fan(FanBase):
             0   : when PWM mode is use
             pwm : when pwm mode is not use
         """
-        return False #Not supported
+        return self.get_speed()
 
     def get_speed_tolerance(self):
         """
@@ -132,7 +152,7 @@ class Fan(FanBase):
             An integer, the percentage of variance from target speed which is
                  considered tolerable
         """
-        return False #Not supported
+        return SPEED_TOLERANCE
 
     def set_speed(self, speed):
         """
@@ -146,7 +166,7 @@ class Fan(FanBase):
         """
         
         if not self.is_psu_fan and self.get_presence():            
-            speed_path = "{}{}".format(CPLD_I2C_PATH, '_duty_cycle_percentage')
+            speed_path = "{}{}".format(CPLD_FAN_I2C_PATH, '_duty_cycle_percentage')
             return self._api_helper.write_txt_file(speed_path, int(speed))
 
         return False
@@ -195,17 +215,18 @@ class Fan(FanBase):
         Returns:
             bool: True if FAN is present, False if not
         """
-        present_path = "{}{}{}".format(CPLD_I2C_PATH, self.fan_tray_index+1, '_present')
-        val=self._api_helper.read_txt_file(present_path)
-
-        if not self.is_psu_fan:
-            if val is not None:
-                return int(val, 10)==1
-            else:
-                return False
-            
+        
+        
+        if self.is_psu_fan:
+            present_path="{}{}".format(self.psu_cpld_path, 'psu_present')
         else:
-            return True
+            present_path = "{}{}{}".format(CPLD_FAN_I2C_PATH, self.fan_tray_index+1, '_present')
+                    
+        val=self._api_helper.read_txt_file(present_path)
+        if val is not None:
+            return int(val, 10)==1
+        else:
+            return False
 
     def get_status(self):
         """
@@ -221,7 +242,7 @@ class Fan(FanBase):
             else:
                 return False
         else:    
-            path = "{}{}{}".format(CPLD_I2C_PATH, self.fan_index+1, '_fault')
+            path = "{}{}{}".format(CPLD_FAN_I2C_PATH, self.fan_tray_index+1, '_fault')
             val=self._api_helper.read_txt_file(path)
             if val is not None:
                 return int(val, 10)==0
@@ -245,3 +266,25 @@ class Fan(FanBase):
             string: Serial number of device
         """
         return "N/A"
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of
+        entPhysicalContainedIn is'0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device
+            or -1 if cannot determine the position
+        """
+        return (self.fan_index+1) \
+            if not self.is_psu_fan else (self.psu_index+1)
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True if not self.is_psu_fan else False
+

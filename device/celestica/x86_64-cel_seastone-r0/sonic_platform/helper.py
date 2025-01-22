@@ -1,3 +1,4 @@
+import fcntl
 import os
 import struct
 import subprocess
@@ -5,7 +6,7 @@ from mmap import *
 
 from sonic_py_common import device_info
 
-HOST_CHK_CMD = "docker > /dev/null 2>&1"
+HOST_CHK_CMD = ["docker"]
 EMPTY_STRING = ""
 
 
@@ -15,7 +16,11 @@ class APIHelper():
         (self.platform, self.hwsku) = device_info.get_platform_and_hwsku()
 
     def is_host(self):
-        return os.system(HOST_CHK_CMD) == 0
+        try:
+            subprocess.call(HOST_CHK_CMD, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except FileNotFoundError:
+            return False
+        return True
 
     def pci_get_value(self, resource, offset):
         status = True
@@ -35,20 +40,13 @@ class APIHelper():
         result = ""
         try:
             p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                cmd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             raw_data, err = p.communicate()
             if err == '':
                 result = raw_data.strip()
         except:
             status = False
         return status, result
-
-    def run_interactive_command(self, cmd):
-        try:
-            os.system(cmd)
-        except:
-            return False
-        return True
 
     def read_txt_file(self, file_path):
         try:
@@ -77,57 +75,23 @@ class APIHelper():
         return True
 
     def get_cpld_reg_value(self, getreg_path, register):
-        cmd = "echo {1} > {0}; cat {0}".format(getreg_path, register)
-        status, result = self.run_command(cmd)
-        return result if status else None
+        file = open(getreg_path, 'w+')
+        # Acquire an exclusive lock on the file
+        fcntl.flock(file, fcntl.LOCK_EX)
 
-    def ipmi_raw(self, netfn, cmd):
-        status = True
-        result = ""
         try:
-            cmd = "ipmitool raw {} {}".format(str(netfn), str(cmd))
-            p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-            else:
-                status = False
-        except:
-            status = False
-        return status, result
+            file.write(register + '\n')
+            file.flush()
 
-    def ipmi_fru_id(self, id, key=None):
-        status = True
-        result = ""
-        try:
-            cmd = "ipmitool fru print {}".format(str(
-                id)) if not key else "ipmitool fru print {0} | grep '{1}' ".format(str(id), str(key))
+            # Seek to the beginning of the file
+            file.seek(0)
 
-            p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-            else:
-                status = False
-        except:
-            status = False
-        return status, result
+            # Read the content of the file
+            result = file.readline().strip()
+        finally:
+            # Release the lock and close the file
+            fcntl.flock(file, fcntl.LOCK_UN)
+            file.close()
 
-    def ipmi_set_ss_thres(self, id, threshold_key, value):
-        status = True
-        result = ""
-        try:
-            cmd = "ipmitool sensor thresh '{}' {} {}".format(
-                str(id), str(threshold_key), str(value))
-            p = subprocess.Popen(
-                cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            raw_data, err = p.communicate()
-            if err == '':
-                result = raw_data.strip()
-            else:
-                status = False
-        except:
-            status = False
-        return status, result
+        return result
+

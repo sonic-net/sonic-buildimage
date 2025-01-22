@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,8 @@
 import os
 import pytest
 import sys
+import threading
+import time
 if sys.version_info.major == 3:
     from unittest import mock
 else:
@@ -113,6 +115,109 @@ class TestUtils:
         @utils.default_return(100, log_func=mock_log)
         def func():
             raise RuntimeError('')
-        
+
         assert func() == 100
         assert mock_log.call_count == 1
+
+    def test_run_command(self):
+        output = utils.run_command(['ls'])
+        assert output
+        assert utils.run_command(['not_a_command']) is None
+
+    def test_run_command_exception(self):
+        output = utils.run_command(['ls'])
+        assert output
+
+    @mock.patch('sonic_platform.utils.load_json_file')
+    @mock.patch('os.path.exists')
+    @mock.patch('sonic_py_common.device_info.get_path_to_port_config_file', mock.MagicMock(return_value=''))
+    @mock.patch('sonic_py_common.device_info.get_path_to_hwsku_dir', mock.MagicMock(return_value='/tmp'))
+    def test_extract_RJ45_ports_index(self, mock_exists, mock_load_json):
+        mock_exists.return_value = False
+        rj45_list = utils.extract_RJ45_ports_index()
+        assert rj45_list is None
+
+        mock_exists.return_value = True
+        platform_json = {
+            'interfaces': {
+                "Ethernet0": {
+                    "index": "1",
+                    "lanes": "0",
+                    "breakout_modes": {
+                        "1x1000[100,10]": ["etp1"]
+                    }
+                }
+            }
+        }
+        hwsku_json = {
+            'interfaces': {
+                "Ethernet0": {
+                    "default_brkout_mode": "1x1000[100,10]",
+                    "port_type": "RJ45"
+                }
+            }
+        }
+
+        mock_load_json.side_effect = [platform_json, hwsku_json]
+        assert utils.extract_RJ45_ports_index() == [0]
+
+    def test_wait_until(self):
+        values = []
+        assert utils.wait_until(lambda: len(values) == 0, timeout=1)
+        assert not utils.wait_until(lambda: len(values) > 0, timeout=1)
+
+        def thread_func(items):
+            time.sleep(3)
+            items.append(0)
+
+        t = threading.Thread(target=thread_func, args=(values, ))
+        t.start()
+        assert utils.wait_until(lambda: len(values) > 0, timeout=5)
+        t.join()
+
+    def test_load_json_file(self):
+        assert utils.load_json_file('some_file') is None
+
+        mock_os_open = mock.mock_open(read_data='')
+        with mock.patch('sonic_platform.utils.open', mock_os_open):
+            assert utils.load_json_file('some_file') is None
+
+        mock_os_open = mock.mock_open(read_data='{"a": "b"}')
+        with mock.patch('sonic_platform.utils.open', mock_os_open):
+            data = utils.load_json_file('some_file')
+            assert data['a'] == 'b'
+
+    def test_read_key_value_file(self):
+        mock_os_open = mock.mock_open(read_data='a:b')
+        with mock.patch('sonic_platform.utils.open', mock_os_open):
+            assert utils.read_key_value_file('some_file') == {'a':'b'}
+
+        mock_os_open = mock.mock_open(read_data='a=b')
+        with mock.patch('sonic_platform.utils.open', mock_os_open):
+            assert utils.read_key_value_file('some_file', delimeter='=') == {'a':'b'}
+            
+    @mock.patch('sonic_platform.utils.time.sleep', mock.MagicMock())
+    def test_wait_until_conditions(self):
+        conditions = [lambda: True]
+        assert utils.wait_until_conditions(conditions, 1)
+        conditions = [lambda: False]
+        assert not utils.wait_until_conditions(conditions, 1)
+
+    def test_timer(self):
+        timer = utils.Timer()
+        timer.start()
+        mock_cb_1000_run_now = mock.MagicMock()
+        mock_cb_1000_run_future = mock.MagicMock()
+        mock_cb_1_run_future_once = mock.MagicMock()
+        mock_cb_1_run_future_repeat = mock.MagicMock()
+        timer.schedule(1000, cb=mock_cb_1000_run_now, repeat=False, run_now=True)
+        timer.schedule(1000, cb=mock_cb_1000_run_future, repeat=False, run_now=False)
+        timer.schedule(1, cb=mock_cb_1_run_future_once, repeat=False, run_now=False)
+        timer.schedule(1, cb=mock_cb_1_run_future_repeat, repeat=True, run_now=False)
+        time.sleep(3)
+        timer.stop()
+
+        mock_cb_1000_run_now.assert_called_once()
+        mock_cb_1000_run_future.assert_not_called()
+        mock_cb_1_run_future_once.assert_called_once()
+        assert mock_cb_1_run_future_repeat.call_count > 1

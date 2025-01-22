@@ -20,6 +20,7 @@ import time
 import syslog
 import re
 from sonic_sfp.bcmshell import bcmshell
+from sonic_py_common.general import getstatusoutput_noshell
 
 
 # =====================================================================
@@ -120,8 +121,8 @@ def _board_init():
     global SYNC_S
     global SYNC_P
 
-    cmd = "uname -n"
-    platform = os.popen(cmd).read()
+    cmd = ["uname", "-n"]
+    _, platform = getstatusoutput_noshell(cmd)
 
     if platform.rstrip() == INV_MAGNOLIA:
         BOARD_TPYE      = "inventec_d6254qs"

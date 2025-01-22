@@ -2,7 +2,7 @@ module sonic-dscp-fc-map {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-dscp-fc-map";
+    namespace "http://github.com/sonic-net/sonic-dscp-fc-map";
 
     prefix dtm;
 

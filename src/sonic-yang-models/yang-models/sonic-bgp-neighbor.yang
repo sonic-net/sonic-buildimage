@@ -1,5 +1,5 @@
 module sonic-bgp-neighbor {
-    namespace "http://github.com/Azure/sonic-bgp-neighbor";
+    namespace "http://github.com/sonic-net/sonic-bgp-neighbor";
     prefix bgpnbr;
     yang-version 1.1;
 
@@ -61,11 +61,17 @@ module sonic-bgp-neighbor {
                     description "BGP Neighbor address";
                 }
 
-                uses bgpcmn:sonic-bgp-cmn-neigh;
+                uses bgpcmn:sonic-bgp-cmn-neigh {
+                    refine asn {
+                        must ". >= 1" {
+                            error-message "ASN must be greater than 0";
+                        }
+                    }
+                }
             }
 
             list BGP_NEIGHBOR_LIST {
-                description "This list is to support generic BGP neighbor configuration handled by frrcfgd and 
+                description "This list is to support generic BGP neighbor configuration handled by frrcfgd and
                 frr_mgmt_framework_config field should be set to true in DEVICE_METADATA talbe for accepting the generic BGP table configurations.";
                 key "vrf_name neighbor";
 

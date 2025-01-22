@@ -10,18 +10,16 @@
   address-family ipv4
     neighbor {{ neighbor_addr }} peer-group INTERNAL_PEER_V4
 !
-{%   if CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' %}
+{%   if CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' or CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
     neighbor {{ neighbor_addr }} next-hop-self force
-    neighbor {{ neighbor_addr }} route-map FROM_BGP_INTERNAL_PEER_V4 in
 {%   endif %}
 !
 {% elif neighbor_addr | ipv6 %}
   address-family ipv6
     neighbor {{ neighbor_addr }} peer-group INTERNAL_PEER_V6
 !
-{%   if CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' %}
+{%   if CONFIG_DB__DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' or CONFIG_DB__DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
     neighbor {{ neighbor_addr }} next-hop-self force
-    neighbor {{ neighbor_addr }} route-map FROM_BGP_INTERNAL_PEER_V6 in
 {%   endif %}
 {% endif %}
 !

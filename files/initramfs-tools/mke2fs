@@ -21,6 +21,7 @@ copy_exec /usr/sbin/mke2fs /usr/local/sbin/
 copy_exec /sbin/sfdisk
 copy_exec /sbin/fdisk
 copy_exec /sbin/resize2fs
+copy_exec /sbin/tune2fs
 copy_exec /sbin/findfs
 
 fstypes="ext4 ext3"

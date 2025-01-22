@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,43 +17,52 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <ngbde.h>
 
 /*! \cond */
 static int dma_debug = 0;
-module_param(dma_debug, int, 0);
+module_param(dma_debug, int, S_IRUSR | S_IWUSR);
 MODULE_PARM_DESC(dma_debug,
 "DMA debug output enable (default 0).");
 /*! \endcond */
 
 /*! Default size of of DMA memory pools (in MB). */
-#define DMAPOOL_SIZE_DEFAULT    16
+#ifndef DMAPOOL_SIZE_DEFAULT
+#define DMAPOOL_SIZE_DEFAULT    32
+#endif
 
 /*! Default number of DMA memory pools per device. */
 #define NUM_DMAPOOL_DEFAULT     1
 
 /*! \cond */
 static int dma_size = DMAPOOL_SIZE_DEFAULT;
-module_param(dma_size, int, 0);
+module_param(dma_size, int, S_IRUSR);
 MODULE_PARM_DESC(dma_size,
-"Size of of DMA memory pools in MB (default 16 MB).");
+"Size of of DMA memory pools in MB (default 32 MB).");
 /*! \endcond */
 
 /*! \cond */
-static char *dma_alloc;
-module_param(dma_alloc, charp, 0);
+static char *dma_alloc = "auto";
+module_param(dma_alloc, charp, S_IRUSR);
 MODULE_PARM_DESC(dma_alloc,
 "DMA allocation method auto|kapi|pgmem (default auto)");
 /*! \endcond */
 
 /*! \cond */
 static int dma_pools = NUM_DMAPOOL_DEFAULT;
-module_param(dma_pools, int, 0);
+module_param(dma_pools, int, S_IRUSR);
 MODULE_PARM_DESC(dma_pools,
 "Number of DMA memory pools to pre-allocate per device (default 1).");
+/*! \endcond */
+
+/*! \cond */
+static int dma_32bit = 0;
+module_param(dma_32bit, int, S_IRUSR);
+MODULE_PARM_DESC(dma_32bit,
+"Request DMA memory with 32-bit physical address (default 0).");
 /*! \endcond */
 
 /*!
@@ -70,8 +79,8 @@ ngbde_dmamem_kapi_alloc(ngbde_dmactrl_t *dmactrl, ngbde_dmamem_t *dmamem)
     void *vaddr;
     dma_addr_t baddr;
 
-    vaddr = dma_alloc_coherent(dmactrl->dev, dmactrl->size, &baddr,
-                               dmactrl->flags);
+    vaddr = dma_alloc_attrs(dmactrl->dev, dmactrl->size, &baddr,
+                            dmactrl->flags, DMA_FORCE_CONTIGUOUS);
     if (vaddr) {
         /* Store allocation information in dmamem structure */
         dmamem->vaddr = vaddr;
@@ -82,7 +91,7 @@ ngbde_dmamem_kapi_alloc(ngbde_dmactrl_t *dmactrl, ngbde_dmamem_t *dmamem)
         dmamem->baddr = baddr;
 
         /* Write small signature for debug purposes */
-        strcpy((char *)vaddr, "DMA_KAPI");
+        strlcpy((char *)vaddr, "DMA_KAPI", dmactrl->size);
 
         if (dma_debug) {
             printk("DMA: Allocated %d KB of KAPI memory at 0x%08lx\n",
@@ -120,14 +129,16 @@ ngbde_dmamem_pgmem_alloc(ngbde_dmactrl_t *dmactrl, ngbde_dmamem_t *dmamem)
         dmamem->baddr = dma_map_single(dmamem->dev, dmamem->vaddr,
                                        dmamem->size, DMA_BIDIRECTIONAL);
         if (dma_mapping_error(dmactrl->dev, dmamem->baddr)) {
-            dmamem->baddr = 0;
+            ngbde_pgmem_free(dmamem->vaddr);
+            memset(dmamem, 0, sizeof(*dmamem));
             if (dma_debug) {
                 printk("DMA: Failed to map PGMEM memory\n");
             }
+            return;
         }
 
         /* Write small signature for debug purposes */
-        strcpy((char *)vaddr, "DMA_PGMEM");
+        strlcpy((char *)vaddr, "DMA_PGMEM", dmactrl->size);
 
         if (dma_debug) {
             printk("DMA: Allocated %d KB of PGMEM memory at 0x%08lx\n",
@@ -222,8 +233,9 @@ ngbde_dmamem_free(ngbde_dmamem_t *dmamem)
             printk("DMA: Freeing %d KB of KAPI memory\n",
                    (int)(dmamem->size / ONE_KB));
         }
-        dma_free_coherent(dmamem->dev, dmamem->size,
-                          dmamem->vaddr, dmamem->paddr);
+        dma_free_attrs(dmamem->dev, dmamem->size,
+                       dmamem->vaddr, dmamem->baddr,
+                       DMA_FORCE_CONTIGUOUS);
         memset(dmamem, 0, sizeof(*dmamem));
         break;
     case NGBDE_DMA_T_PGMEM:
@@ -298,7 +310,9 @@ ngbde_dma_init(void)
 
     /* Check for forced DMA allocation method */
     if (dma_alloc) {
-        if (strcmp(dma_alloc, "kapi") == 0) {
+        if (strcmp(dma_alloc, "auto") == 0) {
+            dma_type = NGBDE_DMA_T_AUTO;
+        } else if (strcmp(dma_alloc, "kapi") == 0) {
             dma_type = NGBDE_DMA_T_KAPI;
         } else if (strcmp(dma_alloc, "pgmem") == 0) {
             dma_type = NGBDE_DMA_T_PGMEM;
@@ -323,7 +337,14 @@ ngbde_dma_init(void)
             dmapool->dmactrl.dev = swdev[idx].dma_dev;
             dmapool->dmactrl.size = dma_size * ONE_MB;
             dmapool->dmactrl.pref_type = dma_type;
-            dmapool->dmactrl.flags = GFP_KERNEL | GFP_DMA32;
+            dmapool->dmactrl.flags = GFP_KERNEL;
+            if (dma_32bit) {
+                dmapool->dmactrl.flags |= GFP_DMA32;
+            }
+            if (dma_type == NGBDE_DMA_T_AUTO && dma_debug == 0) {
+                /* Prevent warning if CMA is unavailable */
+                dmapool->dmactrl.flags |= __GFP_NOWARN;
+            }
         }
 
         /* Allocate DMA pools */

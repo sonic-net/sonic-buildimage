@@ -1,15 +1,26 @@
 #!/bin/bash
 
+IMAGENAME=$1
+
 . /usr/local/share/buildinfo/scripts/buildinfo_base.sh
+
 
 [ -d $POST_VERSION_PATH ] && rm -rf $POST_VERSION_PATH
 
 # Collect the version files
 collect_version_files $POST_VERSION_PATH
 
+#Save the cache file for exporting it to host.
+tar -C ${PKG_CACHE_PATH} --exclude=cache.tgz -zcvf /cache.tgz .
+
 [ -d $BUILD_VERSION_PATH ] && [ ! -z "$(ls -A $BUILD_VERSION_PATH)" ] && cp -rf $BUILD_VERSION_PATH/* $POST_VERSION_PATH
 rm -rf $BUILD_VERSION_PATH/*
+if [ ! -z "$(get_version_cache_option)" ]; then
+	# Restore he deletion of cache files
+	cat <<-EOF >/etc/apt/apt.conf.d/docker-clean
+	DPkg::Post-Invoke { "rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true"; };
+	APT::Update::Post-Invoke { "rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true"; };
+	EOF
 
-# Disable the build hooks
-symlink_build_hooks -d
-set_reproducible_mirrors -d
+fi
+

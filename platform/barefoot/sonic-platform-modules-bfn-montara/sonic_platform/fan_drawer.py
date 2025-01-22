@@ -10,7 +10,7 @@ class FanDrawer(FanDrawerBase):
     def __init__(self, fantray_index, max_fan):
         # For now we return only present fans
         self.fantrayindex = fantray_index
-        self._fan_list = [Fan(i, self.fantrayindex) for i in range(1, max_fan + 1)]
+        self._fan_list = [Fan(i, max_fan, self.fantrayindex) for i in range(1, max_fan + 1)]
 
     # DeviceBase interface methods:
     def get_name(self):

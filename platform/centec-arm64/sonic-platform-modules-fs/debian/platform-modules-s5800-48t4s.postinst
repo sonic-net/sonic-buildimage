@@ -1,0 +1,9 @@
+#!/bin/bash
+
+hw_ver=`dd if=/dev/mtd2 bs=1 skip=4115 count=1 2>/dev/null | hexdump | awk '{print $2}'`
+if [[ 0x$hw_ver -ge 0x30 ]] && [[ 0x$hw_ver -ne 0x44 ]]; then
+    sed -i "s/S5800-48t4s /S5800-48t4s-mars8p /g" /usr/share/sonic/device/arm64-fs_s5800_48t4s-r0/default_sku
+fi
+
+systemctl enable 48t4s_platform.service
+systemctl start 48t4s_platform.service

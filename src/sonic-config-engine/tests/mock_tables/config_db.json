@@ -1,11 +1,11 @@
 {
     "PORT|Ethernet0": {
-        "lanes": "29,30,31,32", 
-        "description": "config_db:switch-01t1:port1", 
-        "pfc_asym": "off", 
-        "mtu": "9100", 
-        "alias": "fortyGigE0/0", 
-        "admin_status": "up", 
+        "lanes": "29,30,31,32",
+        "description": "config_db:switch-01t1:port1",
+        "pfc_asym": "off",
+        "mtu": "9100",
+        "alias": "fortyGigE0/0",
+        "admin_status": "up",
         "speed": "10000"
     },
     "PORT|Ethernet4": {

@@ -53,7 +53,7 @@
                         "port": "Ethernet4",
                         "profile_list": ["lossless_buffer_profile", "lossless_buffer_profile2"]
                     }
-                ]    
+                ]
             }
         }
     },

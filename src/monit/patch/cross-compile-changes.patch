@@ -1,0 +1,13 @@
+Index: monit/debian/rules
+===================================================================
+--- monit.orig/debian/rules
++++ monit/debian/rules
+@@ -4,7 +4,7 @@
+ 	dh $@ --with autoreconf
+ 
+ override_dh_auto_configure:
+-	dh_auto_configure -- \
++	dh_auto_configure -- libmonit_cv_setjmp_available=yes libmonit_cv_vsnprintf_c99_conformant=yes \
+ 		--sysconfdir=/etc/monit
+ 
+ override_dh_fixperms:

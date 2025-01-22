@@ -1,10 +1,40 @@
 #!/bin/bash
 
+DEVICE_MGR_REBOOT_FILE="/tmp/device_mgr_reboot"
+
+update_reboot_cause()
+{
+    DEVICE_MGR_REBOOT_FILE=/tmp/device_mgr_reboot
+    REBOOT_CAUSE_FILE=/host/reboot-cause/reboot-cause.txt
+    DEVICE_REBOOT_CAUSE_FILE=/etc/opt/srlinux/reboot-cause.txt
+    if [ -e  $DEVICE_MGR_REBOOT_FILE ]; then
+        if [ -e $DEVICE_REBOOT_CAUSE_FILE ]; then
+            cp -f $DEVICE_REBOOT_CAUSE_FILE $REBOOT_CAUSE_FILE
+        fi
+        rm -f $DEVICE_MGR_REBOOT_FILE
+    else
+        touch /etc/opt/srlinux/devmgr_reboot_cause.done
+        rm -f $DEVICE_REBOOT_CAUSE_FILE &> /dev/null
+    fi
+    sync
+}
+
+if [ ! -e $DEVICE_MGR_REBOOT_FILE ]; then
+    echo "Rebooting all Linecards"
+    python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); platform_chassis.reboot_imms()'
+    sleep 3
+fi
+
+# update the reboot_cuase file when reboot is trigger by device-mgr
+update_reboot_cause
+
 systemctl stop nokia-watchdog.service
 sleep 2
 echo "w" > /dev/watchdog
 kick_date=`date -u`
 echo "last watchdog kick $kick_date" > /var/log/nokia-watchdog-last.log
 rm -f /sys/firmware/efi/efivars/dump-*
+echo "Shutdown midplane"
+ifconfig xe0 down
 sync
-/sbin/reboot
+exec /sbin/reboot $@

@@ -23,6 +23,8 @@ import commands
 import sys
 import logging
 import time
+import subprocess
+from sonic_py_common.general import getstatusoutput_noshell
 
 PROJECT_NAME = 'QFX5200-32C'
 verbose = False
@@ -30,8 +32,8 @@ DEBUG = False
 FORCE = 0
 
 if DEBUG == True:
-    print sys.argv[0]
-    print 'ARGV      :', sys.argv[1:]   
+    print(sys.argv[0])
+    print('ARGV      :', sys.argv[1:])   
 
 i2c_prefix = '/sys/bus/i2c/devices/'
 
@@ -70,7 +72,7 @@ mknod =[
 
 def my_log(txt):
     if DEBUG == True:
-        print txt    
+        print(txt)
     return
     
 def log_os_system(cmd, show):
@@ -83,6 +85,10 @@ def log_os_system(cmd, show):
         if show:
             print('Failed :'+cmd)
     return  status, output
+
+def write_file(text, file):
+    with open(file, 'w') as f:
+        f.write(text + '\n')
             
 def driver_install():
     global FORCE
@@ -106,7 +112,7 @@ def device_install():
     for i in range(0,len(mknod)):
         status, output = log_os_system(mknod[i], 1)
         if status:
-            print output
+            print(output)
             if FORCE == 0:
                 return status
 
@@ -123,7 +129,7 @@ def do_install():
             if FORCE == 0:        
                 return  status        
     else:
-        print PROJECT_NAME.upper()+" devices detected...."           
+        print(PROJECT_NAME.upper()+" devices detected....")
     return
     
 def main():
@@ -139,49 +145,50 @@ def main():
     
 
     # Enabling REFPGA	
-    EnableREFFGACmd = 'busybox devmem 0xFED50011 8 0x53' 
+    EnableREFFGACmd = ['busybox', 'devmem', '0xFED50011', '8', '0x53'] 
     try:
-        os.system(EnableREFFGACmd)
+        subprocess.call(EnableREFFGACmd)
     except OSError:
-        print 'Error: Execution of "%s" failed', EnableREFFGACmd
+        print('Error: Execution of "%s" failed', EnableREFFGACmd)
         return False
 
     time.sleep(2)
     
     # Create CPU Board EEPROM device	
-    CreateEEPROMdeviceCmd = 'sudo echo 24c02 0x51 > /sys/bus/i2c/devices/i2c-0/new_device' 
+    CreateEEPROMdeviceCmd = '24c02 0x51'
+    file = '/sys/bus/i2c/devices/i2c-0/new_device'
     try:
-        os.system(CreateEEPROMdeviceCmd)
+        write_file(CreateEEPROMdeviceCmd, file)
     except OSError:
-        print 'Error: Execution of "%s" failed', CreateEEPROMdeviceCmd
+        print('Error: Execution of "%s" failed', CreateEEPROMdeviceCmd)
         return False
 
     time.sleep(1)
 
     #Retrieve the Base MAC Address from EEPROM	
-    status, macAddress = commands.getstatusoutput("decode-syseeprom -m 0x24")
+    status, macAddress = getstatusoutput_noshell(["decode-syseeprom", "-m", "0x24"])
     if status:
-        print 'Error: Could not retrieve BASE MAC Address from EEPROM'
+        print('Error: Could not retrieve BASE MAC Address from EEPROM')
         return False
 
     #Make eth0 interface down	
-    status, eth0Down = commands.getstatusoutput("ifconfig eth0 down")
+    status, eth0Down = getstatusoutput_noshell(["ifconfig", "eth0", "down"])
     if status:
-        print 'Error: Could not make eth0 interface down'
+        print('Error: Could not make eth0 interface down')
         return False
 
     #Assign BASE MAC ADDRESS retieved from CPU board EEPROM to eth0 interface	
-    mac_address_prog = "ifconfig eth0 hw ether " + str(macAddress)
+    mac_address_prog = ["ifconfig", "eth0", "hw", "ether", str(macAddress)]
 
-    status, MACAddressProg = commands.getstatusoutput(mac_address_prog)
+    status, MACAddressProg = getstatusoutput_noshell(mac_address_prog)
     if status:
-        print 'Error: Could not set up "macAddress" for eth0 interface'
+        print('Error: Could not set up "macAddress" for eth0 interface')
         return False
 
     #Make eth0 interface up	
-    status, eth0UP = commands.getstatusoutput("ifconfig eth0 up")
+    status, eth0UP = getstatusoutput_noshell(["ifconfig", "eth0", "up"])
     if status:
-        print 'Error: Could not make eth0 interface up'
+        print('Error: Could not make eth0 interface up')
         return False
 
     # Juniper QFX5200 platform drivers install
@@ -189,20 +196,20 @@ def main():
     time.sleep(2)
 
     # Juniper SFP Intialization	
-    JuniperSFPInitCmd = 'python /usr/share/sonic/device/x86_64-juniper_qfx5200-r0/plugins/qfx5200_sfp_init.py'
+    JuniperSFPInitCmd = ['python', '/usr/share/sonic/device/x86_64-juniper_qfx5200-r0/plugins/qfx5200_sfp_init.py']
     try:
-        os.system(JuniperSFPInitCmd)
+        subprocess.call(JuniperSFPInitCmd)
     except OSError:
-        print 'Error: Execution of "%s" failed', JuniperSFPInitCmd
+        print('Error: Execution of "%s" failed', JuniperSFPInitCmd)
         return False
 
     time.sleep(1)
     # Invoking the script which retrieves the data from CPU Board and Main Board EEPROM and storing in file	
-    EEPROMDataCmd = 'python /usr/share/sonic/device/x86_64-juniper_qfx5200-r0/plugins/qfx5200_eeprom_data.py'
+    EEPROMDataCmd = ['python', '/usr/share/sonic/device/x86_64-juniper_qfx5200-r0/plugins/qfx5200_eeprom_data.py']
     try:
-        os.system(EEPROMDataCmd)
+        subprocess.call(EEPROMDataCmd)
     except OSError:
-        print 'Error: Execution of "%s" failed', EEPROMDataCmd
+        print('Error: Execution of "%s" failed', EEPROMDataCmd)
         return False
 
     for x in range(PWMINPUT_NUM):
@@ -218,16 +225,16 @@ def main():
 				                 hwmon_dir)
          device_path = pwm_input_path_mapping[x]
          time.sleep(1)
-         cmd = ("sudo echo 22500 > %s" %device_path)
-         os.system(cmd)
+         cmd = "22500"
+         write_file(cmd, device_path)
 
 	 numsensors_input_path_mapping[x] = NUMSENSORS_PATH.format(
 		                                 hwmon_input_node_mapping[x],
 				                 hwmon_dir)
          numsensors_path = numsensors_input_path_mapping[x]
          time.sleep(1)
-         cmd = ("sudo echo 0 > %s" %numsensors_path)
-         os.system(cmd)
+         cmd = "0"
+         write_file(cmd, numsensors_path)
 
     return True              
         

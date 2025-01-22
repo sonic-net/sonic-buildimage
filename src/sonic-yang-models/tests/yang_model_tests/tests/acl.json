@@ -4,6 +4,28 @@
         "eStrKey" : "InvalidValue",
         "eStr": ["PACKET_ACTION"]
     },
+    "ACL_RULE_FOR_CTRLPLANE_ACL_REQUIRES_PACKET_ACTION": {
+        "desc": "ACL_RULE for CTRLPLANE ACLs require PACKET_ACTION.",
+        "eStrKey" : "Must",
+        "eStr": ["CTRLPLANE", "PACKET_ACTION"]
+    },
+    "ACL_RULE_MANDATORY_PRIORITY": {
+        "desc": "ACL_RULE MANDATORY PRIORITY field.",
+        "eStrKey" : "Mandatory",
+        "eStr": ["ACL_RULE", "PRIORITY"]
+    },
+    "ACL_RULE_WITH_VALID_IN_PORTS": {
+        "desc": "Configure ACL_RULE with valid IN_PORTS."
+    },
+    "ACL_RULE_WITH_VALID_OUT_PORTS": {
+        "desc": "Configure ACL_RULE with valid OUT_PORTS."
+    },
+    "ACL_RULE_WITH_VALID_ICMPV4_CODE": {
+        "desc": "Configure ACL_RULE with valid ICMPV4 type and code."
+    },
+    "ACL_RULE_WITH_VALID_ICMPV6_CODE": {
+        "desc": "Configure ACL_RULE with valid ICMPV6 type and code."
+    },
     "ACL_TABLE_EMPTY_PORTS": {
         "desc": "Configure ACL_TABLE with empty ports."
     },
@@ -16,15 +38,30 @@
         "desc": "Configure non-existing ACL_TABLE in ACL_RULE.",
         "eStrKey" : "LeafRef"
     },
+    "ACL_RULE_IP_TYPE_SRC_IPV6ANY": {
+        "desc": "Configure IP_TYPE as ipv6any and SRC_IPV6 in ACL_RULE."
+    },
+    "ACL_RULE_IP_TYPE_DST_IPV4ANY": {
+        "desc": "Configure IP_TYPE as ipv4any and DST_IP in ACL_RULE."
+    },
     "ACL_RULE_IP_TYPE_SRC_IPV6_MISMATCH": {
         "desc": "Configure IP_TYPE as ipv4any and SRC_IPV6 in ACL_RULE.",
         "eStrKey" : "When",
         "eStr": ["IP_TYPE"]
     },
+    "ACL_RULE_WITHOUT_IP_TYPE": {
+        "desc": "Configure ACL_RULE without IP_TYPE."
+    },
     "ACL_RULE_ARP_TYPE_DST_IPV6_MISMATCH": {
         "desc": "Configure IP_TYPE as ARP and DST_IPV6 in ACL_RULE.",
         "eStrKey" : "When",
         "eStr": ["IP_TYPE"]
+    },
+    "ACL_RULE_VALID_L4_SRC_PORT_RANGE": {
+        "desc": "Configure l4_src_port_range as 1024-65535 in ACL_RULE"
+    },
+    "ACL_RULE_VALID_L4_DST_PORT_RANGE": {
+        "desc": "Configure l4_src_port_range as 0-65535 in ACL_RULE"
     },
     "ACL_RULE_WRONG_L4_SRC_PORT_RANGE": {
         "desc": "Configure l4_src_port_range as 99999-99999 in ACL_RULE",
@@ -79,13 +116,17 @@
         "eStrKey": "MinElements"
     },
     "ACL_TABLE_CUSTOM_TABLE_TYPE_NO_ACTIONS": {
-        "desc": "ACL_TABLE LOAD TABLE TYPE SUCCESSFULLY WITH NO ACTIONS.",
+        "desc": "ACL_TABLE LOAD TABLE TYPE WITH NO ACTIONS.",
         "eStrKey" : "Verify",
         "verify": {
             "xpath": "/sonic-acl:sonic-acl/ACL_TABLE_TYPE/ACL_TABLE_TYPE_LIST[ACL_TABLE_TYPE_NAME='CUSTOM_L3']/ACL_TABLE_TYPE_NAME",
-            "key": "sonic-acl:actions",
+            "key": "sonic-acl:ACTIONS",
             "value": [""]
         }
+    },
+    "ACL_TABLE_CUSTOM_TABLE_TYPE_LOWERCASE_KEY": {
+        "desc": "ACL_TABLE LOAD TABLE TYPE WITH KEY ACTIONS/BIND_POINTS/MATCHES WRITTEN IN LOWERCASE.",
+        "eStrKey": "UnknownElement"
     },
     "ACL_TABLE_L2_ACL_FIELDS": {
         "desc": "Configure L2 ACL with proper rule fields"
@@ -100,10 +141,45 @@
         "eStrKey" : "Pattern"
     },
     "ACL_RULE_L2_INVALID_ETHER": {
-        "desc": "Configure invalid MAC address format.",
+        "desc": "Configure invalid ethertype.",
+        "eStrKey" : "Pattern"
+    },
+    "ACL_RULE_L2_VALID_ETHER_IN_DECIMAL": {
+        "desc": "Configure valid ethertype in decimal format."
+    },
+    "ACL_RULE_L2_INVALID_ETHER_IN_DECIMAL": {
+        "desc": "Configure invalid ethertype in decimal format.",
         "eStrKey" : "Pattern"
     },
     "ACL_PACKET_ACTION_VALIDATE_VALUE_ACCEPT": {
         "desc": "Configure CTRLPLANE with proper action ACCEPT."
+    },
+    "ACL_RULE_WITH_INVALID_MIRROR_INGRESS_ACTION": {
+        "desc": "Configure ACL_RULE with invalid mirror action.",
+        "eStrKey" : "LeafRef"
+    },
+    "ACL_RULE_WITH_VALID_MIRROR_INGRESS_ACTION": {
+        "desc": "Configure ACL_RULE with valid mirror action."
+    },
+    "ACL_RULE_VALID_TCP_FLAGS": {
+        "desc": "Configure ACL_RULE with valid TCP_FLAGS."
+    },
+    "ACL_RULE_WRONG_BTH_OPCODE": {
+        "desc": "Configure invalid BTH_OPCODE in decimal format.",
+        "eStrKey" : "Pattern"
+    },
+    "ACL_RULE_WRONG_AETH_SYNDROME": {
+        "desc": "Configure invalid AETH_SYNDROME in decimal format.",
+        "eStrKey" : "Pattern"
+    },
+    "ACL_TABLE_L3V4V6_TABLE_TYPE": {
+        "desc": "ACL_TABLE Validate type L3V4V6."
+    },
+    "ACL_RULE_WITH_TUNNEL_TERMINATION_WRONG_TYPE": {
+        "desc": "ACL Rule with Tunnel Termination",
+        "eStrKey" : "InvalidValue"
+    },
+    "ACL_RULE_WITH_TUNNEL_TERMINATION": {
+        "desc": "ACL Rule with Tunnel Termination"
     }
 }

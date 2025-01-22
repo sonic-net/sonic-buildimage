@@ -1,0 +1,52 @@
+module sonic-dhcp-server {
+
+    yang-version 1.1;
+
+    namespace  "http://github.com/sonic-net/sonic-dhcp-server";
+
+    prefix dhcp-server;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-port {
+        prefix port;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description "DHCP SERVER YANG module for SONiC OS";
+
+    revision 2022-09-23 {
+        description "Initial version";
+    }
+
+    container sonic-dhcp-server {
+
+        container DHCP_SERVER {
+
+            description "DHCP_SERVER part of config_db.json";
+
+            list DHCP_SERVER_LIST {
+
+                description "List of IPs in DHCP_SERVER Table";
+
+                key "ip";
+
+                leaf ip {
+                    description "IP as DHCP_SERVER";
+                    type inet:ip-address;
+                }
+
+            } /* end of list IPS_LIST */
+
+        } /* end of container DHCP_SERVER */
+
+    } /* end of container sonic-dhcp-server */
+
+} /* end of module sonic-dhcp-server */

@@ -1,9 +1,8 @@
-FROM {{ docker_pde_load_image }}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ENV PYTHONPATH=/usr/share/sonic/platform
 
-RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -20,8 +19,7 @@ RUN apt-get update && apt-get install -y ipmitool telnet busybox kmod libpcap-de
 RUN apt-get install -y bzip2 curl ioping openssl bc sysstat
 
 # Packages for PDDF
-
-RUN apt-get install -y python-jsonschema
+RUN apt-get install -y python3-jsonschema i2c-tools
 
 RUN pip3 install pytest pexpect
 
@@ -89,7 +87,7 @@ COPY ["stress-sfp-i2c.py", "/home/pde"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["syseeprom.py", "/usr/bin/"]
 COPY ["docker_init.sh", "/usr/bin/"]
-COPY ["cancun_files/cancun_4.5.0/*", "cancun_files/cancun_6.6.1/*", "cancun_files/cancun_4.3.0/*", "/usr/lib/cancun/"]
+COPY ["cancun_files/cancun_4.6.0/*", "cancun_files/cancun_6.9.1/*", "cancun_files/cancun_4.8.0/*", "/usr/lib/cancun/"]
 COPY ["syncd_init_common.sh", "/usr/bin/"]
 
 ENTRYPOINT ["/usr/bin/docker_init.sh"]

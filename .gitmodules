@@ -1,15 +1,15 @@
 [submodule "sonic-swss-common"]
 	path = src/sonic-swss-common
-	url = https://github.com/Azure/sonic-swss-common
+	url = https://github.com/sonic-net/sonic-swss-common
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
-	url = https://github.com/Azure/sonic-linux-kernel
+	url = https://github.com/sonic-net/sonic-linux-kernel
 [submodule "sonic-sairedis"]
 	path = src/sonic-sairedis
-	url = https://github.com/Azure/sonic-sairedis
+	url = https://github.com/sonic-net/sonic-sairedis
 [submodule "sonic-swss"]
 	path = src/sonic-swss
-	url = https://github.com/Azure/sonic-swss
+	url = https://github.com/sonic-net/sonic-swss
 [submodule "src/p4c-bm/p4c-bm"]
 	path = platform/p4/p4c-bm/p4c-bm
 	url = https://github.com/krambn/p4c-bm
@@ -18,35 +18,35 @@
 	url = https://github.com/p4lang/p4-hlir
 [submodule "sonic-dbsyncd"]
 	path = src/sonic-dbsyncd
-	url = https://github.com/Azure/sonic-dbsyncd
+	url = https://github.com/sonic-net/sonic-dbsyncd
 [submodule "src/sonic-py-swsssdk"]
 	path = src/sonic-py-swsssdk
-	url = https://github.com/Azure/sonic-py-swsssdk.git
+	url = https://github.com/sonic-net/sonic-py-swsssdk.git
 [submodule "src/sonic-snmpagent"]
 	path = src/sonic-snmpagent
-	url = https://github.com/Azure/sonic-snmpagent
+	url = https://github.com/sonic-net/sonic-snmpagent
 [submodule "src/ptf"]
 	path = src/ptf
 	url = https://github.com/p4lang/ptf.git
 [submodule "src/sonic-utilities"]
 	path = src/sonic-utilities
-	url = https://github.com/Azure/sonic-utilities
+	url = https://github.com/sonic-net/sonic-utilities
 [submodule "platform/broadcom/sonic-platform-modules-arista"]
 	path = platform/broadcom/sonic-platform-modules-arista
 	url = https://github.com/aristanetworks/sonic
 [submodule "src/sonic-platform-common"]
 	path = src/sonic-platform-common
-	url = https://github.com/Azure/sonic-platform-common
+	url = https://github.com/sonic-net/sonic-platform-common
 [submodule "src/sonic-platform-daemons"]
 	path = src/sonic-platform-daemons
-	url = https://github.com/Azure/sonic-platform-daemons
+	url = https://github.com/sonic-net/sonic-platform-daemons
 [submodule "src/sonic-platform-pde"]
 	path = src/sonic-platform-pde
-	url = https://github.com/Azure/sonic-platform-pdk-pde
+	url = https://github.com/sonic-net/sonic-platform-pdk-pde
 [submodule "src/sonic-frr/frr"]
 	path = src/sonic-frr/frr
-	url = https://github.com/Azure/sonic-frr.git
-	branch = frr/7.5
+	url = https://github.com/sonic-net/sonic-frr.git
+	branch = frr-10.0.1
 [submodule "platform/p4/p4-hlir/p4-hlir-v1.1"]
 	path = platform/p4/p4-hlir/p4-hlir-v1.1
 	url = https://github.com/p4lang/p4-hlir.git
@@ -62,41 +62,74 @@
 [submodule "src/redis-dump-load"]
 	path = src/redis-dump-load
 	url = https://github.com/p/redis-dump-load.git
-[submodule "platform/mellanox/mlnx-sai/SAI-Implementation"]
-	path = platform/mellanox/mlnx-sai/SAI-Implementation
-	url = https://github.com/Mellanox/SAI-Implementation
+[submodule "src/scapy"]
+	path = src/scapy
+	url = https://github.com/secdev/scapy.git
 [submodule "src/sonic-mgmt-framework"]
 	path = src/sonic-mgmt-framework
-	url = https://github.com/Azure/sonic-mgmt-framework
-[submodule "src/sonic-telemetry"]
-	path = src/sonic-telemetry
-	url = https://github.com/Azure/sonic-telemetry
-[submodule "Switch-SDK-drivers"]
-	path = platform/mellanox/sdk-src/sx-kernel/Switch-SDK-drivers
-	url = https://github.com/Mellanox/Switch-SDK-drivers
+	url = https://github.com/sonic-net/sonic-mgmt-framework
 [submodule "src/sonic-ztp"]
 	path = src/sonic-ztp
-	url = https://github.com/Azure/sonic-ztp
+	url = https://github.com/sonic-net/sonic-ztp
 [submodule "src/sonic-restapi"]
 	path = src/sonic-restapi
-	url = https://github.com/Azure/sonic-restapi.git
+	url = https://github.com/sonic-net/sonic-restapi.git
 	branch = master
 [submodule "src/sonic-mgmt-common"]
 	path = src/sonic-mgmt-common
-	url = https://github.com/Azure/sonic-mgmt-common.git
+	url = https://github.com/sonic-net/sonic-mgmt-common.git
 [submodule "src/wpasupplicant/sonic-wpa-supplicant"]
 	path = src/wpasupplicant/sonic-wpa-supplicant
-	url = https://github.com/Azure/sonic-wpa-supplicant.git
+	url = https://github.com/sonic-net/sonic-wpa-supplicant.git
 [submodule "platform/broadcom/saibcm-modules-dnx"]
 	path = platform/broadcom/saibcm-modules-dnx
-	url = https://github.com/Azure/saibcm-modules.git
+	url = https://github.com/sonic-net/saibcm-modules.git
 	branch =  sdk-6.5.22-gpl-dnx
 [submodule "platform/broadcom/sonic-platform-modules-nokia"]
 	path = platform/broadcom/sonic-platform-modules-nokia
 	url = https://github.com/nokia/sonic-platform.git
 [submodule "src/linkmgrd"]
 	path = src/linkmgrd
-	url = https://github.com/Azure/sonic-linkmgrd.git
+	url = https://github.com/sonic-net/sonic-linkmgrd.git
 [submodule "src/sonic-p4rt/sonic-pins"]
 	path = src/sonic-p4rt/sonic-pins
-	url = https://github.com/Azure/sonic-pins.git
+	url = https://github.com/sonic-net/sonic-pins.git
+[submodule "src/ptf-py3"]
+	path = src/ptf-py3
+	url = https://github.com/p4lang/ptf.git
+[submodule "src/dhcprelay"]
+	path = src/dhcprelay
+	url = https://github.com/sonic-net/sonic-dhcp-relay.git
+[submodule "src/sonic-host-services"]
+	path = src/sonic-host-services
+	url = https://github.com/sonic-net/sonic-host-services
+[submodule "src/sonic-gnmi"]
+	path = src/sonic-gnmi
+	url = https://github.com/sonic-net/sonic-gnmi.git
+[submodule "src/sonic-bmp"]
+	path = src/sonic-bmp
+	url = https://github.com/sonic-net/sonic-bmp.git
+[submodule "src/sonic-genl-packet"]
+	path = src/sonic-genl-packet
+	url = https://github.com/sonic-net/sonic-genl-packet
+[submodule "src/dhcpmon"]
+	path = src/dhcpmon
+	url = https://github.com/sonic-net/sonic-dhcpmon.git
+[submodule "src/sonic-dash-api"]
+	path = src/sonic-dash-api
+	url = https://github.com/sonic-net/sonic-dash-api.git
+[submodule "platform/marvell/mrvl-prestera"]
+	path = platform/marvell/mrvl-prestera
+	url = https://github.com/Marvell-switching/mrvl-prestera.git
+[submodule "platform/marvell/sonic-platform-marvell"]
+	path = platform/marvell/sonic-platform-marvell
+	url = https://github.com/Marvell-switching/sonic-platform-arm64.git
+[submodule "src/sonic-stp"]
+	path = src/sonic-stp
+	url = https://github.com/sonic-net/sonic-stp
+[submodule "platform/marvell-teralynx/sonic-platform-marvell-teralynx"]
+	path = platform/marvell-teralynx/sonic-platform-marvell-teralynx
+	url = https://github.com/Marvell-switching/sonic-platform-marvell.git
+[submodule "platform/vpp"]
+	path = platform/vpp
+	url = https://github.com/sonic-net/sonic-platform-vpp.git

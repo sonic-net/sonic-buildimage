@@ -1,5 +1,6 @@
 /*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+ * $Id: $
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,12 +23,9 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/*
- * $Id: $
- * $Copyright: (c) 2014 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
+ * 
  *
  */
 
@@ -159,9 +157,7 @@ shbde_iproc_config_init(shbde_iproc_config_t *icfg,
         icfg->iproc_ver = 7;
         icfg->dma_hi_bits = 0x2;
         break;
-    case 0xb560: /* Apache */
     case 0xb670: /* MO */
-    case 0xb760: /* Maverick */
         icfg->iproc_ver = 0xB;
         break;
     case 0xb160: /* Hurricane3 */
@@ -177,11 +173,6 @@ shbde_iproc_config_init(shbde_iproc_config_t *icfg,
 
     /* Check for exceptions */
     switch (icfg->dev_id) {
-       case 0xb069:
-       case 0xb068:
-          icfg->iproc_ver = 0xB;       /*Ranger2+  Apache Family */
-          icfg->dma_hi_bits = 0;
-          break;
     case 0xb168: /* Ranger3+ */
     case 0xb169:
         icfg->iproc_ver = 0;
@@ -349,7 +340,7 @@ shbde_iproc_pci_read(shbde_hal_t *shbde, void *iproc_regs,
                      unsigned int addr)
 {
     unsigned int subwin_base;
-    void *reg;
+    void *reg = 0;
     shbde_iproc_config_t *icfg = &shbde->icfg;
 
     if (!iproc_regs) {
@@ -359,16 +350,29 @@ shbde_iproc_pci_read(shbde_hal_t *shbde, void *iproc_regs,
     /* Sub-window size is 0x1000 (4K) */
     subwin_base = (addr & ~0xfff);
 
-    if((icfg->cmic_ver >= 4) &&
-       ((subwin_base == 0x10230000) || (subwin_base == 0x18012000))) {
-        /* Route the PAXB register through IMAP0_2 */
-        reg = ROFFS(iproc_regs, 0x2000 + (addr & 0xfff));
-    } else if((icfg->cmic_ver >= 4) &&
-       ((subwin_base == 0x10231000) || (subwin_base == 0x18013000))) {
-        /* Route the INTC block access through IMAP0_6 */
-        reg = ROFFS(iproc_regs, 0x6000 + (addr & 0xfff));
+    if (icfg->iproc_ver >= 20) {
+        if (subwin_base == 0x292c000) {
+            /* Route PAXB register through IMAP0_2 */
+            reg = ROFFS(iproc_regs, 0x2000 + (addr & 0xfff));
+        } else if (subwin_base == 0x292d000) {
+            /* Route INTC register through IMAP0_6 */
+            reg = ROFFS(iproc_regs, 0x6000 + (addr & 0xfff));
+        }
     } else {
-    /* Update base address for sub-window 7 */
+        if((icfg->cmic_ver >= 4) &&
+           ((subwin_base == 0x10230000) || (subwin_base == 0x18012000))) {
+            /* Route the PAXB register through IMAP0_2 */
+            reg = ROFFS(iproc_regs, 0x2000 + (addr & 0xfff));
+        } else if((icfg->cmic_ver >= 4) &&
+           ((subwin_base == 0x10231000) || (subwin_base == 0x18013000))) {
+            /* Route the INTC block access through IMAP0_6 */
+            reg = ROFFS(iproc_regs, 0x6000 + (addr & 0xfff));
+        }
+    }
+
+    /* Not found fixed sub-window, reuse the sub-window 7 */
+    if (0 == reg) {
+        /* Update base address for sub-window 7 */
         subwin_base |= 1; /* Valid bit */
         reg = ROFFS(iproc_regs, BAR0_PAXB_IMAP0_7);
         iproc32_write(shbde, reg, subwin_base);
@@ -400,7 +404,7 @@ shbde_iproc_pci_write(shbde_hal_t *shbde, void *iproc_regs,
                       unsigned int addr, unsigned int data)
 {
     unsigned int subwin_base;
-    void *reg;
+    void *reg = 0;
     shbde_iproc_config_t *icfg = &shbde->icfg;
 
     if (!iproc_regs) {
@@ -410,16 +414,29 @@ shbde_iproc_pci_write(shbde_hal_t *shbde, void *iproc_regs,
     /* Sub-window size is 0x1000 (4K) */
     subwin_base = (addr & ~0xfff);
 
-    if((icfg->cmic_ver >= 4) &&
-       ((subwin_base == 0x10230000) || (subwin_base == 0x18012000))) {
-        /* Route the PAXB register through IMAP0_2 */
-        reg = ROFFS(iproc_regs, 0x2000 + (addr & 0xfff));
-    } else if((icfg->cmic_ver >= 4) &&
-       ((subwin_base == 0x10231000) || (subwin_base == 0x18013000))) {
-        /* Route the INTC block access through IMAP0_6 */
-        reg = ROFFS(iproc_regs, 0x6000 + (addr & 0xfff));
+    if (icfg->iproc_ver >= 20) {
+        if (subwin_base == 0x292c000) {
+            /* Route PAXB register through IMAP0_2 */
+            reg = ROFFS(iproc_regs, 0x2000 + (addr & 0xfff));
+        } else if (subwin_base == 0x292d000) {
+             /* Route INTC register through IMAP0_6 */
+             reg = ROFFS(iproc_regs, 0x6000 + (addr & 0xfff));
+        }
     } else {
-    /* Update base address for sub-window 7 */
+        if((icfg->cmic_ver >= 4) &&
+           ((subwin_base == 0x10230000) || (subwin_base == 0x18012000))) {
+            /* Route the PAXB register through IMAP0_2 */
+            reg = ROFFS(iproc_regs, 0x2000 + (addr & 0xfff));
+        } else if((icfg->cmic_ver >= 4) &&
+           ((subwin_base == 0x10231000) || (subwin_base == 0x18013000))) {
+            /* Route the INTC block access through IMAP0_6 */
+            reg = ROFFS(iproc_regs, 0x6000 + (addr & 0xfff));
+        }
+    }
+
+    /* Not found fixed sub-window */
+    if (0 == reg) {
+        /* Update base address for sub-window 7 */
         subwin_base |= 1; /* Valid bit */
         reg = ROFFS(iproc_regs, BAR0_PAXB_IMAP0_7);
         iproc32_write(shbde, reg, subwin_base);

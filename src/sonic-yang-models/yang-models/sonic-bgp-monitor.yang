@@ -1,5 +1,5 @@
 module sonic-bgp-monitor {
-    namespace "http://github.com/Azure/sonic-bgp-monitor";
+    namespace "http://github.com/sonic-net/sonic-bgp-monitor";
     prefix bgpmon;
     yang-version 1.1;
 

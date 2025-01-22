@@ -9,6 +9,7 @@
 #############################################################################
 
 try:
+    import os
     import time
     import sys
     from sonic_platform_base.chassis_base import ChassisBase
@@ -17,9 +18,8 @@ try:
     from sonic_platform.component import Component
     from sonic_platform.psu import Psu
     from sonic_platform.thermal import Thermal
-    from sonic_platform.watchdog import Watchdog
-    from sonic_platform.fan import Fan
     from sonic_platform.fan_drawer import FanDrawer
+    from sonic_platform.watchdog import Watchdog
     from sonic_platform.hwaccess import pci_get_value, pci_set_value
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -56,11 +56,32 @@ class Chassis(ChassisBase):
 
     REBOOT_CAUSE_PATH = "/host/reboot-cause/platform/reboot_reason"
     OIR_FD_PATH = "/sys/bus/pci/devices/0000:04:00.0/port_msi"
+    pci_res = "/sys/bus/pci/devices/0000:04:00.0/resource0"
+
+    oir_fd = -1
+    epoll = -1
+
+    sysled_offset = 0x0024
+    SYSLED_COLOR_TO_REG = {
+        "blinking_green": 0x0,
+        "green"         : 0x10,
+        "amber"         : 0x20,
+        "blinking_amber": 0x30
+        }
+
+    REG_TO_SYSLED_COLOR = {
+        0x0  : "blinking_green",
+        0x10 : "green",
+        0x20 : "amber",
+        0x30 : "blinking_amber"
+        }
 
     _global_port_pres_dict = {}
 
     def __init__(self):
         ChassisBase.__init__(self)
+        self.STATUS_LED_COLOR_BLUE_BLINK = "blinking blue"
+        self.STATUS_LED_COLOR_OFF = "off"
         # sfp.py will read eeprom contents and retrive the eeprom data.
         # We pass the eeprom path from chassis.py
         self.PORT_START = 1
@@ -98,22 +119,59 @@ class Chassis(ChassisBase):
             self._psu_list.append(psu)
 
         for i in range(MAX_S5224F_FANTRAY):
-            for j in range(MAX_S5224F_FAN):
-                fan = Fan(i,j)
-                self._fan_list.append(fan)
-
-        for i in range(MAX_S5224F_FANTRAY):
             fandrawer = FanDrawer(i)
             self._fan_drawer_list.append(fandrawer)
             self._fan_list.extend(fandrawer._fan_list)
 
         for port_num in range(self.PORT_START, (self.PORT_END + 1)):
             # sfp get uses zero-indexing, but port numbers start from 1
-            presence = self.get_sfp(port_num-1).get_presence()
-            if presence:
+            self._global_port_pres_dict[port_num] = '0'
+
+        self.LOCATOR_LED_ON = self.STATUS_LED_COLOR_BLUE_BLINK
+        self.LOCATOR_LED_OFF = self.STATUS_LED_COLOR_OFF
+
+
+    def __del__(self):
+        if self.oir_fd != -1:
+            self.epoll.unregister(self.oir_fd.fileno())
+            self.epoll.close()
+            self.oir_fd.close()
+
+# not needed /delete after validation
+
+    def _get_register(self, reg_file):
+        retval = 'ERR'
+        if (not os.path.isfile(reg_file)):
+            print(reg_file,  'not found !')
+            return retval
+
+        try:
+            with os.fdopen(os.open(reg_file, os.O_RDONLY)) as fd:
+                retval = fd.read()
+        except Exception:
+            pass
+        retval = retval.rstrip('\r\n')
+        retval = retval.lstrip(" ")
+        return retval
+
+# not needed /delete after validation
+
+    def _check_interrupts(self, port_dict):
+        retval = 0
+        is_port_dict_updated = False
+        for port_num in range(self.PORT_START, (self.PORT_END + 1)):
+            # sfp get uses zero-indexing, but port numbers start from 1
+            sfp = self.get_sfp(port_num-1)
+            presence = sfp.get_presence()
+            if(presence and (self._global_port_pres_dict[port_num] == '0')):
+                is_port_dict_updated = True
                 self._global_port_pres_dict[port_num] = '1'
-            else:
+                port_dict[port_num] = '1'
+            elif(not presence and (self._global_port_pres_dict[port_num] == '1')):
+                is_port_dict_updated = True
                 self._global_port_pres_dict[port_num] = '0'
+                port_dict[port_num] = '0'
+        return retval, is_port_dict_updated
 
 # check for this event change for sfp / do we need to handle timeout/sleep
 
@@ -167,8 +225,8 @@ class Chassis(ChassisBase):
             # The index will start from 0
             sfp = self._sfp_list[index-1]
         except IndexError:
-            sys.stderr.write("SFP index {} out of range (1-{})\n".format(
-                             index, len(self._sfp_list)))
+            sys.stderr.write("SFP index {} out of range (0-{})\n".format(
+                             index, len(self._sfp_list)-1))
         return sfp
 
     def get_name(self):
@@ -202,6 +260,14 @@ class Chassis(ChassisBase):
             string: Serial number of chassis
         """
         return self._eeprom.serial_str()
+
+    def get_revision(self):
+        """
+        Retrieves the revision number of the chassis (Service tag)
+        Returns:
+            string: Revision number of chassis
+        """
+        return self._eeprom.revision_str()
 
     def get_status(self):
         """
@@ -263,6 +329,9 @@ class Chassis(ChassisBase):
         """
         return self._num_sfps
 
+    def initizalize_system_led(self):
+        self.sys_ledcolor = "green"
+
     def get_reboot_cause(self):
         """
         Retrieves the cause of the previous reboot
@@ -276,7 +345,7 @@ class Chassis(ChassisBase):
         try:
             with open(self.REBOOT_CAUSE_PATH) as fd:
                 reboot_cause = int(fd.read(), 16)
-        except EnvironmentError:
+        except Exception:
             return (self.REBOOT_CAUSE_NON_HARDWARE, None)
 
         if reboot_cause & 0x1:
@@ -306,13 +375,10 @@ class Chassis(ChassisBase):
     def set_locator_led(self, color):
         """
         Sets the state of the Chassis Locator LED
-
         Args:
             color: A string representing the color with which to set the Chassis Locator LED
-
         Returns:
             bool: True if the Chassis Locator LED state is set successfully, False if not
-
         """
         resource = "/sys/bus/pci/devices/0000:04:00.0/resource0"
         val = pci_get_value(resource, SYSTEM_LED_REG)
@@ -328,7 +394,6 @@ class Chassis(ChassisBase):
     def get_locator_led(self):
         """
         Gets the state of the Chassis Locator LED
-
         Returns:
             LOCATOR_LED_ON or LOCATOR_LED_OFF
         """
@@ -340,3 +405,51 @@ class Chassis(ChassisBase):
         else:
             return self.LOCATOR_LED_ON
 
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether Chassis is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the system LED
+        Args:
+            color: A string representing the color with which to set the
+                   system LED
+        Returns:
+            bool: True if system LED state is set successfully, False if not
+        """
+        if color not in list(self.SYSLED_COLOR_TO_REG.keys()):
+            return False
+
+        val = pci_get_value(self.pci_res, self.sysled_offset)
+        val = (val & 0xFFCF) | self.SYSLED_COLOR_TO_REG[color]
+
+        pci_set_value(self.pci_res, val, self.sysled_offset)
+        self.sys_ledcolor = color
+        return True
+
+    def get_status_led(self):
+        """
+        Gets the state of the system LED
+        Returns:
+            A string, one of the valid LED color strings which could be
+            vendor specified.
+        """
+        val = pci_get_value(self.pci_res, self.sysled_offset)
+        if val != -1:
+            val = val & 0x30
+            return self.REG_TO_SYSLED_COLOR.get(val)
+        return self.sys_ledcolor

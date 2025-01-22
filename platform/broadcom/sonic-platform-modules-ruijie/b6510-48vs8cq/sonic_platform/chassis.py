@@ -10,13 +10,13 @@
 
 try:
     import time
-    import subprocess
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform.common import Common
     from sonic_platform.sfp import Sfp
     from sonic_platform.sfp import PORT_START
     from sonic_platform.sfp import PORTS_IN_BLOCK
     from sonic_platform.logger import logger
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -36,17 +36,17 @@ class Chassis(ChassisBase):
         self.SFP_STATUS_INSERTED = "1"
         self.SFP_STATUS_REMOVED = "0"
         self.port_dict = {}
-        self.enable_read= "i2cset -f -y 2 0x35 0x2a 0x01"
-        self.disable_read = "i2cset -f -y 2 0x35 0x2a 0x00"
-        self.enable_write = "i2cset -f -y 2 0x35 0x2b 0x00"
-        self.disable_write = "i2cset -f -y 2 0x35 0x2b 0x01"
-        self.enable_erase = "i2cset -f -y 2 0x35 0x2c 0x01"
-        self.disable_erase = "i2cset -f -y 2 0x35 0x2c 0x00"
-        self.read_value = "i2cget -f -y 2 0x35 0x25"
-        self.write_value = "i2cset -f -y 2 0x35 0x21 0x0a"
-        self.set_sys_led_cmd = "i2cset -f -y 2 0x33 0xb2 "
-        self.get_sys_led_cmd = "i2cget -f -y 2 0x33 0xb2"
-        self.led_status = "red"
+        self.enable_read= ["i2cset", "-f", "-y", "2", "0x35", "0x2a", "0x01"]
+        self.disable_read = ["i2cset", "-f", "-y", "2", "0x35", "0x2a", "0x00"]
+        self.enable_write = ["i2cset", "-f", "-y", "2", "0x35", "0x2b", "0x00"]
+        self.disable_write = ["i2cset", "-f", "-y", "2", "0x35", "0x2b", "0x01"]
+        self.enable_erase = ["i2cset", "-f", "-y", "2", "0x35", "0x2c", "0x01"]
+        self.disable_erase = ["i2cset", "-f", "-y", "2", "0x35", "0x2c", "0x00"]
+        self.read_value = ["i2cget", "-f", "-y", "2", "0x35", "0x25"]
+        self.write_value = ["i2cset", "-f", "-y", "2", "0x35", "0x21", "0x0a"]
+        self.set_sys_led_cmd = ["i2cset", "-f", "-y", "2", "0x33", "0xb2"]
+        self.get_sys_led_cmd = ["i2cget", "-f", "-y", "2", "0x33", "0xb2"]
+        self.led_status = "red" 
         # Initialize SFP list
         # sfp.py will read eeprom contents and retrive the eeprom data.
         # It will also provide support sfp controls like reset and setting
@@ -210,25 +210,25 @@ class Chassis(ChassisBase):
         try:
             is_power_loss = False
             # enable read
-            subprocess.getstatusoutput(self.disable_write)
-            subprocess.getstatusoutput(self.enable_read)
-            ret , log = subprocess.getstatusoutput(self.read_value)
+            getstatusoutput_noshell(self.disable_write)
+            getstatusoutput_noshell(self.enable_read)
+            ret , log = getstatusoutput_noshell(self.read_value)
             if ret == 0 and "0x0a" in log:
                 is_power_loss = True
 
             # erase i2c and e2
-            subprocess.getstatusoutput(self.enable_erase)
+            getstatusoutput_noshell(self.enable_erase)
             time.sleep(1)
-            subprocess.getstatusoutput(self.disable_erase)
+            getstatusoutput_noshell(self.disable_erase)
             # clear data
-            subprocess.getstatusoutput(self.enable_write)
-            subprocess.getstatusoutput(self.disable_read)
-            subprocess.getstatusoutput(self.disable_write)
-            subprocess.getstatusoutput(self.enable_read)
+            getstatusoutput_noshell(self.enable_write)
+            getstatusoutput_noshell(self.disable_read)
+            getstatusoutput_noshell(self.disable_write)
+            getstatusoutput_noshell(self.enable_read)
             # enable write and set data
-            subprocess.getstatusoutput(self.enable_write)
-            subprocess.getstatusoutput(self.disable_read)
-            subprocess.getstatusoutput(self.write_value)
+            getstatusoutput_noshell(self.enable_write)
+            getstatusoutput_noshell(self.disable_read)
+            getstatusoutput_noshell(self.write_value)
             if is_power_loss:
                 return(self.REBOOT_CAUSE_POWER_LOSS, None)
         except Exception as e:
@@ -417,7 +417,8 @@ class Chassis(ChassisBase):
         if regval is None:
             print("Invaild color input.")
             return False
-        ret , log = subprocess.getstatusoutput(self.set_sys_led_cmd + regval)
+        cmd = self.set_sys_led_cmd + [regval]
+        ret, log = getstatusoutput_noshell(cmd)
         if ret != 0:
             print("Cannot execute %s" % self.set_sys_led_cmd + regval)
             return False
@@ -431,7 +432,7 @@ class Chassis(ChassisBase):
             A string, one of the valid LED color strings which could be vendor
             specified.
         """
-        ret , log = subprocess.getstatusoutput(self.get_sys_led_cmd)
+        ret , log = getstatusoutput_noshell(self.get_sys_led_cmd)
         if ret != 0:
             print("Cannot execute %s" % self.get_sys_led_cmd)
             return False

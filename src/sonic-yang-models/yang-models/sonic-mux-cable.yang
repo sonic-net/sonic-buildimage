@@ -1,0 +1,92 @@
+module sonic-mux-cable {
+    namespace "http://github.com/sonic-net/sonic-mux-cable";
+    prefix mux_cable;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-port {
+        prefix prt;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONiC DualToR MUX CABLE confifuration data";
+
+    revision 2022-08-19 {
+        description
+            "Initial revision";
+    }
+
+    container sonic-mux-cable {
+
+        container MUX_CABLE {
+
+            list MUX_CABLE_LIST {
+
+                key "ifname";
+
+                leaf ifname {
+                    type leafref {
+                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                    }
+                    description
+                        "Reference of port on which MUX cable to be configured.";
+                }
+
+                leaf cable_type {
+                    type enumeration {
+                        enum active-active;
+                        enum active-standby;
+                    }
+                    default active-standby;
+                    description "SONiC DualToR interface cable type.";
+                }
+
+                leaf server_ipv4 {
+                    type inet:ipv4-prefix;
+
+                    description "Server IPv4 Address.";
+                }
+
+                leaf server_ipv6 {
+                    type inet:ipv6-prefix;
+
+                    description "Server IPv6 Address.";
+                }
+
+                leaf soc_ipv4 {
+                    type inet:ipv4-prefix;
+
+                    description "SoC IPv4 address. Optional and for active-active ports only. ";
+                }
+
+                leaf soc_ipv6 {
+                    type inet:ipv6-prefix;
+
+                    description "SoC IPv6 address. Optional and for active-active ports only. ";
+                }
+
+                leaf state {
+                    type enumeration {
+                        enum auto;
+                        enum manual;
+                        enum detach;
+                        enum active;
+                        enum standby;
+                    }
+
+                    default auto;
+                    description "MUX mode determining if auto failover is enabled. ";
+                }
+            }
+        }
+    }
+}

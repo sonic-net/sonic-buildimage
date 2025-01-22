@@ -90,7 +90,10 @@ class IpmiSensor(object):
         R_exp = get_twos_complement((factors[6] & 0xF0) >> 4, 4)
         B_exp = get_twos_complement(factors[6] & 0x0F, 4)
 
-        converted_reading = ((M * raw_value) + (B * 10**B_exp)) * 10**R_exp
+        if R_exp < 0:
+            converted_reading = ((M * raw_value) + (B * 10**B_exp)) / 10**(-R_exp)
+        else:
+            converted_reading = ((M * raw_value) + (B * 10**B_exp)) * 10**R_exp
 
         return True, converted_reading
 

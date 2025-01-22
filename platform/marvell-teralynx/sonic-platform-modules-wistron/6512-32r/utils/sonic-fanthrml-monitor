@@ -1,0 +1,416 @@
+#!/bin/bash
+
+debug_flag=0
+
+fan_val=0
+temp_val=0
+ctrl_mode_val=0
+fan_pwm_val=0
+fan_rpm_val=0
+init_threshold=0
+
+byte_hex_test()
+{
+	if ! [[ $1  =~ ^[0-9A-Fa-f]{2}$ ]] ; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+
+bmc_sensor_read()
+{
+	temp_val=$(ipmitool raw 0x30 0x88 2>>/dev/null)
+	if [ $? -ne 0 ];then
+		return 1
+	fi
+
+	fan_val=$(ipmitool raw 0x30 0x22 2>>/dev/null)
+	if [ $? -ne 0 ];then
+		return 1
+	fi
+
+	return 0
+}
+
+#$1=get(0)/set(1), $2=ctrl_mode(1:manual, 0:auto)
+#get rtn: ctrl_mode_val, fan_pwm_val
+bmc_fan_speed_ctrl()
+{
+	if [ -e /sys/bus/i2c/devices/0-0044/pwm ];then
+		if [ $1 -eq 1 ];then
+			#Set Fan Speed Control
+			if [ $2 -eq 0 ];then
+				ipmitool raw 0x30 0x21 0x0 0x0 1>/dev/null 2>/dev/null
+			else
+				fan_pwm_input=$(cat /sys/bus/i2c/devices/0-0044/pwm | awk '{printf $1}')
+				fan_pwm_input=$( printf "%d" 0x$fan_pwm_input )
+				ipmitool raw 0x30 0x21 0x1 $fan_pwm_input 1>/dev/null 2>/dev/null
+			fi
+		else
+			#Get Fan Speed Control
+			ctrl_mode_val=$(echo $fan_val | awk '{printf $1}')
+			fan_pwm_val=$(echo $fan_val | awk '{printf $2}')
+			byte_hex_test $ctrl_mode_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			byte_hex_test $fan_pwm_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			ctrl_mode_val=$( printf "%d" 0x$ctrl_mode_val )
+			fan_pwm_val=$( printf "%d" 0x$fan_pwm_val )
+			echo $fan_pwm_val > /sys/bus/i2c/devices/0-0044/pwm
+		fi
+	fi
+}
+
+bmc_fan_presence()
+{
+	if [ -e /sys/bus/i2c/devices/0-0044/fan1_present ];then
+		for i in $(seq 0 6);
+		do
+			p=$((31+i))
+			fan_pre_val=$(echo $fan_val | awk '{print $'"$p"'}')
+			byte_hex_test $fan_pre_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			fan_pre_val=$( printf "%d" 0x$fan_pre_val )
+			echo $fan_pre_val > /sys/bus/i2c/devices/0-0044/fan$((i+1))_present
+		done
+	fi
+}
+
+bmc_fan_speed_rpm()
+{
+	if [ -e /sys/bus/i2c/devices/0-0044/fan1_input ];then
+		for i in $(seq 0 6);
+		do
+			p1=$((3+i*2))
+			p2=$((4+i*2))
+			p3=$((17+i*2))
+			p4=$((18+i*2))
+
+			#front
+			hi_byte=$(echo $fan_val | awk '{print $'"$p1"'}')
+			lo_byte=$(echo $fan_val | awk '{print $'"$p2"'}')
+			byte_hex_test $hi_byte
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			byte_hex_test $lo_byte
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			hi_byte=$( printf "%d" 0x$hi_byte )
+			lo_byte=$( printf "%d" 0x$lo_byte )
+			fan_rpm_val=$((hi_byte<<8))
+			fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+			echo $fan_rpm_val > /sys/bus/i2c/devices/0-0044/fan$((i+1))_input
+
+			#rear
+			hi_byte=$(echo $fan_val | awk '{print $'"$p3"'}')
+			lo_byte=$(echo $fan_val | awk '{print $'"$p4"'}')
+			byte_hex_test $hi_byte
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			byte_hex_test $lo_byte
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			hi_byte=$( printf "%d" 0x$hi_byte )
+			lo_byte=$( printf "%d" 0x$lo_byte )
+			fan_rpm_val=$((hi_byte<<8))
+			fan_rpm_val=`expr $fan_rpm_val + $lo_byte`
+			echo $fan_rpm_val > /sys/bus/i2c/devices/0-0044/fan$((i+8))_input
+		done
+	fi
+}
+
+do_fan_update()
+{
+	#fan presence
+	bmc_fan_presence
+
+	#fan speed rpm
+	bmc_fan_speed_rpm
+
+	if [ $debug_flag -eq 0 ];then
+		#Get Fan RPM
+		bmc_fan_speed_ctrl 0
+	else
+		bmc_fan_speed_ctrl 1 1
+	fi
+}
+
+do_thermal_update()
+{
+	if [ -e /sys/bus/i2c/devices/0-004f/temp1_input ];then
+
+		local check_val=0
+		#command return check
+		for i in $(seq 8 7 57); do
+			thermal_val=$(echo $temp_val | awk '{print $'"$i"'}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			check_val=$((check_val + thermal_val))
+			if [ $check_val -gt 0 ]; then
+				break
+			fi
+		done
+
+		if [ $check_val -eq 0 ]; then
+			return
+		fi
+
+		#mcp3425
+		thermal_val=$(echo $temp_val | awk '{printf $8}')
+		byte_hex_test $thermal_val
+		if [ $? -eq 0 ]; then
+			return
+		fi
+		thermal_val=$( printf "%d" 0x$thermal_val )
+		thermal_val=`expr $thermal_val \* 1000`
+		echo $thermal_val > /sys/bus/i2c/devices/0-0068/temp1_input
+
+		thermal_val=$(echo $temp_val | awk '{printf $15}')
+		byte_hex_test $thermal_val
+		if [ $? -eq 0 ]; then
+			return
+		fi
+		thermal_val=$( printf "%d" 0x$thermal_val )
+		thermal_val=`expr $thermal_val \* 1000`
+		echo $thermal_val > /sys/bus/i2c/devices/0-004a/temp1_input
+
+		thermal_val=$(echo $temp_val | awk '{printf $22}')
+		byte_hex_test $thermal_val
+		if [ $? -eq 0 ]; then
+			return
+		fi
+		thermal_val=$( printf "%d" 0x$thermal_val )
+		thermal_val=`expr $thermal_val \* 1000`
+		echo $thermal_val > /sys/bus/i2c/devices/0-0049/temp1_input
+
+		thermal_val=$(echo $temp_val | awk '{printf $29}')
+		byte_hex_test $thermal_val
+		if [ $? -eq 0 ]; then
+			return
+		fi
+		thermal_val=$( printf "%d" 0x$thermal_val )
+		thermal_val=`expr $thermal_val \* 1000`
+		echo $thermal_val > /sys/bus/i2c/devices/0-004b/temp1_input
+
+		thermal_val=$(echo $temp_val | awk '{printf $36}')
+		byte_hex_test $thermal_val
+		if [ $? -eq 0 ]; then
+			return
+		fi
+		thermal_val=$( printf "%d" 0x$thermal_val )
+		thermal_val=`expr $thermal_val \* 1000`
+		echo $thermal_val > /sys/bus/i2c/devices/0-004c/temp1_input
+
+		thermal_val=$(echo $temp_val | awk '{printf $43}')
+		byte_hex_test $thermal_val
+		if [ $? -eq 0 ]; then
+			return
+		fi
+		thermal_val=$( printf "%d" 0x$thermal_val )
+		thermal_val=`expr $thermal_val \* 1000`
+		echo $thermal_val > /sys/bus/i2c/devices/0-004f/temp1_input
+
+		thermal_val=$(echo $temp_val | awk '{printf $50}')
+		byte_hex_test $thermal_val
+		if [ $? -eq 0 ]; then
+			return
+		fi
+		thermal_val=$( printf "%d" 0x$thermal_val )
+		thermal_val=`expr $thermal_val \* 1000`
+		echo $thermal_val > /sys/bus/i2c/devices/0-0048/temp1_input
+
+		thermal_val=$(echo $temp_val | awk '{printf $57}')
+		byte_hex_test $thermal_val
+		if [ $? -eq 0 ]; then
+			return
+		fi
+		thermal_val=$( printf "%d" 0x$thermal_val )
+		thermal_val=`expr $thermal_val \* 1000`
+		# fan tmp75 should be 0x49, but conflict
+		echo $thermal_val > /sys/bus/i2c/devices/0-004d/temp1_input
+	fi
+}
+
+do_thermal_threshold_init()
+{
+	if [ $init_threshold -eq 0 ]; then
+		if [ -e /sys/bus/i2c/devices/0-004f/temp1_max ];then
+			#mcp3425
+			thermal_val=$(echo $temp_val | awk '{printf $13}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-0068/temp1_max
+			thermal_val=$(echo $temp_val | awk '{printf $14}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-0068/temp1_crit
+
+			thermal_val=$(echo $temp_val | awk '{printf $20}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-004a/temp1_max
+			thermal_val=$(echo $temp_val | awk '{printf $21}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-004a/temp1_crit
+
+			thermal_val=$(echo $temp_val | awk '{printf $27}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-0049/temp1_max
+			thermal_val=$(echo $temp_val | awk '{printf $28}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-0049/temp1_crit
+
+			thermal_val=$(echo $temp_val | awk '{printf $34}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-004b/temp1_max
+			thermal_val=$(echo $temp_val | awk '{printf $35}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-004b/temp1_crit
+
+			thermal_val=$(echo $temp_val | awk '{printf $41}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-004c/temp1_max
+			thermal_val=$(echo $temp_val | awk '{printf $42}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-004c/temp1_crit
+
+			thermal_val=$(echo $temp_val | awk '{printf $48}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-004f/temp1_max
+			thermal_val=$(echo $temp_val | awk '{printf $49}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-004f/temp1_crit
+
+			thermal_val=$(echo $temp_val | awk '{printf $55}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-0048/temp1_max
+			thermal_val=$(echo $temp_val | awk '{printf $56}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-0048/temp1_crit
+
+			thermal_val=$(echo $temp_val | awk '{printf $62}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-004d/temp1_max
+			thermal_val=$(echo $temp_val | awk '{printf $63}')
+			byte_hex_test $thermal_val
+			if [ $? -eq 0 ]; then
+				return
+			fi
+			thermal_val=$( printf "%d" 0x$thermal_val )
+			thermal_val=`expr $thermal_val \* 1000`
+			echo $thermal_val > /sys/bus/i2c/devices/0-004d/temp1_crit
+
+			init_threshold=1
+		fi
+	fi
+}
+
+FAN_Thermal_monitor()
+{
+	if [ $debug_flag -eq 1 ];then
+		fan_pwm_input=100
+		echo $fan_pwm_input > /sys/bus/i2c/devices/0-0044/pwm
+	fi
+
+	while true
+	do
+		#get bmc sensor value
+		bmc_sensor_read
+		if [ $? -eq 0 ];then
+			do_fan_update
+			do_thermal_update
+			do_thermal_threshold_init
+		fi
+
+		sleep 1
+	done
+}
+
+FAN_Thermal_monitor

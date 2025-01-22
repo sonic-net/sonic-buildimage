@@ -1,0 +1,9 @@
+{
+    "yang_module": "sonic-events-swss",
+    "proclist": [
+        {
+            "name": "swss",
+            "parse_json": "swss_regex.json"
+        }
+    ]
+}

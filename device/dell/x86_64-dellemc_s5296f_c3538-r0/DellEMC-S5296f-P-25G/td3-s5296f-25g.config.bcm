@@ -1,4 +1,4 @@
-sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_issu/b870.6.4.1/
+sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_premium_issu/b870.6.4.1/
 os=unix
 portmap_5.0=5:25
 portmap_6.0=6:25

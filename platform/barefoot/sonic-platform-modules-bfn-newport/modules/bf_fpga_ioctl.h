@@ -93,7 +93,7 @@ typedef struct bf_fpga_i2c_inst_s {
     unsigned char
         wr_buf[BF_FPGA_MAX_I2C_WR_DATA]; /* write data source buffer */
     unsigned char rd_buf[BF_FPGA_MAX_I2C_RD_DATA]; /* read data dest buffer */
-  };
+  } fpga_i2c_buf;
   unsigned char status;
   unsigned char retry_cnt; /* if fpga maintains retry count */
   unsigned char mux;       /* if fpga maintains internal MUX */

@@ -30,11 +30,11 @@ sys.path.insert(0, modules_path)
 from sonic_platform.chassis import Chassis
 from sonic_platform.eeprom import Eeprom, EepromContentVisitor
 
-
 class TestEeprom:
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.path.islink', MagicMock(return_value=True))
     @patch('sonic_platform.eeprom.Eeprom.get_system_eeprom_info')
+    @patch('sonic_platform.chassis.extract_RJ45_ports_index', MagicMock(return_value=[]))
     def test_chassis_eeprom(self, mock_eeprom_info):
         mock_eeprom_info.return_value = {
             hex(Eeprom._TLV_CODE_PRODUCT_NAME): 'MSN3420',
@@ -49,6 +49,7 @@ class TestEeprom:
         assert chassis.get_serial() == 'MT2019X13878'
         assert chassis.get_system_eeprom_info() == mock_eeprom_info.return_value
 
+    @patch('sonic_platform.eeprom.wait_until', MagicMock(return_value=False))
     def test_eeprom_init(self):
         # Test symlink not exist, there is an exception
         with pytest.raises(RuntimeError):
@@ -83,7 +84,7 @@ class TestEeprom:
 
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('os.path.islink', MagicMock(return_value=True))
-    def test_get_system_eeprom_info_from_hardware(self):        
+    def test_get_system_eeprom_info_from_hardware(self):    
         eeprom = Eeprom()
         eeprom.p = os.path.join(test_path, 'mock_eeprom_data')
         eeprom._redis_hget = MagicMock()
@@ -102,7 +103,3 @@ class TestEeprom:
         v.visit_tlv('tlv3', Eeprom._TLV_CODE_VENDOR_EXT, 4, 'ext2')
         assert content[hex(Eeprom._TLV_CODE_PRODUCT_NAME)] == 'MSN3420'
         assert content[hex(Eeprom._TLV_CODE_VENDOR_EXT)] == ['ext1', 'ext2']
-
-
-
-        

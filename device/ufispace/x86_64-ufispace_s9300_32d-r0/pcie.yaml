@@ -1,0 +1,742 @@
+- bus: '00'
+  dev: '00'
+  fn: '0'
+  id: '2020'
+  name: 'Host bridge: Intel Corporation Sky Lake-E DMI3 Registers (rev 04)'
+- bus: '00'
+  dev: '04'
+  fn: '0'
+  id: '2021'
+  name: 'System peripheral: Intel Corporation Sky Lake-E CBDMA Registers (rev 04)'
+- bus: '00'
+  dev: '04'
+  fn: '1'
+  id: '2021'
+  name: 'System peripheral: Intel Corporation Sky Lake-E CBDMA Registers (rev 04)'
+- bus: '00'
+  dev: '04'
+  fn: '2'
+  id: '2021'
+  name: 'System peripheral: Intel Corporation Sky Lake-E CBDMA Registers (rev 04)'
+- bus: '00'
+  dev: '04'
+  fn: '3'
+  id: '2021'
+  name: 'System peripheral: Intel Corporation Sky Lake-E CBDMA Registers (rev 04)'
+- bus: '00'
+  dev: '04'
+  fn: '4'
+  id: '2021'
+  name: 'System peripheral: Intel Corporation Sky Lake-E CBDMA Registers (rev 04)'
+- bus: '00'
+  dev: '04'
+  fn: '5'
+  id: '2021'
+  name: 'System peripheral: Intel Corporation Sky Lake-E CBDMA Registers (rev 04)'
+- bus: '00'
+  dev: '04'
+  fn: '6'
+  id: '2021'
+  name: 'System peripheral: Intel Corporation Sky Lake-E CBDMA Registers (rev 04)'
+- bus: '00'
+  dev: '04'
+  fn: '7'
+  id: '2021'
+  name: 'System peripheral: Intel Corporation Sky Lake-E CBDMA Registers (rev 04)'
+- bus: '00'
+  dev: '05'
+  fn: '0'
+  id: '2024'
+  name: 'System peripheral: Intel Corporation Sky Lake-E MM/Vt-d Configuration Registers
+    (rev 04)'
+- bus: '00'
+  dev: '05'
+  fn: '2'
+  id: '2025'
+  name: 'System peripheral: Intel Corporation Sky Lake-E RAS (rev 04)'
+- bus: '00'
+  dev: '05'
+  fn: '4'
+  id: '2026'
+  name: 'PIC: Intel Corporation Sky Lake-E IOAPIC (rev 04)'
+- bus: '00'
+  dev: 08
+  fn: '0'
+  id: '2014'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Ubox Registers (rev 04)'
+- bus: '00'
+  dev: 08
+  fn: '1'
+  id: '2015'
+  name: 'Performance counters: Intel Corporation Sky Lake-E Ubox Registers (rev 04)'
+- bus: '00'
+  dev: 08
+  fn: '2'
+  id: '2016'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Ubox Registers (rev 04)'
+- bus: '00'
+  dev: '11'
+  fn: '0'
+  id: a1ec
+  name: 'Unassigned class [ff00]: Intel Corporation C620 Series Chipset Family MROM
+    0 (rev 04)'
+- bus: '00'
+  dev: '11'
+  fn: '1'
+  id: a1ed
+  name: 'Unassigned class [ff00]: Intel Corporation C620 Series Chipset Family MROM
+    1 (rev 04)'
+- bus: '00'
+  dev: '14'
+  fn: '0'
+  id: a1af
+  name: 'USB controller: Intel Corporation C620 Series Chipset Family USB 3.0 xHCI
+    Controller (rev 04)'
+- bus: '00'
+  dev: '14'
+  fn: '2'
+  id: a1b1
+  name: 'Signal processing controller: Intel Corporation C620 Series Chipset Family
+    Thermal Subsystem (rev 04)'
+- bus: '00'
+  dev: '16'
+  fn: '0'
+  id: a1ba
+  name: 'Communication controller: Intel Corporation C620 Series Chipset Family MEI
+    Controller #1 (rev 04)'
+- bus: '00'
+  dev: '16'
+  fn: '4'
+  id: a1be
+  name: 'Communication controller: Intel Corporation C620 Series Chipset Family MEI
+    Controller #3 (rev 04)'
+- bus: '00'
+  dev: 1c
+  fn: '0'
+  id: a190
+  name: 'PCI bridge: Intel Corporation C620 Series Chipset Family PCI Express Root
+    Port #1 (rev f4)'
+- bus: '00'
+  dev: 1c
+  fn: '4'
+  id: a194
+  name: 'PCI bridge: Intel Corporation C620 Series Chipset Family PCI Express Root
+    Port #5 (rev f4)'
+- bus: '00'
+  dev: 1c
+  fn: '5'
+  id: a195
+  name: 'PCI bridge: Intel Corporation C620 Series Chipset Family PCI Express Root
+    Port #6 (rev f4)'
+- bus: '00'
+  dev: 1d
+  fn: '0'
+  id: a198
+  name: 'PCI bridge: Intel Corporation C620 Series Chipset Family PCI Express Root
+    Port #9 (rev f4)'
+- bus: '00'
+  dev: 1d
+  fn: '2'
+  id: a19a
+  name: 'PCI bridge: Intel Corporation C620 Series Chipset Family PCI Express Root
+    Port #11 (rev f4)'
+- bus: '00'
+  dev: 1f
+  fn: '0'
+  id: a1c8
+  name: 'ISA bridge: Intel Corporation Device a1c8 (rev 04)'
+- bus: '00'
+  dev: 1f
+  fn: '2'
+  id: a1a1
+  name: 'Memory controller: Intel Corporation C620 Series Chipset Family Power Management
+    Controller (rev 04)'
+- bus: '00'
+  dev: 1f
+  fn: '4'
+  id: a1a3
+  name: 'SMBus: Intel Corporation C620 Series Chipset Family SMBus (rev 04)'
+- bus: '00'
+  dev: 1f
+  fn: '5'
+  id: a1a4
+  name: 'Serial bus controller [0c80]: Intel Corporation C620 Series Chipset Family
+    SPI Controller (rev 04)'
+- bus: '02'
+  dev: '00'
+  fn: '0'
+  id: '1533'
+  name: 'Ethernet controller: Intel Corporation I210 Gigabit Network Connection (rev
+    03)'
+- bus: '03'
+  dev: '00'
+  fn: '0'
+  id: '1150'
+  name: 'PCI bridge: ASPEED Technology, Inc. AST1150 PCI-to-PCI Bridge (rev 03)'
+- bus: '04'
+  dev: '00'
+  fn: '0'
+  id: '2000'
+  name: 'VGA compatible controller: ASPEED Technology, Inc. ASPEED Graphics Family
+    (rev 30)'
+- bus: '06'
+  dev: '00'
+  fn: '0'
+  id: '0625'
+  name: 'SATA controller: ASMedia Technology Inc. Device 0625 (rev 01)'
+- bus: '16'
+  dev: '00'
+  fn: '0'
+  id: '2030'
+  name: 'PCI bridge: Intel Corporation Sky Lake-E PCI Express Root Port A (rev 04)'
+- bus: '16'
+  dev: '01'
+  fn: '0'
+  id: '2031'
+  name: 'PCI bridge: Intel Corporation Sky Lake-E PCI Express Root Port B (rev 04)'
+- bus: '16'
+  dev: '02'
+  fn: '0'
+  id: '2032'
+  name: 'PCI bridge: Intel Corporation Sky Lake-E PCI Express Root Port C (rev 04)'
+- bus: '16'
+  dev: '03'
+  fn: '0'
+  id: '2033'
+  name: 'PCI bridge: Intel Corporation Sky Lake-E PCI Express Root Port D (rev 04)'
+- bus: '16'
+  dev: '05'
+  fn: '0'
+  id: '2034'
+  name: 'System peripheral: Intel Corporation Sky Lake-E VT-d (rev 04)'
+- bus: '16'
+  dev: '05'
+  fn: '2'
+  id: '2035'
+  name: 'System peripheral: Intel Corporation Sky Lake-E RAS Configuration Registers
+    (rev 04)'
+- bus: '16'
+  dev: '05'
+  fn: '4'
+  id: '2036'
+  name: 'PIC: Intel Corporation Sky Lake-E IOxAPIC Configuration Registers (rev 04)'
+- bus: '16'
+  dev: 08
+  fn: '0'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 08
+  fn: '1'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 08
+  fn: '2'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 08
+  fn: '3'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 08
+  fn: '4'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 08
+  fn: '5'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 08
+  fn: '6'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 08
+  fn: '7'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 09
+  fn: '0'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 09
+  fn: '1'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 09
+  fn: '2'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 09
+  fn: '3'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 09
+  fn: '4'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 09
+  fn: '5'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 09
+  fn: '6'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 09
+  fn: '7'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0a
+  fn: '0'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0a
+  fn: '1'
+  id: 208d
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0e
+  fn: '0'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0e
+  fn: '1'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0e
+  fn: '2'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0e
+  fn: '3'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0e
+  fn: '4'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0e
+  fn: '5'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0e
+  fn: '6'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0e
+  fn: '7'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0f
+  fn: '0'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0f
+  fn: '1'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0f
+  fn: '2'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0f
+  fn: '3'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0f
+  fn: '4'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0f
+  fn: '5'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0f
+  fn: '6'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 0f
+  fn: '7'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: '10'
+  fn: '0'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: '10'
+  fn: '1'
+  id: 208e
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 1d
+  fn: '0'
+  id: '2054'
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 1d
+  fn: '1'
+  id: '2055'
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 1d
+  fn: '2'
+  id: '2056'
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 1d
+  fn: '3'
+  id: '2057'
+  name: 'System peripheral: Intel Corporation Sky Lake-E CHA Registers (rev 04)'
+- bus: '16'
+  dev: 1e
+  fn: '0'
+  id: '2080'
+  name: 'System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)'
+- bus: '16'
+  dev: 1e
+  fn: '1'
+  id: '2081'
+  name: 'System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)'
+- bus: '16'
+  dev: 1e
+  fn: '2'
+  id: '2082'
+  name: 'System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)'
+- bus: '16'
+  dev: 1e
+  fn: '3'
+  id: '2083'
+  name: 'System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)'
+- bus: '16'
+  dev: 1e
+  fn: '4'
+  id: '2084'
+  name: 'System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)'
+- bus: '16'
+  dev: 1e
+  fn: '5'
+  id: '2085'
+  name: 'System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)'
+- bus: '16'
+  dev: 1e
+  fn: '6'
+  id: '2086'
+  name: 'System peripheral: Intel Corporation Sky Lake-E PCU Registers (rev 04)'
+- bus: '17'
+  dev: '00'
+  fn: '0'
+  id: b880
+  name: 'Ethernet controller: Broadcom Inc. and subsidiaries BCM56880 Switch ASIC
+    (rev 11)'
+- bus: '64'
+  dev: '00'
+  fn: '0'
+  id: '2030'
+  name: 'PCI bridge: Intel Corporation Sky Lake-E PCI Express Root Port A (rev 04)'
+- bus: '64'
+  dev: '01'
+  fn: '0'
+  id: '2031'
+  name: 'PCI bridge: Intel Corporation Sky Lake-E PCI Express Root Port B (rev 04)'
+- bus: '64'
+  dev: '02'
+  fn: '0'
+  id: '2032'
+  name: 'PCI bridge: Intel Corporation Sky Lake-E PCI Express Root Port C (rev 04)'
+- bus: '64'
+  dev: '03'
+  fn: '0'
+  id: '2033'
+  name: 'PCI bridge: Intel Corporation Sky Lake-E PCI Express Root Port D (rev 04)'
+- bus: '64'
+  dev: '05'
+  fn: '0'
+  id: '2034'
+  name: 'System peripheral: Intel Corporation Sky Lake-E VT-d (rev 04)'
+- bus: '64'
+  dev: '05'
+  fn: '2'
+  id: '2035'
+  name: 'System peripheral: Intel Corporation Sky Lake-E RAS Configuration Registers
+    (rev 04)'
+- bus: '64'
+  dev: '05'
+  fn: '4'
+  id: '2036'
+  name: 'PIC: Intel Corporation Sky Lake-E IOxAPIC Configuration Registers (rev 04)'
+- bus: '64'
+  dev: 08
+  fn: '0'
+  id: '2066'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller
+    (rev 04)'
+- bus: '64'
+  dev: 09
+  fn: '0'
+  id: '2066'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller
+    (rev 04)'
+- bus: '64'
+  dev: 0a
+  fn: '0'
+  id: '2040'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller
+    (rev 04)'
+- bus: '64'
+  dev: 0a
+  fn: '1'
+  id: '2041'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller
+    (rev 04)'
+- bus: '64'
+  dev: 0a
+  fn: '2'
+  id: '2042'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller
+    (rev 04)'
+- bus: '64'
+  dev: 0a
+  fn: '3'
+  id: '2043'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller
+    (rev 04)'
+- bus: '64'
+  dev: 0a
+  fn: '4'
+  id: '2044'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller
+    (rev 04)'
+- bus: '64'
+  dev: 0a
+  fn: '5'
+  id: '2045'
+  name: 'System peripheral: Intel Corporation Sky Lake-E LM Channel 1 (rev 04)'
+- bus: '64'
+  dev: 0a
+  fn: '6'
+  id: '2046'
+  name: 'System peripheral: Intel Corporation Sky Lake-E LMS Channel 1 (rev 04)'
+- bus: '64'
+  dev: 0a
+  fn: '7'
+  id: '2047'
+  name: 'System peripheral: Intel Corporation Sky Lake-E LMDP Channel 1 (rev 04)'
+- bus: '64'
+  dev: 0b
+  fn: '0'
+  id: '2048'
+  name: 'System peripheral: Intel Corporation Sky Lake-E DECS Channel 2 (rev 04)'
+- bus: '64'
+  dev: 0b
+  fn: '1'
+  id: '2049'
+  name: 'System peripheral: Intel Corporation Sky Lake-E LM Channel 2 (rev 04)'
+- bus: '64'
+  dev: 0b
+  fn: '2'
+  id: 204a
+  name: 'System peripheral: Intel Corporation Sky Lake-E LMS Channel 2 (rev 04)'
+- bus: '64'
+  dev: 0b
+  fn: '3'
+  id: 204b
+  name: 'System peripheral: Intel Corporation Sky Lake-E LMDP Channel 2 (rev 04)'
+- bus: '64'
+  dev: 0c
+  fn: '0'
+  id: '2040'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller
+    (rev 04)'
+- bus: '64'
+  dev: 0c
+  fn: '1'
+  id: '2041'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller
+    (rev 04)'
+- bus: '64'
+  dev: 0c
+  fn: '2'
+  id: '2042'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller
+    (rev 04)'
+- bus: '64'
+  dev: 0c
+  fn: '3'
+  id: '2043'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller
+    (rev 04)'
+- bus: '64'
+  dev: 0c
+  fn: '4'
+  id: '2044'
+  name: 'System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller
+    (rev 04)'
+- bus: '64'
+  dev: 0c
+  fn: '5'
+  id: '2045'
+  name: 'System peripheral: Intel Corporation Sky Lake-E LM Channel 1 (rev 04)'
+- bus: '64'
+  dev: 0c
+  fn: '6'
+  id: '2046'
+  name: 'System peripheral: Intel Corporation Sky Lake-E LMS Channel 1 (rev 04)'
+- bus: '64'
+  dev: 0c
+  fn: '7'
+  id: '2047'
+  name: 'System peripheral: Intel Corporation Sky Lake-E LMDP Channel 1 (rev 04)'
+- bus: '64'
+  dev: 0d
+  fn: '0'
+  id: '2048'
+  name: 'System peripheral: Intel Corporation Sky Lake-E DECS Channel 2 (rev 04)'
+- bus: '64'
+  dev: 0d
+  fn: '1'
+  id: '2049'
+  name: 'System peripheral: Intel Corporation Sky Lake-E LM Channel 2 (rev 04)'
+- bus: '64'
+  dev: 0d
+  fn: '2'
+  id: 204a
+  name: 'System peripheral: Intel Corporation Sky Lake-E LMS Channel 2 (rev 04)'
+- bus: '64'
+  dev: 0d
+  fn: '3'
+  id: 204b
+  name: 'System peripheral: Intel Corporation Sky Lake-E LMDP Channel 2 (rev 04)'
+- bus: b2
+  dev: '00'
+  fn: '0'
+  id: '2030'
+  name: 'PCI bridge: Intel Corporation Sky Lake-E PCI Express Root Port A (rev 04)'
+- bus: b2
+  dev: '05'
+  fn: '0'
+  id: '2034'
+  name: 'System peripheral: Intel Corporation Sky Lake-E VT-d (rev 04)'
+- bus: b2
+  dev: '05'
+  fn: '2'
+  id: '2035'
+  name: 'System peripheral: Intel Corporation Sky Lake-E RAS Configuration Registers
+    (rev 04)'
+- bus: b2
+  dev: '05'
+  fn: '4'
+  id: '2036'
+  name: 'PIC: Intel Corporation Sky Lake-E IOxAPIC Configuration Registers (rev 04)'
+- bus: b2
+  dev: '12'
+  fn: '0'
+  id: 204c
+  name: 'Performance counters: Intel Corporation Sky Lake-E M3KTI Registers (rev 04)'
+- bus: b2
+  dev: '12'
+  fn: '1'
+  id: 204d
+  name: 'Performance counters: Intel Corporation Sky Lake-E M3KTI Registers (rev 04)'
+- bus: b2
+  dev: '12'
+  fn: '2'
+  id: 204e
+  name: 'System peripheral: Intel Corporation Sky Lake-E M3KTI Registers (rev 04)'
+- bus: b2
+  dev: '15'
+  fn: '0'
+  id: '2018'
+  name: 'System peripheral: Intel Corporation Sky Lake-E M2PCI Registers (rev 04)'
+- bus: b2
+  dev: '16'
+  fn: '0'
+  id: '2018'
+  name: 'System peripheral: Intel Corporation Sky Lake-E M2PCI Registers (rev 04)'
+- bus: b2
+  dev: '16'
+  fn: '4'
+  id: '2018'
+  name: 'System peripheral: Intel Corporation Sky Lake-E M2PCI Registers (rev 04)'
+- bus: b2
+  dev: '17'
+  fn: '0'
+  id: '2018'
+  name: 'System peripheral: Intel Corporation Sky Lake-E M2PCI Registers (rev 04)'
+- bus: b3
+  dev: '00'
+  fn: '0'
+  id: 37c0
+  name: 'PCI bridge: Intel Corporation Device 37c0 (rev 04)'
+- bus: b4
+  dev: '00'
+  fn: '0'
+  id: 37c2
+  name: 'PCI bridge: Intel Corporation Device 37c2 (rev 04)'
+- bus: b4
+  dev: '03'
+  fn: '0'
+  id: 37c5
+  name: 'PCI bridge: Intel Corporation Device 37c5 (rev 04)'
+- bus: b5
+  dev: '00'
+  fn: '0'
+  id: 37c8
+  name: 'Co-processor: Intel Corporation C62x Chipset QuickAssist Technology (rev
+    04)'
+- bus: b6
+  dev: '00'
+  fn: '0'
+  id: 37d3
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection X722 for 10GbE
+    SFP+ (rev 04)'
+- bus: b6
+  dev: '00'
+  fn: '1'
+  id: 37d3
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection X722 for 10GbE
+    SFP+ (rev 04)'
+- bus: b6
+  dev: '00'
+  fn: '2'
+  id: 37ce
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection X722 for 10GbE
+    backplane (rev 04)'
+- bus: b6
+  dev: '00'
+  fn: '3'
+  id: 37ce
+  name: 'Ethernet controller: Intel Corporation Ethernet Connection X722 for 10GbE
+    backplane (rev 04)'

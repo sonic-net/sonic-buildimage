@@ -14,6 +14,7 @@ l2xmsg_mode=1
 l2_mem_entries=8192
 l3_mem_entries=8192
 l3_alpm_enable=2
+lpm_scaling_enable=0
 ipv6_lpm_128b_enable=1
 mmu_lossless=0
 
@@ -700,3 +701,4 @@ serdes_preemphasis_lane2_130=0x2b4104
 serdes_preemphasis_lane3_130=0x2b4104
 
 mmu_init_config="MSFT-TH-Tier1"
+phy_an_lt_msft=1

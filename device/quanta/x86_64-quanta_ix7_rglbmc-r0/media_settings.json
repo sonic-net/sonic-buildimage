@@ -1,0 +1,254 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "1-1": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x114D06",
+                    "lane1": "0x0F4F06",
+                    "lane2": "0x0F4F06",
+                    "lane3": "0x104E06"
+                }
+            }
+        },
+        "2,4": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x104E06",
+                    "lane1": "0x104E06",
+                    "lane2": "0x114D06",
+                    "lane3": "0x104E06"
+                }
+            }
+        },
+        "3-3": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x104E06",
+                    "lane1": "0x104E06",
+                    "lane2": "0x104E06",
+                    "lane3": "0x104E06"
+                }
+            }
+        },
+        "5-5": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x104E06",
+                    "lane1": "0x114D06",
+                    "lane2": "0x0F4F06",
+                    "lane3": "0x114D06"
+                }
+            }
+        },
+        "6-6": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0F4F06",
+                    "lane1": "0x0F4F06",
+                    "lane2": "0x104E06",
+                    "lane3": "0x114D06"
+                }
+            }
+        },
+        "7-7": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0F4F06",
+                    "lane1": "0x0F4F06",
+                    "lane2": "0x0D5106",
+                    "lane3": "0x0F4F06"
+                }
+            }
+        },
+        "8-8": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0D5106",
+                    "lane1": "0x0D5106",
+                    "lane2": "0x0D5106",
+                    "lane3": "0x0E5006"
+                }
+            }
+        },
+        "9,23": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0C5206",
+                    "lane1": "0x0C5206",
+                    "lane2": "0x0C5206",
+                    "lane3": "0x0C5206"
+                }
+            }
+        },
+        "10-10": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0A5406",
+                    "lane1": "0x0C5206",
+                    "lane2": "0x0A5406",
+                    "lane3": "0x0C5206"
+                }
+            }
+        },
+        "11,13": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0A5406",
+                    "lane1": "0x0B5306",
+                    "lane2": "0x0A5406",
+                    "lane3": "0x0B5306"
+                }
+            }
+        },
+        "12,14": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0A5406",
+                    "lane1": "0x0B5306",
+                    "lane2": "0x0A5406",
+                    "lane3": "0x0A5406"
+                }
+            }
+        },
+        "15,17": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x095506",
+                    "lane1": "0x095506",
+                    "lane2": "0x095506",
+                    "lane3": "0x095506"
+                }
+            }
+        },
+        "16-16": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0A5406",
+                    "lane1": "0x0A5406",
+                    "lane2": "0x0A5406",
+                    "lane3": "0x095506"
+                }
+            }
+        },
+        "18,19": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0A5406",
+                    "lane1": "0x0A5406",
+                    "lane2": "0x0A5406",
+                    "lane3": "0x0A5406"
+                }
+            }
+        },
+        "20-20": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0B5306",
+                    "lane1": "0x0C5206",
+                    "lane2": "0x0A5406",
+                    "lane3": "0x0C5206"
+                }
+            }
+        },
+        "21-21": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0B5306",
+                    "lane1": "0x0B5306",
+                    "lane2": "0x0B5306",
+                    "lane3": "0x0B5306"
+                }
+            }
+        },
+        "22-22": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0B5306",
+                    "lane1": "0x0C5206",
+                    "lane2": "0x0A5406",
+                    "lane3": "0x0A5406"
+                }
+            }
+        },
+        "24-24": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0C5206",
+                    "lane1": "0x0C5206",
+                    "lane2": "0x0B5306",
+                    "lane3": "0x0C5206"
+                }
+            }
+        },
+        "25-25": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0E5006",
+                    "lane1": "0x0D5106",
+                    "lane2": "0x0D5106",
+                    "lane3": "0x0D5106"
+                }
+            }
+        },
+        "26-26": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0E5006",
+                    "lane1": "0x0E5006",
+                    "lane2": "0x0D5106",
+                    "lane3": "0x0E5006"
+                }
+            }
+        },
+        "27-27": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0F4F06",
+                    "lane1": "0x114D06",
+                    "lane2": "0x104E06",
+                    "lane3": "0x114D06"
+                }
+            }
+        },
+        "28,31": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x104E06",
+                    "lane1": "0x114D06",
+                    "lane2": "0x104E06",
+                    "lane3": "0x114D06"
+                }
+            }
+        },
+        "29-29": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0F4F06",
+                    "lane1": "0x104E06",
+                    "lane2": "0x104E06",
+                    "lane3": "0x104E06"
+                }
+            }
+        },
+        "30-30": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x114D06",
+                    "lane1": "0x114D06",
+                    "lane2": "0x114D06",
+                    "lane3": "0x114D06"
+                }
+            }
+        },
+        "32-32": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x104E06",
+                    "lane1": "0x104E06",
+                    "lane2": "0x114D06",
+                    "lane3": "0x114D06"
+                }
+            }
+        }
+    }
+}

@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "x86_64-mlnx_msn4410-r0": {
+        "MSN4410": {
             "component": {
                 "ONIE": { },
                 "SSD": { },

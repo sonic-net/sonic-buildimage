@@ -2,7 +2,7 @@ module sonic-interface {
 
 	yang-version 1.1;
 
-	namespace "http://github.com/Azure/sonic-interface";
+	namespace "http://github.com/sonic-net/sonic-interface";
 	prefix intf;
 
 	import sonic-types {
@@ -66,6 +66,7 @@ module sonic-interface {
 					}
                                         default "0";
 				}
+
 				leaf mpls {
 					description "Enable/disable MPLS routing for the interface";
 					type enumeration {
@@ -73,6 +74,17 @@ module sonic-interface {
 						enum disable;
 					}
 				}
+
+				leaf ipv6_use_link_local_only {
+					description "Enable/Disable IPv6 link local address on interface";
+					type stypes:mode-status;
+					default disable;
+				}
+
+                leaf loopback_action {
+                    description "Packet action when a packet ingress and gets routed on the same IP interface";
+                    type stypes:loopback_action;
+                }
 			}
 			/* end of INTERFACE_LIST */
 

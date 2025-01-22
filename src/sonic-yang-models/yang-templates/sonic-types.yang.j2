@@ -2,7 +2,7 @@ module sonic-types {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-head";
+    namespace "http://github.com/sonic-net/sonic-head";
     prefix sonic-types;
 
     description "SONiC type for yang Models of SONiC OS";
@@ -76,8 +76,10 @@ module sonic-types {
             enum IPV4;
             enum IPV6;
             enum IPv4ANY;
+            enum IPV4ANY;
             enum NON_IP4;
             enum IPv6ANY;
+            enum IPV6ANY;
             enum NON_IPv6;
             enum ARP;
         }
@@ -88,6 +90,7 @@ module sonic-types {
             enum L2;
             enum L3;
             enum L3V6;
+            enum L3V4V6;
             enum MIRROR;
             enum MIRRORV6;
             enum MIRROR_DSCP;
@@ -117,6 +120,12 @@ module sonic-types {
         }
     }
 
+    typedef loopback_action {
+        type string {
+            pattern "drop|forward";
+        }
+    }
+
     typedef admin_mode {
         type enumeration {
             enum enabled;
@@ -136,13 +145,17 @@ module sonic-types {
             enum CR;
             enum CR2;
             enum CR4;
+            enum CR8;
             enum SR;
             enum SR2;
             enum SR4;
+            enum SR8;
             enum LR;
             enum LR4;
+            enum LR8;
             enum KR;
             enum KR4;
+            enum KR8;
             enum CAUI;
             enum GMII;
             enum SFI;
@@ -198,6 +211,14 @@ module sonic-types {
         }
     }
 
+    typedef switchport_mode {
+        type string {
+            pattern "routed|access|trunk";
+        }
+        description
+            "SwitchPort Modes for Port & PortChannel";
+    }
+
     typedef meter_type {
         type enumeration {
             enum packets;
@@ -205,7 +226,23 @@ module sonic-types {
         }
     }
 
-    typedef copp_packet_action {
+    typedef policer_mode {
+        type enumeration {
+            enum sr_tcm;
+            enum tr_tcm;
+            enum storm;
+        }
+    }
+
+    typedef policer_color_source {
+        type enumeration {
+	    enum aware;
+	    enum blind;
+        }
+    }
+
+
+    typedef policer_packet_action {
         type enumeration {
             enum drop;
             enum forward;
@@ -233,6 +270,135 @@ module sonic-types {
     typedef hostname {
         type string {
             length 1..63;
+        }
+    }
+
+    typedef vnid_type {
+        type uint32 {
+             range "1..16777215";
+        }
+        description
+            "VXLAN Network Identifier";
+    }
+
+    typedef tc_type {
+        type uint8 {
+            range "0..15" {
+                error-message "Invalid Traffic Class";
+                error-app-tag tc-invalid;
+            }
+        }
+    }
+
+    typedef process_name {
+        type string {
+            pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
+                error-message "Invalid process_name.";
+                error-app-tag invalid-process-name;
+            }
+            length 1..32 {
+                error-message "Invalid length for process_name.";
+                error-app-tag invalid-process-name-length;
+            }
+        }
+    }
+
+    typedef ctr_name {
+        type string {
+            pattern '[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})' {
+                error-message "Invalid ctr_name.";
+                error-app-tag invalid-ctr-name;
+            }
+            length 1..32 {
+                error-message "Invalid length for ctr_name.";
+                error-app-tag invalid-ctr-name-length;
+            }
+        }
+    }
+
+    typedef interface_name {
+        description "Represents IFNAMSIZ defined in <net/if.h>";
+        type string {
+            length 1..15 {
+                error-message "Invalid interface name length, it must not exceed 16 characters.";
+                error-app-tag invalid-interface-name-length;
+            }
+        }
+    }
+
+    typedef hash-field {
+        description "Represents native hash field";
+        type enumeration {
+            enum IN_PORT;
+            enum DST_MAC;
+            enum SRC_MAC;
+            enum ETHERTYPE;
+            enum VLAN_ID;
+            enum IP_PROTOCOL;
+            enum DST_IP;
+            enum SRC_IP;
+            enum L4_DST_PORT;
+            enum L4_SRC_PORT;
+            enum INNER_DST_MAC;
+            enum INNER_SRC_MAC;
+            enum INNER_ETHERTYPE;
+            enum INNER_IP_PROTOCOL;
+            enum INNER_DST_IP;
+            enum INNER_DST_IPV4;
+            enum INNER_DST_IPV6;
+            enum INNER_SRC_IP;
+            enum INNER_SRC_IPV4;
+            enum INNER_SRC_IPV6;
+            enum INNER_L4_DST_PORT;
+            enum INNER_L4_SRC_PORT;
+        }
+    }
+
+    typedef hash-algorithm {
+        description "Represents hash algorithm";
+        type enumeration {
+            enum CRC;
+            enum XOR;
+            enum RANDOM;
+            enum CRC_32LO;
+            enum CRC_32HI;
+            enum CRC_CCITT;
+            enum CRC_XOR;
+        }
+    }
+
+    typedef timezone-name-type {
+        type string;
+        description
+            "A time zone name as used by the Time Zone Database,
+            sometimes referred to as the 'Olson Database'.
+
+            The exact set of valid values is an implementation-specific
+            matter.  Client discovery of the exact set of time zone names
+            for a particular server is out of scope.";
+        reference
+            "BCP 175: Procedures for Maintaining the Time Zone Database";
+    }
+
+    typedef yes-no {
+        description "Yes/No configuration";
+        type enumeration {
+            enum yes;
+            enum no;
+        }
+    }
+
+    typedef on-off {
+        description "On/Off configuration";
+        type enumeration {
+            enum on;
+            enum off;
+        }
+    }
+
+    typedef asic_name {
+        type string {
+            pattern '[Aa][Ss][Ii][Cc][0-9]{1,2}';
         }
     }
 

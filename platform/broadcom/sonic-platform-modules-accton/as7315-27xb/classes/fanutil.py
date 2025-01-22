@@ -24,10 +24,8 @@
 # ------------------------------------------------------------------
 
 try:
-    import time
     import logging
-    from collections import namedtuple
-    import subprocess
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
@@ -65,10 +63,11 @@ class FanUtil(object):
         return "fan{0}_{1}".format(fan_num, self.node_postfix[node_num-1])
     
     def _get_fan_i2c_bus_addr(self):
-        cmd_template = 'i2cget -f -y {} 0x{} 0'
+        cmd_template = ['i2cget', '-f', '-y', '', '', '0']
         for bus_no, dev_addr in self.I2CADDR_CANDIDATES:
-            cmd = cmd_template.format(bus_no, dev_addr)
-            if subprocess.getstatusoutput(cmd)[0] == 0:
+            cmd_template[3] = str(bus_no)
+            cmd_template[4] = '0x' + str(dev_addr)
+            if getstatusoutput_noshell(cmd_template)[0] == 0:
                 return bus_no, dev_addr
         raise IOError('Unable to reach fan CPLD via I2C')
 

@@ -11,16 +11,25 @@ schedules:
     - master
     - 202012
 
+resources:
+  repositories:
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    ref: master
+    endpoint: sonic-net
+
 trigger: none
 pr: none
 
 stages:
 - stage: Build
-  pool: sonicbld
+  pool: sonicbld-1es
   variables:
   - name: CACHE_MODE
     value: cache
-  - template: azure-pipelines-repd-build-variables.yml
+  - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
+  - template: .azure-pipelines/template-variables.yml@buildimage
   jobs:
   - template: azure-pipelines-build.yml
     parameters:
@@ -30,10 +39,15 @@ stages:
         - name: broadcom
           variables:
             swi_image: yes
-            raw_image: yes
             docker_syncd_rpc_image: yes
             platform_rpc: brcm
         - name: mellanox
           variables:
             docker_syncd_rpc_image: yes
             platform_rpc: mlnx
+        - name: marvell-armhf
+          pool: sonicbld-armhf
+          timeoutInMinutes: 1200
+          variables:
+            PLATFORM_NAME: marvell
+            PLATFORM_ARCH: armhf

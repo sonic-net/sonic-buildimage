@@ -1,0 +1,197 @@
+#!/bin/bash
+###########################################################################
+# SONIC Factory reset script                                              #
+# /usr/bin/reset-factory                                                  #
+# This script is used to reset the system to factory settings.            #
+# It creates factory default configuration and save it to config_db.json. #
+# Also, it clear logs, tech-support, reboot-cause files, warmboot files,  #
+# docker containers non-default users, users history files and            #
+# home directories.                                                       #
+###########################################################################
+
+# Initialize constants
+CONFIG_DB_JSON=/etc/sonic/config_db.json
+DEFAULT_USERS_FILE=/etc/sonic/default_users.json
+PERMLOG=/var/log/systemlog
+SONIC_VERSION=$(sonic-cfggen -y /etc/sonic/sonic_version.yml -v build_version)
+SONIC_OVERLAY_UPPERDIR="/host/image-$SONIC_VERSION/rw/etc/sonic"
+
+SERVICES_STOPPED=0
+trap "error_cleanup" HUP INT QUIT PIPE TERM
+
+# Command usage and help
+usage()
+{
+    cat << EOF
+ Usage:  reset-factory < keep-all-config | only-config | keep-basic >
+
+        Create factory default configuration and save it to
+        to ${CONFIG_DB_JSON}.
+        Clears logs, system files and reboot the system.
+
+        Default          - Reset configurations to factory default. Logs and files will be deleted.
+        keep-all-config  - Preserves all configurations after boot. Logs and files will be deleted.
+        only-config      - Reset configurations to factory default. Logs and files will be preserved.
+        keep-basic       - Preserves basic configurations only after boot. Logs and files will be deleted.
+EOF
+}
+
+run_reboot()
+{
+    reboot
+    # If for any reason we reach this code, then force reboot
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        # Force reboot
+        reboot -f
+    fi
+}
+
+error_cleanup()
+{
+    if [ ! -z "${TEMP_CFG}" ]; then
+        # Recover config_db.json file
+        mv ${TEMP_CFG} ${CONFIG_DB_JSON}
+    fi
+
+    if [ $SERVICES_STOPPED -eq 0 ]; then
+        ERRMSG="reset-factory: halted with error before stopping critical services; exiting"
+        logger $ERRMSG
+        echo $ERRMSG
+        exit 1
+    else
+        ERRMSG="reset-factory: halted with error after stopping critical services; rebooting"
+        logger $ERRMSG
+        echo $ERRMSG
+        run_reboot
+    fi
+}
+
+# Restore original /etc/sonic folder by clearing the folder in overlayfs upperdir
+clear_sonic_dir()
+{
+    EXCLUDE_LIST="${CONFIG_DB_JSON}\|/etc/sonic/sonic-environment"
+    find $SONIC_OVERLAY_UPPERDIR -type f | grep -ve ${EXCLUDE_LIST} | xargs rm -rf
+    # remount root
+    mount -o remount /
+}
+
+# Get list of defaults users names and passwords from DEFAULT_USERS_FILE
+# Delete non-default users and restore default password of default users
+reset_users()
+{
+    if [ ! -f "${DEFAULT_USERS_FILE}" ]; then
+        echo "Error: Failed to get default users information"
+        return
+    fi
+    # Get default user accounts
+    default_users=$(jq -r '. | keys[]' $DEFAULT_USERS_FILE)
+    EXCLUDE_LIST=$(echo $default_users | tr ' ' '|')
+    # Get non-default user accounts
+    other_users=$(getent passwd | awk -F:  '($3>=1000 && $3<=60000) {print $1}' | grep -E -v $EXCLUDE_LIST)
+    echo "Remove non-default users"
+    for user in ${other_users[@]}
+    do
+       # avoid printing home directory and mail spool errors
+       userdel -rf $user 2> /dev/null
+    done
+    echo "Restore default users passwords"
+    for user in ${default_users[@]}
+    do
+       # Restore default password
+       user_pass=$(jq -r '.[$user].password' --arg user "${user}" $DEFAULT_USERS_FILE)
+       echo "$user:$user_pass" | chpasswd -e
+       # Check if we need to expire password
+       expire=$(jq -r '.[$user].expire' --arg user "${user}" $DEFAULT_USERS_FILE)
+       [ "${expire}" == "true" ] && passwd -e ${user}
+    done
+}
+
+# Only root can run reset factory
+if [ $UID != 0 ]; then
+    echo "You must be root to reset system to factory settings"
+    exit 1
+fi
+
+CMD=$1
+FACTORY_TYPE=
+
+if [ "$CMD" = "keep-all-config" ] || [ "$CMD" = "only-config" ] || \
+   [ "$CMD" = "keep-basic" ] || [ -z "$CMD" ]; then
+    FACTORY_TYPE=$CMD
+else
+    usage
+    exit 1
+fi
+
+SERVICES_STOPPED=1
+echo "Stop critical services"
+monit unmonitor container_checker
+systemctl stop sonic.target --job-mode replace-irreversibly
+
+rc=$?
+if [ $rc -ne 0 ]; then
+    error_cleanup
+fi
+
+DATE=$(date "+%Y/%m/%d %H:%M:%S")
+HOSTNAME=$(hostname | sed 's/\./ /' | awk '{print $1}')
+printf "%s %s reset-factory: resetting system to factory defaults\n" "$DATE" "$HOSTNAME" >> $PERMLOG
+
+# Backup and delete config_db.json
+TEMP_CFG="/tmp/temp_config_db.$$"
+cp ${CONFIG_DB_JSON} ${TEMP_CFG}
+if [ "$FACTORY_TYPE" != "keep-basic" ] && [ "$FACTORY_TYPE" != "keep-all-config" ]; then
+    rm -f ${CONFIG_DB_JSON}
+fi
+
+echo "Call config-setup factory"
+config-setup factory $FACTORY_TYPE
+rc=$?
+if [ $rc -ne 0 ]; then
+    error_cleanup
+fi
+
+if [ "$FACTORY_TYPE" != "only-config" ]; then
+
+    if [ "$FACTORY_TYPE" != "keep-basic" ]; then
+
+        # Delete non-default users and restore default users passwords
+        reset_users
+
+        echo "Delete bash, python and vim history files"
+        find /home /root -type f -name ".bash_history" -o -name ".python_history" -o -name ".viminfo" | xargs rm -rf
+
+        echo "Delete any non-dotfiles in users home directories"
+        find /home/ /root -type f ! -iname ".*" -delete
+    fi
+
+    echo "Remove all docker containers except the database"
+    database_pattern=($(docker ps -a -q -f "name=database" | paste -sd '|' -))
+    docker rm -f $(docker ps -a -q | egrep -v ${database_pattern}) > /dev/null
+
+    echo "Clear sonic directory"
+    clear_sonic_dir
+
+    echo "Clear warmboot folder"
+    find /host/warmboot/ -type f -delete
+
+    echo "Delete reboot-cause files and symlinks"
+    find /host/reboot-cause/ -type l,f -delete
+
+    echo "Delete tech-support files"
+    rm -rf /var/dump/*
+
+    echo "Delete logs files"
+    find /var/log/ -type f ! -iname "wtmp" ! -iname "btmp" ! -iname "lastlog" ! -iname "systemlog" -delete
+
+    # Clear wtmp, utmp and lastlog files
+    rm -rf /var/log/btmp.*
+    cat /dev/null > /var/log/btmp
+    rm -rf /var/log/wtmp.*
+    cat /dev/null > /var/log/wtmp
+    rm -rf /var/log/lastlog.*
+    cat /dev/null > /var/log/lastlog
+fi
+
+run_reboot

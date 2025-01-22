@@ -1,0 +1,102 @@
+{
+    "DEVICE_NEIGHBOR_METADATA_TYPE_CORRECT_PATTERN_BMC": {
+        "sonic-device_neighbor_metadata:sonic-device_neighbor_metadata": {
+            "sonic-device_neighbor_metadata:DEVICE_NEIGHBOR_METADATA": {
+                "DEVICE_NEIGHBOR_METADATA_LIST": [
+                    {
+                        "name": "Ethernet116",
+                        "hwsku": "DUMMY_BMC_SKU",
+                        "type": "Bmc"
+                    }
+                ]
+            }
+        }
+    },
+    "DEVICE_NEIGHBOR_METADATA_TYPE_NOT_PROVISIONED_PATTERN": {
+        "sonic-device_neighbor_metadata:sonic-device_neighbor_metadata": {
+            "sonic-device_neighbor_metadata:DEVICE_NEIGHBOR_METADATA": {
+                "DEVICE_NEIGHBOR_METADATA_LIST": [
+                    {
+                        "name": "Ethernet116",
+                        "hwsku": "Arista",
+                        "type": "not-provisioned"
+                    }
+                ]
+            }
+        }
+    },
+    "DEVICE_NEIGHBOR_METADATA_TABLE": {
+        "sonic-device_neighbor_metadata:sonic-device_neighbor_metadata": {
+            "sonic-device_neighbor_metadata:DEVICE_NEIGHBOR_METADATA": {
+                "DEVICE_NEIGHBOR_METADATA_LIST": [
+                    {
+                        "cluster": "AAA00PrdStr00",
+                        "lo_addr": "25.77.193.11/32",
+                        "mgmt_addr": "0.0.0.0/0",
+                        "name": "dccsw01.nw",
+                        "hwsku": "Arista",
+                        "type": "ToRRouter",
+                        "deployment_id": "1"
+                    },
+                    {
+                        "cluster": "AAA00PrdStr00",
+                        "lo_addr": "0.0.0.0/0",
+                        "mgmt_addr": "10.11.150.46/26",
+                        "name": "dccsw02.nw",
+                        "hwsku": "Arista",
+                        "type": "LeafRouter",
+                        "deployment_id": "1"
+                    },
+                    {
+                        "cluster": "AAA00PrdStr00",
+                        "lo_addr_v6": "2a04:5555:40:a709::2/126",
+                        "mgmt_addr": "10.11.150.47/26",
+                        "name": "dccsw03.nw",
+                        "hwsku": "Arista",
+                        "type": "SpineRouter",
+                        "deployment_id": "1"
+                    },
+                    {
+                        "cluster": "AAA00PrdStr00",
+                        "name": "dccsw04.nw",
+                        "mgmt_addr_v6": "2a04:5555:40:a708::2/126",
+                        "hwsku": "Arista",
+                        "type": "LeafRouter",
+                        "deployment_id": "1"
+                    },
+                    {
+                        "cluster": "AAA00PrdStr00",
+                        "name": "dccsw05.nw",
+                        "hwsku": "Arista",
+                        "type": "LeafRouter",
+                        "deployment_id": "1"
+                    },
+                    {
+                        "cluster": "AAA00PrdStr00",
+                        "lo_addr_v6": "2a04:5555:40:a710::2/126",
+                        "name": "dccsw06.nw",
+                        "hwsku": "Arista",
+                        "type": "LeafRouter",
+                        "deployment_id": "1"
+                    },
+                    {
+                        "cluster": "AAA00PrdStr00",
+                        "lo_addr": "25.77.193.11/32",
+                        "name": "dccsw07.nw",
+                        "hwsku": "Arista",
+                        "type": "LeafRouter",
+                        "deployment_id": "1"
+                    },
+                    {
+                        "cluster": "AAA00PrdStr00",
+                        "mgmt_addr": "10.11.150.48/26",
+                        "name": "dccsw08.nw",
+                        "hwsku": "Arista",
+                        "type": "LeafRouter",
+                        "deployment_id": "1"
+                    }
+                ]
+            }
+        }
+    }
+}

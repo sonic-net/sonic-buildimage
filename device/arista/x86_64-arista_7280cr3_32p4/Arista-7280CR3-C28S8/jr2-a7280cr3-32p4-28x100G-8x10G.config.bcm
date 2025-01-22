@@ -269,10 +269,10 @@ tdma_timeout_usec.BCM8869X=1000000
 tslam_timeout_usec.BCM8869X=1000000
 
 appl_enable_intr_init.BCM8869X=1
-polled_irq_mode.BCM8869X=1
+polled_irq_mode.BCM8869X=0
 polled_irq_delay.BCM8869X=1000
 
-bcm_stat_interval.BCM8869X=1000
+bcm_stat_interval.BCM8869X=1000000
 
 mem_cache_enable_ecc.BCM8869X=1
 mem_cache_enable_parity.BCM8869X=1

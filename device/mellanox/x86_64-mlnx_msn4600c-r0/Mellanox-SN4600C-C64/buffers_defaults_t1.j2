@@ -15,10 +15,17 @@
     limitations under the License.
 #}
 {% set default_cable = '5m' %}
+{%- if ((SYSTEM_DEFAULTS is defined) and ('tunnel_qos_remap' in SYSTEM_DEFAULTS) and (SYSTEM_DEFAULTS['tunnel_qos_remap']['status'] == 'enabled')) -%}
+{% set ingress_lossless_pool_size =  '44130304' %}
+{% set ingress_lossless_pool_xoff  =  '8790016' %}
+{% set egress_lossless_pool_size =  '60817392' %}
+{% set egress_lossy_pool_size =  '44130304' %}
+{%- else -%}
 {% set ingress_lossless_pool_size =  '48332800' %}
 {% set ingress_lossless_pool_xoff  =  '5275648' %}
 {% set egress_lossless_pool_size =  '60817392' %}
 {% set egress_lossy_pool_size =  '48332800' %}
+{%- endif -%}
 
 {% import 'buffers_defaults_objects.j2' as defs with context %}
 
@@ -30,8 +37,16 @@
 {{ defs.generate_profile_lists(port_names_active, port_names_inactive) }}
 {%- endmacro %}
 
+{%- macro generate_queue_buffers_with_extra_lossless_queues_with_inactive_ports(port_names_active, port_names_extra_queues, port_names_inactive) %}
+{{ defs.generate_queue_buffers_with_extra_lossless_queues(port_names_active, port_names_extra_queues, port_names_inactive) }}
+{%- endmacro %}
+
 {%- macro generate_queue_buffers_with_inactive_ports(port_names_active, port_names_inactive) %}
 {{ defs.generate_queue_buffers(port_names_active, port_names_inactive) }}
+{%- endmacro %}
+
+{%- macro generate_pg_profiles_with_extra_lossless_pgs_with_inactive_ports(port_names_active, port_names_extra_pgs, port_names_inactive) %}
+{{ defs.generate_pg_profiles_with_extra_lossless_pgs(port_names_active, port_names_extra_pgs, port_names_inactive) }}
 {%- endmacro %}
 
 {%- macro generate_pg_profiles_with_inactive_ports(port_names_active, port_names_inactive) %}

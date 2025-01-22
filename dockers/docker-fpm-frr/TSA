@@ -16,7 +16,8 @@ then
   TSA_FILE=$(mktemp)
   for route_map_name in $(echo "$config" | sed -ne 's/  neighbor \S* route-map \(\S*\) out/\1/p' | uniq);
   do
-    is_internal_route_map $route_map_name && continue
+    is_internal_route_map $route_map_name
+    internal_route_map=$?
     case "$route_map_name" in
       *V4*)
         ip_version=V4
@@ -30,7 +31,7 @@ then
         continue
       ;;
     esac
-    sonic-cfggen -d -a "{\"route_map_name\":\"$route_map_name\", \"ip_version\": \"$ip_version\", \"ip_protocol\": \"$ip_protocol\"}" -y /etc/sonic/constants.yml -t /usr/share/sonic/templates/bgpd/tsa/bgpd.tsa.isolate.conf.j2 > "$TSA_FILE"
+    sonic-cfggen -d -a "{\"route_map_name\":\"$route_map_name\", \"ip_version\": \"$ip_version\", \"ip_protocol\": \"$ip_protocol\", \"internal_route_map\": \"$internal_route_map\"}" -y /etc/sonic/constants.yml -t /usr/share/sonic/templates/bgpd/tsa/bgpd.tsa.isolate.conf.j2 > "$TSA_FILE"
     vtysh -f "$TSA_FILE"
     rm -f "$TSA_FILE"
   done

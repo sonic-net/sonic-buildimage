@@ -166,11 +166,11 @@ class LedControl(LedControlBase):
 
     def _initSystemLed(self):
         try:
-            cmd = 'i2cset -y 0 0x36 0x2 0x5'
-            Popen(cmd, shell=True)
+            cmd = ['i2cset', '-y', '0', '0x36', '0x2', '0x5']
+            Popen(cmd)
             DBG_PRINT("init system led to normal")
-            cmd = 'i2cset -y 0 0x36 0x3 0x1'
-            Popen(cmd, shell=True)
+            cmd = ['i2cset', '-y', '0', '0x36', '0x3', '0x1']
+            Popen(cmd)
             DBG_PRINT("init idn led to off")
         except IOError as e:
             DBG_PRINT(str(e))

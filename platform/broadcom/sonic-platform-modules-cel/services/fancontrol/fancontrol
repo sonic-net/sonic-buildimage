@@ -348,8 +348,12 @@ CheckFiles || exit 1
 
 if [ -f "$PIDFILE" ]
 then
-    echo "File $PIDFILE exists, is fancontrol already running?" >&2
-    exit 1
+    # Test if process is really running, if not, no need to exit
+    if ps -p $(echo $PIDFILE) > /dev/null
+    then
+        echo "File $PIDFILE exists, is fancontrol already running?" >&2
+        exit 1
+    fi
 fi
 echo $$ > "$PIDFILE"
 

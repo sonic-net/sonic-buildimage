@@ -98,10 +98,6 @@
             "PORTCHANNEL_LIST": [
                 {
                     "admin_status": "up",
-                    "members": [
-                        "Ethernet0",
-                        "Ethernet4"
-                    ],
                     "min_links": "1",
                     "mtu": "9100",
                     "lacp_key": "auto",
@@ -109,10 +105,6 @@
                 },
                 {
                     "admin_status": "up",
-                    "members": [
-                        "Ethernet16",
-                        "Ethernet20"
-                    ],
                     "min_links": "1",
                     "mtu": "9100",
                     "lacp_key": "auto",
@@ -161,7 +153,8 @@
                 "hostname": "sonic",
                 "hwsku": "Force10-S6000",
                 "type": "LeafRouter",
-                "platform": "x86_64-kvm_x86_64-r0"
+                "platform": "x86_64-kvm_x86_64-r0",
+                "yang_config_validation": "disable"
             }
         }
     },
@@ -299,7 +292,8 @@
                     "DST_IP": "192.169.10.1/32",
                     "SRC_IP": "10.10.1.1/16",
                     "IP_TYPE": "IPV4",
-                    "RULE_NAME": "Rule2"
+                    "RULE_NAME": "Rule2",
+                    "PRIORITY": 101
                 }
             ]
         }
@@ -376,6 +370,31 @@
                 "ipv6_neighbor_low_threshold": 10,
                 "ipv6_neighbor_threshold_type": "used"
             }
+        }
+    },
+    "sonic-fabric-monitor:sonic-fabric-monitor": {
+        "sonic-fabric-monitor:FABRIC_MONITOR": {
+            "FABRIC_MONITOR_DATA": {
+                "monErrThreshCrcCells": "1",
+                "monErrThreshRxCells": "61035156",
+                "monPollThreshIsolation": "1",
+                "monPollThreshRecovery": "8",
+                "monCapacityThreshWarn": "10",
+                "monState": "enable"
+            }
+        }
+    },
+    "sonic-fabric-port:sonic-fabric-port": {
+        "sonic-fabric-port:FABRIC_PORT": {
+            "FABRIC_PORT_LIST": [
+                {
+                    "name": "Fabric0",
+                    "alias": "Fabric0",
+                    "isolateStatus": "False",
+                    "lanes": "0",
+                    "forceUnisolateStatus": "0"
+                }
+            ]
         }
     }
 }

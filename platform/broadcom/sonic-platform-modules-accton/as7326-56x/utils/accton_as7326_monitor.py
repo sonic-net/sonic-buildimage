@@ -23,10 +23,10 @@
 # ------------------------------------------------------------------
 
 try:
-    import os
     import getopt
     import sys
     import logging
+    import subprocess
     import logging.config
     import logging.handlers
     import time  # this is only being used as part of the example
@@ -166,14 +166,14 @@ class device_monitor(object):
               
         thermal = ThermalUtil()
         fan = FanUtil()
-        fan_dir=fan.get_fan_dir(1)            
-        if fan_dir > 1:
-            fan_dri=1 #something wrong, set fan_dir to default val
-        if fan_dir < 0:
-            fan_dri=1 #something wrong, set fan_dir to default val
+        #fan_dir=fan.get_fan_dir(1)            
+        #if fan_dir > 1:
+        #    fan_dri=1 #something wrong, set fan_dir to default val
+        #if fan_dir < 0:
+        #    fan_dri=1 #something wrong, set fan_dir to default val
         ori_pwm=fan.get_fan_duty_cycle()
         new_pwm=0  
-        logging.debug('fan_dir=%d, ori_pwm=%d', fan_dir, ori_pwm)
+        #logging.debug('fan_dir=%d, ori_pwm=%d', fan_dir, ori_pwm)
         logging.debug('test_temp=%d', test_temp)
         if test_temp==0: 
             temp1 = thermal._get_thermal_val(1)
@@ -233,7 +233,7 @@ class device_monitor(object):
            if new_state==LEVEL_TEMP_CRITICAL:
                logging.critical('Alarm for temperature critical is detected, reboot DUT')
                time.sleep(2)
-               os.system('reboot')           
+               subprocess.call(['reboot'])
         if ori_state==LEVEL_FAN_MID:
             if new_state==LEVEL_TEMP_HIGH:
                 if alarm_state==0:
@@ -242,7 +242,7 @@ class device_monitor(object):
             if new_state==LEVEL_TEMP_CRITICAL:
                 logging.critical('Alarm for temperature critical is detected')
                 time.sleep(2)
-                os.system('reboot') 
+                subprocess.call(['reboot'])
         if ori_state==LEVEL_FAN_MAX:
             if new_state==LEVEL_TEMP_HIGH:
                 if alarm_state==0:
@@ -251,7 +251,7 @@ class device_monitor(object):
             if new_state==LEVEL_TEMP_CRITICAL:
                 logging.critical('Alarm for temperature critical is detected')
                 time.sleep(2)
-                os.system('reboot') 
+                subprocess.call(['reboot'])
             if alarm_state==1:
                 if temp_get < (fan_policy[3][0] - 5000):  #below 65 C, clear alarm
                     logging.warning('Alarm for temperature high is cleared')
@@ -260,7 +260,7 @@ class device_monitor(object):
             if new_state==LEVEL_TEMP_CRITICAL:
                 logging.critical('Alarm for temperature critical is detected')
                 time.sleep(2)
-                os.system('reboot')
+                subprocess.call(['reboot'])
             if new_state <= LEVEL_FAN_MID:
                 logging.warning('Alarm for temperature high is cleared')
                 alarm_state=0

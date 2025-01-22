@@ -114,6 +114,9 @@
             },
             {
                 "name": "CPU Pack Temp"
+            },
+            {
+                "name": "SODIMM 1 Temp"
             }
         ],
         "sfps": [

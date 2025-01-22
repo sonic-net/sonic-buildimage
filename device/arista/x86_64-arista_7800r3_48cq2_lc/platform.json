@@ -1,25 +1,44 @@
 {
     "chassis": {
         "name": "7800R3-48CQ2-LC",
-        "components": [],
+        "components": [
+            {
+                "name": "Aboot()"
+            },
+            {
+                "name": "Scd(addr=0000:00:18.7)"
+            },
+            {
+                "name": "Scd(addr=0000:07:00.0)"
+            }
+        ],
         "fans": [],
         "fan_drawers": [],
         "psus": [],
         "thermals": [
             {
-                "name": "Cpu temp sensor"
+                "name": "Cpu temp sensor",
+                "controllable": false
             },
             {
-                "name": "Center back"
+                "name": "Center back",
+                "controllable": false
             },
             {
-                "name": "Fap0 core0"
+                "name": "Fap0 core0",
+                "controllable": false
             },
             {
-                "name": "Fap0 core1"
+                "name": "Fap0 core1",
+                "controllable": false
             },
             {
-                "name": "PCIE"
+                "name": "PCIE",
+                "controllable": false
+            },
+            {
+                "name": "Cpu SBTSI",
+                "controllable": false
             }
         ],
         "sfps": [

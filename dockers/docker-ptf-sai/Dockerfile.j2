@@ -1,0 +1,49 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+FROM docker-ptf-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+# Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Set the apt source, update package cache and install necessary packages
+RUN apt-get update              \
+    && apt-get upgrade -y       \
+    && apt-get dist-upgrade -y  \
+    && apt-get install -y       \
+    python3-pip             
+
+RUN pip3 install crc16          \
+        netifaces               \
+        getmac                  \
+        packet_helper           \
+        psutil                  \
+        scapy_helper            \
+        pysubnettree            \
+        importlib-metadata      \
+        xmlrunner
+
+# 8.0.1 breaks build on 09/20/2023
+RUN pip3 install setuptools_scm==7.1.0
+
+COPY \
+{% for deb in docker_ptf_sai_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%} 
+debs/
+
+RUN dpkg -i \
+{% for deb in docker_ptf_sai_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor %}
+
+# Remove old ptf package
+RUN dpkg -r python-ptf
+
+# Install new ptf package
+RUN git clone https://github.com/p4lang/ptf.git \
+        && cd ptf                               \
+        && python3.7 setup.py install --single-version-externally-managed --record /tmp/ptf_install.txt
+
+run echo "declare -x LANG=\"C.UTF-8\"" >> /root/.bashrc
+run echo "declare -x LC_ALL=\"C.UTF-8\"" >> /root/.bashrc
+run echo "declare -x PYTHONIOENCODING=\"UTF-8\"" >> /root/.bashrc
+run echo "declare -x VIRTUAL_ENV=\"/root/env-python3\"" >> /root/.bashrc

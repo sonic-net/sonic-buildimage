@@ -1,0 +1,25 @@
+{
+    "NVGRE_TUNNEL_AND_TUNNEL_MAP": {
+	    "desc": "NVGRE_TUNNEL with NVGRE_TUNNEL_MAP"
+    },
+
+    "NVGRE_TUNNEL_INVALID_SRC_IP": {
+        "desc": "INVALID src_ip value for NVGRE_TUNNEL",
+        "eStrKey": "InvalidValue"
+    },
+
+    "NVGRE_TUNNEL_MAP_UNEXISTING_NVGRE_TUNNEL_NAME": {
+        "desc": "Unexisting NVGRE_TUNNEL",
+        "eStrKey": "LeafRef"
+    },
+
+    "NVGRE_TUNNEL_MAP_INVALID_VLAN_ID": {
+        "desc": "Invalid VLAN ID",
+        "eStrKey": "Pattern"
+    },
+
+    "NVGRE_TUNNEL_MAP_INVALID_VSID": {
+        "desc": "INVALID VSID value for NVGRE_TUNNEL_MAP",
+        "eStrKey": "Pattern"
+    }
+}

@@ -25,6 +25,7 @@ The term "Broadcom" refers to Broadcom Inc. and/or its subsidiaries.
 #include <sys/file.h>
 #include <regex.h>
 #include <time.h>
+#include <sys/wait.h>
 
 #include "nss_radius_common.h"
 
@@ -165,6 +166,124 @@ static void init_rnm(RADIUS_NSS_CONF_B * conf) {
     rnm[RADIUS_MAX_MPL-1].gecos = "remote_user_su";
     rnm[RADIUS_MAX_MPL-1].shell = "/usr/bin/sonic-launch-shell";
 
+}
+
+static int user_add(const char* name, char* gid, char* sec_grp, char* gecos, 
+                        char* home, char* shell, const char* unconfirmed_user, int many_to_one) {
+    pid_t pid, w;
+    int status = 0;
+    int wstatus;
+    char cmd[64];
+
+    snprintf(cmd, 63, "%s", USERADD);
+
+    pid = fork();
+
+    if(pid > 0) {
+        do {
+            w = waitpid(pid, &wstatus, WUNTRACED | WCONTINUED);
+            if (w == -1)
+                return -1;
+        } while (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus));
+        if WIFEXITED(wstatus)
+            return WEXITSTATUS(wstatus);
+        else
+            return -1;
+
+    // Child
+
+    } else if(pid == 0) {
+
+        if (many_to_one)
+          execl(cmd, cmd, "-g", gid, "-G", sec_grp, "-c", gecos, "-m", "-s", shell, name, NULL);
+        else
+          execl(cmd, cmd, "-U", "-G", sec_grp, "-c", unconfirmed_user, "-d", home, "-m", "-s", shell, name, NULL);
+        syslog(LOG_ERR, "exec of %s failed with errno=%d", cmd, errno);
+        return -1;
+
+    // Error
+    } else {
+        fprintf(stderr, "error forking the child\n");
+        return -1;
+    }
+
+    return status;
+}
+
+static int user_del(const char* name) {
+    pid_t pid, w;
+    int status = 0;
+    int wstatus;
+    char cmd[64];
+
+    snprintf(cmd, 63, "%s", USERDEL);
+
+    pid = fork();
+
+    if(pid > 0) {
+        do {
+            w = waitpid(pid, &wstatus, WUNTRACED | WCONTINUED);
+            if (w == -1)
+                return -1;
+        } while (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus));
+        if WIFEXITED(wstatus)
+            return WEXITSTATUS(wstatus);
+        else
+            return -1;
+
+    // Child
+
+    } else if(pid == 0) {
+
+        execl(cmd, cmd, "-r", name, NULL);
+        syslog(LOG_ERR, "exec of %s failed with errno=%d", cmd, errno);
+        return -1;
+
+    // Error
+    } else {
+        fprintf(stderr, "error forking the child\n");
+        return -1;
+    }
+
+    return status;
+}
+
+static int user_mod(const char* name, char* sec_grp) {
+    pid_t pid, w;
+    int status = 0;
+    int wstatus;
+    char cmd[64];
+
+    snprintf(cmd, 63, "%s", USERMOD);
+
+    pid = fork();
+
+    if(pid > 0) {
+        do {
+            w = waitpid(pid, &wstatus, WUNTRACED | WCONTINUED);
+            if (w == -1)
+                return -1;
+        } while (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus));
+        if WIFEXITED(wstatus)
+            return WEXITSTATUS(wstatus);
+        else
+            return -1;
+
+    // Child
+
+    } else if(pid == 0) {
+
+        execl(cmd, cmd, "-G", sec_grp, "-c", name, name, NULL);
+        syslog(LOG_ERR, "exec of %s failed with errno=%d", cmd, errno);
+        return -1;
+
+    // Error
+    } else {
+        fprintf(stderr, "error forking the child\n");
+        return -1;
+    }
+
+    return status;
 }
 
 int parse_nss_config(RADIUS_NSS_CONF_B * conf, char * prog,
@@ -379,22 +498,6 @@ int unparse_nss_config(RADIUS_NSS_CONF_B * conf, int * errnop, int * plockfd) {
     return 0;
 }
 
-static int invoke_popen(RADIUS_NSS_CONF_B * conf, char * cmd) {
-    FILE * fp;
-    int status = 0;
-
-    if (conf->debug)
-        syslog(LOG_DEBUG, "%s:%s", conf->prog, cmd);
-
-    if (((fp = popen(cmd, "r")) == NULL) || (pclose(fp) == -1)) {
-        syslog(LOG_ERR, "%s: %s: popen()/pclose() failed %p, errno=%d",
-            conf->prog, cmd, fp, errno);
-            status = errno;
-    }
-
-    return status;
-}
-
 static int radius_getpwnam_r_cleanup(int status, FILE * fp) {
     if (fp)
         fclose(fp);
@@ -434,10 +537,8 @@ static int radius_update_user_cleanup(int status) {
 int radius_update_user(RADIUS_NSS_CONF_B * conf, const char * user, int mpl) {
 
     char buf[BUFLEN];
-    char usermod[4096];
     struct passwd pw, *result = NULL;
     RADIUS_NSS_MPL * rnm = NULL;
-    int written = 0;
     int status;
 
     /* Verify uid is not in the reserved range (<=1000).
@@ -466,82 +567,53 @@ int radius_update_user(RADIUS_NSS_CONF_B * conf, const char * user, int mpl) {
     if (conf->trace)
         dump_rnm(mpl, rnm, "update");
 
-    written = snprintf(usermod, sizeof(usermod),
-        "%s -G %s -c \"%s\" \"%s\"", USERMOD, rnm->groups, user, user);
-
-    if (written >= sizeof(usermod)) {
-        syslog(LOG_ERR,
-          "%s: truncated usermod cmd. Skipping:\"%s\"\n", conf->prog, usermod);
-        return radius_update_user_cleanup(STATUS_E2BIG);
+    if(0 != user_mod(user, rnm->groups)) {
+      syslog(LOG_ERR, "%s: %s %s failed", conf->prog, USERMOD, user);
+        return -1;
     }
-
-    return radius_update_user_cleanup(invoke_popen(conf, usermod));
-}
-
-static int radius_create_user_cleanup(int status) {
-    return status;
+    return 0;
 }
 
 int radius_create_user(RADIUS_NSS_CONF_B * conf, const char * user, int mpl,
     int unconfirmed) {
 
-    char buf[BUFLEN];
-    char useradd[4096];
+    char buf[BUFLEN] = {0};
     RADIUS_NSS_MPL * rnm = &((conf->rnm)[mpl-1]);
-    int written = 0;
 
     if (conf->trace)
         dump_rnm(mpl, rnm, "create");
 
-
-    if (conf->many_to_one) {
-
-        written = snprintf(useradd, sizeof(useradd),
-            "%s -g %d -G %s -c \"%s\" -m -s %s \"%s\"",
-            USERADD, rnm->gid, rnm->groups, rnm->gecos, rnm->shell, user);
-
-    } else {
-
-        snprintf(buf, sizeof(buf), "Unconfirmed-%ld", time(NULL));
-        written = snprintf(useradd, sizeof(useradd),
-            "%s -U -G %s -c \"%s\" -d \"/home/%s\" -m -s %s \"%s\"",
-            USERADD, rnm->groups, unconfirmed ? buf : user, user,
-            rnm->shell, user);
-
-    }
-
-    if (written >= sizeof(useradd)) {
-        syslog(LOG_ERR,
-          "%s: truncated useradd cmd. Skipping:\"%s\"\n", conf->prog, useradd);
-        return radius_create_user_cleanup(STATUS_E2BIG);
+    if(strlen(user) > 32) {
+        syslog(LOG_ERR, "%s: Username too long", conf->prog);
+        return -1;
     }
 
     syslog(LOG_INFO, "%s: Creating user \"%s\"", conf->prog, user);
 
-    return radius_create_user_cleanup(invoke_popen(conf, useradd));
-}
+    char sgid[10] = {0};
+    char home[64] = {0};
+    snprintf(sgid, 10, "%d", rnm->gid);
+    snprintf(home, 63, "/home/%s", user);
 
-static int radius_delete_user_cleanup(int status) {
-    return status;
+    snprintf(buf, sizeof(buf), "Unconfirmed-%ld", time(NULL));
+
+    if(0 != user_add(user, sgid, rnm->groups, rnm->gecos, home, rnm->shell, unconfirmed ? buf : user, conf->many_to_one)) {
+      syslog(LOG_ERR, "%s: %s %s failed", conf->prog, USERADD, user);
+
+        return -1;
+    }
+    return 0;
 }
 
 int radius_delete_user(RADIUS_NSS_CONF_B * conf, const char * user) {
 
-    char buf[BUFLEN];
-    char userdel[4096];
-    int written = 0;
-
-    written = snprintf(userdel, sizeof(userdel), "%s -r \"%s\"", USERDEL, user);
-
-    if (written >= sizeof(userdel)) {
-        syslog(LOG_ERR,
-          "%s: truncated userdel cmd. Skipping:\"%s\"\n", conf->prog, userdel);
-        return radius_delete_user_cleanup(STATUS_E2BIG);
-    }
-
     syslog(LOG_INFO, "%s: Deleting user \"%s\"", conf->prog, user);
+    if(0 != user_del(user)) {
+      syslog(LOG_ERR, "%s: %s %s failed", conf->prog, USERDEL, user);
 
-    return radius_delete_user_cleanup(invoke_popen(conf, userdel));
+        return -1;
+    }
+    return 0;
 }
 
 int radius_clear_unconfirmed_users_cleanup(int status, FILE * fp) {

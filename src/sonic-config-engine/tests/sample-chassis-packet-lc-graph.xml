@@ -79,62 +79,7 @@
     </Routers>
   </CpgDec>
   <DpgDec>
-    <DeviceDataPlaneInfo>
-      <IPSecTunnels/>
-      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
-        <a:LoopbackIPInterface>
-          <Name>HostIP</Name>
-          <AttachTo>Loopback0</AttachTo>
-          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
-            <b:IPPrefix>10.0.1.6/32</b:IPPrefix>
-          </a:Prefix>
-          <a:PrefixStr>10.0.1.6/32</a:PrefixStr>
-        </a:LoopbackIPInterface>
-      </LoopbackIPInterfaces>
-      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
-        <a:ManagementIPInterface>
-          <Name>HostIP</Name>
-          <AttachTo>eth0</AttachTo>
-          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
-            <b:IPPrefix>10.3.147.97/23</b:IPPrefix>
-          </a:Prefix>
-          <a:PrefixStr>10.3.147.97/23</a:PrefixStr>
-        </a:ManagementIPInterface>
-      </ManagementIPInterfaces>
-      <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
-      <MplsInterfaces/>
-      <MplsTeInterfaces/>
-      <RsvpInterfaces/>
-      <Hostname>str2-8808-lc2-1</Hostname>
-      <PortChannelInterfaces>
-      </PortChannelInterfaces>
-      <IPInterfaces>
-        <IPInterface>
-          <Name i:nil="true"/>
-          <AttachTo>Eth1/1/47</AttachTo>
-          <Prefix>27.1.1.1/24</Prefix>
-        </IPInterface>
-        </IPInterfaces>
-       <VlanInterfaces>
-       </VlanInterfaces>
-      <IPNextHops>
-	   <IPNextHop>
-	    <ElementType>IPNextHop</ElementType>
-	    <Name i:nil="true"/>
-	    <AssociatedTo>8.0.0.1/32</AssociatedTo>
-	    <Address>192.168.1.2,192.168.2.2</Address>
-	    <AttachTo>PortChannel40,PortChannel50</AttachTo>
-	    <Type>StaticRoute</Type>
-        <Advertise>false</Advertise>
-        </IPNextHop>
-      </IPNextHops>
-      <DataAcls/>
-      <AclInterfaces>
-      </AclInterfaces>
-      <DownstreamSummaries/>
-      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
-    </DeviceDataPlaneInfo>
-    <DeviceDataPlaneInfo>
+   <DeviceDataPlaneInfo>
       <IPSecTunnels/>
       <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
         <a:LoopbackIPInterface>
@@ -201,11 +146,6 @@
         </SubInterface>
       </SubInterfaces>
       <IPInterfaces>
-        <IPInterface>
-          <Name i:nil="true"/>
-          <AttachTo>Eth1/1/47</AttachTo>
-          <Prefix>27.1.1.1/24</Prefix>
-        </IPInterface>
       </IPInterfaces>
       <DownstreamSummaries/>
       <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
@@ -213,24 +153,104 @@
 	<IPNextHop>
 	  <ElementType>IPNextHop</ElementType>
 	  <Name i:nil="true"/>
-	    <AssociatedTo>8.0.0.1/32</AssociatedTo>
-	    <Address>192.168.1.2,192.168.2.2</Address>
-	    <AttachTo>PortChannel40,PortChannel50</AttachTo>
-      <Type>StaticRoute</Type>
-      <Advertise>false</Advertise>
+	  <Address>8.0.0.1</Address>
+          <AttachTo>PortChannel40,192.168.1.2;PortChannel50,192.168.2.2</AttachTo>
+          <Type>StaticRoute</Type>
         </IPNextHop>
       </IPNextHops>
+      <AclInterfaces>
+        <AclInterface>
+          <InAcl>SNMP_ACL</InAcl>
+          <AttachTo>SNMP</AttachTo>
+          <Type>SNMP</Type>
+        </AclInterface>
+       <AclInterface>
+          <AttachTo>VTY_LINE</AttachTo>
+          <InAcl>ssh-only</InAcl>
+          <Type>SSH</Type>
+        </AclInterface>
+      </AclInterfaces>
+    </DeviceDataPlaneInfo>
+    <DeviceDataPlaneInfo>
+      <IPSecTunnels/>
+      <LoopbackIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:LoopbackIPInterface>
+          <Name>HostIP</Name>
+          <AttachTo>Loopback0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>10.0.1.6/32</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>10.0.1.6/32</a:PrefixStr>
+        </a:LoopbackIPInterface>
+      </LoopbackIPInterfaces>
+      <ManagementIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+        <a:ManagementIPInterface>
+          <Name>HostIP</Name>
+          <AttachTo>eth0</AttachTo>
+          <a:Prefix xmlns:b="Microsoft.Search.Autopilot.Evolution">
+            <b:IPPrefix>10.3.147.97/23</b:IPPrefix>
+          </a:Prefix>
+          <a:PrefixStr>10.3.147.97/23</a:PrefixStr>
+        </a:ManagementIPInterface>
+      </ManagementIPInterfaces>
+      <ManagementVIPInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+      <MplsInterfaces/>
+      <MplsTeInterfaces/>
+      <RsvpInterfaces/>
+      <Hostname>str2-8808-lc2-1</Hostname>
+      <PortChannelInterfaces>
+      </PortChannelInterfaces>
+      <IPInterfaces>
+        </IPInterfaces>
+       <VlanInterfaces>
+       </VlanInterfaces>
+      <IPNextHops>
+	   <IPNextHop>
+	    <ElementType>IPNextHop</ElementType>
+	    <Name i:nil="true"/>
+	    <Address>8.0.0.1</Address>
+            <AttachTo>PortChannel40,192.168.1.2;PortChannel50,192.168.2.2</AttachTo>
+	    <Type>StaticRoute</Type>
+        </IPNextHop>
+      </IPNextHops>
+      <DataAcls/>
+      <AclInterfaces>
+        <AclInterface>
+          <InAcl>SNMP_ACL</InAcl>
+          <AttachTo>SNMP</AttachTo>
+          <Type>SNMP</Type>
+        </AclInterface>
+       <AclInterface>
+          <AttachTo>VTY_LINE</AttachTo>
+          <InAcl>ssh-only</InAcl>
+          <Type>SSH</Type>
+        </AclInterface>
+      </AclInterfaces>
+      <DownstreamSummaries/>
+      <DownstreamSummarySet xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
     </DeviceDataPlaneInfo>
   </DpgDec>
+  <LinkMetadataDeclaration>
+    <Link xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
+      <a:LinkMetadata>
+        <a:Name i:nil="true"/>
+        <a:Properties>
+          <a:DeviceProperty>
+            <a:Name>Frequency</a:Name>
+            <a:Value>131</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>TxPower</a:Name>
+            <a:Value>7.5</a:Value>
+          </a:DeviceProperty>
+        </a:Properties>
+        <a:Key>str2-8808-lc2-1:Eth1/1/13;ARISTA01-RH:Ethernet1/1</a:Key>
+      </a:LinkMetadata>
+    </Link>
+    <Properties xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
+  </LinkMetadataDeclaration>
   <PngDec>
     <DeviceInterfaceLinks>
-      <DeviceLinkBase>
-        <ElementType>DeviceInterfaceLink</ElementType>
-        <EndDevice>IXIA-EBGP</EndDevice>
-        <EndPort>Ethernet1</EndPort>
-        <StartDevice>str2-8808-lc2-1</StartDevice>
-        <StartPort>Eth1/1/47</StartPort>
-      </DeviceLinkBase>
       <DeviceLinkBase i:type="DeviceInterfaceLink">
         <ElementType>DeviceInterfaceLink</ElementType>
         <Bandwidth>100000</Bandwidth>
@@ -365,20 +385,6 @@
     <DeviceInfo>
       <AutoNegotiation>true</AutoNegotiation>
       <EthernetInterfaces xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
-        <a:EthernetInterface>
-          <ElementType>DeviceInterface</ElementType>
-          <AlternateSpeeds i:nil="true"/>
-          <EnableAutoNegotiation>true</EnableAutoNegotiation>
-          <EnableFlowControl>true</EnableFlowControl>
-          <Index>1</Index>
-          <InterfaceName>Ethernet1/1/47</InterfaceName>
-          <InterfaceType i:nil="true"/>
-          <MultiPortsInterface>false</MultiPortsInterface>
-          <PortName>47</PortName>
-          <Priority>0</Priority>
-          <Speed>100000</Speed>
-          <SonicName>Ethernet47</SonicName>
-        </a:EthernetInterface>
       </EthernetInterfaces>
       <FlowControl>true</FlowControl>
       <Height>0</Height>
@@ -394,7 +400,7 @@
           <a:DeviceProperty>
             <a:Name>SwitchType</a:Name>
             <a:Reference i:nil="true"/>
-            <a:Value>chassis_packet</a:Value>
+            <a:Value>chassis-packet</a:Value>
           </a:DeviceProperty>
           <a:DeviceProperty>
             <a:Name>DeploymentId</a:Name>
@@ -459,7 +465,7 @@
           <a:DeviceProperty>
             <a:Name>SwitchType</a:Name>
             <a:Reference i:nil="true"/>
-            <a:Value>chassis_packet</a:Value>
+            <a:Value>chassis-packet</a:Value>
           </a:DeviceProperty>
         </a:Properties>
       </a:DeviceMetadata>

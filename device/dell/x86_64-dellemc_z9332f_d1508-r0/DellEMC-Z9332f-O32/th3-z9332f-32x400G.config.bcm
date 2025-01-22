@@ -53,6 +53,10 @@ l2xlrn_intr_en=0
 sai_optimized_mmu=1
 mmu_init_config="TH3-MSFT-T1"
 
+hybrid_pfc_deadlock_enable=1
+pfc_deadlock_seq_control=1
+sai_pfc_dlr_init_capability=1
+
 pbmp_xport_xe=0xffffffFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE
 
 phy_an_c73=3

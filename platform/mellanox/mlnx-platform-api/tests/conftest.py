@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,14 +42,3 @@ def auto_recover_mock():
     utils.read_str_from_file = origin_read_str_from_file
     utils.write_file = origin_write_file
     utils.read_float_from_file = origin_read_float_from_file
-
-
-@pytest.fixture(scope='function', autouse=True)
-def auto_reset_cooling_level():
-    from sonic_platform.thermal import Thermal
-    yield
-    Thermal.expect_cooling_level = None
-    Thermal.expect_cooling_state = None
-    Thermal.last_set_cooling_level = None
-    Thermal.last_set_cooling_state = None
-    Thermal.last_set_psu_cooling_level = None

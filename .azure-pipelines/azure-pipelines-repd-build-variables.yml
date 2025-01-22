@@ -1,5 +1,2 @@
 variables:
-  ${{ if and(ge(variables['Build.SourceBranchName'], '202012'), le(variables['Build.SourceBranchName'], '299999')) }}:
-    VERSION_CONTROL_OPTIONS: 'SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker'
-  ${{ if or(lt(variables['Build.SourceBranchName'], '202012'), gt(variables['Build.SourceBranchName'], '299999')) }}:
-    VERSION_CONTROL_OPTIONS: ''
+  VERSION_CONTROL_OPTIONS: 'SONIC_VERSION_CONTROL_COMPONENTS=py2,py3,web,git,docker'

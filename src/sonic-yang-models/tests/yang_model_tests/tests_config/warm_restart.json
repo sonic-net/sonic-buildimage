@@ -4,7 +4,7 @@
             "sonic-warm-restart:WARM_RESTART": {
                 "WARM_RESTART_LIST": [{
                         "module": "bgp",
-                        "bgp_eoiu": true, 
+                        "bgp_eoiu": true,
                         "bgp_timer": 500
                 }]
             }

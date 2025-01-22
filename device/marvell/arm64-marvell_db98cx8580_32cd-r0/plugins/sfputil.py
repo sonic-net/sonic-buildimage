@@ -1,16 +1,12 @@
 try:
     import os
     import time
-    import sys
     import re
+    import subprocess
     from sonic_sfp.sfputilbase import SfpUtilBase
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
-
-if sys.version_info[0] < 3:
-    import commands
-else:
-    import subprocess as commands
 
 smbus_present = 1
 
@@ -31,9 +27,10 @@ class SfpUtil(SfpUtilBase):
     _qsfp_ports = list(range(_port_start, ports_in_block + 1))
 
     def __init__(self):
-        os.system("modprobe i2c-dev")
+        subprocess.call(["modprobe", "i2c-dev"])
         if not os.path.exists("/sys/bus/i2c/devices/0-0050"):
-            os.system("echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-0/new_device")
+            with open("/sys/bus/i2c/devices/i2c-0/new_device", 'w') as file:
+                file.write("optoe2 0x50")
 
         eeprom_path = '/sys/bus/i2c/devices/0-0050/eeprom'
         # for x in range(self.port _start, self.port_end +1):
@@ -74,8 +71,8 @@ class SfpUtil(SfpUtilBase):
     def i2c_get(self, device_addr, offset):
         status = 0
         if smbus_present == 0:
-            x = "i2cget -y 0 " + hex(device_addr) + " " + hex(offset)
-            cmdstatus, status = commands.getstatusoutput(x)
+            x = ["i2cget", "-y", "0", hex(device_addr), hex(offset)]
+            cmdstatus, status = getstatusoutput_noshell(x)
             if cmdstatus != 0:
                 return cmdstatus
             status = int(status, 16)
@@ -86,8 +83,8 @@ class SfpUtil(SfpUtilBase):
 
     def i2c_set(self, device_addr, offset, value):
         if smbus_present == 0:
-            cmd = "i2cset -y 0 " + hex(device_addr) + " " + hex(offset) + " " + hex(value)
-            os.system(cmd)
+            cmd = ["i2cset", "-y", "0", hex(device_addr), hex(offset), hex(value)]
+            subprocess.call(cmd)
         else:
             bus = smbus.SMBus(0)
             bus.write_byte_data(device_addr, offset, value)

@@ -2,7 +2,7 @@ module sonic-auto_techsupport {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-auto_techsupport";
+    namespace "http://github.com/sonic-net/sonic-auto_techsupport";
     prefix auto_techsupport;
 
     import sonic-types {
@@ -18,7 +18,7 @@ module sonic-auto_techsupport {
     typedef decimal-repr {
         type decimal64 {
             fraction-digits 2;
-            range 0.0..99.99; 
+            range 0.0..99.99;
         }
     }
 
@@ -27,9 +27,9 @@ module sonic-auto_techsupport {
         container AUTO_TECHSUPPORT {
 
                 description "AUTO_TECHSUPPORT part of config_db.json";
-                
+
                 container GLOBAL {
-               
+
                     leaf state {
                         description "Knob to make techsupport invocation event-driven based on core-dump generation";
                         type stypes:admin_mode;
@@ -59,11 +59,23 @@ module sonic-auto_techsupport {
                         description "Max Limit in percentage for the cummulative size of core dumps. No cleanup is performed if the value isn't congiured or is 0.0";
                         type decimal-repr;
                     }
-                    
+
+                    leaf available_mem_threshold {
+                        description "Memory threshold; 0 to disable techsupport invocation on memory usage threshold crossing";
+                        type decimal-repr;
+                        default 10.0;
+                    }
+
+                    leaf min_available_mem {
+                        description "Minimum Free memory (in MB) that should be available for the techsupport execution to start";
+                        type uint32;
+                        default 200;
+                    }
+
                     leaf since {
                         /*
-                        Any valid date string of the formats specified here (https://www.gnu.org/software/coreutils/manual/html_node/Date-input-formats.html) 
-                        can be used. 
+                        Any valid date string of the formats specified here (https://www.gnu.org/software/coreutils/manual/html_node/Date-input-formats.html)
+                        can be used.
                         */
                         description "Only collect the logs & core-dumps generated since the time provided. A default value of '2 days ago' is used if this value is not set explicitly or a non-valid string is provided";
                         type string {
@@ -74,7 +86,7 @@ module sonic-auto_techsupport {
             /* end of container GLOBAL */
         }
         /* end of container AUTO_TECHSUPPORT */
-            
+
         container AUTO_TECHSUPPORT_FEATURE {
 
             description "AUTO_TECHSUPPORT_FEATURE part of config_db.json";
@@ -94,6 +106,12 @@ module sonic-auto_techsupport {
                 leaf state {
                     description "Enable auto techsupport invocation on the processes running inside this feature";
                     type stypes:admin_mode;
+                }
+
+                leaf available_mem_threshold {
+                    description "Memory threshold; 0 to disable techsupport invocation on memory usage threshold crossing";
+                    type decimal-repr;
+                    default 10.0;
                 }
 
                 leaf rate_limit_interval {

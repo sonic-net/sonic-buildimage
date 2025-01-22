@@ -15,7 +15,11 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
 	# Apply patch (if any)
 
+ifeq ($(CROSS_BUILD_ENVIRON), y)
+	dpkg-buildpackage -rfakeroot -b -a$(CONFIGURED_ARCH) -Pcross,nocheck -us -uc
+else
 	dpkg-buildpackage -rfakeroot -b -us -uc
+endif
 	popd
 
 	mv $(DERIVED_TARGETS) $* $(DEST)/

@@ -1,32 +1,30 @@
-#
-#  Copyright 2007-2020 Broadcom Inc. All rights reserved.
-#  
-#  Permission is granted to use, copy, modify and/or distribute this
-#  software under either one of the licenses below.
-#  
-#  License Option 1: GPL
-#  
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License, version 2, as
-#  published by the Free Software Foundation (the "GPL").
-#  
-#  This program is distributed in the hope that it will be useful, but
-#  WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  General Public License version 2 (GPLv2) for more details.
-#  
-#  You should have received a copy of the GNU General Public License
-#  version 2 (GPLv2) along with this source code.
-#  
-#  
-#  License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
-#  
-#  This software is governed by the Broadcom Open Network Switch APIs license:
-#  https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
-#
 # $Id: Makefile.linux-iproc Exp $
-# $Copyright: (c) 2007 Broadcom Corp.
-# All Rights Reserved.$
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
 # Makefile for iproc-CMICd
 
 # User must select one platform from below.By default ARM_LINUX is selected. .
@@ -41,13 +39,13 @@ ifeq (BE,$(ENDIAN_MODE))
 #While BE mode is supported, it's use is very limited.  We had a specific customer
 #request for BE support but don't currently mainstream it.  So a 5.1.0 version
 #has not been built.  Continue using 5.0.3 for any BE support
-TOOLCHAIN_BASE_DIR ?= /projects/ntsw-tools/linux/iproc_ldks/xldk61-be/XLDK32
+TOOLCHAIN_BASE_DIR ?= /projects/ntsw-tools/linux/iproc_ldks/xldk63-be/XLDK32
 KERN_BASE_DIR ?= $(TOOLCHAIN_BASE_DIR)
 TARGET_ARCHITECTURE:=armeb-broadcom-linux-uclibcgnueabi
 KERNDIR ?= $(TOOLCHAIN_BASE_DIR)/kernel/linux
 else
-TOOLCHAIN_BASE_DIR ?= /projects/ntsw-tools/linux/iproc_ldks/XLDK_GCC10/XLDK32
-KERN_BASE_DIR ?= /projects/ntsw-tools/linux/iproc_ldks/xldk61/XLDK32
+TOOLCHAIN_BASE_DIR ?= /projects/ntsw-tools/linux/iproc_ldks/xldk63/XLDK32
+KERN_BASE_DIR ?= $(TOOLCHAIN_BASE_DIR)
 TARGET_ARCHITECTURE:= arm-broadcom-linux-uclibcgnueabi
 KERNDIR ?= $(KERN_BASE_DIR)/kernel/linux
 endif
@@ -79,32 +77,37 @@ ENDIAN = LE_HOST=1
 endif
 
 CFLAGS += -fno-aggressive-loop-optimizations
-CFLAGS += -Wno-error=maybe-uninitialized
-CFLAGS += -Wno-error=array-bounds
+OPT_CFLAGS += -Wno-error=maybe-uninitialized
+OPT_CFLAGS += -Wno-error=unused-function
+OPT_CFLAGS += -Wno-error=array-bounds
+OPT_CFLAGS += -Wno-error=unused-variable
+OPT_CFLAGS += -Wno-error=memset-elt-size #SDK-232626
+OPT_CFLAGS += -Wno-error=unused-const-variable
 CFLAGS += -fgnu89-inline
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 8)" "1"
-    CFLAGS += -Wno-stringop-overflow
-    CFLAGS += -Wno-stringop-truncation
-    CFLAGS += -Wno-error=restrict
+    OPT_CFLAGS += -Wno-stringop-overflow
+    OPT_CFLAGS += -Wno-stringop-truncation
+    OPT_CFLAGS += -Wno-error=restrict
 endif
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 9)" "1"
-	CFLAGS += -Wno-address-of-packed-member
+	OPT_CFLAGS += -Wno-address-of-packed-member
 endif
-ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \== 10)" "1"
-	#There might be a bug in GCC10 that cannot detect initialization correctly.
-	CFLAGS += -Wno-error=uninitialized
-	CFLAGS += -Wno-error=format-overflow
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 10)" "1"
+	OPT_CFLAGS += -Wno-error=uninitialized
+	OPT_CFLAGS += -Wno-error=format-overflow
 	CFLAGS += -fcommon
+endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 12)" "1"
+	CFLAGS += -flarge-source-files
+	OPT_CFLAGS += -Wno-error=address
+endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 13)" "1"
+	OPT_CFLAGS += -Wno-error=enum-int-mismatch
 endif
 
 CFGFLAGS += -D$(ENDIAN) -DIPROC_CMICD
 CFGFLAGS += -DBCM_PLATFORM_STRING=\"IPROC_CMICD\"
 
-#XLR-54
-CFLAGS += -Wno-error=memset-elt-size #SDK-232626
-CFLAGS += -Wno-error=unused-function
-CFLAGS += -Wno-error=unused-variable
-CFLAGS += -Wno-error=unused-const-variable
 ARCH = arm
 KBUILD_VERBOSE = 1
 
@@ -125,7 +128,7 @@ modname_flags  = $(if $(filter 1,$(words $(modname))),\
 KFLAG_INCLD ?= $(LD_LIBRARY_PATH)/gcc/$(TARGET_ARCHITECTURE)/$(CROSS_GCC_VER)/include
 
 ifeq (,$(KFLAGS))
-KFLAGS := -D__LINUX_ARM_ARCH__=7 -D__KERNEL__ -nostdinc  -isystem $(KFLAG_INCLD) -I$(LINUX_INCLUDE) -include $(LINUX_INCLUDE)/generated/autoconf.h -I$(KERNDIR)/arch/arm/include -I$(KERNDIR)/arch/arm/include/generated -I$(KERNDIR)/arch/arm/mach-iproc/include -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -marm -mabi=aapcs-linux -fno-pic -pipe -msoft-float -ffreestanding -march=armv7-a -mfpu=vfp -mfloat-abi=softfp -fomit-frame-pointer -g -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -mlong-calls
+KFLAGS := -D__LINUX_ARM_ARCH__=7 -D__KERNEL__ -nostdinc  -isystem $(KFLAG_INCLD) -I$(LINUX_INCLUDE) -include $(LINUX_INCLUDE)/generated/autoconf.h -I$(KERNDIR)/arch/arm/include -I$(KERNDIR)/arch/arm/include/generated -I$(KERNDIR)/arch/arm/mach-iproc/include -Wall -Wstrict-prototypes -Wno-trigraphs -Os -fno-strict-aliasing -fno-common -marm -mabi=aapcs-linux -fno-pic -pipe -msoft-float -ffreestanding -march=armv7-a -mfloat-abi=softfp -fomit-frame-pointer -g -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -mlong-calls
 KFLAGS += -I$(LINUX_INCLUDE)/uapi -I$(LINUX_INCLUDE)/generated/uapi -I$(KERNDIR)/arch/arm/include/uapi -I$(KERNDIR)/arch/arm/include/generated/uapi
 
 ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \== 10)" "1"

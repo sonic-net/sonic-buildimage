@@ -96,25 +96,19 @@ static ssize_t psu_info_show(struct device *dev, struct device_attribute *da,
     struct i2c_client *client = to_i2c_client(dev);
     struct as7716_32xb_psu_data *data = i2c_get_clientdata(client);
     int status = -EINVAL;
-    //printk("psu_info_show\n");
-   // printk("attr->index=%d\n", attr->index);
     mutex_lock(&data->update_lock);
     switch (attr->index)
     {
         case PSU_PRESENT:
-            //printk("data->present=%d\n",data->present);
             status = snprintf(buf, PAGE_SIZE - 1, "%d\r\n", data->present);
             break;
         case PSU_MODEL_NAME:
-            //printk("data->model_name=%s\n",data->model_name);
             status = snprintf(buf, PAGE_SIZE - 1, "%s\r\n", data->model_name);
             break;
         case PSU_POWER_GOOD:
-           // printk("data->present=%d\n",data->power_good);
             status = snprintf(buf, PAGE_SIZE - 1, "%d\r\n", data->power_good);
             break;
         case PSU_FAN_DIR:
-            //printk("data->fan_dir=%s\n",data->fan_dir);
             status = snprintf(buf, PAGE_SIZE - 1, "%s\r\n", data->fan_dir);
             break;             
         default :
@@ -132,8 +126,6 @@ static ssize_t psu_info_store(struct device *dev, struct device_attribute *da,
     struct as7716_32xb_psu_data *data = i2c_get_clientdata(client);
     long keyin = 0;
     int status = -EINVAL;
-    //printk("psu_info_store\n");
-    //printk("attr->index=%d\n", attr->index);
     mutex_lock(&data->update_lock);
     switch (attr->index)
     {
@@ -219,15 +211,14 @@ exit:
     return status;
 }
 
-static int as7716_32xb_psu_remove(struct i2c_client *client)
+static void as7716_32xb_psu_remove(struct i2c_client *client)
 {
     struct as7716_32xb_psu_data *data = i2c_get_clientdata(client);
 
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &as7716_32xb_psu_group);
     kfree(data);
-    
-    return 0;
+
 }
 
 enum psu_index 

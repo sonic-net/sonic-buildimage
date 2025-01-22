@@ -8,7 +8,7 @@
                     "max_techsupport_limit" : "10.0",
                     "max_core_limit" : "5.0",
                     "since" : "2 days ago"
-                } 
+                }
             }
         }
     },
@@ -20,8 +20,8 @@
                     "rate_limit_interval" : "180",
                     "max_techsupport_limit" : "10.0",
                     "max_core_limit" : "5.0",
-                    "since" : "2 days ago"                
-                } 
+                    "since" : "2 days ago"
+                }
             }
         }
     },
@@ -30,7 +30,7 @@
             "sonic-auto_techsupport:AUTO_TECHSUPPORT": {
                 "sonic-auto_techsupport:GLOBAL": {
                     "rate_limit_interval" : "whatever"
-                } 
+                }
             }
         }
     },
@@ -40,7 +40,7 @@
                 "sonic-auto_techsupport:GLOBAL": {
                     "max_core_limit" : "100.00",
                     "rate_limit_interval" : "180"
-                } 
+                }
             }
         }
     },
@@ -50,7 +50,7 @@
                 "sonic-auto_techsupport:GLOBAL": {
                     "max_techsupport_limit" : "11.23",
                     "max_core_limit" : "99.99"
-                } 
+                }
             }
         }
     },
@@ -60,7 +60,7 @@
                 "sonic-auto_techsupport:GLOBAL": {
                     "max_techsupport_limit" : "11.111",
                     "max_core_limit" : "99.99"
-                } 
+                }
             }
         }
     },
@@ -77,6 +77,61 @@
                         "feature_name" : "swss",
                         "state" : "disabled",
                         "rate_limit_interval" : "400"
+                    }
+                ]
+            }
+        }
+    },
+    "AUTO_TECHSUPPORT_GLOBAL_MEM_THRESHOLD_VALID": {
+        "sonic-auto_techsupport:sonic-auto_techsupport": {
+            "sonic-auto_techsupport:AUTO_TECHSUPPORT": {
+                "sonic-auto_techsupport:GLOBAL": {
+                    "available_mem_threshold": "10.0",
+                    "min_available_mem": "900"
+                }
+            }
+        }
+    },
+    "AUTO_TECHSUPPORT_GLOBAL_MEM_THRESHOLD_INVALID_THRESHOLD": {
+        "sonic-auto_techsupport:sonic-auto_techsupport": {
+            "sonic-auto_techsupport:AUTO_TECHSUPPORT": {
+                "sonic-auto_techsupport:GLOBAL": {
+                    "available_mem_threshold": "11.111"
+                }
+            }
+        }
+    },
+    "AUTO_TECHSUPPORT_AVAILABLE_MEM_THRESHOLD": {
+        "sonic-auto_techsupport:sonic-auto_techsupport": {
+            "sonic-auto_techsupport:AUTO_TECHSUPPORT_FEATURE": {
+                "AUTO_TECHSUPPORT_FEATURE_LIST": [
+                    {
+                        "feature_name" : "bgp",
+                        "state" : "enabled",
+                        "available_mem_threshold": "10.0"
+                    },
+                    {
+                        "feature_name" : "swss",
+                        "state" : "disabled",
+                        "available_mem_threshold": "10.0"
+                    }
+                ]
+            }
+        }
+    },
+    "AUTO_TECHSUPPORT_INVALID_AVAILABLE_MEM_THRESHOLD": {
+        "sonic-auto_techsupport:sonic-auto_techsupport": {
+            "sonic-auto_techsupport:AUTO_TECHSUPPORT_FEATURE": {
+                "AUTO_TECHSUPPORT_FEATURE_LIST": [
+                    {
+                        "feature_name" : "bgp",
+                        "state" : "enabled",
+                        "available_mem_threshold": "11.111"
+                    },
+                    {
+                        "feature_name" : "swss",
+                        "state" : "disabled",
+                        "available_mem_threshold": "10.0"
                     }
                 ]
             }

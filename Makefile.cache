@@ -70,6 +70,7 @@ SONIC_COMMON_FILES_LIST :=  $(if $(wildcard cache.skip.common),, .platform slave
 SONIC_COMMON_FLAGS_LIST :=  $(CONFIGURED_PLATFORM) \
                             $(CONFIGURED_ARCH) \
                             $(BLDENV) \
+                            $(MIRROR_URLS) $(MIRROR_SECURITY_URLS) \
                             $(SONIC_DEBUGGING_ON) \
                             $(SONIC_PROFILING_ON) $(SONIC_ENABLE_SYNCD_RPC)
 SONIC_COMMON_DPKG_LIST  :=  debian/control debian/changelog debian/rules \
@@ -77,7 +78,8 @@ SONIC_COMMON_DPKG_LIST  :=  debian/control debian/changelog debian/rules \
 SONIC_COMMON_BASE_FILES_LIST  := sonic-slave-jessie/Dockerfile.j2 sonic-slave-jessie/Dockerfile.user.j2 \
                                  sonic-slave-stretch/Dockerfile.j2 sonic-slave-stretch/Dockerfile.user.j2 \
                                  sonic-slave-buster/Dockerfile.j2 sonic-slave-buster/Dockerfile.user.j2 \
-                                 sonic-slave-bullseye/Dockerfile.j2 sonic-slave-bullseye/Dockerfile.user.j2
+                                 sonic-slave-bullseye/Dockerfile.j2 sonic-slave-bullseye/Dockerfile.user.j2 \
+                                 sonic-slave-bookworm/Dockerfile.j2 sonic-slave-bookworm/Dockerfile.user.j2
 
 
 
@@ -186,7 +188,7 @@ define GET_MOD_DEP_SHA
 	$(if $($(1)_DEP_FILES_MISSING), $(warning "[ DPKG ] Dependecy file(s) are not found for $(1) : $($(1)_DEP_FILES_MISSING)))
 
 	# Include package dependencies hash values into package hash calculation
-	$(eval $(1)_DEP_PKGS_SHA := $(foreach dfile,$(1)_MOD_DEP_PKGS,$(dfile)_DEP_MOD_SHA $(dfile)_MOD_HASH))
+	$(eval $(1)_DEP_PKGS_SHA := $(foreach dfile,$($(1)_MOD_DEP_PKGS),$($(dfile)_DEP_MOD_SHA) $($(dfile)_MOD_HASH)))
 
 	$(eval $(1)_DEP_MOD_SHA := $(shell bash -c "git hash-object  $($(1)_DEP_MOD_SHA_FILES) && echo $($(1)_DEP_PKGS_SHA)" \
                             | sha1sum | awk '{print substr($$1,0,23);}'))
@@ -293,10 +295,12 @@ define SAVE_INTO_CACHE
 		echo "Target $(1) dependencies are modifed - global save cache skipped" >> $($(1)_DST_PATH)/$(1).log
 		$(eval $(1)_CACHE_DIR := $(SONIC_DPKG_LOCAL_CACHE_DIR))
 	 )
-	$($(1)_CACHE_USER) tar -C $($(1)_BASE_PATH) -mczvf $($(1)_CACHE_DIR)/$(MOD_CACHE_FILE) $(2) $(addprefix $($(1)_DST_PATH)/,$($(1)_DERIVED_DEBS) $($(1)_EXTRA_DEBS) )  \
+	cp $($(1)_DST_PATH)/$(1).log $($(1)_DST_PATH)/$(1).cached.log
+	$($(1)_CACHE_USER) tar -C $($(1)_BASE_PATH) -mczvf $($(1)_CACHE_DIR)/$(MOD_CACHE_FILE) $(2) $(addprefix $($(1)_DST_PATH)/,$($(1)_DERIVED_DEBS) $($(1)_EXTRA_DEBS) $(1).cached.log)  \
 		1>>$($(1)_DST_PATH)/$(1).log
 	sudo chmod 777 $($(1)_CACHE_DIR)/$(MOD_CACHE_FILE)
-
+	rm -f $($(1)_DST_PATH)/$(1).cached.log
+	
 	echo "File $($(1)_CACHE_DIR)/$(MOD_CACHE_FILE) saved in cache " >> $($(1)_DST_PATH)/$(1).log
 	echo "[ CACHE::SAVED ] $($(1)_CACHE_DIR)/$(MOD_CACHE_FILE)" >> $($(1)_DST_PATH)/$(1).log
 
@@ -356,6 +360,22 @@ define SAVE_CACHE
 	$(if $(call CHECK_WCACHE_ENABLED,$(1)), $(call SAVE_INTO_CACHE,$(1),$(2)))
 endef
 
+RFS_DEP_FILES := $(wildcard \
+	$(addprefix scripts/, build_debian_base_system.sh prepare_debian_image_buildinfo.sh build_mirror_config.sh) \
+	$(addprefix $(IMAGE_DISTRO_DEBS_PATH)/,$(INITRAMFS_TOOLS) $(LINUX_KERNEL)) \
+	$(shell git ls-files files/initramfs-tools) \
+	$(shell git ls-files files/image_config) \
+	$(shell git ls-files files/apparmor) \
+	$(shell git ls-files files/apt) \
+	$(shell git ls-files files/sshd) \
+	$(shell git ls-files files/dhcp) \
+	src/sonic-build-hooks/buildinfo/trusted.gpg.d \
+	platform/$(CONFIGURED_PLATFORM)/modules  \
+	files/docker/docker.service.conf \
+	files/build_templates/default_users.json.j2 \
+	files/build_scripts/generate_asic_config_checksum.py \
+	files/scripts/core_cleanup.py \
+	build_debian.sh onie-image.conf)
 
 
 # Set the target path for each target.
@@ -383,11 +403,17 @@ $(foreach pkg, $(SONIC_INSTALL_PKGS), \
         $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(FSROOT_PATH))) \
 		$(eval $(FSROOT_PATH)/$(pkg)_TARGET := $(pkg)) )
 
+$(foreach pkg, $(SONIC_RFS_TARGETS), \
+        $(eval $(pkg)_DST_PATH := $(if $($(pkg)_DST_PATH), $($(pkg)_DST_PATH), $(TARGET_PATH))) \
+        $(eval $(pkg)_CACHE_MODE := GIT_CONTENT_SHA) \
+        $(eval $(pkg)_DEP_FLAGS := $(SONIC_COMMON_FLAGS_LIST)) \
+        $(eval $(pkg)_DEP_FILES := $(SONIC_COMMON_BASE_FILES_LIST) $(RFS_DEP_FILES)) \
+        $(eval $(TARGET_PATH)/$(pkg)_TARGET := $(pkg)) )
 
 # define the DEP files(.dep and .smdep) and SHA files (.sha and smsha) for each target
 $(foreach pkg, $(SONIC_MAKE_DEBS) $(SONIC_DPKG_DEBS) $(SONIC_ONLINE_DEBS) $(SONIC_COPY_DEBS) \
         $(SONIC_MAKE_FILES) $(SONIC_PYTHON_STDEB_DEBS) $(SONIC_PYTHON_WHEELS) \
-        $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES) $(SONIC_INSTALL_PKGS), \
+        $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES) $(SONIC_INSTALL_PKGS) $(SONIC_RFS_TARGETS), \
         $(eval $(pkg)_MOD_SRC_PATH:=$(if $($(pkg)_SRC_PATH),$($(pkg)_SRC_PATH),$($(pkg)_PATH))) \
         $(eval $(pkg)_BASE_PATH:=$(if $($(pkg)_BASE_PATH),$($(pkg)_BASE_PATH),$(CURDIR))) \
         $(eval $(pkg)_DEP_FLAGS_FILE:=$($(pkg)_DST_PATH)/$(pkg).flags) \
@@ -488,6 +514,7 @@ $(eval $(call FLAGS_DEP_RULES, $(SONIC_PYTHON_STDEB_DEBS), $(PYTHON_DEBS_PATH),f
 $(eval $(call FLAGS_DEP_RULES, $(SONIC_PYTHON_WHEELS), $(PYTHON_WHEELS_PATH),flags))
 $(eval $(call FLAGS_DEP_RULES, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES), $(TARGET_PATH),flags))
 $(eval $(call FLAGS_DEP_RULES, $(SONIC_INSTALL_PKGS), $(FSROOT_PATH),flags))
+$(eval $(call FLAGS_DEP_RULES, $(SONIC_RFS_TARGETS), $(TARGET_PATH),flags))
 
 
 
@@ -561,6 +588,14 @@ define SHA_DEP_RULES
 ALL_DEP_FILES_LIST += $(foreach pkg,$(2), $($(filter none,$($(1)_CACHE_MODE)), \
                       $(addsuffix .$(3),$(addprefix $(pkg)/, $(1))) \
                       $(addsuffix .$(3).sha,$(addprefix $(pkg)/, $(1)))))
+$(foreach docker, $(filter $(SONIC_DOCKER_IMAGES), $(1)), \
+	$(eval $(docker)_DEP_FILES+=$(wildcard files/build/versions/default/*) \
+	$(wildcard files/build/versions/dockers/$(basename $(docker))/*) \
+	$(foreach docker_file, $($(docker)_FILES), $(addprefix $(if $($(docker_file)_PATH), $($(docker_file)_PATH), $(FILES_PATH))/, $(docker_file))) ))
+$(foreach docker, $(filter $(SONIC_DOCKER_DBG_IMAGES), $(1)), \
+	$(eval $(docker)_DEP_FILES+=$(wildcard files/build/versions/default/*) \
+	$(wildcard files/build/versions/dockers/$(patsubst %-$(DBG_IMAGE_MARK).gz,%,$(docker))/*) \
+	$(foreach docker_file, $($(docker)_FILES), $(addprefix $(if $($(docker_file)_PATH), $($(docker_file)_PATH), $(FILES_PATH))/, $(docker_file))) ))
 $(addsuffix .$(3),$(addprefix $(2)/, $(1))) : $(2)/%.$(3) : \
 	$(2)/%.flags $$$$($$$$*_DEP_FILES) $$$$(if $$$$($$$$*_SMDEP_FILES), $(2)/%.smdep)
 	@$$(eval $$*_DEP_FILES_MODIFIED := $$? )
@@ -576,6 +611,7 @@ $(eval $(call SHA_DEP_RULES, $(SONIC_PYTHON_STDEB_DEBS), $(PYTHON_DEBS_PATH),dep
 $(eval $(call SHA_DEP_RULES, $(SONIC_PYTHON_WHEELS), $(PYTHON_WHEELS_PATH),dep))
 $(eval $(call SHA_DEP_RULES, $(SONIC_DOCKER_IMAGES) $(SONIC_DOCKER_DBG_IMAGES), $(TARGET_PATH),dep))
 $(eval $(call SHA_DEP_RULES, $(SONIC_INSTALL_PKGS), $(FSROOT_PATH),dep))
+$(eval $(call SHA_DEP_RULES, $(SONIC_RFS_TARGETS), $(TARGET_PATH),dep))
 
 
 
@@ -609,6 +645,7 @@ SONIC_CACHE_CLEAN_TARGETS = $(addsuffix -clean,$(addprefix $(TARGET_PATH)/, \
                $(SONIC_DOCKER_IMAGES) \
                $(SONIC_DOCKER_DBG_IMAGES) \
                $(SONIC_SIMPLE_DOCKER_IMAGES) \
+               $(SONIC_RFS_TARGETS) \
                $(SONIC_INSTALLERS)))
 $(SONIC_CACHE_CLEAN_TARGETS) :: $(TARGET_PATH)/%-clean : .platform
 	@rm -f $($*_DEP_FLAGS_FILE) $($*_MOD_HASH_FILE) $($*_SMOD_HASH_FILE) \

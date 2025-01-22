@@ -24,7 +24,6 @@ NUM_COMPONENT = 3
 RESET_REGISTER = "0x112"
 HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/previous-reboot-cause.txt"
 PMON_REBOOT_CAUSE_PATH = "/usr/share/sonic/platform/api_files/reboot-cause/previous-reboot-cause.txt"
-HOST_CHK_CMD = "docker > /dev/null 2>&1"
 STATUS_LED_PATH = "/sys/devices/platform/e1031.smc/master_led"
 
 

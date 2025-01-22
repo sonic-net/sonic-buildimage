@@ -2,11 +2,15 @@
 {# set default hash seed to 0 #}
 {% set hash_seed = 0 %}
 {% set hash_seed_offset = 0 %}
+{% set ecmp_hash_offset_value = 0 %}
+{% set lag_hash_offset_value = 0 %}
 {% if DEVICE_METADATA.localhost.type %}
-{% if "ToRRouter" in DEVICE_METADATA.localhost.type %}
+{% if "ToRRouter" in DEVICE_METADATA.localhost.type or DEVICE_METADATA.localhost.type in ["EPMS", "MgmtTsToR"] %}
 {% set hash_seed = 0 %}
 {% elif "LeafRouter" in DEVICE_METADATA.localhost.type %}
 {% set hash_seed = 10 %}
+{% set ecmp_hash_offset_value = 10 %}
+{% set lag_hash_offset_value = 10 %}
 {% elif "SpineRouter" in DEVICE_METADATA.localhost.type %}
 {% set hash_seed = 25 %}
 {% endif %}
@@ -18,13 +22,19 @@
 [
     {
         "SWITCH_TABLE:switch": {
+{% if not DEVICE_METADATA.localhost.switch_type or DEVICE_METADATA.localhost.switch_type != "dpu" %}
             "ecmp_hash_seed": "{{ hash_seed_value }}",
             "lag_hash_seed": "{{ hash_seed_value }}",
             "fdb_aging_time": "600",
+{% if not DEVICE_METADATA.localhost.switch_type or DEVICE_METADATA.localhost.switch_type != "chassis-packet" %}
+            "ecmp_hash_offset": "{{ ecmp_hash_offset_value }}",
+            "lag_hash_offset": "{{ lag_hash_offset_value }}",
+{% endif %}
 {% if DEVICE_METADATA.localhost.type and "LeafRouter" in DEVICE_METADATA.localhost.type %}
             "ordered_ecmp": "true"
 {% else %}
             "ordered_ecmp": "false"
+{% endif %}
 {% endif %}
         },
         "OP": "SET"

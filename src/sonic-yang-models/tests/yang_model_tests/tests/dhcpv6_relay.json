@@ -5,5 +5,9 @@
     },
     "DHCPV6_SERVER_VALID_FORMAT": {
         "desc": "Add dhcpv6_server in correct format."
+    },
+    "DHCPv6_OPTION_WITH_INVALID_BOOLEAN_TYPE": {
+        "desc": "Add dhcpv6 option with invalid option boolean types.",
+        "eStrKey": "Pattern"
     }
 }

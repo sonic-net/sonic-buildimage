@@ -2,7 +2,7 @@ module sonic-warm-restart  {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-warm-restart";
+    namespace "http://github.com/sonic-net/sonic-warm-restart";
     prefix wrm;
 
     description "SONIC WARMRESTART";

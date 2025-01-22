@@ -5,9 +5,9 @@
 #   * PSU
 #
 import os
-import xml.etree.ElementTree as ET
 import glob
 from eepromutil.fru import *
+from lxml import etree as ET
 
 MAILBOX_DIR = "/sys/bus/i2c/devices/"
 CONFIG_NAME = "dev.xml"

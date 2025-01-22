@@ -1,5 +1,7 @@
 #!/bin/bash
 
+IMAGENAME=$1
+
 . /usr/local/share/buildinfo/scripts/buildinfo_base.sh
 
 [ -d $DIFF_VERSION_PATH ] && rm -rf $DIFF_VERSION_PATH
@@ -8,14 +10,39 @@ mkdir -p $BUILD_VERSION_PATH
 mkdir -p $LOG_PATH
 
 [ -d $PRE_VERSION_PATH ] && rm -rf $PRE_VERSION_PATH
+[ -d $POST_VERSION_PATH ] && rm -rf $POST_VERSION_PATH
+mkdir -p $POST_VERSION_PATH
 collect_version_files $PRE_VERSION_PATH
+update_version_files
 symlink_build_hooks
 set_reproducible_mirrors
+
+mkdir -p /var/cache/apt/archives/
+mkdir -p ${PKG_CACHE_PATH}/deb/
+
+if [ ! -z "$(get_version_cache_option)" ]; then
+	# Skip the deletion of cache files
+	cat <<-EOF >/etc/apt/apt.conf.d/docker-clean
+	DPkg::Post-Invoke { "test -f /usr/bin/rsync && rsync -avzh --ignore-errors /var/cache/apt/archives/ ${PKG_CACHE_PATH}/deb/; rm -f /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true"; };
+	APT::Update::Post-Invoke { "test -f /usr/bin/rsync && rsync -avzh --ignore-errors /var/cache/apt/archives/ ${PKG_CACHE_PATH}/deb/; rm -f /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true"; };
+	APT::Keep-Downloaded-Packages "true";
+	EOF
+fi
+
+# Extract the cache inside the docker build.
+if [ -f ${PKG_CACHE_FILE_NAME} ]; then
+	tar -C ${PKG_CACHE_PATH} -xvf  ${PKG_CACHE_FILE_NAME}
+	test -e ${PKG_CACHE_PATH}/deb && cp ${PKG_CACHE_PATH}/deb/* /var/cache/apt/archives/
+fi
 
 chmod -R a+rw $BUILDINFO_PATH
 
 if [ "$ENABLE_VERSION_CONTROL_DEB" == "y" ] && [ -f $VERSION_DEB_PREFERENCE ]; then
     cp -f $VERSION_DEB_PREFERENCE /etc/apt/preferences.d/
+fi
+
+if [ ! -z "$(get_version_cache_option)" ]; then
+    DISTRO=${DISTRO} apt-get update && apt-get install -y rsync
 fi
 
 exit 0

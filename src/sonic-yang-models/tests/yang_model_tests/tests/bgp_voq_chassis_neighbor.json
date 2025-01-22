@@ -1,0 +1,17 @@
+{
+    "BGP_VOQ_CHASSIS_NEIGHBOR_TEST" : {
+        "desc": "Load bgp voq chassis neighbor"
+    },
+    "BGP_VOQ_CHASSIS_ABSENT_LOCAL_ADDRESS_TEST" : {
+        "desc": "Load bgp voq chassis with no local address",
+        "eStrKey" : "Mandatory"
+    },
+    "BGP_VOQ_CHASSIS_INVALID_LOCAL_ADDRESS_ADDRESS_FAMILY_TEST": {
+        "desc": "Load ipv6 bgp voq chassis with ipv4 local address",
+        "eStr": ["local address and neighbor address family doesnt match"]
+    },
+    "BGP_VOQ_CHASSIS_INVALID_ASN_TEST": {
+        "desc" :"Load bgp voq chassis neighbor with asn number different than local asn",
+        "eStr": ["Voq chassis BGP neighbors should have same ASN as defined in device metadata"]
+    }
+}

@@ -1,5 +1,5 @@
 module sonic-system-tacacs {
-    namespace "http://github.com/Azure/sonic-system-tacacs";
+    namespace "http://github.com/sonic-net/sonic-system-tacacs";
     prefix ssys;
     yang-version 1.1;
 

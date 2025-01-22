@@ -18,11 +18,11 @@ index c16219b..b51e4eb 100644
 +	const char *portname = cmdenv_get(env, "ports");
 +	int find_port = 0;
  
- 	log_debug("lldpctl", "lldp PortID TLV Subtype Local port-id '%s' port-descr '%s'", id, descr);
- 
+ 	log_debug("lldpctl",
+ 	    "lldp PortID TLV Subtype Local port-id '%s' port-descr '%s'", id, descr);
 @@ -165,6 +167,12 @@ cmd_portid_type_local(struct lldpctl_conn_t *conn, struct writer *w,
- 			log_warnx("lldpctl", "unable to set LLDP Port Description for %s."
- 			    " %s", name, lldpctl_last_strerror(conn));
+ 			    " %s",
+ 			    name, lldpctl_last_strerror(conn));
  		}
 +		find_port = 1;
 +	}

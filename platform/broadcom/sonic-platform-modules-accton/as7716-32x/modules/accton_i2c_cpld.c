@@ -151,12 +151,11 @@ exit:
 	return status;
 }
 
-static int accton_i2c_cpld_remove(struct i2c_client *client)
+static void accton_i2c_cpld_remove(struct i2c_client *client)
 {
     sysfs_remove_group(&client->dev.kobj, &as5712_54x_cpld_group);    
   
 	accton_i2c_cpld_remove_client(client);	
-	return 0;
 }
 
 static const struct i2c_device_id accton_i2c_cpld_id[] = {

@@ -1,0 +1,130 @@
+module sonic-static-route {
+  yang-version 1.1;
+  namespace "http://github.com/sonic-net/sonic-static-route";
+  prefix sroute;
+
+  import sonic-vrf {
+    prefix vrf;
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import sonic-types {
+    prefix stypes;
+  }
+
+  organization
+    "SONiC";
+  contact
+    "SONiC";
+  description
+    "STATIC ROUTE yang Module for SONiC OS";
+
+  revision 2022-03-17 {
+    description
+      "First Revision";
+  }
+
+  container sonic-static-route {
+    container STATIC_ROUTE {
+      description
+        "STATIC_ROUTE part of config_db.json";
+      list STATIC_ROUTE_TEMPLATE_LIST {
+        key "prefix";
+        leaf prefix {
+          type inet:ip-prefix;
+          description
+            "prefix is the destination IP address, as key";
+        }
+        leaf nexthop {
+          type string;
+          description
+            "The next-hop that is to be used for the
+             static route as IP address. When interface needs to be
+             specified, use 0.0.0.0 as leaf value";
+        }
+        leaf ifname {
+          type string;
+          description
+            "When interface is specified, forwarding happens through it";
+        }
+        leaf advertise {
+          type string {
+            pattern "((true|false),)*(true|false)";
+          }
+          default "false";
+        }
+        leaf bfd {
+          type string {
+            pattern "((true|false),)*(true|false)";
+          }
+          default "false";
+        }
+      }
+      list STATIC_ROUTE_LIST {
+        key "vrf_name prefix";
+        leaf vrf_name {
+          type union {
+            type string {
+              pattern 'default';
+            }
+            type string {
+              pattern 'mgmt';
+            }
+            type string {
+              pattern "Vrf[a-zA-Z0-9_-]+";
+            }
+          }
+          description
+            "Virtual Routing Instance name as key";
+        }
+        leaf prefix {
+          type inet:ip-prefix;
+          description
+            "prefix is the destination IP address, as key";
+        }
+        leaf nexthop {
+          type string;
+          description
+            "The next-hop that is to be used for the
+             static route as IP address. When interface needs to be
+             specified, use 0.0.0.0 as leaf value";
+        }
+        leaf ifname {
+          type string;
+          description
+            "When interface is specified, forwarding happens through it";
+        }
+        leaf distance {
+          type string {
+            pattern "((25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?),)*(25[0-5]|2[0-4][0-9]|[0-1]?[0-9][0-9]?)";
+          }
+          default "0";
+          description
+            "Administrative Distance (preference) of the entry.  The
+             preference defines the order of selection when multiple
+             sources (protocols, static, etc.) contribute to the same
+             prefix entry.  The lower the preference, the more preferable the
+             prefix is.  When this value is not specified, the preference is
+             inherited from the default preference of the implementation for
+             static routes.";
+        }
+        leaf nexthop-vrf {
+          type string {
+            pattern "(((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)),)*((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt))";
+          }
+          description
+            "VRF name of the nexthop. This is for vrf leaking";
+        }
+        leaf blackhole {
+          type string {
+            pattern "((true|false),)*(true|false)";
+          }
+          default "false";
+          description
+            "blackhole refers to a route that, if matched, discards the message silently.";
+        }
+      } /* end of list STATIC_ROUTE_LIST */
+    } /* end of container STATIC_ROUTE */
+  } /* end of container sonic-static_route */
+}

@@ -1,10 +1,11 @@
+{% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-{% if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
-FROM multiarch/debian-debootstrap:armhf-bullseye
-{% elif CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
-FROM multiarch/debian-debootstrap:arm64-bullseye
+{% if CONFIGURED_ARCH == "armhf" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
+FROM {{ prefix }}multiarch/debian-debootstrap:armhf-bullseye
+{% elif CONFIGURED_ARCH == "arm64" and (MULTIARCH_QEMU_ENVIRON == "y" or CROSS_BUILD_ENVIRON == "y") %}
+FROM {{ prefix }}multiarch/debian-debootstrap:arm64-bullseye
 {% else %}
-FROM {{DOCKER_BASE_ARCH}}/debian:bullseye
+FROM {{ prefix }}{{DOCKER_BASE_ARCH}}/debian:bullseye
 {% endif %}
 
 # Clean documentation in FROM image
@@ -26,15 +27,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Configure data sources for apt/dpkg
 COPY ["dpkg_01_drop", "/etc/dpkg/dpkg.cfg.d/01_drop"]
-{% if CONFIGURED_ARCH == "armhf" %}
-COPY ["sources.list.armhf", "/etc/apt/sources.list"]
-{% elif CONFIGURED_ARCH == "arm64" %}
-COPY ["sources.list.arm64", "/etc/apt/sources.list"]
-{% else %}
-COPY ["sources.list", "/etc/apt/sources.list"]
-{% endif %}
+COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
+COPY ["apt-multiple-retries", "/etc/apt/apt.conf.d"]
 
 # Update apt cache and
 # pre-install fundamental packages
@@ -47,7 +43,7 @@ RUN apt-get update &&        \
         python3              \
         python3-distutils    \
         python3-pip          \
-        rsyslog              \
+        python-is-python3    \
         vim-tiny             \
 # Install redis-tools
         redis-tools          \
@@ -61,7 +57,12 @@ RUN apt-get update &&        \
 # for processing/handling json files in bash environment
         jq                   \
 # for sairedis zmq rpc channel
-        libzmq5
+        libzmq5              \
+        libwrap0
+
+# default rsyslog version is 8.2110.0 which has a bug on log rate limit,
+# use backport version 8.2206.0-1~bpo11+1
+RUN apt-get -t bullseye-backports -y install rsyslog
 
 # Upgrade pip via PyPI and uninstall the Debian version
 RUN pip3 install --upgrade pip
@@ -80,7 +81,10 @@ RUN pip3 install supervisor==4.2.1
 # Add support for supervisord to handle startup dependencies
 RUN pip3 install supervisord-dependent-startup==1.4.0
 
-RUN mkdir -p /etc/supervisor /var/log/supervisor
+RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
+
+# Uninstall unused dependencies
+RUN apt autoremove -y --purge
 
 RUN apt-get -y purge   \
     exim4              \
@@ -101,7 +105,7 @@ RUN apt-get -y purge   \
 RUN apt-get clean -y                     && \
     apt-get autoclean -y                 && \
     apt-get autoremove -y                && \
-    rm -rf /var/lib/apt/lists/* /tmp/*
+    rm -rf /var/lib/apt/lists/* /tmp/* ~/.cache
 
 COPY ["etc/rsyslog.conf", "/etc/rsyslog.conf"]
 COPY ["etc/rsyslog.d/*", "/etc/rsyslog.d/"]

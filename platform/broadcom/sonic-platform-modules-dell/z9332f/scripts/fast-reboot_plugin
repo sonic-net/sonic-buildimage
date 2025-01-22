@@ -1,0 +1,8 @@
+#!/bin/bash
+
+ONIE_PATH="/mnt/onie-boot"
+
+# Unmount ONIE partition if mounted
+if grep -qs ${ONIE_PATH} /proc/mounts; then
+    umount ${ONIE_PATH}
+fi

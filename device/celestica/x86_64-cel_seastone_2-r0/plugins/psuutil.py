@@ -1,10 +1,9 @@
-import os.path
-import subprocess
 import sys
 import re
 
 try:
     from sonic_psu.psu_base import PsuBase
+    from sonic_py_common.general import getstatusoutput_noshell_pipe
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -13,16 +12,16 @@ class PsuUtil(PsuBase):
     """Platform-specific PSUutil class"""
 
     def __init__(self):
-        self.ipmi_sensor = "ipmitool sensor"
+        self.ipmi_sensor = ["ipmitool", "sensor"]
         PsuBase.__init__(self)
 
-    def run_command(self, command):
-        proc = subprocess.Popen(command, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
-        (out, err) = proc.communicate()
-
-        if proc.returncode != 0:
-            sys.exit(proc.returncode)
-
+    def run_command(self, cmd1, cmd2):
+        exitcode, out = getstatusoutput_noshell_pipe(cmd1, cmd2)
+        i = 0
+        while i < 2:
+            if exitcode[i] != 0:
+                sys.exit(exitcode[i])
+            i += 1
         return out
 
     def find_value(self, grep_string):
@@ -50,7 +49,8 @@ class PsuUtil(PsuBase):
             return False
 
         grep_key = "PSUL_Status" if index == 1 else "PSUR_Status"
-        grep_string = self.run_command(self.ipmi_sensor + ' | grep ' + grep_key)
+        grep_cmd = ["grep", grep_key]
+        grep_string = self.run_command(self.ipmi_sensor, grep_cmd)
         status_byte = self.find_value(grep_string)
 
         if status_byte is None:
@@ -74,7 +74,8 @@ class PsuUtil(PsuBase):
             return False
 
         grep_key = "PSUL_Status" if index == 1 else "PSUR_Status"
-        grep_string = self.run_command(self.ipmi_sensor + ' | grep ' + grep_key)
+        grep_cmd = ["grep", grep_key]
+        grep_string = self.run_command(self.ipmi_sensor, grep_cmd)
         status_byte = self.find_value(grep_string)
 
         if status_byte is None:

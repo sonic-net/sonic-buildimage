@@ -1,0 +1,37 @@
+{# Construct config.bcm to include additional soc properties per specific device metadata requirement #}
+{%- set mmu_sock = 'mmu_init_config="MSFT-TH2-Tier1"' -%}
+{%- set IPinIP_sock = '' -%}
+{%- set map_prio = '' -%}
+{%- set pfcwd_sock = '' -%}
+{%- if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined -%}
+{%-     if DEVICE_METADATA['localhost']['type'] is defined -%}
+{%-         set switch_role = DEVICE_METADATA['localhost']['type'] -%}
+{%-         if 'torrouter' in switch_role.lower() or 'torswitch' in switch_role.lower() %}
+{%-             set mmu_sock = 'mmu_init_config="MSFT-TH2-Tier0"' -%}
+{%-         endif %}
+{%-     endif %}
+{%-     if DEVICE_METADATA['localhost']['subtype'] is defined -%}
+{%-         set switch_subtype = DEVICE_METADATA['localhost']['subtype'] -%}
+{%-         if 'dualtor' in switch_subtype.lower() %}
+{%-             set IPinIP_sock =
+'sai_tunnel_support=1
+sai_tunnel_underlay_route_mode=1
+host_as_route_disable=1
+l3_ecmp_levels=2' -%}
+{%-             set map_prio = 'sai_remap_prio_on_tnl_egress=1' -%}
+{%-         endif %}
+{%-     endif %}
+{%- endif %}
+{%- if SYSTEM_DEFAULTS is defined and 'tunnel_qos_remap' in SYSTEM_DEFAULTS and SYSTEM_DEFAULTS['tunnel_qos_remap']['status'] == 'enabled' -%}
+{%-     set pfcwd_sock =
+'hybrid_pfc_deadlock_enable=1
+pfc_deadlock_seq_control=1
+sai_pfc_dlr_init_capability=1' -%}
+{%- endif %}
+{# The following is the common soc properties that used to be named "th2-a7260cx3-64-64x100G-t1.config.bcm" #}
+
+l3_alpm_hit_skip=1
+{{ map_prio }}
+{{ mmu_sock }}
+{{ IPinIP_sock }}
+{{ pfcwd_sock }}

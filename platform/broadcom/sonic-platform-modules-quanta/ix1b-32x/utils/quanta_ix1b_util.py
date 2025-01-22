@@ -27,13 +27,10 @@ command:
     clean       : uninstall drivers and remove related sysfs nodes    
 """
 
-import os
 import commands
 import sys, getopt
 import logging
-import re
 import time
-from collections import namedtuple
 
 DEBUG = False
 args = []
@@ -41,8 +38,8 @@ FORCE = 0
 i2c_prefix = '/sys/bus/i2c/devices/'
 
 if DEBUG == True:
-    print sys.argv[0]
-    print 'ARGV      :', sys.argv[1:]
+    print(sys.argv[0])
+    print('ARGV      :', sys.argv[1:])
 
 def main():
     global DEBUG
@@ -56,10 +53,10 @@ def main():
                                                        'debug',
                                                        'force',
                                                           ])
-    if DEBUG == True:
-        print options
-        print args
-        print len(sys.argv)
+    if DEBUG is True:
+        print(options)
+        print(args)
+        print(len(sys.argv))
 
     for opt, arg in options:
         if opt in ('-h', '--help'):
@@ -83,12 +80,12 @@ def main():
     return 0
 
 def show_help():
-    print __doc__ % {'scriptName' : sys.argv[0].split("/")[-1]}
+    print(__doc__ % {'scriptName' : sys.argv[0].split("/")[-1]})
     sys.exit(0)
 
 def show_log(txt):
-    if DEBUG == True:
-        print "[IX1B-32X]" + txt
+    if DEBUG is True:
+        print("[IX1B-32X]" + txt)
 
     return
 
@@ -165,7 +162,7 @@ def system_install():
         status, output = exec_cmd("modprobe " + drivers[i], 1)
 
     if status:
-        print output
+        print(output)
         if FORCE == 0:
             return status
 
@@ -174,7 +171,7 @@ def system_install():
         status, output = exec_cmd(instantiate[i], 1)
 
     if status:
-        print output
+        print(output)
         if FORCE == 0:
             return status
 
@@ -184,7 +181,9 @@ def system_install():
     #QSFP for 1~32 port
     for port_number in range(1, 33):
         bus_number = port_number + 31
-        os.system("echo %d >/sys/bus/i2c/devices/%d-0050/port_name" % (port_number, bus_number))
+        file = "/sys/bus/i2c/devices/%d-0050/port_name" % bus_number
+        with open(file, 'w') as f:
+            f.write(str(port_number) + '\n')
 
     #Set system LED to green
     status, output = exec_cmd("echo 1 > /sys/class/leds/sysled_green/brightness", 1)
@@ -199,14 +198,14 @@ def system_ready():
 
 def install():
     if not device_found():
-        print "No device, installing...."
+        print("No device, installing....")
         status = system_install()
 
         if status:
             if FORCE == 0:
                 return status
     else:
-        print " ix1b driver already installed...."
+        print(" ix1b driver already installed....")
 
     return
 
@@ -215,10 +214,10 @@ def uninstall():
 
     #uninstall drivers
     for i in range(len(drivers) - 1, -1, -1):
-       status, output = exec_cmd("rmmod " + drivers[i], 1)
+        status, output = exec_cmd("rmmod " + drivers[i], 1)
 
     if status:
-        print output
+        print(output)
         if FORCE == 0:
             return status
 

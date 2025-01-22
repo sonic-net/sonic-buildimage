@@ -33,6 +33,7 @@ import sys, getopt
 import logging
 import syslog
 import time
+from sonic_py_common.general import getstatusoutput_noshell_pipe
 
 DEBUG = False
 args = []
@@ -236,8 +237,9 @@ def system_install(boot_option):
 	      return status
     for addr_offset in range (0,FAN_NUM):
         addr=FAN_VPD_ADDR_BASE+addr_offset
-        cmd = "i2cdetect -y "+str(FAN_VPD_CHANNEL)+" "+str(addr)+" "+str(addr)+" | grep "+str(hex(addr)).replace('0x','')
-        result=os.system(cmd)
+        cmd1 = ["i2cdetect", "-y", str(FAN_VPD_CHANNEL), str(addr), str(addr)]
+        cmd2 = ["grep", f'{addr:x}']
+        result, _ = getstatusoutput_noshell_pipe(cmd1, cmd2)
         if( result==0 ):
             cmd="echo inv_eeprom "+str(addr)+" > /sys/bus/i2c/devices/i2c-"+FAN_VPD_CHANNEL
             status, output = exec_cmd(cmd,1)

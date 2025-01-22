@@ -1,23 +1,13 @@
-From b11fd3d516b62c01513d289bc901820aa150c63e Mon Sep 17 00:00:00 2001
-From: Charlie Chen <charlie_chen@edge-core.com>
-Date: Wed, 1 Apr 2020 06:59:06 +0000
-Subject: Patch to peform dh_installinit to include sensord.install in the
- packed deb
-
-Signed-off-by: Charlie Chen <charlie_chen@edge-core.com>
----
- debian/rules | 1 +
- 1 file changed, 1 insertion(+)
-
 diff --git a/debian/rules b/debian/rules
-index 5ebda06..1d77e28 100755
+index 3cd5314..1dd0983 100755
 --- a/debian/rules
 +++ b/debian/rules
-@@ -56,3 +56,4 @@ override_dh_auto_install-arch:
-
+@@ -66,6 +66,8 @@ override_dh_auto_install-arch:
+ 
  override_dh_installinit-arch:
  	dh_installinit -plm-sensors --no-start
 +	dh_installinit -psensord --no-start
---
-2.17.1
-
+ 
+ override_dh_installsystemd-arch:
+ 	dh_installsystemd -plm-sensors --no-start
++	dh_installsystemd -psensord --no-start

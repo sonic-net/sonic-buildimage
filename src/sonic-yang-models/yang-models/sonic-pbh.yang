@@ -2,11 +2,15 @@ module sonic-pbh {
 
 	yang-version 1.1;
 
-	namespace "http://github.com/Azure/sonic-pbh";
+	namespace "http://github.com/sonic-net/sonic-pbh";
 	prefix pbh;
 
 	import ietf-inet-types {
 		prefix inet;
+	}
+
+	import sonic-types {
+		prefix stypes;
 	}
 
 	import sonic-port {
@@ -25,7 +29,7 @@ module sonic-pbh {
 
 	typedef hash-field {
 		description "Represents native hash field";
-		type enumeration {
+		type stypes:hash-field {
 			enum INNER_IP_PROTOCOL;
 			enum INNER_L4_DST_PORT;
 			enum INNER_L4_SRC_PORT;

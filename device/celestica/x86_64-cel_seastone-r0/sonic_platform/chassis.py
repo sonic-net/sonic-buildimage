@@ -20,13 +20,12 @@ NUM_FAN_TRAY = 5
 NUM_PSU = 2
 NUM_THERMAL = 5
 NUM_SFP = 32
-NUM_COMPONENT = 5
+NUM_COMPONENT = 6
 RESET_REGISTER = "0x103"
 HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
 PREV_REBOOT_CAUSE_FILE = "previous-reboot-cause.txt"
 GETREG_PATH = "/sys/devices/platform/dx010_cpld/getreg"
-HOST_CHK_CMD = "docker > /dev/null 2>&1"
 STATUS_LED_PATH = "/sys/devices/platform/leds_dx010/leds/dx010:green:stat/brightness"
 
 
@@ -44,15 +43,16 @@ class Chassis(ChassisBase):
         self.__initialize_psu()
         self.__initialize_thermals()
         self.__initialize_components()
+        self.__initialize_system_led()
 
     def __initialize_sfp(self):
         sfputil_helper = SfpUtilHelper()
         port_config_file_path = device_info.get_path_to_port_config_file()
         sfputil_helper.read_porttab_mappings(port_config_file_path, 0)
 
-        from sonic_platform.sfp import Sfp
+        from sonic_platform.sfp_optoe import SfpOptoe
         for index in range(0, NUM_SFP):
-            sfp = Sfp(index, sfputil_helper.logical[index])
+            sfp = SfpOptoe(index, sfputil_helper.physical_to_logical[index + 1])
             self._sfp_list.append(sfp)
         self.sfp_module_initialized = True
 
@@ -85,6 +85,9 @@ class Chassis(ChassisBase):
         for index in range(0, NUM_COMPONENT):
             component = Component(index)
             self._component_list.append(component)
+
+    def __initialize_system_led(self):
+        self.set_status_led(self.STATUS_LED_COLOR_GREEN)
 
     def __get_air_flow(self):
         air_flow_path = '/usr/share/sonic/device/{}/fan_airflow'.format(
@@ -266,7 +269,7 @@ class Chassis(ChassisBase):
             Returns:
             string: The name of the device
         """
-        return self._api_helper.hwsku
+        return self._eeprom.get_product_name()
 
     def get_presence(self):
         """
@@ -317,6 +320,14 @@ class Chassis(ChassisBase):
         """
         return False
 
+    def initizalize_system_led(self):
+        """
+        This function is not defined in chassis base class,
+        system-health command would invoke chassis.initizalize_system_led(),
+        add this stub function just to let the command sucessfully execute
+        """
+        pass
+
     def set_status_led(self, color):
         """
         Sets the state of the PSU status LED
@@ -345,7 +356,7 @@ class Chassis(ChassisBase):
         """
         status = self._api_helper.read_txt_file(STATUS_LED_PATH)
         status_str = {
-            '255': self.STATUS_LED_COLOR_GREEN,
+            '1': self.STATUS_LED_COLOR_GREEN,
             '0': self.STATUS_LED_COLOR_OFF
         }.get(status, None)
 

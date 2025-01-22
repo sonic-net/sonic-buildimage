@@ -1,0 +1,30 @@
+From 51f315046a0bec13934930edde9c145b31bf7d53 Mon Sep 17 00:00:00 2001
+From: Bart Van Assche <bvanassche@acm.org>
+Date: Sun, 24 Jul 2022 16:45:05 -0700
+Subject: [PATCH] agent/Makefile.in: Unbreak the --enable-minimalist build
+
+Build the features rules in the mibgroup directory before building the
+features rules in the helpers directory.
+
+Fixes: 51128ad09507 ("agent/Makefile.in: Build the MIB module code once")
+Fixes: https://github.com/net-snmp/net-snmp/issues/438
+---
+ agent/Makefile.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/agent/Makefile.in b/agent/Makefile.in
+index 047d880bf4..44f8818d29 100644
+--- a/agent/Makefile.in
++++ b/agent/Makefile.in
+@@ -16,7 +16,7 @@ mysubdir=agent
+ # what to install
+ #
+ SUBDIRS=helpers
+-FTSUBDIRS=helpers
++FTSUBDIRS=mibgroup helpers
+ 
+ INSTALLSBINPROGS= @SNMPD@
+ INSTALLLIBS	= libnetsnmpagent.$(LIB_EXTENSION)$(LIB_VERSION)
+-- 
+2.34.1
+

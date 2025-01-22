@@ -1,12 +1,12 @@
 {% set default_cable = '5m' %}
-{% set ingress_lossless_pool_size =  '23850816' %}
-{% set ingress_lossy_pool_size =  '36222208' %}
-{% set egress_lossless_pool_size =  '29482816' %}
-{% set egress_lossy_pool_size =  '26400000' %}
+{% set ingress_lossless_pool_size = '43067728' %}
+{% set ingress_lossy_pool_size = '3520000' %}
+{% set egress_lossless_pool_size = '46749824' %}
+{% set egress_lossy_pool_size = '2463824' %}
 
 {%- macro generate_port_lists(PORT_ALL) %}
     {# Generate list of ports #}
-    {%- for port_idx in range(0,32) %}
+    {%- for port_idx in range(0, 32) %}
         {%- if PORT_ALL.append("Ethernet%d" % (port_idx * 4)) %}{%- endif %}
     {%- endfor %}
 {%- endmacro %}
@@ -15,9 +15,11 @@
     "BUFFER_POOL": {
         "ingress_lossless_pool": {
             "size": "{{ ingress_lossless_pool_size }}",
+            {%- if dynamic_mode is defined %}
+            "xoff": "3153920",
+            {%- endif %}
             "type": "ingress",
-            "mode": "dynamic",
-            "xoff": "36222208"
+            "mode": "dynamic"
         },
         "ingress_lossy_pool": {
             "size": "{{ ingress_lossy_pool_size }}",
@@ -61,11 +63,15 @@
 
 {%- macro generate_queue_buffers(port_names) %}
     "BUFFER_QUEUE": {
-        "{{ port_names }}|3-4": {
-            "profile" : "egress_lossless_profile"
-        },
-        "{{ port_names }}|0-1": {
+{% for port in port_names.split(',') %}
+        "{{ port }}|0-2": {
             "profile" : "q_lossy_profile"
-        }
+        },
+{% endfor %}
+{% for port in port_names.split(',') %}
+        "{{ port }}|3-4": {
+            "profile" : "egress_lossless_profile"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
     }
 {%- endmacro %}

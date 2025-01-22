@@ -1,6 +1,6 @@
 s6100/scripts/iom_power_*.sh usr/local/bin
 s6100/scripts/s6100_platform.sh usr/local/bin
-s6100/scripts/s6100_i2c_enumeration.sh usr/local/bin
+s6100/scripts/s6100_platform_startup.sh usr/local/bin
 s6100/scripts/s6100_bitbang_reset.sh usr/local/bin
 s6100/scripts/pcisysfs.py usr/bin
 common/dell_i2c_utils.sh usr/local/bin
@@ -33,7 +33,9 @@ s6100/systemd/s6100-ssd-monitor.service etc/systemd/system
 s6100/systemd/s6100-ssd-monitor.timer etc/systemd/system
 s6100/systemd/s6100-ssd-upgrade-status.service etc/systemd/system
 s6100/systemd/s6100-reboot-cause.service etc/systemd/system
-s6100/systemd/s6100-i2c-enumerate.service etc/systemd/system
+s6100/systemd/s6100-platform-startup.service etc/systemd/system
 s6100/scripts/s6100_serial_getty_monitor etc/monit/conf.d
+s6100/scripts/check-getty.sh usr/local/bin
 common/fw-updater usr/local/bin
 common/onie_mode_set usr/local/bin
+common/onie_version usr/local/bin

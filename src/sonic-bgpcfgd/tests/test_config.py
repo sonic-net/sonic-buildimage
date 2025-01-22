@@ -126,9 +126,9 @@ def test_to_canonical_empty():
     !
     !
     !
-    
+
     !
-    
+
 """
     to_canonical_common(raw_config, [])
 
@@ -139,11 +139,11 @@ router bgp 12345
   bgp router-id 1020
   address-family ipv4
     neighbor PEER_V4 peer-group
-    neighbor PEER_V4 route-map A10 in    
+    neighbor PEER_V4 route-map A10 in
   exit-address-family
   address-family ipv6
     neighbor PEER_V6 peer-group
-    neighbor PEER_V6 route-map A20 in        
+    neighbor PEER_V6 route-map A20 in
   exit-address-family
 route-map A10 permit 10
 !

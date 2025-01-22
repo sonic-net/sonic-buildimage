@@ -100,12 +100,6 @@
   id: 8c22
   name: 'SMBus: Intel Corporation 8 Series/C220 Series Chipset Family SMBus Controller
     (rev 05)'
-- bus: '02'
-  dev: '00'
-  fn: '0'
-  id: '1533'
-  name: 'Ethernet controller: Intel Corporation I210 Gigabit Network Connection (rev
-    03)'
 - bus: '03'
   dev: '00'
   fn: '0'
@@ -140,11 +134,6 @@
   fn: '1'
   id: 15ab
   name: 'Ethernet controller: Intel Corporation Ethernet Connection X552 10 GbE Backplane'
-- bus: '06'
-  dev: '00'
-  fn: '0'
-  id: '0100'
-  name: 'Ethernet controller: Device 1d1c:0100'
 - bus: '07'
   dev: '00'
   fn: '0'

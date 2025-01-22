@@ -19,10 +19,24 @@ check program container_checker with path "/usr/bin/container_checker"
 import docker
 import sys
 
-import swsssdk
-from sonic_py_common import multi_asic
+from sonic_py_common import multi_asic, device_info
 from swsscommon import swsscommon
 
+EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
+EVENTS_PUBLISHER_TAG = "event-down-ctr"
+
+def check_docker_image(image_name):
+    """
+    @summary: This function will check if docker image exists.
+    @return:  True if the image exists, otherwise False.
+    """
+    try:
+        DOCKER_CLIENT = docker.DockerClient(base_url='unix://var/run/docker.sock')
+        DOCKER_CLIENT.images.get(image_name)
+        return True
+    except (docker.errors.ImageNotFound, docker.errors.APIError) as err:
+        print("Failed to get image '{}'. Error: '{}'".format(image_name, err))
+        return False
 
 def get_expected_running_containers():
     """
@@ -32,32 +46,79 @@ def get_expected_running_containers():
               value of field 'has_global_scope', the number of ASICs and the value of field
               'has_per_asic_scope'.
               If the device has single ASIC, the container name was put into the list.
-    @return:  A set which contains the expected running containers and a set that has 
+    @return:  A set which contains the expected running containers and a set that has
               containers marked as "always_enabled".
     """
-    config_db = swsssdk.ConfigDBConnector()
+    config_db = swsscommon.ConfigDBConnector()
     config_db.connect()
     feature_table = config_db.get_table("FEATURE")
 
     expected_running_containers = set()
     always_running_containers = set()
 
+    # Get current asic presence list. For multi_asic system, multi instance containers
+    # should be checked only for asics present.
+    asics_id_presence = multi_asic.get_asic_presence_list()
+
+    # Some services may run all the instances irrespective of asic presence.
+    # Add those to exception list.
+    # database service: Currently services have dependency on all database services to
+    # be up irrespective of asic presence.
+    # bgp service: Currently bgp runs all instances. Once this is fixed to be config driven,
+    # it will be removed from exception list.
+    run_all_instance_list = ['database', 'bgp']
+
+    container_list = []
     for container_name in feature_table.keys():
+        # slim image does not have telemetry container and corresponding docker image
+        if container_name == "telemetry":
+            ret = check_docker_image("docker-sonic-telemetry")
+            if not ret:
+                # If telemetry container image is not present, check gnmi container image
+                # If gnmi container image is not present, ignore telemetry container check
+                # if gnmi container image is present, check gnmi container instead of telemetry
+                ret = check_docker_image("docker-sonic-gnmi")
+                if not ret:
+                    print("Ignoring telemetry container check on image which has no corresponding docker image")
+                else:
+                    container_list.append("gnmi")
+                continue
+        container_list.append(container_name)
+
+    for container_name in container_list:
         if feature_table[container_name]["state"] not in ["disabled", "always_disabled"]:
             if multi_asic.is_multi_asic():
-                if feature_table[container_name]["has_global_scope"] == "True":
+                if feature_table[container_name].get("has_global_scope", "True") == "True":
                     expected_running_containers.add(container_name)
-                if feature_table[container_name]["has_per_asic_scope"] == "True":
+                if feature_table[container_name].get("has_per_asic_scope", "False") == "True":
                     num_asics = multi_asic.get_num_asics()
                     for asic_id in range(num_asics):
-                        expected_running_containers.add(container_name + str(asic_id))
-            elif feature_table[container_name]["state"] == 'always_enabled':
-                always_running_containers.add(container_name)
+                        if asic_id in asics_id_presence or container_name in run_all_instance_list:
+                            expected_running_containers.add(container_name + str(asic_id))
             else:
                 expected_running_containers.add(container_name)
+        if feature_table[container_name]["state"] == 'always_enabled':
+            if multi_asic.is_multi_asic():
+                if feature_table[container_name].get("has_global_scope", "True") == "True":
+                    always_running_containers.add(container_name)
+                if feature_table[container_name].get("has_per_asic_scope", "False") == "True":
+                    num_asics = multi_asic.get_num_asics()
+                    for asic_id in range(num_asics):
+                        if asic_id in asics_id_presence or container_name in run_all_instance_list:
+                            always_running_containers.add(container_name + str(asic_id))
+            else:
+                always_running_containers.add(container_name)
+
+    if device_info.is_supervisor() or device_info.is_smartswitch():
+        always_running_containers.add("database-chassis")
+
+    if device_info.is_smartswitch():
+        raw_dpustable = config_db.get_table("DPUS")
+        for dpu_name in raw_dpustable:
+            container_name = f"databasedpu{dpu_name.replace('dpu', '')}"
+            always_running_containers.add(container_name)
 
     return expected_running_containers, always_running_containers
-
 
 def get_current_running_from_DB(always_running_containers):
     """
@@ -74,7 +135,7 @@ def get_current_running_from_DB(always_running_containers):
     state_db = swsscommon.DBConnector("STATE_DB", 0)
     tbl = swsscommon.Table(state_db, "FEATURE")
     if not tbl.getKeys():
-        return False, None
+        return running_containers
 
     for name in tbl.getKeys():
         data = dict(tbl.get(name)[1])
@@ -93,7 +154,7 @@ def get_current_running_from_DB(always_running_containers):
             print("Failed to get container '{}'. Error: '{}'".format(name, err))
             pass
 
-    return True, running_containers
+    return running_containers
 
 
 def get_current_running_from_dockers():
@@ -120,14 +181,24 @@ def get_current_running_containers(always_running_containers):
     """
     @summary: This function will get the list of currently running containers.
               If available in STATE-DB, get from DB else from list of dockers.
-              
+
     @return:  A set of currently running containers.
     """
 
-    ret, current_running_containers = get_current_running_from_DB(always_running_containers)
-    if not ret:
-        current_running_containers = get_current_running_from_dockers()
+    current_running_containers = get_current_running_from_DB(always_running_containers)
+    current_running_containers.update(get_current_running_from_dockers())
     return current_running_containers
+
+
+def publish_events(lst):
+    events_handle = swsscommon.events_init_publisher(EVENTS_PUBLISHER_SOURCE)
+    params = swsscommon.FieldValueMap()
+
+    for ctr in lst:
+        params["ctr_name"] = ctr;
+        swsscommon.event_publish(events_handle, EVENTS_PUBLISHER_TAG, params)
+
+    swsscommon.events_deinit_publisher(events_handle)
 
 
 def main():
@@ -142,6 +213,7 @@ def main():
     expected_running_containers |= always_running_containers
     not_running_containers = expected_running_containers.difference(current_running_containers)
     if not_running_containers:
+        publish_events(not_running_containers)
         print("Expected containers not running: " + ", ".join(not_running_containers))
         sys.exit(3)
 

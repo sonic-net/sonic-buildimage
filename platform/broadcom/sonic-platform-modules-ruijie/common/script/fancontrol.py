@@ -4,6 +4,7 @@ import click
 import os
 import time
 import syslog
+import subprocess
 from ruijieconfig import MONITOR_CONST, FANCTROLDEBUG, MONITOR_FANS_LED, DEV_LEDS, MONITOR_PSU_STATUS, \
         MONITOR_SYS_PSU_LED, MONITOR_DEV_STATUS, MONITOR_FAN_STATUS, MONITOR_DEV_STATUS_DECODE, \
         MONITOR_SYS_FAN_LED, MONITOR_SYS_LED, fanloc
@@ -766,7 +767,7 @@ class FanControl(object):
                     self.fanSpeedSetMax()  # fan full speed
                     self.critnum += 1 # anti-shake
                     if self.critnum >= MONITOR_CONST.CRITICAL_NUM:
-                       os.system("reboot")
+                        subprocess.call(["reboot"])
                     fanwarningdebuglog(DEBUG_FANCONTROL,"crit次数:%d" % self.critnum)
                 else:
                     self.critnum = 0

@@ -1,3 +1,0 @@
-# Attempt to rotate system logs once every 10 minutes.
-# First kill any logrotate process(es) if they are still running, as they're most likely hung
-*/10 * * * * root /usr/bin/pkill -9 logrotate > /dev/null 2>&1; /usr/sbin/logrotate /etc/logrotate.conf > /dev/null 2>&1

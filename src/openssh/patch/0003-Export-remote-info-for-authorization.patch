@@ -1,0 +1,86 @@
+From 51b3d58afef6796fe0568deb4c3765e24cc828c9 Mon Sep 17 00:00:00 2001
+From: liuh-80 <liuh@microsoft.com>
+Date: Fri, 30 Sep 2022 16:57:03 +0800
+Subject: [PATCH] Export remote info for authorization. authorization.
+
+---
+ auth.c    | 11 +++++++++++
+ auth.h    |  3 +++
+ session.c |  3 +++
+ sshd.c    |  5 +++++
+ 4 files changed, 22 insertions(+)
+
+diff --git a/auth.c b/auth.c
+index c3693ba3f..96d551922 100644
+--- a/auth.c
++++ b/auth.c
+@@ -764,3 +764,14 @@ auth_authorise_keyopts(struct ssh *ssh, struct passwd *pw,
+ 		fatal_f("failed to restrict session");
+ 	sshauthopt_free(restricted);
+ }
++
++/* Export remote IP address and port for authorization. */
++void
++export_remote_info(struct ssh *ssh)
++{
++	const char *remote_ip = ssh_remote_ipaddr(ssh);
++	const int remote_port = ssh_remote_port(ssh);
++	const char remote_addr_port[32 + INET6_ADDRSTRLEN];
++	snprintf(remote_addr_port, sizeof(remote_addr_port), "%s %d", remote_ip, remote_port);
++	setenv("SSH_CLIENT_IPADDR_PORT", remote_addr_port, 1);
++}
+\ No newline at end of file
+diff --git a/auth.h b/auth.h
+index 3cfce0eaf..3a34742b1 100644
+--- a/auth.h
++++ b/auth.h
+@@ -229,6 +229,9 @@ struct passwd *fakepw(void);
+ 
+ int	 sys_auth_passwd(struct ssh *, const char *);
+ 
++/* Export remote IP address and port for authorization. */
++void	 export_remote_info(struct ssh *);
++
+ #if defined(KRB5) && !defined(HEIMDAL)
+ krb5_error_code ssh_krb5_cc_gen(krb5_context, krb5_ccache *);
+ #endif
+diff --git a/session.c b/session.c
+index a638ceef1..c615cb3d0 100644
+--- a/session.c
++++ b/session.c
+@@ -619,6 +619,9 @@ do_exec_pty(struct ssh *ssh, Session *s, const char *command)
+ 		/* Close the extra descriptor for the pseudo tty. */
+ 		close(ttyfd);
+ 
++		/* Export remote IP address and port for authorization. */
++		export_remote_info(ssh);
++
+ 		/* record login, etc. similar to login(1) */
+ #ifndef HAVE_OSF_SIA
+ 		do_login(ssh, s, command);
+diff --git a/sshd.c b/sshd.c
+index 3ef0c1452..2f67a0304 100644
+--- a/sshd.c
++++ b/sshd.c
+@@ -1737,6 +1737,8 @@ main(int ac, char **av)
+ 			test_flag = 2;
+ 			break;
+ 		case 'C':
++			/* Export remote IP address and port for authorization. */
++			export_remote_info(ssh);
+ 			connection_info = get_connection_info(ssh, 0, 0);
+ 			if (parse_server_match_testspec(connection_info,
+ 			    optarg) == -1)
+@@ -2252,6 +2254,9 @@ main(int ac, char **av)
+ 	 */
+ 	remote_ip = ssh_remote_ipaddr(ssh);
+ 
++	/* Export remote IP address and port for authorization. */
++	export_remote_info(ssh);
++
+ #ifdef SSH_AUDIT_EVENTS
+ 	audit_connection_from(remote_ip, remote_port);
+ #endif
+-- 
+2.35.1.windows.2
+

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #############################################################################
-# Quanta
+# Quanta IX8
 #
 # Module contains an implementation of SONiC Platform Base API and
 # provides the Thermal information

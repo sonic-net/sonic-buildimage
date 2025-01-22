@@ -54,9 +54,10 @@ docker login -u ${REGISTRY_USERNAME} -p "${REGISTRY_PASSWD}" ${REGISTRY_SERVER_W
 docker_image_name=$(basename ${DOCKER_IMAGE_FILE} | cut -d. -f1)
 remote_image_name=${REGISTRY_SERVER_WITH_PORT}/${docker_image_name}
 
-[ -z "${DOCKER_IMAGE_TAG}" ] || {
-    push_it ${docker_image_name} ${remote_image_name}:${DOCKER_IMAGE_TAG}
-}
+for tag in ${DOCKER_IMAGE_TAG}
+do
+    push_it ${docker_image_name} ${remote_image_name}:$tag
+done
 
 if [ -n "${sonic_version}" ] && [ -n "${sonic_platform}" ]
 then

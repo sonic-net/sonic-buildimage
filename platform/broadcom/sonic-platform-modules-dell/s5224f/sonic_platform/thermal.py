@@ -107,7 +107,7 @@ class Thermal(ThermalBase):
         """
         is_valid, high_threshold = self.sensor.get_threshold("UpperNonCritical")
         if not is_valid:
-            return super(Thermal, self).get_high_threshold()
+            return 0.0
 
         return float(high_threshold)
 
@@ -122,7 +122,7 @@ class Thermal(ThermalBase):
         """
         is_valid, high_crit_threshold = self.sensor.get_threshold("UpperCritical")
         if not is_valid:
-            return super(Thermal, self).get_high_critical_threshold()
+            return 0.0
 
         return float(high_crit_threshold)
 
@@ -167,4 +167,21 @@ class Thermal(ThermalBase):
             not
         """
         # Thermal threshold values are pre-defined based on HW.
+        return False
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.index
+
+    def is_replaceable(self):
+        """
+        Indicate whether this Thermal is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
         return False

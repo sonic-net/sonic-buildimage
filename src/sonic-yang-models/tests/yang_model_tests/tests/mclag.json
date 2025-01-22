@@ -1,0 +1,32 @@
+{
+    "MCLAG_VALID_DOMAIN_CFG_TEST": {
+        "desc": "valid mclag configuration test"
+    },
+    "MCLAG_VALID_DOMAIN_PEERLINK_ETH_TEST": {
+        "desc": "valid mclag configuration test with peer link ethernet"
+    },
+    "MCLAG_INVALID_DOMAIN_IDS_TEST": {
+        "desc": "configure mclag domain id in range",
+        "eStr": "MCLAG Domain ID out of range"
+    },
+    "MCLAG_INVALID_KEEPALIVE_TEST": {
+        "desc": "configure mclag keepalive values in range",
+        "eStr" : "MCLAG Domain keepalive interval out of range"
+    },
+    "MCLAG_INVALID_SESSION_TIMEOUT_TEST": {
+        "desc": "configure mclag session timeout in range",
+        "eStr" : "MCLAG Domain session timeout out of range"
+    },
+    "MCLAG_INVALID_KEEPALIVE_MUST_COND_TEST": {
+        "desc": "Invalid session and keepalive multiplier",
+        "eStr" : "(keepalive interval * 3) <= session_timeout value"
+    },
+    "MCLAG_INTERFACE_DOMAIN_ABSENT_TEST": {
+        "desc": "mclag interface configured without domain",
+        "eStrKey" : "LeafRef"
+    },
+    "MCLAG_UNIQUE_IP_DOMAIN_ABSENT_TEST": {
+        "desc": "mclag unique ip configured without domain",
+        "eStr" : "mclag not configured"
+    }
+}

@@ -213,7 +213,7 @@ if [ "$1" == "init" ]; then
     modprobe i2c-dev
     modprobe i2c-mux-pca954x
     modprobe ipmi_devintf
-    modprobe ipmi_si
+    modprobe ipmi_si kipmid_max_busy_us=3000
     modprobe i2c_ocores
     modprobe dell_z9264f_fpga_ocores
     sys_eeprom "new_device"

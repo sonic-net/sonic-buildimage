@@ -8,7 +8,7 @@
     },
     "AUTO_TECHSUPPORT_INVALID_RATE_LIMIT_FORMAT": {
             "desc" : "Configure cooloff with a value of invalid format",
-            "eStrKey": "InvalidValue" 
+            "eStrKey": "InvalidValue"
     },
     "AUTO_TECHSUPPORT_OUT_OF_RANGE_DECIMAL": {
             "desc" : "Configure a value for core-uage outside the range [0, 100)",
@@ -19,9 +19,23 @@
     },
     "AUTO_TECHSUPPORT_INVALID_FRACTION_DIGITS": {
             "desc" : "Configure a value for max_techsupport_size inside the range [0, 100) but with 3 fractional digits",
-            "eStrKey": "InvalidValue" 
+            "eStrKey": "InvalidValue"
     },
     "AUTO_TECHSUPPORT_RATE_LIMIT_INTERVAL_TEST": {
             "desc" : "Configure and test the valid configuration"
+    },
+    "AUTO_TECHSUPPORT_AVAILABLE_MEM_THRESHOLD": {
+            "desc" : "Configure and test the valid configuration"
+    },
+    "AUTO_TECHSUPPORT_INVALID_AVAILABLE_MEM_THRESHOLD": {
+            "desc" : "Configure a value for available_mem_threshold inside the range [0, 100) but with 3 fractional digits",
+            "eStrKey": "InvalidValue"
+    },
+    "AUTO_TECHSUPPORT_GLOBAL_MEM_THRESHOLD_VALID": {
+            "desc" : "Configure and test the valid configuration"
+    },
+    "AUTO_TECHSUPPORT_GLOBAL_MEM_THRESHOLD_INVALID_THRESHOLD": {
+            "desc" : "Configure a value for available_mem_threshold inside the range [0, 100) but with 3 fractional digits",
+            "eStrKey": "InvalidValue"
     }
 }

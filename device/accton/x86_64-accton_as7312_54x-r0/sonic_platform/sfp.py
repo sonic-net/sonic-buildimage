@@ -6,10 +6,9 @@
 #
 #############################################################################
 
-import os
 import time
 import sys
-
+import subprocess
 from ctypes import create_string_buffer
 
 try:
@@ -125,7 +124,7 @@ class Sfp(SfpBase):
     # Path to sysfs
     PLATFORM_ROOT_PATH = "/usr/share/sonic/device"
     PMON_HWSKU_PATH = "/usr/share/sonic/hwsku"
-    HOST_CHK_CMD = "docker > /dev/null 2>&1"
+    HOST_CHK_CMD = ["docker"]
         
     PLATFORM = "x86_64-accton_as7312_54x-r0"
     HWSKU = "Accton-AS7312-54X"
@@ -256,7 +255,7 @@ class Sfp(SfpBase):
         return True
     
     def __is_host(self):
-        return os.system(self.HOST_CHK_CMD) == 0
+        return subprocess.call(self.HOST_CHK_CMD) == 0
 
     def __get_path_to_port_config_file(self):
         platform_path = "/".join([self.PLATFORM_ROOT_PATH, self.PLATFORM])

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2021-2022 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,23 +24,21 @@ test_path = os.path.dirname(os.path.abspath(__file__))
 modules_path = os.path.dirname(test_path)
 sys.path.insert(0, modules_path)
 
-from sonic_platform.component import Component, ComponentSSD
+from sonic_platform.component import Component, ComponentSSD, ComponentCPLD
 
 from sonic_platform_base.component_base import ComponentBase,           \
                                                 FW_AUTO_INSTALLED,      \
+                                                FW_AUTO_SCHEDULED,      \
+                                                FW_AUTO_UPDATED,        \
                                                 FW_AUTO_ERR_BOOT_TYPE,  \
-                                                FW_AUTO_ERR_IMAGE
-# Temp workaround to fix build issue, shall be refactor once sonic-platform-common submodule pointer is updated
-try:
-    from sonic_platform_base.component_base import FW_AUTO_ERR_UNKNOWN
-except ImportError as e:
-    from sonic_platform_base.component_base import FW_AUTO_ERR_UKNOWN as FW_AUTO_ERR_UNKNOWN
+                                                FW_AUTO_ERR_IMAGE,      \
+                                                FW_AUTO_ERR_UNKNOWN
 
 
-def mock_update_firmware_success(image_path):
+def mock_update_firmware_success(image_path, allow_reboot=False):
     return True
 
-def mock_update_firmware_fail(image_path):
+def mock_update_firmware_fail(image_path, allow_reboot=False):
     return False
 
 def mock_update_notification_cold_boot(image_path):
@@ -59,14 +57,20 @@ test_data_default = [
         (mock_update_firmware_success, True, 'cold', FW_AUTO_INSTALLED)
         ]
 
+test_data_cpld = [
+        (None, False, None, FW_AUTO_ERR_IMAGE),
+        (None, True, 'warm', FW_AUTO_ERR_BOOT_TYPE),
+        (mock_update_firmware_fail, True, 'cold', FW_AUTO_ERR_UNKNOWN),
+        (mock_update_firmware_success, True, 'cold', FW_AUTO_SCHEDULED)
+        ]
+
 test_data_ssd = [
         (None, None, False, None, FW_AUTO_ERR_IMAGE),
         (None, mock_update_notification_error, True, None, FW_AUTO_ERR_UNKNOWN),
-        (mock_update_firmware_fail,    mock_update_notification_cold_boot, True, 'cold', FW_AUTO_ERR_UNKNOWN),
         (mock_update_firmware_success, mock_update_notification_cold_boot, True, 'warm', FW_AUTO_ERR_BOOT_TYPE),
-        (mock_update_firmware_success, mock_update_notification_cold_boot, True, 'cold', FW_AUTO_INSTALLED),
-        (mock_update_firmware_success, mock_update_notification_warm_boot, True, 'warm', FW_AUTO_INSTALLED),
-        (mock_update_firmware_success, mock_update_notification_warm_boot, True, 'cold', FW_AUTO_INSTALLED)
+        (mock_update_firmware_success, mock_update_notification_cold_boot, True, 'cold', FW_AUTO_SCHEDULED),
+        (mock_update_firmware_success, mock_update_notification_warm_boot, True, 'warm', FW_AUTO_UPDATED),
+        (mock_update_firmware_success, mock_update_notification_warm_boot, True, 'cold', FW_AUTO_UPDATED)
         ]
 
 @pytest.mark.parametrize('update_func, image_found, boot_type, expect', test_data_default)
@@ -77,7 +81,23 @@ def test_auto_update_firmware_default(monkeypatch, update_func, image_found, boo
 
     test_component = Component()
 
-    monkeypatch.setattr(test_component, 'update_firmware', update_func)
+    monkeypatch.setattr(test_component, 'install_firmware', update_func)
+    monkeypatch.setattr(os.path, 'exists', mock_path_exists)
+
+    result = test_component.auto_update_firmware(None, boot_type)
+
+    assert result == expect
+
+
+@pytest.mark.parametrize('update_func, image_found, boot_type, expect', test_data_cpld)
+def test_auto_update_firmware_cpld(monkeypatch, update_func, image_found, boot_type, expect):
+
+    def mock_path_exists(path):
+        return image_found
+
+    test_component = ComponentCPLD(0)
+
+    monkeypatch.setattr(test_component, 'install_firmware', update_func)
     monkeypatch.setattr(os.path, 'exists', mock_path_exists)
 
     result = test_component.auto_update_firmware(None, boot_type)
@@ -86,7 +106,7 @@ def test_auto_update_firmware_default(monkeypatch, update_func, image_found, boo
 
 
 @pytest.mark.parametrize('update_func, notify, image_found, boot_type, expect', test_data_ssd)
-def test_auto_update_firmware_default(monkeypatch, update_func, notify, image_found, boot_type, expect):
+def test_auto_update_firmware_ssd(monkeypatch, update_func, notify, image_found, boot_type, expect):
 
     def mock_path_exists(path):
         return image_found

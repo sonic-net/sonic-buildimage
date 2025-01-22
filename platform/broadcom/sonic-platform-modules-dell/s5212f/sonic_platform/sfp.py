@@ -18,6 +18,10 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+QSFP_INFO_OFFSET = 128
+SFP_INFO_OFFSET = 0
+QSFP_DD_PAGE0 = 0
+
 SFP_TYPE_LIST = [
     '0x3' # SFP/SFP+/SFP28 and later
 ]
@@ -38,7 +42,9 @@ class Sfp(SfpOptoeBase):
 
     def __init__(self, index, sfp_type, eeprom_path):
         SfpOptoeBase.__init__(self)
+        self.port_type = sfp_type
         self.sfp_type = sfp_type
+        self.port_type = sfp_type
         self.index = index
         self.eeprom_path = eeprom_path
         self._initialize_media(delay=False)
@@ -89,6 +95,23 @@ class Sfp(SfpOptoeBase):
 
         self.set_media_type()
         self.reinit_sfp_driver()
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.index
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device  is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True
 
     def get_presence(self):
         """
@@ -276,7 +299,6 @@ class Sfp(SfpOptoeBase):
         del_sfp_path = "/sys/class/i2c-adapter/i2c-{0}/delete_device".format(self.index+1)
         new_sfp_path = "/sys/class/i2c-adapter/i2c-{0}/new_device".format(self.index+1)
         driver_path = "/sys/class/i2c-adapter/i2c-{0}/{0}-0050/name".format(self.index+1)
-        delete_device = "echo 0x50 >" + del_sfp_path
 
         if not os.path.isfile(driver_path):
             print(driver_path, "does not exist")
@@ -290,24 +312,57 @@ class Sfp(SfpOptoeBase):
 
             #Avoid re-initialization of the QSFP/SFP optic on QSFP/SFP port.
             if self.sfp_type == 'SFP' and driver_name in ['optoe1', 'optoe3']:
-                subprocess.Popen(delete_device, shell=True, stdout=subprocess.PIPE)
+                with open(del_sfp_path, 'w') as f:
+                    f.write('0x50\n')
                 time.sleep(0.2)
-                new_device = "echo optoe2 0x50 >" + new_sfp_path
-                subprocess.Popen(new_device, shell=True, stdout=subprocess.PIPE)
+                with open(new_sfp_path, 'w') as f:
+                    f.write('optoe2 0x50\n')
                 time.sleep(2)
             elif self.sfp_type == 'QSFP' and driver_name in ['optoe2', 'optoe3']:
-                subprocess.Popen(delete_device, shell=True, stdout=subprocess.PIPE)
+                with open(del_sfp_path, 'w') as f:
+                    f.write('0x50\n')
                 time.sleep(0.2)
-                new_device = "echo optoe1 0x50 >" + new_sfp_path
-                subprocess.Popen(new_device, shell=True, stdout=subprocess.PIPE)
+                with open(new_sfp_path, 'w') as f:
+                    f.write('optoe1 0x50\n')
                 time.sleep(2)
             elif self.sfp_type == 'QSFP_DD' and driver_name in ['optoe1', 'optoe2']:
-                subprocess.Popen(delete_device, shell=True, stdout=subprocess.PIPE)
+                with open(del_sfp_path, 'w') as f:
+                    f.write('0x50\n')
                 time.sleep(0.2)
-                new_device = "echo optoe3 0x50 >" + new_sfp_path
-                subprocess.Popen(new_device, shell=True, stdout=subprocess.PIPE)
+                with open(new_sfp_path, 'w') as f:
+                    f.write('optoe3 0x50\n')
                 time.sleep(2)
 
         except IOError as e:
             print("Error: Unable to open file: %s" % str(e))
             return False
+
+    def get_error_description(self):
+        """
+        Retrives the error descriptions of the SFP module
+        Returns:
+            String that represents the current error descriptions of vendor specific errors
+            In case there are multiple errors, they should be joined by '|',
+            like: "Bad EEPROM|Unsupported cable"
+        """
+        if not self.get_presence():
+            return self.SFP_STATUS_UNPLUGGED
+        else:
+            if not os.path.isfile(self.eeprom_path):
+                return "EEPROM driver is not attached"
+
+            if self.sfp_type == 'SFP':
+                offset = SFP_INFO_OFFSET
+            elif self.sfp_type == 'QSFP':
+                offset = QSFP_INFO_OFFSET
+            elif self.sfp_type == 'QSFP_DD':
+                offset = QSFP_DD_PAGE0
+
+            try:
+                with open(self.eeprom_path, mode="rb", buffering=0) as eeprom:
+                    eeprom.seek(offset)
+                    eeprom.read(1)
+            except OSError as e:
+                return "EEPROM read failed ({})".format(e.strerror)
+
+        return self.SFP_STATUS_OK

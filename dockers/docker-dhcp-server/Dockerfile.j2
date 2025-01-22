@@ -1,0 +1,58 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+ARG image_version
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+RUN apt-get update &&       \
+    apt-get install -f -y   \
+        tcpdump             \
+        python3-dev         \
+        build-essential     \
+        kea-dhcp4-server
+
+RUN mkdir -p /var/run/kea
+
+RUN pip3 install psutil
+
+{% if docker_dhcp_server_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_dhcp_server_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_dhcp_server_debs.split(' ')) }}
+{%- endif %}
+
+{% if docker_dhcp_server_whls.strip() %}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_dhcp_server_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_dhcp_server_whls.split(' ')) }}
+{% endif %}
+
+# Remove build stuff we don't need
+RUN apt-get remove -y build-essential     \
+                      python3-dev
+
+RUN apt-get clean -y        && \
+    apt-get autoclean -y    && \
+    apt-get autoremove -y   && \
+    rm -rf /debs
+
+COPY ["docker_init.sh", "start.sh", "/usr/bin/"]
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
+COPY ["kea-dhcp4.conf.j2", "/usr/share/sonic/templates/"]
+COPY ["critical_processes", "/etc/supervisor/"]
+COPY ["lease_update.sh", "/etc/kea/"]
+COPY ["kea-dhcp4-init.conf", "/etc/kea/kea-dhcp4.conf"]
+COPY ["cli", "/cli/"]
+
+ENTRYPOINT ["/usr/bin/docker_init.sh"]

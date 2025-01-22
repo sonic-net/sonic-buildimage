@@ -1,0 +1,37 @@
+{
+    "chassis": {
+        "RA-B6510-48V8C": {
+            "component": {
+                "CPU_CPLD": {
+                    "firmware": "/usr/share/sonic/device/x86_64-ragile_ra-b6510-48v8c-r0/latest_firmware/cpu_cpld_upgrade_header.vme",
+                    "version": "27190516"
+                },
+                "CONNECT_CPLD": {
+                    "firmware": "/usr/share/sonic/device/x86_64-ragile_ra-b6510-48v8c-r0/latest_firmware/other_cpld_upgrade_header.vme",
+                    "version": "49191230"
+                },
+                "CONNECT_CPLD-FAN": {
+                    "firmware": "/usr/share/sonic/device/x86_64-ragile_ra-b6510-48v8c-r0/latest_firmware/other_cpld_upgrade_header.vme",
+                    "version": "49191230"
+                },
+                "MAC_CPLD1": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-ragile_ra-b6510-48v8c-r0/latest_firmware/other_cpld_upgrade_header.vme",
+                    "version" : "16190108"
+                },
+                "MAC_CPLD2": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-ragile_ra-b6510-48v8c-r0/latest_firmware/other_cpld_upgrade_header.vme",
+                    "version" : "17200110"
+                },
+                "FPGA": {
+                    "firmware": "/usr/share/sonic/device/x86_64-ragile_ra-b6510-48v8c-r0/latest_firmware/fpga_upgrade_header.bin",
+                    "version": "7a150016"
+                },
+                "BIOS": {
+                    "firmware" : "/usr/share/sonic/device/x86_64-ragile_ra-b6510-48v8c-r0/latest_firmware/bios_upgrade_header.bin",
+                    "version" : "5.11(3BARB029)"
+                }
+            }
+        }
+    }
+}
+

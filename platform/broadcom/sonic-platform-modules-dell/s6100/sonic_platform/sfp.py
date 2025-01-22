@@ -10,6 +10,7 @@
 
 try:
     import os
+    import syslog
     import time
     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
 except ImportError as e:
@@ -42,6 +43,9 @@ class Sfp(SfpOptoeBase):
         """
         Retrieves the presence of the sfp
         """
+        if self.index > 64:
+            return False
+
         presence_ctrl = self.sfp_control + 'qsfp_modprs'
         try:
             reg_file = open(presence_ctrl)
@@ -69,6 +73,9 @@ class Sfp(SfpOptoeBase):
         """
         Retrieves the reset status of SFP
         """
+        if self.index > 64:
+            return False
+
         reset_status = None
         reset_ctrl = self.sfp_control + 'qsfp_reset'
         try:
@@ -100,6 +107,9 @@ class Sfp(SfpOptoeBase):
         """
         Retrieves the lpmode (low power mode) status of this SFP
         """
+        if self.index > 64:
+            return False
+
         lpmode_ctrl = self.sfp_control + 'qsfp_lpmode'
         try:
             reg_file = open(lpmode_ctrl, "r+")
@@ -133,6 +143,9 @@ class Sfp(SfpOptoeBase):
         """
         Reset SFP and return all user module settings to their default srate.
         """
+        if self.index > 64:
+            return False
+
         reset_ctrl = self.sfp_control + 'qsfp_reset'
         try:
             # Open reset_ctrl in both read & write mode
@@ -178,6 +191,9 @@ class Sfp(SfpOptoeBase):
         """
         Sets the lpmode (low power mode) of SFP
         """
+        if self.index > 64:
+            return False
+
         lpmode_ctrl = self.sfp_control + 'qsfp_lpmode'
         try:
             reg_file = open(lpmode_ctrl, "r+")

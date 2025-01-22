@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2016-2021 NVIDIA CORPORATION & AFFILIATES.
+## Copyright (c) 2016-2022 NVIDIA CORPORATION & AFFILIATES.
 ## Apache-2.0
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,15 +14,19 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 ##
-FROM docker-config-engine-stretch
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages %}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
-RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update
+## Pre-install the fundamental packages
+RUN apt-get update \
+ && apt-get -y install  \
+    gdb                 \
+    libboost-atomic1.74.0
 
 COPY \
 {% for deb in docker_saiserver_mlnx_debs.split(' ') -%}
@@ -36,17 +40,9 @@ python-debs/{{ deb }}{{' '}}
 {%- endfor -%}
 debs/
 
-RUN apt-get install -y --no-install-recommends libxml2 iptables libbsd0 protobuf-c-compiler protobuf-compiler python-protobuf libprotobuf-c1 python-future python-ipaddr libnet1 pkg-config asciidoc xmlto
+RUN apt-get install -y --no-install-recommends libxml2 iptables libbsd0 protobuf-c-compiler protobuf-compiler python3-protobuf libprotobuf-c1 python3-future libnet1 pkg-config asciidoc xmlto
 
-RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
-{% for deb in docker_saiserver_mlnx_debs.split(' ') -%}
-dpkg_apt debs/{{ deb }}{{'; '}}
-{%- endfor %}
-
-RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
-{% for deb in docker_saiserver_mlnx_pydebs.split(' ') -%}
-dpkg_apt debs/{{ deb }}{{'; '}}
-{%- endfor %}
+{{ install_debian_packages(docker_saiserver_mlnx_debs.split(' ')) }}
 
 COPY ["start.sh", "/usr/bin/"]
 

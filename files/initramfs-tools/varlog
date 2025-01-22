@@ -11,16 +11,26 @@ case $1 in
     ;;
 esac
 
+logs_inram=false
+
 # Extract kernel parameters
 set -- $(cat /proc/cmdline)
 for x in "$@"; do
     case "$x" in
         varlog_size=*)
             varlog_size="${x#varlog_size=}"
+            ;;
+        logs_inram=on)
+            logs_inram=true
+            ;;
     esac
 done
 
 [ -z "$varlog_size" ] && exit 0
+
+# If logs are being stored in memory, then don't bother
+# creating the log file just to have it deleted afterwards.
+$logs_inram && exit 0
 
 # exit when the var_log.ext4 exists and the size matches
 if [ -e "${rootmnt}/host/disk-img/var-log.ext4" ]; then

@@ -31,7 +31,7 @@ wait_get_flash_dev() {
             if [ -n "$is_mmc" ]; then
                 continue
             fi
-            local devid=$(realpath "/sys/block/$dev/device")
+            local devid="$(realpath "/sys/block/$dev/device")/"
             local is_device=$(echo "$devid" | grep '^/sys/devices/' | cat)
             local is_flash=$(echo "$devid" | grep "$block_flash" | cat)
             if [ -n "$is_device" -a -n "$is_flash" ]; then

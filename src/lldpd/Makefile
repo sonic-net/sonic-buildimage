@@ -20,10 +20,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	rm -rf lldpd-$(LLDPD_VERSION)
 
 	# download debian LLDPDD
-	wget -NO "$(DSC_FILE)" $(DSC_FILE_URL)
-	wget -NO "$(ORIG_FILE)" $(ORIG_FILE_URL)
-	wget -NO "$(DEBIAN_FILE)" $(DEBIAN_FILE_URL)
-	dpkg-source -x lldpd_$(LLDPD_VERSION_FULL).dsc
+	dget $(DSC_FILE_URL)
 
 	pushd lldpd-$(LLDPD_VERSION)
 	git init
@@ -35,7 +32,11 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	stg import -s ../patch/series
 
 	# Build source and Debian packages
+ifeq ($(CROSS_BUILD_ENVIRON), y)
+	env "with_netlink_receive_bufsize=1024*1024" CFLAGS="-I $$CROSS_PERL_CORE_PATH" dpkg-buildpackage -rfakeroot -b -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+else
 	env "with_netlink_receive_bufsize=1024*1024" dpkg-buildpackage -rfakeroot -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+endif
 	popd
 
 	# Move the newly-built .deb packages to the destination directory

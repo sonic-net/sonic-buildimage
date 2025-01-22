@@ -407,6 +407,35 @@ emc2305_set_pwm(struct i2c_client *client, int fan_idx, long pwm)
 	mutex_unlock(&data->update_lock);
 	return status;
 }
+
+static int
+emc2305_enable_timeout(struct i2c_client *client, bool enable)
+{
+	struct emc2305_data *data = i2c_get_clientdata(client);
+	int status = 0;
+	u8 conf_val = 0;
+
+	mutex_lock(&data->update_lock);
+
+	status = read_u8_from_i2c(client, REG_CONFIGURATION, &conf_val);
+	if (status < 0) {
+	    mutex_unlock(&data->update_lock);
+	    return status;
+	}
+
+	// Section 6.2: CONFIG REGISTER DIS_TO bit(bit 6)
+	if (enable) {
+	    conf_val &= ~(1 << 6);
+	} else {
+	    conf_val |= (1 << 6);
+	}
+
+	status = i2c_smbus_write_byte_data(client, REG_CONFIGURATION, conf_val);
+
+	mutex_unlock(&data->update_lock);
+	return status;
+}
+
 /*
  * sysfs callback functions
  *
@@ -609,7 +638,7 @@ static const struct sensor_device_attribute *emc2305_fan_attrs[] = {
  * driver interface
  */
 
-static int emc2305_remove(struct i2c_client *client)
+static void emc2305_remove(struct i2c_client *client)
 {
 	struct emc2305_data *data = i2c_get_clientdata(client);
 	int fan_idx, i;
@@ -627,7 +656,6 @@ static int emc2305_remove(struct i2c_client *client)
 				   &emc2305_attr_common[i].dev_attr);
 
 	kfree(data);
-	return 0;
 }
 
 
@@ -743,6 +771,9 @@ emc2305_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	i2c_set_clientdata(client, data);
 	mutex_init(&data->update_lock);
+
+	// Enable SMBus timeout feature
+	emc2305_enable_timeout(client, true);
 
 	status = i2c_smbus_read_byte_data(client, REG_PRODUCT_ID);
 	switch (status) {

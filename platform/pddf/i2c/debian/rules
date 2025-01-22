@@ -13,12 +13,13 @@ include /usr/share/dpkg/pkg-info.mk
 export INSTALL_MOD_DIR:=extra
 
 PYTHON         ?= python3
+PIP            ?= pip3
 
 PACKAGE_PRE_NAME := sonic-platform-pddf
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= client cpld cpld/driver cpldmux cpldmux/driver fan fan/driver mux gpio led psu psu/driver sysstatus xcvr xcvr/driver
+MODULE_DIRS:= client cpld cpld/driver cpldmux cpldmux/driver fpgai2c fpgai2c/driver fpgapci fpgapci/driver fpgapci/algos fan fan/driver mux gpio led psu psu/driver sysstatus xcvr xcvr/driver
 MODULE_DIR:= modules
 UTILS_DIR := utils
 SERVICE_DIR := service
@@ -37,7 +38,7 @@ clean:
 build:
 	set -e; \
 	make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR); \
-	$(PYTHON) $(MOD_SRC_DIR)/setup.py build; \
+	$(PYTHON) -m build --wheel --no-isolation $(MOD_SRC_DIR); \
 	set +e
 
 binary: binary-arch binary-indep
@@ -59,7 +60,7 @@ binary-indep:
 	# Need to take a backup of symvers file for compilation of custom modules in various platforms
 	cp $(MOD_SRC_DIR)/Module.symvers $(MOD_SRC_DIR)/Module.symvers.PDDF; \
 	cp -r $(MOD_SRC_DIR)/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)/usr/local/bin/; \
-	$(PYTHON) $(MOD_SRC_DIR)/setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME) --install-layout=deb; \
+	$(PIP) install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME) $(MOD_SRC_DIR)/; \
 	set +e
 
 	# Resuming debhelper scripts

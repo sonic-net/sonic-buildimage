@@ -1,0 +1,4 @@
+#!/bin/bash
+sudo ipmitool raw 0x06 0x52 0x05 192 0 0x49 0 2>>/dev/null
+exit 0
+

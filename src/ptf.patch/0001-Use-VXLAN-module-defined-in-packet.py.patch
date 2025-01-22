@@ -1,0 +1,26 @@
+From 5f0df673c8e2d6a8795346127d176d753217bd24 Mon Sep 17 00:00:00 2001
+From: Lawrence Lee <lawlee@microsoft.com>
+Date: Fri, 23 Dec 2022 19:32:17 +0000
+Subject: [PATCH] Use VXLAN module defined in packet.py
+
+Signed-off-by: Lawrence Lee <lawlee@microsoft.com>
+---
+ src/ptf/testutils.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/ptf/testutils.py b/src/ptf/testutils.py
+index 6394ad3..5aa46b0 100755
+--- a/src/ptf/testutils.py
++++ b/src/ptf/testutils.py
+@@ -674,7 +674,7 @@ def simple_vxlan_packet(pktlen=300,
+                 scapy.IP(src=ip_src, dst=ip_dst, tos=ip_tos, ttl=ip_ttl, id=ip_id, flags=ip_flags, ihl=ip_ihl, options=ip_options)/ \
+                 udp_hdr
+ 
+-    pkt = pkt / VXLAN(vni = vxlan_vni, reserved1 = vxlan_reserved1, reserved2 = vxlan_reserved2)
++    pkt = pkt / scapy.VXLAN(vni = vxlan_vni, reserved1 = vxlan_reserved1, reserved2 = vxlan_reserved2)
+ 
+     if inner_frame:
+         pkt = pkt / inner_frame
+-- 
+2.25.1
+

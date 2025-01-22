@@ -1,0 +1,21 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "1-48": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x063203"
+                }
+            }
+        },
+        "49-56": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0a500a",
+                    "lane1": "0x0a500a",
+                    "lane2": "0x0a500a",
+                    "lane3": "0x0a500a"
+                }
+            }
+        }
+    }
+}

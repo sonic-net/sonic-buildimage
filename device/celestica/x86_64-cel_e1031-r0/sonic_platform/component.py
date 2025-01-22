@@ -10,7 +10,6 @@
 try:
     import os.path
     import shutil
-    import shlex
     import subprocess
     from sonic_platform_base.component_base import ComponentBase
 except ImportError as e:
@@ -39,8 +38,7 @@ class Component(ComponentBase):
     def __run_command(self, command):
         # Run bash command and print output to stdout
         try:
-            process = subprocess.Popen(
-                shlex.split(command), universal_newlines=True, stdout=subprocess.PIPE)
+            process = subprocess.Popen(command, universal_newlines=True, stdout=subprocess.PIPE)
             while True:
                 output = process.stdout.readline()
                 if output == '' and process.poll() is not None:
@@ -63,12 +61,10 @@ class Component(ComponentBase):
 
     def get_register_value(self, register):
         # Retrieves the cpld register value
-        cmd = "echo {1} > {0}; cat {0}".format(GETREG_PATH, register)
-        p = subprocess.Popen(
-            cmd, shell=True, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        raw_data, err = p.communicate()
-        if err is not '':
-            return None
+        with open(GETREG_PATH, 'w') as file:
+            file.write(register + '\n')
+        with open(GETREG_PATH, 'r') as file:
+            raw_data = file.readline()
         return raw_data.strip()
 
     def __get_cpld_version(self):
@@ -76,11 +72,11 @@ class Component(ComponentBase):
         cpld_version = dict()
         with open(SMC_CPLD_PATH, 'r') as fd:
             smc_cpld_version = fd.read()
-        smc_cpld_version = 'None' if smc_cpld_version is 'None' else "{}.{}".format(
+        smc_cpld_version = 'None' if smc_cpld_version == 'None' else "{}.{}".format(
             int(smc_cpld_version[2], 16), int(smc_cpld_version[3], 16))
 
         mmc_cpld_version = self.get_register_value(MMC_CPLD_ADDR)
-        mmc_cpld_version = 'None' if mmc_cpld_version is 'None' else "{}.{}".format(
+        mmc_cpld_version = 'None' if mmc_cpld_version == 'None' else "{}.{}".format(
             int(mmc_cpld_version[2], 16), int(mmc_cpld_version[3], 16))
 
         cpld_version["SMC_CPLD"] = smc_cpld_version
@@ -159,7 +155,7 @@ class Component(ComponentBase):
             ext = ".vme" if ext == "" else ext
             new_image_path = os.path.join("/tmp", (root.lower() + ext))
             shutil.copy(image_path, new_image_path)
-            install_command = "ispvm %s" % new_image_path
+            install_command = ["ispvm", str(new_image_path)]
         # elif self.name == "BIOS":
         #     install_command = "afulnx_64 %s /p /b /n /x /r" % image_path
         return self.__run_command(install_command)

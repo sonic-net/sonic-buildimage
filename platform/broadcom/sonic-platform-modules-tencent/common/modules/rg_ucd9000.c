@@ -1,0 +1,294 @@
+/*
+ * Hardware monitoring driver for UCD90xxx Sequencer and System Health
+ * Controller series
+ *
+ * Copyright (C) 2011 Ericsson AB.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/init.h>
+#include <linux/err.h>
+#include <linux/slab.h>
+#include <linux/i2c.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,19,152)
+#include <linux/i2c/pmbus.h>
+#else
+#include <linux/pmbus.h>
+#endif
+#include <linux/delay.h>
+#include "rg_pmbus.h"
+
+enum chips { ucd9000, ucd90120, ucd90124, ucd90160, ucd9090, ucd90910 };
+
+#define UCD9000_MONITOR_CONFIG		0xd5
+#define UCD9000_NUM_PAGES		0xd6
+#define UCD9000_FAN_CONFIG_INDEX	0xe7
+#define UCD9000_FAN_CONFIG		0xe8
+#define UCD9000_DEVICE_ID		0xfd
+
+#define UCD9000_MON_TYPE(x)	(((x) >> 5) & 0x07)
+#define UCD9000_MON_PAGE(x)	((x) & 0x0f)
+
+#define UCD9000_MON_VOLTAGE	1
+#define UCD9000_MON_TEMPERATURE	2
+#define UCD9000_MON_CURRENT	3
+#define UCD9000_MON_VOLTAGE_HW	4
+
+#define UCD9000_NUM_FAN		4
+#define UCD9000_RETRY_SLEEP_TIME          (10000)   /* 10ms */
+#define UCD9000_RETRY_TIME                (10)
+#define RG_DEV_NAME_MAX_LEN               (64)
+
+int g_rg_ucd9000_debug = 0;
+int g_rg_ucd9000_error = 0;
+
+module_param(g_rg_ucd9000_debug, int, S_IRUGO | S_IWUSR);
+module_param(g_rg_ucd9000_error, int, S_IRUGO | S_IWUSR);
+
+#define RG_UDC9000_VERBOSE(fmt, args...) do {                                        \
+    if (g_rg_ucd9000_debug) { \
+        printk(KERN_INFO "[RG_UCD9000][VER][func:%s line:%d]\r\n"fmt, __func__, __LINE__, ## args); \
+    } \
+} while (0)
+
+#define RG_UDC9000_ERROR(fmt, args...) do {                                        \
+    if (g_rg_ucd9000_error) { \
+        printk(KERN_ERR "[RG_UCD9000][ERR][func:%s line:%d]\r\n"fmt, __func__, __LINE__, ## args); \
+    } \
+} while (0)
+
+struct ucd9000_data {
+	u8 fan_data[UCD9000_NUM_FAN][I2C_SMBUS_BLOCK_MAX];
+	struct pmbus_driver_info info;
+};
+#define to_ucd9000_data(_info) container_of(_info, struct ucd9000_data, info)
+
+static int rg_i2c_smbus_read_block_data(const struct i2c_client *client, u8 command, u8 *values)
+{
+	int rv, i;
+    for(i = 0; i < UCD9000_RETRY_TIME; i++) {
+        rv = i2c_smbus_read_block_data(client, command, values);
+        if(rv >= 0){
+            return rv;
+        }
+        usleep_range(UCD9000_RETRY_SLEEP_TIME, UCD9000_RETRY_SLEEP_TIME + 1);
+    }
+    RG_UDC9000_ERROR("read_block_data failed. nr:%d, addr:0x%x, reg:0x%x, rv:%d.",
+        client->adapter->nr, client->addr, command, rv);
+    return rv;
+}
+
+static int ucd9000_get_fan_config(struct i2c_client *client, int fan)
+{
+	int fan_config = 0;
+	struct ucd9000_data *data
+	  = to_ucd9000_data(rg_pmbus_get_driver_info(client));
+
+	if (data->fan_data[fan][3] & 1)
+		fan_config |= PB_FAN_2_INSTALLED;   /* Use lower bit position */
+
+	/* Pulses/revolution */
+	fan_config |= (data->fan_data[fan][3] & 0x06) >> 1;
+
+	return fan_config;
+}
+
+static int ucd9000_read_byte_data(struct i2c_client *client, int page, int reg)
+{
+	int ret = 0;
+	int fan_config;
+
+	switch (reg) {
+	case PMBUS_FAN_CONFIG_12:
+		if (page > 0)
+			return -ENXIO;
+
+		ret = ucd9000_get_fan_config(client, 0);
+		if (ret < 0)
+			return ret;
+		fan_config = ret << 4;
+		ret = ucd9000_get_fan_config(client, 1);
+		if (ret < 0)
+			return ret;
+		fan_config |= ret;
+		ret = fan_config;
+		break;
+	case PMBUS_FAN_CONFIG_34:
+		if (page > 0)
+			return -ENXIO;
+
+		ret = ucd9000_get_fan_config(client, 2);
+		if (ret < 0)
+			return ret;
+		fan_config = ret << 4;
+		ret = ucd9000_get_fan_config(client, 3);
+		if (ret < 0)
+			return ret;
+		fan_config |= ret;
+		ret = fan_config;
+		break;
+	default:
+		ret = -ENODATA;
+		break;
+	}
+	return ret;
+}
+
+static const struct i2c_device_id ucd9000_id[] = {
+	{"rg_ucd9000", ucd9000},
+	{"rg_ucd90120", ucd90120},
+	{"rg_ucd90124", ucd90124},
+	{"rg_ucd90160", ucd90160},
+	{"rg_ucd9090", ucd9090},
+	{"rg_ucd90910", ucd90910},
+	{}
+};
+MODULE_DEVICE_TABLE(i2c, ucd9000_id);
+
+static int ucd9000_probe(struct i2c_client *client,
+			 const struct i2c_device_id *id)
+{
+	u8 block_buffer[I2C_SMBUS_BLOCK_MAX + 1];
+    u8 rg_device_name[RG_DEV_NAME_MAX_LEN];
+	struct ucd9000_data *data;
+	struct pmbus_driver_info *info;
+	const struct i2c_device_id *mid;
+	int i, ret;
+
+	if (!i2c_check_functionality(client->adapter,
+				     I2C_FUNC_SMBUS_BYTE_DATA |
+				     I2C_FUNC_SMBUS_BLOCK_DATA))
+		return -ENODEV;
+
+	ret = rg_i2c_smbus_read_block_data(client, UCD9000_DEVICE_ID,
+					block_buffer);
+	if (ret < 0) {
+		dev_err(&client->dev, "Failed to read device ID\n");
+		return ret;
+	}
+	block_buffer[ret] = '\0';
+	dev_info(&client->dev, "Device ID %s\n", block_buffer);
+
+    memset(rg_device_name, 0, sizeof(rg_device_name));
+    snprintf(rg_device_name, sizeof(rg_device_name), "rg_%s", block_buffer);
+
+	for (mid = ucd9000_id; mid->name[0]; mid++) {
+		if (!strncasecmp(mid->name, rg_device_name, strlen(mid->name)))
+			break;
+	}
+	if (!mid->name[0]) {
+		dev_err(&client->dev, "Unsupported device\n");
+		return -ENODEV;
+	}
+
+	if (id->driver_data != ucd9000 && id->driver_data != mid->driver_data)
+		dev_notice(&client->dev,
+			   "Device mismatch: Configured %s, detected %s\n",
+			   id->name, mid->name);
+
+	data = devm_kzalloc(&client->dev, sizeof(struct ucd9000_data),
+			    GFP_KERNEL);
+	if (!data)
+		return -ENOMEM;
+	info = &data->info;
+
+	ret = i2c_smbus_read_byte_data(client, UCD9000_NUM_PAGES);
+	if (ret < 0) {
+		dev_err(&client->dev,
+			"Failed to read number of active pages\n");
+		return ret;
+	}
+	info->pages = ret;
+	if (!info->pages) {
+		dev_err(&client->dev, "No pages configured\n");
+		return -ENODEV;
+	}
+
+	/* The internal temperature sensor is always active */
+
+	/* info->func[0] = PMBUS_HAVE_TEMP; */
+
+	/* Everything else is configurable */
+	ret = rg_i2c_smbus_read_block_data(client, UCD9000_MONITOR_CONFIG,
+					block_buffer);
+	if (ret <= 0) {
+		dev_err(&client->dev, "Failed to read configuration data\n");
+		return -ENODEV;
+	}
+	for (i = 0; i < ret; i++) {
+		int page = UCD9000_MON_PAGE(block_buffer[i]);
+
+		if (page >= info->pages)
+			continue;
+
+		switch (UCD9000_MON_TYPE(block_buffer[i])) {
+		case UCD9000_MON_VOLTAGE:
+		case UCD9000_MON_VOLTAGE_HW:
+			info->func[page] |= PMBUS_HAVE_VOUT
+			  | PMBUS_HAVE_STATUS_VOUT;
+			break;
+		case UCD9000_MON_TEMPERATURE:
+			info->func[page] |= PMBUS_HAVE_TEMP2
+			  | PMBUS_HAVE_STATUS_TEMP;
+			break;
+		case UCD9000_MON_CURRENT:
+			info->func[page] |= PMBUS_HAVE_IOUT
+			  | PMBUS_HAVE_STATUS_IOUT;
+			break;
+		default:
+			break;
+		}
+	}
+
+	/* Fan configuration */
+	if (mid->driver_data == ucd90124) {
+		for (i = 0; i < UCD9000_NUM_FAN; i++) {
+			i2c_smbus_write_byte_data(client,
+						  UCD9000_FAN_CONFIG_INDEX, i);
+			ret = rg_i2c_smbus_read_block_data(client,
+							UCD9000_FAN_CONFIG,
+							data->fan_data[i]);
+			if (ret < 0)
+				return ret;
+		}
+		i2c_smbus_write_byte_data(client, UCD9000_FAN_CONFIG_INDEX, 0);
+
+		info->read_byte_data = ucd9000_read_byte_data;
+		info->func[0] |= PMBUS_HAVE_FAN12 | PMBUS_HAVE_STATUS_FAN12
+		  | PMBUS_HAVE_FAN34 | PMBUS_HAVE_STATUS_FAN34;
+	}
+
+	return rg_pmbus_do_probe(client, mid, info);
+}
+
+/* This is the driver that will be inserted */
+static struct i2c_driver ucd9000_driver = {
+	.driver = {
+		.name = "rg_ucd9000",
+	},
+	.probe = ucd9000_probe,
+	.remove = rg_pmbus_do_remove,
+	.id_table = ucd9000_id,
+};
+
+module_i2c_driver(ucd9000_driver);
+
+MODULE_AUTHOR("Guenter Roeck");
+MODULE_DESCRIPTION("PMBus driver for TI UCD90xxx");
+MODULE_LICENSE("GPL");

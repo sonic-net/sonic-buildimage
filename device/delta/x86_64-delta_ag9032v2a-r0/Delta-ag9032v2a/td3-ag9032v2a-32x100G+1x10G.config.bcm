@@ -1,4 +1,4 @@
-sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_issu/b870.6.4.1/
+sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_premium_issu/b870.6.4.1/
 pbmp_oversubscribe=0x00003fc000000ff0000003fc000001fe
 pbmp_xport_xe=0xffffffffffffffffffffffffffffffffffff
 core_clock_frequency=1525

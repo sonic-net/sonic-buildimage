@@ -167,7 +167,7 @@ int mars1s_config_aneg(struct phy_device *phydev)
 	return 0;
 }
 
-static int mars_ack_interrupt(struct phy_device *phydev)
+static irqreturn_t mars_handle_interrupt(struct phy_device *phydev)
 {
 	int err;
 
@@ -178,9 +178,9 @@ static int mars_ack_interrupt(struct phy_device *phydev)
 	err = mars_ext_read(phydev, 0xa011);
 #endif
 	if (err < 0)
-		return err;
+		return IRQ_NONE;
 
-	return 0;
+	return IRQ_HANDLED;
 }
 
 static int mars_config_intr(struct phy_device *phydev)
@@ -256,7 +256,7 @@ static struct phy_driver ctc_drivers[] = {
 	 .config_init = mars_config_init,
 	 .features = PHY_GBIT_FEATURES,
 	 .config_aneg = mars1s_config_aneg,
-	 .ack_interrupt = &mars_ack_interrupt,
+	 .handle_interrupt = &mars_handle_interrupt,
 	 .config_intr = &mars_config_intr,
 	 .read_status = genphy_read_status,
 	 .suspend = genphy_suspend,
@@ -269,7 +269,7 @@ static struct phy_driver ctc_drivers[] = {
 	 .config_init = mars_config_init,
 	 .features = PHY_GBIT_FEATURES,
 	 .config_aneg = mars1s_config_aneg,
-	 .ack_interrupt = &mars_ack_interrupt,
+	 .handle_interrupt = &mars_handle_interrupt,
 	 .config_intr = &mars_config_intr,
 	 .read_status = genphy_read_status,
 	 .suspend = genphy_suspend,
@@ -282,7 +282,7 @@ static struct phy_driver ctc_drivers[] = {
 	 .config_init = mars1p_config_init,
 	 .features = PHY_GBIT_FEATURES,
 	 .config_aneg = mars1s_config_aneg,
-	 .ack_interrupt = &mars_ack_interrupt,
+	 .handle_interrupt = &mars_handle_interrupt,
 	 .config_intr = &mars_config_intr,
 	 .read_status = genphy_read_status,
 	 .suspend = genphy_suspend,
@@ -295,7 +295,7 @@ static struct phy_driver ctc_drivers[] = {
 	 .config_init = mars1p_config_init,
 	 .features = PHY_GBIT_FEATURES,
 	 .config_aneg = mars1s_config_aneg,
-	 .ack_interrupt = &mars_ack_interrupt,
+	 .handle_interrupt = &mars_handle_interrupt,
 	 .config_intr = &mars_config_intr,
 	 .read_status = genphy_read_status,
 	 .suspend = genphy_suspend,
@@ -314,3 +314,6 @@ static struct mdio_device_id __maybe_unused mars_tbl[] = {
 };
 
 MODULE_DEVICE_TABLE(mdio, mars_tbl);
+
+MODULE_AUTHOR("Centec, Inc.");
+MODULE_LICENSE("GPL");

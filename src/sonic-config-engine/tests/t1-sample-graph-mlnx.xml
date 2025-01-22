@@ -2133,9 +2133,9 @@
       </EthernetInterfaces>
       <FlowControl>true</FlowControl>
       <Height>0</Height>
-      <HwSku>ACS-MSN2700</HwSku> 
+      <HwSku>ACS-MSN2700</HwSku>
       <ManagementInterfaces/>
-    </DeviceInfo> 
+    </DeviceInfo>
   </DeviceInfos>
   <MetadataDeclaration>
     <Devices xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">

@@ -1,0 +1,63 @@
+module sonic-kubernetes_master {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-kubernetes_master";
+
+    prefix kubernetes_master;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "KUBERNETES_MASTER YANG Module for SONiC OS";
+
+    revision 2022-10-09 {
+        description "First Revision";
+    }
+
+    container sonic-kubernetes_master {
+
+        container KUBERNETES_MASTER {
+
+            description "KUBERNETES_MASTER part of config_db.json";
+
+            container SERVER {
+
+                leaf ip {
+                    description "Kubernetes api server endpoint(an IP address or a DNS
+                                domain name.)";
+                    type inet:host;
+                }
+
+                leaf port {
+                    description "Kubernetes api server port";
+                    type inet:port-number;
+                    default 6443;
+                }
+
+                leaf disable {
+                    description "This configuration identicates whether disable kubernetes";
+                    type stypes:boolean_type;
+                    default "false";
+                }
+
+                leaf insecure {
+                    description "This configuration identicates it will download kubernetes
+                                CA by http other than https";
+                    type stypes:boolean_type;
+                    default "true";
+                }
+
+            }
+            /* end of container SERVER */
+        }
+        /* end of container KUBERNETES_MASTER */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-kubernetes_master */

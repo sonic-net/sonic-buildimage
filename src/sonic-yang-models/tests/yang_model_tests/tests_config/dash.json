@@ -1,0 +1,143 @@
+{
+    "DASH_VNET_TABLE_WITH_CORRECT_CONFIG": {
+	"sonic-dash:sonic-dash": {
+            "sonic-dash:DASH_VNET": {
+                "DASH_VNET_LIST": [{
+                    "name": "Vnet1",
+		    "vni": "10",
+                    "guid":"guid-vnet1"
+		}]
+            }
+        }
+    },
+    "DASH_ENI_TABLE_WITH_CORRECT_CONFIG": {
+	"sonic-dash:sonic-dash": {
+            "sonic-dash:DASH_ENI": {
+                "DASH_ENI_LIST": [{
+                    "name": "F9-22",
+                    "vnet": "Vnet1",
+                    "eni_id":"guid-eni1",
+                    "mac_address":"F9:22:83:99:22:A2"
+		}]
+            },
+            "sonic-dash:DASH_VNET": {
+                "DASH_VNET_LIST": [{
+                    "name": "Vnet1",
+		    "vni": "10",
+                    "guid":"guid-vnet1"
+		}]
+            }
+        }
+    },
+    "DASH_ROUTING_TYPE_TABLE_WITH_CORRECT_CONFIG": {
+	"sonic-dash:sonic-dash": {
+            "sonic-dash:DASH_ROUTING_TYPE": {
+                "DASH_ROUTING_TYPE_LIST": [{
+                    "name": "vnet_direct",
+                    "action_name": "act_name",
+                    "action_type":"maprouting"
+		},
+		{
+                    "name": "vnet_encap",
+                    "action_name": "act_name1",
+		    "action_type": "staticencap",
+                    "encap_type": "vxlan"
+		}]
+            }
+        }
+    },
+    "DASH_MAPPING_TABLE_WITH_NON_EXISTENT_VNET": {
+	"sonic-dash:sonic-dash": {
+            "sonic-dash:DASH_VNET_MAPPING_TABLE": {
+                "DASH_VNET_MAPPING_TABLE_LIST": [{
+                    "vnet": "Vnet2",
+		    "ip_addr": "10.0.0.6",
+                    "routing_type":"vnet_encap",
+                    "underlay_ip":"2601:12:7a:1::1234",
+                    "mac_address":"F9:22:83:99:22:A2"
+		}]
+            }
+        }
+    },
+    "DASH_ROUTE_TABLE_WITH_INCORRECT_IPPREFIX": {
+	"sonic-dash:sonic-dash": {
+            "sonic-dash:DASH_ROUTE_TABLE": {
+                "DASH_ROUTE_TABLE_LIST": [{
+                    "eni": "F9-22",
+		    "prefix": "10.0.0.6",
+                    "action_type":"vnet_encap"
+		}]
+            },
+            "sonic-dash:DASH_ROUTING_TYPE": {
+                "DASH_ROUTING_TYPE_LIST": [{
+                    "name": "vnet_encap",
+                    "action_name": "act_name1",
+		    "action_type": "staticencap",
+                    "encap_type": "vxlan"
+		}]
+	    }
+        }
+    },
+    "DASH_MAPPING_TABLE_WITH_VALID_CONFIG": {
+	"sonic-dash:sonic-dash": {
+            "sonic-dash:DASH_VNET_MAPPING_TABLE": {
+                "DASH_VNET_MAPPING_TABLE_LIST": [{
+                    "vnet": "Vnet1",
+		    "ip_addr": "10.0.0.6",
+                    "routing_type":"vnet_encap",
+                    "underlay_ip":"2601:12:7a:1::1234",
+                    "mac_address":"F9:22:83:99:22:A2"
+		}]
+            },
+            "sonic-dash:DASH_ROUTING_TYPE": {
+                "DASH_ROUTING_TYPE_LIST": [{
+                    "name": "vnet_encap",
+                    "action_name": "act_name1",
+		    "action_type": "staticencap",
+                    "encap_type": "vxlan"
+		}]
+	    },
+            "sonic-dash:DASH_VNET": {
+                "DASH_VNET_LIST": [{
+                    "name": "Vnet1",
+		    "vni": "10",
+                    "guid":"guid-vnet1"
+		}]
+            }
+        }
+    },
+    "DASH_ROUTE_TABLE_WITH_VALID_CONFIG": {
+	"sonic-dash:sonic-dash": {
+            "sonic-dash:DASH_ROUTE_TABLE": {
+                "DASH_ROUTE_TABLE_LIST": [{
+                    "eni": "F9-22",
+		    "prefix": "10.0.0.6/32",
+                    "action_type":"vnet",
+                    "vnet":"Vnet1"
+		}]
+            },
+            "sonic-dash:DASH_ROUTING_TYPE": {
+                "DASH_ROUTING_TYPE_LIST": [{
+                    "name": "vnet",
+                    "action_name": "act_name1",
+		    "action_type": "maprouting"
+		}]
+	    },
+            "sonic-dash:DASH_ENI": {
+                "DASH_ENI_LIST": [{
+                    "name": "F9-22",
+                    "vnet": "Vnet1",
+                    "eni_id":"guid-eni1",
+                    "mac_address":"F9:22:83:99:22:A2"
+		}]
+            },
+            "sonic-dash:DASH_VNET": {
+                "DASH_VNET_LIST": [{
+                    "name": "Vnet1",
+		    "vni": "10",
+                    "guid":"guid-vnet1"
+		}]
+            }
+        }
+    }
+}

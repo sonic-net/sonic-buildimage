@@ -1,0 +1,41 @@
+{
+    "LOSSLESS_TRAFFIC_PATTERN_TEST": {
+        "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table."
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_INVALID_NAME_TEST": {
+        "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table with invalid character.",
+        "eStr": "Invalid lossless traffic pattern list name."
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_TOO_LONG_NAME_TEST": {
+        "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table with too long name.",
+        "eStr": "Invalid length for the lossless traffic pattern list name."
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_TOO_SMALL_MTU_TEST": {
+        "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table with an MTU exceeding the lowerbound.",
+        "eStr": "Invaild MTU which should be in [1, 9216]."
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_TOO_LARGE_MTU_TEST": {
+        "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table with an MTU exceeding the upperbound.",
+        "eStr": "Invaild MTU which should be in [1, 9216]."
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_INVALID_FORMAT_MTU_TEST": {
+        "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table with an invalid MTU",
+        "eStr": "Invalid"
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_LACK_MTU_TEST": {
+        "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table without MTU",
+        "eStrKey": "Mandatory"
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_TOO_LARGE_SMALL_PACKET_PERCENTAGE_TEST": {
+        "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table with a small packet percentage exceeding the upperbound.",
+        "eStr": "Invalid small packets percentage which should be in [0, 100]."
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_INVALID_FORMAT_SMALL_PACKET_PERCENTAGE_TEST": {
+        "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table with an invalid small packet percentage",
+        "eStr": "Invalid"
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_LACK_SMALL_PACKET_PERCENTAGE_TEST": {
+        "desc": "Configure LOSSLESS_TRAFFIC_PATTERN table without small packet percentage",
+        "eStrKey": "Mandatory"
+    }
+}

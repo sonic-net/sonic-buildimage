@@ -1,8 +1,8 @@
 [Unit]
 Description={{docker_container_name}} service
-Requires=database{% if multi_instance == 'true' %}@%i{% endif %}.service updategraph.service
+Requires=database{% if multi_instance == 'true' %}@%i{% endif %}.service config-setup.service
 ConditionPathExists=!/usr/share/sonic/hwsku/gearbox_config.json
-After=database{% if multi_instance == 'true' %}@%i{% endif %}.service updategraph.service
+After=database{% if multi_instance == 'true' %}@%i{% endif %}.service config-setup.service
 After=interfaces-config.service
 After=swss{% if multi_instance == 'true' %}@%i{% endif %}.service
 BindsTo=sonic.target

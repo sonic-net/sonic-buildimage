@@ -1,0 +1,70 @@
+#!/bin/bash
+
+pre_loc_state=0
+loc=256
+sys=256
+fan=256
+psu=256
+
+byte_hex_test()
+{
+	if ! [[ $1  =~ ^[0-9A-Fa-f]{2}$ ]] ; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+bmc_led_read()
+{
+	led_state=0
+	val=$(ipmitool raw 0x30 0x25 0x00 0x60 0x1 0x81 2>>/dev/null)
+	res=$?
+	val=$(echo $val | awk '{printf $1}')
+	byte_hex_test $val
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
+	val=$( printf "%d" 0x$val )
+	loc=$(($val & 0x3))
+	sys=$((($val & 0xc) >> 2))
+	fan=$((($val & 0x30) >> 4))
+	psu=$((($val & 0xc0) >> 6))
+
+	return 1
+}
+
+bmc_led_write()
+{
+	ipmitool raw 0x30 0x42 $1 1>>/dev/null 2>>/dev/null
+}
+
+LED_monitor()
+{
+	local loc_state=0
+
+	while true
+	do
+		if [ -e /sys/bus/i2c/devices/0-0030/sys_led ];then
+			loc_state=$(cat /sys/bus/i2c/devices/0-0030/loc_led | awk '{printf $1}')
+			if [ $loc_state -gt 1 ]; then
+				loc_state=1
+			fi
+			if [ $loc_state != $pre_loc_state ]; then
+				bmc_led_write $loc_state
+				pre_loc_state=$loc_state
+			fi
+
+			bmc_led_read
+			if [ $? -eq 1 ];then
+				echo $sys > /sys/bus/i2c/devices/0-0030/sys_led
+				echo $fan > /sys/bus/i2c/devices/0-0030/fan_led
+				echo $psu > /sys/bus/i2c/devices/0-0030/psu_led
+			fi
+		fi
+
+		sleep 2
+	done
+}
+
+LED_monitor

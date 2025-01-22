@@ -28,6 +28,7 @@
 
 #define PCI_VENDOR_ID_BF 0x1d1c
 #define BF_FPGA_DEV_ID_JBAY_0 0x01F0
+#define BF_FPGA_DEV_ID_CB_0 0x01F1
 
 #ifndef PCI_MSIX_ENTRY_SIZE
 #define PCI_MSIX_ENTRY_SIZE 16
@@ -123,8 +124,8 @@ struct bf_pci_dev {
   u8 instance;
   char name[16];
   struct bf_int_vector bf_int_vec[BF_MSIX_ENTRY_CNT];
-  struct bf_listener *
-      listener_head; /* head of a singly linked list of listeners */
+  struct bf_listener
+      *listener_head; /* head of a singly linked list of listeners */
   struct bf_fpga_sysfs_buff fpga_sysfs_buff[BF_FPGA_SYSFS_CNT];
   struct bf_fpga_sysfs_buff fpga_sysfs_new_device;
   struct bf_fpga_sysfs_buff fpga_sysfs_rm_device;

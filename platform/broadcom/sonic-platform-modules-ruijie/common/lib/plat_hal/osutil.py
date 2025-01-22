@@ -6,7 +6,6 @@
 #
 #######################################################
 
-import subprocess
 import time
 import glob
 import re
@@ -14,6 +13,7 @@ import re
 from rjutil.smbus import SMBus
 import time
 from  functools import wraps
+from sonic_py_common.general import getstatusoutput_noshell
 
 
 def retry(maxretry =6, delay = 0.01):
@@ -80,13 +80,13 @@ class osutil(object):
 
     @staticmethod
     def command(cmdstr):
-        retcode, output = subprocess.getstatusoutput(cmdstr)
+        retcode, output = getstatusoutput_noshell(cmdstr)
         return retcode, output
 
 
     @staticmethod
     def geti2cword_i2ctool(bus, addr, offset):
-        command_line = "i2cget -f -y %d 0x%02x 0x%02x  wp" % (bus, addr, offset)
+        command_line = ["i2cget", "-f", "-y", str(bus), "0x%02x"%addr, "0x%02x"%offset, "wp"]
         retrytime = 6
         ret_t = ""
         for i in range(retrytime):
@@ -99,7 +99,7 @@ class osutil(object):
 
     @staticmethod
     def seti2cword_i2ctool(bus, addr, offset, val):
-        command_line = "i2cset -f -y %d 0x%02x 0x%0x 0x%04x wp" % (bus, addr, offset, val)
+        command_line = ["i2cset", "-f", "-y", str(bus), "0x%02x"%addr, "0x%0x"%offset, "0x%04x"%val, "wp"]
         retrytime = 6
         ret_t = ""
         for i in range(retrytime):
@@ -111,7 +111,7 @@ class osutil(object):
 
     @staticmethod
     def rji2cget_i2ctool(bus, devno, address):
-        command_line = "i2cget -f -y %d 0x%02x 0x%02x " % (bus, devno, address)
+        command_line = ["i2cget", "-f", "-y", str(bus), "0x%02x"%devno, "0x%02x"%address]
         retrytime = 6
         ret_t = ""
         for i in range(retrytime):
@@ -123,8 +123,7 @@ class osutil(object):
 
     @staticmethod
     def rji2cset_i2ctool(bus, devno, address, byte):
-        command_line = "i2cset -f -y %d 0x%02x 0x%02x 0x%02x" % (
-            bus, devno, address, byte)
+        command_line = ["i2cset", "-f", "-y", str(bus), "0x%02x"%devno, "0x%02x"%address, "0x%02x"%byte]
         retrytime = 6
         ret_t = ""
         for i in range(retrytime):
@@ -166,7 +165,7 @@ class osutil(object):
 
     @staticmethod
     def getdevmem(addr, digit, mask):
-        command_line = "devmem 0x%02x %d" %(addr, digit)
+        command_line = ["devmem", "0x%02x"%addr, str(digit)]
         retrytime = 6
         ret_t = ""
         for i in range(retrytime):
@@ -179,13 +178,13 @@ class osutil(object):
 
     @staticmethod
     def rj_os_system(cmd):
-        status, output = subprocess.getstatusoutput(cmd)
+        status, output = getstatusoutput_noshell(cmd)
         return status, output
 
     @staticmethod
     def getsdkreg(reg):
         try:
-            cmd = "bcmcmd -t 1 'getr %s ' < /dev/null" % reg
+            cmd = ["bcmcmd", "-t", "1", "getr"+str(reg)]
             ret, result = osutil.rj_os_system(cmd)
             result_t = result.strip().replace("\r", "").replace("\n", "")
             if ret != 0 or "Error:" in result_t:
@@ -203,8 +202,8 @@ class osutil(object):
             result = {}
             #waitForDocker()
             #need to exec twice
-            osutil.rj_os_system("bcmcmd -t 1 \"show temp\" < /dev/null")
-            ret, log = osutil.rj_os_system("bcmcmd -t 1 \"show temp\" < /dev/null")
+            osutil.rj_os_system(["bcmcmd", "-t", "1", "show temp"])
+            ret, log = osutil.rj_os_system(["bcmcmd", "-t", "1", "show temp"])
             if ret:
                 return False, result
             else:

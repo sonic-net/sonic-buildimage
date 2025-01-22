@@ -1,7 +1,7 @@
 [Unit]
 Description=Delays tacacs apply until SONiC has started
 PartOf=tacacs-config.service
-After=updategraph.service
+After=config-setup.service
 
 [Timer]
 OnUnitActiveSec=0 sec
@@ -9,4 +9,4 @@ OnBootSec=5min 30 sec
 Unit=tacacs-config.service
 
 [Install]
-WantedBy=timers.target updategraph.service
+WantedBy=timers.target sonic.target sonic-delayed.target

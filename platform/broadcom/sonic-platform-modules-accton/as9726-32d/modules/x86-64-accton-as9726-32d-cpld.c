@@ -839,7 +839,7 @@ exit:
 	return ret;
 }
 
-static int as9726_32d_cpld_remove(struct i2c_client *client)
+static void as9726_32d_cpld_remove(struct i2c_client *client)
 {
     struct as9726_32d_cpld_data *data = i2c_get_clientdata(client);
     const struct attribute_group *group = NULL;
@@ -857,7 +857,7 @@ static int as9726_32d_cpld_remove(struct i2c_client *client)
     case as9726_32d_cpld3:
         group = &as9726_32d_cpld3_group;
         break;
-	case as9726_32d_cpld_cpu:
+    case as9726_32d_cpld_cpu:
 	    group = &as9726_32d_cpld_cpu_group;
         break;
     default:
@@ -870,7 +870,6 @@ static int as9726_32d_cpld_remove(struct i2c_client *client)
 
     kfree(data);
 
-    return 0;
 }
 
 static int as9726_32d_cpld_read_internal(struct i2c_client *client, u8 reg)

@@ -1,0 +1,14 @@
+{
+    "chassis": {
+        "DCS-7260CX3-64": {
+            "component": {
+                "Aboot()": {},
+                "Scd(addr=0000:06:00.0)": {},
+                "Scd(addr=0000:ff:0b.3)": {},
+                "Ucd90160(addr=74-004e)": {},
+                "Ucd90120A(addr=83-0034)": {},
+                "RookSysCpld(addr=81-0023)": {}
+            }
+        }
+    }
+}

@@ -69,12 +69,6 @@ static ssize_t oom_info_show(struct device *dev, struct device_attribute *da,
   
     mutex_lock(&data->lock);
     memcpy(buf, data->eeprom, EEPROM_DATA_SIZE);
-    //for(i=0; i < EEPROM_DATA_SIZE ; i++)
-    //{ 
-    //    buf[i]=data->eeprom[i];
-     //   printk("buf[%d]=0x%x ",i, buf[i]);
-    //}
-    //status = EEPROM_DATA_SIZE+1;
    
     
     memcpy(buf, data->eeprom, 256);
@@ -92,7 +86,6 @@ static ssize_t oom_info_store(struct device *dev, struct device_attribute *da,
     unsigned char str[3];
     unsigned int val;
    
-   // printk("strlen(buf)=%d\n",strlen(buf));
     k=0;
     mutex_lock(&data->lock);  
     memset(data->eeprom, 0xFF, EEPROM_DATA_SIZE);  
@@ -101,31 +94,20 @@ static ssize_t oom_info_store(struct device *dev, struct device_attribute *da,
     {
         for(i=0; i < strlen(buf) ; i++)
         {   
-           // printk("i=%d ", i);
             for(j=0;j<2; j++)
             {
                 str[j]=buf[i+j];
             }
             sscanf(str, "%x", &val);
-            //printk("str=%s val=0x%x ", str, val);
             i=j+i-1;
             if(k>=EEPROM_DATA_SIZE)
             {
                 break;
             }
             data->eeprom[k]=(unsigned char)val;
-            //printk("data->eeprom[%d]=0x%x\n",k, data->eeprom[k]);
             k++;
         }
     }
-    //printk("buf=\n");
-    //for(i=0; i < strlen(buf) ; i++)
-    //{
-       // printk("%c%c ", buf[i], buf[i+1]);
-       // if((i % 31)==0)
-         //   printk("\n");
-    //}
-    //printk("\n");
    
     
     mutex_unlock(&data->lock);
@@ -215,7 +197,7 @@ exit:
     return status;
 }
 
-static int as7716_32xb_oom_remove(struct i2c_client *client)
+static void as7716_32xb_oom_remove(struct i2c_client *client)
 {
     struct as7716_32xb_oom_data *data = i2c_get_clientdata(client);
 
@@ -223,7 +205,6 @@ static int as7716_32xb_oom_remove(struct i2c_client *client)
     sysfs_remove_group(&client->dev.kobj, &as7716_32xb_oom_group);
     kfree(data);
     
-    return 0;
 }
 
 

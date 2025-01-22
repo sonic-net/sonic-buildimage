@@ -1,0 +1,31 @@
+From 1a639f2dcd400997345dab424a2adbc091752661 Mon Sep 17 00:00:00 2001
+From: Stepan Blyschak <stepanb@nvidia.com>
+Date: Thu, 20 Oct 2022 13:07:18 +0000
+Subject: [PATCH] From ca66350aecf7db3354019480d11754fabae3a97c Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 09/13] ignore route from default table
+
+Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
+
+diff --git a/zebra/dplane_fpm_nl.c b/zebra/dplane_fpm_nl.c
+index 0a9fecc9d..b18a96353 100644
+--- a/zebra/dplane_fpm_nl.c
++++ b/zebra/dplane_fpm_nl.c
+@@ -814,6 +814,15 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
+ 		|| op == DPLANE_OP_NH_UPDATE))
+ 		return 0;
+ 
++	/*
++	 * Ignore route from default table, because when mgmt port goes down,
++	 * zebra will remove the default route and causing ASIC to blackhole IO.
++	 */
++	if (dplane_ctx_get_table(ctx) == RT_TABLE_DEFAULT) {
++		zlog_debug("%s: discard default table route", __func__);
++		return 0;
++	}
++
+ 	nl_buf_len = 0;
+ 
+ 	frr_mutex_lock_autounlock(&fnc->obuf_mutex);
+-- 
+2.17.1
+

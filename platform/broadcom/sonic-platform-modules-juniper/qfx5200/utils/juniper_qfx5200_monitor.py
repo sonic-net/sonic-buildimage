@@ -34,7 +34,6 @@
 
 try:
     import os
-    import commands
     import subprocess
     import logging
     import logging.config
@@ -42,6 +41,7 @@ try:
     import time
     import glob
     import re
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
@@ -172,8 +172,8 @@ class QFX5200_FanUtil(object):
 	    pwm_value = 0
 	    pwm_value1 = 0
             device_path = self._pwm_input_path_mapping[x]
-            cmd = ("sudo cat %s" %(device_path))
-            status, pwm_value = commands.getstatusoutput(cmd)
+            cmd = ["sudo", "cat", device_path]
+            status, pwm_value = getstatusoutput_noshell(cmd)
 	    pwm_value1 = int(pwm_value)
 	    time.sleep(0.25)
 	    if int(pwm_value1) > 0:
@@ -181,6 +181,10 @@ class QFX5200_FanUtil(object):
 	        break
 
         return int(ret_value)	
+
+    def write_file(self, text, file):
+        with open(file, 'w') as f:
+            f.write(text + '\n')
             
     def set_fan_dutycycle(self, val):
         fan_speed = {35: 86, 55: 139, 75: 192, 90: 230,100: 255}
@@ -188,8 +192,7 @@ class QFX5200_FanUtil(object):
             device_path = self._pwm_input_path_mapping[x]
             pwm_value = fan_speed.get(val)
             pwm_value1 = str(pwm_value)
-            cmd = ("sudo echo %s > %s" %(pwm_value1,device_path))
-            os.system(cmd)
+            self.write_file(pwm_value1,device_path)
             time.sleep(0.25)
 	logging.debug('Setting PWM value: %s to all fans', pwm_value1)
         return True
@@ -198,8 +201,8 @@ class QFX5200_FanUtil(object):
 	pwm_str = ''    
 	for x in range(self.PWMINPUT_NUM):
             device_path = self._pwm_input_path_mapping[x]
-            cmd = ("sudo cat %s" %(device_path))
-            status, pwm_value = commands.getstatusoutput(cmd)
+            cmd = ["sudo", "cat", device_path]
+            status, pwm_value = getstatusoutput_noshell(cmd)
 	    pwm_str += pwm_value
             if (x != self.PWMINPUT_NUM -1):		   
 	        pwm_str += ', '
@@ -495,8 +498,8 @@ class QFX5200_ThermalUtil(object):
             else:
                 proc = subprocess.Popen("bcmcmd \"show temp\" | grep \"maximum peak temperature\" | awk '{ print $5 }' > /var/log/asic_value 2>&1 & ",shell=True)
                 time.sleep(2)
-                cmd = "kill -9 %s"%(proc.pid)
-                commands.getstatusoutput(cmd)
+                cmd = ["kill", "-9", proc.pid]
+                getstatusoutput_noshell(cmd)
                 
                 if os.stat("/var/log/asic_value").st_size == 0:
                     value = PrevASICValue
@@ -568,7 +571,7 @@ class QFX5200_ThermalUtil(object):
             or SensorFlag[8][11] or SensorFlag[9][11] or SensorFlag[10][11] or SensorFlag[11][11]):
 
             logging.debug('Fire Threshold reached: System is going to shutdown now')
-            os.system("echo 'CRITICAL: Fire Threshold reached: System is going to shutdown now' > /dev/console")
+            self.write_file('CRITICAL: Fire Threshold reached: System is going to shutdown now', "/dev/console")
 
 
             logging.debug('Executing poweroff command')
@@ -583,8 +586,8 @@ class QFX5200_ThermalUtil(object):
 
             monitorlog_file.close()
 
-            cmd = "poweroff"
-	    os.system(cmd)
+            cmd = ["poweroff"]
+        subprocess.call(cmd)
             
         # CHECK IF ANY TEMPERATURE SENSORS is running at RED warning , IF YES, SET THE ALARM LED TO 'RED'
         elif (SensorFlag[0][10] or SensorFlag[1][10] or SensorFlag[2][10] or SensorFlag[3][10] or SensorFlag[4][10] or SensorFlag[5][10] or SensorFlag[6][10] or SensorFlag[7][10]
@@ -878,8 +881,7 @@ class device_monitor(object):
             pwm_value = fan_speed.get(val)
             pwm_value1 = str(pwm_value)
             time.sleep(0.25)
-            cmd = ("sudo echo %s > %s" %(pwm_value1,device_path))
-            os.system(cmd)
+            self.write_file(pwm_value1, device_path)
 
 	logging.debug('Setting Default PWM value: 86 to all fans')
 	return True
@@ -888,8 +890,8 @@ class device_monitor(object):
 	pwm_str = ''    
 	for x in range(self.PWMINPUT_NUM):
             device_path = self._pwm_input_path_mapping[x]
-            cmd = ("sudo cat %s" %(device_path))
-            status, pwm_value = commands.getstatusoutput(cmd)
+            cmd = ["sudo", "cat", device_path]
+            status, pwm_value = getstatusoutput_noshell(cmd)
 	    pwm_str += pwm_value
             if (x != self.PWMINPUT_NUM -1):		   
 	        pwm_str += ', '

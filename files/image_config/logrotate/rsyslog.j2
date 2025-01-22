@@ -19,16 +19,18 @@
     delaycompress
     sharedscripts
     postrotate
-        /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+        if [ -f /var/run/rsyslogd.pid ]; then
+            /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+        fi
     endscript
 }
 
 /var/log/auth.log
-/var/log/arista.log
 /var/log/cron.log
 /var/log/syslog
 /var/log/teamd.log
 /var/log/telemetry.log
+/var/log/gnmi.log
 /var/log/frr/bgpd.log
 /var/log/frr/zebra.log
 /var/log/swss/sairedis*.rec
@@ -37,6 +39,8 @@
 {
 {% if var_log_kb <= 204800 %}
     size 1M
+{% elif var_log_kb <= 409600 %}
+    size 2M
 {% else %}
     size 16M
 {% endif %}
@@ -51,13 +55,19 @@
         NUM_LOGS_TO_ROTATE=8
 
         # Adjust LOG_FILE_ROTATE_SIZE_KB to reflect the "size" parameter specified above, in kB
+{% if var_log_kb <= 204800 %}
         LOG_FILE_ROTATE_SIZE_KB=1024
+{% elif var_log_kb <= 409600 %}
+        LOG_FILE_ROTATE_SIZE_KB=2048
+{% else %}
+        LOG_FILE_ROTATE_SIZE_KB=16384
+{% endif %}
 
         # Reserve space for btmp, wtmp, dpkg.log, monit.log, etc., as well as logs that
         # should be disabled, just in case they get created and rotated
         RESERVED_SPACE_KB=4096
 
-        VARL_LOG_SIZE_KB={{var_log_kb}}
+        VAR_LOG_SIZE_KB={{var_log_kb}}
 
         # Limit usable space to 90% of the partition minus the reserved space for other logs
         USABLE_SPACE_KB=$(( (VAR_LOG_SIZE_KB * 90 / 100) - RESERVED_SPACE_KB))
@@ -77,7 +87,7 @@
             if [ $USED_KB -lt $THRESHOLD_KB ]; then
                 break
             else
-                OLDEST_ARCHIVE_FILE=$(find /var/log -type f -printf '%T+ %p\n' | grep -E '.+\.[0-9]+(\.gz)?$' | sort | head -n 1 | awk '{ print $2; }')
+                OLDEST_ARCHIVE_FILE=$(find /var/log -type f -printf '%T+ %p\n' | grep -E '.+\.[0-9]+(\.gz)?$' | sort  | awk 'NR == 1 {print $2}')
 
                 if [ -z "$OLDEST_ARCHIVE_FILE" ]; then
                     logger -p syslog.err -t "logrotate" "No archive file to delete -- potential for filling up /var/log partition!"
@@ -108,7 +118,9 @@
                 pgrep -x orchagent | xargs /bin/kill -HUP 2>/dev/null || true
             fi
         else
-            /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+            if [ -f /var/run/rsyslogd.pid ]; then
+                /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+            fi
         fi
     endscript
 }

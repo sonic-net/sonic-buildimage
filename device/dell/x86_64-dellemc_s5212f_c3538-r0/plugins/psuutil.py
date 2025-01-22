@@ -3,6 +3,19 @@
 # Platform-specific PSU status interface for SONiC
 #
 
+import logging
+import sys
+from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_noshell_pipe
+
+S5212F_MAX_PSUS = 2
+IPMI_PSU_DATA = ["docker", "exec", "-it", "pmon", "ipmitool", "sdr", "list"]
+IPMI_PSU_DATA_DOCKER = ["ipmitool", "sdr", "list"]
+PSU_PRESENCE = "PSU{0}_stat"
+# Use this for older firmware
+# PSU_PRESENCE="PSU{0}_prsnt"
+ipmi_sdr_list = ""
+
+
 try:
     from sonic_psu.psu_base import PsuBase
 except ImportError as e:
@@ -17,7 +30,38 @@ class PsuUtil(PsuBase):
 
     def isDockerEnv(self):
         num_docker = open('/proc/self/cgroup', 'r').read().count(":/docker")
-        return (num_docker > 0)
+        if num_docker > 0:
+            return True
+        else:
+            return False
+
+    # Fetch a BMC register
+    def get_pmc_register(self, reg_name):
+
+        global ipmi_sdr_list
+        ipmi_cmd = IPMI_PSU_DATA
+        dockerenv = self.isDockerEnv()
+        if dockerenv == True:
+            ipmi_cmd = IPMI_PSU_DATA_DOCKER
+
+        status, ipmi_sdr_list = getstatusoutput_noshell(ipmi_cmd)
+
+        if status:
+            logging.error('Failed to execute:' + ipmi_sdr_list)
+            sys.exit(0)
+
+        for item in ipmi_sdr_list.split("\n"):
+            if reg_name in item:
+                output = item.strip()
+
+        if not output:
+            print('\nFailed to fetch: ' + reg_name + ' sensor ')
+            sys.exit(0)
+
+        output = output.split('|')[1]
+
+        logging.basicConfig(level=logging.DEBUG)
+        return output
 
     def get_num_psus(self):
         """
@@ -37,7 +81,8 @@ class PsuUtil(PsuBase):
         """
         # Until psu_status is implemented this is hardcoded temporarily
 
-        return 1
+        status = 1
+        return status
 
     def get_psu_presence(self, index):
         """
@@ -46,5 +91,8 @@ class PsuUtil(PsuBase):
         :param index: An integer, index of the PSU of which to query status
         :return: Boolean, True if PSU is plugged, False if not
         """
-        return 1
+        ipmi_cmd = ["ipmitool", "raw", "0x04", "0x2d", hex(0x30 + index)]
+        awk_cmd = ['awk', '{print substr($0,9,1)}']
+        cmd_status, psu_status = getstatusoutput_noshell_pipe(ipmi_cmd, awk_cmd)
+        return 1 if psu_status == '1' else 0
 

@@ -1,0 +1,172 @@
+module sonic-mclag {
+    namespace "http://github.com/sonic-net/sonic-mclag";
+    prefix smclag;
+    yang-version 1.1;
+
+
+    import ietf-yang-types {
+        prefix yang;
+    }
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    import sonic-port {
+        prefix prt;
+    }
+
+    import sonic-portchannel {
+        prefix lag;
+    }
+
+    // Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
+    //import sonic-vlan {
+    //    prefix vlan;
+    //}
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC MCLAG";
+
+    revision 2019-10-01 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-mclag {
+
+        container MCLAG_DOMAIN {
+
+            list MCLAG_DOMAIN_LIST {
+                key "domain_id";
+                max-elements 1;
+
+                leaf domain_id {
+                    description "MCLAG Domain ID";
+                    type uint16 {
+                        range "1..4095" {
+                            error-message "MCLAG Domain ID out of range";
+                        }
+                    }
+                }
+
+                leaf source_ip {
+                    type inet:ipv4-address;
+                    description  "MCLAG Domain source ip address for session between MCLAG Peers";
+                }
+                leaf peer_ip {
+                    type inet:ipv4-address;
+                    description  "MCLAG Domain peer ip address for session between MCLAG Peers";
+                }
+                leaf peer_link {
+                    description  "MCLAG Domain peer link, data backup path link between MCLAG peers";
+                    type union {
+                        type leafref {
+                            path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
+                        }
+                        type leafref {
+                            path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                        }
+                    }
+                }
+                leaf keepalive_interval {
+                    description  "keepalive interval in seconds for MCLAG session between peers";
+                    type uint16 {
+                        range "1..60" {
+                            error-message "MCLAG Domain keepalive interval out of range";
+                            error-app-tag keepalive_interval-invalid;
+                        }
+                    }
+                    default 1;
+                }
+                leaf session_timeout {
+                    description  "Session timeout in seconds for MCLAG session between peers";
+                    type uint16 {
+                        range "1..3600" {
+                            error-message "MCLAG Domain session timeout out of range";
+                            error-app-tag session_timeout-invalid;
+                        }
+                    }
+                    default 30;
+                }
+                must "(keepalive_interval * 3) <= session_timeout" {
+                    error-message "(keepalive interval * 3) <= session_timeout value";
+                    error-app-tag keepalive_session_multiplier-invalid;
+                }
+            }
+        }
+
+        container MCLAG_INTERFACE {
+
+            list MCLAG_INTERFACE_LIST {
+                description  "List of MCLAG interfaces";
+                key "domain_id if_name";
+
+                leaf domain_id {
+                    description  "List of MCLAG interfaces";
+                    type leafref {
+                        path "../../../MCLAG_DOMAIN/MCLAG_DOMAIN_LIST/domain_id";
+                    }
+                }
+
+                leaf if_name {
+                    description  "MCLAG interface name";
+                    type leafref {
+                        path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
+                    }
+                }
+                leaf if_type {
+                    description  "MCLAG interface type, placeholder field to create instance";
+                    type string;
+                }
+            }
+        }
+
+        container MCLAG_UNIQUE_IP {
+
+            list MCLAG_UNIQUE_IP_LIST {
+                description  "List of VLANs allowed to have unique ip addresses on MCLAG Peer nodes";
+                key "if_name";
+
+                must "count(../../MCLAG_DOMAIN/MCLAG_DOMAIN_LIST/domain_id) != 0" {
+                    error-message "mclag not configured";
+                    error-app-tag mclag-invalid;
+                }
+
+                // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
+                //must
+                //    "count(/vlan:sonic-vlan/vlan:VLAN_INTERFACE/vlan:VLAN_INTERFACE_IPPREFIX_LIST[vlan:name=current()/if_name]) = 0" {
+                //        error-message "remove configured ip/v6 address and reconfigure after separate ip configuration";
+                //        error-app-tag vlan-intf-ip-invalid;
+                //    }
+
+                leaf if_name {
+                    description  "Vlan interface name on which MCLAG unique ip config is done";
+                    // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
+                    //type leafref {
+                    //    path "/vlan:sonic-vlan/vlan:VLAN/vlan:VLAN_LIST/vlan:name";
+                    //}
+                    type string {
+                        pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                    }
+                }
+                leaf unique_ip {
+                    description  "unique ip enable, by default disable";
+                    type enumeration {
+                        enum enable;
+                    }
+                }
+            }
+        }
+    }
+}

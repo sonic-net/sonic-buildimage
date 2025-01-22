@@ -11,7 +11,12 @@
 	    "queue4_group1": {
 		    "trap_action":"trap",
 		    "trap_priority":"4",
-		    "queue": "4"
+		    "queue": "4",
+		    "meter_type":"packets",
+		    "mode":"sr_tcm",
+		    "cir":"6000",
+		    "cbs":"6000",
+		    "red_action":"drop"
 	    },
 	    "queue4_group2": {
 		    "trap_action":"copy",
@@ -26,7 +31,17 @@
 	    "queue4_group3": {
 		    "trap_action":"trap",
 		    "trap_priority":"4",
-		    "queue": "4"
+		    "queue": "4",
+		    "meter_type":"packets",
+		    "mode":"sr_tcm",
+{% if DEVICE_METADATA is defined and DEVICE_METADATA['localhost'] is defined and DEVICE_METADATA['localhost']['type'] is defined and 'Mgmt' in DEVICE_METADATA['localhost']['type'] %}
+		    "cir":"300",
+		    "cbs":"300",
+{% else %}
+		    "cir":"100",
+		    "cbs":"100",
+{% endif %}
+		    "red_action":"drop"
 	    },
 	    "queue1_group1": {
 		    "trap_action":"trap",
@@ -97,7 +112,7 @@
 	    },
 	    "macsec": {
 		    "trap_ids": "eapol",
-		    "trap_group": "queue4_group3"
+		    "trap_group": "queue4_group1"
 	    },
 	    "nat": {
 		    "trap_ids": "src_nat_miss,dest_nat_miss",

@@ -104,7 +104,7 @@ class FanUtil(object):
             return None
 
         try:
-		    val_file.close()
+            val_file.close()
         except:
             logging.debug('GET. unable to close file. device_path:%s', device_path)
             return None
@@ -135,7 +135,7 @@ class FanUtil(object):
         val_file.write(content)
 
         try:
-		    val_file.close()
+            val_file.close()
         except:
             logging.debug('GET. unable to close file. device_path:%s', device_path)
             return None
@@ -174,14 +174,11 @@ class FanUtil(object):
     def get_fan_fault(self, fan_num):
         return self._get_fan_node_val(fan_num, self.FAN_NODE_FAULT_IDX_OF_MAP)
 
-    #def get_fan_speed(self, fan_num):
-    #    return self._get_fan_node_val(fan_num, self.FAN_NODE_SPEED_IDX_OF_MAP)
-
     def get_fan_dir(self, fan_num):
         return self._get_fan_node_val(fan_num, self.FAN_NODE_DIR_IDX_OF_MAP)
 
     def get_fan_duty_cycle(self):
-        #duty_path = self.FAN_DUTY_PATH
+
         try:
             val_file = open(self.FAN_DUTY_PATH)
         except IOError as e:
@@ -203,9 +200,6 @@ class FanUtil(object):
         fan_file.close()
         return True
 
-    #def get_fanr_fault(self, fan_num):
-    #    return self._get_fan_node_val(fan_num, self.FANR_NODE_FAULT_IDX_OF_MAP)
-
     def get_fanr_speed(self, fan_num):
         return self._get_fan_node_val(fan_num, self.FANR_NODE_SPEED_IDX_OF_MAP)
 
@@ -218,20 +212,6 @@ class FanUtil(object):
             logging.debug('GET. FAN fault. fan_num, %d', fan_num)
             return False
 
-        #if self.get_fanr_fault(fan_num) is not None and self.get_fanr_fault(fan_num) > 0:
-        #    logging.debug('GET. FANR fault. fan_num, %d', fan_num)
-        #   return False
 
         return True
 
-#def main():
-#    fan = FanUtil()
-#
-#    print 'get_size_node_map : %d' % fan.get_size_node_map()
-#    print 'get_size_path_map : %d' % fan.get_size_path_map()
-#    for x in range(fan.get_idx_fan_start(), fan.get_num_fans()+1):
-#        for y in range(fan.get_idx_node_start(), fan.get_num_nodes()+1):
-#            print fan.get_fan_to_device_path(x, y)
-#
-#if __name__ == '__main__':
-#    main()

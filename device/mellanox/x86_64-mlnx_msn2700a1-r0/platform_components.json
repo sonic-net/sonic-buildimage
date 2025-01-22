@@ -1,0 +1,15 @@
+{
+    "chassis": {
+        "MSN2700-A1": {
+            "component": {
+                "ONIE": { },
+                "SSD": { },
+                "BIOS": { },
+                "CPLD1": { },
+                "CPLD2": { },
+                "CPLD3": { },
+                "CPLD4": { }
+            }
+        }
+    }
+}

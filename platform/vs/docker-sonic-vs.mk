@@ -2,9 +2,7 @@
 
 DOCKER_SONIC_VS = docker-sonic-vs.gz
 $(DOCKER_SONIC_VS)_PATH = $(PLATFORM_PATH)/docker-sonic-vs
-$(DOCKER_SONIC_VS)_DEPENDS += $(SWSS) \
-                              $(SYNCD_VS) \
-                              $(PYTHON_SWSSCOMMON) \
+$(DOCKER_SONIC_VS)_DEPENDS += $(SYNCD_VS) \
                               $(PYTHON3_SWSSCOMMON) \
                               $(LIBTEAMDCTL) \
                               $(LIBTEAM_UTILS) \
@@ -13,13 +11,9 @@ $(DOCKER_SONIC_VS)_DEPENDS += $(SWSS) \
                               $(LIBYANG_CPP) \
                               $(LIBYANG_PY3) \
                               $(SONIC_UTILITIES_DATA) \
-                              $(SONIC_HOST_SERVICES_DATA) \
-                              $(IPROUTE2)
+                              $(SONIC_HOST_SERVICES_DATA)
 
-# swsssdk is a dependency of sonic-py-common
-# TODO: sonic-py-common should depend on swsscommon instead
-$(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SWSSSDK_PY3) \
-                                    $(SONIC_PY_COMMON_PY3) \
+$(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SONIC_PY_COMMON_PY3) \
                                     $(SONIC_PLATFORM_COMMON_PY3) \
                                     $(SONIC_YANG_MODELS_PY3) \
                                     $(SONIC_YANG_MGMT_PY3) \
@@ -27,8 +21,7 @@ $(DOCKER_SONIC_VS)_PYTHON_WHEELS += $(SWSSSDK_PY3) \
                                     $(SONIC_HOST_SERVICES_PY3)
 
 ifeq ($(INSTALL_DEBUG_TOOLS), y)
-$(DOCKER_SONIC_VS)_DEPENDS += $(SWSS_DBG) \
-                              $(LIBSWSSCOMMON_DBG) \
+$(DOCKER_SONIC_VS)_DEPENDS += $(LIBSWSSCOMMON_DBG) \
                               $(LIBSAIREDIS_DBG) \
                               $(LIBSAIVS_DBG) \
                               $(SYNCD_VS_DBG)
@@ -40,6 +33,10 @@ else
 $(DOCKER_SONIC_VS)_DEPENDS += $(GOBGP)
 endif
 
+ifeq ($(INCLUDE_FIPS), y)
+$(DOCKER_SONIC_VS)_DEPENDS += $(FIPS_KRB5_ALL)
+endif
+
 $(DOCKER_SONIC_VS)_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                             $(ARP_UPDATE_SCRIPT) \
                             $(ARP_UPDATE_VARS_TEMPLATE) \
@@ -49,7 +46,7 @@ $(DOCKER_SONIC_VS)_FILES += $(CONFIGDB_LOAD_SCRIPT) \
                             $(UPDATE_CHASSISDB_CONFIG_SCRIPT) \
                             $(COPP_CONFIG_TEMPLATE)
 
-$(DOCKER_SONIC_VS)_LOAD_DOCKERS += $(DOCKER_CONFIG_ENGINE_BUSTER)
+$(DOCKER_SONIC_VS)_LOAD_DOCKERS += $(DOCKER_SWSS_LAYER_BOOKWORM)
 SONIC_DOCKER_IMAGES += $(DOCKER_SONIC_VS)
 
-SONIC_BUSTER_DOCKERS += $(DOCKER_SONIC_VS)
+SONIC_BOOKWORM_DOCKERS += $(DOCKER_SONIC_VS)

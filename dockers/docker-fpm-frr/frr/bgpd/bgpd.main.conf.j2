@@ -8,10 +8,19 @@
 !
 ! TSA configuration
 !
-ip prefix-list PL_LoopbackV4 permit {{ get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}/32
+{% set lo0_ipv4 = get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip %}
+{% set lo4096_ipv4 = get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback4096") | ip %}
+{% if lo0_ipv4 is not none %}
+ip prefix-list PL_LoopbackV4 permit {{ lo0_ipv4 }}/32
+{% endif %}
 !
 {% if get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") != 'None' %}
+{% if ( ('localhost' in DEVICE_METADATA) and ('bgp_adv_lo_prefix_as_128' in  DEVICE_METADATA['localhost']) and
+        (DEVICE_METADATA['localhost']['bgp_adv_lo_prefix_as_128'] == 'true') ) %}
+ipv6 prefix-list PL_LoopbackV6 permit {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip_network }}/128
+{% else %}
 ipv6 prefix-list PL_LoopbackV6 permit {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | replace('/128', '/64') | ip_network }}/64
+{% endif %}
 {% endif %}
 !
 {% if VLAN_INTERFACE is defined %}
@@ -56,12 +65,17 @@ route-map HIDE_INTERNAL permit 20
 !
 {% endif %}
 !
+{% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('bgp_asn' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['bgp_asn'].lower() != 'none') and (DEVICE_METADATA['localhost']['bgp_asn'].lower() != 'null') %}
 router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
 !
 {% block bgp_init %}
   bgp log-neighbor-changes
+  bgp suppress-fib-pending
   no bgp default ipv4-unicast
   no bgp ebgp-requires-policy
+{% if (DEVICE_METADATA is defined) and ('localhost' in DEVICE_METADATA) and ('subtype' in DEVICE_METADATA['localhost']) and (DEVICE_METADATA['localhost']['subtype'].lower() == 'dualtor') %}
+  coalesce-time 10000
+{% endif %}
 !
 {% if constants.bgp.multipath_relax.enabled is defined and constants.bgp.multipath_relax.enabled %}
   bgp bestpath as-path multipath-relax
@@ -74,22 +88,53 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
   bgp graceful-restart select-defer-time {{ constants.bgp.graceful_restart.select_defer_time | default(45) }}
 {% endif %}
 !
+{# set bmp info #}
+{% if (FEATURE is defined) and ('bmp' in FEATURE) and ('state' in FEATURE['bmp']) and (FEATURE['bmp']['state'] == 'enabled') %}
+!
+  bmp mirror buffer-limit 4294967214
+!
+  bmp targets sonic-bmp
+  bmp stats interval 1000
+  bmp monitor ipv4 unicast pre-policy
+  bmp monitor ipv6 unicast pre-policy
+  bmp connect 127.0.0.1 port 5000 min-retry 1000 max-retry 2000
+!
+!
+{% endif %}
 {# set router-id #}
 {% if DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd' or DEVICE_METADATA['localhost']['switch_type'] == 'voq' or DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
-  bgp router-id {{ get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback4096") | ip }}
+{% if 'bgp_router_id' in DEVICE_METADATA['localhost'] %}
+  bgp router-id {{ DEVICE_METADATA["localhost"]["bgp_router_id"] }}
+{% elif lo4096_ipv4 is not none %}
+  bgp router-id {{ lo4096_ipv4 }}
+{% endif %}
 {% else %}
-  bgp router-id {{ get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}
+{% if "localhost" in DEVICE_METADATA and "bgp_router_id" in DEVICE_METADATA["localhost"] %}
+  bgp router-id {{ DEVICE_METADATA["localhost"]["bgp_router_id"] }}
+{% elif lo0_ipv4 is not none%}
+  bgp router-id {{ lo0_ipv4 }}
+{% endif %}
 {% endif %}
 !
 {# advertise loopback #}
-  network {{ get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}/32
-{% if ((multi_asic is defined and DEVICE_METADATA['localhost']['switch_type'] != 'chassis-packet') or (DEVICE_METADATA['localhost']['switch_type'] == 'voq')) %}
-  network {{ get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback4096") | ip }}/32 route-map HIDE_INTERNAL
+{% if lo0_ipv4 is not none %}
+  network {{ lo0_ipv4 }}/32
+{% endif %}
+{% if lo4096_ipv4 is not none and ((multi_asic is defined and DEVICE_METADATA['localhost']['switch_type'] != 'chassis-packet') or (DEVICE_METADATA['localhost']['switch_type'] == 'voq')) %}
+  network {{ lo4096_ipv4 }}/32 route-map HIDE_INTERNAL
 {% endif %}
 !
 {% if get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") != 'None' %}
   address-family ipv6
+{% if ( ('localhost' in DEVICE_METADATA) and ('bgp_adv_lo_prefix_as_128' in  DEVICE_METADATA['localhost']) and
+        (DEVICE_METADATA['localhost']['bgp_adv_lo_prefix_as_128'] == 'true') ) %}
+    network {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}/128
+{% else %}
     network {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}/64
+{% if DEVICE_METADATA['localhost']['switch_type'] == 'voq' or DEVICE_METADATA['localhost']['switch_type'] == 'chassis-packet' %}
+    network {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip }}/128 route-map HIDE_INTERNAL
+{% endif %}
+{% endif %}
   exit-address-family
 {% endif %}
 {% if ((multi_asic is defined and DEVICE_METADATA['localhost']['switch_type'] != 'chassis-packet') or (DEVICE_METADATA['localhost']['switch_type'] == 'voq')) %}
@@ -132,6 +177,7 @@ router bgp {{ DEVICE_METADATA['localhost']['bgp_asn'] }}
     maximum-paths {{ constants.bgp.maximum_paths.ipv6 | default(64) }}
   exit-address-family
 {% endblock maximum_paths %}
+{% endif %}
 {% endif %}
 !
 ! end of template: bgpd/bgpd.main.conf.j2

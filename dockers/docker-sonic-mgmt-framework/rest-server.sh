@@ -16,13 +16,13 @@ MGMT_VARS=${MGMT_VARS//[\']/\"}
 REST_SERVER=$(echo $MGMT_VARS | jq -r '.rest_server')
 
 if [ -n "$REST_SERVER" ]; then
-    SERVER_PORT=$(echo $REST_SERVER | jq -r '.port')
-    CLIENT_AUTH=$(echo $REST_SERVER | jq -r '.client_auth')
-    LOG_LEVEL=$(echo $REST_SERVER | jq -r '.log_level')
+    SERVER_PORT=$(echo $REST_SERVER | jq -r '.port // empty')
+    CLIENT_AUTH=$(echo $REST_SERVER | jq -r '.client_auth // empty')
+    LOG_LEVEL=$(echo $REST_SERVER | jq -r '.log_level // empty')
 
-    SERVER_CRT=$(echo $REST_SERVER | jq -r '.server_crt')
-    SERVER_KEY=$(echo $REST_SERVER | jq -r '.server_key')
-    CA_CRT=$(echo $REST_SERVER | jq -r '.ca_crt')
+    SERVER_CRT=$(echo $REST_SERVER | jq -r '.server_crt // empty')
+    SERVER_KEY=$(echo $REST_SERVER | jq -r '.server_key // empty')
+    CA_CRT=$(echo $REST_SERVER | jq -r '.ca_crt // empty')
 fi
 
 if [[ -z $SERVER_CRT ]] && [[ -z $SERVER_KEY ]] && [[ -z $CA_CRT ]]; then
@@ -31,9 +31,9 @@ fi
 
 # Read certificate file paths from DEVICE_METADATA|x509 entry.
 if [ -n "$X509" ]; then
-    SERVER_CRT=$(echo $X509 | jq -r '.server_crt')
-    SERVER_KEY=$(echo $X509 | jq -r '.server_key')
-    CA_CRT=$(echo $X509 | jq -r '.ca_crt')
+    SERVER_CRT=$(echo $X509 | jq -r '.server_crt // empty')
+    SERVER_KEY=$(echo $X509 | jq -r '.server_key // empty')
+    CA_CRT=$(echo $X509 | jq -r '.ca_crt // empty')
 fi
 
 # Create temporary server certificate if they not configured in ConfigDB

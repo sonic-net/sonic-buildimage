@@ -1,4 +1,27 @@
 {
+    "SYSLOG_SERVER_VALID": {
+        "desc": "Configure SYSLOG_SERVER."
+    },
+    "SYSLOG_SERVER_INVALID_SOURCE": {
+        "desc": "Configure invalid SOURCE in SYSLOG_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_SERVER_SOURCE_IP_FAMILY_MISMATCH": {
+        "desc": "Configure SOURCE IP family mismatch in SYSLOG_SERVER.",
+        "eStrKey": "Must"
+    },
+    "SYSLOG_SERVER_INVALID_PORT": {
+        "desc": "Configure invalid PORT in SYSLOG_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_SERVER_INVALID_VRF": {
+        "desc": "Configure invalid VRF in SYSLOG_SERVER.",
+        "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_SERVER_DISABLED_MGMT_VRF": {
+        "desc": "Configure disabled management VRF in SYSLOG_SERVER.",
+        "eStrKey": "Must"
+    },
     "SYSLOG_SERVER_TEST": {
         "desc": "Load syslog server table with ipv4 address as syslog servers."
     },
@@ -6,13 +29,89 @@
         "desc": "Load syslog server table with empty address as syslog server.",
         "eStrKey": "InvalidValue"
     },
-    "SYSLOG_SERVER_INVALID_IPADDR_TEST": {
-        "desc": "Load syslog server table with invalid ipv4 address as syslog server.",
-        "eStrKey": "InvalidValue"
-    },
     "SYSLOG_SERVER_INVALID_IPV6_ADDR_TEST": {
         "desc": "Load syslog server table with invalid ipv6 address as syslog server.",
         "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_CONFIG_VALID": {
+        "desc": "Configure SYSLOG_CONFIG."
+    },
+    "SYSLOG_CONFIG_INVALID_INTERVAL": {
+        "desc": "Configure invalid rate limit interval in SYSLOG_CONFIG.",
+        "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_CONFIG_INVALID_BURST": {
+        "desc": "Configure invalid rate limit burst in SYSLOG_CONFIG.",
+        "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_CONFIG_FEATURE_VALID": {
+        "desc": "Configure SYSLOG_CONFIG_FEATURE."
+    },
+    "SYSLOG_CONFIG_FEATURE_INVALID_SERVICE_NAME": {
+        "desc": "Configure invalid service in SYSLOG_CONFIG_FEATURE.",
+        "eStrKey": "LeafRef"
+    },
+    "SYSLOG_CONFIG_FEATURE_INVALID_INTERVAL": {
+        "desc": "Configure invalid rate_limit_interval in SYSLOG_CONFIG_FEATURE.",
+        "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_CONFIG_FEATURE_INVALID_BURST": {
+        "desc": "Configure invalid rate_limit_burst in SYSLOG_CONFIG_FEATURE.",
+        "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_SERVER_HOSTNAME": {
+        "desc": "Load syslog server table with hostname"
+    },
+    "SYSLOG_SERVER_HOSTNAME_INVALID": {
+        "desc": "Load syslog server table with invalid hostname",
+        "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_SERVER_FILTER_TYPE": {
+        "desc": "Valid filter type for syslog server"
+    },
+    "SYSLOG_SERVER_FILTER_TYPE_INVALID": {
+        "desc": "Invalid filter type for syslog server",
+        "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_SERVER_FILTER_REGEX": {
+        "desc": "Valid filter regex"
+    },
+    "SYSLOG_SERVER_PROTOCOL": {
+        "desc": "Valid syslog server protocol"
+    },
+    "SYSLOG_SERVER_PROTOCOL_INVALID": {
+        "desc": "Invalid syslog server protocol",
+        "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_SERVER_SEVERITY": {
+        "desc": "Syslog server valid severity"
+    },
+    "SYSLOG_SERVER_SEVERITY_INVALID": {
+        "desc": "Syslog server invalid severity",
+        "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_CONFIG_GLOBAL_VALID": {
+        "desc": "Global syslog configuration"
+    },
+    "SYSLOG_CONFIG_FORMAT": {
+        "desc": "Syslog format type"
+    },
+    "SYSLOG_CONFIG_FORMAT_INVALID": {
+        "desc": "Invalid syslog format",
+        "eStrKey": "InvalidValue"
+    },
+    "SYSLOG_CONFIG_FORMAT_WELF_FW_NAME": {
+        "desc": "Syslog format WELF firewall name"
+    },
+    "SYSLOG_CONFIG_FORMAT_WELF_FW_NAME_INVALID": {
+        "desc": "Syslog format WELF invalid firewall name",
+        "eStrKey": "Must"
+    },
+    "SYSLOG_CONFIG_SEVERITY": {
+        "desc": "Global syslog severity"
+    },
+    "SYSLOG_CONFIG_SEVERITY_INVALID": {
+        "desc": "Global invalid syslog severity",
+        "eStrKey": "InvalidValue"
     }
-
 }

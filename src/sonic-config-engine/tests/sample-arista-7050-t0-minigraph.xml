@@ -468,6 +468,66 @@
           <AlternateSpeeds i:nil="true"/>
           <EnableFlowControl>true</EnableFlowControl>
           <Index>1</Index>
+          <InterfaceName>Ethernet0</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet1</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet2</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet3</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
+          <InterfaceName>Ethernet4</InterfaceName>
+          <InterfaceType i:nil="true"/>
+          <MultiPortsInterface>false</MultiPortsInterface>
+          <PortName>0</PortName>
+          <Priority>0</Priority>
+          <Speed>40000</Speed>
+        </a:EthernetInterface>
+        <a:EthernetInterface>
+          <ElementType>DeviceInterface</ElementType>
+          <AlternateSpeeds i:nil="true"/>
+          <EnableFlowControl>true</EnableFlowControl>
+          <Index>1</Index>
           <InterfaceName>Ethernet5/1</InterfaceName>
           <InterfaceType i:nil="true"/>
           <MultiPortsInterface>false</MultiPortsInterface>
@@ -850,9 +910,9 @@
       </EthernetInterfaces>
       <FlowControl>true</FlowControl>
       <Height>0</Height>
-      <HwSku>Arista-7050-QX-32S</HwSku> 
+      <HwSku>Arista-7050-QX-32S</HwSku>
       <ManagementInterfaces/>
-    </DeviceInfo> 
+    </DeviceInfo>
   </DeviceInfos>
   <MetadataDeclaration>
     <Devices xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
@@ -863,6 +923,11 @@
             <a:Name>ErspanDestinationIpv4</a:Name>
             <a:Reference i:nil="true"/>
             <a:Value>10.0.0.16</a:Value>
+          </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>ResourceType</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>Storage</a:Value>
           </a:DeviceProperty>
         </a:Properties>
       </a:DeviceMetadata>

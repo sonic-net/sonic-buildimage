@@ -1,89 +1,502 @@
 {
     "chassis": {
-        "name": "Mavericks",
+        "name": "Wedge100BF-65X-O-AC-F-BF",
+        "components": [
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "BMC"
+            }
+        ],
+        "thermal_manager": false,
         "fans": [
             {
-                "name": "counter-rotating-fan-1"
+                "name": "counter-rotating-fan-1",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-2"
+                "name": "counter-rotating-fan-2",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-3"
+                "name": "counter-rotating-fan-3",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-4"
+                "name": "counter-rotating-fan-4",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-5"
+                "name": "counter-rotating-fan-5",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-6"
+                "name": "counter-rotating-fan-6",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-7"
+                "name": "counter-rotating-fan-7",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-8"
+                "name": "counter-rotating-fan-8",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-9"
+                "name": "counter-rotating-fan-9",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-10"
+                "name": "counter-rotating-fan-10",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             }
         ],
         "fan_drawers": [
             {
                 "name": "fantray-1",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
-                        "name": "counter-rotating-fan-1"
+                        "name": "counter-rotating-fan-1",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-2"
+                        "name": "counter-rotating-fan-2",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-3"
+                        "name": "counter-rotating-fan-3",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-4"
+                        "name": "counter-rotating-fan-4",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-5"
+                        "name": "counter-rotating-fan-5",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             },
             {
                 "name": "fantray-2",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
-                        "name": "counter-rotating-fan-6"
+                        "name": "counter-rotating-fan-6",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-7"
+                        "name": "counter-rotating-fan-7",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-8"
+                        "name": "counter-rotating-fan-8",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-9"
+                        "name": "counter-rotating-fan-9",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-10"
+                        "name": "counter-rotating-fan-10",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             }
+        ],
+        "psus": [
+            {
+                "name": "psu-1",
+                "thermals": [
+                    {
+                        "name": "psu_driver-i2c-7-5a:psu1-temp1"
+                    },
+                    {
+                        "name": "psu_driver-i2c-7-5a:psu1-temp2"
+                    }
+                ]
+            },
+            {
+                "name": "psu-2",
+                "thermals": [
+                    {
+                        "name": "psu_driver-i2c-7-59:psu2-temp1"
+                    },
+                    {
+                        "name": "psu_driver-i2c-7-59:psu2-temp2"
+                    }
+                ]
+            }
+        ],
+        "thermals": [
+            {
+                "name": "com_e_driver-i2c-4-33:cpu-temp"
+            },
+            {
+                "name": "com_e_driver-i2c-4-33:memory-temp"
+            },
+            {
+                "name": "coretemp-isa-0000:core-0"
+            },
+            {
+                "name": "coretemp-isa-0000:core-1"
+            },
+            {
+                "name": "coretemp-isa-0000:core-2"
+            },
+            {
+                "name": "coretemp-isa-0000:core-3"
+            },
+            {
+                "name": "coretemp-isa-0000:package-id-0"
+            },
+            {
+                "name": "max6658-i2c-9-4c:come-board-temp"
+            },
+            {
+                "name": "max6658-i2c-9-4c:max6658-chip-temp"
+            },
+            {
+                "name": "pch_haswell-virtual-0:temp1"
+            },
+            {
+                "name": "tmp75-i2c-3-4a:exhaust-temp"
+            },
+            {
+                "name": "tmp75-i2c-3-4b:intake-temp"
+            },
+            {
+                "name": "tmp75-i2c-3-4c:intake2-temp"
+            },
+            {
+                "name": "tmp75-i2c-3-48:chip-temp"
+            },
+            {
+                "name": "tmp75-i2c-3-49:exhaust2-temp"
+            },
+            {
+                "name": "tmp75-i2c-8-48:fan-board-outlet-right-temp"
+            },
+            {
+                "name": "tmp75-i2c-8-49:fan-board-outlet-left-temp"
+            },
+            {
+                "name": "tmp75-i2c-9-4a:upper-board-intake-temp"
+            },
+            {
+                "name": "tmp75-i2c-9-4b:upper-board-tofino-temp"
+            },
+            {
+                "name": "tmp75-i2c-9-48:upper-board-intake2-temp"
+            },
+            {
+                "name": "tmp75-i2c-9-49:server-board-temp"
+            }
+        ],
+        "sfps": [
+            {
+                "name": "sfp1"
+            },
+            {
+                "name": "sfp2"
+            },
+            {
+                "name": "sfp3"
+            },
+            {
+                "name": "sfp4"
+            },
+            {
+                "name": "sfp5"
+            },
+            {
+                "name": "sfp6"
+            },
+            {
+                "name": "sfp7"
+            },
+            {
+                "name": "sfp8"
+            },
+            {
+                "name": "sfp9"
+            },
+            {
+                "name": "sfp10"
+            },
+            {
+                "name": "sfp11"
+            },
+            {
+                "name": "sfp12"
+            },
+            {
+                "name": "sfp13"
+            },
+            {
+                "name": "sfp14"
+            },
+            {
+                "name": "sfp15"
+            },
+            {
+                "name": "sfp16"
+            },
+            {
+                "name": "sfp17"
+            },
+            {
+                "name": "sfp18"
+            },
+            {
+                "name": "sfp19"
+            },
+            {
+                "name": "sfp20"
+            },
+            {
+                "name": "sfp21"
+            },
+            {
+                "name": "sfp22"
+            },
+            {
+                "name": "sfp23"
+            },
+            {
+                "name": "sfp24"
+            },
+            {
+                "name": "sfp25"
+            },
+            {
+                "name": "sfp26"
+            },
+            {
+                "name": "sfp27"
+            },
+            {
+                "name": "sfp28"
+            },
+            {
+                "name": "sfp29"
+            },
+            {
+                "name": "sfp30"
+            },
+            {
+                "name": "sfp31"
+            },
+            {
+                "name": "sfp32"
+            },
+            {
+                "name": "sfp33"
+            },
+            {
+                "name": "sfp34"
+            },
+            {
+                "name": "sfp35"
+            },
+            {
+                "name": "sfp36"
+            },
+            {
+                "name": "sfp37"
+            },
+            {
+                "name": "sfp38"
+            },
+            {
+                "name": "sfp39"
+            },
+            {
+                "name": "sfp40"
+            },
+            {
+                "name": "sfp41"
+            },
+            {
+                "name": "sfp42"
+            },
+            {
+                "name": "sfp43"
+            },
+            {
+                "name": "sfp44"
+            },
+            {
+                "name": "sfp45"
+            },
+            {
+                "name": "sfp46"
+            },
+            {
+                "name": "sfp47"
+            },
+            {
+                "name": "sfp48"
+            },
+            {
+                "name": "sfp49"
+            },
+            {
+                "name": "sfp50"
+            },
+            {
+                "name": "sfp51"
+            },
+            {
+                "name": "sfp52"
+            },
+            {
+                "name": "sfp53"
+            },
+            {
+                "name": "sfp54"
+            },
+            {
+                "name": "sfp55"
+            },
+            {
+                "name": "sfp56"
+            },
+            {
+                "name": "sfp57"
+            },
+            {
+                "name": "sfp58"
+            },
+            {
+                "name": "sfp59"
+            },
+            {
+                "name": "sfp60"
+            },
+            {
+                "name": "sfp61"
+            },
+            {
+                "name": "sfp62"
+            },
+            {
+                "name": "sfp63"
+            },
+            {
+                "name": "sfp64"
+            },
+            {
+                "name": "sfp65"
+            }
         ]
     },
-    "psus": [
-        {
-            "name": "psu-1"
-        },
-        {
-            "name": "psu-2"
-        }
-    ],
     "interfaces": {
         "Ethernet0": {
             "index": "1,1,1,1",

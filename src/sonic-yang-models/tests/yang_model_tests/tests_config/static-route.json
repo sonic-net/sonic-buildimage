@@ -1,0 +1,1028 @@
+{
+    "STATIC_ROUTE_TEST": {
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "10.0.0.1/24",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+       "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "vrf_name": "default",
+                        "prefix":"100.100.100.1/24",
+                        "nexthop":"10.10.10.1",
+                        "distance": "1",
+                        "nexthop-vrf":"default",
+                        "blackhole":"false"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_WITH_INTERFACE": {
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "10.0.0.1/30",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+       "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "vrf_name": "default",
+                        "prefix":"100.100.100.1/24",
+                        "nexthop":"0.0.0.0",
+                        "ifname":"Ethernet8",
+                        "distance": "1",
+                        "nexthop-vrf":"default",
+                        "blackhole":"false"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_WITH_BLACKHOLE": {
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "10.0.0.1/30",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+       "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "150.150.150.0/24",
+                        "vrf_name": "default",
+                        "ifname": "Ethernet8",
+                        "distance": "1",
+                        "nexthop-vrf": "default",
+                        "blackhole": "true"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_WITH_VRF": {
+         "sonic-vrf:sonic-vrf": {
+           "VRF": {
+             "VRF_LIST": [
+               {
+                 "name": "VrfMav",
+                 "fallback": true
+               }
+              ]
+            }
+         },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+       "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "75.75.75.0/24",
+                        "vrf_name": "VrfMav",
+                        "nexthop": "1.1.1.2",
+                        "ifname": "Ethernet8",
+                        "distance": "1",
+                        "nexthop-vrf": "VrfMav",
+                        "blackhole": "false"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_WITH_KEY_VRF_MGMT": {
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+       "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "75.75.75.0/24",
+                        "vrf_name": "mgmt",
+                        "nexthop": "1.1.1.2",
+                        "ifname": "Ethernet8",
+                        "distance": "1",
+                        "nexthop-vrf": "mgmt",
+                        "blackhole": "false"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_WITH_VRF_MGMT": {
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+       "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "75.75.75.0/24",
+                        "vrf_name": "VrfMav",
+                        "nexthop": "1.1.1.2",
+                        "ifname": "Ethernet8",
+                        "distance": "1",
+                        "nexthop-vrf": "mgmt",
+                        "blackhole": "false"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_WITH_VRF_LEAK": {
+         "sonic-vrf:sonic-vrf": {
+           "VRF": {
+             "VRF_LIST": [
+               {
+                 "name": "VrfAbc",
+                 "fallback": true
+               }
+              ]
+            }
+         },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+       "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "85.85.85.0/24",
+                        "vrf_name": "default",
+                        "nexthop": "1.0.0.2",
+                        "ifname": "Ethernet8",
+                        "distance": "1",
+                        "nexthop-vrf": "VrfAbc",
+                        "blackhole": "false"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_ECMP": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet0",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet0"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "2.0.0.1/30",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "15.15.15.0/24",
+                        "vrf_name": "default",
+                        "nexthop": "1.0.0.2,2.0.0.2",
+                        "distance": "1,1",
+                        "nexthop-vrf": "default,default",
+                        "blackhole": "false,false"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_ECMP_WITH_MGMT": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet0",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet0"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "2.0.0.1/30",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "15.15.15.0/24",
+                        "vrf_name": "default",
+                        "nexthop": "1.0.0.2,2.0.0.2",
+                        "distance": "1,1",
+                        "nexthop-vrf": "default,mgmt",
+                        "blackhole": "false,false"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_ECMP_WITH_INTERFACE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet0",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet0"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "2.0.0.1/30",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "16.16.16.0/24",
+                        "vrf_name": "default",
+                                                "nexthop": "0.0.0.0,0.0.0.0",
+                        "ifname": "Ethernet0,Ethernet8",
+                        "distance": "1,1",
+                        "nexthop-vrf": "default,default",
+                        "blackhole": "false,false"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_DISTANCE_INVALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet0",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet0"
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "16.16.16.0/24",
+                        "vrf_name": "default",
+                        "nexthop": "1.0.0.4",
+                        "distance": "300",
+                        "nexthop-vrf": "default",
+                        "blackhole": "false"
+                }]
+            }
+        }
+    },
+        "STATIC_ROUTE_TEST_BLACKHOLE_INVALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet0",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet0"
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "16.16.16.0/24",
+                        "vrf_name": "default",
+                        "nexthop": "1.0.0.5",
+                        "distance": "1",
+                        "nexthop-vrf": "default",
+                        "blackhole": "down"
+                }]
+            }
+        }
+    },
+        "STATIC_ROUTE_TEST_NEXTHOP_VRF_INVALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet0",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet0"
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "16.16.16.0/24",
+                        "vrf_name": "default",
+                        "nexthop": "1.0.05",
+                        "distance": "1",
+                        "nexthop-vrf": "vrf123",
+                        "blackhole": "false"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_NEXTHOP_VRF_INVALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet0",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet0"
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "16.16.16.0/24",
+                        "vrf_name": "default",
+                        "nexthop": "1.0.05",
+                        "distance": "1",
+                        "nexthop-vrf": "vrf123",
+                        "blackhole": "false"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_ECMP_DISTANCE_INVALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet0",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet0"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "2.0.0.1/30",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "16.16.16.0/24",
+                        "vrf_name": "default",
+                                                "nexthop": "1.0.0.3,2.0.0.8",
+                        "distance": "1000,1",
+                        "nexthop-vrf": "default,default",
+                        "blackhole": "false,false"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_ECMP_BLACKHOLE_INVALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet0",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet0"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "2.0.0.1/30",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "16.16.16.0/24",
+                        "vrf_name": "default",
+                        "nexthop": "1.0.0.4,2.0.0.3",
+                        "distance": "1,1",
+                        "nexthop-vrf": "default,default",
+                        "blackhole": "no,no"
+                }]
+            }
+        }
+    },
+    "STATIC_ROUTE_TEST_ECMP_NEXTHOP_VRF_INVALID": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth0",
+                        "description": "Ethernet0",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet0",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "1.0.0.1/30",
+                        "name": "Ethernet0",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet0"
+                    }
+                ]
+            }
+        },
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                    {
+                        "admin_status": "up",
+                        "alias": "eth8",
+                        "description": "Ethernet8",
+                        "fec": "rs",
+                        "lanes": "65",
+                        "mtu": 9000,
+                        "name": "Ethernet8",
+                        "speed": 25000
+                    }
+                ]
+            }
+        },
+        "sonic-interface:sonic-interface": {
+            "sonic-interface:INTERFACE": {
+                "INTERFACE_IPPREFIX_LIST": [
+                    {
+                        "family": "IPv4",
+                        "ip-prefix": "2.0.0.1/30",
+                        "name": "Ethernet8",
+                        "scope": "global"
+                    }
+                ],
+                "INTERFACE_LIST": [
+                    {
+                        "name": "Ethernet8"
+                    }
+                ]
+            }
+        },
+        "sonic-static-route:sonic-static-route": {
+            "sonic-static-route:STATIC_ROUTE": {
+                "STATIC_ROUTE_LIST": [{
+                        "prefix": "16.16.16.0/24",
+                        "vrf_name": "default",
+                        "nexthop": "1.0.0.4,2.0.0.3",
+                        "distance": "1,1",
+                        "nexthop-vrf": "vrf123,xyz",
+                        "blackhole": "false,false"
+                }]
+            }
+        }
+    }
+
+}
+
+

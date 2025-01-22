@@ -1,0 +1,138 @@
+Don't reset the retry count after setting it for 60 seconds
+
+From: Saikrishna Arcot <sarcot@microsoft.com>
+Date: 2023-01-18 14:26:36 -0800
+
+After setting the retry count to some custom value, if a normal LACP
+packet comes in without a custom retry count, don't reset it back to
+the default retry count for 60 seconds since the last new packet.
+---
+ teamd/teamd_runner_lacp.c |   58 +++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 50 insertions(+), 8 deletions(-)
+
+diff --git a/teamd/teamd_runner_lacp.c b/teamd/teamd_runner_lacp.c
+index 3e8a0f6..b6a8647 100644
+--- a/teamd/teamd_runner_lacp.c
++++ b/teamd/teamd_runner_lacp.c
+@@ -180,6 +180,7 @@ struct lacp {
+ 	struct lacp_port *selected_agg_lead; /* leading port of selected aggregator */
+ 	bool carrier_up;
+ 	time_t warm_start_mode_timer;
++	time_t next_retry_count_change_time;
+ 	struct {
+ 		bool active;
+ #define		LACP_CFG_DFLT_ACTIVE true
+@@ -234,6 +235,7 @@ struct lacp_port {
+ 	struct lacp_port *agg_lead; /* leading port of aggregator.
+ 				     * NULL in case this port is not selected */
+ 	enum lacp_port_state state;
++	int last_received_lacpdu_version;
+ 	bool lacpdu_saved;
+ 	struct lacpdu last_pdu;
+ 	struct {
+@@ -1351,6 +1353,7 @@ static int lacp_port_set_state(struct lacp_port *lacp_port,
+ 		if (err)
+ 			return err;
+ 		lacp_port->lacp->cfg.retry_count = LACP_CFG_DFLT_RETRY_COUNT;
++		lacp_port->last_received_lacpdu_version = 0x01;
+ 		teamd_loop_callback_disable(lacp_port->ctx,
+ 					    LACP_RETRY_COUNT_TIMEOUT_CB_NAME, lacp_port->lacp);
+ 		lacp_port_timeout_set(lacp_port, true);
+@@ -1462,7 +1465,7 @@ static int lacpdu_send(struct lacp_port *lacp_port)
+ 	if (lacp_port->lacp->cfg.enable_retry_count) {
+ 		if (lacp_port->lacp->cfg.retry_count != LACP_CFG_DFLT_RETRY_COUNT
+ 				|| lacp_port->partner_retry_count != LACP_CFG_DFLT_RETRY_COUNT) {
+-			lacpdu_init(&lacpdu, 0xf1);
++			lacpdu_init(&lacpdu, lacp_port->last_received_lacpdu_version);
+ 		} else {
+ 			lacpdu_init(&lacpdu, 0x01);
+ 		}
+@@ -1483,9 +1486,12 @@ static int lacpdu_send(struct lacp_port *lacp_port)
+ 	return err;
+ }
+ 
++#define LACP_RETRY_COUNT_RESET_TIMEOUT_SECONDS 60
++
+ static int lacpdu_process(struct lacp_port *lacp_port, struct lacpdu* lacpdu)
+ {
+ 	int err;
++	struct timespec monotonic_time = {0};
+ 
+ 	if (!lacpdu_check(lacpdu))
+ 		return 0;
+@@ -1523,14 +1529,38 @@ static int lacpdu_process(struct lacp_port *lacp_port, struct lacpdu* lacpdu)
+ 					lacp_port->partner_retry_count,
+ 					lacpdu->v2.actor_retry_count);
+ 			lacp_port->partner_retry_count = lacpdu->v2.actor_retry_count;
++			if (clock_gettime(CLOCK_MONOTONIC, &monotonic_time)) {
++				err = errno;
++				teamd_log_err("%s: unable to get current time: %s", lacp_port->tdport->ifname, strerror(err));
++				return -err;
++			}
++		}
++		if (lacp_port->partner_retry_count != LACP_CFG_DFLT_RETRY_COUNT) {
++			// Reset the change time every time a 0xf1 packet comes in
++			if (clock_gettime(CLOCK_MONOTONIC, &monotonic_time)) {
++				err = errno;
++				teamd_log_err("%s: unable to get current time: %s", lacp_port->tdport->ifname, strerror(err));
++				return -err;
++			}
++			lacp_port->lacp->next_retry_count_change_time = monotonic_time.tv_sec + LACP_RETRY_COUNT_RESET_TIMEOUT_SECONDS;
+ 		}
+ 	} else {
+ 		if (lacp_port->partner_retry_count != LACP_CFG_DFLT_RETRY_COUNT) {
+-			teamd_log_dbg(lacp_port->ctx, "%s: retry count from partner changed from %u to %u",
+-					lacp_port->tdport->ifname,
+-					lacp_port->partner_retry_count,
+-					LACP_CFG_DFLT_RETRY_COUNT);
+-			lacp_port->partner_retry_count = LACP_CFG_DFLT_RETRY_COUNT;
++			if (clock_gettime(CLOCK_MONOTONIC, &monotonic_time)) {
++				err = errno;
++				teamd_log_err("%s: unable to get current time: %s", lacp_port->tdport->ifname, strerror(err));
++				return -err;
++			}
++			if (monotonic_time.tv_sec < lacp_port->lacp->next_retry_count_change_time) {
++				teamd_log_dbg(lacp_port->ctx, "%s: ignoring resetting retry count to 3",
++						lacp_port->tdport->ifname);
++			} else {
++				teamd_log_dbg(lacp_port->ctx, "%s: retry count from partner changed from %u to %u",
++						lacp_port->tdport->ifname,
++						lacp_port->partner_retry_count,
++						LACP_CFG_DFLT_RETRY_COUNT);
++				lacp_port->partner_retry_count = LACP_CFG_DFLT_RETRY_COUNT;
++			}
+ 		}
+ 	}
+ 
+@@ -1540,10 +1570,21 @@ static int lacpdu_process(struct lacp_port *lacp_port, struct lacpdu* lacpdu)
+ 
+ 	lacp_port_actor_update(lacp_port);
+ 
++	if (lacp_port->last_received_lacpdu_version != lacpdu->version_number) {
++		teamd_log_dbg(lacp_port->ctx, "%s: LACPDU version changed from %u to %u",
++				lacp_port->tdport->ifname,
++				lacp_port->last_received_lacpdu_version,
++				lacpdu->version_number);
++		lacp_port->last_received_lacpdu_version = lacpdu->version_number;
++		// Force-send a LACPDU packet acknowledging change in version
++		err = lacpdu_send(lacp_port);
++		if (err)
++			return err;
++	}
++
+ 	/* Check if the other side has correct info about us */
+ 	if (memcmp(&lacpdu->partner, &lacp_port->actor, sizeof(struct lacpdu_info))
+-			|| (lacpdu->version_number == 0xf1 && lacp_port->lacp->cfg.retry_count != lacpdu->v2.partner_retry_count)
+-			|| (lacpdu->version_number != 0xf1 && lacp_port->lacp->cfg.retry_count != LACP_CFG_DFLT_RETRY_COUNT)) {
++			|| (lacpdu->version_number == 0xf1 && lacp_port->lacp->cfg.retry_count != lacpdu->v2.partner_retry_count)) {
+ 		err = lacpdu_send(lacp_port);
+ 		if (err)
+ 			return err;
+@@ -2210,6 +2251,7 @@ static int lacp_state_retry_count_work(struct teamd_context *ctx,
+ 		if (lacp_port_selected(lacp_port)) {
+ 			teamd_log_dbg(ctx, "%s: Notifying partner of updated retry count",
+ 					   lacp_port->tdport->ifname);
++			lacp_port->last_received_lacpdu_version = 0xf1;
+ 			lacpdu_send(lacp_port);
+ 		}
+ 	}

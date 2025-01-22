@@ -1,6 +1,11 @@
 Source: systemd-sonic-generator
+Section: devel
+Priority: optional
+Build-Depends: debhelper (>= 11.0.0)
+Standards-Version: 3.9.3
 Maintainer: Lawrence Lee <t-lale@microsoft.com>
 
 Package: systemd-sonic-generator
 Architecture: any
+Depends: ${shlibs:Depends}
 Description: Systemd generator for SONiC services

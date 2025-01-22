@@ -13,6 +13,10 @@
                             {
                                 "dscp":"2",
                                 "tc":"2"
+                            },
+                            {
+                                "dscp":"8",
+                                "tc":"8"
                             }
                         ]
                     },
@@ -26,6 +30,10 @@
                             {
                                 "dscp":"2",
                                 "tc":"2"
+                            },
+                            {
+                                "dscp":"8",
+                                "tc":"8"
                             }
                         ]
                     }
@@ -65,7 +73,7 @@
                         "DSCP_TO_TC_MAP": [
                             {
                                 "dscp": "1",
-                                "tc": "8"
+                                "tc": "16"
                             },
                             {
                                 "dscp":"2",
@@ -92,6 +100,10 @@
                             {
                                 "dot1p":"2",
                                 "tc":"2"
+                            },
+                            {
+                                "dot1p":"3",
+                                "tc":"8"
                             }
                         ]
                     },
@@ -105,6 +117,10 @@
                             {
                                 "dot1p":"2",
                                 "tc":"2"
+                            },
+                            {
+                                "dot1p":"3",
+                                "tc":"8"
                             }
                         ]
                     }
@@ -144,7 +160,7 @@
                         "DOT1P_TO_TC_MAP": [
                             {
                                 "dot1p": "1",
-                                "tc": "8"
+                                "tc": "16"
                             },
                             {
                                 "dot1p":"2",
@@ -171,6 +187,10 @@
                             {
                                 "tc":"2",
                                 "qindex":"2"
+                            },
+                            {
+                                "tc":"8",
+                                "qindex":"3"
                             }
                         ]
                     },
@@ -184,6 +204,10 @@
                             {
                                 "tc":"2",
                                 "qindex":"2"
+                            },
+                            {
+                                "tc":"8",
+                                "qindex":"3"
                             }
                         ]
                     }
@@ -250,6 +274,10 @@
                             {
                                 "tc":"2",
                                 "pg":"2"
+                            },
+                            {
+                                "tc":"8",
+                                "pg":"3"
                             }
                         ]
                     },
@@ -263,6 +291,10 @@
                             {
                                 "tc":"2",
                                 "pg":"2"
+                            },
+                            {
+                                "tc":"8",
+                                "pg":"3"
                             }
                         ]
                     }
@@ -487,13 +519,17 @@
                             {
                                 "dscp":"2",
                                 "tc":"2"
+                            },
+                            {
+                                "dscp":"8",
+                                "tc":"8"
                             }
                         ]
                     }
                 ]
             }
         },
-     
+
         "sonic-dot1p-tc-map:sonic-dot1p-tc-map": {
             "sonic-dot1p-tc-map:DOT1P_TO_TC_MAP": {
                 "DOT1P_TO_TC_MAP_LIST": [
@@ -507,6 +543,10 @@
                             {
                                 "dot1p":"2",
                                 "tc":"2"
+                            },
+                            {
+                                "dot1p":"3",
+                                "tc":"8"
                             }
                         ]
                     }
@@ -527,6 +567,10 @@
                             {
                                 "tc":"2",
                                 "qindex":"2"
+                            },
+                            {
+                                "tc":"8",
+                                "qindex":"3"
                             }
                         ]
                     }
@@ -546,6 +590,10 @@
                             {
                                 "tc":"2",
                                 "pg":"2"
+                            },
+                            {
+                                "tc":"8",
+                                "pg":"3"
                             }
                         ]
                     }
@@ -609,6 +657,24 @@
                 ]
             }
         },
+
+        "sonic-scheduler:sonic-scheduler":{
+            "sonic-scheduler:SCHEDULER": {
+                "SCHEDULER_LIST": [
+                {
+                    "name":"port_scheduler",
+                    "cbs": "256",
+                    "cir": "1250000",
+                    "meter_type": "bytes",
+                    "pbs": "1024",
+                    "pir": "25000000",
+                    "type": "DWRR",
+                    "weight": "10"
+                }
+                ]
+            }
+        },
+
         "sonic-port-qos-map:sonic-port-qos-map": {
             "sonic-port-qos-map:PORT_QOS_MAP": {
                 "PORT_QOS_MAP_LIST": [
@@ -621,7 +687,46 @@
                         "pfc_to_pg_map": "map1",
                         "dscp_to_tc_map": "map1",
                         "dot1p_to_tc_map": "map1",
-                        "pfc_enable": "3,4"
+                        "pfc_enable": "2,3,4,6",
+                        "pfcwd_sw_enable" : "2,3,4,6",
+                        "scheduler" : "port_scheduler"
+                    }
+                ]
+            }
+        }
+    },
+
+    "PORT_QOS_MAP_APPLY_MAP_TO_GLOBAL": {
+        "sonic-dscp-tc-map:sonic-dscp-tc-map": {
+            "sonic-dscp-tc-map:DSCP_TO_TC_MAP": {
+                "DSCP_TO_TC_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "DSCP_TO_TC_MAP": [
+                            {
+                                "dscp": "1",
+                                "tc": "1"
+                            },
+                            {
+                                "dscp":"2",
+                                "tc":"2"
+                            },
+                            {
+                                "dscp":"8",
+                                "tc":"8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "global",
+                        "dscp_to_tc_map": "map1"
                     }
                 ]
             }
@@ -657,13 +762,43 @@
                         "pfc_to_pg_map": "map2",
                         "dscp_to_tc_map": "map2",
                         "dot1p_to_tc_map": "map2",
-                        "pfc_enable": "3,4"
+                        "pfc_enable": "3,4",
+                        "pfcwd_sw_enable" : "3,4"
                     }
                 ]
             }
         }
     },
-   
+
+    "PORT_QOS_MAP_APPLY_NON_EXISTS_SCHEDULER": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet0",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet0",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-port-qos-map:sonic-port-qos-map": {
+            "sonic-port-qos-map:PORT_QOS_MAP": {
+                "PORT_QOS_MAP_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "scheduler": "scheduler1"
+                    }
+                ]
+            }
+        }
+    },
+
      "PORT_QOS_MAP_APPLY_NON_EXISTS_PORT": {
         "sonic-port:sonic-port": {
             "sonic-port:PORT": {
@@ -714,11 +849,98 @@
                 "PORT_QOS_MAP_LIST": [
                     {
                         "ifname": "Ethernet4",
-                        "pfc_enable": "8"
+                        "pfc_enable": "8",
+                        "pfcwd_sw_enable" : "8"
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DSCP_MAP_CRETAE": {
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            },
+                            {
+                                "tc": "8",
+                                "dscp": "8"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            },
+                            {
+                                "tc": "8",
+                                "dscp": "8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DSCP_MAP_CREATE_INVALID_TC": {
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "16",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DSCP_MAP_CREATE_INVALID_DSCP": {
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "64"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            }
+                        ]
                     }
                 ]
             }
         }
     }
-
 }

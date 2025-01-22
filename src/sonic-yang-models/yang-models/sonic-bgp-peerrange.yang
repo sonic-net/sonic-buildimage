@@ -1,0 +1,64 @@
+module sonic-bgp-peerrange {
+    namespace "http://github.com/sonic-net/sonic-bgp-peerrange";
+    prefix pr;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BGP Peer Range YANG";
+
+    revision 2022-02-24 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-bgp-peerrange {
+        container BGP_PEER_RANGE {
+            list BGP_PEER_RANGE_LIST {
+                key "peer_range_name";
+
+                leaf peer_range_name {
+                    type string;
+                    description "Peer range name";
+                }
+
+                leaf name {
+                    type string;
+                    must "(current() = current()/../peer_range_name)" {
+                        error-message "Invalid name";
+                    }
+                }
+
+                leaf src_address {
+                    type inet:ip-address;
+                    description "Source address to use for connection";
+                }
+
+                leaf peer_asn {
+                    type uint32 {
+                        range "1..4294967295";
+                    }
+                    description "Peer AS number";
+                }
+
+                leaf-list ip_range {
+                    type stypes:sonic-ip-prefix;
+                    description "A range of addresses";
+                }
+            }
+        }
+    }
+}

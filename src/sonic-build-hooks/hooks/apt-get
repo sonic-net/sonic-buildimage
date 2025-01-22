@@ -3,36 +3,28 @@
 INSTALL=
 . /usr/local/share/buildinfo/scripts/buildinfo_base.sh
 
-REAL_COMMAND=$(get_command apt-get)
+REAL_COMMAND=$APT_REAL_COMMAND
+[ -z "$REAL_COMMAND" ] && REAL_COMMAND=$(get_command apt-get)
 if [ -z "$REAL_COMMAND" ]; then
     echo "The command apt-get does not exist." 1>&2
     exit 1
 fi
 
-VERSION_FILE="/usr/local/share/buildinfo/versions/versions-deb"
-if [ "$ENABLE_VERSION_CONTROL_DEB" == "y" ]; then
-    for para in $@
-    do
-        if [[ "$para" != -* ]]; then
-            continue
-        fi
-        if [ ! -z "$INSTALL" ]; then
-            if [[ "$para" == *=* ]]; then
-                continue
-            elif [[ "$para" == *=* ]]; then
-                continue
-            else
-                package=$para
-                if ! grep -q "^${package}=" $VERSION_FILE; then
-                    echo "The version of the package ${package} is not specified."
-                    exit 1
-                fi
-            fi
-        elif [[ "$para" == "install"  ]]; then
-            INSTALL=y
-        fi
-    done
+INSTALL=$(check_apt_install "$@")
+COMMAND_INFO="Locked by command: $REAL_COMMAND $@"
+if [ "$INSTALL" == y ]; then
+    check_apt_version "$@"
+    lock_result=$(acquire_apt_installation_lock "$COMMAND_INFO" )
+    $REAL_COMMAND "$@"
+    command_result=$?
+    [ "$lock_result" == y ] && release_apt_installation_lock
+    exit $command_result
+else
+    if [[ " $@ " == *" purge "* || " $@ " == *" remove "* ]]; then
+      # When running the purge command, collect the debian versions
+      dpkg-query -W -f '${Package}==${Version}\n' >> $POST_VERSION_PATH/purge-versions-deb
+      chmod a+wr $POST_VERSION_PATH/purge-versions-deb
+    fi
+    $REAL_COMMAND "$@"
 fi
 
-
-$REAL_COMMAND "$@"

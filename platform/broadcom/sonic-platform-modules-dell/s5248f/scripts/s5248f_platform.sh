@@ -30,15 +30,14 @@ sys_eeprom() {
 switch_board_qsfp_mux() {
     case $1 in
         "new_device")
-                      for ((i=603;i<=610;i++));
+                      for ((i=603;i<=609;i++));
                       do
                           echo "Attaching PCA9548 @ 0x74"
                           echo pca9548 0x74 > /sys/bus/i2c/devices/i2c-$i/$1
                       done
-
                       ;;
         "delete_device")
-                      for ((i=603;i<=610;i++));
+                      for ((i=603;i<=609;i++));
                       do
                           echo "Detaching PCA9548 @ 0x74"
                           echo 0x74 > /sys/bus/i2c/devices/i2c-$i/$1
@@ -56,7 +55,11 @@ switch_board_qsfp_mux() {
 switch_board_qsfp() {
         case $1 in
         "new_device")
-                        for ((i=2;i<=57;i++));
+                        for ((i=2;i<=49;i++));
+                        do
+                            echo optoe2 0x50 > /sys/bus/i2c/devices/i2c-$i/$1
+                        done
+                        for ((i=50;i<=57;i++));
                         do
                             echo optoe1 0x50 > /sys/bus/i2c/devices/i2c-$i/$1
                         done
@@ -84,20 +87,6 @@ switch_board_modsel() {
 		hex=$( printf "0x%x" $port_addr )
 		/usr/bin/pcisysfs.py --set --offset $hex --val 0x10 --res $resource  > /dev/null 2>&1
 	done
-}
-
-install_python_api_package() {
-    device="/usr/share/sonic/device"
-    platform=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
-
-    rv=$(pip3 install $device/$platform/sonic_platform-1.0-py3-none-any.whl)
-}
-
-remove_python_api_package() {
-    rv=$(pip3 show sonic-platform > /dev/null 2>/dev/null)
-    if [ $? -eq 0 ]; then
-        rv=$(pip3 uninstall -y sonic-platform > /dev/null 2>/dev/null)
-    fi
 }
 
 platform_firmware_versions() {
@@ -128,16 +117,6 @@ platform_firmware_versions() {
 	r_min=`/usr/sbin/i2cget -y 600 0x31 0x0 | sed ' s/.*\(0x..\)$/\1/'`
 	r_maj=`/usr/sbin/i2cget -y 600 0x31 0x1 | sed ' s/.*\(0x..\)$/\1/'`
 	echo "Slave CPLD 2: $((r_maj)).$((r_min))" >> $FIRMWARE_VERSION_FILE
-
-	#Slave CPLD 3 0x32 on i2c bus 600 ( physical FPGA I2C-1)
-	r_min=`/usr/sbin/i2cget -y 600 0x32 0x0 | sed ' s/.*\(0x..\)$/\1/'`
-	r_maj=`/usr/sbin/i2cget -y 600 0x32 0x1 | sed ' s/.*\(0x..\)$/\1/'`
-	echo "Slave CPLD 3: $((r_maj)).$((r_min))" >> $FIRMWARE_VERSION_FILE
-
-	#Slave CPLD 3 0x32 on i2c bus 600 ( physical FPGA I2C-1)
-	r_min=`/usr/sbin/i2cget -y 600 0x33 0x0 | sed ' s/.*\(0x..\)$/\1/'`
-	r_maj=`/usr/sbin/i2cget -y 600 0x33 0x1 | sed ' s/.*\(0x..\)$/\1/'`
-	echo "Slave CPLD 4: $((r_maj)).$((r_min))" >> $FIRMWARE_VERSION_FILE
 }
 
 #This enables the led control for CPU and default states 
@@ -145,6 +124,36 @@ switch_board_led_default() {
 	resource="/sys/bus/pci/devices/0000:04:00.0/resource0"
 	/usr/bin/pcisysfs.py --set --offset 0x24 --val 0x194 --res $resource  > /dev/null 2>&1
 }
+
+install_python_api_package() {
+    device="/usr/share/sonic/device"
+    platform=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+
+    pip3 install $device/$platform/sonic_platform-1.0-py3-none-any.whl
+}
+
+remove_python_api_package() {
+    rv=$(pip3 show sonic-platform > /dev/null 2>/dev/null)
+    if [ $? -eq 0 ]; then
+        rv=$(pip3 uninstall -y sonic-platform > /dev/null 2>/dev/null)
+    fi
+}
+
+get_reboot_cause() {
+    REBOOT_REASON_FILE="/host/reboot-cause/platform/reboot_reason"
+    resource="/sys/bus/pci/devices/0000:04:00.0/resource0"
+
+    mkdir -p $(dirname $REBOOT_REASON_FILE)
+
+    # Handle First Boot into software version with reboot cause determination support
+    if [[ ! -e $REBOOT_REASON_FILE ]]; then
+        echo "0" > $REBOOT_REASON_FILE
+    else
+        /usr/bin/pcisysfs.py --get --offset 0x18 --res $resource | sed '1d; s/.*:\(.*\)$/\1/;' > $REBOOT_REASON_FILE
+    fi
+    /usr/bin/pcisysfs.py --set --val 0x0 --offset 0x18 --res $resource
+}
+
 init_devnum
 
 if [ "$1" == "init" ]; then
@@ -155,6 +164,7 @@ if [ "$1" == "init" ]; then
     modprobe i2c_ocores
     modprobe dell_s5248f_fpga_ocores
     sys_eeprom "new_device"
+    get_reboot_cause
     switch_board_qsfp_mux "new_device"
     switch_board_qsfp "new_device"
     switch_board_modsel
@@ -169,14 +179,11 @@ if [ "$1" == "init" ]; then
     echo -2 > /sys/bus/i2c/drivers/pca954x/607-0074/idle_state
     echo -2 > /sys/bus/i2c/drivers/pca954x/608-0074/idle_state
     echo -2 > /sys/bus/i2c/drivers/pca954x/609-0074/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/610-0074/idle_state
 
 elif [ "$1" == "deinit" ]; then
     sys_eeprom "delete_device"
     switch_board_qsfp "delete_device"
     switch_board_qsfp_mux "delete_device"
-
-    modprobe -r dell_s5248f_fpga_ocores
     modprobe -r i2c_ocores
     modprobe -r acpi_ipmi
     modprobe -r ipmi_si
@@ -185,6 +192,5 @@ elif [ "$1" == "deinit" ]; then
     modprobe -r i2c-dev
     remove_python_api_package
 else
-     echo "s5248f_platform : Invalid option !"
+    echo "s5248f_platform : Invalid option !"
 fi
-

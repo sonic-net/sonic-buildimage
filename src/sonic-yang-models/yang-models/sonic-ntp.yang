@@ -2,7 +2,7 @@ module sonic-ntp {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-system-ntp";
+    namespace "http://github.com/sonic-net/sonic-system-ntp";
     prefix ntp;
 
     import ietf-inet-types {
@@ -32,13 +32,50 @@ module sonic-ntp {
     import sonic-mgmt_port {
         prefix mprt;
     }
-    
+
+    import sonic-types {
+        prefix stypes;
+    }
+
     description
         "NTP yang Module for SONiC OS";
 
     revision 2021-04-07 {
         description
             "First revision";
+    }
+
+    revision 2023-03-20 {
+        description
+            "Add extended configuration options";
+    }
+
+    typedef association-type {
+        description "NTP server association type";
+        type enumeration {
+            enum server;
+            enum pool;
+        }
+    }
+
+    typedef key-type {
+        description "NTP key encryption type";
+        type enumeration {
+            enum md5;
+            enum sha1;
+            enum sha256;
+            enum sha384;
+            enum sha512;
+        }
+    }
+
+    typedef key-id {
+        description "NTP key ID";
+        type uint16 {
+            range 1..65535 {
+                error-message "Failed NTP key ID";
+            }
+        }
     }
 
     container sonic-ntp {
@@ -48,7 +85,7 @@ module sonic-ntp {
             container global {
 
                 description "Global NTP part of config_db.json";
-                
+
                 leaf-list src_intf {
                     type union {
                         type leafref {
@@ -68,13 +105,16 @@ module sonic-ntp {
                         type leafref {
                             path /mprt:sonic-mgmt_port/mprt:MGMT_PORT/mprt:MGMT_PORT_LIST/mprt:name;
                         }
+                        type string {
+                            pattern 'eth0';
+                        }
                     }
 
                     description
                         "This is the interface whose IP address is used as the source IP address for
-                         generating NTP traffic. User is required to make sure that the NTP server 
-                         is reachable via this IP address and the same IP address is reachable 
-                         from the NTP server. The source interface should be in the same VRF as the 
+                         generating NTP traffic. User is required to make sure that the NTP server
+                         is reachable via this IP address and the same IP address is reachable
+                         from the NTP server. The source interface should be in the same VRF as the
                          VRF NTP is enabled in.";
                 }
 
@@ -89,7 +129,31 @@ module sonic-ntp {
 
                     description
                         "NTP can be enabled only in one VRF at a time. In this revision, it is either
-                         default VRF or Management VRF."; 
+                         default VRF or Management VRF.";
+                }
+
+                leaf authentication {
+                    type stypes:admin_mode;
+                    default disabled;
+                    description "NTP authentication state";
+                }
+
+                leaf dhcp {
+                    type stypes:admin_mode;
+                    default enabled;
+                    description "Use NTP servers distributed by DHCP";
+                }
+
+                leaf server_role {
+                    type stypes:admin_mode;
+                    default enabled;
+                    description "NTP server functionality state";
+                }
+
+                leaf admin_state {
+                    type stypes:admin_mode;
+                    default enabled;
+                    description "NTP feature state";
                 }
 
             } /* end of container global */
@@ -97,9 +161,9 @@ module sonic-ntp {
         } /* end of container NTP */
 
         container NTP_SERVER {
-        
+
             description "NTP SERVER part of config_db.json";
-    
+
             list NTP_SERVER_LIST {
                 max-elements 10;
                 description
@@ -112,9 +176,94 @@ module sonic-ntp {
                 leaf server_address {
                     type inet:host;
                 }
-            } /* end of list NTP_SERVER_LIST */ 
+
+                leaf association_type {
+                    type association-type;
+                    default server;
+                    description "NTP remote association type: server or pool.";
+                }
+
+                leaf iburst {
+                    type stypes:on-off;
+                    default on;
+                    description "NTP aggressive polling";
+                }
+
+                leaf key {
+                    description "NTP server key ID";
+                    type leafref {
+                        path /ntp:sonic-ntp/ntp:NTP_KEY/ntp:NTP_KEYS_LIST/ntp:id;
+                    }
+                }
+
+                leaf resolve_as {
+                    type inet:host;
+                    description "Server resolved IP address";
+                }
+
+                leaf admin_state {
+                    type stypes:admin_mode;
+                    default enabled;
+                    description "NTP server state";
+                }
+
+                leaf trusted {
+                    type stypes:yes-no;
+                    default no;
+                    description "Trust this server. It will force time
+                                 synchronization only to this server when
+                                 authentication is enabled";
+                }
+
+                leaf version {
+                    type uint8 {
+                        range "3..4" {
+                            error-message "Failed NTP version";
+                        }
+                    }
+                    default 4;
+                    description "NTP proto version to communicate with NTP
+                                 server";
+                }
+
+            } /* end of list NTP_SERVER_LIST */
 
         } /* end of container NTP_SERVER */
+
+        container NTP_KEY {
+
+            description "NTP authentication keys inventory";
+
+            list NTP_KEYS_LIST {
+                description "NTP authentication keys inventory";
+                key "id";
+
+                leaf id {
+                    type key-id;
+                    description "NTP key ID";
+                }
+
+                leaf trusted {
+                    type stypes:yes-no;
+                    default no;
+                    description "Trust this NTP key";
+                }
+
+                leaf value {
+                    type string {
+                        length 1..64;
+                    }
+                    description "NTP encrypted authentication key";
+                }
+
+                leaf type {
+                    type key-type;
+                    default md5;
+                    description "NTP authentication key type";
+                }
+            } /* end of list NTP_KEYS_LIST */
+
+        } /* end of container NTP_KEY */
 
     } /* end of container  sonic-ntp */
 

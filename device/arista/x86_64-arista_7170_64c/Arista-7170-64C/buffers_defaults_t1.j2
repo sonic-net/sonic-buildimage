@@ -61,11 +61,15 @@
 
 {%- macro generate_queue_buffers(port_names) %}
     "BUFFER_QUEUE": {
-        "{{ port_names }}|3-4": {
-            "profile" : "egress_lossless_profile"
-        },
-        "{{ port_names }}|0-1": {
+{% for port in port_names.split(',') %}
+        "{{ port }}|0-2": {
             "profile" : "q_lossy_profile"
-        }
+        },
+{% endfor %}
+{% for port in port_names.split(',') %}
+        "{{ port }}|3-4": {
+            "profile" : "egress_lossless_profile"
+        }{% if not loop.last %},{% endif %}
+{% endfor %}
     }
 {%- endmacro %}

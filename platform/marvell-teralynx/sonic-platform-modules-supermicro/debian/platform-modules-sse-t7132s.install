@@ -1,0 +1,8 @@
+sse-t7132s/scripts/platform.sh /usr/local/bin
+sse-t7132s/scripts/health_checker_thermal.py /usr/local/bin
+sse-t7132s/scripts/sysledctl.py /usr/local/bin
+sse-t7132s/cfg/t7132s-modules.conf etc/modules-load.d
+sse-t7132s/cfg/iTCO_wdt.conf /etc/modprobe.d
+sse-t7132s/systemd/platform-modules-sse-t7132s.service etc/systemd/system
+sse-t7132s/systemd/sysled.service etc/systemd/system
+sse-t7132s/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-supermicro_sse_t7132s-r0

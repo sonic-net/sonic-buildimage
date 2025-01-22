@@ -86,7 +86,7 @@ class Component(ComponentBase):
         self.index = component_index
         self.name = self.CHASSIS_COMPONENTS[self.index][0]
         self.description = self.CHASSIS_COMPONENTS[self.index][1]
-        self.version = self.CHASSIS_COMPONENTS[self.index][2]()
+        self.version = None
 
     def get_name(self):
         """
@@ -110,6 +110,8 @@ class Component(ComponentBase):
         Returns:
             A string containing the firmware version of the component
         """
+        if self.version == None:
+            self.version = self.CHASSIS_COMPONENTS[self.index][2]()
         return self.version
 
     def install_firmware(self, image_path):

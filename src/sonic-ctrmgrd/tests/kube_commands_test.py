@@ -15,6 +15,8 @@ import kube_commands
 KUBE_ADMIN_CONF = "/tmp/kube_admin.conf"
 FLANNEL_CONF_FILE = "/tmp/flannel.conf"
 CNI_DIR = "/tmp/cni/net.d"
+AME_CRT = "/tmp/restapiserver.crt"
+AME_KEY = "/tmp/restapiserver.key"
 
 # kube_commands test cases
 # NOTE: Ensure state-db entry is complete in PRE as we need to
@@ -25,8 +27,7 @@ read_labels_test_data = {
         common_test.DESCR: "read labels",
         common_test.RETVAL: 0,
         common_test.PROC_CMD: ["\
-kubectl --kubeconfig {} get nodes --show-labels |\
- grep none | tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)],
+kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)],
         common_test.PROC_OUT: ["foo=bar,hello=world"],
         common_test.POST: {
             "foo": "bar",
@@ -39,8 +40,7 @@ kubectl --kubeconfig {} get nodes --show-labels |\
         common_test.TRIGGER_THROW: True,
         common_test.RETVAL: -1,
         common_test.PROC_CMD: ["\
-kubectl --kubeconfig {} get nodes --show-labels |\
- grep none | tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)],
+kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)],
         common_test.POST: {
         },
         common_test.PROC_KILLED: 1
@@ -49,8 +49,7 @@ kubectl --kubeconfig {} get nodes --show-labels |\
         common_test.DESCR: "read labels fail",
         common_test.RETVAL: -1,
         common_test.PROC_CMD: ["\
-kubectl --kubeconfig {} get nodes --show-labels |\
- grep none | tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)],
+kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)],
         common_test.PROC_OUT: [""],
         common_test.PROC_ERR: ["command failed"],
         common_test.POST: {
@@ -65,8 +64,7 @@ write_labels_test_data = {
         common_test.RETVAL: 0,
         common_test.ARGS: { "foo": "bar", "hello": "World!", "test": "ok" },
         common_test.PROC_CMD: [
-"kubectl --kubeconfig {} get nodes --show-labels |\
- grep none | tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF),
+"kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF),
 "kubectl --kubeconfig {} label --overwrite nodes none hello-".format(
     KUBE_ADMIN_CONF),
 "kubectl --kubeconfig {} label --overwrite nodes none hello=World! test=ok".format(
@@ -79,8 +77,7 @@ write_labels_test_data = {
         common_test.RETVAL: 0,
         common_test.ARGS: { "foo": "bar", "hello": "world" },
         common_test.PROC_CMD: [
-"kubectl --kubeconfig {} get nodes --show-labels |\
- grep none | tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)
+"kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)
  ],
         common_test.PROC_OUT: ["foo=bar,hello=world"]
     },
@@ -90,8 +87,7 @@ write_labels_test_data = {
         common_test.ARGS: { "any": "thing" },
         common_test.RETVAL: -1,
         common_test.PROC_CMD: [
-"kubectl --kubeconfig {} get nodes --show-labels |\
- grep none | tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)
+"kubectl --kubeconfig {} get nodes none --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '".format(KUBE_ADMIN_CONF)
 ],
         common_test.PROC_ERR: ["read failed"]
     }
@@ -117,7 +113,10 @@ none".format(KUBE_ADMIN_CONF),
             "kubeadm join --discovery-file {} --node-name none".format(
                 KUBE_ADMIN_CONF)
         ],
-        common_test.PROC_RUN: [True, True]
+        common_test.PROC_RUN: [True, True],
+        common_test.REQ: {
+            "data": {"ca.crt": "test"}
+        }
     },
     1: {
         common_test.DESCR: "Regular secure join",
@@ -138,7 +137,10 @@ none".format(KUBE_ADMIN_CONF),
             "kubeadm join --discovery-file {} --node-name none".format(
                 KUBE_ADMIN_CONF)
         ],
-        common_test.PROC_RUN: [True, True]
+        common_test.PROC_RUN: [True, True],
+        common_test.REQ: {
+            "data": {"ca.crt": "test"}
+        }
     },
     2: {
         common_test.DESCR: "Skip join as already connected",
@@ -211,6 +213,208 @@ none".format(KUBE_ADMIN_CONF),
     }
 }
 
+tag_latest_test_data = {
+    0: {
+        common_test.DESCR: "Tag latest successfuly and remove origin local container",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "123456", "v1"],
+        common_test.PROC_CMD: [
+            "docker ps |grep 123456",
+            "docker inspect 123456 |jq -r .[].Image",
+            "docker images |grep 5425bcbd23c5",
+            "docker tag 5425bcbd23c5 snmp:latest",
+            "docker inspect snmp |jq -r .[].State.Running",
+            "docker rm snmp"
+        ],
+        common_test.PROC_OUT: [
+            "",
+            "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc",
+            "acr.io/snmp v1 5425bcbd23c5",
+            "",
+            "false",
+            ""
+        ]
+    },
+    1: {
+        common_test.DESCR: "Tag latest successfuly and origin local container has been removed before",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "123456", "v1"],
+        common_test.PROC_CMD: [
+            "docker ps |grep 123456",
+            "docker inspect 123456 |jq -r .[].Image",
+            "docker images |grep 5425bcbd23c5",
+            "docker tag 5425bcbd23c5 snmp:latest",
+            "docker inspect snmp |jq -r .[].State.Running",
+            "docker rm snmp"
+        ],
+        common_test.PROC_OUT: [
+            "",
+            "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc",
+            "acr.io/snmp v1 5425bcbd23c5",
+            "",
+            "",
+            ""
+        ],
+        common_test.PROC_ERR: [
+            "",
+            "",
+            "",
+            "",
+            "Error: No such object",
+            ""
+        ]
+    },
+    2: {
+        common_test.DESCR: "Tag a unstable container",
+        common_test.RETVAL: -1,
+        common_test.ARGS: ["snmp", "123456", "v1"],
+        common_test.PROC_CMD: [
+            "docker ps |grep 123456"
+        ],
+        common_test.PROC_CODE: [
+            1
+        ]
+    },
+    3: {
+        common_test.DESCR: "Docker error",
+        common_test.RETVAL: 1,
+        common_test.ARGS: ["snmp", "123456", "v1"],
+        common_test.PROC_CMD: [
+            "docker ps |grep 123456"
+        ],
+        common_test.PROC_ERR: [
+            "err"
+        ]
+    },
+    4: {
+        common_test.DESCR: "Find local container is still running",
+        common_test.RETVAL: 1,
+        common_test.ARGS: ["snmp", "123456", "v1"],
+        common_test.PROC_CMD: [
+            "docker ps |grep 123456",
+            "docker inspect 123456 |jq -r .[].Image",
+            "docker images |grep 5425bcbd23c5",
+            "docker tag 5425bcbd23c5 snmp:latest",
+            "docker inspect snmp |jq -r .[].State.Running",
+            "docker rm snmp"
+        ],
+        common_test.PROC_OUT: [
+            "",
+            "sha256:5425bcbd23c54270d9de028c09634f8e9a014e9351387160c133ccf3a53ab3dc",
+            "acr.io/snmp v1 5425bcbd23c5",
+            "",
+            "true",
+            ""
+        ]
+    }
+}
+
+clean_image_test_data = {
+    0: {
+        common_test.DESCR: "Clean image successfuly(kube to kube)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
+            "docker rmi 744d3a09062f --force"
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.96 744d3a09062f\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6e",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            0
+        ]
+    },
+    1: {
+        common_test.DESCR: "Clean image failed(delete image failed)",
+        common_test.RETVAL: 1,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
+            "docker rmi 744d3a09062f --force"
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.96 744d3a09062f\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6e",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            1
+        ]
+    },
+    2: {
+        common_test.DESCR: "Clean image failed(no image found)",
+        common_test.RETVAL: 1,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'"
+        ],
+        common_test.PROC_OUT: [
+            ""
+        ]
+    },
+    3: {
+        common_test.DESCR: "Clean image failed(current image doesn't exist)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
+            ""
+        ],
+        common_test.PROC_OUT: [
+            "sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.96 744d3a09062f",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0
+        ]
+    },
+    4: {
+        common_test.DESCR: "Clean image successfuly(local to kube)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "20201231.84", ""],
+        common_test.PROC_CMD: [
+            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
+            "docker rmi docker-sonic-telemetry:20201231.74"
+        ],
+        common_test.PROC_OUT: [
+            "docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6e",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            0
+        ]
+    },
+    5: {
+        common_test.DESCR: "Clean image successfuly(local to dry-kube to kube)",
+        common_test.RETVAL: 0,
+        common_test.ARGS: ["snmp", "20201231.84", "20201231.74"],
+        common_test.PROC_CMD: [
+            "docker images |grep snmp |grep -v latest |awk '{print $1,$2,$3}'",
+            "docker rmi sonick8scue.azurecr.io/docker-sonic-telemetry:20201231.74 && docker tag 507f8d28bf6e sonick8scue.azurecr.io/docker-sonic-telemetry:20201231.74 && docker rmi docker-sonic-telemetry:20201231.74"
+        ],
+        common_test.PROC_OUT: [
+            "docker-sonic-telemetry 20201231.74 507f8d28bf6e\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.74 507f8d28bf6f\n\
+             sonick8scue.azurecr.io/docker-sonic-telemetry 20201231.84 507f8d28bf6g",
+            ""
+        ],
+        common_test.PROC_CODE: [
+            0,
+            0
+        ]
+    },
+}
+
 class TestKubeCommands(object):
 
     def init(self):
@@ -228,11 +432,17 @@ clusters:\n\
             s.close()
         with open(FLANNEL_CONF_FILE, "w") as s:
             s.close()
+        with open(AME_CRT, "w") as s:
+            s.close()
+        with open(AME_KEY, "w") as s:
+            s.close()
         kube_commands.KUBELET_YAML = kubelet_yaml
         kube_commands.CNI_DIR = CNI_DIR
         kube_commands.FLANNEL_CONF_FILE = FLANNEL_CONF_FILE
         kube_commands.SERVER_ADMIN_URL = "file://{}".format(self.admin_conf_file)
         kube_commands.KUBE_ADMIN_CONF = KUBE_ADMIN_CONF
+        kube_commands.AME_CRT = AME_CRT
+        kube_commands.AME_KEY = AME_KEY
 
 
     @patch("kube_commands.subprocess.Popen")
@@ -295,11 +505,13 @@ clusters:\n\
                     json.dumps(labels, indent=4)))
                 assert False
 
-
+    @patch("kube_commands.requests.get")
+    @patch("kube_commands.swsscommon.DBConnector")
+    @patch("kube_commands.swsscommon.Table")
     @patch("kube_commands.subprocess.Popen")
-    def test_join(self, mock_subproc):
+    def test_join(self, mock_subproc, mock_table, mock_conn, mock_reqget):
         self.init()
-        common_test.set_kube_mock(mock_subproc)
+        common_test.set_kube_mock(mock_subproc, mock_table, mock_conn, mock_reqget)
 
         for (i, ct_data) in join_test_data.items():
             lock_file = ""
@@ -331,7 +543,7 @@ clusters:\n\
         # test to_str()
         f = "abcd"
         f == kube_commands.to_str(str.encode(f))
-        
+
 
     @patch("kube_commands.subprocess.Popen")
     def test_reset(self, mock_subproc):
@@ -348,5 +560,27 @@ clusters:\n\
 
             (ret, _) = kube_commands.kube_reset_master(
                     ct_data[common_test.ARGS][0])
+            if common_test.RETVAL in ct_data:
+                assert ret == ct_data[common_test.RETVAL]
+
+    @patch("kube_commands.subprocess.Popen")
+    def test_tag_latest(self, mock_subproc):
+        common_test.set_kube_mock(mock_subproc)
+
+        for (i, ct_data) in tag_latest_test_data.items():
+            common_test.do_start_test("tag:latest", i, ct_data)
+
+            ret = kube_commands.tag_latest(*ct_data[common_test.ARGS])
+            if common_test.RETVAL in ct_data:
+                assert ret == ct_data[common_test.RETVAL]
+
+    @patch("kube_commands.subprocess.Popen")
+    def test_clean_image(self, mock_subproc):
+        common_test.set_kube_mock(mock_subproc)
+
+        for (i, ct_data) in clean_image_test_data.items():
+            common_test.do_start_test("clean:image", i, ct_data)
+
+            ret = kube_commands.clean_image(*ct_data[common_test.ARGS])
             if common_test.RETVAL in ct_data:
                 assert ret == ct_data[common_test.RETVAL]

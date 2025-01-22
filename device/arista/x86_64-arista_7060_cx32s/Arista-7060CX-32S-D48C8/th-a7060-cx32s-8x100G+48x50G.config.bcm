@@ -551,3 +551,4 @@ serdes_driver_current_115=0xa
 serdes_preemphasis_115=0x284008
 
 mmu_init_config="MSFT-TH-Tier0"
+phy_an_lt_msft=1

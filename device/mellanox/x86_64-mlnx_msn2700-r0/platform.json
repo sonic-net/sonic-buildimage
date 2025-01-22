@@ -114,6 +114,9 @@
             },
             {
                 "name": "CPU Pack Temp"
+            },
+            {
+                "name": "SODIMM 1 Temp"
             }
         ],
         "sfps": [
@@ -381,8 +384,7 @@
             "lanes": "0,1,2,3",
             "breakout_modes": {
                 "1x100G[50G,40G,25G,10G]": ["etp1"],
-                "2x50G[25G,10G]": ["etp1a", "etp1b"],
-                "4x10G[25G]": ["etp1a", "etp1b", "etp1c", "etp1d"]
+                "2x50G[25G,10G]": ["etp1a", "etp1b"]
             }
         },
         "Ethernet4": {
@@ -398,8 +400,7 @@
             "lanes": "8,9,10,11",
             "breakout_modes": {
                 "1x100G[50G,40G,25G,10G]": ["etp3"],
-                "2x50G[25G,10G]": ["etp3a", "etp3b"],
-                "4x10G[25G]": ["etp3a", "etp3b", "etp3c", "etp3d"]
+                "2x50G[25G,10G]": ["etp3a", "etp3b"]
             }
         },
         "Ethernet12": {

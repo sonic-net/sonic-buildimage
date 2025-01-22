@@ -1,0 +1,39 @@
+module sonic-system-defaults{
+
+    yang-version 1.1;
+
+    namespace "http://github.com/Azure/system-defaults";
+    prefix system-defaults;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "SYSTEM_DEFAULTS Table yang Module for SONiC";
+
+    container sonic-system-defaults {
+
+        container SYSTEM_DEFAULTS {
+
+            description "system_defaults table in config_db.json";
+
+            list SYSTEM_DEFAULTS_LIST {
+
+                key "name";
+
+                leaf name {
+                    description "feature name in SYSTEM_DEFAULTS table";
+                    type string {
+                        length 1..32;
+                    }
+                }
+
+                leaf status {
+                    description "default status of the feature";
+                    type stypes:admin_mode;
+                }
+
+            }
+        }
+    }
+}

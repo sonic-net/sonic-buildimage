@@ -1,5 +1,5 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM sonic-sdk
+FROM sonic-sdk-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG base_os_version
 ARG docker_database_version

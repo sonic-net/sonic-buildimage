@@ -1,0 +1,47 @@
+From ece5d83bebfe2345edf8e18f5af713bd99cc3739 Mon Sep 17 00:00:00 2001
+From: Ying Xie <ying.xie@microsoft.com>
+Date: Wed, 25 Nov 2020 22:28:43 +0000
+Subject: [PATCH] From 0417036a3aece862c95111d4646ca7508a028165 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH] [PATCH 6/8] [frr] remove frr log outchannel to
+ /var/log/frr.log SONiC runs frr inside a docker and the logs are sent to base
+ image via rsyslog and recorded already. There is no need to keep the frr.log
+ inside the docker. It will grow and take all harddrive space eventually.
+
+
+diff --git a/tools/etc/rsyslog.d/45-frr.conf b/tools/etc/rsyslog.d/45-frr.conf
+index 75b20d76b..9cdd55762 100644
+--- a/tools/etc/rsyslog.d/45-frr.conf
++++ b/tools/etc/rsyslog.d/45-frr.conf
+@@ -2,29 +2,6 @@
+ # to /var/log/frr/frr.log, then drops the message so it does
+ # not also go to /var/log/syslog, so the messages are not duplicated
+ 
+-$outchannel frr_log,/var/log/frr/frr.log
+-if  $programname == 'babeld' or
+-    $programname == 'bgpd' or
+-    $programname == 'bfdd' or
+-    $programname == 'eigrpd' or
+-    $programname == 'frr' or
+-    $programname == 'isisd' or
+-    $programname == 'fabricd' or
+-    $programname == 'ldpd' or
+-    $programname == 'nhrpd' or
+-    $programname == 'ospf6d' or
+-    $programname == 'ospfd' or
+-    $programname == 'pimd' or
+-    $programname == 'pim6d' or
+-    $programname == 'pathd' or
+-    $programname == 'pbrd' or
+-    $programname == 'ripd' or
+-    $programname == 'ripngd' or
+-    $programname == 'vrrpd' or
+-    $programname == 'watchfrr' or
+-    $programname == 'zebra'
+-    then :omfile:$frr_log
+-
+ if  $programname == 'babeld' or
+     $programname == 'bgpd' or
+     $programname == 'bfdd' or
+-- 
+2.17.1
+

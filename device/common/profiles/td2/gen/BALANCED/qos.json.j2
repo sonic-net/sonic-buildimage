@@ -1,0 +1,23 @@
+{% if ('type' in DEVICE_METADATA['localhost'] and 'BackEnd' in DEVICE_METADATA['localhost']['type'] and 'storage_device' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['storage_device'] == 'true') %}
+{%- macro generate_wred_profiles() %}
+    "WRED_PROFILE": {
+        "AZURE_LOSSLESS" : {
+            "wred_green_enable"      : "true",
+            "wred_yellow_enable"     : "true",
+            "wred_red_enable"        : "true",
+            "ecn"                    : "ecn_all",
+            "green_max_threshold"    : "12000144",
+            "green_min_threshold"    : "1048576",
+            "yellow_max_threshold"   : "2097152",
+            "yellow_min_threshold"   : "1048576",
+            "red_max_threshold"      : "2097152",
+            "red_min_threshold"      : "1048576",
+            "green_drop_probability" : "5",
+            "yellow_drop_probability": "5",
+            "red_drop_probability"   : "5"
+        }
+    },
+{%- endmacro %}
+{% endif %}
+
+{%- include 'qos_config.j2' %}

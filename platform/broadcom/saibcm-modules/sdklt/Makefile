@@ -1,5 +1,5 @@
 #
-# $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+# Copyright 2018-2024 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -12,7 +12,9 @@
 # GNU General Public License for more details.
 # 
 # A copy of the GNU General Public License version 2 (GPLv2) can
-# be found in the LICENSES folder.$
+# be found in the LICENSES folder.
+#
+# Makefile for building Linux GPL kernel modules for SDKLT.
 #
 
 help:
@@ -26,6 +28,7 @@ help:
 	@echo 'Supported make variables:'
 	@echo 'KDIR          - Linux kernel source directory (mandatory)'
 	@echo 'CROSS_COPILE  - Cross-compiler prefix (optional)'
+	@echo 'OUTPUT_DIR    - Output directory (build/ by default)'
 	@echo ''
 	@echo 'Examples:'
 	@echo 'make -s KDIR=$$KERNEL/linux kmod'
@@ -44,40 +47,70 @@ export CROSS_COMPILE
 
 override SDK := $(CURDIR)
 
-ifeq ($(BUILD_PSAMPLE),1)
-PSAMPLE=psample
-PSAMPLE_SYMVERS=$(SDK)/linux/psample/Module.symvers
+ifeq (,$(OUTPUT_DIR))
+OUTPUT_DIR := $(CURDIR)/build
 endif
 
-kmod: bde knet knetcb $(PSAMPLE)
+BDE_BLDDIR := $(OUTPUT_DIR)/bde
+KNET_BLDDIR := $(OUTPUT_DIR)/knet
+KNETCB_BLDDIR := $(OUTPUT_DIR)/knetcb
+BCMGENL_BLDDIR := $(OUTPUT_DIR)/bcmgenl
+GENL_PACKET_BLDDIR := $(OUTPUT_DIR)/genl-packet
+EDK_BLDDIR := $(OUTPUT_DIR)/edk
+PTP_BLDDIR := $(OUTPUT_DIR)/ptpclock
+
+LKM_CFLAGS += -UNGKNET_NETIF_MAX -DNGKNET_NETIF_MAX=1056 -UNGKNET_FILTER_MAX -DNGKNET_FILTER_MAX=1025
+export LKM_CFLAGS
+
+kmod: bde knet knetcb genl-packet bcmgenl edk ptpclock
 
 bde:
 	$(MAKE) -C $(SDK)/linux/bde SDK=$(SDK) \
-		$(TARGET)
-	ln -sf $(SDK)/linux/bde/*.ko
+		LKM_BLDDIR=$(BDE_BLDDIR) $(TARGET)
+	ln -sf $(BDE_BLDDIR)/*.ko $(OUTPUT_DIR)
 
 knet: bde
 	$(MAKE) -C $(SDK)/linux/knet SDK=$(SDK) \
-		KBUILD_EXTRA_SYMBOLS=$(SDK)/linux/bde/Module.symvers \
-		$(TARGET)
-	ln -sf $(SDK)/linux/knet/*.ko
+		KBUILD_EXTRA_SYMBOLS=$(BDE_BLDDIR)/Module.symvers \
+		LKM_BLDDIR=$(KNET_BLDDIR) $(TARGET)
+	ln -sf $(KNET_BLDDIR)/*.ko $(OUTPUT_DIR)
 
-knetcb: knet $(PSAMPLE)
+knetcb: knet
 	$(MAKE) -C $(SDK)/linux/knetcb SDK=$(SDK) \
-		KBUILD_EXTRA_SYMBOLS=$(SDK)/linux/knet/Module.symvers \
-		KBUILD_EXTRA_SYMBOLS+=$(PSAMPLE_SYMVERS) \
-		$(TARGET)
-	ln -sf $(SDK)/linux/knetcb/*.ko
+		KBUILD_EXTRA_SYMBOLS=$(KNET_BLDDIR)/Module.symvers \
+		LKM_BLDDIR=$(KNETCB_BLDDIR) $(TARGET)
+	ln -sf $(KNETCB_BLDDIR)/*.ko $(OUTPUT_DIR)
 
-ifeq ($(BUILD_PSAMPLE),1)
-$(PSAMPLE):
-	$(MAKE) -C $(SDK)/linux/psample SDK=$(SDK) \
-		$(TARGET)
-	ln -sf $(SDK)/linux/psample/*.ko
-endif
+bcmgenl: knet genl-packet
+	$(MAKE) -C $(SDK)/linux/bcmgenl SDK=$(SDK) \
+		KBUILD_EXTRA_SYMBOLS=$(KNET_BLDDIR)/Module.symvers \
+		LKM_BLDDIR=$(BCMGENL_BLDDIR) $(TARGET)
+	ln -sf $(BCMGENL_BLDDIR)/*.ko $(OUTPUT_DIR)
 
+genl-packet:
+	$(MAKE) -C $(SDK)/linux/genl-packet SDK=$(SDK) \
+		LKM_BLDDIR=$(GENL_PACKET_BLDDIR) $(TARGET)
+	ln -sf $(GENL_PACKET_BLDDIR)/*.ko $(OUTPUT_DIR)
+
+edk: bde
+	$(MAKE) -C $(SDK)/linux/edk SDK=$(SDK) \
+		KBUILD_EXTRA_SYMBOLS=$(BDE_BLDDIR)/Module.symvers \
+		LKM_BLDDIR=$(EDK_BLDDIR) $(TARGET)
+	ln -sf $(EDK_BLDDIR)/*.ko $(OUTPUT_DIR)
+
+ptpclock: knet edk
+	$(MAKE) -C $(SDK)/linux/ptpclock SDK=$(SDK) \
+		KBUILD_EXTRA_SYMBOLS=$(KNET_BLDDIR)/Module.symvers \
+		KBUILD_EXTRA_SYMBOLS+=$(EDK_BLDDIR)/Module.symvers \
+		KBUILD_EXTRA_SYMBOLS+=$(BDE_BLDDIR)/Module.symvers \
+		LKM_BLDDIR=$(PTP_BLDDIR) $(TARGET)
+	ln -sf $(PTP_BLDDIR)/*.ko $(OUTPUT_DIR)
 clean:
-	$(MAKE) kmod TARGET=clean
-	rm -f *.ko
+	$(MAKE) kmod TARGET=$@
+	rm -f $(OUTPUT_DIR)/*.ko
 
-.PHONY: help kmod bde knet knetcb $(PSAMPLE) clean
+distclean:
+	$(MAKE) kmod TARGET=$@
+	rm -rf $(OUTPUT_DIR)
+
+.PHONY: help kmod bde knet knetcb genl-packet bcmgenl edk ptpclock clean distclean

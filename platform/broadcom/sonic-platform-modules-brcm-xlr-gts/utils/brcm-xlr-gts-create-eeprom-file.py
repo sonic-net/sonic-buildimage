@@ -7,6 +7,7 @@ import sys
 import struct
 from ctypes import *
 import os
+from sonic_py_common.general import getstatusoutput_noshell_pipe
 
 TLV_CODE_PRODUCT_NAME  = 0x21
 TLV_CODE_SERIAL_NUMBER = 0x23
@@ -71,7 +72,7 @@ def main():
     tlvinfo_data = TLVINFO_DATA()
     tlvinfo_data.add_tlv_str(TLV_CODE_SERIAL_NUMBER, 'S/N')
 
-    onie_machine = os.popen("cat /host/machine.conf | grep 'onie_machine=' | sed 's/onie_machine=//'").read().strip()
+    _, onie_machine = getstatusoutput_noshell_pipe(["cat", "/host/machine.conf"], ["grep", 'onie_machine='], ["sed", 's/onie_machine=//'])
     if onie_machine == 'bcm_xlr':
         tlvinfo_data.add_tlv_str(TLV_CODE_PRODUCT_NAME,  'BCM9COMX2XMC')
     else:
@@ -83,11 +84,11 @@ def main():
     eth0_mac = eth0_mac_str.split(':')
     tlvinfo_data.add_tlv_mac(TLV_CODE_MAC_BASE, eth0_mac)
 
-    brcm_dev = os.popen("lspci | grep -m1 'Ethernet controller: Broadcom ' | grep 'Device' | sed 's/(.*//' | awk '{print $NF}'").read().strip()
+    _, brcm_dev = getstatusoutput_noshell_pipe(["lspci"], ["grep", "-m1", 'Ethernet controller: Broadcom '], ["grep", 'Device'], ["sed", 's/(.*//'], ["awk", '{print $NF}'])
     if brcm_dev == 'b960':
         tlvinfo_data.add_tlv_str(TLV_CODE_PLATFORM_NAME, 'BCM956960K')
 
-    onie_version = os.popen("cat /host/machine.conf | grep 'onie_version' | sed 's/onie_version=//'").read().strip()
+    onie_version = getstatusoutput_noshell_pipe(["cat", "/host/machine.conf"], ["grep", 'onie_version'], ["sed", 's/onie_version=//'])
     tlvinfo_data.add_tlv_str(TLV_CODE_ONIE_VERSION, onie_version)
 
     tlvinfo_header.totallen = len(tlvinfo_data.dump())+4;

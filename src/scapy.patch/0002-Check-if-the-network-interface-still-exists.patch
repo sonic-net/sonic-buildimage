@@ -1,0 +1,42 @@
+From 7ffd8101c1e535f9c3225db2c319958a64412686 Mon Sep 17 00:00:00 2001
+From: Guillaume Valadon <guillaume@valadon.net>
+Date: Tue, 14 Sep 2021 19:34:43 +0200
+Subject: [PATCH] Check if the network interface still exists
+
+Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
+---
+ scapy/arch/linux.py | 18 +++++++++++-------
+ 1 file changed, 11 insertions(+), 7 deletions(-)
+
+diff --git a/scapy/arch/linux.py b/scapy/arch/linux.py
+index 94fac8f0..b86e98ab 100644
+--- a/scapy/arch/linux.py
++++ b/scapy/arch/linux.py
+@@ -414,13 +414,17 @@ class LinuxInterfaceProvider(InterfaceProvider):
+         data = {}
+         ips = in6_getifaddr()
+         for i in _get_if_list():
+-            ifflags = struct.unpack("16xH14x", get_if(i, SIOCGIFFLAGS))[0]
+-            index = get_if_index(i)
+-            mac = scapy.utils.str2mac(
+-                get_if_raw_hwaddr(i, siocgifhwaddr=SIOCGIFHWADDR)[1]
+-            )
+-            ip = None  # type: Optional[str]
+-            ip = inet_ntop(socket.AF_INET, get_if_raw_addr(i))
++            try:
++                ifflags = struct.unpack("16xH14x", get_if(i, SIOCGIFFLAGS))[0]
++                index = get_if_index(i)
++                mac = scapy.utils.str2mac(
++                    get_if_raw_hwaddr(i, siocgifhwaddr=SIOCGIFHWADDR)[1]
++                )
++                ip = None  # type: Optional[str]
++                ip = inet_ntop(socket.AF_INET, get_if_raw_addr(i))
++            except IOError:
++                warning("Interface %s does not exist!", i)
++                continue
+             if ip == "0.0.0.0":
+                 ip = None
+             ifflags = FlagValue(ifflags, _iff_flags)
+-- 
+2.14.1
+

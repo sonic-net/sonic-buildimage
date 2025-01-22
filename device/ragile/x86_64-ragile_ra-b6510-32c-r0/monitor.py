@@ -5,11 +5,10 @@
 #   * PSU
 #
 import os
-import xml.etree.ElementTree as ET
 import glob
 from fru import *
 from fantlv import *
-
+from lxml import etree as ET
 
 
 MAILBOX_DIR = "/sys/bus/i2c/devices/"

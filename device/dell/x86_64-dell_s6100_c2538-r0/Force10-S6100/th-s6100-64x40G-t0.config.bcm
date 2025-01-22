@@ -34,6 +34,8 @@ os=unix
 parity_correction=1
 parity_enable=1
 
+port_phy_addr_66=0x176
+port_phy_addr_100=0x177
 xgxs_tx_lane_map_104=0x3210
 xgxs_rx_lane_map_104=0x0312
 phy_xaui_tx_polarity_flip_104=0x0
@@ -345,6 +347,9 @@ phy_xaui_rx_polarity_flip_79=0x3
 dport_map_port_78=63
 dport_map_port_79=64
 pbmp_xport_xe=0x3fffd0000ffff40003fffc0001fffe
+
+portmap_66=129:10
+portmap_100=131:10
 portmap_33=132:10
 portmap_67=133:10
 portmap_101=134:10
@@ -413,5 +418,7 @@ portmap_114=121:40:2
 portmap_115=123:40:2
 portmap_116=125:40:2
 portmap_117=127:40:2
+dport_map_port_66=65
+dport_map_port_100=66
 
 mmu_init_config="MSFT-TH-Tier0"

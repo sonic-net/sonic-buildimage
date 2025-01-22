@@ -180,17 +180,6 @@ static int sd2405_rtc_set_time(struct device *dev, struct rtc_time *tm)
 	return sd2405_i2c_set_time(to_i2c_client(dev), tm);
 }
 
-static int sd2405_remove(struct i2c_client *client)
-{
-#if 0
-	struct rtc_device *rtc = i2c_get_clientdata(client);
-
-	if (rtc)
-		rtc_device_unregister(rtc);
-#endif
-	return 0;
-}
-
 static const struct rtc_class_ops sd2405_rtc_ops = {
 	.read_time = sd2405_rtc_read_time,
 	.set_time = sd2405_rtc_set_time,
@@ -210,7 +199,7 @@ sd2405_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (IS_ERR(rtc))
 		return PTR_ERR(rtc);
 	rtc->ops = &sd2405_rtc_ops;
-	ret = rtc_register_device(rtc);
+	ret = devm_rtc_register_device(rtc);
 	if (ret)
 		return ret;
 
@@ -229,7 +218,6 @@ static struct i2c_driver sd2405_driver = {
 		   .name = "rtc-sd2405",
 		   },
 	.probe = sd2405_probe,
-	.remove = sd2405_remove,
 	.id_table = sd2405_id,
 };
 

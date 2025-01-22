@@ -6,11 +6,10 @@
 #
 #############################################################################
 
-import os
 import sys
 import time
 import struct
-
+import subprocess
 from ctypes import create_string_buffer
 
 try:
@@ -272,7 +271,7 @@ I2C_EEPROM_PATH = '/sys/bus/i2c/devices/{0}-0050/eeprom'
 
 class Sfp(SfpBase):
     """Platform-specific Sfp class"""
-    HOST_CHK_CMD = "docker > /dev/null 2>&1"
+    HOST_CHK_CMD = ["docker"]
     PLATFORM = "x86_64-accton_as9726_32d-r0"
     HWSKU = "Accton-AS9726-32D"
 
@@ -310,7 +309,7 @@ class Sfp(SfpBase):
         return True
 
     def __is_host(self):
-        return os.system(self.HOST_CHK_CMD) == 0
+        return subprocess.call(self.HOST_CHK_CMD) == 0
 
     def __get_path_to_port_config_file(self):
         platform_path = "/".join([self.PLATFORM_ROOT_PATH, self.PLATFORM])

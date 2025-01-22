@@ -20,6 +20,7 @@ try:
     from sonic_platform.psu import Psu
     from sonic_platform.thermal import Thermal
     from sonic_platform.watchdog import Watchdog, WatchdogTCO
+    from sonic_platform.sfp import Sfp
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -27,7 +28,7 @@ MAX_S6100_MODULE = 4
 MAX_S6100_FANTRAY = 4
 MAX_S6100_PSU = 2
 MAX_S6100_THERMAL = 10
-MAX_S6100_COMPONENT = 4
+MAX_S6100_COMPONENT = 5
 
 
 class Chassis(ChassisBase):
@@ -64,6 +65,8 @@ class Chassis(ChassisBase):
         'amber': 0x02, 'blinking amber': 0x08
     }
 
+    _global_port_pres_dict = {}
+
     def __init__(self):
 
         ChassisBase.__init__(self)
@@ -75,6 +78,15 @@ class Chassis(ChassisBase):
             module = Module(i)
             self._module_list.append(module)
             self._sfp_list.extend(module._sfp_list)
+
+        #SFP ports
+        sfp_port = 11
+        for index in range(64,66):
+             eeprom_path = "/sys/bus/i2c/devices/i2c-{0}/{0}-0050/eeprom".format(sfp_port)
+             sfp_control = ""
+             sfp_node = Sfp(index, 'SFP', eeprom_path, sfp_control, index)
+             self._sfp_list.append(sfp_node)
+             sfp_port = sfp_port + 1
 
         for i in range(MAX_S6100_FANTRAY):
             fandrawer = FanDrawer(i)
@@ -92,6 +104,13 @@ class Chassis(ChassisBase):
         for i in range(MAX_S6100_COMPONENT):
             component = Component(i)
             self._component_list.append(component)
+
+        for i in self._sfp_list:
+            presence = i.get_presence()
+            if presence:
+                self._global_port_pres_dict[i.index] = '1'
+            else:
+                self._global_port_pres_dict[i.index] = '0'
 
         bios_ver = self.get_component(0).get_firmware_version()
         bios_minor_ver = bios_ver.split("-")[-1]
@@ -197,7 +216,7 @@ class Chassis(ChassisBase):
         Returns:
             string: Serial number of chassis
         """
-        return self._eeprom.serial_str()
+        return self._eeprom.serial_number_str()
 
     def get_status(self):
         """

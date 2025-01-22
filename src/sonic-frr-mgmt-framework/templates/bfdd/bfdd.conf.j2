@@ -23,10 +23,10 @@ bfd
 {% if peer_key[3] != 'null' %}
 {% set peer_args = peer_args~' '~'local-address'~' '~peer_key[3] %}
 {% endif %}
-{{ peer_args }} 
+{{ peer_args }}
 {# set the bfd peer timers #}
 {% if  (peer_info['desired-minimum-tx-interval'] is defined and peer_info['desired-minimum-tx-interval'] | int != 300) %}
-  transmit-interval {{ peer_info['desired-minimum-tx-interval'] }} 
+  transmit-interval {{ peer_info['desired-minimum-tx-interval'] }}
 {% endif %}
 {% if  (peer_info['required-minimum-receive'] is defined and peer_info['required-minimum-receive'] | int != 300) %}
   receive-interval {{ peer_info['required-minimum-receive'] }}

@@ -1,0 +1,34 @@
+{% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+ARG image_version
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pass the image_version to container
+ENV IMAGE_VERSION=$image_version
+
+RUN apt-get update
+
+{% if docker_sonic_gnmi_debs.strip() -%}
+# Copy locally-built Debian package dependencies
+{{ copy_files("debs/", docker_sonic_gnmi_debs.split(' '), "/debs/") }}
+
+# Install locally-built Debian packages and implicitly install their dependencies
+{{ install_debian_packages(docker_sonic_gnmi_debs.split(' ')) }}
+{%- endif %}
+
+RUN apt-get clean -y      && \
+    apt-get autoclean -   && \
+    apt-get autoremove -y && \
+    rm -rf /debs
+
+COPY ["start.sh", "gnmi-native.sh", "dialout.sh", "/usr/bin/"]
+COPY ["telemetry_vars.j2", "/usr/share/sonic/templates/"]
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
+COPY ["critical_processes", "/etc/supervisor"]
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

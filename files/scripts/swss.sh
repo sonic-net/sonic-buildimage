@@ -9,8 +9,6 @@ LOCKFILE="/tmp/swss-syncd-lock$DEV"
 NAMESPACE_PREFIX="asic"
 ETC_SONIC_PATH="/etc/sonic/"
 
-DEPENDENT="radv"
-MULTI_INST_DEPENDENT="teamd"
 
 . /usr/local/bin/asic_status.sh
 
@@ -28,7 +26,7 @@ function read_dependent_services()
     fi
 
     if [[ -f ${ETC_SONIC_PATH}/${SERVICE}_multi_inst_dependent ]]; then
-        MULTI_INST_DEPENDENT="${MULTI_INST_DEPENDENT} cat ${ETC_SONIC_PATH}/${SERVICE}_multi_inst_dependent"
+        MULTI_INST_DEPENDENT="${MULTI_INST_DEPENDENT} $(cat ${ETC_SONIC_PATH}/${SERVICE}_multi_inst_dependent)"
     fi
 }
 
@@ -38,7 +36,7 @@ function lock_service_state_change()
 
     exec {LOCKFD}>${LOCKFILE}
     /usr/bin/flock -x ${LOCKFD}
-    trap "/usr/bin/flock -u ${LOCKFD}" 0 2 3 15
+    trap "/usr/bin/flock -u ${LOCKFD}" EXIT
 
     debug "Locked ${LOCKFILE} (${LOCKFD}) from ${SERVICE}$DEV service"
 }
@@ -62,7 +60,8 @@ function check_warm_boot()
 
 function check_fast_boot()
 {
-    if [[ $($SONIC_DB_CLI STATE_DB GET "FAST_REBOOT|system") == "1" ]]; then
+    SYSTEM_FAST_REBOOT=`sonic-db-cli STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
+    if [[ x"${SYSTEM_FAST_REBOOT}" == x"true" ]]; then
         FAST_BOOT="true"
     else
         FAST_BOOT="false"
@@ -88,7 +87,7 @@ function wait_for_database_service()
     done
 
     # Wait for configDB initialization
-    until [[ $($SONIC_DB_CLI CONFIG_DB GET "CONFIG_DB_INITIALIZED") ]];
+    until [[ $($SONIC_DB_CLI CONFIG_DB GET "CONFIG_DB_INITIALIZED") -eq 1 ]];
         do sleep 1;
     done
 }
@@ -108,17 +107,173 @@ function clean_up_tables()
     end" 0
 }
 
+# This function cleans up the chassis db table entries created ONLY by this asic
+# This is used to do the clean up operation when the line card / asic reboots
+# When the asic/lc is RE-booting, the chassis db server is supposed to be running 
+# in the supervisor.  So the clean up is done when only the chassis db connectable. 
+# Otherwise no need to do the clean up since both the supervisor and line card may be 
+# rebooting (the whole chassis scenario)
+# The clean up operation is required to delete only those entries created by
+# the asic that is rebooted. Entries from the following tables are deleted in the order
+# given below
+#   (1) SYSTEM_NEIGH
+#   (2) SYSTEM_INTERFACE
+#   (3) SYSTEM_LAG_MEMBER_TABLE
+#   (4) SYSTEM_LAG_TABLE
+#   (5) The corresponding LAG IDs of the entries from SYSTEM_LAG_TABLE
+#       SYSTEM_LAG_ID_TABLE and SYSTEM_LAG_ID_SET are adjusted appropriately
+function clean_up_chassis_db_tables()
+{
+
+    switch_type=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'switch_type'`
+
+    # Run clean up only in swss running for voq switches
+    if is_chassis_supervisor || [[ $switch_type != 'voq' ]]; then
+        return
+    fi
+
+    until [[ $($SONIC_DB_CLI CHASSIS_APP_DB PING | grep -c True) -gt 0 ]]; do
+        sleep 1
+    done
+
+    lc=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'hostname'`
+    until [[ -n "${lc}" ]]; do
+        lc=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'hostname'`
+        sleep 1
+    done
+    debug "Chassis db clean up for ${SERVICE}$DEV. hostname=$lc"
+
+    asic=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'asic_name'`
+    until [[ -n "${asic}" ]]; do
+        asic=`$SONIC_DB_CLI CONFIG_DB  hget 'DEVICE_METADATA|localhost' 'asic_name'`
+        sleep 1
+    done
+    debug "Chassis db clean up for ${SERVICE}$DEV. asic=$asic"
+
+    # First, delete SYSTEM_NEIGH entries
+    num_neigh=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local nn = 0
+    local host = string.gsub(ARGV[1], '%-', '%%-')
+    local dev = ARGV[2]
+    local ps = 'SYSTEM_NEIGH*|' .. host .. '|' .. dev
+    local keylist = redis.call('KEYS', 'SYSTEM_NEIGH*')
+    for j,key in ipairs(keylist) do
+        if string.match(key, ps) ~= nil then
+            redis.call('DEL', key)
+            nn = nn + 1
+        end
+    end
+    return nn" 0 $lc $asic`
+
+    debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_NEIGH entries deleted: $num_neigh"
+
+    # Wait for some time before deleting system interface so that the system interface's "object in use"
+    # is cleared in both orchangent and in syncd. Without this delay, the orchagent clears the refcount
+    # but the syncd (meta) still has no-zero refcount. Because of this, orchagent gets "object still in use"
+    # error and aborts.
+    # This delay is needed only if some system neighbors were deleted.
+
+    if [[ $num_neigh > 0 ]]; then
+        sleep 30
+    fi
+
+    # Next, delete SYSTEM_INTERFACE entries
+    num_sys_intf=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local nsi = 0
+    local host = string.gsub(ARGV[1], '%-', '%%-')
+    local dev = ARGV[2]
+    local ps = 'SYSTEM_INTERFACE*|' .. host .. '|' .. dev
+    local keylist = redis.call('KEYS', 'SYSTEM_INTERFACE*')
+    for j,key in ipairs(keylist) do
+        if string.match(key, ps) ~= nil then
+            redis.call('DEL', key)
+            nsi = nsi + 1
+        end
+    end
+    return nsi" 0 $lc $asic`
+
+    debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_INTERFACE entries deleted: $num_sys_intf"
+
+    # Next, delete SYSTEM_LAG_MEMBER_TABLE entries
+    num_lag_mem=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local nlm = 0
+    local host = string.gsub(ARGV[1], '%-', '%%-')
+    local dev = ARGV[2]
+    local ps = 'SYSTEM_LAG_MEMBER_TABLE*|' .. host .. '|' .. dev
+    local keylist = redis.call('KEYS', 'SYSTEM_LAG_MEMBER_TABLE*')
+    for j,key in ipairs(keylist) do
+        if string.match(key, ps) ~= nil then
+            redis.call('DEL', key)
+            nlm = nlm + 1
+        end
+    end
+    return nlm" 0 $lc $asic`
+
+    debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_LAG_MEMBER_TABLE entries deleted: $num_lag_mem"
+
+    # Wait for some time before deleting system lag so that the all the memebers of the
+    # system lag will be cleared. 
+    # This delay is needed only if some system lag members were deleted
+
+    if [[ $num_lag_mem > 0 ]]; then
+        sleep 15
+    fi
+
+    # Finally, delete SYSTEM_LAG_TABLE entries and deallot LAG IDs
+    num_sys_lag=`$SONIC_DB_CLI CHASSIS_APP_DB EVAL "
+    local nsl = 0
+    local host = string.gsub(ARGV[1], '%-', '%%-')
+    local dev = ARGV[2]
+    local ps = 'SYSTEM_LAG_TABLE*|' .. '(' .. host .. '|' .. dev ..'.*' .. ')'
+    local keylist = redis.call('KEYS', 'SYSTEM_LAG_TABLE*')
+    for j,key in ipairs(keylist) do
+        local lagname = string.match(key, ps)
+        if lagname ~= nil then
+            redis.call('DEL', key)
+            local lagid = redis.call('HGET', 'SYSTEM_LAG_ID_TABLE', lagname)
+            redis.call('SREM', 'SYSTEM_LAG_ID_SET', lagid)
+            redis.call('HDEL', 'SYSTEM_LAG_ID_TABLE', lagname)
+            redis.call('rpush', 'SYSTEM_LAG_IDS_FREE_LIST', lagid)
+            nsl = nsl + 1
+        end
+    end
+    return nsl" 0 $lc $asic`
+
+    debug "Chassis db clean up for ${SERVICE}$DEV. Number of SYSTEM_LAG_TABLE entries deleted: $num_sys_lag"
+
+}
+
+is_feature_enabled()
+{
+    s=$1
+    service=${s%@*}
+    state=$(sonic-db-cli CONFIG_DB hget "FEATURE|${service}" "state")
+    if [[ $state == "enabled" ]]; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
 start_peer_and_dependent_services() {
     check_warm_boot
 
     if [[ x"$WARM_BOOT" != x"true" ]]; then
-        if [[ ! -z $DEV ]]; then
-            /bin/systemctl start ${PEER}@$DEV
-        else
-           /bin/systemctl start ${PEER}
-        fi
+        for peer in ${PEER}; do
+            if [[ ! -z $DEV ]]; then
+                /bin/systemctl start ${peer}@$DEV
+            else
+               /bin/systemctl start ${peer}
+            fi
+        done
         for dep in ${DEPENDENT}; do
-            /bin/systemctl start ${dep}
+            if [[ $dep == "dhcp_relay" ]]; then
+                state=$(is_feature_enabled $dep)
+                if [[ $state == "true" ]]; then
+                    /bin/systemctl start ${dep}
+                fi
+            else
+                /bin/systemctl start ${dep}
+            fi
         done
         for dep in ${MULTI_INST_DEPENDENT}; do
             if [[ ! -z $DEV ]]; then
@@ -143,11 +298,13 @@ stop_peer_and_dependent_services() {
         for dep in ${DEPENDENT}; do
             /bin/systemctl stop ${dep}
         done
-        if [[ ! -z $DEV ]]; then
-            /bin/systemctl stop ${PEER}@$DEV
-        else
-            /bin/systemctl stop ${PEER}
-        fi
+        for peer in ${PEER}; do
+            if [[ ! -z $DEV ]]; then
+                /bin/systemctl stop ${peer}@$DEV
+            else
+                /bin/systemctl stop ${peer}
+            fi
+        done
     fi
 }
 
@@ -172,8 +329,10 @@ start() {
         $SONIC_DB_CLI GB_ASIC_DB FLUSHDB
         $SONIC_DB_CLI GB_COUNTERS_DB FLUSHDB
         $SONIC_DB_CLI RESTAPI_DB FLUSHDB
-        clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*'"
+        clean_up_tables STATE_DB "'PORT_TABLE*', 'MGMT_PORT_TABLE*', 'VLAN_TABLE*', 'VLAN_MEMBER_TABLE*', 'LAG_TABLE*', 'LAG_MEMBER_TABLE*', 'INTERFACE_TABLE*', 'MIRROR_SESSION*', 'VRF_TABLE*', 'FDB_TABLE*', 'FG_ROUTE_TABLE*', 'BUFFER_POOL*', 'BUFFER_PROFILE*', 'MUX_CABLE_TABLE*', 'ADVERTISE_NETWORK_TABLE*', 'VXLAN_TUNNEL_TABLE*', 'VNET_ROUTE*', 'MACSEC_PORT_TABLE*', 'MACSEC_INGRESS_SA_TABLE*', 'MACSEC_EGRESS_SA_TABLE*', 'MACSEC_INGRESS_SC_TABLE*', 'MACSEC_EGRESS_SC_TABLE*', 'VRF_OBJECT_TABLE*', 'VNET_MONITOR_TABLE*', 'BFD_SESSION_TABLE*', 'SYSTEM_NEIGH_TABLE*', 'FABRIC_PORT_TABLE*', 'TUNNEL_DECAP_TABLE*', 'TUNNEL_DECAP_TERM_TABLE*'"
         $SONIC_DB_CLI APPL_STATE_DB FLUSHDB
+        clean_up_chassis_db_tables
+        rm -rf /tmp/cache
     fi
 
     # On supervisor card, skip starting asic related services here. In wait(),
@@ -207,11 +366,18 @@ wait() {
     # NOTE: This assumes Docker containers share the same names as their
     # corresponding services
     for SECS in {1..60}; do
-        if [[ ! -z $DEV ]]; then
-            RUNNING=$(docker inspect -f '{{.State.Running}}' ${PEER}$DEV)
-        else
-            RUNNING=$(docker inspect -f '{{.State.Running}}' ${PEER})
-        fi
+        ALL_PEERS_RUNNING=true
+        for peer in ${PEER}; do
+            if [[ ! -z $DEV ]]; then
+                RUNNING=$(docker inspect -f '{{.State.Running}}' ${peer}$DEV)
+            else
+                RUNNING=$(docker inspect -f '{{.State.Running}}' ${peer})
+            fi
+            if [[ x"$RUNNING" != x"true" ]]; then
+                ALL_PEERS_RUNNING=false
+                break
+            fi
+        done
         ALL_DEPS_RUNNING=true
         for dep in ${MULTI_INST_DEPENDENT}; do
             if [[ ! -z $DEV ]]; then
@@ -225,7 +391,7 @@ wait() {
             fi
         done
 
-        if [[ x"$RUNNING" == x"true" && x"$ALL_DEPS_RUNNING" == x"true" ]]; then
+        if [[ x"$ALL_PEERS_RUNNING" == x"true" && x"$ALL_DEPS_RUNNING" == x"true" ]]; then
             break
         else
             sleep 1
@@ -243,7 +409,7 @@ wait() {
     done
 
     if [[ ! -z $DEV ]]; then
-        /usr/bin/docker-wait-any -s ${SERVICE}$DEV -d ${PEER}$DEV ${ALL_DEPS}
+        /usr/bin/docker-wait-any -s ${SERVICE}$DEV -d `printf "%s$DEV " ${PEER}` ${ALL_DEPS}
     else
         /usr/bin/docker-wait-any -s ${SERVICE} -d ${PEER} ${ALL_DEPS}
     fi
@@ -264,6 +430,10 @@ stop() {
     if [[ x"$WARM_BOOT" != x"true" ]] && [[ x"$FAST_BOOT" != x"true" ]]; then
         /usr/bin/${SERVICE}.sh stop $DEV
         debug "Stopped ${SERVICE}$DEV service..."
+        $SONIC_DB_CLI APPL_DB DEL PORT_TABLE:PortInitDone
+        debug "Cleared PortInitDone from APPL_DB for ${SERVICE}$DEV..."
+        clean_up_tables STATE_DB "'FABRIC_PORT_TABLE*'"
+        debug "Cleared FABRIC_PORT_TABLE from STATE_DB for ${SERVICE}$DEV..."
     else
         debug "Killing Docker swss..."
         /usr/bin/docker kill swss &> /dev/null || debug "Docker swss is not running ($?) ..."
@@ -274,8 +444,8 @@ stop() {
     # encountered error, e.g. syncd crashed. And swss needs to
     # be restarted.
     if [[ x"$FAST_BOOT" != x"true" ]]; then
-        debug "Clearing FAST_REBOOT flag..."
-        clean_up_tables STATE_DB "'FAST_REBOOT*'"
+        debug "Clearing FAST_RESTART_ENABLE_TABLE flag..."
+        sonic-db-cli STATE_DB hset "FAST_RESTART_ENABLE_TABLE|system" "enable" "false"
     fi
     # Unlock has to happen before reaching out to peer service
     unlock_service_state_change
@@ -283,12 +453,89 @@ stop() {
     stop_peer_and_dependent_services
 }
 
+function check_peer_gbsyncd()
+{
+    GEARBOX_CONFIG=/usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV/gearbox_config.json
+
+    if [ -f $GEARBOX_CONFIG ]; then
+        PEER="$PEER gbsyncd"
+    fi
+}
+
+function check_macsec()
+{
+    MACSEC_STATE=`$SONIC_DB_CLI CONFIG_DB hget 'FEATURE|macsec' state`
+
+    if [[ ${MACSEC_STATE} == 'enabled' ]]; then
+        if [ "$DEV" ]; then
+            DEPENDENT="${DEPENDENT} macsec@${DEV}"
+        else
+            DEPENDENT="${DEPENDENT} macsec"
+        fi
+    fi
+}
+
+function check_add_bgp_dependency()
+{
+    if ! is_chassis_supervisor; then
+        if [ "$DEV" ]; then
+            DEPENDENT="${DEPENDENT} bgp@${DEV}"
+        else
+            DEPENDENT="${DEPENDENT} bgp"
+        fi
+    fi
+}
+function check_ports_present()
+{
+    PORT_CONFIG_INI=/usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV/port_config.ini
+    HWSKU_JSON=/usr/share/sonic/device/$PLATFORM/$HWSKU/$DEV/hwsku.json
+
+    if [[ -f $PORT_CONFIG_INI ]] || [[ -f $HWSKU_JSON ]]; then
+         return 0
+    fi
+    return 1
+}
+
+function check_service_exists()
+{
+    systemctl list-units --full -all 2>/dev/null | grep -Fq $1
+    if [[ $? -eq 0 ]]; then
+        echo true
+        return
+    else
+        echo false
+        return
+    fi
+}
+
+# DEPENDENT initially contains namespace independent services
+# namespace specific services are added later in this script.
+DEPENDENT=""
+MULTI_INST_DEPENDENT=""
+
+if [[ $(check_service_exists radv) == "true" ]]; then
+    DEPENDENT="$DEPENDENT radv"
+fi
+
 if [ "$DEV" ]; then
     NET_NS="$NAMESPACE_PREFIX$DEV" #name of the network namespace
     SONIC_DB_CLI="sonic-db-cli -n $NET_NS"
 else
     NET_NS=""
     SONIC_DB_CLI="sonic-db-cli"
+fi
+
+PLATFORM=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' platform`
+HWSKU=`$SONIC_DB_CLI CONFIG_DB hget 'DEVICE_METADATA|localhost' hwsku`
+
+check_peer_gbsyncd
+check_macsec
+check_add_bgp_dependency
+check_ports_present
+PORTS_PRESENT=$?
+
+if [[ $PORTS_PRESENT == 0 ]] && [[ $(check_service_exists teamd) == "true" ]]; then
+    MULTI_INST_DEPENDENT="teamd"
 fi
 
 read_dependent_services

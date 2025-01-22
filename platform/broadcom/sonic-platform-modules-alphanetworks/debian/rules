@@ -13,13 +13,13 @@ include /usr/share/dpkg/pkg-info.mk
 
 export INSTALL_MOD_DIR:=extra
 
-PYTHON         ?= python2
+PYTHON3        ?= python3
 
 PACKAGE_PRE_NAME := sonic-platform-alphanetworks
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= snh60a0-320fv2 snh60b0-640f snj60d0-320f
+MODULE_DIRS:= snh60a0-320fv2 snh60b0-640f snj60d0-320f bes2348t
 MODULE_DIR := modules
 UTILS_DIR := utils
 SERVICE_DIR := service
@@ -39,11 +39,15 @@ build:
 	(for mod in $(MODULE_DIRS); do \
 		make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
 		cd $(MOD_SRC_DIR)/$${mod}; \
-		$(PYTHON) setup.py build; \
-		$(PYTHON) setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/utils; \
-		if [ $$mod = "snj60d0-320f" ]; then \
-			python3 setup.py build; \
-			python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/utils; \
+		if [ -f setup.py ]; then \
+			$(PYTHON3) setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+		fi; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
+			cd $(MOD_SRC_DIR)/$${mod}/pddf; \
+			if [ -f sonic_platform_setup.py ]; then \
+				$(PYTHON3) sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/pddf; \
+				echo "Finished makig pddf whl package for $$mod"; \
+			fi; \
 		fi; \
 		cd $(MOD_SRC_DIR); \
 	done)
@@ -68,17 +72,13 @@ binary-indep:
 	(for mod in $(MODULE_DIRS); do \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} $(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/local/bin; \
-		platform_name=`echo $${mod} | sed "s/-/_/g"`; \
-		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} usr/share/sonic/device/x86_64-alphanetworks_$${platform_name}-r0; \
 		dh_installdirs -p$(PACKAGE_PRE_NAME)-$${mod} lib/systemd/system; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(MODULE_DIR)/*.ko debian/$(PACKAGE_PRE_NAME)-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
-		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/*.py debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
-		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/*.whl debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/share/sonic/device/x86_64-alphanetworks_$${platform_name}-r0; \
+		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/$(PACKAGE_PRE_NAME)-$${mod}/usr/local/bin/; \
 		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/$(PACKAGE_PRE_NAME)-$${mod}/lib/systemd/system/; \
 		cd $(MOD_SRC_DIR)/$${mod}; \
-		$(PYTHON) setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
-		if [ $$mod = "snj60d0-320f" ]; then \
-			python3 setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
+		if [ -f setup.py ]; then \
+			$(PYTHON3) setup.py install --root=$(MOD_SRC_DIR)/debian/$(PACKAGE_PRE_NAME)-$${mod} --install-layout=deb; \
 		fi; \
 		cd $(MOD_SRC_DIR); \
 	done)

@@ -358,172 +358,6 @@ static ssize_t set_duty_cycle(struct device *dev, struct device_attribute *da,
     return count;
 }
 
-/* Due to this struct is declared at lm75.c, it cannot be include
- * under Sonic environment. I duplicate it from lm75.c.
- */
-struct lm75_data {
-    struct i2c_client       *client;
-    struct device           *hwmon_dev;
-    struct thermal_zone_device      *tz;
-    struct mutex            update_lock;
-    u8                      orig_conf;
-    u8                      resolution;     /* In bits, between 9 and 12 */
-    u8                      resolution_limits;
-    char                    valid;          /* !=0 if registers are valid */
-    unsigned long           last_updated;   /* In jiffies */
-    unsigned long           sample_time;    /* In jiffies */
-    s16                     temp[3];        /* Register values,
-                                                   0 = input
-                                                   1 = max
-                                                   2 = hyst */
-};
-
-/*Copied from lm75.c*/
-static inline long lm75_reg_to_mc(s16 temp, u8 resolution)
-{
-    return ((temp >> (16 - resolution)) * 1000) >> (resolution - 8);
-}
-
-/*Get hwmon_dev from i2c_client, set hwmon_dev = NULL is failed.*/
-static struct device * get_hwmon_dev(
-    struct i2c_client *client)
-{
-    struct lm75_data *data = NULL;
-
-    data = i2c_get_clientdata(client);
-    if(data)
-    {
-        if( data->valid == 1  && data->hwmon_dev)
-        {
-            return data->hwmon_dev;
-        }
-
-    }
-    return NULL;
-}
-
-/* To find hwmon index by opening hwmon under that i2c address.
- */
-static int find_hwmon_index_by_FileOpen(
-    int bus_nr,
-    unsigned short addr,
-    int *index)
-{
-#define MAX_HWMON_DEVICE        (10)    /* Find hwmon device in 0~10*/
-    struct file *sfd;
-    char client_name[96];
-    int  i=0;
-
-    do {
-        snprintf(client_name, sizeof(client_name),
-                 "/sys/bus/i2c/devices/%d-%04x/hwmon/hwmon%d/temp1_input",
-                 bus_nr, addr, i);
-
-        sfd = filp_open(client_name, O_RDONLY, 0);
-        i++;
-    } while( IS_ERR(sfd) && i < MAX_HWMON_DEVICE);
-
-    if (IS_ERR(sfd)) {
-        pr_err("Failed to open file(%s)#%d\r\n", client_name, __LINE__);
-        return -ENOENT;
-    }
-    filp_close(sfd, 0);
-    *index = i - 1;
-    return 0;
-
-#undef MAX_HWMON_DEVICE
-}
-
-static int get_temp_file_path(
-    int bus_nr, unsigned short addr,
-    struct device *hwmon_dev
-    ,char *path, int max_len)
-{
-
-    if(hwmon_dev && strlen(dev_name(hwmon_dev)))
-    {
-        snprintf(path, max_len,
-                 "/sys/bus/i2c/devices/%d-%04x/hwmon/%s/temp1_input",
-                 bus_nr, addr, dev_name(hwmon_dev));
-    }
-    else
-    {
-        int  i=0;
-        if(find_hwmon_index_by_FileOpen( bus_nr, addr, &i))
-        {
-            return  -EIO;
-        }
-        snprintf(path, max_len,
-                 "/sys/bus/i2c/devices/%d-%04x/hwmon/hwmon%d/temp1_input",
-                 bus_nr, addr, i);
-    }
-    
-    return 0;
-}
-
-/*File read the dev file at user space.*/
-static int read_devfile_temp1_input(
-    struct device *dev,
-    int bus_nr,
-    unsigned short addr,
-    struct device *hwmon_dev,
-    int *miniCelsius)
-{
-    struct file *sfd;
-    char buffer[96];
-    char devfile[96];
-    int     rc, status;
-    int     rdlen, value;
-    mm_segment_t old_fs;
-
-    rc = 0;
-    get_temp_file_path(bus_nr, addr, hwmon_dev, devfile, sizeof(devfile));
-    sfd = filp_open(devfile, O_RDONLY, 0);
-    if (IS_ERR(sfd)) {
-        pr_err("Failed to open file(%s)#%d\r\n", devfile, __LINE__);
-        return -ENOENT;
-    }
-    dev_dbg(dev, "Found device:%s\n",devfile);
-
-    if(!(sfd->f_op) || !(sfd->f_op->read) ) {
-        pr_err("file %s cann't readable ?\n",devfile);
-        return -ENOENT;
-    }
-
-    old_fs = get_fs();
-    set_fs(KERNEL_DS);
-    rdlen = sfd->f_op->read(sfd, buffer, sizeof(buffer), &sfd->f_pos);
-    if (rdlen == 0) {
-        pr_err( "File(%s) empty!\n", devfile);
-        rc = -EIO;
-        goto exit;
-    }
-    status = sscanf(buffer, "%d", &value);
-    if (status != 1) {
-        rc = -EIO;
-        goto exit;
-    }
-    *miniCelsius = value;
-    dev_dbg(dev,"found sensors: %d @i2c %d-%04x\n", value, bus_nr, addr);
-
-exit:
-    set_fs(old_fs);
-    filp_close(sfd, 0);
-    return rc;
-}
-
-static u8 is_lm75_data_due(struct i2c_client *client)
-{
-    struct lm75_data *data = NULL;
-
-    data = i2c_get_clientdata(client);
-    if (time_after(jiffies, data->last_updated + data->sample_time))
-    {
-        return 1;
-    }
-    return 0;
-}
-
 static ssize_t fan_show_value(struct device *dev, struct device_attribute *da,
                               char *buf)
 {
@@ -680,13 +514,12 @@ exit:
     return status;
 }
 
-static int as9726_32d_fan_remove(struct i2c_client *client)
+static void as9726_32d_fan_remove(struct i2c_client *client)
 {
     struct as9726_32d_fan_data *data = i2c_get_clientdata(client);
     hwmon_device_unregister(data->hwmon_dev);
     sysfs_remove_group(&client->dev.kobj, &as9726_32d_fan_group);
 
-    return 0;
 }
 
 /* Addresses to scan */

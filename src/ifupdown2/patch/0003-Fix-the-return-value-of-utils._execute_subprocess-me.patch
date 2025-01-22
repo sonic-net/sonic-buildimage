@@ -1,0 +1,21 @@
+Fix the return value of utils._execute_subprocess method for empty strings
+---
+ ifupdown2/ifupdown/utils.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/ifupdown2/ifupdown/utils.py b/ifupdown2/ifupdown/utils.py
+index d638fe9..0c5d8ce 100644
+--- a/ifupdown2/ifupdown/utils.py
++++ b/ifupdown2/ifupdown/utils.py
+@@ -380,7 +380,7 @@ class utils():
+         finally:
+             utils.disable_subprocess_signal_forwarding(signal.SIGINT)
+ 
+-        cmd_output_string = cmd_output.decode() if cmd_output else cmd_output
++        cmd_output_string = cmd_output.decode() if cmd_output is not None else cmd_output
+ 
+         if cmd_returncode != 0:
+             raise Exception(cls._format_error(cmd,
+-- 
+2.14.1
+

@@ -39,7 +39,7 @@ class ThermalUtil(object):
     """ Dictionary where
         key1 = thermal id index (integer) starting from 1
         value = path to fan device file (string) """
-    #_thermal_to_device_path_mapping = {}
+
         
     thermal_sysfspath ={
     THERMAL_NUM_1_IDX: ["/sys/bus/i2c/devices/15-0048/hwmon/hwmon*/temp1_input"],
@@ -51,7 +51,6 @@ class ThermalUtil(object):
     THERMAL_NUM_7_IDX: ["/sys/bus/i2c/devices/15-004b/hwmon/hwmon*/temp1_input"],    
     }
 
-    #def __init__(self):
         
     def _get_thermal_val(self, thermal_num):
         if thermal_num < self.THERMAL_NUM_1_IDX or thermal_num > self.THERMAL_NUM_MAX:
@@ -70,11 +69,11 @@ class ThermalUtil(object):
                 logging.debug('GET. content is NULL. device_path:%s', device_path)
                 return None
             try:
-		        val_file.close()
+                val_file.close()
             except BaseException:
                 logging.debug('GET. unable to close file. device_path:%s', device_path)
                 return None
-              
+
             return int(content)
                 
         return 0

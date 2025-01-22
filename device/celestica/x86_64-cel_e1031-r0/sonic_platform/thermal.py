@@ -324,6 +324,5 @@ class Thermal(ThermalBase):
         Returns:
             A int value, 0 represent ASIC thermal, 1 represent CPU thermal info
         """
-        if self.postion == "cpu":
-            return 1
-        return 0
+        
+        return self.index + 1

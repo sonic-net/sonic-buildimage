@@ -2,9 +2,13 @@ module sonic-dot1p-tc-map {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-dot1p-tc-map";
+    namespace "http://github.com/sonic-net/sonic-dot1p-tc-map";
 
     prefix dot1ptm;
+
+    import sonic-types {
+        prefix stypes;
+    }
 
     organization
         "SONiC";
@@ -20,14 +24,14 @@ module sonic-dot1p-tc-map {
             "Initial revision.";
     }
 
-    container sonic-dot1p-tc-map {  
+    container sonic-dot1p-tc-map {
 
         container DOT1P_TO_TC_MAP {
 
             description "DOT1P_TO_TC_MAP part of config_db.json";
 
             list DOT1P_TO_TC_MAP_LIST {
-                
+
                 key "name";
 
                 leaf name {
@@ -54,12 +58,7 @@ module sonic-dot1p-tc-map {
                     }
 
                     leaf tc {
-                        type string {
-                            pattern "[0-7]?"{
-                                error-message "Invalid Traffic Class";
-                                error-app-tag tc-invalid;
-                            }
-                        }
+                        type stypes:tc_type;
                     }
                 }
             }

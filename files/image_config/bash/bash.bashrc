@@ -55,7 +55,7 @@ if [ -x /usr/lib/command-not-found -o -x /usr/share/command-not-found/command-no
 fi
 
 # Automatically log out console ttyS* sessions after 15 minutes of inactivity
-tty | grep ttyS >/dev/null && TMOUT=900
+tty | egrep -q '^/dev/ttyS[[:digit:]]+$' && TMOUT=900
 
 # if SSH_TARGET_CONSOLE_LINE was set, attach to console line interactive cli directly
 if [ -n "$SSH_TARGET_CONSOLE_LINE" ]; then

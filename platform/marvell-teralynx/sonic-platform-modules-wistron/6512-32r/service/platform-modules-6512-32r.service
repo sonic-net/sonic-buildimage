@@ -1,0 +1,14 @@
+[Unit]
+Description=Wistron 6512-32R Platform modules
+Before=pmon.service
+After=sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wistron_6512_32r_util.py install
+ExecStop=/usr/local/bin/wistron_6512_32r_util.py clean
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

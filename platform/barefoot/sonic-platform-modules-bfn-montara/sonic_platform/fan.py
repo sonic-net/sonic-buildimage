@@ -17,15 +17,15 @@ def _fan_info_get(fan_num, cb, default=None):
 
 # Fan -> FanBase -> DeviceBase
 class Fan(FanBase):
-    def __init__(self, index, fantrayindex):
+    def __init__(self, index, max_index, fantrayindex):
         self.__index = index
-        self.__fantrayindex = fantrayindex
+        self.__glob_index = (fantrayindex - 1) * max_index + self.__index
 
     # FanBase interface methods:
     # returns speed in percents
     def get_speed(self):
         def cb(info): return info.percent
-        return _fan_info_get(self.__index, cb, 0)
+        return _fan_info_get(self.__glob_index, cb, 0)
 
     def set_speed(self, percent):
         # Fan tray speed controlled by BMC
@@ -33,10 +33,10 @@ class Fan(FanBase):
 
     # DeviceBase interface methods:
     def get_name(self):
-        return "counter-rotating-fan-{}".format((self.__fantrayindex - 1) * self.__index + self.__index)
+        return "counter-rotating-fan-{}".format(self.__glob_index)
 
     def get_presence(self):
-        return _fan_info_get(self.__index, lambda _: True, False)
+        return _fan_info_get(self.__glob_index, lambda _: True, False)
 
     def get_position_in_parent(self):
         return self.__index

@@ -2,7 +2,7 @@ module sonic-port{
 
 	yang-version 1.1;
 
-	namespace "http://github.com/Azure/sonic-port";
+	namespace "http://github.com/sonic-net/sonic-port";
 	prefix port;
 
 	import sonic-types {
@@ -11,6 +11,14 @@ module sonic-port{
 
 	import sonic-extension {
 		prefix ext;
+	}
+
+	import sonic-device_metadata {
+		prefix sdm;
+	}
+
+	import sonic-macsec {
+		prefix macsec;
 	}
 
 	description "PORT yang Module for SONiC OS";
@@ -35,6 +43,27 @@ module sonic-port{
 					}
 				}
 
+				leaf core_id {
+					description "The ASIC core where the port belongs to.";
+					type string {
+						length 1..16;
+					}
+				}
+
+				leaf core_port_id {
+					description "The ASIC core port for this port.";
+					type string {
+						length 1..16;
+					}
+				}
+
+				leaf num_voq {
+					description "The number of virtual output queue supportted on this port.";
+					type string {
+						length 1..16;
+					}
+				}
+
 				leaf alias {
 					type string {
 						length 1..128;
@@ -42,10 +71,23 @@ module sonic-port{
 				}
 
 				leaf lanes {
+					when "not(not(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:asic_name) and
+					((/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='voq') or 
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='chassis-packet') or
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:switch_type='fabric') or
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:hwsku='msft_four_asic_vs') or 
+					(/sdm:sonic-device_metadata/sdm:DEVICE_METADATA/sdm:localhost/sdm:hwsku='msft_multi_asic_vs')))";
+
+					description "Number of hardware lanes for the port. This is mandatory for all devices except for chassis devices";
 					mandatory true;
 					type string {
 						length 1..128;
 					}
+				}
+
+				leaf mode {
+					description "SwitchPort Modes possible values are routed|access|trunk. Default value  for mode is routed"; 
+					type stypes:switchport_mode; 
 				}
 
 				leaf description {
@@ -57,7 +99,21 @@ module sonic-port{
 				leaf speed {
 					mandatory true;
 					type uint32 {
-						range 1..400000;
+						range 1..800000;
+					}
+				}
+
+				leaf dhcp_rate_limit {
+					description "DHCP DOS Mitigation Rate with default value 300";
+					type uint32; 
+					default 300;
+				}
+
+				leaf link_training {
+					description "Port link training mode";
+
+					type string {
+						pattern "on|off";
 					}
 				}
 
@@ -71,10 +127,10 @@ module sonic-port{
 
 				leaf-list adv_speeds {
 					description "Port advertised speeds, valid value could be a list of interger or all";
-					
+
 					type union {
 						type uint32 {
-							range 1..400000;
+							range 1..800000;
 						}
 						type string {
 							pattern "all";
@@ -102,27 +158,50 @@ module sonic-port{
 				}
 
 				must "(count(adv_interface_types[text()='all']) = 0) or (count(adv_interface_types) = 1)";
-					
+
 				leaf mtu {
 					type uint16 {
-						range 1..9216;
+						range 68..9216;
+					}
+				}
+
+				leaf subport {
+					description "Logical subport(s) for physical port breakout";
+					type uint8 {
+						range 0..8;
 					}
 				}
 
 				leaf index {
-					type uint16 {
-						range 0..256;
+					type uint16;
+				}
+
+				leaf asic_port_name {
+					type string;
+					description "port name in asic and asic name, e.g Eth0-ASIC1";
+				}
+
+				leaf role {
+					type string {
+						pattern "Ext|Int|Inb|Rec|Dpc";
 					}
+					description "Internal port or External port for multi-asic or SmartSwitch platform";
+					default "Ext";
 				}
 
 				leaf admin_status {
 					type stypes:admin_status;
+					default down;
 				}
 
 				leaf fec {
 					type string {
-						pattern "rs|fc|none";
+						pattern "rs|fc|none|auto";
 					}
+				}
+
+				leaf dom_polling {
+					type stypes:admin_mode;
 				}
 
 				leaf pfc_asym {
@@ -133,13 +212,31 @@ module sonic-port{
 
 				leaf tpid {
 					description "This leaf describes the possible TPID value that can be configured
-					            to the specified port if the HW supports TPID configuration. The possible
-					            values are 0x8100, 0x9100, 0x9200, 0x88a8, and 0x88A8";
+								to the specified port if the HW supports TPID configuration. The possible
+								values are 0x8100, 0x9100, 0x9200, 0x88a8, and 0x88A8";
 					type stypes:tpid_type;
 				}
 
 				leaf mux_cable {
 					type boolean;
+				}
+
+				leaf macsec {
+					type leafref {
+						path "/macsec:sonic-macsec/macsec:MACSEC_PROFILE/macsec:MACSEC_PROFILE_LIST/macsec:name";
+					}
+				}
+
+				leaf tx_power {
+						description "Target output power(dBm) for the 400G ZR transceiver";
+						type decimal64 {
+							fraction-digits 1;
+						}
+				}
+
+				leaf laser_freq {
+						description "Target laser frequency(GHz) for the 400G ZR transceiver";
+						type int32;
 				}
 
 			} /* end of list PORT_LIST */

@@ -37,6 +37,7 @@
 #include <linux/io.h>
 #include <linux/wait.h>
 #include <linux/poll.h>
+#include <linux/version.h>
 #include <linux/dma-mapping.h>
 #include "bf_ioctl.h"
 #include "bf_kdrv.h"
@@ -60,6 +61,7 @@ extern int bf_kpkt_init(struct pci_dev *pdev,
                         u8 *bar0_vaddr,
                         void **adapter_ptr,
                         int dev_id,
+                        int subdev_id,
                         int pci_use_highmem,
                         unsigned long head_room,
                         int kpkt_dr_int_en,
@@ -72,14 +74,15 @@ extern void bf_kpkt_set_pci_error(void *adapter_ptr, u8 pci_error);
 /* Keep any global information here that must survive even after the
  * bf_pci_dev is free-ed up.
  */
-struct bf_global {
+struct bf_global_s {
   struct bf_pci_dev *bfdev;
   struct cdev *bf_cdev;
   struct fasync_struct *async_queue;
+  /* Pending user space error signal. */
+  bool pending_signal;
 };
 
-static int bf_major;
-static int bf_minor[BF_MAX_DEVICE_CNT] = {0};
+static int bf_minor[BF_MAX_DEV_SUBDEV_CNT] = {0};
 static struct class *bf_class = NULL;
 static char *intr_mode = NULL;
 static int kpkt_mode = 0;
@@ -91,7 +94,10 @@ static enum bf_intr_mode bf_intr_mode_default = BF_INTR_MODE_MSI;
 static spinlock_t bf_nonisr_lock;
 
 /* dev->minor should index into this array */
-static struct bf_global bf_global[BF_MAX_DEVICE_CNT];
+static struct bf_global_s bf_global[BF_MAX_DEV_SUBDEV_CNT];
+
+/* global tofino3 info to group subdevices to a parent device */
+static struct bf_tof3_info_s bf_tof3_info[BF_MAX_DEVICE_CNT];
 
 static void bf_add_listener(struct bf_pci_dev *bfdev,
                             struct bf_listener *listener) {
@@ -145,7 +151,7 @@ static int bf_get_next_minor_no(int *minor) {
   int i;
 
   spin_lock(&bf_nonisr_lock);
-  for (i = 0; i < BF_MAX_DEVICE_CNT; i++) {
+  for (i = 0; i < BF_MAX_DEV_SUBDEV_CNT; i++) {
     if (bf_minor[i] == 0) {
       *minor = i;
       bf_minor[i] = 1; /* mark it as taken */
@@ -276,7 +282,7 @@ static irqreturn_t bf_pci_irqhandler(int irq, struct bf_pci_dev *bfdev) {
         bf_kpkt_irqhandler(irq, bfdev->adapter_ptr);
       }
     } else if (bfdev->mode == BF_INTR_MODE_MSIX) {
-      if (bfdev->info.tof_type == BF_TOFINO_2 && bf_irq_is_tbus_msix(bfdev,irq)) {
+      if ((bfdev->info.tof_type == BF_TOFINO_2 || bfdev->info.tof_type == BF_TOFINO_3) && bf_irq_is_tbus_msix(bfdev, irq)) {
         bf_kpkt_irqhandler(irq, bfdev->adapter_ptr);
       }
     }
@@ -470,6 +476,7 @@ static int bf_mmap(struct file *filep, struct vm_area_struct *vma) {
 
 static int bf_fasync(int fd, struct file *filep, int mode) {
   int minor;
+  int res;
 
   if (!filep->private_data) {
     return (-EINVAL);
@@ -479,17 +486,32 @@ static int bf_fasync(int fd, struct file *filep, int mode) {
     return (-EINVAL);
   }
   if (mode == 0 && &bf_global[minor].async_queue == NULL) {
+    bf_global[minor].pending_signal = false;
     return 0; /* nothing to do */
   }
-  return (fasync_helper(fd, filep, mode, &bf_global[minor].async_queue));
+  res = fasync_helper(fd, filep, mode, &bf_global[minor].async_queue);
+  if (bf_global[minor].pending_signal && bf_global[minor].async_queue) {
+    kill_fasync(&bf_global[minor].async_queue, SIGIO, POLL_ERR);
+  }
+  bf_global[minor].pending_signal = false;
+  return res;
 }
 
 static int bf_open(struct inode *inode, struct file *filep) {
+  unsigned id;
   struct bf_pci_dev *bfdev;
   struct bf_listener *listener;
   int i;
 
-  bfdev = bf_global[iminor(inode)].bfdev;
+  id = iminor(inode);
+  if (id >= BF_MAX_DEVICE_CNT) {
+    return (-EINVAL);
+  }
+
+  bfdev = bf_global[id].bfdev;
+  if (bfdev->in_use) {
+    return (-EBUSY);
+  }
   listener = kmalloc(sizeof(*listener), GFP_KERNEL);
   if (listener) {
     listener->bfdev = bfdev;
@@ -500,6 +522,7 @@ static int bf_open(struct inode *inode, struct file *filep) {
       listener->event_count[i] = atomic_read(&bfdev->info.event[i]);
     }
     filep->private_data = listener;
+    bfdev->in_use = 1;
     return 0;
   } else {
     return (-ENOMEM);
@@ -512,6 +535,7 @@ static int bf_release(struct inode *inode, struct file *filep) {
   bf_fasync(-1, filep, 0); /* empty any process id in the notification list */
   if (listener->bfdev) {
     bf_remove_listener(listener->bfdev, listener);
+    listener->bfdev->in_use = 0;
   }
   kfree(listener);
   return 0;
@@ -645,7 +669,15 @@ static long bf_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
   }
   switch(cmd) {
   case BF_IOCMAPDMAADDR:
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
+#if defined(RHEL_RELEASE_CODE)
+#if defined(RHEL_RELEASE_VERSION)
+#if RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(7, 9)
+    if (access_ok(addr, sizeof(bf_dma_bus_map_t))) {
+#else
+    if (access_ok(VERIFY_WRITE, addr, sizeof(bf_dma_bus_map_t))) {
+#endif
+#endif /* RHEL_RELEASE_CODE && RHEL_RELEASE_VERSION */
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
     if (access_ok(addr, sizeof(bf_dma_bus_map_t))) {
 #else
     if (access_ok(VERIFY_WRITE, addr, sizeof(bf_dma_bus_map_t))) {
@@ -669,7 +701,15 @@ static long bf_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
     }
     break;
   case BF_IOCUNMAPDMAADDR:
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
+#if defined(RHEL_RELEASE_CODE)
+#if defined(RHEL_RELEASE_VERSION)
+#if RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(7, 9)
+    if (access_ok(addr, sizeof(bf_dma_bus_map_t))) {
+#else
+    if (access_ok(VERIFY_WRITE, addr, sizeof(bf_dma_bus_map_t))) {
+#endif
+#endif /* RHEL_RELEASE_CODE && RHEL_RELEASE_VERSION */
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
     if (access_ok(addr, sizeof(bf_dma_bus_map_t))) {
 #else
     if (access_ok(VERIFY_READ, addr, sizeof(bf_dma_bus_map_t))) {
@@ -692,21 +732,39 @@ static long bf_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
     } else {
       int i;
       bf_tbus_msix_indices_t msix_ind;
-      if (copy_from_user(&msix_ind, addr, sizeof(bf_tbus_msix_indices_t))) {
-        return EFAULT;
-      }
-      if (msix_ind.cnt > BF_TBUS_MSIX_INDICES_MAX) {
-        return EINVAL;
-      }
-      for (i = 0; i < msix_ind.cnt; i++) {
-        if (msix_ind.indices[i] >= BF_MSIX_ENTRY_CNT) {
+#if defined(RHEL_RELEASE_CODE)
+#if defined(RHEL_RELEASE_VERSION)
+#if RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(7, 9)
+      if (access_ok(addr, sizeof(bf_tbus_msix_indices_t))) {
+#else
+      if (access_ok(VERIFY_WRITE, addr, sizeof(bf_tbus_msix_indices_t))) {
+#endif
+#endif /* RHEL_RELEASE_CODE && RHEL_RELEASE_VERSION */
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
+      if (access_ok(addr, sizeof(bf_tbus_msix_indices_t))) {
+#else
+      if (access_ok(VERIFY_READ, addr, sizeof(bf_tbus_msix_indices_t))) {
+#endif
+        if (copy_from_user(&msix_ind, addr, sizeof(bf_tbus_msix_indices_t))) {
+          return EFAULT;
+        }
+        if (msix_ind.cnt < BF_TBUS_MSIX_INDICES_MIN ||
+            msix_ind.cnt > BF_TBUS_MSIX_INDICES_MAX) {
           return EINVAL;
         }
+        for (i = 0; i < msix_ind.cnt; i++) {
+          if (msix_ind.indices[i] <  0 ||
+              msix_ind.indices[i] >= BF_MSIX_ENTRY_CNT) {
+            return EINVAL;
+          }
+        }
+        for (i = 0; i < msix_ind.cnt; i++) {
+          bfdev->info.tbus_msix_ind[i] = msix_ind.indices[i];
+        }
+        bfdev->info.tbus_msix_map_enable = 1;
+      } else {
+	    return EFAULT;
       }
-      for (i = 0; i < msix_ind.cnt; i++) {
-        bfdev->info.tbus_msix_ind[i] = msix_ind.indices[i];
-      }
-      bfdev->info.tbus_msix_map_enable = 1;
     }
     break;
   case BF_GET_INTR_MODE:
@@ -761,7 +819,7 @@ static int bf_major_init(struct bf_pci_dev *bfdev, int minor) {
     goto fail_dev_add;
   }
 
-  bf_major = MAJOR(bf_dev);
+  bfdev->info.major = MAJOR(bf_dev);
   bf_global[minor].bf_cdev = cdev;
   return 0;
 
@@ -771,31 +829,91 @@ fail_dev_add:
 }
 
 static void bf_major_cleanup(struct bf_pci_dev *bfdev, int minor) {
-  unregister_chrdev_region(MKDEV(bf_major, 0), BF_MAX_DEVICE_CNT);
+  unregister_chrdev_region(MKDEV(bfdev->info.major, 0), BF_MAX_DEVICE_CNT);
   cdev_del(bf_global[minor].bf_cdev);
 }
 
 static int bf_init_cdev(struct bf_pci_dev *bfdev, int minor) {
   int ret;
   ret = bf_major_init(bfdev, minor);
-  if (ret) return ret;
-
-  bf_class = class_create(THIS_MODULE, BF_CLASS_NAME);
-  if (!bf_class) {
-    printk(KERN_ERR "create_class failed for bf_dev\n");
-    ret = -ENODEV;
-    goto err_class_register;
-  }
-  return 0;
-
-err_class_register:
-  bf_major_cleanup(bfdev, minor);
   return ret;
 }
 
 static void bf_remove_cdev(struct bf_pci_dev *bfdev) {
-  class_destroy(bf_class);
   bf_major_cleanup(bfdev, bfdev->info.minor);
+}
+
+/* return the first unused dev_id based on invalid chip_id */
+static int bf_multisub_tof_unused_devid_get(void) {
+  int i;
+  for (i = 0; i < BF_MAX_DEVICE_CNT; i++) {
+    if ((bf_tof3_info[i]).minor[0] == -1 &&
+        (bf_tof3_info[i]).minor[1] == -1) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/* special case handling for TOF3. each subdevice creates its own device node
+ * device node is named as /dev/bf<devid>s<subdevid 0-3>
+*/
+static int bf_tof3_register_device(struct device *parent,
+                                   struct bf_pci_dev *bfdev) {
+  struct bf_dev_info *info = &bfdev->info;
+  int minor = 0;
+  u8 *bf_base_addr;
+  volatile u32 *bf_addr;
+  int dev_id = 0, subdev_id = 0, ret = 0;
+
+  if (!info || !info->version) {
+    return -EINVAL;
+  }
+  bf_base_addr = (info->mem[0].internal_addr);
+  if (!bf_base_addr) {
+    return -ENODEV;
+  }
+  /* *** TBD  for multi Tofino(with 2 subdevices) systems *** */
+  /* We must be able to identify multiple sub devices as  belonging to one
+     physical Tofino(3) device. We have not figured that out yet.
+     until then, we support only one CB device per host CPU */
+  bf_addr = (u32 *)((u8 *)bf_base_addr + TOFINO3_MISC_PAD_STATUS_OFFSET);
+#if 1 /* USING EMULATOR where subdevice info is not possible to have */
+  bf_multisub_tof_unused_devid_get(); /* keep compiler happy */
+  subdev_id = 0;
+  if (bf_get_next_minor_no(&minor)) {
+    return -EINVAL;
+  }
+  dev_id = minor;
+#else
+  subdev_id = (int)(*bf_addr & TOFINO3_MISC_PAD_STATUS_DIEID0);
+  if (bf_get_next_minor_no(&minor)) {
+    return -EINVAL;
+  }
+  /* we cannot assume the order in which sub devices are probed */
+  if (subdev_id == 0) {
+    dev_id = bf_multisub_tof_unused_devid_get();
+    bf_tof3_info[dev_id].dev_id = dev_id; /* back reference */
+    (bf_tof3_info[dev_id].minor)[subdev_id] = minor;
+  } else {
+    dev_id = 0; /* TBD : for Tofino with multi sub devices */
+    (bf_tof3_info[dev_id].minor)[subdev_id] = minor;
+  }
+#endif
+  ret = bf_init_cdev(bfdev, minor);
+  if (ret) {
+    printk(KERN_ERR "BF: device cdev creation failed dev_id %d\n", dev_id);
+    return ret;
+  }
+  info->tof3_info = &(bf_tof3_info[dev_id]);
+  info->dev_id = dev_id;
+  info->subdev_id = subdev_id;
+  printk(KERN_NOTICE "BF: registering dev_id %d subdev_id %d\n",
+         dev_id, subdev_id);
+  info->dev = device_create(bf_class, parent, MKDEV(bfdev->info.major, minor),
+                            bfdev, "bf%ds%1d", dev_id, subdev_id);
+  info->minor = minor;
+  return 0;
 }
 
 /**
@@ -808,7 +926,7 @@ static void bf_remove_cdev(struct bf_pci_dev *bfdev) {
 int bf_register_device(struct device *parent, struct bf_pci_dev *bfdev) {
   struct bf_dev_info *info = &bfdev->info;
   int i, j, ret = 0;
-  int minor;
+  int minor = 0;
 
   if (!parent || !info || !info->version) {
     return -EINVAL;
@@ -820,24 +938,32 @@ int bf_register_device(struct device *parent, struct bf_pci_dev *bfdev) {
     atomic_set(&info->event[i], 0);
   }
 
-  if (bf_get_next_minor_no(&minor)) {
-    return -EINVAL;
-  }
+  if (info->tof_type == BF_TOFINO_3) {
+    if ((ret = bf_tof3_register_device(parent, bfdev)) != 0) {
+      printk(KERN_ERR "BF: TOF3 device cdev creation failed %d\n", ret);
+      return ret;
+    }
+  } else {
+    if (bf_get_next_minor_no(&minor)) {
+      return -EINVAL;
+    }
 
-  ret = bf_init_cdev(bfdev, minor);
-  if (ret) {
-    printk(KERN_ERR "BF: device cdev creation failed\n");
-    return ret;
-  }
+    ret = bf_init_cdev(bfdev, minor);
+    if (ret) {
+      printk(KERN_ERR "BF: device cdev creation failed\n");
+      return ret;
+    }
 
-  info->dev = device_create(
-      bf_class, parent, MKDEV(bf_major, minor), bfdev, "bf%d", minor);
+    info->dev = device_create(
+      bf_class, parent, MKDEV(bfdev->info.major, minor), bfdev, "bf%d", minor);
+    info->minor = minor;
+    info->dev_id = minor;
+    info->subdev_id = 0;
+  }
   if (!info->dev) {
     printk(KERN_ERR "BF: device creation failed\n");
     return -ENODEV;
   }
-
-  info->minor = minor;
 
   /* bind ISRs and request interrupts */
   if (info->irq && (bfdev->mode != BF_INTR_MODE_NONE)) {
@@ -906,6 +1032,33 @@ int bf_register_device(struct device *parent, struct bf_pci_dev *bfdev) {
   return 0;
 }
 
+/* special case handling for TOF3.  return minor number only after all
+ * sub devices using the minor number are unregistered */
+static int bf_tof3_unregister_device(struct bf_pci_dev *bfdev) {
+  struct bf_dev_info *info = &bfdev->info;
+#if 1 //HACK until emulator implements efuse
+  bf_return_minor_no(info->minor);
+#else
+  int j, dev_id, subdev_id, found;
+
+  if (!info->tof3_info) {
+    printk(KERN_ERR "BF TOF3 bad info in tof3_unregister_device\n");
+    return -1;
+  }
+  dev_id = info->tof3_info->dev_id;
+  subdev_id = info->subdev_id;
+  if (dev_id >= BF_MAX_DEVICE_CNT || subdev_id >= BF_MAX_SUBDEV_CNT) {
+    return -1;
+  }
+  /* update bf_tof3_info structure for the device being unregistered */
+  (bf_tof3_info[dev_id].minor)[subdev_id] = -1;
+  /* return the minor number */
+  bf_return_minor_no(info->minor);
+  info->subdev_id = -1;
+#endif
+  return 0;
+}
+
 /**
  * bf_unregister_device - register a new userspace mem device
  * @bfdev:      bf pci device
@@ -914,8 +1067,12 @@ int bf_register_device(struct device *parent, struct bf_pci_dev *bfdev) {
  */
 void bf_unregister_device(struct bf_pci_dev *bfdev) {
   struct bf_dev_info *info = &bfdev->info;
-  int i;
+  int i, ret;
 
+  if (!info) {
+    printk(KERN_ERR "BF: bad data in device unregister\n");
+    return;
+  }
   if (info->irq) {
     if (bfdev->mode == BF_INTR_MODE_LEGACY) {
       free_irq(info->irq, (void *)&(bfdev->bf_int_vec[0]));
@@ -929,9 +1086,16 @@ void bf_unregister_device(struct bf_pci_dev *bfdev) {
       }
     }
   }
-  device_destroy(bf_class, MKDEV(bf_major, info->minor));
+  device_destroy(bf_class, MKDEV(info->major, info->minor));
   bf_remove_cdev(bfdev);
-  bf_return_minor_no(info->minor);
+  if (bfdev->info.tof_type == BF_TOFINO_3) {
+    if ((ret = bf_tof3_unregister_device(bfdev)) != 0) {
+      printk(KERN_ERR "BF: TOF3 device cdev unregister failed %d\n", ret);
+      return;
+    }
+  } else {
+    bf_return_minor_no(info->minor);
+  }
   return;
 }
 
@@ -944,13 +1108,13 @@ static void bf_disable_int_dma(struct bf_pci_dev *bfdev) {
   u32 *bf_addr;
   volatile u32 val;
 
-  /* maskinterrupts and DMA */
+  /* mask interrupts and DMA */
   bf_base_addr = (bfdev->info.mem[0].internal_addr);
   /* return if called before mmap */
   if (!bf_base_addr) {
     return;
   }
-  /* mask interrupt  at shadow level */
+  /* mask interrupts at shadow level */
   bf_addr = (u32 *)((u8 *)bf_base_addr + 0xc0);
   for (i = 0; i < 16; i++) {
     *bf_addr = 0xffffffffUL;
@@ -967,8 +1131,6 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
   struct bf_pci_dev *bfdev;
   int err, pci_use_highmem;
   int i, num_irq;
-
-  memset(bf_global, 0, sizeof(bf_global));
 
   bfdev = kzalloc(sizeof(struct bf_pci_dev), GFP_KERNEL);
   if (!bfdev) {
@@ -995,6 +1157,9 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
   case TOFINO2_DEV_ID_B0:
     bfdev->info.tof_type = BF_TOFINO_2;
     break;
+  case TOFINO3_DEV_ID_A0:
+    bfdev->info.tof_type = BF_TOFINO_3;
+    break;
   default:
     bfdev->info.tof_type = BF_TOFINO_1;
     break;
@@ -1004,6 +1169,8 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
     if (bfdev->info.tof_type == BF_TOFINO_1) {
       bfdev->info.tbus_msix_ind[i] = BF_TBUS_MSIX_BASE_INDEX_TOF1 + i;
     } else if (bfdev->info.tof_type == BF_TOFINO_2) {
+      bfdev->info.tbus_msix_ind[i] = BF_TBUS_MSIX_INDEX_INVALID;
+    } else if (bfdev->info.tof_type == BF_TOFINO_3) {
       bfdev->info.tbus_msix_ind[i] = BF_TBUS_MSIX_INDEX_INVALID;
     }
   }
@@ -1068,7 +1235,6 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
   bfdev->info.version = "0.2";
   bfdev->info.owner = THIS_MODULE;
   bfdev->pdev = pdev;
-
   switch (bf_intr_mode_default) {
 #ifdef CONFIG_PCI_MSI
     case BF_INTR_MODE_MSIX:
@@ -1113,6 +1279,7 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
       }
 #endif /* LINUX_VERSION_CODE */
     /* ** intentional no-break */
+    /* FALLTHRU */
     case BF_INTR_MODE_MSI:
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
       num_irq = pci_enable_msi_block(pdev, BF_MSI_ENTRY_CNT);
@@ -1150,6 +1317,7 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
 #endif /* LINUX_VERSION_CODE */
 #endif /* CONFIG_PCI_MSI */
     /* fall back to Legacy Interrupt, intentional no-break */
+    /* FALLTHRU */
 
     case BF_INTR_MODE_LEGACY:
       if (pci_intx_mask_supported(pdev)) {
@@ -1161,6 +1329,7 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
       }
       printk(KERN_NOTICE " bf PCI INTx mask not supported\n");
     /* fall back to no Interrupt, intentional no-break */
+    /* FALLTHRU */
     case BF_INTR_MODE_NONE:
       bfdev->info.irq = 0;
       bfdev->info.num_irq = 0;
@@ -1183,6 +1352,7 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
 
   bf_global[bfdev->info.minor].async_queue = NULL;
   bf_global[bfdev->info.minor].bfdev = bfdev;
+  bf_global[bfdev->info.minor].pending_signal = false;
 
   dev_info(&pdev->dev,
            "bf device %d registered with irq %ld\n",
@@ -1194,15 +1364,18 @@ static int bf_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id) {
     err = bf_kpkt_init(pdev,
                        bfdev->info.mem[0].internal_addr,
                        &bfdev->adapter_ptr,
-                       bfdev->info.minor,
+                       bfdev->info.dev_id,
+                       bfdev->info.subdev_id,
                        pci_use_highmem,
                        kpkt_hd_room,
                        kpkt_dr_int_en,
                        kpkt_rx_count);
     if (err == 0) {
-      printk(KERN_ALERT "bf_kpkt kernel processing enabled\n");
+      printk(KERN_ALERT "bf_kpkt kernel processing enabled for dev %d subdev_id %d\n",
+             bfdev->info.dev_id, bfdev->info.subdev_id);
     } else {
-      printk(KERN_ALERT "error starting bf_kpkt kernel processing\n");
+      printk(KERN_ERR "error starting bf_kpkt kernel processing for dev %d subdev_id %d\n",
+             bfdev->info.dev_id, bfdev->info.subdev_id);
       bfdev->adapter_ptr = NULL;
     }
   }
@@ -1316,16 +1489,29 @@ static pci_ers_result_t bf_pci_mmio_enabled(struct pci_dev *dev) {
   struct bf_pci_dev *bfdev = pci_get_drvdata(dev);
 
   printk(KERN_ERR "BF pci_mmio_enabled invoked after pci error\n");
-  #if KERNEL_VERSION(5, 8, 0) <= LINUX_VERSION_CODE
-  	pci_aer_clear_nonfatal_status(dev);
-  #else
-  	pci_cleanup_aer_uncorrect_error_status(dev);
-  #endif
+#if defined(RHEL_RELEASE_CODE)
+#if defined(RHEL_RELEASE_VERSION)
+#if RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(7, 9)
+  pci_aer_clear_nonfatal_status(dev);
+#else
+  pci_cleanup_aer_uncorrect_error_status(dev);
+#endif
+#endif /* RHEL_RELEASE_CODE && RHEL_RELEASE_VERSION */
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
+  pci_aer_clear_nonfatal_status(dev);
+#else
+  pci_cleanup_aer_uncorrect_error_status(dev);
+#endif
+
   if (bfdev) {
     /* send a signal to the user space program of the error */
     int minor = bfdev->info.minor;
-    if (minor < BF_MAX_DEVICE_CNT && bf_global[minor].async_queue) {
-      kill_fasync(&bf_global[minor].async_queue, SIGIO, POLL_ERR);
+    if (minor < BF_MAX_DEVICE_CNT) {
+      if (bf_global[minor].async_queue) {
+        kill_fasync(&bf_global[minor].async_queue, SIGIO, POLL_ERR);
+      } else {
+        bf_global[minor].pending_signal = true;
+      }
     }
   }
   return PCI_ERS_RESULT_RECOVERED;
@@ -1389,6 +1575,7 @@ static const struct pci_device_id bf_pci_tbl[] = {
     {PCI_VDEVICE(BF, TOFINO2_DEV_ID_A0), 0},
     {PCI_VDEVICE(BF, TOFINO2_DEV_ID_A00), 0},
     {PCI_VDEVICE(BF, TOFINO2_DEV_ID_B0), 0},
+    {PCI_VDEVICE(INTEL, TOFINO3_DEV_ID_A0), 0},
     /* required last entry */
     {.device = 0}};
 
@@ -1409,12 +1596,36 @@ static struct pci_driver bf_pci_driver = {.name = "bf",
 static int __init bfdrv_init(void) {
   int ret;
 
+  pr_info("%s: %s - version %s\n", DRV_NAME(kpkt_mode),
+            DRV_DESCRIPTION(kpkt_mode),DRV_VERSION);
+  pr_info("%s: %s\n", DRV_NAME(kpkt_mode),DRV_COPYRIGHT);
+  memset(bf_global, 0, sizeof(bf_global));
+  memset(bf_tof3_info, 0xff, sizeof(bf_tof3_info));
+  bf_class = class_create(THIS_MODULE, BF_CLASS_NAME);
+  if (!bf_class) {
+    printk(KERN_ERR "create_class failed for bf device\n");
+    return -ENODEV;
+  } else {
+    printk(KERN_NOTICE "bf device class created\n");
+  }
+
   ret = bf_config_intr_mode(intr_mode);
+
+  if (ret < 0) {
+    printk(KERN_ERR "config interrupt mode failed for bf device\n");
+    if (bf_class) {
+      class_destroy(bf_class);
+      bf_class = NULL;
+    }
+    return ret;
+  }
+
   /* do not enable DR interrupt if not using MSI or not in kpkt mode */
   if ((bf_intr_mode_default != BF_INTR_MODE_MSI &&
        bf_intr_mode_default != BF_INTR_MODE_LEGACY) || kpkt_mode == 0) {
     kpkt_dr_int_en = 0;
   }
+
   if (kpkt_mode) {
     printk(KERN_NOTICE "kpkt_mode %d hd_room %d dr_int_en %d rx_count %d\n",
            kpkt_mode,
@@ -1422,15 +1633,17 @@ static int __init bfdrv_init(void) {
            kpkt_dr_int_en,
            kpkt_rx_count);
   }
-  if (ret < 0) {
-    return ret;
-  }
+
   spin_lock_init(&bf_nonisr_lock);
   return pci_register_driver(&bf_pci_driver);
 }
 
 static void __exit bfdrv_exit(void) {
+  pr_info("%s: module unloading ...\n", DRV_NAME(kpkt_mode));
   pci_unregister_driver(&bf_pci_driver);
+  class_destroy(bf_class);
+  pr_info("%s: module unloaded successfully\n", DRV_NAME(kpkt_mode));
+  bf_class = NULL;
   intr_mode = NULL;
   kpkt_mode = 0;
 }

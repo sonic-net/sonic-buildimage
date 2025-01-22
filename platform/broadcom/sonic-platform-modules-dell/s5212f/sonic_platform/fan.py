@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 ########################################################################
-# DellEMC SS5212F
+# DellEMC S5212F
 #
 # Module contains an implementation of SONiC Platform Base API and
 # provides the Fans' information which are available in the platform.
@@ -46,8 +46,8 @@ class Fan(FanBase):
                            2: {"Prsnt": 0x5b, "State": 0x5b, "Speed": 0x20},
                            3: {"Prsnt": 0x58, "State": 0x58, "Speed": 0x25},
                            4: {"Prsnt": 0x5c, "State": 0x5c, "Speed": 0x21},
-                           5: {"Prsnt": 0x59, "State": 0x59, "Speed": 0x26},
-                           6: {"Prsnt": 0x5d, "State": 0x5d, "Speed": 0x22},
+                           5: {"Prsnt": 0x57, "State": 0x59, "Speed": 0x26},
+                           6: {"Prsnt": 0x59, "State": 0x5d, "Speed": 0x22},
                            7: {"Prsnt": 0x5a, "State": 0x5a, "Speed": 0x27},
                            8: {"Prsnt": 0x5e, "State": 0x5e, "Speed": 0x23} }
     PSU_FAN_SENSOR_MAPPING = { 1: {"State": 0x31, "Speed": 0x2e},
@@ -119,7 +119,11 @@ class Fan(FanBase):
         Returns:
             bool: True if fan is present, False if not
         """
-        return True
+        if self.is_psu_fan:
+            return self.dependency.get_presence()
+        else:
+            # In S5212F, Fans are fixed
+            return True
 
     def get_status(self):
         """
@@ -130,8 +134,12 @@ class Fan(FanBase):
         status = False
         is_valid, state = self.state_sensor.get_reading()
         if is_valid:
-            if (state == 0x00):
-                status = True
+            if self.is_psu_fan:
+                if not state > 1:
+                    status = True
+            else:
+                if state == 0x00:
+                    status = True
         return status
 
     def get_direction(self):
@@ -160,13 +168,13 @@ class Fan(FanBase):
             int: percentage of the max fan speed
         """
         speed = None
-        if not self.is_psu_fan :
+        if not self.is_psu_fan:
             if self.max_speed == 0:
                 self.max_speed = self.fru.get_fru_data(self.max_speed_offset,2)[1]
                 self.max_speed = self.max_speed[1] << 8 | self.max_speed[0]
             is_valid, fan_speed = self.speed_sensor.get_reading()
             if is_valid and self.max_speed > 0:
-                speed = (100 * fan_speed)/self.max_speed
+                speed = (100 * fan_speed)//self.max_speed
         return speed
 
     def get_speed_rpm(self):
@@ -178,4 +186,49 @@ class Fan(FanBase):
         fan_speed = None
         if not self.is_psu_fan :
             is_valid, fan_speed = self.speed_sensor.get_reading()
-        return fan_speed
+        return fan_speed if is_valid else None
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.fanindex
+
+    def is_replaceable(self):
+        """
+        Indicate whether Fan is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+    def get_speed_tolerance(self):
+        """
+        Retrieves the speed tolerance of the fan
+        Returns:
+            An integer, the percentage of variance from target speed which is
+            considered tolerable
+        """
+        if self.get_presence():
+            # The tolerance value is fixed as 20% for all the DellEMC platforms
+            tolerance = 20
+        else:
+            tolerance = 0
+
+        return tolerance
+
+    def set_status_led(self, color):
+        """
+        Set led to expected color
+        Args:
+           color: A string representing the color with which to set the
+                 fan status LED
+        Returns:
+            bool: True if set success, False if fail.
+        """
+        # Fan tray status LED controlled by HW
+        # Return True to avoid thermalctld alarm
+        return True

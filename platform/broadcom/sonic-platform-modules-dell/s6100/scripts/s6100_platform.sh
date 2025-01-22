@@ -2,21 +2,31 @@
 
 #platform init script for Dell S6100
 
-install_python_api_package() {
-    device="/usr/share/sonic/device"
-    platform=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
-    rv=$(pip3 install $device/$platform/sonic_platform-1.0-py3-none-any.whl)
-}
-
-remove_python_api_package() {
-    rv=$(pip3 show sonic-platform > /dev/null 2>/dev/null)
-    if [ $? -eq 0 ]; then
-        rv=$(pip3 uninstall -y sonic-platform > /dev/null 2>/dev/null)
-    fi
-}
-
-
 if [[ "$1" == "init" ]]; then
+    depmod -a
+    case "$(cat /proc/cmdline)" in
+        *SONIC_BOOT_TYPE=warm*)
+            TYPE='warm'
+            ;;
+        *SONIC_BOOT_TYPE=fastfast*)
+            TYPE='fastfast'
+            ;;
+        *SONIC_BOOT_TYPE=fast*|*fast-reboot*)
+            TYPE='fast'
+            ;;
+        *SONIC_BOOT_TYPE=soft*)
+            TYPE='soft'
+            ;;
+        *)
+            TYPE='cold'
+    esac
+
+    if [[ "$TYPE" == "cold" ]]; then
+        /usr/local/bin/iom_power_on.sh
+    fi
+
+    systemctl enable s6100-lpc-monitor.service
+    systemctl start --no-block s6100-lpc-monitor.service
 
     pericom="/sys/bus/pci/devices/0000:08:00.0"
     modprobe i2c-dev
@@ -38,30 +48,14 @@ if [[ "$1" == "init" ]]; then
 
     systemctl start --no-block s6100-ssd-upgrade-status.service
 
-    is_fast_warm=$(cat /proc/cmdline | grep SONIC_BOOT_TYPE | wc -l)
-
-    if [[ "$is_fast_warm" == "1" ]]; then
-        systemctl start --no-block s6100-i2c-enumerate.service
+    if [[ "$TYPE" == "cold" ]]; then
+        systemctl start s6100-platform-startup.service
     else
-        systemctl start s6100-i2c-enumerate.service
+        systemctl start --no-block s6100-platform-startup.service
     fi
 
-    echo -2 > /sys/bus/i2c/drivers/pca954x/0-0070/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/4-0071/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/6-0071/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/6-0072/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/7-0071/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/7-0072/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/8-0071/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/8-0072/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/9-0071/idle_state
-    echo -2 > /sys/bus/i2c/drivers/pca954x/9-0072/idle_state
-
-    install_python_api_package
-    monit reload
-
 elif [[ "$1" == "deinit" ]]; then
-    /usr/local/bin/s6100_i2c_enumeration.sh deinit
+    /usr/local/bin/s6100_platform_startup.sh deinit
 
     modprobe -r dell_s6100_lpc
     modprobe -r dell_s6100_iom_cpld
@@ -69,7 +63,6 @@ elif [[ "$1" == "deinit" ]]; then
     modprobe -r i2c-dev
     modprobe -r dell_ich
     modprobe -r nvram
-    remove_python_api_package
 else
      echo "s6100_platform : Invalid option !"
 fi

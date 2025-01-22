@@ -146,11 +146,11 @@ static int fpga_i2c_enqueue(int bus_id,
       wd0 |= (I2C_WR_ADDR_DATA | (delay << I2C_DELAY_SHF));
       wd1 |= (i2c_inst->i2c_addr << I2C_DEV_ADDR_SHF);
       /* copy the first byte into register address */
-      wd1 |= ((i2c_inst->wr_buf[0]) << I2C_CMD_OFFSET);
+      wd1 |= ((i2c_inst->fpga_i2c_buf.wr_buf[0]) << I2C_CMD_OFFSET);
       wd1 |= ((num_wr - 1) << I2C_WR_CNT_SHF);
       if (num_wr <= 9) {
         /* copy data into instruction area */
-        memcpy(i2c_data, &i2c_inst->wr_buf[1], (num_wr - 1));
+        memcpy(i2c_data, &i2c_inst->fpga_i2c_buf.wr_buf[1], (num_wr - 1));
         bf_fpga_i2c_reg_write32(
             i2c_ctrl, Bf_FPGA_I2C_INST_DATA_LO(inst_id), i2c_data[0]);
         bf_fpga_i2c_reg_write32(
@@ -159,7 +159,7 @@ static int fpga_i2c_enqueue(int bus_id,
         /* copy the data in data area */
         int len = num_wr - 1;
         uint32_t addr;
-        uint8_t *val = (uint8_t *)(&i2c_inst->wr_buf[1]);
+        uint8_t *val = (uint8_t *)(&i2c_inst->fpga_i2c_buf.wr_buf[1]);
         /* store the data pointer  Note the indexing required by FPGA specs */
         i2c_data[0] = BF_FPGA_I2C_DATA_AREA(inst_id);
         addr = i2c_data[0];
@@ -195,11 +195,11 @@ static int fpga_i2c_enqueue(int bus_id,
       wd1 |= (i2c_inst->i2c_addr << I2C_DEV_ADDR_SHF);
       /* 1st byte of the write buf goes into "register address" field */
       wd1 |= ((num_wr - 1) << I2C_WR_CNT_SHF);
-      wd1 |= ((i2c_inst->wr_buf[0]) << I2C_CMD_OFFSET);
+      wd1 |= ((i2c_inst->fpga_i2c_buf.wr_buf[0]) << I2C_CMD_OFFSET);
       wd1 |= ((num_rd) << I2C_RD_CNT_SHF);
       /* less than 8 bytes data goes to the instruction area */
       if ((num_wr - 1 + num_rd) <= 8) {
-        memcpy(i2c_data, &i2c_inst->wr_buf[1], (num_wr - 1));
+        memcpy(i2c_data, &i2c_inst->fpga_i2c_buf.wr_buf[1], (num_wr - 1));
         bf_fpga_i2c_reg_write32(
             i2c_ctrl, Bf_FPGA_I2C_INST_DATA_LO(inst_id), i2c_data[0]);
         bf_fpga_i2c_reg_write32(
@@ -207,7 +207,7 @@ static int fpga_i2c_enqueue(int bus_id,
       } else {
         int len = num_wr - 1;
         uint32_t addr;
-        uint8_t *val = (uint8_t *)(&i2c_inst->wr_buf[1]);
+        uint8_t *val = (uint8_t *)(&i2c_inst->fpga_i2c_buf.wr_buf[1]);
         /* store the data area pointer */
         i2c_data[0] = BF_FPGA_I2C_DATA_AREA(inst_id);
         addr = i2c_data[0];
@@ -419,7 +419,7 @@ int fpga_i2c_oneshot(bf_fpga_i2c_t *i2c_op) {
                                     i,
                                     offset,
                                     i2c_op->i2c_inst[i].rd_cnt,
-                                    i2c_op->i2c_inst[i].rd_buf)) {
+                                    i2c_op->i2c_inst[i].fpga_i2c_buf.rd_buf)) {
         ret = BF_FPGA_EIO;
         goto oneshot_error_exit;
       }

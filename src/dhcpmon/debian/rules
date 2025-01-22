@@ -1,7 +1,0 @@
-#!/usr/bin/make -f
-
-DEB_CFLAGS_APPEND=-std=gnu11
-export DEB_CFLAGS_APPEND
-
-%:
-	dh $@ --parallel

@@ -3,10 +3,10 @@
 # Platform-specific FAN status interface for SONiC
 #
 
-import subprocess
 import sys
+from sonic_py_common.general import getstatusoutput_noshell
 
-SENSORS_CMD = "docker exec -i pmon /usr/bin/sensors"
+SENSORS_CMD = ["docker", "exec", "-i", "pmon", "/usr/bin/sensors"]
 DOCKER_SENSORS_CMD = "/usr/bin/sensors"
 
 
@@ -33,24 +33,23 @@ class FanUtil(FanBase):
             return True
 
     def get_num_fans(self):
-       N3248TE_MAX_FANTRAYS = 3
-       return N3248TE_MAX_FANTRAYS
+        N3248TE_MAX_FANTRAYS = 3
+        return N3248TE_MAX_FANTRAYS
 
     def get_presence(self, idx):
-       sysfs_path = "/sys/devices/platform/dell-n3248te-cpld.0/fan" + self._fan_mapping[idx] + "_prs"
-       return int(open(sysfs_path).read(), 16)
+        sysfs_path = "/sys/devices/platform/dell-n3248te-cpld.0/fan" + self._fan_mapping[idx] + "_prs"
+        return int(open(sysfs_path).read(), 16)
 
     def get_direction(self, idx):
-       sysfs_path = "/sys/devices/platform/dell-n3248te-cpld.0/fan" + self._fan_mapping[idx] + "_dir"
-       return open(sysfs_path).read()
+        sysfs_path = "/sys/devices/platform/dell-n3248te-cpld.0/fan" + self._fan_mapping[idx] + "_dir"
+        return open(sysfs_path).read()
 
     def get_speed(self, idx):
         dockerenv = self.isDockerEnv()
         if not dockerenv:
-            status, cmd_output = subprocess.getstatusoutput(SENSORS_CMD)
-        else :
-            status, cmd_output = subprocess.getstatusoutput(DOCKER_SENSORS_CMD)
-
+            status, cmd_output = getstatusoutput_noshell(SENSORS_CMD)
+        else:
+            status, cmd_output = getstatusoutput_noshell(DOCKER_SENSORS_CMD)
         if status:
             print('Failed to execute sensors command')
             sys.exit(0)
@@ -64,9 +63,9 @@ class FanUtil(FanBase):
         return 0.0
 
     def get_status(self, idx):
-       sysfs_path = "/sys/devices/platform/dell-n3248te-cpld.0/fan" + self._fan_mapping[idx] + "_prs"
-       return int(open(sysfs_path).read(), 16)
+        sysfs_path = "/sys/devices/platform/dell-n3248te-cpld.0/fan" + self._fan_mapping[idx] + "_prs"
+        return int(open(sysfs_path).read(), 16)
 
 
     def set_speed(self, idx):
-       return False
+        return False

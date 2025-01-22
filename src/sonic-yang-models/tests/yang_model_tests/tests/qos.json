@@ -35,6 +35,10 @@
         "eStr": ["pir must be greater than or equal to cir"]
     },
 
+    "SCHEDULER_VALID_NAME": {
+        "desc": "Configure SCHEDULER table."
+    },
+
     "WRED_PROFILE_EMPTY": {
         "desc": "Configure Empty WRED profile."
     },
@@ -42,7 +46,7 @@
     "WRED_PROFILE_VALID": {
         "desc": "Configure WRED profile."
     },
-    
+
     "WRED_PROFILE_INVALID_DROP_PROBABILITY": {
         "desc": "Configure invalid drop probability in WRED profile.",
         "eStrKey" : "Pattern"
@@ -81,5 +85,8 @@
     "QUEUE_WRED_NOT_EXIST": {
         "desc": "Referring non-existing WRED table.",
         "eStrKey" : "LeafRef"
+    },
+    "VOQ_QUEUE_CONFIG": {
+        "desc": "Attach scheduler and wred profiles to VOQ."
     }
 }

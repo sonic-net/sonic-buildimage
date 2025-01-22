@@ -1,0 +1,15 @@
+[Unit]
+Description= Ruijie Global Load process.
+After=rg_platform_driver.service s3ip_sysfs.service
+Requires=rg_platform_driver.service
+#DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/rg_platform_process.py start
+ExecStop=/usr/local/bin/rg_platform_process.py stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

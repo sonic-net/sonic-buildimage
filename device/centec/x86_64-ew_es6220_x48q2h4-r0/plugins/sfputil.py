@@ -5,7 +5,6 @@
 
 try:
     import time
-    import os
     from sonic_sfp.sfputilbase import SfpUtilBase
 except ImportError as e:
     raise ImportError("%s - required module not found" % str(e))
@@ -46,32 +45,6 @@ class SfpUtil(SfpUtilBase):
                 x + self.EEPROM_OFFSET)
 
         SfpUtilBase.__init__(self)
-
-    def get_presence(self, port_name):
-        # modify by zhw to get sfp presence
-        # Check for invalid port_num
-        port_num = int(port_name[8:])
-
-        if port_num < (self.port_start+1) or port_num > (self.port_end+1):
-            return False
-
-        # cpld info from "CPLD Register for es5800A2.2(V1.1)"
-        cpld_map = {0: '0x82', 1: '0x83', 2: '0x84',
-                    3: '0x85', 4: '0x86', 5: '0x87', 6: '0x8E'}
-        cpld_key = (port_num - 1)/8
-        cpld_mask = (1 << (port_num - 1) % 8)
-
-        # use i2cget cmd to get cpld data
-        output = os.popen('i2cdetect -l | grep CP')
-        bus_num = output.read()[4]
-        cmd = "i2cget -y "+bus_num+" 0x5 "+cpld_map[cpld_key]
-        tmp = os.popen(cmd).read().replace("\n", "")
-        cpld_value = int(tmp, 16)
-
-        if cpld_value & cpld_mask == 0:
-            return True
-        else:
-            return False
 
     def get_low_power_mode(self, port_num):
         '''

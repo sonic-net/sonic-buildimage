@@ -1,0 +1,149 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "sonic-host"
+        }
+    },
+    "VLAN_INTERFACE": {
+        "Vlan1000|192.168.0.1/21": {
+            "NULL": "NULL"
+        },
+        "Vlan1000": {
+            "NULL": "NULL"
+        },
+        "Vlan1000|fc02:1000::1/64": {
+            "NULL": "NULL"
+        }
+    },
+    "VLAN_MEMBER": {
+        "Vlan1000|Ethernet68": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet72": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet8": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet80": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet96": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet48": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet32": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet4": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet24": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet40": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet52": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet28": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet44": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet60": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet16": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet12": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet84": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet36": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet64": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet92": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet56": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet20": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet88": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet76": {
+            "tagging_mode": "untagged"
+        }
+    },
+    "DHCP_SERVER_IPV4": {
+        "Vlan1000": {
+            "customized_options": [
+                "option60",
+                "option223"
+            ],
+            "gateway": "192.168.0.1",
+            "lease_time": "900",
+            "mode": "PORT",
+            "netmask": "255.255.255.0",
+            "state": "enabled"
+        },
+        "Vlan2000": {
+            "customized_options": [
+                "option60"
+            ],
+            "gateway": "192.168.0.1",
+            "lease_time": "900",
+            "mode": "PORT",
+            "netmask": "255.255.255.0",
+            "state": "disabled"
+        }
+    },
+    "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
+        "option223": {
+            "id": "223",
+            "type": "text",
+            "value": "dummy_value"
+        },
+        "option60": {
+            "id": "60",
+            "type": "text",
+            "value": "dummy_value"
+        }
+    },
+    "DHCP_SERVER_IPV4_RANGE": {
+        "range3": {
+            "range": [
+                "192.168.0.10",
+                "192.168.0.10"
+            ]
+        },
+        "range2": {
+            "range": [
+                "192.168.0.6",
+                "192.168.0.3"
+            ]
+        },
+        "range1": {
+            "range": [
+                "192.168.0.2",
+                "192.168.0.5"
+            ]
+        }
+    },
+    "DHCP_SERVER_IPV4_PORT": {
+    }
+}

@@ -1,0 +1,40 @@
+{
+    "CONSOLE_DISABLED": {
+        "desc": "Verifying CONSOLE_SWITCH configuration."
+    },
+    "CONSOLE_DEFAULT_CONSOLE_MGMT": {
+        "desc": "CONSOLE_SWITCH default value for console_mgmt enabled field.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-console:sonic-console/CONSOLE_SWITCH/console_mgmt/enabled",
+            "key": "sonic-console:enabled",
+            "value": "no"
+        }
+    },
+    "CONSOLE_DISABLED_INCORRECT_PATTERN": {
+        "desc": "CONSOLE_SWITCH configuration pattern failure.",
+        "eStrKey": "Pattern"
+    },
+    "CONSOLE_PORT_DEFAULT_FLOW_CONTROL": {
+        "desc": "CONSOLE_PORT default value for flow_control field.",
+        "eStrKey": "Verify",
+        "verify": {
+            "xpath": "/sonic-console:sonic-console/CONSOLE_PORT/CONSOLE_PORT_LIST[name='1']/flow_control",
+            "key": "sonic-console:flow_control",
+            "value": "0"
+        }
+    },
+    "CONSOLE_PORT_INVALID_NAME": {
+        "desc": "CONSOLE_PORT invalid name failure.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["name"]
+    },
+    "CONSOLE_PORT_INVALID_BAUD": {
+        "desc": "CONSOLE_PORT invalid baud failure.",
+        "eStrKey": "InvalidValue",
+        "eStr": ["baud"]
+    },
+    "CONSOLE_PORT_VALID": {
+        "desc": "Verifying CONSOLE_PORT configuration no failure."
+    }
+}

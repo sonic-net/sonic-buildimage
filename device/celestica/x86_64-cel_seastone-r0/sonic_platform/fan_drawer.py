@@ -106,3 +106,13 @@ class FanDrawer(FanDrawerBase):
             bool: True if it is replaceable.
         """
         return True
+
+    def get_maximum_consumed_power(self):
+        """
+        Retrives the maximum power drawn by Fan Drawer
+
+        Returns:
+            A float, with value of the maximum consumable power of the
+            component.
+        """
+        return 33.60

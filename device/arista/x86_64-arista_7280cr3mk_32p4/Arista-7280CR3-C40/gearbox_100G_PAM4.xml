@@ -4,11 +4,6 @@
     <phy_addr>0</phy_addr>
     <mode>gearbox</mode>
     <topology>2</topology>
-    <tx-taps>
-        <PAM4>2,-8,17,0,0</PAM4>
-        <NRZ>0,-8,17,0,0</NRZ>
-    </tx-taps>
-    <tx-taps-scale>0,0,1,0,0</tx-taps-scale>
 
     <lane id="0" system-side="true" />
     <lane id="1" system-side="true" />
@@ -34,4 +29,33 @@
     <lane id="21" system-side="false"  />
     <lane id="22" system-side="false"  />
     <lane id="23" system-side="false"  />
+
+    <PAM4>
+        <lane id="0" tx-taps="1,-5,14,0,0"/>
+        <lane id="1" tx-taps="1,-5,14,0,0"/>
+        <lane id="2" tx-taps="1,-5,14,0,0"/>
+        <lane id="3" tx-taps="1,-5,14,0,0"/>
+        <lane id="4" tx-taps="1,-5,14,0,0"/>
+        <lane id="5" tx-taps="1,-5,14,0,0"/>
+        <lane id="6" tx-taps="1,-5,14,0,0"/>
+        <lane id="7" tx-taps="1,-5,14,0,0"/>
+    </PAM4>
+    <NRZ>
+        <lane id="8" tx-taps="0,-1,13,-5,0"/>
+        <lane id="9" tx-taps="0,-1,13,-5,0"/>
+        <lane id="10" tx-taps="0,-1,13,-5,0"/>
+        <lane id="11" tx-taps="0,-1,13,-5,0"/>
+        <lane id="12" tx-taps="0,-1,13,-5,0"/>
+        <lane id="13" tx-taps="0,-1,13,-5,0"/>
+        <lane id="14" tx-taps="0,-1,13,-5,0"/>
+        <lane id="15" tx-taps="0,-1,13,-5,0"/>
+        <lane id="16" tx-taps="0,-1,13,-5,0"/>
+        <lane id="17" tx-taps="0,-1,13,-5,0"/>
+        <lane id="18" tx-taps="0,-1,13,-5,0"/>
+        <lane id="19" tx-taps="0,-1,13,-5,0"/>
+        <lane id="20" tx-taps="0,-1,13,-5,0"/>
+        <lane id="21" tx-taps="0,-1,13,-5,0"/>
+        <lane id="22" tx-taps="0,-1,13,-5,0"/>
+        <lane id="23" tx-taps="0,-1,13,-5,0"/>
+    </NRZ>
 </root>

@@ -6,8 +6,8 @@
 #
 #############################################################################
 
-import os
 import sys
+import subprocess
 
 try:
     from sonic_platform_base.chassis_base import ChassisBase
@@ -28,7 +28,14 @@ HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
 PMON_REBOOT_CAUSE_PATH = "/usr/share/sonic/platform/api_files/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
 PREV_REBOOT_CAUSE_FILE = "previous-reboot-cause.txt"
-HOST_CHK_CMD = "docker > /dev/null 2>&1"
+HOST_CHK_CMD = ["which", "systemctl"]
+SYSLED_FNODE= "/sys/class/leds/as5835_54x_led::diag/brightness"
+
+SYSLED_MODES = {
+    "0" : "STATUS_LED_COLOR_OFF",
+    "1" : "STATUS_LED_COLOR_GREEN",
+    "3" : "STATUS_LED_COLOR_AMBER"
+}
 
 
 class Chassis(ChassisBase):
@@ -36,7 +43,6 @@ class Chassis(ChassisBase):
 
     def __init__(self):
         ChassisBase.__init__(self)
-        self._api_helper = APIHelper()
         self._api_helper = APIHelper()
         self.is_host = self._api_helper.is_host()
         
@@ -54,15 +60,16 @@ class Chassis(ChassisBase):
         for index in range(0, PORT_END):
             sfp = Sfp(index)
             self._sfp_list.append(sfp)
+        self._sfpevent = SfpEvent(self._sfp_list)
         self.sfp_module_initialized = True
         
     def __initialize_fan(self):
-        from sonic_platform.fan import Fan
-        for fant_index in range(0, NUM_FAN_TRAY):
-            for fan_index in range(0, NUM_FAN):
-                fan = Fan(fant_index, fan_index)
-                self._fan_list.append(fan)
-                
+       from sonic_platform.fan_drawer import FanDrawer
+       for fant_index in range(NUM_FAN_TRAY):
+           fandrawer = FanDrawer(fant_index)
+           self._fan_drawer_list.append(fandrawer)
+           self._fan_list.extend(fandrawer._fan_list)
+
     def __initialize_psu(self):
         from sonic_platform.psu import Psu
         for index in range(0, NUM_PSU):
@@ -84,14 +91,14 @@ class Chassis(ChassisBase):
         for index in range(0, NUM_COMPONENT):
             component = Component(index)
             self._component_list.append(component)
-    
+
     def __initialize_watchdog(self):
         from sonic_platform.watchdog import Watchdog
         self._watchdog = Watchdog()
     
-    
+
     def __is_host(self):
-        return os.system(HOST_CHK_CMD) == 0
+        return subprocess.call(HOST_CHK_CMD) == 0
 
     def __read_txt_file(self, file_path):
         try:
@@ -101,23 +108,14 @@ class Chassis(ChassisBase):
         except IOError:
             pass
         return None
-        
-    def get_model(self):
-        """
-        Retrieves the model number (or part number) of the device
-        Returns:
-            string: Model/part number of device
-        """
-        return self._eeprom.get_pn()
-    
+
     def get_name(self):
         """
         Retrieves the name of the device
             Returns:
             string: The name of the device
         """
-        
-        return self._api_helper.hwsku
+        return self._eeprom.get_product_name()
 
     def get_presence(self):
         """
@@ -144,7 +142,15 @@ class Chassis(ChassisBase):
         """
         return self._eeprom.get_mac()
 
-    def get_serial_number(self):
+    def get_model(self):
+        """
+        Retrieves the model number (or part number) of the device
+        Returns:
+            string: Model/part number of device
+        """
+        return self._eeprom.get_pn()
+        
+    def get_serial(self):
         """
         Retrieves the hardware serial number for the chassis
         Returns:
@@ -173,7 +179,7 @@ class Chassis(ChassisBase):
             is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
             to pass a description of the reboot cause.
         """
-        
+
         reboot_cause_path = (HOST_REBOOT_CAUSE_PATH + REBOOT_CAUSE_FILE)
         sw_reboot_cause = self._api_helper.read_txt_file(
             reboot_cause_path) or "Unknown"
@@ -185,10 +191,7 @@ class Chassis(ChassisBase):
         # SFP event
         if not self.sfp_module_initialized:
             self.__initialize_sfp()
-
-        status, sfp_event = SfpEvent(self._sfp_list).get_sfp_event(timeout)
-        
-        return status, sfp_event
+        return self._sfpevent.get_sfp_event(timeout)
 
     def get_sfp(self, index):
         """
@@ -212,3 +215,40 @@ class Chassis(ChassisBase):
             sys.stderr.write("SFP index {} out of range (1-{})\n".format(
                              index, len(self._sfp_list)))
         return sfp
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device. If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of entPhysicalContainedIn is '0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+        
+    def initizalize_system_led(self):
+        return True
+
+    def get_status_led(self):
+        val = self._api_helper.read_txt_file(SYSLED_FNODE)
+        return SYSLED_MODES[val] if val in SYSLED_MODES else "UNKNOWN"
+
+    def set_status_led(self, color):
+        mode = None
+        for key, val in SYSLED_MODES.items():
+            if val == color:
+                mode = key
+                break
+        if mode is None:
+            return False
+        else:
+            return self._api_helper.write_txt_file(SYSLED_FNODE, mode)
+            

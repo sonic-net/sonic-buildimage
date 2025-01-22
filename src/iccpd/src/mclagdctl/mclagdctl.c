@@ -164,7 +164,7 @@ static struct command_type command_types[] =
 
 int mclagdctl_sock_connect()
 {
-    struct sockaddr_un addr;
+    struct sockaddr_un addr = { 0 };
     int addrlen = 0;
     int ret = 0;
 
@@ -181,7 +181,6 @@ int mclagdctl_sock_connect()
         return MCLAG_ERROR;
     }
 
-    memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
     snprintf(addr.sun_path, sizeof(addr.sun_path) - 1, "%s", mclagdctl_sock_path);
     addrlen = sizeof(addr.sun_family) + strlen(mclagdctl_sock_path);

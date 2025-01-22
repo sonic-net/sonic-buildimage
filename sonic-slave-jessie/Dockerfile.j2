@@ -1,14 +1,16 @@
+{% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {%- if CONFIGURED_ARCH == "armhf"  -%}
-FROM multiarch/debian-debootstrap:armhf-jessie
+FROM {{ prefix }}multiarch/debian-debootstrap:armhf-jessie
 {%- elif CONFIGURED_ARCH == "arm64" -%}
-FROM multiarch/debian-debootstrap:arm64-jessie
+FROM {{ prefix }}multiarch/debian-debootstrap:arm64-jessie
 {%- else -%}
-FROM debian:jessie
+FROM {{ prefix }}debian:jessie
 {%- endif %}
 
 MAINTAINER johnar@microsoft.com
 
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
+COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
 
 ## Remove retired jessie-updates repo
 RUN sed -i '/http:\/\/deb.debian.org\/debian jessie-updates main/d' /etc/apt/sources.list
@@ -260,7 +262,7 @@ RUN apt-get -y build-dep linux
 {%- endif %}
 
 # For gobgp and telemetry build
-RUN export VERSION=1.14.2 \
+RUN export VERSION=1.15.15 \
 {%- if CONFIGURED_ARCH == "armhf" %}
  && wget https://storage.googleapis.com/golang/go$VERSION.linux-armv6l.tar.gz \
  && tar -C /usr/local -xzf go$VERSION.linux-armv6l.tar.gz \

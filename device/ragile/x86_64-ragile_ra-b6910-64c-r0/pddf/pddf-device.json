@@ -74,11 +74,11 @@
         "dev_name": "i2c-0",
         "dev": "SMBUS0"
       }, {
-        "dev_name": "i2c-1",
-        "dev": "I2C-GPIO0"
-      }, {
         "dev_name": "i2c-2",
         "dev": "SMBUS1"
+      }, {
+        "dev_name": "i2c-1",
+        "dev": "I2C-GPIO0"
       }]
     }
   },
@@ -1370,6 +1370,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -1378,6 +1379,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -1451,6 +1453,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -1459,6 +1462,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -1532,6 +1536,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -1540,6 +1545,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -1614,6 +1620,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -1622,6 +1629,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -1696,6 +1704,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -1704,6 +1713,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -1778,6 +1788,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -1786,6 +1797,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -1859,6 +1871,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -1867,6 +1880,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -1940,6 +1954,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -1948,6 +1963,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -2021,6 +2037,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -2029,6 +2046,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -2102,6 +2120,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -2110,6 +2129,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -2184,6 +2204,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -2192,6 +2213,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -2266,6 +2288,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -2274,6 +2297,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -2348,6 +2372,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -2356,6 +2381,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -2430,6 +2456,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -2438,6 +2465,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -2511,6 +2539,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -2519,6 +2548,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -2592,6 +2622,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -2600,6 +2631,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -2673,6 +2705,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -2681,6 +2714,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -2754,6 +2788,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -2762,6 +2797,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -2836,6 +2872,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -2844,6 +2881,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -2918,6 +2956,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -2926,6 +2965,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -3000,6 +3040,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -3008,6 +3049,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -3082,6 +3124,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -3090,6 +3133,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -3163,6 +3207,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -3171,6 +3216,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -3244,6 +3290,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x30",
@@ -3252,6 +3299,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x40",
@@ -3325,6 +3373,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -3333,6 +3382,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -3406,6 +3456,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -3414,6 +3465,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -3488,6 +3540,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -3496,6 +3549,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -3570,6 +3624,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -3578,6 +3633,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -3652,6 +3708,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -3660,6 +3717,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -3734,6 +3792,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -3742,6 +3801,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -3815,6 +3875,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -3823,6 +3884,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -3896,6 +3958,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x31",
@@ -3904,6 +3967,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x41",
@@ -3977,6 +4041,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -3985,6 +4050,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -4058,6 +4124,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -4066,6 +4133,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -4140,6 +4208,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -4148,6 +4217,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -4222,6 +4292,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -4230,6 +4301,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -4304,6 +4376,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -4312,6 +4385,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -4386,6 +4460,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -4394,6 +4469,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -4467,6 +4543,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -4475,6 +4552,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -4548,6 +4626,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -4556,6 +4635,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -4629,6 +4709,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -4637,6 +4718,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -4710,6 +4792,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -4718,6 +4801,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -4792,6 +4876,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -4800,6 +4885,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -4874,6 +4960,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -4882,6 +4969,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -4956,6 +5044,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -4964,6 +5053,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -5038,6 +5128,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -5046,6 +5137,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -5119,6 +5211,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -5127,6 +5220,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -5200,6 +5294,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -5208,6 +5303,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD1_B",
         "attr_devaddr": "0x34",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -5281,6 +5377,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -5289,6 +5386,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -5362,6 +5460,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -5370,6 +5469,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -5444,6 +5544,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -5452,6 +5553,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -5526,6 +5628,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -5534,6 +5637,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -5608,6 +5712,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -5616,6 +5721,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -5690,6 +5796,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -5698,6 +5805,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -5771,6 +5879,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -5779,6 +5888,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -5852,6 +5962,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x32",
@@ -5860,6 +5971,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x42",
@@ -5933,6 +6045,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -5941,6 +6054,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -6014,6 +6128,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -6022,6 +6137,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -6095,6 +6211,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -6103,6 +6220,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -6176,6 +6294,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -6184,6 +6303,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -6257,6 +6377,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -6265,6 +6386,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -6338,6 +6460,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -6346,6 +6469,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -6419,6 +6543,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -6427,6 +6552,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",
@@ -6500,6 +6626,7 @@
       },
       "attr_list": [{
         "attr_name": "xcvr_present",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x33",
@@ -6508,6 +6635,7 @@
         "attr_len": "1"
       }, {
         "attr_name": "xcvr_intr_status",
+        "attr_devname": "MAC_BOARD_CPLD2_B",
         "attr_devaddr": "0x36",
         "attr_devtype": "cpld",
         "attr_offset": "0x43",

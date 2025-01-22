@@ -6,8 +6,6 @@
 #
 #############################################################################
 
-import shlex
-import subprocess
 
 try:
     from sonic_platform_base.component_base import ComponentBase
@@ -42,22 +40,6 @@ class Component(ComponentBase):
         ComponentBase.__init__(self)
         self.index = component_index
         self.name = self.get_name()
-
-    def __run_command(self, command):
-        # Run bash command and print output to stdout
-        try:
-            process = subprocess.Popen(
-                shlex.split(command), stdout=subprocess.PIPE)
-            while True:
-                output = process.stdout.readline()
-                if output == '' and process.poll() is not None:
-                    break
-            rc = process.poll()
-            if rc != 0:
-                return False
-        except Exception:
-            return False
-        return True
 
     def __get_bios_version(self):
         # Retrieves the BIOS firmware version

@@ -2,6 +2,7 @@
 
 import os
 import socket
+import subprocess
 from collections import OrderedDict
 
 # Purpose:  Shutdown DUT upon receiving thermaltrip event from kernel (inv_pthread)
@@ -59,6 +60,6 @@ if __name__ == '__main__':
 
             # Receive thermaltrip event
             if event['ACTION'] == 'remove' and event['DEVPATH'] == '/kernel/platform_status/fan':
-                os.system("shutdown -h now")
+                subprocess.call(["shutdown", "-h", "now"])
                 
 

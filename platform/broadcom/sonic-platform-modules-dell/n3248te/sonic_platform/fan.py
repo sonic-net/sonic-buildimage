@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 ########################################################################
-# DellEMC Z9332F
+# DellEMC N3248TE
 #
 # Module contains an implementation of SONiC Platform Base API and
 # provides the Fans' information which are available in the platform.
@@ -26,15 +26,19 @@ class Fan(FanBase):
             self.presence_reg = "fan{}_prs".format(fantray_index)
             self.dir_reg = "fan{}_dir".format(fantray_index)
             self.rpm_file = "/sys/bus/i2c/devices/7-002c/fan{}_input".format(fantray_index+1)
+            self.status_file = "/sys/bus/i2c/devices/7-002c/fan{}_fault".format(fantray_index+1)
             self.eeprom = "/sys/bus/i2c/devices/{}-0050/eeprom".format(15 + fantray_index)
             self.fantray_index = fantray_index
+            self.fan_index = fan_index
         else:
-            self.presence_reg = "psu{}_prs".format(fantray_index)
-            self.psu_index = fantray_index
+            self.psu_index = fan_index - 1
             self.dependancy = dependency
+            self.presence_reg = "psu{}_prs".format(self.psu_index)
+            self.status_reg = "psu{}_status".format(self.psu_index)
             self.dir_reg = ""
-            self.dps_hwmon = "/sys/bus/i2c/devices/{}-005e/hwmon/".format(fantray_index+10)
-            self.eeprom = "/sys/bus/i2c/devices/{}-0056/eeprom".format(10 + fantray_index)
+            self.dps_hwmon = "/sys/bus/i2c/devices/{}-005e/hwmon/".format(self.psu_index + 10)
+            self.eeprom = "/sys/bus/i2c/devices/{}-0056/eeprom".format(self.psu_index + 10)
+            self.fan_index = fan_index
         self.max_speed = 0
 
     def _get_cpld_register(self, reg_name):
@@ -43,7 +47,8 @@ class Fan(FanBase):
         cpld_dir = "/sys/devices/platform/dell-n3248te-cpld.0/"
         cpld_reg_file = cpld_dir + '/' + reg_name
         try:
-            buf = open(cpld_reg_file, 'r').read()
+            with open(cpld_reg_file, 'r')as fd:
+                buf = fd.read()
         except (IOError, AttributeError):
             return 'ERR'
         return buf.strip('\r\n').lstrip(' ')
@@ -55,9 +60,9 @@ class Fan(FanBase):
             String: The name of the device
         """
         if self.is_psu_fan:
-            return "PSU{} Fan".format(self.psu_index)
+            return "PSU{} Fan".format(self.psu_index+1)
         else:
-            return "Fan{}".format(self.fantray_index+1)
+            return "FanTray{}-Fan{}".format(self.fantray_index+1, self.fan_index+1)
 
     def get_model(self):
         """
@@ -95,6 +100,8 @@ class Fan(FanBase):
             return False
         if int(presence,0) == 1:
             return True
+        else:
+            return False
 
     def get_status(self):
         """
@@ -102,7 +109,20 @@ class Fan(FanBase):
         Returns:
             bool: True if FAN is operating properly, False if not
         """
-        return True
+        if not self.is_psu_fan:
+            status = open(self.status_file, "rb").read()
+            if int(status, 0) == 1:
+                return False
+            else:
+                return True
+        else:
+            status = self._get_cpld_register(self.status_reg)
+            if status == 'ERR':
+                return False
+            if int(status, 0) == 1:
+                return True
+            else:
+                return False
 
     def get_direction(self):
         """
@@ -118,7 +138,7 @@ class Fan(FanBase):
         """
         if not self.is_psu_fan:
             val = self._get_cpld_register(self.dir_reg)
-            direction = 'Exhaust' if val == 'F2B' else 'Intake'
+            direction = 'exhaust' if val == 'F2B' else 'intake'
             if direction == 'ERR':
                 return None
         else:
@@ -126,7 +146,7 @@ class Fan(FanBase):
                 val = open(self.eeprom, "rb").read()[0xe1:0xe8]
             except Exception:
                 return None
-            direction = 'Exhaust' if val == 'FORWARD' else 'Intake'
+            direction = 'exhaust' if val == 'FORWARD' else 'intake'
         return direction
 
     def get_speed(self):
@@ -167,3 +187,68 @@ class Fan(FanBase):
         except Exception:
             return None
         return fan_speed
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.fan_index
+
+    def is_replaceable(self):
+        """
+        Indicate whether Fan is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+
+    def get_speed_tolerance(self):
+        """
+        Retrieves the speed tolerance of the fan
+        Returns:
+            An integer, the percentage of variance from target speed which is
+            considered tolerable
+        """
+        if self.get_presence():
+            # The tolerance value is fixed as 20% for all the DellEMC platforms
+            tolerance = 20
+        else:
+            tolerance = 0
+
+        return tolerance
+
+    def set_status_led(self, color):
+        """
+        Set led to expected color
+        Args:
+           color: A string representing the color with which to set the
+                 fan status LED
+        Returns:
+            bool: True if set success, False if fail.
+        """
+        # N3248TE has led only on FanTray and not available for seperate fans
+        return True
+
+    def get_status_led(self):
+        """
+        Gets the current system LED color
+
+        Returns:
+            A string that represents the supported color
+        """
+
+        return None
+
+    def get_target_speed(self):
+        """
+        Retrieves the target (expected) speed of the fan
+        Returns:
+            An integer, the percentage of full fan speed, in the range 0 (off)
+                 to 100 (full speed)
+        """
+        # Return current speed to avoid false thermalctld alarm.
+        return self.get_speed()
+

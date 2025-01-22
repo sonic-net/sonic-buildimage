@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_LINUX_H
@@ -34,6 +34,52 @@
 
 #define MODULE_PARAM(n, t, p)   module_param(n, t, p)
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
+#define kal_netif_napi_add(_dev, _napi, _poll, _weight) \
+            netif_napi_add(_dev, _napi, _poll, _weight)
+#else
+#define kal_netif_napi_add(_dev, _napi, _poll, _weight) \
+            netif_napi_add_weight(_dev, _napi, _poll, _weight)
+#endif
+
+/*
+ * The eth_hw_addr_set was added in Linux 5.15, but later backported
+ * to various longterm releases, so we need a more advanced check with
+ * the option to override the default.
+ */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0))
+#define KERNEL_HAS_ETH_HW_ADDR_SET 1
+#endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,11,0) && \
+     LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,188))
+#define KERNEL_HAS_ETH_HW_ADDR_SET 1
+#endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0) && \
+     LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,251))
+#define KERNEL_HAS_ETH_HW_ADDR_SET 1
+#endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,20,0) &&     \
+     LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,291))
+#define KERNEL_HAS_ETH_HW_ADDR_SET 1
+#endif
+#ifndef KERNEL_HAS_ETH_HW_ADDR_SET
+#define KERNEL_HAS_ETH_HW_ADDR_SET 0
+#endif
+
+#if (KERNEL_HAS_ETH_HW_ADDR_SET == 0)
+static inline void
+eth_hw_addr_set(struct net_device *dev, const u8 *addr)
+{
+    memcpy(dev->dev_addr, addr, ETH_ALEN);
+}
+#endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0))
+#define NGKNET_ETHTOOL_LINK_SETTINGS 1
+#else
+#define NGKNET_ETHTOOL_LINK_SETTINGS 0
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #define kal_vlan_hwaccel_put_tag(skb, proto, tci) \
     __vlan_hwaccel_put_tag(skb, tci)
@@ -44,42 +90,22 @@
     __vlan_hwaccel_put_tag(skb, htons(proto), tci)
 #endif /* KERNEL_VERSION(3,10,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0)
-static inline int
-kal_support_paged_skb(void)
-{
-    return false;
-}
-#else
-static inline int
-kal_support_paged_skb(void)
-{
-    return true;
-}
-#endif /* KERNEL_VERSION(3,6,0) */
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
 static inline struct page *
-kal_dev_alloc_page(void)
-{
-    return NULL;
-}
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
-static inline struct page *
-kal_dev_alloc_page(void)
+kal_dev_alloc_pages(unsigned int order)
 {
     return alloc_pages(GFP_ATOMIC | __GFP_ZERO | __GFP_COLD |
-                       __GFP_COMP | __GFP_MEMALLOC, 0);
+                       __GFP_COMP | __GFP_MEMALLOC, order);
 }
 #else
 static inline struct page *
-kal_dev_alloc_page(void)
+kal_dev_alloc_pages(unsigned int order)
 {
-    return dev_alloc_page();
+    return dev_alloc_pages(order);
 }
-#endif /* KERNEL_VERSION(3,6,0) */
+#endif /* KERNEL_VERSION(3,19,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
 static inline struct sk_buff *
 kal_build_skb(void *data, unsigned int frag_size)
 {
@@ -91,7 +117,21 @@ kal_build_skb(void *data, unsigned int frag_size)
 {
     return build_skb(data, frag_size);
 }
-#endif /* KERNEL_VERSION(3,6,0) */
+#endif /* KERNEL_VERSION(3,5,0) */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0)
+static inline bool
+kal_page_is_pfmemalloc(struct page *page)
+{
+    return false;
+}
+#else
+static inline bool
+kal_page_is_pfmemalloc(struct page *page)
+{
+    return page_is_pfmemalloc(page);
+}
+#endif /* KERNEL_VERSION(4,2,0) */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)
 static inline void
@@ -107,26 +147,53 @@ kal_netif_trans_update(struct net_device *dev)
 }
 #endif /* KERNEL_VERSION(4,7,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0)
-static inline void
-kal_time_val_get(struct timeval *tv)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
+static inline dma_addr_t
+kal_dma_map_page_attrs(struct device *dev, struct page *page,
+                       size_t offset, size_t size, enum dma_data_direction dir,
+                       unsigned long attrs)
 {
-    do_gettimeofday(tv);
+    return dma_map_page(dev, page, offset, size, dir);
 }
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
 static inline void
-kal_time_val_get(struct timeval *tv)
+kal_dma_unmap_page_attrs(struct device *dev, dma_addr_t addr,
+                         size_t size, enum dma_data_direction dir,
+                         unsigned long attrs)
+{
+    dma_unmap_page(dev, addr, size, dir);
+}
+#else
+static inline dma_addr_t
+kal_dma_map_page_attrs(struct device *dev, struct page *page,
+                       size_t offset, size_t size, enum dma_data_direction dir,
+                       unsigned long attrs)
+{
+    return dma_map_page_attrs(dev, page, offset, size, dir, attrs);
+}
+static inline void
+kal_dma_unmap_page_attrs(struct device *dev, dma_addr_t addr,
+                         size_t size, enum dma_data_direction dir,
+                         unsigned long attrs)
+{
+    dma_unmap_page_attrs(dev, addr, size, dir, attrs);
+}
+#endif /* KERNEL_VERSION(4,10,0) */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0)
+static inline s64
+kal_time_usecs(void)
+{
+    struct timeval tv;
+    do_gettimeofday(&tv);
+    return tv.tv_sec * 1000000 + tv.tv_usec;
+}
+#else
+static inline s64
+kal_time_usecs(void)
 {
     struct timespec64 ts;
     ktime_get_real_ts64(&ts);
-    tv->tv_sec = ts.tv_sec;
-    tv->tv_usec = ts.tv_nsec / 1000;
-}
-#else
-static inline void
-kal_time_val_get(struct timespec64 *tv)
-{
-    ktime_get_real_ts64(tv);
+    return ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
 }
 #endif /* KERNEL_VERSION(3,17,0) */
 

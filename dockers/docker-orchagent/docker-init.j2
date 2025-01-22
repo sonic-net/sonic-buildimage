@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+
+mkdir -p /etc/swss/config.d/
+mkdir -p /etc/supervisor/
+mkdir -p /etc/supervisor/conf.d/
+mkdir -p /dev/shm/supervisor/
+
+CFGGEN_PARAMS=" \
+    -d \
+{% if ENABLE_ASAN == "y" %}
+     -a "{\"ENABLE_ASAN\":\"{{ENABLE_ASAN}}\"}" \
+{% endif %}
+    -y /etc/sonic/constants.yml \
+    -t /usr/share/sonic/templates/switch.json.j2,/etc/swss/config.d/switch.json \
+    -t /usr/share/sonic/templates/vxlan.json.j2,/etc/swss/config.d/vxlan.json \
+    -t /usr/share/sonic/templates/ipinip.json.j2,/etc/swss/config.d/ipinip.json \
+    -t /usr/share/sonic/templates/ports.json.j2,/etc/swss/config.d/ports.json \
+    -t /usr/share/sonic/templates/vlan_vars.j2 \
+    -t /usr/share/sonic/templates/ndppd.conf.j2,/etc/ndppd.conf \
+    -t /usr/share/sonic/templates/critical_processes.j2,/etc/supervisor/critical_processes \
+    -t /usr/share/sonic/templates/watchdog_processes.j2,/etc/supervisor/watchdog_processes \
+    -t /usr/share/sonic/templates/supervisord.conf.j2,/etc/supervisor/conf.d/supervisord.conf
+    -t /usr/share/sonic/templates/wait_for_link.sh.j2,/usr/bin/wait_for_link.sh \
+"
+VLAN=$(sonic-cfggen $CFGGEN_PARAMS)
+SUBTYPE=$(sonic-db-cli -s CONFIG_DB HGET 'DEVICE_METADATA|localhost' 'subtype')
+SWITCH_TYPE=${SWITCH_TYPE:-`sonic-db-cli -s CONFIG_DB HGET 'DEVICE_METADATA|localhost' 'switch_type'`}
+chmod +x /usr/bin/wait_for_link.sh
+
+# Executed platform specific initialization tasks.
+if [ -x /usr/share/sonic/platform/platform-init ]; then
+    /usr/share/sonic/platform/platform-init
+fi
+
+# Executed HWSKU specific initialization tasks.
+if [ -x /usr/share/sonic/hwsku/hwsku-init ]; then
+    /usr/share/sonic/hwsku/hwsku-init
+fi
+
+# Start arp update when VLAN exists or switch type as chassis packet for backend port channel interfaces
+if [[ "$VLAN" != "" ]] || [[ "$SWITCH_TYPE" == "chassis-packet" ]]; then
+    cp /usr/share/sonic/templates/arp_update.conf /etc/supervisor/conf.d/
+fi
+
+if [ "$VLAN" != "" ]; then
+    cp /usr/share/sonic/templates/ndppd.conf /etc/supervisor/conf.d/
+fi
+
+if [ "$SUBTYPE" == "DualToR" ]; then
+    cp /usr/share/sonic/templates/tunnel_packet_handler.conf /etc/supervisor/conf.d/
+fi
+
+IS_SUPERVISOR=/etc/sonic/chassisdb.conf
+USE_PCI_ID_IN_CHASSIS_STATE_DB=/usr/share/sonic/platform/use_pci_id_chassis
+ASIC_ID="asic$NAMESPACE_ID"
+if [ -f "$IS_SUPERVISOR" ]; then 
+    if [ -f "$USE_PCI_ID_IN_CHASSIS_STATE_DB" ]; then
+        while true; do
+            PCI_ID=$(sonic-db-cli -s CHASSIS_STATE_DB HGET "CHASSIS_FABRIC_ASIC_TABLE|$ASIC_ID" asic_pci_address)
+            if [ -z "$PCI_ID" ]; then
+                sleep 3
+            else
+                # Update asic_id in CONFIG_DB, which is used by orchagent and fed to syncd
+                if [[ $PCI_ID == ????:??:??.? ]]; then
+                    sonic-db-cli CONFIG_DB HSET 'DEVICE_METADATA|localhost' 'asic_id' ${PCI_ID#*:}
+                    break
+                fi
+            fi
+        done
+    fi
+fi
+
+exec /usr/local/bin/supervisord

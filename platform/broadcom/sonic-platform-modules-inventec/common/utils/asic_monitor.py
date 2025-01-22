@@ -17,13 +17,11 @@ options:
 
 try:
     import os
-    import commands
-    import sys, getopt
-    import logging
     import re
     import time
     import syslog
     from sonic_sfp.bcmshell import bcmshell
+    from sonic_py_common.general import getstatusoutput_noshell
     
 except ImportError as e:
     raise ImportError("%s - required module not found" % str(e))
@@ -53,10 +51,10 @@ def initialLoop():
             bcm_obj = BCMUtil()
             bcm_obj.execute_command("echo")
             initialNotOK = False
-            print bcm_obj
+            print(bcm_obj)
             log_message( syslog.LOG_INFO, "BCMUtil Object initialed successfully" )  
-        except Exception, e:   
-            print "Exception. The warning is {0}".format(str(e)) 
+        except Exception as e:   
+            print("Exception. The warning is {0}".format(str(e)))
             time.sleep(10)
             
 class BCMUtil(bcmshell):
@@ -66,7 +64,7 @@ class BCMUtil(bcmshell):
     
     def get_platform(self):
         if self.platform is None:
-            self.platform = os.popen("uname -n").read().strip()
+            _, self.platform = getstatusoutput_noshell(["uname", "-n"]).strip()
         return self.platform
         
     def get_asic_temperature( self ):
@@ -102,14 +100,18 @@ def main():
                         content = readPtr.read().strip()
                         if bcm_obj.get_platform() == INV_SEQUOIA_PLATFORM :
                             if content == "inv_bmc" and SWITCH_TEMP_FILE_NAME in file_list :
-                                os.system("echo {0} > {1}/{2}/device/{3}".format( ( bcm_obj.get_asic_temperature() * 1000 ), HWMON_PATH, index, SWITCH_TEMP_FILE_NAME ))
+                                file = "{0}/{1}/device/{2}".format(HWMON_PATH, index, SWITCH_TEMP_FILE_NAME)
+                                with open(file, 'w') as f:
+                                    f.write(str(bcm_obj.get_asic_temperature() * 1000) + '\n')
                                 break
                         else :
                             if content == "inv_psoc" and SWITCH_TEMP_FILE_NAME in file_list :
-                                print "echo {0} > {1}/{2}/device/{3}".format( ( bcm_obj.get_asic_temperature() * 1000 ), HWMON_PATH, index, SWITCH_TEMP_FILE_NAME )
-                                os.system("echo {0} > {1}/{2}/device/{3}".format( ( bcm_obj.get_asic_temperature() * 1000 ), HWMON_PATH, index, SWITCH_TEMP_FILE_NAME ))
+                                print("echo {0} > {1}/{2}/device/{3}".format( ( bcm_obj.get_asic_temperature() * 1000 ), HWMON_PATH, index, SWITCH_TEMP_FILE_NAME))
+                                file = "{0}/{1}/device/{2}".format(HWMON_PATH, index, SWITCH_TEMP_FILE_NAME)
+                                with open(file, 'w') as f:
+                                    f.write(str(bcm_obj.get_asic_temperature() * 1000) + '\n')
                                 break
-        except Exception, e:
+        except Exception as e:
             log_message( syslog.LOG_WARNING, "Exception. The warning is {0}".format(str(e)) )
             initialLoop()            
         time.sleep(5)

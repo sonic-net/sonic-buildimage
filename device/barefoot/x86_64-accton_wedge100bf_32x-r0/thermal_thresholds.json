@@ -1,0 +1,64 @@
+{
+    "thermals": [
+        {
+            "com_e_driver-i2c-4-33:cpu-temp" : [99.0, 89.0, 11.0, 1.0]
+        },
+        {
+            "com_e_driver-i2c-4-33:memory-temp" : [85.0, 75.0, 11.0, 1.0]
+        },
+        {
+            "psu_driver-i2c-7-59:psu2-temp1" : [50.0, 40.0, 11.0, 1.0]
+        },
+        {
+            "psu_driver-i2c-7-59:psu2-temp2" : [90.0, 80.0, 11.0, 1.0]
+        },
+        {
+            "psu_driver-i2c-7-5a:psu1-temp1" : [50.0, 40.0, 11.0, 1.0]
+        },
+        {
+            "psu_driver-i2c-7-5a:psu1-temp2" : [90.0, 80.0, 11.0, 1.0]
+        },
+        {
+            "tmp75-i2c-3-48:chip-temp" : [90.0, 80.0, 11.0, 1.0]
+        },
+        {
+            "tmp75-i2c-3-49:exhaust2-temp" : [80.0, 70.0, 11.0, 1.0]
+        },
+        {
+            "tmp75-i2c-3-4a:exhaust-temp" : [60.0, 50.0, 11.0, 1.0]
+        },
+        {
+            "tmp75-i2c-3-4b:intake-temp" : [60.0, 50.0, 11.0, 1.0]
+        },
+        {
+            "tmp75-i2c-3-4c:tofino-temp" : [99.0, 89.0, 11.0, 1.0]
+        },
+        {
+            "tmp75-i2c-3-4d:intake2-temp" : [60.0, 50.0, 11.0, 1.0]
+        },
+        {
+            "tmp75-i2c-8-48:outlet-right-temp" : [60.0, 50.0, 11.0, 1.0]
+        },
+        {
+            "tmp75-i2c-8-49:outlet-left-temp" : [60.0, 50.0, 11.0, 1.0]
+        },
+        {
+            "pch_haswell-virtual-0:temp1" : [60.0, 50.0, 11.0, 1.0]
+        },
+        {
+            "coretemp-isa-0000:package-id-0" : [80.0, 70.0, 11.0, 1.0]
+        },
+        {
+            "coretemp-isa-0000:core-0" : [99.0, 89.0, 11.0, 1.0]
+        },
+        {
+            "coretemp-isa-0000:core-1" : [99.0, 89.0, 11.0, 1.0]
+        },
+        {
+            "coretemp-isa-0000:core-2" : [99.0, 89.0, 11.0, 1.0]
+        },
+        {
+            "coretemp-isa-0000:core-3" : [99.0, 89.0, 11.0, 1.0]
+        }
+    ]
+}

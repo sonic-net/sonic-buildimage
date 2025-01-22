@@ -40,8 +40,8 @@ class PsuUtil(PsuBase):
         if index is None:
             return False
 
-        cmd = 'i2cget -y 0 0x36 0x1e'
-        status = int(Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True).stdout.readline(), 16)
+        cmd = ['i2cget', '-y', '0', '0x36', '0x1e']
+        status = int(Popen(cmd, stdout=PIPE, stderr=STDOUT).stdout.readline(), 16)
         powergood = ((status & (1 << (3 * (index - 1) + 2))) != 0)
         return powergood
 
@@ -56,7 +56,7 @@ class PsuUtil(PsuBase):
         if index is None:
             return False
 
-        cmd = 'i2cget -y 0 0x36 0x1e'
-        status = int(Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True).stdout.readline(), 16)
+        cmd = ['i2cget', '-y', '0', '0x36', '0x1e']
+        status = int(Popen(cmd, stdout=PIPE, stderr=STDOUT).stdout.readline(), 16)
         presence = ((status & (1 << (3 * (index - 1) + 1))) == 0)
         return presence

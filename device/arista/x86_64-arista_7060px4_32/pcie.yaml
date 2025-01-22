@@ -187,11 +187,6 @@
   name: 'Performance counters: Intel Corporation Xeon E7 v4/Xeon E5 v4/Xeon E3 v4/Xeon
     D R3 QPI Link 0/1 (rev 03)'
 - bus: ff
-  dev: 0b
-  fn: '3'
-  id: '0001'
-  name: 'System peripheral: Arastra Inc. Device 0001 (rev 03)'
-- bus: ff
   dev: 0c
   fn: '0'
   id: 6fe0

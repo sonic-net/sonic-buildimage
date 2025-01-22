@@ -1,5 +1,5 @@
 {#
-    Copyright (c) 2020-2021 NVIDIA CORPORATION & AFFILIATES.
+    Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
     Apache-2.0
 
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +28,7 @@
         'x86_64-mlnx_msn2100-r0':'MELLANOX-SPECTRUM',
         'x86_64-mlnx_msn2410-r0':'MELLANOX-SPECTRUM',
         'x86_64-mlnx_msn2700-r0':'MELLANOX-SPECTRUM',
+        'x86_64-mlnx_msn2700a1-r0':'MELLANOX-SPECTRUM',
         'x86_64-mlnx_msn2700_simx-r0':'MELLANOX-SPECTRUM',
         'x86_64-mlnx_msn2740-r0':'MELLANOX-SPECTRUM',
         'x86_64-mlnx_msn3420-r0':'MELLANOX-SPECTRUM-2',
@@ -40,11 +41,16 @@
         'x86_64-mlnx_msn4700-r0':'MELLANOX-SPECTRUM-3',
         'x86_64-mlnx_msn4600c-r0':'MELLANOX-SPECTRUM-3',
         'x86_64-mlnx_msn4600-r0':'MELLANOX-SPECTRUM-3',
+        'x86_64-nvidia_sn4280_simx-r0':'MELLANOX-SPECTRUM-3',
 	'x86_64-nvidia_sn4800-r0':'MELLANOX-SPECTRUM-3',
 	'x86_64-nvidia_sn4800_simx-r0':'MELLANOX-SPECTRUM-3',
         'x86_64-nvidia_sn2201-r0':'MELLANOX-SPECTRUM',
+        'x86_64-nvidia_sn5400-r0':'MELLANOX-SPECTRUM-4',
         'x86_64-nvidia_sn5600-r0':'MELLANOX-SPECTRUM-4',
+        'x86_64-nvidia_sn5400_simx-r0':'MELLANOX-SPECTRUM-4',
         'x86_64-nvidia_sn5600_simx-r0':'MELLANOX-SPECTRUM-4',
+        'x86_64-nvidia_sn4280-r0':'MELLANOX-SPECTRUM-3',
+        'x86_64-nvidia_sn5640_simx-r0':'MELLANOX-SPECTRUM-5',
         'vs-platform':'vs'
     }
 %}
@@ -55,7 +61,9 @@
             "cell_size": "96",
             "pipeline_latency": "19",
             "mac_phy_delay": "0.8",
-            "peer_response_time": "3.8"
+            "peer_response_time": "3.8",
+            "port_reserved_shp": "20",
+            "port_max_shp": "8192"
         },
         "OP": "SET"
     }
@@ -65,7 +73,9 @@
             "cell_size": "144",
             "pipeline_latency": "19",
             "mac_phy_delay": "0.8",
-            "peer_response_time": "3.8"
+            "peer_response_time": "3.8",
+            "port_reserved_shp": "20",
+            "port_max_shp": "8192"
         },
         "OP": "SET"
     }
@@ -75,13 +85,27 @@
             "cell_size": "144",
             "pipeline_latency": "19",
             "mac_phy_delay": "0.8",
-            "peer_response_time": "3.8"
+            "peer_response_time": "3.8",
+            "port_reserved_shp": "20",
+            "port_max_shp": "8192"
         },
         "OP": "SET"
     }
 {% elif asic_type == 'MELLANOX-SPECTRUM-4' %}
     {
         "ASIC_TABLE:MELLANOX-SPECTRUM-4": {
+            "cell_size": "192",
+            "pipeline_latency": "19",
+            "mac_phy_delay": "0.8",
+            "peer_response_time": "3.8",
+            "port_reserved_shp": "20",
+            "port_max_shp": "8192"
+        },
+        "OP": "SET"
+    }
+{% elif asic_type == 'MELLANOX-SPECTRUM-5' %}
+    {
+        "ASIC_TABLE:MELLANOX-SPECTRUM-5": {
             "cell_size": "192",
             "pipeline_latency": "19",
             "mac_phy_delay": "0.8",

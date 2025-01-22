@@ -14,8 +14,28 @@ $ModLoad imuxsock # provides support for local system logging
 #
 # Set a rate limit on messages from the container
 #
+
+{% if SYSLOG_CONFIG_FEATURE is defined %}
+{% if container_name in SYSLOG_CONFIG_FEATURE %}
+{% if 'rate_limit_interval' in SYSLOG_CONFIG_FEATURE[container_name]%}
+{% set rate_limit_interval = SYSLOG_CONFIG_FEATURE[container_name]['rate_limit_interval'] %}
+{% endif %}
+{% if 'rate_limit_burst' in SYSLOG_CONFIG_FEATURE[container_name]%}
+{% set rate_limit_burst = SYSLOG_CONFIG_FEATURE[container_name]['rate_limit_burst'] %}
+{% endif %}
+{% endif %}
+{% endif %}
+
+{% if rate_limit_interval is defined %}
+$SystemLogRateLimitInterval {{ rate_limit_interval }}
+{% else %}
 $SystemLogRateLimitInterval 300
+{% endif %}
+{% if rate_limit_burst is defined %}
+$SystemLogRateLimitBurst {{ rate_limit_burst }}
+{% else %}
 $SystemLogRateLimitBurst 20000
+{% endif %}
 
 #$ModLoad imklog  # provides kernel logging support
 #$ModLoad immark  # provides --MARK-- message capability
@@ -33,9 +53,25 @@ $SystemLogRateLimitBurst 20000
 #### GLOBAL DIRECTIVES ####
 ###########################
 
+set $.PLATFORM=getenv("PLATFORM");
+set $.CONTAINER_NAME=getenv("CONTAINER_NAME");
+
+{% if container_name == 'pmon' %}
+
+# This rsyslog configuration is intended to resolve the following error message that only appears on the MSN2700 and MSN2410 platforms:
+# "ERR pmon#sensord: Error getting sensor data: dps460/#10: Can't read"
+# This error is because of firmware issue with some type of PSU, we are not able to upgrade the FW online.
+# Since there is no functional impact, this error log can be ignored safely.
+
+if ($.PLATFORM == "x86_64-mlnx_msn2700-r0" or $.PLATFORM == "x86_64-mlnx_msn2700a1-r0" or $.PLATFORM == "x86_64-mlnx_msn2410-r0") then {
+    if $programname contains "sensord" and $msg contains "Error getting sensor data: dps460/#" then stop
+}
+
+{% endif %}
+
 # Set remote syslog server
-template (name="ForwardFormatInContainer" type="string" string="<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% {{container_name}}#%syslogtag%%msg:::sp-if-no-1st-sp%%msg%")
-*.* action(type="omfwd" target="{{target_ip}}" port="514" protocol="udp" Template="ForwardFormatInContainer")
+template (name="ForwardFormatInContainer" type="string" string="<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %$.CONTAINER_NAME%#%syslogtag%%msg:::sp-if-no-1st-sp%%msg%")
+*.* action(type="omfwd" target=`echo $SYSLOG_TARGET_IP` port="514" protocol="udp" Template="ForwardFormatInContainer")
 
 #
 # Use traditional timestamp format.
@@ -44,7 +80,7 @@ template (name="ForwardFormatInContainer" type="string" string="<%PRI%>%TIMESTAM
 #$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
 
 # Define a custom template
-$template SONiCFileFormat,"%TIMESTAMP%.%timestamp:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% {{container_name}}#%syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCFileFormat,"%TIMESTAMP%.%timestamp:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %$.CONTAINER_NAME%#%syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 $ActionFileDefaultTemplate SONiCFileFormat
 
 #

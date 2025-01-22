@@ -24,15 +24,19 @@ setup(
     description="Package contains Python Library for YANG for sonic.",
     license="GNU General Public License v3",
     long_description=readme + '\n\n',
+    scripts = [
+        'sonic-cfg-help',
+    ],
     install_requires = [
         'xmltodict==0.12.0',
-        'ijson==2.6.1',
+        'ijson==3.2.3',
         'jsondiff>=1.2.0',
+        'tabulate==0.9.0'
     ],
     tests_require = [
         'pytest>3',
         'xmltodict==0.12.0',
-        'ijson==2.6.1',
+        'ijson==3.2.3',
         'jsondiff>=1.2.0'
     ],
     setup_requires = [

@@ -43,7 +43,7 @@
         "BUFFER_PROFILE_TABLE:egress_lossless_zero_profile" : {
             "pool":"egress_lossless_pool",
             "size":"0",
-            "dynamic_th":"-8"
+            "static_th":"0"
         },
         "OP": "SET"
     },

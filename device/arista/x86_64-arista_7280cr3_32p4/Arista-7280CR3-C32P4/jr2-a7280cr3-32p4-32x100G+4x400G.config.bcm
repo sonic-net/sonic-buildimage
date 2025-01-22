@@ -270,10 +270,10 @@ tdma_timeout_usec.BCM8869X=1000000
 tslam_timeout_usec.BCM8869X=1000000
 
 appl_enable_intr_init.BCM8869X=1
-polled_irq_mode.BCM8869X=1
+polled_irq_mode.BCM8869X=0
 polled_irq_delay.BCM8869X=1000
 
-bcm_stat_interval.BCM8869X=1000
+bcm_stat_interval.BCM8869X=1000000
 
 mem_cache_enable_ecc.BCM8869X=1
 mem_cache_enable_parity.BCM8869X=1
@@ -734,7 +734,7 @@ ucode_port_34=CDGE5:core_0.34
 ucode_port_35=CDGE11:core_1.35
 ucode_port_36=CDGE10:core_1.36
 
-rif_id_max=0x4000
+rif_id_max=0x6000
 
 dma_desc_aggregator_chain_length_max.BCM8869X=1000
 dma_desc_aggregator_buff_size_kb.BCM8869X=100

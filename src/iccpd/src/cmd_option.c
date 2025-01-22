@@ -80,26 +80,26 @@ struct CmdOption* cmd_option_add(struct CmdOptionParser* parser, char* opt_name)
 
 static void cmd_option_register(struct CmdOptionParser* parser, char* syntax, char* desc)
 {
-    char buf[OPTION_MAX_LEN];
+    char buf[OPTION_MAX_LEN] = {0};
     struct CmdOption* opt = NULL;
     char* opt_name = NULL;
     char* param = NULL;
     char* desc_copy = NULL;
     char* token = NULL;
+    char* saveptr;
 
     if (parser == NULL)
         return;
     if (syntax == NULL)
         return;
 
-    memset(buf, 0, OPTION_MAX_LEN);
     snprintf(buf, OPTION_MAX_LEN - 1, "%s", syntax);
 
-    if ((token = strtok(buf, " ")) == NULL)
+    if ((token = strtok_r(buf, " ", &saveptr)) == NULL)
         return;
 
     opt_name = strdup(token);
-    if ((token = strtok(NULL, " ")) != NULL)
+    if ((token = strtok_r(NULL, " ", &saveptr)) != NULL)
         param = strdup(token);
     desc_copy = strdup(desc);
     if ((opt = cmd_option_find(parser, opt_name)) != NULL)

@@ -1,7 +1,26 @@
 {
     "chassis": {
         "name": "DCS-7260CX3-64",
-        "components": [],
+        "components": [
+            {
+               "name": "Aboot()"
+            },
+            {
+               "name": "Scd(addr=0000:06:00.0)"
+            },
+            {
+               "name": "Scd(addr=0000:ff:0b.3)"
+            },
+            {
+               "name": "Ucd90160(addr=74-004e)"
+            },
+            {
+               "name": "Ucd90120A(addr=83-0034)"
+            },
+            {
+               "name": "RookSysCpld(addr=81-0023)"
+            }
+        ],
         "fans": [],
         "fan_drawers": [
             {
@@ -40,55 +59,59 @@
         "psus": [
             {
                 "name": "psu1",
-                "fans": []
+                "fans": [
+                    {
+                        "name": "psu1/1",
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
             },
             {
                 "name": "psu2",
-                "fans": []
+                "fans": [
+                    {
+                        "name": "psu2/1",
+                        "speed": {
+                            "controllable": false
+                        }
+                    }
+                ]
             }
         ],
         "thermals": [
             {
-                "name": "Board sensor"
+                "name": "Board sensor",
+                "controllable": false
             },
             {
-                "name": "PCH temp sensor"
+                "name": "PCH temp sensor",
+                "controllable": false
             },
             {
-                "name": "Physical id 0"
+                "name": "Physical id 0",
+                "controllable": false
             },
             {
-                "name": "CPU core0 temp sensor"
+                "name": "CPU core0 temp sensor",
+                "controllable": false
             },
             {
-                "name": "CPU core1 temp sensor"
+                "name": "CPU core1 temp sensor",
+                "controllable": false
             },
             {
-                "name": "CPU board temp sensor"
+                "name": "CPU board temp sensor",
+                "controllable": false
             },
             {
-                "name": "Back-panel temp sensor"
+                "name": "Back-panel temp sensor",
+                "controllable": false
             },
             {
-                "name": "Front-panel temp sensor"
-            },
-            {
-                "name": "Power supply 1 hotspot sensor"
-            },
-            {
-                "name": "Power supply 1 inlet temp sensor"
-            },
-            {
-                "name": "Power supply 1 exhaust temp sensor"
-            },
-            {
-                "name": "Power supply 2 hotspot sensor"
-            },
-            {
-                "name": "Power supply 2 inlet temp sensor"
-            },
-            {
-                "name": "Power supply 2 exhaust temp sensor"
+                "name": "Front-panel temp sensor",
+                "controllable": false
             }
         ],
         "sfps": [

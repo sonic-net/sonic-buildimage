@@ -8,6 +8,6 @@ Before=ntp-config.service
 
 [Service]
 User={{ sonicadmin_user }}
-ExecStartPre=/usr/bin/{{docker_container_name}}.sh start
-ExecStart=/usr/bin/{{docker_container_name}}.sh wait
-ExecStop=/usr/bin/{{docker_container_name}}.sh stop
+ExecStartPre=/usr/local/bin/{{docker_container_name}}.sh start
+ExecStart=/usr/local/bin/{{docker_container_name}}.sh wait
+ExecStop=/usr/local/bin/{{docker_container_name}}.sh stop

@@ -14,17 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# SONIC_PLATFORM_API_PY2 package
-
-ifeq ($(ENABLE_PY2_MODULES), y)
-    SONIC_PLATFORM_API_PY2 = mlnx_platform_api-1.0-py2-none-any.whl
-    $(SONIC_PLATFORM_API_PY2)_SRC_PATH = $(PLATFORM_PATH)/mlnx-platform-api
-    $(SONIC_PLATFORM_API_PY2)_PYTHON_VERSION = 2
-    $(SONIC_PLATFORM_API_PY2)_DEPENDS = $(SONIC_PY_COMMON_PY2) $(SONIC_PLATFORM_COMMON_PY2) $(SONIC_CONFIG_ENGINE_PY2)
-    SONIC_PYTHON_WHEELS += $(SONIC_PLATFORM_API_PY2)
-endif
-
-export mlnx_platform_api_py2_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_API_PY2))"
 
 # SONIC_PLATFORM_API_PY3 package
 
@@ -32,6 +21,7 @@ SONIC_PLATFORM_API_PY3 = mlnx_platform_api-1.0-py3-none-any.whl
 $(SONIC_PLATFORM_API_PY3)_SRC_PATH = $(PLATFORM_PATH)/mlnx-platform-api
 $(SONIC_PLATFORM_API_PY3)_PYTHON_VERSION = 3
 $(SONIC_PLATFORM_API_PY3)_DEPENDS = $(SONIC_PY_COMMON_PY3) $(SONIC_PLATFORM_COMMON_PY3) $(SONIC_CONFIG_ENGINE_PY3) $(SONIC_PLATFORM_API_PY2)
+$(SONIC_PLATFORM_API_PY3)_DEBS_DEPENDS = $(PYTHON3_SWSSCOMMON)
 SONIC_PYTHON_WHEELS += $(SONIC_PLATFORM_API_PY3)
 
 export mlnx_platform_api_py3_wheel_path="$(addprefix $(PYTHON_WHEELS_PATH)/,$(SONIC_PLATFORM_API_PY3))"

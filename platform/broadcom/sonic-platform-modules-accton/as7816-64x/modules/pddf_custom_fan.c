@@ -9,8 +9,8 @@
 #include <linux/sysfs.h>
 #include <linux/slab.h>
 #include <linux/dmi.h>
-#include "../../../../pddf/i2c/modules/include/pddf_fan_defs.h"
-#include "../../../../pddf/i2c/modules/include/pddf_fan_driver.h"
+#include "pddf_fan_defs.h"
+#include "pddf_fan_driver.h"
 
 extern FAN_SYSFS_ATTR_DATA data_fan1_input;
 extern FAN_SYSFS_ATTR_DATA data_fan2_input;

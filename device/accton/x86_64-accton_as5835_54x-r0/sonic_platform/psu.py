@@ -10,7 +10,7 @@
 
 try:
     from sonic_platform_base.psu_base import PsuBase
-    #from sonic_platform.fan import Fan
+    from sonic_platform.thermal import Thermal
     from .helper import APIHelper
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -64,6 +64,8 @@ class Psu(PsuBase):
         for fan_index in range(0, PSU_NUM_FAN[self.index]):
             fan = Fan(fan_index, 0, is_psu_fan=True, psu_index=self.index)
             self._fan_list.append(fan)
+        
+        self._thermal_list.append(Thermal(is_psu=True, psu_index=self.index))
 
     def get_voltage(self):
         """
@@ -154,7 +156,7 @@ class Psu(PsuBase):
             return float(val)/1000
         else:
             return 0
-    
+
     def get_temperature_high_threshold(self):
         """
         Retrieves the high threshold temperature of PSU
@@ -251,3 +253,20 @@ class Psu(PsuBase):
         if serial is None:
             return "N/A"
         return serial
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device. If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of entPhysicalContainedIn is '0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
+        """
+        return self.index+1
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True

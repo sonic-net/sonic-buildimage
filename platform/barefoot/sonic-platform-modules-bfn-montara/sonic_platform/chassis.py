@@ -1,16 +1,21 @@
 #!/usr/bin/env python
 
 try:
+    import os
     import time
     import syslog
+    import logging
+    import logging.config
+    import yaml
 
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform.sfp import Sfp
     from sonic_platform.psu import psu_list_get
     from sonic_platform.fan_drawer import fan_drawer_list_get
-    from sonic_platform.thermal import thermal_list_get
-    from eeprom import Eeprom
-    from sonic_platform.thermal_manager import ThermalManager
+    from sonic_platform.thermal import chassis_thermals_list_get
+    from sonic_platform.platform_utils import file_create
+    from sonic_platform.eeprom import Eeprom
+    from sonic_platform.watchdog import Watchdog
 
     from sonic_platform.platform_thrift_client import pltfm_mgr_ready
     from sonic_platform.platform_thrift_client import thrift_try
@@ -20,6 +25,7 @@ try:
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
+NUM_COMPONENT = 2
 class Chassis(ChassisBase):
     """
     Platform-specific Chassis class
@@ -36,17 +42,25 @@ class Chassis(ChassisBase):
         ChassisBase.__init__(self)
 
         self.__eeprom = None
+        self.__tlv_bin_eeprom = None
+        self.__tlv_dict_eeprom = None
+
         self.__fan_drawers = None
         self.__fan_list = None
         self.__thermals = None
         self.__psu_list = None
         self.__sfp_list = None
-        self.__thermal_mngr = None
-        self.__polling_thermal_time = 30
+        self.__watchdog = None
 
         self.ready = False
         self.phy_port_cur_state = {}
         self.qsfp_interval = self.QSFP_CHECK_INTERVAL
+        self.__initialize_components()
+
+        with open(os.path.dirname(__file__) + "/logging.conf", 'r') as f:
+            config_dict = yaml.load(f, yaml.SafeLoader)
+            file_create(config_dict['handlers']['file']['filename'], '646')
+            logging.config.dictConfig(config_dict)
 
     @property
     def _eeprom(self):
@@ -56,6 +70,28 @@ class Chassis(ChassisBase):
 
     @_eeprom.setter
     def _eeprom(self, value):
+        pass
+
+    @property
+    def _tlv_bin_eeprom(self):
+        if self.__tlv_bin_eeprom is None:
+            self.__tlv_bin_eeprom = self._eeprom.get_raw_data()
+        return self.__tlv_bin_eeprom
+
+    @property
+    def _tlv_dict_eeprom(self):
+        if self.__tlv_dict_eeprom is None:
+            self.__tlv_dict_eeprom = self._eeprom.get_data()
+        return self.__tlv_dict_eeprom
+
+    @property
+    def _watchdog(self):
+        if self.__watchdog is None:
+            self.__watchdog = Watchdog()
+        return self.__watchdog
+
+    @_watchdog.setter
+    def _watchdog(self, value):
         pass
 
     @property
@@ -83,7 +119,7 @@ class Chassis(ChassisBase):
     @property
     def _thermal_list(self):
         if self.__thermals is None:
-            self.__thermals = thermal_list_get()
+            self.__thermals = chassis_thermals_list_get()
         return self.__thermals
 
     @_thermal_list.setter
@@ -114,16 +150,6 @@ class Chassis(ChassisBase):
     def _sfp_list(self, value):
         pass
 
-    @property
-    def _thermal_mngr(self):
-        if self.__thermal_mngr is None:
-            self.__thermal_mngr = ThermalManager(self.__polling_thermal_time)
-        return self.__thermal_mngr
-
-    @_thermal_mngr.setter
-    def _thermal_mngr(self, value):
-        self.__thermal_mngr = ThermalManager(value)
-
     def __update_port_info(self):
         def qsfp_max_port_get(client):
             return client.pltfm_mgr.pltfm_mgr_qsfp_get_max_port()
@@ -141,13 +167,19 @@ class Chassis(ChassisBase):
             self.PORT_END = self.QSFP_PORT_END
             self.PORTS_IN_BLOCK = self.QSFP_PORT_END
 
+    def __initialize_components(self):
+        from sonic_platform.component import Components
+        for index in range(0, NUM_COMPONENT):
+            component = Components(index)
+            self._component_list.append(component)
+
     def get_name(self):
         """
         Retrieves the name of the chassis
         Returns:
             string: The name of the chassis
         """
-        return self._eeprom.modelstr()
+        return self._eeprom.modelstr(self._tlv_bin_eeprom)
 
     def get_presence(self):
         """
@@ -163,7 +195,7 @@ class Chassis(ChassisBase):
         Returns:
             string: Model/part number of chassis
         """
-        return self._eeprom.part_number_str()
+        return self._eeprom.part_number_str(self._tlv_bin_eeprom)
 
     def get_serial(self):
         """
@@ -171,7 +203,7 @@ class Chassis(ChassisBase):
         Returns:
             string: Serial number of chassis
         """
-        return self._eeprom.serial_number_str()
+        return self._eeprom.serial_number_str(self._tlv_bin_eeprom)
 
     def get_revision(self):
         """
@@ -179,7 +211,8 @@ class Chassis(ChassisBase):
         Returns:
             string: Revision number of chassis
         """
-        return self._eeprom.revision_str()
+        return self._tlv_dict_eeprom.get(
+            "0x{:X}".format(Eeprom._TLV_CODE_LABEL_REVISION), 'N/A')
 
     def get_sfp(self, index):
         """
@@ -220,7 +253,7 @@ class Chassis(ChassisBase):
             A string containing the MAC address in the format
             'XX:XX:XX:XX:XX:XX'
         """
-        return self._eeprom.base_mac_addr()
+        return self._eeprom.base_mac_addr(self._tlv_bin_eeprom)
 
     def get_system_eeprom_info(self):
         """
@@ -231,7 +264,7 @@ class Chassis(ChassisBase):
             OCP ONIE TlvInfo EEPROM format and values are their corresponding
             values.
         """
-        return self._eeprom.system_eeprom_info()
+        return self._tlv_dict_eeprom
 
     def __get_transceiver_change_event(self, timeout=0):
         forever = False
@@ -346,10 +379,3 @@ class Chassis(ChassisBase):
             specified.
         """
         return self.system_led
-
-    def get_thermal_manager(self):
-        return self._thermal_mngr
-
-    def __del__(self):
-        if self.__thermal_mngr is not None:
-            self.__thermal_mngr.stop()

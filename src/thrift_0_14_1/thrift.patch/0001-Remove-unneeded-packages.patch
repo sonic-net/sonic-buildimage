@@ -1,0 +1,118 @@
+From e9e789bdeb4eb3ae5bf905f83171c66558f29551 Mon Sep 17 00:00:00 2001
+From: Myron sosyak <myronx.sosyak@intel.com>
+Date: Fri, 28 Jan 2022 15:01:35 +0000
+Subject: [PATCH 1/2] Remove unneeded packages
+
+---
+ debian/control | 83 +++-----------------------------------------------
+ 1 file changed, 5 insertions(+), 78 deletions(-)
+
+diff --git a/debian/control b/debian/control
+index a9e934f17..752076582 100644
+--- a/debian/control
++++ b/debian/control
+@@ -1,14 +1,12 @@
+ Source: thrift
+ Section: devel
+ Priority: extra
+-Build-Depends: dotnet-runtime-3.1, dotnet-sdk-3.1, debhelper (>= 9), build-essential, python-dev, ant,
+-    erlang-base, ruby-dev | ruby1.9.1-dev, ruby-bundler ,autoconf, automake,
+-    pkg-config, libtool, bison, flex, libboost-dev | libboost1.56-dev | libboost1.63-all-dev,
+-    python-all, python-setuptools, python-all-dev, python-all-dbg,
++Build-Depends: debhelper (>= 9), build-essential, python-dev,
++    autoconf, automake,
++    pkg-config, libtool,
++    python-all, python-setuptools, python-all-dev,
+     python3-all, python3-setuptools, python3-all-dev, python3-all-dbg,
+-    openjdk-8-jdk | openjdk-8-jdk-headless | openjdk-11-jdk | openjdk-11-jdk-headless | default-jdk,
+-    libboost-test-dev | libboost-test1.56-dev | libboost-test1.63-dev, libevent-dev, libssl-dev, perl (>= 5.8.0-7),
+-    php (>= 5), php-dev (>= 5), libglib2.0-dev, qtchooser, qtbase5-dev-tools
++    libevent-dev, libssl-dev, libglib2.0-dev
+ Maintainer: Thrift Developer's <dev@thrift.apache.org>
+ Homepage: http://thrift.apache.org/
+ Vcs-Git: https://github.com/apache/thrift.git
+@@ -95,65 +93,6 @@ Description: Python bindings for Thrift (debug version)
+  definition to Python classes, and then the modules in this package will allow
+  you to use those classes in your programs.
+
+-Package: ruby-thrift
+-Architecture: all
+-Section: libs
+-Depends: ruby | ruby-interpreter, ${shlibs:Depends}, ${misc:Depends}
+-Provides: libthrift-ruby
+-Replaces: libthrift-ruby
+-Breaks: libthrift-ruby
+-Description: Ruby bindings for Thrift
+- Thrift is a software framework for scalable cross-language services
+- development. It combines a software stack with a code generation engine to
+- build services that work efficiently and seamlessly.
+- .
+- This package contains the Ruby bindings for Thrift. You will need the thrift
+- tool (in the thrift-compiler package) to compile your definition to Ruby
+- classes, and then the modules in this package will allow you to use those
+- classes in your programs.
+-
+-Package: libthrift-java
+-Architecture: all
+-Section: java
+-Depends: ${misc:Depends}
+-Description: Java bindings for Thrift
+- Thrift is a software framework for scalable cross-language services
+- development. It combines a software stack with a code generation engine to
+- build services that work efficiently and seamlessly.
+- .
+- This package contains the Java bindings for Thrift. You will need the thrift
+- tool (in the thrift-compiler package) to compile your definition to Java
+- classes, and then the modules in this package will allow you to use those
+- classes in your programs.
+-
+-Package: libthrift-netstd
+-Architecture: all
+-Section: netstd
+-Depends: dotnet-runtime-3.1, ${misc:Depends}
+-Description: NET Standard bindings for Thrift
+- Thrift is a software framework for scalable cross-language services
+- development. It combines a software stack with a code generation engine to
+- build services that work efficiently and seamlessly.
+- .
+- This package contains the NET Standard bindings for Thrift. You will need the thrift
+- tool (in the thrift-compiler package) to compile your definition to C#
+- classes, and then the modules in this package will allow you to use those
+- classes in your programs.
+-
+-Package: libthrift-perl
+-Architecture: all
+-Section: perl
+-Depends: perl (>= 5.8.0-7), ${misc:Depends}
+-Description: Perl bindings for Thrift
+- Thrift is a software framework for scalable cross-language services
+- development. It combines a software stack with a code generation engine to
+- build services that work efficiently and seamlessly.
+- .
+- This package contains the Perl bindings for Thrift. You will need the thrift
+- tool (in the thrift-compiler package) to compile your definition to Perl
+- classes, and then the modules in this package will allow you to use those
+- classes in your programs.
+-
+ Package: libthrift0
+ Architecture: any
+ Depends: ${shlibs:Depends}, ${misc:Depends}
+@@ -187,15 +126,3 @@ Description: Thrift C++ library (development headers)
+  .
+  This package contains the development libraries required for writing C++
+  applications using Thrift.
+-
+-Package: php5-thrift
+-Architecture: any
+-Section: php
+-Depends: ${php:Depends}, ${shlibs:Depends}, ${misc:Depends}
+-Provides: ${php:Provides}
+-Description: PHP bindings for Thrift
+- Thrift is a software framework for scalable cross-language services
+- development. It combines a software stack with a code generation engine to
+- build services that work efficiently and seamlessly.
+- .
+- This package contains the PHP bindings for Thrift.
+--
+2.17.1
+

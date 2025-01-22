@@ -13,7 +13,7 @@ try:
     import ctypes
     import subprocess
     import syslog
-    import sonic_platform.component as Component 
+    import sonic_platform.component as Component
     from sonic_platform_base.watchdog_base import WatchdogBase
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -48,7 +48,7 @@ class Watchdog(WatchdogBase):
                     stderr=subprocess.STDOUT)
             stdout = proc.communicate()[0]
             proc.wait()
-            result = stdout.rstrip('\n')
+            result = stdout.rstrip('\n'.encode())
         except OSError:
             result = None
 
@@ -95,7 +95,7 @@ class Watchdog(WatchdogBase):
         """
         timer_offset = -1
         for key,timer_seconds in enumerate(self.TIMERS):
-            if seconds <= timer_seconds:
+            if seconds > 0 and seconds <= timer_seconds:
                 timer_offset = key
                 seconds = timer_seconds
                 break
@@ -126,18 +126,15 @@ class Watchdog(WatchdogBase):
             # Last bit = WD Timer punch
             self._set_reg_val(reg_val & 0xFE)
 
-            self.armed_time = self._get_time()
-            self.timeout = seconds
-            return seconds
         else:
             # Setting 4th bit to enable WD
             # 4th bit = Enable WD
             reg_val = self._get_reg_val()
             self._set_reg_val(reg_val | 0x8)
 
-            self.armed_time = self._get_time()
-            self.timeout = seconds
-            return seconds
+        self.armed_time = self._get_time()
+        self.timeout = seconds
+        return seconds
 
     def disarm(self):
         """

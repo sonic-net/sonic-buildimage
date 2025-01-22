@@ -2,7 +2,7 @@
     "CONFIG_DB__DEVICE_METADATA": {
         "localhost": {
             "type": "SpineRouter",
-	        "sub_role": "BackEnd",
+	    "sub_role": "FrontEnd",
             "switch_type": "chassis-packet"
         }
     },

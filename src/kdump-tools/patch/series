@@ -1,1 +1,2 @@
 0002-core-file-prefixed-by-kdump.patch
+0003-Revert-the-MODULES-dep-optimization.patch

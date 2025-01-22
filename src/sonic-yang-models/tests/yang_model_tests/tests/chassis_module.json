@@ -1,0 +1,13 @@
+{
+    "CHASSIS_MODULE_WITH_DEFAULT_VALUES": {
+        "desc": "Load chassis module table with fields set to default values"
+    },
+    "CHASSIS_MODULE_WITH_LINECARD_ADMIN_DOWN": {
+        "desc": "Load chassis module table with admin_status set to down"
+    },
+    "CHASSIS_MODULE_WITH_LINECARD_ADMIN_INVALID_VALUE": {
+        "desc": "Load chassis module table with admin_status set to invalid value",
+        "eStrKey": "InvalidValue",
+        "eStr": ["admin_status"]
+    }
+}

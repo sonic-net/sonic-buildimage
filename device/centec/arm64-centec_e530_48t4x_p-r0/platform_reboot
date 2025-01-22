@@ -1,11 +1,13 @@
 #!/usr/bin/python
-import os
 
 def main():
     # reboot the system
-    os.system('echo 502 > /sys/class/gpio/export')
-    os.system('echo out > /sys/class/gpio/gpio502/direction')
-    os.system('echo 1 > /sys/class/gpio/gpio502/value')
+    with open('/sys/class/gpio/export', 'w') as file:
+        file.write('502\n')
+    with open('/sys/class/gpio/gpio502/direction', 'w') as file:
+        file.write('out\n')
+    with open('/sys/class/gpio/gpio502/value', 'w') as file:
+        file.write('1\n')
 
 if __name__ == "__main__":
     main()

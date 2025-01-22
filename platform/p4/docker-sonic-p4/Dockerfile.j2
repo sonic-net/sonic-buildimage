@@ -1,7 +1,6 @@
-FROM docker-config-engine
+FROM docker-config-engine-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
-RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -82,7 +81,7 @@ RUN sed -ri 's/^(save .*$)/# \1/g;                                              
              s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/ \
             ' /etc/redis/redis.conf
 
-ADD port_config.ini /port_config.ini
+COPY ["port_config.ini", "/port_config.ini"]
 COPY ["start.sh", "orchagent.sh", "config_bm.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/configdb-load.sh", "/usr/bin/"]

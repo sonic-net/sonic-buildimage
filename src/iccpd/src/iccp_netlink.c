@@ -461,7 +461,7 @@ void iccp_set_interface_ipadd_mac(struct LocalInterface *lif, char * mac_addr )
 {
     struct IccpSyncdHDr * msg_hdr;
     mclag_sub_option_hdr_t * sub_msg;
-    char msg_buf[4096];
+    char msg_buf[4096] = { 0 };
     struct System *sys;
 
     int src_len = 0, dst_len = 0;
@@ -469,8 +469,6 @@ void iccp_set_interface_ipadd_mac(struct LocalInterface *lif, char * mac_addr )
     sys = system_get_instance();
     if (sys == NULL)
         return;
-
-    memset(msg_buf, 0, 4095);
 
     msg_hdr = (struct IccpSyncdHDr *)msg_buf;
     msg_hdr->ver = 1;
@@ -572,6 +570,7 @@ static int iccp_netlink_set_portchannel_iff_flag(
 {
     int rv, ret_rv = 0;
     char* token;
+    char* saveptr;
     struct LocalInterface* member_if;
     char *tmp_member_buf = NULL;
 
@@ -592,7 +591,7 @@ static int iccp_netlink_set_portchannel_iff_flag(
             lif_po->portchannel_member_buf);
     }
     /* Port-channel members are stored as comma separated strings */
-    token = strtok(tmp_member_buf, ",");
+    token = strtok_r(tmp_member_buf, ",", &saveptr);
     while (token != NULL)
     {
         member_if = local_if_find_by_name(token);
@@ -616,7 +615,7 @@ static int iccp_netlink_set_portchannel_iff_flag(
                 "Can't find member %s:%s, if_up(%d), location %d",
                 lif_po->name, token, is_iff_up, location);
         }
-        token = strtok(NULL, ",");
+        token = strtok_r(NULL, ",", &saveptr);
     }
     if (tmp_member_buf)
         free(tmp_member_buf);
@@ -650,7 +649,7 @@ void update_if_ipmac_on_standby(struct LocalInterface* lif_po, int dir)
         return;
 
     pif = peer_if_find_by_name(csm, lif_po->name);
-    
+
     /*Set new mac only if remote MLAG interface also exists */
     if (pif && (memcmp( lif_po->mac_addr, MLACP(csm).remote_system.system_id, ETHER_ADDR_LEN) != 0))
     {
@@ -660,7 +659,7 @@ void update_if_ipmac_on_standby(struct LocalInterface* lif_po, int dir)
         ICCPD_LOG_NOTICE(__FUNCTION__,
                         "%s Change the system-id of %s from [%02X:%02X:%02X:%02X:%02X:%02X] to [%02X:%02X:%02X:%02X:%02X:%02X], dir %d",
                         (csm->role_type == STP_ROLE_STANDBY) ? "Standby" : "Active",
-                        lif_po->name,  lif_po->mac_addr[0], lif_po->mac_addr[1], lif_po->mac_addr[2], 
+                        lif_po->name,  lif_po->mac_addr[0], lif_po->mac_addr[1], lif_po->mac_addr[2],
                         lif_po->mac_addr[3], lif_po->mac_addr[4], lif_po->mac_addr[5],
                         MLACP(csm).remote_system.system_id[0], MLACP(csm).remote_system.system_id[1],
                         MLACP(csm).remote_system.system_id[2], MLACP(csm).remote_system.system_id[3],
@@ -777,9 +776,9 @@ void recover_if_ipmac_on_standby(struct LocalInterface *lif_po, int dir)
         iccp_netlink_if_shutdown_set(lif_po->ifindex);
         iccp_netlink_if_startup_set(lif_po->ifindex);
         /* Set the interface MAC address back to its local address so that subsequent vlan member
-         * add processing (local_if_add_vlan) will not use the old MAC address for 
+         * add processing (local_if_add_vlan) will not use the old MAC address for
          * update_if_ipmac_on_standby()
-         */ 
+         */
         memcpy(lif_po->mac_addr, MLACP(csm).system_id, ETHER_ADDR_LEN);
     }
 
@@ -987,14 +986,14 @@ void iccp_event_handler_obj_input_newlink(struct nl_object *obj, void *arg)
             if ((strncmp(ifname,
                          if_whitelist[i].ifname, strlen(if_whitelist[i].ifname)) == 0))
             {
-                
+
                 /*if the iface exists, but the ifindex changed, then delete old
                  * interface and add the new interface
                  * possible scenario is due to many kernel events, there is
                  * possiblility of losing if deletion event and just
                  * getting a add of same iface with new ifindex.
                  * to address this possibility if add event of interface is
-                 * received with new ifindex different from old interace, 
+                 * received with new ifindex different from old interace,
                  * then delete the old ifindex interface and add new if with new
                  * ifindex
                  */
@@ -1942,13 +1941,11 @@ int iccp_receive_ndisc_packet_handler(struct System *sys)
     struct nd_msg *ndmsg = NULL;
     struct nd_opt_hdr *nd_opt = NULL;
     struct in6_addr target;
-    uint8_t mac_addr[ETHER_ADDR_LEN];
+    uint8_t mac_addr[ETHER_ADDR_LEN] = { 0 };
     int8_t *opt = NULL;
     int opt_len = 0, l = 0;
     int len;
     struct CSM* csm = NULL;
-
-    memset(mac_addr, 0, ETHER_ADDR_LEN);
 
     /* Fill in message and iovec. */
     msg.msg_name = (void *)(&from);
@@ -2177,7 +2174,7 @@ int iccp_handle_events(struct System * sys)
     int i;
     int err;
     int max_nfds;
-    struct mLACPHeartbeatTLV dummy_tlv; 
+    struct mLACPHeartbeatTLV dummy_tlv;
 
     max_nfds = ICCP_EVENT_FDS_COUNT + sys->readfd_count;
 
@@ -2233,7 +2230,7 @@ int iccp_handle_events(struct System * sys)
                 {
                     if (scheduler_csm_read_callback(csm) != MCLAG_ERROR)
                     {
-                        //consider any msg from peer as heartbeat update, this will be in scenarios of scaled msg sync b/w peers 
+                        //consider any msg from peer as heartbeat update, this will be in scenarios of scaled msg sync b/w peers
                         mlacp_fsm_update_heartbeat(csm, &dummy_tlv);
                     }
                     break;
@@ -2337,7 +2334,7 @@ void update_vlan_if_mac_on_standby(struct LocalInterface* lif_vlan, int dir)
     ICCPD_LOG_DEBUG(__FUNCTION__,
             "%s Change the system-id of %s from [%02X:%02X:%02X:%02X:%02X:%02X] to [%02X:%02X:%02X:%02X:%02X:%02X], dir %d",
             (csm->role_type == STP_ROLE_STANDBY) ? "Standby" : "Active",
-            lif_vlan->name, lif_vlan->mac_addr[0], lif_vlan->mac_addr[1], lif_vlan->mac_addr[2], 
+            lif_vlan->name, lif_vlan->mac_addr[0], lif_vlan->mac_addr[1], lif_vlan->mac_addr[2],
             lif_vlan->mac_addr[3], lif_vlan->mac_addr[4], lif_vlan->mac_addr[5],
             system_mac[0], system_mac[1], system_mac[2], system_mac[3], system_mac[4], system_mac[5], dir);
 
@@ -2375,9 +2372,9 @@ void recover_vlan_if_mac_on_standby(struct LocalInterface* lif_vlan, int dir, ui
     struct CSM *csm = NULL;
     struct System* sys = NULL;
     uint8_t null_mac[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    char macaddr[64];
-    char remote_macaddr[64];
-    uint8_t system_mac[ETHER_ADDR_LEN];
+    char macaddr[64] = { 0 };
+    char remote_macaddr[64] = { 0 };
+    uint8_t system_mac[ETHER_ADDR_LEN] = { 0 };
     int ret = 0;
     int vid = 0;
 
@@ -2404,9 +2401,6 @@ void recover_vlan_if_mac_on_standby(struct LocalInterface* lif_vlan, int dir, ui
 
     sscanf (lif_vlan->name, "Vlan%d", &vid);
 
-    memset(macaddr, 0, 64);
-    memset(remote_macaddr, 0, 64);
-    memset(system_mac, 0, ETHER_ADDR_LEN);
     ICCPD_LOG_DEBUG(__FUNCTION__, " ifname %s, l3_proto %d, dir %d\n",
             lif_vlan->name, lif_vlan->is_l3_proto_enabled, dir);
     if (lif_vlan->is_l3_proto_enabled == true)

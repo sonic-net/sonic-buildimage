@@ -1,0 +1,76 @@
+module sonic-console {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-console";
+    prefix console;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "SONiC CONSOLE";
+
+    revision 2022-08-22 {
+        description "First Revision";
+    }
+
+    typedef console-mgmt-enabled {
+        description "configuration to set if console switch is enabled or not";
+        type string {
+            pattern "yes|no";
+        }
+    }
+
+    typedef console-flow-control {
+        description "configuration to set if enable flow control on a console port";
+        type string {
+            pattern "0|1";
+        }
+    }
+
+    container sonic-console {
+        container CONSOLE_PORT {
+            description "CONSOLE_PORT part of config_db.json";
+
+            list CONSOLE_PORT_LIST {
+                key "name";
+
+                leaf name {
+                    description "Configure console port name";
+                    type uint16;
+                }
+
+                leaf baud_rate {
+                    description "Configure baud rate";
+                    type uint32;
+                }
+
+                leaf flow_control {
+                    description "Configure if enable/disable flow control";
+                    type console-flow-control;
+                    default "0";
+                }
+
+                leaf remote_device {
+                    description "Configure the remote device name";
+                    type stypes:hostname;
+                }
+            }
+
+        } /* end of container CONSOLE_PORT */
+
+        container CONSOLE_SWITCH {
+            description "CONSOLE_SWITCH part of config_db.json";
+
+            container console_mgmt {
+                leaf enabled {
+                    description "This configuration indicate if enable console management feature on SONiC";
+                    type console-mgmt-enabled;
+                    default "no";
+                }
+            }
+
+        } /* end of container CONSOLE_SWITCH */
+
+    } /* end of top level container */
+
+} /* end of module sonic-console */

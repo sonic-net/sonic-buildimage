@@ -1,0 +1,33 @@
+From 3d6a3a02d12bcd742e9bcd701cb77da5f265adee Mon Sep 17 00:00:00 2001
+From: Neil McKee <neil.mckee@inmon.com>
+Date: Fri, 26 Apr 2024 11:05:19 -0700
+Subject: [PATCH] When interface removed just as we discover it, log with
+ LOG_INFO, not LOG_ERR.
+
+
+diff --git a/src/Linux/readInterfaces.c b/src/Linux/readInterfaces.c
+index 438d8ed..06427eb 100644
+--- a/src/Linux/readInterfaces.c
++++ b/src/Linux/readInterfaces.c
+@@ -758,7 +758,8 @@ extern "C" {
+ 
+       // Get the flags for this interface
+       if(ioctl(fd,SIOCGIFFLAGS, &ifr) < 0) {
+-	myLog(LOG_ERR, "device %s Get SIOCGIFFLAGS failed : %s",
++	// Can get here if the interface was just removed under our feet.
++	myLog(LOG_INFO, "device %s Get SIOCGIFFLAGS failed : %s",
+ 	      devName,
+ 	      strerror(errno));
+ 	continue;
+@@ -781,7 +782,7 @@ extern "C" {
+       u_char macBytes[6];
+       int gotMac = NO;
+       if(ioctl(fd,SIOCGIFHWADDR, &ifr) < 0) {
+-	myLog(LOG_ERR, "device %s Get SIOCGIFHWADDR failed : %s",
++	myLog(LOG_INFO, "device %s Get SIOCGIFHWADDR failed : %s",
+ 	      devName,
+ 	      strerror(errno));
+       }
+-- 
+2.30.2
+

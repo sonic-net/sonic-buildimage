@@ -60,8 +60,8 @@ class LedControl(LedControlBase):
 
     def _initSystemLed(self):
         # Front Panel System LEDs setting
-        oldfan = 0xf
-        oldpsu = 0xf
+        oldfan = 0xf    # 0=amber, 1=green
+        oldpsu = 0xf    # 0=amber, 1=green
 
         # Write sys led
         if smbus_present == 0:
@@ -73,18 +73,19 @@ class LedControl(LedControlBase):
             bus.write_byte_data(DEVICE_ADDRESS, DEVICEREG, 0x02)
             DBG_PRINT(" System LED set O.K. ")
 
+        # Timer loop to monitor and set front panel Status, Fan, and PSU LEDs
         while True:
-            # Front Panel FAN Panel LED setting in register 0x08
+            # Front Panel FAN Panel LED setting
             if (self.chassis.get_fan(0).get_status() == self.chassis.get_fan(1).get_status() == True):
-                if (os.path.isfile("/sys/class/gpio/fanLedAmber/value")):
+                if (os.path.isfile("/sys/class/gpio/fanLedGreen/value")):
                     if oldfan != 0x1:
                         self._set_i2c_register("/sys/class/gpio/fanLedAmber/value", 0)
                         self._set_i2c_register("/sys/class/gpio/fanLedGreen/value", 1)
                         oldfan = 0x1
                 else:
-                        oldfan = 0xf
+                    oldfan = 0xf
             else:
-                if (os.path.isfile("/sys/class/gpio/fanLedGreen/value")):
+                if (os.path.isfile("/sys/class/gpio/fanLedAmber/value")):
                     if oldfan != 0x0:
                         self._set_i2c_register("/sys/class/gpio/fanLedGreen/value", 0)
                         self._set_i2c_register("/sys/class/gpio/fanLedAmber/value", 1)
@@ -92,9 +93,9 @@ class LedControl(LedControlBase):
                 else:
                     oldfan = 0xf
 
-            # Front Panel PSU Panel LED setting in register 0x09
+            # Front Panel PSU Panel LED setting
             if (self.chassis.get_psu(0).get_status() == self.chassis.get_psu(1).get_status() == True):
-                if (os.path.isfile("/sys/class/gpio/psuLedAmber/value")):
+                if (os.path.isfile("/sys/class/gpio/psuLedGreen/value")):
                     if oldpsu != 0x1:
                         self._set_i2c_register("/sys/class/gpio/psuLedAmber/value", 0)
                         self._set_i2c_register("/sys/class/gpio/psuLedGreen/value", 1)
@@ -102,13 +103,14 @@ class LedControl(LedControlBase):
                 else:
                     oldpsu = 0xf
             else:
-                if (os.path.isfile("/sys/class/gpio/psuLedGreen/value")):
+                if (os.path.isfile("/sys/class/gpio/psuLedAmber/value")):
                     if oldpsu != 0x0:
                         self._set_i2c_register("/sys/class/gpio/psuLedGreen/value", 0)
                         self._set_i2c_register("/sys/class/gpio/psuLedAmber/value", 1)
                         oldpsu = 0x0
                 else:
                     oldpsu = 0xf
+
             time.sleep(6)
 
     # Helper method to map SONiC port name to index

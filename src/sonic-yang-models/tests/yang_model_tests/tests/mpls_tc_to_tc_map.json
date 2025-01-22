@@ -1,0 +1,11 @@
+{
+    "MPLS_TCP_MAP_INCORRECT_MPLS_PATTERN": {
+        "desc": "Configure INCORRECT_MPLS_PATTERN in MPLS_TCP_MAP Table.",
+        "eStr": ["Invalid MPLS"]
+
+    },
+    "MPLS_TCP_MAP_INCORRECT_TC_PATTERN": {
+        "desc": "Configure INCORRECT_TC_PATTERN in MPLS_TCP_MAP Table.",
+        "eStr": ["Invalid Traffic Class"]
+    }
+}

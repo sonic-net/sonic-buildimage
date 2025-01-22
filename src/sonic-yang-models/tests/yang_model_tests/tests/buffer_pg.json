@@ -10,6 +10,9 @@
         "desc": "BUFFER_PG_WRONG_PG_VALUE pattern failure",
         "eStr": "Invalid Buffer PG number"
     },
+    "BUFFER_PG_NULL_PROFILE_VALUE": {
+        "desc": "BUFFER_PG_NULL_PROFILE_VALUE no failure"
+    },
     "BUFFER_PG_WRONG_PORT_VALUE": {
         "desc": "BUFFER_PG_WRONG_PORT_VALUE pattern failure",
         "eStr": "wrong"

@@ -11,6 +11,7 @@
 
 import os.path
 import sys
+import ast
 sys.path.append('/usr/share/sonic/platform/plugins')
 import pddfparse
 import json
@@ -170,7 +171,7 @@ class FanUtil(FanBase):
             print("Setting fan speed is not allowed !")
             return False
         else:
-            duty_cycle_to_pwm = eval(plugin_data['FAN']['duty_cycle_to_pwm'])
+            duty_cycle_to_pwm = ast.literal_eval(plugin_data['FAN']['duty_cycle_to_pwm'])
             pwm = duty_cycle_to_pwm(val)
             print("New Speed: %d%% - PWM value to be set is %d\n" % (val, pwm))
 

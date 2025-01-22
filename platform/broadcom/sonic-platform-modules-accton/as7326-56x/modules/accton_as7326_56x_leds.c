@@ -146,7 +146,7 @@ static int accton_getLedReg(enum led_type type, u8 *reg)
     int i;
     
     for (i = 0; i < ARRAY_SIZE(led_reg_map); i++) {
-        if(led_reg_map[i].types ==type)) {
+        if (led_reg_map[i].types ==type) {
             *reg = led_reg_map[i].reg_addr;
             return 0;
         }

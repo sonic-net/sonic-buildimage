@@ -14,11 +14,13 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(DELL_S5232F_PLATFORM_MODULE) \
                                $(DELL_S5248F_PLATFORM_MODULE) \
                                $(DELL_Z9332F_PLATFORM_MODULE) \
+                               $(DELL_Z9432F_PLATFORM_MODULE) \
                                $(DELL_S5296F_PLATFORM_MODULE) \
                                $(DELL_Z9100_PLATFORM_MODULE) \
                                $(DELL_S6100_PLATFORM_MODULE) \
                                $(DELL_N3248PXE_PLATFORM_MODULE) \
                                $(DELL_N3248TE_PLATFORM_MODULE) \
+                               $(DELL_E3224F_PLATFORM_MODULE) \
                                $(INGRASYS_S8900_54XC_PLATFORM_MODULE) \
                                $(INGRASYS_S8900_64XC_PLATFORM_MODULE) \
                                $(INGRASYS_S9100_PLATFORM_MODULE) \
@@ -52,6 +54,11 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(CEL_DX010_PLATFORM_MODULE) \
                                $(CEL_HALIBURTON_PLATFORM_MODULE) \
                                $(CEL_SEASTONE2_PLATFORM_MODULE) \
+                               $(CEL_DS3000_PLATFORM_MODULE) \
+                               $(CEL_DS1000_PLATFORM_MODULE) \
+                               $(CEL_QUESTONE2_PLATFORM_MODULE) \
+                               $(CEL_SILVERSTONE_V2_PLATFORM_MODULE) \
+                               $(CEL_DS2000_PLATFORM_MODULE) \
                                $(DELTA_AG9032V1_PLATFORM_MODULE) \
                                $(DELTA_AG9064_PLATFORM_MODULE) \
                                $(DELTA_AG5648_PLATFORM_MODULE) \
@@ -67,6 +74,7 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(ALPHANETWORKS_SNH60A0_320FV2_PLATFORM_MODULE) \
                                $(ALPHANETWORKS_SNH60B0_640F_PLATFORM_MODULE) \
                                $(ALPHANETWORKS_SNJ60D0_320F_PLATFORM_MODULE) \
+                               $(ALPHANETWORKS_BES2348T_PLATFORM_MODULE) \
                                $(BRCM_XLR_GTS_PLATFORM_MODULE) \
                                $(DELTA_AG9032V2A_PLATFORM_MODULE) \
                                $(JUNIPER_QFX5210_PLATFORM_MODULE) \
@@ -75,10 +83,29 @@ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(DELL_S6000_PLATFORM_MODULE) \
                                $(DELTA_AGC032_PLATFORM_MODULE) \
                                $(RUIJIE_B6510_48VS8CQ_PLATFORM_MODULE) \
                                $(RAGILE_RA_B6510_48V8C_PLATFORM_MODULE) \
-                               $(RAGILE_RA_B6910_64C_PLATFORM_MODULE) \
-                               $(RAGILE_RA_B6510_32C_PLATFORM_MODULE) \
-                               $(RAGILE_RA_B6920_4S_PLATFORM_MODULE) \
-                               $(NOKIA_IXR7250_PLATFORM_MODULE)
+                               $(NOKIA_IXR7250_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7220H3_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7220H4_32D_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7220H4_64D_PLATFORM_MODULE) \
+                               $(NOKIA_IXR7220H5_64D_PLATFORM_MODULE) \
+                               $(TENCENT_TCS8400_PLATFORM_MODULE) \
+                               $(TENCENT_TCS9400_PLATFORM_MODULE) \
+                               $(UFISPACE_S6301_56ST_PLATFORM_MODULE) \
+                               $(UFISPACE_S7801_54XS_PLATFORM_MODULE) \
+                               $(UFISPACE_S8901_54XC_PLATFORM_MODULE) \
+                               $(UFISPACE_S9110_32X_PLATFORM_MODULE) \
+                               $(UFISPACE_S9300_32D_PLATFORM_MODULE) \
+                               $(UFISPACE_S9301_32D_PLATFORM_MODULE) \
+                               $(UFISPACE_S9301_32DB_PLATFORM_MODULE) \
+                               $(MICAS_M2_W6510_48V8C_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6510_48GT4V_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6520_24DC8QC_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6940_128QC_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6930_64QC_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6940_64OC_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6920_32QC2X_PLATFORM_MODULE) \
+			       $(MICAS_M2_W6510_32C_PLATFORM_MODULE)
+
 $(SONIC_ONE_IMAGE)_LAZY_BUILD_INSTALLS = $(BRCM_OPENNSL_KERNEL) $(BRCM_DNX_OPENNSL_KERNEL)
 ifeq ($(INSTALL_DEBUG_TOOLS),y)
 $(SONIC_ONE_IMAGE)_DOCKERS += $(SONIC_INSTALL_DOCKER_DBG_IMAGES)

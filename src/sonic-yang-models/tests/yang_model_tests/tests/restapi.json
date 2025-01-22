@@ -1,0 +1,16 @@
+{
+    "RESTAPI_TABLE_WITH_INCORRECT_CERT": {
+        "desc": "RESTAPI TABLE_WITH_INCORRECT_CERT failure.",
+        "eStr": ["Value", "does not satisfy the constraint"]
+    },
+    "RESTAPI_TABLE_WITH_INCORRECT_CLIENT": {
+        "desc": "RESTAPI TABLE_WITH_INCORRECT_CLIENT failure.",
+        "eStr": ["Value", "does not satisfy the constraint"]
+    },
+    "RESTAPI_TABLE_WITH_VALID_CONFIG": {
+        "desc": "RESTAPI TABLE WITH VALID CONFIG."
+    },
+    "RESTAPI_TABLE_WITH_MULTIPLE_CERTS": {
+        "desc": "RESTAPI TABLE WITH MULTIPLE CERTS."
+    }
+}

@@ -1,7 +1,7 @@
 [Unit]
 Description=Platform monitor container
-Requires=database.service updategraph.service
-After=database.service updategraph.service
+Requires=database.service config-setup.service
+After=database.service config-setup.service
 {% if sonic_asic_platform == 'mellanox' %}
 After=syncd.service
 {% endif %}
@@ -17,6 +17,3 @@ ExecStartPre=/usr/bin/{{docker_container_name}}.sh start
 ExecStart=/usr/bin/{{docker_container_name}}.sh wait
 ExecStop=/usr/bin/{{docker_container_name}}.sh stop
 RestartSec=30
-
-[Install]
-WantedBy=sonic.target

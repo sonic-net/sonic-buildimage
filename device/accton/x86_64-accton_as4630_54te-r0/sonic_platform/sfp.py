@@ -8,10 +8,9 @@
 #
 #############################################################################
 
-import os
 import time
 import sys
-
+import subprocess
 from ctypes import create_string_buffer
 
 try:
@@ -74,6 +73,7 @@ QSFP_CHANNL_TX_FAULT_STATUS_OFFSET = 4
 QSFP_CHANNL_TX_FAULT_STATUS_WIDTH = 1
 QSFP_POWEROVERRIDE_OFFSET = 93
 QSFP_POWEROVERRIDE_WIDTH = 1
+QSFP_PAGE03_OFFSET = 384
 QSFP_MODULE_THRESHOLD_OFFSET = 128
 QSFP_MODULE_THRESHOLD_WIDTH = 24
 QSFP_CHANNEL_THRESHOLD_OFFSET = 176
@@ -126,7 +126,7 @@ class Sfp(SfpBase):
     # Path to sysfs
     PLATFORM_ROOT_PATH = "/usr/share/sonic/device"
     PMON_HWSKU_PATH = "/usr/share/sonic/hwsku"
-    HOST_CHK_CMD = "docker > /dev/null 2>&1"
+    HOST_CHK_CMD = ["docker"]
 
     PLATFORM = "x86_64-accton_as4630_54te-r0"
     HWSKU = "Accton-AS4630-54TE"
@@ -152,7 +152,8 @@ class Sfp(SfpBase):
             self.port_to_eeprom_mapping[x] = eeprom_path.format(self._port_to_i2c_mapping[x])
 
         self.info_dict_keys = ['type', 'vendor_rev', 'serial', 'manufacturer', 'model', 'connector', 'encoding', 'ext_identifier',
-                               'ext_rateselect_compliance', 'cable_type', 'cable_length', 'nominal_bit_rate', 'specification_compliance', 'vendor_date', 'vendor_oui']
+                               'ext_rateselect_compliance', 'cable_type', 'cable_length', 'nominal_bit_rate', 'specification_compliance', 'vendor_date', 'vendor_oui',
+                               'application_advertisement', 'type_abbrv_name']
 
         self.dom_dict_keys = ['rx_los', 'tx_fault', 'reset_status', 'power_lpmode', 'tx_disable', 'tx_disable_channel', 'temperature', 'voltage',
                               'rx1power', 'rx2power', 'rx3power', 'rx4power', 'tx1bias', 'tx2bias', 'tx3bias', 'tx4bias', 'tx1power', 'tx2power', 'tx3power', 'tx4power']
@@ -191,7 +192,7 @@ class Sfp(SfpBase):
         return True
 
     def __is_host(self):
-        return os.system(self.HOST_CHK_CMD) == 0
+        return subprocess.call(self.HOST_CHK_CMD) == 0
 
     def __get_path_to_port_config_file(self):
         platform_path = "/".join([self.PLATFORM_ROOT_PATH, self.PLATFORM])
@@ -247,6 +248,7 @@ class Sfp(SfpBase):
         specification_compliance   |1*255VCHAR     |specification compliance
         vendor_date                |1*255VCHAR     |vendor date
         vendor_oui                 |1*255VCHAR     |vendor OUI
+        application_advertisement  |1*255VCHAR     |supported applications advertisement
         ========================================================================
         """
         # check present status
@@ -442,7 +444,7 @@ class Sfp(SfpBase):
             qsfp_dom_capability_raw = self.__read_eeprom_specific_bytes(
                 (offset_xcvr + XCVR_DOM_CAPABILITY_OFFSET), XCVR_DOM_CAPABILITY_WIDTH)
             if qsfp_dom_capability_raw is not None:
-                qspf_dom_capability_data = sfpi_obj.parse_qsfp_dom_capability(
+                qspf_dom_capability_data = sfpi_obj.parse_dom_capability(
                     qsfp_dom_capability_raw, 0)
             else:
                 return None
@@ -598,10 +600,11 @@ class Sfp(SfpBase):
             if not self.get_presence() or not sfpd_obj:
                 return {}
 
+            offset = QSFP_PAGE03_OFFSET
             transceiver_dom_threshold_dict = dict.fromkeys(
                 self.threshold_dict_keys, 'N/A')
             dom_thres_raw = self.__read_eeprom_specific_bytes(
-                QSFP_MODULE_THRESHOLD_OFFSET, QSFP_MODULE_THRESHOLD_WIDTH) if self.get_presence() and sfpd_obj else None
+                offset + QSFP_MODULE_THRESHOLD_OFFSET, QSFP_MODULE_THRESHOLD_WIDTH) if self.get_presence() and sfpd_obj else None
 
             if dom_thres_raw:
                 module_threshold_values = sfpd_obj.parse_module_threshold_values(
@@ -618,7 +621,7 @@ class Sfp(SfpBase):
                     transceiver_dom_threshold_dict['vcclowwarning'] = module_threshold_data['VccLowWarning']['value']
 
             dom_thres_raw = self.__read_eeprom_specific_bytes(
-                QSFP_CHANNEL_THRESHOLD_OFFSET, QSFP_CHANNEL_THRESHOLD_WIDTH) if self.get_presence() and sfpd_obj else None
+                offset + QSFP_CHANNEL_THRESHOLD_OFFSET, QSFP_CHANNEL_THRESHOLD_WIDTH) if self.get_presence() and sfpd_obj else None
             channel_threshold_values = sfpd_obj.parse_channel_threshold_values(
                 dom_thres_raw, 0)
             channel_threshold_data = channel_threshold_values.get('data')
@@ -648,11 +651,16 @@ class Sfp(SfpBase):
         Returns:
             A Boolean, True if reset enabled, False if disabled
         """
-        if self.port_num < 49: #Copper port, no sysfs
+        if self.port_num < 53: # non-QSFP ports don't support it.
             return False
 
-        return False # CPLD port doesn't support this feature
+        reset_path="{}{}{}".format(CPLD_I2C_PATH , "module_reset_" , str(self.port_num))
+        val = self._api_helper.read_txt_file(reset_path)
 
+        if val is not None:
+            return int(val, 10) == 1
+        else:
+            return False
 
     def get_rx_los(self):
         """
@@ -827,7 +835,7 @@ class Sfp(SfpBase):
                 return False
 
             dom_control_raw = self.__read_eeprom_specific_bytes(
-                QSFP_POWEROVERRIDE_OFFSET, QSFP_CONTROL_WIDTH) if self.get_presence() else None
+                QSFP_CONTROL_OFFSET, QSFP_CONTROL_WIDTH) if self.get_presence() else None
             if dom_control_raw is not None:
                 dom_control_data = sfpd_obj.parse_control_bytes(dom_control_raw, 0)
                 power_set = (
@@ -852,7 +860,7 @@ class Sfp(SfpBase):
                 return False
 
             dom_control_raw = self.__read_eeprom_specific_bytes(
-                QSFP_POWEROVERRIDE_OFFSET, QSFP_CONTROL_WIDTH) if self.get_presence() else None
+                QSFP_CONTROL_OFFSET, QSFP_CONTROL_WIDTH) if self.get_presence() else None
             if dom_control_raw is not None:
                 dom_control_data = sfpd_obj.parse_control_bytes(dom_control_raw, 0)
                 power_override = (
@@ -939,23 +947,19 @@ class Sfp(SfpBase):
             A boolean, True if successful, False if not
         """
         # Check for invalid port_num
-        if self.port_num < 49: #Copper port, no sysfs
+        if self.port_num < 53: # non-QSFP ports don't support it.
             return False
 
-        '''  
         reset_path = "{}{}{}".format(CPLD_I2C_PATH, 'module_reset_', self.port_num)
-        ret = self.__write_txt_file(reset_path, 1)
+        ret = self._api_helper.write_txt_file(reset_path, 1)
         if ret is not True:
             return ret
-        
-        time.sleep(0.01)
-        ret = self.__write_txt_file(reset_path, 0)
-        time.sleep(0.2)
-        
-        return ret
-        '''
 
-        return False #CPLD doens't support this feature
+        time.sleep(0.01)
+        ret = self._api_helper.write_txt_file(reset_path, 0)
+        time.sleep(0.2)
+
+        return ret
 
     def tx_disable(self, tx_disable):
         """
@@ -1167,3 +1171,20 @@ class Sfp(SfpBase):
             A boolean value, True if device is operating properly, False if not
         """
         return self.get_presence() and self.get_transceiver_bulk_status()
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device. If the agent cannot determine the parent-relative position
+        for some reason, or if the associated value of entPhysicalContainedIn is '0', then the value '-1' is returned
+        Returns:
+            integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
+        """
+        return self.port_num
+
+    def is_replaceable(self):
+        """
+        Indicate whether this device is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True

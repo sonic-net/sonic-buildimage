@@ -1,5 +1,5 @@
 module sonic-storm-control {
-    namespace "http://github.com/Azure/sonic-storm-control";
+    namespace "http://github.com/sonic-net/sonic-storm-control";
     yang-version "1";
 
     prefix ssc;
@@ -8,21 +8,21 @@ module sonic-storm-control {
         prefix prt;
     }
 
-    organization 
+    organization
         "SONiC";
 
-    contact 
+    contact
         "SONiC";
 
     description
         "This module defines configuration and operational state
-        data for broadcast, unknown-unicast and unknown-multicast (BUM) storm-control.  
-        storm-control can be enabled on ethernet interfaces. 
-        Rate is defined in bits-per-second. All three types of storm-control can be 
+        data for broadcast, unknown-unicast and unknown-multicast (BUM) storm-control.
+        storm-control can be enabled on ethernet interfaces.
+        Rate is defined in bits-per-second. All three types of storm-control can be
         enabled on an interface.";
 
     revision 2021-12-13 {
-        description 
+        description
             "Initial revision";
     }
 
@@ -33,7 +33,7 @@ module sonic-storm-control {
                 /*scommon:key-pattern "PORT_STORM_CONTROL|{ifname}|{storm_type}";*/
                 leaf ifname {
                     type leafref {
-                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name"; 
+                        path "/prt:sonic-port/prt:PORT/prt:PORT_LIST/prt:name";
                     }
                 }
                 leaf storm_type {

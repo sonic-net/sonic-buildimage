@@ -1,0 +1,18 @@
+{
+    "LOGGER_CORRECT_LOGLEVEL_AND_LOGOUTPUT": {
+        "desc": "LOGGER_CORRECT_LOGLEVEL_AND_LOGOUTPUT_1 no failure."
+    },
+    "LOGGER_WRONG_LOGLEVEL": {
+        "desc": "LOGGER_WRONG_LOGLEVEL pattern failure.",
+        "eStr": ["wrong", "LOGLEVEL"]
+    },
+    "LOGGER_WRONG_LOGOUTPUT": {
+        "desc": "LOGGER_WRONG_LOGOUTPUT pattern failure.",
+        "eStr": ["wrong", "LOGOUTPUT"]
+    },
+    "LOGGER_MANDATORY_LOGLEVEL": {
+        "desc": "LOGGER_MANDATORY_LOGOUTPUT no logoutput.",
+        "estr": ["LOGLEVEL"],
+        "eStrKey": "Mandatory"
+    }
+}

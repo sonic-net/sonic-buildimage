@@ -76,7 +76,7 @@ static ssize_t bf_fpga_sysfs_i2c_get(struct device *dev,
              i2c_op.i2c_inst[0].status);
       return -EIO;
     }
-    memcpy(buf, i2c_op.i2c_inst[0].rd_buf, cur_cnt);
+    memcpy(buf, i2c_op.i2c_inst[0].fpga_i2c_buf.rd_buf, cur_cnt);
     buf += cur_cnt;
     size += cur_cnt;
     cur_size -= cur_cnt;
@@ -108,7 +108,7 @@ static ssize_t bf_fpga_sysfs_i2c_set(struct device *dev,
     }
     i2c_op.i2c_inst[0].wr_cnt = cur_cnt;
     i2c_op.i2c_inst[0].rd_cnt = 0;
-    memcpy(i2c_op.i2c_inst[0].wr_buf, buf, cur_cnt);
+    memcpy(i2c_op.i2c_inst[0].fpga_i2c_buf.wr_buf, buf, cur_cnt);
     i2c_op.num_i2c = 1;
     i2c_op.one_time = 1;
     i2c_op.inst_hndl.bus_id = sysfs_buf->bus_id;

@@ -28,7 +28,7 @@
 #define __TO_R_EXP(bacc)	(int32_t)(tos32(((BSWAP_32(bacc) & 0xf0) >> 4), 4))
 #define __TO_B_EXP(bacc)	(int32_t)(tos32((BSWAP_32(bacc) & 0xf), 4))
 
-#define SENSOR_ATTR_MAX			17
+#define SENSOR_ATTR_MAX			19
 #define SENSOR_ATTR_NAME_LENGTH	20
 
 #define SENSOR_GET_CAP_LABEL	0x001
@@ -53,6 +53,8 @@
 #define SENSOR_GET_CAP_PSU_PRESENT	0x8000
 
 #define SENSOR_GET_CAP_MFRID	0x10000
+#define SENSOR_GET_CAP_VIN_TYPE	0x20000
+#define SENSOR_GET_CAP_POUT_MAX	0x40000
 
 #define SDR_SENSOR_TYPE_TEMP	0x01
 #define SDR_SENSOR_TYPE_VOLT	0x02
@@ -83,6 +85,8 @@
 #define IPM_DEV_DEVICE_ID_SDR_MASK		(0x80)	/* 1 = provides SDRs      */
 #define IPMI_TIMEOUT			(4 * HZ)
 #define IPMI_MAX_WAIT_QUEUE	1
+
+typedef struct ipmi_user *ipmi_user_t;
 
 struct quanta_hwmon_ipmi_data {
 	struct platform_device	*ipmi_platform_dev;
@@ -912,6 +916,8 @@ void ipmi_sdr_set_sensor_factor(uint8_t idx, struct sdr_record_full_sensor *sens
 				g_sensor_data[idx].capability |= SENSOR_GET_CAP_SN;
 				g_sensor_data[idx].capability |= SENSOR_GET_CAP_MFRID;
 				g_sensor_data[idx].capability |= SENSOR_GET_CAP_PSU_PRESENT;
+				g_sensor_data[idx].capability |= SENSOR_GET_CAP_VIN_TYPE;
+				g_sensor_data[idx].capability |= SENSOR_GET_CAP_POUT_MAX;
 			}
 			sprintf(g_sensor_data[idx].attrinfo.attr_type_str, "power");
 		}
@@ -976,7 +982,7 @@ int32_t sdr_convert_sensor_reading(uint8_t idx, uint8_t val, int32_t *point_resu
 		result = (m * (int16_t)val) * decimal_point + b;
 		break;
 	default:
-		return;
+		return result;
 	}
 
 	pow_convert(&result, k2);
@@ -1073,6 +1079,83 @@ int32_t ipmi_get_psu_info(uint8_t idx, uint8_t cmd, uint8_t *retbuf)
 
 	return sprintf(retbuf, "N/A\n");
 }
+
+int32_t ipmi_get_vin_type(uint8_t idx, uint8_t *retbuf)
+{
+	uint8_t psu_slot = 0;
+	int32_t rv = 0;
+
+	uint8_t returnData = 0;
+	uint8_t msg_data[] = { 0x06, 0x52, 0x0f, 0x00, 0x01, 0xd8 }; // read line status
+
+	if (strstr(g_sensor_data[idx].sensor_idstring, "PSU1"))	psu_slot = 1;
+	else													psu_slot = 2;
+
+	msg_data[3] = (psu_slot == 1) ? 0xb0 : 0xb2;
+	if (ipmi_check_psu_present(psu_slot)) {
+		mutex_lock(&ipmi_lock);
+		rv = ipmi_send_system_cmd(msg_data, sizeof(msg_data), &returnData, 1);
+		mutex_unlock(&ipmi_lock);
+
+		if (rv) {
+			printk("BMC down at (%d)!!\n", __LINE__);
+		}
+		else {
+			switch (returnData)
+			{
+				case 0x7: //LVDC
+				case 0x3: //HVDC
+					return sprintf(retbuf, "DC\n");
+				default:
+					return sprintf(retbuf, "AC\n");
+			}
+		}
+	}
+	else {
+		//printk("Error ! cannot detect PSU%d\n", psu_slot);
+	}
+
+	return sprintf(retbuf, "N/A\n");
+}
+
+int32_t ipmi_get_pout_max(uint8_t idx, uint8_t *retbuf)
+{
+	uint8_t psu_slot = 0;
+	int32_t rv = 0, pout_max = 0;
+
+	uint8_t returnData[2] = { 0 }, tempData[2] = { 0 };
+	uint8_t msg_data[] = { 0x06, 0x52, 0x0f, 0x00, 0x02, 0xa7 };
+
+	if (strstr(g_sensor_data[idx].sensor_idstring, "PSU1"))	psu_slot = 1;
+	else													psu_slot = 2;
+
+	msg_data[3] = (psu_slot == 1) ? 0xb0 : 0xb2;
+	if (ipmi_check_psu_present(psu_slot)) {
+		mutex_lock(&ipmi_lock);
+		rv = ipmi_send_system_cmd(msg_data, sizeof(msg_data), returnData, 1);
+		mutex_unlock(&ipmi_lock);
+
+		if (rv) {
+			printk("BMC down at (%d)!!\n", __LINE__);
+		}
+		else {
+			/* MFR_POUT_MAX has 2 data format: Direct and Linear Data (see PMbus spec).
+			   Query command is needed to tell the data format, but since we have not use PSU
+			   whose output power is over 0x07ff (2047), just check the first 5 bits*/
+			if (returnData[1] & 0xf8 == 0) // Direct
+				pout_max = (returnData[1] << 8) | returnData[0];
+			else // Linear Data
+				pout_max = (((returnData[1] & 0x07) << 8) | returnData[0]) << ((returnData[1] & 0xf8) >> 3);
+			return sprintf(retbuf, "%d\n", pout_max);
+		}
+	}
+	else {
+		//printk("Error ! cannot detect PSU%d\n", psu_slot);
+	}
+
+	return sprintf(retbuf, "N/A\n");
+}
+
 
 void ipmi_fan_control(uint8_t cmd_data1, uint8_t cmd_data2, uint8_t *retbuf)
 {
@@ -1183,6 +1266,18 @@ static ssize_t show_mfrid(struct device *dev, struct device_attribute *devattr, 
 	return ipmi_get_psu_info(attr->index + DEBUGUSE_SHIFT, 0x99, buf);
 }
 
+static ssize_t show_vin_type(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+	struct sensor_device_attribute *attr = to_sensor_dev_attr(devattr);
+	return ipmi_get_vin_type(attr->index + DEBUGUSE_SHIFT, buf);
+}
+
+static ssize_t show_pout_max(struct device *dev, struct device_attribute *devattr, char *buf)
+{
+	struct sensor_device_attribute *attr = to_sensor_dev_attr(devattr);
+	return ipmi_get_pout_max(attr->index + DEBUGUSE_SHIFT, buf);
+}
+
 static ssize_t show_pwm(struct device *dev, struct device_attribute *devattr, char *buf)
 {
 	uint8_t returnData[10] = { 0 };
@@ -1277,7 +1372,8 @@ static ssize_t(*const attr_show_func_ptr[SENSOR_ATTR_MAX]) (struct device *dev, 
 	, show_unc, show_ucr, show_unr
 	, show_model, show_sn, show_pwm
 	, show_controlmode, show_direction, show_fanpresent
-	, show_psupresent, show_mfrid
+	, show_psupresent, show_mfrid, show_vin_type
+	, show_pout_max
 };
 
 static ssize_t(*const attr_store_func_ptr[SENSOR_ATTR_MAX]) (struct device *dev, struct device_attribute *devattr, const char *buf, size_t count) =
@@ -1287,7 +1383,8 @@ static ssize_t(*const attr_store_func_ptr[SENSOR_ATTR_MAX]) (struct device *dev,
 	, NULL, NULL, NULL
 	, NULL, NULL, store_pwm
 	, store_controlmode, NULL, NULL
-	, NULL, NULL
+	, NULL, NULL, NULL
+	, NULL
 };
 
 static const char *const sensor_attrnames[SENSOR_ATTR_MAX] =
@@ -1297,7 +1394,8 @@ static const char *const sensor_attrnames[SENSOR_ATTR_MAX] =
 	, "%s%d_ncrit", "%s%d_crit", "%s%d_max"
 	, "%s%d_model", "%s%d_sn", "%s%d_pwm"
 	, "%s%d_controlmode", "%s%d_direction", "%s%d_present"
-	, "%s%d_present", "%s%d_mfrid"
+	, "%s%d_present", "%s%d_mfrid", "%s%d_vin_type"
+	, "%s%d_pout_max"
 };
 
 static int32_t create_sensor_attrs(int32_t attr_no)
@@ -1516,7 +1614,7 @@ static int32_t __init quanta_hwmon_ipmi_init(void)
 		goto device_reg_err;
 	}
 
-	data->ipmi_hwmon_dev = hwmon_device_register_with_groups(NULL, DRVNAME, NULL, NULL);
+	data->ipmi_hwmon_dev = hwmon_device_register_with_groups(&data->ipmi_platform_dev->dev, DRVNAME, NULL, NULL);
 	err = IS_ERR(data->ipmi_hwmon_dev);
 	if (err) {
 		printk("hwmon register fail\n");
@@ -1539,19 +1637,15 @@ static int32_t __init quanta_hwmon_ipmi_init(void)
 	return 0;
 
 init_sensor_err:
-	if (g_sensor_data) {
-		kfree(g_sensor_data);
-		g_sensor_data = NULL;
-	}
+	kfree(g_sensor_data);
+	g_sensor_data = NULL;
 ipmi_create_err:
 	hwmon_device_unregister(data->ipmi_hwmon_dev);
 hwmon_register_err:
 	platform_device_unregister(data->ipmi_platform_dev);
 device_reg_err:
-	if (data) {
-		kfree(data);
-		data = NULL;
-	}
+	kfree(data);
+	data = NULL;
 alloc_err:
 	return err;
 }
@@ -1567,15 +1661,10 @@ static void __exit quanta_hwmon_ipmi_exit(void)
 
 	platform_device_unregister(data->ipmi_platform_dev);
 
-	if (g_sensor_data) {
-		kfree(g_sensor_data);
-		g_sensor_data = NULL;
-	}
-
-	if (data) {
-		kfree(data);
-		data = NULL;
-	}
+	kfree(g_sensor_data);
+	g_sensor_data = NULL;
+	kfree(data);
+	data = NULL;
 }
 
 module_init(quanta_hwmon_ipmi_init);

@@ -73,6 +73,5 @@ class SwitchPolicyAction(ThermalPolicyActionBase):
         thermal_overload_position = Common().read_txt_file(
             thermal_overload_position_path)
 
-        cmd = 'bash /usr/share/sonic/platform/thermal_overload_control.sh {}'.format(
-            thermal_overload_position)
+        cmd = ['bash', '/usr/share/sonic/platform/thermal_overload_control.sh', thermal_overload_position]
         Common().run_command(cmd)

@@ -13,10 +13,14 @@ import sys
 import syslog
 import tempfile
 import urllib.request
+import base64
 from urllib.parse import urlparse
 
 import yaml
+import requests
 from sonic_py_common import device_info
+from jinja2 import Template
+from swsscommon import swsscommon
 
 KUBE_ADMIN_CONF = "/etc/sonic/kube_admin.conf"
 KUBELET_YAML = "/var/lib/kubelet/config.yaml"
@@ -24,6 +28,9 @@ SERVER_ADMIN_URL = "https://{}/admin.conf"
 LOCK_FILE = "/var/lock/kube_join.lock"
 FLANNEL_CONF_FILE = "/usr/share/sonic/templates/kube_cni.10-flannel.conflist"
 CNI_DIR = "/etc/cni/net.d"
+K8S_CA_URL = "https://{}:{}/api/v1/namespaces/default/configmaps/kube-root-ca.crt"
+AME_CRT = "/etc/sonic/credentials/restapiserver.crt"
+AME_KEY = "/etc/sonic/credentials/restapiserver.key"
 
 def log_debug(m):
     msg = "{}: {}".format(inspect.stack()[1][3], m)
@@ -77,8 +84,7 @@ def _run_command(cmd, timeout=5):
 
 def kube_read_labels():
     """ Read current labels on node and return as dict. """
-    KUBECTL_GET_CMD = "kubectl --kubeconfig {} get nodes --show-labels |\
- grep {} | tr -s ' ' | cut -f6 -d' '"
+    KUBECTL_GET_CMD = "kubectl --kubeconfig {} get nodes {} --show-labels --no-headers |tr -s ' ' | cut -f6 -d' '"
 
     labels = {}
     ret, out, _ = _run_command(KUBECTL_GET_CMD.format(
@@ -97,7 +103,7 @@ def kube_read_labels():
 
     return (ret, labels)
 
- 
+
 def kube_write_labels(set_labels):
     """ Set given set_labels.
     """
@@ -141,7 +147,7 @@ def kube_write_labels(set_labels):
 
     return ret
 
- 
+
 def func_get_labels(args):
     """ args parser default function for get labels"""
     ret, node_labels = kube_read_labels()
@@ -151,7 +157,7 @@ def func_get_labels(args):
 
     log_debug(json.dumps(node_labels, indent=4))
     return 0
-    
+
 
 def is_connected(server=""):
     """ Check if we are currently connected """
@@ -209,6 +215,68 @@ def _download_file(server, port, insecure):
     shutil.copyfile(fname, KUBE_ADMIN_CONF)
 
     log_debug("{} downloaded".format(KUBE_ADMIN_CONF))
+
+
+def _gen_cli_kubeconf(server, port, insecure):
+    """generate identity which can help authenticate and
+       authorization to k8s cluster
+    """
+    client_kubeconfig_template = """
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: {{ k8s_ca }}
+    server: https://{{ vip }}:{{ port }}
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: user
+  name: user@kubernetes
+current-context: user@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: user
+  user:
+    client-certificate-data: {{ ame_crt }}
+    client-key-data: {{ ame_key }}
+    """
+    if insecure:
+        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY), verify=False)
+    else:
+        r = requests.get(K8S_CA_URL.format(server, port), cert=(AME_CRT, AME_KEY))
+    if not r.ok:
+        raise requests.RequestException("Something wrong with AME cert or something wrong about sonic role in k8s cluster")
+    k8s_ca = r.json()["data"]["ca.crt"]
+    k8s_ca_b64 = base64.b64encode(k8s_ca.encode("utf-8")).decode("utf-8")
+    ame_crt_raw = open(AME_CRT, "rb")
+    ame_crt_b64 = base64.b64encode(ame_crt_raw.read()).decode("utf-8")
+    ame_key_raw = open(AME_KEY, "rb")
+    ame_key_b64 = base64.b64encode(ame_key_raw.read()).decode("utf-8")
+    client_kubeconfig_template_j2 = Template(client_kubeconfig_template)
+    client_kubeconfig = client_kubeconfig_template_j2.render(
+        k8s_ca=k8s_ca_b64, vip=server, port=port, ame_crt=ame_crt_b64, ame_key=ame_key_b64)
+    (h, fname) = tempfile.mkstemp(suffix="_kube_join")
+    os.write(h, client_kubeconfig.encode("utf-8"))
+    os.close(h)
+    log_debug("Downloaded = {}".format(fname))
+
+    shutil.copyfile(fname, KUBE_ADMIN_CONF)
+
+    log_debug("{} downloaded".format(KUBE_ADMIN_CONF))
+
+
+def _get_local_ipv6():
+    try:
+        config_db = swsscommon.DBConnector("CONFIG_DB", 0)
+        mgmt_ip_data = swsscommon.Table(config_db, 'MGMT_INTERFACE')
+        for key in mgmt_ip_data.getKeys():
+            if key.find(":") >= 0:
+                return key.split("|")[1].split("/")[0]
+        raise IOError("IPV6 not find from MGMT_INTERFACE table")
+    except Exception as e:
+        raise IOError(str(e))
 
 
 def _troubleshoot_tips():
@@ -269,7 +337,7 @@ def _do_join(server, port, insecure):
     out = ""
     ret = 0
     try:
-        _download_file(server, port, insecure)
+        _gen_cli_kubeconf(server, port, insecure)
         _do_reset(True)
         _run_command("modprobe br_netfilter")
         # Copy flannel.conf
@@ -283,7 +351,7 @@ def _do_join(server, port, insecure):
             log_debug("ret = {}".format(ret))
 
     except IOError as e:
-        err = "Download failed: {}".format(str(e))
+        err = "Join failed: {}".format(str(e))
         ret = -1
         out = ""
 
@@ -319,7 +387,7 @@ def kube_join_master(server, port, insecure, force=False):
 
     log_debug("join: ret={} out:{} err:{}".format(ret, out, err))
     return (ret, out, err)
-    
+
 
 def kube_reset_master(force):
     err = ""
@@ -344,7 +412,147 @@ def kube_reset_master(force):
 
     return (ret, err)
 
+def _do_tag(docker_id, image_ver):
+    err = ""
+    out = ""
+    ret = 1
+    status, _, err = _run_command("docker ps |grep {}".format(docker_id))
+    if status == 0:
+        _, image_item, err = _run_command("docker inspect {} |jq -r .[].Image".format(docker_id))
+        if image_item:
+            image_id = image_item.split(":")[1][:12]
+            _, image_info, err = _run_command("docker images |grep {}".format(image_id))
+            if image_info:
+                # Only need the docker repo name without acr domain
+                image_rep = image_info.split()[0].split("/")[-1]
+                tag_res, _, err = _run_command("docker tag {} {}:latest".format(image_id, image_rep))
+                if tag_res == 0:
+                    out = "docker tag {} {}:latest successfully".format(image_id, image_rep)
+                    ret = 0
+                else:
+                    err = "Failed to tag {}:{} to latest. Err: {}".format(image_rep, image_ver, err)
+            else:
+                err = "Failed to docker images |grep {} to get image repo. Err: {}".format(image_id, err)
+        else:
+            err = "Failed to inspect container:{} to get image id. Err: {}".format(docker_id, err)
+    elif err:
+        err = "Error happens when execute docker ps |grep {}. Err: {}".format(docker_id, err)
+    else:
+        out = "New version {} is not running.".format(image_ver)
+        ret = -1
 
+    return (ret, out, err)
+
+def _remove_container(feat):
+    err = ""
+    out = ""
+    ret = 0
+    _, feat_status, err = _run_command("docker inspect {} |jq -r .[].State.Running".format(feat))
+    if feat_status:
+        if feat_status == 'true':
+            err = "Feature {} container is running, it's unexpected".format(feat)
+            ret = 1
+        else:
+            rm_res, _, err = _run_command("docker rm {}".format(feat))
+            if rm_res == 0:
+                out = "Remove origin local {} container successfully".format(feat)
+            else:
+                err = "Failed to docker rm {}. Err: {}".format(feat, err)
+                ret = 1
+    elif err.startswith("Error: No such object"):
+        out = "Origin local {} container has been removed before".format(feat)
+        err = ""
+    else:
+        err = "Failed to docker inspect {} |jq -r .[].State.Running. Err: {}".format(feat, err)
+        ret = 1
+
+    return (ret, out, err)
+
+def tag_latest(feat, docker_id, image_ver):
+    ret, out, err = _do_tag(docker_id, image_ver)
+    if ret == 0:
+        log_debug(out)
+        ret, out, err = _remove_container(feat)
+        if ret == 0:
+            log_debug(out)
+        else:
+            log_error(err)
+    elif ret == -1:
+        log_debug(out)
+    else:
+        log_error(err)
+    return ret
+
+def _do_clean(feat, current_version, last_version):
+    err = ""
+    out = ""
+    ret = 0
+    IMAGE_ID = "image_id"
+    REPO = "repo"
+    _, image_info, err = _run_command("docker images |grep {} |grep -v latest |awk '{{print $1,$2,$3}}'".format(feat))
+    if image_info:
+        remote_image_version_dict = {}
+        local_image_version_dict = {}
+        for info in image_info.split("\n"):
+            rep, version, image_id = info.split()
+            if len(rep.split("/")) == 1:
+                local_image_version_dict[version] = {IMAGE_ID: image_id, REPO: rep}
+            else:
+                remote_image_version_dict[version] = {IMAGE_ID: image_id, REPO: rep}
+
+        if current_version in remote_image_version_dict:
+            image_prefix = remote_image_version_dict[current_version][REPO]
+            del remote_image_version_dict[current_version]
+        else:
+            out = "Current version {} doesn't exist.".format(current_version)
+            ret = 0
+            return ret, out, err
+        # should be only one item in local_image_version_dict
+        for k, v in local_image_version_dict.items():
+            local_version, local_repo, local_image_id = k, v[REPO], v[IMAGE_ID]
+            # if there is a kube image with same version, need to remove the kube version
+            # and tag the local version to kube version for fallback preparation
+            # and remove the local version
+            if local_version in remote_image_version_dict:
+                tag_res, _, err = _run_command("docker rmi {}:{} && docker tag {} {}:{} && docker rmi {}:{}".format(
+                image_prefix, local_version, local_image_id, image_prefix, local_version, local_repo, local_version))
+            # if there is no kube image with same version, just remove the local version
+            else:
+                tag_res, _, err = _run_command("docker rmi {}:{}".format(local_repo, local_version))
+            if tag_res == 0:
+                msg = "Tag {} local version images successfully".format(feat)
+                log_debug(msg)
+            else:
+                ret = 1
+                err = "Failed to tag {} local version images. Err: {}".format(feat, err)
+            return ret, out, err
+
+        if last_version in remote_image_version_dict:
+            del remote_image_version_dict[last_version]
+
+        image_id_remove_list = [item[IMAGE_ID] for item in remote_image_version_dict.values()]
+        if image_id_remove_list:
+            clean_res, _, err = _run_command("docker rmi {} --force".format(" ".join(image_id_remove_list)))
+        else:
+            clean_res = 0
+        if clean_res == 0:
+            out = "Clean {} old version images successfully".format(feat)
+        else:
+            err = "Failed to clean {} old version images. Err: {}".format(feat, err)
+            ret = 1
+    else:
+        err = "Failed to docker images |grep {} |awk '{{print $3}}'. Error: {}".format(feat, err)
+        ret = 1
+
+    return ret, out, err
+
+def clean_image(feat, current_version, last_version):
+    ret, out, err = _do_clean(feat, current_version, last_version)
+    if ret == 0:
+        log_debug(out)
+    else:
+        log_error(err)
+    return ret
 
 def main():
     syslog.openlog("kube_commands")

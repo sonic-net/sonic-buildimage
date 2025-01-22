@@ -1,3 +1,7 @@
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc
+
+ipv6_lpm_128b_enable=1
+
 # disables bcmALPMDH (ALPM distributed hitbit) thread.  This thread is purely for debug purpose
 l3_alpm_hit_skip=1
 

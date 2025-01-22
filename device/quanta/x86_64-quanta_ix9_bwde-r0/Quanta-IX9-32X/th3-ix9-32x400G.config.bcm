@@ -1,6 +1,7 @@
 phy_null=1
 pll_bypass=1
 
+sai_tunnel_global_sip_mask_enable=1
 core_clock_frequency=1325
 dpr_clock_frequency=1000
 device_clock_frequency=1325
@@ -235,6 +236,8 @@ dport_map_port_132=125
 dport_map_port_133=126
 dport_map_port_134=127
 dport_map_port_135=128
+dport_map_port_136=129
+dport_map_port_137=130
 
 ### lane swap and polarity follow front port order ###
 phy_chain_tx_lane_map_physical{33.0}=0x75206431

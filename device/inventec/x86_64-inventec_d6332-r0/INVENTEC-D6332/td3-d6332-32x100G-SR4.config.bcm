@@ -1,4 +1,4 @@
-sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_issu/b870.6.4.1/
+sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_premium_issu/b870.6.4.1/
 ### fix for sonic
 ptp_ts_pll_fref=50000000
 ptp_bs_fref_0=50000000

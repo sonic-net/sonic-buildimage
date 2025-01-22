@@ -26,6 +26,7 @@ class PddfFan(FanBase):
 
     def __init__(self, tray_idx, fan_idx=0, pddf_data=None, pddf_plugin_data=None, is_psu_fan=False, psu_index=0):
         # idx is 0-based
+        FanBase.__init__(self)
         if not pddf_data or not pddf_plugin_data:
             raise ValueError('PDDF JSON data error')
 
@@ -99,7 +100,7 @@ class PddfFan(FanBase):
             device = "PSU{}".format(self.fans_psu_index)
             output = self.pddf_obj.get_attr_name_output(device, "psu_fan_dir")
             if not output:
-                return False
+                return None
 
             mode = output['mode']
             val = output['status']
@@ -117,7 +118,7 @@ class PddfFan(FanBase):
             attr = "fan" + str(idx) + "_direction"
             output = self.pddf_obj.get_attr_name_output("FAN-CTRL", attr)
             if not output:
-                return False
+                return None
 
             mode = output['mode']
             val = output['status']
@@ -150,10 +151,10 @@ class PddfFan(FanBase):
             if output['status'].isalpha():
                 return 0
             else:
-                speed = int(output['status'])
+                speed = int(float(output['status']))
 
             max_speed = int(self.plugin_data['PSU']['PSU_FAN_MAX_SPEED'])
-            speed_percentage = (speed*100)/max_speed
+            speed_percentage = round((speed*100)/max_speed)
             return speed_percentage
         else:
             # TODO This calculation should change based on MAX FAN SPEED
@@ -168,7 +169,7 @@ class PddfFan(FanBase):
             if output['status'].isalpha():
                 return 0
             else:
-                fpwm = int(output['status'])
+                fpwm = int(float(output['status']))
 
             pwm_to_dc = eval(self.plugin_data['FAN']['pwm_to_duty_cycle'])
             speed_percentage = int(round(pwm_to_dc(fpwm)))
@@ -190,10 +191,11 @@ class PddfFan(FanBase):
                 return 0
 
             output['status'] = output['status'].rstrip()
-            if output['status'].isalpha():
-                return 0
-            else:
+
+            if output['status'].replace('.', '', 1).isdigit():
                 speed = int(float(output['status']))
+            else:
+                return 0
 
             rpm_speed = speed
             return rpm_speed
@@ -237,7 +239,7 @@ class PddfFan(FanBase):
             if output['status'].isalpha():
                 return 0
             else:
-                fpwm = int(output['status'])
+                fpwm = int(float(output['status']))
 
             pwm_to_dc = eval(self.plugin_data['FAN']['pwm_to_duty_cycle'])
             speed_percentage = int(round(pwm_to_dc(fpwm)))
@@ -295,38 +297,53 @@ class PddfFan(FanBase):
                 return status
 
     def set_status_led(self, color):
-        index = str(self.fantray_index-1)
-        led_device_name = "FANTRAY{}".format(self.fantray_index) + "_LED"
-
-        result, msg = self.pddf_obj.is_supported_sysled_state(led_device_name, color)
-        if result == False:
-            print(msg)
-            return (False)
-
-        device_name = self.pddf_obj.data[led_device_name]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', index, self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('color', color, self.pddf_obj.get_led_cur_state_path())
-        self.pddf_obj.create_attr('dev_ops', 'set_status',  self.pddf_obj.get_led_path())
-        return (True)
+        result = False
+        if self.is_psu_fan:
+            # Usually no led for psu_fan hence raise a NotImplementedError
+            raise NotImplementedError
+        else:
+            # Usually there is no led for psu_fan
+            led_device_name = "FANTRAY{}".format(self.fantray_index) + "_LED"
+            result, msg = self.pddf_obj.set_system_led_color(led_device_name, color)
+        return (result)
 
     def get_status_led(self):
-        index = str(self.fantray_index-1)
-        fan_led_device = "FANTRAY{}".format(self.fantray_index) + "_LED"
+        if self.is_psu_fan:
+            # Usually no led for psu_fan hence raise a NotImplementedError
+            raise NotImplementedError
+        else:
+            fan_led_device = "FANTRAY{}".format(self.fantray_index) + "_LED"
+            if (not fan_led_device in self.pddf_obj.data.keys()):
+                # Implement a generic status_led color scheme
+                if self.get_status():
+                    return self.STATUS_LED_COLOR_GREEN
+                else:
+                    return self.STATUS_LED_COLOR_OFF
 
-        if fan_led_device not in self.pddf_obj.data.keys():
-            # Implement a generic status_led color scheme
-            if self.get_status():
-                return self.STATUS_LED_COLOR_GREEN
-            else:
-                return self.STATUS_LED_COLOR_OFF
+            result, color = self.pddf_obj.get_system_led_color(fan_led_device)
+            return (color)
 
-        device_name = self.pddf_obj.data[fan_led_device]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', index, self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('dev_ops', 'get_status',  self.pddf_obj.get_led_path())
-        color = self.pddf_obj.get_led_color()
-        return (color)
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        # self.fan_index represents the fan index in a Fantray as well as in the PSU
+        return self.fan_index
+
+    def is_replaceable(self):
+        """
+        Indicate whether Fan (inside a Fantray) is replaceable
+        Returns:
+            bool: True if it is replaceable.
+        """
+        # Usually a psu-fan is not replaceable
+        if self.is_psu_fan:
+            return False
+        else:
+            return True
 
     def dump_sysfs(self):
         return self.pddf_obj.cli_dump_dsysfs('fan')

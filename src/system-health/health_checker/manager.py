@@ -1,23 +1,17 @@
-from . import utils
 from .config import Config
 from .health_checker import HealthChecker
 from .service_checker import ServiceChecker
 from .hardware_checker import HardwareChecker
 from .user_defined_checker import UserDefinedChecker
+from . import utils
 
 
 class HealthCheckerManager(object):
     """
     Manage all system health checkers and system health configuration.
     """
-    STATE_BOOTING = 'booting'
-    STATE_RUNNING = 'running'
-    boot_timeout = None
-
     def __init__(self):
         self._checkers = []
-        self._state = self.STATE_BOOTING
-
         self.config = Config()
         self.initialize()
 
@@ -33,17 +27,11 @@ class HealthCheckerManager(object):
         """
         Load new configuration if any and perform the system health check for all existing checkers.
         :param chassis: A chassis object.
-        :return: A tuple. The first element indicate the status of the checker; the second element is a dictionary that
-        contains the status for all objects that was checked.
+        :return: A dictionary that contains the status for all objects that was checked.
         """
         HealthChecker.summary = HealthChecker.STATUS_OK
         stats = {}
         self.config.load_config()
-        # check state first to avoid user change boot timeout in configuration file
-        # after finishing system boot
-        if self._state == self.STATE_BOOTING and self._is_system_booting():
-            self._set_system_led(chassis, self.config, 'booting')
-            return self._state, stats
 
         for checker in self._checkers:
             self._do_check(checker, stats)
@@ -53,10 +41,8 @@ class HealthCheckerManager(object):
                 checker = UserDefinedChecker(udc)
                 self._do_check(checker, stats)
 
-        led_status = 'normal' if HealthChecker.summary == HealthChecker.STATUS_OK else 'fault'
-        self._set_system_led(chassis, self.config, led_status)
-
-        return self._state, stats
+        self._set_system_led(chassis)
+        return stats
 
     def _do_check(self, checker, stats):
         """
@@ -86,19 +72,22 @@ class HealthCheckerManager(object):
             else:
                 stats['Internal'].update(entry)
 
-    def _is_system_booting(self):
-        uptime = utils.get_uptime()
-        if not self.boot_timeout:
-            self.boot_timeout = self.config.get_bootup_timeout()
-        booting = uptime < self.boot_timeout
-        if not booting:
-            self._state = self.STATE_RUNNING
-        return booting
-
-    def _set_system_led(self, chassis, config, status):
+    def _set_system_led(self, chassis):
         try:
-            chassis.set_status_led(config.get_led_color(status))
+            chassis.set_status_led(self._get_led_target_color())
         except NotImplementedError:
             print('chassis.set_status_led is not implemented')
         except Exception as e:
             print('Failed to set system led due to - {}'.format(repr(e)))
+
+    def _get_led_target_color(self):
+        """Get target LED color according to health status and system uptime
+
+        Returns:
+            str: LED color
+        """
+        if HealthChecker.summary == HealthChecker.STATUS_OK:
+            return self.config.get_led_color('normal')
+        else:
+            uptime = utils.get_uptime()
+            return self.config.get_led_color('booting') if uptime < self.config.get_bootup_timeout() else self.config.get_led_color('fault')

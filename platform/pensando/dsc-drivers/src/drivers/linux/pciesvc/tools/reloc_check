@@ -1,0 +1,78 @@
+#!/bin/bash
+
+relocs='R_AARCH64_ADR_PREL_PG_HI21|R_AARCH64_ADR_PREL_LO21|R_AARCH64_CALL26|R_AARCH64_JUMP26|LO12' 
+
+OBJDUMP=${CROSS_COMPILE}objdump
+tmp=/tmp/reloc_check$$
+trap "rm -f $tmp" EXIT
+
+$OBJDUMP --section=.text --section=.data --reloc $1 | grep '^000' >$tmp
+
+safe=yes
+num_relocs=$(wc -l $tmp | awk '{ print $1 }')
+echo Examining $num_relocs relocations
+cat $tmp | grep -vE "$relocs" |\
+ {
+     illegals=0
+     while read line
+     do
+	 echo Illegal relocation: $line
+	 ((illegals++))
+     done
+
+     if ((illegals>0))
+     then
+	 echo DO NOT PROCEED!
+	 exit 1
+     else
+	 echo No illegal relocations found
+	 exit 0
+     fi
+ }
+if [ $? != 0 ]
+then
+ safe=no
+fi
+
+# look for external symbol references
+
+nm -u $1  | grep -v mcount | awk '{ print $2 }' | 
+  {
+    read pattern
+    if [ "$pattern" != kpcimgr_module_register ]
+    then
+	echo Caution: found undesirable symbol $pattern
+    fi
+
+    while read symbol
+    do
+	pattern="$pattern|$symbol"
+	if [ "$symbol" != kpcimgr_module_register ]
+	then
+	  echo Caution: found undesirable symbol $symbol
+	fi
+    done
+    echo checking objects for any of these symbols: $pattern
+
+    nm kpci_entry.o kpcinterface.o pciesvc/src/*.o | grep -E $pattern >$tmp
+  }
+
+if [ -s $tmp ]
+then
+  echo Found external references:
+  cat $tmp
+  echo
+  echo DO NOT PROCEED!
+  safe=no
+else
+  echo No external references found
+fi
+
+
+if [ $safe = yes ]
+then
+  echo Safe to proceed.
+else
+  echo NOT safe to proceed.
+  rm -f $1
+fi

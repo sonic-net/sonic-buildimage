@@ -4,10 +4,7 @@ obj-m:= x86-64-accton-as4630-54pe-cpld.o x86-64-accton-as4630-54pe-psu.o  \
 	    
 else
 ifeq (,$(KERNEL_SRC))
-#$(error KERNEL_SRC is not defined)
-KVERSION=3.16.0-8-amd64
-KERNEL_DIR   = /usr/src/linux-headers-$(KVERSION)/
-KERNELDIR:=$(KERNEL_DIR)
+$(error KERNEL_SRC is not defined)
 else
 KERNELDIR:=$(KERNEL_SRC)
 endif

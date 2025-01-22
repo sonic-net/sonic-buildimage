@@ -19,15 +19,10 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 MAIN_TARGET = issu-version
-BUSTER_FILES_PATH = /sonic/target/files/buster
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
-ifneq (,$(findstring buster,$(DEST)))
 	sx_sdk --version | egrep -o 'ISSU [0-9]+' > $(DEST)/$(MAIN_TARGET) || {
 		echo "ISSU version is undefined: $(sx_sdk --version)"
 		rm $(DEST)/$(MAIN_TARGET)
 		exit 1
 	}
-else
-	cp $(BUSTER_FILES_PATH)/$(MAIN_TARGET) $(DEST)/$(MAIN_TARGET)
-endif

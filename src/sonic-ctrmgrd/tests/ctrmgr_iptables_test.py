@@ -103,30 +103,31 @@ class proc:
 
 
 def mock_subproc_run(cmd, shell, capture_output):
-    cmd_prefix = "sudo iptables -t nat "
-    list_cmd = "{}-n -L OUTPUT ".format(cmd_prefix)
-    del_cmd = "{}-D OUTPUT ".format(cmd_prefix)
-    ins_cmd = "{}-A OUTPUT -p tcp -d ".format(cmd_prefix)
+    list_cmd = ["sudo", "iptables", "-t", "nat", "-n", "-L", "OUTPUT"]
+    del_cmd = ["sudo", "iptables", "-t", "nat", "-D", "OUTPUT"]
+    ins_cmd = ["sudo", "iptables", "-t", "nat", "-A", "OUTPUT", "-p", "tcp", "-d"]
 
-    assert shell
-    
+    assert shell == False
+
     print("cmd={}".format(cmd))
-    if cmd.startswith(list_cmd):
-        num = int(cmd[len(list_cmd):])
-        out = current_rules[num] if len(current_rules) > num else ""
-        return proc(0, out, "")
+    if list_cmd == cmd[:len(list_cmd)]:
+        if len(cmd) == len(list_cmd) + 1:
+            num = int(cmd[len(list_cmd)])
+            out = current_rules[num] if len(current_rules) > num else ""
+            return proc(0, out, "")
 
-    if cmd.startswith(del_cmd):
-        num = int(cmd[len(del_cmd):])
-        if num >= len(current_rules):
-            print("delete num={} is greater than len={}".format(num, len(current_rules)))
-            print("current_rules = {}".format(current_rules))
-            assert False
-        del current_rules[num]
-        return proc(0, "", "")
+    if del_cmd == cmd[:len(del_cmd)]:
+        if len(cmd) == len(del_cmd) + 1:
+            num = int(cmd[len(del_cmd)])
+            if num >= len(current_rules):
+                print("delete num={} is greater than len={}".format(num, len(current_rules)))
+                print("current_rules = {}".format(current_rules))
+                assert False
+            del current_rules[num]
+            return proc(0, "", "")
 
-    if cmd.startswith(ins_cmd):
-        l = cmd.split()
+    if ins_cmd == cmd[:len(ins_cmd)]:
+        l = cmd
         assert len(l) == 16
         rule = "DNAT tcp -- 0.0.0.0/0 {} tcp dpt:{} to:{}".format(l[9], l[11], l[-1])
         current_rules.append(rule)

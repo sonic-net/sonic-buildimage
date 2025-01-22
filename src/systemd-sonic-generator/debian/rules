@@ -1,20 +1,8 @@
 #!/usr/bin/make -f
-
-DISTRIBUTION = $(shell sed -n "s/^VERSION_CODENAME=//p" /etc/os-release)
-VERSION = 1.0.0
-PACKAGEVERSION = $(VERSION)
+export DH_VERBOSE=1
 
 %:
 	dh $@
-
-override_dh_auto_clean:
-override_dh_auto_build:
-override_dh_auto_install:
-	make systemd-sonic-generator
-	make install DESTDIR=debian/systemd-sonic-generator
-
-override_dh_gencontrol:
-	dh_gencontrol -- -v$(PACKAGEVERSION)
 
 override_dh_auto_test:
 ifneq "$(DEB_HOST_ARCH)" "armhf"

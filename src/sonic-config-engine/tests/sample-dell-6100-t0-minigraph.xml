@@ -716,11 +716,16 @@
             <a:Reference i:nil="true"/>
             <a:Value>10.0.0.16</a:Value>
           </a:DeviceProperty>
+          <a:DeviceProperty>
+            <a:Name>SonicQosProfile</a:Name>
+            <a:Reference i:nil="true"/>
+            <a:Value>RDMA-CENTRIC</a:Value>
+          </a:DeviceProperty>
         </a:Properties>
       </a:DeviceMetadata>
     </Devices>
     <Properties xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution"/>
-  </MetadataDeclaration>  
+  </MetadataDeclaration>
   <LinkMetadataDeclaration>
     <Link xmlns:a="http://schemas.datacontract.org/2004/07/Microsoft.Search.Autopilot.Evolution">
       <a:LinkMetadata>

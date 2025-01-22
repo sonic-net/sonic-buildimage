@@ -1,0 +1,6 @@
+{
+    "name": "rtc-test",
+    "description": "Check RTC function",
+    "type": "auto",
+    "tags": ["manufacture", "delivery", "pa", "emc"]
+}

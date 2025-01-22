@@ -1,0 +1,27 @@
+From 988c808af6065b740006aef0e94496821d41fb98 Mon Sep 17 00:00:00 2001
+From: Stepan Blyschak <stepanb@nvidia.com>
+Date: Mon, 4 Apr 2022 09:57:39 +0000
+Subject: [PATCH] Fix version string generation when scapy is a submodule
+
+Signed-off-by: Stepan Blyschak <stepanb@nvidia.com>
+---
+ scapy/__init__.py | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/scapy/__init__.py b/scapy/__init__.py
+index f920151e..2adbea19 100644
+--- a/scapy/__init__.py
++++ b/scapy/__init__.py
+@@ -42,9 +42,6 @@ def _version_from_git_describe():
+     :raises CalledProcessError: if git is unavailable
+     :return: Scapy's latest tag
+     """
+-    if not os.path.isdir(os.path.join(os.path.dirname(_SCAPY_PKG_DIR), '.git')):  # noqa: E501
+-        raise ValueError('not in scapy git repo')
+-
+     def _git(cmd):
+         # type: (str) -> str
+         process = subprocess.Popen(
+-- 
+2.14.1
+

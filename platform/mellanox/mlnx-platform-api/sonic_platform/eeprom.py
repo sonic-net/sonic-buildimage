@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,17 +31,18 @@ except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
 from .device_data import DeviceDataManager
-from .utils import default_return, is_host
+from .utils import default_return, is_host, wait_until
 
 logger = Logger()
 
 #
 # this is mlnx-specific
-# should this be moved to chass.py or here, which better?
+# should this be moved to chassis.py or here, which better?
 #
 EEPROM_SYMLINK = "/var/run/hw-management/eeprom/vpd_info"
 platform_name = DeviceDataManager.get_platform_name()
-if platform_name and 'simx' in platform_name:
+platform_supporting_simx = ['x86_64-nvidia_sn4280_simx-r0', 'x86_64-mlnx_msn4700_simx-r0']
+if platform_name and 'simx' in platform_name and not platform_name in platform_supporting_simx:
     if not os.path.exists(EEPROM_SYMLINK):
         if is_host():
             platform_path = os.path.join('/usr/share/sonic/device', platform_name)
@@ -51,10 +52,12 @@ if platform_name and 'simx' in platform_name:
             os.makedirs(os.path.dirname(EEPROM_SYMLINK))
         subprocess.check_call(['/usr/bin/xxd', '-r', '-p', 'syseeprom.hex', EEPROM_SYMLINK], cwd=platform_path)
 
+WAIT_EEPROM_READY_SEC = 60
+
 
 class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
     def __init__(self):
-        if not os.path.exists(EEPROM_SYMLINK):
+        if not wait_until(predict=os.path.exists, timeout=WAIT_EEPROM_READY_SEC, path=EEPROM_SYMLINK):
             logger.log_error("Nowhere to read syseeprom from! No symlink found")
             raise RuntimeError("No syseeprom symlink found")
 

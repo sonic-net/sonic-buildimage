@@ -1,0 +1,34 @@
+FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+
+ARG docker_container_name
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update
+
+RUN apt-get install -y protobuf-compiler  libprotobuf-dev  libgrpc++-dev
+
+COPY \
+{% for deb in docker_syncd_pensando_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor -%}
+debs/
+
+RUN dpkg -i \
+{% for deb in docker_syncd_pensando_debs.split(' ') -%}
+debs/{{ deb }}{{' '}}
+{%- endfor %}
+
+## TODO: add kmod into Depends
+RUN apt-get install -yf kmod
+
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["files/supervisor-proc-exit-listener", "/usr/bin/"]
+COPY ["critical_processes", "/etc/supervisor/"]
+
+## Clean up
+RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
+RUN rm -rf /debs
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]

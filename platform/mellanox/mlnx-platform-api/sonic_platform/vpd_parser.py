@@ -24,6 +24,7 @@ logger = Logger()
 SN_VPD_FIELD = "SN_VPD_FIELD"
 PN_VPD_FIELD = "PN_VPD_FIELD"
 REV_VPD_FIELD = "REV_VPD_FIELD"
+MFR_VPD_FIELD = "MFR_NAME"
 
 
 class VpdParser:
@@ -82,3 +83,17 @@ class VpdParser:
             logger.log_error("Fail to read revision: No key {} in VPD {}".format(REV_VPD_FIELD, self.vpd_file))
             return 'N/A'
         return self.vpd_data.get(REV_VPD_FIELD, 'N/A')
+
+    def get_entry_value(self, key):
+        """
+        Retrieves an vpd entry of the device
+
+        Returns:
+            string: Vpd entry value of device
+        """
+        if self._get_data() and key not in self.vpd_data:
+            logger.log_warning("Fail to read vpd info: No key {} in VPD {}".format(key, self.vpd_file))
+            return 'N/A'
+        return self.vpd_data.get(key, 'N/A')
+
+

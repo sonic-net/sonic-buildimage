@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMCNET_TYPES_H
@@ -118,8 +118,14 @@ typedef struct bcmcnet_dev_info {
     /*! Number of Rx descriptors per queue */
     uint32_t nb_rx_desc[NUM_Q_MAX];
 
+    /*! State of Rx queues */
+    uint32_t rxq_state[NUM_Q_MAX];
+
     /*! Number of Tx descriptors per queue */
     uint32_t nb_tx_desc[NUM_Q_MAX];
+
+    /*! State of Tx queues */
+    uint32_t txq_state[NUM_Q_MAX];
 } bcmcnet_dev_info_t;
 
 /*!

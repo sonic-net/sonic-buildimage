@@ -1,4 +1,5 @@
 import os
+import ast
 import imp
 import yaml
 import subprocess
@@ -24,7 +25,7 @@ class Common:
 
     SET_METHOD_IPMI = 'ipmitool'
     NULL_VAL = 'N/A'
-    HOST_CHK_CMD = "docker > /dev/null 2>&1"
+    HOST_CHK_CMD = ["docker"]
     REF_KEY = '$ref:'
 
     def __init__(self, conf=None):
@@ -56,7 +57,7 @@ class Common:
             cleaned_input = input_translator.get(input)
 
         elif type(input_translator) is str:
-            cleaned_input = eval(input_translator.format(input))
+            cleaned_input = ast.literal_eval(input_translator.format(input))
 
         return cleaned_input
 
@@ -66,9 +67,9 @@ class Common:
         if type(output_translator) is dict:
             output = output_translator.get(output)
         elif type(output_translator) is str:
-            output = eval(output_translator.format(output))
+            output = ast.literal_eval(output_translator.format(output))
         elif type(output_translator) is list:
-            output = eval(output_translator[index].format(output))
+            output = ast.literal_eval(output_translator[index].format(output))
 
         return output
 
@@ -166,7 +167,11 @@ class Common:
         return True
 
     def is_host(self):
-        return os.system(self.HOST_CHK_CMD) == 0
+        try:
+            subprocess.call(self.HOST_CHK_CMD, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except FileNotFoundError:
+            return False
+        return True
 
     def load_json_file(self, path):
         """

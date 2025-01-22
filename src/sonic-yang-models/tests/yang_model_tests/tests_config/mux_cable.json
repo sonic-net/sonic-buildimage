@@ -1,0 +1,93 @@
+{
+    "MUX_CABLE_ACTIVE_STANDBY_INTERFACE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet0",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet0",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-mux-cable:sonic-mux-cable": {
+            "sonic-mux-cable:MUX_CABLE": {
+                "MUX_CABLE_LIST": [
+                    {
+                        "ifname": "Ethernet0",
+                        "server_ipv4": "192.168.0.2/32",
+                        "server_ipv6": "fc02:1000::30/128",
+                        "state": "auto"
+                    }
+                ]
+
+            }
+        }
+    },
+
+    "MUX_CABLE_ACTIVE_ACTIVE_INTERFACE": {
+        "sonic-port:sonic-port": {
+            "sonic-port:PORT": {
+                "PORT_LIST": [
+                {
+                    "admin_status": "up",
+                    "alias": "eth0",
+                    "description": "Ethernet4",
+                    "lanes": "65",
+                    "mtu": "9000",
+                    "name": "Ethernet4",
+                    "tpid": "0x8100",
+                    "speed": "25000"
+                }
+                ]
+            }
+        },
+        "sonic-mux-cable:sonic-mux-cable": {
+            "sonic-mux-cable:MUX_CABLE": {
+                "MUX_CABLE_LIST": [
+                    {
+                        "ifname": "Ethernet4",
+                        "cable_type": "active-active",
+                        "server_ipv4": "192.168.0.2/32",
+                        "server_ipv6": "fc02:1000::30/128",
+                        "soc_ipv4": "192.168.0.3/32",
+                        "state": "auto"
+                    }
+                ]
+
+            }
+        }
+    },
+
+    "MUX_CABLE_INVALID_STATE": {
+        "sonic-mux-cable:sonic-mux-cable": {
+            "sonic-mux-cable:MUX_CABLE": {
+                "MUX_CABLE_LIST": [
+                    {
+                        "state": "Standby"
+                    }
+                ]
+
+            }
+        }
+    },
+
+    "MUX_CABLE_INVALID_IP": {
+        "sonic-mux-cable:sonic-mux-cable": {
+            "sonic-mux-cable:MUX_CABLE": {
+                "MUX_CABLE_LIST": [
+                    {
+                        "server_ipv4": "999.999.999.999/32"
+                    }
+                ]
+
+            }
+        }
+    }
+}

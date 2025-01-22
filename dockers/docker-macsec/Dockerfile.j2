@@ -1,8 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-swss-layer-buster
+FROM docker-swss-layer-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
-RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -22,10 +21,10 @@ RUN apt-get clean -y      && \
     apt-get autoremove -y && \
     rm -rf /debs
 
-COPY ["start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["etc/wpa_supplicant.conf", "/etc/wpa_supplicant.conf"]
+COPY ["cli", "/cli/"]
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

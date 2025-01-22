@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 
-import os
+import subprocess
 import time
 
 def main():
-    os.system('hwclock -w -f /dev/rtc1')
+    subprocess.call(['hwclock', '-w', '-f', '/dev/rtc1'])
     time.sleep(1)
 
-    os.system('i2cset -y 0 0x36 0x23 0')
+    subprocess.call(['i2cset', '-y', '0', '0x36', '0x23', '0'])
     time.sleep(1)
-    os.system('i2cset -y 0 0x36 0x23 1')
+    subprocess.call(['i2cset', '-y', '0', '0x36', '0x23', '1'])
 
 if __name__ == '__main__':
     main()

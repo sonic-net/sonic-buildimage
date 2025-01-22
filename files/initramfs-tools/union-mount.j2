@@ -12,6 +12,8 @@ case $1 in
 esac
 
 docker_inram=false
+docker_inram_algo=tmpfs
+docker_inram_size={{ DOCKER_RAMFS_SIZE }}
 logs_inram=false
 secureboot=false
 bootloader=generic
@@ -26,6 +28,12 @@ for x in $(cat /proc/cmdline); do
             ;;
         docker_inram=on)
             docker_inram=true
+            ;;
+        docker_inram_algo=*)
+            docker_inram_algo="${x#docker_inram_algo=}"
+            ;;
+        docker_inram_size=*)
+            docker_inram_size="${x#docker_inram_size=}"
             ;;
         logs_inram=on)
             logs_inram=true
@@ -95,6 +103,63 @@ remove_not_in_allowlist_files()
     rm -f $allowlist_pattern_file
 }
 
+mount_docker_inram()
+{
+    if [ "$docker_inram_algo" = "tmpfs" ]; then
+        echo "Creating tmpfs to extract {{ FILESYSTEM_DOCKERFS }}"
+        mount -t tmpfs -o "rw,nodev,size=$docker_inram_size" tmpfs "${rootmnt}/var/lib/docker"
+    else
+        echo "Creating zram to extract {{ FILESYSTEM_DOCKERFS }}"
+        modprobe zram num_devices=0
+        # create new zram device
+        local zid="$(cat /sys/class/zram-control/hot_add)"
+        local zname="zram$zid"
+        # attempt to use desired algorithm
+        if ! echo $docker_inram_algo > /sys/block/$zname/comp_algorithm 2>/dev/null; then
+            echo "zram algorithm $docker_inram_algo is not supported"
+            echo "using default instead: $(cat /sys/block/$zname/comp_algorithm)"
+        fi
+        echo $docker_inram_size > /sys/block/$zname/disksize
+        # create filesystem on the newly created zram block device
+        mkfs.ext4 -m 0 -L dockerfs -O '^has_journal' -q /dev/$zname
+        mount -o rw,nodev /dev/$zname "${rootmnt}/var/lib/docker"
+    fi
+}
+
+extract_dockerfs()
+{
+    echo "Extracting {{ FILESYSTEM_DOCKERFS }}"
+    if [ -f "${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }}" ] && [ "$secureboot" = false ]; then
+        # Extract dockerfs.tar.gz into /var/lib/docker unless the system booted with secureboot
+        # In secureboot dockerfs.tar.gz cannot be trusted as it does not have a signature
+        tar xz --numeric-owner -f ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }} -C ${rootmnt}/var/lib/docker
+    elif [ "$bootloader" = "aboot" ] && unzip -l "$swi_path" | grep -q {{ FILESYSTEM_DOCKERFS }}; then
+        # Aboot swi images also support extracting dockerfs.tar.gz directly from them
+        unzip -qp "$swi_path" {{ FILESYSTEM_DOCKERFS }} | tar xz --numeric-owner -C ${rootmnt}/var/lib/docker
+    else
+        # Warn but allow the system to boot to at least have ssh access
+        echo "No {{ FILESYSTEM_DOCKERFS }} to extract, SONiC will be broken"
+    fi
+}
+
+mount_docker()
+{
+    if [ "$in_kdump" = true ]; then
+        # There is no point in mounting the docker filesystem in kdump environment
+        # Especially when there is some space mitigation in place
+        return
+    fi
+
+    if [ "$docker_inram" = true ]; then
+        # Create an in memory filesystem (tmpfs, zram) and extract dockerfs.tar.gz
+        mount_docker_inram
+        extract_dockerfs
+    else
+        # Mount the working directory of docker engine in the raw partition, bypass the overlay
+        mount --bind ${rootmnt}/host/$image_dir/{{ DOCKERFS_DIR }} ${rootmnt}/var/lib/docker
+    fi
+}
+
 ## Mount the overlay file system: rw layer over squashfs
 image_dir=$(cat /proc/cmdline | sed -e 's/.*loop=\(\S*\)\/.*/\1/')
 rw_dir=${rootmnt}/host/$image_dir/rw
@@ -132,35 +197,23 @@ case "${ROOT}" in
         ;;
     *)
         ## Mount the raw partition again
-        mount ${ROOT} ${rootmnt}/host
+        mount -t ext4 ${ROOT} ${rootmnt}/host
+        tune2fs -m 0 -r 0 ${ROOT}
         ;;
 esac
 
+## Mount the docker storage path
 mkdir -p ${rootmnt}/var/lib/docker
-if [ "$in_kdump" = false ]; then
-    if [ "$secureboot" = true ]; then
-        mount -t tmpfs -o rw,nodev,size={{ DOCKER_RAMFS_SIZE }} tmpfs ${rootmnt}/var/lib/docker
-        if [ "$bootloader" = "aboot" ]; then
-            unzip -qp "$swi_path" dockerfs.tar.gz | tar xz --numeric-owner -C ${rootmnt}/var/lib/docker
-            ## Boot folder is not extracted during secureboot since content would inherently become unsafe
-            mkdir -p ${rootmnt}/host/$image_dir/boot
-        else
-            echo "secureboot unsupported for bootloader $bootloader" 1>&2
-            exit 1
-        fi
-    elif [ -f ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }} ]; then
-        ## mount tmpfs and extract docker into it
-        mount -t tmpfs -o rw,nodev,size={{ DOCKER_RAMFS_SIZE }} tmpfs ${rootmnt}/var/lib/docker
-        tar xz --numeric-owner -f ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }} -C ${rootmnt}/var/lib/docker
-    else
-        ## Mount the working directory of docker engine in the raw partition, bypass the overlay
-        mount --bind ${rootmnt}/host/$image_dir/{{ DOCKERFS_DIR }} ${rootmnt}/var/lib/docker
-    fi
-fi
+mount_docker
 
 ## Mount the boot directory in the raw partition, bypass the overlay
 mkdir -p ${rootmnt}/boot
+# make sure that the boot folder exists before attempting a mount
+mkdir -p ${rootmnt}/host/$image_dir/boot
 mount --bind ${rootmnt}/host/$image_dir/boot ${rootmnt}/boot
+
+## Mount the /tmp directory as tmpfs
+mount -t tmpfs -o rw,nosuid,nodev,size=25% tmpfs ${rootmnt}/tmp
 
 ## Mount loop device or tmpfs for /var/log
 if $logs_inram; then
@@ -188,4 +241,9 @@ fi
 ## fscklog file: /tmp will be lost when overlayfs is mounted
 if [ -f /tmp/fsck.log.gz ]; then
     mv /tmp/fsck.log.gz ${rootmnt}/var/log
+fi
+
+## ssd-fw-upgrade log file: /tmp will be lost when overlayfs is mounted
+if [ -f /tmp/ssd-fw-upgrade.log.gz ]; then
+    mv /tmp/ssd-fw-upgrade.log.gz ${rootmnt}/var/log
 fi

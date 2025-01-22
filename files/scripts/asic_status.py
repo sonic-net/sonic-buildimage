@@ -17,7 +17,7 @@ except ImportError as e:
 # Constants ====================================================================
 #
 SYSLOG_IDENTIFIER = 'asic_status.py'
-CHASSIS_ASIC_INFO_TABLE = 'CHASSIS_ASIC_TABLE'
+CHASSIS_FABRIC_ASIC_INFO_TABLE = 'CHASSIS_FABRIC_ASIC_TABLE'
 SELECT_TIMEOUT_MSECS = 5000
 
 def main():
@@ -40,7 +40,7 @@ def main():
     state_db = daemon_base.db_connect("CHASSIS_STATE_DB")
 
     sel = swsscommon.Select()
-    sst = swsscommon.SubscriberStateTable(state_db, CHASSIS_ASIC_INFO_TABLE)
+    sst = swsscommon.SubscriberStateTable(state_db, CHASSIS_FABRIC_ASIC_INFO_TABLE)
     sel.addSelectable(sst)
 
     while True:
@@ -69,8 +69,9 @@ def main():
                 logger.log_info('Detected asic{} is online'.format(global_asic_id))
                 sys.exit(0)
         elif asic_op == 'DEL':
-            logger.log_info('Detected asic{} is offline'.format(global_asic_id))
-            sys.exit(1)
+            if (global_asic_id == args_asic_id):
+                logger.log_info('Detected asic{} is offline'.format(global_asic_id))
+                sys.exit(1)
         else:
             continue
 

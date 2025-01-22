@@ -1,10 +1,8 @@
 module sonic-buffer-pg {
-    namespace "http://github.com/Azure/sonic-buffer-pg";
+    namespace "http://github.com/sonic-net/sonic-buffer-pg";
     prefix bpg;
 
-    import sonic-extension {
-        prefix sonic-ext;
-    }
+    yang-version 1.1;
 
     import sonic-port {
         prefix prt;
@@ -54,8 +52,13 @@ module sonic-buffer-pg {
 
                 leaf profile {
                     default 0;
-                    type leafref {
-                        path "/bpf:sonic-buffer-profile/bpf:BUFFER_PROFILE/bpf:BUFFER_PROFILE_LIST/bpf:name";
+                    type union {
+                        type leafref {
+                            path "/bpf:sonic-buffer-profile/bpf:BUFFER_PROFILE/bpf:BUFFER_PROFILE_LIST/bpf:name";
+                        }
+                        type string {
+                            pattern "NULL";
+                        }
                     }
                     description "Buffer Profile associated with Priority Group number for a port";
                 }

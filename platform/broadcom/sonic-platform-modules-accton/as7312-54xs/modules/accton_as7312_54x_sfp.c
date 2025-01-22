@@ -1919,7 +1919,7 @@ static int qfp_remove(struct i2c_client *client, struct qsfp_data *data)
     return 0;
 }
 
-static int sfp_device_remove(struct i2c_client *client)
+static void sfp_device_remove(struct i2c_client *client)
 {
     int ret = 0;
     struct sfp_port_data *data = i2c_get_clientdata(client);
@@ -1936,7 +1936,6 @@ static int sfp_device_remove(struct i2c_client *client)
         kfree(data->writebuf);
 #endif
     kfree(data);
-    return ret;
 }
 
 /* Addresses scanned

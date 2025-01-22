@@ -2,7 +2,7 @@ module sonic-scheduler {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-scheduler";
+    namespace "http://github.com/sonic-net/sonic-scheduler";
 
     prefix sch;
 
@@ -31,14 +31,7 @@ module sonic-scheduler {
                 key "name";
 
                 leaf name {
-
-                    type string {
-                        pattern "[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})|[a-zA-Z0-9]{1}([-a-zA-Z0-9_]{0,31})([@]{1})([0-9]{1,3})";
-                        length 1..36 {
-                            error-message "Invalid length for scheduler name.";
-                            error-app-tag scheduler-name-invalid-length;
-                        }
-                    }
+                    type string;
                     description "Scheduler name";
                 }
 
@@ -92,7 +85,7 @@ module sonic-scheduler {
                         "Committed information rate for the dual-rate token
                         bucket policer.This value represents the rate at which
                         tokens are added to the primary bucket.nt Units is
-                        Bps(Bytes per second) for meter type is bytes else 
+                        Bps(Bytes per second) for meter type is bytes else
                         Pps(packets per second) for meter type is packets";
                 }
 

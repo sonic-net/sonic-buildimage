@@ -53,7 +53,8 @@
         ],
         "custom_kos":
         [
-            "pddf_custom_psu"
+            "pddf_custom_psu",
+            "accton_as9716_32d_ioport"
         ]
     },
 

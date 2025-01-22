@@ -1,4 +1,4 @@
-FROM docker-syncd-bfn
+FROM docker-syncd-bfn-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -12,20 +12,16 @@ debs/
 RUN apt-get purge -y syncd
 
 ## Pre-install the fundamental packages
-RUN apt-get update \
+RUN apt-get update      \
  && apt-get -y install  \
-    net-tools           \
-    python-pip          \
-    python-setuptools   \
-    build-essential     \
-    libssl-dev          \
-    libffi-dev          \
-    python-dev          \
     wget                \
     cmake               \
     libqt5core5a        \
     libqt5network5      \
-    libboost-atomic1.71.0
+    python3-setuptools  \
+    python3-pip         \
+    python-is-python3   \
+    libboost-atomic1.74.0
 
 RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
 {% for deb in docker_syncd_bfn_rpc_debs.split(' ') -%}
@@ -42,10 +38,10 @@ RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
  && cd ..               \
  && rm -fr nanomsg-1.0.0 \
  && rm -f 1.0.0.tar.gz  \
- && pip2 install cffi==1.7.0    \
- && pip2 install --upgrade cffi==1.7.0 \
- && pip2 install wheel  \
- && pip2 install nnpy   \
+ && pip3 install cffi==1.7.0 \
+ && pip3 install --upgrade cffi==1.7.0 \
+ && pip3 install wheel  \
+ && pip3 install nnpy   \
  && mkdir -p /opt       \
  && cd /opt             \
  && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py \

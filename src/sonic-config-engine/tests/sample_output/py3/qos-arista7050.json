@@ -114,201 +114,232 @@
         }
     },
     "PORT_QOS_MAP": {
+        "global": {
+            "dscp_to_tc_map"  : "AZURE"
+        },
         "Ethernet4": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet8": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet12": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet16": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet20": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet24": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet28": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet32": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet36": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet40": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet44": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet48": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet52": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet56": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet60": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet64": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet68": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet72": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet76": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet80": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet84": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet88": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet92": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet96": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet112": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet116": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet120": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         },
         "Ethernet124": {
             "dscp_to_tc_map"  : "AZURE",
             "tc_to_queue_map" : "AZURE",
             "tc_to_pg_map"    : "AZURE",
             "pfc_to_queue_map": "AZURE",
-            "pfc_enable"      : "3,4"
+            "pfc_enable"      : "3,4",
+            "pfcwd_sw_enable" : "3,4"
         }
     },
     "WRED_PROFILE": {

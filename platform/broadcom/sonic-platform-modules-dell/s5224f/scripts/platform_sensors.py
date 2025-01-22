@@ -10,25 +10,25 @@
 #   * FAN trays
 #   * PSU
 
-
 import sys
 import logging
-import subprocess
+from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_noshell_pipe
 
 S5224F_MAX_FAN_TRAYS = 4
 S5224F_MAX_PSUS = 2
-IPMI_SENSOR_DATA = "ipmitool sdr list"
+IPMI_SENSOR_DATA = ["ipmitool", "sdr", "list"]
 IPMI_SENSOR_DUMP = "/tmp/sdr"
 
 PSU_PRESENCE = "PSU{0}_stat"
 # Use this for older firmware
 # PSU_PRESENCE="PSU{0}_prsnt"
 
-IPMI_FAN_PRESENCE = "ipmitool sensor get FAN{0}_prsnt"
-IPMI_PSU1_DATA_DOCKER = "ipmitool raw 0x04 0x2d 0x31 |  awk '{print substr($0,9,1)}'"
-IPMI_PSU2_DATA_DOCKER = "ipmitool raw 0x04 0x2d 0x32 |  awk '{print substr($0,9,1)}'"
-IPMI_RAW_STORAGE_READ = "ipmitool raw 0x0a 0x11 {0} 0 0 0xa0"
-IPMI_FRU = "ipmitool fru"
+IPMI_FAN_PRESENCE = ["ipmitool", "sensor", "get", "FAN{0}_prsnt"]
+IPMI_PSU1_DATA_DOCKER = ["ipmitool", "raw", "0x04", "0x2d", "0x31"]
+IPMI_PSU2_DATA_DOCKER = ["ipmitool", "raw", "0x04", "0x2d", "0x32"]
+awk_cmd = ['awk', '{print substr($0,9,1)}']
+IPMI_RAW_STORAGE_READ = ["ipmitool", "raw", "0x0a", "0x11", "", "0", "0", "0xa0"]
+IPMI_FRU = ["ipmitool", "fru"]
 ipmi_sdr_list = ""
 
 # Dump sensor registers
@@ -38,7 +38,7 @@ def ipmi_sensor_dump():
 
     global ipmi_sdr_list
     ipmi_cmd = IPMI_SENSOR_DATA
-    status, ipmi_sdr_list = subprocess.getstatusoutput(ipmi_cmd)
+    status, ipmi_sdr_list = getstatusoutput_noshell(ipmi_cmd)
 
     if status:
         logging.error('Failed to execute:' + ipmi_sdr_list)
@@ -47,9 +47,10 @@ def ipmi_sensor_dump():
 # Fetch a Fan Status
 
 def get_fan_status(fan_id):
-    ret_status, ipmi_cmd_ret = subprocess.getstatusoutput(IPMI_FAN_PRESENCE.format(fan_id))
+    IPMI_FAN_PRESENCE[3] = 'FAN' + str(fan_id) + '_prsnt'
+    ret_status, ipmi_cmd_ret = getstatusoutput_noshell(IPMI_FAN_PRESENCE)
     if ret_status:
-        logging.error('Failed to execute : %s'%IPMI_FAN_PRESENCE.format(fan_id))
+        logging.error('Failed to execute : %s'% (' '.join(IPMI_FAN_PRESENCE)))
         sys.exit(0)
     return(' ' + ipmi_cmd_ret.splitlines()[5].strip(' ').strip('[]'))
 
@@ -75,9 +76,9 @@ def get_pmc_register(reg_name):
 #Fetch FRU Data for given fruid
 def get_psu_airflow(psu_id):
     fru_id = 'PSU' + str(psu_id) + '_fru'
-    ret_status, ipmi_cmd_ret = subprocess.getstatusoutput(IPMI_FRU)
+    ret_status, ipmi_cmd_ret = getstatusoutput_noshell(IPMI_FRU)
     if ret_status:
-        logging.error('Failed to execute ipmitool: '+ IPMI_FRU)
+        logging.error('Failed to execute ipmitool: '+ ' '.join(IPMI_FRU))
         sys.exit(0)
     found_fru = False
     for line in ipmi_cmd_ret.splitlines():
@@ -89,9 +90,10 @@ def get_psu_airflow(psu_id):
 
 # Fetch FRU on given offset
 def fetch_raw_fru(dev_id, offset):
-    ret_status, ipmi_cmd_ret = subprocess.getstatusoutput(IPMI_RAW_STORAGE_READ.format(dev_id))
+    IPMI_RAW_STORAGE_READ[3] = str(dev_id)
+    ret_status, ipmi_cmd_ret = getstatusoutput_noshell(IPMI_RAW_STORAGE_READ)
     if ret_status:
-        logging.error('Failed to execute ipmitool :' + IPMI_RAW_STORAGE_READ.format(dev_id))
+        logging.error('Failed to execute ipmitool :' + ' '.join(IPMI_RAW_STORAGE_READ))
         sys.exit(0)
     return int((ipmi_cmd_ret.splitlines()[int(offset/16)]).split(' ')[(int(offset%16)+1)])
 
@@ -119,8 +121,11 @@ def print_temperature_sensors():
     print ('  CPU Temp:                       ',\
         (get_pmc_register('CPU_temp')))
 
-ret_status, ipmi_cmd_ret = subprocess.getstatusoutput('echo 0 > /sys/module/ipmi_si/parameters/kipmid_max_busy_us')
-if ret_status:
+file = '/sys/module/ipmi_si/parameters/kipmid_max_busy_us'
+try:
+    with open(file, 'w') as f:
+        f.write('0\n')
+except (IOError, FileNotFoundError):
     logging.error("platform_sensors: Failed to set kipmid_max_busy_us to 0")
 ipmi_sensor_dump()
 
@@ -212,12 +217,12 @@ def get_psu_presence(index):
     ret_status = 1
 
     if index == 1:
-       ret_status, ipmi_cmd_ret = subprocess.getstatusoutput(IPMI_PSU1_DATA_DOCKER)
+       ret_status, ipmi_cmd_ret = getstatusoutput_noshell_pipe(IPMI_PSU1_DATA_DOCKER, awk_cmd)
     elif index == 2:
-       ret_status, ipmi_cmd_ret = subprocess.getstatusoutput(IPMI_PSU2_DATA_DOCKER)
+       ret_status, ipmi_cmd_ret = getstatusoutput_noshell_pipe(IPMI_PSU2_DATA_DOCKER, awk_cmd)
 
     if ret_status:
-        logging.error('Failed to execute ipmitool :' + IPMI_PSU1_DATA_DOCKER)
+        logging.error('Failed to execute ipmitool :' + ' '.join(IPMI_PSU1_DATA_DOCKER))
         sys.exit(0)
 
     psu_status = ipmi_cmd_ret
@@ -234,12 +239,12 @@ def get_psu_status(index):
     ipmi_cmd_ret = 'f'
 
     if index == 1:
-       ret_status, ipmi_cmd_ret = subprocess.getstatusoutput(IPMI_PSU1_DATA_DOCKER)
+       ret_status, ipmi_cmd_ret = getstatusoutput_noshell_pipe(IPMI_PSU1_DATA_DOCKER, awk_cmd)
     elif index == 2:
-       ret_status, ipmi_cmd_ret = subprocess.getstatusoutput(IPMI_PSU2_DATA_DOCKER)
+       ret_status, ipmi_cmd_ret = getstatusoutput_noshell_pipe(IPMI_PSU2_DATA_DOCKER, awk_cmd)
 
     if ret_status:
-        logging.error('Failed to execute ipmitool : ' + IPMI_PSU2_DATA_DOCKER)
+        logging.error('Failed to execute ipmitool : ' + ' '.join(IPMI_PSU2_DATA_DOCKER))
         sys.exit(0)
 
     psu_status = ipmi_cmd_ret
@@ -316,6 +321,9 @@ for psu in range(1, S5224F_MAX_PSUS + 1):
 print ('\n    Total Power:                     ',\
     get_pmc_register('PSU_Total_watt'))
 
-ret_status, ipmi_cmd_ret = subprocess.getstatusoutput('echo 1000 > /sys/module/ipmi_si/parameters/kipmid_max_busy_us')
-if ret_status:
+file = '/sys/module/ipmi_si/parameters/kipmid_max_busy_us'
+try:
+    with open(file, 'w') as f:
+        f.write('1000\n')
+except (IOError, FileNotFoundError):
     logging.error("platform_sensors: Failed to set kipmid_max_busy_us to 1000")

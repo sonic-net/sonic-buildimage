@@ -160,8 +160,6 @@ static ssize_t pmbus_info_show(struct device *dev, struct device_attribute *da,
     struct i2c_client *client = to_i2c_client(dev);
     struct as7716_32xb_pmbus_data *data = i2c_get_clientdata(client);
     int status = -EINVAL;
-    //printk("pmbus_info_show\n");
-    printk("attr->index=%d\n", attr->index);
     mutex_lock(&data->update_lock);
     switch (attr->index)
     {
@@ -190,11 +188,9 @@ static ssize_t pmbus_info_show(struct device *dev, struct device_attribute *da,
             status=snprintf(buf, PAGE_SIZE-1, "%d\r\n", data->i_out);
             break;        
         case PSU_P_OUT:
-            printk("read PSU_P_OUT\n");
             status=snprintf(buf, PAGE_SIZE-1, "%d\r\n", data->p_out);
             break;
         case PSU_P_OUT_UV:
-            printk("read PSU_P_OUT_UV\n");
             status=snprintf(buf, PAGE_SIZE-1, "%ld\r\n", data->p_out * 1000000);
             break;
         case PSU_TEMP1_INPUT:
@@ -256,8 +252,6 @@ static ssize_t pmbus_info_store(struct device *dev, struct device_attribute *da,
     struct as7716_32xb_pmbus_data *data = i2c_get_clientdata(client);
     long keyin = 0;
     int status = -EINVAL;
-    //printk("pmbus_info_store\n");
-    //printk("attr->index=%d\n", attr->index);
     mutex_lock(&data->update_lock);
     status = kstrtol(buf, STRING_TO_DEC_VALUE, &keyin);
     switch (attr->index)
@@ -286,7 +280,6 @@ static ssize_t pmbus_info_store(struct device *dev, struct device_attribute *da,
             data->i_out=keyin;
             break;        
         case PSU_P_OUT:
-            printk("data->p_out=%d\n", data->p_out);
             data->p_out=keyin;
             break;
         case PSU_P_OUT_UV:
@@ -392,7 +385,7 @@ exit:
     return status;
 }
 
-static int as7716_32xb_pmbus_remove(struct i2c_client *client)
+static void as7716_32xb_pmbus_remove(struct i2c_client *client)
 {
     struct as7716_32xb_pmbus_data *data = i2c_get_clientdata(client);
 
@@ -400,7 +393,6 @@ static int as7716_32xb_pmbus_remove(struct i2c_client *client)
     sysfs_remove_group(&client->dev.kobj, &as7716_32xb_pmbus_group);
     kfree(data);
     
-    return 0;
 }
 
 

@@ -1,0 +1,123 @@
+module sonic-vxlan {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-vxlan";
+    prefix svxlan;
+
+    import ietf-yang-types {
+        prefix yang;
+    }
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-extension {
+        prefix sonic-ext;
+    }
+    // Comment sonic-vlan import here until libyang back-links issue is resolved for VLAN leaf reference.
+    //import sonic-vlan {
+    //    prefix svlan;
+    //}
+    import sonic-types {
+        prefix stypes;
+    }
+
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC VXLAN";
+
+    revision 2021-04-12 {
+        description
+            "First revision.";
+    }
+
+    container sonic-vxlan {
+
+        container VXLAN_TUNNEL {
+
+            description "config db VXLAN_TUNNEL table";
+
+            list VXLAN_TUNNEL_LIST {
+
+                key "name";
+                max-elements 1;
+
+                leaf name {
+                    type stypes:interface_name;
+                }
+
+                leaf src_ip {
+                    type inet:ip-address;
+                }
+
+                leaf dst_ip {
+                    type inet:ip-address;
+                }
+            }
+        }
+
+        container VXLAN_TUNNEL_MAP {
+
+            description "config db VXLAN_TUNNEL_MAP table";
+
+            list VXLAN_TUNNEL_MAP_LIST {
+                key "name mapname";
+
+                leaf name {
+                    type leafref {
+                        path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
+                    }
+                }
+
+                leaf mapname {
+                    type string;
+                }
+
+                leaf vlan {
+                    mandatory true;
+                    // Comment VLAN leaf reference here until libyang back-links issue is resolved and use VLAN string pattern
+                    // type leafref {
+                    //    path "/svlan:sonic-vlan/svlan:VLAN/svlan:VLAN_LIST/svlan:name";
+                    //}
+                    type string {
+                        pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
+                    }
+
+                }
+
+                leaf vni {
+                    mandatory true;
+                    type stypes:vnid_type;
+                }
+            }
+        }
+
+        container VXLAN_EVPN_NVO {
+
+            description "config db VXLAN_EVPN_NVO table";
+
+            list VXLAN_EVPN_NVO_LIST {
+
+                key "name";
+                max-elements 1;
+
+                leaf name {
+                    type string;
+                }
+
+                leaf source_vtep {
+                    mandatory true;
+                    type leafref {
+                        path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
+                    }
+                }
+            }
+        }
+    }
+}

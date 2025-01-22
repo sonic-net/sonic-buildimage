@@ -853,6 +853,41 @@ static ssize_t fan_led_store(struct device *dev, struct device_attribute *devatt
     return count;
 }
 
+static ssize_t watchdog_show(struct device *dev,
+                                   struct device_attribute *devattr, char *buf)
+{
+    s32 ret;
+    u8 data = 0;
+    struct cpld_platform_data *pdata = dev->platform_data;
+
+    ret = i2c_smbus_read_byte_data(pdata[cpu_cpld].client, 0x7);
+    if (ret < 0)
+        return sprintf(buf, "read error");
+    data = ret;
+
+    return sprintf(buf, "%x\n", data);
+}
+
+static ssize_t watchdog_store(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+    s32 ret, err;
+    unsigned long val;
+    u8 data = 0;
+    struct cpld_platform_data *pdata = dev->platform_data;
+
+    err = kstrtoul(buf, 10, &val);
+    if (err)
+        return err;
+
+    if (data)
+    {
+        ret = i2c_smbus_write_byte_data(pdata[cpu_cpld].client, 0x7, data);
+        if (ret < 0)
+            return ret;
+    }
+
+    return count;
+}
 
 static ssize_t power_good_show(struct device *dev,
                                    struct device_attribute *devattr, char *buf)
@@ -947,6 +982,7 @@ static DEVICE_ATTR_RO(psu1_prs);
 static DEVICE_ATTR_RO(psu0_status);
 static DEVICE_ATTR_RO(psu1_status);
 static DEVICE_ATTR_RW(system_led);
+static DEVICE_ATTR_RW(watchdog);
 static DEVICE_ATTR_RW(locator_led);
 static DEVICE_ATTR_RW(power_led);
 static DEVICE_ATTR_RW(master_led);
@@ -988,6 +1024,7 @@ static struct attribute *n3248pxe_cpld_attrs[] = {
     &dev_attr_psu0_status.attr,
     &dev_attr_psu1_status.attr,
     &dev_attr_system_led.attr,
+    &dev_attr_watchdog.attr,
     &dev_attr_locator_led.attr,
     &dev_attr_power_led.attr,
     &dev_attr_master_led.attr,

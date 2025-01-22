@@ -1,0 +1,24 @@
+From 69370e52e94c66e06052a7859dd059dfa34fd61e Mon Sep 17 00:00:00 2001
+From: Pavel Shirshov <pavelsh@microsoft.com>
+Date: Mon, 16 Nov 2020 18:11:47 -0800
+Subject: [PATCH] From 15274a197e4d3b7ac0f11ca63a5274f1168739f5 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH 2/8] Reduce severity of 'Vty connected from'
+ message
+
+
+diff --git a/lib/vty.c b/lib/vty.c
+index ab98ac14e..c32fc13ba 100644
+--- a/lib/vty.c
++++ b/lib/vty.c
+@@ -1843,7 +1843,7 @@ static void vty_accept(struct thread *thread)
+ 		zlog_info("can't set sockopt to vty_sock : %s",
+ 			  safe_strerror(errno));
+ 
+-	zlog_info("Vty connection from %pSU", &su);
++	zlog_debug("Vty connection from %pSU", &su);
+ 
+ 	vty_create(vty_sock, &su);
+ }
+-- 
+2.17.1
+

@@ -3,27 +3,36 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 # Build and push sonic-slave-[buster|jessie|stretch] images for amd64/armhf/arm64
+resources:
+  repositories:
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    ref: master
+    endpoint: sonic-net
 
 schedules:
-- cron: "0 8 * * *"
+- cron: "0 0 * * 0"
+  displayName: Weekly build
   branches:
     include:
     - master
-    - 202012
+    - 202???
   always: true
 
-trigger: none
-pr:
+pr: none
+trigger:
+  batch: true
   branches:
     include:
     - master
+    - 202???
   paths:
     include:
-    - sonic-slave-jessie
-    - sonic-slave-stretch
-    - sonic-slave-buster
-    - sonic-slave-bullseye
-    - src/sonic-build-hooks
+    - sonic-slave-*
+    - files/build/versions
+    - Makefile
+    - Makefile.work
 
 parameters:
 - name: 'arches'
@@ -35,6 +44,7 @@ parameters:
 - name: 'dists'
   type: object
   default:
+  - bookworm
   - bullseye
   - buster
   - stretch
@@ -47,13 +57,28 @@ parameters:
   default: sonicdev
 
 stages:
-- stage: Build
+- stage: Build_in_amd64
   jobs:
   - ${{ each dist in parameters.dists }}:
     - ${{ if endswith(variables['Build.DefinitionName'], dist) }}:
       - ${{ each arch in parameters.arches }}:
-        - template: docker-sonic-slave-template.yml
+        - template: .azure-pipelines/docker-sonic-slave-template.yml@buildimage
           parameters:
-            pool: sonicbld
+            pool: sonicbld-1es
             arch: ${{ arch }}
             dist: ${{ dist }}
+            ${{ if ne(arch, 'amd64') }}:
+              march: _march_${{ arch }}
+- stage: Build_native_arm
+  dependsOn: []
+  jobs:
+  - ${{ each dist in parameters.dists }}:
+    - ${{ if endswith(variables['Build.DefinitionName'], dist) }}:
+      - ${{ each arch in parameters.arches }}:
+        - ${{ if ne(arch, 'amd64') }}:
+          - template: .azure-pipelines/docker-sonic-slave-template.yml@buildimage
+            parameters:
+              pool: sonicbld-${{ arch }}
+              arch: ${{ arch }}
+              dist: ${{ dist }}
+              march: _${{ arch }}

@@ -9,6 +9,7 @@ import time
 CONFIG_DB_NO = 4
 STATE_DB_NO = 6
 FEATURE_TABLE = "FEATURE"
+MGMT_INTERFACE_TABLE = "MGMT_INTERFACE"
 KUBE_LABEL_TABLE = "KUBE_LABELS"
 KUBE_LABEL_SET_KEY = "SET"
 
@@ -41,6 +42,7 @@ KUBE_RETURN = "kube_return"
 IMAGE_TAG = "image_tag"
 FAIL_LOCK = "fail_lock"
 DO_JOIN = "do_join"
+REQ = "req"
 
 # subproc key words
 
@@ -56,6 +58,7 @@ PROC_FAIL = "proc_fail"
 PROC_THROW = "proc_throw"
 PROC_OUT = "subproc_output"
 PROC_ERR = "subproc_error"
+PROC_CODE = "subproc_code"
 PROC_KILLED = "procs_killed"
 
 # container_start test cases
@@ -182,6 +185,7 @@ class mock_container:
         self.actions = []
         self.name = name
         self.image = mock_image(self.actions)
+        self.attrs = {"Config": {"Env": ["IMAGE_VERSION=20201231.11"]}}
 
 
     def start(self):
@@ -314,13 +318,13 @@ class Table:
         d = self.data[key]
         for (k, v) in items:
             d[k] = v
-        
+
 
     def check(self):
         expected = self.get_val(current_test_data, [POST, self.db, self.tbl])
 
         ret = check_subset(expected, self.data)
-        
+
         if ret != 0:
             print("Failed test={} no={} ret={}".format(
                 current_test_name, current_test_no, ret))
@@ -426,7 +430,7 @@ class mock_subscriber:
             return (key, "", mock_tbl.get(key)[1])
         else:
             return ("", "", {})
-   
+
 
     def getDbConnector(self):
         return self.dbconn
@@ -503,7 +507,7 @@ def kube_join_side_effect(ip, port, insecure):
     else:
         kube_return = 0
         return (1, "not joined", "error")
-    
+
 
 def kube_reset_side_effect(flag):
     global kube_actions
@@ -525,10 +529,10 @@ def check_kube_actions():
     ret = 0
     expected = {}
     expected[KUBE_CMD] = current_test_data.get(KUBE_CMD, {})
-     
+
     if expected[KUBE_CMD]:
         ret = check_subset(expected, kube_actions)
-    
+
     if ret != 0:
         print("Failed test={} no={} ret={}".format(
             current_test_name, current_test_no, ret))
@@ -536,12 +540,25 @@ def check_kube_actions():
         print("expect: {}".format(json.dumps(expected, indent=4)))
         return -1
     return 0
-    
+
 
 def set_mock_kube(kube_labels, kube_join, kube_reset):
     kube_labels.side_effect = kube_labels_side_effect
     kube_join.side_effect = kube_join_side_effect
     kube_reset.side_effect = kube_reset_side_effect
+
+
+def clean_image_side_effect(feat, current_version, last_version):
+    return 0
+
+
+def tag_latest_side_effect(feat, docker_id, image_ver):
+    return 0
+
+
+def set_mock_image_op(clean_image, tag_latest):
+    clean_image.side_effect = clean_image_side_effect
+    tag_latest.side_effect = tag_latest_side_effect
 
 
 def str_comp(needle, hay):
@@ -603,6 +620,7 @@ class mock_proc:
 
         out_lst = current_test_data.get(PROC_OUT, None)
         err_lst = current_test_data.get(PROC_ERR, None)
+        code_lst = current_test_data.get(PROC_CODE, None)
         if out_lst:
             assert (len(out_lst) > self.index)
             out = out_lst[self.index]
@@ -613,7 +631,11 @@ class mock_proc:
             err = err_lst[self.index]
         else:
             err = ""
-        self.returncode = 0 if not err else -1
+        if code_lst:
+            assert (len(code_lst) > self.index)
+            self.returncode = code_lst[self.index]
+        else:
+            self.returncode = 0 if not err else -1
         return (out, err)
 
     def kill(self):
@@ -643,8 +665,27 @@ def mock_subproc_side_effect(cmd, shell=False, stdout=None, stderr=None):
     return mock_proc(cmd, index)
 
 
-def set_kube_mock(mock_subproc):
+class mock_reqget:
+    def __init__(self):
+        self.ok = True
+
+    def json(self):
+        return current_test_data.get(REQ, "")
+
+
+def mock_reqget_side_effect(url, cert, verify=True):
+    return mock_reqget()
+
+
+def set_kube_mock(mock_subproc, mock_table=None, mock_conn=None, mock_reqget=None):
     mock_subproc.side_effect = mock_subproc_side_effect
+    if mock_table != None:
+        mock_table.side_effect = table_side_effect
+    if mock_conn != None:
+        mock_conn.side_effect = conn_side_effect
+    if mock_reqget != None:
+        mock_reqget.side_effect = mock_reqget_side_effect
+
 
 def create_remote_ctr_config_json():
     str_conf = '\
@@ -652,7 +693,8 @@ def create_remote_ctr_config_json():
     "join_latency_on_boot_seconds": 2,\n\
     "retry_join_interval_seconds": 0,\n\
     "retry_labels_update_seconds": 0,\n\
-    "revert_to_local_on_wait_seconds": 5\n\
+    "revert_to_local_on_wait_seconds": 5,\n\
+    "tag_latest_image_on_wait_seconds": 0\n\
 }\n'
 
     fname = "/tmp/remote_ctr.config.json"

@@ -1,5 +1,5 @@
 module sonic-route-common {
-    namespace "http://github.com/Azure/sonic-route-common";
+    namespace "http://github.com/sonic-net/sonic-route-common";
     prefix rtcmn;
     yang-version 1.1;
 

@@ -1,8 +1,7 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-buster
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
-RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,22 +10,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 
 # Install redis-server
-{% if CONFIGURED_ARCH == "armhf" %}
-RUN curl -k -o redis-tools_6.0.6-1~bpo10+1_armhf.deb "https://sonicstorage.blob.core.windows.net/packages/redis/redis-tools_6.0.6-1_bpo10+1_armhf.deb?sv=2015-04-05&sr=b&sig=67vHAMxsl%2BS3X1KsqhdYhakJkGdg5FKSPgU8kUiw4as%3D&se=2030-10-24T04%3A22%3A40Z&sp=r"
-RUN curl -k -o redis-server_6.0.6-1~bpo10+1_armhf.deb "https://sonicstorage.blob.core.windows.net/packages/redis/redis-server_6.0.6-1_bpo10+1_armhf.deb?sv=2015-04-05&sr=b&sig=xTdayvm0RBguxi9suyv855jKRjU%2FmKQ8nHuct4WSX%2FA%3D&se=2030-10-24T04%3A22%3A05Z&sp=r"
-RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_armhf.deb redis-server_6.0.6-1~bpo10+1_armhf.deb || apt-get install -f
-RUN rm redis-tools_6.0.6-1~bpo10+1_armhf.deb redis-server_6.0.6-1~bpo10+1_armhf.deb
-{% elif CONFIGURED_ARCH == "arm64" %}
-RUN curl -o redis-tools_6.0.6-1~bpo10+1_arm64.deb "https://sonicstorage.blob.core.windows.net/packages/redis/redis-tools_6.0.6-1_bpo10+1_arm64.deb?sv=2015-04-05&sr=b&sig=GbkJV2wWln3hoz27zKi5erdk3NDKrAFrQriA97bcRCY%3D&se=2030-10-24T04%3A22%3A21Z&sp=r"
-RUN curl -o redis-server_6.0.6-1~bpo10+1_arm64.deb "https://sonicstorage.blob.core.windows.net/packages/redis/redis-server_6.0.6-1_bpo10+1_arm64.deb?sv=2015-04-05&sr=b&sig=622w2KzIKIjAaaA0Bz12MzU%2BUBzY2AiXFIFfuKNoKSk%3D&se=2030-10-24T04%3A21%3A44Z&sp=r"
-RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_arm64.deb redis-server_6.0.6-1~bpo10+1_arm64.deb || apt-get install -f
-RUN rm redis-tools_6.0.6-1~bpo10+1_arm64.deb redis-server_6.0.6-1~bpo10+1_arm64.deb
-{% else %}
-RUN curl -o redis-tools_6.0.6-1~bpo10+1_amd64.deb "https://sonicstorage.blob.core.windows.net/packages/redis/redis-tools_6.0.6-1~bpo10+1_amd64.deb?sv=2015-04-05&sr=b&sig=73zbmjkf3pi%2Bn0R8Hy7CWT2EUvOAyzM5aLYJWCLySGM%3D&se=2030-09-06T19%3A44%3A59Z&sp=r"
-RUN curl -o redis-server_6.0.6-1~bpo10+1_amd64.deb "https://sonicstorage.blob.core.windows.net/packages/redis/redis-server_6.0.6-1~bpo10+1_amd64.deb?sv=2015-04-05&sr=b&sig=2Ketg7BmkZEaTxR%2FgvAFVmhjn7ywdmkc7l2T2rsL57o%3D&se=2030-09-06T19%3A45%3A20Z&sp=r"
-RUN dpkg -i redis-tools_6.0.6-1~bpo10+1_amd64.deb redis-server_6.0.6-1~bpo10+1_amd64.deb || apt-get install -f
-RUN rm redis-tools_6.0.6-1~bpo10+1_amd64.deb redis-server_6.0.6-1~bpo10+1_amd64.deb
-{% endif %}
+RUN apt-get install -y redis-tools redis-server
+
+# Install click for CLI
+RUN pip3 install click
 
 {% if docker_database_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -41,23 +28,26 @@ RUN apt-get clean -y                                  && \
     apt-get autoclean -y                              && \
     apt-get autoremove -y                             && \
     rm -rf /debs ~/.cache                             && \
-    sed -ri 's/^(save .*$)/# \1/g;                       \
+    sed -ri 's/^# save ""$/save ""/g;                    \
              s/^daemonize yes$/daemonize no/;            \
              s/^logfile .*$/logfile ""/;                 \
              s/^# syslog-enabled no$/syslog-enabled no/; \
              s/^# unixsocket/unixsocket/;                \
              s/redis-server.sock/redis.sock/g;           \
-             s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/ \
+             s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
+             s/^notify-keyspace-events ""$/notify-keyspace-events AKE/; \
+             s/^databases [0-9]+$/databases 100/ \
             ' /etc/redis/redis.conf
 
 COPY ["supervisord.conf.j2", "/usr/share/sonic/templates/"]
+COPY ["critical_processes.j2", "/usr/share/sonic/templates/"]
 COPY ["docker-database-init.sh", "/usr/local/bin/"]
 COPY ["database_config.json.j2", "/usr/share/sonic/templates/"]
 COPY ["database_global.json.j2", "/usr/share/sonic/templates/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["files/sysctl-net.conf", "/etc/sysctl.d/"]
-COPY ["critical_processes", "/etc/supervisor"]
 COPY ["files/update_chassisdb_config", "/usr/local/bin/"]
 COPY ["flush_unused_database", "/usr/local/bin/"]
+COPY ["multi_database_config.json.j2", "/usr/share/sonic/templates/"]
 
 ENTRYPOINT ["/usr/local/bin/docker-database-init.sh"]

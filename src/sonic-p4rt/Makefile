@@ -11,6 +11,10 @@ BAZEL_BUILD_OPTS += --fission=yes --features=per_object_debug_info
 # Override sonic_swss_common to use the version specific to this buildimage.
 BAZEL_BUILD_OPTS += --override_repository=sonic_swss_common=/sonic/src/sonic-swss-common
 
+# Newer version of gcc has spurious warnings in boringssl package.
+BAZEL_BUILD_OPTS += --copt=-Wno-array-bounds
+BAZEL_BUILD_OPTS += --copt=-Wno-stringop-overflow
+
 # Build optimized, stripped binaries.
 BAZEL_BUILD_OPTS += -c opt
 

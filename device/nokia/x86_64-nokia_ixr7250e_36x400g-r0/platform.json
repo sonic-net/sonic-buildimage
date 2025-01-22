@@ -12,38 +12,156 @@
                 "name": "FPGA2"
             }
         ],
-        
+        "watchdog": {
+	    "disarm": false
+	},
+	"get_module_attributes": {
+	    "model": false,
+	    "serial": false,
+	    "base_mac": false,
+	    "system_eeprom_info": false,
+            "reboot_other_modules": false
+	},
+        "thermal_temperature": {
+	     "minimum": 0,
+	     "maximum": 110
+	},
         "fans": [],
         "fan_drawers": [],
         "master_psu_led_color": [], 
         "psus": [],
         "thermals": [
+	    {
+	        "name": "ASIC0_0--FAB0",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC0_1--FAB1",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC0_2--FAB2",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC0_3--FAB3",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC0_4--NIF0",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC0_5--NIF1",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC0_6--PRM",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC0_7--EMI0",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC0_8--EMI1",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC0_9--DRAM0",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC0_10--DRAM1",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC1_0--FAB0",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC1_1--FAB1",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC1_2--FAB2",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC1_3--FAB3",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC1_4--NIF0",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC1_5--NIF1",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC1_6--PRM",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC1_7--EMI0",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC1_8--EMI1",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC1_9--DRAM0",
+		"controllable": false
+	    },
+	    {
+	        "name": "ASIC1_10--DRAM1",
+		"controllable": false
+	    },
             {
-                "name": "temp_1(fan)"
+                "name": "temp_1(fan)",
+		"controllable": false
             },
             {
-                "name": "temp_2(fan)"
+                "name": "temp_2(fan)",
+		"controllable": false
             },
             {
-                "name": "temp_3"
+                "name": "temp_3(fan)",
+		"controllable": false
             },
             {
-                "name": "temp_4"
+                "name": "temp_4(fan)",
+		"controllable": false
             },
             {
-                "name": "temp_5"
+                "name": "temp_5",
+		"controllable": false
             },
             {
-                "name": "temp_6"
+                "name": "temp_6",
+		"controllable": false
             },
             {
-                "name": "temp_7"
+                "name": "temp_7(fan)",
+		"controllable": false
             },
             {
-                "name": "temp_8"
+                "name": "temp_8(fan)",
+		"controllable": false
             },
             {
-                "name": "temp_9"
+                "name": "temp_9(fan)",
+		"controllable": false
+            },
+            {
+                "name": "temp_10(fan)",
+		"controllable": false
+            },
+            {
+                "name": "temp_11(fan)",
+		"controllable": false
             }
         ],
         "sfps": [
@@ -157,5 +275,9 @@
             }
         ]
     },
-    "interfaces": {}
+    "interfaces": {},
+    "asic_sensors": {
+        "poll_interval": "10",
+        "poll_admin_status": "enable"
+    }
 }

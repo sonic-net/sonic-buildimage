@@ -2,7 +2,7 @@ module sonic-loopback-interface {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-loopback-interface";
+    namespace "http://github.com/sonic-net/sonic-loopback-interface";
     prefix lointf;
 
     import sonic-types {
@@ -36,7 +36,7 @@ module sonic-loopback-interface {
                 key "name";
 
                 leaf name{
-                    type string;
+                    type stypes:interface_name;
                 }
 
                 leaf vrf_name {

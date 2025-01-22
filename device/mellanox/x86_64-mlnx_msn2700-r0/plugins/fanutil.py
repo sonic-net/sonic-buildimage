@@ -44,7 +44,7 @@ class FanUtil(FanBase):
 
     PWM_MAX = 255
     MAX_FAN_PER_DRAWER = 2
-    GET_HWSKU_CMD = "sonic-cfggen -d -v DEVICE_METADATA.localhost.hwsku"
+    GET_HWSKU_CMD = ["sonic-cfggen", "-d", "-v", "DEVICE_METADATA.localhost.hwsku"]
     sku_without_fan_direction = ['ACS-MSN2010', 'ACS-MSN2100', 'ACS-MSN2410',
                                  'ACS-MSN2700', 'Mellanox-SN2700', 'Mellanox-SN2700-D48C8', 'LS-SN2700', 'ACS-MSN2740']
     sku_with_unpluggable_fan = ['ACS-MSN2010', 'ACS-MSN2100']
@@ -72,7 +72,7 @@ class FanUtil(FanBase):
         self.num_of_fan, self.num_of_drawer = self._extract_num_of_fans_and_fan_drawers()
 
     def _get_sku_name(self):
-        p = subprocess.Popen(self.GET_HWSKU_CMD, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+        p = subprocess.Popen(self.GET_HWSKU_CMD, universal_newlines=True, stdout=subprocess.PIPE)
         out, err = p.communicate()
         return out.rstrip('\n')
 

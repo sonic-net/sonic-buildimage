@@ -36,11 +36,11 @@
 
 try:
     import os
-    import subprocess
     import sys
     import time
     import syslog
     from sonic_platform_base.chassis_base import ChassisBase
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -242,7 +242,7 @@ class Chassis(ChassisBase):
 	log_info("Juniper Platform name: {} and {}".format(self.get_platform_name(), platform_name))
         if str(platform_name) == "x86_64-juniper_networks_qfx5210-r0":	
 	    log_info("Juniper Platform QFX5210 ")
-            status, last_reboot_reason = subprocess.getstatusoutput("i2cget -f -y 0 0x65 0x24")
+            status, last_reboot_reason = getstatusoutput_noshell(["i2cget", "-f", "-y", "0", "0x65", "0x24"])
             if (status == 0):
                 if last_reboot_reason == "0x80":
                     return (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
@@ -256,7 +256,7 @@ class Chassis(ChassisBase):
                     return (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, "Unknown reason")
             else:
                 time.sleep(3)
-                status, last_reboot_reason = subprocess.getstatusoutput("i2cget -f -y 0 0x65 0x24")
+                status, last_reboot_reason = getstatusoutput_noshell(["i2cget", "-f", "-y", "0", "0x65", "0x24"])
                 if last_reboot_reason == "0x80":
                     return (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
                 elif last_reboot_reason == "0x40" or last_reboot_reason == "0x08":
@@ -270,9 +270,9 @@ class Chassis(ChassisBase):
 
         elif str(platform_name) == "x86_64-juniper_networks_qfx5200-r0" : 		
 	    log_info("Juniper Platform QFX5200 ")
-	    status, major_version = subprocess.getstatusoutput("busybox devmem 0xFED50000 8")
-	    status, minor_version = subprocess.getstatusoutput("busybox devmem 0xFED50001 8")
-	    status, last_reboot_reason = subprocess.getstatusoutput("busybox devmem 0xFED50004 8")
+	    status, major_version = getstatusoutput_noshell(["busybox", "devmem", "0xFED50000", "8"])
+	    status, minor_version = getstatusoutput_noshell(["busybox", "devmem", "0xFED50001", "8"])
+	    status, last_reboot_reason = getstatusoutput_noshell(["busybox", "devmem", "0xFED50004", "8"])
 	    if (status == 0):
 	        if (major_version == "0x31") and (minor_version == "0x03") and (last_reboot_reason == "0x80"):
 	            return (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
@@ -288,9 +288,9 @@ class Chassis(ChassisBase):
 	            return (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, "Unknown reason")
 	    else:
 	        time.sleep(3)
-		status, major_version = subprocess.getstatusoutput("busybox devmem 0xFED50000 8")
-		status, minor_version = subprocess.getstatusoutput("busybox devmem 0xFED50001 8")
-	        status, last_reboot_reason = subprocess.getstatusoutput("busybox devmem 0xFED50004 8")
+		status, major_version = getstatusoutput_noshell(["busybox", "devmem", "0xFED50000", "8"])
+		status, minor_version = getstatusoutput_noshell(["busybox", "devmem", "0xFED50001", "8"])
+	        status, last_reboot_reason = getstatusoutput_noshell(["busybox", "devmem", "0xFED50004", "8"])
 	        if (status == 0):
 		    if (major_version == "0x31") and (minor_version == "0x03") and (last_reboot_reason == "0x80"):
 	            	return (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)

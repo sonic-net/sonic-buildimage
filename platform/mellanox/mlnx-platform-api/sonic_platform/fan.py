@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,7 @@ try:
     from .led import ComponentFaultyIndicator
     from . import utils
     from .thermal import Thermal
+    from .fan_drawer import VirtualDrawer
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
@@ -45,7 +46,12 @@ CONFIG_PATH = "/var/run/hw-management/config"
 FAN_DIR = "/var/run/hw-management/thermal/fan{}_dir"
 FAN_DIR_VALUE_EXHAUST = 0
 FAN_DIR_VALUE_INTAKE = 1
-
+FAN_DIR_VALUE_NOT_APPLICABLE = 2
+FAN_DIR_MAPPING = {
+    FAN_DIR_VALUE_EXHAUST: FanBase.FAN_DIRECTION_EXHAUST,
+    FAN_DIR_VALUE_INTAKE: FanBase.FAN_DIRECTION_INTAKE,
+    FAN_DIR_VALUE_NOT_APPLICABLE: FanBase.FAN_DIRECTION_NOT_APPLICABLE,
+}
 
 class MlnxFan(FanBase):
     def __init__(self, fan_index, position):
@@ -125,6 +131,20 @@ class MlnxFan(FanBase):
         """
         return False
 
+    @classmethod
+    def get_fan_direction(cls, dir_path):
+        try:
+            fan_dir = utils.read_int_from_file(dir_path, raise_exception=True)
+            ret = FAN_DIR_MAPPING.get(fan_dir)
+            if ret is None:
+                logger.log_error(f"Got wrong value {fan_dir} for fan direction {dir_path}")
+                return FanBase.FAN_DIRECTION_NOT_APPLICABLE
+            else:
+                return ret
+        except (ValueError, IOError) as e:
+            logger.log_error(f"Failed to read fan direction from {dir_path} - {e}")
+            return FanBase.FAN_DIRECTION_NOT_APPLICABLE
+
 
 class PsuFan(MlnxFan):
     # PSU fan speed vector
@@ -145,13 +165,14 @@ class PsuFan(MlnxFan):
         self.psu_i2c_bus_path = os.path.join(CONFIG_PATH, 'psu{0}_i2c_bus'.format(self.index))
         self.psu_i2c_addr_path = os.path.join(CONFIG_PATH, 'psu{0}_i2c_addr'.format(self.index))
         self.psu_i2c_command_path = os.path.join(CONFIG_PATH, 'fan_command')
+        self.psu_fan_dir_path = os.path.join(FAN_PATH, "psu{}_fan_dir".format(self.index))
 
     def get_direction(self):
         """
         Retrieves the fan's direction
 
         Returns:
-            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
+            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST or FAN_DIRECTION_NOT_APPLICABLE
             depending on fan direction
 
         Notes:
@@ -162,10 +183,14 @@ class PsuFan(MlnxFan):
             Air flow from QSFP side to fans side, for example: MSN2700-CS2R
             which means exhaust in community
             According to hw-mgmt:
+                2 stands for N/A, in case fan direction could not be determined
                 1 stands for forward, in other words intake
                 0 stands for reverse, in other words exhaust
         """
-        return self.FAN_DIRECTION_NOT_APPLICABLE
+        if not os.path.exists(self.psu_fan_dir_path) or not self.get_presence():
+            return self.FAN_DIRECTION_NOT_APPLICABLE
+
+        return MlnxFan.get_fan_direction(self.psu_fan_dir_path)
 
     def get_status(self):
         """
@@ -194,7 +219,10 @@ class PsuFan(MlnxFan):
         """
         try:
             # Get PSU fan target speed according to current system cooling level
-            cooling_level = Thermal.get_cooling_level()
+            pwm = utils.read_int_from_file('/run/hw-management/thermal/pwm1', log_func=None)
+            if pwm >= PWM_MAX:
+                pwm = PWM_MAX - 1
+            cooling_level = int(pwm / PWM_MAX * 10)
             return int(self.PSU_FAN_SPEED[cooling_level], 16)
         except Exception:
             return self.get_speed()
@@ -218,8 +246,8 @@ class PsuFan(MlnxFan):
             addr = utils.read_str_from_file(self.psu_i2c_addr_path, raise_exception=True)
             command = utils.read_str_from_file(self.psu_i2c_command_path, raise_exception=True)
             speed = self.PSU_FAN_SPEED[int(speed // 10)]
-            command = "i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, command, speed)
-            subprocess.check_call(command, shell = True, universal_newlines=True)
+            command = ["i2cset", "-f", "-y", bus, addr, command, speed, "wp"]
+            subprocess.check_call(command, universal_newlines=True)
             return True
         except subprocess.CalledProcessError as ce:
             logger.log_error('Failed to call command {}, return code={}, command output={}'.format(ce.cmd, ce.returncode, ce.output))
@@ -227,6 +255,7 @@ class PsuFan(MlnxFan):
         except Exception as e:
             logger.log_error('Failed to set PSU FAN speed - {}'.format(e))
             return False
+
 
 class Fan(MlnxFan):
     """Platform-specific Fan class"""
@@ -249,7 +278,7 @@ class Fan(MlnxFan):
         Retrieves the fan's direction
 
         Returns:
-            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST
+            A string, either FAN_DIRECTION_INTAKE or FAN_DIRECTION_EXHAUST or FAN_DIRECTION_NOT_APPLICABLE
             depending on fan direction
 
         Notes:
@@ -260,10 +289,14 @@ class Fan(MlnxFan):
             Air flow from QSFP side to fans side, for example: MSN2700-CS2R
             which means exhaust in community
             According to hw-mgmt:
+                2 stands for N/A, in case fan direction could not be determined
                 1 stands for forward, in other words intake
                 0 stands for reverse, in other words exhaust
         """
-        return self.fan_drawer.get_direction()
+        if not isinstance(self.fan_drawer, VirtualDrawer):
+            return self.fan_drawer.get_direction()
+        else:
+            return MlnxFan.get_fan_direction(FAN_DIR.format(self.index))
 
     def get_status(self):
         """

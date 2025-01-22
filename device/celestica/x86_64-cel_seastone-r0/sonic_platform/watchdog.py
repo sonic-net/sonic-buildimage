@@ -135,7 +135,7 @@ class Watchdog(WatchdogBase):
         ret = WDT_COMMON_ERROR
         if seconds < 0:
             return ret
-        if seconds > 16779:
+        if seconds > 16777:
             return ret
 
 

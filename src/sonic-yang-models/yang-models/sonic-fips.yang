@@ -1,0 +1,45 @@
+module sonic-fips {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-fips";
+
+    prefix sonic-fips;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "FIPS YANG Module for SONiC OS";
+
+    revision 2023-06-20 {
+        description "First Revision";
+    }
+
+    container sonic-fips {
+
+        container FIPS {
+
+            description "FIPS part of config_db.json";
+
+            container global {
+
+                leaf enable {
+                    description "This configuration identicates whether enable fips";
+                    type stypes:boolean_type;
+                    default "false";
+                }
+
+                leaf enforce {
+                    description "This configuration identicates whether enforce fips";
+                    type stypes:boolean_type;
+                    default "false";
+                }
+            }
+            /* end of container global */
+        }
+        /* end of container FIPS */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-fips */

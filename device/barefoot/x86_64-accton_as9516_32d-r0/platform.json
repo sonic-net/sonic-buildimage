@@ -1,57 +1,163 @@
 {
     "chassis": {
         "name": "Newport",
+        "components": [
+            {
+                "name": "BIOS"
+            },
+            {
+                "name": "BMC"
+            }
+        ],
+        "thermal_manager": false,
         "fans": [
             {
-                "name": "counter-rotating-fan-1"
+                "name": "counter-rotating-fan-1",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-2"
+                "name": "counter-rotating-fan-2",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-3"
+                "name": "counter-rotating-fan-3",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-4"
+                "name": "counter-rotating-fan-4",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-5"
+                "name": "counter-rotating-fan-5",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "counter-rotating-fan-6"
+                "name": "counter-rotating-fan-6",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             }
         ],
         "fan_drawers": [
             {
                 "name": "fantray-1",
+                "status_led": {
+                    "controllable": false
+                },
                 "fans": [
                     {
-                        "name": "counter-rotating-fan-1"
+                        "name": "counter-rotating-fan-1",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-2"
+                        "name": "counter-rotating-fan-2",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-3"
+                        "name": "counter-rotating-fan-3",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-4"
+                        "name": "counter-rotating-fan-4",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-5"
+                        "name": "counter-rotating-fan-5",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "counter-rotating-fan-6"
+                        "name": "counter-rotating-fan-6",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             }
         ],
         "psus": [
             {
-                "name": "psu-1"
+                "name": "psu-1",
+                "thermals": [
+                    {
+                        "name": "psu_driver-i2c-7-5a:psu1-temp1"
+                    },
+                    {
+                        "name": "psu_driver-i2c-7-5a:psu1-temp2"
+                    },
+                    {
+                        "name": "psu_driver-i2c-7-5a:psu1-temp3"
+                    }
+                ]
             },
             {
-                "name": "psu-2"
+                "name": "psu-2",
+                "thermals": [
+                    {
+                        "name": "psu_driver-i2c-7-59:psu2-temp1"
+                    },
+                    {
+                        "name": "psu_driver-i2c-7-59:psu2-temp2"
+                    },
+                    {
+                        "name": "psu_driver-i2c-7-59:psu2-temp3"
+                    }
+                ]
             }
         ],
         "thermals": [
@@ -60,24 +166,6 @@
             },
             {
                 "name": "com_e_driver-i2c-4-33:memory-temp"
-            },
-            {
-                "name": "psu_driver-i2c-7-59:psu2-temp1"
-            },
-            {
-                "name": "psu_driver-i2c-7-59:psu2-temp2"
-            },
-            {
-                "name": "psu_driver-i2c-7-59:psu2-temp3"
-            },
-            {
-                "name": "psu_driver-i2c-7-5a:psu1-temp1"
-            },
-            {
-                "name": "psu_driver-i2c-7-5a:psu1-temp2"
-            },
-            {
-                "name": "psu_driver-i2c-7-5a:psu1-temp3"
             },
             {
                 "name": "tmp75-i2c-3-48:chip-temp"

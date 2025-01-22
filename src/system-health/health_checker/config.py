@@ -20,7 +20,7 @@ class Config(object):
     DEFAULT_LED_CONFIG = {
         'fault': 'red',
         'normal': 'green',
-        'booting': 'orange_blink'
+        'booting': 'red'
     }
 
     # System health configuration file name

@@ -1,17 +1,20 @@
-# disables bcmALPMDH (ALPM distributed hitbit) thread.  This thread is purely for debug purpose
+# disables bcmALPMDH (ALPM distributed hitbit) thread.	This thread is purely for debug purpose
 l3_alpm_hit_skip=1
 
 # Disable Counting ACL Drop towards interface RX_DRP counter
 sai_adjust_acl_drop_in_rx_drop=1
 
-os=unix 
-l2xmsg_mode=1 
-parity_enable=0 
-rate_ext_mdio_divisor=0x80 
-phy_ext_rom_boot=0 
-fpem_mem_entries=32768 
-l2xmsg_mode=1 
-oversubscribe_mode=1 
+os=unix
+l2xmsg_mode=1
+parity_enable=0
+rate_ext_mdio_divisor=0x80
+phy_ext_rom_boot=0
+fpem_mem_entries=32768
+l2xmsg_mode=1
+oversubscribe_mode=1
+l3_alpm_enable=2
+lpm_scaling_enable=0
+ipv6_lpm_128b_enable=1
 pbmp_xport_xe=0xcccc44cc33113333044cccccc66666622
 
 
@@ -257,17 +260,17 @@ xgxs_tx_lane_map_55=0x1032
 xgxs_rx_lane_map_55=0x0132
 
 #WC14
- xgxs_tx_lane_map_58=0x1032 
- xgxs_rx_lane_map_58=0x3120 
- 
+ xgxs_tx_lane_map_58=0x1032
+ xgxs_rx_lane_map_58=0x3120
+
 #WC15
 xgxs_tx_lane_map_62=0x2031
 xgxs_rx_lane_map_62=0x0132
 
 #WC20
- xgxs_tx_lane_map_84=0x3120 
- xgxs_rx_lane_map_84=0x1032 
- 
+ xgxs_tx_lane_map_84=0x3120
+ xgxs_rx_lane_map_84=0x1032
+
 #WC21
 xgxs_tx_lane_map_88=0x2310
 xgxs_rx_lane_map_88=0x0123
@@ -451,8 +454,8 @@ phy_xaui_tx_polarity_flip_62=0x0005
 phy_xaui_rx_polarity_flip_62=0x000F
 
 #WC20
- phy_xaui_tx_polarity_flip_84=0x000E 
- phy_xaui_rx_polarity_flip_84=0x0007 
+ phy_xaui_tx_polarity_flip_84=0x000E
+ phy_xaui_rx_polarity_flip_84=0x0007
 
 #WC21
 phy_xaui_tx_polarity_flip_88=0x000B
@@ -568,7 +571,7 @@ phy_xaui_rx_polarity_flip_130=0x0000
 phy_xaui_tx_polarity_flip_131=0x0001
 phy_xaui_rx_polarity_flip_131=0x0000
 
-#xe 
+#xe
 serdes_driver_current=0x0a
 serdes_preemphasis=0x1a5402
 
@@ -652,3 +655,4 @@ serdes_preemphasis_lane1_5=0x244a02
 serdes_preemphasis_lane2_5=0x244a02
 serdes_preemphasis_lane3_5=0x254902
 
+phy_an_lt_msft=1

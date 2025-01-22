@@ -32,8 +32,8 @@
 # components is subject to the terms and conditions of the respective license
 # as noted in the Third-Party source code file.
 
-import os
 import binascii
+import subprocess
 from sonic_eeprom import eeprom_tlvinfo
 
 
@@ -81,10 +81,12 @@ def main():
     eeprom_file.write("Vendor Name=%s\r\n" % eeprom_qfx5210.vendor_name_str())
     eeprom_file.write("Manufacture Name=%s\r\n" % eeprom_qfx5210.manufacture_name_str())
 
-    CPUeepromFileCmd = 'cat /sys/devices/pci0000:00/0000:00:1f.3/i2c-0/0-0056/eeprom > /etc/init.d/eeprom_qfx5210_ascii'
+    CPUeepromFileCmd = ['cat', '/sys/devices/pci0000:00/0000:00:1f.3/i2c-0/0-0056/eeprom']
     # Write the contents of CPU EEPROM to file
+    out_file = '/etc/init.d/eeprom_qfx5210_ascii'
     try:
-        os.system(CPUeepromFileCmd)
+        with open(out_file, 'w') as file:
+            subprocess.call(CPUeepromFileCmd, universal_newlines=True, stdout=file)
     except OSError:
         print('Error: Execution of "%s" failed', CPUeepromFileCmd)
         return False

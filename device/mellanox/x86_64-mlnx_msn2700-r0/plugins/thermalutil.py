@@ -375,12 +375,12 @@ class ThermalUtil(ThermalBase):
 
     MAX_PSU_FAN = 1
     MAX_NUM_PSU = 2
-    GET_HWSKU_CMD = "sonic-cfggen -d -v DEVICE_METADATA.localhost.hwsku"
+    GET_HWSKU_CMD = ["sonic-cfggen", "-d", "-v", "DEVICE_METADATA.localhost.hwsku"]
     number_of_thermals = 0
     thermal_list = []
 
     def _get_sku_name(self):
-        p = subprocess.Popen(self.GET_HWSKU_CMD, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+        p = subprocess.Popen(self.GET_HWSKU_CMD, universal_newlines=True, stdout=subprocess.PIPE)
         out, err = p.communicate()
         return out.rstrip('\n')
 

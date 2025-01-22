@@ -21,8 +21,9 @@ function wait_until_iface_ready
     echo "Interface ${IFACE_NAME} is ready!"
 }
 
-
 # Wait for all interfaces with IPv4 addresses to be up and ready
+# dhcp6relay binds to ipv6 addresses configured on these vlan ifaces
+# Thus check if they are ready before launching dhcp6relay
 {% for (name, prefix) in INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %}
 wait_until_iface_ready {{ name }} {{ prefix }}
@@ -31,6 +32,11 @@ wait_until_iface_ready {{ name }} {{ prefix }}
 {% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
 {% if prefix | ipv4 %}
 wait_until_iface_ready {{ name }} {{ prefix }}
+{% endif %}
+{% if prefix | ipv6 %}
+{% if DHCP_RELAY and name in DHCP_RELAY %}
+wait_until_iface_ready {{ name }} {{ prefix }}
+{% endif %}
 {% endif %}
 {% endfor %}
 {% for (name, prefix) in PORTCHANNEL_INTERFACE|pfx_filter %}

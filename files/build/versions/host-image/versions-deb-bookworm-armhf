@@ -1,0 +1,4 @@
+binutils-arm-linux-gnueabihf==2.40-2
+linux-image-6.1.0-11-2-armmp==6.1.38-4
+mrvlprestera==1.0
+python3-gi==3.42.2-3+b1

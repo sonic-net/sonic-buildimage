@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,23 +17,17 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_MAIN_H
 #define NGKNET_MAIN_H
 
+#include <linux/ethtool.h>
 #include <linux/netdevice.h>
 #include <lkm/lkm.h>
 #include <lkm/ngknet_dev.h>
 #include <bcmcnet/bcmcnet_core.h>
-
-/*! Maximum number of PDMA devices supported */
-#ifdef NGBDE_NUM_SWDEV_MAX
-#define NUM_PDMA_DEV_MAX    NGBDE_NUM_SWDEV_MAX
-#else
-#define NUM_PDMA_DEV_MAX    16
-#endif
 
 /*!
  * Debug levels
@@ -64,15 +58,17 @@
 #define DBG_RATE(_s)        do { if (debug & DBG_LVL_RATE) printk _s; } while (0)
 #define DBG_LINK(_s)        do { if (debug & DBG_LVL_LINK) printk _s; } while (0)
 
+
+/* FIXME: SAI_FIXUP */
+#define SAI_FIXUP           1
+#define KNET_SVTAG_HOTFIX   1
+
 /*!
  * Device description
  */
 struct ngknet_dev {
-    /*! Device type string */
-    char type_str[NGKNET_DEV_NAME_MAX];
-
-    /*! Device type string */
-    char var_str[NGKNET_DEV_NAME_MAX];
+    /* Device information */
+    ngknet_dev_info_t dev_info;
 
     /*! Base address for PCI register access */
     volatile void *base_addr;
@@ -89,10 +85,7 @@ struct ngknet_dev {
     /*! PDMA device */
     struct pdma_dev pdma_dev;
 
-    /*! Device number (from BDE) */
-    int dev_no;
-
-    /*! Virtual network devices, 0 is reserved for valid number of devices. */
+    /*! Virtual network devices, 0 is used for max ID number. */
     struct net_device *vdev[NUM_VDEV_MAX + 1];
 
     /*! Virtual network devices bound to queue */
@@ -159,32 +152,8 @@ struct ngknet_private {
     /*! NGKNET device */
     struct ngknet_dev *bkn_dev;
 
-    /*! Network interface ID */
-    int id;
-
-    /*! Network interface type */
-    int type;
-
-    /*! Network interface flags */
-    uint32_t flags;
-
-    /*! Network interface vlan */
-    uint32_t vlan;
-
-    /*! Network interface bound to */
-    uint32_t chan;
-
-    /*! Metadata offset from Ethernet header */
-    uint32_t meta_off;
-
-    /*! Metadata length */
-    uint32_t meta_len;
-
-    /*! Metadata used to send packets to physical port */
-    uint8_t meta_data[NGKNET_NETIF_META_MAX];
-
-    /*! User data gotten back through callbacks */
-    uint8_t user_data[NGKNET_NETIF_USER_DATA];
+    /*! Network interface */
+    ngknet_netif_t netif;
 
     /*! Users of this network interface */
     int users;
@@ -198,8 +167,14 @@ struct ngknet_private {
     /*! HW timestamp Tx type */
     int hwts_tx_type;
 
-    /*! Matched callback filter */
-    struct ngknet_filter_s *filt_cb;
+#if NGKNET_ETHTOOL_LINK_SETTINGS
+    /* Link settings */
+    struct ethtool_link_settings link_settings;
+#endif
+#if SAI_FIXUP && KNET_SVTAG_HOTFIX  /* SONIC-76482 */
+    /* ! MACSEC SVTAG */
+    uint8_t svtag[4];
+#endif
 };
 
 /*!
@@ -282,6 +257,14 @@ ngknet_rx_rate_limit_get(void);
  */
 extern void
 ngknet_rx_rate_limit_set(int rate_limit);
+
+/*!
+ * \brief Get page buffer mode.
+ *
+ * \retval Current page buffer mode.
+ */
+extern int
+ngknet_page_buffer_mode_get(void);
 
 #endif /* NGKNET_MAIN_H */
 

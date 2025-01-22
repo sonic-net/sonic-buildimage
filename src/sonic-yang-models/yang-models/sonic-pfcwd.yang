@@ -1,5 +1,5 @@
 module sonic-pfcwd {
-    namespace "http://github.com/Azure/sonic-pfcwd";
+    namespace "http://github.com/sonic-net/sonic-pfcwd";
     prefix sonic-pfcwd;
 
     yang-version 1.1;

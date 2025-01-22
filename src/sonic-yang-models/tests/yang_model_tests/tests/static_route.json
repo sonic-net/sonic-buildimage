@@ -1,0 +1,57 @@
+{
+    "STATIC_ROUTE_TEST": {
+        "desc": "Configure basic static route with default VRFs with PREFIX"
+    },
+    "STATIC_ROUTE_TEST_WITH_INTERFACE": {
+        "desc": "Configure with nexthop as interface instead of IP address"
+    },
+    "STATIC_ROUTE_TEST_WITH_BLACKHOLE": {
+        "desc": "Configure with nexthop as blackhole"
+    },
+    "STATIC_ROUTE_TEST_WITH_VRF": {
+        "desc": "Configure with routes in non default VRF"
+    },
+    "STATIC_ROUTE_TEST_WITH_KEY_VRF_MGMT": {
+        "desc": "Configure with routes in mgmt VRF as key"
+    },
+    "STATIC_ROUTE_TEST_WITH_VRF_MGMT": {
+        "desc": "Configure with routes with mgmt VRF as next hop"
+    },
+    "STATIC_ROUTE_TEST_WITH_VRF_LEAK": {
+        "desc": "Configure with route leak across VRFS"
+    },
+    "STATIC_ROUTE_TEST_ECMP": {
+        "desc": "Configure comma separated values for ECMP, with nexthop as PREFIX"
+    },
+    "STATIC_ROUTE_TEST_ECMP_WITH_INTERFACE": {
+        "desc": "Configure comma separated values with nexthop as INTERFACE"
+    },
+    "STATIC_ROUTE_TEST_ECMP_WITH_MGMT": {
+        "desc": "Configure comma separated values with one nexthop as mgmt"
+    },
+    "STATIC_ROUTE_TEST_DISTANCE_INVALID": {
+        "desc": "Configure with invalid distance number",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEST_BLACKHOLE_INVALID": {
+        "desc": "Configure with invalid value for blackhole",
+        "eStrKey": "Pattern"
+    },
+     "STATIC_ROUTE_TEST_NEXTHOP_VRF_INVALID": {
+        "desc": "Configure with invalid value for VRF",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEST_ECMP_DISTANCE_INVALID": {
+        "desc": "Configure with invalid distance for ECMP",
+        "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEST_ECMP_BLACKHOLE_INVALID": {
+        "desc": "Configure with invalid blackhop for ECMP",
+        "eStrKey": "Pattern"
+    },
+     "STATIC_ROUTE_TEST_ECMP_NEXTHOP_VRF_INVALID": {
+        "desc": "Configure with invalid vrf for ECMP",
+        "eStrKey": "Pattern"
+    }
+
+}

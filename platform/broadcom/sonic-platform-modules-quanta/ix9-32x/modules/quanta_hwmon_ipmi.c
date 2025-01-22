@@ -86,6 +86,8 @@
 #define IPMI_TIMEOUT			(4 * HZ)
 #define IPMI_MAX_WAIT_QUEUE	1
 
+typedef struct ipmi_user *ipmi_user_t;
+
 struct quanta_hwmon_ipmi_data {
 	struct platform_device	*ipmi_platform_dev;
 	struct device			*ipmi_hwmon_dev;
@@ -839,7 +841,7 @@ void ipmi_sdr_set_sensor_threshold(uint8_t idx, struct sdr_record_full_sensor *s
 	/*refer to Table 35-, Get Sensor Event Enable*/
 	/*
 	// change detect threshold method, keep it for record detail format
-	// in this version function input is 
+	// in this version function input is
 		"void ipmi_sdr_set_sensor_threshold(uint8_t idx, uint8_t *rec)"
 		#define offset_threshold_enable	9
 		#define offset_threshold_data	31
@@ -1100,7 +1102,7 @@ int32_t ipmi_get_vin_type(uint8_t idx, uint8_t *retbuf)
 		if (rv) {
 			printk("BMC down at (%d)!!\n", __LINE__);
 		}
-		else {			
+		else {
 			switch (returnData)
 			{
 				case 0x7: //LVDC
@@ -1338,7 +1340,7 @@ static ssize_t show_fanpresent(struct device *dev, struct device_attribute *deva
 	uint8_t returnData[10] = { 0 };
 	uint8_t msg_data[] = { 0x36, 0xB9, 0x4C, 0x1C, 0x00, 0x02 }; //netfn = 0x36; cmd = 0xB9;
 
-	struct sensor_device_attribute *attr = to_sensor_dev_attr(devattr);	
+	struct sensor_device_attribute *attr = to_sensor_dev_attr(devattr);
 
 	fan_idx = (g_sensor_data[attr->index].sensor_idstring[8] - '0') - 1;
 
@@ -1611,7 +1613,7 @@ static int32_t __init quanta_hwmon_ipmi_init(void)
 		goto device_reg_err;
 	}
 
-	data->ipmi_hwmon_dev = hwmon_device_register_with_groups(NULL, DRVNAME, NULL, NULL);
+	data->ipmi_hwmon_dev = hwmon_device_register_with_groups(&data->ipmi_platform_dev->dev, DRVNAME, NULL, NULL);
 	err = IS_ERR(data->ipmi_hwmon_dev);
 	if (err) {
 		printk("hwmon register fail\n");
@@ -1646,7 +1648,7 @@ alloc_err:
 }
 
 static void __exit quanta_hwmon_ipmi_exit(void)
-{	
+{
 	remove_sensor_attrs();
 	hwmon_device_unregister(data->ipmi_hwmon_dev);
 	platform_device_unregister(data->ipmi_platform_dev);
@@ -1656,8 +1658,9 @@ static void __exit quanta_hwmon_ipmi_exit(void)
 	mutex_unlock(&ipmi_lock);
 
 	kfree(g_sensor_data);
+	g_sensor_data = NULL;
 	kfree(data);
-	return;
+	data = NULL;
 }
 
 module_init(quanta_hwmon_ipmi_init);

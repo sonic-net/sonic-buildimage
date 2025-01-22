@@ -10,15 +10,15 @@
                         "speed": 100,
                         "autoneg": "off",
                         "description": "management interface",
-                        "mtu": 1500 
-                    } 
+                        "mtu": 1500
+                    }
                 ]
             }
         }
     },
     "MGMT_PORT_INVALID_NAME_PATTERN": {
         "sonic-mgmt_port:sonic-mgmt_port": {
-            "sonic-mgmt_port:MGMT_PORT": { 
+            "sonic-mgmt_port:MGMT_PORT": {
                 "MGMT_PORT_LIST": [
                     {
                         "name": "ethernet0"
@@ -60,7 +60,7 @@
                     }
                 ]
             }
-        } 
+        }
     },
     "MGMT_PORT_INVALID_AUTONEG": {
         "sonic-mgmt_port:sonic-mgmt_port": {

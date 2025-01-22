@@ -5,20 +5,26 @@
     System health monitor daemon for SONiC
 """
 
+from swsscommon.swsscommon import RestartWaiter
+RestartWaiter.waitAdvancedBootDone()
+
 import signal
 import threading
+import time
 
 from sonic_py_common.daemon_base import DaemonBase
 from swsscommon.swsscommon import SonicV2Connector
 
 from health_checker.manager import HealthCheckerManager
+from health_checker.sysmonitor import Sysmonitor
+
 
 SYSLOG_IDENTIFIER = 'healthd'
 
 
 class HealthDaemon(DaemonBase):
     """
-    A daemon that run as a service to perform system health checker with a configurable interval. Also set system LED 
+    A daemon that run as a service to perform system health checker with a configurable interval. Also set system LED
     according to the check result and store the check result to redis.
     """
     SYSTEM_HEALTH_TABLE_NAME = 'SYSTEM_HEALTH_INFO'
@@ -28,14 +34,14 @@ class HealthDaemon(DaemonBase):
         Constructor of HealthDaemon.
         """
         DaemonBase.__init__(self, SYSLOG_IDENTIFIER)
-        self._db = SonicV2Connector(host="127.0.0.1")
+        self._db = SonicV2Connector(use_unix_socket_path=True)
         self._db.connect(self._db.STATE_DB)
         self.stop_event = threading.Event()
 
     def deinit(self):
         """
         Destructor. Remove all entries in $SYSTEM_HEALTH_TABLE_NAME table.
-        :return: 
+        :return:
         """
         self._clear_system_health_table()
 
@@ -64,7 +70,7 @@ class HealthDaemon(DaemonBase):
     def run(self):
         """
         Check system health in an infinite loop.
-        :return: 
+        :return:
         """
         self.log_notice("Starting up...")
 
@@ -75,17 +81,28 @@ class HealthDaemon(DaemonBase):
             if not manager.config.config_file_exists():
                 self.log_warning("System health configuration file not found, exit...")
                 return
-            while 1:
-                state, stat = manager.check(chassis)
-                if state == HealthCheckerManager.STATE_RUNNING:
-                    self._process_stat(chassis, manager.config, stat)
-
-                if self.stop_event.wait(manager.config.interval):
-                    break
+            sysmon = Sysmonitor()
+            sysmon.task_run()
+            while self._run_checker(manager, chassis):
+                pass
         except ImportError:
             self.log_warning("sonic_platform package not installed. Cannot start system-health daemon")
 
         self.deinit()
+        sysmon.task_stop()
+
+    def _run_checker(self, manager, chassis):
+        begin = time.time()
+        stat = manager.check(chassis)
+        self._process_stat(chassis, manager.config, stat)
+        elapse = time.time() - begin
+        sleep_time_in_sec = manager.config.interval - elapse
+        if sleep_time_in_sec < 0:
+            self.log_notice(f'System health takes {elapse} seconds for one iteration')
+            sleep_time_in_sec = 1
+        if self.stop_event.wait(sleep_time_in_sec):
+            return False
+        return True
 
     def _process_stat(self, chassis, config, stat):
         from health_checker.health_checker import HealthChecker

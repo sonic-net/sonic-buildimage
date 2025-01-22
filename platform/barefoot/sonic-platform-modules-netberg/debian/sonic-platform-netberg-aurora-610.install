@@ -1,0 +1,6 @@
+aurora-610/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-netberg_aurora_610-r0
+aurora-610/utils/healthstatus.sh usr/bin/
+aurora-610/utils/netberg_nba610_platform.sh usr/bin/
+aurora-610/utils/Yafuflash usr/share/sonic/platform/plugins
+aurora-610/utils/afulnx_64 usr/share/sonic/platform/plugins
+aurora-610/utils/cpld usr/share/sonic/platform/plugins

@@ -8,34 +8,61 @@ packet is trapped to the CPU. In this case, we should ping the inner
 destination IP to trigger the process of obtaining neighbor information
 """
 import subprocess
+import sys
 import time
-
 from datetime import datetime
 from ipaddress import ip_interface
+from queue import Queue
+
+from swsscommon.swsscommon import ConfigDBConnector, SonicV2Connector, \
+                                  DBConnector, Select, SubscriberStateTable
+from sonic_py_common import logger as log
+
 from pyroute2 import IPRoute
+from pyroute2.netlink.exceptions import NetlinkError
 from scapy.layers.inet import IP
 from scapy.layers.inet6 import IPv6
 from scapy.sendrecv import AsyncSniffer
-from swsssdk import ConfigDBConnector, SonicV2Connector
-from sonic_py_common import logger as log
+
 
 logger = log.Logger()
 
 STATE_DB = 'STATE_DB'
+APPL_DB = 'APPL_DB'
 PORTCHANNEL_INTERFACE_TABLE = 'PORTCHANNEL_INTERFACE'
 TUNNEL_TABLE = 'TUNNEL'
 PEER_SWITCH_TABLE = 'PEER_SWITCH'
 INTF_TABLE_TEMPLATE = 'INTERFACE_TABLE|{}|{}'
+LAG_TABLE = 'LAG_TABLE'
 STATE_KEY = 'state'
 TUNNEL_TYPE_KEY = 'tunnel_type'
 DST_IP_KEY = 'dst_ip'
 ADDRESS_IPV4_KEY = 'address_ipv4'
+OPER_STATUS_KEY = 'oper_status'
 IPINIP_TUNNEL = 'ipinip'
-
 RTM_NEWLINK = 'RTM_NEWLINK'
+SELECT_TIMEOUT = 1000
 
+nl_msgs = Queue()
+portchannel_intfs = None
+
+def add_msg_to_queue(target, msg):
+    """
+    Adds a netlink message to a queue
+
+    Args:
+        target: unused, needed by NDB API
+        msg: a netlink message
+    """
+
+    if msg.get_attr('IFLA_IFNAME') in portchannel_intfs:
+        nl_msgs.put(msg)
 
 class TunnelPacketHandler(object):
+    """
+    This class handles unroutable tunnel packets that are trapped
+    to the CPU from the ASIC.
+    """
 
     def __init__(self):
         self.config_db = ConfigDBConnector()
@@ -45,6 +72,13 @@ class TunnelPacketHandler(object):
         self._portchannel_intfs = None
         self.up_portchannels = None
         self.netlink_api = IPRoute()
+        self.sniffer = None
+        self.self_ip = ''
+        self.packet_filter = ''
+        self.sniff_intfs = set()
+
+        global portchannel_intfs
+        portchannel_intfs = [name for name, _ in self.portchannel_intfs]
 
     @property
     def portchannel_intfs(self):
@@ -68,19 +102,21 @@ class TunnelPacketHandler(object):
 
         return self._portchannel_intfs
 
-    def get_portchannel_index_mapping(self):
+    def get_intf_name(self, msg):
         """
-        Gets a mapping of interface kernel indices to portchannel interfaces
+        Gets the interface name for a netlink msg
 
         Returns:
-            (list) integers representing kernel indices
+            (str) The interface name, or the empty string if no interface
+                  name was found
         """
-        index_map = {}
-        for portchannel in self.portchannel_intfs:
-            index = self.netlink_api.link_lookup(ifname=portchannel[0])[0]
-            index_map[index] = portchannel
+        attr_list = msg.get('attrs', list())
 
-        return index_map
+        for attribute, val in attr_list:
+            if attribute == 'IFLA_IFNAME':
+                return val
+
+        return ''
 
     def get_up_portchannels(self):
         """
@@ -89,15 +125,23 @@ class TunnelPacketHandler(object):
         Returns:
             (list) of interface names which are up, as strings
         """
-        pc_index_map = self.get_portchannel_index_mapping()
-        pc_indices = list(pc_index_map.keys())
-        link_statuses = self.netlink_api.get_links(*pc_indices)
-        up_portchannels = []
+        portchannel_intf_names = [name for name, _ in self.portchannel_intfs]
+        link_statuses = []
+        for intf in portchannel_intf_names:
+            try:
+                status = self.netlink_api.link("get", ifname=intf)
+            except NetlinkError:
+                # Continue if we find a non-existent interface since we don't
+                # need to listen on it while it's down/not created. Once it comes up,
+                # we will get another netlink message which will trigger this check again
+                logger.log_notice("Skipping non-existent interface {}".format(intf))
+                continue
+            link_statuses.append(status[0])
+        up_portchannels = set()
 
         for status in link_statuses:
-            if status['state'] == 'up':
-                port_index = status['index']
-                up_portchannels.append(pc_index_map[port_index][0])
+            if status.get_attr('IFLA_OPERSTATE').lower() == 'up':
+                up_portchannels.add(status.get_attr('IFLA_IFNAME'))
 
         return up_portchannels
 
@@ -117,7 +161,7 @@ class TunnelPacketHandler(object):
                                 STATE_DB,
                                 intf_table_name,
                                 STATE_KEY
-                              )
+                        )
 
             if intf_state and intf_state.lower() != 'ok':
                 return False
@@ -168,7 +212,7 @@ class TunnelPacketHandler(object):
             peer_switch = self.config_db.get_keys(PEER_SWITCH_TABLE)[0]
             tunnel = self.config_db.get_keys(TUNNEL_TABLE)[0]
         except IndexError:
-            logger.log_warning('PEER_SWITCH or TUNNEL table'
+            logger.log_warning('PEER_SWITCH or TUNNEL table '
                                'not found in config DB')
             return None, None
 
@@ -177,13 +221,13 @@ class TunnelPacketHandler(object):
             tunnel_type = tunnel_table[TUNNEL_TYPE_KEY].lower()
             self_loopback_ip = tunnel_table[DST_IP_KEY]
             peer_loopback_ip = self.config_db.get_entry(
-                                    PEER_SWITCH_TABLE, peer_switch
-                                    )[ADDRESS_IPV4_KEY]
-        except KeyError as e:
+                                PEER_SWITCH_TABLE, peer_switch
+                                )[ADDRESS_IPV4_KEY]
+        except KeyError as error:
             logger.log_warning(
                 'PEER_SWITCH or TUNNEL table missing data, '
                 'could not find key {}'
-                .format(e)
+                .format(error)
             )
             return None, None
 
@@ -210,46 +254,73 @@ class TunnelPacketHandler(object):
                 return IPv6
         return False
 
-    def wait_for_netlink_msgs(self):
-        """
-        Gathers any RTM_NEWLINK messages
-
-        Returns:
-            (list) containing any received messages
-        """
-        msgs = []
-        with IPRoute() as ipr:
-            ipr.bind()
-            for msg in ipr.get():
-                if msg['event'] == RTM_NEWLINK:
-                    msgs.append(msg)
-
-        return msgs
-
-    def sniffer_restart_required(self, messages):
+    def sniffer_restart_required(self, lag, fvs):
         """
         Determines if the packet sniffer needs to be restarted
 
-        A restart is required if all of the following conditions are met:
-            1. A netlink message of type RTM_NEWLINK is received
-               (this is checked by `wait_for_netlink_msgs`)
-            2. The interface index of the message corresponds to a portchannel
-               interface
-            3. The state of the interface in the message is 'up'
-                    Here, we do not care about an interface going down since
-                    the sniffer is able to continue sniffing on the other
-                    interfaces. However, if an interface has gone down and
-                    come back up, we need to restart the sniffer to be able
-                    to sniff traffic on the interface that has come back up.
+        The sniffer needs to be restarted when a portchannel interface transitions
+        from down to up. When a portchannel interface goes down, the sniffer is
+        able to continue sniffing on other portchannels. 
         """
-        pc_index_map = self.get_portchannel_index_mapping()
-        for msg in messages:
-            if msg['index'] in pc_index_map:
-                if msg['state'] == 'up':
-                    logger.log_info('{} came back up, sniffer restart required'
-                                    .format(pc_index_map[msg['index']]))
-                    return True
-        return False
+        oper_status = dict(fvs).get(OPER_STATUS_KEY)
+        if lag not in self.sniff_intfs and oper_status == 'up':
+            logger.log_info('{} came back up, sniffer restart required'
+                            .format(lag))
+            # Don't need to modify self.sniff_intfs here since it is repopulated
+            # by self.get_up_portchannels()
+            return True
+        elif lag in self.sniff_intfs and oper_status == 'down':
+            # A portchannel interface went down, remove it from the list of
+            # sniffed interfaces so we can detect when it comes back up
+            self.sniff_intfs.remove(lag)
+            return False
+        else:
+            return False
+
+    def start_sniffer(self):
+        """
+        Starts an AsyncSniffer and waits for it to inititalize fully
+        """
+        start = datetime.now()
+        
+        self.sniff_intfs = self.get_up_portchannels()
+
+        while not self.sniff_intfs:
+            logger.log_info('No portchannels are up yet...')
+            if (datetime.now() - start).seconds > 180:
+                logger.log_error('All portchannels failed to come up within 3 minutes, exiting...')
+                sys.exit(1)
+            self.sniff_intfs = self.get_up_portchannels()
+            time.sleep(10)
+
+        self.sniffer = AsyncSniffer(
+            iface=list(self.sniff_intfs),
+            filter=self.packet_filter,
+            prn=self.ping_inner_dst,
+            store=0
+        )
+        self.sniffer.start()
+
+        while not hasattr(self.sniffer, 'stop_cb'):
+            time.sleep(0.1)
+
+    def ping_inner_dst(self, packet):
+        """
+        Pings the inner destination IP for an encapsulated packet
+
+        Args:
+            packet: The encapsulated packet received
+        """
+        inner_packet_type = self.get_inner_pkt_type(packet)
+        if inner_packet_type and packet[IP].dst == self.self_ip:
+            cmds = ['timeout', '0.2', 'ping', '-c1',
+                    '-W1', '-i0', '-n', '-q']
+            if inner_packet_type == IPv6:
+                cmds.append('-6')
+            dst_ip = packet[IP].payload[inner_packet_type].dst
+            cmds.append(dst_ip)
+            logger.log_info("Running command '{}'".format(' '.join(cmds)))
+            subprocess.run(cmds, stdout=subprocess.DEVNULL)
 
     def listen_for_tunnel_pkts(self):
         """
@@ -258,60 +329,50 @@ class TunnelPacketHandler(object):
         These packets may be trapped if there is no neighbor info for the
         inner packet destination IP in the hardware.
         """
-
-        def _ping_inner_dst(packet):
-            """
-            Pings the inner destination IP for an encapsulated packet
-
-            Args:
-                packet: The encapsulated packet received
-            """
-            inner_packet_type = self.get_inner_pkt_type(packet)
-            if inner_packet_type and packet[IP].dst == self_ip:
-                cmds = ['timeout', '0.2', 'ping', '-c1',
-                        '-W1', '-i0', '-n', '-q']
-                if inner_packet_type == IPv6:
-                    cmds.append('-6')
-                dst_ip = packet[IP].payload[inner_packet_type].dst
-                cmds.append(dst_ip)
-                logger.log_info("Running command '{}'".format(' '.join(cmds)))
-                subprocess.run(cmds, stdout=subprocess.DEVNULL)
-
-        self_ip, peer_ip = self.get_ipinip_tunnel_addrs()
-        if self_ip is None or peer_ip is None:
+        self.self_ip, peer_ip = self.get_ipinip_tunnel_addrs()
+        if self.self_ip is None or peer_ip is None:
             logger.log_notice('Could not get tunnel addresses from '
                               'config DB, exiting...')
             return None
 
-        packet_filter = 'host {} and host {}'.format(self_ip, peer_ip)
+        self.packet_filter = 'host {} and host {}'.format(self.self_ip, peer_ip)
         logger.log_notice('Starting tunnel packet handler for {}'
-                          .format(packet_filter))
+                          .format(self.packet_filter))
 
-        sniff_intfs = self.get_up_portchannels()
-        logger.log_info("Listening on interfaces {}".format(sniff_intfs))
 
-        sniffer = AsyncSniffer(
-            iface=sniff_intfs,
-            filter=packet_filter,
-            prn=_ping_inner_dst
+        app_db = DBConnector(APPL_DB, 0)
+        lag_table = SubscriberStateTable(app_db, LAG_TABLE)
+        sel = Select()
+        sel.addSelectable(lag_table)
 
-        )
-        sniffer.start()
+        self.start_sniffer()
+        logger.log_info("Listening on interfaces {}".format(self.sniff_intfs))
         while True:
-            msgs = self.wait_for_netlink_msgs()
-            if self.sniffer_restart_required(msgs):
-                sniffer.stop()
-                sniff_intfs = self.get_up_portchannels()
-                logger.log_notice('Restarting tunnel packet handler on '
-                                  'interfaces {}'.format(sniff_intfs))
-                sniffer = AsyncSniffer(
-                    iface=sniff_intfs,
-                    filter=packet_filter,
-                    prn=_ping_inner_dst
-                )
-                sniffer.start()
+            rc, _ = sel.select(SELECT_TIMEOUT)
+
+            if rc == Select.TIMEOUT:
+                continue
+            elif rc == Select.ERROR:
+                raise Exception("Select() error")
+            else:
+                lag, op, fvs = lag_table.pop()
+                if self.sniffer_restart_required(lag, fvs):
+                    self.sniffer.stop()
+                    start = datetime.now()
+                    # wait up to 3 seconds for the kernel interface to be synced with APPL_DB status
+                    while (datetime.now() - start).seconds < 3:
+                        self.sniff_intfs = self.get_up_portchannels()
+                        if lag in self.sniff_intfs:
+                            break
+                        time.sleep(0.1)
+                    logger.log_notice('Restarting tunnel packet handler on '
+                                    'interfaces {}'.format(self.sniff_intfs))
+                    self.start_sniffer()
 
     def run(self):
+        """
+        Entry point for the TunnelPacketHandler class
+        """
         self.wait_for_portchannels()
         self.listen_for_tunnel_pkts()
 

@@ -55,7 +55,7 @@ You might find **rules/config** very useful, as it is a configuration file for a
 **dockers/** directory is a place where you can find Dockerfiles for generic docker images.  
 **src/** is a place where a source code for generic packages goes.
 It has both submodules (simple case, just run dpkg-buildpackage to build),
-and directories with more complcated components, that provide their own Makefiles.  
+and directories with more complicated components, that provide their own Makefiles.
 **platform/** contains all vendor-specific recipes, submodules etc.  
 Every **platform/[VENDOR]/** directory is a derived part of buildimage frontend, that defines rules and targets for a concrete vendor.  
 
@@ -119,7 +119,7 @@ SONIC_PYTHON_STDEB_DEBS += $(SOME_NEW_DEB) # add package to this target group
 
 **SONIC_MAKE_DEBS**  
 This is a bit more flexible case.
-If you have to do some specific type of build or apply pathes prior to build, just define your own Makefile and add it to buildimage.
+If you have to do some specific type of build or apply paths prior to build, just define your own Makefile and add it to buildimage.
 Define:
 ```make
 SOME_NEW_DEB = some_new_deb.deb # name of your package
@@ -178,7 +178,7 @@ SONIC_SIMPLE_DOCKER_IMAGES += $(SOME_DOCKER) # add docker to this group
 ```
 
 **SONIC_DOCKER_IMAGES**  
-This one is a bit more sophisticated. You can define debian packages from buildimage that will be installed to it, and corresponding Dockerfile will be dinamically generated from a template.
+This one is a bit more sophisticated. You can define debian packages from buildimage that will be installed to it, and corresponding Dockerfile will be dynamically generated from a template.
 Define:  
 ```make
 SOME_DOCKER = some_docker.gz # name of your docker

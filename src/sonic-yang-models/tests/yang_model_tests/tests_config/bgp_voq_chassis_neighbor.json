@@ -1,0 +1,165 @@
+{
+    "BGP_VOQ_CHASSIS_NEIGHBOR_TEST": {
+        "sonic-bgp-voq-chassis-neighbor:sonic-bgp-voq-chassis-neighbor": {
+            "sonic-bgp-voq-chassis-neighbor:BGP_VOQ_CHASSIS_NEIGHBOR": {
+                "BGP_VOQ_CHASSIS_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "10.0.0.1",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "local_addr": "10.0.0.2",
+                        "name": "sonic-chassis-lc3",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    },
+                    {
+                        "neighbor": "3333::3:6",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "local_addr": "3333::3:3",
+                        "name": "sonic-chassis-lc3",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "sonic-chassis",
+                    "platform": "voq-chassis",
+                    "switch_type": "voq"
+                }
+            }
+        }
+    },
+    "BGP_VOQ_CHASSIS_ABSENT_LOCAL_ADDRESS_TEST": {
+        "sonic-bgp-voq-chassis-neighbor:sonic-bgp-voq-chassis-neighbor": {
+            "sonic-bgp-voq-chassis-neighbor:BGP_VOQ_CHASSIS_NEIGHBOR": {
+                "BGP_VOQ_CHASSIS_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "10.0.0.1",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "local_addr": "10.0.0.2",
+                        "name": "sonic-chassis-lc3",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    },
+                    {
+                        "neighbor": "3333::3:6",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "name": "sonic-chassis-lc3",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "sonic-chassis",
+                    "platform": "voq-chassis",
+                    "switch_type": "voq"
+                }
+            }
+        }
+    },
+    "BGP_VOQ_CHASSIS_INVALID_LOCAL_ADDRESS_ADDRESS_FAMILY_TEST": {
+        "sonic-bgp-voq-chassis-neighbor:sonic-bgp-voq-chassis-neighbor": {
+            "sonic-bgp-voq-chassis-neighbor:BGP_VOQ_CHASSIS_NEIGHBOR": {
+                "BGP_VOQ_CHASSIS_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "10.0.0.1",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "local_addr": "10.0.0.2",
+                        "name": "sonic-chassis-lc3",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    },
+                    {
+                        "neighbor": "3333::3:6",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "local_addr": "3.3.3.3",
+                        "name": "sonic-chassis-lc3",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "sonic-chassis",
+                    "platform": "voq-chassis",
+                    "switch_type": "voq"
+                }
+            }
+        }
+    },
+    "BGP_VOQ_CHASSIS_INVALID_ASN_TEST": {
+        "sonic-bgp-voq-chassis-neighbor:sonic-bgp-voq-chassis-neighbor": {
+            "sonic-bgp-voq-chassis-neighbor:BGP_VOQ_CHASSIS_NEIGHBOR": {
+                "BGP_VOQ_CHASSIS_NEIGHBOR_LIST": [
+                    {
+                        "neighbor": "10.0.0.1",
+                        "asn": "65000",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "local_addr": "10.0.0.2",
+                        "name": "sonic-chassis-lc3",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    },
+                    {
+                        "neighbor": "3333::3:6",
+                        "asn": "65001",
+                        "holdtime": "180",
+                        "keepalive": "60",
+                        "local_addr": "3333::3:3",
+                        "name": "sonic-chassis-lc3",
+                        "nhopself": "0",
+                        "rrclient": "0",
+                        "admin_status": "up"
+                    }
+                ]
+            }
+        },
+        "sonic-device_metadata:sonic-device_metadata": {
+            "sonic-device_metadata:DEVICE_METADATA": {
+                "localhost": {
+                    "bgp_asn": "65001",
+                    "default_bgp_status": "up",
+                    "hostname": "sonic-chassis",
+                    "platform": "voq-chassis",
+                    "switch_type": "voq"
+                }
+            }
+        }
+    }
+}

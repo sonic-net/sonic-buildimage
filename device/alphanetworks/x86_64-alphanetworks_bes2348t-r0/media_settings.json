@@ -1,0 +1,11 @@
+{
+    "GLOBAL_MEDIA_SETTINGS": {
+        "49-52": {
+            "Default": {
+                "preemphasis": {
+                    "lane0": "0x0a3205"
+                }
+            }
+        }
+    }
+}

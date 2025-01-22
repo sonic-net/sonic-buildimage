@@ -2,7 +2,7 @@ module sonic-wred-profile {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-wred-profile";
+    namespace "http://github.com/sonic-net/sonic-wred-profile";
 
     prefix wrd;
 

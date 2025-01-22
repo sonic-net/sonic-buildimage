@@ -104,7 +104,7 @@ class FanUtil(object):
             return None
 
         try:
-		    val_file.close()
+            val_file.close()
         except:
             logging.debug('GET. unable to close file. device_path:%s', device_path)
             return None
@@ -135,7 +135,7 @@ class FanUtil(object):
         val_file.write(content)
 
         try:
-		    val_file.close()
+            val_file.close()
         except:
             logging.debug('GET. unable to close file. device_path:%s', device_path)
             return None

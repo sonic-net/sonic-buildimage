@@ -1,8 +1,0 @@
-[Unit]
-Description=Retrieve the reboot cause from the history files and save them to StateDB
-Requires=database.service
-After=database.service
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/process-reboot-cause

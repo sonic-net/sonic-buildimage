@@ -1,5 +1,6 @@
 /*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+ * $Id: ibde.h,v 1.27 Broadcom SDK $
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,12 +23,9 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/*
- * $Id: ibde.h,v 1.27 Broadcom SDK $
- * $Copyright: (c) 2005 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
+ * 
  */
 
 #ifndef __IBDE_H__
@@ -88,6 +86,7 @@ typedef struct ibde_s {
 #define BDE_AXI_DEV_TYPE      SAL_AXI_DEV_TYPE    /* AXI device */
 #define BDE_EMMI_DEV_TYPE     SAL_EMMI_DEV_TYPE   /* EMMI device */
 #define BDE_COMPOSITE_DEV_TYPE SAL_COMPOSITE_DEV_TYPE /* Composite device, composed of sub-devices with buses */
+#define BDE_SUB_DEV_TYPE      SAL_SUB_DEV_TYPE    /* A sub-device (with a bus) of a composite device */
 #define BDE_USER_DEV_TYPE     SAL_USER_DEV_TYPE   /* The user implements his own method of access to the device */
 #define BDE_DEV_BUS_ALT       SAL_DEV_BUS_ALT     /* Alternate Access */
 #define BDE_DEV_BUS_MSI       SAL_DEV_BUS_MSI     /* Message-signaled interrupts */
@@ -186,6 +185,23 @@ typedef struct ibde_s {
     uint64  (*read64)(int d, uint32 addr);
     void    (*write64)(int d, uint32 addr, uint64 data);
 
+    /*
+     * Probe for new devices.
+     *
+     * This function will normally be called implicitly by the BDE
+     * initialization function, but it may be called at a later time
+     * by the application to detect removed or added devices.
+     *
+     * Existing devices are not affected by this operation.
+     *
+     * If a device has been hot-swapped, then it will be assigned the
+     * same resources as before the hot-swap.
+     *
+     * Return value:
+     *   0: Device probe completed successfully.
+     *  -1: An error happened during device probe.
+     */
+    int     (*probe)(void);
 } ibde_t;
 
 

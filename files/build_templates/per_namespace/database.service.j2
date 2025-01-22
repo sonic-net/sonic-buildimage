@@ -14,9 +14,9 @@ StartLimitBurst=3
 
 [Service]
 User=root
-ExecStartPre=/usr/bin/{{docker_container_name}}.sh start{% if multi_instance == 'true' %} %i{% endif %}
-ExecStart=/usr/bin/{{docker_container_name}}.sh wait{% if multi_instance == 'true' %} %i{% endif %}
-ExecStop=/usr/bin/{{docker_container_name}}.sh stop{% if multi_instance == 'true' %} %i{% endif %}
+ExecStartPre=/usr/local/bin/{{docker_container_name}}.sh start{% if multi_instance == 'true' %} %i{% endif %}
+ExecStart=/usr/local/bin/{{docker_container_name}}.sh wait{% if multi_instance == 'true' %} %i{% endif %}
+ExecStop=/usr/local/bin/{{docker_container_name}}.sh stop{% if multi_instance == 'true' %} %i{% endif %}
 RestartSec=30
 
 [Install]

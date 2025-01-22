@@ -1,0 +1,31 @@
+!
+! template: bgpd/templates/sentinels/instance.conf.j2
+!
+  neighbor {{ bgp_session['name'] }} peer-group
+  neighbor {{ bgp_session['name'] }} remote-as {{ bgp_asn }}
+{% if bgp_session['src_address'] is defined %}
+  neighbor {{ bgp_session['name'] }} update-source {{ bgp_session['src_address'] | ip }}
+{% endif %}
+{% for ip_range in bgp_session['ip_range'].split(',') %}
+  bgp listen range {{ ip_range }} peer-group {{ bgp_session['name'] }}
+{% endfor %}
+!
+  address-family ipv4
+    neighbor {{ bgp_session['name'] }} activate
+    neighbor {{ bgp_session['name'] }} addpath-tx-all-paths
+    neighbor {{ bgp_session['name'] }} soft-reconfiguration inbound
+    neighbor {{ bgp_session['name'] }} route-map FROM_BGP_SENTINEL in
+    neighbor {{ bgp_session['name'] }} route-map TO_BGP_SENTINEL out
+    neighbor {{ bgp_session['name'] }} maximum-prefix 200
+  exit-address-family
+  address-family ipv6
+    neighbor {{ bgp_session['name'] }} activate
+    neighbor {{ bgp_session['name'] }} addpath-tx-all-paths
+    neighbor {{ bgp_session['name'] }} soft-reconfiguration inbound
+    neighbor {{ bgp_session['name'] }} route-map FROM_BGP_SENTINEL in
+    neighbor {{ bgp_session['name'] }} route-map TO_BGP_SENTINEL out
+    neighbor {{ bgp_session['name'] }} maximum-prefix 200
+  exit-address-family
+!
+! end of template: bgpd/templates/sentinels/instance.conf.j2
+!

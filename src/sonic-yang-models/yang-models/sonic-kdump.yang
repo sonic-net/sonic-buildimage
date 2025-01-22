@@ -1,0 +1,60 @@
+module sonic-kdump {
+    namespace "http://github.com/sonic-net/sonic-kdump";
+    prefix kdump;
+    yang-version 1.1;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "This module contains a collection of YANG definitions for the
+         Linux Kernel crash dumping (Kdump) mechanism. The Kdump feature
+         is used to detect and record Linux kernel crash events.";
+
+    revision 2022-05-09 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-kdump {
+        container KDUMP {
+            description
+                "Kdump configuration parameters";
+            container config {
+                description "Top level grouping for attributes for Kdump.";
+                leaf enabled {
+                    type boolean;
+                    description
+                        "Enable or Disable the Kdump mechanism";
+                }
+
+                leaf memory {
+                    type string {
+                        pattern "(((([0-9]+[MG])?(-([0-9]+[MG])?):)?[0-9]+[MG],?)+)";
+                    }
+                    description
+                        "Memory reserved for loading the crash handler kernel. The amount
+                        of reserved memory can be variable, depending on the total amount
+                        of installed memory. The syntax for variable memory reservation is
+                        <range1>:<size1>,<range2>:<size2>. For example, 512M-2G:64M,2G-:128M,
+                        where a memory of 64MB is reserved for the crash kernel for systems
+                        with installed memory between 512MB and 2GB, 128MB is reserved for
+                        systems that have more than 2GB installed memory. An absolute memory
+                        value can also be specified in the format <size>M or <size>G.
+                        For example, 512M.";
+                }
+
+                leaf num_dumps {
+                    type uint8 {
+                        range "1 .. 9";
+                    }
+                    description
+                        "Maximum number of Kernel Core files Stored";
+                }
+            }
+        }
+    }
+}

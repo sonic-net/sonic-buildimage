@@ -5,7 +5,7 @@ import os
 import socket
 import tarfile
 import time
-
+import subprocess
 import yaml
 from azure.storage.file import FileService
 from sonic_py_common.logger import Logger
@@ -42,8 +42,8 @@ logger.set_min_log_priority_info()
 
 
 def make_new_dir(p):
-    os.system("rm -rf " + p)
-    os.system("mkdir -p " + p)
+    subprocess.call(["rm", "-rf", p])
+    subprocess.call(["mkdir", "-p", p])
 
 
 def parse_a_json(data, prefix, val):

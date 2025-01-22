@@ -1,0 +1,17 @@
+diff --git a/debian/rules b/debian/rules
+index 9274c17..d107454 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -5,6 +5,12 @@ export DEB_BUILD_MAINT_OPTIONS := hardening=+all
+ DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+ DEB_BUILD_ARCH_OS  ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH_OS)
+ 
++DEB_BUILD_MULTIARCH  ?= $(shell dpkg-architecture -qDEB_BUILD_MULTIARCH)
++
++ifneq ($(DEB_BUILD_MULTIARCH),$(DEB_HOST_MULTIARCH))
++export PERL5OPT := -I/usr/lib/$(DEB_HOST_MULTIARCH)/perl/cross-config-$(shell perl -MConfig -e 'print $$Config{version}')
++endif
++
+ LIB_VERSION = 30
+ PYTHON_VERSION = 1.0a1
+ 

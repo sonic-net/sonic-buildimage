@@ -1,0 +1,8 @@
+{
+    "bgp_asn": "555",
+    "bgp_session": {
+        "ip_range": "10.10.20.0/24,20.20.20.0/24",
+        "name": "BGPSentinel",
+        "src_address": "1.1.1.1"
+    }
+}

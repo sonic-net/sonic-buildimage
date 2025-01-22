@@ -48,7 +48,7 @@ def test_set_del():
     set_del_test(
         mgr,
         "SET",
-        ("10.1.0.0/24", {}),
+        ("10.1.0.0/24", {"":""}),
         True,
         [
             ["router bgp 65100",
@@ -62,7 +62,7 @@ def test_set_del():
     set_del_test(
         mgr,
         "SET",
-        ("fc00:10::/64", {}),
+        ("fc00:10::/64", {"":""}),
         True,
         [
             ["router bgp 65100",
@@ -103,7 +103,7 @@ def test_set_del_vrf():
     set_del_test(
         mgr,
         "SET",
-        ("vrfRED|10.2.0.0/24", {}),
+        ("vrfRED|10.2.0.0/24", {"":""}),
         True,
         [
             ["router bgp 65100 vrf vrfRED",
@@ -117,7 +117,7 @@ def test_set_del_vrf():
     set_del_test(
         mgr,
         "SET",
-        ("vrfRED|fc00:20::/64", {}),
+        ("vrfRED|fc00:20::/64", {"":""}),
         True,
         [
             ["router bgp 65100 vrf vrfRED",
@@ -158,7 +158,9 @@ def test_set_del_bgp_asn_change():
     set_del_test(
         mgr,
         "SET",
-        ("vrfRED|10.3.0.0/24", {}),
+        ("vrfRED|10.3.0.0/24", {
+            "profile": "FROM_SDN_SLB_ROUTES"
+        }),
         True,
         []
     )
@@ -170,7 +172,7 @@ def test_set_del_bgp_asn_change():
          " no bgp network import-check"],
         ["router bgp 65100 vrf vrfRED",
          " address-family ipv4 unicast",
-         "  network 10.3.0.0/24"]
+         "  network 10.3.0.0/24 route-map FROM_SDN_SLB_ROUTES_RM"]
     ]
     def push_list(cmds):
         test_set_del_bgp_asn_change.push_list_called = True
@@ -183,3 +185,61 @@ def test_set_del_bgp_asn_change():
     mgr.directory.put("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost", {"bgp_asn": "65100"})
 
     assert test_set_del_bgp_asn_change.push_list_called
+
+def test_set_del_with_community():
+    mgr = constructor()
+    set_del_test(
+        mgr,
+        "SET",
+        ("10.1.0.0/24", {
+            "profile": "FROM_SDN_SLB_ROUTES"
+        }),
+        True,
+        [
+            ["router bgp 65100",
+             " no bgp network import-check"],
+            ["router bgp 65100",
+             " address-family ipv4 unicast",
+             "  network 10.1.0.0/24 route-map FROM_SDN_SLB_ROUTES_RM"]
+        ]
+    )
+
+    set_del_test(
+        mgr,
+        "SET",
+        ("fc00:10::/64", {
+            "profile": "FROM_SDN_SLB_ROUTES"
+        }),
+        True,
+        [
+            ["router bgp 65100",
+             " address-family ipv6 unicast",
+             "  network fc00:10::/64 route-map FROM_SDN_SLB_ROUTES_RM"]
+        ]
+    )
+
+    set_del_test(
+        mgr,
+        "DEL",
+        ("10.1.0.0/24",),
+        True,
+        [
+            ["router bgp 65100",
+             " address-family ipv4 unicast",
+             "  no network 10.1.0.0/24"]
+        ]
+    )
+
+    set_del_test(
+        mgr,
+        "DEL",
+        ("fc00:10::/64",),
+        True,
+        [
+            ["router bgp 65100",
+             " bgp network import-check"],
+            ["router bgp 65100",
+             " address-family ipv6 unicast",
+             "  no network fc00:10::/64"]
+        ]
+    )

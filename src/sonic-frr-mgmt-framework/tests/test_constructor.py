@@ -2,9 +2,11 @@ import socket
 import pytest
 from unittest.mock import MagicMock, NonCallableMagicMock, patch
 
-swsssdk_module_mock = MagicMock(ConfigDBConnector = NonCallableMagicMock)
+swsscommon_module_mock = MagicMock(ConfigDBConnector = NonCallableMagicMock)
+# because can’t use dotted names directly in a call, have to create a dictionary and unpack it using **:
+mockmapping = {'swsscommon.swsscommon': swsscommon_module_mock}
 
-with patch.dict('sys.modules', swsssdk = swsssdk_module_mock):
+with patch.dict('sys.modules', **mockmapping):
     from frrcfgd.frrcfgd import CachedDataWithOp
     from frrcfgd.frrcfgd import BGPPeerGroup
     from frrcfgd.frrcfgd import BGPKeyMapInfo

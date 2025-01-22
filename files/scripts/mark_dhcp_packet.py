@@ -73,18 +73,17 @@ class MarkDhcpPacket(object):
         return intf_mark
 
     def run_command(self, cmd):
-        subprocess.call(cmd, shell=True)
+        subprocess.call(cmd)
         log.log_info("run command: {}".format(cmd))
 
     def clear_dhcp_packet_marks(self):
         '''
         Flush the INPUT chain in ebtables upon restart
         '''
-        self.run_command("sudo ebtables -F INPUT")
+        self.run_command(["sudo", "ebtables", "-F", "INPUT"])
 
     def apply_mark_in_ebtables(self, intf, mark):
-        self.run_command("sudo ebtables -A INPUT -i {} -j mark --mark-set {}"
-                         .format(intf, mark))
+        self.run_command(["sudo", "ebtables", "-A", "INPUT", "-i", intf, "-j", "mark", "--mark-set", mark])
 
     def update_mark_in_state_db(self, intf, mark):
         self.state_db.set(

@@ -3,7 +3,6 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 # Build and push sonic-slave-[buster|jessie|stretch] images for amd64/armhf/arm64
-
 parameters:
 - name: arch
   type: string
@@ -11,9 +10,13 @@ parameters:
   - amd64
   - armhf
   - arm64
+- name: march
+  type: string
+  default: ''
 - name: dist
   type: string
   values:
+  - bookworm
   - bullseye
   - buster
   - stretch
@@ -26,83 +29,57 @@ parameters:
   default: sonicdev
 - name: pool
   type: string
-  default: sonicbld
+  default: sonicbld-1es
   values:
-  - sonicbld
+  - sonicbld-1es
   - sonicbld-arm64
   - sonicbld-armhf
 
 jobs:
-- job: Build_${{ parameters.dist }}_${{ parameters.arch }}
+- job: sonic_slave_${{ parameters.dist }}${{ parameters.march }}
   timeoutInMinutes: 360
+  variables:
+  - template: /.azure-pipelines/template-variables.yml@buildimage
+  - template: /.azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
   pool: ${{ parameters.pool }}
   steps:
   - template: cleanup.yml
+  - template: /.azure-pipelines/template-clean-sonic-slave.yml@buildimage
   - checkout: self
     clean: true
-    submodules: recursive
+  - task: Docker@2
+    displayName: Login to ACR
+    inputs:
+      command: login
+      containerRegistry: ${{ parameters.registry_conn }}
   - bash: |
       set -ex
+      build_options="$(VERSION_CONTROL_OPTIONS)"
+      image_tag=$(BLDENV=${{ parameters.dist }} make -f Makefile.work showtag $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} | grep sonic-slave | tail -n 1)
+      image_latest=$(echo $(echo $image_tag | awk -F: '{print$1}'):latest)
+      if echo ${{ parameters.pool }} | grep ${{ parameters.arch }};then
+        image_latest=$(echo ${image_latest} | sed 's/:/-${{ parameters.arch }}:/')
+      fi
+      image_branch=$(echo $(echo $image_latest | awk -F: '{print$1}'):$(Build.SourceBranchName))
+      docker rmi $image_tag || true
 
-      SLAVE_DIR=sonic-slave-${{ parameters.dist }}
-      if [ x${{ parameters.pool }} == x"sonicbld" ]; then
-        if [ x${{ parameters.arch }} == x"amd64" ]; then
-          SLAVE_BASE_IMAGE=${SLAVE_DIR}
-          SLAVE_BASE_IMAGE_UPLOAD=${SLAVE_DIR}
-        elif [ x${{ parameters.pool }} == x"sonicbld" ]; then
-          SLAVE_BASE_IMAGE=${SLAVE_DIR}-march-${{ parameters.arch }}
-          SLAVE_BASE_IMAGE_UPLOAD=${SLAVE_DIR}-march-${{ parameters.arch }}
-        fi
-      elif [[ x${{ parameters.pool }} == x"sonicbld-armhf" && x${{ parameters.arch }} == x"armhf" ]]; then
-        SLAVE_BASE_IMAGE=${SLAVE_DIR}
-        SLAVE_BASE_IMAGE_UPLOAD=${SLAVE_DIR}-armhf
-      elif [[ x${{ parameters.pool }} == x"sonicbld-arm64" && x${{ parameters.arch }} == x"arm64" ]]; then
-        SLAVE_BASE_IMAGE=${SLAVE_DIR}
-        SLAVE_BASE_IMAGE_UPLOAD=${SLAVE_DIR}-arm64
-      else
-        echo "do not support build ${{ parameters.arch }} on ${{ parameters.pool }}"
-        exit 1
+      if [[ "$(Build.Reason)" =~ [a-zA-Z]*CI ]] && docker pull ${{ parameters.registry_url }}/${image_tag};then
+        exit 0
       fi
 
-      if [ x"$(Build.SourceBranchName)" == x"202012" ]; then
-        BUILD_OPTIONS = 'SONIC_VERSION_CONTROL_COMPONENTS=deb,py2,py3,web,git,docker'
+      DOCKER_DATA_ROOT_FOR_MULTIARCH=/data/march/docker BLDENV=${{ parameters.dist }} make -f Makefile.work configure $build_options PLATFORM=generic PLATFORM_ARCH=${{ parameters.arch }} $args || docker image ls $image_tag
+      if [[ "$(Build.Reason)" == "PullRequest" ]];then
+        exit 0
       fi
 
-      containers=$(docker container ls | grep "sonic-slave" | awk '{ print $1 }')
-      if [ ! -z "$containers" ]; then
-        docker container kill $containers || true
-        sleep 5
+      docker tag ${image_tag} ${REGISTRY_SERVER}/${image_tag}
+      docker push ${REGISTRY_SERVER}/${image_tag}
+      docker tag ${image_tag} ${REGISTRY_SERVER}/${image_branch}
+      docker push ${REGISTRY_SERVER}/${image_branch}
+      if [[ "$(Build.SourceBranchName)" == "master" ]];then
+        docker tag ${image_tag} ${REGISTRY_SERVER}/${image_latest}
+        docker push ${REGISTRY_SERVER}/${image_latest}
       fi
-      images=$(docker images 'sonic-slave-*' -a -q)
-      if [ ! -z "$images" ]; then
-        docker rmi -f $images
-      fi
-
-      tmpfile=$(mktemp)
-
-      echo ${{ parameters.arch }} > .arch
-
-      DOCKER_DATA_ROOT_FOR_MULTIARCH=/data/march/docker BLDENV=${{ parameters.dist }} $(BUILD_OPTIONS) make -f Makefile.work sonic-slave-build | tee $tmpfile
-      SLAVE_BASE_TAG=$(grep "^Checking sonic-slave-base image:" $tmpfile | awk -F ':' '{print $3}')
-      SLAVE_TAG=$(grep "^Checking sonic-slave image:" $tmpfile | awk -F ':' '{print $3}')
-
-      mkdir -p target
-
-      docker tag $SLAVE_BASE_IMAGE:$SLAVE_BASE_TAG $REGISTRY_SERVER/$SLAVE_BASE_IMAGE_UPLOAD:latest
-      docker tag $SLAVE_BASE_IMAGE:$SLAVE_BASE_TAG $REGISTRY_SERVER/$SLAVE_BASE_IMAGE_UPLOAD:$SLAVE_BASE_TAG
-      set +x
-      echo "##vso[task.setvariable variable=VARIABLE_SLAVE_BASE_IMAGE]$SLAVE_BASE_IMAGE_UPLOAD"
-      echo "##vso[task.setvariable variable=VARIABLE_SLAVE_BASE_TAG]$SLAVE_BASE_TAG"
     env:
       REGISTRY_SERVER: ${{ parameters.registry_url }}
     displayName: Build sonic-slave-${{ parameters.dist }}-${{ parameters.arch }}
-
-  - task: Docker@2
-    displayName: Upload image
-    inputs:
-      containerRegistry: ${{ parameters.registry_conn }}
-      repository: $(VARIABLE_SLAVE_BASE_IMAGE)
-      command: push
-      tags: |
-        $(VARIABLE_SLAVE_BASE_TAG)
-        latest

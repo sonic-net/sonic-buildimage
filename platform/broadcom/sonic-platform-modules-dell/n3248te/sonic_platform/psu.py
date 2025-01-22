@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 ########################################################################
-# DellEMC Z9332F
+# DellEMC N3248TE
 #
 # Module contains an implementation of SONiC Platform Base API and
 # provides the PSUs' information which are available in the platform
@@ -38,7 +38,8 @@ class Psu(PsuBase):
         cpld_dir = "/sys/devices/platform/dell-n3248te-cpld.0/"
         cpld_reg_file = cpld_dir + '/' + reg_name
         try:
-            rv = open(cpld_reg_file, 'r').read()
+            with open(cpld_reg_file, 'r') as fd:
+                rv = fd.read()
         except IOError : return 'ERR'
         return rv.strip('\r\n').lstrip(' ')
 
@@ -46,7 +47,8 @@ class Psu(PsuBase):
         try :
             dps_dir = self.dps_hwmon + '/' + os.listdir(self.dps_hwmon)[0]
             dps_reg_file = dps_dir + '/' + reg_name
-            rv = open(dps_reg_file, 'r').read()
+            with open(dps_reg_file, 'r') as fd:
+                rv = fd.read()
         except (IOError, OSError) : return 'ERR'
         return rv
 
@@ -61,20 +63,24 @@ class Psu(PsuBase):
 
     def _reload_dps_module(self):
         try:
-            del_cmd = "echo  0x56 > /sys/bus/i2c/devices/i2c-{}/delete_device".format(10 + self.index - 1)
-            os.system(del_cmd)
+            file = "/sys/bus/i2c/devices/i2c-{}/delete_device".format(10 + self.index - 1)
+            with open(file, 'w') as f:
+                f.write('0x56\n')
         except (IOError, OSError):
             pass
         try:
-            del_cmd = "echo  0x5e > /sys/bus/i2c/devices/i2c-{}/delete_device".format(10 + self.index - 1)
-            os.system(del_cmd)
+            file = "/sys/bus/i2c/devices/i2c-{}/delete_device".format(10 + self.index - 1)
+            with open(file, 'w') as f:
+                f.write('0x5e\n')
         except (IOError, OSError):
             pass
         try:
-            ins_cmd = "echo '24c02 0x56' > /sys/bus/i2c/devices/i2c-{}/new_device".format(10 + self.index - 1)
-            os.system(ins_cmd)
-            ins_cmd = "echo 'dps460 0x5e' > /sys/bus/i2c/devices/i2c-{}/new_device".format(10 + self.index - 1)
-            os.system(ins_cmd)
+            file = "/sys/bus/i2c/devices/i2c-{}/new_device".format(10 + self.index - 1)
+            with open(file, 'w') as f:
+                f.write('24c02 0x56\n')
+            file = "/sys/bus/i2c/devices/i2c-{}/new_device".format(10 + self.index - 1)
+            with open(file, 'w') as f:
+                f.write('dps460 0x5e\n')
         except (IOError, OSError):
             pass
 
@@ -91,7 +97,9 @@ class Psu(PsuBase):
             self.dps_hwmon_exist = os.path.exists(self.dps_hwmon)
             if not self.dps_hwmon_exist:
                 self._reload_dps_module()
-        return int(presence, 0)
+        if int(presence, 0) == 1:
+            return True
+        return False
 
     def get_model(self):
         """
@@ -103,7 +111,7 @@ class Psu(PsuBase):
         try: val = open(self.eeprom, "rb").read()[0x50:0x62]
         except Exception:
             val = None
-        return val.decode()
+        return val.decode('ascii')
 
     def get_serial(self):
         """
@@ -115,7 +123,22 @@ class Psu(PsuBase):
         try: val = open(self.eeprom, "rb").read()[0xc4:0xd9]
         except Exception:
             val = None
-        return val.decode()
+        return val.decode('ascii')
+
+    def get_revision(self):
+        """
+        Retrieves the serial number of the PSU
+
+        Returns:
+            string: Serial number of PSU
+        """
+        try: val = open(self.eeprom, "rb").read()[0xc4:0xd9]
+        except Exception:
+            val = None
+        if val != "NA" and len(val) == 23:
+            return val[-3:]
+        else:
+            return "NA"
 
     def get_status(self):
         """
@@ -126,7 +149,9 @@ class Psu(PsuBase):
         """
         status = self._get_cpld_register(self.psu_status).strip()
         if status == 'ERR' : return False
-        return int(status, 0)
+        if int(status, 0) == 1:
+            return True
+        return False
 
     def get_voltage(self):
         """
@@ -141,7 +166,7 @@ class Psu(PsuBase):
             voltage = int(volt_reading)/1000
         except Exception:
             return None
-        return "{:.1f}".format(voltage)
+        return float(voltage)
 
     def get_current(self):
         """
@@ -156,7 +181,7 @@ class Psu(PsuBase):
             current = int(curr_reading)/1000
         except Exception:
             return None
-        return "{:.1f}".format(current)
+        return float(current)
 
     def get_power(self):
         """
@@ -168,10 +193,10 @@ class Psu(PsuBase):
         """
         power_reading = self._get_dps_register(self.psu_power_reg)
         try:
-            power = int(power_reading)/1000
+            power = int(power_reading)/(1000*1000)
         except Exception:
             return None
-        return "{:.1f}".format(power)
+        return float(power)
 
     def get_powergood_status(self):
         """
@@ -204,4 +229,21 @@ class Psu(PsuBase):
         try: val = open(self.eeprom, "rb").read()[0xe8:0xea]
         except Exception:
             return None
-        return val
+        return val.decode()
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.index
+
+    def is_replaceable(self):
+        """
+        Indicate whether this PSU is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True
+

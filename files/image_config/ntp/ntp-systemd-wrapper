@@ -4,45 +4,62 @@
 # This is now manually modified for supporting NTP in management VRF.
 # When management VRF is enabled, the NTP application should be started using "ip vrf exec mgmt".
 # Check has been added to verify the management VRF enabled status and use "ip vrf exec mgmt"  when it is enabled.
-# This file will be copied to /usr/lib/ntp/ntp-systemd-wrapper file that gets created during build process.
-
+# This file will be copied to /usr/libexec/ntpsec/ntp-systemd-wrapper file that gets created during build process.
 DAEMON=/usr/sbin/ntpd
-PIDFILE=/var/run/ntpd.pid
+PIDFILE=/run/ntpd.pid
+LOCKFILE=/run/lock/ntpsec-ntpdate
+NTPLOGDIR=/var/log/ntpsec
 
-if [ -r /etc/default/ntp ]; then
-        . /etc/default/ntp
+if [ -r /etc/default/ntpsec ]; then
+        . /etc/default/ntpsec
 fi
 
-if [ -e /run/ntp.conf.dhcp ]; then
-        NTPD_OPTS="$NTPD_OPTS -c /run/ntp.conf.dhcp"
+dhcp=$(/usr/local/bin/sonic-cfggen -d -v 'NTP["global"]["dhcp"]' 2> /dev/null)
+if [ "$IGNORE_DHCP" != "yes" ] && [ -e /run/ntpsec/ntp.conf.dhcp ] && [ "$dhcp" = "enabled" ]; then
+        NTPD_OPTS="$NTPD_OPTS -c /run/ntpsec/ntp.conf.dhcp"
+else
+	# List the default -c first, so if the admin has specified -c in
+	# NTPD_OPTS, it is honored.
+	NTPD_OPTS="-c /etc/ntpsec/ntp.conf $NTPD_OPTS"
 fi
 
-LOCKFILE=/run/lock/ntpdate
+NTPD_OPTS="$NTPD_OPTS -u ntpsec:ntpsec"
 
-RUNASUSER=ntp
-UGID=$(getent passwd $RUNASUSER | cut -f 3,4 -d:) || true
-if test "$(uname -s)" = "Linux"; then
-        NTPD_OPTS="$NTPD_OPTS -u $UGID"
+if [ ! -e $NTPLOGDIR ]; then
+    mkdir $NTPLOGDIR
+    chmod 777 $NTPLOGDIR
 fi
 
+# Protect the service startup against concurrent ntpdate ifup hooks
 (
-        flock -w 180 9
-        # when mgmt vrf is configured, ntp starts in mgmt vrf by default unless user configures otherwise
-        vrfEnabled=$(/usr/local/bin/sonic-cfggen -d -v 'MGMT_VRF_CONFIG["vrf_global"]["mgmtVrfEnabled"]' 2> /dev/null)
-        vrfConfigured=$(/usr/local/bin/sonic-cfggen -d -v 'NTP["global"]["vrf"]' 2> /dev/null)
-        if [ "$vrfEnabled" = "true" ]
-        then
-                if [ "$vrfConfigured" = "default" ]
+        if flock -w 180 9; then
+                ntpEnabled=$(/usr/local/bin/sonic-cfggen -d -v 'NTP["global"]["admin_state"]' 2> /dev/null)
+                if [ "$ntpEnabled" = "disabled" ]
                 then
-                            log_daemon_msg "Starting NTP server in default-vrf for default set as NTP vrf" "ntpd"
-                            start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $NTPD_OPTS
+                        echo "Stopping NTP daemon"
+                        kill -9 $(cat $PIDFILE)
+                        exit 0
+                fi
+
+                # when mgmt vrf is configured, ntp starts in mgmt vrf by default unless user configures otherwise
+                vrfEnabled=$(/usr/local/bin/sonic-cfggen -d -v 'MGMT_VRF_CONFIG["vrf_global"]["mgmtVrfEnabled"]' 2> /dev/null)
+                vrfConfigured=$(/usr/local/bin/sonic-cfggen -d -v 'NTP["global"]["vrf"]' 2> /dev/null)
+                if [ "$vrfEnabled" = "true" ]
+                then
+                        if [ "$vrfConfigured" = "default" ]
+                        then
+                                    echo "Starting NTP server in default-vrf for default set as NTP vrf"
+                                    exec $DAEMON -p $PIDFILE $NTPD_OPTS
+                        else
+                                    echo "Starting NTP server in mgmt-vrf"
+                                    exec ip vrf exec mgmt $DAEMON -p $PIDFILE $NTPD_OPTS
+                        fi
                 else
-                            log_daemon_msg "Starting NTP server in mgmt-vrf" "ntpd"
-                            ip vrf exec mgmt start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $NTPD_OPTS
+                        echo "Starting NTP server in default-vrf"
+                        exec $DAEMON -p $PIDFILE $NTPD_OPTS
                 fi
         else
-                log_daemon_msg "Starting NTP server in default-vrf" "ntpd"
-                start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $NTPD_OPTS
+                echo "Timeout waiting for $LOCKFILE"
+                exit 1
         fi
 ) 9>$LOCKFILE
-

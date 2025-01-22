@@ -2,7 +2,7 @@ module sonic-versions {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-versions";
+    namespace "http://github.com/sonic-net/sonic-versions";
     prefix versions;
 
 
@@ -23,7 +23,7 @@ module sonic-versions {
                 leaf VERSION {
                     type string {
                         length 1..255;
-                        pattern 'version_([1-9]|[1-9]{1}[0-9]{1})_([0-9]{1,2})_([0-9]{1,2})';
+                        pattern 'version_(([1-9]|[1-9]{1}[0-9]{1})_([0-9]{1,2})_([0-9]{1,2})|([1-9]{1}[0-9]{5})_([0-9]{2}))';
                     }
                 }
             }

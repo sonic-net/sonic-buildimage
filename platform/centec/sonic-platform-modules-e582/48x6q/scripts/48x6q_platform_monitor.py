@@ -15,7 +15,7 @@ try:
     import logging
     import struct
     import syslog
-    import swsssdk
+    from swsscommon import swsscommon
     from socket import *
     from select import *
 except ImportError, e:
@@ -96,7 +96,7 @@ class PlatformMonitor:
             aligned_last_byte = format(int(int(str(last_byte), 16) + 1), '02x')
             mac_addr = mac_addr[:-2] + aligned_last_byte
             DBG_PRINT("start connect swss config-db to set device mac-address")
-            swss = swsssdk.SonicV2Connector()
+            swss = swsscommon.SonicV2Connector()
             swss.connect(swss.CONFIG_DB)
             swss.set(swss.CONFIG_DB, "DEVICE_METADATA|localhost", 'mac', mac_addr)
             mac_addr = swss.get(swss.CONFIG_DB, "DEVICE_METADATA|localhost", 'mac')

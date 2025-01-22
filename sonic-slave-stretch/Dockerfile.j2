@@ -1,45 +1,17 @@
+{% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {%- if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
-FROM multiarch/debian-debootstrap:armhf-stretch
+FROM {{ prefix }}multiarch/debian-debootstrap:armhf-stretch
 {%- elif CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
-FROM multiarch/debian-debootstrap:arm64-stretch
+FROM {{ prefix }}multiarch/debian-debootstrap:arm64-stretch
 {%- else -%}
-FROM debian:stretch
+FROM {{ prefix }}debian:stretch
 {%- endif %}
 
 MAINTAINER gulv@microsoft.com
 
 COPY ["no-check-valid-until", "/etc/apt/apt.conf.d/"]
-
-RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ stretch main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian/ stretch main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ stretch/updates main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb-src [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ stretch/updates main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian stretch-backports main" >> /etc/apt/sources.list && \
-        echo "deb [arch=amd64] http://packages.trafficmanager.net/debian/debian stretch main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb [arch=amd64] http://packages.trafficmanager.net/debian/debian stretch-updates main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb [arch=amd64] http://packages.microsoft.com/debian/9/prod stretch main" >> /etc/apt/sources.list
-
-{%- if CONFIGURED_ARCH == "armhf" %}
-RUN echo "deb [arch=armhf] http://deb.debian.org/debian stretch main contrib non-free" > /etc/apt/sources.list && \
-        echo "deb-src [arch=armhf] http://deb.debian.org/debian stretch main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb [arch=armhf] http://deb.debian.org/debian stretch-updates main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb-src [arch=armhf] http://deb.debian.org/debian stretch-updates main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb [arch=armhf] http://security.debian.org stretch/updates main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb-src [arch=armhf] http://security.debian.org stretch/updates main contrib non-free" >> /etc/apt/sources.list && \
-        echo 'deb [arch=armhf] http://ftp.debian.org/debian stretch-backports main' >> /etc/apt/sources.list && \
-        echo "deb [arch=armhf] http://packages.trafficmanager.net/debian/debian stretch main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb [arch=armhf] http://packages.trafficmanager.net/debian/debian stretch-updates main contrib non-free" >> /etc/apt/sources.list
-{%- elif CONFIGURED_ARCH == "arm64" %}
-RUN echo "deb [arch=arm64] http://deb.debian.org/debian stretch main contrib non-free" > /etc/apt/sources.list && \
-        echo "deb-src [arch=arm64] http://deb.debian.org/debian stretch main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb [arch=arm64] http://deb.debian.org/debian stretch-updates main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb-src [arch=arm64] http://deb.debian.org/debian stretch-updates main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb [arch=arm64] http://security.debian.org stretch/updates main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb-src [arch=arm64] http://security.debian.org stretch/updates main contrib non-free" >> /etc/apt/sources.list && \
-        echo 'deb [arch=arm64] http://ftp.debian.org/debian stretch-backports main' >> /etc/apt/sources.list && \
-        echo "deb [arch=arm64] http://packages.trafficmanager.net/debian/debian stretch main contrib non-free" >> /etc/apt/sources.list && \
-        echo "deb [arch=arm64] http://packages.trafficmanager.net/debian/debian stretch-updates main contrib non-free" >> /etc/apt/sources.list
-{%- endif %}
+COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
+COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -51,6 +23,8 @@ RUN apt-get update && apt-get install -y \
         curl \
         wget \
         unzip \
+        gzip \
+        pigz \
         git \
         build-essential \
         libtool \
@@ -272,9 +246,6 @@ RUN apt-get update && apt-get install -y \
         librrd8 \
         librrd-dev \
         rrdtool \
-# For smartmontools 6.6-1
-        automake1.11 \
-        libselinux1-dev \
 # For kdump-tools
         liblzo2-dev \
 # For iptables
@@ -303,7 +274,7 @@ RUN apt-get update && apt-get install -y \
 # For gmock
 RUN apt-get install -y libgmock-dev -t stretch-backports
 
-# Install dependencies for dhcp relay test 
+# Install dependencies for dhcp relay test
 RUN pip3 install parameterized==0.8.1
 RUN pip3 install pyfakefs
 
@@ -314,9 +285,6 @@ RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confmiss"
 RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confdef"
 ## do not modify the current configuration file, the new version is installed with a .dpkg-dist suffix
 RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confold"
-
-# For smartmontools 6.6-1
-RUN apt-get -t stretch-backports install -y debhelper
 
 # For linux build
 RUN apt-get -y build-dep linux
@@ -366,11 +334,12 @@ RUN pip3 install mockredispy==2.9.3
 # For sonic-mgmt-framework
 RUN pip2 install "PyYAML==5.3.1"
 RUN pip3 install "PyYAML==5.3.1"
-RUN pip2 install "lxml==4.6.5"
-RUN pip3 install "lxml==4.6.5"
+RUN pip2 install "lxml==4.9.1"
+RUN pip3 install "lxml==4.9.1"
 
 
 # For sonic-platform-common testing
+RUN pip2 install redis
 RUN pip3 install redis
 
 # For vs image build
@@ -389,7 +358,7 @@ RUN pip2 install Pympler==0.8
 RUN pip3 install pyang==2.4.0
 
 # For mgmt-framework build
-RUN pip2 install mmh3
+RUN pip2 install mmh3==2.5.1
 
 # Install dependencies for isc-dhcp-relay build
 RUN apt-get -y build-dep isc-dhcp
@@ -405,16 +374,16 @@ RUN apt-get install -y libarchive13 librhash0
 RUN apt-get -t stretch-backports install -y libuv1
 # Install cmake/cmake-data 3.13.2-1_bpo9+1
 # latest cmake 3.16.3 break the build libyang 1.0.73
-RUN wget -O cmake-data_3.13.2-1_bpo9+1_all.deb "https://sonicstorage.blob.core.windows.net/packages/cmake/cmake-data_3.13.2-1_bpo9%2B1_all.deb?st=2020-03-27T02%3A22%3A24Z&se=2100-03-26T19%3A00%3A00Z&sp=rl&sv=2018-03-28&sr=b&sig=Xby%2Bm3OZOjPB%2FSlDbHD65yDcPzAgoys%2FA3vK8RB4BzA%3D"
+RUN wget -O cmake-data_3.13.2-1_bpo9+1_all.deb "https://sonicstorage.blob.core.windows.net/public/cmake/cmake-data_3.13.2-1_bpo9%2B1_all.deb"
 RUN dpkg -i cmake-data_3.13.2-1_bpo9+1_all.deb || apt-get install -f
 {% if CONFIGURED_ARCH == "armhf" %}
-RUN wget -O cmake_3.13.2-1_bpo9+1_armhf.deb "https://sonicstorage.blob.core.windows.net/packages/cmake/cmake_3.13.2-1_bpo9%2B1_armhf.deb?st=2020-03-27T02%3A29%3A41Z&se=2100-03-26T19%3A00%3A00Z&sp=rl&sv=2018-03-28&sr=b&sig=sWt7kxrFumn020d2GeutGJ716cuQsFwmAmgU%2BJ0kqnk%3D"
+RUN wget -O cmake_3.13.2-1_bpo9+1_armhf.deb "https://sonicstorage.blob.core.windows.net/public/cmake/cmake_3.13.2-1_bpo9%2B1_armhf.deb"
 RUN dpkg -i cmake_3.13.2-1_bpo9+1_armhf.deb || apt-get install -f
 {% elif CONFIGURED_ARCH == "arm64" %}
-RUN wget -O cmake_3.13.2-1_bpo9+1_arm64.deb "https://sonicstorage.blob.core.windows.net/packages/cmake/cmake_3.13.2-1_bpo9%2B1_arm64.deb?st=2020-03-27T02%3A28%3A38Z&se=2100-03-26T19%3A00%3A00Z&sp=rl&sv=2018-03-28&sr=b&sig=rrHMkLi29aI8yH6s52ILCY8VcEbNFrzYT2DmC5RwOgs%3D"
+RUN wget -O cmake_3.13.2-1_bpo9+1_arm64.deb "https://sonicstorage.blob.core.windows.net/public/cmake/cmake_3.13.2-1_bpo9%2B1_arm64.deb"
 RUN dpkg -i cmake_3.13.2-1_bpo9+1_arm64.deb || apt-get install -f
 {% else %}
-RUN wget -O cmake_3.13.2-1_bpo9+1_amd64.deb "https://sonicstorage.blob.core.windows.net/packages/cmake/cmake_3.13.2-1_bpo9%2B1_amd64.deb?st=2020-03-27T02%3A27%3A21Z&se=2100-03-26T19%3A00%3A00Z&sp=rl&sv=2018-03-28&sr=b&sig=4MvmmDBQuicFEJYakLm7xCNU19yJ8GIP4ankFSnITKY%3D"
+RUN wget -O cmake_3.13.2-1_bpo9+1_amd64.deb "https://sonicstorage.blob.core.windows.net/public/cmake/cmake_3.13.2-1_bpo9%2B1_amd64.deb"
 RUN dpkg -i cmake_3.13.2-1_bpo9+1_amd64.deb || apt-get install -f
 {% endif %}
 RUN cd /usr/src/gtest && cmake . && make -C /usr/src/gtest

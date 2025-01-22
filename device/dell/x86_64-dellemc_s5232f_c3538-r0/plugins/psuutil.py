@@ -4,22 +4,17 @@
 #
 
 
-import os.path
 import logging
 import sys
-
-if sys.version_info[0] < 3:
-    import commands
-else:
-    import subprocess as commands
-
+from sonic_py_common.general import getstatusoutput_noshell_pipe
 
 S5232F_MAX_PSUS = 2
-IPMI_PSU1_DATA = "docker exec -it pmon ipmitool raw 0x04 0x2d 0x31 |  awk '{print substr($0,9,1)}'"
-IPMI_PSU1_DATA_DOCKER = "ipmitool raw 0x04 0x2d 0x31 |  awk '{print substr($0,9,1)}'"
-IPMI_PSU2_DATA = "docker exec -it pmon ipmitool raw 0x04 0x2d 0x32 |  awk '{print substr($0,9,1)}'"
-IPMI_PSU2_DATA_DOCKER = "ipmitool raw 0x04 0x2d 0x32 |  awk '{print substr($0,9,1)}'"
+IPMI_PSU1_DATA = ["docker", "exec", "-it", "pmon", "ipmitool", "raw", "0x04", "0x2d", "0x31"]
+IPMI_PSU1_DATA_DOCKER = ["ipmitool", "raw", "0x04", "0x2d", "0x31"]
+IPMI_PSU2_DATA = ["docker", "exec", "-it", "pmon", "ipmitool", "raw", "0x04", "0x2d", "0x32"]
+IPMI_PSU2_DATA_DOCKER = ["ipmitool", "raw", "0x04", "0x2d", "0x32"]
 PSU_PRESENCE = "PSU{0}_stat"
+awk_cmd = ['awk', '{print substr($0,9,1)}']
 # Use this for older firmware
 # PSU_PRESENCE="PSU{0}_prsnt"
 
@@ -44,23 +39,24 @@ class PsuUtil(PsuBase):
             return False
 
     # Fetch a BMC register
-    def get_pmc_register(self, reg_name):
+    def get_pmc_register(self, index):
 
         status = 1
-        ipmi_cmd_1 = IPMI_PSU1_DATA
-        ipmi_cmd_2 = IPMI_PSU1_DATA
+        ipmi_cmd = ''
         dockerenv = self.isDockerEnv()
         if dockerenv == True:
             if index == 1:
-                status, ipmi_sdr_list = commands.getstatusoutput(IPMI_PSU1_DATA_DOCKER)
+                ipmi_cmd = IPMI_PSU1_DATA_DOCKER
             elif index == 2:
-                status, ipmi_sdr_list = commands.getstatusoutput(IPMI_PSU2_DATA_DOCKER)
+                ipmi_cmd = IPMI_PSU2_DATA_DOCKER
         else:
             if index == 1:
-                status, ipmi_sdr_list = commands.getstatusoutput(IPMI_PSU1_DATA)
+                ipmi_cmd = IPMI_PSU1_DATA
             elif index == 2:
-                status, ipmi_sdr_list = commands.getstatusoutput(IPMI_PSU2_DATA)
-
+                ipmi_cmd = IPMI_PSU2_DATA
+        if ipmi_cmd != '':
+            status, ipmi_sdr_list = getstatusoutput_noshell_pipe(ipmi_cmd, awk_cmd)
+        
         if status:
             logging.error('Failed to execute ipmitool')
             sys.exit(0)
@@ -87,22 +83,25 @@ class PsuUtil(PsuBase):
         """
         # Until psu_status is implemented this is hardcoded temporarily
 
-        psu_status = 'f'
+        psu_status = ''
         ret_status = 1
+        ipmi_cmd = ''
         dockerenv = self.isDockerEnv()
         if dockerenv == True:
             if index == 1:
-                ret_status, ipmi_sdr_list = commands.getstatusoutput(IPMI_PSU1_DATA_DOCKER)
+                ipmi_cmd = IPMI_PSU1_DATA_DOCKER
             elif index == 2:
-                ret_status, ipmi_sdr_list = commands.getstatusoutput(IPMI_PSU2_DATA_DOCKER)
+                ipmi_cmd = IPMI_PSU2_DATA_DOCKER
         else:
             if index == 1:
-                ret_status, ipmi_sdr_list = commands.getstatusoutput(IPMI_PSU1_DATA)
+                ipmi_cmd = IPMI_PSU1_DATA
             elif index == 2:
-                ret_status, ipmi_sdr_list = commands.getstatusoutput(IPMI_PSU2_DATA)
+                ipmi_cmd = IPMI_PSU2_DATA
+        if ipmi_cmd != '':
+            ret_status, ipmi_sdr_list = getstatusoutput_noshell_pipe(ipmi_cmd, awk_cmd)
 
         if ret_status:
-            logging.error('Failed to execute ipmitool : ')
+            logging.error('Failed to execute ipmitool')
             sys.exit(0)
 
         psu_status = ipmi_sdr_list
@@ -117,20 +116,23 @@ class PsuUtil(PsuBase):
         """
         psu_status = '0'
         ret_status = 1
+        ipmi_cmd = ''
         dockerenv = self.isDockerEnv()
         if dockerenv == True:
             if index == 1:
-                ret_status, ipmi_sdr_list = commands.getstatusoutput(IPMI_PSU1_DATA_DOCKER)
+                ipmi_cmd = IPMI_PSU1_DATA_DOCKER
             elif index == 2:
-                ret_status, ipmi_sdr_list = commands.getstatusoutput(IPMI_PSU2_DATA_DOCKER)
+                ipmi_cmd = IPMI_PSU2_DATA_DOCKER
         else:
             if index == 1:
-                ret_status, ipmi_sdr_list = commands.getstatusoutput(IPMI_PSU1_DATA)
+                ipmi_cmd = IPMI_PSU1_DATA
             elif index == 2:
-                ret_status, ipmi_sdr_list = commands.getstatusoutput(IPMI_PSU2_DATA)
+                ipmi_cmd = IPMI_PSU2_DATA
+        if ipmi_cmd != '':
+            ret_status, ipmi_sdr_list = getstatusoutput_noshell_pipe(ipmi_cmd, awk_cmd)
 
         if ret_status:
-            logging.error('Failed to execute ipmitool : ')
+            logging.error('Failed to execute ipmitool')
             sys.exit(0)
 
         psu_status = ipmi_sdr_list

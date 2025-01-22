@@ -4,8 +4,8 @@ dis_i2c_ir3570a()
 {
     local addr=$1
 
-    i2cset -y 0 $addr 0xE5 0x01 &>/dev/null
-    i2cset -y 0 $addr 0x12 0x02 &>/dev/null
+    i2cset -y -a 0 $addr 0xE5 0x01 &>/dev/null
+    i2cset -y -a 0 $addr 0x12 0x02 &>/dev/null
 }
 
 

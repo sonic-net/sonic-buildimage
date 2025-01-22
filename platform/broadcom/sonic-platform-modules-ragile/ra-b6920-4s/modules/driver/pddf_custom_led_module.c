@@ -22,11 +22,12 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/hwmon-sysfs.h>
-#include "../../../../../pddf/i2c/modules/include/pddf_led_defs.h"
-#include "../../../../../pddf/i2c/modules/include/pddf_client_defs.h"
+#include "../../../ra-b6510-32c/modules/driver/pddf_led_defs.h"
+#include "../../../ra-b6510-32c/modules/driver//pddf_client_defs.h"
 #include <linux/err.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 #include <linux/i2c.h>
 
 #define DEBUG 0
@@ -48,11 +49,16 @@ LED_OPS_DATA* dev_list[LED_TYPE_MAX] = {
 int num_psus = 0;
 int num_fantrays = 0;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+extern int board_i2c_cpld_read_new(unsigned short cpld_addr, char *name, u8 reg);
+extern int board_i2c_cpld_write_new(unsigned short cpld_addr, char *name, u8 reg, u8 value);
+#else
 extern int board_i2c_cpld_read(unsigned short cpld_addr, u8 reg);
 extern int board_i2c_cpld_write(unsigned short cpld_addr, u8 reg, u8 value);
+extern void *get_device_table(char *name);
+#endif
 extern ssize_t show_pddf_data(struct device *dev, struct device_attribute *da, char *buf);
 extern ssize_t store_pddf_data(struct device *dev, struct device_attribute *da, const char *buf, size_t count);
-extern void *get_device_table(char *name);
 
 static LED_STATUS find_state_index(const char* state_str) {
     int index;
@@ -151,6 +157,7 @@ static void print_led_data(LED_OPS_DATA *ptr, LED_STATUS state)
     }
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
 int get_sys_val(LED_OPS_DATA *ops_ptr, uint32_t *sys_val)
 {
     int ret;
@@ -187,8 +194,8 @@ int get_sys_val(LED_OPS_DATA *ops_ptr, uint32_t *sys_val)
 
     return ret;
 }
-
-
+#endif
+	
 ssize_t get_status_led(struct device_attribute *da)
 {
     int ret=0;
@@ -206,6 +213,7 @@ ssize_t get_status_led(struct device_attribute *da)
                 temp_data_ptr->device_name, temp_data_ptr->index);
         return (-1);
     }
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)	
     ret = get_sys_val(ops_ptr, &sys_val);
     if (ret < 0) {
         pddf_dbg(LED, KERN_ERR "ERROR %s: Cannot get sys val\n", __func__);
@@ -213,7 +221,11 @@ ssize_t get_status_led(struct device_attribute *da)
     }
     /* keep ret as old value */
     ret = 0;
-
+#else
+    sys_val = board_i2c_cpld_read_new(ops_ptr->swpld_addr, ops_ptr->device_name, ops_ptr->swpld_addr_offset);
+	if (sys_val < 0)
+		return sys_val;
+#endif
     strcpy(temp_data.cur_state.color, "None");
     for (state=0; state<MAX_LED_STATUS; state++) {
         color_val = (sys_val & ~ops_ptr->data[state].bits.mask_bits);
@@ -232,6 +244,7 @@ ssize_t get_status_led(struct device_attribute *da)
     return(ret);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
 int set_sys_val(LED_OPS_DATA *ops_ptr, uint32_t new_val)
 {
     int ret;
@@ -266,6 +279,7 @@ int set_sys_val(LED_OPS_DATA *ops_ptr, uint32_t new_val)
 
     return ret;
 }
+#endif
 
 ssize_t set_status_led(struct device_attribute *da)
 {
@@ -297,12 +311,18 @@ ssize_t set_status_led(struct device_attribute *da)
     }
 
     if(ops_ptr->data[cur_state].swpld_addr != 0x0) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
         ret = get_sys_val(ops_ptr, &sys_val);
         if (ret < 0) {
             pddf_dbg(LED, KERN_ERR "ERROR %s: Cannot get sys val\n", __func__);
             return (-1);
         }
-
+#else
+        sys_val = board_i2c_cpld_read_new(ops_ptr->swpld_addr, ops_ptr->device_name, ops_ptr->swpld_addr_offset);
+        if (sys_val < 0) {
+            return sys_val;
+        }
+#endif
         new_val = (sys_val & ops_ptr->data[cur_state].bits.mask_bits) |
             (ops_ptr->data[cur_state].value << ops_ptr->data[cur_state].bits.pos);
 
@@ -312,16 +332,24 @@ ssize_t set_status_led(struct device_attribute *da)
         return (-1);
     }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
     ret = set_sys_val(ops_ptr, new_val);
     if (ret < 0) {
         pddf_dbg(LED, KERN_ERR "ERROR %s: Cannot set sys val\n", __func__);
         return (-1);
     }
+#else
+        board_i2c_cpld_write_new(ops_ptr->swpld_addr, ops_ptr->device_name, ops_ptr->swpld_addr_offset, new_val);
+#endif
     pddf_dbg(LED, KERN_INFO "Set color:%s; 0x%x:0x%x sys_val:0x%x new_val:0x%x read:0x%x\n",
             LED_STATUS_STR[cur_state],
             ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset,
             sys_val, new_val,
-            ret = board_i2c_cpld_read(ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset));
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
+        ret = board_i2c_cpld_read(ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset));
+#else
+        ret = board_i2c_cpld_read_new(ops_ptr->swpld_addr, ops_ptr->device_name, ops_ptr->swpld_addr_offset));
+#endif
     if (ret < 0)
     {
         pddf_dbg(LED, KERN_ERR "PDDF_LED ERROR %s: Error %d in reading from cpld(0x%x) offset 0x%x\n", __FUNCTION__, ret, ops_ptr->swpld_addr, ops_ptr->swpld_addr_offset);

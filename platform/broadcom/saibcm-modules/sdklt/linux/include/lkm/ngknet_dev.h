@@ -9,7 +9,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -22,13 +22,20 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_DEV_H
 #define NGKNET_DEV_H
 
-#include <bcmcnet/bcmcnet_types.h>
+#include <lkm/ngbde_kapi.h>
+
+/*! Maximum number of devices supported */
+#ifdef NGBDE_NUM_SWDEV_MAX
+#define NUM_PDMA_DEV_MAX        NGBDE_NUM_SWDEV_MAX
+#else
+#define NUM_PDMA_DEV_MAX        16
+#endif
 
 /*! Device name length */
 #define NGKNET_DEV_NAME_MAX     16
@@ -97,6 +104,8 @@
 #define NGKNET_NETIF_F_ADD_TAG      (1U << 1)
 /*! Bind network interface to Rx channel */
 #define NGKNET_NETIF_F_BIND_CHAN    (1U << 2)
+/*! Create network interface with specified ID */
+#define NGKNET_NETIF_F_WITH_ID      (1U << 3)
 
 /*!
  * \brief Network interface description.
@@ -140,6 +149,9 @@ typedef struct ngknet_netif_s {
 
     /*! User data gotten back through callbacks */
     uint8_t user_data[NGKNET_NETIF_USER_DATA];
+
+    /*! Network interface port */
+    uint32_t port;
 } ngknet_netif_t;
 
 /*!
@@ -285,7 +297,27 @@ typedef struct ngknet_filter_s {
 } ngknet_filter_t;
 
 /*!
- * \brief Device configure structure.
+ * \brief Device information.
+ */
+typedef struct ngknet_dev_info_s {
+    /*! Device number (from BDE) */
+    int dev_no;
+
+    /*! Device ID */
+    uint32_t dev_id;
+
+    /*! Device type string */
+    char type_str[NGKNET_DEV_NAME_MAX];
+
+    /*! Device variant string */
+    char var_str[NGKNET_DEV_NAME_MAX];
+
+    /*! Virtual network devices, pointer to ngknet_dev.vdev[] */
+    struct net_device **vdev;
+} ngknet_dev_info_t;
+
+/*!
+ * \brief Device configuration structure.
  */
 typedef struct ngknet_dev_cfg_s {
     /*! Device name */
@@ -294,14 +326,14 @@ typedef struct ngknet_dev_cfg_s {
     /*! Device type string */
     char type_str[NGKNET_DEV_NAME_MAX];
 
-    /*! Variant string */
+    /*! Device variant string */
     char var_str[NGKNET_DEV_NAME_MAX];
 
     /*! Device ID */
     uint32_t dev_id;
 
     /*! Device mode */
-    dev_mode_t mode;
+    int mode;
 
     /*! Number of groups */
     uint32_t nb_grp;
@@ -317,6 +349,11 @@ typedef struct ngknet_dev_cfg_s {
 
     /*! Base network interface */
     ngknet_netif_t base_netif;
+
+    /*! Configuration flags */
+    uint32_t flags;
+    /*! Rx polling for single queue */
+#define NGKNET_RX_POLL_SQ       (1 << 0)
 } ngknet_dev_cfg_t;
 
 /*!
@@ -347,6 +384,9 @@ typedef struct ngknet_chan_cfg_s {
 #define NGKNET_RX_CHAN          0
     /*! Tx channel */
 #define NGKNET_TX_CHAN          1
+
+    /*! Pipe specified for Rx/Tx */
+    int pipe;
 } ngknet_chan_cfg_t;
 
 /*!
@@ -383,8 +423,8 @@ struct ngknet_rcpu_hdr {
     /*! Packet data length */
     uint16_t data_len;
 
-    /*! Reserved must be 0 */
-    uint16_t rsvd0;
+    /*! Header profile */
+    uint16_t hdr_prof;
 
     /*! packet meta data length */
     uint8_t meta_len;
@@ -393,7 +433,7 @@ struct ngknet_rcpu_hdr {
     uint8_t queue_id;
 
     /*! Reserved must be 0 */
-    uint16_t rsvd1;
+    uint16_t rsvd;
 };
 
 /*! RCPU Rx operation */

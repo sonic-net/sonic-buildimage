@@ -11,6 +11,10 @@
         "eStrKey" : "Pattern",
         "eStr": ["Vlan"]
     },
+    "INVALID_LONG_VLAN_NAME": {
+        "desc": "INVALID VLAN_NAME FIELD IN VLAN TABLE.",
+        "eStrKey" : "Pattern"
+    },
     "WRONG_FAMILY_WITH_IP_PREFIX": {
         "desc": "Configure Wrong family with ip-prefix for VLAN_Interface Table",
         "eStrKey" : "Must"
@@ -74,5 +78,45 @@
     "VLAN_INTERFACE_INVALID_PROXY_ARP": {
         "desc": "VLAN_INTERFACE with invalid proxy_arp value",
         "eStrKey": "Pattern"
+    },
+    "VLAN_INTERFACE_INVALID_LOOPBACK_ACTION": {
+        "desc": "INCORRECT LOOPBACK ACTION IN VLAN_INTERFACE TABLE.",
+        "eStrKey" : "Pattern",
+        "eStr": ["drop|forward"]
+    },
+    "VLAN_INTERFACE_ENABLE_IPV6_LINK_LOCAL": {
+        "desc": "Enable the ipv6 link-local."
+    },
+    "VLAN_INTERFACE_INVALID_ENABLE_IPV6_LINK_LOCAL": {
+        "desc": "Enable the ipv6 link-local as true.",
+        "eStr": "Invalid value \"true\" in \"ipv6_use_link_local_only\" element."
+    },
+    "VLAN_MEMBERS_WITHOUT_CREATING_VLAN":{
+        "desc": "Vlan members without Creating Vlan",
+        "eStrKey": "LeafRef"
+    },
+    "VLAN_CREATE_VLAN_WITH_MISSMATCHING_NAME": {
+        "desc": "Create Vlan so that name doesn't match id",
+        "eStr": "The vlanid must correspond to the VLAN name"
+    },
+    "IP_PREFIX_WITHOUT_CREATNG_VLAN": {
+        "desc": "Create IP on not created Vlan",
+        "eStrKey": "LeafRef"
+    },
+    "MIRROR_SESSION_ON_VLAN_MEMBER_PORT": {
+        "desc": "Set mirror dst port to a Vlan member",
+        "eStr": "Port is used as a destination port in a mirror session"
+    },
+    "VLAN_ADD_PORT_CHANNEL_MEMBER": {
+        "desc": "Add port channel member to Vlan",
+        "eStr": "Port is a member of a port channel"
+    },
+    "VLAN_ADD_PORT_THAT_IS_UNTAGGED": {
+        "desc": "Add port that is already untagged",
+        "eStr": "Port can be untagged in at most one VLAN"
+    },
+    "VLAN_ADD_PORT_THAT_IS_ROUTER_INTERFACE": {
+        "desc": "Add to Vlan port that is router interface",
+        "eStr": "Port is a router interface"
     }
 }

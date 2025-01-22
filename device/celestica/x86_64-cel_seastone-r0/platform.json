@@ -1,6 +1,10 @@
 {
     "chassis": {
-        "name": "Celestica-DX010-C32",
+        "name": "DX010",
+        "status_led": {
+            "controllable": true,
+            "colors": ["green", "off"]
+        },
         "components": [
             {
                 "name": "CPLD1"
@@ -15,94 +19,237 @@
                 "name": "CPLD4"
             },
             {
+                "name": "CPLD5"
+            },
+            {
                 "name": "BIOS"
             }
         ],
         "fans": [
             {
-                "name": "FAN-1F"
+                "name": "FAN-1F",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-1R"
+                "name": "FAN-1R",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-2F"
+                "name": "FAN-2F",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-2R"
+                "name": "FAN-2R",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-3F"
+                "name": "FAN-3F",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-3R"
+                "name": "FAN-3R",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-4F"
+                "name": "FAN-4F",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-4R"
+                "name": "FAN-4R",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-5F"
+                "name": "FAN-5F",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             },
             {
-                "name": "FAN-5R"
+                "name": "FAN-5R",
+                "status_led": {
+                    "controllable": false
+                },
+                "speed": {
+                    "controllable": false
+                }
             }
         ],
         "fan_drawers": [
             {
                 "name": "Drawer1",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["red", "green", "amber", "off"]
+                },
                 "fans": [
                     {
-                        "name": "FAN-1F"
+                        "name": "FAN-1F",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "FAN-1R"
+                        "name": "FAN-1R",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             },
             {
                 "name": "Drawer2",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["red", "green", "amber", "off"]
+                },
                 "fans": [
                     {
-                        "name": "FAN-2F"
+                        "name": "FAN-2F",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "FAN-2R"
+                        "name": "FAN-2R",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             },
             {
                 "name": "Drawer3",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["red", "green", "amber", "off"]
+                },
                 "fans": [
                     {
-                        "name": "FAN-3F"
+                        "name": "FAN-3F",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "FAN-3R"
+                        "name": "FAN-3R",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             },
             {
                 "name": "Drawer4",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["red", "green", "amber", "off"]
+                },
                 "fans": [
                     {
-                        "name": "FAN-4F"
+                        "name": "FAN-4F",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "FAN-4R"
+                        "name": "FAN-4R",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             },
             {
                 "name": "Drawer5",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["red", "green", "amber", "off"]
+                },
                 "fans": [
                     {
-                        "name": "FAN-5F"
+                        "name": "FAN-5F",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     },
                     {
-                        "name": "FAN-5R"
+                        "name": "FAN-5R",
+                        "status_led": {
+                            "controllable": false
+                        },
+                        "speed": {
+                            "controllable": false
+                        }
                     }
                 ]
             }
@@ -110,36 +257,66 @@
         "psus": [
             {
                 "name": "PSU-1",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["green", "off"]
+                },
                 "fans": [
                     {
-                        "name": "PSU-1 FAN-1"
+                        "name": "PSU-1 FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
                     }
                 ]
             },
             {
                 "name": "PSU-2",
+                "status_led": {
+                    "controllable": true,
+                    "colors": ["green", "off"]
+                },
                 "fans": [
                     {
-                        "name": "PSU-2 FAN-1"
+                        "name": "PSU-2 FAN-1",
+                        "speed": {
+                            "controllable": false
+                        },
+                        "status_led": {
+                            "available": false
+                        }
                     }
                 ]
             }
         ],
         "thermals": [
             {
-                "name": "Front-panel temp sensor 1"
+                "name": "Front-panel temp sensor 1",
+                "controllable": false,
+                "low-crit-threshold": false
             },
             {
-                "name": "Front-panel temp sensor 2"
+                "name": "Front-panel temp sensor 2",
+                "controllable": false,
+                "low-crit-threshold": false
             },
             {
-                "name": "ASIC temp sensor"
+                "name": "ASIC temp sensor",
+                "controllable": false,
+                "low-crit-threshold": false
             },
             {
-                "name": "Rear-panel temp sensor 1"
+                "name": "Rear-panel temp sensor 1",
+                "controllable": false,
+                "low-crit-threshold": false
             },
             {
-                "name": "Rear-panel temp sensor 2"
+                "name": "Rear-panel temp sensor 2",
+                "controllable": false,
+                "low-crit-threshold": false
             }
         ],
         "sfps": [

@@ -2,9 +2,15 @@
 {% from "common/functions.conf.j2" import get_ipv4_loopback_address, get_ipv6_loopback_address, get_vnet_interfaces %}
 !
 {% block loopback_route %}
-! add static ipv6 /64 loopback route to allow bgpd to advertise the loopback route prefix
 {% if get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") != 'None' %}
+{% if ( ('localhost' in DEVICE_METADATA) and ('bgp_adv_lo_prefix_as_128' in  DEVICE_METADATA['localhost']) and
+        (DEVICE_METADATA['localhost']['bgp_adv_lo_prefix_as_128'] == 'true') ) %}
+! add static ipv6 /128 loopback route to allow bgpd to advertise the loopback route prefix
+ipv6 route {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip_network }}/128 Loopback0
+{% else %}
+! add static ipv6 /64 loopback route to allow bgpd to advertise the loopback route prefix
 ipv6 route {{ get_ipv6_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | replace('/128', '/64') | ip_network }}/64 Loopback0
+{% endif %}
 {% endif %}
 {% endblock loopback_route %}
 !

@@ -69,7 +69,7 @@ class Psu(PsuBase):
 
     def __get_gpio_base(self):
         for r in os.listdir(GPIO_DIR):
-            label_path = os.path.join(GPIO_DIR, r, "label")
+            label_path = os.path.join(GPIO_DIR, r, "device/name")
             if "gpiochip" in r and GPIO_LABEL in self._api_helper.read_txt_file(label_path):
                 return int(r[8:], 10)
         return 216  # Reserve
@@ -197,7 +197,7 @@ class Psu(PsuBase):
         """
 
         set_status_str = {
-            self.STATUS_LED_COLOR_GREEN: '1',
+            self.STATUS_LED_COLOR_GREEN: '255',
             self.STATUS_LED_COLOR_OFF: '0'
         }.get(color, None)
 
@@ -408,7 +408,7 @@ class Psu(PsuBase):
         Returns:
             integer: The 1-based relative physical position in parent device or -1 if cannot determine the position
         """
-        return -1
+        return self.index + 1
 
     def is_replaceable(self):
         """

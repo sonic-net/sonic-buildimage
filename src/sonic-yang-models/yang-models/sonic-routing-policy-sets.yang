@@ -1,5 +1,5 @@
 module sonic-routing-policy-sets {
-    namespace "http://github.com/Azure/sonic-routing-policy-lists";
+    namespace "http://github.com/sonic-net/sonic-routing-policy-lists";
     prefix rpolsets;
     yang-version 1.1;
 
@@ -62,7 +62,7 @@ module sonic-routing-policy-sets {
 
         container PREFIX {
 
-            list PREFIX_LIST { 
+            list PREFIX_LIST {
                 key "name sequence_number ip_prefix masklength_range";
                 //ext:custom-validation ValidateIpPrefixListCfg;
 
@@ -71,7 +71,7 @@ module sonic-routing-policy-sets {
                         path "../../../PREFIX_SET/PREFIX_SET_LIST/name";
                     }
                     description "Prefix name";
-                }   
+                }
 
                 leaf sequence_number {
                     type uint32 {

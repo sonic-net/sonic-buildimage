@@ -4,5 +4,6 @@
     "skip_pcied": true,
     "skip_psud": true,
     "skip_syseepromd": true,
-    "skip_thermalctld": true
+    "skip_thermalctld": true,
+    "skip_ycabled": false
 }

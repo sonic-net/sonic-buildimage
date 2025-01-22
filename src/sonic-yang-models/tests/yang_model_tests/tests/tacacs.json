@@ -4,7 +4,7 @@
     },
     "TACPLUS_INVALID_TIMEOUT_TEST": {
         "desc": "Tacplus global configuration with invalid timeout value in TACPLUS table.",
-	"eStr": "TACACS timeout must be 1..60"
+        "eStr": "TACACS timeout must be 1..60"
     },
     "TACPLUS_NOT_PRESENT_SRC_INTF_TEST": {
         "desc": "Tacplus global configuration with a non existent port in TACPLUS table.",
@@ -15,7 +15,7 @@
     },
     "TACPLUS_SERVER_INVALID_PRIORITY_TEST": {
         "desc": "Tacplus server configuration with invalid priority value in TACPLUS_SERVER table.",
-	"eStr": "TACACS server priority must be 1..64"
+        "eStr": "TACACS server priority must be 1..64"
     },
     "TACPLUS_SERVER_INVALID_TIMEOUT_TEST" : {
         "desc": "Tacplus server configuration with invalid timeout value in TACPLUS_SERVER table.",

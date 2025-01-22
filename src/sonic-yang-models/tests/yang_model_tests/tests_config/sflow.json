@@ -59,6 +59,69 @@
         }
     },
 
+    "SFLOW_TEST_WITH_COLLECTOR_DEFAULT_VRF": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_COLLECTOR": {
+                "SFLOW_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "collector_ip": "2001:1:2::23",
+                        "collector_vrf": "default"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_TEST_WITH_COLLECTOR_MGMT_VRF": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_COLLECTOR": {
+                "SFLOW_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "collector_ip": "10.100.12.13",
+                        "collector_vrf": "mgmt"
+                    }
+                ]
+            }
+        },
+        "sonic-mgmt_vrf:sonic-mgmt_vrf": {
+            "sonic-mgmt_vrf:MGMT_VRF_CONFIG": {
+                "sonic-mgmt_vrf:vrf_global": {
+                    "mgmtVrfEnabled": "true"
+                }
+            }
+        }
+    },
+
+    "SFLOW_TEST_WITH_COLLECTOR_NON_EXISTING_MGMT_VRF": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_COLLECTOR": {
+                "SFLOW_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "collector_ip": "10.100.12.13",
+                        "collector_vrf": "mgmt"
+                    }
+                ]
+            }
+        }
+    },
+
+    "SFLOW_TEST_WITH_COLLECTOR_INVALID_VRF": {
+        "sonic-sflow:sonic-sflow": {
+            "sonic-sflow:SFLOW_COLLECTOR": {
+                "SFLOW_COLLECTOR_LIST": [
+                    {
+                        "name": "collector1",
+                        "collector_ip": "10.100.12.13",
+                        "collector_vrf": "Vrf1"
+                    }
+                ]
+            }
+        }
+    },
+
     "SFLOW_SESSION_TEST": {
 	"sonic-port:sonic-port": {
             "sonic-port:PORT": {
@@ -81,6 +144,7 @@
                     {
                         "port": "Ethernet0",
                         "admin_state": "up",
+                        "sample_direction": "both",
                         "sample_rate": "40000"
                     }
                 ]
@@ -95,6 +159,7 @@
                     {
                         "port": "Ethernet4",
                         "admin_state": "down",
+                        "sample_direction": "tx",
                         "sample_rate": "32768"
                     }
                 ]
@@ -179,6 +244,7 @@
                 "global": {
                     "agent_id": "Ethernet0",
                     "admin_state": "up",
+                    "sample_direction": "both",
                     "polling_interval": "20"
                 }
             }

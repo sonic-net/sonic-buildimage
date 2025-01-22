@@ -1,0 +1,17 @@
+[Unit]
+Description=EVENTD container
+Requires=config-setup.service
+After=config-setup.service
+BindsTo=sonic.target
+After=sonic.target
+StartLimitIntervalSec=1200
+StartLimitBurst=3
+
+[Service]
+ExecStartPre=/usr/bin/{{docker_container_name}}.sh start
+ExecStart=/usr/bin/{{docker_container_name}}.sh wait
+ExecStop=/usr/bin/{{docker_container_name}}.sh stop
+RestartSec=30
+
+[Install]
+WantedBy=sonic.target

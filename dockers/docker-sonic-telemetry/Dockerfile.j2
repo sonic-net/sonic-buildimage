@@ -1,9 +1,8 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bullseye
+FROM docker-sonic-gnmi-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG image_version
-RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -29,7 +28,6 @@ RUN apt-get clean -y      && \
 COPY ["start.sh", "telemetry.sh", "dialout.sh", "/usr/bin/"]
 COPY ["telemetry_vars.j2", "/usr/share/sonic/templates/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
-COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

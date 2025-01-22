@@ -487,17 +487,17 @@ enum MCLAG_DOMAIN_CFG_OP_TYPE {
     MCLAG_CFG_OPER_ADD        = 1,  //Add domain
     MCLAG_CFG_OPER_DEL        = 2,  //Delete domain
     MCLAG_CFG_OPER_UPDATE     = 3,   //update domain
-    MCLAG_CFG_OPER_ATTR_DEL   = 4   //Attribute del 
+    MCLAG_CFG_OPER_ATTR_DEL   = 4   //Attribute del
 };
 
 
 enum MCLAG_DOMAIN_CFG_ATTR_BMAP_FLAGS {
-    MCLAG_CFG_ATTR_NONE                  = 0x0,  
-    MCLAG_CFG_ATTR_SRC_ADDR              = 0x1,  
-    MCLAG_CFG_ATTR_PEER_ADDR             = 0x2,  
-    MCLAG_CFG_ATTR_PEER_LINK             = 0x4,   
-    MCLAG_CFG_ATTR_KEEPALIVE_INTERVAL    = 0x8,   
-    MCLAG_CFG_ATTR_SESSION_TIMEOUT       = 0x10   
+    MCLAG_CFG_ATTR_NONE                  = 0x0,
+    MCLAG_CFG_ATTR_SRC_ADDR              = 0x1,
+    MCLAG_CFG_ATTR_PEER_ADDR             = 0x2,
+    MCLAG_CFG_ATTR_PEER_LINK             = 0x4,
+    MCLAG_CFG_ATTR_KEEPALIVE_INTERVAL    = 0x8,
+    MCLAG_CFG_ATTR_SESSION_TIMEOUT       = 0x10
 };
 
 struct IccpSyncdHDr

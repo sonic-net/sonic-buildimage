@@ -101,7 +101,8 @@ fi
 
 ## Save the docker image in a gz file
 mkdir -p target
-docker save $docker_image_name | gzip -c > target/$docker_image_name.gz
+command -v pigz > /dev/null && GZ_COMPRESS_PROGRAM=pigz || GZ_COMPRESS_PROGRAM=gzip
+docker save $docker_image_name | $GZ_COMPRESS_PROGRAM -c > target/$docker_image_name.gz
 
 if [ -n "$1" ]; then
     ./push_docker.sh target/$docker_image_name.gz $@ $docker_image_tag

@@ -35,9 +35,9 @@ parameters:
 - name: pool
   type: string
   values:
-  - sonicbld
+  - sonicbld-1es
   - sonicbld_8c
-  default: sonicbld
+  default: sonicbld-1es
 
 - name: dbg_image
   type: boolean
@@ -92,6 +92,7 @@ jobs:
         fi
 
         make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-sonic-vs.gz target/sonic-vs.img.gz target/docker-ptf.gz
+        make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/docker-ptf-sai.gz
       else
         if [ ${{ parameters.dbg_image }} == true ]; then
           make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) INSTALL_DEBUG_TOOLS=y target/sonic-${{ parameters.platform }}.bin && \
@@ -100,11 +101,24 @@ jobs:
         if [ ${{ parameters.swi_image }} == true ]; then
           make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) ENABLE_IMAGE_SIGNATURE=y target/sonic-aboot-${{ parameters.platform }}.swi
         fi
-        if [ ${{ parameters.raw_image }} == true ]; then
-          make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/sonic-${{ parameters.platform }}.raw
-        fi
         if [ ${{ parameters.sync_rpc_image }} == true ]; then
           make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y target/docker-syncd-${{ parameters.platform_short }}-rpc.gz
+          # workaround for issue in rules/sairedis.dep,  git ls-files will list un-exist files for cache
+          pushd ./src/sonic-sairedis/SAI
+          git stash
+          popd 
+          if [ ${{ parameters.platform }} == broadcom ]; then
+            make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) ENABLE_SYNCD_RPC=y SAITHRIFT_V2=y target/docker-saiserverv2-brcm.gz
+            pushd ./src/sonic-sairedis/SAI
+            git stash
+            popd 
+          fi
+          if [ ${{ parameters.platform }} == barefoot ]; then
+            make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) SAITHRIFT_V2=y  ENABLE_SYNCD_RPC=y  target/docker-saiserverv2-bfn.gz
+            pushd ./src/sonic-sairedis/SAI
+            git stash
+            popd 
+          fi
         fi
 
         make USERNAME=admin $CACHE_OPTIONS SONIC_BUILD_JOBS=$(nproc) target/sonic-${{ parameters.platform }}.bin

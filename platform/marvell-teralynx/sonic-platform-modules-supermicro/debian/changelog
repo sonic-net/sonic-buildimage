@@ -1,0 +1,5 @@
+sonic-supermicro-platform-modules (0.1) unstable; urgency=low
+
+  * Inital release of SSE-T7132S platform module package.
+
+ -- SuperMicro Team <support@supermicro.com>  Fri, 22 Oct 2021 17:14:00 +0800

@@ -2,7 +2,7 @@ module sonic-exp-fc-map {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-exp-fc-map";
+    namespace "http://github.com/sonic-net/sonic-exp-fc-map";
 
     prefix dtm;
 

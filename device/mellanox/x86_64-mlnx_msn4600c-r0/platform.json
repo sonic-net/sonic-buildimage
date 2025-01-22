@@ -96,6 +96,12 @@
                 "name": "CPU Core 1 Temp"
             },
             {
+                "name": "CPU Core 2 Temp"
+            },
+            {
+                "name": "CPU Core 3 Temp"
+            },
+            {
                 "name": "CPU Pack Temp"
             }
         ],

@@ -7,7 +7,7 @@
 
 try:
     import os
-    import sys
+    import subprocess
     from sonic_platform_base.sfp_base import SfpBase
     from sonic_platform_base.sonic_sfp.sff8472 import sff8472Dom
     from sonic_platform_base.sonic_sfp.sff8472 import sff8472InterfaceId
@@ -95,7 +95,7 @@ class Sfp(SfpBase):
         return retval
 
     def __is_host(self):
-        return os.system("docker > /dev/null 2>&1") == 0
+        return subprocess.call(["docker"]) == 0
 
     def __get_path_to_port_config_file(self):
         host_platform_root_path = '/usr/share/sonic/device'

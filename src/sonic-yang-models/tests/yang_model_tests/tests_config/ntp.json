@@ -4,13 +4,38 @@
             "sonic-ntp:NTP_SERVER": {
                 "NTP_SERVER_LIST": [
                     {
-                        "server_address": "10.11.12.13"
+                        "server_address": "10.11.12.13",
+                        "association_type": "server",
+                        "iburst": "on",
+                        "key": 10,
+                        "admin_state": "enabled",
+                        "trusted": "no"
                     },
                     {
-                        "server_address": "2001:aa:aa::aa"
+                        "server_address": "2001:aa:aa::aa",
+                        "association_type": "server",
+                        "iburst": "off",
+                        "key": 15,
+                        "admin_state": "disabled",
+                        "trusted": "yes"
                     },
                     {
-                        "server_address": "pool.ntp.org"
+                        "server_address": "pool.ntp.org",
+                        "association_type": "pool",
+                        "iburst": "on",
+                        "admin_state": "enabled"
+                    }
+                ]
+            },
+            "sonic-ntp:NTP_KEY": {
+                "NTP_KEYS_LIST": [
+                    {
+                        "id": 10,
+                        "value": "bHVtb3M="
+                    },
+                    {
+                        "id": 15,
+                        "value": "Ym9tYmFyZGE="
                     }
                 ]
             }
@@ -52,32 +77,32 @@
     "NTP_DEFAULT_VRF_1_TEST": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "vrf": "default"
-                } 
+                }
             }
         }
     },
     "NTP_DEFAULT_VRF_TEST": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "vrf": "default"
-                } 
+                }
             }
         }
     },
     "NTP_MGMT_VRF_TEST": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "vrf": "mgmt"
                 }
             }
         },
         "sonic-mgmt_vrf:sonic-mgmt_vrf": {
             "sonic-mgmt_vrf:MGMT_VRF_CONFIG": {
-                "sonic-mgmt_vrf:vrf_global": { 
+                "sonic-mgmt_vrf:vrf_global": {
                     "mgmtVrfEnabled": "true"
                 }
             }
@@ -86,14 +111,14 @@
     "NTP_MGMT_VRF_INVALID_MGMT_VRF_STATE_TEST": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "vrf": "mgmt"
                 }
             }
         },
         "sonic-mgmt_vrf:sonic-mgmt_vrf": {
             "sonic-mgmt_vrf:MGMT_VRF_CONFIG": {
-                "sonic-mgmt_vrf:vrf_global": { 
+                "sonic-mgmt_vrf:vrf_global": {
                     "mgmtVrfEnabled": "false"
                 }
             }
@@ -102,7 +127,7 @@
     "NTP_MGMT_VRF_WITH_NOEXIST_MGMT_VRF_TEST": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "vrf": "mgmt"
                 }
             }
@@ -111,7 +136,7 @@
     "NTP_VRF_INVALID_NAME": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "vrf": "Vrf_1"
                 }
             }
@@ -121,7 +146,7 @@
     "NTP_SRC_INTF": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "src_intf": [
                         "Ethernet0",
                         "Loopback100",
@@ -178,7 +203,7 @@
     "NTP_SRC_INTF_WITH_NONEXIST_ETH_PORT": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "src_intf": [
 		        "Ethernet0"
 		    ]
@@ -189,7 +214,7 @@
     "NTP_SRC_INTF_WITH_NONEXIST_LOOPBACK_INTF": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "src_intf": [
 			"Loopback100"
 		    ]
@@ -200,7 +225,7 @@
     "NTP_SRC_INTF_WITH_NONEXIST_PORTCHANNEL_INTF": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "src_intf": [
 			"PortChannel10"
 		    ]
@@ -221,7 +246,7 @@
     "NTP_SRC_INTF_WITH_NONEXIST_MGMT_INTF": {
         "sonic-ntp:sonic-ntp": {
             "sonic-ntp:NTP": {
-                "sonic-ntp:global": { 
+                "sonic-ntp:global": {
                     "src_intf": [
 			"eth1"
 		    ]
@@ -233,6 +258,235 @@
                 "MGMT_PORT_LIST": [
                     {
                         "name": "eth0"
+                    }
+                ]
+            }
+        }
+    },
+    "NTP_GLOB_VALID1": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP": {
+                "sonic-ntp:global": {
+                    "authentication": "enabled",
+                    "dhcp": "enabled",
+                    "server_role": "enabled",
+                    "admin_state": "enabled"
+                }
+            }
+        }
+    },
+    "NTP_GLOB_VALID2": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP": {
+                "sonic-ntp:global": {
+                    "authentication": "disabled",
+                    "dhcp": "disabled",
+                    "server_role": "disabled",
+                    "admin_state": "disabled"
+                }
+            }
+        }
+    },
+    "NTP_AUTH_INVALID1": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP": {
+                "sonic-ntp:global": {
+                    "authentication": ""
+                }
+            }
+        }
+    },
+    "NTP_AUTH_INVALID2": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP": {
+                "sonic-ntp:global": {
+                    "authentication": "blahblah"
+                }
+            }
+        }
+    },
+    "NTP_DHCP_INVALID1": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP": {
+                "sonic-ntp:global": {
+                    "dhcp": ""
+                }
+            }
+        }
+    },
+    "NTP_DHCP_INVALID2": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP": {
+                "sonic-ntp:global": {
+                    "dhcp": "abracadabra"
+                }
+            }
+        }
+    },
+    "NTP_SERVER_ROLE_INVALID1": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP": {
+                "sonic-ntp:global": {
+                    "server_role": ""
+                }
+            }
+        }
+    },
+    "NTP_SERVER_ROLE_INVALID2": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP": {
+                "sonic-ntp:global": {
+                    "server_role": "olololo"
+                }
+            }
+        }
+    },
+    "NTP_STATE_INVALID1": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP": {
+                "sonic-ntp:global": {
+                    "admin_state": ""
+                }
+            }
+        }
+    },
+    "NTP_STATE_INVALID2": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP": {
+                "sonic-ntp:global": {
+                    "admin_state": "azazaza"
+                }
+            }
+        }
+    },
+    "NTP_SERVER_ASSOCIATION_INVALID": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP_SERVER": {
+                "NTP_SERVER_LIST": [
+                    {
+                        "server_address": "2001:aa:aa:aa",
+                        "association_type": "puul"
+                    }
+                ]
+            }
+        }
+    },
+    "NTP_SERVER_IBURST_INVALID": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP_SERVER": {
+                "NTP_SERVER_LIST": [
+                    {
+                        "server_address": "2001:aa:aa:aa",
+                        "iburst": "of"
+                    }
+                ]
+            }
+        }
+    },
+    "NTP_SERVER_KEY_INVALID": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP_SERVER": {
+                "NTP_SERVER_LIST": [
+                    {
+                        "server_address": "2001:aa:aa:aa",
+                        "key": 0
+                    }
+                ]
+            }
+        }
+    },
+    "NTP_SERVER_STATE_INVALID": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP_SERVER": {
+                "NTP_SERVER_LIST": [
+                    {
+                        "server_address": "2001:aa:aa:aa",
+                        "admin_state": "enable"
+                    }
+                ]
+            }
+        }
+    },
+    "NTP_SERVER_TRUSTED_INVALID": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP_SERVER": {
+                "NTP_SERVER_LIST": [
+                    {
+                        "server_address": "2001:aa:aa:aa",
+                        "trusted": "not"
+                    }
+                ]
+            }
+        }
+    },
+    "NTP_KEY_VALID": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP_KEY": {
+                "NTP_KEYS_LIST": [
+                    {
+                        "id": 20,
+                        "type": "md5",
+                        "value": "anNkZjg4MzIwZnNkMkBANDQ1",
+                        "trusted": "no"
+                    },
+                    {
+                        "id": 30,
+                        "type": "sha1",
+                        "value": "YWFiYmNjZGRlZWZm",
+                        "trusted": "yes"
+                    },
+                    {
+                        "id": 42,
+                        "type": "md5",
+                        "value": "dGhlYW5zd2Vy",
+                        "trusted": "yes"
+                    }
+                ]
+            }
+        }
+    },
+    "NTP_KEY_ID_INVALID": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP_KEY": {
+                "NTP_KEYS_LIST": [
+                    {
+                        "id": 100000
+                    }
+                ]
+            }
+        }
+    },
+    "NTP_KEY_TRUSTED_INVALID": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP_KEY": {
+                "NTP_KEYS_LIST": [
+                    {
+                        "id": 20,
+                        "trusted": "nope"
+                    }
+                ]
+            }
+        }
+    },
+    "NTP_KEY_TYPE_INVALID": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP_KEY": {
+                "NTP_KEYS_LIST": [
+                    {
+                        "id": 20,
+                        "type": "md6"
+                    }
+                ]
+            }
+        }
+    },
+    "NTP_KEY_VALUE_INVALID": {
+        "sonic-ntp:sonic-ntp": {
+            "sonic-ntp:NTP_KEY": {
+                "NTP_KEYS_LIST": [
+                    {
+                        "id": 20,
+                        "value": ""
                     }
                 ]
             }

@@ -11,15 +11,24 @@
 # - psu_serial_num
 # - psu_fan_dir
 # - psu_v_out
+# - psu_v_out_min
+# - psu_v_out_max
 # - psu_i_out
 # - psu_p_out
+# - psu_p_out_max
 # - psu_fan1_speed_rpm
+# - psu_temp1_input
+# - psu_temp1_high_threshold
+# - psu_v_in
+# - psu_i_in
+# - psu_p_in
 #############################################################################
 
 
 try:
     from sonic_platform_base.psu_base import PsuBase
     from sonic_platform.fan import Fan
+    from sonic_platform.thermal import Thermal
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -44,6 +53,11 @@ class PddfPsu(PsuBase):
         for psu_fan_idx in range(self.num_psu_fans):
             psu_fan = Fan(0, psu_fan_idx, pddf_data, pddf_plugin_data, True, self.psu_index)
             self._fan_list.append(psu_fan)
+
+        self.num_psu_thermals = 1 # Fixing it 1 for now
+        for psu_thermal_idx in range(self.num_psu_thermals):
+            psu_thermal = Thermal(psu_thermal_idx, pddf_data, pddf_plugin_data, True, self.psu_index)
+            self._thermal_list.append(psu_thermal)
 
     def get_num_fans(self):
         """
@@ -123,6 +137,10 @@ class PddfPsu(PsuBase):
 
         serial = output['status']
 
+        # strip_non_ascii
+        stripped = (c for c in serial if 0 < ord(c) < 127)
+        serial = ''.join(stripped)
+
         return serial.rstrip('\n')
 
     def get_status(self):
@@ -161,6 +179,10 @@ class PddfPsu(PsuBase):
             return None
 
         mfr = output['status']
+
+        # strip_non_ascii
+        stripped = (c for c in mfr if 0 < ord(c) < 127)
+        mfr = ''.join(stripped)
 
         return mfr.rstrip('\n')
 
@@ -228,23 +250,17 @@ class PddfPsu(PsuBase):
         return self.get_status()
 
     def set_status_led(self, color):
-        index = str(self.psu_index-1)
+        if 'psu_led_color' in self.plugin_data['PSU']:
+            led_color_map = self.plugin_data['PSU']['psu_led_color']['colmap']
+            if color in led_color_map:
+                # change the color properly
+                new_color = led_color_map[color]
+                color = new_color
         led_device_name = "PSU{}".format(self.psu_index) + "_LED"
-
-        result, msg = self.pddf_obj.is_supported_sysled_state(led_device_name, color)
-        if result == False:
-            print(msg)
-            return (False)
-
-        device_name = self.pddf_obj.data[led_device_name]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', index, self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('color', color, self.pddf_obj.get_led_cur_state_path())
-        self.pddf_obj.create_attr('dev_ops', 'set_status',  self.pddf_obj.get_led_path())
-        return (True)
+        result, msg = self.pddf_obj.set_system_led_color(led_device_name, color)
+        return (result)
 
     def get_status_led(self):
-        index = str(self.psu_index-1)
         psu_led_device = "PSU{}_LED".format(self.psu_index)
         if psu_led_device not in self.pddf_obj.data.keys():
             # Implement a generic status_led color scheme
@@ -253,11 +269,7 @@ class PddfPsu(PsuBase):
             else:
                 return self.STATUS_LED_COLOR_OFF
 
-        device_name = self.pddf_obj.data[psu_led_device]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', index, self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('dev_ops', 'get_status',  self.pddf_obj.get_led_path())
-        color = self.pddf_obj.get_led_color()
+        result, color = self.pddf_obj.get_system_led_color(psu_led_device)
         return (color)
 
     def get_temperature(self):
@@ -312,6 +324,100 @@ class PddfPsu(PsuBase):
 
         # current in mA
         return float(i_in)/1000
+
+    def get_input_power(self):
+        """
+        Retrieves current energy supplied to the PSU
+        Returns:
+            A float number, the power in watts, e.g. 302.6
+        """
+        device = "PSU{}".format(self.psu_index)
+        output = self.pddf_obj.get_attr_name_output(device, "psu_p_in")
+        if not output:
+            return 0.0
+
+        p_in = output['status']
+
+        # power is returned in micro watts
+        return float(p_in)/1000000
+
+    def get_temperature_high_threshold(self):
+        """
+        Retrieves the high threshold temperature of PSU
+        Returns:
+            A float number, the high threshold temperature of PSU in Celsius
+            up to nearest thousandth of one degree Celsius, e.g. 30.125
+        """
+        device = "PSU{}".format(self.psu_index)
+        output = self.pddf_obj.get_attr_name_output(device, "psu_temp1_high_threshold")
+        if not output:
+            return 0.0
+
+        temp_high_thresh = output['status']
+        return float(temp_high_thresh)/1000
+
+    def get_voltage_high_threshold(self):
+        """
+        Retrieves the high threshold PSU voltage output
+        Returns:
+            A float number, the high threshold output voltage in volts,
+            e.g. 12.1
+        """
+        device = "PSU{}".format(self.psu_index)
+        output = self.pddf_obj.get_attr_name_output(device, "psu_v_out_max")
+        if not output:
+            return 0.0
+
+        v_out_max = output['status']
+        return float(v_out_max)/1000
+
+    def get_voltage_low_threshold(self):
+        """
+        Retrieves the low threshold PSU voltage output
+        Returns:
+            A float number, the low threshold output voltage in volts,
+            e.g. 12.1
+        """
+        device = "PSU{}".format(self.psu_index)
+        output = self.pddf_obj.get_attr_name_output(device, "psu_v_out_min")
+        if not output:
+            return 0.0
+
+        v_out_min = output['status']
+        return float(v_out_min)/1000
+
+    def get_maximum_supplied_power(self):
+        """
+        Retrieves the maximum supplied power by PSU
+        Returns:
+            A float number, the maximum power output in Watts.
+            e.g. 1200.1
+        """
+        device = "PSU{}".format(self.psu_index)
+        output = self.pddf_obj.get_attr_name_output(device, "psu_p_out_max")
+        if not output:
+            return 0.0
+
+        p_out_max = output['status']
+        # max power is in milliwatts
+        return float(p_out_max)/1000
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.psu_index
+
+    def is_replaceable(self):
+        """
+        Indicate whether PSU is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return True
 
     def dump_sysfs(self):
         return self.pddf_obj.cli_dump_dsysfs('psu')

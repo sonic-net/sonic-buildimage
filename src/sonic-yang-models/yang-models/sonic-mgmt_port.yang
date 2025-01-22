@@ -2,7 +2,7 @@ module sonic-mgmt_port {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-mgmt_port";
+    namespace "http://github.com/sonic-net/sonic-mgmt_port";
     prefix mgmtprt;
 
     import sonic-types {
@@ -33,7 +33,7 @@ module sonic-mgmt_port {
 
                 leaf speed {
                     type uint16 {
-                        range "10|100|1000"; 
+                        range "10|100|1000";
                     }
 
                     description
@@ -56,7 +56,7 @@ module sonic-mgmt_port {
 
                 leaf mtu{
                     type uint16 {
-                        range "1500..9216"; 
+                        range "1500..9216";
                     }
                     default 1500;
                 }

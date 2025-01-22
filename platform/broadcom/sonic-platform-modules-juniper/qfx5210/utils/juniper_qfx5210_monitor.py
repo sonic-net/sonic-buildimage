@@ -34,13 +34,13 @@
 
 try:
     import os
-    import commands
     import subprocess
     import logging
     import logging.config
     import logging.handlers
     import time
     import glob
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
@@ -305,10 +305,12 @@ class QFX5210_ThermalUtil(object):
             firethr = FireThresholdSecsRemaining - 20
             if firethr == 0:
                 logging.critical('CRITICAL: Fire Threshold reached: System is going to shutdown now')
-                os.system("echo 'CRITICAL: Fire Threshold reached: System is going to shutdown now' > /dev/console")
+                with open("/dev/console", 'w') as f:
+                    f.write('CRITICAL: Fire Threshold reached: System is going to shutdown now\n')
             else:
                 logging.critical('CRITICAL: Fire Threshold reached: System is going to shutdown in %s seconds', firethr)
-                os.system("echo 'CRITICAL: Fire Threshold reached: System is going to shutdown in %s seconds' > /dev/console" % firethr)
+                with open("/dev/console", 'w') as f:
+                    f.write('CRITICAL: Fire Threshold reached: System is going to shutdown in %s seconds\n' % firethr)
 
             FireThresholdSecsRemaining = FireThresholdSecsRemaining - 20
             logging.critical('CRITICAL: Value of FireThresholdSecsRemaining %s seconds', FireThresholdSecsRemaining)
@@ -316,8 +318,8 @@ class QFX5210_ThermalUtil(object):
             if (FireThresholdSecsRemaining == 0):
                 isFireThresholdReached == False
                 time.sleep(20)
-                cmd = "poweroff"
-                os.system(cmd)
+                cmd = ["poweroff"]
+                subprocess.call(cmd)
 
         for x in range(self.SENSOR_CORETEMP_NUM_ON_MAIN_BOARD):
             if x < self.SENSOR_NUM_ON_MAIN_BOARD:
@@ -330,8 +332,8 @@ class QFX5210_ThermalUtil(object):
                 logging.debug('Reading ASIC Temp value using bcmcmd')
                 proc = subprocess.Popen("bcmcmd \"show temp\" | grep \"maximum peak temperature\" | awk '{ print $5 }' > /var/log/asic_value 2>&1 & ",shell=True)
                 time.sleep(2)
-                cmd = "kill -9 %s"%(proc.pid)
-                commands.getstatusoutput(cmd)
+                cmd = ["kill", "-9", proc.pid]
+                getstatusoutput_noshell(cmd)
                 
                 if os.stat("/var/log/asic_value").st_size == 0:
                     value = PrevASICValue
@@ -346,7 +348,7 @@ class QFX5210_ThermalUtil(object):
                     logging.debug('Reading from ASIC Temp file: %s', value)
                     logging.debug('Reading from Prev ASIC Temp Value: %s', PrevASICValue)
                 
-                os.system('rm /var/log/asic_value')
+                subprocess.call(['rm', '/var/log/asic_value'])
 
             # 60% Duty Cycle for AFO and 70% Duty Cycle for AFI
             if value > temp_policy[x][0][1] and value <= temp_policy[x][0][2]:
@@ -389,7 +391,9 @@ class QFX5210_ThermalUtil(object):
             isFireThresholdReached = True
             if (isFireThresholdPrint == True):
                 logging.critical('CRITICAL: Fire Threshold reached: System is going to shutdown in 120 seconds')
-                os.system("echo 'CRITICAL: Fire Threshold reached: System is going to shutdown in 120 seconds' > /dev/console") 
+                with open("/dev/console", 'w') as f:
+                    f.write('CRITICAL: Fire Threshold reached: System is going to shutdown in 120 seconds')
+
                 isFireThresholdPrint = False
 
             logging.debug('Temp Sensor is set to FIRE SHUTDOWN Flag')
@@ -403,7 +407,8 @@ class QFX5210_ThermalUtil(object):
             logging.debug('Temp Sensor is set to Red Alarm Flag')
             if (isFireThresholdReached == True):
                 logging.critical('CRITICAL: System Stabilized, not shutting down')
-                os.system("echo 'CRITICAL: System Stabilized, not shutting down' > /dev/console")
+                with open("/dev/console", 'w') as f:
+                    f.write('CRITICAL: System Stabilized, not shutting down\n')
                 FireThresholdSecsRemaining = 120
                 isFireThresholdReached = False
 
@@ -414,7 +419,8 @@ class QFX5210_ThermalUtil(object):
             logging.debug('Temp Sensor is set to Yellow Alarm Flag')
             if (isFireThresholdReached == True):
                 logging.critical('CRITICAL: System Stabilized, not shutting down')
-                os.system("echo 'CRITICAL: System Stabilized, not shutting down' > /dev/console")
+                with open("/dev/console", 'w') as f:
+                    f.write('CRITICAL: System Stabilized, not shutting down\n')
                 FireThresholdSecsRemaining = 120
                 isFireThresholdReached = False
    
@@ -442,7 +448,8 @@ class QFX5210_ThermalUtil(object):
 
             if (isFireThresholdReached == True):
                 logging.critical('CRITICAL: System Stabilized, not shutting down')
-                os.system("echo 'CRITICAL: System Stabilized, not shutting down' > /dev/console")
+                with open("/dev/console", 'w') as f:
+                    f.write('CRITICAL: System Stabilized, not shutting down')
                 FireThresholdSecsRemaining = 120
                 isFireThresholdReached = False
             logging.debug('Temp Sensor is set to 80% Prev Duty Cycle Flag')
@@ -457,7 +464,8 @@ class QFX5210_ThermalUtil(object):
 
             if (isFireThresholdReached == True):
                 logging.critical('CRITICAL: System Stabilized, not shutting down')
-                os.system("echo 'CRITICAL: System Stabilized, not shutting down' > /dev/console")
+                with open("/dev/console", 'w') as f:
+                    f.write('CRITICAL: System Stabilized, not shutting down\n')
                 FireThresholdSecsRemaining = 120
                 isFireThresholdReached = False
 
@@ -483,7 +491,8 @@ class QFX5210_ThermalUtil(object):
 
             if (isFireThresholdReached == True):
                 logging.critical('CRITICAL: System Stabilized, not shutting down')
-                os.system("echo 'CRITICAL: System Stabilized, not shutting down' > /dev/console")
+                with open("/dev/console", 'w') as f:
+                    f.write('CRITICAL: System Stabilized, not shutting down\n')
                 FireThresholdSecsRemaining = 120
                 isFireThresholdReached = False
 
@@ -504,7 +513,8 @@ class QFX5210_ThermalUtil(object):
 
             if (isFireThresholdReached == True):
                 logging.critical('CRITICAL: System Stabilized, not shutting down')
-                os.system("echo 'CRITICAL: System Stabilized, not shutting down' > /dev/console")
+                with open("/dev/console", 'w') as f:
+                    f.write('CRITICAL: System Stabilized, not shutting down\n')
                 FireThresholdSecsRemaining = 120
                 isFireThresholdReached = False
             logging.debug('Temp Sensor is set to 60% Duty Cycle Flag')

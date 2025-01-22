@@ -21,6 +21,104 @@
         "OP": "SET"
     },
     {
+        "PORT_TABLE:Ethernet108": {
+            "speed": "100000",
+            "description": "fortyGigE0/108"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet100": {
+            "speed": "100000",
+            "description": "fortyGigE0/100"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet104": {
+            "speed": "100000",
+            "description": "fortyGigE0/104"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet68": {
+            "speed": "100000",
+            "description": "fortyGigE0/68"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet96": {
+            "speed": "100000",
+            "description": "fortyGigE0/96"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet124": {
+            "speed": "100000",
+            "description": "fortyGigE0/124"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet92": {
+            "speed": "100000",
+            "description": "fortyGigE0/92"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet120": {
+            "speed": "100000",
+            "description": "fortyGigE0/120"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet52": {
+            "speed": "100000",
+            "description": "fortyGigE0/52"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet56": {
+            "speed": "100000",
+            "description": "fortyGigE0/56"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet76": {
+            "speed": "100000",
+            "description": "fortyGigE0/76"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet72": {
+            "speed": "100000",
+            "description": "fortyGigE0/72"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet64": {
+            "speed": "100000",
+            "description": "fortyGigE0/64"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet32": {
+            "speed": "100000",
+            "description": "fortyGigE0/32"
+        },
+        "OP": "SET"
+    },
+    {
         "PORT_TABLE:Ethernet16": {
             "speed": "1000",
             "description": "fortyGigE0/16"
@@ -28,9 +126,100 @@
         "OP": "SET"
     },
     {
+        "PORT_TABLE:Ethernet36": {
+            "speed": "100000",
+            "description": "fortyGigE0/36"
+        },
+        "OP": "SET"
+    },
+    {
         "PORT_TABLE:Ethernet12": {
             "speed": "100000",
             "description": "Interface description"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet88": {
+            "speed": "100000",
+            "description": "fortyGigE0/88"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet116": {
+            "speed": "100000",
+            "description": "fortyGigE0/116"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet80": {
+            "speed": "100000",
+            "description": "fortyGigE0/80"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet112": {
+            "speed": "100000",
+            "description": "fortyGigE0/112"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet84": {
+            "speed": "100000",
+            "description": "fortyGigE0/84"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet48": {
+            "speed": "100000",
+            "description": "fortyGigE0/48"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet44": {
+            "speed": "100000",
+            "description": "fortyGigE0/44"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet40": {
+            "speed": "100000",
+            "description": "fortyGigE0/40"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet28": {
+            "speed": "100000",
+            "description": "fortyGigE0/28"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet60": {
+            "speed": "100000",
+            "description": "fortyGigE0/60"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet20": {
+            "speed": "100000",
+            "description": "fortyGigE0/20"
+        },
+        "OP": "SET"
+    },
+    {
+        "PORT_TABLE:Ethernet24": {
+            "speed": "100000",
+            "description": "fortyGigE0/24"
         },
         "OP": "SET"
     }

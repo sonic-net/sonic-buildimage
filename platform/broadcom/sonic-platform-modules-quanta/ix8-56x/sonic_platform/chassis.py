@@ -72,6 +72,13 @@ class Chassis(ChassisBase):
         for index in range(1, self.__num_of_ports + 1):
             self.__xcvr_presence[index] = self._sfp_list[index-1].get_presence()
 
+        # Initialize components
+        from sonic_platform.component import ComponentBIOS, ComponentBMC, ComponentCPLD, ComponentPCIE
+        self._component_list.append(ComponentBIOS())
+        self._component_list.append(ComponentBMC())
+        self._component_list.extend(ComponentCPLD.get_component_list())
+        self._component_list.append(ComponentPCIE())
+
 ##############################################
 # Device methods
 ##############################################
@@ -79,7 +86,7 @@ class Chassis(ChassisBase):
     def get_sfp(self, index):
         """
         Retrieves sfp represented by (1-based) index <index>
-        For Quanta IX8 the index in sfputil.py starts from 1, so override
+        For Quanta the index in sfputil.py starts from 1, so override
 
         Args:
             index: An integer, the index (1-based) of the sfp to retrieve.
@@ -179,6 +186,18 @@ class Chassis(ChassisBase):
         """
         return self._eeprom.system_eeprom_info()
 
+    def get_reboot_cause(self):
+        """
+        Retrieves the cause of the previous reboot
+        Returns:
+            A tuple (string, string) where the first element is a string
+            containing the cause of the previous reboot. This string must be
+            one of the predefined strings in this class. If the first string
+            is "REBOOT_CAUSE_HARDWARE_OTHER", the second string can be used
+            to pass a description of the reboot cause.
+        """
+        return (ChassisBase.REBOOT_CAUSE_HARDWARE_OTHER, "Invalid Reason")
+
     ##############################################
     # Other methods
     ##############################################
@@ -215,10 +234,10 @@ class Chassis(ChassisBase):
                 cur_xcvr_presence = self._sfp_list[index-1].get_presence()
                 if cur_xcvr_presence != self.__xcvr_presence[index]:
                     if cur_xcvr_presence is True:
-                        xcvr_change_event_dict[str(index)] = '1'
+                        xcvr_change_event_dict[index] = '1'
                         self.__xcvr_presence[index] = True
                     elif cur_xcvr_presence is False:
-                        xcvr_change_event_dict[str(index)] = '0'
+                        xcvr_change_event_dict[index] = '0'
                         self.__xcvr_presence[index] = False
                     event = True
 

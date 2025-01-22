@@ -3,3 +3,5 @@
 0006-From-Jiri-Cervenka-snmpd-Fixed-agentx-crashing-and-or-freezing-on-timeout.patch
 0007-Linux-VRF-5.7.3-Support.patch
 0008-Enable-macro-DEB_BUILD_ARCH_OS-in-order-to-build-ipv.patch
+cross-compile-changes.patch
+0022-etherlike-mib-memleak.patch

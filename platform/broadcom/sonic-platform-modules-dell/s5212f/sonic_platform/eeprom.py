@@ -32,34 +32,34 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         self.eeprom_tlv_dict = dict()
         try:
             self.eeprom_data = self.read_eeprom()
-        except:
+        except Exception:
             self.eeprom_data = "N/A"
             raise RuntimeError("Eeprom is not Programmed")
-        else:
-            eeprom = self.eeprom_data
 
-            if not self.is_valid_tlvinfo_header(eeprom):
-                return
+        eeprom = self.eeprom_data
 
-            total_length = eeprom[9] << 8 | eeprom[10]
-            tlv_index = self._TLV_INFO_HDR_LEN
-            tlv_end = self._TLV_INFO_HDR_LEN + total_length
+        if not self.is_valid_tlvinfo_header(eeprom):
+            return
 
-            while (tlv_index + 2) < len(eeprom) and tlv_index < tlv_end:
-                if not self.is_valid_tlv(eeprom[tlv_index:]):
-                    break
+        total_length = (eeprom[9] << 8) | eeprom[10]
+        tlv_index = self._TLV_INFO_HDR_LEN
+        tlv_end = self._TLV_INFO_HDR_LEN + total_length
 
-                tlv = eeprom[tlv_index:tlv_index + 2
-                             + eeprom[tlv_index + 1]]
-                code = "0x%02X" % tlv[0]
+        while (tlv_index + 2) < len(eeprom) and tlv_index < tlv_end:
+            if not self.is_valid_tlv(eeprom[tlv_index:]):
+                break
 
-                name, value = self.decoder(None, tlv)
+            tlv = eeprom[tlv_index:tlv_index + 2
+                    + eeprom[tlv_index + 1]]
+            code = "0x%02X" % tlv[0]
 
-                self.eeprom_tlv_dict[code] = value
-                if eeprom[tlv_index] == self._TLV_CODE_CRC_32:
-                    break
+            name, value = self.decoder(None, tlv)
 
-                tlv_index += eeprom[tlv_index+1] + 2
+            self.eeprom_tlv_dict[code] = value
+            if eeprom[tlv_index] == self._TLV_CODE_CRC_32:
+                break
+
+            tlv_index += eeprom[tlv_index+1] + 2
 
     def serial_number_str(self):
         """
@@ -80,7 +80,7 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         if not is_valid or t[1] != 6:
             return super(TlvInfoDecoder, self).switchaddrstr(e)
 
-        return ":".join([binascii.b2a_hex(T) for T in t[2]])
+        return ":".join(["{:02x}".format(T) for T in t[2]]).upper()
 
     def modelstr(self):
         """
@@ -133,7 +133,3 @@ class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
         found in the system EEPROM.
         """
         return self.eeprom_tlv_dict
-
-
-
-

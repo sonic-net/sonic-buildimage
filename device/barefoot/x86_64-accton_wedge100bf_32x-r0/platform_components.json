@@ -2,6 +2,8 @@
     "chassis": {
         "Wedge100BF-32X-O-AC-F-BF": {
             "component": {
+                "BIOS": { },
+                "BMC": { }
             }
         }
     }

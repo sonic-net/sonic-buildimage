@@ -1,9 +1,8 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-bullseye
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 ARG image_version
-RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 # Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -14,6 +13,12 @@ ENV IMAGE_VERSION=$image_version
 # Update apt's cache of available packages
 RUN apt-get update
 
+RUN apt-get install -y libjsoncpp-dev \
+                       python3-dev    \
+                       build-essential
+
+RUN pip3 install psutil
+
 {% if docker_dhcp_relay_debs.strip() -%}
 # Copy built Debian packages
 {{ copy_files("debs/", docker_dhcp_relay_debs.split(' '), "/debs/") }}
@@ -22,7 +27,17 @@ RUN apt-get update
 {{ install_debian_packages(docker_dhcp_relay_debs.split(' ')) }}
 {%- endif %}
 
+{% if docker_dhcp_relay_whls.strip() %}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_dhcp_relay_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_dhcp_relay_whls.split(' ')) }}
+{% endif %}
+
 # Clean up
+RUN apt-get remove -y build-essential     \
+                python3-dev
 RUN apt-get clean -y         && \
     apt-get autoclean -y     && \
     apt-get autoremove -y    && \
@@ -30,9 +45,19 @@ RUN apt-get clean -y         && \
 
 COPY ["docker_init.sh", "start.sh", "/usr/bin/"]
 COPY ["docker-dhcp-relay.supervisord.conf.j2", "port-name-alias-map.txt.j2", "wait_for_intf.sh.j2", "/usr/share/sonic/templates/"]
-COPY ["dhcp-relay.programs.j2", "dhcpv4-relay.agents.j2", "dhcpv6-relay.agents.j2", "dhcpv6-relay.monitors.j2", "/usr/share/sonic/templates/"]
+COPY ["dhcp-relay.programs.j2", "dhcpv4-relay.agents.j2", "dhcpv6-relay.agents.j2", "dhcp-relay.monitors.j2", "/usr/share/sonic/templates/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
 COPY ["cli", "/cli/"]
+
+{% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
+# Copy regex json and rsyslog_plugin.conf file into rsyslog.d
+COPY ["*.json", "/etc/rsyslog.d/"]
+COPY ["files/rsyslog_plugin.conf.j2", "/etc/rsyslog.d/"]
+# Create dhcp_relay_regex.conf
+RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin.conf.j2 /etc/rsyslog.d/events_info.json  > /etc/rsyslog.d/dhcp_relay_events.conf
+RUN rm -f /etc/rsyslog.d/rsyslog_plugin.conf.j2
+RUN rm -f /etc/rsyslog.d/events_info.json
+{% endif %}
 
 ENTRYPOINT ["/usr/bin/docker_init.sh"]

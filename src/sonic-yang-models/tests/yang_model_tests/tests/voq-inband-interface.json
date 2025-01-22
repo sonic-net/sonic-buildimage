@@ -1,0 +1,25 @@
+{
+    "VOQ_INBAND_INTERFACE_TEST": {
+        "desc": "Configure voq inband interface"
+    },
+    "VOQ_INBAND_INTERFACE_WRONG_PATTERN_FOR_INTERFACE_NAME_TEST": {
+        "desc": "Configure incorrect interface name in VOQ_INBAND_INTERFACE table",
+        "eStrKey" : "Pattern",
+        "eStr": ["Ethernet-IB[0-9]+"]
+    },
+    "VOQ_INBAND_INTERFACE_DEFAULT_INBAND_TYPE_TEST": {
+        "desc": "Configure voq_inband_interface with default inband type"
+    },
+    "VOQ_INBAND_INTERFACE_INVALID_INBAND_TYPE_TEST": {
+        "desc": "Configure incorrect inband type",
+        "eStrKey": "Pattern"
+    },
+    "VOQ_INBAND_INTERFACE_IP_PREFIX_PORT_NON_EXISTING_LEAF_TEST": {
+        "desc": "Configure ip prefix on voq-inband-interface with non-existing reference",
+        "eStrKey": "LeafRef"
+    },
+    "VOQ_INBAND_INTERFACE_IP_PREFIX_EMPTY_STRING_TEST": {
+        "desc": "Configure ip prefix voq-inband-interface with empty ip prefix",
+        "eStrKey": "InvalidValue"
+    }
+}

@@ -1,1 +1,3 @@
 0001-Put-style-as-line-number-to-ssh-session-environment-.patch
+0002-Revert-commit-69334996-make-sshd_config-ClientAliveC.patch
+0003-Export-remote-info-for-authorization.patch

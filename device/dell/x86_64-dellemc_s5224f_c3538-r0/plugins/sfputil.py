@@ -48,7 +48,6 @@ XCVR_DOM_CAPABILITY_OFFSET = 92
 XCVR_DOM_CAPABILITY_WIDTH = 1
 
 
-
 class SfpUtil(SfpUtilBase):
     """Platform-specific SfpUtil class"""
 
@@ -166,7 +165,7 @@ class SfpUtil(SfpUtilBase):
         if (reg_value == "" ):
             return False
 
-        # Mask off 4th bit for presence
+        # Mask off 6th bit for lpmode status
         mask = (1 << 6)
 
         # LPMode is active high
@@ -191,7 +190,7 @@ class SfpUtil(SfpUtilBase):
         if (reg_value == "" ):
             return False
 
-        # Mask off 4th bit for presence
+        # Mask off 6th bit for lpmode status
         mask = (1 << 6)
 
         # LPMode is active high; set or clear the bit accordingly
@@ -223,8 +222,8 @@ class SfpUtil(SfpUtilBase):
         if (reg_value == "" ):
             return False
 
-        # Mask off 4th bit for presence
-        mask = (1 << 6)
+        # Mask off 4th bit for reset status
+        mask = (1 << 4)
 
         # ResetL is active low
         reg_value = reg_value & ~mask
@@ -375,8 +374,10 @@ class SfpUtil(SfpUtilBase):
             sfpd_obj = sff8472Dom(None,1)
             if sfpd_obj is None:
                 return None
+
             dom_temperature_raw = self._read_eeprom_specific_bytes(sysfsfile_eeprom, (offset + SFP_TEMPE_OFFSET),
-                                                                                    SFP_TEMPE_WIDTH)
+                    SFP_TEMPE_WIDTH)
+
             if dom_temperature_raw is not None:
                 dom_temperature_data = sfpd_obj.parse_temperature(dom_temperature_raw, 0)
             else:
@@ -417,7 +418,7 @@ class SfpUtil(SfpUtilBase):
             transceiver_dom_info_dict['tx3power'] = 'N/A'
             transceiver_dom_info_dict['tx4power'] = 'N/A'
 
-            return transceiver_dom_info_dict
+        return transceiver_dom_info_dict
 
     def get_transceiver_dom_threshold_info_dict(self, port_num):
         transceiver_dom_threshold_info_dict = {}

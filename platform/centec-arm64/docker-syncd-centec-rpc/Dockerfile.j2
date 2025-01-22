@@ -1,12 +1,7 @@
-FROM docker-syncd-centec
+FROM docker-syncd-centec-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update \
-  && apt-get -y install \
-  libboost-atomic1.71-dev \
-  libqt5core5a   \
-  libqt5network5
 
 COPY \
 {% for deb in docker_syncd_centec_rpc_debs.split(' ') -%}
@@ -20,7 +15,7 @@ RUN apt-get purge -y syncd
 RUN apt-get update \
  && apt-get -y install  \
     net-tools           \
-    python-pip          \
+    python3-pip          \
     python-setuptools   \
     build-essential     \
     libssl-dev          \
@@ -30,7 +25,7 @@ RUN apt-get update \
     cmake               \
     libqt5core5a        \
     libqt5network5      \
-    libboost-atomic1.71.0
+    libboost-atomic1.74.0
 
 RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
 {% for deb in docker_syncd_centec_rpc_debs.split(' ') -%}

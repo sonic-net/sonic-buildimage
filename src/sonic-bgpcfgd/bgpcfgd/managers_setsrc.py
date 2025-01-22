@@ -64,4 +64,4 @@ class ZebraSetSrc(Manager):
     def del_handler(self, key):
         """ Implementation of 'DEL' command for this class """
         self.directory.remove(self.db_name, self.table_name, key)
-        log_warn("Delete command is not supported for 'zebra set src' templates")
+        log_warn("Delete key '%s' is not supported for 'zebra set src' templates" % str(key))

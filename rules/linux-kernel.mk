@@ -1,15 +1,25 @@
 # linux kernel package
 
-KVERSION_SHORT = 5.10.0-8-2
+KVERSION_SHORT = 6.1.0-22-2
 KVERSION = $(KVERSION_SHORT)-$(CONFIGURED_ARCH)
-KERNEL_VERSION = 5.10.46
-KERNEL_SUBVERSION = 4
+KERNEL_VERSION = 6.1.94
+KERNEL_SUBVERSION = 1
 ifeq ($(CONFIGURED_ARCH), armhf)
 # Override kernel version for ARMHF as it uses arm MP (multi-platform) for short version
 KVERSION = $(KVERSION_SHORT)-armmp
 endif
 
+# Place an URL here to .tar.gz file if you want to include those patches
+EXTERNAL_KERNEL_PATCH_URL =
+# Set y to include non upstream patches tarball provided by the corresponding platform
+INCLUDE_EXTERNAL_PATCHES ?= n
+# platforms should override this and provide an absolute location to the patches
+EXTERNAL_KERNEL_PATCH_LOC =
+
 export KVERSION_SHORT KVERSION KERNEL_VERSION KERNEL_SUBVERSION
+export EXTERNAL_KERNEL_PATCH_URL
+export INCLUDE_EXTERNAL_PATCHES
+export EXTERNAL_KERNEL_PATCH_LOC
 
 LINUX_HEADERS_COMMON = linux-headers-$(KVERSION_SHORT)-common_$(KERNEL_VERSION)-$(KERNEL_SUBVERSION)_all.deb
 $(LINUX_HEADERS_COMMON)_SRC_PATH = $(SRC_PATH)/sonic-linux-kernel

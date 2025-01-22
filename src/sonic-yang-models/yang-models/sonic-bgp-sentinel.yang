@@ -1,0 +1,58 @@
+module sonic-bgp-sentinel {
+    namespace "http://github.com/Azure/sonic-bgp-sentinel";
+    prefix pr;
+    yang-version 1.1;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BGP Sentinel YANG";
+
+    revision 2023-06-06 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-bgp-sentinel {
+        container BGP_SENTINELS {
+            list BGP_SENTINELS_LIST {
+                key "sentinel_name";
+
+                leaf sentinel_name {
+                    type string;
+                    description "BGP Sentinel name";
+                }
+
+                leaf name {
+                    type string;
+                    must "(current() = current()/../sentinel_name)" {
+                        error-message "Invalid BGP Sentinel name";
+                    }
+                    description "BGP Sentinel name";
+                }
+
+                leaf src_address {
+                    type inet:ip-address;
+                    description "Source address to use for connection";
+                }
+
+                leaf-list ip_range {
+                    type stypes:sonic-ip-prefix;
+                    description "A range of addresses";
+                }
+            }
+        }
+    }
+}

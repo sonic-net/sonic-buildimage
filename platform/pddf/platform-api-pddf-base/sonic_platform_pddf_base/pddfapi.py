@@ -6,6 +6,7 @@ import re
 import subprocess
 import time
 import unicodedata
+from sonic_py_common import device_info
 
 bmc_cache = {}
 cache = {}
@@ -15,23 +16,10 @@ PLATFORM_KEY = 'DEVICE_METADATA.localhost.platform'
 
 dirname = os.path.dirname(os.path.realpath(__file__))
 
-color_map = {
-    "STATUS_LED_COLOR_GREEN": "green",
-    "STATUS_LED_COLOR_RED": "red",
-    "STATUS_LED_COLOR_AMBER": "amber",
-    "STATUS_LED_COLOR_BLUE": "blue",
-    "STATUS_LED_COLOR_GREEN_BLINK": "blinking green",
-    "STATUS_LED_COLOR_RED_BLINK": "blinking red",
-    "STATUS_LED_COLOR_AMBER_BLINK": "blinking amber",
-    "STATUS_LED_COLOR_BLUE_BLINK": "blinking blue",
-    "STATUS_LED_COLOR_OFF": "off"
-}
-
-
 class PddfApi():
     def __init__(self):
         if not os.path.exists("/usr/share/sonic/platform"):
-            self.platform, self.hwsku = self.get_platform_and_hwsku()
+            self.platform, self.hwsku = device_info.get_platform_and_hwsku()
             os.symlink("/usr/share/sonic/device/"+self.platform, "/usr/share/sonic/platform")
 
         try:
@@ -43,29 +31,6 @@ class PddfApi():
 
         self.data_sysfs_obj = {}
         self.sysfs_obj = {}
-
-    # Returns platform and HW SKU
-    def get_platform_and_hwsku(self):
-        try:
-            proc = subprocess.Popen([SONIC_CFGGEN_PATH, '-H', '-v', PLATFORM_KEY],
-                                    stdout=subprocess.PIPE,
-                                    shell=False,
-                                    stderr=subprocess.STDOUT)
-            stdout = proc.communicate()[0]
-            proc.wait()
-            platform = stdout.rstrip('\n')
-
-            proc = subprocess.Popen([SONIC_CFGGEN_PATH, '-d', '-v', HWSKU_KEY],
-                                    stdout=subprocess.PIPE,
-                                    shell=False,
-                                    stderr=subprocess.STDOUT)
-            stdout = proc.communicate()[0]
-            proc.wait()
-            hwsku = stdout.rstrip('\n')
-        except OSError as e:
-            raise OSError("Cannot detect platform")
-
-        return (platform, hwsku)
 
     #################################################################################################################
     #   GENERIC DEFS
@@ -145,10 +110,12 @@ class PddfApi():
                 color = f.read().strip("\r\n")
         except IOError:
             return ("Error")
-
-        return (color_map[color])
+        return color
 
     def get_led_color_devtype(self, key):
+        if 'bmc' in self.data[key]:
+            return 'bmc'
+
         attr_list = self.data[key]['i2c']['attr_list']
         for attr in attr_list:
             if 'attr_devtype' in attr:
@@ -185,8 +152,8 @@ class PddfApi():
 
         for attr in attr_list:
             if int(attr['value'].strip(), 16) == value:
-                return(color_map[attr['attr_name']])
-        return (color_map['STATUS_LED_COLOR_OFF'])
+                return (attr['attr_name'])
+        return ("off")
 
     def get_led_color_from_cpld(self, led_device_name):
         index = self.data[led_device_name]['dev_attr']['index']
@@ -195,6 +162,12 @@ class PddfApi():
         self.create_attr('index', index, self.get_led_path())
         self.create_attr('dev_ops', 'get_status',  self.get_led_path())
         return self.get_led_color()
+
+    def get_led_color_from_bmc(self, led_device_name):
+        for bmc_attr in self.data[led_device_name]['bmc']['ipmitool']['attr_list']:
+            if (self.bmc_get_cmd(bmc_attr) == str(int(bmc_attr['value'], 16))):
+                return (bmc_attr['attr_name'])
+        return ("off")
 
     def set_led_color_from_gpio(self, led_device_name, color):
         attr_list = self.data[led_device_name]['i2c']['attr_list']
@@ -218,9 +191,9 @@ class PddfApi():
                         cmd = "echo {} > {}".format(_value, attr_path)
                         self.runcmd(cmd)
                     except Exception as e:
-                        print("Invalid gpio path : " + attr_path)
-                        return (False)
-        return (True)
+                        msg = "Invalid gpio path : " + attr_path
+                        return (False, msg)
+        return (True, "Success")
 
     def set_led_color_from_cpld(self, led_device_name, color):
         index = self.data[led_device_name]['dev_attr']['index']
@@ -229,26 +202,42 @@ class PddfApi():
         self.create_attr('index', index, self.get_led_path())
         self.create_attr('color', color, self.get_led_cur_state_path())
         self.create_attr('dev_ops', 'set_status',  self.get_led_path())
-        return (True)
+        return (True, "Success")
 
     def get_system_led_color(self, led_device_name):
         if led_device_name not in self.data.keys():
-            status = "[FAILED] " + led_device_name + " is not configured"
-            return (status)
+            msg = led_device_name + " is not configured"
+            return (False, msg)
 
         dtype = self.get_led_color_devtype(led_device_name)
 
         if dtype == 'gpio':
             color = self.get_led_color_from_gpio(led_device_name)
-        elif dtype == 'cpld':
+        elif dtype == 'bmc':
+            color = self.get_led_color_from_bmc(led_device_name)
+        else:
+            # This case takes care of CPLD as well as I2CFPGA
             color = self.get_led_color_from_cpld(led_device_name)
-        return color
+
+        return (True, color)
 
     def set_system_led_color(self, led_device_name, color):
-        result, msg = self.is_supported_sysled_state(led_device_name, color)
-        if result == False:
-            print(msg)
-            return (result)
+        # Check if the device is configured
+        if led_device_name not in self.data.keys():
+            msg = led_device_name + " is not configured"
+            return (False, msg)
+
+        # Check for the write permission
+        if 'flag' in self.data[led_device_name]['dev_attr']:
+            if self.data[led_device_name]['dev_attr']['flag'] == 'ro':
+                return (False, "Set LED operation not supported or handled separately")
+
+        found = False
+        for attr in self.data[led_device_name]['i2c']['attr_list']:
+            if attr['attr_name'] == color:
+                found = True
+        if not found:
+            return (False, "Invalid color")
 
         dtype = self.get_led_color_devtype(led_device_name)
 
@@ -413,7 +402,6 @@ class PddfApi():
                     ret.append(dsysfs_path)
         return ret
 
-    # This is only valid for LM75
     def show_attr_temp_sensor_device(self, dev, ops):
         ret = []
         if 'i2c' not in dev.keys():
@@ -428,19 +416,25 @@ class PddfApi():
 
         for attr in attr_list:
             if attr_name == attr['attr_name'] or attr_name == 'all':
-                path = self.show_device_sysfs(dev, ops)+"/%d-00%x/" % (int(dev['i2c']['topo_info']['parent_bus'], 0),
-                                                                       int(dev['i2c']['topo_info']['dev_addr'], 0))
                 if 'drv_attr_name' in attr.keys():
                     real_name = attr['drv_attr_name']
                 else:
                     real_name = attr['attr_name']
 
-                if (os.path.exists(path)):
-                    full_path = glob.glob(path + 'hwmon/hwmon*/' + real_name)[0]
-                    dsysfs_path = full_path
-                    if dsysfs_path not in self.data_sysfs_obj[KEY]:
-                        self.data_sysfs_obj[KEY].append(dsysfs_path)
-                    ret.append(full_path)
+                if 'topo_info' in dev['i2c']:
+                    path = self.show_device_sysfs(dev, ops)+"/%d-00%x/"%(int(dev['i2c']['topo_info']['parent_bus'], 0),
+                            int(dev['i2c']['topo_info']['dev_addr'], 0))
+                    if (os.path.exists(path)):
+                        full_path = glob.glob(path + 'hwmon/hwmon*/' + real_name)[0]
+                elif 'path_info' in dev['i2c']:
+                    path = dev['i2c']['path_info']['sysfs_base_path']
+                    if (os.path.exists(path)):
+                        full_path = "/".join([path, real_name])
+
+                dsysfs_path = full_path
+                if dsysfs_path not in self.data_sysfs_obj[KEY]:
+                    self.data_sysfs_obj[KEY].append(dsysfs_path)
+                ret.append(full_path)
         return ret
 
     def show_attr_sysstatus_device(self, dev, ops):
@@ -825,14 +819,6 @@ class PddfApi():
 
         if attr['device_type'] == 'SYSSTAT':
             return self.sysstatus_parse(dev, ops)
-
-    def is_supported_sysled_state(self, sysled_name, sysled_state):
-        if sysled_name not in self.data.keys():
-            return False, "[FAILED] " + sysled_name + " is not configured"
-        for attr in self.data[sysled_name]['i2c']['attr_list']:
-            if attr['attr_name'] == sysled_state:
-                return True, "supported"
-        return False,  "[FAILED]: Invalid color"
 
     def create_attr(self, key, value, path):
         cmd = "echo '%s' > /sys/kernel/%s/%s" % (value,  path, key)

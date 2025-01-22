@@ -9,13 +9,7 @@ DEP_FILES   += $(addprefix $(SPATH)/,$(shell cd $(SPATH) && git ls-files |grep -
 FRR_SPATH   := $(SPATH)/frr
 SMDEP_FILES := $(addprefix $(FRR_SPATH)/,$(shell cd $(FRR_SPATH) && git ls-files \
 			| grep -Ev -e 'debian/changelog$$$$' \
-			-e '^tests/topotests/bgp_instance_del_test/ce[0-9]$$$$' \
-			-e '^tests/topotests/bgp_instance_del_test/r[0-9]$$$$' \
-			-e '^tests/topotests/bgp_instance_del_test/scripts$$$$' \
-			-e '^tests/topotests/bgp_instance_del_test/customize.py$$$$' \
-			-e '^tests/topotests/bgp_rfapi_basic_sanity_config2/customize.py$$$$' \
-			-e '^tests/topotests/bgp_rfapi_basic_sanity_config2/scripts$$$$' \
-			-e '^tests/topotests/bgp_rfapi_basic_sanity_config2/test_bgp_rfapi_basic_sanity_config2.py$$$$' \
+			-e "$$(find -L tests/ -xtype l)" \
 			))
 
 $(FRR)_CACHE_MODE  := GIT_CONTENT_SHA 

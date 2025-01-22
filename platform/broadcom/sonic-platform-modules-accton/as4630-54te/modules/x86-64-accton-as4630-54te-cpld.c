@@ -97,13 +97,16 @@ static const struct i2c_device_id as4630_54te_cpld_id[] = {
 MODULE_DEVICE_TABLE(i2c, as4630_54te_cpld_id);
 
 #define TRANSCEIVER_PRESENT_ATTR_ID(index)   	MODULE_PRESENT_##index
+#define TRANSCEIVER_RESET_ATTR_ID(index)        MODULE_RESET_##index
+#define TRANSCEIVER_LPMODE_ATTR_ID(index)       MODULE_LPMODE_##index
+#define TRANSCEIVER_PRESENT_ATTR_ID(index)      MODULE_PRESENT_##index
 #define TRANSCEIVER_TXDISABLE_ATTR_ID(index)   	MODULE_TXDISABLE_##index
-#define TRANSCEIVER_RXLOS_ATTR_ID(index)   		MODULE_RXLOS_##index
-#define TRANSCEIVER_TXFAULT_ATTR_ID(index)   	MODULE_TXFAULT_##index
+#define TRANSCEIVER_RXLOS_ATTR_ID(index)        MODULE_RXLOS_##index
+#define TRANSCEIVER_TXFAULT_ATTR_ID(index)      MODULE_TXFAULT_##index
 #define FAN_SPEED_RPM_ATTR_ID(index)   	        FAN_SPEED_RPM_##index
-#define FAN_DIRECTION_ID(index)   	            FAN_DIRECTION_##index
+#define FAN_DIRECTION_ID(index)                 FAN_DIRECTION_##index
 #define FAN_PRESENT_ATTR_ID(index)   	        FAN_PRESENT_##index
-#define FAN_FAULT_ATTR_ID(index)   	            FAN_FAULT_##index
+#define FAN_FAULT_ATTR_ID(index)                FAN_FAULT_##index
 
 enum as4630_54te_cpld_sysfs_attributes {
 	CPLD_VERSION,
@@ -123,6 +126,10 @@ enum as4630_54te_cpld_sysfs_attributes {
 	TRANSCEIVER_PRESENT_ATTR_ID(52),
 	TRANSCEIVER_PRESENT_ATTR_ID(53),
 	TRANSCEIVER_PRESENT_ATTR_ID(54),
+	TRANSCEIVER_RESET_ATTR_ID(53),
+	TRANSCEIVER_RESET_ATTR_ID(54),
+	TRANSCEIVER_LPMODE_ATTR_ID(53),
+	TRANSCEIVER_LPMODE_ATTR_ID(54),
 	TRANSCEIVER_TXDISABLE_ATTR_ID(49),
 	TRANSCEIVER_TXDISABLE_ATTR_ID(50),
 	TRANSCEIVER_TXDISABLE_ATTR_ID(51),
@@ -148,6 +155,8 @@ static ssize_t show_status(struct device *dev, struct device_attribute *da,
              char *buf);
 static ssize_t set_tx_disable(struct device *dev, struct device_attribute *da,
 			const char *buf, size_t count);
+static ssize_t set_qsfp(struct device *dev, struct device_attribute *da,
+                        const char *buf, size_t count);
 static ssize_t access(struct device *dev, struct device_attribute *da,
 			const char *buf, size_t count);
 static ssize_t show_version(struct device *dev, struct device_attribute *da,
@@ -160,11 +169,6 @@ static struct as4630_54te_cpld_data *as4630_54te_fan_update_device(struct device
 static ssize_t fan_show_value(struct device *dev, struct device_attribute *da, char *buf);
 static ssize_t set_duty_cycle(struct device *dev, struct device_attribute *da,
                               const char *buf, size_t count);
-static ssize_t get_sys_temp(struct device *dev, struct device_attribute *da, char *buf);
-//static ssize_t show_power(struct device *dev, struct device_attribute *da,
- //            char *buf);
-
-
 
 /* transceiver attributes */
 #define DECLARE_SFP_TRANSCEIVER_SENSOR_DEVICE_ATTR(index) \
@@ -180,9 +184,13 @@ static ssize_t get_sys_temp(struct device *dev, struct device_attribute *da, cha
 	&sensor_dev_attr_module_tx_fault_##index.dev_attr.attr
 	
 #define DECLARE_QSFP_TRANSCEIVER_SENSOR_DEVICE_ATTR(index) \
+    static SENSOR_DEVICE_ATTR(module_lpmode_##index, S_IRUGO | S_IWUSR, show_status, set_qsfp, MODULE_LPMODE_##index); \
+    static SENSOR_DEVICE_ATTR(module_reset_##index, S_IRUGO | S_IWUSR, show_status, set_qsfp, MODULE_RESET_##index); \
     static SENSOR_DEVICE_ATTR(module_present_##index, S_IRUGO, show_status, NULL, MODULE_PRESENT_##index);
 
 #define DECLARE_QSFP_TRANSCEIVER_ATTR(index)  \
+    &sensor_dev_attr_module_lpmode_##index.dev_attr.attr, \
+    &sensor_dev_attr_module_reset_##index.dev_attr.attr, \
     &sensor_dev_attr_module_present_##index.dev_attr.attr
 
 
@@ -204,10 +212,7 @@ static ssize_t get_sys_temp(struct device *dev, struct device_attribute *da, cha
     static SENSOR_DEVICE_ATTR(fan_duty_cycle_percentage, S_IWUSR | S_IRUGO, fan_show_value, set_duty_cycle, FAN_DUTY_CYCLE_PERCENTAGE);
 #define DECLARE_FAN_DUTY_CYCLE_ATTR(index) &sensor_dev_attr_fan_duty_cycle_percentage.dev_attr.attr
 
-#define DECLARE_FAN_SYSTEM_TEMP_SENSOR_DEV_ATTR() \
-    static SENSOR_DEVICE_ATTR(sys_temp, S_IRUGO, get_sys_temp, NULL, FAN_DUTY_CYCLE_PERCENTAGE)
 
-#define DECLARE_FAN_SYSTEM_TEMP_ATTR()  &sensor_dev_attr_sys_temp.dev_attr.attr
 
 static SENSOR_DEVICE_ATTR(version, S_IRUGO, show_version, NULL, CPLD_VERSION);
 static SENSOR_DEVICE_ATTR(access, S_IWUSR, NULL, access, ACCESS);
@@ -273,7 +278,7 @@ static ssize_t show_status(struct device *dev, struct device_attribute *da,
             break;       
         case MODULE_TXDISABLE_49 ... MODULE_TXDISABLE_50:
             reg=0x5;
-            mask=0x1 << (attr->index==MODULE_TXFAULT_49?7:3);
+            mask=0x1 << (attr->index==MODULE_TXDISABLE_49?7:3);
             break;
             
         case MODULE_RXLOS_51 ... MODULE_RXLOS_52:
@@ -290,11 +295,21 @@ static ssize_t show_status(struct device *dev, struct device_attribute *da,
             break;       
         case MODULE_TXDISABLE_51 ... MODULE_TXDISABLE_52:
             reg=0x6;
-            mask=0x1 << (attr->index==MODULE_TXFAULT_51?7:3);
+            mask=0x1 << (attr->index==MODULE_TXDISABLE_51?7:3);
             break;
         case MODULE_PRESENT_53 ... MODULE_PRESENT_54:
             reg=0x21;
             mask=0x1 << (attr->index==MODULE_PRESENT_53?0:4);
+            break;
+        case MODULE_RESET_53 ... MODULE_RESET_54:
+            reg=0x21;
+            mask=0x1 << (attr->index==MODULE_RESET_53?3:7);
+            revert = 1;
+            break;
+        case MODULE_LPMODE_53 ... MODULE_LPMODE_54:
+            reg = 0x21;
+            mask = 0x1 << (attr->index==MODULE_LPMODE_53?2:6);
+            revert = 0;
             break;
 	    default:
 		    return 0;
@@ -319,6 +334,61 @@ exit:
 	return status;
 }
 
+static ssize_t set_qsfp(struct device *dev, struct device_attribute *da,
+                        const char *buf, size_t count)
+{
+    struct sensor_device_attribute *attr = to_sensor_dev_attr(da);
+    struct i2c_client *client = to_i2c_client(dev);
+    struct as4630_54te_cpld_data *data = i2c_get_clientdata(client);
+    long disable;
+    int status;
+    u8 reg = 0, mask = 0, revert = 0;
+
+    status = kstrtol(buf, 10, &disable);
+    if (status) {
+        return status;
+    }
+    reg  = 0x21;
+    switch (attr->index)
+    {
+    case MODULE_RESET_53 ... MODULE_RESET_54:
+        mask=0x1 << (attr->index==MODULE_RESET_53?3:7);
+        revert = 1;
+        break;
+    case MODULE_LPMODE_53 ... MODULE_LPMODE_54:
+        mask=0x1 << (attr->index==MODULE_LPMODE_53?2:6);
+        revert = 0;
+        break;
+    default:
+        return 0;
+    }
+
+    disable = revert ? disable : !disable;
+    /* Read current status */
+    mutex_lock(&data->update_lock);
+    status = as4630_54te_cpld_read_internal(client, reg);
+    if (unlikely(status < 0)) {
+        goto exit;
+    }
+    if (disable) {
+        status &= ~mask;
+    }
+    else {
+        status |= mask;
+    }
+    status = as4630_54te_cpld_write_internal(client, reg, status);
+    if (unlikely(status < 0)) {
+        goto exit;
+    }
+
+    mutex_unlock(&data->update_lock);
+    return count;
+
+exit:
+    mutex_unlock(&data->update_lock);
+    return status;
+}
+
 static ssize_t set_tx_disable(struct device *dev, struct device_attribute *da,
 			const char *buf, size_t count)
 {
@@ -338,7 +408,7 @@ static ssize_t set_tx_disable(struct device *dev, struct device_attribute *da,
     {
          case MODULE_TXDISABLE_49 ... MODULE_TXDISABLE_50:
             reg=0x5;
-            mask=0x1 << (attr->index==MODULE_TXFAULT_49?7:3);
+            mask=0x1 << (attr->index==MODULE_TXDISABLE_49?7:3);
             break;
         case MODULE_TXDISABLE_51 ... MODULE_TXDISABLE_52:
             reg=0x6;
@@ -357,10 +427,10 @@ static ssize_t set_tx_disable(struct device *dev, struct device_attribute *da,
 	}
 	/* Update tx_disable status */
 	if (disable) {
-		status &= ~mask;
+		status |= mask;
 	}
 	else {
-	    status |= mask;
+	    status &= ~mask;
 	}
     status = as4630_54te_cpld_write_internal(client, reg, status);
 	if (unlikely(status < 0)) {
@@ -498,7 +568,7 @@ static ssize_t set_duty_cycle(struct device *dev, struct device_attribute *da,
 
 static u8 reg_val_to_direction(u8 reg_val, enum fan_id id)
 {
-    u8 mask = (1 << id);
+    u8 mask = (1 << id+4);
 
     reg_val &= mask;
 
@@ -528,268 +598,6 @@ static u8 is_fan_fault(struct as4630_54te_cpld_data *data, enum fan_id id)
         ret = 0;
     }
 
-    return ret;
-}
-
-/* Due to this struct is declared at lm75.c, it cannot be include
- * under Sonic environment. I duplicate it from lm75.c.
- */
-struct lm75_data {
-    struct i2c_client       *client;
-    struct device           *hwmon_dev;
-    struct thermal_zone_device      *tz;
-    struct mutex            update_lock;
-    u8                      orig_conf;
-    u8                      resolution;     /* In bits, between 9 and 12 */
-    u8                      resolution_limits;
-    char                    valid;          /* !=0 if registers are valid */
-    unsigned long           last_updated;   /* In jiffies */
-    unsigned long           sample_time;    /* In jiffies */
-    s16                     temp[3];        /* Register values,
-                                                   0 = input
-                                                   1 = max
-                                                   2 = hyst */
-};
-
-/*Copied from lm75.c*/
-static inline long lm75_reg_to_mc(s16 temp, u8 resolution)
-{
-    return ((temp >> (16 - resolution)) * 1000) >> (resolution - 8);
-}
-
-/*Get hwmon_dev from i2c_client, set hwmon_dev = NULL is failed.*/
-static struct device * get_hwmon_dev(
-    struct i2c_client *client)
-{
-    struct lm75_data *data = NULL;
-
-    data = i2c_get_clientdata(client);
-    if(data)
-    {
-        if( data->valid == 1  && data->hwmon_dev)
-        {
-            return data->hwmon_dev;
-        }
-
-    }
-    return NULL;
-}
-
-/* To find hwmon index by opening hwmon under that i2c address.
- */
-static int find_hwmon_index_by_FileOpen(
-    int bus_nr,
-    unsigned short addr,
-    int *index)
-{
-#define MAX_HWMON_DEVICE        (10)    /* Find hwmon device in 0~10*/
-    struct file *sfd;
-    char client_name[96];
-    int  i=0;
-
-    do {
-        snprintf(client_name, sizeof(client_name),
-                 "/sys/bus/i2c/devices/%d-%04x/hwmon/hwmon%d/temp1_input",
-                 bus_nr, addr, i);
-
-        sfd = filp_open(client_name, O_RDONLY, 0);
-        i++;
-    } while( IS_ERR(sfd) && i < MAX_HWMON_DEVICE);
-
-    if (IS_ERR(sfd)) {
-        pr_err("Failed to open file(%s)#%d\r\n", client_name, __LINE__);
-        return -ENOENT;
-    }
-    filp_close(sfd, 0);
-    *index = i - 1;
-    return 0;
-
-#undef MAX_HWMON_DEVICE
-}
-
-static int get_temp_file_path(
-    int bus_nr, unsigned short addr,
-    struct device *hwmon_dev
-    ,char *path, int max_len)
-{
-
-    if(hwmon_dev && strlen(dev_name(hwmon_dev)))
-    {
-        snprintf(path, max_len,
-                 "/sys/bus/i2c/devices/%d-%04x/hwmon/%s/temp1_input",
-                 bus_nr, addr, dev_name(hwmon_dev));
-    }
-    else
-    {
-        int  i=0;
-        if(find_hwmon_index_by_FileOpen( bus_nr, addr, &i))
-        {
-            return  -EIO;
-        }
-        snprintf(path, max_len,
-                 "/sys/bus/i2c/devices/%d-%04x/hwmon/hwmon%d/temp1_input",
-                 bus_nr, addr, i);
-    }
-    
-    return 0;
-}
-
-/*File read the dev file at user space.*/
-static int read_devfile_temp1_input(
-    struct device *dev,
-    int bus_nr,
-    unsigned short addr,
-    struct device *hwmon_dev,
-    int *miniCelsius)
-{
-    struct file *sfd;
-    char buffer[96];
-    char devfile[96];
-    int     rc, status;
-    int     rdlen, value;
-    mm_segment_t old_fs;
-
-    rc = 0;
-    get_temp_file_path(bus_nr, addr, hwmon_dev, devfile, sizeof(devfile));
-    sfd = filp_open(devfile, O_RDONLY, 0);
-    if (IS_ERR(sfd)) {
-        pr_err("Failed to open file(%s)#%d\r\n", devfile, __LINE__);
-        return -ENOENT;
-    }
-    dev_dbg(dev, "Found device:%s\n",devfile);
-
-    if(!(sfd->f_op) || !(sfd->f_op->read) ) {
-        pr_err("file %s cann't readable ?\n",devfile);
-        return -ENOENT;
-    }
-
-    old_fs = get_fs();
-    set_fs(KERNEL_DS);
-    rdlen = sfd->f_op->read(sfd, buffer, sizeof(buffer), &sfd->f_pos);
-    if (rdlen == 0) {
-        pr_err( "File(%s) empty!\n", devfile);
-        rc = -EIO;
-        goto exit;
-    }
-    status = sscanf(buffer, "%d", &value);
-    if (status != 1) {
-        rc = -EIO;
-        goto exit;
-    }
-    *miniCelsius = value;
-    dev_dbg(dev,"found sensors: %d @i2c %d-%04x\n", value, bus_nr, addr);
-
-exit:
-    set_fs(old_fs);
-    filp_close(sfd, 0);
-    return rc;
-}
-
-static u8 is_lm75_data_due(struct i2c_client *client)
-{
-    struct lm75_data *data = NULL;
-
-    data = i2c_get_clientdata(client);
-    if (time_after(jiffies, data->last_updated + data->sample_time))
-    {
-        return 1;
-    }
-    return 0;
-}
-static int get_lm75_temp(struct i2c_client *client, int *miniCelsius)
-{
-    struct lm75_data *data = NULL;
-
-    data = i2c_get_clientdata(client);
-    *miniCelsius = lm75_reg_to_mc(data->temp[0], data->resolution);
-
-    return 0;
-}
-
-static bool lm75_addr_mached(unsigned short addr)
-{
-    int i;
-    unsigned short addrs[] = THERMAL_SENSORS_ADDRS;
-    
-    for (i = 0; i < ARRAY_SIZE(addrs); i++)
-    {
-        if( addr == addrs[i])
-            return 1;
-    }
-    return 0;
-}
-
-static int _find_lm75_device(struct device *dev, void *data)
-{
-    struct device_driver *driver;
-    struct as4630_54te_cpld_data *prv = data;
-    char *driver_name = THERMAL_SENSORS_DRIVER;
-
-    driver = dev->driver;
-    if (driver && driver->name &&
-            strcmp(driver->name, driver_name) == 0)
-    {
-        struct i2c_client *client;
-        client = to_i2c_client(dev);
-        if (client)
-        {
-            /*cannot use "struct i2c_adapter *adap = to_i2c_adapter(dev);"*/
-            struct i2c_adapter *adap = client->adapter;
-            int miniCelsius = 0;
-
-            if (! lm75_addr_mached(client->addr))
-            {
-                return 0;
-            }
-
-            if (!adap) {
-                return -ENXIO;
-            }
-
-            /* If the data is not updated, read them from devfile
-               to drive them updateing data from chip.*/
-            if (is_lm75_data_due(client))
-            {
-                struct device *hwmon_dev;
-
-                hwmon_dev = get_hwmon_dev(client);
-                if(0 == read_devfile_temp1_input(dev, adap->nr,
-                                                 client->addr, hwmon_dev, &miniCelsius))
-                {
-                    prv->system_temp += miniCelsius;
-                    prv->sensors_found++;
-                }
-
-            }
-            else
-            {
-                get_lm75_temp(client, &miniCelsius);
-                prv->system_temp += miniCelsius;
-                prv->sensors_found++;
-
-            }
-        }
-    }
-    return 0;
-}
-
-/*Find all lm75 devices and return sum of temperatures.*/
-static ssize_t get_sys_temp(struct device *dev, struct device_attribute *da,
-                            char *buf)
-{
-    ssize_t ret = 0;
-    struct as4630_54te_cpld_data *data = as4630_54te_fan_update_device(dev);
-
-    data->system_temp=0;
-    data->sensors_found=0;
-    i2c_for_each_dev(data, _find_lm75_device);
-    if (NUM_THERMAL_SENSORS != data->sensors_found)
-    {
-        dev_dbg(dev,"only %d of %d temps are found\n",
-                data->sensors_found, NUM_THERMAL_SENSORS);
-        data->system_temp = INT_MAX;
-    }
-    ret = sprintf(buf, "%d\n",data->system_temp);
     return ret;
 }
 
@@ -964,7 +772,7 @@ exit:
 	return ret;
 }
 
-static int as4630_54te_cpld_remove(struct i2c_client *client)
+static void as4630_54te_cpld_remove(struct i2c_client *client)
 {
     struct as4630_54te_cpld_data *data = i2c_get_clientdata(client);
     const struct attribute_group *group = NULL;
@@ -989,7 +797,6 @@ static int as4630_54te_cpld_remove(struct i2c_client *client)
 
     kfree(data);
 
-    return 0;
 }
 
 static int as4630_54te_cpld_read_internal(struct i2c_client *client, u8 reg)

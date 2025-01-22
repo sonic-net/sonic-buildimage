@@ -1,5 +1,5 @@
 ARG slave_base_tag_ref=latest
-{%- if MULTIARCH_QEMU_ENVIRON != "y" %}
+{%- if MULTIARCH_QEMU_ENVIRON != "y" and CROSS_BUILD_ENVIRON != "y" %}
 FROM sonic-slave-buster:${slave_base_tag_ref}
 {%- else %}
 FROM sonic-slave-buster-march-{{ CONFIGURED_ARCH }}:${slave_base_tag_ref}

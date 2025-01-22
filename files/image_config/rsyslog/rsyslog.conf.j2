@@ -14,6 +14,18 @@
 #################
 
 $ModLoad imuxsock # provides support for local system logging
+
+{% set gconf = (SYSLOG_CONFIG | d({})).get('GLOBAL', {}) -%}
+{% set rate_limit_interval = gconf.get('rate_limit_interval') %}
+{% set rate_limit_burst = gconf.get('rate_limit_burst') %}
+
+{% if rate_limit_interval is not none %}
+$SystemLogRateLimitInterval {{ rate_limit_interval }}
+{% endif %}
+{% if rate_limit_burst is not none %}
+$SystemLogRateLimitBurst {{ rate_limit_burst }}
+{% endif %}
+
 $ModLoad imklog   # provides kernel logging support
 #$ModLoad immark  # provides --MARK-- message capability
 
@@ -21,6 +33,10 @@ $ModLoad imklog   # provides kernel logging support
 $ModLoad imudp
 $UDPServerAddress {{udp_server_ip}}  #bind to localhost before udp server run
 $UDPServerRun 514
+{% if docker0_ip and docker0_ip != "" %}
+$UDPServerAddress {{docker0_ip}}
+$UDPServerRun 514
+{% endif%}
 
 # provides TCP syslog reception
 #$ModLoad imtcp
@@ -30,6 +46,8 @@ $UDPServerRun 514
 ###########################
 #### GLOBAL DIRECTIVES ####
 ###########################
+{% set format = gconf.get('format', 'standard') -%}
+{% set fw_name = gconf.get('welf_firewall_name', hostname) -%}
 #
 # Use traditional timestamp format.
 # To enable high precision timestamps, comment out the following line.
@@ -37,13 +55,14 @@ $UDPServerRun 514
 #$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
 
 # Define a custom template
-$template SONiCFileFormat,"%timegenerated%.%timegenerated:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$template SONiCFileFormat,"%timegenerated:::date-year% %timegenerated%.%timegenerated:::date-subseconds% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 $ActionFileDefaultTemplate SONiCFileFormat
+$template SONiCForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogseverity-text:::uppercase% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+$ActionForwardDefaultTemplate SONiCForwardFormat
 
-#Set remote syslog server
-{% for server in SYSLOG_SERVER %}
-*.* @[{{ server }}]:514;SONiCFileFormat
-{% endfor %}
+template(name="WelfRemoteFormat" type="string" string="%TIMESTAMP% id=firewall time=\"%timereported\
+:::date-year%-%timereported:::date-month%-%timereported:::date-day% %timereported:::date-hour%:%timereported:::date-minute%:%timereported\
+:::date-second%\" fw=\"{{ fw_name }}\" pri=%syslogpriority% msg=\"%syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\"\n")
 
 #
 # Set the default permissions for all log files.
@@ -72,3 +91,46 @@ $RepeatedMsgReduction on
 ###############
 #### RULES ####
 ###############
+
+#
+# Remote syslog logging
+#
+
+# The omfwd plug-in provides the core functionality of traditional message
+# forwarding via UDP and plain TCP. It is a built-in module that does not need
+# to be loaded.
+
+{% set servers = SYSLOG_SERVER | d({}) -%}
+{% for server in servers %}
+{% set conf = servers[server] | d({}) -%}
+
+{% set source = conf.get('source') -%}
+{% set port = conf.get('port', 514) -%}
+{% set proto = conf.get('protocol', 'udp') -%}
+{% set vrf = conf.get('vrf', 'default') -%}
+{% set severity = conf.get('severity', gconf.get('severity', '*')) -%}
+{% set filter = conf.get('filter') -%}
+{% set regex = conf.get('filter_regex') -%}
+
+{% set fmodifier = '!' if filter == 'exclude' else '' %}
+{% set device = vrf if vrf != '' and vrf != 'default' -%}
+{% set template = 'WelfRemoteFormat' if format == 'welf' else 'SONiCForwardFormat' -%}
+
+{# Server extra options -#}
+{% set options = '' -%}
+
+{% if source -%}
+    {% set options = options ~ ' Address="' ~ source ~ '"'-%}
+    {% set device = device if device != 'eth0' else '' -%}
+{% endif -%}
+
+{% if device -%}
+    {% set options = options ~ ' Device="' ~ device ~ '"'-%}
+{% endif -%}
+
+{% if filter %}
+:msg, {{ fmodifier }}ereregex, "{{ regex }}"
+{% endif %}
+*.{{ severity }}
+action(type="omfwd" Target="{{ server }}" Port="{{ port }}" Protocol="{{ proto }}" Template="{{ template }}"{{ options }})
+{% endfor %}

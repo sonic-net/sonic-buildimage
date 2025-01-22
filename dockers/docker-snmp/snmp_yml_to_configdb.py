@@ -5,7 +5,7 @@ import sys
 
 import yaml
 from sonic_py_common.logger import Logger
-from swsssdk import ConfigDBConnector
+from swsscommon.swsscommon import ConfigDBConnector
 
 db = ConfigDBConnector()
 db.connect()

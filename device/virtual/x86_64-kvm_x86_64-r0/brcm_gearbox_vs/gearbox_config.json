@@ -20,7 +20,17 @@
       "index": 0,
       "phy_id" : 1,
       "system_lanes": [200,201],
-      "line_lanes": [206]
+      "line_lanes": [206],
+      "system_tx_fir_pre2": [1,1],
+      "system_tx_fir_pre1": [-5,-5],
+      "system_tx_fir_main": [14,14],
+      "system_tx_fir_post1": [0,0],
+      "system_tx_fir_post2": [0,0],
+      "line_tx_fir_pre2": [0],
+      "line_tx_fir_pre1": [-1],
+      "line_tx_fir_main": [13],
+      "line_tx_fir_post1": [-5],
+      "line_tx_fir_post2": [0]
     },
     {
       "name": "Ethernet4",

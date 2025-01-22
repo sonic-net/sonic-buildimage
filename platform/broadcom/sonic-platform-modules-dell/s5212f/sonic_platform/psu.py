@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 ########################################################################
-# DellEMC S5212F 
+# DellEMC S5212F
 #
 # Module contains an implementation of SONiC Platform Base API and
 # provides the PSUs' information which are available in the platform
@@ -83,6 +83,15 @@ class Psu(PsuBase):
 
         return presence
 
+    def get_temperature(self):
+        """
+        Retrieves current temperature reading from thermal
+        Returns:
+           A float number of current temperature in Celcius up to
+           nearest thousandth of one degree celcius, e.g. 30.125
+        """
+        return 0.0
+
     def get_model(self):
         """
         Retrieves the part number of the PSU
@@ -100,6 +109,26 @@ class Psu(PsuBase):
             string: Serial number of PSU
         """
         return self.fru.get_board_serial()
+
+    def get_revision(self):
+        """
+        Retrives thehardware revision of the device
+        Returns:
+            String: revision value of device
+        """
+        serial = self.fru.get_board_serial()
+        if serial != "NA" and len(serial) == 23:
+            return serial[-3:]
+        else:
+            return "NA"
+
+    def is_replaceable(self):
+        """
+        Indicate whether this PSU is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
 
     def get_status(self):
         """
@@ -124,7 +153,7 @@ class Psu(PsuBase):
             A float number, the output voltage in volts,
             e.g. 12.1
         """
-        return None
+        return 0.0
 
     def get_current(self):
         """
@@ -134,7 +163,7 @@ class Psu(PsuBase):
             A float number, electric current in amperes,
             e.g. 15.4
         """
-        return None
+        return 0.0
 
     def get_power(self):
         """
@@ -144,7 +173,37 @@ class Psu(PsuBase):
             A float number, the power in watts,
             e.g. 302.6
         """
-        return None
+        return 0.0
+
+    def get_input_voltage(self):
+        """
+        Retrieves current PSU voltage input
+
+        Returns:
+            A float number, the input voltage in volts,
+            e.g. 12.1
+        """
+        return 0.0
+
+    def get_input_current(self):
+        """
+        Retrieves present electric current supplied to PSU
+
+        Returns:
+            A float number, electric current in amperes,
+            e.g. 15.4
+        """
+        return 0.0
+
+    def get_input_power(self):
+        """
+        Retrieves current energy supplied to PSU
+
+        Returns:
+            A float number, the power in watts,
+            e.g. 302.6
+        """
+        return 0.0
 
     def get_powergood_status(self):
         """
@@ -162,6 +221,15 @@ class Psu(PsuBase):
 
         return status
 
+    def get_mfr_id(self):
+        """
+        Retrives the Manufacturer Id of PSU
+
+        Returns:
+            A string, the manunfacturer id.
+        """
+        return self.fru.get_board_mfr_id()
+
     def get_type(self):
         """
         Retrives the Power Type of PSU
@@ -169,12 +237,54 @@ class Psu(PsuBase):
         Returns :
             A string, PSU power type
         """
-        board_info = self.fru.get_board_part_number()
-        if board_info is not None :
-            board_part_no = board_info[0:6]
-            if board_part_no in switch_sku:
-                return switch_sku[board_part_no][0]
+        board_product = self.fru.get_board_product()
+        if board_product is not None :
+            info =  board_product.split(',')
+            if 'AC' in info : return 'AC'
+            if 'DC' in info : return 'DC'
         return None
 
-    def get_mfr_id(self):
-        return self.fru.get_board_mfr_id()
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.index
+
+    def get_voltage_low_threshold(self):
+        """
+        Retrieves the low threshold PSU voltage output
+        Returns:
+            A float number, the low threshold output voltage in volts,
+            e.g. 12.1
+        """
+        return 0.0
+
+    def get_voltage_high_threshold(self):
+        """
+        Returns PSU high threshold in Volts
+        """
+        return 0.0
+
+    def get_maximum_supplied_power(self):
+        """
+        Retrieves the maximum supplied power by PSU
+        Returns:
+            A float number, the maximum power output in Watts.
+            e.g. 1200.1
+        """
+        return float(750)
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the PSU status LED
+        Args:
+            color: A string representing the color with which to set the PSU status LED
+                   Note: Only support green and off
+        Returns:
+            bool: True if status LED state is set successfully, False if not
+        """
+        # Hardware not supported
+        return False

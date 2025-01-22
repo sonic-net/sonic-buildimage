@@ -181,7 +181,7 @@ if [ "$1" == "init" ]; then
     modprobe i2c-dev
     modprobe cls-i2c-mux-pca954x
     modprobe ipmi_devintf
-    modprobe ipmi_si kipmid_max_busy_us=1000
+    modprobe ipmi_si kipmid_max_busy_us=2500
     modprobe cls-i2c-ocore
     modprobe cls-switchboard 
     modprobe mc24lc64t 
@@ -194,7 +194,7 @@ if [ "$1" == "init" ]; then
   # /usr/bin/qsfp_irq_enable.py
     platform_firmware_versions
     get_reboot_cause
-    echo 1000 > /sys/module/ipmi_si/parameters/kipmid_max_busy_us
+    echo 2500 > /sys/module/ipmi_si/parameters/kipmid_max_busy_us
     # Set the PCA9548 mux behavior
     echo -2 > /sys/bus/i2c/drivers/cls_pca954x/3-0070/idle_state
     echo -2 > /sys/bus/i2c/drivers/cls_pca954x/3-0071/idle_state

@@ -1,0 +1,444 @@
+{
+    "fibers" : [
+        {
+          "fiber_flg" : "E_FIBER_SFP",
+          "mode"      : "E_FIBER_ASIC_ASIC",
+          "cs"        : "0 0 0",
+          "en_mode"   : "E_FIBER_EN_SYSFS",
+          "en"        : "sfp_enable",
+          "sysfs_path"         : "/sys/class/sfp/sfp1/",
+          "sync_fiber_present" : 1
+        },
+        {
+          "fiber_flg" : "E_FIBER_SFP",
+          "mode"      : "E_FIBER_ASIC_ASIC",
+          "cs"        : "0 0 1",
+          "en_mode"   : "E_FIBER_EN_SYSFS",
+          "en"        : "sfp_enable",
+          "sysfs_path"         : "/sys/class/sfp/sfp2/",
+          "sync_fiber_present" : 1
+        },
+        {
+          "fiber_flg" : "E_FIBER_SFP",
+          "mode"      : "E_FIBER_ASIC_ASIC",
+          "cs"        : "0 0 2",
+          "en_mode"   : "E_FIBER_EN_SYSFS",
+          "en"        : "sfp_enable",
+          "sysfs_path"         : "/sys/class/sfp/sfp3/",
+          "sync_fiber_present" : 1
+        },
+        {
+          "fiber_flg" : "E_FIBER_SFP",
+          "mode"      : "E_FIBER_ASIC_ASIC",
+          "cs"        : "0 0 3",
+          "en_mode"   : "E_FIBER_EN_SYSFS",
+          "en"        : "sfp_enable",
+          "sysfs_path"         : "/sys/class/sfp/sfp4/",
+          "sync_fiber_present" : 1
+        }
+    ],
+    "macleds" : {
+        "polarity" : 1,
+        "maps" : [
+            {
+                "port_id" : 14,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port52/brightness"
+            },
+            {
+                "port_id" : 15,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port51/brightness"
+            },
+            {
+                "port_id" : 12,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port50/brightness"
+            },
+            {
+                "port_id" : 13,
+                "lchip"   : 0,
+                "ctl_id"  : 0,
+                "mode"    : "LED_MODE_2_FORCE_OFF",
+                "fixed"   : 0,
+                "sysfs_path" : "/sys/class/leds/port49/brightness"
+            }
+        ]
+    },
+    "phys" : [
+        {
+          "macid" : 1,
+          "busid" : 0,
+          "addr" : 1,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 0,
+          "busid" : 0,
+          "addr" : 0,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 3,
+          "busid" : 0,
+          "addr" : 3,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 2,
+          "busid" : 0,
+          "addr" : 2,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 5,
+          "busid" : 0,
+          "addr" : 5,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 4,
+          "busid" : 0,
+          "addr" : 4,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 7,
+          "busid" : 0,
+          "addr" : 7,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 6,
+          "busid" : 0,
+          "addr" : 6,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 17,
+          "busid" : 0,
+          "addr" : 9,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 16,
+          "busid" : 0,
+          "addr" : 8,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 19,
+          "busid" : 0,
+          "addr" : 11,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 18,
+          "busid" : 0,
+          "addr" : 10,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 21,
+          "busid" : 0,
+          "addr" : 13,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 20,
+          "busid" : 0,
+          "addr" : 12,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 23,
+          "busid" : 0,
+          "addr" : 15,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 22,
+          "busid" : 0,
+          "addr" : 14,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 9,
+          "busid" : 1,
+          "addr" : 1,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 8,
+          "busid" : 1,
+          "addr" : 0,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 11,
+          "busid" : 1,
+          "addr" : 3,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 10,
+          "busid" : 1,
+          "addr" : 2,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 33,
+          "busid" : 1,
+          "addr" : 5,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 32,
+          "busid" : 1,
+          "addr" : 4,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 35,
+          "busid" : 1,
+          "addr" : 7,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 34,
+          "busid" : 1,
+          "addr" : 6,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 37,
+          "busid" : 1,
+          "addr" : 9,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 36,
+          "busid" : 1,
+          "addr" : 8,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 39,
+          "busid" : 1,
+          "addr" : 11,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 38,
+          "busid" : 1,
+          "addr" : 10,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 41,
+          "busid" : 1,
+          "addr" : 13,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 40,
+          "busid" : 1,
+          "addr" : 12,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 43,
+          "busid" : 1,
+          "addr" : 15,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 42,
+          "busid" : 1,
+          "addr" : 14,
+          "base_port" : 8,
+          "last_port" : 15
+        },
+        {
+          "macid" : 25,
+          "busid" : 2,
+          "addr" : 1,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 24,
+          "busid" : 2,
+          "addr" : 0,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 27,
+          "busid" : 2,
+          "addr" : 3,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 26,
+          "busid" : 2,
+          "addr" : 2,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 49,
+          "busid" : 2,
+          "addr" : 5,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 48,
+          "busid" : 2,
+          "addr" : 4,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 51,
+          "busid" : 2,
+          "addr" : 7,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 50,
+          "busid" : 2,
+          "addr" : 6,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 53,
+          "busid" : 3,
+          "addr" : 1,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 52,
+          "busid" : 3,
+          "addr" : 0,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 55,
+          "busid" : 3,
+          "addr" : 3,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 54,
+          "busid" : 3,
+          "addr" : 2,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 57,
+          "busid" : 3,
+          "addr" : 5,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 56,
+          "busid" : 3,
+          "addr" : 4,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 59,
+          "busid" : 3,
+          "addr" : 7,
+          "base_port" : 0,
+          "last_port" : 7
+        },
+        {
+          "macid" : 58,
+          "busid" : 3,
+          "addr" : 6,
+          "base_port" : 0,
+          "last_port" : 7
+        }
+    ],
+    "ffe" : {
+        "board_material" : "BOARD_MATERIAL_M4",
+        "config" : [
+            {
+              "serdes_id" : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+              "is_dac"    : 0,
+              "speed"     : [1000, 100, 10],
+
+              "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+              "cfg"       : [0, 100, 15, 0]
+            },
+            {
+              "serdes_id" : [12, 13, 14, 15],
+              "is_dac"    : 0,
+              "speed"     : [10000, 1000],
+
+              "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+              "cfg"       : [2, 92, 15, 0]
+            },
+            {
+              "serdes_id" : [12, 13, 14, 15],
+              "is_dac"    : 1,
+              "speed"     : [10000, 1000],
+
+              "mode"      : "CTC_CHIP_SERDES_FFE_MODE_DEFINE",
+              "cfg"       : [8, 174, 0, 0]
+            }
+        ]
+    }
+}

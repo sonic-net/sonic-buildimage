@@ -1,0 +1,106 @@
+{%- set default_lease_time = 900 -%}
+{
+    "Dhcp4": {
+{%- if customized_options %}
+        "option-def": [
+    {%- for option_name, config in customized_options.items() %}
+            {
+                "name": "{{ option_name }}",
+                "code": {{ config["id"] }},
+                "type": "{{ config["type"] }}"
+            }{% if not loop.last %},{% endif %}
+    {%- endfor %}
+        ],
+{%- endif %}
+        "hooks-libraries": [
+            {
+                "library": "{{ hook_lib_path }}",
+                "parameters": {
+                    "name": "{{ lease_update_script_path }}",
+                    "sync": false
+                }
+            }
+        ],
+        "interfaces-config": {
+            "interfaces": [
+                "eth0"
+            ]
+        },
+        "control-socket": {
+            "socket-type": "unix",
+            "socket-name": "/run/kea/kea4-ctrl-socket"
+        },
+        "lease-database": {
+            "type": "memfile",
+            "persist": true,
+            "name": "{{ lease_path }}",
+            "lfc-interval": 3600
+        },
+        "subnet4": [
+{%- set add_subnet_preceding_comma = { 'flag': False } %}
+{%- for subnet_info in subnets %}
+    {%- if add_subnet_preceding_comma.flag -%},{%- endif -%}
+    {%- set _dummy = add_subnet_preceding_comma.update({'flag': True}) %}
+            {
+                "id": {{ subnet_info["id"] }},
+                "subnet": "{{ subnet_info["subnet"] }}",
+                "pools": [
+    {%- set add_pool_preceding_comma = { 'flag': False } %}
+    {%- for pool in subnet_info["pools"] %}
+            {%- if add_pool_preceding_comma.flag -%},{%- endif -%}
+            {%- set _dummy = add_pool_preceding_comma.update({'flag': True}) %}
+                    {
+                        "pool": "{{ pool["range"] }}",
+                        "client-class": "{{ pool["client_class"] }}"
+                    }
+    {%- endfor%}
+                ],
+                "option-data": [
+    {%- for option_name, config in subnet_info["customized_options"].items() %}
+                    {
+                        "name": "{{ option_name }}",
+                        "data": "{{ config["value"] }}",
+                        "always-send": {{ config["always_send"] }}
+                    },
+    {%- endfor %}
+                    {
+                        "name": "routers",
+                        "data": "{{ subnet_info["gateway"] if "gateway" in subnet_info else subnet_info["server_id"] }}"
+                    },
+                    {
+                        "name": "dhcp-server-identifier",
+                        "data": "{{ subnet_info["server_id"] }}"
+                    }
+                ],
+                "valid-lifetime": {{ subnet_info["lease_time"] if "lease_time" in subnet_info else default_lease_time }},
+                "reservations": []
+            }
+{%- endfor %}
+        ],
+        "loggers": [
+            {
+                "name": "kea-dhcp4",
+                "output_options": [
+                    {
+                        "output": "/var/log/kea-dhcp.log",
+                        "pattern": "%-5p %m\n"
+                    }
+                ],
+                "severity": "INFO",
+                "debuglevel": 0
+            }
+        ]{%- if client_classes -%},
+        "client-classes": [
+            {%- set add_preceding_comma = { 'flag': False } %}
+            {%- for class in client_classes %}
+                {%- if add_preceding_comma.flag -%},{%- endif -%}
+                {%- set _dummy = add_preceding_comma.update({'flag': True}) %}
+            {
+                "name": "{{ class["name"] }}",
+                "test": "{{ class["condition"] }}"
+            }
+            {%- endfor %}
+        ]
+        {%- endif %}
+    }
+}

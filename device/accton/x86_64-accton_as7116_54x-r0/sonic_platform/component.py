@@ -3,10 +3,7 @@
 # provides the components firmware management function
 #############################################################################
 
-import json
 import os.path
-import shutil
-import shlex
 import subprocess
 
 try:
@@ -29,8 +26,7 @@ class Component(DeviceBase):
     def __run_command(self, command):
         # Run bash command and print output to stdout
         try:
-            process = subprocess.Popen(
-                shlex.split(command), universal_newlines=True, stdout=subprocess.PIPE)
+            process = subprocess.Popen(command, universal_newlines=True, stdout=subprocess.PIPE)
             while True:
                 output = process.stdout.readline()
                 if output == '' and process.poll() is not None:

@@ -50,7 +50,6 @@
 #define PCA954X_MAX_NCHANS 8
 
 #define PCA954X_IRQ_OFFSET 4
-
 enum pca_type {
 	pca_9540,
 	pca_9542,
@@ -533,14 +532,13 @@ fail_cleanup:
 	return ret;
 }
 
-static int pca954x_remove(struct i2c_client *client)
+static void pca954x_remove(struct i2c_client *client)
 {
 	struct i2c_mux_core *muxc = i2c_get_clientdata(client);
 
 	device_remove_file(&client->dev, &dev_attr_idle_state);
 
 	pca954x_cleanup(muxc);
-	return 0;
 }
 
 #ifdef CONFIG_PM_SLEEP

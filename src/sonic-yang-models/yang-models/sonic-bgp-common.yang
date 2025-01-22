@@ -1,12 +1,12 @@
 module sonic-bgp-common {
-    namespace "http://github.com/Azure/sonic-bgp-common";
+    namespace "http://github.com/sonic-net/sonic-bgp-common";
     prefix bgpcmn;
     yang-version 1.1;
 
     import sonic-types {
         prefix stypes;
     }
-    
+
     import ietf-inet-types {
         prefix inet;
     }
@@ -69,12 +69,12 @@ module sonic-bgp-common {
         type enumeration {
             enum tx_all_paths {
                 description
-                    "Send multiple path advertisements for an NLRI from 
+                    "Send multiple path advertisements for an NLRI from
                     the neighbor or group";
             }
             enum tx_best_path_per_as {
                 description
-                    "Send only best path per AS advertisements for an NLRI from 
+                    "Send only best path per AS advertisements for an NLRI from
                     the neighbor or group";
             }
         }
@@ -534,7 +534,7 @@ module sonic-bgp-common {
     grouping sonic-bgp-cmn-neigh {
         leaf asn {
             type uint32 {
-                range "1..4294967295";
+                range "0..4294967295";
             }
             description "Peer AS number";
         }

@@ -110,9 +110,10 @@ int bf_fpga_ioctl(struct bf_pci_dev *bfdev,
         /* copy read data to user area */
         for (i = 0; i < i2c_op.num_i2c; i++) {
           if (i2c_op.i2c_inst[i].rd_cnt) {
-            if (copy_to_user(&(((bf_fpga_i2c_t *)addr)->i2c_inst[i].rd_buf),
-                             &i2c_op.i2c_inst[i].rd_buf,
-                             i2c_op.i2c_inst[i].rd_cnt)) {
+            if (copy_to_user(
+                    &(((bf_fpga_i2c_t *)addr)->i2c_inst[i].fpga_i2c_buf.rd_buf),
+                    &i2c_op.i2c_inst[i].fpga_i2c_buf.rd_buf,
+                    i2c_op.i2c_inst[i].rd_cnt)) {
               return -EFAULT;
             }
           }

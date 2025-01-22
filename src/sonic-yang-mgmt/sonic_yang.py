@@ -12,7 +12,7 @@ i.e. it is mixin not parent class.
 """
 class SonicYang(SonicYangExtMixin):
 
-    def __init__(self, yang_dir, debug=False, print_log_enabled=True):
+    def __init__(self, yang_dir, debug=False, print_log_enabled=True, sonic_yang_options=0):
         self.yang_dir = yang_dir
         self.ctx = None
         self.module = None
@@ -44,9 +44,11 @@ class SonicYang(SonicYangExtMixin):
         # below dict will store preProcessed yang objects, which may be needed by
         # all yang modules, such as grouping.
         self.preProcessedYang = dict()
-
+        # element path for CONFIG DB. An example for this list could be:
+        # ['PORT', 'Ethernet0', 'speed']
+        self.elementPath = []
         try:
-            self.ctx = ly.Context(yang_dir)
+            self.ctx = ly.Context(yang_dir, sonic_yang_options)
         except Exception as e:
             self.fail(e)
 

@@ -1,0 +1,88 @@
+{
+    "CONSOLE_DISABLED": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_SWITCH": {
+                "sonic-console:console_mgmt": {
+                    "enabled": "no"
+                }
+            }
+        }
+    },
+    "CONSOLE_DEFAULT_CONSOLE_MGMT": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_SWITCH": {
+                "sonic-console:console_mgmt": {
+                }
+            }
+        }
+    },
+    "CONSOLE_DISABLED_INCORRECT_PATTERN": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_SWITCH": {
+                "sonic-console:console_mgmt": {
+                    "enabled": "false"
+                }
+            }
+        }
+    },
+    "CONSOLE_PORT_DEFAULT_FLOW_CONTROL": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_NAME": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "invalid",
+                        "baud_rate": "9600"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_INVALID_BAUD": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "invalid"
+                    }
+                ]
+            }
+        }
+    },
+    "CONSOLE_PORT_VALID": {
+        "sonic-console:sonic-console": {
+            "sonic-console:CONSOLE_PORT": {
+                "CONSOLE_PORT_LIST": [
+                    {
+                        "name": "1",
+                        "baud_rate": "9600",
+                        "flow_control": "1",
+                        "remote_device": "remote_host_1"
+                    },
+                    {
+                        "name": "2",
+                        "baud_rate": "9600",
+                        "flow_control": "0",
+                        "remote_device": "remote_host_2"
+                    },
+                    {
+                        "name": "3",
+                        "baud_rate": "9600"
+                    }
+                ]
+            }
+        }
+    }
+}

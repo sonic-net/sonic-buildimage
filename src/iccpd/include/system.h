@@ -270,9 +270,9 @@ typedef struct system_dbg_counter_info
     uint32_t peer_link_down_counter;
     uint32_t warmboot_counter;
     uint32_t rx_peer_invalid_msg_counter; //counts partial msgs received as sending end is not sending partial msgs
-    uint32_t rx_peer_hdr_read_sock_err_counter; //counts socket header read errors 
+    uint32_t rx_peer_hdr_read_sock_err_counter; //counts socket header read errors
     uint32_t rx_peer_hdr_read_sock_zero_len_counter; //counts socket header read zero length
-    uint32_t rx_peer_tlv_read_sock_err_counter; //counts socket data/tlv read errors 
+    uint32_t rx_peer_tlv_read_sock_err_counter; //counts socket data/tlv read errors
     uint32_t rx_peer_tlv_read_sock_zero_len_counter; //counts socket data/tlv read zero length
     uint32_t socket_close_err_counter; //socket close failure
     uint32_t socket_cleanup_counter; //socket cleanup outside of session down

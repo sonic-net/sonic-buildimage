@@ -1,0 +1,34 @@
+{
+    "SYSTEM_DEFAULTS_WITH_CORRECT_VALUES": {
+        "sonic-system-defaults:sonic-system-defaults": {
+            "sonic-system-defaults:SYSTEM_DEFAULTS": {
+                "SYSTEM_DEFAULTS_LIST": [
+                    {
+                        "name": "tunnel_qos_remap",
+                        "status": "enabled"
+                    },
+                    {
+                        "name": "mux_tunnel_egress_acl",
+                        "status": "enabled"
+                    }
+                ]
+            }
+        }
+    },
+    "SYSTEM_DEFAULTS_WITH_INVALID_STATUS_VALUE": {
+        "sonic-system-defaults:sonic-system-defaults": {
+            "sonic-system-defaults:SYSTEM_DEFAULTS": {
+                "SYSTEM_DEFAULTS_LIST": [
+                    {
+                        "name": "tunnel_qos_remap",
+                        "status": "invalid_status"
+                    },
+                    {
+                        "name": "mux_tunnel_egress_acl",
+                        "status": "invalid_status"
+                    }
+                ]
+            }
+        }
+    }
+}

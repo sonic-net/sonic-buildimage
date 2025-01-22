@@ -26,9 +26,9 @@ try:
     import logging.config
     import logging.handlers
     import time
-    import subprocess
     from as4630_54pe.fanutil import FanUtil
     from as4630_54pe.thermalutil import ThermalUtil
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError('%s - required module not found' % str(e))
 
@@ -198,9 +198,9 @@ class device_monitor(object):
         if temp[0] >= 70000: #LM75-48    
             #critical case*/
             logging.critical('Alarm-Critical for temperature critical is detected, reset DUT')
-            cmd_str="i2cset -y -f 3 0x60 0x4 0xE4"
+            cmd_str = ["i2cset", "-y", "-f", "3", "0x60", "0x4", "0xE4"]
             time.sleep(2);
-            status, output = subprocess.getstatusoutput(cmd_str)
+            status, output = getstatusoutput_noshell(cmd_str)
                 
         #logging.debug('ori_state=%d, current_state=%d, temp_val=%d\n\n',ori_state, fan_policy_state, temp_val)
         

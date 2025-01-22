@@ -4,16 +4,9 @@
 %:
 	dh $@
 
-override_dh_auto_build:
-	cmake . && make
-
 override_dh_auto_install:
+	dh_auto_install
+	rm -r debian/psample/usr/include
 
 override_dh_auto_test:
-
-override_dh_auto_clean:
-
-override_dh_strip:
-
-override_dh_clean:
 

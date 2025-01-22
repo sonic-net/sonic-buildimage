@@ -9,7 +9,7 @@ schedules:
   branches:
     include:
     - master
-    - 202012
+    - 202???
   always: true
 - cron: "0 4 * * *"
   displayName: nightly build for release
@@ -18,18 +18,32 @@ schedules:
     - 201911
     - 201811
 
+resources:
+  repositories:
+  - repository: buildimage
+    type: github
+    name: sonic-net/sonic-buildimage
+    ref: master
+    endpoint: sonic-net
+
 trigger: none
 pr: none
 
+variables:
+- template: .azure-pipelines/template-variables.yml@buildimage
+
 stages:
 - stage: Build
-  pool: sonicbld
+  pool: sonicbld-1es
   variables:
+  - group: Container-Registry
   - name: CACHE_MODE
     value: wcache
-  - template: azure-pipelines-repd-build-variables.yml
+  - template: .azure-pipelines/azure-pipelines-repd-build-variables.yml@buildimage
   jobs:
   - template: azure-pipelines-build.yml
     parameters:
       buildOptions: 'USERNAME=admin SONIC_BUILD_JOBS=$(nproc) ${{ variables.VERSION_CONTROL_OPTIONS }}'
       jobFilters: none
+      ${{ if contains(variables['Build.DefinitionName'], 'cross') }}:
+        qemuOrCrossBuild: true

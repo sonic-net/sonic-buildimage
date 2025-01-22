@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pwd.h>
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
@@ -65,13 +66,13 @@ void initialize_tacacs_servers()
 		getaddrinfo(buffer, "49", &hints, &servers);
 		tac_srv[idx].addr = &(tac_srv_addr[idx]);
 		memcpy(tac_srv[idx].addr, servers, sizeof(struct addrinfo));
-		
+
         tac_srv[idx].addr->ai_addr = &(tac_sock_addr[idx]);
         memcpy(tac_srv[idx].addr->ai_addr, servers->ai_addr, sizeof(struct sockaddr));
-		
+
 		snprintf(tac_srv[idx].key, sizeof(tac_srv[idx].key), "key%d", idx);
         freeaddrinfo(servers);
-		
+
 		debug_printf("MOCK: initialize_tacacs_servers with index: %d, address: %p\n", idx, tac_srv[idx].addr);
 	}
 }
@@ -119,7 +120,7 @@ void tac_free_attrib(struct tac_attrib **attr)
 {
 	memory_allocate_count--;
 	debug_printf("MOCK: tac_free_attrib memory count: %d\n", memory_allocate_count);
-	
+
 	// the mock code here only free first allocated memory, because the mock tac_add_attrib implementation not allocate new memory.
 	free(*attr);
 }
@@ -133,7 +134,7 @@ int tac_author_send(int tac_fd, const char *user, char *tty, char *host,struct t
 		// send auth message failed
 		return -1;
 	}
-	
+
 	return 0;
 }
 
@@ -146,7 +147,7 @@ int tac_author_read(int tac_fd, struct areply *reply)
 	{
 		return -1;
 	}
-	
+
 	if (TEST_SCEANRIO_CONNECTION_SEND_DENINED_RESULT == test_scenario)
 	{
 		reply->status = AUTHOR_STATUS_FAIL;
@@ -155,7 +156,7 @@ int tac_author_read(int tac_fd, struct areply *reply)
 	{
 		reply->status = AUTHOR_STATUS_PASS_REPL;
 	}
-	
+
 	return 0;
 }
 
@@ -163,7 +164,7 @@ int tac_author_read(int tac_fd, struct areply *reply)
 int tac_connect_single(const struct addrinfo *address, const char *key, struct addrinfo *source_address, int timeout, char *vrfname)
 {
 	debug_printf("MOCK: tac_connect_single with address: %p\n", address);
-	
+
 	switch (test_scenario)
 	{
 		case TEST_SCEANRIO_CONNECTION_ALL_FAILED:
@@ -183,7 +184,7 @@ char *tac_ntop(const struct sockaddr *address)
 			return tac_natop_result_buffer;
 		}
 	}
-	
+
 	return "UnknownTestAddress";
 }
 
@@ -198,12 +199,41 @@ void mock_syslog(int priority, const char *format, ...)
 {
   // set mock message data to buffer for UT.
   memset(mock_syslog_message_buffer, 0, sizeof(mock_syslog_message_buffer));
-  
+
   va_list args;
   va_start (args, format);
   // save message to buffer to UT check later
   vsnprintf(mock_syslog_message_buffer, sizeof(mock_syslog_message_buffer), format, args);
   va_end (args);
-  
+
   debug_printf("MOCK: syslog: %s\n", mock_syslog_message_buffer);
+}
+
+int mock_getpwent_r(struct passwd *restrict pwbuf,
+                      char *buf, size_t buflen,
+                      struct passwd **restrict pwbufp)
+{
+	static char* test_user = "test_user";
+	static char* root_user = "root";
+	static char* empty_gecos = "";
+	static char* remote_gecos = "remote_user";
+	*pwbufp = pwbuf;
+	switch (test_scenario)
+	{
+		case TEST_SCEANRIO_CONNECTION_SEND_SUCCESS_RESULT:
+		case TEST_SCEANRIO_CONNECTION_SEND_DENINED_RESULT:
+		case TEST_SCEANRIO_IS_LOCAL_USER_REMOTE:
+			pwbuf->pw_name = test_user;
+			pwbuf->pw_gecos = remote_gecos;
+			pwbuf->pw_uid = 1000;
+			return 0;
+		case TEST_SCEANRIO_IS_LOCAL_USER_ROOT:
+			pwbuf->pw_name = root_user;
+			pwbuf->pw_gecos = empty_gecos;
+			pwbuf->pw_uid = 0;
+			return 0;
+		case TEST_SCEANRIO_IS_LOCAL_USER_NOT_FOUND:
+			return 1;
+	}
+	return 1;
 }

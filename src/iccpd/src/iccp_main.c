@@ -143,7 +143,7 @@ static int iccpd_signal_init(struct System* sys)
     int fds[2];
     int err;
     sigset_t ss;
-    struct sigaction sa;
+    struct sigaction sa = { 0 };
     struct epoll_event event;
 
     err = pipe(fds);
@@ -171,7 +171,6 @@ static int iccpd_signal_init(struct System* sys)
         goto close_pipe;
     }
 
-    memset(&sa, 0, sizeof(sa));
     sa.sa_handler = iccpd_signal_handler;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;

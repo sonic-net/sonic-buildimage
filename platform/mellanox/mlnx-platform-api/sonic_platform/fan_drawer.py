@@ -58,19 +58,8 @@ class MellanoxFanDrawer(FanDrawerBase):
         if not self.get_presence():
             return FanBase.FAN_DIRECTION_NOT_APPLICABLE
         
-        try:
-            from .fan import FAN_DIR, FAN_DIR_VALUE_INTAKE, FAN_DIR_VALUE_EXHAUST
-            fan_dir = utils.read_int_from_file(FAN_DIR.format(self._index), raise_exception=True)
-            if fan_dir == FAN_DIR_VALUE_INTAKE:
-                return FanBase.FAN_DIRECTION_INTAKE
-            elif fan_dir == FAN_DIR_VALUE_EXHAUST:
-                return FanBase.FAN_DIRECTION_EXHAUST
-            else:
-                logger.log_error("Got wrong value {} for fan direction {}".format(fan_dir, self._index))
-                return FanBase.FAN_DIRECTION_NOT_APPLICABLE
-        except (ValueError, IOError) as e:
-            logger.log_error("Failed to read fan direction status to {}".format(repr(e)))
-            return FanBase.FAN_DIRECTION_NOT_APPLICABLE
+        from .fan import FAN_DIR, MlnxFan
+        return MlnxFan.get_fan_direction(FAN_DIR.format(self._index))
 
     def set_status_led(self, color):
         """

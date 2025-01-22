@@ -67,6 +67,9 @@
             },
             {
                 "name": "CPU Core 3 Temp"
+            },
+            {
+                "name": "SODIMM 1 Temp"
             }
         ],
         "sfps": [

@@ -1,0 +1,59 @@
+{
+    "FG_NHG_TEST": {
+        "desc": "Fine-grained ECMP next-hop group configuration in FG_NHG_LIST table."
+    },
+    "FG_NHG_PREFIX_TEST": {
+        "desc": "Fine-grained ECMP prefix configuration in FG_NHG_PREFIX_LIST table."
+    },
+    "FG_NHG_MEMBER_TEST": {
+        "desc": "Fine-grained ECMP next-hop member configuration in FG_NHG_MEMBER_LIST table."
+    },
+    "FG_NHG_MEMBER_MULTI_LINK_TEST": {
+        "desc": "Fine-grained ECMP next-hop member configuration with multiple links in FG_NHG_MEMBER_LIST table."
+    },
+    "FG_NHG_TEST_DUPLICATE_NAME": {
+        "desc": "Fine-grained ECMP next-hop group configuration with duplicate name in FG_NHG_LIST table.",
+        "eStr": "Duplicated instance of \"FG_NHG_LIST\" list."
+    },
+    "FG_NHG_MEMBER_TEST_INVALID_IP": {
+        "desc": "Fine-grained ECMP next-hop member configuration with invalid IP value in FG_NHG_MEMBER_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "next_hop_ip"
+        ]
+    },
+    "FG_NHG_PREFIX_TEST_INVALID_PREFIX": {
+        "desc": "Fine-grained ECMP prefix configuration with invalid prefix value in FG_NHG_PREFIX_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "ip_prefix"
+        ]
+    },
+    "FG_NHG_MEMBER_TEST_INVALID_LINK": {
+        "desc": "Fine-grained ECMP next-hop member configuration with invalid link value in FG_NHG_MEMBER_LIST table.",
+        "eStrKey": "InvalidValue",
+        "eStr": [
+            "link"
+        ]
+    },
+    "FG_NHG_MEMBER_TEST_MISSING_FG_NHG_REF": {
+        "desc": "Fine-grained ECMP next-hop member configuration with missing FG_NHG reference in FG_NHG_MEMBER_LIST table.",
+        "eStr": "Missing required element \"FG_NHG\" in \"FG_NHG_MEMBER_LIST\". "
+    },
+    "FG_NHG_PREFIX_TEST_MISSING_FG_NHG_REF": {
+        "desc": "Fine-grained ECMP prefix configuration with missing FG_NHG reference in FG_NHG_PREFIX_LIST table.",
+        "eStr": "Missing required element \"FG_NHG\" in \"FG_NHG_PREFIX_LIST\". "
+    },
+    "FG_NHG_MEMBER_TEST_MISSING_BANK": {
+        "desc": "Fine-grained ECMP next-hop member configuration with missing bank in FG_NHG_MEMBER_LIST table.",
+        "eStr": "Missing required element \"bank\""
+    },
+    "FG_NHG_PREFIX_TEST_DUPLICATE_ENTRY": {
+        "desc": "Fine-grained ECMP prefix configuration with duplicate entry in FG_NHG_PREFIX_LIST table.",
+        "eStr": "Duplicated instance of \"FG_NHG_PREFIX_LIST\" list."
+    },
+    "FG_NHG_MEMBER_TEST_DUPLICATE_MEMBER": {
+        "desc": "Fine-grained ECMP next-hop member configuration with duplicate member in FG_NHG_MEMBER_LIST table.",
+        "eStr": "Duplicated instance of \"FG_NHG_MEMBER_LIST\" list."
+    }
+}

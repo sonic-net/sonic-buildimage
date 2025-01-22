@@ -2,7 +2,7 @@ module sonic-pfc-priority-queue-map {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-pfc-priority-queue-map";
+    namespace "http://github.com/sonic-net/sonic-pfc-priority-queue-map";
 
     prefix ppqm;
 
@@ -20,7 +20,7 @@ module sonic-pfc-priority-queue-map {
             "Initial revision.";
     }
 
-    container sonic-pfc-priority-queue-map {    
+    container sonic-pfc-priority-queue-map {
 
         container MAP_PFC_PRIORITY_TO_QUEUE {
 

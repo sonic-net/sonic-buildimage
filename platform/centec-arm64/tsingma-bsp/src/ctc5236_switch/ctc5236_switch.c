@@ -278,7 +278,6 @@ static int ctc_switch_probe(struct platform_device *pdev)
 	struct resource *iomem;
 	void __iomem *ioaddr;
 	resource_size_t start;
-	uint val;
 
 	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 

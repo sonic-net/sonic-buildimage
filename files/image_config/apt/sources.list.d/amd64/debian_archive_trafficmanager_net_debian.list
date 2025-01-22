@@ -1,3 +1,0 @@
-deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ bullseye main contrib non-free
-#deb [arch=amd64] http://debian-archive.trafficmanager.net/debian-security/ bullseye/updates main contrib non-free
-deb [arch=amd64] http://debian-archive.trafficmanager.net/debian/ bullseye-backports main contrib non-free

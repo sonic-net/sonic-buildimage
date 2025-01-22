@@ -1,6 +1,6 @@
 module sonic-sflow{
 
-    namespace "http://github.com/Azure/sonic-sflow";
+    namespace "http://github.com/sonic-net/sonic-sflow";
     prefix sflow;
     yang-version 1.1;
 
@@ -25,11 +25,33 @@ module sonic-sflow{
     import sonic-mgmt_port {
         prefix mgmt-port;
     }
+    import sonic-mgmt_vrf {
+        prefix mvrf;
+    }
+
 
     description "SFLOW yang Module for SONiC OS";
 
+    revision 2023-04-11 {
+        description "Add direction command to support egress sflow";
+    }
+
     revision 2021-04-26 {
         description "First Revision";
+    }
+
+    typedef sample_direction {
+        type enumeration {
+            enum rx {
+                description "rx direction";
+            }
+            enum tx {
+                description "tx direction";
+            }
+            enum both {
+                description "Both tx and rx direction";
+            }
+        }
     }
 
     container sonic-sflow {
@@ -43,17 +65,34 @@ module sonic-sflow{
                     type string {
                         length 1..64;
                     }
+                    description "Name of the Sflow collector";
                 }
 
                 leaf collector_ip {
                     mandatory true;
                     type inet:ip-address;
+                    description "IPv4/IPv6 address of the Sflow collector";
                 }
 
 
                 leaf collector_port {
                     type inet:port-number;
                     default 6343;
+                    description "Destination L4 port of the Sflow collector";
+                }
+
+                leaf collector_vrf {
+                    must "(current() != 'mgmt') or (/mvrf:sonic-mgmt_vrf/mvrf:MGMT_VRF_CONFIG/mvrf:vrf_global/mvrf:mgmtVrfEnabled = 'true')" {
+                        error-message "Must condition not satisfied. Try enable Management VRF.";
+                    }
+
+                    type string {
+                        pattern "mgmt|default";
+                    }
+
+                    description
+                        "Specify the Collector VRF. In this revision, it is either
+                         default VRF or Management VRF.";
                 }
 
             } /* end of list SFLOW_COLLECTOR_LIST */
@@ -78,6 +117,7 @@ module sonic-sflow{
                 leaf admin_state {
                     type stypes:admin_status;
                     default up;
+                    description "Per port sflow admin state";
                 }
 
                 leaf sample_rate {
@@ -89,6 +129,13 @@ module sonic-sflow{
                     }
                     description "Sets the packet sampling rate.  The rate is expressed as an integer N, where the intended sampling rate is 1/N packets.";
                 }
+
+                leaf sample_direction {
+                    type sample_direction;
+                    default "rx";
+                    description "sflow sample direction";
+                }
+
             } /* end of list SFLOW_SESSION_LIST */
         } /* end of container SFLOW_SESSION */
 
@@ -99,6 +146,7 @@ module sonic-sflow{
                 leaf admin_state {
                     type stypes:admin_status;
                     default down;
+                    description "Global sflow admin state";
                 }
 
                 leaf polling_interval {
@@ -133,6 +181,13 @@ module sonic-sflow{
                     }
                     description "Interface name";
                 }
+
+                leaf sample_direction {
+                    type sample_direction;
+                    default "rx";
+                    description "sflow sample direction";
+                }
+
             } /* end of container global */
        } /* end of container SFLOW */
 

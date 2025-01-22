@@ -1,9 +1,13 @@
 #!/bin/bash
 
+[[ ! -z "${DBGOPT}" && $0 =~ ${DBGOPT} ]] && set -x
+
 
 ARCH=$1
 DISTRO=$2
 FILESYSTEM_ROOT=$3
+HOST_IMAGE_NAME=host-image
+IMAGENAME=${HOST_IMAGE_NAME}
 
 . /usr/local/share/buildinfo/scripts/buildinfo_base.sh
 VERSION_DEB_PREFERENCE="01-versions-deb"
@@ -26,4 +30,8 @@ if [ "$ENABLE_VERSION_CONTROL_DEB" == "y" ]; then
 fi
 
 sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "dpkg -i /usr/local/share/buildinfo/sonic-build-hooks_1.0_all.deb"
-sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "pre_run_buildinfo"
+#sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "pre_run_buildinfo"
+sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo export DISTRO=${DISTRO} >> /usr/local/share/buildinfo/config/buildinfo.config"
+sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "echo export IMAGENAME=${IMAGENAME} >> /usr/local/share/buildinfo/config/buildinfo.config"
+
+sudo LANG=C chroot $FILESYSTEM_ROOT /bin/bash -c "pre_run_buildinfo ${HOST_IMAGE_NAME}"

@@ -11,6 +11,11 @@ install() {
     if [ -e $PY3_PACK ]; then
         pip3 install $PY3_PACK
     fi
+
+    if [ -e $DEVICE/$PLATFORM/pddf/sonic_platform-1.0-py3-none-any.whl ]; then
+	PY3_PACK=$DEVICE/$PLATFORM/pddf/sonic_platform-1.0-py3-none-any.whl
+	pip3 install $PY3_PACK
+    fi	    
 }
 
 init() {

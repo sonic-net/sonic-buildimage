@@ -8,6 +8,7 @@ from .log import log_warn, log_err, log_info, log_debug, log_crit
 from .manager import Manager
 from .template import TemplateFabric
 from .utils import run_command
+from .managers_device_global import DeviceGlobalCfgMgr
 
 
 class BGPPeerGroupMgr(object):
@@ -23,6 +24,7 @@ class BGPPeerGroupMgr(object):
         tf = common_objs['tf']
         self.policy_template = tf.from_file(base_template + "policies.conf.j2")
         self.peergroup_template = tf.from_file(base_template + "peer-group.conf.j2")
+        self.device_global_cfgmgr = DeviceGlobalCfgMgr(common_objs, "CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME)
 
     def update(self, name, **kwargs):
         """
@@ -56,14 +58,16 @@ class BGPPeerGroupMgr(object):
         """
         try:
             pg = self.peergroup_template.render(**kwargs)
+            tsa_rm = self.device_global_cfgmgr.check_state_and_get_tsa_routemaps(pg)
+            idf_isolation_rm = self.device_global_cfgmgr.check_state_and_get_idf_isolation_routemaps()
         except jinja2.TemplateError as e:
             log_err("Can't render peer-group template: '%s': %s" % (name, str(e)))
             return False
 
         if kwargs['vrf'] == 'default':
-            cmd = ('router bgp %s\n' % kwargs['bgp_asn']) + pg
+            cmd = ('router bgp %s\n' % kwargs['bgp_asn']) + pg + tsa_rm + idf_isolation_rm
         else:
-            cmd = ('router bgp %s vrf %s\n' % (kwargs['bgp_asn'], kwargs['vrf'])) + pg
+            cmd = ('router bgp %s vrf %s\n' % (kwargs['bgp_asn'], kwargs['vrf'])) + pg + tsa_rm + idf_isolation_rm
         self.update_entity(cmd, "Peer-group for peer '%s'" % name)
         return True
 
@@ -103,7 +107,10 @@ class BGPPeerMgrBase(Manager):
 
         deps = [
             ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/bgp_asn"),
+            ("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/type"),
             ("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback0"),
+            ("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "tsa_enabled"),
+            ("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "idf_isolation_state"),
             ("LOCAL", "local_addresses", ""),
             ("LOCAL", "interfaces", ""),
         ]
@@ -125,7 +132,7 @@ class BGPPeerMgrBase(Manager):
         if self.check_deployment_id:
             deps.append(("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/deployment_id"))
 
-        if self.peer_type == 'internal':    
+        if self.peer_type == 'internal':
             deps.append(("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME, "Loopback4096"))
 
         super(BGPPeerMgrBase, self).__init__(
@@ -164,14 +171,17 @@ class BGPPeerMgrBase(Manager):
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
         #
         lo0_ipv4 = self.get_lo_ipv4("Loopback0|")
-        if lo0_ipv4 is None:
-            log_warn("Loopback0 ipv4 address is not presented yet")
+        if (lo0_ipv4 is None and "bgp_router_id"
+            not in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]):
+            log_warn("Loopback0 ipv4 address is not presented yet and bgp_router_id not configured")
             return False
+
         #
         if self.peer_type == 'internal':
             lo4096_ipv4 = self.get_lo_ipv4("Loopback4096|")
-            if lo4096_ipv4 is None:
-                log_warn("Loopback4096 ipv4 address is not presented yet")
+            if (lo4096_ipv4 is None and "bgp_router_id"
+                not in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]):
+                log_warn("Loopback4096 ipv4 address is not presented yet and bgp_router_id not configured")
                 return False
 
         if "local_addr" not in data:
@@ -199,10 +209,11 @@ class BGPPeerMgrBase(Manager):
             'vrf': vrf,
             'neighbor_addr': nbr,
             'bgp_session': data,
-            'loopback0_ipv4': lo0_ipv4,
             'CONFIG_DB__LOOPBACK_INTERFACE':{ tuple(key.split('|')) : {} for key in self.directory.get_slot("CONFIG_DB", swsscommon.CFG_LOOPBACK_INTERFACE_TABLE_NAME)
                                                                          if '|' in key }
         }
+        if lo0_ipv4 is not None:
+            kwargs['loopback0_ipv4'] = lo0_ipv4
         if self.check_neig_meta:
             neigmeta = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_NEIGHBOR_METADATA_TABLE_NAME)
             if 'name' in data and data["name"] not in neigmeta:
@@ -301,10 +312,11 @@ class BGPPeerMgrBase(Manager):
         :return: True if no errors, False if there are errors
         """
         bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
+        enable_bgp_suppress_fib_pending_cmd = 'bgp suppress-fib-pending'
         if vrf == 'default':
-            cmd = ('router bgp %s\n' % bgp_asn) + cmd
+            cmd = ('router bgp %s\n %s\n' % (bgp_asn, enable_bgp_suppress_fib_pending_cmd)) + cmd
         else:
-            cmd = ('router bgp %s vrf %s\n' % (bgp_asn, vrf)) + cmd
+            cmd = ('router bgp %s vrf %s\n %s\n' % (bgp_asn, vrf, enable_bgp_suppress_fib_pending_cmd)) + cmd
         self.cfg_mgr.push(cmd)
         return True
 
@@ -375,7 +387,7 @@ class BGPPeerMgrBase(Manager):
         Load peers from FRR.
         :return: set of peers, which are already installed in FRR
         """
-        command = ["vtysh", "-c", "show bgp vrfs json"]
+        command = ["vtysh", "-H", "/dev/null", "-c", "show bgp vrfs json"]
         ret_code, out, err = run_command(command)
         if ret_code == 0:
             js_vrf = json.loads(out)

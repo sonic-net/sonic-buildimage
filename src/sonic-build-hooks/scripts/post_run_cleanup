@@ -1,0 +1,41 @@
+#!/bin/bash
+
+IMAGENAME=$1
+
+. /usr/local/share/buildinfo/scripts/buildinfo_base.sh
+
+set -x
+
+
+if [ ! -z "$(get_version_cache_option)" ]; then
+
+	#Delete the rsync package files
+	if [[ ! ${IMAGENAME} =~ -slave- ]]; then
+		/usr/bin/apt-get purge -y --auto-remove rsync
+	fi
+fi
+
+apt-get -s clean -y
+apt-get -s autoclean -y
+apt-get -s autoremove -y
+#apt-get -s autoremove -y --purge
+rm -f /var/cache/apt/archives/*.deb /var/cache/apt/*.bin
+
+if [[ ! ${IMAGENAME} =~ -slave- ]]; then
+	rm -f /var/lib/apt/lists/*
+fi
+
+rm -rf /sonic/target /ssh
+rm -f /tmp/*
+rm -rf /debs /python-wheels  ~/.cache
+find / | grep -E "__pycache__" | xargs rm -rf
+
+rm -rf $BUILD_VERSION_PATH/*
+
+# Disable the build hooks
+symlink_build_hooks -d
+set_reproducible_mirrors -d
+
+# Remove the version deb preference
+rm -f $VERSION_DEB_PREFERENCE
+rm -f /etc/apt/preferences.d/01-versions-deb

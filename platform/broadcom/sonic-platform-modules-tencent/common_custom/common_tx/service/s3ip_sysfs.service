@@ -1,0 +1,17 @@
+[Unit]
+Description=s3ip sysfs service
+Wants=network-online.target
+After=network-online.target rg_platform_driver.service
+Before=pmon.service rg_platform_process.service
+Requires=rg_platform_driver.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/s3ip_sysfs_tool.sh start
+ExecStop=/usr/local/bin/s3ip_sysfs_tool.sh stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target
+

@@ -236,6 +236,9 @@
                     "Ethernet1/3",
                     "Ethernet1/5",
                     "Ethernet1/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet1/1"
                 ]
             }
         },
@@ -255,6 +258,9 @@
                     "Ethernet2/3",
                     "Ethernet2/5",
                     "Ethernet2/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet2/1"
                 ]
             }
         },
@@ -274,6 +280,9 @@
                     "Ethernet3/3",
                     "Ethernet3/5",
                     "Ethernet3/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet3/1"
                 ]
             }
         },
@@ -293,6 +302,9 @@
                     "Ethernet4/3",
                     "Ethernet4/5",
                     "Ethernet4/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet4/1"
                 ]
             }
         },
@@ -312,6 +324,9 @@
                     "Ethernet5/3",
                     "Ethernet5/5",
                     "Ethernet5/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet5/1"
                 ]
             }
         },
@@ -331,6 +346,9 @@
                     "Ethernet6/3",
                     "Ethernet6/5",
                     "Ethernet6/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet6/1"
                 ]
             }
         },
@@ -350,6 +368,9 @@
                     "Ethernet7/3",
                     "Ethernet7/5",
                     "Ethernet7/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet7/1"
                 ]
             }
         },
@@ -369,6 +390,9 @@
                     "Ethernet8/3",
                     "Ethernet8/5",
                     "Ethernet8/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet8/1"
                 ]
             }
         },
@@ -388,6 +412,9 @@
                     "Ethernet9/3",
                     "Ethernet9/5",
                     "Ethernet9/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet9/1"
                 ]
             }
         },
@@ -407,6 +434,9 @@
                     "Ethernet10/3",
                     "Ethernet10/5",
                     "Ethernet10/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet10/1"
                 ]
             }
         },
@@ -426,6 +456,9 @@
                     "Ethernet11/3",
                     "Ethernet11/5",
                     "Ethernet11/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet11/1"
                 ]
             }
         },
@@ -445,6 +478,9 @@
                     "Ethernet12/3",
                     "Ethernet12/5",
                     "Ethernet12/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet12/1"
                 ]
             }
         },
@@ -464,6 +500,9 @@
                     "Ethernet13/3",
                     "Ethernet13/5",
                     "Ethernet13/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet13/1"
                 ]
             }
         },
@@ -483,6 +522,9 @@
                     "Ethernet14/3",
                     "Ethernet14/5",
                     "Ethernet14/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet14/1"
                 ]
             }
         },
@@ -502,6 +544,9 @@
                     "Ethernet15/3",
                     "Ethernet15/5",
                     "Ethernet15/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet15/1"
                 ]
             }
         },
@@ -521,6 +566,9 @@
                     "Ethernet16/3",
                     "Ethernet16/5",
                     "Ethernet16/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet16/1"
                 ]
             }
         },
@@ -540,6 +588,9 @@
                     "Ethernet17/3",
                     "Ethernet17/5",
                     "Ethernet17/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet17/1"
                 ]
             }
         },
@@ -559,6 +610,9 @@
                     "Ethernet18/3",
                     "Ethernet18/5",
                     "Ethernet18/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet18/1"
                 ]
             }
         },
@@ -578,6 +632,9 @@
                     "Ethernet19/3",
                     "Ethernet19/5",
                     "Ethernet19/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet19/1"
                 ]
             }
         },
@@ -597,6 +654,9 @@
                     "Ethernet20/3",
                     "Ethernet20/5",
                     "Ethernet20/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet20/1"
                 ]
             }
         },
@@ -616,6 +676,9 @@
                     "Ethernet21/3",
                     "Ethernet21/5",
                     "Ethernet21/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet21/1"
                 ]
             }
         },
@@ -635,6 +698,9 @@
                     "Ethernet22/3",
                     "Ethernet22/5",
                     "Ethernet22/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet22/1"
                 ]
             }
         },
@@ -654,6 +720,9 @@
                     "Ethernet23/3",
                     "Ethernet23/5",
                     "Ethernet23/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet23/1"
                 ]
             }
         },
@@ -673,6 +742,9 @@
                     "Ethernet24/3",
                     "Ethernet24/5",
                     "Ethernet24/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet24/1"
                 ]
             }
         },
@@ -692,6 +764,9 @@
                     "Ethernet25/3",
                     "Ethernet25/5",
                     "Ethernet25/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet25/1"
                 ]
             }
         },
@@ -711,6 +786,9 @@
                     "Ethernet26/3",
                     "Ethernet26/5",
                     "Ethernet26/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet26/1"
                 ]
             }
         },
@@ -730,6 +808,9 @@
                     "Ethernet27/3",
                     "Ethernet27/5",
                     "Ethernet27/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet27/1"
                 ]
             }
         },
@@ -749,6 +830,9 @@
                     "Ethernet28/3",
                     "Ethernet28/5",
                     "Ethernet28/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet28/1"
                 ]
             }
         },
@@ -768,6 +852,9 @@
                     "Ethernet29/3",
                     "Ethernet29/5",
                     "Ethernet29/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet29/1"
                 ]
             }
         },
@@ -787,6 +874,9 @@
                     "Ethernet30/3",
                     "Ethernet30/5",
                     "Ethernet30/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet30/1"
                 ]
             }
         },
@@ -806,6 +896,9 @@
                     "Ethernet31/3",
                     "Ethernet31/5",
                     "Ethernet31/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet31/1"
                 ]
             }
         },
@@ -825,6 +918,9 @@
                     "Ethernet32/3",
                     "Ethernet32/5",
                     "Ethernet32/7"
+                ],
+                "1x100G(4)": [
+                    "Ethernet32/1"
                 ]
             }
         },

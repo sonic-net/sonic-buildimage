@@ -1,7 +1,7 @@
 #DPKG FRK
 
 SPATH       := $($(LIBTAC2)_SRC_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/tacacs.mk rules/tacacs.dep   
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/tacacs.mk rules/tacacs.dep 
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 DEP_FILES   += $(shell git ls-files $(SPATH))
 
@@ -32,4 +32,16 @@ DEP_FILES   += $(shell git ls-files $(SPATH))
 $(BASH_TACPLUS)_CACHE_MODE  := GIT_CONTENT_SHA 
 $(BASH_TACPLUS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
 $(BASH_TACPLUS)_DEP_FILES   := $(DEP_FILES)
+
+
+
+
+SPATH       := $($(AUDISP_TACPLUS)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/tacacs.mk rules/tacacs.dep
+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
+DEP_FILES   += $(shell git ls-files $(SPATH))
+
+$(AUDISP_TACPLUS)_CACHE_MODE  := GIT_CONTENT_SHA
+$(AUDISP_TACPLUS)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
+$(AUDISP_TACPLUS)_DEP_FILES   := $(DEP_FILES)
 

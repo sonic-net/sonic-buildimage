@@ -5,7 +5,7 @@ import subprocess
 import time
 import syslog
 import os
-from swsssdk import ConfigDBConnector
+from swsscommon.swsscommon import ConfigDBConnector
 import socket
 import threading
 import queue
@@ -118,6 +118,7 @@ class BgpdClientMgr(threading.Thread):
             'PIM_INTERFACE': ['pimd'],
             'IGMP_INTERFACE': ['pimd'],
             'IGMP_INTERFACE_QUERY': ['pimd'],
+            'SRV6_LOCATOR': ['zebra']
     }
     VTYSH_CMD_DAEMON = [(r'show (ip|ipv6) route($|\s+\S+)', ['zebra']),
                         (r'show ip mroute($|\s+\S+)', ['pimd']),
@@ -401,6 +402,47 @@ def get_command_cmn(daemon, cmd_str, op, st_idx, vals, bool_values):
         cmd_args.append(CommandArgument(daemon, cmd_enable, vals[idx]))
     return [cmd_str.format(*cmd_args, no = CommandArgument(daemon, cmd_enable))]
 
+def hdl_srv6_locator(daemon, cmd_str, op, st_idx, vals, bool_values):
+    chk_val = None
+    if op == CachedDataWithOp.OP_DELETE:
+        if bool_values is not None and len(bool_values) >= 3:
+            # set to default if given
+            cmd_enable = bool_values[2]
+        else:
+            cmd_enable = False
+    else:
+        cmd_enable = True
+        if bool_values is not None:
+            if len(vals) <= st_idx:
+                return None
+            chk_val = vals[st_idx]
+            if type(chk_val) is dict:
+                cmd_enable = False
+                for _, v in chk_val.items():
+                    if not v[1]:
+                        continue
+                    if v[0] == bool_values[0]:
+                        cmd_enable = True
+                        break
+            else:
+                if chk_val == bool_values[0]:
+                    cmd_enable = True
+                elif chk_val == bool_values[1]:
+                    cmd_enable = False
+                else:
+                    return None
+        else:
+            cmd_enable = True
+    cmd_list = []
+    for num in range(len(vals[0])):
+        cmd_args = []
+        for idx in range(len(vals)):
+            if bool_values is not None and idx == st_idx:
+                continue
+            cmd_args.append(CommandArgument(daemon, cmd_enable, vals[idx][num]))
+        cmd_list.append(cmd_str.format(*cmd_args, no = CommandArgument(daemon, cmd_enable)))
+    return cmd_list
+
 def hdl_set_extcomm(daemon, cmd_str, op, st_idx, args, is_inline):
     if is_inline:
         if type(args[0]) is list:
@@ -522,7 +564,7 @@ class BGPKeyMapInfo:
                 ret_str += ' DFT: %s' % self.data[2]
         ret_str += ']'
         return ret_str
-        
+
 class BGPKeyMapList(list):
     def __init__(self, key_map_list, table_name, table_key = None):
         super(BGPKeyMapList, self).__init__()
@@ -1038,9 +1080,9 @@ def hdl_ospf_log(daemon, cmd_str, op, st_idx, args, data):
 
 def handle_ospf_area_auth(daemon, cmd_str, op, st_idx, args, data):
     cmd_list = []
-  
+
     no_op = 'no ' if op == CachedDataWithOp.OP_DELETE else ''
- 
+
     if (args[1] == "MD5HMAC"):
         cmd_list.append(cmd_str.format(CommandArgument(daemon, True, no_op),
                                        CommandArgument(daemon, True, args[0]),
@@ -1053,7 +1095,7 @@ def handle_ospf_area_auth(daemon, cmd_str, op, st_idx, args, data):
     elif (args[1] == "NONE"):
         cmd_list.append(cmd_str.format(CommandArgument(daemon, True, 'no '),
                                        CommandArgument(daemon, True, args[0]),
-                                       CommandArgument(daemon, True, "")))        
+                                       CommandArgument(daemon, True, "")))
     return cmd_list
 
 def handle_ospf_area_shortcut(daemon, cmd_str, op, st_idx, args, data):
@@ -1083,13 +1125,13 @@ def handle_ospf_area_vlink_auth(daemon, cmd_str, op, st_idx, args, data):
 
     if (args[2] == "MD5HMAC"):
         cmd_list.append(cmd_str.format(CommandArgument(daemon, True, no_op),
-                                       CommandArgument(daemon, True, args[0]), 
-                                       CommandArgument(daemon, True, args[1]), 
+                                       CommandArgument(daemon, True, args[0]),
+                                       CommandArgument(daemon, True, args[1]),
                                        CommandArgument(daemon, True, "message-digest")))
     elif (args[2] == "NONE"):
         cmd_list.append(cmd_str.format(CommandArgument(daemon, True, no_op),
-                                       CommandArgument(daemon, True, args[0]), 
-                                       CommandArgument(daemon, True, args[1]), 
+                                       CommandArgument(daemon, True, args[0]),
+                                       CommandArgument(daemon, True, args[1]),
                                        CommandArgument(daemon, True, "null")))
 
     return cmd_list
@@ -1368,17 +1410,17 @@ def hdl_leaf_list_expansion(daemon, cmd_str, op, st_idx, args, data, table_key, 
     syslog.syslog(syslog.LOG_DEBUG, 'cmd_list {}'.format(cmd_list))
     return cmd_list
 
-def hdl_import_list(daemon, cmd_str, op, st_idx, args, data):    
+def hdl_import_list(daemon, cmd_str, op, st_idx, args, data):
     return hdl_leaf_list_expansion(daemon, cmd_str, op, st_idx, args, data, daemon.tmp_cache_key, 'import-rts')
 
-def hdl_export_list(daemon, cmd_str, op, st_idx, args, data):    
+def hdl_export_list(daemon, cmd_str, op, st_idx, args, data):
     return hdl_leaf_list_expansion(daemon, cmd_str, op, st_idx, args, data, daemon.tmp_cache_key, 'export-rts')
 
-def hdl_enum_conversion(daemon, cmd_str, op, st_idx, args, data): 
-    cmd_list = []   
+def hdl_enum_conversion(daemon, cmd_str, op, st_idx, args, data):
+    cmd_list = []
     syslog.syslog(syslog.LOG_DEBUG, 'handle_enum_conversion {} op {} st_idx {} args {} data {}'.format(
                                     cmd_str, op, st_idx, args, data))
-    cmd_list.append(cmd_str.format(CommandArgument(daemon, True, args[st_idx].lower().replace('_','-')), 
+    cmd_list.append(cmd_str.format(CommandArgument(daemon, True, args[st_idx].lower().replace('_','-')),
         no = CommandArgument(daemon, (op != CachedDataWithOp.OP_DELETE))))
     syslog.syslog(syslog.LOG_DEBUG, 'cmd_list {}'.format(cmd_list))
     return cmd_list
@@ -1445,6 +1487,7 @@ class ExtConfigDBConnector(ConfigDBConnector):
     def __init__(self, ns_attrs = None):
         super(ExtConfigDBConnector, self).__init__()
         self.nosort_attrs = ns_attrs if ns_attrs is not None else {}
+        self.__listen_thread_running = False
     def raw_to_typed(self, raw_data, table = ''):
         if len(raw_data) == 0:
             raw_data = None
@@ -1469,12 +1512,28 @@ class ExtConfigDBConnector(ConfigDBConnector):
             except Exception as e:
                 syslog.syslog(syslog.LOG_ERR, '[bgp cfgd] Failed handling config DB update with exception:' + str(e))
                 logging.exception(e)
+
+    def listen_thread(self, timeout):
+        self.__listen_thread_running = True
+        sub_key_space = "__keyspace@{}__:*".format(self.get_dbid(self.db_name))
+        self.pubsub.psubscribe(sub_key_space)
+        while self.__listen_thread_running:
+            msg = self.pubsub.get_message(timeout, True)
+            if msg:
+                self.sub_msg_handler(msg)
+
+        self.pubsub.punsubscribe(sub_key_space)
+
     def listen(self):
         """Start listen Redis keyspace events and will trigger corresponding handlers when content of a table changes.
         """
         self.pubsub = self.get_redis_client(self.db_name).pubsub()
-        self.pubsub.psubscribe(**{"__keyspace@{}__:*".format(self.get_dbid(self.db_name)): self.sub_msg_handler})
-        self.sub_thread = self.pubsub.run_in_thread(sleep_time = 0.01)
+        self.sub_thread = threading.Thread(target=self.listen_thread, args=(10,))
+        self.sub_thread.start()
+
+    def stop_listen(self):
+        self.__listen_thread_running = False
+
     @staticmethod
     def get_table_key(table, key):
         return table + '&&' + key
@@ -1701,6 +1760,7 @@ class BGPConfigDaemon:
     DEFAULT_VRF = 'default'
 
     global_key_map = [('router_id',                                     '{no:no-prefix}bgp router-id {}'),
+                      ('srv6_locator',                                  '{no:no-prefix}srv6-locator {}'),
                       (['load_balance_mp_relax', '+as_path_mp_as_set'], '{no:no-prefix}bgp bestpath as-path multipath-relax {:mp-as-set}', ['true', 'false']),
                       ('always_compare_med',                            '{no:no-prefix}bgp always-compare-med', ['true', 'false']),
                       ('external_compare_router_id',                    '{no:no-prefix}bgp bestpath compare-routerid', ['true', 'false']),
@@ -1742,6 +1802,16 @@ class BGPConfigDaemon:
     global_af_key_map = [(['ebgp_route_distance',
                            'ibgp_route_distance',
                            'local_route_distance'],                     '{no:no-prefix}distance bgp {} {} {}'),
+                         ('rd_vpn_export',                              '{no:no-prefix}rd vpn export {}'),
+                         ('rt_vpn_export',                              '{no:no-prefix}rt vpn export {}'),
+                         ('rt_vpn_import',                              '{no:no-prefix}rt vpn import {}'),
+                         ('rt_vpn_both',                                '{no:no-prefix}rt vpn both {}'),
+                         ('export_vpn',                                 '{no:no-prefix}export vpn', ['true','false']),
+                         ('import_vpn',                                 '{no:no-prefix}import vpn', ['true','false']),
+                         ('redistribute_connected',                     '{no:no-prefix}redistribute connected', ['true','false']),
+                         ('redistribute_static_rmap',                   '{no:no-prefix}redistribute static route-map {}'),
+                         ('rmap_vpn_export',                            '{no:no-prefix}route-map vpn export {}'),
+                         ('rmap_vpn_import',                            '{no:no-prefix}route-map vpn import {}'),
                          ('max_ebgp_paths',                             '{no:no-prefix}maximum-paths {}'),
                          (['max_ibgp_paths',
                            '+ibgp_equal_cluster_length'],               '{no:no-prefix}maximum-paths ibgp {} {:match-clust-len}', hdl_ibgp_maxpath),
@@ -1862,18 +1932,18 @@ class BGPConfigDaemon:
                          ('set_ext_community_ref',          '[bgpd]{no:no-prefix}set extcommunity {:ext-com-ref}', hdl_set_extcomm, False)
     ]
 
-    bfd_peer_shop_key_map = [('enabled',                        '{no:no-prefix}shutdown', ['false', 'true']),                
-                         ('desired-minimum-tx-interval',        '{no:no-prefix}transmit-interval {}'),      
-                         ('required-minimum-receive',           '{no:no-prefix}receive-interval {}'),       
-                         ('desired-minimum-echo-receive',       '{no:no-prefix}echo-interval {}'),             
-                         ('detection-multiplier',               '{no:no-prefix}detect-multiplier {}'),          
+    bfd_peer_shop_key_map = [('enabled',                        '{no:no-prefix}shutdown', ['false', 'true']),
+                         ('desired-minimum-tx-interval',        '{no:no-prefix}transmit-interval {}'),
+                         ('required-minimum-receive',           '{no:no-prefix}receive-interval {}'),
+                         ('desired-minimum-echo-receive',       '{no:no-prefix}echo-interval {}'),
+                         ('detection-multiplier',               '{no:no-prefix}detect-multiplier {}'),
                          ('echo-active',                        '{no:no-prefix}echo-mode', ['true', 'false'])
-    ]  
+    ]
 
-    bfd_peer_mhop_key_map = [('enabled',                        '{no:no-prefix}shutdown', ['false', 'true']),                
-                         ('desired-minimum-tx-interval',        '{no:no-prefix}transmit-interval {}'),      
-                         ('required-minimum-receive',           '{no:no-prefix}receive-interval {}'),       
-                         ('detection-multiplier',               '{no:no-prefix}detect-multiplier {}'),          
+    bfd_peer_mhop_key_map = [('enabled',                        '{no:no-prefix}shutdown', ['false', 'true']),
+                         ('desired-minimum-tx-interval',        '{no:no-prefix}transmit-interval {}'),
+                         ('required-minimum-receive',           '{no:no-prefix}receive-interval {}'),
+                         ('detection-multiplier',               '{no:no-prefix}detect-multiplier {}'),
     ]
 
     listen_prefix_key_map = [('peer_group', '{no:no-prefix}bgp listen range {} peer-group {}')]
@@ -1915,7 +1985,7 @@ class BGPConfigDaemon:
                              ('distance-all',                  '{no:no-prefix}distance {}'),
                              ('distance-external',             '{no:no-prefix}distance ospf external {}'),
                              ('distance-inter-area',           '{no:no-prefix}distance ospf inter-area {}'),
-                             ('distance-intra-area',           '{no:no-prefix}distance ospf intra-area {}')]    
+                             ('distance-intra-area',           '{no:no-prefix}distance ospf intra-area {}')]
 
     ospfv2_area_key_map = [('stub',                     '{no:no-prefix}area {} stub'),
                            ('stub-no-summary',          '{no:no-prefix}area {} stub no-summary'),
@@ -1975,7 +2045,7 @@ class BGPConfigDaemon:
                              ('ecmp-enabled', '{no:no-prefix}ip pim ecmp', ['true', 'false']),
                              ('ecmp-rebalance-enabled', '{no:no-prefix}ip pim ecmp rebalance',['true', 'false']),
             ]
-    
+
     igmp_mcast_grp_key_map =[('enable', '{no:no-prefix}ip igmp join {} {}'),
                            ]
 
@@ -2008,6 +2078,7 @@ class BGPConfigDaemon:
                              ('icmo_ttl', 'ttl {}', handle_ip_sla_common),
                              ('icmp_tos', 'tos {}', handle_ip_sla_common),
                            ]
+    srv6_locator_key_map = [(['opcode_prefix', 'opcode_act', 'opcode_data'], '{no:no-prefix}opcode {} {} {}', hdl_srv6_locator)]
 
 
     tbl_to_key_map = {'BGP_GLOBALS':                    global_key_map,
@@ -2025,7 +2096,7 @@ class BGPConfigDaemon:
                       'BGP_GLOBALS_AF_AGGREGATE_ADDR':  af_aggregate_key_map,
                       'BGP_GLOBALS_AF_NETWORK':         af_network_key_map,
                       'BGP_GLOBALS_EVPN_VNI':           global_evpn_vni_key_map,
-                      'BFD_PEER_SINGLE_HOP':            bfd_peer_shop_key_map,          
+                      'BFD_PEER_SINGLE_HOP':            bfd_peer_shop_key_map,
                       'BFD_PEER_MULTI_HOP':             bfd_peer_mhop_key_map,
                       'IP_SLA':                         ip_sla_key_map,
                       'OSPFV2_ROUTER':                  ospfv2_global_key_map,
@@ -2037,7 +2108,8 @@ class BGPConfigDaemon:
                       'PIM_GLOBALS':                    pim_global_key_map,
                       'PIM_INTERFACE':                  pim_interface_key_map,
                       'IGMP_INTERFACE':                 igmp_mcast_grp_key_map,
-                      'IGMP_INTERFACE_QUERY':           igmp_interface_config_key_map
+                      'IGMP_INTERFACE_QUERY':           igmp_interface_config_key_map,
+                      'SRV6_LOCATOR':                   srv6_locator_key_map,
     }
 
     vrf_tables = {'BGP_GLOBALS', 'BGP_GLOBALS_AF',
@@ -2219,7 +2291,7 @@ class BGPConfigDaemon:
             ('ROUTE_REDISTRIBUTE', self.bgp_table_handler_common),
             ('BGP_GLOBALS_AF_AGGREGATE_ADDR', self.bgp_table_handler_common),
             ('BGP_GLOBALS_AF_NETWORK', self.bgp_table_handler_common),
-            ('BFD_PEER_SINGLE_HOP', self.bgp_table_handler_common),               
+            ('BFD_PEER_SINGLE_HOP', self.bgp_table_handler_common),
             ('BFD_PEER_MULTI_HOP', self.bgp_table_handler_common),
             ('IP_SLA', self.bgp_table_handler_common),
             ('OSPFV2_ROUTER', self.bgp_table_handler_common),
@@ -2234,7 +2306,8 @@ class BGPConfigDaemon:
             ('PIM_GLOBALS', self.bgp_table_handler_common),
             ('PIM_INTERFACE', self.bgp_table_handler_common),
             ('IGMP_INTERFACE', self.bgp_table_handler_common),
-            ('IGMP_INTERFACE_QUERY', self.bgp_table_handler_common)
+            ('IGMP_INTERFACE_QUERY', self.bgp_table_handler_common),
+            ('SRV6_LOCATOR', self.bgp_table_handler_common),
         ]
         self.bgp_message = queue.Queue(0)
         self.table_data_cache = self.config_db.get_table_data([tbl for tbl, _ in self.table_handler_list])
@@ -2263,7 +2336,7 @@ class BGPConfigDaemon:
     @staticmethod
     def __run_command(table, command, daemons = None):
         return g_run_command(table, command, True, daemons)
-        
+
     def metadata_handler(self, table, key, data):
         if key != 'localhost':
             syslog.syslog(syslog.LOG_DEBUG, 'not localhost data update')
@@ -2309,7 +2382,7 @@ class BGPConfigDaemon:
                 elif param == 'admin_status' and data[param] == 'down':
                     command = command + " -c 'shutdown'"
             self.__run_command(table, command)
-    
+
     def vrf_handler(self, table, key, data):
         syslog.syslog(syslog.LOG_INFO, '[bgp cfgd](vrf) value for {} changed to {}'.format(key, data))
         #get vrf key
@@ -2469,7 +2542,7 @@ class BGPConfigDaemon:
         if len(cfg_data) == 0:
             for dkey, dval in data.items():
                 dval.status = CachedDataWithOp.STAT_SUCC
-        else : 
+        else :
             for dkey, dval in data.items():
                 if dkey in cfg_data.keys():
                     if cfg_data[dkey] not in op_list :
@@ -2483,7 +2556,7 @@ class BGPConfigDaemon:
         for dkey, dval in data.items():
             dval.status = CachedDataWithOp.STAT_SUCC
             dval.op = CachedDataWithOp.OP_DELETE
-    
+
     def __ospf_delete (self, data):
         for dkey, dval in data.items():
             # force delete all peer attributes in cache
@@ -2492,7 +2565,7 @@ class BGPConfigDaemon:
 
     def __ospf_apply_config(self, data, rmapoper, metricoper, metrictypeoper, alwaysoper, acclistoper):
         for dkey, dval in data.items():
- 
+
             if 'route-map' == dkey:
                 dval.status = CachedDataWithOp.STAT_SUCC
                 dval.op = rmapoper
@@ -2622,6 +2695,17 @@ class BGPConfigDaemon:
                         self.bgp_confed_peers[vrf] = copy.copy(self.upd_confed_peers)
                 else:
                     self.__delete_vrf_asn(vrf, table, data)
+            elif table == 'SRV6_LOCATOR':
+                key = prefix
+                prefix = data['prefix']
+                cmd_prefix = ['configure terminal', 'segment-routing', 'srv6', 'locators', 
+                              'locator {}'.format(key), 
+                              'prefix {} block-len {} node-len {} func-bits {}'.format(prefix.data, data['block_len'].data, data['node_len'].data, data['func_len'].data)]
+                
+                if not key_map.run_command(self, table, data, cmd_prefix):
+                    syslog.syslog(syslog.LOG_ERR, 'failed running SRV6 LOCATOR config command')
+                    continue
+            
             elif table == 'BGP_GLOBALS_AF':
                 af, ip_type = key.lower().split('_')
                 #this is to temporarily make table cache key accessible to key_map handler function
@@ -3161,7 +3245,7 @@ class BGPConfigDaemon:
                                 icmp_cmd_str = "-".join(icmp_cmd)
                                 icmp_cmd_mode = icmp_cmd_str + " " + entry['icmp_dst_ip']
                                 syslog.syslog(syslog.LOG_INFO, 'Data: icmp_cmd_str %s icmp_cmd_mode %s' % (icmp_cmd_str, icmp_cmd_mode))
-                                 
+
                                 cmd_prefix = ['configure terminal','ip sla {}'.format(sla_id), icmp_cmd_mode]
                                 chk_icmp_attrs = ['icmp_source_interface', 'icmp_source_ip', 'icmp_size', 'icmp_vrf', 'icmp_tos', 'icmp_ttl']
                                 chk_icmp_attrs_dict = {'icmp_source_interface':'source-interface ', 'icmp_source_ip':'source-address ', 'icmp_size':'request-data-size ', 'icmp_vrf':'source-vrf ', 'icmp_tos':'tos ', 'icmp_ttl':'ttl '}
@@ -3173,7 +3257,7 @@ class BGPConfigDaemon:
                                         if not self.__run_command(table, command):
                                             syslog.syslog(syslog.LOG_ERR, 'failed to add icmp config for  ip sla {}'.format(sla_id))
                                             continue
- 
+
                     syslog.syslog(syslog.LOG_INFO, 'Done with Icmp {}'.format(sla_id))
                     if not key_map.run_command(self, table, data, cmd_prefix, sla_id):
                         syslog.syslog(syslog.LOG_ERR, 'failed running ip sla command')
@@ -3200,7 +3284,7 @@ class BGPConfigDaemon:
                                         if not self.__run_command(table, command):
                                             syslog.syslog(syslog.LOG_ERR, 'failed to add Tcp config for  ip sla {}'.format(sla_id))
                                             continue
- 
+
                     syslog.syslog(syslog.LOG_INFO, 'Done with Tcp {}'.format(sla_id))
                     if not key_map.run_command(self, table, data, cmd_prefix, sla_id):
                         syslog.syslog(syslog.LOG_ERR, 'failed running ip sla command')
@@ -3211,7 +3295,7 @@ class BGPConfigDaemon:
                     if not key_map.run_command(self, table, data, cmd_prefix, sla_id):
                         syslog.syslog(syslog.LOG_ERR, 'failed running ip sla command')
                         continue
- 
+
                 elif icmp_config == False or tcp_config == False:
                     syslog.syslog(syslog.LOG_INFO, 'Basic mode Configure for ip sla {}'.format(sla_id))
                     cmd_prefix = ['configure terminal']
@@ -3231,7 +3315,7 @@ class BGPConfigDaemon:
                 vrf = prefix
                 if not del_table:
                     syslog.syslog(syslog.LOG_INFO, 'Create router ospf vrf {}'.format(vrf))
-                
+
                     cmd_prefix = ['configure terminal',
                                   'router ospf vrf {}'.format(vrf)]
 
@@ -3259,7 +3343,7 @@ class BGPConfigDaemon:
                     continue
             elif table == 'OSPFV2_ROUTER_AREA_VIRTUAL_LINK':
                 vrf = prefix
-          
+
                 keyvals = key.split('|')
                 area = keyvals[0]
                 vlinkid = keyvals[1]
@@ -3300,8 +3384,8 @@ class BGPConfigDaemon:
                 keyvals = key.split('|')
                 area = keyvals[0]
                 network = keyvals[1]
-                   
-                if not del_table: 
+
+                if not del_table:
                     command = "vtysh -c 'configure terminal' -c 'router ospf vrf {}' -c 'network {} area {}'".\
                     format(vrf, network, area)
 
@@ -3416,7 +3500,7 @@ class BGPConfigDaemon:
                         (acclistoper == CachedDataWithOp.OP_DELETE)):
 
                         cmd_oper = "no"
-                    
+
                         if (alwaysoper == CachedDataWithOp.OP_DELETE):
                             del_cmd_suffix = alwayscmd
                         if (rmapoper == CachedDataWithOp.OP_DELETE):
@@ -3484,9 +3568,9 @@ class BGPConfigDaemon:
                             if not self.__run_command(table, command):
                                 syslog.syslog(syslog.LOG_ERR, 'failed to delete distribute-list {} {}'.format(protocol, direction))
                                 continue
-                            
+
                         self.__ospf_delete(data)
- 
+
             elif table == 'OSPFV2_INTERFACE':
 
                 key = prefix + '|' + key
@@ -3512,7 +3596,7 @@ class BGPConfigDaemon:
 
                         for key, data in cache_tbl_data.items() :
                             cached_op_data = CachedDataWithOp(data, CachedDataWithOp.OP_DELETE)
-                            cmd_data.update({ key : cached_op_data } ) 
+                            cmd_data.update({ key : cached_op_data } )
 
                     syslog.syslog(syslog.LOG_INFO, 'Row delete cmd data {} '.format(cmd_data))
 
@@ -3531,7 +3615,7 @@ class BGPConfigDaemon:
                     if 'area-id' in data.keys():
                         dval = data['area-id']
                         if dval.op == CachedDataWithOp.OP_NONE :
-                            dval.op = CachedDataWithOp.OP_ADD 
+                            dval.op = CachedDataWithOp.OP_ADD
 
                     if not key_map.run_command(self, table, data, cmd_prefix, if_name, if_addr):
                         syslog.syslog(syslog.LOG_ERR, 'failed running interface ip ospf config command')
@@ -3543,7 +3627,7 @@ class BGPConfigDaemon:
                                 syslog.syslog(syslog.LOG_INFO, 'area-id delete enforced')
                         continue
                     else :
-                        self.__apply_config_op_success(data) 
+                        self.__apply_config_op_success(data)
 
             elif table == 'OSPFV2_ROUTER_PASSIVE_INTERFACE':
                 syslog.syslog(syslog.LOG_INFO, 'Create passive interface')
@@ -3774,7 +3858,7 @@ class BGPConfigDaemon:
         self.subscribe_all()
         self.config_db.listen()
     def stop(self):
-        self.config_db.sub_thread.stop()
+        self.config_db.stop_listen()
         if self.config_db.sub_thread.is_alive():
             self.config_db.sub_thread.join()
 

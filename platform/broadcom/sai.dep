@@ -1,22 +1,22 @@
 
 #DPKG FRK
-SPATH       := $($(BRCM_SAI)_SRC_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/sai.mk platform/broadcom/sai.dep   
+SPATH       := $($(BRCM_XGS_SAI)_SRC_PATH)
+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/broadcom/sai.mk platform/broadcom/sai.dep
 DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
 # Get the Latest HTTP Header and calculate the SHA value as it is a softlink that always points to LATEST_INT_OCP_SAI_X.X.X
-SAI_FLAGS   := $(shell wget --spider --server-response $($(BRCM_SAI)_URL) $($(BRCM_SAI_DEV)_URL)  2>&1 \
+SAI_FLAGS   := $(shell SKIP_BUILD_HOOK=y wget --spider --server-response $($(BRCM_XGS_SAI)_URL) $($(BRCM_XGS_SAI_DEV)_URL)  2>&1 \
 			   | grep -Ev -- '--|Date:|x-ms-request-id'|sha256sum|awk '{print $$1}' )
 
-$(BRCM_SAI)_CACHE_MODE  := GIT_CONTENT_SHA 
-$(BRCM_SAI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(SAI_FLAGS)
-$(BRCM_SAI)_DEP_FILES   := $(DEP_FILES)
+$(BRCM_XGS_SAI)_CACHE_MODE  := GIT_CONTENT_SHA
+$(BRCM_XGS_SAI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(SAI_FLAGS)
+$(BRCM_XGS_SAI)_DEP_FILES   := $(DEP_FILES)
 
 
-$(BRCM_SAI_DEV)_CACHE_MODE  := GIT_CONTENT_SHA 
-$(BRCM_SAI_DEV)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(SAI_FLAGS)
-$(BRCM_SAI_DEV)_DEP_FILES   := $(DEP_FILES)
+$(BRCM_XGS_SAI_DEV)_CACHE_MODE  := GIT_CONTENT_SHA
+$(BRCM_XGS_SAI_DEV)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(SAI_FLAGS)
+$(BRCM_XGS_SAI_DEV)_DEP_FILES   := $(DEP_FILES)
 
 # Dependencies for SAI DNX ASIC family
-$(BRCM_DNX_SAI)_CACHE_MODE  := GIT_CONTENT_SHA 
+$(BRCM_DNX_SAI)_CACHE_MODE  := GIT_CONTENT_SHA
 $(BRCM_DNX_SAI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST) $(SAI_FLAGS)
 $(BRCM_DNX_SAI)_DEP_FILES   := $(DEP_FILES)

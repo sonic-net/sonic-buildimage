@@ -10,7 +10,7 @@ try:
     from sonic_platform_base.chassis_base import ChassisBase
     from sonic_platform.sfp import Sfp
     from sonic_platform.psu import Psu
-    from sonic_platform.fan import Fan
+    from sonic_platform.fan_drawer import FanDrawer
     from sonic_platform.thermal import Thermal
     from sonic_platform.eeprom import Eeprom
 except ImportError as e:
@@ -52,9 +52,9 @@ class PddfChassis(ChassisBase):
 
         # FANs
         for i in range(self.platform_inventory['num_fantrays']):
-            for j in range(self.platform_inventory['num_fans_pertray']):
-                fan = Fan(i, j, self.pddf_obj, self.plugin_data)
-                self._fan_list.append(fan)
+            fandrawer = FanDrawer(i, self.pddf_obj, self.plugin_data)
+            self._fan_drawer_list.append(fandrawer)
+            self._fan_list.extend(fandrawer._fan_list)
 
         # PSUs
         for i in range(self.platform_inventory['num_psus']):
@@ -96,11 +96,11 @@ class PddfChassis(ChassisBase):
         """
         return self._eeprom.part_number_str()
 
-    def get_serial(self):
+    def get_service_tag(self):
         """
-        Retrieves the serial number of the chassis (Service tag)
+        Retrieves the service tag of the chassis
         Returns:
-            string: Serial number of chassis
+            string: Sevice tag of chassis
         """
         return self._eeprom.serial_str()
 
@@ -123,7 +123,7 @@ class PddfChassis(ChassisBase):
         """
         return self._eeprom.base_mac_addr()
 
-    def get_serial_number(self):
+    def get_serial(self):
         """
         Retrieves the hardware serial number for the chassis
 
@@ -193,32 +193,30 @@ class PddfChassis(ChassisBase):
     ##############################################
     # System LED  methods
     ##############################################
+    # APIs used by PDDF. Use them for debugging front panel
+    # system LED and fantray LED issues
     def set_system_led(self, led_device_name, color):
-        result, msg = self.pddf_obj.is_supported_sysled_state(led_device_name, color)
-        if result == False:
+        """
+        Sets the color of an LED device in PDDF
+        Args:
+           led_device_name: a pre-defined LED device name list used in pddf-device.json.
+           color: A string representing the color with which to set a LED
+        Returns:
+           bool: True if the LED state is set successfully, False if not
+        """
+        result, msg = self.pddf_obj.set_system_led_color(led_device_name, color)
+        if not result and msg:
             print(msg)
-            return (False)
-
-        index = self.pddf_obj.data[led_device_name]['dev_attr']['index']
-        device_name = self.pddf_obj.data[led_device_name]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', index, self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('color', color, self.pddf_obj.get_led_cur_state_path())
-        self.pddf_obj.create_attr('dev_ops', 'set_status',  self.pddf_obj.get_led_path())
-        return (True)
+        return (result)
 
     def get_system_led(self, led_device_name):
-        if led_device_name not in self.pddf_obj.data.keys():
-            status = "[FAILED] " + led_device_name + " is not configured"
-            return (status)
-
-        index = self.pddf_obj.data[led_device_name]['dev_attr']['index']
-        device_name = self.pddf_obj.data[led_device_name]['dev_info']['device_name']
-        self.pddf_obj.create_attr('device_name', device_name,  self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('index', index, self.pddf_obj.get_led_path())
-        self.pddf_obj.create_attr('dev_ops', 'get_status',  self.pddf_obj.get_led_path())
-        color = self.pddf_obj.get_led_color()
-        return (color)
+        """
+        Gets the color of an LED device in PDDF
+        Returns:
+            string: color of LED or message if failed.
+        """
+        result, output = self.pddf_obj.get_system_led_color(led_device_name)
+        return (output)
 
     ##############################################
     # Other methods

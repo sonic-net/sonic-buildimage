@@ -1,0 +1,62 @@
+# The steps to trigger the pipeline to publish the artifacts
+
+parameters:
+- name: artifactName
+  type: string
+  default: ""
+- name: publishPrefix
+  type: string
+  default: "$(Build.DefinitionName)/$(Build.SourceBranchName)"
+
+steps:
+- script: |
+    . functions.sh
+    sonic_version=$(sonic_get_version)
+    latest_tag=$(git describe --tags --abbrev=0)
+    docker_tags="$sonic_version $(Build.SourceBranchName)"
+    if [ "$(Build.SourceBranchName)" == "master" ]; then
+      docker_tags="$docker_tags latest"
+    fi
+    echo "##vso[task.setvariable variable=sonic_version]$sonic_version"
+    echo "##vso[task.setvariable variable=latest_tag]$latest_tag"
+    echo "##vso[task.setvariable variable=docker_tags]$docker_tags"
+  displayName: 'Set trigger build variables'
+- task: TriggerBuild@4
+  inputs:
+    definitionIsInCurrentTeamProject: false
+    teamProject: internal
+    tfsServer: $(System.CollectionUri)
+    buildDefinition: 'publish-artifacts'
+    queueBuildForUserThatTriggeredBuild: true
+    ignoreSslCertificateErrors: false
+    useSameSourceVersion: false
+    useCustomSourceVersion: false
+    useSameBranch: false
+    waitForQueuedBuildsToFinish: false
+    storeInEnvironmentVariable: true
+    authenticationMethod: 'Personal Access Token'
+    password: '$(system.accesstoken)'
+    enableBuildInQueueCondition: false
+    dependentOnSuccessfulBuildCondition: false
+    dependentOnFailedBuildCondition: false
+    checkbuildsoncurrentbranch: false
+    failTaskIfConditionsAreNotFulfilled: false
+    buildParameters: ''
+    templateParameters: |
+      pipelineContext: {"buildId":"$(Build.BuildId)",
+        "pipelineId":"$(System.DefinitionId)",
+        "project": "$(System.TeamProject)",
+        "branchName":"$(Build.SourceBranchName)"},
+      artifactContext: {"artifactName":"${{ parameters.artifactName }}",
+        "artifactPatterns":"**/*.bin\n
+              **/*.swi\n
+              **/*.raw\n
+              **/*.img.gz\n
+              **/*-rpc.gz\n
+              **/*.deb"},
+      publishContext: {"publishPrefix":"${{ parameters.publishPrefix }}",
+        "keepArtifactName":false,
+        "dockerImagePatterns":"target/*-rpc.gz",
+        "dockerTags":"$(docker_tags)",
+        "version":"$(sonic_version)",
+        "latestTag":"$(latest_tag)"}

@@ -5,4 +5,4 @@ if [[ -d /sys/devices/platform/SMF.512/hwmon/ ]]; then
     echo 0xcc > mb_poweron_reason
 fi
 
-/usr/local/bin/s6100_i2c_enumeration.sh deinit & > /dev/null
+/usr/local/bin/s6100_platform_startup.sh deinit & > /dev/null

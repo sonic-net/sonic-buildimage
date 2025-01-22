@@ -1,5 +1,5 @@
 module sonic-buffer-profile {
-    namespace "http://github.com/Azure/sonic-buffer-profile";
+    namespace "http://github.com/sonic-net/sonic-buffer-profile";
     prefix bpf;
 
     import sonic-buffer-pool {

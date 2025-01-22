@@ -3,3 +3,9 @@
 #0006-From-Jiri-Cervenka-snmpd-Fixed-agentx-crashing-and-or-freezing-on-timeout.patch
 #0007-Linux-VRF-5.7.3-Support.patch
 0008-Enable-macro-DEB_BUILD_ARCH_OS-in-order-to-build-ipv.patch
+0009-Makefile.in-agent-Makefile.in-Fix-parallel-compilati.patch
+0010-Makefile.in-Make-sure-that-sedscript-is-built-before.patch
+0011-agent-Makefile.in-Build-the-MIB-module-code-once.patch
+0012-agent-Makefile.in-Unbreak-the-enable-minimalist-buil.patch
+0013-enable-parallel-build-for-net-snmp.patch
+cross-compile-changes.patch

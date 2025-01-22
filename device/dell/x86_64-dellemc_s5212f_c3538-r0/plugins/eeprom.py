@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #############################################################################
-# DellEMC S5248f
+# DellEMC S5212f
 #
 # Platform and model specific eeprom subclass, inherits from the base class,
 # and provides the followings:
@@ -9,10 +9,11 @@
 # - specific encoder/decoder if there is special need
 #############################################################################
 
+import os.path
+
 try:
-    import os.path
     from sonic_eeprom import eeprom_tlvinfo
-except ImportError, e:
+except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
 
 

@@ -1,5 +1,5 @@
 module sonic-route-map {
-    namespace "http://github.com/Azure/sonic-route-map";
+    namespace "http://github.com/sonic-net/sonic-route-map";
     prefix rmap;
     yang-version 1.1;
 
@@ -139,7 +139,7 @@ module sonic-route-map {
                     type uint16 {
                         range 1..65535;
                     }
-                    description "Statement name, this helps to provide multiple statements 
+                    description "Statement name, this helps to provide multiple statements
                                  under a particular route-map";
                 }
 
@@ -304,7 +304,7 @@ module sonic-route-map {
                     description "Set IPv6 global next hop";
                 }
 
-                leaf set_ipv6_next_hop_prefer_global { 
+                leaf set_ipv6_next_hop_prefer_global {
                     type boolean;
                     description "Set to prefer IPv6 nexthop global address";
                 }

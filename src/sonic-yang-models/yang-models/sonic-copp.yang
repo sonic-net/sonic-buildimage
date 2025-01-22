@@ -2,7 +2,7 @@ module sonic-copp {
 
 	yang-version 1.1;
 
-	namespace "http://github.com/Azure/sonic-copp";
+	namespace "http://github.com/sonic-net/sonic-copp";
 	prefix copp;
 
 	import sonic-types {
@@ -40,7 +40,7 @@ module sonic-copp {
 
 				leaf trap_action {
 					mandatory true;
-					type stypes:copp_packet_action;
+					type stypes:policer_packet_action;
 					description "Trap action";
 				}
 
@@ -61,12 +61,8 @@ module sonic-copp {
 				}
 
 				leaf color {
-					type enumeration {
-						enum blind;
-						enum color;
-					}
-					default "color";
-					description "Policer color source";
+					type stypes:policer_color_source;
+					description "Policer color Source";
 				}
 
 				leaf cir {
@@ -120,20 +116,20 @@ module sonic-copp {
 				}
 
 				leaf green_action {
-					type stypes:copp_packet_action;
+					type stypes:policer_packet_action;
 					default "forward";
 					description "Green action";
 				}
 
 				leaf yellow_action {
 					when "((current()/../mode = 'sr_tcm') or (current()/../mode = 'tr_tcm'))";
-					type stypes:copp_packet_action;
+					type stypes:policer_packet_action;
 					default "forward";
 					description "Yellow action";
 				}
 
 				leaf red_action {
-					type stypes:copp_packet_action;
+					type stypes:policer_packet_action;
 					default "forward";
 					description "Red action";
 				}

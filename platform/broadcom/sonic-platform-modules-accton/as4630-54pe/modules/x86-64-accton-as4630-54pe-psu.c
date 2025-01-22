@@ -186,7 +186,7 @@ exit:
     return status;
 }
 
-static int as4630_54pe_psu_remove(struct i2c_client *client)
+static void as4630_54pe_psu_remove(struct i2c_client *client)
 {
     struct as4630_54pe_psu_data *data = i2c_get_clientdata(client);
 
@@ -194,7 +194,6 @@ static int as4630_54pe_psu_remove(struct i2c_client *client)
     sysfs_remove_group(&client->dev.kobj, &as4630_54pe_psu_group);
     kfree(data);
 
-    return 0;
 }
 
 enum psu_index

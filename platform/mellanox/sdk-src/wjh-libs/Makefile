@@ -1,10 +1,10 @@
 .ONESHELL:
 SHELL = /bin/bash
 
-MAIN_TARGET = wjh-libs_1.mlnx.$(MLNX_SDK_DEB_VERSION)_amd64.deb
-DERIVED_TARGETS = wjh-libs-dev_1.mlnx.$(MLNX_SDK_DEB_VERSION)_amd64.deb \
-				  wjh-libs-dev-static_1.mlnx.$(MLNX_SDK_DEB_VERSION)_amd64.deb \
-				  wjh-libs-dbgsym_1.mlnx.$(MLNX_SDK_DEB_VERSION)_amd64.deb
+MAIN_TARGET = wjh-libs_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
+DERIVED_TARGETS = wjh-libs-dev_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb \
+				  wjh-libs-dev-static_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb \
+				  wjh-libs-dbgsym_1.mlnx.$(MLNX_SDK_DEB_VERSION)_$(CONFIGURED_ARCH).deb
 PACKAGE_NAME = wjh_libs
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
@@ -20,7 +20,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 		./autogen.sh
 	fi
 
-	debuild -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS)
+	debuild -e 'KVERSION=$(shell ls -t /lib/modules |head -1)' -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS)
 
 	popd
 

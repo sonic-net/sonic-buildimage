@@ -15,7 +15,7 @@ class HardwareChecker(HealthChecker):
 
     def __init__(self):
         HealthChecker.__init__(self)
-        self._db = SonicV2Connector(host="127.0.0.1")
+        self._db = SonicV2Connector(use_unix_socket_path=True)
         self._db.connect(self._db.STATE_DB)
 
     def get_category(self):
@@ -71,6 +71,7 @@ class HardwareChecker(HealthChecker):
             1. Check all fans are present
             2. Check all fans are in good state
             3. Check fan speed is in valid range
+            4. Check all fans direction are the same
         :param config: Health checker configuration
         :return:
         """
@@ -82,6 +83,7 @@ class HardwareChecker(HealthChecker):
             self.set_object_not_ok('Fan', 'Fan', 'Failed to get fan information')
             return
 
+        expect_fan_direction = None
         for key in natsorted(keys):
             key_list = key.split('|')
             if len(key_list) != 2:  # error data in DB, log it and ignore
@@ -100,37 +102,51 @@ class HardwareChecker(HealthChecker):
             if not self._ignore_check(config.ignore_devices, 'fan', name, 'speed'):
                 speed = data_dict.get('speed', None)
                 speed_target = data_dict.get('speed_target', None)
-                speed_tolerance = data_dict.get('speed_tolerance', None)
+                is_under_speed = data_dict.get('is_under_speed', None)
+                is_over_speed = data_dict.get('is_over_speed', None)
                 if not speed:
                     self.set_object_not_ok('Fan', name, 'Failed to get actual speed data for {}'.format(name))
                     continue
                 elif not speed_target:
                     self.set_object_not_ok('Fan', name, 'Failed to get target speed date for {}'.format(name))
                     continue
-                elif not speed_tolerance:
-                    self.set_object_not_ok('Fan', name, 'Failed to get speed tolerance for {}'.format(name))
+                elif is_under_speed is None:
+                    self.set_object_not_ok('Fan', name, 'Failed to get under speed threshold check for {}'.format(name))
+                    continue
+                elif is_over_speed is None:
+                    self.set_object_not_ok('Fan', name, 'Failed to get over speed threshold check for {}'.format(name))
                     continue
                 else:
                     try:
                         speed = float(speed)
                         speed_target = float(speed_target)
-                        speed_tolerance = float(speed_tolerance)
-                        speed_min_th = speed_target * (1 - float(speed_tolerance) / 100)
-                        speed_max_th = speed_target * (1 + float(speed_tolerance) / 100)
-                        if speed < speed_min_th or speed > speed_max_th:
+                        if 'true' in (is_under_speed.lower(), is_over_speed.lower()):
                             self.set_object_not_ok('Fan', name,
-                                                   '{} speed is out of range, speed={}, range=[{},{}]'.format(name,
-                                                                                                              speed,
-                                                                                                              speed_min_th,
-                                                                                                              speed_max_th))
+                                                   '{} speed is out of range, speed={}, target={}'.format(
+                                                       name,
+                                                       speed,
+                                                       speed_target))
                             continue
                     except ValueError:
                         self.set_object_not_ok('Fan', name,
-                                               'Invalid fan speed data for {}, speed={}, target={}, tolerance={}'.format(
+                                               'Invalid fan speed data for {}, speed={}, target={}, is_under_speed={}, is_over_speed={}'.format(
                                                    name,
                                                    speed,
                                                    speed_target,
-                                                   speed_tolerance))
+                                                   is_under_speed,
+                                                   is_over_speed))
+                        continue
+
+            if not self._ignore_check(config.ignore_devices, 'fan', name, 'direction'):
+                direction = data_dict.get('direction', 'N/A')
+                # ignore fan whose direction is not available to avoid too many false alarms
+                if direction != 'N/A':
+                    if not expect_fan_direction:
+                        # initialize the expect fan direction
+                        expect_fan_direction = (name, direction)
+                    elif direction != expect_fan_direction[1]:
+                        self.set_object_not_ok('Fan', name,
+                                               f'{name} direction {direction} is not aligned with {expect_fan_direction[0]} direction {expect_fan_direction[1]}')
                         continue
 
             status = data_dict.get('status', 'false')
@@ -239,6 +255,19 @@ class HardwareChecker(HealthChecker):
                                                                                                                voltage_min_th,
                                                                                                                voltage_max_th))
                         continue
+
+            if not self._ignore_check(config.ignore_devices, 'psu', name, 'power_threshold'):
+                power_overload = data_dict.get('power_overload', None)
+                if power_overload == 'True':
+
+                    try:
+                        power = data_dict['power']
+                        power_critical_threshold = data_dict['power_critical_threshold']
+                        self.set_object_not_ok('PSU', name, 'System power exceeds threshold ({}w)'.format(power_critical_threshold))
+                    except KeyError:
+                        self.set_object_not_ok('PSU', name, 'System power exceeds threshold but power_critical_threshold is invalid')
+                    continue
+
             self.set_object_ok('PSU', name)
 
     def reset(self):

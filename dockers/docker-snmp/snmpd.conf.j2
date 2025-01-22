@@ -13,11 +13,20 @@
 #  AGENT BEHAVIOUR
 #
 
-#  Listen for connections on all ip addresses, including eth0, ipv4 lo
+# Listen for connections on all ip addresses, including eth0, ipv4 lo for multi-asic platform
+# Listen on managment and loopback0 ips for single asic platform
 #
+{% macro protocol(ip_addr) %}
+{%- if ip_addr.split('%')[0]|ipv6 -%}
+{{ 'udp6' }}
+{%- else -%}
+{{ 'udp' }}
+{%- endif -%}
+{% endmacro %}
+
 {% if SNMP_AGENT_ADDRESS_CONFIG %}
 {% for (agentip, port, vrf) in SNMP_AGENT_ADDRESS_CONFIG %}
-agentAddress {{ agentip }}{% if port %}:{{ port }}{% endif %}{% if vrf %}%{{ vrf }}{% endif %}{{ "" }}
+agentAddress {{ protocol(agentip) }}:[{{ agentip }}]{% if port %}:{{ port }}{% endif %}{% if vrf %}%{{ vrf }}{% endif %}{{ "" }}
 {% endfor %}
 {% else %}
 agentAddress udp:161
@@ -82,7 +91,7 @@ sysLocation    {{ SNMP.LOCATION.Location }}
 sysLocation    public
 {% endif %}
 {% if SNMP is defined and SNMP.CONTACT is defined %}
-sysContact     {{ SNMP.CONTACT.keys()[0] }} {{ SNMP.CONTACT.values()[0] }}
+sysContact     {{ SNMP.CONTACT.keys() | first }} {{ SNMP.CONTACT.values() | first }}
 {% else %}
 sysContact     Azure Cloud Switch vteam <linuxnetdev@microsoft.com>
 {% endif %}
@@ -185,6 +194,9 @@ trapsink {{ v3SnmpTrapIp }}:{{ v3SnmpTrapPort }}{% if v3SnmpTrapVrf != 'None' %}
 #
                                            #  Run as an AgentX master agent
 master          agentx
+agentXTimeout   5
+agentXRetries   4
+
 # internal socket to allow extension to other docker containers
 # Currently the other container using this is docker-fpm-frr
 # make sure this line matches bgp:/etc/snmp/frr.conf 

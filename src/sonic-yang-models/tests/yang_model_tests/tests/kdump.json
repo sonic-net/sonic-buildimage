@@ -1,0 +1,19 @@
+{
+    "KDUMP_WITH_VALID_VALUES": {
+        "desc": "Configuring the kdump with valid values."
+    },
+    "KDUMP_WITH_VALID_VALUES_2": {
+        "desc": "Configuring the kdump with valid values."
+    },
+    "KDUMP_WITH_VALID_VALUES_3": {
+        "desc": "Configuring the kdump with valid values."
+    },
+    "KDUMP_WITH_INVALID_NUM_DUMPS": {
+        "desc": "Configuring kdump config with a invalid number of allowed kdumps.",
+        "eStr": ["pattern", "does not satisfy"]
+    },
+    "KDUMP_WITH_INVALID_MEMORY": {
+        "desc": "Configuring kdump config with invalid memory config.",
+        "eStr": ["pattern", "does not satisfy"]
+    }
+}

@@ -1,7 +1,7 @@
 /*
  * dx010_cpld.c - driver for SeaStone's CPLD
  *
- * Copyright (C) 2017 Celestica Corp.
+ * Copyright (C) 2023 Celestica Corp.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -120,11 +120,11 @@
 #define SSRR_ID_BANK2           0x296
 #define SSRR_ID_BANK3           0x396
 
-#define HST_CNTL2_QUICK         0x00
-#define HST_CNTL2_BYTE          0x01
-#define HST_CNTL2_BYTE_DATA     0x02
-#define HST_CNTL2_WORD_DATA     0x03
-#define HST_CNTL2_BLOCK         0x05
+#define SSRR_MASTER_ERR         0x80
+#define SSRR_BUS_BUSY           0x40
+
+#define I2C_BAUD_RATE_100K      0x40
+
 
 struct dx010_i2c_data {
         int portid;
@@ -610,6 +610,166 @@ exit:
         return error;
 }
 
+
+/**
+ * Read/Write eeprom of CPLD connected QSFP device.
+ * @param  a        i2c adapter.
+ * @param  addr     address to read.
+ * @param  new_data QSFP port number struct.
+ * @param  rw       read/write flag
+ * @param  cmd      i2c command.
+ * @param  size     access size
+ * @return          0 if not error, else the error code.
+ */
+static int dx010_cpld_i2c_access(struct i2c_adapter *a, u16 addr,
+               struct dx010_i2c_data *new_data, char rw,
+               u8 cmd, int size, union i2c_smbus_data *data)
+{
+        u32 reg;
+        int ioBase=0;
+        char byte;
+        char data_len = 0;
+        short temp;
+        short portid, opcode, devaddr, cmdbyte0, ssrr, writedata, readdata;
+        __u16 word_data;
+        __u8  byte_data;
+        int error = -EIO;
+
+        mutex_lock(&cpld_data->cpld_lock);
+
+        if (((new_data->portid >= PORT_BANK1_START)
+                        && (new_data->portid <= PORT_BANK1_END))
+                        || (new_data->portid == PORT_SFPP1)
+                        || (new_data->portid == PORT_SFPP2))
+        {
+                portid = PORT_ID_BANK1;
+                opcode = OPCODE_ID_BANK1;
+                devaddr = DEVADDR_ID_BANK1;
+                cmdbyte0 = CMDBYT_ID_BANK1;
+                ssrr = SSRR_ID_BANK1;
+                writedata = WRITE_ID_BANK1;
+                readdata = READ_ID_BANK1;
+        }else if ((new_data->portid >= PORT_BANK2_START) && (new_data->portid <= PORT_BANK2_END)){
+                portid = PORT_ID_BANK2;
+                opcode = OPCODE_ID_BANK2;
+                devaddr = DEVADDR_ID_BANK2;
+                cmdbyte0 = CMDBYT_ID_BANK2;
+                ssrr = SSRR_ID_BANK2;
+                writedata = WRITE_ID_BANK2;
+                readdata = READ_ID_BANK2;
+        }else if ((new_data->portid  >= PORT_BANK3_START) && (new_data->portid  <= PORT_BANK3_END)){
+                portid = PORT_ID_BANK3;
+                opcode = OPCODE_ID_BANK3;
+                devaddr = DEVADDR_ID_BANK3;
+                cmdbyte0 = CMDBYT_ID_BANK3;
+                ssrr = SSRR_ID_BANK3;
+                writedata = WRITE_ID_BANK3;
+                readdata = READ_ID_BANK3;
+        }else{
+            /* Invalid parameter! */
+                error = -EINVAL;
+                goto exit;
+        }
+
+        if (size == I2C_SMBUS_BYTE || size == I2C_SMBUS_BYTE_DATA)
+            data_len = 1;
+        else if (size == I2C_SMBUS_WORD_DATA)
+            data_len = 2;
+        else {
+            error = -EINVAL;
+            goto exit;
+        }
+
+        while ((inb(ioBase + ssrr) & SSRR_BUS_BUSY));
+        if ((inb(ioBase + ssrr) & SSRR_MASTER_ERR) == SSRR_MASTER_ERR) {
+                error = -EIO;
+                /* Read error reset the port */
+                outb(0x00, ioBase + ssrr);
+                udelay(3000);
+                outb(0x01, ioBase + ssrr);
+                goto exit;
+        }
+
+        byte = I2C_BAUD_RATE_100K + new_data->portid;
+        reg = cmd;
+        outb(byte, ioBase + portid);
+        outb(reg, ioBase + cmdbyte0);
+        byte = (data_len << 4) | 0x1;
+        outb(byte, ioBase + opcode);
+        addr = addr << 1;
+        if (rw == I2C_SMBUS_READ)
+        {
+            addr |= 0x01;
+            outb(addr, ioBase + devaddr);
+            while ((inb(ioBase + ssrr) & SSRR_BUS_BUSY))
+            {
+                udelay(100);
+            }
+
+            if ((inb(ioBase + ssrr) & SSRR_MASTER_ERR) == SSRR_MASTER_ERR) {
+                /* Read error reset the port */
+                    error = -EIO;
+                    outb(0x00, ioBase + ssrr);
+                    udelay(3000);
+                    outb(0x01, ioBase + ssrr);
+                    goto exit;
+            }
+
+            temp = ioBase + readdata;
+            if (data_len == 1)
+            {
+                byte_data = inb(temp);
+                data->byte = byte_data;
+            }
+            else if (data_len == 2)
+            {
+                word_data = inb(temp);
+                word_data |= (inb(++temp) << 8);
+                data->word = word_data;
+            }
+        }
+        else // do i2c write
+        {
+            temp = ioBase + writedata;
+            if (data_len == 1)
+            {
+                byte_data = data->byte;
+                outb(byte_data, temp);
+            }
+            else if (data_len == 2)
+            {
+                word_data = data->word;
+                outb((word_data & 0xff), temp);
+                outb((word_data >> 4), (++temp));
+            }
+            // write dev addr
+            outb(addr, ioBase + devaddr);
+
+            // check bus access status
+            while ((inb(ioBase + ssrr) & SSRR_BUS_BUSY))
+            {
+                udelay(100);
+            }
+
+            if ((inb(ioBase + ssrr) & SSRR_MASTER_ERR) == SSRR_MASTER_ERR) {
+                /* Read error reset the port */
+                    error = -EIO;
+                    outb(0x00, ioBase + ssrr);
+                    udelay(3000);
+                    outb(0x01, ioBase + ssrr);
+                    goto exit;
+            }
+        }
+
+        mutex_unlock(&cpld_data->cpld_lock);
+        return 0;
+
+exit:
+        mutex_unlock(&cpld_data->cpld_lock);
+        return error;
+}
+
+
 static int dx010_i2c_access(struct i2c_adapter *a, u16 addr,
               unsigned short flags, char rw, u8 cmd,
               int size, union i2c_smbus_data *data)
@@ -624,39 +784,19 @@ static int dx010_i2c_access(struct i2c_adapter *a, u16 addr,
 
         /* Map the size to what the chip understands */
         switch (size) {
-        case I2C_SMBUS_QUICK:
-                size = HST_CNTL2_QUICK;
-        break;
         case I2C_SMBUS_BYTE:
-                size = HST_CNTL2_BYTE;
-        break;
         case I2C_SMBUS_BYTE_DATA:
-                size = HST_CNTL2_BYTE_DATA;
-        break;
         case I2C_SMBUS_WORD_DATA:
-            	size = HST_CNTL2_WORD_DATA;
-        break;
-        case I2C_SMBUS_BLOCK_DATA:
-                size = HST_CNTL2_BLOCK;
-        break;
-        default:
-                dev_warn(&a->dev, "Unsupported transaction %d\n", size);
-                error = -EOPNOTSUPP;
-                goto Done;
-        }
-
-        switch (size) {
-        case HST_CNTL2_BYTE:    /* Result put in SMBHSTDAT0 */
-        break;
-        case HST_CNTL2_BYTE_DATA:
-        break;
-        case HST_CNTL2_WORD_DATA:
-                if( 0 == i2c_read_eeprom(a,addr,new_data,cmd,data)){
+                if(0 == dx010_cpld_i2c_access(a, addr, new_data, rw, cmd, size, data)){
                     error = 0;
                 }else{
                     error = -EIO;
                 }
         break;
+        default:
+                dev_warn(&a->dev, "Unsupported transaction %d\n", size);
+                error = -EOPNOTSUPP;
+                goto Done;
         }
 
 Done:
@@ -790,6 +930,6 @@ module_init(cel_dx010_lpc_init);
 module_exit(cel_dx010_lpc_exit);
 
 MODULE_AUTHOR("Pradchaya P <pphuchar@celestica.com>");
-MODULE_VERSION("1.0.1");
+MODULE_VERSION("1.0.2");
 MODULE_DESCRIPTION("Celestica SeaStone DX010 LPC Driver");
 MODULE_LICENSE("GPL");

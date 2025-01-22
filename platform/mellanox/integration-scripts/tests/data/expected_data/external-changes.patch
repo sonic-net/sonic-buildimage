@@ -1,0 +1,32 @@
+--- a/patch/series
++++ b/patch/series
+@@ -51,6 +51,10 @@
+ 0105-mlxsw-reg-Extend-MTBR-register-with-new-slot-number-.patch
+ 0106-mlxsw-reg-Extend-MCIA-register-with-new-slot-number-.patch
+ 0107-mlxsw-reg-Extend-MCION-register-with-new-slot-number.patch
++0168-TMP-mlxsw-minimal-Ignore-error-reading-SPAD-register.patch
++0169-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch
++0172-DS-platform-mlx-platform-Add-SPI-path-for-rack-switc.patch
++0174-DS-mlxsw-core_linecards-Skip-devlink-and-provisionin.patch
+ 0188-i2c-mux-Add-register-map-based-mux-driver.patch
+ ###-> mellanox_hw_mgmt-end
+ 
+
+--- a/patch/kconfig-inclusions
++++ b/patch/kconfig-inclusions
+@@ -41,4 +41,15 @@
+ CONFIG_HWMON=y
+ CONFIG_OF=y
+ CONFIG_THERMAL_NETLINK=y
++CONFIG_SENSORS_MP2891=m
++CONFIG_MMC_SDHCI_OF_DWCMSHC=m
++CONFIG_VFIO_PLATFORM=m
++CONFIG_SENSORS_ARM_SCMI=m
++CONFIG_MLXBF_GIGE=m
++CONFIG_I2C_MLXBF=m
++CONFIG_GPIO_MLXBF3=m
++CONFIG_MLXBF_TMFIFO=m
++CONFIG_MLXBF_BOOTCTL=m
++CONFIG_MLXBF_PMC=m
++CONFIG_MLXBF_PTM=m
+ 

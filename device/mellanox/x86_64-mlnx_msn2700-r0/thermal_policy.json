@@ -1,80 +1,12 @@
-{   
+{
     "thermal_control_algorithm": {
         "run_at_boot_up": "true",
         "fan_speed_when_suspend": "60"
     },
     "info_types": [
-        {
-            "type": "fan_info"
-        },
-        {
-            "type": "psu_info"
-        },
-        {
-            "type": "chassis_info"
-        }
+
     ],
     "policies": [
-        {
-            "name": "any fan absence",
-            "conditions": [
-                {
-                    "type": "fan.any.absence"
-                }
-            ],
-            "actions": [
-                {
-                    "type": "fan.all.set_speed",
-                    "speed": "100"
-                }
-            ]
-        },
-        {
-            "name": "any psu absence",
-            "conditions": [
-                {
-                    "type": "psu.any.absence"
-                }
-            ],
-            "actions": [
-                {
-                    "type": "fan.all.set_speed",
-                    "speed": "100"
-                }
-            ]
-        },
-        {
-            "name": "any fan broken",
-            "conditions": [
-                {
-                    "type": "fan.any.fault"
-                }
-            ],
-            "actions": [
-                {
-                    "type": "fan.all.set_speed",
-                    "speed": "100"
-                }
-            ]
-        },
-        {
-            "name": "all fan and psu presence",
-            "conditions": [
-                {
-                    "type": "fan.all.presence"
-                },
-                {
-                    "type": "psu.all.presence"
-                },
-                {
-                    "type": "fan.all.good"
-                }
-            ],
-            "actions": [
-                {
-                    "type": "thermal.recover"
-                }
-            ]
-        }
+
     ]
 }

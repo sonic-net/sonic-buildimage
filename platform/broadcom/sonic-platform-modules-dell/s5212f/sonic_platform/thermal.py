@@ -21,12 +21,12 @@ class Thermal(ThermalBase):
 
     # [ Sensor-Name, Sensor-ID ]
     SENSOR_MAPPING = [
-        ['Port Mid', 0x1],
-        ['NPU Near', 0x2],
-        ['Port Left', 0x3],
-        ['Port Right', 0x4],
-        ['Inlet Airflow Sensor', 0x5],
-        ['CPU', 0xe],
+        ['CPU On-board', 0xe],
+        ['ASIC On-board', 0x2],
+        ['System Front Left', 0x3],
+        ['System Front Middle', 0x1],
+        ['System Front Right', 0x4],
+        ['Inlet Airflow Sensor', 0x5]
     ]
 
     def __init__(self, thermal_index):
@@ -92,7 +92,7 @@ class Thermal(ThermalBase):
         if not is_valid:
             temperature = 0
 
-        return "{:.3f}".format(temperature)
+        return float(temperature)
 
     def get_high_threshold(self):
         """
@@ -105,9 +105,9 @@ class Thermal(ThermalBase):
         """
         is_valid, high_threshold = self.sensor.get_threshold("UpperNonCritical")
         if not is_valid:
-            high_threshold = 0
+            return 0.0
 
-        return "{:.3f}".format(high_threshold)
+        return float(high_threshold)
 
     def get_high_critical_threshold(self):
         """
@@ -120,9 +120,9 @@ class Thermal(ThermalBase):
         """
         is_valid, high_crit_threshold = self.sensor.get_threshold("UpperCritical")
         if not is_valid:
-            high_crit_threshold = 0
+            return 0.0
 
-        return "{:.3f}".format(high_crit_threshold)
+        return float(high_crit_threshold)
 
     def get_low_threshold(self):
         """
@@ -137,7 +137,7 @@ class Thermal(ThermalBase):
         if not is_valid:
             low_threshold = 0
 
-        return "{:.3f}".format(low_threshold)
+        return float(low_threshold)
 
     def set_high_threshold(self, temperature):
         """
@@ -165,4 +165,21 @@ class Thermal(ThermalBase):
             not
         """
         # Thermal threshold values are pre-defined based on HW.
+        return False
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return self.index
+
+    def is_replaceable(self):
+        """
+        Indicate whether this Thermal is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
         return False

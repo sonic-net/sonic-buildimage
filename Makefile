@@ -1,9 +1,18 @@
 # SONiC make file
 
 NOJESSIE ?= 1
-NOSTRETCH ?= 0
+NOSTRETCH ?= 1
 NOBUSTER ?= 0
 NOBULLSEYE ?= 0
+NOBOOKWORM ?= 0
+
+override Q := @
+ifeq ($(QUIET),n)
+  override Q := 
+endif
+override SONIC_OVERRIDE_BUILD_VARS += $(SONIC_BUILD_VARS)
+override SONIC_OVERRIDE_BUILD_VARS += Q=$(Q)
+export Q SONIC_OVERRIDE_BUILD_VARS
 
 ifeq ($(NOJESSIE),0)
 BUILD_JESSIE=1
@@ -21,57 +30,76 @@ ifeq ($(NOBULLSEYE),0)
 BUILD_BULLSEYE=1
 endif
 
+ifeq ($(NOBOOKWORM),0)
+BUILD_BOOKWORM=1
+endif
+
 PLATFORM_PATH := platform/$(if $(PLATFORM),$(PLATFORM),$(CONFIGURED_PLATFORM))
 PLATFORM_CHECKOUT := platform/checkout
 PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM).ini
+ifeq ($(SMARTSWITCH),1)
+PLATFORM_CHECKOUT_FILE := $(PLATFORM_CHECKOUT)/$(PLATFORM)-smartswitch.ini
+endif
 PLATFORM_CHECKOUT_CMD := $(shell if [ -f $(PLATFORM_CHECKOUT_FILE) ]; then PLATFORM_PATH=$(PLATFORM_PATH) j2 $(PLATFORM_CHECKOUT)/template.j2 $(PLATFORM_CHECKOUT_FILE); fi)
+MAKE_WITH_RETRY := ./scripts/run_with_retry $(MAKE)
 
 %::
 	@echo "+++ --- Making $@ --- +++"
 ifeq ($(NOJESSIE), 0)
-	EXTRA_DOCKER_TARGETS=$(notdir $@) make -f Makefile.work jessie
+	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) -f Makefile.work jessie
 endif
 ifeq ($(NOSTRETCH), 0)
-	EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=stretch make -f Makefile.work stretch
+	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=stretch -f Makefile.work stretch
 endif
 ifeq ($(NOBUSTER), 0)
-	EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=buster make -f Makefile.work buster
+	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=buster -f Makefile.work buster
 endif
 ifeq ($(NOBULLSEYE), 0)
-	BLDENV=bullseye make -f Makefile.work $@
+	$(MAKE_WITH_RETRY) EXTRA_DOCKER_TARGETS=$(notdir $@) BLDENV=bullseye -f Makefile.work bullseye
 endif
+ifeq ($(NOBOOKWORM), 0)
+	$(MAKE_WITH_RETRY) BLDENV=bookworm -f Makefile.work $@
+endif
+	BLDENV=bookworm $(MAKE) -f Makefile.work docker-cleanup
 
 jessie:
 	@echo "+++ Making $@ +++"
 ifeq ($(NOJESSIE), 0)
-	make -f Makefile.work jessie
+	$(MAKE) -f Makefile.work jessie
 endif
 
 stretch:
 	@echo "+++ Making $@ +++"
 ifeq ($(NOSTRETCH), 0)
-	make -f Makefile.work stretch
+	$(MAKE) -f Makefile.work stretch
 endif
 
 buster:
 	@echo "+++ Making $@ +++"
 ifeq ($(NOBUSTER), 0)
-	make -f Makefile.work buster
+	$(MAKE) -f Makefile.work buster
 endif
 
-init:
+bullseye:
 	@echo "+++ Making $@ +++"
-	make -f Makefile.work $@
+ifeq ($(NOBUSTER), 0)
+	$(MAKE) -f Makefile.work bullseye
+endif
+
+init reset:
+	@echo "+++ Making $@ +++"
+	$(MAKE) -f Makefile.work $@
 
 #
 # Function to invoke target $@ in Makefile.work with proper BLDENV
 #
 define make_work
 	@echo "+++ Making $@ +++"
-	$(if $(BUILD_JESSIE),make -f Makefile.work $@,)
-	$(if $(BUILD_STRETCH),BLDENV=stretch make -f Makefile.work $@,)
-	$(if $(BUILD_BUSTER),BLDENV=buster make -f Makefile.work $@,)
-	$(if $(BUILD_BULLSEYE),BLDENV=bullseye make -f Makefile.work $@,)
+	$(if $(BUILD_JESSIE),$(MAKE) -f Makefile.work $@,)
+	$(if $(BUILD_STRETCH),BLDENV=stretch $(MAKE) -f Makefile.work $@,)
+	$(if $(BUILD_BUSTER),BLDENV=buster $(MAKE) -f Makefile.work $@,)
+	$(if $(BUILD_BULLSEYE),BLDENV=bullseye $(MAKE) -f Makefile.work $@,)
+	$(if $(BUILD_BOOKWORM),BLDENV=bookworm $(MAKE) -f Makefile.work $@,)
 endef
 
 .PHONY: $(PLATFORM_PATH)
@@ -83,7 +111,7 @@ $(PLATFORM_PATH):
 configure : $(PLATFORM_PATH)
 	$(call make_work, $@)
 
-clean reset showtag sonic-slave-build sonic-slave-bash :
+clean showtag docker-cleanup sonic-slave-build sonic-slave-bash :
 	$(call make_work, $@)
 
 # Freeze the versions, see more detail options: scripts/versions_manager.py freeze -h

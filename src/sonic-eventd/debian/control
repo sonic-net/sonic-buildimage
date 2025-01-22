@@ -1,0 +1,20 @@
+Source: sonic-eventd
+Section: devel
+Priority: optional
+Maintainer: Renuka Manavalan <remanava@microsoft.com>
+Build-Depends: debhelper (>= 12.0.0), libevent-dev, libboost-thread-dev, libboost-system-dev, libswsscommon-dev, liblua5.1-0
+Standards-Version: 3.9.3
+Homepage: https://github.com/Azure/sonic-buildimage
+XS-Go-Import-Path: github.com/Azure/sonic-buildimage
+
+Package: sonic-eventd
+Architecture: any
+Built-Using: ${misc:Built-Using}
+Depends: ${shlibs:Depends}
+Description: SONiC event service
+
+Package: sonic-rsyslog-plugin
+Architecture: any
+Built-Using: ${misc:Built-Using}
+Depends: ${shlibs:Depends}
+Description: SONiC rsyslog plugin service

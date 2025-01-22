@@ -19,6 +19,9 @@
 /Makefile.work  @qiluo-msft @xumia @lguohan
 /slave.mk       @qiluo-msft @xumia @lguohan
 /scripts        @qiluo-msft @xumia @lguohan
+/src/sonic-build-hooks/                 @sonic-net/sonic-build
+/src/debootstrap/                       @sonic-net/sonic-build
+/src/sonic-fips/                        @sonic-net/sonic-build
 
 # installer
 /installer/     @qiluo-msft
@@ -31,8 +34,78 @@
 /dockers/docker-config-engine*/         @qiluo-msft
 /dockers/docker-snmp/                   @qiluo-msft
 
-# src
+# kernel
+/src/sonic-linux-kernel/                @sonic-net/sonic-kernel
+
+# devices
+/device/                                @sonic-net/sonic-platform
+/src/sonic-platform-common/             @sonic-net/sonic-platform
+/src/sonic-platform-daemons/            @sonic-net/sonic-platform
+/src/sonic-platform-pde/                @sonic-net/sonic-platform
+/src/lm-sensors/                        @sonic-net/sonic-platform
+/src/flashrom/                          @sonic-net/sonic-platform
+
+# common library
 /src/initramfs-tools/                   @qiluo-msft
+/src/redis-dump-load/                   @sonic-net/sonic-management
+/src/sonic-py-common/                   @sonic-net/sonic-management
+/src/sonic-py-swsssdk/                  @sonic-net/sonic-management
+/src/sonic-swss-common/                 @sonic-net/sonic-management
+/src/bash/                              @sonic-net/sonic-management
+/src/tacacs/                            @sonic-net/sonic-management
+/src/radius/                            @sonic-net/sonic-management
+/src/swig/                              @sonic-net/sonic-management
+/src/socat/                             @sonic-net/sonic-management
+
+# redis
+/src/redis/                             @sonic-net/sonic-management
+/src/hiredis/                           @sonic-net/sonic-management
 
 # yang
 /src/sonic-yang-models/                 @praveen-li @dgsudharsan @rathnasabapathyv @venkatmahalingam @qiluo-msft
+/src/sonic-yang-mgmt/                   @sonet-net/sonic-management
+/src/libyang/                           @sonic-net/sonic-management
+/src/libyang1/                          @sonic-net/sonic-management
+/src/libyang2/                          @sonic-net/sonic-management
+
+# bgpcfgd
+/src/sonic-bgpcfgd/                     @StormLiangMS
+
+# sonic-config-engine
+/src/sonic-config-engine/               @sonic-net/sonic-management
+
+# sonic-utilities
+/src/sonic-utilities/                   @sonic-net/sonic-management
+
+# sonic-telemetry
+/dockers/docker-sonic-telemetry         @sonic-net/sonic-management
+/src/sonic-telemetry/                   @sonic-net/sonic-management
+
+# snmp
+/src/sonic-snmpagent/                   @sonic-net/sonic-management
+/src/snmpd/                             @sonic-net/sonic-management
+
+# dhcp relay
+/src/dhcp6relay/                        @sonic-net/sonic-fundamentals
+/src/dhcpmon/                           @sonic-net/sonic-fundamentals
+/src/isc-dhcp/                          @sonic-net/sonic-fundamentals
+
+# sflow
+/src/sflow/                             @sonic-net/sonic-dataplane
+
+# sonic restapi
+/src/sonic-restapi/                     @sonic-net/sonic-dataplane
+
+# sonic swss
+/src/sonic-swss/                        @sonic-net/sonic-dataplane
+
+# linux networking, e.g., libnl3, iproute2, ifupdown2, ethtool
+/src/libnl3/                            @sonic-net/sonic-dataplane
+/src/iproute2/                          @sonic-net/sonic-dataplane
+/src/ifupdown2/                         @sonic-net/sonic-dataplane
+/src/ethtool/                           @sonic-net/sonic-dataplane
+
+# ptf
+/src/ptf/                               @sonic-net/sonic-fundamentals
+/src/ptf-py3/                           @sonic-net/sonic-fundamentals
+/src/scapy/                             @sonic-net/sonic-fundamentals

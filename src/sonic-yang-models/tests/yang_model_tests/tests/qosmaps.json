@@ -86,19 +86,42 @@
     "PORT_QOS_MAP_APPLY_MAPS": {
         "desc": "Configure qos maps on port."
     },
-    
+
+    "PORT_QOS_MAP_APPLY_MAP_TO_GLOBAL": {
+        "desc": "Configure qos maps on switch level."
+    },
+
     "PORT_QOS_MAP_APPLY_NON_EXISTS_MAPS": {
         "desc": "Configure non exists qos maps on port.",
         "eStrKey": "LeafRef"
     },
 
+    "PORT_QOS_MAP_APPLY_NON_EXISTS_SCHEDULER": {
+        "desc": "Configure non exists scheduler on port.",
+        "eStrKey": "LeafRef"
+    },
+
     "PORT_QOS_MAP_APPLY_NON_EXISTS_PORT": {
         "desc": "Configure port qos map entry on non exists port.",
-        "eStrKey": "LeafRef"
+        "eStr": "Invalid value"
     },
 
     "PORT_QOS_MAP_APPLY_INVALID_PFC": {
         "desc": "Configure port pfc enable with invalid pfc priority.",
         "eStrKey": "Pattern"
+    },
+
+    "TC_TO_DSCP_MAP_CRETAE": {
+        "desc": "Configure a Traffic class to DSCP map."
+    },
+
+    "TC_TO_DSCP_MAP_CREATE_INVALID_TC": {
+        "desc": "Configure a Traffic class to DSCP with invalid key.",
+        "eStr": "Invalid Traffic Class"
+    },
+
+    "TC_TO_DSCP_MAP_CREATE_INVALID_DSCP": {
+        "desc": "Configure a Traffic class to DSCP map with invalid value.",
+        "eStr": "Invalid DSCP"
     }
 }

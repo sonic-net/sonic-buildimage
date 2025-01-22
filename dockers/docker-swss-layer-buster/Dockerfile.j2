@@ -1,10 +1,12 @@
 {% from "dockers/dockerfile-macros.j2" import install_debian_packages, install_python_wheels, copy_files %}
-FROM docker-config-engine-buster
+FROM docker-config-engine-buster-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
+
+RUN apt-get install iputils-ping
 
 {% if docker_swss_layer_buster_debs.strip() -%}
 # Copy locally-built Debian package dependencies

@@ -1,9 +1,13 @@
 module sonic-vrf {
-    namespace "http://github.com/Azure/sonic-vrf";
+    namespace "http://github.com/sonic-net/sonic-vrf";
     prefix vrf;
-    
+
     import sonic-extension {
         prefix sonic-ext;
+    }
+
+    import sonic-types {
+        prefix stypes;
     }
 
     organization
@@ -22,19 +26,19 @@ module sonic-vrf {
 
     container sonic-vrf {
         container VRF {
-            description "Vrf configuration.";            
+            description "Vrf configuration.";
 
             list VRF_LIST {
                 key "name";
 
                 leaf name {
-                    type string {
+                    type stypes:interface_name {
                         pattern "Vrf[a-zA-Z0-9_-]+" {
                             error-message "Invalid VRF name";
                             error-app-tag vrf-name-invalid;
                         }
                     }
-                }   
+                }
 
                 leaf fallback {
                     type  boolean;
@@ -43,6 +47,14 @@ module sonic-vrf {
                         "Enable/disable fallback feature which is useful for specified VRF user to access internet through global/main route.";
                 }
 
+                leaf vni {
+                    type uint32 {
+                        range "0..16777215";
+                    }
+                    default 0;
+                    description
+                        "VNI mapped to VRF";
+                }
             } /* end of list VRF_LISt */
         } /* end of container VRf */
     } /* end of container sonic-vrf */

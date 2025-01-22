@@ -1,0 +1,81 @@
+module sonic-hash {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-hash";
+    prefix hash;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "HASH YANG Module for SONiC OS";
+
+    revision 2023-09-25 {
+        description "Added hashing algorithm configuration";
+    }
+
+    revision 2022-09-05 {
+        description "First Revision";
+    }
+
+    typedef hash-field {
+        description "Represents native hash field";
+        type stypes:hash-field {
+            enum IN_PORT;
+            enum DST_MAC;
+            enum SRC_MAC;
+            enum ETHERTYPE;
+            enum VLAN_ID;
+            enum IP_PROTOCOL;
+            enum DST_IP;
+            enum SRC_IP;
+            enum L4_DST_PORT;
+            enum L4_SRC_PORT;
+            enum INNER_DST_MAC;
+            enum INNER_SRC_MAC;
+            enum INNER_ETHERTYPE;
+            enum INNER_IP_PROTOCOL;
+            enum INNER_DST_IP;
+            enum INNER_SRC_IP;
+            enum INNER_L4_DST_PORT;
+            enum INNER_L4_SRC_PORT;
+        }
+    }
+
+    container sonic-hash {
+
+        container SWITCH_HASH {
+
+            description "SWITCH_HASH part of config_db.json";
+
+            container GLOBAL {
+
+                leaf-list ecmp_hash {
+                    description "Hash fields for hashing packets going through ECMP";
+                    type hash:hash-field;
+                }
+
+                leaf-list lag_hash  {
+                    description "Hash fields for hashing packets going through LAG";
+                    type hash:hash-field;
+                }
+
+                leaf ecmp_hash_algorithm {
+                    description "Hash algorithm for hashing packets going through ECMP";
+                    type stypes:hash-algorithm;
+                }
+
+                leaf lag_hash_algorithm {
+                    description "Hash algorithm for hashing packets going through LAG";
+                    type stypes:hash-algorithm;
+                }
+
+            }
+            /* end of container GLOBAL */
+        }
+        /* end of container SWITCH_HASH */
+    }
+    /* end of container sonic-hash */
+}
+/* end of module sonic-hash */

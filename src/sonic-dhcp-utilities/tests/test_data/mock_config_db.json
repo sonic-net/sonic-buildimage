@@ -1,0 +1,217 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "sonic-host"
+        }
+    },
+    "VLAN": {
+        "Vlan1000": {},
+        "Vlan2000": {},
+        "Vlan3000": {}
+    },
+    "VLAN_INTERFACE": {
+        "Vlan1000|192.168.0.1/21": {
+            "NULL": "NULL"
+        },
+        "Vlan1000": {
+            "NULL": "NULL"
+        },
+        "Vlan1000|fc02:1000::1/64": {
+            "NULL": "NULL"
+        },
+        "Vlan2000|192.168.1.1/21": {
+            "NULL": "NULL"
+        },
+        "Vlan2000|192.168.2.1/21": {
+            "NULL": "NULL"
+        },
+        "Vlan2000": {
+            "NULL": "NULL"
+        },
+        "Vlan3000": {
+            "NULL": "NULL"
+        }
+    },
+    "VLAN_MEMBER": {
+        "Vlan1000|Ethernet24": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet28": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan1000|Ethernet40": {
+            "tagging_mode": "untagged"
+        },
+        "Vlan3000|Ethernet44": {
+            "tagging_mode": "untagged"
+        }
+    },
+    "DHCP_SERVER_IPV4": {
+        "Vlan1000": {
+            "customized_options": [
+                "option60",
+                "option223"
+            ],
+            "gateway": "192.168.0.1",
+            "lease_time": "900",
+            "mode": "PORT",
+            "netmask": "255.255.255.0",
+            "state": "enabled"
+        },
+        "Vlan2000": {
+            "customized_options": [
+                "option60"
+            ],
+            "gateway": "192.168.1.1",
+            "lease_time": "900",
+            "mode": "PORT",
+            "netmask": "255.255.255.0",
+            "state": "disabled"
+        },
+        "Vlan3000": {
+            "customized_options": [
+                "option60"
+            ],
+            "gateway": "192.168.2.1",
+            "lease_time": "900",
+            "mode": "STATIC",
+            "netmask": "255.255.255.0",
+            "state": "enabled"
+        },
+        "Vlan4000": {
+            "customized_options": [
+                "option60",
+                "option223"
+            ],
+            "gateway": "192.168.3.1",
+            "lease_time": "900",
+            "mode": "PORT",
+            "netmask": "255.255.255.0",
+            "state": "enabled"
+        },
+        "Vlan5000": {
+            "customized_options": [
+                "option60",
+                "option223"
+            ],
+            "gateway": "192.168.4.1",
+            "lease_time": "900",
+            "mode": "PORT",
+            "netmask": "255.255.255.0",
+            "state": "disabled"
+        },
+        "Vlan6000": {
+            "gateway": "192.168.2.1",
+            "lease_time": "900",
+            "mode": "PORT",
+            "netmask": "255.255.255.0",
+            "state": "enabled"
+        }
+    },
+    "DHCP_SERVER_IPV4_RANGE": {
+        "range3": {
+            "range": [
+                "192.168.0.10",
+                "192.168.0.10"
+            ]
+        },
+        "range2": {
+            "range": [
+                "192.168.0.6",
+                "192.168.0.3"
+            ]
+        },
+        "range1": {
+            "range": [
+                "192.168.0.2",
+                "192.168.0.5"
+            ]
+        },
+        "range4": {
+            "range": [
+                "192.168.0.1"
+            ]
+        },
+        "range0": {
+            "range": [
+                "192.168.8.2",
+                "192.168.8.3"
+            ]
+        },
+        "range5": {
+            "range": []
+        }
+    },
+    "DHCP_SERVER_IPV4_PORT": {
+        "Vlan1000|Ethernet24": {
+            "ips": [
+                "192.168.0.7"
+            ]
+        },
+        "Vlan1000|Ethernet28": {
+            "ranges": [
+                "range0",
+                "range1",
+                "range2",
+                "range3",
+                "range6"
+            ]
+        },
+        "Vlan1000|Ethernet32": {
+            "ips": [
+                "192.168.0.8"
+            ],
+            "ranges": [
+                "range0"
+            ]
+        },
+        "Vlan1000|Ethernet36": {
+            "ips": [
+                "192.168.0.9"
+            ]
+        },
+        "Vlan1000|Ethernet40": {
+            "ips": [
+                "192.168.0.10"
+            ]
+        },
+        "Vlan3000|Ethernet44": {
+            "ips": [
+                "192.168.0.10"
+            ]
+        }
+    },
+    "PORT": {
+        "Ethernet0": {
+            "admin_status": "up",
+            "alias": "etp1",
+            "description": "Servers0:eth0",
+            "index": "1",
+            "lanes": "25",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "1000",
+            "tpid": "0x8100"
+        },
+        "Ethernet1": {
+            "admin_status": "up",
+            "alias": "etp2",
+            "description": "Servers1:eth0",
+            "index": "2",
+            "lanes": "26",
+            "mtu": "9100",
+            "pfc_asym": "off",
+            "speed": "1000",
+            "tpid": "0x8100"
+        }
+    },
+    "PORTCHANNEL": {
+        "PortChannel101": {
+            "admin_status": "up",
+            "lacp_key": "auto",
+            "min_links": "1",
+            "mtu": "9100",
+            "tpid": "0x8100"
+        }
+    }
+}

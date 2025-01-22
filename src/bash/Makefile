@@ -17,6 +17,9 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	pushd bash-$(BASH_VERSION_MAJOR)
 
 	# build package
+ifeq ($(CROSS_BUILD_ENVIRON), y)
+	dpkg-buildpackage -us -uc -b -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+else
 	DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -us -uc -b -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
 
 	# copy UT code.
@@ -30,7 +33,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
 	# run UT after config.h ready.
 	make -C unittest && make test -C unittest
-
+endif
 	popd
 
 	mv $* $(DEST)/

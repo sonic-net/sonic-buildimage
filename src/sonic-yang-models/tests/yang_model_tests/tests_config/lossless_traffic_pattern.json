@@ -1,0 +1,130 @@
+{
+    "LOSSLESS_TRAFFIC_PATTERN_TEST": {
+        "sonic-lossless-traffic-pattern:sonic-lossless-traffic-pattern": {
+            "sonic-lossless-traffic-pattern:LOSSLESS_TRAFFIC_PATTERN": {
+                "LOSSLESS_TRAFFIC_PATTERN_LIST": [
+                    {
+                        "name": "AZURE",
+                        "mtu": "1024",
+                        "small_packet_percentage": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_INVALID_NAME_TEST": {
+        "sonic-lossless-traffic-pattern:sonic-lossless-traffic-pattern": {
+            "sonic-lossless-traffic-pattern:LOSSLESS_TRAFFIC_PATTERN": {
+                "LOSSLESS_TRAFFIC_PATTERN_LIST": [
+                    {
+                        "name": "Invalid$",
+                        "mtu": "1024",
+                        "small_packet_percentage": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_TOO_LONG_NAME_TEST": {
+        "sonic-lossless-traffic-pattern:sonic-lossless-traffic-pattern": {
+            "sonic-lossless-traffic-pattern:LOSSLESS_TRAFFIC_PATTERN": {
+                "LOSSLESS_TRAFFIC_PATTERN_LIST": [
+                    {
+                        "name": "Long_name_which_exceeds_the_limit",
+                        "mtu": "1024",
+                        "small_packet_percentage": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_TOO_SMALL_MTU_TEST": {
+        "sonic-lossless-traffic-pattern:sonic-lossless-traffic-pattern": {
+            "sonic-lossless-traffic-pattern:LOSSLESS_TRAFFIC_PATTERN": {
+                "LOSSLESS_TRAFFIC_PATTERN_LIST": [
+                    {
+                        "name": "AZURE",
+                        "mtu": "0",
+                        "small_packet_percentage": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_TOO_LARGE_MTU_TEST": {
+        "sonic-lossless-traffic-pattern:sonic-lossless-traffic-pattern": {
+            "sonic-lossless-traffic-pattern:LOSSLESS_TRAFFIC_PATTERN": {
+                "LOSSLESS_TRAFFIC_PATTERN_LIST": [
+                    {
+                        "name": "AZURE",
+                        "mtu": "9217",
+                        "small_packet_percentage": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_INVALID_FORMAT_MTU_TEST": {
+        "sonic-lossless-traffic-pattern:sonic-lossless-traffic-pattern": {
+            "sonic-lossless-traffic-pattern:LOSSLESS_TRAFFIC_PATTERN": {
+                "LOSSLESS_TRAFFIC_PATTERN_LIST": [
+                    {
+                        "name": "AZURE",
+                        "mtu": "NaN",
+                        "small_packet_percentage": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_LACK_MTU_TEST": {
+        "sonic-lossless-traffic-pattern:sonic-lossless-traffic-pattern": {
+            "sonic-lossless-traffic-pattern:LOSSLESS_TRAFFIC_PATTERN": {
+                "LOSSLESS_TRAFFIC_PATTERN_LIST": [
+                    {
+                        "name": "AZURE",
+                        "small_packet_percentage": "100"
+                    }
+                ]
+            }
+        }
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_TOO_LARGE_SMALL_PACKET_PERCENTAGE_TEST": {
+        "sonic-lossless-traffic-pattern:sonic-lossless-traffic-pattern": {
+            "sonic-lossless-traffic-pattern:LOSSLESS_TRAFFIC_PATTERN": {
+                "LOSSLESS_TRAFFIC_PATTERN_LIST": [
+                    {
+                        "name": "AZURE",
+                        "mtu": "1024",
+                        "small_packet_percentage": "101"
+                    }
+                ]
+            }
+        }
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_INVALID_FORMAT_SMALL_PACKET_PERCENTAGE_TEST": {
+        "sonic-lossless-traffic-pattern:sonic-lossless-traffic-pattern": {
+            "sonic-lossless-traffic-pattern:LOSSLESS_TRAFFIC_PATTERN": {
+                "LOSSLESS_TRAFFIC_PATTERN_LIST": [
+                    {
+                        "name": "AZURE",
+                        "mtu": "1024",
+                        "small_packet_percentage": "NaN"
+                    }
+                ]
+            }
+        }
+    },
+    "LOSSLESS_TRAFFIC_PATTERN_LACK_SMALL_PACKET_PERCENTAGE_TEST": {
+        "sonic-lossless-traffic-pattern:sonic-lossless-traffic-pattern": {
+            "sonic-lossless-traffic-pattern:LOSSLESS_TRAFFIC_PATTERN": {
+                "LOSSLESS_TRAFFIC_PATTERN_LIST": [
+                    {
+                        "name": "AZURE",
+                        "mtu": "1024"
+                    }
+                ]
+            }
+        }
+    }
+}

@@ -1,0 +1,56 @@
+module sonic-voq-inband-interface {
+    namespace "http://github.com/sonic-net/sonic-voq-inband-interface";
+    prefix voq-inband-intf;
+    yang-version 1.1;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONIC BGP Internal Neighbor for voq chassis platforms";
+
+    revision 2022-10-06 {
+        description
+            "Initial revision.";
+    }
+
+    container sonic-voq-inband-interface {
+        container VOQ_INBAND_INTERFACE {
+            description "VOQ inband interface in VOQ Chassis";
+            list VOQ_INBAND_INTERFACE_LIST {
+                key "name";
+                leaf name {
+                    type string {
+                        pattern "Ethernet-IB[0-9]+";
+                    }
+                }
+                leaf inband_type {
+                    description "Type of inband interface";
+                    type string {
+                        pattern "port|Port";
+                    }
+                    default "port";
+                }
+            }
+            list VOQ_INBAND_INTERFACE_IPPREFIX_LIST {
+                description "Prefix for VOQ_INBAND_INTERFACE";
+                key "name ip-prefix";
+                leaf name {
+                    type leafref {
+                        path "../../VOQ_INBAND_INTERFACE_LIST/name";
+                    }
+                }
+                leaf ip-prefix {
+                    type stypes:sonic-ip-prefix;
+                }
+            }
+        }
+    }
+}

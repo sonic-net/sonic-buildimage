@@ -23,6 +23,7 @@ BIOS_QUERY_VERSION_COMMAND = "dmidecode -s system-version"
 SSD_VERSION_COMMAND = "ssdutil -v"
 SSD_UPGRADE_SCHEDULE = "/usr/local/bin/ssd_upgrade_schedule"
 PCI_VERSION_COMMAND = "lspci -s 0:0.0"
+ONIE_VERSION_COMMAND = "/usr/local/bin/onie_version"
 
 
 class Component(ComponentBase):
@@ -38,7 +39,8 @@ class Component(ComponentBase):
         ["FPGA", ("Platform management controller for on-board temperature "
                   "monitoring, in-chassis power, Fan and LED control")],
         ["CPLD", "Used for managing IO modules, SFP+ modules and system LEDs"],
-        ["SSD", "Solid State Drive that stores data persistently"]
+        ["SSD", "Solid State Drive that stores data persistently"],
+        ["ONIE", "Open Network Install Environment"]
     ]
     MODULE_COMPONENT = [
         "IOM{}-CPLD",
@@ -261,6 +263,11 @@ class Component(ComponentBase):
                 return self._get_cpld_version()
             elif self.index == 3:       #SSD
                 return self._get_ssd_version()
+            elif self.index == 4:       # ONIE
+                try:
+                    return subprocess.check_output(ONIE_VERSION_COMMAND, text=True).strip()
+                except (FileNotFoundError, subprocess.CalledProcessError):
+                    return 'NA'
 
     def get_available_firmware_version(self, image_path):
         """
@@ -314,3 +321,16 @@ class Component(ComponentBase):
             A boolean, True if install was successful, False if not
         """
         return False
+
+    def update_firmware(self,image_path):
+       """
+         Updates firmware to the componenent
+
+        Args:
+            image_path: A string, path to firmware image
+
+        Returns:
+            A boolean, True if install was successful, False if not
+
+       """
+       return False

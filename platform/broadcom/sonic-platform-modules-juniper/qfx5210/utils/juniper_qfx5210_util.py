@@ -34,13 +34,12 @@ command:
     set         : change board setting with fan|led|sfp    
 """
 
-import os
 import commands
 import sys, getopt
 import binascii
 import logging
 import time
-
+import subprocess
 
 
 
@@ -55,8 +54,8 @@ FORCE = 0
 FUNCTION_NAME = '/var/log/juniper_qfx5210_util'
 
 if DEBUG == True:
-    print sys.argv[0]
-    print 'ARGV      :', sys.argv[1:]   
+    print(sys.argv[0])
+    print('ARGV      :', sys.argv[1:])
 
 
 def main():
@@ -81,10 +80,10 @@ def main():
         format= '[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
         datefmt='%H:%M:%S')
 
-    if DEBUG == True:                                                           
-        print options
-        print args
-        print len(sys.argv)
+    if DEBUG is True:                                                           
+        print(options)
+        print(args)
+        print(len(sys.argv))
         # set up logging to console
         if log_level == logging.DEBUG:
             console = logging.StreamHandler()
@@ -127,45 +126,45 @@ def main():
         else:
             show_help()
            
-    DisableWatchDogCmd = '/usr/sbin/i2cset -f -y 0 0x65 0x3 0x04' 
+    DisableWatchDogCmd = ['/usr/sbin/i2cset', '-f', '-y', '0', '0x65', '0x3', '0x04'] 
     # Disable watchdog
     try:
-        os.system(DisableWatchDogCmd)
+        subprocess.call(DisableWatchDogCmd)
     except OSError:
-        print 'Error: Execution of "%s" failed', DisableWatchDogCmd
+        print('Error: Execution of "%s" failed', DisableWatchDogCmd)
         return False
 
     time.sleep(1)
     # Invoking the script which retrieves the data from Board EEPROM and storing in file
-    EEPROMDataCmd = 'python /usr/share/sonic/device/x86_64-juniper_qfx5210-r0/plugins/qfx5210_eeprom_data.py'
+    EEPROMDataCmd = ['python', '/usr/share/sonic/device/x86_64-juniper_qfx5210-r0/plugins/qfx5210_eeprom_data.py']
     try:
-        os.system(EEPROMDataCmd)
+        subprocess.call(EEPROMDataCmd)
     except OSError:
-        print 'Error: Execution of "%s" failed', EEPROMDataCmd
+        print('Error: Execution of "%s" failed', EEPROMDataCmd)
         return False
 
     return True              
         
 def show_help():
-    print __doc__ % {'scriptName' : sys.argv[0].split("/")[-1]}
+    print(__doc__ % {'scriptName' : sys.argv[0].split("/")[-1]})
     sys.exit(0)
 
 def  show_set_help():
     cmd =  sys.argv[0].split("/")[-1]+ " "  + args[0]
-    print  cmd +" [led|sfp|fan]"
-    print  "    use \""+ cmd + " led 0-4 \"  to set led color"
-    print  "    use \""+ cmd + " fan 0-100\" to set fan duty percetage"    
-    print  "    use \""+ cmd + " sfp 1-32 {0|1}\" to set sfp# tx_disable" 
+    print(cmd +" [led|sfp|fan]")
+    print("    use \""+ cmd + " led 0-4 \"  to set led color")
+    print("    use \""+ cmd + " fan 0-100\" to set fan duty percetage")
+    print("    use \""+ cmd + " sfp 1-32 {0|1}\" to set sfp# tx_disable")
     sys.exit(0)  
     
 def  show_eeprom_help():
     cmd =  sys.argv[0].split("/")[-1]+ " "  + args[0]
-    print  "    use \""+ cmd + " 1-32 \" to dump sfp# eeprom" 
+    print("    use \""+ cmd + " 1-32 \" to dump sfp# eeprom")
     sys.exit(0)           
             
 def my_log(txt):
-    if DEBUG == True:
-        print txt    
+    if DEBUG is True:
+        print(txt)
     return
     
 def log_os_system(cmd, show):
@@ -283,7 +282,7 @@ def device_install():
            
         status, output = log_os_system(mknod[i], 1)
         if status:
-            print output
+            print(output)
             if FORCE == 0:                
                 return status  
 
@@ -291,12 +290,12 @@ def device_install():
         path = "/sys/bus/i2c/devices/i2c-"+str(sfp_map[i])+"/new_device"
         status, output =log_os_system("echo optoe1 0x50 > " + path, 1)
         if status:
-            print output
+            print(output)
             if FORCE == 0:            
                 return status
         status, output =log_os_system("echo Port"+str(i)+" > /sys/bus/i2c/devices/"+str(sfp_map[i])+"-0050/port_name", 1)
         if status:
-            print output
+            print(output)
             if FORCE == 0:
                 return status
     return 
@@ -310,7 +309,7 @@ def device_uninstall():
         target = "/sys/bus/i2c/devices/i2c-"+str(sfp_map[i])+"/delete_device"
         status, output =log_os_system("echo 0x50 > "+ target, 1)
         if status:
-            print output
+            print(output)
             if FORCE == 0:            
                 return status
        
@@ -323,7 +322,7 @@ def device_uninstall():
         temp[-1] = temp[-1].replace('new_device', 'delete_device')
         status, output = log_os_system(" ".join(temp), 1)
         if status:
-            print output
+            print(output)
             if FORCE == 0:            
                 return status  
                                   
@@ -351,14 +350,14 @@ def do_install():
             if FORCE == 0:        
                 return  status        
     else:
-        print PROJECT_NAME.upper()+" devices detected...."
+        print(PROJECT_NAME.upper()+" devices detected....")
 
     return
     
 def do_uninstall():
     logging.info('Checking system....')
     if not device_exist():
-        print PROJECT_NAME.upper() +" has no device installed...."         
+        print(PROJECT_NAME.upper() +" has no device installed....")
     else:
         logging.info('Removing device....')
         status = device_uninstall() 
@@ -367,7 +366,7 @@ def do_uninstall():
                 return  status  
                 
     if driver_check()== False :
-        print PROJECT_NAME.upper() +" has no driver installed...."
+        print(PROJECT_NAME.upper() +" has no driver installed....")
     else:
         logging.info('Removing installed driver....')
         status = driver_uninstall()
@@ -421,7 +420,7 @@ def devices_info():
                 ALL_DEVICE[key][ key+str(i+1)].append(path)                   
     
     #show dict all in the order
-    if DEBUG == True:
+    if DEBUG is True:
         for i in sorted(ALL_DEVICE.keys()):
             print(i+": ")
             for j in sorted(ALL_DEVICE[i].keys()):    
@@ -448,22 +447,22 @@ def show_eeprom(index):
     else:
         log = 'Failed : no hexdump cmd!!'
         logging.info(log)
-        print log
+        print(log)
         return 1                                 
             
-    print node + ":"
+    print(node + ":")
     ret, log = log_os_system(hex_cmd +" -C "+node, 1)
     if ret==0:                                      
-        print  log 
+        print(log)
     else:
-        print "**********device no found**********"       
+        print("**********device no found**********")
     return 
          
 def set_device(args):
     global DEVICE_NO
     global ALL_DEVICE
     if system_ready()==False:
-        print("System's not ready.")        
+        print("System's not ready.")
         print("Please install first!")
         return     
     
@@ -474,7 +473,7 @@ def set_device(args):
         if int(args[1])>4:
             show_set_help()
             return
-        #print  ALL_DEVICE['led']
+        #print ALL_DEVICE['led']
         for i in range(0,len(ALL_DEVICE['led'])):   
             for k in (ALL_DEVICE['led']['led'+str(i+1)]):  
                 ret, log = log_os_system("echo "+args[1]+" >"+k, 1)
@@ -489,10 +488,10 @@ def set_device(args):
         node = node.replace(node.split("/")[-1], 'fan_duty_cycle_percentage')
         ret, log = log_os_system("cat "+ node, 1)            
         if ret==0:
-            print ("Previous fan duty: " + log.strip() +"%")            
+            print("Previous fan duty: " + log.strip() +"%")
         ret, log = log_os_system("echo "+args[1]+" >"+node, 1)
         if ret==0:
-            print ("Current fan duty: " + args[1] +"%")          
+            print("Current fan duty: " + args[1] +"%")
         return ret
     elif args[0]=='sfp':
         if int(args[1])> DEVICE_NO[args[0]] or int(args[1])==0:
@@ -506,7 +505,7 @@ def set_device(args):
             show_set_help()
             return
        
-        #print  ALL_DEVICE[args[0]]   
+        #print ALL_DEVICE[args[0]]
         for i in range(0,len(ALL_DEVICE[args[0]])):   
             for j in ALL_DEVICE[args[0]][args[0]+str(args[1])]:        
                 if j.find('tx_disable')!= -1:  
@@ -531,26 +530,24 @@ def device_traversal():
     if len(ALL_DEVICE)==0:
         devices_info()
     for i in sorted(ALL_DEVICE.keys()):
-        print("============================================")        
+        print("============================================")
         print(i.upper()+": ")
         print("============================================")
          
         for j in sorted(ALL_DEVICE[i].keys(), key=get_value):    
-            print "   "+j+":",
+            print("   "+j+":", end=' ')
             for k in (ALL_DEVICE[i][j]):
                 ret, log = log_os_system("cat "+k, 0)
                 func = k.split("/")[-1].strip()
                 func = re.sub(j+'_','',func,1)
                 func = re.sub(i.lower()+'_','',func,1)                 
                 if ret==0:
-                    print func+"="+log+" ",                  
+                    print(func+"="+log+" ")
                 else:
-                    print func+"="+"X"+" ",
-            print                    
+                    print(func+"="+"X"+" ")
             print("----------------------------------------------------------------")
                                               
      
-        print
     return
             
 def device_exist():

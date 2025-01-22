@@ -1,4 +1,5 @@
 appl_param_module_id=309
+system_ref_core_clock_khz=1600000
 
 dpp_db_path=/usr/share/bcm/db
 port_init_cl72=1

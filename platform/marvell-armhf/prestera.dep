@@ -1,8 +1,0 @@
-MPATH       := $($(MRVL_PRESTERA_DEB)_SRC_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/marvell-armhf/prestera.mk platform/marvell-armhf/prestera.dep
-DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES   += $(shell git ls-files $(MPATH))
-
-$(MRVL_PRESTERA_DEB)_CACHE_MODE  := GIT_CONTENT_SHA 
-$(MRVL_PRESTERA_DEB)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
-$(MRVL_PRESTERA_DEB)_DEP_FILES   := $(DEP_FILES)

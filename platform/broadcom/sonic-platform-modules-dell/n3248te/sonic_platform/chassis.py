@@ -19,7 +19,6 @@ try:
     from sonic_platform.psu import Psu
     from sonic_platform.thermal import Thermal
     from sonic_platform.watchdog import Watchdog
-    from sonic_platform.fan import Fan
     from sonic_platform.fan_drawer import FanDrawer
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
@@ -62,6 +61,12 @@ class Chassis(ChassisBase):
             53: 24,
             54: 25,
             }
+    SYSTEM_LED_COLORS = {
+        "green",
+        "blink_green",
+        "yellow",
+        "blink_yellow"
+        }
 
     def __init__(self):
         ChassisBase.__init__(self)
@@ -89,8 +94,6 @@ class Chassis(ChassisBase):
         self._watchdog = Watchdog()
         self._num_sfps = 54
         self._num_fans =  MAX_N3248TE_FANTRAY * MAX_N3248TE_FAN
-        self._fan_list = [Fan(i, j) for i in range(MAX_N3248TE_FANTRAY) \
-                            for j in range(MAX_N3248TE_FAN)]
         for k in range(MAX_N3248TE_FANTRAY):
             fandrawer = FanDrawer(k)
             self._fan_drawer_list.append(fandrawer)
@@ -105,6 +108,7 @@ class Chassis(ChassisBase):
             self._global_port_pres_dict[port_num] = '1' if presence else '0'
 
         self._watchdog = Watchdog()
+        self.status_led_reg = "system_led"
         self.locator_led_reg = "locator_led"
         self.LOCATOR_LED_ON = "blink_blue"
         self.LOCATOR_LED_OFF = self.STATUS_LED_COLOR_OFF
@@ -114,7 +118,8 @@ class Chassis(ChassisBase):
         # reg name and on failure rethrns 'ERR'
         cpld_reg_file = self.CPLD_DIR + '/' + reg_name
         try:
-            rv = open(cpld_reg_file, 'r').read()
+            with open(cpld_reg_file, 'r') as fd:
+                rv = fd.read()
         except IOError : return 'ERR'
         return rv.strip('\r\n').lstrip(' ')
 
@@ -125,7 +130,6 @@ class Chassis(ChassisBase):
         cpld_reg_file = self.CPLD_DIR + '/' + reg_name
 
         if (not os.path.isfile(cpld_reg_file)):
-            #print "open error"
             return rv
 
         try:
@@ -135,6 +139,40 @@ class Chassis(ChassisBase):
             rv = 'ERR'
 
         return rv
+
+    def get_status_led(self):
+        """
+        Gets the current system LED color
+
+        Returns:
+            A string that represents the supported color
+        """
+
+        color = self._get_cpld_register(self.status_led_reg)
+
+        if color not in list(self.SYSTEM_LED_COLORS):
+            return self.sys_ledcolor
+
+        return color
+
+    def initizalize_system_led(self):
+        self.sys_ledcolor = "green"
+
+    def set_status_led(self,color):
+        """
+        Set system LED status based on the color type passed in the argument.
+        Argument: Color to be set
+        Returns:
+          bool: True is specified color is set, Otherwise return False
+        """
+
+        if color not in list(self.SYSTEM_LED_COLORS):
+            return False
+        if(not self._set_cpld_register(self.status_led_reg, color)):
+            return False
+
+        self.sys_ledcolor = color
+        return True
 
 # check for this event change for sfp / do we need to handle timeout/sleep
 
@@ -193,7 +231,7 @@ class Chassis(ChassisBase):
         Returns:
            string: The name of the chassis
         """
-        return self._eeprom.modelstr().decode()
+        return self._eeprom.modelstr()
 
     def get_presence(self):
         """
@@ -348,3 +386,28 @@ class Chassis(ChassisBase):
                 return self.LOCATOR_LED_OFF
         else:
             return self.LOCATOR_LED_OFF
+
+    def get_position_in_parent(self):
+        """
+        Retrieves 1-based relative physical position in parent device.
+        Returns:
+            integer: The 1-based relative physical position in parent
+            device or -1 if cannot determine the position
+        """
+        return -1
+
+    def is_replaceable(self):
+        """
+        Indicate whether Chassis is replaceable.
+        Returns:
+            bool: True if it is replaceable.
+        """
+        return False
+    def get_revision(self):
+        """
+        Retrives the hardware revision of the device
+
+        Returns:
+            string: Revision value of device
+        """
+        return self._eeprom.revision_str()

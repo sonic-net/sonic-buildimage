@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2021 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <linux/kconfig.h>
@@ -39,19 +39,7 @@
 unsigned long
 sal_time_usecs(void)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
-    struct timeval tv;
-
-    kal_time_val_get(&tv);
-
-    return tv.tv_sec * 1000000 + tv.tv_usec;
-#else
-    struct timespec64 tv;
-
-    kal_time_val_get(&tv);
-
-    return tv.tv_sec * 1000000 + tv.tv_nsec / 1000;
-#endif
+    return (unsigned long)kal_time_usecs();
 }
 
 void

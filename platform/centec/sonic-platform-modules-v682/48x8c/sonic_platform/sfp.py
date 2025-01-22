@@ -383,7 +383,7 @@ class Sfp(SfpBase):
 
         try:
             with open(self.port_to_eeprom_mapping[self.port_num], mode='rb', buffering=0) as fd:
-                fd.read()
+                fd.read(256)
         except IOError:
             return False
 

@@ -1,9 +1,0 @@
-deb [arch=armhf] http://deb.debian.org/debian bullseye main contrib non-free
-deb-src [arch=armhf] http://deb.debian.org/debian bullseye main contrib non-free
-deb [arch=armhf] http://deb.debian.org/debian bullseye-updates main contrib non-free
-deb-src [arch=armhf] http://deb.debian.org/debian bullseye-updates main contrib non-free
-deb [arch=armhf] http://security.debian.org bullseye-security main contrib non-free
-deb-src [arch=armhf] http://security.debian.org bullseye-security main contrib non-free
-deb [arch=armhf] https://download.docker.com/linux/debian bullseye stable
-deb [arch=armhf] http://ftp.debian.org/debian bullseye-backports main
-

@@ -28,7 +28,7 @@ MAX_Z9332F_FANTRAY = 7
 MAX_Z9332F_FAN = 2
 MAX_Z9332F_PSU = 2
 MAX_Z9332F_THERMAL = 14
-MAX_Z9332F_COMPONENT = 8 # BIOS,FPGA,BMC,BB CPLD,2 Switch CPLDs,SSD and PCIe
+MAX_Z9332F_COMPONENT = 9 # BIOS,FPGA,BMC,BB CPLD,2 Switch CPLDs,SSD,PCIe and ONIE
 
 media_part_num_list = set([ \
 "8T47V","XTY28","MHVPK","GF76J","J6FGD","F1KMV","9DN5J","H4DHD","6MCNV","0WRX0","X7F70","5R2PT","WTRD1","WTRD1","WTRD1","WTRD1","5250G","WTRD1","C5RNH","C5RNH","FTLX8571D3BCL-FC",
@@ -147,8 +147,7 @@ class Chassis(ChassisBase):
         self._component_list = [Component(i) for i in range(MAX_Z9332F_COMPONENT)]
         for port_num in range(self.PORT_START, self.PORTS_IN_BLOCK):
             # sfp get uses zero-indexing, but port numbers start from 1
-            presence = self.get_sfp(port_num).get_presence()
-            self._global_port_pres_dict[port_num] = '1' if presence else '0'
+            self._global_port_pres_dict[port_num] = '0'
 
         self._watchdog = Watchdog()
     def __del__(self):

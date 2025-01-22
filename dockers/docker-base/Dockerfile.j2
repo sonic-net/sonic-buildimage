@@ -1,9 +1,10 @@
+{% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {% if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
-FROM multiarch/debian-debootstrap:armhf-jessie
+FROM {{ prefix }}multiarch/debian-debootstrap:armhf-jessie
 {% elif CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
-FROM multiarch/debian-debootstrap:arm64-jessie
+FROM {{ prefix }}multiarch/debian-debootstrap:arm64-jessie
 {% else %}
-FROM {{DOCKER_BASE_ARCH}}/debian:jessie
+FROM {{ prefix }}{{DOCKER_BASE_ARCH}}/debian:jessie
 {% endif %}
 
 ## Remove retired jessie-updates repo
@@ -37,6 +38,7 @@ COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
 COPY ["sources.list", "/etc/apt/sources.list"]
 {% endif %}
 COPY ["no_install_recommend_suggest", "/etc/apt/apt.conf.d"]
+COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
 RUN apt-get update
 
 # Pre-install fundamental packages
@@ -63,7 +65,7 @@ RUN pip install wheel
 # Install supervisor
 RUN pip install supervisor>=3.4.0
 
-RUN mkdir -p /etc/supervisor
+RUN mkdir -p /etc/supervisor/conf.d
 RUN mkdir -p /var/log/supervisor
 
 COPY ["etc/supervisor/supervisord.conf", "/etc/supervisor/"]

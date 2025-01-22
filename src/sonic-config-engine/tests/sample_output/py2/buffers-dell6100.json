@@ -1,4 +1,3 @@
-
 {
     "CABLE_LENGTH": {
         "AZURE": {
@@ -13,10 +12,11 @@
             "Ethernet4": "5m",
             "Ethernet5": "5m",
             "Ethernet46": "5m",
-            "Ethernet34": "5m",
+            "Ethernet29": "5m",
             "Ethernet22": "5m",
             "Ethernet58": "5m",
             "Ethernet59": "5m",
+            "Ethernet28": "5m",
             "Ethernet50": "5m",
             "Ethernet51": "5m",
             "Ethernet52": "5m",
@@ -41,6 +41,7 @@
             "Ethernet32": "5m",
             "Ethernet33": "5m",
             "Ethernet30": "5m",
+            "Ethernet34": "5m",
             "Ethernet31": "5m",
             "Ethernet49": "5m",
             "Ethernet48": "5m",
@@ -52,8 +53,8 @@
             "Ethernet42": "5m",
             "Ethernet41": "5m",
             "Ethernet40": "5m",
-            "Ethernet29": "5m",
-            "Ethernet28": "5m",
+            "Ethernet65": "5m",
+            "Ethernet64": "5m",
             "Ethernet61": "5m",
             "Ethernet60": "5m",
             "Ethernet63": "5m",
@@ -91,7 +92,7 @@
         "ingress_lossy_profile": {
             "pool":"ingress_lossless_pool",
             "size":"0",
-            "dynamic_th":"3"
+            "static_th":"10875072"
         },
         "egress_lossless_profile": {
             "pool":"egress_lossless_pool",

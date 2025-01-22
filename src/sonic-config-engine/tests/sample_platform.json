@@ -1,4 +1,16 @@
 {
+    "chassis": {
+        "psus": [
+            {
+                "name": "PSU 1",
+                "temperature": false
+            },
+            {
+                "name": "PSU 2",
+                "temperature": false
+            }
+        ]
+    },
     "interfaces": {
         "Ethernet0": {
             "index": "1,1,1,1",

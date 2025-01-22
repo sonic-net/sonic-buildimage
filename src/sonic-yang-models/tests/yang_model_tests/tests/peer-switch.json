@@ -1,0 +1,13 @@
+{
+    "PEER_SWITCH_LOAD_NORMAL": {
+        "desc": "Load PEER_SWITCH for dualtor device."
+    },
+    "PEER_SWITCH_MISSING_DEVICE__NAME": {
+        "desc": "Load PEER_SWITCH missing PEER Device name.",
+        "eStrKey": "Mandatory"
+    },
+    "PEER_SWITCH_INVALID_IP_ADDRESS": {
+        "desc": "Load PEER_SWITCH with invalid IPv4 Address.",
+        "eStrKey": "Pattern"
+    }
+}

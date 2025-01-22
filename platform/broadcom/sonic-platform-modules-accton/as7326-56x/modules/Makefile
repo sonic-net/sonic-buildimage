@@ -1,7 +1,12 @@
 ifneq ($(KERNELRELEASE),)
 obj-m:= accton_i2c_cpld.o \
     accton_as7326_56x_fan.o accton_as7326_56x_leds.o \
-    accton_as7326_56x_psu.o ym2651y.o
+    accton_as7326_56x_psu.o ym2651y.o \
+    pddf_custom_psu.o
+
+	    
+CFLAGS_pddf_custom_psu.o := -I$(M)/../../../../pddf/i2c/modules/include
+KBUILD_EXTRA_SYMBOLS := $(M)/../../../../pddf/i2c/Module.symvers.PDDF
 
 else
 ifeq (,$(KERNEL_SRC))

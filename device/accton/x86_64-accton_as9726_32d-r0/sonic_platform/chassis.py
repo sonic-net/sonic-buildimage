@@ -6,7 +6,7 @@
 #
 #############################################################################
 
-import os
+import subprocess
 
 try:
     from sonic_platform_base.chassis_base import ChassisBase
@@ -28,7 +28,7 @@ HOST_REBOOT_CAUSE_PATH = "/host/reboot-cause/"
 PMON_REBOOT_CAUSE_PATH = "/usr/share/sonic/platform/api_files/reboot-cause/"
 REBOOT_CAUSE_FILE = "reboot-cause.txt"
 PREV_REBOOT_CAUSE_FILE = "previous-reboot-cause.txt"
-HOST_CHK_CMD = "docker > /dev/null 2>&1"
+HOST_CHK_CMD = ["docker"]
 
 
 class Chassis(ChassisBase):
@@ -96,7 +96,7 @@ class Chassis(ChassisBase):
 
 
     def __is_host(self):
-        return os.system(HOST_CHK_CMD) == 0
+        return subprocess.call(HOST_CHK_CMD) == 0
 
     def __read_txt_file(self, file_path):
         try:

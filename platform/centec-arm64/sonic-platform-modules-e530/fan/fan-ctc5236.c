@@ -180,7 +180,7 @@ static int fan_ctc5236_probe(struct platform_device *pdev)
 
     for (idx = 0; idx < CTC_MAX_FAN; idx++)
     {
-        data->pwm[idx] = devm_of_pwm_get(&pdev->dev, pdev->dev.of_node, pwmnames[idx]);
+        data->pwm[idx] = devm_pwm_get(&pdev->dev, pwmnames[idx]);
         if (IS_ERR(data->pwm[idx])) {
             dev_err(&pdev->dev, "Could not get PWM\n");
             return PTR_ERR(data->pwm[idx]);

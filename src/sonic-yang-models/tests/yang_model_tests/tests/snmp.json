@@ -1,0 +1,152 @@
+{
+    "SNMP_SYSTEM_TEST": {
+        "desc": "Load SNMP sysContact and sysLocation."
+    },
+    "SNMP_SYSTEM_CONTACT_NEG_TEST": {
+        "desc": "Load SNMP sysContact with empty string",
+        "eStrKey": "Range"
+    },
+    "SNMP_SYSTEM_LOCATION_NEG_TEST": {
+        "desc": "Load SNMP sysContact with empty string",
+        "eStrKey": "Range"
+    },
+    "SNMP_COMMUNITY_TEST": {
+        "desc": "Load SNMP community string."
+    },
+    "SNMP_COMMUNITY_MIN_NEG_TEST": {
+        "desc": "Load SNMP community string of length < 3.",
+        "eStrKey": "Range"
+    },
+    "SNMP_COMMUNITY_MAX_NEG_TEST": {
+        "desc": "Load SNMP community string of lenth > 32.",
+        "eStrKey": "Range"
+    },
+    "SNMP_COMMUNITY_WRONG_TYPE_TEST": {
+        "desc": "Load SNMP community string with un supported type.",
+        "eStrKey": "InvalidValue"
+    },
+    "SNMP_RO_USER_NAME_TEST": {
+        "desc": "Load valid RO SNMP user"
+    },
+    "SNMP_RW_USER_NAME_TEST": {
+        "desc": "Load valid RW SNMP user"
+    },
+    "SNMP_USER_NAME_MIN_NEG_TEST": {
+        "desc": "Load SNMP user with name < 4",
+        "eStrKey": "Range"
+    },
+    "SNMP_USER_NAME_INVALID_NEG_TEST": {
+        "desc": "Load SNMP user with invalid value",
+	"eStr": "Invalid snmp user string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\", \"\\\" and \":\")"
+    },
+    "SNMP_USER_NAME_INVALID_NEG_TEST_2": {
+        "desc": "Load SNMP user with invalid value",
+        "eStr": "Invalid snmp user string (Valid chars are ASCII printable except SPACE, single quote,\"@\", \",\", \"\\\" and \":\")"
+    },
+    "SNMP_USER_NO_USER_TYPE_NEG_TEST": {
+        "desc": "Load SNMP user with no user type",
+        "eStrKey": "Must"
+    },
+    "SNMP_USER_INVALID_USER_TYPE_NEG_TEST": {
+        "desc": "Load SNMP user with invalid user type",
+        "eStrKey": "InvalidValue"
+    },
+    "SNMP_USER_NO_USER_PERM_NEG_TEST": {
+        "desc": "Load SNMP user with no user permission",
+        "eStrKey": "Mandatory"
+    },
+    "SNMP_USER_INVALID_USER_TYPE_NEG_TEST": {
+        "desc": "Load valid SNMP user with no user permission",
+        "eStrKey": "InvalidValue"
+    },
+    "SNMP_USER_AUTH_NO_PRIV_TEST": {
+        "desc": "Load valid SNMP user with user type AuthNoPriv with SHA auth type"
+    },
+    "SNMP_USER_AUTH_NO_PRIV_TEST_2": {
+        "desc": "Load valid SNMP user with user type AuthNoPriv with MD5 auth type"
+    },
+    "SNMP_USER_AUTH_NO_PRIV_TEST_3": {
+        "desc": "Load valid SNMP user with user type AuthNoPriv with HMAC-SHA-2 auth type"
+    },
+    "SNMP_USER_NO_AUTH_NO_PRIV_AUTH_TYPE_NEG_TEST": {
+        "desc": "Load SNMP user with user type noAuthNoPriv with auth type",
+        "eStrKey": "Must"
+    },
+    "SNMP_USER_AUTH_NO_PRIV_NO_AUTH_PASS_NEG_TEST": {
+        "desc": "Load SNMP user with user type AuthNoPriv without auth password",
+        "eStrKey": "Must"
+    },
+    "SNMP_USER_AUTH_NO_PRIV_NO_AUTH_TYPE_NEG_TEST": {
+        "desc": "Load SNMP user with user type AuthNoPriv without auth type",
+        "eStrKey": "Must"
+    },
+    "SNMP_USER_AUTH_NO_PRIV_INVALID_AUTH_PASS_NEG_TEST": {
+        "desc": "Load SNMP user with user type AuthNoPriv with invalid auth password",
+        "eStr": "Invalid snmp user authentication password (Valid chars are ASCII printable except \":\" and\"@\")"
+    },
+    "SNMP_USER_PRIV_TEST": {
+        "desc": "Load SNMP user with user type Priv with AES encryption type"
+    },
+    "SNMP_USER_PRIV_TEST": {
+        "desc": "Load SNMP user with user type Priv with DES encryption type"
+    },
+    "SNMP_USER_PRIV_NO_ENCRYPT_TYPE_NEG_TEST": {
+        "desc": "Load SNMP user with user type Priv without encyrption type",
+        "eStrKey": "Must"
+    },
+    "SNMP_USER_PRIV_INVALID_ENCRYPT_TYPE_NEG_TEST": {
+        "desc": "Load SNMP user with user type Priv with invalid encryption type",
+        "eStrKey": "Must"
+    },
+    "SNMP_USER_PRIV_NO_ENCRYPT_PASS_NEG_TEST": {
+        "desc": "Load SNMP user with user type Priv with no encryption password",
+        "eStrKey": "Must"
+    },
+    "SNMP_USER_PRIV_INVALID_ENCRYPT_PASS_NEG_TEST": {
+        "desc": "Load SNMP user with user type Priv with invalid encryption password",
+        "eStr": "Invalid snmp user encryption password (Valid chars are ASCII printable except \":\" and\"@\")"
+    },
+    "SNMP_USER_PRIV_SHORT_ENCRYPT_PASS_NEG_TEST": {
+        "desc": "Load SNMP user with user type Priv with short encryption password",
+        "eStrKey": "Must"
+    },
+    "SNMP_USER_PRIV_LONG_ENCRYPT_PASS_NEG_TEST": {
+        "desc": "Load SNMP user with user type Priv with long encryption password",
+        "eStrKey": "Range"
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG": {
+        "desc": "Load SNMP agent address config"
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_IPV6": {
+        "desc": "Load SNMP agent address config"
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_EMPTY_PORT_NUMBER": {
+        "desc": "Load SNMP agent address config with empty port number"
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_MGMT_VRF": {
+        "desc": "Load SNMP agent address config with mgmt vrf"
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_NO_VRF": {
+        "desc": "Load SNMP agent address config with no vrf",
+	"eStr": ["Missing required element"]
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_INVALID_PORT": {
+        "desc": "Load SNMP agent address config with invalid port",
+        "eStrKey": "InvalidValue"
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_DUPLICATE_IP_PORT": {
+        "desc": "Load two SNMP agent address config same ip and port",
+	"eStr": ["Unique data leaf(s)"]
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_INVALID_IPV4_ADDRESS": {
+        "desc": "Load SNMP agent address config with invalid IPv4 address",
+        "eStrKey": "InvalidValue",
+        "eStr": ["ip"]
+    },
+    "SNMP_AGENT_ADDRESS_CONFIG_INVALID_IPV6_ADDRESS": {
+        "desc": "Load SNMP agent address config with invalid IPV6 address",
+        "eStrKey": "InvalidValue",
+        "eStr": ["ip"]
+    }
+}
+

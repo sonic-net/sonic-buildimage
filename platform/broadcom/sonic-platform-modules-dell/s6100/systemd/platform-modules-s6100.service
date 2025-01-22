@@ -1,6 +1,6 @@
 [Unit]
 Description=Dell S6100 Platform modules
-Before=pmon.service determine-reboot-cause.service
+Before=pmon.service determine-reboot-cause.service pcie-check.service system-health.service watchdog-control.service
 DefaultDependencies=no
 
 [Service]

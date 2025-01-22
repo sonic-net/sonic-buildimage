@@ -21,8 +21,12 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# fix aclocal depency issue by run auto.sh
 	./auto.sh
 
+ifeq ($(CROSS_BUILD_ENVIRON), y)
+	dpkg-buildpackage -rfakeroot -b -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+else
 	# build package
 	dpkg-buildpackage -rfakeroot -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS) --admindir $(SONIC_DPKG_ADMINDIR)
+endif
 	popd
 
 	mv $(DERIVED_TARGETS) $* $(DEST)/

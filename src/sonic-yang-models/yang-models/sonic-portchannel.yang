@@ -2,7 +2,7 @@ module sonic-portchannel {
 
     yang-version 1.1;
 
-    namespace "http://github.com/Azure/sonic-portchannel";
+    namespace "http://github.com/sonic-net/sonic-portchannel";
     prefix lag;
 
     import sonic-types {
@@ -53,32 +53,20 @@ module sonic-portchannel {
 
                 leaf name {
                     type string {
-                        length 1..128;
                         pattern 'PortChannel[0-9]{1,4}';
                     }
-                }
-
-                leaf-list members {
-                    /* leaf-list members are unique by default */
-                    type union {
-                        type leafref {
-                            path /port:sonic-port/port:PORT/port:PORT_LIST/port:name;
-                        }
-                        type string {
-                            pattern "";
-                        }
-                    }
-                    /* Today in SONiC, we do not delete the list once
-                     * created, instead we set to empty list. Due to that
-                     * below default values are needed.
-                     */
-                    default "";
                 }
 
                 leaf min_links {
                     type uint16 {
                         range 1..1024;
                     }
+                }
+
+               leaf mode {
+                   description "PortChannel SwitchPort Mode possible values are routed|access|trunk. Default value for mode is routed.";
+                   type stypes:switchport_mode;
+
                 }
 
                 leaf description {
@@ -117,6 +105,15 @@ module sonic-portchannel {
                                 to the specified portchannel if the HW supports TPID configuration. The possible
                                 values are 0x8100, 0x9100, 0x9200, 0x88a8, and 0x88A8";
                     type stypes:tpid_type;
+                }
+
+                leaf fallback {
+                    description "Enable LACP fallback feature";
+                    type stypes:boolean_type;
+                }
+                leaf fast_rate {
+                    description "Enable LACP fast rate";
+                    type stypes:boolean_type;
                 }
 
             } /* end of list PORTCHANNEL_LIST */
@@ -167,6 +164,11 @@ module sonic-portchannel {
                     }
                 }
 
+                leaf loopback_action {
+                    description "Packet action when a packet ingress and gets routed on the same IP interface";
+                    type stypes:loopback_action;
+                }
+
 		leaf nat_zone {
 		    description "NAT Zone for the portchannel interface";
 		    type uint8 {
@@ -184,6 +186,13 @@ module sonic-portchannel {
 				enum disable;
 			}
 		}
+
+		leaf ipv6_use_link_local_only {
+			description "Enable/Disable IPv6 link local address on portchannel interface";
+			type stypes:mode-status;
+			default disable;
+		}
+
             } /* end of list PORTCHANNEL_INTERFACE_LIST */
 
             list PORTCHANNEL_INTERFACE_IPPREFIX_LIST {

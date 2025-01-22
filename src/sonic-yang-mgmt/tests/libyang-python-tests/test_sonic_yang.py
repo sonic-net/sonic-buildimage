@@ -292,11 +292,13 @@ class Test_SonicYang(object):
         '''
         test_file = sonic_yang_data['test_file']
         syc = sonic_yang_data['syc']
-        # Currently only 3 YANG files are not directly related to config
+        # Currently only 3 YANG files are not directly related to config, along with event YANG models
         # which are: sonic-extension.yang, sonic-types.yang and sonic-bgp-common.yang. Hard coding
         # it right now.
+        # event YANG models do not map directly to config_db and are included to NON_CONFIG_YANG_FILES at run time
         # If any more such helper yang files are added, we need to update here.
-        NON_CONFIG_YANG_FILES = 3
+        EVENT_YANG_FILES = sum(1 for yang_model in syc.yangFiles if 'sonic-events' in yang_model)
+        NON_CONFIG_YANG_FILES = 3 + EVENT_YANG_FILES
         # read config
         jIn = self.readIjsonInput(test_file, 'SAMPLE_CONFIG_DB_JSON')
         jIn = json.loads(jIn)
@@ -361,6 +363,21 @@ class Test_SonicYang(object):
         ty = syc.tablesWithOutYang
 
         assert (len(ty) and "UNKNOWN_TABLE" in ty)
+
+        return
+
+    def test_special_json_with_yang(self, sonic_yang_data):
+        # in this test, we validate unusual json config and check if
+        # loadData works successfully
+        test_file = sonic_yang_data['test_file']
+        syc = sonic_yang_data['syc']
+
+        # read config
+        jIn = self.readIjsonInput(test_file, 'SAMPLE_CONFIG_DB_SPECIAL_CASE')
+        jIn = json.loads(jIn)
+
+        # load config and create Data tree
+        syc.loadData(jIn)
 
         return
 

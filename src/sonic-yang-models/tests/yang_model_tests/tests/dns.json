@@ -1,0 +1,13 @@
+{
+    "DNS_NAMESERVER_TEST" : {
+        "desc": "DNS nameserver configuration in DNS_NAMESERVER table."
+    },
+    "DNS_NAMESERVER_TEST_INVALID_IP" : {
+        "desc": "DNS nameserver configuration with invalid IP value in DNS_NAMESERVER table.",
+        "eStr": "Invalid value"
+    },
+    "DNS_NAMESERVER_TEST_MAX_IP_NUMBER" : {
+        "desc": "DNS nameserver configuration exceeds the maximum IPs in DNS_NAMESERVER table.",
+        "eStr": "Too many elements."
+    }
+}

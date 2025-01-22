@@ -1,5 +1,5 @@
 module sonic-bgp-peergroup {
-    namespace "http://github.com/Azure/sonic-bgp-peergroup";
+    namespace "http://github.com/sonic-net/sonic-bgp-peergroup";
     prefix pg;
     yang-version 1.1;
 

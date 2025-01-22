@@ -1,0 +1,116 @@
+{
+    "BGP_DEVICE_GLOBAL_WITH_TSA_DEFAULT_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_TSA_TEST": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "tsa_enabled": "true"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_TSB_TEST": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "tsa_enabled": "false"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_TSA_INVALID_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "tsa_enabled": "invalid_value"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_WCMP_DEFAULT_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE": {
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_WCMP_ENABLED": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE": {
+                    "wcmp_enabled": "true"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_WCMP_DISABLED": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE": {
+                    "wcmp_enabled": "false"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_WCMP_INVALID_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE": {
+                    "wcmp_enabled": "invalid_value"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_ISOLATION_DEFAULT_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_ISOLATION_TEST_1": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "idf_isolation_state": "isolated_no_export"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_ISOLATION_TEST_2": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "idf_isolation_state": "isolated_withdraw_all"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_ISOLATION_TEST_3": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "idf_isolation_state": "unisolated"
+                }
+            }
+        }
+    },
+    "BGP_DEVICE_GLOBAL_WITH_IDF_INVALID_VALUE": {
+        "sonic-bgp-device-global:sonic-bgp-device-global": {
+            "sonic-bgp-device-global:BGP_DEVICE_GLOBAL": {
+                "STATE":{
+                    "idf_isolation_state": "invalid_value"
+                }
+            }
+        }
+    }
+}

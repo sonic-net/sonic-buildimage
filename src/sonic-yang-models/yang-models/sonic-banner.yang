@@ -1,0 +1,51 @@
+module sonic-banner {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-banner";
+    prefix banner_message;
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    description "BANNER_MESSAGE YANG Module for SONiC-based OS";
+    revision 2023-05-18 {
+        description "First Revision";
+    }
+    container sonic-banner {
+        container BANNER_MESSAGE {
+            description "BANNER_MESSAGE part of config_db.json";
+            container global {
+                leaf state {
+                    type stypes:admin_mode;
+                    description "Banner feature state";
+                    default disabled;
+                }
+                leaf login {
+                    type string;
+                    description "Banner message displayed to user before login prompt";
+                    default "Debian GNU/Linux 11";
+                }
+                leaf motd {
+                    type string;
+                    description "Banner message displayed to user after login prompt";
+                    default "You are on
+                              ____   ___  _   _ _  ____
+                             / ___| / _ \\| \\ | (_)/ ___|
+                             \\___ \\| | | |  \\| | | |
+                              ___) | |_| | |\\  | | |___
+                             |____/ \\___/|_| \\_|_|\\____|
+                             -- Software for Open Networking in the Cloud --
+                             Unauthorized access and/or use are prohibited.
+                             All access and/or use are subject to monitoring.
+                             Help:    https://sonic-net.github.io/SONiC/
+                             ";
+                }
+                leaf logout {
+                    type string;
+                    description "Banner message dispalyed to the users on logout";
+                    default "";
+                }
+            } /* end of container MESSAGE */
+        } /* end of container BANNER_MESSAGE */
+    } /* end of top level container */
+}

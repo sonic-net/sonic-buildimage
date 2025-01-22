@@ -2,3 +2,4 @@ libyang.patch
 libyang_mgmt_framework.patch
 swig.patch
 large_file_support_arm32.patch
+debian-packaging-files.patch

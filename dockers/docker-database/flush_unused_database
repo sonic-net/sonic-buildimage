@@ -1,8 +1,8 @@
 #!/usr/bin/python3
-import swsssdk
-import redis
+from swsscommon import swsscommon
 import subprocess
 import time
+import syslog
 
 while(True):
     output = subprocess.Popen(['sonic-db-cli', 'PING'], stdout=subprocess.PIPE, text=True).communicate()[0]
@@ -10,19 +10,33 @@ while(True):
         break
     time.sleep(1)
 
-instlists = swsssdk.SonicDBConfig.get_instancelist()
+instlists = swsscommon.SonicDBConfig.getInstanceList()
 for instname, v in instlists.items():
-    insthost = v['hostname']
-    instsocket = v['unix_socket_path']
+    insthost = v.hostname
+    instsocket = v.unixSocketPath
 
-    dblists = swsssdk.SonicDBConfig.get_dblist()
+    dblists = swsscommon.SonicDBConfig.getDbList()
     for dbname in dblists:
-        dbid = swsssdk.SonicDBConfig.get_dbid(dbname)
-        dbinst = swsssdk.SonicDBConfig.get_instancename(dbname)
+        dbid = swsscommon.SonicDBConfig.getDbId(dbname)
+        dbinst = swsscommon.SonicDBConfig.getDbInst(dbname)
 
         # this DB is on current instance, skip flush
         if dbinst == instname:
             continue
 
-        r = redis.Redis(host=insthost, unix_socket_path=instsocket, db=dbid)
-        r.flushdb()
+        try:
+            # Migrate code from py-redis to swsscommon, original code:
+            #    r = redis.Redis(host=insthost, unix_socket_path=instsocket, db=dbid)
+            #    py-redis will use TCP connection when unix_socket_path is None
+            #    https://github.com/redis/redis-py/blob/d95d8a24ed2af3eae80b7b0f14cbccc9dbe86e96/redis/client.py#L1006
+            if instsocket is not None:
+                # connect with Unix socket
+                connector = swsscommon.DBConnector(dbid, instsocket, 0)
+            else:
+                # connect with TCP socket
+                port = swsscommon.SonicDBConfig.getDbPort(dbname);
+                connector = swsscommon.DBConnector(dbid, insthost, port, 0)
+
+            connector.flushdb()
+        except RuntimeError:
+           syslog.syslog(syslog.LOG_INFO,"flushdb:Redis Unix Socket connection error for path {} and dbaname {}".format(instsocket, dbname))

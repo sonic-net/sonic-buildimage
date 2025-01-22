@@ -13,10 +13,10 @@
 
 import sys
 import logging
-import commands
+from sonic_py_common.general import getstatusoutput_noshell
 
 S5212F_MAX_FAN_TRAYS = 4
-IPMI_SENSOR_DATA = "ipmitool sdr list"
+IPMI_SENSOR_DATA = ["ipmitool", "sdr", "list"]
 
 switch_sku = {
   "0K6MG9":(' AC', ' Exhaust'),
@@ -36,7 +36,7 @@ switch_sku = {
   "04T94Y":(' DC', ' Intake')
 }
 
-ipmi_status, ipmi_sdr_list = commands.getstatusoutput(IPMI_SENSOR_DATA)
+ipmi_status, ipmi_sdr_list = getstatusoutput_noshell(IPMI_SENSOR_DATA)
 
 def get_pmc_register(reg_name):
     if ipmi_status:
@@ -56,21 +56,21 @@ def print_temperature_sensors():
 
     print("\nOnboard Temperature Sensors:")
 
-    print '  PT_Left_temp:                   ',\
-        (get_pmc_register('PT_Left_temp'))
-    print '  PT_Mid_temp:                    ',\
-        (get_pmc_register('PT_Mid_temp'))
-    print '  PT_Right_temp:                  ',\
-        (get_pmc_register('PT_Right_temp'))
-    print '  Broadcom Temp:                  ',\
-        (get_pmc_register('NPU_Near_temp'))
-    print '  Inlet Airflow Temp:             ',\
-        (get_pmc_register('ILET_AF_temp'))
-    print '  CPU Temp:                       ',\
-        (get_pmc_register('CPU_temp'))
+    print('  PT_Left_temp:                   ',\
+        (get_pmc_register('PT_Left_temp')))
+    print('  PT_Mid_temp:                    ',\
+        (get_pmc_register('PT_Mid_temp')))
+    print('  PT_Right_temp:                  ',\
+        (get_pmc_register('PT_Right_temp')))
+    print('  Broadcom Temp:                  ',\
+        (get_pmc_register('NPU_Near_temp')))
+    print('  Inlet Airflow Temp:             ',\
+        (get_pmc_register('ILET_AF_temp')))
+    print('  CPU Temp:                       ',\
+        (get_pmc_register('CPU_temp')))
 
 def get_switch_details():
-    status, ipmi_fru = commands.getstatusoutput('/usr/bin/ipmitool fru')
+    status, ipmi_fru = getstatusoutput_noshell(['/usr/bin/ipmitool', 'fru'])
     for line in ipmi_fru.splitlines():
         info = line.split(':')
         if 'Board Part Number' in info[0] : 
@@ -78,7 +78,9 @@ def get_switch_details():
             if (partno  in switch_sku): return switch_sku[partno]
     return None
 
-commands.getstatusoutput('echo 0 > /sys/module/ipmi_si/parameters/kipmid_max_busy_us')
+file = '/sys/module/ipmi_si/parameters/kipmid_max_busy_us'
+with open(file, 'w') as f:
+    f.write('0\n')
 print_temperature_sensors()
 
 # Print the information for 1 Fan Tray
@@ -86,40 +88,42 @@ print_temperature_sensors()
 
 def print_fan_tray(tray):
 
-    print '  Fan Tray ' + str(tray) + ':'
+    print('  Fan Tray ' + str(tray) + ':')
 
     if (tray == 1):
-        print '    Fan1 Speed:                   ',\
-            get_pmc_register('FAN1_Front_rpm')
-        print '    Fan2 Speed:                   ',\
-            get_pmc_register('FAN1_Rear_rpm')
+        print('    Fan1 Speed:                   ',\
+            get_pmc_register('FAN1_Front_rpm'))
+        print('    Fan2 Speed:                   ',\
+            get_pmc_register('FAN1_Rear_rpm'))
 
     elif (tray == 2):
-        print '    Fan1 Speed:                   ',\
-            get_pmc_register('FAN2_Front_rpm')
-        print '    Fan2 Speed:                   ',\
-            get_pmc_register('FAN2_Rear_rpm')
+        print('    Fan1 Speed:                   ',\
+            get_pmc_register('FAN2_Front_rpm'))
+        print('    Fan2 Speed:                   ',\
+            get_pmc_register('FAN2_Rear_rpm'))
 
     elif (tray == 3):
-        print '    Fan1 Speed:                   ',\
-            get_pmc_register('FAN3_Front_rpm')
-        print '    Fan2 Speed:                   ',\
-            get_pmc_register('FAN3_Rear_rpm')
+        print('    Fan1 Speed:                   ',\
+            get_pmc_register('FAN3_Front_rpm'))
+        print('    Fan2 Speed:                   ',\
+            get_pmc_register('FAN3_Rear_rpm'))
 
     elif (tray == 4):
-        print '    Fan1 Speed:                   ',\
-            get_pmc_register('FAN4_Front_rpm')
-        print '    Fan2 Speed:                   ',\
-            get_pmc_register('FAN4_Rear_rpm')
+        print('    Fan1 Speed:                   ',\
+            get_pmc_register('FAN4_Front_rpm'))
+        print('    Fan2 Speed:                   ',\
+            get_pmc_register('FAN4_Rear_rpm'))
 
 type, dir = get_switch_details()
 print('\nFan Trays(Fixed):')
-print '  Fan Tray Direction:             ', dir
+print('  Fan Tray Direction:             ', dir)
 for tray in range(1, S5212F_MAX_FAN_TRAYS + 1):
     print_fan_tray(tray)
 
 print('\nPSU Tray(Fixed):')
-print '  PSU Tray Direction:             ', dir
-print '  PSU Tray Type:                  ', type
+print('  PSU Tray Direction:             ', dir)
+print('  PSU Tray Type:                  ', type)
 
-ret_status, ipmi_cmd_ret = commands.getstatusoutput('echo 1000 > /sys/module/ipmi_si/parameters/kipmid_max_busy_us')
+file = '/sys/module/ipmi_si/parameters/kipmid_max_busy_us'
+with open(file, 'w') as f:
+    f.write('1000\n')

@@ -48,7 +48,7 @@ SYSTEM_NOT_READY = 'system_not_ready'
 SYSTEM_READY = 'system_become_ready'
 SYSTEM_FAIL = 'system_fail'
 
-GET_PLATFORM_CMD = "sonic-cfggen -d -v DEVICE_METADATA.localhost.platform"
+GET_PLATFORM_CMD = ["sonic-cfggen", "-d", "-v", "DEVICE_METADATA.localhost.platform"]
 
 # Ethernet<n> <=> sfp<n+SFP_PORT_NAME_OFFSET>
 SFP_PORT_NAME_OFFSET = 0
@@ -110,7 +110,7 @@ class SfpUtil(SfpUtilBase):
         raise Exception()
 
     def get_port_position_tuple_by_platform_name(self):
-        p = subprocess.Popen(GET_PLATFORM_CMD, shell=True, universal_newlines=True, stdout=subprocess.PIPE)
+        p = subprocess.Popen(GET_PLATFORM_CMD, universal_newlines=True, stdout=subprocess.PIPE)
         out, err = p.communicate()
         position_tuple = port_position_tuple_list[platform_dict[out.rstrip('\n')]]
         return position_tuple
@@ -136,9 +136,9 @@ class SfpUtil(SfpUtilBase):
         port_num += SFP_PORT_NAME_OFFSET
         sfpname = SFP_PORT_NAME_CONVENTION.format(port_num)
 
-        ethtool_cmd = "ethtool -m {} 2>/dev/null".format(sfpname)
+        ethtool_cmd = ["ethtool", "-m", sfpname]
         try:
-            proc = subprocess.Popen(ethtool_cmd, stdout=subprocess.PIPE, shell=True, universal_newlines=True, stderr=subprocess.STDOUT)
+            proc = subprocess.Popen(ethtool_cmd, stdout=subprocess.PIPE, universal_newlines=True, stderr=subprocess.DEVNULL)
             stdout = proc.communicate()[0]
             proc.wait()
             result = stdout.rstrip('\n')
@@ -155,10 +155,10 @@ class SfpUtil(SfpUtilBase):
         if port_num < self.port_start or port_num > self.port_end:
             return False
 
-        lpm_cmd = "docker exec syncd python /usr/share/sonic/platform/plugins/sfplpmget.py {}".format(port_num)
+        lpm_cmd = ["docker", "exec", "syncd", "python", "/usr/share/sonic/platform/plugins/sfplpmget.py", str(port_num)]
 
         try:
-            output = subprocess.check_output(lpm_cmd, shell=True, universal_newlines=True)
+            output = subprocess.check_output(lpm_cmd, universal_newlines=True)
             if 'LPM ON' in output:
                 return True
         except subprocess.CalledProcessError as e:
@@ -178,11 +178,11 @@ class SfpUtil(SfpUtilBase):
 
         # Compose LPM command
         lpm = 'on' if lpmode else 'off'
-        lpm_cmd = "docker exec syncd python /usr/share/sonic/platform/plugins/sfplpmset.py {} {}".format(port_num, lpm)
+        lpm_cmd = ["docker", "exec", "syncd", "python", "/usr/share/sonic/platform/plugins/sfplpmset.py", str(port_num), lpm]
 
         # Set LPM
         try:
-            subprocess.check_output(lpm_cmd, shell=True, universal_newlines=True)
+            subprocess.check_output(lpm_cmd, universal_newlines=True)
         except subprocess.CalledProcessError as e:
             print("Error! Unable to set LPM for {}, rc = {}, err msg: {}".format(port_num, e.returncode, e.output))
             return False
@@ -194,10 +194,10 @@ class SfpUtil(SfpUtilBase):
         if port_num < self.port_start or port_num > self.port_end:
             return False
 
-        lpm_cmd = "docker exec syncd python /usr/share/sonic/platform/plugins/sfpreset.py {}".format(port_num)
+        lpm_cmd = ["docker", "exec", "syncd", "python", "/usr/share/sonic/platform/plugins/sfpreset.py", str(port_num)]
 
         try:
-            subprocess.check_output(lpm_cmd, shell=True, universal_newlines=True)
+            subprocess.check_output(lpm_cmd, universal_newlines=True)
             return True
         except subprocess.CalledProcessError as e:
             print("Error! Unable to set LPM for {}, rc = {}, err msg: {}".format(port_num, e.returncode, e.output))
@@ -267,9 +267,9 @@ class SfpUtil(SfpUtilBase):
         sfpname = SFP_PORT_NAME_CONVENTION.format(port_num)
 
         eeprom_raw = []
-        ethtool_cmd = "ethtool -m {} hex on offset {} length {}".format(sfpname, offset, num_bytes)
+        ethtool_cmd = ["ethtool", "-m", sfpname, "hex", "on", "offset", str(offset), "length", str(num_bytes)]
         try:
-            output = subprocess.check_output(ethtool_cmd, shell=True, universal_newlines=True)
+            output = subprocess.check_output(ethtool_cmd, universal_newlines=True)
             output_lines = output.splitlines()
             first_line_raw = output_lines[0]
             if "Offset" in first_line_raw:

@@ -21,10 +21,12 @@ function wait_until_iface_ready
     echo "Interface ${IFACE_NAME} is ready!"
 }
 
-
 # Wait for all interfaces with IPv4 addresses to be up and ready
+# dhcp6relay binds to ipv6 addresses configured on these vlan ifaces
+# Thus check if they are ready before launching dhcp6relay
 wait_until_iface_ready Vlan2000 192.168.200.1/27
 wait_until_iface_ready Vlan1000 192.168.0.1/27
+wait_until_iface_ready Vlan1000 fc02:2000::2/24
 wait_until_iface_ready PortChannel02 10.0.0.58/31
 wait_until_iface_ready PortChannel03 10.0.0.60/31
 wait_until_iface_ready PortChannel04 10.0.0.62/31

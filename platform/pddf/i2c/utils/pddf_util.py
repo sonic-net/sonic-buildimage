@@ -21,7 +21,7 @@ import os
 import shutil
 import subprocess
 import sys
-
+from sonic_py_common import device_info
 import pddfparse
 
 PLATFORM_ROOT_PATH = '/usr/share/sonic/device'
@@ -139,7 +139,7 @@ def driver_check():
 
 def get_path_to_device():
     # Get platform and hwsku
-    (platform, hwsku) = pddf_obj.get_platform_and_hwsku()
+    (platform, hwsku) = device_info.get_platform_and_hwsku()
 
     # Load platform module from source
     platform_path = "/".join([PLATFORM_ROOT_PATH, platform])
@@ -203,7 +203,9 @@ def config_pddf_utils():
             if not os.path.exists(SONIC_PLATFORM_BSP_WHL_PKG_BK):
                 # bsp 2.0 classes are installed. Take a backup and copy pddf 2.0 whl pkg
                 log_os_system('mv '+SONIC_PLATFORM_BSP_WHL_PKG+' '+SONIC_PLATFORM_BSP_WHL_PKG_BK, 1)
+                log_os_system('sync', 1)
                 shutil.copy(SONIC_PLATFORM_PDDF_WHL_PKG, SONIC_PLATFORM_BSP_WHL_PKG)
+                log_os_system('sync', 1)
                 # uninstall the existing bsp whl pkg
                 status, output = log_os_system("pip3 uninstall sonic-platform -y &> /dev/null", 1)
                 if status:
@@ -328,6 +330,7 @@ def create_pddf_log_files():
     log_os_system("sudo touch /var/log/pddf/cpldmux.txt", 1)
     log_os_system("sudo touch /var/log/pddf/client.txt", 1)
     log_os_system("sudo touch /var/log/pddf/mux.txt", 1)
+    log_os_system("sudo touch /var/log/pddf/fpgapci.txt", 1)
 
 def driver_install():
     global FORCE
@@ -451,6 +454,11 @@ def do_install():
     status = device_install()
     if status:
         return status
+
+    # Check if S3IP support is enabled, if yes, start the service in no block mode
+    if 'enable_s3ip' in pddf_obj.data['PLATFORM'].keys() and pddf_obj.data['PLATFORM']['enable_s3ip'] == 'yes':
+        log_os_system('systemctl enable pddf-s3ip-init.service', 1)
+        log_os_system('systemctl start --no-block pddf-s3ip-init.service', 1)
 
     return
     

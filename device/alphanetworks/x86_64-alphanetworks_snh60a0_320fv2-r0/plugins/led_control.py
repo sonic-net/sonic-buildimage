@@ -3,7 +3,7 @@
 
 # try:
 #     from sonic_led.led_control_base import LedControlBase
-#     import swsssdk
+#     from swsscommon import swsscommon
 # except ImportError as e:
 #     raise ImportError (str(e) + " - required module not found")
 
@@ -181,15 +181,21 @@ class LedControl(LedControlBase):
 
         sonic_port_num = int(port_name[len(self.SONIC_PORT_NAME_PREFIX):])
 
-        swss = swsssdk.SonicV2Connector()
+        swss = swsscommon.SonicV2Connector()
         swss.connect(swss.APPL_DB)
 
         lanes = swss.get(
             swss.APPL_DB, self.PORT_TABLE_PREFIX + port_name, 'lanes')
 
+        # SonicV2Connector.get() will return None when key does not exist.
+        if lanes:
+            lanes_len = len(lanes.split(','))
+        else:
+            lanes_len = 0
+
         # SONiC port nums are 0-based and increment by 4
         # Arista QSFP indices are 1-based and increment by 1
-        return (((sonic_port_num/4) + 1), sonic_port_num % 4, len(lanes.split(',')))
+        return (((sonic_port_num/4) + 1), sonic_port_num % 4, lanes_len)
 
     # Concrete implementation of port_link_state_change() method
 

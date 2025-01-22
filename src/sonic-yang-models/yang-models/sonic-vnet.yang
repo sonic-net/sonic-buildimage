@@ -1,0 +1,104 @@
+module sonic-vnet {
+    yang-version 1.1;
+    namespace "http://github.com/sonic-net/sonic-vnet";
+    prefix svnet;
+
+    import ietf-yang-types {
+        prefix yang;
+    }
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    import sonic-types {
+        prefix stypes;
+    }
+
+    import sonic-vxlan {
+        prefix svxlan;
+    }
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "VNET YANG Module for SONiC OS";
+
+    revision 2023-04-25 {
+        description
+            "First revision.";
+    }
+
+    container sonic-vnet {
+
+        container VNET {
+
+            description "config db VNET table";
+
+            list VNET_LIST {
+
+                key "name";
+
+                leaf name {
+                    description "An alphanumaric string to represent the name of the unique vnet";
+                    type string;
+                }
+
+                leaf vxlan_tunnel {
+                    mandatory true;
+                    description "A valid and active vxlan tunnel to be used with this vnet for traffic encapsulation.";
+                    type leafref {
+                        path "/svxlan:sonic-vxlan/svxlan:VXLAN_TUNNEL/svxlan:VXLAN_TUNNEL_LIST/svxlan:name";
+                    }
+                }
+
+                leaf vni {
+                    mandatory true;
+                    description "A valid and unique vni which will become part of the encapsulated traffic header.";
+                    type stypes:vnid_type;
+                }
+
+                leaf peer_list {
+                    description "Set of peers";
+                    /* Values in leaf list are UNIQUE */
+                    type string;
+                }
+
+                leaf guid {
+                    description "An optional guid.";
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf scope {
+                    description "can only be default.";
+                    type string {
+                        pattern "default" {
+                            error-message "Invalid VRF name";
+                        }
+                    }
+                }
+
+                leaf advertise_prefix {
+                    description "Flag to enable advertisement of route prefixes belonging to the Vnet.";
+                    type  boolean;
+                }
+
+                leaf overlay_dmac {
+                    description "Overlay Dest MAC address to be used by Vnet ping.";
+                    type yang:mac-address;
+                }
+
+                leaf src_mac {
+                    description "source mac address for the Vnet";
+                    type yang:mac-address;
+                }
+            }
+        }
+    }
+}
+

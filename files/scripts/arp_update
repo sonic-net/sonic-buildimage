@@ -9,23 +9,98 @@
 
 ARP_UPDATE_VARS_FILE="/usr/share/sonic/templates/arp_update_vars.j2"
 
+# Overload `logger` command to include arp_update tag
+logger () {
+    command logger -i "$$" -t "arp_update" "$@"
+}
+
 while /bin/true; do
   # find L3 interfaces which are UP, send ipv6 multicast pings
   ARP_UPDATE_VARS=$(sonic-cfggen -d -t ${ARP_UPDATE_VARS_FILE})
+  SWITCH_TYPE=$(echo $ARP_UPDATE_VARS | jq -r '.switch_type')
+  if [[ "$SWITCH_TYPE" == "chassis-packet" ]]; then
+      # Get array of Nexthops and ifnames. Nexthops and ifnames are mapped one to one
+      STATIC_ROUTE_NEXTHOPS=($(echo $ARP_UPDATE_VARS | jq -r '.static_route_nexthops'))
+      STATIC_ROUTE_IFNAMES=($(echo $ARP_UPDATE_VARS | jq -r '.static_route_ifnames'))
+      # on supervisor/rp exit the script gracefully
+      if [[ -z "$STATIC_ROUTE_NEXTHOPS" ]] || [[ -z "$STATIC_ROUTE_IFNAMES" ]]; then
+          logger "exiting as no static route in packet based chassis"
+          exit 0
+      fi
+      for i in ${!STATIC_ROUTE_NEXTHOPS[@]}; do
+          nexthop="${STATIC_ROUTE_NEXTHOPS[i]}"
+          if [[ $nexthop == *"."* ]]; then
+              neigh_state=$(ip -4 neigh show | grep -w $nexthop | tr -s ' ')
+              ping_prefix=ping
+          elif [[ $nexthop == *":"* ]] ; then
+              neigh_state=$(ip -6 neigh show | grep -w $nexthop | tr -s ' ')
+              ping_prefix=ping6
+          fi
+          # Check if there is an INCOMPLETE, FAILED, or STALE entry and try to resolve it again.
+          # STALE entries may be present if there is no traffic on a path. A far-end down event may not
+          # clear the STALE entry. Refresh the STALE entry to clear the table.
+          if [[ -z "${neigh_state}" ]] || [[ -n $(echo ${neigh_state} | grep 'INCOMPLETE\|FAILED\|STALE') ]]; then
+              interface="${STATIC_ROUTE_IFNAMES[i]}"
+              if [[ -z "$interface" ]]; then
+                  # should never be here, handling just in case
+                  logger -p error "missing interface entry for static route $nexthop"
+                  continue
+              fi
+              intf_up=$(ip link show $interface | grep "state UP")
+              if [[ -n "$intf_up" ]]; then
+                  pingcmd="timeout 0.2 $ping_prefix -I ${interface} -n -q -i 0 -c 1 -W 1 $nexthop >/dev/null"
+                  eval $pingcmd
+                  # STALE entries may appear more often, not logging to prevent periodic syslogs
+                  if [[ -z $(echo ${neigh_state} | grep 'STALE') ]]; then
+                      logger "static route nexthop not resolved ($neigh_state), pinging $nexthop on $interface"
+                  fi
+              fi
+          fi
+      done
+
+      sleep 150
+      continue
+  fi
+  # find L3 interfaces which are UP, send ipv6 multicast pings
   INTERFACE=$(echo $ARP_UPDATE_VARS | jq -r '.interface')
   PC_INTERFACE=$(echo $ARP_UPDATE_VARS | jq -r '.pc_interface')
   VLAN_SUB_INTERFACE=$(echo $ARP_UPDATE_VARS | jq -r '.vlan_sub_interface')
 
   ALL_INTERFACE="$INTERFACE $PC_INTERFACE $VLAN_SUB_INTERFACE"
   for intf in $ALL_INTERFACE; do
-      ping6cmd="ping6 -I $intf -n -q -i 0 -c 1 -W 0 ff02::1 >/dev/null"
+      ping6cmd="timeout 0.2 ping6 -I $intf -n -q -i 0 -c 1 -W 0 ff02::1 >/dev/null"
       intf_up=$(ip link show $intf | grep "state UP")
       if [[ -n "$intf_up" ]]; then
           eval $ping6cmd
       fi
   done
 
+  # find neighbor entries with aged MAC and flush/relearn them
+  STALE_NEIGHS=$(ip neigh show | grep -v "fe80" | grep "STALE" | awk '{print $1 "," $5}' | tr '[:lower:]' '[:upper:]')
+  for neigh in $STALE_NEIGHS; do
+        ip="$( cut -d ',' -f 1 <<< "$neigh" )"
+        mac="$( cut -d ',' -f 2 <<< "$neigh" )"
+        if [[ -z $(sonic-db-cli ASIC_DB keys "ASIC_STATE:SAI_OBJECT_TYPE_FDB_ENTRY*${mac}*") ]]; then
+            timeout 0.2 ping -c1 -w1 $ip > /dev/null
+        fi
+  done
+
+  # Flush neighbor entries with MAC mismatch between kernel and APPL_DB
+  KERNEL_NEIGH=$(ip neigh show | grep -v "fe80" | grep -v "FAILED\|INCOMPLETE" | cut -d ' ' -f 1,3,5 --output-delimiter=',' | tr -d ' ')
+  for neigh in $KERNEL_NEIGH; do
+        ip="$( cut -d ',' -f 1 <<< "$neigh" )"
+        intf="$( cut -d ',' -f 2 <<< "$neigh" )"
+        kernel_mac="$( cut -d ',' -f 3 <<< "$neigh" )"
+        appl_db_mac="$(sonic-db-cli APPL_DB hget NEIGH_TABLE:$intf:$ip neigh)"
+        if [[ $kernel_mac != $appl_db_mac ]]; then
+            logger -p warning "MAC mismatch for ${ip} on ${intf} - kernel: ${kernel_mac}, APPL_DB: ${appl_db_mac}"
+            ip neigh flush $ip
+            timeout 0.2 ping -c1 -w1 $ip > /dev/null
+        fi
+  done
+
   VLAN=$(echo $ARP_UPDATE_VARS | jq -r '.vlan')
+  SUBTYPE=$(sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'subtype' | tr '[:upper:]' '[:lower:]')
   for vlan in $VLAN; do
       # generate a list of arping commands:
       #   arping -q -w 0 -c 1 -i <VLAN interface> <IP 1>;
@@ -47,13 +122,62 @@ while /bin/true; do
       ndisc6cmd="sed -e 's/^/ndisc6 -q -w 0 -1 /' -e 's/$/;/'"
       ip6cmd="ip -6 neigh show | grep -v fe80 | grep $vlan | cut -d ' ' -f 1,3 | $ndisc6cmd"
       eval `eval $ip6cmd`
+ 
+      if [[ $SUBTYPE == "dualtor" ]]; then
+        # capture all current failed/incomplete IPv6 neighbors in the kernel to avoid situations where new neighbors are learned
+        # in the middle of the below sequence of commands
+        unresolved_kernel_neighbors=$(ip -6 neigh show | grep -v fe80 | grep $vlan | grep -E 'FAILED|INCOMPLETE')
+        failed_kernel_neighbors=$(echo "$unresolved_kernel_neighbors" | grep FAILED | cut -d ' ' -f 1)
+
+        # it's possible for kernel neighbors to fall out of sync with the hardware
+        # this can result in failed neighbors entries that don't have corresponding zero MAC neighbor entries
+        # and therefore don't have tunnel routes installed in the hardware
+        # flush these neighbors from the kernel to force relearning and resync them to the hardware:
+        # 1. for every FAILED or INCOMPLETE neighbor in the kernel, check if there is a corresponding zero MAC neighbor in APPL_DB
+        # 2. if no zero MAC neighbor entry exists, flush the kernel neighbor entry
+        #     - generates the command 'ip neigh flush <neighbor IPv6>' for all such neighbors
+        unsync_neighbors=$(echo "$unresolved_kernel_neighbors" | cut -d ' ' -f 1 | xargs -I{} bash -c "if [[ -z \"\$(sonic-db-cli APPL_DB hget NEIGH_TABLE:$vlan:{} neigh)\" ]]; then echo '{}'; fi")
+        if [[ ! -z "$unsync_neighbors" ]]; then
+            ip_neigh_flush_cmd="echo \"$unsync_neighbors\" | sed -e 's/^/ip neigh flush /' -e 's/$/;/'"
+            eval `eval "$ip_neigh_flush_cmd"`
+            sleep 2
+        fi
+
+        # generates the following command for each FAILED or INCOMPLETE IPv6 neighbor
+        # timeout 0.2 ping <neighbor IPv6> -n -q -i 0 -c 1 -W 1 -I <VLAN name> >/dev/null
+        if [[ ! -z "$unresolved_kernel_neighbors" ]]; then
+            ping6_template="sed -e 's/^/timeout 0.2 ping /' -e 's/,/ -n -q -i 0 -c 1 -W 1 -I /' -e 's/$/ >\/dev\/null;/'"
+            failed_ip6_neigh_cmd="echo \"$unresolved_kernel_neighbors\" | cut -d ' ' -f 1,3 --output-delimiter=',' | $ping6_template"
+            eval `eval "$failed_ip6_neigh_cmd"`
+            # allow some time for any transient INCOMPLETE neighbors to transition to FAILED
+            sleep 5
+        fi
+
+        # manually set any remaining FAILED entries to permanently INCOMPLETE
+        # once these entries are INCOMPLETE, any subsequent neighbor advertisement messages are able to resolve the entry
+        # ignore INCOMPLETE neighbors since if they are transiently incomplete (i.e. new kernel neighbors that we are attempting to resolve for the first time),
+        # setting them to permanently incomplete here means the kernel will never generate a netlink message for that neighbor
+        # generates the following command for each FAILED IPv6 neighbor
+        # ip neigh replace <neighbor IPv6> dev <VLAN name> nud incomplete
+        failed_kernel_neighbors=$(ip -6 neigh show | grep -v fe80 | grep $vlan | grep -E 'FAILED')
+        if [[ ! -z "$failed_kernel_neighbors" ]]; then
+            neigh_replace_template="sed -e 's/^/ip neigh replace /' -e 's/,/ dev /' -e 's/$/ nud incomplete;/'" 
+            ip_neigh_replace_cmd="echo \"$failed_kernel_neighbors\" | cut -d ' ' -f 1,3 --output-delimiter=',' | $neigh_replace_template"
+            eval `eval "$ip_neigh_replace_cmd"`
+        fi
+      fi
   done
+  
 
   # sleep here before handling the mismatch as it is not required during startup
   sleep 300
 
   # refresh neighbor entries from APP_DB in case of mismatch with kernel
   DBNEIGH=$(sonic-db-cli APPL_DB keys NEIGH_TABLE*)
+
+  # resolve neighbor entries from CONFIG_DB in case of mismatch with kernel
+  DBNEIGH="$DBNEIGH $(sonic-db-cli CONFIG_DB keys NEIGH* | sed -e 's/|/:/g')"
+
   KERNEIGH4=$(ip -4 neigh show | grep Vlan | cut -d ' ' -f 1,3  --output-delimiter=',')
   KERNEIGH6=$(ip -6 neigh show | grep -v fe80 | grep Vlan | cut -d ' ' -f 1,3  --output-delimiter=',')
   for neigh in $DBNEIGH; do
@@ -63,11 +187,11 @@ while /bin/true; do
           if [[ $ip == *"."* ]] && [[ ! $KERNEIGH4 =~ "${ip},${intf}" ]]; then
               pingcmd="timeout 0.2 ping -I $intf -n -q -i 0 -c 1 -W 1 $ip >/dev/null"
               eval $pingcmd
-              logger "arp_update: mismatch arp entry, pinging ${ip} on ${intf}"
+              logger "mismatch arp entry, pinging ${ip} on ${intf}"
           elif [[ $ip == *":"* ]] && [[ ! $KERNEIGH6 =~ "${ip},${intf}" ]]; then
               ping6cmd="timeout 0.2 ping6 -I $intf -n -q -i 0 -c 1 -W 1 $ip >/dev/null"
               eval $ping6cmd
-              logger "arp_update: mismatch v6 nbr entry, pinging ${ip} on ${intf}"
+              logger "mismatch v6 nbr entry, pinging ${ip} on ${intf}"
           fi
       fi
   done

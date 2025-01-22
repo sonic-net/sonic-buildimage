@@ -8,10 +8,10 @@
 ########################################################################
 
 try:
-    import subprocess
     from sonic_platform_base.component_base import ComponentBase
     from sonic_platform.regutil import Reg
     from sonic_platform.logger import logger
+    from sonic_py_common.general import getstatusoutput_noshell
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -70,12 +70,12 @@ class Component(ComponentBase):
         """
         try:
             successtips = "CPLD Upgrade succeeded!"
-            status, output = subprocess.getstatusoutput("which firmware_upgrade")
+            status, output = getstatusoutput_noshell(["which", "firmware_upgrade"])
             if status or len(output) <= 0:
                 logger.error("no upgrade tool.")
                 return False
-            cmdstr = "%s %s cpld %d cpld"%(output,image_path,self.slot)
-            ret, log = subprocess.getstatusoutput(cmdstr)
+            cmdstr = [output, image_path, "cpld", self.slot, "cpld"]
+            ret, log = getstatusoutput_noshell(cmdstr)
             if ret == 0 and successtips in log:
                 return True
             logger.error("upgrade failed. ret:%d, log:\n%s" % (ret, log))

@@ -1,0 +1,486 @@
+{
+  "phys": [
+    {
+      "phy_id": 0,
+      "name": "phy0",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy0_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "0"
+    },
+    {
+      "phy_id": 1,
+      "name": "phy1",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy1_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "1"
+    },
+    {
+      "phy_id": 2,
+      "name": "phy2",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy2_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "2"
+    },
+    {
+      "phy_id": 3,
+      "name": "phy3",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy3_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "3"
+    },
+    {
+      "phy_id": 4,
+      "name": "phy4",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy4_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "4"
+    },
+    {
+      "phy_id": 5,
+      "name": "phy5",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy5_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "5"
+    },
+    {
+      "phy_id": 6,
+      "name": "phy6",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy6_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "6"
+    },
+    {
+      "phy_id": 7,
+      "name": "phy7",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy7_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "7"
+    },
+    {
+      "phy_id": 9,
+      "name": "phy9",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy9_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "9"
+    },
+    {
+      "phy_id": 10,
+      "name": "phy10",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy10_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "10"
+    },
+    {
+      "phy_id": 11,
+      "name": "phy11",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy11_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "11"
+    },
+    {
+      "phy_id": 12,
+      "name": "phy12",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy12_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "12"
+    },
+    {
+      "phy_id": 13,
+      "name": "phy13",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy13_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "13"
+    },
+    {
+      "phy_id": 14,
+      "name": "phy14",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy14_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "14"
+    },
+    {
+      "phy_id": 15,
+      "name": "phy15",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy15_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "15"
+    },
+    {
+      "phy_id": 16,
+      "name": "phy16",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy16_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "16"
+    },
+    {
+      "phy_id": 18,
+      "name": "phy18",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy18_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "18"
+    },
+    {
+      "phy_id": 19,
+      "name": "phy19",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy19_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "19"
+    },
+    {
+      "phy_id": 20,
+      "name": "phy20",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy20_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "20"
+    },
+    {
+      "phy_id": 21,
+      "name": "phy21",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy21_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "21"
+    },
+    {
+      "phy_id": 22,
+      "name": "phy22",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy22_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "22"
+    },
+    {
+      "phy_id": 23,
+      "name": "phy23",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy23_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "23"
+    },
+    {
+      "phy_id": 24,
+      "name": "phy24",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy24_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "24"
+    },
+    {
+      "phy_id": 25,
+      "name": "phy25",
+      "address": "255",
+      "lib_name": "",
+      "firmware_path": "",
+      "config_file": "/usr/share/sonic/hwsku/phy25_config.json",
+      "sai_init_config_file": "",
+      "phy_access": "mdio",
+      "bus_id": 0,
+      "context_id": 1,
+      "hwinfo": "25"
+    }
+  ],
+  "interfaces": [
+    {
+      "name": "Ethernet0",
+      "index": 1,
+      "phy_id": 0,
+      "system_lanes": [1],
+      "line_lanes": [0]
+    },
+    {
+       "name": "Ethernet1",
+       "index": 2,
+       "phy_id": 1,
+       "system_lanes": [3],
+       "line_lanes": [2]
+    },
+    {
+      "name": "Ethernet2",
+      "index": 3,
+      "phy_id": 2,
+      "system_lanes": [5],
+      "line_lanes": [4]
+    },
+    {
+      "name": "Ethernet3",
+      "index": 4,
+      "phy_id": 3,
+      "system_lanes": [7],
+      "line_lanes": [6]
+    },
+    {
+      "name": "Ethernet4",
+      "index": 5,
+      "phy_id": 4,
+      "system_lanes": [9],
+      "line_lanes": [8]
+    },
+    {
+      "name": "Ethernet5",
+      "index": 6,
+      "phy_id": 5,
+      "system_lanes": [11],
+      "line_lanes": [10]
+    },
+    {
+      "name": "Ethernet6",
+      "index": 7,
+      "phy_id": 6,
+      "system_lanes": [13],
+      "line_lanes": [12]
+    },
+    {
+      "name": "Ethernet7",
+      "index": 8,
+      "phy_id": 7,
+      "system_lanes": [15],
+      "line_lanes": [14]
+    },
+    {
+      "name": "Ethernet8",
+      "index": 9,
+      "phy_id": 9,
+      "system_lanes": [17],
+      "line_lanes": [16]
+    },
+    {
+      "name": "Ethernet9",
+      "index": 10,
+      "phy_id": 10,
+      "system_lanes": [19],
+      "line_lanes": [18]
+    },
+    {
+      "name": "Ethernet10",
+      "index": 11,
+      "phy_id": 11,
+      "system_lanes": [21],
+      "line_lanes": [20]
+    },
+    {
+      "name": "Ethernet11",
+      "index": 12,
+      "phy_id": 12,
+      "system_lanes": [23],
+      "line_lanes": [22]
+    },
+    {
+      "name": "Ethernet12",
+      "index": 13,
+      "phy_id": 13,
+      "system_lanes": [25],
+      "line_lanes": [24]
+    },
+    {
+      "name": "Ethernet13",
+      "index": 14,
+      "phy_id": 14,
+      "system_lanes": [27],
+      "line_lanes": [26]
+    },
+    {
+      "name": "Ethernet14",
+      "index": 15,
+      "phy_id": 15,
+      "system_lanes": [29],
+      "line_lanes": [28]
+    },
+    {
+      "name": "Ethernet15",
+      "index": 16,
+      "phy_id": 16,
+      "system_lanes": [31],
+      "line_lanes": [30]
+    },
+    {
+      "name": "Ethernet16",
+      "index": 17,
+      "phy_id": 18,
+      "system_lanes": [33],
+      "line_lanes": [32]
+    },
+    {
+      "name": "Ethernet17",
+      "index": 18,
+      "phy_id": 19,
+      "system_lanes": [35],
+      "line_lanes": [34]
+    },
+    {
+      "name": "Ethernet18",
+      "index": 19,
+      "phy_id": 20,
+      "system_lanes": [37],
+      "line_lanes": [36]
+    },
+    {
+      "name": "Ethernet19",
+      "index": 20,
+      "phy_id": 21,
+      "system_lanes": [39],
+      "line_lanes": [38]
+    },
+    {
+      "name": "Ethernet20",
+      "index": 21,
+      "phy_id": 22,
+      "system_lanes": [41],
+      "line_lanes": [40]
+    },
+    {
+      "name": "Ethernet21",
+      "index": 22,
+      "phy_id": 23,
+      "system_lanes": [43],
+      "line_lanes": [42]
+    },
+    {
+      "name": "Ethernet22",
+      "index": 23,
+      "phy_id": 24,
+      "system_lanes": [45],
+      "line_lanes": [44]
+    },
+    {
+      "name": "Ethernet23",
+      "index": 24,
+      "phy_id": 25,
+      "system_lanes": [47],
+      "line_lanes": [46]
+    }
+  ]
+}

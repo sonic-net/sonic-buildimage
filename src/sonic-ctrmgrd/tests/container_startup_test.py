@@ -23,6 +23,13 @@ startup_test_data = {
                         "set_owner": "local"
                     }
                 }
+            },
+            common_test.STATE_DB_NO: {
+                common_test.FEATURE_TABLE: {
+                    "snmp": {
+                        "system_state": "up"
+                    }
+                }
             }
         },
         common_test.POST: {
@@ -36,7 +43,7 @@ startup_test_data = {
                 },
                 common_test.KUBE_LABEL_TABLE: {
                     "SET": {
-                        "snmp_20201230.11_enabled": "false"
+                        "snmp_local": "20201230.11"
                     }
                 }
             }
@@ -169,7 +176,7 @@ startup_test_data = {
                 common_test.FEATURE_TABLE: {
                     "snmp": {
                         "container_id": "no_change",
-                        "container_version": "20201230.77",
+                        "container_version": "20201230.11",
                         "current_owner": "no_change",
                         "remote_state": "no_change",
                         "system_state": "up"
@@ -345,7 +352,7 @@ startup_test_data = {
                 },
                 common_test.KUBE_LABEL_TABLE: {
                     "SET": {
-                        "snmp_20201230.11_enabled": "false"
+                        "snmp_local": "20201230.11"
                     }
                 }
             }
@@ -363,7 +370,7 @@ startup_test_data = {
                 },
                 common_test.KUBE_LABEL_TABLE: {
                     "SET": {
-                        "snmp_20201230.11_enabled": "false"
+                        "snmp_local": "20201230.11"
                     }
                 }
             }

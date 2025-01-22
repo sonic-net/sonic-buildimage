@@ -3,11 +3,11 @@
 #
 # common functions used by "syncd" scipts (syncd.sh, gbsyncd.sh, etc..)
 # scripts using this must provide implementations of the following functions:
-# 
+#
 # startplatform
 # waitplatform
 # stopplatform1 and stopplatform2
-# 
+#
 # For examples of these, see gbsyncd.sh and syncd.sh.
 #
 
@@ -25,7 +25,7 @@ function lock_service_state_change()
 
     exec {LOCKFD}>${LOCKFILE}
     /usr/bin/flock -x ${LOCKFD}
-    trap "/usr/bin/flock -u ${LOCKFD}" 0 2 3 15
+    trap "/usr/bin/flock -u ${LOCKFD}" EXIT
 
     debug "Locked ${LOCKFILE} (${LOCKFD}) from ${SERVICE}$DEV service"
 }
@@ -48,6 +48,16 @@ function check_warm_boot()
     fi
 }
 
+function check_fast_boot()
+{
+    SYSTEM_FAST_REBOOT=`sonic-db-cli STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
+    if [[ x"${SYSTEM_FAST_REBOOT}" == x"true" ]]; then
+        FAST_BOOT="true"
+    else
+        FAST_BOOT="false"
+    fi
+}
+
 function wait_for_database_service()
 {
     # Wait for redis server start before database clean
@@ -56,7 +66,7 @@ function wait_for_database_service()
     done
 
     # Wait for configDB initialization
-    until [[ $($SONIC_DB_CLI CONFIG_DB GET "CONFIG_DB_INITIALIZED") ]];
+    until [[ $($SONIC_DB_CLI CONFIG_DB GET "CONFIG_DB_INITIALIZED") -eq 1 ]];
         do sleep 1;
     done
 }
@@ -71,9 +81,13 @@ function getBootType()
     *SONIC_BOOT_TYPE=fastfast*)
         TYPE='fastfast'
         ;;
+    *SONIC_BOOT_TYPE=express*)
+        TYPE='express'
+        ;;
     *SONIC_BOOT_TYPE=fast*|*fast-reboot*)
         # check that the key exists
-        if [[ $($SONIC_DB_CLI STATE_DB GET "FAST_REBOOT|system") == "1" ]]; then
+        SYSTEM_FAST_REBOOT=`sonic-db-cli STATE_DB hget "FAST_RESTART_ENABLE_TABLE|system" enable`
+        if [[ x"${SYSTEM_FAST_REBOOT}" == x"true" ]]; then
             TYPE='fast'
         else
             TYPE='cold'
@@ -140,10 +154,14 @@ stop() {
 
     lock_service_state_change
     check_warm_boot
+    check_fast_boot
     debug "Warm boot flag: ${SERVICE}$DEV ${WARM_BOOT}."
+    debug "Fast boot flag: ${SERVICE}$DEV ${FAST_BOOT}."
 
     if [[ x"$WARM_BOOT" == x"true" ]]; then
         TYPE=warm
+    elif [[ x"$FAST_BOOT" == x"true" ]]; then
+        TYPE=fast
     else
         TYPE=cold
     fi

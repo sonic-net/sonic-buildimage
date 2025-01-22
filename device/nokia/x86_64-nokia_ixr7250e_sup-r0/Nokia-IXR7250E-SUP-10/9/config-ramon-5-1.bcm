@@ -1,7 +1,9 @@
+
 appl_enable_intr_init.BCM8879X=0
 appl_param_module_id.BCM8879X=10
-bcm_linkscan_interval.BCM8879X=0
-bcm_stat_interval.BCM8879X=0
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc
+bcm_stat_interval.BCM8879X=15000000
+bcm_linkscan_interval=500000
 bist_enable.BCM8879X=0
 core_clock_speed_khz.BCM8879X=1000000
 custom_feature_access_only.BCM8879X=0
@@ -18,12 +20,12 @@ load_firmware.BCM8879X=0x102
 mdio_output_delay_ext.BCM8879X=14
 mdio_output_delay_int.BCM8879X=25
 mem_cache_enable_parity.BCM8879X=1
-mm_intr_enable.BCM8879X=0
-mm_timeout_usec.BCM8879X=300000
-polled_irq_delay.BCM8879X=500000
+miim_intr_enable.BCM8879X=0
+miim_timeout_usec.BCM8879X=300000
+polled_irq_delay.BCM8879X=100000
 polled_irq_mode.BCM8879X=1
 port_fec.BCM8879X=7
-port_init_cl72.BCM8879X=1
+port_init_cl72.BCM8879X=0
 port_init_speed.BCM8879X=53125
 rate_ext_mdio_divisor.BCM8879X=14
 rate_int_mdio_divisor.BCM8879X=50
@@ -42,134 +44,134 @@ tslam_dma_enable.BCM8879X=0
 tslam_intr_enable.BCM8879X=0
 tslam_timeout_usec.BCM8879X=5000000
 
-lane_to_serdes_map_fabric_lane0.BCM8879X=rx0:tx1
-lane_to_serdes_map_fabric_lane1.BCM8879X=rx1:tx3
+lane_to_serdes_map_fabric_lane0.BCM8879X=rx0:tx0
+lane_to_serdes_map_fabric_lane1.BCM8879X=rx1:tx1
 lane_to_serdes_map_fabric_lane2.BCM8879X=rx2:tx2
-lane_to_serdes_map_fabric_lane3.BCM8879X=rx3:tx0
+lane_to_serdes_map_fabric_lane3.BCM8879X=rx3:tx3
 
-lane_to_serdes_map_fabric_lane4.BCM8879X=rx4:tx5
-lane_to_serdes_map_fabric_lane5.BCM8879X=rx5:tx6
-lane_to_serdes_map_fabric_lane6.BCM8879X=rx6:tx7
-lane_to_serdes_map_fabric_lane7.BCM8879X=rx7:tx4
+lane_to_serdes_map_fabric_lane4.BCM8879X=rx4:tx4
+lane_to_serdes_map_fabric_lane5.BCM8879X=rx5:tx5
+lane_to_serdes_map_fabric_lane6.BCM8879X=rx6:tx6
+lane_to_serdes_map_fabric_lane7.BCM8879X=rx7:tx7
 
-lane_to_serdes_map_fabric_lane8.BCM8879X=rx8:tx10
-lane_to_serdes_map_fabric_lane9.BCM8879X=rx9:tx8
-lane_to_serdes_map_fabric_lane10.BCM8879X=rx10:tx11
-lane_to_serdes_map_fabric_lane11.BCM8879X=rx11:tx9
+lane_to_serdes_map_fabric_lane8.BCM8879X=rx8:tx8
+lane_to_serdes_map_fabric_lane9.BCM8879X=rx9:tx9
+lane_to_serdes_map_fabric_lane10.BCM8879X=rx10:tx10
+lane_to_serdes_map_fabric_lane11.BCM8879X=rx11:tx11
 
-lane_to_serdes_map_fabric_lane12.BCM8879X=rx12:tx13
-lane_to_serdes_map_fabric_lane13.BCM8879X=rx13:tx15
+lane_to_serdes_map_fabric_lane12.BCM8879X=rx12:tx12
+lane_to_serdes_map_fabric_lane13.BCM8879X=rx13:tx13
 lane_to_serdes_map_fabric_lane14.BCM8879X=rx14:tx14
-lane_to_serdes_map_fabric_lane15.BCM8879X=rx15:tx12
+lane_to_serdes_map_fabric_lane15.BCM8879X=rx15:tx15
 
-lane_to_serdes_map_fabric_lane16.BCM8879X=rx16:tx18
-lane_to_serdes_map_fabric_lane17.BCM8879X=rx17:tx16
-lane_to_serdes_map_fabric_lane18.BCM8879X=rx18:tx17
+lane_to_serdes_map_fabric_lane16.BCM8879X=rx16:tx16
+lane_to_serdes_map_fabric_lane17.BCM8879X=rx17:tx17
+lane_to_serdes_map_fabric_lane18.BCM8879X=rx18:tx18
 lane_to_serdes_map_fabric_lane19.BCM8879X=rx19:tx19
 
 lane_to_serdes_map_fabric_lane20.BCM8879X=rx20:tx20
-lane_to_serdes_map_fabric_lane21.BCM8879X=rx21:tx22
-lane_to_serdes_map_fabric_lane22.BCM8879X=rx22:tx23
-lane_to_serdes_map_fabric_lane23.BCM8879X=rx23:tx21
+lane_to_serdes_map_fabric_lane21.BCM8879X=rx21:tx21
+lane_to_serdes_map_fabric_lane22.BCM8879X=rx22:tx22
+lane_to_serdes_map_fabric_lane23.BCM8879X=rx23:tx23
 
 lane_to_serdes_map_fabric_lane24.BCM8879X=rx24:tx24
-lane_to_serdes_map_fabric_lane25.BCM8879X=rx25:tx26
-lane_to_serdes_map_fabric_lane26.BCM8879X=rx26:tx27
-lane_to_serdes_map_fabric_lane27.BCM8879X=rx27:tx25
+lane_to_serdes_map_fabric_lane25.BCM8879X=rx25:tx25
+lane_to_serdes_map_fabric_lane26.BCM8879X=rx26:tx26
+lane_to_serdes_map_fabric_lane27.BCM8879X=rx27:tx27
 
-lane_to_serdes_map_fabric_lane28.BCM8879X=rx28:tx29
-lane_to_serdes_map_fabric_lane29.BCM8879X=rx29:tx30
-lane_to_serdes_map_fabric_lane30.BCM8879X=rx30:tx28
+lane_to_serdes_map_fabric_lane28.BCM8879X=rx28:tx28
+lane_to_serdes_map_fabric_lane29.BCM8879X=rx29:tx29
+lane_to_serdes_map_fabric_lane30.BCM8879X=rx30:tx30
 lane_to_serdes_map_fabric_lane31.BCM8879X=rx31:tx31
 
-lane_to_serdes_map_fabric_lane32.BCM8879X=rx32:tx34
-lane_to_serdes_map_fabric_lane33.BCM8879X=rx33:tx32
-lane_to_serdes_map_fabric_lane34.BCM8879X=rx34:tx35
-lane_to_serdes_map_fabric_lane35.BCM8879X=rx35:tx33
+lane_to_serdes_map_fabric_lane32.BCM8879X=rx32:tx32
+lane_to_serdes_map_fabric_lane33.BCM8879X=rx33:tx33
+lane_to_serdes_map_fabric_lane34.BCM8879X=rx34:tx34
+lane_to_serdes_map_fabric_lane35.BCM8879X=rx35:tx35
 
 lane_to_serdes_map_fabric_lane36.BCM8879X=rx36:tx36
-lane_to_serdes_map_fabric_lane37.BCM8879X=rx37:tx38
-lane_to_serdes_map_fabric_lane38.BCM8879X=rx38:tx39
-lane_to_serdes_map_fabric_lane39.BCM8879X=rx39:tx37
+lane_to_serdes_map_fabric_lane37.BCM8879X=rx37:tx37
+lane_to_serdes_map_fabric_lane38.BCM8879X=rx38:tx38
+lane_to_serdes_map_fabric_lane39.BCM8879X=rx39:tx39
 
-lane_to_serdes_map_fabric_lane40.BCM8879X=rx40:tx43
-lane_to_serdes_map_fabric_lane41.BCM8879X=rx41:tx42
-lane_to_serdes_map_fabric_lane42.BCM8879X=rx42:tx40
-lane_to_serdes_map_fabric_lane43.BCM8879X=rx43:tx41
+lane_to_serdes_map_fabric_lane40.BCM8879X=rx40:tx40
+lane_to_serdes_map_fabric_lane41.BCM8879X=rx41:tx41
+lane_to_serdes_map_fabric_lane42.BCM8879X=rx42:tx42
+lane_to_serdes_map_fabric_lane43.BCM8879X=rx43:tx43
 
-lane_to_serdes_map_fabric_lane44.BCM8879X=rx44:tx46
-lane_to_serdes_map_fabric_lane45.BCM8879X=rx45:tx44
-lane_to_serdes_map_fabric_lane46.BCM8879X=rx46:tx45
+lane_to_serdes_map_fabric_lane44.BCM8879X=rx44:tx44
+lane_to_serdes_map_fabric_lane45.BCM8879X=rx45:tx45
+lane_to_serdes_map_fabric_lane46.BCM8879X=rx46:tx46
 lane_to_serdes_map_fabric_lane47.BCM8879X=rx47:tx47
 
-lane_to_serdes_map_fabric_lane48.BCM8879X=rx48:tx49
-lane_to_serdes_map_fabric_lane49.BCM8879X=rx49:tx50
-lane_to_serdes_map_fabric_lane50.BCM8879X=rx50:tx51
-lane_to_serdes_map_fabric_lane51.BCM8879X=rx51:tx48
+lane_to_serdes_map_fabric_lane48.BCM8879X=rx48:tx48
+lane_to_serdes_map_fabric_lane49.BCM8879X=rx49:tx49
+lane_to_serdes_map_fabric_lane50.BCM8879X=rx50:tx50
+lane_to_serdes_map_fabric_lane51.BCM8879X=rx51:tx51
 
-lane_to_serdes_map_fabric_lane52.BCM8879X=rx52:tx54
+lane_to_serdes_map_fabric_lane52.BCM8879X=rx52:tx52
 lane_to_serdes_map_fabric_lane53.BCM8879X=rx53:tx53
-lane_to_serdes_map_fabric_lane54.BCM8879X=rx54:tx55
-lane_to_serdes_map_fabric_lane55.BCM8879X=rx55:tx52
+lane_to_serdes_map_fabric_lane54.BCM8879X=rx54:tx54
+lane_to_serdes_map_fabric_lane55.BCM8879X=rx55:tx55
 
-lane_to_serdes_map_fabric_lane56.BCM8879X=rx56:tx57
-lane_to_serdes_map_fabric_lane57.BCM8879X=rx57:tx58
-lane_to_serdes_map_fabric_lane58.BCM8879X=rx58:tx59
-lane_to_serdes_map_fabric_lane59.BCM8879X=rx59:tx56
+lane_to_serdes_map_fabric_lane56.BCM8879X=rx56:tx56
+lane_to_serdes_map_fabric_lane57.BCM8879X=rx57:tx57
+lane_to_serdes_map_fabric_lane58.BCM8879X=rx58:tx58
+lane_to_serdes_map_fabric_lane59.BCM8879X=rx59:tx59
 
-lane_to_serdes_map_fabric_lane60.BCM8879X=rx60:tx61
-lane_to_serdes_map_fabric_lane61.BCM8879X=rx61:tx60
+lane_to_serdes_map_fabric_lane60.BCM8879X=rx60:tx60
+lane_to_serdes_map_fabric_lane61.BCM8879X=rx61:tx61
 lane_to_serdes_map_fabric_lane62.BCM8879X=rx62:tx62
 lane_to_serdes_map_fabric_lane63.BCM8879X=rx63:tx63
 
 lane_to_serdes_map_fabric_lane64.BCM8879X=rx64:tx64
-lane_to_serdes_map_fabric_lane65.BCM8879X=rx65:tx66
-lane_to_serdes_map_fabric_lane66.BCM8879X=rx66:tx65
+lane_to_serdes_map_fabric_lane65.BCM8879X=rx65:tx65
+lane_to_serdes_map_fabric_lane66.BCM8879X=rx66:tx66
 lane_to_serdes_map_fabric_lane67.BCM8879X=rx67:tx67
 
-lane_to_serdes_map_fabric_lane68.BCM8879X=rx68:tx69
-lane_to_serdes_map_fabric_lane69.BCM8879X=rx69:tx70
-lane_to_serdes_map_fabric_lane70.BCM8879X=rx70:tx71
-lane_to_serdes_map_fabric_lane71.BCM8879X=rx71:tx68
+lane_to_serdes_map_fabric_lane68.BCM8879X=rx68:tx68
+lane_to_serdes_map_fabric_lane69.BCM8879X=rx69:tx69
+lane_to_serdes_map_fabric_lane70.BCM8879X=rx70:tx70
+lane_to_serdes_map_fabric_lane71.BCM8879X=rx71:tx71
 
-lane_to_serdes_map_fabric_lane72.BCM8879X=rx72:tx74
-lane_to_serdes_map_fabric_lane73.BCM8879X=rx73:tx72
-lane_to_serdes_map_fabric_lane74.BCM8879X=rx74:tx75
-lane_to_serdes_map_fabric_lane75.BCM8879X=rx75:tx73
+lane_to_serdes_map_fabric_lane72.BCM8879X=rx72:tx72
+lane_to_serdes_map_fabric_lane73.BCM8879X=rx73:tx73
+lane_to_serdes_map_fabric_lane74.BCM8879X=rx74:tx74
+lane_to_serdes_map_fabric_lane75.BCM8879X=rx75:tx75
 
-lane_to_serdes_map_fabric_lane76.BCM8879X=rx76:tx78
-lane_to_serdes_map_fabric_lane77.BCM8879X=rx77:tx76
-lane_to_serdes_map_fabric_lane78.BCM8879X=rx78:tx79
-lane_to_serdes_map_fabric_lane79.BCM8879X=rx79:tx77
+lane_to_serdes_map_fabric_lane76.BCM8879X=rx76:tx76
+lane_to_serdes_map_fabric_lane77.BCM8879X=rx77:tx77
+lane_to_serdes_map_fabric_lane78.BCM8879X=rx78:tx78
+lane_to_serdes_map_fabric_lane79.BCM8879X=rx79:tx79
 
 lane_to_serdes_map_fabric_lane80.BCM8879X=rx80:tx80
-lane_to_serdes_map_fabric_lane81.BCM8879X=rx81:tx82
-lane_to_serdes_map_fabric_lane82.BCM8879X=rx82:tx81
+lane_to_serdes_map_fabric_lane81.BCM8879X=rx81:tx81
+lane_to_serdes_map_fabric_lane82.BCM8879X=rx82:tx82
 lane_to_serdes_map_fabric_lane83.BCM8879X=rx83:tx83
 
-lane_to_serdes_map_fabric_lane84.BCM8879X=rx84:tx85
-lane_to_serdes_map_fabric_lane85.BCM8879X=rx85:tx86
-lane_to_serdes_map_fabric_lane86.BCM8879X=rx86:tx87
-lane_to_serdes_map_fabric_lane87.BCM8879X=rx87:tx84
+lane_to_serdes_map_fabric_lane84.BCM8879X=rx84:tx84
+lane_to_serdes_map_fabric_lane85.BCM8879X=rx85:tx85
+lane_to_serdes_map_fabric_lane86.BCM8879X=rx86:tx86
+lane_to_serdes_map_fabric_lane87.BCM8879X=rx87:tx87
 
-lane_to_serdes_map_fabric_lane88.BCM8879X=rx88:tx90
-lane_to_serdes_map_fabric_lane89.BCM8879X=rx89:tx88
-lane_to_serdes_map_fabric_lane90.BCM8879X=rx90:tx91
-lane_to_serdes_map_fabric_lane91.BCM8879X=rx91:tx89
+lane_to_serdes_map_fabric_lane88.BCM8879X=rx88:tx88
+lane_to_serdes_map_fabric_lane89.BCM8879X=rx89:tx89
+lane_to_serdes_map_fabric_lane90.BCM8879X=rx90:tx90
+lane_to_serdes_map_fabric_lane91.BCM8879X=rx91:tx91
 
-lane_to_serdes_map_fabric_lane92.BCM8879X=rx92:tx95
-lane_to_serdes_map_fabric_lane93.BCM8879X=rx93:tx94
-lane_to_serdes_map_fabric_lane94.BCM8879X=rx94:tx92
-lane_to_serdes_map_fabric_lane95.BCM8879X=rx95:tx93
+lane_to_serdes_map_fabric_lane92.BCM8879X=rx92:tx92
+lane_to_serdes_map_fabric_lane93.BCM8879X=rx93:tx93
+lane_to_serdes_map_fabric_lane94.BCM8879X=rx94:tx94
+lane_to_serdes_map_fabric_lane95.BCM8879X=rx95:tx95
 
 lane_to_serdes_map_fabric_lane96.BCM8879X=rx96:tx96
-lane_to_serdes_map_fabric_lane97.BCM8879X=rx97:tx98
-lane_to_serdes_map_fabric_lane98.BCM8879X=rx98:tx97
+lane_to_serdes_map_fabric_lane97.BCM8879X=rx97:tx97
+lane_to_serdes_map_fabric_lane98.BCM8879X=rx98:tx98
 lane_to_serdes_map_fabric_lane99.BCM8879X=rx99:tx99
 
-lane_to_serdes_map_fabric_lane100.BCM8879X=rx100:tx101
-lane_to_serdes_map_fabric_lane101.BCM8879X=rx101:tx102
-lane_to_serdes_map_fabric_lane102.BCM8879X=rx102:tx100
+lane_to_serdes_map_fabric_lane100.BCM8879X=rx100:tx100
+lane_to_serdes_map_fabric_lane101.BCM8879X=rx101:tx101
+lane_to_serdes_map_fabric_lane102.BCM8879X=rx102:tx102
 lane_to_serdes_map_fabric_lane103.BCM8879X=rx103:tx103
 
 lane_to_serdes_map_fabric_lane104.BCM8879X=rx104:tx104
@@ -179,13 +181,13 @@ lane_to_serdes_map_fabric_lane107.BCM8879X=rx107:tx107
 
 lane_to_serdes_map_fabric_lane108.BCM8879X=rx108:tx108
 lane_to_serdes_map_fabric_lane109.BCM8879X=rx109:tx109
-lane_to_serdes_map_fabric_lane110.BCM8879X=rx110:tx111
-lane_to_serdes_map_fabric_lane111.BCM8879X=rx111:tx110
+lane_to_serdes_map_fabric_lane110.BCM8879X=rx110:tx110
+lane_to_serdes_map_fabric_lane111.BCM8879X=rx111:tx111
 
-lane_to_serdes_map_fabric_lane112.BCM8879X=rx112:tx115
-lane_to_serdes_map_fabric_lane113.BCM8879X=rx113:tx114
-lane_to_serdes_map_fabric_lane114.BCM8879X=rx114:tx113
-lane_to_serdes_map_fabric_lane115.BCM8879X=rx115:tx112
+lane_to_serdes_map_fabric_lane112.BCM8879X=rx112:tx112
+lane_to_serdes_map_fabric_lane113.BCM8879X=rx113:tx113
+lane_to_serdes_map_fabric_lane114.BCM8879X=rx114:tx114
+lane_to_serdes_map_fabric_lane115.BCM8879X=rx115:tx115
 
 lane_to_serdes_map_fabric_lane116.BCM8879X=rx116:tx116
 lane_to_serdes_map_fabric_lane117.BCM8879X=rx117:tx117
@@ -197,15 +199,15 @@ lane_to_serdes_map_fabric_lane121.BCM8879X=rx121:tx121
 lane_to_serdes_map_fabric_lane122.BCM8879X=rx122:tx122
 lane_to_serdes_map_fabric_lane123.BCM8879X=rx123:tx123
 
-lane_to_serdes_map_fabric_lane124.BCM8879X=rx124:tx127
-lane_to_serdes_map_fabric_lane125.BCM8879X=rx125:tx126
-lane_to_serdes_map_fabric_lane126.BCM8879X=rx126:tx124
-lane_to_serdes_map_fabric_lane127.BCM8879X=rx127:tx125
+lane_to_serdes_map_fabric_lane124.BCM8879X=rx124:tx124
+lane_to_serdes_map_fabric_lane125.BCM8879X=rx125:tx125
+lane_to_serdes_map_fabric_lane126.BCM8879X=rx126:tx126
+lane_to_serdes_map_fabric_lane127.BCM8879X=rx127:tx127
 
-lane_to_serdes_map_fabric_lane128.BCM8879X=rx128:tx130
-lane_to_serdes_map_fabric_lane129.BCM8879X=rx129:tx131
-lane_to_serdes_map_fabric_lane130.BCM8879X=rx130:tx129
-lane_to_serdes_map_fabric_lane131.BCM8879X=rx131:tx128
+lane_to_serdes_map_fabric_lane128.BCM8879X=rx128:tx128
+lane_to_serdes_map_fabric_lane129.BCM8879X=rx129:tx129
+lane_to_serdes_map_fabric_lane130.BCM8879X=rx130:tx130
+lane_to_serdes_map_fabric_lane131.BCM8879X=rx131:tx131
 
 lane_to_serdes_map_fabric_lane132.BCM8879X=rx132:tx132
 lane_to_serdes_map_fabric_lane133.BCM8879X=rx133:tx133
@@ -213,23 +215,23 @@ lane_to_serdes_map_fabric_lane134.BCM8879X=rx134:tx134
 lane_to_serdes_map_fabric_lane135.BCM8879X=rx135:tx135
 
 lane_to_serdes_map_fabric_lane136.BCM8879X=rx136:tx136
-lane_to_serdes_map_fabric_lane137.BCM8879X=rx137:tx138
-lane_to_serdes_map_fabric_lane138.BCM8879X=rx138:tx137
+lane_to_serdes_map_fabric_lane137.BCM8879X=rx137:tx137
+lane_to_serdes_map_fabric_lane138.BCM8879X=rx138:tx138
 lane_to_serdes_map_fabric_lane139.BCM8879X=rx139:tx139
 
-lane_to_serdes_map_fabric_lane140.BCM8879X=rx140:tx143
-lane_to_serdes_map_fabric_lane141.BCM8879X=rx141:tx142
-lane_to_serdes_map_fabric_lane142.BCM8879X=rx142:tx141
-lane_to_serdes_map_fabric_lane143.BCM8879X=rx143:tx140
+lane_to_serdes_map_fabric_lane140.BCM8879X=rx140:tx140
+lane_to_serdes_map_fabric_lane141.BCM8879X=rx141:tx141
+lane_to_serdes_map_fabric_lane142.BCM8879X=rx142:tx142
+lane_to_serdes_map_fabric_lane143.BCM8879X=rx143:tx143
 
-lane_to_serdes_map_fabric_lane144.BCM8879X=rx144:tx145
-lane_to_serdes_map_fabric_lane145.BCM8879X=rx145:tx147
-lane_to_serdes_map_fabric_lane146.BCM8879X=rx146:tx144
-lane_to_serdes_map_fabric_lane147.BCM8879X=rx147:tx146
+lane_to_serdes_map_fabric_lane144.BCM8879X=rx144:tx144
+lane_to_serdes_map_fabric_lane145.BCM8879X=rx145:tx145
+lane_to_serdes_map_fabric_lane146.BCM8879X=rx146:tx146
+lane_to_serdes_map_fabric_lane147.BCM8879X=rx147:tx147
 
-lane_to_serdes_map_fabric_lane148.BCM8879X=rx148:tx150
+lane_to_serdes_map_fabric_lane148.BCM8879X=rx148:tx148
 lane_to_serdes_map_fabric_lane149.BCM8879X=rx149:tx149
-lane_to_serdes_map_fabric_lane150.BCM8879X=rx150:tx148
+lane_to_serdes_map_fabric_lane150.BCM8879X=rx150:tx150
 lane_to_serdes_map_fabric_lane151.BCM8879X=rx151:tx151
 
 lane_to_serdes_map_fabric_lane152.BCM8879X=rx152:tx152
@@ -237,116 +239,116 @@ lane_to_serdes_map_fabric_lane153.BCM8879X=rx153:tx153
 lane_to_serdes_map_fabric_lane154.BCM8879X=rx154:tx154
 lane_to_serdes_map_fabric_lane155.BCM8879X=rx155:tx155
 
-lane_to_serdes_map_fabric_lane156.BCM8879X=rx156:tx157
-lane_to_serdes_map_fabric_lane157.BCM8879X=rx157:tx159
+lane_to_serdes_map_fabric_lane156.BCM8879X=rx156:tx156
+lane_to_serdes_map_fabric_lane157.BCM8879X=rx157:tx157
 lane_to_serdes_map_fabric_lane158.BCM8879X=rx158:tx158
-lane_to_serdes_map_fabric_lane159.BCM8879X=rx159:tx156
+lane_to_serdes_map_fabric_lane159.BCM8879X=rx159:tx159
 
 lane_to_serdes_map_fabric_lane160.BCM8879X=rx160:tx160
-lane_to_serdes_map_fabric_lane161.BCM8879X=rx161:tx162
-lane_to_serdes_map_fabric_lane162.BCM8879X=rx162:tx161
+lane_to_serdes_map_fabric_lane161.BCM8879X=rx161:tx161
+lane_to_serdes_map_fabric_lane162.BCM8879X=rx162:tx162
 lane_to_serdes_map_fabric_lane163.BCM8879X=rx163:tx163
 
-lane_to_serdes_map_fabric_lane164.BCM8879X=rx164:tx166
-lane_to_serdes_map_fabric_lane165.BCM8879X=rx165:tx164
-lane_to_serdes_map_fabric_lane166.BCM8879X=rx166:tx165
+lane_to_serdes_map_fabric_lane164.BCM8879X=rx164:tx164
+lane_to_serdes_map_fabric_lane165.BCM8879X=rx165:tx165
+lane_to_serdes_map_fabric_lane166.BCM8879X=rx166:tx166
 lane_to_serdes_map_fabric_lane167.BCM8879X=rx167:tx167
 
-lane_to_serdes_map_fabric_lane168.BCM8879X=rx168:tx170
-lane_to_serdes_map_fabric_lane169.BCM8879X=rx169:tx168
-lane_to_serdes_map_fabric_lane170.BCM8879X=rx170:tx169
+lane_to_serdes_map_fabric_lane168.BCM8879X=rx168:tx168
+lane_to_serdes_map_fabric_lane169.BCM8879X=rx169:tx169
+lane_to_serdes_map_fabric_lane170.BCM8879X=rx170:tx170
 lane_to_serdes_map_fabric_lane171.BCM8879X=rx171:tx171
 
-lane_to_serdes_map_fabric_lane172.BCM8879X=rx172:tx173
-lane_to_serdes_map_fabric_lane173.BCM8879X=rx173:tx174
-lane_to_serdes_map_fabric_lane174.BCM8879X=rx174:tx175
-lane_to_serdes_map_fabric_lane175.BCM8879X=rx175:tx172
+lane_to_serdes_map_fabric_lane172.BCM8879X=rx172:tx172
+lane_to_serdes_map_fabric_lane173.BCM8879X=rx173:tx173
+lane_to_serdes_map_fabric_lane174.BCM8879X=rx174:tx174
+lane_to_serdes_map_fabric_lane175.BCM8879X=rx175:tx175
 
 lane_to_serdes_map_fabric_lane176.BCM8879X=rx176:tx176
-lane_to_serdes_map_fabric_lane177.BCM8879X=rx177:tx178
-lane_to_serdes_map_fabric_lane178.BCM8879X=rx178:tx177
+lane_to_serdes_map_fabric_lane177.BCM8879X=rx177:tx177
+lane_to_serdes_map_fabric_lane178.BCM8879X=rx178:tx178
 lane_to_serdes_map_fabric_lane179.BCM8879X=rx179:tx179
 
 lane_to_serdes_map_fabric_lane180.BCM8879X=rx180:tx180
-lane_to_serdes_map_fabric_lane181.BCM8879X=rx181:tx182
-lane_to_serdes_map_fabric_lane182.BCM8879X=rx182:tx181
+lane_to_serdes_map_fabric_lane181.BCM8879X=rx181:tx181
+lane_to_serdes_map_fabric_lane182.BCM8879X=rx182:tx182
 lane_to_serdes_map_fabric_lane183.BCM8879X=rx183:tx183
 
-lane_to_serdes_map_fabric_lane184.BCM8879X=rx184:tx187
-lane_to_serdes_map_fabric_lane185.BCM8879X=rx185:tx184
+lane_to_serdes_map_fabric_lane184.BCM8879X=rx184:tx184
+lane_to_serdes_map_fabric_lane185.BCM8879X=rx185:tx185
 lane_to_serdes_map_fabric_lane186.BCM8879X=rx186:tx186
-lane_to_serdes_map_fabric_lane187.BCM8879X=rx187:tx185
+lane_to_serdes_map_fabric_lane187.BCM8879X=rx187:tx187
 
-lane_to_serdes_map_fabric_lane188.BCM8879X=rx188:tx190
+lane_to_serdes_map_fabric_lane188.BCM8879X=rx188:tx188
 lane_to_serdes_map_fabric_lane189.BCM8879X=rx189:tx189
-lane_to_serdes_map_fabric_lane190.BCM8879X=rx190:tx191
-lane_to_serdes_map_fabric_lane191.BCM8879X=rx191:tx188
+lane_to_serdes_map_fabric_lane190.BCM8879X=rx190:tx190
+lane_to_serdes_map_fabric_lane191.BCM8879X=rx191:tx191
 
 
-phy_rx_polarity_flip_fabric0.BCM8879X=0
-phy_rx_polarity_flip_fabric1.BCM8879X=1
-phy_rx_polarity_flip_fabric2.BCM8879X=0
-phy_rx_polarity_flip_fabric3.BCM8879X=1
+phy_rx_polarity_flip_fabric0.BCM8879X=1
+phy_rx_polarity_flip_fabric1.BCM8879X=0
+phy_rx_polarity_flip_fabric2.BCM8879X=1
+phy_rx_polarity_flip_fabric3.BCM8879X=0
 
 phy_rx_polarity_flip_fabric4.BCM8879X=1
 phy_rx_polarity_flip_fabric5.BCM8879X=0
 phy_rx_polarity_flip_fabric6.BCM8879X=1
 phy_rx_polarity_flip_fabric7.BCM8879X=0
 
-phy_rx_polarity_flip_fabric8.BCM8879X=1
-phy_rx_polarity_flip_fabric9.BCM8879X=0
-phy_rx_polarity_flip_fabric10.BCM8879X=1
-phy_rx_polarity_flip_fabric11.BCM8879X=0
+phy_rx_polarity_flip_fabric8.BCM8879X=0
+phy_rx_polarity_flip_fabric9.BCM8879X=1
+phy_rx_polarity_flip_fabric10.BCM8879X=0
+phy_rx_polarity_flip_fabric11.BCM8879X=1
 
-phy_rx_polarity_flip_fabric12.BCM8879X=0
-phy_rx_polarity_flip_fabric13.BCM8879X=1
-phy_rx_polarity_flip_fabric14.BCM8879X=0
-phy_rx_polarity_flip_fabric15.BCM8879X=1
+phy_rx_polarity_flip_fabric12.BCM8879X=1
+phy_rx_polarity_flip_fabric13.BCM8879X=0
+phy_rx_polarity_flip_fabric14.BCM8879X=1
+phy_rx_polarity_flip_fabric15.BCM8879X=0
 
-phy_rx_polarity_flip_fabric16.BCM8879X=0
-phy_rx_polarity_flip_fabric17.BCM8879X=1
-phy_rx_polarity_flip_fabric18.BCM8879X=0
-phy_rx_polarity_flip_fabric19.BCM8879X=1
+phy_rx_polarity_flip_fabric16.BCM8879X=1
+phy_rx_polarity_flip_fabric17.BCM8879X=0
+phy_rx_polarity_flip_fabric18.BCM8879X=1
+phy_rx_polarity_flip_fabric19.BCM8879X=0
 
 phy_rx_polarity_flip_fabric20.BCM8879X=0
 phy_rx_polarity_flip_fabric21.BCM8879X=1
 phy_rx_polarity_flip_fabric22.BCM8879X=0
 phy_rx_polarity_flip_fabric23.BCM8879X=1
 
-phy_rx_polarity_flip_fabric24.BCM8879X=0
-phy_rx_polarity_flip_fabric25.BCM8879X=1
-phy_rx_polarity_flip_fabric26.BCM8879X=0
-phy_rx_polarity_flip_fabric27.BCM8879X=1
+phy_rx_polarity_flip_fabric24.BCM8879X=1
+phy_rx_polarity_flip_fabric25.BCM8879X=0
+phy_rx_polarity_flip_fabric26.BCM8879X=1
+phy_rx_polarity_flip_fabric27.BCM8879X=0
 
 phy_rx_polarity_flip_fabric28.BCM8879X=1
 phy_rx_polarity_flip_fabric29.BCM8879X=0
 phy_rx_polarity_flip_fabric30.BCM8879X=1
 phy_rx_polarity_flip_fabric31.BCM8879X=0
 
-phy_rx_polarity_flip_fabric32.BCM8879X=1
-phy_rx_polarity_flip_fabric33.BCM8879X=0
-phy_rx_polarity_flip_fabric34.BCM8879X=1
-phy_rx_polarity_flip_fabric35.BCM8879X=0
+phy_rx_polarity_flip_fabric32.BCM8879X=0
+phy_rx_polarity_flip_fabric33.BCM8879X=1
+phy_rx_polarity_flip_fabric34.BCM8879X=0
+phy_rx_polarity_flip_fabric35.BCM8879X=1
 
-phy_rx_polarity_flip_fabric36.BCM8879X=0
-phy_rx_polarity_flip_fabric37.BCM8879X=1
-phy_rx_polarity_flip_fabric38.BCM8879X=0
-phy_rx_polarity_flip_fabric39.BCM8879X=1
+phy_rx_polarity_flip_fabric36.BCM8879X=1
+phy_rx_polarity_flip_fabric37.BCM8879X=0
+phy_rx_polarity_flip_fabric38.BCM8879X=1
+phy_rx_polarity_flip_fabric39.BCM8879X=0
 
 phy_rx_polarity_flip_fabric40.BCM8879X=0
 phy_rx_polarity_flip_fabric41.BCM8879X=1
 phy_rx_polarity_flip_fabric42.BCM8879X=0
 phy_rx_polarity_flip_fabric43.BCM8879X=1
 
-phy_rx_polarity_flip_fabric44.BCM8879X=0
-phy_rx_polarity_flip_fabric45.BCM8879X=1
-phy_rx_polarity_flip_fabric46.BCM8879X=0
-phy_rx_polarity_flip_fabric47.BCM8879X=1
+phy_rx_polarity_flip_fabric44.BCM8879X=1
+phy_rx_polarity_flip_fabric45.BCM8879X=0
+phy_rx_polarity_flip_fabric46.BCM8879X=1
+phy_rx_polarity_flip_fabric47.BCM8879X=0
 
-phy_rx_polarity_flip_fabric48.BCM8879X=0
-phy_rx_polarity_flip_fabric49.BCM8879X=1
-phy_rx_polarity_flip_fabric50.BCM8879X=0
-phy_rx_polarity_flip_fabric51.BCM8879X=1
+phy_rx_polarity_flip_fabric48.BCM8879X=1
+phy_rx_polarity_flip_fabric49.BCM8879X=0
+phy_rx_polarity_flip_fabric50.BCM8879X=1
+phy_rx_polarity_flip_fabric51.BCM8879X=0
 
 phy_rx_polarity_flip_fabric52.BCM8879X=0
 phy_rx_polarity_flip_fabric53.BCM8879X=1
@@ -358,10 +360,10 @@ phy_rx_polarity_flip_fabric57.BCM8879X=1
 phy_rx_polarity_flip_fabric58.BCM8879X=0
 phy_rx_polarity_flip_fabric59.BCM8879X=1
 
-phy_rx_polarity_flip_fabric60.BCM8879X=1
-phy_rx_polarity_flip_fabric61.BCM8879X=0
-phy_rx_polarity_flip_fabric62.BCM8879X=1
-phy_rx_polarity_flip_fabric63.BCM8879X=0
+phy_rx_polarity_flip_fabric60.BCM8879X=0
+phy_rx_polarity_flip_fabric61.BCM8879X=1
+phy_rx_polarity_flip_fabric62.BCM8879X=0
+phy_rx_polarity_flip_fabric63.BCM8879X=1
 
 phy_rx_polarity_flip_fabric64.BCM8879X=0
 phy_rx_polarity_flip_fabric65.BCM8879X=1
@@ -373,78 +375,78 @@ phy_rx_polarity_flip_fabric69.BCM8879X=0
 phy_rx_polarity_flip_fabric70.BCM8879X=1
 phy_rx_polarity_flip_fabric71.BCM8879X=0
 
-phy_rx_polarity_flip_fabric72.BCM8879X=0
-phy_rx_polarity_flip_fabric73.BCM8879X=1
-phy_rx_polarity_flip_fabric74.BCM8879X=0
-phy_rx_polarity_flip_fabric75.BCM8879X=1
+phy_rx_polarity_flip_fabric72.BCM8879X=1
+phy_rx_polarity_flip_fabric73.BCM8879X=0
+phy_rx_polarity_flip_fabric74.BCM8879X=1
+phy_rx_polarity_flip_fabric75.BCM8879X=0
 
 phy_rx_polarity_flip_fabric76.BCM8879X=0
 phy_rx_polarity_flip_fabric77.BCM8879X=1
 phy_rx_polarity_flip_fabric78.BCM8879X=0
 phy_rx_polarity_flip_fabric79.BCM8879X=1
 
-phy_rx_polarity_flip_fabric80.BCM8879X=0
-phy_rx_polarity_flip_fabric81.BCM8879X=1
-phy_rx_polarity_flip_fabric82.BCM8879X=0
-phy_rx_polarity_flip_fabric83.BCM8879X=1
+phy_rx_polarity_flip_fabric80.BCM8879X=1
+phy_rx_polarity_flip_fabric81.BCM8879X=0
+phy_rx_polarity_flip_fabric82.BCM8879X=1
+phy_rx_polarity_flip_fabric83.BCM8879X=0
 
-phy_rx_polarity_flip_fabric84.BCM8879X=1
-phy_rx_polarity_flip_fabric85.BCM8879X=0
-phy_rx_polarity_flip_fabric86.BCM8879X=1
-phy_rx_polarity_flip_fabric87.BCM8879X=0
+phy_rx_polarity_flip_fabric84.BCM8879X=0
+phy_rx_polarity_flip_fabric85.BCM8879X=1
+phy_rx_polarity_flip_fabric86.BCM8879X=0
+phy_rx_polarity_flip_fabric87.BCM8879X=1
 
 phy_rx_polarity_flip_fabric88.BCM8879X=1
 phy_rx_polarity_flip_fabric89.BCM8879X=0
 phy_rx_polarity_flip_fabric90.BCM8879X=1
 phy_rx_polarity_flip_fabric91.BCM8879X=0
 
-phy_rx_polarity_flip_fabric92.BCM8879X=0
-phy_rx_polarity_flip_fabric93.BCM8879X=1
-phy_rx_polarity_flip_fabric94.BCM8879X=0
-phy_rx_polarity_flip_fabric95.BCM8879X=1
+phy_rx_polarity_flip_fabric92.BCM8879X=1
+phy_rx_polarity_flip_fabric93.BCM8879X=0
+phy_rx_polarity_flip_fabric94.BCM8879X=1
+phy_rx_polarity_flip_fabric95.BCM8879X=0
 
 phy_rx_polarity_flip_fabric96.BCM8879X=0
-phy_rx_polarity_flip_fabric97.BCM8879X=0
+phy_rx_polarity_flip_fabric97.BCM8879X=1
 phy_rx_polarity_flip_fabric98.BCM8879X=0
 phy_rx_polarity_flip_fabric99.BCM8879X=1
 
-phy_rx_polarity_flip_fabric100.BCM8879X=0
-phy_rx_polarity_flip_fabric101.BCM8879X=1
+phy_rx_polarity_flip_fabric100.BCM8879X=1
+phy_rx_polarity_flip_fabric101.BCM8879X=0
 phy_rx_polarity_flip_fabric102.BCM8879X=1
-phy_rx_polarity_flip_fabric103.BCM8879X=1
+phy_rx_polarity_flip_fabric103.BCM8879X=0
 
 phy_rx_polarity_flip_fabric104.BCM8879X=0
 phy_rx_polarity_flip_fabric105.BCM8879X=1
-phy_rx_polarity_flip_fabric106.BCM8879X=1
+phy_rx_polarity_flip_fabric106.BCM8879X=0
 phy_rx_polarity_flip_fabric107.BCM8879X=1
 
-phy_rx_polarity_flip_fabric108.BCM8879X=1
-phy_rx_polarity_flip_fabric109.BCM8879X=0
-phy_rx_polarity_flip_fabric110.BCM8879X=1
-phy_rx_polarity_flip_fabric111.BCM8879X=0
+phy_rx_polarity_flip_fabric108.BCM8879X=0
+phy_rx_polarity_flip_fabric109.BCM8879X=1
+phy_rx_polarity_flip_fabric110.BCM8879X=0
+phy_rx_polarity_flip_fabric111.BCM8879X=1
 
-phy_rx_polarity_flip_fabric112.BCM8879X=0
-phy_rx_polarity_flip_fabric113.BCM8879X=1
-phy_rx_polarity_flip_fabric114.BCM8879X=0
-phy_rx_polarity_flip_fabric115.BCM8879X=1
+phy_rx_polarity_flip_fabric112.BCM8879X=1
+phy_rx_polarity_flip_fabric113.BCM8879X=0
+phy_rx_polarity_flip_fabric114.BCM8879X=1
+phy_rx_polarity_flip_fabric115.BCM8879X=0
 
-phy_rx_polarity_flip_fabric116.BCM8879X=1
-phy_rx_polarity_flip_fabric117.BCM8879X=0
-phy_rx_polarity_flip_fabric118.BCM8879X=1
-phy_rx_polarity_flip_fabric119.BCM8879X=0
+phy_rx_polarity_flip_fabric116.BCM8879X=0
+phy_rx_polarity_flip_fabric117.BCM8879X=1
+phy_rx_polarity_flip_fabric118.BCM8879X=0
+phy_rx_polarity_flip_fabric119.BCM8879X=1
 
-phy_rx_polarity_flip_fabric120.BCM8879X=0
+phy_rx_polarity_flip_fabric120.BCM8879X=1
 phy_rx_polarity_flip_fabric121.BCM8879X=0
-phy_rx_polarity_flip_fabric122.BCM8879X=0
-phy_rx_polarity_flip_fabric123.BCM8879X=1
+phy_rx_polarity_flip_fabric122.BCM8879X=1
+phy_rx_polarity_flip_fabric123.BCM8879X=0
 
 phy_rx_polarity_flip_fabric124.BCM8879X=1
-phy_rx_polarity_flip_fabric125.BCM8879X=1
-phy_rx_polarity_flip_fabric126.BCM8879X=0
-phy_rx_polarity_flip_fabric127.BCM8879X=1
+phy_rx_polarity_flip_fabric125.BCM8879X=0
+phy_rx_polarity_flip_fabric126.BCM8879X=1
+phy_rx_polarity_flip_fabric127.BCM8879X=0
 
 phy_rx_polarity_flip_fabric128.BCM8879X=0
-phy_rx_polarity_flip_fabric129.BCM8879X=0
+phy_rx_polarity_flip_fabric129.BCM8879X=1
 phy_rx_polarity_flip_fabric130.BCM8879X=0
 phy_rx_polarity_flip_fabric131.BCM8879X=1
 
@@ -453,25 +455,25 @@ phy_rx_polarity_flip_fabric133.BCM8879X=0
 phy_rx_polarity_flip_fabric134.BCM8879X=1
 phy_rx_polarity_flip_fabric135.BCM8879X=0
 
-phy_rx_polarity_flip_fabric136.BCM8879X=1
-phy_rx_polarity_flip_fabric137.BCM8879X=0
-phy_rx_polarity_flip_fabric138.BCM8879X=1
-phy_rx_polarity_flip_fabric139.BCM8879X=0
+phy_rx_polarity_flip_fabric136.BCM8879X=0
+phy_rx_polarity_flip_fabric137.BCM8879X=1
+phy_rx_polarity_flip_fabric138.BCM8879X=0
+phy_rx_polarity_flip_fabric139.BCM8879X=1
 
-phy_rx_polarity_flip_fabric140.BCM8879X=0
-phy_rx_polarity_flip_fabric141.BCM8879X=1
-phy_rx_polarity_flip_fabric142.BCM8879X=0
-phy_rx_polarity_flip_fabric143.BCM8879X=1
+phy_rx_polarity_flip_fabric140.BCM8879X=1
+phy_rx_polarity_flip_fabric141.BCM8879X=0
+phy_rx_polarity_flip_fabric142.BCM8879X=1
+phy_rx_polarity_flip_fabric143.BCM8879X=0
 
-phy_rx_polarity_flip_fabric144.BCM8879X=0
-phy_rx_polarity_flip_fabric145.BCM8879X=1
-phy_rx_polarity_flip_fabric146.BCM8879X=0
-phy_rx_polarity_flip_fabric147.BCM8879X=1
+phy_rx_polarity_flip_fabric144.BCM8879X=1
+phy_rx_polarity_flip_fabric145.BCM8879X=0
+phy_rx_polarity_flip_fabric146.BCM8879X=1
+phy_rx_polarity_flip_fabric147.BCM8879X=0
 
-phy_rx_polarity_flip_fabric148.BCM8879X=1
-phy_rx_polarity_flip_fabric149.BCM8879X=0
-phy_rx_polarity_flip_fabric150.BCM8879X=1
-phy_rx_polarity_flip_fabric151.BCM8879X=0
+phy_rx_polarity_flip_fabric148.BCM8879X=0
+phy_rx_polarity_flip_fabric149.BCM8879X=1
+phy_rx_polarity_flip_fabric150.BCM8879X=0
+phy_rx_polarity_flip_fabric151.BCM8879X=1
 
 phy_rx_polarity_flip_fabric152.BCM8879X=1
 phy_rx_polarity_flip_fabric153.BCM8879X=0
@@ -480,28 +482,28 @@ phy_rx_polarity_flip_fabric155.BCM8879X=0
 
 phy_rx_polarity_flip_fabric156.BCM8879X=0
 phy_rx_polarity_flip_fabric157.BCM8879X=1
-phy_rx_polarity_flip_fabric158.BCM8879X=1
+phy_rx_polarity_flip_fabric158.BCM8879X=0
 phy_rx_polarity_flip_fabric159.BCM8879X=1
 
-phy_rx_polarity_flip_fabric160.BCM8879X=0
+phy_rx_polarity_flip_fabric160.BCM8879X=1
 phy_rx_polarity_flip_fabric161.BCM8879X=0
-phy_rx_polarity_flip_fabric162.BCM8879X=0
-phy_rx_polarity_flip_fabric163.BCM8879X=1
+phy_rx_polarity_flip_fabric162.BCM8879X=1
+phy_rx_polarity_flip_fabric163.BCM8879X=0
 
-phy_rx_polarity_flip_fabric164.BCM8879X=0
+phy_rx_polarity_flip_fabric164.BCM8879X=1
 phy_rx_polarity_flip_fabric165.BCM8879X=0
-phy_rx_polarity_flip_fabric166.BCM8879X=0
-phy_rx_polarity_flip_fabric167.BCM8879X=1
+phy_rx_polarity_flip_fabric166.BCM8879X=1
+phy_rx_polarity_flip_fabric167.BCM8879X=0
 
-phy_rx_polarity_flip_fabric168.BCM8879X=0
-phy_rx_polarity_flip_fabric169.BCM8879X=1
-phy_rx_polarity_flip_fabric170.BCM8879X=0
-phy_rx_polarity_flip_fabric171.BCM8879X=1
+phy_rx_polarity_flip_fabric168.BCM8879X=1
+phy_rx_polarity_flip_fabric169.BCM8879X=0
+phy_rx_polarity_flip_fabric170.BCM8879X=1
+phy_rx_polarity_flip_fabric171.BCM8879X=0
 
-phy_rx_polarity_flip_fabric172.BCM8879X=1
-phy_rx_polarity_flip_fabric173.BCM8879X=0
-phy_rx_polarity_flip_fabric174.BCM8879X=1
-phy_rx_polarity_flip_fabric175.BCM8879X=0
+phy_rx_polarity_flip_fabric172.BCM8879X=0
+phy_rx_polarity_flip_fabric173.BCM8879X=1
+phy_rx_polarity_flip_fabric174.BCM8879X=0
+phy_rx_polarity_flip_fabric175.BCM8879X=1
 
 phy_rx_polarity_flip_fabric176.BCM8879X=1
 phy_rx_polarity_flip_fabric177.BCM8879X=0
@@ -509,79 +511,80 @@ phy_rx_polarity_flip_fabric178.BCM8879X=1
 phy_rx_polarity_flip_fabric179.BCM8879X=0
 
 phy_rx_polarity_flip_fabric180.BCM8879X=0
-phy_rx_polarity_flip_fabric181.BCM8879X=0
+phy_rx_polarity_flip_fabric181.BCM8879X=1
 phy_rx_polarity_flip_fabric182.BCM8879X=0
 phy_rx_polarity_flip_fabric183.BCM8879X=1
 
-phy_rx_polarity_flip_fabric184.BCM8879X=0
+phy_rx_polarity_flip_fabric184.BCM8879X=1
 phy_rx_polarity_flip_fabric185.BCM8879X=0
-phy_rx_polarity_flip_fabric186.BCM8879X=0
-phy_rx_polarity_flip_fabric187.BCM8879X=1
+phy_rx_polarity_flip_fabric186.BCM8879X=1
+phy_rx_polarity_flip_fabric187.BCM8879X=0
 
 phy_rx_polarity_flip_fabric188.BCM8879X=1
-phy_rx_polarity_flip_fabric189.BCM8879X=1
-phy_rx_polarity_flip_fabric190.BCM8879X=0
-phy_rx_polarity_flip_fabric191.BCM8879X=1
+phy_rx_polarity_flip_fabric189.BCM8879X=0
+phy_rx_polarity_flip_fabric190.BCM8879X=1
+phy_rx_polarity_flip_fabric191.BCM8879X=0
+
 
 phy_tx_polarity_flip_fabric0.BCM8879X=0
-phy_tx_polarity_flip_fabric1.BCM8879X=0
-phy_tx_polarity_flip_fabric2.BCM8879X=1
+phy_tx_polarity_flip_fabric1.BCM8879X=1
+phy_tx_polarity_flip_fabric2.BCM8879X=0
 phy_tx_polarity_flip_fabric3.BCM8879X=1
 
-phy_tx_polarity_flip_fabric4.BCM8879X=1
-phy_tx_polarity_flip_fabric5.BCM8879X=0
-phy_tx_polarity_flip_fabric6.BCM8879X=1
-phy_tx_polarity_flip_fabric7.BCM8879X=0
+phy_tx_polarity_flip_fabric4.BCM8879X=0
+phy_tx_polarity_flip_fabric5.BCM8879X=1
+phy_tx_polarity_flip_fabric6.BCM8879X=0
+phy_tx_polarity_flip_fabric7.BCM8879X=1
 
-phy_tx_polarity_flip_fabric8.BCM8879X=0
+phy_tx_polarity_flip_fabric8.BCM8879X=1
 phy_tx_polarity_flip_fabric9.BCM8879X=0
 phy_tx_polarity_flip_fabric10.BCM8879X=1
-phy_tx_polarity_flip_fabric11.BCM8879X=1
+phy_tx_polarity_flip_fabric11.BCM8879X=0
 
 phy_tx_polarity_flip_fabric12.BCM8879X=0
-phy_tx_polarity_flip_fabric13.BCM8879X=0
-phy_tx_polarity_flip_fabric14.BCM8879X=1
+phy_tx_polarity_flip_fabric13.BCM8879X=1
+phy_tx_polarity_flip_fabric14.BCM8879X=0
 phy_tx_polarity_flip_fabric15.BCM8879X=1
 
-phy_tx_polarity_flip_fabric16.BCM8879X=1
+phy_tx_polarity_flip_fabric16.BCM8879X=0
 phy_tx_polarity_flip_fabric17.BCM8879X=1
 phy_tx_polarity_flip_fabric18.BCM8879X=0
-phy_tx_polarity_flip_fabric19.BCM8879X=0
+phy_tx_polarity_flip_fabric19.BCM8879X=1
 
 phy_tx_polarity_flip_fabric20.BCM8879X=1
-phy_tx_polarity_flip_fabric21.BCM8879X=1
-phy_tx_polarity_flip_fabric22.BCM8879X=0
+phy_tx_polarity_flip_fabric21.BCM8879X=0
+phy_tx_polarity_flip_fabric22.BCM8879X=1
 phy_tx_polarity_flip_fabric23.BCM8879X=0
 
-phy_tx_polarity_flip_fabric24.BCM8879X=1
+phy_tx_polarity_flip_fabric24.BCM8879X=0
 phy_tx_polarity_flip_fabric25.BCM8879X=1
 phy_tx_polarity_flip_fabric26.BCM8879X=0
-phy_tx_polarity_flip_fabric27.BCM8879X=0
+phy_tx_polarity_flip_fabric27.BCM8879X=1
 
-phy_tx_polarity_flip_fabric28.BCM8879X=1
-phy_tx_polarity_flip_fabric29.BCM8879X=0
+phy_tx_polarity_flip_fabric28.BCM8879X=0
+phy_tx_polarity_flip_fabric29.BCM8879X=1
 phy_tx_polarity_flip_fabric30.BCM8879X=0
 phy_tx_polarity_flip_fabric31.BCM8879X=1
 
-phy_tx_polarity_flip_fabric32.BCM8879X=0
+phy_tx_polarity_flip_fabric32.BCM8879X=1
 phy_tx_polarity_flip_fabric33.BCM8879X=0
 phy_tx_polarity_flip_fabric34.BCM8879X=1
-phy_tx_polarity_flip_fabric35.BCM8879X=1
+phy_tx_polarity_flip_fabric35.BCM8879X=0
 
-phy_tx_polarity_flip_fabric36.BCM8879X=1
+phy_tx_polarity_flip_fabric36.BCM8879X=0
 phy_tx_polarity_flip_fabric37.BCM8879X=1
 phy_tx_polarity_flip_fabric38.BCM8879X=0
-phy_tx_polarity_flip_fabric39.BCM8879X=0
+phy_tx_polarity_flip_fabric39.BCM8879X=1
 
-phy_tx_polarity_flip_fabric40.BCM8879X=0
-phy_tx_polarity_flip_fabric41.BCM8879X=1
+phy_tx_polarity_flip_fabric40.BCM8879X=1
+phy_tx_polarity_flip_fabric41.BCM8879X=0
 phy_tx_polarity_flip_fabric42.BCM8879X=1
 phy_tx_polarity_flip_fabric43.BCM8879X=0
 
-phy_tx_polarity_flip_fabric44.BCM8879X=1
+phy_tx_polarity_flip_fabric44.BCM8879X=0
 phy_tx_polarity_flip_fabric45.BCM8879X=1
 phy_tx_polarity_flip_fabric46.BCM8879X=0
-phy_tx_polarity_flip_fabric47.BCM8879X=0
+phy_tx_polarity_flip_fabric47.BCM8879X=1
 
 phy_tx_polarity_flip_fabric48.BCM8879X=0
 phy_tx_polarity_flip_fabric49.BCM8879X=1
@@ -590,43 +593,43 @@ phy_tx_polarity_flip_fabric51.BCM8879X=1
 
 phy_tx_polarity_flip_fabric52.BCM8879X=1
 phy_tx_polarity_flip_fabric53.BCM8879X=0
-phy_tx_polarity_flip_fabric54.BCM8879X=0
-phy_tx_polarity_flip_fabric55.BCM8879X=1
+phy_tx_polarity_flip_fabric54.BCM8879X=1
+phy_tx_polarity_flip_fabric55.BCM8879X=0
 
-phy_tx_polarity_flip_fabric56.BCM8879X=0
-phy_tx_polarity_flip_fabric57.BCM8879X=1
-phy_tx_polarity_flip_fabric58.BCM8879X=0
-phy_tx_polarity_flip_fabric59.BCM8879X=1
+phy_tx_polarity_flip_fabric56.BCM8879X=1
+phy_tx_polarity_flip_fabric57.BCM8879X=0
+phy_tx_polarity_flip_fabric58.BCM8879X=1
+phy_tx_polarity_flip_fabric59.BCM8879X=0
 
 phy_tx_polarity_flip_fabric60.BCM8879X=1
 phy_tx_polarity_flip_fabric61.BCM8879X=0
-phy_tx_polarity_flip_fabric62.BCM8879X=0
-phy_tx_polarity_flip_fabric63.BCM8879X=1
+phy_tx_polarity_flip_fabric62.BCM8879X=1
+phy_tx_polarity_flip_fabric63.BCM8879X=0
 
 phy_tx_polarity_flip_fabric64.BCM8879X=1
-phy_tx_polarity_flip_fabric65.BCM8879X=1
-phy_tx_polarity_flip_fabric66.BCM8879X=0
+phy_tx_polarity_flip_fabric65.BCM8879X=0
+phy_tx_polarity_flip_fabric66.BCM8879X=1
 phy_tx_polarity_flip_fabric67.BCM8879X=0
 
-phy_tx_polarity_flip_fabric68.BCM8879X=1
-phy_tx_polarity_flip_fabric69.BCM8879X=0
-phy_tx_polarity_flip_fabric70.BCM8879X=1
-phy_tx_polarity_flip_fabric71.BCM8879X=0
+phy_tx_polarity_flip_fabric68.BCM8879X=0
+phy_tx_polarity_flip_fabric69.BCM8879X=1
+phy_tx_polarity_flip_fabric70.BCM8879X=0
+phy_tx_polarity_flip_fabric71.BCM8879X=1
 
-phy_tx_polarity_flip_fabric72.BCM8879X=1
+phy_tx_polarity_flip_fabric72.BCM8879X=0
 phy_tx_polarity_flip_fabric73.BCM8879X=1
 phy_tx_polarity_flip_fabric74.BCM8879X=0
-phy_tx_polarity_flip_fabric75.BCM8879X=0
+phy_tx_polarity_flip_fabric75.BCM8879X=1
 
 phy_tx_polarity_flip_fabric76.BCM8879X=1
-phy_tx_polarity_flip_fabric77.BCM8879X=1
-phy_tx_polarity_flip_fabric78.BCM8879X=0
+phy_tx_polarity_flip_fabric77.BCM8879X=0
+phy_tx_polarity_flip_fabric78.BCM8879X=1
 phy_tx_polarity_flip_fabric79.BCM8879X=0
 
-phy_tx_polarity_flip_fabric80.BCM8879X=1
+phy_tx_polarity_flip_fabric80.BCM8879X=0
 phy_tx_polarity_flip_fabric81.BCM8879X=1
 phy_tx_polarity_flip_fabric82.BCM8879X=0
-phy_tx_polarity_flip_fabric83.BCM8879X=0
+phy_tx_polarity_flip_fabric83.BCM8879X=1
 
 phy_tx_polarity_flip_fabric84.BCM8879X=1
 phy_tx_polarity_flip_fabric85.BCM8879X=0
@@ -634,32 +637,32 @@ phy_tx_polarity_flip_fabric86.BCM8879X=1
 phy_tx_polarity_flip_fabric87.BCM8879X=0
 
 phy_tx_polarity_flip_fabric88.BCM8879X=0
-phy_tx_polarity_flip_fabric89.BCM8879X=0
-phy_tx_polarity_flip_fabric90.BCM8879X=1
+phy_tx_polarity_flip_fabric89.BCM8879X=1
+phy_tx_polarity_flip_fabric90.BCM8879X=0
 phy_tx_polarity_flip_fabric91.BCM8879X=1
 
 phy_tx_polarity_flip_fabric92.BCM8879X=0
 phy_tx_polarity_flip_fabric93.BCM8879X=1
-phy_tx_polarity_flip_fabric94.BCM8879X=1
-phy_tx_polarity_flip_fabric95.BCM8879X=0
+phy_tx_polarity_flip_fabric94.BCM8879X=0
+phy_tx_polarity_flip_fabric95.BCM8879X=1
 
 phy_tx_polarity_flip_fabric96.BCM8879X=1
-phy_tx_polarity_flip_fabric97.BCM8879X=1
-phy_tx_polarity_flip_fabric98.BCM8879X=0
+phy_tx_polarity_flip_fabric97.BCM8879X=0
+phy_tx_polarity_flip_fabric98.BCM8879X=1
 phy_tx_polarity_flip_fabric99.BCM8879X=0
 
 phy_tx_polarity_flip_fabric100.BCM8879X=0
-phy_tx_polarity_flip_fabric101.BCM8879X=0
+phy_tx_polarity_flip_fabric101.BCM8879X=1
 phy_tx_polarity_flip_fabric102.BCM8879X=0
-phy_tx_polarity_flip_fabric103.BCM8879X=0
+phy_tx_polarity_flip_fabric103.BCM8879X=1
 
 phy_tx_polarity_flip_fabric104.BCM8879X=1
 phy_tx_polarity_flip_fabric105.BCM8879X=0
-phy_tx_polarity_flip_fabric106.BCM8879X=0
-phy_tx_polarity_flip_fabric107.BCM8879X=1
+phy_tx_polarity_flip_fabric106.BCM8879X=1
+phy_tx_polarity_flip_fabric107.BCM8879X=0
 
-phy_tx_polarity_flip_fabric108.BCM8879X=0
-phy_tx_polarity_flip_fabric109.BCM8879X=1
+phy_tx_polarity_flip_fabric108.BCM8879X=1
+phy_tx_polarity_flip_fabric109.BCM8879X=0
 phy_tx_polarity_flip_fabric110.BCM8879X=1
 phy_tx_polarity_flip_fabric111.BCM8879X=0
 
@@ -668,35 +671,35 @@ phy_tx_polarity_flip_fabric113.BCM8879X=1
 phy_tx_polarity_flip_fabric114.BCM8879X=0
 phy_tx_polarity_flip_fabric115.BCM8879X=1
 
-phy_tx_polarity_flip_fabric116.BCM8879X=0
-phy_tx_polarity_flip_fabric117.BCM8879X=1
-phy_tx_polarity_flip_fabric118.BCM8879X=0
-phy_tx_polarity_flip_fabric119.BCM8879X=1
+phy_tx_polarity_flip_fabric116.BCM8879X=1
+phy_tx_polarity_flip_fabric117.BCM8879X=0
+phy_tx_polarity_flip_fabric118.BCM8879X=1
+phy_tx_polarity_flip_fabric119.BCM8879X=0
 
-phy_tx_polarity_flip_fabric120.BCM8879X=1
-phy_tx_polarity_flip_fabric121.BCM8879X=0
-phy_tx_polarity_flip_fabric122.BCM8879X=1
-phy_tx_polarity_flip_fabric123.BCM8879X=0
+phy_tx_polarity_flip_fabric120.BCM8879X=0
+phy_tx_polarity_flip_fabric121.BCM8879X=1
+phy_tx_polarity_flip_fabric122.BCM8879X=0
+phy_tx_polarity_flip_fabric123.BCM8879X=1
 
-phy_tx_polarity_flip_fabric124.BCM8879X=1
-phy_tx_polarity_flip_fabric125.BCM8879X=0
-phy_tx_polarity_flip_fabric126.BCM8879X=1
-phy_tx_polarity_flip_fabric127.BCM8879X=0
+phy_tx_polarity_flip_fabric124.BCM8879X=0
+phy_tx_polarity_flip_fabric125.BCM8879X=1
+phy_tx_polarity_flip_fabric126.BCM8879X=0
+phy_tx_polarity_flip_fabric127.BCM8879X=1
 
-phy_tx_polarity_flip_fabric128.BCM8879X=0
-phy_tx_polarity_flip_fabric129.BCM8879X=1
-phy_tx_polarity_flip_fabric130.BCM8879X=0
-phy_tx_polarity_flip_fabric131.BCM8879X=1
+phy_tx_polarity_flip_fabric128.BCM8879X=1
+phy_tx_polarity_flip_fabric129.BCM8879X=0
+phy_tx_polarity_flip_fabric130.BCM8879X=1
+phy_tx_polarity_flip_fabric131.BCM8879X=0
 
 phy_tx_polarity_flip_fabric132.BCM8879X=0
 phy_tx_polarity_flip_fabric133.BCM8879X=1
 phy_tx_polarity_flip_fabric134.BCM8879X=0
 phy_tx_polarity_flip_fabric135.BCM8879X=1
 
-phy_tx_polarity_flip_fabric136.BCM8879X=0
+phy_tx_polarity_flip_fabric136.BCM8879X=1
 phy_tx_polarity_flip_fabric137.BCM8879X=0
 phy_tx_polarity_flip_fabric138.BCM8879X=1
-phy_tx_polarity_flip_fabric139.BCM8879X=1
+phy_tx_polarity_flip_fabric139.BCM8879X=0
 
 phy_tx_polarity_flip_fabric140.BCM8879X=0
 phy_tx_polarity_flip_fabric141.BCM8879X=1
@@ -704,39 +707,39 @@ phy_tx_polarity_flip_fabric142.BCM8879X=0
 phy_tx_polarity_flip_fabric143.BCM8879X=1
 
 phy_tx_polarity_flip_fabric144.BCM8879X=0
-phy_tx_polarity_flip_fabric145.BCM8879X=0
-phy_tx_polarity_flip_fabric146.BCM8879X=1
+phy_tx_polarity_flip_fabric145.BCM8879X=1
+phy_tx_polarity_flip_fabric146.BCM8879X=0
 phy_tx_polarity_flip_fabric147.BCM8879X=1
 
-phy_tx_polarity_flip_fabric148.BCM8879X=0
-phy_tx_polarity_flip_fabric149.BCM8879X=1
-phy_tx_polarity_flip_fabric150.BCM8879X=0
-phy_tx_polarity_flip_fabric151.BCM8879X=1
+phy_tx_polarity_flip_fabric148.BCM8879X=1
+phy_tx_polarity_flip_fabric149.BCM8879X=0
+phy_tx_polarity_flip_fabric150.BCM8879X=1
+phy_tx_polarity_flip_fabric151.BCM8879X=0
 
 phy_tx_polarity_flip_fabric152.BCM8879X=0
 phy_tx_polarity_flip_fabric153.BCM8879X=1
 phy_tx_polarity_flip_fabric154.BCM8879X=0
 phy_tx_polarity_flip_fabric155.BCM8879X=1
 
-phy_tx_polarity_flip_fabric156.BCM8879X=0
+phy_tx_polarity_flip_fabric156.BCM8879X=1
 phy_tx_polarity_flip_fabric157.BCM8879X=0
-phy_tx_polarity_flip_fabric158.BCM8879X=0
+phy_tx_polarity_flip_fabric158.BCM8879X=1
 phy_tx_polarity_flip_fabric159.BCM8879X=0
 
-phy_tx_polarity_flip_fabric160.BCM8879X=1
+phy_tx_polarity_flip_fabric160.BCM8879X=0
 phy_tx_polarity_flip_fabric161.BCM8879X=1
 phy_tx_polarity_flip_fabric162.BCM8879X=0
-phy_tx_polarity_flip_fabric163.BCM8879X=0
+phy_tx_polarity_flip_fabric163.BCM8879X=1
 
 phy_tx_polarity_flip_fabric164.BCM8879X=0
-phy_tx_polarity_flip_fabric165.BCM8879X=0
+phy_tx_polarity_flip_fabric165.BCM8879X=1
 phy_tx_polarity_flip_fabric166.BCM8879X=0
-phy_tx_polarity_flip_fabric167.BCM8879X=0
+phy_tx_polarity_flip_fabric167.BCM8879X=1
 
-phy_tx_polarity_flip_fabric168.BCM8879X=1
+phy_tx_polarity_flip_fabric168.BCM8879X=0
 phy_tx_polarity_flip_fabric169.BCM8879X=1
 phy_tx_polarity_flip_fabric170.BCM8879X=0
-phy_tx_polarity_flip_fabric171.BCM8879X=0
+phy_tx_polarity_flip_fabric171.BCM8879X=1
 
 phy_tx_polarity_flip_fabric172.BCM8879X=1
 phy_tx_polarity_flip_fabric173.BCM8879X=0
@@ -744,25 +747,410 @@ phy_tx_polarity_flip_fabric174.BCM8879X=1
 phy_tx_polarity_flip_fabric175.BCM8879X=0
 
 phy_tx_polarity_flip_fabric176.BCM8879X=0
-phy_tx_polarity_flip_fabric177.BCM8879X=0
-phy_tx_polarity_flip_fabric178.BCM8879X=1
+phy_tx_polarity_flip_fabric177.BCM8879X=1
+phy_tx_polarity_flip_fabric178.BCM8879X=0
 phy_tx_polarity_flip_fabric179.BCM8879X=1
 
-phy_tx_polarity_flip_fabric180.BCM8879X=0
+phy_tx_polarity_flip_fabric180.BCM8879X=1
 phy_tx_polarity_flip_fabric181.BCM8879X=0
-phy_tx_polarity_flip_fabric182.BCM8879X=0
+phy_tx_polarity_flip_fabric182.BCM8879X=1
 phy_tx_polarity_flip_fabric183.BCM8879X=0
 
-phy_tx_polarity_flip_fabric184.BCM8879X=1
-phy_tx_polarity_flip_fabric185.BCM8879X=0
-phy_tx_polarity_flip_fabric186.BCM8879X=1
-phy_tx_polarity_flip_fabric187.BCM8879X=0
+phy_tx_polarity_flip_fabric184.BCM8879X=0
+phy_tx_polarity_flip_fabric185.BCM8879X=1
+phy_tx_polarity_flip_fabric186.BCM8879X=0
+phy_tx_polarity_flip_fabric187.BCM8879X=1
 
-phy_tx_polarity_flip_fabric188.BCM8879X=1
-phy_tx_polarity_flip_fabric189.BCM8879X=0
+phy_tx_polarity_flip_fabric188.BCM8879X=0
+phy_tx_polarity_flip_fabric189.BCM8879X=1
 phy_tx_polarity_flip_fabric190.BCM8879X=0
 phy_tx_polarity_flip_fabric191.BCM8879X=1
 
+port_init_cl72_0=0
+port_init_cl72_1=0
+port_init_cl72_2=0
+port_init_cl72_3=0
+port_init_cl72_4=0
+port_init_cl72_5=0
+port_init_cl72_6=0
+port_init_cl72_7=0
+port_init_cl72_8=0
+port_init_cl72_9=0
+port_init_cl72_10=0
+port_init_cl72_11=0
+port_init_cl72_12=0
+port_init_cl72_13=0
+port_init_cl72_14=0
+port_init_cl72_15=0
+port_init_cl72_16=0
+port_init_cl72_17=0
+port_init_cl72_18=0
+port_init_cl72_19=0
+port_init_cl72_20=0
+port_init_cl72_21=0
+port_init_cl72_22=0
+port_init_cl72_23=0
+port_init_cl72_24=0
+port_init_cl72_25=0
+port_init_cl72_26=0
+port_init_cl72_27=0
+port_init_cl72_28=0
+port_init_cl72_29=0
+port_init_cl72_30=0
+port_init_cl72_31=0
+port_init_cl72_32=0
+port_init_cl72_33=0
+port_init_cl72_34=0
+port_init_cl72_35=0
+port_init_cl72_36=0
+port_init_cl72_37=0
+port_init_cl72_38=0
+port_init_cl72_39=0
+port_init_cl72_40=0
+port_init_cl72_41=0
+port_init_cl72_42=0
+port_init_cl72_43=0
+port_init_cl72_44=0
+port_init_cl72_45=0
+port_init_cl72_46=0
+port_init_cl72_47=0
+port_init_cl72_48=0
+port_init_cl72_49=0
+port_init_cl72_50=0
+port_init_cl72_51=0
+port_init_cl72_52=0
+port_init_cl72_53=0
+port_init_cl72_54=0
+port_init_cl72_55=0
+port_init_cl72_56=0
+port_init_cl72_57=0
+port_init_cl72_58=0
+port_init_cl72_59=0
+port_init_cl72_60=0
+port_init_cl72_61=0
+port_init_cl72_62=0
+port_init_cl72_63=0
+port_init_cl72_64=0
+port_init_cl72_65=0
+port_init_cl72_66=0
+port_init_cl72_67=0
+port_init_cl72_68=0
+port_init_cl72_69=0
+port_init_cl72_70=0
+port_init_cl72_71=0
+port_init_cl72_72=0
+port_init_cl72_73=0
+port_init_cl72_74=0
+port_init_cl72_75=0
+port_init_cl72_76=0
+port_init_cl72_77=0
+port_init_cl72_78=0
+port_init_cl72_79=0
+port_init_cl72_80=0
+port_init_cl72_81=0
+port_init_cl72_82=0
+port_init_cl72_83=0
+port_init_cl72_84=0
+port_init_cl72_85=0
+port_init_cl72_86=0
+port_init_cl72_87=0
+port_init_cl72_88=0
+port_init_cl72_89=0
+port_init_cl72_90=0
+port_init_cl72_91=0
+port_init_cl72_92=0
+port_init_cl72_93=0
+port_init_cl72_94=0
+port_init_cl72_95=0
+port_init_cl72_96=0
+port_init_cl72_97=0
+port_init_cl72_98=0
+port_init_cl72_99=0
+port_init_cl72_100=0
+port_init_cl72_101=0
+port_init_cl72_102=0
+port_init_cl72_103=0
+port_init_cl72_104=0
+port_init_cl72_105=0
+port_init_cl72_106=0
+port_init_cl72_107=0
+port_init_cl72_108=0
+port_init_cl72_109=0
+port_init_cl72_110=0
+port_init_cl72_111=0
+port_init_cl72_112=0
+port_init_cl72_113=0
+port_init_cl72_114=0
+port_init_cl72_115=0
+port_init_cl72_116=0
+port_init_cl72_117=0
+port_init_cl72_118=0
+port_init_cl72_119=0
+port_init_cl72_120=0
+port_init_cl72_121=0
+port_init_cl72_122=0
+port_init_cl72_123=0
+port_init_cl72_124=0
+port_init_cl72_125=0
+port_init_cl72_126=0
+port_init_cl72_127=0
+port_init_cl72_128=0
+port_init_cl72_129=0
+port_init_cl72_130=0
+port_init_cl72_131=0
+port_init_cl72_132=0
+port_init_cl72_133=0
+port_init_cl72_134=0
+port_init_cl72_135=0
+port_init_cl72_136=0
+port_init_cl72_137=0
+port_init_cl72_138=0
+port_init_cl72_139=0
+port_init_cl72_140=0
+port_init_cl72_141=0
+port_init_cl72_142=0
+port_init_cl72_143=0
+port_init_cl72_144=0
+port_init_cl72_145=0
+port_init_cl72_146=0
+port_init_cl72_147=0
+port_init_cl72_148=0
+port_init_cl72_149=0
+port_init_cl72_150=0
+port_init_cl72_151=0
+port_init_cl72_152=0
+port_init_cl72_153=0
+port_init_cl72_154=0
+port_init_cl72_155=0
+port_init_cl72_156=0
+port_init_cl72_157=0
+port_init_cl72_158=0
+port_init_cl72_159=0
+port_init_cl72_160=0
+port_init_cl72_161=0
+port_init_cl72_162=0
+port_init_cl72_163=0
+port_init_cl72_164=0
+port_init_cl72_165=0
+port_init_cl72_166=0
+port_init_cl72_167=0
+port_init_cl72_168=0
+port_init_cl72_169=0
+port_init_cl72_170=0
+port_init_cl72_171=0
+port_init_cl72_172=0
+port_init_cl72_173=0
+port_init_cl72_174=0
+port_init_cl72_175=0
+port_init_cl72_176=0
+port_init_cl72_177=0
+port_init_cl72_178=0
+port_init_cl72_179=0
+port_init_cl72_180=0
+port_init_cl72_181=0
+port_init_cl72_182=0
+port_init_cl72_183=0
+port_init_cl72_184=0
+port_init_cl72_185=0
+port_init_cl72_186=0
+port_init_cl72_187=0
+port_init_cl72_188=0
+port_init_cl72_189=0
+port_init_cl72_190=0
+port_init_cl72_191=0
+
+serdes_tx_taps_0.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_1.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_2.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_3.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_4.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_5.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_6.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_7.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_8.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_9.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_10.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_11.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_12.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_13.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_14.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_15.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_16.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_17.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_18.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_19.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_20.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_21.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_22.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_23.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_24.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_25.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_26.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_27.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_28.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_29.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_30.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_31.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_32.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_33.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_34.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_35.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_36.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_37.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_38.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_39.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_40.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_41.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_42.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_43.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_44.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_45.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_46.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_47.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_48.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_49.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_50.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_51.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_52.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_53.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_54.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_55.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_56.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_57.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_58.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_59.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_60.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_61.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_62.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_63.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_64.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_65.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_66.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_67.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_68.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_69.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_70.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_71.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_72.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_73.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_74.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_75.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_76.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_77.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_78.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_79.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_80.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_81.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_82.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_83.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_84.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_85.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_86.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_87.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_88.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_89.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_90.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_91.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_92.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_93.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_94.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_95.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_96.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_97.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_98.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_99.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_100.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_101.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_102.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_103.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_104.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_105.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_106.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_107.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_108.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_109.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_110.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_111.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_112.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_113.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_114.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_115.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_116.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_117.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_118.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_119.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_120.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_121.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_122.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_123.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_124.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_125.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_126.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_127.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_128.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_129.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_130.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_131.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_132.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_133.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_134.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_135.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_136.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_137.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_138.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_139.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_140.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_141.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_142.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_143.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_144.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_145.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_146.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_147.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_148.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_149.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_150.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_151.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_152.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_153.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_154.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_155.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_156.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_157.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_158.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_159.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_160.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_161.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_162.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_163.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_164.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_165.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_166.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_167.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_168.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_169.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_170.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_171.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_172.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_173.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_174.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_175.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_176.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_177.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_178.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_179.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_180.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_181.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_182.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_183.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_184.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_185.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_186.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_187.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_188.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_189.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_190.BCM8879X=pam4:-24:132:-12:0:0:0
+serdes_tx_taps_191.BCM8879X=pam4:-24:132:-12:0:0:0
 
 serdes_lane_config_channel_mode_0.0=force_nr
 serdes_lane_config_channel_mode_1.0=force_nr
@@ -1006,3 +1394,5 @@ serdes_qrtt_active_44.0=1
 serdes_qrtt_active_45.0=1
 serdes_qrtt_active_46.0=1
 serdes_qrtt_active_47.0=1
+
+dpp_db_path=/usr/share/bcm/db

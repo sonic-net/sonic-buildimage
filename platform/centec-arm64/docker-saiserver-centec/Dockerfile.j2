@@ -1,14 +1,13 @@
-FROM docker-config-engine-buster
+FROM docker-config-engine-bullseye-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
-RUN [ -f /etc/rsyslog.conf ] && sed -ri "s/%syslogtag%/$docker_container_name#%syslogtag%/;" /etc/rsyslog.conf
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update              \
  && apt-get -y install          \
-      libboost-atomic1.71-dev   \
+      libboost-atomic1.74.0     \
       libqt5core5a              \
       libqt5network5
 

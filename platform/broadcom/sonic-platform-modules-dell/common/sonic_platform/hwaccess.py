@@ -39,7 +39,10 @@ def pci_set_value(resource, val, offset):
 # Read I2C device
 
 def i2c_get(bus, i2caddr, ofs):
-    return int(subprocess.check_output(['/usr/sbin/i2cget', '-y', str(bus), str(i2caddr), str(ofs)]), 16)
+    try:
+        return int(subprocess.check_output(['/usr/sbin/i2cget', '-y', str(bus), str(i2caddr), str(ofs)]), 16)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return -1
 
 def io_reg_read(io_resource, offset):
     fd = os.open(io_resource, os.O_RDONLY)

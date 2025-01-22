@@ -1,0 +1,10 @@
+# /etc/modules: kernel modules to load at boot time.
+#
+# This file contains the names of kernel modules that should be loaded
+# at boot time, one per line. Lines beginning with "#" are ignored.
+
+{% if driver_targets.strip() %}
+{%- for k_module in driver_targets.strip().split() -%}
+{{ k_module.split(".")[0] }}
+{% endfor %}
+{% endif -%}

@@ -11,6 +11,7 @@ except ImportError as e:
 SFP_TYPE = "SFP"
 QSFP_TYPE = "QSFP"
 QSFP_DD_TYPE = "QSFP_DD"
+EEPROM_PAGE_SIZE = 128
 
 
 class Sfp(SfpOptoeBase):
@@ -18,22 +19,33 @@ class Sfp(SfpOptoeBase):
     BFN Platform-specific SFP class
     """
 
-    SFP_EEPROM_PATH = "/var/run/platform/sfp/"
-
     def __init__(self, port_num):
         SfpOptoeBase.__init__(self)
         self.index = port_num
         self.port_num = port_num
         self.sfp_type = QSFP_TYPE
+        self.SFP_EEPROM_PATH = "/var/run/platform/sfp/"
+        self.eeprom_path = None
+        self.__cached_api_supported = None
 
-        if not os.path.exists(self.SFP_EEPROM_PATH):
+    @property
+    def _cached_api_supported(self):
+        def cached_num_bytes_get(client):
+            return client.pltfm_mgr.pltfm_mgr_qsfp_cached_num_bytes_get(1, 0, 0, 0)
+        if self.__cached_api_supported is None:
             try:
-                os.makedirs(self.SFP_EEPROM_PATH)
-            except OSError as e:
-                if e.errno != errno.EEXIST:
-                    raise
-
-        self.eeprom_path = self.SFP_EEPROM_PATH + "sfp{}-eeprom-cache".format(self.index)
+                thrift_try(cached_num_bytes_get, 1)
+                self.__cached_api_supported = True
+            except Exception as e:
+                self.__cached_api_supported = False
+                if not os.path.exists(self.SFP_EEPROM_PATH):
+                    try:
+                        os.makedirs(self.SFP_EEPROM_PATH)
+                    except OSError as e:
+                        if e.errno != errno.EEXIST:
+                            raise
+                self.eeprom_path = self.SFP_EEPROM_PATH + "sfp{}-eeprom-cache".format(self.index)
+        return self.__cached_api_supported
 
     def get_presence(self):
         """
@@ -47,7 +59,7 @@ class Sfp(SfpOptoeBase):
         try:
             presence = thrift_try(qsfp_presence_get)
         except Exception as e:
-            print( e.__doc__)
+            print(e.__doc__)
             print(e.message)
 
         return presence
@@ -75,14 +87,31 @@ class Sfp(SfpOptoeBase):
         def qsfp_info_get(client):
             return client.pltfm_mgr.pltfm_mgr_qsfp_info_get(self.index)
 
-        if self.get_presence():
-            eeprom_hex = thrift_try(qsfp_info_get)
-            eeprom_raw = bytearray.fromhex(eeprom_hex)
-            with open(self.eeprom_path, 'wb') as fp:
-                fp.write(eeprom_raw)
-            return self.eeprom_path
+        eeprom_hex = thrift_try(qsfp_info_get)
+        eeprom_raw = bytearray.fromhex(eeprom_hex)
+        with open(self.eeprom_path, 'wb') as fp:
+            fp.write(eeprom_raw)
+        return self.eeprom_path
 
-        return None
+    def read_eeprom(self, offset, num_bytes):
+        if not self.get_presence():
+            return None
+
+        if not self._cached_api_supported:
+            return super().read_eeprom(offset, num_bytes)
+
+        def cached_num_bytes_get(page, offset, num_bytes):
+            def qsfp_cached_num_bytes_get(client):
+                return client.pltfm_mgr.pltfm_mgr_qsfp_cached_num_bytes_get(self.index, page, offset, num_bytes)
+            return bytearray.fromhex(thrift_try(qsfp_cached_num_bytes_get))
+
+        page_offset = offset % EEPROM_PAGE_SIZE
+        if page_offset + num_bytes > EEPROM_PAGE_SIZE:
+            curr_page_num_bytes_left = EEPROM_PAGE_SIZE - page_offset
+            curr_page_bytes = cached_num_bytes_get(offset // EEPROM_PAGE_SIZE, page_offset, curr_page_num_bytes_left)
+            return curr_page_bytes + self.read_eeprom(offset + curr_page_num_bytes_left, num_bytes - curr_page_num_bytes_left)
+
+        return cached_num_bytes_get(offset // EEPROM_PAGE_SIZE, page_offset, num_bytes)
 
     def write_eeprom(self, offset, num_bytes, write_buffer):
         # Not supported at the moment

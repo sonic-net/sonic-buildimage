@@ -1,0 +1,50 @@
+{
+    "RESTAPI_TABLE_WITH_INCORRECT_CERT": {
+        "sonic-restapi:sonic-restapi": {
+            "sonic-restapi:RESTAPI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/ame_root.pem",
+                    "server_crt": "a/b/c",
+                    "server_key": "/etc/sonic/credentials/restapiserver.key",
+                    "client_crt_cname": "client"
+                }
+            }
+        }
+    },
+    "RESTAPI_TABLE_WITH_INCORRECT_CLIENT": {
+        "sonic-restapi:sonic-restapi": {
+            "sonic-restapi:RESTAPI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/ame_root.pem",
+                    "server_crt": "/etc/sonic/credentials/restapiserver.crt",
+                    "server_key": "/etc/sonic/credentials/restapiserver.key",
+                    "client_crt_cname": "/client"
+                }
+            }
+        }
+    },
+    "RESTAPI_TABLE_WITH_VALID_CONFIG": {
+        "sonic-restapi:sonic-restapi": {
+            "sonic-restapi:RESTAPI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/ame_root.pem",
+                    "server_crt": "/etc/sonic/credentials/restapiserver.crt",
+                    "server_key": "/etc/sonic/credentials/restapiserver.key",
+                    "client_crt_cname": "client.sonic.net"
+                }
+            }
+        }
+    },
+    "RESTAPI_TABLE_WITH_MULTIPLE_CERTS": {
+        "sonic-restapi:sonic-restapi": {
+            "sonic-restapi:RESTAPI": {
+                "certs": {
+                    "ca_crt": "/etc/sonic/credentials/ame_root.pem",
+                    "server_crt": "/etc/sonic/credentials/restapiserver.crt",
+                    "server_key": "/etc/sonic/credentials/restapiserver.key",
+                    "client_crt_cname": "client.sonic.net,clientds.prod.net"
+                }
+            }
+        }
+    }
+}

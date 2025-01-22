@@ -1,0 +1,11 @@
+<Device i:type="ToRRouter" xmlns="Microsoft.Search.Autopilot.Evolution" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+  <Hostname>switch-t0</Hostname>
+  <HwSku>Force10-S6000</HwSku>
+  <ClusterName>AAA00PrdStr00</ClusterName>
+  <ManagementAddress xmlns:a="Microsoft.Search.Autopilot.NetMux">
+    <a:IPPrefix>10.0.0.100/24</a:IPPrefix>
+    </ManagementAddress>
+    <ManagementAddressV6 xmlns:a="Microsoft.Search.Autopilot.NetMux">
+    <a:IPPrefix>FC00:1::32/64</a:IPPrefix>
+  </ManagementAddressV6>
+</Device>

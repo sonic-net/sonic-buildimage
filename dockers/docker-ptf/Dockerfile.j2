@@ -1,21 +1,31 @@
+{% set prefix = DEFAULT_CONTAINER_REGISTRY %}
 {% if CONFIGURED_ARCH == "armhf" and MULTIARCH_QEMU_ENVIRON == "y" %}
-FROM multiarch/debian-debootstrap:armhf-stretch
+FROM {{ prefix }}multiarch/debian-debootstrap:armhf-stretch
 {% elif CONFIGURED_ARCH == "arm64" and MULTIARCH_QEMU_ENVIRON == "y" %}
-FROM multiarch/debian-debootstrap:arm64-stretch
+FROM {{ prefix }}multiarch/debian-debootstrap:arm64-stretch
+{% elif PTF_ENV_PY_VER == "mixed" %}
+FROM {{ prefix}}debian:buster
 {% else %}
-FROM debian:buster
+FROM {{ prefix }}debian:bullseye
 {% endif %}
 
-MAINTAINER Pavel Shirshov
+{% from "dockers/dockerfile-macros.j2" import install_python_wheels, copy_files %}
 
-RUN echo "deb [arch=amd64] http://debian-archive.trafficmanager.net/debian buster-backports main" >> /etc/apt/sources.list
+USER root
+WORKDIR /root
+
+LABEL maintainer="Pavel Shirshov"
+
+COPY ["sources.list.{{ CONFIGURED_ARCH }}", "/etc/apt/sources.list"]
+COPY ["no-check-valid-until", "/etc/apt/apt.conf.d"]
+COPY ["apt-retries-count", "/etc/apt/apt.conf.d"]
+
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
 ## Set the apt source, update package cache and install necessary packages
 ## TODO: Clean up this step
-RUN sed --in-place 's/httpredir.debian.org/debian-archive.trafficmanager.net/' /etc/apt/sources.list \
-    && apt-get update          \
+RUN apt-get update          \
     && apt-get upgrade -y   \
     && apt-get dist-upgrade -y  \
     && apt-get install -y   \
@@ -38,19 +48,39 @@ RUN sed --in-place 's/httpredir.debian.org/debian-archive.trafficmanager.net/' /
         cmake               \
         libqt5core5a        \
         libqt5network5      \
+{% if PTF_ENV_PY_VER == "mixed" %}
         libboost-atomic1.71.0 \
+{% else %}
+        libboost-atomic1.74.0 \
+        flex                  \
+        bison                 \
+        tcpd                  \
+        libwrap0              \
+        libwrap0-dev          \
+{% endif %}
         less                \
         git                 \
         iputils-ping        \
         hping3              \
         curl                \
         tmux                \
+{% if PTF_ENV_PY_VER == "mixed" %}
         python              \
         python-dev          \
         python-libpcap      \
         python-scapy        \
         python-six          \
+{% endif %}
+        python3             \
+        python3-venv        \
+        python3-pip         \
+        python3-dev         \
+        python3-scapy       \
+        python3-six         \
+        libpcap-dev         \
+{% if PTF_ENV_PY_VER == "mixed" %}
         tacacs+             \
+{% endif %}
         rsyslog             \
         ntp                 \
         ntpstat             \
@@ -58,7 +88,18 @@ RUN sed --in-place 's/httpredir.debian.org/debian-archive.trafficmanager.net/' /
         arping              \
         bridge-utils        \
         libteam-utils       \
-        gdb
+        gdb                 \
+        automake            \
+        iproute2            \
+        wireshark-common
+
+{% if PTF_ENV_PY_VER == "py3" %}
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
+    && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1 \
+    && update-alternatives --install /usr/bin/pdb pdb /usr/bin/pdb3 1 \
+    && update-alternatives --install /usr/bin/pydoc pydoc /usr/bin/pydoc3 1 \
+    && update-alternatives --install /usr/bin/pygettext pygettext /usr/bin/pygettext3 1
+{% endif %}
 
 # Install all python modules from pypi. python-scapy is exception, ptf debian package requires python-scapy
 # TODO: Clean up this step
@@ -66,6 +107,7 @@ RUN rm -rf /debs \
     && apt-get -y autoclean \
     && apt-get -y autoremove \
     && rm -rf /var/lib/apt/lists/* \
+{% if PTF_ENV_PY_VER == "mixed" %}
     && wget --https-only https://bootstrap.pypa.io/pip/2.7/get-pip.py \
     && python get-pip.py \
     && rm -f get-pip.py \
@@ -77,8 +119,14 @@ RUN rm -rf /debs \
     && python setup.py install \
     && cd .. \
     && rm -fr scapy-vxlan \
+{% else %}
+    && wget --https-only https://bootstrap.pypa.io/pip/get-pip.py \
+    && python3 get-pip.py \
+    && rm -f get-pip.py \
+{% endif %}
     && git clone https://github.com/sflow/sflowtool \
     && cd sflowtool \
+    && git checkout v6.04 \
     && ./boot.sh \
     && ./configure \
     && make \
@@ -104,6 +152,7 @@ RUN rm -rf /debs \
     && cd ../..            \
     && rm -fr nanomsg-1.0.0 \
     && rm -f 1.0.0.tar.gz  \
+{% if PTF_ENV_PY_VER == "mixed" %}
     && pip install cffi    \
     && pip install nnpy    \
     && pip install dpkt    \
@@ -116,9 +165,78 @@ RUN rm -rf /debs \
     && pip install pybrctl pyro4 rpyc yabgp \
     && pip install unittest-xml-reporting \
     && pip install pyrasite \
+    && pip install retrying \
+{% endif %}
     && mkdir -p /opt       \
     && cd /opt             \
     && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py
+
+{% if PTF_ENV_PY_VER == "py3" %}
+RUN git clone https://github.com/facebook/tac_plus \
+    && cd tac_plus \
+    && cd tacacs-F4.0.4.28 \
+    && ./configure \
+    && make install \
+    && ln -s /usr/local/sbin/tac_plus /usr/sbin/tac_plus \
+    && ln -s /usr/local/bin/tac_pwd /usr/sbin/tac_pwd
+{% endif %}
+
+{% if PTF_ENV_PY_VER == "mixed" %}
+RUN python3 -m venv --system-site-packages env-python3
+# Activating a virtualenv. The virtualenv automatically works for RUN, ENV and CMD.
+ENV VIRTUAL_ENV=/root/env-python3
+ARG BACKUP_OF_PATH="$PATH"
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONIOENCODING=UTF-8
+{% endif %}
+
+{% if PTF_ENV_PY_VER == "mixed" %}
+RUN python3 -m pip install --upgrade --ignore-installed pip
+{% else %}
+RUN pip3 install --upgrade --ignore-installed pip
+{% endif %}
+
+# Install all python modules from pypi. python3-scapy is exception, ptf debian package requires python3-scapy
+RUN pip3 install setuptools \
+    && pip3 install supervisor \
+    && pip3 install ipython==5.4.1 \
+    && pip3 install Cython \
+    && pip3 install cffi    \
+    && pip3 install nnpy    \
+    && pip3 install dpkt    \
+    && pip3 install ipaddress \
+    && pip3 install pysubnettree \
+    && pip3 install paramiko \
+    && pip3 install Flask   \
+    && pip3 install exabgp \
+    && pip3 install pyaml   \
+    && pip3 install pybrctl pyro4 rpyc \
+    && pip3 install unittest-xml-reporting \
+    && pip3 install pyrasite \
+    && pip3 install python-libpcap \
+    && pip3 install enum34 \
+    && pip3 install grpcio \
+    && pip3 install grpcio-tools \
+    && pip3 install protobuf \
+    && pip3 install six==1.16.0 \
+    && pip3 install itsdangerous \
+    && pip3 install retrying \
+    && pip3 install jinja2 \
+    && pip3 install scapy==2.5.0 \
+    && pip3 install thrift
+
+{% if docker_ptf_whls.strip() -%}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_ptf_whls.split(' '), "/python-wheels/") }}
+
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_ptf_whls.split(' ')) }}
+{% endif %}
+
+{% if PTF_ENV_PY_VER == "mixed" %}
+# Deactivating a virtualenv.
+ENV PATH="$BACKUP_OF_PATH"
+{% endif %}
 
 ## Adjust sshd settings
 RUN mkdir /var/run/sshd \
@@ -131,18 +249,25 @@ COPY supervisord.conf /etc/supervisor/
 COPY conf.d/ /etc/supervisor/conf.d/
 COPY ptf_tgen.sh /ptf_tgen/
 
+{% if PTF_ENV_PY_VER == "mixed" %}
 # Move tcpdump into /usr/bin Otherwise it's impossible to run tcpdump due to a docker bug
 RUN mv /usr/sbin/tcpdump /usr/bin/tcpdump
 RUN ln -s /usr/bin/tcpdump /usr/sbin/tcpdump
+{% endif %}
 
 RUN mkdir -p /var/log/supervisor
 
 # Install Python-based GNMI client
 RUN git clone https://github.com/lguohan/gnxi.git \
     && cd gnxi \
-    && git checkout 53901ab \
+    && git checkout 3adf8b9 \
     && cd gnmi_cli_py \
+{% if PTF_ENV_PY_VER == "mixed" %}
     && pip install -r requirements.txt
+{% else %}
+    && cat requirements.txt | grep -v futures > /tmp/requirements.txt \
+    && pip3 install -r /tmp/requirements.txt
+{% endif %}
 
 COPY \
 {% for deb in docker_ptf_debs.split(' ') -%}
@@ -154,6 +279,18 @@ RUN dpkg -i \
 {% for deb in docker_ptf_debs.split(' ') -%}
 debs/{{ deb }}{{' '}}
 {%- endfor %}
+
+{% if PTF_ENV_PY_VER == "py3" %}
+# Create symlink so that test scripts and ptf_runner invocation path
+# is same across python 2 and python 3 envs. Note that for virtual-env 
+# ptf is under /root/env-python3/bin. 
+# TODO - cleanup when the supported PTF image is py3only across all branches
+RUN mkdir -p /root/env-python3/bin \
+    && ln -s /usr/local/bin/ptf /usr/bin/ptf \
+    && ln -s /usr/bin/python /root/env-python3/bin/python3 \
+    && ln -s /usr/bin/python /root/env-python3/bin/python \
+    && ln -s /usr/local/bin/ptf /root/env-python3/bin/ptf
+{% endif %}
 
 COPY ["*.ini", "/etc/ptf/"]
 EXPOSE 22 8009

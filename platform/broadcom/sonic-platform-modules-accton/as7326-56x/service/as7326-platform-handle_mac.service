@@ -1,6 +1,6 @@
 [Unit]
 Description=Accton AS7326-56X Platform MAC handle service
-Before=opennsl-modules.service pddf-platform-init.service
+Before=opennsl-modules.service
 After=local-fs.target
 
 [Service]

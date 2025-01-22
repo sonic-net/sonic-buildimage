@@ -1,0 +1,129 @@
+{% if yang_model_type == "cvl" %}
+/* this is sonic cvl yang model */
+{% else %}
+/* this is sonic py yang model */
+{% endif %}
+module sonic-policer {
+
+	yang-version 1.1;
+
+	namespace "http://github.com/sonic-net/sonic-policer";
+	prefix policer;
+
+	import sonic-types {
+		prefix stypes;
+	}
+
+	description "Policer YANG Module for SONiC OS";
+
+	revision 2022-02-03 {
+		description
+			"First Revision";
+	}
+
+	container sonic-policer {
+		container POLICER {
+			list POLICER_LIST {
+				key name;
+
+				leaf name {
+					type string;
+					description "Policer name";
+				}
+
+				leaf meter_type {
+					mandatory true;
+					type stypes:meter_type;
+					description "Policer meter type";
+				}
+
+				leaf mode {
+					mandatory true;
+                                        type stypes:policer_mode;
+					description "Policer mode";
+				}
+
+  				leaf color {
+                                        type stypes:policer_color_source;
+					description "Policer color Source";
+				}
+
+				leaf cir {
+					type uint64;
+					default 0;
+					description
+						"Committed information rate for the dual-rate token
+						bucket policer.  This value represents the rate at which
+						tokens are added to the primary bucket. Unit is bytes/sec
+						or packets/sec based on meter_type";
+				}
+
+				leaf cbs {
+					must "((current()/../cir) and (current()/../cir > 0))" {
+						error-message "cbs can't be configured without cir.";
+					}
+					must "(current() >= current()/../cir)" {
+						error-message "cbs must be greater than or equal to cir";
+					}
+					type uint64;
+					default 0;
+					description
+						"Committed burst size for the dual-rate token bucket
+						policer.  This value represents the depth of the token
+						bucket. Unit is bytes or packets based on meter_type";
+				}
+
+				leaf pir {
+					when "current()/../mode = 'tr_tcm'";
+					must "((current()/../cir) and (current()/../cir > 0))" {
+						error-message "pir can't be configured without cir.";
+					}
+					must "(current() >= current()/../cir)" {
+						error-message "pir must be greater than or equal to cir";
+					}
+					type uint64;
+					description
+						"Peak information rate for the dual-rate token bucket
+						policer.  This value represents the rate at which tokens
+						are added to the secondary bucket. Unit is bytes/sec or
+						packets/sec based on meter_type";
+				}
+
+				leaf pbs {
+					when "((current()/../mode = 'sr_tcm') or (current()/../mode = 'tr_tcm'))";
+					must "((not(current()/../cbs)) or (current() >= current()/../cbs))" {
+						error-message "pbs must be greater than or equal to cbs";
+					}
+					type uint64;
+					description
+						"Excess burst size for the dual-rate token bucket policer.
+						This value represents the depth of the secondary bucket. Unit
+						is bytes or packets based on meter_type";
+				}
+
+				leaf green_packet_action {
+					type stypes:policer_packet_action;
+					default "forward";
+					description "Green action";
+				}
+
+				leaf yellow_packet_action {
+					when "((current()/../mode = 'sr_tcm') or (current()/../mode = 'tr_tcm'))";
+					type stypes:policer_packet_action;
+					default "forward";
+					description "Yellow action";
+				}
+
+				leaf red_packet_action {
+					type stypes:policer_packet_action;
+					default "forward";
+					description "Red action";
+				}
+			}
+			/* end of list POLICER_LIST */
+		}
+		/* end of container POLICER */
+	}
+	/* end of top level container */
+}
+/* end of module sonic-policer */

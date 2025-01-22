@@ -18,25 +18,42 @@ try:
     import tempfile
     from sonic_platform_base.component_base import ComponentBase
     import sonic_platform.hwaccess as hwaccess
+    from sonic_py_common.general import check_output_pipe
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 
 def get_bios_version():
-    return subprocess.check_output(
-        ['dmidecode', '-s', 'bios-version']).decode('utf-8').strip()
+    try:
+        return subprocess.check_output(['dmidecode', '-s', 'bios-version'],
+                                       text=True).strip()
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return 'NA'
 
 def get_fpga_version():
     val = hwaccess.pci_get_value('/sys/bus/pci/devices/0000:09:00.0/resource0', 0)
     return '{}.{}'.format((val >> 16) & 0xffff, val & 0xffff)
 
 def get_bmc_version():
-    return subprocess.check_output(
-        ['cat', '/sys/class/ipmi/ipmi0/device/bmc/firmware_revision']
-        ).decode('utf-8').strip()
+    val = 'NA'
+    try:
+        bmc_ver = subprocess.check_output(['ipmitool', 'mc', 'info'],
+                                          stderr=subprocess.STDOUT, text=True)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        pass
+    else:
+        version = re.search(r'Firmware Revision\s*:\s(.*)', bmc_ver)
+        if version:
+            val = version.group(1).strip()
+
+    return val
 
 def get_cpld_version(bus, i2caddr):
-    return '{}'.format(hwaccess.i2c_get(bus, i2caddr, 0))
+    val = hwaccess.i2c_get(bus, i2caddr, 0)
+    if val != -1:
+        return '{:x}.{:x}'.format((val >> 4) & 0xf, val & 0xf)
+    else:
+        return 'NA'
 
 def get_cpld0_version():
     return get_cpld_version(5, 0x0d)
@@ -69,11 +86,17 @@ def get_pciephy_version():
     except (FileNotFoundError, subprocess.CalledProcessError):
         pass
     else:
-        version = re.search(r'PCIe FW loader version:\s(.*)', pcie_ver)
+        version = re.search(r'PCIe FW version:\s(.*)', pcie_ver)
         if version:
             val = version.group(1).strip()
 
     return val
+
+def get_onie_version():
+    try:
+        return subprocess.check_output('/usr/local/bin/onie_version', text=True).strip()
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return 'NA'
 
 
 class Component(ComponentBase):
@@ -118,6 +141,11 @@ class Component(ComponentBase):
         ['PCIe',
          'ASIC PCIe firmware',
          get_pciephy_version
+         ],
+
+        ['ONIE',
+         'Open Network Install Environment',
+         get_onie_version
          ]
     ]
 
@@ -126,7 +154,7 @@ class Component(ComponentBase):
         self.index = component_index
         self.name = self.CHASSIS_COMPONENTS[self.index][0]
         self.description = self.CHASSIS_COMPONENTS[self.index][1]
-        self.version = self.CHASSIS_COMPONENTS[self.index][2]()
+        self.version = None
 
     @staticmethod
     def _get_available_firmware_version(image_path):
@@ -134,10 +162,10 @@ class Component(ComponentBase):
             return False, "ERROR: File not found"
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            cmd = "sed -e '1,/^exit_marker$/d' {} | tar -x -C {} installer/onie-update.tar.xz".format(image_path, tmpdir)
+            cmd1 = ["sed", "-e", '1,/^exit_marker$/d', image_path]
+            cmd2 = ["tar", "-x", "-C", tmpdir, "installer/onie-update.tar.xz"]
             try:
-                subprocess.check_call(cmd, stdout=subprocess.DEVNULL,
-                                      stderr=subprocess.DEVNULL, shell=True)
+                check_output_pipe(cmd1, cmd2)
             except subprocess.CalledProcessError:
                 return False, "ERROR: Unable to extract firmware updater"
 
@@ -158,6 +186,14 @@ class Component(ComponentBase):
 
             ver_info = ver_info.get("x86_64-dellemc_z9332f_d1508-r0")
             if ver_info:
+                components = list(ver_info.keys())
+                for component in components:
+                    if "CPLD" in component and ver_info[component].get('version'):
+                        val = ver_info.pop(component)
+                        ver = int(val['version'], 16)
+                        val['version'] = "{:x}.{:x}".format((ver >> 4) & 0xf, ver & 0xf)
+                        ver_info[component.replace("-", " ")] = val
+
                 return True, ver_info
             else:
                 return False, "ERROR: Version info not available"
@@ -165,18 +201,18 @@ class Component(ComponentBase):
     @staticmethod
     def _stage_firmware_package(image_path):
         stage_msg = None
-        cmd = "onie_stage_fwpkg -a {}".format(image_path)
+        cmd = ["onie_stage_fwpkg", "-a", image_path]
         try:
-            subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT, text=True)
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True)
         except subprocess.CalledProcessError as e:
             if e.returncode != 2:
                 return False, e.output.strip()
             else:
                 stage_msg = e.output.strip()
 
-        cmd = "onie_mode_set -o update"
+        cmd = ["onie_mode_set", "-o", "update"]
         try:
-            subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT, text=True)
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True)
         except subprocess.CalledProcessError as e:
             return False, e.output.strip()
 
@@ -207,6 +243,8 @@ class Component(ComponentBase):
         Returns:
             A string containing the firmware version of the component
         """
+        if self.version == None:
+            self.version = self.CHASSIS_COMPONENTS[self.index][2]()
         return self.version
 
     def get_presence(self):
@@ -353,9 +391,15 @@ class Component(ComponentBase):
         Args:
             image_path: A string, path to firmware image
 
+        Returns:
+            False if image not found.
+
         Raises:
             RuntimeError: update failed
         """
+        if not os.path.isfile(image_path):
+            return False
+
         valid, version = self._get_available_firmware_version(image_path)
         if valid:
             avail_ver = version.get(self.name)

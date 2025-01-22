@@ -28,6 +28,9 @@
         "fast-shutdown": {
             "after": {{ fast_shutdown_after.split()|json if fast_shutdown_after is defined else [] }},
             "before": {{ fast_shutdown_before.split()|json if fast_shutdown_before is defined else [] }}
+        },
+        "syslog": {
+            "support-rate-limit": {{ support_rate_limit if support_rate_limit else 'true' }}
         }
     },
     "container": {

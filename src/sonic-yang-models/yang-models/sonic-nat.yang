@@ -1,5 +1,5 @@
 module sonic-nat {
-    namespace "http://github.com/Azure/sonic-nat";
+    namespace "http://github.com/sonic-net/sonic-nat";
     prefix snat;
     yang-version 1.1;
 
@@ -66,26 +66,26 @@ module sonic-nat {
                     description "Global ip for the Static NAPT entry.";
 
                     type inet:ipv4-address;
-                }   
-                
+                }
+
                 leaf ip_protocol {
                     description "IP Protocol (tcp or udp) for the Static NAPT entry.";
 
                     type stypes:ip-protocol-type;
-                }   
-                
+                }
+
                 leaf global_l4_port {
                     description "Global L4 port for the Static NAPT entry.";
 
                     type inet:port-number;
-                }   
+                }
 
                 leaf local_ip {
                     description "Local ip for the Static NAPT entry.";
 
                     mandatory true;
                     type inet:ipv4-address;
-                }   
+                }
 
                 leaf local_port {
                     description "Local port for the Static NAPT entry.";
@@ -93,23 +93,23 @@ module sonic-nat {
                     mandatory true;
                     type inet:port-number ;
                 }
-                
+
                 leaf nat_type {
                     description "Nat type for the static napt entry - snat or dnat";
 
                     type nat-type;
                     default dnat;
-                }   
-                
+                }
+
                 leaf twice_nat_id {
                     description "Twice nat id for the static napt to achieve the twice napt";
 
-                    type uint16 { 
+                    type uint16 {
                         range "1..9999" {
                             error-message "Invalid twice nat id for the static NAPT.";
                             error-app-tag twice-nat-id-invalid;
-                        }   
-                    }   
+                        }
+                    }
                 }
             }
         }
@@ -144,12 +144,12 @@ module sonic-nat {
                 leaf twice_nat_id {
                     description "Twice nat id for the static nat to achieve the twice nat";
 
-                    type uint16 { 
+                    type uint16 {
                         range "1..9999" {
                             error-message "Invalid twice nat id for the static NAT.";
-                            error-app-tag twice-nat-id-invalid; 
-                        }   
-                    }   
+                            error-app-tag twice-nat-id-invalid;
+                        }
+                    }
                 }
             }
         }

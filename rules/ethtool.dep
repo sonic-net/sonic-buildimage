@@ -1,8 +1,0 @@
-SPATH       := $($(ETHTOOL)_SRC_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) rules/ethtool.mk rules/ethtool.dep
-DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES   += $(shell git ls-files $(SPATH))
-
-$(ETHTOOL)_CACHE_MODE  := GIT_CONTENT_SHA
-$(ETHTOOL)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
-$(ETHTOOL)_DEP_FILES   := $(DEP_FILES)

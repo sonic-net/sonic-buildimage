@@ -1,0 +1,12 @@
+#!/bin/bash
+
+networking_status=$(systemctl is-active networking.service 2>/dev/null)
+if [[ $networking_status != "active" ]]; then
+    exit 0
+fi
+
+for container in $(docker ps -q); do
+    docker cp -L /etc/resolv.conf ${container}:/_resolv.conf
+    docker exec -t ${container} bash -c "cat /_resolv.conf > /etc/resolv.conf"
+    docker exec -t ${container} bash -c "rm /_resolv.conf"
+done

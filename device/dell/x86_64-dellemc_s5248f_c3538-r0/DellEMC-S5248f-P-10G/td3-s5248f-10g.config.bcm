@@ -1,4 +1,4 @@
-sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_issu/b870.6.4.1/
+sai_load_hw_config=/etc/bcm/flex/bcm56870_a0_premium_issu/b870.6.4.1/
 os=unix
 dpp_clock_ratio=2:3
 oversubscribe_mode=1
@@ -350,5 +350,4 @@ dport_map_port_5=55
 dport_map_port_41=56
 
 mmu_init_config="TD3-DELL-lossless"
-#sai_preinit_cmd_file=/usr/share/sonic/hwsku/sai_preinit_cmd.soc
-
+sai_preinit_cmd_file=/usr/share/sonic/hwsku/sai_preinit_cmd.soc
