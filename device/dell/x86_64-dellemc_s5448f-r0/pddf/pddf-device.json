@@ -325,7 +325,7 @@
                     { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool sensor reading PSU1_rpm", "raw":"0", "field_name" : "PSU1_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
                     { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool sensor reading PSU1_AF_temp", "raw":"0", "field_name" : "PSU1_AF_temp", "separator":"|", "field_pos":"2", "mult":"1000"},
                     { "attr_name":"psu_temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_AF_temp", "separator":"|", "field_pos":"9", "mult":"1000"},
-                    {"attr_name":"psu_fan_dir", "bmc_cmd":"ipmitool raw 0x0A 0x11 0x01 0x2f 0x00 1 | cut -d ' ' -f 3", "type": "raw","raw": "1"}
+                    {"attr_name":"psu_fan_dir", "bmc_cmd":"ipmitool raw 0x0A 0x11 0x01 0x2f 0x00 1 | awk '{print substr($0,6,1)}'", "type": "raw","raw": "1"}
                 ]
             }
         }
@@ -352,7 +352,7 @@
                     { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool sensor reading PSU2_rpm", "raw":"0", "field_name" : "PSU2_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
                     { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool sensor reading PSU2_AF_temp", "raw":"0", "field_name" : "PSU2_AF_temp", "separator":"|", "field_pos":"2", "mult":"1000"},
                     { "attr_name":"psu_temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_AF_temp", "separator":"|", "field_pos":"9", "mult":"1000"},
-                    {"attr_name":"psu_fan_dir", "bmc_cmd":"ipmitool raw 0x0A 0x11 0x02 0x2f 0x00 1 | cut -d ' ' -f 3", "type": "raw","raw": "1"}
+                    {"attr_name":"psu_fan_dir", "bmc_cmd":"ipmitool raw 0x0A 0x11 0x02 0x2f 0x00 1 | awk '{print substr($0,6,1)}'", "type": "raw","raw": "1"}
                 ]
                 ]
             }
