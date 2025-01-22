@@ -7,7 +7,7 @@
         "ingress_lossy_pool": {
             "size": "166607744",
             "type": "ingress",
-            "mode": "dynamic",
+            "mode": "dynamic"
         },
         "egress_lossy_pool": {
             "size": "166607744",
@@ -28,10 +28,13 @@
         }
     },
 {%- endmacro %}
-{%- macro generate_queue_buffers(port_names) %}
+{%- macro generate_queue_buffers(ports) %}
     "BUFFER_QUEUE": {
-        "{{ port_names }}|0-6": {
+    {% for port in ports.split(',') %}
+        "{{ port }}|0-9": {
             "profile" : "egress_lossy_profile"
         }
+    {%- if not loop.last -%},{% endif %}
+    {% endfor %}
     }
 {%- endmacro %}

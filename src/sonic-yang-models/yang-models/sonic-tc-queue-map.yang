@@ -54,7 +54,7 @@ module sonic-tc-queue-map {
 
                     leaf qindex {
                         type string {
-                            pattern "[0-7]?" {
+                            pattern "[0-9]?" {
                                 error-message "Invalid queue index";
                                 error-app-tag queue-index-invalid;
                             }
