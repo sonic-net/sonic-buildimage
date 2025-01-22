@@ -855,6 +855,92 @@
                 ]
             }
         }
-    }
+    },
 
+    "TC_TO_DSCP_MAP_CRETAE": {
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map1",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            },
+                            {
+                                "tc": "8",
+                                "dscp": "8"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "map2",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            },
+                            {
+                                "tc": "8",
+                                "dscp": "8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DSCP_MAP_CREATE_INVALID_TC": {
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "16",
+                                "dscp": "1"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "TC_TO_DSCP_MAP_CREATE_INVALID_DSCP": {
+        "sonic-tc-dscp-map:sonic-tc-dscp-map": {
+            "sonic-tc-dscp-map:TC_TO_DSCP_MAP": {
+                "TC_TO_DSCP_MAP_LIST": [
+                    {
+                        "name": "map3",
+                        "TC_TO_DSCP_MAP": [
+                            {
+                                "tc": "1",
+                                "dscp": "64"
+                            },
+                            {
+                                "tc":"2",
+                                "dscp":"2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
 }

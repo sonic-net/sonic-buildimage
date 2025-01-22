@@ -54,14 +54,18 @@ class SRv6Mgr(Manager):
 
     def sids_set_handler(self, key, data):
         locator_name = key.split("|")[0]
-        ip_addr = key.split("|")[1].lower()
-        key = "{}|{}".format(locator_name, ip_addr)
+        ip_prefix = key.split("|")[1].lower()
+        key = "{}|{}".format(locator_name, ip_prefix)
+        prefix_len = int(ip_prefix.split("/")[1])
 
         if not self.directory.path_exist(self.db_name, "SRV6_MY_LOCATORS", locator_name):
             log_err("Found a SRv6 SID config entry with a locator that does not exist: {} | {}".format(key, data))
             return False
         
         locator = self.directory.get(self.db_name, "SRV6_MY_LOCATORS", locator_name)
+        if locator.block_len + locator.node_len > prefix_len:
+            log_err("Found a SRv6 SID config entry with an invalid prefix length {} | {}".format(key, data))
+            return False
 
         if 'action' not in data:
             log_err("Found a SRv6 SID config entry that does not specify action: {} | {}".format(key, data))
@@ -71,10 +75,10 @@ class SRv6Mgr(Manager):
             log_err("Found a SRv6 SID config entry associated with unsupported action: {} | {}".format(key, data))
             return False
         
-        sid = SID(locator_name, ip_addr, data) # the information in data will be parsed into SID's attributes
+        sid = SID(locator_name, ip_prefix, data) # the information in data will be parsed into SID's attributes
 
         cmd_list = ['segment-routing', 'srv6', 'static-sids']
-        sid_cmd = 'sid {}/{} locator {} behavior {}'.format(ip_addr, locator.block_len + locator.node_len + locator.func_len, locator_name, sid.action)
+        sid_cmd = 'sid {} locator {} behavior {}'.format(ip_prefix, locator_name, sid.action)
         if sid.decap_vrf != DEFAULT_VRF:
             sid_cmd += ' vrf {}'.format(sid.decap_vrf)
         cmd_list.append(sid_cmd)
@@ -82,7 +86,7 @@ class SRv6Mgr(Manager):
         self.cfg_mgr.push_list(cmd_list)
         log_debug("{} SRv6 static configuration {}|{} is scheduled for updates. {}".format(self.db_name, self.table_name, key, str(cmd_list)))
 
-        self.directory.put(self.db_name, self.table_name, key, (sid, sid_cmd))
+        self.directory.put(self.db_name, self.table_name, key.replace("/", "\\"), (sid, sid_cmd))
         return True
 
     def del_handler(self, key):
@@ -101,21 +105,21 @@ class SRv6Mgr(Manager):
 
     def sids_del_handler(self, key):
         locator_name = key.split("|")[0]
-        ip_addr = key.split("|")[1].lower()
-        key = "{}|{}".format(locator_name, ip_addr)
+        ip_prefix = key.split("|")[1].lower()
+        key = "{}|{}".format(locator_name, ip_prefix)
 
-        if not self.directory.path_exist(self.db_name, self.table_name, key):
+        if not self.directory.path_exist(self.db_name, self.table_name, key.replace("/", "\\")):
             log_warn("Encountered a config deletion with a SRv6 SID that does not exist: {}".format(key))
             return
 
-        _, sid_cmd = self.directory.get(self.db_name, self.table_name, key)
+        _, sid_cmd = self.directory.get(self.db_name, self.table_name, key.replace("/", "\\"))
         cmd_list = ['segment-routing', 'srv6', "static-sids"]
         no_sid_cmd = 'no ' + sid_cmd
         cmd_list.append(no_sid_cmd)
 
         self.cfg_mgr.push_list(cmd_list)
         log_debug("{} SRv6 static configuration {}|{} is scheduled for updates. {}".format(self.db_name, self.table_name, key, str(cmd_list)))
-        self.directory.remove(self.db_name, self.table_name, key)
+        self.directory.remove(self.db_name, self.table_name, key.replace("/", "\\"))
 
 class Locator:
     def __init__(self, name, data):
@@ -127,9 +131,9 @@ class Locator:
         self.prefix = data['prefix'].lower() + "/{}".format(self.block_len + self.node_len)
 
 class SID:
-    def __init__(self, locator, ip_addr, data):
+    def __init__(self, locator, ip_prefix, data):
         self.locator_name = locator
-        self.ip_addr = ip_addr
+        self.ip_prefix = ip_prefix
         
         self.action = data['action']
         self.decap_vrf = data['decap_vrf'] if 'decap_vrf' in data else DEFAULT_VRF
