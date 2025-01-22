@@ -197,7 +197,7 @@ function GetMstDeviceType() {
     local -r asic_type=$(GetAsicType)
 
     case $asic_type in
-    ${SPC1_ASIC}|${SPC2_ASIC}|${SPC3_ASIC}|${SPC4_ASIC})|${SPC5_ASIC})
+    ${SPC1_ASIC}|${SPC2_ASIC}|${SPC3_ASIC}|${SPC4_ASIC}|${SPC5_ASIC})
         echo "Spectrum"
         return ${EXIT_SUCCESS}
         ;;
