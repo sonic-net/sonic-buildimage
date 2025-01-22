@@ -33,7 +33,7 @@
             },
             "bmc":
             {
-                "valmap": { "1":"exhaust", "2":"intake" }
+                "valmap": { "0":"exhaust", "1":"intake" }
             }
         },
 
