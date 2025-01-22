@@ -354,7 +354,6 @@
                     { "attr_name":"psu_temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_AF_temp", "separator":"|", "field_pos":"9", "mult":"1000"},
                     {"attr_name":"psu_fan_dir", "bmc_cmd":"ipmitool raw 0x0A 0x11 0x02 0x2f 0x00 1 | awk '{print substr($0,6,1)}'", "type": "raw","raw": "1"}
                 ]
-                ]
             }
         }
     },
