@@ -92,6 +92,8 @@
         ('resource_type' in DEVICE_METADATA['localhost'] and
           DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     {{- generate_tc_to_pg_map() }}
+{% elif generate_tc_to_pg_map_per_sku is defined %}
+    {{- generate_tc_to_pg_map_per_sku() }}
 {% else %}
     "TC_TO_PRIORITY_GROUP_MAP": {
         "AZURE": {
