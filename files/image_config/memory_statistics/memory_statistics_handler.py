@@ -7,7 +7,6 @@ import gzip
 import logging
 import math
 import os
-import pickle
 import re
 import signal
 import socket
@@ -595,8 +594,8 @@ class MemoryStatisticsCollector:
         :param retention_period: Data retention period in days (1 to 30).
         """
         self.sampling_interval = sampling_interval
-        self.retention_period = retention_period 
-    
+        self.retention_period = retention_period
+
     def fetch_memory_statistics(self):
         """
         Collect memory statistics using psutil.
@@ -612,15 +611,14 @@ class MemoryStatisticsCollector:
             'available_memory': {"prss": memory_data.available, "count": 1},
             'cached_memory': {"prss": memory_data.cached, "count": 1},
             'buffers_memory': {"prss": memory_data.buffers, "count": 1},
-            'shared_memory': {"prss": memory_data.shared, "count": 1}        
-   
+            'shared_memory': {"prss": memory_data.shared, "count": 1}
         }
         del memory_data
         return memory_stats
 
     def fetch_memory_entries(self, filepath):
         """
-        Fetch memory entries from a compressed file.
+        Fetch memory entries from a compressed JSON file.
         
         Args:
             filepath (str): The path to the compressed file containing memory entries.
@@ -629,21 +627,17 @@ class MemoryStatisticsCollector:
             dict: A dictionary containing loaded memory entries or default structure.
         """
         tentry = {SYSTEM_MEMORY_KEY: {'system': {}, "count": 0}, "count": 0}
-        if not os.path.exists(filepath):
-            return tentry
-
-        if os.path.getsize(filepath) <= 0:
+        if not os.path.exists(filepath) or os.path.getsize(filepath) <= 0:
             return tentry
 
         try:
-            with gzip.open(filepath, 'rb') as bfile:
-                loaded_entry = pickle.load(bfile)
+            with gzip.open(filepath, 'rt', encoding='utf-8') as jfile:
+                loaded_entry = json.load(jfile)
+            return loaded_entry
         except Exception as e:
             logger.log_error(f"Failed to load memory entries from {filepath}: {e}")
-            return tentry 
+            return tentry
 
-        return loaded_entry
- 
     def update_memory_statistics(self, total_dict, mem_dict, time_list, item, category):
         """
         Update memory statistics for the specified item and category.
@@ -706,7 +700,6 @@ class MemoryStatisticsCollector:
         that are older than the configured retention period. 
         total_dict (dict): A dictionary containing memory statistics.
         """
-        
         if not total_dict or SYSTEM_MEMORY_KEY not in total_dict:
             total_dict[SYSTEM_MEMORY_KEY] = {
                 'count': 0,
@@ -736,11 +729,11 @@ class MemoryStatisticsCollector:
         total_dict[SYSTEM_MEMORY_KEY]['count'] = len([
             k for k in total_dict[SYSTEM_MEMORY_KEY].keys() 
             if k not in ['count', 'timestamp']
-        ])   
+        ])
 
     def collect_and_store_memory_usage(self, collect_only):
         """
-        Dump memory usage statistics into log files
+        Dump memory usage statistics into log files using JSON format
         
         Args:
             collect_only (bool): If True, return memory data without dumping
@@ -772,15 +765,26 @@ class MemoryStatisticsCollector:
             return mem_dict
 
         try:
-            with gzip.open(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'], "wb") as bfile:
-                pickle.dump(total_dict, bfile)
+            with gzip.open(memory_statistics_config['TOTAL_MEMORY_STATISTICS_LOG_FILENAME'], 'wt', encoding='utf-8') as jfile:
+                json.dump(total_dict, jfile)
         except Exception as e:
             logger.log_error(f"Failed to dump total memory statistics: {e}")
             return
 
         try:
-            with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], "ab") as bfile:
-                pickle.dump(mem_dict, bfile)
+            existing_data = []
+            try:
+                with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], 'rt', encoding='utf-8') as jfile:
+                    existing_data = json.load(jfile)
+                    if not isinstance(existing_data, list):
+                        existing_data = [existing_data]
+            except (FileNotFoundError, json.JSONDecodeError):
+                pass
+
+            existing_data.append(mem_dict)
+            
+            with gzip.open(memory_statistics_config['MEMORY_STATISTICS_LOG_FILENAME'], 'wt', encoding='utf-8') as jfile:
+                json.dump(existing_data, jfile)
         except Exception as e:
             logger.log_error(f"Failed to dump memory statistics log: {e}")
 
@@ -1131,15 +1135,33 @@ class MemoryStatisticsProcessor:
         - first_interval_rate (int): The rate for the first interval.
         - second_interval_unit (str): The second time interval unit.
         """
-        if os.path.exists(file_name) and os.path.getsize(file_name) > 0:
-            with gzip.open(file_name, "rb") as bfile:
+        if not os.path.exists(file_name) or os.path.getsize(file_name) <= 0:
+            return
+
+        try:
+            with gzip.open(file_name, 'rt', encoding='utf-8') as jfile:
                 try:
-                    while True:
-                        memory_entry = pickle.load(bfile)
-                        self.process_memory_entry(memory_entry, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
-                                                 first_interval_unit, first_interval_rate, second_interval_unit)
-                except (EOFError, pickle.UnpicklingError):
-                    pass
+                    content = json.load(jfile)
+
+                    entries = content if isinstance(content, list) else [content]
+
+                    for memory_entry in entries:
+                        self.process_memory_entry(
+                            memory_entry,
+                            start_time_obj, 
+                            end_time_obj, 
+                            step, 
+                            num_columns, 
+                            time_entry_summary, 
+                            request_data,
+                            first_interval_unit, 
+                            first_interval_rate, 
+                            second_interval_unit
+                        )
+                except json.JSONDecodeError as e:
+                    logger.log_error(f"Error decoding JSON from {file_name}: {e}")
+        except Exception as e:
+            logger.log_error(f"Error processing file {file_name}: {e}")    
 
     def process_memory_entry(self, memory_entry, start_time_obj, end_time_obj, step, num_columns, time_entry_summary, request_data,
                              first_interval_unit, first_interval_rate, second_interval_unit):
@@ -1846,11 +1868,11 @@ class MemoryStatisticsService:
         """
         logger.log_info("Starting configuration retrieval from ConfigDB")
         config_db = ConfigDBConnector()
-        
+
         try:
             config_db.connect()
             config = config_db.get_table('MEMORY_STATISTICS')
-            
+
             updates = {}
 
             sampling_interval = config.get('sampling_interval', 5)
@@ -1864,7 +1886,7 @@ class MemoryStatisticsService:
             except (ValueError, TypeError) as interval_error:
                 logger.log_warning(f"Invalid sampling interval: {interval_error}. Using default.")
                 updates['sampling_interval'] = 5
-            
+
             retention_period = config.get('retention_period', 15)
             try:
                 retention_period = int(retention_period)
@@ -1876,21 +1898,21 @@ class MemoryStatisticsService:
             except (ValueError, TypeError) as retention_error:
                 logger.log_warning(f"Invalid retention period: {retention_error}. Using default.")
                 updates['retention_period'] = 15
-            
+
             self.config.update(updates)
-            
+
             self.sampling_interval = updates.get('sampling_interval', 5) * 60
             self.retention_period = updates.get('retention_period', 15)
-            
+
             logger.log_info(f"Configuration updated: "
                             f"sampling_interval={self.sampling_interval // 60} minutes, "
                             f"retention_period={self.retention_period} days")
-        
+
         except Exception as error:
             logger.log_error(f"Configuration retrieval failed: {error}")
             self.sampling_interval = 5 * 60
             self.retention_period = 15
-        
+
         finally:
             try:
                 config_db.disconnect()
@@ -1919,7 +1941,7 @@ class MemoryStatisticsService:
         """
         try:
             logger.log_info(f"Received memory statistics request: {request}")
-            
+
             current_config = self.config.get_copy()
             sampling_interval = int(current_config.get('sampling_interval', 5)) * 60
             retention_period = int(current_config.get('retention_period', 15))
@@ -1932,6 +1954,7 @@ class MemoryStatisticsService:
                 current_memory = memory_collector.collect_and_store_memory_usage(collect_only=True)
                 request['current_memory'] = current_memory
                 logger.log_info(f"Current memory usage collected: {current_memory}")
+
                 time_processor = TimeProcessor(
                     sampling_interval=sampling_interval // 60,
                     retention_period=retention_period
@@ -1948,6 +1971,9 @@ class MemoryStatisticsService:
 
             return {"status": True, "data": report}
 
+        except json.JSONDecodeError as je:
+            logger.log_error(f"JSON decoding error in memory statistics request: {je}")
+            return {"status": False, "error": f"Invalid JSON format: {str(je)}"}
         except Exception as error:
             logger.log_error(f"Error handling memory statistics request: {error}")
             return {"status": False, "error": str(error)}
@@ -1986,8 +2012,11 @@ class MemoryStatisticsService:
                         retention_period=self.retention_period
                     )
                     memory_collector.collect_and_store_memory_usage(collect_only=False)
+            except json.JSONDecodeError as je:
+                logger.log_error(f"JSON encoding/decoding error during collection: {je}")
             except Exception as error:
                 logger.log_error(f"Error during memory statistics collection: {error}")
+
             elapsed_time = (datetime.now() - start_time).total_seconds()
             sleep_time = max(0, self.sampling_interval - elapsed_time)
             if self.stop_event.wait(timeout=sleep_time):
@@ -1998,7 +2027,11 @@ class MemoryStatisticsService:
         """
         Starts memory statistics collection in a separate thread.
         This method initializes and starts a separate thread dedicated to 
-        collecting memory statistics at defined intervals.
+        collecting memory statistics at defined intervals. The collection 
+        process runs in a loop until signaled to stop, capturing memory usage 
+        data and logging any errors that may occur during the process.
+        The collection interval is determined by the `sampling_interval` 
+        configuration. Logs the start and stop of the memory collection thread.
         """ 
         self.memory_collection_thread = threading.Thread(
             target=self.memory_collection,
@@ -2019,7 +2052,7 @@ class MemoryStatisticsService:
         """
         logger.log_info("Signaling threads to stop.")
         self.stop_event.set()
-        
+
         if self.socket_listener_thread and self.socket_listener_thread.is_alive():
             logger.log_info("Waiting for socket listener thread to stop...")
             self.socket_listener_thread.join(timeout=5)
@@ -2094,13 +2127,13 @@ if __name__ == '__main__':
         'sampling_interval': 5, 
         'retention_period': 15,
         'LOG_DIRECTORY': "/var/log/memory_statistics",
-        'MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/memory-stats.log.gz",
-        'TOTAL_MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/total-memory-stats.log.gz",
+        'MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/memory-stats.json.gz",
+        'TOTAL_MEMORY_STATISTICS_LOG_FILENAME': "/var/log/memory_statistics/total-memory-stats.json.gz",
         'DBUS_SOCKET_ADDRESS': '/var/run/dbus/memstats.socket'
     }
 
     logger = SyslogLogger(identifier="memstats#log", log_to_console=True)
-    
+
     service_name = "MemoryStatisticsService" 
     service = MemoryStatisticsService(memory_statistics_config, name=service_name)
     service.run()
