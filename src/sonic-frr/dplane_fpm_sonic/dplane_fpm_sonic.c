@@ -1035,33 +1035,29 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		nl_attr_nest(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_FORMAT);
 
-	if (nexthop->nh_srv6->seg6local_ctx.block_len)
-		if (!nl_attr_put8(
-				&req->n, datalen, 
-				FPM_SRV6_LOCALSID_FORMAT_BLOCK_LEN,
-				nexthop->nh_srv6->seg6local_ctx.block_len))
-			return -1;
+	if (!nl_attr_put8(
+			&req->n, datalen, 
+			FPM_SRV6_LOCALSID_FORMAT_BLOCK_LEN,
+			nexthop->nh_srv6->seg6local_ctx.block_len))
+		return -1;
 
-	if (nexthop->nh_srv6->seg6local_ctx.node_len)
-		if (!nl_attr_put8(
-				&req->n, datalen, 
-				FPM_SRV6_LOCALSID_FORMAT_NODE_LEN,
-				nexthop->nh_srv6->seg6local_ctx.node_len))
-			return -1;
+	if (!nl_attr_put8(
+			&req->n, datalen, 
+			FPM_SRV6_LOCALSID_FORMAT_NODE_LEN,
+			nexthop->nh_srv6->seg6local_ctx.node_len))
+		return -1;
 
-	if (nexthop->nh_srv6->seg6local_ctx.function_len)
-		if (!nl_attr_put8(
-				&req->n, datalen, 
-				FPM_SRV6_LOCALSID_FORMAT_FUNC_LEN,
-				nexthop->nh_srv6->seg6local_ctx.function_len))
-			return -1;
+	if (!nl_attr_put8(
+			&req->n, datalen, 
+			FPM_SRV6_LOCALSID_FORMAT_FUNC_LEN,
+			nexthop->nh_srv6->seg6local_ctx.function_len))
+		return -1;
 
-	if (nexthop->nh_srv6->seg6local_ctx.argument_len)
-		if (!nl_attr_put8(
-				&req->n, datalen, 
-				FPM_SRV6_LOCALSID_FORMAT_ARG_LEN,
-				nexthop->nh_srv6->seg6local_ctx.argument_len))
-			return -1;
+	if (!nl_attr_put8(
+			&req->n, datalen, 
+			FPM_SRV6_LOCALSID_FORMAT_ARG_LEN,
+			nexthop->nh_srv6->seg6local_ctx.argument_len))
+		return -1;
 
 	nl_attr_nest_end(&req->n, nest);
 
