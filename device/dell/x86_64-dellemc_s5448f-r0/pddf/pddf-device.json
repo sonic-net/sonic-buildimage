@@ -323,7 +323,8 @@
                     { "attr_name":"psu_i_in", "bmc_cmd":"ipmitool sensor reading PSU1_In_amp", "raw":"0", "field_name" : "PSU1_In_amp", "separator":"|", "field_pos":"2", "mult":"1000"},
                     { "attr_name":"psu_p_in", "bmc_cmd":"ipmitool sensor reading PSU1_In_watt", "raw": "0", "field_name":"PSU1_In_watt", "separator":"|", "field_pos":"2", "mult":"1000000"},
                     { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool sensor reading PSU1_rpm", "raw":"0", "field_name" : "PSU1_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
-                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool sensor reading PSU1_AF_temp", "raw":"0", "field_name" : "PSU1_AF_temp", "separator":"|", "field_pos":"2", "mult":"1000"}
+                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool sensor reading PSU1_AF_temp", "raw":"0", "field_name" : "PSU1_AF_temp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU1_AF_temp", "separator":"|", "field_pos":"9", "mult":"1000"}
                 ]
             }
         }
@@ -348,7 +349,8 @@
                     { "attr_name":"psu_v_in", "bmc_cmd":"ipmitool sensor reading PSU2_In_volt", "raw":"0", "field_name" : "PSU2_In_volt", "separator":"|", "field_pos":"2", "mult":"1000"},
                     { "attr_name":"psu_i_in", "bmc_cmd":"ipmitool sensor reading PSU2_In_amp", "raw":"0", "field_name" : "PSU2_In_amp", "separator":"|", "field_pos":"2", "mult":"1000"},
                     { "attr_name":"psu_fan1_speed_rpm", "bmc_cmd":"ipmitool sensor reading PSU2_rpm", "raw":"0", "field_name" : "PSU2_rpm", "separator":"|", "field_pos":"2", "mult":"1"},
-                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool sensor reading PSU2_AF_temp", "raw":"0", "field_name" : "PSU2_AF_temp", "separator":"|", "field_pos":"2", "mult":"1000"}
+                    { "attr_name":"psu_temp1_input", "bmc_cmd":"ipmitool sensor reading PSU2_AF_temp", "raw":"0", "field_name" : "PSU2_AF_temp", "separator":"|", "field_pos":"2", "mult":"1000"},
+                    { "attr_name":"psu_temp1_high_threshold", "bmc_cmd":"ipmitool sensor", "raw":"0", "field_name":"PSU2_AF_temp", "separator":"|", "field_pos":"9", "mult":"1000"}
                 ]
             }
         }
