@@ -36,7 +36,7 @@
                 <width>8</width>
                 <module>0</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -45,7 +45,7 @@
                 <width>8</width>
                 <module>1</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -54,7 +54,7 @@
                 <width>8</width>
                 <module>2</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -63,7 +63,7 @@
                 <width>8</width>
                 <module>3</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -72,7 +72,7 @@
                 <width>8</width>
                 <module>4</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -81,7 +81,7 @@
                 <width>8</width>
                 <module>5</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -90,7 +90,7 @@
                 <width>8</width>
                 <module>6</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -99,7 +99,7 @@
                 <width>8</width>
                 <module>7</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -108,7 +108,7 @@
                 <width>8</width>
                 <module>8</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -117,7 +117,7 @@
                 <width>8</width>
                 <module>9</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -126,7 +126,7 @@
                 <width>8</width>
                 <module>10</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -135,7 +135,7 @@
                 <width>8</width>
                 <module>11</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -144,7 +144,7 @@
                 <width>8</width>
                 <module>12</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -153,7 +153,7 @@
                 <width>8</width>
                 <module>13</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -162,7 +162,7 @@
                 <width>8</width>
                 <module>14</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -171,7 +171,7 @@
                 <width>8</width>
                 <module>15</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -180,7 +180,7 @@
                 <width>8</width>
                 <module>16</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -189,7 +189,7 @@
                 <width>8</width>
                 <module>17</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -198,7 +198,7 @@
                 <width>8</width>
                 <module>18</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -207,7 +207,7 @@
                 <width>8</width>
                 <module>19</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -216,7 +216,7 @@
                 <width>8</width>
                 <module>20</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -225,7 +225,7 @@
                 <width>8</width>
                 <module>21</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -234,7 +234,7 @@
                 <width>8</width>
                 <module>22</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -243,7 +243,7 @@
                 <width>8</width>
                 <module>23</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -252,7 +252,7 @@
                 <width>8</width>
                 <module>24</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -261,7 +261,7 @@
                 <width>8</width>
                 <module>25</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -274,7 +274,7 @@
                 <breakout-modes>3</breakout-modes>
 
                 <!-- (BITMASK) 2 - 1Gb , 16 - 10Gb , 32 - 40Gb , 384 - 50Gb , 1536 - 100Gb , 4096 - 200Gb, 32768 - 400G, 262144 - 800G -->
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -283,7 +283,7 @@
                 <width>8</width>
                 <module>27</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -292,7 +292,7 @@
                 <width>8</width>
                 <module>28</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -301,7 +301,7 @@
                 <width>8</width>
                 <module>29</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -310,7 +310,7 @@
                 <width>8</width>
                 <module>30</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -319,7 +319,7 @@
                 <width>8</width>
                 <module>31</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -328,7 +328,7 @@
                 <width>8</width>
                 <module>32</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -337,7 +337,7 @@
                 <width>8</width>
                 <module>33</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -346,7 +346,7 @@
                 <width>8</width>
                 <module>34</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -355,7 +355,7 @@
                 <width>8</width>
                 <module>35</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -364,7 +364,7 @@
                 <width>8</width>
                 <module>36</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -373,7 +373,7 @@
                 <width>8</width>
                 <module>37</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -382,7 +382,7 @@
                 <width>8</width>
                 <module>38</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -391,7 +391,7 @@
                 <width>8</width>
                 <module>39</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -400,7 +400,7 @@
                 <width>8</width>
                 <module>40</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -409,7 +409,7 @@
                 <width>8</width>
                 <module>41</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -418,7 +418,7 @@
                 <width>8</width>
                 <module>42</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -427,7 +427,7 @@
                 <width>8</width>
                 <module>43</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -436,7 +436,7 @@
                 <width>8</width>
                 <module>44</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -445,7 +445,7 @@
                 <width>8</width>
                 <module>45</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -454,7 +454,7 @@
                 <width>8</width>
                 <module>46</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -463,7 +463,7 @@
                 <width>8</width>
                 <module>47</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -472,7 +472,7 @@
                 <width>8</width>
                 <module>48</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -481,7 +481,7 @@
                 <width>8</width>
                 <module>49</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -490,7 +490,7 @@
                 <width>8</width>
                 <module>50</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -499,7 +499,7 @@
                 <width>8</width>
                 <module>51</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -508,7 +508,7 @@
                 <width>8</width>
                 <module>52</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -517,7 +517,7 @@
                 <width>8</width>
                 <module>53</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -526,7 +526,7 @@
                 <width>8</width>
                 <module>54</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -535,7 +535,7 @@
                 <width>8</width>
                 <module>55</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -544,7 +544,7 @@
                 <width>8</width>
                 <module>56</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -553,7 +553,7 @@
                 <width>8</width>
                 <module>57</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -562,7 +562,7 @@
                 <width>8</width>
                 <module>58</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -571,7 +571,7 @@
                 <width>8</width>
                 <module>59</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -580,7 +580,7 @@
                 <width>8</width>
                 <module>60</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -589,7 +589,7 @@
                 <width>8</width>
                 <module>61</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -598,7 +598,7 @@
                 <width>8</width>
                 <module>62</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -607,7 +607,7 @@
                 <width>8</width>
                 <module>63</module>
                 <breakout-modes>3</breakout-modes>
-                <port-speed>384</port-speed>
+                <port-speed>1536</port-speed>
                 <split>8</split>
                 <late-create>true</late-create>
             </port-info>
@@ -630,4 +630,3 @@
         </ports-list>
     </platform_info>
 </root>
-
