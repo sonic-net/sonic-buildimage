@@ -29,6 +29,9 @@ RUN apt-get update &&   \
         nvme-cli        \
         ethtool         \
         xxd
+{% if sonic_asic_platform == 'mellanox' %}
+RUN apt-get install -y dbus
+{% endif %}
 
 # smartmontools version should match the installed smartmontools in sonic_debian_extension build template
 RUN apt-get install -y -t bookworm-backports \
