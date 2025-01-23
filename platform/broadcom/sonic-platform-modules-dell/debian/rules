@@ -94,6 +94,13 @@ override_dh_auto_build:
 			cp $(COMMON_DIR)/ipmihelper.py $(MOD_SRC_DIR)/$${mod}/sonic_platform/ipmihelper.py; \
 			cd $(MOD_SRC_DIR)/$${mod}; \
 			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
+			if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
+				cd $(MOD_SRC_DIR)/$${mod}/pddf; \
+				if [ -f sonic_platform_setup.py ]; then \
+					python3 sonic_platform_setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/pddf; \
+					echo "Finished making pddf whl package for $$mod"; \
+				fi; \
+			fi; \
 			cd $(MOD_SRC_DIR); \
 		fi; \
 		echo "making man page alias $$mod -> $$mod APIs";\
@@ -211,6 +218,9 @@ override_dh_clean:
 			rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
 			rm -rf $(MOD_SRC_DIR)/$${mod}/build; \
 			rm -rf $(MOD_SRC_DIR)/$${mod}/build/*.egg-info; \
+			if [ -f $(MOD_SRC_DIR)/$${mod}/pddf/*.whl ]; then \
+				rm -f $(MOD_SRC_DIR)/$${mod}/pddf/*.whl; \
+			fi; \
 		fi; \
 		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
 	done); \

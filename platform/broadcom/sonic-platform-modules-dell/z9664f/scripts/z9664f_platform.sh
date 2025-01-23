@@ -97,6 +97,7 @@ switch_board_qsfp_sfp_mux() {
                            if [[ $i == 609 ]]; then
                                echo "Detaching PCA9546 @ 0x71"
                                echo 0x71 > /sys/bus/i2c/devices/i2c-$i/$1
+			       break
                            fi
                            echo "Detaching PCA9548 @ 0x70"
                            echo 0x70 > /sys/bus/i2c/devices/i2c-$i/$1
@@ -291,7 +292,7 @@ install_python_api_package() {
     device="/usr/share/sonic/device"
     platform=$(/usr/local/bin/sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
 
-    pip3 install $device/$platform/sonic_platform-1.0-py3-none-any.whl
+    pip3 install $device/$platform/sonic_platform-1.0-py3-none-any.whl --force-reinstall -q --root-user-action=ignore
 }
 
 remove_python_api_package() {
@@ -324,7 +325,6 @@ switch_fpga_port_scan_disable() {
 
 init_devnum
 init_fpga_busnum
-PLATFORM_READY_CHECK=/var/run/platform_ready
 
 if [ "$1" == "init" ]; then
     modprobe i2c-dev
@@ -335,9 +335,6 @@ if [ "$1" == "init" ]; then
     modprobe dell_z9664f_fpga_ocores
     modprobe mc24lc64t
     sys_eeprom "new_device"
-    sleep 1
-    # Create a flag file to denote the platform is ready
-    touch $PLATFORM_READY_CHECK
     sleep 1
     switch_fpga_port_scan_disable
     sleep 1
@@ -362,14 +359,17 @@ if [ "$1" == "init" ]; then
     echo -2 > /sys/bus/i2c/drivers/pca954x/609-0071/idle_state
 
 elif [ "$1" == "deinit" ]; then
-    if [ ! -f "/tmp/warm-reboot-progress" ]; then
-        switch_board_sfp "media_down"
-    fi
-    # Remove the flag file to denote the platform is no more ready
-    rm -f $PLATFORM_READY_CHECK
+    sys_eeprom "delete_device"
+    switch_board_sfp "delete_device"
+    switch_board_qsfp "delete_device"
+    switch_board_qsfp_sfp_mux "delete_device"
+    modprobe -r  mc24lc64t
+    modprobe -r i2c-mux-pca954x
+    modprobe -r i2c-dev
+    remove_python_api_package
 elif [ "$1" == "media_down" ]; then
     switch_board_sfp $1 "shut_down"
 else
-     echo "z9664f_platform : Invalid option !"
+    echo "z9664f_platform : Invalid option !"
 fi
 
