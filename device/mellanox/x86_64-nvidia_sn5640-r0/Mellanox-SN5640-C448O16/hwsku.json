@@ -2320,10 +2320,10 @@
             "subport": "8",
             "autoneg": "off"
         },
-        "Ethernet512": {
+        "Ethernet513": {
             "default_brkout_mode": "1x10G[25G]"
         },
-        "Ethernet520": {
+        "Ethernet515": {
             "default_brkout_mode": "1x10G[25G]"
         }
     }
