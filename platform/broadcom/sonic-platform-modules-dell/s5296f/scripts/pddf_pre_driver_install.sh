@@ -1,9 +1,4 @@
 #!/bin/bash
-sys_eeprom "delete_device"
-switch_board_qsfp "delete_device"
-switch_board_sfp "delete_device"
-switch_board_qsfp_mux "delete_device"
-
 modprobe -r dell_s5296f_fpga_ocores
 modprobe -r i2c_ocores
 modprobe -r i2c_ismt 
