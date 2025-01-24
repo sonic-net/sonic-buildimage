@@ -28,6 +28,11 @@ RUN apt-get update
 {{ install_python_wheels(docker_sonic_bmp_whls.split(' ')) }}
 {% endif %}
 
+RUN apt-get install -y build-essential
+
+RUN pip3 install psutil
+RUN pip3 install pysetns
+
 RUN apt-get clean -y      && \
     apt-get autoclean -   && \
     apt-get autoremove -y && \

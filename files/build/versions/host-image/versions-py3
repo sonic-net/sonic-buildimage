@@ -47,6 +47,7 @@ prefixed==0.8.0
 prettyprinter==0.18.0
 protobuf==4.25.4
 psutil==6.0.0
+pysetns==0.3.0
 ptyprocess==0.7.0
 pyang==2.6.1
 pyangbind==0.8.2
