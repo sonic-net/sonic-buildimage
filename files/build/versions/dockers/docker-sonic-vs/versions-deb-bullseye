@@ -123,7 +123,7 @@ python2-minimal==2.7.18-3
 python2.7==2.7.18-8+deb11u1
 python2.7-minimal==2.7.18-8+deb11u1
 python3-scapy==2.4.4-4
-redis-server==5:6.0.16-1+deb11u2
+redis-server==5:7.0.10-1~bpo11+1
 runit-helper==2.10.3
 sensible-utils==0.0.14
 shared-mime-info==2.0-1

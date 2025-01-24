@@ -69,7 +69,7 @@ python3-minimal==3.9.2-3
 python3.9==3.9.2-1
 python3.9-minimal==3.9.2-1
 readline-common==8.1-1
-redis-tools==5:6.0.16-1+deb11u2
+redis-tools==5:7.0.10-1~bpo11+1
 rsyslog==8.2302.0-1~bpo11+1
 socat==1.7.4.1-3
 symcrypt-openssl==0.1
