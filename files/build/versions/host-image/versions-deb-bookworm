@@ -166,7 +166,7 @@ libjansson4==2.14-2
 libjq1==1.6-2.1
 libjs-jquery==3.6.1+dfsg+~3.5.14-1
 libjson-c5==0.16-2
-libk5crypto3==1.20.1-2+deb12u2
+libk5crypto3==1.20.1-2+deb12u1+fips
 libkeyutils1==1.6.3-2
 libklibc==2.0.12-1
 libkmod2==30+20221128-1
