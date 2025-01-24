@@ -1131,8 +1131,15 @@ sudo chmod a+x $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 sudo LANG=C chroot $FILESYSTEM_ROOT /tmp/mask_disabled_services.py
 sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
+echo "check fips version before install"
+apt-cache madison openssl
+apt-cache madison libk5crypto3
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
+
+echo "check fips version after install"
+apt-cache madison openssl
+apt-cache madison libk5crypto3
 
 # [Hua] remove this only for debug
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install debtree
