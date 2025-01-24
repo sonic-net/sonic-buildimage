@@ -1135,6 +1135,9 @@ echo "check fips version before install"
 apt-cache madison openssl
 apt-cache madison libk5crypto3
 
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark hold openssl
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark hold libk5crypto3
+
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
 
 echo "check fips version after install"
