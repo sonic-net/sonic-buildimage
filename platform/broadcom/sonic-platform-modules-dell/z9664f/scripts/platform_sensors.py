@@ -236,8 +236,8 @@ def _print_psu(psu_id):
         print('    PSU2:')
         print('       AF Temperature:           ',\
             _get_bmc_register('PSU2_AF_temp'))
-        print('       Mid Temperature:          ',\
-            _get_bmc_register('PSU2_Mid_temp'))
+        #print('       Mid Temperature:          ',\
+            #_get_bmc_register('PSU2_Mid_temp'))
         print('       Rear Temperature:         ',\
             _get_bmc_register('PSU2_Rear_temp'))
         print('       FAN RPM:                  ',\
