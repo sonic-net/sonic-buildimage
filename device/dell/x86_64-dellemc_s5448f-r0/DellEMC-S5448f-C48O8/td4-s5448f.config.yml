@@ -10,6 +10,7 @@ bcm_device:
             uft_mode: 4
             sai_brcm_sonic_acl_enhancements: 1
             sai_tunnel_support: 1
+            sai_l2pt_feature_support: 1
             multi_network_groups: 1
             sai_field_group_auto_prioritize: 1
             pktio_mode: 1
@@ -33,6 +34,8 @@ bcm_device:
             sai_common_hash_crc: 1
             sai_stats_support_mask: 0x20
             pfc_deadlock_seq_control : 1
+            sai_cpu_mirror_queue: 28
+            sai_cpu_drop_mirror_queue: 29
 ...
 ---
 device:
