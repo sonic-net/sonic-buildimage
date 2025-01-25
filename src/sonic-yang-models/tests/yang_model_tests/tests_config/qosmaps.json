@@ -247,7 +247,7 @@
                         "TC_TO_QUEUE_MAP": [
                             {
                                 "tc": "1",
-                                "qindex": "8"
+                                "qindex": "10"
                             },
                             {
                                 "tc":"2",
