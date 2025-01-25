@@ -8,7 +8,7 @@
         "num_temps":18,
         "pddf_dev_types":
         {
-            "description":"AS7726 - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
+            "description":"Z9664F - Below is the list of supported PDDF device types (chip names) for various components. If any component uses some other driver, we will create the client using 'echo <dev-address> <dev-type> > <path>/new_device' method",
             "CPLD":
             [
                "i2c_cpld"
