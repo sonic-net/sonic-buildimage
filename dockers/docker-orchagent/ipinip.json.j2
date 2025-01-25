@@ -52,11 +52,10 @@
         {%- set ipv6_vlan_addresses = ipv6_vlan_addresses.append(prefix) %}
     {%- endif %}
 {% endfor %}
-{# FIXME: SAI report tunnel TABLE_FULL with large interfaces. Disable it temporarily if over 128 ports. #}
-{% if PORT|length <= 128 %}
 {%- set ipv4_addresses = ipv4_addresses + ipv4_vlan_addresses %}
 {%- set ipv6_addresses = ipv6_addresses + ipv6_vlan_addresses %}
-{% else %}
+{# FIXME: SAI report tunnel TABLE_FULL for large topo. Disable it temporarily if over 128 IPv4/IPv6 tunnels. #}
+{% if ipv4_addresses|length + ipv6_addresses|length > 128 %}
 {%- set ipv4_addresses = [] %}
 {%- set ipv6_addresses = [] %}
 {% endif %}
