@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import os
-import shutil
+import re
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, date
 
 from sonic_py_common.logger import Logger
 
@@ -13,11 +13,19 @@ KERNEL_DUMP_DIR = '/var/dump/'
 MAX_CORE_FILES = 4
 EXPIRE_DAYS = 90
 
-def delete_dump(file_path)
+def delete_dump(file_path):
     try:
         os.remove(file_path)
     except:
         logger.log_error('Unexpected error occured trying to delete {}'.format(file_path))
+
+def get_dump_timestamp(file_name):
+    match = re.search(r'sonic_dump_.*_(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d).tar.gz', file_name)
+    if match:
+        groups = match.groups()
+        dump_date = datetime(int(groups[0]), int(groups[1]), int(groups[2]), int(groups[3]), int(groups[4]), int(groups[5]))
+    
+    return None
 
 def main():
     logger = Logger(SYSLOG_IDENTIFIER)
@@ -61,14 +69,19 @@ def main():
     not_expired_dumps = []
     for kernel_dump in kernel_dumps:
         # delete expired kernel dump
-        dump_date = datetime.utcfromtimestamp(int(kernel_dump.split('_')[3]))
+        dump_date = get_dump_timestamp(kernel_dump)
+        if not dump_date:
+            # Not a kernel dump file
+            continue
+
         if dump_date < expire_date:
+            # Kernel dump expired
             delete_dump(os.path.join(KERNEL_DUMP_DIR, kernel_dump))
             continue
 
         not_expired_dumps.append(f)
         if len(not_expired_dumps) > MAX_CORE_FILES:
-            not_expired_dumps.sort(reverse = True, key = lambda x: datetime.utcfromtimestamp(int(kernel_dump.split('_')[3])))
+            not_expired_dumps.sort(reverse = True, key = lambda x: get_dump_timestamp(kernel_dump))
             oldest_dump = not_expired_dumps[MAX_CORE_FILES]
             logger.log_info('Deleting {}'.format(oldest_dump))
             delete_dump(os.path.join(KERNEL_DUMP_DIR, oldest_dump))
