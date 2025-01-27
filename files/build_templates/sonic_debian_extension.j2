@@ -767,11 +767,20 @@ fi
 
 {% if installer_debs.strip() -%}
 {% for deb in installer_debs.strip().split(' ') -%}
-sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}} || sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
+sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}}
+if [ $? -ne 0 ]; then
+    # Install debian package failed, install depency and fix unconfigured package
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
+    # Install debian package again, some SONiC packages inderectly depends on eachother, and both have lower version than Debian offical package
+    # So 'apt-get -y install -f' command will downgrade installed SONiC package
+    sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}}
+fi
+
 ## SONiC packages may have lower version than Debian offical package, install offical Debian package will break feature
 ## Hold installed packages to prevent these packages be upgrade by apt commands in this file
 PACKAGE_NAME=$(dpkg-deb -f {{deb}} Package)
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark hold $PACKAGE_NAME
+
 {% endfor %}
 {% endif %}
 
