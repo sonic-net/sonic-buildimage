@@ -1,0 +1,17 @@
+#!/bin/bash
+cpld1_ver=$(ipmitool raw 0x30 0x25 0x0 0xc 0x1 0x0 2>>/dev/null | awk '{printf $1}')
+cpld2_ver=$(ipmitool raw 0x30 0x25 0x0 0xe 0x1 0x0 2>>/dev/null | awk '{printf $1}')
+fpga_ver=$(ipmitool raw 0x30 0x25 0x0 0x60 0x1 0x0 2>>/dev/null | awk '{printf $1}')
+cpld1_ver=$( printf "%d" 0x$cpld1_ver )
+cpld2_ver=$( printf "%d" 0x$cpld2_ver )
+fpga_ver=$( printf "%d" 0x$fpga_ver )
+cpld1_ver_path="/sys/bus/i2c/devices/0-0006/version"
+cpld2_ver_path="/sys/bus/i2c/devices/0-0007/version"
+fpga_ver_path="/sys/bus/i2c/devices/0-0030/version"
+
+echo $cpld1_ver > $cpld1_ver_path
+echo $cpld2_ver > $cpld2_ver_path
+echo $fpga_ver > $fpga_ver_path
+
+exit 0
+
