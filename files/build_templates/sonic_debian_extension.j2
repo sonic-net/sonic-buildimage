@@ -768,6 +768,10 @@ fi
 {% if installer_debs.strip() -%}
 {% for deb in installer_debs.strip().split(' ') -%}
 sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}} || sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
+## SONiC packages may have lower version than Debian offical package, install offical Debian package will break feature
+## Hold installed packages to prevent these packages be upgrade by apt commands in this file
+PACKAGE_NAME=$(dpkg-deb -f {{deb}} Package)
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark hold $PACKAGE_NAME
 {% endfor %}
 {% endif %}
 
@@ -1170,6 +1174,15 @@ sudo rm -rf $FILESYSTEM_ROOT/tmp/mask_disabled_services.py
 
 
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install python3-dbus
+
+
+{% if installer_debs.strip() -%}
+{% for deb in installer_debs.strip().split(' ') -%}
+## Unhold installed packages to allow these packages be upgrade after SONiC installed
+PACKAGE_NAME=$(dpkg-deb -f {{deb}} Package)
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark unhold $PACKAGE_NAME
+{% endfor %}
+{% endif %}
 
 ## Enable MULTIDB
 {% if ENABLE_MULTIDB == "y" %}
