@@ -79,7 +79,7 @@ https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sdk-2
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sdk-24.10-RC2-bookworm//rdma-core_2407mlnx52-1.2407061_arm64.deb==064d40e0c9e1b20b11983fa885eafdc2
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sdk-24.10-RC2-bookworm//rxp-compiler_22.05.1_arm64.deb==dd7265c708beffaf4a1dc4cdeac28c6e
 https://github.com/Mellanox/sonic-bluefield-packages/releases/download/dpu-sdk-24.10-RC2-bookworm//sdn-appliance_1.5-1mlnx1_arm64.deb==7edb3bcc674120c639893de415f57ee8
-https://github.com/Mellanox/sonic-bluefield-packages/releases/download/rshim-2.0.29-bookworm-amd64/rshim_2.0.29_amd64.deb==f78f52c7e36ddeb04602c11c95b10181
+https://github.com/Mellanox/sonic-bluefield-packages/releases/download/rshim-2.0.40-bookworm-amd64/rshim_2.0.40_amd64.deb==96f9e37f9f32e4d29fd771043269fce4
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2014.2164/fw-SPC-rel-13_2014_2164-EVB.mfa==16dcbc2712a084428131c3d8b10d9bcb
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2014.2164/fw-SPC2-rel-29_2014_2164-EVB.mfa==5444267d3ab7e443606e748bb0811294
 https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins/releases/download/fw-2014.2164/fw-SPC3-rel-30_2014_2164-EVB.mfa==a4bf309c65aa842ceb53ea6c93de43b5
