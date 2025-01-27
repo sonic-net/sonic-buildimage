@@ -1,0 +1,145 @@
+{
+    "PSU":
+    {
+        "name":
+        {
+            "1": "PSU 1",
+            "2": "PSU 2"
+        },
+        "fan_name":
+        {
+            "1":
+            {
+               "1": "PSU 1 Fan 1"
+            },
+            "2":
+            {
+               "1": "PSU 2 Fan 1"
+            }
+        },
+        "thermal_name":
+        {
+            "1": "PSU 1 Temp1",
+            "2": "PSU 2 Temp1"
+        },
+        "psu_present": 
+        {
+            "bmc": 
+            {
+                "valmap": { "0": true, "4":false, "8":false }
+            },
+            "i2c":
+            {   
+                "valmap": {"1":true, "0": false}
+            }   
+        },
+
+        "psu_power_good": 
+        {
+            "bmc":
+            {
+                "valmap": { "1": true, "2": true, "0":false }
+            },
+            "i2c":
+            {
+                "valmap": {"1":true, "0": false}
+            }
+
+        },
+
+        "psu_fan_dir":
+        {
+            "bmc":
+            {
+                "valmap": { "B2F":"INTAKE", "F2B":"EXHAUST" }
+            },
+            "i2c":
+            {
+                "valmap": { "FSP550-29FM":"INTAKE", "FSP550-20FM":"EXHAUST"}
+            }
+
+        },
+
+        "psu_led_color":
+        {
+            "colmap": {"green":"green", "red":"amber"}
+        },
+
+        "PSU_FAN_MAX_SPEED":"18000"
+    },
+
+    "FAN":
+    {
+        "direction":
+        {
+            "bmc":
+            {
+                "valmap": { "1":"INTAKE", "0":"EXHAUST" }
+            },
+            "i2c":
+            {
+                "valmap": { "1":"INTAKE", "0":"EXHAUST" }
+            }
+        },
+        "drawer_name":
+        {
+            "1": "Fantray 1",
+            "2": "Fantray 2",
+            "3": "Fantray 3",
+            "4": "Fantray 4"
+        },
+        "name":
+        {
+            "1":
+            {
+               "1": "Fan 1 Front",
+               "2": "Fan 1 Rear"
+            },
+            "2":
+            {
+               "1": "Fan 2 Front",
+               "2": "Fan 2 Rear"
+            },
+            "3":
+            {
+              "1": "Fan 3 Front",
+              "2": "Fan 3 Rear"
+            },
+            "4":
+            {
+              "1": "Fan 4 Front",
+              "2": "Fan 4 Rear"
+            }
+        },
+        "present":
+        {
+            "bmc":
+            {
+                "valmap": {"0":true, "1":false}
+            },
+            "bmc":
+            {
+               "valmap": {"0":true, "1":false}
+            },
+            "i2c":
+            {
+               "valmap": {"1":true, "0":false}
+            }
+        },
+        
+        "fan_master_led_color":
+        {
+            "colmap": {"green":"green", "red":"amber"}
+        },
+
+        "duty_cycle_to_pwm": "lambda dc: ((dc*255.0)/100)",
+
+        "pwm_to_duty_cycle": "lambda pwm: ((pwm*100.0)/256)",
+
+        "FAN_MAX_RPM_SPEED":
+        {   
+            "Front": "23300", 
+            "Rear": "20300"
+        }  
+    }
+}

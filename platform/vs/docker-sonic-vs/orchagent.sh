@@ -8,6 +8,20 @@ else
     export platform=vs
 fi
 
+# Force orchagent to run with the given ASIC.
+if [ "$ASIC_TYPE" == "broadcom-dnx" ]; then
+    export platform="broadcom"
+    export sub_platform="broadcom-dnx"
+fi
+
+# Allow test to override PfcDlrInitEnable for VS switch so that
+# we can test PfcWdAclHandler, instead of PfcWdDlrHandler.
+if [ "$PFC_DLR_INIT_ENABLE" == "1" ]; then
+    export pfcDlrInitEnable="1"
+elif [ "$PFC_DLR_INIT_ENABLE" == "0" ]; then
+    export pfcDlrInitEnable="0"
+fi
+
 SWSS_VARS_FILE=/usr/share/sonic/templates/swss_vars.j2
 
 # Retrieve SWSS vars from sonic-cfggen

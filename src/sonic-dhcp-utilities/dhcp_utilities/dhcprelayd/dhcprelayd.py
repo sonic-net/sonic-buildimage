@@ -8,7 +8,7 @@ import sys
 import syslog
 import time
 from swsscommon import swsscommon
-from dhcp_utilities.common.utils import DhcpDbConnector, terminate_proc, get_target_process_cmds, is_smart_switch
+from dhcp_utilities.common.utils import DhcpDbConnector, terminate_proc, is_smart_switch
 from dhcp_utilities.common.dhcp_db_monitor import DhcpRelaydDbMonitor, DhcpServerTableIntfEnablementEventChecker, \
      VlanTableEventChecker, VlanIntfTableEventChecker, DhcpServerFeatureStateChecker, MidPlaneTableEventChecker
 
@@ -109,7 +109,9 @@ class DhcpRelayd(object):
         self._disable_checkers(checkers_to_be_disabled)
 
         self._start_dhcrelay_process(dhcp_interfaces, dhcp_server_ip, force_kill)
-        self._start_dhcpmon_process(dhcp_interfaces, force_kill)
+
+        # TODO dhcpmon is not ready for count packet for dhcp_server, hence comment invoke it for now
+        # self._start_dhcpmon_process(dhcp_interfaces, force_kill)
 
     def wait(self):
         """
@@ -224,7 +226,23 @@ class DhcpRelayd(object):
         """
         Check whether dhcrelay running as expected, if not, dhcprelayd will exit with code 1
         """
-        running_cmds = get_target_process_cmds("dhcrelay")
+        procs = {}
+        for proc in psutil.process_iter():
+            try:
+                if proc.name() != "dhcrelay":
+                    continue
+                procs[proc.pid] = [proc.ppid(), proc.cmdline()]
+            except psutil.NoSuchProcess:
+                continue
+
+        # When there is network io, dhcrelay would create child process to proceed them, psutil has chance to get
+        # duplicated cmdline. Hence ignore chlid process in here
+        running_cmds = []
+        for _, (parent_pid, cmdline) in procs.items():
+            if parent_pid in procs:
+                continue
+            running_cmds.append(cmdline)
+
         running_cmds.sort()
         expected_cmds = [value for key, value in self.dhcp_relay_supervisor_config.items() if "isc-dhcpv4-relay" in key]
         expected_cmds.sort()
@@ -307,7 +325,7 @@ class DhcpRelayd(object):
         for pid, cmds in pids_cmds.items():
             proc = psutil.Process(pid)
             if proc.status() == psutil.STATUS_ZOMBIE:
-                syslog.syslog(syslog.LOG_ERR, "Faild to start dhcpmon process: {}".format(cmds))
+                syslog.syslog(syslog.LOG_ERR, "Failed to start dhcpmon process: {}".format(cmds))
                 terminate_proc(proc)
             else:
                 syslog.syslog(syslog.LOG_INFO, "dhcpmon process started successfully, cmds: {}".format(cmds))
@@ -319,16 +337,19 @@ class DhcpRelayd(object):
 
         # Get old dhcrelay process and get old dhcp interfaces
         for proc in psutil.process_iter():
-            if proc.name() == process_name:
-                cmds = proc.cmdline()
-                index = 0
-                target_procs.append(proc)
-                while index < len(cmds):
-                    if cmds[index] == "-id":
-                        old_dhcp_interfaces.add(cmds[index + 1])
-                        index += 2
-                    else:
-                        index += 1
+            try:
+                if proc.name() == process_name:
+                    cmds = proc.cmdline()
+                    index = 0
+                    target_procs.append(proc)
+                    while index < len(cmds):
+                        if cmds[index] == "-id":
+                            old_dhcp_interfaces.add(cmds[index + 1])
+                            index += 2
+                        else:
+                            index += 1
+            except psutil.NoSuchProcess:
+                continue
         if len(target_procs) == 0:
             return NOT_FOUND_PROC
 

@@ -1,32 +1,30 @@
-#
-#  Copyright 2007-2020 Broadcom Inc. All rights reserved.
-#  
-#  Permission is granted to use, copy, modify and/or distribute this
-#  software under either one of the licenses below.
-#  
-#  License Option 1: GPL
-#  
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License, version 2, as
-#  published by the Free Software Foundation (the "GPL").
-#  
-#  This program is distributed in the hope that it will be useful, but
-#  WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  General Public License version 2 (GPLv2) for more details.
-#  
-#  You should have received a copy of the GNU General Public License
-#  version 2 (GPLv2) along with this source code.
-#  
-#  
-#  License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
-#  
-#  This software is governed by the Broadcom Open Network Switch APIs license:
-#  https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
-#
 # $Id: Makefile.linux-xlr-4_19,v 0.1 Broadcom SDK $
-# $Copyright: (c) 2015 Broadcom Corp.
-# All Rights Reserved.$
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
 
 #
 # XLR system make file.
@@ -45,14 +43,18 @@
 #endif
 
 # some basic path variables for tools and kernel source, etc #
-XLR_TOOLS_BASE ?= /projects/ntsw-tools/linux/xlr-510
+XLR_TOOLS_BASE ?= /projects/ntsw-tools/linux/xlr-66
 TOOLCHAIN_DIR = $(XLR_TOOLS_BASE)/buildroot/host/usr
-KERNDIR       = $(XLR_TOOLS_BASE)/kernel/linux
+ifeq (1,$(USE_CLANG))
+KERNDIR = $(XLR_TOOLS_BASE)/kernel/linux-clang
+endif
+KERNDIR ?= $(XLR_TOOLS_BASE)/kernel/linux
+
 # Target machine for EDK-Host defconfig
 TARGET_MACHINE ?= x86_64
 
 # set up cross compile prefix, tools dir variables. #
-export CROSS_COMPILE := x86_64-broadcom-linux-gnu-
+export CROSS_COMPILE := x86_64-linux-
 export TOOLS_DIR     := $(TOOLCHAIN_DIR)/bin
 
 # architecture. #
@@ -70,68 +72,77 @@ export PATH         := $(TOOLCHAIN_DIR)/bin:$(KERNDIR):$(PATH)
 
 # set up SYSINC path #
 CROSS_GCC_VER ?= $(shell $(TOOLCHAIN_DIR)/bin/$(CROSS_COMPILE)gcc -dumpversion)
+CROSS_GCC_VER_MAJOR := $(shell echo $(CROSS_GCC_VER) | cut -f1 -d.)
 export SYSINC := $(TOOLCHAIN_DIR)/lib/gcc/$(TARGET_ARCHITECTURE)/$(CROSS_GCC_VER)/include
 
-# Glibc 2.27 or later version doesn't support SVID libm error handling. 
+# Glibc 2.27 or later version doesn't support SVID libm error handling.
 # Building tcl 8.3.3 with the new toolchain will occur errors.
 export TCL840  := 1
 
 # Common CFLAGS
-CFLAGS += -DUSE_LINUX_BDE_MMAP=1
-#CFLAGS += -DBDE_LINUX_USE_MSI_INTERRUPT
-CFLAGS += -Wno-error=unused-value
-CFLAGS += -Wno-error=unused-function
-CFLAGS += -Wno-error=cpp
-CFLAGS += -Wno-error=array-bounds
-CFLAGS += -Wno-error=strict-overflow
+CFGFLAGS += -DUSE_LINUX_BDE_MMAP=1
+#CFGFLAGS += -DBDE_LINUX_USE_MSI_INTERRUPT
+OPT_CFLAGS += -Wno-error=unused-value
+OPT_CFLAGS += -Wno-error=unused-function
+OPT_CFLAGS += -Wno-error=cpp
+OPT_CFLAGS += -Wno-error=array-bounds
+OPT_CFLAGS += -Wno-error=strict-overflow
 CFLAGS += -L$(TOOLCHAIN_DIR)/lib
 CFLAGS += -L$(TOOLCHAIN_DIR)/lib64
-#CFLAGS += -Wl,--rpath=/lib64                                 # may need to set rpath and dynamic-linker path here (and possibly in KLFAGS below) in the future, #
-#CFLAGS += -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2   # if we want to build the target executable to be used with shared libs #
+#OPT_CFLAGS += -Wl,--rpath=/lib64                                 # may need to set rpath and dynamic-linker path here (and possibly in KLFAGS below) in the future, #
+#OPT_CFLAGS += -Wl,--dynamic-linker=/lib64/ld-linux-x86-64.so.2   # if we want to build the target executable to be used with shared libs #
 
 # Compiler-specific CFLAGS
 ifeq (1,$(USE_CLANG)) # CLANG-specific CFLAGS
-CFLAGS += -Wno-strlcpy-strlcat-size
-CFLAGS += -Wno-strncat-size
+OPT_CFLAGS += -Wno-strlcpy-strlcat-size
+OPT_CFLAGS += -Wno-strncat-size
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 12)" "1"
+	export LIBNSL_DEPRECATED := 1
+endif
 else # GCC-specific CFLAGS
-CFLAGS += -Wno-error=unused-but-set-variable
-CFLAGS += -Wno-error=maybe-uninitialized
-CFLAGS += -Wno-error=aggressive-loop-optimizations
-CFLAGS += -Wno-error=sizeof-pointer-div #SDK-233830
-CFLAGS += -Wno-error=memset-elt-size #SDK-232626
-ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f1 -d.` \>= 8)" "1"
-	CFLAGS += -Wno-stringop-overflow
-	CFLAGS += -Wno-stringop-truncation
-	CFLAGS += -Wno-error=restrict
+OPT_CFLAGS += -Wno-error=unused-but-set-variable
+OPT_CFLAGS += -Wno-error=maybe-uninitialized
+OPT_CFLAGS += -Wno-error=aggressive-loop-optimizations
+OPT_CFLAGS += -Wno-error=sizeof-pointer-div #SDK-233830
+OPT_CFLAGS += -Wno-error=memset-elt-size #SDK-232626
+OPT_CFLAGS += -Wno-error=unused-variable #SDK-232993
+OPT_CFLAGS += -Wno-deprecated-declarations #SDK-233174
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 8)" "1"
+	OPT_CFLAGS += -Wno-stringop-overflow
+	OPT_CFLAGS += -Wno-stringop-truncation
+	OPT_CFLAGS += -Wno-error=restrict
 endif
-ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f1 -d.` \>= 9)" "1"
-	CFLAGS += -Wno-address-of-packed-member
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 9)" "1"
+	OPT_CFLAGS += -Wno-address-of-packed-member
 endif
-ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f1 -d.` \== 10)" "1"
-	#There might be a bug in GCC10 that cannot detect initialization correctly.
-	CFLAGS += -Wno-error=uninitialized
-	CFLAGS += -Wno-error=format-overflow
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 10)" "1"
+	OPT_CFLAGS += -Wno-error=uninitialized
+	OPT_CFLAGS += -Wno-error=format-overflow
 	CFLAGS += -fcommon
-ifeq "$(shell expr `echo $(CROSS_GCC_VER) | cut -f2 -d.` \== 2)" "1"
-	CFLAGS += -Wno-zero-length-bounds
+	OPT_CFLAGS += -Wno-zero-length-bounds
 endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 12)" "1"
+	CFLAGS += -flarge-source-files
+	OPT_CFLAGS += -Wno-error=address
+	export LIBNSL_DEPRECATED := 1
+endif
+ifeq "$(shell expr $(CROSS_GCC_VER_MAJOR) \>= 13)" "1"
+	OPT_CFLAGS += -Wno-error=enum-int-mismatch
+	CFLAGS += -fcf-protection
 endif
 endif # Compiler-specific CFLAGS
 
 #XLDK-568 fix inline references
 CFGFLAGS += -fgnu89-inline
 
-#XLR-54
-CFLAGS += -Wno-unused-variable #SDK-232993
-CFLAGS += -Wno-deprecated-declarations #SDK-233174
-
-#CFLAGS += -Wno-unused-function
-#CFLAGS += -Wno-aggressive-loop-optimizations
-#CFLAGS += -Wno-maybe-uninitialized
-
 # set up KFLAGS appropriately. #
 ifeq (,$(KFLAGS))
-KFLAGS := -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib64 -I$(KERNDIR) -lc -nostdinc -isystem $(SYSINC) -Iinclude -I$(KERNDIR)/arch/x86/include -I$(KERNDIR)/arch/x86/include/generated -I$(KERNDIR)/arch/x86/include/generated/uapi -I$(KERNDIR)/arch/x86/include/uapi -I$(KERNDIR)/include -I$(KERNDIR)/include/generated -I$(KERNDIR)/include/generated/uapi -I$(KERNDIR)/include/uapi -include $(KERNDIR)/include/generated/autoconf.h -D__KERNEL__ -DNDEBUG -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Wno-format-security -fno-delete-null-pointer-checks -Os -mno-sse -m64 -mtune=generic -mno-red-zone -mcmodel=kernel -funit-at-a-time -maccumulate-outgoing-args -fstack-protector -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -pipe -Wno-sign-compare -fno-asynchronous-unwind-tables -fno-omit-frame-pointer -Wdeclaration-after-statement -Wno-pointer-sign -fno-dwarf2-cfi-asm -fconserve-stack
+KFLAGS := -L$(TOOLCHAIN_DIR)/lib -L$(TOOLCHAIN_DIR)/lib64 -I$(KERNDIR) -lc -nostdinc -isystem $(SYSINC) -Iinclude -I$(KERNDIR)/arch/x86/include -I$(KERNDIR)/arch/x86/include/generated -I$(KERNDIR)/arch/x86/include/generated/uapi -I$(KERNDIR)/arch/x86/include/uapi -I$(KERNDIR)/include -I$(KERNDIR)/include/generated -I$(KERNDIR)/include/generated/uapi -I$(KERNDIR)/include/uapi -include $(KERNDIR)/include/generated/autoconf.h -D__KERNEL__ -DNDEBUG -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Wno-format-security -fno-delete-null-pointer-checks -Os -mno-sse -m64 -mtune=generic -mno-red-zone -mcmodel=kernel -fstack-protector -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -pipe -Wno-sign-compare -fno-asynchronous-unwind-tables -fno-omit-frame-pointer -Wdeclaration-after-statement -Wno-pointer-sign -fno-dwarf2-cfi-asm
+ifneq (1,$(USE_CLANG))
+KFLAGS += -funit-at-a-time -maccumulate-outgoing-args -fconserve-stack
+else
+KFLAGS += -fno-pie
+endif
 endif
 
 

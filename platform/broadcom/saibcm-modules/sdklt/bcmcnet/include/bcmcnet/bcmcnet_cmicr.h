@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMCNET_CMICR_H
@@ -150,7 +150,7 @@
 #define CMICR_HW_RETRY_TIMES            100000
 
 /*! Max remaining descriptors */
-#define CMICR_DESC_REMAIN_MAX           8
+#define CMICR_DESC_REMAIN_MAX           63
 
 /*!
  * \brief Initialize HW handles.

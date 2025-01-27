@@ -1,3 +1,4 @@
 0001-Remove-ord-in-get_mac-to-avoid-TypeError.patch
 0002-Fill-byte-formatted-client-mac-address-in-DHCP-Disco.patch
 0003-Avoid-local-version-scheme-by-setuptools-scm.patch
+0004-Consider-only-expected-packets-for-timeout.patch

@@ -4,6 +4,7 @@ import jinja2
 from .manager import Manager
 from .log import log_err, log_debug, log_notice
 from swsscommon import swsscommon
+from sonic_py_common import device_info
 
 class DeviceGlobalCfgMgr(Manager):
     """This class responds to change in device-specific state"""
@@ -18,8 +19,9 @@ class DeviceGlobalCfgMgr(Manager):
         :param common_objs: common object dictionary
         :param db: name of the db
         :param table: name of the table in the db
-        """
-        self.switch_type = ""
+        """        
+        self.switch_role = ""
+        self.chassis_tsa = ""
         self.directory = common_objs['directory']
         self.cfg_mgr = common_objs['cfg_mgr']
         self.constants = common_objs['constants']
@@ -27,8 +29,8 @@ class DeviceGlobalCfgMgr(Manager):
         self.tsb_template = common_objs['tf'].from_file("bgpd/tsa/bgpd.tsa.unisolate.conf.j2")
         self.wcmp_template = common_objs['tf'].from_file("bgpd/wcmp/bgpd.wcmp.conf.j2")
         self.idf_isolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_isolate.conf.j2")
-        self.idf_unisolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_unisolate.conf.j2")
-        self.directory.subscribe([("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/switch_type"),], self.on_switch_type_change)
+        self.idf_unisolate_template = common_objs['tf'].from_file("bgpd/idf_isolate/idf_unisolate.conf.j2")        
+        self.directory.subscribe([("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/type"),], self.handle_type_update)
         super(DeviceGlobalCfgMgr, self).__init__(
             common_objs,
             [],
@@ -46,18 +48,16 @@ class DeviceGlobalCfgMgr(Manager):
         if not self.directory.path_exist(self.db_name, self.table_name, "idf_isolation_state"):
             self.directory.put(self.db_name, self.table_name, "idf_isolation_state", self.IDF_DEFAULTS)
 
-    def on_switch_type_change(self):
-        log_debug("DeviceGlobalCfgMgr:: Switch type update handler")
-        if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/switch_type"):
-            self.switch_type = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["switch_type"]
-        log_debug("DeviceGlobalCfgMgr:: Switch type: %s" % self.switch_type)
+    def handle_type_update(self):
+        log_debug("DeviceGlobalCfgMgr:: Switch role update handler")
+        if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME, "localhost/type"):
+            self.switch_role = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["type"]
+        log_debug("DeviceGlobalCfgMgr:: Switch role: %s" % self.switch_role)
 
     def set_handler(self, key, data):
         """ Handle device TSA/W-ECMP state change """
         log_debug("DeviceGlobalCfgMgr:: set handler")
 
-        if self.switch_type:
-            log_debug("DeviceGlobalCfgMgr:: Switch type: %s" % self.switch_type)
         if not data:
             log_err("DeviceGlobalCfgMgr:: data is None")
             return False
@@ -97,11 +97,16 @@ class DeviceGlobalCfgMgr(Manager):
             if "tsa_enabled" in data:
                 state = data["tsa_enabled"]
 
-        if self.is_update_required("tsa_enabled", state):
+        self.chassis_tsa = self.get_chassis_tsa_status()
+        requires_update = self.is_update_required("tsa_enabled", state)
+
+        if state in ["true", "false"] and self.directory.path_exist(self.db_name, self.table_name, "tsa_enabled"):
+            self.directory.put(self.db_name, self.table_name, "tsa_enabled", state)
+
+        if requires_update and self.chassis_tsa == "false":
             self.cfg_mgr.commit()
             self.cfg_mgr.update()
-            if self.isolate_unisolate_device(state):
-                self.directory.put(self.db_name, self.table_name, "tsa_enabled", state)
+            self.isolate_unisolate_device(state)
         else:
             log_notice("DeviceGlobalCfgMgr:: TSA configuration is up-to-date")
 
@@ -167,7 +172,9 @@ class DeviceGlobalCfgMgr(Manager):
         cmd = ""
         if self.directory.path_exist("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME, "tsa_enabled"):
             tsa_status = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_BGP_DEVICE_GLOBAL_TABLE_NAME)["tsa_enabled"]
-            if tsa_status == "true":
+            chassis_tsa = self.get_chassis_tsa_status()
+
+            if tsa_status == "true" or chassis_tsa == "true":
                 cmds = cfg.replace("#012", "\n").split("\n")
                 log_notice("DeviceGlobalCfgMgr:: Device is isolated. Applying TSA route-maps")
                 cmd = self.get_ts_routemaps(cmds, self.tsa_template)
@@ -228,6 +235,21 @@ class DeviceGlobalCfgMgr(Manager):
                 route_map_names.add(result.group(1))
         return route_map_names
 
+    def get_chassis_tsa_status(self):
+        chassis_tsa_status = "false"
+
+        if not device_info.is_chassis():
+            return chassis_tsa_status
+
+        try:
+            ch = swsscommon.SonicV2Connector(use_unix_socket_path=False)
+            ch.connect(ch.CHASSIS_APP_DB, False)
+            chassis_tsa_status = ch.get(ch.CHASSIS_APP_DB, "BGP_DEVICE_GLOBAL|STATE", 'tsa_enabled')
+        except Exception as e:
+            log_err("Got an exception {}".format(e))
+
+        return chassis_tsa_status
+
     def downstream_isolate_unisolate(self, idf_isolation_state):
         """ API to apply IDF configuration """
 
@@ -235,8 +257,8 @@ class DeviceGlobalCfgMgr(Manager):
             log_err("IDF: invalid value({}) is provided".format(idf_isolation_state))
             return False
 
-        if self.switch_type and self.switch_type != "SpineRouter":
-            log_debug("DeviceGlobalCfgMgr:: Skipping IDF isolation configuration on Switch type: %s" % self.switch_type)
+        if self.switch_role and self.switch_role != "SpineRouter":
+            log_debug("DeviceGlobalCfgMgr:: Skipping IDF isolation configuration on %s" % self.switch_role)
             return True
 
         cmd = "\n"

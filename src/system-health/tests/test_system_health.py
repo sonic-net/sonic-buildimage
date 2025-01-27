@@ -12,6 +12,7 @@
 import copy
 import os
 import sys
+import docker
 from imp import load_source
 from swsscommon import swsscommon
 
@@ -21,8 +22,10 @@ from sonic_py_common import device_info
 from .mock_connector import MockConnector
 
 swsscommon.SonicV2Connector = MockConnector
+swsscommon.RestartWaiter = MagicMock()
 
 test_path = os.path.dirname(os.path.abspath(__file__))
+telemetry_path = os.path.join(test_path, 'telemetry')
 modules_path = os.path.dirname(test_path)
 scripts_path = os.path.join(modules_path, 'scripts')
 sys.path.insert(0, modules_path)
@@ -46,7 +49,7 @@ snmpd                       RUNNING   pid 67, uptime 1:03:56
 snmp-subagent               EXITED    Oct 19 01:53 AM
 """
 device_info.get_platform = MagicMock(return_value='unittest')
- 
+
 device_runtime_metadata = {"DEVICE_RUNTIME_METADATA": {"ETHERNET_PORTS_PRESENT":True}}
 
 def no_op(*args, **kwargs):
@@ -165,6 +168,53 @@ def test_service_checker_single_asic(mock_config_db, mock_run, mock_docker_clien
     checker.load_critical_process_cache()
     assert origin_container_critical_processes == checker.container_critical_processes
 
+
+@patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
+@patch('health_checker.service_checker.ServiceChecker._get_container_folder', MagicMock(return_value=telemetry_path))
+@patch('sonic_py_common.multi_asic.is_multi_asic', MagicMock(return_value=False))
+@patch('docker.DockerClient')
+@patch('health_checker.utils.run_command')
+@patch('swsscommon.swsscommon.ConfigDBConnector')
+def test_service_checker_telemetry(mock_config_db, mock_run, mock_docker_client):
+    setup()
+    mock_db_data = MagicMock()
+    mock_get_table = MagicMock()
+    mock_db_data.get_table = mock_get_table
+    mock_config_db.return_value = mock_db_data
+    mock_get_table.return_value = {
+        'gnmi': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+
+        },
+        'telemetry': {
+            'state': 'enabled',
+            'has_global_scope': 'True',
+            'has_per_asic_scope': 'False',
+
+        }
+    }
+    mock_containers = MagicMock()
+    mock_gnmi_container = MagicMock()
+    mock_gnmi_container.name = 'gnmi'
+    mock_containers.list = MagicMock(return_value=[mock_gnmi_container])
+    mock_docker_client_object = MagicMock()
+    mock_docker_client.return_value = mock_docker_client_object
+    mock_docker_client_object.containers = mock_containers
+    mock_docker_client_object.images = MagicMock()
+    mock_docker_client_object.images.get = MagicMock()
+    except_err = docker.errors.ImageNotFound("Unit test")
+    mock_docker_client_object.images.get.side_effect = [except_err, None]
+
+    mock_run.return_value = "gnmi-native                       RUNNING   pid 67, uptime 1:03:56"
+
+    checker = ServiceChecker()
+    assert checker.get_category() == 'Services'
+    config = Config()
+    checker.check(config)
+    assert 'gnmi:gnmi-native' in checker._info
+    assert checker._info['gnmi:gnmi-native'][HealthChecker.INFO_FIELD_OBJECT_STATUS] == HealthChecker.STATUS_OK
 
 
 @patch('swsscommon.swsscommon.ConfigDBConnector.connect', MagicMock())
@@ -794,7 +844,7 @@ def test_publish_system_status_allowed_status():
     sysmon = Sysmonitor()
     sysmon.publish_system_status('UP')
     sysmon.publish_system_status('DOWN')
-    
+
     expected_calls = [
         (("UP",), {}),
         (("DOWN",), {})
@@ -807,7 +857,7 @@ def test_publish_system_status():
     sysmon = Sysmonitor()
     sysmon.publish_system_status('UP')
     result = swsscommon.SonicV2Connector.get(MockConnector, 0, "SYSTEM_READY|SYSTEM_STATE", 'Status')
-    assert result == "UP" 
+    assert result == "UP"
 
 @patch('health_checker.sysmonitor.Sysmonitor.get_all_system_status', test_get_all_system_status_ok())
 @patch('health_checker.sysmonitor.Sysmonitor.publish_system_status', test_publish_system_status())

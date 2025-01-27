@@ -5,31 +5,34 @@ template(name="prog_msg" type="list") {
     constant(value="\n")
 }
 
-{% if include_system_eventd == "y" %}
-{% if build_reduce_image_size != "y" or sonic_asic_platform != "broadcom" %}
+{% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
 
 $ModLoad omprog
 
+{% endif %}
+
 if re_match($programname, "bgp[0-9]*#(frr|zebra|staticd|watchfrr)") then {
     /var/log/frr/zebra.log
+    {% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
     action(type="omprog"
         binary="/usr/bin/rsyslog_plugin -r /etc/rsyslog.d/zebra_regex.json -m sonic-events-bgp"
         output="/var/log/rsyslog_plugin.log"
         template="prog_msg")
+    {% endif %}
     stop
 }
 
 if re_match($programname, "bgp[0-9]*#bgpd") then {
     /var/log/frr/bgpd.log
+    {% if include_system_eventd == "y" and build_reduce_image_size != "y" %}
     action(type="omprog"
         binary="/usr/bin/rsyslog_plugin -r /etc/rsyslog.d/bgpd_regex.json -m sonic-events-bgp"
         output="/var/log/rsyslog_plugin.log"
         template="prog_msg")
+    {% endif %}
     stop
 }
 
-{% endif %}
-{% endif %}
 
 ## Teamd rules
 

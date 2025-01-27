@@ -9,6 +9,7 @@
 try:
     import time
     from sonic_platform_pddf_base.pddf_chassis import PddfChassis
+    from sonic_py_common import device_info
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -175,3 +176,14 @@ class Chassis(PddfChassis):
             sw_reboot_cause = "Unknown"
 
         return ('REBOOT_CAUSE_NON_HARDWARE', sw_reboot_cause)
+
+    def get_serial_number(self):
+        """
+        Retrieves the hardware serial number for the chassis
+
+        Returns:
+            A string containing the hardware serial number for this
+            chassis.
+        """
+
+        return self.get_serial()

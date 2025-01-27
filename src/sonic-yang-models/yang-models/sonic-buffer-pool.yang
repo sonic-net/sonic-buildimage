@@ -2,6 +2,10 @@ module sonic-buffer-pool {
     namespace "http://github.com/sonic-net/sonic-buffer-pool";
     prefix bpl;
 
+    import sonic-device_metadata {
+        prefix device_metadata;
+    }
+
     organization
         "SONiC";
 
@@ -56,6 +60,20 @@ module sonic-buffer-pool {
                     default 0;
                     type uint64;
                     description "Buffer Pool Xoff Threshold (in Bytes)";
+                }
+
+                leaf percentage {
+                    type uint8;
+                    description "
+                        Buffer Pool percentage.
+                        The buffer pool size will be available_buffer * percentage / 100 if percentage is provided.
+                        It is valid in dynamic buffer model only.";
+                    must "(not(current()/../size))" {
+                        error-message "Percentage should not be configured along with size";
+                    }
+                    must "/device_metadata:sonic-device_metadata/device_metadata:DEVICE_METADATA/device_metadata:localhost/device_metadata:buffer_model = 'dynamic'" {
+                        error-message "Percentage must be configured in dynamic buffer model";
+                    }
                 }
             }
         }

@@ -29,8 +29,125 @@ module sonic-bgp-allowed-prefix {
             "Initial revision.";
     }
 
+    typedef bgp-allowed-ipv4-prefix {
+       type string {
+         pattern
+            '(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}'
+          +  '([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])'
+          + '/(([0-9])|([1-2][0-9])|(3[0-2]))'
+          + '( (le|ge) (([0-9])|([1-2][0-9])|(3[0-2])))?';
+       }
+       description
+        "The bgp-allowed-ipv4-prefix type represents an IPv4 address prefix
+         in BGP allowed prefix format.
+
+         The string format is an inet:ipv4-prefix (defined in RFC 6991) value
+         appended with an optional suffix.
+
+         The optional suffix consists of a string 'le' or 'ge' followed by a
+         number which is less than or equal to 32.";
+    }
+
+    typedef bgp-allowed-ipv6-prefix {
+       type string {
+         pattern '((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}'
+               + '((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|'
+               + '(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}'
+               + '(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))'
+               + '(/(([0-9])|([0-9]{2})|(1[0-1][0-9])|(12[0-8])))'
+               + '( (le|ge) (([0-9])|([0-9]{2})|(1[0-1][0-9])|(12[0-8])))?';
+         pattern '(([^:]+:){6}(([^:]+:[^:]+)|(.*\..*)))|'
+               + '((([^:]+:)*[^:]+)?::(([^:]+:)*[^:]+)?)'
+               + '(/.+)'
+               + '( (le|ge) (([0-9])|([0-9]{2})|(1[0-1][0-9])|(12[0-8])))?';
+       }
+       description
+        "The bgp-allowed-ipv6-prefix type represents an IPv6 address prefix
+         in BGP allowed prefix format.
+
+         The string format is an inet:ipv6-prefix (defined in RFC 6991) value
+         appended with an optional suffix.
+
+         The optional suffix consists of a string 'le' or 'ge' followed by a
+         number which is less than or equal to 128.";
+    }
+
     container sonic-bgp-allowed-prefix {
         container BGP_ALLOWED_PREFIXES {
+            list BGP_ALLOWED_PREFIXES_LIST {
+                key "deployment id";
+
+                leaf deployment {
+                    type string {
+                        pattern "DEPLOYMENT_ID";
+                    }
+                    description "BGP allowed prefix list key type";
+                }
+
+                leaf id {
+                    type uint32;
+                    description "BGP allowed prefix list deployment id";
+                }
+
+                leaf default_action {
+                    type rpolsets:routing-policy-action-type;
+                    description "Permit/Deny action for BGP allow prefix list";
+                }
+
+                leaf-list prefixes_v4 {
+                    type bgp-allowed-ipv4-prefix;
+                    description "BGP V4 allowed prefix list";
+                }
+
+                leaf-list prefixes_v6 {
+                    type bgp-allowed-ipv6-prefix;
+                    description "BGP V6 allowed prefix list";
+                }
+            }
+
+            list BGP_ALLOWED_PREFIXES_NEIGH_LIST {
+                key "deployment id neighbor neighbor_type";
+
+                leaf deployment {
+                    type string {
+                        pattern "DEPLOYMENT_ID";
+                    }
+                    description "BGP allowed prefix list key type";
+                }
+
+                leaf id {
+                    type uint32;
+                    description "BGP allowed prefix list deployment id";
+                }
+
+                leaf neighbor {
+                    type string {
+                        pattern "NEIGHBOR_TYPE";
+                    }
+                    description "BGP allowed prefix list neighbor";
+                }
+
+                leaf neighbor_type {
+                    type string;
+                    description "BGP allowed prefix list neighbor type";
+                }
+
+                leaf default_action {
+                    type rpolsets:routing-policy-action-type;
+                    description "Permit/Deny action for BGP allow prefix list";
+                }
+
+                leaf-list prefixes_v4 {
+                    type bgp-allowed-ipv4-prefix;
+                    description "BGP V4 allowed prefix list";
+                }
+
+                leaf-list prefixes_v6 {
+                    type bgp-allowed-ipv6-prefix;
+                    description "BGP V6 allowed prefix list";
+                }
+            }
+
             list BGP_ALLOWED_PREFIXES_COM_LIST {
                 key "deployment id community";
 
@@ -57,18 +174,18 @@ module sonic-bgp-allowed-prefix {
                 }
 
                 leaf-list prefixes_v4 {
-                    type inet:ipv4-prefix;
+                    type bgp-allowed-ipv4-prefix;
                     description "BGP V4 allowed prefix list";
                 }
 
                 leaf-list prefixes_v6 {
-                    type inet:ipv6-prefix;
+                    type bgp-allowed-ipv6-prefix;
                     description "BGP V6 allowed prefix list";
                 }
             }
 
-            list BGP_ALLOWED_PREFIXES_LIST {
-                key "deployment id";
+            list BGP_ALLOWED_PREFIXES_NEIGH_COM_LIST {
+                key "deployment id neighbor neighbor_type community";
 
                 leaf deployment {
                     type string {
@@ -82,18 +199,35 @@ module sonic-bgp-allowed-prefix {
                     description "BGP allowed prefix list deployment id";
                 }
 
+                leaf neighbor {
+                    type string {
+                        pattern "NEIGHBOR_TYPE";
+                    }
+                    description "BGP allowed prefix list neighbor";
+                }
+
+                leaf neighbor_type {
+                    type string;
+                    description "BGP allowed prefix list neighbor type";
+                }
+
+                leaf community {
+                    type string;
+                    description "BGP allowed prefix list deployment community";
+                }
+
                 leaf default_action {
                     type rpolsets:routing-policy-action-type;
                     description "Permit/Deny action for BGP allow prefix list";
                 }
 
                 leaf-list prefixes_v4 {
-                    type inet:ipv4-prefix;
+                    type bgp-allowed-ipv4-prefix;
                     description "BGP V4 allowed prefix list";
                 }
 
                 leaf-list prefixes_v6 {
-                    type inet:ipv6-prefix;
+                    type bgp-allowed-ipv6-prefix;
                     description "BGP V6 allowed prefix list";
                 }
             }

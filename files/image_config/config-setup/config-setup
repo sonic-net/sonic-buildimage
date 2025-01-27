@@ -330,6 +330,19 @@ do_db_migration()
         /usr/local/bin/db_migrator.py -o migrate
     fi
     sonic-db-cli CONFIG_DB SET "CONFIG_DB_INITIALIZED" "1"
+
+    #Enforce CHASSIS_APP_DB.tsa_enabled to be in sync with BGP_DEVICE_GLOBAL.STATE.tsa_enabled
+    if [[ -f /etc/sonic/chassisdb.conf ]]; then
+       tsa_cfg="$(sonic-db-cli CONFIG_DB HGET "BGP_DEVICE_GLOBAL|STATE" "tsa_enabled")"
+       sonic-db-cli CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled ${tsa_cfg}
+       OP_CODE=$?
+
+       if [ $OP_CODE -ne 0 ]; then
+         err_msg="Cmd failed (exit code $OP_CODE). CHASSIS_APP_DB and CONFIG_DB may be incosistent wrt tsa_enabled."
+         echo "$err_msg"
+         logger -t CHASSIS_APP_DB -p user.info "$err_msg"
+       fi
+    fi
 }
 
 # Perform configuration migration from backup copy.

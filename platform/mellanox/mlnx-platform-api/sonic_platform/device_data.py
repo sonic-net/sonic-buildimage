@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,10 +19,22 @@
 import glob
 import os
 import time
+import re
+from enum import Enum
 
 from . import utils
+from sonic_py_common.general import check_output_pipe
 
 DEFAULT_WD_PERIOD = 65535
+
+
+class DpuInterfaceEnum(Enum):
+    MIDPLANE_INT = "midplane_interface"
+    RSHIM_INT = "rshim_info"
+    PCIE_INT = "bus_info"
+
+
+dpu_interface_values = [item.value for item in DpuInterfaceEnum]
 
 DEVICE_DATA = {
     'x86_64-mlnx_msn2700-r0': {
@@ -102,6 +115,13 @@ DEVICE_DATA = {
     },
     'x86_64-mlnx_msn4600-r0': {
     },
+    'x86_64-nvidia_sn4280-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False
+            }
+        }
+    },
     'x86_64-nvidia_sn4800-r0': {
         'thermal': {
             "capability": {
@@ -126,6 +146,9 @@ DEVICE_DATA = {
                 "comex_amb": False,
                 "pch_temp": True
             }
+        },
+        'sfp': {
+            'fw_control_ports': [64, 65]  # 0 based sfp index list
         }
     },
     'x86_64-nvidia_sn5600-r0': {
@@ -133,6 +156,16 @@ DEVICE_DATA = {
             "capability": {
                 "comex_amb": False,
                 "pch_temp": True
+            }
+        },
+        'sfp': {
+            'fw_control_ports': [64]  # 0 based sfp index list
+        }
+    },
+    'x86_64-nvidia_sn5640_simx-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False,
             }
         }
     },
@@ -159,6 +192,13 @@ class DeviceDataManager:
     def is_simx_platform(cls):
         platform_name = cls.get_platform_name()
         return platform_name and 'simx' in platform_name
+
+    @classmethod
+    @utils.read_only_cache()
+    def get_simx_version(cls):
+        version = check_output_pipe(["lspci", "-vv"], ["grep", "SimX"])
+        parsed_version = re.search("([0-9]+\\.[0-9]+-[0-9]+)", version)
+        return parsed_version.group(1) if parsed_version else "N/A"
 
     @classmethod
     @utils.read_only_cache()
@@ -247,6 +287,30 @@ class DeviceDataManager:
         return sfp_data.get('max_port_per_line_card', 0)
 
     @classmethod
+    @utils.read_only_cache()
+    def get_platform_dpus_data(cls):
+        from sonic_py_common import device_info
+        platform_path = device_info.get_path_to_platform_dir()
+        platform_json_path = os.path.join(platform_path, 'platform.json')
+        json_data = utils.load_json_file(platform_json_path)
+        return json_data.get('DPUS', None)
+
+    @classmethod
+    def get_dpu_interface(cls, dpu, interface):
+        dpu_data = cls.get_platform_dpus_data()
+        if (not dpu_data) or (interface not in dpu_interface_values):
+            return None
+        return dpu_data.get(dpu, {}).get(interface)
+
+    @classmethod
+    @utils.read_only_cache()
+    def get_dpu_count(cls):
+        dpu_data = cls.get_platform_dpus_data()
+        if not dpu_data:
+            return 0
+        return len(dpu_data)
+
+    @classmethod
     def get_bios_component(cls):
         from .component import ComponentBIOS, ComponentBIOSSN2201
         if cls.get_platform_name() in ['x86_64-nvidia_sn2201-r0']:
@@ -257,22 +321,26 @@ class DeviceDataManager:
 
     @classmethod
     def get_cpld_component_list(cls):
-        from .component import ComponentCPLD, ComponentCPLDSN2201
+        from .component import ComponentCPLD, ComponentCPLDSN2201, ComponentCPLDSN4280, ComponenetFPGADPU
         if cls.get_platform_name() in ['x86_64-nvidia_sn2201-r0']:
             # For SN2201, special chass is required for handle BIOS
             # Currently, only fetching BIOS version is supported
             return ComponentCPLDSN2201.get_component_list()
+        if cls.get_platform_name() in ['x86_64-nvidia_sn4280-r0']:
+            return ComponentCPLDSN4280.get_component_list() + ComponenetFPGADPU.get_component_list()
         return ComponentCPLD.get_component_list()
 
     @classmethod
     @utils.read_only_cache()
     def is_module_host_management_mode(cls):
-        from sonic_py_common import device_info
-        _, hwsku_dir = device_info.get_paths_to_platform_and_hwsku_dirs()
-        sai_profile_file = os.path.join(hwsku_dir, 'sai.profile')
+        sai_profile_file = '/tmp/sai.profile'
+        if not os.path.exists(sai_profile_file):
+            from sonic_py_common import device_info
+            _, hwsku_dir = device_info.get_paths_to_platform_and_hwsku_dirs()
+            sai_profile_file = os.path.join(hwsku_dir, 'sai.profile')
         data = utils.read_key_value_file(sai_profile_file, delimeter='=')
         return data.get('SAI_INDEPENDENT_MODULE_MODE') == '1'
-    
+
     @classmethod
     def wait_platform_ready(cls):
         """
@@ -305,3 +373,16 @@ class DeviceDataManager:
             return DEFAULT_WD_PERIOD
 
         return watchdog_data.get('max_period', None)
+    
+    @classmethod
+    @utils.read_only_cache()
+    def get_always_fw_control_ports(cls):
+        platform_data = DEVICE_DATA.get(cls.get_platform_name())
+        if not platform_data:
+            return None
+        
+        sfp_data = platform_data.get('sfp')
+        if not sfp_data:
+            return None
+        
+        return sfp_data.get('fw_control_ports')

@@ -26,7 +26,7 @@ EMPTY_NAMESPACE = ''
 
 def db_connect(db_name, namespace=EMPTY_NAMESPACE):
     from swsscommon import swsscommon
-    return swsscommon.DBConnector(db_name, REDIS_TIMEOUT_MSECS, True, namespace)
+    return swsscommon.DBConnector(db_name, REDIS_TIMEOUT_MSECS, False, namespace)
 
 
 #
@@ -35,10 +35,10 @@ def db_connect(db_name, namespace=EMPTY_NAMESPACE):
 
 
 class DaemonBase(Logger):
-    def __init__(self, log_identifier, use_syslogger=True):
+    def __init__(self, log_identifier, use_syslogger=True, enable_runtime_log_config=False):
         super().__init__()
         if use_syslogger:
-            self.logger_instance = SysLogger(log_identifier)
+            self.logger_instance = SysLogger(log_identifier, enable_runtime_config=enable_runtime_log_config)
         else:
             self.logger_instance = Logger(
                 log_identifier=log_identifier,

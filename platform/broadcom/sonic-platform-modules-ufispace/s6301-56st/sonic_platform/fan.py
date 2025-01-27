@@ -19,6 +19,25 @@ class Fan(PddfFan):
     # Provide the functions/variables below for which implementation is to be overwritten
     # Since psu_fan airflow direction cant be read from sysfs, it is fixed as 'F2B' or 'intake'
 
+    def get_max_speed(self):
+        """
+        Retrieves the max speed
+
+        Returns:
+            An Integer, the max speed
+        """
+        if self.is_psu_fan:
+            psu_fru = PsuFru(self.fans_psu_index)
+            max_speed = int(self.plugin_data['PSU']['valmap']['PSU_FAN_MAX_SPEED'])
+            for dev in self.plugin_data['PSU']['psu_support_list']:
+                if dev['Manufacturer'] == psu_fru.mfr_id and dev['Name'] == psu_fru.model:
+                    max_speed = int(self.plugin_data['PSU']['valmap'][dev['MaxSpd']])
+                    break           
+        else:
+            max_speed = int(self.plugin_data['FAN']['FAN_MAX_SPEED'])
+
+        return max_speed
+
     def get_speed(self):
         """
         Retrieves the speed of fan as a percentage of full speed
@@ -28,15 +47,12 @@ class Fan(PddfFan):
                  to 100 (full speed)
         """
         speed_percentage = 0
-        if self.is_psu_fan:
-            max_speed = int(self.plugin_data['PSU']['PSU_FAN_MAX_SPEED'])
-        else:
-            max_speed = int(self.plugin_data['FAN']['FAN_MAX_SPEED'])
 
+        max_speed = self.get_max_speed()
         speed = int(self.get_speed_rpm())
 
-
         speed_percentage = round((speed*100)/max_speed)
+        
         return min(speed_percentage, 100)
 
     def get_speed_rpm(self):
@@ -63,7 +79,7 @@ class Fan(PddfFan):
             ucd_path = "/sys/bus/i2c/devices/5-0034/hwmon/"
             if os.path.exists(ucd_path):
                 hwmon_dir = os.listdir(ucd_path)
-                with open("{}/{}/temp{}_input".format(ucd_path, hwmon_dir[0], self.fantray_index), "rb") as f:
+                with open("{}/{}/fan{}_input".format(ucd_path, hwmon_dir[0], self.fantray_index), "rb") as f:
                     rpm_speed = int(f.read().strip())
 
         return rpm_speed
@@ -81,7 +97,7 @@ class Fan(PddfFan):
             if psu_fru.mfr_id == "not available":
                 return direction
             for dev in self.plugin_data['PSU']['psu_support_list']:
-                if dev['Mfr_id'] == psu_fru.mfr_id and dev['Model'] == psu_fru.model:
+                if dev['Manufacturer'] == psu_fru.mfr_id and dev['Name'] == psu_fru.model:
                     dir = dev['Dir']
                     break
         else:
@@ -97,34 +113,6 @@ class Fan(PddfFan):
                 dir = vmap[val]
 
         return dir
-
-    def get_presence(self):
-        """
-        Retrieves the presence of the device
-        Returns:
-            bool: True if device is present, False if not
-        """
-        presence = False
-        if self.is_psu_fan:
-            attr = "psu_present"
-            device = "PSU{}".format(self.fans_psu_index)
-        else:
-            attr = "fan{}_present".format(self.fantray_index)
-            device = "FAN-CTRL"
-
-        output = self.pddf_obj.get_attr_name_output(device, attr)
-        if not output:
-            return presence
-
-
-        mode = output['mode']
-        val = output['status'].strip()
-        vmap = self.plugin_data['FAN']['present'][mode]['valmap']
-
-        if val in vmap:
-            presence = vmap[val]
-
-        return presence
 
     def get_target_speed(self):
         """

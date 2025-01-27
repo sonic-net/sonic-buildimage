@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMCNET_CORE_H
@@ -45,8 +45,8 @@ struct pkt_hdr {
     /*! Data length */
     uint16_t data_len;
 
-    /*! Reserved */
-    uint16_t rsvd2;
+    /*! Header profile */
+    uint16_t hdr_prof;
 
     /*! Meta length */
     uint8_t meta_len;
@@ -129,6 +129,9 @@ struct intr_handle {
 
     /*! Interrupt flags */
     uint32_t intr_flags;
+
+    /*! Extra polling after queue is empty */
+    bool extra_poll;
 };
 
 /*!
@@ -179,6 +182,9 @@ struct queue_group {
 #define PDMA_OTH_BYTE_SWAP  (1 << 1)
     /*! Header_byte_swap */
 #define PDMA_HDR_BYTE_SWAP  (1 << 2)
+
+    /*! Pipe interfaces */
+    int pipe[NUM_Q_PER_GRP];
 
     /*! Group ID */
     int id;
@@ -917,6 +923,11 @@ struct pdma_dev {
 #define PDMA_VNET_DOCKED    (1 << 5)
     /*! Abort PDMA mode for suspend and resume */
 #define PDMA_ABORT          (1 << 6)
+    /*! No FCS for Rx/Tx packets */
+#define PDMA_NO_FCS         (1 << 7)
+
+    /*! Extra poll time in microseconds */
+    int extra_poll_time;
 
     /*! Device mode */
     dev_mode_t mode;

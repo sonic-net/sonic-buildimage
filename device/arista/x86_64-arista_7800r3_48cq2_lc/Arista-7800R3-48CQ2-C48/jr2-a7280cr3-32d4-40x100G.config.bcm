@@ -2,13 +2,14 @@ soc_family.BCM8869X=BCM8869X
 system_ref_core_clock_khz=1600000
 
 dpp_db_path=/usr/share/bcm/db
-custom_feature_ucode_path=u_code_db2pem.txt
+programmability_ucode_relative_path.BCM8869X=pemla/ucode/standard_1/jer2pemla/u_code_db2pem.txt
 system_headers_mode=1
 suppress_unknown_prop_warnings=1
 l4_protocols_load_balancing_enable=1
 fabric_logical_port_base=512
 trunk_group_max_members=16
 num_olp_tm_ports.BCM8869X=1
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc
 
 # nif
 port_init_cl72=0

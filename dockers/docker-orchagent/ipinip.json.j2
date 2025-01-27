@@ -3,6 +3,8 @@
 {% else %}
 {% set ipv4_addresses = [] %}
 {% set ipv6_addresses = [] %}
+{% set ipv4_vlan_addresses = [] %}
+{% set ipv6_vlan_addresses = [] %}
 {% set ipv4_loopback_addresses = [] %}
 {% set ipv6_loopback_addresses = [] %}
 {% if DEVICE_METADATA['localhost']['sub_role'] == 'FrontEnd' or  DEVICE_METADATA['localhost']['sub_role'] == 'BackEnd'%}
@@ -44,12 +46,19 @@
 {% endfor %}
 {% for (name, prefix) in VLAN_INTERFACE|pfx_filter %}
     {%- if prefix | ipv4 %}
-        {%- set ipv4_addresses = ipv4_addresses.append(prefix) %}
+        {%- set ipv4_vlan_addresses = ipv4_vlan_addresses.append(prefix) %}
     {%- endif %}
     {%- if prefix | ipv6 %}
-        {%- set ipv6_addresses = ipv6_addresses.append(prefix) %}
+        {%- set ipv6_vlan_addresses = ipv6_vlan_addresses.append(prefix) %}
     {%- endif %}
 {% endfor %}
+{%- set ipv4_addresses = ipv4_addresses + ipv4_vlan_addresses %}
+{%- set ipv6_addresses = ipv6_addresses + ipv6_vlan_addresses %}
+{# FIXME: SAI report tunnel TABLE_FULL for large topo. Disable it temporarily if over 128 IPv4/IPv6 tunnels. #}
+{% if ipv4_addresses|length + ipv6_addresses|length > 128 %}
+{%- set ipv4_addresses = [] %}
+{%- set ipv6_addresses = [] %}
+{% endif %}
 [
 {% if ipv4_loopback_addresses %}
 {% if subnet_decap.enable %}
@@ -66,6 +75,15 @@
         },
         "OP": "SET"
     },
+{% for prefix in ipv4_vlan_addresses|sort %}
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_SUBNET:{{ prefix | network }}/{{ prefix | prefixlen }}" : {
+            "term_type":"MP2MP",
+            "subnet_type": "vlan"
+        },
+        "OP": "SET"
+    },
+{% endfor %}
 {% endif %}
     {
         "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
@@ -110,6 +128,15 @@
         },
         "OP": "SET"
     },
+{% for prefix in ipv6_vlan_addresses|sort %}
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_SUBNET_V6:{{ prefix | network }}/{{ prefix | prefixlen }}" : {
+            "term_type":"MP2MP",
+            "subnet_type": "vlan"
+        },
+        "OP": "SET"
+    },
+{% endfor %}
 {% endif %}
     {
         "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {

@@ -168,3 +168,16 @@ class TestSfpStateMachine:
         s.disable_tx_for_sff_optics = mock.MagicMock()
         s.on_event(sfp.EVENT_START)
         assert s.get_state() == sfp.STATE_SW_CONTROL
+        
+    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_always_fw_control_ports', mock.MagicMock(return_value=[0]))
+    def test_fcp_state(self):
+        self.mock_value('present', 1)
+        s = sfp.SFP(0)
+        s.on_event(sfp.EVENT_START)
+        assert s.get_state() == sfp.STATE_FCP_PRESENT
+        
+        self.mock_value('present', 0)
+        s = sfp.SFP(0)
+        s.on_event(sfp.EVENT_START)
+        assert s.get_state() == sfp.STATE_FCP_NOT_PRESENT
+        

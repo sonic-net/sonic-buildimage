@@ -1,0 +1,21 @@
+{
+    "chassis": {
+        "name": "Nvidia-bf3-com-dpu",
+        "components": [],
+        "fans": [],
+        "fan_drawers": [],
+        "psus": [],
+        "thermals": [],
+        "sfps": []
+    },
+    "interfaces": {
+        "Ethernet0": {
+            "index": "1,1,1,1",
+            "lanes": "0,1,2,3",
+            "breakout_modes": {
+                "1x400G": ["etp1"]
+            }
+        }
+    },
+    "DPU": {}
+}

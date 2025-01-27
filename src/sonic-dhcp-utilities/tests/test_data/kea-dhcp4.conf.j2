@@ -42,6 +42,7 @@
     {%- if add_subnet_preceding_comma.flag -%},{%- endif -%}
     {%- set _dummy = add_subnet_preceding_comma.update({'flag': True}) %}
             {
+                "id": {{ subnet_info["id"] }},
                 "subnet": "{{ subnet_info["subnet"] }}",
                 "pools": [
     {%- set add_pool_preceding_comma = { 'flag': False } %}

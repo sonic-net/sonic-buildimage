@@ -266,7 +266,7 @@ module sonic-vlan {
 							path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
 						}
 					}
-					must "not(/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST[sms:dst_port=current()])" 
+					must "not(/sms:sonic-mirror-session/sms:MIRROR_SESSION/sms:MIRROR_SESSION_LIST[sms:dst_port=current()])"
 					{
 						error-message "Port is used as a destination port in a mirror session.";
 					}

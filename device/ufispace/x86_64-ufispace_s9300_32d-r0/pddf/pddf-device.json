@@ -18,6 +18,10 @@
                 "pddf_xcvr"
             ]
         },
+        "std_perm_kos": [
+            "igb",
+            "i40e"
+        ],
         "std_kos": [
             "i2c_i801",
             "i2c_dev",
@@ -32,9 +36,12 @@
             "pddf_cpld_driver",
             "pddf_mux_module",
             "pddf_xcvr_module",
+            "pddf_fpgapci_driver",
             "pddf_xcvr_driver_module",
             "pddf_psu_driver_module",
             "pddf_psu_module",
+            "pddf_fpgai2c_module",
+            "pddf_fpgai2c_driver",
             "pddf_fan_driver_module",
             "pddf_fan_module",
             "pddf_led_module",
@@ -141,13 +148,6 @@
                         "raw": "0",
                         "field_name": "TEMP_CPU_PECI",
                         "field_pos": "18"
-                    },
-                    {
-                        "attr_name": "temp1_low_threshold",
-                        "bmc_cmd": "ipmitool sensor",
-                        "raw": "0",
-                        "field_name": "TEMP_CPU_PECI",
-                        "field_pos": "16"
                     }
                 ]
             }
@@ -185,14 +185,7 @@
                         "raw": "0",
                         "field_name": "TEMP_CPU_ENV",
                         "field_pos": "18"
-                    },
-                    {
-                        "attr_name": "temp1_low_threshold",
-                        "bmc_cmd": "ipmitool sensor",
-                        "raw": "0",
-                        "field_name": "TEMP_CPU_ENV",
-                        "field_pos": "16"
-                    }                
+                    }               
                 ]
             }
         }
@@ -229,13 +222,6 @@
                         "raw": "0",
                         "field_name": "TEMP_CPU_ENV_2",
                         "field_pos": "18"
-                    },
-                    {
-                        "attr_name": "temp1_low_threshold",
-                        "bmc_cmd": "ipmitool sensor",
-                        "raw": "0",
-                        "field_name": "TEMP_CPU_ENV_2",
-                        "field_pos": "16"
                     }
                 ]
             }
@@ -273,13 +259,6 @@
                         "raw": "0",
                         "field_name": "TEMP_MAC_ENV",
                         "field_pos": "18"
-                    },
-                    {
-                        "attr_name": "temp1_low_threshold",
-                        "bmc_cmd": "ipmitool sensor",
-                        "raw": "0",
-                        "field_name": "TEMP_MAC_ENV",
-                        "field_pos": "16"
                     }
                 ]
             }
@@ -317,13 +296,6 @@
                         "raw": "0",
                         "field_name": "TEMP_MAC_DIE",
                         "field_pos": "18"
-                    },
-                    {
-                        "attr_name": "temp1_low_threshold",
-                        "bmc_cmd": "ipmitool sensor",
-                        "raw": "0",
-                        "field_name": "TEMP_MAC_DIE",
-                        "field_pos": "16"
                     }
                 ]
             }
@@ -361,13 +333,6 @@
                         "raw": "0",
                         "field_name": "TEMP_CAGE",
                         "field_pos": "18"
-                    },
-                    {
-                        "attr_name": "temp1_low_threshold",
-                        "bmc_cmd": "ipmitool sensor",
-                        "raw": "0",
-                        "field_name": "TEMP_CAGE",
-                        "field_pos": "16"
                     }
                 ]
             }
@@ -405,13 +370,6 @@
                         "raw": "0",
                         "field_name": "TEMP_PSU_CONN",
                         "field_pos": "18"
-                    },
-                    {
-                        "attr_name": "temp1_low_threshold",
-                        "bmc_cmd": "ipmitool sensor",
-                        "raw": "0",
-                        "field_name": "TEMP_PSU_CONN",
-                        "field_pos": "16"
                     }
                 ]
             }
@@ -1116,72 +1074,96 @@
                 "attr_list": [
                     {
                         "attr_name": "psu_present",
-                        "bmc_cmd": "ipmitool sensor",
+                        "bmc_cmd": "ipmitool sdr -c get PSU0_PRSNT_L | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
                         "raw": "0",
                         "field_name": "PSU0_PRSNT_L",
-                        "field_pos": "7"
+                        "field_pos": "5",
+                        "separator": ","
                     },
                     {
                         "attr_name": "psu_power_good",
-                        "bmc_cmd": "ipmitool sensor",
+                        "bmc_cmd": "ipmitool sdr -c get PSU0_PWROK_H | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
                         "raw": "0",
                         "field_name": "PSU0_PWROK_H",
-                        "field_pos": "7"
+                        "field_pos": "5",
+                        "separator": ","
                     },
                     {
                         "attr_name": "psu_v_out",
-                        "bmc_cmd": "ipmitool sensor",
+                        "bmc_cmd": "ipmitool sdr -c get PSU0_VOUT | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
                         "raw": "0",
                         "field_name": "PSU0_VOUT",
-                        "field_pos": "3",
-                        "mult": "1000"
+                        "field_pos": "2",
+                        "mult": "1000",
+                        "separator": ","
                     },
                     {
                         "attr_name": "psu_i_out",
-                        "bmc_cmd": "ipmitool sensor",
+                        "bmc_cmd": "ipmitool sdr -c get PSU0_IOUT | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
                         "raw": "0",
                         "field_name": "PSU0_IOUT",
-                        "field_pos": "3",
+                        "field_pos": "2",
+                        "mult": "1000",
+                        "separator": ","
+                    },
+                    {
+                        "attr_name": "psu_v_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU0_VIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU0_VIN",
+                        "field_pos": "2",
+                        "mult": "1000"
+                    },
+                    {
+                        "attr_name": "psu_i_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU0_IIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU0_IIN",
+                        "field_pos": "2",
                         "mult": "1000"
                     },
                     {
                         "attr_name": "psu_temp1_input",
-                        "bmc_cmd": "ipmitool sensor",
+                        "bmc_cmd": "ipmitool sdr -c get PSU0_TEMP | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
                         "raw": "0",
                         "field_name": "PSU0_TEMP",
-                        "field_pos": "3",
-                        "mult": "1000"
+                        "field_pos": "2",
+                        "mult": "1000",
+                        "separator": ","
                     },
                     {
                         "attr_name": "psu_fan1_speed_rpm",
-                        "bmc_cmd": "ipmitool sensor",
+                        "bmc_cmd": "ipmitool sdr -c get PSU0_FAN1 | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
                         "raw": "0",
                         "field_name": "PSU0_FAN1",
-                        "field_pos": "3"
+                        "field_pos": "2",
+                        "separator": ","
                     },
                     {
                         "attr_name": "psu_mfr_id",
-                        "bmc_cmd": "ipmitool fru print 1 | tr -s ' ' | cut -d' ' -f3-5",
+                        "bmc_cmd": "_rv=$(ipmitool fru print 1 2>/dev/null | tr -s ' ' | cut -d' ' -f3-5 | grep 'Manufacturer') && echo $_rv || echo 'Manufacturer : N/A'",
                         "raw": "0",
+                        "separator": ":",
                         "field_name": "Manufacturer",
-                        "field_pos": "3",
-                        "delimiter": ":"
+                        "field_pos": "2"
                     },
                     {
                         "attr_name": "psu_model_name",
-                        "bmc_cmd": "ipmitool fru print 1 | tr -s ' ' | cut -d' ' -f3-5",
+                        "bmc_cmd": "_rv=$(ipmitool fru print 1 2>/dev/null | tr -s ' ' | cut -d' ' -f3-5 | grep 'Name') && echo $_rv || echo 'Name : N/A'",
                         "raw": "0",
+                        "separator": ":",
                         "field_name": "Name",
-                        "field_pos": "3",
-                        "delimiter": ":"
+                        "field_pos": "2"
                     },
                     {
                         "attr_name": "psu_serial_num",
-                        "bmc_cmd": "ipmitool fru print 1 | tr -s ' ' | cut -d' ' -f3-5",
+                        "bmc_cmd": "_rv=$(ipmitool fru print 1 2>/dev/null | tr -s ' ' | cut -d' ' -f3-5 | grep 'Serial') && echo $_rv || echo 'Serial : N/A'",
                         "raw": "0",
+                        "separator": ":",
                         "field_name": "Serial",
-                        "field_pos": "3",
-                        "delimiter": ":"
+                        "field_pos": "2"
                     },
                     {
                         "attr_name": "psu_fan1_dir",
@@ -1211,72 +1193,96 @@
                 "attr_list": [
                     {
                         "attr_name": "psu_present",
-                        "bmc_cmd": "ipmitool sensor",
+                        "bmc_cmd": "ipmitool sdr -c get PSU1_PRSNT_L | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
                         "raw": "0",
                         "field_name": "PSU1_PRSNT_L",
-                        "field_pos": "7"
+                        "field_pos": "5",
+                        "separator": ","
                     },
                     {
                         "attr_name": "psu_power_good",
-                        "bmc_cmd": "ipmitool sensor",
+                        "bmc_cmd": "ipmitool sdr -c get PSU1_PWROK_H | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
                         "raw": "0",
                         "field_name": "PSU1_PWROK_H",
-                        "field_pos": "7"
+                        "field_pos": "5",
+                        "separator": ","
                     },
                     {
                         "attr_name": "psu_v_out",
-                        "bmc_cmd": "ipmitool sensor",
+                        "bmc_cmd": "ipmitool sdr -c get PSU1_VOUT | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
                         "raw": "0",
                         "field_name": "PSU1_VOUT",
-                        "field_pos": "3",
-                        "mult": "1000"
+                        "field_pos": "2",
+                        "mult": "1000",
+                        "separator": ","
                     },
                     {
                         "attr_name": "psu_i_out",
-                        "bmc_cmd": "ipmitool sensor",
+                        "bmc_cmd": "ipmitool sdr -c get PSU1_IOUT | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
                         "raw": "0",
                         "field_name": "PSU1_IOUT",
-                        "field_pos": "3",
+                        "field_pos": "2",
+                        "mult": "1000",
+                        "separator": ","
+                    },
+                    {
+                        "attr_name": "psu_v_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU1_VIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU1_VIN",
+                        "field_pos": "2",
+                        "mult": "1000"
+                    },
+                    {
+                        "attr_name": "psu_i_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU1_IIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU1_IIN",
+                        "field_pos": "2",
                         "mult": "1000"
                     },
                     {
                         "attr_name": "psu_temp1_input",
-                        "bmc_cmd": "ipmitool sensor",
+                        "bmc_cmd": "ipmitool sdr -c get PSU1_TEMP | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
                         "raw": "0",
                         "field_name": "PSU1_TEMP",
-                        "field_pos": "3",
-                        "mult": "1000"
+                        "field_pos": "2",
+                        "mult": "1000",
+                        "separator": ","
                     },
                     {
                         "attr_name": "psu_fan1_speed_rpm",
-                        "bmc_cmd": "ipmitool sensor",
+                        "bmc_cmd": "ipmitool sdr -c get PSU1_FAN1 | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
                         "raw": "0",
                         "field_name": "PSU1_FAN1",
-                        "field_pos": "3"
+                        "field_pos": "2",
+                        "separator": ","
                     },
                     {
                         "attr_name": "psu_mfr_id",
-                        "bmc_cmd": "ipmitool fru print 2 | tr -s ' ' | cut -d' ' -f3-5",
+                        "bmc_cmd": "_rv=$(ipmitool fru print 2 2>/dev/null | tr -s ' ' | cut -d' ' -f3-5 | grep 'Manufacturer') && echo $_rv || echo 'Manufacturer : N/A'",
                         "raw": "0",
+                        "separator": ":",
                         "field_name": "Manufacturer",
-                        "field_pos": "3",
-                        "delimiter": ":"
+                        "field_pos": "2"
                     },
                     {
                         "attr_name": "psu_model_name",
-                        "bmc_cmd": "ipmitool fru print 2 | tr -s ' ' | cut -d' ' -f3-5",
+                        "bmc_cmd": "_rv=$(ipmitool fru print 2 2>/dev/null | tr -s ' ' | cut -d' ' -f3-5 | grep 'Name') && echo $_rv || echo 'Name : N/A'",
                         "raw": "0",
+                        "separator": ":",
                         "field_name": "Name",
-                        "field_pos": "3",
-                        "delimiter": ":"
+                        "field_pos": "2"
                     },
                     {
                         "attr_name": "psu_serial_num",
-                        "bmc_cmd": "ipmitool fru print 2 | tr -s ' ' | cut -d' ' -f3-5",
+                        "bmc_cmd": "_rv=$(ipmitool fru print 2 2>/dev/null | tr -s ' ' | cut -d' ' -f3-5 | grep 'Serial') && echo $_rv || echo 'Serial : N/A'",
                         "raw": "0",
+                        "separator": ":",
                         "field_name": "Serial",
-                        "field_pos": "3",
-                        "delimiter": ":"
+                        "field_pos": "2"
                     },
                     {
                         "attr_name": "psu_fan1_dir",
@@ -1679,7 +1685,7 @@
             ]
         }
     },
-    "ID_LED": {
+    "LOC_LED": {
         "dev_info": {
             "device_type": "LED",
             "device_name": "LOC_LED"

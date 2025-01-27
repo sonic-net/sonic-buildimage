@@ -5,12 +5,12 @@ bcm_device:
             l2_table_default_view: 1
             pktio_mode: 1
             vlan_flooding_l2mc_num_reserved: 0
-            shared_block_mask_section: uc_mc
+            shared_block_mask_section: uc_bc
             ctr_evict_enable: 0
             uat_mode: 1
             uft_mode: 4
             sai_brcm_sonic_acl_enhancements: 1
-            sai_tunnel_support: 1
+            sai_tunnel_support: 2
             multi_network_groups: 1
             sai_field_group_auto_prioritize: 1
             sai_modify_hash_flexdigest: 1
@@ -24,7 +24,7 @@ device:
             CORE_CLK_FREQ: CLK_1350MHZ
             # PP CLOCK FREQUENCY
             PP_CLK_FREQ: CLK_1350MHZ
-            VARIANT: DNA_4_9_5_0
+            VARIANT: DNA_4_11_4_0
 ...
 ---
 device:
@@ -625,7 +625,7 @@ device:
                 NUM_LANES: 1
                 MAX_FRAME_SIZE: 9416
         SER_CONFIG:
-            SER_ENABLE: 0
+            SER_ENABLE: 1
 ...
 ---
 device:
@@ -690,6 +690,17 @@ device:
     0:
         FP_CONFIG:
             FP_ING_OPERMODE: GLOBAL_PIPE_AWARE
+        
+        TM_ING_PORT_PRI_GRP:
+            ?
+                PORT_ID: [ [1, 18], [20, 38],
+                            [40, 57], [60, 78],
+                            [80, 97], [100, 118],
+                            [120, 137], [140, 158] ]
+
+                TM_PRI_GRP_ID: [[3,4]]
+            :
+                LOSSLESS: 0
 ...
 ---
 device:

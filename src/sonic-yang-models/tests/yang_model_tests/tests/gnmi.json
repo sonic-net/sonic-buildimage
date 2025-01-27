@@ -11,7 +11,18 @@
         "desc": "TABLE_WITH_INCORRECT_PORT failure.",
         "eStrKey": "InvalidValue"
     },
+    "GNMI_TABLE_WITH_INCORRECT_SAVE_ON_SET": {
+        "desc": "TABLE_WITH_INCORRECT_SAVE_ON_SET failure",
+        "eStrKey": "InvalidValue"
+    },
     "GNMI_TABLE_WITH_VALID_CONFIG": {
+        "desc": "TABLE WITH VALID CONFIG."
+    },
+    "GNMI_CLIENT_CERT_LIST_TABLE_WITH_MISSING_ROLE": {
+        "desc": "CLIENT_CERT_LIST_TABLE_WITH_MISSING_ROLE failure.",
+        "eStrKey": "Mandatory"
+    },
+    "GNMI_CLIENT_CERT_LIST_TABLE_WITH_VALID_CONFIG": {
         "desc": "TABLE WITH VALID CONFIG."
     }
 }

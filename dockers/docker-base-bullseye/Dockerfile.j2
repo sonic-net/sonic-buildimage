@@ -83,18 +83,6 @@ RUN pip3 install supervisord-dependent-startup==1.4.0
 
 RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d
 
-# Install gcc, libc6-dev and python3-dev for compiling python-lzf
-RUN apt-get -y install build-essential libc6-dev python3-dev
-
-# Install python-lzf
-RUN pip3 install 'python-lzf==0.2.4'
-
-# Install rdbtools
-RUN pip3 install 'rdbtools==0.1.15'
-
-# Uninstall gcc, libc6-dev and python3-dev for compiling python-lzf
-RUN apt-get -y purge build-essential libc6-dev python3-dev
-
 # Uninstall unused dependencies
 RUN apt autoremove -y --purge
 

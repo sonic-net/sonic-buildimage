@@ -4,17 +4,31 @@
 [ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
 
 PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
+type=`sonic-db-cli CONFIG_DB hget 'DEVICE_METADATA|localhost' 'type'`
+TSA_CHASSIS_STATE=false
+
+if [[ $type == *"SpineRouter"* ]]; then
+ TSA_CHASSIS_STATE="$(sonic-db-cli CHASSIS_APP_DB HGET "BGP_DEVICE_GLOBAL|STATE" tsa_enabled)"
+fi
 
 if [[ $1 == "TSA" ]]; then
     TSA_STATE_UPDATE='{"BGP_DEVICE_GLOBAL":{"STATE":{"tsa_enabled": "true"}}}'
-    log_msg='System Mode: Normal -> Maintenance'
+    if [[ $TSA_CHASSIS_STATE == true ]]; then
+        log_msg='System Mode: Maintenance -> Maintenance'
+    else
+        log_msg='System Mode: Normal -> Maintenance'
+    fi
     err_msg='System is already in Maintenance'
-    desired_tsa_state=true 
+    desired_tsa_state=true
 elif [[ $1 == "TSB" ]]; then
     TSA_STATE_UPDATE='{"BGP_DEVICE_GLOBAL":{"STATE":{"tsa_enabled": "false"}}}'
-    log_msg='System Mode: Maintenance -> Normal'
+    if [[ $TSA_CHASSIS_STATE == true ]]; then
+        log_msg='System Mode: Maintenance -> Maintenance'
+    else
+        log_msg='System Mode: Maintenance -> Normal'
+    fi
     err_msg='System is already in Normal mode'
-    desired_tsa_state=false    
+    desired_tsa_state=false
 fi
 
 # Parse the device specific asic conf file, if it exists
