@@ -777,15 +777,15 @@ sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}} || sudo LANG=C DEBIAN_FRONTEND=noni
 # For some SONiC patch packages, Debian offcial version may higher than SONiC version
 # When install SONiC packages, fix broken install by 'apt-get -y install -f' may upgrade some installed SONiC packages to Debian offical version
 # Check and install upgraded SONiC package again, if install failed, need manually check and fix SONiC package version issue
-INSTALLED_VERSION=$(dpkg-query --showformat='${Version}' --show {{deb}})
-DEB_PACKAGE_VERSION=$(dpkg-deb -f {{deb}} Version)
-if [ "$INSTALLED_VERSION" != "$DEB_PACKAGE_VERSION" ]; then
+PACKAGE_NAME=$(dpkg-deb -f {{deb}} Package)
+PACKAGE_VERSION=$(dpkg-deb -f {{deb}} Version)
+INSTALLED_VERSION=$(dpkg-query --showformat='${Version}' --show $PACKAGE_NAME
+if [ "$INSTALLED_VERSION" != "$PACKAGE_VERSION" ]; then
     sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}}
 fi
 
 ## SONiC packages may have lower version than Debian offical package, install offical Debian package will break feature
 ## Hold installed packages to prevent these packages be upgrade by apt commands in this file
-PACKAGE_NAME=$(dpkg-deb -f {{deb}} Package)
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-mark hold $PACKAGE_NAME
 
 {% endfor %}
