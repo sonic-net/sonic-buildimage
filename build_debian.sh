@@ -379,7 +379,7 @@ sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y in
     haveged                 \
     fdisk                   \
     gpg                     \
-    dmidecode               \    
+    dmidecode               \
     jq                      \
     auditd                  \
     linux-perf              \
