@@ -768,8 +768,8 @@ fi
 {% if installer_debs.strip() -%}
 {% for deb in installer_debs.strip().split(' ') -%}
 install_failed=false
-sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}} || install_failed=true; true
-if [ install_failed ]; then
+sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}} || install_failed=true
+if [ $install_failed == true ]; then
     # Install debian package failed, install depency and fix unconfigured package
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
     # Install debian package again, some SONiC packages inderectly depends on eachother, and both have lower version than Debian offical package
