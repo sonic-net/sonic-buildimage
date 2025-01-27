@@ -13,12 +13,10 @@ ENV IMAGE_VERSION=$image_version
 # Update apt's cache of available packages
 RUN apt-get update
 
-COPY ["start.sh", "/usr/bin/"]
 COPY ["config_checker.py", "/usr/bin/"]
 COPY ["auditd_config_files/", "/usr/share/sonic/auditd_config_files/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 
-RUN chmod +x /usr/bin/start.sh
 RUN chmod +x /usr/bin/config_checker.py
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

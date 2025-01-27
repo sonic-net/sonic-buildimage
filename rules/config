@@ -201,9 +201,6 @@ INCLUDE_KUBERNETES ?= y
 # INCLUDE_DUMMYK8S - if set to y dummy docker to be deployed using Kubernetes is built into SONiC buildimage
 INCLUDE_DUMMYK8S ?= n
 
-# INCLUDE_AUDITD - build docker-auditd for security auditing support
-INCLUDE_AUDITD ?= n
-
 KUBE_DOCKER_PROXY = http://172.16.1.1:3128/
 
 # KUBERNETES_VERSION - Set to the required version.
