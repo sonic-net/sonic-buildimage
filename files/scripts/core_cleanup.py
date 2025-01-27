@@ -13,7 +13,7 @@ KERNEL_DUMP_DIR = '/var/dump/'
 MAX_CORE_FILES = 4
 EXPIRE_DAYS = 90
 
-def delete_dump(file_path):
+def delete_file(file_path):
     try:
         os.remove(file_path)
     except:
@@ -45,7 +45,7 @@ def main():
         # delete expired core files
         dump_date = datetime.utcfromtimestamp(int(f.split('.')[1]))
         if dump_date < expire_date:
-            delete_dump(os.path.join(CORE_FILE_DIR, f))
+            delete_file(os.path.join(CORE_FILE_DIR, f))
             continue
             
         # for none expired core files, only keep recent MAX_CORE_FILES
@@ -54,10 +54,10 @@ def main():
         curr_files.append(f)
 
         if len(curr_files) > MAX_CORE_FILES:
-            curr_files.sort(reverse = True, key = lambda x: datetime.utcfromtimestamp(int(x.split('.')[1])))
+            curr_files.sort(reverse=True, key=lambda x: datetime.utcfromtimestamp(int(x.split('.')[1])))
             oldest_core = curr_files[MAX_CORE_FILES]
             logger.log_info('Deleting {}'.format(oldest_core))
-            delete_dump(os.path.join(CORE_FILE_DIR, oldest_core))
+            delete_file(os.path.join(CORE_FILE_DIR, oldest_core))
             core_files_by_process[process] = curr_files[0:MAX_CORE_FILES]
 
     logger.log_info('Finished cleaning up core files')
@@ -77,7 +77,7 @@ def main():
 
         if dump_date < expire_date:
             # Kernel dump expired
-            delete_dump(os.path.join(KERNEL_DUMP_DIR, kernel_dump))
+            delete_file(os.path.join(KERNEL_DUMP_DIR, kernel_dump))
             continue
 
         # Only keep recent MAX_CORE_FILES kernel dumps
@@ -85,7 +85,7 @@ def main():
             not_expired_dumps.append(kernel_dump)
         else:
             logger.log_info('Deleting {}'.format(kernel_dump))
-            delete_dump(os.path.join(KERNEL_DUMP_DIR, kernel_dump))
+            delete_file(os.path.join(KERNEL_DUMP_DIR, kernel_dump))
 
     logger.log_info('Finished cleaning up kernel dump files')
 
