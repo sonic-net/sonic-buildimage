@@ -69,6 +69,12 @@
  */
 #define FPM_HEADER_SIZE 4
 
+/* Default SRv6 SID format values */
+DEFAULT_SRV6_LOCALSID_FORMAT_BLOCK_LEN = 32;
+DEFAULT_SRV6_LOCALSID_FORMAT_NODE_LEN = 16;
+DEFAULT_SRV6_LOCALSID_FORMAT_FUNCTION_LEN = 16;
+DEFAULT_SRV6_LOCALSID_FORMAT_ARGUMENT_LEN = 0;
+
 /**
  * Custom Netlink TLVs
 */
@@ -951,6 +957,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	vrf_id_t vrf_id;
 	uint32_t table_id;
 	uint32_t action;
+	uint32_t block_len, node_len, func_len, arg_len;
 
 	struct {
 		struct nlmsghdr n;
@@ -1035,28 +1042,44 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		nl_attr_nest(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_FORMAT);
 
+	block_len = nexthop->nh_srv6->seg6local_ctx.block_len;
+	node_len = nexthop->nh_srv6->seg6local_ctx.node_len;
+	func_len = nexthop->nh_srv6->seg6local_ctx.function_len;
+	arg_len = nexthop->nh_srv6->seg6local_ctx.argument_len;
+
+	/*
+	 * If block/node/func/arg length are not provided by the srv6 nexthop,
+	 * then we use the default values
+	 */
+	if (block_len == 0 && node_len == 0 && func_len == 0 && arg_len == 0) {
+		block_len = DEFAULT_SRV6_LOCALSID_FORMAT_BLOCK_LEN;
+		node_len = DEFAULT_SRV6_LOCALSID_FORMAT_NODE_LEN;
+		func_len = DEFAULT_SRV6_LOCALSID_FORMAT_FUNCTION_LEN;
+		arg_len = DEFAULT_SRV6_LOCALSID_FORMAT_ARGUMENT_LEN;
+	}
+
 	if (!nl_attr_put8(
 			&req->n, datalen, 
 			FPM_SRV6_LOCALSID_FORMAT_BLOCK_LEN,
-			nexthop->nh_srv6->seg6local_ctx.block_len))
+			block_len))
 		return -1;
 
 	if (!nl_attr_put8(
 			&req->n, datalen, 
 			FPM_SRV6_LOCALSID_FORMAT_NODE_LEN,
-			nexthop->nh_srv6->seg6local_ctx.node_len))
+			node_len))
 		return -1;
 
 	if (!nl_attr_put8(
 			&req->n, datalen, 
 			FPM_SRV6_LOCALSID_FORMAT_FUNC_LEN,
-			nexthop->nh_srv6->seg6local_ctx.function_len))
+			func_len))
 		return -1;
 
 	if (!nl_attr_put8(
 			&req->n, datalen, 
 			FPM_SRV6_LOCALSID_FORMAT_ARG_LEN,
-			nexthop->nh_srv6->seg6local_ctx.argument_len))
+			arg_len))
 		return -1;
 
 	nl_attr_nest_end(&req->n, nest);
