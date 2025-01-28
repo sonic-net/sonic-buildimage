@@ -83,6 +83,18 @@ set_tmpfs_log_partition_size()
     fi
 }
 
+calculate_time_diff() {
+    local start_time=$1
+    local end_time=$2
+
+    local start_seconds=${start_time%.*}
+    local end_seconds=${end_time%.*}
+
+    local time_diff_seconds=$((end_seconds - start_seconds))
+
+    echo "$time_diff_seconds"
+}
+
 remove_not_in_allowlist_files()
 {
     local allowlist_file="$1"
@@ -121,8 +133,24 @@ mount_docker_inram()
         fi
         echo $docker_inram_size > /sys/block/$zname/disksize
         # create filesystem on the newly created zram block device
+        echo "$(date '+%Y-%m-%d %H:%M:%S') mount_docker_inram: create filesystem on zram"
+
+        start_time=$(date '+%s.%N')
         mkfs.ext4 -m 0 -L dockerfs -O '^has_journal' -q /dev/$zname
+        start_time_end=$(date '+%s.%N')
+
+        echo "$(date '+%Y-%m-%d %H:%M:%S') mount_docker_inram: mount docker"
+        start_mount_time=$(date '+%s.%N')
         mount -o rw,nodev /dev/$zname "${rootmnt}/var/lib/docker"
+        start_mount_time_end=$(date '+%s.%N')
+        echo "$(date '+%Y-%m-%d %H:%M:%S') mount_docker_inram: end"
+
+        time_diff=$(calculate_time_diff "$start_time" "$start_time_end")
+        echo "##### disk2ram: mkfs.ext4 Time difference: $time_diff " | tee /dev/kmsg
+
+        time_diff=$(calculate_time_diff "$start_mount_time" "$start_mount_time_end")
+        echo "##### disk2ram: mount Time difference: $time_diff " | tee /dev/kmsg
+
     fi
 }
 
@@ -132,7 +160,15 @@ extract_dockerfs()
     if [ -f "${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }}" ] && [ "$secureboot" = false ]; then
         # Extract dockerfs.tar.gz into /var/lib/docker unless the system booted with secureboot
         # In secureboot dockerfs.tar.gz cannot be trusted as it does not have a signature
-        tar xz --numeric-owner -f ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }} -C ${rootmnt}/var/lib/docker
+        start_extract_time=$(date '+%s.%N')
+        # tar xz --numeric-owner -f ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }} -C ${rootmnt}/var/lib/docker
+        zstd -d ${rootmnt}/host/$image_dir/{{ FILESYSTEM_DOCKERFS }} -c | tar -xf - -C ${rootmnt}/var/lib/docker
+        start_extract_time_end=$(date '+%s.%N')
+        echo "$(date '+%Y-%m-%d %H:%M:%S') extract_dockerfs: Extracting {{ FILESYSTEM_DOCKERFS }} done"
+
+        time_diff=$(calculate_time_diff "$start_extract_time" "$start_extract_time_end")
+        echo "##### disk2ram: extract_dockerfs Time difference: $time_diff " | tee /dev/kmsg
+
     elif [ "$bootloader" = "aboot" ] && unzip -l "$swi_path" | grep -q {{ FILESYSTEM_DOCKERFS }}; then
         # Aboot swi images also support extracting dockerfs.tar.gz directly from them
         unzip -qp "$swi_path" {{ FILESYSTEM_DOCKERFS }} | tar xz --numeric-owner -C ${rootmnt}/var/lib/docker
