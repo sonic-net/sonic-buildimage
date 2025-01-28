@@ -1,0 +1,9 @@
+[Unit]
+Description=Frequently sync the system clock to the hardware clock
+
+[Timer]
+OnBootSec=30min
+OnUnitActiveSec=1h
+
+[Install]
+WantedBy=multi-user.target
