@@ -88,9 +88,7 @@ def do_work():
     switch_type = device_info.get_localhost_info("switch_type")
     if switch_type and switch_type == "dpu":
         log_notice("switch type is dpu, starting bfd manager")
-        #TODO: use swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME onces definition is in master
-        #managers.append(BfdMgr(common_objs, "STATE_DB", swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME))
-        managers.append(BfdMgr(common_objs, "STATE_DB", "BFD_SOFTWARE_SESSION_TABLE"))
+        managers.append(BfdMgr(common_objs, "STATE_DB", swsscommon.STATE_BFD_SOFTWARE_SESSION_TABLE_NAME))
 
     runner = Runner(common_objs['cfg_mgr'])
     for mgr in managers:
