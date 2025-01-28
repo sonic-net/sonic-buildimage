@@ -54,7 +54,7 @@ DEFAULT_PASSWORD = YourPaSsWoRd
 # ENABLE_ZTP - installs Zero Touch Provisioning support.
 # ENABLE_ZTP = y
 
-# INCLUDE_PDE - Enable platform development enviroment
+# INCLUDE_PDE - Enable platform development environment
 # INCLUDE_PDE = y
 # SHUTDOWN_BGP_ON_START - if set to y all bgp sessions will be in admin down state when
 # bgp service starts.
@@ -264,7 +264,7 @@ TRUSTED_GPG_URLS = https://packages.trafficmanager.net/debian/public_key.gpg,htt
 #   web   : web packages, downloaded by wget, curl
 #   git   : git repositories, donloaded by git clone
 #   docker: docker base images
-SONIC_VERSION_CONTROL_COMPONENTS ?= none
+SONIC_VERSION_CONTROL_COMPONENTS ?= deb,py2,py3,web,git,docker
 
 ifeq ($(SONIC_VERSION_CONTROL_COMPONENTS),all)
 override MIRROR_SNAPSHOT = y
@@ -303,7 +303,7 @@ INCLUDE_MUX = y
 ENABLE_ASAN ?= n
 
 # reset default container registry from dockerhub to other
-DEFAULT_CONTAINER_REGISTRY ?=
+DEFAULT_CONTAINER_REGISTRY ?= publicmirror.azurecr.io
 
 # INCLUDE_BOOTCHART - install systemd-bootchart
 INCLUDE_BOOTCHART = y

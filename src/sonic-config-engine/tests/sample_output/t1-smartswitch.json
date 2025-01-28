@@ -301,10 +301,6 @@
 	"DEVICE_NEIGHBOR": {},
 	"DHCP_SERVER_IPV4": {
 		"bridge-midplane": {
-			"customized_options": [
-				"option60",
-				"option223"
-			],
 			"gateway": "169.254.200.254",
 			"lease_time": "3600",
 			"mode": "PORT",
@@ -379,6 +375,38 @@
 		}
 	},
 	"INTERFACE": {
+		"Ethernet0":{},
+		"Ethernet104": {},
+		"Ethernet112": {},
+		"Ethernet120": {},
+		"Ethernet128": {},
+		"Ethernet136": {},
+		"Ethernet144": {},
+		"Ethernet152": {},
+		"Ethernet160": {},
+		"Ethernet168": {},
+		"Ethernet16": {},
+		"Ethernet176": {},
+		"Ethernet184": {},
+		"Ethernet192": {},
+		"Ethernet200": {},
+		"Ethernet208": {},
+		"Ethernet216": {},
+		"Ethernet224": {},
+		"Ethernet232": {},
+		"Ethernet240": {},
+		"Ethernet248": {},
+		"Ethernet24": {},
+		"Ethernet32": {},
+		"Ethernet40": {},
+		"Ethernet48": {},
+		"Ethernet56": {},
+		"Ethernet64": {},
+		"Ethernet72": {},
+		"Ethernet80": {},
+		"Ethernet88": {},
+		"Ethernet8": {},
+		"Ethernet96": {},
 		"Ethernet0|10.0.0.0/31": {},
 		"Ethernet104|10.0.0.26/31": {},
 		"Ethernet112|10.0.0.28/31": {},
@@ -413,7 +441,14 @@
 		"Ethernet96|10.0.0.24/31": {}
 	},
 	"LOOPBACK_INTERFACE": {
+		"Loopback0": {},
 		"Loopback0|10.1.0.1/32": {}
+	},
+	"MID_PLANE_BRIDGE": {
+		"GLOBAL": {
+			"bridge": "bridge-midplane",
+			"ip_prefix": "169.254.200.254/24"
+		}
 	},
 	"PORT": {
 		"Ethernet0": {

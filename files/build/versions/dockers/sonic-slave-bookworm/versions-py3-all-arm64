@@ -1,0 +1,2 @@
+protobuf==4.25.5
+psutil==6.1.1

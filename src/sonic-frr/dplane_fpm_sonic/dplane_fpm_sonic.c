@@ -69,6 +69,12 @@
  */
 #define FPM_HEADER_SIZE 4
 
+/* Default SRv6 SID format values */
+DEFAULT_SRV6_LOCALSID_FORMAT_BLOCK_LEN = 32;
+DEFAULT_SRV6_LOCALSID_FORMAT_NODE_LEN = 16;
+DEFAULT_SRV6_LOCALSID_FORMAT_FUNCTION_LEN = 16;
+DEFAULT_SRV6_LOCALSID_FORMAT_ARGUMENT_LEN = 0;
+
 /**
  * Custom Netlink TLVs
 */
@@ -204,8 +210,6 @@ struct fpm_nl_ctx {
 
 		/* Amount of data plane context processed. */
 		_Atomic uint32_t dplane_contexts;
-		/* Amount of data plane contexts enqueued. */
-		_Atomic uint32_t ctxqueue_len;
 		/* Peak amount of data plane contexts enqueued. */
 		_Atomic uint32_t ctxqueue_len_peak;
 
@@ -380,6 +384,12 @@ DEFUN(fpm_show_counters, fpm_show_counters_cmd,
       FPM_STR
       "FPM statistic counters\n")
 {
+	uint32_t curr_queue_len;
+
+	frr_with_mutex (&gfnc->ctxqueue_mutex) {
+		curr_queue_len = dplane_ctx_queue_count(&gfnc->ctxqueue);
+	}
+
 	vty_out(vty, "%30s\n%30s\n", "FPM counters", "============");
 
 #define SHOW_COUNTER(label, counter) \
@@ -393,8 +403,7 @@ DEFUN(fpm_show_counters, fpm_show_counters_cmd,
 	SHOW_COUNTER("Connection errors", gfnc->counters.connection_errors);
 	SHOW_COUNTER("Data plane items processed",
 		     gfnc->counters.dplane_contexts);
-	SHOW_COUNTER("Data plane items enqueued",
-		     gfnc->counters.ctxqueue_len);
+	SHOW_COUNTER("Data plane items enqueued", curr_queue_len);
 	SHOW_COUNTER("Data plane items queue peak",
 		     gfnc->counters.ctxqueue_len_peak);
 	SHOW_COUNTER("Buffer full hits", gfnc->counters.buffer_full);
@@ -413,6 +422,12 @@ DEFUN(fpm_show_counters_json, fpm_show_counters_json_cmd,
       "FPM statistic counters\n"
       JSON_STR)
 {
+	uint32_t curr_queue_len;
+
+	frr_with_mutex (&gfnc->ctxqueue_mutex) {
+		curr_queue_len = dplane_ctx_queue_count(&gfnc->ctxqueue);
+	}
+
 	struct json_object *jo;
 
 	jo = json_object_new_object();
@@ -426,8 +441,7 @@ DEFUN(fpm_show_counters_json, fpm_show_counters_json_cmd,
 			    gfnc->counters.connection_errors);
 	json_object_int_add(jo, "data-plane-contexts",
 			    gfnc->counters.dplane_contexts);
-	json_object_int_add(jo, "data-plane-contexts-queue",
-			    gfnc->counters.ctxqueue_len);
+	json_object_int_add(jo, "data-plane-contexts-queue", curr_queue_len);
 	json_object_int_add(jo, "data-plane-contexts-queue-peak",
 			    gfnc->counters.ctxqueue_len_peak);
 	json_object_int_add(jo, "buffer-full-hits", gfnc->counters.buffer_full);
@@ -943,6 +957,7 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 	vrf_id_t vrf_id;
 	uint32_t table_id;
 	uint32_t action;
+	uint32_t block_len, node_len, func_len, arg_len;
 
 	struct {
 		struct nlmsghdr n;
@@ -1027,33 +1042,45 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 		nl_attr_nest(&req->n, datalen, 
 					FPM_SRV6_LOCALSID_FORMAT);
 
-	if (nexthop->nh_srv6->seg6local_ctx.block_len)
-		if (!nl_attr_put8(
-				&req->n, datalen, 
-				FPM_SRV6_LOCALSID_FORMAT_BLOCK_LEN,
-				nexthop->nh_srv6->seg6local_ctx.block_len))
-			return -1;
+	block_len = nexthop->nh_srv6->seg6local_ctx.block_len;
+	node_len = nexthop->nh_srv6->seg6local_ctx.node_len;
+	func_len = nexthop->nh_srv6->seg6local_ctx.function_len;
+	arg_len = nexthop->nh_srv6->seg6local_ctx.argument_len;
 
-	if (nexthop->nh_srv6->seg6local_ctx.node_len)
-		if (!nl_attr_put8(
-				&req->n, datalen, 
-				FPM_SRV6_LOCALSID_FORMAT_NODE_LEN,
-				nexthop->nh_srv6->seg6local_ctx.node_len))
-			return -1;
+	/*
+	 * If block/node/func/arg length are not provided by the srv6 nexthop,
+	 * then we use the default values
+	 */
+	if (block_len == 0 && node_len == 0 && func_len == 0 && arg_len == 0) {
+		block_len = DEFAULT_SRV6_LOCALSID_FORMAT_BLOCK_LEN;
+		node_len = DEFAULT_SRV6_LOCALSID_FORMAT_NODE_LEN;
+		func_len = DEFAULT_SRV6_LOCALSID_FORMAT_FUNCTION_LEN;
+		arg_len = DEFAULT_SRV6_LOCALSID_FORMAT_ARGUMENT_LEN;
+	}
 
-	if (nexthop->nh_srv6->seg6local_ctx.function_len)
-		if (!nl_attr_put8(
-				&req->n, datalen, 
-				FPM_SRV6_LOCALSID_FORMAT_FUNC_LEN,
-				nexthop->nh_srv6->seg6local_ctx.function_len))
-			return -1;
+	if (!nl_attr_put8(
+			&req->n, datalen, 
+			FPM_SRV6_LOCALSID_FORMAT_BLOCK_LEN,
+			block_len))
+		return -1;
 
-	if (nexthop->nh_srv6->seg6local_ctx.argument_len)
-		if (!nl_attr_put8(
-				&req->n, datalen, 
-				FPM_SRV6_LOCALSID_FORMAT_ARG_LEN,
-				nexthop->nh_srv6->seg6local_ctx.argument_len))
-			return -1;
+	if (!nl_attr_put8(
+			&req->n, datalen, 
+			FPM_SRV6_LOCALSID_FORMAT_NODE_LEN,
+			node_len))
+		return -1;
+
+	if (!nl_attr_put8(
+			&req->n, datalen, 
+			FPM_SRV6_LOCALSID_FORMAT_FUNC_LEN,
+			func_len))
+		return -1;
+
+	if (!nl_attr_put8(
+			&req->n, datalen, 
+			FPM_SRV6_LOCALSID_FORMAT_ARG_LEN,
+			arg_len))
+		return -1;
 
 	nl_attr_nest_end(&req->n, nest);
 
@@ -1313,7 +1340,7 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 			&encap_src_addr, IPV6_MAX_BYTELEN))
 		return false;
 	if (!nl_attr_put(&req->n, datalen, FPM_ROUTE_ENCAP_SRV6_VPN_SID,
-				&nexthop->nh_srv6->seg6_segs,
+				&nexthop->nh_srv6->seg6_segs->seg[0],
 				IPV6_MAX_BYTELEN))
 		return false;
 	nl_attr_nest_end(&req->n, nest);
@@ -1992,8 +2019,6 @@ static void fpm_process_queue(struct event *t)
 
 		/* Account the processed entries. */
 		processed_contexts++;
-		atomic_fetch_sub_explicit(&fnc->counters.ctxqueue_len, 1,
-					  memory_order_relaxed);
 
 		dplane_ctx_set_status(ctx, ZEBRA_DPLANE_REQUEST_SUCCESS);
 		dplane_provider_enqueue_out_ctx(fnc->prov, ctx);
@@ -2162,10 +2187,29 @@ static int fpm_nl_process(struct zebra_dplane_provider *prov)
 	struct zebra_dplane_ctx *ctx;
 	struct fpm_nl_ctx *fnc;
 	int counter, limit;
-	uint64_t cur_queue, peak_queue = 0, stored_peak_queue;
+	uint64_t cur_queue = 0, peak_queue = 0, stored_peak_queue;
 
 	fnc = dplane_provider_get_data(prov);
 	limit = dplane_provider_get_work_limit(prov);
+
+	frr_with_mutex (&fnc->ctxqueue_mutex) {
+		cur_queue = dplane_ctx_queue_count(&fnc->ctxqueue);
+	}
+
+	if (cur_queue >= (uint64_t)limit) {
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: Already at a limit(%" PRIu64
+				   ") of internal work, hold off",
+				   __func__, cur_queue);
+		limit = 0;
+	} else {
+		if (IS_ZEBRA_DEBUG_FPM)
+			zlog_debug("%s: current queue is %" PRIu64
+				   ", limiting to lesser amount of %" PRIu64,
+				   __func__, cur_queue, limit - cur_queue);
+		limit -= cur_queue;
+	}
+
 	for (counter = 0; counter < limit; counter++) {
 		ctx = dplane_provider_dequeue_in_ctx(prov);
 		if (ctx == NULL)
@@ -2176,20 +2220,12 @@ static int fpm_nl_process(struct zebra_dplane_provider *prov)
 		 * anyway.
 		 */
 		if (fnc->socket != -1 && fnc->connecting == false) {
-			/*
-			 * Update the number of queued contexts *before*
-			 * enqueueing, to ensure counter consistency.
-			 */
-			atomic_fetch_add_explicit(&fnc->counters.ctxqueue_len,
-						  1, memory_order_relaxed);
-
 			frr_with_mutex (&fnc->ctxqueue_mutex) {
 				dplane_ctx_enqueue_tail(&fnc->ctxqueue, ctx);
+				cur_queue =
+					dplane_ctx_queue_count(&fnc->ctxqueue);
 			}
 
-			cur_queue = atomic_load_explicit(
-				&fnc->counters.ctxqueue_len,
-				memory_order_relaxed);
 			if (peak_queue < cur_queue)
 				peak_queue = cur_queue;
 			continue;
@@ -2206,9 +2242,7 @@ static int fpm_nl_process(struct zebra_dplane_provider *prov)
 		atomic_store_explicit(&fnc->counters.ctxqueue_len_peak,
 				      peak_queue, memory_order_relaxed);
 
-	if (atomic_load_explicit(&fnc->counters.ctxqueue_len,
-				 memory_order_relaxed)
-	    > 0)
+	if (cur_queue > 0)
 		event_add_timer(fnc->fthread->master, fpm_process_queue,
 				 fnc, 0, &fnc->t_dequeue);
 
