@@ -25,8 +25,6 @@ endif
 
 $(DOCKER_AUDITD)_CONTAINER_NAME = auditd
 $(DOCKER_AUDITD)_RUN_OPT += -t --privileged --pid=host
-$(DOCKER_AUDITD)_RUN_OPT += -v /etc/audit/rules.d:/etc/audit/rules.d:rw
-$(DOCKER_AUDITD)_RUN_OPT += -v /etc/audit/plugins.d:/etc/audit/plugins.d:rw
 $(DOCKER_AUDITD)_RUN_OPT += -v /lib/systemd/system:/lib/systemd/system:rw
 $(DOCKER_AUDITD)_RUN_OPT += -v /etc/audit:/etc/audit:rw
 $(DOCKER_AUDITD)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
