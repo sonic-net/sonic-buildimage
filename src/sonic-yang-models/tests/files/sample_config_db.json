@@ -2794,7 +2794,7 @@
                 "client_key": "grpcclient.key",
                 "ca_crt": "root.pem",
                 "grpc_ssl_credential": "azureclient.ms"
-            } 
+            }
 	},
         "BANNER_MESSAGE": {
             "global": {
@@ -2836,5 +2836,14 @@
             "daemon_polling_interval" : "3600",
             "fsstats_sync_interval"   : "86400"
         }
+    },
+    "SRV6_MY_LOCATORS": {
+        "loc1": {
+            "prefix": "fcbb:bbbb:1::"
+        }
+    },
+    "SRV6_MY_SIDS": {
+        "action": "uN",
+        "decap_dscp_mode": "pipe"
     }
 }
