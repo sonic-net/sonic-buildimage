@@ -423,7 +423,7 @@ sudo cp -f $IMAGE_CONFIGS/cron.d/* $FILESYSTEM_ROOT/etc/cron.d/
 
 # Copy NTP configuration files and templates
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT \
-    apt-get -y install ntpdate
+    apt-get -y install ntpsec ntpdate
 sudo rm -f $FILESYSTEM_ROOT/etc/network/if-up.d/ntpsec-ntpdate
 sudo cp $IMAGE_CONFIGS/ntp/ntp-config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 echo "ntp-config.service" | sudo tee -a $GENERATED_SERVICE_FILE
