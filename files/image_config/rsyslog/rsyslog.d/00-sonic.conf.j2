@@ -37,7 +37,7 @@ if re_match($programname, "bgp[0-9]*#bgpd") then {
 ## Teamd rules
 
 if $programname contains "teamd_" then {
-    /var/log/teamd.log
+    action(type="omfile" file="/var/log/teamd.log" flushOnTXEnd="off" asyncWriting="on" flushInterval="5" ioBufferSize="64k")
     stop
 }
 
@@ -48,7 +48,7 @@ if $msg startswith " gnmi-native" then {
 }
 
 ## telemetry rules
-if $msg startswith  " telemetry" or ($msg startswith  " dialout" )then {
-    /var/log/telemetry.log
+if (($msg startswith  " telemetry") or ($msg startswith  " dialout" )) then {
+    action(type="omfile" file="/var/log/telemetry.log" flushOnTXEnd="off" asyncWriting="on" flushInterval="5" ioBufferSize="64k")
     stop
 }
