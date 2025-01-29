@@ -361,7 +361,7 @@ rasdaemon==0.6.8-1
 readline-common==8.2-1.3
 resolvconf==1.91+nmu1
 rpcsvc-proto==1.4.3-1
-rshim==2.0.29
+rshim==2.0.40
 rsyslog==8.2302.0-1
 runit-helper==2.15.2
 sbsigntool==0.9.4-3.1

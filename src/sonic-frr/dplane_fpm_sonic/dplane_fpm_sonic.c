@@ -24,6 +24,10 @@
 #endif
 
 #include <arpa/inet.h>
+#include <linux/seg6_iptunnel.h>
+#include <linux/nexthop.h>
+#include <linux/lwtunnel.h>
+#include <linux/mpls_iptunnel.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -52,10 +56,11 @@
 #include "zebra/debug.h"
 #include "zebra/zebra_srv6.h"
 #include "fpm/fpm.h"
+#include "lib/srv6.h"
 
 #define SOUTHBOUND_DEFAULT_ADDR INADDR_LOOPBACK
 #define SOUTHBOUND_DEFAULT_PORT 2620
-
+#define SEG6_SEGMENT_NAME_LEN 64
 /**
  * FPM header:
  * {
@@ -83,6 +88,12 @@ DEFAULT_SRV6_LOCALSID_FORMAT_ARGUMENT_LEN = 0;
 enum custom_nlmsg_types {
 	RTM_NEWSRV6LOCALSID		= 1000,
 	RTM_DELSRV6LOCALSID		= 1001,
+	RTM_NEWPICCONTEXT		= 2000,
+	RTM_DELPICCONTEXT		= 2001,
+	RTM_NEWSRV6VPNROUTE		= 3000,
+	RTM_DELSRV6VPNROUTE		= 3001,
+	RTM_NEWSIDLIST			= 4000,
+	RTM_DELSIDLIST			= 4001,
 };
 
 /* Custom Netlink attribute types */
@@ -102,13 +113,18 @@ enum custom_rtattr_srv6_localsid {
 	FPM_SRV6_LOCALSID_OIF				= 8,
 	FPM_SRV6_LOCALSID_BPF				= 9,
 	FPM_SRV6_LOCALSID_SIDLIST			= 10,
-	FPM_SRV6_LOCALSID_ENCAP_SRC_ADDR	= 11,
+	FPM_SRV6_LOCALSID_ENCAP_SRC_ADDR		= 11,
 };
 
 enum custom_rtattr_encap_srv6 {
 	FPM_ROUTE_ENCAP_SRV6_ENCAP_UNSPEC		= 0,
 	FPM_ROUTE_ENCAP_SRV6_VPN_SID			= 1,
 	FPM_ROUTE_ENCAP_SRV6_ENCAP_SRC_ADDR		= 2,
+	FPM_ROUTE_ENCAP_SRV6_PIC_ID			= 2,
+	FPM_ROUTE_ENCAP_SRV6_NH_ID  			= 4,
+	FPM_ROUTE_ENCAP_SRV6_ENCAP_SIDLIST_NAME		= 5,
+	FPM_ROUTE_ENCAP_SRV6_ENCAP_SIDLIST_LEN		= 6,
+	FPM_ROUTE_ENCAP_SRV6_ENCAP_SIDLIST		= 7,
 };
 
 enum custom_rtattr_srv6_localsid_format {
@@ -217,6 +233,13 @@ struct fpm_nl_ctx {
 		_Atomic uint32_t buffer_full;
 	} counters;
 } *gfnc;
+
+struct seg6_iptunnel_encap_pri {
+	int mode;
+	char segment_name[SEG6_SEGMENT_NAME_LEN];
+	struct in6_addr src;
+	struct ipv6_sr_hdr srh[0];
+};
 
 enum fpm_nl_events {
 	/* Ask for FPM to reconnect the external server. */
@@ -1207,6 +1230,115 @@ static ssize_t netlink_srv6_localsid_msg_encode(int cmd,
 
 	return NLMSG_ALIGN(req->n.nlmsg_len);
 }
+/*
+ * SRv6 VPN route change via netlink interface (use nhg) , using a dataplane context object
+ *
+ * Returns -1 on failure, 0 when the msg doesn't fit entirely in the buffer
+ * otherwise the number of bytes written to buf.
+ */
+static ssize_t netlink_vpn_route_msg_encode(int cmd,
+					   struct zebra_dplane_ctx *ctx,
+					   uint8_t *data, size_t datalen,
+					   bool force_nhg)
+{
+	struct rtattr *nest;
+	struct nexthop *nexthop;
+	const struct prefix *p;
+	struct nlsock *nl;
+	int bytelen;
+	vrf_id_t vrf_id;
+	uint32_t pic_id = dplane_ctx_get_nhe_id(ctx);
+	uint32_t nhg_id = dplane_ctx_get_pic_nhe_id(ctx);
+	uint32_t table_id;
+
+	struct {
+		struct nlmsghdr n;
+		struct rtmsg r;
+		char buf[];
+	} *req = (void *)data;
+
+	nexthop = dplane_ctx_get_ng(ctx)->nexthop;
+	if (!nexthop || !nexthop->nh_srv6 || sid_zero(nexthop->nh_srv6->seg6_segs))
+		return -1;
+
+	p = dplane_ctx_get_dest(ctx);
+
+	if (datalen < sizeof(*req))
+		return 0;
+
+	nl = kernel_netlink_nlsock_lookup(dplane_ctx_get_ns_sock(ctx));
+
+	memset(req, 0, sizeof(*req));
+
+	bytelen = (p->family == AF_INET ? IPV4_MAX_BYTELEN : IPV6_MAX_BYTELEN);
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
+
+	if ((cmd == RTM_NEWROUTE) &&
+	    ((p->family == AF_INET) || zrouter.v6_rr_semantics))
+		req->n.nlmsg_flags |= NLM_F_REPLACE;
+
+	if(cmd == RTM_NEWROUTE)
+		cmd =RTM_NEWSRV6VPNROUTE;
+	else
+		cmd = RTM_DELSRV6VPNROUTE;
+
+	req->n.nlmsg_type = cmd;
+
+	req->n.nlmsg_pid = nl->snl.nl_pid;
+
+	req->r.rtm_family = p->family;
+	req->r.rtm_dst_len = p->prefixlen;
+	req->r.rtm_scope = RT_SCOPE_UNIVERSE;
+
+	if (cmd == RTM_DELSRV6VPNROUTE)
+		req->r.rtm_protocol = zebra2proto(dplane_ctx_get_old_type(ctx));
+	else
+		req->r.rtm_protocol = zebra2proto(dplane_ctx_get_type(ctx));
+
+	req->r.rtm_type = RTN_UNICAST;
+
+	if (!nl_attr_put(&req->n, datalen, RTA_DST, &p->u.prefix, bytelen))
+		return 0;
+
+	/* Table corresponding to this route. */
+	table_id = dplane_ctx_get_table(ctx);
+	/* Put vrf if_index instead of table id */
+	vrf_id = dplane_ctx_get_vrf(ctx);
+	if (vrf_id < 256)
+		req->r.rtm_table = vrf_id;
+	else {
+		req->r.rtm_table = RT_TABLE_UNSPEC;
+		if (!nl_attr_put32(&req->n, datalen, RTA_TABLE, vrf_id))
+			return 0;
+	}
+
+	if (IS_ZEBRA_DEBUG_FPM)
+		zlog_debug(
+			"%s: %s %pFX vrf %u(%u)", __func__,
+			nl_msg_type_to_str(cmd), p, dplane_ctx_get_vrf(ctx),
+			table_id);
+
+	if (!nl_attr_put16(&req->n, datalen, RTA_ENCAP_TYPE,
+				FPM_ROUTE_ENCAP_SRV6))
+		return false;
+	nest = nl_attr_nest(&req->n, datalen, RTA_ENCAP);
+	if (!nest)
+		return false;
+
+    if (!nl_attr_put32(&req->n, datalen, FPM_ROUTE_ENCAP_SRV6_PIC_ID, pic_id)){
+		return 0;
+	}
+
+	if (!nl_attr_put32(&req->n, datalen, FPM_ROUTE_ENCAP_SRV6_NH_ID, nhg_id)){
+		return 0;
+	}
+
+	nl_attr_nest_end(&req->n, nest);
+
+	return NLMSG_ALIGN(req->n.nlmsg_len);
+}
 
 /*
  * SRv6 VPN route change via netlink interface, using a dataplane context object
@@ -1257,7 +1389,7 @@ static ssize_t netlink_srv6_vpn_route_msg_encode(int cmd,
 	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
 
 	if ((cmd == RTM_NEWROUTE) &&
-	    ((p->family == AF_INET) || zrouter.v6_rr_semantics))
+		((p->family == AF_INET) || zrouter.v6_rr_semantics))
 		req->n.nlmsg_flags |= NLM_F_REPLACE;
 
 	req->n.nlmsg_type = cmd;
@@ -1372,7 +1504,7 @@ static ssize_t netlink_srv6_msg_encode(int cmd,
 		return -1;
 
 	if (nexthop->nh_srv6->seg6local_action !=
- 		    ZEBRA_SEG6_LOCAL_ACTION_UNSPEC) {
+			ZEBRA_SEG6_LOCAL_ACTION_UNSPEC) {
 		if (cmd == RTM_NEWROUTE)
 			cmd = RTM_NEWSRV6LOCALSID;
 		else if (cmd == RTM_DELROUTE)
@@ -1382,14 +1514,618 @@ static ssize_t netlink_srv6_msg_encode(int cmd,
 				cmd, ctx, data, datalen, fpm, force_nhg))
 			return 0;
 	} else if (!sid_zero(nexthop->nh_srv6->seg6_segs)) {
-		if (!netlink_srv6_vpn_route_msg_encode(
+		if(force_nhg){
+			if (!netlink_vpn_route_msg_encode(
+				cmd, ctx, data, datalen, force_nhg))
+				return 0;
+		}
+		else{
+			if (!netlink_srv6_vpn_route_msg_encode(
 				cmd, ctx, data, datalen, fpm, force_nhg))
-			return 0;
+				return 0;
+		}
+
 	} else {
 		zlog_err(
 			"%s: invalid srv6 nexthop", __func__);
 		return -1;
 	}
+
+	return NLMSG_ALIGN(req->n.nlmsg_len);
+}
+
+static int build_label_stack(struct mpls_label_stack *nh_label,
+			     mpls_lse_t *out_lse, char *label_buf,
+			     size_t label_buf_size)
+{
+	char label_buf1[MPLS_LABEL_STRLEN];
+	int num_labels = 0;
+
+	for (int i = 0; nh_label && i < nh_label->num_labels; i++) {
+		if (nh_label->label[i] == MPLS_LABEL_IMPLICIT_NULL)
+			continue;
+
+		if (IS_ZEBRA_DEBUG_KERNEL) {
+			if (!num_labels)
+				snprintf(label_buf, label_buf_size, "label %u",
+					 nh_label->label[i]);
+			else {
+				snprintf(label_buf1, sizeof(label_buf1), "/%u",
+					 nh_label->label[i]);
+				strlcat(label_buf, label_buf1, label_buf_size);
+			}
+		}
+
+		out_lse[num_labels] =
+			mpls_lse_encode(nh_label->label[i], 0, 0, 0);
+		num_labels++;
+	}
+
+	return num_labels;
+}
+
+static bool proto_nexthops_only(void)
+{
+	return zebra_nhg_proto_nexthops_only();
+}
+
+
+/* Helper to control use of kernel-level nexthop ids */
+static bool kernel_nexthops_supported(void)
+{
+
+	return (!vrf_is_backend_netns()
+		&& zebra_nhg_kernel_nexthops_enabled());
+}
+
+/* Char length to debug ID with */
+#define ID_LENGTH 10
+
+static bool _netlink_nexthop_build_group(struct nlmsghdr *n, size_t req_size,
+					 uint32_t id,
+					 const struct nh_grp *z_grp,
+					 const uint8_t count, bool resilient,
+					 const struct nhg_resilience *nhgr)
+{
+	struct nexthop_grp grp[count];
+	/* Need space for max group size, "/", and null term */
+	char buf[(MULTIPATH_NUM * (ID_LENGTH + 1)) + 1];
+	char buf1[ID_LENGTH + 2];
+
+	buf[0] = '\0';
+
+	memset(grp, 0, sizeof(grp));
+
+	if (count) {
+		for (int i = 0; i < count; i++) {
+			grp[i].id = z_grp[i].id;
+			grp[i].weight = z_grp[i].weight - 1;
+
+			if (IS_ZEBRA_DEBUG_KERNEL) {
+				if (i == 0)
+					snprintf(buf, sizeof(buf1), "group %u",
+						 grp[i].id);
+				else {
+					snprintf(buf1, sizeof(buf1), "/%u",
+						 grp[i].id);
+					strlcat(buf, buf1, sizeof(buf));
+				}
+			}
+		}
+		if (!nl_attr_put(n, req_size, NHA_GROUP, grp,
+				 count * sizeof(*grp)))
+			return false;
+
+		if (resilient) {
+			struct rtattr *nest;
+
+			nest = nl_attr_nest(n, req_size, NHA_RES_GROUP);
+
+			nl_attr_put16(n, req_size, NHA_RES_GROUP_BUCKETS,
+				      nhgr->buckets);
+			nl_attr_put32(n, req_size, NHA_RES_GROUP_IDLE_TIMER,
+				      nhgr->idle_timer * 1000);
+			nl_attr_put32(n, req_size,
+				      NHA_RES_GROUP_UNBALANCED_TIMER,
+				      nhgr->unbalanced_timer * 1000);
+			nl_attr_nest_end(n, nest);
+
+			nl_attr_put16(n, req_size, NHA_GROUP_TYPE,
+				      NEXTHOP_GRP_TYPE_RES);
+		}
+	}
+
+	if (IS_ZEBRA_DEBUG_KERNEL)
+		zlog_debug("%s: ID (%u): %s", __func__, id, buf);
+
+	return true;
+}
+
+/* Is this a proto created NHG? */
+static bool is_proto_nhg(uint32_t id, int type)
+{
+	/* If type is available, use it as the source of truth */
+	if (type) {
+		if (type != ZEBRA_ROUTE_NHG)
+			return true;
+		return false;
+	}
+
+	if (id >= ZEBRA_NHG_PROTO_LOWER)
+		return true;
+
+	return false;
+}
+
+static ssize_t fill_seg6ipt_encap_private(char *buffer, size_t buflen,
+				  const struct seg6_seg_stack *segs, const struct in6_addr *src,
+				  const char *segment_name)
+{
+	struct seg6_iptunnel_encap_pri *ipt;
+	struct ipv6_sr_hdr *srh;
+	size_t srhlen;
+	int i;
+
+	if (segs->num_segs > SRV6_MAX_SEGS) {
+		/* Exceeding maximum supported SIDs */
+		zlog_err("%s: Exceeding maximum supported SIDs", __func__);
+		return -1;
+	}
+
+	srhlen = SRH_BASE_HEADER_LENGTH + SRH_SEGMENT_LENGTH * segs->num_segs;
+
+	if (buflen < (sizeof(struct seg6_iptunnel_encap_pri) + srhlen))
+		zlog_err("%s: Buffer too small", __func__);
+		return -1;
+
+	memset(buffer, 0, buflen);
+
+	ipt = (struct seg6_iptunnel_encap_pri *)buffer;
+	ipt->mode = SEG6_IPTUN_MODE_ENCAP;
+	srh = ipt->srh;
+	srh->hdrlen = (srhlen >> 3) - 1;
+	srh->type = 4;
+	srh->segments_left = segs->num_segs - 1;
+	srh->first_segment = segs->num_segs - 1;
+
+	for (i = 0; i < segs->num_segs; i++) {
+		memcpy(&srh->segments[segs->num_segs - i - 1], &segs->seg[i],
+		       sizeof(struct in6_addr));
+	}
+
+	if(src != NULL)
+	    memcpy(&ipt->src, src, sizeof(struct in6_addr));
+
+	if (segment_name != NULL)
+		memcpy(ipt->segment_name, segment_name, SEG6_SEGMENT_NAME_LEN);
+
+	return sizeof(struct seg6_iptunnel_encap_pri) + srhlen;
+}
+
+/*
+ * Encode pic context
+ */
+static ssize_t netlink_pic_context_msg_encode(uint16_t cmd,
+				   const struct zebra_dplane_ctx *ctx,
+				   void *buf, size_t buflen)
+{
+	struct {
+		struct nlmsghdr n;
+		struct nhmsg nhm;
+		char buf[];
+	} *req = buf;
+
+	mpls_lse_t out_lse[MPLS_MAX_LABELS];
+	char label_buf[256];
+	int num_labels = 0;
+	uint32_t id = dplane_ctx_get_nhe_id(ctx);
+	int type = dplane_ctx_get_nhe_type(ctx);
+	struct rtattr *nest;
+	struct zebra_vrf *zvrf;
+	uint16_t encap;
+	struct nlsock *nl =
+		kernel_netlink_nlsock_lookup(dplane_ctx_get_ns_sock(ctx));
+
+	if (!id) {
+		zlog_err(
+			"Failed trying to update a nexthop group in the kernel that does not have an ID");
+		return -1;
+	}
+
+	/*
+	 * Nothing to do if the kernel doesn't support nexthop objects or
+	 * we dont want to install this type of NHG, but FPM may possible to
+	 * handle this.
+	 */
+	if (!kernel_nexthops_supported()) {
+		if (IS_ZEBRA_DEBUG_KERNEL || IS_ZEBRA_DEBUG_NHG)
+			zlog_debug(
+				"%s: nhg_id %u (%s): kernel nexthops not supported, ignoring",
+				__func__, id, zebra_route_string(type));
+		return 0;
+	}
+
+	if (proto_nexthops_only() && !is_proto_nhg(id, type)) {
+		if (IS_ZEBRA_DEBUG_KERNEL || IS_ZEBRA_DEBUG_NHG)
+			zlog_debug(
+				"%s: nhg_id %u (%s): proto-based nexthops only, ignoring",
+				__func__, id, zebra_route_string(type));
+		return 0;
+	}
+
+	label_buf[0] = '\0';
+
+	if (buflen < sizeof(*req))
+		return 0;
+
+	memset(req, 0, sizeof(*req));
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct nhmsg));
+	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
+
+	if (cmd == RTM_NEWNEXTHOP)
+	{
+		req->n.nlmsg_flags |= NLM_F_REPLACE;
+		cmd = RTM_NEWPICCONTEXT;
+	}
+	else if (cmd == RTM_DELNEXTHOP)
+	{
+		cmd = RTM_DELPICCONTEXT;
+	}
+
+	req->n.nlmsg_type = cmd;
+	req->n.nlmsg_pid = nl->snl.nl_pid;
+
+	req->nhm.nh_family = AF_UNSPEC;
+	/* TODO: Scope? */
+
+	if (!nl_attr_put32(&req->n, buflen, NHA_ID, id))
+		return 0;
+
+	if (cmd == RTM_NEWPICCONTEXT) {
+		/*
+		 * We distinguish between a "group", which is a collection
+		 * of ids, and a singleton nexthop with an id. The
+		 * group is installed as an id that just refers to a list of
+		 * other ids.
+		 */
+		if (dplane_ctx_get_nhe_nh_grp_count(ctx)) {
+			const struct nexthop_group *nhg;
+			const struct nhg_resilience *nhgr;
+
+			nhg = dplane_ctx_get_nhe_ng(ctx);
+			nhgr = &nhg->nhgr;
+			if (!_netlink_nexthop_build_group(
+				    &req->n, buflen, id,
+				    dplane_ctx_get_nhe_nh_grp(ctx),
+				    dplane_ctx_get_nhe_nh_grp_count(ctx),
+				    !!nhgr->buckets, nhgr))
+				return 0;
+		} else {
+			const struct nexthop *nh =
+				dplane_ctx_get_nhe_ng(ctx)->nexthop;
+			afi_t afi = dplane_ctx_get_nhe_afi(ctx);
+
+			if (afi == AFI_IP)
+				req->nhm.nh_family = AF_INET;
+			else if (afi == AFI_IP6)
+				req->nhm.nh_family = AF_INET6;
+
+			switch (nh->type) {
+			case NEXTHOP_TYPE_IPV4:
+			case NEXTHOP_TYPE_IPV4_IFINDEX:
+				if (!nl_attr_put(&req->n, buflen, NHA_GATEWAY,
+						 &nh->gate.ipv4,
+						 IPV4_MAX_BYTELEN))
+					return 0;
+				break;
+			case NEXTHOP_TYPE_IPV6:
+			case NEXTHOP_TYPE_IPV6_IFINDEX:
+				if (!nl_attr_put(&req->n, buflen, NHA_GATEWAY,
+						 &nh->gate.ipv6,
+						 IPV6_MAX_BYTELEN))
+					return 0;
+				break;
+			case NEXTHOP_TYPE_BLACKHOLE:
+				if (!nl_attr_put(&req->n, buflen, NHA_BLACKHOLE,
+						 NULL, 0))
+					return 0;
+				/* Blackhole shouldn't have anymore attributes
+				 */
+				goto nexthop_done;
+			case NEXTHOP_TYPE_IFINDEX:
+				/* Don't need anymore info for this */
+				break;
+			}
+
+			if (!nh->ifindex) {
+				zlog_info(
+					"Context received for kernel nexthop update without an interface");
+				return -1;
+			}
+
+			if (!nl_attr_put32(&req->n, buflen, NHA_OIF,
+					   nh->ifindex))
+				return 0;
+
+			if (CHECK_FLAG(nh->flags, NEXTHOP_FLAG_ONLINK))
+				req->nhm.nh_flags |= RTNH_F_ONLINK;
+
+			num_labels =
+				build_label_stack(nh->nh_label, out_lse,
+						  label_buf, sizeof(label_buf));
+
+			if (num_labels) {
+				/* Set the BoS bit */
+				out_lse[num_labels - 1] |=
+					htonl(1 << MPLS_LS_S_SHIFT);
+
+				/*
+				 * TODO: MPLS unsupported for now in kernel.
+				 */
+				if (req->nhm.nh_family == AF_MPLS)
+					goto nexthop_done;
+
+				encap = LWTUNNEL_ENCAP_MPLS;
+				if (!nl_attr_put16(&req->n, buflen,
+						   NHA_ENCAP_TYPE, encap))
+					return 0;
+				nest = nl_attr_nest(&req->n, buflen, NHA_ENCAP);
+				if (!nest)
+					return 0;
+				if (!nl_attr_put(
+					    &req->n, buflen, MPLS_IPTUNNEL_DST,
+					    &out_lse,
+					    num_labels * sizeof(mpls_lse_t)))
+					return 0;
+
+				nl_attr_nest_end(&req->n, nest);
+			}
+
+			if (nh->nh_srv6) {
+				if (nh->nh_srv6->seg6local_action !=
+				    ZEBRA_SEG6_LOCAL_ACTION_UNSPEC) {
+					uint16_t encap;
+					struct rtattr *nest;
+					const struct seg6local_context *seg6local_ctx;
+
+					req->nhm.nh_family = AF_INET6;
+					seg6local_ctx = &nh->nh_srv6->seg6local_ctx;
+					encap = LWTUNNEL_ENCAP_SEG6_LOCAL;
+					if (!nl_attr_put(&req->n, buflen,
+							 NHA_ENCAP_TYPE,
+							 &encap,
+							 sizeof(uint16_t)))
+						return 0;
+
+					nest = nl_attr_nest(&req->n, buflen,
+						NHA_ENCAP | NLA_F_NESTED);
+					if (!nest)
+						return 0;
+
+					switch (nh->nh_srv6->seg6local_action) {
+					case ZEBRA_SEG6_LOCAL_ACTION_END:
+						if (!nl_attr_put32(
+							&req->n, buflen,
+							FPM_SRV6_LOCALSID_ACTION,
+							FPM_SRV6_LOCALSID_ACTION_END))
+							return -1;
+						break;
+					case ZEBRA_SEG6_LOCAL_ACTION_END_X:
+						if (!nl_attr_put32(
+							&req->n, buflen,
+							FPM_SRV6_LOCALSID_ACTION,
+							FPM_SRV6_LOCALSID_ACTION_END_X))
+							return -1;
+						if (!nl_attr_put(&req->n, buflen,
+						    FPM_SRV6_LOCALSID_NH6, &seg6local_ctx->nh6,
+							sizeof(struct in6_addr)))
+							return -1;
+						break;
+					case ZEBRA_SEG6_LOCAL_ACTION_END_T:
+						zvrf = vrf_lookup_by_table_id(seg6local_ctx->table);
+						if (!zvrf)
+						    return false;
+						if (!nl_attr_put32(
+							&req->n, buflen,
+							FPM_SRV6_LOCALSID_ACTION,
+							FPM_SRV6_LOCALSID_ACTION_END_T))
+							return -1;
+						if (!nl_attr_put(&req->n, buflen,
+						    FPM_SRV6_LOCALSID_VRFNAME,
+							zvrf->vrf->name,
+							strlen(zvrf->vrf->name) + 1))
+							return -1;
+						break;
+					case ZEBRA_SEG6_LOCAL_ACTION_END_DX6:
+						if (!nl_attr_put32(
+							&req->n, buflen,
+							FPM_SRV6_LOCALSID_ACTION,
+							FPM_SRV6_LOCALSID_ACTION_END_DX6))
+							return -1;
+						if (!nl_attr_put(&req->n, buflen,
+						    FPM_SRV6_LOCALSID_NH6, &seg6local_ctx->nh6,
+							sizeof(struct in6_addr)))
+							return -1;
+						break;
+					case ZEBRA_SEG6_LOCAL_ACTION_END_DX4:
+						if (!nl_attr_put32(
+							&req->n, buflen,
+							FPM_SRV6_LOCALSID_ACTION,
+							FPM_SRV6_LOCALSID_ACTION_END_DX4))
+							return -1;
+						if (!nl_attr_put(&req->n, buflen,
+						    FPM_SRV6_LOCALSID_NH6, &seg6local_ctx->nh4,
+							sizeof(struct in6_addr)))
+							return -1;
+						break;
+					case ZEBRA_SEG6_LOCAL_ACTION_END_DT6:
+						zvrf = vrf_lookup_by_table_id(seg6local_ctx->table);
+						if (!zvrf)
+						    return false;
+						if (!nl_attr_put32(
+							&req->n, buflen,
+							FPM_SRV6_LOCALSID_ACTION,
+							FPM_SRV6_LOCALSID_ACTION_END_DT6))
+							return -1;
+						if (!nl_attr_put(&req->n, buflen,
+						    FPM_SRV6_LOCALSID_VRFNAME,
+							zvrf->vrf->name,
+							strlen(zvrf->vrf->name) + 1))
+							return -1;
+						break;
+					case ZEBRA_SEG6_LOCAL_ACTION_END_DT4:
+						zvrf = vrf_lookup_by_table_id(seg6local_ctx->table);
+						if (!zvrf)
+						    return false;
+						if (!nl_attr_put32(
+							&req->n, buflen,
+							FPM_SRV6_LOCALSID_ACTION,
+							FPM_SRV6_LOCALSID_ACTION_END_DT4))
+							return -1;
+						if (!nl_attr_put(&req->n, buflen,
+						    FPM_SRV6_LOCALSID_VRFNAME,
+							zvrf->vrf->name,
+							strlen(zvrf->vrf->name) + 1))
+							return -1;
+						break;
+					case ZEBRA_SEG6_LOCAL_ACTION_END_DT46:
+						zvrf = vrf_lookup_by_table_id(seg6local_ctx->table);
+						if (!zvrf)
+						    return false;
+						if (!nl_attr_put32(
+							&req->n, buflen,
+							FPM_SRV6_LOCALSID_ACTION,
+							FPM_SRV6_LOCALSID_ACTION_END_DT46))
+							return -1;
+						if (!nl_attr_put(&req->n, buflen,
+						    FPM_SRV6_LOCALSID_VRFNAME,
+							zvrf->vrf->name,
+							strlen(zvrf->vrf->name) + 1))
+							return -1;
+						break;
+					default:
+						zlog_err("%s: unsupport seg6local behaviour action=%u",
+							 __func__, nh->nh_srv6->seg6local_action);
+						return 0;
+					}
+
+					nl_attr_nest_end(&req->n, nest);
+				}
+
+
+				if (!sid_zero(nh->nh_srv6->seg6_segs)) {
+					char tun_buf[4096];
+					ssize_t tun_len;
+					struct rtattr *nest;
+
+					if (!nl_attr_put16(&req->n, buflen,
+					    NHA_ENCAP_TYPE,
+					    LWTUNNEL_ENCAP_SEG6))
+						return 0;
+					nest = nl_attr_nest(&req->n, buflen,
+					    NHA_ENCAP | NLA_F_NESTED);
+					if (!nest)
+						return 0;
+					if (!sid_zero_ipv6(&nh->nh_srv6->seg6_src)) {
+						tun_len = fill_seg6ipt_encap_private(tun_buf,
+						    sizeof(tun_buf),
+						    nh->nh_srv6->seg6_segs,
+						    &nh->nh_srv6->seg6_src, NULL);
+					}
+					else {
+						tun_len = fill_seg6ipt_encap_private(tun_buf,
+					    sizeof(tun_buf),
+					    nh->nh_srv6->seg6_segs,
+						NULL,NULL);
+					}
+					if (tun_len < 0)
+						return 0;
+					if (!nl_attr_put(&req->n, buflen,
+							 SEG6_IPTUNNEL_SRH,
+							 tun_buf, tun_len))
+						return 0;
+					nl_attr_nest_end(&req->n, nest);
+				}
+			}
+
+nexthop_done:
+
+			if (IS_ZEBRA_DEBUG_KERNEL)
+				zlog_debug("%s: ID (%u): %pNHv(%d) vrf %s(%u) %s ",
+					   __func__, id, nh, nh->ifindex,
+					   vrf_id_to_name(nh->vrf_id),
+					   nh->vrf_id, label_buf);
+		}
+
+		req->nhm.nh_protocol = zebra2proto(type);
+
+	} else if (cmd != RTM_DELPICCONTEXT) {
+		zlog_debug(
+			"Nexthop group kernel update command (%d) does not exist",
+			cmd);
+		return -1;
+	}
+
+	if (IS_ZEBRA_DEBUG_KERNEL)
+		zlog_debug("%s: %s, id=%u", __func__, nl_msg_type_to_str(cmd),
+			   id);
+
+	return NLMSG_ALIGN(req->n.nlmsg_len);
+}
+
+static ssize_t netlink_sidlist_msg_encode(int cmd,
+					   struct zebra_dplane_ctx *ctx,
+					   uint8_t *data, size_t datalen)
+{
+	struct rtattr *nest;
+	struct zebra_srv6_sidlist *sidlist;
+
+	struct {
+		struct nlmsghdr n;
+		struct rtmsg r;
+		char buf[];
+	} *req = (void *)data;
+
+	sidlist = dplane_ctx_get_sidlist(ctx);
+
+	if (datalen < sizeof(*req))
+		return 0;
+
+	memset(req, 0, sizeof(*req));
+
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+	req->n.nlmsg_flags = NLM_F_CREATE | NLM_F_REQUEST;
+
+	req->n.nlmsg_type = cmd;
+	req->r.rtm_scope = RT_SCOPE_UNIVERSE;
+	req->r.rtm_type = RTN_UNICAST;
+
+	if (!nl_attr_put32(&req->n, datalen, RTA_TABLE, sidlist->segment_count_))
+		return false;
+
+	nest = nl_attr_nest(&req->n, datalen, RTA_ENCAP);
+	if (!nest)
+		return false;
+
+	char sidlist_name[SRV6_SEGMENTLIST_NAME_MAX_LENGTH];
+	memset(sidlist_name, 0, sizeof(sidlist_name));
+	memcpy(sidlist_name, sidlist->sidlist_name_, sizeof(sidlist_name));
+	if (!nl_attr_put(
+			&req->n, datalen, FPM_ROUTE_ENCAP_SRV6_ENCAP_SIDLIST_NAME,
+			sidlist_name, sizeof(sidlist_name)))
+		return false;
+
+	struct zebra_srv6_segment_entry segments[SRV6_SID_INDEX_MAX_NUM];
+	memset(segments, 0, sizeof(segments));
+	for (uint32_t i = 0; i < sidlist->segment_count_; i++) {
+		segments[i].index_ = sidlist->segments_[i].index_;
+		segments[i].srv6_sid_value_ = sidlist->segments_[i].srv6_sid_value_;
+	}
+	if (!nl_attr_put(&req->n, datalen, FPM_ROUTE_ENCAP_SRV6_ENCAP_SIDLIST,
+				segments, SRV6_SID_INDEX_MAX_NUM * sizeof(struct zebra_srv6_segment_entry)))
+		return false;
+	nl_attr_nest_end(&req->n, nest);
 
 	return NLMSG_ALIGN(req->n.nlmsg_len);
 }
@@ -1417,8 +2153,10 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 	 */
 	if ((!fnc->use_nhg)
 	    && (op == DPLANE_OP_NH_DELETE || op == DPLANE_OP_NH_INSTALL
-		|| op == DPLANE_OP_NH_UPDATE))
-		return 0;
+		|| op == DPLANE_OP_NH_UPDATE
+		|| op == DPLANE_OP_PIC_CONTEXT_DELETE || op == DPLANE_OP_PIC_CONTEXT_INSTALL
+		|| op == DPLANE_OP_PIC_CONTEXT_UPDATE))
+			return 0;
  
 	/*
 	 * Ignore route from default table, because when mgmt port goes down,
@@ -1529,7 +2267,53 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 
 		nl_buf_len = (size_t)rv;
 		break;
+	case DPLANE_OP_SID_LIST_DELETE:
+		rv = netlink_sidlist_msg_encode(
+				RTM_DELSIDLIST, ctx, nl_buf, sizeof(nl_buf));
+		if (rv <= 0) {
+			zlog_err(
+				"%s: netlink_srv6_msg_encode failed",
+				__func__);
+			return 0;
+		}
+		nl_buf_len += (size_t)rv;
+		break;
+	case DPLANE_OP_SID_LIST_INSTALL:
+	case DPLANE_OP_SID_LIST_UPDATE:
+		rv = netlink_sidlist_msg_encode(
+				RTM_NEWSIDLIST, ctx, nl_buf, sizeof(nl_buf));
+		if (rv <= 0) {
+			zlog_err(
+				"%s: netlink_srv6_msg_encode failed",
+				__func__);
+			return 0;
+		}
+		nl_buf_len += (size_t)rv;
+		break;
 
+	case DPLANE_OP_PIC_CONTEXT_DELETE:
+		rv = netlink_pic_context_msg_encode(RTM_DELNEXTHOP, ctx, nl_buf,
+						sizeof(nl_buf));
+		if (rv <= 0) {
+			zlog_err("%s: netlink_nexthop_msg_encode failed",
+				 __func__);
+			return 0;
+		}
+
+		nl_buf_len = (size_t)rv;
+		break;
+	case DPLANE_OP_PIC_CONTEXT_INSTALL:
+	case DPLANE_OP_PIC_CONTEXT_UPDATE:
+		rv = netlink_pic_context_msg_encode(RTM_NEWNEXTHOP, ctx, nl_buf,
+						sizeof(nl_buf));
+		if (rv <= 0) {
+			zlog_err("%s: netlink_pic_context_msg_encode failed",
+				 __func__);
+			return 0;
+		}
+
+		nl_buf_len = (size_t)rv;
+		break;
 	case DPLANE_OP_LSP_INSTALL:
 	case DPLANE_OP_LSP_UPDATE:
 	case DPLANE_OP_LSP_DELETE:
