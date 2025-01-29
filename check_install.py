@@ -86,6 +86,10 @@ def main():
     p.expect([cmd_prompt])
     p.sendline('show ip bgp sum')
     p.expect([cmd_prompt])
+    p.sendline('sudo rm /etc/sonic/config_db.json')
+    p.expect([cmd_prompt])
+    p.sendline('cd /host/image-*/platform; sudo touch firsttime; cd -')
+    p.expect([cmd_prompt])
     p.sendline('sync')
     p.expect([cmd_prompt])
 
