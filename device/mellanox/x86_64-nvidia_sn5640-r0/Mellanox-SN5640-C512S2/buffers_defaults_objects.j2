@@ -105,7 +105,7 @@
     "BUFFER_PORT_INGRESS_PROFILE_LIST": {
 {% for port in port_names_active.split(',') %}
         "{{ port }}": {
-            "profile_list" : "ingress_lossless_profile"
+            "profile_list" : "ingress_lossy_profile"
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
@@ -114,7 +114,7 @@
 {% for port in port_names_inactive.split(',') %}
         "{{ port }}": {
 {% if dynamic_mode is defined %}
-            "profile_list" : "ingress_lossless_profile"
+            "profile_list" : "ingress_lossy_profile"
 {% else %}
             "profile_list" : "ingress_lossless_zero_profile"
 {% endif %}
@@ -147,7 +147,7 @@
 {%- endmacro %}
 
 {%- macro generate_queue_buffers(port_names_active, port_names_inactive) %}
-
+    "BUFFER_QUEUE": {
 {% if dynamic_mode is not defined %}
 {% for port in port_names_active.split(',') %}
         "{{ port }}|0": {
@@ -177,6 +177,7 @@
 {% endfor %}
 {% if port_names_inactive|length > 0 %}
 {% for port in port_names_inactive.split(',') %}
+       {%- if loop.first -%},{%- endif -%}
         "{{ port }}|1-6": {
             "profile" : "egress_lossy_zero_profile"
         }{% if not loop.last %},{% endif %}
