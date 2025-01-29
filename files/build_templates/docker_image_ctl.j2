@@ -112,6 +112,10 @@ function preStartAction()
     fi
 {%- elif docker_container_name == "snmp" %}
     $SONIC_DB_CLI STATE_DB HSET 'DEVICE_METADATA|localhost' chassis_serial_number $(decode-syseeprom -s)
+{%- elif docker_container_name == "dhcp_relay" %}
+    until [[ $($SONIC_DB_CLI APPL_DB EXISTS "PORT_TABLE:PortInitDone" | grep -c 1) -gt 0 ]]; do
+        sleep 1;
+    done
 {%- else %}
     : # nothing
 {%- endif %}
