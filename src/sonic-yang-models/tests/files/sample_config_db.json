@@ -2818,6 +2818,15 @@
             "ASIC_SENSORS_POLLER_STATUS": {
                 "admin_status": "enable"
             }
+        },
+        "SRV6_MY_LOCATORS": {
+            "loc1": {
+                "prefix": "fcbb:bbbb:1::"
+            }
+        },
+        "SRV6_MY_SIDS": {
+            "action": "uN",
+            "decap_dscp_mode": "pipe"
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
@@ -2836,14 +2845,5 @@
             "daemon_polling_interval" : "3600",
             "fsstats_sync_interval"   : "86400"
         }
-    },
-    "SRV6_MY_LOCATORS": {
-        "loc1": {
-            "prefix": "fcbb:bbbb:1::"
-        }
-    },
-    "SRV6_MY_SIDS": {
-        "action": "uN",
-        "decap_dscp_mode": "pipe"
     }
 }
