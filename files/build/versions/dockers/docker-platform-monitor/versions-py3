@@ -12,7 +12,7 @@ jsonschema==2.6.0
 libpci==0.2
 netifaces==0.11.0
 nose==1.3.7
-protobuf==4.25.5
+protobuf==4.25.6
 psutil==6.1.1
 pyrsistent==0.18.1
 requests==2.32.3

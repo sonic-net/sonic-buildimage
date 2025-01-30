@@ -1,11 +1,11 @@
-https://chromium.googlesource.com/chromium/tools/depot_tools.git==2b1cab22672ba9ca530d5d1ef3f1c80d26ab4c41
+https://chromium.googlesource.com/chromium/tools/depot_tools.git==77a800d7294d29ded899af9685c65babb3a62821
 https://github.com/aristanetworks/swi-tools.git==989aec67105f565836364b4167c9566c132d0b54
 https://github.com/CESNET/libyang.git==03e294d83b610f89e8ba7b2156a80dc0ad534443
 https://github.com/daveolson53/audisp-tacplus.git==559c9f22edd4f2dea0ecedffb3ad9502b12a75b6
 https://github.com/daveolson53/libnss-tacplus.git==19008ab68d9d504aa58eb34d5f564755a1613b8b
 https://github.com/dyninc/OpenBFDD.git==e35f43ad8d2b3f084e96a84c392528a90d05a287
-https://github.com/flashrom/flashrom.git==1deeb5d392f1b840dbad18a393005c544efcebde
-https://github.com/FreeRADIUS/freeradius-server.git==5d02ea5fbca12d9d953e9ff4ba0e54f3bf029d5a
+https://github.com/flashrom/flashrom.git==15e6b337437b906a817a87481301dec53b77bb66
+https://github.com/FreeRADIUS/freeradius-server.git==4a3d9366277e8bee2d97cd25a65dfa3b9385497d
 https://github.com/FreeRADIUS/pam_radius.git==5e043859f177f12fed604da0f8e4c7577acadcb9
 https://github.com/jeroennijhof/pam_tacplus.git==b839c440e33c36eced9dcbc287fcfe6237c4c4ce
 https://github.com/lguohan/gnxi.git==3adf8b97755b49947e465b5a14645f11e79fa0cd
@@ -14,9 +14,9 @@ https://github.com/openconfig/oc-pyang.git==4607fd1987d4f586aba03b40f222015cb3ef
 https://github.com/p4lang/ptf.git==c554f83685186be4cfa9387eb5d6d700d2bbd7c0
 https://github.com/p4lang/scapy-vxlan.git==85ffe83da156568ee47a0750f638227e6e1d7479
 https://github.com/redis/librdb.git==bcd3db9bfa430e3d032692df413e1e49e4355d12
-https://github.com/sflow/host-sflow==61094a1f3cfacf8980aa44b4170625abb77d8814
+https://github.com/sflow/host-sflow==3cf96c38fa98ac9a3fac6b02cc84426bcbe95798
 https://github.com/sflow/sflowtool==4b51fce9abf1096682922a85746f613039fc4570
-https://github.com/sonic-net/DASH.git==f5b4b70ec5a0b43b4f63a9375a56a7e20a54ed0e
+https://github.com/sonic-net/DASH.git==abd0d1a591adbd18c0586776fab741aa2a857660
 https://salsa.debian.org/kernel-team/initramfs-tools.git==fe0846fea0879e7f7b206409eb0420a9e4fa2d68
 https://salsa.debian.org/sk-guest/monit.git==c9da7ebb1f35dfba17b50b5969a6e75e29cbec0d
 https://salsa.debian.org/tai271828/rasdaemon.git==51a7f485f8b2e2ae43e613f19c5a387595174132
