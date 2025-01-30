@@ -258,11 +258,10 @@ class PsuFan(MlnxFan):
             return False
 
     def get_speed(self):
-        if self.get_presence():
-            return super().get_speed()
-        logger.log_notice(f"No PSU presence detected, returning default value for {self._name}")
-        return 0
-
+        if not self.get_presence():
+            logger.log_notice(f"No PSU presence detected, returning default value for {self._name}")
+            return 0
+        return super().get_speed()
 
 class Fan(MlnxFan):
     """Platform-specific Fan class"""
