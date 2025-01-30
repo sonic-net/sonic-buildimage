@@ -54,6 +54,8 @@ OPER_STATUS_KEY = 'oper_status'
 # Ping task list
 g_ping_task_list = []
 
+# TSA state
+is_state_TSA = False
 
 def ip_addr(ip_network_addr):
     """
@@ -484,26 +486,30 @@ class TaskPing():
         """
         while self.running:
             ping_wait_time = DEFAULT_INTERVAL
-            for task in self.task_queue:
-                cur_time = monotonic_ms()
-                if cur_time - task[KEY_LAST_PING] >= task[KEY_INTERVAL]:
-                    self.do_task(task)
-                    task[KEY_SEQ_NUM] += 1
-                    task[KEY_LAST_PING] = cur_time
-                    g_ping_stats.update_sequence_number(task[KEY_T0_LO], task[KEY_CARD_VIP], task[KEY_SEQ_NUM])
-                ping_wait_time = min(ping_wait_time, task[KEY_INTERVAL] - (cur_time - task[KEY_LAST_PING]))
+            if not is_state_TSA:
+                for task in self.task_queue:
+                    cur_time = monotonic_ms()
+                    if cur_time - task[KEY_LAST_PING] >= task[KEY_INTERVAL]:
+                        self.do_task(task)
+                        task[KEY_SEQ_NUM] += 1
+                        task[KEY_LAST_PING] = cur_time
+                        g_ping_stats.update_sequence_number(task[KEY_T0_LO], task[KEY_CARD_VIP], task[KEY_SEQ_NUM])
+                    ping_wait_time = min(ping_wait_time, task[KEY_INTERVAL] - (cur_time - task[KEY_LAST_PING]))
             time.sleep(ping_wait_time/1000)
 
 class DBMonitor():
     """
     A class to monitor the db (APP_DB)
     """
-    def __init__(self, table_name, t1_mac, t1_loopback, vni, cached_stats, task_list):
+    def __init__(self, table_name, tsa_table_name, t1_mac, t1_loopback, vni, cached_stats, task_list):
         self.working = False
         self.appl_db = daemon_base.db_connect("APPL_DB")
+        self.config_db = daemon_base.db_connect("CONFIG_DB")
         self.sel = swsscommon.Select()
         self.tbl = swsscommon.SubscriberStateTable(self.appl_db, table_name)
         self.sel.addSelectable(self.tbl)
+        self.tsa_tbl = swsscommon.SubscriberStateTable(self.config_db, tsa_table_name)
+        self.sel.addSelectable(self.tsa_tbl)
         self.t1_mac = t1_mac
         self.t1_loopback = t1_loopback
         self.vni = vni
@@ -578,14 +584,24 @@ class DBMonitor():
         """
         self.working = True
         SELECT_TIMEOUT_MSECS = 1000
+        global is_state_TSA
         while True:
-            (state, c) = self.sel.select(SELECT_TIMEOUT_MSECS)
+            (state, selectableObj) = self.sel.select(SELECT_TIMEOUT_MSECS)
             if not self.working:
                 break
             if state == swsscommon.Select.OBJECT:
-                (key, op, fvp) = self.tbl.pop()
-                self.process_new_entry(key, op, dict(fvp))
-    
+                if selectableObj.getFd() == self.tbl.getFd():
+                    (key, op, fvp) = self.tbl.pop()
+                    self.process_new_entry(key, op, dict(fvp))
+                elif selectableObj.getFd() == self.tsa_tbl.getFd():
+                    (_, _, fvp) = self.tsa_tbl.pop()
+                    tsa_state = dict(fvp).get("tsa_enabled", "false")
+                    if tsa_state.lower() == "true":
+                        is_state_TSA = True
+                    else:
+                        is_state_TSA = False
+                    logger_helper.log_notice("TSA state changed to {}".format(is_state_TSA))
+
     def stop(self):
         """
         Stop the select operation and exit

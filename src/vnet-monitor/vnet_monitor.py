@@ -8,6 +8,7 @@ import signal
 
 APP_DB_VNET_MONITOR_TABLE_NAME = "VNET_MONITOR_TABLE"
 STATE_DB_VNET_MONITOR_TABLE_NAME = "VNET_MONITOR_TABLE"
+CONFIG_DB_BGP_DEVICE_GLOBAL_NAME = "BGP_DEVICE_GLOBAL"
 
 def state_db_table(table_name):
     state_db = swsscommon.DBConnector("STATE_DB", 0, False)
@@ -59,6 +60,7 @@ def main():
                          t1_loopback_v6=t1_loopback_v6)
 
     g_db_monitor = DBMonitor(table_name=APP_DB_VNET_MONITOR_TABLE_NAME,
+                            tsa_table_name=CONFIG_DB_BGP_DEVICE_GLOBAL_NAME,
                             t1_mac=t1_mac,
                             t1_loopback={4: t1_loopback_v4, 6: t1_loopback_v6},
                             vni=DEFAULT_VNI,

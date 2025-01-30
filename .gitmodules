@@ -85,9 +85,6 @@
 	path = platform/broadcom/saibcm-modules-dnx
 	url = https://github.com/sonic-net/saibcm-modules.git
 	branch =  sdk-6.5.22-gpl-dnx
-[submodule "platform/broadcom/Networking-acs-platform-modules-n3132"]
-	path = platform/broadcom/Networking-acs-platform-modules-n3132
-	url = https://msazure.visualstudio.com/One/_git/Networking-acs-platform-modules-n3132
 [submodule "platform/broadcom/sonic-platform-modules-nokia"]
 	path = platform/broadcom/sonic-platform-modules-nokia
 	url = https://github.com/nokia/sonic-platform.git

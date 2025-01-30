@@ -233,6 +233,7 @@ class TestTaskPing(object):
             assert(self.task_ping.worker_thread != None)
             
     def test_do_task(self):
+        vnet_monitor_base.is_state_TSA = False 
         with mock.patch('socket.socket') as mock_socket:
             mock_socket.return_value.sendto.return_value = 0
             self.task_ping.init()
@@ -260,6 +261,7 @@ class TestDBMonitor(object):
         vnet_monitor_base.daemon_base = mock.MagicMock()
         db_monitor = DBMonitor(
                                 table_name="VNET_MONITOR_TABLE",
+                                tsa_table_name="BGP_DEVICE_GLOBAL",
                                 t1_mac=T1_MAC,
                                 t1_loopback={4: T1_LOOPBACK_V4, 6: T1_LOOPBACK_V6},
                                 vni=DEFAULT_VNI,

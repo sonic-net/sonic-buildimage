@@ -21,6 +21,8 @@
 {% set hash_seed_value = hash_seed_offset + hash_seed %}
 {% set vxlan_port = 65330 %}
 {% set vxlan_mac = "00:12:34:56:78:9a"  %}
+{% set vxlan_sport = 64128 %}
+{% set vxlan_sport_mask = 7 %}
 [
     {
         "SWITCH_TABLE:switch": {
@@ -29,6 +31,10 @@
             "vxlan_port": "{{ vxlan_port }}",
             "vxlan_router_mac": "{{ vxlan_mac }}",
 {% endif %}
+{% elif DEVICE_METADATA.localhost.type in ["dpu", "SonicDpu"] %}
+            "vxlan_port": "{{ vxlan_port }}",
+            "vxlan_sport": "{{ vxlan_sport }}",
+            "vxlan_mask": "{{ vxlan_sport_mask }}"
 {% endif %}
 {% if not DEVICE_METADATA.localhost.switch_type or DEVICE_METADATA.localhost.switch_type != "dpu" %}
             "ecmp_hash_seed": "{{ hash_seed_value }}",
