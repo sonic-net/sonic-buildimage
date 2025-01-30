@@ -2825,8 +2825,10 @@
             }
         },
         "SRV6_MY_SIDS": {
-            "action": "uN",
-            "decap_dscp_mode": "pipe"
+            "loc1|fcbb:bbbb:1::/48": {
+                "action": "uN",
+                "decap_dscp_mode": "pipe"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
