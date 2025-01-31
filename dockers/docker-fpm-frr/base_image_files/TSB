@@ -42,7 +42,7 @@ if [ -z "$STARTED_BY_TSA_TSB_SERVICE" ]; then
      [[ $(/bin/systemctl show $service --property SubState  --value) == "running" ]]; then
       echo "Stopping $service before configuring TSB"
       systemctl stop $service
-      if sonic-db-cli CONFIG_DB HDEL "BGP_DEVICE_GLOBAL|STATE" "tsa_tsb_service" >/dev/null; then
+      if sonic-db-cli STATE_DB HDEL "ALL_SERVICE_STATUS|tsa_tsb_service" "running" >/dev/null; then
         echo "Successfully removed TSA-TSB service flag."
       else
         echo "Failed to remove TSA-TSB service flag!" >&2
