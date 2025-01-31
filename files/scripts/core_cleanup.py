@@ -11,13 +11,12 @@ SYSLOG_IDENTIFIER = 'core_cleanup.py'
 CORE_FILE_DIR = '/var/core/'
 KERNEL_DUMP_DIR = '/var/dump/'
 MAX_CORE_FILES = 4
-EXPIRE_DAYS = 90
 
 def delete_file(file_path):
     try:
         os.remove(file_path)
-    except:
-        logger.log_error('Unexpected error occured trying to delete {}'.format(file_path))
+    except e:
+        logger.log_error('Unexpected error: {} occured trying to delete {}'.format(e, file_path))
 
 def get_dump_timestamp(file_name):
     match = re.search(r'sonic_dump_.*_(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d).tar.gz', file_name)
@@ -35,20 +34,11 @@ def main():
         logger.log_error('Root required to clean up core files')
         return
 
-    expire_date = datetime.now() - timedelta(days=EXPIRE_DAYS)
-
     logger.log_info('Cleaning up core files')
     core_files = [f for f in os.listdir(CORE_FILE_DIR) if os.path.isfile(os.path.join(CORE_FILE_DIR, f))]
 
     core_files_by_process = defaultdict(list)
     for f in core_files:
-        # delete expired core files
-        dump_date = datetime.utcfromtimestamp(int(f.split('.')[1]))
-        if dump_date < expire_date:
-            delete_file(os.path.join(CORE_FILE_DIR, f))
-            continue
-            
-        # for none expired core files, only keep recent MAX_CORE_FILES
         process = f.split('.')[0]
         curr_files = core_files_by_process[process]
         curr_files.append(f)
@@ -73,11 +63,6 @@ def main():
         dump_date = get_dump_timestamp(kernel_dump)
         if not dump_date:
             # Not a kernel dump file
-            continue
-
-        if dump_date < expire_date:
-            # Kernel dump expired
-            delete_file(os.path.join(KERNEL_DUMP_DIR, kernel_dump))
             continue
 
         # Only keep recent MAX_CORE_FILES kernel dumps
