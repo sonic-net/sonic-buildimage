@@ -69,16 +69,33 @@ def config_tsa():
     if tsa_ena == True:
         logger.log_info("Configuring TSA")
         subprocess.check_output(['TSA']).strip()
+        logger.log_info("Setting TSA-TSB service field in CONFIG_DB")
+        subprocess.check_output([
+            'sonic-db-cli', 'CONFIG_DB', 'HSET', 'BGP_DEVICE_GLOBAL|STATE', 'tsa_tsb_service', 'running']).strip()
     else:
-        if num_asics > 1:
-            logger.log_info("Either TSA is already configured or switch sub_role is not Frontend - not configuring TSA")
+        #check if tsa_tsb service is already running, restart the timer
+        try:
+            startup_tsa_tsb_service_status = subprocess.check_output([
+                'sonic-db-cli', 'CONFIG_DB', 'HGET', 'BGP_DEVICE_GLOBAL|STATE', 'tsa_tsb_service'
+            ]).strip().decode('utf-8')  # Convert bytes to string
+        except subprocess.CalledProcessError:
+            startup_tsa_tsb_service_status = None  # Default if the field is missing
+        if startup_tsa_tsb_service_status == 'running':
+            logger.log_info("TSA-TSB service is already running, just restart the timer")
+            return True
         else:
-            logger.log_info("Either TSA is already configured - not configuring TSA")
+            if num_asics > 1:
+                logger.log_info("Either TSA is already configured or switch sub_role is not Frontend - not configuring TSA")
+            else:
+                logger.log_info("Either TSA is already configured - not configuring TSA")
     return tsa_ena
 
 def config_tsb():
     logger.log_info("Configuring TSB")
     subprocess.check_output(['TSB']).strip()
+    logger.log_info("removing the TSA-TSB service field from CONFIG_DB")
+    subprocess.check_output([
+        'sonic-db-cli', 'CONFIG_DB', 'HDEL', 'BGP_DEVICE_GLOBAL|STATE', 'tsa_tsb_service']).strip()
     tsb_issued = True
     return
 
