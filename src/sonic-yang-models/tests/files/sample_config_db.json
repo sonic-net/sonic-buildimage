@@ -2794,7 +2794,7 @@
                 "client_key": "grpcclient.key",
                 "ca_crt": "root.pem",
                 "grpc_ssl_credential": "azureclient.ms"
-            } 
+            }
 	},
         "BANNER_MESSAGE": {
             "global": {
@@ -2817,6 +2817,17 @@
             },
             "ASIC_SENSORS_POLLER_STATUS": {
                 "admin_status": "enable"
+            }
+        },
+        "SRV6_MY_LOCATORS": {
+            "loc1": {
+                "prefix": "fcbb:bbbb:1::"
+            }
+        },
+        "SRV6_MY_SIDS": {
+            "loc1|fcbb:bbbb:1::/48": {
+                "action": "uN",
+                "decap_dscp_mode": "pipe"
             }
         }
     },
