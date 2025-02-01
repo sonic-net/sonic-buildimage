@@ -1,6 +1,6 @@
 bfscripts==4.9.0-13347
 doca-cx-libs==2.8.0064-1
-kernel-mft-dkms==4.30.0-136
+kernel-mft-dkms==4.30.2-23
 kernel-mft-dkms-modules-6.1.0-22-2-arm64==4.28.0
 libdashapi==1.0.0
 libdoca-cx-libs-dev==2.8.0064-1
@@ -44,6 +44,7 @@ mlnx-dpdk==22.11.0-2407.0.6
 mlnx-dpdk-dev==22.11.0-2407.0.6
 mlnx-iproute2==6.9.0-1.2407061
 mlnx-ofed-kernel-utils==24.07.OFED.24.07.0.6.1.1-1
+mlnx-sai==1.mlnx.SAIBuild2411.2405.30.1
 mlnx-tools==24.07.0-1.2407061
 mlxbf-bootctl==2.1
 mlxbf-bootimages==4.9.0-13347
@@ -60,5 +61,5 @@ sonic-mgmt-common==1.0.0
 sonic-mgmt-common-codegen==1.0.0
 sonic-platform-pddf==1.1
 sonic-platform-pddf-sym==1.1
-sys-sdk-dev==1.mlnx.4.7.2152
-sys-sdk-main==1.mlnx.4.7.2152
+sys-sdk-dev==1.mlnx.4.7.2166
+sys-sdk-main==1.mlnx.4.7.2166

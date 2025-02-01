@@ -82,7 +82,7 @@ isc-dhcp-client==4.4.3-P1-2
 j2cli==0.3.12b-4
 jq==1.6-2.1
 kdump-tools==1:1.8.1
-kernel-mft-dkms-modules-6.1.0-22-2-amd64==4.30.0
+kernel-mft-dkms-modules-6.1.0-22-2-amd64==4.30.2
 kernel-mft-dkms-modules-6.1.0-22-2-arm64==4.28.0
 kexec-tools==1:2.0.25-3+deb12u1
 klibc-utils==2.0.12-1
@@ -289,9 +289,9 @@ lsof==4.95.0-1
 makedev==2.3.1-97
 makedumpfile==1:1.7.2-1
 media-types==10.0.0
-mft==4.30.0-136
+mft==4.30.2-23
 mft-fwtrace-cfg==1.0.0
-mft-oem==4.30.0-136
+mft-oem==4.30.2-23
 minicom==2.8-2
 mlnx-iproute2==6.9.0-1.2407061
 mlnx-ofed-kernel-modules-6.1.0-22-2-arm64==24.07.OFED.24.07.0.6.1.1
@@ -380,7 +380,7 @@ sqlite3==3.40.1-2+deb12u1
 squashfs-tools==1:4.5.1-1
 ssh==1:9.2p1-2+deb12u3+fips
 sudo==1.9.13p3-1+deb12u1
-sx-kernel==1.mlnx.4.7.2152
+sx-kernel==1.mlnx.4.7.2166
 symcrypt-openssl==0.1
 sysfsutils==2.1.1-4
 sysstat==12.6.1-1
