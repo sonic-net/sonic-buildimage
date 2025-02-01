@@ -3,7 +3,6 @@ Description= STARTUP TSA-TSB SERVICE
 Requires=config-setup.service database.service
 After=config-setup.service database.service
 Before=bgp.service
-ConditionPathExists=!/etc/sonic/chassisdb.conf
 
 [Service]
 Environment="STARTED_BY_TSA_TSB_SERVICE=1"

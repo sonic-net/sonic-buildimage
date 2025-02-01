@@ -88,6 +88,19 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
 {% for route in MGMT_INTERFACE[(name, prefix)]['forced_mgmt_routes'] %}
     up ip {{ '-4' if prefix | ipv4 else '-6' }} rule add pref {{ force_mgmt_route_priority }} to {{ route }} table {{ vrf_table }}
 {% endfor %}
+{% if SYSLOG_SERVER is defined and SYSLOG_SERVER %}
+{% for server in SYSLOG_SERVER %}
+{% if server | ipv4 and prefix | ipv4 %}
+    up ip rule add pref {{ force_mgmt_route_priority }} to {{ server }}/32 table {{ vrf_table }}
+{% elif server | ipv6 and prefix | ipv6 %}
+    up ip -6 rule add pref {{ force_mgmt_route_priority }} to {{ server }}/128 table {{ vrf_table }}
+{% endif %}
+{% endfor %}
+{% else %}
+{% if prefix | ipv4 %}
+    up ip rule add pref {{ force_mgmt_route_priority }} to 10.20.6.16/32 table {{ vrf_table }}
+{% endif %}
+{% endif %}
 {% if prefix | ipv6 and vrf_table == 'default'%}
     # IPV6 default table not add to lookup by default, management server need this to access IPV6 address when BGP shutdown
     up ip -6 rule add pref {{ force_mgmt_route_priority + 3 }} lookup {{ vrf_table }}
@@ -99,12 +112,26 @@ iface {{ name }} {{ 'inet' if prefix | ipv4 else 'inet6' }} static
 {% for route in MGMT_INTERFACE[(name, prefix)]['forced_mgmt_routes'] %}
     pre-down ip {{ '-4' if route | ipv4 else '-6' }} rule delete pref {{ force_mgmt_route_priority }} to {{ route }} table {{ vrf_table }}
 {% endfor %}
+{% if SYSLOG_SERVER is defined and SYSLOG_SERVER %}
+{% for server in SYSLOG_SERVER %}
+{% if server | ipv4 and prefix | ipv4 %}
+    down ip rule delete pref {{ force_mgmt_route_priority }} to {{ server }}/32 table {{ vrf_table }}
+{% elif server | ipv6 and prefix | ipv6 %}
+    down ip -6 rule delete pref {{ force_mgmt_route_priority }} to {{ server }}/128 table {{ vrf_table }}
+{% endif %}
+{% endfor %}
+{% else %}
+{% if prefix | ipv4 %}
+    down ip rule delete pref {{ force_mgmt_route_priority }} to 10.20.6.16/32 table {{ vrf_table }}
+{% endif %}
+{% endif %}
 {% if prefix | ipv6 and vrf_table == 'default'%}
     pre-down ip -6 rule delete pref {{ force_mgmt_route_priority + 3 }} lookup {{ vrf_table }}
 {% endif %}
 {# TODO: COPP policy type rules #}
 {% endfor %}
 {% else %}
+{% if not (DEVICE_METADATA['localhost']['subtype'] == 'SmartSwitch' and DEVICE_METADATA['localhost']['switch_type'] == 'dpu') %}
 auto eth0
 iface eth0 inet dhcp
     metric 202
@@ -114,6 +141,7 @@ iface eth0 inet dhcp
 iface eth0 inet6 dhcp
     up sysctl net.ipv6.conf.eth0.accept_ra=1
     down sysctl net.ipv6.conf.eth0.accept_ra=0
+{% endif %}
 {% endif %}
 {% endif %}
 #

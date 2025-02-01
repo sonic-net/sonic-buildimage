@@ -3,7 +3,7 @@
         "sonic-smart-switch:sonic-smart-switch": {
             "sonic-smart-switch:MID_PLANE_BRIDGE": {
                 "GLOBAL": {
-                    "bridge": "bridge_midplane",
+                    "bridge": "bridge-midplane",
                     "ip_prefix": "169.254.200.254/24"
                 }
             }
@@ -49,7 +49,7 @@
                         "state": "enabled"
                     },
                     {
-                        "name": "bridge_midplane",
+                        "name": "bridge-midplane",
                         "gateway": "169.254.200.254",
                         "lease_time": 3600,
                         "mode": "PORT",
@@ -185,7 +185,7 @@
         "sonic-smart-switch:sonic-smart-switch": {
             "sonic-smart-switch:MID_PLANE_BRIDGE": {
                 "GLOBAL": {
-                    "bridge": "bridge_midplane",
+                    "bridge": "bridge-midplane",
                     "ip_prefix": "169.254.200.254/24"
                 }
             }
@@ -194,7 +194,7 @@
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
                 "DHCP_SERVER_IPV4_LIST": [
                     {
-                        "name": "non_exist_bridge_midplane",
+                        "name": "non_exist_bridge-midplane",
                         "gateway": "192.168.0.1",
                         "lease_time": 3600,
                         "mode": "PORT",
@@ -294,7 +294,7 @@
         "sonic-smart-switch:sonic-smart-switch": {
             "sonic-smart-switch:MID_PLANE_BRIDGE": {
                 "GLOBAL": {
-                    "bridge": "bridge_midplane",
+                    "bridge": "bridge-midplane",
                     "ip_prefix": "169.254.200.254/24"
                 }
             }
@@ -303,7 +303,7 @@
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
                 "DHCP_SERVER_IPV4_LIST": [
                     {
-                        "name": "bridge_midplane",
+                        "name": "bridge-midplane",
                         "gateway": "169.254.200.254",
                         "lease_time": 3600,
                         "mode": "PORT",
@@ -315,7 +315,7 @@
             "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_PORT": {
                 "DHCP_SERVER_IPV4_PORT_LIST": [
                     {
-                        "name": "bridge_midplane",
+                        "name": "bridge-midplane",
                         "port": "non_exit_dpu",
                         "ips": [
                             "169.254.200.1"
@@ -473,88 +473,6 @@
                         "ranges": [
                             "range1"
                         ],
-                        "ips": [
-                            "192.168.0.4"
-                        ]
-                    }
-                ]
-            }
-        }
-    },
-    "DHCP_SERVER_IPV4_GATEWAY_ABSENT": {
-        "sonic-portchannel:sonic-portchannel": {
-            "sonic-portchannel:PORTCHANNEL": {
-                "PORTCHANNEL_LIST": [
-                    {
-                        "name": "PortChannel1"
-                    }
-                ]
-            }
-        },
-        "sonic-port:sonic-port": {
-            "sonic-port:PORT": {
-                "PORT_LIST": [
-                    {
-                        "admin_status": "up",
-                        "alias": "etp1",
-                        "description": "Ethernet0",
-                        "mtu": 9000,
-                        "lanes": "1",
-                        "name": "Ethernet0",
-                        "speed": 25000,
-                        "mode" : "trunk"
-                    }
-                ]
-            }
-        },
-        "sonic-dhcp-server-ipv4:sonic-dhcp-server-ipv4": {
-            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4": {
-                "DHCP_SERVER_IPV4_LIST": [
-                    {
-                        "name": "Vlan1000",
-                        "lease_time": 3600,
-                        "mode": "PORT",
-                        "netmask": "255.255.255.0",
-                        "customized_options": [
-                            "option60"
-                        ],
-                        "state": "enabled"
-                    }
-                ]
-            },
-            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS": {
-                "DHCP_SERVER_IPV4_CUSTOMIZED_OPTIONS_LIST": [
-                    {
-                        "name": "option60",
-                        "id": 60,
-                        "type": "string",
-                        "value": "dummy_value"
-                    }
-                ]
-            },
-            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_RANGE": {
-                "DHCP_SERVER_IPV4_RANGE_LIST": [
-                    {
-                        "name": "range1",
-                        "range": [
-                            "192.168.0.2",
-                            "192.168.0.3"
-                        ]
-                    }
-                ]
-            },
-            "sonic-dhcp-server-ipv4:DHCP_SERVER_IPV4_PORT": {
-                "DHCP_SERVER_IPV4_PORT_LIST": [
-                    {
-                        "name": "Vlan1000",
-                        "port": "Ethernet0",
-                        "ranges": [
-                            "range1"
-                        ]
-                    },
-                    {
-                        "name": "Vlan1000",
-                        "port": "PortChannel1",
                         "ips": [
                             "192.168.0.4"
                         ]

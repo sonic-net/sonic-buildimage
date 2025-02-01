@@ -9,40 +9,50 @@ command=/usr/bin/start.sh
 priority=1
 autostart=true
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 
 [program:rsyslogd]
 command=/usr/sbin/rsyslogd -n
 priority=2
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 
 [program:redis-server]
 command=/usr/bin/redis-server /etc/redis/redis.conf
 priority=3
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 
 [program:redis-chassis]
-command=/bin/bash -c "{ [[ -s /var/lib/redis_chassis/dump.rdb ]] || rm -f /var/lib/redis_chassis/dump.rdb; } && mkdir -p /var/lib/redis_chassis && exec /usr/bin/redis-server /etc/redis/redis.conf --bind redis_chassis.server --port 6380 --unixsocket /var/run/redis/redis_chassis.sock --pidfile /var/run/redis/redis_chassis.pid --dir /var/lib/redis_chassis"
+command=/bin/bash -c "{ [[ -s /var/lib/redis_chassis/dump.rdb ]] || rm -f /var/lib/redis_chassis/dump.rdb; } && mkdir -p /var/lib/redis_chassis && exec /usr/bin/redis-server /etc/redis/redis.conf --bind redis_chassis.server --port 6380 --protected-mode no --unixsocket /var/run/redis/redis_chassis.sock --pidfile /var/run/redis/redis_chassis.pid --dir /var/lib/redis_chassis"
 priority=3
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 
 [program:syncd]
 command=/usr/bin/syncd_start.sh
 priority=4
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/syncd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -52,8 +62,10 @@ command=/usr/bin/syncd -s -p /usr/share/sonic/hwsku/pai.profile -x /usr/share/so
 priority=4
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 
 [program:gearsyncd]
 command=/usr/bin/gearsyncd -p /usr/share/sonic/hwsku/gearbox_config.json
@@ -61,16 +73,20 @@ startsecs=0
 priority=5
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 
 [program:portsyncd]
 command=/usr/bin/portsyncd
 priority=5
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/portsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -80,8 +96,10 @@ command=/usr/bin/orchagent.sh
 priority=6
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/orchagent-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -91,8 +109,10 @@ command=/usr/bin/coppmgrd
 priority=7
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/coppmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -102,8 +122,10 @@ command=/usr/bin/neighsyncd
 priority=8
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/neighsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -113,8 +135,10 @@ command=/usr/bin/teamsyncd
 priority=9
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/teamsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -124,8 +148,10 @@ command=/usr/bin/vlanmgrd
 priority=10
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/vlanmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -135,8 +161,10 @@ command=/usr/bin/intfmgrd
 priority=11
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/intfmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -146,8 +174,10 @@ command=/usr/bin/portmgrd
 priority=12
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/portmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -157,62 +187,92 @@ command=/usr/bin/teammgrd
 priority=12
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/teammgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
 
-[program:zebra]
-command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_nl
+[program:mgmtd]
+command=/usr/lib/frr/mgmtd -A 127.0.0.1
 priority=13
 autostart=false
 autorestart=false
 stdout_logfile=syslog
 stderr_logfile=syslog
 
+[program:zebra]
+command=/usr/lib/frr/zebra -A 127.0.0.1 -s 90000000 -M dplane_fpm_sonic --asic-offload=notify_on_offload
+priority=13
+autostart=false
+autorestart=false
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+
 [program:bgpd]
 command=/usr/lib/frr/bgpd -A 127.0.0.1
 priority=14
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 
 [program:staticd]
 command=/usr/lib/frr/staticd -A 127.0.0.1
 priority=14
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 
 [program:fpmsyncd]
 command=/usr/bin/fpmsyncd
 priority=15
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/fpmsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
+
+[program:pathd]
+command=/usr/lib/frr/pathd -A 127.0.0.1
+priority=14
+autostart=false
+autorestart=false
+stdout_logfile=syslog
+stderr_logfile=syslog
 
 [program:arp_update]
 command=/usr/bin/arp_update
 priority=16
 autostart=false
 autorestart=unexpected
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 
 [program:buffermgrd]
 command=/usr/bin/buffermgrd.sh
 priority=17
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/buffermgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -222,8 +282,10 @@ command=/usr/bin/vrfmgrd
 priority=18
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/vrfmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -235,16 +297,20 @@ autostart=false
 autorestart=false
 startsecs=0
 startretries=0
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 
 [program:nbrmgrd]
 command=/usr/bin/nbrmgrd
 priority=20
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/nbrmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -254,8 +320,10 @@ command=/usr/bin/vxlanmgrd
 priority=21
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/vxlanmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -265,8 +333,10 @@ command=/usr/bin/sflowmgrd
 priority=22
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/sflowmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -276,8 +346,10 @@ command=/usr/bin/natmgrd
 priority=23
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/natmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -287,8 +359,10 @@ command=/usr/bin/natsyncd
 priority=24
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/natsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -298,8 +372,10 @@ command=/usr/bin/fdbsyncd
 priority=25
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/fdbsyncd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -309,8 +385,10 @@ command=/usr/bin/tunnelmgrd
 priority=26
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/tunnelmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}
@@ -320,8 +398,10 @@ command=/usr/bin/fabricmgrd
 priority=27
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 {% if ENABLE_ASAN == "y" %}
 environment=ASAN_OPTIONS="log_path=/var/log/asan/fabricmgrd-asan.log{{ asan_extra_options }}"
 {% endif %}

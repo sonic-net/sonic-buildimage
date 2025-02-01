@@ -63,8 +63,10 @@ command=/usr/sbin/dhcpmon -id {{ vlan_name }}
 priority=4
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=
 {%- if relay_for_ipv4.flag %}isc-dhcpv4-relay-{{ vlan_name }}:running {% endif %}

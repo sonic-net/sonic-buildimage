@@ -1,32 +1,30 @@
-#
-#  Copyright 2007-2020 Broadcom Inc. All rights reserved.
-#  
-#  Permission is granted to use, copy, modify and/or distribute this
-#  software under either one of the licenses below.
-#  
-#  License Option 1: GPL
-#  
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License, version 2, as
-#  published by the Free Software Foundation (the "GPL").
-#  
-#  This program is distributed in the hope that it will be useful, but
-#  WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  General Public License version 2 (GPLv2) for more details.
-#  
-#  You should have received a copy of the GNU General Public License
-#  version 2 (GPLv2) along with this source code.
-#  
-#  
-#  License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
-#  
-#  This software is governed by the Broadcom Open Network Switch APIs license:
-#  https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
-#
 # $Id: Makefile.linux-kmodule-3_6,v 1.2 Broadcom SDK $
-# $Copyright: (c) 2006 Broadcom Corp.
-# All Rights Reserved.$
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
 
 # Due to the extensive use of driver libraries, the SDK usually builds
 # kernel modules from a precompiled object. To avoid various warnings
@@ -39,11 +37,17 @@
 # module symbol versions. The symbol source file should be passed to
 # this Makefile via the MODULE_SYM variable.
 
+#
+# Do not remove this assignment of LOCALDIR.
+# It is used as an input flag for Make.config
+LOCALDIR = .
 MODULE := $(MOD_NAME).o
 KMODULE := $(MOD_NAME).ko
 obj-m := $(MODULE)
 
-SAVE_CFLAGS := ${CFLAGS}
+# Get CFGFLAGS, but ignore CFLAGS
+include $(SDK)/make/Make.config
+CFLAGS :=
 
 ifeq (1,$(NO_PRECOMPILED_MODULE))
 # {
@@ -52,26 +56,26 @@ ifeq (1,$(NO_PRECOMPILED_MODULE))
 # of pointer-to-int and the other way round. So, we need to silence them.
 # Apart from that, we need a search path on the kernel's 'include' and the various
 # SDK 'include' directories. 
-# It is not clear why they need to be repeated in EXTRA_CFLAGS (probably because
-# of the compilation cycle which is done within the SDK environment).
 #
 ccflags-y   := \
   -Wno-pointer-to-int-cast \
   -Wno-int-to-pointer-cast \
-  -I$(KERNDIR)/include \
   -I$(SDK)/include \
   -I$(SDK)/systems/bde/linux/include \
   -I$(SDK)/systems/bde/shared/include \
   -I$(SDK)/systems/linux/kernel/modules/include
 
-include $(SDK)/make/Make.config
 #
-# For compilation of all module files on linux environment, make sure
-# all CFLAGS are passed to the module. This was not required when a
-# 'precompiled' object was used since it automatically got all these flags.
+# For compilation of all module files in Linux environment, make sure
+# all configuration flags (CFGFLAGS) are passed to the module. This
+# was not required when a 'precompiled' object was used since it
+# automatically got all these flags.
 #
-ccflags-y += $(KFLAGS)
-ccflags-y += $(CFLAGS)
+ccflags-y += $(CFGFLAGS) $(LKM_BUILD_INFO)
+
+# Required for older kernels
+export EXTRA_CFLAGS := $(ccflags-y)
+
 #
 # Reach here if this makefile is invoked
 #   from systems\bde\linux\kernel (module name: linux-kernel-bde.ko).
@@ -79,24 +83,11 @@ ccflags-y += $(CFLAGS)
 #   from systems/linux/kernel/modules/bcm-knet (module name: linux-bcm-knet)
 #   from systems/linux/kernel/modules/knet-cb (module name: linux-knet-cb)
 $(MOD_NAME)-y := $(MOD_OBJS)
-#
-# If, for any reason, the definition of CROSS_COMPILE was erased, then
-# set it, again.
-#
-ifeq ($(CROSS_COMPILE),)
-CROSS_COMPILE = /tools/bin/
-endif
-export CROSS_COMPILE
 # }
 else
 # {
 PRE_COMPILED_OBJ := obj_$(MOD_NAME).o
 $(MOD_NAME)-y := $(MODULE_SYM) $(PRE_COMPILED_OBJ)
-ifeq (,$(CROSS_COMPILE))
-export CROSS_COMPILE
-endif
-
-include $(SDK)/make/Make.config
 # }
 endif
 
@@ -112,13 +103,13 @@ A := ARCH=$(ARCH)
 export ARCH
 endif
 
+ifeq (,$(CROSS_COMPILE))
+export CROSS_COMPILE
+endif
+
 # Provide an option in case kernel was built in separate directory
 KERNBLDDIR ?= $(KERNDIR)
-#
-# Standard SDK include path for building source files that export
-# kernel symbols.
-#
-override EXTRA_CFLAGS = -I${SDK}/include -I${SDK}/systems/linux/kernel/modules/include -I${SDK}/systems/bde/linux/include
+
 #
 # If, for any reason, the definition of LD was erased, then
 # set it, again.
@@ -126,6 +117,7 @@ override EXTRA_CFLAGS = -I${SDK}/include -I${SDK}/systems/linux/kernel/modules/i
 ifeq ($(LD),)
 LD = $(CROSS_COMPILE)ld
 endif
+
 ifeq (1,$(NO_PRECOMPILED_MODULE))
 # {
 $(KMODULE):
@@ -136,7 +128,8 @@ $(KMODULE):
 	# This make creates the module's object. It, somehow, runs two cycls, one in SDK environment
 	# and one in the kernel's directory.
 	#
-	$(MAKE) -C $(KERNBLDDIR) CROSS_COMPILE=$(CROSS_COMPILE) LD=$(LD) M=$(PWD) modules
+	$(MAKE) -C $(KERNBLDDIR) CROSS_COMPILE=$(CROSS_COMPILE) LD=$(LD) M=$(PWD) \
+		quiet=$(quiet) KBUILD_VERBOSE=$(KBUILD_VERBOSE) modules
 	if [ ! -f Module.symvers ]; then echo "old kernel (pre-2.6.17)" > Module.symvers; fi
 	cp -f $(KMODULE) $(LIBDIR)
 # }
@@ -158,6 +151,3 @@ $(KMODULE):
 	rm -f $(PRE_COMPILED_OBJ)_shipped
 # }
 endif
-
-EXTRA_CFLAGS = $(CFLAGS)
-CFLAGS := ${SAVE_CFLAGS}

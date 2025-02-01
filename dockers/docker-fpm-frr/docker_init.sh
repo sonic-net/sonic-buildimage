@@ -88,6 +88,7 @@ elif [ "$CONFIG_TYPE" == "unified" ]; then
     CFGGEN_PARAMS=" \
         -d \
         -y /etc/sonic/constants.yml \
+        -T /usr/local/sonic/frrcfgd \
         -t /usr/share/sonic/templates/gen_frr.conf.j2,/etc/frr/frr.conf \
     "
     sonic-cfggen $CFGGEN_PARAMS
@@ -106,9 +107,5 @@ chmod 0755 /usr/sbin/bgp-unisolate
 
 mkdir -p /var/sonic
 echo "# Config files managed by sonic-config-engine" > /var/sonic/config_status
-
-TZ=$(cat /etc/timezone)
-rm -rf /etc/localtime
-ln -sf /usr/share/zoneinfo/$TZ /etc/localtime
 
 exec /usr/local/bin/supervisord

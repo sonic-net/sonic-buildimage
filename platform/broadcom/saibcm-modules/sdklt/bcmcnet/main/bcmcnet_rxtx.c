@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <bcmcnet/bcmcnet_core.h>
@@ -574,7 +574,8 @@ bcmcnet_pdma_group_poll(struct pdma_dev *dev, int group, int budget)
     struct pdma_rx_queue *rxq = NULL;
     struct pdma_tx_queue *txq = NULL;
     struct queue_group *grp = &ctrl->grp[group];
-    int done = 0, done_que, budget_que;
+    uint32_t intr_actives = 0;
+    int rx_done = 0, tx_done = 0, done_que, budget_que;
     int i;
 
     /* Acknowledge the interrupts */
@@ -584,6 +585,7 @@ bcmcnet_pdma_group_poll(struct pdma_dev *dev, int group, int budget)
             if (hw->hdls.chan_intr_query(hw, rxq->chan_id)) {
                 hw->hdls.chan_clear(hw, rxq->chan_id);
                 grp->poll_queues |= 1 << i;
+                intr_actives |= 1 << i;
             }
             if (rxq->state & PDMA_RX_QUEUE_BUSY) {
                 rxq->state &= ~PDMA_RX_QUEUE_BUSY;
@@ -596,6 +598,7 @@ bcmcnet_pdma_group_poll(struct pdma_dev *dev, int group, int budget)
             if (hw->hdls.chan_intr_query(hw, txq->chan_id)) {
                 hw->hdls.chan_clear(hw, txq->chan_id);
                 grp->poll_queues |= 1 << i;
+                intr_actives |= 1 << i;
             }
             if (txq->state & PDMA_TX_QUEUE_BUSY) {
                 txq->state &= ~PDMA_TX_QUEUE_BUSY;
@@ -625,10 +628,12 @@ bcmcnet_pdma_group_poll(struct pdma_dev *dev, int group, int budget)
         if (1 << i & grp->bm_rxq & grp->poll_queues) {
             rxq = grp->rx_queue[i];
             done_que = bcn_rx_poll(rxq, budget_que);
-            if (done_que < budget_que) {
-                grp->poll_queues &= ~(1 << i);
+            if (done_que >= budget_que ||
+                (done_que == 0 && (1 << i & intr_actives))) {
+                continue;
             }
-            done += done_que;
+            grp->poll_queues &= ~(1 << i);
+            rx_done += done_que;
         }
     }
 
@@ -636,13 +641,44 @@ bcmcnet_pdma_group_poll(struct pdma_dev *dev, int group, int budget)
     for (i = 0; i < dev->grp_queues; i++) {
         txq = grp->tx_queue[i];
         if (1 << i & grp->bm_txq & grp->poll_queues && !txq->free_thresh) {
-            if (bcn_tx_poll(txq, budget) < budget) {
-                grp->poll_queues &= ~(1 << i);
+            done_que = bcn_tx_poll(txq, budget);
+            if (done_que >= budget ||
+                (done_que == 0 && (1 << i & intr_actives))) {
+                continue;
             }
+            grp->poll_queues &= ~(1 << i);
+            tx_done += done_que;
         }
     }
 
-    return grp->poll_queues ? budget : done;
+    /* Reschedule the poll if not completed */
+    if (grp->poll_queues) {
+        return budget;
+    }
+
+    /* Check channel status before exits */
+    if (hw->hdls.chan_check) {
+        for (i = 0; i < dev->grp_queues; i++) {
+            rxq = grp->rx_queue[i];
+            if (rxq->state & PDMA_RX_QUEUE_ACTIVE) {
+                if (hw->hdls.chan_check(hw, rxq->chan_id)) {
+                    hw->hdls.chan_clear(hw, rxq->chan_id);
+                    grp->poll_queues |= 1 << i;
+                }
+                continue;
+            }
+            txq = grp->tx_queue[i];
+            if (txq->state & PDMA_TX_QUEUE_ACTIVE) {
+                if (hw->hdls.chan_check(hw, txq->chan_id)) {
+                    hw->hdls.chan_clear(hw, txq->chan_id);
+                    grp->poll_queues |= 1 << i;
+                }
+            }
+        }
+        return grp->poll_queues ? budget : rx_done;
+    } else {
+        return (rx_done + tx_done) ? budget : 0;
+    }
 }
 
 /*!

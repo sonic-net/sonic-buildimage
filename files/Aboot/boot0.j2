@@ -670,13 +670,16 @@ write_platform_specific_cmdline() {
     if in_array "$platform" "prairieisland"; then
         read_system_eeprom
     fi
-    if in_array "$platform" "shearwater"; then
+    if in_array "$platform" "shearwater" "redstart"; then
         cmdline_add modprobe.blacklist=snd_hda_intel,hdaudio
         if [ -f /tmp/.switch-prefdl ]; then
             read_switch_eeprom
         else
             read_system_eeprom
         fi
+    fi
+    if in_array "$sid" "Moby" "RedstartFixed8CNMoby"; then
+        aboot_machine=arista_7060x6_16pe_384c
     fi
 
     if [ $varlog_size -eq 0 ]; then

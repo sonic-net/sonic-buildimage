@@ -24,8 +24,10 @@ command=/usr/sbin/rsyslogd -n -iNONE
 priority=1
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 
 {% if INSTANCES %}
@@ -46,9 +48,12 @@ priority=2
 user=redis
 autostart=true
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
-{%- endif -%}
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+
+{% endif %}
 {%     endfor %}
 {% endif %}
 
@@ -57,7 +62,9 @@ command=/bin/bash -c "sleep 300 && /usr/local/bin/flush_unused_database"
 priority=3
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running

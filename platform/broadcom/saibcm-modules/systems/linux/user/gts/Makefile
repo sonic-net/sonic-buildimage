@@ -1,33 +1,31 @@
-#
-#  Copyright 2007-2020 Broadcom Inc. All rights reserved.
-#  
-#  Permission is granted to use, copy, modify and/or distribute this
-#  software under either one of the licenses below.
-#  
-#  License Option 1: GPL
-#  
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License, version 2, as
-#  published by the Free Software Foundation (the "GPL").
-#  
-#  This program is distributed in the hope that it will be useful, but
-#  WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#  General Public License version 2 (GPLv2) for more details.
-#  
-#  You should have received a copy of the GNU General Public License
-#  version 2 (GPLv2) along with this source code.
-#  
-#  
-#  License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
-#  
-#  This software is governed by the Broadcom Open Network Switch APIs license:
-#  https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
-#
 # -*- Makefile -*-
 # $Id: Makefile,v 0.1 Broadcom SDK $
-# $Copyright: (c) 2015 Broadcom Corp.
-# All Rights Reserved.$
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
 
 #
 # This make job requires the following environment variables to be set:
@@ -62,14 +60,12 @@ endif
 
 export SDK
 
-override kernel_version=5_10
+override kernel_version=6_6
 platform=gts
 
-LINUX_MAKE_USER=1
 export LINKER_RELAX = 1
 export ADD_TO_CFLAGS
 export BR_NO_CCACHE
-
 
 include ${SDK}/make/Make.linux
 

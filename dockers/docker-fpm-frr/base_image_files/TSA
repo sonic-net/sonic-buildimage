@@ -1,12 +1,17 @@
 #!/bin/bash
 
+# Source the platform_utils script
+source "$(dirname "$0")/platform_utils" > /dev/null 2>&1
+
+${SMARTSWITCH:=false}
+
 # Restrict command to sudo users
 if [ "$EUID" -ne 0 ] ; then
   echo "Root priveleges are needed for this operation"
   exit 1
 fi
 
-if [ -f /etc/sonic/chassisdb.conf ]; then
+if [ -f /etc/sonic/chassisdb.conf ] && [ "$SMARTSWITCH" = false ] ; then
   CHASSIS_TSA_STATE_UPDATE="CHASSIS_APP_DB HMSET "BGP_DEVICE_GLOBAL\|STATE" tsa_enabled "true""
   CONFIG_DB_TSA_STATE_UPDATE='{"BGP_DEVICE_GLOBAL":{"STATE":{"tsa_enabled": "true"}}}'
   current_tsa_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.tsa_enabled)"
@@ -25,7 +30,7 @@ if [ -f /etc/sonic/chassisdb.conf ]; then
 fi
 # toggle the mux to standby if dualtor and any mux active
 if
-[[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr [:upper:] [:lower:])" == *"dualtor"* ]] &&
+[[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.subtype | tr '[:upper:]' '[:lower:]')" == *"dualtor"* ]] &&
 [[ $(show mux status | grep active | wc -l) > 0 ]];
 then
   logger -t TSA -p user.info "Toggle all mux mode to standby"

@@ -19,7 +19,9 @@
     delaycompress
     sharedscripts
     postrotate
-        /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+        if [ -f /var/run/rsyslogd.pid ]; then
+            /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+        fi
     endscript
 }
 
@@ -116,7 +118,9 @@
                 pgrep -x orchagent | xargs /bin/kill -HUP 2>/dev/null || true
             fi
         else
-            /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+            if [ -f /var/run/rsyslogd.pid ]; then
+                /bin/kill -HUP $(cat /var/run/rsyslogd.pid)
+            fi
         fi
     endscript
 }

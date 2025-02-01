@@ -1,5 +1,5 @@
 
-pbmp_xport_xe.0=0x8111181111c1111811118111181111c111182222
+pbmp_xport_xe.0=0x8ffff8ffffcffff8ffff8ffff8ffffcffff8ffff
 ccm_dma_enable=0
 ccmdma_intr_enable=0
 ctr_evict_enable=0
@@ -9,8 +9,6 @@ parity_enable=0
 phy_enable=0
 phy_null=1
 pll_bypass=1
-
-init_all_modules=0
 
 sai_tunnel_global_sip_mask_enable=1
 
@@ -183,38 +181,38 @@ serdes_core_tx_polarity_flip_physical{209}=0xe9
 serdes_core_rx_polarity_flip_physical{217}=0xec
 serdes_core_tx_polarity_flip_physical{217}=0x68
 
-dport_map_port_20=1
-dport_map_port_24=2
-dport_map_port_28=3
-dport_map_port_32=4
-dport_map_port_40=5
-dport_map_port_44=6
-dport_map_port_48=7
-dport_map_port_52=8
-dport_map_port_1=9
-dport_map_port_5=10
-dport_map_port_9=11
-dport_map_port_13=12
-dport_map_port_60=13
-dport_map_port_64=14
-dport_map_port_68=15
-dport_map_port_72=16
-dport_map_port_80=17
-dport_map_port_84=18
-dport_map_port_88=19
-dport_map_port_92=20
-dport_map_port_140=21
-dport_map_port_144=22
-dport_map_port_148=23
-dport_map_port_152=24
-dport_map_port_100=25
-dport_map_port_104=26
-dport_map_port_108=27
-dport_map_port_112=28
-dport_map_port_120=29
-dport_map_port_124=30
-dport_map_port_128=31
-dport_map_port_132=32
+#dport_map_port_20=1
+#dport_map_port_24=2
+#dport_map_port_28=3
+#dport_map_port_32=4
+#dport_map_port_40=5
+#dport_map_port_44=6
+#dport_map_port_48=7
+#dport_map_port_52=8
+#dport_map_port_1=9
+#dport_map_port_5=10
+#dport_map_port_9=11
+#dport_map_port_13=12
+#dport_map_port_60=13
+#dport_map_port_64=14
+#dport_map_port_68=15
+#dport_map_port_72=16
+#dport_map_port_80=17
+#dport_map_port_84=18
+#dport_map_port_88=19
+#dport_map_port_92=20
+#dport_map_port_140=21
+#dport_map_port_144=22
+#dport_map_port_148=23
+#dport_map_port_152=24
+#dport_map_port_100=25
+#dport_map_port_104=26
+#dport_map_port_108=27
+#dport_map_port_112=28
+#dport_map_port_120=29
+#dport_map_port_124=30
+#dport_map_port_128=31
+#dport_map_port_132=32
 
 #dport_map_port_38=33
 #dport_map_port_118=34
@@ -229,4 +227,4 @@ port_flex_enable=1
 #firmware load method, use fast load
 load_firmware=0x2
 
-
+sai_postinit_cmd_file=/usr/share/sonic/hwsku/sai_postinit_cmd.soc

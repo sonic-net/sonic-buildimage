@@ -1777,14 +1777,6 @@
                         "field_name": "PSU0_TEMP1",
                         "field_pos": "12",
                         "separator": ","
-                    },
-                    {
-                        "attr_name": "temp1_high_threshold",
-                        "bmc_cmd": "ipmitool sdr -c get PSU0_TEMP1",
-                        "raw": "0",
-                        "field_name": "PSU0_TEMP1",
-                        "field_pos": "13",
-                        "separator": ","
                     }
                 ]
             }
@@ -1816,14 +1808,6 @@
                         "raw": "0",
                         "field_name": "PSU1_TEMP1",
                         "field_pos": "12",
-                        "separator": ","
-                    },
-                    {
-                        "attr_name": "temp1_high_threshold",
-                        "bmc_cmd": "ipmitool sdr -c get PSU1_TEMP1",
-                        "raw": "0",
-                        "field_name": "PSU1_TEMP1",
-                        "field_pos": "13",
                         "separator": ","
                     }
                 ]
@@ -2594,7 +2578,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x1a",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2693,7 +2677,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x1b",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2792,7 +2776,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x1c",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2891,7 +2875,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x1d",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2990,7 +2974,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x1e",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3089,7 +3073,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x1f",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3188,7 +3172,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x20",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3287,7 +3271,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x21",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3386,7 +3370,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x22",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3485,7 +3469,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x23",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3584,7 +3568,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x24",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3683,7 +3667,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x25",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3782,7 +3766,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x26",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3881,7 +3865,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x27",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3980,7 +3964,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x28",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4079,7 +4063,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x29",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4178,7 +4162,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x2a",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4277,7 +4261,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x2b",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4376,7 +4360,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x2c",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4475,7 +4459,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x2d",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4574,7 +4558,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x2e",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4673,7 +4657,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x2f",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4772,7 +4756,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x30",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4871,7 +4855,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x31",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4970,7 +4954,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x32",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -5069,7 +5053,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x33",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -5168,7 +5152,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x34",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -5267,7 +5251,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x35",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -5366,7 +5350,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x36",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -5465,7 +5449,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x37",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -5564,7 +5548,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x38",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -5663,7 +5647,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x39",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -5762,7 +5746,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x3a",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -5861,7 +5845,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x3b",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -5960,7 +5944,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x3c",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -6059,7 +6043,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x3d",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -6158,7 +6142,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x3e",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -6257,7 +6241,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x3f",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -6356,7 +6340,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x40",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -6455,7 +6439,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x41",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -6554,7 +6538,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x42",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -6653,7 +6637,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x43",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -6752,7 +6736,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x44",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -6851,7 +6835,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x45",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -6950,7 +6934,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x46",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -7049,7 +7033,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x47",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -7148,7 +7132,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x48",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -7247,7 +7231,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x49",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -7346,7 +7330,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x4a",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -7445,7 +7429,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x4b",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -7544,7 +7528,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x4c",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -7643,7 +7627,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x4d",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -7742,7 +7726,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x4e",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -7841,7 +7825,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x4f",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [

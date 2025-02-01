@@ -20,6 +20,7 @@ class TestJ2Files(TestCase):
         self.ztp_ip = os.path.join(self.test_dir, "sample-ztp-ip.json")
         self.ztp_inband_ip = os.path.join(self.test_dir, "sample-ztp-inband-ip.json")
         self.t0_minigraph = os.path.join(self.test_dir, 't0-sample-graph.xml')
+        self.t0_minigraph_syslog = os.path.join(self.test_dir, 't0-sample-graph-syslog.xml')
         self.t0_minigraph_secondary_subnets = os.path.join(self.test_dir, 't0-sample-graph-secondary-subnets.xml')
         self.t0_mvrf_minigraph = os.path.join(self.test_dir, 't0-sample-graph-mvrf.xml')
         self.t0_minigraph_nomgmt = os.path.join(self.test_dir, 't0-sample-graph-nomgmt.xml')
@@ -47,6 +48,7 @@ class TestJ2Files(TestCase):
         self.no_ip_helper_minigraph = os.path.join(self.test_dir, 't0-sample-no-ip-helper-graph.xml')
         self.nokia_ixr7250e_36x100g_t2_minigraph = os.path.join(self.test_dir, 'sample-nokia-ixr7250e-36x100g-t2-minigraph.xml')
         self.nokia_ixr7250e_36x400g_t2_minigraph = os.path.join(self.test_dir, 'sample-nokia-ixr7250e-36x400g-t2-minigraph.xml')
+        self.t2_sample_graph_chassis_packet = os.path.join(self.test_dir, 'sample-chassis-packet-lc-graph.xml')
         self.output_file = os.path.join(self.test_dir, 'output')
         os.environ["CFGGEN_UNIT_TESTING"] = "2"
 
@@ -130,6 +132,11 @@ class TestJ2Files(TestCase):
         argument = ['-m', self.t0_minigraph, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
         self.run_script(argument, output_file=self.output_file)
         self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'interfaces'), self.output_file))
+        
+        # ZTP disabled, MGMT_INTERFACE defined, SYSLOG_SERVER defined
+        argument = ['-m', self.t0_minigraph_syslog, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
+        self.run_script(argument, output_file=self.output_file)
+        self.assertTrue(utils.cmp(os.path.join(self.test_dir, 'sample_output', utils.PYvX_DIR, 'interfaces_syslog'), self.output_file))
 
         argument = ['-m', self.t0_mvrf_minigraph, '-p', self.t0_port_config, '-a', '{\"hwaddr\":\"e4:1d:2d:a5:f3:ad\"}', '-t', interfaces_template]
         self.run_script(argument, output_file=self.output_file)
@@ -746,6 +753,36 @@ class TestJ2Files(TestCase):
         for _, v in test_list.items():
             os.environ["NAMESPACE_ID"] = v["namespace_id"]
             argument = ["-m", self.t1_mlnx_minigraph, "-y", constants_yml, "-t", switch_template]
+            sample_output_file = os.path.join(
+                self.test_dir, 'sample_output', v["output"]
+            )
+            self.run_script(argument, output_file=self.output_file)
+            assert utils.cmp(sample_output_file, self.output_file), self.run_diff(sample_output_file, self.output_file)
+        os.environ["NAMESPACE_ID"] = ""
+
+    def test_swss_switch_render_template_t2(self):
+        # verify the ECMP hash seed changes per namespace
+        switch_template = os.path.join(
+            self.test_dir, '..', '..', '..', 'dockers', 'docker-orchagent',
+            'switch.json.j2'
+        )
+        constants_yml = os.path.join(
+            self.test_dir, '..', '..', '..', 'files', 'image_config',
+            'constants', 'constants.yml'
+        )
+        test_list = {
+            "0": {
+                "namespace_id": "1",
+                "output": "t2-switch-masic1.json"
+            },
+            "1": {
+                "namespace_id": "3",
+                "output": "t2-switch-masic3.json"
+            },
+        }
+        for _, v in test_list.items():
+            os.environ["NAMESPACE_ID"] = v["namespace_id"]
+            argument = ["-m", self.t2_sample_graph_chassis_packet, "-y", constants_yml, "-t", switch_template]
             sample_output_file = os.path.join(
                 self.test_dir, 'sample_output', v["output"]
             )

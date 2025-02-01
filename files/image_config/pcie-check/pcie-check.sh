@@ -18,7 +18,7 @@ function debug()
 function check_and_rescan_pcie_devices()
 {
     PCIE_CHK_CMD='sudo pcieutil check | grep "$RESULTS"'
-    PLATFORM=$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)
+    PLATFORM=$(sonic-db-cli CONFIG_DB HGET 'DEVICE_METADATA|localhost' platform)
 
     if [ ! -f /usr/share/sonic/device/$PLATFORM/pcie*.yaml ]; then
         debug "pcie.yaml does not exist! Can't check PCIe status!"
@@ -38,7 +38,7 @@ function check_and_rescan_pcie_devices()
         fi
 
         if [ "$(eval $PCIE_CHK_CMD)" = "$EXPECTED" ]; then
-            redis-cli -n 6 HSET $PCIE_STATUS_TABLE "status" "PASSED"
+            sonic-db-cli STATE_DB HSET $PCIE_STATUS_TABLE "status" "PASSED"
             debug "PCIe check passed"
             exit
         else
@@ -54,7 +54,7 @@ function check_and_rescan_pcie_devices()
 
      done
      debug "PCIe check failed"
-     redis-cli -n 6 HSET $PCIE_STATUS_TABLE "status" "FAILED"
+     sonic-db-cli STATE_DB HSET $PCIE_STATUS_TABLE "status" "FAILED"
 }
 
 check_and_rescan_pcie_devices

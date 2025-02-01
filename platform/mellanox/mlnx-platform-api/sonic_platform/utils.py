@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -105,7 +106,7 @@ def read_float_from_file(file_path, default=0.0, raise_exception=False, log_func
 def _key_value_converter(content, delimeter):
     ret = {}
     for line in content.splitlines():
-        k,v = line.split(delimeter)
+        k,v = line.split(delimeter, 1)
         ret[k.strip()] = v.strip()
     return ret
 
@@ -339,7 +340,7 @@ class Timer(threading.Thread):
         self.add_timer_event(timer_event, run_now)
 
     def add_timer_event(self, timer_event, run_now=True):
-        timestamp = time.time()
+        timestamp = time.monotonic()
         if not run_now:
             timestamp += timer_event.interval
 
@@ -355,7 +356,7 @@ class Timer(threading.Thread):
 
     def run(self):
         while not self._stop_event.is_set():
-            now = time.time()
+            now = time.monotonic()
             item = self._timestamp_queue.get()
             self._min_timestamp = item[0]
             if self._min_timestamp > now:

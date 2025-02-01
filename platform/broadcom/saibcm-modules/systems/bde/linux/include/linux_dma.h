@@ -1,5 +1,7 @@
-/*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+/***********************************************************************
+ *
+ * $Id: linux_dma.h,v 1.24 Broadcom SDK $
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,13 +24,9 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/***********************************************************************
- *
- * $Id: linux_dma.h,v 1.24 Broadcom SDK $
- * $Copyright: (c) 2016 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
+ * 
  *
  **********************************************************************/
 
@@ -74,6 +72,11 @@ extern sal_paddr_t _l2p(int d, void *vaddr);
 extern void *_p2l(int d, sal_paddr_t paddr);
 extern int _dma_pool_allocated(void);
 extern int _dma_mmap(struct file *filp, struct vm_area_struct *vma);
+
+#ifdef INCLUDE_SRAM_DMA
+/* A mode to use SRAM for DMA for some systems where the CPU has no PCIe connection to the device */
+extern int use_sram_for_dma;
+#endif /* INCLUDE_SRAM_DMA */
 
 #endif /* __KERNEL__ */
 

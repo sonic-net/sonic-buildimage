@@ -2,7 +2,7 @@
 #
 # Linux KNET Callback module.
 #
-# $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+# Copyright 2018-2024 Broadcom. All rights reserved.
 # The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
 # 
 # This program is free software; you can redistribute it and/or
@@ -15,13 +15,8 @@
 # GNU General Public License for more details.
 # 
 # A copy of the GNU General Public License version 2 (GPLv2) can
-# be found in the LICENSES folder.$
+# be found in the LICENSES folder.
 #
-
-ifeq ($(BUILD_PSAMPLE),1)
-PSAMPLE_CFLAGS=-DPSAMPLE_SUPPORT
-PSAMPLE_CB_OBJS=psample-cb.o
-endif
 
 ifneq ($(OUTPUT_DIR),)
 INCLUDES := -I$(OUTPUT_DIR)/knet/generated/include -I$(OUTPUT_DIR)/knet/generated
@@ -40,9 +35,7 @@ ccflags-y := $(KNETCB_CPPFLAGS) $(LKM_CFLAGS) \
              -I$(SDK)/linux/knet \
              -I$(SDK)/linux/knet/generated/include \
              -I$(SDK)/linux/knet/generated \
-             $(INCLUDES) \
-             $(PSAMPLE_CFLAGS) \
+             $(INCLUDES)
 
 linux_ngknetcb-y := $(SDK_PMD_KOBJS) \
-                    ngknetcb_main.o \
-                    $(PSAMPLE_CB_OBJS) 
+                    ngknetcb_main.o

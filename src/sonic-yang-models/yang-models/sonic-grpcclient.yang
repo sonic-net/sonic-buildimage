@@ -1,0 +1,79 @@
+module sonic-grpcclient {
+    namespace "http://github.com/sonic-net/sonic-grpcclient";
+    prefix grpcclient;
+    yang-version 1.1;
+
+    organization
+        "SONiC";
+
+    contact
+        "SONiC";
+
+    description
+        "SONiC DualToR grpc client configuration data";
+
+    revision 2024-10-14 {
+        description
+            "Initial revision";
+    }
+
+    container sonic-grpcclient {
+
+        container GRPCCLIENT {
+
+            container config {
+
+                leaf type {
+                    type enumeration {
+                        enum secure;
+                        enum insecure;
+                    }
+                    description "grpc client security level. ";
+                }
+
+                leaf auth_level {
+                    type enumeration {
+                        enum server;
+                        enum client;
+                    }
+                    description "grpc client auth level. ";
+                }
+
+                leaf log_level {
+                    type enumeration {
+                        enum info;
+                        enum notice;
+                        enum debug;
+                        enum warning;
+                        enum critical;
+                    }
+                    description "grpc client log level. ";
+                }
+            }
+
+            container certs {
+
+                leaf client_crt {
+                    type string;
+                    description "grpc client certificate file name ";
+
+                }
+
+                leaf client_key {
+                    type string;
+                    description "grpc client key file name ";
+                }
+
+                leaf ca_crt {
+                    type string;
+                    description "grpc client root cert";
+                }
+
+                leaf grpc_ssl_credential {
+                    type string;
+                    description "grpc client ssl credential";
+                }
+            }
+        }
+    }
+}
