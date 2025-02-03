@@ -56,3 +56,7 @@
 0074-bgp-best-port-reordering.patch
 0075-bgp-mp-info-changes.patch
 0076-Optimizations-and-problem-fixing-for-large-scale-ecmp-from-bgp.patch
+0077-frr-vtysh-dependencies-for-srv6-static-patches.patch
+0078-vtysh-de-conditionalize-and-reorder-install-node.patch
+0079-staticd-add-support-for-srv6.patch
+0080-SRv6-vpn-route-and-sidlist-install.patch
