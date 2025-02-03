@@ -225,7 +225,21 @@ class switch(object):
 #LM75-1(0X4B)>=77
 #Transceiver >=77
 
+def run_command(cmd):
+    status = True
+    result = ""
+    try:
+        p = subprocess.Popen(
+            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        raw_data, err = p.communicate()
+        if err == '':
+            result = raw_data.strip()
+    except Exception:
+        status = False
+    return status, result
+
 def power_off_dut():
+    global platform_chassis
     # Sync log buffer to disk
     cmd_str = ["sync"]
     status, output = getstatusoutput_noshell(cmd_str)
@@ -233,9 +247,19 @@ def power_off_dut():
     status, output = getstatusoutput_noshell(cmd_str)
     time.sleep(3)
 
-    # Power off dut
-    cmd_str = ["i2cset", "-y", "-f", "19", "0x60", "0x60", "0x10"]
-    (status, output) = getstatusoutput_noshell(cmd_str)
+    # Get FPGA version
+    fpga_version = int(platform_chassis.get_component(0).get_firmware_version())
+    if fpga_version is None:
+        return False
+
+    if fpga_version >= 9:
+        # Power off dut & Power off cpu
+        cmd_str="i2cset -y -f 1 0x60 0x60 0x11 & i2cset -y -f 1 0x65 0x07 0x2c"
+        (status, output) = run_command(cmd_str)
+    else:
+        cmd_str = ["i2cset", "-y", "-f", "1", "0x60", "0x60", "0x10"] # Power-cycle dut
+        (status, output) = getstatusoutput_noshell(cmd_str)
+
     return (status == 0)
 
 #If only one PSU insert(or one of PSU pwoer fail), and watt >800w. Must let DUT fan pwm >= 75% in AFO.
