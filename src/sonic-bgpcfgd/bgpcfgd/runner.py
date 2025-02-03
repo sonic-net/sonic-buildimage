@@ -40,7 +40,7 @@ class Runner(object):
         db = swsscommon.SonicDBConfig.getDbId(db_name)
         if db not in self.db_connectors:
             if db_name == "CHASSIS_APP_DB":
-                 # Cannot use unix socket for Chassis DB connection from LC
+                 # isTcpConn is True since we cannot use unix socket for Chassis DB connection from LC
                 self.db_connectors[db] = swsscommon.DBConnector(db_name, 0, True, '')
             else:
                 self.db_connectors[db] = swsscommon.DBConnector(db_name, 0)

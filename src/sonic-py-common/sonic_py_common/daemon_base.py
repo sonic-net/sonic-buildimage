@@ -26,7 +26,10 @@ EMPTY_NAMESPACE = ''
 
 def db_connect(db_name, namespace=EMPTY_NAMESPACE):
     from swsscommon import swsscommon
-    return swsscommon.DBConnector(db_name, REDIS_TIMEOUT_MSECS, False, namespace)
+    if "CHASSIS" in db_name and not device_info.is_supervisor():
+        return swsscommon.DBConnector(db_name, REDIS_TIMEOUT_MSECS, True, namespace) # Use TCP socket for chassis db
+
+    return swsscommon.DBConnector(db_name, REDIS_TIMEOUT_MSECS, False, namespace) # Use Unix Socket for all other DBs
 
 
 #
