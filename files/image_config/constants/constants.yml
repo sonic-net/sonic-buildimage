@@ -8,6 +8,7 @@ constants:
     internal_fallback_community: 22222:22222
     sentinel_community: 12345:12346
     internal_community_match_tag: 201
+    local_anchor_route_community: 12345:555
     route_do_not_send_appdb_tag: 202
     route_eligible_for_fallback_to_default_tag: 203
     families:
