@@ -9,6 +9,26 @@ exit
 {%   endfor %}
 {%  endif %}
 {% endblock vrf %}
+{% block setsrc %}
+{%  if BGP_GLOBALS is defined and BGP_GLOBALS|length > 0 %}
+{%   for vrf, bgp_sess in BGP_GLOBALS.items() %}
+{%    if 'route_map' in bgp_sess %}
+!
+vrf {{ vrf }}
+ ip protocol bgp route-map {{ bgp_sess['route_map'] }}
+{%    endif %}
+{%   endfor %}
+{%  endif %}
+{%  if ROUTE_MAP is defined and ROUTE_MAP|length > 0 %}
+{%   for rm_key, rm_val in ROUTE_MAP.items() %}
+{%    if 'route_operation' in rm_val and 'set_src' in rm_val %}
+!
+route-map {{rm_key[0]}} {{rm_val['route_operation']}} {{rm_key[1]}}
+ set src {{rm_val['set_src']}}
+{%    endif %}
+{%   endfor %}
+{%  endif %}
+{% endblock setsrc %}
 !
 {% block interfaces %}
 ! Enable nht through default route
