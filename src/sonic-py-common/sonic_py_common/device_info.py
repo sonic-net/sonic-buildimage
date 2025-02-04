@@ -862,7 +862,7 @@ def get_system_mac(namespace=None, hostname=None):
         mac_tmp = "{:012x}".format(int(mac_tmp, 16) + 1)
         mac_tmp = re.sub("(.{2})", "\\1:", mac_tmp, 0, re.DOTALL)
         mac = mac_tmp[:-1]
-    return mac
+    return mac.strip() if mac else None
 
 
 def get_system_routing_stack():
