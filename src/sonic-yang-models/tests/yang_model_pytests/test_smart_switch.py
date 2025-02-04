@@ -111,8 +111,8 @@ class TestSmartSwitch:
 
     @pytest.mark.parametrize(
         "port_name, error_message", [
-            ("port0", None),
-            ("Po0rt0", 'Value "Po0rt0" does not satisfy the constraint "[a-zA-Z]+[0-9]+"')]
+            ("dpu0", None),
+            ("dp0rt0", 'Value "dp0rt0" does not satisfy the constraint "[a-zA-Z]+[0-9]+"')]
         )
     def test_dpu_port_name(self, yang_model, port_name, error_message):
         data = {
@@ -147,7 +147,7 @@ class TestSmartSwitch:
                 "sonic-smart-switch:DPU_PORT": {
                     "DPU_PORT_LIST": [
                         {
-                            "PORT_NAME": "port0",
+                            "PORT_NAME": "dpu0",
                             "state": "up",
                             "vip_ipv4": vip_ipv4,
                             "vip_ipv6": "2001:db8::1",
@@ -174,7 +174,7 @@ class TestSmartSwitch:
                 "sonic-smart-switch:DPU_PORT": {
                     "DPU_PORT_LIST": [
                         {
-                            "PORT_NAME": "port0",
+                            "PORT_NAME": "dpu0",
                             "state": "up",
                             "vip_ipv4": "192.168.1.1",
                             "vip_ipv6": vip_ipv6,
@@ -201,7 +201,7 @@ class TestSmartSwitch:
                 "sonic-smart-switch:DPU_PORT": {
                     "DPU_PORT_LIST": [
                         {
-                            "PORT_NAME": "port0",
+                            "PORT_NAME": "dpu0",
                             "state": "up",
                             "vip_ipv4": "192.168.1.1",
                             "vip_ipv6": "2001:db8::1",
@@ -228,7 +228,7 @@ class TestSmartSwitch:
                 "sonic-smart-switch:DPU_PORT": {
                     "DPU_PORT_LIST": [
                         {
-                            "PORT_NAME": "port0",
+                            "PORT_NAME": "dpu0",
                             "state": "up",
                             "vip_ipv4": "192.168.1.1",
                             "vip_ipv6": "2001:db8::1",
@@ -255,7 +255,7 @@ class TestSmartSwitch:
                 "sonic-smart-switch:DPU_PORT": {
                     "DPU_PORT_LIST": [
                         {
-                            "PORT_NAME": "port0",
+                            "PORT_NAME": "dpu0",
                             "state": "up",
                             "vip_ipv4": "192.168.1.1",
                             "vip_ipv6": "2001:db8::1",
