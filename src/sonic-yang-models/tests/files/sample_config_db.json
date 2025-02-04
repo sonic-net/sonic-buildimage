@@ -1780,6 +1780,7 @@
                 "max_ibgp_paths": "2"
             },
             "default|l2vpn_evpn": {
+                "autort": "rfc8365-compatible",
                 "advertise-all-vni": "true"
             }
         },
