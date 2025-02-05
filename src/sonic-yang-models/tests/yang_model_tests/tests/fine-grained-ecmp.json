@@ -61,6 +61,11 @@
         "eStrKey": "Mandatory",
         "eStr": ["max_next_hops"]
     },
+    "FG_NHG_TEST_DYNAMIC_NHG_INVALID_MAX_NEXT_HOPS": {
+        "desc": "Fine-grained ECMP Dynamic next-hop group configuration with out-of-range max_next_hops value in FG_NHG_LIST table.",
+        "eStrKey": "Range",
+        "eStr": ["1..128"]
+    },
     "FG_NHG_TEST_DYNAMIC_NHG_MISSING_BUCKET_SIZE": {
         "desc": "Fine-grained ECMP Dynamic next-hop group configuration with missing bucket_size in FG_NHG_LIST table.",
         "eStr": "Missing required element \"bucket_size\" in \"FG_NHG_LIST\"."

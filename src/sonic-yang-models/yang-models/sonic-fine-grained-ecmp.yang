@@ -111,10 +111,12 @@ module sonic-fine-grained-ecmp {
                 leaf max_next_hops{
                     when "current()/../nhg_mode = 'dynamic-nhg'";
                     mandatory true;
+                    type uint16 {
+                        range 1..128; // Adjust based on platform support
+                    }
                     must "current() > 0" {
                         error-message "max_next_hops needs to be a positive value in dynamic-nhg mode";
                     }
-                    type uint16;
                     description "Applicable only when nhg_mode = dynamic-nhg. Maximum number of nexthops that will be received in route updates for any of the prefixes that match FG_NHG_PREFIX for this FG_NHG.";
                 }
 

@@ -428,6 +428,21 @@
             }
         }
     },
+    "FG_NHG_TEST_DYNAMIC_NHG_INVALID_MAX_NEXT_HOPS": {
+        "sonic-fine-grained-ecmp:sonic-fine-grained-ecmp": {
+            "sonic-fine-grained-ecmp:FG_NHG": {
+                "FG_NHG_LIST": [
+                    {
+                        "name": "group3",
+                        "bucket_size": 30,
+                        "match_mode": "route-based",
+                        "nhg_mode": "dynamic-nhg",
+                        "max_next_hops": 2048
+                    }
+                ]
+            }
+        }
+    },
     "FG_NHG_TEST_DYNAMIC_NHG_MISSING_BUCKET_SIZE": {
         "sonic-fine-grained-ecmp:sonic-fine-grained-ecmp": {
             "sonic-fine-grained-ecmp:FG_NHG": {
