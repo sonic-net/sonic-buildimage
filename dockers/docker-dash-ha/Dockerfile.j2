@@ -7,15 +7,21 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
 
-{% if docker_ha_debs.strip() -%}
+{% if docker_dash_ha_debs.strip() -%}
 # Copy locally-built Debian package dependencies
-{{ copy_files("debs/", docker_ha_debs.split(' '), "/debs/") }}
+{{ copy_files("debs/", docker_dash_ha_debs.split(' '), "/debs/") }}
 
 # Install locally-built Debian packages and implicitly install their dependencies
-{{ install_debian_packages(docker_ha_debs.split(' ')) }}
+{{ install_debian_packages(docker_dash_ha_debs.split(' ')) }}
 {%- endif %}
 
 RUN apt-get clean -y      && \
     apt-get autoclean -y  && \
     apt-get autoremove -y && \
     rm -rf /debs
+
+COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
+COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
+COPY ["critical_processes", "/etc/supervisor"]
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]
