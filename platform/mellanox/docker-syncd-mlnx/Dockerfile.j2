@@ -29,7 +29,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y \
 {%- if ENABLE_ASAN == "y" %}
-        libasan6 \
+        libasan8 \
 {%- endif %}
         libxml2 \
         python3-pip \
