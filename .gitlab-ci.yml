@@ -84,7 +84,7 @@ configure:sonic:aarch64:
       # skip build and use the latest
       mkdir -p target
       for f in ${TARGET_BIN}; do
-        curl -o target/$f http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/$f
+        curl -o target/$f http://sonic-pluto.wfr.ion.nokia.net/${PLUTO_POSTED_LATEST}/$f
       done
       exit 0
     fi
@@ -132,7 +132,7 @@ build:sonic:aarch64:
     if [ "$skip_build" = "1" ] && [ -z "${NO_SKIP_BUILD}" ]; then
       # skip build and use the latest
       mkdir -p target
-      curl -o target/${TARGET_BIN} http://sonic-pluto.ipd.us.alcatel-lucent.com/${PLUTO_POSTED_LATEST}/${TARGET_BIN}
+      curl -o target/${TARGET_BIN} http://sonic-pluto.wfr.ion.nokia.net/${PLUTO_POSTED_LATEST}/${TARGET_BIN}
     else
       ./build.sh --rpc-${TARGET_SAI}
     fi
