@@ -54,8 +54,7 @@
         "eStrKey": "Pattern"
     },
     "STATIC_ROUTE_TEST_NEXTHOP_EMPTY_VRF": {
-        "desc": "Configure with null value for VRF",
-        "eStrKey": "Pattern"
+        "desc": "Configure with null value for VRF"
     }
 
 }
