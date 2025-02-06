@@ -2973,6 +2973,42 @@ The ASIC_SENSORS table introduces the asic sensors polling configuration when th
 }
 ```
 
+### DPU PORT Configuration^M
+
+The **DPU_PORT** table introduces the configuration for the DPUs(Data Processing Unit) PORT information available on the platform.
+
+```json
+{
+    "DPU_PORT": {
+        "dpu0": {
+            "state": "up",
+            "vip_ipv4": "192.168.1.1",
+            "vip_ipv6": "2001:db8::10",
+            "pa_ipv4": "192.168.1.10",
+            "pa_ipv6": "2001:db8::10",
+            "vdpu_id": "vdpu0",
+            "gnmi_port": "50052"
+        },
+        "dpu1": {
+            "state": "down",
+            "vip_ipv4": "192.168.1.2",
+            "vip_ipv6": "2001:db8::20",
+            "pa_ipv4": "192.168.1.20",
+            "pa_ipv6": "2001:db8::20",
+            "vdpu_id": "vdpu1",
+            "gnmi_port": "50052"
+        }
+    }
+}
+```
+
+**state**: Administrative status of the DPU (`up` or `down`).
+**vip_ipv4**: VIP IPv4 address from minigraph.
+**vip_ipv6**: VIP IPv6 address from minigraph.
+**pa_ipv4**: PA IPv4 address from minigraph.
+**pa_ipv6**: PA IPv6 address from minigraph.
+**vdpu_id**: ID of VDPUs from minigraph.
+**gnmi_port**: Port gNMI runs on.
 
 # For Developers
 
