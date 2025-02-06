@@ -11,6 +11,7 @@ from sonic_py_common.general import getstatusoutput_noshell, getstatusoutput_nos
 
 class TestJ2Files(TestCase):
     def setUp(self):
+        self.yang = utils.YangWrapper()
         self.test_dir = os.path.dirname(os.path.realpath(__file__))
         self.script_file = [utils.PYTHON_INTERPRETTER, os.path.join(self.test_dir, '..', 'sonic-cfggen')]
         self.simple_minigraph = os.path.join(self.test_dir, 'simple-sample-graph.xml')
@@ -242,6 +243,7 @@ class TestJ2Files(TestCase):
 
     def test_l2switch_template(self):
         argument = ['-k', 'Mellanox-SN2700', '--preset', 'l2', '-p', self.t0_port_config]
+        self.assertTrue(self.yang.validate(argument))
         output = self.run_script(argument)
         output_json = json.loads(output)
 
@@ -260,6 +262,7 @@ class TestJ2Files(TestCase):
 
     def test_l1_ports_template(self):
         argument = ['-k', '32x1000Gb', '--preset', 'l1', '-p', self.l1_l3_port_config]
+        self.assertTrue(self.yang.validate(argument))
         output = self.run_script(argument)
         output_json = json.loads(output)
 
@@ -278,6 +281,7 @@ class TestJ2Files(TestCase):
 
     def test_l3_ports_template(self):
         argument = ['-k', '32x1000Gb', '--preset', 'l3', '-p', self.l1_l3_port_config]
+        self.assertTrue(self.yang.validate(argument))
         output = self.run_script(argument)
         output_json = json.loads(output)
 
@@ -311,6 +315,7 @@ class TestJ2Files(TestCase):
             ]
         }
         argument = ['-a', json.dumps(extra_args), '-k', 'Arista-7050CX3-32S-D48C8', '--preset', 'l2', '-p', self.t0_7050cx3_port_config]
+        self.assertTrue(self.yang.validate(argument))
         output = self.run_script(argument)
         output_json = json.loads(output)
 
@@ -322,6 +327,7 @@ class TestJ2Files(TestCase):
 
     def test_t1_smartswitch_template(self):
         argument = ['-k', 'SSwitch-32x1000Gb', '--preset', 't1-smartswitch', '-p', self.t1_ss_port_config]
+        self.assertTrue(self.yang.validate(argument))
         output = self.run_script(argument)
         output_json = json.loads(output)
 
@@ -333,6 +339,7 @@ class TestJ2Files(TestCase):
 
     def test_t1_smartswitch_dpu_template(self):
         argument = ['-k', 'SS-DPU-1x400Gb', '--preset', 't1-smartswitch', '-p', self.t1_ss_dpu_port_config]
+        self.assertTrue(self.yang.validate(argument))
         output = self.run_script(argument)
         output_json = json.loads(output)
 
