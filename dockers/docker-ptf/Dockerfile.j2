@@ -10,6 +10,8 @@ FROM {{ prefix }}debian:bullseye
 {% endif %}
 
 {% from "dockers/dockerfile-macros.j2" import install_python_wheels, copy_files, install_offending_packages %}
+{% from "dockers/dockerfile-macros.j2" import apt_install, apt_install_for_img %}
+{% from "dockers/dockerfile-macros.j2" import pip3_install, pip_install, pip3_install_for_img, pip_install_for_img %}
 
 USER root
 WORKDIR /root
@@ -27,71 +29,29 @@ ENV DEBIAN_FRONTEND=noninteractive
 ## TODO: Clean up this step
 RUN apt-get update          \
     && apt-get upgrade -y   \
-    && apt-get dist-upgrade -y  \
-    && apt-get install -y   \
-        autoconf            \
-        openssh-server      \
-        vim                 \
-        telnet              \
-        net-tools           \
-        traceroute          \
-        lsof                \
-        tcpdump             \
-        ethtool             \
-        unzip               \
-        pkg-config          \
-        binutils            \
-        build-essential     \
-        libssl-dev          \
-        libffi-dev          \
-        wget                \
-        cmake               \
-        libqt5core5a        \
-        libqt5network5      \
-{% if PTF_ENV_PY_VER == "mixed" %}
-        libboost-atomic1.71.0 \
-{% else %}
-        libboost-atomic1.74.0 \
-        flex                  \
-        bison                 \
-        tcpd                  \
-        libwrap0              \
-        libwrap0-dev          \
-{% endif %}
-        less                \
-        git                 \
-        iputils-ping        \
-        hping3              \
-        curl                \
-        tmux                \
-{% if PTF_ENV_PY_VER == "mixed" %}
-        python              \
-        python-dev          \
-        python-libpcap      \
-        python-scapy        \
-        python-six          \
-{% endif %}
-        python3             \
-        python3-venv        \
-        python3-pip         \
-        python3-dev         \
-        python3-scapy       \
-        python3-six         \
-        libpcap-dev         \
-{% if PTF_ENV_PY_VER == "mixed" %}
-        tacacs+             \
-{% endif %}
-        rsyslog             \
-        ntp                 \
-        ntpstat             \
-        ntpdate             \
-        arping              \
-        bridge-utils        \
-        libteam-utils       \
-        gdb                 \
-        automake            \
-        iproute2            \
-        wireshark-common
+    && apt-get dist-upgrade -y
+
+# install debian packages common to both 'mixed' (buster) and 'py3' (bullseye) images
+{% set apt_packages = [ 'autoconf', 'openssh-server', 'vim', 'telnet', 'net-tools', 'traceroute',
+'lsof', 'tcpdump', 'ethtool', 'unzip', 'pkg-config', 'binutils',
+'build-essential', 'libssl-dev', 'libffi-dev', 'wget', 'cmake',
+'libqt5core5a', 'libqt5network5', 'less', 'git', 'iputils-ping',
+'hping3', 'curl', 'tmux', 'python3', 'python3', 'python3-venv',
+'python3-pip', 'python3-dev', 'python3-scapy', 'python3-six',
+'libpcap-dev', 'rsyslog', 'ntp', 'ntpstat', 'ntpdate', 'arping',
+'bridge-utils', 'libteam-utils', 'gdb', 'automake', 'iproute2',
+'wireshark-common' ] %}
+{{ apt_install(apt_packages) }}
+
+# install debian packages specific to mixed image type (buster)
+{% set apt_mixed_packages = [ 'libboost-atomic1.71.0', 'python',
+'python-dev', 'python-libpcap', 'python-scapy', 'python-six', 'tacacs+' ] %}
+{{ apt_install_for_img(apt_mixed_packages, PTF_ENV_PY_VER, 'mixed') }}
+
+# install debian packages specific to py3 image type (bullseye)
+{% set apt_py3_packages = [ 'libboost-atomic1.74.0', 'flex',
+'bison', 'tcpd', 'libwrap0', 'libwrap0-dev' ] %}
+{{ apt_install_for_img(apt_py3_packages, PTF_ENV_PY_VER, 'py3') }}
 
 {% if PTF_ENV_PY_VER == "py3" %}
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
@@ -101,29 +61,10 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
     && update-alternatives --install /usr/bin/pygettext pygettext /usr/bin/pygettext3 1
 {% endif %}
 
-# Install all python modules from pypi. python-scapy is exception, ptf debian package requires python-scapy
-# TODO: Clean up this step
 RUN rm -rf /debs \
     && apt-get -y autoclean \
     && apt-get -y autoremove \
     && rm -rf /var/lib/apt/lists/* \
-{% if PTF_ENV_PY_VER == "mixed" %}
-    && wget --https-only https://bootstrap.pypa.io/pip/2.7/get-pip.py \
-    && python get-pip.py \
-    && rm -f get-pip.py \
-    && pip install setuptools \
-    && pip install supervisor \
-    && pip install ipython==5.4.1 \
-    && git clone https://github.com/p4lang/scapy-vxlan.git \
-    && cd scapy-vxlan \
-    && python setup.py install \
-    && cd .. \
-    && rm -fr scapy-vxlan \
-{% else %}
-    && wget --https-only https://bootstrap.pypa.io/pip/get-pip.py \
-    && python3 get-pip.py \
-    && rm -f get-pip.py \
-{% endif %}
     && git clone https://github.com/sflow/sflowtool \
     && cd sflowtool \
     && git checkout v6.04 \
@@ -152,27 +93,33 @@ RUN rm -rf /debs \
     && cd ../..            \
     && rm -fr nanomsg-1.0.0 \
     && rm -f 1.0.0.tar.gz  \
-{% if PTF_ENV_PY_VER == "mixed" %}
-    && pip install cffi    \
-    && pip install nnpy    \
-    && pip install dpkt    \
-    && pip install ipaddress \
-    && pip install pysubnettree \
-    && pip install paramiko \
-    && pip install flask   \
-    && pip install exabgp==3.4.17\
-    && pip install pyaml   \
-    && pip install pybrctl pyro4 rpyc yabgp \
-    && pip install unittest-xml-reporting \
-    && pip install pyrasite \
-    && pip install retrying \
-{% endif %}
     && mkdir -p /opt       \
     && cd /opt             \
     && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py
 
-{% if PTF_ENV_PY_VER == "py3" %}
-RUN git clone https://github.com/facebook/tac_plus \
+{% if PTF_ENV_PY_VER == "mixed" %}
+    RUN git clone https://github.com/p4lang/scapy-vxlan.git \
+    && cd scapy-vxlan \
+    && python setup.py install \
+    && cd .. \
+    && rm -fr scapy-vxlan \
+    && wget --https-only https://bootstrap.pypa.io/pip/2.7/get-pip.py \
+    && python get-pip.py \
+    && rm -f get-pip.py
+{% endif %}
+
+{% set pip_packages_mixed = [ 'setuptools', 'supervisor', 'ipython==5.4.1', 'cffi', 'nnpy'
+'dpkt', 'ipaddress', 'pysubnettree', 'paramiko', 'flask',
+'exabgp==3.4.17', 'pyaml', 'pybrctl', 'pyro4', 'rpyc',
+'yabgp', 'unittest-xml-reporting', 'pyrasite', 'retrying' ] %}
+{{ pip_install_for_img(pip_packages_mixed, PTF_ENV_PY_VER, 'mixed') }}
+
+
+{% if PTF_ENV_PY_VER == "mixed" %}
+RUN wget --https-only https://bootstrap.pypa.io/pip/get-pip.py \
+    && python3 get-pip.py \
+    && rm -f get-pip.py   \
+    && git clone https://github.com/facebook/tac_plus \
     && cd tac_plus \
     && cd tacacs-F4.0.4.28 \
     && ./configure \
@@ -185,65 +132,54 @@ COPY ["tacacs_plus", "/etc/init.d"]
 COPY ["tacacs+", "/etc/default"]
 {% endif %}
 
+
+##
+# Setup and activate virtual environment (applicable to mixed image only)
+# Python 3 related installs after this step go into the virtual environment
+##
 {% if PTF_ENV_PY_VER == "mixed" %}
 RUN python3 -m venv --system-site-packages env-python3
-# Activating a virtualenv. The virtualenv automatically works for RUN, ENV and CMD.
 ENV VIRTUAL_ENV=/root/env-python3
 ARG BACKUP_OF_PATH="$PATH"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONIOENCODING=UTF-8
-{% endif %}
-
-{% if PTF_ENV_PY_VER == "mixed" %}
 RUN python3 -m pip install --upgrade --ignore-installed pip
 {% endif %}
 
-# For py3 image 4 offending packages below do not use the updated 
+# For py3 image the offending packages below do not use the updated 
 # setuptools on Python 3.9. The packages downgrade setuptools 
 # to 40.x causing further installations to fail
+{% set pkgs = ["supervisor", "ipython==5.4.1", "exabgp", "grpcio-tools==1.41.1"] %}
 {% if PTF_ENV_PY_VER == "py3" %}
-{% set offending_packages = ["supervisor", "ipython==5.4.1", "exabgp", "grpcio-tools"] %}
-{{ install_offending_packages(offending_packages) }}
+{{ install_offending_packages(pkgs) }}
 {% else %}
-RUN pip3 install setuptools \
-        && pip3 install supervisor \
-        && pip3 install ipython==5.4.1 \
-        && pip3 install exabgp \
-        && pip3 install grpcio-tools
+{{ pip3_install(pkgs) }}
 {% endif %}
 
-# Install all python modules from pypi. python3-scapy is exception, 
-# ptf debian package requires python3-scapy
-{% if PTF_ENV_PY_VER == "py3" %}
-# Werkzeug 3.1.3 has a bug and causes announce routes to fail
-# by returning 413 Request Entity Too Large though request buffers
-# have been increased.
-RUN pip3 install Flask==3.0.3   \
-    && pip3 install Werkzeug==3.1.2 \
-{% else %}
-RUN pip3 install Flask \
-{% endif %}
-    && pip3 install Cython \
-    && pip3 install cffi    \
-    && pip3 install nnpy    \
-    && pip3 install dpkt    \
-    && pip3 install ipaddress \
-    && pip3 install pysubnettree \
-    && pip3 install paramiko \
-    && pip3 install pyaml   \
-    && pip3 install pybrctl pyro4 rpyc \
-    && pip3 install unittest-xml-reporting \
-    && pip3 install pyrasite \
-    && pip3 install python-libpcap \
-    && pip3 install enum34 \
-    && pip3 install grpcio \
-    && pip3 install protobuf \
-    && pip3 install six==1.16.0 \
-    && pip3 install itsdangerous \
-    && pip3 install retrying \
-    && pip3 install jinja2 \
-    && pip3 install scapy==2.5.0 \
-    && pip3 install thrift
+# In the old/mixed image environment the exabgp process API
+# uses the old flask package and runs in a Python 2 environment.
+# In the new/py3 image Flask 3.0.3 and Werkzeug 3.1.2 are used.
+# Werkzeug 3.1.3 ignores Request.max_form_memory_size setting
+# the bug causes announce routes to fail by returning 413
+# (Request Entity Too Large). Hence using Werkzeug 3.1.2
+{% set pip3_packages_py3 = [ 'Flask==3.0.3', 'Werkzeug==3.1.2' ] %}
+{{ pip3_install_for_img(pip3_packages_py3, PTF_ENV_PY_VER, 'py3') }}
+
+# These packages are installed in virtual environment on mixed image and
+# in global environment on py3 image
+{% set pip3_packages_common = [ 'Cython', 'cffi', 'nnpy', 'dpkt', 'ipaddress',
+'pysubnettree', 'paramiko', 'pyaml', 'pybrctl', 'pyro4', 'rpyc',
+'unittest-xml-reporting', 'pyrasite', 'python-libpcap', 'itsdangerous',
+'retrying', 'jinja2', 'scapy==2.5.0', 'thrift' ] %}
+{{ pip3_install(pip3_packages_common) }}
+
+# Following packages are required for GNMI 
+# https://github.com/lguohan/gnxi/blob/master/gnmi_cli_py/requirements.txt
+# Install them for 'py3' without futures and as-is for 'mixed'
+{% set gnmi_cli_py_reqs = [ 'enum34==1.1.6', 'grpcio==1.41.1', 'protobuf==3.6.1', 'six==1.12.0' ] %}
+{{ pip3_install_for_img(gnmi_cli_py_reqs, PTF_ENV_PY_VER, 'py3') }}
+{{ pip_install_for_img(gnmi_cli_py_reqs, PTF_ENV_PY_VER, 'mixed') }}
+{{ pip_install_for_img(['futures==3.2.0'], PTF_ENV_PY_VER, 'mixed') }}
 
 {% if docker_ptf_whls.strip() -%}
 # Copy locally-built Python wheel dependencies
@@ -285,7 +221,6 @@ RUN git clone https://github.com/lguohan/gnxi.git \
 {% if PTF_ENV_PY_VER == "mixed" %}
     && pip install -r requirements.txt
 {% else %}
-    && pip3 install setuptools==51.0.0 \
     && cat requirements.txt | grep -v futures > /tmp/requirements.txt \
     && pip3 install -r /tmp/requirements.txt
 {% endif %}

@@ -44,3 +44,34 @@ COPY \
         RUN pip3 install setuptools==51.0.0
     {%- endfor %}
 {%- endmacro %}
+
+{% macro apt_install(packages) -%}
+RUN apt-get install -y {{ packages | join(' ') }}
+{%- endmacro %}
+
+{% macro apt_install_for_img(packages, ptf_env_py_ver, img_type) -%}
+{% if ptf_env_py_ver == img_type %}
+{{ apt_install(packages) }}
+{% endif %}
+{%- endmacro %}
+
+{% macro pip3_install(packages) -%}
+RUN pip3 install {{ packages | join(' ') }}
+{%- endmacro %}
+
+{% macro pip_install(packages) -%}
+RUN pip install {{ packages | join(' ') }}
+{%- endmacro %}
+
+{% macro pip3_install_for_img(packages, ptf_env_py_ver, img_type) -%}
+{% if ptf_env_py_ver == img_type %}
+{{ pip3_install(packages) }}
+{% endif %}
+{%- endmacro %}
+
+{% macro pip_install_for_img(packages, ptf_env_py_ver, img_type) -%}
+{% if ptf_env_py_ver == img_type %}
+{{ pip_install(packages) }}
+{% endif %}
+{%- endmacro %}
+
