@@ -18,8 +18,9 @@
 .ONESHELL:
 SHELL = /bin/bash
 
-MAIN_TARGET = $(DOCA_LIBS)
-DERIVED_TARGETS = $(DOCA_LIBS_DEV) $(DOCA_LIBS_DBG)
+MAIN_TARGET = $(DOCA_COMMON)
+DERIVED_TARGETS = $(DOCA_DEBS) $(DOCA_DEV_DEBS) $(DOCA_DBG_DEBS)
+DOCA_PATH := $(shell pwd)/doca
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	# Make sure errors will be reported
@@ -35,16 +36,18 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	pushd doca/
 	find . -type f -exec touch {} +
 
-	patch -p1 < ../0001-Allow-compilation-with-warnings.patch
-	patch -p1 < ../0001-Remove-meson-from-connectx-dependencies.patch
-
-	source /etc/profile.d/libgrpc.sh
 	source /etc/profile.d/mlnx-dpdk-aarch64-linux-gnu.sh
+	source ./devtools/public/set_env_variables.sh  --deb
 
-	# Build the Debs
-	PATH=/opt/mellanox/grpc/bin:/usr/bin/:$(PATH) ./devtools/doca_package_build.sh connectx
+	python3 ./devtools/public/split_sdk_to_source_components.py
 
+	pushd /tmp/doca_delivery
+	sudo -E $(DOCA_PATH)/devtools/scripts/doca_build_packages.sh --dpu --deb $(DOCA_PATH)/../packages.txt
 	popd
+
+	sudo chown -R ${USER} /tmp/doca_sdk_packages/
+	pushd /tmp/doca_sdk_packages
 	mv $(DERIVED_TARGETS) $* $(DEST)/
+	popd
 
 $(addprefix $(DEST)/, $(DERIVED_TARGETS)): $(DEST)/% : $(DEST)/$(MAIN_TARGET)
