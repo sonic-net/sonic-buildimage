@@ -42,11 +42,6 @@
         <lane id="14" tx-polarity="0" rx-polarity="0" />
         <lane id="15" tx-polarity="0" rx-polarity="0" />
 
-        <port-connector>
-            <macsec-mode>bypass</macsec-mode>
-            <system-side lane-number="0,1,2,3,4,5,6,7" speed="400000" fec="rs544" />
-            <line-side lane-number="8,9,10,11,12,13,14,15" speed="400000" fec="rs544" />
-        </port-connector>
     </phy>
 
     <phy context_id="2">
@@ -88,11 +83,6 @@
         <lane id="14" tx-polarity="0" rx-polarity="0" />
         <lane id="15" tx-polarity="0" rx-polarity="0" />
 
-        <port-connector>
-            <macsec-mode>bypass</macsec-mode>
-            <system-side lane-number="0,1,2,3,4,5,6,7" speed="400000" fec="rs544" />
-            <line-side lane-number="8,9,10,11,12,13,14,15" speed="400000" fec="rs544" />
-        </port-connector>
     </phy>
 
     <phy context_id="3">
@@ -135,11 +125,6 @@
         <lane id="14" tx-polarity="0" rx-polarity="0" />
         <lane id="15" tx-polarity="0" rx-polarity="0" />
 
-        <port-connector>
-            <macsec-mode>bypass</macsec-mode>
-            <system-side lane-number="0,1,2,3,4,5,6,7" speed="400000" fec="rs544" />
-            <line-side lane-number="8,9,10,11,12,13,14,15" speed="400000" fec="rs544" />
-        </port-connector>
     </phy>
 
     <phy context_id="4">
@@ -182,11 +167,6 @@
         <lane id="14" tx-polarity="0" rx-polarity="0" />
         <lane id="15" tx-polarity="0" rx-polarity="0" />
 
-        <port-connector>
-            <macsec-mode>bypass</macsec-mode>
-            <system-side lane-number="0,1,2,3,4,5,6,7" speed="400000" fec="rs544" />
-            <line-side lane-number="8,9,10,11,12,13,14,15" speed="400000" fec="rs544" />
-        </port-connector>
     </phy>
 
     <phy context_id="5">
@@ -229,11 +209,6 @@
         <lane id="14" tx-polarity="0" rx-polarity="0" />
         <lane id="15" tx-polarity="0" rx-polarity="0" />
 
-        <port-connector>
-            <macsec-mode>bypass</macsec-mode>
-            <system-side lane-number="0,1,2,3,4,5,6,7" speed="400000" fec="rs544" />
-            <line-side lane-number="8,9,10,11,12,13,14,15" speed="400000" fec="rs544" />
-        </port-connector>
     </phy>
 
     <phy context_id="6">
@@ -275,11 +250,6 @@
         <lane id="14" tx-polarity="0" rx-polarity="0" />
         <lane id="15" tx-polarity="0" rx-polarity="0" />
 
-        <port-connector>
-            <macsec-mode>bypass</macsec-mode>
-            <system-side lane-number="0,1,2,3,4,5,6,7" speed="400000" fec="rs544" />
-            <line-side lane-number="8,9,10,11,12,13,14,15" speed="400000" fec="rs544" />
-        </port-connector>
     </phy>
 
     <phy context_id="7">
@@ -322,11 +292,6 @@
         <lane id="14" tx-polarity="0" rx-polarity="0" />
         <lane id="15" tx-polarity="0" rx-polarity="0" />
 
-        <port-connector>
-            <macsec-mode>bypass</macsec-mode>
-            <system-side lane-number="0,1,2,3,4,5,6,7" speed="400000" fec="rs544" />
-            <line-side lane-number="8,9,10,11,12,13,14,15" speed="400000" fec="rs544" />
-        </port-connector>
     </phy>
 
     <phy context_id="8">
@@ -369,11 +334,6 @@
         <lane id="14" tx-polarity="0" rx-polarity="0" />
         <lane id="15" tx-polarity="0" rx-polarity="0" />
 
-        <port-connector>
-            <macsec-mode>bypass</macsec-mode>
-            <system-side lane-number="0,1,2,3,4,5,6,7" speed="400000" fec="rs544" />
-            <line-side lane-number="8,9,10,11,12,13,14,15" speed="400000" fec="rs544" />
-        </port-connector>
     </phy>
 
 </root>
