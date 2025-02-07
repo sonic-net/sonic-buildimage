@@ -1,0 +1,13 @@
+Source: sonic-supermicro-platform-modules
+Section: main
+Priority: optional
+Maintainer: Supermicro Team <support@supermicro.com>
+Build-Depends: debhelper (>=9)
+Standards-Version: 3.9.6
+Homepage: <insert the upstream URL, if relevant>
+
+Package: sonic-platform-supermicro-sse-g3748
+Architecture: arm64
+Depends: ${misc:Depends}
+Description: Kernel modules for platform devices such as fan, led, sfp
+ <insert long description, indented with spaces>
