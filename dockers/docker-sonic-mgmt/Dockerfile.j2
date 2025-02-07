@@ -210,9 +210,9 @@ RUN mkdir -p /etc/apt/keyrings \
     && apt-get update && apt-get install -y azure-cli
 
 ## Copy and install sonic-mgmt docker dependencies
-COPY debs/sonic-device-data_*.deb debs/
+COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/
 
-RUN dpkg -i debs/sonic-device-data_*.deb
+RUN dpkg -i debs/sonic-device-data_*.deb debs/libdashapi_*.deb
 
 # Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
 RUN mkdir -p /tmp/protobuf \
@@ -226,14 +226,6 @@ RUN mkdir -p /tmp/protobuf \
     && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/python3-protobuf_3.21.12-3_amd64.deb \
     && dpkg -i *.deb \
     && rm -rf /tmp/protobuf
-
-# Install dash-api
-RUN cd /tmp \
-    && mkdir -p /usr/lib/python3/dist-packages/dash_api \
-    && wget https://raw.githubusercontent.com/sonic-net/sonic-dash-api/master/misc/pypkg/dash_api/__init__.py -O /usr/lib/python3/dist-packages/dash_api/__init__.py \
-    && git clone https://github.com/sonic-net/sonic-dash-api.git \
-    && protoc -I=sonic-dash-api/proto --python_out=/usr/lib/python3/dist-packages/dash_api sonic-dash-api/proto/*.proto \
-    && rm -rf /tmp/sonic-dash-api
 
 RUN mkdir /var/run/sshd
 EXPOSE 22
