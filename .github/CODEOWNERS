@@ -66,6 +66,7 @@
 /src/sonic-yang-mgmt/                   @sonic-net/sonic-management
 /src/libyang/                           @sonic-net/sonic-management
 /src/libyang3/                          @sonic-net/sonic-management
+/src/libyang3-py3/                      @sonic-net/sonic-management
 
 # bgpcfgd
 /src/sonic-bgpcfgd/                     @StormLiangMS
