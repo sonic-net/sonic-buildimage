@@ -103,10 +103,10 @@ portmap_115=113:100
 portmap_119=117:100
 portmap_123=121:100
 portmap_127=125:100
-#portmap_66=129:10:m
-#portmap_130=128:10:m
-#portmap_65=130:10
-#portmap_131=131:10
+portmap_66=129:10:m
+portmap_130=128:10:m
+portmap_65=130:10
+portmap_131=131:10
 
 phy_chain_rx_lane_map_physical{1.0}=0x1320
 phy_chain_rx_lane_map_physical{5.0}=0x0123

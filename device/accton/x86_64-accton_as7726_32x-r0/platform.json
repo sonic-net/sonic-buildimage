@@ -560,6 +560,12 @@
             },
             {
                 "name": "Ethernet124"
+            },
+            {
+                "name": "Ethernet128"
+            },
+            {
+                "name": "Ethernet129"
             }
         ]
     },
@@ -913,6 +919,22 @@
                 "2x50G": ["Eth32/1(Port32)", "Eth32/2(Port32)"],
                 "4x25G": ["Eth32/1(Port32)", "Eth32/2(Port32)", "Eth32/3(Port32)", "Eth32/4(Port32)"],
                 "4x10G": ["Eth32/1(Port32)", "Eth32/2(Port32)", "Eth32/3(Port32)", "Eth32/4(Port32)"]
+            }
+        },
+        
+        "Ethernet128": {
+            "index": "33",
+            "lanes": "129",
+            "breakout_modes": {
+                "1x10G[1G]": ["Eth33(Port33)"]
+            }
+        },
+
+        "Ethernet129": {
+            "index": "34",
+            "lanes": "128",
+            "breakout_modes": {
+                "1x10G[1G]": ["Eth34(Port34)"]
             }
         }
     }
