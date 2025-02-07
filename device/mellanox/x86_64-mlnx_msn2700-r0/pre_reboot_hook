@@ -1,0 +1,19 @@
+#!/bin/bash
+
+declare -r EXIT_SUCCESS=0
+declare -r EXIT_ERROR=1
+
+declare -r PENDING_COMPONENT_FW="/usr/bin/install-pending-fw.py"
+declare -r FW_UPGRADE_SCRIPT="/usr/bin/mlnx-fw-upgrade.sh"
+
+
+${FW_UPGRADE_SCRIPT} --upgrade --verbose
+EXIT_CODE=$?
+if [[ ${EXIT_CODE} != ${EXIT_SUCCESS} ]]; then
+    echo "Failed to burn MLNX FW: errno=${EXIT_CODE}"
+    exit ${EXIT_ERROR}
+fi
+
+${PENDING_COMPONENT_FW}
+
+exit ${EXIT_SUCCESS}
