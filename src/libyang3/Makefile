@@ -19,6 +19,8 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 
 	# Enable large file support for 32-bit arch
 	echo 'add_definitions(-D_FILE_OFFSET_BITS=64)' >> CMakeLists.txt
+	[ -d ".pc" ] && rm -rf .pc
+	QUILT_PATCHES=../patch quilt push -a
 
 ifeq ($(CROSS_BUILD_ENVIRON), y)
 	dpkg-buildpackage -rfakeroot -d -b -us -uc -a$(CONFIGURED_ARCH) -Pcross,nocheck -j$(SONIC_CONFIG_MAKE_JOBS)
