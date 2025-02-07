@@ -1,0 +1,140 @@
+transceivers:
+  0:
+    present: true
+    defaults: &defaults
+      SFF8024Identifier: "QSFP_DD"
+      SFF8024IdentifierCopy: "QSFP_DD"
+      VendorName: "xcvr-emu"
+      VendorRev: "01"
+      VendorOUI: 0x010203
+      VendorSN: "0123456789"
+      DateCode:
+        Year: "24"
+        Month: "12"
+        DayOfMonth: "14"
+      LengthMultiplier: "MULTIPLIER_100"
+      BaseLength: 1
+      CmisRevision:
+        Major: 5
+        Minor: 2
+      MediaType: "OPTICAL_SMF"
+      ModulePowerClass: "CLASS_8"
+      MaxPower: 40 # 10.0 W
+
+      ConnectorType: "MPO_1X16"
+      ModuleActiveFirmwareMajorRevision: 1
+      ModuleActiveFirmwareMinorRevision: 2
+      ModuleInactiveFirmwareMajorRevision: 1
+      ModuleInactiveFirmwareMinorRevision: 1
+      MemoryModel: "PAGED"
+      MciMaxSpeed: "UP_TO_400_KHZ"
+      ApplicationDescriptor:
+        - HostInterfaceID: 79 # 400GAUI-4-S C2M (Annex 120G)
+          MediaInterfaceID: 28 # 400GBASE-DR4 (Cl 124)
+          HostLaneCount: 4
+          MediaLaneCount: 4
+          HostLaneAssignmentOptions: 0b1
+        - HostInterfaceID: 71 # 200GAUI-CR2 (Clause 162)
+          MediaInterfaceID: 23 # 200GBASE-DR4 (Cl 121)
+          HostLaneCount: 2
+          MediaLaneCount: 2
+          HostLaneAssignmentOptions: 0b101
+      MediaLaneAssignmentOptions:
+      - 0b001
+      - 0b101
+      MaxDurationDPInit: "BETWEEN_1_AND_5_S"
+      OutputDisableTxSupported: "SUPPORTED"
+      SteppedConfigOnly: "STEP_BY_STEP" # no support for intervention-free reconfiguration
+  1:
+    present: false
+    defaults: *defaults
+  2:
+    present: false
+    defaults: *defaults
+  3:
+    present: false
+    defaults: *defaults
+  4:
+    present: false
+    defaults: *defaults
+  5:
+    present: false
+    defaults: *defaults
+  6:
+    present: false
+    defaults: *defaults
+  7:
+    present: false
+    defaults: *defaults
+  8:
+    present: false
+    defaults: *defaults
+  9:
+    present: false
+    defaults: *defaults
+  10:
+    present: false
+    defaults: *defaults
+  11:
+    present: false
+    defaults: *defaults
+  12:
+    present: false
+    defaults: *defaults
+  13:
+    present: false
+    defaults: *defaults
+  14:
+    present: false
+    defaults: *defaults
+  15:
+    present: false
+    defaults: *defaults
+  16:
+    present: false
+    defaults: *defaults
+  17:
+    present: false
+    defaults: *defaults
+  18:
+    present: false
+    defaults: *defaults
+  19:
+    present: false
+    defaults: *defaults
+  20:
+    present: false
+    defaults: *defaults
+  21:
+    present: false
+    defaults: *defaults
+  22:
+    present: false
+    defaults: *defaults
+  23:
+    present: false
+    defaults: *defaults
+  24:
+    present: false
+    defaults: *defaults
+  25:
+    present: false
+    defaults: *defaults
+  26:
+    present: false
+    defaults: *defaults
+  27:
+    present: false
+    defaults: *defaults
+  28:
+    present: false
+    defaults: *defaults
+  29:
+    present: false
+    defaults: *defaults
+  30:
+    present: false
+    defaults: *defaults
+  31:
+    present: false
+    defaults: *defaults
