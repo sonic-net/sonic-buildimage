@@ -170,6 +170,16 @@ DEVICE_DATA = {
             }
         }
     },
+    'x86_64-nvidia_sn5610n-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False
+            }
+        },
+        'sfp': {
+            'fw_control_ports': [64, 65] # 0 based sfp index list
+        }
+    },
     'x86_64-nvidia_sn5640_simx-r0': {
         'thermal': {
             "capability": {
