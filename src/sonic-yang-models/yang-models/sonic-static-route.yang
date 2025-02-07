@@ -111,7 +111,7 @@ module sonic-static-route {
         }
         leaf nexthop-vrf {
           type string {
-            pattern "(((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)),)*((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt))";
+            pattern "((((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)),)*((Vrf[a-zA-Z0-9_-]+)|(default)|(mgmt)))?";
           }
           description
             "VRF name of the nexthop. This is for vrf leaking";

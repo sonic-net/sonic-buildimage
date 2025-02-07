@@ -52,6 +52,9 @@
      "STATIC_ROUTE_TEST_ECMP_NEXTHOP_VRF_INVALID": {
         "desc": "Configure with invalid vrf for ECMP",
         "eStrKey": "Pattern"
+    },
+    "STATIC_ROUTE_TEST_NEXTHOP_EMPTY_VRF": {
+        "desc": "Configure with null value for VRF"
     }
 
 }
