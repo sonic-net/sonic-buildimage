@@ -258,8 +258,11 @@ start_peer_and_dependent_services() {
     check_warm_boot
 
     if [[ x"$WARM_BOOT" != x"true" ]]; then
-        echo "${SERVICE}$DEV: starting TSA-TSB service"
-        /bin/systemctl restart $TSA_TSB_SERVICE
+        SERVICES_CONF="/usr/share/sonic/device/$PLATFORM/services.conf"
+        if [[ -f $SERVICES_CONF ]] && grep -q "^startup_tsa_tsb.service$" $SERVICES_CONF; then
+            echo "${SERVICE}$DEV: starting TSA-TSB service"
+            /bin/systemctl restart $TSA_TSB_SERVICE
+        fi
 
         for peer in ${PEER}; do
             if [[ ! -z $DEV ]]; then
