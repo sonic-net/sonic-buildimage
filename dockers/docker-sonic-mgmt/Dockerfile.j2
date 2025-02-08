@@ -210,9 +210,9 @@ RUN mkdir -p /etc/apt/keyrings \
     && apt-get update && apt-get install -y azure-cli
 
 ## Copy and install sonic-mgmt docker dependencies
-COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/
+COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/libprotobuf*.deb debs/protobuf-compiler*.deb debs/python3-protobuf*.deb debs/ 
 
-RUN dpkg -i debs/sonic-device-data_*.deb debs/libdashapi_*.deb
+RUN dpkg -i debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/libprotobuf*.deb debs/protobuf-compiler*.deb debs/python3-protobuf*.deb
 
 # Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
 RUN mkdir -p /tmp/protobuf \
