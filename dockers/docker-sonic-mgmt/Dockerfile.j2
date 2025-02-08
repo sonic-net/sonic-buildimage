@@ -209,11 +209,6 @@ RUN mkdir -p /etc/apt/keyrings \
     && echo "deb [arch=`dpkg --print-architecture` signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ `lsb_release -cs` main" | tee /etc/apt/sources.list.d/azure-cli.list \
     && apt-get update && apt-get install -y azure-cli
 
-## Copy and install sonic-mgmt docker dependencies
-COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/libproto*.deb debs/protobuf-compiler*.deb debs/python3-protobuf*.deb debs/ 
-
-RUN dpkg -i debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/libproto*.deb debs/protobuf-compiler*.deb debs/python3-protobuf*.deb
-
 # Install protobuf 3.21.12 which is from https://deb.debian.org/debian/pool/main/p/protobuf/protobuf_3.21.12-3.dsc
 RUN mkdir -p /tmp/protobuf \
     && cd /tmp/protobuf \
@@ -226,6 +221,11 @@ RUN mkdir -p /tmp/protobuf \
     && wget https://sonicstorage.blob.core.windows.net/public/ubuntu/20.04/python3-protobuf_3.21.12-3_amd64.deb \
     && dpkg -i *.deb \
     && rm -rf /tmp/protobuf
+
+## Copy and install sonic-mgmt docker dependencies
+COPY debs/sonic-device-data_*.deb debs/libdashapi_*.deb debs/
+
+RUN dpkg -i debs/sonic-device-data_*.deb debs/libdashapi_*.deb
 
 RUN mkdir /var/run/sshd
 EXPOSE 22
