@@ -1684,10 +1684,10 @@ nodejs-doc==18.19.0+dfsg-6~deb12u2
 nss-plugin-pem==1.0.8+1-1
 ocl-icd-libopencl1==2.3.1-1
 openjade==1.4devel1-22
-openjdk-17-jdk==17.0.13+11-2~deb12u1
-openjdk-17-jdk-headless==17.0.13+11-2~deb12u1
-openjdk-17-jre==17.0.13+11-2~deb12u1
-openjdk-17-jre-headless==17.0.13+11-2~deb12u1
+openjdk-17-jdk==17.0.14+7-1~deb12u1
+openjdk-17-jdk-headless==17.0.14+7-1~deb12u1
+openjdk-17-jre==17.0.14+7-1~deb12u1
+openjdk-17-jre-headless==17.0.14+7-1~deb12u1
 openmpi-bin==4.1.4-3+b1
 openmpi-common==4.1.4-3
 opensp==1.5.2-13+b2
