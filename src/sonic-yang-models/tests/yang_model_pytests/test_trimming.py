@@ -32,8 +32,8 @@ class TestTrimming:
 
     @pytest.mark.parametrize(
         "size,error_message", [
-            pytest.param('-1', 'Invalid value', id="min-1"),
-            pytest.param('4294967296', 'Invalid value', id="max+1")
+            pytest.param('-1', 'out of type uint32 min/max bounds', id="min-1"),
+            pytest.param('4294967296', 'out of type uint32 min/max bounds', id="max+1")
         ]
     )
     def test_neg_size(self, yang_model, size, error_message):
@@ -51,8 +51,8 @@ class TestTrimming:
 
     @pytest.mark.parametrize(
         "dscp,error_message", [
-            pytest.param('-1', 'Invalid value', id="min-1"),
-            pytest.param('64', 'Invalid value', id="max+1")
+            pytest.param('-1', 'out of type uint8 min/max bounds', id="min-1"),
+            pytest.param('64', 'Invalid DSCP value', id="max+1")
         ]
     )
     def test_neg_dscp_value(self, yang_model, dscp, error_message):
@@ -69,9 +69,9 @@ class TestTrimming:
         yang_model.load_data(data, error_message)
 
     @pytest.mark.parametrize(
-        "tc,error_message", [
-            pytest.param('-1', 'Invalid value', id="min-1"),
-            pytest.param('256', 'Invalid value', id="max+1")
+        "index,error_message", [
+            pytest.param('-1', 'Invalid union value', id="min-1"),
+            pytest.param('256', 'Invalid union value', id="max+1")
         ]
     )
     def test_neg_tc_value(self, yang_model, tc, error_message):
