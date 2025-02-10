@@ -39,29 +39,25 @@ class Test_yang_models:
     def initTest(self):
         self.defaultYANGFailure = {
             'Must': ['Must condition', 'not satisfied'],
-            'InvalidValue': ['Invalid value'],  # libyang3: ['Invalid', 'value', 'Data path']
-            'LeafRef': ['Leafref', 'non-existing'], #libyang3: ['Invalid leafref', 'no target instance']
+            'InvalidValue': ['Invalid', 'value', 'Data path'],
+            'LeafRef': ['Invalid leafref', 'no target instance'],
             'When': ['When condition', 'not satisfied'],
-            'Pattern': ['pattern', 'does not satisfy'], #libyang3: ['pattern', 'Unsatisfied pattern']
-            'Mandatory': ['required element', 'Missing'], #libyang3: ['Mandatory node', 'does not exist']
+            'Pattern': ['pattern', 'Unsatisfied pattern'],
+            'Mandatory': ['Mandatory node', 'does not exist'],
             'Verify': ['verified'],
-            'Range': ['does not satisfy', 'range'], #libyang3: ['Unsatisfied range']
+            'Range': ['Unsatisfied range'],
             'MinElements': ['Too few'],
             'MaxElements': ['Too many'],
-            'UnknownElement': ['Unknown element'],
+            'UnknownElement': ['not found as a child'],
             'Missing': ['Missing required element'],
-            "InvalidJSON": ['Invalid JSON data'],
+            "InvalidJSON": ['Expecting JSON'],
             'None': [],
-# New keys are needed for libyang3's messages which are different.  Go
-# ahead and add them now with the libyang1 values (which are duplicates
-# of the above).  This will make migrating to libyang3 easier with less
-# code review.
-            'Length': ['does not satisfy', 'range'], # libyang3: ['Unsatisfied length']
-            'DecimalFractionExceed': ['Invalid value'], # libyang3: ['Value', 'exceeds defined number', 'fraction digits']
-            'Bounds': ['Invalid value'], #libyang3 ['Value', 'out of type', 'min/max bounds'],
-            'ListKey': ['Missing required element'], #libyang3 ['List instance is missing its key']
-            'DateTime': ['pattern', 'does not satisfy'], #libyang3: ['Invalid date-and-time']
-            'IPv4': ['pattern', 'does not satisfy'], #libyang3 ['Failed to convert IPv4 address'],
+            'Length': ['Unsatisfied length'],
+            'DecimalFractionExceed': ['Value', 'exceeds defined number', 'fraction digits'],
+            'Bounds': ['Value', 'out of type', 'min/max bounds'],
+            'ListKey': ['List instance is missing its key'],
+            'DateTime': ['Invalid date-and-time'],
+            'IPv4': ['Failed to convert IPv4 address'],
         }
 
         self.ExceptionTests = { }
