@@ -1,0 +1,26 @@
+{
+    "DEBUG_DROP_MONITOR_POSITIVE_CONFIG": {
+       "sonic-configurable-drop-monitor:sonic-configurable-drop-monitor": {
+            "sonic-configurable-drop-monitor:DEBUG_DROP_MONITOR": {
+                "CONFIG": {
+                    "status": "enabled",
+                    "window": 600,
+                    "incident_count_threshold": 2,
+                    "drop_count_threshold": 2
+                }
+            }
+        }
+    },
+    "DEBUG_DROP_MONITOR_INVALID_TYPE": {
+       "sonic-configurable-drop-monitor:sonic-configurable-drop-monitor": {
+            "sonic-configurable-drop-monitor:DEBUG_DROP_MONITOR": {
+                "CONFIG": {
+                    "status": "down",
+                    "window": 600,
+                    "incident_count_threshold": 2,
+                    "drop_count_threshold": 2
+                }
+            }
+        }
+    }
+}

@@ -2185,6 +2185,15 @@
             }
         },
 
+        "DEBUG_DROP_MONITOR": {
+            "CONFIG": {
+                "status": "disabled",
+                "window": "800",
+                "incident_count_threshold": "3",
+                "drop_count_threshold": "3"
+            }
+        },
+
         "QUEUE": {
             "Ethernet0|0": {
                 "scheduler": "TEST@0",
