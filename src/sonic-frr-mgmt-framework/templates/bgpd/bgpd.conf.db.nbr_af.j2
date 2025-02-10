@@ -4,7 +4,7 @@
 {% if 'admin_status' in n_af_val %}
 {% if n_af_val['admin_status'] in ['true', 'up'] %}
   neighbor {{nbr_name}} activate
-{% elif n_af_val['admin_status'] in ['false', 'down'] %}
+{% else %}
   no neighbor {{nbr_name}} activate
 {% endif %}
 {% endif %}
