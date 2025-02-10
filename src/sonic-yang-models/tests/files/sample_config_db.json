@@ -5,6 +5,13 @@
                     "vni" : "100"
                 }
         },
+        "SUBNET_DECAP": {
+            "AZURE": {
+                "status": "enable",
+                "src_ip": "10.10.10.0/24",
+                "src_ip_v6": "20c1:ba8::/64"
+            }
+        },
         "DHCP_SERVER": {
             "192.0.0.8": {},
             "192.0.0.8": {},
@@ -1773,7 +1780,8 @@
                 "max_ibgp_paths": "2"
             },
             "default|l2vpn_evpn": {
-                "advertise-all-vni": "true"
+                "advertise-all-vni": "true",
+                "advertise-svi-ip": "true"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
@@ -2271,6 +2279,17 @@
             }
         },
 
+        "TC_TO_DSCP_MAP": {
+           "tc_to_dscp_map1": {
+              "1": "1",
+              "2": "2"
+            },
+           "tc_to_dscp_map2": {
+              "3": "3",
+              "4": "4"
+            }
+        },
+
         "MAP_PFC_PRIORITY_TO_QUEUE": {
            "pfc_prio_to_q_map1": {
               "1": "1",
@@ -2322,6 +2341,7 @@
            "Ethernet0": {
                "dot1p_to_tc_map" : "Dot1p_to_tc_map1",
                "dscp_to_tc_map": "Dscp_to_tc_map1",
+               "tc_to_dscp_map": "tc_to_dscp_map1",
                "tc_to_queue_map": "tc_to_q_map1",
                "tc_to_pg_map": "tc_to_pg_map1",
                "pfc_to_queue_map": "pfc_prio_to_q_map1",
@@ -2333,12 +2353,13 @@
             "Ethernet4": {
               "dot1p_to_tc_map" : "Dot1p_to_tc_map2",
               "dscp_to_tc_map": "Dscp_to_tc_map2",
-	          "tc_to_queue_map": "tc_to_q_map2",
-	          "tc_to_pg_map": "tc_to_pg_map2",
-	          "pfc_to_queue_map": "pfc_prio_to_q_map2",
-	          "pfc_to_pg_map"   : "pfc_prio_to_pg_map2",
-	          "pfc_enable"      : "3,4",
-	          "pfcwd_sw_enable" : "3,4"
+              "tc_to_dscp_map": "tc_to_dscp_map2",
+              "tc_to_queue_map": "tc_to_q_map2",
+              "tc_to_pg_map": "tc_to_pg_map2",
+              "pfc_to_queue_map": "pfc_prio_to_q_map2",
+              "pfc_to_pg_map"   : "pfc_prio_to_pg_map2",
+              "pfc_enable"      : "3,4",
+              "pfcwd_sw_enable" : "3,4"
             }
         },
 
@@ -2760,6 +2781,26 @@
                 "midplane_interface": "dpu1"
             }
         },
+        "DPU_PORT": {
+            "dpu0": {
+                "state": "up",
+                "vip_ipv4": "192.168.1.1",
+                "vip_ipv6": "2001:db8::10",
+                "pa_ipv4": "192.168.1.10",
+                "pa_ipv6": "2001:db8::10",
+                "vdpu_id": "vdpu0",
+                "gnmi_port": "50052"
+            },
+            "dpu1": {
+                "state": "down",
+                "vip_ipv4": "192.168.1.2",
+                "vip_ipv6": "2001:db8::20",
+                "pa_ipv4": "192.168.1.20",
+                "pa_ipv6": "2001:db8::20",
+                "vdpu_id": "vdpu1",
+                "gnmi_port": "50052"
+            }
+        },
 	"XCVRD_LOG": {
 	    "Y_CABLE": {
 		"log_verbosity": "notice"
@@ -2776,7 +2817,7 @@
                 "client_key": "grpcclient.key",
                 "ca_crt": "root.pem",
                 "grpc_ssl_credential": "azureclient.ms"
-            } 
+            }
 	},
         "BANNER_MESSAGE": {
             "global": {
@@ -2791,6 +2832,25 @@
                 "enabled": "false",
                 "sampling_interval": "5",
                 "retention_period": "15"
+            }
+        },
+        "ASIC_SENSORS": {
+            "ASIC_SENSORS_POLLER_INTERVAL": {
+                "interval": "10"
+            },
+            "ASIC_SENSORS_POLLER_STATUS": {
+                "admin_status": "enable"
+            }
+        },
+        "SRV6_MY_LOCATORS": {
+            "loc1": {
+                "prefix": "fcbb:bbbb:1::"
+            }
+        },
+        "SRV6_MY_SIDS": {
+            "loc1|fcbb:bbbb:1::/48": {
+                "action": "uN",
+                "decap_dscp_mode": "pipe"
             }
         }
     },

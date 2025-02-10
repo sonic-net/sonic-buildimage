@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -206,8 +206,8 @@ class DpuCtlPlat():
                     return True
                 poll_obj = poll()
                 poll_obj.register(dir_fd, POLLIN)
-                start = time.time()
-                while (time.time() - start) < WAIT_FOR_PCI_DEV:
+                start = time.monotonic()
+                while (time.monotonic() - start) < WAIT_FOR_PCI_DEV:
                     events = poll_obj.poll(WAIT_FOR_PCI_DEV * 1000)
                     if events:
                         if os.path.exists(os.path.dirname(self.get_pci_dev_path())):
@@ -473,9 +473,9 @@ class DpuCtlPlat():
     @contextmanager
     def time_check_context(self, msg):
         if self.verbosity:
-            start_time = time.time()
+            start_time = time.monotonic()
             yield
-            end_time = time.time()
+            end_time = time.monotonic()
             self.log_info(f"Total time taken = {end_time - start_time} for {msg}")
             return
         yield

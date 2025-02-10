@@ -4,7 +4,7 @@ DOCKER_ORCHAGENT_STEM = docker-orchagent
 DOCKER_ORCHAGENT = $(DOCKER_ORCHAGENT_STEM).gz
 DOCKER_ORCHAGENT_DBG = $(DOCKER_ORCHAGENT_STEM)-$(DBG_IMAGE_MARK).gz
 
-$(DOCKER_ORCHAGENT)_DEPENDS += $(SWSS)
+$(DOCKER_ORCHAGENT)_DEPENDS += $(SWSS) $(LIB_SONIC_DASH_API)
 
 ifeq ($(ENABLE_ASAN), y)
 $(DOCKER_ORCHAGENT)_DEPENDS += $(SWSS_DBG)
@@ -36,7 +36,7 @@ SONIC_BOOKWORM_DBG_DOCKERS += $(DOCKER_ORCHAGENT_DBG)
 SONIC_INSTALL_DOCKER_DBG_IMAGES += $(DOCKER_ORCHAGENT_DBG)
 
 $(DOCKER_ORCHAGENT)_CONTAINER_NAME = swss
-$(DOCKER_ORCHAGENT)_RUN_OPT += --privileged -t
+$(DOCKER_ORCHAGENT)_RUN_OPT += -t --cap-add=NET_ADMIN --security-opt apparmor=unconfined --security-opt="systempaths=unconfined"
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/network/interfaces:/etc/network/interfaces:ro
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/localtime:/etc/localtime:ro 
 $(DOCKER_ORCHAGENT)_RUN_OPT += -v /etc/network/interfaces.d/:/etc/network/interfaces.d/:ro
