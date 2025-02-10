@@ -771,6 +771,9 @@ sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}} || sudo LANG=C DEBIAN_FRONTEND=noni
 {% endfor %}
 {% endif %}
 
+# Purge python3-dev before hold SONiC packages, because SONiC may install a patched version of python, purge after it will get dependency break error.
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y python3-dev
+
 {% if installer_debs.strip() -%}
 {% for deb in installer_debs.strip().split(' ') -%}
 
@@ -1068,7 +1071,6 @@ sudo cp files/build_templates/startup_tsa_tsb.service $FILESYSTEM_ROOT_USR_LIB_S
 sudo cp $BUILD_TEMPLATES/sonic.target $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo LANG=C chroot $FILESYSTEM_ROOT systemctl enable sonic.target
 
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y python3-dev
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y libcairo2-dev libdbus-1-dev libgirepository1.0-dev libsystemd-dev pkg-config
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get clean -y
 sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get autoremove -y
