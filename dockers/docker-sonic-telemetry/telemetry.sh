@@ -5,7 +5,7 @@ INCORRECT_TELEMETRY_VALUE=2
 TELEMETRY_VARS_FILE=/usr/share/sonic/templates/telemetry_vars.j2
 ESCAPE_QUOTE="'\''"
 
-Extract_json_field() {
+extract_field() {
     value=$(echo $1 | jq -r $2)
     echo "${value//\'/${ESCAPE_QUOTE}}"
 }
@@ -31,28 +31,28 @@ export CVL_SCHEMA_PATH=/usr/sbin/schema
 export GOTRACEBACK=crash
 
 if [ -n "$CERTS" ]; then
-    SERVER_CRT=$(Extract_json_field "$CERTS" '.server_crt')
-    SERVER_KEY=$(Extract_json_field "$CERTS" '.server_key')
+    SERVER_CRT=$(extract_field "$CERTS" '.server_crt')
+    SERVER_KEY=$(extract_field "$CERTS" '.server_key')
     if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
         TELEMETRY_ARGS+=" --insecure"
     else
         TELEMETRY_ARGS+=" --server_crt '$SERVER_CRT' --server_key '$SERVER_KEY' "
     fi
 
-    CA_CRT=$(Extract_json_field "$CERTS" '.ca_crt')
+    CA_CRT=$(extract_field "$CERTS" '.ca_crt')
     if [ ! -z $CA_CRT ]; then
         TELEMETRY_ARGS+=" --ca_crt '$CA_CRT'"
     fi
 elif [ -n "$X509" ]; then
-    SERVER_CRT=$(Extract_json_field "$X509" '.server_crt')
-    SERVER_KEY=$(Extract_json_field "$X509" '.server_key')
+    SERVER_CRT=$(extract_field "$X509" '.server_crt')
+    SERVER_KEY=$(extract_field "$X509" '.server_key')
     if [ -z $SERVER_CRT  ] || [ -z $SERVER_KEY  ]; then
         TELEMETRY_ARGS+=" --insecure"
     else
         TELEMETRY_ARGS+=" --server_crt '$SERVER_CRT' --server_key '$SERVER_KEY' "
     fi
 
-    CA_CRT=$(Extract_json_field "$X509" '.ca_crt')
+    CA_CRT=$(extract_field "$X509" '.ca_crt')
     if [ ! -z $CA_CRT ]; then
         TELEMETRY_ARGS+=" --ca_crt '$CA_CRT'"
     fi
@@ -64,16 +64,16 @@ fi
 if [ -z "$GNMI" ]; then
     PORT=8080
 else
-    PORT=$(Extract_json_field "$GNMI" '.port')
+    PORT=$(extract_field "$GNMI" '.port')
 fi
 TELEMETRY_ARGS+=" --port '$PORT'"
 
-CLIENT_AUTH=$(Extract_json_field "$GNMI" '.client_auth')
+CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
 if [ -z $CLIENT_AUTH ] || [ $CLIENT_AUTH == "false" ]; then
     TELEMETRY_ARGS+=" --allow_no_client_auth"
 fi
 
-LOG_LEVEL=$(Extract_json_field "$GNMI" '.log_level')
+LOG_LEVEL=$(extract_field "$GNMI" '.log_level')
 if [[ $LOG_LEVEL =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" -v='$LOG_LEVEL'"
 else
@@ -89,7 +89,7 @@ if [ ! -z "$SAVE_ON_SET" ]; then
 fi
 
 # Server will handle threshold connections consecutively
-THRESHOLD_CONNECTIONS=$(Extract_json_field "$GNMI" '.threshold')
+THRESHOLD_CONNECTIONS=$(extract_field "$GNMI" '.threshold')
 if [[ $THRESHOLD_CONNECTIONS =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" --threshold '$THRESHOLD_CONNECTIONS'"
 else
@@ -102,7 +102,7 @@ else
 fi
 
 # Close idle connections after certain duration (in seconds)
-IDLE_CONN_DURATION=$(Extract_json_field "$GNMI" '.idle_conn_duration')
+IDLE_CONN_DURATION=$(extract_field "$GNMI" '.idle_conn_duration')
 if [[ $IDLE_CONN_DURATION =~ ^[0-9]+$ ]]; then
     TELEMETRY_ARGS+=" --idle_conn_duration '$IDLE_CONN_DURATION'"
 else
@@ -115,7 +115,7 @@ else
 fi
 TELEMETRY_ARGS+=" -gnmi_native_write=false"
 
-USER_AUTH=$(Extract_json_field "$GNMI" '.user_auth')
+USER_AUTH=$(extract_field "$GNMI" '.user_auth')
 if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
     TELEMETRY_ARGS+=" --client_auth '$USER_AUTH'"
 
@@ -128,7 +128,7 @@ if [ ! -z "$USER_AUTH" ] && [  $USER_AUTH != "null" ]; then
             TELEMETRY_ARGS+=" --enable_crl"
         fi
 
-        CRL_EXPIRE_DURATION=$(Extract_json_field "$GNMI" '.crl_expire_duration')
+        CRL_EXPIRE_DURATION=$(extract_field "$GNMI" '.crl_expire_duration')
         if [ ! -z "$CRL_EXPIRE_DURATION" ] && [ $CRL_EXPIRE_DURATION != "null" ]; then
             TELEMETRY_ARGS+=" --crl_expire_duration '$CRL_EXPIRE_DURATION'"
         fi
