@@ -1,0 +1,67 @@
+module sonic-logging {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-logging";
+    prefix logging;
+
+    description "LOGGING YANG Module for SONiC-based OS";
+
+    revision 2022-08-27 {
+        description "First Revision";
+    }
+
+    container sonic-logging {
+
+        container LOGGING {
+
+            description "LOGGING part of config_db.json";
+
+            list LOGGING_LIST {
+
+                key "name";
+
+                leaf name {
+                    description "Name of the file to configure log rotation";
+                    type string {
+                        length 1..255;
+                    }
+                }
+
+                leaf disk_percentage {
+                    description "Define rotation size as disk percentage";
+                    type decimal64 {
+                        fraction-digits 3;
+                        range 0.001..100;
+                    }
+                }
+
+                leaf frequency {
+                    description "Log file rotation frequency";
+                    type string {
+                        pattern "daily|weekly|monthly|yearly";
+                    }
+                }
+
+                leaf max_number {
+                    description "Max number of rotated files to keep";
+                    type int32 {
+                        range "0..999999";
+                    }
+                }
+
+                leaf size {
+                    description "Log files are rotated only if they grow bigger then size MiB";
+                    type decimal64 {
+                        fraction-digits 3;
+                        range 0.001..3500.0;
+                    }
+                }
+            }
+            /* end of list LOG_FILES_LIST */
+        }
+        /* end of container LOGGING */
+    }
+    /* end of top level container */
+}
+/* end of module sonic-logging */
