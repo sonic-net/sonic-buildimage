@@ -99,7 +99,7 @@ conf_cmd = 'configure terminal'
 conf_bgp_cmd = lambda vrf, asn: [conf_cmd, 'router bgp %d vrf %s' % (asn, vrf)]
 conf_no_bgp_cmd = lambda vrf, asn: [conf_cmd, 'no router bgp %d%s' % (asn, '' if vrf == 'default' else ' vrf %s' % vrf)]
 conf_bgp_dft_cmd = lambda vrf, asn: conf_bgp_cmd(vrf, asn) + ['no bgp default ipv4-unicast']
-conf_bgp_af_cmd = lambda vrf, asn, af: conf_bgp_cmd(vrf, asn) + ['address-family %s unicast' % af]
+conf_bgp_af_cmd = lambda vrf, asn, af: conf_bgp_cmd(vrf, asn) + ['address-family %s %s' % (af, 'evpn' if af == 'l2vpn' else 'unicast')]
 
 bgp_globals_data = [
         CmdMapTestInfo('BGP_GLOBALS', 'default', {'local_asn': 100},
@@ -151,6 +151,45 @@ bgp_globals_data = [
                        conf_bgp_af_cmd('Vrf_red', 200, 'ipv6') + ['{}import vrf route-map test_map']),
 ]
 
+# Add admin status test cases for BGP_NEIGHBOR_AF and BGP_PEER_GROUP_AF
+address_families = ['ipv4', 'ipv6', 'l2vpn']
+admin_states = [
+    ('true', '{}neighbor {} activate'),
+    ('false', '{}no neighbor {} activate'),
+    ('up', '{}neighbor {} activate'),
+    ('down', '{}no neighbor {} activate')
+]
+
+def create_af_test_data(table_name):
+    test_data = []
+    for af in address_families:
+        af_key = f"{af}_{'evpn' if af == 'l2vpn' else 'unicast'}"
+        if af == 'ipv4':
+            entries = [('PG_IPV4_1', 'default'), ('PG_IPV4_2', 'Vrf_red')] if table_name == 'BGP_PEER_GROUP_AF' else \
+                     [('10.0.0.1', 'default'), ('20.0.0.1', 'Vrf_red')]
+        elif af == 'ipv6':
+            entries = [('PG_IPV6_1', 'default'), ('PG_IPV6_2', 'Vrf_red')] if table_name == 'BGP_PEER_GROUP_AF' else \
+                     [('2001:db8::1', 'default'), ('2001:db8::2', 'Vrf_red')]
+        else:  # l2vpn case
+            entries = [('PG_EVPN_1', 'default'), ('PG_EVPN_2', 'Vrf_red')] if table_name == 'BGP_PEER_GROUP_AF' else \
+                     [('10.0.0.1', 'default'), ('20.0.0.1', 'Vrf_red')]
+
+        for entry, vrf in entries:
+            for status, cmd_template in admin_states:
+                test_data.append(
+                    CmdMapTestInfo(
+                        table_name,
+                        f'{vrf}|{entry}|{af_key}',
+                        {'admin_status': status},
+                        conf_bgp_af_cmd(vrf, 100, af) + [cmd_template.format('', entry)]
+                    )
+                )
+    return test_data
+
+# Create test data for both neighbor and peer group AF
+neighbor_af_data = create_af_test_data('BGP_NEIGHBOR_AF')
+peer_group_af_data = create_af_test_data('BGP_PEER_GROUP_AF')
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def data_set_del_test(test_data, run_cmd):
@@ -178,3 +217,9 @@ def data_set_del_test(test_data, run_cmd):
 
 def test_bgp_globals():
     data_set_del_test(bgp_globals_data)
+
+def test_bgp_neighbor_af():
+    data_set_del_test(neighbor_af_data)
+
+def test_bgp_peer_group_af():
+    data_set_del_test(peer_group_af_data)
