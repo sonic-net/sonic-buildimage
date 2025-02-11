@@ -1,0 +1,554 @@
+From b6ea2d3a0fd74ce9c7323e07aef957c65597ecd0 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Mon, 17 Feb 2025 15:16:30 +0100
+Subject: [PATCH 1/3] tree schema UPDATE function for getting all leafref
+ targets
+
+Co-authored-by: Brad House <brad@brad-house.com>
+---
+ src/tree_schema.h        | 14 +++++++-
+ src/tree_schema_common.c | 76 +++++++++++++++++++++++++++++++++++-----
+ 2 files changed, 80 insertions(+), 10 deletions(-)
+
+diff --git a/src/tree_schema.h b/src/tree_schema.h
+index 0181bc6f9..c5a464262 100644
+--- a/src/tree_schema.h
++++ b/src/tree_schema.h
+@@ -1908,13 +1908,25 @@ LIBYANG_API_DECL struct lysc_must *lysc_node_musts(const struct lysc_node *node)
+ LIBYANG_API_DECL struct lysc_when **lysc_node_when(const struct lysc_node *node);
+ 
+ /**
+- * @brief Get the target node of a leafref node.
++ * @brief Get the target node of a leafref node. Function ::lysc_node_lref_targets() should be used instead
++ * to get all the leafref targets even for a union node.
+  *
+  * @param[in] node Leafref node.
+  * @return Leafref target, NULL on any error.
+  */
+ LIBYANG_API_DECL const struct lysc_node *lysc_node_lref_target(const struct lysc_node *node);
+ 
++/**
++ * @brief Get the target node(s) of a leafref node or union node with leafrefs.
++ *
++ * @param[in] node Term node to use.
++ * @param[out] set Set with all the leafref targets, may be empty if the node is a different type or the targets
++ * are not found.
++ * @return LY_SUCCESS on success.
++ * @return LY_ERR value on error.
++ */
++LIBYANG_API_DECL LY_ERR lysc_node_lref_targets(const struct lysc_node *node, struct ly_set **set);
++
+ /**
+  * @brief Callback to be called for every schema node in a DFS traversal.
+  *
+diff --git a/src/tree_schema_common.c b/src/tree_schema_common.c
+index e6af579b6..df5e88160 100644
+--- a/src/tree_schema_common.c
++++ b/src/tree_schema_common.c
+@@ -1804,21 +1804,24 @@ lysc_node_when(const struct lysc_node *node)
+     }
+ }
+ 
+-LIBYANG_API_DEF const struct lysc_node *
+-lysc_node_lref_target(const struct lysc_node *node)
++/**
++ * @brief Get the target node of a leafref.
++ *
++ * @param[in] node Context node for the leafref.
++ * @param[in] type Leafref type to resolve.
++ * @return Target schema node;
++ * @return NULL if the tearget is not found.
++ */
++static const struct lysc_node *
++lysc_type_lref_target(const struct lysc_node *node, const struct lysc_type *type)
+ {
+     struct lysc_type_leafref *lref;
+     struct ly_path *p;
+     const struct lysc_node *target;
+ 
+-    if (!node || !(node->nodetype & LYD_NODE_TERM)) {
+-        return NULL;
+-    }
++    assert(type->basetype == LY_TYPE_LEAFREF);
+ 
+-    lref = (struct lysc_type_leafref *)((struct lysc_node_leaf *)node)->type;
+-    if (lref->basetype != LY_TYPE_LEAFREF) {
+-        return NULL;
+-    }
++    lref = (struct lysc_type_leafref *)type;
+ 
+     /* compile the path */
+     if (ly_path_compile_leafref(node->module->ctx, node, NULL, lref->path,
+@@ -1834,6 +1837,61 @@ lysc_node_lref_target(const struct lysc_node *node)
+     return target;
+ }
+ 
++LIBYANG_API_DEF const struct lysc_node *
++lysc_node_lref_target(const struct lysc_node *node)
++{
++    if (!node || !(node->nodetype & LYD_NODE_TERM) || (((struct lysc_node_leaf *)node)->type->basetype != LY_TYPE_LEAFREF)) {
++        return NULL;
++    }
++
++    return lysc_type_lref_target(node, ((struct lysc_node_leaf *)node)->type);
++}
++
++LIBYANG_API_DEF LY_ERR
++lysc_node_lref_targets(const struct lysc_node *node, struct ly_set **set)
++{
++    LY_ERR rc = LY_SUCCESS;
++    struct lysc_type *type;
++    struct lysc_type_union *type_un;
++    const struct lysc_node *target;
++    LY_ARRAY_COUNT_TYPE u;
++
++    LY_CHECK_ARG_RET(NULL, node, (node->nodetype & LYD_NODE_TERM), LY_EINVAL);
++
++    /* allocate return set */
++    LY_CHECK_RET(ly_set_new(set));
++
++    type = ((struct lysc_node_leaf *)node)->type;
++    if (type->basetype == LY_TYPE_UNION) {
++        /* union with possible leafrefs */
++        type_un = (struct lysc_type_union *)type;
++
++        LY_ARRAY_FOR(type_un->types, u) {
++            if (type_un->types[u]->basetype != LY_TYPE_LEAFREF) {
++                continue;
++            }
++
++            target = lysc_type_lref_target(node, type_un->types[u]);
++            if (target) {
++                LY_CHECK_GOTO(rc = ly_set_add(*set, target, 1, NULL), cleanup);
++            }
++        }
++    } else if (type->basetype == LY_TYPE_LEAFREF) {
++        /* leafref */
++        target = lysc_type_lref_target(node, type);
++        if (target) {
++            LY_CHECK_GOTO(rc = ly_set_add(*set, target, 1, NULL), cleanup);
++        }
++    }
++
++cleanup:
++    if (rc) {
++        ly_set_free(*set, NULL);
++        *set = NULL;
++    }
++    return rc;
++}
++
+ enum ly_stmt
+ lysp_match_kw(struct ly_in *in, uint64_t *indent)
+ {
+
+From b7e024d82f63c9d8e278237ca6c65bb21a6bad45 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Mon, 17 Feb 2025 15:46:59 +0100
+Subject: [PATCH 2/3] tree schema UPDATE function for getting leafref backlinks
+
+Meaning all leafrefs that target a specific node.
+
+Co-authored-by: Brad House <brad@brad-house.com>
+---
+ src/tree_schema.h        |  16 +++++-
+ src/tree_schema_common.c | 103 +++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 118 insertions(+), 1 deletion(-)
+
+diff --git a/src/tree_schema.h b/src/tree_schema.h
+index c5a464262..baeb261c0 100644
+--- a/src/tree_schema.h
++++ b/src/tree_schema.h
+@@ -4,7 +4,7 @@
+  * @author Michal Vasko <mvasko@cesnet.cz>
+  * @brief libyang representation of YANG schema trees.
+  *
+- * Copyright (c) 2015 - 2022 CESNET, z.s.p.o.
++ * Copyright (c) 2015 - 2025 CESNET, z.s.p.o.
+  *
+  * This source code is licensed under BSD 3-Clause License (the "License").
+  * You may not use this file except in compliance with the License.
+@@ -1927,6 +1927,20 @@ LIBYANG_API_DECL const struct lysc_node *lysc_node_lref_target(const struct lysc
+  */
+ LIBYANG_API_DECL LY_ERR lysc_node_lref_targets(const struct lysc_node *node, struct ly_set **set);
+ 
++/**
++ * @brief Get all the leafref (or union with leafrefs) nodes that target a specific node.
++ *
++ * @param[in] ctx Context to use, may not be set if @p node is.
++ * @param[in] node Leafref target node to use for matching. If not set, all the leafref nodes are just collected.
++ * @param[in] match_ancestors If set, @p node is considered a match not only when a leafref targets it directly but
++ * even when an ancestor (parent) node of @p node is a target of the leafref.
++ * @param[out] set Set of matching leafref nodes.
++ * @return LY_SUCCESS on success.
++ * @return LY_ERR value on error.
++ */
++LIBYANG_API_DECL LY_ERR lysc_node_lref_backlinks(const struct ly_ctx *ctx, const struct lysc_node *node,
++        ly_bool match_ancestors, struct ly_set **set);
++
+ /**
+  * @brief Callback to be called for every schema node in a DFS traversal.
+  *
+diff --git a/src/tree_schema_common.c b/src/tree_schema_common.c
+index df5e88160..d62b01db8 100644
+--- a/src/tree_schema_common.c
++++ b/src/tree_schema_common.c
+@@ -1892,6 +1892,109 @@ lysc_node_lref_targets(const struct lysc_node *node, struct ly_set **set)
+     return rc;
+ }
+ 
++struct lysc_node_lref_backlings_arg {
++    const struct lysc_node *node;
++    ly_bool match_ancestors;
++    struct ly_set *set;
++};
++
++static LY_ERR
++lysc_node_lref_backlinks_clb(struct lysc_node *node, void *data, ly_bool *dfs_continue)
++{
++    LY_ERR rc = LY_SUCCESS;
++    struct lysc_node_lref_backlings_arg *arg = data;
++    struct ly_set *set = NULL;
++    const struct lysc_node *par;
++    uint32_t i;
++
++    (void)dfs_continue;
++
++    if (!(node->nodetype & LYD_NODE_TERM)) {
++        /* skip */
++        goto cleanup;
++    }
++
++    /* get all the leafref targets */
++    LY_CHECK_GOTO(rc = lysc_node_lref_targets(node, &set), cleanup);
++
++    /* ignore node if has no leafref targets */
++    if (!set->count) {
++        goto cleanup;
++    }
++
++    /* if just collecting leafrefs, we are done */
++    if (!arg->node) {
++        rc = ly_set_add(arg->set, node, 1, NULL);
++        goto cleanup;
++    }
++
++    /* check that the node (or the ancestor of) is the target of this leafref */
++    for (i = 0; i < set->count; ++i) {
++        for (par = set->snodes[i]; par; par = par->parent) {
++            if (par == arg->node) {
++                /* match */
++                break;
++            }
++
++            if (!arg->match_ancestors) {
++                /* not a match */
++                par = NULL;
++                break;
++            }
++        }
++
++        if (par) {
++            /* add into the set, matches */
++            LY_CHECK_GOTO(rc = ly_set_add(arg->set, node, 1, NULL), cleanup);
++            break;
++        }
++    }
++
++cleanup:
++    ly_set_free(set, NULL);
++    return rc;
++}
++
++LIBYANG_API_DEF LY_ERR
++lysc_node_lref_backlinks(const struct ly_ctx *ctx, const struct lysc_node *node, ly_bool match_ancestors,
++        struct ly_set **set)
++{
++    LY_ERR rc = LY_SUCCESS;
++    struct lysc_node_lref_backlings_arg arg = {0};
++    uint32_t idx = 0;
++    const struct lys_module *mod;
++
++    LY_CHECK_ARG_RET(NULL, ctx || node, set, LY_EINVAL);
++
++    if (!ctx) {
++        ctx = node->module->ctx;
++    }
++
++    /* allocate return set */
++    LY_CHECK_RET(ly_set_new(set));
++
++    /* prepare the arg */
++    arg.node = node;
++    arg.match_ancestors = match_ancestors;
++    arg.set = *set;
++
++    /* iterate across all loaded modules */
++    while ((mod = ly_ctx_get_module_iter(ctx, &idx))) {
++        if (!mod->compiled) {
++            continue;
++        }
++
++        LY_CHECK_GOTO(rc = lysc_module_dfs_full(mod, lysc_node_lref_backlinks_clb, &arg), cleanup);
++    }
++
++cleanup:
++    if (rc) {
++        ly_set_free(*set, NULL);
++        *set = NULL;
++    }
++    return rc;
++}
++
+ enum ly_stmt
+ lysp_match_kw(struct ly_in *in, uint64_t *indent)
+ {
+
+From 2f373f8677023e66c163617da4f11e78b61fa86d Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Mon, 17 Feb 2025 16:02:54 +0100
+Subject: [PATCH 3/3] tests UPDATE new leafref backlinks test
+
+Co-authored-by: Brad House <brad@brad-house.com>
+---
+ tests/utests/schema/test_schema.c | 220 ++++++++++++++++++++++++++++++
+ 1 file changed, 220 insertions(+)
+
+diff --git a/tests/utests/schema/test_schema.c b/tests/utests/schema/test_schema.c
+index cba2b2d45..45189e4b4 100644
+--- a/tests/utests/schema/test_schema.c
++++ b/tests/utests/schema/test_schema.c
+@@ -1887,6 +1887,225 @@ test_lysc_path(void **state)
+     free(path);
+ }
+ 
++/* TEST */
++static ly_bool
++compare_str_nodeset(struct ly_set *expected, struct ly_set *received)
++{
++    ly_bool is_error = 0;
++    size_t r;
++    size_t e;
++
++    for (e = 0; expected && e < expected->count; e++) {
++        const char *epath = expected->objs[e];
++        ly_bool found = 0;
++
++        for (r = 0; received && (r < received->count); r++) {
++            const char *rpath = received->objs[r];
++
++            if (!strcmp(epath, rpath)) {
++                found = 1;
++                break;
++            }
++        }
++
++        if (!found) {
++            fprintf(stderr, "< %s\n", epath);
++            is_error = 1;
++        }
++    }
++
++    /* If the count was equal and there was no error, no need to scan again */
++    if (expected && received && (expected->count == received->count) && !is_error) {
++        return 1;
++    }
++
++    for (r = 0; received && (r < received->count); r++) {
++        ly_bool found = 0;
++        const char *rpath = received->objs[r];
++
++        for (e = 0; expected && (e < expected->count) && !found; e++) {
++            char *epath = expected->objs[e];
++
++            if (!strcmp(epath, rpath)) {
++                found = 1;
++                break;
++            }
++        }
++        if (!found) {
++            fprintf(stderr, "> %s\n", rpath);
++        }
++    }
++
++    return 0;
++}
++
++static struct ly_set *
++strlist_to_pathset(const char **pathlist)
++{
++    struct ly_set *set = NULL;
++    uint32_t i;
++
++    if (!pathlist || !pathlist[0]) {
++        return NULL;
++    }
++
++    ly_set_new(&set);
++
++    for (i = 0; pathlist[i]; i++) {
++        ly_set_add(set, pathlist[i], 0, NULL);
++    }
++
++    return set;
++}
++
++static struct ly_set *
++lysc_nodeset_to_pathset(struct ly_set *nodeset)
++{
++    struct ly_set *set = NULL;
++    uint32_t i;
++
++    if (!nodeset || !nodeset->count) {
++        return NULL;
++    }
++
++    ly_set_new(&set);
++
++    for (i = 0; i < nodeset->count; i++) {
++        char *path = lysc_path(nodeset->snodes[i], LYSC_PATH_DATA, NULL, 0);
++
++        ly_set_add(set, path, 0, NULL);
++    }
++
++    return set;
++}
++
++static void
++test_lysc_backlinks(void **state)
++{
++    const char *expect1[] = {
++        /* Built-ins, not sure how to exclude those when not limiting by
++         * path */
++        "/ietf-yang-library:yang-library/module-set/module/deviation",
++        "/ietf-yang-library:yang-library/schema/module-set",
++        "/ietf-yang-library:yang-library/datastore/schema",
++        "/ietf-yang-library:yang-library-update/content-id",
++        "/ietf-yang-library:yang-library-change/module-set-id",
++        /* Normal expected */
++        "/b:my_extref_list/my_extref",
++        "/a:refstr",
++        "/a:refnum",
++        "/b:my_extref_union",
++        NULL
++    };
++
++    const char *expect2[] = {
++        "/b:my_extref_list/my_extref",
++        "/a:refstr",
++        "/b:my_extref_union",
++        NULL
++    };
++
++    const char *expect3[] = {
++        "/b:my_extref_list/my_extref",
++        "/a:refstr",
++        "/a:refnum",
++        "/b:my_extref_union",
++        NULL
++    };
++
++    struct {
++        const char *match_path;
++        ly_bool match_ancestors;
++        const char **expected_paths;
++    } tests[] = {
++        {NULL, 0, expect1},
++        {"/a:my_list/my_leaf_string", 0, expect2},
++        {"/a:my_list", 1, expect3}
++    };
++    const char *str;
++    uint32_t i;
++
++    str = "module a {\n"
++            "    namespace urn:a;\n"
++            "    prefix a;\n"
++            "    list my_list {\n"
++            "        key my_leaf_string;\n"
++            "        leaf my_leaf_string {\n"
++            "            type string;\n"
++            "        }\n"
++            "        leaf my_leaf_number {\n"
++            "            type uint32;\n"
++            "        }\n"
++            "    }\n"
++            "    leaf refstr {\n"
++            "        type leafref {\n"
++            "            path \"../my_list/my_leaf_string\";\n"
++            "        }\n"
++            "    }\n"
++            "    leaf refnum {\n"
++            "        type leafref {\n"
++            "            path \"../my_list/my_leaf_number\";\n"
++            "        }\n"
++            "    }\n"
++            "}\n";
++
++    assert_int_equal(lys_parse_mem(UTEST_LYCTX, str, LYS_IN_YANG, NULL), LY_SUCCESS);
++    CHECK_LOG_CTX(NULL, NULL, 0);
++
++    str = "module b {\n"
++            "    namespace urn:b;\n"
++            "    prefix b;\n"
++            "    import a {\n"
++            "        prefix a;\n"
++            "    }\n"
++            "    list my_extref_list {\n"
++            "        key my_leaf_string;\n"
++            "        leaf my_leaf_string {\n"
++            "            type string;\n"
++            "        }\n"
++            "        leaf my_extref {\n"
++            "            type leafref {\n"
++            "                path \"/a:my_list/a:my_leaf_string\";\n"
++            "            }\n"
++            "        }\n"
++            "    }\n"
++            "    leaf my_extref_union {\n"
++            "        type union {\n"
++            "            type leafref {\n"
++            "                path \"/a:my_list/a:my_leaf_string\";\n"
++            "            }\n"
++            "            type leafref {\n"
++            "                path \"/a:my_list/a:my_leaf_number\";\n"
++            "            }\n"
++            "            type uint32;\n"
++            "         }\n"
++            "    }\n"
++            "}\n";
++
++    assert_int_equal(lys_parse_mem(UTEST_LYCTX, str, LYS_IN_YANG, NULL), LY_SUCCESS);
++    CHECK_LOG_CTX(NULL, NULL, 0);
++
++    for (i = 0; i < sizeof tests / sizeof *tests; i++) {
++        const struct lysc_node *node = NULL;
++        struct ly_set *set = NULL, *expected = NULL, *received = NULL;
++
++        if (tests[i].match_path) {
++            node = lys_find_path(UTEST_LYCTX, NULL, tests[i].match_path, 0);
++            assert_non_null(node);
++        }
++
++        assert_int_equal(LY_SUCCESS, lysc_node_lref_backlinks(UTEST_LYCTX, node, tests[i].match_ancestors, &set));
++
++        expected = strlist_to_pathset(tests[i].expected_paths);
++        received = lysc_nodeset_to_pathset(set);
++        assert_int_equal(1, compare_str_nodeset(expected, received));
++
++        ly_set_free(expected, NULL);
++        ly_set_free(received, free);
++        ly_set_free(set, NULL);
++    }
++}
++
+ int
+ main(void)
+ {
+@@ -1909,6 +2128,7 @@ main(void)
+         UTEST(test_extension_compile),
+         UTEST(test_ext_recursive),
+         UTEST(test_lysc_path),
++        UTEST(test_lysc_backlinks),
+     };
+ 
+     return cmocka_run_group_tests(tests, NULL, NULL);
