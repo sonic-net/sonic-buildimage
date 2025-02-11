@@ -190,6 +190,22 @@ def create_af_test_data(table_name):
 neighbor_af_data = create_af_test_data('BGP_NEIGHBOR_AF')
 peer_group_af_data = create_af_test_data('BGP_PEER_GROUP_AF')
 
+# Create test data for neighbor shutdown
+neighbor_shutdown_data = [
+    CmdMapTestInfo('BGP_NEIGHBOR', '10.1.1.1',
+                  {'admin_status': 'down', 'shutdown_message': 'maintenance'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.1.1.1 shutdown maintenance']),
+    CmdMapTestInfo('BGP_NEIGHBOR', '10.1.1.2',
+                  {'admin_status': 'false', 'shutdown_message': 'planned outage'},
+                  conf_bgp_cmd('default', 100) + ['{}neighbor 10.1.1.2 shutdown planned outage']),
+    CmdMapTestInfo('BGP_NEIGHBOR', '10.1.1.4',
+                  {'admin_status': 'up'},
+                  conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.4 shutdown']),
+    CmdMapTestInfo('BGP_NEIGHBOR', '10.1.1.5',
+                  {'admin_status': 'true'},
+                  conf_bgp_cmd('default', 100) + ['{}no neighbor 10.1.1.5 shutdown'])
+]
+
 @patch.dict('sys.modules', **mockmapping)
 @patch('frrcfgd.frrcfgd.g_run_command')
 def data_set_del_test(test_data, run_cmd):
@@ -223,3 +239,6 @@ def test_bgp_neighbor_af():
 
 def test_bgp_peer_group_af():
     data_set_del_test(peer_group_af_data)
+
+def test_bgp_neighbor_shutdown():
+    data_set_del_test(neighbor_shutdown_data)
