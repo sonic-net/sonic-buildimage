@@ -2,36 +2,32 @@
 SHELL = /bin/bash
 .SHELLFLAGS += -e
 
-LIBYANG_URL = https://sonicstorage.blob.core.windows.net/debian/pool/main/liby/libyang
+LIBYANG_URL = http://debian-archive.trafficmanager.net/debian/pool/main/liby/libyang
 
-DSC_FILE = libyang2_$(LIBYANG2_FULLVERSION).dsc
-ORIG_FILE = libyang2_$(LIBYANG2_VERSION).orig.tar.xz
-DEBIAN_FILE = libyang2_$(LIBYANG2_FULLVERSION).debian.tar.xz
+DSC_FILE = libyang_$(LIBYANG3_FULLVERSION).dsc
+ORIG_FILE = libyang_$(LIBYANG3_VERSION).orig.tar.xz
+DEBIAN_FILE = libyang_$(LIBYANG3_FULLVERSION).debian.tar.xz
 
 DSC_FILE_URL = $(LIBYANG_URL)/$(DSC_FILE)
 ORIG_FILE_URL = $(LIBYANG_URL)/$(ORIG_FILE)
 DEBIAN_FILE_URL = $(LIBYANG_URL)/$(DEBIAN_FILE)
 
-MAIN_TARGET = $(LIBYANG2)
-DERIVED_TARGETS = $(LIBYANG2_DEV) $(LIBYANG2_DBG) $(LIBYANG2_TOOLS) $(LIBYANG2_TOOLS_DBG)
+MAIN_TARGET = $(LIBYANG3)
+DERIVED_TARGETS = $(LIBYANG3_DEV) $(LIBYANG3_DBG) $(LIBYANG3_TOOLS) $(LIBYANG3_TOOLS_DBG)
 
 $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
         # Obtaining the libyang
-	rm -fr ./libyang2-$(LIBYANG2_VERSION)
+	rm -fr ./libyang-$(LIBYANG3_VERSION)
 
 	# download debian libyang
 	wget -NO "$(DSC_FILE)" $(DSC_FILE_URL)
 	wget -NO "$(ORIG_FILE)" $(ORIG_FILE_URL)
 	wget -NO "$(DEBIAN_FILE)" $(DEBIAN_FILE_URL)
-	dpkg-source -x libyang2_$(LIBYANG2_FULLVERSION).dsc
+	dpkg-source -x libyang_$(LIBYANG3_FULLVERSION).dsc
 
-	pushd libyang2-$(LIBYANG2_VERSION)
-	#The package libyang2.1.148 is taken from debian trixie, which only has dpkg-dev version 1.21.22
-	#The bullseye package has dpkg-dev version 1.20.13
-	#The VS package has dpkg-dev version 1.19.8
-	sed -i 's/dpkg-dev (>= 1.22.5)/dpkg-dev (>= 1.19.8)/' debian/control
-	#sed -i 's/set(LIBYANG_MAJOR_SOVERSION 1)/set(LIBYANG_MAJOR_SOVERSION 2)/' CMakeLists.txt
-	#sed -i 's/libyang2/libyang2/' debian/libyang2.install
+	pushd libyang-$(LIBYANG3_VERSION)
+	# The package libyang3.7.8 is taken from debian trixie
+
 	# Enable large file support for 32-bit arch
 	echo 'add_definitions(-D_FILE_OFFSET_BITS=64)' >> CMakeLists.txt
 
