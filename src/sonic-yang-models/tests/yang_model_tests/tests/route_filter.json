@@ -17,8 +17,7 @@
     },
     "ROUTE_MAP_INVALID_STMT": {
         "desc": "Configure route map table with wrong value for stmt_name.",
-        "eStrKey": "InvalidValue",
-        "eStr": ["stmt_name"]
+        "eStrKey": "Bounds"
     },
     "ROUTE_MAP_INVALID_OPERATION_TYPE": {
         "desc": "Configure route map table with invalid route operation type.",
