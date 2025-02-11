@@ -1509,6 +1509,30 @@ def hdl_admin_status(daemon, cmd_str, op, st_idx, args, data):
 
     return cmd_list
 
+def hdl_admin_status_shutdown_msg(daemon, cmd_str, op, st_idx, args, data):
+    if len(args) < 2:
+        return None
+
+    cmd_list = []
+    status = args[st_idx]
+    shutdown_msg = args[st_idx + 1] if op != CachedDataWithOp.OP_DELETE else ""
+
+    # Convert up/down to true/false if needed
+    if status == 'up':
+        status = 'true'
+    elif status == 'down':
+        status = 'false'
+    elif status not in ['true', 'false']:
+        return None
+
+    # Apply the command with appropriate no prefix
+    cmd_list.append(cmd_str.format(
+        CommandArgument(daemon, True, args[0]),
+        CommandArgument(daemon, True, shutdown_msg),
+        no=CommandArgument(daemon, (status == 'false'))).rstrip())
+
+    return cmd_list
+
 class ExtConfigDBConnector(ConfigDBConnector):
     def __init__(self, ns_attrs = None):
         super(ExtConfigDBConnector, self).__init__()
@@ -1870,7 +1894,7 @@ class BGPConfigDaemon:
     cmn_key_map = [('asn&peer_type',                        '{no:no-prefix}neighbor {} remote-as {}'),
                    (['local_asn', '+local_as_no_prepend',
                      '+local_as_replace_as'],               '{no:no-prefix}neighbor {} local-as {} {:no-prepend} {:replace-as}'),
-                   (['admin_status', '+shutdown_message'],  '{no:no-prefix}neighbor {} shutdown {:shutdown-msg}', hdl_admin_status),
+                   (['admin_status', '+shutdown_message'],  '{no:no-prefix}neighbor {} shutdown {:shutdown-msg}', hdl_admin_status_shutdown_msg),
                    ('local_addr',                           '{no:no-prefix}neighbor {} update-source {}'),
                    ('name',                                 '{no:no-prefix}neighbor {} description {}'),
                    (['ebgp_multihop', '+ebgp_multihop_ttl'],'{no:no-prefix}neighbor {} ebgp-multihop {}', ['true', 'false']),
