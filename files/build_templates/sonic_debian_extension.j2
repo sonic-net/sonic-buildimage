@@ -765,14 +765,14 @@ if [ "$INCLUDE_FIPS" == y ]; then
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y remove openssh-client
 fi
 
+# Purge python3-dev before install SONiC packages, because SONiC may install a patched version of python, purge after it will get dependency break error.
+sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y python3-dev
+
 {% if installer_debs.strip() -%}
 {% for deb in installer_debs.strip().split(' ') -%}
 sudo dpkg --root=$FILESYSTEM_ROOT -i {{deb}} || sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
 {% endfor %}
 {% endif %}
-
-# Purge python3-dev before hold SONiC packages, because SONiC may install a patched version of python, purge after it will get dependency break error.
-sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get purge -y python3-dev
 
 {% if installer_debs.strip() -%}
 {% for deb in installer_debs.strip().split(' ') -%}
