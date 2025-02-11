@@ -217,6 +217,7 @@ module sonic-route-map {
                             pattern 'Vlan([0-9]{1,3}|[1-3][0-9]{3}|[4][0][0-8][0-9]|[4][0][9][0-4])';
                         }
                     }
+                    ordered-by user;
                     description
                         "IP addresse or interface for match operation.";
                     max-elements 1;
@@ -224,6 +225,7 @@ module sonic-route-map {
 
                 leaf-list match_tag {
                     type uint32;
+                    ordered-by user;
                     description
                         "Value of the tag match member";
                     max-elements 1;
@@ -333,6 +335,7 @@ module sonic-route-map {
 
                 leaf-list set_community_inline {
                     type string;
+                    ordered-by user;
                     description "Set community string";
                 }
 
@@ -345,6 +348,7 @@ module sonic-route-map {
 
                 leaf-list set_ext_community_inline {
                     type string;
+                    ordered-by user;
                     description "Set extended community string";
                 }
 
