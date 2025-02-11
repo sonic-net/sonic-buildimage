@@ -257,6 +257,7 @@ module sonic-device_metadata {
 
                 leaf-list supporting_bulk_counter_groups {
                     type string;
+                    ordered-by user;
                     description "This field contains a list of counter groups that support bulk operation.";
                 }
 
