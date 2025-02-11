@@ -121,23 +121,28 @@ class TestDeviceInfo(object):
             open_mocked.assert_called_once_with(device_info.SONIC_VERSION_YAML_PATH)
 
     @mock.patch("sonic_py_common.device_info.get_platform_info")
-    def test_is_chassis(self, mock_platform_info):
+    @mock.patch("sonic_py_common.device_info.is_platform_chassis_module")
+    def test_is_chassis(self, mock_is_platform_chassis_module, mock_platform_info):
         mock_platform_info.return_value = {"switch_type": "npu"}
+        mock_is_platform_chassis_module.return_value = False
         assert device_info.is_chassis() == False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
 
         mock_platform_info.return_value = {"switch_type": "voq"}
+        mock_is_platform_chassis_module.return_value = True
         assert device_info.is_voq_chassis() == True
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == True
 
         mock_platform_info.return_value = {"switch_type": "chassis-packet"}
+        mock_is_platform_chassis_module.return_value = False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == True
         assert device_info.is_chassis() == True
 
         mock_platform_info.return_value = {}
+        mock_is_platform_chassis_module.return_value = False
         assert device_info.is_voq_chassis() == False
         assert device_info.is_packet_chassis() == False
         assert device_info.is_chassis() == False

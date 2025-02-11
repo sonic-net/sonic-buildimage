@@ -18,6 +18,12 @@ CONTAINER_PLATFORM_PATH = USR_SHARE_SONIC_PATH + "/platform"
 MACHINE_CONF_PATH = "/host/machine.conf"
 SONIC_VERSION_YAML_PATH = "/etc/sonic/sonic_version.yml"
 
+# chassisdb config file
+CHASSISDB_CONF_FILENAME = "chassisdb.conf"
+
+# chassisdb.conf in /etc/sonic
+ETC_SONIC_CHASSISDB_CONF_FILE = "/etc/sonic/chassisdb.conf"
+
 # Port configuration file names
 PORT_CONFIG_FILE = "port_config.ini"
 PLATFORM_JSON_FILE = "platform.json"
@@ -239,6 +245,28 @@ def get_platform_env_conf_file_path():
     for platform_env_conf_file_path in platform_env_conf_path_candidates:
         if os.path.isfile(platform_env_conf_file_path):
             return platform_env_conf_file_path
+
+    return None
+
+def get_chassisdb_conf_file_path():
+    """
+    Retrieves the path to the chassidb configuration file on the device
+
+    Returns:
+        A string containing the path to the chassisdb configuration file on success,
+        None on failure
+    """
+    chassisdb_conf_path_candidates = []
+
+    chassisdb_conf_path_candidates.append(os.path.join(CONTAINER_PLATFORM_PATH, CHASSISDB_CONF_FILENAME))
+
+    platform = get_platform()
+    if platform:
+        chassisdb_conf_path_candidates.append(os.path.join(HOST_DEVICE_PATH, platform, CHASSISDB_CONF_FILENAME))
+
+    for chassisdb_conf_file_path in chassisdb_conf_path_candidates:
+        if os.path.isfile(chassisdb_conf_file_path):
+            return chassisdb_conf_file_path
 
     return None
 
@@ -541,6 +569,18 @@ def get_platform_info(config_db=None):
 
     return hw_info_dict
 
+def is_platform_chassis_module():
+    '''
+    This function check the chassisdb.conf and it's non_supervisor value to determine if it chassis module 
+    Return: True if it chassis, Flase if it is not chassis
+    '''
+    module_chassisdb_conf_file_path = get_chassisdb_conf_file_path()
+    if module_chassisdb_conf_file_path is None:
+        return False
+    if os.path.isfile(ETC_SONIC_CHASSISDB_CONF_FILE):
+        if not is_supervisor():
+            return False
+    return True
 
 def get_chassis_info():
     """
@@ -601,7 +641,7 @@ def is_packet_chassis():
 
 
 def is_chassis():
-    return is_voq_chassis() or is_packet_chassis()
+    return (is_voq_chassis() and is_platform_chassis_module()) or is_packet_chassis()
 
 
 def is_smartswitch():
@@ -647,6 +687,21 @@ def is_supervisor():
                     return True
         return False
 
+def is_database_chassis_supported():
+    chassisdb_conf_file_path = get_chassisdb_conf_file_path()
+    if chassisdb_conf_file_path is None:
+        return False
+    with open(chassisdb_conf_file_path) as chassisdb_conf_file:
+        for line in chassisdb_conf_file:
+            tokens = line.split('=')
+            if len(tokens) < 2:
+               continue
+            if tokens[0].lower() == 'start_chassis_db':
+                val = tokens[1].strip()
+                if val == '1':
+                    return True
+        return False
+    
 # Check if this platform has macsec capability.
 def is_macsec_supported():
     supported = 0

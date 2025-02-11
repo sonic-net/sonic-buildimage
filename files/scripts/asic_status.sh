@@ -1,9 +1,19 @@
 #!/bin/bash
 
+PLATFORM="$(sonic-cfggen -H -v DEVICE_METADATA.localhost.platform)"
+PLATFORM_ENV_CONF=/usr/share/sonic/device/$PLATFORM/platform_env.conf
+
 is_chassis_supervisor() {
-    if [ -f /etc/sonic/chassisdb.conf ]; then
-        true
-        return
+    if [ -f "$PLATFORM_ENV_CONF" ]; then
+        source $PLATFORM_ENV_CONF
+         if [ -v supervisor ]; then
+            if [ $supervisor -eq 1 ]; then
+                true
+                return
+            fi
+         fi
+         false
+         return
     fi
     false
     return
