@@ -120,6 +120,8 @@
     },
 {% if (generate_tc_to_queue_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_queue_map() }}
+{% elif (generate_tc_to_queue_map_per_sku is defined) %}
+    {{ generate_tc_to_queue_map_per_sku() }}
 {% else %}
     "TC_TO_QUEUE_MAP": {
         "AZURE": {
