@@ -1,11 +1,11 @@
 {
     "RESTAPI_TABLE_WITH_INCORRECT_CERT": {
         "desc": "RESTAPI TABLE_WITH_INCORRECT_CERT failure.",
-        "eStr": ["Value", "does not satisfy the constraint"]
+        "eStrKey": "Pattern"
     },
     "RESTAPI_TABLE_WITH_INCORRECT_CLIENT": {
         "desc": "RESTAPI TABLE_WITH_INCORRECT_CLIENT failure.",
-        "eStr": ["Value", "does not satisfy the constraint"]
+        "eStrKey": "Pattern"
     },
     "RESTAPI_TABLE_WITH_VALID_CONFIG": {
         "desc": "RESTAPI TABLE WITH VALID CONFIG."

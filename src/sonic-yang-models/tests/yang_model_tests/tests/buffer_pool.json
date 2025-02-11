@@ -48,7 +48,7 @@
     },
     "BUFFER_POOL_WRONG_PERCENTAGE_NEGATIVE_VALUE": {
         "desc": "BUFFER_POOL_WRONG_PERCENTAGE_NEGATIVE_VALUE pattern failure.",
-        "eStr": "Invalid value"
+        "eStrKey": "Bounds"
     },
     "BUFFER_POOL_WRONG_PERCENTAGE_NOT_A_NUMBER_VALUE": {
         "desc": "BUFFER_POOL_WRONG_PERCENTAGE_NOT_A_NUMBER_VALUE pattern failure.",
