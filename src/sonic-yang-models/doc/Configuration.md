@@ -1370,7 +1370,10 @@ The configuration is applied globally for each ECMP and LAG on a switch.
         "config": {
             "enabled": "true",
             "num_dumps": "3",
-            "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M"
+            "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M",
+            "remote": "true",
+            "ssh_string": "username@ipaddress",
+            "ssh_path": "a/b/c"
          }
      }
 }
