@@ -2341,6 +2341,7 @@
            "Ethernet0": {
                "dot1p_to_tc_map" : "Dot1p_to_tc_map1",
                "dscp_to_tc_map": "Dscp_to_tc_map1",
+               "tc_to_dscp_map": "tc_to_dscp_map1",
                "tc_to_queue_map": "tc_to_q_map1",
                "tc_to_pg_map": "tc_to_pg_map1",
                "pfc_to_queue_map": "pfc_prio_to_q_map1",
@@ -2352,12 +2353,13 @@
             "Ethernet4": {
               "dot1p_to_tc_map" : "Dot1p_to_tc_map2",
               "dscp_to_tc_map": "Dscp_to_tc_map2",
-	          "tc_to_queue_map": "tc_to_q_map2",
-	          "tc_to_pg_map": "tc_to_pg_map2",
-	          "pfc_to_queue_map": "pfc_prio_to_q_map2",
-	          "pfc_to_pg_map"   : "pfc_prio_to_pg_map2",
-	          "pfc_enable"      : "3,4",
-	          "pfcwd_sw_enable" : "3,4"
+              "tc_to_dscp_map": "tc_to_dscp_map2",
+              "tc_to_queue_map": "tc_to_q_map2",
+              "tc_to_pg_map": "tc_to_pg_map2",
+              "pfc_to_queue_map": "pfc_prio_to_q_map2",
+              "pfc_to_pg_map"   : "pfc_prio_to_pg_map2",
+              "pfc_enable"      : "3,4",
+              "pfcwd_sw_enable" : "3,4"
             }
         },
 
