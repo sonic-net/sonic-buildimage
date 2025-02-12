@@ -339,6 +339,13 @@ function postStartAction()
             docker cp $PSENSOR pmon:/usr/bin/
         fi
     fi
+{%- elif docker_container_name == "eventd" %}
+    HOST_RSYSLOG_PLUGIN_CONF_FILE="/etc/rsyslog.d/host_events.conf"
+    if [ ! -f ${HOST_RSYSLOG_PLUGIN_CONF_FILE} ]; then
+        for f in $(docker exec -i eventd ls /etc/rsyslog.d/rsyslog_plugin_conf); do docker cp eventd:/etc/rsyslog.d/rsyslog_plugin_conf/$f /etc/rsyslog.d/; done
+        systemctl reset-failed rsyslog
+        systemctl restart rsyslog
+    fi
 {%- else %}
     : # nothing
 {%- endif %}

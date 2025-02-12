@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,12 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 declare -A rshim2dpu
-rshim2dpu["rshim0"]="dpu0"
-rshim2dpu["rshim1"]="dpu1"
-rshim2dpu["rshim2"]="dpu2"
-rshim2dpu["rshim3"]="dpu3"
 
 command_name="sonic-bfb-installer.sh"
 usage(){
@@ -37,15 +32,17 @@ WORK_DIR=`mktemp -d -p "$DIR"`
 
 bfb_install_call(){
     #Example:sudo bfb-install -b <full path to image> -r rshim<id>
-    local appendix=$3
+    local appendix=$4
     local -r rshim=$1
+    local dpu=$2
+    local bfb=$3
     local result_file=$(mktemp "${WORK_DIR}/result_file.XXXXX")
     if [ -z "$appendix" ]; then
-        local cmd="timeout 600s bfb-install -b $2 -r $1"
+        local cmd="timeout 600s bfb-install -b $bfb -r $1"
     else
-        local cmd="timeout 600s bfb-install -b $2 -r $1 -c $appendix"
+        local cmd="timeout 600s bfb-install -b $bfb -r $1 -c $appendix"
     fi
-    echo "Installing bfb image on DPU connected to $1 using $cmd"
+    echo "Installing bfb image on DPU connected to $rshim using $cmd"
     local indicator="$rshim:"
     trap 'kill_ch_procs' SIGINT SIGTERM SIGHUP
     eval "$cmd"  > >(while IFS= read -r line; do echo "$indicator $line"; done >> "$result_file") 2>&1 &
@@ -72,14 +69,11 @@ bfb_install_call(){
     if [ $exit_status -ne 0 ] ||[ $verbose = true ]; then
         cat "$result_file"
     fi
-
-    dpu=${rshim2dpu[$rshim]}
     echo "$rshim: Resetting DPU $dpu"
     cmd="dpuctl dpu-reset --force $dpu"
     if [[ $verbose == true ]]; then
         cmd="$cmd -v"
     fi
-
     eval $cmd
 }
 
@@ -120,6 +114,31 @@ validate_rshim(){
     done
 }
 
+get_mapping(){
+    local provided_list=("$@")
+
+    for item1 in "${provided_list[@]}"; do
+        var=$(dpumap.sh rshim2dpu $item1)
+        if [ $? -ne 0 ]; then
+            echo "$item1 does not have a valid dpu mapping!"
+            exit 1
+        fi
+        rshim2dpu["$item1"]="$var"
+    done
+}
+
+validate_dpus(){
+    local provided_list=("$@")
+    for item1 in "${provided_list[@]}"; do
+        var=$(dpumap.sh dpu2rshim $item1)
+        if [ $? -ne 0 ]; then
+            echo "$item1 does not have a valid rshim mapping!"
+            exit 1
+        fi
+        rshim2dpu["$var"]="$item1"
+        dev_names+=("$var")
+    done
+}
 check_for_root(){
     if [ "$EUID" -ne 0 ]
         then echo "Please run the script in sudo mode"
@@ -144,6 +163,10 @@ main(){
                 shift;
                 rshim_dev=$1
             ;;
+            --dpu|-d)
+                shift;
+                dpus=$1
+	    ;;
             --config|-c)
                 shift;
                 config=$1
@@ -170,18 +193,33 @@ main(){
         exit 1
     fi
     if [ -z "$rshim_dev" ]; then
-        echo "No rshim interfaces provided!"
-        usage
-        exit 1
-    else
-        if [ "$rshim_dev" = "all" ]; then
+        if [ -z "$dpus" ]; then
+        	echo "No rshim interfaces provided!"
+        	usage
+        	exit 1
+       fi
+       if [ "$dpus" = "all" ]; then
+            rshim_dev="$dpus" 
+       else
+            IFS=',' read -ra dpu_names <<< "$dpus"
+            validate_dpus ${dpu_names[@]}
+       fi
+    fi
+
+
+    if [ "$rshim_dev" = "all" ]; then
             dev_names=("${dev_names_det[@]}")
             echo "${#dev_names_det[@]} rshim interfaces detected:"
             echo "${dev_names_det[@]}"
         else
-            IFS=',' read -ra dev_names <<< "$rshim_dev"
+            if [ ${#dev_names[@]} -eq 0 ]; then
+                # If the list is not empty, the list is obtained from the DPUs
+                IFS=',' read -ra dev_names <<< "$rshim_dev"
+            fi
             validate_rshim ${dev_names[@]}
-        fi
+    fi
+    if [ ${#rshim2dpu[@]} -eq 0 ]; then
+        get_mapping ${dev_names[@]}
     fi
     # Sort list of rshim interfaces so that config is applied in a known order
     sorted_devs=($(for i in "${dev_names[@]}"; do echo $i; done | sort))
@@ -211,7 +249,9 @@ main(){
     for i in "${!sorted_devs[@]}"
     do
         :
-        bfb_install_call ${sorted_devs[$i]} $bfb ${arr[$i]} &
+        rshim_name=${sorted_devs[$i]}
+        dpu_name=${rshim2dpu[$rshim_name]}
+        bfb_install_call ${rshim_name} ${dpu_name} $bfb ${arr[$i]} &
     done
     wait
 }
@@ -238,3 +278,4 @@ kill_ch_procs(){
 appendix=
 verbose=false
 main "$@"
+

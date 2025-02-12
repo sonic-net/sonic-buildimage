@@ -35,7 +35,6 @@ def check_docker_image(image_name):
         DOCKER_CLIENT.images.get(image_name)
         return True
     except (docker.errors.ImageNotFound, docker.errors.APIError) as err:
-        print("Failed to get image '{}'. Error: '{}'".format(image_name, err))
         return False
 
 def get_expected_running_containers():
@@ -79,7 +78,7 @@ def get_expected_running_containers():
                 # if gnmi container image is present, check gnmi container instead of telemetry
                 ret = check_docker_image("docker-sonic-gnmi")
                 if not ret:
-                    print("Ignoring telemetry container check on image which has no corresponding docker image")
+                    print("Ignoring telemetry container check on image which has no corresponding telemetry or gnmi docker image")
                 else:
                     container_list.append("gnmi")
                 continue

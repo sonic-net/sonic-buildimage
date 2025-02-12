@@ -35,7 +35,7 @@ module sonic-srv6 {
                     type uint8 {
                         range "1..128";
                     }
-                    
+
                     default 32;
                 }
 
@@ -49,7 +49,7 @@ module sonic-srv6 {
 
                 leaf func_len {
                     type uint8 {
-                        range "1..128";
+                        range "0..128";
                     }
 
                     default 16;
@@ -127,6 +127,6 @@ module sonic-srv6 {
                                   substring-before(/srv6:sonic-srv6/SRV6_MY_LOCATORS/SRV6_MY_LOCATORS_LIST[current()/locator]/prefix, "::"))';
             }
         }
-        
+
     }
 }
