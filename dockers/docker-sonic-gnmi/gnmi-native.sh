@@ -66,7 +66,12 @@ if [ -z "$GNMI" ]; then
     PORT=8080
 else
     PORT=$(extract_field "$GNMI" '.port')
+    if ! [[ $PORT =~ ^[0-9]+$ ]]; then
+        echo "Incorrect port value ${PORT}, expecting positive integers" >&2
+        exit $INCORRECT_TELEMETRY_VALUE
+    fi
 fi
+
 TELEMETRY_ARGS+=" --port '$PORT'"
 
 CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
