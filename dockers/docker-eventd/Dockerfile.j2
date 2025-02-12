@@ -28,9 +28,27 @@ RUN apt-get clean -y         && \
     apt-get autoremove -y    && \
     rm -rf /debs
 
+RUN mkdir -p /etc/rsyslog.d/rsyslog_plugin_conf
+
 COPY ["start.sh", "/usr/bin/"]
 COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
 COPY ["files/supervisor-proc-exit-listener", "/usr/bin"]
 COPY ["critical_processes", "/etc/supervisor"]
+COPY ["*.json", "/etc/rsyslog.d/rsyslog_plugin_conf/"]
+COPY ["files/rsyslog_plugin.conf.j2", "/etc/rsyslog.d/rsyslog_plugin_conf/"]
+
+RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin_conf/rsyslog_plugin.conf.j2 /etc/rsyslog.d/rsyslog_plugin_conf/host_events_info.json > /etc/rsyslog.d/rsyslog_plugin_conf/host_events.conf
+RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin_conf/rsyslog_plugin.conf.j2 /etc/rsyslog.d/rsyslog_plugin_conf/bgp_events_info.json > /etc/rsyslog.d/rsyslog_plugin_conf/bgp_events.conf
+RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin_conf/rsyslog_plugin.conf.j2 /etc/rsyslog.d/rsyslog_plugin_conf/dhcp_relay_events_info.json > /etc/rsyslog.d/rsyslog_plugin_conf/dhcp_relay_events.conf
+RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin_conf/rsyslog_plugin.conf.j2 /etc/rsyslog.d/rsyslog_plugin_conf/swss_events_info.json > /etc/rsyslog.d/rsyslog_plugin_conf/swss_events.conf
+RUN j2 -f json /etc/rsyslog.d/rsyslog_plugin_conf/rsyslog_plugin.conf.j2 /etc/rsyslog.d/rsyslog_plugin_conf/syncd_events_info.json > /etc/rsyslog.d/rsyslog_plugin_conf/syncd_events.conf
+
+
+RUN rm -f /etc/rsyslog.d/rsyslog_plugin_conf/rsyslog_plugin.conf.j2
+RUN rm -f /etc/rsyslog.d/rsyslog_plugin_conf/host_events_info.json
+RUN rm -f /etc/rsyslog.d/rsyslog_plugin_conf/bgp_events_info.json
+RUN rm -f /etc/rsyslog.d/rsyslog_plugin_conf/dhcp_relay_events_info.json
+RUN rm -f /etc/rsyslog.d/rsyslog_plugin_conf/swss_events_info.json
+RUN rm -f /etc/rsyslog.d/rsyslog_plugin_conf/syncd_events_info.json
 
 ENTRYPOINT ["/usr/local/bin/supervisord"]

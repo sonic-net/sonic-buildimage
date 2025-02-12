@@ -264,7 +264,7 @@ TRUSTED_GPG_URLS = https://packages.trafficmanager.net/debian/public_key.gpg,htt
 #   web   : web packages, downloaded by wget, curl
 #   git   : git repositories, donloaded by git clone
 #   docker: docker base images
-SONIC_VERSION_CONTROL_COMPONENTS ?= deb,py2,py3,web,git,docker
+SONIC_VERSION_CONTROL_COMPONENTS ?= py2,py3,web,git,docker
 
 ifeq ($(SONIC_VERSION_CONTROL_COMPONENTS),all)
 override MIRROR_SNAPSHOT = y

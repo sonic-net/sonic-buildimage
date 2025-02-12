@@ -241,7 +241,12 @@ if [[ $fw_upgrade_is_needed == "true" ]]; then
 
 	ex mst start
 
-	ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh --update -v
+	if function_exists bfb_pre_fw_install; then
+		log "Running bfb_pre_fw_install from bf.cfg"
+		bfb_pre_fw_install
+	fi
+
+	ex $sonic_fs_mountpoint/usr/bin/mlnx-fw-upgrade.sh -v
 	if [[ $? != 0 ]]; then
 		log "ERROR: FW update failed"
 	fi
