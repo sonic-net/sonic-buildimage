@@ -555,7 +555,7 @@ RUN patch -p1 -i /disable-non-manylinux.patch /usr/local/lib/python3.11/dist-pac
 RUN pip3 install fastentrypoints mock
 
 # For DASH BMv2
-RUN pip3 install jsonpath_ng pyyaml-include
+RUN pip3 install jsonpath_ng
 
 # For building sonic_ycabled
 # Note: Match version in bookworm

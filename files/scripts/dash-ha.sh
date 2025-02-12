@@ -1,7 +1,5 @@
 #!/bin/bash
 
-. /usr/local/bin/asic_status.sh
-
 function debug()
 {
     /usr/bin/logger $1
@@ -11,28 +9,12 @@ function debug()
 start() {
     debug "Starting ${SERVICE}$DEV service..."
 
-    # On supervisor card, skip starting asic related services here. In wait(),
-    # wait until the asic is detected by pmon and published via database.
-    if ! is_chassis_supervisor; then
-        # start service docker
-        /usr/bin/${SERVICE}.sh start $DEV
-        debug "Started ${SERVICE}$DEV service..."
-    fi
+    # start service docker
+    /usr/bin/${SERVICE}.sh start $DEV
+    debug "Started ${SERVICE}$DEV service..."
 }
 
 wait() {
-    # On supervisor card, wait for asic to be online before starting the docker.
-    if is_chassis_supervisor; then
-        check_asic_status
-        ASIC_STATUS=$?
-
-        # start service docker
-        if [[ $ASIC_STATUS == 0 ]]; then
-            /usr/bin/${SERVICE}.sh start $DEV
-            debug "Started ${SERVICE}$DEV service..."
-        fi
-    fi
-
     /usr/bin/${SERVICE}.sh wait $DEV
 }
 
