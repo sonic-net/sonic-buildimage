@@ -162,7 +162,7 @@ if [[ $CONFIGURED_ARCH == armhf || $CONFIGURED_ARCH == arm64 ]]; then
 fi
 
 # Install sonic-yang-models Python 3 package, install dependencies
-sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/libyang_*.deb $debs_path/libyang-cpp_*.deb $debs_path/python3-yang_*.deb || \
+sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/libyang_*.deb $debs_path/libyang-cpp_*.deb $debs_path/python3-yang_*.deb $debs_path/libyang3_*.deb $debs_path/python3-libyang_*.deb || \
     sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install -f
 SONIC_YANG_MODEL_PY3_WHEEL_NAME=$(basename {{sonic_yang_models_py3_wheel_path}})
 sudo cp {{sonic_yang_models_py3_wheel_path}} $FILESYSTEM_ROOT/$SONIC_YANG_MODEL_PY3_WHEEL_NAME
