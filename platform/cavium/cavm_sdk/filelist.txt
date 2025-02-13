@@ -1,7 +1,0 @@
-## Get vendor SAI SDK
-## https://github.com/Azure/sonic-buildimage/blob/master/README.md#3-get-vendor-sai-sdk
-
-libsai.deb
-sai.deb
-xp-tools.deb
-xpshell.deb
