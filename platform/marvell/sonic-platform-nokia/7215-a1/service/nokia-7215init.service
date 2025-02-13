@@ -4,6 +4,7 @@ After=sysinit.target
 Before=pmon.service
 
 [Service]
+Type=oneshot
 ExecStart=/usr/local/bin/nokia-7215-init.sh
 StandardOutput=tty
 
