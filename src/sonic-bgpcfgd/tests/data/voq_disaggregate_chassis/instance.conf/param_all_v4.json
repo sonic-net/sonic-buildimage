@@ -1,0 +1,22 @@
+{
+    "CONFIG_DB__DEVICE_METADATA": {
+        "localhost": {}
+    },
+    "neighbor_addr": "10.10.10.10",
+    "bgp_session": {
+        "asn": "555",
+        "name": "internal1",
+        "keepalive": "5",
+        "holdtime": "30",
+        "admin_status": "down"
+    },
+    "constants": {
+        "bgp": {
+            "maximum_paths": {
+                "enabled": "true",
+                "ipv4": "32",
+                "ipv6": "24"
+            }
+        }
+    }
+}

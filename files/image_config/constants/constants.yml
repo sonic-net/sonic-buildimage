@@ -64,6 +64,10 @@ constants:
         enabled: true
         db_table: "BGP_VOQ_CHASSIS_NEIGHBOR"
         template_dir: "voq_chassis"
+      voq_disaggregate_chassis: # peer_type
+        enabled: true
+        db_table: "BGP_VOQ_CHASSIS_NEIGHBOR"
+        template_dir: "voq_disaggregate_chassis"
       sentinels: # peer_type
         enabled: true
         db_table: "BGP_SENTINELS"
