@@ -1,6 +1,9 @@
 {% if 'advertise-all-vni' in af_val and af_val['advertise-all-vni'] == 'true' %}
   advertise-all-vni
 {% endif %}
+{% if 'advertise-svi-ip' in af_val and af_val['advertise-svi-ip'] == 'true' %}
+  advertise-svi-ip
+{% endif %}
 {% if 'autort' in af_val %}
   autort {{af_val['autort']}}
 {% endif %}
