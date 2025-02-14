@@ -1,0 +1,136 @@
+[
+    {
+        "TUNNEL_DECAP_TABLE:IPINIP_SUBNET" : {
+            "tunnel_type":"IPINIP",
+            "dscp_mode":"uniform",
+            "ecn_mode":"copy_from_outer",
+            "ttl_mode":"pipe"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_SUBNET:192.168.0.0/27" : {
+            "term_type":"MP2MP",
+            "subnet_type": "vlan"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_SUBNET:192.168.200.0/27" : {
+            "term_type":"MP2MP",
+            "subnet_type": "vlan"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TABLE:IPINIP_TUNNEL" : {
+            "tunnel_type":"IPINIP",
+            "dscp_mode":"uniform",
+            "ecn_mode":"copy_from_outer",
+            "ttl_mode":"pipe"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_TUNNEL:10.0.0.56" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_TUNNEL:10.0.0.58" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_TUNNEL:10.0.0.60" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_TUNNEL:10.0.0.62" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_TUNNEL:10.1.0.32" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_TUNNEL:10.21.0.64" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_TUNNEL:10.21.64.2" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_TUNNEL:192.168.0.1" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_TUNNEL:192.168.200.1" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TABLE:IPINIP_SUBNET_V6" : {
+            "tunnel_type":"IPINIP",
+            "dscp_mode":"uniform",
+            "ecn_mode":"copy_from_outer",
+            "ttl_mode":"pipe"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TABLE:IPINIP_V6_TUNNEL" : {
+            "tunnel_type":"IPINIP",
+            "dscp_mode":"uniform",
+            "ecn_mode":"copy_from_outer",
+            "ttl_mode":"pipe"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_V6_TUNNEL:fc00:1::32" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_V6_TUNNEL:fc00::71" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_V6_TUNNEL:fc00::75" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_V6_TUNNEL:fc00::79" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    },
+    {
+        "TUNNEL_DECAP_TERM_TABLE:IPINIP_V6_TUNNEL:fc00::7d" : {
+            "term_type":"P2MP"
+        },
+        "OP": "SET"
+    }
+]

@@ -129,7 +129,7 @@ class TestCfgGenCaseInsensitive(TestCase):
         output = self.run_script(argument)
         expected = {
                        'Vlan1000|Ethernet8': {'tagging_mode': 'untagged'},
-                       'Vlan2000|Ethernet4': {'tagging_mode': 'untagged'}
+                       'Vlan2000|PortChannel01': {'tagging_mode': 'untagged'}
                    }
         self.assertEqual(
                 utils.to_dict(output.strip()),
@@ -283,7 +283,7 @@ class TestCfgGenCaseInsensitive(TestCase):
     def test_metadata_ntp(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "NTP_SERVER"]
         output = self.run_script(argument)
-        self.assertEqual(output.strip(), "{'10.0.10.1': {}, '10.0.10.2': {}}")
+        self.assertEqual(output.strip(), "{'10.0.10.1': {'iburst': 'on'}, '10.0.10.2': {'iburst': 'on'}}")
 
     def test_minigraph_vnet(self):
         argument = ['-m', self.sample_graph, '-p', self.port_config, '-v', "VNET"]

@@ -1,9 +1,11 @@
 # docker image for vs gbsyncd
 
 DOCKER_GBSYNCD_PLATFORM_CODE = vs
-include $(PLATFORM_PATH)/../template/docker-gbsyncd-base.mk
+include $(PLATFORM_PATH)/../template/docker-gbsyncd-bookworm.mk
 
-$(DOCKER_GBSYNCD_BASE)_DEPENDS += $(SYNCD_VS)
+$(DOCKER_GBSYNCD_BASE)_DEPENDS += $(SYNCD_VS) \
+                              $(LIBNL3_DEV) \
+                              $(LIBNL3)
 
 $(DOCKER_GBSYNCD_BASE)_DBG_DEPENDS += $(SYNCD_VS_DBG) \
                                 $(LIBSWSSCOMMON_DBG) \

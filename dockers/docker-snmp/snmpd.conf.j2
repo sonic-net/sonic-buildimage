@@ -17,7 +17,7 @@
 # Listen on managment and loopback0 ips for single asic platform
 #
 {% macro protocol(ip_addr) %}
-{%- if ip_addr|ipv6 -%}
+{%- if ip_addr.split('%')[0]|ipv6 -%}
 {{ 'udp6' }}
 {%- else -%}
 {{ 'udp' }}
@@ -194,6 +194,9 @@ trapsink {{ v3SnmpTrapIp }}:{{ v3SnmpTrapPort }}{% if v3SnmpTrapVrf != 'None' %}
 #
                                            #  Run as an AgentX master agent
 master          agentx
+agentXTimeout   5
+agentXRetries   4
+
 # internal socket to allow extension to other docker containers
 # Currently the other container using this is docker-fpm-frr
 # make sure this line matches bgp:/etc/snmp/frr.conf 

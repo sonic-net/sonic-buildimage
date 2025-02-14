@@ -71,8 +71,43 @@ module sonic-gnmi {
                     description "Port gnmi runs on.";
                 }
 
-            }
+                leaf save_on_set {
+                    type boolean;
+                    description "Flag for enabling save on set.";
+                }
 
+                leaf enable_crl {
+                    type boolean;
+                    description "Flag for enable certificate revocation list.";
+                }
+
+                leaf crl_expire_duration {
+                    type uint32;
+                    description "Certificate revocation list cache expire duration.";
+                }
+            }
+        }
+
+        container GNMI_CLIENT_CERT {
+            description "GNMI client cert list";
+
+            list GNMI_CLIENT_CERT_LIST {
+                max-elements 8;
+                key "cert_cname";
+
+                leaf cert_cname {
+                    type string;
+                    description
+                        "client cert common name";
+                }
+
+                leaf role {
+                    type string;
+                    mandatory true;
+                    description
+                        "role of client cert common name";
+                }
+            }
         }
     }
 }

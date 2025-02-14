@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef NGKNET_LINUX_H
@@ -34,6 +34,45 @@
 
 #define MODULE_PARAM(n, t, p)   module_param(n, t, p)
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0))
+#define kal_netif_napi_add(_dev, _napi, _poll, _weight) \
+            netif_napi_add(_dev, _napi, _poll, _weight)
+#else
+#define kal_netif_napi_add(_dev, _napi, _poll, _weight) \
+            netif_napi_add_weight(_dev, _napi, _poll, _weight)
+#endif
+
+/*
+ * The eth_hw_addr_set was added in Linux 5.15, but later backported
+ * to various longterm releases, so we need a more advanced check with
+ * the option to override the default.
+ */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0))
+#define KERNEL_HAS_ETH_HW_ADDR_SET 1
+#endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,11,0) && \
+     LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,188))
+#define KERNEL_HAS_ETH_HW_ADDR_SET 1
+#endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0) && \
+     LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,251))
+#define KERNEL_HAS_ETH_HW_ADDR_SET 1
+#endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,20,0) &&     \
+     LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,291))
+#define KERNEL_HAS_ETH_HW_ADDR_SET 1
+#endif
+#ifndef KERNEL_HAS_ETH_HW_ADDR_SET
+#define KERNEL_HAS_ETH_HW_ADDR_SET 0
+#endif
+
+#if (KERNEL_HAS_ETH_HW_ADDR_SET == 0)
+static inline void
+eth_hw_addr_set(struct net_device *dev, const u8 *addr)
+{
+    memcpy(dev->dev_addr, addr, ETH_ALEN);
+}
+#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0))
 #define NGKNET_ETHTOOL_LINK_SETTINGS 1
@@ -184,16 +223,6 @@ kal_copy_to_user(void __user *to, const void *from,
     }
 
     return copy_to_user(to, from, len);
-}
-
-static inline int
-kal_support_paged_skb(void)
-{
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
-    return 1;
-#else
-    return 0;
-#endif
 }
 
 /*!

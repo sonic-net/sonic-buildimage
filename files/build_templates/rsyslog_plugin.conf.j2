@@ -12,6 +12,7 @@ if re_match($programname, "{{ proc.name }}") then {
     action(type="omprog"
         binary="/usr/bin/rsyslog_plugin -r /etc/rsyslog.d/{{ proc.parse_json }} -m {{ yang_module }}"
         output="/var/log/rsyslog_plugin.log"
+        signalOnClose="on"
         template="prog_msg")
 }
 {% endfor %}

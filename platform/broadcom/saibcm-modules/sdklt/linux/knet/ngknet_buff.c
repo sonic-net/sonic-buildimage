@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <bcmcnet/bcmcnet_core.h>
@@ -251,19 +251,8 @@ ngknet_rx_buf_mode(struct pdma_dev *dev, struct pdma_rx_queue *rxq)
 {
     uint32_t len, order;
 
-    switch (ngknet_page_buffer_mode_get()) {
-    case 0:
-        /* Forced SKB mode */
+    if (ngknet_page_buffer_mode_get() == 0) {
         return PDMA_BUF_MODE_SKB;
-    case 1:
-        /* Forced page mode */
-        break;
-    default: /* -1 */
-        /* Select buffer mode based on system capability */
-        if (kal_support_paged_skb() == 0) {
-            return PDMA_BUF_MODE_SKB;
-        }
-        break;
     }
 
     len = dev->rx_ph_size ? rxq->buf_size : rxq->buf_size + PDMA_RXB_META;
@@ -327,12 +316,7 @@ ngknet_tx_buf_free(struct pdma_dev *dev, struct pdma_tx_queue *txq,
     }
 
     dma_unmap_single(kdev->dev, pbuf->dma, pbuf->len, DMA_TO_DEVICE);
-    if (skb_shinfo(pbuf->skb)->tx_flags & SKBTX_IN_PROGRESS) {
-        skb_queue_tail(&kdev->ptp_tx_queue, pbuf->skb);
-        schedule_work(&kdev->ptp_tx_work);
-    } else {
-        dev_kfree_skb_any(pbuf->skb);
-    }
+    dev_kfree_skb_any(pbuf->skb);
 
     pbuf->dma = 0;
     pbuf->len = 0;

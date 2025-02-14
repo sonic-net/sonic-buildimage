@@ -1,12 +1,27 @@
 #!/bin/bash
 
+DEVICE_MGR_REBOOT_FILE=/tmp/device_mgr_reboot
+REBOOT_CAUSE_FILE=/host/reboot-cause/reboot-cause.txt
+DEVICE_REBOOT_CAUSE_FILE=/etc/opt/srlinux/reboot-cause.txt
+kHeartbeatLostRebootCause="Heartbeat with the Supervisor card lost"
+DEVICE_DETAILS_FILE="/etc/opt/srlinux/devices/hw_details.json"
+
+ungraceful_reboot_handle()
+{
+    str=$(grep "$kHeartbeatLostRebootCause" $DEVICE_REBOOT_CAUSE_FILE 2> /dev/null)
+    status=$?
+    if [ $status -eq 0 ]; then
+        slot_num=$(jq -r '.slot_num' $DEVICE_DETAILS_FILE 2>/dev/null)
+        slot_num=$((slot_num - 1))
+        sonic-db-cli CHASSIS_STATE_DB del "CHASSIS_MODULE_REBOOT_INFO_TABLE|LINE-CARD${slot_num}"
+    fi
+}
 update_reboot_cause()
 {
-    DEVICE_MGR_REBOOT_FILE=/tmp/device_mgr_reboot
-    REBOOT_CAUSE_FILE=/host/reboot-cause/reboot-cause.txt
-    DEVICE_REBOOT_CAUSE_FILE=/etc/opt/srlinux/reboot-cause.txt
     if [ -e  $DEVICE_MGR_REBOOT_FILE ]; then
         if [ -e $DEVICE_REBOOT_CAUSE_FILE ]; then
+            # reomve the REBOOT_INFO_TABLE entry for unpexected reboot
+            ungraceful_reboot_handle
             cp -f $DEVICE_REBOOT_CAUSE_FILE $REBOOT_CAUSE_FILE
         fi
         rm -f $DEVICE_MGR_REBOOT_FILE
@@ -18,7 +33,7 @@ update_reboot_cause()
 }
 
 echo "Disable all SFPs"
-python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); platform_chassis.tx_disable_all_sfps()'
+python3 -c 'import sonic_platform.platform; platform_chassis = sonic_platform.platform.Platform().get_chassis(); platform_chassis.tx_disable_all_sfps()' &
 sleep 3
 
 # update the reboot_cuase file when reboot is trigger by device-mgr

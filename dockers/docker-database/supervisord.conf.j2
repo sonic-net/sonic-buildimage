@@ -24,12 +24,15 @@ command=/usr/sbin/rsyslogd -n -iNONE
 priority=1
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 
 {% if INSTANCES %}
 {%     for redis_inst, redis_items in INSTANCES.items() %}
+{%- if redis_inst != 'remote_redis' %}
 [program:{{ redis_inst }}]
 {% if redis_items['hostname'] != '127.0.0.1' %}
 {%- set ADDITIONAL_OPTS = '--protected-mode no' %}
@@ -45,8 +48,12 @@ priority=2
 user=redis
 autostart=true
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
+
+{% endif %}
 {%     endfor %}
 {% endif %}
 
@@ -55,7 +62,9 @@ command=/bin/bash -c "sleep 300 && /usr/local/bin/flush_unused_database"
 priority=3
 autostart=false
 autorestart=false
-stdout_logfile=syslog
-stderr_logfile=syslog
+stdout_logfile=NONE
+stdout_syslog=true
+stderr_logfile=NONE
+stderr_syslog=true
 dependent_startup=true
 dependent_startup_wait_for=rsyslogd:running

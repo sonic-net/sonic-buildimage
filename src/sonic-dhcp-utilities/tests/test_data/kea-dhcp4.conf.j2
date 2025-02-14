@@ -42,6 +42,7 @@
     {%- if add_subnet_preceding_comma.flag -%},{%- endif -%}
     {%- set _dummy = add_subnet_preceding_comma.update({'flag': True}) %}
             {
+                "id": {{ subnet_info["id"] }},
                 "subnet": "{{ subnet_info["subnet"] }}",
                 "pools": [
     {%- set add_pool_preceding_comma = { 'flag': False } %}
@@ -62,10 +63,12 @@
                         "always-send": {{ config["always_send"] }}
                     },
     {%- endfor %}
+    {%- if "gateway" in subnet_info %}
                     {
                         "name": "routers",
-                        "data": "{{ subnet_info["gateway"] if "gateway" in subnet_info else subnet_info["server_id"] }}"
+                        "data": "{{ subnet_info["gateway"] }}"
                     },
+    {%- endif %}
                     {
                         "name": "dhcp-server-identifier",
                         "data": "{{ subnet_info["server_id"] }}"

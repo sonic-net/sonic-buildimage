@@ -38,9 +38,9 @@ ARG PYTHON_CROSS_PLATFORM=linux_aarch64
 {%- endif %}
 
 RUN dpkg --add-architecture $arch
-RUN apt-get update
-RUN apt-get install -y crossbuild-essential-$arch
-RUN apt-get install -y gcc-$gcc_arch
+RUN apt-get update && apt-get install -y eatmydata
+RUN eatmydata apt-get install -y crossbuild-essential-$arch
+RUN eatmydata apt-get install -y gcc-$gcc_arch
 
 RUN apt-mark hold g++-$gcc_arch
 RUN apt-mark hold g++-10-$gcc_arch
@@ -57,10 +57,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 COPY ["pip.conf", "/etc/pip.conf"]
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
-RUN apt-get install -y python3 python3-pip
-RUN apt-get install -y python3-minimal:$arch python3.11:$arch python3:$arch python3-dev:$arch python3-setuptools:$arch
-RUN apt-get download python3-distutils && dpkg --force-all -i python3-distutils*
-RUN apt-get download python3-pip && dpkg --force-all -i python3-pip*
+RUN eatmydata apt-get install -y python3 python3-pip
+RUN eatmydata apt-get install -y python3-minimal:$arch python3.11:$arch python3:$arch python3-dev:$arch python3-setuptools:$arch
+RUN apt-get download python3-distutils && eatmydata dpkg --force-all -i python3-distutils*
+RUN apt-get download python3-pip && eatmydata dpkg --force-all -i python3-pip*
 RUN which pip3 && pip3 install enum34
 RUN pip3 install virtualenv
 
@@ -70,10 +70,10 @@ RUN cd /python_virtualenv && python3 -m virtualenv --copies -p /usr/bin/python3 
 
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install setuptools==66.1.1 setuptools-scm==8.0.4 setuptools-scm-git-archive==1.4.1 wheel==0.38.4 fastentrypoints pytest pytest-cov pytest-runner==5.2 nose==1.3.7 mockredispy==2.9.3 mock==3.0.5 PyYAML==6.0.1 redis==3.5.3 pexpect==4.8.0 Pympler==0.8 parameterized natsort==6.2.1 MarkupSafe==2.0.1 Jinja2==3.0.3 click tabulate netaddr netifaces pyroute2 pyfakefs sphinx && ln -s /python_virtualenv/env3/bin/pytest /python_virtualenv/env3/bin/pytest-3
 
-RUN apt-get --fix-broken install -y
+RUN eatmydata apt-get --fix-broken install -y
 RUN LIBPYTHON3_DEPS="`apt-cache depends libpython3-dev:$arch |grep Depends|awk {'print \$2;'}|tr "\n" " "`" && apt-get install -y libpython2.7-dev:$arch $LIBPYTHON3_DEPS libxml2-dev:$arch libxslt-dev:$arch libssl-dev:$arch libz-dev:$arch
 
-RUN apt-get install -y swig libssl-dev
+RUN eatmydata apt-get install -y swig libssl-dev
 
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyang==2.4.0
 RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip install pyangbind==0.8.2
@@ -81,16 +81,18 @@ RUN PATH=/python_virtualenv/env3/bin/:$PATH python3 -m pip uninstall -y enum34
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install --force-reinstall --no-cache-dir coverage
 {%- endif %}
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install -y \
         apt-utils \
         default-jre-headless \
         openssh-server \
         curl \
         wget \
         unzip \
-        {{ GZ_COMPRESS_PROGRAM }} \
+        gzip \
+        pigz \
         git \
         build-essential \
+        remake \
         libtool \
         lintian \
         sudo \
@@ -111,9 +113,11 @@ RUN apt-get update && apt-get install -y \
         git-buildpackage \
         perl-modules \
         libclass-accessor-perl \
+        libcap2-bin \
         libswitch-perl \
         libzmq5 \
         libzmq3-dev \
+        libyaml-cpp-dev \
         uuid-dev \
         jq \
         cron \
@@ -141,6 +145,8 @@ RUN apt-get update && apt-get install -y \
         libjson-c-dev \
         libsystemd-dev \
         libcmocka-dev \
+        libprotobuf-c-dev \
+        protobuf-c-compiler \
 #{%- if CROSS_BUILD_ENVIRON != "y" %}
         python3-all-dev \
         python3-all-dbg \
@@ -258,6 +264,7 @@ RUN apt-get update && apt-get install -y \
         python3-nose \
         python3-venv \
         gcovr \
+        lcov \
         python3-pytest-cov \
         python3-pytest-cov \
         python3-parse \
@@ -276,6 +283,10 @@ RUN apt-get update && apt-get install -y \
         libbsd-dev \
         pkg-config \
         check \
+# For bmp
+        librdkafka-dev \
+        libyaml-cpp-dev \
+        libsasl2-dev \
 # For mpdecimal
         docutils-common \
         libjs-sphinxdoc \
@@ -334,6 +345,9 @@ RUN apt-get update && apt-get install -y \
         qemu-kvm \
         libvirt-clients \
         python3-pexpect \
+# For rasdaemon build
+        libsqlite3-dev \
+        libgettextpo-dev \
 {%- endif %}
 # For ntp
         autogen \
@@ -420,19 +434,80 @@ RUN apt-get update && apt-get install -y \
         protobuf-compiler \
         libprotobuf-dev \
 # For sonic-dhcp6relay build
-        libjsoncpp-dev
+        libjsoncpp-dev \
+#for nvidia-bluefield driver compilation
+        pciutils \
+        dh-dkms \
+        rpm2cpio \
+        libsnmp-dev \
+        libpopt-dev \
+        libfuse-dev \
+{%- if CONFIGURED_ARCH == "arm64" %}
+        grub-efi-arm64-bin \
+{%- endif %}
+        efibootmgr \
+        watchdog \
+        dmidecode \
+        usbutils \
+        xmlstarlet \
+# For nvidia-bluefield sdk compilation
+        cython3 \
+        pandoc \
+        valgrind \
+        udev \
+        inkscape \
+        meson \
+        python3-pyelftools \
+        hwdata \
+        libzip-dev
+
+{%- if CONFIGURED_ARCH != "arm64" and CONFIGURED_ARCH != "armhf" %}
+RUN eatmydata apt-get install -y \
+# For p4 libraries
+        libgrpc++-dev \
+        libgrpc-dev \
+        libprotoc-dev \
+        protobuf-compiler-grpc \
+        valgrind \
+        python3-protobuf \
+        python3-grpcio \
+        thrift-compiler \
+        gfortran \
+        libopenmpi-dev \
+        libthrift-0.17.0 \
+        libthrift-dev \
+        libboost-all-dev \
+        libboost-graph-dev \
+        libboost-iostreams-dev \
+        libgc-dev \
+        tcpdump \
+        llvm \
+        net-tools \
+        python3-pyroute2 \
+        python3-ply \
+        python3-scapy \
+        python3-thrift
+{%- endif %}
+
+{%- if CONFIGURED_ARCH == "amd64" %}
+# Upgrade CMAKE version
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.sh
+RUN chmod +x cmake-3.27.6-linux-x86_64.sh
+RUN sudo ./cmake-3.27.6-linux-x86_64.sh --skip-license --prefix=/usr
+RUN sudo apt-get update -y
+{%- endif %}
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 # Arm vs. amd64 versions conflict - remove amd64 packages
 RUN apt-get remove -y libnl-3-200
-RUN apt-get install -y libpcre3:$arch
+RUN eatmydata apt-get install -y libpcre3:$arch
 {%- endif %}
 
-RUN apt-get -y build-dep openssh
+RUN eatmydata apt-get -y build-dep openssh
 
 # Build fix for ARM64 and ARMHF /etc/debian_version
 {%- if CONFIGURED_ARCH == "armhf" or CONFIGURED_ARCH == "arm64" %}
-RUN apt upgrade -y base-files libc-bin=$(dpkg-query -W -f '${Version}' libc-bin)
+RUN eatmydata apt upgrade -y base-files libc-bin=$(dpkg-query -W -f '${Version}' libc-bin)
 {%- endif %}
 
 ## Config dpkg
@@ -445,27 +520,25 @@ RUN sudo augtool --autosave "set /files/etc/dpkg/dpkg.cfg/force-confold"
 
 {%- if CROSS_BUILD_ENVIRON != "y" %}
 # For linux build
-RUN apt-get -y build-dep linux
+RUN eatmydata apt-get -y build-dep linux
 {%- else %}
-RUN apt-get install -y kernel-wedge
+RUN eatmydata apt-get install -y kernel-wedge
 {%- endif %}
 
 # For gobgp and telemetry build
-RUN apt-get install -y golang
+RUN eatmydata apt-get install -y golang
 {%- if INCLUDE_FIPS == "y" %}
-# FIPS not yet available
-RUN false
-RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/0.1/{{ CONFIGURED_ARCH }}/golang-1.15-go_1.15.15-1~deb11u4%2Bfips_{{ CONFIGURED_ARCH }}.deb' \
- && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/0.1/{{ CONFIGURED_ARCH }}/golang-1.15-src_1.15.15-1~deb11u4%2Bfips_{{ CONFIGURED_ARCH }}.deb' \
- && dpkg -i golang-go.deb golang-src.deb \
- && ln -sf /usr/lib/go-1.15 /usr/local/go \
+RUN wget -O golang-go.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-go_{{ FIPS_GOLANG_VERSION }}_{{ CONFIGURED_ARCH }}.deb' \
+ && wget -O golang-src.deb 'https://sonicstorage.blob.core.windows.net/public/fips/bookworm/{{ FIPS_VERSION }}/{{ CONFIGURED_ARCH }}/golang-1.19-src_{{ FIPS_GOLANG_VERSION }}_all.deb' \
+ && eatmydata dpkg -i golang-go.deb golang-src.deb \
+ && ln -sf /usr/lib/go-1.19 /usr/local/go \
  && rm golang-go.deb golang-src.deb
 {%- else %}
-RUN apt-get install -y golang-go \
+RUN eatmydata apt-get install -y golang-go \
  && ln -sf /usr/lib/go-1.19 /usr/local/go
 {%- endif %}
 
-RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade pip==24.2
 RUN apt-get purge -y python3-pip
 
 {%- if CONFIGURED_ARCH == "armhf" %}
@@ -480,6 +553,13 @@ RUN patch -p1 -i /disable-non-manylinux.patch /usr/local/lib/python3.11/dist-pac
 
 # For building sonic-utilities
 RUN pip3 install fastentrypoints mock
+
+# For DASH BMv2
+RUN pip3 install jsonpath_ng pyyaml-include
+
+# For building sonic_ycabled
+# Note: Match version in bookworm
+RUN pip3 install grpcio==1.51.1 grpcio-tools==1.51.1
 
 # For running Python unit tests
 RUN pip3 install pytest-runner==5.2
@@ -502,6 +582,8 @@ RUN pip3 uninstall -y enum34
 
 # For sonic-platform-common testing
 RUN pip3 install redis
+RUN pip3 install psutil
+RUN pip3 install blkinfo
 
 # For sonic-swss-common testing
 RUN pip3 install Pympler==1.0
@@ -515,16 +597,16 @@ RUN pip3 install mmh3==2.5.1
 # For ptf-py3 0.10.0
 RUN pip3 install setuptools==66.1.1 setuptools-scm==8.0.4 setuptools-scm-git-archive==1.4.1
 
-RUN apt-get install -y xsltproc
+RUN eatmydata apt-get install -y xsltproc
 
 # Install dependencies for isc-dhcp-relay build
-RUN apt-get -y build-dep isc-dhcp
+RUN eatmydata apt-get -y build-dep isc-dhcp
 
 # Install vim
-RUN apt-get install -y vim
+RUN eatmydata apt-get install -y vim
 
 # Install rsyslog
-RUN apt-get install -y rsyslog
+RUN eatmydata apt-get install -y rsyslog
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
 RUN cd /usr/src/gtest && CXX=$CROSS_CXX CC=$CROSS_CC cmake . && make -C /usr/src/gtest
@@ -537,7 +619,7 @@ EXPOSE 22
 
 # Install docker engine 24 inside docker and enable experimental feature
 RUN apt-get update
-RUN apt-get install -y \
+RUN eatmydata apt-get install -y \
            apt-transport-https \
            ca-certificates \
            curl \
@@ -556,12 +638,18 @@ RUN add-apt-repository \
            $(lsb_release -cs) \
            stable"
 RUN apt-get update
-RUN apt-get install -y docker-ce=5:24.0.2-1~debian.12~bookworm docker-ce-cli=5:24.0.2-1~debian.12~bookworm containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.12~bookworm docker-compose-plugin=2.18.1-1~debian.12~bookworm
+RUN eatmydata apt-get install -y docker-ce=5:24.0.2-1~debian.12~bookworm docker-ce-cli=5:24.0.2-1~debian.12~bookworm containerd.io=1.6.21-1 docker-buildx-plugin=0.10.5-1~debian.12~bookworm docker-compose-plugin=2.18.1-1~debian.12~bookworm
 RUN echo "DOCKER_OPTS=\"--experimental --storage-driver=vfs {{ DOCKER_EXTRA_OPTS }}\"" >> /etc/default/docker
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 
 # Install m2crypto package, needed by SWI tools
-RUN apt-get install python3-m2crypto
+RUN eatmydata apt-get install python3-m2crypto
+
+# Install libthrift package needed by saithrift
+RUN eatmydata apt-get install  libthrift-0.17 \
+        libthrift-dev \
+        thrift-compiler\
+        python3-thrift
 
 # Install swi tools
 RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261770237f7dd21ace3774ba04a017e9
@@ -569,12 +657,12 @@ RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261
 {% if CONFIGURED_ARCH != "amd64" -%}
 # Install node.js for azure pipeline
 RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
-RUN apt-get install -y nodejs
+RUN eatmydata apt-get install -y nodejs
 
 {%- if CROSS_BUILD_ENVIRON == "y" %}
-RUN apt-get install -y rsync dh-python
+RUN eatmydata apt-get install -y rsync dh-python
 
-RUN apt-get install -y \
+RUN eatmydata apt-get install -y \
         libelf-dev:$arch \
         libdw-dev:$arch \
         libbz2-dev:$arch \
@@ -586,6 +674,7 @@ RUN apt-get install -y \
         pps-tools:$arch \
         libpam-cap:$arch \
         libcap-dev:$arch \
+        libcap2-bin:$arch \
         libpam0g-dev:$arch \
         libaudit-dev:$arch \
         libgtk-3-dev:$arch \
@@ -646,25 +735,36 @@ RUN apt-get install -y \
         libboost-filesystem-dev:$arch \
         libboost-program-options-dev:$arch
 
-RUN apt-get download libgirepository1.0-dev:$arch && dpkg --force-all -i libgirepository1.0-dev*
+RUN apt-get download libgirepository1.0-dev:$arch && eatmydata dpkg --force-all -i libgirepository1.0-dev*
 RUN PATH=/python_virtualenv/env3/bin/:$PATH pip3 install pycairo
 
 # Install libpcsclite-dev for wpasupplicant using download because regular install removes amd64 python package
-RUN apt-get download libpcsclite1:$arch && dpkg --force-all -i libpcsclite1* && apt-get download libpcsclite-dev:$arch && dpkg --force-all -i libpcsclite-dev*
+RUN apt-get download libpcsclite1:$arch && eatmydata dpkg --force-all -i libpcsclite1* && apt-get download libpcsclite-dev:$arch && eatmydata dpkg --force-all -i libpcsclite-dev*
 # Install python3-dev for frr (/usr/bin/python3-config for $arch) using download because regular install removes amd64 python package
-RUN apt-get download python3.11-dev:$arch && apt-get download python3-dev:$arch && dpkg --force-all -i python3*-dev*
+RUN apt-get download python3.11-dev:$arch && apt-get download python3-dev:$arch && eatmydata dpkg --force-all -i python3*-dev*
 {% endif %}
 
 # Tell azure pipeline to use node.js in the docker
 LABEL "com.azure.dev.pipelines.agent.handler.node.path"="/usr/bin/node"
 {% endif -%}
 
+RUN eatmydata apt install -y python-is-python3
+
 # Install Bazel build system (amd64 and arm64 architectures are supported using this method)
 # TODO(PINS): Remove once pre-build Bazel binaries are available for armhf (armv7l)
 {%- if CONFIGURED_ARCH == "amd64" or CONFIGURED_ARCH == "arm64" %}
 ARG bazelisk_url=https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-{{ CONFIGURED_ARCH }}
 RUN curl -fsSL -o /usr/local/bin/bazel ${bazelisk_url} && chmod 755 /usr/local/bin/bazel
-# Bazel requires "python"
-# TODO(PINS): remove when Bazel is okay with "python3" binary name
-RUN apt install -y python-is-python3
 {% endif -%}
+
+# Install Rust
+ARG RUST_ROOT=/usr/.cargo
+RUN RUSTUP_HOME=$RUST_ROOT CARGO_HOME=$RUST_ROOT bash -c 'curl --proto "=https" -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.79.0 -y'
+{% if CROSS_BUILD_ENVIRON == "y" and CONFIGURED_ARCH == "armhf" %}
+RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add armv7-unknown-linux-gnueabihf && echo "[target.armv7-unknown-linux-gnueabihf]\nlinker = \"arm-linux-gnueabihf-gcc\"" >> /.cargo/config.toml
+{% endif -%}
+{% if CROSS_BUILD_ENVIRON == "y" and CONFIGURED_ARCH == "arm64" %}
+RUN mkdir -p /.cargo && $RUST_ROOT/bin/rustup target add aarch64-unknown-linux-gnu && echo "[target.aarch64-unknown-linux-gnu]\nlinker = \"aarch64-linux-gnu-gcc\"" >> /.cargo/config.toml
+{% endif -%}
+ENV RUSTUP_HOME $RUST_ROOT
+ENV PATH $PATH:$RUST_ROOT/bin

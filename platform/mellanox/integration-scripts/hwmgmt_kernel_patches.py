@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 
 from hwmgmt_helper import *
 
-COMMIT_TITLE = "Intgerate HW-MGMT {} Changes"
+COMMIT_TITLE = "Integrate HW-MGMT {} Changes"
 
 PATCH_TABLE_LOC = "platform/mellanox/hw-management/hw-mgmt/recipes-kernel/linux/"
 PATCHWORK_LOC = "linux-{}/patchwork"
@@ -270,9 +270,15 @@ class PostProcess(HwMgmtAction):
             sys.exit(1)
         
     def mv_new_non_up_mlnx(self):
+        dest_fpath = os.path.join(self.args.build_root, NON_UP_PATCH_LOC)
+        if not Data.new_non_up and os.path.exists(dest_fpath):
+            os.rmdir(dest_fpath)
+            return
+
         for patch in Data.new_non_up:
             src_path = os.path.join(self.args.non_up_patches, patch)
-            shutil.copy(src_path, os.path.join(self.args.build_root, NON_UP_PATCH_LOC))
+            os.makedirs(dest_fpath, exist_ok=True)
+            shutil.copy(src_path, dest_fpath)
     
     def construct_series_with_non_up(self):
         Data.agg_slk_series = copy.deepcopy(Data.up_slk_series) 
@@ -309,7 +315,23 @@ class PostProcess(HwMgmtAction):
         return lines
     
     def get_merged_diff(self, series_diff: list, kcfg_diff: list) -> list:
-        return series_diff + ["\n"] + kcfg_diff
+        if series_diff or kcfg_diff:
+            return series_diff + ["\n"] + kcfg_diff
+        else:
+            return []
+
+    def write_non_up_diff(self, series_diff, kcfg_diff):
+        final_diff = self.get_merged_diff(series_diff, kcfg_diff)
+        non_up_diff_path = os.path.join(self.args.build_root, NON_UP_DIFF)
+        if "".join(final_diff).strip():
+            # don't write anything if the diff just contains whitespaces
+            FileHandler.write_lines(non_up_diff_path, final_diff, True)
+        else:
+            # if nothing to write, delete the patch file
+            try:
+                os.remove(non_up_diff_path)
+            except OSError as error:
+                print("-> NOTICE File {} remove failed with error {}".format(non_up_diff_path, error))
 
     def list_patches(self):
         old_up_patches = []
@@ -388,8 +410,7 @@ class PostProcess(HwMgmtAction):
         series_diff = self.get_series_diff()
         # handle kconfig and get any diff
         kcfg_diff = self.kcfg_handler.perform()
-        final_diff = self.get_merged_diff(series_diff, kcfg_diff)
-        FileHandler.write_lines(os.path.join(self.args.build_root, NON_UP_DIFF), final_diff, True)
+        self.write_non_up_diff(series_diff, kcfg_diff)
 
         path = os.path.join(self.args.build_root, PATCH_TABLE_LOC)
         patch_table = load_patch_table(path, Data.k_ver)

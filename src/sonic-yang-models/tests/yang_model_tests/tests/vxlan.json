@@ -16,5 +16,23 @@
     "VXLAN_MAP_OOR_VNI": {
         "desc": "VNI Out of Range in VXLAN_TUNNEL_MAP TABLE",
         "eStrKey": "Range"
+    },
+    "VXLAN_TUNNEL_NAME_VALID_TEST": {
+        "desc": "Tunnel Name string length 15 is valid"
+    },
+    "VXLAN_TUNNEL_NAME_INVALID_LENGTH_TEST": {
+        "desc": "Tunnel Name string length exceeding 16 is invalid",
+        "eStr" : "Invalid interface name length, it must not exceed 16 characters."
+    },
+    "VXLAN_TUNNEL_NAME_INVALID_TEST": {
+        "desc": "Tunnel Name string length 0 is invalid",
+        "eStr" : "Invalid interface name length, it must not exceed 16 characters."
+    },
+    "VXLAN_TUNNEL_NAME_VALID_DST_IPV4_TEST": {
+        "desc": "Valid IPv4 Destination Address",
+        "eStr" : "Invalid interface name length, it must not exceed 16 characters."
+    },
+    "VXLAN_TUNNEL_NAME_VALID_DST_IPV6_TEST": {
+        "desc": "Valid IPv6 Destination Address"
     }
 }

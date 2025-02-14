@@ -1,8 +1,0 @@
-[Unit]
-Description=CPU WDT
-After=nokia-7215init.service
-[Service]
-ExecStart=/usr/local/bin/cpu_wdt.py
-
-[Install]
-WantedBy=multi-user.target

@@ -1,4 +1,4 @@
-FROM docker-config-engine-buster-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
+FROM docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
 
 ARG docker_container_name
 
@@ -6,17 +6,10 @@ ARG docker_container_name
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -y g++ python3-dev libxml2 libcurl3-gnutls libcjson-dev
+    apt-get install -y g++ python3-dev libxml2 libcurl4-openssl-dev libcjson-dev
 
-# Limited to grpcio 1.58.0 due to armhf 
-RUN pip3 install connexion==2.7.0 \
-                 setuptools==21.0.0 \
-                 grpcio==1.58.0 \
-                 grpcio-tools==1.20.0 \
-                 certifi==2017.4.17 \
-                 python-dateutil==2.6.0 \
-                 six==1.11.0 \
-                 urllib3==1.26.5
+RUN pip3 install requests \
+                 urllib3
 
 COPY \
 {% for deb in docker_sonic_mgmt_framework_debs.split(' ') -%}

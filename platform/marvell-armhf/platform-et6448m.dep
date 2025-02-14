@@ -1,8 +1,0 @@
-MPATH       := $($(ET6448M_PLATFORM)_SRC_PATH)
-DEP_FILES   := $(SONIC_COMMON_FILES_LIST) platform/marvell-armhf/platform-et6448m.mk platform/marvell-armhf/platform-et6448m.dep
-DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-DEP_FILES   += $(shell git ls-files $(MPATH))
-
-$(ET6448M_PLATFORM)_CACHE_MODE  := GIT_CONTENT_SHA 
-$(ET6448M_PLATFORM)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
-$(ET6448M_PLATFORM)_DEP_FILES   := $(DEP_FILES)

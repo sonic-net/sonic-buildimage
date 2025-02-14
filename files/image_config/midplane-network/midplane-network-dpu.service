@@ -1,0 +1,15 @@
+# Oneshot midplane network service
+
+[Unit]
+Description=Midplane network service
+Requires=systemd-networkd.service
+After=systemd-networkd.service
+Before=database.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/lib/systemd/systemd-networkd-wait-online -i eth0-midplane --timeout=600
+
+[Install]
+WantedBy=multi-user.target

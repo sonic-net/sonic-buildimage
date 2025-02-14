@@ -1,4 +1,5 @@
 import click
+import re
 from tabulate import tabulate
 import utilities_common.cli as clicommon
 
@@ -6,14 +7,13 @@ import utilities_common.cli as clicommon
 import ipaddress
 from datetime import datetime
 import fnmatch
-import re
 
 
 def ts_to_str(ts):
     return datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d %H:%M:%S")
 
 
-@click.group(cls=clicommon.AbbreviationGroup, name="dhcp_server")
+@click.group(cls=clicommon.AbbreviationGroup, name="dhcp_server", invoke_without_command=True)
 @clicommon.pass_db
 def dhcp_server(db):
     """Show dhcp_server related info"""
@@ -21,6 +21,9 @@ def dhcp_server(db):
     dbconn = db.db
     if dbconn.get("CONFIG_DB", "FEATURE|dhcp_server", "state") != "enabled":
         ctx.fail("Feature dhcp_server is not enabled")
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+        ctx.exit()
 
 
 @dhcp_server.group(cls=clicommon.AliasedGroup)
@@ -40,6 +43,12 @@ def lease(db, dhcp_interface):
         entry = dbconn.get_all("STATE_DB", key)
         interface, mac = key.split("|")[1:]
         port = dbconn.get("STATE_DB", "FDB_TABLE|" + interface + ":" + mac, "port")
+        if not port:
+            # Smart switch sample: aa:bb:cc:dd:ee:ff dev dpu0 master bridge-midplane
+            (out, _) = clicommon.run_command("sudo bridge fdb show | grep {}".format(mac), return_cmd=True, shell=True)
+            match = re.match(r'([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2} dev (.*) master (.*)', out)
+            if match and match.group(3).strip() == interface:
+                port = match.group(2).strip()
         if not port:
             port = "<Unknown>"
         table.append([interface + "|" + port, mac, entry["ip"], ts_to_str(entry["lease_start"]), ts_to_str(entry["lease_end"])])
@@ -62,7 +71,7 @@ def range(db, range_name):
     for key in dbconn.keys("CONFIG_DB", "DHCP_SERVER_IPV4_RANGE|" + range_name):
         name = key.split("|")[1]
         entry = dbconn.get_all("CONFIG_DB", key)
-        range_ = entry["range"].split(",")
+        range_ = entry["range@"].split(",")
         if len(range_) == 1:
             start, end = range_[0], range_[0]
         elif len(range_) == 2:
@@ -103,7 +112,7 @@ def info(db, dhcp_interface, with_customized_options):
         interface = key.split("|")[1]
         table.append([interface, entry["mode"], entry["gateway"], entry["netmask"], entry["lease_time"], entry["state"]])
         if with_customized_options:
-            table[-1].append(entry["customized_options"])
+            table[-1].append(entry["customized_options@"])
     click.echo(tabulate(table, headers=headers, tablefmt="grid"))
 
 
@@ -132,10 +141,10 @@ def port(db, interface):
         intf = key[len("DHCP_SERVER_IPV4_PORT|"):]
         if dhcp_interface_is_match(interface, intf):
             entry = dbconn.get_all("CONFIG_DB", key)
-            if "ranges" in entry:
-                table.append([intf, entry["ranges"].replace(",", "\n")])
-            if "ips" in entry:
-                table.append([intf, entry["ips"].replace(",", "\n")])
+            if "ranges@" in entry:
+                table.append([intf, entry["ranges@"].replace(",", "\n")])
+            if "ips@" in entry:
+                table.append([intf, entry["ips@"].replace(",", "\n")])
     click.echo(tabulate(table, headers=headers, tablefmt="grid"))
 
 

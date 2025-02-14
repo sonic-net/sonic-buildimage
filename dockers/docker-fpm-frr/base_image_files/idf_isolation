@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# Restrict command to sudo users
+if [ "$EUID" -ne 0 ] ; then
+    echo "Root priveleges are needed for this operation"
+    exit 1
+fi
+
+# Command is only supported on spine routers
+if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)" != *"SpineRouter"* ]] ; then
+    echo "Operation is not supported on this platform"
+    exit 1
+fi
+
+# Skip operation on chassis supervisor
+if [ -f /etc/sonic/chassisdb.conf ]; then  
+    echo "Skipping Operation on chassis supervisor"
+    exit 0
+fi
+
+idf_isolation_states=("isolated_no_export" "isolated_withdraw_all" "unisolated" "status")
+valid=false
+for state in "${idf_isolation_states[@]}"; do
+    if [[ "$1" == "$state" ]]; then
+       valid=true
+       break
+    fi
+done
+if [ $valid == false ]; then
+    echo "Invalid parameter $1, Operation not supported"
+    echo ""
+    echo "Usage: sudo idf_isolation <isolated_no_export|isolated_withdraw_all|unisolated|status>"
+    exit 0
+fi
+
+IDF_ISOLATION_STATE="{\"BGP_DEVICE_GLOBAL\":{\"STATE\":{\"idf_isolation_state\": \"$1\"}}}"
+
+# read SONiC immutable variables
+[ -f /etc/sonic/sonic-environment ] && . /etc/sonic/sonic-environment
+
+PLATFORM=${PLATFORM:-`sonic-cfggen -H -v DEVICE_METADATA.localhost.platform`}
+
+# Parse the device specific asic conf file, if it exists
+ASIC_CONF=/usr/share/sonic/device/$PLATFORM/asic.conf
+[ -f $ASIC_CONF ] && . $ASIC_CONF
+
+if [[ ($NUM_ASIC -gt 1) ]]; then
+    asic=0
+    NAMESPACE_PREFIX='asic'
+
+    while [ $asic -lt $NUM_ASIC ]
+    do        
+        sub_role=`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['sub_role']" -n $NAMESPACE_PREFIX$asic`
+        if [ $sub_role == 'FrontEnd' ] ; then
+            cur_idf_isolation_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.idf_isolation_state -n $NAMESPACE_PREFIX$asic)"
+            if [ $1 == 'status' ] ; then
+                echo "BGP$asic: IDF isolation state: $cur_idf_isolation_state"
+            else
+                if [ $1 == $cur_idf_isolation_state ]; then
+                    echo "BGP$asic: IDF is already in $1 state"
+                else
+                    sonic-cfggen -a "$IDF_ISOLATION_STATE" -w -n $NAMESPACE_PREFIX$asic
+                    logger -t $1 -p user.info "IDF isolation state: $1"
+                    echo "BGP$asic: IDF isolation state: $1"
+                fi
+            fi
+        fi
+        asic=$[$asic+1]
+    done
+else
+    cur_idf_isolation_state="$(sonic-cfggen -d -v BGP_DEVICE_GLOBAL.STATE.idf_isolation_state)"
+    if [ $1 == 'status' ] ; then
+        echo "IDF isolation state: $cur_idf_isolation_state"
+    else
+        if [ $1 == $cur_idf_isolation_state ]; then
+            echo "IDF is already in $1 state"
+        else
+            sonic-cfggen -a "$IDF_ISOLATION_STATE" -w
+            logger -t $1 -p user.info "IDF isolation state: $1"
+            echo "IDF isolation state: $1"
+        fi
+    fi
+fi
+
+if [ $1 != 'status' ]; then
+    echo "Please execute 'sudo config save' to preserve IDF isolation state after reboot or config reload"
+fi

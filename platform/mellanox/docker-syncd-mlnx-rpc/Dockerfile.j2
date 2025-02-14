@@ -39,14 +39,14 @@ RUN apt-get update        \
     python3-pip           \
     python3-dev           \
     python-is-python3     \
-    python3-setuptools
+    python3-scapy         \
+    libnanomsg5           \
+    libnanomsg-dev        \
+    libthrift-0.17.0      \
+    thrift-compiler       \
+    python3-thrift
 
 RUN pip3 install --upgrade pip
-
-# Build and install python-scapy
-RUN curl http://ftp.us.debian.org/debian/pool/main/s/scapy/python3-scapy_2.4.0-2_all.deb --output python3-scapy_2.4.0-2_all.deb \
- && dpkg -i python3-scapy_2.4.0-2_all.deb \
- && apt install -f
 
 {% if docker_syncd_mlnx_rpc_debs.strip() -%}
 # Copy locally-built Debian package dependencies
@@ -68,29 +68,33 @@ RUN curl http://ftp.us.debian.org/debian/pool/main/s/scapy/python3-scapy_2.4.0-2
 {{ install_debian_packages(docker_syncd_mlnx_rpc_pydebs.split(' ')) }}
 {% endif %}
 
-RUN wget https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz \
- && tar xvfz 1.0.0.tar.gz \
- && cd nanomsg-1.0.0    \
- && mkdir -p build      \
- && cmake .             \
- && make install        \
- && ldconfig            \
- && cd ..               \
- && rm -fr nanomsg-1.0.0 \
- && rm -f 1.0.0.tar.gz  \
- && pip3 install cffi==1.16.0    \
+RUN pip3 install cffi==1.16.0    \
  && pip3 install wheel  \
  && pip3 install nnpy   \
- && pip3 install ptf    \
  && mkdir -p /opt       \
  && cd /opt             \
  && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py \
  && apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y \
  && rm -rf /root/deps
 
+{% if docker_syncd_mlnx_rpc_whls.strip() -%}
+# Copy locally-built Python wheel dependencies
+{{ copy_files("python-wheels/", docker_syncd_mlnx_rpc_whls.split(' '), "/python-wheels/") }}
+# Install locally-built Python wheel dependencies
+{{ install_python_wheels(docker_syncd_mlnx_rpc_whls.split(' ')) }}
+{% endif %}
+
 COPY ["ptf_nn_agent.conf", "/etc/supervisor/conf.d/"]
 
 ## Clean up
+RUN apt-get -y purge \
+    cmake            \
+    libssl-dev       \
+    libffi-dev       \
+    python3-dev      \
+    libthrift-dev    \
+    build-essential
+
 RUN apt-get clean -y && \
     apt-get autoclean -y && \
     apt-get autoremove -y && \

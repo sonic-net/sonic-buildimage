@@ -71,6 +71,20 @@ module sonic-telemetry {
                     description "Port gnmi runs on.";
                 }
 
+                leaf save_on_set {
+                    type boolean;
+                    description "Flag for enabling save on set.";
+                }
+
+                leaf enable_crl {
+                    type boolean;
+                    description "Flag for enable certificate revocation list.";
+                }
+
+                leaf crl_expire_duration {
+                    type uint32;
+                    description "Certificate revocation list cache expire duration.";
+                }
             }
 
         }

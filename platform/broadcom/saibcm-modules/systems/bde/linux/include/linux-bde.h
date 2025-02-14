@@ -1,5 +1,7 @@
-/*
- * Copyright 2007-2020 Broadcom Inc. All rights reserved.
+/***********************************************************************
+ *
+ * $Id: linux-bde.h,v 1.24 Broadcom SDK $
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -22,13 +24,9 @@
  * License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
- * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa
- */
-/***********************************************************************
- *
- * $Id: linux-bde.h,v 1.24 Broadcom SDK $
- * $Copyright: (c) 2005 Broadcom Corp.
- * All Rights Reserved.$
+ * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
+ * 
  *
  * Linux Broadcom Device Enumerators
  *
@@ -167,6 +165,11 @@ typedef struct linux_bde_bus_s {
  * BDE_DEV_INST_ID_INVALID : The invalid instance identifier.
  */
 #define BDE_DEV_INST_ID_INVALID    ((uint32)-1)
+#define BDE_DEV_INST_ID_CURRENT    ((uint32)-2)
+#define BDE_DEV_INST_ID_GET_FREE   ((uint32)-3)
+
+extern int get_instance_dma_size(unsigned int instance_num, unsigned int *size);
+extern int dma_get_usage(void);
 
 extern int linux_bde_create(linux_bde_bus_t* bus, ibde_t** bde);
 extern int linux_bde_destroy(ibde_t* bde);
@@ -174,6 +177,7 @@ extern int linux_bde_destroy(ibde_t* bde);
 extern int linux_bde_instance_attach(unsigned int dev_mask,unsigned int dma_size);
 extern int linux_bde_instance_config(linux_bde_device_bitmap_t dev_mask,unsigned int dma_size);
 #endif
+extern int linux_bde_get_pci_info(int d, uint32 *bus, uint32 *slot, uint32 *func);
 
 #ifdef __KERNEL__
 
@@ -199,6 +203,7 @@ extern uint32 lkbde_get_dev_phys_hi(int d);
 #ifdef BDE_EDK_SUPPORT
 extern int lkbde_edk_get_dma_info(int dev_id, phys_addr_t* cpu_pbase,
                                   phys_addr_t* dma_pbase, ssize_t* size);
+extern void * lkbde_edk_dmamem_map_p2v(phys_addr_t paddr);
 #endif
 
 /*
@@ -244,7 +249,6 @@ extern int lkbde_dev_state_set(int d, uint32 state);
 extern int lkbde_dev_instid_get(int d, uint32 *instid);
 extern int lkbde_dev_instid_set(int d, uint32 instid);
 
-
 /*
  * Return none-zero if the SDK instance with the given instance ID
  * manages the given device.
@@ -263,6 +267,7 @@ extern linux_bde_device_bitmap_t* lkbde_get_inst_devs(uint32 inst_id);
  */
 extern int lkbde_irq_mask_set(int d, uint32 addr, uint32 mask, uint32 fmask);
 extern int lkbde_irq_mask_get(int d, uint32 *mask, uint32 *fmask);
+extern int lkbde_irq_status_get(int d, uint32_t addr, uint32 *status);
 
 #ifdef BCM_SAND_SUPPORT
 extern int lkbde_cpu_write(int d, uint32 addr, uint32 *buf);
@@ -273,6 +278,19 @@ extern int lkbde_cpu_pci_register(int d);
 extern int lkbde_intr_cb_register(int d,
                                   int (*intr_pending)(void*),
                                   void *intr_pending_data);
+
+/*
+ * Get the PCI bus number, bus slot and function for a PCI device.
+ */
+extern int lkbde_get_dev_pci_info(int d, uint32_t *bus,
+                                  uint32_t *slot, uint32_t *func);
+
+#ifdef INCLUDE_SRAM_DMA
+#ifdef SRAM_DMA_NEEDS_KERNEL_APIS
+extern void _update_apis_for_sram_dma();
+#endif
+extern void lkbde_get_sram_dma_info(unsigned d, uint32 *sram_start, uint32 *sram_size);
+#endif /* INCLUDE_SRAM_DMA */
 /*
  * This flag must be OR'ed onto the device number when calling
  * interrupt_connect/disconnect and irq_mask_set functions from

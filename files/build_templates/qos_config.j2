@@ -1,5 +1,6 @@
 {%- set PORT_ALL = [] %}
 {%- set PORT_BP = [] %}
+{%- set PORT_DPC  = [] %}
 {%- set SYSTEM_PORT_ALL = [] %}
 
 {%- set voq_chassis = false %}
@@ -22,6 +23,9 @@
 {%- for port in PORT %}
     {%- if not port.startswith('Ethernet-Rec') and not port.startswith('Ethernet-IB') %}
         {%- if PORT_ALL.append(port) %}{% endif %}
+        {%- if 'role' in PORT[port] and PORT[port]['role'] == 'Dpc' %}
+            {%- if PORT_DPC.append(port) %}{%- endif %}
+        {%- endif %}
     {%- endif %}
 {%- endfor %}
 {%- if generate_bp_port_list is defined %}
@@ -47,6 +51,9 @@
     {%- for port in PORT_BP %}
         {%- if PORT_ACTIVE.append(port) %}{%- endif %}
     {%- endfor %}
+    {%- for port in PORT_DPC %}
+        {%- if PORT_ACTIVE.append(port) %}{%- endif %}
+    {%- endfor %}
 {%- endif %}
 {%- if PORT_ACTIVE | sort_by_port_index %}{% endif %}
 
@@ -70,7 +77,7 @@
 {% endif %}
 {%- endfor %}
 
-{%- set pfc_to_pg_map_supported_asics = ['mellanox', 'barefoot', 'marvell'] -%}
+{%- set pfc_to_pg_map_supported_asics = ['mellanox', 'barefoot'] -%}
 {%- set backend_device_types = ['BackEndToRRouter', 'BackEndLeafRouter'] -%}
 {%- set apollo_resource_types = ['DL-NPU-Apollo'] -%}
 
@@ -85,6 +92,8 @@
         ('resource_type' in DEVICE_METADATA['localhost'] and
           DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     {{- generate_tc_to_pg_map() }}
+{% elif generate_tc_to_pg_map_per_sku is defined %}
+    {{- generate_tc_to_pg_map_per_sku() }}
 {% else %}
     "TC_TO_PRIORITY_GROUP_MAP": {
         "AZURE": {
@@ -113,6 +122,8 @@
     },
 {% if (generate_tc_to_queue_map is defined) and tunnel_qos_remap_enable %}
     {{- generate_tc_to_queue_map() }}
+{% elif (generate_tc_to_queue_map_per_sku is defined) %}
+    {{ generate_tc_to_queue_map_per_sku() }}
 {% else %}
     "TC_TO_QUEUE_MAP": {
         "AZURE": {
@@ -149,6 +160,8 @@
          ('resource_type' in DEVICE_METADATA['localhost'] and
            DEVICE_METADATA['localhost']['resource_type'] == 'ComputeAI') %}
     {{- generate_dscp_to_tc_map() }}
+{% elif (generate_dscp_to_tc_map_per_sku is defined) %}
+    {{ generate_dscp_to_tc_map_per_sku() }}
 {% else %}
     "DSCP_TO_TC_MAP": {
         "AZURE": {
@@ -260,6 +273,8 @@
             "weight": "5"
         }
     },
+{% elif generate_scheduler_per_sku is defined %}
+    {{ generate_scheduler_per_sku() }}
 {% else %}
     "SCHEDULER": {
         "scheduler.0": {
@@ -321,8 +336,6 @@
 {% else %}
             "tc_to_queue_map" : "AZURE",
 {% endif %}
-            "tc_to_pg_map"    : "AZURE",
-            "pfc_to_queue_map": "AZURE",
 {% if asic_type in pfc_to_pg_map_supported_asics %}
 {% if port in port_names_list_extra_queues %}
             "pfc_to_pg_map"   : "AZURE_DUALTOR",
@@ -330,12 +343,16 @@
             "pfc_to_pg_map"   : "AZURE",
 {% endif %}
 {% endif %}
+{% if port not in PORT_DPC %}
 {% if port in port_names_list_extra_queues %}
             "pfc_enable"      : "2,3,4,6",
 {% else %}
             "pfc_enable"      : "3,4",
 {% endif %}
-            "pfcwd_sw_enable" : "3,4"
+            "pfcwd_sw_enable" : "3,4",
+{% endif %}
+            "tc_to_pg_map"    : "AZURE",
+            "pfc_to_queue_map": "AZURE"
         }{% if not loop.last %},{% endif %}
 
 {% endfor %}
@@ -401,6 +418,13 @@
         }{% if not loop.last %},{% endif %}
 {% endfor %}
     }
+{% elif generate_single_queue_per_sku is defined %}
+    "QUEUE": {
+{% for port in PORT_ACTIVE %}
+        {{ generate_single_queue_per_sku(port) }}
+        {%- if not loop.last -%},{% endif %}
+{% endfor %}
+    }
 {% else %}
    "QUEUE": {
 {% if 'type' in DEVICE_METADATA['localhost'] and
@@ -426,8 +450,12 @@
 {% else %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|3": {
+{% if port not in PORT_DPC %}
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
+{% else %}
+            "scheduler": "scheduler.0"
+{% endif %}
         },
 {% endfor %}
 {% if 'resource_type' in DEVICE_METADATA['localhost'] and DEVICE_METADATA['localhost']['resource_type'] in apollo_resource_types %}
@@ -440,8 +468,12 @@
 {% else %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|4": {
+{% if port not in PORT_DPC %}
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
+{% else %}
+            "scheduler": "scheduler.0"
+{% endif %}
         },
 {% endfor %}
 {% endif %}
@@ -457,7 +489,7 @@
 {% endfor %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|2": {
-{% if port in port_names_list_extra_queues %}
+{% if port in port_names_list_extra_queues and port not in PORT_DPC %}
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
 {% else %}
@@ -478,7 +510,7 @@
 {% endfor %}
 {% for port in PORT_ACTIVE %}
         "{{ port }}|6": {
-{% if port in port_names_list_extra_queues %}
+{% if port in port_names_list_extra_queues and port not in PORT_DPC %}
             "scheduler"   : "scheduler.1",
             "wred_profile": "AZURE_LOSSLESS"
 {% else %}

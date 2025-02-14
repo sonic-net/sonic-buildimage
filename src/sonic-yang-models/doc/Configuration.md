@@ -1,98 +1,102 @@
-=======
 # SONiC Configuration Database Manual
 
-Table of Contents
-=================
 
-   * [Introduction](#introduction)
-   * [Configuration](#configuration)
-   * [<strong>Config Load and Save</strong>](#config-load-and-save)
+**Table of Contents**
 
-         * [Incremental Configuration](#incremental-configuration)
-   * [<strong>Redis and Json Schema</strong>](#redis-and-json-schema)
-
-         * [ACL and Mirroring](#acl-and-mirroring)
-         * [BGP BBR](#bgp-bbr)
-         * [BGP Device Global](#bgp-device-global)
-         * [BGP Sessions](#bgp-sessions)
-         * [BUFFER_PG](#buffer_pg)
-         * [Buffer pool](#buffer-pool)
-         * [Buffer profile](#buffer-profile)
-         * [Buffer queue](#buffer-queue)
-         * [Buffer port ingress profile list](#buffer-port-ingress-profile-list)
-         * [Buffer port egress profile list](#buffer-port-egress-profile-list)
-         * [Cable length](#cable-length)
-         * [Chassis module](#chassis-module)
-         * [COPP_TABLE](#copp_table)
-         * [Console](#console)
-         * [CRM](#crm)
-         * [CRM DASH](#crm-dash)
-         * [Data Plane L3 Interfaces](#data-plane-l3-interfaces)
-         * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
-         * [Device Metadata](#device-metadata)
-         * [Device neighbor metada](#device-neighbor-metada)
-         * [DHCP_RELAY](#dhcp_relay)
-         * [DHCP Server IPV4](#dhcp_server_ipv4)
-         * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
-         * [FG_NHG](#fg_nhg)
-         * [FG_NHG_MEMBER](#fg_nhg_member)
-         * [FG_NHG_PREFIX](#fg_nhg_prefix)
-         * [FABRIC_MONITOR](#fabric-monitor)
-         * [FABRIC_PORT](#fabric-port)
-         * [FLEX_COUNTER_TABLE](#flex_counter_table)
-         * [Hash](#hash)
-         * [IPv6 Link-local] (#ipv6-link-local)
-         * [KDUMP](#kdump)
-         * [Kubernetes Master](#kubernetes-master)
-         * [L2 Neighbors](#l2-neighbors)
-         * [Loopback Interface](#loopback-interface)
-         * [LOSSLESS_TRAFFIC_PATTERN](#LOSSLESS_TRAFFIC_PATTERN)
-         * [Management Interface](#management-interface)
-         * [Management port](#management-port)
-         * [Management VRF](#management-vrf)
-         * [MAP_PFC_PRIORITY_TO_QUEUE](#map_pfc_priority_to_queue)
-         * [MUX_CABLE](#mux_cable)
-         * [MUX_LINKMGR](#mux_linkmgr)
-         * [NEIGH](#neigh)
-         * [NTP Global Configuration](#ntp-global-configuration)
-         * [NTP Servers](#ntp-servers)
-         * [Peer Switch](#peer-switch)
-         * [Policer](#policer)
-         * [Port](#port)
-         * [Port Channel](#port-channel)
-         * [Portchannel member](#portchannel-member)
-         * [Scheduler](#scheduler)
-         * [Port QoS Map](#port-qos-map)
-         * [Queue](#queue)
-         * [Syslog Global Configuration](#syslog-global-configuration)
-         * [Syslog Servers](#syslog-servers)
-         * [Sflow](#sflow)
-         * [Restapi](#restapi)
-         * [System Port](#system-port)
-         * [Tacplus Server](#tacplus-server)
-         * [TC to Priority group map](#tc-to-priority-group-map)
-         * [TC to Queue map](#tc-to-queue-map)
-         * [Telemetry](#telemetry)
-         * [Telemetry client](#telemetry-client)
-         * [Tunnel](#tunnel)
-         * [Versions](#versions)
-         * [VLAN](#vlan)
-         * [VLAN_MEMBER](#vlan_member)
-         * [VNET](#vnet)
-         * [VOQ Inband Interface](#voq-inband-interface)
-         * [VXLAN](#vxlan)
-         * [Virtual router](#virtual-router)
-         * [LOGGER](#logger)
-         * [WRED_PROFILE](#wred_profile)
-         * [PASSWORD_HARDENING](#password_hardening)
-         * [SSH_SERVER](#ssh_server)  
-         * [SYSTEM_DEFAULTS table](#systemdefaults-table)
-         * [RADIUS](#radius)
-         * [Static DNS](#static-dns)
-   * [For Developers](#for-developers)
-      * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
-      * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
-
+* [Introduction](#introduction)
+* [Configuration](#configuration)
+* [<strong>Config Load and Save</strong>](#config-load-and-save)
+  * [Incremental Configuration](#incremental-configuration)
+* [<strong>Redis and Json Schema</strong>](#redis-and-json-schema)
+  * [ACL and Mirroring](#acl-and-mirroring)
+  * [BGP BBR](#bgp-bbr)
+  * [ASIC SDK health event](#asic-sdk-health-event)
+  * [BGP Device Global](#bgp-device-global)
+  * [BGP Sessions](#bgp-sessions)
+  * [BUFFER_PG](#buffer_pg)
+  * [Buffer pool](#buffer-pool)
+  * [Buffer profile](#buffer-profile)
+  * [Buffer queue](#buffer-queue)
+  * [Buffer port ingress profile list](#buffer-port-ingress-profile-list)
+  * [Buffer port egress profile list](#buffer-port-egress-profile-list)
+  * [Cable length](#cable-length)
+  * [Chassis module](#chassis-module)
+  * [COPP_TABLE](#copp_table)
+  * [Console](#console)
+  * [CRM](#crm)
+  * [CRM DASH](#crm-dash)
+  * [Data Plane L3 Interfaces](#data-plane-l3-interfaces)
+  * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
+  * [Device Metadata](#device-metadata)
+  * [Device neighbor metada](#device-neighbor-metada)
+  * [DHCP_RELAY](#dhcp_relay)
+  * [DHCP Server IPV4](#dhcp_server_ipv4)
+  * [BMP](#bmp)
+  * [DSCP_TO_TC_MAP](#dscp_to_tc_map)
+  * [FG_NHG](#fg_nhg)
+  * [FG_NHG_MEMBER](#fg_nhg_member)
+  * [FG_NHG_PREFIX](#fg_nhg_prefix)
+  * [FABRIC_MONITOR](#fabric-monitor)
+  * [FABRIC_PORT](#fabric-port)
+  * [FLEX_COUNTER_TABLE](#flex_counter_table)
+  * [GRPCCLIENT](#grpcclient)
+  * [Hash](#hash)
+  * [IPv6 Link-local] (#ipv6-link-local)
+  * [KDUMP](#kdump)
+  * [Kubernetes Master](#kubernetes-master)
+  * [L2 Neighbors](#l2-neighbors)
+  * [Loopback Interface](#loopback-interface)
+  * [LOSSLESS_TRAFFIC_PATTERN](#LOSSLESS_TRAFFIC_PATTERN)
+  * [Memory Statistics](#memory-statistics)
+  * [Management Interface](#management-interface)
+  * [Management port](#management-port)
+  * [Management VRF](#management-vrf)
+  * [MAP_PFC_PRIORITY_TO_QUEUE](#map_pfc_priority_to_queue)
+  * [MUX_CABLE](#mux_cable)
+  * [MUX_LINKMGR](#mux_linkmgr)
+  * [NEIGH](#neigh)
+  * [NTP Global Configuration](#ntp-global-configuration)
+  * [NTP Servers](#ntp-servers)
+  * [Peer Switch](#peer-switch)
+  * [Policer](#policer)
+  * [Port](#port)
+  * [Port Channel](#port-channel)
+  * [Portchannel member](#portchannel-member)
+  * [Scheduler](#scheduler)
+  * [Port QoS Map](#port-qos-map)
+  * [Queue](#queue)
+  * [Syslog Global Configuration](#syslog-global-configuration)
+  * [Syslog Servers](#syslog-servers)
+  * [Sflow](#sflow)
+  * [Restapi](#restapi)
+  * [System Port](#system-port)
+  * [Tacplus Server](#tacplus-server)
+  * [TC to Priority group map](#tc-to-priority-group-map)
+  * [TC to Queue map](#tc-to-queue-map)
+  * [Telemetry](#telemetry)
+  * [Telemetry client](#telemetry-client)
+  * [Tunnel](#tunnel)
+  * [Versions](#versions)
+  * [VLAN](#vlan)
+  * [VLAN_MEMBER](#vlan_member)
+  * [VNET](#vnet)
+  * [VOQ Inband Interface](#voq-inband-interface)
+  * [VXLAN](#vxlan)
+  * [Virtual router](#virtual-router)
+  * [LOGGER](#logger)
+  * [WRED_PROFILE](#wred_profile)
+  * [XCVRD_LOG](#xcvrd_log)
+  * [PASSWORD_HARDENING](#password_hardening)
+  * [SSH_SERVER](#ssh_server)
+  * [SUBNET_DECAP](#subnet_decap)
+  * [SYSTEM_DEFAULTS table](#systemdefaults-table)
+  * [RADIUS](#radius)
+  * [Static DNS](#static-dns)
+  * [ASIC_SENSORS](#asic_sensors)  
+  * [SRv6](#srv6)
+* [For Developers](#for-developers)
+  * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
+  * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
 
 
 # Introduction
@@ -339,7 +343,8 @@ and migration plan
             "MATCHES": [
                 "IN_PORTS",
                 "OUT_PORTS",
-                "SRC_IP"
+                "SRC_IP",
+                "TUNNEL_TERM"
             ],
             "ACTIONS": [
                 "PACKET_ACTION",
@@ -366,6 +371,7 @@ and migration plan
             "PRIORITY": "999",
             "PACKET_ACTION": "DROP",
             "SRC_IP": "1.1.1.1/32",
+            "TUNNEL_TERM": "true"
         }
     }
 }
@@ -382,14 +388,36 @@ The **BGP_BBR** table contains device-level BBR state.
         }
 }
 ```
-### BGP Device Global
 
-The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.
-It has a STATE object containing device state like **tsa_enabled**
-which is set to true if device is currently isolated using
-traffic-shift-away (TSA) route-maps in BGP
+### ASIC SDK health event
+
+ASIC/SDK health event related configuration is defined in **SUPPRESS_ASIC_SDK_HEALTH_EVENT** table.
 
 ```
+"SUPPRESS_ASIC_SDK_HEALTH_EVENT": {
+    "notice": {
+        "categories": [
+            "asic_hw"
+        ],
+        "max_events": "1000"
+    },
+    "warning": {
+        "categories": [
+            "software",
+            "cpu_hw"
+        ]
+    }
+}
+```
+
+### BGP Device Global
+
+The **BGP_DEVICE_GLOBAL** table contains device-level BGP global state.  
+It has a STATE object containing device state like **tsa_enabled**, **wcmp_enabled** and **idf_isolation_state**.
+
+When **tsa_enabled** is set to true, the device is isolated using traffic-shift-away (TSA) route-maps in BGP.
+
+```json
 {
 "BGP_DEVICE_GLOBAL": {
     "STATE": {
@@ -397,6 +425,30 @@ traffic-shift-away (TSA) route-maps in BGP
     }
 }
 ```
+
+When **wcmp_enabled** is set to true, the device is configured to use BGP Link Bandwidth Extended Community.  
+Weighted ECMP load balances traffic between the equal cost paths in proportion to the capacity of the local links.
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
+        "wcmp_enabled": "true"
+    }
+}
+```
+
+The IDF isolation state **idf_isolation_state** could be one of isolated_no_export, isolated_withdraw_all or unisolated.
+
+```json
+{
+"BGP_DEVICE_GLOBAL": {
+    "STATE": {
+        "idf_isolation_state": "isolated_no_export"
+    }
+}
+```
+
 ### BGP Sessions
 
 BGP session configuration is defined in **BGP_NEIGHBOR** table. BGP
@@ -525,6 +577,7 @@ When the system is running in traditional buffer model, the size of all of the b
 ```
 
 When the system is running in dynamic buffer model, the size of some of the buffer pools can be omitted and will be dynamically calculated.
+In this case, A percentage can be configured on a pool, representing how many the available buffer can be allloced to the pool.
 
 ```
 {
@@ -536,11 +589,12 @@ When the system is running in dynamic buffer model, the size of some of the buff
     },
     "egress_lossy_pool": {
         "type": "egress",
-        "mode": "dynamic",
+        "mode": "dynamic"
     },
     "ingress_lossless_pool": {
         "type": "ingress",
         "mode": "dynamic",
+        "percentage": "80"
     }
   }
 }
@@ -942,6 +996,8 @@ instance is supported in SONiC.
 {
 "DEVICE_METADATA": {
         "localhost": {
+        "asic_id": "06:00.0",
+        "asic_name": "asic0",
         "hwsku": "Force10-S6100",
         "default_bgp_status": "up",
         "docker_routing_config_mode": "unified",
@@ -956,7 +1012,8 @@ instance is supported in SONiC.
         "buffer_model": "traditional",
         "yang_config_validation": "disable",
         "rack_mgmt_map": "dummy_value",
-        "timezome": "Europe/Kiev"
+        "timezome": "Europe/Kiev",
+        "bgp_router_id": "8.8.8.8"
     }
   }
 }
@@ -1003,6 +1060,21 @@ instance is supported in SONiC.
     "interface_id": "true"
 }
 
+```
+
+### BMP
+BMP related configuration are defined in **bgp_neighbor_table**,**bgp_rib_in_table**, **bgp_rib_out_table** tables.
+
+```
+{
+    "BMP": {
+        "table": {
+            "bgp_neighbor_table": "true",
+            "bgp_rib_in_table": "false",
+            "bgp_rib_out_table": "false"
+        }
+    }
+}
 ```
 
 ### DHCP_SERVER_IPV4
@@ -1129,7 +1201,9 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
         "monErrThreshCrcCells": "1",
         "monErrThreshRxCells": "61035156",
         "monPollThreshIsolation": "1",
-        "monPollThreshRecovery": "8"
+        "monPollThreshRecovery": "8",
+        "monCapacityThreshWarn": "10",
+        "monState": "enable"
     }
   }
 }
@@ -1143,12 +1217,14 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
     "Fabric0": {
         "alias": "Fabric0",
         "isolateStatus": "False",
-        "lanes": "0"
+        "lanes": "0",
+        "forceUnisolateStatus": "0"
     },
     "Fabric1": {
         "alias": "Fabric1",
         "isolateStatus": "False",
-        "lanes": "1"
+        "lanes": "1",
+        "forceUnisolateStatus": "0"
     }
   }
 }
@@ -1210,7 +1286,7 @@ The FG_NHG_PREFIX table provides the FG_NHG_PREFIX for which FG behavior is desi
 
 ### Hash
 
-Generic hash allows user to configure various aspects of hashing algorithm.  
+Generic hash allows user to configure various aspects of hashing algorithm.
 The configuration is applied globally for each ECMP and LAG on a switch.
 
 ***ECMP/LAG HASH***
@@ -1294,7 +1370,10 @@ The configuration is applied globally for each ECMP and LAG on a switch.
         "config": {
             "enabled": "true",
             "num_dumps": "3",
-            "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M"
+            "memory": "0M-2G:256M,2G-4G:256M,4G-8G:384M,8G-:448M",
+            "remote": "true",
+            "ssh_string": "username@ipaddress",
+            "ssh_path": "a/b/c"
          }
      }
 }
@@ -1405,6 +1484,25 @@ lossless traffic for dynamic buffer calculation
     }
 }
 ```
+
+### Memory Statistics
+The memory statistics configuration is stored in the **MEMORY_STATISTICS** table. This table is used by the memory statistics daemon to manage memory monitoring settings. The configuration allows enabling or disabling memory collection, specifying how frequently memory statistics are sampled, and defining how long the memory data is retained. 
+
+```
+{
+    "MEMORY_STATISTICS": {
+        "memory_statistics": {
+            "enabled": "false",
+            "sampling_interval": "5",
+            "retention_period":  "15"
+        }
+    }
+}
+
+```
+- **enabled**: Defines whether the memory statistics collection is active (true or false).
+- **sampling_interval**: Interval between data collection.
+- **retention_period**: Time to retain collected data.
 
 ### Management Interface
 
@@ -1808,7 +1906,10 @@ optional attributes.
             "link_training": "off",
             "laser_freq": "191300",
             "tx_power": "-27.3",
-            "dom_polling": "enabled"
+            "dom_polling": "enabled",
+            "core_id": "1",
+            "core_port_id": "1",
+            "num_voq": "8"
         },
         "Ethernet1": {
             "index": "1",
@@ -1821,7 +1922,10 @@ optional attributes.
             "link_training": "on",
             "laser_freq": "191300",
             "tx_power": "-27.3",
-            "dom_polling": "enabled"
+            "dom_polling": "enabled",
+            "core_id": "0",
+            "core_port_id": "14",
+            "num_voq": "8"
         },
         "Ethernet63": {
             "index": "63",
@@ -1832,7 +1936,10 @@ optional attributes.
             "speed": "40000",
             "laser_freq": "191300",
             "tx_power": "-27.3",
-            "dom_polling": "disabled"
+            "dom_polling": "disabled",
+            "core_id": "0",
+            "core_port_id": "15",
+            "num_voq": "8"
         }
     }
 }
@@ -2021,6 +2128,27 @@ key - name
 | collector_ip   | IPv4/IPv6 address of the Sflow collector                                                | true        |           |             |
 | collector_port | Destination L4 port of the Sflow collector                                              |             | 6343      |             |
 | collector_vrf  | Specify the Collector VRF. In this revision, it is either default VRF or Management VRF.|             |           |             |
+
+### Storage Monitoring Daemon Interval Configuration
+
+These options are used to configure the daemon polling and sync-to-disk interval
+of the Storage Monitoring Daemon (stormond)
+
+**Config Sample**
+```
+{
+    "STORMOND_CONFIG": {
+        "INTERVALS": {
+            "daemon_polling_interval" : "60",
+            "fsstats_sync_interval"   : "360"
+        }
+    }
+}
+```
+
+*   `daemon_polling_interval` - Determines how often stormond queries the disk for relevant information and posts to STATE_DB
+*   `fsstats_sync_interval`   - Determines how often key information from the STATE_DB is synced to a file on disk
+
 
 ### Syslog Global Configuration
 
@@ -2236,7 +2364,8 @@ and is listed in this table.
         "gnmi": {
             "client_auth": "true",
             "log_level": "2",
-            "port": "50051"
+            "port": "50051",
+            "save_on_set": "false"
         }
     }
 }
@@ -2437,7 +2566,8 @@ VXLAN_EVPN_NVO holds the VXLAN_TUNNEL object to be used for BGP-EVPN discovered 
 {
 "VXLAN_TUNNEL": {
         "vtep1": {
-            "src_ip": "10.10.10.10"
+            "src_ip": "10.10.10.10",
+            "dst_ip": "12.12.12.12"
         }
   }
 "VXLAN_TUNNEL_MAP" : {
@@ -2590,20 +2720,41 @@ There are 4 classes
 }
 ```
 
+### SERIAL_CONSOLE
+
+In this table collected configuration of the next serial-console attributes:
+-   inactivity_timeout - Inactivity timeout for serial-console session, allowed values: 0-35000 (minutes), default value: 15
+-   sysrq_capabilities - Enabling or disabling SysRq functionality for serial-console session, allowed values: enabled/disabled, default value disabled
+
+```
+{
+    SERIAL_CONSOLE:{
+        "POLICIES":{
+            "inactivity_timeout": 15
+            "sysrq_capabilities": "disabled"
+        }
+    }
+}
+```
+
 ### SSH_SERVER
 
-In this table, we allow configuring ssh server global settings. This will feature includes 3 configurations:
+In this table, we allow configuring ssh server global settings. This will feature includes 5 configurations:
 
 -   authentication_retries - number of login attepmts 1-100
 -   login_timeout - Timeout in seconds for login session for user to connect 1-600
 -   ports - Ssh port numbers - string of port numbers seperated by ','
+-   inactivity_timeout - Inactivity timeout for SSH session, allowed values: 0-35000 (min), default value: 15 (min)
+-   max_sessions - Max number of concurrent logins, allowed values: 0-100 (where 0 means no limit), default value: 0
 ```
 {
     "SSH_SERVER": {
         "POLICIES":{
             "authentication_retries": "6",
             "login_timeout": "120",
-            "ports": "22"
+            "ports": "22",
+            "inactivity_timeout": "15",
+            "max_sessions": "0"
         }
     }
 }
@@ -2661,6 +2812,20 @@ The method could be:
     },
     "accounting": {
        "login": "local"
+    }
+}
+```
+
+### SUBNET_DECAP
+
+The **SUBNET_DECAP** table is used for subnet decap configuration.
+
+```
+"SUBNET_DECAP": {
+    "AZURE": {
+        "status": "enable",
+        "src_ip": "10.10.10.0/24",
+        "src_ip_v6": "20c1:ba8::/64"
     }
 }
 ```
@@ -2724,6 +2889,30 @@ The DNS_NAMESERVER table introduces static DNS nameservers configuration.
 }
 ```
 
+### SRv6
+
+The **SRV6_MY_SIDS** and **SRV6_MY_LOCATORS** tables introduce Segment Routing over IPv6 configuration.
+An example is as follows:
+```
+{
+    "SRV6_MY_LOCATORS" : {
+        "loc1" : {
+            "prefix" : "FCBB:BBBB:20::"
+        }
+    }
+    "SRV6_MY_SIDS" : {
+        "loc1|FCBB:BBBB:20::" : {
+           "action": "uN"
+        },
+        "loc1|FCBB:BBBB:20:F1::" : {
+           "action": "uDT46",
+           "decap_vrf": "default",
+           "decap_dscp_mode": "pipe"
+        }
+    }
+}
+```
+
 ### FIPS
 
 The FIPS table introduces FIPS  configuration.
@@ -2746,7 +2935,7 @@ The MID_PLANE_BRIDGE" table introduces the configuration for the midplane bridge
 {
     "MID_PLANE_BRIDGE": {
         "GLOBAL" : {
-            "bridge": "bridge_midplane",
+            "bridge": "bridge-midplane",
             "ip_prefix": "169.254.200.254/24"
         }
     }
@@ -2770,18 +2959,67 @@ The DPUS table introduces the information on the DPUs (Data Processing Unit) ava
 }
 ```
 
-#### 5.2.3 Update value directly in db memory
+### ASIC_SENSORS
 
-For Developers
-==============
+The ASIC_SENSORS table introduces the asic sensors polling configuration when they are available on the platform.
 
-Generating Application Config by Jinja2 Template
-------------------------------------------------
+```json
+{
+    "ASIC_SENSORS": {
+        "ASIC_SENSORS_POLLER_INTERVAL": {
+            "interval": "10"
+        },
+        "ASIC_SENSORS_POLLER_STATUS": {
+            "admin_status": "enable"
+        }
+    }
+}
+```
+
+### DPU PORT Configuration^M
+
+The **DPU_PORT** table introduces the configuration for the DPUs(Data Processing Unit) PORT information available on the platform.
+
+```json
+{
+    "DPU_PORT": {
+        "dpu0": {
+            "state": "up",
+            "vip_ipv4": "192.168.1.1",
+            "vip_ipv6": "2001:db8::10",
+            "pa_ipv4": "192.168.1.10",
+            "pa_ipv6": "2001:db8::10",
+            "vdpu_id": "vdpu0",
+            "gnmi_port": "50052"
+        },
+        "dpu1": {
+            "state": "down",
+            "vip_ipv4": "192.168.1.2",
+            "vip_ipv6": "2001:db8::20",
+            "pa_ipv4": "192.168.1.20",
+            "pa_ipv6": "2001:db8::20",
+            "vdpu_id": "vdpu1",
+            "gnmi_port": "50052"
+        }
+    }
+}
+```
+
+**state**: Administrative status of the DPU (`up` or `down`).
+**vip_ipv4**: VIP IPv4 address from minigraph.
+**vip_ipv6**: VIP IPv6 address from minigraph.
+**pa_ipv4**: PA IPv4 address from minigraph.
+**pa_ipv6**: PA IPv6 address from minigraph.
+**vdpu_id**: ID of VDPUs from minigraph.
+**gnmi_port**: Port gNMI runs on.
+
+# For Developers
+
+## Generating Application Config by Jinja2 Template
 
 To be added.
 
-Incremental Configuration by Subscribing to ConfigDB
-----------------------------------------------------
+## Incremental Configuration by Subscribing to ConfigDB
 
 Detail instruction to be added. A sample could be found in this
 [PR](https://github.com/Azure/sonic-buildimage/pull/861) that

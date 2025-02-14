@@ -31,13 +31,12 @@ import base64
 from collections import OrderedDict
 from config_samples import generate_sample_config, get_available_config
 from functools import partial
-from minigraph import minigraph_encoder, parse_xml, parse_device_desc_xml, parse_asic_sub_role, parse_asic_switch_type
+from minigraph import minigraph_encoder, parse_xml, parse_device_desc_xml, parse_asic_sub_role, parse_asic_switch_type, parse_hostname
 from portconfig import get_port_config, get_breakout_mode
-from smartswitch_config import get_smartswitch_config
 from sonic_py_common.multi_asic import get_asic_id_from_name, get_asic_device_id, is_multi_asic
 from sonic_py_common import device_info
 from swsscommon.swsscommon import ConfigDBConnector, SonicDBConfig, ConfigDBPipeConnector
-
+from asic_sensors_config import get_asic_sensors_config
 
 PY3x = sys.version_info >= (3, 0)
 
@@ -184,12 +183,13 @@ def get_primary_addr(value):
             intf_with_secondary.remove(name)
     return primary_gateways
 
-def load_namespace_config(asic_name):
-    if not SonicDBConfig.isInit():
-        if is_multi_asic():
-            SonicDBConfig.load_sonic_global_db_config(namespace=asic_name)
-        else:
-            SonicDBConfig.load_sonic_db_config()
+def load_namespace_config():
+    if is_multi_asic():
+        if not SonicDBConfig.isGlobalInit():
+            SonicDBConfig.initializeGlobalConfig()
+    else:
+        if not SonicDBConfig.isInit():
+            SonicDBConfig.initialize()
 
 class FormatConverter:
     """Convert config DB based schema to legacy minigraph based schema for backward capability.
@@ -240,7 +240,6 @@ TODO(taoyl): Current version of config db only supports BGP admin states.
                     if new_key != key:
                         data[table][new_key] = data[table].pop(key)
         return data
-
 
 def deep_update(dst, src):
     """ Deep update of dst dict with contest of src dict"""
@@ -359,9 +358,9 @@ def main():
             }}}
         deep_update(data, hardware_data)
         if args.port_config is None:
-            args.port_config = device_info.get_path_to_port_config_file(hwsku)
-        load_namespace_config(asic_name)
-        (ports, _, _) = get_port_config(hwsku, platform, args.port_config, asic_id)
+            args.port_config = device_info.get_path_to_port_config_file(hwsku, asic_id)
+        load_namespace_config()
+        (ports, _, _) = get_port_config(hwsku, platform, args.port_config, hwsku_config_file=args.hwsku_config, asic_name=asic_name)
         if ports is None:
             print('Failed to get port config', file=sys.stderr)
             sys.exit(1)
@@ -370,11 +369,6 @@ def main():
         brkout_table = get_breakout_mode(hwsku, platform, args.port_config)
         if  brkout_table is not None:
             deep_update(data, {'BREAKOUT_CFG': brkout_table})
-
-        # Read Smart Switch config
-        smartswitch_config = get_smartswitch_config(hwsku, platform)
-        if smartswitch_config:
-            deep_update(data, smartswitch_config)
 
     _process_json(args, data)
 
@@ -391,7 +385,7 @@ def main():
 
     if args.minigraph is not None:
         minigraph = args.minigraph
-        load_namespace_config(asic_name)
+        load_namespace_config()
         if platform:
             if args.port_config is not None:
                 deep_update(data, parse_xml(minigraph, platform, args.port_config, asic_name=asic_name, hwsku_config_file=args.hwsku_config))
@@ -419,7 +413,7 @@ def main():
         if args.namespace is None:
             configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, **db_kwargs)
         else:
-            SonicDBConfig.load_sonic_global_db_config(namespace=args.namespace)
+            load_namespace_config()
             configdb = ConfigDBPipeConnector(use_unix_socket_path=use_unix_sock, namespace=args.namespace, **db_kwargs)
 
         configdb.connect()
@@ -431,18 +425,23 @@ def main():
     if args.platform_info:
         asic_role = None
         switch_type = None
+        hostname = None
+
+        if args.minigraph is not None:
+            hostname = parse_hostname(args.minigraph)
+
         if asic_name is not None:
             if args.minigraph is not None:
                 asic_role = parse_asic_sub_role(args.minigraph, asic_name)
-                switch_type = parse_asic_switch_type(args.minigraph, asic_name)
-
+                switch_type = parse_asic_switch_type(args.minigraph, asic_name, hostname)
             if ((switch_type is not None and switch_type.lower() == "chassis-packet") or
-                (asic_role is not None and asic_role.lower() == "backend")):
-                mac = device_info.get_system_mac(namespace=asic_name)
+                (asic_role is not None and asic_role.lower() == "backend") or
+                (platform == device_info.VS_PLATFORM)) :
+                mac = device_info.get_system_mac(namespace=asic_name, hostname=hostname)
             else:
                 mac = device_info.get_system_mac()
         else:
-            mac = device_info.get_system_mac()
+            mac = device_info.get_system_mac(hostname=hostname)
 
         hardware_data = {'DEVICE_METADATA': {'localhost': {
             'platform': platform,
@@ -459,6 +458,15 @@ def main():
                 hardware_data['DEVICE_METADATA']['localhost'].update(asic_id=device_id)
 
         deep_update(data, hardware_data)
+
+        asic_sensors = {}
+        if is_multi_asic():
+            if asic_name is not None:
+                asic_sensors = get_asic_sensors_config()
+        else:
+            asic_sensors = get_asic_sensors_config()
+        if asic_sensors:
+            deep_update(data, asic_sensors) 
 
     paths = ['/', '/usr/share/sonic/templates']
     if args.template_dir:
@@ -491,7 +499,7 @@ def main():
         if args.namespace is None:
             configdb = ConfigDBPipeConnector(use_unix_socket_path=True, **db_kwargs)
         else:
-            SonicDBConfig.load_sonic_global_db_config(namespace=args.namespace)
+            load_namespace_config()
             configdb = ConfigDBPipeConnector(use_unix_socket_path=True, namespace=args.namespace, **db_kwargs)
 
         configdb.connect(False)

@@ -1,0 +1,245 @@
+# $Id: Makefile.linux-gts,v 0.1 Broadcom SDK $
+# $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
+# 
+# Permission is granted to use, copy, modify and/or distribute this
+# software under either one of the licenses below.
+# 
+# License Option 1: GPL
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License, version 2, as
+# published by the Free Software Foundation (the "GPL").
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License version 2 (GPLv2) for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# version 2 (GPLv2) along with this source code.
+# 
+# 
+# License Option 2: Broadcom Open Network Switch APIs (OpenNSA) license
+# 
+# This software is governed by the Broadcom Open Network Switch APIs license:
+# https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+# 
+# 
+
+#
+# x86_64 build for Fedora 28 - system make file.
+#
+#
+
+
+#############################################################################
+# this segment is custom and not sourced from any existing makefile         #
+# (base thanks to http:<slash><slash>confluence.broadcom.com/display/NTSWSW/X86+System) #
+#############################################################################
+
+# set up a basic feature list. tcl, etc. #
+#ifeq (,$(FEATURE_LIST))
+#FEATURE_LIST = TCL BFD PTP CINT L3 I2C MEM_SCAN EDITLINE BCM_SAL_PROFILE CUSTOMER TEST CHASSIS MSTP RCPU
+#endif
+
+# some basic path variables for tools and kernel source, etc #
+
+export BINUTILSVER := 2.41
+
+#
+# For ESW compilation, suppress 'stringop-overflow'
+#
+ifeq ($(BCM_ESW_SUPPORT),1)
+    OPT_CFLAGS += -Wno-error=stringop-overflow
+endif
+ifeq (1,$(GCC_12_1_0))
+    export GCCVER := 12.1.0
+    TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel7/gcc/$(GCCVER)
+else ifeq (1,$(GCC_13_1_0))
+    export GCCVER := 13.1.0
+    TOOLCHAIN_DIR = /projects/ntsw-tools/linux/gcc/13.1.0
+    ifneq ($(DEBUG_OPTIMIZE),FALSE)
+    # {
+      # These flags are required for -O2 'optimized' compilation
+      # We leave the suppression of array-bounds since, currently,
+      # GCC emits many 'false positive' errors of this kind (among a
+      # few that are justified)
+      #
+      OPT_CFLAGS += -Wno-error=array-bounds=
+    # }
+    endif
+else
+    export GCCVER := 11.2.0
+    TOOLCHAIN_DIR = /projects/ntsw-tools/linux/gcc/11.2.0-x86_64
+    ifneq ($(USE_CLANG),1)
+      OPT_CFLAGS += -Wno-error=array-bounds
+    endif
+endif
+
+#The LCOV tool is not compatible with GCC version 9.x and newer, thus we are forced to compile with older one.
+ifeq (1,$(GCOV))
+  ifeq ($(targetplat),user)
+    # GCC 8.1 does not work with binutils 2.41 and newer
+    export BINUTILSVER := 2.38
+    export GCCVER := 8.1.0
+    TOOLCHAIN_DIR = /tools/oss/packages/x86_64-rhel7/gcc/$(GCCVER)
+  endif
+endif
+
+BINUTILS_DIR = /tools/oss/packages/x86_64-rhel7/binutils/$(BINUTILSVER)/bin
+export TCL860 := 1
+
+# For GCC versions >= 4.7
+USE_GCC_TOOLS := 1
+#enables executables > 2GB
+#CFLAGS += -mcmodel=medium
+
+TARGET_MACHINE ?= x86_64
+KERNDIR       ?= /projects/ntsw-tools/linux/x86-kernel-5.10.67
+
+# set up cross compile prefix, tools dir variables. #
+#export CROSS_COMPILE := x86_64-fedora-linux-gnu-
+export TOOLS_DIR     := $(TOOLCHAIN_DIR)/bin
+
+# architecture. #
+ARCH                = x86_64
+#TARGET_ARCHITECTURE = x86_64-fedora-linux-gnu
+TARGET_ARCHITECTURE := x86_64-pc-linux-gnu
+TOOLCHAIN_BASE_DIR := $(TOOLCHAIN_DIR)
+
+ifeq (,$(BUILD_32BITS_EXEC))
+TOOLCHAIN_LIB_DIR:= $(TOOLCHAIN_DIR)/lib64
+else
+TOOLCHAIN_LIB_DIR:= $(TOOLCHAIN_DIR)/lib
+endif
+# set up paths. #
+#export LIBRARY_PATH := $(TOOLCHAIN_LIB_DIR):$(LIBRARY_PATH)
+export PATH         := $(TOOLS_DIR):$(BINUTILS_DIR):$(KERNDIR):$(PATH)
+
+# set up SYSINC path #
+export SYSINC := $(TOOLCHAIN_DIR)/lib/gcc/$(TARGET_ARCHITECTURE)/$(GCCVER)/include
+
+# CFLAGS/CFGFLAGS #
+ifdef SAND_CHIPS
+CFGFLAGS += -D__DUNE_GTS_BCM_CPU__
+endif
+CFGFLAGS += -DUSE_LINUX_BDE_MMAP=1
+#CFGFLAGS += -DBDE_LINUX_USE_MSI_INTERRUPT
+#
+#Flags to prevent gcc 8.1.0 new warnings to appear as errors.
+#(All these flags have been removed so as to activate the maximal types of
+#warning)
+#
+#OPT_CFLAGS += -Wno-error=unused-value
+#OPT_CFLAGS += -Wno-error=unused-but-set-variable
+#OPT_CFLAGS += -Wno-error=maybe-uninitialized
+#OPT_CFLAGS += -Wno-error=aggressive-loop-optimizations
+#OPT_CFLAGS += -Wno-error=array-bounds
+
+# set up KFLAGS appropriately. #
+# -fno-builtin needed for using kernel's version of memcpy instead of the gcc inline version
+ifeq (,$(KFLAGS))
+# {
+  KFLAGS := -I$(KERNDIR) -nostdinc -isystem $(SYSINC) -Iinclude -I$(KERNDIR)/arch/x86/include -I$(KERNDIR)/arch/x86/include/asm  -I$(KERNDIR)/arch/x86/include/generated  -I$(KERNDIR)/arch/x86/include/generated/uapi  -I$(KERNDIR)/arch/x86/include/uapi -I$(KERNDIR)/include -I$(KERNDIR)/include/generated -I$(KERNDIR)/include/uapi -include $(KERNDIR)/include/generated/autoconf.h -D__KERNEL__ -DNDEBUG -Wundef -Wno-error=unused-value -Wno-error=cpp -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -Wno-format-security -O2 -m64 -mtune=generic -mno-red-zone -mcmodel=kernel -funit-at-a-time -fstack-protector -DCONFIG_AS_CFI=1 -DCONFIG_AS_CFI_SIGNAL_FRAME=1 -pipe -Wno-sign-compare -fno-asynchronous-unwind-tables -Wframe-larger-than=1024 -fno-omit-frame-pointer -Wdeclaration-after-statement -Wno-pointer-sign -fno-strict-overflow -fno-dwarf2-cfi-asm -fno-builtin
+  #
+  # Current version of CLANG seems to not recognize some of the options of kernel FLAGS.
+  #
+ifneq (1,$(USE_CLANG))
+# {
+  KFLAGS += -Wno-error=maybe-uninitialized -lc -fno-delete-null-pointer-checks -maccumulate-outgoing-args -fconserve-stack -mpreferred-stack-boundary=3
+# }
+else
+# {
+  KFLAGS +=  -Wno-error=address-of-packed-member
+# }
+endif
+ifeq (1,$(NO_PRECOMPILED_MODULE))
+# {
+  KFLAGS += -DNO_PRECOMPILED_MODULE=1
+  export KFLAGS
+# }
+else
+# {
+  KFLAGS += -DNO_PRECOMPILED_MODULE=0
+# }
+endif
+
+# }
+endif
+
+
+######################################################################
+# this segment comes from make/Makefile.linux-x86-smp_generic_64-2_6 #
+######################################################################
+CFGFLAGS += -DSAL_SPL_LOCK_ON_IRQ
+
+ifeq (,$(BUILD_32BITS_EXEC))
+CFGFLAGS += -DPTRS_ARE_64BITS -DLONGS_ARE_64BITS
+else
+CFLAGS += -m32
+EXTRA_USER_LDFLAGS += -m32
+CFGFLAGS += -DSAL_BDE_32BIT_USER_64BIT_KERNEL
+endif
+CFGFLAGS += -DPHYS_ADDRS_ARE_64BITS
+
+
+###########################################################################################
+# This segment comes from make/Makefile.linux-x86-generic-common-2_6 (with modifications) #
+###########################################################################################
+
+# Default architecture
+ifeq (,$(ARCH))
+ARCH = x86_64
+endif
+
+# Noisy kernel build
+KBUILD_VERBOSE = 1
+
+export ARCH KBUILD_VERBOSE KERNDIR
+
+# Default Linux include directory
+ifeq (,$(LINUX_INCLUDE))
+LINUX_INCLUDE := $(KERNDIR)/include
+endif
+
+# autoconf.h was moved in later kernels
+AUTOCONF = $(KERNDIR)/include/generated/autoconf.h
+ifeq (,$(shell ls $(AUTOCONF) 2>/dev/null))
+AUTOCONF = $(KERNDIR)/include/linux/autoconf.h
+endif
+
+# gcc system include path
+#SYSINC = $(shell gcc -print-search-dirs | grep install | cut -c 10-)include
+
+
+##############################################################
+# This segment comes from make/Makefile.linux-x86-common-2_6 #
+##############################################################
+CFGFLAGS += -DSYS_BE_PIO=0 -DSYS_BE_PACKET=0 -DSYS_BE_OTHER=0
+ENDIAN = LE_HOST=1
+CFGFLAGS += -D$(ENDIAN)
+CFGFLAGS += -DBCM_PLATFORM_STRING=\"X86\"
+CFGFLAGS += -DSAL_BDE_DMA_MEM_DEFAULT=32
+
+# Extra variables.
+EXTRA_CFLAGS = -D"KBUILD_STR(s)=\#s" $(basename_flags) $(modname_flags)
+
+comma = ,
+basetarget = $(basename $(notdir $@))
+modname = $(basetarget)
+
+name-fix = $(subst $(comma),_,$(subst -,_,$1))
+basename_flags = -D"KBUILD_BASENAME=KBUILD_STR($(call name-fix,$(basetarget)))"
+modname_flags  = $(if $(filter 1,$(words $(modname))),\
+-D"KBUILD_MODNAME=KBUILD_STR($(call name-fix,$(modname)))")
+
+ifneq (, $(EDKHOST))
+# Default open source target build
+OPENSRC_BUILD ?= fed21-x86_64
+endif
+
+ifneq ($(targetplat),user)
+# By default we exclude -Werror from x86 kernel builds
+BCM_CFLAGS   = -Wall
+include ${SDK}/make/Makefile.linux-kernel-4_18
+endif

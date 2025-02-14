@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,7 +40,9 @@ class TestThermal:
     @mock.patch('os.path.exists', mock.MagicMock(return_value=True))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_gearbox_count', mock.MagicMock(return_value=2))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_cpu_thermal_count', mock.MagicMock(return_value=2))
-    @mock.patch('sonic_platform.device_data.DeviceDataManager.get_sodimm_thermal_count', mock.MagicMock(return_value=2))
+    @mock.patch('sonic_platform.thermal.glob.iglob', mock.MagicMock(
+        return_value=['/run/hw-management/thermal/sodimm1_temp_input',
+                      '/run/hw-management/thermal/sodimm2_temp_input']))
     @mock.patch('sonic_platform.device_data.DeviceDataManager.get_platform_name', mock.MagicMock(return_value='x86_64-mlnx_msn2700-r0'))
     def test_chassis_thermal(self):
         from sonic_platform.thermal import THERMAL_NAMING_RULE
@@ -159,12 +162,21 @@ class TestThermal:
         assert thermal.get_name() == rule['name'].format(start_index)
         assert thermal.get_position_in_parent() == 1
         assert thermal.is_replaceable() == False
+        sfp.get_presence = mock.MagicMock(return_value=True)
         sfp.get_temperature = mock.MagicMock(return_value=35.4)
         sfp.get_temperature_warning_threshold = mock.MagicMock(return_value=70)
         sfp.get_temperature_critical_threshold = mock.MagicMock(return_value=80)
         assert thermal.get_temperature() == 35.4
         assert thermal.get_high_threshold() == 70
         assert thermal.get_high_critical_threshold() == 80
+        sfp.get_presence = mock.MagicMock(return_value=False)
+        sfp.get_temperature = mock.MagicMock(return_value=35.4)
+        sfp.get_temperature_warning_threshold = mock.MagicMock(return_value=70)
+        sfp.get_temperature_critical_threshold = mock.MagicMock(return_value=80)
+        assert thermal.get_temperature() is None
+        assert thermal.get_high_threshold() is None
+        assert thermal.get_high_critical_threshold() is None
+        sfp.get_presence = mock.MagicMock(return_value=True)
         sfp.get_temperature = mock.MagicMock(return_value=0)
         sfp.get_temperature_warning_threshold = mock.MagicMock(return_value=0)
         sfp.get_temperature_critical_threshold = mock.MagicMock(return_value=None)

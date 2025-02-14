@@ -1,0 +1,154 @@
+From 70e995bd076b5027414e1332a453f366f20c7002 Mon Sep 17 00:00:00 2001
+From: Fernando <fernando.agnes@venkonetworks.com.br>
+Date: Mon, 19 Sep 2022 12:56:46 -0300
+Subject: Adding support for RTA_NH_ID attribute
+
+---
+ include/netlink-private/types.h |  1 +
+ include/netlink/route/route.h   |  2 ++
+ lib/route/route_obj.c           | 23 +++++++++++++++++++++++
+ 3 files changed, 26 insertions(+)
+
+diff --git a/include/netlink-private/types.h b/include/netlink-private/types.h
+index 97af3e5..51e58b1 100644
+--- a/include/netlink-private/types.h
++++ b/include/netlink-private/types.h
+@@ -348,6 +348,7 @@ struct rtnl_route
+ 	uint32_t		rt_metrics[RTAX_MAX];
+ 	uint32_t		rt_metrics_mask;
+ 	uint32_t		rt_nr_nh;
++	uint32_t		rt_nh_id;
+ 	struct nl_addr *	rt_pref_src;
+ 	struct nl_list_head	rt_nexthops;
+ 	struct rtnl_rtcacheinfo	rt_cacheinfo;
+diff --git a/include/netlink/route/route.h b/include/netlink/route/route.h
+index 824dae3..9cfa393 100644
+--- a/include/netlink/route/route.h
++++ b/include/netlink/route/route.h
+@@ -93,6 +93,8 @@ extern int	rtnl_route_set_pref_src(struct rtnl_route *, struct nl_addr *);
+ extern struct nl_addr *rtnl_route_get_pref_src(struct rtnl_route *);
+ extern void	rtnl_route_set_iif(struct rtnl_route *, int);
+ extern int	rtnl_route_get_iif(struct rtnl_route *);
++extern void	rtnl_route_set_nh_id(struct rtnl_route *, uint32_t);
++extern uint32_t	rtnl_route_get_nh_id(struct rtnl_route *);
+ extern int	rtnl_route_get_src_len(struct rtnl_route *);
+ extern void	rtnl_route_set_ttl_propagate(struct rtnl_route *route,
+ 					     uint8_t ttl_prop);
+diff --git a/lib/route/route_obj.c b/lib/route/route_obj.c
+index bacabe8..5d9d4ce 100644
+--- a/lib/route/route_obj.c
++++ b/lib/route/route_obj.c
+@@ -65,6 +65,7 @@
+ #define ROUTE_ATTR_REALMS    0x010000
+ #define ROUTE_ATTR_CACHEINFO 0x020000
+ #define ROUTE_ATTR_TTL_PROPAGATE 0x040000
++#define ROUTE_ATTR_NH_ID     0x080000
+ /** @endcond */
+ 
+ static void route_constructor(struct nl_object *c)
+@@ -252,6 +253,8 @@ static void route_dump_details(struct nl_object *a, struct nl_dump_params *p)
+ 		nl_dump(p, " ttl-propagate %s",
+ 			r->rt_ttl_propagate ? "enabled" : "disabled");
+ 	}
++	if (r->ce_mask & ROUTE_ATTR_NH_ID)
++		nl_dump(p, "nh id %d ", r->rt_nh_id);
+ 
+ 	nl_dump(p, "\n");
+ 
+@@ -391,6 +394,7 @@ static uint64_t route_compare(struct nl_object *_a, struct nl_object *_b,
+ 						    b->rt_pref_src));
+ 	diff |= ROUTE_DIFF(TTL_PROPAGATE,
+ 			   a->rt_ttl_propagate != b->rt_ttl_propagate);
++	diff |= ROUTE_DIFF(NH_ID,		a->rt_nh_id != b->rt_nh_id);
+ 
+ 	if (flags & LOOSE_COMPARISON) {
+ 		nl_list_for_each_entry(nh_b, &b->rt_nexthops, rtnh_list) {
+@@ -589,6 +593,7 @@ static const struct trans_tbl route_attrs[] = {
+ 	__ADD(ROUTE_ATTR_REALMS, realms),
+ 	__ADD(ROUTE_ATTR_CACHEINFO, cacheinfo),
+ 	__ADD(ROUTE_ATTR_TTL_PROPAGATE, ttl_propagate),
++	__ADD(ROUTE_ATTR_NH_ID, nh_id),
+ };
+ 
+ static char *route_attrs2str(int attrs, char *buf, size_t len)
+@@ -862,6 +867,17 @@ int rtnl_route_get_iif(struct rtnl_route *route)
+ 	return route->rt_iif;
+ }
+ 
++void rtnl_route_set_nh_id(struct rtnl_route *route, uint32_t nhid)
++{
++	route->rt_nh_id = nhid;
++	route->ce_mask |= ROUTE_ATTR_NH_ID;
++}
++
++uint32_t rtnl_route_get_nh_id(struct rtnl_route *route)
++{
++	return route->rt_nh_id;
++}
++
+ void rtnl_route_add_nexthop(struct rtnl_route *route, struct rtnl_nexthop *nh)
+ {
+ 	nl_list_add_tail(&nh->rtnh_list, &route->rt_nexthops);
+@@ -1018,6 +1034,7 @@ static struct nla_policy route_policy[RTA_MAX+1] = {
+ 	[RTA_TTL_PROPAGATE] = { .type = NLA_U8 },
+ 	[RTA_ENCAP]	= { .type = NLA_NESTED },
+ 	[RTA_ENCAP_TYPE] = { .type = NLA_U16 },
++	[RTA_NH_ID] = { .type = NLA_U32 },
+ };
+ 
+ static int parse_multipath(struct rtnl_route *route, struct nlattr *attr)
+@@ -1201,6 +1218,9 @@ int rtnl_route_parse(struct nlmsghdr *nlh, struct rtnl_route **result)
+ 		rtnl_route_set_pref_src(route, addr);
+ 	}
+ 
++	if (tb[RTA_NH_ID])
++		rtnl_route_set_nh_id(route, nla_get_u32(tb[RTA_NH_ID]));
++
+ 	if (tb[RTA_METRICS]) {
+ 		struct nlattr *mtb[RTAX_MAX + 1];
+ 		int i;
+@@ -1404,6 +1424,9 @@ int rtnl_route_build_msg(struct nl_msg *msg, struct rtnl_route *route)
+ 	if (route->ce_mask & ROUTE_ATTR_TTL_PROPAGATE)
+ 		NLA_PUT_U8(msg, RTA_TTL_PROPAGATE, route->rt_ttl_propagate);
+ 
++	if (route->ce_mask & ROUTE_ATTR_NH_ID)
++		NLA_PUT_U32(msg, RTA_NH_ID, route->rt_nh_id);
++
+ 	if (route->rt_nmetrics > 0) {
+ 		uint32_t val;
+ 
+-- 
+2.25.1
+
+diff --git a/include/linux-private/linux/rtnetlink.h b/include/linux-private/linux/rtnetlink.h
+index 8c1d600..82fb56b 100644
+--- a/include/linux-private/linux/rtnetlink.h
++++ b/include/linux-private/linux/rtnetlink.h
+@@ -342,6 +342,7 @@ enum rtattr_type_t {
+ 	RTA_IP_PROTO,
+ 	RTA_SPORT,
+ 	RTA_DPORT,
++	RTA_NH_ID,
+ 	__RTA_MAX
+ };
+ 
+diff --git a/libnl-route-3.sym b/libnl-route-3.sym
+index ce6d714..fb81b7f 100644
+--- a/libnl-route-3.sym
++++ b/libnl-route-3.sym
+@@ -690,6 +690,7 @@ global:
+ 	rtnl_route_get_family;
+ 	rtnl_route_get_flags;
+ 	rtnl_route_get_iif;
++	rtnl_route_get_nh_id;
+ 	rtnl_route_get_metric;
+ 	rtnl_route_get_nexthops;
+ 	rtnl_route_get_nnexthops;
+@@ -732,6 +733,7 @@ global:
+ 	rtnl_route_set_family;
+ 	rtnl_route_set_flags;
+ 	rtnl_route_set_iif;
++	rtnl_route_set_nh_id;
+ 	rtnl_route_set_metric;
+ 	rtnl_route_set_pref_src;
+ 	rtnl_route_set_priority;

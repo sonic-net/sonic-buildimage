@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2022 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <ngbde.h>
@@ -313,57 +313,6 @@ ngbde_kapi_intr_disconnect(int kdev, unsigned int irq_num)
 }
 /*! \cond */
 EXPORT_SYMBOL(ngbde_kapi_intr_disconnect);
-/*! \endcond */
-
-int
-ngbde_kapi_intr2_connect(int kdev, unsigned int irq_num,
-                         int (*isr_func)(void *), void *isr_data)
-{
-    struct ngbde_dev_s *sd;
-    struct ngbde_intr_ctrl_s *ic;
-
-    sd = ngbde_swdev_get(kdev);
-    if (!sd) {
-        return -1;
-    }
-
-    if (irq_num >= NGBDE_NUM_IRQS_MAX) {
-        return -1;
-    }
-
-    ic = &sd->intr_ctrl[irq_num];
-    ic->isr2_func = isr_func;
-    ic->isr2_data = isr_data;
-
-    return 0;
-}
-/*! \cond */
-EXPORT_SYMBOL(ngbde_kapi_intr2_connect);
-/*! \endcond */
-
-int
-ngbde_kapi_intr2_disconnect(int kdev, unsigned int irq_num)
-{
-    struct ngbde_dev_s *sd;
-    struct ngbde_intr_ctrl_s *ic;
-
-    sd = ngbde_swdev_get(kdev);
-    if (!sd) {
-        return -1;
-    }
-
-    if (irq_num >= NGBDE_NUM_IRQS_MAX) {
-        return -1;
-    }
-
-    ic = &sd->intr_ctrl[irq_num];
-    ic->isr2_func = NULL;
-    ic->isr2_data = NULL;
-
-    return 0;
-}
-/*! \cond */
-EXPORT_SYMBOL(ngbde_kapi_intr2_disconnect);
 /*! \endcond */
 
 int

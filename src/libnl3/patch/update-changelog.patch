@@ -1,0 +1,30 @@
+From 62e7fbb3b7f47c686d918f67bbba17f77e1ed217 Mon Sep 17 00:00:00 2001
+From: Saikrishna Arcot <sarcot@microsoft.com>
+Date: Mon, 4 Nov 2024 16:26:03 -0800
+Subject: [PATCH] Update changelog
+
+Add changelog entry to force different timestamps, so that docker's
+overlay2 diff code doesn't have issues.
+
+Signed-off-by: Saikrishna Arcot <sarcot@microsoft.com>
+---
+ debian/changelog | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/debian/changelog b/debian/changelog
+index b8b08d7..48e33f0 100644
+--- a/debian/changelog
++++ b/debian/changelog
+@@ -1,3 +1,9 @@
++libnl3 (3.7.0-0.2+b1sonic1) unstable; urgency=medium
++
++  * Add support to get/set the nexthop ID
++
++ -- SONiC Build <sonic-dev@lists.sonicfoundation.dev>  Tue, 05 Nov 2024 00:20:23 +0000
++
+ libnl3 (3.7.0-0.2) unstable; urgency=medium
+ 
+   * Non-maintainer upload.
+-- 
+2.34.1
+

@@ -76,8 +76,10 @@ module sonic-types {
             enum IPV4;
             enum IPV6;
             enum IPv4ANY;
+            enum IPV4ANY;
             enum NON_IP4;
             enum IPv6ANY;
+            enum IPV6ANY;
             enum NON_IPv6;
             enum ARP;
         }
@@ -314,6 +316,16 @@ module sonic-types {
         }
     }
 
+    typedef interface_name {
+        description "Represents IFNAMSIZ defined in <net/if.h>";
+        type string {
+            length 1..15 {
+                error-message "Invalid interface name length, it must not exceed 16 characters.";
+                error-app-tag invalid-interface-name-length;
+            }
+        }
+    }
+
     typedef hash-field {
         description "Represents native hash field";
         type enumeration {
@@ -381,6 +393,12 @@ module sonic-types {
         type enumeration {
             enum on;
             enum off;
+        }
+    }
+
+    typedef asic_name {
+        type string {
+            pattern '[Aa][Ss][Ii][Cc][0-9]{1,2}';
         }
     }
 

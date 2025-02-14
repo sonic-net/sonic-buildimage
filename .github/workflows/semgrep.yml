@@ -19,4 +19,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: semgrep ci
         env:
-           SEMGREP_RULES: p/default
+           SEMGREP_RULES: |
+             p/default
+             r/python.lang.security.audit.dangerous-system-call-audit.dangerous-system-call-audit
+             r/c.lang.security.insecure-use-strcat-fn.insecure-use-strcat-fn
+             r/c.lang.security.insecure-use-string-copy-fn.insecure-use-string-copy-fn

@@ -163,11 +163,8 @@ endif
 	git add -- $(PLATFORM_PATH)/non-upstream-patches/
 	git add -- $(PLATFORM_PATH)/hw-management.mk
 
-	echo -en '\n###-> Non Upstream external-changes.patch changes <-###\n' >> ${HWMGMT_USER_OUTFILE}
-	git diff --no-color --staged -- $(PLATFORM_PATH)/non-upstream-patches/external-changes.patch >> ${HWMGMT_USER_OUTFILE}
-
-	echo -en '\n###-> Non Upstream kconfig-inclusions.patch changes <-###\n' >> ${HWMGMT_USER_OUTFILE}
-	git diff --no-color --staged -- $(PLATFORM_PATH)/non-upstream-patches/kconfig-inclusions.patch >> ${HWMGMT_USER_OUTFILE}
+	echo -en '\n###-> Non Upstream changes <-###\n' >> ${HWMGMT_USER_OUTFILE}
+	git diff --no-color --staged -- $(PLATFORM_PATH)/non-upstream-patches/ >> ${HWMGMT_USER_OUTFILE}
 
 	echo -en '\n###-> Non Upstream patch list file <-###\n' >> ${HWMGMT_USER_OUTFILE}
 	git diff --no-color --staged -- $($(MLNX_HW_MANAGEMENT)_SRC_PATH)/hwmgmt_nonup_patches >> ${HWMGMT_USER_OUTFILE}

@@ -18,9 +18,11 @@
                 "pddf_xcvr"
             ]
         },
+        "std_perm_kos": [
+            "i2c-i801",
+            "i2c-ismt"
+        ],
         "std_kos": [
-            "i2c_i801",
-            "i2c-ismt",
             "i2c_dev",
             "i2c_mux_pca954x",
             "optoe"
@@ -31,9 +33,12 @@
             "pddf_cpld_driver",
             "pddf_mux_module",
             "pddf_xcvr_module",
+            "pddf_fpgapci_driver",
             "pddf_xcvr_driver_module",
             "pddf_psu_driver_module",
             "pddf_psu_module",
+            "pddf_fpgai2c_module",
+            "pddf_fpgai2c_driver",
             "pddf_fan_driver_module",
             "pddf_fan_module",
             "pddf_led_module"
@@ -65,7 +70,7 @@
     },
     "SMBUS1": {
         "dev_info": {
-            "device_type": "SMBUS", "device_name": "SMBUS1", "device_parent": "SYSTEM" 
+            "device_type": "SMBUS", "device_name": "SMBUS1", "device_parent": "SYSTEM"
         },
         "i2c": {
             "topo_info": {
@@ -495,14 +500,6 @@
                         "field_pos": "2"
                     },
                     {
-                        "attr_name": "temp1_high_threshold",
-                        "bmc_cmd": "ipmitool sdr get -c PSU0_TEMP1",
-                        "raw": "0",
-                        "separator": ",",
-                        "field_name": "PSU0_TEMP1",
-                        "field_pos": "13"
-                    },
-                    {
                         "attr_name": "temp1_high_crit_threshold",
                         "bmc_cmd": "ipmitool sdr get -c PSU0_TEMP1",
                         "raw": "0",
@@ -533,14 +530,6 @@
                         "separator": ",",
                         "field_name": "PSU1_TEMP1",
                         "field_pos": "2"
-                    },
-                    {
-                        "attr_name": "temp1_high_threshold",
-                        "bmc_cmd": "ipmitool sdr get -c PSU1_TEMP1",
-                        "raw": "0",
-                        "separator": ",",
-                        "field_name": "PSU1_TEMP1",
-                        "field_pos": "13"
                     },
                     {
                         "attr_name": "temp1_high_crit_threshold",
@@ -752,6 +741,24 @@
                         "bmc_cmd": "ipmitool raw 0x3c 0x30 0x0 | xargs | cut -d' ' -f1",
                         "raw": "1",
                         "type": "raw"
+                    },
+                    {
+                        "attr_name": "psu_v_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU0_VIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU0_VIN",
+                        "field_pos": "2",
+                        "mult": "1000"
+                    },
+                    {
+                        "attr_name": "psu_i_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU0_IIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU0_IIN",
+                        "field_pos": "2",
+                        "mult": "1000"
                     }
                 ]
             }
@@ -875,6 +882,24 @@
                         "bmc_cmd": "ipmitool raw 0x3c 0x30 0x0 | xargs | cut -d' ' -f2",
                         "raw": "1",
                         "type": "raw"
+                    },
+                    {
+                        "attr_name": "psu_v_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU1_VIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU1_VIN",
+                        "field_pos": "2",
+                        "mult": "1000"
+                    },
+                    {
+                        "attr_name": "psu_i_in",
+                        "bmc_cmd": "ipmitool sdr get -c PSU1_IIN | sed -e 's/,,/,N\\/A,/g' -e 's/,,/,N\\/A,/g'",
+                        "raw": "0",
+                        "separator": ",",
+                        "field_name": "PSU1_IIN",
+                        "field_pos": "2",
+                        "mult": "1000"
                     }
                 ]
             }
@@ -1320,7 +1345,7 @@
             ]
         }
     },
-    "ID_LED": {
+    "LOC_LED": {
         "dev_info": {
             "device_type": "LED",
             "device_name": "LOC_LED"
@@ -1360,7 +1385,7 @@
     },
     "PORT1": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT1",
             "device_parent": "MUX3"
         },
@@ -1410,7 +1435,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x12",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -1459,7 +1484,7 @@
     },
     "PORT2": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT2",
             "device_parent": "MUX3"
         },
@@ -1509,7 +1534,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x13",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -1558,7 +1583,7 @@
     },
     "PORT3": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT3",
             "device_parent": "MUX3"
         },
@@ -1608,7 +1633,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x14",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -1657,7 +1682,7 @@
     },
     "PORT4": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT4",
             "device_parent": "MUX3"
         },
@@ -1707,7 +1732,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x15",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -1756,7 +1781,7 @@
     },
     "PORT5": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT5",
             "device_parent": "MUX3"
         },
@@ -1806,7 +1831,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x16",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -1855,7 +1880,7 @@
     },
     "PORT6": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT6",
             "device_parent": "MUX3"
         },
@@ -1905,7 +1930,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x17",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -1954,7 +1979,7 @@
     },
     "PORT7": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT7",
             "device_parent": "MUX3"
         },
@@ -2004,7 +2029,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x18",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2053,7 +2078,7 @@
     },
     "PORT8": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT8",
             "device_parent": "MUX3"
         },
@@ -2103,7 +2128,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x19",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2152,7 +2177,7 @@
     },
     "PORT9": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT9",
             "device_parent": "MUX4"
         },
@@ -2202,7 +2227,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x1A",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2251,7 +2276,7 @@
     },
     "PORT10": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT10",
             "device_parent": "MUX4"
         },
@@ -2301,7 +2326,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x1B",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2350,7 +2375,7 @@
     },
     "PORT11": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT11",
             "device_parent": "MUX4"
         },
@@ -2400,7 +2425,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x1C",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2449,7 +2474,7 @@
     },
     "PORT12": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT12",
             "device_parent": "MUX4"
         },
@@ -2499,7 +2524,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x1D",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2548,7 +2573,7 @@
     },
     "PORT13": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT13",
             "device_parent": "MUX4"
         },
@@ -2598,7 +2623,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x1E",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2647,7 +2672,7 @@
     },
     "PORT14": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT14",
             "device_parent": "MUX4"
         },
@@ -2697,7 +2722,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x1F",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2746,7 +2771,7 @@
     },
     "PORT15": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT15",
             "device_parent": "MUX4"
         },
@@ -2796,7 +2821,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x20",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2845,7 +2870,7 @@
     },
     "PORT16": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT16",
             "device_parent": "MUX4"
         },
@@ -2895,7 +2920,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x21",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -2944,7 +2969,7 @@
     },
     "PORT17": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT17",
             "device_parent": "MUX5"
         },
@@ -2994,7 +3019,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x22",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3043,7 +3068,7 @@
     },
     "PORT18": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT18",
             "device_parent": "MUX5"
         },
@@ -3093,7 +3118,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x23",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3142,7 +3167,7 @@
     },
     "PORT19": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT19",
             "device_parent": "MUX5"
         },
@@ -3192,7 +3217,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x24",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3241,7 +3266,7 @@
     },
     "PORT20": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT20",
             "device_parent": "MUX5"
         },
@@ -3291,7 +3316,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x25",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3340,7 +3365,7 @@
     },
     "PORT21": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT21",
             "device_parent": "MUX5"
         },
@@ -3390,7 +3415,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x26",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3439,7 +3464,7 @@
     },
     "PORT22": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT22",
             "device_parent": "MUX5"
         },
@@ -3489,7 +3514,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x27",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3538,7 +3563,7 @@
     },
     "PORT23": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT23",
             "device_parent": "MUX5"
         },
@@ -3588,7 +3613,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x28",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3635,17 +3660,17 @@
             ]
         }
     },
-        "PORT24": {
-                "dev_info": {
-                        "device_type": "QSFP",
-                        "device_name": "PORT24",
-                        "device_parent": "MUX5"
-                },
-                "dev_attr": {
-                        "dev_idx": "24"
-                },
-                "i2c": {
-                        "interface": [
+    "PORT24": {
+        "dev_info": {
+            "device_type": "QSFP28",
+            "device_name": "PORT24",
+            "device_parent": "MUX5"
+        },
+        "dev_attr": {
+            "dev_idx": "24"
+        },
+        "i2c": {
+            "interface": [
                 {
                         "itf": "eeprom",
                         "dev": "PORT24-EEPROM"
@@ -3654,9 +3679,9 @@
                         "itf": "control",
                         "dev": "PORT24-CTRL"
                 }
-                        ]
-                }
-        },
+            ]
+        }
+    },
     "PORT24-EEPROM": {
         "dev_info": {
             "device_type": "",
@@ -3687,7 +3712,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x29",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3736,7 +3761,7 @@
     },
     "PORT25": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT25",
             "device_parent": "MUX6"
         },
@@ -3786,7 +3811,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x2A",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3835,7 +3860,7 @@
     },
     "PORT26": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT26",
             "device_parent": "MUX6"
         },
@@ -3885,7 +3910,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x2B",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -3934,7 +3959,7 @@
     },
     "PORT27": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT27",
             "device_parent": "MUX6"
         },
@@ -3984,7 +4009,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x2C",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4033,7 +4058,7 @@
     },
     "PORT28": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT28",
             "device_parent": "MUX6"
         },
@@ -4083,7 +4108,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x2D",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4132,7 +4157,7 @@
     },
     "PORT29": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT29",
             "device_parent": "MUX6"
         },
@@ -4182,7 +4207,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x2E",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4231,7 +4256,7 @@
     },
     "PORT30": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT30",
             "device_parent": "MUX6"
         },
@@ -4281,7 +4306,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x2F",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4330,7 +4355,7 @@
     },
     "PORT31": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT31",
             "device_parent": "MUX6"
         },
@@ -4380,7 +4405,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x30",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4429,7 +4454,7 @@
     },
     "PORT32": {
         "dev_info": {
-            "device_type": "QSFP",
+            "device_type": "QSFP28",
             "device_name": "PORT32",
             "device_parent": "MUX6"
         },
@@ -4479,7 +4504,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x31",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [
@@ -4578,7 +4603,7 @@
         "i2c": {
             "topo_info": {
                 "parent_bus": "0x33",
-                "dev_addr": "0x53",
+                "dev_addr": "0x5f",
                 "dev_type": "pddf_xcvr"
             },
             "attr_list": [

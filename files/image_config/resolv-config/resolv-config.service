@@ -2,7 +2,6 @@
 Description=Update DNS configuration
 Requires=config-setup.service
 After=config-setup.service
-BindsTo=sonic.target
 After=sonic.target
 StartLimitIntervalSec=0
 
@@ -11,5 +10,3 @@ Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/bin/resolv-config.sh start
 
-[Install]
-WantedBy=sonic.target

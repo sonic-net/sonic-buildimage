@@ -28,6 +28,20 @@ if [[ $DATABASE_TYPE == "dpudb" ]]; then
     redis_port=`expr 6381 + $DPU_ID`
 fi
 
+if [[ $IS_DPU_DEVICE == "true" ]]
+then
+    midplane_ip=$( ip -4 -o addr show eth0-midplane | awk '{print $4}' | cut -d'/' -f1  )
+    if [[ $midplane_ip != "" ]]
+    then
+        export DATABASE_TYPE="dpudb"
+        export REMOTE_DB_IP="169.254.200.254"
+        # Determine the DB PORT from midplane IP
+        IFS=. read -r a b c d <<< $midplane_ip
+        export REMOTE_DB_PORT=$((6380 + $d))
+    fi
+fi
+
+export BMP_DB_PORT=6400
 
 REDIS_DIR=/var/run/redis$NAMESPACE_ID
 mkdir -p $REDIS_DIR/sonic-db
@@ -36,7 +50,11 @@ mkdir -p /etc/supervisor/conf.d/
 if [ -f /etc/sonic/database_config$NAMESPACE_ID.json ]; then
     cp /etc/sonic/database_config$NAMESPACE_ID.json $REDIS_DIR/sonic-db/database_config.json
 else
-    HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE j2 /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+    if [ -f /etc/sonic/enable_multidb ]; then
+        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT j2 /usr/share/sonic/templates/multi_database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+    else
+        HOST_IP=$host_ip REDIS_PORT=$redis_port DATABASE_TYPE=$DATABASE_TYPE BMP_DB_PORT=$BMP_DB_PORT j2 /usr/share/sonic/templates/database_config.json.j2 > $REDIS_DIR/sonic-db/database_config.json
+    fi
 fi
 
 # on VoQ system, we only publish redis_chassis instance and CHASSIS_APP_DB when
@@ -111,12 +129,12 @@ do
     else
         echo -n > /var/lib/$inst/dump.rdb
     fi
+    # the Redis process is operating under the 'redis' user in supervisord and make redis user own /var/lib/$inst inside db container.
+    chown -R redis:redis /var/lib/$inst
 done
 
-TZ=$(cat /etc/timezone)
-rm -rf /etc/localtime
-ln -sf /usr/share/zoneinfo/$TZ /etc/localtime
-
 chown -R redis:redis $REDIS_DIR
+REDIS_BMP_DIR="/var/lib/redis_bmp"
+chown -R redis:redis $REDIS_BMP_DIR
 
 exec /usr/local/bin/supervisord

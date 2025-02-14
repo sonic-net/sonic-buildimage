@@ -6,7 +6,8 @@ export KBUILD_EXTRA_SYMBOLS := /sonic/platform/pddf/i2c/Module.symvers.PDDF
 KVERSION   ?= $(shell uname -r)
 KERNEL_SRC :=  /lib/modules/$(KVERSION)
 MOD_SRC_DIR:= $(shell pwd)
-MODULE_DIRS:= dx010 haliburton silverstone seastone2 belgite
+
+MODULE_DIRS:= dx010 haliburton silverstone seastone2 ds1000 questone2 silverstone-v2 ds2000 ds3000
 
 %:
 	dh $@
@@ -14,22 +15,13 @@ MODULE_DIRS:= dx010 haliburton silverstone seastone2 belgite
 override_dh_auto_build:
 	(for mod in $(MODULE_DIRS); do \
 		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
-		if [ $$mod = "seastone2" ]; then \
-			cd $(MOD_SRC_DIR)/services/platform_api; \
-			python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
-			continue; \
+		if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
+			cd $(MOD_SRC_DIR)/$${mod}/pddf; \
+		else \
+			cd $(MOD_SRC_DIR)/$${mod}; \
 		fi; \
-                if [ $$mod = "belgite" ]; then \
-                       cd $(MOD_SRC_DIR); \
-                       if [ -d $(MOD_SRC_DIR)/$${mod}/pddf ]; then \
-                           cd $(MOD_SRC_DIR)/$${mod}/pddf; \
-                           python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/pddf; \
-                           echo "Finished making pddf whl package for $$mod"; \
-                       fi; \
-                       continue; \
-                fi; \
-		cd $(MOD_SRC_DIR)/$${mod}; \
-		python3 -m build --wheel --no-isolation --outdir $(MOD_SRC_DIR)/$${mod}/modules; \
+		python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}/modules; \
+		echo "Finished making sonic_platform whl package for $$mod"; \
 	done)
 
 override_dh_auto_install:
@@ -46,7 +38,5 @@ override_dh_clean:
 	dh_clean
 	(for mod in $(MODULE_DIRS); do \
 		make -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules clean; \
-		if [ -f $(MOD_SRC_DIR)/$${mod}/pddf/*.whl ]; then \
-                    rm -f $(MOD_SRC_DIR)/$${mod}/pddf/*.whl; \
-		fi; \
+		rm -f $(MOD_SRC_DIR)/$${mod}/modules/*.whl; \
 	done)

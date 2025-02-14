@@ -150,21 +150,6 @@ def _parse_table_to_dict(table):
     return ret
 
 
-def get_target_process_cmds(process_name):
-    """
-    Get running process cmds
-    Args:
-        process_name: name of process
-    Returns:
-        List of cmds list
-    """
-    res = []
-    for proc in psutil.process_iter():
-        if proc.name() == process_name:
-            res.append(proc.cmdline())
-    return res
-
-
 def is_smart_switch(device_metadata):
     """
     Check in device metadata whether subtype is smartswitch

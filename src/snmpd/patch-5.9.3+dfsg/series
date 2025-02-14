@@ -1,0 +1,5 @@
+0001-SNMP-Stop-spamming-logs-with-statfs-permission-denie.patch
+0008-Enable-macro-DEB_BUILD_ARCH_OS-in-order-to-build-ipv.patch  
+0012-agent-Makefile.in-Unbreak-the-enable-minimalist-buil.patch  
+0013-enable-parallel-build-for-net-snmp.patch  
+cross-compile-changes.patch 

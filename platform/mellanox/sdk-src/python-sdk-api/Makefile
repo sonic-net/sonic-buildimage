@@ -18,7 +18,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 		./autogen.sh
 	fi
 
-	debuild -e PYTHON_INTERPRETERS="\"python3\"" -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS)
+	debuild -e PYTHON_INTERPRETERS=python3 -b -us -uc -j$(SONIC_CONFIG_MAKE_JOBS)
 
 	popd
 

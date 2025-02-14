@@ -188,6 +188,8 @@ class Fan(FanBase):
             sysfs_path = sysfs_path.format(fan_index[self.fan_tray_index])
             pwm = self._api_helper.read_txt_file(sysfs_path)
             target = round(int(pwm) / 255 * 100.0)
+        else:
+            return self.get_speed()
 
         return target
 

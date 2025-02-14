@@ -7,6 +7,7 @@ automat==0.6.0
 babel==2.6.0
 backports.functools-lru-cache==1.5
 beautifulsoup4==4.7.1
+blkinfo==0.2.0
 certifi==2018.8.24
 chardet==3.0.4
 click==7.0
@@ -57,6 +58,7 @@ pexpect==4.6.0
 pillow==5.4.1
 pip==20.3.4
 pluggy==0.8.0
+psutil==6.1.1
 ptyprocess==0.7.0
 py==1.7.0
 pyasn1==0.4.2
