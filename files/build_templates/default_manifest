@@ -52,9 +52,9 @@
         "show": [],
         "config": [],
         "clear": [],
-        "auto-generate-show": false,
-        "auto-generate-config": false,
-        "auto-generate-show-source-yang-modules": [],
-        "auto-generate-config-source-yang-modules": []
+        "auto-generate-show": true,
+        "auto-generate-config": true,
+        "auto-generate-show-source-yang-modules": [sonic-fine-grained-ecmp],
+        "auto-generate-config-source-yang-modules": [sonic-fine-grained-ecmp]
     }
 }

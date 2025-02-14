@@ -30,6 +30,10 @@ module sonic-fine-grained-ecmp {
     description
         "SONIC Fine Grained ECMP";
 
+    revision 2024-09-15 {
+        description "Added support for dynamic nexthop group.";
+    }
+
     revision 2023-01-19 {
         description "Initial revision.";
     }
@@ -47,11 +51,27 @@ module sonic-fine-grained-ecmp {
                description
                  "Fine grained ecmp is used when the nexthop IPs match the FG_NHG_MEMBER IPs";
             }
-
         }
 
         description
             "This enumeration type defines the method used to determine whether fine grained ecmp should be applied.";
+    }
+
+    typedef nhg-mode-name {
+        type enumeration {
+            enum static-nhg {
+               description
+                 "List of nexthops is statically configured in FG_NHG_MEMBER table.";
+            }
+
+            enum dynamic-nhg {
+               description
+                 "List of nexthops is dynamically derived from the route updates. FG_NHG_MEMBER table is not configured.";
+            }
+        }
+
+        description
+            "This enumeration type defines whether the list of nexthops used for fine grained ecmp are statically configure or derived from route updates.";
     }
 
     container sonic-fine-grained-ecmp {
@@ -72,22 +92,34 @@ module sonic-fine-grained-ecmp {
                 leaf bucket_size{
                     type uint16;
                     mandatory true;
-                    description "total hash bucket size desired,
-                    recommended value of Lowest Common Multiple
-                    of 1..{max # of next-hops}";
+                    description "total hash bucket size desired, recommended value of Lowest Common Multiple of 1..{max # of next-hops}";
                 }
 
                 leaf match_mode{
                     type match-mode-name;
                     mandatory true;
-                    description " The filtering method used to identify
-                    when to use Fine Grained vs regular route handling.
-                    nexthop-based looks to next-hop IP to filter routes
-                    and uses fine grained ecmp when nexthop IPs matches
-                    FG_NHG_MEMBER IPs. route-based looks to prefix to
-                    filter routes, and uses fine grained ecmp when the
-                    route prefix matches the FG_NHG_PREFIX prefix.";
+                    description " The filtering method used to identify when to use Fine Grained vs regular route handling. nexthop-based looks to next-hop IP to filter routes and uses fine grained ecmp when nexthop IPs matches FG_NHG_MEMBER IPs. route-based looks to prefix to filter routes, and uses fine grained ecmp when the route prefix matches the FG_NHG_PREFIX prefix.";
                 }
+
+                leaf nhg_mode{
+                    when "current()/../match_mode = 'route-based'";
+                    type nhg-mode-name;
+                    default 'static-nhg';
+                    description " static-nhg : List of nexthops needs to be statically configured in FG_NHG_MEMBER table. dynamic-nhg : List of nexthops will be dynamically derived from the route updates.";
+                }
+
+                leaf max_next_hops{
+                    when "current()/../nhg_mode = 'dynamic-nhg'";
+                    mandatory true;
+                    type uint16 {
+                        range 1..128; // Adjust based on platform support
+                    }
+                    must "current() > 0" {
+                        error-message "max_next_hops needs to be a positive value in dynamic-nhg mode";
+                    }
+                    description "Applicable only when nhg_mode = dynamic-nhg. Maximum number of nexthops that will be received in route updates for any of the prefixes that match FG_NHG_PREFIX for this FG_NHG.";
+                }
+
             }
              /* end of list FG_NHG_LIST */
         }
@@ -136,7 +168,7 @@ module sonic-fine-grained-ecmp {
                 leaf FG_NHG{
                     type leafref {
                         path "/sfgecmp:sonic-fine-grained-ecmp/sfgecmp:FG_NHG/sfgecmp:FG_NHG_LIST/sfgecmp:name";
-                }
+                    }
                     mandatory true;
                     description "Fine Grained next-hop group name";
                 }
@@ -144,8 +176,7 @@ module sonic-fine-grained-ecmp {
                 leaf bank{
                     type uint16;
                     mandatory true;
-                    description "An index which specifies a bank/group
-                    in which the redistribution is performed";
+                    description "An index which specifies a bank/group in which the redistribution is performed";
                 }
 
                 leaf link{
@@ -157,9 +188,7 @@ module sonic-fine-grained-ecmp {
                             path "/lag:sonic-portchannel/lag:PORTCHANNEL/lag:PORTCHANNEL_LIST/lag:name";
                         }
                     }
-                    description "Link associated with next-hop-ip, if
-                    configured, enables next-hop withdrawal/addition
-                    per link's operational state changes";
+                    description "Link associated with next-hop-ip, if configured, enables next-hop withdrawal/addition per link's operational state changes";
                 }
             }
             /* end of list FG_NHG_MEMBER_LIST */
