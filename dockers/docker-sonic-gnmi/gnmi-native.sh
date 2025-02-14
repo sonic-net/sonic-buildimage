@@ -72,7 +72,7 @@ else
     fi
 fi
 
-TELEMETRY_ARGS+=" --port '$PORT'"
+TELEMETRY_ARGS+=" --port $PORT"
 
 CLIENT_AUTH=$(extract_field "$GNMI" '.client_auth')
 if [ -z $CLIENT_AUTH ] || [ $CLIENT_AUTH == "false" ]; then
