@@ -34,8 +34,8 @@ sname:=opennsl
 PACKAGE=opennsl-modules
 # modifieable for experiments or debugging m-a
 MA_DIR ?= /usr/share/modass
-KVERSION ?= 6.1.0-22-2-amd64
-KERNVERSION ?= 6.1.0-22-2
+KVERSION ?= 6.1.0-29-2-amd64
+KERNVERSION ?= 6.1.0-29-2
 
 # load generic variable handling
 -include $(MA_DIR)/include/generic.make
