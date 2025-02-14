@@ -34,19 +34,27 @@ class PrefixListMgr(Manager):
         :return: rendered configuration
         """
         cmd = "\n"
-        bgp_asn = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["bgp_asn"]
-        localhost_type = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["type"]
-        subtype = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]["subtype"]
-        if data["prefix_list_name"] == "ANCHOR_PREFIX" and localhost_type == "SpineRouter" and subtype == "UpstreamLC":
-            # Add the anchor prefix to the radian configuration`
-            data["bgp_asn"] = bgp_asn
-            if add:
-                # add some way of getting this asn list from the database in the future
-                cmd += self.templates["add_radian"].render(data=data)
-                log_debug("PrefixListMgr:: Anchor prefix %s added to radian configuration" % data["prefix"])
-            else:
-                cmd += self.templates["del_radian"].render(data=data)
-                log_debug("PrefixListMgr:: Anchor prefix %s removed from radian configuration" % data["prefix"])	
+        metadata = self.directory.get_slot("CONFIG_DB", swsscommon.CFG_DEVICE_METADATA_TABLE_NAME)["localhost"]
+        bgp_asn = metadata["bgp_asn"]
+        localhost_type = metadata["type"]
+        subtype = metadata["subtype"]
+
+        if data["prefix_list_name"] != "ANCHOR_PREFIX":
+            log_warn("PrefixListMgr:: Prefix list %s is not supported" % data["prefix_list_name"])
+            return
+        if localhost_type != "SpineRouter" or subtype != "UpstreamLC":
+            log_warn("PrefixListMgr:: Prefix list %s is only supported on UpstreamLC of SpineRouter" % data["prefix_list_name"])
+            return
+
+        # Add the anchor prefix to the radian configuration
+        data["bgp_asn"] = bgp_asn
+        if add:
+            # add some way of getting this asn list from the database in the future
+            cmd += self.templates["add_radian"].render(data=data)
+            log_debug("PrefixListMgr:: Anchor prefix %s added to radian configuration" % data["prefix"])
+        else:
+            cmd += self.templates["del_radian"].render(data=data)
+            log_debug("PrefixListMgr:: Anchor prefix %s removed from radian configuration" % data["prefix"])	
         self.cfg_mgr.push(cmd)
             
         

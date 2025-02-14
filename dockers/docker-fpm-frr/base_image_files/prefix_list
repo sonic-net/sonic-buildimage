@@ -27,15 +27,19 @@ display_help() {
 # Function to check if the user has root privileges
 check_root_privileges() {
     if [ "$EUID" -ne 0 ] ; then
-        echo "Root privileges are needed for this operation"
+        echo "Root privileges are needed for this operation." >&2
         exit 1
     fi
 }
 
-# Function to check if the command is supported on spine routers
+# Function to check if the device is supported device with type spine routers and subtype UpstreamLC
 check_spine_router() {
-    if [[ "$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)" != *"SpineRouter"* ]] ; then
-        echo "Operation is not supported on this platform"
+    type=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.type)
+    sub_type=$(sonic-cfggen -d -v DEVICE_METADATA.localhost.sub_type)
+    
+    # only supported on spine routers and UpstreamLC
+    if [[ "$type" != "SpineRouter" ||  "$sub_type" != "UpstreamLC" ]]; then
+        echo "Operation is only supported on UpstreamLC of SpineRouter." >&2
         exit 1
     fi
 }
@@ -61,10 +65,10 @@ validate_operation() {
     done
 
     if [ $valid_operation == false ]; then
-        echo "Invalid parameter $1, Operation not supported"
+        echo "Invalid parameter $1, Operation not supported" >&2
         echo ""
         display_help
-        exit 0
+        exit 1
     fi
 
     # Check if the prefix type is supported or not if the operation is not status
@@ -77,10 +81,10 @@ validate_operation() {
         done
 
         if [ $valid_prefix_type == false ]; then
-            echo "Invalid parameter $2, Prefix type not supported"
+            echo "Invalid parameter $2, Prefix type not supported" >&2
             echo ""
             display_help
-            exit 0
+            exit 1
         fi
     fi
 }
@@ -160,19 +164,13 @@ if [[ ($NUM_ASIC -gt 1) ]]; then
     while [ $asic -lt $NUM_ASIC ]
     do        
         sub_role=`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['sub_role']" -n asic$asic`
-        subtype=`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['subtype']" -n asic$asic`
-        if [ $sub_role == 'FrontEnd' ] ; then
-            if [ $subtype == 'UpstreamLC' ] ; then
-                handle_prefix_list_asic $asic $1 $2 $3
-            fi
+        if [ $sub_role == 'FrontEnd' ]; then
+            handle_prefix_list_asic $asic $1 $2 $3
         fi
         asic=$((asic+1))
     done
 else
-    subtype=`sonic-cfggen -d -v "DEVICE_METADATA['localhost']['subtype']"`
-    if [ $subtype == 'UpstreamLC' ] ; then
         handle_prefix_list_single $1 $2 $3
-    fi
 fi
 
 if [ $1 != 'status' ]; then
