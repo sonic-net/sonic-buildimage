@@ -1,7 +1,7 @@
 # fips packages
 
 ifeq ($(BLDENV), bookworm)
-FIPS_VERSION = 1.4.3-1
+FIPS_VERSION = 1.5.2
 FIPS_OPENSSL_VERSION = 3.0.11-1~deb12u2+fips
 FIPS_OPENSSH_VERSION = 9.2p1-2+deb12u3+fips
 FIPS_PYTHON_MAIN_VERSION = 3.11

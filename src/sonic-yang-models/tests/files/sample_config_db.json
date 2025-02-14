@@ -1780,7 +1780,8 @@
                 "max_ibgp_paths": "2"
             },
             "default|l2vpn_evpn": {
-                "advertise-all-vni": "true"
+                "advertise-all-vni": "true",
+                "advertise-svi-ip": "true"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
@@ -2273,6 +2274,17 @@
               "2": "2"
             },
            "tc_to_q_map2": {
+              "3": "3",
+              "4": "4"
+            }
+        },
+
+        "TC_TO_DSCP_MAP": {
+           "tc_to_dscp_map1": {
+              "1": "1",
+              "2": "2"
+            },
+           "tc_to_dscp_map2": {
               "3": "3",
               "4": "4"
             }
@@ -2783,7 +2795,7 @@
                 "client_key": "grpcclient.key",
                 "ca_crt": "root.pem",
                 "grpc_ssl_credential": "azureclient.ms"
-            } 
+            }
 	},
         "BANNER_MESSAGE": {
             "global": {
@@ -2806,6 +2818,17 @@
             },
             "ASIC_SENSORS_POLLER_STATUS": {
                 "admin_status": "enable"
+            }
+        },
+        "SRV6_MY_LOCATORS": {
+            "loc1": {
+                "prefix": "fcbb:bbbb:1::"
+            }
+        },
+        "SRV6_MY_SIDS": {
+            "loc1|fcbb:bbbb:1::/48": {
+                "action": "uN",
+                "decap_dscp_mode": "pipe"
             }
         }
     },

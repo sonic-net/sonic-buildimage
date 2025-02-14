@@ -111,9 +111,9 @@ class StaticRouteBfd(object):
         #assume only one ipv4  and/or one ipv6 for each interface
         self.local_db[LOCAL_INTERFACE_TABLE] = defaultdict(dict)
 
-        self.config_db  = swsscommon.DBConnector(CONFIG_DB_NAME, 0, True)
-        self.appl_db = swsscommon.DBConnector(APPL_DB_NAME, 0, True)
-        self.state_db = swsscommon.DBConnector(STATE_DB_NAME, 0, True)
+        self.config_db  = swsscommon.DBConnector(CONFIG_DB_NAME, 0, False)
+        self.appl_db = swsscommon.DBConnector(APPL_DB_NAME, 0, False)
+        self.state_db = swsscommon.DBConnector(STATE_DB_NAME, 0, False)
 
         self.bfd_appl_tbl = swsscommon.ProducerStateTable(self.appl_db, BFD_SESSION_TABLE_NAME)
 
