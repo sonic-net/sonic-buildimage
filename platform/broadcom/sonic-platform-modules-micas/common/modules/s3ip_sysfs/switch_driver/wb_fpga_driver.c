@@ -256,11 +256,7 @@ int dfd_set_fpga_testreg(uint8_t main_dev_id, unsigned int fpga_index, unsigned 
             main_dev_id, fpga_index, key_to_name(DFD_CFG_ITEM_FPGA_TEST_REG));
         return -DFD_RV_DEV_NOTSUPPORT;
     }
-    if (info_ctrl->fpath == NULL) {
-        DBG_FPGA_DEBUG(DBG_VERBOSE, "main_dev_id: %u, fpga%u get fpath failed\n", main_dev_id,
-            fpga_index);
-         return -DFD_RV_INVALID_VALUE;
-    }
+
     if (info_ctrl->len > FPGA_REG_WIDTH_MAX) {
         DBG_FPGA_DEBUG(DBG_ERROR, "main_dev_id: %u, fpga%u info_ctrl len: %d, unsupport\n",
             main_dev_id, fpga_index, info_ctrl->len);
