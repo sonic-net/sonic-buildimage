@@ -246,6 +246,7 @@ libswsscommon==1.0.0
 libsysfs2==2.1.1-4
 libsystemd-shared==252.33-1~deb12u1
 libtac2==1.4.1-1
+libtasn1-6==4.19.0-2+deb12u1
 libtcl8.6==8.6.13+dfsg-2
 libtirpc-common==1.3.3+ds-1
 libtirpc-dev==1.3.3+ds-1
@@ -281,8 +282,8 @@ libzmq5==4.3.4-6
 linux-base==4.9
 linux-image-6.1.0-22-2-amd64-unsigned==6.1.94-1
 linux-image-6.1.0-22-2-arm64-unsigned==6.1.94-1
-linux-libc-dev==6.1.124-1
-linux-perf==6.1.124-1
+linux-libc-dev==6.1.128-1
+linux-perf==6.1.128-1
 locales==2.36-9+deb12u9
 logrotate==3.21.0-1
 lsof==4.95.0-1
