@@ -1,0 +1,2 @@
+SAI_INIT_CONFIG_FILE=/etc/sai.d/config.bcm
+SAI_NUM_ECMP_MEMBERS=64
