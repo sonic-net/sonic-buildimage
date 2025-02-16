@@ -16,6 +16,10 @@ module sonic-bgp-prefix-list {
 
     description "SONIC Device-specfifc BGP prefix lists data";
 
+    revision 2025-02-17 {
+        description "Updated description and leafs for PREFIX_LIST_LIST";
+    }
+
     revision 2025-02-05 {
         description "Initial revision.";
     }
@@ -24,17 +28,17 @@ module sonic-bgp-prefix-list {
 
         container PREFIX_LIST {
 
-            description "PREFIX_LIST part of config_db.json";
+            description "PREFIX_LIST container consumed in BGP";
 
             list PREFIX_LIST_LIST {
 
-                description "PREFIX_LIST part of config_db.json with prefix";
+                description "PREFIX_LIST part of config_db.json with prefix_type and ip-prefix";
 
-                key "name ip-prefix";
+                key "prefix_type ip-prefix";
 
-                leaf name {
+                leaf prefix_type {
                     type string;
-                    description "Name of the prefix list";
+                    description "Prefix type";
                 }
 
                 leaf ip-prefix {
