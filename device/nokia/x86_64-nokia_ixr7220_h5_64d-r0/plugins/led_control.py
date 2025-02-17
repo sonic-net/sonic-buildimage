@@ -1,32 +1,28 @@
-#
-# led_control.py
-#
-# Platform-specific LED control functionality for SONiC
-#
+"""
+    led_control.py
+
+    Platform-specific LED control functionality for SONiC
+"""
 
 try:
     from sonic_led.led_control_base import LedControlBase
     import os
     import time
     import syslog
-    import struct
     from mmap import *
     import sonic_platform.platform
     import sonic_platform.chassis
 except ImportError as e:
     raise ImportError(str(e) + " - required module not found")
 
-H5_64D_FAN_DRAWERS = 4
-H5_64D_FANS_PER_DRAWER = 2
-RESOURCE = "/sys/bus/pci/devices/0000:02:00.0/resource0"
-REG_FRONT_SYSLED = 0x0084
-REG_FRONT_FANLED = 0x0088
+FAN_DRAWERS = 4
+FANS_PER_DRAWER = 2
+FPGA_DIR = "/sys/kernel/sys_fpga/"
 
 def DBG_PRINT(str):
     syslog.openlog("nokia-led")
     syslog.syslog(syslog.LOG_INFO, str)
     syslog.closelog()
-
 
 class LedControl(LedControlBase):
     """Platform specific LED control class"""
@@ -53,6 +49,7 @@ class LedControl(LedControlBase):
         try:
             with open(sysfs_file, 'r') as fd:
                 rv = fd.read()
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
@@ -69,29 +66,12 @@ class LedControl(LedControlBase):
             return rv
         try:
             with open(sysfs_file, 'w') as fd:
-                rv = fd.write(str(value))
+                rv = fd.write(value)
+                fd.close()
         except Exception as e:
             rv = 'ERR'
 
         return rv
-    
-    def _pci_set_value(self, resource, data, offset):
-        fd = open(resource, O_RDWR)
-        mm = mmap(fd, 0)
-        mm.seek(offset)
-        mm.write(struct.pack('I', data))
-        mm.close()
-        close(fd)
-
-    def _pci_get_value(self, resource, offset):
-        fd = open(resource, O_RDWR)
-        mm = mmap(fd, 0)
-        mm.seek(offset)
-        read_data_stream = mm.read(4)
-        reg_val = struct.unpack('I', read_data_stream)
-        mm.close()
-        close(fd)
-        return reg_val
     
     def _initSystemLed(self):
         # Front Panel System LEDs setting
@@ -99,7 +79,11 @@ class LedControl(LedControlBase):
         oldpsu = 0xf    # 0=amber, 1=green
 
         # Write sys led
-        self._pci_set_value(RESOURCE, 1, REG_FRONT_SYSLED)
+        status  = self._write_sysfs_file(FPGA_DIR + 'led_sys', "3")
+        if status == "ERR":
+            DBG_PRINT(" System LED NOT set correctly")
+        else:
+            DBG_PRINT(" System LED set O.K. ")
         
         # Timer loop to monitor and set front panel Status, Fan, and PSU LEDs
         while True:
@@ -109,16 +93,20 @@ class LedControl(LedControlBase):
                 if fan.get_status() == True:
                     good_fan = good_fan + 1
             
-            if (good_fan == H5_64D_FAN_DRAWERS * H5_64D_FANS_PER_DRAWER):                
-                if oldfan != 0x1:
-                    self._pci_set_value(RESOURCE, 1, REG_FRONT_FANLED)
-                    oldfan = 0x1
-                
-            else:                
-                if oldfan != 0x0:
-                    self._pci_set_value(RESOURCE, 0, REG_FRONT_FANLED)
-                    oldfan = 0x0
-                
+            if (good_fan == FAN_DRAWERS * FANS_PER_DRAWER):
+                if (os.path.isfile(FPGA_DIR + "led_fan")):
+                    if oldfan != 0x1:
+                        self._write_sysfs_file(FPGA_DIR + "led_fan", "1")
+                        oldfan = 0x1
+                else:
+                    oldfan = 0xf
+            else:
+                if (os.path.isfile(FPGA_DIR + "led_fan")):
+                    if oldfan != 0x0:
+                        self._write_sysfs_file(FPGA_DIR + "led_fan", "2")
+                        oldfan = 0x0
+                else:
+                    oldfan = 0xf
 
             
             time.sleep(6)
