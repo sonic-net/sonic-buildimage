@@ -1,5 +1,5 @@
 /*
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -23,6 +23,7 @@
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  * 
  */
 
@@ -121,6 +122,7 @@ typedef struct genl_stats_s {
     unsigned long pkts_f_genl_cb;
     unsigned long pkts_f_genl_mod;
     unsigned long pkts_f_handled;
+    unsigned long pkts_f_pass_through;
     unsigned long pkts_f_tag_stripped;
     unsigned long pkts_f_dst_mc;
     unsigned long pkts_f_src_cpu;
@@ -395,11 +397,6 @@ genl_filter_cb(uint8_t * pkt, int size, int dev_no, void *pkt_meta,
     }
 
     /* setup skb by copying packet content */
-    /*
-     * Strip reserved vlan tag
-     * FIXME: enhance GENL interface to support FILTER_TAG_STRIP,
-     * FILTER_TAG_KEEP and FILTER_TAG_ORIGINAL
-     */
     if(strip_tag) {
         memcpy(skb->data, pkt, 12);
         memcpy(skb->data + 12, pkt + 16, size - 12);
@@ -424,18 +421,16 @@ genl_filter_cb(uint8_t * pkt, int size, int dev_no, void *pkt_meta,
     schedule_work(&g_genl_work.wq);
     spin_unlock_irqrestore(&g_genl_work.lock, flags);
 
-    /* expected rv values:
-     * -ve for error
-     * 0 for passthrough
-     * 1 for packet handled
-     *  */
-
     /* Set rv to packet handled */
     rv = 1;
 
 GENL_FILTER_CB_PKT_HANDLED:
-    g_genl_stats.pkts_f_handled++;
-    return rv;
+    if (rv == 1) {
+        g_genl_stats.pkts_f_handled++;
+        return 1;
+    }
+    g_genl_stats.pkts_f_pass_through++;
+    return 0;
 }
 
 /*
@@ -510,6 +505,7 @@ genl_proc_stats_show(struct seq_file *m, void *v)
     seq_printf(m, "  pkts filter generic cb         %10lu\n", g_genl_stats.pkts_f_genl_cb);
     seq_printf(m, "  pkts sent to generic module    %10lu\n", g_genl_stats.pkts_f_genl_mod);
     seq_printf(m, "  pkts handled by generic cb     %10lu\n", g_genl_stats.pkts_f_handled);
+    seq_printf(m, "  pkts pass through              %10lu\n", g_genl_stats.pkts_f_pass_through);
     seq_printf(m, "  pkts with vlan tag stripped    %10lu\n", g_genl_stats.pkts_f_tag_stripped);
     seq_printf(m, "  pkts with mc destination       %10lu\n", g_genl_stats.pkts_f_dst_mc);
     seq_printf(m, "  pkts with cpu source           %10lu\n", g_genl_stats.pkts_f_src_cpu);

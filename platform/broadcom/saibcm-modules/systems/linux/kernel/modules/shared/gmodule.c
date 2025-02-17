@@ -1,6 +1,6 @@
 /*
  * $Id: gmodule.c,v 1.20 Broadcom SDK $
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -26,6 +26,7 @@
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
  * 
  * 
+ * 
  * Generic Linux Module Framework
  *
  * Hooks up your driver to the kernel 
@@ -38,7 +39,7 @@
 static gmodule_t* _gmodule = NULL;
 
 
-/* FIXME: support dynamic debugging */
+
 
 static int _dbg_enable = 0;
 
@@ -51,7 +52,7 @@ gvprintk(const char* fmt, va_list args)
 {
     static char _buf[256];
 
-    strcpy(_buf, "");
+    _buf[0] = 0;
     sprintf(_buf, "%s (%d): ", _gmodule->name, current->pid);
     vsprintf(_buf+strlen(_buf), fmt, args);
     printk("%s",_buf);
@@ -318,17 +319,17 @@ void __exit
 cleanup_module(void)
 {
     if(!_gmodule) return;
-  
+
     /* Specific Cleanup */
     if(_gmodule->cleanup) {
 	_gmodule->cleanup();
     }
-  
+
     /* Remove any proc entries */
     if(_gmodule->pprint) {
 	_gmodule_remove_proc();
     }
-  
+
     /* Finally, remove ourselves from the universe */
     unregister_chrdev(_gmodule->major, _gmodule->name);
 }

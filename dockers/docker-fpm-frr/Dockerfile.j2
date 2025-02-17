@@ -59,11 +59,4 @@ RUN chmod a+x /usr/bin/TSA && \
     chmod a+x /usr/bin/TSC && \
     chmod a+x /usr/bin/zsocket.sh
 
-RUN mkdir -p /usr/share/sonic/templates/rsyslog_plugin
-
-# Copy rsyslog plugin configuration file and regexes to docker
-COPY ["bgp_regex.json", "/etc/rsyslog.d/"]
-COPY ["events_info.json", "/usr/share/sonic/templates/rsyslog_plugin/"]
-COPY ["files/rsyslog_plugin.conf.j2", "/usr/share/sonic/templates/rsyslog_plugin/"]
-
 ENTRYPOINT ["/usr/bin/docker_init.sh"]

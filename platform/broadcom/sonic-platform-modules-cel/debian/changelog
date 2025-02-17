@@ -1,3 +1,12 @@
+sonic-cel-platform-modules (1.0) unstable; urgency=low
+
+  * Add questone2 platform module.
+  * V2 platforms DS4000, DS3000, DS2000
+  * Rename Belgite to DS1000
+  * Hardened platform bug fixes
+
+ -- Jemston Fernando <sjemstonirudayam.fernando@celestica.com>  Wed, 12 Jun 2024 15:00:00 +0530
+
 sonic-cel-platform-modules (0.9) unstable; urgency=low
 
   * Add haliburton platform module.

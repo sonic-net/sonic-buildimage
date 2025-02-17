@@ -5,6 +5,13 @@
                     "vni" : "100"
                 }
         },
+        "SUBNET_DECAP": {
+            "AZURE": {
+                "status": "enable",
+                "src_ip": "10.10.10.0/24",
+                "src_ip_v6": "20c1:ba8::/64"
+            }
+        },
         "DHCP_SERVER": {
             "192.0.0.8": {},
             "192.0.0.8": {},
@@ -328,6 +335,12 @@
                 "SRC_IP": "1.1.1.1/32",
                 "BTH_OPCODE": "0x11/0xbf",
                 "AETH_SYNDROME": "0x60/0x60"
+            },
+            "DATAACL|RULE0": {
+                "PRIORITY": "999",
+                "PACKET_ACTION": "FORWARD",
+                "TUNNEL_TERM": "true",
+                "DST_IP": "1.1.1.1/32"
             }
         },
         "SWITCH_HASH": {
@@ -591,7 +604,8 @@
                 "link_training": "off",
                 "laser_freq": "191600",
                 "tx_power": "-26.6",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet1": {
                 "alias": "Eth1/2",
@@ -609,7 +623,8 @@
                 "link_training": "on",
                 "laser_freq": "191300",
                 "tx_power": "-27.3",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet2": {
                 "alias": "Eth1/3",
@@ -627,7 +642,8 @@
                 "adv_interface_types": "all",
                 "subport" : "0",
                 "mode":"trunk",
-                "dom_polling":"enabled"
+                "dom_polling":"enabled",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet3": {
                 "alias": "Eth1/4",
@@ -637,7 +653,8 @@
                 "tpid": "0x88A8",
                 "admin_status": "up",
                 "subport": "1",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet4": {
                 "alias": "Eth2/1",
@@ -648,7 +665,8 @@
                 "admin_status": "up",
                 "subport": "2",
                 "mode":"trunk",
-                "dom_polling":"enabled"
+                "dom_polling":"enabled",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet5": {
                 "alias": "Eth2/2",
@@ -658,7 +676,8 @@
                 "tpid": "0x9200",
                 "admin_status": "up",
                 "subport": "3",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet6": {
                 "alias": "Eth2/3",
@@ -668,7 +687,8 @@
                 "tpid": "0x8100",
                 "admin_status": "up",
                 "subport": "4",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet7": {
                 "alias": "Eth2/4",
@@ -678,7 +698,8 @@
                 "tpid": "0x8100",
                 "admin_status": "up",
                 "subport": "5",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet8": {
                 "alias": "Eth3/1",
@@ -688,7 +709,8 @@
                 "tpid": "0x8100",
                 "admin_status": "up",
                 "subport": "6",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet9": {
                 "alias": "Eth3/2",
@@ -698,7 +720,8 @@
                 "tpid": "0x8100",
                 "admin_status": "up",
                 "subport": "7",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet10": {
                 "alias": "Eth3/3",
@@ -708,7 +731,8 @@
                 "tpid": "0x8100",
                 "admin_status": "up",
                 "subport": "8",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet11": {
                 "alias": "Eth3/4",
@@ -717,7 +741,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet12": {
                 "alias": "Eth4/1",
@@ -726,7 +751,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet13": {
                 "alias": "Eth4/2",
@@ -735,7 +761,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet14": {
                 "alias": "Eth4/3",
@@ -744,7 +771,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet15": {
                 "alias": "Eth4/4",
@@ -753,7 +781,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet16": {
                 "alias": "Eth5/1",
@@ -762,7 +791,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet17": {
                 "alias": "Eth5/2",
@@ -771,7 +801,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet18": {
                 "alias": "Eth5/3",
@@ -780,7 +811,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet19": {
                 "alias": "Eth5/4",
@@ -789,7 +821,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet20": {
                 "alias": "Eth6/1",
@@ -798,7 +831,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet21": {
                 "alias": "Eth6/2",
@@ -807,7 +841,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet22": {
                 "alias": "Eth6/3",
@@ -816,7 +851,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet23": {
                 "alias": "Eth6/4",
@@ -825,7 +861,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet24": {
                 "alias": "Eth7/1",
@@ -834,7 +871,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet25": {
                 "alias": "Eth7/2",
@@ -843,7 +881,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet26": {
                 "alias": "Eth7/3",
@@ -852,7 +891,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet27": {
                 "alias": "Eth7/4",
@@ -861,7 +901,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet28": {
                 "alias": "Eth8/1",
@@ -870,7 +911,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet29": {
                 "alias": "Eth8/2",
@@ -879,7 +921,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet30": {
                 "alias": "Eth8/3",
@@ -888,7 +931,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet31": {
                 "alias": "Eth8/4",
@@ -897,7 +941,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet32": {
                 "alias": "Eth9/1",
@@ -906,7 +951,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet33": {
                 "alias": "Eth9/2",
@@ -915,7 +961,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet34": {
                 "alias": "Eth9/3",
@@ -924,7 +971,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet35": {
                 "alias": "Eth9/4",
@@ -933,7 +981,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet36": {
                 "alias": "Eth10/1",
@@ -942,7 +991,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"trunk"
+                "mode":"trunk",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet112": {
                 "alias": "Eth29/1",
@@ -952,7 +1002,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet120": {
                 "alias": "Eth31/1",
@@ -962,7 +1013,8 @@
                 "speed": "11100",
                 "tpid": "0x8100",
                 "admin_status": "up",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet-BP0": {
                 "admin_status": "up",
@@ -976,7 +1028,8 @@
                 "role": "Int",
                 "speed": "40000",
                 "tpid": "0x8100",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             },
             "Ethernet-BP4": {
                 "admin_status": "up",
@@ -990,7 +1043,8 @@
                 "role": "Int",
                 "speed": "40000",
                 "tpid": "0x8100",
-                "mode":"routed"
+                "mode":"routed",
+                "dhcp_rate_limit": "300"
             }
         },
         "LOGGER": {
@@ -1290,7 +1344,9 @@
             "gnmi": {
                 "client_auth": "true",
                 "log_level": "2",
-                "port": "50051"
+                "port": "50051",
+                "enable_crl": "false",
+                "crl_expire_duration": "86400"
             }
         },
         "TELEMETRY_CLIENT": {
@@ -1327,7 +1383,9 @@
             "gnmi": {
                 "client_auth": "true",
                 "log_level": "2",
-                "port": "50052"
+                "port": "50052",
+                "enable_crl": "false",
+                "crl_expire_duration": "86400"
             }
         },
         "GNMI_CLIENT_CERT": {
@@ -1720,6 +1778,10 @@
             "default|ipv6_unicast": {
                 "max_ebgp_paths": "2",
                 "max_ibgp_paths": "2"
+            },
+            "default|l2vpn_evpn": {
+                "advertise-all-vni": "true",
+                "advertise-svi-ip": "true"
             }
         },
         "BGP_GLOBALS_AF_AGGREGATE_ADDR": {
@@ -1853,6 +1915,9 @@
                 "admin_status": "down"
             },
             "FABRIC-CARD1": {
+                "admin_status": "down"
+            },
+            "DPU2": {
                 "admin_status": "down"
             }
         },
@@ -2214,6 +2279,17 @@
             }
         },
 
+        "TC_TO_DSCP_MAP": {
+           "tc_to_dscp_map1": {
+              "1": "1",
+              "2": "2"
+            },
+           "tc_to_dscp_map2": {
+              "3": "3",
+              "4": "4"
+            }
+        },
+
         "MAP_PFC_PRIORITY_TO_QUEUE": {
            "pfc_prio_to_q_map1": {
               "1": "1",
@@ -2265,6 +2341,7 @@
            "Ethernet0": {
                "dot1p_to_tc_map" : "Dot1p_to_tc_map1",
                "dscp_to_tc_map": "Dscp_to_tc_map1",
+               "tc_to_dscp_map": "tc_to_dscp_map1",
                "tc_to_queue_map": "tc_to_q_map1",
                "tc_to_pg_map": "tc_to_pg_map1",
                "pfc_to_queue_map": "pfc_prio_to_q_map1",
@@ -2276,12 +2353,13 @@
             "Ethernet4": {
               "dot1p_to_tc_map" : "Dot1p_to_tc_map2",
               "dscp_to_tc_map": "Dscp_to_tc_map2",
-	          "tc_to_queue_map": "tc_to_q_map2",
-	          "tc_to_pg_map": "tc_to_pg_map2",
-	          "pfc_to_queue_map": "pfc_prio_to_q_map2",
-	          "pfc_to_pg_map"   : "pfc_prio_to_pg_map2",
-	          "pfc_enable"      : "3,4",
-	          "pfcwd_sw_enable" : "3,4"
+              "tc_to_dscp_map": "tc_to_dscp_map2",
+              "tc_to_queue_map": "tc_to_q_map2",
+              "tc_to_pg_map": "tc_to_pg_map2",
+              "pfc_to_queue_map": "pfc_prio_to_q_map2",
+              "pfc_to_pg_map"   : "pfc_prio_to_pg_map2",
+              "pfc_enable"      : "3,4",
+              "pfcwd_sw_enable" : "3,4"
             }
         },
 
@@ -2703,12 +2781,76 @@
                 "midplane_interface": "dpu1"
             }
         },
+        "DPU_PORT": {
+            "dpu0": {
+                "state": "up",
+                "vip_ipv4": "192.168.1.1",
+                "vip_ipv6": "2001:db8::10",
+                "pa_ipv4": "192.168.1.10",
+                "pa_ipv6": "2001:db8::10",
+                "vdpu_id": "vdpu0",
+                "gnmi_port": "50052"
+            },
+            "dpu1": {
+                "state": "down",
+                "vip_ipv4": "192.168.1.2",
+                "vip_ipv6": "2001:db8::20",
+                "pa_ipv4": "192.168.1.20",
+                "pa_ipv6": "2001:db8::20",
+                "vdpu_id": "vdpu1",
+                "gnmi_port": "50052"
+            }
+        },
+	"XCVRD_LOG": {
+	    "Y_CABLE": {
+		"log_verbosity": "notice"
+	    }
+	},
+	"GRPCCLIENT": {
+            "config": {
+                "type": "secure",
+                "auth_level": "server",
+                "log_level": "info"
+            },
+            "certs": {
+                "client_crt": "grpcclient.crt",
+                "client_key": "grpcclient.key",
+                "ca_crt": "root.pem",
+                "grpc_ssl_credential": "azureclient.ms"
+            }
+	},
         "BANNER_MESSAGE": {
             "global": {
                 "state": "enabled",
                 "login": "Some login message",
                 "motd": "Some message of the day",
                 "logout": "Some logout message"
+            }
+        },
+        "MEMORY_STATISTICS": {
+            "memory_statistics": {
+                "enabled": "false",
+                "sampling_interval": "5",
+                "retention_period": "15"
+            }
+        },
+        "ASIC_SENSORS": {
+            "ASIC_SENSORS_POLLER_INTERVAL": {
+                "interval": "10"
+            },
+            "ASIC_SENSORS_POLLER_STATUS": {
+                "admin_status": "enable"
+            }
+        },
+        "SRV6_MY_LOCATORS": {
+            "loc1": {
+                "prefix": "fcbb:bbbb:1::"
+            }
+        },
+        "SRV6_MY_SIDS": {
+            "loc1|fcbb:bbbb:1::/48": {
+                "action": "uN",
+                "decap_dscp_mode": "pipe"
             }
         }
     },

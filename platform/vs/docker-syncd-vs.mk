@@ -3,7 +3,9 @@
 DOCKER_SYNCD_PLATFORM_CODE = vs
 include $(PLATFORM_PATH)/../template/docker-syncd-bookworm.mk
 
-$(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD_VS)
+$(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD_VS) \
+                              $(LIBNL3_DEV) \
+                              $(LIBNL3)
 
 $(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(SYNCD_VS_DBG) \
                                 $(LIBSWSSCOMMON_DBG) \

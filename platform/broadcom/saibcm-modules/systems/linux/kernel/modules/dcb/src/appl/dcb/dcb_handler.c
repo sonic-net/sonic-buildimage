@@ -1,6 +1,6 @@
 /* 
  * $Id:$
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -24,6 +24,7 @@
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  * 
  *
  * File:        dcb.c
@@ -147,13 +148,11 @@ _dcb_op_get(uint16 dev_id, uint8 rev_id)
 #endif
 #if defined(BCM_TRIDENT3_SUPPORT)
     case DEVICE_FAMILY(BCM56870_DEVICE_ID):    /* Trident 3*/
-    /* SONIC-79319 Start */
     case DEVICE_FAMILY(BCM56770_DEVICE_ID):    /* Maverick 2*/
     case DEVICE_FAMILY(BCM56370_DEVICE_ID):    /* Helix 5*/
     case DEVICE_FAMILY(BCM56470_DEVICE_ID):    /* Firebolt 6*/
     case DEVICE_FAMILY(BCM56275_DEVICE_ID):    /* Hurricane 4*/
     case DEVICE_FAMILY(BCM56175_DEVICE_ID):    /* Trident3 X1*/
-    /* SONIC-79319 End */
         return &dcb36_op;
         break;
 #endif

@@ -16,7 +16,6 @@ def generate_common_config(data):
     data['FLEX_COUNTER_TABLE'] = {
         'ACL': {
             'FLEX_COUNTER_STATUS': 'disable',
-            'FLEX_COUNTER_DELAY_STATUS': 'true',
             'POLL_INTERVAL': '10000'
         }
     }
@@ -51,7 +50,8 @@ def generate_t1_sample_config(data):
     data['DEVICE_METADATA']['localhost']['hostname'] = 'sonic'
     data['DEVICE_METADATA']['localhost']['type'] = 'LeafRouter'
     data['DEVICE_METADATA']['localhost']['bgp_asn'] = '65100'
-    data['LOOPBACK_INTERFACE'] = {"Loopback0|10.1.0.1/32": {}}
+    data['LOOPBACK_INTERFACE'] = {"Loopback0": {},
+                                  "Loopback0|10.1.0.1/32": {}}
     data['BGP_NEIGHBOR'] = {}
     data['DEVICE_NEIGHBOR'] = {}
     data['INTERFACE'] = {}
@@ -64,6 +64,7 @@ def generate_t1_sample_config(data):
         peer_addr = '10.0.{}.{}'.format(2 * port_count // 256, 2 * port_count % 256 + 1)
         peer_name='ARISTA{0:02d}{1}'.format(1+port_count%(total_port_amount // 2), 'T2' if port_count < (total_port_amount // 2) else 'T0')
         peer_asn = 65200 if port_count < (total_port_amount // 2) else 64001 + port_count - (total_port_amount // 2)
+        data['INTERFACE']['{}'.format(port)] = {}
         data['INTERFACE']['{}|{}/31'.format(port, local_addr)] = {}
         data['BGP_NEIGHBOR'][peer_addr] = {
                 'rrclient': 0,
@@ -86,15 +87,23 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
     bridge_name = 'bridge-midplane'
 
+    data['MID_PLANE_BRIDGE'] = {
+        "GLOBAL": {
+            "bridge": bridge_name,
+            "ip_prefix": "169.254.200.254/24"
+        }
+    }
     dhcp_server_ports = {}
+    dpu_midplane_dict = {}
 
     for dpu_name in natsorted(ss_config.get('DPUS', {})):
         midplane_interface = ss_config['DPUS'][dpu_name]['midplane_interface']
+        dpu_midplane_dict[dpu_name] = {'midplane_interface': midplane_interface}
         dpu_id = int(midplane_interface.replace('dpu', ''))
         dhcp_server_ports['{}|{}'.format(bridge_name, midplane_interface)] = {'ips': ['{}.{}'.format(mpbr_prefix, dpu_id + 1)]}
 
     if dhcp_server_ports:
-        data['DPUS'] = ss_config['DPUS']
+        data['DPUS'] = dpu_midplane_dict
 
         data['FEATURE'] = {
             "dhcp_relay": {
@@ -123,10 +132,6 @@ def generate_t1_smartswitch_switch_sample_config(data, ss_config):
 
         data['DHCP_SERVER_IPV4'] = {
             bridge_name: {
-                'customized_options': [
-                    'option60',
-                    'option223'
-                ],
                 'gateway': mpbr_address,
                 'lease_time': '3600',
                 'mode': 'PORT',
@@ -184,7 +189,7 @@ def generate_global_dualtor_tables():
     data = defaultdict(lambda: defaultdict(dict))
     data['LOOPBACK_INTERFACE'] = {
                                     'Loopback2': {},
-                                    'Loopback2|3.3.3.3': {}
+                                    'Loopback2|3.3.3.3/32': {}
                                     }
     data['MUX_CABLE'] = {}
     data['PEER_SWITCH'] = {
@@ -270,4 +275,3 @@ def get_available_config():
 def generate_sample_config(data, setting_name):
     data = generate_common_config(data)
     return _sample_generators[setting_name.lower()](data)
-

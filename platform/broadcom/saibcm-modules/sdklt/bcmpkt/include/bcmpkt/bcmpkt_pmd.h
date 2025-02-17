@@ -4,7 +4,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -17,7 +17,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #ifndef BCMPKT_PMD_H
@@ -39,15 +39,6 @@
 
 /*! Bitmap array size. */
 #define BCMPKT_BITMAP_WORD_SIZE  16
-
-/*!
- * \name BCMPKT Dumping flags.
- * \anchor BCMPKT_DUMP_F_XXX
- */
-/*! Dump all fields contents. */
-#define BCMPKT_DUMP_F_ALL         0
-/*! Dump none zero field content only. */
-#define BCMPKT_DUMP_F_NONE_ZERO   1
 
 /*! PMD header field ID bit array. */
 typedef struct bcmpkt_bitmap_s {

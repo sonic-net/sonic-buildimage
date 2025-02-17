@@ -5,7 +5,7 @@
  *
  */
 /*
- * $Copyright: Copyright 2018-2023 Broadcom. All rights reserved.
+ * Copyright 2018-2024 Broadcom. All rights reserved.
  * The term 'Broadcom' refers to Broadcom Inc. and/or its subsidiaries.
  * 
  * This program is free software; you can redistribute it and/or
@@ -18,7 +18,7 @@
  * GNU General Public License for more details.
  * 
  * A copy of the GNU General Public License version 2 (GPLv2) can
- * be found in the LICENSES folder.$
+ * be found in the LICENSES folder.
  */
 
 #include <bcmcnet/bcmcnet_core.h>
@@ -350,6 +350,8 @@ bcmcnet_cmicr2_pdma_driver_attach(struct pdma_dev *dev)
     bcmcnet_cmicr_pdma_desc_ops_init(hw);
 
     hw->dops.pkt_xmit = cmicr2_pdma_pkt_xmit;
+
+    dev->flags |= PDMA_NO_FCS;
 
     return SHR_E_NONE;
 }

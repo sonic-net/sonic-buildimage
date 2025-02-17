@@ -1,6 +1,6 @@
 /*
  * $Id: $
- * $Copyright: 2007-2023 Broadcom Inc. All rights reserved.
+ * $Copyright: 2017-2024 Broadcom Inc. All rights reserved.
  * 
  * Permission is granted to use, copy, modify and/or distribute this
  * software under either one of the licenses below.
@@ -24,6 +24,7 @@
  * 
  * This software is governed by the Broadcom Open Network Switch APIs license:
  * https://www.broadcom.com/products/ethernet-connectivity/software/opennsa $
+ * 
  * 
  *
  */
@@ -156,9 +157,7 @@ shbde_iproc_config_init(shbde_iproc_config_t *icfg,
         icfg->iproc_ver = 7;
         icfg->dma_hi_bits = 0x2;
         break;
-    case 0xb560: /* Apache */
     case 0xb670: /* MO */
-    case 0xb760: /* Maverick */
         icfg->iproc_ver = 0xB;
         break;
     case 0xb160: /* Hurricane3 */
@@ -174,11 +173,6 @@ shbde_iproc_config_init(shbde_iproc_config_t *icfg,
 
     /* Check for exceptions */
     switch (icfg->dev_id) {
-       case 0xb069:
-       case 0xb068:
-          icfg->iproc_ver = 0xB;       /*Ranger2+  Apache Family */
-          icfg->dma_hi_bits = 0;
-          break;
     case 0xb168: /* Ranger3+ */
     case 0xb169:
         icfg->iproc_ver = 0;
