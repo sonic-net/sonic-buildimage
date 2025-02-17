@@ -1,0 +1,603 @@
+From 238bf5fae004f33d3da22eb9589cf1f063319d18 Mon Sep 17 00:00:00 2001
+From: Brad House <brad@brad-house.com>
+Date: Sat, 15 Feb 2025 06:32:27 -0500
+Subject: [PATCH] schema: helpers for tracking backlinks
+
+In libyang v1, each schema node had a backlinks object that would
+allow a caller to quickly see if the node was referenced by another
+node.  Since this functionality was removed, it takes quite a bit
+of code to accomplish the same thing, including full tree scans.
+
+This adds these primary new helpers:
+ * lys_find_backlinks() scan the entire schema tree (all modules)
+   and locate any node that contains leafrefs (including in unions),
+   possibly filtered to a single target node or ancestor.
+ * lysc_node_find_lref_targets() for a given node, return a set
+   of leafref target nodes.  This returns a set instead of a single
+   node like lysc_node_lref_target() as it also returns targets
+   associated with unions (which there may be more than one).
+
+It also adds a couple of new helpers used by the above new functions
+that may be found useful so they were made public:
+ * lysc_node_has_ancestor() determine if the ancestor node exists
+   as a parent, grandparent, etc within the node schema for the
+   specified node.
+ * lysc_type_lref_target() similar to lysc_node_lref_target() except
+   it can return the target node referenced in a leafref for a
+   `struct lysc_type`
+
+This functionality was determined to be needed when porting SONiC from
+libyang v1 to v3.  SONiC uses libyang-python, and the API does not
+currently expose some of the underlying functions used by these helpers.
+Instead of simply modifying the libyang-python to add CFFI wrappers
+it was determined it would be cost prohibitive to support
+lysc_module_dfs_full() in python due to generating a Python SNode for
+each node in the tree, of which most nodes are not needed to be
+evaluated by Python.
+
+It is not unlikely that other users may have the same need to track
+backlinks so adding these helpers would also benefit other users.
+
+Signed-off-by: Brad House <brad@brad-house.com>
+---
+ src/tree_schema.c                 | 104 ++++++++++++++
+ src/tree_schema.h                 |  61 ++++++++
+ src/tree_schema_common.c          | 114 +++++++++++++++
+ tests/utests/schema/test_schema.c | 225 ++++++++++++++++++++++++++++++
+ 4 files changed, 504 insertions(+)
+
+diff --git a/src/tree_schema.c b/src/tree_schema.c
+index 21e24132e..5950a36a0 100644
+--- a/src/tree_schema.c
++++ b/src/tree_schema.c
+@@ -684,6 +684,110 @@ lys_find_path(const struct ly_ctx *ctx, const struct lysc_node *ctx_node, const
+     return snode;
+ }
+ 
++
++typedef struct {
++    const struct lysc_node *match_node;
++    ly_bool match_ancestors;
++    struct ly_set *set;
++} lys_find_backlinks_t;
++
++static LY_ERR
++lys_find_backlinks_clb(struct lysc_node *node, void *data, ly_bool *dfs_continue)
++{
++    lys_find_backlinks_t *bldata = data;
++    LY_ERR ret = LY_SUCCESS;
++    struct ly_set *set = NULL;
++    size_t i;
++
++    (void)dfs_continue;
++
++    /* Not a node type we are interested in */
++    if (node->nodetype != LYS_LEAF && node->nodetype != LYS_LEAFLIST) {
++        return LY_SUCCESS;
++    }
++
++    /* Fetch leafrefs targets for comparison against our match node.  Even if we
++     * are going to throw them away, we still need a count to know if this has
++     * valid leafref targets*/
++    ret = lysc_node_find_lref_targets(node, &set);
++    if (ret == LY_ENOTFOUND) {
++        return LY_SUCCESS;
++    } else if (ret != LY_SUCCESS) {
++        goto cleanup;
++    }
++
++    /* If set contains no entries, don't add node */
++    if (set == NULL || set->count == 0) {
++        goto cleanup;
++    }
++
++    /* If we're not requiring a match of a target node, just add this node to
++     * the returned set */
++    if (bldata->match_node == NULL) {
++        ly_set_add(bldata->set, node, 1, NULL);
++        goto cleanup;
++    }
++
++    /* We are doing target matching, scan to see if this node should be added */
++    for (i=0; i<set->count; i++) {
++        if (bldata->match_ancestors) {
++            if (!lysc_node_has_ancestor(set->snodes[i], bldata->match_node)) {
++                continue;
++            }
++        } else {
++            if (set->snodes[i] != bldata->match_node) {
++                continue;
++            }
++        }
++
++        /* Found a match, add self */
++        ly_set_add(bldata->set, node, 1, NULL);
++        goto cleanup;
++    }
++
++
++cleanup:
++    ly_set_free(set, NULL);
++    return ret;
++}
++
++LIBYANG_API_DEF LY_ERR
++lys_find_backlinks(const struct ly_ctx *ctx, const struct lysc_node *match_node, ly_bool match_ancestors, struct ly_set **set)
++{
++    LY_ERR ret;
++    uint32_t                 module_idx = 0;
++    const struct lys_module *module;
++
++    LY_CHECK_ARG_RET(NULL, ctx, set, LY_EINVAL);
++
++    /* allocate return set */
++    ret = ly_set_new(set);
++    LY_CHECK_GOTO(ret, cleanup);
++
++    /* Iterate across all loaded modules */
++    for (module_idx = 0; (module = ly_ctx_get_module_iter(ctx, &module_idx)) != NULL; ) {
++        lys_find_backlinks_t data = { match_node, match_ancestors, *set };
++        if (!module->compiled) {
++            continue;
++        }
++        ret = lysc_module_dfs_full(module, lys_find_backlinks_clb, &data);
++        LY_CHECK_GOTO(ret, cleanup);
++    }
++
++cleanup:
++    if (ret != LY_SUCCESS || (*set)->count == 0) {
++        if (ret != LY_SUCCESS) {
++            ret = LY_ENOTFOUND;
++        }
++        ly_set_free(*set, NULL);
++        *set = NULL;
++        return ret;
++    }
++
++    return ret;
++}
++
++
+ char *
+ lysc_path_until(const struct lysc_node *node, const struct lysc_node *parent, LYSC_PATH_TYPE pathtype, char *buffer,
+         size_t buflen)
+diff --git a/src/tree_schema.h b/src/tree_schema.h
+index 0181bc6f9..f7585b449 100644
+--- a/src/tree_schema.h
++++ b/src/tree_schema.h
+@@ -1915,6 +1915,67 @@ LIBYANG_API_DECL struct lysc_when **lysc_node_when(const struct lysc_node *node)
+  */
+ LIBYANG_API_DECL const struct lysc_node *lysc_node_lref_target(const struct lysc_node *node);
+ 
++/**
++ * @brief Get the target node of a leafref type
++ *
++ * This is similar to lysc_node_lref_target() except it operates on a struct lysc_type
++ * object, which may be a member of another structure such as a union.  The node
++ * owning the lysc_type must also be specified since the type object does not
++ * reference its parent.
++ *
++ * @param[in] node  Node ownining the type object
++ * @param[in] type  Type node which has a basetype of LY_TYPE_LEAFREF
++ * @return target schema node if found, otherwise NULL
++ */
++LIBYANG_API_DECL const struct lysc_node *lysc_type_lref_target(const struct lysc_node *node, const struct lysc_type *type);
++
++/**
++ * @brief Determine if the node provided has an ancestor of the specified node.
++ *
++ * This will scan backwards in the tree using the parent node of each subsequent
++ * node to see if the ancestor matches. This will also match on self.
++ *
++ * @param[in] node Node to examine
++ * @param[in] ancestor node to match
++ * @return true if ancestor is found in tree, otherwise false
++ */
++LIBYANG_API_DECL ly_bool lysc_node_has_ancestor(const struct lysc_node *node, const struct lysc_node *ancestor);
++
++/**
++ * @brief Fetch all leafref targets of the specified node
++ *
++ * This is an enhanced version of lysc_node_lref_target() which will return a
++ * set of leafref target nodes retrieved from the specified node.  While
++ * lysc_node_lref_target() will only work on nodetype of LYS_LEAF and LYS_LEAFLIST
++ * this function will also evaluate other datatypes that may contain leafrefs
++ * such as LYS_UNION.  This does not, however, search for children with leafref
++ * targets.
++ *
++ * @param[in] node node containing a leafref
++ * @param[out] set Set of found leafref targets (schema nodes).
++ * @return LY_ENOTFOUND if node specified does not contain lref targets, otherwise LY_SUCCESS
++ *
++ */
++LIBYANG_API_DECL LY_ERR lysc_node_find_lref_targets(const struct lysc_node *node, struct ly_set **set);
++
++/**
++ * @brief Search entire schema for nodes that contain leafrefs and return as a set of schema nodes
++ *
++ * Perform a complete scan of the schema tree looking for nodes that contain leafref entries.
++ * When a node contains a leafref entry, and match_node is specified, determine if reference
++ * points to match_node, if so add the node to returned set.  If no match_node is specified, the node
++ * containing the leafref is always added to the returned set.  When match_ancestors is true,
++ * will evaluate if match_node is self or an ansestor of self.
++ *
++ * This does not return the leafref targets, but the actual node that contains a leafref.
++ *
++ * @param[in] ly_ctx
++ * @param[in] match_node  Leafref target node to use for matching.
++ * @param[in] match_ancestors Whether match_node may be an anscestor instead of an exact node.
++ * @param[out] set Set of found nodes containing leafrefs
++ */
++LIBYANG_API_DECL LY_ERR lys_find_backlinks(const struct ly_ctx *ctx, const struct lysc_node *match_node, ly_bool match_ancestors, struct ly_set **set);
++
+ /**
+  * @brief Callback to be called for every schema node in a DFS traversal.
+  *
+diff --git a/src/tree_schema_common.c b/src/tree_schema_common.c
+index e6af579b6..132f33405 100644
+--- a/src/tree_schema_common.c
++++ b/src/tree_schema_common.c
+@@ -1834,6 +1834,120 @@ lysc_node_lref_target(const struct lysc_node *node)
+     return target;
+ }
+ 
++LIBYANG_API_DEF const struct lysc_node *
++lysc_type_lref_target(const struct lysc_node *node, const struct lysc_type *type)
++{
++    struct ly_set *set = NULL;
++    LY_ERR err;
++    const struct lysc_node *ret = NULL;
++    const struct lysc_type_leafref *lref;
++
++    if (node == NULL || type == NULL || type->basetype != LY_TYPE_LEAFREF) {
++        return NULL;
++    }
++
++    lref = (const struct lysc_type_leafref *)type;
++
++    err = lys_find_expr_atoms(node, node->module, lref->path, lref->prefixes, 0, &set);
++    if (err != LY_SUCCESS) {
++        return NULL;
++    }
++
++    if (set->count != 0) {
++        ret = set->snodes[set->count - 1];
++    }
++    ly_set_free(set, NULL);
++    return ret;
++}
++
++LIBYANG_API_DEF LY_ERR
++lysc_node_find_lref_targets(const struct lysc_node *node, struct ly_set **set)
++{
++    LY_ERR ret = LY_SUCCESS;
++    const struct lysc_type *type;
++
++    LY_CHECK_ARG_RET(NULL, node, set, LY_EINVAL);
++
++    /* Not a node type we are interested in */
++    if (node->nodetype != LYS_LEAF && node->nodetype != LYS_LEAFLIST) {
++        return LY_ENOTFOUND;
++    }
++
++    /* allocate return set */
++    ret = ly_set_new(set);
++    LY_CHECK_GOTO(ret, cleanup);
++
++    if (node->nodetype == LYS_LEAF) {
++        type = ((const struct lysc_node_leaf *)node)->type;
++    } else {
++        type = ((const struct lysc_node_leaflist *)node)->type;
++    }
++
++    if (type->basetype == LY_TYPE_UNION) {
++        /* Unions are a bit of a pain as they aren't represented by nodes,
++         * so we need to iterate across them to see if they contain any
++         * leafrefs */
++        const struct lysc_type_union *un = (const struct lysc_type_union *)type;
++        size_t                        i;
++        for (i=0; i<LY_ARRAY_COUNT(un->types); i++) {
++            const struct lysc_type *utype = un->types[i];
++            const struct lysc_node *target;
++
++            if (utype->basetype != LY_TYPE_LEAFREF) {
++                continue;
++            }
++
++            target = lysc_type_lref_target(node, utype);
++            if (target == NULL) {
++                continue;
++            }
++
++            ret = ly_set_add(*set, target, 1, NULL);
++            LY_CHECK_GOTO(ret, cleanup);
++        }
++    } else if (type->basetype == LY_TYPE_LEAFREF) {
++        const struct lysc_node *target = lysc_node_lref_target(node);
++        if (target == NULL) {
++            ret = LY_ENOTFOUND;
++            goto cleanup;
++        }
++        ret = ly_set_add(*set, target, 1, NULL);
++        LY_CHECK_GOTO(ret, cleanup);
++    } else {
++        /* Not a node type we're interested in */
++        ret = LY_ENOTFOUND;
++        goto cleanup;
++    }
++
++cleanup:
++    if ((*set)->count == 0) {
++        ly_set_free(*set, NULL);
++        *set = NULL;
++        if (ret == LY_SUCCESS) {
++            ret = LY_ENOTFOUND;
++        }
++    }
++    return ret;
++}
++
++
++LIBYANG_API_DEF ly_bool
++lysc_node_has_ancestor(const struct lysc_node *node, const struct lysc_node *ancestor)
++{
++    const struct lysc_node *n;
++
++    if (node == NULL || ancestor == NULL) {
++        return 0;
++    }
++
++    for (n = node; n != NULL ; n = n->parent) {
++        if (n == ancestor) {
++            return 1;
++        }
++    }
++    return 0;
++}
++
+ enum ly_stmt
+ lysp_match_kw(struct ly_in *in, uint64_t *indent)
+ {
+diff --git a/tests/utests/schema/test_schema.c b/tests/utests/schema/test_schema.c
+index cba2b2d45..be67c675a 100644
+--- a/tests/utests/schema/test_schema.c
++++ b/tests/utests/schema/test_schema.c
+@@ -1887,6 +1887,230 @@ test_lysc_path(void **state)
+     free(path);
+ }
+ 
++static ly_bool
++compare_str_nodeset(struct ly_set *expected, struct ly_set *received)
++{
++    ly_bool is_error = 0;
++    size_t r;
++    size_t e;
++
++    for (e=0; expected && e < expected->count; e++) {
++        const char *epath = expected->objs[e];
++        ly_bool found = 0;
++        for (r = 0; received && r < received->count; r++) {
++            const char *rpath = received->objs[r];
++            if (strcmp(epath, rpath) == 0) {
++                found = 1;
++            }
++        }
++
++        if (!found) {
++            fprintf(stderr, "< %s\n", epath);
++            is_error = 1;
++        }
++    }
++
++    /* If the count was equal and there was no error, no need to scan again */
++    if (expected != NULL && received != NULL && expected->count == received->count && !is_error) {
++        return 1;
++    }
++
++    for (r = 0; received && r < received->count; r++) {
++        ly_bool found = 0;
++        const char *rpath = received->objs[r];
++        for (e = 0; expected && e < expected->count && !found; e++) {
++            char *epath = expected->objs[e];
++            if (strcmp(epath, rpath) == 0) {
++                found = 1;
++            }
++        }
++        if (!found) {
++            fprintf(stderr, "> %s\n", rpath);
++            is_error = 1;
++        }
++    }
++
++    return 0;
++}
++
++static struct ly_set *
++strlist_to_pathset(const char **pathlist)
++{
++    struct ly_set *set = NULL;
++    size_t  i;
++
++    if (pathlist == NULL || pathlist[0] == NULL) {
++        return NULL;
++    }
++
++    ly_set_new(&set);
++
++    for (i=0; pathlist[i] != NULL; i++) {
++        ly_set_add(set, strdup(pathlist[i]), 0, NULL);
++    }
++
++    return set;
++}
++
++static struct ly_set *
++lysc_nodeset_to_pathset(struct ly_set *nodeset)
++{
++    struct ly_set *set = NULL;
++    size_t i;
++
++    if (nodeset == NULL || nodeset->count == 0) {
++        return NULL;
++    }
++
++    ly_set_new(&set);
++
++    for (i=0; i< nodeset->count; i++) {
++        char *path = lysc_path(nodeset->snodes[i], LYSC_PATH_DATA, NULL, 0);
++        ly_set_add(set, path, 0, NULL);
++    }
++    return set;
++}
++
++static void
++test_lysc_backlinks(void **state)
++{
++    const char *expect1[] = {
++        /* Built-ins, not sure how to exclude those when not limiting by
++         * path */
++        "/ietf-yang-library:yang-library/module-set/module/deviation",
++        "/ietf-yang-library:yang-library/schema/module-set",
++        "/ietf-yang-library:yang-library/datastore/schema",
++        "/ietf-yang-library:yang-library-update/content-id",
++        "/ietf-yang-library:yang-library-change/module-set-id",
++        /* Normal expected */
++        "/b:my_extref_list/my_extref",
++        "/a:refstr",
++        "/a:refnum",
++        "/b:my_extref_union",
++        NULL
++    };
++    const char *expect2[] = {
++        "/b:my_extref_list/my_extref",
++        "/a:refstr",
++        "/b:my_extref_union",
++        NULL
++    };
++    const char *expect3[] = {
++        "/b:my_extref_list/my_extref",
++        "/a:refstr",
++        "/a:refnum",
++        "/b:my_extref_union",
++        NULL
++    };
++    struct {
++        const char *match_path;
++        ly_bool match_ancestors;
++        const char **expected_paths;
++    } tests[] = {
++        { NULL, 0, expect1 },
++        { "/a:my_list/my_leaf_string", 0, expect2 },
++        { "/a:my_list", 1, expect3 }
++    };
++    const char *str;
++    size_t      i;
++
++    str = "module a {\n"
++          "    namespace urn:a;\n"
++          "    prefix a;\n"
++          "    list my_list {\n"
++          "        key my_leaf_string;\n"
++          "        leaf my_leaf_string {\n"
++          "            type string;\n"
++          "        }\n"
++          "        leaf my_leaf_number {\n"
++          "            type uint32;\n"
++          "        }\n"
++          "    }\n"
++          "    leaf refstr {\n"
++          "        type leafref {\n"
++          "            path \"../my_list/my_leaf_string\";\n"
++          "        }\n"
++          "    }\n"
++          "    leaf refnum {\n"
++          "        type leafref {\n"
++          "            path \"../my_list/my_leaf_number\";\n"
++          "        }\n"
++          "    }\n"
++          "}\n";
++
++    assert_int_equal(lys_parse_mem(UTEST_LYCTX, str, LYS_IN_YANG, NULL), LY_SUCCESS);
++    CHECK_LOG_CTX(NULL, NULL, 0);
++
++    str = "module b {\n"
++          "    namespace urn:b;\n"
++          "    prefix b;\n"
++          "    import a {\n"
++          "        prefix a;\n"
++          "    }\n"
++          "    list my_extref_list {\n"
++          "        key my_leaf_string;\n"
++          "        leaf my_leaf_string {\n"
++          "            type string;\n"
++          "        }\n"
++          "        leaf my_extref {\n"
++          "            type leafref {\n"
++          "                path \"/a:my_list/a:my_leaf_string\";\n"
++          "            }\n"
++          "        }\n"
++          "    }\n"
++          "    leaf my_extref_union {\n"
++          "        type union {\n"
++          "            type leafref {\n"
++          "                path \"/a:my_list/a:my_leaf_string\";\n"
++          "            }\n"
++          "            type leafref {\n"
++          "                path \"/a:my_list/a:my_leaf_number\";\n"
++          "            }\n"
++          "            type uint32;\n"
++          "         }\n"
++          "    }\n"
++          "}\n";
++
++    assert_int_equal(lys_parse_mem(UTEST_LYCTX, str, LYS_IN_YANG, NULL), LY_SUCCESS);
++    CHECK_LOG_CTX(NULL, NULL, 0);
++
++    for (i=0; i<sizeof(tests)/sizeof(*tests); i++) {
++        const struct lysc_node *node = NULL;
++        struct ly_set *set = NULL;
++        struct ly_set *expected = NULL;
++        struct ly_set *received = NULL;
++        LY_ERR ret;
++
++        if (tests[i].match_path) {
++            node = lys_find_path(UTEST_LYCTX, NULL, tests[i].match_path, 0);
++            if (node == NULL) {
++                fail_msg("failed to find schema node: %s", tests[i].match_path);
++            }
++        }
++
++        ret = lys_find_backlinks(UTEST_LYCTX, node, tests[i].match_ancestors, &set);
++        if (ret != LY_SUCCESS) {
++            fail_msg("failed to find backlinks for %s%s: %s",
++                tests[i].match_path == NULL?"/":tests[i].match_path,
++                tests[i].match_ancestors?" (including ancestors)":"",
++                ly_strerr(ret));
++        }
++
++
++        expected = strlist_to_pathset(tests[i].expected_paths);
++        received = lysc_nodeset_to_pathset(set);
++        if (!compare_str_nodeset(expected, received)) {
++            fail_msg("backlinks for %s%s returned unexpected results",
++                tests[i].match_path == NULL?"/":tests[i].match_path,
++                tests[i].match_ancestors?" (including ancestors)":"");
++        }
++
++        ly_set_free(expected, free);
++        ly_set_free(received, free);
++        ly_set_free(set, NULL);
++    }
++}
++
+ int
+ main(void)
+ {
+@@ -1909,6 +2133,7 @@ main(void)
+         UTEST(test_extension_compile),
+         UTEST(test_ext_recursive),
+         UTEST(test_lysc_path),
++        UTEST(test_lysc_backlinks)
+     };
+ 
+     return cmocka_run_group_tests(tests, NULL, NULL);

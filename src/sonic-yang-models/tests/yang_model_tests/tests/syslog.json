@@ -12,7 +12,7 @@
     },
     "SYSLOG_SERVER_INVALID_PORT": {
         "desc": "Configure invalid PORT in SYSLOG_SERVER.",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "SYSLOG_SERVER_INVALID_VRF": {
         "desc": "Configure invalid VRF in SYSLOG_SERVER.",
@@ -38,11 +38,11 @@
     },
     "SYSLOG_CONFIG_INVALID_INTERVAL": {
         "desc": "Configure invalid rate limit interval in SYSLOG_CONFIG.",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "SYSLOG_CONFIG_INVALID_BURST": {
         "desc": "Configure invalid rate limit burst in SYSLOG_CONFIG.",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "SYSLOG_CONFIG_FEATURE_VALID": {
         "desc": "Configure SYSLOG_CONFIG_FEATURE."
@@ -53,11 +53,11 @@
     },
     "SYSLOG_CONFIG_FEATURE_INVALID_INTERVAL": {
         "desc": "Configure invalid rate_limit_interval in SYSLOG_CONFIG_FEATURE.",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "SYSLOG_CONFIG_FEATURE_INVALID_BURST": {
         "desc": "Configure invalid rate_limit_burst in SYSLOG_CONFIG_FEATURE.",
-        "eStrKey": "InvalidValue"
+        "eStrKey": "Bounds"
     },
     "SYSLOG_SERVER_HOSTNAME": {
         "desc": "Load syslog server table with hostname"
