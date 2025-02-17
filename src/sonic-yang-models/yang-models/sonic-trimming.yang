@@ -1,0 +1,56 @@
+module sonic-trimming {
+
+    yang-version 1.1;
+
+    namespace "http://github.com/sonic-net/sonic-trimming";
+    prefix trim;
+
+    description "TRIMMING YANG Module for SONiC OS";
+
+    revision 2024-11-01 {
+        description "First Revision";
+    }
+
+    container sonic-trimming {
+
+        container SWITCH_TRIMMING {
+
+            description "SWITCH_TRIMMING part of config_db.json";
+
+            container GLOBAL {
+
+                leaf size {
+                    description "Size (in bytes) to trim eligible packet";
+                    type uint32;
+                }
+
+                leaf dscp_value {
+                    description "DSCP value assigned to a packet after trimming";
+                    type uint8 {
+                        range "0..63" {
+                            error-message "Invalid DSCP value";
+                            error-app-tag dscp-invalid;
+                        }
+                    }
+                }
+
+                leaf queue_index {
+                    description
+                        "Queue index to use for transmission of a packet after trimming.
+                        When set to dynamic, the dscp_value is used for mapping to queue";
+                    type union {
+                        type uint8;
+                        type string {
+                            pattern "dynamic";
+                        }
+                    }
+                }
+
+            }
+            /* end of container GLOBAL */
+        }
+        /* end of container SWITCH_TRIMMING */
+    }
+    /* end of container sonic-trimming */
+}
+/* end of module sonic-trimming */
