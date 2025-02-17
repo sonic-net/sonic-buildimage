@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-02-19-1.06" profile="SAI" sid="c310bbb1-ffca-4c99-9bae-f7d4caff5941">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-10-24-1.10" profile="SAI" dsig="md5" sid="92a3e944-e664-45d1-a29f-df4774c889db">
   <SAIplt:SAI xmlns:SAIplt="urn:marvell:SAI:yang">
     <SAIplt:typedefs>
       <SAIplt:typedef>
@@ -50,10 +50,20 @@
           <SAIplt:description>Router In Drop Counters track Route Black Hole Packets</SAIplt:description>
           <SAIplt:value>1</SAIplt:value>
         </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>Feature-enable</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description>Feature Enabled/Disabled</SAIplt:description>
         <SAIplt:enum>
-          <SAIplt:name>IN_DROP_ANY</SAIplt:name>
-          <SAIplt:description>Router In Drop Counters track either TTL &amp; Hop Limit Exceeded or Route Black Hole Packets</SAIplt:description>
-          <SAIplt:value>2</SAIplt:value>
+          <SAIplt:name>Disabled</SAIplt:name>
+          <SAIplt:description>Disabled</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>Enabled</SAIplt:name>
+          <SAIplt:description>Enabled</SAIplt:description>
+          <SAIplt:value>1</SAIplt:value>
         </SAIplt:enum>
       </SAIplt:typedef>
       <SAIplt:typedef>
@@ -156,6 +166,26 @@
           <SAIplt:description>FALCON</SAIplt:description>
           <SAIplt:value>2</SAIplt:value>
         </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>ASIC_AC5P</SAIplt:name>
+          <SAIplt:description>AC5P</SAIplt:description>
+          <SAIplt:value>3</SAIplt:value>
+        </SAIplt:enum>
+      </SAIplt:typedef>
+      <SAIplt:typedef>
+        <SAIplt:name>boolean-type</SAIplt:name>
+        <SAIplt:type>enumeration</SAIplt:type>
+        <SAIplt:description>Boolean 32 bits , due to bing endian</SAIplt:description>
+        <SAIplt:enum>
+          <SAIplt:name>false</SAIplt:name>
+          <SAIplt:description>False</SAIplt:description>
+          <SAIplt:value>0</SAIplt:value>
+        </SAIplt:enum>
+        <SAIplt:enum>
+          <SAIplt:name>true</SAIplt:name>
+          <SAIplt:description>True</SAIplt:description>
+          <SAIplt:value>1</SAIplt:value>
+        </SAIplt:enum>
       </SAIplt:typedef>
     </SAIplt:typedefs>
     <SAIplt:ASIC_Type SAIplt:type="asic-type">ASIC_Falcon</SAIplt:ASIC_Type>
@@ -164,642 +194,642 @@
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">0</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">130</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">0</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">1</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">129</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">1</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">2</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">128</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">2</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">3</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">127</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">3</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">4</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">126</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">4</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">5</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">125</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">5</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">6</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">124</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">6</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">7</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">123</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">7</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">8</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">122</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">8</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">9</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">121</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">9</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">10</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">120</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">10</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">11</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">119</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">11</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">12</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">118</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">12</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">13</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">117</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">13</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">14</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">116</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">14</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">15</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">115</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">15</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">16</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">114</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">16</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">17</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">113</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">17</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">18</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">112</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">18</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">19</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">111</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">19</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">20</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">110</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">20</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">21</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">109</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">21</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">22</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">108</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">22</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">23</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">107</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">23</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">24</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">106</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">24</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">25</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">105</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">25</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">26</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">104</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">26</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">27</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">103</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">27</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">28</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">102</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">28</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">29</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">101</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">29</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">30</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">100</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">30</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">31</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">99</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">31</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">32</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">98</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">32</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">33</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">97</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">33</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">34</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">96</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">34</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">35</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">95</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">35</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">36</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">94</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">36</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">37</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">93</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">37</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">38</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">92</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">38</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">39</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">91</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">39</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">40</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">90</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">40</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">41</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">89</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">41</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">42</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">88</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">42</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">43</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">87</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">43</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">44</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">86</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">44</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">45</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">85</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">45</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">46</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">84</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">46</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">47</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">83</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">47</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">48</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">82</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">48</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">49</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">81</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">49</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">50</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">80</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">50</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">51</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">79</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">51</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">52</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">78</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">52</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">53</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">77</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">53</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">54</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">76</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">54</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">55</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">75</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">55</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">56</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">74</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">56</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">57</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">73</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">57</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">58</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">72</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">58</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">59</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">71</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">59</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">60</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">70</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">60</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">61</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">69</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">64</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">62</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">68</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">65</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">63</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">67</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">66</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">64</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">66</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">67</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">65</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">65</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">68</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">66</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">64</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">69</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">67</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">60</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">70</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">68</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">59</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">71</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">69</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">58</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">72</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">70</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">57</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">73</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">71</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">56</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">74</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">72</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">55</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">75</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">73</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">54</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">76</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">74</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">53</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">77</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">75</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">52</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">78</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">76</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">51</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">79</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">77</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">50</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">80</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">78</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">49</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">81</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">79</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">48</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">82</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">80</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">47</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">83</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">81</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">46</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">84</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">82</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">45</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">85</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">83</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">44</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">86</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">84</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">43</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">87</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">85</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">42</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">88</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">86</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">41</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">89</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">87</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">40</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">90</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">88</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">39</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">91</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">89</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">38</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">92</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">90</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">37</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">93</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">91</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">36</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">94</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">92</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">35</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">95</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">93</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">34</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">96</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">94</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">33</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">97</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">95</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">32</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">98</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">96</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">31</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">99</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">97</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">30</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">100</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">98</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">29</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">101</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">99</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">28</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">102</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">100</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">27</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">103</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">101</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">26</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">104</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">102</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">25</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">105</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">103</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">24</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">106</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">104</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">23</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">107</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">105</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">22</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">108</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">106</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">21</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">109</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">107</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">20</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">110</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">108</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">19</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">111</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">109</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">18</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">112</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">110</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">17</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">113</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">111</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">16</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">114</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">112</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">15</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">115</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">113</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">14</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">116</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">114</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">13</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">117</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">115</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">12</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">118</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">116</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">11</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">119</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">117</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">10</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">120</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">118</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">9</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">121</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">119</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">8</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">122</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">120</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">7</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">123</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">121</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">6</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">124</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">122</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">5</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">125</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">123</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">4</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">126</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">124</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">3</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">127</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">125</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">2</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">128</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">126</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">1</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">129</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">127</SAIplt:sai_port_id>
         <SAIplt:sdk_device_id SAIplt:type="device-id-type">0</SAIplt:sdk_device_id>
-        <SAIplt:sdk_port_id SAIplt:type="port-id-type">0</SAIplt:sdk_port_id>
+        <SAIplt:sdk_port_id SAIplt:type="port-id-type">130</SAIplt:sdk_port_id>
       </SAIplt:port-list>
       <SAIplt:port-list>
         <SAIplt:sai_port_id SAIplt:type="port-id-type">128</SAIplt:sai_port_id>
@@ -827,6 +857,13 @@
       <SAIplt:cnc-base-list>
         <SAIplt:counter-base SAIplt:type="uint32">0</SAIplt:counter-base>
       </SAIplt:cnc-base-list>
+      <SAIplt:Queue-counter>
+        <SAIplt:queue-pass-drop-counter SAIplt:type="Feature-enable">Enabled</SAIplt:queue-pass-drop-counter>
+        <SAIplt:queue-watermark-counter SAIplt:type="Feature-enable">Enabled</SAIplt:queue-watermark-counter>
+      </SAIplt:Queue-counter>
+      <SAIplt:Port-counter>
+        <SAIplt:port-in-discard-counter SAIplt:type="Feature-enable">Enabled</SAIplt:port-in-discard-counter>
+      </SAIplt:Port-counter>
     </SAIplt:Counters>
     <SAIplt:Logging>
       <SAIplt:log_dest SAIplt:type="logDest-type">SAI_LOG_SYSLOG</SAIplt:log_dest>
