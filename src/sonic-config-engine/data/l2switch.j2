@@ -17,8 +17,7 @@
             {% if keyPort != "admin_status" %}"{{ keyPort }}": "{{ valuePort }}",{% endif %}
             {%- endfor %}
 
-            "admin_status": "{{ value.admin_status|default("up") }}",
-            "speed": "{{ value.speed|default("50000") }}"
+            "admin_status": "{{ value.admin_status|default("up") }}"
         }
         {%- if ns.update({'firstPrinted': True}) %}{% endif -%}
         {%- endfor %}

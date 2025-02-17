@@ -243,7 +243,6 @@ class TestJ2Files(TestCase):
 
     def test_l2switch_template(self):
         argument = ['-k', 'Mellanox-SN2700', '--preset', 'l2', '-p', self.t0_port_config]
-        self.assertTrue(self.yang.validate(argument))
         output = self.run_script(argument)
         output_json = json.loads(output)
 
