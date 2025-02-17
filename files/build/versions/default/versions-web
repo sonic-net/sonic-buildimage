@@ -92,6 +92,7 @@ https://github.com/Mellanox/Spectrum-SDK-Drivers/archive/refs/heads/4.7.2164.zip
 https://github.com/nanomsg/nanomsg/archive/1.0.0.tar.gz==6f56ef28c93cee644e8c4aaaef7cfb55
 https://github.com/pensando/dsc-artifacts/blob/main/docker-dpu-base.gz?raw=true==26caa959af69bc5f895dce0cd02557a8
 https://github.com/pensando/dsc-artifacts/blob/main/libsai_1.10.1-0_arm64.deb?raw=true==f6f9619ecb727c0491431f3f019ac5b3
+https://github.com/libevent/libevent/releases/download/release-2.1.12-stable/libevent-2.1.12-stable.tar.gz==b5333f021f880fe76490d8a799cd79f4
 https://launchpad.net/debian/+archive/primary/+sourcefiles/bash/5.1-2/bash_5.1-2.debian.tar.xz==9d0cbd5f463f461c840c95f62a64d61b
 https://launchpad.net/debian/+archive/primary/+sourcefiles/bash/5.1-2/bash_5.1-2.dsc==be44c5a9fc12fb567a486f54b842dd9e
 https://launchpad.net/debian/+archive/primary/+sourcefiles/bash/5.1-2/bash_5.1.orig.tar.xz==6ddb13b6111f601db08fc7c72afa0263
