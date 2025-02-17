@@ -44,7 +44,7 @@ pexpect==4.8.0
 pillow==9.4.0
 pip==24.0
 pluggy==0.8.0
-psutil==6.1.1
+psutil==7.0.0
 ptyprocess==0.7.0
 py==1.7.0
 pyang==2.4.0
