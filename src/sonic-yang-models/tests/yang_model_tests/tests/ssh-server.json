@@ -7,13 +7,11 @@
     },
     "SSH_SERVER_INVALID_AUTH_RETRIES": {
         "desc": "Configure invalid number of authentication retries in SSH_SERVER.",
-        "eStrKey" : "Pattern",
-        "eStr": ["1..100"]
+        "eStrKey" : "Range"
     },
     "SSH_SERVER_INVALID_LOGIN_TIMEOUT": {
         "desc": "Configure invalid login timeout value in SSH_SERVER.",
-        "eStrKey" : "Pattern",
-        "eStr": ["1..600"]
+        "eStrKey" : "Range"
     },
     "SSH_SERVER_INVALID_PORTS_1": {
         "desc": "Configure invalid port value in SSH_SERVER.",
@@ -25,10 +23,10 @@
     },
     "SSH_SERVER_INVALID_INACTIVITY_TIMEOUT": {
         "desc": "Configure invalid inactivity_timeout value in SSH_SERVER.",
-        "eStr": "does not satisfy the constraint \"0..35000\""
+        "eStrKey": "Range"
     },
     "SSH_SERVER_INVALID_MAX_SESSIONS": {
         "desc": "Configure invalid max_sessions value in SSH_SERVER.",
-        "eStr": "does not satisfy the constraint \"0..100\""
+        "eStrKey": "Range"
     }
 }

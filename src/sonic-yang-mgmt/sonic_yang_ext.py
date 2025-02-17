@@ -2,7 +2,7 @@
 # class sonic_yang. A separate file is used to avoid a single large file.
 
 from __future__ import print_function
-import yang as ly
+import libyang as ly
 import syslog
 from json import dump, dumps, loads
 from xmltodict import parse
@@ -86,7 +86,7 @@ class SonicYangExtMixin:
             for f in self.yangFiles:
                 m = self.ctx.get_module(f)
                 if m is not None:
-                    xml = m.print_mem(ly.LYD_JSON, ly.LYP_FORMAT)
+                    xml = m.print_mem("yin")
                     self.yJson.append(parse(xml))
                     self.sysLog(msg="Parsed Json for {}".format(m.name()))
         except Exception as e:
@@ -328,7 +328,7 @@ class SonicYangExtMixin:
             Parameters:
                 uses_s (str): uses statement in yang module.
                 table (str): config DB table, this table is being translated.
-                leafDict (dict): dict with leaf(s) information for List\Container
+                leafDict (dict): dict with leaf(s) information for List Container
                     corresponding to config DB table.
 
             Returns:
@@ -369,7 +369,7 @@ class SonicYangExtMixin:
                 table (str): config DB table, this table is being translated.
 
             Returns:
-                 leafDict (dict): dict with leaf(s) information for List\Container
+                 leafDict (dict): dict with leaf(s) information for List Container
                     corresponding to config DB table.
         '''
         leafDict = dict()
@@ -1174,8 +1174,7 @@ class SonicYangExtMixin:
           self._xlateConfigDB(xlateFile=xlateFile)
           #print(self.xlateJson)
           self.sysLog(msg="Try to load Data in the tree")
-          self.root = self.ctx.parse_data_mem(dumps(self.xlateJson), \
-                        ly.LYD_JSON, ly.LYD_OPT_CONFIG|ly.LYD_OPT_STRICT)
+          self.root = self.ctx.parse_data_mem(dumps(self.xlateJson), "json", no_state=True, strict=True, json_string_datatypes=True)
 
        except Exception as e:
            self.root = None
@@ -1195,7 +1194,7 @@ class SonicYangExtMixin:
             revXlateFile = None
             if debug:
                 revXlateFile = "revXlateConfig.json"
-            self.xlateJson = loads(self._print_data_mem('JSON'))
+            self.xlateJson = loads(self._print_data_mem("JSON"))
             # reset reverse xlate
             self.revXlateJson = dict()
             # result will be stored self.revXlateJson
@@ -1229,13 +1228,13 @@ class SonicYangExtMixin:
                     # try to delete parent
                     nodeP = self._find_parent_data_node(xpath)
                     xpathP = nodeP.path()
-                    if self._deleteNode(xpath=xpathP, node=nodeP) == False:
+                    if self._deleteNode(xpath=xpathP) == False:
                         raise Exception('_deleteNode failed')
                     else:
                         return True
 
             # delete non key element
-            if self._deleteNode(xpath=xpath, node=node) == False:
+            if self._deleteNode(xpath=xpath) == False:
                 raise Exception('_deleteNode failed')
         except Exception as e:
             self.sysLog(msg="deleteNode:{}".format(str(e)), \
