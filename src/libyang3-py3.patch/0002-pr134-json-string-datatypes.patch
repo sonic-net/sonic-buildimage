@@ -1,0 +1,85 @@
+diff --git a/cffi/cdefs.h b/cffi/cdefs.h
+index 1c1d8f3..89f607b 100644
+--- a/cffi/cdefs.h
++++ b/cffi/cdefs.h
+@@ -318,6 +318,7 @@ LY_ERR lyd_print_all(struct ly_out *, const struct lyd_node *, LYD_FORMAT, uint3
+ #define LYD_PARSE_OPTS_MASK ...
+ #define LYD_PARSE_ORDERED ...
+ #define LYD_PARSE_STRICT ...
++#define LYD_PARSE_JSON_STRING_DATATYPES ...
+ 
+ #define LYD_VALIDATE_NO_STATE ...
+ #define LYD_VALIDATE_PRESENT ...
+diff --git a/libyang/context.py b/libyang/context.py
+index 1b1d4cd..2692eb3 100644
+--- a/libyang/context.py
++++ b/libyang/context.py
+@@ -520,6 +520,7 @@ def parse_data(
+         validate_present: bool = False,
+         validate_multi_error: bool = False,
+         store_only: bool = False,
++        json_string_datatypes: bool = False,
+     ) -> Optional[DNode]:
+         if self.cdata is None:
+             raise RuntimeError("context already destroyed")
+@@ -531,6 +532,7 @@ def parse_data(
+             ordered=ordered,
+             strict=strict,
+             store_only=store_only,
++            json_string_datatypes=json_string_datatypes,
+         )
+         validation_flgs = validation_flags(
+             no_state=no_state,
+@@ -589,6 +591,7 @@ def parse_data_mem(
+         validate_present: bool = False,
+         validate_multi_error: bool = False,
+         store_only: bool = False,
++        json_string_datatypes: bool = False,
+     ) -> Optional[DNode]:
+         return self.parse_data(
+             fmt,
+@@ -604,6 +607,7 @@ def parse_data_mem(
+             validate_present=validate_present,
+             validate_multi_error=validate_multi_error,
+             store_only=store_only,
++            json_string_datatypes=json_string_datatypes,
+         )
+ 
+     def parse_data_file(
+@@ -620,6 +624,7 @@ def parse_data_file(
+         validate_present: bool = False,
+         validate_multi_error: bool = False,
+         store_only: bool = False,
++        json_string_datatypes: bool = False,
+     ) -> Optional[DNode]:
+         return self.parse_data(
+             fmt,
+@@ -635,6 +640,7 @@ def parse_data_file(
+             validate_present=validate_present,
+             validate_multi_error=validate_multi_error,
+             store_only=store_only,
++            json_string_datatypes=json_string_datatypes,
+         )
+ 
+     def __iter__(self) -> Iterator[Module]:
+diff --git a/libyang/data.py b/libyang/data.py
+index 19ef0ca..86c26e1 100644
+--- a/libyang/data.py
++++ b/libyang/data.py
+@@ -116,6 +116,7 @@ def parser_flags(
+     ordered: bool = False,
+     strict: bool = False,
+     store_only: bool = False,
++    json_string_datatypes: bool = False,
+ ) -> int:
+     flags = 0
+     if lyb_mod_update:
+@@ -132,6 +133,8 @@ def parser_flags(
+         flags |= lib.LYD_PARSE_STRICT
+     if store_only:
+         flags |= lib.LYD_PARSE_STORE_ONLY
++    if json_string_datatypes:
++        flags |= lib.LYD_PARSE_JSON_STRING_DATATYPES
+     return flags
+ 
+ 
