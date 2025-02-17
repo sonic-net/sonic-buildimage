@@ -270,7 +270,7 @@ function GetAsicType() {
     elif echo $pcitree | grep "${VENDOR_ID}:${SPC4_PRODUCT_ID}" &>/dev/null; then
         echo "${SPC4_ASIC}"
         exit "${EXIT_SUCCESS}"
-    elif echo $pcitree | grep "${VENDOR_ID}:${BF3_PRODUCT_ID}" &>/dev/null; then
+    elif lspci -n | grep "${VENDOR_ID}:${BF3_PRODUCT_ID}" &>/dev/null; then
         echo "${BF3_NIC}"
         exit "${EXIT_SUCCESS}"
     fi
