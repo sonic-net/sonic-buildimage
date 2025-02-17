@@ -1,0 +1,12 @@
+ds4000/systemd/pddf-platform-init.service etc/systemd/system
+ds4000/service/ds4000-pddf-platform-monitor.service lib/systemd/system
+ds4000/scripts/ds4000_platform_shutdown.sh usr/local/bin
+ds4000/scripts/pddf_pre_driver_install.sh usr/local/bin
+ds4000/scripts/pddf_post_device_create.sh usr/local/bin
+ds4000/scripts/pre_pddf_init.py usr/local/bin
+ds4000/scripts/sensors usr/bin
+ds4000/scripts/platform_sensors.py usr/local/bin
+ds4000/utils/pddf_fan_control_sensor_refresh.py usr/local/bin
+ds4000/utils/pddf_sensor_list_refresh.py usr/local/bin
+ds4000/utils/FanControl usr/local/bin
+ds4000/modules/sonic_platform-1.0-py3-none-any.whl usr/share/sonic/device/x86_64-cls_ds4000-r0/pddf
