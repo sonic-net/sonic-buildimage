@@ -175,8 +175,8 @@ class Component(ComponentBase):
             return self._get_cpld_version(self.index)
 
         if self.index == 1:
-            cmdstatus, uboot_version = cmd.getstatusoutput('grep --null-data ^U-Boot /dev/mtd0ro | cut -d" " -f4')
-            return uboot_version
+            cmdstatus, uboot_version = cmd.getstatusoutput('fw_printenv current_uboot_version |cut -d= -f 2')
+            return uboot_version or "V1.1"
 
     def install_firmware(self, image_path):
         """
