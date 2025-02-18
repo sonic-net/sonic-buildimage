@@ -20,6 +20,7 @@
 #    12/12/2023: Add detect temp of xcvr, and implement shutdown function.
 #    23/01/2024: Sync the log buffer to the disk before powering off the DUT.
 #    11/06/2024: Enhance thermal-plan warning message.
+#    01/07/2025: Roger_Ho updated the threshold value based on spec. v15.
 # ------------------------------------------------------------------
 
 try:
@@ -89,11 +90,11 @@ class switch(object):
 #    - MAC Use SMB TMP422(0x4c)
 #
 # Raise to Fan Level 2 from Level 1 condition:
-#    - SMB TMP75 (0x48) >= 59
+#    - SMB TMP75 (0x48) >= 59 --> Please refer to "Condition 2" in the spec. for this value.
 #          or
-#    - SMB TMP75 (0x49) >= 59
+#    - SMB TMP75 (0x49) >= 50
 #          or
-#    - SMB TMP422(0x4c) >= 94
+#    - SMB TMP422(0x4c) >= 92
 #          or
 #    - FCM TMP75 (0x48) >= 50
 #          or
@@ -112,9 +113,9 @@ class switch(object):
 #    - LDB TMP422(0x4d) >= 54
 #
 # Slow down to Fan Level 1 from Level 2 condition:
-#    - SMB TMP75 (0x48) <= 54
+#    - SMB TMP75 (0x48) <= 54 --> Please refer to "Condition 1" in the spec. for this value.
 #          and
-#    - SMB TMP75 (0x49) <= 54
+#    - SMB TMP75 (0x49) <= 43
 #          and
 #    - SMB TMP422(0x4c) <= 83
 #          and
@@ -141,11 +142,11 @@ class switch(object):
 # Thermal Protect Function for Shutdown condition:
 #    - CPU core temp >= 99     (System shutdown except to CPU)
 #          or
-#    - SMB TMP75 (0x48) >= 76
+#    - SMB TMP75 (0x48) >= 76  --> Please refer to "Shutdown T" in the spec. for this value.
 #          or
-#    - SMB TMP75 (0x49) >= 76
+#    - SMB TMP75 (0x49) >= 60
 #          or
-#    - SMB TMP422(0x4c) >= 105 (MAC shutdown)
+#    - SMB TMP422(0x4c) >= 103 (MAC shutdown)
 #          or
 #    - FCM TMP75 (0x48) >= 67
 #          or
@@ -314,7 +315,7 @@ class device_monitor(object):
 
         fan_speed_policy = {
             FAN_LEVEL_1: [50],
-            FAN_LEVEL_2: [75],
+            FAN_LEVEL_2: [70],
             FAN_LEVEL_3: [100]
         }
 
@@ -327,24 +328,44 @@ class device_monitor(object):
         TRANSCEIVER_NUM_MAX = 64
         TOTAL_DETECT_SENSOR_NUM = thermal.THERMAL_NUM_BD_SENSOR + TRANSCEIVER_NUM_MAX
 
+        # thermal_spec={
+        #      "min_to_mid_temp": [SMB TMP75 (0x48), SMB TMP75 (0x49),
+        #                          FCM TMP75 (0x48), FCM TMP75 (0x49),
+        #                          PDB_L TMP75 (0x48), PDB_R TMP75 (0x49),
+        #                          UDB TMP75 (0x48), UDB TMP422(0x4c),
+        #                          LDB TMP75 (0x4c), LDB TMP422(0x4d), SMB TMP422(0x4c)],
+        #      "mid_to_min_temp": [SMB TMP75 (0x48), SMB TMP75 (0x49),
+        #                          FCM TMP75 (0x48), FCM TMP75 (0x49),
+        #                          PDB_L TMP75 (0x48), PDB_R TMP75 (0x49),
+        #                          UDB TMP75 (0x48), UDB TMP422(0x4c),
+        #                          LDB TMP75 (0x4c), LDB TMP422(0x4d), SMB TMP422(0x4c)],
+        #      "shutdown_temp"  : [SMB TMP75 (0x48), SMB TMP75 (0x49),
+        #                          FCM TMP75 (0x48), FCM TMP75 (0x49),
+        #                          PDB_L TMP75 (0x48), PDB_R TMP75 (0x49),
+        #                          UDB TMP75 (0x48), UDB TMP422(0x4c),
+        #                          LDB TMP75 (0x4c), LDB TMP422(0x4d), SMB TMP422(0x4c)],
+        #      "cpu_temp"       : [(TYPE_SENSOR, 80000), CPU],
+        #      "mac_temp"       : [(TYPE_SENSOR, 85000), SMB TMP422(0x4c)]
+        # }
+
         thermal_spec={
-            "min_to_mid_temp": [(TYPE_SENSOR, 59000), (TYPE_SENSOR, 59000),
+            "min_to_mid_temp": [(TYPE_SENSOR, 59000), (TYPE_SENSOR, 50000),
                                 (TYPE_SENSOR, 50000), (TYPE_SENSOR, 50000),
                                 (TYPE_SENSOR, 45000), (TYPE_SENSOR, 45000),
                                 (TYPE_SENSOR, 58000), (TYPE_SENSOR, 51000),
-                                (TYPE_SENSOR, 54000), (TYPE_SENSOR, 54000), (TYPE_SENSOR, 94000)],
-            "mid_to_min_temp": [(TYPE_SENSOR, 54000), (TYPE_SENSOR, 54000),
+                                (TYPE_SENSOR, 54000), (TYPE_SENSOR, 54000), (TYPE_SENSOR, 92000)],
+            "mid_to_min_temp": [(TYPE_SENSOR, 54000), (TYPE_SENSOR, 43000),
                                 (TYPE_SENSOR, 45000), (TYPE_SENSOR, 45000),
                                 (TYPE_SENSOR, 40000), (TYPE_SENSOR, 40000),
                                 (TYPE_SENSOR, 53000), (TYPE_SENSOR, 44000),
                                 (TYPE_SENSOR, 47000), (TYPE_SENSOR, 47000), (TYPE_SENSOR, 83000)],
-            "shutdown_temp"  : [(TYPE_SENSOR, 76000), (TYPE_SENSOR, 76000),
+            "shutdown_temp"  : [(TYPE_SENSOR, 76000), (TYPE_SENSOR, 60000),
                                 (TYPE_SENSOR, 67000), (TYPE_SENSOR, 67000),
                                 (TYPE_SENSOR, 62000), (TYPE_SENSOR, 62000),
                                 (TYPE_SENSOR, 70000), (TYPE_SENSOR, 61000),
-                                (TYPE_SENSOR, 67000), (TYPE_SENSOR, 67000), (TYPE_SENSOR, 105000)],
+                                (TYPE_SENSOR, 67000), (TYPE_SENSOR, 67000), (TYPE_SENSOR, 103000)],
             "cpu_temp"       : [(TYPE_SENSOR, 80000), (TYPE_SENSOR, 99000)],
-            "mac_temp"       : [(TYPE_SENSOR, 85000), (TYPE_SENSOR, 105000)]
+            "mac_temp"       : [(TYPE_SENSOR, 85000), (TYPE_SENSOR, 103000)]
         }
 
         thermal_spec["min_to_mid_temp"] += [(TYPE_TRANSCEIVER, 70000)]
