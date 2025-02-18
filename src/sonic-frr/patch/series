@@ -40,6 +40,7 @@
 0058-When-the-file-is-config-replayed-we-cannot-handle-th.patch
 0059-Fix-BGP-reset-on-suppress-fib-pending-configuration.patch
 0060-bgpd-Validate-both-nexthop-information-NEXTHOP-and-N.patch
+0061-dont-print-warning-if-not-a-daemon.patch
 0061-Set-multipath-to-514-and-disable-bgp-vnc-for-optimiz.patch
 0062-zebra-lib-use-internal-rbtree-per-ns.patch
 0063-Patch-to-send-tag-value-associated-with-route-via-ne.patch
@@ -56,4 +57,8 @@
 0074-bgp-best-port-reordering.patch
 0075-bgp-mp-info-changes.patch
 0076-Optimizations-and-problem-fixing-for-large-scale-ecmp-from-bgp.patch
-0077-support-vrrp6-commands-and-tracking-interface.patch
+0077-frr-vtysh-dependencies-for-srv6-static-patches.patch
+0078-vtysh-de-conditionalize-and-reorder-install-node.patch
+0079-staticd-add-support-for-srv6.patch
+0080-SRv6-vpn-route-and-sidlist-install.patch
+0081-support-vrrp6-commands-and-tracking-interface.patch

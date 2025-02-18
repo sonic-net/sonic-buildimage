@@ -18,7 +18,8 @@ Type_1_list_maps_model = [
     'DSCP_TO_FC_MAP_LIST',
     'EXP_TO_FC_MAP_LIST',
     'CABLE_LENGTH_LIST',
-    'MPLS_TC_TO_TC_MAP_LIST'
+    'MPLS_TC_TO_TC_MAP_LIST',
+    'TC_TO_DSCP_MAP_LIST'
 ]
 
 # Workaround for those fields who is defined as leaf-list in YANG model but have string value in config DB.
