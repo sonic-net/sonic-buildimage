@@ -26,6 +26,7 @@
   * [CRM](#crm)
   * [CRM DASH](#crm-dash)
   * [Data Plane L3 Interfaces](#data-plane-l3-interfaces)
+  * [Debug Drop Monitor](#debug-drop-monitor)
   * [DEFAULT_LOSSLESS_BUFFER_PARAMETER](#DEFAULT_LOSSLESS_BUFFER_PARAMETER)
   * [Device Metadata](#device-metadata)
   * [Device neighbor metada](#device-neighbor-metada)
@@ -968,6 +969,23 @@ and value is a list of field-values representing the interface attributes, e.g. 
 }
 ```
 
+### Debug Drop Monitor
+Ingress and eggress port debug counter flows can be monitored for persistent drops using
+debug drop monitor feature. This table shows the status and configurations of the feature which can
+be modified via the CLI.
+
+```
+{
+"DEBUG_DROP_MONITOR": {
+    "CONFIG": {
+        "status": "disabled",
+        "window": "800",
+        "incident_count_threshold": "3",
+        "drop_count_threshold": "3"
+    }
+  }
+}
+```
 
 ### DEFAULT_LOSSLESS_BUFFER_PARAMETER
 
