@@ -1,0 +1,8 @@
+{
+    "SCHEDULER": {
+        "DEFAULT_SCHEDULER_PROFILE": {
+            "type" : "WRR",
+            "weight" : "1"
+        }
+    }
+}
