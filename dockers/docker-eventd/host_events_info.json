@@ -6,10 +6,6 @@
             "parse_json": "monit_regex.json"
         },
         {
-            "name": "sshd",
-            "parse_json": "sshd_regex.json"
-        },
-        {
             "name": "systemd",
             "parse_json": "systemd_regex.json"
         },
