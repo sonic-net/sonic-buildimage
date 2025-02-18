@@ -2609,9 +2609,7 @@ index fd6cbc8b6..7bd40c78f 100644
 -      "Add IPv6 address\n"
 -      VRRP_IP_STR)
 +      "Add tracking interface\n"
-+      VRRP_TRACK_INTF_STR
-+      VRRP_PRIORITY_DECREMENT_STR
-+      "Priority decrement value\n")
++      VRRP_TRACK_INTF_STR)
  {
 -	int op = no ? NB_OP_DESTROY : NB_OP_CREATE;
  	char xpath[XPATH_MAXLEN];
@@ -2638,9 +2636,7 @@ index fd6cbc8b6..7bd40c78f 100644
 +      VRRP_STR
 +      VRRP_VRID_STR
 +      "Add tracking interface\n"
-+      VRRP_TRACK_INTF_STR
-+      VRRP_PRIORITY_DECREMENT_STR
-+      "Priority decrement value\n")
++      VRRP_TRACK_INTF_STR)
 +{
 +	char xpath[XPATH_MAXLEN];
 +	snprintf(xpath, sizeof(xpath),
