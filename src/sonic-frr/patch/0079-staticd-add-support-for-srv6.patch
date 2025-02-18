@@ -14,7 +14,7 @@ Signed-off-by: Carmine Scarpitta <cscarpit@cisco.com>
  staticd/static_srv6.h                         | 125 ++++
  staticd/static_vrf.c                          |   2 +
  staticd/static_vty.c                          | 320 +++++++++
- staticd/static_zebra.c                        | 636 ++++++++++++++++++
+ staticd/static_zebra.c                        | 698 ++++++++++++++++++
  staticd/static_zebra.h                        |  12 +-
  staticd/subdir.am                             |   2 +
  tests/topotests/static_srv6_sids/__init__.py  |   0
@@ -1136,7 +1136,7 @@ index d76befc131..f86fd3b48a 100644
  	return 0;
  }
  
-@@ -530,10 +537,639 @@ extern void static_zebra_route_add(struct static_path *pn, bool install)
+@@ -529,10 +536,701 @@ extern void static_zebra_route_add(struct static_path *pn, bool install)
  			   zclient, &api);
  }
  
@@ -1218,6 +1218,9 @@ index d76befc131..f86fd3b48a 100644
 +	struct seg6local_context ctx = {};
 +	struct interface *ifp = NULL;
 +	struct vrf *vrf;
++	struct prefix_ipv6 sid_block = {};
++	struct prefix_ipv6 locator_block = {};
++	struct prefix_ipv6 sid_locator = {};
 +
 +	if (!sid)
 +		return;
@@ -1291,10 +1294,38 @@ index d76befc131..f86fd3b48a 100644
 +		break;
 +	}
 +
-+	ctx.block_len = sid->locator->block_bits_length;
-+	ctx.node_len = sid->locator->node_bits_length;
-+	ctx.function_len = sid->locator->function_bits_length;
-+	ctx.argument_len = sid->locator->argument_bits_length;
++	ctx.block_len = 0;
++	ctx.node_len = 0;
++	ctx.function_len = 0;
++	ctx.argument_len = 0;
++
++	sid_block = sid->addr;
++	sid_block.prefixlen = sid->locator->block_bits_length;
++	apply_mask(&sid_block);
++
++	locator_block = sid->locator->prefix;
++	locator_block.prefixlen = sid->locator->block_bits_length;
++	apply_mask(&locator_block);
++
++	if (prefix_same(&sid_block, &locator_block))
++		ctx.block_len = sid->locator->block_bits_length;
++	else {
++		zlog_warn("SID block %pFX does not match locator block %pFX", &sid_block, &locator_block);
++		return;
++	}
++
++	sid_locator = sid->addr;
++	sid_locator.prefixlen = sid->locator->block_bits_length + sid->locator->node_bits_length;
++	apply_mask(&sid_locator);
++
++	if (prefix_same(&sid_locator, &sid->locator->prefix))
++		ctx.node_len = sid->locator->node_bits_length;
++	else {
++		zlog_warn("SID locator %pFX does not match the specified locator %pFX", &sid_locator, &sid->locator->prefix);
++		return;
++	}
++
++	ctx.function_len = sid->addr.prefixlen - (ctx.block_len + ctx.node_len);
 +
 +	/* Attach the SID to the SRv6 interface */
 +	if (!ifp) {
@@ -1318,6 +1349,9 @@ index d76befc131..f86fd3b48a 100644
 +	struct interface *ifp = NULL;
 +	struct seg6local_context ctx = {};
 +	struct vrf *vrf;
++	struct prefix_ipv6 sid_block = {};
++	struct prefix_ipv6 locator_block = {};
++	struct prefix_ipv6 sid_locator = {};
 +
 +	if (!sid)
 +		return;
@@ -1387,10 +1421,38 @@ index d76befc131..f86fd3b48a 100644
 +		}
 +	}
 +
-+	ctx.block_len = sid->locator->block_bits_length;
-+	ctx.node_len = sid->locator->node_bits_length;
-+	ctx.function_len = sid->locator->function_bits_length;
-+	ctx.argument_len = sid->locator->argument_bits_length;
++	ctx.block_len = 0;
++	ctx.node_len = 0;
++	ctx.function_len = 0;
++	ctx.argument_len = 0;
++
++	sid_block = sid->addr;
++	sid_block.prefixlen = sid->locator->block_bits_length;
++	apply_mask(&sid_block);
++
++	locator_block = sid->locator->prefix;
++	locator_block.prefixlen = sid->locator->block_bits_length;
++	apply_mask(&locator_block);
++
++	if (prefix_same(&sid_block, &locator_block))
++		ctx.block_len = sid->locator->block_bits_length;
++	else {
++		zlog_warn("SID block %pFX does not match locator block %pFX", &sid_block, &locator_block);
++		return;
++	}
++
++	sid_locator = sid->addr;
++	sid_locator.prefixlen = sid->locator->block_bits_length + sid->locator->node_bits_length;
++	apply_mask(&sid_locator);
++
++	if (prefix_same(&sid_locator, &sid->locator->prefix))
++		ctx.node_len = sid->locator->node_bits_length;
++	else {
++		zlog_warn("SID locator %pFX does not match the specified locator %pFX", &sid_locator, &sid->locator->prefix);
++		return;
++	}
++
++	ctx.function_len = sid->addr.prefixlen - (ctx.block_len + ctx.node_len);
 +
 +	zlog_info("delete SID %pFX",
 +		 &sid->addr);

@@ -12,7 +12,7 @@ $(addprefix $(DEST)/, $(MAIN_TARGET)): $(DEST)/% :
 	pushd ./flashrom-$(FLASHROM_VERSION_FULL)
 
 	# Check out tag: tags/0.9.7
-	git checkout -b flashrom-src tags/$(FLASHROM_VERSION_FULL)
+	git checkout -b flashrom-src v$(FLASHROM_VERSION_FULL)
 
 	# Apply patch series
 	stg init

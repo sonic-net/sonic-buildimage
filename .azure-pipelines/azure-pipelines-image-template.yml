@@ -19,6 +19,12 @@ parameters:
 - name: jobVariables
   type: object
   default: []
+- name: SUBMODULE
+  type: string
+  default: ''
+- name: COMMIT_ID
+  type: string
+  default: ''
 jobs:
 - template: azure-pipelines-job-groups.yml
   parameters:
@@ -30,7 +36,7 @@ jobs:
       - script: |
           [ -n "$OVERRIDE_BUILD_OPTIONS" ] && OVERRIDE_BUILD_OPTIONS=$(OVERRIDE_BUILD_OPTIONS)
           BUILD_OPTIONS="$(BUILD_OPTIONS) $OVERRIDE_BUILD_OPTIONS"
-          if [ -n "$(CACHE_MODE)" ] && echo $(PLATFORM_AZP) | grep -E -q "^(vs|broadcom|mellanox|marvell-armhf|marvell-arm64)$"; then
+          if [ -n "$(CACHE_MODE)" ] && echo $(PLATFORM_AZP) | grep -E -q "^(vs|broadcom|mellanox|marvell-armhf|marvell-arm64|vpp)$"; then
             CACHE_OPTIONS="SONIC_DPKG_CACHE_METHOD=$(CACHE_MODE) SONIC_DPKG_CACHE_SOURCE=/nfs/dpkg_cache/$(PLATFORM_AZP)"
             BUILD_OPTIONS="$BUILD_OPTIONS $CACHE_OPTIONS"
           fi
@@ -42,6 +48,17 @@ jobs:
         fetchDepth: 0
         condition: and(succeeded(), eq(variables.SKIP_CHECKOUT, ''))
         displayName: 'Checkout code'
+      - script: |
+          if [ -n "${{ parameters.COMMIT_ID }}" ]; then
+            if [ -n "${{ parameters.SUBMODULE }}" ]; then
+              git submodule update --init --recursive
+              cd src/${{ parameters.SUBMODULE }}
+            fi
+            git checkout ${{ parameters.COMMIT_ID }}
+          else
+            echo "No specific commit id provided, checkout to latest commit"
+          fi
+        displayName: 'Checkout commit'
       - script: |
           set -x
           sudo setfacl -R -b $(Agent.BuildDirectory)

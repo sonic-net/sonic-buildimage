@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2020-2023 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 import os
 import pytest
 import subprocess
@@ -155,3 +157,8 @@ class TestFan:
         subprocess.check_call = MagicMock()
         utils.read_str_from_file = MagicMock(side_effect=RuntimeError(''))
         assert not fan.set_speed(60)
+        fan.get_presence = MagicMock(return_value=False)
+        assert fan.get_speed() == 0
+        fan.get_presence = MagicMock(return_value=True)
+        utils.read_int_from_file = MagicMock(return_value=60)
+        assert fan.get_speed() == 100

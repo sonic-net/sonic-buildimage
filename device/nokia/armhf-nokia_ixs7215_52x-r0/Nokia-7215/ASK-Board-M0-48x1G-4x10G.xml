@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-09-04-1.09" profile="Askboard" sid="f5800f14-68b6-4eed-bd32-d93056a9feef">
+<data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" version="2024-10-24-1.10" profile="Askboard" sid="7093bb99-b026-4a69-990a-db984aab32e7">
   <askboardplt:ASK-Board xmlns:askboardplt="urn:marvell:askboard:yang">
     <askboardplt:typedefs>
       <askboardplt:typedef>
@@ -176,6 +176,18 @@ with IEEE 1588v2 PTP Support</askboardplt:description>
           <askboardplt:description>Specifies PHY identifier 88E2780, Octal 10/100/1000/2.5G/5GBASE-T Ethernet Transceiver
 with IEEE 1588v2 PTP Support</askboardplt:description>
           <askboardplt:value>5</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-MVCUE1786</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier alaska V MV-CUE 1786, Octal 100/1000BASE-T Ethernet Transceiver
+with IEEE 1588v2 PTP Support</askboardplt:description>
+          <askboardplt:value>6</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>alaska-88E1781</askboardplt:name>
+          <askboardplt:description>Specifies PHY identifier 88E1781, Integrated Octal 10/100/1000 Mbps Energy
+Efficient Ethernet Transceiver</askboardplt:description>
+          <askboardplt:value>7</askboardplt:value>
         </askboardplt:enum>
       </askboardplt:typedef>
       <askboardplt:typedef>
@@ -508,15 +520,6 @@ with IEEE 1588v2 PTP Support</askboardplt:description>
         <askboardplt:max>1</askboardplt:max>
       </askboardplt:typedef>
       <askboardplt:typedef>
-        <askboardplt:name>led-stream-force-data-type</askboardplt:name>
-        <askboardplt:type>string</askboardplt:type>
-        <askboardplt:description>A hexadecimal string with octets represented as hex digits
-separated by colons.  The canonical representation uses
-lowercase characters.</askboardplt:description>
-        <askboardplt:min>3</askboardplt:min>
-        <askboardplt:max>11</askboardplt:max>
-      </askboardplt:typedef>
-      <askboardplt:typedef>
         <askboardplt:name>bit-type</askboardplt:name>
         <askboardplt:type>uint32</askboardplt:type>
         <askboardplt:description>Bit range 0..31</askboardplt:description>
@@ -635,6 +638,11 @@ lowercase characters.</askboardplt:description>
           <askboardplt:name>ASIC_Falcon</askboardplt:name>
           <askboardplt:description>FALCON</askboardplt:description>
           <askboardplt:value>2</askboardplt:value>
+        </askboardplt:enum>
+        <askboardplt:enum>
+          <askboardplt:name>ASIC_AC5P</askboardplt:name>
+          <askboardplt:description>AC5P</askboardplt:description>
+          <askboardplt:value>3</askboardplt:value>
         </askboardplt:enum>
       </askboardplt:typedef>
       <askboardplt:typedef>
@@ -1335,7 +1343,7 @@ lowercase characters.</askboardplt:description>
           <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
           <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
           <askboardplt:forceEnable askboardplt:type="boolean-type">true</askboardplt:forceEnable>
-          <askboardplt:forceData askboardplt:type="led-stream-force-data-type">0x0</askboardplt:forceData>
+          <askboardplt:forceData askboardplt:type="uint32">0</askboardplt:forceData>
           <askboardplt:pulseStretchEnable askboardplt:type="boolean-type">true</askboardplt:pulseStretchEnable>
           <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">true</askboardplt:disableOnLinkDown>
         </askboardplt:ledstream-class-manipulation-list>
@@ -1356,7 +1364,7 @@ lowercase characters.</askboardplt:description>
           <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
           <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
           <askboardplt:forceEnable askboardplt:type="boolean-type">true</askboardplt:forceEnable>
-          <askboardplt:forceData askboardplt:type="led-stream-force-data-type">0x0</askboardplt:forceData>
+          <askboardplt:forceData askboardplt:type="uint32">0x0</askboardplt:forceData>
           <askboardplt:pulseStretchEnable askboardplt:type="boolean-type">true</askboardplt:pulseStretchEnable>
           <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">true</askboardplt:disableOnLinkDown>
         </askboardplt:ledstream-class-manipulation-list>
@@ -2037,7 +2045,7 @@ lowercase characters.</askboardplt:description>
           <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
           <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
           <askboardplt:forceEnable askboardplt:type="boolean-type">true</askboardplt:forceEnable>
-          <askboardplt:forceData askboardplt:type="led-stream-force-data-type">0x0</askboardplt:forceData>
+          <askboardplt:forceData askboardplt:type="uint32">0x0</askboardplt:forceData>
           <askboardplt:pulseStretchEnable askboardplt:type="boolean-type">true</askboardplt:pulseStretchEnable>
           <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">true</askboardplt:disableOnLinkDown>
         </askboardplt:ledstream-class-manipulation-list>
@@ -2058,7 +2066,7 @@ lowercase characters.</askboardplt:description>
           <askboardplt:blinkEnable askboardplt:type="boolean-type">false</askboardplt:blinkEnable>
           <askboardplt:blinkSelect askboardplt:type="led-stream-blink-select-type">BLINK_SELECT_0</askboardplt:blinkSelect>
           <askboardplt:forceEnable askboardplt:type="boolean-type">true</askboardplt:forceEnable>
-          <askboardplt:forceData askboardplt:type="led-stream-force-data-type">0x0</askboardplt:forceData>
+          <askboardplt:forceData askboardplt:type="uint32">0x0</askboardplt:forceData>
           <askboardplt:pulseStretchEnable askboardplt:type="boolean-type">true</askboardplt:pulseStretchEnable>
           <askboardplt:disableOnLinkDown askboardplt:type="boolean-type">true</askboardplt:disableOnLinkDown>
         </askboardplt:ledstream-class-manipulation-list>

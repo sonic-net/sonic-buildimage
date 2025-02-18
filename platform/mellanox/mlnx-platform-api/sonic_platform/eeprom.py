@@ -1,5 +1,6 @@
 #
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +42,7 @@ logger = Logger()
 #
 EEPROM_SYMLINK = "/var/run/hw-management/eeprom/vpd_info"
 platform_name = DeviceDataManager.get_platform_name()
-platform_supporting_simx = ['x86_64-nvidia_sn4280_simx-r0', 'x86_64-mlnx_msn4700_simx-r0']
+platform_supporting_simx = ['x86_64-nvidia_sn4280_simx-r0', 'x86_64-mlnx_msn4700_simx-r0', 'x86_64-mlnx_msn5640_simx-r0']
 if platform_name and 'simx' in platform_name and not platform_name in platform_supporting_simx:
     if not os.path.exists(EEPROM_SYMLINK):
         if is_host():

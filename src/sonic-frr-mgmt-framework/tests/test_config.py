@@ -131,6 +131,8 @@ bgp_globals_data = [
                        conf_bgp_af_cmd('default', 100, 'ipv4') + ['{}distance bgp 100 115 238']),
         CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'advertise-all-vni': 'true'},
                        conf_bgp_af_cmd('default', 100, 'ipv6') + ['{}advertise-all-vni']),
+        CmdMapTestInfo('BGP_GLOBALS_AF', 'default|ipv6_unicast', {'advertise-svi-ip': 'true'},
+                       conf_bgp_af_cmd('default', 100, 'ipv6') + ['{}advertise-svi-ip']),
         CmdMapTestInfo('BGP_GLOBALS', 'Vrf_red', {'local_asn': 200},
                        conf_bgp_dft_cmd('Vrf_red', 200), False, conf_no_bgp_cmd('Vrf_red', 200), None, None, None),
         CmdMapTestInfo('BGP_GLOBALS', 'Vrf_red', {'med_confed': 'true'},

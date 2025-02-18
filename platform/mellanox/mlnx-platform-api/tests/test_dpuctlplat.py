@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -461,7 +461,7 @@ class TestDpuClass:
             mock_time_diff.counter += 1
             return mock_time_diff.counter * timeout_val
         mock_time_diff.counter = 0
-        with patch("time.time", wraps=mock_time_diff):
+        with patch("time.monotonic", wraps=mock_time_diff):
             # PCI Device is not recognized
             assert not dpuctl_obj.wait_for_pci()
             pci_parent_path = os.path.dirname(pci_dev_path)

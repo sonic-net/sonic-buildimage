@@ -211,7 +211,6 @@ The supported ASIC vendors are:
 * PLATFORM=broadcom
 * PLATFORM=marvell
 * PLATFORM=mellanox
-* PLATFORM=cavium
 * PLATFORM=centec
 * PLATFORM=nephos
 * PLATFORM=nvidia-bluefield

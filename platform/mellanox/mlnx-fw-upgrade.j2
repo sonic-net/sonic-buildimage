@@ -389,6 +389,18 @@ function RunFwUpdateCmd() {
         failure_msg="${output#*Fail : }"
         ExitFailure "FW Update command: ${COMMAND} failed with error: ${failure_msg}"
     fi
+
+    local COMMAND="mlxconfig -d ${_MST_DEVICE} -y s INTERNAL_CPU_MODEL=1 LAG_RESOURCE_ALLOCATION=1 NUM_OF_PF=0 CQE_COMPRESSION=1 NUM_OF_VFS=0 HAIRPIN_DATA_BUFFER_LOCK=1 MEMIC_SIZE_LIMIT=0 PCI_WR_ORDERING=1"
+
+    output=$(eval "${COMMAND}")
+
+    ERROR_CODE="$?"
+
+    if [[ "${ERROR_CODE}" != "${EXIT_SUCCESS}" ]]; then
+        echo "${output}"
+        failure_msg="${output#*Fail : }"
+        ExitFailure "FW Update command: ${COMMAND} failed with error: ${failure_msg}"
+    fi
 }
 
 function GetAvailableFwVersion() {

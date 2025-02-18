@@ -1,7 +1,0 @@
-INTERVAL=10
-FCTEMPS=/sys/bus/i2c/devices/2-0066/fan_pwm=/sys/bus/i2c/devices/3-004b/hwmon/hwmon[[:print:]]*/temp1_input /sys/bus/i2c/devices/2-0066/fan_pwm=/sys/bus/i2c/devices/3-004a/hwmon/hwmon[[:print:]]*/temp1_input
-FCFANS=/sys/bus/i2c/devices/2-0066/fan_pwm=/sys/bus/i2c/devices/2-0066/fan1_front_speed_rpm /sys/bus/i2c/devices/2-0066/fan_pwm=/sys/bus/i2c/devices/2-0066/fan2_front_speed_rpm /sys/bus/i2c/devices/2-0066/fan_pwm=/sys/bus/i2c/devices/2-0066/fan3_front_speed_rpm /sys/bus/i2c/devices/2-0066/fan_pwm=/sys/bus/i2c/devices/2-0066/fan4_front_speed_rpm /sys/bus/i2c/devices/2-0066/fan_pwm=/sys/bus/i2c/devices/2-0066/fan5_front_speed_rpm /sys/bus/i2c/devices/2-0066/fan_pwm=/sys/bus/i2c/devices/2-0066/fan6_front_speed_rpm
-MINTEMP=/sys/bus/i2c/devices/2-0066/fan_pwm=20
-MAXTEMP=/sys/bus/i2c/devices/2-0066/fan_pwm=60
-MINSTART=/sys/bus/i2c/devices/2-0066/fan_pwm=150
-MINSTOP=/sys/bus/i2c/devices/2-0066/fan_pwm=7

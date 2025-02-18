@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -447,7 +447,7 @@ class Chassis(ChassisBase):
         timeout = 1000.0 if timeout >= 1000 else float(timeout)
         port_dict = {}
         error_dict = {}
-        begin = time.time()
+        begin = time.monotonic()
         wait_ready_task = sfp.SFP.get_wait_ready_task()
         
         while True:        
@@ -524,7 +524,7 @@ class Chassis(ChassisBase):
                 }
             else:
                 if not wait_forever:
-                    elapse = time.time() - begin
+                    elapse = time.monotonic() - begin
                     if elapse * 1000 >= timeout:
                         return True, {'sfp': {}}
 
@@ -569,7 +569,7 @@ class Chassis(ChassisBase):
         timeout = 1000.0 if timeout >= 1000 else float(timeout)
         port_dict = {}
         error_dict = {}
-        begin = time.time()
+        begin = time.monotonic()
         
         while True:
             fds_events = self.poll_obj.poll(timeout)
@@ -619,7 +619,7 @@ class Chassis(ChassisBase):
                 }
             else:
                 if not wait_forever:
-                    elapse = time.time() - begin
+                    elapse = time.monotonic() - begin
                     if elapse * 1000 >= timeout:
                         return True, {'sfp': {}}
 

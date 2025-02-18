@@ -153,18 +153,6 @@ config_syncd_centec()
     [ -e /dev/net/tun ] || ( mkdir -p /dev/net && mknod /dev/net/tun c 10 200 )
 }
 
-config_syncd_cavium()
-{
-    CMD_ARGS+=" -p $HWSKU_DIR/sai.profile -d"
-
-    export XP_ROOT=/usr/bin/
-
-    # Wait until redis-server starts
-    until [ $(sonic-db-cli PING | grep -c PONG) -gt 0 ]; do
-        sleep 1
-    done
-}
-
 config_syncd_marvell()
 {
     CMD_ARGS+=" -p $HWSKU_DIR/sai.profile"
@@ -224,8 +212,6 @@ config_syncd()
         config_syncd_bcm
     elif [ "$SONIC_ASIC_TYPE" == "mellanox" ]; then
         config_syncd_mlnx
-    elif [ "$SONIC_ASIC_TYPE" == "cavium" ]; then
-        config_syncd_cavium
     elif [ "$SONIC_ASIC_TYPE" == "centec" ]; then
         config_syncd_centec
     elif [ "$SONIC_ASIC_TYPE" == "marvell" ]; then

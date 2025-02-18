@@ -1,7 +1,0 @@
-[
-    {
-        "tag": "zebra-no-buff",
-        "regex": "No buffer space available",
-        "params": []
-    }
-]

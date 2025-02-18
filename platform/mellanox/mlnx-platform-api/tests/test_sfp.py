@@ -94,6 +94,10 @@ class TestSfp:
         mock_control.side_effect = RuntimeError('')
         description = sfp.get_error_description()
         assert description == 'Initializing'
+        
+        mock_control.side_effect = NotImplementedError('')
+        description = sfp.get_error_description()
+        assert description == 'Not supported'
 
     @mock.patch('sonic_platform.sfp.SFP._get_page_and_page_offset')
     @mock.patch('sonic_platform.sfp.SFP._is_write_protected')

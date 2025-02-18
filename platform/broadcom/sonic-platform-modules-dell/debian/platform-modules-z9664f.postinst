@@ -1,0 +1,10 @@
+# postinst script for Z9664f
+
+# Enable Dell-Z9664f-platform-service
+depmod -a
+systemctl enable platform-modules-z9664f.service
+systemctl start platform-modules-z9664f.service
+
+
+#DEBHELPER#
+

@@ -74,3 +74,8 @@ Package: platform-modules-s5296f
 Architecture: amd64
 Depends: linux-image-6.1.0-22-2-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
+
+Package: platform-modules-z9664f
+Architecture: amd64
+Depends: linux-image-6.1.0-22-2-amd64-unsigned
+Description: kernel modules for platform devices such as fan, led, sfp

@@ -1,6 +1,6 @@
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -160,6 +160,32 @@ DEVICE_DATA = {
         },
         'sfp': {
             'fw_control_ports': [64]  # 0 based sfp index list
+        }
+    },
+    'x86_64-nvidia_sn5600_simx-r0': {
+        'thermal': {
+            "capability": {
+                "cpu_pack": False,
+                "comex_amb": False,
+            }
+        }
+    },
+    'x86_64-nvidia_sn5610n-r0': {
+        'thermal': {
+            "capability": {
+                "comex_amb": False
+            }
+        },
+        'sfp': {
+            'fw_control_ports': [64, 65] # 0 based sfp index list
+        }
+    },
+    'x86_64-nvidia_sn5640_simx-r0': {
+        'thermal': {
+            "capability": {
+                "cpu_pack": False,
+                "comex_amb": False,
+            }
         }
     },
     'x86_64-nvidia_sn4280_simx-r0': {

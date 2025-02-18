@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2019-2023 NVIDIA CORPORATION & AFFILIATES.
-# Apache-2.0
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -256,6 +257,11 @@ class PsuFan(MlnxFan):
             logger.log_error('Failed to set PSU FAN speed - {}'.format(e))
             return False
 
+    def get_speed(self):
+        if not self.get_presence():
+            logger.log_notice(f"No PSU presence detected, returning default value for {self._name}")
+            return 0
+        return super().get_speed()
 
 class Fan(MlnxFan):
     """Platform-specific Fan class"""
