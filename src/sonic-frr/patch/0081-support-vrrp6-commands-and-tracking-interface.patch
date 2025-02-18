@@ -2635,7 +2635,7 @@ index fd6cbc8b6..7bd40c78f 100644
 +      NO_STR
 +      VRRP_STR
 +      VRRP_VRID_STR
-+      "Add tracking interface\n"
++      "Del tracking interface\n"
 +      VRRP_TRACK_INTF_STR)
 +{
 +	char xpath[XPATH_MAXLEN];
