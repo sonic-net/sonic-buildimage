@@ -5,8 +5,8 @@ gdbserver==13.1-3
 iproute2-mlnx==6.1.0-3
 libbabeltrace1==1.5.11-1+b2
 libboost-regex1.74.0==1.74.0+ds1-21
-libc-dev-bin==2.36-9+deb12u7
-libc6-dev==2.36-9+deb12u7
+libc-dev-bin==2.36-9+deb12u9
+libc6-dev==2.36-9+deb12u9
 libcbor0.8==0.8.0-2+b1
 libcurl3-gnutls==7.88.1-10+deb12u8
 libdebuginfod-common==0.188-2.1
