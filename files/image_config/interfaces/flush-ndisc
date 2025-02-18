@@ -1,0 +1,5 @@
+#!/bin/bash
+# Flush IPv6 neighbor table on interface operational change
+logger "interface $IFACE operational change. flushing ipv6 neighbor table for interface..."
+
+ip -6 neigh flush dev $IFACE
