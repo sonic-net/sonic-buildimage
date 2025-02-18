@@ -38,7 +38,7 @@ prepare_installer_disk()
 {
     fallocate -l 4096M $INSTALLER_DISK
 
-    mkfs.vfat $INSTALLER_DISK
+    mkfs.vfat -n INSTALLER $INSTALLER_DISK
 
     tmpdir=$(mktemp -d)
 
@@ -109,9 +109,20 @@ wait_kvm_ready
 
 echo "to kill kvm:  sudo kill $kvm_pid"
 
-./install_sonic.py
+if [ "$MLNX_KVM_IMAGE" = "yes" ]; then
+    echo "Mellanox KVM build: use force image installation routine"
+    ./install_sonic.py -f
+else
+    echo "Generic KVM build: use regular image installation routine"
+    ./install_sonic.py
+fi
 
 kill $kvm_pid
+
+if [ "$MLNX_KVM_IMAGE" = "yes" ]; then
+    echo "Skip SONiC boot for Mellanox KVM build"
+    exit 0
+fi
 
 echo "Booting up SONiC"
 

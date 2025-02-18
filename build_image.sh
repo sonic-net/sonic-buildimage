@@ -162,6 +162,10 @@ elif [ "$IMAGE_TYPE" = "raw" ]; then
     echo "The raw image is in $OUTPUT_RAW_IMAGE"
 
 elif [ "$IMAGE_TYPE" = "kvm" ]; then
+    if [ "$TARGET_MACHINE" = "mellanox" ]; then
+        echo "Enable Mellanox KVM build"
+        export MLNX_KVM_IMAGE="yes"
+    fi
 
     generate_device_list "./installer/platforms_asic"
 
