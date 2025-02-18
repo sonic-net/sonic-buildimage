@@ -17,7 +17,7 @@ then
     host_ip=127.0.0.1
 fi
 
-redis_port=6379
+redis_port=0
 
 if [[ $DATABASE_TYPE == "dpudb" ]]; then
     host_ip="169.254.200.254"
