@@ -7,20 +7,20 @@ Standards-Version: 3.9.3
 
 Package: sonic-platform-alphanetworks-snh60a0-320fv2
 Architecture: amd64
-Depends: linux-image-6.1.0-22-2-amd64-unsigned
+Depends: linux-image-6.1.0-29-2-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-alphanetworks-snh60b0-640f
 Architecture: amd64
-Depends: linux-image-6.1.0-22-2-amd64-unsigned
+Depends: linux-image-6.1.0-29-2-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-alphanetworks-snj60d0-320f
 Architecture: amd64
-Depends: linux-image-6.1.0-22-2-amd64-unsigned
+Depends: linux-image-6.1.0-29-2-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
 
 Package: sonic-platform-alphanetworks-bes2348t
 Architecture: amd64
-Depends: linux-image-6.1.0-22-2-amd64-unsigned
+Depends: linux-image-6.1.0-29-2-amd64-unsigned
 Description: kernel modules for platform devices such as fan, led, sfp
