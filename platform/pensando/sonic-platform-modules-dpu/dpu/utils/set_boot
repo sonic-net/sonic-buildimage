@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+# {C} Copyright 2023 AMD Systems Inc. All rights reserved
+#############################################################################
+# Pensando
+#
+# This helps to boot to goldfw/mainfwb from sonic
+#
+#############################################################################
+
+import sys
+import subprocess
+import click
+
+def runCMD(cmd):
+    try:
+        print(f"CMD : {cmd}")
+        ret = subprocess.getoutput(cmd)
+    except Exception as e:
+        print("Exception in runCMD due to %s, cleaning up and exiting\n" % str(e))
+        sys.exit(2)
+    return ret
+
+def set_boot_helper(firmware_type):
+    if firmware_type in ['goldfw', 'mainfwb']:
+        runCMD("fw_setenv bootcmd_sonic 'test -n \"$boot_once\" && setenv do_boot_once \"$boot_once\" && setenv boot_once && saveenv && run do_boot_once; run boot_next'")
+        runCMD("fw_setenv bootcmd 'boot'")
+        runCMD("flash_erase -q /dev/mtd8 0 1")
+        runCMD(f"echo -n {firmware_type} | dd of=/dev/mtd8 status=none")
+        ret = runCMD("hexdump -C /dev/mtd8")
+        print(ret)
+        return
+    if firmware_type in ['mainfwa','sonic']:
+        runCMD("fw_setenv bootcmd_sonic 'test -n \"$boot_once\" && setenv do_boot_once \"$boot_once\" && setenv boot_once && saveenv && run do_boot_once; run boot_next'")
+        if firmware_type == 'sonic':
+            runCMD("fw_setenv bootcmd 'run bootcmd_sonic'")
+            firmware_type = 'mainfwa'
+        else:
+            runCMD("fw_setenv bootcmd 'boot'")
+        runCMD("flash_erase -q /dev/mtd8 0 1")
+        runCMD(f"echo -n {firmware_type} | dd of=/dev/mtd8 status=none")
+        ret = runCMD("hexdump -C /dev/mtd8")
+        print(ret)
+        return
+    print(f'Given firmware is not supported {firmware_type}')
+
+@click.command()
+@click.argument('firmware_type', type=click.Choice(['goldfw', 'mainfwb', 'mainfwa', 'sonic']))
+def set_boot(firmware_type):
+    """Set the boot firmware in fwsel mtd partition to boot next"""
+    click.echo(f'Setting boot firmware type to: {firmware_type}')
+    set_boot_helper(firmware_type)
+
+if __name__ == '__main__':
+    set_boot()
