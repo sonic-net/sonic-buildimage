@@ -1144,8 +1144,7 @@ IPV4 DHPC Server related configuration are defined in **DHCP_SERVER_IPV4**, **DH
 
 ### FG_NHG
 
-The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size), match mode for each group, nexthopgroup mode to distinguish between static vs
-dynamic nexthop configuration and an optional max-next-hops attribute for dynamic mode.
+The FG_NHG table provides information on Next Hop Groups, including a specified Hash Bucket Size (bucket_size), match mode for each group, an optional max-next-hops attribute for prefix_based match_ mode.
 
 ```
 "FG_NHG": {
@@ -1159,14 +1158,12 @@ dynamic nexthop configuration and an optional max-next-hops attribute for dynami
     },
     "dynamic_fgnhg_v4": {
         "bucket_size": "120",
-        "match_mode": "nexthop-based",
-        "nhg_mode": "dynamic-nhg",
+        "match_mode": "prefix-based",
         "max_next_hops": "6"
     },
     "dynamic_fgnhg_v6": {
         "bucket_size": "120",
-        "match_mode": "nexthop-based",
-        "nhg_mode": "dynamic-nhg",
+        "match_mode": "prefix-based",
         "max_next_hops": "6"
     }    
 }

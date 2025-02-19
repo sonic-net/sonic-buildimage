@@ -51,12 +51,17 @@ module sonic-fine-grained-ecmp {
                description
                  "Fine grained ecmp is used when the nexthop IPs match the FG_NHG_MEMBER IPs";
             }
+
+            enum prefix-based {
+                description
+                    "Fine grained ecmp is used when the route prefix matches the FG_NHG_PREFIX prefix";
+            }
         }
 
         description
             "This enumeration type defines the method used to determine whether fine grained ecmp should be applied.";
     }
-
+/*
     typedef nhg-mode-name {
         type enumeration {
             enum static-nhg {
@@ -73,7 +78,7 @@ module sonic-fine-grained-ecmp {
         description
             "This enumeration type defines whether the list of nexthops used for fine grained ecmp are statically configure or derived from route updates.";
     }
-
+*/
     container sonic-fine-grained-ecmp {
 
         container FG_NHG {
@@ -101,15 +106,8 @@ module sonic-fine-grained-ecmp {
                     description " The filtering method used to identify when to use Fine Grained vs regular route handling. nexthop-based looks to next-hop IP to filter routes and uses fine grained ecmp when nexthop IPs matches FG_NHG_MEMBER IPs. route-based looks to prefix to filter routes, and uses fine grained ecmp when the route prefix matches the FG_NHG_PREFIX prefix.";
                 }
 
-                leaf nhg_mode{
-                    when "current()/../match_mode = 'route-based'";
-                    type nhg-mode-name;
-                    default 'static-nhg';
-                    description " static-nhg : List of nexthops needs to be statically configured in FG_NHG_MEMBER table. dynamic-nhg : List of nexthops will be dynamically derived from the route updates.";
-                }
-
                 leaf max_next_hops{
-                    when "current()/../nhg_mode = 'dynamic-nhg'";
+                    when "current()/../match_mode = 'prefix-based'";
                     mandatory true;
                     type uint16 {
                         range 1..128; // Adjust based on platform support
@@ -117,7 +115,7 @@ module sonic-fine-grained-ecmp {
                     must "current() > 0" {
                         error-message "max_next_hops needs to be a positive value in dynamic-nhg mode";
                     }
-                    description "Applicable only when nhg_mode = dynamic-nhg. Maximum number of nexthops that will be received in route updates for any of the prefixes that match FG_NHG_PREFIX for this FG_NHG.";
+                    description "Applicable only when match_mode = prefix-based. Maximum number of nexthops that will be received in route updates for any of the prefixes that match FG_NHG_PREFIX for this FG_NHG.";
                 }
 
             }

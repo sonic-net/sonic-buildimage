@@ -16,8 +16,7 @@
                     {
                         "name": "group3",
                         "bucket_size": 30,
-                        "match_mode": "route-based",
-                        "nhg_mode": "dynamic-nhg",
+                        "match_mode": "prefix-based",
                         "max_next_hops": 6
                     }
                 ]
@@ -41,8 +40,7 @@
                     {
                         "name": "group3",
                         "bucket_size": 30,
-                        "match_mode": "route-based",
-                        "nhg_mode": "dynamic-nhg",
+                        "match_mode": "prefix-based",
                         "max_next_hops": 6
                     }
                 ]
@@ -414,58 +412,40 @@
             }
         }
     },
-    "FG_NHG_TEST_DYNAMIC_NHG_MISSING_MAX_NEXT_HOPS": {
+    "FG_NHG_PREFIX_BASED_MISSING_MAX_NEXT_HOPS": {
         "sonic-fine-grained-ecmp:sonic-fine-grained-ecmp": {
             "sonic-fine-grained-ecmp:FG_NHG": {
                 "FG_NHG_LIST": [
                     {
                         "name": "group3",
                         "bucket_size": 30,
-                        "match_mode": "route-based",
-                        "nhg_mode": "dynamic-nhg"
+                        "match_mode": "prefix-based"
                     }
                 ]
             }
         }
     },
-    "FG_NHG_TEST_DYNAMIC_NHG_INVALID_MAX_NEXT_HOPS": {
+    "FG_NHG_PREFIX_BASED_INVALID_MAX_NEXT_HOPS": {
         "sonic-fine-grained-ecmp:sonic-fine-grained-ecmp": {
             "sonic-fine-grained-ecmp:FG_NHG": {
                 "FG_NHG_LIST": [
                     {
                         "name": "group3",
                         "bucket_size": 30,
-                        "match_mode": "route-based",
-                        "nhg_mode": "dynamic-nhg",
+                        "match_mode": "prefix-based",
                         "max_next_hops": 2048
                     }
                 ]
             }
         }
     },
-    "FG_NHG_TEST_DYNAMIC_NHG_MISSING_BUCKET_SIZE": {
+    "FG_NHG_PREFIX_BASED_MISSING_BUCKET_SIZE": {
         "sonic-fine-grained-ecmp:sonic-fine-grained-ecmp": {
             "sonic-fine-grained-ecmp:FG_NHG": {
                 "FG_NHG_LIST": [
                     {
                         "name": "group3",
-                        "match_mode": "route-based",
-                        "nhg_mode": "dynamic-nhg",
-                        "max_next_hops": 6
-                    }
-                ]
-            }
-        }
-    },
-    "FG_NHG_TEST_DYNAMIC_NHG_INVALID_MATCH_MODE": {
-        "sonic-fine-grained-ecmp:sonic-fine-grained-ecmp": {
-            "sonic-fine-grained-ecmp:FG_NHG": {
-                "FG_NHG_LIST": [
-                    {
-                        "name": "group3",
-                        "bucket_size": 30,
-                        "match_mode": "nexthop-based",
-                        "nhg_mode": "dynamic-nhg",
+                        "match_mode": "prefix-based",
                         "max_next_hops": 6
                     }
                 ]
