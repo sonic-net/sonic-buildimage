@@ -38,6 +38,6 @@
     },
     "INTERFACE_INVALID_MAC_ADDR": {
         "desc": "Set invalid interface mac address.",
-        "eStr": "Value \"badaddr\" does not satisfy the constraint \"[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}\" (range, length, or pattern)."
+        "eStrKey": "Pattern"
     }
 }
