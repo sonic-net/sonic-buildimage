@@ -4,9 +4,6 @@ DOCKER_CONFIG_ENGINE_BOOKWORM = docker-config-engine-bookworm.gz
 $(DOCKER_CONFIG_ENGINE_BOOKWORM)_PATH = $(DOCKERS_PATH)/docker-config-engine-bookworm
 
 $(DOCKER_CONFIG_ENGINE_BOOKWORM)_DEPENDS += $(LIBSWSSCOMMON) \
-                                          $(LIBYANG) \
-                                          $(LIBYANG_CPP) \
-                                          $(LIBYANG_PY3) \
                                           $(LIBYANG3) \
                                           $(LIBYANG3_PY3) \
                                           $(PYTHON3_SWSSCOMMON) \
