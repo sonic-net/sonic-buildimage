@@ -112,7 +112,7 @@ if [[ x"${MGMT_VRF_ENABLED}" == x"true" ]]; then
 fi
 
 # Enable ring buffer
-ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "RING_BUFFER_CONFIG|orchdaemon" "ringBufferEnabled"`
+ORCHDAEMON_RING_ENABLED=`sonic-db-cli CONFIG_DB hget "DEVICE_METADATA|localhost" "ring_thread_enabled"`
 if [[ x"${ORCHDAEMON_RING_ENABLED}" == x"true" ]]; then
     ORCHAGENT_ARGS+=" -R"
 fi
